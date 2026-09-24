@@ -170,24 +170,64 @@ def test_user_root_prefix_rejects_invalid_session_identifiers(artifact_module):
         artifact_module._user_root_prefix("   ")
 
 
-def test_read_record_gcs_handles_download_failures_and_invalid_json(artifact_module, monkeypatch):
-    monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True)
+def test_read_record_gcs_raises_on_a_download_error_and_skips_what_does_not_decode(artifact_module, monkeypatch, caplog):
+    from server.app.storage.common import StorageReadError
 
+    monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True)
+    blob_name = artifact_module._artifact_blob("cred-1", "session-a")
+
+    # A download that fails is not "no artifact": the store could not be read.
     monkeypatch.setattr(
         artifact_module,
         "download_bytes",
         lambda _blob: (_ for _ in ()).throw(RuntimeError("download failed")),
     )
+    with pytest.raises(StorageReadError, match="Could not read") as raised:
+        artifact_module._read_record("cred-1", "session-a")
+    assert isinstance(raised.value.__cause__, RuntimeError)
+
+    # Nothing stored is fine.
+    monkeypatch.setattr(artifact_module, "download_bytes", lambda _blob: None)
     assert artifact_module._read_record("cred-1", "session-a") is None
 
-    monkeypatch.setattr(artifact_module, "download_bytes", lambda _blob: b"")
-    assert artifact_module._read_record("cred-1", "session-a") is None
+    # Content that does not decode is logged by name, never its content, and skipped.
+    for content in (b"", b"\xff-secret", b"{invalid-secret", b'["secret list"]'):
+        monkeypatch.setattr(artifact_module, "download_bytes", lambda _blob, content=content: content)
+        caplog.clear()
+        with caplog.at_level("WARNING", logger="server.app.credential_artifacts"):
+            assert artifact_module._read_record("cred-1", "session-a") is None
+        messages = [record.getMessage() for record in caplog.records]
+        assert len(messages) == 1 and blob_name in messages[0], messages
+        assert "secret" not in messages[0]
 
-    monkeypatch.setattr(artifact_module, "download_bytes", lambda _blob: b"\xff")
-    assert artifact_module._read_record("cred-1", "session-a") is None
 
-    monkeypatch.setattr(artifact_module, "download_bytes", lambda _blob: b"{invalid")
-    assert artifact_module._read_record("cred-1", "session-a") is None
+def test_read_record_local_raises_when_the_file_cannot_be_read(artifact_module):
+    from server.app.storage.common import StorageReadError
+
+    path = artifact_module._artifact_path("cred-dir", "session-a")
+    # A directory where the file belongs: an OSError that is not "no such file".
+    os.makedirs(path)
+    with pytest.raises(StorageReadError):
+        artifact_module._read_record("cred-dir", "session-a")
+    with pytest.raises(StorageReadError):
+        artifact_module.load_credential_artifact("cred-dir", session_id="session-a")
+
+
+def test_a_local_merge_refuses_a_record_that_does_not_decode(artifact_module):
+    from server.app.storage.common import StorageReadError
+
+    path = artifact_module._artifact_path("cred-corrupt", "session-a")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write("{broken-json")
+
+    with pytest.raises(StorageReadError) as raised:
+        artifact_module.store_credential_artifact("cred-corrupt", {"x": 1}, merge=True, session_id="session-a")
+    assert isinstance(raised.value.__cause__, artifact_module.ArtifactUndecodable)
+    with open(path, encoding="utf-8") as handle:
+        assert handle.read() == "{broken-json"
+    # A store that replaces the record outright does not read it, and may.
+    assert artifact_module.store_credential_artifact("cred-corrupt", {"x": 1}, session_id="session-a") is True
 
 
 def test_write_record_gcs_uploads_json_payload(artifact_module, monkeypatch):
@@ -242,7 +282,7 @@ def test_load_credential_artifact_returns_none_for_non_mapping_payload(artifact_
 def test_store_credential_artifact_merge_handles_non_dict_existing_payload(artifact_module, monkeypatch):
     monkeypatch.setattr(
         artifact_module,
-        "_read_record",
+        "_record_to_merge_into",
         lambda *_args, **_kwargs: {
             "storageId": "cred-1",
             "createdAt": 123.0,

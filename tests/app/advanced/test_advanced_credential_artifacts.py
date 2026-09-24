@@ -290,3 +290,38 @@ def test_delete_credential_artifact_route_reports_status(monkeypatch, delete_sta
 
     assert response.status_code == expected_http_status
     assert response.get_json() == expected_payload
+
+
+@pytest.mark.parametrize("route", ["get", "bulk", "merging-put", "snapshot"])
+def test_an_artifact_the_store_cannot_read_answers_503_not_missing_or_unstored(
+    monkeypatch, client, metadata_module, route
+):
+    # A failed download used to read as "no artifact" (404, or left out of the
+    # bulk answer), and a merge that could not read answered 400.
+    import json
+
+    from server.app import credential_artifacts
+
+    from ..storage import fake_gcs
+
+    bucket = fake_gcs.install(monkeypatch, credential_artifacts)
+    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
+    blob_name = credential_artifacts._artifact_blob("cred-1", "session-id")
+    bucket.put(blob_name, json.dumps({"storageId": "cred-1", "payload": {"kept": True}}).encode())
+    bucket.failing[blob_name] = fake_gcs.ServiceUnavailable("503 at /secret/path")
+
+    base = "/api/advanced/credential-artifacts"
+    if route == "get":
+        response = client.get(f"{base}/cred-1")
+    elif route == "bulk":
+        response = client.post(f"{base}/bulk", json={"storageIds": ["cred-1"]})
+    elif route == "merging-put":
+        response = client.put(f"{base}/cred-1", json={"artifact": {"late": True}})
+    else:
+        response = client.put(f"{base}/cred-1/snapshot", json={"snapshot": {"html": "<p>x</p>"}})
+
+    assert response.status_code == 503, response.get_json()
+    assert list(response.get_json()) == ["error"]
+    assert "/secret/path" not in response.get_data(as_text=True)
+    bucket.failing.clear()
+    assert json.loads(bucket.objects[blob_name][0])["payload"] == {"kept": True}
