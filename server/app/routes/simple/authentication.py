@@ -196,41 +196,45 @@ def authenticate_complete():
             400,
         )
 
-    server_records, metadata_session_id = load_server_records(uname)
-    record_index = find_server_record_index(server_records, authenticated_id_bytes)
-    server_record = server_records[record_index] if record_index is not None else None
-    stored_sign_count = resolve_stored_sign_count(
-        server_record,
-        client_supplied_sign_count(session_credentials, authenticated_id_bytes),
-    )
+    client_sign_count = client_supplied_sign_count(session_credentials, authenticated_id_bytes)
+    # Check-then-save is compare-and-swap: two authentications that both read
+    # counter N cannot both store N+1. The one that loses reads the records
+    # again and is checked again -- against the counter the other just stored.
+    for _attempt in range(_SIGN_COUNT_SAVE_ATTEMPTS):
+        server_records, version, metadata_session_id = load_server_records(uname)
+        record_index = find_server_record_index(server_records, authenticated_id_bytes)
+        server_record = server_records[record_index] if record_index is not None else None
+        stored_sign_count = resolve_stored_sign_count(server_record, client_sign_count)
 
-    if sign_count_status(stored_sign_count, sign_count) == SIGN_COUNT_REGRESSED:
-        logger.warning(
-            "Rejected assertion for credential %s: signature counter %d did not "
-            "increase past stored %d (possible cloned authenticator)",
-            authenticated_id,
-            sign_count,
-            stored_sign_count,
-        )
-        return (
-            jsonify(
-                {
-                    "error": (
-                        f"Signature counter did not increase (stored {stored_sign_count}, "
-                        f"received {sign_count}). This authenticator may have been cloned, "
-                        "so authentication was rejected."
-                    ),
-                    "failedCredentialId": authenticated_id,
-                    "signCountStatus": SIGN_COUNT_REGRESSED,
-                }
-            ),
-            400,
-        )
+        if sign_count_status(stored_sign_count, sign_count) == SIGN_COUNT_REGRESSED:
+            logger.warning(
+                "Rejected assertion for credential %s: signature counter %d did not "
+                "increase past stored %d (possible cloned authenticator)",
+                authenticated_id,
+                sign_count,
+                stored_sign_count,
+            )
+            return (
+                jsonify(
+                    {
+                        "error": (
+                            f"Signature counter did not increase (stored {stored_sign_count}, "
+                            f"received {sign_count}). This authenticator may have been cloned, "
+                            "so authentication was rejected."
+                        ),
+                        "failedCredentialId": authenticated_id,
+                        "signCountStatus": SIGN_COUNT_REGRESSED,
+                    }
+                ),
+                400,
+            )
 
-    if server_record is not None and record_sign_count(server_record) != sign_count:
+        if server_record is None or record_sign_count(server_record) == sign_count:
+            break
         server_record[RECORD_SIGN_COUNT_KEY] = sign_count
         try:
-            credentials.savekey(uname, server_records, session_id=metadata_session_id)
+            if credentials.save_if_unchanged(uname, server_records, version, session_id=metadata_session_id):
+                break
         except Exception:
             logger.exception(
                 "Failed to persist signature counter for %s", authenticated_id
@@ -239,6 +243,21 @@ def authenticate_complete():
                 jsonify({"error": "Unable to persist the signature counter."}),
                 500,
             )
+        logger.info("Signature counter for %s changed while it was being saved; reading it again", authenticated_id)
+    else:
+        logger.warning("Rejected assertion for credential %s: its stored counter kept changing", authenticated_id)
+        return (
+            jsonify(
+                {
+                    "error": (
+                        "The stored signature counter changed during authentication more than "
+                        "once, so authentication was rejected. Please try again."
+                    ),
+                    "failedCredentialId": authenticated_id,
+                }
+            ),
+            409,
+        )
 
     debug_info = {
         "hintsUsed": [],
@@ -255,6 +274,8 @@ def authenticate_complete():
 
 
 RECORD_SIGN_COUNT_KEY = "sign_count"
+# A lost compare-and-swap is retried once; losing twice rejects the assertion.
+_SIGN_COUNT_SAVE_ATTEMPTS = 2
 
 
 def _as_counter(value: Any) -> int | None:
@@ -279,14 +300,14 @@ def record_sign_count(record: Mapping[str, Any]) -> int | None:
     return _as_counter(getattr(record.get("auth_data"), "counter", None))
 
 
-def load_server_records(uname: Any) -> tuple[list[Any] | None, str | None]:
-    """Read the caller's server-side credential records, or ``(None, None)``."""
+def load_server_records(uname: Any) -> tuple[list[Any] | None, Any, str | None]:
+    """The caller's server-side records, their version, the session: ``(None, None, None)`` if none."""
 
     if not isinstance(uname, str) or not uname:
-        return None, None
+        return None, None, None
     try:
         session_id = metadata.ensure_metadata_session_id()
-        records = credentials.readkey(uname, session_id=session_id)
+        records, version = credentials.read_for_update(uname, session_id=session_id)
     except InvalidStorageIdentifier:
         # A name the store refuses is the caller's error: the app answers 400.
         raise
@@ -294,10 +315,10 @@ def load_server_records(uname: Any) -> tuple[list[Any] | None, str | None]:
         logger.warning(
             "Could not read stored credentials for the signature counter check", exc_info=True
         )
-        return None, None
+        return None, None, None
     if not isinstance(records, list):
-        return None, None
-    return records, session_id
+        return None, None, None
+    return records, version, session_id
 
 
 def find_server_record_index(records: list[Any] | None, credential_id: bytes) -> int | None:
