@@ -3,11 +3,16 @@ from pathlib import Path
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-# Where the app keeps state on a developer's machine, and the MDS snapshot files
-# (docs/MDS_SNAPSHOT.md). What is there already mixes the owner's local data
-# with earlier test runs' leftovers, so the guard compares, never cleans.
-_GUARDED_TREES = ("server/runtime", "instance")
-_GUARDED_STATIC = ("frontend/static/fido-mds3.*", "frontend/static/blob.jwt*")
+# Where the app keeps state on a developer's machine -- including the legacy
+# credential stores in the source tree, which are still read -- and the MDS
+# snapshot files (docs/MDS_SNAPSHOT.md). What is there already mixes the owner's
+# local data with earlier test runs' leftovers, so the guard compares, never cleans.
+_GUARDED_TREES = ("server/runtime", "instance", "server/app/session-credentials")
+_GUARDED_STATIC = (
+    "frontend/static/fido-mds3.*",
+    "frontend/static/blob.jwt*",
+    "server/app/*_credential_data.pkl",
+)
 
 
 def pytest_addoption(parser):
@@ -103,7 +108,8 @@ def _no_writes_into_the_checkout():
     ]
     if problems:
         pytest.fail(
-            "Tests wrote into the checkout (server/runtime/, instance/ or the MDS snapshot):\n"
+            "Tests wrote into the checkout (server/runtime/, instance/, the legacy credential "
+            "stores in server/app/ or the MDS snapshot):\n"
             + "\n".join(problems),
             pytrace=False,
         )
