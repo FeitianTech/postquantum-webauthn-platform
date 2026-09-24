@@ -26,7 +26,7 @@ def session_env(monkeypatch, tmp_path):
     session_dir = tmp_path / "sessions"
     session_dir.mkdir()
 
-    for module in (config, metadata, session_store):
+    for module in (config, session_store):
         monkeypatch.setattr(
             module, "SESSION_METADATA_DIR", str(session_dir), raising=False
         )
