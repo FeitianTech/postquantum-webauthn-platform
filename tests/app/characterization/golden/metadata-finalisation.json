@@ -1,0 +1,673 @@
+{
+ "object/f8a011f38c0a4d15800617111f9edc7d/f8a011f38c0a4d15800617111f9edc7d": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": true,
+  "metadata": {
+   "available": true,
+   "description": "Model",
+   "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
+   "algorithm_supported": true,
+   "root_certificates_present": true,
+   "source": "chain"
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "object/f8a011f38c0a4d15800617111f9edc7d/01010101010101010101010101010101": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": false,
+  "metadata": {
+   "available": true,
+   "description": "Model",
+   "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
+   "algorithm_supported": true,
+   "root_certificates_present": true,
+   "source": "chain"
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "object/-/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": true,
+   "description": "Model",
+   "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
+   "algorithm_supported": true,
+   "root_certificates_present": true,
+   "source": "chain"
+  }
+ },
+ "object/05/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": true,
+   "description": "Model",
+   "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
+   "algorithm_supported": true,
+   "root_certificates_present": true,
+   "source": "chain"
+  },
+  "root_checks": {
+   "chain": true
+  }
+ },
+ "object-other-algorithms/f8a011f38c0a4d15800617111f9edc7d/f8a011f38c0a4d15800617111f9edc7d": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [
+   "algorithm_not_in_metadata"
+  ],
+  "warnings": [],
+  "aaguid_match": true,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
+   "algorithm_supported": false,
+   "root_certificates_present": false,
+   "source": "chain"
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "object-other-algorithms/f8a011f38c0a4d15800617111f9edc7d/01010101010101010101010101010101": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [
+   "algorithm_not_in_metadata"
+  ],
+  "warnings": [],
+  "aaguid_match": false,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
+   "algorithm_supported": false,
+   "root_certificates_present": false,
+   "source": "chain"
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "object-other-algorithms/-/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [
+   "algorithm_not_in_metadata"
+  ],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
+   "algorithm_supported": false,
+   "root_certificates_present": false,
+   "source": "chain"
+  }
+ },
+ "object-other-algorithms/05/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [
+   "algorithm_not_in_metadata"
+  ],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
+   "algorithm_supported": false,
+   "root_certificates_present": false,
+   "source": "chain"
+  },
+  "root_checks": {
+   "chain": true
+  }
+ },
+ "dict-statement/f8a011f38c0a4d15800617111f9edc7d/f8a011f38c0a4d15800617111f9edc7d": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": true,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "chain"
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "dict-statement/f8a011f38c0a4d15800617111f9edc7d/01010101010101010101010101010101": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": false,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "chain"
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "dict-statement/-/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "chain"
+  }
+ },
+ "dict-statement/05/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "chain"
+  },
+  "root_checks": {
+   "chain": true
+  }
+ },
+ "dict-statement-snake/f8a011f38c0a4d15800617111f9edc7d/f8a011f38c0a4d15800617111f9edc7d": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": true,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "chain"
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "dict-statement-snake/f8a011f38c0a4d15800617111f9edc7d/01010101010101010101010101010101": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": false,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "chain"
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "dict-statement-snake/-/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "chain"
+  }
+ },
+ "dict-statement-snake/05/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "chain"
+  },
+  "root_checks": {
+   "chain": true
+  }
+ },
+ "no-statement/f8a011f38c0a4d15800617111f9edc7d/f8a011f38c0a4d15800617111f9edc7d": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": true,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false,
+   "source": "chain"
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "no-statement/f8a011f38c0a4d15800617111f9edc7d/01010101010101010101010101010101": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": false,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false,
+   "source": "chain"
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "no-statement/-/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false,
+   "source": "chain"
+  }
+ },
+ "no-statement/05/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": true,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false,
+   "source": "chain"
+  },
+  "root_checks": {
+   "chain": true
+  }
+ },
+ "fallback-found/f8a011f38c0a4d15800617111f9edc7d/f8a011f38c0a4d15800617111f9edc7d": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": true,
+  "metadata": {
+   "available": true,
+   "description": "Model",
+   "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
+   "algorithm_supported": true,
+   "root_certificates_present": true,
+   "source": "aaguid"
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "fallback-found/f8a011f38c0a4d15800617111f9edc7d/01010101010101010101010101010101": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": false,
+  "metadata": {
+   "available": true,
+   "description": "Model",
+   "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
+   "algorithm_supported": true,
+   "root_certificates_present": true,
+   "source": "aaguid"
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "fallback-found/-/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false
+  }
+ },
+ "fallback-found/05/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false
+  },
+  "root_checks": {
+   "chain": true
+  }
+ },
+ "fallback-missing/f8a011f38c0a4d15800617111f9edc7d/f8a011f38c0a4d15800617111f9edc7d": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": true,
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "fallback-missing/f8a011f38c0a4d15800617111f9edc7d/01010101010101010101010101010101": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": false,
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "fallback-missing/-/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false
+  }
+ },
+ "fallback-missing/05/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false
+  },
+  "root_checks": {
+   "chain": true
+  }
+ },
+ "fallback-raises/f8a011f38c0a4d15800617111f9edc7d/f8a011f38c0a4d15800617111f9edc7d": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": true,
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "fallback-raises/f8a011f38c0a4d15800617111f9edc7d/01010101010101010101010101010101": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": false,
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "fallback-raises/-/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false
+  }
+ },
+ "fallback-raises/05/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false
+  },
+  "root_checks": {
+   "chain": true
+  }
+ },
+ "fallback-global-verifier/f8a011f38c0a4d15800617111f9edc7d/f8a011f38c0a4d15800617111f9edc7d": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": true,
+  "metadata": {
+   "available": true,
+   "description": "Model",
+   "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
+   "algorithm_supported": true,
+   "root_certificates_present": true,
+   "source": "aaguid"
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "fallback-global-verifier/f8a011f38c0a4d15800617111f9edc7d/01010101010101010101010101010101": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": false,
+  "metadata": {
+   "available": true,
+   "description": "Model",
+   "aaguid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
+   "algorithm_supported": true,
+   "root_certificates_present": true,
+   "source": "aaguid"
+  },
+  "root_checks": {
+   "chain": true
+  },
+  "root_valid": true
+ },
+ "fallback-global-verifier/-/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false
+  }
+ },
+ "fallback-global-verifier/05/-": {
+  "authenticator_data": {
+   "algorithm": -7
+  },
+  "errors": [],
+  "warnings": [],
+  "aaguid_match": null,
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false
+  },
+  "root_checks": {
+   "chain": true
+  }
+ }
+}

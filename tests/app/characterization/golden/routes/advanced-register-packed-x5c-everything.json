@@ -1,0 +1,1423 @@
+{
+ "scenario": "advanced-register-packed-x5c-everything",
+ "requests": [
+  {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "1012"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "advanced_original_request": {
+       "publicKey": {
+        "attestation": "direct",
+        "authenticatorSelection": {
+         "authenticatorAttachment": "cross-platform",
+         "residentKey": "preferred"
+        },
+        "challenge": {
+         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
+        },
+        "excludeCredentials": [
+         {
+          "id": {
+           "$base64url": "RERERERERERERERERERERA"
+          },
+          "type": "public-key"
+         }
+        ],
+        "extensions": {
+         "credBlob": {
+          "$base64url": "YmxvYg"
+         },
+         "credProps": true,
+         "credentialProtectionPolicy": "userVerificationOptionalWithCredentialIDList",
+         "enforceCredentialProtectionPolicy": true,
+         "hmacCreateSecret": true,
+         "largeBlob": {
+          "support": "preferred"
+         },
+         "minPinLength": true,
+         "prf": {
+          "eval": {
+           "first": {
+            "$base64url": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc"
+           },
+           "second": "0a0b0c"
+          }
+         }
+        },
+        "hints": [
+         "security-key"
+        ],
+        "pubKeyCredParams": [
+         {
+          "alg": -7,
+          "type": "public-key"
+         },
+         {
+          "alg": -257,
+          "type": "public-key"
+         }
+        ],
+        "rp": {
+         "id": "localhost",
+         "name": "Demo server"
+        },
+        "user": {
+         "displayName": "A. User",
+         "id": "757365722d68616e646c65",
+         "name": "user@example.com"
+        }
+       }
+      },
+      "advanced_register_allowed_attachments": [
+       "cross-platform"
+      ],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "Demo server"
+      },
+      "advanced_state": {
+       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      }
+     }
+    }
+   ],
+   "bodySha256": "f1c555495139196c8a60e1f6ed7c49386ba48217a951652d9532cf748396b65b",
+   "body": {
+    "__session_state": {
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "user_verification": "preferred"
+    },
+    "publicKey": {
+     "attestation": "direct",
+     "authenticatorSelection": {
+      "authenticatorAttachment": "cross-platform",
+      "requireResidentKey": false,
+      "residentKey": "preferred",
+      "userVerification": "preferred"
+     },
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "excludeCredentials": [
+      {
+       "id": "RERERERERERERERERERERA",
+       "type": "public-key"
+      }
+     ],
+     "extensions": {
+      "credBlob": {
+       "$base64url": "YmxvYg"
+      },
+      "credProps": true,
+      "credentialProtectionPolicy": "userVerificationOptionalWithCredentialIDList",
+      "enforceCredentialProtectionPolicy": true,
+      "hmacCreateSecret": true,
+      "largeBlob": {
+       "support": "preferred"
+      },
+      "minPinLength": true,
+      "prf": {
+       "eval": {
+        "first": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc",
+        "second": "CgsM"
+       }
+      }
+     },
+     "pubKeyCredParams": [
+      {
+       "alg": -7,
+       "type": "public-key"
+      },
+      {
+       "alg": -257,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "Demo server"
+     },
+     "timeout": 90,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/advanced/register/complete",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "21812"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "fido.mds.session",
+     "attributes": [
+      "Max-Age=31536000",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": "VRJf72bDgaMlsA4lFvicETd02L9bX7zOxiqEty5JtjQ"
+    },
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "_permanent": true,
+      "fido.mds.session": "VRJf72bDgaMlsA4lFvicETd02L9bX7zOxiqEty5JtjQ",
+      "fido.mds.touched_at": 1790000000.0
+     }
+    }
+   ],
+   "bodySha256": "20c7b5ae009a21052429176204abd524a01022ebb2a83a739c8638effa2f3b65",
+   "body": {
+    "actualResidentKey": true,
+    "algo": "ES256 (ECDSA)",
+    "algorithmsUsed": [
+     -7,
+     -257
+    ],
+    "attestationAaguidMatch": true,
+    "attestationChecks": {
+     "aaguid_match": true,
+     "attestation_format": "packed",
+     "authenticator_data": {
+      "algorithm": -7,
+      "algorithm_allowed": true,
+      "attested_credential_data": true,
+      "cose_key_valid": true,
+      "counter": 0,
+      "credential_aaguid": "00112233445566778899aabbccddeeff",
+      "credential_id_length": 32,
+      "user_present": true,
+      "user_verification_required": false,
+      "user_verification_satisfied": true,
+      "user_verified": true
+     },
+     "client_data": {
+      "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+      "challenge_matches": true,
+      "cross_origin": false,
+      "cross_origin_ok": true,
+      "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+      "expected_origin": "http://localhost",
+      "expected_type": "webauthn.create",
+      "origin": "http://localhost",
+      "origin_valid": true,
+      "type": "webauthn.create",
+      "type_valid": true
+     },
+     "errors": [],
+     "hash_binding": {
+      "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+      "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAARIjNEVWZ3iJmqu8zd7v8AIB4XySczgVZplGWLhmHNmmPUjCYjTI0NWNEKaVZqiOMipQECAyYgASFYIOEwuXhv8VDNwRWr-lvZyR3c4huUqfFJxMdFv2eGhEsvIlggtDdm4OvKPMpcRN7orExKgJjWk6IogLbfU_fHAyrN0ud2ga9-bqE8WACZh9UWoDs--A5Nr0EuvCdAQVrZliQrVw"
+     },
+     "metadata": {
+      "aaguid": null,
+      "algorithm_supported": null,
+      "available": false,
+      "description": null,
+      "root_certificates_present": false
+     },
+     "pqc_signature_valid": null,
+     "root_checks": {
+      "chain": null,
+      "fido_mds": null,
+      "trusted_ca": false
+     },
+     "root_valid": null,
+     "rp_id_hash_valid": true,
+     "signature_valid": true,
+     "warnings": [
+      "metadata_not_available"
+     ]
+    },
+    "attestationErrors": [],
+    "attestationFormat": "packed",
+    "attestationRootValid": null,
+    "attestationRpIdHashValid": true,
+    "attestationSignatureValid": true,
+    "attestationSummary": {
+     "aaguidMatch": true,
+     "errors": [],
+     "metadata": {
+      "aaguid": null,
+      "algorithm_supported": null,
+      "available": false,
+      "description": null,
+      "root_certificates_present": false
+     },
+     "rootValid": null,
+     "rpIdHashValid": true,
+     "signatureValid": true,
+     "verified": true,
+     "warnings": [
+      "metadata_not_available"
+     ]
+    },
+    "attestationVerified": true,
+    "challengeSource": "server-session",
+    "challengeStatus": "fresh",
+    "credProtectUsed": "userVerificationOptionalWithCredentialIDList",
+    "enforceCredProtectUsed": true,
+    "excludeCredentialsUsed": true,
+    "hintsUsed": [
+     "security-key"
+    ],
+    "relyingParty": {
+     "aaguid": {
+      "guid": "00112233-4455-6677-8899-aabbccddeeff",
+      "raw": "00112233445566778899aabbccddeeff"
+     },
+     "attestationCertificate": {
+      "algorithmInfo": "ED25519_SHA512",
+      "derBase64": "MIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hhcmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxqMzMDEwDAYDVR0TAQH/BAIwADAhBgsrBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7/MAUGAytlcANBAJfvyLEWLdbGJ62qXdTTLZgz1xp0LYWpm/j8W5/u3PBSl1nUVLoQPfZS+6B+xESrUzwWA2mrVRGy2Ni8M39znAc=",
+      "extensions": [
+       {
+        "critical": true,
+        "displayHeader": "X509v3 Basic Constraints",
+        "friendlyName": "X509v3 Basic Constraints",
+        "includeOidInHeader": false,
+        "name": "X509v3 Basic Constraints",
+        "oid": "2.5.29.19",
+        "value": {
+         "CA": "FALSE"
+        }
+       },
+       {
+        "critical": false,
+        "displayHeader": null,
+        "friendlyName": "FIDO: Device AAGUID",
+        "includeOidInHeader": true,
+        "name": "FIDO: Device AAGUID",
+        "oid": "1.3.6.1.4.1.45724.1.1.4",
+        "value": {
+         "AAGUID": "00112233445566778899aabbccddeeff"
+        }
+       }
+      ],
+      "fingerprints": {
+       "md5": "ed8357b048fe5552671dd940361ea1ba",
+       "sha1": "eee42e39bd272a7b08150a2873ff48312168feba",
+       "sha256": "e5d98c650723833de489255a078164b1e0ab91fb27ae62011ca6a99b8ca6c521"
+      },
+      "issuer": "CN=Characterization Test CA",
+      "pem": "-----BEGIN CERTIFICATE-----\nMIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6\nYXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFow\nfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEi\nMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hh\ncmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZI\nzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcO\nxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxqMzMDEwDAYDVR0TAQH/BAIwADAhBgsr\nBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7/MAUGAytlcANBAJfvyLEWLdbG\nJ62qXdTTLZgz1xp0LYWpm/j8W5/u3PBSl1nUVLoQPfZS+6B+xESrUzwWA2mrVRGy\n2Ni8M39znAc=\n-----END CERTIFICATE-----",
+      "publicKeyInfo": {
+       "algorithm": {
+        "name": "ECDSA",
+        "namedCurve": "secp256r1"
+       },
+       "curve": "secp256r1",
+       "keySize": 256,
+       "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxg==",
+       "type": "ECC",
+       "uncompressedPoint": "04:64:1a:28:f0:44:a1:9d:8b:40:83:b1:dc:9c:d0:2b:b0:a9:af:ba:77:45:e6:77:53:25:ed:3a:39:7d:b1:88:2f:33:4f:50:76:15:07:0e:c7:29:31:15:70:cf:4b:32:9d:e4:44:7a:d0:b9:c2:48:bf:f7:06:b1:ae:5b:d7:21:c6"
+      },
+      "serialNumber": {
+       "decimal": "7855",
+       "hex": "0x1eaf"
+      },
+      "signature": {
+       "algorithm": "ed25519",
+       "colon": "97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98:33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52:97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53:3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07",
+       "details": null,
+       "hash": null,
+       "hex": "97efc8b1162dd6c627adaa5dd4d32d9833d71a742d85a99bf8fc5b9feedcf0529759d454ba103df652fba07ec444ab533c160369ab5511b2d8d8bc337f739c07",
+       "lines": [
+        "97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98",
+        "33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52",
+        "97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53",
+        "3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07"
+       ],
+       "oid": "1.3.101.112"
+      },
+      "signatureAlgorithm": "ed25519",
+      "signatureAlgorithmDetails": null,
+      "signatureAlgorithmOid": "1.3.101.112",
+      "subject": "CN=Characterization Attestation Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE",
+      "subjectCommonNames": [
+       "Characterization Attestation Leaf"
+      ],
+      "summary": "Version: 3 (0x2)\nCertificate Serial Number: 7855 (0x1eaf)\nSignature Algorithm: ed25519\nIssuer: CN=Characterization Test CA\n\nValidity:\n    Not Before: 2020-01-01T00:00:00+00:00\n    Not After: 2099-12-31T00:00:00+00:00\n\nSubject: CN=Characterization Attestation Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE\n\nSubject Public Key Info:\n    Type: ECC\n    Public-Key: (256 bit)\n    pub:\n        04:64:1a:28:f0:44:a1:9d:8b:40:83:b1:dc:9c:d0:2b\n        b0:a9:af:ba:77:45:e6:77:53:25:ed:3a:39:7d:b1:88\n        2f:33:4f:50:76:15:07:0e:c7:29:31:15:70:cf:4b:32\n        9d:e4:44:7a:d0:b9:c2:48:bf:f7:06:b1:ae:5b:d7:21\n        c6\n    Curve: secp256r1\n\nX509v3 extensions:\n    X509v3 Basic Constraints [critical]:\n        CA: FALSE\n    1.3.6.1.4.1.45724.1.1.4 (FIDO: Device AAGUID):\n        AAGUID: 00112233445566778899aabbccddeeff\n\nSignature Algorithm: ed25519\n    97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98\n    33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52\n    97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53\n    3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07\n\nFingerprint:\n    MD5:\n        ed:83:57:b0:48:fe:55:52:67:1d:d9:40:36:1e:a1:ba\n    SHA1:\n        ee:e4:2e:39:bd:27:2a:7b:08:15:0a:28:73:ff:48:31\n        21:68:fe:ba\n    SHA256:\n        e5:d9:8c:65:07:23:83:3d:e4:89:25:5a:07:81:64:b1\n        e0:ab:91:fb:27:ae:62:01:1c:a6:a9:9b:8c:a6:c5:21",
+      "validity": {
+       "notAfter": "2099-12-31T00:00:00+00:00",
+       "notBefore": "2020-01-01T00:00:00+00:00"
+      },
+      "version": {
+       "display": "3 (0x2)",
+       "hex": "0x2",
+       "numeric": 3
+      }
+     },
+     "attestationCertificates": [
+      {
+       "algorithmInfo": "ED25519_SHA512",
+       "derBase64": "MIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hhcmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxqMzMDEwDAYDVR0TAQH/BAIwADAhBgsrBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7/MAUGAytlcANBAJfvyLEWLdbGJ62qXdTTLZgz1xp0LYWpm/j8W5/u3PBSl1nUVLoQPfZS+6B+xESrUzwWA2mrVRGy2Ni8M39znAc=",
+       "extensions": [
+        {
+         "critical": true,
+         "displayHeader": "X509v3 Basic Constraints",
+         "friendlyName": "X509v3 Basic Constraints",
+         "includeOidInHeader": false,
+         "name": "X509v3 Basic Constraints",
+         "oid": "2.5.29.19",
+         "value": {
+          "CA": "FALSE"
+         }
+        },
+        {
+         "critical": false,
+         "displayHeader": null,
+         "friendlyName": "FIDO: Device AAGUID",
+         "includeOidInHeader": true,
+         "name": "FIDO: Device AAGUID",
+         "oid": "1.3.6.1.4.1.45724.1.1.4",
+         "value": {
+          "AAGUID": "00112233445566778899aabbccddeeff"
+         }
+        }
+       ],
+       "fingerprints": {
+        "md5": "ed8357b048fe5552671dd940361ea1ba",
+        "sha1": "eee42e39bd272a7b08150a2873ff48312168feba",
+        "sha256": "e5d98c650723833de489255a078164b1e0ab91fb27ae62011ca6a99b8ca6c521"
+       },
+       "issuer": "CN=Characterization Test CA",
+       "pem": "-----BEGIN CERTIFICATE-----\nMIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6\nYXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFow\nfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEi\nMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hh\ncmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZI\nzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcO\nxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxqMzMDEwDAYDVR0TAQH/BAIwADAhBgsr\nBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7/MAUGAytlcANBAJfvyLEWLdbG\nJ62qXdTTLZgz1xp0LYWpm/j8W5/u3PBSl1nUVLoQPfZS+6B+xESrUzwWA2mrVRGy\n2Ni8M39znAc=\n-----END CERTIFICATE-----",
+       "publicKeyInfo": {
+        "algorithm": {
+         "name": "ECDSA",
+         "namedCurve": "secp256r1"
+        },
+        "curve": "secp256r1",
+        "keySize": 256,
+        "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxg==",
+        "type": "ECC",
+        "uncompressedPoint": "04:64:1a:28:f0:44:a1:9d:8b:40:83:b1:dc:9c:d0:2b:b0:a9:af:ba:77:45:e6:77:53:25:ed:3a:39:7d:b1:88:2f:33:4f:50:76:15:07:0e:c7:29:31:15:70:cf:4b:32:9d:e4:44:7a:d0:b9:c2:48:bf:f7:06:b1:ae:5b:d7:21:c6"
+       },
+       "serialNumber": {
+        "decimal": "7855",
+        "hex": "0x1eaf"
+       },
+       "signature": {
+        "algorithm": "ed25519",
+        "colon": "97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98:33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52:97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53:3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07",
+        "details": null,
+        "hash": null,
+        "hex": "97efc8b1162dd6c627adaa5dd4d32d9833d71a742d85a99bf8fc5b9feedcf0529759d454ba103df652fba07ec444ab533c160369ab5511b2d8d8bc337f739c07",
+        "lines": [
+         "97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98",
+         "33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52",
+         "97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53",
+         "3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07"
+        ],
+        "oid": "1.3.101.112"
+       },
+       "signatureAlgorithm": "ed25519",
+       "signatureAlgorithmDetails": null,
+       "signatureAlgorithmOid": "1.3.101.112",
+       "subject": "CN=Characterization Attestation Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE",
+       "subjectCommonNames": [
+        "Characterization Attestation Leaf"
+       ],
+       "summary": "Version: 3 (0x2)\nCertificate Serial Number: 7855 (0x1eaf)\nSignature Algorithm: ed25519\nIssuer: CN=Characterization Test CA\n\nValidity:\n    Not Before: 2020-01-01T00:00:00+00:00\n    Not After: 2099-12-31T00:00:00+00:00\n\nSubject: CN=Characterization Attestation Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE\n\nSubject Public Key Info:\n    Type: ECC\n    Public-Key: (256 bit)\n    pub:\n        04:64:1a:28:f0:44:a1:9d:8b:40:83:b1:dc:9c:d0:2b\n        b0:a9:af:ba:77:45:e6:77:53:25:ed:3a:39:7d:b1:88\n        2f:33:4f:50:76:15:07:0e:c7:29:31:15:70:cf:4b:32\n        9d:e4:44:7a:d0:b9:c2:48:bf:f7:06:b1:ae:5b:d7:21\n        c6\n    Curve: secp256r1\n\nX509v3 extensions:\n    X509v3 Basic Constraints [critical]:\n        CA: FALSE\n    1.3.6.1.4.1.45724.1.1.4 (FIDO: Device AAGUID):\n        AAGUID: 00112233445566778899aabbccddeeff\n\nSignature Algorithm: ed25519\n    97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98\n    33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52\n    97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53\n    3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07\n\nFingerprint:\n    MD5:\n        ed:83:57:b0:48:fe:55:52:67:1d:d9:40:36:1e:a1:ba\n    SHA1:\n        ee:e4:2e:39:bd:27:2a:7b:08:15:0a:28:73:ff:48:31\n        21:68:fe:ba\n    SHA256:\n        e5:d9:8c:65:07:23:83:3d:e4:89:25:5a:07:81:64:b1\n        e0:ab:91:fb:27:ae:62:01:1c:a6:a9:9b:8c:a6:c5:21",
+       "validity": {
+        "notAfter": "2099-12-31T00:00:00+00:00",
+        "notBefore": "2020-01-01T00:00:00+00:00"
+       },
+       "version": {
+        "display": "3 (0x2)",
+        "hex": "0x2",
+        "numeric": 3
+       }
+      }
+     ],
+     "attestationFmt": "packed",
+     "attestationObject": "o2NmbXRmcGFja2VkZ2F0dFN0bXSjY2FsZyZjc2lnWEcwRQIhANkdUolqxDqC9Z8RVxRtyuxy2S8ywkjA6cgXXeMbVbuzAiBoSY7j9AGyBvRiEdBF0CHXJGXv-O5Ctjq3DRKwCdJA7mN4NWOBWQG4MIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hhcmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL_3BrGuW9chxqMzMDEwDAYDVR0TAQH_BAIwADAhBgsrBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7_MAUGAytlcANBAJfvyLEWLdbGJ62qXdTTLZgz1xp0LYWpm_j8W5_u3PBSl1nUVLoQPfZS-6B-xESrUzwWA2mrVRGy2Ni8M39znAdoYXV0aERhdGFYpEmWDeWIDoxodDQXD2R2YFuP5K65ooYyx5lc87qDHZdjRQAAAAAAESIzRFVmd4iZqrvM3e7_ACAeF8knM4FWaZRli4ZhzZpj1IwmI0yNDVjRCmlWaojjIqUBAgMmIAEhWCDhMLl4b_FQzcEVq_pb2ckd3OIblKnxScTHRb9nhoRLLyJYILQ3ZuDryjzKXETe6KxMSoCY1pOiKIC231P3xwMqzdLn",
+     "authenticatorDataHash": "29b306e7891724b1258da352e87b4eb123f31e1e171625e68e039cdeedac9bdd",
+     "createdAt": "2026-09-21T14:13:20+00:00",
+     "credentialId": "1e17c9273381566994658b8661cd9a63d48c26234c8d0d58d10a69566a88e322",
+     "credentialIdBase64": "HhfJJzOBVmmUZYuGYc2aY9SMJiNMjQ1Y0QppVmqI4yI=",
+     "credentialIdBase64Url": "HhfJJzOBVmmUZYuGYc2aY9SMJiNMjQ1Y0QppVmqI4yI",
+     "device": {
+      "name": "Unknown device",
+      "type": "unknown"
+     },
+     "largeBlob": true,
+     "publicKeyAlgorithm": -7,
+     "registrationData": {
+      "attestationChecks": {
+       "aaguid_match": true,
+       "attestation_format": "packed",
+       "authenticator_data": {
+        "algorithm": -7,
+        "algorithm_allowed": true,
+        "attested_credential_data": true,
+        "cose_key_valid": true,
+        "counter": 0,
+        "credential_aaguid": "00112233445566778899aabbccddeeff",
+        "credential_id_length": 32,
+        "user_present": true,
+        "user_verification_required": false,
+        "user_verification_satisfied": true,
+        "user_verified": true
+       },
+       "client_data": {
+        "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+        "challenge_matches": true,
+        "cross_origin": false,
+        "cross_origin_ok": true,
+        "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+        "expected_origin": "http://localhost",
+        "expected_type": "webauthn.create",
+        "origin": "http://localhost",
+        "origin_valid": true,
+        "type": "webauthn.create",
+        "type_valid": true
+       },
+       "errors": [],
+       "hash_binding": {
+        "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+        "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAARIjNEVWZ3iJmqu8zd7v8AIB4XySczgVZplGWLhmHNmmPUjCYjTI0NWNEKaVZqiOMipQECAyYgASFYIOEwuXhv8VDNwRWr-lvZyR3c4huUqfFJxMdFv2eGhEsvIlggtDdm4OvKPMpcRN7orExKgJjWk6IogLbfU_fHAyrN0ud2ga9-bqE8WACZh9UWoDs--A5Nr0EuvCdAQVrZliQrVw"
+       },
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "description": null,
+        "root_certificates_present": false
+       },
+       "pqc_signature_valid": null,
+       "root_checks": {
+        "chain": null,
+        "fido_mds": null,
+        "trusted_ca": false
+       },
+       "root_valid": null,
+       "rp_id_hash_valid": true,
+       "signature_valid": true,
+       "warnings": [
+        "metadata_not_available"
+       ]
+      },
+      "attestationSummary": {
+       "aaguidMatch": true,
+       "errors": [],
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "description": null,
+        "root_certificates_present": false
+       },
+       "rootValid": null,
+       "rpIdHashValid": true,
+       "signatureValid": true,
+       "verified": true,
+       "warnings": [
+        "metadata_not_available"
+       ]
+      },
+      "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763450000000000112233445566778899aabbccddeeff00201e17c9273381566994658b8661cd9a63d48c26234c8d0d58d10a69566a88e322a5010203262001215820e130b9786ff150cdc115abfa5bd9c91ddce21b94a9f149c4c745bf6786844b2f225820b43766e0ebca3cca5c44dee8ac4c4a8098d693a22880b6df53f7c7032acdd2e7",
+      "authenticatorDataHash": "29b306e7891724b1258da352e87b4eb123f31e1e171625e68e039cdeedac9bdd",
+      "clientExtensionResults": {
+       "credProps": {
+        "rk": false
+       },
+       "largeBlob": {
+        "written": true
+       },
+       "minPinLength": 6,
+       "prf": {
+        "enabled": true
+       }
+      },
+      "flags": {
+       "AT": true,
+       "BE": false,
+       "BS": false,
+       "ED": false,
+       "UP": true,
+       "UV": true
+      },
+      "signatureCounter": 0
+     },
+     "residentKey": false,
+     "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+     "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+     "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+     "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+     "rpIdHashMatch": true,
+     "userHandle": {
+      "base64": "dXNlci1oYW5kbGU=",
+      "base64url": "dXNlci1oYW5kbGU",
+      "hex": "757365722d68616e646c65"
+     }
+    },
+    "status": "OK",
+    "storedCredential": {
+     "aaguid": "ABEiM0RVZneImaq7zN3u_w",
+     "aaguidGuid": "00112233-4455-6677-8899-aabbccddeeff",
+     "aaguidHex": "00112233445566778899aabbccddeeff",
+     "artifactVersion": 1,
+     "attestationFormat": "packed",
+     "authenticatorAttachment": "cross-platform",
+     "clientExtensionOutputs": {
+      "credProps": {
+       "rk": false
+      },
+      "largeBlob": {
+       "written": true
+      },
+      "minPinLength": 6,
+      "prf": {
+       "enabled": true
+      }
+     },
+     "createdAt": 1790000000.0,
+     "credentialId": "HhfJJzOBVmmUZYuGYc2aY9SMJiNMjQ1Y0QppVmqI4yI=",
+     "credentialIdBase64Url": "HhfJJzOBVmmUZYuGYc2aY9SMJiNMjQ1Y0QppVmqI4yI",
+     "credentialIdHex": "1e17c9273381566994658b8661cd9a63d48c26234c8d0d58d10a69566a88e322",
+     "displayName": "A. User",
+     "hasServerArtifact": true,
+     "largeBlob": true,
+     "localStorageId": "HhfJJzOBVmmUZYuGYc2aY9SM::1a0c4506c00::02f5575ac1c848f2bfd09f36c6fe1da5",
+     "properties": {
+      "aaguid": "00112233445566778899aabbccddeeff",
+      "aaguidGuid": "00112233-4455-6677-8899-aabbccddeeff",
+      "aaguidHex": "00112233445566778899aabbccddeeff",
+      "attestationAaguidMatch": true,
+      "attestationRootValid": null,
+      "attestationRpIdHashValid": true,
+      "attestationSignatureValid": true,
+      "attestationSummary": {
+       "aaguidMatch": true,
+       "errors": [],
+       "metadata": {
+        "aaguid": null,
+        "algorithm_supported": null,
+        "available": false,
+        "description": null,
+        "root_certificates_present": false
+       },
+       "rootValid": null,
+       "rpIdHashValid": true,
+       "signatureValid": true,
+       "verified": true,
+       "warnings": [
+        "metadata_not_available"
+       ]
+      },
+      "authenticatorAttachment": "cross-platform",
+      "authenticatorDataHash": "29b306e7891724b1258da352e87b4eb123f31e1e171625e68e039cdeedac9bdd",
+      "credentialIdLength": 32,
+      "excludeCredentialsSentCount": 1,
+      "excludeCredentialsUsed": false,
+      "fakeCredentialIdLengthRequested": null,
+      "hintsSent": [
+       "security-key"
+      ],
+      "largeBlobClientOutput": {
+       "written": true
+      },
+      "largeBlobRequested": {
+       "support": "preferred"
+      },
+      "minPinLength": 6,
+      "residentKey": false,
+      "residentKeyRequested": "preferred",
+      "residentKeyRequired": false,
+      "resolvedAuthenticatorAttachments": [
+       "cross-platform"
+      ],
+      "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+      "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
+     },
+     "publicKey": "pQECAyYgASFYIOEwuXhv8VDNwRWr+lvZyR3c4huUqfFJxMdFv2eGhEsvIlggtDdm4OvKPMpcRN7orExKgJjWk6IogLbfU/fHAyrN0uc=",
+     "publicKeyAlgorithm": -7,
+     "publicKeyBase64": "pQECAyYgASFYIOEwuXhv8VDNwRWr+lvZyR3c4huUqfFJxMdFv2eGhEsvIlggtDdm4OvKPMpcRN7orExKgJjWk6IogLbfU/fHAyrN0uc=",
+     "publicKeyBase64Url": "pQECAyYgASFYIOEwuXhv8VDNwRWr-lvZyR3c4huUqfFJxMdFv2eGhEsvIlggtDdm4OvKPMpcRN7orExKgJjWk6IogLbfU_fHAyrN0uc",
+     "publicKeyCose": {
+      "-1": 1,
+      "-2": "4TC5eG/xUM3BFav6W9nJHdziG5Sp8UnEx0W/Z4aESy8=",
+      "-3": "tDdm4OvKPMpcRN7orExKgJjWk6IogLbfU/fHAyrN0uc=",
+      "1": 2,
+      "3": -7
+     },
+     "publicKeyType": 2,
+     "relyingParty": {
+      "aaguid": {
+       "guid": "00112233-4455-6677-8899-aabbccddeeff",
+       "raw": "00112233445566778899aabbccddeeff"
+      },
+      "attestationFmt": "packed",
+      "attestationObject": "o2NmbXRmcGFja2VkZ2F0dFN0bXSjY2FsZyZjc2lnWEcwRQIhANkdUolqxDqC9Z8RVxRtyuxy2S8ywkjA6cgXXeMbVbuzAiBoSY7j9AGyBvRiEdBF0CHXJGXv-O5Ctjq3DRKwCdJA7mN4NWOBWQG4MIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hhcmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL_3BrGuW9chxqMzMDEwDAYDVR0TAQH_BAIwADAhBgsrBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7_MAUGAytlcANBAJfvyLEWLdbGJ62qXdTTLZgz1xp0LYWpm_j8W5_u3PBSl1nUVLoQPfZS-6B-xESrUzwWA2mrVRGy2Ni8M39znAdoYXV0aERhdGFYpEmWDeWIDoxodDQXD2R2YFuP5K65ooYyx5lc87qDHZdjRQAAAAAAESIzRFVmd4iZqrvM3e7_ACAeF8knM4FWaZRli4ZhzZpj1IwmI0yNDVjRCmlWaojjIqUBAgMmIAEhWCDhMLl4b_FQzcEVq_pb2ckd3OIblKnxScTHRb9nhoRLLyJYILQ3ZuDryjzKXETe6KxMSoCY1pOiKIC231P3xwMqzdLn",
+      "authenticatorDataHash": "29b306e7891724b1258da352e87b4eb123f31e1e171625e68e039cdeedac9bdd",
+      "createdAt": "2026-09-21T14:13:20+00:00",
+      "credentialId": "1e17c9273381566994658b8661cd9a63d48c26234c8d0d58d10a69566a88e322",
+      "credentialIdBase64": "HhfJJzOBVmmUZYuGYc2aY9SMJiNMjQ1Y0QppVmqI4yI=",
+      "credentialIdBase64Url": "HhfJJzOBVmmUZYuGYc2aY9SMJiNMjQ1Y0QppVmqI4yI",
+      "device": {
+       "name": "Unknown device",
+       "type": "unknown"
+      },
+      "largeBlob": true,
+      "publicKeyAlgorithm": -7,
+      "residentKey": false,
+      "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+      "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+      "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+      "rpIdHashMatch": true,
+      "userHandle": {
+       "base64": "dXNlci1oYW5kbGU=",
+       "base64url": "dXNlci1oYW5kbGU",
+       "hex": "757365722d68616e646c65"
+      }
+     },
+     "residentKey": false,
+     "signCount": 0,
+     "storageId": "HhfJJzOBVmmUZYuGYc2aY9SM::1a0c4506c00::02f5575ac1c848f2bfd09f36c6fe1da5",
+     "type": "advanced",
+     "userHandle": "dXNlci1oYW5kbGU=",
+     "userHandleBase64": "dXNlci1oYW5kbGU=",
+     "userHandleBase64Url": "dXNlci1oYW5kbGU",
+     "userHandleHex": "757365722d68616e646c65",
+     "userName": "user@example.com"
+    },
+    "warnings": [
+     "metadata_not_available"
+    ]
+   },
+   "stored": [
+    {
+     "file": "artifacts/226feaa5be0796b1c34f27fe5a7101b8fdbbd7e38874fdd5f6d9a257f0a0a268.json",
+     "sha256": "968931ff67764dc871d0bdcb311b8500ae7afcaa888edd1cd7907ae9a973aabe",
+     "content": {
+      "storageId": "HhfJJzOBVmmUZYuGYc2aY9SM::1a0c4506c00::02f5575ac1c848f2bfd09f36c6fe1da5",
+      "createdAt": 1790000000.0,
+      "updatedAt": 1790000000.0,
+      "payload": {
+       "schemaVersion": 1,
+       "storedCredential": {
+        "type": "advanced",
+        "userName": "user@example.com",
+        "displayName": "A. User",
+        "residentKey": false,
+        "largeBlob": true,
+        "authenticatorAttachment": "cross-platform",
+        "credentialId": "HhfJJzOBVmmUZYuGYc2aY9SMJiNMjQ1Y0QppVmqI4yI=",
+        "credentialIdBase64Url": "HhfJJzOBVmmUZYuGYc2aY9SMJiNMjQ1Y0QppVmqI4yI",
+        "credentialIdHex": "1e17c9273381566994658b8661cd9a63d48c26234c8d0d58d10a69566a88e322",
+        "aaguid": "ABEiM0RVZneImaq7zN3u_w",
+        "aaguidHex": "00112233445566778899aabbccddeeff",
+        "aaguidGuid": "00112233-4455-6677-8899-aabbccddeeff",
+        "publicKeyAlgorithm": -7,
+        "publicKey": "pQECAyYgASFYIOEwuXhv8VDNwRWr+lvZyR3c4huUqfFJxMdFv2eGhEsvIlggtDdm4OvKPMpcRN7orExKgJjWk6IogLbfU/fHAyrN0uc=",
+        "publicKeyBase64": "pQECAyYgASFYIOEwuXhv8VDNwRWr+lvZyR3c4huUqfFJxMdFv2eGhEsvIlggtDdm4OvKPMpcRN7orExKgJjWk6IogLbfU/fHAyrN0uc=",
+        "publicKeyBase64Url": "pQECAyYgASFYIOEwuXhv8VDNwRWr-lvZyR3c4huUqfFJxMdFv2eGhEsvIlggtDdm4OvKPMpcRN7orExKgJjWk6IogLbfU_fHAyrN0uc",
+        "publicKeyCose": {
+         "1": 2,
+         "3": -7,
+         "-1": 1,
+         "-2": "4TC5eG/xUM3BFav6W9nJHdziG5Sp8UnEx0W/Z4aESy8=",
+         "-3": "tDdm4OvKPMpcRN7orExKgJjWk6IogLbfU/fHAyrN0uc="
+        },
+        "publicKeyType": 2,
+        "signCount": 0,
+        "createdAt": 1790000000.0,
+        "clientExtensionOutputs": {
+         "credProps": {
+          "rk": false
+         },
+         "largeBlob": {
+          "written": true
+         },
+         "minPinLength": 6,
+         "prf": {
+          "enabled": true
+         }
+        },
+        "attestationFormat": "packed",
+        "attestationStatement": {
+         "alg": -7,
+         "sig": "MEUCIQDZHVKJasQ6gvWfEVcUbcrsctkvMsJIwOnIF13jG1W7swIgaEmO4/QBsgb0YhHQRdAh1yRl7/juQrY6tw0SsAnSQO4=",
+         "x5c": [
+          "MIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hhcmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxqMzMDEwDAYDVR0TAQH/BAIwADAhBgsrBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7/MAUGAytlcANBAJfvyLEWLdbGJ62qXdTTLZgz1xp0LYWpm/j8W5/u3PBSl1nUVLoQPfZS+6B+xESrUzwWA2mrVRGy2Ni8M39znAc="
+         ]
+        },
+        "attestationObject": "o2NmbXRmcGFja2VkZ2F0dFN0bXSjY2FsZyZjc2lnWEcwRQIhANkdUolqxDqC9Z8RVxRtyuxy2S8ywkjA6cgXXeMbVbuzAiBoSY7j9AGyBvRiEdBF0CHXJGXv-O5Ctjq3DRKwCdJA7mN4NWOBWQG4MIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hhcmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL_3BrGuW9chxqMzMDEwDAYDVR0TAQH_BAIwADAhBgsrBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7_MAUGAytlcANBAJfvyLEWLdbGJ62qXdTTLZgz1xp0LYWpm_j8W5_u3PBSl1nUVLoQPfZS-6B-xESrUzwWA2mrVRGy2Ni8M39znAdoYXV0aERhdGFYpEmWDeWIDoxodDQXD2R2YFuP5K65ooYyx5lc87qDHZdjRQAAAAAAESIzRFVmd4iZqrvM3e7_ACAeF8knM4FWaZRli4ZhzZpj1IwmI0yNDVjRCmlWaojjIqUBAgMmIAEhWCDhMLl4b_FQzcEVq_pb2ckd3OIblKnxScTHRb9nhoRLLyJYILQ3ZuDryjzKXETe6KxMSoCY1pOiKIC231P3xwMqzdLn",
+        "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763450000000000112233445566778899aabbccddeeff00201e17c9273381566994658b8661cd9a63d48c26234c8d0d58d10a69566a88e322a5010203262001215820e130b9786ff150cdc115abfa5bd9c91ddce21b94a9f149c4c745bf6786844b2f225820b43766e0ebca3cca5c44dee8ac4c4a8098d693a22880b6df53f7c7032acdd2e7",
+        "authenticatorDataHash": "29b306e7891724b1258da352e87b4eb123f31e1e171625e68e039cdeedac9bdd",
+        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+        "relyingParty": {
+         "aaguid": {
+          "raw": "00112233445566778899aabbccddeeff",
+          "guid": "00112233-4455-6677-8899-aabbccddeeff"
+         },
+         "attestationFmt": "packed",
+         "attestationObject": "o2NmbXRmcGFja2VkZ2F0dFN0bXSjY2FsZyZjc2lnWEcwRQIhANkdUolqxDqC9Z8RVxRtyuxy2S8ywkjA6cgXXeMbVbuzAiBoSY7j9AGyBvRiEdBF0CHXJGXv-O5Ctjq3DRKwCdJA7mN4NWOBWQG4MIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hhcmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL_3BrGuW9chxqMzMDEwDAYDVR0TAQH_BAIwADAhBgsrBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7_MAUGAytlcANBAJfvyLEWLdbGJ62qXdTTLZgz1xp0LYWpm_j8W5_u3PBSl1nUVLoQPfZS-6B-xESrUzwWA2mrVRGy2Ni8M39znAdoYXV0aERhdGFYpEmWDeWIDoxodDQXD2R2YFuP5K65ooYyx5lc87qDHZdjRQAAAAAAESIzRFVmd4iZqrvM3e7_ACAeF8knM4FWaZRli4ZhzZpj1IwmI0yNDVjRCmlWaojjIqUBAgMmIAEhWCDhMLl4b_FQzcEVq_pb2ckd3OIblKnxScTHRb9nhoRLLyJYILQ3ZuDryjzKXETe6KxMSoCY1pOiKIC231P3xwMqzdLn",
+         "createdAt": "2026-09-21T14:13:20+00:00",
+         "credentialId": "1e17c9273381566994658b8661cd9a63d48c26234c8d0d58d10a69566a88e322",
+         "credentialIdBase64": "HhfJJzOBVmmUZYuGYc2aY9SMJiNMjQ1Y0QppVmqI4yI=",
+         "credentialIdBase64Url": "HhfJJzOBVmmUZYuGYc2aY9SMJiNMjQ1Y0QppVmqI4yI",
+         "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "rpIdHashMatch": true,
+         "authenticatorDataHash": "29b306e7891724b1258da352e87b4eb123f31e1e171625e68e039cdeedac9bdd",
+         "device": {
+          "name": "Unknown device",
+          "type": "unknown"
+         },
+         "largeBlob": true,
+         "publicKeyAlgorithm": -7,
+         "registrationData": {
+          "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763450000000000112233445566778899aabbccddeeff00201e17c9273381566994658b8661cd9a63d48c26234c8d0d58d10a69566a88e322a5010203262001215820e130b9786ff150cdc115abfa5bd9c91ddce21b94a9f149c4c745bf6786844b2f225820b43766e0ebca3cca5c44dee8ac4c4a8098d693a22880b6df53f7c7032acdd2e7",
+          "authenticatorDataHash": "29b306e7891724b1258da352e87b4eb123f31e1e171625e68e039cdeedac9bdd",
+          "clientExtensionResults": {
+           "credProps": {
+            "rk": false
+           },
+           "largeBlob": {
+            "written": true
+           },
+           "minPinLength": 6,
+           "prf": {
+            "enabled": true
+           }
+          },
+          "flags": {
+           "AT": true,
+           "BE": false,
+           "BS": false,
+           "ED": false,
+           "UP": true,
+           "UV": true
+          },
+          "signatureCounter": 0,
+          "attestationChecks": {
+           "attestation_format": "packed",
+           "signature_valid": true,
+           "pqc_signature_valid": null,
+           "root_valid": null,
+           "rp_id_hash_valid": true,
+           "aaguid_match": true,
+           "client_data": {
+            "type": "webauthn.create",
+            "expected_type": "webauthn.create",
+            "type_valid": true,
+            "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+            "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+            "challenge_matches": true,
+            "origin": "http://localhost",
+            "expected_origin": "http://localhost",
+            "origin_valid": true,
+            "cross_origin": false,
+            "cross_origin_ok": true
+           },
+           "authenticator_data": {
+            "user_present": true,
+            "user_verified": true,
+            "user_verification_required": false,
+            "user_verification_satisfied": true,
+            "attested_credential_data": true,
+            "counter": 0,
+            "credential_id_length": 32,
+            "credential_aaguid": "00112233445566778899aabbccddeeff",
+            "algorithm": -7,
+            "algorithm_allowed": true,
+            "cose_key_valid": true
+           },
+           "metadata": {
+            "available": false,
+            "description": null,
+            "aaguid": null,
+            "algorithm_supported": null,
+            "root_certificates_present": false
+           },
+           "hash_binding": {
+            "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+            "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAARIjNEVWZ3iJmqu8zd7v8AIB4XySczgVZplGWLhmHNmmPUjCYjTI0NWNEKaVZqiOMipQECAyYgASFYIOEwuXhv8VDNwRWr-lvZyR3c4huUqfFJxMdFv2eGhEsvIlggtDdm4OvKPMpcRN7orExKgJjWk6IogLbfU_fHAyrN0ud2ga9-bqE8WACZh9UWoDs--A5Nr0EuvCdAQVrZliQrVw"
+           },
+           "errors": [],
+           "warnings": [
+            "metadata_not_available"
+           ],
+           "root_checks": {
+            "trusted_ca": false,
+            "chain": null,
+            "fido_mds": null
+           }
+          },
+          "attestationSummary": {
+           "signatureValid": true,
+           "rootValid": null,
+           "rpIdHashValid": true,
+           "aaguidMatch": true,
+           "errors": [],
+           "verified": true,
+           "metadata": {
+            "available": false,
+            "description": null,
+            "aaguid": null,
+            "algorithm_supported": null,
+            "root_certificates_present": false
+           },
+           "warnings": [
+            "metadata_not_available"
+           ]
+          }
+         },
+         "residentKey": false,
+         "userHandle": {
+          "base64": "dXNlci1oYW5kbGU=",
+          "base64url": "dXNlci1oYW5kbGU",
+          "hex": "757365722d68616e646c65"
+         },
+         "attestationCertificate": {
+          "version": {
+           "display": "3 (0x2)",
+           "numeric": 3,
+           "hex": "0x2"
+          },
+          "serialNumber": {
+           "decimal": "7855",
+           "hex": "0x1eaf"
+          },
+          "signatureAlgorithm": "ed25519",
+          "signatureAlgorithmOid": "1.3.101.112",
+          "signatureAlgorithmDetails": null,
+          "issuer": "CN=Characterization Test CA",
+          "validity": {
+           "notBefore": "2020-01-01T00:00:00+00:00",
+           "notAfter": "2099-12-31T00:00:00+00:00"
+          },
+          "subject": "CN=Characterization Attestation Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE",
+          "subjectCommonNames": [
+           "Characterization Attestation Leaf"
+          ],
+          "publicKeyInfo": {
+           "type": "ECC",
+           "keySize": 256,
+           "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxg==",
+           "algorithm": {
+            "name": "ECDSA",
+            "namedCurve": "secp256r1"
+           },
+           "curve": "secp256r1",
+           "uncompressedPoint": "04:64:1a:28:f0:44:a1:9d:8b:40:83:b1:dc:9c:d0:2b:b0:a9:af:ba:77:45:e6:77:53:25:ed:3a:39:7d:b1:88:2f:33:4f:50:76:15:07:0e:c7:29:31:15:70:cf:4b:32:9d:e4:44:7a:d0:b9:c2:48:bf:f7:06:b1:ae:5b:d7:21:c6"
+          },
+          "algorithmInfo": "ED25519_SHA512",
+          "extensions": [
+           {
+            "oid": "2.5.29.19",
+            "name": "X509v3 Basic Constraints",
+            "friendlyName": "X509v3 Basic Constraints",
+            "critical": true,
+            "value": {
+             "CA": "FALSE"
+            },
+            "displayHeader": "X509v3 Basic Constraints",
+            "includeOidInHeader": false
+           },
+           {
+            "oid": "1.3.6.1.4.1.45724.1.1.4",
+            "name": "FIDO: Device AAGUID",
+            "friendlyName": "FIDO: Device AAGUID",
+            "critical": false,
+            "value": {
+             "AAGUID": "00112233445566778899aabbccddeeff"
+            },
+            "displayHeader": null,
+            "includeOidInHeader": true
+           }
+          ],
+          "fingerprints": {
+           "sha256": "e5d98c650723833de489255a078164b1e0ab91fb27ae62011ca6a99b8ca6c521",
+           "sha1": "eee42e39bd272a7b08150a2873ff48312168feba",
+           "md5": "ed8357b048fe5552671dd940361ea1ba"
+          },
+          "signature": {
+           "algorithm": "ed25519",
+           "hash": null,
+           "hex": "97efc8b1162dd6c627adaa5dd4d32d9833d71a742d85a99bf8fc5b9feedcf0529759d454ba103df652fba07ec444ab533c160369ab5511b2d8d8bc337f739c07",
+           "colon": "97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98:33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52:97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53:3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07",
+           "lines": [
+            "97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98",
+            "33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52",
+            "97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53",
+            "3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07"
+           ],
+           "oid": "1.3.101.112",
+           "details": null
+          },
+          "derBase64": "MIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hhcmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxqMzMDEwDAYDVR0TAQH/BAIwADAhBgsrBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7/MAUGAytlcANBAJfvyLEWLdbGJ62qXdTTLZgz1xp0LYWpm/j8W5/u3PBSl1nUVLoQPfZS+6B+xESrUzwWA2mrVRGy2Ni8M39znAc=",
+          "pem": "-----BEGIN CERTIFICATE-----\nMIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6\nYXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFow\nfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEi\nMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hh\ncmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZI\nzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcO\nxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxqMzMDEwDAYDVR0TAQH/BAIwADAhBgsr\nBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7/MAUGAytlcANBAJfvyLEWLdbG\nJ62qXdTTLZgz1xp0LYWpm/j8W5/u3PBSl1nUVLoQPfZS+6B+xESrUzwWA2mrVRGy\n2Ni8M39znAc=\n-----END CERTIFICATE-----",
+          "summary": "Version: 3 (0x2)\nCertificate Serial Number: 7855 (0x1eaf)\nSignature Algorithm: ed25519\nIssuer: CN=Characterization Test CA\n\nValidity:\n    Not Before: 2020-01-01T00:00:00+00:00\n    Not After: 2099-12-31T00:00:00+00:00\n\nSubject: CN=Characterization Attestation Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE\n\nSubject Public Key Info:\n    Type: ECC\n    Public-Key: (256 bit)\n    pub:\n        04:64:1a:28:f0:44:a1:9d:8b:40:83:b1:dc:9c:d0:2b\n        b0:a9:af:ba:77:45:e6:77:53:25:ed:3a:39:7d:b1:88\n        2f:33:4f:50:76:15:07:0e:c7:29:31:15:70:cf:4b:32\n        9d:e4:44:7a:d0:b9:c2:48:bf:f7:06:b1:ae:5b:d7:21\n        c6\n    Curve: secp256r1\n\nX509v3 extensions:\n    X509v3 Basic Constraints [critical]:\n        CA: FALSE\n    1.3.6.1.4.1.45724.1.1.4 (FIDO: Device AAGUID):\n        AAGUID: 00112233445566778899aabbccddeeff\n\nSignature Algorithm: ed25519\n    97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98\n    33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52\n    97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53\n    3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07\n\nFingerprint:\n    MD5:\n        ed:83:57:b0:48:fe:55:52:67:1d:d9:40:36:1e:a1:ba\n    SHA1:\n        ee:e4:2e:39:bd:27:2a:7b:08:15:0a:28:73:ff:48:31\n        21:68:fe:ba\n    SHA256:\n        e5:d9:8c:65:07:23:83:3d:e4:89:25:5a:07:81:64:b1\n        e0:ab:91:fb:27:ae:62:01:1c:a6:a9:9b:8c:a6:c5:21"
+         },
+         "attestationCertificates": [
+          {
+           "version": {
+            "display": "3 (0x2)",
+            "numeric": 3,
+            "hex": "0x2"
+           },
+           "serialNumber": {
+            "decimal": "7855",
+            "hex": "0x1eaf"
+           },
+           "signatureAlgorithm": "ed25519",
+           "signatureAlgorithmOid": "1.3.101.112",
+           "signatureAlgorithmDetails": null,
+           "issuer": "CN=Characterization Test CA",
+           "validity": {
+            "notBefore": "2020-01-01T00:00:00+00:00",
+            "notAfter": "2099-12-31T00:00:00+00:00"
+           },
+           "subject": "CN=Characterization Attestation Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE",
+           "subjectCommonNames": [
+            "Characterization Attestation Leaf"
+           ],
+           "publicKeyInfo": {
+            "type": "ECC",
+            "keySize": 256,
+            "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxg==",
+            "algorithm": {
+             "name": "ECDSA",
+             "namedCurve": "secp256r1"
+            },
+            "curve": "secp256r1",
+            "uncompressedPoint": "04:64:1a:28:f0:44:a1:9d:8b:40:83:b1:dc:9c:d0:2b:b0:a9:af:ba:77:45:e6:77:53:25:ed:3a:39:7d:b1:88:2f:33:4f:50:76:15:07:0e:c7:29:31:15:70:cf:4b:32:9d:e4:44:7a:d0:b9:c2:48:bf:f7:06:b1:ae:5b:d7:21:c6"
+           },
+           "algorithmInfo": "ED25519_SHA512",
+           "extensions": [
+            {
+             "oid": "2.5.29.19",
+             "name": "X509v3 Basic Constraints",
+             "friendlyName": "X509v3 Basic Constraints",
+             "critical": true,
+             "value": {
+              "CA": "FALSE"
+             },
+             "displayHeader": "X509v3 Basic Constraints",
+             "includeOidInHeader": false
+            },
+            {
+             "oid": "1.3.6.1.4.1.45724.1.1.4",
+             "name": "FIDO: Device AAGUID",
+             "friendlyName": "FIDO: Device AAGUID",
+             "critical": false,
+             "value": {
+              "AAGUID": "00112233445566778899aabbccddeeff"
+             },
+             "displayHeader": null,
+             "includeOidInHeader": true
+            }
+           ],
+           "fingerprints": {
+            "sha256": "e5d98c650723833de489255a078164b1e0ab91fb27ae62011ca6a99b8ca6c521",
+            "sha1": "eee42e39bd272a7b08150a2873ff48312168feba",
+            "md5": "ed8357b048fe5552671dd940361ea1ba"
+           },
+           "signature": {
+            "algorithm": "ed25519",
+            "hash": null,
+            "hex": "97efc8b1162dd6c627adaa5dd4d32d9833d71a742d85a99bf8fc5b9feedcf0529759d454ba103df652fba07ec444ab533c160369ab5511b2d8d8bc337f739c07",
+            "colon": "97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98:33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52:97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53:3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07",
+            "lines": [
+             "97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98",
+             "33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52",
+             "97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53",
+             "3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07"
+            ],
+            "oid": "1.3.101.112",
+            "details": null
+           },
+           "derBase64": "MIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hhcmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxqMzMDEwDAYDVR0TAQH/BAIwADAhBgsrBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7/MAUGAytlcANBAJfvyLEWLdbGJ62qXdTTLZgz1xp0LYWpm/j8W5/u3PBSl1nUVLoQPfZS+6B+xESrUzwWA2mrVRGy2Ni8M39znAc=",
+           "pem": "-----BEGIN CERTIFICATE-----\nMIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6\nYXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFow\nfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEi\nMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hh\ncmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZI\nzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcO\nxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxqMzMDEwDAYDVR0TAQH/BAIwADAhBgsr\nBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7/MAUGAytlcANBAJfvyLEWLdbG\nJ62qXdTTLZgz1xp0LYWpm/j8W5/u3PBSl1nUVLoQPfZS+6B+xESrUzwWA2mrVRGy\n2Ni8M39znAc=\n-----END CERTIFICATE-----",
+           "summary": "Version: 3 (0x2)\nCertificate Serial Number: 7855 (0x1eaf)\nSignature Algorithm: ed25519\nIssuer: CN=Characterization Test CA\n\nValidity:\n    Not Before: 2020-01-01T00:00:00+00:00\n    Not After: 2099-12-31T00:00:00+00:00\n\nSubject: CN=Characterization Attestation Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE\n\nSubject Public Key Info:\n    Type: ECC\n    Public-Key: (256 bit)\n    pub:\n        04:64:1a:28:f0:44:a1:9d:8b:40:83:b1:dc:9c:d0:2b\n        b0:a9:af:ba:77:45:e6:77:53:25:ed:3a:39:7d:b1:88\n        2f:33:4f:50:76:15:07:0e:c7:29:31:15:70:cf:4b:32\n        9d:e4:44:7a:d0:b9:c2:48:bf:f7:06:b1:ae:5b:d7:21\n        c6\n    Curve: secp256r1\n\nX509v3 extensions:\n    X509v3 Basic Constraints [critical]:\n        CA: FALSE\n    1.3.6.1.4.1.45724.1.1.4 (FIDO: Device AAGUID):\n        AAGUID: 00112233445566778899aabbccddeeff\n\nSignature Algorithm: ed25519\n    97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98\n    33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52\n    97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53\n    3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07\n\nFingerprint:\n    MD5:\n        ed:83:57:b0:48:fe:55:52:67:1d:d9:40:36:1e:a1:ba\n    SHA1:\n        ee:e4:2e:39:bd:27:2a:7b:08:15:0a:28:73:ff:48:31\n        21:68:fe:ba\n    SHA256:\n        e5:d9:8c:65:07:23:83:3d:e4:89:25:5a:07:81:64:b1\n        e0:ab:91:fb:27:ae:62:01:1c:a6:a9:9b:8c:a6:c5:21"
+          }
+         ]
+        },
+        "properties": {
+         "excludeCredentialsSentCount": 1,
+         "excludeCredentialsUsed": false,
+         "credentialIdLength": 32,
+         "fakeCredentialIdLengthRequested": null,
+         "hintsSent": [
+          "security-key"
+         ],
+         "resolvedAuthenticatorAttachments": [
+          "cross-platform"
+         ],
+         "authenticatorAttachment": "cross-platform",
+         "largeBlobRequested": {
+          "support": "preferred"
+         },
+         "largeBlobClientOutput": {
+          "written": true
+         },
+         "residentKeyRequested": "preferred",
+         "residentKeyRequired": false,
+         "attestationSignatureValid": true,
+         "attestationRootValid": null,
+         "attestationRpIdHashValid": true,
+         "attestationAaguidMatch": true,
+         "attestationChecks": {
+          "attestation_format": "packed",
+          "signature_valid": true,
+          "pqc_signature_valid": null,
+          "root_valid": null,
+          "rp_id_hash_valid": true,
+          "aaguid_match": true,
+          "client_data": {
+           "type": "webauthn.create",
+           "expected_type": "webauthn.create",
+           "type_valid": true,
+           "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+           "expected_challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+           "challenge_matches": true,
+           "origin": "http://localhost",
+           "expected_origin": "http://localhost",
+           "origin_valid": true,
+           "cross_origin": false,
+           "cross_origin_ok": true
+          },
+          "authenticator_data": {
+           "user_present": true,
+           "user_verified": true,
+           "user_verification_required": false,
+           "user_verification_satisfied": true,
+           "attested_credential_data": true,
+           "counter": 0,
+           "credential_id_length": 32,
+           "credential_aaguid": "00112233445566778899aabbccddeeff",
+           "algorithm": -7,
+           "algorithm_allowed": true,
+           "cose_key_valid": true
+          },
+          "metadata": {
+           "available": false,
+           "description": null,
+           "aaguid": null,
+           "algorithm_supported": null,
+           "root_certificates_present": false
+          },
+          "hash_binding": {
+           "client_data_hash": "doGvfm6hPFgAmYfVFqA7PvgOTa9BLrwnQEFa2ZYkK1c",
+           "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAARIjNEVWZ3iJmqu8zd7v8AIB4XySczgVZplGWLhmHNmmPUjCYjTI0NWNEKaVZqiOMipQECAyYgASFYIOEwuXhv8VDNwRWr-lvZyR3c4huUqfFJxMdFv2eGhEsvIlggtDdm4OvKPMpcRN7orExKgJjWk6IogLbfU_fHAyrN0ud2ga9-bqE8WACZh9UWoDs--A5Nr0EuvCdAQVrZliQrVw"
+          },
+          "errors": [],
+          "warnings": [
+           "metadata_not_available"
+          ],
+          "root_checks": {
+           "trusted_ca": false,
+           "chain": null,
+           "fido_mds": null
+          }
+         },
+         "attestationSummary": {
+          "signatureValid": true,
+          "rootValid": null,
+          "rpIdHashValid": true,
+          "aaguidMatch": true,
+          "errors": [],
+          "verified": true,
+          "metadata": {
+           "available": false,
+           "description": null,
+           "aaguid": null,
+           "algorithm_supported": null,
+           "root_certificates_present": false
+          },
+          "warnings": [
+           "metadata_not_available"
+          ]
+         },
+         "minPinLength": 6,
+         "attestationCertificates": [
+          {
+           "version": {
+            "display": "3 (0x2)",
+            "numeric": 3,
+            "hex": "0x2"
+           },
+           "serialNumber": {
+            "decimal": "7855",
+            "hex": "0x1eaf"
+           },
+           "signatureAlgorithm": "ed25519",
+           "signatureAlgorithmOid": "1.3.101.112",
+           "signatureAlgorithmDetails": null,
+           "issuer": "CN=Characterization Test CA",
+           "validity": {
+            "notBefore": "2020-01-01T00:00:00+00:00",
+            "notAfter": "2099-12-31T00:00:00+00:00"
+           },
+           "subject": "CN=Characterization Attestation Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE",
+           "subjectCommonNames": [
+            "Characterization Attestation Leaf"
+           ],
+           "publicKeyInfo": {
+            "type": "ECC",
+            "keySize": 256,
+            "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxg==",
+            "algorithm": {
+             "name": "ECDSA",
+             "namedCurve": "secp256r1"
+            },
+            "curve": "secp256r1",
+            "uncompressedPoint": "04:64:1a:28:f0:44:a1:9d:8b:40:83:b1:dc:9c:d0:2b:b0:a9:af:ba:77:45:e6:77:53:25:ed:3a:39:7d:b1:88:2f:33:4f:50:76:15:07:0e:c7:29:31:15:70:cf:4b:32:9d:e4:44:7a:d0:b9:c2:48:bf:f7:06:b1:ae:5b:d7:21:c6"
+           },
+           "algorithmInfo": "ED25519_SHA512",
+           "extensions": [
+            {
+             "oid": "2.5.29.19",
+             "name": "X509v3 Basic Constraints",
+             "friendlyName": "X509v3 Basic Constraints",
+             "critical": true,
+             "value": {
+              "CA": "FALSE"
+             },
+             "displayHeader": "X509v3 Basic Constraints",
+             "includeOidInHeader": false
+            },
+            {
+             "oid": "1.3.6.1.4.1.45724.1.1.4",
+             "name": "FIDO: Device AAGUID",
+             "friendlyName": "FIDO: Device AAGUID",
+             "critical": false,
+             "value": {
+              "AAGUID": "00112233445566778899aabbccddeeff"
+             },
+             "displayHeader": null,
+             "includeOidInHeader": true
+            }
+           ],
+           "fingerprints": {
+            "sha256": "e5d98c650723833de489255a078164b1e0ab91fb27ae62011ca6a99b8ca6c521",
+            "sha1": "eee42e39bd272a7b08150a2873ff48312168feba",
+            "md5": "ed8357b048fe5552671dd940361ea1ba"
+           },
+           "signature": {
+            "algorithm": "ed25519",
+            "hash": null,
+            "hex": "97efc8b1162dd6c627adaa5dd4d32d9833d71a742d85a99bf8fc5b9feedcf0529759d454ba103df652fba07ec444ab533c160369ab5511b2d8d8bc337f739c07",
+            "colon": "97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98:33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52:97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53:3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07",
+            "lines": [
+             "97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98",
+             "33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52",
+             "97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53",
+             "3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07"
+            ],
+            "oid": "1.3.101.112",
+            "details": null
+           },
+           "derBase64": "MIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hhcmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxqMzMDEwDAYDVR0TAQH/BAIwADAhBgsrBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7/MAUGAytlcANBAJfvyLEWLdbGJ62qXdTTLZgz1xp0LYWpm/j8W5/u3PBSl1nUVLoQPfZS+6B+xESrUzwWA2mrVRGy2Ni8M39znAc=",
+           "pem": "-----BEGIN CERTIFICATE-----\nMIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6\nYXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFow\nfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEi\nMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hh\ncmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZI\nzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcO\nxykxFXDPSzKd5ER60LnCSL/3BrGuW9chxqMzMDEwDAYDVR0TAQH/BAIwADAhBgsr\nBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7/MAUGAytlcANBAJfvyLEWLdbG\nJ62qXdTTLZgz1xp0LYWpm/j8W5/u3PBSl1nUVLoQPfZS+6B+xESrUzwWA2mrVRGy\n2Ni8M39znAc=\n-----END CERTIFICATE-----",
+           "summary": "Version: 3 (0x2)\nCertificate Serial Number: 7855 (0x1eaf)\nSignature Algorithm: ed25519\nIssuer: CN=Characterization Test CA\n\nValidity:\n    Not Before: 2020-01-01T00:00:00+00:00\n    Not After: 2099-12-31T00:00:00+00:00\n\nSubject: CN=Characterization Attestation Leaf,OU=Authenticator Attestation,O=Characterization Test,C=SE\n\nSubject Public Key Info:\n    Type: ECC\n    Public-Key: (256 bit)\n    pub:\n        04:64:1a:28:f0:44:a1:9d:8b:40:83:b1:dc:9c:d0:2b\n        b0:a9:af:ba:77:45:e6:77:53:25:ed:3a:39:7d:b1:88\n        2f:33:4f:50:76:15:07:0e:c7:29:31:15:70:cf:4b:32\n        9d:e4:44:7a:d0:b9:c2:48:bf:f7:06:b1:ae:5b:d7:21\n        c6\n    Curve: secp256r1\n\nX509v3 extensions:\n    X509v3 Basic Constraints [critical]:\n        CA: FALSE\n    1.3.6.1.4.1.45724.1.1.4 (FIDO: Device AAGUID):\n        AAGUID: 00112233445566778899aabbccddeeff\n\nSignature Algorithm: ed25519\n    97:ef:c8:b1:16:2d:d6:c6:27:ad:aa:5d:d4:d3:2d:98\n    33:d7:1a:74:2d:85:a9:9b:f8:fc:5b:9f:ee:dc:f0:52\n    97:59:d4:54:ba:10:3d:f6:52:fb:a0:7e:c4:44:ab:53\n    3c:16:03:69:ab:55:11:b2:d8:d8:bc:33:7f:73:9c:07\n\nFingerprint:\n    MD5:\n        ed:83:57:b0:48:fe:55:52:67:1d:d9:40:36:1e:a1:ba\n    SHA1:\n        ee:e4:2e:39:bd:27:2a:7b:08:15:0a:28:73:ff:48:31\n        21:68:fe:ba\n    SHA256:\n        e5:d9:8c:65:07:23:83:3d:e4:89:25:5a:07:81:64:b1\n        e0:ab:91:fb:27:ae:62:01:1c:a6:a9:9b:8c:a6:c5:21"
+          }
+         ],
+         "aaguid": "00112233445566778899aabbccddeeff",
+         "aaguidHex": "00112233445566778899aabbccddeeff",
+         "aaguidGuid": "00112233-4455-6677-8899-aabbccddeeff",
+         "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
+         "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
+         "residentKey": false,
+         "authenticatorDataHash": "29b306e7891724b1258da352e87b4eb123f31e1e171625e68e039cdeedac9bdd"
+        },
+        "registrationResponse": {
+         "authenticatorAttachment": "cross-platform",
+         "clientExtensionResults": {
+          "credProps": {
+           "rk": false
+          },
+          "largeBlob": {
+           "written": true
+          },
+          "minPinLength": 6,
+          "prf": {
+           "enabled": true
+          }
+         },
+         "id": "HhfJJzOBVmmUZYuGYc2aY9SMJiNMjQ1Y0QppVmqI4yI",
+         "rawId": "HhfJJzOBVmmUZYuGYc2aY9SMJiNMjQ1Y0QppVmqI4yI",
+         "response": {
+          "attestationObject": "o2NmbXRmcGFja2VkZ2F0dFN0bXSjY2FsZyZjc2lnWEcwRQIhANkdUolqxDqC9Z8RVxRtyuxy2S8ywkjA6cgXXeMbVbuzAiBoSY7j9AGyBvRiEdBF0CHXJGXv-O5Ctjq3DRKwCdJA7mN4NWOBWQG4MIIBtDCCAWagAwIBAgICHq8wBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhQ2hhcmFjdGVyaXphdGlvbiBBdHRlc3RhdGlvbiBMZWFmMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZBoo8EShnYtAg7HcnNArsKmvundF5ndTJe06OX2xiC8zT1B2FQcOxykxFXDPSzKd5ER60LnCSL_3BrGuW9chxqMzMDEwDAYDVR0TAQH_BAIwADAhBgsrBgEEAYLlHAEBBAQSBBAAESIzRFVmd4iZqrvM3e7_MAUGAytlcANBAJfvyLEWLdbGJ62qXdTTLZgz1xp0LYWpm_j8W5_u3PBSl1nUVLoQPfZS-6B-xESrUzwWA2mrVRGy2Ni8M39znAdoYXV0aERhdGFYpEmWDeWIDoxodDQXD2R2YFuP5K65ooYyx5lc87qDHZdjRQAAAAAAESIzRFVmd4iZqrvM3e7_ACAeF8knM4FWaZRli4ZhzZpj1IwmI0yNDVjRCmlWaojjIqUBAgMmIAEhWCDhMLl4b_FQzcEVq_pb2ckd3OIblKnxScTHRb9nhoRLLyJYILQ3ZuDryjzKXETe6KxMSoCY1pOiKIC231P3xwMqzdLn",
+          "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiTVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URXhNVEV4TVRFeE1URSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+          "transports": [
+           "usb",
+           "nfc",
+           7
+          ]
+         },
+         "transports": [
+          "usb",
+          "nfc",
+          7
+         ],
+         "type": "public-key"
+        },
+        "userHandle": "dXNlci1oYW5kbGU=",
+        "userHandleBase64": "dXNlci1oYW5kbGU=",
+        "userHandleBase64Url": "dXNlci1oYW5kbGU",
+        "userHandleHex": "757365722d68616e646c65"
+       }
+      }
+     }
+    }
+   ],
+   "deviceLogEvents": [
+    {
+     "timestamp": "<datetime scrubbed>",
+     "rp_id": "localhost",
+     "user_id": {
+      "$bytes": "757365722d68616e646c65"
+     },
+     "user_name": "user@example.com",
+     "user_display_name": "A. User",
+     "credential_id": {
+      "$bytes": "1e17c9273381566994658b8661cd9a63d48c26234c8d0d58d10a69566a88e322"
+     },
+     "public_key_cose": {
+      "$map": [
+       [
+        1,
+        2
+       ],
+       [
+        3,
+        -7
+       ],
+       [
+        -1,
+        1
+       ],
+       [
+        -2,
+        {
+         "$bytes": "e130b9786ff150cdc115abfa5bd9c91ddce21b94a9f149c4c745bf6786844b2f"
+        }
+       ],
+       [
+        -3,
+        {
+         "$bytes": "b43766e0ebca3cca5c44dee8ac4c4a8098d693a22880b6df53f7c7032acdd2e7"
+        }
+       ]
+      ]
+     },
+     "sign_count": 0,
+     "transports": [
+      "usb",
+      "nfc"
+     ],
+     "aaguid": {
+      "$bytes": "00112233445566778899aabbccddeeff"
+     },
+     "device_name_mds": null,
+     "attestation_format": "packed",
+     "attestation_object": {
+      "$bytes": "a363666d74667061636b65646761747453746d74a363616c67266373696758473045022100d91d52896ac43a82f59f1157146dcaec72d92f32c248c0e9c8175de31b55bbb3022068498ee3f401b206f46211d045d021d72465eff8ee42b63ab70d12b009d240ee63783563815901b8308201b430820166a00302010202021eaf300506032b657030233121301f06035504030c18436861726163746572697a6174696f6e20546573742043413020170d3230303130313030303030305a180f32303939313233313030303030305a307d310b3009060355040613025345311e301c060355040a0c15436861726163746572697a6174696f6e205465737431223020060355040b0c1941757468656e74696361746f72204174746573746174696f6e312a302806035504030c21436861726163746572697a6174696f6e204174746573746174696f6e204c6561663059301306072a8648ce3d020106082a8648ce3d03010703420004641a28f044a19d8b4083b1dc9cd02bb0a9afba7745e6775325ed3a397db1882f334f507615070ec729311570cf4b329de4447ad0b9c248bff706b1ae5bd721c6a3333031300c0603551d130101ff040230003021060b2b0601040182e51c0101040412041000112233445566778899aabbccddeeff300506032b657003410097efc8b1162dd6c627adaa5dd4d32d9833d71a742d85a99bf8fc5b9feedcf0529759d454ba103df652fba07ec444ab533c160369ab5511b2d8d8bc337f739c0768617574684461746158a449960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763450000000000112233445566778899aabbccddeeff00201e17c9273381566994658b8661cd9a63d48c26234c8d0d58d10a69566a88e322a5010203262001215820e130b9786ff150cdc115abfa5bd9c91ddce21b94a9f149c4c745bf6786844b2f225820b43766e0ebca3cca5c44dee8ac4c4a8098d693a22880b6df53f7c7032acdd2e7"
+     },
+     "client_data_json": {
+      "$bytes": "7b2274797065223a22776562617574686e2e637265617465222c226368616c6c656e6765223a224d5445784d5445784d5445784d5445784d5445784d5445784d5445784d5445784d5445784d5445784d5445222c226f726967696e223a22687474703a2f2f6c6f63616c686f7374222c2263726f73734f726967696e223a66616c73657d"
+     },
+     "signature_valid": null,
+     "root_valid": null,
+     "rp_id_hash_valid": null,
+     "aaguid_match": null
+    }
+   ]
+  }
+ ]
+}

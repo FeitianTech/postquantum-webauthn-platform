@@ -1,0 +1,1767 @@
+{
+ "scenario": "decoder-attestation-objects",
+ "requests": [
+  {
+   "request": "POST /api/decode",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "25934"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ]
+   ],
+   "cookies": [],
+   "bodySha256": "0c7753ba63cbec5527880e57f8a5936118c87107c44eb589cc75953d53a7c573",
+   "body": {
+    "data": {
+     "attestationObject": {
+      "attStmt": {
+       "alg": -65535,
+       "certInfo": "_1RDR4AXACIAC2jOxifMZBEJmh-An95DefZJqhcMcHLRrfIw3kOe_ICBABT3yLDN6zEyhkgTChlzPW__FuduEwAAAAPvYFYDRG7YxWqnYI0BpupWUe5nqKIAIgAL32gZF-GFKcYeG4Wh55UvMgHrWcYJ7V2OIX5d52sii70AIgALChDSFrDDq4K_3B8KAWq5STOEx67hk37ogA92swybcac",
+       "pubArea": "AAEACwAGBHIAIJ3_y_NsODrmmfuYaNxty4nXFTiEvigDkiwSQVi_rSKuABAAEAgAAAAAAAEAxwZYbH9Gzf_t4O4MXryLegizZVXICRZp6e8stP2FgTSgHpUi0--SQGmu7sInGCP-mHm1B56zEjvi6zmn6VT4uDtevv79olrtAb0Z6rbbGWKjcTmFt6LdGqd3C1wVZ_sNGFIeFKvrvMwWgy7xC7BdzIGLu3DJHCJEdZKK2m9hge1k8c-0DbXgFodFTPrK-oMYvcamd1ULqm4k-K-GT6UyTp2TCpfN6xmVtHbyGgF7M6t_5BOfJSTHhPywTPUkHInwwUXrI9qRStFyLUeoQ2kqCypWfZTdgIwTZ4pRxaBYPcBC3Luhuc7_ErFZ0FOSSLCZTuGBKO1Q3XqFXlTSRZ2wBQ",
+       "sig": "gOVk2MuyNld95o0uaOyuIAqOr2mSiJtf3CRiSky2nKqrGN-WUFj7rDnflxS5yAuaEtcVz8TdFe06bhkabSbnIG_UArBzPCyLkfYq1E5NQclA4ukUJTsdGhyIibHNr2aLVEkkXcMx-rEuCw3N_FMMvh83Dh8rBsFj-9YXeSWhqJmO3S5yaYkkahmA-jTm1l08ooSUTLECVNhdsNiUgpT7gXSkEgbGteNkBrrkRzQ_jJ-XQg4582GBXfsmizPM3l8p5DSKcPlavDB1TIOfpxJuW9iCN31qvjwMlbpcIRkKXk__U4CywjzBZV5ZMkQBnhcrqChGGEcdlbksIxwf_pj_Iw",
+       "x5c": [
+        {
+         "parsedX5c": {
+          "algorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
+          "derBase64": "MIIEsjCCA5qgAwIBAgIQeJ4aNlc0TFK60i7RzrG/rzANBgkqhkiG9w0BAQsFADBBMT8wPQYDVQQDEzZOQ1UtTlRDLUtFWUlELTlGQkI3OUFBMEY1MjYyNzhCRUQxNTA5MjlBNzE3MUU5NkEzNUJFRjcwHhcNMTkwNDAxMDg1OTQwWhcNMjkwNDAxMDg1OTQwWjAAMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApmDR/kFWTCb5Q8cP+J+9ntbZVxkdXsr3Jzk9c8//hePM+5gwAn/oSxccxLCxOBHfTZ3v8rzk2Kj5eXFp97j8JQFtm6aHwAMINpNxYYDI8ezKpEEKmn/gexmK17qU7PdE6b7wJzpeByOkrBl5lMoawOX1lUM5cAzxTq1BmufN6MPoE4l3HV+j0zn40IVukY/TdG+pqUTTwfHGpODOP5m1rFugUWazuGlUBa59N3f5zI46uFcPIZG6Tyz8TFRDN1lvSNPV9fmugFdb+euB1cR36ZxYhUZF1YfdDM3qKw49SC5psyayieZXQeayFD/CvKNcp91g5VSv/cuFAAdi/wmwQQIDAQABo4IB5TCCAeEwDgYDVR0PAQH/BAQDAgeAMAwGA1UdEwEB/wQCMAAwbQYDVR0gAQH/BGMwYTBfBgkrBgEEAYI3FR8wUjBQBggrBgEFBQcCAjBEHkIAVABDAFAAQQAgACAAVAByAHUAcwB0AGUAZAAgACAAUABsAGEAdABmAG8AcgBtACAAIABJAGQAZQBuAHQAaQB0AHkwEAYDVR0lBAkwBwYFZ4EFCAMwSgYDVR0RAQH/BEAwPqQ8MDoxODAOBgVngQUCAwwFaWQ6MTMwEAYFZ4EFAgIMB05QQ1Q2eHgwFAYFZ4EFAgEMC2lkOjRFNTQ0MzAwMB8GA1UdIwQYMBaAFMeZ7yNxMnyy6eA4ONCpAJ/p7SnnMB0GA1UdDgQWBBQp+18Fxhh9hGO4slC48P8Sj9OgcTCBswYIKwYBBQUHAQEEgaYwgaMwgaAGCCsGAQUFBzAChoGTaHR0cHM6Ly9hemNzcHJvZG5jdWFpa3B1Ymxpc2guYmxvYi5jb3JlLndpbmRvd3MubmV0L25jdS1udGMta2V5aWQtOWZiYjc5YWEwZjUyNjI3OGJlZDE1MDkyOWE3MTcxZTk2YTM1YmVmNy9mODUwNTQ4OS0wMjVhLTQyNTItODI5MC05NGRlMmM2M2QwOTYuY2VyMA0GCSqGSIb3DQEBCwUAA4IBAQCEvEuaw6tsJDi97N09meYXm/xGWZVIHYVmg2Ar3PDCYye4q3f3tpXIxqq18oOwecKTaSlye4OeW/CMaHoz/Fm/KB6/KOnQTnj9YmVzAoAUAoutygOOaDYQF6RQGxjVampz418A4EPY/rt6THGcg3vFy4Ae/iNXDWyLQGmbpBH+Zvb+VVj30cVqdka6SDzWAWkKkyPKupJXrlYXgbE8ZYCDrRKBBH2U1MGrl1nZChb74WfOw4jntnAnog28G4iYbbtjYQfvkf/sIsQTrF+/7D3p7kqhxuTBc+QyRhk4kMiwJFh/zIAo6zefUV3jxnixHfuBrvNUfDxueQV31S93X5FI",
+          "extensions": [
+           {
+            "critical": true,
+            "displayHeader": null,
+            "friendlyName": null,
+            "includeOidInHeader": true,
+            "name": "keyUsage",
+            "oid": "2.5.29.15",
+            "value": "<KeyUsage(digital_signature=True, content_commitment=False, key_encipherment=False, data_encipherment=False, key_agreement=False, key_cert_sign=False, crl_sign=False, encipher_only=False, decipher_only=False)>"
+           },
+           {
+            "critical": true,
+            "displayHeader": "X509v3 Basic Constraints",
+            "friendlyName": "X509v3 Basic Constraints",
+            "includeOidInHeader": false,
+            "name": "X509v3 Basic Constraints",
+            "oid": "2.5.29.19",
+            "value": {
+             "CA": "FALSE"
+            }
+           },
+           {
+            "critical": true,
+            "displayHeader": null,
+            "friendlyName": null,
+            "includeOidInHeader": true,
+            "name": "certificatePolicies",
+            "oid": "2.5.29.32",
+            "value": "<CertificatePolicies([<PolicyInformation(policy_identifier=<ObjectIdentifier(oid=1.3.6.1.4.1.311.21.31, name=Unknown OID)>, policy_qualifiers=[<UserNotice(notice_reference=None, explicit_text='TCPA  Trusted  Platform  Identity')>])>])>"
+           },
+           {
+            "critical": false,
+            "displayHeader": null,
+            "friendlyName": null,
+            "includeOidInHeader": true,
+            "name": "extendedKeyUsage",
+            "oid": "2.5.29.37",
+            "value": "<ExtendedKeyUsage([<ObjectIdentifier(oid=2.23.133.8.3, name=Unknown OID)>])>"
+           },
+           {
+            "critical": true,
+            "displayHeader": null,
+            "friendlyName": null,
+            "includeOidInHeader": true,
+            "name": "subjectAltName",
+            "oid": "2.5.29.17",
+            "value": "<SubjectAlternativeName(<GeneralNames([<DirectoryName(value=<Name(2.23.133.2.3=id:13+2.23.133.2.2=NPCT6xx+2.23.133.2.1=id:4E544300)>)>])>)>"
+           },
+           {
+            "critical": false,
+            "displayHeader": null,
+            "friendlyName": "Authority key identifier",
+            "includeOidInHeader": true,
+            "name": "Authority key identifier",
+            "oid": "2.5.29.35",
+            "value": {
+             "Hex value": [
+              "c7:99:ef:23:71:32:7c:b2:e9:e0:38:38:d0:a9:00:9f",
+              "e9:ed:29:e7"
+             ]
+            }
+           },
+           {
+            "critical": false,
+            "displayHeader": null,
+            "friendlyName": "Subject key id",
+            "includeOidInHeader": true,
+            "name": "Subject key id",
+            "oid": "2.5.29.14",
+            "value": {
+             "Hex value": [
+              "29:fb:5f:05:c6:18:7d:84:63:b8:b2:50:b8:f0:ff:12",
+              "8f:d3:a0:71"
+             ]
+            }
+           },
+           {
+            "critical": false,
+            "displayHeader": null,
+            "friendlyName": null,
+            "includeOidInHeader": true,
+            "name": "authorityInfoAccess",
+            "oid": "1.3.6.1.5.5.7.1.1",
+            "value": "<AuthorityInformationAccess([<AccessDescription(access_method=<ObjectIdentifier(oid=1.3.6.1.5.5.7.48.2, name=caIssuers)>, access_location=<UniformResourceIdentifier(value='https://azcsprodncuaikpublish.blob.core.windows.net/ncu-ntc-keyid-9fbb79aa0f526278bed150929a7171e96a35bef7/f8505489-025a-4252-8290-94de2c63d096.cer')>)>])>"
+           }
+          ],
+          "fingerprints": {
+           "md5": "ccb84d54505a03a44d4f030cd36518fb",
+           "sha1": "11f1ae041712d64ae1fe6f0c3e4a3651978218d6",
+           "sha256": "d06fc274d427dd946423852d7b935043abb39a637ef0e02da425df472be6aee5"
+          },
+          "issuer": "CN=NCU-NTC-KEYID-9FBB79AA0F526278BED150929A7171E96A35BEF7",
+          "pem": "-----BEGIN CERTIFICATE-----\nMIIEsjCCA5qgAwIBAgIQeJ4aNlc0TFK60i7RzrG/rzANBgkqhkiG9w0BAQsFADBB\nMT8wPQYDVQQDEzZOQ1UtTlRDLUtFWUlELTlGQkI3OUFBMEY1MjYyNzhCRUQxNTA5\nMjlBNzE3MUU5NkEzNUJFRjcwHhcNMTkwNDAxMDg1OTQwWhcNMjkwNDAxMDg1OTQw\nWjAAMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApmDR/kFWTCb5Q8cP\n+J+9ntbZVxkdXsr3Jzk9c8//hePM+5gwAn/oSxccxLCxOBHfTZ3v8rzk2Kj5eXFp\n97j8JQFtm6aHwAMINpNxYYDI8ezKpEEKmn/gexmK17qU7PdE6b7wJzpeByOkrBl5\nlMoawOX1lUM5cAzxTq1BmufN6MPoE4l3HV+j0zn40IVukY/TdG+pqUTTwfHGpODO\nP5m1rFugUWazuGlUBa59N3f5zI46uFcPIZG6Tyz8TFRDN1lvSNPV9fmugFdb+euB\n1cR36ZxYhUZF1YfdDM3qKw49SC5psyayieZXQeayFD/CvKNcp91g5VSv/cuFAAdi\n/wmwQQIDAQABo4IB5TCCAeEwDgYDVR0PAQH/BAQDAgeAMAwGA1UdEwEB/wQCMAAw\nbQYDVR0gAQH/BGMwYTBfBgkrBgEEAYI3FR8wUjBQBggrBgEFBQcCAjBEHkIAVABD\nAFAAQQAgACAAVAByAHUAcwB0AGUAZAAgACAAUABsAGEAdABmAG8AcgBtACAAIABJ\nAGQAZQBuAHQAaQB0AHkwEAYDVR0lBAkwBwYFZ4EFCAMwSgYDVR0RAQH/BEAwPqQ8\nMDoxODAOBgVngQUCAwwFaWQ6MTMwEAYFZ4EFAgIMB05QQ1Q2eHgwFAYFZ4EFAgEM\nC2lkOjRFNTQ0MzAwMB8GA1UdIwQYMBaAFMeZ7yNxMnyy6eA4ONCpAJ/p7SnnMB0G\nA1UdDgQWBBQp+18Fxhh9hGO4slC48P8Sj9OgcTCBswYIKwYBBQUHAQEEgaYwgaMw\ngaAGCCsGAQUFBzAChoGTaHR0cHM6Ly9hemNzcHJvZG5jdWFpa3B1Ymxpc2guYmxv\nYi5jb3JlLndpbmRvd3MubmV0L25jdS1udGMta2V5aWQtOWZiYjc5YWEwZjUyNjI3\nOGJlZDE1MDkyOWE3MTcxZTk2YTM1YmVmNy9mODUwNTQ4OS0wMjVhLTQyNTItODI5\nMC05NGRlMmM2M2QwOTYuY2VyMA0GCSqGSIb3DQEBCwUAA4IBAQCEvEuaw6tsJDi9\n7N09meYXm/xGWZVIHYVmg2Ar3PDCYye4q3f3tpXIxqq18oOwecKTaSlye4OeW/CM\naHoz/Fm/KB6/KOnQTnj9YmVzAoAUAoutygOOaDYQF6RQGxjVampz418A4EPY/rt6\nTHGcg3vFy4Ae/iNXDWyLQGmbpBH+Zvb+VVj30cVqdka6SDzWAWkKkyPKupJXrlYX\ngbE8ZYCDrRKBBH2U1MGrl1nZChb74WfOw4jntnAnog28G4iYbbtjYQfvkf/sIsQT\nrF+/7D3p7kqhxuTBc+QyRhk4kMiwJFh/zIAo6zefUV3jxnixHfuBrvNUfDxueQV3\n1S93X5FI\n-----END CERTIFICATE-----",
+          "publicKeyInfo": {
+           "algorithm": {
+            "modulusLength": 2048,
+            "name": "RSASSA-PKCS1-v1_5"
+           },
+           "keySize": 2048,
+           "modulusHex": "0xa660d1fe41564c26f943c70ff89fbd9ed6d957191d5ecaf727393d73cfff85e3ccfb9830027fe84b171cc4b0b13811df4d9deff2bce4d8a8f9797169f7b8fc25016d9ba687c003083693716180c8f1eccaa4410a9a7fe07b198ad7ba94ecf744e9bef0273a5e0723a4ac197994ca1ac0e5f5954339700cf14ead419ae7cde8c3e81389771d5fa3d339f8d0856e918fd3746fa9a944d3c1f1c6a4e0ce3f99b5ac5ba05166b3b8695405ae7d3777f9cc8e3ab8570f2191ba4f2cfc4c544337596f48d3d5f5f9ae80575bf9eb81d5c477e99c58854645d587dd0ccdea2b0e3d482e69b326b289e65741e6b2143fc2bca35ca7dd60e554affdcb85000762ff09b041",
+           "publicExponent": 65537,
+           "subjectPublicKeyInfoBase64": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApmDR/kFWTCb5Q8cP+J+9ntbZVxkdXsr3Jzk9c8//hePM+5gwAn/oSxccxLCxOBHfTZ3v8rzk2Kj5eXFp97j8JQFtm6aHwAMINpNxYYDI8ezKpEEKmn/gexmK17qU7PdE6b7wJzpeByOkrBl5lMoawOX1lUM5cAzxTq1BmufN6MPoE4l3HV+j0zn40IVukY/TdG+pqUTTwfHGpODOP5m1rFugUWazuGlUBa59N3f5zI46uFcPIZG6Tyz8TFRDN1lvSNPV9fmugFdb+euB1cR36ZxYhUZF1YfdDM3qKw49SC5psyayieZXQeayFD/CvKNcp91g5VSv/cuFAAdi/wmwQQIDAQAB",
+           "type": "RSA"
+          },
+          "serialNumber": {
+           "decimal": "160328274045797298650494485881739657135",
+           "hex": "0x789e1a3657344c52bad22ed1ceb1bfaf"
+          },
+          "signature": {
+           "algorithm": "sha256WithRSAEncryption",
+           "colon": "84:bc:4b:9a:c3:ab:6c:24:38:bd:ec:dd:3d:99:e6:17:9b:fc:46:59:95:48:1d:85:66:83:60:2b:dc:f0:c2:63:27:b8:ab:77:f7:b6:95:c8:c6:aa:b5:f2:83:b0:79:c2:93:69:29:72:7b:83:9e:5b:f0:8c:68:7a:33:fc:59:bf:28:1e:bf:28:e9:d0:4e:78:fd:62:65:73:02:80:14:02:8b:ad:ca:03:8e:68:36:10:17:a4:50:1b:18:d5:6a:6a:73:e3:5f:00:e0:43:d8:fe:bb:7a:4c:71:9c:83:7b:c5:cb:80:1e:fe:23:57:0d:6c:8b:40:69:9b:a4:11:fe:66:f6:fe:55:58:f7:d1:c5:6a:76:46:ba:48:3c:d6:01:69:0a:93:23:ca:ba:92:57:ae:56:17:81:b1:3c:65:80:83:ad:12:81:04:7d:94:d4:c1:ab:97:59:d9:0a:16:fb:e1:67:ce:c3:88:e7:b6:70:27:a2:0d:bc:1b:88:98:6d:bb:63:61:07:ef:91:ff:ec:22:c4:13:ac:5f:bf:ec:3d:e9:ee:4a:a1:c6:e4:c1:73:e4:32:46:19:38:90:c8:b0:24:58:7f:cc:80:28:eb:37:9f:51:5d:e3:c6:78:b1:1d:fb:81:ae:f3:54:7c:3c:6e:79:05:77:d5:2f:77:5f:91:48",
+           "details": null,
+           "hash": {
+            "name": "sha256"
+           },
+           "hex": "84bc4b9ac3ab6c2438bdecdd3d99e6179bfc465995481d856683602bdcf0c26327b8ab77f7b695c8c6aab5f283b079c2936929727b839e5bf08c687a33fc59bf281ebf28e9d04e78fd626573028014028badca038e68361017a4501b18d56a6a73e35f00e043d8febb7a4c719c837bc5cb801efe23570d6c8b40699ba411fe66f6fe5558f7d1c56a7646ba483cd601690a9323caba9257ae561781b13c658083ad1281047d94d4c1ab9759d90a16fbe167cec388e7b67027a20dbc1b88986dbb636107ef91ffec22c413ac5fbfec3de9ee4aa1c6e4c173e43246193890c8b024587fcc8028eb379f515de3c678b11dfb81aef3547c3c6e790577d52f775f9148",
+           "lines": [
+            "84:bc:4b:9a:c3:ab:6c:24:38:bd:ec:dd:3d:99:e6:17",
+            "9b:fc:46:59:95:48:1d:85:66:83:60:2b:dc:f0:c2:63",
+            "27:b8:ab:77:f7:b6:95:c8:c6:aa:b5:f2:83:b0:79:c2",
+            "93:69:29:72:7b:83:9e:5b:f0:8c:68:7a:33:fc:59:bf",
+            "28:1e:bf:28:e9:d0:4e:78:fd:62:65:73:02:80:14:02",
+            "8b:ad:ca:03:8e:68:36:10:17:a4:50:1b:18:d5:6a:6a",
+            "73:e3:5f:00:e0:43:d8:fe:bb:7a:4c:71:9c:83:7b:c5",
+            "cb:80:1e:fe:23:57:0d:6c:8b:40:69:9b:a4:11:fe:66",
+            "f6:fe:55:58:f7:d1:c5:6a:76:46:ba:48:3c:d6:01:69",
+            "0a:93:23:ca:ba:92:57:ae:56:17:81:b1:3c:65:80:83",
+            "ad:12:81:04:7d:94:d4:c1:ab:97:59:d9:0a:16:fb:e1",
+            "67:ce:c3:88:e7:b6:70:27:a2:0d:bc:1b:88:98:6d:bb",
+            "63:61:07:ef:91:ff:ec:22:c4:13:ac:5f:bf:ec:3d:e9",
+            "ee:4a:a1:c6:e4:c1:73:e4:32:46:19:38:90:c8:b0:24",
+            "58:7f:cc:80:28:eb:37:9f:51:5d:e3:c6:78:b1:1d:fb",
+            "81:ae:f3:54:7c:3c:6e:79:05:77:d5:2f:77:5f:91:48"
+           ],
+           "oid": "1.2.840.113549.1.1.11"
+          },
+          "signatureAlgorithm": "sha256WithRSAEncryption",
+          "signatureAlgorithmDetails": null,
+          "signatureAlgorithmOid": "1.2.840.113549.1.1.11",
+          "subject": "",
+          "subjectCommonNames": [],
+          "validity": {
+           "notAfter": "2029-04-01T08:59:40+00:00",
+           "notBefore": "2019-04-01T08:59:40+00:00"
+          },
+          "version": {
+           "display": "3 (0x2)",
+           "hex": "0x2",
+           "numeric": 3
+          }
+         },
+         "pem": "-----BEGIN CERTIFICATE-----\nMIIEsjCCA5qgAwIBAgIQeJ4aNlc0TFK60i7RzrG/rzANBgkqhkiG9w0BAQsFADBB\nMT8wPQYDVQQDEzZOQ1UtTlRDLUtFWUlELTlGQkI3OUFBMEY1MjYyNzhCRUQxNTA5\nMjlBNzE3MUU5NkEzNUJFRjcwHhcNMTkwNDAxMDg1OTQwWhcNMjkwNDAxMDg1OTQw\nWjAAMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApmDR/kFWTCb5Q8cP\n+J+9ntbZVxkdXsr3Jzk9c8//hePM+5gwAn/oSxccxLCxOBHfTZ3v8rzk2Kj5eXFp\n97j8JQFtm6aHwAMINpNxYYDI8ezKpEEKmn/gexmK17qU7PdE6b7wJzpeByOkrBl5\nlMoawOX1lUM5cAzxTq1BmufN6MPoE4l3HV+j0zn40IVukY/TdG+pqUTTwfHGpODO\nP5m1rFugUWazuGlUBa59N3f5zI46uFcPIZG6Tyz8TFRDN1lvSNPV9fmugFdb+euB\n1cR36ZxYhUZF1YfdDM3qKw49SC5psyayieZXQeayFD/CvKNcp91g5VSv/cuFAAdi\n/wmwQQIDAQABo4IB5TCCAeEwDgYDVR0PAQH/BAQDAgeAMAwGA1UdEwEB/wQCMAAw\nbQYDVR0gAQH/BGMwYTBfBgkrBgEEAYI3FR8wUjBQBggrBgEFBQcCAjBEHkIAVABD\nAFAAQQAgACAAVAByAHUAcwB0AGUAZAAgACAAUABsAGEAdABmAG8AcgBtACAAIABJ\nAGQAZQBuAHQAaQB0AHkwEAYDVR0lBAkwBwYFZ4EFCAMwSgYDVR0RAQH/BEAwPqQ8\nMDoxODAOBgVngQUCAwwFaWQ6MTMwEAYFZ4EFAgIMB05QQ1Q2eHgwFAYFZ4EFAgEM\nC2lkOjRFNTQ0MzAwMB8GA1UdIwQYMBaAFMeZ7yNxMnyy6eA4ONCpAJ/p7SnnMB0G\nA1UdDgQWBBQp+18Fxhh9hGO4slC48P8Sj9OgcTCBswYIKwYBBQUHAQEEgaYwgaMw\ngaAGCCsGAQUFBzAChoGTaHR0cHM6Ly9hemNzcHJvZG5jdWFpa3B1Ymxpc2guYmxv\nYi5jb3JlLndpbmRvd3MubmV0L25jdS1udGMta2V5aWQtOWZiYjc5YWEwZjUyNjI3\nOGJlZDE1MDkyOWE3MTcxZTk2YTM1YmVmNy9mODUwNTQ4OS0wMjVhLTQyNTItODI5\nMC05NGRlMmM2M2QwOTYuY2VyMA0GCSqGSIb3DQEBCwUAA4IBAQCEvEuaw6tsJDi9\n7N09meYXm/xGWZVIHYVmg2Ar3PDCYye4q3f3tpXIxqq18oOwecKTaSlye4OeW/CM\naHoz/Fm/KB6/KOnQTnj9YmVzAoAUAoutygOOaDYQF6RQGxjVampz418A4EPY/rt6\nTHGcg3vFy4Ae/iNXDWyLQGmbpBH+Zvb+VVj30cVqdka6SDzWAWkKkyPKupJXrlYX\ngbE8ZYCDrRKBBH2U1MGrl1nZChb74WfOw4jntnAnog28G4iYbbtjYQfvkf/sIsQT\nrF+/7D3p7kqhxuTBc+QyRhk4kMiwJFh/zIAo6zefUV3jxnixHfuBrvNUfDxueQV3\n1S93X5FI\n-----END CERTIFICATE-----",
+         "raw": "308204b23082039aa0030201020210789e1a3657344c52bad22ed1ceb1bfaf300d06092a864886f70d01010b05003041313f303d060355040313364e43552d4e54432d4b455949442d39464242373941413046353236323738424544313530393239413731373145393641333542454637301e170d3139303430313038353934305a170d3239303430313038353934305a300030820122300d06092a864886f70d01010105000382010f003082010a0282010100a660d1fe41564c26f943c70ff89fbd9ed6d957191d5ecaf727393d73cfff85e3ccfb9830027fe84b171cc4b0b13811df4d9deff2bce4d8a8f9797169f7b8fc25016d9ba687c003083693716180c8f1eccaa4410a9a7fe07b198ad7ba94ecf744e9bef0273a5e0723a4ac197994ca1ac0e5f5954339700cf14ead419ae7cde8c3e81389771d5fa3d339f8d0856e918fd3746fa9a944d3c1f1c6a4e0ce3f99b5ac5ba05166b3b8695405ae7d3777f9cc8e3ab8570f2191ba4f2cfc4c544337596f48d3d5f5f9ae80575bf9eb81d5c477e99c58854645d587dd0ccdea2b0e3d482e69b326b289e65741e6b2143fc2bca35ca7dd60e554affdcb85000762ff09b0410203010001a38201e5308201e1300e0603551d0f0101ff040403020780300c0603551d130101ff04023000306d0603551d200101ff04633061305f06092b060104018237151f3052305006082b0601050507020230441e420054004300500041002000200054007200750073007400650064002000200050006c006100740066006f0072006d00200020004900640065006e007400690074007930100603551d250409300706056781050803304a0603551d110101ff0440303ea43c303a3138300e060567810502030c0569643a31333010060567810502020c074e5043543678783014060567810502010c0b69643a3445353434333030301f0603551d23041830168014c799ef2371327cb2e9e03838d0a9009fe9ed29e7301d0603551d0e0416041429fb5f05c6187d8463b8b250b8f0ff128fd3a0713081b306082b060105050701010481a63081a33081a006082b0601050507300286819368747470733a2f2f617a637370726f646e637561696b7075626c6973682e626c6f622e636f72652e77696e646f77732e6e65742f6e63752d6e74632d6b657969642d396662623739616130663532363237386265643135303932396137313731653936613335626566372f66383530353438392d303235612d343235322d383239302d3934646532633633643039362e636572300d06092a864886f70d01010b0500038201010084bc4b9ac3ab6c2438bdecdd3d99e6179bfc465995481d856683602bdcf0c26327b8ab77f7b695c8c6aab5f283b079c2936929727b839e5bf08c687a33fc59bf281ebf28e9d04e78fd626573028014028badca038e68361017a4501b18d56a6a73e35f00e043d8febb7a4c719c837bc5cb801efe23570d6c8b40699ba411fe66f6fe5558f7d1c56a7646ba483cd601690a9323caba9257ae561781b13c658083ad1281047d94d4c1ab9759d90a16fbe167cec388e7b67027a20dbc1b88986dbb636107ef91ffec22c413ac5fbfec3de9ee4aa1c6e4c173e43246193890c8b024587fcc8028eb379f515de3c678b11dfb81aef3547c3c6e790577d52f775f9148"
+        }
+       ]
+      },
+      "fmt": "tpm",
+      "raw": "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"
+     },
+     "attestationStatementDecoded": {
+      "attestationTypesSupported": "AttCA",
+      "fields": {
+       "alg": {
+        "name": "RS1 (RSA)",
+        "value": -65535
+       },
+       "certInfo": {
+        "attested": {
+         "name": {
+          "digest": "df681917e18529c61e1b85a1e7952f3201eb59c609ed5d8e217e5de76b228bbd",
+          "hex": "000bdf681917e18529c61e1b85a1e7952f3201eb59c609ed5d8e217e5de76b228bbd",
+          "nameAlg": {
+           "meaning": "TPM_ALG_SHA256",
+           "value": "0x000b"
+          },
+          "size": 34
+         },
+         "note": "WebAuthn L3 section 8.3: name is pubArea's Name under its nameAlg; not checked",
+         "qualifiedName": {
+          "digest": "0a10d216b0c3ab82bfdc1f0a016ab9493384c7aee1937ee8800f76b30c9b71a7",
+          "hex": "000b0a10d216b0c3ab82bfdc1f0a016ab9493384c7aee1937ee8800f76b30c9b71a7",
+          "nameAlg": {
+           "meaning": "TPM_ALG_SHA256",
+           "value": "0x000b"
+          },
+          "size": 34
+         },
+         "structure": "TPMS_CERTIFY_INFO ([TPMv2-Part2] section 10.12.3)"
+        },
+        "clockInfo": {
+         "clock": 16900969987,
+         "resetCount": 1148115141,
+         "restartCount": 1789354125,
+         "safe": true
+        },
+        "extraData": {
+         "hex": "f7c8b0cdeb31328648130a19733d6fff16e76e13",
+         "note": "WebAuthn L3 section 8.3: the hash of authenticatorData || clientDataHash under alg; not checked",
+         "size": 20
+        },
+        "firmwareVersion": {
+         "hex": "0xa6ea5651ee67a8a2",
+         "value": 12027520664738441378
+        },
+        "magic": {
+         "meaning": "TPM_GENERATED_VALUE",
+         "value": "0xff544347"
+        },
+        "qualifiedSigner": {
+         "digest": "68cec627cc6411099a1f809fde4379f649aa170c7072d1adf230de439efc8081",
+         "hex": "000b68cec627cc6411099a1f809fde4379f649aa170c7072d1adf230de439efc8081",
+         "nameAlg": {
+          "meaning": "TPM_ALG_SHA256",
+          "value": "0x000b"
+         },
+         "size": 34
+        },
+        "structure": "TPMS_ATTEST ([TPMv2-Part2] section 10.12.8)",
+        "type": {
+         "meaning": "TPM_ST_ATTEST_CERTIFY",
+         "value": "0x8017"
+        }
+       },
+       "pubArea": {
+        "authPolicy": {
+         "hex": "9dffcbf36c383ae699fb9868dc6dcb89d7153884be2803922c124158bfad22ae",
+         "size": 32
+        },
+        "nameAlg": {
+         "meaning": "TPM_ALG_SHA256",
+         "value": "0x000b"
+        },
+        "objectAttributes": {
+         "set": [
+          "fixedTPM",
+          "fixedParent",
+          "sensitiveDataOrigin",
+          "userWithAuth",
+          "noDA",
+          "decrypt",
+          "sign"
+         ],
+         "value": "0x00060472"
+        },
+        "parameters": {
+         "exponent": {
+          "meaning": "0: the default exponent, 65537",
+          "value": 0
+         },
+         "keyBits": 2048,
+         "scheme": {
+          "meaning": "TPM_ALG_NULL",
+          "value": "0x0010"
+         },
+         "structure": "TPMS_RSA_PARMS",
+         "symmetric": {
+          "meaning": "TPM_ALG_NULL",
+          "value": "0x0010"
+         }
+        },
+        "structure": "TPMT_PUBLIC ([TPMv2-Part2] section 12.2.4)",
+        "type": {
+         "meaning": "TPM_ALG_RSA",
+         "value": "0x0001"
+        },
+        "unique": {
+         "n": "c706586c7f46cdffede0ee0c5ebc8b7a08b36555c8091669e9ef2cb4fd858134a01e9522d3ef924069aeeec2271823fe9879b5079eb3123be2eb39a7e954f8b83b5ebefefda25aed01bd19eab6db1962a3713985b7a2dd1aa7770b5c1567fb0d18521e14abebbccc16832ef10bb05dcc818bbb70c91c224475928ada6f6181ed64f1cfb40db5e01687454cfacafa8318bdc6a677550baa6e24f8af864fa5324e9d930a97cdeb1995b476f21a017b33ab7fe4139f2524c784fcb04cf5241c89f0c145eb23da914ad1722d47a843692a0b2a567d94dd808c13678a51c5a0583dc042dcbba1b9ceff12b159d0539248b0994ee18128ed50dd7a855e54d2459db005",
+         "size": 256,
+         "structure": "TPM2B_PUBLIC_KEY_RSA"
+        }
+       },
+       "sig": {
+        "hex": "80e564d8cbb236577de68d2e68ecae200a8eaf6992889b5fdc24624a4cb69caaab18df965058fbac39df9714b9c80b9a12d715cfc4dd15ed3a6e191a6d26e7206fd402b0733c2c8b91f62ad44e4d41c940e2e914253b1d1a1c8889b1cdaf668b5449245dc331fab12e0b0dcdfc530cbe1f370e1f2b06c163fbd6177925a1a8998edd2e726989246a1980fa34e6d65d3ca284944cb10254d85db0d8948294fb8174a41206c6b5e36406bae447343f8c9f97420e39f361815dfb268b33ccde5f29e4348a70f95abc30754c839fa7126e5bd882377d6abe3c0c95ba5c21190a5e4fff5380b2c23cc1655e593244019e172ba8284618471d95b92c231c1ffe98ff23",
+        "length": 256,
+        "note": "section 8.3 calls sig a TPMT_SIGNATURE; shown as bytes, not parsed"
+       },
+       "x5c": {
+        "certificates": [
+         {
+          "issuer": "CN=NCU-NTC-KEYID-9FBB79AA0F526278BED150929A7171E96A35BEF7",
+          "notValidAfter": "2029-04-01T08:59:40+00:00",
+          "notValidBefore": "2019-04-01T08:59:40+00:00",
+          "sha256": "d06fc274d427dd946423852d7b935043abb39a637ef0e02da425df472be6aee5",
+          "subject": ""
+         },
+         {
+          "issuer": "CN=Microsoft TPM Root Certificate Authority 2014,O=Microsoft Corporation,L=Redmond,ST=Washington,C=US",
+          "notValidAfter": "2029-12-31T20:20:20+00:00",
+          "notValidBefore": "2016-08-18T20:20:20+00:00",
+          "sha256": "c889b16c383035d4d28ffc7ea82f5d7aeb1774945353b9609bff66d2d0ddcfc8",
+          "subject": "CN=NCU-NTC-KEYID-9FBB79AA0F526278BED150929A7171E96A35BEF7"
+         }
+        ],
+        "count": 2
+       }
+      },
+      "fmt": "tpm",
+      "known": true,
+      "missing": {
+       "members": [
+        "ver"
+       ],
+       "note": "section 8.3's attStmt syntax requires them; absent here"
+      },
+      "notChecked": [
+       "sig over certInfo under aikCert's key",
+       "certInfo.extraData = hash of authenticatorData || clientDataHash",
+       "certInfo.attested.name = pubArea's Name",
+       "pubArea's key = the credential public key",
+       "the aikCert requirements of section 8.3.1",
+       "the x5c chain up to a trust anchor"
+      ],
+      "spec": "WebAuthn L3 section 8.3",
+      "verification": "not verified: the decoder shows this statement; it checks no signature, chain or value in it"
+     },
+     "authenticatorData": {
+      "counter": 0,
+      "credential": {
+       "aaguid": {
+        "raw": "08987058cadc4b81b6e130de50dcbe96",
+        "uuid": "08987058-cadc-4b81-b6e1-30de50dcbe96"
+       },
+       "credentialId": "6053b7b599d16fb3fb11ea17a344850ebd0d18183a5b7ca6dfbd20c63cdb462a",
+       "credentialIdLength": "0020",
+       "publicKey": {
+        "alg": "RS256 (RSA)",
+        "cose": {
+         "-2": "010001",
+         "-1": "c706586c7f46cdffede0ee0c5ebc8b7a08b36555c8091669e9ef2cb4fd858134a01e9522d3ef924069aeeec2271823fe9879b5079eb3123be2eb39a7e954f8b83b5ebefefda25aed01bd19eab6db1962a3713985b7a2dd1aa7770b5c1567fb0d18521e14abebbccc16832ef10bb05dcc818bbb70c91c224475928ada6f6181ed64f1cfb40db5e01687454cfacafa8318bdc6a677550baa6e24f8af864fa5324e9d930a97cdeb1995b476f21a017b33ab7fe4139f2524c784fcb04cf5241c89f0c145eb23da914ad1722d47a843692a0b2a567d94dd808c13678a51c5a0583dc042dcbba1b9ceff12b159d0539248b0994ee18128ed50dd7a855e54d2459db005",
+         "1": 3,
+         "3": -257
+        },
+        "keyType": "RSA (3)",
+        "modulusBits": 2048
+       }
+      },
+      "flags": {
+       "AT": true,
+       "BE": false,
+       "BS": false,
+       "ED": false,
+       "UP": true,
+       "UV": true,
+       "bin": "01000101",
+       "hex": "45",
+       "raw": "45"
+      },
+      "rpIdHash": "54ce651ed715b4aaa755eecebd4ea0950815b334bd07d109893e963018cddbd9"
+     }
+    },
+    "decodeMode": "strict",
+    "findings": [],
+    "malformed": [],
+    "success": true,
+    "type": "Attestation object"
+   }
+  },
+  {
+   "request": "POST /api/decode",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "10901"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ]
+   ],
+   "cookies": [],
+   "bodySha256": "532efc7ced59e6a7c360288563167cac2a2077dd179f9d2e60c5d0cfe2cd45c2",
+   "body": {
+    "data": {
+     "attestationObject": {
+      "attStmt": {
+       "sig": "MEUCIDJHecaPM4AoihGXtglfem65sbHBJ_Zq4SqZ_oUy7CO5AiEA45UWrE1h7mQETVC0Faak1NhLptiVy1q3oap9CB3jQfo",
+       "x5c": [
+        {
+         "parsedX5c": {
+          "algorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
+          "derBase64": "MIICSjCCATKgAwIBAgIEBGyIIjANBgkqhkiG9w0BAQsFADAuMSwwKgYDVQQDEyNZdWJpY28gVTJGIFJvb3QgQ0EgU2VyaWFsIDQ1NzIwMDYzMTAgFw0xNDA4MDEwMDAwMDBaGA8yMDUwMDkwNDAwMDAwMFowLDEqMCgGA1UEAwwhWXViaWNvIFUyRiBFRSBTZXJpYWwgMjQ5MTgyMzI0NzcwMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEPMq5LMuXKH7o5jlDfiH81rbxZbLVo/PbEx0xwWt0K7R22NHpkIDrVGybvfVW5iEP1CeFiZ54zFievjEPbNuf9KM7MDkwIgYJKwYBBAGCxAoCBBUxLjMuNi4xLjQuMS40MTQ4Mi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwDQYJKoZIhvcNAQELBQADggEBAJ+bBSJIvEz0LMWZH8qrrJtlG75b3NyO8K0sHB/7NtGHFdQueLJJIk+Sx+bnoFxJ8OfkyIG/LpT0Xkohgz10VoUdD2wUWilUDIdPMJLJNLQ9IiuJYsD0EM7x23WJKvEWtEqW9dNa3qOCL8cUb2AEOFvLabZcmefraRl4ZwPA2M1B6PdcykSqirclrY55n/OoaWpvGyZW5jGx5AGDwI/aU/pKj4WgVpOUSuF5oTOdAC0Vyr2BAJDsci713vmWWjcdQV1iS2iicHytl7zdF4Wvl+JY8z31agMaoDVtjo1evK3HTgcWNsaxEKzlzJuQ3+rK5kD/G7Dx/l207/epXwYHM/U=",
+          "extensions": [
+           {
+            "critical": false,
+            "displayHeader": null,
+            "friendlyName": "Yubico: Device identifier",
+            "includeOidInHeader": true,
+            "name": "Yubico: Device identifier",
+            "oid": "1.3.6.1.4.1.41482.2",
+            "value": {
+             "Device identifier": "1.3.6.1.4.1.41482.1.2",
+             "Hex value": "312e332e362e312e342e312e34313438322e312e32"
+            }
+           },
+           {
+            "critical": false,
+            "displayHeader": null,
+            "friendlyName": "FIDO: Transports",
+            "includeOidInHeader": true,
+            "name": "FIDO: Transports",
+            "oid": "1.3.6.1.4.1.45724.2.1.1",
+            "value": {
+             "Hex value": "03020430",
+             "Transports": "USB NFC"
+            }
+           }
+          ],
+          "fingerprints": {
+           "md5": "7c24966ba5f8c10d63a7cbd9edc85d27",
+           "sha1": "098d2bf4228e9bbf10bb00c5cd82eb0171d1aeb0",
+           "sha256": "a88d6c0530957076e8fb2a9f9aad5ac3a569e77edb54544a1875ab8b2bc865cd"
+          },
+          "issuer": "CN=Yubico U2F Root CA Serial 457200631",
+          "pem": "-----BEGIN CERTIFICATE-----\nMIICSjCCATKgAwIBAgIEBGyIIjANBgkqhkiG9w0BAQsFADAuMSwwKgYDVQQDEyNZ\ndWJpY28gVTJGIFJvb3QgQ0EgU2VyaWFsIDQ1NzIwMDYzMTAgFw0xNDA4MDEwMDAw\nMDBaGA8yMDUwMDkwNDAwMDAwMFowLDEqMCgGA1UEAwwhWXViaWNvIFUyRiBFRSBT\nZXJpYWwgMjQ5MTgyMzI0NzcwMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEPMq5\nLMuXKH7o5jlDfiH81rbxZbLVo/PbEx0xwWt0K7R22NHpkIDrVGybvfVW5iEP1CeF\niZ54zFievjEPbNuf9KM7MDkwIgYJKwYBBAGCxAoCBBUxLjMuNi4xLjQuMS40MTQ4\nMi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwDQYJKoZIhvcNAQELBQADggEBAJ+b\nBSJIvEz0LMWZH8qrrJtlG75b3NyO8K0sHB/7NtGHFdQueLJJIk+Sx+bnoFxJ8Ofk\nyIG/LpT0Xkohgz10VoUdD2wUWilUDIdPMJLJNLQ9IiuJYsD0EM7x23WJKvEWtEqW\n9dNa3qOCL8cUb2AEOFvLabZcmefraRl4ZwPA2M1B6PdcykSqirclrY55n/OoaWpv\nGyZW5jGx5AGDwI/aU/pKj4WgVpOUSuF5oTOdAC0Vyr2BAJDsci713vmWWjcdQV1i\nS2iicHytl7zdF4Wvl+JY8z31agMaoDVtjo1evK3HTgcWNsaxEKzlzJuQ3+rK5kD/\nG7Dx/l207/epXwYHM/U=\n-----END CERTIFICATE-----",
+          "publicKeyInfo": {
+           "algorithm": {
+            "name": "ECDSA",
+            "namedCurve": "secp256r1"
+           },
+           "curve": "secp256r1",
+           "keySize": 256,
+           "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEPMq5LMuXKH7o5jlDfiH81rbxZbLVo/PbEx0xwWt0K7R22NHpkIDrVGybvfVW5iEP1CeFiZ54zFievjEPbNuf9A==",
+           "type": "ECC",
+           "uncompressedPoint": "04:3c:ca:b9:2c:cb:97:28:7e:e8:e6:39:43:7e:21:fc:d6:b6:f1:65:b2:d5:a3:f3:db:13:1d:31:c1:6b:74:2b:b4:76:d8:d1:e9:90:80:eb:54:6c:9b:bd:f5:56:e6:21:0f:d4:27:85:89:9e:78:cc:58:9e:be:31:0f:6c:db:9f:f4"
+          },
+          "serialNumber": {
+           "decimal": "74221602",
+           "hex": "0x46c8822"
+          },
+          "signature": {
+           "algorithm": "sha256WithRSAEncryption",
+           "colon": "9f:9b:05:22:48:bc:4c:f4:2c:c5:99:1f:ca:ab:ac:9b:65:1b:be:5b:dc:dc:8e:f0:ad:2c:1c:1f:fb:36:d1:87:15:d4:2e:78:b2:49:22:4f:92:c7:e6:e7:a0:5c:49:f0:e7:e4:c8:81:bf:2e:94:f4:5e:4a:21:83:3d:74:56:85:1d:0f:6c:14:5a:29:54:0c:87:4f:30:92:c9:34:b4:3d:22:2b:89:62:c0:f4:10:ce:f1:db:75:89:2a:f1:16:b4:4a:96:f5:d3:5a:de:a3:82:2f:c7:14:6f:60:04:38:5b:cb:69:b6:5c:99:e7:eb:69:19:78:67:03:c0:d8:cd:41:e8:f7:5c:ca:44:aa:8a:b7:25:ad:8e:79:9f:f3:a8:69:6a:6f:1b:26:56:e6:31:b1:e4:01:83:c0:8f:da:53:fa:4a:8f:85:a0:56:93:94:4a:e1:79:a1:33:9d:00:2d:15:ca:bd:81:00:90:ec:72:2e:f5:de:f9:96:5a:37:1d:41:5d:62:4b:68:a2:70:7c:ad:97:bc:dd:17:85:af:97:e2:58:f3:3d:f5:6a:03:1a:a0:35:6d:8e:8d:5e:bc:ad:c7:4e:07:16:36:c6:b1:10:ac:e5:cc:9b:90:df:ea:ca:e6:40:ff:1b:b0:f1:fe:5d:b4:ef:f7:a9:5f:06:07:33:f5",
+           "details": null,
+           "hash": {
+            "name": "sha256"
+           },
+           "hex": "9f9b052248bc4cf42cc5991fcaabac9b651bbe5bdcdc8ef0ad2c1c1ffb36d18715d42e78b249224f92c7e6e7a05c49f0e7e4c881bf2e94f45e4a21833d7456851d0f6c145a29540c874f3092c934b43d222b8962c0f410cef1db75892af116b44a96f5d35adea3822fc7146f6004385bcb69b65c99e7eb6919786703c0d8cd41e8f75cca44aa8ab725ad8e799ff3a8696a6f1b2656e631b1e40183c08fda53fa4a8f85a05693944ae179a1339d002d15cabd810090ec722ef5def9965a371d415d624b68a2707cad97bcdd1785af97e258f33df56a031aa0356d8e8d5ebcadc74e071636c6b110ace5cc9b90dfeacae640ff1bb0f1fe5db4eff7a95f060733f5",
+           "lines": [
+            "9f:9b:05:22:48:bc:4c:f4:2c:c5:99:1f:ca:ab:ac:9b",
+            "65:1b:be:5b:dc:dc:8e:f0:ad:2c:1c:1f:fb:36:d1:87",
+            "15:d4:2e:78:b2:49:22:4f:92:c7:e6:e7:a0:5c:49:f0",
+            "e7:e4:c8:81:bf:2e:94:f4:5e:4a:21:83:3d:74:56:85",
+            "1d:0f:6c:14:5a:29:54:0c:87:4f:30:92:c9:34:b4:3d",
+            "22:2b:89:62:c0:f4:10:ce:f1:db:75:89:2a:f1:16:b4",
+            "4a:96:f5:d3:5a:de:a3:82:2f:c7:14:6f:60:04:38:5b",
+            "cb:69:b6:5c:99:e7:eb:69:19:78:67:03:c0:d8:cd:41",
+            "e8:f7:5c:ca:44:aa:8a:b7:25:ad:8e:79:9f:f3:a8:69",
+            "6a:6f:1b:26:56:e6:31:b1:e4:01:83:c0:8f:da:53:fa",
+            "4a:8f:85:a0:56:93:94:4a:e1:79:a1:33:9d:00:2d:15",
+            "ca:bd:81:00:90:ec:72:2e:f5:de:f9:96:5a:37:1d:41",
+            "5d:62:4b:68:a2:70:7c:ad:97:bc:dd:17:85:af:97:e2",
+            "58:f3:3d:f5:6a:03:1a:a0:35:6d:8e:8d:5e:bc:ad:c7",
+            "4e:07:16:36:c6:b1:10:ac:e5:cc:9b:90:df:ea:ca:e6",
+            "40:ff:1b:b0:f1:fe:5d:b4:ef:f7:a9:5f:06:07:33:f5"
+           ],
+           "oid": "1.2.840.113549.1.1.11"
+          },
+          "signatureAlgorithm": "sha256WithRSAEncryption",
+          "signatureAlgorithmDetails": null,
+          "signatureAlgorithmOid": "1.2.840.113549.1.1.11",
+          "subject": "CN=Yubico U2F EE Serial 249182324770",
+          "subjectCommonNames": [
+           "Yubico U2F EE Serial 249182324770"
+          ],
+          "validity": {
+           "notAfter": "2050-09-04T00:00:00+00:00",
+           "notBefore": "2014-08-01T00:00:00+00:00"
+          },
+          "version": {
+           "display": "3 (0x2)",
+           "hex": "0x2",
+           "numeric": 3
+          }
+         },
+         "pem": "-----BEGIN CERTIFICATE-----\nMIICSjCCATKgAwIBAgIEBGyIIjANBgkqhkiG9w0BAQsFADAuMSwwKgYDVQQDEyNZ\ndWJpY28gVTJGIFJvb3QgQ0EgU2VyaWFsIDQ1NzIwMDYzMTAgFw0xNDA4MDEwMDAw\nMDBaGA8yMDUwMDkwNDAwMDAwMFowLDEqMCgGA1UEAwwhWXViaWNvIFUyRiBFRSBT\nZXJpYWwgMjQ5MTgyMzI0NzcwMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEPMq5\nLMuXKH7o5jlDfiH81rbxZbLVo/PbEx0xwWt0K7R22NHpkIDrVGybvfVW5iEP1CeF\niZ54zFievjEPbNuf9KM7MDkwIgYJKwYBBAGCxAoCBBUxLjMuNi4xLjQuMS40MTQ4\nMi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwDQYJKoZIhvcNAQELBQADggEBAJ+b\nBSJIvEz0LMWZH8qrrJtlG75b3NyO8K0sHB/7NtGHFdQueLJJIk+Sx+bnoFxJ8Ofk\nyIG/LpT0Xkohgz10VoUdD2wUWilUDIdPMJLJNLQ9IiuJYsD0EM7x23WJKvEWtEqW\n9dNa3qOCL8cUb2AEOFvLabZcmefraRl4ZwPA2M1B6PdcykSqirclrY55n/OoaWpv\nGyZW5jGx5AGDwI/aU/pKj4WgVpOUSuF5oTOdAC0Vyr2BAJDsci713vmWWjcdQV1i\nS2iicHytl7zdF4Wvl+JY8z31agMaoDVtjo1evK3HTgcWNsaxEKzlzJuQ3+rK5kD/\nG7Dx/l207/epXwYHM/U=\n-----END CERTIFICATE-----",
+         "raw": "3082024a30820132a0030201020204046c8822300d06092a864886f70d01010b0500302e312c302a0603550403132359756269636f2055324620526f6f742043412053657269616c203435373230303633313020170d3134303830313030303030305a180f32303530303930343030303030305a302c312a302806035504030c2159756269636f205532462045452053657269616c203234393138323332343737303059301306072a8648ce3d020106082a8648ce3d030107034200043ccab92ccb97287ee8e639437e21fcd6b6f165b2d5a3f3db131d31c16b742bb476d8d1e99080eb546c9bbdf556e6210fd42785899e78cc589ebe310f6cdb9ff4a33b3039302206092b0601040182c40a020415312e332e362e312e342e312e34313438322e312e323013060b2b0601040182e51c020101040403020430300d06092a864886f70d01010b050003820101009f9b052248bc4cf42cc5991fcaabac9b651bbe5bdcdc8ef0ad2c1c1ffb36d18715d42e78b249224f92c7e6e7a05c49f0e7e4c881bf2e94f45e4a21833d7456851d0f6c145a29540c874f3092c934b43d222b8962c0f410cef1db75892af116b44a96f5d35adea3822fc7146f6004385bcb69b65c99e7eb6919786703c0d8cd41e8f75cca44aa8ab725ad8e799ff3a8696a6f1b2656e631b1e40183c08fda53fa4a8f85a05693944ae179a1339d002d15cabd810090ec722ef5def9965a371d415d624b68a2707cad97bcdd1785af97e258f33df56a031aa0356d8e8d5ebcadc74e071636c6b110ace5cc9b90dfeacae640ff1bb0f1fe5db4eff7a95f060733f5"
+        }
+       ]
+      },
+      "fmt": "fido-u2f",
+      "raw": "o2NmbXRoZmlkby11MmZnYXR0U3RtdKJjc2lnWEcwRQIgMkd5xo8zgCiKEZe2CV96brmxscEn9mrhKpn+hTLsI7kCIQDjlRasTWHuZARNULQVpqTU2Eum2JXLWrehqn0IHeNB+mN4NWOBWQJOMIICSjCCATKgAwIBAgIEBGyIIjANBgkqhkiG9w0BAQsFADAuMSwwKgYDVQQDEyNZdWJpY28gVTJGIFJvb3QgQ0EgU2VyaWFsIDQ1NzIwMDYzMTAgFw0xNDA4MDEwMDAwMDBaGA8yMDUwMDkwNDAwMDAwMFowLDEqMCgGA1UEAwwhWXViaWNvIFUyRiBFRSBTZXJpYWwgMjQ5MTgyMzI0NzcwMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEPMq5LMuXKH7o5jlDfiH81rbxZbLVo/PbEx0xwWt0K7R22NHpkIDrVGybvfVW5iEP1CeFiZ54zFievjEPbNuf9KM7MDkwIgYJKwYBBAGCxAoCBBUxLjMuNi4xLjQuMS40MTQ4Mi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwDQYJKoZIhvcNAQELBQADggEBAJ+bBSJIvEz0LMWZH8qrrJtlG75b3NyO8K0sHB/7NtGHFdQueLJJIk+Sx+bnoFxJ8OfkyIG/LpT0Xkohgz10VoUdD2wUWilUDIdPMJLJNLQ9IiuJYsD0EM7x23WJKvEWtEqW9dNa3qOCL8cUb2AEOFvLabZcmefraRl4ZwPA2M1B6PdcykSqirclrY55n/OoaWpvGyZW5jGx5AGDwI/aU/pKj4WgVpOUSuF5oTOdAC0Vyr2BAJDsci713vmWWjcdQV1iS2iicHytl7zdF4Wvl+JY8z31agMaoDVtjo1evK3HTgcWNsaxEKzlzJuQ3+rK5kD/G7Dx/l207/epXwYHM/VoYXV0aERhdGFYxBGUIo2o/b3u/SYb17ZZXP1wpQ1wxkB7zwE96W1O+xfeQQAAAAAAAAAAAAAAAAAAAAAAAAAAAEA+vYm/d+xQl1XunCY176qseyucXO8XNsNxfaSFNMjGtlTX/5RfULXMTngFW905a2T3jaLF+WIAzNQVzQj+QgA4pQECAyYgASFYIOh2JYlu5ORtwDJ2boCHli82353+i1Z/N2MBWxmQpg4UIlggJ95hLWZBi9oZUFgevFyMHa1xDLFMIvjJcEX0YS+yDJE="
+     },
+     "attestationStatementDecoded": {
+      "attestationTypesSupported": "Basic, AttCA",
+      "fields": {
+       "attestnCertKey": "EC secp256r1 (section 8.6 requires P-256; shown, not judged)",
+       "sig": {
+        "hex": "30450220324779c68f3380288a1197b6095f7a6eb9b1b1c127f66ae12a99fe8532ec23b9022100e39516ac4d61ee64044d50b415a6a4d4d84ba6d895cb5ab7a1aa7d081de341fa",
+        "length": 71
+       },
+       "x5c": {
+        "certificates": [
+         {
+          "issuer": "CN=Yubico U2F Root CA Serial 457200631",
+          "notValidAfter": "2050-09-04T00:00:00+00:00",
+          "notValidBefore": "2014-08-01T00:00:00+00:00",
+          "sha256": "a88d6c0530957076e8fb2a9f9aad5ac3a569e77edb54544a1875ab8b2bc865cd",
+          "subject": "CN=Yubico U2F EE Serial 249182324770"
+         }
+        ],
+        "count": 1
+       }
+      },
+      "fmt": "fido-u2f",
+      "known": true,
+      "notChecked": [
+       "sig over 0x00 || rpIdHash || clientDataHash || credentialId || publicKeyU2F",
+       "the x5c chain up to a trust anchor"
+      ],
+      "spec": "WebAuthn L3 section 8.6",
+      "verification": "not verified: the decoder shows this statement; it checks no signature, chain or value in it"
+     },
+     "authenticatorData": {
+      "counter": 0,
+      "credential": {
+       "aaguid": {
+        "raw": "00000000000000000000000000000000",
+        "uuid": "00000000-0000-0000-0000-000000000000"
+       },
+       "credentialId": "3ebd89bf77ec509755ee9c2635efaaac7b2b9c5cef1736c3717da48534c8c6b654d7ff945f50b5cc4e78055bdd396b64f78da2c5f96200ccd415cd08fe420038",
+       "credentialIdLength": "0040",
+       "publicKey": {
+        "alg": "ES256 (ECDSA)",
+        "cose": {
+         "-3": "27de612d66418bda1950581ebc5c8c1dad710cb14c22f8c97045f4612fb20c91",
+         "-2": "e87625896ee4e46dc032766e8087962f36df9dfe8b567f3763015b1990a60e14",
+         "-1": 1,
+         "1": 2,
+         "3": -7
+        },
+        "curve": "P-256 (1)",
+        "keyType": "EC2 (2)"
+       }
+      },
+      "flags": {
+       "AT": true,
+       "BE": false,
+       "BS": false,
+       "ED": false,
+       "UP": true,
+       "UV": false,
+       "bin": "01000001",
+       "hex": "41",
+       "raw": "41"
+      },
+      "rpIdHash": "1194228da8fdbdeefd261bd7b6595cfd70a50d70c6407bcf013de96d4efb17de"
+     }
+    },
+    "decodeMode": "strict",
+    "findings": [],
+    "malformed": [],
+    "success": true,
+    "type": "Attestation object"
+   }
+  },
+  {
+   "request": "POST /api/decode",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "12390"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ]
+   ],
+   "cookies": [],
+   "bodySha256": "45bd136c41222a52c1390c91be6054c8df0eaeea1b95b1eab88db79b641ece06",
+   "body": {
+    "data": {
+     "attestationObject": {
+      "attStmt": {
+       "alg": -7,
+       "sig": "MEUCIA0V2vM31yerRxm0AnEUoqxDzVZdOUztYsPZ0dkIJfCzAiEAmJYV5zlMh_Stkfj9rob3ozJt8zKzYz2wiKrHa_-5pGs",
+       "x5c": [
+        {
+         "parsedX5c": {
+          "algorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
+          "derBase64": "MIICtzCCAZ+gAwIBAgIEHTEzDTANBgkqhkiG9w0BAQsFADAqMSgwJgYDVQQDDB9ZdWJpY28gUHJldmlldyBGSURPIEF0dGVzdGF0aW9uMB4XDTE4MDMyODA2MzkyNFoXDTE5MDMyODA2MzkyNFowbjELMAkGA1UEBhMCU0UxEjAQBgNVBAoMCVl1YmljbyBBQjEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweWXViaWNvIFUyRiBFRSBTZXJpYWwgNDg5NzYzNTk3MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfXHoNnyv0Ops8NYeTGpBa6W7bY+tUtsjia0Hlp8PRjv93d3CnTnTGZFj7klXWjM2wEszCdYH9hYMgeAjNz4Bl6NsMGowIgYJKwYBBAGCxAoCBBUxLjMuNi4xLjQuMS40MTQ4Mi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwIQYLKwYBBAGC5RwBAQQEEgQQ+KAR84wKTRWABhcRH57cfTAMBgNVHRMBAf8EAjAAMA0GCSqGSIb3DQEBCwUAA4IBAQCbkEzq2+HxmFSG/q0Cuuqnflq05uUrfmomZqTcBuJBV4FpGTtj2t7FsreGBaEosuA/f+Kpjq60IZ9SIgmV9ADOFdYwzwWYumYtcWJFnxrR/GIwZzdtTkCRvmWsGjPYVhuZlsBSnsGBbRcQeGOE1eh4OqH3R0y5n+j1pjp5/0VDgDYcKZ1ny1zHx58NjAn4hJsFAPbWJUCMd8u8Jt3uEctYG+t5RxN61PBarzi9mNoQBC3crCd2BKOVpbPqqIpci7J6tZyBJ9Wda7ul8RUGv3t1/adWGgg3xG8CX9VNzxAU/I0XyFlQesV9Sx3qmUhd8LqPNNABA8Pu8u87v+x6ZhPe",
+          "extensions": [
+           {
+            "critical": false,
+            "displayHeader": null,
+            "friendlyName": "Yubico: Device identifier",
+            "includeOidInHeader": true,
+            "name": "Yubico: Device identifier",
+            "oid": "1.3.6.1.4.1.41482.2",
+            "value": {
+             "Device identifier": "1.3.6.1.4.1.41482.1.2",
+             "Hex value": "312e332e362e312e342e312e34313438322e312e32"
+            }
+           },
+           {
+            "critical": false,
+            "displayHeader": null,
+            "friendlyName": "FIDO: Transports",
+            "includeOidInHeader": true,
+            "name": "FIDO: Transports",
+            "oid": "1.3.6.1.4.1.45724.2.1.1",
+            "value": {
+             "Hex value": "03020430",
+             "Transports": "USB NFC"
+            }
+           },
+           {
+            "critical": false,
+            "displayHeader": null,
+            "friendlyName": "FIDO: Device AAGUID",
+            "includeOidInHeader": true,
+            "name": "FIDO: Device AAGUID",
+            "oid": "1.3.6.1.4.1.45724.1.1.4",
+            "value": {
+             "AAGUID": "f8a011f38c0a4d15800617111f9edc7d"
+            }
+           },
+           {
+            "critical": true,
+            "displayHeader": "X509v3 Basic Constraints",
+            "friendlyName": "X509v3 Basic Constraints",
+            "includeOidInHeader": false,
+            "name": "X509v3 Basic Constraints",
+            "oid": "2.5.29.19",
+            "value": {
+             "CA": "FALSE"
+            }
+           }
+          ],
+          "fingerprints": {
+           "md5": "c3d3834e80e9a879c79d4c993db40ff8",
+           "sha1": "3a59814c22d3c5cf5d0e687dba02b9ac46574d76",
+           "sha256": "cb3645299b81be94c780eae789c5fabba2ccfc5059aaa21dd7e3564b10ce480c"
+          },
+          "issuer": "CN=Yubico Preview FIDO Attestation",
+          "pem": "-----BEGIN CERTIFICATE-----\nMIICtzCCAZ+gAwIBAgIEHTEzDTANBgkqhkiG9w0BAQsFADAqMSgwJgYDVQQDDB9Z\ndWJpY28gUHJldmlldyBGSURPIEF0dGVzdGF0aW9uMB4XDTE4MDMyODA2MzkyNFoX\nDTE5MDMyODA2MzkyNFowbjELMAkGA1UEBhMCU0UxEjAQBgNVBAoMCVl1YmljbyBB\nQjEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwwe\nWXViaWNvIFUyRiBFRSBTZXJpYWwgNDg5NzYzNTk3MFkwEwYHKoZIzj0CAQYIKoZI\nzj0DAQcDQgAEfXHoNnyv0Ops8NYeTGpBa6W7bY+tUtsjia0Hlp8PRjv93d3CnTnT\nGZFj7klXWjM2wEszCdYH9hYMgeAjNz4Bl6NsMGowIgYJKwYBBAGCxAoCBBUxLjMu\nNi4xLjQuMS40MTQ4Mi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwIQYLKwYBBAGC\n5RwBAQQEEgQQ+KAR84wKTRWABhcRH57cfTAMBgNVHRMBAf8EAjAAMA0GCSqGSIb3\nDQEBCwUAA4IBAQCbkEzq2+HxmFSG/q0Cuuqnflq05uUrfmomZqTcBuJBV4FpGTtj\n2t7FsreGBaEosuA/f+Kpjq60IZ9SIgmV9ADOFdYwzwWYumYtcWJFnxrR/GIwZzdt\nTkCRvmWsGjPYVhuZlsBSnsGBbRcQeGOE1eh4OqH3R0y5n+j1pjp5/0VDgDYcKZ1n\ny1zHx58NjAn4hJsFAPbWJUCMd8u8Jt3uEctYG+t5RxN61PBarzi9mNoQBC3crCd2\nBKOVpbPqqIpci7J6tZyBJ9Wda7ul8RUGv3t1/adWGgg3xG8CX9VNzxAU/I0XyFlQ\nesV9Sx3qmUhd8LqPNNABA8Pu8u87v+x6ZhPe\n-----END CERTIFICATE-----",
+          "publicKeyInfo": {
+           "algorithm": {
+            "name": "ECDSA",
+            "namedCurve": "secp256r1"
+           },
+           "curve": "secp256r1",
+           "keySize": 256,
+           "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfXHoNnyv0Ops8NYeTGpBa6W7bY+tUtsjia0Hlp8PRjv93d3CnTnTGZFj7klXWjM2wEszCdYH9hYMgeAjNz4Blw==",
+           "type": "ECC",
+           "uncompressedPoint": "04:7d:71:e8:36:7c:af:d0:ea:6c:f0:d6:1e:4c:6a:41:6b:a5:bb:6d:8f:ad:52:db:23:89:ad:07:96:9f:0f:46:3b:fd:dd:dd:c2:9d:39:d3:19:91:63:ee:49:57:5a:33:36:c0:4b:33:09:d6:07:f6:16:0c:81:e0:23:37:3e:01:97"
+          },
+          "serialNumber": {
+           "decimal": "489763597",
+           "hex": "0x1d31330d"
+          },
+          "signature": {
+           "algorithm": "sha256WithRSAEncryption",
+           "colon": "9b:90:4c:ea:db:e1:f1:98:54:86:fe:ad:02:ba:ea:a7:7e:5a:b4:e6:e5:2b:7e:6a:26:66:a4:dc:06:e2:41:57:81:69:19:3b:63:da:de:c5:b2:b7:86:05:a1:28:b2:e0:3f:7f:e2:a9:8e:ae:b4:21:9f:52:22:09:95:f4:00:ce:15:d6:30:cf:05:98:ba:66:2d:71:62:45:9f:1a:d1:fc:62:30:67:37:6d:4e:40:91:be:65:ac:1a:33:d8:56:1b:99:96:c0:52:9e:c1:81:6d:17:10:78:63:84:d5:e8:78:3a:a1:f7:47:4c:b9:9f:e8:f5:a6:3a:79:ff:45:43:80:36:1c:29:9d:67:cb:5c:c7:c7:9f:0d:8c:09:f8:84:9b:05:00:f6:d6:25:40:8c:77:cb:bc:26:dd:ee:11:cb:58:1b:eb:79:47:13:7a:d4:f0:5a:af:38:bd:98:da:10:04:2d:dc:ac:27:76:04:a3:95:a5:b3:ea:a8:8a:5c:8b:b2:7a:b5:9c:81:27:d5:9d:6b:bb:a5:f1:15:06:bf:7b:75:fd:a7:56:1a:08:37:c4:6f:02:5f:d5:4d:cf:10:14:fc:8d:17:c8:59:50:7a:c5:7d:4b:1d:ea:99:48:5d:f0:ba:8f:34:d0:01:03:c3:ee:f2:ef:3b:bf:ec:7a:66:13:de",
+           "details": null,
+           "hash": {
+            "name": "sha256"
+           },
+           "hex": "9b904ceadbe1f1985486fead02baeaa77e5ab4e6e52b7e6a2666a4dc06e241578169193b63dadec5b2b78605a128b2e03f7fe2a98eaeb4219f52220995f400ce15d630cf0598ba662d7162459f1ad1fc623067376d4e4091be65ac1a33d8561b9996c0529ec1816d1710786384d5e8783aa1f7474cb99fe8f5a63a79ff454380361c299d67cb5cc7c79f0d8c09f8849b0500f6d625408c77cbbc26ddee11cb581beb7947137ad4f05aaf38bd98da10042ddcac277604a395a5b3eaa88a5c8bb27ab59c8127d59d6bbba5f11506bf7b75fda7561a0837c46f025fd54dcf1014fc8d17c859507ac57d4b1dea99485df0ba8f34d00103c3eef2ef3bbfec7a6613de",
+           "lines": [
+            "9b:90:4c:ea:db:e1:f1:98:54:86:fe:ad:02:ba:ea:a7",
+            "7e:5a:b4:e6:e5:2b:7e:6a:26:66:a4:dc:06:e2:41:57",
+            "81:69:19:3b:63:da:de:c5:b2:b7:86:05:a1:28:b2:e0",
+            "3f:7f:e2:a9:8e:ae:b4:21:9f:52:22:09:95:f4:00:ce",
+            "15:d6:30:cf:05:98:ba:66:2d:71:62:45:9f:1a:d1:fc",
+            "62:30:67:37:6d:4e:40:91:be:65:ac:1a:33:d8:56:1b",
+            "99:96:c0:52:9e:c1:81:6d:17:10:78:63:84:d5:e8:78",
+            "3a:a1:f7:47:4c:b9:9f:e8:f5:a6:3a:79:ff:45:43:80",
+            "36:1c:29:9d:67:cb:5c:c7:c7:9f:0d:8c:09:f8:84:9b",
+            "05:00:f6:d6:25:40:8c:77:cb:bc:26:dd:ee:11:cb:58",
+            "1b:eb:79:47:13:7a:d4:f0:5a:af:38:bd:98:da:10:04",
+            "2d:dc:ac:27:76:04:a3:95:a5:b3:ea:a8:8a:5c:8b:b2",
+            "7a:b5:9c:81:27:d5:9d:6b:bb:a5:f1:15:06:bf:7b:75",
+            "fd:a7:56:1a:08:37:c4:6f:02:5f:d5:4d:cf:10:14:fc",
+            "8d:17:c8:59:50:7a:c5:7d:4b:1d:ea:99:48:5d:f0:ba",
+            "8f:34:d0:01:03:c3:ee:f2:ef:3b:bf:ec:7a:66:13:de"
+           ],
+           "oid": "1.2.840.113549.1.1.11"
+          },
+          "signatureAlgorithm": "sha256WithRSAEncryption",
+          "signatureAlgorithmDetails": null,
+          "signatureAlgorithmOid": "1.2.840.113549.1.1.11",
+          "subject": "CN=Yubico U2F EE Serial 489763597,OU=Authenticator Attestation,O=Yubico AB,C=SE",
+          "subjectCommonNames": [
+           "Yubico U2F EE Serial 489763597"
+          ],
+          "validity": {
+           "notAfter": "2019-03-28T06:39:24+00:00",
+           "notBefore": "2018-03-28T06:39:24+00:00"
+          },
+          "version": {
+           "display": "3 (0x2)",
+           "hex": "0x2",
+           "numeric": 3
+          }
+         },
+         "pem": "-----BEGIN CERTIFICATE-----\nMIICtzCCAZ+gAwIBAgIEHTEzDTANBgkqhkiG9w0BAQsFADAqMSgwJgYDVQQDDB9Z\ndWJpY28gUHJldmlldyBGSURPIEF0dGVzdGF0aW9uMB4XDTE4MDMyODA2MzkyNFoX\nDTE5MDMyODA2MzkyNFowbjELMAkGA1UEBhMCU0UxEjAQBgNVBAoMCVl1YmljbyBB\nQjEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwwe\nWXViaWNvIFUyRiBFRSBTZXJpYWwgNDg5NzYzNTk3MFkwEwYHKoZIzj0CAQYIKoZI\nzj0DAQcDQgAEfXHoNnyv0Ops8NYeTGpBa6W7bY+tUtsjia0Hlp8PRjv93d3CnTnT\nGZFj7klXWjM2wEszCdYH9hYMgeAjNz4Bl6NsMGowIgYJKwYBBAGCxAoCBBUxLjMu\nNi4xLjQuMS40MTQ4Mi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwIQYLKwYBBAGC\n5RwBAQQEEgQQ+KAR84wKTRWABhcRH57cfTAMBgNVHRMBAf8EAjAAMA0GCSqGSIb3\nDQEBCwUAA4IBAQCbkEzq2+HxmFSG/q0Cuuqnflq05uUrfmomZqTcBuJBV4FpGTtj\n2t7FsreGBaEosuA/f+Kpjq60IZ9SIgmV9ADOFdYwzwWYumYtcWJFnxrR/GIwZzdt\nTkCRvmWsGjPYVhuZlsBSnsGBbRcQeGOE1eh4OqH3R0y5n+j1pjp5/0VDgDYcKZ1n\ny1zHx58NjAn4hJsFAPbWJUCMd8u8Jt3uEctYG+t5RxN61PBarzi9mNoQBC3crCd2\nBKOVpbPqqIpci7J6tZyBJ9Wda7ul8RUGv3t1/adWGgg3xG8CX9VNzxAU/I0XyFlQ\nesV9Sx3qmUhd8LqPNNABA8Pu8u87v+x6ZhPe\n-----END CERTIFICATE-----",
+         "raw": "308202b73082019fa00302010202041d31330d300d06092a864886f70d01010b0500302a3128302606035504030c1f59756269636f2050726576696577204649444f204174746573746174696f6e301e170d3138303332383036333932345a170d3139303332383036333932345a306e310b300906035504061302534531123010060355040a0c0959756269636f20414231223020060355040b0c1941757468656e74696361746f72204174746573746174696f6e3127302506035504030c1e59756269636f205532462045452053657269616c203438393736333539373059301306072a8648ce3d020106082a8648ce3d030107034200047d71e8367cafd0ea6cf0d61e4c6a416ba5bb6d8fad52db2389ad07969f0f463bfdddddc29d39d3199163ee49575a3336c04b3309d607f6160c81e023373e0197a36c306a302206092b0601040182c40a020415312e332e362e312e342e312e34313438322e312e323013060b2b0601040182e51c0201010404030204303021060b2b0601040182e51c01010404120410f8a011f38c0a4d15800617111f9edc7d300c0603551d130101ff04023000300d06092a864886f70d01010b050003820101009b904ceadbe1f1985486fead02baeaa77e5ab4e6e52b7e6a2666a4dc06e241578169193b63dadec5b2b78605a128b2e03f7fe2a98eaeb4219f52220995f400ce15d630cf0598ba662d7162459f1ad1fc623067376d4e4091be65ac1a33d8561b9996c0529ec1816d1710786384d5e8783aa1f7474cb99fe8f5a63a79ff454380361c299d67cb5cc7c79f0d8c09f8849b0500f6d625408c77cbbc26ddee11cb581beb7947137ad4f05aaf38bd98da10042ddcac277604a395a5b3eaa88a5c8bb27ab59c8127d59d6bbba5f11506bf7b75fda7561a0837c46f025fd54dcf1014fc8d17c859507ac57d4b1dea99485df0ba8f34d00103c3eef2ef3bbfec7a6613de"
+        }
+       ]
+      },
+      "fmt": "packed",
+      "raw": "o2NmbXRmcGFja2VkZ2F0dFN0bXSjY2FsZyZjc2lnWEcwRQIgDRXa8zfXJ6tHGbQCcRSirEPNVl05TO1iw9nR2Qgl8LMCIQCYlhXnOUyH9K2R+P2uhvejMm3zMrNjPbCIqsdr/7mka2N4NWOBWQK7MIICtzCCAZ+gAwIBAgIEHTEzDTANBgkqhkiG9w0BAQsFADAqMSgwJgYDVQQDDB9ZdWJpY28gUHJldmlldyBGSURPIEF0dGVzdGF0aW9uMB4XDTE4MDMyODA2MzkyNFoXDTE5MDMyODA2MzkyNFowbjELMAkGA1UEBhMCU0UxEjAQBgNVBAoMCVl1YmljbyBBQjEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweWXViaWNvIFUyRiBFRSBTZXJpYWwgNDg5NzYzNTk3MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfXHoNnyv0Ops8NYeTGpBa6W7bY+tUtsjia0Hlp8PRjv93d3CnTnTGZFj7klXWjM2wEszCdYH9hYMgeAjNz4Bl6NsMGowIgYJKwYBBAGCxAoCBBUxLjMuNi4xLjQuMS40MTQ4Mi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwIQYLKwYBBAGC5RwBAQQEEgQQ+KAR84wKTRWABhcRH57cfTAMBgNVHRMBAf8EAjAAMA0GCSqGSIb3DQEBCwUAA4IBAQCbkEzq2+HxmFSG/q0Cuuqnflq05uUrfmomZqTcBuJBV4FpGTtj2t7FsreGBaEosuA/f+Kpjq60IZ9SIgmV9ADOFdYwzwWYumYtcWJFnxrR/GIwZzdtTkCRvmWsGjPYVhuZlsBSnsGBbRcQeGOE1eh4OqH3R0y5n+j1pjp5/0VDgDYcKZ1ny1zHx58NjAn4hJsFAPbWJUCMd8u8Jt3uEctYG+t5RxN61PBarzi9mNoQBC3crCd2BKOVpbPqqIpci7J6tZyBJ9Wda7ul8RUGv3t1/adWGgg3xG8CX9VNzxAU/I0XyFlQesV9Sx3qmUhd8LqPNNABA8Pu8u87v+x6ZhPeaGF1dGhEYXRhWMQAIfX8C4XNIuYGI7zX0cpIlIkJJJtHdutRUVTle2auEkEAAAAD+KAR84wKTRWABhcRH57cfQBAYKOGIGo6rOy9uyLWAYU9lV/cXRGt+9GqapUNlms0jHZj1AFzcUqfmH32Rhvq37nNZBn/3+TUzy7sGqYFpPWb2qUBAgMmIAEhWCAO2ydYA4lJTXTSNzuPjC6LdvoTWUbU8w0OGH4SC0IzSSJYIOA0ANGJ6FpV3pqw9TjtYHNut1D18DBqgAYP4bEwEFYN"
+     },
+     "attestationStatementDecoded": {
+      "attestationTypesSupported": "Basic, Self, AttCA",
+      "fields": {
+       "alg": {
+        "name": "ES256 (ECDSA)",
+        "value": -7
+       },
+       "attestationType": "Basic or AttCA (x5c present; which one depends on the trust anchor)",
+       "sig": {
+        "hex": "304502200d15daf337d727ab4719b4027114a2ac43cd565d394ced62c3d9d1d90825f0b3022100989615e7394c87f4ad91f8fdae86f7a3326df332b3633db088aac76bffb9a46b",
+        "length": 71
+       },
+       "x5c": {
+        "certificates": [
+         {
+          "issuer": "CN=Yubico Preview FIDO Attestation",
+          "notValidAfter": "2019-03-28T06:39:24+00:00",
+          "notValidBefore": "2018-03-28T06:39:24+00:00",
+          "sha256": "cb3645299b81be94c780eae789c5fabba2ccfc5059aaa21dd7e3564b10ce480c",
+          "subject": "CN=Yubico U2F EE Serial 489763597,OU=Authenticator Attestation,O=Yubico AB,C=SE"
+         }
+        ],
+        "count": 1
+       }
+      },
+      "fmt": "packed",
+      "known": true,
+      "notChecked": [
+       "sig over authenticatorData || clientDataHash",
+       "the attestation certificate requirements of section 8.2.1",
+       "the x5c chain up to a trust anchor",
+       "for self attestation: that alg matches the credential public key and sig verifies under it"
+      ],
+      "spec": "WebAuthn L3 section 8.2",
+      "verification": "not verified: the decoder shows this statement; it checks no signature, chain or value in it"
+     },
+     "authenticatorData": {
+      "counter": 3,
+      "credential": {
+       "aaguid": {
+        "raw": "f8a011f38c0a4d15800617111f9edc7d",
+        "uuid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d"
+       },
+       "credentialId": "60a386206a3aacecbdbb22d601853d955fdc5d11adfbd1aa6a950d966b348c7663d40173714a9f987df6461beadfb9cd6419ffdfe4d4cf2eec1aa605a4f59bda",
+       "credentialIdLength": "0040",
+       "publicKey": {
+        "alg": "ES256 (ECDSA)",
+        "cose": {
+         "-3": "e03400d189e85a55de9ab0f538ed60736eb750f5f0306a80060fe1b13010560d",
+         "-2": "0edb27580389494d74d2373b8f8c2e8b76fa135946d4f30d0e187e120b423349",
+         "-1": 1,
+         "1": 2,
+         "3": -7
+        },
+        "curve": "P-256 (1)",
+        "keyType": "EC2 (2)"
+       }
+      },
+      "flags": {
+       "AT": true,
+       "BE": false,
+       "BS": false,
+       "ED": false,
+       "UP": true,
+       "UV": false,
+       "bin": "01000001",
+       "hex": "41",
+       "raw": "41"
+      },
+      "rpIdHash": "0021f5fc0b85cd22e60623bcd7d1ca48948909249b4776eb515154e57b66ae12"
+     }
+    },
+    "decodeMode": "strict",
+    "findings": [],
+    "malformed": [],
+    "success": true,
+    "type": "Attestation object"
+   }
+  },
+  {
+   "request": "POST /api/decode",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "10872"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ]
+   ],
+   "cookies": [],
+   "bodySha256": "42235ee767e15f31c5f5fa987d4ea2925546ffb4a3c2a296f41e67e317d57c87",
+   "body": {
+    "data": {
+     "attestationObject": {
+      "attStmt": {
+       "alg": -7,
+       "x5c": [
+        {
+         "parsedX5c": {
+          "algorithmInfo": "ECDSA_SHA256",
+          "derBase64": "MIICQjCCAcmgAwIBAgIGAXavU1n/MAoGCCqGSM49BAMCMEgxHDAaBgNVBAMME0FwcGxlIFdlYkF1dGhuIENBIDExEzARBgNVBAoMCkFwcGxlIEluYy4xEzARBgNVBAgMCkNhbGlmb3JuaWEwHhcNMjAxMjI4MTYyNzI0WhcNMjAxMjMxMTYyNzI0WjCBkTFJMEcGA1UEAwxAODA5ZmJjMTEwZWE4NWYyM2E4YjI0NWFlYzYxNjM1MGYzN2RmZTk2MjEyMjczNmU0MWY4YmRjZWYzNDZhODBkOTEaMBgGA1UECwwRQUFBIENlcnRpZmljYXRpb24xEzARBgNVBAoMCkFwcGxlIEluYy4xEzARBgNVBAgMCkNhbGlmb3JuaWEwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQfRqLxWf3jVFmM3UfgBfG258nwDtKpQex6iNIi9bz1XWsHi8WwvpVS2FqXSSH1u4SOK7w67Nb3GjhtLIfW6v03o1UwUzAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIE8DAzBgkqhkiG92NkCAIEJjAkoSIEIOVvtiErOq6IUpRGT7EBhLf+pixIpteOYRlOB65trMEyMAoGCCqGSM49BAMCA2cAMGQCMB3o8PI47uT1roDFkpC1How/eTl78ZjkRLoWLU/MqrhViwcs8Ap8Zi+QWP8qmK9hrgIwFJQDuWQwZuc6mNNllWPcTaSb+E6CsrW76vV3VWRvokPzY0TUS4CleYIDvKAj4DDH",
+          "extensions": [
+           {
+            "critical": true,
+            "displayHeader": "X509v3 Basic Constraints",
+            "friendlyName": "X509v3 Basic Constraints",
+            "includeOidInHeader": false,
+            "name": "X509v3 Basic Constraints",
+            "oid": "2.5.29.19",
+            "value": {
+             "CA": "FALSE"
+            }
+           },
+           {
+            "critical": true,
+            "displayHeader": null,
+            "friendlyName": null,
+            "includeOidInHeader": true,
+            "name": "keyUsage",
+            "oid": "2.5.29.15",
+            "value": "<KeyUsage(digital_signature=True, content_commitment=True, key_encipherment=True, data_encipherment=True, key_agreement=False, key_cert_sign=False, crl_sign=False, encipher_only=False, decipher_only=False)>"
+           },
+           {
+            "critical": false,
+            "displayHeader": null,
+            "friendlyName": null,
+            "includeOidInHeader": true,
+            "name": "Unknown OID",
+            "oid": "1.2.840.113635.100.8.2",
+            "value": {
+             "Hex value": "3024a1220420e56fb6212b3aae885294464fb10184b7fea62c48a6d78e61194e07ae6dacc132"
+            }
+           }
+          ],
+          "fingerprints": {
+           "md5": "4f7cc1b47c3a72436c4a0f11f75fc4a8",
+           "sha1": "750d563fcfbf4f6a62bd669a12f06d51bdf44b38",
+           "sha256": "63ff4c82b40d50e6b3d7837317fb418baad8447bbfe5c2c6fc8f8f7079924180"
+          },
+          "issuer": "ST=California,O=Apple Inc.,CN=Apple WebAuthn CA 1",
+          "pem": "-----BEGIN CERTIFICATE-----\nMIICQjCCAcmgAwIBAgIGAXavU1n/MAoGCCqGSM49BAMCMEgxHDAaBgNVBAMME0Fw\ncGxlIFdlYkF1dGhuIENBIDExEzARBgNVBAoMCkFwcGxlIEluYy4xEzARBgNVBAgM\nCkNhbGlmb3JuaWEwHhcNMjAxMjI4MTYyNzI0WhcNMjAxMjMxMTYyNzI0WjCBkTFJ\nMEcGA1UEAwxAODA5ZmJjMTEwZWE4NWYyM2E4YjI0NWFlYzYxNjM1MGYzN2RmZTk2\nMjEyMjczNmU0MWY4YmRjZWYzNDZhODBkOTEaMBgGA1UECwwRQUFBIENlcnRpZmlj\nYXRpb24xEzARBgNVBAoMCkFwcGxlIEluYy4xEzARBgNVBAgMCkNhbGlmb3JuaWEw\nWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQfRqLxWf3jVFmM3UfgBfG258nwDtKp\nQex6iNIi9bz1XWsHi8WwvpVS2FqXSSH1u4SOK7w67Nb3GjhtLIfW6v03o1UwUzAM\nBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIE8DAzBgkqhkiG92NkCAIEJjAkoSIE\nIOVvtiErOq6IUpRGT7EBhLf+pixIpteOYRlOB65trMEyMAoGCCqGSM49BAMCA2cA\nMGQCMB3o8PI47uT1roDFkpC1How/eTl78ZjkRLoWLU/MqrhViwcs8Ap8Zi+QWP8q\nmK9hrgIwFJQDuWQwZuc6mNNllWPcTaSb+E6CsrW76vV3VWRvokPzY0TUS4CleYID\nvKAj4DDH\n-----END CERTIFICATE-----",
+          "publicKeyInfo": {
+           "algorithm": {
+            "name": "ECDSA",
+            "namedCurve": "secp256r1"
+           },
+           "curve": "secp256r1",
+           "keySize": 256,
+           "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEH0ai8Vn941RZjN1H4AXxtufJ8A7SqUHseojSIvW89V1rB4vFsL6VUthal0kh9buEjiu8OuzW9xo4bSyH1ur9Nw==",
+           "type": "ECC",
+           "uncompressedPoint": "04:1f:46:a2:f1:59:fd:e3:54:59:8c:dd:47:e0:05:f1:b6:e7:c9:f0:0e:d2:a9:41:ec:7a:88:d2:22:f5:bc:f5:5d:6b:07:8b:c5:b0:be:95:52:d8:5a:97:49:21:f5:bb:84:8e:2b:bc:3a:ec:d6:f7:1a:38:6d:2c:87:d6:ea:fd:37"
+          },
+          "serialNumber": {
+           "decimal": "1609259244031",
+           "hex": "0x176af5359ff"
+          },
+          "signature": {
+           "algorithm": "ecdsa-with-SHA256",
+           "colon": "30:64:02:30:1d:e8:f0:f2:38:ee:e4:f5:ae:80:c5:92:90:b5:1e:8c:3f:79:39:7b:f1:98:e4:44:ba:16:2d:4f:cc:aa:b8:55:8b:07:2c:f0:0a:7c:66:2f:90:58:ff:2a:98:af:61:ae:02:30:14:94:03:b9:64:30:66:e7:3a:98:d3:65:95:63:dc:4d:a4:9b:f8:4e:82:b2:b5:bb:ea:f5:77:55:64:6f:a2:43:f3:63:44:d4:4b:80:a5:79:82:03:bc:a0:23:e0:30:c7",
+           "details": null,
+           "hash": {
+            "name": "sha256"
+           },
+           "hex": "306402301de8f0f238eee4f5ae80c59290b51e8c3f79397bf198e444ba162d4fccaab8558b072cf00a7c662f9058ff2a98af61ae0230149403b9643066e73a98d3659563dc4da49bf84e82b2b5bbeaf57755646fa243f36344d44b80a5798203bca023e030c7",
+           "lines": [
+            "30:64:02:30:1d:e8:f0:f2:38:ee:e4:f5:ae:80:c5:92",
+            "90:b5:1e:8c:3f:79:39:7b:f1:98:e4:44:ba:16:2d:4f",
+            "cc:aa:b8:55:8b:07:2c:f0:0a:7c:66:2f:90:58:ff:2a",
+            "98:af:61:ae:02:30:14:94:03:b9:64:30:66:e7:3a:98",
+            "d3:65:95:63:dc:4d:a4:9b:f8:4e:82:b2:b5:bb:ea:f5",
+            "77:55:64:6f:a2:43:f3:63:44:d4:4b:80:a5:79:82:03",
+            "bc:a0:23:e0:30:c7"
+           ],
+           "oid": "1.2.840.10045.4.3.2"
+          },
+          "signatureAlgorithm": "ecdsa-with-SHA256",
+          "signatureAlgorithmDetails": null,
+          "signatureAlgorithmOid": "1.2.840.10045.4.3.2",
+          "subject": "ST=California,O=Apple Inc.,OU=AAA Certification,CN=809fbc110ea85f23a8b245aec616350f37dfe962122736e41f8bdcef346a80d9",
+          "subjectCommonNames": [
+           "809fbc110ea85f23a8b245aec616350f37dfe962122736e41f8bdcef346a80d9"
+          ],
+          "validity": {
+           "notAfter": "2020-12-31T16:27:24+00:00",
+           "notBefore": "2020-12-28T16:27:24+00:00"
+          },
+          "version": {
+           "display": "3 (0x2)",
+           "hex": "0x2",
+           "numeric": 3
+          }
+         },
+         "pem": "-----BEGIN CERTIFICATE-----\nMIICQjCCAcmgAwIBAgIGAXavU1n/MAoGCCqGSM49BAMCMEgxHDAaBgNVBAMME0Fw\ncGxlIFdlYkF1dGhuIENBIDExEzARBgNVBAoMCkFwcGxlIEluYy4xEzARBgNVBAgM\nCkNhbGlmb3JuaWEwHhcNMjAxMjI4MTYyNzI0WhcNMjAxMjMxMTYyNzI0WjCBkTFJ\nMEcGA1UEAwxAODA5ZmJjMTEwZWE4NWYyM2E4YjI0NWFlYzYxNjM1MGYzN2RmZTk2\nMjEyMjczNmU0MWY4YmRjZWYzNDZhODBkOTEaMBgGA1UECwwRQUFBIENlcnRpZmlj\nYXRpb24xEzARBgNVBAoMCkFwcGxlIEluYy4xEzARBgNVBAgMCkNhbGlmb3JuaWEw\nWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQfRqLxWf3jVFmM3UfgBfG258nwDtKp\nQex6iNIi9bz1XWsHi8WwvpVS2FqXSSH1u4SOK7w67Nb3GjhtLIfW6v03o1UwUzAM\nBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIE8DAzBgkqhkiG92NkCAIEJjAkoSIE\nIOVvtiErOq6IUpRGT7EBhLf+pixIpteOYRlOB65trMEyMAoGCCqGSM49BAMCA2cA\nMGQCMB3o8PI47uT1roDFkpC1How/eTl78ZjkRLoWLU/MqrhViwcs8Ap8Zi+QWP8q\nmK9hrgIwFJQDuWQwZuc6mNNllWPcTaSb+E6CsrW76vV3VWRvokPzY0TUS4CleYID\nvKAj4DDH\n-----END CERTIFICATE-----",
+         "raw": "30820242308201c9a00302010202060176af5359ff300a06082a8648ce3d0403023048311c301a06035504030c134170706c6520576562417574686e204341203131133011060355040a0c0a4170706c6520496e632e3113301106035504080c0a43616c69666f726e6961301e170d3230313232383136323732345a170d3230313233313136323732345a3081913149304706035504030c4038303966626331313065613835663233613862323435616563363136333530663337646665393632313232373336653431663862646365663334366138306439311a3018060355040b0c114141412043657274696669636174696f6e31133011060355040a0c0a4170706c6520496e632e3113301106035504080c0a43616c69666f726e69613059301306072a8648ce3d020106082a8648ce3d030107034200041f46a2f159fde354598cdd47e005f1b6e7c9f00ed2a941ec7a88d222f5bcf55d6b078bc5b0be9552d85a974921f5bb848e2bbc3aecd6f71a386d2c87d6eafd37a3553053300c0603551d130101ff04023000300e0603551d0f0101ff0404030204f0303306092a864886f76364080204263024a1220420e56fb6212b3aae885294464fb10184b7fea62c48a6d78e61194e07ae6dacc132300a06082a8648ce3d040302036700306402301de8f0f238eee4f5ae80c59290b51e8c3f79397bf198e444ba162d4fccaab8558b072cf00a7c662f9058ff2a98af61ae0230149403b9643066e73a98d3659563dc4da49bf84e82b2b5bbeaf57755646fa243f36344d44b80a5798203bca023e030c7"
+        }
+       ]
+      },
+      "fmt": "apple",
+      "raw": "o2NmbXRlYXBwbGVnYXR0U3RtdKJjYWxnJmN4NWOCWQJGMIICQjCCAcmgAwIBAgIGAXavU1n/MAoGCCqGSM49BAMCMEgxHDAaBgNVBAMME0FwcGxlIFdlYkF1dGhuIENBIDExEzARBgNVBAoMCkFwcGxlIEluYy4xEzARBgNVBAgMCkNhbGlmb3JuaWEwHhcNMjAxMjI4MTYyNzI0WhcNMjAxMjMxMTYyNzI0WjCBkTFJMEcGA1UEAwxAODA5ZmJjMTEwZWE4NWYyM2E4YjI0NWFlYzYxNjM1MGYzN2RmZTk2MjEyMjczNmU0MWY4YmRjZWYzNDZhODBkOTEaMBgGA1UECwwRQUFBIENlcnRpZmljYXRpb24xEzARBgNVBAoMCkFwcGxlIEluYy4xEzARBgNVBAgMCkNhbGlmb3JuaWEwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQfRqLxWf3jVFmM3UfgBfG258nwDtKpQex6iNIi9bz1XWsHi8WwvpVS2FqXSSH1u4SOK7w67Nb3GjhtLIfW6v03o1UwUzAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIE8DAzBgkqhkiG92NkCAIEJjAkoSIEIOVvtiErOq6IUpRGT7EBhLf+pixIpteOYRlOB65trMEyMAoGCCqGSM49BAMCA2cAMGQCMB3o8PI47uT1roDFkpC1How/eTl78ZjkRLoWLU/MqrhViwcs8Ap8Zi+QWP8qmK9hrgIwFJQDuWQwZuc6mNNllWPcTaSb+E6CsrW76vV3VWRvokPzY0TUS4CleYIDvKAj4DDHWQI4MIICNDCCAbqgAwIBAgIQViVTlcen+0Dr4ijYJghTtjAKBggqhkjOPQQDAzBLMR8wHQYDVQQDDBZBcHBsZSBXZWJBdXRobiBSb290IENBMRMwEQYDVQQKDApBcHBsZSBJbmMuMRMwEQYDVQQIDApDYWxpZm9ybmlhMB4XDTIwMDMxODE4MzgwMVoXDTMwMDMxMzAwMDAwMFowSDEcMBoGA1UEAwwTQXBwbGUgV2ViQXV0aG4gQ0EgMTETMBEGA1UECgwKQXBwbGUgSW5jLjETMBEGA1UECAwKQ2FsaWZvcm5pYTB2MBAGByqGSM49AgEGBSuBBAAiA2IABIMuhy8mFJGBAiW59fzWu2N4tfVfP8sEW8c1mTR1/VSQRN+b/hkhF2XGmh3aBQs41FCDQBpDT7JNES1Ww+HPv8uYkf7AaWCBvvlsvHfIjd2vRqWu4d1RW1r6q5O+nAsmkaNmMGQwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBQm12TZxXjCWmfRp95rEtAbY/HG1zAdBgNVHQ4EFgQU666CxP+hrFtR1M8kYQUAvmO9d4gwDgYDVR0PAQH/BAQDAgEGMAoGCCqGSM49BAMDA2gAMGUCMQDdixo0gaX62du052V7hB4UTCe3W4dqQYbCsUdXUDNyJ+/lVEV+9kiVDGMuXEg+cMECMCyKYETcIB/P5ZvDTSkwwUh4Udlg7Wp18etKyr44zSW4l9DIBb7wx/eLB6VxxugOB2hhdXRoRGF0YViYxGzvgq0bVGR3WR0Aiwh1nsPm0uy085R0v+ppaZJdA7dFAAAAAAAAAAAAAAAAAAAAAAAAAAAAFHPZQp9AUthN69A161u35xbjuBhjpQECAyYgASFYIB9GovFZ/eNUWYzdR+AF8bbnyfAO0qlB7HqI0iL1vPVdIlggaweLxbC+lVLYWpdJIfW7hI4rvDrs1vcaOG0sh9bq/Tc="
+     },
+     "attestationStatementDecoded": {
+      "attestationTypesSupported": "Anonymization CA",
+      "fields": {
+       "nonce": {
+        "extension": "1.2.840.113635.100.8.2",
+        "length": 32,
+        "nonce": "e56fb6212b3aae885294464fb10184b7fea62c48a6d78e61194e07ae6dacc132",
+        "note": "WebAuthn L3 section 8.8: SHA-256(authenticatorData || clientDataHash); not compared"
+       },
+       "x5c": {
+        "certificates": [
+         {
+          "issuer": "ST=California,O=Apple Inc.,CN=Apple WebAuthn CA 1",
+          "notValidAfter": "2020-12-31T16:27:24+00:00",
+          "notValidBefore": "2020-12-28T16:27:24+00:00",
+          "sha256": "63ff4c82b40d50e6b3d7837317fb418baad8447bbfe5c2c6fc8f8f7079924180",
+          "subject": "ST=California,O=Apple Inc.,OU=AAA Certification,CN=809fbc110ea85f23a8b245aec616350f37dfe962122736e41f8bdcef346a80d9"
+         },
+         {
+          "issuer": "ST=California,O=Apple Inc.,CN=Apple WebAuthn Root CA",
+          "notValidAfter": "2030-03-13T00:00:00+00:00",
+          "notValidBefore": "2020-03-18T18:38:01+00:00",
+          "sha256": "77d279ec4595417175d36de57040d606e1fb6c72676175ab8f50b4504fb6da1e",
+          "subject": "ST=California,O=Apple Inc.,CN=Apple WebAuthn CA 1"
+         }
+        ],
+        "count": 2
+       }
+      },
+      "fmt": "apple",
+      "known": true,
+      "notChecked": [
+       "nonce = SHA-256(authenticatorData || clientDataHash)",
+       "the credCert key = the credential public key",
+       "the x5c chain up to a trust anchor"
+      ],
+      "notInSyntax": {
+       "members": {
+        "alg": -7
+       },
+       "note": "not in section 8.8's attStmt syntax; shown as sent"
+      },
+      "spec": "WebAuthn L3 section 8.8",
+      "verification": "not verified: the decoder shows this statement; it checks no signature, chain or value in it"
+     },
+     "authenticatorData": {
+      "counter": 0,
+      "credential": {
+       "aaguid": {
+        "raw": "00000000000000000000000000000000",
+        "uuid": "00000000-0000-0000-0000-000000000000"
+       },
+       "credentialId": "73d9429f4052d84debd035eb5bb7e716e3b81863",
+       "credentialIdLength": "0014",
+       "publicKey": {
+        "alg": "ES256 (ECDSA)",
+        "cose": {
+         "-3": "6b078bc5b0be9552d85a974921f5bb848e2bbc3aecd6f71a386d2c87d6eafd37",
+         "-2": "1f46a2f159fde354598cdd47e005f1b6e7c9f00ed2a941ec7a88d222f5bcf55d",
+         "-1": 1,
+         "1": 2,
+         "3": -7
+        },
+        "curve": "P-256 (1)",
+        "keyType": "EC2 (2)"
+       }
+      },
+      "flags": {
+       "AT": true,
+       "BE": false,
+       "BS": false,
+       "ED": false,
+       "UP": true,
+       "UV": true,
+       "bin": "01000101",
+       "hex": "45",
+       "raw": "45"
+      },
+      "rpIdHash": "c46cef82ad1b546477591d008b08759ec3e6d2ecb4f39474bfea6969925d03b7"
+     }
+    },
+    "decodeMode": "strict",
+    "findings": [],
+    "malformed": [],
+    "success": true,
+    "type": "Attestation object"
+   }
+  },
+  {
+   "request": "POST /api/decode",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "21356"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ]
+   ],
+   "cookies": [],
+   "bodySha256": "6009384b1c9f47fcb0c388d30e5f2630721848e30173150685767f4249f5e4d3",
+   "body": {
+    "data": {
+     "attestationObject": {
+      "attStmt": {
+       "response": "ZXlKaGJHY2lPaUpTVXpJMU5pSXNJbmcxWXlJNld5Sk5TVWxHYTJwRFEwSkljV2RCZDBsQ1FXZEpVVkpZY205T01GcFBaRkpyUWtGQlFVRkJRVkIxYm5wQlRrSm5hM0ZvYTJsSE9YY3dRa0ZSYzBaQlJFSkRUVkZ6ZDBOUldVUldVVkZIUlhkS1ZsVjZSV1ZOUW5kSFFURlZSVU5vVFZaU01qbDJXako0YkVsR1VubGtXRTR3U1VaT2JHTnVXbkJaTWxaNlRWSk5kMFZSV1VSV1VWRkVSWGR3U0ZaR1RXZFJNRVZuVFZVNGVFMUNORmhFVkVVMFRWUkJlRTFFUVROTlZHc3dUbFp2V0VSVVJUVk5WRUYzVDFSQk0wMVVhekJPVm05M1lrUkZURTFCYTBkQk1WVkZRbWhOUTFaV1RYaEZla0ZTUW1kT1ZrSkJaMVJEYTA1b1lrZHNiV0l6U25WaFYwVjRSbXBCVlVKblRsWkNRV05VUkZVeGRtUlhOVEJaVjJ4MVNVWmFjRnBZWTNoRmVrRlNRbWRPVmtKQmIxUkRhMlIyWWpKa2MxcFRRazFVUlUxNFIzcEJXa0puVGxaQ1FVMVVSVzFHTUdSSFZucGtRelZvWW0xU2VXSXliR3RNYlU1MllsUkRRMEZUU1hkRVVWbEtTMjlhU1doMlkwNUJVVVZDUWxGQlJHZG5SVkJCUkVORFFWRnZRMmRuUlVKQlRtcFlhM293WlVzeFUwVTBiU3N2UnpWM1QyOHJXRWRUUlVOeWNXUnVPRGh6UTNCU04yWnpNVFJtU3pCU2FETmFRMWxhVEVaSWNVSnJOa0Z0V2xaM01rczVSa2N3VHpseVVsQmxVVVJKVmxKNVJUTXdVWFZ1VXpsMVowaEROR1ZuT1c5MmRrOXRLMUZrV2pKd09UTllhSHAxYmxGRmFGVlhXRU40UVVSSlJVZEtTek5UTW1GQlpucGxPVGxRVEZNeU9XaE1ZMUYxV1ZoSVJHRkROMDlhY1U1dWIzTnBUMGRwWm5NNGRqRnFhVFpJTDNob2JIUkRXbVV5YkVvck4wZDFkSHBsZUV0d2VIWndSUzkwV2xObVlsazVNRFZ4VTJ4Q2FEbG1jR293TVRWamFtNVJSbXRWYzBGVmQyMUxWa0ZWZFdWVmVqUjBTMk5HU3pSd1pYWk9UR0Y0UlVGc0swOXJhV3hOZEVsWlJHRmpSRFZ1Wld3MGVFcHBlWE0wTVROb1lXZHhWekJYYUdnMVJsQXpPV2hIYXpsRkwwSjNVVlJxWVhwVGVFZGtkbGd3YlRaNFJsbG9hQzh5VmsxNVdtcFVORXQ2VUVwRlEwRjNSVUZCWVU5RFFXeG5kMmRuU2xWTlFUUkhRVEZWWkVSM1JVSXZkMUZGUVhkSlJtOUVRVlJDWjA1V1NGTlZSVVJFUVV0Q1oyZHlRbWRGUmtKUlkwUkJWRUZOUW1kT1ZraFNUVUpCWmpoRlFXcEJRVTFDTUVkQk1WVmtSR2RSVjBKQ1VYRkNVWGRIVjI5S1FtRXhiMVJMY1hWd2J6UlhObmhVTm1veVJFRm1RbWRPVmtoVFRVVkhSRUZYWjBKVFdUQm1hSFZGVDNaUWJTdDRaMjU0YVZGSE5rUnlabEZ1T1V0NlFtdENaMmR5UW1kRlJrSlJZMEpCVVZKWlRVWlpkMHAzV1VsTGQxbENRbEZWU0UxQlIwZEhNbWd3WkVoQk5reDVPWFpaTTA1M1RHNUNjbUZUTlc1aU1qbHVUREprTUdONlJuWk5WRUZ5UW1kbmNrSm5SVVpDVVdOM1FXOVpabUZJVWpCalJHOTJURE5DY21GVE5XNWlNamx1VERKa2VtTnFTWFpTTVZKVVRWVTRlRXh0VG5sa1JFRmtRbWRPVmtoU1JVVkdha0ZWWjJoS2FHUklVbXhqTTFGMVdWYzFhMk50T1hCYVF6VnFZakl3ZDBsUldVUldVakJuUWtKdmQwZEVRVWxDWjFwdVoxRjNRa0ZuU1hkRVFWbExTM2RaUWtKQlNGZGxVVWxHUVhwQmRrSm5UbFpJVWpoRlMwUkJiVTFEVTJkSmNVRm5hR2cxYjJSSVVuZFBhVGgyV1ROS2MweHVRbkpoVXpWdVlqSTVia3d3WkZWVmVrWlFUVk0xYW1OdGQzZG5aMFZGUW1kdmNrSm5SVVZCWkZvMVFXZFJRMEpKU0RGQ1NVaDVRVkJCUVdSM1EydDFVVzFSZEVKb1dVWkpaVGRGTmt4TldqTkJTMUJFVjFsQ1VHdGlNemRxYW1RNE1FOTVRVE5qUlVGQlFVRlhXbVJFTTFCTVFVRkJSVUYzUWtsTlJWbERTVkZEVTFwRFYyVk1Tblp6YVZaWE5rTm5LMmRxTHpsM1dWUktVbnAxTkVocGNXVTBaVmswWXk5dGVYcHFaMGxvUVV4VFlta3ZWR2g2WTNweGRHbHFNMlJyTTNaaVRHTkpWek5NYkRKQ01HODNOVWRSWkdoTmFXZGlRbWRCU0ZWQlZtaFJSMjFwTDFoM2RYcFVPV1ZIT1ZKTVNTdDRNRm95ZFdKNVdrVldla0UzTlZOWlZtUmhTakJPTUVGQlFVWnRXRkU1ZWpWQlFVRkNRVTFCVW1wQ1JVRnBRbU5EZDBFNWFqZE9WRWRZVURJM09IbzBhSEl2ZFVOSWFVRkdUSGx2UTNFeVN6QXJlVXhTZDBwVlltZEpaMlk0WjBocWRuQjNNbTFDTVVWVGFuRXlUMll6UVRCQlJVRjNRMnR1UTJGRlMwWlZlVm8zWmk5UmRFbDNSRkZaU2t0dldrbG9kbU5PUVZGRlRFSlJRVVJuWjBWQ1FVazVibFJtVWt0SlYyZDBiRmRzTTNkQ1REVTFSVlJXTm10aGVuTndhRmN4ZVVGak5VUjFiVFpZVHpReGExcDZkMG8yTVhkS2JXUlNVbFF2VlhORFNYa3hTMFYwTW1Nd1JXcG5iRzVLUTBZeVpXRjNZMFZYYkV4UldUSllVRXg1Um1wclYxRk9ZbE5vUWpGcE5GY3lUbEpIZWxCb2RETnRNV0kwT1doaWMzUjFXRTAyZEZnMVEzbEZTRzVVYURoQ2IyMDBMMWRzUm1sb2VtaG5iamd4Ukd4a2IyZDZMMHN5VlhkTk5sTTJRMEl2VTBWNGEybFdabllyZW1KS01ISnFkbWM1TkVGc1pHcFZabFYzYTBrNVZrNU5ha1ZRTldVNGVXUkNNMjlNYkRabmJIQkRaVVkxWkdkbVUxZzBWVGw0TXpWdmFpOUpTV1F6VlVVdlpGQndZaTl4WjBkMmMydG1aR1Y2ZEcxVmRHVXZTMU50Y21sM1kyZFZWMWRsV0daVVlra3plbk5wYTNkYVltdHdiVkpaUzIxcVVHMW9kalJ5YkdsNlIwTkhkRGhRYmpod2NUaE5Na3RFWmk5UU0ydFdiM1F6WlRFNFVUMGlMQ0pOU1VsRlUycERRMEY2UzJkQmQwbENRV2RKVGtGbFR6QnRjVWRPYVhGdFFrcFhiRkYxUkVGT1FtZHJjV2hyYVVjNWR6QkNRVkZ6UmtGRVFrMU5VMEYzU0dkWlJGWlJVVXhGZUdSSVlrYzVhVmxYZUZSaFYyUjFTVVpLZG1JelVXZFJNRVZuVEZOQ1UwMXFSVlJOUWtWSFFURlZSVU5vVFV0U01uaDJXVzFHYzFVeWJHNWlha1ZVVFVKRlIwRXhWVVZCZUUxTFVqSjRkbGx0Um5OVk1teHVZbXBCWlVaM01IaE9la0V5VFZSVmQwMUVRWGRPUkVwaFJuY3dlVTFVUlhsTlZGVjNUVVJCZDA1RVNtRk5SVWw0UTNwQlNrSm5UbFpDUVZsVVFXeFdWRTFTTkhkSVFWbEVWbEZSUzBWNFZraGlNamx1WWtkVloxWklTakZqTTFGblZUSldlV1J0YkdwYVdFMTRSWHBCVWtKblRsWkNRVTFVUTJ0a1ZWVjVRa1JSVTBGNFZIcEZkMmRuUldsTlFUQkhRMU54UjFOSllqTkVVVVZDUVZGVlFVRTBTVUpFZDBGM1oyZEZTMEZ2U1VKQlVVUlJSMDA1UmpGSmRrNHdOWHByVVU4NUszUk9NWEJKVW5aS2VucDVUMVJJVnpWRWVrVmFhRVF5WlZCRGJuWlZRVEJSYXpJNFJtZEpRMlpMY1VNNVJXdHpRelJVTW1aWFFsbHJMMnBEWmtNelVqTldXazFrVXk5a1RqUmFTME5GVUZwU2NrRjZSSE5wUzFWRWVsSnliVUpDU2pWM2RXUm5lbTVrU1UxWlkweGxMMUpIUjBac05YbFBSRWxMWjJwRmRpOVRTa2d2VlV3clpFVmhiSFJPTVRGQ2JYTkxLMlZSYlUxR0t5dEJZM2hIVG1oeU5UbHhUUzg1YVd3M01Va3laRTQ0UmtkbVkyUmtkM1ZoWldvMFlsaG9jREJNWTFGQ1ltcDRUV05KTjBwUU1HRk5NMVEwU1N0RWMyRjRiVXRHYzJKcWVtRlVUa001ZFhwd1JteG5UMGxuTjNKU01qVjRiM2x1VlhoMk9IWk9iV3R4TjNwa1VFZElXR3Q0VjFrM2IwYzVhaXRLYTFKNVFrRkNhemRZY2twbWIzVmpRbHBGY1VaS1NsTlFhemRZUVRCTVMxY3dXVE42Tlc5Nk1rUXdZekYwU2t0M1NFRm5UVUpCUVVkcVoyZEZlazFKU1VKTWVrRlBRbWRPVmtoUk9FSkJaamhGUWtGTlEwRlpXWGRJVVZsRVZsSXdiRUpDV1hkR1FWbEpTM2RaUWtKUlZVaEJkMFZIUTBOelIwRlJWVVpDZDAxRFRVSkpSMEV4VldSRmQwVkNMM2RSU1UxQldVSkJaamhEUVZGQmQwaFJXVVJXVWpCUFFrSlpSVVpLYWxJclJ6UlJOamdyWWpkSFEyWkhTa0ZpYjA5ME9VTm1NSEpOUWpoSFFURlZaRWwzVVZsTlFtRkJSa3AyYVVJeFpHNUlRamRCWVdkaVpWZGlVMkZNWkM5alIxbFpkVTFFVlVkRFEzTkhRVkZWUmtKM1JVSkNRMnQzU25wQmJFSm5aM0pDWjBWR1FsRmpkMEZaV1ZwaFNGSXdZMFJ2ZGt3eU9XcGpNMEYxWTBkMGNFeHRaSFppTW1OMldqTk9lVTFxUVhsQ1owNVdTRkk0UlV0NlFYQk5RMlZuU21GQmFtaHBSbTlrU0ZKM1QyazRkbGt6U25OTWJrSnlZVk0xYm1JeU9XNU1NbVI2WTJwSmRsb3pUbmxOYVRWcVkyMTNkMUIzV1VSV1VqQm5Ra1JuZDA1cVFUQkNaMXB1WjFGM1FrRm5TWGRMYWtGdlFtZG5ja0puUlVaQ1VXTkRRVkpaWTJGSVVqQmpTRTAyVEhrNWQyRXlhM1ZhTWpsMlduazVlVnBZUW5aak1td3dZak5LTlV4NlFVNUNaMnR4YUd0cFJ6bDNNRUpCVVhOR1FVRlBRMEZSUlVGSGIwRXJUbTV1TnpoNU5uQlNhbVE1V0d4UlYwNWhOMGhVWjJsYUwzSXpVazVIYTIxVmJWbElVRkZ4TmxOamRHazVVRVZoYW5aM1VsUXlhVmRVU0ZGeU1ESm1aWE54VDNGQ1dUSkZWRlYzWjFwUksyeHNkRzlPUm5ab2MwODVkSFpDUTA5SllYcHdjM2RYUXpsaFNqbDRhblUwZEZkRVVVZzRUbFpWTmxsYVdpOVlkR1ZFVTBkVk9WbDZTbkZRYWxrNGNUTk5SSGh5ZW0xeFpYQkNRMlkxYnpodGR5OTNTalJoTWtjMmVIcFZjalpHWWpaVU9FMWpSRTh5TWxCTVVrdzJkVE5OTkZSNmN6TkJNazB4YWpaaWVXdEtXV2s0ZDFkSlVtUkJka3RNVjFwMUwyRjRRbFppZWxsdGNXMTNhMjAxZWt4VFJGYzFia2xCU21KRlRFTlJRMXAzVFVnMU5uUXlSSFp4YjJaNGN6WkNRbU5EUmtsYVZWTndlSFUyZURaMFpEQldOMU4yU2tORGIzTnBjbE50U1dGMGFpODVaRk5UVmtSUmFXSmxkRGh4THpkVlN6UjJORnBWVGpnd1lYUnVXbm94ZVdjOVBTSmRmUS5leUp1YjI1alpTSTZJbnBpTlZFNU5GVlBhSEZPV25SVlVXRXJhV1kwTm5GMVVEUndaV1pRTjJKblFXUnBRM2hyYURGWlJHczlJaXdpZEdsdFpYTjBZVzF3VFhNaU9qRTFORE0wT0RJMU5qZzROVGdzSW1Gd2ExQmhZMnRoWjJWT1lXMWxJam9pWTI5dExtZHZiMmRzWlM1aGJtUnliMmxrTG1kdGN5SXNJbUZ3YTBScFoyVnpkRk5vWVRJMU5pSTZJbkl4WXpaaVRrSm1RMGhqWkhjdlpXcEtTRTFOV2pob2FrSXJVMHhYYTFCU00wbHJlVFpqVjFkaE5FMDlJaXdpWTNSelVISnZabWxzWlUxaGRHTm9JanAwY25WbExDSmhjR3REWlhKMGFXWnBZMkYwWlVScFoyVnpkRk5vWVRJMU5pSTZXeUk0VURGelZ6QkZVRXBqYzJ4M04xVjZVbk5wV0V3Mk5IY3JUelV3UldRclVrSkpRM1JoZVRGbk1qUk5QU0pkTENKaVlYTnBZMGx1ZEdWbmNtbDBlU0k2ZEhKMVpYMC5McTlXcE9KX0dpbG9jdlBDVGJJTjJLNUZ0cHBYVzJmVFF6Q1cycHZiMUJvNXFPWm5KMG9PWUJVcU1neHgtemdobGx1U2trSUlmUFR2WWwyelpVUXNZLVNObEJ4N0pBU3FEYmtzTXlSc2RVOXIxSm44RDJ6RXRpcEZnam1aVWtvemk3QW5nbkhvQTVkMFlwLU5GNnNsbXJfRkxNcEFPbkxaWTlsUkV3OEN4bm1zbzNQaDd6WVV1N081U3hhUkd3ajhlTUt5ZFlKWUhhMjNoMkM4YWN1UUtnU1dMMllsRzlULW9LVDBDSjhqT1NyS25IcjM5ZU1vN1BGWDA0NjRkaVV2WFVzdl9NOWtSSUlRcUNQMEx6aWxHTWRKVlVydkZVN2tnOGNzbkZQNktNRGZZNzBSR1o1ZXkzZU5xc19ENS1walBmQzRYUHNQc2tzbXlfd2YtM1VPbXc",
+       "ver": "14574037"
+      },
+      "fmt": "android-safetynet",
+      "raw": "o2NmbXRxYW5kcm9pZC1zYWZldHluZXRnYXR0U3RtdKJjdmVyaDE0NTc0MDM3aHJlc3BvbnNlWRS9ZXlKaGJHY2lPaUpTVXpJMU5pSXNJbmcxWXlJNld5Sk5TVWxHYTJwRFEwSkljV2RCZDBsQ1FXZEpVVkpZY205T01GcFBaRkpyUWtGQlFVRkJRVkIxYm5wQlRrSm5hM0ZvYTJsSE9YY3dRa0ZSYzBaQlJFSkRUVkZ6ZDBOUldVUldVVkZIUlhkS1ZsVjZSV1ZOUW5kSFFURlZSVU5vVFZaU01qbDJXako0YkVsR1VubGtXRTR3U1VaT2JHTnVXbkJaTWxaNlRWSk5kMFZSV1VSV1VWRkVSWGR3U0ZaR1RXZFJNRVZuVFZVNGVFMUNORmhFVkVVMFRWUkJlRTFFUVROTlZHc3dUbFp2V0VSVVJUVk5WRUYzVDFSQk0wMVVhekJPVm05M1lrUkZURTFCYTBkQk1WVkZRbWhOUTFaV1RYaEZla0ZTUW1kT1ZrSkJaMVJEYTA1b1lrZHNiV0l6U25WaFYwVjRSbXBCVlVKblRsWkNRV05VUkZVeGRtUlhOVEJaVjJ4MVNVWmFjRnBZWTNoRmVrRlNRbWRPVmtKQmIxUkRhMlIyWWpKa2MxcFRRazFVUlUxNFIzcEJXa0puVGxaQ1FVMVVSVzFHTUdSSFZucGtRelZvWW0xU2VXSXliR3RNYlU1MllsUkRRMEZUU1hkRVVWbEtTMjlhU1doMlkwNUJVVVZDUWxGQlJHZG5SVkJCUkVORFFWRnZRMmRuUlVKQlRtcFlhM293WlVzeFUwVTBiU3N2UnpWM1QyOHJXRWRUUlVOeWNXUnVPRGh6UTNCU04yWnpNVFJtU3pCU2FETmFRMWxhVEVaSWNVSnJOa0Z0V2xaM01rczVSa2N3VHpseVVsQmxVVVJKVmxKNVJUTXdVWFZ1VXpsMVowaEROR1ZuT1c5MmRrOXRLMUZrV2pKd09UTllhSHAxYmxGRmFGVlhXRU40UVVSSlJVZEtTek5UTW1GQlpucGxPVGxRVEZNeU9XaE1ZMUYxV1ZoSVJHRkROMDlhY1U1dWIzTnBUMGRwWm5NNGRqRnFhVFpJTDNob2JIUkRXbVV5YkVvck4wZDFkSHBsZUV0d2VIWndSUzkwV2xObVlsazVNRFZ4VTJ4Q2FEbG1jR293TVRWamFtNVJSbXRWYzBGVmQyMUxWa0ZWZFdWVmVqUjBTMk5HU3pSd1pYWk9UR0Y0UlVGc0swOXJhV3hOZEVsWlJHRmpSRFZ1Wld3MGVFcHBlWE0wTVROb1lXZHhWekJYYUdnMVJsQXpPV2hIYXpsRkwwSjNVVlJxWVhwVGVFZGtkbGd3YlRaNFJsbG9hQzh5VmsxNVdtcFVORXQ2VUVwRlEwRjNSVUZCWVU5RFFXeG5kMmRuU2xWTlFUUkhRVEZWWkVSM1JVSXZkMUZGUVhkSlJtOUVRVlJDWjA1V1NGTlZSVVJFUVV0Q1oyZHlRbWRGUmtKUlkwUkJWRUZOUW1kT1ZraFNUVUpCWmpoRlFXcEJRVTFDTUVkQk1WVmtSR2RSVjBKQ1VYRkNVWGRIVjI5S1FtRXhiMVJMY1hWd2J6UlhObmhVTm1veVJFRm1RbWRPVmtoVFRVVkhSRUZYWjBKVFdUQm1hSFZGVDNaUWJTdDRaMjU0YVZGSE5rUnlabEZ1T1V0NlFtdENaMmR5UW1kRlJrSlJZMEpCVVZKWlRVWlpkMHAzV1VsTGQxbENRbEZWU0UxQlIwZEhNbWd3WkVoQk5reDVPWFpaTTA1M1RHNUNjbUZUTlc1aU1qbHVUREprTUdONlJuWk5WRUZ5UW1kbmNrSm5SVVpDVVdOM1FXOVpabUZJVWpCalJHOTJURE5DY21GVE5XNWlNamx1VERKa2VtTnFTWFpTTVZKVVRWVTRlRXh0VG5sa1JFRmtRbWRPVmtoU1JVVkdha0ZWWjJoS2FHUklVbXhqTTFGMVdWYzFhMk50T1hCYVF6VnFZakl3ZDBsUldVUldVakJuUWtKdmQwZEVRVWxDWjFwdVoxRjNRa0ZuU1hkRVFWbExTM2RaUWtKQlNGZGxVVWxHUVhwQmRrSm5UbFpJVWpoRlMwUkJiVTFEVTJkSmNVRm5hR2cxYjJSSVVuZFBhVGgyV1ROS2MweHVRbkpoVXpWdVlqSTVia3d3WkZWVmVrWlFUVk0xYW1OdGQzZG5aMFZGUW1kdmNrSm5SVVZCWkZvMVFXZFJRMEpKU0RGQ1NVaDVRVkJCUVdSM1EydDFVVzFSZEVKb1dVWkpaVGRGTmt4TldqTkJTMUJFVjFsQ1VHdGlNemRxYW1RNE1FOTVRVE5qUlVGQlFVRlhXbVJFTTFCTVFVRkJSVUYzUWtsTlJWbERTVkZEVTFwRFYyVk1Tblp6YVZaWE5rTm5LMmRxTHpsM1dWUktVbnAxTkVocGNXVTBaVmswWXk5dGVYcHFaMGxvUVV4VFlta3ZWR2g2WTNweGRHbHFNMlJyTTNaaVRHTkpWek5NYkRKQ01HODNOVWRSWkdoTmFXZGlRbWRCU0ZWQlZtaFJSMjFwTDFoM2RYcFVPV1ZIT1ZKTVNTdDRNRm95ZFdKNVdrVldla0UzTlZOWlZtUmhTakJPTUVGQlFVWnRXRkU1ZWpWQlFVRkNRVTFCVW1wQ1JVRnBRbU5EZDBFNWFqZE9WRWRZVURJM09IbzBhSEl2ZFVOSWFVRkdUSGx2UTNFeVN6QXJlVXhTZDBwVlltZEpaMlk0WjBocWRuQjNNbTFDTVVWVGFuRXlUMll6UVRCQlJVRjNRMnR1UTJGRlMwWlZlVm8zWmk5UmRFbDNSRkZaU2t0dldrbG9kbU5PUVZGRlRFSlJRVVJuWjBWQ1FVazVibFJtVWt0SlYyZDBiRmRzTTNkQ1REVTFSVlJXTm10aGVuTndhRmN4ZVVGak5VUjFiVFpZVHpReGExcDZkMG8yTVhkS2JXUlNVbFF2VlhORFNYa3hTMFYwTW1Nd1JXcG5iRzVLUTBZeVpXRjNZMFZYYkV4UldUSllVRXg1Um1wclYxRk9ZbE5vUWpGcE5GY3lUbEpIZWxCb2RETnRNV0kwT1doaWMzUjFXRTAyZEZnMVEzbEZTRzVVYURoQ2IyMDBMMWRzUm1sb2VtaG5iamd4Ukd4a2IyZDZMMHN5VlhkTk5sTTJRMEl2VTBWNGEybFdabllyZW1KS01ISnFkbWM1TkVGc1pHcFZabFYzYTBrNVZrNU5ha1ZRTldVNGVXUkNNMjlNYkRabmJIQkRaVVkxWkdkbVUxZzBWVGw0TXpWdmFpOUpTV1F6VlVVdlpGQndZaTl4WjBkMmMydG1aR1Y2ZEcxVmRHVXZTMU50Y21sM1kyZFZWMWRsV0daVVlra3plbk5wYTNkYVltdHdiVkpaUzIxcVVHMW9kalJ5YkdsNlIwTkhkRGhRYmpod2NUaE5Na3RFWmk5UU0ydFdiM1F6WlRFNFVUMGlMQ0pOU1VsRlUycERRMEY2UzJkQmQwbENRV2RKVGtGbFR6QnRjVWRPYVhGdFFrcFhiRkYxUkVGT1FtZHJjV2hyYVVjNWR6QkNRVkZ6UmtGRVFrMU5VMEYzU0dkWlJGWlJVVXhGZUdSSVlrYzVhVmxYZUZSaFYyUjFTVVpLZG1JelVXZFJNRVZuVEZOQ1UwMXFSVlJOUWtWSFFURlZSVU5vVFV0U01uaDJXVzFHYzFVeWJHNWlha1ZVVFVKRlIwRXhWVVZCZUUxTFVqSjRkbGx0Um5OVk1teHVZbXBCWlVaM01IaE9la0V5VFZSVmQwMUVRWGRPUkVwaFJuY3dlVTFVUlhsTlZGVjNUVVJCZDA1RVNtRk5SVWw0UTNwQlNrSm5UbFpDUVZsVVFXeFdWRTFTTkhkSVFWbEVWbEZSUzBWNFZraGlNamx1WWtkVloxWklTakZqTTFGblZUSldlV1J0YkdwYVdFMTRSWHBCVWtKblRsWkNRVTFVUTJ0a1ZWVjVRa1JSVTBGNFZIcEZkMmRuUldsTlFUQkhRMU54UjFOSllqTkVVVVZDUVZGVlFVRTBTVUpFZDBGM1oyZEZTMEZ2U1VKQlVVUlJSMDA1UmpGSmRrNHdOWHByVVU4NUszUk9NWEJKVW5aS2VucDVUMVJJVnpWRWVrVmFhRVF5WlZCRGJuWlZRVEJSYXpJNFJtZEpRMlpMY1VNNVJXdHpRelJVTW1aWFFsbHJMMnBEWmtNelVqTldXazFrVXk5a1RqUmFTME5GVUZwU2NrRjZSSE5wUzFWRWVsSnliVUpDU2pWM2RXUm5lbTVrU1UxWlkweGxMMUpIUjBac05YbFBSRWxMWjJwRmRpOVRTa2d2VlV3clpFVmhiSFJPTVRGQ2JYTkxLMlZSYlUxR0t5dEJZM2hIVG1oeU5UbHhUUzg1YVd3M01Va3laRTQ0UmtkbVkyUmtkM1ZoWldvMFlsaG9jREJNWTFGQ1ltcDRUV05KTjBwUU1HRk5NMVEwU1N0RWMyRjRiVXRHYzJKcWVtRlVUa001ZFhwd1JteG5UMGxuTjNKU01qVjRiM2x1VlhoMk9IWk9iV3R4TjNwa1VFZElXR3Q0VjFrM2IwYzVhaXRLYTFKNVFrRkNhemRZY2twbWIzVmpRbHBGY1VaS1NsTlFhemRZUVRCTVMxY3dXVE42Tlc5Nk1rUXdZekYwU2t0M1NFRm5UVUpCUVVkcVoyZEZlazFKU1VKTWVrRlBRbWRPVmtoUk9FSkJaamhGUWtGTlEwRlpXWGRJVVZsRVZsSXdiRUpDV1hkR1FWbEpTM2RaUWtKUlZVaEJkMFZIUTBOelIwRlJWVVpDZDAxRFRVSkpSMEV4VldSRmQwVkNMM2RSU1UxQldVSkJaamhEUVZGQmQwaFJXVVJXVWpCUFFrSlpSVVpLYWxJclJ6UlJOamdyWWpkSFEyWkhTa0ZpYjA5ME9VTm1NSEpOUWpoSFFURlZaRWwzVVZsTlFtRkJSa3AyYVVJeFpHNUlRamRCWVdkaVpWZGlVMkZNWkM5alIxbFpkVTFFVlVkRFEzTkhRVkZWUmtKM1JVSkNRMnQzU25wQmJFSm5aM0pDWjBWR1FsRmpkMEZaV1ZwaFNGSXdZMFJ2ZGt3eU9XcGpNMEYxWTBkMGNFeHRaSFppTW1OMldqTk9lVTFxUVhsQ1owNVdTRkk0UlV0NlFYQk5RMlZuU21GQmFtaHBSbTlrU0ZKM1QyazRkbGt6U25OTWJrSnlZVk0xYm1JeU9XNU1NbVI2WTJwSmRsb3pUbmxOYVRWcVkyMTNkMUIzV1VSV1VqQm5Ra1JuZDA1cVFUQkNaMXB1WjFGM1FrRm5TWGRMYWtGdlFtZG5ja0puUlVaQ1VXTkRRVkpaWTJGSVVqQmpTRTAyVEhrNWQyRXlhM1ZhTWpsMlduazVlVnBZUW5aak1td3dZak5LTlV4NlFVNUNaMnR4YUd0cFJ6bDNNRUpCVVhOR1FVRlBRMEZSUlVGSGIwRXJUbTV1TnpoNU5uQlNhbVE1V0d4UlYwNWhOMGhVWjJsYUwzSXpVazVIYTIxVmJWbElVRkZ4TmxOamRHazVVRVZoYW5aM1VsUXlhVmRVU0ZGeU1ESm1aWE54VDNGQ1dUSkZWRlYzWjFwUksyeHNkRzlPUm5ab2MwODVkSFpDUTA5SllYcHdjM2RYUXpsaFNqbDRhblUwZEZkRVVVZzRUbFpWTmxsYVdpOVlkR1ZFVTBkVk9WbDZTbkZRYWxrNGNUTk5SSGh5ZW0xeFpYQkNRMlkxYnpodGR5OTNTalJoTWtjMmVIcFZjalpHWWpaVU9FMWpSRTh5TWxCTVVrdzJkVE5OTkZSNmN6TkJNazB4YWpaaWVXdEtXV2s0ZDFkSlVtUkJka3RNVjFwMUwyRjRRbFppZWxsdGNXMTNhMjAxZWt4VFJGYzFia2xCU21KRlRFTlJRMXAzVFVnMU5uUXlSSFp4YjJaNGN6WkNRbU5EUmtsYVZWTndlSFUyZURaMFpEQldOMU4yU2tORGIzTnBjbE50U1dGMGFpODVaRk5UVmtSUmFXSmxkRGh4THpkVlN6UjJORnBWVGpnd1lYUnVXbm94ZVdjOVBTSmRmUS5leUp1YjI1alpTSTZJbnBpTlZFNU5GVlBhSEZPV25SVlVXRXJhV1kwTm5GMVVEUndaV1pRTjJKblFXUnBRM2hyYURGWlJHczlJaXdpZEdsdFpYTjBZVzF3VFhNaU9qRTFORE0wT0RJMU5qZzROVGdzSW1Gd2ExQmhZMnRoWjJWT1lXMWxJam9pWTI5dExtZHZiMmRzWlM1aGJtUnliMmxrTG1kdGN5SXNJbUZ3YTBScFoyVnpkRk5vWVRJMU5pSTZJbkl4WXpaaVRrSm1RMGhqWkhjdlpXcEtTRTFOV2pob2FrSXJVMHhYYTFCU00wbHJlVFpqVjFkaE5FMDlJaXdpWTNSelVISnZabWxzWlUxaGRHTm9JanAwY25WbExDSmhjR3REWlhKMGFXWnBZMkYwWlVScFoyVnpkRk5vWVRJMU5pSTZXeUk0VURGelZ6QkZVRXBqYzJ4M04xVjZVbk5wV0V3Mk5IY3JUelV3UldRclVrSkpRM1JoZVRGbk1qUk5QU0pkTENKaVlYTnBZMGx1ZEdWbmNtbDBlU0k2ZEhKMVpYMC5McTlXcE9KX0dpbG9jdlBDVGJJTjJLNUZ0cHBYVzJmVFF6Q1cycHZiMUJvNXFPWm5KMG9PWUJVcU1neHgtemdobGx1U2trSUlmUFR2WWwyelpVUXNZLVNObEJ4N0pBU3FEYmtzTXlSc2RVOXIxSm44RDJ6RXRpcEZnam1aVWtvemk3QW5nbkhvQTVkMFlwLU5GNnNsbXJfRkxNcEFPbkxaWTlsUkV3OEN4bm1zbzNQaDd6WVV1N081U3hhUkd3ajhlTUt5ZFlKWUhhMjNoMkM4YWN1UUtnU1dMMllsRzlULW9LVDBDSjhqT1NyS25IcjM5ZU1vN1BGWDA0NjRkaVV2WFVzdl9NOWtSSUlRcUNQMEx6aWxHTWRKVlVydkZVN2tnOGNzbkZQNktNRGZZNzBSR1o1ZXkzZU5xc19ENS1walBmQzRYUHNQc2tzbXlfd2YtM1VPbXdoYXV0aERhdGFYxXIMIP3oNXheD168rY72p72IgEqRYSougg4AWbjVNYeXRQAAAAAAAAAAAAAAAAAAAAAAAAAAAEEByP2bUz1q2s9nEOvPs59jYcTX6Hh9tH3Ap1rg58hiGYycg7ge8lR7tWaTFAlfyEavTsrGh197Iwysc1nHawwg96UBAgMmIAEhWCCiiFHi1BG1ssKJ2lDUHMQb6ISYlB/CVtq1ALIcja/o0SJYINKJ3UZ3Fb4GpiJ3Gnsh4bviNy+HE9IN14iKbnrhhFyo"
+     },
+     "attestationStatementDecoded": {
+      "attestationTypesSupported": "Basic",
+      "fields": {
+       "deprecated": "WebAuthn L3 section 8.5: this format is deprecated and expected to be removed",
+       "response": {
+        "deprecated": "WebAuthn L3 section 8.5: this format is deprecated and expected to be removed",
+        "header": {
+         "certificates": [
+          {
+           "issuer": "CN=GTS CA 1O1,O=Google Trust Services,C=US",
+           "notValidAfter": "2019-10-09T07:19:45+00:00",
+           "notValidBefore": "2018-10-10T07:19:45+00:00",
+           "sha256": "801a3e8fbfa3fc123c017bfdadb47b8e41a550784d144cf450b1dc61d9e2facf",
+           "subject": "CN=attest.android.com,O=Google LLC,L=Mountain View,ST=California,C=US"
+          },
+          {
+           "issuer": "CN=GlobalSign,O=GlobalSign,OU=GlobalSign Root CA - R2",
+           "notValidAfter": "2021-12-15T00:00:42+00:00",
+           "notValidBefore": "2017-06-15T00:00:42+00:00",
+           "sha256": "95c074e35902a14abd9d19afb6e7f80e669ff8e2363270539d963613f04aaa21",
+           "subject": "CN=GTS CA 1O1,O=Google Trust Services,C=US"
+          }
+         ],
+         "json": {
+          "alg": "RS256",
+          "x5c": [
+           "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"
+          ]
+         }
+        },
+        "payload": {
+         "json": {
+          "apkCertificateDigestSha256": [
+           "8P1sW0EPJcslw7UzRsiXL64w+O50Ed+RBICtay1g24M="
+          ],
+          "apkDigestSha256": "r1c6bNBfCHcdw/ejJHMMZ8hjB+SLWkPR3Iky6cWWa4M=",
+          "apkPackageName": "com.google.android.gms",
+          "basicIntegrity": true,
+          "ctsProfileMatch": true,
+          "nonce": "zb5Q94UOhqNZtUQa+if46quP4pefP7bgAdiCxkh1YDk=",
+          "timestampMs": 1543482568858
+         },
+         "timestampUtc": "2018-11-29T09:09:28.858000+00:00"
+        },
+        "signature": {
+         "hex": "2eaf56a4e27f1a296872f3c24db20dd8ae45b69a575b67d3433096da9bdbd41a39a8e667274a0e60152a320c71fb3821965b929242087cf4ef625db365442c63e48d941c7b2404aa0db92c33246c754f6bd499fc0f6cc4b62a45823999524a338bb0278271e8039774629f8d17ab259abfc52cca403a72d963d951130f02c679aca373e1ef3614bbb3b94b16911b08fc78c2b27582581dadb78760bc69cb902a04962f66251bd4fea0a4f4089f23392aca9c7af7f5e328ecf157d38eb876252f5d4b2ffccf64448210a823f42f38a518c749554aef154ee483c72c9c53fa28c0df63bd11199e5ecb778daacfc3e7ea633df0b85cfb0fb24b26cbfc1ffb750e9b",
+         "length": 256,
+         "note": "not verified"
+        },
+        "verification": "NOT VERIFIED: the JWS signature, its certificate chain, the nonce (base64 of SHA-256(authenticatorData || clientDataHash)) and ctsProfileMatch are not checked"
+       },
+       "ver": {
+        "meaning": "the Google Play Services version that produced the response",
+        "value": "14574037"
+       }
+      },
+      "fmt": "android-safetynet",
+      "known": true,
+      "notChecked": [
+       "the JWS signature and its chain to attest.android.com",
+       "nonce = base64 of SHA-256(authenticatorData || clientDataHash)",
+       "ctsProfileMatch"
+      ],
+      "spec": "WebAuthn L3 section 8.5",
+      "verification": "not verified: the decoder shows this statement; it checks no signature, chain or value in it"
+     },
+     "authenticatorData": {
+      "counter": 0,
+      "credential": {
+       "aaguid": {
+        "raw": "00000000000000000000000000000000",
+        "uuid": "00000000-0000-0000-0000-000000000000"
+       },
+       "credentialId": "01c8fd9b533d6adacf6710ebcfb39f6361c4d7e8787db47dc0a75ae0e7c862198c9c83b81ef2547bb5669314095fc846af4ecac6875f7b230cac7359c76b0c20f7",
+       "credentialIdLength": "0041",
+       "publicKey": {
+        "alg": "ES256 (ECDSA)",
+        "cose": {
+         "-3": "d289dd467715be06a622771a7b21e1bbe2372f8713d20dd7888a6e7ae1845ca8",
+         "-2": "a28851e2d411b5b2c289da50d41cc41be88498941fc256dab500b21c8dafe8d1",
+         "-1": 1,
+         "1": 2,
+         "3": -7
+        },
+        "curve": "P-256 (1)",
+        "keyType": "EC2 (2)"
+       }
+      },
+      "flags": {
+       "AT": true,
+       "BE": false,
+       "BS": false,
+       "ED": false,
+       "UP": true,
+       "UV": true,
+       "bin": "01000101",
+       "hex": "45",
+       "raw": "45"
+      },
+      "rpIdHash": "720c20fde835785e0f5ebcad8ef6a7bd88804a91612a2e820e0059b8d5358797"
+     }
+    },
+    "decodeMode": "strict",
+    "findings": [],
+    "malformed": [],
+    "success": true,
+    "type": "Attestation object"
+   }
+  },
+  {
+   "request": "POST /api/decode",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "11531"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ]
+   ],
+   "cookies": [],
+   "bodySha256": "cca5290962f94ed923fb57db79ae14860e9f5eb8bfe06b4f7a01f87821825d00",
+   "body": {
+    "data": {
+     "attestationObject": {
+      "attStmt": {
+       "alg": -7,
+       "sig": "MEYCIQDpVRKYKqPyFs_y6HyOxXBXuFKfZ06qvsyqJ_0D2HefGQIhAK-2v0WdpKgm8A0B_GtgcS_zHcTrMxYZyPh0uxfkMU6U",
+       "x5c": [
+        {
+         "parsedX5c": {
+          "algorithmInfo": "ECDSA_SHA256",
+          "derBase64": "MIICeDCCAh6gAwIBAgIQH/kfdrY/RIEvmYslCwKGvzAKBggqhkjOPQQDAjBiMR4wHAYDVQQDDBVXZWJBdXRobiB0ZXN0IHZlY3RvcnMxDDAKBgNVBAoMA1czQzElMCMGA1UECwwcQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbiBDQTELMAkGA1UEBhMCQUEwIBcNMjQwMTAxMDAwMDAwWhgPMzAyNDAxMDEwMDAwMDBaMF8xHjAcBgNVBAMMFVdlYkF1dGhuIHRlc3QgdmVjdG9yczEMMAoGA1UECgwDVzNDMSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMQswCQYDVQQGEwJBQTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJkWllcDbQiaKpghp9AGPTQfGkYTOJNZY276tfPL8azP3ZHFVUMXbqmbZEQG3R3WN3S2r2WsdZ4G/0CxyKsC32ujgbYwgbMwDAYDVR0TAQH/BAIwADAOBgNVHQ8BAf8EBAMCB4AwHQYDVR0OBBYEFBrIHlBkHo0TOauffrJfDNWqwFSwMB8GA1UdIwQYMBaAFEWv9xWw3XhnQf7pluvBZUejkxseMFMGCisGAQQB1nkCAREERTBDAgIBLAoBAAIBAAoBAAQgtDUCjXtqj4O7Rh1BwZsFOp082zA1Gk83TNTN6NvvtgYEADAAMA6hBTEDAgECv4U+AwIBADAKBggqhkjOPQQDAgNIADBFAiATVPkUmZb24YMIUtpim4bTfBDaD/4XRxxn1Idl7YP2OwIhAIbbV0aUTOzfzgcdngQQcs6sPRxQQ4LyBWdumh8C12Ml",
+          "extensions": [
+           {
+            "critical": true,
+            "displayHeader": "X509v3 Basic Constraints",
+            "friendlyName": "X509v3 Basic Constraints",
+            "includeOidInHeader": false,
+            "name": "X509v3 Basic Constraints",
+            "oid": "2.5.29.19",
+            "value": {
+             "CA": "FALSE"
+            }
+           },
+           {
+            "critical": true,
+            "displayHeader": null,
+            "friendlyName": null,
+            "includeOidInHeader": true,
+            "name": "keyUsage",
+            "oid": "2.5.29.15",
+            "value": "<KeyUsage(digital_signature=True, content_commitment=False, key_encipherment=False, data_encipherment=False, key_agreement=False, key_cert_sign=False, crl_sign=False, encipher_only=False, decipher_only=False)>"
+           },
+           {
+            "critical": false,
+            "displayHeader": null,
+            "friendlyName": "Subject key id",
+            "includeOidInHeader": true,
+            "name": "Subject key id",
+            "oid": "2.5.29.14",
+            "value": {
+             "Hex value": [
+              "1a:c8:1e:50:64:1e:8d:13:39:ab:9f:7e:b2:5f:0c:d5",
+              "aa:c0:54:b0"
+             ]
+            }
+           },
+           {
+            "critical": false,
+            "displayHeader": null,
+            "friendlyName": "Authority key identifier",
+            "includeOidInHeader": true,
+            "name": "Authority key identifier",
+            "oid": "2.5.29.35",
+            "value": {
+             "Hex value": [
+              "45:af:f7:15:b0:dd:78:67:41:fe:e9:96:eb:c1:65:47",
+              "a3:93:1b:1e"
+             ]
+            }
+           },
+           {
+            "critical": false,
+            "displayHeader": null,
+            "friendlyName": null,
+            "includeOidInHeader": true,
+            "name": "Unknown OID",
+            "oid": "1.3.6.1.4.1.11129.2.1.17",
+            "value": {
+             "Hex value": "30430202012c0a01000201000a01000420b435028d7b6a8f83bb461d41c19b053a9d3cdb30351a4f374cd4cde8dbefb60604003000300ea1053103020102bf853e03020100"
+            }
+           }
+          ],
+          "fingerprints": {
+           "md5": "026bd77797a45366e9403d3b323d1f82",
+           "sha1": "8afa5c86f6acbae9e1aee52dfb67b44e148c1de5",
+           "sha256": "e5f6a65648684459620ce34d7b2c0095cd6560e1c1692964c78df724ba0616af"
+          },
+          "issuer": "C=AA,OU=Authenticator Attestation CA,O=W3C,CN=WebAuthn test vectors",
+          "pem": "-----BEGIN CERTIFICATE-----\nMIICeDCCAh6gAwIBAgIQH/kfdrY/RIEvmYslCwKGvzAKBggqhkjOPQQDAjBiMR4w\nHAYDVQQDDBVXZWJBdXRobiB0ZXN0IHZlY3RvcnMxDDAKBgNVBAoMA1czQzElMCMG\nA1UECwwcQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbiBDQTELMAkGA1UEBhMCQUEw\nIBcNMjQwMTAxMDAwMDAwWhgPMzAyNDAxMDEwMDAwMDBaMF8xHjAcBgNVBAMMFVdl\nYkF1dGhuIHRlc3QgdmVjdG9yczEMMAoGA1UECgwDVzNDMSIwIAYDVQQLDBlBdXRo\nZW50aWNhdG9yIEF0dGVzdGF0aW9uMQswCQYDVQQGEwJBQTBZMBMGByqGSM49AgEG\nCCqGSM49AwEHA0IABJkWllcDbQiaKpghp9AGPTQfGkYTOJNZY276tfPL8azP3ZHF\nVUMXbqmbZEQG3R3WN3S2r2WsdZ4G/0CxyKsC32ujgbYwgbMwDAYDVR0TAQH/BAIw\nADAOBgNVHQ8BAf8EBAMCB4AwHQYDVR0OBBYEFBrIHlBkHo0TOauffrJfDNWqwFSw\nMB8GA1UdIwQYMBaAFEWv9xWw3XhnQf7pluvBZUejkxseMFMGCisGAQQB1nkCAREE\nRTBDAgIBLAoBAAIBAAoBAAQgtDUCjXtqj4O7Rh1BwZsFOp082zA1Gk83TNTN6Nvv\ntgYEADAAMA6hBTEDAgECv4U+AwIBADAKBggqhkjOPQQDAgNIADBFAiATVPkUmZb2\n4YMIUtpim4bTfBDaD/4XRxxn1Idl7YP2OwIhAIbbV0aUTOzfzgcdngQQcs6sPRxQ\nQ4LyBWdumh8C12Ml\n-----END CERTIFICATE-----",
+          "publicKeyInfo": {
+           "algorithm": {
+            "name": "ECDSA",
+            "namedCurve": "secp256r1"
+           },
+           "curve": "secp256r1",
+           "keySize": 256,
+           "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmRaWVwNtCJoqmCGn0AY9NB8aRhM4k1ljbvq188vxrM/dkcVVQxduqZtkRAbdHdY3dLavZax1ngb/QLHIqwLfaw==",
+           "type": "ECC",
+           "uncompressedPoint": "04:99:16:96:57:03:6d:08:9a:2a:98:21:a7:d0:06:3d:34:1f:1a:46:13:38:93:59:63:6e:fa:b5:f3:cb:f1:ac:cf:dd:91:c5:55:43:17:6e:a9:9b:64:44:06:dd:1d:d6:37:74:b6:af:65:ac:75:9e:06:ff:40:b1:c8:ab:02:df:6b"
+          },
+          "serialNumber": {
+           "decimal": "42499587947131211642598361230399932095",
+           "hex": "0x1ff91f76b63f44812f998b250b0286bf"
+          },
+          "signature": {
+           "algorithm": "ecdsa-with-SHA256",
+           "colon": "30:45:02:20:13:54:f9:14:99:96:f6:e1:83:08:52:da:62:9b:86:d3:7c:10:da:0f:fe:17:47:1c:67:d4:87:65:ed:83:f6:3b:02:21:00:86:db:57:46:94:4c:ec:df:ce:07:1d:9e:04:10:72:ce:ac:3d:1c:50:43:82:f2:05:67:6e:9a:1f:02:d7:63:25",
+           "details": null,
+           "hash": {
+            "name": "sha256"
+           },
+           "hex": "304502201354f9149996f6e1830852da629b86d37c10da0ffe17471c67d48765ed83f63b02210086db5746944cecdfce071d9e041072ceac3d1c504382f205676e9a1f02d76325",
+           "lines": [
+            "30:45:02:20:13:54:f9:14:99:96:f6:e1:83:08:52:da",
+            "62:9b:86:d3:7c:10:da:0f:fe:17:47:1c:67:d4:87:65",
+            "ed:83:f6:3b:02:21:00:86:db:57:46:94:4c:ec:df:ce",
+            "07:1d:9e:04:10:72:ce:ac:3d:1c:50:43:82:f2:05:67",
+            "6e:9a:1f:02:d7:63:25"
+           ],
+           "oid": "1.2.840.10045.4.3.2"
+          },
+          "signatureAlgorithm": "ecdsa-with-SHA256",
+          "signatureAlgorithmDetails": null,
+          "signatureAlgorithmOid": "1.2.840.10045.4.3.2",
+          "subject": "C=AA,OU=Authenticator Attestation,O=W3C,CN=WebAuthn test vectors",
+          "subjectCommonNames": [
+           "WebAuthn test vectors"
+          ],
+          "validity": {
+           "notAfter": "3024-01-01T00:00:00+00:00",
+           "notBefore": "2024-01-01T00:00:00+00:00"
+          },
+          "version": {
+           "display": "3 (0x2)",
+           "hex": "0x2",
+           "numeric": 3
+          }
+         },
+         "pem": "-----BEGIN CERTIFICATE-----\nMIICeDCCAh6gAwIBAgIQH/kfdrY/RIEvmYslCwKGvzAKBggqhkjOPQQDAjBiMR4w\nHAYDVQQDDBVXZWJBdXRobiB0ZXN0IHZlY3RvcnMxDDAKBgNVBAoMA1czQzElMCMG\nA1UECwwcQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbiBDQTELMAkGA1UEBhMCQUEw\nIBcNMjQwMTAxMDAwMDAwWhgPMzAyNDAxMDEwMDAwMDBaMF8xHjAcBgNVBAMMFVdl\nYkF1dGhuIHRlc3QgdmVjdG9yczEMMAoGA1UECgwDVzNDMSIwIAYDVQQLDBlBdXRo\nZW50aWNhdG9yIEF0dGVzdGF0aW9uMQswCQYDVQQGEwJBQTBZMBMGByqGSM49AgEG\nCCqGSM49AwEHA0IABJkWllcDbQiaKpghp9AGPTQfGkYTOJNZY276tfPL8azP3ZHF\nVUMXbqmbZEQG3R3WN3S2r2WsdZ4G/0CxyKsC32ujgbYwgbMwDAYDVR0TAQH/BAIw\nADAOBgNVHQ8BAf8EBAMCB4AwHQYDVR0OBBYEFBrIHlBkHo0TOauffrJfDNWqwFSw\nMB8GA1UdIwQYMBaAFEWv9xWw3XhnQf7pluvBZUejkxseMFMGCisGAQQB1nkCAREE\nRTBDAgIBLAoBAAIBAAoBAAQgtDUCjXtqj4O7Rh1BwZsFOp082zA1Gk83TNTN6Nvv\ntgYEADAAMA6hBTEDAgECv4U+AwIBADAKBggqhkjOPQQDAgNIADBFAiATVPkUmZb2\n4YMIUtpim4bTfBDaD/4XRxxn1Idl7YP2OwIhAIbbV0aUTOzfzgcdngQQcs6sPRxQ\nQ4LyBWdumh8C12Ml\n-----END CERTIFICATE-----",
+         "raw": "308202783082021ea00302010202101ff91f76b63f44812f998b250b0286bf300a06082a8648ce3d0403023062311e301c06035504030c15576562417574686e207465737420766563746f7273310c300a060355040a0c0357334331253023060355040b0c1c41757468656e74696361746f72204174746573746174696f6e204341310b30090603550406130241413020170d3234303130313030303030305a180f33303234303130313030303030305a305f311e301c06035504030c15576562417574686e207465737420766563746f7273310c300a060355040a0c0357334331223020060355040b0c1941757468656e74696361746f72204174746573746174696f6e310b30090603550406130241413059301306072a8648ce3d020106082a8648ce3d0301070342000499169657036d089a2a9821a7d0063d341f1a4613389359636efab5f3cbf1accfdd91c55543176ea99b644406dd1dd63774b6af65ac759e06ff40b1c8ab02df6ba381b63081b3300c0603551d130101ff04023000300e0603551d0f0101ff040403020780301d0603551d0e041604141ac81e50641e8d1339ab9f7eb25f0cd5aac054b0301f0603551d2304183016801445aff715b0dd786741fee996ebc16547a3931b1e3053060a2b06010401d679020111044530430202012c0a01000201000a01000420b435028d7b6a8f83bb461d41c19b053a9d3cdb30351a4f374cd4cde8dbefb60604003000300ea1053103020102bf853e03020100300a06082a8648ce3d040302034800304502201354f9149996f6e1830852da629b86d37c10da0ffe17471c67d48765ed83f63b02210086db5746944cecdfce071d9e041072ceac3d1c504382f205676e9a1f02d76325"
+        }
+       ]
+      },
+      "fmt": "android-key",
+      "raw": "o2NmbXRrYW5kcm9pZC1rZXlnYXR0U3RtdKNjYWxnJmNzaWdYSDBGAiEA6VUSmCqj8hbP8uh8jsVwV7hSn2dOqr7Mqif9A9h3nxkCIQCvtr9FnaSoJvANAfxrYHEv8x3E6zMWGcj4dLsX5DFOlGN4NWOBWQJ8MIICeDCCAh6gAwIBAgIQH/kfdrY/RIEvmYslCwKGvzAKBggqhkjOPQQDAjBiMR4wHAYDVQQDDBVXZWJBdXRobiB0ZXN0IHZlY3RvcnMxDDAKBgNVBAoMA1czQzElMCMGA1UECwwcQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbiBDQTELMAkGA1UEBhMCQUEwIBcNMjQwMTAxMDAwMDAwWhgPMzAyNDAxMDEwMDAwMDBaMF8xHjAcBgNVBAMMFVdlYkF1dGhuIHRlc3QgdmVjdG9yczEMMAoGA1UECgwDVzNDMSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMQswCQYDVQQGEwJBQTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJkWllcDbQiaKpghp9AGPTQfGkYTOJNZY276tfPL8azP3ZHFVUMXbqmbZEQG3R3WN3S2r2WsdZ4G/0CxyKsC32ujgbYwgbMwDAYDVR0TAQH/BAIwADAOBgNVHQ8BAf8EBAMCB4AwHQYDVR0OBBYEFBrIHlBkHo0TOauffrJfDNWqwFSwMB8GA1UdIwQYMBaAFEWv9xWw3XhnQf7pluvBZUejkxseMFMGCisGAQQB1nkCAREERTBDAgIBLAoBAAIBAAoBAAQgtDUCjXtqj4O7Rh1BwZsFOp082zA1Gk83TNTN6NvvtgYEADAAMA6hBTEDAgECv4U+AwIBADAKBggqhkjOPQQDAgNIADBFAiATVPkUmZb24YMIUtpim4bTfBDaD/4XRxxn1Idl7YP2OwIhAIbbV0aUTOzfzgcdngQQcs6sPRxQQ4LyBWdumh8C12MlaGF1dGhEYXRhWKS/q8N0MpWLBjNg061kYcnEc1rn+O3UZZKl4PAUUrLktV0AAAAArelwXhznCFuJmlQNAhmb+AAgCkcpUZeItu2KLXcrSU4YYkTYx5jAUpYNvIwQyRUXZ5WlAQIDJiABIVggmRaWVwNtCJoqmCGn0AY9NB8aRhM4k1ljbvq188vxrM8iWCDdkcVVQxduqZtkRAbdHdY3dLavZax1ngb/QLHIqwLfaw=="
+     },
+     "attestationStatementDecoded": {
+      "attestationTypesSupported": "Basic",
+      "fields": {
+       "alg": {
+        "name": "ES256 (ECDSA)",
+        "value": -7
+       },
+       "keyDescription": {
+        "attestationChallenge": {
+         "hex": "b435028d7b6a8f83bb461d41c19b053a9d3cdb30351a4f374cd4cde8dbefb606",
+         "length": 32,
+         "note": "WebAuthn L3 section 8.4: must equal clientDataHash; not checked (the decoder has no clientDataHash)"
+        },
+        "attestationSecurityLevel": {
+         "content": "00",
+         "meaning": "Software"
+        },
+        "attestationVersion": {
+         "meaning": "KeyMint version 3.0",
+         "value": 300
+        },
+        "extension": "1.3.6.1.4.1.11129.2.1.17 (KeyDescription)",
+        "hardwareEnforced": {
+         "origin": {
+          "meaning": "GENERATED",
+          "value": 0
+         },
+         "purpose": {
+          "meanings": [
+           "SIGN"
+          ],
+          "values": [
+           2
+          ]
+         }
+        },
+        "hex": "30430202012c0a01000201000a01000420b435028d7b6a8f83bb461d41c19b053a9d3cdb30351a4f374cd4cde8dbefb60604003000300ea1053103020102bf853e03020100",
+        "keyMintSecurityLevel": {
+         "content": "00",
+         "meaning": "Software"
+        },
+        "keyMintVersion": {
+         "value": 0
+        },
+        "softwareEnforced": {},
+        "uniqueId": {
+         "hex": "",
+         "length": 0
+        }
+       },
+       "sig": {
+        "hex": "3046022100e95512982aa3f216cff2e87c8ec57057b8529f674eaabeccaa27fd03d8779f19022100afb6bf459da4a826f00d01fc6b60712ff31dc4eb331619c8f874bb17e4314e94",
+        "length": 72
+       },
+       "x5c": {
+        "certificates": [
+         {
+          "issuer": "C=AA,OU=Authenticator Attestation CA,O=W3C,CN=WebAuthn test vectors",
+          "notValidAfter": "3024-01-01T00:00:00+00:00",
+          "notValidBefore": "2024-01-01T00:00:00+00:00",
+          "sha256": "e5f6a65648684459620ce34d7b2c0095cd6560e1c1692964c78df724ba0616af",
+          "subject": "C=AA,OU=Authenticator Attestation,O=W3C,CN=WebAuthn test vectors"
+         }
+        ],
+        "count": 1
+       }
+      },
+      "fmt": "android-key",
+      "known": true,
+      "notChecked": [
+       "sig over authenticatorData || clientDataHash",
+       "the credCert key = the credential public key",
+       "attestationChallenge = clientDataHash",
+       "allApplications absent, origin KM_ORIGIN_GENERATED, purpose KM_PURPOSE_SIGN",
+       "the x5c chain up to a trust anchor"
+      ],
+      "spec": "WebAuthn L3 section 8.4",
+      "verification": "not verified: the decoder shows this statement; it checks no signature, chain or value in it"
+     },
+     "authenticatorData": {
+      "counter": 0,
+      "credential": {
+       "aaguid": {
+        "raw": "ade9705e1ce7085b899a540d02199bf8",
+        "uuid": "ade9705e-1ce7-085b-899a-540d02199bf8"
+       },
+       "credentialId": "0a4729519788b6ed8a2d772b494e186244d8c798c052960dbc8c10c915176795",
+       "credentialIdLength": "0020",
+       "publicKey": {
+        "alg": "ES256 (ECDSA)",
+        "cose": {
+         "-3": "dd91c55543176ea99b644406dd1dd63774b6af65ac759e06ff40b1c8ab02df6b",
+         "-2": "99169657036d089a2a9821a7d0063d341f1a4613389359636efab5f3cbf1accf",
+         "-1": 1,
+         "1": 2,
+         "3": -7
+        },
+        "curve": "P-256 (1)",
+        "keyType": "EC2 (2)"
+       }
+      },
+      "flags": {
+       "AT": true,
+       "BE": true,
+       "BS": true,
+       "ED": false,
+       "UP": true,
+       "UV": true,
+       "bin": "01011101",
+       "hex": "5D",
+       "raw": "5D"
+      },
+      "rpIdHash": "bfabc37432958b063360d3ad6461c9c4735ae7f8edd46592a5e0f01452b2e4b5"
+     }
+    },
+    "decodeMode": "strict",
+    "findings": [],
+    "malformed": [],
+    "success": true,
+    "type": "Attestation object"
+   }
+  },
+  {
+   "request": "POST /api/decode",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "2315"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ]
+   ],
+   "cookies": [],
+   "bodySha256": "9336647531c3aa37f0cae90c827e833246054a776532e1724473937e029854fe",
+   "body": {
+    "data": {
+     "attestationObject": {
+      "attStmt": {
+       "alg": -7,
+       "sig": "MEQCIAZ6IHVKuSUAXb83gJfJISADFYHHMijR-09biBvNfamDAiB_x7FHVYx8Dro68YvZ0SH6PTom0X_j8iAnIXj0c7YAbQ"
+      },
+      "fmt": "packed",
+      "raw": "o2NmbXRmcGFja2VkZ2F0dFN0bXSiY2FsZyZjc2lnWEYwRAIgBnogdUq5JQBdvzeAl8khIAMVgccyKNH7T1uIG819qYMCIH/HsUdVjHwOujrxi9nRIfo9OibRf+PyICchePRztgBtaGF1dGhEYXRhWKS/q8N0MpWLBjNg061kYcnEc1rn+O3UZZKl4PAUUrLktV0AAAAA34UOCdtq+9+rUWl3kVBs/AAgRV7zTiBDqH2z1K/rObvLbMMt+TR8eJqGXs3KEpy+9YylAQIDJiABIVgg6xUcgXayJcxlFVn+zwevRQ/YWAIEZlazTBj2zxk4Q8UiWCCSe4qkJ6K+G4g00jOi009h8Tv9RBGcMl1YluGD/uSE8g=="
+     },
+     "attestationStatementDecoded": {
+      "attestationTypesSupported": "Basic, Self, AttCA",
+      "fields": {
+       "alg": {
+        "name": "ES256 (ECDSA)",
+        "value": -7
+       },
+       "attestationType": "Self (no x5c): sig is made with the credential private key",
+       "credentialPublicKeyAlg": {
+        "name": "ES256 (ECDSA)",
+        "value": -7
+       },
+       "note": "section 8.2: for self attestation alg must be the credential public key's alg; shown, not compared",
+       "sig": {
+        "hex": "30440220067a20754ab925005dbf378097c92120031581c73228d1fb4f5b881bcd7da98302207fc7b147558c7c0eba3af18bd9d121fa3d3a26d17fe3f220272178f473b6006d",
+        "length": 70
+       }
+      },
+      "fmt": "packed",
+      "known": true,
+      "notChecked": [
+       "sig over authenticatorData || clientDataHash",
+       "the attestation certificate requirements of section 8.2.1",
+       "the x5c chain up to a trust anchor",
+       "for self attestation: that alg matches the credential public key and sig verifies under it"
+      ],
+      "spec": "WebAuthn L3 section 8.2",
+      "verification": "not verified: the decoder shows this statement; it checks no signature, chain or value in it"
+     },
+     "authenticatorData": {
+      "counter": 0,
+      "credential": {
+       "aaguid": {
+        "raw": "df850e09db6afbdfab51697791506cfc",
+        "uuid": "df850e09-db6a-fbdf-ab51-697791506cfc"
+       },
+       "credentialId": "455ef34e2043a87db3d4afeb39bbcb6cc32df9347c789a865ecdca129cbef58c",
+       "credentialIdLength": "0020",
+       "publicKey": {
+        "alg": "ES256 (ECDSA)",
+        "cose": {
+         "-3": "927b8aa427a2be1b8834d233a2d34f61f13bfd44119c325d5896e183fee484f2",
+         "-2": "eb151c8176b225cc651559fecf07af450fd85802046656b34c18f6cf193843c5",
+         "-1": 1,
+         "1": 2,
+         "3": -7
+        },
+        "curve": "P-256 (1)",
+        "keyType": "EC2 (2)"
+       }
+      },
+      "flags": {
+       "AT": true,
+       "BE": true,
+       "BS": true,
+       "ED": false,
+       "UP": true,
+       "UV": true,
+       "bin": "01011101",
+       "hex": "5D",
+       "raw": "5D"
+      },
+      "rpIdHash": "bfabc37432958b063360d3ad6461c9c4735ae7f8edd46592a5e0f01452b2e4b5"
+     }
+    },
+    "decodeMode": "strict",
+    "findings": [],
+    "malformed": [],
+    "success": true,
+    "type": "Attestation object"
+   }
+  },
+  {
+   "request": "POST /api/decode",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "1479"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ]
+   ],
+   "cookies": [],
+   "bodySha256": "78cda295ac3200aef1180e15674270da73720802ead49a94f0a67698cbb95adc",
+   "body": {
+    "data": {
+     "attestationObject": {
+      "fmt": "none",
+      "raw": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVjEACH1/AuFzSLmBiO819HKSJSJCSSbR3brUVFU5XtmrhJBAAAAK/igEfOMCk0VgAYXER+e3H0AQKFzcNnBdZAFcAyN5359/ToKUwDgom5SE6pA1t8Q7kAotYtfNBZwNdhAvrrgxc6P0FrZvTPjvn0cVY2Bq0gDVwulAQIDJiABIVggpf1c4bHEWMUwpU+mGzG/awS+i5ev3lTdjLtpJ1qKG+EiWCD6OjIx3Z3u2dGJe+WmIoxZUB5LzRKXXT3/cw8BJ46mHA=="
+     },
+     "attestationStatementDecoded": {
+      "attestationTypesSupported": "None",
+      "fields": {},
+      "fmt": "none",
+      "known": true,
+      "notChecked": [],
+      "spec": "WebAuthn L3 section 8.7",
+      "verification": "not verified: the decoder shows this statement; it checks no signature, chain or value in it"
+     },
+     "authenticatorData": {
+      "counter": 43,
+      "credential": {
+       "aaguid": {
+        "raw": "f8a011f38c0a4d15800617111f9edc7d",
+        "uuid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d"
+       },
+       "credentialId": "a17370d9c1759005700c8de77e7dfd3a0a5300e0a26e5213aa40d6df10ee4028b58b5f34167035d840bebae0c5ce8fd05ad9bd33e3be7d1c558d81ab4803570b",
+       "credentialIdLength": "0040",
+       "publicKey": {
+        "alg": "ES256 (ECDSA)",
+        "cose": {
+         "-3": "fa3a3231dd9deed9d1897be5a6228c59501e4bcd12975d3dff730f01278ea61c",
+         "-2": "a5fd5ce1b1c458c530a54fa61b31bf6b04be8b97afde54dd8cbb69275a8a1be1",
+         "-1": 1,
+         "1": 2,
+         "3": -7
+        },
+        "curve": "P-256 (1)",
+        "keyType": "EC2 (2)"
+       }
+      },
+      "flags": {
+       "AT": true,
+       "BE": false,
+       "BS": false,
+       "ED": false,
+       "UP": true,
+       "UV": false,
+       "bin": "01000001",
+       "hex": "41",
+       "raw": "41"
+      },
+      "rpIdHash": "0021f5fc0b85cd22e60623bcd7d1ca48948909249b4776eb515154e57b66ae12"
+     }
+    },
+    "decodeMode": "strict",
+    "findings": [],
+    "malformed": [],
+    "success": true,
+    "type": "Attestation object"
+   }
+  }
+ ]
+}
