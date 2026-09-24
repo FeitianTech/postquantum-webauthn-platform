@@ -1,11 +1,13 @@
 """How the certificate views show an X.509 extension's value.
 
-Key identifiers, basic constraints and the FIDO and Yubico extensions (AAGUID,
-transports, firmware version, device identifiers) get a structured value; any
-other extension shows ``str()`` of cryptography's parsed value.
+Key identifiers, basic constraints, signed certificate timestamps and the FIDO
+and Yubico extensions (AAGUID, transports, firmware version, device identifiers)
+get a structured value; any other extension shows ``str()`` of cryptography's
+parsed value.
 """
 from __future__ import annotations
 
+import datetime
 from typing import Any
 
 from cryptography import x509
@@ -75,6 +77,26 @@ def _basic_constraints_value(value: x509.BasicConstraints) -> dict[str, Any]:
     if value.path_length is not None:
         serialized["Path Length"] = value.path_length
     return serialized
+
+
+def _signed_certificate_timestamps_value(scts: Any) -> list[dict[str, Any]]:
+    """RFC 6962 SCTs, one record each; ``str()`` of these names each object's memory address."""
+
+    records = []
+    for sct in scts:
+        # cryptography gives a naive datetime that is in UTC.
+        timestamp = sct.timestamp.replace(tzinfo=datetime.timezone.utc)
+        records.append(
+            {
+                "Version": sct.version.name,
+                "Log ID": sct.log_id.hex(),
+                "Timestamp": timestamp.isoformat(timespec="milliseconds"),
+                "Entry type": sct.entry_type.name,
+                "Signature hash algorithm": sct.signature_hash_algorithm.name,
+                "Signature algorithm": sct.signature_algorithm.name,
+            }
+        )
+    return records
 
 
 def _firmware_version_value(raw_bytes: bytes, raw_hex: str) -> dict[str, Any]:
@@ -158,6 +180,8 @@ def _serialize_extension_value(ext: Any) -> Any:
         return _authority_key_identifier_value(value)
     if isinstance(value, x509.BasicConstraints):
         return _basic_constraints_value(value)
+    if isinstance(value, (x509.PrecertificateSignedCertificateTimestamps, x509.SignedCertificateTimestamps)):
+        return _signed_certificate_timestamps_value(value)
     if isinstance(value, x509.UnrecognizedExtension):
         return _unrecognized_extension_value(ext.oid.dotted_string, value.value)
 
