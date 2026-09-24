@@ -198,16 +198,22 @@ def _upload_worker(
     try:
         github_upload_json(path, dict(payload_dict))
     except Exception as exc:
-        print(
-            f"[{TIMEZONE_LABEL} {summary_dict.get('timestamp', '')}] "
-            f"Failed to upload credential log {path}: {exc}"
+        _logger.warning(
+            "[%s %s] Failed to upload credential log %s: %s",
+            TIMEZONE_LABEL,
+            summary_dict.get("timestamp", ""),
+            path,
+            exc,
         )
         return
 
-    print(
-        f"[{TIMEZONE_LABEL} {summary_dict.get('timestamp', '')}] "
-        f"Uploaded credential log AAGUID={summary_dict.get('aaguid')} device={summary_dict.get('device')} "
-        f"action={summary_dict.get('action')}"
+    _logger.info(
+        "[%s %s] Uploaded credential log AAGUID=%s device=%s action=%s",
+        TIMEZONE_LABEL,
+        summary_dict.get("timestamp", ""),
+        summary_dict.get("aaguid"),
+        summary_dict.get("device"),
+        summary_dict.get("action"),
     )
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 import textwrap
 from collections.abc import Mapping, Sequence
@@ -25,6 +26,8 @@ from ... import encoding
 from ...encoding import encode_base64
 from . import formatting, trust
 from .constants import EXTENSION_DISPLAY_METADATA
+
+logger = logging.getLogger(__name__)
 
 _HASH_NORMALISE_PATTERN = re.compile(r"sha-?(\d{3})$", re.IGNORECASE)
 
@@ -905,8 +908,9 @@ def extract_attestation_details(
 
     try:
         registration = RegistrationResponse.from_dict(response)
-    except Exception as exc:  # pragma: no cover - debugging aid
-        print(f"[DEBUG] Failed to parse registration response for attestation: {exc}")
+    except Exception as exc:
+        # The caller's registration data, not a server fault: debug, not stdout.
+        logger.debug("Failed to parse registration response for attestation: %s", exc)
         return (
             attestation_format,
             attestation_statement,
