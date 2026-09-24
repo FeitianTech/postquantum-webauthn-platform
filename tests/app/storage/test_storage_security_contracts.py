@@ -386,7 +386,10 @@ def test_savekey_never_writes_a_pickle_file(local_store):
 
     store.savekey("alice@example.com", [{"a": 1}], session_id="session-a")
 
-    written = [str(p) for p in local_store.root.rglob("*") if p.is_file()]
+    # Beside each credential file, the empty lock file its writers take.
+    locks = [p for p in local_store.root.rglob("*.lock") if p.is_file()]
+    assert [p.stat().st_size for p in locks] == [0]
+    written = [str(p) for p in local_store.root.rglob("*") if p.is_file() and p not in locks]
     assert written, "expected the credential file to be written"
     assert not any(p.endswith(".pkl") for p in written)
     assert all(p.endswith(".json") for p in written)
@@ -651,7 +654,7 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
     )
     assert complete.status_code == 200, complete.get_data(as_text=True)
 
-    written = sorted(p for p in root.rglob("*") if p.is_file())
+    written = sorted(p for p in root.rglob("*") if p.is_file() and p.suffix != ".lock")
     assert len(written) == 1
     assert written[0].name == "alice@example.com_credential_data.json"
     envelope = json.loads(written[0].read_text(encoding="utf-8"))
