@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from . import (
     aaguid,
+    certificate_names,
     certificates,
     checks,
     classical,
@@ -59,12 +60,12 @@ format_hex_string_lines = formatting.format_hex_string_lines
 make_json_safe = formatting.make_json_safe
 
 # X.509 name and signature-algorithm helpers.
-_derive_certificate_algorithm_info = certificates._derive_certificate_algorithm_info
-_extract_common_names = certificates._extract_common_names
-_format_algorithm_component = certificates._format_algorithm_component
-_format_hash_value = certificates._format_hash_value
-_normalise_signature_algorithm_name = certificates._normalise_signature_algorithm_name
-format_x509_name = certificates.format_x509_name
+_derive_certificate_algorithm_info = certificate_names._derive_certificate_algorithm_info
+_extract_common_names = certificate_names._extract_common_names
+_format_algorithm_component = certificate_names._format_algorithm_component
+_format_hash_value = certificate_names._format_hash_value
+_normalise_signature_algorithm_name = certificate_names._normalise_signature_algorithm_name
+format_x509_name = certificate_names.format_x509_name
 
 # Certificate extension serialisation.
 _parse_fido_transport_bitfield = certificates._parse_fido_transport_bitfield
