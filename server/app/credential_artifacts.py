@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
@@ -15,13 +16,16 @@ from .storage.cloud import (
     build_blob_name,
     delete_blob,
     download_bytes,
+    download_bytes_with_generation,
     gcs_enabled,
     upload_bytes,
+    upload_bytes_if_generation,
 )
 from .storage.common import (
     assert_contained_blob_name,
     build_session_root_prefix,
     build_session_scoped_prefix,
+    file_lock,
     resolve_contained_path,
     resolve_metadata_session_id,
     using_gcs_backend,
@@ -48,8 +52,13 @@ _ARTIFACT_SUBDIR = os.environ.get(
     os.environ.get("FIDO_SERVER_GCS_CREDENTIAL_ARTIFACT_PREFIX", "credential-artifacts"),
 )
 # Striped per-key locks: serialise read-merge-write for one artifact without
-# making every artifact operation in the process wait on network I/O.
+# making every artifact operation in the process wait on network I/O. They keep
+# threads apart; across processes a local record's writers hold an flock on its
+# ``.lock`` file, and on GCS a merge is conditional on the generation it read.
 _LOCK_STRIPES = tuple(threading.RLock() for _ in range(64))
+# A merge that loses re-reads and merges into the winner's record. Each other
+# writer wins at most once while it waits, so eight attempts cover eight at once.
+_MERGE_ATTEMPTS = 8
 
 
 def _lock_for(storage_id: str, session_id: str) -> threading.RLock:
@@ -150,11 +159,23 @@ def _read_record(storage_id: str, session_id: str) -> dict[str, Any] | None:
     return _read_file(_artifact_path(storage_id))
 
 
+def _encode_record(record: dict[str, Any]) -> bytes:
+    return json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def _decode_record(payload: bytes | None) -> dict[str, Any] | None:
+    if not payload:
+        return None
+    try:
+        return json.loads(payload.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return None
+
+
 def _write_record(storage_id: str, session_id: str, record: dict[str, Any]) -> None:
     if _using_gcs():
         blob_name = _artifact_blob(storage_id, session_id)
-        payload = json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-        upload_bytes(blob_name, payload, content_type="application/json")
+        upload_bytes(blob_name, _encode_record(record), content_type="application/json")
         return
 
     _ensure_directory()
@@ -174,14 +195,22 @@ def _delete_record(storage_id: str, session_id: str) -> bool:
             return False
         return existed
 
-    path = _artifact_path(storage_id)
     try:
-        os.remove(path)
+        _remove_locked(_artifact_path(storage_id))
     except FileNotFoundError:
         return False
     except OSError:
         return False
     return True
+
+
+def _remove_locked(path: str) -> None:
+    """Remove a local record under the lock its writers hold; no lock file for no record."""
+
+    if not os.path.exists(path):
+        raise FileNotFoundError(path)
+    with file_lock(path):
+        os.remove(path)
 
 
 def load_credential_artifact(
@@ -244,32 +273,67 @@ def store_credential_artifact(
     resolved_session = _resolve_session_id(session_id)
 
     with _lock_for(normalised, resolved_session):
-        existing = _read_record(normalised, resolved_session) if merge else None
-        base_payload: dict[str, Any]
-        if merge and existing and isinstance(existing, dict):
-            current_payload = existing.get("payload")
-            if isinstance(current_payload, dict):
-                base_payload = _merge_payload(dict(current_payload), payload)
-            else:
-                base_payload = dict(payload)
-            created_at = existing.get("createdAt")
-        else:
-            base_payload = dict(payload)
-            created_at = None
-
-        record = {
-            "storageId": normalised,
-            "createdAt": created_at or timestamp,
-            "updatedAt": timestamp,
-            "payload": base_payload,
-        }
-
-        try:
-            _write_record(normalised, resolved_session, record)
-        except Exception:
-            return False
+        if _using_gcs() and merge:
+            return _merge_on_gcs(normalised, resolved_session, payload, timestamp)
+        with contextlib.ExitStack() as held:
+            if not _using_gcs():
+                try:
+                    _ensure_directory()
+                    held.enter_context(file_lock(_artifact_path(normalised)))
+                except OSError:
+                    return False
+            existing = _read_record(normalised, resolved_session) if merge else None
+            record = _updated_record(normalised, existing, payload, merge=merge, timestamp=timestamp)
+            try:
+                _write_record(normalised, resolved_session, record)
+            except Exception:
+                return False
 
     return True
+
+
+def _updated_record(
+    storage_id: str, existing: Any, payload: dict[str, Any], *, merge: bool, timestamp: float
+) -> dict[str, Any]:
+    base_payload: dict[str, Any]
+    if merge and existing and isinstance(existing, dict):
+        current_payload = existing.get("payload")
+        if isinstance(current_payload, dict):
+            base_payload = _merge_payload(dict(current_payload), payload)
+        else:
+            base_payload = dict(payload)
+        created_at = existing.get("createdAt")
+    else:
+        base_payload = dict(payload)
+        created_at = None
+
+    return {
+        "storageId": storage_id,
+        "createdAt": created_at or timestamp,
+        "updatedAt": timestamp,
+        "payload": base_payload,
+    }
+
+
+def _merge_on_gcs(storage_id: str, session_id: str, payload: dict[str, Any], timestamp: float) -> bool:
+    """Read-merge-write conditional on the generation read; a lost race merges again."""
+
+    blob_name = _artifact_blob(storage_id, session_id)
+    for _attempt in range(_MERGE_ATTEMPTS):
+        try:
+            stored, generation = download_bytes_with_generation(blob_name)
+        except Exception:
+            # Merging into a record that could not be read would overwrite it.
+            return False
+        record = _updated_record(storage_id, _decode_record(stored), payload, merge=True, timestamp=timestamp)
+        try:
+            if upload_bytes_if_generation(
+                blob_name, _encode_record(record), generation=generation, content_type="application/json"
+            ):
+                return True
+        except Exception:
+            return False
+    return False
 
 
 def delete_credential_artifact(storage_id: Any, *, session_id: str | None = None) -> bool:
@@ -319,9 +383,8 @@ def delete_credential_artifact_with_status(
 
             return "deleted" if existed else "absent"
 
-        path = _artifact_path(normalised)
         try:
-            os.remove(path)
+            _remove_locked(_artifact_path(normalised))
         except FileNotFoundError:
             return "absent"
         except OSError:
