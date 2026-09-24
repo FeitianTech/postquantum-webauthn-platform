@@ -18,6 +18,7 @@ from . import (
 )
 from .cbor_parser import _CborDecodingError, _structure_to_value
 from .ctap_prefix import _extract_ctap_prefix, _is_padding_bytes
+from .findings import _attach_findings, _trailing_findings
 from .keys import MISSING, json_items, key_identity
 from .keys import MISSING as _MISSING
 from .keys import coerce_cbor_bytes as _coerce_cbor_bytes
@@ -736,34 +737,3 @@ def _try_decode_cbor(data: bytes, encoding: str, *, lenient: bool = False) -> di
     }
     _attach_findings(result, findings)
     return result
-
-
-def _trailing_findings(data: bytes, end: int) -> list[dict[str, Any]]:
-    """Report the bytes after the top-level item: never decoded, never dropped.
-
-    All 0x00 (or 0xff) is what an unstripped HID report ends with, and is
-    reported as such -- still reported.
-    """
-
-    remaining = data[end:]
-    if not remaining:
-        return []
-    note = " (all 0x00/0xff: HID report padding?)" if _is_padding_bytes(remaining) else ""
-    return [
-        {
-            "code": "trailing-bytes",
-            "category": "trailing",
-            "offset": end,
-            "path": "$",
-            "length": len(remaining),
-            "hex": remaining.hex(),
-            "message": f"Trailing {len(remaining)} byte(s) after CBOR payload{note}.",
-        }
-    ]
-
-
-def _attach_findings(result: dict[str, Any], findings: list[dict[str, Any]]) -> None:
-    ordered = sorted(findings, key=lambda finding: (finding.get("source", ""), finding["offset"]))
-    result["findings"] = ordered
-    if ordered:
-        result["malformed"] = [finding["message"] for finding in ordered]
