@@ -161,7 +161,6 @@ _convert_user_text_value = ctap._convert_user_text_value
 _format_att_stmt_for_expanded_json = ctap._format_att_stmt_for_expanded_json
 _format_auth_data_for_expanded_json = ctap._format_auth_data_for_expanded_json
 _parse_authenticator_data_bytes = ctap._parse_authenticator_data_bytes
-_summarize_bytes_for_json = ctap._summarize_bytes_for_json
 
 # CTAP interpretation and expanded JSON.
 _GET_ASSERTION_REQUEST_HANDLERS = ctap._GET_ASSERTION_REQUEST_HANDLERS
