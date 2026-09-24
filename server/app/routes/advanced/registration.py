@@ -29,16 +29,17 @@ from ... import (
     device_logs,
 )
 from ...attachments import (
+    attachment_hint_violation,
     normalize_attachment,
-    normalize_attachment_list,
+    resolve_allowed_attachments,
     resolve_effective_attachments,
 )
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
-from ...encoding import decode_hex, encode_base64, encode_base64url
+from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials
 from ...webauthn import attestation, metadata, pqc
 from .. import binary_helpers
-from . import algorithms, binary, summary, tracing
+from . import algorithms, binary, constants, summary, tracing
 
 logger = logging.getLogger(__name__)
 
@@ -71,34 +72,16 @@ def prepare_register_complete_inputs(
         requested_attachment,
     )
 
-    session_allowed_marker = session.pop("advanced_register_allowed_attachments", None)
-    if session_allowed_marker is None:
-        allowed_attachments = request_allowed_attachments
-    else:
-        allowed_attachments = normalize_attachment_list(session_allowed_marker)
-    if not allowed_attachments:
-        allowed_attachments = request_allowed_attachments
-
-    response_attachment = normalize_attachment(
-        response.get("authenticatorAttachment") if isinstance(response, Mapping) else None
+    allowed_attachments = resolve_allowed_attachments(
+        session.pop("advanced_register_allowed_attachments", None),
+        request_allowed_attachments,
     )
-    if allowed_attachments:
-        if response_attachment is None:
-            return None, (
-                jsonify(
-                    {
-                        "error": "Authenticator attachment could not be determined to enforce selected hints.",
-                    }
-                ),
-                400,
-            )
-        if response_attachment not in allowed_attachments:
-            return None, (
-                jsonify(
-                    {"error": "Authenticator attachment is not permitted by the selected hints."}
-                ),
-                400,
-            )
+    violation = attachment_hint_violation(
+        allowed_attachments,
+        normalize_attachment(response.get("authenticatorAttachment") if isinstance(response, Mapping) else None),
+    )
+    if violation is not None:
+        return None, (jsonify({"error": violation}), 400)
 
     if not original_request.get("publicKey"):
         return None, (
@@ -182,13 +165,6 @@ def prepare_register_complete_inputs(
     }, None
 
 
-CHALLENGE_SOURCE_SERVER = "server-session"
-#: The ceremony challenge was taken from the request body (request-editor mode).
-CHALLENGE_SOURCE_CLIENT = "client-supplied"
-#: A client-supplied challenge: the server never issued it, so cannot say.
-CHALLENGE_STATUS_NOT_TRACKED = "not-tracked"
-
-
 def resolve_state_and_registration_server(
     *,
     data: Mapping[str, Any],
@@ -203,12 +179,12 @@ def resolve_state_and_registration_server(
 ) -> tuple[dict[str, Any] | None, Any | None]:
     # The caller has already taken the session's state, and consumed its challenge.
     state = session_state
-    challenge_source = CHALLENGE_SOURCE_SERVER if state is not None else None
+    challenge_source = constants.CHALLENGE_SOURCE_SERVER if state is not None else None
     if state is None:
         fallback_state = data.get("__session_state")
         if isinstance(fallback_state, Mapping):
             state = fallback_state
-            challenge_source = CHALLENGE_SOURCE_CLIENT
+            challenge_source = constants.CHALLENGE_SOURCE_CLIENT
 
     # Record where the challenge came from before anything below can raise, so
     # that the caller can always report it -- the advanced flow may be
@@ -605,9 +581,9 @@ def advanced_register_complete():
     # reject on it. Every response carries the trace.
     session_state = session.pop("advanced_state", None)
     state_trace: dict[str, Any] = {
-        "challengeSource": CHALLENGE_SOURCE_SERVER if session_state is not None else CHALLENGE_SOURCE_CLIENT,
+        "challengeSource": constants.CHALLENGE_SOURCE_SERVER if session_state is not None else constants.CHALLENGE_SOURCE_CLIENT,
         "challengeStatus": (
-            consume_ceremony_state(session_state) if session_state is not None else CHALLENGE_STATUS_NOT_TRACKED
+            consume_ceremony_state(session_state) if session_state is not None else constants.CHALLENGE_STATUS_NOT_TRACKED
         ),
     }
     return _with_challenge_source(_register_complete(data, session_state, state_trace), state_trace)
@@ -758,9 +734,7 @@ def _register_complete(data: Mapping[str, Any], session_state: Any, state_trace:
         user_id_value = user_info.get("id", "")
         if user_id_value:
             try:
-                user_handle = binary._extract_binary_value(user_id_value)
-                if isinstance(user_handle, str):
-                    user_handle = decode_hex(user_handle)
+                user_handle = binary._decode_request_binary(user_id_value)
             except (ValueError, TypeError):
                 user_handle = username.encode("utf-8")
         else:
@@ -1072,9 +1046,7 @@ def build_exclude_list(public_key: Mapping[str, Any]) -> list[Any]:
     if isinstance(exclude_credentials, list):
         for exclude_cred in exclude_credentials:
             if isinstance(exclude_cred, dict) and exclude_cred.get("type") == "public-key":
-                cred_id = binary._extract_binary_value(exclude_cred.get("id", ""))
-                if isinstance(cred_id, str):
-                    cred_id = decode_hex(cred_id)
+                cred_id = binary._decode_request_binary(exclude_cred.get("id", ""))
                 if cred_id:
                     exclude_list.append(
                         PublicKeyCredentialDescriptor(
@@ -1122,14 +1094,10 @@ def build_processed_extensions(public_key: Mapping[str, Any]) -> dict[str, Any]:
                 processed_eval = {}
                 if isinstance(prf_eval, dict):
                     if "first" in prf_eval:
-                        first_value = binary._extract_binary_value(prf_eval["first"])
-                        if isinstance(first_value, str):
-                            first_value = decode_hex(first_value)
+                        first_value = binary._decode_request_binary(prf_eval["first"])
                         processed_eval["first"] = first_value
                     if "second" in prf_eval:
-                        second_value = binary._extract_binary_value(prf_eval["second"])
-                        if isinstance(second_value, str):
-                            second_value = decode_hex(second_value)
+                        second_value = binary._decode_request_binary(prf_eval["second"])
                         processed_eval["second"] = second_value
                 processed_extensions["prf"] = {"eval": processed_eval} if processed_eval else ext_value
             else:
@@ -1169,9 +1137,7 @@ def advanced_register_begin():
     user_id_value = user_info.get("id", "")
     if user_id_value:
         try:
-            user_id_bytes = binary._extract_binary_value(user_id_value)
-            if isinstance(user_id_bytes, str):
-                user_id_bytes = decode_hex(user_id_bytes)
+            user_id_bytes = binary._decode_request_binary(user_id_value)
         except (ValueError, TypeError) as exc:
             return jsonify({"error": f"Invalid user ID format: {exc}"}), 400
     else:
@@ -1181,9 +1147,7 @@ def advanced_register_begin():
     challenge_bytes = None
     if challenge_value:
         try:
-            challenge_bytes = binary._extract_binary_value(challenge_value)
-            if isinstance(challenge_bytes, str):
-                challenge_bytes = decode_hex(challenge_bytes)
+            challenge_bytes = binary._decode_request_binary(challenge_value)
         except (ValueError, TypeError) as exc:
             return jsonify({"error": f"Invalid challenge format: {exc}"}), 400
 
