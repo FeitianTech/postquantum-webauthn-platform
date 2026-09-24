@@ -128,10 +128,8 @@ _looks_like_make_credential_request = ctap._looks_like_make_credential_request
 _resolve_ctap_label = ctap._resolve_ctap_label
 
 # CTAP field conversion leaves.
-_attempt_decode_cbor_map = ctap._attempt_decode_cbor_map
 _convert_ctap_credential_descriptor = ctap._convert_ctap_credential_descriptor
 _convert_optional_ctap_field = ctap._convert_optional_ctap_field
-_normalize_user_mapping = ctap._normalize_user_mapping
 
 # CTAP trailing-field repair helpers.
 

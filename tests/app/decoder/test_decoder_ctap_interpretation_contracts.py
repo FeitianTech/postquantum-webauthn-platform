@@ -149,27 +149,30 @@ def test_interpret_ctap_cbor_value_prefers_make_credential_request_classificatio
     assert mapped["2 (rp)"]["id"] == "example.com"
 
 
-def test_convert_ctap_user_decodes_cbor_bytes_and_preserves_custom_fields():
+def test_convert_ctap_user_shows_a_non_map_user_as_it_was_sent():
+    # A user entity sent as a byte string or as text is not re-read as CBOR,
+    # base64 or hex to turn it into a map.
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    user_mapping = {
-        1: b"\xAA\xBB",
-        2: b"alice",
-        3: "Alice",
-        b"role": "admin",
-    }
-    encoded = cbor2.dumps(user_mapping)
+    encoded = cbor2.dumps({1: b"\xAA\xBB", 2: "alice"})
+    assert decode_module._convert_ctap_user(encoded) == encoded.hex()
 
-    converted = decode_module._convert_ctap_user(encoded)
+    encoded_text = base64.urlsafe_b64encode(encoded).decode("ascii").rstrip("=")
+    assert decode_module._convert_ctap_user(encoded_text) == encoded_text
+
+
+def test_convert_ctap_user_keeps_byte_string_keys_distinct_from_text_keys():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    converted = decode_module._convert_ctap_user(
+        {1: b"\xAA\xBB", 2: b"alice", 3: "Alice", b"role": "admin"}
+    )
 
     assert converted["id"] == "aabb"
     assert converted["name"]["text"] == "alice"
     assert converted["displayName"] == "Alice"
-    assert converted["role"] == "admin"
-
-    encoded_text = base64.urlsafe_b64encode(encoded).decode("ascii").rstrip("=")
-    converted_from_text = decode_module._convert_ctap_user(encoded_text)
-    assert converted_from_text["id"] == "aabb"
+    assert converted[b"role".hex()] == "admin"
+    assert "role" not in converted
 
 
 def test_convert_ctap_credential_descriptor_supports_bytes_mapping_and_extra_keys():
@@ -190,13 +193,6 @@ def test_convert_ctap_credential_descriptor_supports_bytes_mapping_and_extra_key
     assert descriptor["type"] == "public-key"
     assert descriptor["transports"] == ["usb", "nfc"]
     assert descriptor["9"] == "03"
-
-
-def test_attempt_decode_cbor_map_returns_none_for_non_map_payload():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    assert decode_module._attempt_decode_cbor_map(cbor2.dumps([1, 2, 3])) is None
-    assert decode_module._attempt_decode_cbor_map(cbor2.dumps({1: 2})) == {1: 2}
 
 
 def test_try_decode_cbor_interprets_prefixed_get_assertion_request_payload():

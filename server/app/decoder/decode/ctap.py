@@ -8,7 +8,6 @@ from typing import Any
 import cbor2
 
 from fido2 import cbor
-from fido2.utils import ByteBuffer
 from fido2.webauthn import AuthenticatorData
 
 from ...encoding import encode_base64
@@ -88,35 +87,6 @@ def _convert_ctap_credential_descriptor(entry: Any) -> Any:
         descriptor[str(key)] = _hex_json_safe(entry[key])
 
     return descriptor
-
-
-def _attempt_decode_cbor_map(data: bytes) -> Mapping[Any, Any] | None:
-    try:
-        decoded = cbor2.loads(data)
-    except Exception:  # pragma: no cover - defensive
-        return None
-    return decoded if isinstance(decoded, Mapping) else None
-
-
-def _normalize_user_mapping(entry: Mapping[Any, Any]) -> Mapping[Any, Any]:
-    normalized: dict[Any, Any] = {}
-    for key, value in entry.items():
-        if isinstance(key, ByteBuffer):
-            candidate_key = key.getvalue()
-        else:
-            candidate_key = key
-
-        if isinstance(candidate_key, (bytes, bytearray, memoryview)):
-            raw_key = bytes(candidate_key)
-            try:
-                normalized_key: Any = raw_key.decode("utf-8")
-            except UnicodeDecodeError:
-                normalized_key = raw_key.hex()
-        else:
-            normalized_key = candidate_key
-
-        normalized[normalized_key] = value
-    return normalized
 
 
 def _labels(members: Mapping[int, str]) -> dict[Any, str]:
@@ -483,51 +453,38 @@ def _convert_user_text_value(value: Any) -> Any:
 
 
 def _convert_ctap_user(entry: Any) -> Any:
+    # A CTAP user entity is a map. Anything else is shown as it was sent: a
+    # byte string or text is never re-read as CBOR, base64 or hex to make one.
     data_bytes = _coerce_cbor_bytes(entry)
     if data_bytes is not None:
-        decoded_map = _attempt_decode_cbor_map(data_bytes)
-        if decoded_map is not None:
-            return _convert_ctap_user(decoded_map)
         return data_bytes.hex()
-
-    if isinstance(entry, str):
-        try:
-            decoded_value, _ = pipeline._decode_binary_input(entry)
-        except ValueError:
-            decoded_value = None
-        if decoded_value:
-            decoded_map = _attempt_decode_cbor_map(decoded_value)
-            if decoded_map is not None:
-                return _convert_ctap_user(decoded_map)
 
     if not isinstance(entry, Mapping):
         return _hex_json_safe(entry)
 
-    normalized_entry = _normalize_user_mapping(entry)
-
     user: dict[str, Any] = {}
-    id_value = _get_mapping_entry(normalized_entry, "id", 1)
+    id_value = _get_mapping_entry(entry, "id", 1)
     if id_value is not _MISSING:
         id_bytes = _coerce_cbor_bytes(id_value)
         if id_bytes is not None:
             user["id"] = id_bytes.hex()
 
-    name_value = _get_mapping_entry(normalized_entry, "name", 2)
+    name_value = _get_mapping_entry(entry, "name", 2)
     if name_value is not _MISSING:
         user["name"] = _convert_user_text_value(name_value)
 
-    display_name_value = _get_mapping_entry(normalized_entry, "displayName", 3)
+    display_name_value = _get_mapping_entry(entry, "displayName", 3)
     if display_name_value is not _MISSING:
         user["displayName"] = _convert_user_text_value(display_name_value)
 
-    icon_value = _get_mapping_entry(normalized_entry, "icon", 4)
+    icon_value = _get_mapping_entry(entry, "icon", 4)
     if icon_value is not _MISSING:
         user["icon"] = _convert_user_text_value(icon_value)
 
-    for key in normalized_entry:
+    for key in entry:
         if key in {"id", "name", "displayName", "icon"} or key in {1, 2, 3, 4}:
             continue
-        user[str(key)] = _hex_json_safe(normalized_entry[key])
+        user[_format_ctap_entry_key(key, None)] = _hex_json_safe(entry[key])
 
     return user
 

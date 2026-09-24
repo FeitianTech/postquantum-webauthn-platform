@@ -7,7 +7,6 @@ import json
 import pytest
 
 from fido2.cose import CoseKey
-from fido2.utils import ByteBuffer
 from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData
 
 
@@ -35,17 +34,6 @@ def test_convert_optional_and_user_helpers_cover_binary_and_text_paths():
 
     assert decode_module._convert_optional_ctap_field(b"\x01\x02") == "0102"
     assert decode_module._convert_optional_ctap_field({"k": b"\xaa"}) == {"k": "aa"}
-
-    normalized = decode_module._normalize_user_mapping(
-        {
-            ByteBuffer(b"id"): b"\x01\x02",
-            b"name": "alice",
-            b"\xff": "raw-key",
-        }
-    )
-    assert normalized["id"] == b"\x01\x02"
-    assert normalized["name"] == "alice"
-    assert normalized["ff"] == "raw-key"
 
     assert decode_module._convert_user_text_value("Alice") == "Alice"
 
