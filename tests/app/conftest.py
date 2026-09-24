@@ -267,13 +267,6 @@ def pqc_module():
 
 
 @pytest.fixture
-def attachments_module():
-    """``server.app.attachments`` -- authenticator attachment normalisation."""
-
-    return _module("server.app.attachments")
-
-
-@pytest.fixture
 def challenge_registry_module():
     """``server.app.challenge_registry`` -- ceremony state stamping and single-use consumption."""
 

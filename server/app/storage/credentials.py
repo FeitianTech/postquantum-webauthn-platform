@@ -54,7 +54,6 @@ __all__ = [
     "add_public_key_material",
     "convert_bytes_for_json",
     "delkey",
-    "extract_credential_data",
     "iter_credentials",
     "list_credentials",
     "read_for_update",
@@ -605,10 +604,3 @@ def add_public_key_material(target: dict[str, Any], public_key: Any) -> None:
 
     if 'publicKeyAlgorithm' not in target:
         target['publicKeyAlgorithm'] = cose_map.get(3)
-
-
-def extract_credential_data(cred: Any) -> Any:
-    """Extract AttestedCredentialData from either old or new storage format."""
-    if isinstance(cred, dict):
-        return cred['credential_data']
-    return cred

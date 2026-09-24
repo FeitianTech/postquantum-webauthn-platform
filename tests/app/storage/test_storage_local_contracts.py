@@ -330,11 +330,3 @@ def test_add_public_key_material_respects_existing_type_and_algorithm(storage_lo
     storage.add_public_key_material(untouched, "not-a-dict")
     assert untouched == {"x": 1}
 
-
-def test_extract_credential_data_supports_dict_and_object(storage_local):
-    storage, _ = storage_local
-
-    assert storage.extract_credential_data({"credential_data": "value"}) == "value"
-
-    obj = object()
-    assert storage.extract_credential_data(obj) is obj
