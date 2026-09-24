@@ -10,8 +10,19 @@ from ...attachments import normalize_attachment
 from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials as credential_store
 from ...webauthn import attestation, metadata
+from . import authentication
 
 logger = logging.getLogger(__name__)
+
+
+def stored_sign_count(cred: Mapping[str, Any]) -> Any:
+    # ``sign_count`` advances on every authentication. authData's counter is the
+    # registration-time one: all a record written before sign_count existed has.
+    counter = authentication.record_sign_count(cred)
+    if counter is not None:
+        return counter
+    auth_data = cred.get("auth_data")
+    return auth_data.get("counter", 0) if isinstance(auth_data, Mapping) else 0
 
 
 def add_registration_metadata(
@@ -75,7 +86,7 @@ def build_credential_info_from_dict_credential_data(
         "algorithm": cred_data.get("public_key", {}).get(3, "Unknown"),
         "type": "WebAuthn",
         "createdAt": cred.get("registration_time"),
-        "signCount": auth_data.get("counter", 0),
+        "signCount": stored_sign_count(cred),
         "aaguid": aaguid_hex,
         "flags": auth_data.get("flags", {}),
         "clientExtensionOutputs": cred.get("client_extension_outputs", {}),
@@ -195,7 +206,7 @@ def build_credential_info_from_object_credential_data(
         else "Unknown",
         "type": "WebAuthn",
         "createdAt": cred.get("registration_time"),
-        "signCount": auth_data.counter if hasattr(auth_data, "counter") else 0,
+        "signCount": stored_sign_count(cred),
         "aaguid": aaguid_hex,
         "flags": {
             "up": bool(auth_data.flags & auth_data.FLAG.UP) if hasattr(auth_data, "flags") else True,
