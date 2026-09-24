@@ -23,6 +23,7 @@ from ..config import basepath
 from ..config.paths import INSTANCE_ROOT
 from . import record_format
 from .cloud import (
+    blob_exists,
     build_blob_name,
     delete_blob,
     download_bytes,
@@ -413,7 +414,14 @@ def readkey(name: str, *, session_id: str | None = None) -> list[Any]:
 
 
 def delkey(name: str, *, session_id: str | None = None) -> None:
-    """Delete every copy of ``name``'s credentials; raise if one could not be deleted.
+    """Delete ``name``'s credentials: empty the current copy, remove every legacy copy.
+
+    When any copy existed, the current copy is left in place holding no records
+    instead of being removed. A save that read while there was no current copy
+    -- its records a legacy copy's -- holds "there is none" as its version;
+    removing the current copy would make that true again, and the save would
+    write the deleted records back. An emptied copy never matches it. Locally
+    all of this happens under the current copy's lock.
 
     A copy that is not there is already deleted. Anything else -- a refused
     permission, an unreachable bucket -- is raised once every other copy has
@@ -421,29 +429,50 @@ def delkey(name: str, *, session_id: str | None = None) -> None:
     """
 
     resolved_session = _resolve_session_id(session_id)
+    emptied = record_format.encode_records([])
     errors: list[Exception] = []
     if _using_gcs():
+        current = _credential_blob(name, resolved_session)
+        existed = False
         for blob_name in _candidate_gcs_blob_names(name, resolved_session):
+            if blob_name == current:
+                continue
             try:
-                delete_blob(blob_name, missing_ok=True)
+                if blob_exists(blob_name):
+                    existed = True
+                    delete_blob(blob_name, missing_ok=True)
             except Exception as exc:
                 errors.append(exc)
+        try:
+            # A legacy copy it could not check may exist: empty the current copy then too.
+            if existed or errors or blob_exists(current):
+                upload_bytes(current, emptied, content_type="application/json")
+        except Exception as exc:
+            errors.append(exc)
     else:
-        # The copy saves write is removed under the lock they write it under, so
-        # a delete cannot land between a compare-and-swap's check and its rename
-        # and have the records written back. Legacy copies are never written.
         current = _local_filename(name, resolved_session)
-        for path in _candidate_local_paths(name, resolved_session):
-            try:
-                if path == current and os.path.exists(path):
-                    with file_lock(path):
-                        os.remove(path)
-                else:
+        legacy = [path for path in _candidate_local_paths(name, resolved_session) if path != current]
+        if not any(os.path.exists(path) for path in (current, *legacy)):
+            # Nothing stored: no lock file and no session directory either.
+            return
+        current = _local_filename(name, resolved_session, create=True)
+        with file_lock(current):
+            existed = False
+            for path in (current, *legacy):
+                existed = existed or os.path.exists(path)
+                if path == current:
+                    continue
+                try:
                     os.remove(path)
-            except FileNotFoundError:
-                continue
-            except OSError as exc:
-                errors.append(exc)
+                except FileNotFoundError:
+                    continue
+                except OSError as exc:
+                    errors.append(exc)
+            if existed:
+                try:
+                    replace_file(current, emptied)
+                except OSError as exc:
+                    errors.append(exc)
     if errors:
         raise errors[0]
 
@@ -522,7 +551,9 @@ def iter_credentials(
             if undecodable is not None:
                 undecodable.append(username)
             continue
-        yield username, creds
+        if creds:
+            # An emptied copy is what delkey leaves: the user has no credentials to list.
+            yield username, creds
 
 
 def list_credentials(

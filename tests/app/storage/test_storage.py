@@ -219,23 +219,29 @@ def test_a_failed_listing_raises_instead_of_listing_the_rest(monkeypatch):
     assert isinstance(raised.value.__cause__, RuntimeError)
 
 
-def test_delkey_attempts_legacy_cleanup(monkeypatch):
+def test_delkey_removes_the_legacy_copies_and_empties_the_current_one(monkeypatch):
     name = "carol@example.com"
     session_id = "session-three"
     legacy_blob = credentials._legacy_credential_blob(name)
     new_blob = credentials._credential_blob(name, session_id)
 
     deleted = []
+    uploaded = []
 
     def fake_delete(blob_name: str, *, missing_ok: bool = True):
         deleted.append((blob_name, missing_ok))
 
     monkeypatch.setattr(credentials, "delete_blob", fake_delete)
+    monkeypatch.setattr(credentials, "blob_exists", lambda blob_name: blob_name == legacy_blob)
+    monkeypatch.setattr(
+        credentials, "upload_bytes", lambda blob_name, data, content_type=None: uploaded.append((blob_name, data))
+    )
 
     credentials.delkey(name, session_id=session_id)
 
-    assert deleted[0][0] == new_blob
-    assert (legacy_blob, True) in deleted
+    assert deleted == [(legacy_blob, True)]
+    assert [blob for blob, _data in uploaded] == [new_blob]
+    assert json.loads(uploaded[0][1])["credentials"] == []
 
 
 def test_readkey_returns_empty_list_for_corrupted_payload(monkeypatch):
@@ -329,6 +335,8 @@ def test_delkey_raises_when_a_gcs_delete_fails(monkeypatch):
         "delete_blob",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("delete failed")),
     )
+    monkeypatch.setattr(credentials, "blob_exists", lambda _blob_name: True)
+    monkeypatch.setattr(credentials, "upload_bytes", lambda *_args, **_kwargs: None)
 
     # A missing blob is not an error (delete_blob is called with missing_ok);
     # a failed delete is, or the caller would report a deletion that did not happen.
