@@ -212,7 +212,7 @@
   },
   {
    "request": "POST /api/register/complete?email=user@example.com",
-   "status": 500,
+   "status": 503,
    "headers": [
     [
      "Content-Type",
@@ -220,7 +220,7 @@
     ],
     [
      "Content-Length",
-     "53"
+     "72"
     ],
     [
      "X-Content-Type-Options",
@@ -272,9 +272,9 @@
      }
     }
    ],
-   "bodySha256": "69fe7d1af2c947e65373a814336fe966b3f19878f276fe40e047682e1f71bc7c",
+   "bodySha256": "297ddc2b63084fadedcdeb9b8e7c67edf337b58558f08e654aa3a2a38b1e6d90",
    "body": {
-    "error": "Unable to persist registered credential."
+    "error": "The stored credentials could not be read. Please try again."
    }
   }
  ]

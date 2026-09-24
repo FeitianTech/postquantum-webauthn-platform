@@ -193,3 +193,82 @@ def test_a_failed_read_is_an_error_not_an_empty_list_to_overwrite(app, monkeypat
     assert response.status_code == 500
     assert response.get_json() == {"error": "Unable to persist registered credential."}
     assert _stored_ids(store, client) == [first.credential_id]
+
+
+def _break_the_current_copy(store, client, how: str):
+    """Make the user's current copy unreadable (``"unreadable"``) or undecodable; return a repair."""
+
+    import os
+
+    from server.app.storage import cloud
+    from server.app.webauthn import metadata
+
+    with client.session_transaction() as session:
+        namespace = session[metadata._SESSION_METADATA_SESSION_KEY]
+    if store._using_gcs():
+        bucket = cloud._ensure_bucket()
+        blob = store._credential_blob(EMAIL, namespace)
+        original = bucket.objects[blob][0]
+        if how == "unreadable":
+            bucket.failing[blob] = fake_gcs.ServiceUnavailable("503 at /secret/path")
+            return bucket.failing.clear
+        bucket.put(blob, b"not a credential record")
+
+        def _restore_object():
+            left = bucket.objects[blob][0]
+            bucket.put(blob, original)
+            return left
+
+        return _restore_object
+    path = store._local_filename(EMAIL, namespace)
+    with open(path, "rb") as handle:
+        original = handle.read()
+    if how == "unreadable":
+        # A directory where the file belongs: the read fails with an OSError.
+        os.replace(path, f"{path}.aside")
+        os.mkdir(path)
+
+        def _repair():
+            os.rmdir(path)
+            os.replace(f"{path}.aside", path)
+
+        return _repair
+    with open(path, "wb") as handle:
+        handle.write(b"not a credential record")
+
+    def _restore():
+        with open(path, "rb") as handle:
+            left = handle.read()
+        with open(path, "wb") as handle:
+            handle.write(original)
+        return left
+
+    return _restore
+
+
+@pytest.mark.parametrize("how", ["unreadable", "undecodable"])
+def test_a_store_that_cannot_be_read_answers_503_and_saves_nothing(app, caplog, store, simple_module, how):
+    import logging
+
+    client = app.test_client()
+    first = Authenticator(credential_id=b"\x01" * 32)
+    _register(client, first)
+    challenge = _begin(client)
+    repair = _break_the_current_copy(store, client, how)
+
+    with caplog.at_level(logging.INFO, logger="server.app"):
+        response = _complete(client, Authenticator(credential_id=b"\x02" * 32), challenge)
+
+    assert response.status_code == 503, response.get_json()
+    body = response.get_json()
+    assert list(body) == ["error"]
+    assert "could not be read" in body["error"]
+    assert "/secret/path" not in response.get_data(as_text=True)
+    logged = [record for record in caplog.records if record.levelno >= logging.WARNING]
+    assert len(logged) == 1, [record.getMessage() for record in logged]
+    assert logged[0].exc_info is None
+    left = repair()
+    if how == "undecodable":
+        # The copy nobody could read was not replaced.
+        assert left == b"not a credential record"
+    assert _stored_ids(store, client) == [first.credential_id]

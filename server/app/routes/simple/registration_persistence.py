@@ -15,7 +15,7 @@ from flask import jsonify, session
 
 from ... import device_logs
 from ...storage import credentials
-from ...storage.common import InvalidStorageIdentifier
+from ...storage.common import InvalidStorageIdentifier, StorageReadError
 from ...webauthn import attestation, metadata
 from .. import binary_helpers
 
@@ -81,9 +81,14 @@ def _persist_registered_credential_entry(ctx: dict[str, Any]) -> Any | None:
     for _attempt in range(_CREDENTIAL_SAVE_ATTEMPTS):
         try:
             records, version = credentials.read_for_update(uname, session_id=metadata_session_id)
-        except InvalidStorageIdentifier:
-            # A name the store refuses is the caller's error: the app answers 400.
+        except (InvalidStorageIdentifier, StorageReadError):
+            # A name the store refuses is the caller's error (400); a store that
+            # could not be read is not (503). routes/errors.py answers both.
             raise
+        except credentials.CredentialsUndecodable as exc:
+            # The current copy exists but does not decode: appending would replace
+            # it unread. Unreadable, as authentication treats it.
+            raise StorageReadError(str(exc)) from exc
         except Exception:
             # Never append to an empty list read in error: the save would
             # replace every credential the user has.
