@@ -572,7 +572,8 @@
   "Ed448": "ED448",
   "dsa-with-sha1": "DSA",
   "ML-DSA-44": "DSA",
-  "some thing-else": "SOMETHINGELSE"
+  "some thing-else": "SOMETHINGELSE",
+  "rsassaPss": "RSASSA-PKCS1-v1_5"
  },
  "hash": {
   "None": "",

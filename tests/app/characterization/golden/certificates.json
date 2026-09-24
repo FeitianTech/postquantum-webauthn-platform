@@ -2334,5 +2334,77 @@
   "summary": "Unable to parse attestation certificate using cryptography.x509.\nError: error parsing asn1 value: ParseError { kind: ShortData { needed: 329 } }\n\nDER length: 40 bytes\n\nFingerprints:\n    SHA256: 6e3d93b34060845b447edc88e27d14e2447caa36712a5b1cc5080e9f0f4aab20\n    SHA1: fdc73f8f73ba80fd23233bb80ed00361895a776c\n    MD5: 2e0ed1120dc134198d1434e94553833d\n\nBest-effort public key details:\n    Type: Unknown",
   "parseError": "error parsing asn1 value: ParseError { kind: ShortData { needed: 329 } }"
  },
+ "generated-rsa-pss-sha256": {
+  "version": {
+   "display": "3 (0x2)",
+   "numeric": 3,
+   "hex": "0x2"
+  },
+  "serialNumber": {
+   "decimal": "85",
+   "hex": "0x55"
+  },
+  "signatureAlgorithm": "rsassaPss",
+  "signatureAlgorithmOid": "1.2.840.113549.1.1.10",
+  "signatureAlgorithmDetails": null,
+  "issuer": "CN=RSA Issuer,OU=Authenticator Attestation,O=Characterization Test,C=SE",
+  "validity": {
+   "notBefore": "2020-01-01T00:00:00+00:00",
+   "notAfter": "2099-12-31T00:00:00+00:00"
+  },
+  "subject": "CN=Signed With RSASSA-PSS,OU=Authenticator Attestation,O=Characterization Test,C=SE",
+  "subjectCommonNames": [
+   "Signed With RSASSA-PSS"
+  ],
+  "publicKeyInfo": {
+   "type": "ECC",
+   "keySize": 256,
+   "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE2MBORd+eJ7w8VtcRUcFLnQP1duf2wNtyMtNaccDVAtyh/yxIn0A/d24Ak4wk4f2SmIfWcKB3rjrPd42f6zwBHw==",
+   "algorithm": {
+    "name": "ECDSA",
+    "namedCurve": "secp256r1"
+   },
+   "curve": "secp256r1",
+   "uncompressedPoint": "04:d8:c0:4e:45:df:9e:27:bc:3c:56:d7:11:51:c1:4b:9d:03:f5:76:e7:f6:c0:db:72:32:d3:5a:71:c0:d5:02:dc:a1:ff:2c:48:9f:40:3f:77:6e:00:93:8c:24:e1:fd:92:98:87:d6:70:a0:77:ae:3a:cf:77:8d:9f:eb:3c:01:1f"
+  },
+  "algorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
+  "extensions": [],
+  "fingerprints": {
+   "sha256": "a75415351f02d233143ea2bd106ec21e0b2e648d1666631754a32c047dbc215e",
+   "sha1": "f18d3a4c586983f41fbc3df7955b89b2395b8f82",
+   "md5": "332c1292f380dfd93f1eba08164ead57"
+  },
+  "signature": {
+   "algorithm": "rsassaPss",
+   "hash": {
+    "name": "sha256"
+   },
+   "hex": "07da3aadac353173d2c27db6b524bc94802c14fd730da3773d1be96f194c6f78c4af6b1ccabc78ec430d2e10cfb44932c261879cbb0e58b271b61de72260426b2752ef1f7796455bd489297a429a209db4af57179ec2f594a9c9de2b17105160adfabd93962ac9873865a93b6994b71f3b6a1ca9ca5c499d4ad245fd7df0da39a154cbabdebbcbb602acd7acda3e244da9a811e485bde02c8239407de0b656d0a27ca0754f2452df4ef0646e5282bcb593dd1e492a42913fc7b9d04fdd8ccfd24aec95016f6065fab896051c0deaef175a3809ca25b670c4fe48d49699e0bda33aaa5a43d6b64e8f534d6b9ad9206f8110208fb5b3e714f0c9aa052c5b3995aa",
+   "colon": "07:da:3a:ad:ac:35:31:73:d2:c2:7d:b6:b5:24:bc:94:80:2c:14:fd:73:0d:a3:77:3d:1b:e9:6f:19:4c:6f:78:c4:af:6b:1c:ca:bc:78:ec:43:0d:2e:10:cf:b4:49:32:c2:61:87:9c:bb:0e:58:b2:71:b6:1d:e7:22:60:42:6b:27:52:ef:1f:77:96:45:5b:d4:89:29:7a:42:9a:20:9d:b4:af:57:17:9e:c2:f5:94:a9:c9:de:2b:17:10:51:60:ad:fa:bd:93:96:2a:c9:87:38:65:a9:3b:69:94:b7:1f:3b:6a:1c:a9:ca:5c:49:9d:4a:d2:45:fd:7d:f0:da:39:a1:54:cb:ab:de:bb:cb:b6:02:ac:d7:ac:da:3e:24:4d:a9:a8:11:e4:85:bd:e0:2c:82:39:40:7d:e0:b6:56:d0:a2:7c:a0:75:4f:24:52:df:4e:f0:64:6e:52:82:bc:b5:93:dd:1e:49:2a:42:91:3f:c7:b9:d0:4f:dd:8c:cf:d2:4a:ec:95:01:6f:60:65:fa:b8:96:05:1c:0d:ea:ef:17:5a:38:09:ca:25:b6:70:c4:fe:48:d4:96:99:e0:bd:a3:3a:aa:5a:43:d6:b6:4e:8f:53:4d:6b:9a:d9:20:6f:81:10:20:8f:b5:b3:e7:14:f0:c9:aa:05:2c:5b:39:95:aa",
+   "lines": [
+    "07:da:3a:ad:ac:35:31:73:d2:c2:7d:b6:b5:24:bc:94",
+    "80:2c:14:fd:73:0d:a3:77:3d:1b:e9:6f:19:4c:6f:78",
+    "c4:af:6b:1c:ca:bc:78:ec:43:0d:2e:10:cf:b4:49:32",
+    "c2:61:87:9c:bb:0e:58:b2:71:b6:1d:e7:22:60:42:6b",
+    "27:52:ef:1f:77:96:45:5b:d4:89:29:7a:42:9a:20:9d",
+    "b4:af:57:17:9e:c2:f5:94:a9:c9:de:2b:17:10:51:60",
+    "ad:fa:bd:93:96:2a:c9:87:38:65:a9:3b:69:94:b7:1f",
+    "3b:6a:1c:a9:ca:5c:49:9d:4a:d2:45:fd:7d:f0:da:39",
+    "a1:54:cb:ab:de:bb:cb:b6:02:ac:d7:ac:da:3e:24:4d",
+    "a9:a8:11:e4:85:bd:e0:2c:82:39:40:7d:e0:b6:56:d0",
+    "a2:7c:a0:75:4f:24:52:df:4e:f0:64:6e:52:82:bc:b5",
+    "93:dd:1e:49:2a:42:91:3f:c7:b9:d0:4f:dd:8c:cf:d2",
+    "4a:ec:95:01:6f:60:65:fa:b8:96:05:1c:0d:ea:ef:17",
+    "5a:38:09:ca:25:b6:70:c4:fe:48:d4:96:99:e0:bd:a3",
+    "3a:aa:5a:43:d6:b6:4e:8f:53:4d:6b:9a:d9:20:6f:81",
+    "10:20:8f:b5:b3:e7:14:f0:c9:aa:05:2c:5b:39:95:aa"
+   ],
+   "oid": "1.2.840.113549.1.1.10",
+   "details": null
+  },
+  "derBase64": "MIIC8DCCAaSgAwIBAgIBVTBBBgkqhkiG9w0BAQowNKAPMA0GCWCGSAFlAwQCAQUAoRwwGgYJKoZIhvcNAQEIMA0GCWCGSAFlAwQCAQUAogMCAQAwZjELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjETMBEGA1UEAwwKUlNBIElzc3VlcjAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowcjELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEfMB0GA1UEAwwWU2lnbmVkIFdpdGggUlNBU1NBLVBTUzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABNjATkXfnie8PFbXEVHBS50D9Xbn9sDbcjLTWnHA1QLcof8sSJ9AP3duAJOMJOH9kpiH1nCgd646z3eNn+s8AR8wQQYJKoZIhvcNAQEKMDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEAA4IBAQAH2jqtrDUxc9LCfba1JLyUgCwU/XMNo3c9G+lvGUxveMSvaxzKvHjsQw0uEM+0STLCYYecuw5YsnG2HeciYEJrJ1LvH3eWRVvUiSl6QpognbSvVxeewvWUqcneKxcQUWCt+r2TlirJhzhlqTtplLcfO2ocqcpcSZ1K0kX9ffDaOaFUy6veu8u2AqzXrNo+JE2pqBHkhb3gLII5QH3gtlbQonygdU8kUt9O8GRuUoK8tZPdHkkqQpE/x7nQT92Mz9JK7JUBb2Bl+riWBRwN6u8XWjgJyiW2cMT+SNSWmeC9ozqqWkPWtk6PU01rmtkgb4EQII+1s+cU8MmqBSxbOZWq",
+  "pem": "-----BEGIN CERTIFICATE-----\nMIIC8DCCAaSgAwIBAgIBVTBBBgkqhkiG9w0BAQowNKAPMA0GCWCGSAFlAwQCAQUA\noRwwGgYJKoZIhvcNAQEIMA0GCWCGSAFlAwQCAQUAogMCAQAwZjELMAkGA1UEBhMC\nU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0\naGVudGljYXRvciBBdHRlc3RhdGlvbjETMBEGA1UEAwwKUlNBIElzc3VlcjAgFw0y\nMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowcjELMAkGA1UEBhMCU0UxHjAc\nBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGlj\nYXRvciBBdHRlc3RhdGlvbjEfMB0GA1UEAwwWU2lnbmVkIFdpdGggUlNBU1NBLVBT\nUzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABNjATkXfnie8PFbXEVHBS50D9Xbn\n9sDbcjLTWnHA1QLcof8sSJ9AP3duAJOMJOH9kpiH1nCgd646z3eNn+s8AR8wQQYJ\nKoZIhvcNAQEKMDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglg\nhkgBZQMEAgEFAKIDAgEAA4IBAQAH2jqtrDUxc9LCfba1JLyUgCwU/XMNo3c9G+lv\nGUxveMSvaxzKvHjsQw0uEM+0STLCYYecuw5YsnG2HeciYEJrJ1LvH3eWRVvUiSl6\nQpognbSvVxeewvWUqcneKxcQUWCt+r2TlirJhzhlqTtplLcfO2ocqcpcSZ1K0kX9\nffDaOaFUy6veu8u2AqzXrNo+JE2pqBHkhb3gLII5QH3gtlbQonygdU8kUt9O8GRu\nUoK8tZPdHkkqQpE/x7nQT92Mz9JK7JUBb2Bl+riWBRwN6u8XWjgJyiW2cMT+SNSW\nmeC9ozqqWkPWtk6PU01rmtkgb4EQII+1s+cU8MmqBSxbOZWq\n-----END CERTIFICATE-----",
+  "summary": "Version: 3 (0x2)\nCertificate Serial Number: 85 (0x55)\nSignature Algorithm: rsassaPss\nIssuer: CN=RSA Issuer,OU=Authenticator Attestation,O=Characterization Test,C=SE\n\nValidity:\n    Not Before: 2020-01-01T00:00:00+00:00\n    Not After: 2099-12-31T00:00:00+00:00\n\nSubject: CN=Signed With RSASSA-PSS,OU=Authenticator Attestation,O=Characterization Test,C=SE\n\nSubject Public Key Info:\n    Type: ECC\n    Public-Key: (256 bit)\n    pub:\n        04:d8:c0:4e:45:df:9e:27:bc:3c:56:d7:11:51:c1:4b\n        9d:03:f5:76:e7:f6:c0:db:72:32:d3:5a:71:c0:d5:02\n        dc:a1:ff:2c:48:9f:40:3f:77:6e:00:93:8c:24:e1:fd\n        92:98:87:d6:70:a0:77:ae:3a:cf:77:8d:9f:eb:3c:01\n        1f\n    Curve: secp256r1\n\nSignature Algorithm: rsassaPss\n    07:da:3a:ad:ac:35:31:73:d2:c2:7d:b6:b5:24:bc:94\n    80:2c:14:fd:73:0d:a3:77:3d:1b:e9:6f:19:4c:6f:78\n    c4:af:6b:1c:ca:bc:78:ec:43:0d:2e:10:cf:b4:49:32\n    c2:61:87:9c:bb:0e:58:b2:71:b6:1d:e7:22:60:42:6b\n    27:52:ef:1f:77:96:45:5b:d4:89:29:7a:42:9a:20:9d\n    b4:af:57:17:9e:c2:f5:94:a9:c9:de:2b:17:10:51:60\n    ad:fa:bd:93:96:2a:c9:87:38:65:a9:3b:69:94:b7:1f\n    3b:6a:1c:a9:ca:5c:49:9d:4a:d2:45:fd:7d:f0:da:39\n    a1:54:cb:ab:de:bb:cb:b6:02:ac:d7:ac:da:3e:24:4d\n    a9:a8:11:e4:85:bd:e0:2c:82:39:40:7d:e0:b6:56:d0\n    a2:7c:a0:75:4f:24:52:df:4e:f0:64:6e:52:82:bc:b5\n    93:dd:1e:49:2a:42:91:3f:c7:b9:d0:4f:dd:8c:cf:d2\n    4a:ec:95:01:6f:60:65:fa:b8:96:05:1c:0d:ea:ef:17\n    5a:38:09:ca:25:b6:70:c4:fe:48:d4:96:99:e0:bd:a3\n    3a:aa:5a:43:d6:b6:4e:8f:53:4d:6b:9a:d9:20:6f:81\n    10:20:8f:b5:b3:e7:14:f0:c9:aa:05:2c:5b:39:95:aa\n\nFingerprint:\n    MD5:\n        33:2c:12:92:f3:80:df:d9:3f:1e:ba:08:16:4e:ad:57\n    SHA1:\n        f1:8d:3a:4c:58:69:83:f4:1f:bc:3d:f7:95:5b:89:b2\n        39:5b:8f:82\n    SHA256:\n        a7:54:15:35:1f:02:d2:33:14:3e:a2:bd:10:6e:c2:1e\n        0b:2e:64:8d:16:66:63:17:54:a3:2c:04:7d:bc:21:5e"
+ },
  "empty-input": null
 }
