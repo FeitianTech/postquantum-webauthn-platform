@@ -18,8 +18,8 @@ from typing import Any
 from fido2.webauthn import AuthenticatorData
 
 from . import canonical
-from .cbor_parser import _CborDecodingError, decode_item
-from .keys import key_identity
+from .cbor_parser import _CborDecodingError, _structure_to_value, decode_item
+from .keys import MISSING, key_identity
 
 _HEADER_LENGTH = 37
 
@@ -45,27 +45,11 @@ def for_member(root: Mapping[str, Any], data: bytes, keys: Sequence[Any]) -> lis
 def check(auth_data: bytes, base_offset: int, path: str) -> list[dict[str, Any]]:
     """Check the CBOR items in ``auth_data`` and report bytes after them."""
 
-    if len(auth_data) < _HEADER_LENGTH:
-        return []
-    flags = auth_data[32]
-    offset = _HEADER_LENGTH
     findings: list[dict[str, Any]] = []
-    try:
-        if flags & AuthenticatorData.FLAG.AT:
-            if len(auth_data) - offset < 18:
-                return findings
-            id_length = int.from_bytes(auth_data[offset + 16 : offset + 18], "big")
-            offset += 18 + id_length
-            if offset > len(auth_data):
-                return findings
-            node, offset, _ = decode_item(auth_data, offset)
-            findings += canonical.relocate(
-                canonical.check(node, auth_data), base_offset, f"{path}<credentialPublicKey>"
-            )
-        if flags & AuthenticatorData.FLAG.ED:
-            node, offset, _ = decode_item(auth_data, offset)
-            findings += canonical.relocate(canonical.check(node, auth_data), base_offset, f"{path}<extensions>")
-    except _CborDecodingError:
+    items, offset = _embedded_items(auth_data)
+    for name, node in items:
+        findings += canonical.relocate(canonical.check(node, auth_data), base_offset, f"{path}<{name}>")
+    if offset is None:
         # Where the embedded CBOR stops being well-formed, the decoded view says so.
         return findings
 
@@ -86,6 +70,41 @@ def check(auth_data: bytes, base_offset: int, path: str) -> list[dict[str, Any]]
             }
         )
     return findings
+
+
+def extensions(auth_data: bytes) -> Any:
+    """The extensions ``auth_data`` carries under its ED flag, or ``MISSING``."""
+
+    items, _end = _embedded_items(auth_data)
+    for name, node in items:
+        if name == "extensions":
+            return _structure_to_value(node)
+    return MISSING
+
+
+def _embedded_items(auth_data: bytes) -> tuple[list[tuple[str, dict[str, Any]]], int | None]:
+    """The CBOR items the flags announce, and where they end (``None``: unreadable)."""
+
+    items: list[tuple[str, dict[str, Any]]] = []
+    if len(auth_data) < _HEADER_LENGTH:
+        return items, None
+    flags = auth_data[32]
+    offset = _HEADER_LENGTH
+    try:
+        if flags & AuthenticatorData.FLAG.AT:
+            if len(auth_data) - offset < 18:
+                return items, None
+            offset += 18 + int.from_bytes(auth_data[offset + 16 : offset + 18], "big")
+            if offset > len(auth_data):
+                return items, None
+            node, offset, _ = decode_item(auth_data, offset)
+            items.append(("credentialPublicKey", node))
+        if flags & AuthenticatorData.FLAG.ED:
+            node, offset, _ = decode_item(auth_data, offset)
+            items.append(("extensions", node))
+    except _CborDecodingError:
+        return items, None
+    return items, offset
 
 
 def member_node(root: Mapping[str, Any], keys: Sequence[Any]) -> Mapping[str, Any] | None:

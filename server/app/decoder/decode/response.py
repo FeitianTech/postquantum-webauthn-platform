@@ -69,6 +69,11 @@ def _build_decoder_payload(result: dict[str, Any]) -> dict[str, Any]:
                     unique.append(qualifier)
             type_label = f"{base_type} ({'; '.join(unique)})"
 
+    # What is interpreted beside the decoded value goes next to it, never over it.
+    extra = result.get("extraData")
+    if isinstance(extra, Mapping) and isinstance(data, dict):
+        data.update(extra)
+
     findings = result.get("findings")
     return {
         "success": True,

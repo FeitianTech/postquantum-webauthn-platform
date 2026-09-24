@@ -26,7 +26,14 @@ from ...webauthn.attestation import (
     serialize_attestation_certificate,
     summarize_authenticator_extensions,
 )
-from . import authenticator_data_findings, canonical, cbor_parser, ctap, response
+from . import (
+    authenticator_data_findings,
+    canonical,
+    cbor_parser,
+    ctap,
+    interpretations,
+    response,
+)
 
 _PEM_CERT_PATTERN = re.compile(
     r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
@@ -153,9 +160,23 @@ def _decode_public_key_credential(
         "format": format_label,
         "inputEncoding": "json",
         "decoded": decoded,
+        "extraData": interpretations.for_public_key_credential(
+            credential,
+            _cbor_map_or_none(attestation_entry[0]) if attestation_entry else None,
+            authenticator_entry[0] if authenticator_entry else None,
+        ),
     }
     ctap._attach_findings(result, findings)
     return result
+
+
+def _cbor_map_or_none(data: bytes) -> Mapping[Any, Any] | None:
+    try:
+        node, _end, _ = cbor_parser.decode_item(data)
+    except cbor_parser._CborDecodingError:
+        return None
+    value = cbor_parser._structure_to_value(node)
+    return value if isinstance(value, Mapping) else None
 
 
 def _read_nested(
@@ -368,6 +389,7 @@ def _try_decode_attestation_object(data: bytes, encoding: str) -> dict[str, Any]
         "inputEncoding": encoding,
         "decoded": details,
         "binary": _binary_summary(data, encoding),
+        "extraData": interpretations.for_attestation_object(cbor_parser._structure_to_value(node)),
     }
     findings = canonical.check(node, data) + ctap._trailing_findings(data, end)
     ctap._attach_findings(result, findings + authenticator_data_findings.for_member(node, data, ("authData",)))
@@ -385,6 +407,7 @@ def _try_decode_authenticator_data(data: bytes, encoding: str) -> dict[str, Any]
         "inputEncoding": encoding,
         "decoded": details,
         "binary": _binary_summary(data, encoding),
+        "extraData": interpretations.for_authenticator_data(data),
     }
     ctap._attach_findings(result, authenticator_data_findings.check(data, 0, "$"))
     return result
