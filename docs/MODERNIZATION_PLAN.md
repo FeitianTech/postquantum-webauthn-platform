@@ -1042,6 +1042,50 @@ encoder's decoded-JSON path silently drops unknown fields; the vendored `fido2.c
 which differs from the CTAP2 rule for array/map keys (the spec notes exactly this); importing `ctap_tables`
 loads `fido2.hid` and the platform HID backend into the web server.
 
+### Phase 15 — M5b: the decoder is honest — DONE (2026-09-24), verified
+17 commits. `decode/cbor_parser.py` is the only parser: strict by default, failing with 422
+`{error, offset, path}` where input stops being well-formed; best-effort only when a request sends
+`"lenient": true`, and the response then lists what was skipped. `decode/canonical.py` reports CTAP2
+canonical-form violations as `findings` on every decode (never changing the value); `decoder/ctap2_order.py`
+is the key order shared with the encoder. The decoder no longer uses `fido2.cbor`, cbor2 or fido2's
+`AttestationObject`/`AuthenticatorData` to parse (only its FLAG constants); a test scans for regressions.
+
+**The "repair" layer is deleted, not made opt-in.** Git history showed every repair branch (2025-10-09..11)
+existed to make six dumps in a since-removed `CBOR_hexcode.txt` decode — and the agent recovered that file
+and showed **every one of those dumps is corrupt**: a lost `0x88` in the rpIdHash, `credIdLen = 0x19f7`, and
+`"alg"` missing its `g` so the `-7` byte became the third character — which is exactly where the `"al&"`
+magic string came from. The ML-DSA-65 dump is one byte short. The "repairs" were fitting code to broken
+captures. Deleted: the `"al&"` merge, the `-50`/`-7` default algorithm, the trailing-signature merge, raw-byte
+getAssertion recovery (a hex search for `0358`), reading authData's tail back as response members,
+status-byte promotion, re-reading a user field via cbor2, and the lines that erased warnings.
+
+Tech-lead verification through `/api/decode`:
+- `a201010102` -> `duplicate-map-key` finding (offset 3); `a1180102` -> `non-shortest-integer`;
+  `bf0102ff` -> `indefinite-length`; `48aabb`, `8a01`, `1e` -> 422 with offset and path; `f6`/`f7`/`fa..`/
+  `fb..`/`8201f6` -> `null` / undefined / 1.5 / 1.5 / `[1, null]` (were `false` via fido2.cbor); a
+  getAssertion request without allowList is labelled a getAssertion request; trailing `deadbeef` after a
+  makeCredential response is reported at its offset and kept; `"lenient": true` returns the partial value
+  plus a `skipped` finding; a non-boolean `lenient` is a 400; prose is still rejected.
+- **Valid input is unchanged:** nine realistic payloads (none and packed ML-DSA attestation objects, authData,
+  a COSE key, a PublicKeyCredential JSON, clientDataJSON, a makeCredential response, a getAssertion request,
+  plain JSON), built once and fed to both trees: **all nine byte-identical** apart from the new
+  `decodeMode`/`findings` keys.
+- Frontend: minus sign kept (`-1` is no longer shown as `1`); kty 5 `HSS-LMS`, 6 `WalnutDSA`, 7 `AKP`; the
+  new findings list and lenient checkbox add **no `innerHTML`** and **no inline handlers** (template count
+  96 -> 96); the checkbox has a proper `<label for>`.
+- Suites 2031 -> **2125** passed / 4 skipped, vitest 278 -> **287**, ruff clean, security 78.
+- Agent-reported: 73 of 77 new Python test functions fail on the pre-change tree (run per file); 7 of 9 new
+  frontend tests. The 11 coverage-chasing decoder files were triaged per file (kept / rewritten as behaviour
+  specs / deleted); `test_decoder_ctap_repair_edges.py` deleted outright.
+
+**Found but not fixed:** `fido2/cbor.py` is still wrong (`load_bool` for all of major type 7, silent
+truncation in `load_bytes`, `struct.error` in `load_int` on short data) and the WebAuthn ROUTES still parse
+real browser input with it — authenticators never send floats/null in CTAP so practical risk is low, but it
+belongs in the un-fork phase. `keys.get_mapping_entry`/`_resolve_ctap_label` match keys across types (a byte
+key `h'01'` or text `"1"` reads as member 1). Bytes left inside authData show as `trailingBytesHex` but are
+not a finding; the COSE key and extensions inside authData are not canonical-checked. An attestationObject
+nested in PublicKeyCredential JSON does not surface its findings. The CTAP nesting limit (4) is not reported.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
