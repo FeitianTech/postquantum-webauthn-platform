@@ -62,6 +62,81 @@ def _collect_allowed_algorithms(
     return allowed_algorithms
 
 
+def _metadata_entry_by_aaguid(verifier: Any, credential_aaguid_bytes: bytes) -> Any:
+    """The metadata entry for the credential's AAGUID, or ``None``; a failed lookup is no entry."""
+
+    try:
+        aaguid_obj = Aaguid.fromhex(credential_aaguid_bytes.hex())
+    except Exception:
+        return None
+    if verifier is None:
+        verifier = metadata.get_mds_verifier()
+    if verifier is None:
+        return None
+    try:
+        return verifier.find_entry_by_aaguid(aaguid_obj)
+    except Exception:
+        return None
+
+
+def _metadata_entry_facts(metadata_entry: Any, algorithm: Any) -> dict[str, Any]:
+    """What an entry says: its description, root certificates, algorithms and AAGUID."""
+
+    metadata_description: str | None = None
+    metadata_aaguid: str | None = None
+    metadata_algorithm_supported: bool | None = None
+    metadata_root_certificates_present = False
+
+    metadata_statement = getattr(metadata_entry, "metadata_statement", None)
+    if getattr(metadata_statement, "description", None):
+        metadata_description = metadata_statement.description
+    authenticator_info = getattr(
+        metadata_statement,
+        "authenticator_get_info",
+        None,
+    )
+    root_certs = getattr(
+        metadata_statement,
+        "attestation_root_certificates",
+        None,
+    )
+    if not root_certs and isinstance(metadata_statement, dict):
+        root_certs = metadata_statement.get("attestation_root_certificates") or metadata_statement.get(
+            "attestationRootCertificates"
+        )
+    if isinstance(root_certs, (list, tuple, set)):
+        metadata_root_certificates_present = any(bool(cert) for cert in root_certs)
+    elif root_certs:
+        metadata_root_certificates_present = True
+    if (
+        isinstance(authenticator_info, dict)
+        and isinstance(algorithm, int)
+    ):
+        alg_list = authenticator_info.get("algorithms")
+        if isinstance(alg_list, (list, tuple)):
+            numeric_algs = [alg for alg in alg_list if isinstance(alg, int)]
+            if numeric_algs:
+                metadata_algorithm_supported = algorithm in numeric_algs
+    # Reported, not compared with the credential's AAGUID: every entry here
+    # was looked up by that AAGUID (fido2's ca_lookup whenever there is one,
+    # the PQC path and the fallback above), so they cannot differ. The one
+    # other lookup, by certificate chain, runs only for a credential with no
+    # AAGUID -- fido-u2f's is zero by definition -- where they always would.
+    entry_aaguid = getattr(metadata_entry, "aaguid", None)
+    if entry_aaguid is not None:
+        try:
+            metadata_aaguid = str(entry_aaguid)
+        except Exception:
+            pass
+
+    return {
+        "description": metadata_description,
+        "aaguid": metadata_aaguid,
+        "algorithm_supported": metadata_algorithm_supported,
+        "root_certificates_present": metadata_root_certificates_present,
+    }
+
+
 def _finalize_metadata_results(
     results: dict[str, Any],
     *,
@@ -73,73 +148,20 @@ def _finalize_metadata_results(
     root_check_details: dict[str, bool | None] | None,
     root_valid: bool | None,
 ) -> None:
-    metadata_description: str | None = None
-    metadata_aaguid: str | None = None
-    metadata_algorithm_supported: bool | None = None
-    metadata_root_certificates_present = False
-    metadata_verification_warning: str | None = None
-
     if metadata_entry is None and credential_aaguid_bytes:
-        try:
-            aaguid_obj = Aaguid.fromhex(credential_aaguid_bytes.hex())
-        except Exception:
-            aaguid_obj = None
-        if aaguid_obj is not None:
-            if verifier is None:
-                verifier = metadata.get_mds_verifier()
-            if verifier is not None:
-                try:
-                    fallback_entry = verifier.find_entry_by_aaguid(aaguid_obj)
-                except Exception:
-                    None
-                else:
-                    if fallback_entry is not None:
-                        metadata_entry = fallback_entry
-                        metadata_lookup_source = "aaguid"
+        fallback_entry = _metadata_entry_by_aaguid(verifier, credential_aaguid_bytes)
+        if fallback_entry is not None:
+            metadata_entry = fallback_entry
+            metadata_lookup_source = "aaguid"
 
+    facts: dict[str, Any] = {
+        "description": None,
+        "aaguid": None,
+        "algorithm_supported": None,
+        "root_certificates_present": False,
+    }
     if metadata_entry is not None:
-        metadata_statement = getattr(metadata_entry, "metadata_statement", None)
-        if getattr(metadata_statement, "description", None):
-            metadata_description = metadata_statement.description
-        authenticator_info = getattr(
-            metadata_statement,
-            "authenticator_get_info",
-            None,
-        )
-        root_certs = getattr(
-            metadata_statement,
-            "attestation_root_certificates",
-            None,
-        )
-        if not root_certs and isinstance(metadata_statement, dict):
-            root_certs = metadata_statement.get("attestation_root_certificates") or metadata_statement.get(
-                "attestationRootCertificates"
-            )
-        if isinstance(root_certs, (list, tuple, set)):
-            metadata_root_certificates_present = any(bool(cert) for cert in root_certs)
-        elif root_certs:
-            metadata_root_certificates_present = True
-        algorithm = results["authenticator_data"].get("algorithm")
-        if (
-            isinstance(authenticator_info, dict)
-            and isinstance(algorithm, int)
-        ):
-            alg_list = authenticator_info.get("algorithms")
-            if isinstance(alg_list, (list, tuple)):
-                numeric_algs = [alg for alg in alg_list if isinstance(alg, int)]
-                if numeric_algs:
-                    metadata_algorithm_supported = algorithm in numeric_algs
-        # Reported, not compared with the credential's AAGUID: every entry here
-        # was looked up by that AAGUID (fido2's ca_lookup whenever there is one,
-        # the PQC path and the fallback above), so they cannot differ. The one
-        # other lookup, by certificate chain, runs only for a credential with no
-        # AAGUID -- fido-u2f's is zero by definition -- where they always would.
-        entry_aaguid = getattr(metadata_entry, "aaguid", None)
-        if entry_aaguid is not None:
-            try:
-                metadata_aaguid = str(entry_aaguid)
-            except Exception:
-                pass
+        facts = _metadata_entry_facts(metadata_entry, results["authenticator_data"].get("algorithm"))
 
     credential_aaguid_value = credential_aaguid_bytes if credential_aaguid_bytes else None
     certificate_aaguid_value = certificate_aaguid_bytes if certificate_aaguid_bytes else None
@@ -151,24 +173,16 @@ def _finalize_metadata_results(
     else:
         results["aaguid_match"] = None
 
-    results["metadata"] = {
-        "available": metadata_entry is not None,
-        "description": metadata_description,
-        "aaguid": metadata_aaguid,
-        "algorithm_supported": metadata_algorithm_supported,
-        "root_certificates_present": metadata_root_certificates_present,
-    }
+    results["metadata"] = {"available": metadata_entry is not None, **facts}
 
     if metadata_lookup_source:
         results["metadata"]["source"] = metadata_lookup_source
-    if metadata_verification_warning:
-        results["metadata"]["verification_warning"] = metadata_verification_warning
 
     # The AAGUID exposed during registration originates from the attestation
     # object. Metadata mismatches are surfaced through ``results["metadata"]``,
     # while ``results["aaguid_match"]`` only reflects whether the authenticator
     # data and attestation certificate agree.
-    if metadata_algorithm_supported is False:
+    if facts["algorithm_supported"] is False:
         results["errors"].append("algorithm_not_in_metadata")
 
     if root_check_details:
@@ -290,31 +304,9 @@ def _populate_rp_id_hash_result(
     return rp_id_hash_valid
 
 
-def _populate_authenticator_data_results(
-    results: dict[str, Any],
-    *,
-    auth_data_obj: Any,
-    state: Mapping[str, Any] | None,
-    public_key_options: Mapping[str, Any] | None,
-) -> dict[str, Any]:
-    flags = auth_data_obj.flags
-    user_present = bool(flags & AuthenticatorData.FLAG.UP)
-    user_verified = bool(flags & AuthenticatorData.FLAG.UV)
-    attested_credential_included = bool(flags & AuthenticatorData.FLAG.AT)
+def _credential_facts(results: dict[str, Any], credential_data: Any) -> dict[str, Any]:
+    """The credential id length, COSE algorithm and AAGUID; a COSE key that will not parse is an error."""
 
-    uv_required = _resolve_uv_required(state, public_key_options)
-    uv_satisfied = user_verified or not uv_required
-
-    if not user_present:
-        results["errors"].append("user_presence_missing")
-    if uv_required and not uv_satisfied:
-        results["errors"].append("user_verification_required_not_satisfied")
-    if not attested_credential_included:
-        results["errors"].append("attested_credential_data_missing")
-
-    allowed_algorithms = _collect_allowed_algorithms(public_key_options)
-
-    credential_data = getattr(auth_data_obj, "credential_data", None)
     credential_id_length: int | None = None
     credential_aaguid: str | None = None
     credential_aaguid_bytes = b""
@@ -355,6 +347,41 @@ def _populate_authenticator_data_results(
             credential_aaguid_bytes = b""
             credential_aaguid = None
 
+    return {
+        "credential_id_length": credential_id_length,
+        "credential_aaguid": credential_aaguid,
+        "credential_aaguid_bytes": credential_aaguid_bytes,
+        "algorithm": algorithm,
+        "cose_key_valid": cose_key_valid,
+    }
+
+
+def _populate_authenticator_data_results(
+    results: dict[str, Any],
+    *,
+    auth_data_obj: Any,
+    state: Mapping[str, Any] | None,
+    public_key_options: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    flags = auth_data_obj.flags
+    user_present = bool(flags & AuthenticatorData.FLAG.UP)
+    user_verified = bool(flags & AuthenticatorData.FLAG.UV)
+    attested_credential_included = bool(flags & AuthenticatorData.FLAG.AT)
+
+    uv_required = _resolve_uv_required(state, public_key_options)
+    uv_satisfied = user_verified or not uv_required
+
+    if not user_present:
+        results["errors"].append("user_presence_missing")
+    if uv_required and not uv_satisfied:
+        results["errors"].append("user_verification_required_not_satisfied")
+    if not attested_credential_included:
+        results["errors"].append("attested_credential_data_missing")
+
+    allowed_algorithms = _collect_allowed_algorithms(public_key_options)
+    credential = _credential_facts(results, getattr(auth_data_obj, "credential_data", None))
+    algorithm = credential["algorithm"]
+
     algorithm_allowed = True
     if allowed_algorithms:
         if isinstance(algorithm, int):
@@ -372,16 +399,16 @@ def _populate_authenticator_data_results(
         "user_verification_satisfied": uv_satisfied,
         "attested_credential_data": attested_credential_included,
         "counter": auth_data_obj.counter,
-        "credential_id_length": credential_id_length,
-        "credential_aaguid": credential_aaguid,
+        "credential_id_length": credential["credential_id_length"],
+        "credential_aaguid": credential["credential_aaguid"],
         "algorithm": algorithm,
         "algorithm_allowed": algorithm_allowed,
-        "cose_key_valid": cose_key_valid,
+        "cose_key_valid": credential["cose_key_valid"],
     }
 
     return {
         "algorithm": algorithm,
-        "credential_aaguid_bytes": credential_aaguid_bytes,
+        "credential_aaguid_bytes": credential["credential_aaguid_bytes"],
         "allowed_algorithms": allowed_algorithms,
         "uv_required": uv_required,
     }
@@ -545,17 +572,16 @@ def _evaluate_root_validation(
     }
 
 
-def perform_attestation_checks(
-    response: Mapping[str, Any],
-    state: Mapping[str, Any] | None,
-    public_key_options: Mapping[str, Any] | None,
-    auth_data: Any | None,
-    expected_origin: str,
-    rp_id: str,
-) -> dict[str, Any]:
-    """Execute a comprehensive set of attestation validation checks."""
+def _record_signature_result(results: dict[str, Any], signature_ctx: Mapping[str, Any]) -> None:
+    for error_message in signature_ctx["attestation_errors"]:
+        results["errors"].append(error_message)
 
-    results: dict[str, Any] = {
+    results["signature_valid"] = signature_ctx["signature_valid"]
+    results["pqc_signature_valid"] = signature_ctx.get("pqc_signature_valid")
+
+
+def _empty_results() -> dict[str, Any]:
+    return {
         "attestation_format": None,
         "signature_valid": None,
         "pqc_signature_valid": None,
@@ -569,6 +595,29 @@ def perform_attestation_checks(
         "errors": [],
         "warnings": [],
     }
+
+
+def _hash_binding(auth_data_obj: Any, client_data_hash: bytes) -> dict[str, str]:
+    """The client data hash and the authData || hash the attestation signature covers."""
+
+    verification_data = bytes(auth_data_obj) + client_data_hash
+    return {
+        "client_data_hash": formatting.encode_base64url(client_data_hash),
+        "verification_data": formatting.encode_base64url(verification_data),
+    }
+
+
+def perform_attestation_checks(
+    response: Mapping[str, Any],
+    state: Mapping[str, Any] | None,
+    public_key_options: Mapping[str, Any] | None,
+    auth_data: Any | None,
+    expected_origin: str,
+    rp_id: str,
+) -> dict[str, Any]:
+    """Execute a comprehensive set of attestation validation checks."""
+
+    results = _empty_results()
 
     if not isinstance(response, Mapping):
         results["errors"].append("registration_response_invalid")
@@ -607,18 +656,10 @@ def perform_attestation_checks(
     )
 
     client_data_hash = client_data.hash
-    verification_data = bytes(auth_data_obj) + client_data_hash
-    results["hash_binding"] = {
-        "client_data_hash": formatting.encode_base64url(client_data_hash),
-        "verification_data": formatting.encode_base64url(verification_data),
-    }
+    results["hash_binding"] = _hash_binding(auth_data_obj, client_data_hash)
 
     signature_ctx = _resolve_signature_validation(attestation_object, client_data_hash)
-    for error_message in signature_ctx["attestation_errors"]:
-        results["errors"].append(error_message)
-
-    results["signature_valid"] = signature_ctx["signature_valid"]
-    results["pqc_signature_valid"] = signature_ctx.get("pqc_signature_valid")
+    _record_signature_result(results, signature_ctx)
 
     root_ctx = _evaluate_root_validation(
         results,
