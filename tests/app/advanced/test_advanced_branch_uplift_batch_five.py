@@ -76,11 +76,11 @@ def test_register_begin_maps_attestation_modes_and_exercises_pqc_warning_branch(
     captured = {}
     _install_register_begin_server(monkeypatch, advanced_module, captured, config_module, include_extensions=True)
 
-    registration_module = pytest.importorskip("server.app.routes.advanced.registration")
+    algorithms_module = pytest.importorskip("server.app.routes.advanced.algorithms")
     warning_messages = []
     monkeypatch.setattr(pqc_module, "detect_available_pqc_algorithms", lambda: (set(), None))
     monkeypatch.setattr(
-        registration_module.logger,
+        algorithms_module.logger,
         "warning",
         lambda message, *args: warning_messages.append(message % args if args else message)
     )

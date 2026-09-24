@@ -16,7 +16,6 @@ from fido2.webauthn import (
     AttestationConveyancePreference,
     AuthenticatorAttachment,
     PublicKeyCredentialDescriptor,
-    PublicKeyCredentialParameters,
     PublicKeyCredentialType,
     PublicKeyCredentialUserEntity,
     ResidentKeyRequirement,
@@ -920,126 +919,6 @@ def _with_challenge_source(
     return jsonify(merged), status
 
 
-def configure_allowed_algorithms(
-    public_key: Mapping[str, Any],
-    temp_server: Any,
-    warnings: list[str],
-) -> None:
-    pub_key_cred_params = public_key.get("pubKeyCredParams", [])
-    if pub_key_cred_params:
-        allowed_algorithms: list[Any] = []
-        normalized_params: list[dict[str, Any]] = []
-        for param in pub_key_cred_params:
-            raw_alg_value: Any
-            if isinstance(param, Mapping):
-                raw_alg_value = param.get("alg")
-                if raw_alg_value is None:
-                    raw_alg_value = param.get("id")
-                if raw_alg_value is None:
-                    raw_alg_value = param.get("value")
-
-                type_value = param.get("type")
-                if isinstance(type_value, str):
-                    if type_value.strip().lower() != "public-key":
-                        continue
-                elif type_value is not None:
-                    continue
-
-                alg_value = algorithms._coerce_cose_algorithm(raw_alg_value)
-                if alg_value is None:
-                    continue
-                normalized_params.append({"type": "public-key", "alg": alg_value})
-            else:
-                alg_value = algorithms._coerce_cose_algorithm(param)
-                if alg_value is None:
-                    continue
-                normalized_params.append({"type": "public-key", "alg": alg_value})
-
-            allowed_algorithms.append(
-                PublicKeyCredentialParameters(
-                    type=PublicKeyCredentialType.PUBLIC_KEY,
-                    alg=alg_value,
-                )
-            )
-
-        if normalized_params:
-            public_key["pubKeyCredParams"] = normalized_params
-        if allowed_algorithms:
-            temp_server.allowed_algorithms = allowed_algorithms
-    else:
-        temp_server.allowed_algorithms = [
-            PublicKeyCredentialParameters(
-                type=PublicKeyCredentialType.PUBLIC_KEY,
-                alg=-50,
-            ),
-            PublicKeyCredentialParameters(
-                type=PublicKeyCredentialType.PUBLIC_KEY,
-                alg=-48,
-            ),
-            PublicKeyCredentialParameters(
-                type=PublicKeyCredentialType.PUBLIC_KEY,
-                alg=-49,
-            ),
-            PublicKeyCredentialParameters(
-                type=PublicKeyCredentialType.PUBLIC_KEY,
-                alg=-7,
-            ),
-            PublicKeyCredentialParameters(
-                type=PublicKeyCredentialType.PUBLIC_KEY,
-                alg=-257,
-            ),
-        ]
-
-    allowed_algorithm_ids = [
-        getattr(param, "alg", None)
-        for param in getattr(temp_server, "allowed_algorithms", [])
-    ]
-    allowed_algorithm_ids = [alg for alg in allowed_algorithm_ids if isinstance(alg, int)]
-
-    pqc_in_allowed = {alg for alg in allowed_algorithm_ids if pqc.is_pqc_algorithm(alg)}
-    if not pqc_in_allowed:
-        return
-
-    pqc_available_ids, pqc_error_message = pqc.detect_available_pqc_algorithms()
-    missing_pqc = pqc_in_allowed - pqc_available_ids
-    if not missing_pqc:
-        return
-
-    missing_names = ", ".join(
-        pqc.PQC_ALGORITHM_ID_TO_NAME[alg] for alg in sorted(missing_pqc)
-    )
-    if pqc_error_message:
-        logger.warning("Post-quantum support unavailable: %s", pqc_error_message)
-    else:
-        logger.warning(
-            "Post-quantum algorithms requested (%s) but not available in this environment.",
-            missing_names,
-        )
-
-    filtered_allowed = [
-        param for param in temp_server.allowed_algorithms if getattr(param, "alg", None) not in missing_pqc
-    ]
-    fallback_applied = False
-    if not filtered_allowed:
-        temp_server.allowed_algorithms = [
-            PublicKeyCredentialParameters(
-                type=PublicKeyCredentialType.PUBLIC_KEY,
-                alg=alg_value,
-            )
-            for alg_value in (-7, -8, -257)
-        ]
-        fallback_applied = True
-    else:
-        temp_server.allowed_algorithms = filtered_allowed
-
-    if fallback_applied:
-        warnings.append(
-            f"Unsupported PQC algorithms were skipped ({missing_names}); falling back to classical algorithms."
-        )
-    else:
-        warnings.append(f"Unsupported PQC algorithms were skipped ({missing_names}).")
-
-
 def build_exclude_list(public_key: Mapping[str, Any]) -> list[Any]:
     exclude_list = []
     exclude_credentials = public_key.get("excludeCredentials") if "excludeCredentials" in public_key else None
@@ -1174,23 +1053,8 @@ def advanced_register_begin():
     else:
         temp_server.attestation = AttestationConveyancePreference.NONE
 
-    configure_allowed_algorithms(public_key,
-        temp_server,
-        warnings,
-    )
-
-    public_key["pubKeyCredParams"] = [
-        {
-            "type": (
-                getattr(param.type, "value", param.type)
-                if hasattr(param, "type")
-                else "public-key"
-            ),
-            "alg": getattr(param, "alg", None),
-        }
-        for param in temp_server.allowed_algorithms
-        if getattr(param, "alg", None) is not None
-    ]
+    algorithms.configure_allowed_algorithms(public_key, temp_server, warnings)
+    public_key["pubKeyCredParams"] = algorithms.advertised_algorithm_params(temp_server)
 
     logger.info(
         "Advanced registration request will advertise algorithms: %s",
