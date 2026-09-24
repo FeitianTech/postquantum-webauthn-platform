@@ -49,6 +49,7 @@ _server_app_pkg.__path__ = [str(_ROOT / "server" / "app")]
 sys.modules.setdefault("server.app", _server_app_pkg)
 
 credentials = importlib.import_module("server.app.storage.credentials")
+record_format = importlib.import_module("server.app.storage.record_format")
 
 from fido2.cose import ES256  # noqa: E402
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData  # noqa: E402
@@ -552,7 +553,7 @@ def test_restricted_unpickler_refuses_disallowed_modules():
     ):
         payload = pickle.dumps(_ReduceTo(module, name))
         with pytest.raises(pickle.UnpicklingError):
-            credentials._restricted_pickle_loads(payload)
+            record_format.restricted_pickle_loads(payload)
 
 
 def test_restricted_unpickler_refuses_non_class_globals():
@@ -560,14 +561,14 @@ def test_restricted_unpickler_refuses_non_class_globals():
 
     payload = _global_pickle("fido2.webauthn", "struct")
     with pytest.raises(pickle.UnpicklingError):
-        credentials._restricted_pickle_loads(payload)
+        record_format.restricted_pickle_loads(payload)
 
 
 def test_restricted_unpickler_still_loads_fido2_value_classes():
     credential_data = _build_attested_credential_data()
     payload = pickle.dumps([{"credential_data": credential_data}])
 
-    restored = credentials._restricted_pickle_loads(payload)
+    restored = record_format.restricted_pickle_loads(payload)
 
     assert isinstance(restored[0]["credential_data"], AttestedCredentialData)
     assert bytes(restored[0]["credential_data"]) == bytes(credential_data)
