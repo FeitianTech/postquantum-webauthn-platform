@@ -91,12 +91,22 @@ def test_a_lone_parameterless_command_is_that_command():
     assert prefix["command"] == "RESET"
 
 
-@pytest.mark.parametrize("payload", ["10", "99"])
-def test_a_two_digit_number_ctap_does_not_name_is_still_json(payload):
-    result = decode_payload_text(payload)
+def test_a_two_digit_number_that_is_not_one_cbor_item_is_still_json():
+    # 0x99 announces a two-byte array length; the other reading is named.
+    result = decode_payload_text("99")
 
     assert result["type"] == "JSON"
-    assert result["data"]["json"] == int(payload)
+    assert result["data"]["json"] == 99
+    assert [finding["alsoValidAs"] for finding in result["findings"]] == ["hex"]
+
+
+def test_a_two_digit_number_that_is_one_cbor_item_is_hex_and_says_so():
+    # 0x10 is no CTAP code, but it is the CBOR integer 16 (ambiguous_input.py).
+    result = decode_payload_text("10")
+
+    assert result["type"] == "CBOR"
+    assert result["data"]["decodedValue"] == 16
+    assert [finding["alsoValidAs"] for finding in result["findings"]] == ["json"]
 
 
 def test_an_error_status_never_carries_a_payload():
