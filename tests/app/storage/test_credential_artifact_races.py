@@ -21,6 +21,7 @@ import time
 import pytest
 
 from server.app import credential_artifacts as artifacts
+from server.app.storage.common import StorageReadError
 
 from . import fake_gcs
 
@@ -105,9 +106,21 @@ def test_a_merge_that_cannot_read_the_record_does_not_overwrite_it(gcs, monkeypa
 
     monkeypatch.setattr(gcs, "blob", _Unreadable)
 
-    assert artifacts.store_credential_artifact(STORAGE_ID, {"late": True}, merge=True, session_id=SESSION) is False
+    # Not "unable to store" (400): the store could not be read, which the app answers with 503.
+    with pytest.raises(StorageReadError):
+        artifacts.store_credential_artifact(STORAGE_ID, {"late": True}, merge=True, session_id=SESSION)
     monkeypatch.setattr(gcs, "blob", real_blob)
     assert _stored_payload(gcs) == ORIGINAL
+
+
+def test_a_merge_refuses_a_record_that_does_not_decode_rather_than_overwrite_it(gcs):
+    blob_name = artifacts._artifact_blob(STORAGE_ID, SESSION)
+    gcs.put(blob_name, b"{not json")
+
+    with pytest.raises(StorageReadError) as raised:
+        artifacts.store_credential_artifact(STORAGE_ID, {"late": True}, merge=True, session_id=SESSION)
+    assert isinstance(raised.value.__cause__, artifacts.ArtifactUndecodable)
+    assert gcs.objects[blob_name][0] == b"{not json"
 
 
 def test_a_merge_whose_write_landed_but_whose_reply_was_lost_is_stored(gcs, monkeypatch):

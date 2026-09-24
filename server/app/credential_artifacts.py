@@ -10,6 +10,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import json
+import logging
 import os
 import threading
 import time
@@ -27,6 +28,7 @@ from .storage.cloud import (
     upload_bytes_if_generation,
 )
 from .storage.common import (
+    StorageReadError,
     assert_contained_blob_name,
     build_session_root_prefix,
     build_session_scoped_prefix,
@@ -43,6 +45,16 @@ __all__ = [
     "delete_credential_artifact",
     "delete_credential_artifact_with_status",
 ]
+
+logger = logging.getLogger(__name__)
+
+
+class ArtifactUndecodable(Exception):
+    """A stored artifact record exists, but its content does not decode.
+
+    A read that only shows the artifact skips it with a warning, as the
+    credential store does; a merge refuses rather than replace it unread.
+    """
 
 
 _ARTIFACT_DIR = os.environ.get(
@@ -132,16 +144,6 @@ def _ensure_directory(session_id: str) -> None:
     os.makedirs(_session_directory(session_id), exist_ok=True)
 
 
-def _read_file(path: str) -> dict[str, Any] | None:
-    try:
-        with open(path, "r", encoding="utf-8") as handle:
-            return json.load(handle)
-    except FileNotFoundError:
-        return None
-    except json.JSONDecodeError:
-        return None
-
-
 def _write_file(path: str, payload: dict[str, Any]) -> None:
     tmp_path = f"{path}.tmp"
     with open(tmp_path, "w", encoding="utf-8") as handle:
@@ -153,21 +155,63 @@ def _resolve_session_id(session_id: str | None = None) -> str:
     return resolve_metadata_session_id(session_id)
 
 
-def _read_record(storage_id: str, session_id: str) -> dict[str, Any] | None:
+def _read_stored(storage_id: str, session_id: str) -> tuple[bytes | None, str]:
+    """The stored record's bytes, ``None`` when nothing is stored, and where it is.
+
+    Only a missing object or file is "nothing stored": any other error raises
+    ``StorageReadError``, which the app answers with 503.
+    """
+
     if _using_gcs():
         blob_name = _artifact_blob(storage_id, session_id)
         try:
-            payload = download_bytes(blob_name)
-        except Exception:
-            return None
-        if not payload:
-            return None
-        try:
-            return json.loads(payload.decode("utf-8"))
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return None
+            return download_bytes(blob_name), blob_name
+        except Exception as exc:
+            raise StorageReadError(f"Could not read {blob_name}") from exc
+    path = _artifact_path(storage_id, session_id)
+    try:
+        with open(path, "rb") as handle:
+            return handle.read(), path
+    except FileNotFoundError:
+        return None, path
+    except OSError as exc:
+        raise StorageReadError(f"Could not read {path}") from exc
 
-    return _read_file(_artifact_path(storage_id, session_id))
+
+def _decode_stored(payload: bytes | None, source: str) -> dict[str, Any] | None:
+    """The record ``payload`` holds, ``None`` for nothing stored; ``ArtifactUndecodable`` otherwise."""
+
+    if payload is None:
+        return None
+    try:
+        record = json.loads(payload.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        # The reason, never the content.
+        raise ArtifactUndecodable(f"Could not decode {source}: {type(exc).__name__}") from None
+    if not isinstance(record, dict):
+        raise ArtifactUndecodable(f"Could not decode {source}: a {type(record).__name__}, not a record")
+    return record
+
+
+def _read_record(storage_id: str, session_id: str) -> dict[str, Any] | None:
+    """The stored record, or ``None`` when nothing is stored or it does not decode (logged)."""
+
+    payload, source = _read_stored(storage_id, session_id)
+    try:
+        return _decode_stored(payload, source)
+    except ArtifactUndecodable as exc:
+        logger.warning("Skipped an undecodable credential artifact: %s", exc)
+        return None
+
+
+def _record_to_merge_into(storage_id: str, session_id: str) -> dict[str, Any] | None:
+    """The record a merge extends; one that does not decode refuses the merge, never is overwritten."""
+
+    payload, source = _read_stored(storage_id, session_id)
+    try:
+        return _decode_stored(payload, source)
+    except ArtifactUndecodable as exc:
+        raise StorageReadError(str(exc)) from exc
 
 
 def _encode_record(record: dict[str, Any]) -> bytes:
@@ -293,7 +337,7 @@ def store_credential_artifact(
                     held.enter_context(file_lock(_artifact_path(normalised, resolved_session)))
                 except OSError:
                     return False
-            existing = _read_record(normalised, resolved_session) if merge else None
+            existing = _record_to_merge_into(normalised, resolved_session) if merge else None
             record = _updated_record(normalised, existing, payload, merge=merge, timestamp=timestamp)
             try:
                 _write_record(normalised, resolved_session, record)
@@ -333,10 +377,14 @@ def _merge_on_gcs(storage_id: str, session_id: str, payload: dict[str, Any], tim
     for _attempt in range(_MERGE_ATTEMPTS):
         try:
             stored, generation = download_bytes_with_generation(blob_name)
-        except Exception:
+        except Exception as exc:
             # Merging into a record that could not be read would overwrite it.
-            return False
-        record = _updated_record(storage_id, _decode_record(stored), payload, merge=True, timestamp=timestamp)
+            raise StorageReadError(f"Could not read {blob_name}") from exc
+        try:
+            existing = _decode_stored(stored, blob_name)
+        except ArtifactUndecodable as exc:
+            raise StorageReadError(str(exc)) from exc
+        record = _updated_record(storage_id, existing, payload, merge=True, timestamp=timestamp)
         try:
             if upload_bytes_if_generation(
                 blob_name, _encode_record(record), generation=generation, content_type="application/json"
