@@ -3,8 +3,9 @@
 # Each module defines a Blueprint, ``bp``, that the app registers.
 from . import (
     advanced,
+    errors,
     general,
     simple,
 )
 
-__all__ = ["advanced", "general", "simple"]
+__all__ = ["advanced", "errors", "general", "simple"]

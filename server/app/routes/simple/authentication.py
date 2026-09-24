@@ -27,6 +27,7 @@ from ...challenge_registry import (
 )
 from ...encoding import encode_base64url
 from ...storage import credentials
+from ...storage.common import InvalidStorageIdentifier
 from ...webauthn import attestation, metadata
 from ...webauthn.sign_count import SIGN_COUNT_REGRESSED, sign_count_status
 from .. import binary_helpers
@@ -286,6 +287,9 @@ def load_server_records(uname: Any) -> tuple[list[Any] | None, str | None]:
     try:
         session_id = metadata.ensure_metadata_session_id()
         records = credentials.readkey(uname, session_id=session_id)
+    except InvalidStorageIdentifier:
+        # A name the store refuses is the caller's error: the app answers 400.
+        raise
     except Exception:
         logger.warning(
             "Could not read stored credentials for the signature counter check", exc_info=True
