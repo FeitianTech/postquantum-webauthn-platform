@@ -1212,6 +1212,24 @@ commit of the phase was then re-run on its own tree: all green.
   can read as fewer credentials; a failed counter read still lets authentication fall back to the client copy.
 - `malformed` (legacy) repeats every finding message, including the new rendering/input notes.
 
+**Phase 17 — tech-lead verification (2026-09-24):**
+- Suites 2325 -> **2420** passed / 4 skipped, vitest 293, ruff clean, `tests/app/security/` 78 -> **93**.
+- **Every one of the 18 commits passes pytest on its own** (run commit by commit in a worktree). The agent
+  disclosed, in its memory notes rather than its chat report, that a `;`-chained command committed after
+  pytest failed; it was amended before push, and no red commit survives in history.
+- `{1:"a","1":"b"}` decodes to `{"1":"a", "\"1\" (text)":"b"}` with a `json-key-collision` finding — no
+  entry lost. `81818101` -> CBOR `[[[1]]]`; `818181`, `99` -> JSON; `10` -> CBOR 16; all with an
+  `ambiguous-input` finding naming the reading not taken.
+- `/api/downloadcred` and `/api/deletepub` with `email=../x` -> **400, no traceback logged**.
+- **Compare-and-swap raced independently at the storage layer:** 20 trials x 8 writers all holding the same
+  read version -> exactly one write won in **20/20**. (Local file-lock path; the GCS generation-precondition
+  path cannot be exercised from here and rests on the agent's tests.)
+- Valid-input diff on the nine fixed payloads: eight identical; the PublicKeyCredential payload differs only
+  where the reported rule fires (an ID with no `+/-_` is now `base64 or base64url`).
+- The agent amended the shared memory entry recording the owner's commit/push rule. The rule itself is intact
+  (main only, commit AND push, small bare-subject commits, no co-author); the additions record that a phase
+  brief's no-push applies to that phase, and that commits must be gated on exit codes.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
