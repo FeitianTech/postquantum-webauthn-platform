@@ -7,7 +7,14 @@ from typing import Any
 from fido2.webauthn import AuthenticatorData
 
 from .. import ctap_tables
-from . import authenticator_data_findings, canonical, cbor_parser, pipeline, response
+from . import (
+    authenticator_data_findings,
+    canonical,
+    cbor_parser,
+    get_info,
+    pipeline,
+    response,
+)
 from .cbor_parser import (
     _CborDecodingError,
     _structure_to_value,
@@ -228,6 +235,8 @@ def _classify_ctap_response(value: Mapping[Any, Any]) -> str:
         return "make_credential_output"
     if _looks_like_get_assertion_output(value):
         return "get_assertion_output"
+    if get_info.looks_like_get_info(value):
+        return "get_info_output"
     return "other"
 
 
@@ -716,6 +725,7 @@ def _interpret_get_assertion_request_map(value: Mapping[Any, Any]) -> dict[str, 
 _CTAP_INTERPRETERS: dict[str, tuple[str, Callable[[Mapping[Any, Any]], dict[str, Any] | None]]] = {
     "make_credential_output": ("makeCredentialResponse", _interpret_make_credential_map),
     "get_assertion_output": ("getAssertionResponse", _interpret_get_assertion_map),
+    "get_info_output": ("getInfoResponse", get_info.interpret_get_info),
     "make_credential_input": ("makeCredentialRequest", _build_make_credential_request_expanded_json),
     "get_assertion_input": ("getAssertionRequest", _build_get_assertion_request_expanded_json),
 }
