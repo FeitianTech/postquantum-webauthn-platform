@@ -447,6 +447,24 @@ def generated_certificates() -> dict[str, bytes]:
         # A zero-length salt keeps the signature, and so the record, byte-stable.
         rsa_padding=padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=0),
     )
+    certificates["generated-ecdsa-sha3-256"] = certificate(
+        ec_key("subject-under-ecdsa-sha3").public_key(),
+        common_name="Signed With ECDSA-SHA3-256",
+        serial=0x53,
+        signing_key=ec_key("issuer-ec"),
+        issuer=_name("EC Issuer"),
+        algorithm=hashes.SHA3_256(),
+        ecdsa_deterministic=True,
+    )
+    certificates["generated-rsa-sha3-256"] = certificate(
+        ec_key("subject-under-rsa-sha3").public_key(),
+        common_name="Signed With RSA-SHA3-256",
+        serial=0x54,
+        signing_key=rsa_key("issuer-rsa"),
+        issuer=_name("RSA Issuer"),
+        algorithm=hashes.SHA3_256(),
+        rsa_padding=padding.PKCS1v15(),
+    )
     return certificates
 
 
