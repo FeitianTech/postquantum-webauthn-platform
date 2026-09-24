@@ -1132,6 +1132,86 @@ earlier old-vs-new probes used `sys.path.insert(0, cwd)` and did import the old 
   through to plain CBOR; getInfo checks none of §6.4's MUSTs; "uvm" (WebAuthn L2) is labelled unknown;
   ML-DSA is not in AOSP's Algorithm enum yet; interpreted fields display alphabetically (Flask sorts keys).
 
+### Phase 17 — decoder input honesty and queued correctness bugs — DONE (2026-09-24)
+18 commits, each gated on pytest, vitest and ruff exit codes; every commit's tree re-run afterwards.
+
+**Part A, decoder input honesty.**
+- *JSON key collisions.* Map keys become JSON keys only through `keys.json_keys`. Where nothing collides the
+  spelling is unchanged; where two keys of one map would share a spelling, each is spelled with its type --
+  `1`, `"1" (text)`, `h'01' (bytes)`, `true (boolean)`, `1.5 (float)`, `[1, 2] (array)` -- and
+  `decode/key_collisions.py` adds a `json-key-collision` finding (category `rendering`) with the map's offset,
+  path and the typed keys. It applies in decodedValue, ctapDecoded, expandedJson, user and descriptor maps,
+  getInfo (members, options, certifications), extension blocks and attestation-statement views. Array, map and
+  tag keys are now keys of their own type (they used to be `str()`-ed into text keys that could replace a real
+  text key). The response goes through `keys.json_ready`, so an attestation statement with integer and text
+  keys no longer crashes `jsonify` with HTTP 500 (it did: `sort_keys` cannot order `int` and `str`).
+- *Hex that is also a JSON number* (`decode/ambiguous_input.py`): read as hex when its bytes are one
+  well-formed CBOR item after at most one CTAP command/status byte, with nothing after; otherwise as the JSON
+  number. Either way an `ambiguous-input` finding names the reading not taken. `818181` stays JSON (the
+  innermost array is empty-handed), `81818101` is `[[[1]]]`, `31` is PIN_INVALID, `99` stays JSON. **This
+  reverses the Phase 14 note that "10" stays JSON: `10` is now the CBOR integer 16, with the JSON reading
+  named.** sniff()'s base64/base64url `ambiguous` flag, which nothing read, now labels a nested binary field
+  `"base64 or base64url"` instead of asserting `"base64"` for a base64url WebAuthn field.
+- *Cross-type labels.* CTAP member labels apply only to integer keys of a CTAP message; a text `"fmt"` or
+  `"rpId"` is not a member, and text keys named `attStmt`/`signature` in expandedJson no longer add
+  "MakeCredential response"/"GetAssertion response" to the type. User entities and credential descriptors are
+  read by their text keys only (integer 1..4 are not id/name), and a non-bytes `id` is shown instead of dropped.
+  A text-keyed attestation object whose authData does not parse is still interpreted as a WebAuthn
+  attestation object (attestationStatementDecoded, authData findings), just not labelled a CTAP response.
+- Valid-input diff: 37 fixed payloads through `/api/decode` on `8d76ff14` and HEAD: **33 byte-identical**;
+  the 4 that differ are exactly where a rule fires (`31` and `99` gain the finding; two PublicKeyCredential
+  payloads say `base64 or base64url` on 4 fields).
+
+**Part B, queued correctness bugs.**
+- `/api/credentials`: a store that cannot be read is 500 with a message (was 200 `[]`); a record that cannot
+  be shown is skipped, logged and counted in `X-Unreadable-Credentials`; DELETE reports `status: partial`
+  with the failed users (500), and `storage.delkey` now raises when a copy it should delete stays (it ignored
+  every error). No frontend code calls this endpoint.
+- A name the store refuses raises `storage.common.InvalidStorageIdentifier` (a `ValueError`); one app error
+  handler (`routes/errors.py`) answers 400 with one warning line, no traceback. Covers downloadcred,
+  deletepub, simple register/authenticate complete. The advanced register flow read the store by user name
+  and discarded the result: deleted, so any WebAuthn `user.name` registers there (`team/alice` was a 500).
+- The credential list shows `sign_count` (last authentication), not authData's registration-time counter.
+- Advanced register/complete now stamps and consumes its challenge and reports `challengeStatus`; both
+  advanced completes consume before anything can fail and report on every response. Reported, not rejected.
+- signCount save is compare-and-swap: `storage.read_for_update`/`save_if_unchanged`, a GCS generation
+  precondition (client-library retry off, so a landed-then-retried upload cannot read as a lost race) or a
+  local `flock` on `<file>.lock` held across the digest check and the rename. A lost race re-reads and
+  re-checks once (the clone is then rejected against the winner's counter); losing twice is 409. **Real race
+  test:** two genuinely signed assertions with counter 6, held by a barrier until both have read counter 5:
+  `8d76ff14` answers `[200, 200]`, HEAD `[200, 400]` (stored 6, received 6). Also 8 threads and 3 spawned
+  processes race `save_if_unchanged` on one file: exactly one writes, 15/15 runs.
+- `checks.py`'s uncompared `metadata_aaguid_bytes`: **deleted**, not compared. Every entry that function sees
+  was looked up by the credential's own AAGUID (fido2 `ca_lookup`, the PQC path, the fallback), so they cannot
+  differ; the one chain lookup runs only when the credential has no AAGUID (fido-u2f: zero by definition),
+  where a comparison would flag every legitimate registration. The entry's AAGUID is still reported.
+
+**Part C.** `print()` in `device_logs.py` and `certificates.py` (user registration parse errors to stdout)
+now go to module loggers; a test scans `server/` for `print(`. Deleted: `SESSION_METADATA_RECOVER_ON_START`
+(and `mds` from `CONFIG_SOURCES`), the `backports.zoneinfo` fallback, `MetadataDownloadError`, and
+`_extract_credential_id`, `_is_custom_cose_algorithm`, `_extract_requested_assertion_algorithm` (no caller
+but tests; the functions went with their forwarders).
+
+**Tests.** 2325 -> **2420** passed / 4 skipped, vitest 293 -> 293, ruff clean. 106 new or rewritten test cases:
+74 fail on the pre-change tree, 14 cannot load there (they test the new `ambiguous_input` module and the new
+storage API), 18 pass there by design (controls, and item 9's deletion, which changes no behaviour).
+
+**Process note:** one commit was made with a failing gate (a `;`-chained command committed after pytest
+exited 1: five device-log tests pinned stdout). It was local, amended green before anything else, and every
+commit of the phase was then re-run on its own tree: all green.
+
+**Found but not fixed:**
+- A duplicate CBOR map key still keeps only the later value (reported as `duplicate-map-key`; the earlier
+  value is not shown). JSON input with a duplicate object key loses one silently (`json.loads`).
+- The encoder's generic CBOR path writes every decodedValue key as text (the integer 1 becomes "1"), and
+  would write a typed spelling such as `"1" (text)` literally; it never round-tripped integer keys.
+- ctapDecoded for makeCredential/getAssertion responses omits non-integer keys (expandedJson has them).
+- Simple registration's readkey-append-savekey is still not compare-and-swap: two concurrent registrations
+  for one user can lose a record (writes are now serialised locally, but not re-checked).
+- `storage.iter_credentials`/`readkey` still skip a blob or file they cannot read, so a transient GCS error
+  can read as fewer credentials; a failed counter read still lets authentication fall back to the client copy.
+- `malformed` (legacy) repeats every finding message, including the new rendering/input notes.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
@@ -1141,7 +1221,7 @@ Tests previously ran against the global interpreter, whose packages matched noth
 ### Follow-ups raised during batch 1
 - `routes/general.py:494` `downloadcred` still serves `pickle.dumps(credentials)` as a `.pkl`
   download — the mirror image of S10; anything that loads it gets code execution.
-- A traversal `?email=` now raises `ValueError` in storage → HTTP 500. Map to 400 in routes.
+- A traversal `?email=` now raises `ValueError` in storage → HTTP 500. Map to 400 in routes. **Done in Phase 17.**
 - `session_metadata_store.py` builds paths via the same shared prefix helpers; not yet contained.
 - `storage.py` `convert_bytes_for_json` emits standard base64 while storage uses base64url.
   Unifying needs a paired frontend change: `binary.js` decodes it with bare `atob()`.
