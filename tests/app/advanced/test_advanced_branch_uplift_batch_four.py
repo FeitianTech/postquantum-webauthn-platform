@@ -99,27 +99,14 @@ def test_algorithm_coercion_handles_blank_values_failed_numeric_extraction_and_p
     monkeypatch.setattr(advanced_constants, "COSE_ALGORITHM_NUMERIC_PATTERN", _BadPattern())
     assert advanced_module._coerce_cose_algorithm("custom algorithm -- broken") is None
 
-    monkeypatch.setattr(pqc_module, "PQC_ALGORITHM_ID_TO_NAME", {123456: "PQ-Example"})
-    assert advanced_module._is_custom_cose_algorithm(123456) is False
 
-
-def test_base64url_and_assertion_algorithm_helpers_degrade_gracefully_on_decode_errors():
+def test_base64url_helpers_degrade_gracefully_on_decode_errors():
     advanced_module = pytest.importorskip("server.app.routes.advanced")
 
     # "br*ken" is outside the base64url alphabet, so it is absent rather than
     # decoded down to whatever characters happen to survive.
     assert advanced_module._decode_base64url_bytes("br*ken") == b""
     assert advanced_module._extract_assertion_credential_id({"rawId": "br*ken"}) is None
-
-    requested = advanced_module._extract_requested_assertion_algorithm(
-        {
-            "allowCredentials": [
-                {"type": "public-key", "id": "br*ken", "alg": "-7"},
-            ]
-        },
-        credential_id=b"target",
-    )
-    assert requested is None
 
 
 def test_attestation_log_falls_back_to_plain_string_payload_when_json_encoding_fails(monkeypatch, advanced_tracing, config_module):

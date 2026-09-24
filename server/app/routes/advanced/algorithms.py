@@ -10,9 +10,7 @@ from fido2.webauthn import (
     PublicKeyCredentialType,
 )
 
-from ...encoding import decode_hex
-from ...webauthn import pqc
-from . import binary, constants
+from . import constants
 
 
 def _normalize_algorithm_name_key(name: str) -> str:
@@ -109,52 +107,3 @@ def _derive_algorithms_from_credentials(
         )
 
     return list(seen.values())
-
-
-def _is_custom_cose_algorithm(alg_id: int | None) -> bool:
-    if alg_id is None:
-        return False
-    if alg_id in constants.COSE_ALGORITHM_NAME_MAP.values():
-        return False
-    if alg_id in pqc.PQC_ALGORITHM_ID_TO_NAME:
-        return False
-    return True
-
-
-def _extract_requested_assertion_algorithm(
-    public_key: Mapping[str, Any],
-    credential_id: bytes | None,
-) -> int | None:
-    requested_alg = _coerce_cose_algorithm(public_key.get("alg"))
-    if isinstance(requested_alg, int):
-        return requested_alg
-
-    allow_credentials = public_key.get("allowCredentials")
-    if not isinstance(allow_credentials, list):
-        return None
-
-    fallback_alg: int | None = None
-    for entry in allow_credentials:
-        if not isinstance(entry, Mapping):
-            continue
-
-        entry_alg = _coerce_cose_algorithm(entry.get("alg"))
-        if entry_alg is None:
-            continue
-
-        entry_id = binary._extract_binary_value(entry.get("id"))
-        if isinstance(entry_id, str):
-            try:
-                entry_id = decode_hex(entry_id)
-            except ValueError:
-                try:
-                    entry_id = binary._decode_base64url(entry_id)
-                except (ValueError, TypeError):
-                    entry_id = None
-
-        if isinstance(entry_id, (bytes, bytearray, memoryview)):
-            if credential_id is not None and bytes(entry_id) == credential_id:
-                return entry_alg
-            fallback_alg = entry_alg
-
-    return fallback_alg

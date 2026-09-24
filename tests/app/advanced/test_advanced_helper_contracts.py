@@ -55,18 +55,16 @@ def test_storage_id_and_summary_helpers_strip_heavy_fields_and_add_artifact_mark
     assert summary["hasServerArtifact"] is True
 
 
-def test_extract_credential_id_and_algorithm_from_mapping_and_objects():
+def test_extract_credential_algorithm_from_mapping_and_objects():
     advanced_module = pytest.importorskip("server.app.routes.advanced")
 
     mapping = {"credential_id": b"cred", "public_key": {3: -7}}
-    assert advanced_module._extract_credential_id(mapping) == b"cred"
     assert advanced_module._extract_credential_algorithm(mapping) == -7
 
     class _CredentialObj:
         credential_id = b"obj-cred"
         public_key = {"alg": -257}
 
-    assert advanced_module._extract_credential_id(_CredentialObj()) == b"obj-cred"
     assert advanced_module._extract_credential_algorithm(_CredentialObj()) == -257
 
     class _IndexablePublicKey:
@@ -81,7 +79,6 @@ def test_extract_credential_id_and_algorithm_from_mapping_and_objects():
         credential_id = None
         public_key = _IndexablePublicKey()
 
-    assert advanced_module._extract_credential_id(_IndexableCredentialObj()) is None
     assert advanced_module._extract_credential_algorithm(_IndexableCredentialObj()) == -8
 
 
@@ -124,13 +121,8 @@ def test_base64_assertion_and_binary_extraction_helpers():
     assert advanced_module._extract_binary_value("plain") == "plain"
 
 
-def test_custom_algorithm_detection_and_attestation_logging(monkeypatch, config_module):
+def test_attestation_logging(monkeypatch, config_module):
     advanced_module = pytest.importorskip("server.app.routes.advanced")
-
-    assert advanced_module._is_custom_cose_algorithm(None) is False
-    assert advanced_module._is_custom_cose_algorithm(-7) is False
-    assert advanced_module._is_custom_cose_algorithm(-50) is False
-    assert advanced_module._is_custom_cose_algorithm(-99999) is True
 
     tracing_module = pytest.importorskip("server.app.routes.advanced.tracing")
     log_calls = []
@@ -179,3 +171,16 @@ def test_custom_algorithm_detection_and_attestation_logging(monkeypatch, config_
     log_calls.clear()
     advanced_module._log_authenticator_attestation_response("packed", None, {}, b"\x01")
     assert log_calls == []
+
+
+@pytest.mark.parametrize(
+    "name", ["_extract_credential_id", "_is_custom_cose_algorithm", "_extract_requested_assertion_algorithm"]
+)
+def test_helpers_no_route_called_are_gone(name):
+    # Each existed only for tests: no route, and no other helper, called it.
+    advanced_module = pytest.importorskip("server.app.routes.advanced")
+    from server.app.routes.advanced import algorithms, parsing
+
+    assert not hasattr(advanced_module, name)
+    assert not hasattr(algorithms, name)
+    assert not hasattr(parsing, name)
