@@ -18,6 +18,7 @@ from .cloud import (
     download_bytes,
     gcs_enabled,
     list_blob_names,
+    list_prefixes,
     upload_bytes,
 )
 from .common import (
@@ -225,11 +226,10 @@ def list_sessions() -> list[str]:
         prefix = _base_prefix()
         seen = set()
         try:
-            for blob_name in list_blob_names(prefix):
-                remainder = blob_name[len(prefix) :] if prefix else blob_name
-                if not remainder:
-                    continue
-                session_component = remainder.split("/", 1)[0].strip()
+            # One entry per session folder, not every object in every session.
+            # A flat object beside the folders (a legacy credential copy) is no session.
+            for folder in list_prefixes(prefix):
+                session_component = folder[len(prefix) :].strip("/").strip()
                 if session_component:
                     seen.add(session_component)
         except Exception as exc:  # pragma: no cover - depends on storage backend
