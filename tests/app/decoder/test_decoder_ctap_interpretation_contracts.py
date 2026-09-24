@@ -165,7 +165,7 @@ def test_convert_ctap_user_keeps_byte_string_keys_distinct_from_text_keys():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     converted = decode_module._convert_ctap_user(
-        {1: b"\xAA\xBB", 2: b"alice", 3: "Alice", b"role": "admin"}
+        {"id": b"\xAA\xBB", "name": b"alice", "displayName": "Alice", b"role": "admin"}
     )
 
     assert converted["id"] == "aabb"
@@ -182,9 +182,9 @@ def test_convert_ctap_credential_descriptor_supports_bytes_mapping_and_extra_key
 
     descriptor = decode_module._convert_ctap_credential_descriptor(
         {
-            1: b"\x01\x02",
-            2: "public-key",
-            3: ["usb", "nfc"],
+            "id": b"\x01\x02",
+            "type": "public-key",
+            "transports": ["usb", "nfc"],
             9: b"\x03",
         }
     )

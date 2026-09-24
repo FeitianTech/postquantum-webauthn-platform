@@ -76,7 +76,8 @@ def test_extensions_announced_by_the_ed_flag_are_not_trailing():
 
 def test_a_text_keyed_attestation_map_reports_its_authdata_path():
     # An attestation object whose authData has a tail is not a valid
-    # attestation object; it is still read, as a makeCredential-shaped map.
+    # attestation object; it is still interpreted as one (its text keys are
+    # WebAuthn's), though not labelled a CTAP makeCredential response.
     auth_data = _auth_data(_UP | _AT, credential_key=_ES256_KEY, tail=b"\xff")
     data = cbor2.dumps({"fmt": "none", "attStmt": {}, "authData": auth_data})
 

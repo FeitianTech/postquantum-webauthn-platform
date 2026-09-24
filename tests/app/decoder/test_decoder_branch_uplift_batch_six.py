@@ -38,11 +38,12 @@ def test_build_labeled_ctap_map_resolves_handlers_and_missing_keys_across_all_pa
     )
 
     assert result["1 (alpha)"] == "label:alpha-value"
-    assert result["9 (nine)"] == "int:int-handler-value"
-    # A handler under the text "3" is not member 3's: only the integer is.
+    # Handlers are found by member name only, never by the raw key: not the
+    # integer 9's, and not the text "3"'s.
+    assert result["9 (nine)"] == "int-handler-value"
     assert result["3"] == "string-handler-value"
     assert result["10 (ten)"] == "missing-ten"
-    assert result["11"] == "missing-eleven"
+    assert result["11"] is None
     assert result["12 (twelve)"] is None
 
 

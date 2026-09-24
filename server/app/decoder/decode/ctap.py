@@ -58,52 +58,22 @@ def _convert_optional_ctap_field(value: Any) -> Any:
 
 
 def _convert_ctap_credential_descriptor(entry: Any) -> Any:
-    data_bytes = _coerce_cbor_bytes(entry)
-    if data_bytes is not None:
-        return data_bytes.hex()
-    if not isinstance(entry, Mapping):
-        return _hex_json_safe(entry)
-
-    descriptor: dict[str, Any] = {}
-    id_value = _get_mapping_entry(entry, "id", 1)
-    if id_value is not MISSING:
-        id_bytes = _coerce_cbor_bytes(id_value)
-        if id_bytes is not None:
-            descriptor["id"] = id_bytes.hex()
-
-    type_value = _get_mapping_entry(entry, "type", 2)
-    if type_value is not MISSING:
-        descriptor["type"] = _hex_json_safe(type_value)
-
-    transports_value = _get_mapping_entry(entry, "transports", 3)
-    if transports_value is not MISSING:
-        descriptor["transports"] = _hex_json_safe(transports_value)
-
-    for label, key, value in json_items(entry):
-        if key in {"id", "type", "transports"} or key in {1, 2, 3}:
-            continue
-        descriptor[label] = _hex_json_safe(value)
-
-    return descriptor
+    # A PublicKeyCredentialDescriptor names its members with text keys (WebAuthn
+    # L3 section 5.8.3): the integer 1 is not "id". Shown as sent, every member.
+    return _hex_json_safe(entry)
 
 
-def _labels(members: Mapping[int, str]) -> dict[Any, str]:
-    """Look a CTAP member up by its number or by its name; input maps use either."""
-
-    labels: dict[Any, str] = dict(members)
-    labels.update((name, name) for name in members.values())
-    return labels
-
-
-_MAKE_CREDENTIAL_REQUEST_LABELS = _labels(ctap_tables.MAKE_CREDENTIAL_PARAMETERS)
-_GET_ASSERTION_REQUEST_LABELS = _labels(ctap_tables.GET_ASSERTION_PARAMETERS)
-_MAKE_CREDENTIAL_RESPONSE_LABELS = _labels(ctap_tables.MAKE_CREDENTIAL_RESPONSE)
-_GET_ASSERTION_RESPONSE_LABELS = _labels(ctap_tables.GET_ASSERTION_RESPONSE)
+# CTAP numbers members with integer keys; these name them by number only.
+_MAKE_CREDENTIAL_REQUEST_LABELS = ctap_tables.MAKE_CREDENTIAL_PARAMETERS
+_GET_ASSERTION_REQUEST_LABELS = ctap_tables.GET_ASSERTION_PARAMETERS
+_MAKE_CREDENTIAL_RESPONSE_LABELS = ctap_tables.MAKE_CREDENTIAL_RESPONSE
+_GET_ASSERTION_RESPONSE_LABELS = ctap_tables.GET_ASSERTION_RESPONSE
 
 
 def _resolve_ctap_label(label_map: Mapping[Any, str], key: Any) -> str | None:
-    # Only the integer 1 is member 1: a text "1" or a byte string h'01' is not.
-    if isinstance(key, bool) or not isinstance(key, (int, str)):
+    # Only the integer 1 is member 1: not a text "1", a byte string h'01', nor
+    # the text "clientDataHash" -- a name is not a member key in CTAP.
+    if isinstance(key, bool) or not isinstance(key, int):
         return None
     return label_map.get(key)
 
@@ -136,11 +106,7 @@ def _build_labeled_ctap_map(
 
         for formatted_key, key, value in json_items(mapping, labelled):
             label = _resolve_ctap_label(labels, key)
-            handler: Callable[[Any], Any] | None = None
-            if label is not None and label in handlers:
-                handler = handlers[label]
-            elif key in handlers:
-                handler = handlers[key]
+            handler = handlers.get(label) if label is not None else None
             if handler is not None:
                 result[formatted_key] = handler(value)
             else:
@@ -156,11 +122,7 @@ def _build_labeled_ctap_map(
         if label is not None and label in seen_labels:
             continue
         formatted_key = _format_ctap_entry_key(missing, label)
-        handler: Callable[[Any], Any] | None = None
-        if label is not None and label in handlers:
-            handler = handlers[label]
-        elif missing in handlers:
-            handler = handlers[missing]
+        handler = handlers.get(label) if label is not None else None
         if handler is not None:
             result.setdefault(formatted_key, handler(None))
         else:
@@ -169,52 +131,28 @@ def _build_labeled_ctap_map(
     return result
 
 
+# The shapes read integer members only: CTAP 2.2 section 6 numbers them, and a
+# text "fmt" or "rpId" is some other map's key (a WebAuthn attestation object's).
+
+
 def _looks_like_make_credential_request(value: Mapping[Any, Any]) -> bool:
-    client_hash_entry = _get_mapping_entry(value, 1, "clientDataHash")
-    client_hash_bytes = _coerce_cbor_bytes(client_hash_entry)
-    if client_hash_bytes is None:
+    # clientDataHash (1) is bytes; rp (2) is a map, where a response has authData bytes.
+    if _extract_mapping_bytes(value, (1,)) is None or _extract_mapping_bytes(value, (2,)) is not None:
         return False
-    if _extract_mapping_string(value, (1, "fmt")) is not None:
-        return False
-    if _extract_mapping_bytes(value, (2, "authData")) is not None:
-        return False
-    rp_entry = _get_mapping_entry(value, 2, "rp")
-    user_entry = _get_mapping_entry(value, 3, "user")
-    if rp_entry is MISSING or user_entry is MISSING:
-        return False
-    return True
+    return _get_mapping_entry(value, 2) is not MISSING and _get_mapping_entry(value, 3) is not MISSING
 
 
 def _looks_like_get_assertion_request(value: Mapping[Any, Any]) -> bool:
-    if not isinstance(value, Mapping):
+    # rpId (1) and clientDataHash (2); a byte-string 3 is a response's signature.
+    if _extract_mapping_string(value, (1,)) is None or _extract_mapping_bytes(value, (2,)) is None:
         return False
-    rp_candidate = value.get(1, MISSING)
-    if isinstance(rp_candidate, str) and rp_candidate.strip():
-        pass
-    else:
-        rp_candidate = value.get("rpId", MISSING)
-        if not isinstance(rp_candidate, str) or not rp_candidate.strip():
-            return False
-    client_entry = value.get(2, MISSING)
-    if client_entry is MISSING:
-        client_entry = value.get("clientDataHash", MISSING)
-    if client_entry is MISSING or _coerce_cbor_bytes(client_entry) is None:
-        return False
-    signature_candidate = value.get(3, MISSING)
-    if signature_candidate is MISSING:
-        signature_candidate = value.get("signature", MISSING)
-    if signature_candidate is not MISSING and _coerce_cbor_bytes(signature_candidate) is not None:
-        return False
-    auth_candidate = value.get("authData", MISSING)
-    if auth_candidate is not MISSING and _coerce_cbor_bytes(auth_candidate) is not None:
-        return False
-    return True
+    return _extract_mapping_bytes(value, (3,)) is None
 
 
 def _looks_like_make_credential_output(value: Mapping[Any, Any]) -> bool:
-    fmt_value = _extract_mapping_string(value, (1, "fmt"))
-    auth_data_bytes = _extract_mapping_bytes(value, (2, "authData"))
-    att_stmt_value = _get_mapping_entry(value, 3, "attStmt")
+    fmt_value = _extract_mapping_string(value, (1,))
+    auth_data_bytes = _extract_mapping_bytes(value, (2,))
+    att_stmt_value = _get_mapping_entry(value, 3)
     if att_stmt_value is MISSING:
         att_stmt_value = None
     att_stmt_bytes = _coerce_cbor_bytes(att_stmt_value)
@@ -226,8 +164,8 @@ def _looks_like_make_credential_output(value: Mapping[Any, Any]) -> bool:
 
 
 def _looks_like_get_assertion_output(value: Mapping[Any, Any]) -> bool:
-    auth_data_bytes = _extract_mapping_bytes(value, (2, "authData"))
-    signature_bytes = _extract_mapping_bytes(value, (3, "signature"))
+    auth_data_bytes = _extract_mapping_bytes(value, (2,))
+    signature_bytes = _extract_mapping_bytes(value, (3,))
     return auth_data_bytes is not None and signature_bytes is not None
 
 
@@ -452,41 +390,20 @@ def _convert_user_text_value(value: Any) -> Any:
     return {"text": text_value, "binary": binary_summary}
 
 
+_USER_TEXT_MEMBERS = ("name", "displayName", "icon")
+
+
 def _convert_ctap_user(entry: Any) -> Any:
     # A CTAP user entity is a map. Anything else is shown as it was sent: a
     # byte string or text is never re-read as CBOR, base64 or hex to make one.
-    data_bytes = _coerce_cbor_bytes(entry)
-    if data_bytes is not None:
-        return data_bytes.hex()
-
     if not isinstance(entry, Mapping):
         return _hex_json_safe(entry)
-
-    user: dict[str, Any] = {}
-    id_value = _get_mapping_entry(entry, "id", 1)
-    if id_value is not _MISSING:
-        id_bytes = _coerce_cbor_bytes(id_value)
-        if id_bytes is not None:
-            user["id"] = id_bytes.hex()
-
-    name_value = _get_mapping_entry(entry, "name", 2)
-    if name_value is not _MISSING:
-        user["name"] = _convert_user_text_value(name_value)
-
-    display_name_value = _get_mapping_entry(entry, "displayName", 3)
-    if display_name_value is not _MISSING:
-        user["displayName"] = _convert_user_text_value(display_name_value)
-
-    icon_value = _get_mapping_entry(entry, "icon", 4)
-    if icon_value is not _MISSING:
-        user["icon"] = _convert_user_text_value(icon_value)
-
-    for label, key, value in json_items(entry):
-        if key in {"id", "name", "displayName", "icon"} or key in {1, 2, 3, 4}:
-            continue
-        user[label] = _hex_json_safe(value)
-
-    return user
+    # PublicKeyCredentialUserEntity names its members with text keys (WebAuthn L3
+    # section 5.4.3): the integer 2 is not "name". Every member is shown.
+    return {
+        label: _convert_user_text_value(value) if key in _USER_TEXT_MEMBERS else _hex_json_safe(value)
+        for label, key, value in json_items(entry)
+    }
 
 
 # The converter tables the labelled-map builder dispatches through.
@@ -599,11 +516,11 @@ def _interpret_ctap_kind(value: Any, classification: str) -> dict[str, Any] | No
 
 
 def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] | None:
-    fmt = _get_mapping_entry(value, 1, "fmt")
+    fmt = _get_mapping_entry(value, 1)
     fmt = fmt if fmt is not _MISSING else None
-    auth_data_entry = _get_mapping_entry(value, 2, "authData")
+    auth_data_entry = _get_mapping_entry(value, 2)
     auth_data_bytes = _coerce_cbor_bytes(auth_data_entry)
-    att_stmt_entry = _get_mapping_entry(value, 3, "attStmt")
+    att_stmt_entry = _get_mapping_entry(value, 3)
     if att_stmt_entry is _MISSING:
         att_stmt_entry = None
     att_stmt_bytes = _coerce_cbor_bytes(att_stmt_entry)
@@ -656,8 +573,8 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] |
 def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | None:
     if _looks_like_get_assertion_request(value):
         return None
-    auth_data_entry = _get_mapping_entry(value, 2, "authData")
-    signature_entry = _get_mapping_entry(value, 3, "signature")
+    auth_data_entry = _get_mapping_entry(value, 2)
+    signature_entry = _get_mapping_entry(value, 3)
     auth_data_bytes = _coerce_cbor_bytes(auth_data_entry)
     signature_bytes = _coerce_cbor_bytes(signature_entry)
     if auth_data_bytes is None:
@@ -665,7 +582,7 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | N
 
     interpreted: dict[str, Any] = {}
 
-    credential_entry = _get_mapping_entry(value, 1, "credential")
+    credential_entry = _get_mapping_entry(value, 1)
     if credential_entry is not _MISSING and credential_entry is not None:
         interpreted["1 (credential)"] = _convert_ctap_credential_descriptor(credential_entry)
 
@@ -677,7 +594,7 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | N
     else:
         interpreted["3 (signature)"] = None
 
-    user_entry = _get_mapping_entry(value, 4, "user")
+    user_entry = _get_mapping_entry(value, 4)
     if user_entry is not _MISSING and user_entry is not None:
         interpreted["4 (user)"] = _convert_ctap_user(user_entry)
 

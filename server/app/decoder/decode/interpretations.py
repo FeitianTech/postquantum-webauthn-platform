@@ -28,14 +28,19 @@ def for_ctap(classification: str, value: Any, node: Mapping[str, Any], data: byt
     extra: dict[str, Any] = {}
     blocks: list[dict[str, Any]] = []
     findings: list[dict[str, Any]] = []
+    if classification == "other" and _looks_like_attestation_object(value):
+        # Text keys are a WebAuthn attestation object's (L3 section 6.5.4), never
+        # CTAP members; one that did not read as one (its authData does not
+        # parse) is still interpreted as what it is.
+        return for_attestation_object(value, node, data)
     if classification == "make_credential_input":
         _add(blocks, get_mapping_entry(value, 6), extensions.MAKE_CREDENTIAL_INPUT, "extensions (0x06)", "${6}")
     elif classification == "get_assertion_input":
         _add(blocks, get_mapping_entry(value, 4), extensions.GET_ASSERTION_INPUT, "extensions (0x04)", "${4}")
     elif classification in ("make_credential_output", "get_assertion_output"):
         registration = classification == "make_credential_output"
-        findings += authenticator_data_findings.for_member(node, data, (2, "authData"))
-        key, auth_data = _member(value, (2, "authData"))
+        findings += authenticator_data_findings.for_member(node, data, (2,))
+        key, auth_data = _member(value, (2,))
         output = extensions.MAKE_CREDENTIAL_OUTPUT if registration else extensions.GET_ASSERTION_OUTPUT
         _add_auth_data(blocks, auth_data, output, _path(key))
         unsigned_key = 6 if registration else 8
@@ -48,9 +53,9 @@ def for_ctap(classification: str, value: Any, node: Mapping[str, Any], data: byt
             f"${{{unsigned_key}}}",
         )
         if registration:
-            _, fmt = _member(value, (1, "fmt"))
-            _, att_stmt = _member(value, (3, "attStmt"))
-            findings += _attestation(extra, fmt, att_stmt, auth_data, node, data, (3, "attStmt"))
+            _, fmt = _member(value, (1,))
+            _, att_stmt = _member(value, (3,))
+            findings += _attestation(extra, fmt, att_stmt, auth_data, node, data, (3,))
     _extensions(extra, blocks)
     return extra, findings
 
@@ -107,6 +112,14 @@ def for_public_key_credential(
         _add(blocks, results, extensions.CLIENT_OUTPUT, "clientExtensionResults", "clientExtensionResults")
     _extensions(extra, blocks)
     return extra, findings
+
+
+def _looks_like_attestation_object(value: Any) -> bool:
+    return (
+        isinstance(get_mapping_entry(value, "fmt"), str)
+        and isinstance(get_mapping_entry(value, "authData"), bytes)
+        and get_mapping_entry(value, "attStmt") is not MISSING
+    )
 
 
 def _member(value: Any, keys: Sequence[Any]) -> tuple[Any, Any]:

@@ -128,7 +128,8 @@ def test_build_decoder_payload_cbor_adds_unique_qualifiers_and_ctap_sections():
     assert payload["type"].startswith("CBOR (")
     assert payload["type"].count("GetAssertion response") == 1
     assert "GetAssertion request" in payload["type"]
-    assert "MakeCredential response" in payload["type"]
+    # An "attStmt" key in expandedJson is not a makeCredential response.
+    assert "MakeCredential response" not in payload["type"]
     assert payload["data"]["ctap"]["codeHex"] == "0x02"
     assert payload["data"]["expandedJson"]["attStmt"]["sig"] == "c0ffee"
 

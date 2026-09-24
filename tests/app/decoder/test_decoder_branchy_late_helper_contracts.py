@@ -195,9 +195,9 @@ def test_ctap_interpretation_variants_cover_request_guard_and_attstmt_bytes(monk
 
     assert decode_module._interpret_get_assertion_map({1: "example.com", 2: b"\x00" * 32}) is None
 
-    interpreted_request = decode_module._interpret_ctap_cbor_value(
-        {"rpId": "example.com", "clientDataHash": b"\x10" * 32}
-    )
+    # Text names are not CTAP members: only the integer-keyed map is a request.
+    assert decode_module._interpret_ctap_cbor_value({"rpId": "example.com", "clientDataHash": b"\x10" * 32}) is None
+    interpreted_request = decode_module._interpret_ctap_cbor_value({1: "example.com", 2: b"\x10" * 32})
     assert interpreted_request is not None
     assert "getAssertionRequest" in interpreted_request
     assert decode_module._interpret_ctap_cbor_value("not-a-map") is None
