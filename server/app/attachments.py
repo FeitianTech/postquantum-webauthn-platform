@@ -4,13 +4,9 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from .storage.credentials import extract_credential_data, iter_credentials
-from .webauthn.metadata import ensure_metadata_session_id
-
 __all__ = [
     "HINT_TO_ATTACHMENT_MAP",
     "attachment_hint_violation",
-    "build_credential_attachment_map",
     "derive_allowed_attachments_from_hints",
     "normalize_attachment",
     "normalize_attachment_list",
@@ -81,52 +77,6 @@ def resolve_effective_attachments(
         return [normalized_requested]
 
     return []
-
-
-def build_credential_attachment_map() -> dict[bytes, str | None]:
-    """Each of the session's stored credentials, by id, and the attachment recorded for it.
-
-    A store that cannot be read raises ``StorageReadError`` out of here rather
-    than giving a map without some credentials: a missing id would read as
-    "no attachment recorded", and a hint check would pass on it. A copy that
-    does not decode is left out; the store logs it.
-    """
-
-    attachment_map: dict[bytes, str | None] = {}
-    metadata_session_id = ensure_metadata_session_id()
-    for email, user_creds in iter_credentials(session_id=metadata_session_id):
-        for cred in user_creds:
-            credential_data = extract_credential_data(cred)
-            credential_id: bytes | None = None
-            if isinstance(credential_data, Mapping):
-                raw_id = credential_data.get('credential_id')
-                if isinstance(raw_id, (bytes, bytearray, memoryview)):
-                    credential_id = bytes(raw_id)
-            else:
-                raw_id = getattr(credential_data, 'credential_id', None)
-                if isinstance(raw_id, (bytes, bytearray, memoryview)):
-                    credential_id = bytes(raw_id)
-
-            if credential_id is None:
-                continue
-
-            attachment_value: str | None = None
-            if isinstance(cred, Mapping):
-                attachment_value = normalize_attachment(
-                    cred.get('authenticator_attachment')
-                    or cred.get('authenticatorAttachment')
-                )
-                if attachment_value is None:
-                    properties = cred.get('properties')
-                    if isinstance(properties, Mapping):
-                        attachment_value = normalize_attachment(
-                            properties.get('authenticatorAttachment')
-                            or properties.get('authenticator_attachment')
-                        )
-
-            attachment_map[credential_id] = attachment_value
-
-    return attachment_map
 
 
 def resolve_allowed_attachments(session_marker: Any, request_allowed: list[str]) -> list[str]:
