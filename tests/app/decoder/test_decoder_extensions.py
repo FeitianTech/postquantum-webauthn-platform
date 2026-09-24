@@ -16,6 +16,7 @@ import cbor2
 import pytest
 
 from server.app.decoder import decode_payload_text
+from server.app.decoder.decode import extensions
 from tests.app.decoder.real_vectors import (
     WEBAUTHN_L3_PACKED_SELF_ATTESTATION_OBJECT,
     WEBAUTHN_L3_PACKED_SELF_CLIENT_DATA_JSON,
@@ -327,3 +328,62 @@ def test_nothing_to_interpret_adds_nothing():
     request = b"\x02" + cbor2.dumps({1: "example.com", 2: bytes(32)})
 
     assert "extensionsDecoded" not in decode_payload_text(request.hex())["data"]
+
+
+def _entry(name: str, value, role: str) -> dict:
+    return extensions.block({name: value}, role=role, location="test", path="$")["entries"][name]
+
+
+@pytest.mark.parametrize(
+    ("name", "value", "role", "expected"),
+    [
+        ("credBlob", "yes", "makeCredential output", {"note": "expected a boolean here; shown as sent"}),
+        ("credBlob", b"", "getAssertion output", {"meaning": "the credential's credBlob: empty"}),
+        ("hmac-secret", 5, "getAssertion input", {"note": "expected a map of keyAgreement (0x01), saltEnc (0x02), saltAuth (0x03), pinUvAuthProtocol (0x04) here; shown as sent"}),
+        ("hmac-secret", "x", "getAssertion output", {"note": "expected a byte string: output1, or output1 || output2, encrypted here; shown as sent"}),
+        ("hmac-secret", bytes(40), "getAssertion output", {"note": "not 32 or 64 bytes (protocol 1), nor 48 or 80 (protocol 2)"}),
+        ("minPinLength", "four", "makeCredential output", {"note": "expected an unsigned integer here; shown as sent"}),
+        ("largeBlob", 7, "makeCredential input", {"note": "expected a map {support: \"required\" / \"preferred\"} here; shown as sent"}),
+        ("largeBlob", {"write": b"z", "originalSize": 3}, "getAssertion input", {"meaning": "write a compressed large blob, with its original size"}),
+        ("largeBlob", {"written": True}, "getAssertion unsigned output", {"meaning": "written"}),
+        ("largeBlob", {"written": False}, "getAssertion unsigned output", {"meaning": "not written"}),
+    ],
+)
+def test_authenticator_readers_name_what_they_expect(name, value, role, expected):
+    entry = _entry(name, value, role)
+
+    for key, text in expected.items():
+        assert entry[key] == text
+
+
+def test_hmac_secret_members_outside_the_section_are_labelled():
+    members = _entry("hmac-secret", {1: {1: 2, 3: "ECDH"}, 9: b"\x01", "x": 1}, "getAssertion input")["members"]
+
+    assert "algorithm" not in members["1 (keyAgreement)"]
+    assert members["9 (not in CTAP 2.2 section 12.7)"]["value"] == "01"
+    assert members["x (not in CTAP 2.2 section 12.7)"]["value"] == 1
+
+
+@pytest.mark.parametrize(
+    ("name", "value", "expected"),
+    [
+        ("credProps", {"rk": False}, {"meaning": "rk false: not a client-side discoverable credential"}),
+        ("credProps", {}, {"meaning": "rk absent: the client does not know whether the credential is discoverable"}),
+        ("credProps", {"rk": "yes"}, {"note": "expected rk as a boolean here; shown as sent"}),
+        ("credProps", True, {"note": "expected a CredentialPropertiesOutput map here; shown as sent"}),
+        ("prf", [], {"note": "expected an AuthenticationExtensionsPRFOutputs map here; shown as sent"}),
+        ("prf", {"enabled": False, "results": {"first": "!!", "second": "AA"}},
+         {"meaning": "the credential does not support PRF", "results": {"first": {"note": "not base64url"}, "second": {"length": 1}}}),
+        ("largeBlob", 1, {"note": "expected an AuthenticationExtensionsLargeBlobOutputs map here; shown as sent"}),
+        ("largeBlob", {"written": True}, {"meaning": "the blob was written"}),
+        ("largeBlob", {"blob": "!!"}, {"meaning": "blob is not base64url"}),
+        ("hmacGetSecret", "x", {"note": "expected an HMACGetSecretOutput map here; shown as sent"}),
+        ("getCredBlob", 5, {"note": "expected an ArrayBuffer, as base64url in JSON here; shown as sent"}),
+        ("getCredBlob", "", {"meaning": "the credential's credBlob: empty"}),
+    ],
+)
+def test_client_readers_name_what_they_expect(name, value, expected):
+    entry = _entry(name, value, "client output")
+
+    for key, text in expected.items():
+        assert entry[key] == text
