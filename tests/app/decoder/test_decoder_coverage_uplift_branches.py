@@ -131,15 +131,14 @@ def test_extract_authenticator_bytes_from_attestation_uses_raw_base64_and_handle
         lambda _entry: None,
     )
 
-    class _FakeAttestation:
-        def __init__(self, _raw):
-            self.auth_data = b"\x11\x22"
-
-    monkeypatch.setattr(binary, "AttestationObject", _FakeAttestation)
+    # {"authData": h'1122'}, as standard base64 with padding and spaces.
     extracted = decode_module._extract_authenticator_bytes_from_attestation(
-        {"raw": " AQI= "}
+        {"raw": " oWhhdXRoRGF0YUIRIg== "}
     )
     assert extracted == b"\x11\x22"
+
+    # 0x01 0x02 is CBOR, but not a map with authData.
+    assert decode_module._extract_authenticator_bytes_from_attestation({"raw": "AQI="}) is None
 
     monkeypatch.setattr(
         base64,
