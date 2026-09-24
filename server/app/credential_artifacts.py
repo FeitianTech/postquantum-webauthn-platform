@@ -1,4 +1,9 @@
-"""Server-side storage for advanced credential artifacts."""
+"""Server-side storage for advanced credential artifacts.
+
+An artifact is kept per metadata session: on GCS under
+``user-data/<session>/credential-artifacts/``, locally under
+``<artifact dir>/<session>/``, each named by the SHA-256 of its storage id.
+"""
 
 from __future__ import annotations
 
@@ -29,6 +34,7 @@ from .storage.common import (
     resolve_contained_path,
     resolve_metadata_session_id,
     using_gcs_backend,
+    validate_storage_component,
 )
 
 __all__ = [
@@ -77,10 +83,15 @@ def _normalise_storage_id(storage_id: Any) -> str | None:
     return trimmed
 
 
-def _artifact_path(storage_id: str) -> str:
+def _session_directory(session_id: str) -> str:
+    return resolve_contained_path(_ARTIFACT_DIR, validate_storage_component(session_id))
+
+
+def _artifact_path(storage_id: str, session_id: str) -> str:
     # ``_artifact_filename`` is a SHA-256 digest, so it cannot traverse today.
-    # The containment check keeps that true if the naming scheme ever changes.
-    return resolve_contained_path(_ARTIFACT_DIR, _artifact_filename(storage_id))
+    # The containment check keeps that true if the naming scheme ever changes;
+    # the session id, which comes from the session, is validated as a name.
+    return resolve_contained_path(_session_directory(session_id), _artifact_filename(storage_id))
 
 
 def _artifact_filename(storage_id: str) -> str:
@@ -117,8 +128,8 @@ def _using_gcs() -> bool:
     return using_gcs_backend(gcs_enabled)
 
 
-def _ensure_directory() -> None:
-    os.makedirs(_ARTIFACT_DIR, exist_ok=True)
+def _ensure_directory(session_id: str) -> None:
+    os.makedirs(_session_directory(session_id), exist_ok=True)
 
 
 def _read_file(path: str) -> dict[str, Any] | None:
@@ -156,7 +167,7 @@ def _read_record(storage_id: str, session_id: str) -> dict[str, Any] | None:
         except (json.JSONDecodeError, UnicodeDecodeError):
             return None
 
-    return _read_file(_artifact_path(storage_id))
+    return _read_file(_artifact_path(storage_id, session_id))
 
 
 def _encode_record(record: dict[str, Any]) -> bytes:
@@ -178,8 +189,8 @@ def _write_record(storage_id: str, session_id: str, record: dict[str, Any]) -> N
         upload_bytes(blob_name, _encode_record(record), content_type="application/json")
         return
 
-    _ensure_directory()
-    _write_file(_artifact_path(storage_id), record)
+    _ensure_directory(session_id)
+    _write_file(_artifact_path(storage_id, session_id), record)
 
 
 def _delete_record(storage_id: str, session_id: str) -> bool:
@@ -196,7 +207,7 @@ def _delete_record(storage_id: str, session_id: str) -> bool:
         return existed
 
     try:
-        _remove_locked(_artifact_path(storage_id))
+        _remove_locked(_artifact_path(storage_id, session_id))
     except FileNotFoundError:
         return False
     except OSError:
@@ -278,8 +289,8 @@ def store_credential_artifact(
         with contextlib.ExitStack() as held:
             if not _using_gcs():
                 try:
-                    _ensure_directory()
-                    held.enter_context(file_lock(_artifact_path(normalised)))
+                    _ensure_directory(resolved_session)
+                    held.enter_context(file_lock(_artifact_path(normalised, resolved_session)))
                 except OSError:
                     return False
             existing = _read_record(normalised, resolved_session) if merge else None
@@ -408,7 +419,7 @@ def delete_credential_artifact_with_status(
             return "deleted" if existed else "absent"
 
         try:
-            _remove_locked(_artifact_path(normalised))
+            _remove_locked(_artifact_path(normalised, resolved_session))
         except FileNotFoundError:
             return "absent"
         except OSError:

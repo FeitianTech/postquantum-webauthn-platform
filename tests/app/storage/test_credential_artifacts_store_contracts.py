@@ -124,8 +124,8 @@ def test_store_credential_artifact_merge_preserves_created_at_and_updates_update
 
 
 def test_load_credential_artifact_returns_none_for_corrupt_json_local(artifact_module):
-    os.makedirs(artifact_module._ARTIFACT_DIR, exist_ok=True)
-    path = artifact_module._artifact_path("cred-corrupt")
+    path = artifact_module._artifact_path("cred-corrupt", "session-a")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as handle:
         handle.write("{broken-json")
 
@@ -319,7 +319,7 @@ def test_resolve_session_id_falls_back_for_non_string(monkeypatch, artifact_modu
 
 def test_delete_record_local_returns_false_on_oserror(artifact_module, monkeypatch):
     storage_id = "cred-oserror"
-    path = artifact_module._artifact_path(storage_id)
+    path = artifact_module._artifact_path(storage_id, "session-a")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as handle:
         handle.write("{}")
