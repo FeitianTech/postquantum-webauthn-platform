@@ -284,6 +284,7 @@ def test_advanced_authenticate_complete_requires_assertion_response():
     assert response.get_json() == {
         "error": "Assertion response is required",
         "challengeSource": "client-supplied",
+        "challengeStatus": "not-tracked",
     }
 
 
@@ -301,6 +302,7 @@ def test_advanced_authenticate_complete_requires_public_key_payload():
     assert response.get_json() == {
         "error": "Invalid request: Missing publicKey in JSON editor content",
         "challengeSource": "client-supplied",
+        "challengeStatus": "not-tracked",
     }
 
 
@@ -377,6 +379,7 @@ def test_advanced_authenticate_complete_returns_404_when_no_credentials_found_an
         assert response.get_json() == {
             "error": "No credentials found",
             "challengeSource": "client-supplied",
+            "challengeStatus": "not-tracked",
         }
 
         with client.session_transaction() as session_state:

@@ -176,7 +176,10 @@ def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkey
         }
 
         with client.session_transaction() as session_state:
-            assert session_state["advanced_state"] == {"challenge": "state-token"}
+            # Stamped at issue, so /complete can tell fresh from replayed or stale.
+            stored_state = dict(session_state["advanced_state"])
+            assert isinstance(stored_state.pop("issued_at"), float)
+            assert stored_state == {"challenge": "state-token"}
             assert session_state["advanced_rp"] == {
                 "id": "normalized.example",
                 "name": "Normalized RP",

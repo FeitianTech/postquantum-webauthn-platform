@@ -294,3 +294,85 @@ def test_advanced_client_supplied_challenge_is_reported_as_not_tracked(config_mo
     assert response.status_code == 200, response.get_json()
     assert response.get_json()["challengeSource"] == "client-supplied"
     assert response.get_json()["challengeStatus"] == "not-tracked"
+
+
+# The advanced flow burns its challenge before anything can fail, like the simple
+# flow, and reports ``challengeStatus`` on every response -- registration too.
+
+
+def _advanced_register_begin(client, challenge=b"\x73" * 32):
+    from .ceremony_helpers import advanced_public_key_options
+
+    begin = client.post("/api/advanced/register/begin", json={"publicKey": advanced_public_key_options(challenge=challenge)})
+    assert begin.status_code == 200, begin.get_json()
+    return begin.get_json()
+
+
+def _advanced_register_complete(client, body, authenticator, **overrides):
+    from .ceremony_helpers import advanced_public_key_options
+
+    challenge = unb64u(body["publicKey"]["challenge"])
+    payload = {
+        "publicKey": advanced_public_key_options(challenge=challenge),
+        "__credential_response": registration_payload(authenticator, challenge=challenge),
+        **overrides,
+    }
+    return client.post("/api/advanced/register/complete", json=payload, headers={"Origin": ORIGIN})
+
+
+def test_advanced_registration_reports_a_replayed_challenge(config_module, advanced_module, advanced_storage):
+    authenticator = Authenticator()
+    client = config_module.app.test_client()
+    body = _advanced_register_begin(client)
+    cookie_with_state = _snapshot_cookie(client)
+
+    first = _advanced_register_complete(client, body, authenticator)
+    assert first.status_code == 200, first.get_json()
+    assert (first.get_json()["challengeSource"], first.get_json()["challengeStatus"]) == ("server-session", "fresh")
+
+    _restore_cookie(client, cookie_with_state)
+    replay = _advanced_register_complete(client, body, authenticator)
+
+    # Reported, not rejected: the request editor is permissive.
+    assert replay.status_code == 200, replay.get_json()
+    assert replay.get_json()["challengeStatus"] == "replayed"
+
+
+def test_an_advanced_registration_that_fails_early_still_burns_its_challenge(config_module, advanced_module, advanced_storage):
+    authenticator = Authenticator()
+    client = config_module.app.test_client()
+    body = _advanced_register_begin(client)
+    cookie_with_state = _snapshot_cookie(client)
+
+    early = _advanced_register_complete(client, body, authenticator, __credential_response=None)
+    assert early.status_code == 400
+    assert early.get_json()["challengeStatus"] == "fresh"
+
+    _restore_cookie(client, cookie_with_state)
+    retry = _advanced_register_complete(client, body, authenticator)
+
+    assert retry.status_code == 200, retry.get_json()
+    assert retry.get_json()["challengeStatus"] == "replayed"
+
+
+def test_an_advanced_authentication_that_fails_early_still_burns_its_challenge(config_module, advanced_module):
+    authenticator = Authenticator()
+    stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
+    client = config_module.app.test_client()
+    challenge = unb64u(_advanced_begin(client, stored_entry)["publicKey"]["challenge"])
+    cookie_with_state = _snapshot_cookie(client)
+
+    # No assertion at all: refused before any credential or state is looked at.
+    early = client.post(
+        "/api/advanced/authenticate/complete",
+        json={"publicKey": {"challenge": {"$base64url": b64u(challenge)}}},
+        headers={"Origin": ORIGIN},
+    )
+    assert early.status_code == 400
+    assert (early.get_json()["challengeSource"], early.get_json()["challengeStatus"]) == ("server-session", "fresh")
+
+    _restore_cookie(client, cookie_with_state)
+    retry = _advanced_complete(client, stored_entry, assertion_payload(authenticator, challenge=challenge), challenge)
+
+    assert retry.status_code == 200, retry.get_json()
+    assert retry.get_json()["challengeStatus"] == "replayed"

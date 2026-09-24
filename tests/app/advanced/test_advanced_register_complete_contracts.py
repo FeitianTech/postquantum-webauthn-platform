@@ -80,6 +80,8 @@ def test_advanced_register_complete_prefers_session_state_over_request_state(mon
         assert response.get_json() == {
             "error": "register failure",
             "challengeSource": "server-session",
+            # This hand-made state was never stamped by /begin.
+            "challengeStatus": "expired",
         }
         assert captured["state"] == session_state
 
@@ -113,6 +115,7 @@ def test_advanced_register_complete_uses_request_state_fallback_when_session_mis
     assert response.get_json() == {
         "error": "register fallback failure",
         "challengeSource": "client-supplied",
+        "challengeStatus": "not-tracked",
     }
     assert captured["state"] == fallback_state
 
@@ -188,6 +191,7 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
         assert response.get_json() == {
             "error": "register reached",
             "challengeSource": "server-session",
+            "challengeStatus": "expired",
         }
 
         with client.session_transaction() as session_store:

@@ -194,7 +194,12 @@ def test_advanced_register_complete_returns_500_when_artifact_store_returns_fals
             assert "advanced_register_allowed_attachments" not in session_state
 
     assert response.status_code == 500
-    assert response.get_json() == {"error": "Unable to persist credential artifact."}
+    assert response.get_json() == {
+        "error": "Unable to persist credential artifact.",
+        # A hand-made session state, never stamped by /begin.
+        "challengeSource": "server-session",
+        "challengeStatus": "expired",
+    }
     assert registration_events == []
 
 
@@ -238,7 +243,12 @@ def test_advanced_register_complete_returns_500_when_artifact_store_raises(monke
             assert "advanced_register_allowed_attachments" not in session_state
 
     assert response.status_code == 500
-    assert response.get_json() == {"error": "Unable to persist credential artifact."}
+    assert response.get_json() == {
+        "error": "Unable to persist credential artifact.",
+        # A hand-made session state, never stamped by /begin.
+        "challengeSource": "server-session",
+        "challengeStatus": "expired",
+    }
     assert registration_events == []
 
 
@@ -291,6 +301,7 @@ def test_advanced_register_complete_returns_400_when_add_public_key_material_rai
     assert response.get_json() == {
         "error": "public key material unavailable",
         "challengeSource": "server-session",
+        "challengeStatus": "expired",
     }
     assert artifact_store_calls == []
     assert registration_events == []

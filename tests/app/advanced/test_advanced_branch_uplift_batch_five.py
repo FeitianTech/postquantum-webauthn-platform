@@ -123,7 +123,11 @@ def test_register_complete_validates_required_payload_and_username_fields():
             json={"publicKey": {"user": {"name": "user@example.com"}}},
         )
         assert missing_response.status_code == 400
-        assert missing_response.get_json() == {"error": "Credential response is required"}
+        assert missing_response.get_json() == {
+            "error": "Credential response is required",
+            "challengeSource": "client-supplied",
+            "challengeStatus": "not-tracked",
+        }
 
         missing_public_key = client.post(
             "/api/advanced/register/complete",
@@ -144,7 +148,7 @@ def test_register_complete_validates_required_payload_and_username_fields():
             },
         )
         assert missing_username.status_code == 400
-        assert missing_username.get_json() == {"error": "Username is required in user.name"}
+        assert missing_username.get_json()["error"] == "Username is required in user.name"
 
 
 def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_contract(monkeypatch, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module, advanced_tracing):

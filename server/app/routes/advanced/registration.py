@@ -33,6 +33,7 @@ from ...attachments import (
     normalize_attachment_list,
     resolve_effective_attachments,
 )
+from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
 from ...encoding import decode_hex, encode_base64, encode_base64url
 from ...storage import credentials
 from ...webauthn import attestation, metadata, pqc
@@ -184,6 +185,8 @@ def prepare_register_complete_inputs(
 CHALLENGE_SOURCE_SERVER = "server-session"
 #: The ceremony challenge was taken from the request body (request-editor mode).
 CHALLENGE_SOURCE_CLIENT = "client-supplied"
+#: A client-supplied challenge: the server never issued it, so cannot say.
+CHALLENGE_STATUS_NOT_TRACKED = "not-tracked"
 
 
 def resolve_state_and_registration_server(
@@ -196,8 +199,10 @@ def resolve_state_and_registration_server(
     attestation_statement: Any,
     raw_attestation_object: Any,
     trace: dict[str, Any] | None = None,
+    session_state: Any = None,
 ) -> tuple[dict[str, Any] | None, Any | None]:
-    state = session.pop("advanced_state", None)
+    # The caller has already taken the session's state, and consumed its challenge.
+    state = session_state
     challenge_source = CHALLENGE_SOURCE_SERVER if state is not None else None
     if state is None:
         fallback_state = data.get("__session_state")
@@ -594,6 +599,21 @@ def finalize_registration_completion(
 
 def advanced_register_complete():
     data = request.get_json(silent=True) or {}
+    # Consumed before anything can fail, as in the simple flow: an early error
+    # burns the challenge too, so a replay is always labelled as one. The
+    # request editor is permissive: it reports ``challengeStatus``, it does not
+    # reject on it. Every response carries the trace.
+    session_state = session.pop("advanced_state", None)
+    state_trace: dict[str, Any] = {
+        "challengeSource": CHALLENGE_SOURCE_SERVER if session_state is not None else CHALLENGE_SOURCE_CLIENT,
+        "challengeStatus": (
+            consume_ceremony_state(session_state) if session_state is not None else CHALLENGE_STATUS_NOT_TRACKED
+        ),
+    }
+    return _with_challenge_source(_register_complete(data, session_state, state_trace), state_trace)
+
+
+def _register_complete(data: Mapping[str, Any], session_state: Any, state_trace: dict[str, Any]) -> Any:
     prepared, error_response = prepare_register_complete_inputs(data)
     if error_response is not None:
         return error_response
@@ -624,10 +644,6 @@ def advanced_register_complete():
 
     warnings: list[str] = []
 
-    # Always reported, even on the error paths below: the advanced flow is
-    # allowed to be permissive, but never allowed to be silent about it.
-    state_trace: dict[str, Any] = {"challengeSource": CHALLENGE_SOURCE_CLIENT}
-
     try:
         state_ctx, state_error = resolve_state_and_registration_server(data=data,
             original_request=original_request,
@@ -637,6 +653,7 @@ def advanced_register_complete():
             attestation_statement=attestation_statement,
             raw_attestation_object=raw_attestation_object,
             trace=state_trace,
+            session_state=session_state,
         )
         if state_error is not None:
             return _with_challenge_source(state_error, state_trace)
@@ -914,7 +931,7 @@ def _with_challenge_source(
     error_response: Any,
     state_trace: Mapping[str, Any],
 ) -> Any:
-    """Re-emit an early error response with the challenge source attached."""
+    """Re-emit a response with the challenge source and status attached."""
 
     payload, status = error_response if isinstance(error_response, tuple) else (error_response, 200)
     try:
@@ -924,7 +941,8 @@ def _with_challenge_source(
     if not isinstance(body, Mapping):
         return error_response
     merged = dict(body)
-    merged.setdefault("challengeSource", state_trace.get("challengeSource"))
+    for key, value in state_trace.items():
+        merged.setdefault(key, value)
     return jsonify(merged), status
 
 
@@ -1278,7 +1296,8 @@ def advanced_register_begin():
         extensions=processed_extensions if processed_extensions else None,
     )
 
-    session["advanced_state"] = state
+    # Stamped so /complete can tell a fresh challenge from a replayed or stale one.
+    session["advanced_state"] = stamp_ceremony_state(dict(state))
     session["advanced_rp"] = {"id": rp_entity.id, "name": rp_entity.name}
     session["advanced_original_request"] = data
 
