@@ -17,7 +17,7 @@ from typing import Any
 
 from fido2.webauthn import AuthenticatorData
 
-from . import canonical
+from . import canonical, key_collisions
 from .cbor_parser import _CborDecodingError, _structure_to_value, decode_item
 from .keys import MISSING, key_identity
 
@@ -48,7 +48,8 @@ def check(auth_data: bytes, base_offset: int, path: str) -> list[dict[str, Any]]
     findings: list[dict[str, Any]] = []
     items, offset = embedded_items(auth_data)
     for name, node in items:
-        findings += canonical.relocate(canonical.check(node, auth_data), base_offset, f"{path}<{name}>")
+        structure = canonical.check(node, auth_data) + key_collisions.check(node)
+        findings += canonical.relocate(structure, base_offset, f"{path}<{name}>")
     if offset is None:
         # Where the embedded CBOR stops being well-formed, the decoded view says so.
         return findings

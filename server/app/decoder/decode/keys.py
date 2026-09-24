@@ -1,7 +1,9 @@
 """Key and binary coercion helpers for decoder internals."""
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+import json
+from collections import Counter
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from fido2.utils import ByteBuffer
@@ -69,11 +71,105 @@ def key_text(key: Any) -> str:
     return str(key)
 
 
+def qualified_key_text(key: Any) -> str:
+    """Spell a map key with its type: 1, "1" (text), h'01' (bytes), true (boolean).
+
+    For a map whose keys ``key_text`` would spell alike. An integer keeps its
+    plain spelling: no other integer has it, and JSON has no other for it.
+    """
+
+    if isinstance(key, bool):
+        return f"{'true' if key else 'false'} (boolean)"
+    if isinstance(key, int):
+        return str(key)
+    if isinstance(key, str):
+        return f"{json.dumps(key, ensure_ascii=False)} (text)"
+    raw = coerce_cbor_bytes(key)
+    if raw is not None:
+        return f"h'{raw.hex()}' (bytes)"
+    if isinstance(key, CborDiagnostic):
+        return f"{key.diagnostic} ({key.kind or 'diagnostic notation'})"
+    return f"{key} ({type(key).__name__})"
+
+
+def json_keys(keys: Sequence[Any], decorate: Callable[[Any, str], str] | None = None) -> list[str]:
+    """The JSON key each of a map's ``keys`` is shown under; no two are alike.
+
+    JSON spells every key as text, so CBOR keys of different types can share a
+    spelling: the integer 1 and the text "1", the byte string h'01' and the text
+    "01". Where nothing collides, a key is ``key_text(key)``, passed through
+    ``decorate(key, text)`` when given (a CTAP label, say). Every key whose
+    spelling another key shares is spelled with its type instead
+    (``qualified_key_text``), so no entry is lost to another.
+    """
+
+    def spell(key: Any, text: str) -> str:
+        return decorate(key, text) if decorate is not None else text
+
+    labels = [spell(key, key_text(key)) for key in keys]
+    clashing = _clashing([key_text(key) for key in keys]) | _clashing(labels)
+    qualified: set[int] = set()
+    while todo := {index for index in clashing - qualified if not _is_int(keys[index])}:
+        for index in todo:
+            labels[index] = spell(keys[index], qualified_key_text(keys[index]))
+        qualified |= todo
+        clashing = _clashing(labels)
+
+    # Typed spellings differ for different keys; should ``decorate`` still make
+    # two alike, the later is numbered rather than lost.
+    used: set[str] = set()
+    for index, label in enumerate(labels):
+        candidate, number = label, 1
+        while candidate in used:
+            number += 1
+            candidate = f"{label} #{number}"
+        labels[index] = candidate
+        used.add(candidate)
+    return labels
+
+
+def json_items(
+    mapping: Mapping[Any, Any], decorate: Callable[[Any, str], str] | None = None
+) -> list[tuple[str, Any, Any]]:
+    """Each entry of ``mapping`` as (JSON key, key, value), JSON keys by ``json_keys``."""
+
+    keys = list(mapping)
+    return [(label, key, mapping[key]) for label, key in zip(json_keys(keys, decorate), keys)]
+
+
+def _is_int(key: Any) -> bool:
+    return isinstance(key, int) and not isinstance(key, bool)
+
+
+def _clashing(labels: Sequence[str]) -> set[int]:
+    counts = Counter(labels)
+    return {index for index, label in enumerate(labels) if counts[label] > 1}
+
+
 def stringify_mapping_keys(value: Any) -> Any:
     if isinstance(value, Mapping):
-        return {key_text(key): stringify_mapping_keys(val) for key, val in value.items()}
+        return {label: stringify_mapping_keys(entry) for label, _key, entry in json_items(value)}
     if isinstance(value, list):
         return [stringify_mapping_keys(item) for item in value]
+    return value
+
+
+def json_ready(value: Any) -> Any:
+    """``value`` with every map in it one JSON can hold whole.
+
+    A map keyed only by text, or only by integers, is kept as it is: the JSON
+    encoder spells an integer key itself. Any other map -- integer and text keys
+    together, byte-string or CBOR-diagnostic keys -- is spelled by ``json_keys``,
+    so no entry is lost and the response still serializes.
+    """
+
+    if isinstance(value, Mapping):
+        keys = list(value)
+        if all(isinstance(key, str) for key in keys) or all(_is_int(key) for key in keys):
+            return {key: json_ready(entry) for key, entry in value.items()}
+        return {label: json_ready(entry) for label, _key, entry in json_items(value)}
+    if isinstance(value, list):
+        return [json_ready(item) for item in value]
     return value
 
 
@@ -85,7 +181,7 @@ def make_hex_only(value: Any) -> Any:
     if isinstance(value, (bytes, bytearray, memoryview)):
         return bytes(value).hex()
     if isinstance(value, Mapping):
-        return {key_text(key): make_hex_only(val) for key, val in value.items()}
+        return {label: make_hex_only(entry) for label, _key, entry in json_items(value)}
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         return [make_hex_only(item) for item in value]
     return value

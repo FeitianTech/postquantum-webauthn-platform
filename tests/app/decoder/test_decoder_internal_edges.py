@@ -230,7 +230,7 @@ def test_structure_to_value_preserves_integer_map_keys():
     assert value == {1: "first", 2: "second"}
 
 
-def test_structure_to_value_falls_back_to_string_for_unhashable_keys():
+def test_structure_to_value_keeps_an_array_key_as_a_key_of_its_own_type():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     structure = {
@@ -253,7 +253,9 @@ def test_structure_to_value_falls_back_to_string_for_unhashable_keys():
 
     value = decode_module._structure_to_value(structure)
 
-    assert value == {"[1, 2]": "value"}
+    # Not the text "[1, 2]": a text key spelled that way stays a different key.
+    assert value == {decode_module.CborDiagnostic("[1, 2]", "array"): "value"}
+    assert decode_module._stringify_mapping_keys(value) == {"[1, 2]": "value"}
 
 
 def test_expand_cbor_value_stringifies_mapping_keys_and_summarizes_binary_values():

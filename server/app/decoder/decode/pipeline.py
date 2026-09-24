@@ -32,6 +32,7 @@ from . import (
     cbor_parser,
     ctap,
     interpretations,
+    key_collisions,
     response,
 )
 
@@ -226,7 +227,7 @@ def _error_location(exc: ValueError) -> tuple[int, str, str]:
 
 def _nested_attestation_object(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     details, node, end = _read_attestation_object(data)
-    findings = canonical.check(node, data) + ctap._trailing_findings(data, end)
+    findings = canonical.check(node, data) + key_collisions.check(node) + ctap._trailing_findings(data, end)
     return details, findings + authenticator_data_findings.for_member(node, data, ("authData",))
 
 
@@ -395,7 +396,8 @@ def _try_decode_attestation_object(data: bytes, encoding: str) -> dict[str, Any]
         "binary": _binary_summary(data, encoding),
         "extraData": extra,
     }
-    ctap._attach_findings(result, canonical.check(node, data) + ctap._trailing_findings(data, end) + located)
+    structure = canonical.check(node, data) + key_collisions.check(node)
+    ctap._attach_findings(result, structure + ctap._trailing_findings(data, end) + located)
     return result
 
 
