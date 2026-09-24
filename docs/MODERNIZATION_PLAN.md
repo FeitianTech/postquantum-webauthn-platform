@@ -263,6 +263,20 @@ Noted: reported image growth of +55MB from `apt-get upgrade` did not reproduce f
 `tools/update_mds_snapshot.py`. 3 moderate dev-only npm advisories remain visible but ungated
 (`@vitest/mocker`; the fix needs vitest 4.1.11, which npm 10.9.8 cannot install).
 
+### Owner decisions (2026-09-24) — settled, do not re-raise
+- **Deploy gate: approved.** The Cloud Build trigger is to build from `cloudbuild.yaml`, so its test
+  steps gate every deploy. `gcloud builds triggers update github ... --build-config=cloudbuild.yaml`
+  fails with `INVALID_ARGUMENT`: the trigger carries an inline `build`, and a trigger may not have
+  both. The switch is a re-import of the same trigger with `filename: cloudbuild.yaml` and no `build`.
+  Both test steps were run beforehand in their exact images (`python:3.12-slim`: 2466 passed /
+  5 skipped; `node:22-slim`: 293 passed).
+- **Branch protection on `main`: off.** The bot PR flow is a convention, not enforced.
+- **`BOT_PR_TOKEN`: not set.** Bot pull requests get no CI run until someone pushes to them.
+- **Git history rewrite: deferred, the tech lead's call on timing.** Planned for the final-audit
+  phase, once the tree has stopped churning, so it happens once.
+- **Multi-instance replay protection: not now.** The challenge registry stays per-instance.
+- **Registration logging to `rainzhang05/CredentialLogs`: keep as it works today.**
+
 ### Phase 6 — M3 pilot: unwind the globals carrier in `metadata` — DONE (2026-09-17), verified
 Four staged passes over 24 commits: give fragments real imports (inert while the carrier lives,
 so safe first) -> move 15 caches, 5 locks and 14 constants into a new leaf
@@ -1899,7 +1913,7 @@ key). `docker-compose.yml` bind-mounts `./instance`, sharing the developer's rea
 into the container. Container **runs as root**, no `HEALTHCHECK`. `ci-*.yml` run twice per
 same-repo PR. No dependency caching anywhere.
 Undocumented: every registration attempts to upload to a hardcoded personal GitHub repo,
-`rainzhang05/CredentialLogs` (`github_client.py:25-26`) — should be opt-in and configurable.
+`rainzhang05/CredentialLogs` (`github_client.py:25-26`) — should be opt-in and configurable. **Owner decision 2026-09-24: keep as it is.**
 
 ---
 
