@@ -1,3 +1,4 @@
+import logging
 import sys
 import types
 import uuid
@@ -40,7 +41,8 @@ class ImmediateThread:
         self._target(*self._args, **self._kwargs)
 
 
-def test_record_registration_event_uploads_json(monkeypatch, capsys):
+def test_record_registration_event_uploads_json(monkeypatch, caplog):
+    caplog.set_level(logging.INFO, logger=device_logs.__name__)
     uploads = []
 
     def fake_upload(path, payload, **kwargs):
@@ -76,7 +78,7 @@ def test_record_registration_event_uploads_json(monkeypatch, capsys):
 
     device_logs.record_registration_event(event)
 
-    out = capsys.readouterr().out.strip()
+    out = "\n".join(record.getMessage() for record in caplog.records)
     assert "Uploaded credential log" in out
     assert "AAGUID=7701a390-8b53-4ce0-bf7c-b331569b8d1a" in out
 
@@ -102,7 +104,8 @@ def test_record_registration_event_uploads_json(monkeypatch, capsys):
     assert payload["aaguid_match"] is True
 
 
-def test_record_registration_event_creates_unique_files(monkeypatch, capsys):
+def test_record_registration_event_creates_unique_files(monkeypatch, caplog):
+    caplog.set_level(logging.INFO, logger=device_logs.__name__)
     uploads = []
 
     def fake_upload(path, payload, **kwargs):
@@ -145,7 +148,7 @@ def test_record_registration_event_creates_unique_files(monkeypatch, capsys):
     device_logs.record_registration_event(event1)
     device_logs.record_registration_event(event2)
 
-    out_lines = [line.strip() for line in capsys.readouterr().out.strip().splitlines() if line.strip()]
+    out_lines = [record.getMessage() for record in caplog.records]
     assert len(out_lines) == 2
     for line in out_lines:
         assert "Uploaded credential log" in line
@@ -193,7 +196,8 @@ def test_record_registration_event_disabled(monkeypatch):
     device_logs.record_registration_event(event)
 
 
-def test_record_registration_event_uploads_inline_on_cloud_run(monkeypatch, capsys):
+def test_record_registration_event_uploads_inline_on_cloud_run(monkeypatch, caplog):
+    caplog.set_level(logging.INFO, logger=device_logs.__name__)
     uploads = []
 
     def fake_upload(path, payload, **kwargs):
@@ -228,7 +232,7 @@ def test_record_registration_event_uploads_inline_on_cloud_run(monkeypatch, caps
 
     device_logs.record_registration_event(event)
 
-    out = capsys.readouterr().out.strip()
+    out = "\n".join(record.getMessage() for record in caplog.records)
     assert "Uploaded credential log" in out
     assert len(uploads) == 1
     assert uploads[0][0].endswith("_inline01.json")
@@ -365,7 +369,8 @@ def test_should_upload_async_unknown_override_falls_back_to_cloud_run_policy(mon
     assert device_logs._should_upload_async() is False
 
 
-def test_upload_worker_logs_failure_without_raising(monkeypatch, capsys):
+def test_upload_worker_logs_failure_without_raising(monkeypatch, caplog):
+    caplog.set_level(logging.INFO, logger=device_logs.__name__)
     monkeypatch.setattr(
         device_logs,
         "github_upload_json",
@@ -383,12 +388,13 @@ def test_upload_worker_logs_failure_without_raising(monkeypatch, capsys):
         },
     )
 
-    output = capsys.readouterr().out.strip()
+    output = "\n".join(record.getMessage() for record in caplog.records)
     assert "Failed to upload credential log" in output
     assert "upload failed" in output
 
 
-def test_upload_worker_logs_success(monkeypatch, capsys):
+def test_upload_worker_logs_success(monkeypatch, caplog):
+    caplog.set_level(logging.INFO, logger=device_logs.__name__)
     monkeypatch.setattr(device_logs, "github_upload_json", lambda *_args, **_kwargs: None)
 
     device_logs._upload_worker(
@@ -402,7 +408,7 @@ def test_upload_worker_logs_success(monkeypatch, capsys):
         },
     )
 
-    output = capsys.readouterr().out.strip()
+    output = "\n".join(record.getMessage() for record in caplog.records)
     assert "Uploaded credential log" in output
     assert "AAGUID=7701a390-8b53-4ce0-bf7c-b331569b8d1a" in output
 
