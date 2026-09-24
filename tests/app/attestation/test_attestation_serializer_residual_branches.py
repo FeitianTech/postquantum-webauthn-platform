@@ -9,7 +9,7 @@ from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
 
 
-def test_attestation_helper_residual_branches(monkeypatch, certificates, attestation_module):
+def test_attestation_helper_residual_branches(monkeypatch, certificate_public_keys, attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     assert attestation_module._normalise_pqc_algorithm_identifier("   ") is None
@@ -63,7 +63,7 @@ def test_attestation_helper_residual_branches(monkeypatch, certificates, attesta
     )
 
     monkeypatch.setattr(
-        certificates,
+        certificate_public_keys,
         "_build_unknown_public_key_info",
         lambda _cert, _err: (
             {"type": "Unknown", "algorithm": {"name": "Unknown"}},
@@ -81,7 +81,7 @@ def test_attestation_helper_residual_branches(monkeypatch, certificates, attesta
     assert "Nested:" in fallback["summary"]
 
 
-def test_serialize_attestation_certificate_mocked_certificate_residual_paths(monkeypatch, certificates, certificate_extensions, attestation_module):
+def test_serialize_attestation_certificate_mocked_certificate_residual_paths(monkeypatch, certificates, certificate_extensions, certificate_public_keys, attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     class _Extensions(list):
@@ -144,7 +144,7 @@ def test_serialize_attestation_certificate_mocked_certificate_residual_paths(mon
     monkeypatch.setattr(certificates, "describe_mldsa_oid_name", lambda _oid: "FriendlySig")
     monkeypatch.setattr(certificates, "describe_mldsa_oid", lambda _oid: {})
     monkeypatch.setattr(
-        certificates,
+        certificate_public_keys,
         "_build_unknown_public_key_info",
         lambda _cert, _err: (
             {"type": "Unknown", "algorithm": {"name": "Unknown"}},

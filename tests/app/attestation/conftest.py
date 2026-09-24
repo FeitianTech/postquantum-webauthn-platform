@@ -43,6 +43,13 @@ def certificate_extensions():
 
 
 @pytest.fixture
+def certificate_public_keys():
+    """The submodule that describes a certificate's public key, loadable or not."""
+
+    return _fragment("certificate_public_keys")
+
+
+@pytest.fixture
 def trust():
     """The fragment that defines the trust-path and certificate helpers. The fragment that defines the trusted-CA allowlist helpers."""
 

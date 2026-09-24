@@ -110,11 +110,11 @@ def test_metadata_lookup_subject_description_and_format_helpers(attestation_modu
     assert attestation_module._extract_common_names(name) == ["Demo CN"]
 
 
-def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(monkeypatch, certificates, attestation_module):
+def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(monkeypatch, certificate_public_keys, attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     monkeypatch.setattr(
-        certificates,
+        certificate_public_keys,
         "extract_certificate_public_key_info",
         lambda _cert: {
             "algorithm_name": "ML-DSA",
@@ -139,7 +139,7 @@ def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(
     assert summary
 
     monkeypatch.setattr(
-        certificates,
+        certificate_public_keys,
         "_build_unknown_public_key_info",
         lambda _cert, _err: ({"type": "Unknown", "algorithm": {"name": "Unknown"}}, [("Type", "Unknown")]),
     )
