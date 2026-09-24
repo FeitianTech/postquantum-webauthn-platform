@@ -16,6 +16,7 @@ from typing import Any
 
 from cbor2 import CBORSimpleValue, CBORTag, undefined
 
+from ..cbor_head import encode_head
 from ..ctap2_order import ctap2_key_order
 
 
@@ -169,19 +170,9 @@ def _encode_major_type_with_length(major_type: int, length: int) -> bytes:
 def _encode_unsigned_integer(major_type: int, value: int) -> bytes:
     if value < 0:
         raise ValueError("Unsigned CBOR integers must be non-negative.")
-
-    if value < 24:
-        return bytes([(major_type << 5) | value])
-    if value < 256:
-        return bytes([(major_type << 5) | 24, value])
-    if value < 65536:
-        return bytes([(major_type << 5) | 25]) + value.to_bytes(2, "big")
-    if value < 4294967296:
-        return bytes([(major_type << 5) | 26]) + value.to_bytes(4, "big")
-    if value < 18446744073709551616:
-        return bytes([(major_type << 5) | 27]) + value.to_bytes(8, "big")
-
-    raise ValueError("CBOR integers exceeding 64 bits are not supported in canonical mode.")
+    if value >= 18446744073709551616:
+        raise ValueError("CBOR integers exceeding 64 bits are not supported in canonical mode.")
+    return encode_head(major_type, value)
 
 
 def _encode_canonical_float(value: float) -> bytes:
