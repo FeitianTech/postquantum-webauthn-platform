@@ -387,3 +387,20 @@ def test_client_readers_name_what_they_expect(name, value, expected):
 
     for key, text in expected.items():
         assert entry[key] == text
+
+
+def test_empty_extension_maps_add_nothing():
+    credential = {
+        "id": "AQID",
+        "type": "public-key",
+        "response": {
+            "attestationObject": _b64url(WEBAUTHN_L3_PACKED_SELF_ATTESTATION_OBJECT),
+            "clientDataJSON": _b64url(WEBAUTHN_L3_PACKED_SELF_CLIENT_DATA_JSON),
+        },
+        "clientExtensionResults": {},
+    }
+    request = b"\x02" + cbor2.dumps({1: "example.com", 2: bytes(32), 4: {}})
+
+    assert "extensionsDecoded" not in decode_payload_text(json.dumps(credential))["data"]
+    assert "extensionsDecoded" not in decode_payload_text(request.hex())["data"]
+    assert "extensionsDecoded" not in decode_payload_text(_auth_data(_UP, {}).hex())["data"]
