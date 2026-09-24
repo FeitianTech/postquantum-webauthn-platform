@@ -430,10 +430,6 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
     assert serialized["source"] == {"storedFilename": "stored.json"}
     assert serialized["legalHeader"] == "Legal Header"
 
-    error = metadata_module.MetadataDownloadError("boom", status_code=503, retry_after="60")
-    assert error.status_code == 503
-    assert error.retry_after == "60"
-
     assert metadata_module._parse_http_datetime(None) is None
     monkeypatch.setattr(blob, "parsedate_to_datetime", lambda _value: datetime(2026, 1, 1, 0, 0, 0))
     parsed = metadata_module._parse_http_datetime("Wed, 01 Jan 2026 00:00:00 GMT")
@@ -733,3 +729,9 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, m
 
     metadata_module.get_mds_verifier()
     assert created == [{"base": None, "count": 1}]
+
+
+def test_the_never_raised_metadata_download_error_is_gone(metadata_module):
+    # Nothing raised or caught it; it was exported for nobody.
+    assert not hasattr(metadata_module, "MetadataDownloadError")
+    assert "MetadataDownloadError" not in metadata_module.__all__
