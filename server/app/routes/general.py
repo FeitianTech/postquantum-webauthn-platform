@@ -30,7 +30,8 @@ from ..env_flags import parse_env_flag
 from ..mds_provisioning import ensure_snapshot_available
 from ..startup import startup_fail_fast_enabled
 from ..static_assets import asset_url
-from ..storage.credentials import delkey, encode_records, readkey
+from ..storage.credentials import delkey, readkey
+from ..storage.record_format import encode_records
 from ..webauthn.attestation import serialize_attestation_certificate
 from ..webauthn.metadata import (
     _load_base_metadata,

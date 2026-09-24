@@ -55,9 +55,9 @@ def _env(tmp: Path) -> dict[str, str]:
 def test_module_logger_warnings_reach_stderr_in_the_flask_format(tmp_path):
     code = (
         "import server.app.app\n"
-        "from server.app.storage import credentials\n"
+        "from server.app.storage import record_format\n"
         "from server.app.webauthn import pqc\n"
-        "credentials._load_payload(b'not json', source='storage-probe')\n"
+        "record_format.load_payload(b'not json', source='storage-probe')\n"
         "pqc.logger.warning('pqc-probe')\n"
         "pqc.logger.info('pqc-info-probe')\n"
     )
@@ -71,7 +71,7 @@ def test_module_logger_warnings_reach_stderr_in_the_flask_format(tmp_path):
     )
 
     storage = _flask_warning(
-        "credentials", r"(Ignoring non-JSON|Unable to read legacy) credential payload at storage-probe"
+        "record_format", r"(Ignoring non-JSON|Unable to read legacy) credential payload at storage-probe"
     )
     assert re.search(storage, result.stderr, re.M), result.stderr
     # %(module)s names the calling code -- here the probe script, not pqc.py.
@@ -162,7 +162,7 @@ def test_storage_warning_reaches_gunicorn_stderr(tmp_path):
         shutil.rmtree(sock_dir, ignore_errors=True)
 
     warning = _flask_warning(
-        "credentials",
+        "record_format",
         r"(Ignoring non-JSON|Unable to read legacy) credential payload at .*probe_credential_data\.json",
     )
     assert re.search(warning, stderr, re.M), stderr
