@@ -80,15 +80,9 @@ def advanced_authenticate_begin():
     if selection_error is not None:
         return selection_error
 
-    algorithm_source: Iterable[Any]
-    if credentials_for_begin:
-        algorithm_source = credentials_for_begin
-    else:
-        algorithm_source = [record["data"] for record in stored_records if record.get("data") is not None]
-
-    derived_algorithms = algorithms._derive_algorithms_from_credentials(algorithm_source)
-    if derived_algorithms:
-        temp_server.allowed_algorithms = derived_algorithms
+    _offer_credential_algorithms(temp_server, credentials_for_begin or [
+        record["data"] for record in stored_records if record.get("data") is not None
+    ])
 
     processed_extensions = assertion_options.process_assertion_extensions(public_key.get("extensions", {}))
 
@@ -109,6 +103,18 @@ def advanced_authenticate_begin():
         "resident_count": sum(1 for entry in serialized_credentials if entry.get("resident")),
     }
 
+    return jsonify(attestation.make_json_safe(_begin_payload(options, state, resident_key_only)))
+
+
+def _offer_credential_algorithms(temp_server: Any, credentials: Iterable[Any]) -> None:
+    derived_algorithms = algorithms._derive_algorithms_from_credentials(credentials)
+    if derived_algorithms:
+        temp_server.allowed_algorithms = derived_algorithms
+
+
+def _begin_payload(options: Any, state: Any, resident_key_only: bool) -> dict[str, Any]:
+    """The options, the unstamped state for the request editor, and no allow list when discoverable-only."""
+
     options_payload = dict(options)
     options_payload["__session_state"] = attestation.make_json_safe(state)
     public_key_dict = options_payload.get("publicKey")
@@ -116,8 +122,7 @@ def advanced_authenticate_begin():
         allow_list = public_key_dict.get("allowCredentials")
         if resident_key_only or allow_list is None:
             public_key_dict.pop("allowCredentials", None)
-
-    return jsonify(attestation.make_json_safe(options_payload))
+    return options_payload
 
 
 def advanced_authenticate_complete():
@@ -157,14 +162,7 @@ def advanced_authenticate_complete():
     raw_allow_credentials = public_key.get("allowCredentials")
     resident_key_only = not (list(raw_allow_credentials) if isinstance(raw_allow_credentials, list) else [])
 
-    allowed_attachments = resolve_allowed_attachments(
-        session.pop("advanced_authenticate_allowed_attachments", None),
-        resolve_effective_attachments(_hints(public_key), None),
-    )
-    violation = attachment_hint_violation(
-        allowed_attachments,
-        normalize_attachment(response.get("authenticatorAttachment") if isinstance(response, Mapping) else None),
-    )
+    violation = _attachment_violation(public_key, response)
     if violation is not None:
         return _fail({"error": violation})
 
@@ -202,15 +200,32 @@ def advanced_authenticate_complete():
             trace=trace,
         )
     except Exception as exc:
-        response_payload: dict[str, Any] = {"error": str(exc), **trace}
-        failed_credential_id = credential_id_bytes
-        if not failed_credential_id and isinstance(response, Mapping):
-            failed_credential_id = binary_helpers.extract_assertion_credential_id(response)
-        if failed_credential_id:
-            response_payload["failedCredentialId"] = (
-                encode_base64url(failed_credential_id)
-            )
-        return jsonify(response_payload), 400
+        return _unexpected_failure(exc, response, credential_id_bytes, trace)
+
+
+def _attachment_violation(public_key: Mapping[str, Any], response: Any) -> str | None:
+    """Why the response's attachment breaks the hints of begin (or of this request), or ``None``."""
+
+    allowed_attachments = resolve_allowed_attachments(
+        session.pop("advanced_authenticate_allowed_attachments", None),
+        resolve_effective_attachments(_hints(public_key), None),
+    )
+    return attachment_hint_violation(
+        allowed_attachments,
+        normalize_attachment(response.get("authenticatorAttachment") if isinstance(response, Mapping) else None),
+    )
+
+
+def _unexpected_failure(exc: Exception, response: Any, credential_id_bytes: bytes | None, trace: Mapping[str, Any]):
+    response_payload: dict[str, Any] = {"error": str(exc), **trace}
+    failed_credential_id = credential_id_bytes
+    if not failed_credential_id and isinstance(response, Mapping):
+        failed_credential_id = binary_helpers.extract_assertion_credential_id(response)
+    if failed_credential_id:
+        response_payload["failedCredentialId"] = (
+            encode_base64url(failed_credential_id)
+        )
+    return jsonify(response_payload), 400
 
 
 def _state_and_origin(data: Mapping[str, Any], state: Any, response: Any, trace: Mapping[str, Any]) -> tuple[Any, Any]:
