@@ -1230,6 +1230,88 @@ commit of the phase was then re-run on its own tree: all green.
   (main only, commit AND push, small bare-subject commits, no co-author); the additions record that a phase
   brief's no-push applies to that phase, and that commits must be gated on exit codes.
 
+### Phase 18 — silent patches, race-safe credential writes, decomposed routes, size ratchet — DONE (2026-09-24)
+29 commits, each gated on pytest, vitest and ruff exit codes, and each re-run afterwards on its own tree in a
+worktree (all green; the worktree's own `server.app` and `fido2` were imported, checked by path).
+
+**Step 1, no silent patches.** tests/ had **417** `monkeypatch.setattr(..., raising=False)` calls by AST (the
+brief's 282 is the single-line subset). A pytest plugin wrapping `MonkeyPatch.setattr`, run on macOS and in a
+Linux container: 406 always patched an existing attribute; the rest were a vacuous patch
+(`test_metadata_session_binding.py` set `SESSION_METADATA_DIR` on the `metadata` package, which has none — dropped),
+two FreeBSD tests adding `sysctlbyname` to the host libc (glibc has none, so removing `raising=False` would have
+broken Linux CI — they now bring a fake `libc`), and 12 calls that must create an attribute (builtin `open`/`range`
+shadowed in one module; Windows-only `ctypes.WinDLL`/`WinError`/`HRESULT`). `raising=False` setattr calls
+**417 -> 12**, all in `test_no_silent_monkeypatch.py`'s `ALLOWED` (9 file/attribute entries, each with its
+reason); the ratchet also refuses positional `raising`, non-literal `raising`, and `mock.patch(create=True)`. On
+the pre-change tree it flags 407 calls. No test was deleted.
+
+**Step 2, race-safe credential writes.** Simple registration appends to the user's list by `read_for_update` /
+`save_if_unchanged`, retrying a lost race up to 8 times (N racing writers lose at most N-1 times each), 409 after
+that. A read error is now a 500 — on GCS `readkey` used to swallow a download error, return `[]`, and let the
+save replace every stored credential. A save that raised is re-read, so a write whose reply was lost counts as
+saved. `delkey` removes the current file under the store's lock (a delete could land between a CAS check and its
+rename, and the rename wrote the records back). Credential-artifact merges (the browser's merge upload and the
+snapshot PUT hit one record) are conditional on the GCS generation, and hold an `flock` locally; a merge that
+cannot read the record refuses rather than overwrite it. The lock helpers moved to `storage/common.py`. The other
+credential writes are not read-modify-writes: `deletepub` and the delete-all loop are blind deletes, the advanced
+registration artifact is a create under a fresh random id. **Race tests on the pre-change tree: 15 fail, 12 pass**
+(controls and the existing CAS tests): 8 genuine registrations racing for one user answer 8x200 and store **2 of 9**
+credentials (local and fake GCS); the artifact merge loses the other instance's key; a delete during a save leaves
+the records behind; and two processes merging one local artifact lose a key — or fail outright, since the old
+store wrote every artifact through one fixed `<path>.tmp`. All pass now. Tests that neutralised persistence by
+patching `readkey`/`savekey` (which the new code no longer calls, so they wrote real files under `instance/`) were
+retargeted; four `readkey` patches in advanced tests that nothing had read since Phase 17 were removed.
+
+**Step 3, decomposition.** Built first, on the untouched tree: `tests/app/characterization/` — 35 scenarios through
+the simple and advanced ceremonies, the decoder and the attestation serialisers, each recorded byte for byte
+(status, headers, decoded cookies, body, every JSON file written to either store, device-log events) with the
+clock fixed, randomness reseeded per request, stores in a temporary directory and the MDS stubbed (an audit hook
+fails a scenario that opens anything under `frontend/static`). Keys and certificates are deterministic (derived EC,
+seeded Ed25519/Ed448, RSA from derived primes, Ed25519-signed certificates); only echoed ML-DSA signatures are
+frozen. Stable across three hash seeds, alone and in the full suite, and on Linux; kept as a test. **Characterization
+diff: empty at every commit of the phase**, steps 1 and 2 included; the only scrub beyond time is the memory
+address cryptography puts in a SafetyNet certificate's SCT extension text. Then: advanced registration
+(1309 lines) became orchestrators over `registration_options`, `registration_inputs`, `registration_attestation`,
+`registration_record` and `registration_persistence`, with the algorithm offer in `algorithms.py`; advanced
+authentication over `assertion_credentials`, `assertion_options`, `assertion_verification`; simple registration
+over `registration_record` and `registration_persistence`; `certificates.py` (977) over `certificate_names`,
+`certificate_extensions`, `certificate_public_keys`, `certificate_summary`; `checks.py` split in place. Every
+moved name is gone from its old module (checked with `hasattr`); moved code is called through module objects;
+seven test patches were retargeted to the module that now defines the name (left alone, each fails with an
+`AttributeError` or, for a logger, an unmet assertion — no longer a silent pass). URL map identical (31 rules); no collected
+test ID vanished (2424 -> 2484); the same 4 skips.
+
+**Step 4, size ratchet.** `test_code_size_ratchet.py`: functions <= 80 lines, modules <= 700, except entries at
+their current length that may only shrink. Functions over 80 in `server/app` **34 -> 14**, modules over 700
+**6 -> 3**. Largest function **328** (`advanced_authenticate_complete`) -> **191** (simple `authenticate_complete`,
+out of the brief's scope); largest module **1309** (`advanced/registration.py`) -> **811** (`decode/ctap.py`, which
+the test now holds at its size). Remaining entries: `routes/simple/authentication.py::authenticate_complete` 191,
+`mds_snapshot.py::build_explorer_entry` 131, `classical._evaluate_classical_attestation_root` 122,
+`pqc._evaluate_mldsa_attestation_root` 120, `credential_list` builders 114/85, `decode/pipeline._decode_public_key_credential`
+109, `advanced/parsing._parse_client_supplied_credentials` 100, `advanced/tracing._log_authenticator_attestation_response`
+94, `pqc._attempt_pqc_attestation_signature_validation` 89, `decode/response._build_credential_payload` 88,
+`decode/ctap._try_decode_cbor` 85, `session_secret._resolve_secret_key` 84, `cbor_parser._structure_to_value` 82;
+modules `decode/ctap.py` 811, `storage/credentials.py` 771, `decode/pipeline.py` 763.
+
+**Tests.** 2420 -> **2480** passed / 4 skipped (Linux 2406 -> 2466 / 5), `tests/app/security/` 93 -> **105**,
+vitest 293 -> 293, ruff clean, coverage 96.15% -> **96.45%**.
+
+**Found but not fixed:**
+- The certificate view shows a SafetyNet certificate's SCT extension as Python `repr` text with memory addresses
+  (`<...Sct object at 0x...>`): different on every run, and meaningless to a reader.
+- `test_challenge_replay.py::test_advanced_registration_reports_a_replayed_challenge` leaves a directory in
+  `server/runtime/session-metadata/` on every run (it does not redirect `SESSION_METADATA_DIR`); five session tests
+  patch `config.SESSION_METADATA_DIR`, which `storage/session_metadata.py` copied at import, so nothing reads it.
+- Legacy credential copies carry no version, so a save racing a delete can still write back deleted legacy records.
+- A conditional GCS upload is one attempt: an artifact merge whose write landed but whose reply was lost answers
+  "Unable to store artifact" (registration re-reads to tell; the merge does not).
+- Local credential artifacts are stored by storage id alone; on GCS they are scoped by session.
+- `mds_snapshot.py` keeps its own copies of three algorithm-name helpers now in `certificate_names.py`.
+- The characterization goldens are 2.1 MB and change with cryptography's extension `str()` and parse-error text:
+  a bump that moves them is regenerated with `CHARACTERIZATION_WRITE=1` and the diff reviewed.
+- Still open from Phase 17: `readkey`/`iter_credentials` skip unreadable blobs; authentication falls back to the
+  client's counter when the server read fails.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
