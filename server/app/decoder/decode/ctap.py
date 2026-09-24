@@ -9,7 +9,7 @@ from fido2.webauthn import AuthenticatorData
 from ...encoding import encode_base64
 from ...webauthn.attestation import encode_base64url
 from .. import ctap_tables
-from . import canonical, cbor_parser, pipeline, response
+from . import authenticator_data_findings, canonical, cbor_parser, pipeline, response
 from .cbor_parser import (
     _CborDecodingError,
     _structure_to_value,
@@ -842,6 +842,8 @@ def _try_decode_cbor(data: bytes, encoding: str, *, lenient: bool = False) -> di
         decoded_payload["decodedValue"] = _stringify_mapping_keys(_hex_json_safe(hex_decoded_value))
 
     findings = canonical.check(node, data) + skipped + _trailing_findings(data, end)
+    if classification in ("make_credential_output", "get_assertion_output"):
+        findings += authenticator_data_findings.for_member(node, data, (2, "authData"))
 
     if ctap_details is not None:
         ctap_details["payloadLength"] = consumed_total
