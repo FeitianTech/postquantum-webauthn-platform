@@ -86,8 +86,9 @@ def test_the_decoder_and_encoder_read_the_same_tables():
     }
     for kind, (table, decoder_labels) in tables.items():
         assert constants._CTAP_FIELD_LABELS[kind] is table
-        assert {key: name for key, name in decoder_labels.items() if isinstance(key, int)} == table
-        assert {key for key in decoder_labels if isinstance(key, str)} == set(table.values())
+        # Numbers only: a text key named like a member is not that member.
+        assert decoder_labels == table
+        assert all(isinstance(key, int) for key in decoder_labels)
 
 
 def test_every_decoder_handler_is_keyed_by_a_name_in_its_table():

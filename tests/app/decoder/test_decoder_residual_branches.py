@@ -19,9 +19,9 @@ def test_build_labeled_ctap_map_covers_seen_key_seen_label_and_string_missing_ha
     )
 
     assert result["1 (shared)"] == "present"
-    # A handler under the text "4" is not member 4's: only the integer is.
+    # Handlers are found by member name only, under neither the text "4" nor the integer 5.
     assert result["4 (four)"] is None
-    assert result["5 (five)"] == "handled-via-int"
+    assert result["5 (five)"] is None
 
 
 def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(monkeypatch, cbor_parser, ctap):

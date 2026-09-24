@@ -32,7 +32,7 @@ def test_ctap_label_key_and_map_building_helpers():
 
     assert decode_module._resolve_ctap_label({1: "one", "2": "two"}, 1) == "one"
     assert decode_module._resolve_ctap_label({1: "one", "2": "two"}, 2) is None
-    assert decode_module._resolve_ctap_label({1: "one", "2": "two"}, "2") == "two"
+    assert decode_module._resolve_ctap_label({1: "one", "2": "two"}, "2") is None
     assert decode_module._resolve_ctap_label({1: "one"}, b"\x01") is None
     assert decode_module._resolve_ctap_label({1: "one"}, True) is None
     assert decode_module._resolve_ctap_label({1: "one"}, 99) is None
@@ -99,7 +99,7 @@ def test_ctap_field_converters_and_auth_data_format_helpers():
     assert att_stmt["sig"] == "aa"
     assert att_stmt["alg"] == -7
 
-    user_value = decode_module._convert_ctap_user_field({1: b"\x99", 2: b"alice"})
+    user_value = decode_module._convert_ctap_user_field({"id": b"\x99", "name": b"alice"})
     assert user_value["id"] == "99"
 
 

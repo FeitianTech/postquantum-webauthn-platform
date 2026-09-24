@@ -108,3 +108,100 @@ def test_resolve_ctap_label_reads_only_integer_members():
     assert ctap._resolve_ctap_label(labels, 2) == "authData"
     assert ctap._resolve_ctap_label(labels, "2") is None
     assert ctap._resolve_ctap_label(labels, b"\x02") is None
+
+
+# A CTAP member label applies only to the key type and context the spec defines:
+# integer keys in a CTAP message, text keys in a WebAuthn attestation object,
+# user entity or credential descriptor.
+
+_RP = {"id": "example.com"}
+_USER = {"id": b"\x01", "name": "alice"}
+
+
+def test_a_text_keyed_attestation_object_after_a_status_byte_is_not_a_ctap_response():
+    message = {"fmt": "none", "authData": _AUTH_DATA, "attStmt": {}}
+
+    result = _decode(message)
+
+    assert result["type"] == "CBOR (SUCCESS status)"
+    assert "ctapDecoded" not in result["data"]
+    assert "expandedJson" not in result["data"]
+    # Its text keys are WebAuthn's, and it is interpreted as an attestation object.
+    assert result["data"]["attestationStatementDecoded"]["fmt"] == "none"
+
+
+def test_text_named_members_are_not_a_get_assertion_request():
+    message = {"rpId": "example.com", "clientDataHash": _CLIENT_DATA_HASH}
+
+    result = decode_payload_text(cbor2.dumps(message).hex())
+
+    assert result["type"] == "CBOR"
+    assert "ctapDecoded" not in result["data"]
+
+
+def test_a_command_byte_does_not_label_a_text_named_member():
+    message = {1: "example.com", 2: _CLIENT_DATA_HASH, "rpId": "other.example"}
+
+    request = _decode(message, prefix="02")["data"]["ctapDecoded"]["getAssertionRequest"]
+
+    assert request["1 (rpId)"] == "example.com"
+    assert request["rpId"] == "other.example"
+    assert "rpId (rpId)" not in request
+
+
+def test_a_text_named_client_data_hash_gets_no_member_label():
+    message = {"clientDataHash": _CLIENT_DATA_HASH, 2: _RP, 3: _USER, 4: []}
+
+    request = _decode(message, prefix="01")["data"]["ctapDecoded"]["makeCredentialRequest"]
+
+    assert request["clientDataHash"] == _CLIENT_DATA_HASH.hex()
+    assert "clientDataHash (clientDataHash)" not in request
+
+
+def test_integer_keys_in_a_user_entity_are_not_its_members():
+    message = {1: _CLIENT_DATA_HASH, 2: _RP, 3: {1: b"\x01", 2: "alice"}, 4: []}
+
+    user = _decode(message, prefix="01")["data"]["ctapDecoded"]["makeCredentialRequest"]["3 (user)"]
+
+    assert user == {"1": "01", "2": "alice"}
+
+
+def test_a_user_id_that_is_not_bytes_is_shown_as_sent():
+    message = {1: _CLIENT_DATA_HASH, 2: _RP, 3: {"id": "text-id", "name": "alice"}, 4: []}
+
+    user = _decode(message, prefix="01")["data"]["ctapDecoded"]["makeCredentialRequest"]["3 (user)"]
+
+    assert user == {"id": "text-id", "name": "alice"}
+
+
+def test_integer_keys_in_a_credential_descriptor_are_not_its_members():
+    message = {1: "example.com", 2: _CLIENT_DATA_HASH, 3: [{1: b"\xaa", 2: "public-key"}]}
+
+    allow_list = _decode(message, prefix="02")["data"]["ctapDecoded"]["getAssertionRequest"]["3 (allowList)"]
+
+    assert allow_list == [{"1": "aa", "2": "public-key"}]
+
+
+def test_a_credential_descriptor_id_that_is_not_bytes_is_shown_as_sent():
+    message = {1: "example.com", 2: _CLIENT_DATA_HASH, 3: [{"id": "text-id", "type": "public-key"}]}
+
+    allow_list = _decode(message, prefix="02")["data"]["ctapDecoded"]["getAssertionRequest"]["3 (allowList)"]
+
+    assert allow_list == [{"id": "text-id", "type": "public-key"}]
+
+
+def test_text_keys_named_like_response_members_do_not_name_the_message_a_response():
+    message = {1: "example.com", 2: _CLIENT_DATA_HASH, "signature": b"x", "attStmt": {}}
+
+    result = _decode(message, prefix="02")
+
+    assert result["type"] == "CBOR (GET_ASSERTION command; GetAssertion request)"
+
+
+def test_a_text_keyed_descriptor_and_user_still_read_as_their_members():
+    message = {1: {"id": b"\xcc", "type": "public-key"}, 2: _AUTH_DATA, 3: _SIGNATURE, 4: {"id": b"\x01", "name": "bob"}}
+
+    response = _decode(message)["data"]["ctapDecoded"]["getAssertionResponse"]
+
+    assert response["1 (credential)"] == {"id": "cc", "type": "public-key"}
+    assert response["4 (user)"] == {"id": "01", "name": "bob"}
