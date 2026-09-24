@@ -35,10 +35,6 @@ _HEAVY_RELYING_PARTY_KEYS = constants.HEAVY_RELYING_PARTY_KEYS
 _coerce_cose_algorithm = algorithms._coerce_cose_algorithm
 _derive_algorithms_from_credentials = algorithms._derive_algorithms_from_credentials
 _extract_credential_algorithm = algorithms._extract_credential_algorithm
-_extract_requested_assertion_algorithm = (
-    algorithms._extract_requested_assertion_algorithm
-)
-_is_custom_cose_algorithm = algorithms._is_custom_cose_algorithm
 _lookup_named_cose_algorithm = algorithms._lookup_named_cose_algorithm
 _normalize_algorithm_name_key = algorithms._normalize_algorithm_name_key
 
@@ -52,7 +48,6 @@ _extract_binary_value = binary._extract_binary_value
 
 # Client-supplied credential parsing.
 _coerce_optional_bool = parsing._coerce_optional_bool
-_extract_credential_id = parsing._extract_credential_id
 _extract_flag_from_mapping = parsing._extract_flag_from_mapping
 _parse_client_supplied_credentials = parsing._parse_client_supplied_credentials
 _select_first = parsing._select_first

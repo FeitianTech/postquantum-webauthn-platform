@@ -12,19 +12,6 @@ from ...encoding import encode_base64url
 from . import algorithms, binary
 
 
-def _extract_credential_id(value: Any) -> bytes | None:
-    credential_id = None
-    if isinstance(value, Mapping):
-        raw_id = value.get("credential_id")
-        if isinstance(raw_id, (bytes, bytearray, memoryview)):
-            credential_id = bytes(raw_id)
-    else:
-        raw_id = getattr(value, "credential_id", None)
-        if isinstance(raw_id, (bytes, bytearray, memoryview)):
-            credential_id = bytes(raw_id)
-    return credential_id
-
-
 def _coerce_optional_bool(value: Any) -> bool | None:
     if isinstance(value, bool):
         return value
