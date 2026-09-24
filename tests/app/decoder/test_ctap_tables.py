@@ -98,3 +98,92 @@ def test_every_decoder_handler_is_keyed_by_a_name_in_its_table():
         (ctap._GET_ASSERTION_RESPONSE_HANDLERS, ctap_tables.GET_ASSERTION_RESPONSE),
     ):
         assert set(handlers) == set(table.values())
+
+
+def test_get_info_members_are_ctap_2_2_section_6_4():
+    from fido2.ctap2.base import Info
+
+    # CTAP 2.2 section 6.4, the authenticatorGetInfo response structure.
+    assert ctap_tables.GET_INFO == 0x04
+    assert ctap_tables.GET_INFO_RESPONSE == {
+        0x01: "versions",
+        0x02: "extensions",
+        0x03: "aaguid",
+        0x04: "options",
+        0x05: "maxMsgSize",
+        0x06: "pinUvAuthProtocols",
+        0x07: "maxCredentialCountInList",
+        0x08: "maxCredentialIdLength",
+        0x09: "transports",
+        0x0A: "algorithms",
+        0x0B: "maxSerializedLargeBlobArray",
+        0x0C: "forcePINChange",
+        0x0D: "minPINLength",
+        0x0E: "firmwareVersion",
+        0x0F: "maxCredBlobLength",
+        0x10: "maxRPIDsForSetMinPINLength",
+        0x11: "preferredPlatformUvAttempts",
+        0x12: "uvModality",
+        0x13: "certifications",
+        0x14: "remainingDiscoverableCredentials",
+        0x15: "vendorPrototypeConfigCommands",
+        0x16: "attestationFormats",
+        0x17: "uvCountSinceLastPinEntry",
+        0x18: "longTouchForReset",
+        0x19: "encIdentifier",
+        0x1A: "transportsForReset",
+        0x1B: "pinComplexityPolicy",
+        0x1C: "pinComplexityPolicyURL",
+        0x1D: "maxPINLength",
+    }
+    assert len(fields(Info)) == 29
+
+
+def test_get_info_option_ids_are_the_ctap_2_2_table_with_its_defaults():
+    # CTAP 2.2 section 6.4, the option ID table "as of CTAP version FIDO_2_2".
+    defaults = {option: entry[2] for option, entry in ctap_tables.GET_INFO_OPTIONS.items()}
+    assert defaults == {
+        "plat": "false",
+        "rk": "false",
+        "clientPin": "not supported: the authenticator cannot accept a PIN from the client",
+        "up": "true",
+        "uv": "not supported: no built-in user verification method",
+        "pinUvAuthToken": "not supported",
+        "noMcGaPermissionsWithClientPin": "false",
+        "largeBlobs": "not supported",
+        "ep": "not supported",
+        "bioEnroll": "not supported",
+        "userVerificationMgmtPreview": "not supported",
+        "uvBioEnroll": "not supported",
+        "authnrCfg": "not supported",
+        "uvAcfg": "not supported",
+        "credMgmt": "not supported",
+        "perCredMgmtRO": "not supported",
+        "credentialMgmtPreview": "not supported",
+        "setMinPINLength": "not supported",
+        "makeCredUvNotRqd": "false",
+        "alwaysUv": "not supported",
+    }
+
+
+def test_certification_ids_and_uv_modality_bits():
+    # CTAP 2.2 section 7.3.1.
+    assert set(ctap_tables.GET_INFO_CERTIFICATIONS) == {
+        "FIPS-CMVP-2", "FIPS-CMVP-3", "FIPS-CMVP-2-PHY", "FIPS-CMVP-3-PHY", "CC-EAL", "FIDO",
+    }
+    # FIDO Registry of Predefined Values (2022-05-23), section 3.1.
+    assert ctap_tables.UV_MODALITY == {
+        0x001: "presence_internal",
+        0x002: "fingerprint_internal",
+        0x004: "passcode_internal",
+        0x008: "voiceprint_internal",
+        0x010: "faceprint_internal",
+        0x020: "location_internal",
+        0x040: "eyeprint_internal",
+        0x080: "pattern_internal",
+        0x100: "handprint_internal",
+        0x200: "none",
+        0x400: "all",
+        0x800: "passcode_external",
+        0x1000: "pattern_external",
+    }
