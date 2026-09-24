@@ -3,6 +3,8 @@ from __future__ import annotations
 import builtins
 import importlib.util
 import json
+import os
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -89,6 +91,23 @@ def test_module_import_does_not_require_flask_dependency(monkeypatch):
         spec.loader.exec_module(module)
     finally:
         sys.modules.pop(module_name, None)
+
+
+def test_the_updater_imports_without_flask_in_a_fresh_interpreter():
+    # The in-process check above cannot see an import of flask by a module
+    # another test already loaded; a fresh interpreter loads everything.
+    repo_root = Path(updater.__file__).resolve().parents[1]
+    code = "import sys, tools.update_mds_snapshot; print(sorted(m for m in sys.modules if m.split('.')[0] == 'flask'))"
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=repo_root,
+        env={**os.environ, "PYTHONPATH": str(repo_root)},
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert result.stdout.strip() == "[]", result.stdout
 
 
 def test_parse_http_datetime_handles_invalid_and_timezone_branches(monkeypatch):
