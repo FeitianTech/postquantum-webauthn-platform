@@ -68,18 +68,15 @@ def test_looks_like_get_assertion_request_rejects_signature_or_authdata_binary_s
     )
 
 
-def test_interpret_get_assertion_map_handles_signature_and_trailing_field_recovery(monkeypatch, ctap):
+def test_interpret_get_assertion_map_leaves_a_missing_signature_missing(monkeypatch, ctap):
+    # Bytes left over inside authData are not read as the response's missing
+    # members: the signature stays missing and nothing else is added.
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
         ctap,
         "_format_auth_data_for_expanded_json",
         lambda _auth_data: ({"flags": {}}, b"trailing"),
-    )
-    monkeypatch.setattr(
-        ctap,
-        "_decode_trailing_map",
-        lambda _trailing: {3: b"sig", 4: {1: b"u"}, 5: 2, 6: True, 8: {"ok": 1}, 9: "x"},
     )
 
     interpreted = decode_module._interpret_get_assertion_map(
@@ -90,13 +87,11 @@ def test_interpret_get_assertion_map_handles_signature_and_trailing_field_recove
         }
     )
 
-    assert interpreted["3 (signature)"] == b"sig".hex()
-    assert interpreted["4 (user)"] == {"id": "75"}
-    assert interpreted["5 (numberOfCredentials)"] == 2
-    assert interpreted["6 (userSelected)"] is True
-    assert interpreted["8 (unsignedExtensionOutputs)"] == {"ok": 1}
-    assert interpreted["trailingFields"] == {"9": "x"}
+    assert interpreted["3 (signature)"] is None
+    assert interpreted["4 (user)"] == {"name": "front-user"}
     assert interpreted["99"] == "extra"
+    assert "trailingFields" not in interpreted
+    assert "5 (numberOfCredentials)" not in interpreted
 
     direct_signature = decode_module._interpret_get_assertion_map({2: b"auth", 3: b"sig"})
     assert direct_signature["3 (signature)"] == b"sig".hex()
@@ -191,23 +186,3 @@ def test_build_authenticator_data_payload_covers_non_mapping_and_partial_details
     assert detailed_payload["rpIdHash"] == "rp-hash"
     assert detailed_payload["counter"] == "not-an-int"
     assert detailed_payload["extensions"] == {"uvm": True}
-
-
-def test_decode_trailing_map_handles_non_progress_and_unhashable_keys(monkeypatch, cbor_parser):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    monkeypatch.setattr(
-        cbor_parser,
-        "_lenient_decode_from",
-        lambda _data, offset=0: (None, offset),
-    )
-    assert decode_module._decode_trailing_map(b"\x01") == {}
-
-    key_then_value = [([1], 1), ("value", 2), (None, 2)]
-
-    def _sequence_decoder(_data, offset=0):
-        _value, new_offset = key_then_value.pop(0)
-        return _value, new_offset
-
-    monkeypatch.setattr(cbor_parser, "_lenient_decode_from", _sequence_decoder)
-    assert decode_module._decode_trailing_map(b"\x00\x00") == {"[1]": "value"}

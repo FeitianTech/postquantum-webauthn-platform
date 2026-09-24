@@ -11,14 +11,13 @@ from fido2 import cbor
 from fido2.utils import ByteBuffer
 from fido2.webauthn import AuthenticatorData
 
-from ...encoding import decode_hex, encode_base64
+from ...encoding import encode_base64
 from ...webauthn.attestation import encode_base64url, make_json_safe
 from .. import ctap_tables
 from . import cbor_parser, pipeline, response
 from .cbor_parser import (
     _CborDecodingError,
     _decode_cbor_sequence_impl,
-    _lenient_read_uint,
     _structure_to_value,
 )
 from .keys import MISSING
@@ -52,151 +51,6 @@ def _extract_mapping_bytes(value: Mapping[Any, Any], keys: Iterable[Any]) -> byt
     if candidate_bytes is not None:
         return candidate_bytes
     return None
-
-
-def _locate_get_assertion_trailing_offset(raw_bytes: bytes, signature_start: int) -> int:
-    if not raw_bytes or signature_start >= len(raw_bytes):
-        return len(raw_bytes)
-
-    search_start = max(signature_start, len(raw_bytes) - 2048)
-    for idx in range(search_start, len(raw_bytes)):
-        if raw_bytes[idx] != 0x04:
-            continue
-        key, after_key = cbor_parser._lenient_decode_from(raw_bytes, idx)
-        if key != 4 or after_key <= idx:
-            continue
-        value, after_value = cbor_parser._lenient_decode_from(raw_bytes, after_key)
-        if after_value <= after_key:
-            continue
-        if isinstance(value, Mapping):
-            string_keys = {str(k) for k in value.keys()}
-            if string_keys.intersection({"id", "name", "displayName"}):
-                return idx
-        if isinstance(value, list):
-            flattened = []
-            for item in value:
-                if isinstance(item, Mapping):
-                    flattened.extend(str(k) for k in item.keys())
-            if any(key in {"id", "name", "displayName"} for key in flattened):
-                return idx
-    return len(raw_bytes)
-
-
-def _extract_get_assertion_trailing_from_raw(
-    raw_bytes: bytes,
-) -> tuple[bytes | None, dict[int, Any]]:
-    if not raw_bytes:
-        return None, {}
-
-    signature_offset: int | None = None
-    length_size = 0
-    for prefix, size in ((0x58, 1), (0x59, 2), (0x5A, 4), (0x5B, 8)):
-        marker = bytes((3, prefix))
-        idx = raw_bytes.find(marker)
-        if idx != -1:
-            signature_offset = idx
-            length_size = size
-            break
-
-    if signature_offset is None or length_size == 0:
-        return None, {}
-
-    length_bytes = raw_bytes[signature_offset + 2 : signature_offset + 2 + length_size]
-    if len(length_bytes) != length_size:
-        return None, {}
-
-    declared_length = int.from_bytes(length_bytes, "big")
-    value_offset = signature_offset + 2 + length_size
-    declared_end = value_offset + declared_length
-
-    if declared_end > len(raw_bytes):
-        trailing_offset = _locate_get_assertion_trailing_offset(raw_bytes, value_offset)
-    else:
-        trailing_offset = declared_end
-
-    signature_bytes = raw_bytes[value_offset:trailing_offset]
-    trailing_fields: dict[int, Any] = {}
-
-    cursor = trailing_offset
-    while cursor < len(raw_bytes):
-        key, after_key = cbor_parser._lenient_decode_from(raw_bytes, cursor)
-        if after_key <= cursor or not isinstance(key, int):
-            break
-        value, after_value = cbor_parser._lenient_decode_from(raw_bytes, after_key)
-        if after_value <= after_key:
-            break
-        try:
-            encoded_value = cbor.encode(value)
-        except Exception:
-            encoded_value = None
-        if encoded_value is not None:
-            expected_end = after_key + len(encoded_value)
-            if expected_end <= len(raw_bytes):
-                after_value = min(after_value, expected_end)
-        trailing_fields[int(key)] = value
-        cursor = after_value
-
-    if 5 not in trailing_fields and trailing_offset < len(raw_bytes):
-        idx = raw_bytes.rfind(b"\x05", trailing_offset)
-        if idx != -1:
-            key_candidate, after_key_candidate = cbor_parser._lenient_decode_from(raw_bytes, idx)
-            if key_candidate == 5 and after_key_candidate > idx:
-                value_candidate, after_value_candidate = cbor_parser._lenient_decode_from(
-                    raw_bytes, after_key_candidate
-                )
-                if after_value_candidate > after_key_candidate:
-                    trailing_fields[5] = value_candidate
-
-    return (signature_bytes if signature_bytes else None), trailing_fields
-
-
-def _split_get_assertion_trailing_fields(
-    signature_bytes: bytes,
-) -> tuple[bytes, dict[int, Any]]:
-    if not signature_bytes:
-        return signature_bytes, {}
-
-    start_search = max(0, len(signature_bytes) - 1024)
-    for offset in range(start_search, len(signature_bytes)):
-        if signature_bytes[offset] != 0x04:
-            continue
-
-        key, after_key = cbor_parser._lenient_decode_from(signature_bytes, offset)
-        if key != 4 or after_key <= offset:
-            continue
-
-        value, after_value = cbor_parser._lenient_decode_from(signature_bytes, after_key)
-        if after_value <= after_key:
-            continue
-
-        trailing_fields: dict[int, Any] = {4: value}
-        cursor = after_value
-        success = True
-
-        while cursor < len(signature_bytes):
-            next_key, after_next_key = cbor_parser._lenient_decode_from(signature_bytes, cursor)
-            if (
-                after_next_key <= cursor
-                or next_key is None
-                or not isinstance(next_key, int)
-                or next_key < 4
-                or next_key > 8
-            ):
-                success = False
-                break
-
-            next_value, after_next_value = cbor_parser._lenient_decode_from(signature_bytes, after_next_key)
-            if after_next_value <= after_next_key:
-                success = False
-                break
-
-            trailing_fields[int(next_key)] = next_value
-            cursor = after_next_value
-
-        if success and cursor == len(signature_bytes):
-            return signature_bytes[:offset], trailing_fields
-
-    return signature_bytes, {}
 
 
 def _convert_optional_ctap_field(value: Any) -> Any:
@@ -610,76 +464,6 @@ def _format_att_stmt_for_expanded_json(att_stmt: Any) -> dict[str, Any]:
     return formatted
 
 
-def _decode_trailing_map(data: bytes) -> dict[Any, Any]:
-    mapping: dict[Any, Any] = {}
-    offset = 0
-    while offset < len(data):
-        key, new_offset = cbor_parser._lenient_decode_from(data, offset)
-        if new_offset <= offset:
-            break
-        offset = new_offset
-        value, new_offset = cbor_parser._lenient_decode_from(data, offset)
-        if new_offset <= offset:
-            break
-        offset = new_offset
-        try:
-            mapping[key] = value
-        except TypeError:
-            mapping[str(key)] = value
-    return mapping
-
-
-def _extract_lenient_map_entries(raw_bytes: bytes | None) -> list[tuple[Any, Any]]:
-    entries: list[tuple[Any, Any]] = []
-    if not raw_bytes:
-        return entries
-    offset = 0
-    initial = raw_bytes[offset]
-    major_type = initial >> 5
-    if major_type != 5:
-        return entries
-    info = initial & 0x1F
-    offset += 1
-    length, offset = _lenient_read_uint(info, raw_bytes, offset)
-    for _ in range(length):
-        key, new_offset = cbor_parser._lenient_decode_from(raw_bytes, offset)
-        if new_offset <= offset:
-            break
-        offset = new_offset
-        value, new_offset = cbor_parser._lenient_decode_from(raw_bytes, offset)
-        if new_offset <= offset:
-            entries.append((key, None))
-            break
-        offset = new_offset
-        entries.append((key, value))
-        if offset >= len(raw_bytes):
-            break
-    return entries
-
-
-def _extract_signature_from_raw_bytes(raw_bytes: bytes) -> bytes | None:
-    if not raw_bytes:
-        return None
-    hex_data = raw_bytes.hex()
-    for prefix, length_hex_len in ("0358", 2), ("0359", 4), ("035a", 8), ("035b", 16):
-        idx = hex_data.find(prefix)
-        if idx == -1:
-            continue
-        length_hex = hex_data[idx + 4 : idx + 4 + length_hex_len]
-        if len(length_hex) != length_hex_len:
-            continue
-        length = int(length_hex, 16)
-        start = idx + 4 + length_hex_len
-        end = start + length * 2
-        if end > len(hex_data):
-            continue
-        try:
-            return decode_hex(hex_data[start:end])
-        except ValueError:
-            continue
-    return None
-
-
 def _convert_user_text_value(value: Any) -> Any:
     if isinstance(value, str):
         return value
@@ -831,58 +615,13 @@ def _build_make_credential_expanded_json(value: Mapping[Any, Any]) -> dict[str, 
     )
 
 
-def _build_get_assertion_expanded_json(value: Mapping[Any, Any], raw_bytes: bytes | None = None) -> dict[str, Any]:
-    result = _build_labeled_ctap_map(
+def _build_get_assertion_expanded_json(value: Mapping[Any, Any]) -> dict[str, Any]:
+    return _build_labeled_ctap_map(
         value,
         _GET_ASSERTION_RESPONSE_LABELS,
         _GET_ASSERTION_RESPONSE_HANDLERS,
         missing_keys=(3,),
     )
-
-    signature_key = _format_ctap_entry_key(3, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 3))
-    auth_key = _format_ctap_entry_key(2, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 2))
-    auth_details = result.get(auth_key)
-    auth_trailing_bytes: bytes | None = None
-    if isinstance(auth_details, Mapping):
-        trailing_hex = auth_details.get("trailingBytesHex")
-        if isinstance(trailing_hex, str) and trailing_hex.strip():
-            try:
-                auth_trailing_bytes = decode_hex(trailing_hex)
-            except ValueError:
-                auth_trailing_bytes = None
-
-    if result.get(signature_key) is None and auth_trailing_bytes:
-        trailing_map = _decode_trailing_map(auth_trailing_bytes)
-        sig_entry = trailing_map.pop(3, None)
-        if sig_entry is not None:
-            sig_bytes = _coerce_cbor_bytes(sig_entry)
-            if sig_bytes is not None:
-                result[signature_key] = sig_bytes.hex()
-        user_entry_trailing = trailing_map.pop(4, None)
-        if user_entry_trailing is not None:
-            user_key = _format_ctap_entry_key(4, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 4))
-            result[user_key] = _convert_ctap_user(user_entry_trailing)
-        number_entry = trailing_map.pop(5, None)
-        if number_entry is not None:
-            number_key = _format_ctap_entry_key(5, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 5))
-            result[number_key] = _convert_optional_ctap_field(number_entry)
-        user_selected_entry = trailing_map.pop(6, None)
-        if user_selected_entry is not None:
-            selected_key = _format_ctap_entry_key(6, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 6))
-            result[selected_key] = _convert_optional_ctap_field(user_selected_entry)
-        extensions_entry = trailing_map.pop(8, None)
-        if extensions_entry is not None:
-            extensions_key = _format_ctap_entry_key(8, _resolve_ctap_label(_GET_ASSERTION_RESPONSE_LABELS, 8))
-            result[extensions_key] = _convert_optional_ctap_field(extensions_entry)
-        if trailing_map:
-            result["trailingFields"] = {str(k): _hex_json_safe(v) for k, v in trailing_map.items()}
-
-    if result.get(signature_key) is None and raw_bytes:
-        sig_bytes = _extract_signature_from_raw_bytes(raw_bytes)
-        if sig_bytes is not None:
-            result[signature_key] = sig_bytes.hex()
-
-    return result
 
 
 def _interpret_ctap_cbor_value(value: Any) -> dict[str, Any] | None:
@@ -920,12 +659,8 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] |
     interpreted: dict[str, Any] = {}
     interpreted["1 (fmt)"] = fmt
 
-    auth_data_details, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
+    auth_data_details, _auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
     interpreted["2 (authData)"] = auth_data_details
-    if auth_trailing:
-        trailing_map = _decode_trailing_map(auth_trailing)
-        if trailing_map:
-            interpreted["2 (authData trailing)"] = _hex_json_safe(trailing_map)
 
     if isinstance(att_stmt_map, Mapping):
         att_stmt_details = response._convert_attestation_statement({"attestationStatement": att_stmt_map})
@@ -976,7 +711,7 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | N
     if credential_entry is not _MISSING and credential_entry is not None:
         interpreted["1 (credential)"] = _convert_ctap_credential_descriptor(credential_entry)
 
-    auth_data_details, auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
+    auth_data_details, _auth_trailing = _format_auth_data_for_expanded_json(auth_data_bytes)
     interpreted["2 (authData)"] = auth_data_details
 
     if signature_bytes is not None:
@@ -1004,28 +739,6 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | N
     ]
     for key in sorted(extra_keys):
         interpreted[f"{key}"] = _hex_json_safe(value[key])
-
-    if interpreted.get("3 (signature)") is None and auth_trailing:
-        trailing_map = _decode_trailing_map(auth_trailing)
-        sig_entry = trailing_map.pop(3, None)
-        if sig_entry is not None:
-            sig_bytes = _coerce_cbor_bytes(sig_entry)
-            if sig_bytes is not None:
-                interpreted["3 (signature)"] = sig_bytes.hex()
-        user_entry_trailing = trailing_map.pop(4, None)
-        if user_entry_trailing is not None:
-            interpreted["4 (user)"] = _convert_ctap_user(user_entry_trailing)
-        number_entry = trailing_map.pop(5, None)
-        if number_entry is not None:
-            interpreted[_format_ctap_entry_key(5, members[5])] = _convert_optional_ctap_field(number_entry)
-        user_selected_entry = trailing_map.pop(6, None)
-        if user_selected_entry is not None:
-            interpreted[_format_ctap_entry_key(6, members[6])] = _convert_optional_ctap_field(user_selected_entry)
-        extensions_entry = trailing_map.pop(8, None)
-        if extensions_entry is not None:
-            interpreted[_format_ctap_entry_key(8, members[8])] = _convert_optional_ctap_field(extensions_entry)
-        if trailing_map:
-            interpreted["trailingFields"] = _hex_json_safe(trailing_map)
 
     return interpreted
 
@@ -1115,131 +828,6 @@ def _decode_cbor_sequence(payload: bytes) -> tuple[list[dict[str, Any]], list[An
     )
 
 
-def _repair_get_assertion_entries(
-    structure: dict[str, Any],
-    value: Mapping[Any, Any],
-    raw_bytes: bytes | None = None,
-) -> tuple[dict[str, Any], Mapping[Any, Any], bytes | None]:
-    if not isinstance(value, dict):
-        return structure, value, None
-
-    entries_source = structure.get("entries")
-    if isinstance(entries_source, list):
-        entries = entries_source
-    else:
-        entries = []
-        structure["entries"] = entries
-
-    signature_entry = None
-    for idx, entry in enumerate(entries):
-        key_info = entry.get("key") if isinstance(entry, Mapping) else None
-        if not isinstance(key_info, Mapping):
-            continue
-        if key_info.get("majorType") == 2 and isinstance(entry.get("value"), Mapping):
-            signature_entry = (idx, entry)
-            break
-
-    signature_bytes: bytes | None = None
-    user_value: Any | None = None
-
-    if signature_entry is not None:
-        idx, entry = signature_entry
-        key_info = entry.get("key")
-        if isinstance(key_info, Mapping):
-            hex_value = key_info.get("hex")
-            if isinstance(hex_value, str):
-                try:
-                    signature_bytes = decode_hex(hex_value)
-                except ValueError:
-                    signature_bytes = None
-        value_node = entry.get("value")
-        if isinstance(value_node, Mapping):
-            user_value = _structure_to_value(value_node)
-        entries.pop(idx)
-
-    recovered_value = dict(value)
-    recovered_fields: dict[int, Any] = {}
-
-    if raw_bytes:
-        raw_signature, raw_field_map = _extract_get_assertion_trailing_from_raw(raw_bytes)
-        if raw_signature is not None:
-            signature_bytes = raw_signature
-        recovered_fields.update(raw_field_map)
-        if user_value is None and 4 in raw_field_map:
-            user_value = raw_field_map.get(4)
-
-    if signature_bytes is None and raw_bytes:
-        for raw_key, raw_value in _extract_lenient_map_entries(raw_bytes):
-            if isinstance(raw_key, int) and raw_key == 3:
-                candidate_bytes = _coerce_cbor_bytes(raw_value)
-                if candidate_bytes is not None:
-                    signature_bytes = candidate_bytes
-                    break
-                if isinstance(raw_value, (bytes, bytearray)):
-                    signature_bytes = bytes(raw_value)
-                    break
-            if isinstance(raw_key, (bytes, bytearray)):
-                candidate = bytes(raw_key)
-                if candidate:
-                    signature_bytes = candidate
-                    break
-
-    if signature_bytes is not None:
-        signature_bytes, trailing_fields = _split_get_assertion_trailing_fields(signature_bytes)
-        if user_value is None and 4 in trailing_fields:
-            user_value = trailing_fields.pop(4)
-        for key, value in trailing_fields.items():
-            recovered_fields.setdefault(key, value)
-
-        bytes_keys = [key for key in recovered_value if isinstance(key, (bytes, bytearray))]
-        for key in bytes_keys:
-            recovered_value.pop(key, None)
-        recovered_value[3] = signature_bytes
-        sig_structure, _ = cbor_parser._decode_cbor_structure(cbor.encode(signature_bytes))
-        entries.append(
-            {
-                "keySummary": "3",
-                "key": {"majorType": 0, "type": "unsigned", "value": 3, "summary": "3"},
-                "value": sig_structure,
-                "valueSummary": sig_structure.get("summary"),
-            }
-        )
-
-    if user_value is not None:
-        recovered_value[4] = user_value
-        user_structure, _ = cbor_parser._decode_cbor_structure(cbor.encode(user_value))
-        entries.append(
-            {
-                "keySummary": "4",
-                "key": {"majorType": 0, "type": "unsigned", "value": 4, "summary": "4"},
-                "value": user_structure,
-                "valueSummary": user_structure.get("summary"),
-            }
-        )
-
-    for key in sorted(recovered_fields):
-        if key in {3, 4}:
-            continue
-        if key in recovered_value:
-            continue
-        field_value = recovered_fields[key]
-        recovered_value[key] = field_value
-        field_structure, _ = cbor_parser._decode_cbor_structure(cbor.encode(field_value))
-        entries.append(
-            {
-                "keySummary": str(key),
-                "key": {"majorType": 0, "type": "unsigned", "value": key, "summary": str(key)},
-                "value": field_structure,
-                "valueSummary": field_structure.get("summary"),
-            }
-        )
-
-    structure["length"] = len(entries)
-    structure["summary"] = f"map[{len(entries)}]"
-
-    return structure, recovered_value, signature_bytes
-
-
 def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
     if not data:
         return None
@@ -1265,50 +853,10 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
     if not structures:
         return None
 
-    base_structure = structures[0]
     base_value = values[0]
-    primary_length = base_structure.get("byteLength") if isinstance(base_structure, Mapping) else None
-    primary_bytes = payload[:primary_length] if isinstance(primary_length, int) and primary_length > 0 else None
     extra_values = values[1:]
 
-    merged_signature: bytes | None = None
-    classification = "other"
-    if isinstance(base_value, Mapping):
-        working_value: Mapping[Any, Any] = base_value
-        fmt_candidate = _extract_mapping_string(working_value, (1, "1", "fmt"))
-        auth_candidate = _extract_mapping_bytes(working_value, (2, "2", "authData"))
-        classification = _classify_ctap_map(working_value)
-
-        if classification == "get_assertion_output":
-            base_structure, working_value, assertion_sig = _repair_get_assertion_entries(
-                base_structure,
-                dict(working_value),
-                primary_bytes,
-            )
-            if assertion_sig is not None:
-                merged_signature = merged_signature or assertion_sig
-            extra_values = []
-        elif classification == "other" and fmt_candidate is None:
-            temp_structure = dict(base_structure)
-            entries = base_structure.get("entries")
-            if isinstance(entries, list):
-                temp_structure["entries"] = [dict(entry) for entry in entries]
-            temp_value = dict(working_value)
-            temp_structure, temp_value, assertion_sig = _repair_get_assertion_entries(
-                temp_structure,
-                temp_value,
-                primary_bytes,
-            )
-            if assertion_sig is not None:
-                classification = "get_assertion_output"
-                working_value = temp_value
-                merged_signature = merged_signature or assertion_sig
-                extra_values = []
-        if classification == "other" and fmt_candidate is None and auth_candidate is not None:
-            if ctap_details is not None and ctap_details.get("kind") == "status":
-                classification = "get_assertion_output"
-
-        base_value = working_value
+    classification = _classify_ctap_map(base_value) if isinstance(base_value, Mapping) else "other"
 
     decoded_payload: dict[str, Any] = {}
 
@@ -1325,7 +873,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
         if classification == "make_credential_output":
             expanded_json = _build_make_credential_expanded_json(base_value)
         elif classification == "get_assertion_output":
-            expanded_json = _build_get_assertion_expanded_json(base_value, primary_bytes)
+            expanded_json = _build_get_assertion_expanded_json(base_value)
         elif classification == "make_credential_input":
             expanded_json = _build_make_credential_request_expanded_json(base_value)
         elif classification == "get_assertion_input":
@@ -1346,8 +894,6 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
 
     if ctap_details is not None:
         ctap_details["payloadLength"] = consumed_total
-        if merged_signature is not None:
-            ctap_details["signatureLength"] = len(merged_signature)
 
     if extra_values:
         warnings.append(f"Detected {len(extra_values)} additional CBOR object(s) following the primary payload.")

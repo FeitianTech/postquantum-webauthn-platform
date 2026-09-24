@@ -239,7 +239,8 @@ def test_ctap_interpretation_variants_cover_request_guard_and_attstmt_bytes(monk
     interpreted_assertion = decode_module._interpret_get_assertion_map({2: auth_data})
     assert interpreted_assertion is not None
     assert interpreted_assertion["3 (signature)"] is None
-    assert interpreted_assertion["trailingFields"]["10"] == 1
+    assert "trailingFields" not in interpreted_assertion
+    assert "10" not in interpreted_assertion
 
 
 def test_try_decode_cbor_warns_for_trailing_bytes_and_records_ignored_padding(monkeypatch, ctap):

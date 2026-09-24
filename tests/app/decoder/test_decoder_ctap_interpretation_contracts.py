@@ -60,31 +60,23 @@ def test_parse_authenticator_data_bytes_parses_attested_and_extension_sections_w
     assert trimmed == payload[: len(payload) - len(trailer)]
 
 
-def test_build_get_assertion_expanded_json_recovers_signature_and_optional_trailing_fields():
+def test_build_get_assertion_expanded_json_reports_bytes_after_auth_data_without_reading_them_as_members():
+    # Bytes after the end authData's flags describe are reported as they are.
+    # They are not read as the response's signature, user or other members.
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    auth_data = _auth_data_with_trailing_pairs(
-        [
-            (3, b"\xAA"),
-            (4, {1: b"\x01", 2: "user@example.com", 3: "User"}),
-            (5, 2),
-            (6, True),
-            (8, {"uvm": True}),
-            (9, b"\xBB"),
-        ]
-    )
+    pairs = [(3, b"\xAA"), (4, {1: b"\x01", 2: "user@example.com", 3: "User"}), (5, 2)]
+    auth_data = _auth_data_with_trailing_pairs(pairs)
+    tail = auth_data[37:]
 
     result = decode_module._build_get_assertion_expanded_json({2: auth_data})
 
-    assert result["3 (signature)"] == "aa"
-    assert result["4 (user)"]["id"] == "01"
-    assert result["5 (numberOfCredentials)"] == 2
-    assert result["6 (userSelected)"] is True
-    assert result["8 (unsignedExtensionOutputs)"]["uvm"] is True
-    assert result["trailingFields"]["9"] == "bb"
+    assert result["3 (signature)"] is None
+    assert result["2 (authData)"]["trailingBytesHex"] == tail.hex()
+    assert set(result) == {"2 (authData)", "3 (signature)"}
 
 
-def test_interpret_get_assertion_map_uses_trailing_signature_when_primary_signature_missing():
+def test_interpret_get_assertion_map_leaves_signature_missing_when_only_auth_data_trailing_bytes_hold_one():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     auth_data = _auth_data_with_trailing_pairs(
@@ -104,11 +96,11 @@ def test_interpret_get_assertion_map_uses_trailing_signature_when_primary_signat
     interpreted = decode_module._interpret_get_assertion_map(value)
 
     assert interpreted is not None
-    assert interpreted["3 (signature)"] == "1122"
-    assert interpreted["4 (user)"]["id"] == "02"
+    assert interpreted["3 (signature)"] is None
     assert interpreted["7 (largeBlobKey)"] == "0a"
-    assert interpreted["8 (unsignedExtensionOutputs)"]["credBlob"] == "ff"
-    assert interpreted["trailingFields"]["10"] == "cc"
+    assert interpreted["2 (authData)"]["trailingBytesHex"] == auth_data[37:].hex()
+    for recovered in ("4 (user)", "8 (unsignedExtensionOutputs)", "trailingFields"):
+        assert recovered not in interpreted
 
 
 def test_interpret_make_credential_map_handles_attstmt_optional_fields_and_extras():
@@ -134,7 +126,8 @@ def test_interpret_make_credential_map_handles_attstmt_optional_fields_and_extra
     assert interpreted["5 (largeBlobKey)"] == "06"
     assert interpreted["6 (unsignedExtensionOutputs)"]["example"] == "07"
     assert interpreted["99"] == "08"
-    assert interpreted["2 (authData trailing)"]["7"] == "99"
+    assert "2 (authData trailing)" not in interpreted
+    assert interpreted["2 (authData)"]["trailingBytesHex"] == auth_data[37:].hex()
 
 
 def test_interpret_ctap_cbor_value_prefers_make_credential_request_classification():

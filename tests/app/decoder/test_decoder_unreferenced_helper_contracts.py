@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 import hashlib
 
-import cbor2
 import pytest
 
 from fido2.cose import CoseKey
@@ -101,28 +100,6 @@ def test_ctap_field_converters_and_auth_data_format_helpers():
     assert user_value["id"] == "99"
 
 
-def test_trailing_map_and_signature_extraction_helpers():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    signature = b"S" * 32
-    raw_trailing = (
-        cbor2.dumps(3)
-        + cbor2.dumps(signature)
-        + cbor2.dumps(4)
-        + cbor2.dumps({"id": "user"})
-    )
-
-    decoded_map = decode_module._decode_trailing_map(raw_trailing)
-    assert decoded_map[3] == signature
-    assert decoded_map[4]["id"] == "user"
-
-    map_entries = decode_module._extract_lenient_map_entries(cbor2.dumps({1: 2, 3: 4}))
-    assert map_entries == [(1, 2), (3, 4)]
-
-    extracted_signature = decode_module._extract_signature_from_raw_bytes(raw_trailing)
-    assert extracted_signature == signature
-
-
 def test_expanded_ctap_json_builder_helpers():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
@@ -148,18 +125,11 @@ def test_expanded_ctap_json_builder_helpers():
     assert any("rpId" in key for key in get_request_expanded)
     assert any("attStmt" in key for key in make_response_expanded)
 
-    trailing_signature = (
-        cbor2.dumps(3)
-        + cbor2.dumps(b"T" * 32)
-        + cbor2.dumps(4)
-        + cbor2.dumps({"id": "u"})
-    )
-    get_response_expanded = decode_module._build_get_assertion_expanded_json(
-        get_response,
-        raw_bytes=trailing_signature,
-    )
+    # A getAssertion response without its signature shows the signature as
+    # missing; nothing is searched for one elsewhere.
+    get_response_expanded = decode_module._build_get_assertion_expanded_json(get_response)
     signature_key = next(k for k in get_response_expanded if "signature" in k)
-    assert get_response_expanded[signature_key] == (b"T" * 32).hex()
+    assert get_response_expanded[signature_key] is None
 
 
 def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, response, binary):

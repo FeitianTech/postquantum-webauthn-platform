@@ -104,94 +104,6 @@ def test_decode_cbor_sequence_breaks_when_lenient_fallback_raises(monkeypatch, c
     assert remaining == b"\xa1"
 
 
-def test_split_get_assertion_trailing_fields_handles_incomplete_and_invalid_followups():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    original = b"\x04"
-    assert decode_module._split_get_assertion_trailing_fields(original) == (original, {})
-
-    invalid_key_tail = (
-        cbor.encode(4)
-        + cbor.encode({"id": "u"})
-        + cbor.encode(9)
-        + cbor.encode(1)
-    )
-    assert decode_module._split_get_assertion_trailing_fields(invalid_key_tail) == (
-        invalid_key_tail,
-        {},
-    )
-
-    truncated_tail = (
-        cbor.encode(4)
-        + cbor.encode({"id": "u"})
-        + cbor.encode(5)
-    )
-    assert decode_module._split_get_assertion_trailing_fields(truncated_tail) == (
-        truncated_tail,
-        {},
-    )
-
-
-def test_repair_get_assertion_entries_handles_non_dict_and_non_list_entries_sources():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    structure = {"entries": []}
-    passthrough_structure, passthrough_value, signature = decode_module._repair_get_assertion_entries(
-        structure,
-        ["not-a-dict"],
-    )
-    assert passthrough_structure == structure
-    assert passthrough_value == ["not-a-dict"]
-    assert signature is None
-
-    rebuilt_structure, rebuilt_value, rebuilt_sig = decode_module._repair_get_assertion_entries(
-        {"entries": "invalid"},
-        {},
-    )
-    assert rebuilt_structure["entries"] == []
-    assert rebuilt_value == {}
-    assert rebuilt_sig is None
-
-
-def test_repair_get_assertion_entries_recovers_trailing_fields_and_prunes_byte_keys(monkeypatch, ctap):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    monkeypatch.setattr(
-        ctap,
-        "_extract_get_assertion_trailing_from_raw",
-        lambda _raw: (b"sig-trailing", {5: 99, 7: b"x"}),
-    )
-    monkeypatch.setattr(
-        ctap,
-        "_split_get_assertion_trailing_fields",
-        lambda _signature: (b"sig-final", {4: {"id": "split-user"}, 6: True}),
-    )
-
-    structure = {
-        "entries": [
-            {"key": "invalid"},
-            {
-                "key": {"majorType": 2, "hex": "zz"},
-                "value": {"majorType": 7, "type": "null"},
-            },
-        ]
-    }
-    repaired_structure, repaired_value, repaired_signature = decode_module._repair_get_assertion_entries(
-        structure,
-        {b"drop-me": "value", 5: "already-present"},
-        raw_bytes=b"raw",
-    )
-
-    assert repaired_signature == b"sig-final"
-    assert repaired_value[3] == b"sig-final"
-    assert repaired_value[4] == {"id": "split-user"}
-    assert repaired_value[5] == "already-present"
-    assert repaired_value[6] is True
-    assert repaired_value[7] == b"x"
-    assert b"drop-me" not in repaired_value
-    assert repaired_structure["summary"].startswith("map[")
-
-
 def test_parse_authenticator_data_bytes_handles_truncation_and_decode_failures(monkeypatch, cbor_parser):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
@@ -253,18 +165,6 @@ def test_parse_authenticator_data_bytes_handles_extension_non_mapping_and_zero_c
     details, trimmed, trailing = decode_module._parse_authenticator_data_bytes(extension_payload)
     assert trimmed == extension_payload
     assert trailing == cbor.encode(7)
-
-
-def test_extract_lenient_map_entries_and_signature_extraction_guard_paths():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    assert decode_module._extract_lenient_map_entries(None) == []
-    assert decode_module._extract_lenient_map_entries(b"\x01") == []
-    assert decode_module._extract_lenient_map_entries(b"\xa1\x01") == [(1, None)]
-
-    assert decode_module._extract_signature_from_raw_bytes(b"") is None
-    assert decode_module._extract_signature_from_raw_bytes(b"\x03\x59\x00") is None
-    assert decode_module._extract_signature_from_raw_bytes(b"\x03\x58\x10ABC") is None
 
 
 def test_convert_ctap_user_attestation_entry_and_payload_helpers_cover_remaining_edges():

@@ -134,11 +134,6 @@ _convert_optional_ctap_field = ctap._convert_optional_ctap_field
 _normalize_user_mapping = ctap._normalize_user_mapping
 
 # CTAP trailing-field repair helpers.
-_extract_get_assertion_trailing_from_raw = (
-    ctap._extract_get_assertion_trailing_from_raw
-)
-_locate_get_assertion_trailing_offset = ctap._locate_get_assertion_trailing_offset
-_split_get_assertion_trailing_fields = ctap._split_get_assertion_trailing_fields
 
 # CTAP make-credential repair helpers.
 _extract_mapping_bytes = ctap._extract_mapping_bytes
@@ -164,7 +159,6 @@ _decode_cbor_sequence = ctap._decode_cbor_sequence
 _extract_ctap_prefix = ctap._extract_ctap_prefix
 _is_padding_bytes = ctap._is_padding_bytes
 _json_safe_with_stringified_keys = ctap._json_safe_with_stringified_keys
-_repair_get_assertion_entries = ctap._repair_get_assertion_entries
 _try_decode_cbor = ctap._try_decode_cbor
 
 # CTAP field parsers and converters.
@@ -176,9 +170,6 @@ _convert_ctap_user_field = ctap._convert_ctap_user_field
 _convert_pub_key_cred_params = ctap._convert_pub_key_cred_params
 _convert_signature_field = ctap._convert_signature_field
 _convert_user_text_value = ctap._convert_user_text_value
-_decode_trailing_map = ctap._decode_trailing_map
-_extract_lenient_map_entries = ctap._extract_lenient_map_entries
-_extract_signature_from_raw_bytes = ctap._extract_signature_from_raw_bytes
 _format_att_stmt_for_expanded_json = ctap._format_att_stmt_for_expanded_json
 _format_auth_data_for_expanded_json = ctap._format_auth_data_for_expanded_json
 _parse_authenticator_data_bytes = ctap._parse_authenticator_data_bytes
