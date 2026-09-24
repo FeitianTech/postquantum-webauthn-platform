@@ -231,4 +231,5 @@ def test_try_decode_authenticator_data_returns_structured_payload_on_success(mon
         "inputEncoding": "hex",
         "decoded": {"parsed": True},
         "binary": {"hex": "0102", "encoding": "hex"},
+        "findings": [],
     }
