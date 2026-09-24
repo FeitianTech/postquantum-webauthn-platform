@@ -889,7 +889,7 @@ def _trailing_findings(data: bytes, end: int) -> list[dict[str, Any]]:
 
 
 def _attach_findings(result: dict[str, Any], findings: list[dict[str, Any]]) -> None:
-    ordered = sorted(findings, key=lambda finding: finding["offset"])
+    ordered = sorted(findings, key=lambda finding: (finding.get("source", ""), finding["offset"]))
     result["findings"] = ordered
     if ordered:
         result["malformed"] = [finding["message"] for finding in ordered]

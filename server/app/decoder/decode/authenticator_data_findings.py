@@ -27,7 +27,7 @@ _HEADER_LENGTH = 37
 def for_member(root: Mapping[str, Any], data: bytes, keys: Sequence[Any]) -> list[dict[str, Any]]:
     """Check the authData held under the first of ``keys`` in the map ``root``."""
 
-    node = _member_node(root, keys)
+    node = member_node(root, keys)
     if node is None or node.get("majorType") != 2 or node.get("type") == "invalid":
         return []
     if node.get("indefinite"):
@@ -88,7 +88,9 @@ def check(auth_data: bytes, base_offset: int, path: str) -> list[dict[str, Any]]
     return findings
 
 
-def _member_node(root: Mapping[str, Any], keys: Sequence[Any]) -> Mapping[str, Any] | None:
+def member_node(root: Mapping[str, Any], keys: Sequence[Any]) -> Mapping[str, Any] | None:
+    """The value node under the first of ``keys`` in the map node ``root``, with its path."""
+
     if not isinstance(root, Mapping) or root.get("majorType") != 5:
         return None
     by_key: dict[tuple[str, Any], Mapping[str, Any]] = {}
