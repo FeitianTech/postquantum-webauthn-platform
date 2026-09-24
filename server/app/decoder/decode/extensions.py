@@ -26,7 +26,7 @@ from ... import encoding
 from ...webauthn import pqc
 from .. import ctap_tables
 from .binary import _describe_cose_key
-from .keys import MISSING, get_mapping_entry, hex_json_safe, key_text
+from .keys import MISSING, get_mapping_entry, hex_json_safe, json_items, key_text
 
 MAKE_CREDENTIAL_INPUT = "makeCredential input"
 GET_ASSERTION_INPUT = "getAssertion input"
@@ -60,7 +60,7 @@ def block(value: Any, *, role: str, location: str, path: str, basis: str | None 
         result["note"] = "extensions are a map from extension identifier to value; this is not a map"
         return result
     interpret = _client_entry if role == CLIENT_OUTPUT else _authenticator_entry
-    result["entries"] = {key_text(name): interpret(name, entry, role) for name, entry in value.items()}
+    result["entries"] = {label: interpret(name, entry, role) for label, name, entry in json_items(value)}
     return result
 
 
@@ -161,14 +161,18 @@ def _protocol(value: Mapping[Any, Any]) -> tuple[int, str]:
 _SALT_COUNTS = {(1, 32): "one salt", (1, 64): "two salts", (2, 48): "one salt", (2, 80): "two salts"}
 
 
+def _hmac_secret_label(key: Any, text: str) -> str:
+    name = ctap_tables.HMAC_SECRET_INPUT.get(key) if _is_int(key) else None
+    return f"{text} ({name})" if name else f"{text} (not in CTAP 2.2 section 12.7)"
+
+
 def _hmac_secret_input(value: Any) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         return _unexpected("a map of keyAgreement (0x01), saltEnc (0x02), saltAuth (0x03), pinUvAuthProtocol (0x04)")
     protocol, basis = _protocol(value)
     members: dict[str, Any] = {}
-    for key, entry in value.items():
+    for label, key, entry in json_items(value, _hmac_secret_label):
         name = ctap_tables.HMAC_SECRET_INPUT.get(key) if _is_int(key) else None
-        label = f"{key} ({name})" if name else f"{key_text(key)} (not in CTAP 2.2 section 12.7)"
         view: dict[str, Any] = {"value": hex_json_safe(entry)}
         if name == "keyAgreement":
             view.update(_describe_cose_key(entry))

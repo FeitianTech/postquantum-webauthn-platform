@@ -55,11 +55,15 @@ class CborDiagnostic:
 
     ``undefined``, ``simple(16)``, ``NaN`` and ``Infinity`` are values JSON
     cannot hold; ``true``, ``null`` and ``1.5`` become one of these when they
-    are map keys, so they cannot collide with the integer or text keys JSON
-    would otherwise turn them into.
+    are map keys, so that Python does not fold them into the integer 1 or 0,
+    and so do array, map and tag keys, which Python cannot use as keys at all.
     """
 
     diagnostic: str
+    #: What a map key spelled this way is ("boolean", "float", "array"), so a key
+    #: that JSON would spell like a text key can be shown with its type. Empty
+    #: for a value.
+    kind: str = ""
 
     def __str__(self) -> str:
         return self.diagnostic
@@ -428,12 +432,22 @@ def _decode_cbor_structure(data: bytes) -> tuple[dict[str, Any], int]:
     return node, offset
 
 
+# The type a map key held as a CborDiagnostic is, named for a reader.
+_KEY_KINDS = {"simple": "simple value", "text string": "text, not UTF-8"}
+
+
 def _map_key(key_node: Mapping[str, Any]) -> Any:
     key = _structure_to_value(key_node)
-    # JSON spells every key as text, so 1, 1.0 and true -- three different CBOR
-    # keys -- would all become "1"/"True"; Python already folds 1 == 1.0 == True.
+    node_type = key_node.get("type")
+    kind = _KEY_KINDS.get(node_type, node_type) if isinstance(node_type, str) else ""
+    # Python folds 1 == 1.0 == True, three different CBOR keys, into one.
     if key is None or isinstance(key, (bool, float)):
-        return CborDiagnostic(_diagnostic_value(key_node))
+        return CborDiagnostic(_diagnostic_value(key_node), kind)
+    if isinstance(key, CborDiagnostic):
+        return CborDiagnostic(key.diagnostic, kind)
+    # An array, map or tag key: spelled as before, and a key of its own type.
+    if isinstance(key, (list, dict)):
+        return CborDiagnostic(str(key), kind)
     return key
 
 
@@ -518,15 +532,11 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
             if not isinstance(key_node, Mapping):
                 continue
             key = _map_key(key_node)
-            value = (
+            result[key] = (
                 _structure_to_value(value_node)
                 if isinstance(value_node, Mapping)
                 else value_node
             )
-            try:
-                result[key] = value
-            except TypeError:
-                result[str(key)] = value
         return result
 
     if major_type == 6:

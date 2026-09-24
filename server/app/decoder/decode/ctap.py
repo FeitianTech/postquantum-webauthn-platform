@@ -12,11 +12,12 @@ from . import (
     cbor_parser,
     get_info,
     interpretations,
+    key_collisions,
     pipeline,
     response,
 )
 from .cbor_parser import _CborDecodingError, _structure_to_value
-from .keys import MISSING, key_identity
+from .keys import MISSING, json_items, key_identity
 from .keys import MISSING as _MISSING
 from .keys import coerce_cbor_bytes as _coerce_cbor_bytes
 from .keys import get_mapping_entry as _get_mapping_entry
@@ -78,10 +79,10 @@ def _convert_ctap_credential_descriptor(entry: Any) -> Any:
     if transports_value is not MISSING:
         descriptor["transports"] = _hex_json_safe(transports_value)
 
-    for key in entry:
+    for label, key, value in json_items(entry):
         if key in {"id", "type", "transports"} or key in {1, 2, 3}:
             continue
-        descriptor[_format_ctap_entry_key(key, None)] = _hex_json_safe(entry[key])
+        descriptor[label] = _hex_json_safe(value)
 
     return descriptor
 
@@ -129,15 +130,17 @@ def _build_labeled_ctap_map(
     seen_labels: set = set()
 
     if isinstance(mapping, Mapping):
-        for key in mapping:
+        def labelled(key: Any, text: str) -> str:
             label = _resolve_ctap_label(labels, key)
-            formatted_key = _format_ctap_entry_key(key, label)
+            return f"{text} ({label})" if label else text
+
+        for formatted_key, key, value in json_items(mapping, labelled):
+            label = _resolve_ctap_label(labels, key)
             handler: Callable[[Any], Any] | None = None
             if label is not None and label in handlers:
                 handler = handlers[label]
             elif key in handlers:
                 handler = handlers[key]
-            value = mapping[key]
             if handler is not None:
                 result[formatted_key] = handler(value)
             else:
@@ -478,10 +481,10 @@ def _convert_ctap_user(entry: Any) -> Any:
     if icon_value is not _MISSING:
         user["icon"] = _convert_user_text_value(icon_value)
 
-    for key in entry:
+    for label, key, value in json_items(entry):
         if key in {"id", "name", "displayName", "icon"} or key in {1, 2, 3, 4}:
             continue
-        user[_format_ctap_entry_key(key, None)] = _hex_json_safe(entry[key])
+        user[label] = _hex_json_safe(value)
 
     return user
 
@@ -838,7 +841,7 @@ def _try_decode_cbor(data: bytes, encoding: str, *, lenient: bool = False) -> di
         decoded_payload["decodedValue"] = _stringify_mapping_keys(_hex_json_safe(hex_decoded_value))
 
     extra, located = interpretations.for_ctap(classification, base_value, node, data)
-    findings = canonical.check(node, data) + skipped + _trailing_findings(data, end) + located
+    findings = canonical.check(node, data) + key_collisions.check(node) + skipped + _trailing_findings(data, end) + located
 
     if ctap_details is not None:
         ctap_details["payloadLength"] = consumed_total

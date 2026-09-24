@@ -29,7 +29,7 @@ from . import (
     safetynet,
     tpm_structures,
 )
-from .keys import hex_json_safe, key_text
+from .keys import hex_json_safe, json_items
 
 NOT_VERIFIED = "not verified: the decoder shows this statement; it checks no signature, chain or value in it"
 
@@ -65,7 +65,8 @@ def interpret(fmt: Any, att_stmt: Any, auth_data: Any = None, *, nested: bool = 
     missing = [name for name in required if name not in att_stmt]
     if missing:
         view["missing"] = {"members": missing, "note": f"section {section}'s attStmt syntax requires them; absent here"}
-    unrecognized = {key_text(key): hex_json_safe(value) for key, value in att_stmt.items() if key not in members}
+    extra = {key: value for key, value in att_stmt.items() if key not in members}
+    unrecognized = {label: hex_json_safe(value) for label, _key, value in json_items(extra)}
     if unrecognized:
         view["notInSyntax"] = {
             "members": unrecognized,

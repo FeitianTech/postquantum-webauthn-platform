@@ -97,7 +97,9 @@ def test_structure_to_value_handles_chunks_and_unhashable_map_keys():
         ],
     }
     converted = decode_module._structure_to_value(map_node)
-    assert converted["[1]"] == 7
+    # An array key is a key of its own, spelled as the array it is.
+    assert converted == {decode_module.CborDiagnostic("[1]"): 7}
+    assert decode_module._stringify_mapping_keys(converted) == {"[1]": 7}
 
 
 def test_decode_item_reads_indefinite_containers_and_never_makes_up_a_short_float():

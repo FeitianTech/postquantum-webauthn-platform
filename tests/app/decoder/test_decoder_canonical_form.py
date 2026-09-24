@@ -73,7 +73,10 @@ def test_map_keys_out_of_ctap2_order_are_reported(hex_text, located):
 
 def test_map_keys_in_ctap2_order_are_not_reported():
     # {5: 0, 24: 0, -1: 0, h'': 0, "": 0, "a": 0}
-    assert _decode("a60500181800200040006000616100")["findings"] == []
+    result = _decode("a60500181800200040006000616100")
+
+    # h'' and "" are both "" as JSON keys: reported, but not a canonical-form problem.
+    assert _located(result) == [("json-key-collision", 0, "$")]
 
 
 def test_a_key_written_twice_in_different_lengths_is_one_key_twice():

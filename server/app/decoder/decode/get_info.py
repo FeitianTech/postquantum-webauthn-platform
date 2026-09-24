@@ -23,7 +23,7 @@ from typing import Any
 
 from ...webauthn import pqc
 from .. import ctap_tables
-from .keys import MISSING, get_mapping_entry, hex_json_safe, key_text
+from .keys import MISSING, get_mapping_entry, hex_json_safe, json_items
 
 _AAGUID_LENGTH = 16
 
@@ -42,19 +42,22 @@ def looks_like_get_info(value: Any) -> bool:
 
 
 def interpret_get_info(value: Mapping[Any, Any]) -> dict[str, Any]:
-    members = ctap_tables.GET_INFO_RESPONSE
     interpreted: dict[str, Any] = {}
-    for key, entry in value.items():
-        if isinstance(key, int) and not isinstance(key, bool):
-            name = members.get(key)
-            if name is None:
-                interpreted[f"{key} (not defined in CTAP 2.2)"] = hex_json_safe(entry)
-            else:
-                interpreted[f"{key} ({name})"] = _MEMBER_VIEWS.get(name, hex_json_safe)(entry)
-        else:
-            label = f"{key_text(key)} (not a member: CTAP 2.2 numbers members with integer keys)"
-            interpreted[label] = hex_json_safe(entry)
+    for label, key, entry in json_items(value, _member_label):
+        name = ctap_tables.GET_INFO_RESPONSE.get(key) if _is_member_number(key) else None
+        interpreted[label] = _MEMBER_VIEWS.get(name, hex_json_safe)(entry) if name else hex_json_safe(entry)
     return interpreted
+
+
+def _is_member_number(key: Any) -> bool:
+    return isinstance(key, int) and not isinstance(key, bool)
+
+
+def _member_label(key: Any, text: str) -> str:
+    if not _is_member_number(key):
+        return f"{text} (not a member: CTAP 2.2 numbers members with integer keys)"
+    name = ctap_tables.GET_INFO_RESPONSE.get(key)
+    return f"{text} ({name})" if name else f"{text} (not defined in CTAP 2.2)"
 
 
 def _aaguid(value: Any) -> Any:
@@ -72,8 +75,7 @@ def _options(value: Any) -> Any:
     if not isinstance(value, Mapping):
         return hex_json_safe(value)
     options: dict[str, Any] = {}
-    for option, setting in value.items():
-        name = key_text(option)
+    for name, option, setting in json_items(value):
         known = ctap_tables.GET_INFO_OPTIONS.get(option) if isinstance(option, str) else None
         if known is None:
             options[name] = {
@@ -131,8 +133,7 @@ def _certifications(value: Any) -> Any:
     if not isinstance(value, Mapping):
         return hex_json_safe(value)
     certifications: dict[str, Any] = {}
-    for certification, level in value.items():
-        name = key_text(certification)
+    for name, certification, level in json_items(value):
         meaning = ctap_tables.GET_INFO_CERTIFICATIONS.get(certification) if isinstance(certification, str) else None
         view: dict[str, Any] = {"value": hex_json_safe(level)}
         if meaning is None:

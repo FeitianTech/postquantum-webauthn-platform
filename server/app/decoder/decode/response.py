@@ -20,6 +20,7 @@ from .certificates import (
     _convert_certificate_payload_impl,
 )
 from .keys import hex_json_safe as _hex_json_safe
+from .keys import json_ready
 from .keys import stringify_mapping_keys as _stringify_mapping_keys
 
 
@@ -78,7 +79,8 @@ def _build_decoder_payload(result: dict[str, Any]) -> dict[str, Any]:
     return {
         "success": True,
         "type": type_label,
-        "data": data,
+        # A map whose keys JSON would spell alike still arrives whole.
+        "data": json_ready(data),
         "decodeMode": result.get("decodeMode", "strict"),
         "findings": findings if isinstance(findings, list) else [],
         "malformed": malformed,
