@@ -124,6 +124,11 @@ Related backend modules:
   The ML-DSA adapter.
 - `server/app/storage/`
   Persistence: `credentials.py`, `session_metadata.py`, `cloud.py`, `common.py`.
+  A read-modify-write of credential records (the signature counter) goes through
+  `read_for_update` / `save_if_unchanged`, compare-and-swap: a GCS generation
+  precondition, or locally an `flock` on the file's `.lock` beside it. A name the
+  store refuses raises `common.InvalidStorageIdentifier`, a `ValueError` that
+  `routes/errors.py` answers with 400 and no traceback.
 - `server/app/decoder/`
   Decoder/encoder logic used by the developer tooling UI: `decode/` and `encode/`.
   `ctap_tables.py` is the one CTAP table both read (command and status bytes,
@@ -140,7 +145,14 @@ Related backend modules:
   every decode; the CTAP2 key order is `decoder/ctap2_order.py`, shared with the
   encoder. The decoder shows what was sent: it never synthesizes or drops a field
   (the old "repair" code did, for a set of corrupt captures), and bytes after the
-  top-level item are reported, never decoded or dropped.
+  top-level item are reported, never decoded or dropped. Map keys become JSON keys
+  only through `keys.json_keys`: keys that would share a spelling (1 and "1",
+  h'01' and "01") are each spelled with their type, and `decode/key_collisions.py`
+  reports the map as `json-key-collision`. A CTAP member label applies only to an
+  integer key in a CTAP message; user entities, credential descriptors and
+  attestation objects are read by their text keys. Text that is both hex and a JSON
+  number is read by the precedence in `decode/ambiguous_input.py` (hex only when it
+  is one well-formed CBOR item), and the response names the reading not taken.
   Interpretation sits beside the decoded value, never in place of it:
   `decode/interpretations.py` adds `data.extensionsDecoded` (`decode/extensions.py`,
   CTAP 2.2 section 12 and WebAuthn L3 section 10) and `data.attestationStatementDecoded`
