@@ -13,6 +13,7 @@ from . import (
     certificate_extensions,
     certificate_names,
     certificate_public_keys,
+    certificate_summary,
     certificates,
     checks,
     classical,
@@ -78,7 +79,7 @@ _build_unknown_public_key_info = certificate_public_keys._build_unknown_public_k
 _serialize_public_key_info = certificate_public_keys._serialize_public_key_info
 
 # Certificate summary composition.
-_build_certificate_summary = certificates._build_certificate_summary
+_build_certificate_summary = certificate_summary._build_certificate_summary
 
 # Full certificate serialisation.
 _serialize_attestation_certificate_fallback = certificates._serialize_attestation_certificate_fallback
