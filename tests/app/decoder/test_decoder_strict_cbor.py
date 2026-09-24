@@ -70,6 +70,15 @@ def test_the_decode_endpoint_returns_the_location_of_a_parse_error(client):
     assert "array declares 10 items" in body["error"]
 
 
+def test_a_long_byte_string_key_is_cut_short_in_the_path():
+    # {h'00'*40: 1, 1: <truncated byte string>}
+    error = _decode_error("a2" + "5828" + "00" * 40 + "01" + "01" + "48aa")
+
+    assert error.path == "${1}"
+    error = _decode_error("a1" + "5828" + "00" * 40 + "48aa")
+    assert error.path == "${h'0000000000000000...'}"
+
+
 def test_nesting_deeper_than_the_limit_fails_instead_of_exhausting_the_stack():
     error = _decode_error("a101" * 100 + "00")
 

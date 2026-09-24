@@ -153,13 +153,17 @@ def _key_path(path: str, key_node: Mapping[str, Any]) -> str:
 
 
 def _diagnostic_key(node: Mapping[str, Any]) -> str:
+    """A map key in CBOR diagnostic notation, cut short: paths name, offsets locate."""
+
     node_type = node.get("type")
     if node_type in ("unsigned", "negative"):
         return str(node.get("value"))
     if node_type == "text string" and isinstance(node.get("value"), str):
-        return f'"{node["value"]}"'
+        text = node["value"]
+        return f'"{text}"' if len(text) <= 32 else f'"{text[:29]}..."'
     if node_type == "byte string":
-        return f"h'{node.get('hex', '')}'"
+        hex_value = str(node.get("hex", ""))
+        return f"h'{hex_value}'" if len(hex_value) <= 32 else f"h'{hex_value[:16]}...'"
     return str(node.get("summary", "?"))
 
 
