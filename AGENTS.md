@@ -141,6 +141,21 @@ Related backend modules:
   encoder. The decoder shows what was sent: it never synthesizes or drops a field
   (the old "repair" code did, for a set of corrupt captures), and bytes after the
   top-level item are reported, never decoded or dropped.
+  Interpretation sits beside the decoded value, never in place of it:
+  `decode/interpretations.py` adds `data.extensionsDecoded` (`decode/extensions.py`,
+  CTAP 2.2 section 12 and WebAuthn L3 section 10) and `data.attestationStatementDecoded`
+  (`decode/attestation_statement.py`, WebAuthn L3 section 8, which calls
+  `tpm_structures.py`, `android_key.py`, `safetynet.py`, `apple_anonymous.py`), and
+  `decode/get_info.py` reads authenticatorGetInfo. It shows, it does not verify:
+  every attestation view says so and lists what it did not check. CTAP numbers and
+  names (getInfo members and options, extension identifiers) go in `ctap_tables.py`,
+  COSE registries in `decoder/cose_tables.py` (shared with `encode/cose_key.py`).
+  DER is read only through `cryptography` (`x509` and `hazmat.asn1`), never by hand.
+  Findings inside authData, a nested PublicKeyCredential field or a TPM structure
+  carry the input offset and path (`${2}<credentialPublicKey>{1}`; a nested field's
+  findings add `source`). `decode/ctap.py` is at its size limit: put new code in a
+  module named for what it does. The encoder refuses a decoded-JSON member it cannot
+  rebuild rather than dropping it.
 
 Each of these packages keeps its public surface in `__init__.py` and its
 implementation in submodules named for what they do. Import the submodule you
