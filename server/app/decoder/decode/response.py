@@ -54,6 +54,8 @@ def _build_decoder_payload(result: dict[str, Any]) -> dict[str, Any]:
                     qualifiers.append("MakeCredential request")
                 if "getAssertionRequest" in ctap_decoded:
                     qualifiers.append("GetAssertion request")
+                if "getInfoResponse" in ctap_decoded:
+                    qualifiers.append("GetInfo response")
             expanded_json = decoded.get("expandedJson")
             if isinstance(expanded_json, Mapping):
                 if "attStmt" in expanded_json and "MakeCredential response" not in qualifiers:
