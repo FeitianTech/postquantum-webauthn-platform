@@ -16,6 +16,9 @@ allowlist of FIDO2 value classes.
 """
 from __future__ import annotations
 
+import contextlib
+import fcntl
+import hashlib
 import io
 import json
 import logging
@@ -34,9 +37,11 @@ from .cloud import (
     build_blob_name,
     delete_blob,
     download_bytes,
+    download_bytes_with_generation,
     gcs_enabled,
     list_blob_names,
     upload_bytes,
+    upload_bytes_if_generation,
 )
 from .common import (
     assert_contained_blob_name,
@@ -58,7 +63,9 @@ __all__ = [
     "extract_credential_data",
     "iter_credentials",
     "list_credentials",
+    "read_for_update",
     "readkey",
+    "save_if_unchanged",
     "savekey",
 ]
 
@@ -496,6 +503,43 @@ def _discard_superseded_pickle(name: str, session_id: str) -> None:
             pass
 
 
+@contextlib.contextmanager
+def _locked(path: str) -> Iterator[None]:
+    """Hold an exclusive ``flock`` on ``path``'s ``.lock`` file.
+
+    One writer at a time for that file, across threads and across the server's
+    worker processes on this host. The lock file is never removed: unlinking a
+    lock another process is waiting on would split the queue in two.
+    """
+
+    with open(f"{path}.lock", "a") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+
+
+def _replace_file(path: str, payload: bytes) -> None:
+    # Write-then-rename so concurrent readers never see a truncated file.
+    tmp_path = f"{path}.tmp.{os.urandom(6).hex()}"
+    try:
+        with open(tmp_path, "wb") as f:
+            f.write(payload)
+        os.replace(tmp_path, path)
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+
+def _file_digest(path: str) -> str | None:
+    try:
+        with open(path, "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+    except FileNotFoundError:
+        return None
+
+
 def savekey(name: str, key: Any, *, session_id: str | None = None) -> None:
     payload = _encode_records(key)
     resolved_session = _resolve_session_id(session_id)
@@ -504,17 +548,67 @@ def savekey(name: str, key: Any, *, session_id: str | None = None) -> None:
         upload_bytes(blob_name, payload, content_type="application/json")
     else:
         path = _local_filename(name, resolved_session, create=True)
-        # Write-then-rename so concurrent readers never see a truncated file.
-        tmp_path = f"{path}.tmp.{os.urandom(6).hex()}"
-        try:
-            with open(tmp_path, "wb") as f:
-                f.write(payload)
-            os.replace(tmp_path, path)
-        finally:
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
+        with _locked(path):
+            _replace_file(path, payload)
 
     _discard_superseded_pickle(name, resolved_session)
+
+
+def read_for_update(name: str, *, session_id: str | None = None) -> tuple[list[Any], Any]:
+    """``readkey``, and the version of the copy a later save would replace.
+
+    The version is opaque: the object's generation on GCS (0 when there is no
+    object), the SHA-256 of the file locally (``None`` when there is no file).
+    Hand it to :func:`save_if_unchanged`.
+    """
+
+    resolved_session = _resolve_session_id(session_id)
+    if _using_gcs():
+        source = _credential_blob(name, resolved_session)
+        payload, version = download_bytes_with_generation(source)
+    else:
+        source = _local_filename(name, resolved_session)
+        try:
+            with open(source, "rb") as f:
+                payload = f.read()
+        except FileNotFoundError:
+            payload = None
+        version = hashlib.sha256(payload).hexdigest() if payload is not None else None
+
+    records = _load_payload(payload, source=source) if payload else None
+    if records is None:
+        # No current copy: the records, if any, are a legacy one's.
+        records = readkey(name, session_id=resolved_session)
+    return records, version
+
+
+def save_if_unchanged(name: str, key: Any, version: Any, *, session_id: str | None = None) -> bool:
+    """``savekey``, only if the copy it replaces is still at ``version``.
+
+    Compare-and-swap for a read-modify-write such as advancing a signature
+    counter: returns ``False``, having written nothing, when another writer
+    changed the records since :func:`read_for_update` returned ``version``.
+    GCS checks the object generation; locally the check and the write happen
+    under the file's lock.
+    """
+
+    payload = _encode_records(key)
+    resolved_session = _resolve_session_id(session_id)
+    if _using_gcs():
+        blob_name = _credential_blob(name, resolved_session)
+        written = upload_bytes_if_generation(
+            blob_name, payload, generation=version, content_type="application/json"
+        )
+    else:
+        path = _local_filename(name, resolved_session, create=True)
+        with _locked(path):
+            written = _file_digest(path) == version
+            if written:
+                _replace_file(path, payload)
+
+    if written:
+        _discard_superseded_pickle(name, resolved_session)
+    return written
 
 
 def readkey(name: str, *, session_id: str | None = None) -> list[Any]:

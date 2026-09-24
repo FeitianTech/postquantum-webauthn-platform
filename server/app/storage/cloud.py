@@ -17,11 +17,13 @@ __all__ = [
     "build_blob_name",
     "delete_blob",
     "download_bytes",
+    "download_bytes_with_generation",
     "ensure_ready",
     "gcs_enabled",
     "list_blob_names",
     "normalise_blob_prefix",
     "upload_bytes",
+    "upload_bytes_if_generation",
 ]
 
 # The Google client libraries take most of the application's import time, so
@@ -245,6 +247,45 @@ def download_bytes(blob_name: str) -> bytes | None:
             return None
 
     return _with_retry(_download)
+
+
+def download_bytes_with_generation(blob_name: str) -> tuple[bytes | None, int]:
+    """The object's bytes and generation; ``(None, 0)`` when there is no object."""
+
+    bucket = _ensure_bucket()
+    blob = bucket.blob(blob_name)
+
+    def _download() -> tuple[bytes | None, int]:
+        try:
+            data = blob.download_as_bytes()
+        except _not_found_error():
+            return None, 0
+        # The download sets the generation from the response it read.
+        return data, int(blob.generation or 0)
+
+    return _with_retry(_download)
+
+
+def upload_bytes_if_generation(
+    blob_name: str, data: bytes, *, generation: int, content_type: str | None = None
+) -> bool:
+    """Upload only if the object is still at ``generation`` (0: there is none).
+
+    Returns ``False``, having written nothing, when another writer got there
+    first. Attempted once, with the client library's own retry off: a retried
+    conditional upload whose first attempt did land would fail its own
+    precondition and read as a lost race. A transient error raises instead.
+    """
+
+    bucket = _ensure_bucket()
+    blob = bucket.blob(blob_name)
+    try:
+        blob.upload_from_string(
+            data, content_type=content_type, if_generation_match=generation, retry=None
+        )
+    except _lazy("gcs_exceptions").PreconditionFailed:
+        return False
+    return True
 
 
 def delete_blob(blob_name: str, *, missing_ok: bool = True) -> None:
