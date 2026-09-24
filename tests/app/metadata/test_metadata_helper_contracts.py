@@ -167,9 +167,11 @@ def test_cache_cleaning_formatting_and_store_helper(tmp_path, monkeypatch, blob)
     assert stored["fetched_at"]
 
 
-def test_prune_helper_and_request_session_identifier_paths(monkeypatch, session_store, app_config):
+def test_prune_helper_and_request_session_identifier_paths(monkeypatch, tmp_path, session_store, app_config):
     metadata_module = pytest.importorskip("server.app.webauthn.metadata")
     config_module = pytest.importorskip("server.app.config")
+    # Resolving the cookie's namespace refreshes its directory's last-access marker.
+    monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
 
     monkeypatch.setattr(
         session_store,

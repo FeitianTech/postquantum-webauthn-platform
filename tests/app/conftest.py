@@ -25,6 +25,23 @@ import pytest
 TEST_SECRET_KEY = "test-session-secret-0123456789abcdef"
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _session_metadata_outside_the_checkout(tmp_path_factory):
+    """Point the session-metadata store at this run's own directory, for the whole run.
+
+    A test that needs a directory of its own still patches one in; this is what
+    it falls back to when that patch is undone. A session-cleanup worker thread
+    can outlive the test that started it, and one listing the default directory
+    removes the inactive sessions it finds there -- the checkout's.
+    """
+
+    from server.app.storage import session_metadata
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(session_metadata, "SESSION_METADATA_DIR", str(tmp_path_factory.mktemp("session-metadata")))
+        yield
+
+
 @pytest.fixture
 def make_app():
     """Build a fresh app with ``create_app()``; keyword arguments override config.

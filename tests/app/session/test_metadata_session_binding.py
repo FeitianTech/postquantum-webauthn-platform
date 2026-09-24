@@ -26,10 +26,8 @@ def session_env(monkeypatch, tmp_path):
     session_dir = tmp_path / "sessions"
     session_dir.mkdir()
 
-    for module in (config, session_store):
-        monkeypatch.setattr(
-            module, "SESSION_METADATA_DIR", str(session_dir)
-        )
+    # The store copied the directory from config at import: patch the copy it reads.
+    monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(session_dir))
 
     monkeypatch.setattr(session_store, "gcs_enabled", lambda: False)
     monkeypatch.setattr(session_store, "_using_gcs", lambda: False)
