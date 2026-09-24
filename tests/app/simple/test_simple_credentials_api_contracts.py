@@ -247,7 +247,7 @@ def test_credentials_get_handles_bare_credential_objects_and_skips_malformed(mon
     assert entry["algorithm"] == -7
 
 
-def test_credentials_get_returns_empty_list_when_storage_iteration_fails(monkeypatch, metadata_module, storage_module):
+def test_credentials_get_is_an_error_when_storage_iteration_fails(monkeypatch, metadata_module, storage_module):
     config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
@@ -261,8 +261,9 @@ def test_credentials_get_returns_empty_list_when_storage_iteration_fails(monkeyp
     with config_module.app.test_client() as client:
         response = client.get("/api/credentials")
 
-    assert response.status_code == 200
-    assert response.get_json() == []
+    # Not 200 with [], which reads as "no credentials".
+    assert response.status_code == 500
+    assert response.get_json() == {"error": "The stored credentials could not be read, so none are listed."}
 
 
 def test_credentials_delete_removes_all_usernames_and_reports_count(monkeypatch, metadata_module, storage_module):
@@ -294,7 +295,7 @@ def test_credentials_delete_removes_all_usernames_and_reports_count(monkeypatch,
     ]
 
 
-def test_credentials_delete_returns_zero_when_listing_credentials_raises(monkeypatch, metadata_module, storage_module):
+def test_credentials_delete_is_an_error_when_listing_credentials_raises(monkeypatch, metadata_module, storage_module):
     config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
@@ -308,5 +309,9 @@ def test_credentials_delete_returns_zero_when_listing_credentials_raises(monkeyp
     with config_module.app.test_client() as client:
         response = client.delete("/api/credentials")
 
-    assert response.status_code == 200
-    assert response.get_json() == {"status": "OK", "removed": 0}
+    assert response.status_code == 500
+    assert response.get_json() == {
+        "status": "error",
+        "removed": 0,
+        "error": "The stored credentials could not be read, so none were deleted.",
+    }
