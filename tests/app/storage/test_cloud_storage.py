@@ -160,6 +160,21 @@ def test_list_blob_names_retries_and_returns_results(monkeypatch):
     assert call_state["attempt"] == 2
 
 
+def test_list_blob_names_passes_a_delimiter_only_when_asked(monkeypatch):
+    calls = []
+
+    class _Bucket:
+        def list_blobs(self, **kwargs):
+            calls.append(kwargs)
+            return [types.SimpleNamespace(name="user-data/flat")]
+
+    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
+
+    assert list(cloud.list_blob_names("user-data/")) == ["user-data/flat"]
+    assert list(cloud.list_blob_names("user-data/", delimiter="/")) == ["user-data/flat"]
+    assert calls == [{"prefix": "user-data/"}, {"prefix": "user-data/", "delimiter": "/"}]
+
+
 def test_download_bytes_handles_not_found(monkeypatch):
     class _Blob:
         def download_as_bytes(self):

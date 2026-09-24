@@ -37,15 +37,31 @@ class Bucket:
         self.upload_retries: list[object] = []
         self.on_download: list[Callable[[str], None]] = []
         self.failing: dict[str, Exception] = {}
+        self.list_calls: list[tuple[str, str | None]] = []
         self.lock = threading.Lock()
 
     def blob(self, name: str) -> Blob:
         return Blob(self, name)
 
-    def list_blobs(self, prefix: str = "", max_results: int | None = None) -> list[Blob]:
+    def list_blobs(self, prefix: str = "", max_results: int | None = None, delimiter: str | None = None) -> Listing:
+        """The objects under ``prefix``, as Cloud Storage lists them; every call is recorded.
+
+        With ``delimiter``, a name with another delimiter after the prefix is not
+        listed: its part up to that delimiter is one of the listing's ``prefixes``.
+        """
+
+        self.list_calls.append((prefix, delimiter))
         with self.lock:
             names = sorted(name for name in self.objects if name.startswith(prefix))
-        return [Blob(self, name) for name in names[:max_results]]
+        blobs: list[Blob] = []
+        prefixes: set[str] = set()
+        for name in names:
+            rest = name[len(prefix) :]
+            if delimiter is not None and delimiter in rest:
+                prefixes.add(prefix + rest[: rest.index(delimiter) + len(delimiter)])
+            else:
+                blobs.append(Blob(self, name))
+        return Listing(blobs[:max_results], prefixes)
 
     def put(self, name: str, data: bytes) -> None:
         """Write ``name`` directly, as another server instance would."""
@@ -53,6 +69,19 @@ class Bucket:
         with self.lock:
             self.objects[name] = (bytes(data), self.next_generation)
             self.next_generation += 1
+
+
+class Listing:
+    """A listing's iterator: ``prefixes`` fills in only as it is read, as the client's pages do."""
+
+    def __init__(self, blobs: list[Blob], prefixes: set[str]) -> None:
+        self._blobs = blobs
+        self._prefixes = prefixes
+        self.prefixes: set[str] = set()
+
+    def __iter__(self):
+        yield from self._blobs
+        self.prefixes |= self._prefixes
 
 
 class Blob:

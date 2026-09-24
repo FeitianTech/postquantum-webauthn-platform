@@ -302,11 +302,20 @@ def delete_blob(blob_name: str, *, missing_ok: bool = True) -> None:
     _with_retry(_delete)
 
 
-def list_blob_names(prefix: str) -> Iterable[str]:
+def list_blob_names(prefix: str, *, delimiter: str | None = None) -> Iterable[str]:
+    """The names of the objects under ``prefix``.
+
+    With ``delimiter`` ("/"), only the objects directly under it: Cloud Storage
+    leaves out every name with another delimiter after the prefix.
+    """
+
     bucket = _ensure_bucket()
 
     def _list() -> Iterable[str]:
-        iterator = bucket.list_blobs(prefix=prefix)
+        if delimiter is None:
+            iterator = bucket.list_blobs(prefix=prefix)
+        else:
+            iterator = bucket.list_blobs(prefix=prefix, delimiter=delimiter)
         return [blob.name for blob in iterator]
 
     for name in _with_retry(_list):
