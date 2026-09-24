@@ -146,3 +146,44 @@ def test_a_conditional_gcs_upload_is_not_retried_by_the_client_library(gcs_store
     store.save_if_unchanged(NAME, records, version, session_id=SESSION)
 
     assert gcs_store.upload_retries[-1] is None
+
+
+def test_a_delete_during_a_save_waits_for_it_and_leaves_nothing(local_store, monkeypatch):
+    # The save is paused inside the store's lock, between its check and its
+    # rename. A delete that did not take the lock would remove the file there,
+    # and the rename would then write the deleted records back.
+    records, version = store.read_for_update(NAME, session_id=SESSION)
+    path = store._local_filename(NAME, SESSION)
+    renaming, release = threading.Event(), threading.Event()
+    real_replace = os.replace
+
+    def _paused_replace(source, destination, *args, **kwargs):
+        if destination == path and threading.current_thread().name == "saver":
+            renaming.set()
+            release.wait(10)
+        return real_replace(source, destination, *args, **kwargs)
+
+    monkeypatch.setattr(os, "replace", _paused_replace)
+    saved = []
+    saver = threading.Thread(
+        name="saver",
+        target=lambda: saved.append(store.save_if_unchanged(NAME, records + [{"sign_count": 6}], version, session_id=SESSION)),
+    )
+    saver.start()
+    assert renaming.wait(10)
+    deleter = threading.Thread(target=lambda: store.delkey(NAME, session_id=SESSION))
+    deleter.start()
+    deleter.join(0.5)
+    release.set()
+    saver.join(10)
+    deleter.join(10)
+
+    assert saved == [True]
+    assert not os.path.exists(path)
+    assert store.readkey(NAME, session_id=SESSION) == []
+
+
+def test_deleting_a_name_with_nothing_stored_leaves_no_lock_file(local_store):
+    store.delkey("nobody@example.com", session_id=SESSION)
+
+    assert not os.path.exists(store._local_filename("nobody@example.com", SESSION) + ".lock")
