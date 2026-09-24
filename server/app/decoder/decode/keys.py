@@ -93,9 +93,19 @@ def coerce_cbor_bytes(value: Any) -> bytes | None:
     return None
 
 
+def key_text(key: Any) -> str:
+    """Spell a map key for JSON: a byte string as hex, like a byte string value."""
+
+    if isinstance(key, ByteBuffer):
+        return key.getvalue().hex()
+    if isinstance(key, (bytes, bytearray, memoryview)):
+        return bytes(key).hex()
+    return str(key)
+
+
 def stringify_mapping_keys(value: Any) -> Any:
     if isinstance(value, Mapping):
-        return {str(key): stringify_mapping_keys(val) for key, val in value.items()}
+        return {key_text(key): stringify_mapping_keys(val) for key, val in value.items()}
     if isinstance(value, list):
         return [stringify_mapping_keys(item) for item in value]
     return value
@@ -107,7 +117,7 @@ def make_hex_only(value: Any) -> Any:
     if isinstance(value, (bytes, bytearray, memoryview)):
         return bytes(value).hex()
     if isinstance(value, Mapping):
-        return {str(key): make_hex_only(val) for key, val in value.items()}
+        return {key_text(key): make_hex_only(val) for key, val in value.items()}
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         return [make_hex_only(item) for item in value]
     return value
