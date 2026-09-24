@@ -25,10 +25,8 @@ from . import parsing, registration_persistence, registration_record
 logger = logging.getLogger(__name__)
 
 
-def register_complete():
-    uname = request.args.get("email")
-    response = request.get_json(silent=True) or {}
-    credential_response = response.get("response", {}) if isinstance(response, dict) else {}
+def _complete_inputs(response: Any, credential_response: Mapping[str, Any]) -> dict[str, Any]:
+    """The attestation, client data and extension outputs the registration response carries."""
 
     (
         attestation_format,
@@ -51,14 +49,22 @@ def register_complete():
         else (response.get("clientExtensionResults", {}) if isinstance(response, dict) else {})
     )
 
-    min_pin_length_value = attestation.extract_min_pin_length(client_extension_results)
+    return {
+        "attestation_format": attestation_format,
+        "attestation_statement": attestation_statement,
+        "parsed_attestation_object": parsed_attestation_object,
+        "attestation_certificate_details": attestation_certificate_details,
+        "attestation_certificates_details": attestation_certificates_details,
+        "client_data_json_b64": client_data_json_b64,
+        "client_data_json": client_data_json,
+        "client_extension_results": client_extension_results,
+        "min_pin_length_value": attestation.extract_min_pin_length(client_extension_results),
+    }
 
-    # A client-supplied ``__session_state`` is stripped and ignored: accepting
-    # it would let the caller choose the challenge it is verified against.
-    if isinstance(response, dict):
-        response.pop("__session_state", None)
 
-    rp_id = session.get("register_rp_id")
+def _consume_registration_state() -> tuple[Any, Any]:
+    """The session's ceremony state, consumed; or the 400 when it is missing, replayed or stale."""
+
     # Popping the state is not enough on its own: the session is a client-side
     # cookie, so an earlier copy that still holds this state can be resent.
     # Consuming the challenge server-side is what makes it single-use.
@@ -67,7 +73,7 @@ def register_complete():
         # Drop any stale ceremony leftovers so the next attempt starts clean.
         session.pop("register_rp_id", None)
         session.pop("simple_register_public_key", None)
-        return (
+        return None, (
             jsonify(
                 {
                     "error": "Registration state not found or has expired. Please restart the registration process."
@@ -87,7 +93,14 @@ def register_complete():
             )
         else:
             message = "Registration challenge has expired. Please restart the registration process."
-        return jsonify({"error": message}), 400
+        return None, (jsonify({"error": message}), 400)
+    return state, None
+
+
+def _verify_registration(
+    state: Any, response: Any, credential_response: Mapping[str, Any], rp_id: Any
+) -> tuple[dict[str, Any] | None, Any]:
+    """fido2's verification, the origin allowlist and the attestation checks; or the 400."""
 
     public_key_options_for_checks = session.pop("simple_register_public_key", None)
     resolved_rp_id = rp_id or config.determine_rp_id()
@@ -97,21 +110,14 @@ def register_complete():
         auth_data = server.register_complete(state, response)
     except Exception as exc:
         session.pop("register_rp_id", None)
-        return jsonify({"error": str(exc)}), 400
-
-    authenticator_attachment_response = normalize_attachment(
-        response.get("authenticatorAttachment") if isinstance(response, Mapping) else None
-    )
-
-    raw_attestation_object_b64 = credential_response.get("attestationObject")
-    raw_attestation_object = raw_attestation_object_b64
+        return None, (jsonify({"error": str(exc)}), 400)
 
     # The origin the ceremony claims, read from clientDataJSON -- NOT from the
     # request's own Origin header, which the caller also controls.
     ceremony_origin = config.extract_client_data_origin(credential_response)
     if not config.is_origin_allowed(ceremony_origin):
         session.pop("register_rp_id", None)
-        return (
+        return None, (
             jsonify(
                 {
                     "error": (
@@ -137,31 +143,36 @@ def register_complete():
         expected_origin,
         resolved_rp_id,
     )
+    return {"auth_data": auth_data, "resolved_rp_id": resolved_rp_id, "attestation_checks": attestation_checks}, None
 
-    ctx: dict[str, Any] = {
+
+def _registration_context(
+    uname: Any, response: Any, credential_response: Mapping[str, Any], inputs: Mapping[str, Any], verified: Mapping[str, Any]
+) -> dict[str, Any]:
+    attestation_checks = verified["attestation_checks"]
+    raw_attestation_object_b64 = credential_response.get("attestationObject")
+    return {
         "uname": uname,
         "response": response,
         "credential_response": credential_response,
-        "attestation_format": attestation_format,
-        "attestation_statement": attestation_statement,
-        "parsed_attestation_object": parsed_attestation_object,
-        "attestation_certificate_details": attestation_certificate_details,
-        "attestation_certificates_details": attestation_certificates_details,
-        "client_data_json_b64": client_data_json_b64,
-        "client_data_json": client_data_json,
-        "client_extension_results": client_extension_results,
-        "min_pin_length_value": min_pin_length_value,
-        "auth_data": auth_data,
-        "authenticator_attachment_response": authenticator_attachment_response,
+        **inputs,
+        "auth_data": verified["auth_data"],
+        "authenticator_attachment_response": normalize_attachment(
+            response.get("authenticatorAttachment") if isinstance(response, Mapping) else None
+        ),
         "raw_attestation_object_b64": raw_attestation_object_b64,
-        "raw_attestation_object": raw_attestation_object,
-        "resolved_rp_id": resolved_rp_id,
+        "raw_attestation_object": raw_attestation_object_b64,
+        "resolved_rp_id": verified["resolved_rp_id"],
         "attestation_signature_valid": attestation_checks.get("signature_valid"),
         "attestation_root_valid": attestation_checks.get("root_valid"),
         "attestation_rp_id_hash_valid": attestation_checks.get("rp_id_hash_valid"),
         "attestation_aaguid_match": attestation_checks.get("aaguid_match"),
         "attestation_checks_safe": attestation.make_json_safe(attestation_checks),
     }
+
+
+def _attestation_error_response(attestation_checks: Mapping[str, Any]) -> Any:
+    """The 400 when the attestation checks found errors: the simple flow rejects on them."""
 
     attestation_errors = attestation_checks.get("errors")
     if isinstance(attestation_errors, list) and attestation_errors:
@@ -178,6 +189,33 @@ def register_complete():
             ),
             400,
         )
+    return None
+
+
+def register_complete():
+    uname = request.args.get("email")
+    response = request.get_json(silent=True) or {}
+    credential_response = response.get("response", {}) if isinstance(response, dict) else {}
+    inputs = _complete_inputs(response, credential_response)
+
+    # A client-supplied ``__session_state`` is stripped and ignored: accepting
+    # it would let the caller choose the challenge it is verified against.
+    if isinstance(response, dict):
+        response.pop("__session_state", None)
+
+    rp_id = session.get("register_rp_id")
+    state, error_response = _consume_registration_state()
+    if error_response is not None:
+        return error_response
+
+    verified, error_response = _verify_registration(state, response, credential_response, rp_id)
+    if error_response is not None:
+        return error_response
+
+    ctx = _registration_context(uname, response, credential_response, inputs, verified)
+    error_response = _attestation_error_response(verified["attestation_checks"])
+    if error_response is not None:
+        return error_response
 
     registration_record.initialize_registration_context(ctx)
     registration_record.populate_authenticator_data_context(ctx)
@@ -191,8 +229,7 @@ def register_complete():
     if persist_response is not None:
         return persist_response
 
-    response_payload = registration_record.build_register_complete_response_payload(ctx)
-    return jsonify(response_payload)
+    return jsonify(registration_record.build_register_complete_response_payload(ctx))
 
 
 _SIMPLE_ALLOWED_ALGORITHMS: tuple[int, ...] = tuple(
