@@ -11,8 +11,9 @@ from fido2.webauthn import AuthenticatorData, UserVerificationRequirement
 
 from ... import config
 from ...attachments import (
+    attachment_hint_violation,
     normalize_attachment,
-    normalize_attachment_list,
+    resolve_allowed_attachments,
     resolve_effective_attachments,
 )
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
@@ -20,7 +21,7 @@ from ...encoding import decode_hex, encode_base64url
 from ...webauthn import attestation, pqc
 from ...webauthn.sign_count import sign_count_status
 from .. import binary_helpers
-from . import algorithms, binary, parsing
+from . import algorithms, binary, constants, parsing
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +51,7 @@ def advanced_authenticate_begin():
     challenge_bytes = None
     if challenge_value:
         try:
-            challenge_bytes = binary._extract_binary_value(challenge_value)
-            if isinstance(challenge_bytes, str):
-                challenge_bytes = decode_hex(challenge_bytes)
+            challenge_bytes = binary._decode_request_binary(challenge_value)
         except (ValueError, TypeError) as exc:
             return jsonify({"error": f"Invalid challenge format: {exc}"}), 400
 
@@ -215,9 +214,7 @@ def advanced_authenticate_begin():
                 if ext_value.get("read"):
                     processed_extensions["largeBlob"] = {"read": True}
                 elif ext_value.get("write"):
-                    write_value = binary._extract_binary_value(ext_value["write"])
-                    if isinstance(write_value, str):
-                        write_value = decode_hex(write_value)
+                    write_value = binary._decode_request_binary(ext_value["write"])
                     processed_extensions["largeBlob"] = {"write": write_value}
                 else:
                     processed_extensions["largeBlob"] = ext_value
@@ -228,14 +225,10 @@ def advanced_authenticate_begin():
                 prf_eval = ext_value["eval"]
                 processed_eval = {}
                 if "first" in prf_eval:
-                    first_value = binary._extract_binary_value(prf_eval["first"])
-                    if isinstance(first_value, str):
-                        first_value = decode_hex(first_value)
+                    first_value = binary._decode_request_binary(prf_eval["first"])
                     processed_eval["first"] = first_value
                 if "second" in prf_eval:
-                    second_value = binary._extract_binary_value(prf_eval["second"])
-                    if isinstance(second_value, str):
-                        second_value = decode_hex(second_value)
+                    second_value = binary._decode_request_binary(prf_eval["second"])
                     processed_eval["second"] = second_value
                 if processed_eval:
                     processed_extensions["prf"] = {"eval": processed_eval}
@@ -270,15 +263,6 @@ def advanced_authenticate_begin():
             public_key_dict.pop("allowCredentials", None)
 
     return jsonify(attestation.make_json_safe(options_payload))
-
-
-CHALLENGE_SOURCE_SERVER = "server-session"
-#: The ceremony challenge was taken from the request body (request-editor mode).
-CHALLENGE_SOURCE_CLIENT = "client-supplied"
-
-#: A client-supplied challenge is not single-use tracked: the request editor
-#: chooses it, so there is nothing for the server to consume.
-CHALLENGE_STATUS_NOT_TRACKED = "not-tracked"
 
 
 def _credential_cose_algorithm(record: Mapping[str, Any] | None) -> int | None:
@@ -325,11 +309,11 @@ def advanced_authenticate_complete():
     # reported via ``challengeStatus`` rather than rejected -- on every response.
     state = session.pop("advanced_auth_state", None)
     if state is not None:
-        challenge_source = CHALLENGE_SOURCE_SERVER
+        challenge_source = constants.CHALLENGE_SOURCE_SERVER
         challenge_status = consume_ceremony_state(state)
     else:
-        challenge_source = CHALLENGE_SOURCE_CLIENT
-        challenge_status = CHALLENGE_STATUS_NOT_TRACKED
+        challenge_source = constants.CHALLENGE_SOURCE_CLIENT
+        challenge_status = constants.CHALLENGE_STATUS_NOT_TRACKED
 
     def _fail(payload: dict[str, Any], status: int = 400):
         payload.setdefault("challengeSource", challenge_source)
@@ -359,31 +343,16 @@ def advanced_authenticate_complete():
 
     request_allowed_attachments = resolve_effective_attachments(hints_list, None)
 
-    session_allowed_marker = session.pop("advanced_authenticate_allowed_attachments", None)
-    if session_allowed_marker is None:
-        allowed_attachments = request_allowed_attachments
-    else:
-        allowed_attachments = normalize_attachment_list(session_allowed_marker)
-
-    if not allowed_attachments:
-        allowed_attachments = request_allowed_attachments
-
-    if allowed_attachments:
-        response_attachment = normalize_attachment(
-            response.get("authenticatorAttachment") if isinstance(response, Mapping) else None
-        )
-        if response_attachment is None:
-            return _fail(
-                {
-                    "error": (
-                        "Authenticator attachment could not be determined to enforce selected hints."
-                    )
-                }
-            )
-        if response_attachment not in allowed_attachments:
-            return _fail(
-                {"error": "Authenticator attachment is not permitted by the selected hints."}
-            )
+    allowed_attachments = resolve_allowed_attachments(
+        session.pop("advanced_authenticate_allowed_attachments", None),
+        request_allowed_attachments,
+    )
+    violation = attachment_hint_violation(
+        allowed_attachments,
+        normalize_attachment(response.get("authenticatorAttachment") if isinstance(response, Mapping) else None),
+    )
+    if violation is not None:
+        return _fail({"error": violation})
 
     raw_credentials_input: list[Any] | None = None
     for field in ("__storedCredentials", "storedCredentials", "credentials"):

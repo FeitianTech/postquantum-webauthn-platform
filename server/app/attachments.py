@@ -9,10 +9,12 @@ from .webauthn.metadata import ensure_metadata_session_id
 
 __all__ = [
     "HINT_TO_ATTACHMENT_MAP",
+    "attachment_hint_violation",
     "build_credential_attachment_map",
     "derive_allowed_attachments_from_hints",
     "normalize_attachment",
     "normalize_attachment_list",
+    "resolve_allowed_attachments",
     "resolve_effective_attachments",
 ]
 
@@ -117,3 +119,27 @@ def build_credential_attachment_map() -> dict[bytes, str | None]:
             attachment_map[credential_id] = attachment_value
 
     return attachment_map
+
+
+def resolve_allowed_attachments(session_marker: Any, request_allowed: list[str]) -> list[str]:
+    """The attachments a ceremony's hints allow: those recorded at begin, else the request's own."""
+
+    if session_marker is None:
+        allowed = request_allowed
+    else:
+        allowed = normalize_attachment_list(session_marker)
+    if not allowed:
+        allowed = request_allowed
+    return allowed
+
+
+def attachment_hint_violation(allowed: list[str], response_attachment: str | None) -> str | None:
+    """Why the attachment a response reports breaks the allowed attachments, or ``None``."""
+
+    if not allowed:
+        return None
+    if response_attachment is None:
+        return "Authenticator attachment could not be determined to enforce selected hints."
+    if response_attachment not in allowed:
+        return "Authenticator attachment is not permitted by the selected hints."
+    return None

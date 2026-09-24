@@ -100,5 +100,14 @@ def _extract_binary_value(value: Any) -> Any:
     return value
 
 
+def _decode_request_binary(value: Any) -> Any:
+    """A binary request field: a ``$hex``/``$base64``/``$base64url`` wrapper decoded, bare text read as hex."""
+
+    decoded = _extract_binary_value(value)
+    if isinstance(decoded, str):
+        decoded = encoding.decode_hex(decoded)
+    return decoded
+
+
 def _encode_base64url(data: bytes) -> str:
     return encoding.encode_base64url(data)

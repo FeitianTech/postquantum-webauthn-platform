@@ -2,6 +2,15 @@ from __future__ import annotations
 
 import re
 
+# Where an advanced ceremony's challenge came from, and whether it was consumed.
+#: The server issued the challenge and kept the state in the session.
+CHALLENGE_SOURCE_SERVER = "server-session"
+#: The ceremony challenge was taken from the request body (request-editor mode).
+CHALLENGE_SOURCE_CLIENT = "client-supplied"
+#: A client-supplied challenge is not single-use tracked: the request editor
+#: chooses it, so there is nothing for the server to consume.
+CHALLENGE_STATUS_NOT_TRACKED = "not-tracked"
+
 COSE_ALGORITHM_NAME_MAP: dict[str, int] = {
     "ML-DSA-87": -50,
     "ML-DSA-65": -49,
