@@ -327,14 +327,17 @@ def test_readkey_returns_empty_when_gcs_download_fails_or_missing(monkeypatch):
     assert len(calls) >= 2
 
 
-def test_delkey_swallows_gcs_delete_exceptions(monkeypatch):
+def test_delkey_raises_when_a_gcs_delete_fails(monkeypatch):
     monkeypatch.setattr(
         credentials,
         "delete_blob",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("delete failed")),
     )
 
-    credentials.delkey("alice@example.com", session_id="session-delete")
+    # A missing blob is not an error (delete_blob is called with missing_ok);
+    # a failed delete is, or the caller would report a deletion that did not happen.
+    with pytest.raises(RuntimeError, match="delete failed"):
+        credentials.delkey("alice@example.com", session_id="session-delete")
 
 
 def test_iter_credentials_gcs_skips_failed_empty_and_non_list_payloads(monkeypatch):

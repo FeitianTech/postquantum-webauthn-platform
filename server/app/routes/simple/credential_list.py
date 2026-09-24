@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
@@ -9,6 +10,8 @@ from ...attachments import normalize_attachment
 from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials as credential_store
 from ...webauthn import attestation, metadata
+
+logger = logging.getLogger(__name__)
 
 
 def add_registration_metadata(
@@ -289,47 +292,75 @@ def build_credential_info_from_bare_credential(email: str, cred: Any) -> dict[st
     return credential_info
 
 
+def build_credential_info(email: str, cred: Any) -> dict[str, Any]:
+    if isinstance(cred, dict) and "credential_data" in cred:
+        if isinstance(cred["credential_data"], dict):
+            return build_credential_info_from_dict_credential_data(email, cred)
+        return build_credential_info_from_object_credential_data(email, cred)
+    return build_credential_info_from_bare_credential(email, cred)
+
+
 def list_credentials():
     metadata_session_id = metadata.ensure_metadata_session_id()
     if request.method == "DELETE":
-        removed = 0
-        try:
-            for username in list(credential_store.list_credentials(session_id=metadata_session_id).keys()):
-                credential_store.delkey(username, session_id=metadata_session_id)
-                removed += 1
-        except Exception:
-            pass
+        return delete_all_credentials(metadata_session_id)
 
-        return jsonify({"status": "OK", "removed": removed})
+    # Read everything first: a store that fails part-way is a failure, never a
+    # shorter list, and never an empty one that reads as "no credentials".
+    try:
+        stored = list(credential_store.iter_credentials(session_id=metadata_session_id))
+    except Exception:
+        logger.exception("Could not read the stored credentials")
+        return jsonify({"error": "The stored credentials could not be read, so none are listed."}), 500
 
     credentials: list[dict[str, Any]] = []
-
-    try:
-        for email, user_creds in credential_store.iter_credentials(session_id=metadata_session_id):
+    unreadable = 0
+    for email, user_creds in stored:
+        if not isinstance(user_creds, list):
+            unreadable += 1
+            logger.warning("Skipped stored credentials for %s that are not a list of records", email)
+            continue
+        for cred in user_creds:
             try:
-                for cred in user_creds:
-                    try:
-                        if isinstance(cred, dict) and "credential_data" in cred:
-                            if isinstance(cred["credential_data"], dict):
-                                credential_info = build_credential_info_from_dict_credential_data(email,
-                                    cred,
-                                )
-                            else:
-                                credential_info = build_credential_info_from_object_credential_data(email,
-                                    cred,
-                                )
-                        else:
-                            credential_info = build_credential_info_from_bare_credential(email,
-                                cred,
-                            )
+                credentials.append(build_credential_info(email, cred))
+            except Exception as exc:
+                unreadable += 1
+                logger.warning("Skipped a stored credential for %s that could not be read: %r", email, exc)
 
-                        credentials.append(credential_info)
-                    except Exception:
-                        continue
-            except Exception:
-                continue
+    response = jsonify(credentials)
+    if unreadable:
+        # The body stays a list; the count of records left out goes beside it.
+        response.headers["X-Unreadable-Credentials"] = str(unreadable)
+    return response
 
+
+def delete_all_credentials(metadata_session_id: str):
+    try:
+        usernames = list(credential_store.list_credentials(session_id=metadata_session_id))
     except Exception:
-        pass
+        logger.exception("Could not read the stored credentials to delete them")
+        return jsonify(
+            {"status": "error", "removed": 0, "error": "The stored credentials could not be read, so none were deleted."}
+        ), 500
 
-    return jsonify(credentials)
+    removed = 0
+    failed: list[str] = []
+    for username in usernames:
+        try:
+            credential_store.delkey(username, session_id=metadata_session_id)
+        except Exception:
+            logger.exception("Could not delete the stored credentials for %s", username)
+            failed.append(username)
+        else:
+            removed += 1
+
+    if failed:
+        return jsonify(
+            {
+                "status": "partial",
+                "removed": removed,
+                "failed": failed,
+                "error": f"The stored credentials of {len(failed)} of {len(usernames)} users could not be deleted.",
+            }
+        ), 500
+    return jsonify({"status": "OK", "removed": removed})

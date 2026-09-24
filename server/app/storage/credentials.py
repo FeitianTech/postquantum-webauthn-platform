@@ -548,20 +548,31 @@ def readkey(name: str, *, session_id: str | None = None) -> list[Any]:
 
 
 def delkey(name: str, *, session_id: str | None = None) -> None:
+    """Delete every copy of ``name``'s credentials; raise if one could not be deleted.
+
+    A copy that is not there is already deleted. Anything else -- a refused
+    permission, an unreachable bucket -- is raised once every other copy has
+    been tried, so a caller never reports a deletion that did not happen.
+    """
+
     resolved_session = _resolve_session_id(session_id)
+    errors: list[Exception] = []
     if _using_gcs():
         for blob_name in _candidate_gcs_blob_names(name, resolved_session):
             try:
                 delete_blob(blob_name, missing_ok=True)
-            except Exception:
-                pass
-        return
-
-    for path in _candidate_local_paths(name, resolved_session):
-        try:
-            os.remove(path)
-        except Exception:
-            pass
+            except Exception as exc:
+                errors.append(exc)
+    else:
+        for path in _candidate_local_paths(name, resolved_session):
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                continue
+            except OSError as exc:
+                errors.append(exc)
+    if errors:
+        raise errors[0]
 
 
 def _iter_local_directory(directory: str) -> Iterable[tuple[str, bytes, str]]:
