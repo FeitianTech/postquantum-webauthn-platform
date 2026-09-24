@@ -85,9 +85,10 @@ def test_certificate_helpers_match_their_golden_record():
         record[f"unknown-key/{name}"] = harness.json_safe(attestation._build_unknown_public_key_info(cert, error))
         record[f"fallback/{name}"] = harness.json_safe(attestation._serialize_attestation_certificate_fallback(cert, error))
     names = ["", "  ", "ecdsa-with-SHA256", "RSASSA-PSS", "sha256WithRSAEncryption", "ed25519", "Ed448",
-             "dsa-with-sha1", "ML-DSA-44", "some thing-else", "rsassaPss"]
+             "dsa-with-sha1", "ML-DSA-44", "some thing-else", "rsassaPss", "ML-DSA-65", "ML-DSA-87",
+             "2.16.840.1.101.3.4.3.10", "2.16.840.1.101.3.4.3.14"]
     record["normalise"] = {name: attestation._normalise_signature_algorithm_name(name) for name in names}
-    record["hash"] = {repr(value): attestation._format_hash_value(value) for value in (None, "", " ", "sha-256", "SHA384", "shake-256", "md5")}
+    record["hash"] = {repr(value): attestation._format_hash_value(value) for value in (None, "", " ", "sha-256", "SHA384", "shake-256", "md5", "sha3-256", "SHA3-512")}
     record["component"] = {repr(value): attestation._format_algorithm_component(value) for value in (None, "", "\u2014", " RSA PSS ", 5)}
     signature_infos = [
         "not-a-mapping", {}, {"algorithm": "ecdsa-with-SHA256", "hash": {"name": "sha256"}},

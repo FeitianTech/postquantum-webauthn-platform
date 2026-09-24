@@ -573,7 +573,11 @@
   "dsa-with-sha1": "DSA",
   "ML-DSA-44": "DSA",
   "some thing-else": "SOMETHINGELSE",
-  "rsassaPss": "RSASSA-PSS"
+  "rsassaPss": "RSASSA-PSS",
+  "ML-DSA-65": "DSA",
+  "ML-DSA-87": "DSA",
+  "2.16.840.1.101.3.4.3.10": "2.16.840.1.101.3.4.3.10",
+  "2.16.840.1.101.3.4.3.14": "2.16.840.1.101.3.4.3.14"
  },
  "hash": {
   "None": "",
@@ -582,7 +586,9 @@
   "'sha-256'": "SHA256",
   "'SHA384'": "SHA384",
   "'shake-256'": "SHAKE256",
-  "'md5'": "MD5"
+  "'md5'": "MD5",
+  "'sha3-256'": "SHA3256",
+  "'SHA3-512'": "SHA3512"
  },
  "component": {
   "None": "",
