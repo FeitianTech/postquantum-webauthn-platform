@@ -622,9 +622,17 @@ def delkey(name: str, *, session_id: str | None = None) -> None:
             except Exception as exc:
                 errors.append(exc)
     else:
+        # The copy saves write is removed under the lock they write it under, so
+        # a delete cannot land between a compare-and-swap's check and its rename
+        # and have the records written back. Legacy copies are never written.
+        current = _local_filename(name, resolved_session)
         for path in _candidate_local_paths(name, resolved_session):
             try:
-                os.remove(path)
+                if path == current and os.path.exists(path):
+                    with file_lock(path):
+                        os.remove(path)
+                else:
+                    os.remove(path)
             except FileNotFoundError:
                 continue
             except OSError as exc:
