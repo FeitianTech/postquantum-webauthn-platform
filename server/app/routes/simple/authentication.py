@@ -7,7 +7,11 @@ written by ``savekey`` at registration, and the browser's own copy, which it
 sends back as the credential list on ``/authenticate/begin``. The server record
 is authoritative; the browser copy is attacker-controllable, so it may only
 ever make the check *stricter*. The stored value is therefore the larger of the
-two, and a missing copy simply does not contribute."""
+two, and a missing copy simply does not contribute.
+
+"Missing" means the server's records were read and hold no record for the
+credential. Records that could not be read are not missing: the assertion is
+rejected with 503, since the browser's copy alone can be omitted or lowered."""
 from __future__ import annotations
 
 import logging
@@ -196,68 +200,14 @@ def authenticate_complete():
             400,
         )
 
-    client_sign_count = client_supplied_sign_count(session_credentials, authenticated_id_bytes)
-    # Check-then-save is compare-and-swap: two authentications that both read
-    # counter N cannot both store N+1. The one that loses reads the records
-    # again and is checked again -- against the counter the other just stored.
-    for _attempt in range(_SIGN_COUNT_SAVE_ATTEMPTS):
-        server_records, version, metadata_session_id = load_server_records(uname)
-        record_index = find_server_record_index(server_records, authenticated_id_bytes)
-        server_record = server_records[record_index] if record_index is not None else None
-        stored_sign_count = resolve_stored_sign_count(server_record, client_sign_count)
-
-        if sign_count_status(stored_sign_count, sign_count) == SIGN_COUNT_REGRESSED:
-            logger.warning(
-                "Rejected assertion for credential %s: signature counter %d did not "
-                "increase past stored %d (possible cloned authenticator)",
-                authenticated_id,
-                sign_count,
-                stored_sign_count,
-            )
-            return (
-                jsonify(
-                    {
-                        "error": (
-                            f"Signature counter did not increase (stored {stored_sign_count}, "
-                            f"received {sign_count}). This authenticator may have been cloned, "
-                            "so authentication was rejected."
-                        ),
-                        "failedCredentialId": authenticated_id,
-                        "signCountStatus": SIGN_COUNT_REGRESSED,
-                    }
-                ),
-                400,
-            )
-
-        if server_record is None or record_sign_count(server_record) == sign_count:
-            break
-        server_record[RECORD_SIGN_COUNT_KEY] = sign_count
-        try:
-            if credentials.save_if_unchanged(uname, server_records, version, session_id=metadata_session_id):
-                break
-        except Exception:
-            logger.exception(
-                "Failed to persist signature counter for %s", authenticated_id
-            )
-            return (
-                jsonify({"error": "Unable to persist the signature counter."}),
-                500,
-            )
-        logger.info("Signature counter for %s changed while it was being saved; reading it again", authenticated_id)
-    else:
-        logger.warning("Rejected assertion for credential %s: its stored counter kept changing", authenticated_id)
-        return (
-            jsonify(
-                {
-                    "error": (
-                        "The stored signature counter changed during authentication more than "
-                        "once, so authentication was rejected. Please try again."
-                    ),
-                    "failedCredentialId": authenticated_id,
-                }
-            ),
-            409,
-        )
+    rejection = enforce_sign_count(
+        uname,
+        authenticated_id_bytes,
+        sign_count,
+        client_supplied_sign_count(session_credentials, authenticated_id_bytes),
+    )
+    if rejection is not None:
+        return rejection
 
     debug_info = {
         "hintsUsed": [],
@@ -271,6 +221,102 @@ def authenticate_complete():
     response_payload["signCount"] = sign_count
 
     return jsonify(response_payload)
+
+
+def enforce_sign_count(uname: Any, credential_id: bytes, sign_count: int, client_sign_count: int | None):
+    """Check ``sign_count`` against the stored counter and store it: ``None``, or the rejection to answer."""
+
+    authenticated_id = encode_base64url(credential_id)
+    # Check-then-save is compare-and-swap: two authentications that both read
+    # counter N cannot both store N+1. The one that loses reads the records
+    # again and is checked again -- against the counter the other just stored.
+    for _attempt in range(_SIGN_COUNT_SAVE_ATTEMPTS):
+        try:
+            server_records, version, metadata_session_id = load_server_records(uname)
+        except StoredRecordsUnreadable as exc:
+            return _unreadable_counter_rejection(authenticated_id, exc)
+        record_index = find_server_record_index(server_records, credential_id)
+        server_record = server_records[record_index] if record_index is not None else None
+        stored_sign_count = resolve_stored_sign_count(server_record, client_sign_count)
+
+        if sign_count_status(stored_sign_count, sign_count) == SIGN_COUNT_REGRESSED:
+            return _regressed_counter_rejection(authenticated_id, stored_sign_count, sign_count)
+
+        if server_record is None or record_sign_count(server_record) == sign_count:
+            return None
+        server_record[RECORD_SIGN_COUNT_KEY] = sign_count
+        try:
+            if credentials.save_if_unchanged(uname, server_records, version, session_id=metadata_session_id):
+                return None
+        except Exception:
+            logger.exception(
+                "Failed to persist signature counter for %s", authenticated_id
+            )
+            return (
+                jsonify({"error": "Unable to persist the signature counter."}),
+                500,
+            )
+        logger.info("Signature counter for %s changed while it was being saved; reading it again", authenticated_id)
+
+    logger.warning("Rejected assertion for credential %s: its stored counter kept changing", authenticated_id)
+    return (
+        jsonify(
+            {
+                "error": (
+                    "The stored signature counter changed during authentication more than "
+                    "once, so authentication was rejected. Please try again."
+                ),
+                "failedCredentialId": authenticated_id,
+            }
+        ),
+        409,
+    )
+
+
+def _unreadable_counter_rejection(authenticated_id: str, exc: Exception):
+    # Checking against the browser's copy alone would let a client that omits
+    # or lowers it past the check whenever the store is down. One line, no
+    # traceback: the cause is the store's, and it is named.
+    logger.warning(
+        "Rejected assertion for credential %s: the stored signature counter could not be read (%r)",
+        authenticated_id,
+        exc.__cause__ or exc,
+    )
+    return (
+        jsonify(
+            {
+                "error": (
+                    "The stored signature counter could not be read, so authentication "
+                    "was rejected. Please try again."
+                )
+            }
+        ),
+        503,
+    )
+
+
+def _regressed_counter_rejection(authenticated_id: str, stored_sign_count: int, sign_count: int):
+    logger.warning(
+        "Rejected assertion for credential %s: signature counter %d did not "
+        "increase past stored %d (possible cloned authenticator)",
+        authenticated_id,
+        sign_count,
+        stored_sign_count,
+    )
+    return (
+        jsonify(
+            {
+                "error": (
+                    f"Signature counter did not increase (stored {stored_sign_count}, "
+                    f"received {sign_count}). This authenticator may have been cloned, "
+                    "so authentication was rejected."
+                ),
+                "failedCredentialId": authenticated_id,
+                "signCountStatus": SIGN_COUNT_REGRESSED,
+            }
+        ),
+        400,
+    )
 
 
 RECORD_SIGN_COUNT_KEY = "sign_count"
@@ -300,8 +346,16 @@ def record_sign_count(record: Mapping[str, Any]) -> int | None:
     return _as_counter(getattr(record.get("auth_data"), "counter", None))
 
 
+class StoredRecordsUnreadable(Exception):
+    """The server's records could not be read: the counter check cannot be made."""
+
+
 def load_server_records(uname: Any) -> tuple[list[Any] | None, Any, str | None]:
-    """The caller's server-side records, their version, the session: ``(None, None, None)`` if none."""
+    """The caller's server-side records, their version, the session: ``(None, None, None)`` if none.
+
+    "None" means the read worked and there is nothing to find (or no name to
+    find it by). A read that failed raises :class:`StoredRecordsUnreadable`.
+    """
 
     if not isinstance(uname, str) or not uname:
         return None, None, None
@@ -311,13 +365,10 @@ def load_server_records(uname: Any) -> tuple[list[Any] | None, Any, str | None]:
     except InvalidStorageIdentifier:
         # A name the store refuses is the caller's error: the app answers 400.
         raise
-    except Exception:
-        logger.warning(
-            "Could not read stored credentials for the signature counter check", exc_info=True
-        )
-        return None, None, None
+    except Exception as exc:
+        raise StoredRecordsUnreadable() from exc
     if not isinstance(records, list):
-        return None, None, None
+        raise StoredRecordsUnreadable(f"the store answered {type(records).__name__}, not a list")
     return records, version, session_id
 
 

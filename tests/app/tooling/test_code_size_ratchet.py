@@ -31,7 +31,7 @@ LONG_FUNCTIONS: dict[str, int] = {
     "server/app/mds_snapshot.py::build_explorer_entry": 131,
     "server/app/routes/advanced/parsing.py::_parse_client_supplied_credentials": 100,
     "server/app/routes/advanced/tracing.py::_log_authenticator_attestation_response": 94,
-    "server/app/routes/simple/authentication.py::authenticate_complete": 191,
+    "server/app/routes/simple/authentication.py::authenticate_complete": 137,
     "server/app/routes/simple/credential_list.py::build_credential_info_from_dict_credential_data": 114,
     "server/app/routes/simple/credential_list.py::build_credential_info_from_object_credential_data": 85,
     "server/app/webauthn/attestation/classical.py::_evaluate_classical_attestation_root": 122,
