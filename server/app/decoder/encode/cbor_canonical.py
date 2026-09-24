@@ -16,6 +16,8 @@ from typing import Any
 
 from cbor2 import CBORSimpleValue, CBORTag, undefined
 
+from ..ctap2_order import ctap2_key_order
+
 
 def _canonical_cbor_dumps(value: Any) -> bytes:
     """Serialize *value* in CTAP2 canonical CBOR."""
@@ -121,8 +123,7 @@ class _CanonicalCBOREncoder:
             seen_keys.add(encoded_key)
             encoded_items.append((encoded_key, key, value))
 
-        # Major type (the top three bits of the first byte), then length, then bytes.
-        encoded_items.sort(key=lambda item: (item[0][0] >> 5, len(item[0]), item[0]))
+        encoded_items.sort(key=lambda item: ctap2_key_order(item[0]))
         return encoded_items
 
     def _encode_tag(self, tag: CBORTag) -> bytes:
