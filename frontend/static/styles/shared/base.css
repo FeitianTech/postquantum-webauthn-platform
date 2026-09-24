@@ -809,6 +809,39 @@ body.header-menu-open { overflow: hidden; }
     margin: 0;
 }
 
+.decoder-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.4rem;
+}
+
+.decoder-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1rem 0.5rem;
+    border-radius: var(--radius-pill);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.decoder-badge--unknown {
+    background: rgba(100, 116, 139, 0.12);
+    color: #475569;
+}
+
+.decoder-badge--not-verified {
+    background: rgba(245, 158, 11, 0.12);
+    color: #92400e;
+}
+
+.decoder-badge--deprecated {
+    background: rgba(220, 53, 69, 0.1);
+    color: #b91c1c;
+}
+
 .decoder-findings ul {
     margin: 0.35rem 0 0;
     padding-left: 1.2rem;

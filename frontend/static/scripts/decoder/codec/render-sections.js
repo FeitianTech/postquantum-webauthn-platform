@@ -50,16 +50,31 @@ function buildSections(type, data) {
         PublicKeyCredential: [
             'credential',
             'attestationObject',
+            'attestationStatementDecoded',
             'authenticatorData',
             'clientDataJSON',
             'clientExtensionResults',
+            'extensionsDecoded',
             'responseDetails',
         ],
-        'Attestation object': ['attestationObject', 'authenticatorData', 'extensions'],
+        'Attestation object': [
+            'attestationObject',
+            'attestationStatementDecoded',
+            'authenticatorData',
+            'extensionsDecoded',
+            'extensions',
+        ],
         'Authenticator data': ['authenticatorData'],
         'WebAuthn client data': ['clientDataJSON'],
         'X.509 certificate': ['raw', 'pem', 'parsedX5c', 'certificates'],
-        CBOR: ['ctapDecoded', 'expandedJson', 'decodedValue', 'ctap'],
+        CBOR: [
+            'ctapDecoded',
+            'attestationStatementDecoded',
+            'extensionsDecoded',
+            'expandedJson',
+            'decodedValue',
+            'ctap',
+        ],
     };
 
     const usedKeys = new Set();
@@ -152,7 +167,9 @@ function buildFindingsList(findings) {
         const offset = Number.isInteger(finding?.offset) ? `offset ${finding.offset}` : 'offset ?';
         const path = typeof finding?.path === 'string' ? finding.path : '';
         const message = typeof finding?.message === 'string' ? finding.message : '';
-        item.textContent = `${offset} · ${path} — ${message}`;
+        // A finding inside a PublicKeyCredential field counts its offset from that field.
+        const source = typeof finding?.source === 'string' ? `${finding.source}: ` : '';
+        item.textContent = `${source}${offset} · ${path} — ${message}`;
         list.appendChild(item);
     });
     block.appendChild(list);

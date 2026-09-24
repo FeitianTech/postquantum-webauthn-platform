@@ -1,5 +1,41 @@
 import { formatKey } from './labels.js';
 
+// What the server says about an interpreted value, shown before it: an
+// identifier nothing defines, something shown but not verified, a format the
+// spec deprecates. Text only.
+function badgesFor(value) {
+    const badges = [];
+    if (value.known === false) {
+        badges.push(['unknown', 'Unknown']);
+    }
+    if (typeof value.verification === 'string' && /not verified/i.test(value.verification)) {
+        badges.push(['not-verified', 'Not verified']);
+    }
+    if (value.deprecated === true || typeof value.deprecated === 'string') {
+        badges.push(['deprecated', 'Deprecated']);
+    }
+    return badges;
+}
+
+function withBadges(value, element) {
+    const badges = badgesFor(value);
+    if (badges.length === 0) {
+        return element;
+    }
+    const wrapper = document.createElement('div');
+    const row = document.createElement('div');
+    row.className = 'decoder-badges';
+    badges.forEach(([kind, text]) => {
+        const badge = document.createElement('span');
+        badge.className = `decoder-badge decoder-badge--${kind}`;
+        badge.textContent = text;
+        row.appendChild(badge);
+    });
+    wrapper.appendChild(row);
+    wrapper.appendChild(element);
+    return wrapper;
+}
+
 export function renderValue(value) {
     if (value === null || value === undefined) {
         const span = document.createElement('span');
@@ -66,7 +102,7 @@ export function renderValue(value) {
             definition.appendChild(detail);
         });
 
-        return definition;
+        return withBadges(value, definition);
     }
 
     const span = document.createElement('span');
