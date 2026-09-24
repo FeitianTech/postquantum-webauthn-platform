@@ -93,6 +93,8 @@ def test_interpret_get_assertion_map_leaves_a_missing_signature_missing(monkeypa
         }
     )
 
+    # The patch is what the interpreter read (it looks the helper up on ctap).
+    assert interpreted["2 (authData)"] == {"flags": {}}
     assert interpreted["3 (signature)"] is None
     assert interpreted["4 (user)"] == {"name": "front-user"}
     assert interpreted["99"] == "extra"

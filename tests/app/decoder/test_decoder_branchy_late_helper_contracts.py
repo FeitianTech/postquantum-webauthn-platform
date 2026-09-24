@@ -210,6 +210,8 @@ def test_ctap_interpretation_variants_cover_request_guard_and_attstmt_bytes(monk
     )
     interpreted_assertion = decode_module._interpret_get_assertion_map({2: auth_data})
     assert interpreted_assertion is not None
+    # The patch is what the interpreter read (it looks the helper up on ctap).
+    assert interpreted_assertion["2 (authData)"] == {"rpIdHash": "00" * 32}
     assert interpreted_assertion["3 (signature)"] is None
     assert "trailingFields" not in interpreted_assertion
     assert "10" not in interpreted_assertion
