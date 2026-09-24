@@ -43,10 +43,6 @@ def test_remaining_mapping_and_auth_data_format_helpers():
     assert decode_module._extract_mapping_string(mapping, (1, "fmt")) == "packed"
     assert decode_module._extract_mapping_bytes(mapping, (2, "authData")) == b"\xaa\xbb"
 
-    summary = decode_module._summarize_bytes_for_json(b"\x01\x02")
-    assert summary["length"] == 2
-    assert summary["hex"] == "0102"
-
     auth_details, trailing = decode_module._format_auth_data_for_expanded_json(_auth_data_bytes())
     assert auth_details["signCount"] == 3
     assert isinstance(trailing, bytes)

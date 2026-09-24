@@ -6,8 +6,6 @@ from typing import Any
 
 from fido2.webauthn import AuthenticatorData
 
-from ...encoding import encode_base64
-from ...webauthn.attestation import encode_base64url
 from .. import ctap_tables
 from . import authenticator_data_findings, canonical, cbor_parser, pipeline, response
 from .cbor_parser import (
@@ -285,9 +283,7 @@ def _convert_pub_key_cred_params(entry: Any) -> Any:
 def _convert_auth_data_field(value: Any) -> Any:
     auth_bytes = _coerce_cbor_bytes(value)
     if auth_bytes is not None:
-        auth_info, trailing = _format_auth_data_for_expanded_json(auth_bytes)
-        if trailing:
-            auth_info = dict(auth_info)
+        auth_info, _trailing = _format_auth_data_for_expanded_json(auth_bytes)
         return auth_info
     return _convert_optional_ctap_field(value)
 
@@ -311,15 +307,6 @@ def _convert_ctap_user_field(value: Any) -> Any:
     if value is None:
         return None
     return _convert_ctap_user(value)
-
-
-def _summarize_bytes_for_json(data: bytes) -> dict[str, Any]:
-    return {
-        "length": len(data),
-        "hex": data.hex(),
-        "base64": encode_base64(data),
-        "base64url": encode_base64url(data),
-    }
 
 
 def _parse_authenticator_data_bytes(data: bytes) -> tuple[dict[str, Any], bytes, bytes]:
