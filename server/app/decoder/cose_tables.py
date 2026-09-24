@@ -7,8 +7,8 @@ Curves". COSE algorithm names are not kept here: ``webauthn/pqc.py``'s
 """
 from __future__ import annotations
 
-# "COSE Key Types". 7 is AKP, the algorithm key pair type ML-DSA keys use: the
-# parameter set comes from alg (3), the key from pub (-1).
+# "COSE Key Types". 7 is AKP (RFC 9964), the algorithm key pair type ML-DSA keys
+# use: the parameter set comes from alg (3), the key from pub (-1).
 KEY_TYPES: dict[int, str] = {
     1: "OKP",
     2: "EC2",
@@ -65,6 +65,6 @@ KEY_TYPE_PARAMETERS: dict[int, dict[int, tuple[str, str]]] = {
     },
     # Symmetric: RFC 9053 section 7.3, Table 21.
     4: {-1: ("k", "bstr")},
-    # AKP: the IANA entries for the algorithm key pair type (ML-DSA).
+    # AKP, the algorithm key pair type ML-DSA keys use: RFC 9964, as IANA lists it.
     7: {-1: ("pub", "bstr"), -2: ("priv", "bstr")},
 }
