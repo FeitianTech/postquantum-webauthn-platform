@@ -45,37 +45,18 @@ def test_is_padding_bytes_distinguishes_padding_from_content():
     assert decode_module._is_padding_bytes(b"\x00\x01\xff") is False
 
 
-def test_int_to_key_bytes_handles_zero_and_large_values():
+def test_key_identity_names_the_cbor_type_of_a_key():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    assert decode_module._int_to_key_bytes(0) == b"\x00"
-    assert decode_module._int_to_key_bytes(1) == b"\x01"
-    assert decode_module._int_to_key_bytes(300) == b"\x01,"
+    assert decode_module._key_identity(7) == ("int", 7)
+    assert decode_module._key_identity(True) == ("bool", True)
+    assert decode_module._key_identity("7") == ("text", "7")
+    assert decode_module._key_identity(b"\x07") == ("bytes", b"\x07")
+    assert decode_module._key_identity(ByteBuffer(b"\x07")) == ("bytes", b"\x07")
+    assert decode_module._key_identity(1.5) == ("other", 1.5)
 
 
-def test_generate_key_variants_covers_int_string_hex_and_byte_inputs():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    assert list(decode_module._generate_key_variants(7)) == [7, "7", b"\x07"]
-    assert list(decode_module._generate_key_variants(-7)) == [-7, "-7"]
-
-    variants_decimal = list(decode_module._generate_key_variants(" 15 "))
-    assert variants_decimal == [" 15 ", 15, b"\x0f"]
-
-    variants_hex = list(decode_module._generate_key_variants("0x10"))
-    assert variants_hex == ["0x10", 16, b"\x10"]
-
-    variants_bad_hex = list(decode_module._generate_key_variants("0xzz"))
-    assert variants_bad_hex == ["0xzz"]
-
-    variants_empty = list(decode_module._generate_key_variants("   "))
-    assert variants_empty == ["   "]
-
-    variants_bytes = list(decode_module._generate_key_variants(b"\x01\x02"))
-    assert variants_bytes == [b"\x01\x02", b"\x01\x02", 258, "258"]
-
-
-def test_get_mapping_entry_uses_variant_lookup_and_missing_sentinel():
+def test_get_mapping_entry_matches_keys_by_exact_type_and_missing_sentinel():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     mapping = {
@@ -84,11 +65,14 @@ def test_get_mapping_entry_uses_variant_lookup_and_missing_sentinel():
         "custom": "custom-key",
     }
 
-    assert decode_module._get_mapping_entry(mapping, "1") == "int-key"
-    assert decode_module._get_mapping_entry(mapping, 2) == "bytes-key"
-    assert decode_module._get_mapping_entry(mapping, "custom") == "custom-key"
+    assert decode_module._get_mapping_entry(mapping, 1) == "int-key"
+    assert decode_module._get_mapping_entry(mapping, "1") is decode_module._MISSING
+    assert decode_module._get_mapping_entry(mapping, True) is decode_module._MISSING
+    assert decode_module._get_mapping_entry(mapping, 2) is decode_module._MISSING
+    assert decode_module._get_mapping_entry(mapping, b"\x02") == "bytes-key"
+    assert decode_module._get_mapping_entry(mapping, "missing", "custom") == "custom-key"
     assert decode_module._get_mapping_entry(mapping, "does-not-exist") is decode_module._MISSING
-    assert decode_module._get_mapping_entry([1, 2, 3], "1") is decode_module._MISSING
+    assert decode_module._get_mapping_entry([1, 2, 3], 1) is decode_module._MISSING
 
 
 def test_coerce_cbor_bytes_supports_supported_binary_types():

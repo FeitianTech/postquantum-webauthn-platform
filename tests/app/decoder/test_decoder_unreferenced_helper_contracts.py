@@ -31,7 +31,10 @@ def test_ctap_label_key_and_map_building_helpers():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     assert decode_module._resolve_ctap_label({1: "one", "2": "two"}, 1) == "one"
-    assert decode_module._resolve_ctap_label({1: "one", "2": "two"}, 2) == "two"
+    assert decode_module._resolve_ctap_label({1: "one", "2": "two"}, 2) is None
+    assert decode_module._resolve_ctap_label({1: "one", "2": "two"}, "2") == "two"
+    assert decode_module._resolve_ctap_label({1: "one"}, b"\x01") is None
+    assert decode_module._resolve_ctap_label({1: "one"}, True) is None
     assert decode_module._resolve_ctap_label({1: "one"}, 99) is None
 
     assert decode_module._format_ctap_entry_key(b"\xaa", "blob") == "aa (blob)"

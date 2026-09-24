@@ -1,7 +1,7 @@
 """Key and binary coercion helpers for decoder internals."""
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from fido2.utils import ByteBuffer
@@ -11,79 +11,43 @@ from .cbor_parser import CborDiagnostic
 MISSING = object()
 
 
-def int_to_key_bytes(value: int) -> bytes:
-    if value == 0:
-        return b"\x00"
-    length = max(1, (value.bit_length() + 7) // 8)
-    return value.to_bytes(length, "big", signed=False)
+def key_identity(key: Any) -> tuple[str, Any]:
+    """What makes a map key the key it is: its CBOR type and its value.
 
+    1, "1" and h'01' are three different CBOR map keys; Python would still fold
+    1 and True together, so a bool never stands in for an integer.
+    """
 
-def generate_key_variants(key: Any) -> Iterable[Any]:
-    yield key
-
+    if isinstance(key, bool):
+        return ("bool", key)
     if isinstance(key, int):
-        yield str(key)
-        if key >= 0:
-            yield int_to_key_bytes(key)
-        return
-
+        return ("int", key)
     if isinstance(key, str):
-        stripped = key.strip()
-        if not stripped:
-            return
-        if stripped.isdigit():
-            numeric = int(stripped, 10)
-            yield numeric
-            if numeric >= 0:
-                yield int_to_key_bytes(numeric)
-        elif stripped.lower().startswith("0x"):
-            try:
-                numeric = int(stripped, 16)
-            except ValueError:
-                return
-            yield numeric
-            if numeric >= 0:
-                yield int_to_key_bytes(numeric)
-        return
-
-    if isinstance(key, (bytes, bytearray)):
-        raw = bytes(key)
-        yield raw
-        if 1 <= len(raw) <= 8:
-            numeric = int.from_bytes(raw, "big", signed=False)
-            yield numeric
-            yield str(numeric)
-        return
-
+        return ("text", key)
     if isinstance(key, ByteBuffer):
-        raw = key.getvalue()
-        yield raw
-        if 1 <= len(raw) <= 8:
-            numeric = int.from_bytes(raw, "big", signed=False)
-            yield numeric
-            yield str(numeric)
-
-
-def key_variant_identity(key: Any) -> tuple[str, Any]:
-    if isinstance(key, (bytes, bytearray)):
+        return ("bytes", key.getvalue())
+    if isinstance(key, (bytes, bytearray, memoryview)):
         return ("bytes", bytes(key))
     return ("other", key)
 
 
 def get_mapping_entry(mapping: Mapping[Any, Any], *keys: Any) -> Any:
+    """Return the value under the first of ``keys`` the map has, by exact key type.
+
+    CTAP numbers its members with integer keys: only the integer 1 is member 1,
+    never a text "1" or a byte string h'01'.
+    """
+
     if not isinstance(mapping, Mapping):
         return MISSING
 
-    seen: set = set()
-    for original in keys:
-        for variant in generate_key_variants(original):
-            identity = key_variant_identity(variant)
-            if identity in seen:
-                continue
-            seen.add(identity)
-            candidate = mapping.get(variant, MISSING)
-            if candidate is not MISSING:
-                return candidate
+    entries: dict[tuple[str, Any], Any] = {}
+    for key, value in mapping.items():
+        entries.setdefault(key_identity(key), value)
+    for key in keys:
+        candidate = entries.get(key_identity(key), MISSING)
+        if candidate is not MISSING:
+            return candidate
     return MISSING
 
 

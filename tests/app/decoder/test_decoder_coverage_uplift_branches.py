@@ -10,11 +10,12 @@ from cryptography.x509.oid import ExtensionOID
 from fido2.utils import ByteBuffer
 
 
-def test_get_mapping_entry_accepts_bytebuffer_key_variants():
+def test_get_mapping_entry_reads_a_bytebuffer_key_as_the_byte_string_it_holds():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    assert decode_module._get_mapping_entry({1: "int"}, ByteBuffer(b"\x01")) == "int"
-    assert decode_module._get_mapping_entry({"1": "str"}, ByteBuffer(b"\x01")) == "str"
+    assert decode_module._get_mapping_entry({b"\x01": "bytes"}, ByteBuffer(b"\x01")) == "bytes"
+    assert decode_module._get_mapping_entry({1: "int"}, ByteBuffer(b"\x01")) is decode_module._MISSING
+    assert decode_module._get_mapping_entry({"1": "str"}, ByteBuffer(b"\x01")) is decode_module._MISSING
 
 
 def test_decode_public_key_credential_marks_authentication_without_attestation(monkeypatch, pipeline):
