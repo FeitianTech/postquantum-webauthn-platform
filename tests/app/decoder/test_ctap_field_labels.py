@@ -172,11 +172,14 @@ def test_the_encoder_writes_unsigned_extension_outputs_at_the_response_members_n
     assert cbor.decode(bytes.fromhex(result["data"]["binary"]["hex"])[1:])[8] == {"x": 1}
 
 
-def test_request_fields_named_only_by_number_are_not_refused():
+def test_request_fields_named_only_by_number_are_refused_not_dropped():
     encode_module = pytest.importorskip("server.app.decoder.encode")
 
-    mapping = encode_module._encode_get_assertion_request({1: "example.com", 2: "22" * 32, "0x0c": "raw"})
+    mapping = encode_module._encode_get_assertion_request({1: "example.com", 2: "22" * 32})
 
     assert (mapping[1], mapping[2]) == ("example.com", b"\x22" * 32)
+    # 0x0c is not a getAssertion parameter: it is neither encoded nor dropped.
+    with pytest.raises(ValueError, match="getAssertionRequest has no member '0x0c'"):
+        encode_module._encode_get_assertion_request({1: "example.com", 2: "22" * 32, "0x0c": "raw"})
     with pytest.raises(ValueError, match="no parameter named 0xzz"):
         encode_module._encode_get_assertion_request({1: "example.com", 2: "22" * 32, "0xzz": "raw"})

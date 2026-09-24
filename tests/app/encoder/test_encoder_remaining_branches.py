@@ -62,8 +62,10 @@ def test_encode_ctap_from_decoded_and_structure_none_paths():
 
     assert encode_module._encode_ctap_from_structure("not-mapping") == (None, None)
 
-    decoded = {
-        "makeCredentialRequest": "not-a-map",
-        "getAssertionRequest": "still-not-a-map",
-    }
-    assert encode_module._encode_ctap_from_decoded(decoded) == (None, None)
+    assert encode_module._encode_ctap_from_decoded({}) == (None, None)
+    with pytest.raises(ValueError, match="ctapDecoded.makeCredentialRequest must be an object"):
+        encode_module._encode_ctap_from_decoded({"makeCredentialRequest": "not-a-map"})
+    with pytest.raises(ValueError, match="ctapDecoded holds 2 messages"):
+        encode_module._encode_ctap_from_decoded(
+            {"makeCredentialRequest": "not-a-map", "getAssertionRequest": "still-not-a-map"}
+        )

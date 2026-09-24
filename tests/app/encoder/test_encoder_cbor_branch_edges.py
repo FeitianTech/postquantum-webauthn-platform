@@ -33,8 +33,12 @@ def test_encode_cbor_value_prefers_ctap_decoded_when_present():
 def test_encode_cbor_value_falls_back_from_decoded_to_expanded_structure():
     encode_module = pytest.importorskip("server.app.decoder.encode")
 
+    # A ctapDecoded naming something the encoder does not build is refused, not skipped.
+    with pytest.raises(ValueError, match="ctapDecoded.unknown is not a CTAP message the encoder builds"):
+        encode_module._encode_cbor_value({"ctapDecoded": {"unknown": {"x": 1}}})
+
     parsed = {
-        "ctapDecoded": {"unknown": {"x": 1}},
+        "ctapDecoded": {},
         "expandedJson": {
             "rpId": "example.com",
             "clientDataHash": _b64url(b"\x22" * 32),
