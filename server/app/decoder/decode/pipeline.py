@@ -27,6 +27,7 @@ from ...webauthn.attestation import (
     summarize_authenticator_extensions,
 )
 from . import (
+    ambiguous_input,
     authenticator_data_findings,
     canonical,
     cbor_parser,
@@ -440,13 +441,19 @@ def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:
     CBOR is parsed strictly. ``lenient`` asks for a best-effort parse of CBOR
     that is not well-formed; the response then says so (``decodeMode``) and
     lists each item it kept partially or stepped over.
+
+    Text that is both hexadecimal and a JSON number is read by the precedence
+    in ``ambiguous_input``, and the response names the reading not taken.
     """
 
     trimmed = value.strip()
     if not trimmed:
         raise ValueError("Decoder input is empty.")
 
-    parsed_json = None if _is_lone_ctap_byte_hex(trimmed) else _try_parse_json(trimmed)
+    parsed_json = _try_parse_json(trimmed)
+    ambiguity = ambiguous_input.check(trimmed, parsed_json)
+    if ambiguity is not None and ambiguity["readAs"] == "hex":
+        parsed_json = None
     if parsed_json is not None:
         result = _decode_json_object(parsed_json, raw_text=trimmed)
     elif _looks_like_pem(trimmed):
@@ -455,19 +462,9 @@ def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:
         data, encoding = _decode_binary_input(trimmed)
         result = _decode_binary_payload(data, encoding, lenient=lenient)
 
+    if ambiguity is not None:
+        ctap._attach_findings(result, [ambiguity, *(result.get("findings") or [])])
     return response._prepare_decoder_response(result)
-
-
-def _is_lone_ctap_byte_hex(text: str) -> bool:
-    # "31" is valid JSON, but as the whole input to this decoder it is the byte
-    # 0x31, PIN_INVALID: a two-digit JSON number would tell nobody anything.
-    if len(text) != 2:
-        return False
-    try:
-        data = bytes.fromhex(text)
-    except ValueError:
-        return False
-    return ctap._extract_ctap_prefix(data)[0] is not None
 
 
 def _describe_client_data_from_bytes(data: bytes) -> dict[str, Any]:
