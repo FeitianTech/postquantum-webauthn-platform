@@ -1,0 +1,1164 @@
+{
+ "scenario": "advanced-register-begin-options",
+ "requests": [
+  {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "532"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "advanced_original_request": {
+       "publicKey": {
+        "challenge": {
+         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
+        },
+        "pubKeyCredParams": [
+         {
+          "alg": -7,
+          "type": "public-key"
+         }
+        ],
+        "rp": {
+         "id": "localhost",
+         "name": "Demo server"
+        },
+        "user": {
+         "displayName": "A. User",
+         "id": "757365722d68616e646c65",
+         "name": "user@example.com"
+        }
+       }
+      },
+      "advanced_register_allowed_attachments": [],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "Demo server"
+      },
+      "advanced_state": {
+       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      }
+     }
+    }
+   ],
+   "bodySha256": "6cf44d913cf867ddddd4a3fccc1745e73e81003e580b4e43a460a05c7ed12970",
+   "body": {
+    "__session_state": {
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "user_verification": "preferred"
+    },
+    "publicKey": {
+     "attestation": "none",
+     "authenticatorSelection": {
+      "requireResidentKey": false,
+      "residentKey": "preferred",
+      "userVerification": "preferred"
+     },
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -7,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "Demo server"
+     },
+     "timeout": 90,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "1227"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "advanced_original_request": {
+       "publicKey": {
+        "attestation": "direct",
+        "authenticatorSelection": {
+         "authenticatorAttachment": "platform",
+         "residentKey": "required",
+         "userVerification": "required"
+        },
+        "challenge": {
+         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
+        },
+        "excludeCredentials": [
+         {
+          "id": {
+           "$base64url": "EREREREREREREREREREREQ"
+          },
+          "transports": [
+           "usb"
+          ],
+          "type": "public-key"
+         },
+         {
+          "id": "2222",
+          "type": "public-key"
+         },
+         {
+          "id": "33",
+          "type": "other"
+         },
+         "not-a-descriptor"
+        ],
+        "extensions": {
+         "credBlob": {
+          "$base64url": "YmxvYg"
+         },
+         "credProps": true,
+         "credentialProtectionPolicy": "userVerificationOptionalWithCredentialIDList",
+         "enforceCredentialProtectionPolicy": true,
+         "hmacCreateSecret": true,
+         "largeBlob": {
+          "support": "preferred"
+         },
+         "minPinLength": true,
+         "prf": {
+          "eval": {
+           "first": {
+            "$base64url": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc"
+           },
+           "second": "0a0b0c"
+          }
+         }
+        },
+        "hints": [
+         "client-device"
+        ],
+        "pubKeyCredParams": [
+         {
+          "alg": -7,
+          "type": "public-key"
+         },
+         {
+          "alg": -8,
+          "type": "public-key"
+         },
+         {
+          "alg": -257,
+          "type": "public-key"
+         },
+         {
+          "alg": -48,
+          "type": "public-key"
+         },
+         {
+          "alg": -49,
+          "type": "public-key"
+         },
+         {
+          "alg": -50,
+          "type": "public-key"
+         },
+         {
+          "alg": -35,
+          "type": "public-key"
+         },
+         {
+          "alg": -37,
+          "type": "public-key"
+         }
+        ],
+        "rp": {
+         "id": "localhost",
+         "name": "Demo server"
+        },
+        "timeout": 120000,
+        "user": {
+         "displayName": "A. User",
+         "id": "757365722d68616e646c65",
+         "name": "user@example.com"
+        }
+       }
+      },
+      "advanced_register_allowed_attachments": [
+       "platform"
+      ],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "Demo server"
+      },
+      "advanced_state": {
+       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+       "issued_at": 1790000000.0,
+       "user_verification": "required"
+      }
+     }
+    }
+   ],
+   "bodySha256": "199ee141d1825fc96498a2054ab685dd64b689c8f8e00e08a17fb9b2b81ca67f",
+   "body": {
+    "__session_state": {
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "user_verification": "required"
+    },
+    "publicKey": {
+     "attestation": "direct",
+     "authenticatorSelection": {
+      "authenticatorAttachment": "platform",
+      "requireResidentKey": true,
+      "residentKey": "required",
+      "userVerification": "required"
+     },
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "excludeCredentials": [
+      {
+       "id": "EREREREREREREREREREREQ",
+       "type": "public-key"
+      },
+      {
+       "id": "IiI",
+       "type": "public-key"
+      }
+     ],
+     "extensions": {
+      "credBlob": {
+       "$base64url": "YmxvYg"
+      },
+      "credProps": true,
+      "credentialProtectionPolicy": "userVerificationOptionalWithCredentialIDList",
+      "enforceCredentialProtectionPolicy": true,
+      "hmacCreateSecret": true,
+      "largeBlob": {
+       "support": "preferred"
+      },
+      "minPinLength": true,
+      "prf": {
+       "eval": {
+        "first": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc",
+        "second": "CgsM"
+       }
+      }
+     },
+     "pubKeyCredParams": [
+      {
+       "alg": -7,
+       "type": "public-key"
+      },
+      {
+       "alg": -8,
+       "type": "public-key"
+      },
+      {
+       "alg": -257,
+       "type": "public-key"
+      },
+      {
+       "alg": -48,
+       "type": "public-key"
+      },
+      {
+       "alg": -49,
+       "type": "public-key"
+      },
+      {
+       "alg": -50,
+       "type": "public-key"
+      },
+      {
+       "alg": -35,
+       "type": "public-key"
+      },
+      {
+       "alg": -37,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "Demo server"
+     },
+     "timeout": 120,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "661"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "advanced_original_request": {
+       "publicKey": {
+        "challenge": {
+         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
+        },
+        "pubKeyCredParams": [
+         {
+          "alg": -50,
+          "type": "public-key"
+         },
+         {
+          "alg": -48,
+          "type": "public-key"
+         },
+         {
+          "alg": -49,
+          "type": "public-key"
+         },
+         {
+          "alg": -7,
+          "type": "public-key"
+         },
+         {
+          "alg": -257,
+          "type": "public-key"
+         }
+        ],
+        "rp": {
+         "id": "localhost",
+         "name": "Demo server"
+        },
+        "user": {
+         "displayName": "A. User",
+         "id": "757365722d68616e646c65",
+         "name": "user@example.com"
+        }
+       }
+      },
+      "advanced_register_allowed_attachments": [],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "Demo server"
+      },
+      "advanced_state": {
+       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      }
+     }
+    }
+   ],
+   "bodySha256": "9b13f8ac99d42e3c9e1e9bb2553d374ca00d052d9ebd22d362e7e15b7ff35b56",
+   "body": {
+    "__session_state": {
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "user_verification": "preferred"
+    },
+    "publicKey": {
+     "attestation": "none",
+     "authenticatorSelection": {
+      "requireResidentKey": false,
+      "residentKey": "preferred",
+      "userVerification": "preferred"
+     },
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -50,
+       "type": "public-key"
+      },
+      {
+       "alg": -48,
+       "type": "public-key"
+      },
+      {
+       "alg": -49,
+       "type": "public-key"
+      },
+      {
+       "alg": -7,
+       "type": "public-key"
+      },
+      {
+       "alg": -257,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "Demo server"
+     },
+     "timeout": 90,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "661"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "advanced_original_request": {
+       "publicKey": {
+        "challenge": {
+         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
+        },
+        "pubKeyCredParams": [
+         {
+          "alg": -50,
+          "type": "public-key"
+         },
+         {
+          "alg": -48,
+          "type": "public-key"
+         },
+         {
+          "alg": -49,
+          "type": "public-key"
+         },
+         {
+          "alg": -7,
+          "type": "public-key"
+         },
+         {
+          "alg": -257,
+          "type": "public-key"
+         }
+        ],
+        "rp": {
+         "id": "localhost",
+         "name": "Demo server"
+        },
+        "user": {
+         "displayName": "A. User",
+         "id": "757365722d68616e646c65",
+         "name": "user@example.com"
+        }
+       }
+      },
+      "advanced_register_allowed_attachments": [],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "Demo server"
+      },
+      "advanced_state": {
+       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      }
+     }
+    }
+   ],
+   "bodySha256": "9b13f8ac99d42e3c9e1e9bb2553d374ca00d052d9ebd22d362e7e15b7ff35b56",
+   "body": {
+    "__session_state": {
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "user_verification": "preferred"
+    },
+    "publicKey": {
+     "attestation": "none",
+     "authenticatorSelection": {
+      "requireResidentKey": false,
+      "residentKey": "preferred",
+      "userVerification": "preferred"
+     },
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -50,
+       "type": "public-key"
+      },
+      {
+       "alg": -48,
+       "type": "public-key"
+      },
+      {
+       "alg": -49,
+       "type": "public-key"
+      },
+      {
+       "alg": -7,
+       "type": "public-key"
+      },
+      {
+       "alg": -257,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "Demo server"
+     },
+     "timeout": 90,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "538"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "advanced_original_request": {
+       "publicKey": {
+        "attestation": "indirect",
+        "authenticatorSelection": {
+         "requireResidentKey": true,
+         "userVerification": "discouraged"
+        },
+        "challenge": {
+         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
+        },
+        "pubKeyCredParams": [
+         {
+          "alg": -7,
+          "type": "public-key"
+         }
+        ],
+        "rp": {
+         "id": "localhost",
+         "name": "Demo server"
+        },
+        "user": {
+         "displayName": "A. User",
+         "id": "757365722d68616e646c65",
+         "name": "user@example.com"
+        }
+       }
+      },
+      "advanced_register_allowed_attachments": [],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "Demo server"
+      },
+      "advanced_state": {
+       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+       "issued_at": 1790000000.0,
+       "user_verification": "discouraged"
+      }
+     }
+    }
+   ],
+   "bodySha256": "c62e77cd903f8928439724c20619687900e9f6551bc7ed2c623b090bc31f9006",
+   "body": {
+    "__session_state": {
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "user_verification": "discouraged"
+    },
+    "publicKey": {
+     "attestation": "indirect",
+     "authenticatorSelection": {
+      "requireResidentKey": true,
+      "residentKey": "required",
+      "userVerification": "discouraged"
+     },
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -7,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "Demo server"
+     },
+     "timeout": 90,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "570"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "advanced_original_request": {
+       "publicKey": {
+        "attestation": "enterprise",
+        "authenticatorSelection": {
+         "residentKey": "discouraged"
+        },
+        "challenge": {
+         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
+        },
+        "hints": [
+         "security-key"
+        ],
+        "pubKeyCredParams": [
+         {
+          "alg": -7,
+          "type": "public-key"
+         }
+        ],
+        "rp": {
+         "id": "localhost",
+         "name": "Demo server"
+        },
+        "timeout": 0,
+        "user": {
+         "displayName": "A. User",
+         "id": "757365722d68616e646c65",
+         "name": "user@example.com"
+        }
+       }
+      },
+      "advanced_register_allowed_attachments": [
+       "cross-platform"
+      ],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "Demo server"
+      },
+      "advanced_state": {
+       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      }
+     }
+    }
+   ],
+   "bodySha256": "9faec8ceea71ed57e8d625c7e9b6fcfc533366c61324bfb1538a4b6901bfa70a",
+   "body": {
+    "__session_state": {
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "user_verification": "preferred"
+    },
+    "publicKey": {
+     "attestation": "enterprise",
+     "authenticatorSelection": {
+      "authenticatorAttachment": "cross-platform",
+      "requireResidentKey": false,
+      "residentKey": "discouraged",
+      "userVerification": "preferred"
+     },
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -7,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "Demo server"
+     },
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "575"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "advanced_original_request": {
+       "publicKey": {
+        "authenticatorSelection": {},
+        "challenge": {
+         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
+        },
+        "hints": [
+         "hybrid",
+         7
+        ],
+        "pubKeyCredParams": [
+         {
+          "alg": -7,
+          "type": "public-key"
+         }
+        ],
+        "rp": {
+         "id": "localhost",
+         "name": "Demo server"
+        },
+        "user": {
+         "displayName": "A. User",
+         "id": "757365722d68616e646c65",
+         "name": "user@example.com"
+        }
+       }
+      },
+      "advanced_register_allowed_attachments": [
+       "cross-platform"
+      ],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "Demo server"
+      },
+      "advanced_state": {
+       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      }
+     }
+    }
+   ],
+   "bodySha256": "9d27a15721899cb922ef6447e2b6467de8c81bd8aa29089219a5e3054a7cb73e",
+   "body": {
+    "__session_state": {
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "user_verification": "preferred"
+    },
+    "publicKey": {
+     "attestation": "none",
+     "authenticatorSelection": {
+      "authenticatorAttachment": "cross-platform",
+      "requireResidentKey": false,
+      "residentKey": "preferred",
+      "userVerification": "preferred"
+     },
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -7,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "Demo server"
+     },
+     "timeout": 90,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "689"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "advanced_original_request": {
+       "publicKey": {
+        "challenge": {
+         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
+        },
+        "extensions": {
+         "credProtect": 3,
+         "enforceCredProtect": false,
+         "largeBlob": "required",
+         "prf": {}
+        },
+        "pubKeyCredParams": [
+         {
+          "alg": -7,
+          "type": "public-key"
+         }
+        ],
+        "rp": {
+         "id": "localhost",
+         "name": "Demo server"
+        },
+        "user": {
+         "displayName": "A. User",
+         "id": "757365722d68616e646c65",
+         "name": "user@example.com"
+        }
+       }
+      },
+      "advanced_register_allowed_attachments": [],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "Demo server"
+      },
+      "advanced_state": {
+       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      }
+     }
+    }
+   ],
+   "bodySha256": "cdc0bbf2979eec47173182e74a1fa20f4e236118200de85e669fb4893ab08b48",
+   "body": {
+    "__session_state": {
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "user_verification": "preferred"
+    },
+    "publicKey": {
+     "attestation": "none",
+     "authenticatorSelection": {
+      "requireResidentKey": false,
+      "residentKey": "preferred",
+      "userVerification": "preferred"
+     },
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "excludeCredentials": [],
+     "extensions": {
+      "credentialProtectionPolicy": "userVerificationRequired",
+      "enforceCredentialProtectionPolicy": false,
+      "largeBlob": {
+       "support": "required"
+      },
+      "prf": {}
+     },
+     "pubKeyCredParams": [
+      {
+       "alg": -7,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "Demo server"
+     },
+     "timeout": 90,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  }
+ ]
+}

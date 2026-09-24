@@ -1,0 +1,604 @@
+{
+ "coerce": {
+  "none": null,
+  "empty": null,
+  "blank": null,
+  "bytes": {
+   "$bytes": "3082016d3082011f"
+  },
+  "bytearray": {
+   "$bytes": "3082016d3082011f"
+  },
+  "memoryview": {
+   "$bytes": "3082016d3082011f"
+  },
+  "bytebuffer": {
+   "$bytes": "3082016d3082011f"
+  },
+  "base64": {
+   "$bytes": "3082016d3082011fa0"
+  },
+  "base64url": {
+   "$bytes": "fbfffbfffbfffbff"
+  },
+  "not-base64": null,
+  "raw-hex": {
+   "$bytes": "3082016d3082011f"
+  },
+  "raw-not-hex": null,
+  "der-base64": {
+   "$bytes": "3082016d3082011f"
+  },
+  "der_base64": {
+   "$bytes": "3082016d3082011f"
+  },
+  "pem": {
+   "$bytes": "3082016d3082011fa003020102020203e8300506032b657030233121301f06035504030c18436861726163746572697a6174696f6e20546573742043413020170d3230303130313030303030305a180f32303939313233313030303030305a306b310b3009060355040613025345311e301c060355040a0c15436861726163746572697a6174696f6e205465737431223020060355040b0c1941757468656e74696361746f72204174746573746174696f6e3118301606035504030c0f5375626a6563742065632d703235363059301306072a8648ce3d020106082a8648ce3d03010703420004fa9e767cbb1f98be31a2f841852a35b10c11dad49a43e7e8ed92b42a8e2fe5145ccc170474f63b249b2b4c545bc18a2c6b2c5083e3f665ed8a5ba20bb683d4dc300506032b6570034100afe4ffd9e3310cf280c4130d3daf8b50a837ac7838a866cb6b06a5c8747955c47121779a155252ca1c3fcc6e438f45c1a037e6dca5b38d2a6d7d21b6cabe3b0f"
+  },
+  "bad-pem": null,
+  "empty-mapping": {
+   "$bytes": ""
+  },
+  "int": {
+   "$bytes": "0000000000"
+  },
+  "list": {
+   "$bytes": "0102"
+  },
+  "object": null
+ },
+ "unknown-key/ec": {
+  "$tuple": [
+   {
+    "type": "Unknown",
+    "algorithm": {
+     "name": "Unknown",
+     "oid": "1.2.840.10045.2.1"
+    },
+    "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE+p52fLsfmL4xovhBhSo1sQwR2tSaQ+fo7ZK0Ko4v5RRczBcEdPY7JJsrTFRbwYosayxQg+P2Ze2KW6ILtoPU3A==",
+    "publicKeyBase64": "BPqedny7H5i+MaL4QYUqNbEMEdrUmkPn6O2StCqOL+UUXMwXBHT2OySbK0xUW8GKLGssUIPj9mXtiluiC7aD1Nw=",
+    "publicKeyHex": "04:fa:9e:76:7c:bb:1f:98:be:31:a2:f8:41:85:2a:35:b1:0c:11:da:d4:9a:43:e7:e8:ed:92:b4:2a:8e:2f:e5:14:5c:cc:17:04:74:f6:3b:24:9b:2b:4c:54:5b:c1:8a:2c:6b:2c:50:83:e3:f6:65:ed:8a:5b:a2:0b:b6:83:d4:dc",
+    "publicKeyHexLines": [
+     "04:fa:9e:76:7c:bb:1f:98:be:31:a2:f8:41:85:2a:35",
+     "b1:0c:11:da:d4:9a:43:e7:e8:ed:92:b4:2a:8e:2f:e5",
+     "14:5c:cc:17:04:74:f6:3b:24:9b:2b:4c:54:5b:c1:8a",
+     "2c:6b:2c:50:83:e3:f6:65:ed:8a:5b:a2:0b:b6:83:d4",
+     "dc"
+    ],
+    "keySize": 520
+   },
+   [
+    {
+     "$tuple": [
+      "Type",
+      "Unknown"
+     ]
+    },
+    {
+     "$tuple": [
+      "Algorithm OID",
+      "1.2.840.10045.2.1"
+     ]
+    },
+    {
+     "$tuple": [
+      "Public key size (bits)",
+      520
+     ]
+    },
+    {
+     "$tuple": [
+      "Public Key (base64)",
+      "BPqedny7H5i+MaL4QYUqNbEMEdrUmkPn6O2StCqOL+UUXMwXBHT2OySbK0xUW8GKLGssUIPj9mXtiluiC7aD1Nw="
+     ]
+    },
+    {
+     "$tuple": [
+      "Public Key (hex)",
+      [
+       "04:fa:9e:76:7c:bb:1f:98:be:31:a2:f8:41:85:2a:35",
+       "b1:0c:11:da:d4:9a:43:e7:e8:ed:92:b4:2a:8e:2f:e5",
+       "14:5c:cc:17:04:74:f6:3b:24:9b:2b:4c:54:5b:c1:8a",
+       "2c:6b:2c:50:83:e3:f6:65:ed:8a:5b:a2:0b:b6:83:d4",
+       "dc"
+      ]
+     ]
+    }
+   ]
+  ]
+ },
+ "fallback/ec": {
+  "error": "Unable to parse attestation certificate: unparsable for the test",
+  "derBase64": "MIIBbTCCAR+gAwIBAgICA+gwBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowazELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEYMBYGA1UEAwwPU3ViamVjdCBlYy1wMjU2MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE+p52fLsfmL4xovhBhSo1sQwR2tSaQ+fo7ZK0Ko4v5RRczBcEdPY7JJsrTFRbwYosayxQg+P2Ze2KW6ILtoPU3DAFBgMrZXADQQCv5P/Z4zEM8oDEEw09r4tQqDeseDioZstrBqXIdHlVxHEhd5oVUlLKHD/MbkOPRcGgN+bcpbONKm19IbbKvjsP",
+  "fingerprints": {
+   "sha256": "414815148587dcd791929df00103d17af7dcf35ba0695d5038895ce918c3e25b",
+   "sha1": "fa1c5a5458244b3a865ab088adbdcd2f461b08a7",
+   "md5": "8b16e23cc42daa99845160b11991acd6"
+  },
+  "pem": "-----BEGIN CERTIFICATE-----\nMIIBbTCCAR+gAwIBAgICA+gwBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6\nYXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFow\nazELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEi\nMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEYMBYGA1UEAwwPU3Vi\namVjdCBlYy1wMjU2MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE+p52fLsfmL4x\novhBhSo1sQwR2tSaQ+fo7ZK0Ko4v5RRczBcEdPY7JJsrTFRbwYosayxQg+P2Ze2K\nW6ILtoPU3DAFBgMrZXADQQCv5P/Z4zEM8oDEEw09r4tQqDeseDioZstrBqXIdHlV\nxHEhd5oVUlLKHD/MbkOPRcGgN+bcpbONKm19IbbKvjsP\n-----END CERTIFICATE-----",
+  "publicKeyInfo": {
+   "type": "Unknown",
+   "algorithm": {
+    "name": "Unknown",
+    "oid": "1.2.840.10045.2.1"
+   },
+   "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE+p52fLsfmL4xovhBhSo1sQwR2tSaQ+fo7ZK0Ko4v5RRczBcEdPY7JJsrTFRbwYosayxQg+P2Ze2KW6ILtoPU3A==",
+   "publicKeyBase64": "BPqedny7H5i+MaL4QYUqNbEMEdrUmkPn6O2StCqOL+UUXMwXBHT2OySbK0xUW8GKLGssUIPj9mXtiluiC7aD1Nw=",
+   "publicKeyHex": "04:fa:9e:76:7c:bb:1f:98:be:31:a2:f8:41:85:2a:35:b1:0c:11:da:d4:9a:43:e7:e8:ed:92:b4:2a:8e:2f:e5:14:5c:cc:17:04:74:f6:3b:24:9b:2b:4c:54:5b:c1:8a:2c:6b:2c:50:83:e3:f6:65:ed:8a:5b:a2:0b:b6:83:d4:dc",
+   "publicKeyHexLines": [
+    "04:fa:9e:76:7c:bb:1f:98:be:31:a2:f8:41:85:2a:35",
+    "b1:0c:11:da:d4:9a:43:e7:e8:ed:92:b4:2a:8e:2f:e5",
+    "14:5c:cc:17:04:74:f6:3b:24:9b:2b:4c:54:5b:c1:8a",
+    "2c:6b:2c:50:83:e3:f6:65:ed:8a:5b:a2:0b:b6:83:d4",
+    "dc"
+   ],
+   "keySize": 520
+  },
+  "raw": "3082016d3082011fa003020102020203e8300506032b657030233121301f06035504030c18436861726163746572697a6174696f6e20546573742043413020170d3230303130313030303030305a180f32303939313233313030303030305a306b310b3009060355040613025345311e301c060355040a0c15436861726163746572697a6174696f6e205465737431223020060355040b0c1941757468656e74696361746f72204174746573746174696f6e3118301606035504030c0f5375626a6563742065632d703235363059301306072a8648ce3d020106082a8648ce3d03010703420004fa9e767cbb1f98be31a2f841852a35b10c11dad49a43e7e8ed92b42a8e2fe5145ccc170474f63b249b2b4c545bc18a2c6b2c5083e3f665ed8a5ba20bb683d4dc300506032b6570034100afe4ffd9e3310cf280c4130d3daf8b50a837ac7838a866cb6b06a5c8747955c47121779a155252ca1c3fcc6e438f45c1a037e6dca5b38d2a6d7d21b6cabe3b0f",
+  "summary": "Unable to parse attestation certificate using cryptography.x509.\nError: unparsable for the test\n\nDER length: 369 bytes\n\nFingerprints:\n    SHA256: 414815148587dcd791929df00103d17af7dcf35ba0695d5038895ce918c3e25b\n    SHA1: fa1c5a5458244b3a865ab088adbdcd2f461b08a7\n    MD5: 8b16e23cc42daa99845160b11991acd6\n\nBest-effort public key details:\n    Type: Unknown\n    Algorithm OID: 1.2.840.10045.2.1\n    Public key size (bits): 520\n    Public Key (base64): BPqedny7H5i+MaL4QYUqNbEMEdrUmkPn6O2StCqOL+UUXMwXBHT2OySbK0xUW8GKLGssUIPj9mXtiluiC7aD1Nw=\n    Public Key (hex):\n        04:fa:9e:76:7c:bb:1f:98:be:31:a2:f8:41:85:2a:35\n        b1:0c:11:da:d4:9a:43:e7:e8:ed:92:b4:2a:8e:2f:e5\n        14:5c:cc:17:04:74:f6:3b:24:9b:2b:4c:54:5b:c1:8a\n        2c:6b:2c:50:83:e3:f6:65:ed:8a:5b:a2:0b:b6:83:d4\n        dc",
+  "parseError": "unparsable for the test"
+ },
+ "unknown-key/ml-dsa": {
+  "$tuple": [
+   {
+    "type": "ML-DSA",
+    "algorithm": {
+     "name": "ML-DSA",
+     "oid": "2.16.840.1.101.3.4.3.17",
+     "mlDsaParameterSet": "ML-DSA-44",
+     "claimedNistLevel": 2,
+     "signatureLengthBytes": 2420
+    },
+    "subjectPublicKeyInfoBase64": "MIIFMjALBglghkgBZQMEAxEDggUhAJc6F6twAas89qa8vJCAKCZNz6epUnrZJkQ0x/c5ICboNrcs6orRqEgLlbNIai5jVLvMQwwJpO2FEmT1vuVmU+yiFCd+5O+opqwtdr0kRD/EIZeCFHMUxhYm81iBE5690upb8hH4/wZN9pHjJNtqXZK1Pv4uRHogGmoM9KzdvnupUv5v4dRfOnAzg67L493FtMlxB3CTP9wsBePfndX9kCSY8apC3aDy0FH4550OFsOY3QAR8uoBMF+aDzUfYS5aFZiH+fJSmcRel7yE0WQN1X7F8npbrgRwD+78Blbj72l1sSYCZwv1cTIaa1Kkgh3x2blYuBVE2+uH3B9L/nvkAyXXQZE5E/hW5BFafh3PHcMQ/0tSMNlIa+J9Ibd6YEk5HUHMEXcrN4X84nU1l/DG2AnnFN83ZIjb8AmMP/W44w1dBjgmwn+UKH3xj/U522G+zdHqO/qdPzNrRfgttYfZthA3NcSENb4WaPEq9qxv7xisK2ibwYeAZkKG7ynU2V3S8/97MJAGxkW6ZHVFFSaUqx4Omke8MdC5QYZlUPt+B3TdAW/cE1+NbeESmLfBjiN7FpFVggF9SKbqQSY3Ii5Clvsnv3i2FTAt7D8ANt229FeKojmfSbZ/o7qTpW5j66Sn+p+lkpXmV2WK9TsHarwkz+bdEGJI1BD3T1eqTf21xh532Cv5f0eKx6IEPbzkJL3RzNBJwiov3lz4VcLgRVjRT1akVVrTOwF5bixzOIuF11es/AOB5RilN8RD+nFIO23iVNKNslsHWo81BSSYEKl1elGUpuy4szVf/BZNMvmwkgvR0eIQugsFxhwplx0trKSrK/EKdPeHj7pA5FAL9+Epov4fiqZX4MrvPoRQvX893avKfmPbBpHmxwSwB5ZQBjnh97HFCHNmI5LfetQW8tncHHEr1Y5PI4jpduOlC4MT5ppKtR8Ids9dPGzQLJUPuCUG/99vlo8HQwEFYCadz/2BTQrVIFD0fH3FR3jc6sTjVm48wyzoOdW++4Rq+PCLbBryinTJWO58PwiDlltNYpvB3MxS6GCPwyGBGINH+O75Ui2RLlOwOtIfQ2tOHRTY+VBBIZPmMPiqf7b1zvir1mi62g+JEuxevChDSkPqw6iiPBBHQttR6elf136Z8aRNiVaf7AGZUJ3U4ihEUPiJAHC/nyCFq75HL6+Bdczo36+OhPh4y3Bn9pYx2Ms5lFhz6nKwjXdOkFksObPWxt79Voa/nqPpHtkC2VMJXsxuxaEHoxOloYU8if+Q5/fMMfubCrsaS2LIPtox2+qhIZp3kGELilLwikSDA2mH4wzm1S5HIQbbdUCRgIBoZ1mVymp4BC/rQlEGrgx4J3uHddl/kkZNDi3juaMWQ6HBTYUhucKI66ZOuOshp8HK7ZJl2Se80jNzxou5Jp/AJNiMzj/QmGfeN7A4jksna+X0nHKaHAKoLoSoDI3RGKPPTtUhh5yyh14EZ+e7cwnrrpxazu2Axn86FMFNIjpSrLky/aTukAo6W7PzB732LZYotb/xC+rSdgxPsBL3UykgrevghTcQLyQ/76qHlCPhTI6joPnol4Om9HJ23Dk7Rn6wkdowBdXmZB2M7A1yMY8CGg7I32y4uB0SUcEueAai5ToT/891tIlS/FAmy8CwcWPbY/KVPL6XXsqBLDR5nFV6Ya+GPmKPWSp/S+zaoOo0Kpe5ht4UDLuQSKv0dM6osuAZ956ARVpONJ51IY+0GK5JlDfdZBy0G+0PCHk=",
+    "publicKeyBase64": "lzoXq3ABqzz2pry8kIAoJk3Pp6lSetkmRDTH9zkgJug2tyzqitGoSAuVs0hqLmNUu8xDDAmk7YUSZPW+5WZT7KIUJ37k76imrC12vSREP8Qhl4IUcxTGFibzWIETnr3S6lvyEfj/Bk32keMk22pdkrU+/i5EeiAaagz0rN2+e6lS/m/h1F86cDODrsvj3cW0yXEHcJM/3CwF49+d1f2QJJjxqkLdoPLQUfjnnQ4Ww5jdABHy6gEwX5oPNR9hLloVmIf58lKZxF6XvITRZA3VfsXyeluuBHAP7vwGVuPvaXWxJgJnC/VxMhprUqSCHfHZuVi4FUTb64fcH0v+e+QDJddBkTkT+FbkEVp+Hc8dwxD/S1Iw2Uhr4n0ht3pgSTkdQcwRdys3hfzidTWX8MbYCecU3zdkiNvwCYw/9bjjDV0GOCbCf5QoffGP9TnbYb7N0eo7+p0/M2tF+C21h9m2EDc1xIQ1vhZo8Sr2rG/vGKwraJvBh4BmQobvKdTZXdLz/3swkAbGRbpkdUUVJpSrHg6aR7wx0LlBhmVQ+34HdN0Bb9wTX41t4RKYt8GOI3sWkVWCAX1IpupBJjciLkKW+ye/eLYVMC3sPwA23bb0V4qiOZ9Jtn+jupOlbmPrpKf6n6WSleZXZYr1OwdqvCTP5t0QYkjUEPdPV6pN/bXGHnfYK/l/R4rHogQ9vOQkvdHM0EnCKi/eXPhVwuBFWNFPVqRVWtM7AXluLHM4i4XXV6z8A4HlGKU3xEP6cUg7beJU0o2yWwdajzUFJJgQqXV6UZSm7LizNV/8Fk0y+bCSC9HR4hC6CwXGHCmXHS2spKsr8Qp094ePukDkUAv34Smi/h+Kplfgyu8+hFC9fz3dq8p+Y9sGkebHBLAHllAGOeH3scUIc2Yjkt961Bby2dwccSvVjk8jiOl246ULgxPmmkq1Hwh2z108bNAslQ+4JQb/32+WjwdDAQVgJp3P/YFNCtUgUPR8fcVHeNzqxONWbjzDLOg51b77hGr48ItsGvKKdMlY7nw/CIOWW01im8HczFLoYI/DIYEYg0f47vlSLZEuU7A60h9Da04dFNj5UEEhk+Yw+Kp/tvXO+KvWaLraD4kS7F68KENKQ+rDqKI8EEdC21Hp6V/XfpnxpE2JVp/sAZlQndTiKERQ+IkAcL+fIIWrvkcvr4F1zOjfr46E+HjLcGf2ljHYyzmUWHPqcrCNd06QWSw5s9bG3v1Whr+eo+ke2QLZUwlezG7FoQejE6WhhTyJ/5Dn98wx+5sKuxpLYsg+2jHb6qEhmneQYQuKUvCKRIMDaYfjDObVLkchBtt1QJGAgGhnWZXKangEL+tCUQauDHgne4d12X+SRk0OLeO5oxZDocFNhSG5wojrpk646yGnwcrtkmXZJ7zSM3PGi7kmn8Ak2IzOP9CYZ943sDiOSydr5fSccpocAqguhKgMjdEYo89O1SGHnLKHXgRn57tzCeuunFrO7YDGfzoUwU0iOlKsuTL9pO6QCjpbs/MHvfYtlii1v/EL6tJ2DE+wEvdTKSCt6+CFNxAvJD/vqoeUI+FMjqOg+eiXg6b0cnbcOTtGfrCR2jAF1eZkHYzsDXIxjwIaDsjfbLi4HRJRwS54BqLlOhP/z3W0iVL8UCbLwLBxY9tj8pU8vpdeyoEsNHmcVXphr4Y+Yo9ZKn9L7Nqg6jQql7mG3hQMu5BIq/R0zqiy4Bn3noBFWk40nnUhj7QYrkmUN91kHLQb7Q8IeQ==",
+    "publicKeyHex": "97:3a:17:ab:70:01:ab:3c:f6:a6:bc:bc:90:80:28:26:4d:cf:a7:a9:52:7a:d9:26:44:34:c7:f7:39:20:26:e8:36:b7:2c:ea:8a:d1:a8:48:0b:95:b3:48:6a:2e:63:54:bb:cc:43:0c:09:a4:ed:85:12:64:f5:be:e5:66:53:ec:a2:14:27:7e:e4:ef:a8:a6:ac:2d:76:bd:24:44:3f:c4:21:97:82:14:73:14:c6:16:26:f3:58:81:13:9e:bd:d2:ea:5b:f2:11:f8:ff:06:4d:f6:91:e3:24:db:6a:5d:92:b5:3e:fe:2e:44:7a:20:1a:6a:0c:f4:ac:dd:be:7b:a9:52:fe:6f:e1:d4:5f:3a:70:33:83:ae:cb:e3:dd:c5:b4:c9:71:07:70:93:3f:dc:2c:05:e3:df:9d:d5:fd:90:24:98:f1:aa:42:dd:a0:f2:d0:51:f8:e7:9d:0e:16:c3:98:dd:00:11:f2:ea:01:30:5f:9a:0f:35:1f:61:2e:5a:15:98:87:f9:f2:52:99:c4:5e:97:bc:84:d1:64:0d:d5:7e:c5:f2:7a:5b:ae:04:70:0f:ee:fc:06:56:e3:ef:69:75:b1:26:02:67:0b:f5:71:32:1a:6b:52:a4:82:1d:f1:d9:b9:58:b8:15:44:db:eb:87:dc:1f:4b:fe:7b:e4:03:25:d7:41:91:39:13:f8:56:e4:11:5a:7e:1d:cf:1d:c3:10:ff:4b:52:30:d9:48:6b:e2:7d:21:b7:7a:60:49:39:1d:41:cc:11:77:2b:37:85:fc:e2:75:35:97:f0:c6:d8:09:e7:14:df:37:64:88:db:f0:09:8c:3f:f5:b8:e3:0d:5d:06:38:26:c2:7f:94:28:7d:f1:8f:f5:39:db:61:be:cd:d1:ea:3b:fa:9d:3f:33:6b:45:f8:2d:b5:87:d9:b6:10:37:35:c4:84:35:be:16:68:f1:2a:f6:ac:6f:ef:18:ac:2b:68:9b:c1:87:80:66:42:86:ef:29:d4:d9:5d:d2:f3:ff:7b:30:90:06:c6:45:ba:64:75:45:15:26:94:ab:1e:0e:9a:47:bc:31:d0:b9:41:86:65:50:fb:7e:07:74:dd:01:6f:dc:13:5f:8d:6d:e1:12:98:b7:c1:8e:23:7b:16:91:55:82:01:7d:48:a6:ea:41:26:37:22:2e:42:96:fb:27:bf:78:b6:15:30:2d:ec:3f:00:36:dd:b6:f4:57:8a:a2:39:9f:49:b6:7f:a3:ba:93:a5:6e:63:eb:a4:a7:fa:9f:a5:92:95:e6:57:65:8a:f5:3b:07:6a:bc:24:cf:e6:dd:10:62:48:d4:10:f7:4f:57:aa:4d:fd:b5:c6:1e:77:d8:2b:f9:7f:47:8a:c7:a2:04:3d:bc:e4:24:bd:d1:cc:d0:49:c2:2a:2f:de:5c:f8:55:c2:e0:45:58:d1:4f:56:a4:55:5a:d3:3b:01:79:6e:2c:73:38:8b:85:d7:57:ac:fc:03:81:e5:18:a5:37:c4:43:fa:71:48:3b:6d:e2:54:d2:8d:b2:5b:07:5a:8f:35:05:24:98:10:a9:75:7a:51:94:a6:ec:b8:b3:35:5f:fc:16:4d:32:f9:b0:92:0b:d1:d1:e2:10:ba:0b:05:c6:1c:29:97:1d:2d:ac:a4:ab:2b:f1:0a:74:f7:87:8f:ba:40:e4:50:0b:f7:e1:29:a2:fe:1f:8a:a6:57:e0:ca:ef:3e:84:50:bd:7f:3d:dd:ab:ca:7e:63:db:06:91:e6:c7:04:b0:07:96:50:06:39:e1:f7:b1:c5:08:73:66:23:92:df:7a:d4:16:f2:d9:dc:1c:71:2b:d5:8e:4f:23:88:e9:76:e3:a5:0b:83:13:e6:9a:4a:b5:1f:08:76:cf:5d:3c:6c:d0:2c:95:0f:b8:25:06:ff:df:6f:96:8f:07:43:01:05:60:26:9d:cf:fd:81:4d:0a:d5:20:50:f4:7c:7d:c5:47:78:dc:ea:c4:e3:56:6e:3c:c3:2c:e8:39:d5:be:fb:84:6a:f8:f0:8b:6c:1a:f2:8a:74:c9:58:ee:7c:3f:08:83:96:5b:4d:62:9b:c1:dc:cc:52:e8:60:8f:c3:21:81:18:83:47:f8:ee:f9:52:2d:91:2e:53:b0:3a:d2:1f:43:6b:4e:1d:14:d8:f9:50:41:21:93:e6:30:f8:aa:7f:b6:f5:ce:f8:ab:d6:68:ba:da:0f:89:12:ec:5e:bc:28:43:4a:43:ea:c3:a8:a2:3c:10:47:42:db:51:e9:e9:5f:d7:7e:99:f1:a4:4d:89:56:9f:ec:01:99:50:9d:d4:e2:28:44:50:f8:89:00:70:bf:9f:20:85:ab:be:47:2f:af:81:75:cc:e8:df:af:8e:84:f8:78:cb:70:67:f6:96:31:d8:cb:39:94:58:73:ea:72:b0:8d:77:4e:90:59:2c:39:b3:d6:c6:de:fd:56:86:bf:9e:a3:e9:1e:d9:02:d9:53:09:5e:cc:6e:c5:a1:07:a3:13:a5:a1:85:3c:89:ff:90:e7:f7:cc:31:fb:9b:0a:bb:1a:4b:62:c8:3e:da:31:db:ea:a1:21:9a:77:90:61:0b:8a:52:f0:8a:44:83:03:69:87:e3:0c:e6:d5:2e:47:21:06:db:75:40:91:80:80:68:67:59:95:ca:6a:78:04:2f:eb:42:51:06:ae:0c:78:27:7b:87:75:d9:7f:92:46:4d:0e:2d:e3:b9:a3:16:43:a1:c1:4d:85:21:b9:c2:88:eb:a6:4e:b8:eb:21:a7:c1:ca:ed:92:65:d9:27:bc:d2:33:73:c6:8b:b9:26:9f:c0:24:d8:8c:ce:3f:d0:98:67:de:37:b0:38:8e:4b:27:6b:e5:f4:9c:72:9a:1c:02:a8:2e:84:a8:0c:8d:d1:18:a3:cf:4e:d5:21:87:9c:b2:87:5e:04:67:e7:bb:73:09:eb:ae:9c:5a:ce:ed:80:c6:7f:3a:14:c1:4d:22:3a:52:ac:b9:32:fd:a4:ee:90:0a:3a:5b:b3:f3:07:bd:f6:2d:96:28:b5:bf:f1:0b:ea:d2:76:0c:4f:b0:12:f7:53:29:20:ad:eb:e0:85:37:10:2f:24:3f:ef:aa:87:94:23:e1:4c:8e:a3:a0:f9:e8:97:83:a6:f4:72:76:dc:39:3b:46:7e:b0:91:da:30:05:d5:e6:64:1d:8c:ec:0d:72:31:8f:02:1a:0e:c8:df:6c:b8:b8:1d:12:51:c1:2e:78:06:a2:e5:3a:13:ff:cf:75:b4:89:52:fc:50:26:cb:c0:b0:71:63:db:63:f2:95:3c:be:97:5e:ca:81:2c:34:79:9c:55:7a:61:af:86:3e:62:8f:59:2a:7f:4b:ec:da:a0:ea:34:2a:97:b9:86:de:14:0c:bb:90:48:ab:f4:74:ce:a8:b2:e0:19:f7:9e:80:45:5a:4e:34:9e:75:21:8f:b4:18:ae:49:94:37:dd:64:1c:b4:1b:ed:0f:08:79",
+    "publicKeyHexLines": [
+     "97:3a:17:ab:70:01:ab:3c:f6:a6:bc:bc:90:80:28:26",
+     "4d:cf:a7:a9:52:7a:d9:26:44:34:c7:f7:39:20:26:e8",
+     "36:b7:2c:ea:8a:d1:a8:48:0b:95:b3:48:6a:2e:63:54",
+     "bb:cc:43:0c:09:a4:ed:85:12:64:f5:be:e5:66:53:ec",
+     "a2:14:27:7e:e4:ef:a8:a6:ac:2d:76:bd:24:44:3f:c4",
+     "21:97:82:14:73:14:c6:16:26:f3:58:81:13:9e:bd:d2",
+     "ea:5b:f2:11:f8:ff:06:4d:f6:91:e3:24:db:6a:5d:92",
+     "b5:3e:fe:2e:44:7a:20:1a:6a:0c:f4:ac:dd:be:7b:a9",
+     "52:fe:6f:e1:d4:5f:3a:70:33:83:ae:cb:e3:dd:c5:b4",
+     "c9:71:07:70:93:3f:dc:2c:05:e3:df:9d:d5:fd:90:24",
+     "98:f1:aa:42:dd:a0:f2:d0:51:f8:e7:9d:0e:16:c3:98",
+     "dd:00:11:f2:ea:01:30:5f:9a:0f:35:1f:61:2e:5a:15",
+     "98:87:f9:f2:52:99:c4:5e:97:bc:84:d1:64:0d:d5:7e",
+     "c5:f2:7a:5b:ae:04:70:0f:ee:fc:06:56:e3:ef:69:75",
+     "b1:26:02:67:0b:f5:71:32:1a:6b:52:a4:82:1d:f1:d9",
+     "b9:58:b8:15:44:db:eb:87:dc:1f:4b:fe:7b:e4:03:25",
+     "d7:41:91:39:13:f8:56:e4:11:5a:7e:1d:cf:1d:c3:10",
+     "ff:4b:52:30:d9:48:6b:e2:7d:21:b7:7a:60:49:39:1d",
+     "41:cc:11:77:2b:37:85:fc:e2:75:35:97:f0:c6:d8:09",
+     "e7:14:df:37:64:88:db:f0:09:8c:3f:f5:b8:e3:0d:5d",
+     "06:38:26:c2:7f:94:28:7d:f1:8f:f5:39:db:61:be:cd",
+     "d1:ea:3b:fa:9d:3f:33:6b:45:f8:2d:b5:87:d9:b6:10",
+     "37:35:c4:84:35:be:16:68:f1:2a:f6:ac:6f:ef:18:ac",
+     "2b:68:9b:c1:87:80:66:42:86:ef:29:d4:d9:5d:d2:f3",
+     "ff:7b:30:90:06:c6:45:ba:64:75:45:15:26:94:ab:1e",
+     "0e:9a:47:bc:31:d0:b9:41:86:65:50:fb:7e:07:74:dd",
+     "01:6f:dc:13:5f:8d:6d:e1:12:98:b7:c1:8e:23:7b:16",
+     "91:55:82:01:7d:48:a6:ea:41:26:37:22:2e:42:96:fb",
+     "27:bf:78:b6:15:30:2d:ec:3f:00:36:dd:b6:f4:57:8a",
+     "a2:39:9f:49:b6:7f:a3:ba:93:a5:6e:63:eb:a4:a7:fa",
+     "9f:a5:92:95:e6:57:65:8a:f5:3b:07:6a:bc:24:cf:e6",
+     "dd:10:62:48:d4:10:f7:4f:57:aa:4d:fd:b5:c6:1e:77",
+     "d8:2b:f9:7f:47:8a:c7:a2:04:3d:bc:e4:24:bd:d1:cc",
+     "d0:49:c2:2a:2f:de:5c:f8:55:c2:e0:45:58:d1:4f:56",
+     "a4:55:5a:d3:3b:01:79:6e:2c:73:38:8b:85:d7:57:ac",
+     "fc:03:81:e5:18:a5:37:c4:43:fa:71:48:3b:6d:e2:54",
+     "d2:8d:b2:5b:07:5a:8f:35:05:24:98:10:a9:75:7a:51",
+     "94:a6:ec:b8:b3:35:5f:fc:16:4d:32:f9:b0:92:0b:d1",
+     "d1:e2:10:ba:0b:05:c6:1c:29:97:1d:2d:ac:a4:ab:2b",
+     "f1:0a:74:f7:87:8f:ba:40:e4:50:0b:f7:e1:29:a2:fe",
+     "1f:8a:a6:57:e0:ca:ef:3e:84:50:bd:7f:3d:dd:ab:ca",
+     "7e:63:db:06:91:e6:c7:04:b0:07:96:50:06:39:e1:f7",
+     "b1:c5:08:73:66:23:92:df:7a:d4:16:f2:d9:dc:1c:71",
+     "2b:d5:8e:4f:23:88:e9:76:e3:a5:0b:83:13:e6:9a:4a",
+     "b5:1f:08:76:cf:5d:3c:6c:d0:2c:95:0f:b8:25:06:ff",
+     "df:6f:96:8f:07:43:01:05:60:26:9d:cf:fd:81:4d:0a",
+     "d5:20:50:f4:7c:7d:c5:47:78:dc:ea:c4:e3:56:6e:3c",
+     "c3:2c:e8:39:d5:be:fb:84:6a:f8:f0:8b:6c:1a:f2:8a",
+     "74:c9:58:ee:7c:3f:08:83:96:5b:4d:62:9b:c1:dc:cc",
+     "52:e8:60:8f:c3:21:81:18:83:47:f8:ee:f9:52:2d:91",
+     "2e:53:b0:3a:d2:1f:43:6b:4e:1d:14:d8:f9:50:41:21",
+     "93:e6:30:f8:aa:7f:b6:f5:ce:f8:ab:d6:68:ba:da:0f",
+     "89:12:ec:5e:bc:28:43:4a:43:ea:c3:a8:a2:3c:10:47",
+     "42:db:51:e9:e9:5f:d7:7e:99:f1:a4:4d:89:56:9f:ec",
+     "01:99:50:9d:d4:e2:28:44:50:f8:89:00:70:bf:9f:20",
+     "85:ab:be:47:2f:af:81:75:cc:e8:df:af:8e:84:f8:78",
+     "cb:70:67:f6:96:31:d8:cb:39:94:58:73:ea:72:b0:8d",
+     "77:4e:90:59:2c:39:b3:d6:c6:de:fd:56:86:bf:9e:a3",
+     "e9:1e:d9:02:d9:53:09:5e:cc:6e:c5:a1:07:a3:13:a5",
+     "a1:85:3c:89:ff:90:e7:f7:cc:31:fb:9b:0a:bb:1a:4b",
+     "62:c8:3e:da:31:db:ea:a1:21:9a:77:90:61:0b:8a:52",
+     "f0:8a:44:83:03:69:87:e3:0c:e6:d5:2e:47:21:06:db",
+     "75:40:91:80:80:68:67:59:95:ca:6a:78:04:2f:eb:42",
+     "51:06:ae:0c:78:27:7b:87:75:d9:7f:92:46:4d:0e:2d",
+     "e3:b9:a3:16:43:a1:c1:4d:85:21:b9:c2:88:eb:a6:4e",
+     "b8:eb:21:a7:c1:ca:ed:92:65:d9:27:bc:d2:33:73:c6",
+     "8b:b9:26:9f:c0:24:d8:8c:ce:3f:d0:98:67:de:37:b0",
+     "38:8e:4b:27:6b:e5:f4:9c:72:9a:1c:02:a8:2e:84:a8",
+     "0c:8d:d1:18:a3:cf:4e:d5:21:87:9c:b2:87:5e:04:67",
+     "e7:bb:73:09:eb:ae:9c:5a:ce:ed:80:c6:7f:3a:14:c1",
+     "4d:22:3a:52:ac:b9:32:fd:a4:ee:90:0a:3a:5b:b3:f3",
+     "07:bd:f6:2d:96:28:b5:bf:f1:0b:ea:d2:76:0c:4f:b0",
+     "12:f7:53:29:20:ad:eb:e0:85:37:10:2f:24:3f:ef:aa",
+     "87:94:23:e1:4c:8e:a3:a0:f9:e8:97:83:a6:f4:72:76",
+     "dc:39:3b:46:7e:b0:91:da:30:05:d5:e6:64:1d:8c:ec",
+     "0d:72:31:8f:02:1a:0e:c8:df:6c:b8:b8:1d:12:51:c1",
+     "2e:78:06:a2:e5:3a:13:ff:cf:75:b4:89:52:fc:50:26",
+     "cb:c0:b0:71:63:db:63:f2:95:3c:be:97:5e:ca:81:2c",
+     "34:79:9c:55:7a:61:af:86:3e:62:8f:59:2a:7f:4b:ec",
+     "da:a0:ea:34:2a:97:b9:86:de:14:0c:bb:90:48:ab:f4",
+     "74:ce:a8:b2:e0:19:f7:9e:80:45:5a:4e:34:9e:75:21",
+     "8f:b4:18:ae:49:94:37:dd:64:1c:b4:1b:ed:0f:08:79"
+    ],
+    "mechanismName": "ML-DSA-44",
+    "mechanismFamily": "ML-DSA",
+    "keySize": 10496
+   },
+   [
+    {
+     "$tuple": [
+      "Type",
+      "ML-DSA"
+     ]
+    },
+    {
+     "$tuple": [
+      "Algorithm OID",
+      "2.16.840.1.101.3.4.3.17"
+     ]
+    },
+    {
+     "$tuple": [
+      "ML-DSA parameter set",
+      "ML-DSA-44"
+     ]
+    },
+    {
+     "$tuple": [
+      "Claimed NIST level",
+      2
+     ]
+    },
+    {
+     "$tuple": [
+      "Signature length (bytes)",
+      2420
+     ]
+    },
+    {
+     "$tuple": [
+      "Public key size (bits)",
+      10496
+     ]
+    },
+    {
+     "$tuple": [
+      "Public Key (base64)",
+      "lzoXq3ABqzz2pry8kIAoJk3Pp6lSetkmRDTH9zkgJug2tyzqitGoSAuVs0hqLmNUu8xDDAmk7YUSZPW+5WZT7KIUJ37k76imrC12vSREP8Qhl4IUcxTGFibzWIETnr3S6lvyEfj/Bk32keMk22pdkrU+/i5EeiAaagz0rN2+e6lS/m/h1F86cDODrsvj3cW0yXEHcJM/3CwF49+d1f2QJJjxqkLdoPLQUfjnnQ4Ww5jdABHy6gEwX5oPNR9hLloVmIf58lKZxF6XvITRZA3VfsXyeluuBHAP7vwGVuPvaXWxJgJnC/VxMhprUqSCHfHZuVi4FUTb64fcH0v+e+QDJddBkTkT+FbkEVp+Hc8dwxD/S1Iw2Uhr4n0ht3pgSTkdQcwRdys3hfzidTWX8MbYCecU3zdkiNvwCYw/9bjjDV0GOCbCf5QoffGP9TnbYb7N0eo7+p0/M2tF+C21h9m2EDc1xIQ1vhZo8Sr2rG/vGKwraJvBh4BmQobvKdTZXdLz/3swkAbGRbpkdUUVJpSrHg6aR7wx0LlBhmVQ+34HdN0Bb9wTX41t4RKYt8GOI3sWkVWCAX1IpupBJjciLkKW+ye/eLYVMC3sPwA23bb0V4qiOZ9Jtn+jupOlbmPrpKf6n6WSleZXZYr1OwdqvCTP5t0QYkjUEPdPV6pN/bXGHnfYK/l/R4rHogQ9vOQkvdHM0EnCKi/eXPhVwuBFWNFPVqRVWtM7AXluLHM4i4XXV6z8A4HlGKU3xEP6cUg7beJU0o2yWwdajzUFJJgQqXV6UZSm7LizNV/8Fk0y+bCSC9HR4hC6CwXGHCmXHS2spKsr8Qp094ePukDkUAv34Smi/h+Kplfgyu8+hFC9fz3dq8p+Y9sGkebHBLAHllAGOeH3scUIc2Yjkt961Bby2dwccSvVjk8jiOl246ULgxPmmkq1Hwh2z108bNAslQ+4JQb/32+WjwdDAQVgJp3P/YFNCtUgUPR8fcVHeNzqxONWbjzDLOg51b77hGr48ItsGvKKdMlY7nw/CIOWW01im8HczFLoYI/DIYEYg0f47vlSLZEuU7A60h9Da04dFNj5UEEhk+Yw+Kp/tvXO+KvWaLraD4kS7F68KENKQ+rDqKI8EEdC21Hp6V/XfpnxpE2JVp/sAZlQndTiKERQ+IkAcL+fIIWrvkcvr4F1zOjfr46E+HjLcGf2ljHYyzmUWHPqcrCNd06QWSw5s9bG3v1Whr+eo+ke2QLZUwlezG7FoQejE6WhhTyJ/5Dn98wx+5sKuxpLYsg+2jHb6qEhmneQYQuKUvCKRIMDaYfjDObVLkchBtt1QJGAgGhnWZXKangEL+tCUQauDHgne4d12X+SRk0OLeO5oxZDocFNhSG5wojrpk646yGnwcrtkmXZJ7zSM3PGi7kmn8Ak2IzOP9CYZ943sDiOSydr5fSccpocAqguhKgMjdEYo89O1SGHnLKHXgRn57tzCeuunFrO7YDGfzoUwU0iOlKsuTL9pO6QCjpbs/MHvfYtlii1v/EL6tJ2DE+wEvdTKSCt6+CFNxAvJD/vqoeUI+FMjqOg+eiXg6b0cnbcOTtGfrCR2jAF1eZkHYzsDXIxjwIaDsjfbLi4HRJRwS54BqLlOhP/z3W0iVL8UCbLwLBxY9tj8pU8vpdeyoEsNHmcVXphr4Y+Yo9ZKn9L7Nqg6jQql7mG3hQMu5BIq/R0zqiy4Bn3noBFWk40nnUhj7QYrkmUN91kHLQb7Q8IeQ=="
+     ]
+    },
+    {
+     "$tuple": [
+      "Public Key (hex)",
+      [
+       "97:3a:17:ab:70:01:ab:3c:f6:a6:bc:bc:90:80:28:26",
+       "4d:cf:a7:a9:52:7a:d9:26:44:34:c7:f7:39:20:26:e8",
+       "36:b7:2c:ea:8a:d1:a8:48:0b:95:b3:48:6a:2e:63:54",
+       "bb:cc:43:0c:09:a4:ed:85:12:64:f5:be:e5:66:53:ec",
+       "a2:14:27:7e:e4:ef:a8:a6:ac:2d:76:bd:24:44:3f:c4",
+       "21:97:82:14:73:14:c6:16:26:f3:58:81:13:9e:bd:d2",
+       "ea:5b:f2:11:f8:ff:06:4d:f6:91:e3:24:db:6a:5d:92",
+       "b5:3e:fe:2e:44:7a:20:1a:6a:0c:f4:ac:dd:be:7b:a9",
+       "52:fe:6f:e1:d4:5f:3a:70:33:83:ae:cb:e3:dd:c5:b4",
+       "c9:71:07:70:93:3f:dc:2c:05:e3:df:9d:d5:fd:90:24",
+       "98:f1:aa:42:dd:a0:f2:d0:51:f8:e7:9d:0e:16:c3:98",
+       "dd:00:11:f2:ea:01:30:5f:9a:0f:35:1f:61:2e:5a:15",
+       "98:87:f9:f2:52:99:c4:5e:97:bc:84:d1:64:0d:d5:7e",
+       "c5:f2:7a:5b:ae:04:70:0f:ee:fc:06:56:e3:ef:69:75",
+       "b1:26:02:67:0b:f5:71:32:1a:6b:52:a4:82:1d:f1:d9",
+       "b9:58:b8:15:44:db:eb:87:dc:1f:4b:fe:7b:e4:03:25",
+       "d7:41:91:39:13:f8:56:e4:11:5a:7e:1d:cf:1d:c3:10",
+       "ff:4b:52:30:d9:48:6b:e2:7d:21:b7:7a:60:49:39:1d",
+       "41:cc:11:77:2b:37:85:fc:e2:75:35:97:f0:c6:d8:09",
+       "e7:14:df:37:64:88:db:f0:09:8c:3f:f5:b8:e3:0d:5d",
+       "06:38:26:c2:7f:94:28:7d:f1:8f:f5:39:db:61:be:cd",
+       "d1:ea:3b:fa:9d:3f:33:6b:45:f8:2d:b5:87:d9:b6:10",
+       "37:35:c4:84:35:be:16:68:f1:2a:f6:ac:6f:ef:18:ac",
+       "2b:68:9b:c1:87:80:66:42:86:ef:29:d4:d9:5d:d2:f3",
+       "ff:7b:30:90:06:c6:45:ba:64:75:45:15:26:94:ab:1e",
+       "0e:9a:47:bc:31:d0:b9:41:86:65:50:fb:7e:07:74:dd",
+       "01:6f:dc:13:5f:8d:6d:e1:12:98:b7:c1:8e:23:7b:16",
+       "91:55:82:01:7d:48:a6:ea:41:26:37:22:2e:42:96:fb",
+       "27:bf:78:b6:15:30:2d:ec:3f:00:36:dd:b6:f4:57:8a",
+       "a2:39:9f:49:b6:7f:a3:ba:93:a5:6e:63:eb:a4:a7:fa",
+       "9f:a5:92:95:e6:57:65:8a:f5:3b:07:6a:bc:24:cf:e6",
+       "dd:10:62:48:d4:10:f7:4f:57:aa:4d:fd:b5:c6:1e:77",
+       "d8:2b:f9:7f:47:8a:c7:a2:04:3d:bc:e4:24:bd:d1:cc",
+       "d0:49:c2:2a:2f:de:5c:f8:55:c2:e0:45:58:d1:4f:56",
+       "a4:55:5a:d3:3b:01:79:6e:2c:73:38:8b:85:d7:57:ac",
+       "fc:03:81:e5:18:a5:37:c4:43:fa:71:48:3b:6d:e2:54",
+       "d2:8d:b2:5b:07:5a:8f:35:05:24:98:10:a9:75:7a:51",
+       "94:a6:ec:b8:b3:35:5f:fc:16:4d:32:f9:b0:92:0b:d1",
+       "d1:e2:10:ba:0b:05:c6:1c:29:97:1d:2d:ac:a4:ab:2b",
+       "f1:0a:74:f7:87:8f:ba:40:e4:50:0b:f7:e1:29:a2:fe",
+       "1f:8a:a6:57:e0:ca:ef:3e:84:50:bd:7f:3d:dd:ab:ca",
+       "7e:63:db:06:91:e6:c7:04:b0:07:96:50:06:39:e1:f7",
+       "b1:c5:08:73:66:23:92:df:7a:d4:16:f2:d9:dc:1c:71",
+       "2b:d5:8e:4f:23:88:e9:76:e3:a5:0b:83:13:e6:9a:4a",
+       "b5:1f:08:76:cf:5d:3c:6c:d0:2c:95:0f:b8:25:06:ff",
+       "df:6f:96:8f:07:43:01:05:60:26:9d:cf:fd:81:4d:0a",
+       "d5:20:50:f4:7c:7d:c5:47:78:dc:ea:c4:e3:56:6e:3c",
+       "c3:2c:e8:39:d5:be:fb:84:6a:f8:f0:8b:6c:1a:f2:8a",
+       "74:c9:58:ee:7c:3f:08:83:96:5b:4d:62:9b:c1:dc:cc",
+       "52:e8:60:8f:c3:21:81:18:83:47:f8:ee:f9:52:2d:91",
+       "2e:53:b0:3a:d2:1f:43:6b:4e:1d:14:d8:f9:50:41:21",
+       "93:e6:30:f8:aa:7f:b6:f5:ce:f8:ab:d6:68:ba:da:0f",
+       "89:12:ec:5e:bc:28:43:4a:43:ea:c3:a8:a2:3c:10:47",
+       "42:db:51:e9:e9:5f:d7:7e:99:f1:a4:4d:89:56:9f:ec",
+       "01:99:50:9d:d4:e2:28:44:50:f8:89:00:70:bf:9f:20",
+       "85:ab:be:47:2f:af:81:75:cc:e8:df:af:8e:84:f8:78",
+       "cb:70:67:f6:96:31:d8:cb:39:94:58:73:ea:72:b0:8d",
+       "77:4e:90:59:2c:39:b3:d6:c6:de:fd:56:86:bf:9e:a3",
+       "e9:1e:d9:02:d9:53:09:5e:cc:6e:c5:a1:07:a3:13:a5",
+       "a1:85:3c:89:ff:90:e7:f7:cc:31:fb:9b:0a:bb:1a:4b",
+       "62:c8:3e:da:31:db:ea:a1:21:9a:77:90:61:0b:8a:52",
+       "f0:8a:44:83:03:69:87:e3:0c:e6:d5:2e:47:21:06:db",
+       "75:40:91:80:80:68:67:59:95:ca:6a:78:04:2f:eb:42",
+       "51:06:ae:0c:78:27:7b:87:75:d9:7f:92:46:4d:0e:2d",
+       "e3:b9:a3:16:43:a1:c1:4d:85:21:b9:c2:88:eb:a6:4e",
+       "b8:eb:21:a7:c1:ca:ed:92:65:d9:27:bc:d2:33:73:c6",
+       "8b:b9:26:9f:c0:24:d8:8c:ce:3f:d0:98:67:de:37:b0",
+       "38:8e:4b:27:6b:e5:f4:9c:72:9a:1c:02:a8:2e:84:a8",
+       "0c:8d:d1:18:a3:cf:4e:d5:21:87:9c:b2:87:5e:04:67",
+       "e7:bb:73:09:eb:ae:9c:5a:ce:ed:80:c6:7f:3a:14:c1",
+       "4d:22:3a:52:ac:b9:32:fd:a4:ee:90:0a:3a:5b:b3:f3",
+       "07:bd:f6:2d:96:28:b5:bf:f1:0b:ea:d2:76:0c:4f:b0",
+       "12:f7:53:29:20:ad:eb:e0:85:37:10:2f:24:3f:ef:aa",
+       "87:94:23:e1:4c:8e:a3:a0:f9:e8:97:83:a6:f4:72:76",
+       "dc:39:3b:46:7e:b0:91:da:30:05:d5:e6:64:1d:8c:ec",
+       "0d:72:31:8f:02:1a:0e:c8:df:6c:b8:b8:1d:12:51:c1",
+       "2e:78:06:a2:e5:3a:13:ff:cf:75:b4:89:52:fc:50:26",
+       "cb:c0:b0:71:63:db:63:f2:95:3c:be:97:5e:ca:81:2c",
+       "34:79:9c:55:7a:61:af:86:3e:62:8f:59:2a:7f:4b:ec",
+       "da:a0:ea:34:2a:97:b9:86:de:14:0c:bb:90:48:ab:f4",
+       "74:ce:a8:b2:e0:19:f7:9e:80:45:5a:4e:34:9e:75:21",
+       "8f:b4:18:ae:49:94:37:dd:64:1c:b4:1b:ed:0f:08:79"
+      ]
+     ]
+    }
+   ]
+  ]
+ },
+ "fallback/ml-dsa": {
+  "error": "Unable to parse attestation certificate: unparsable for the test",
+  "derBase64": "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",
+  "fingerprints": {
+   "sha256": "8ab0ef603e7e37178b6deceee441612fe85e71efcacf92121a6d856540bcdde9",
+   "sha1": "9de0126a39c090af35b73b78b8eeb12141d7015b",
+   "md5": "0ad7207c3f8afab57b03a8b26cc8f546"
+  },
+  "pem": "-----BEGIN CERTIFICATE-----\n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\n-----END CERTIFICATE-----",
+  "publicKeyInfo": {
+   "type": "ML-DSA",
+   "algorithm": {
+    "name": "ML-DSA",
+    "oid": "2.16.840.1.101.3.4.3.17",
+    "mlDsaParameterSet": "ML-DSA-44",
+    "claimedNistLevel": 2,
+    "signatureLengthBytes": 2420
+   },
+   "subjectPublicKeyInfoBase64": "MIIFMjALBglghkgBZQMEAxEDggUhAJc6F6twAas89qa8vJCAKCZNz6epUnrZJkQ0x/c5ICboNrcs6orRqEgLlbNIai5jVLvMQwwJpO2FEmT1vuVmU+yiFCd+5O+opqwtdr0kRD/EIZeCFHMUxhYm81iBE5690upb8hH4/wZN9pHjJNtqXZK1Pv4uRHogGmoM9KzdvnupUv5v4dRfOnAzg67L493FtMlxB3CTP9wsBePfndX9kCSY8apC3aDy0FH4550OFsOY3QAR8uoBMF+aDzUfYS5aFZiH+fJSmcRel7yE0WQN1X7F8npbrgRwD+78Blbj72l1sSYCZwv1cTIaa1Kkgh3x2blYuBVE2+uH3B9L/nvkAyXXQZE5E/hW5BFafh3PHcMQ/0tSMNlIa+J9Ibd6YEk5HUHMEXcrN4X84nU1l/DG2AnnFN83ZIjb8AmMP/W44w1dBjgmwn+UKH3xj/U522G+zdHqO/qdPzNrRfgttYfZthA3NcSENb4WaPEq9qxv7xisK2ibwYeAZkKG7ynU2V3S8/97MJAGxkW6ZHVFFSaUqx4Omke8MdC5QYZlUPt+B3TdAW/cE1+NbeESmLfBjiN7FpFVggF9SKbqQSY3Ii5Clvsnv3i2FTAt7D8ANt229FeKojmfSbZ/o7qTpW5j66Sn+p+lkpXmV2WK9TsHarwkz+bdEGJI1BD3T1eqTf21xh532Cv5f0eKx6IEPbzkJL3RzNBJwiov3lz4VcLgRVjRT1akVVrTOwF5bixzOIuF11es/AOB5RilN8RD+nFIO23iVNKNslsHWo81BSSYEKl1elGUpuy4szVf/BZNMvmwkgvR0eIQugsFxhwplx0trKSrK/EKdPeHj7pA5FAL9+Epov4fiqZX4MrvPoRQvX893avKfmPbBpHmxwSwB5ZQBjnh97HFCHNmI5LfetQW8tncHHEr1Y5PI4jpduOlC4MT5ppKtR8Ids9dPGzQLJUPuCUG/99vlo8HQwEFYCadz/2BTQrVIFD0fH3FR3jc6sTjVm48wyzoOdW++4Rq+PCLbBryinTJWO58PwiDlltNYpvB3MxS6GCPwyGBGINH+O75Ui2RLlOwOtIfQ2tOHRTY+VBBIZPmMPiqf7b1zvir1mi62g+JEuxevChDSkPqw6iiPBBHQttR6elf136Z8aRNiVaf7AGZUJ3U4ihEUPiJAHC/nyCFq75HL6+Bdczo36+OhPh4y3Bn9pYx2Ms5lFhz6nKwjXdOkFksObPWxt79Voa/nqPpHtkC2VMJXsxuxaEHoxOloYU8if+Q5/fMMfubCrsaS2LIPtox2+qhIZp3kGELilLwikSDA2mH4wzm1S5HIQbbdUCRgIBoZ1mVymp4BC/rQlEGrgx4J3uHddl/kkZNDi3juaMWQ6HBTYUhucKI66ZOuOshp8HK7ZJl2Se80jNzxou5Jp/AJNiMzj/QmGfeN7A4jksna+X0nHKaHAKoLoSoDI3RGKPPTtUhh5yyh14EZ+e7cwnrrpxazu2Axn86FMFNIjpSrLky/aTukAo6W7PzB732LZYotb/xC+rSdgxPsBL3UykgrevghTcQLyQ/76qHlCPhTI6joPnol4Om9HJ23Dk7Rn6wkdowBdXmZB2M7A1yMY8CGg7I32y4uB0SUcEueAai5ToT/891tIlS/FAmy8CwcWPbY/KVPL6XXsqBLDR5nFV6Ya+GPmKPWSp/S+zaoOo0Kpe5ht4UDLuQSKv0dM6osuAZ956ARVpONJ51IY+0GK5JlDfdZBy0G+0PCHk=",
+   "publicKeyBase64": "lzoXq3ABqzz2pry8kIAoJk3Pp6lSetkmRDTH9zkgJug2tyzqitGoSAuVs0hqLmNUu8xDDAmk7YUSZPW+5WZT7KIUJ37k76imrC12vSREP8Qhl4IUcxTGFibzWIETnr3S6lvyEfj/Bk32keMk22pdkrU+/i5EeiAaagz0rN2+e6lS/m/h1F86cDODrsvj3cW0yXEHcJM/3CwF49+d1f2QJJjxqkLdoPLQUfjnnQ4Ww5jdABHy6gEwX5oPNR9hLloVmIf58lKZxF6XvITRZA3VfsXyeluuBHAP7vwGVuPvaXWxJgJnC/VxMhprUqSCHfHZuVi4FUTb64fcH0v+e+QDJddBkTkT+FbkEVp+Hc8dwxD/S1Iw2Uhr4n0ht3pgSTkdQcwRdys3hfzidTWX8MbYCecU3zdkiNvwCYw/9bjjDV0GOCbCf5QoffGP9TnbYb7N0eo7+p0/M2tF+C21h9m2EDc1xIQ1vhZo8Sr2rG/vGKwraJvBh4BmQobvKdTZXdLz/3swkAbGRbpkdUUVJpSrHg6aR7wx0LlBhmVQ+34HdN0Bb9wTX41t4RKYt8GOI3sWkVWCAX1IpupBJjciLkKW+ye/eLYVMC3sPwA23bb0V4qiOZ9Jtn+jupOlbmPrpKf6n6WSleZXZYr1OwdqvCTP5t0QYkjUEPdPV6pN/bXGHnfYK/l/R4rHogQ9vOQkvdHM0EnCKi/eXPhVwuBFWNFPVqRVWtM7AXluLHM4i4XXV6z8A4HlGKU3xEP6cUg7beJU0o2yWwdajzUFJJgQqXV6UZSm7LizNV/8Fk0y+bCSC9HR4hC6CwXGHCmXHS2spKsr8Qp094ePukDkUAv34Smi/h+Kplfgyu8+hFC9fz3dq8p+Y9sGkebHBLAHllAGOeH3scUIc2Yjkt961Bby2dwccSvVjk8jiOl246ULgxPmmkq1Hwh2z108bNAslQ+4JQb/32+WjwdDAQVgJp3P/YFNCtUgUPR8fcVHeNzqxONWbjzDLOg51b77hGr48ItsGvKKdMlY7nw/CIOWW01im8HczFLoYI/DIYEYg0f47vlSLZEuU7A60h9Da04dFNj5UEEhk+Yw+Kp/tvXO+KvWaLraD4kS7F68KENKQ+rDqKI8EEdC21Hp6V/XfpnxpE2JVp/sAZlQndTiKERQ+IkAcL+fIIWrvkcvr4F1zOjfr46E+HjLcGf2ljHYyzmUWHPqcrCNd06QWSw5s9bG3v1Whr+eo+ke2QLZUwlezG7FoQejE6WhhTyJ/5Dn98wx+5sKuxpLYsg+2jHb6qEhmneQYQuKUvCKRIMDaYfjDObVLkchBtt1QJGAgGhnWZXKangEL+tCUQauDHgne4d12X+SRk0OLeO5oxZDocFNhSG5wojrpk646yGnwcrtkmXZJ7zSM3PGi7kmn8Ak2IzOP9CYZ943sDiOSydr5fSccpocAqguhKgMjdEYo89O1SGHnLKHXgRn57tzCeuunFrO7YDGfzoUwU0iOlKsuTL9pO6QCjpbs/MHvfYtlii1v/EL6tJ2DE+wEvdTKSCt6+CFNxAvJD/vqoeUI+FMjqOg+eiXg6b0cnbcOTtGfrCR2jAF1eZkHYzsDXIxjwIaDsjfbLi4HRJRwS54BqLlOhP/z3W0iVL8UCbLwLBxY9tj8pU8vpdeyoEsNHmcVXphr4Y+Yo9ZKn9L7Nqg6jQql7mG3hQMu5BIq/R0zqiy4Bn3noBFWk40nnUhj7QYrkmUN91kHLQb7Q8IeQ==",
+   "publicKeyHex": "97:3a:17:ab:70:01:ab:3c:f6:a6:bc:bc:90:80:28:26:4d:cf:a7:a9:52:7a:d9:26:44:34:c7:f7:39:20:26:e8:36:b7:2c:ea:8a:d1:a8:48:0b:95:b3:48:6a:2e:63:54:bb:cc:43:0c:09:a4:ed:85:12:64:f5:be:e5:66:53:ec:a2:14:27:7e:e4:ef:a8:a6:ac:2d:76:bd:24:44:3f:c4:21:97:82:14:73:14:c6:16:26:f3:58:81:13:9e:bd:d2:ea:5b:f2:11:f8:ff:06:4d:f6:91:e3:24:db:6a:5d:92:b5:3e:fe:2e:44:7a:20:1a:6a:0c:f4:ac:dd:be:7b:a9:52:fe:6f:e1:d4:5f:3a:70:33:83:ae:cb:e3:dd:c5:b4:c9:71:07:70:93:3f:dc:2c:05:e3:df:9d:d5:fd:90:24:98:f1:aa:42:dd:a0:f2:d0:51:f8:e7:9d:0e:16:c3:98:dd:00:11:f2:ea:01:30:5f:9a:0f:35:1f:61:2e:5a:15:98:87:f9:f2:52:99:c4:5e:97:bc:84:d1:64:0d:d5:7e:c5:f2:7a:5b:ae:04:70:0f:ee:fc:06:56:e3:ef:69:75:b1:26:02:67:0b:f5:71:32:1a:6b:52:a4:82:1d:f1:d9:b9:58:b8:15:44:db:eb:87:dc:1f:4b:fe:7b:e4:03:25:d7:41:91:39:13:f8:56:e4:11:5a:7e:1d:cf:1d:c3:10:ff:4b:52:30:d9:48:6b:e2:7d:21:b7:7a:60:49:39:1d:41:cc:11:77:2b:37:85:fc:e2:75:35:97:f0:c6:d8:09:e7:14:df:37:64:88:db:f0:09:8c:3f:f5:b8:e3:0d:5d:06:38:26:c2:7f:94:28:7d:f1:8f:f5:39:db:61:be:cd:d1:ea:3b:fa:9d:3f:33:6b:45:f8:2d:b5:87:d9:b6:10:37:35:c4:84:35:be:16:68:f1:2a:f6:ac:6f:ef:18:ac:2b:68:9b:c1:87:80:66:42:86:ef:29:d4:d9:5d:d2:f3:ff:7b:30:90:06:c6:45:ba:64:75:45:15:26:94:ab:1e:0e:9a:47:bc:31:d0:b9:41:86:65:50:fb:7e:07:74:dd:01:6f:dc:13:5f:8d:6d:e1:12:98:b7:c1:8e:23:7b:16:91:55:82:01:7d:48:a6:ea:41:26:37:22:2e:42:96:fb:27:bf:78:b6:15:30:2d:ec:3f:00:36:dd:b6:f4:57:8a:a2:39:9f:49:b6:7f:a3:ba:93:a5:6e:63:eb:a4:a7:fa:9f:a5:92:95:e6:57:65:8a:f5:3b:07:6a:bc:24:cf:e6:dd:10:62:48:d4:10:f7:4f:57:aa:4d:fd:b5:c6:1e:77:d8:2b:f9:7f:47:8a:c7:a2:04:3d:bc:e4:24:bd:d1:cc:d0:49:c2:2a:2f:de:5c:f8:55:c2:e0:45:58:d1:4f:56:a4:55:5a:d3:3b:01:79:6e:2c:73:38:8b:85:d7:57:ac:fc:03:81:e5:18:a5:37:c4:43:fa:71:48:3b:6d:e2:54:d2:8d:b2:5b:07:5a:8f:35:05:24:98:10:a9:75:7a:51:94:a6:ec:b8:b3:35:5f:fc:16:4d:32:f9:b0:92:0b:d1:d1:e2:10:ba:0b:05:c6:1c:29:97:1d:2d:ac:a4:ab:2b:f1:0a:74:f7:87:8f:ba:40:e4:50:0b:f7:e1:29:a2:fe:1f:8a:a6:57:e0:ca:ef:3e:84:50:bd:7f:3d:dd:ab:ca:7e:63:db:06:91:e6:c7:04:b0:07:96:50:06:39:e1:f7:b1:c5:08:73:66:23:92:df:7a:d4:16:f2:d9:dc:1c:71:2b:d5:8e:4f:23:88:e9:76:e3:a5:0b:83:13:e6:9a:4a:b5:1f:08:76:cf:5d:3c:6c:d0:2c:95:0f:b8:25:06:ff:df:6f:96:8f:07:43:01:05:60:26:9d:cf:fd:81:4d:0a:d5:20:50:f4:7c:7d:c5:47:78:dc:ea:c4:e3:56:6e:3c:c3:2c:e8:39:d5:be:fb:84:6a:f8:f0:8b:6c:1a:f2:8a:74:c9:58:ee:7c:3f:08:83:96:5b:4d:62:9b:c1:dc:cc:52:e8:60:8f:c3:21:81:18:83:47:f8:ee:f9:52:2d:91:2e:53:b0:3a:d2:1f:43:6b:4e:1d:14:d8:f9:50:41:21:93:e6:30:f8:aa:7f:b6:f5:ce:f8:ab:d6:68:ba:da:0f:89:12:ec:5e:bc:28:43:4a:43:ea:c3:a8:a2:3c:10:47:42:db:51:e9:e9:5f:d7:7e:99:f1:a4:4d:89:56:9f:ec:01:99:50:9d:d4:e2:28:44:50:f8:89:00:70:bf:9f:20:85:ab:be:47:2f:af:81:75:cc:e8:df:af:8e:84:f8:78:cb:70:67:f6:96:31:d8:cb:39:94:58:73:ea:72:b0:8d:77:4e:90:59:2c:39:b3:d6:c6:de:fd:56:86:bf:9e:a3:e9:1e:d9:02:d9:53:09:5e:cc:6e:c5:a1:07:a3:13:a5:a1:85:3c:89:ff:90:e7:f7:cc:31:fb:9b:0a:bb:1a:4b:62:c8:3e:da:31:db:ea:a1:21:9a:77:90:61:0b:8a:52:f0:8a:44:83:03:69:87:e3:0c:e6:d5:2e:47:21:06:db:75:40:91:80:80:68:67:59:95:ca:6a:78:04:2f:eb:42:51:06:ae:0c:78:27:7b:87:75:d9:7f:92:46:4d:0e:2d:e3:b9:a3:16:43:a1:c1:4d:85:21:b9:c2:88:eb:a6:4e:b8:eb:21:a7:c1:ca:ed:92:65:d9:27:bc:d2:33:73:c6:8b:b9:26:9f:c0:24:d8:8c:ce:3f:d0:98:67:de:37:b0:38:8e:4b:27:6b:e5:f4:9c:72:9a:1c:02:a8:2e:84:a8:0c:8d:d1:18:a3:cf:4e:d5:21:87:9c:b2:87:5e:04:67:e7:bb:73:09:eb:ae:9c:5a:ce:ed:80:c6:7f:3a:14:c1:4d:22:3a:52:ac:b9:32:fd:a4:ee:90:0a:3a:5b:b3:f3:07:bd:f6:2d:96:28:b5:bf:f1:0b:ea:d2:76:0c:4f:b0:12:f7:53:29:20:ad:eb:e0:85:37:10:2f:24:3f:ef:aa:87:94:23:e1:4c:8e:a3:a0:f9:e8:97:83:a6:f4:72:76:dc:39:3b:46:7e:b0:91:da:30:05:d5:e6:64:1d:8c:ec:0d:72:31:8f:02:1a:0e:c8:df:6c:b8:b8:1d:12:51:c1:2e:78:06:a2:e5:3a:13:ff:cf:75:b4:89:52:fc:50:26:cb:c0:b0:71:63:db:63:f2:95:3c:be:97:5e:ca:81:2c:34:79:9c:55:7a:61:af:86:3e:62:8f:59:2a:7f:4b:ec:da:a0:ea:34:2a:97:b9:86:de:14:0c:bb:90:48:ab:f4:74:ce:a8:b2:e0:19:f7:9e:80:45:5a:4e:34:9e:75:21:8f:b4:18:ae:49:94:37:dd:64:1c:b4:1b:ed:0f:08:79",
+   "publicKeyHexLines": [
+    "97:3a:17:ab:70:01:ab:3c:f6:a6:bc:bc:90:80:28:26",
+    "4d:cf:a7:a9:52:7a:d9:26:44:34:c7:f7:39:20:26:e8",
+    "36:b7:2c:ea:8a:d1:a8:48:0b:95:b3:48:6a:2e:63:54",
+    "bb:cc:43:0c:09:a4:ed:85:12:64:f5:be:e5:66:53:ec",
+    "a2:14:27:7e:e4:ef:a8:a6:ac:2d:76:bd:24:44:3f:c4",
+    "21:97:82:14:73:14:c6:16:26:f3:58:81:13:9e:bd:d2",
+    "ea:5b:f2:11:f8:ff:06:4d:f6:91:e3:24:db:6a:5d:92",
+    "b5:3e:fe:2e:44:7a:20:1a:6a:0c:f4:ac:dd:be:7b:a9",
+    "52:fe:6f:e1:d4:5f:3a:70:33:83:ae:cb:e3:dd:c5:b4",
+    "c9:71:07:70:93:3f:dc:2c:05:e3:df:9d:d5:fd:90:24",
+    "98:f1:aa:42:dd:a0:f2:d0:51:f8:e7:9d:0e:16:c3:98",
+    "dd:00:11:f2:ea:01:30:5f:9a:0f:35:1f:61:2e:5a:15",
+    "98:87:f9:f2:52:99:c4:5e:97:bc:84:d1:64:0d:d5:7e",
+    "c5:f2:7a:5b:ae:04:70:0f:ee:fc:06:56:e3:ef:69:75",
+    "b1:26:02:67:0b:f5:71:32:1a:6b:52:a4:82:1d:f1:d9",
+    "b9:58:b8:15:44:db:eb:87:dc:1f:4b:fe:7b:e4:03:25",
+    "d7:41:91:39:13:f8:56:e4:11:5a:7e:1d:cf:1d:c3:10",
+    "ff:4b:52:30:d9:48:6b:e2:7d:21:b7:7a:60:49:39:1d",
+    "41:cc:11:77:2b:37:85:fc:e2:75:35:97:f0:c6:d8:09",
+    "e7:14:df:37:64:88:db:f0:09:8c:3f:f5:b8:e3:0d:5d",
+    "06:38:26:c2:7f:94:28:7d:f1:8f:f5:39:db:61:be:cd",
+    "d1:ea:3b:fa:9d:3f:33:6b:45:f8:2d:b5:87:d9:b6:10",
+    "37:35:c4:84:35:be:16:68:f1:2a:f6:ac:6f:ef:18:ac",
+    "2b:68:9b:c1:87:80:66:42:86:ef:29:d4:d9:5d:d2:f3",
+    "ff:7b:30:90:06:c6:45:ba:64:75:45:15:26:94:ab:1e",
+    "0e:9a:47:bc:31:d0:b9:41:86:65:50:fb:7e:07:74:dd",
+    "01:6f:dc:13:5f:8d:6d:e1:12:98:b7:c1:8e:23:7b:16",
+    "91:55:82:01:7d:48:a6:ea:41:26:37:22:2e:42:96:fb",
+    "27:bf:78:b6:15:30:2d:ec:3f:00:36:dd:b6:f4:57:8a",
+    "a2:39:9f:49:b6:7f:a3:ba:93:a5:6e:63:eb:a4:a7:fa",
+    "9f:a5:92:95:e6:57:65:8a:f5:3b:07:6a:bc:24:cf:e6",
+    "dd:10:62:48:d4:10:f7:4f:57:aa:4d:fd:b5:c6:1e:77",
+    "d8:2b:f9:7f:47:8a:c7:a2:04:3d:bc:e4:24:bd:d1:cc",
+    "d0:49:c2:2a:2f:de:5c:f8:55:c2:e0:45:58:d1:4f:56",
+    "a4:55:5a:d3:3b:01:79:6e:2c:73:38:8b:85:d7:57:ac",
+    "fc:03:81:e5:18:a5:37:c4:43:fa:71:48:3b:6d:e2:54",
+    "d2:8d:b2:5b:07:5a:8f:35:05:24:98:10:a9:75:7a:51",
+    "94:a6:ec:b8:b3:35:5f:fc:16:4d:32:f9:b0:92:0b:d1",
+    "d1:e2:10:ba:0b:05:c6:1c:29:97:1d:2d:ac:a4:ab:2b",
+    "f1:0a:74:f7:87:8f:ba:40:e4:50:0b:f7:e1:29:a2:fe",
+    "1f:8a:a6:57:e0:ca:ef:3e:84:50:bd:7f:3d:dd:ab:ca",
+    "7e:63:db:06:91:e6:c7:04:b0:07:96:50:06:39:e1:f7",
+    "b1:c5:08:73:66:23:92:df:7a:d4:16:f2:d9:dc:1c:71",
+    "2b:d5:8e:4f:23:88:e9:76:e3:a5:0b:83:13:e6:9a:4a",
+    "b5:1f:08:76:cf:5d:3c:6c:d0:2c:95:0f:b8:25:06:ff",
+    "df:6f:96:8f:07:43:01:05:60:26:9d:cf:fd:81:4d:0a",
+    "d5:20:50:f4:7c:7d:c5:47:78:dc:ea:c4:e3:56:6e:3c",
+    "c3:2c:e8:39:d5:be:fb:84:6a:f8:f0:8b:6c:1a:f2:8a",
+    "74:c9:58:ee:7c:3f:08:83:96:5b:4d:62:9b:c1:dc:cc",
+    "52:e8:60:8f:c3:21:81:18:83:47:f8:ee:f9:52:2d:91",
+    "2e:53:b0:3a:d2:1f:43:6b:4e:1d:14:d8:f9:50:41:21",
+    "93:e6:30:f8:aa:7f:b6:f5:ce:f8:ab:d6:68:ba:da:0f",
+    "89:12:ec:5e:bc:28:43:4a:43:ea:c3:a8:a2:3c:10:47",
+    "42:db:51:e9:e9:5f:d7:7e:99:f1:a4:4d:89:56:9f:ec",
+    "01:99:50:9d:d4:e2:28:44:50:f8:89:00:70:bf:9f:20",
+    "85:ab:be:47:2f:af:81:75:cc:e8:df:af:8e:84:f8:78",
+    "cb:70:67:f6:96:31:d8:cb:39:94:58:73:ea:72:b0:8d",
+    "77:4e:90:59:2c:39:b3:d6:c6:de:fd:56:86:bf:9e:a3",
+    "e9:1e:d9:02:d9:53:09:5e:cc:6e:c5:a1:07:a3:13:a5",
+    "a1:85:3c:89:ff:90:e7:f7:cc:31:fb:9b:0a:bb:1a:4b",
+    "62:c8:3e:da:31:db:ea:a1:21:9a:77:90:61:0b:8a:52",
+    "f0:8a:44:83:03:69:87:e3:0c:e6:d5:2e:47:21:06:db",
+    "75:40:91:80:80:68:67:59:95:ca:6a:78:04:2f:eb:42",
+    "51:06:ae:0c:78:27:7b:87:75:d9:7f:92:46:4d:0e:2d",
+    "e3:b9:a3:16:43:a1:c1:4d:85:21:b9:c2:88:eb:a6:4e",
+    "b8:eb:21:a7:c1:ca:ed:92:65:d9:27:bc:d2:33:73:c6",
+    "8b:b9:26:9f:c0:24:d8:8c:ce:3f:d0:98:67:de:37:b0",
+    "38:8e:4b:27:6b:e5:f4:9c:72:9a:1c:02:a8:2e:84:a8",
+    "0c:8d:d1:18:a3:cf:4e:d5:21:87:9c:b2:87:5e:04:67",
+    "e7:bb:73:09:eb:ae:9c:5a:ce:ed:80:c6:7f:3a:14:c1",
+    "4d:22:3a:52:ac:b9:32:fd:a4:ee:90:0a:3a:5b:b3:f3",
+    "07:bd:f6:2d:96:28:b5:bf:f1:0b:ea:d2:76:0c:4f:b0",
+    "12:f7:53:29:20:ad:eb:e0:85:37:10:2f:24:3f:ef:aa",
+    "87:94:23:e1:4c:8e:a3:a0:f9:e8:97:83:a6:f4:72:76",
+    "dc:39:3b:46:7e:b0:91:da:30:05:d5:e6:64:1d:8c:ec",
+    "0d:72:31:8f:02:1a:0e:c8:df:6c:b8:b8:1d:12:51:c1",
+    "2e:78:06:a2:e5:3a:13:ff:cf:75:b4:89:52:fc:50:26",
+    "cb:c0:b0:71:63:db:63:f2:95:3c:be:97:5e:ca:81:2c",
+    "34:79:9c:55:7a:61:af:86:3e:62:8f:59:2a:7f:4b:ec",
+    "da:a0:ea:34:2a:97:b9:86:de:14:0c:bb:90:48:ab:f4",
+    "74:ce:a8:b2:e0:19:f7:9e:80:45:5a:4e:34:9e:75:21",
+    "8f:b4:18:ae:49:94:37:dd:64:1c:b4:1b:ed:0f:08:79"
+   ],
+   "mechanismName": "ML-DSA-44",
+   "mechanismFamily": "ML-DSA",
+   "keySize": 10496
+  },
+  "raw": "3082064a308205fca003020102020203ed300506032b657030233121301f06035504030c18436861726163746572697a6174696f6e20546573742043413020170d3230303130313030303030305a180f32303939313233313030303030305a306d310b3009060355040613025345311e301c060355040a0c15436861726163746572697a6174696f6e205465737431223020060355040b0c1941757468656e74696361746f72204174746573746174696f6e311a301806035504030c115375626a656374206d6c2d6473612d343430820532300b06096086480165030403110382052100973a17ab7001ab3cf6a6bcbc908028264dcfa7a9527ad9264434c7f7392026e836b72cea8ad1a8480b95b3486a2e6354bbcc430c09a4ed851264f5bee56653eca214277ee4efa8a6ac2d76bd24443fc4219782147314c61626f35881139ebdd2ea5bf211f8ff064df691e324db6a5d92b53efe2e447a201a6a0cf4acddbe7ba952fe6fe1d45f3a703383aecbe3ddc5b4c9710770933fdc2c05e3df9dd5fd902498f1aa42dda0f2d051f8e79d0e16c398dd0011f2ea01305f9a0f351f612e5a159887f9f25299c45e97bc84d1640dd57ec5f27a5bae04700feefc0656e3ef6975b12602670bf571321a6b52a4821df1d9b958b81544dbeb87dc1f4bfe7be40325d741913913f856e4115a7e1dcf1dc310ff4b5230d9486be27d21b77a6049391d41cc11772b3785fce2753597f0c6d809e714df376488dbf0098c3ff5b8e30d5d063826c27f94287df18ff539db61becdd1ea3bfa9d3f336b45f82db587d9b6103735c48435be1668f12af6ac6fef18ac2b689bc18780664286ef29d4d95dd2f3ff7b309006c645ba647545152694ab1e0e9a47bc31d0b941866550fb7e0774dd016fdc135f8d6de11298b7c18e237b16915582017d48a6ea412637222e4296fb27bf78b615302dec3f0036ddb6f4578aa2399f49b67fa3ba93a56e63eba4a7fa9fa59295e657658af53b076abc24cfe6dd106248d410f74f57aa4dfdb5c61e77d82bf97f478ac7a2043dbce424bdd1ccd049c22a2fde5cf855c2e04558d14f56a4555ad33b01796e2c73388b85d757acfc0381e518a537c443fa71483b6de254d28db25b075a8f3505249810a9757a5194a6ecb8b3355ffc164d32f9b0920bd1d1e210ba0b05c61c29971d2daca4ab2bf10a74f7878fba40e4500bf7e129a2fe1f8aa657e0caef3e8450bd7f3dddabca7e63db0691e6c704b00796500639e1f7b1c50873662392df7ad416f2d9dc1c712bd58e4f2388e976e3a50b8313e69a4ab51f0876cf5d3c6cd02c950fb82506ffdf6f968f0743010560269dcffd814d0ad52050f47c7dc54778dceac4e3566e3cc32ce839d5befb846af8f08b6c1af28a74c958ee7c3f0883965b4d629bc1dccc52e8608fc32181188347f8eef9522d912e53b03ad21f436b4e1d14d8f950412193e630f8aa7fb6f5cef8abd668bada0f8912ec5ebc28434a43eac3a8a23c104742db51e9e95fd77e99f1a44d89569fec0199509dd4e2284450f8890070bf9f2085abbe472faf8175cce8dfaf8e84f878cb7067f69631d8cb39945873ea72b08d774e90592c39b3d6c6defd5686bf9ea3e91ed902d953095ecc6ec5a107a313a5a1853c89ff90e7f7cc31fb9b0abb1a4b62c83eda31dbeaa1219a7790610b8a52f08a4483036987e30ce6d52e472106db754091808068675995ca6a78042feb425106ae0c78277b8775d97f92464d0e2de3b9a31643a1c14d8521b9c288eba64eb8eb21a7c1caed9265d927bcd23373c68bb9269fc024d88cce3fd09867de37b0388e4b276be5f49c729a1c02a82e84a80c8dd118a3cf4ed521879cb2875e0467e7bb7309ebae9c5aceed80c67f3a14c14d223a52acb932fda4ee900a3a5bb3f307bdf62d9628b5bff10bead2760c4fb012f7532920adebe08537102f243fefaa879423e14c8ea3a0f9e89783a6f47276dc393b467eb091da3005d5e6641d8cec0d72318f021a0ec8df6cb8b81d1251c12e7806a2e53a13ffcf75b48952fc5026cbc0b07163db63f2953cbe975eca812c34799c557a61af863e628f592a7f4becdaa0ea342a97b986de140cbb9048abf474cea8b2e019f79e80455a4e349e75218fb418ae499437dd641cb41bed0f0879300506032b6570034100365b39ae118891a7b4b7c84bd8541b1868a3e23f0a54759962eeb2bfbab784b43d405b48e42b22d5e6a92c1cf5f6909daef382c93073c9679932a65576a4d50a",
+  "summary": "Unable to parse attestation certificate using cryptography.x509.\nError: unparsable for the test\n\nDER length: 1614 bytes\n\nFingerprints:\n    SHA256: 8ab0ef603e7e37178b6deceee441612fe85e71efcacf92121a6d856540bcdde9\n    SHA1: 9de0126a39c090af35b73b78b8eeb12141d7015b\n    MD5: 0ad7207c3f8afab57b03a8b26cc8f546\n\nBest-effort public key details:\n    Type: ML-DSA\n    Algorithm OID: 2.16.840.1.101.3.4.3.17\n    ML-DSA parameter set: ML-DSA-44\n    Claimed NIST level: 2\n    Signature length (bytes): 2420\n    Public key size (bits): 10496\n    Public Key (base64): lzoXq3ABqzz2pry8kIAoJk3Pp6lSetkmRDTH9zkgJug2tyzqitGoSAuVs0hqLmNUu8xDDAmk7YUSZPW+5WZT7KIUJ37k76imrC12vSREP8Qhl4IUcxTGFibzWIETnr3S6lvyEfj/Bk32keMk22pdkrU+/i5EeiAaagz0rN2+e6lS/m/h1F86cDODrsvj3cW0yXEHcJM/3CwF49+d1f2QJJjxqkLdoPLQUfjnnQ4Ww5jdABHy6gEwX5oPNR9hLloVmIf58lKZxF6XvITRZA3VfsXyeluuBHAP7vwGVuPvaXWxJgJnC/VxMhprUqSCHfHZuVi4FUTb64fcH0v+e+QDJddBkTkT+FbkEVp+Hc8dwxD/S1Iw2Uhr4n0ht3pgSTkdQcwRdys3hfzidTWX8MbYCecU3zdkiNvwCYw/9bjjDV0GOCbCf5QoffGP9TnbYb7N0eo7+p0/M2tF+C21h9m2EDc1xIQ1vhZo8Sr2rG/vGKwraJvBh4BmQobvKdTZXdLz/3swkAbGRbpkdUUVJpSrHg6aR7wx0LlBhmVQ+34HdN0Bb9wTX41t4RKYt8GOI3sWkVWCAX1IpupBJjciLkKW+ye/eLYVMC3sPwA23bb0V4qiOZ9Jtn+jupOlbmPrpKf6n6WSleZXZYr1OwdqvCTP5t0QYkjUEPdPV6pN/bXGHnfYK/l/R4rHogQ9vOQkvdHM0EnCKi/eXPhVwuBFWNFPVqRVWtM7AXluLHM4i4XXV6z8A4HlGKU3xEP6cUg7beJU0o2yWwdajzUFJJgQqXV6UZSm7LizNV/8Fk0y+bCSC9HR4hC6CwXGHCmXHS2spKsr8Qp094ePukDkUAv34Smi/h+Kplfgyu8+hFC9fz3dq8p+Y9sGkebHBLAHllAGOeH3scUIc2Yjkt961Bby2dwccSvVjk8jiOl246ULgxPmmkq1Hwh2z108bNAslQ+4JQb/32+WjwdDAQVgJp3P/YFNCtUgUPR8fcVHeNzqxONWbjzDLOg51b77hGr48ItsGvKKdMlY7nw/CIOWW01im8HczFLoYI/DIYEYg0f47vlSLZEuU7A60h9Da04dFNj5UEEhk+Yw+Kp/tvXO+KvWaLraD4kS7F68KENKQ+rDqKI8EEdC21Hp6V/XfpnxpE2JVp/sAZlQndTiKERQ+IkAcL+fIIWrvkcvr4F1zOjfr46E+HjLcGf2ljHYyzmUWHPqcrCNd06QWSw5s9bG3v1Whr+eo+ke2QLZUwlezG7FoQejE6WhhTyJ/5Dn98wx+5sKuxpLYsg+2jHb6qEhmneQYQuKUvCKRIMDaYfjDObVLkchBtt1QJGAgGhnWZXKangEL+tCUQauDHgne4d12X+SRk0OLeO5oxZDocFNhSG5wojrpk646yGnwcrtkmXZJ7zSM3PGi7kmn8Ak2IzOP9CYZ943sDiOSydr5fSccpocAqguhKgMjdEYo89O1SGHnLKHXgRn57tzCeuunFrO7YDGfzoUwU0iOlKsuTL9pO6QCjpbs/MHvfYtlii1v/EL6tJ2DE+wEvdTKSCt6+CFNxAvJD/vqoeUI+FMjqOg+eiXg6b0cnbcOTtGfrCR2jAF1eZkHYzsDXIxjwIaDsjfbLi4HRJRwS54BqLlOhP/z3W0iVL8UCbLwLBxY9tj8pU8vpdeyoEsNHmcVXphr4Y+Yo9ZKn9L7Nqg6jQql7mG3hQMu5BIq/R0zqiy4Bn3noBFWk40nnUhj7QYrkmUN91kHLQb7Q8IeQ==\n    Public Key (hex):\n        97:3a:17:ab:70:01:ab:3c:f6:a6:bc:bc:90:80:28:26\n        4d:cf:a7:a9:52:7a:d9:26:44:34:c7:f7:39:20:26:e8\n        36:b7:2c:ea:8a:d1:a8:48:0b:95:b3:48:6a:2e:63:54\n        bb:cc:43:0c:09:a4:ed:85:12:64:f5:be:e5:66:53:ec\n        a2:14:27:7e:e4:ef:a8:a6:ac:2d:76:bd:24:44:3f:c4\n        21:97:82:14:73:14:c6:16:26:f3:58:81:13:9e:bd:d2\n        ea:5b:f2:11:f8:ff:06:4d:f6:91:e3:24:db:6a:5d:92\n        b5:3e:fe:2e:44:7a:20:1a:6a:0c:f4:ac:dd:be:7b:a9\n        52:fe:6f:e1:d4:5f:3a:70:33:83:ae:cb:e3:dd:c5:b4\n        c9:71:07:70:93:3f:dc:2c:05:e3:df:9d:d5:fd:90:24\n        98:f1:aa:42:dd:a0:f2:d0:51:f8:e7:9d:0e:16:c3:98\n        dd:00:11:f2:ea:01:30:5f:9a:0f:35:1f:61:2e:5a:15\n        98:87:f9:f2:52:99:c4:5e:97:bc:84:d1:64:0d:d5:7e\n        c5:f2:7a:5b:ae:04:70:0f:ee:fc:06:56:e3:ef:69:75\n        b1:26:02:67:0b:f5:71:32:1a:6b:52:a4:82:1d:f1:d9\n        b9:58:b8:15:44:db:eb:87:dc:1f:4b:fe:7b:e4:03:25\n        d7:41:91:39:13:f8:56:e4:11:5a:7e:1d:cf:1d:c3:10\n        ff:4b:52:30:d9:48:6b:e2:7d:21:b7:7a:60:49:39:1d\n        41:cc:11:77:2b:37:85:fc:e2:75:35:97:f0:c6:d8:09\n        e7:14:df:37:64:88:db:f0:09:8c:3f:f5:b8:e3:0d:5d\n        06:38:26:c2:7f:94:28:7d:f1:8f:f5:39:db:61:be:cd\n        d1:ea:3b:fa:9d:3f:33:6b:45:f8:2d:b5:87:d9:b6:10\n        37:35:c4:84:35:be:16:68:f1:2a:f6:ac:6f:ef:18:ac\n        2b:68:9b:c1:87:80:66:42:86:ef:29:d4:d9:5d:d2:f3\n        ff:7b:30:90:06:c6:45:ba:64:75:45:15:26:94:ab:1e\n        0e:9a:47:bc:31:d0:b9:41:86:65:50:fb:7e:07:74:dd\n        01:6f:dc:13:5f:8d:6d:e1:12:98:b7:c1:8e:23:7b:16\n        91:55:82:01:7d:48:a6:ea:41:26:37:22:2e:42:96:fb\n        27:bf:78:b6:15:30:2d:ec:3f:00:36:dd:b6:f4:57:8a\n        a2:39:9f:49:b6:7f:a3:ba:93:a5:6e:63:eb:a4:a7:fa\n        9f:a5:92:95:e6:57:65:8a:f5:3b:07:6a:bc:24:cf:e6\n        dd:10:62:48:d4:10:f7:4f:57:aa:4d:fd:b5:c6:1e:77\n        d8:2b:f9:7f:47:8a:c7:a2:04:3d:bc:e4:24:bd:d1:cc\n        d0:49:c2:2a:2f:de:5c:f8:55:c2:e0:45:58:d1:4f:56\n        a4:55:5a:d3:3b:01:79:6e:2c:73:38:8b:85:d7:57:ac\n        fc:03:81:e5:18:a5:37:c4:43:fa:71:48:3b:6d:e2:54\n        d2:8d:b2:5b:07:5a:8f:35:05:24:98:10:a9:75:7a:51\n        94:a6:ec:b8:b3:35:5f:fc:16:4d:32:f9:b0:92:0b:d1\n        d1:e2:10:ba:0b:05:c6:1c:29:97:1d:2d:ac:a4:ab:2b\n        f1:0a:74:f7:87:8f:ba:40:e4:50:0b:f7:e1:29:a2:fe\n        1f:8a:a6:57:e0:ca:ef:3e:84:50:bd:7f:3d:dd:ab:ca\n        7e:63:db:06:91:e6:c7:04:b0:07:96:50:06:39:e1:f7\n        b1:c5:08:73:66:23:92:df:7a:d4:16:f2:d9:dc:1c:71\n        2b:d5:8e:4f:23:88:e9:76:e3:a5:0b:83:13:e6:9a:4a\n        b5:1f:08:76:cf:5d:3c:6c:d0:2c:95:0f:b8:25:06:ff\n        df:6f:96:8f:07:43:01:05:60:26:9d:cf:fd:81:4d:0a\n        d5:20:50:f4:7c:7d:c5:47:78:dc:ea:c4:e3:56:6e:3c\n        c3:2c:e8:39:d5:be:fb:84:6a:f8:f0:8b:6c:1a:f2:8a\n        74:c9:58:ee:7c:3f:08:83:96:5b:4d:62:9b:c1:dc:cc\n        52:e8:60:8f:c3:21:81:18:83:47:f8:ee:f9:52:2d:91\n        2e:53:b0:3a:d2:1f:43:6b:4e:1d:14:d8:f9:50:41:21\n        93:e6:30:f8:aa:7f:b6:f5:ce:f8:ab:d6:68:ba:da:0f\n        89:12:ec:5e:bc:28:43:4a:43:ea:c3:a8:a2:3c:10:47\n        42:db:51:e9:e9:5f:d7:7e:99:f1:a4:4d:89:56:9f:ec\n        01:99:50:9d:d4:e2:28:44:50:f8:89:00:70:bf:9f:20\n        85:ab:be:47:2f:af:81:75:cc:e8:df:af:8e:84:f8:78\n        cb:70:67:f6:96:31:d8:cb:39:94:58:73:ea:72:b0:8d\n        77:4e:90:59:2c:39:b3:d6:c6:de:fd:56:86:bf:9e:a3\n        e9:1e:d9:02:d9:53:09:5e:cc:6e:c5:a1:07:a3:13:a5\n        a1:85:3c:89:ff:90:e7:f7:cc:31:fb:9b:0a:bb:1a:4b\n        62:c8:3e:da:31:db:ea:a1:21:9a:77:90:61:0b:8a:52\n        f0:8a:44:83:03:69:87:e3:0c:e6:d5:2e:47:21:06:db\n        75:40:91:80:80:68:67:59:95:ca:6a:78:04:2f:eb:42\n        51:06:ae:0c:78:27:7b:87:75:d9:7f:92:46:4d:0e:2d\n        e3:b9:a3:16:43:a1:c1:4d:85:21:b9:c2:88:eb:a6:4e\n        b8:eb:21:a7:c1:ca:ed:92:65:d9:27:bc:d2:33:73:c6\n        8b:b9:26:9f:c0:24:d8:8c:ce:3f:d0:98:67:de:37:b0\n        38:8e:4b:27:6b:e5:f4:9c:72:9a:1c:02:a8:2e:84:a8\n        0c:8d:d1:18:a3:cf:4e:d5:21:87:9c:b2:87:5e:04:67\n        e7:bb:73:09:eb:ae:9c:5a:ce:ed:80:c6:7f:3a:14:c1\n        4d:22:3a:52:ac:b9:32:fd:a4:ee:90:0a:3a:5b:b3:f3\n        07:bd:f6:2d:96:28:b5:bf:f1:0b:ea:d2:76:0c:4f:b0\n        12:f7:53:29:20:ad:eb:e0:85:37:10:2f:24:3f:ef:aa\n        87:94:23:e1:4c:8e:a3:a0:f9:e8:97:83:a6:f4:72:76\n        dc:39:3b:46:7e:b0:91:da:30:05:d5:e6:64:1d:8c:ec\n        0d:72:31:8f:02:1a:0e:c8:df:6c:b8:b8:1d:12:51:c1\n        2e:78:06:a2:e5:3a:13:ff:cf:75:b4:89:52:fc:50:26\n        cb:c0:b0:71:63:db:63:f2:95:3c:be:97:5e:ca:81:2c\n        34:79:9c:55:7a:61:af:86:3e:62:8f:59:2a:7f:4b:ec\n        da:a0:ea:34:2a:97:b9:86:de:14:0c:bb:90:48:ab:f4\n        74:ce:a8:b2:e0:19:f7:9e:80:45:5a:4e:34:9e:75:21\n        8f:b4:18:ae:49:94:37:dd:64:1c:b4:1b:ed:0f:08:79",
+  "parseError": "unparsable for the test"
+ },
+ "unknown-key/truncated": {
+  "$tuple": [
+   {
+    "type": "Unknown",
+    "algorithm": {
+     "name": "Unknown"
+    }
+   },
+   [
+    {
+     "$tuple": [
+      "Type",
+      "Unknown"
+     ]
+    }
+   ]
+  ]
+ },
+ "fallback/truncated": {
+  "error": "Unable to parse attestation certificate: unparsable for the test",
+  "derBase64": "MIIBbTCCAR+gAwIBAgICA+gwBQYDK2VwMCMxITAfBgNVBAMMGENoYQ==",
+  "fingerprints": {
+   "sha256": "6e3d93b34060845b447edc88e27d14e2447caa36712a5b1cc5080e9f0f4aab20",
+   "sha1": "fdc73f8f73ba80fd23233bb80ed00361895a776c",
+   "md5": "2e0ed1120dc134198d1434e94553833d"
+  },
+  "pem": "-----BEGIN CERTIFICATE-----\nMIIBbTCCAR+gAwIBAgICA+gwBQYDK2VwMCMxITAfBgNVBAMMGENoYQ==\n-----END CERTIFICATE-----",
+  "publicKeyInfo": {
+   "type": "Unknown",
+   "algorithm": {
+    "name": "Unknown"
+   }
+  },
+  "raw": "3082016d3082011fa003020102020203e8300506032b657030233121301f06035504030c18436861",
+  "summary": "Unable to parse attestation certificate using cryptography.x509.\nError: unparsable for the test\n\nDER length: 40 bytes\n\nFingerprints:\n    SHA256: 6e3d93b34060845b447edc88e27d14e2447caa36712a5b1cc5080e9f0f4aab20\n    SHA1: fdc73f8f73ba80fd23233bb80ed00361895a776c\n    MD5: 2e0ed1120dc134198d1434e94553833d\n\nBest-effort public key details:\n    Type: Unknown",
+  "parseError": "unparsable for the test"
+ },
+ "unknown-key/garbage": {
+  "$tuple": [
+   {
+    "type": "Unknown",
+    "algorithm": {
+     "name": "Unknown"
+    }
+   },
+   [
+    {
+     "$tuple": [
+      "Type",
+      "Unknown"
+     ]
+    }
+   ]
+  ]
+ },
+ "fallback/garbage": {
+  "error": "Unable to parse attestation certificate: unparsable for the test",
+  "derBase64": "AQI=",
+  "fingerprints": {
+   "sha256": "a12871fee210fb8619291eaea194581cbd2531e4b23759d225f6806923f63222",
+   "sha1": "0ca623e2855f2c75c842ad302fe820e41b4d197d",
+   "md5": "0cb988d042a7f28dd5fe2b55b3f5ac7a"
+  },
+  "pem": "-----BEGIN CERTIFICATE-----\nAQI=\n-----END CERTIFICATE-----",
+  "publicKeyInfo": {
+   "type": "Unknown",
+   "algorithm": {
+    "name": "Unknown"
+   }
+  },
+  "raw": "0102",
+  "summary": "Unable to parse attestation certificate using cryptography.x509.\nError: unparsable for the test\n\nDER length: 2 bytes\n\nFingerprints:\n    SHA256: a12871fee210fb8619291eaea194581cbd2531e4b23759d225f6806923f63222\n    SHA1: 0ca623e2855f2c75c842ad302fe820e41b4d197d\n    MD5: 0cb988d042a7f28dd5fe2b55b3f5ac7a\n\nBest-effort public key details:\n    Type: Unknown",
+  "parseError": "unparsable for the test"
+ },
+ "normalise": {
+  "": "",
+  "  ": "",
+  "ecdsa-with-SHA256": "ECDSA",
+  "RSASSA-PSS": "RSASSA-PSS",
+  "sha256WithRSAEncryption": "RSASSA-PKCS1-v1_5",
+  "ed25519": "ED25519",
+  "Ed448": "ED448",
+  "dsa-with-sha1": "DSA",
+  "ML-DSA-44": "DSA",
+  "some thing-else": "SOMETHINGELSE"
+ },
+ "hash": {
+  "None": "",
+  "''": "",
+  "' '": "",
+  "'sha-256'": "SHA256",
+  "'SHA384'": "SHA384",
+  "'shake-256'": "SHAKE256",
+  "'md5'": "MD5"
+ },
+ "component": {
+  "None": "",
+  "''": "",
+  "'\u2014'": "",
+  "' RSA PSS '": "RSAPSS",
+  "5": "5"
+ },
+ "algorithm-info": [
+  "",
+  "",
+  "ECDSA_SHA256",
+  "RSASSA-PKCS1-v1_5_SHA256",
+  "ED25519_SHA512",
+  "ED448_SHAKE256",
+  "DSA",
+  "SHA1",
+  ""
+ ]
+}

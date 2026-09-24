@@ -1,0 +1,272 @@
+{
+ "scenario": "simple-register-packed-self",
+ "requests": [
+  {
+   "request": "POST /api/register/begin?email=user@example.com",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "612"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "register_rp_id": "localhost",
+      "simple_register_public_key": {
+       "authenticatorSelection": {
+        "authenticatorAttachment": "cross-platform",
+        "requireResidentKey": false,
+        "residentKey": "discouraged",
+        "userVerification": "discouraged"
+       },
+       "challenge": "F8bM5R6_E6SdKuPGRNPSkds6JHf8gtzqObSg5AXjh5I",
+       "excludeCredentials": [],
+       "pubKeyCredParams": [
+        {
+         "alg": -48,
+         "type": "public-key"
+        },
+        {
+         "alg": -49,
+         "type": "public-key"
+        },
+        {
+         "alg": -50,
+         "type": "public-key"
+        },
+        {
+         "alg": -7,
+         "type": "public-key"
+        },
+        {
+         "alg": -9,
+         "type": "public-key"
+        },
+        {
+         "alg": -8,
+         "type": "public-key"
+        },
+        {
+         "alg": -19,
+         "type": "public-key"
+        },
+        {
+         "alg": -53,
+         "type": "public-key"
+        },
+        {
+         "alg": -35,
+         "type": "public-key"
+        },
+        {
+         "alg": -36,
+         "type": "public-key"
+        },
+        {
+         "alg": -51,
+         "type": "public-key"
+        },
+        {
+         "alg": -52,
+         "type": "public-key"
+        },
+        {
+         "alg": -47,
+         "type": "public-key"
+        },
+        {
+         "alg": -37,
+         "type": "public-key"
+        },
+        {
+         "alg": -38,
+         "type": "public-key"
+        },
+        {
+         "alg": -39,
+         "type": "public-key"
+        },
+        {
+         "alg": -257,
+         "type": "public-key"
+        },
+        {
+         "alg": -258,
+         "type": "public-key"
+        },
+        {
+         "alg": -259,
+         "type": "public-key"
+        },
+        {
+         "alg": -65535,
+         "type": "public-key"
+        }
+       ],
+       "rp": {
+        "id": "localhost",
+        "name": "Demo server"
+       },
+       "user": {
+        "displayName": "A. User",
+        "id": "dXNlcl9pZA",
+        "name": "a_user"
+       }
+      },
+      "state": {
+       "challenge": "F8bM5R6_E6SdKuPGRNPSkds6JHf8gtzqObSg5AXjh5I",
+       "issued_at": 1790000000.0,
+       "user_verification": "discouraged"
+      }
+     }
+    }
+   ],
+   "bodySha256": "83059d319a422b0afba9955e6c7e2a596f6096c95eec9a5c5e3f5e606a58c303",
+   "body": {
+    "publicKey": {
+     "authenticatorSelection": {
+      "authenticatorAttachment": "cross-platform",
+      "requireResidentKey": false,
+      "residentKey": "discouraged",
+      "userVerification": "discouraged"
+     },
+     "challenge": "F8bM5R6_E6SdKuPGRNPSkds6JHf8gtzqObSg5AXjh5I",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -50,
+       "type": "public-key"
+      },
+      {
+       "alg": -49,
+       "type": "public-key"
+      },
+      {
+       "alg": -48,
+       "type": "public-key"
+      },
+      {
+       "alg": -8,
+       "type": "public-key"
+      },
+      {
+       "alg": -7,
+       "type": "public-key"
+      },
+      {
+       "alg": -257,
+       "type": "public-key"
+      },
+      {
+       "alg": -35,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "Demo server"
+     },
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlcl9pZA",
+      "name": "a_user"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/register/complete?email=user@example.com",
+   "status": 400,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "106"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; manifest-src 'self'; worker-src 'self'"
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "Max-Age=0",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": null
+    }
+   ],
+   "bodySha256": "85c82c1661ced79756625ab6df6b790706e36b2c7da123b399ffea97c20dec27",
+   "body": {
+    "attestationErrors": [
+     "trust_path_missing"
+    ],
+    "error": "Registration verification failed.",
+    "verified": false
+   }
+  }
+ ]
+}
