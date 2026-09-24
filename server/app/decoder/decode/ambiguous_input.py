@@ -20,7 +20,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from . import cbor_parser, ctap
+from . import cbor_parser, ctap_prefix
 
 _HEX_DIGITS = re.compile(r"[0-9A-Fa-f]+")
 
@@ -60,7 +60,7 @@ def check(text: str, parsed_json: Any) -> dict[str, Any] | None:
 def is_one_ctap_message(data: bytes) -> bool:
     """A CTAP command or status byte on its own, or at most one before a single well-formed CBOR item."""
 
-    prefix, payload = ctap._extract_ctap_prefix(data)
+    prefix, payload = ctap_prefix._extract_ctap_prefix(data)
     if not payload:
         return prefix is not None
     try:
