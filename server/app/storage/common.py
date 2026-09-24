@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
+import hashlib
 import os
 import posixpath
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any
 
 from werkzeug.security import safe_join
@@ -16,9 +19,12 @@ __all__ = [
     "assert_contained_blob_name",
     "build_session_root_prefix",
     "build_session_scoped_prefix",
+    "file_digest",
+    "file_lock",
     "normalize_nonempty_str",
     "resolve_contained_path",
     "resolve_metadata_session_id",
+    "replace_file",
     "resolve_session_id",
     "using_gcs_backend",
     "validate_storage_component",
@@ -213,3 +219,40 @@ def assert_contained_blob_name(
         raise InvalidStorageIdentifier(error)
 
     return blob_name
+
+
+@contextlib.contextmanager
+def file_lock(path: str) -> Iterator[None]:
+    """Hold an exclusive ``flock`` on ``path``'s ``.lock`` file.
+
+    One writer at a time for that file, across threads and across the server's
+    worker processes on this host. The lock file is never removed: unlinking a
+    lock another process is waiting on would split the queue in two.
+    """
+
+    with open(f"{path}.lock", "a") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+
+
+def replace_file(path: str, payload: bytes) -> None:
+    # Write-then-rename so concurrent readers never see a truncated file.
+    tmp_path = f"{path}.tmp.{os.urandom(6).hex()}"
+    try:
+        with open(tmp_path, "wb") as f:
+            f.write(payload)
+        os.replace(tmp_path, path)
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+
+def file_digest(path: str) -> str | None:
+    try:
+        with open(path, "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+    except FileNotFoundError:
+        return None
