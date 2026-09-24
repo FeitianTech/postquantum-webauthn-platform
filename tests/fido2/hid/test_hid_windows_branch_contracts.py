@@ -49,10 +49,10 @@ def _load_hid_windows_module(monkeypatch, *, arch="64bit"):
                 self._libs[name] = _FakeLib()
             return self._libs[name]
 
-    monkeypatch.setattr(sys, "platform", "win32", raising=False)
-    monkeypatch.setattr(platform, "architecture", lambda: (arch, ""), raising=False)
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(platform, "architecture", lambda: (arch, ""))
     monkeypatch.setattr(ctypes, "WinDLL", lambda _name: None, raising=False)
-    monkeypatch.setattr(ctypes, "LibraryLoader", _FakeLoader, raising=False)
+    monkeypatch.setattr(ctypes, "LibraryLoader", _FakeLoader)
     monkeypatch.setattr(ctypes, "WinError", lambda *_args, **_kwargs: OSError("win error"), raising=False)
 
     spec = importlib.util.spec_from_file_location(module_name, module_path)
@@ -91,23 +91,22 @@ def test_connection_and_descriptor_error_paths(monkeypatch):
         module.kernel32,
         "CreateFileA",
         lambda *_args, **_kwargs: module.INVALID_HANDLE_VALUE,
-        raising=False,
     )
     with pytest.raises(OSError):
         module.WinCtapHidConnection(_descriptor(module))
 
     closed = []
-    monkeypatch.setattr(module.kernel32, "CreateFileA", lambda *_args, **_kwargs: 99, raising=False)
-    monkeypatch.setattr(module.kernel32, "CloseHandle", lambda handle: closed.append(handle) or True, raising=False)
+    monkeypatch.setattr(module.kernel32, "CreateFileA", lambda *_args, **_kwargs: 99)
+    monkeypatch.setattr(module.kernel32, "CloseHandle", lambda handle: closed.append(handle) or True)
     conn = module.WinCtapHidConnection(_descriptor(module))
     conn.close()
     assert closed == [99]
 
-    monkeypatch.setattr(module.kernel32, "WriteFile", lambda *_args, **_kwargs: False, raising=False)
+    monkeypatch.setattr(module.kernel32, "WriteFile", lambda *_args, **_kwargs: False)
     with pytest.raises(OSError):
         conn.write_packet(b"A" * 64)
 
-    monkeypatch.setattr(module.kernel32, "ReadFile", lambda *_args, **_kwargs: False, raising=False)
+    monkeypatch.setattr(module.kernel32, "ReadFile", lambda *_args, **_kwargs: False)
     with pytest.raises(OSError):
         conn.read_packet()
 
@@ -115,16 +114,16 @@ def test_connection_and_descriptor_error_paths(monkeypatch):
         num_read_ptr._obj.value = buf_len - 1
         return True
 
-    monkeypatch.setattr(module.kernel32, "ReadFile", _short_read, raising=False)
+    monkeypatch.setattr(module.kernel32, "ReadFile", _short_read)
     with pytest.raises(OSError, match="full length report"):
         conn.read_packet()
 
-    monkeypatch.setattr(module.hid, "HidD_GetAttributes", lambda *_args, **_kwargs: False, raising=False)
+    monkeypatch.setattr(module.hid, "HidD_GetAttributes", lambda *_args, **_kwargs: False)
     with pytest.raises(OSError):
         module.get_vid_pid(1)
 
-    monkeypatch.setattr(module.hid, "HidD_GetProductString", lambda *_args, **_kwargs: False, raising=False)
-    monkeypatch.setattr(module.hid, "HidD_GetSerialNumberString", lambda *_args, **_kwargs: False, raising=False)
+    monkeypatch.setattr(module.hid, "HidD_GetProductString", lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(module.hid, "HidD_GetSerialNumberString", lambda *_args, **_kwargs: False)
     assert module.get_product_name(1) is None
     assert module.get_serial(1) is None
 
@@ -132,14 +131,13 @@ def test_connection_and_descriptor_error_paths(monkeypatch):
         module.kernel32,
         "CreateFileA",
         lambda *_args, **_kwargs: module.INVALID_HANDLE_VALUE,
-        raising=False,
     )
     with pytest.raises(OSError):
         module.get_descriptor(b"device-path")
 
-    monkeypatch.setattr(module.kernel32, "CreateFileA", lambda *_args, **_kwargs: 7, raising=False)
-    monkeypatch.setattr(module.kernel32, "CloseHandle", lambda _handle: True, raising=False)
-    monkeypatch.setattr(module.hid, "HidD_GetPreparsedData", lambda *_args, **_kwargs: False, raising=False)
+    monkeypatch.setattr(module.kernel32, "CreateFileA", lambda *_args, **_kwargs: 7)
+    monkeypatch.setattr(module.kernel32, "CloseHandle", lambda _handle: True)
+    monkeypatch.setattr(module.hid, "HidD_GetPreparsedData", lambda *_args, **_kwargs: False)
     with pytest.raises(OSError):
         module.get_descriptor(b"device-path")
 
@@ -147,14 +145,14 @@ def test_connection_and_descriptor_error_paths(monkeypatch):
         ptr._obj.value = 123
         return True
 
-    monkeypatch.setattr(module.hid, "HidD_GetPreparsedData", _preparsed, raising=False)
-    monkeypatch.setattr(module.hid, "HidD_FreePreparsedData", lambda _value: True, raising=False)
-    monkeypatch.setattr(module.hid, "HidP_GetCaps", lambda *_args, **_kwargs: 0, raising=False)
+    monkeypatch.setattr(module.hid, "HidD_GetPreparsedData", _preparsed)
+    monkeypatch.setattr(module.hid, "HidD_FreePreparsedData", lambda _value: True)
+    monkeypatch.setattr(module.hid, "HidP_GetCaps", lambda *_args, **_kwargs: 0)
     with pytest.raises(OSError):
         module.get_descriptor(b"device-path")
 
     marker = object()
-    monkeypatch.setattr(module, "WinCtapHidConnection", lambda descriptor: (marker, descriptor), raising=False)
+    monkeypatch.setattr(module, "WinCtapHidConnection", lambda descriptor: (marker, descriptor))
     descriptor = _descriptor(module)
     assert module.open_connection(descriptor) == (marker, descriptor)
 
@@ -168,22 +166,20 @@ def test_list_descriptors_cache_hits_and_stale_cleanup(monkeypatch):
     module._descriptor_cache[b"cached-skip"] = module._SKIP
     module._descriptor_cache[b"stale-device"] = _descriptor(module)
 
-    monkeypatch.setattr(module.hid, "HidD_GetHidGuid", lambda *_args, **_kwargs: None, raising=False)
-    monkeypatch.setattr(module.setupapi, "SetupDiGetClassDevsA", lambda *_args, **_kwargs: 123, raising=False)
+    monkeypatch.setattr(module.hid, "HidD_GetHidGuid", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(module.setupapi, "SetupDiGetClassDevsA", lambda *_args, **_kwargs: 123)
 
     destroyed = []
     monkeypatch.setattr(
         module.setupapi,
         "SetupDiDestroyDeviceInfoList",
         lambda collection: destroyed.append(collection) or True,
-        raising=False,
     )
 
     monkeypatch.setattr(
         module.setupapi,
         "SetupDiEnumDeviceInterfaces",
         lambda _collection, _dev_info, _guid, index, _interface: index < 2,
-        raising=False,
     )
 
     def _detail(_collection, _interface_data, detail_ptr, _detail_len, required_len_ptr, _dev_info):
@@ -192,11 +188,11 @@ def test_list_descriptors_cache_hits_and_stale_cleanup(monkeypatch):
             return False
         return True
 
-    monkeypatch.setattr(module.setupapi, "SetupDiGetDeviceInterfaceDetailA", _detail, raising=False)
+    monkeypatch.setattr(module.setupapi, "SetupDiGetDeviceInterfaceDetailA", _detail)
 
     paths = [b"cached-ok", b"cached-skip"]
-    monkeypatch.setattr(module.ctypes, "string_at", lambda _ptr: paths.pop(0), raising=False)
-    monkeypatch.setattr(module, "get_descriptor", lambda _path: (_ for _ in ()).throw(AssertionError("unexpected")), raising=False)
+    monkeypatch.setattr(module.ctypes, "string_at", lambda _ptr: paths.pop(0))
+    monkeypatch.setattr(module, "get_descriptor", lambda _path: (_ for _ in ()).throw(AssertionError("unexpected")))
 
     descriptors = module.list_descriptors()
     assert descriptors == [cached]
@@ -208,9 +204,9 @@ def test_list_descriptors_zero_length_and_descriptor_failures(monkeypatch):
     module = _load_hid_windows_module(monkeypatch)
     module._descriptor_cache.clear()
 
-    monkeypatch.setattr(module.hid, "HidD_GetHidGuid", lambda *_args, **_kwargs: None, raising=False)
-    monkeypatch.setattr(module.setupapi, "SetupDiGetClassDevsA", lambda *_args, **_kwargs: 321, raising=False)
-    monkeypatch.setattr(module.setupapi, "SetupDiDestroyDeviceInfoList", lambda *_args, **_kwargs: True, raising=False)
+    monkeypatch.setattr(module.hid, "HidD_GetHidGuid", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(module.setupapi, "SetupDiGetClassDevsA", lambda *_args, **_kwargs: 321)
+    monkeypatch.setattr(module.setupapi, "SetupDiDestroyDeviceInfoList", lambda *_args, **_kwargs: True)
 
     state = {"index": 0}
 
@@ -218,7 +214,7 @@ def test_list_descriptors_zero_length_and_descriptor_failures(monkeypatch):
         state["index"] = index
         return index < 3
 
-    monkeypatch.setattr(module.setupapi, "SetupDiEnumDeviceInterfaces", _enum, raising=False)
+    monkeypatch.setattr(module.setupapi, "SetupDiEnumDeviceInterfaces", _enum)
 
     def _detail(_collection, _interface_data, detail_ptr, _detail_len, required_len_ptr, _dev_info):
         if detail_ptr is None:
@@ -226,20 +222,20 @@ def test_list_descriptors_zero_length_and_descriptor_failures(monkeypatch):
             return False
         return True
 
-    monkeypatch.setattr(module.setupapi, "SetupDiGetDeviceInterfaceDetailA", _detail, raising=False)
+    monkeypatch.setattr(module.setupapi, "SetupDiGetDeviceInterfaceDetailA", _detail)
 
     paths = [b"value-error-path", b"exception-path"]
-    monkeypatch.setattr(module.ctypes, "string_at", lambda _ptr: paths.pop(0), raising=False)
+    monkeypatch.setattr(module.ctypes, "string_at", lambda _ptr: paths.pop(0))
 
     debug_messages = []
-    monkeypatch.setattr(module.logger, "debug", lambda *args, **kwargs: debug_messages.append(args), raising=False)
+    monkeypatch.setattr(module.logger, "debug", lambda *args, **kwargs: debug_messages.append(args))
 
     def _get_descriptor(path):
         if path == b"value-error-path":
             raise ValueError("not ctap")
         raise RuntimeError("boom")
 
-    monkeypatch.setattr(module, "get_descriptor", _get_descriptor, raising=False)
+    monkeypatch.setattr(module, "get_descriptor", _get_descriptor)
 
     assert module.list_descriptors() == []
     assert module._descriptor_cache[b"value-error-path"] is module._SKIP
@@ -250,14 +246,13 @@ def test_list_descriptors_zero_length_and_descriptor_failures(monkeypatch):
 def test_list_descriptors_raises_on_detail_api_failures(monkeypatch):
     module = _load_hid_windows_module(monkeypatch)
 
-    monkeypatch.setattr(module.hid, "HidD_GetHidGuid", lambda *_args, **_kwargs: None, raising=False)
-    monkeypatch.setattr(module.setupapi, "SetupDiGetClassDevsA", lambda *_args, **_kwargs: 1, raising=False)
-    monkeypatch.setattr(module.setupapi, "SetupDiDestroyDeviceInfoList", lambda *_args, **_kwargs: True, raising=False)
+    monkeypatch.setattr(module.hid, "HidD_GetHidGuid", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(module.setupapi, "SetupDiGetClassDevsA", lambda *_args, **_kwargs: 1)
+    monkeypatch.setattr(module.setupapi, "SetupDiDestroyDeviceInfoList", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(
         module.setupapi,
         "SetupDiEnumDeviceInterfaces",
         lambda _collection, _dev_info, _guid, index, _interface: index < 1,
-        raising=False,
     )
 
     # Initial detail query unexpectedly succeeds -> WinError branch.
@@ -265,20 +260,18 @@ def test_list_descriptors_raises_on_detail_api_failures(monkeypatch):
         module.setupapi,
         "SetupDiGetDeviceInterfaceDetailA",
         lambda _collection, _interface_data, detail_ptr, _detail_len, _required_len_ptr, _dev_info: detail_ptr is None,
-        raising=False,
     )
     with pytest.raises(OSError):
         module.list_descriptors()
 
     module_fail_second = _load_hid_windows_module(monkeypatch)
-    monkeypatch.setattr(module_fail_second.hid, "HidD_GetHidGuid", lambda *_args, **_kwargs: None, raising=False)
-    monkeypatch.setattr(module_fail_second.setupapi, "SetupDiGetClassDevsA", lambda *_args, **_kwargs: 2, raising=False)
-    monkeypatch.setattr(module_fail_second.setupapi, "SetupDiDestroyDeviceInfoList", lambda *_args, **_kwargs: True, raising=False)
+    monkeypatch.setattr(module_fail_second.hid, "HidD_GetHidGuid", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(module_fail_second.setupapi, "SetupDiGetClassDevsA", lambda *_args, **_kwargs: 2)
+    monkeypatch.setattr(module_fail_second.setupapi, "SetupDiDestroyDeviceInfoList", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(
         module_fail_second.setupapi,
         "SetupDiEnumDeviceInterfaces",
         lambda _collection, _dev_info, _guid, index, _interface: index < 1,
-        raising=False,
     )
 
     def _detail_fail_second(_collection, _interface_data, detail_ptr, _detail_len, required_len_ptr, _dev_info):
@@ -287,7 +280,7 @@ def test_list_descriptors_raises_on_detail_api_failures(monkeypatch):
             return False
         return False
 
-    monkeypatch.setattr(module_fail_second.setupapi, "SetupDiGetDeviceInterfaceDetailA", _detail_fail_second, raising=False)
+    monkeypatch.setattr(module_fail_second.setupapi, "SetupDiGetDeviceInterfaceDetailA", _detail_fail_second)
 
     with pytest.raises(OSError):
         module_fail_second.list_descriptors()

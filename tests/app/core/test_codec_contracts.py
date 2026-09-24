@@ -542,7 +542,6 @@ def test_codec_api_encode_maps_value_error_to_422(monkeypatch):
         general_module,
         "encode_payload_text",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("bad encode request")),
-        raising=False,
     )
 
     with config_module.app.test_client() as client:
@@ -564,7 +563,6 @@ def test_codec_api_encode_maps_unexpected_error_to_500(monkeypatch):
         general_module,
         "encode_payload_text",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("encoder crashed")),
-        raising=False,
     )
 
     with config_module.app.test_client() as client:

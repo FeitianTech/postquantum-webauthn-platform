@@ -441,7 +441,7 @@ def test_gcs_upload_publishes_every_snapshot_file(stubbed_refresh, monkeypatch, 
         lambda name, data, content_type=None: uploaded.__setitem__(name, data),
     )
     monkeypatch.setattr(
-        mds_provisioning, "_FRONTEND_STATIC_ROOT", stubbed_refresh, raising=False
+        mds_provisioning, "_FRONTEND_STATIC_ROOT", stubbed_refresh
     )
 
     assert updater.main(["--gcs-upload"]) == 0

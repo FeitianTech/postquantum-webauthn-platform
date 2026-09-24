@@ -28,12 +28,12 @@ def session_env(monkeypatch, tmp_path):
 
     for module in (config, session_store):
         monkeypatch.setattr(
-            module, "SESSION_METADATA_DIR", str(session_dir), raising=False
+            module, "SESSION_METADATA_DIR", str(session_dir)
         )
 
-    monkeypatch.setattr(session_store, "gcs_enabled", lambda: False, raising=False)
-    monkeypatch.setattr(session_store, "_using_gcs", lambda: False, raising=False)
-    monkeypatch.setattr(session_store, "_local_last_cleanup", 0.0, raising=False)
+    monkeypatch.setattr(session_store, "gcs_enabled", lambda: False)
+    monkeypatch.setattr(session_store, "_using_gcs", lambda: False)
+    monkeypatch.setattr(session_store, "_local_last_cleanup", 0.0)
     monkeypatch.setattr(state, "_session_metadata_entry_ids", set())
     monkeypatch.setattr(state, "_session_metadata_last_cleanup", 0.0)
 

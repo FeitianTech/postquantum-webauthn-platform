@@ -68,18 +68,16 @@ def test_prune_session_removes_empty_session(monkeypatch):
     session_store = pytest.importorskip("server.app.storage.session_metadata")
 
     calls = []
-    monkeypatch.setattr(session_store, "session_is_empty", lambda _session_id: True, raising=False)
+    monkeypatch.setattr(session_store, "session_is_empty", lambda _session_id: True)
     monkeypatch.setattr(
         session_store,
         "delete_file",
         lambda session_id, name, *, missing_ok=True: calls.append(("delete_file", session_id, name, missing_ok)),
-        raising=False,
     )
     monkeypatch.setattr(
         session_store,
         "delete_session",
         lambda session_id: calls.append(("delete_session", session_id)),
-        raising=False,
     )
 
     session_store.prune_session("session-1")
@@ -92,18 +90,16 @@ def test_prune_session_keeps_non_empty_session(monkeypatch):
     session_store = pytest.importorskip("server.app.storage.session_metadata")
 
     calls = []
-    monkeypatch.setattr(session_store, "session_is_empty", lambda _session_id: False, raising=False)
+    monkeypatch.setattr(session_store, "session_is_empty", lambda _session_id: False)
     monkeypatch.setattr(
         session_store,
         "delete_file",
         lambda *args, **kwargs: calls.append(("delete_file", args, kwargs)),
-        raising=False,
     )
     monkeypatch.setattr(
         session_store,
         "delete_session",
         lambda *args, **kwargs: calls.append(("delete_session", args, kwargs)),
-        raising=False,
     )
 
     session_store.prune_session("session-2")

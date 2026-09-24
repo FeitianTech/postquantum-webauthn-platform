@@ -277,7 +277,6 @@ def test_resolve_session_id_falls_back_to_metadata_session(monkeypatch):
         metadata_module,
         "ensure_metadata_session_id",
         lambda: "fallback-session-id",
-        raising=False,
     )
 
     assert credentials._resolve_session_id("   ") == "fallback-session-id"

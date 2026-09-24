@@ -18,7 +18,7 @@ def test_android_and_apple_attestation_reject_invalid_mobile_attestation_inputs(
         }
         return mapping[value]
 
-    monkeypatch.setattr(android_module, "websafe_decode", _decode_cts_false, raising=False)
+    monkeypatch.setattr(android_module, "websafe_decode", _decode_cts_false)
     with pytest.raises(base_module.InvalidData, match="ctsProfileMatch must be true"):
         android_module.AndroidSafetynetAttestation().verify(statement, b"auth", b"client")
 
@@ -31,8 +31,8 @@ def test_android_and_apple_attestation_reject_invalid_mobile_attestation_inputs(
         }
         return mapping[value]
 
-    monkeypatch.setattr(android_module, "websafe_decode", _decode_nonce_mismatch, raising=False)
-    monkeypatch.setattr(android_module, "sha256", lambda _data: b"expected-nonce", raising=False)
+    monkeypatch.setattr(android_module, "websafe_decode", _decode_nonce_mismatch)
+    monkeypatch.setattr(android_module, "sha256", lambda _data: b"expected-nonce")
     with pytest.raises(base_module.InvalidData, match="Nonce does not match"):
         android_module.AndroidSafetynetAttestation().verify(statement, b"auth", b"client")
 
@@ -50,13 +50,12 @@ def test_android_and_apple_attestation_reject_invalid_mobile_attestation_inputs(
         get_attributes_for_oid=lambda _oid: [SimpleNamespace(value="example.invalid")]
     )
     fake_cert = SimpleNamespace(subject=fake_subject)
-    monkeypatch.setattr(android_module, "websafe_decode", _decode_bad_cn, raising=False)
-    monkeypatch.setattr(android_module, "sha256", lambda _data: b"expected-nonce", raising=False)
+    monkeypatch.setattr(android_module, "websafe_decode", _decode_bad_cn)
+    monkeypatch.setattr(android_module, "sha256", lambda _data: b"expected-nonce")
     monkeypatch.setattr(
         android_module.x509,
         "load_der_x509_certificate",
         lambda *_args, **_kwargs: fake_cert,
-        raising=False,
     )
     with pytest.raises(
         base_module.InvalidData,
@@ -67,12 +66,11 @@ def test_android_and_apple_attestation_reject_invalid_mobile_attestation_inputs(
     fake_extension = SimpleNamespace(value=SimpleNamespace(value=b"ABCDEF" + b"other-nonce"))
     fake_extensions = SimpleNamespace(get_extension_for_oid=lambda _oid: fake_extension)
     fake_apple_cert = SimpleNamespace(extensions=fake_extensions)
-    monkeypatch.setattr(apple_module, "sha256", lambda _data: b"expected-nonce", raising=False)
+    monkeypatch.setattr(apple_module, "sha256", lambda _data: b"expected-nonce")
     monkeypatch.setattr(
         apple_module.x509,
         "load_der_x509_certificate",
         lambda *_args, **_kwargs: fake_apple_cert,
-        raising=False,
     )
     with pytest.raises(base_module.InvalidData, match="Nonce does not match"):
         apple_module.AppleAttestation().verify({"x5c": [b"fake-cert"]}, b"auth", b"client")

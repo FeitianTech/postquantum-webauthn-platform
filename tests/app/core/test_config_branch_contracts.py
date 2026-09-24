@@ -18,7 +18,7 @@ from server.app.config import (
 
 
 def test_discover_project_root_fallback_when_frontend_not_found(monkeypatch):
-    monkeypatch.setattr(Path, "is_dir", lambda self: False, raising=False)
+    monkeypatch.setattr(Path, "is_dir", lambda self: False)
 
     package_root = Path("/tmp/postquantum/server/app")
     assert paths._discover_project_root(package_root) == package_root.parents[1]
@@ -141,7 +141,7 @@ def test_register_after_request_once_guard_paths(monkeypatch):
     marker = compression._RESPONSE_COMPRESSION_MARKER
 
     calls = []
-    monkeypatch.setattr(flask_app, "after_request", lambda handler: calls.append(handler), raising=False)
+    monkeypatch.setattr(flask_app, "after_request", lambda handler: calls.append(handler))
 
     def existing(response):
         return response
@@ -153,11 +153,11 @@ def test_register_after_request_once_guard_paths(monkeypatch):
     assert calls == []
 
     flask_app.after_request_funcs[None] = []
-    monkeypatch.setattr(flask_app, "_got_first_request", True, raising=False)
+    monkeypatch.setattr(flask_app, "_got_first_request", True)
     compression._register_after_request_once(flask_app, lambda response: response)
     assert calls == []
 
-    monkeypatch.setattr(flask_app, "_got_first_request", False, raising=False)
+    monkeypatch.setattr(flask_app, "_got_first_request", False)
     def handler(response):
         return response
 

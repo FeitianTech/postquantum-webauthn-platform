@@ -48,9 +48,9 @@ def _load_hid_windows_module(monkeypatch):
                 self._libs[name] = _FakeLib()
             return self._libs[name]
 
-    monkeypatch.setattr(sys, "platform", "win32", raising=False)
+    monkeypatch.setattr(sys, "platform", "win32")
     monkeypatch.setattr(ctypes, "WinDLL", lambda _name: None, raising=False)
-    monkeypatch.setattr(ctypes, "LibraryLoader", _FakeLoader, raising=False)
+    monkeypatch.setattr(ctypes, "LibraryLoader", _FakeLoader)
     monkeypatch.setattr(ctypes, "WinError", lambda *_args, **_kwargs: OSError("win error"), raising=False)
 
     spec = importlib.util.spec_from_file_location(module_name, module_path)
@@ -78,9 +78,9 @@ def test_hid_windows_vid_pid_product_and_serial_helpers(monkeypatch):
         buf.value = "SER123"
         return True
 
-    monkeypatch.setattr(module.hid, "HidD_GetAttributes", _attrs, raising=False)
-    monkeypatch.setattr(module.hid, "HidD_GetProductString", _product, raising=False)
-    monkeypatch.setattr(module.hid, "HidD_GetSerialNumberString", _serial, raising=False)
+    monkeypatch.setattr(module.hid, "HidD_GetAttributes", _attrs)
+    monkeypatch.setattr(module.hid, "HidD_GetProductString", _product)
+    monkeypatch.setattr(module.hid, "HidD_GetSerialNumberString", _serial)
 
     assert module.get_vid_pid(1) == (0x1234, 0x5678)
     assert module.get_product_name(1) == "Demo Key"
@@ -90,18 +90,18 @@ def test_hid_windows_vid_pid_product_and_serial_helpers(monkeypatch):
 def test_hid_windows_get_descriptor_success_and_non_ctap_failure(monkeypatch):
     module = _load_hid_windows_module(monkeypatch)
 
-    monkeypatch.setattr(module.kernel32, "CreateFileA", lambda *_args, **_kwargs: 1, raising=False)
-    monkeypatch.setattr(module.kernel32, "CloseHandle", lambda _handle: True, raising=False)
+    monkeypatch.setattr(module.kernel32, "CreateFileA", lambda *_args, **_kwargs: 1)
+    monkeypatch.setattr(module.kernel32, "CloseHandle", lambda _handle: True)
 
     def _preparsed(_device, ptr):
         ptr._obj.value = 99
         return True
 
-    monkeypatch.setattr(module.hid, "HidD_GetPreparsedData", _preparsed, raising=False)
-    monkeypatch.setattr(module.hid, "HidD_FreePreparsedData", lambda _ppd: True, raising=False)
-    monkeypatch.setattr(module, "get_vid_pid", lambda _device: (0x1111, 0x2222), raising=False)
-    monkeypatch.setattr(module, "get_product_name", lambda _device: "Security Key", raising=False)
-    monkeypatch.setattr(module, "get_serial", lambda _device: "SERIAL", raising=False)
+    monkeypatch.setattr(module.hid, "HidD_GetPreparsedData", _preparsed)
+    monkeypatch.setattr(module.hid, "HidD_FreePreparsedData", lambda _ppd: True)
+    monkeypatch.setattr(module, "get_vid_pid", lambda _device: (0x1111, 0x2222))
+    monkeypatch.setattr(module, "get_product_name", lambda _device: "Security Key")
+    monkeypatch.setattr(module, "get_serial", lambda _device: "SERIAL")
 
     def _caps_ctap(_preparsed, caps_ptr):
         caps_ptr._obj.UsagePage = module.FIDO_USAGE_PAGE
@@ -110,7 +110,7 @@ def test_hid_windows_get_descriptor_success_and_non_ctap_failure(monkeypatch):
         caps_ptr._obj.OutputReportByteLength = 65
         return module.HIDP_STATUS_SUCCESS
 
-    monkeypatch.setattr(module.hid, "HidP_GetCaps", _caps_ctap, raising=False)
+    monkeypatch.setattr(module.hid, "HidP_GetCaps", _caps_ctap)
 
     descriptor = module.get_descriptor(b"device-path")
     assert descriptor.path == b"device-path"
@@ -126,7 +126,7 @@ def test_hid_windows_get_descriptor_success_and_non_ctap_failure(monkeypatch):
         caps_ptr._obj.OutputReportByteLength = 64
         return module.HIDP_STATUS_SUCCESS
 
-    monkeypatch.setattr(module.hid, "HidP_GetCaps", _caps_non_ctap, raising=False)
+    monkeypatch.setattr(module.hid, "HidP_GetCaps", _caps_non_ctap)
 
     with pytest.raises(ValueError, match="Not a CTAP device"):
         module.get_descriptor(b"device-path")
@@ -145,8 +145,8 @@ def test_hid_windows_connection_write_and_read_packet_contracts(monkeypatch):
         serial_number="SERIAL",
     )
 
-    monkeypatch.setattr(module.kernel32, "CreateFileA", lambda *_args, **_kwargs: 99, raising=False)
-    monkeypatch.setattr(module.kernel32, "CloseHandle", lambda _handle: True, raising=False)
+    monkeypatch.setattr(module.kernel32, "CreateFileA", lambda *_args, **_kwargs: 99)
+    monkeypatch.setattr(module.kernel32, "CloseHandle", lambda _handle: True)
 
     def _write_file(_handle, out_buf, out_len, num_written_ptr, _overlapped):
         num_written_ptr._obj.value = out_len
@@ -158,8 +158,8 @@ def test_hid_windows_connection_write_and_read_packet_contracts(monkeypatch):
         num_read_ptr._obj.value = buf_len
         return True
 
-    monkeypatch.setattr(module.kernel32, "WriteFile", _write_file, raising=False)
-    monkeypatch.setattr(module.kernel32, "ReadFile", _read_file, raising=False)
+    monkeypatch.setattr(module.kernel32, "WriteFile", _write_file)
+    monkeypatch.setattr(module.kernel32, "ReadFile", _read_file)
 
     connection = module.WinCtapHidConnection(descriptor)
     connection.write_packet(b"B" * 64)
@@ -181,14 +181,14 @@ def test_hid_windows_write_packet_raises_when_partial_write_occurs(monkeypatch):
         serial_number="SERIAL",
     )
 
-    monkeypatch.setattr(module.kernel32, "CreateFileA", lambda *_args, **_kwargs: 99, raising=False)
-    monkeypatch.setattr(module.kernel32, "CloseHandle", lambda _handle: True, raising=False)
+    monkeypatch.setattr(module.kernel32, "CreateFileA", lambda *_args, **_kwargs: 99)
+    monkeypatch.setattr(module.kernel32, "CloseHandle", lambda _handle: True)
 
     def _short_write(_handle, _out_buf, out_len, num_written_ptr, _overlapped):
         num_written_ptr._obj.value = out_len - 1
         return True
 
-    monkeypatch.setattr(module.kernel32, "WriteFile", _short_write, raising=False)
+    monkeypatch.setattr(module.kernel32, "WriteFile", _short_write)
 
     connection = module.WinCtapHidConnection(descriptor)
     with pytest.raises(OSError, match="Failed to write complete packet"):

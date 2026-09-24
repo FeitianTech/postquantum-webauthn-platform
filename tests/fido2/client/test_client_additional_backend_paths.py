@@ -77,7 +77,7 @@ def _make_ctap2_backend(monkeypatch, *, extensions=None):
             )
         ],
     )
-    monkeypatch.setattr(client_mod, "Ctap2", lambda _device: ctap2, raising=False)
+    monkeypatch.setattr(client_mod, "Ctap2", lambda _device: ctap2)
     backend = client_mod._Ctap2ClientBackend(object(), _UI(), extensions or [])
     return backend, ctap2
 
@@ -104,7 +104,7 @@ def test_ctap1_do_get_assertion_timeout_and_device_ineligible_paths(monkeypatch)
         calls["count"] += 1
         raise client_mod.ClientError.ERR.BAD_REQUEST()
 
-    monkeypatch.setattr(client_mod, "_call_polling", _polling, raising=False)
+    monkeypatch.setattr(client_mod, "_call_polling", _polling)
 
     with pytest.raises(client_mod.ClientError) as ineligible:
         backend.do_get_assertion(options, client_data, "example.com", None)
@@ -115,7 +115,6 @@ def test_ctap1_do_get_assertion_timeout_and_device_ineligible_paths(monkeypatch)
         client_mod,
         "_call_polling",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(client_mod.ClientError.ERR.TIMEOUT()),
-        raising=False,
     )
     with pytest.raises(client_mod.ClientError) as timeout_err:
         backend.do_get_assertion(options, client_data, "example.com", None)
@@ -152,9 +151,9 @@ def test_ctap2_do_make_credential_extension_output_and_error_paths(monkeypatch):
         def __init__(self, **kwargs):
             self.__dict__.update(kwargs)
 
-    monkeypatch.setattr(client_mod, "AuthenticatorAttestationResponse", _Obj, raising=False)
-    monkeypatch.setattr(client_mod, "RegistrationResponse", _Obj, raising=False)
-    monkeypatch.setattr(client_mod, "AuthenticationExtensionsClientOutputs", lambda value: value, raising=False)
+    monkeypatch.setattr(client_mod, "AuthenticatorAttestationResponse", _Obj)
+    monkeypatch.setattr(client_mod, "RegistrationResponse", _Obj)
+    monkeypatch.setattr(client_mod, "AuthenticationExtensionsClientOutputs", lambda value: value)
     monkeypatch.setattr(
         client_mod,
         "AttestationObject",
@@ -165,7 +164,6 @@ def test_ctap2_do_make_credential_extension_output_and_error_paths(monkeypatch):
                 )
             )
         ),
-        raising=False,
     )
 
     response = backend.do_make_credential(
@@ -184,9 +182,9 @@ def test_ctap2_do_make_credential_extension_output_and_error_paths(monkeypatch):
     backend_err, _ctap2_err = _make_ctap2_backend(monkeypatch, extensions=[_Extension(output_error=True)])
     backend_err._get_auth_params = lambda *_args, **_kwargs: (None, False)
     backend_err._filter_creds = lambda *_args, **_kwargs: None
-    monkeypatch.setattr(client_mod, "AuthenticatorAttestationResponse", _Obj, raising=False)
-    monkeypatch.setattr(client_mod, "RegistrationResponse", _Obj, raising=False)
-    monkeypatch.setattr(client_mod, "AuthenticationExtensionsClientOutputs", lambda value: value, raising=False)
+    monkeypatch.setattr(client_mod, "AuthenticatorAttestationResponse", _Obj)
+    monkeypatch.setattr(client_mod, "RegistrationResponse", _Obj)
+    monkeypatch.setattr(client_mod, "AuthenticationExtensionsClientOutputs", lambda value: value)
     monkeypatch.setattr(
         client_mod,
         "AttestationObject",
@@ -197,7 +195,6 @@ def test_ctap2_do_make_credential_extension_output_and_error_paths(monkeypatch):
                 )
             )
         ),
-        raising=False,
     )
 
     with pytest.raises(client_mod.ClientError) as config_err:
@@ -305,9 +302,9 @@ def test_fido2client_get_assertion_starts_and_cancels_timeout_timer(monkeypatch)
         )
     )
 
-    monkeypatch.setattr(client_mod, "_Ctap2ClientBackend", lambda *_args, **_kwargs: backend, raising=False)
-    monkeypatch.setattr(client_mod, "_Ctap1ClientBackend", lambda *_args, **_kwargs: backend, raising=False)
-    monkeypatch.setattr(client_mod, "Timer", _FakeTimer, raising=False)
+    monkeypatch.setattr(client_mod, "_Ctap2ClientBackend", lambda *_args, **_kwargs: backend)
+    monkeypatch.setattr(client_mod, "_Ctap1ClientBackend", lambda *_args, **_kwargs: backend)
+    monkeypatch.setattr(client_mod, "Timer", _FakeTimer)
 
     client = client_mod.Fido2Client(object(), collector)
     result = client.get_assertion(_request_options(timeout=25))
@@ -358,13 +355,11 @@ def test_ctap1_do_get_assertion_success_path_and_ctap2_filter_multiple_matches(m
         client_mod,
         "_call_polling",
         lambda *_args, **_kwargs: b"auth-response",
-        raising=False,
     )
     monkeypatch.setattr(
         client_mod.AssertionResponse,
         "from_ctap1",
         staticmethod(lambda *_args, **_kwargs: assertion),
-        raising=False,
     )
 
     selection = backend.do_get_assertion(

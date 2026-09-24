@@ -22,13 +22,11 @@ def test_main_bootstraps_metadata_and_starts_tls_server(monkeypatch):
         app_module,
         "general",
         types.SimpleNamespace(ensure_metadata_bootstrapped=_bootstrap),
-        raising=False,
     )
     monkeypatch.setattr(
         app_module,
         "app",
         types.SimpleNamespace(run=_run),
-        raising=False,
     )
 
     app_module.main()
@@ -50,13 +48,11 @@ def test_main_skips_bootstrap_when_hook_is_not_callable(monkeypatch):
         app_module,
         "general",
         types.SimpleNamespace(ensure_metadata_bootstrapped="not-callable"),
-        raising=False,
     )
     monkeypatch.setattr(
         app_module,
         "app",
         types.SimpleNamespace(run=lambda **kwargs: runs.append(kwargs)),
-        raising=False,
     )
 
     app_module.main()

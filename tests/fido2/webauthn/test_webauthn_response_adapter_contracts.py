@@ -83,7 +83,7 @@ def test_collected_client_data_hashing_and_string_representation():
 
 
 def test_attestation_and_assertion_response_from_dict_clientdata_alias_paths(monkeypatch):
-    monkeypatch.setattr(webauthn_json_mapping, "_enabled", False, raising=False)
+    monkeypatch.setattr(webauthn_json_mapping, "_enabled", False)
 
     client_data = CollectedClientData.create(
         CollectedClientData.TYPE.CREATE.value,

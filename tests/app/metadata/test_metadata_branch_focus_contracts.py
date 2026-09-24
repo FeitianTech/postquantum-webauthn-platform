@@ -152,13 +152,11 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
         sessions.logger,
         "error",
         lambda *args, **kwargs: errors.append((args, kwargs)),
-        raising=False,
     )
     monkeypatch.setattr(
         session_store,
         "ensure_session",
         lambda _sid: (_ for _ in ()).throw(RuntimeError("ensure failed")),
-        raising=False,
     )
 
     with pytest.raises(RuntimeError, match="ensure failed"):
@@ -168,7 +166,6 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
         session_store,
         "ensure_session",
         lambda _sid: None,
-        raising=False,
     )
     assert (
         metadata_module._session_metadata_directory("session-a", create=True, cleanup=False)
@@ -180,7 +177,6 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
         session_store,
         "touch_last_access",
         lambda _sid: (_ for _ in ()).throw(RuntimeError("touch failed")),
-        raising=False,
     )
     metadata_module._touch_session_last_access("session-a")
 
@@ -188,7 +184,6 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
         session_store,
         "resolve_last_access",
         lambda _sid: (_ for _ in ()).throw(RuntimeError("resolve failed")),
-        raising=False,
     )
     assert metadata_module._resolve_session_last_access("session-a") is None
 
@@ -205,7 +200,6 @@ def test_env_interval_upload_and_normalisation_error_edges(metadata_module, monk
         sessions.logger,
         "warning",
         lambda *args, **kwargs: warnings.append((args, kwargs)),
-        raising=False,
     )
     monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "bad-seconds")
     monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "bad-hours")
@@ -350,13 +344,11 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
         session_store,
         "list_files",
         lambda _sid: ["entry.json"],
-        raising=False,
     )
     monkeypatch.setattr(
         session_store,
         "read_file",
         lambda _sid, _name: json.dumps(_minimal_entry_payload()).encode("utf-8"),
-        raising=False,
     )
     monkeypatch.setattr(
         sessions,
@@ -370,7 +362,6 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
         session_store,
         "file_mtime",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("mtime failed")),
-        raising=False,
     )
 
     listed = metadata_module.list_session_metadata_items("session-a")
@@ -387,7 +378,6 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
         session_store,
         "file_exists",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("exists failed")),
-        raising=False,
     )
     assert metadata_module.delete_session_metadata_item("entry.json", session_id="session-a") is False
 
@@ -402,13 +392,11 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
         session_store,
         "file_exists",
         lambda *_args, **_kwargs: True,
-        raising=False,
     )
     monkeypatch.setattr(
         session_store,
         "delete_file",
         _delete_file,
-        raising=False,
     )
     monkeypatch.setattr(sessions, "_prune_session_metadata_directory", lambda *_args, **_kwargs: None)
 
@@ -466,7 +454,6 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
         os,
         "makedirs",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("mkdir failed")),
-        raising=False,
     )
     metadata_module._store_metadata_cache_entry(
         last_modified_header="x",
@@ -506,7 +493,6 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
         os.path,
         "getmtime",
         lambda _path: (_ for _ in ()).throw(OSError("mtime missing")),
-        raising=False,
     )
     monkeypatch.setattr(blob, "_load_verified_metadata_fallback", lambda: (None, None))
     metadata_value, marker = metadata_module._load_base_metadata()
@@ -535,7 +521,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     }
     verified_path.write_text(json.dumps(verified_payload), encoding="utf-8")
 
-    monkeypatch.setattr(os.path, "getmtime", lambda path: 20.0 if path == str(verified_path) else 10.0, raising=False)
+    monkeypatch.setattr(os.path, "getmtime", lambda path: 20.0 if path == str(verified_path) else 10.0)
     explorer_cache_marker = (10.0, 20.0)
     monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_cache", {"meta": {"entryCount": 9}})
     monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_mtime", explorer_cache_marker)
@@ -565,7 +551,6 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
         os.path,
         "getmtime",
         lambda _path: (_ for _ in ()).throw(OSError("missing mtime")),
-        raising=False,
     )
     monkeypatch.setattr(metadata_state, "_base_full_snapshot_cache", None)
     monkeypatch.setattr(metadata_state, "_base_full_snapshot_mtime", None)

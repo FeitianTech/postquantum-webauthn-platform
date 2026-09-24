@@ -18,13 +18,11 @@ def test_deletepub_and_downloadcred_contracts(monkeypatch):
         general_module,
         "ensure_metadata_session_id",
         lambda: "session-123",
-        raising=False,
     )
     monkeypatch.setattr(
         general_module,
         "delkey",
         lambda email, session_id=None: deleted.append((email, session_id)),
-        raising=False,
     )
     monkeypatch.setattr(
         general_module,
@@ -32,7 +30,6 @@ def test_deletepub_and_downloadcred_contracts(monkeypatch):
         lambda email, session_id=None: (
             stored_credentials if email == "user@example.com" and session_id == "session-123" else None
         ),
-        raising=False,
     )
 
     with config_module.app.test_client() as client:
@@ -79,8 +76,8 @@ def test_decode_and_certificate_routes_cover_error_and_success_paths(monkeypatch
             raise ValueError("certificate parse failed")
         return {"length": len(certificate_bytes), "hex": certificate_bytes.hex()}
 
-    monkeypatch.setattr(general_module, "decode_payload_text", _fake_decode, raising=False)
-    monkeypatch.setattr(general_module, "serialize_attestation_certificate", _fake_serialize, raising=False)
+    monkeypatch.setattr(general_module, "decode_payload_text", _fake_decode)
+    monkeypatch.setattr(general_module, "serialize_attestation_certificate", _fake_serialize)
 
     bad_cert_b64 = base64.b64encode(b"bad-cert").decode("ascii")
     good_cert_unpadded = base64.b64encode(b"good-cert").decode("ascii").rstrip("=")
@@ -156,7 +153,7 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
 
     with config_module.app.test_client() as client:
         missing_path = tmp_path / "missing.json"
-        monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(missing_path), raising=False)
+        monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(missing_path))
 
         missing_response = client.get("/api/mds/metadata/base")
         assert missing_response.status_code == 404
@@ -166,7 +163,7 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
 
         corrupted_path = tmp_path / "corrupted.json"
         corrupted_path.write_text("{bad", encoding="utf-8")
-        monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(corrupted_path), raising=False)
+        monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(corrupted_path))
 
         corrupted_response = client.get("/api/mds/metadata/base")
         assert corrupted_response.status_code == 500
@@ -177,7 +174,7 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
         valid_path = tmp_path / "valid.json"
         valid_payload = {"entries": [{"entryId": "test-entry"}]}
         valid_path.write_text('{"entries":[{"entryId":"test-entry"}]}', encoding="utf-8")
-        monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(valid_path), raising=False)
+        monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(valid_path))
 
         valid_response = client.get("/api/mds/metadata/base")
         assert valid_response.status_code == 200
@@ -188,19 +185,16 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
             general_module,
             "ensure_metadata_session_id",
             lambda: session_calls.append("called") or "session-abc",
-            raising=False,
         )
         monkeypatch.setattr(
             general_module,
             "list_session_metadata_items",
             lambda: [{"storedFilename": "one.json"}],
-            raising=False,
         )
         monkeypatch.setattr(
             general_module,
             "serialize_session_metadata_item",
             lambda item: {"storedFilename": item["storedFilename"], "label": "demo"},
-            raising=False,
         )
 
         list_response = client.get("/api/mds/metadata/custom")
@@ -235,10 +229,10 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
                 raise self._exc
             return self._data
 
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-abc", raising=False)
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-abc")
 
     with config_module.app.app_context():
-        monkeypatch.setattr(general_module, "request", SimpleNamespace(files=None), raising=False)
+        monkeypatch.setattr(general_module, "request", SimpleNamespace(files=None))
         response, status = _unpack(general_module.api_upload_custom_metadata())
         assert status == 400
         assert response.get_json() == {
@@ -249,8 +243,7 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
         monkeypatch.setattr(
             general_module,
             "request",
-            SimpleNamespace(files=_Files([_Storage("note.txt", b"{}")])) ,
-            raising=False,
+            SimpleNamespace(files=_Files([_Storage("note.txt", b"{}")])),
         )
         response, status = _unpack(general_module.api_upload_custom_metadata())
         assert status == 400
@@ -263,7 +256,6 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
             general_module,
             "request",
             SimpleNamespace(files=_Files([_Storage("bad.json", exc=RuntimeError("disk read failed"))])),
-            raising=False,
         )
         response, status = _unpack(general_module.api_upload_custom_metadata())
         assert status == 400
@@ -275,8 +267,7 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
         monkeypatch.setattr(
             general_module,
             "request",
-            SimpleNamespace(files=_Files([_Storage("utf8.json", b"\xff")])) ,
-            raising=False,
+            SimpleNamespace(files=_Files([_Storage("utf8.json", b"\xff")])),
         )
         response, status = _unpack(general_module.api_upload_custom_metadata())
         assert status == 400
@@ -288,8 +279,7 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
         monkeypatch.setattr(
             general_module,
             "request",
-            SimpleNamespace(files=_Files([_Storage("syntax.json", b"{not-json")])) ,
-            raising=False,
+            SimpleNamespace(files=_Files([_Storage("syntax.json", b"{not-json")])),
         )
         response, status = _unpack(general_module.api_upload_custom_metadata())
         assert status == 400
@@ -299,8 +289,7 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
         monkeypatch.setattr(
             general_module,
             "request",
-            SimpleNamespace(files=_Files([_Storage("array.json", b"[]")])) ,
-            raising=False,
+            SimpleNamespace(files=_Files([_Storage("array.json", b"[]")])),
         )
         response, status = _unpack(general_module.api_upload_custom_metadata())
         assert status == 400
@@ -313,13 +302,11 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
             general_module,
             "expand_metadata_entry_payloads",
             lambda _payload: (_ for _ in ()).throw(ValueError("bad metadata object")),
-            raising=False,
         )
         monkeypatch.setattr(
             general_module,
             "request",
-            SimpleNamespace(files=_Files([_Storage("expand.json", b"{}")])) ,
-            raising=False,
+            SimpleNamespace(files=_Files([_Storage("expand.json", b"{}")])),
         )
         response, status = _unpack(general_module.api_upload_custom_metadata())
         assert status == 400
@@ -332,13 +319,11 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
             general_module,
             "expand_metadata_entry_payloads",
             lambda _payload: [{"entry": 1}, {"entry": 2}],
-            raising=False,
         )
         monkeypatch.setattr(
             general_module,
             "maybe_store_uploaded_metadata_file",
             lambda *_args, **_kwargs: None,
-            raising=False,
         )
 
         def _save_item(entry_payload, original_filename=None):
@@ -346,24 +331,21 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
                 raise ValueError("duplicate entry")
             return {"storedFilename": "stored-2.json", "originalFilename": original_filename}
 
-        monkeypatch.setattr(general_module, "save_session_metadata_item", _save_item, raising=False)
+        monkeypatch.setattr(general_module, "save_session_metadata_item", _save_item)
         monkeypatch.setattr(
             general_module,
             "serialize_session_metadata_item",
             lambda item: item,
-            raising=False,
         )
         monkeypatch.setattr(
             general_module,
             "load_effective_full_snapshot",
             lambda: {"meta": {"entryCount": 1}},
-            raising=False,
         )
         monkeypatch.setattr(
             general_module,
             "request",
-            SimpleNamespace(files=_Files([_Storage("mixed.json", b"{}")])) ,
-            raising=False,
+            SimpleNamespace(files=_Files([_Storage("mixed.json", b"{}")])),
         )
         response, status = _unpack(general_module.api_upload_custom_metadata())
         payload = response.get_json()
@@ -381,26 +363,23 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
             general_module,
             "save_session_metadata_item",
             lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("persistence down")),
-            raising=False,
         )
         monkeypatch.setattr(
             general_module,
             "request",
-            SimpleNamespace(files=_Files([_Storage("fatal.json", b"{}")])) ,
-            raising=False,
+            SimpleNamespace(files=_Files([_Storage("fatal.json", b"{}")])),
         )
         response, status = _unpack(general_module.api_upload_custom_metadata())
         assert status == 500
         assert response.get_json() == {"error": "persistence down"}
 
     with config_module.app.test_client() as client:
-        monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-abc", raising=False)
+        monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-abc")
 
         monkeypatch.setattr(
             general_module,
             "delete_session_metadata_item",
             lambda _name: (_ for _ in ()).throw(ValueError("invalid filename")),
-            raising=False,
         )
         delete_value_error = client.delete("/api/mds/metadata/custom/invalid")
         assert delete_value_error.status_code == 400
@@ -410,7 +389,6 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
             general_module,
             "delete_session_metadata_item",
             lambda _name: (_ for _ in ()).throw(RuntimeError("storage unavailable")),
-            raising=False,
         )
         delete_runtime_error = client.delete("/api/mds/metadata/custom/invalid")
         assert delete_runtime_error.status_code == 500
@@ -420,7 +398,6 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
             general_module,
             "delete_session_metadata_item",
             lambda _name: False,
-            raising=False,
         )
         delete_not_found = client.delete("/api/mds/metadata/custom/missing.json")
         assert delete_not_found.status_code == 404
@@ -445,7 +422,7 @@ def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
     monkeypatch.setenv(flag_name, "yes")
     assert general_module._env_flag(flag_name) is True
 
-    monkeypatch.setattr(general_module, "startup_fail_fast_enabled", lambda: True, raising=False)
+    monkeypatch.setattr(general_module, "startup_fail_fast_enabled", lambda: True)
     monkeypatch.setenv(general_module._INDEX_EAGER_METADATA_ENV_FLAG, "0")
     assert general_module._should_bootstrap_metadata_on_index() is False
     monkeypatch.setenv(general_module._INDEX_EAGER_METADATA_ENV_FLAG, "1")
@@ -457,21 +434,21 @@ def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
         "marker": None,
         "cache_loaded": False,
     }
-    monkeypatch.setattr(general_module, "_metadata_bootstrap_state", state, raising=False)
+    monkeypatch.setattr(general_module, "_metadata_bootstrap_state", state)
 
-    monkeypatch.setattr(general_module, "load_cached_metadata_snapshot", lambda: {}, raising=False)
+    monkeypatch.setattr(general_module, "load_cached_metadata_snapshot", lambda: {})
     general_module._load_cached_metadata_snapshot_if_available()
     assert state["cache_loaded"] is False
 
-    monkeypatch.setattr(general_module, "load_cached_metadata_snapshot", lambda: {"meta": {}}, raising=False)
+    monkeypatch.setattr(general_module, "load_cached_metadata_snapshot", lambda: {"meta": {}})
     general_module._load_cached_metadata_snapshot_if_available()
     assert state["cache_loaded"] is True
     general_module._load_cached_metadata_snapshot_if_available()
     assert state["cache_loaded"] is True
 
     load_calls = []
-    monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: load_calls.append("load"), raising=False)
-    monkeypatch.setattr(config_module.app, "debug", True, raising=False)
+    monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: load_calls.append("load"))
+    monkeypatch.setattr(config_module.app, "debug", True)
     monkeypatch.delenv("WERKZEUG_RUN_MAIN", raising=False)
     with config_module.app.app_context():
         general_module.ensure_metadata_bootstrapped(skip_if_reloader_parent=True)
@@ -487,16 +464,14 @@ def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
             "marker": today,
             "cache_loaded": False,
         },
-        raising=False,
     )
-    monkeypatch.setattr(config_module.app, "debug", False, raising=False)
+    monkeypatch.setattr(config_module.app, "debug", False)
     load_calls.clear()
-    monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: load_calls.append("load"), raising=False)
+    monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: load_calls.append("load"))
     monkeypatch.setattr(
         general_module,
         "_load_base_metadata",
         lambda: (_ for _ in ()).throw(AssertionError("_load_base_metadata should not be called")),
-        raising=False,
     )
     general_module.ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
     assert load_calls == ["load"]
@@ -511,26 +486,25 @@ def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
             "marker": None,
             "cache_loaded": False,
         },
-        raising=False,
     )
-    monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: None, raising=False)
-    monkeypatch.setattr(general_module, "_load_base_metadata", lambda: (None, None), raising=False)
-    monkeypatch.setattr(general_module, "_mark_bootstrap_completed_for_today", lambda: marked.append(True), raising=False)
+    monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: None)
+    monkeypatch.setattr(general_module, "_load_base_metadata", lambda: (None, None))
+    monkeypatch.setattr(general_module, "_mark_bootstrap_completed_for_today", lambda: marked.append(True))
     general_module.ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
     assert marked == [True]
 
     with config_module.app.test_client() as client:
-        monkeypatch.setattr(general_module, "_should_bootstrap_metadata_on_index", lambda: False, raising=False)
-        monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
-        monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {}, raising=False)
-        monkeypatch.setattr(general_module, "render_template", lambda *_args, **_kwargs: "index-body", raising=False)
+        monkeypatch.setattr(general_module, "_should_bootstrap_metadata_on_index", lambda: False)
+        monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
+        monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {})
+        monkeypatch.setattr(general_module, "render_template", lambda *_args, **_kwargs: "index-body")
         index_response = client.get("/")
         assert index_response.status_code == 200
         assert index_response.get_data(as_text=True) == "index-body"
 
-        monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
-        monkeypatch.setattr(general_module, "load_effective_explorer_snapshot", lambda: {}, raising=False)
-        monkeypatch.setattr(general_module, "load_effective_full_snapshot", lambda: {}, raising=False)
+        monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
+        monkeypatch.setattr(general_module, "load_effective_explorer_snapshot", lambda: {})
+        monkeypatch.setattr(general_module, "load_effective_full_snapshot", lambda: {})
 
         explorer_missing = client.get("/api/mds/metadata/explorer")
         assert explorer_missing.status_code == 404
@@ -566,24 +540,22 @@ def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
             return response, status
         return result, result.status_code
 
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
-    monkeypatch.setattr(general_module, "expand_metadata_entry_payloads", lambda payload: [payload], raising=False)
-    monkeypatch.setattr(general_module, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: None, raising=False)
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(general_module, "expand_metadata_entry_payloads", lambda payload: [payload])
+    monkeypatch.setattr(general_module, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(
         general_module,
         "save_session_metadata_item",
         lambda _payload, original_filename=None: {"originalFilename": original_filename},
-        raising=False,
     )
-    monkeypatch.setattr(general_module, "serialize_session_metadata_item", lambda item: item, raising=False)
-    monkeypatch.setattr(general_module, "load_effective_full_snapshot", lambda: {"meta": {"entryCount": 1}}, raising=False)
+    monkeypatch.setattr(general_module, "serialize_session_metadata_item", lambda item: item)
+    monkeypatch.setattr(general_module, "load_effective_full_snapshot", lambda: {"meta": {"entryCount": 1}})
 
     with config_module.app.app_context():
         monkeypatch.setattr(
             general_module,
             "request",
-            SimpleNamespace(files=_Files([_Storage("   ", b"{}")])) ,
-            raising=False,
+            SimpleNamespace(files=_Files([_Storage("   ", b"{}")])),
         )
         response, status = _unpack(general_module.api_upload_custom_metadata())
         assert status == 200

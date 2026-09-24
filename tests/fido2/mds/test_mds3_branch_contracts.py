@@ -52,7 +52,6 @@ def test_ca_lookup_skips_unparseable_roots_before_failing(monkeypatch):
         mds3_module.x509,
         "load_der_x509_certificate",
         _load_der,
-        raising=False,
     )
 
     verifier = MdsAttestationVerifier(

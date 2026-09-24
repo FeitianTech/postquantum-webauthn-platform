@@ -14,9 +14,9 @@ provisioning = pytest.importorskip("server.app.mds_provisioning")
 def static_root(monkeypatch, tmp_path):
     """Point provisioning at an empty static directory and reset its state."""
 
-    monkeypatch.setattr(provisioning, "_FRONTEND_STATIC_ROOT", tmp_path, raising=False)
+    monkeypatch.setattr(provisioning, "_FRONTEND_STATIC_ROOT", tmp_path)
     monkeypatch.setattr(
-        provisioning, "_provision_state", {"attempted": False, "source": None}, raising=False
+        provisioning, "_provision_state", {"attempted": False, "source": None}
     )
     return tmp_path
 
