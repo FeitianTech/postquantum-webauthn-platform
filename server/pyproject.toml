@@ -25,6 +25,7 @@ dependencies = [
 dev = [
     "pytest",
     "coverage",
+    "hypothesis",                         # the codec's round-trip property tests
 ]
 
 [tool.uv]
