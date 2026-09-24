@@ -12,7 +12,7 @@ import hashlib
 import time
 import uuid
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, NamedTuple
 
 from fido2 import cbor
 
@@ -280,29 +280,38 @@ def _public_key_encodings(auth_data: Any) -> tuple[str | None, str | None]:
     return None, None
 
 
-def build_registration_material(
+class _Facts(NamedTuple):
+    credential_id_bytes: bytes
+    identifiers: tuple[Any, Any, Any]  # base64, base64url, hex
+    aaguid: tuple[Any, Any, Any]  # bytes, hex, GUID
+    flags: dict[str, bool]
+    authenticator_data: tuple[str, str]  # hex, SHA-256
+    registration_timestamp: str
+    rp_hash: dict[str, Any]
+    rp_id_hash_valid: Any
+    resident_key: bool
+    large_blob: bool
+
+
+def _registration_facts(
     *,
     auth_data: Any,
-    attestation_format: Any,
-    attestation_statement: Any,
-    attestation_certificate_details: Any,
-    attestation_certificates_details: Any,
-    client_extension_results: Any,
     credential_info: dict[str, Any],
-    response: Any,
-    user_handle: bytes,
+    client_extension_results: Any,
     resolved_rp_id: str,
     resident_key_required: bool,
     attestation_rp_id_hash_valid: Any,
-    attestation_checks_safe: Any,
-    attestation_summary: Any,
-) -> dict[str, Any]:
+) -> _Facts:
+    """What authData and the extension outputs say, recorded into the credential's properties."""
+
     properties = credential_info["properties"]
     credential_data = auth_data.credential_data
     credential_id_bytes = getattr(credential_data, "credential_id", b"") or b""
-    credential_id_hex = credential_id_bytes.hex() if credential_id_bytes else None
-    credential_id_b64 = encode_base64(credential_id_bytes) if credential_id_bytes else None
-    credential_id_b64url = encode_base64url(credential_id_bytes) if credential_id_bytes else None
+    identifiers = (
+        encode_base64(credential_id_bytes) if credential_id_bytes else None,
+        encode_base64url(credential_id_bytes) if credential_id_bytes else None,
+        credential_id_bytes.hex() if credential_id_bytes else None,
+    )
 
     aaguid_bytes, aaguid_hex, aaguid_guid = _aaguid_values(credential_data)
     if aaguid_hex:
@@ -333,13 +342,42 @@ def build_registration_material(
     credential_info["resident_key"] = bool(resident_key_result)
     properties["authenticatorDataHash"] = authenticator_data_hash
 
-    large_blob_result = _large_blob_result(client_extension_results)
+    return _Facts(
+        credential_id_bytes=credential_id_bytes,
+        identifiers=identifiers,
+        aaguid=(aaguid_bytes, aaguid_hex, aaguid_guid),
+        flags=flags_dict,
+        authenticator_data=(authenticator_data_hex, authenticator_data_hash),
+        registration_timestamp=registration_timestamp,
+        rp_hash=rp_hash,
+        rp_id_hash_valid=attestation_rp_id_hash_valid,
+        resident_key=resident_key_result,
+        large_blob=_large_blob_result(client_extension_results),
+    )
 
-    rp_info = {
+
+def _relying_party_info(
+    facts: _Facts,
+    *,
+    auth_data: Any,
+    attestation_format: Any,
+    credential_info: Mapping[str, Any],
+    client_extension_results: Any,
+    attestation_checks_safe: Any,
+    attestation_summary: Any,
+    user_handle: bytes,
+) -> dict[str, Any]:
+    """The relying party's view of the registration, as the response reports it."""
+
+    credential_id_b64, credential_id_b64url, credential_id_hex = facts.identifiers
+    _aaguid_bytes, aaguid_hex, aaguid_guid = facts.aaguid
+    authenticator_data_hex, authenticator_data_hash = facts.authenticator_data
+    rp_hash = facts.rp_hash
+    return {
         "aaguid": {"raw": aaguid_hex, "guid": aaguid_guid},
         "attestationFmt": attestation_format,
         "attestationObject": credential_info.get("attestation_object"),
-        "createdAt": registration_timestamp,
+        "createdAt": facts.registration_timestamp,
         "credentialId": credential_id_hex,
         "credentialIdBase64": credential_id_b64,
         "credentialIdBase64Url": credential_id_b64url,
@@ -347,21 +385,21 @@ def build_registration_material(
         "rpIdHashBase64": rp_hash["base64url"],
         "rpIdHashExpected": rp_hash["expectedHex"],
         "rpIdHashExpectedBase64": rp_hash["expectedBase64url"],
-        "rpIdHashMatch": bool(attestation_rp_id_hash_valid),
+        "rpIdHashMatch": bool(facts.rp_id_hash_valid),
         "authenticatorDataHash": authenticator_data_hash,
         "device": {"name": "Unknown device", "type": "unknown"},
-        "largeBlob": large_blob_result,
+        "largeBlob": facts.large_blob,
         "publicKeyAlgorithm": credential_info.get("publicKeyAlgorithm"),
         "registrationData": {
             "authenticatorData": authenticator_data_hex,
             "authenticatorDataHash": authenticator_data_hash,
             "clientExtensionResults": credentials.convert_bytes_for_json(client_extension_results),
-            "flags": flags_dict,
+            "flags": facts.flags,
             "signatureCounter": auth_data.counter,
             "attestationChecks": attestation_checks_safe,
             "attestationSummary": attestation_summary,
         },
-        "residentKey": resident_key_result,
+        "residentKey": facts.resident_key,
         "userHandle": {
             "base64": encode_base64(user_handle),
             "base64url": encode_base64url(user_handle),
@@ -369,6 +407,42 @@ def build_registration_material(
         },
     }
 
+
+def build_registration_material(
+    *,
+    auth_data: Any,
+    attestation_format: Any,
+    attestation_statement: Any,
+    attestation_certificate_details: Any,
+    attestation_certificates_details: Any,
+    client_extension_results: Any,
+    credential_info: dict[str, Any],
+    response: Any,
+    user_handle: bytes,
+    resolved_rp_id: str,
+    resident_key_required: bool,
+    attestation_rp_id_hash_valid: Any,
+    attestation_checks_safe: Any,
+    attestation_summary: Any,
+) -> dict[str, Any]:
+    facts = _registration_facts(
+        auth_data=auth_data,
+        credential_info=credential_info,
+        client_extension_results=client_extension_results,
+        resolved_rp_id=resolved_rp_id,
+        resident_key_required=resident_key_required,
+        attestation_rp_id_hash_valid=attestation_rp_id_hash_valid,
+    )
+    rp_info = _relying_party_info(
+        facts,
+        auth_data=auth_data,
+        attestation_format=attestation_format,
+        credential_info=credential_info,
+        client_extension_results=client_extension_results,
+        attestation_checks_safe=attestation_checks_safe,
+        attestation_summary=attestation_summary,
+        user_handle=user_handle,
+    )
     if attestation_certificate_details:
         rp_info["attestationCertificate"] = attestation_certificate_details
     if attestation_certificates_details:
@@ -384,18 +458,18 @@ def build_registration_material(
         client_extension_results=client_extension_results,
         rp_info=rp_info,
         user_handle=user_handle,
-        identifiers=(credential_id_b64, credential_id_b64url, credential_id_hex),
-        aaguid=(aaguid_bytes, aaguid_hex, aaguid_guid),
-        resident_key_result=resident_key_result,
-        large_blob_result=large_blob_result,
-        authenticator_data=(authenticator_data_hex, authenticator_data_hash),
+        identifiers=facts.identifiers,
+        aaguid=facts.aaguid,
+        resident_key_result=facts.resident_key,
+        large_blob_result=facts.large_blob,
+        authenticator_data=facts.authenticator_data,
     )
 
     return {
         "storedCredential": stored_credential,
         "rpInfo": rp_info,
-        "credentialIdBytes": credential_id_bytes,
-        "aaguidBytes": aaguid_bytes,
+        "credentialIdBytes": facts.credential_id_bytes,
+        "aaguidBytes": facts.aaguid[0],
     }
 
 
