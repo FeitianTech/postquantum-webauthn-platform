@@ -6,6 +6,8 @@ from typing import Any
 
 from fido2.utils import ByteBuffer
 
+from .cbor_parser import CborDiagnostic
+
 MISSING = object()
 
 
@@ -112,6 +114,8 @@ def stringify_mapping_keys(value: Any) -> Any:
 
 
 def make_hex_only(value: Any) -> Any:
+    if isinstance(value, CborDiagnostic):
+        return {"diagnostic": value.diagnostic}
     if isinstance(value, ByteBuffer):
         return value.getvalue().hex()
     if isinstance(value, (bytes, bytearray, memoryview)):

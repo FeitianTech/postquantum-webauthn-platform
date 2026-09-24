@@ -410,7 +410,12 @@ def _perform_decode(decoder_input: str):
     try:
         return decode_payload_text(decoder_input), 200
     except ValueError as exc:
-        return {"error": str(exc)}, 422
+        body = {"error": str(exc)}
+        # A CBOR parse error says where the input stops being well-formed.
+        for field in ("offset", "path"):
+            if hasattr(exc, field):
+                body[field] = getattr(exc, field)
+        return body, 422
     except Exception as exc:  # pylint: disable=broad-except
         logger.exception("Failed to decode payload: %s", exc)
         return {"error": "Unable to decode payload."}, 500

@@ -105,10 +105,16 @@ def test_bytes_after_an_attestation_object_are_never_read_as_its_signature():
     assert result["malformed"]
 
 
-def test_the_get_assertion_dump_with_a_lost_byte_is_not_given_a_signature():
-    result = _decode(ES256_GET_ASSERTION_DUMP)
+def test_the_get_assertion_dump_with_a_lost_byte_fails_where_it_runs_out():
+    # With the 0x03 key swallowed by authData, the signature is read as a map
+    # key and the user entity as its value -- and the user map's own lost byte
+    # leaves its last key without a value. Nothing is assembled from the
+    # pieces: the decode fails at the last byte, saying which item ran out.
+    decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    items = list(_walk_items(result))
-    assert not any("signature" in str(key) and item is not None for key, item in items)
-    assert "signatureLength" not in result["data"].get("ctap", {})
-    assert "GetAssertion response" not in result["type"]
+    with pytest.raises(ValueError) as caught:
+        decode_module.decode_payload_text(ES256_GET_ASSERTION_DUMP)
+
+    assert caught.value.offset == len(ES256_GET_ASSERTION_DUMP) // 2 - 1
+    assert caught.value.path.startswith("${h'3045022100aad84e")
+    assert caught.value.reason == "map key 1 has no value"

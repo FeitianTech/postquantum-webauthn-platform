@@ -121,14 +121,6 @@ def test_stringify_and_hex_helpers_convert_nested_values():
     assert decode_module._hex_json_safe(payload) == hex_only
 
 
-def test_json_safe_with_stringified_keys_wraps_make_json_safe(monkeypatch, ctap):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    monkeypatch.setattr(ctap, "make_json_safe", lambda _value: {1: "ok", 2: "yes"})
-
-    assert decode_module._json_safe_with_stringified_keys(object()) == {"1": "ok", "2": "yes"}
-
-
 def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, pipeline, response):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
@@ -222,7 +214,7 @@ def test_decode_binary_field_and_try_parse_json_handle_invalid_inputs(monkeypatc
     assert decode_module._try_parse_json(None) is None
 
 
-def test_decode_binary_payload_prefers_pem_and_json_and_then_binary_fallback(monkeypatch, pipeline, ctap):
+def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(monkeypatch, pipeline):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(pipeline, "_try_decode_utf8", lambda _data: "-----BEGIN CERTIFICATE-----")
@@ -251,11 +243,8 @@ def test_decode_binary_payload_prefers_pem_and_json_and_then_binary_fallback(mon
     monkeypatch.setattr(pipeline, "_try_decode_certificate_bytes", lambda _data, _enc: None)
     monkeypatch.setattr(pipeline, "_try_decode_attestation_object", lambda _data, _enc: None)
     monkeypatch.setattr(pipeline, "_try_decode_authenticator_data", lambda _data, _enc: None)
-    monkeypatch.setattr(ctap, "_try_decode_cbor", lambda _data, _enc: None)
 
-    fallback_result = decode_module._decode_binary_payload(b"abc", "hex")
-    assert fallback_result == {
-        "format": "Binary data",
-        "inputEncoding": "hex",
-        "decoded": {"hex": "616263"},
-    }
+    # What nothing else claims is read as CBOR. Bytes that are not CBOR fail,
+    # saying where, instead of coming back as an unexplained "Binary data".
+    with pytest.raises(ValueError, match=r"offset 0 \(\$\): byte string declares 8 bytes; 1 remain"):
+        decode_module._decode_binary_payload(b"\x48\xaa", "hex")

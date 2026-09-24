@@ -41,27 +41,35 @@ def test_decode_binary_input_rejects_invalid_binary_text():
         decode_module._decode_binary_input("g$")
 
 
-def test_parse_cbor_item_marks_truncated_byte_string():
+def test_parse_cbor_item_rejects_a_truncated_byte_string_and_keeps_its_bytes_only_when_lenient():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     # Major type 2, additional info 26 -> 4-byte length; declares 5 bytes, carries only 2.
     payload = b"\x5a\x00\x00\x00\x05\x01\x02"
 
-    node, offset = decode_module._parse_cbor_item(payload, 0)
+    with pytest.raises(decode_module._CborDecodingError, match="byte string declares 5 bytes; 2 remain"):
+        decode_module._parse_cbor_item(payload, 0)
+
+    node, offset, skipped = decode_module.decode_item(payload, lenient=True)
 
     assert offset == len(payload)
     assert node["majorType"] == 2
     assert node["type"] == "byte string"
-    assert node["length"] == 5
+    assert node["length"] == 2
+    assert node["declaredLength"] == 5
     assert node["truncated"] is True
     assert node["summary"] == "bytes[2] (truncated from 5)"
+    assert [entry["code"] for entry in skipped] == ["truncated"]
 
 
-def test_parse_cbor_item_reports_invalid_utf8_text_string():
+def test_parse_cbor_item_rejects_invalid_utf8_and_keeps_its_bytes_only_when_lenient():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     payload = b"\x63\xff\xff\xff"
-    node, offset = decode_module._parse_cbor_item(payload, 0)
+    with pytest.raises(decode_module._CborDecodingError, match="text string is not valid UTF-8"):
+        decode_module._parse_cbor_item(payload, 0)
+
+    node, offset, _ = decode_module.decode_item(payload, lenient=True)
 
     assert offset == len(payload)
     assert node["majorType"] == 3
@@ -77,18 +85,17 @@ def test_try_decode_cbor_returns_none_for_empty_data():
     assert decode_module._try_decode_cbor(b"", "hex") is None
 
 
-def test_try_decode_cbor_reports_extra_cbor_objects_as_malformed():
+def test_try_decode_cbor_reports_bytes_after_the_first_item_as_trailing():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     payload = cbor2.dumps({"a": 1}) + cbor2.dumps(2) + cbor2.dumps(3)
 
     result = decode_module._try_decode_cbor(payload, "base64url")
 
-    assert result is not None
     assert result["format"] == "CBOR"
     assert result["inputEncoding"] == "base64url"
-    malformed = result.get("malformed", [])
-    assert any("additional CBOR object" in message for message in malformed)
+    assert result["decoded"]["decodedValue"] == {"a": 1}
+    assert result["malformed"] == ["Trailing 2 byte(s) after CBOR payload."]
 
 
 def test_parse_cbor_item_rejects_break_code_outside_indefinite_container():
@@ -96,7 +103,7 @@ def test_parse_cbor_item_rejects_break_code_outside_indefinite_container():
 
     with pytest.raises(
         decode_module._CborDecodingError,
-        match="Unexpected break code outside indefinite container",
+        match=r"a break byte \(0xff\) outside an indefinite-length item",
     ):
         decode_module._parse_cbor_item(b"\xff", 0)
 
@@ -109,7 +116,7 @@ def test_parse_cbor_item_rejects_non_bytes_segment_in_indefinite_byte_string():
 
     with pytest.raises(
         decode_module._CborDecodingError,
-        match="Indefinite byte string segment is not a byte string",
+        match="a chunk of an indefinite-length byte string must be a definite-length byte string",
     ):
         decode_module._parse_cbor_item(payload, 0)
 
@@ -122,18 +129,22 @@ def test_parse_cbor_item_rejects_non_text_segment_in_indefinite_text_string():
 
     with pytest.raises(
         decode_module._CborDecodingError,
-        match="Indefinite text string segment is not a text string",
+        match="a chunk of an indefinite-length text string must be a definite-length text string",
     ):
         decode_module._parse_cbor_item(payload, 0)
 
 
-def test_parse_cbor_item_indefinite_map_with_orphan_key_keeps_completed_pairs():
+def test_parse_cbor_item_rejects_an_orphan_map_key_and_keeps_completed_pairs_only_when_lenient():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     # 0xbf => indefinite map: {"a": 1, "b": <missing-value>}
     payload = b"\xbf\x61a\x01\x61b\xff"
 
-    node, offset = decode_module._parse_cbor_item(payload, 0)
+    with pytest.raises(decode_module._CborDecodingError) as caught:
+        decode_module._parse_cbor_item(payload, 0)
+    assert (caught.value.reason, caught.value.offset, caught.value.path) == ('map key "b" has no value', 4, '${"b"}')
+
+    node, offset, skipped = decode_module.decode_item(payload, lenient=True)
 
     assert node["majorType"] == 5
     assert node["type"] == "map"
@@ -141,18 +152,21 @@ def test_parse_cbor_item_indefinite_map_with_orphan_key_keeps_completed_pairs():
     assert node["length"] == 1
     assert node["summary"] == "map[1]"
     assert node["entries"][0]["value"]["value"] == 1
-    # The trailing break byte remains unread because the orphan key has no value.
-    assert offset == len(payload) - 1
+    assert offset == len(payload)
+    assert [entry["code"] for entry in skipped] == ["missing-map-value"]
 
 
-def test_parse_cbor_item_indefinite_array_without_break_keeps_parsed_items():
+def test_parse_cbor_item_rejects_an_unterminated_indefinite_array_and_keeps_its_items_only_when_lenient():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     # 0x9f => indefinite array containing a single nested definite array [1, 2],
     # with no break byte for the outer container.
     payload = b"\x9f\x82\x01\x02"
 
-    node, offset = decode_module._parse_cbor_item(payload, 0)
+    with pytest.raises(decode_module._CborDecodingError, match="indefinite-length array has no break byte"):
+        decode_module._parse_cbor_item(payload, 0)
+
+    node, offset, skipped = decode_module.decode_item(payload, lenient=True)
 
     assert offset == len(payload)
     assert node["majorType"] == 4
@@ -163,6 +177,7 @@ def test_parse_cbor_item_indefinite_array_without_break_keeps_parsed_items():
     nested = node["items"][0]
     assert nested["type"] == "array"
     assert nested["length"] == 2
+    assert [entry["code"] for entry in skipped] == ["truncated"]
 
 
 def test_try_decode_cbor_handles_ctap_prefix_without_payload():
@@ -178,19 +193,18 @@ def test_try_decode_cbor_handles_ctap_prefix_without_payload():
     assert result["decoded"]["ctap"]["payloadLength"] == 0
 
 
-def test_try_decode_cbor_treats_ctap_padding_bytes_as_additional_objects():
+def test_try_decode_cbor_reports_ctap_padding_bytes_as_padding():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     payload = b"\x01" + cbor2.dumps({"a": 1}) + b"\x00\xff"
 
     result = decode_module._try_decode_cbor(payload, "base64url")
 
-    assert result is not None
     assert result["format"] == "CBOR"
     ctap = result["decoded"]["ctap"]
     assert ctap["kind"] == "command"
-    malformed = result.get("malformed", [])
-    assert any("additional CBOR object" in message for message in malformed)
+    assert ctap["ignoredPaddingBytes"] == 2
+    assert result["malformed"] == ["Trailing 2 byte(s) after CBOR payload (all 0x00/0xff: HID report padding?)."]
 
 
 def test_structure_to_value_preserves_integer_map_keys():
@@ -240,41 +254,6 @@ def test_structure_to_value_falls_back_to_string_for_unhashable_keys():
     value = decode_module._structure_to_value(structure)
 
     assert value == {"[1, 2]": "value"}
-
-
-def test_lenient_decode_from_indefinite_array_without_break_keeps_items():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    payload = b"\x9f\x01\x02"
-
-    value, offset = decode_module._lenient_decode_from(payload)
-
-    assert value == [1, 2]
-    assert offset == len(payload)
-
-
-def test_lenient_decode_from_indefinite_map_with_orphan_key_keeps_completed_pairs():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    payload = b"\xbf\x61k\x01\x61m"
-
-    value, offset = decode_module._lenient_decode_from(payload)
-
-    assert value == {"k": 1}
-    assert offset == len(payload)
-
-
-def test_decode_cbor_sequence_uses_lenient_fallback_for_reserved_additional_info_payload():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    structures, values, consumed_total, remaining = decode_module._decode_cbor_sequence(b"\x1c")
-
-    assert consumed_total == 1
-    assert remaining == b""
-    assert values == [28]
-    assert len(structures) == 1
-    assert structures[0]["lenient"] is True
-    assert structures[0]["summary"] == "Decoded value (lenient)"
 
 
 def test_expand_cbor_value_stringifies_mapping_keys_and_summarizes_binary_values():

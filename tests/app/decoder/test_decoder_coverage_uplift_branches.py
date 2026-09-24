@@ -3,12 +3,10 @@ from __future__ import annotations
 import base64
 from types import SimpleNamespace
 
-import cbor2
 import pytest
 from cryptography import x509
 from cryptography.x509.oid import ExtensionOID
 
-from fido2 import cbor
 from fido2.utils import ByteBuffer
 
 
@@ -57,45 +55,6 @@ def test_parse_cbor_item_covers_simple_and_single_double_precision_float_paths()
     assert single_node["value"] == 1.0
     assert double_node["precision"] == "double"
     assert double_node["value"] == 1.0
-
-
-def test_decode_cbor_sequence_uses_structure_to_value_when_fallback_structure_parse_succeeds(monkeypatch, cbor_parser):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    monkeypatch.setattr(
-        cbor,
-        "decode_from",
-        lambda _payload: (_ for _ in ()).throw(ValueError("boom")),
-    )
-
-    class _BrokenDecoder:
-        def __init__(self, *_args, **_kwargs):
-            pass
-
-        def decode(self):
-            raise ValueError("boom")
-
-    monkeypatch.setattr(cbor2, "CBORDecoder", _BrokenDecoder)
-    monkeypatch.setattr(
-        cbor_parser,
-        "_decode_cbor_structure",
-        lambda _payload: (
-            {
-                "majorType": 0,
-                "type": "unsigned",
-                "value": 7,
-                "summary": "7",
-                "byteLength": 1,
-            },
-            1,
-        ),
-    )
-
-    structures, values, consumed, remaining = decode_module._decode_cbor_sequence(b"\x01")
-    assert structures and structures[0]["majorType"] == 0
-    assert values == [7]
-    assert consumed == 1
-    assert remaining == b""
 
 
 def test_att_stmt_extension_header_and_authenticator_data_fallback_helpers():

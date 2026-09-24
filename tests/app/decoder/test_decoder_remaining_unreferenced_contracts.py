@@ -35,9 +35,6 @@ def test_remaining_cbor_key_float_and_lenient_helpers():
     assert structure["type"] == "map"
     assert offset > 0
 
-    assert decode_module._lenient_read_uint(24, b"\x7f", 0) == (0x7F, 1)
-    assert decode_module._lenient_read_uint(25, b"\x00", 0) == (0, 1)
-
 
 def test_remaining_mapping_and_auth_data_format_helpers():
     decode_module = pytest.importorskip("server.app.decoder.decode")
