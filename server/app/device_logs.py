@@ -10,13 +10,9 @@ from collections.abc import Mapping, MutableMapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import cbor2
-
-try:  # Python 3.9+
-    from zoneinfo import ZoneInfo
-except ImportError:  # pragma: no cover - fallback for very old Python
-    from backports.zoneinfo import ZoneInfo  # type: ignore
 
 from . import encoding
 from .encoding import encode_base64url
