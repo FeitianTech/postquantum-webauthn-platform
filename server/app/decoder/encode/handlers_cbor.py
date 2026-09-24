@@ -7,6 +7,7 @@ from typing import Any
 from ..decode import _binary_summary, _hex_json_safe, _stringify_mapping_keys
 from .cbor_canonical import _canonical_cbor_dumps, _canonicalize_cbor_structure
 from .constants import _CTAP_FIELD_LABELS, _CTAP_PREFIX_DETAILS, _CTAP_REQUIRED_FIELDS
+from .cose_key import encode_cose_key
 from .ctap_encode import (
     _determine_ctap_prefix,
     _encode_ctap_from_decoded,
@@ -165,4 +166,5 @@ def _encode_ctap_webauthn_value(parsed: Any) -> dict[str, Any]:
 
 
 def _encode_cose_value(parsed: Any) -> dict[str, Any]:
-    return _encode_cbor_value(parsed, base_type="COSE")
+    # A COSE_Key, never a CTAP message: its labels 1 and 3 are kty and alg.
+    return encode_cose_key(parsed)
