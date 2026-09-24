@@ -20,6 +20,7 @@ __all__ = [
 ]
 
 _HASH_NORMALISE_PATTERN = re.compile(r"sha-?(\d{3})$", re.IGNORECASE)
+_SHA3_HASH_PATTERN = re.compile(r"sha-?3-?(\d{3})$", re.IGNORECASE)
 
 
 def format_algorithm_component(value: Any) -> str:
@@ -37,6 +38,9 @@ def format_hash_name(value: Any) -> str:
     text = str(value).strip()
     if not text:
         return ""
+    match = _SHA3_HASH_PATTERN.match(text)
+    if match:
+        return f"SHA3-{match.group(1)}"
     match = _HASH_NORMALISE_PATTERN.match(text)
     if match:
         return f"SHA{match.group(1)}"
@@ -45,26 +49,43 @@ def format_hash_name(value: Any) -> str:
 
 # RSASSA-PSS (RFC 4055): cryptography names it "rsassaPss", others "RSASSA-PSS".
 _RSASSA_PSS_OID = "1.2.840.113549.1.1.10"
+# NIST's signature OIDs (2.16.840.1.101.3.4.3.x), which cryptography 50 does not
+# name: ECDSA and RSA PKCS#1 v1.5 with SHA3 (the hash is read from the
+# certificate), and pure ML-DSA (FIPS 204), which has no separate hash.
+_NIST_SIGNATURE_OIDS = {
+    **{f"2.16.840.1.101.3.4.3.{arc}": "ECDSA" for arc in (9, 10, 11, 12)},
+    **{f"2.16.840.1.101.3.4.3.{arc}": "RSASSA-PKCS1-v1_5" for arc in (13, 14, 15, 16)},
+    "2.16.840.1.101.3.4.3.17": "ML-DSA-44",
+    "2.16.840.1.101.3.4.3.18": "ML-DSA-65",
+    "2.16.840.1.101.3.4.3.19": "ML-DSA-87",
+}
+_ML_DSA_PATTERN = re.compile(r"mldsa(44|65|87)?")
 
 
 def normalise_signature_algorithm_name(name: str) -> str:
     """The algorithm part of a signature's spelling, from its name or dotted OID.
 
-    RSASSA-PSS is told from PKCS#1 v1.5 by name or OID; its hash is the one its
-    parameters name, which the callers read from the certificate and pass to
-    :func:`join_algorithm_info`.
+    RSASSA-PSS is told from PKCS#1 v1.5, and ML-DSA from DSA, by name or OID; a
+    signature's hash (RSASSA-PSS's is the one its parameters name) is read from
+    the certificate by the callers and passed to :func:`join_algorithm_info`.
     """
 
     text = (name or "").strip()
     if not text:
         return ""
 
+    if text in _NIST_SIGNATURE_OIDS:
+        return _NIST_SIGNATURE_OIDS[text]
     lowered = text.lower()
     compact = lowered.replace("-", "").replace("_", "").replace(" ", "")
     if "ecdsa" in lowered:
         return "ECDSA"
     if "rsassapss" in compact or text == _RSASSA_PSS_OID:
         return "RSASSA-PSS"
+    ml_dsa = _ML_DSA_PATTERN.search(compact)
+    if ml_dsa:
+        # Before "dsa": ML-DSA is not DSA, and its parameter set is part of its name.
+        return f"ML-DSA-{ml_dsa.group(1)}" if ml_dsa.group(1) else "ML-DSA"
     if "rsa" in lowered:
         return "RSASSA-PKCS1-v1_5"
     if "ed25519" in lowered:

@@ -2137,7 +2137,7 @@
    "curve": "secp256r1",
    "uncompressedPoint": "04:22:ce:a3:27:9c:a9:b3:ba:56:ad:14:bb:dc:f4:a1:b1:46:be:5e:c1:b1:00:16:c7:48:c3:8f:1f:b7:e8:74:26:09:91:42:0f:aa:52:b0:df:4c:ab:71:04:f3:5e:58:3b:97:23:96:ed:1e:a3:62:9c:b9:a3:c0:bb:49:6d:34:c3"
   },
-  "algorithmInfo": "DSA",
+  "algorithmInfo": "ML-DSA-44",
   "extensions": [],
   "fingerprints": {
    "sha256": "8b5a7b025ae936014a753138d71f8cb05787cf1f1e9c633d63dbf1eacacf1c27",
@@ -2439,7 +2439,7 @@
    "curve": "secp256r1",
    "uncompressedPoint": "04:69:58:d1:c7:db:f9:55:ee:79:f0:22:cc:04:3f:eb:a3:f7:af:6e:4c:17:1d:e9:87:5f:87:0a:c5:4e:2c:a1:e3:58:53:86:fa:ed:29:04:1e:04:b4:b9:98:22:f3:8d:b2:64:19:14:2e:fa:91:f9:39:a9:a5:ae:8e:3e:1d:28:26"
   },
-  "algorithmInfo": "2.16.840.1.101.3.4.3.10_SHA3256",
+  "algorithmInfo": "ECDSA_SHA3-256",
   "extensions": [],
   "fingerprints": {
    "sha256": "81d71d73d8983b6ca078104f6f63bebb1c830c76324c335d1bc6a368f6fd1e94",
@@ -2500,7 +2500,7 @@
    "curve": "secp256r1",
    "uncompressedPoint": "04:b0:e5:bd:ea:ba:25:bb:6f:e4:ec:14:55:b4:11:c8:4e:5f:4a:a3:96:de:88:e5:3a:53:a6:a8:a0:b0:66:25:05:dc:1a:92:ef:f3:bd:b9:2f:22:76:83:26:f2:e5:cc:26:57:07:6f:5a:8c:52:9e:00:ee:65:3b:b7:16:e7:71:e1"
   },
-  "algorithmInfo": "2.16.840.1.101.3.4.3.14_SHA3256",
+  "algorithmInfo": "RSASSA-PKCS1-v1_5_SHA3-256",
   "extensions": [],
   "fingerprints": {
    "sha256": "15cd268f41e7e8931ff336915f252263f079a73fbcbc0327536ce8d8a5274175",

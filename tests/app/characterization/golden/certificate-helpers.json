@@ -571,13 +571,13 @@
   "ed25519": "ED25519",
   "Ed448": "ED448",
   "dsa-with-sha1": "DSA",
-  "ML-DSA-44": "DSA",
+  "ML-DSA-44": "ML-DSA-44",
   "some thing-else": "SOMETHINGELSE",
   "rsassaPss": "RSASSA-PSS",
-  "ML-DSA-65": "DSA",
-  "ML-DSA-87": "DSA",
-  "2.16.840.1.101.3.4.3.10": "2.16.840.1.101.3.4.3.10",
-  "2.16.840.1.101.3.4.3.14": "2.16.840.1.101.3.4.3.14"
+  "ML-DSA-65": "ML-DSA-65",
+  "ML-DSA-87": "ML-DSA-87",
+  "2.16.840.1.101.3.4.3.10": "ECDSA",
+  "2.16.840.1.101.3.4.3.14": "RSASSA-PKCS1-v1_5"
  },
  "hash": {
   "None": "",
@@ -587,8 +587,8 @@
   "'SHA384'": "SHA384",
   "'shake-256'": "SHAKE256",
   "'md5'": "MD5",
-  "'sha3-256'": "SHA3256",
-  "'SHA3-512'": "SHA3512"
+  "'sha3-256'": "SHA3-256",
+  "'SHA3-512'": "SHA3-512"
  },
  "component": {
   "None": "",
@@ -604,7 +604,7 @@
   "RSASSA-PKCS1-v1_5_SHA256",
   "ED25519_SHA512",
   "ED448_SHAKE256",
-  "DSA",
+  "ML-DSA-65",
   "SHA1",
   ""
  ]
