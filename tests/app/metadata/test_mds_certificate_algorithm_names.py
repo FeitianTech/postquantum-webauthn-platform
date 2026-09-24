@@ -13,7 +13,14 @@ import datetime
 import pytest
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, padding, rsa
+from cryptography.hazmat.primitives.asymmetric import (
+    ec,
+    ed448,
+    ed25519,
+    mldsa,
+    padding,
+    rsa,
+)
 from cryptography.x509.oid import NameOID
 
 import server.app.mds_snapshot as mds_snapshot
@@ -53,8 +60,16 @@ def _pss(hash_algorithm):
         (_RSA_KEY, hashes.SHA384(), _pss(hashes.SHA384()), "RSASSA-PSS_SHA384"),
         (ed25519.Ed25519PrivateKey.generate(), None, None, "ED25519_SHA512"),
         (ed448.Ed448PrivateKey.generate(), None, None, "ED448_SHAKE256"),
+        # Both views used to spell ML-DSA "DSA", and SHA3 as the dotted OID plus "SHA3256".
+        (mldsa.MLDSA44PrivateKey.generate(), None, None, "ML-DSA-44"),
+        (mldsa.MLDSA65PrivateKey.generate(), None, None, "ML-DSA-65"),
+        (ec.generate_private_key(ec.SECP256R1()), hashes.SHA3_256(), None, "ECDSA_SHA3-256"),
+        (_RSA_KEY, hashes.SHA3_384(), padding.PKCS1v15(), "RSASSA-PKCS1-v1_5_SHA3-384"),
     ],
-    ids=["p256", "p384", "rsa", "rsa-pss-sha256", "rsa-pss-sha384", "ed25519", "ed448"],
+    ids=[
+        "p256", "p384", "rsa", "rsa-pss-sha256", "rsa-pss-sha384", "ed25519", "ed448",
+        "ml-dsa-44", "ml-dsa-65", "ecdsa-sha3-256", "rsa-sha3-384",
+    ],
 )
 def test_the_mds_summary_names_a_root_as_the_certificate_view_does(key, algorithm, rsa_padding, expected):
     der = _self_signed(key, algorithm, "Root", rsa_padding)
@@ -108,10 +123,15 @@ def test_a_pss_signature_without_parameters_is_named_with_the_default_hash():
         ("rsassa_pss", "RSASSA-PSS"),
         ("1.2.840.113549.1.1.10", "RSASSA-PSS"),
         ("sha256WithRSAEncryption", "RSASSA-PKCS1-v1_5"),
+        ("ML-DSA-87", "ML-DSA-87"),
+        ("2.16.840.1.101.3.4.3.17", "ML-DSA-44"),
+        ("dsa-with-sha1", "DSA"),
+        ("2.16.840.1.101.3.4.3.12", "ECDSA"),
+        ("2.16.840.1.101.3.4.3.16", "RSASSA-PKCS1-v1_5"),
         ("some thing-else", "SOMETHINGELSE"),
     ],
 )
-def test_rsassa_pss_is_told_from_pkcs1_v1_5_by_name_or_oid(name, expected):
+def test_a_signature_algorithm_is_named_by_name_or_oid(name, expected):
     from server.app.webauthn import signature_algorithms
 
     assert signature_algorithms.normalise_signature_algorithm_name(name) == expected
