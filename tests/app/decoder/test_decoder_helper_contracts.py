@@ -142,11 +142,16 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, p
 
     monkeypatch.setattr(pipeline, "_looks_like_pem", lambda _v: False)
     monkeypatch.setattr(pipeline, "_decode_binary_input", lambda _v: (b"\x01\x02", "hex"))
-    monkeypatch.setattr(pipeline, "_decode_binary_payload", lambda data, encoding: {"kind": "bin", "data": data, "encoding": encoding})
+    monkeypatch.setattr(
+        pipeline,
+        "_decode_binary_payload",
+        lambda data, encoding, lenient=False: {"kind": "bin", "data": data, "encoding": encoding, "lenient": lenient},
+    )
     monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"bin": result})
     assert decode_module.decode_payload_text("0102") == {
-        "bin": {"kind": "bin", "data": b"\x01\x02", "encoding": "hex"}
+        "bin": {"kind": "bin", "data": b"\x01\x02", "encoding": "hex", "lenient": False}
     }
+    assert decode_module.decode_payload_text("0102", lenient=True)["bin"]["lenient"] is True
 
 
 def test_decode_json_object_handles_client_data_and_plain_json(monkeypatch, pipeline):
