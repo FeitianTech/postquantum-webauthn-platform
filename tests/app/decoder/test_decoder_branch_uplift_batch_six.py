@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 
+import cbor2
 import pytest
 
 from fido2.webauthn import AuthenticatorData
@@ -73,10 +74,13 @@ def test_interpret_get_assertion_map_leaves_a_missing_signature_missing(monkeypa
     # members: the signature stays missing and nothing else is added.
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
+    # The tail is the CBOR of {3: h'736967', 5: 2, 9: "x"} without its map
+    # header: what the old repair read back as a signature and members.
+    tail = cbor2.dumps(3) + cbor2.dumps(b"sig") + cbor2.dumps(5) + cbor2.dumps(2) + cbor2.dumps(9) + cbor2.dumps("x")
     monkeypatch.setattr(
         ctap,
         "_format_auth_data_for_expanded_json",
-        lambda _auth_data: ({"flags": {}}, b"trailing"),
+        lambda _auth_data: ({"flags": {}}, tail),
     )
 
     interpreted = decode_module._interpret_get_assertion_map(
