@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from ... import encoding
 from .binary_decode import _require_bytes
 from .binary_extract import _restore_generic_structure
 from .constants import _CTAP_PREFIX_DETAILS
@@ -17,6 +18,7 @@ from .ctap_fields import (
     _ensure_text,
     _get_ctap_member,
     _reject_misnamed_request_fields,
+    _reject_unknown_members,
     _require_mapping,
 )
 
@@ -40,10 +42,20 @@ def _encode_ctap_from_decoded(
         _MAKE_CREDENTIAL_RESPONSE: _encode_make_credential_response,
         _GET_ASSERTION_RESPONSE: _encode_get_assertion_response,
     }
+    others = [key for key in decoded if key not in encoders]
+    if others:
+        raise ValueError(
+            f"ctapDecoded.{others[0]} is not a CTAP message the encoder builds; it builds "
+            f"{', '.join(encoders)}."
+        )
+    if len(decoded) > 1:
+        raise ValueError(f"ctapDecoded holds {len(decoded)} messages ({', '.join(decoded)}); give it one.")
     for key, encoder in encoders.items():
         entry = decoded.get(key)
         if isinstance(entry, Mapping):
             return encoder(entry), key
+        if entry is not None:
+            raise ValueError(f"ctapDecoded.{key} must be an object for encoding.")
     return None, None
 
 
@@ -96,6 +108,7 @@ def _determine_ctap_prefix(
 
 def _encode_make_credential_request(structure: Mapping[str, Any]) -> dict[int, Any]:
     _reject_misnamed_request_fields(structure, _MAKE_CREDENTIAL_REQUEST)
+    _reject_unknown_members(structure, _MAKE_CREDENTIAL_REQUEST)
 
     def member(number: int) -> Any:
         return _get_ctap_member(structure, _MAKE_CREDENTIAL_REQUEST, number)
@@ -146,6 +159,7 @@ def _encode_make_credential_request(structure: Mapping[str, Any]) -> dict[int, A
 
 def _encode_get_assertion_request(structure: Mapping[str, Any]) -> dict[int, Any]:
     _reject_misnamed_request_fields(structure, _GET_ASSERTION_REQUEST)
+    _reject_unknown_members(structure, _GET_ASSERTION_REQUEST)
 
     def member(number: int) -> Any:
         return _get_ctap_member(structure, _GET_ASSERTION_REQUEST, number)
@@ -179,13 +193,15 @@ def _encode_get_assertion_request(structure: Mapping[str, Any]) -> dict[int, Any
 
 
 def _encode_make_credential_response(structure: Mapping[str, Any]) -> dict[int, Any]:
+    _reject_unknown_members(structure, _MAKE_CREDENTIAL_RESPONSE)
+
     def member(number: int) -> Any:
         return _get_ctap_member(structure, _MAKE_CREDENTIAL_RESPONSE, number)
 
     mapping: dict[int, Any] = {}
 
     mapping[1] = _ensure_text(member(1), "fmt")
-    mapping[2] = _require_bytes(member(2), "authData")
+    mapping[2] = _auth_data_bytes(member(2))
 
     att_stmt = member(3)
     if att_stmt is not None:
@@ -207,6 +223,8 @@ def _encode_make_credential_response(structure: Mapping[str, Any]) -> dict[int, 
 
 
 def _encode_get_assertion_response(structure: Mapping[str, Any]) -> dict[int, Any]:
+    _reject_unknown_members(structure, _GET_ASSERTION_RESPONSE)
+
     def member(number: int) -> Any:
         return _get_ctap_member(structure, _GET_ASSERTION_RESPONSE, number)
 
@@ -216,7 +234,7 @@ def _encode_get_assertion_response(structure: Mapping[str, Any]) -> dict[int, An
     if credential is not None:
         mapping[1] = _encode_credential_descriptor(credential)
 
-    mapping[2] = _require_bytes(member(2), "authData")
+    mapping[2] = _auth_data_bytes(member(2))
     mapping[3] = _require_bytes(member(3), "signature")
 
     user = member(4)
@@ -240,3 +258,16 @@ def _encode_get_assertion_response(structure: Mapping[str, Any]) -> dict[int, An
         mapping[8] = _restore_generic_structure(unsigned_extension_outputs)
 
     return mapping
+
+
+def _auth_data_bytes(value: Any) -> bytes:
+    """authData, with the bytes the decoder showed after it put back: nothing dropped."""
+
+    data = _require_bytes(value, "authData")
+    trailing = value.get("trailingBytesHex") if isinstance(value, Mapping) else None
+    if trailing is None:
+        return data
+    tail = encoding.try_decode_hex(trailing) if isinstance(trailing, str) else None
+    if tail is None:
+        raise ValueError("authData trailingBytesHex must be hex.")
+    return data + tail

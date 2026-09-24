@@ -49,6 +49,43 @@ def _reject_misnamed_request_fields(
             raise ValueError(f"CTAP 2.2 {command} has no parameter named {text}.")
 
 
+def _reject_unknown_members(structure: Mapping[Any, Any], kind: str) -> None:
+    """Refuse what a builder for ``kind`` would otherwise drop without a word.
+
+    A member CTAP 2.2 does not define for ``kind`` is not passed through either:
+    the decoder shows byte strings as hex text, so from JSON alone "abcd" could
+    have been a byte string or a text string, and encoding it would be a guess.
+    Two keys that name one member ("1" and "1 (fmt)") are refused too, since
+    only one of them could be encoded.
+    """
+
+    members = _CTAP_FIELD_LABELS[kind]
+    claimed: dict[int, Any] = {}
+    unknown: list[str] = []
+    for key in structure:
+        number = next(
+            (
+                number
+                for number, label in members.items()
+                if _ctap_key_matches(key, {label.lower(), str(number), f"{number} ({label})"})
+            ),
+            None,
+        )
+        if number is None:
+            unknown.append(repr(key))
+        elif number in claimed:
+            raise ValueError(
+                f"{kind} member {number} ({members[number]}) is given twice, as {claimed[number]!r} and {key!r}."
+            )
+        else:
+            claimed[number] = key
+    if unknown:
+        raise ValueError(
+            f"{kind} has no member {', '.join(unknown)} in CTAP 2.2. The encoder does not drop it, and "
+            "cannot pass it through: its JSON does not say whether a string was a byte or text string."
+        )
+
+
 def _is_bare_number(text: str) -> bool:
     lowered = text.lower()
     if lowered.startswith("0x"):
