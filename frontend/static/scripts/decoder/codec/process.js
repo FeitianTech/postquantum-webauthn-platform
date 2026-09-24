@@ -108,6 +108,8 @@ export async function processCodec(mode = getSelectedDecoderMode()) {
         const body = { payload: inputValue, mode };
         if (mode === 'encode') {
             body.format = targetFormat;
+        } else if (document.getElementById('decoder-lenient')?.checked) {
+            body.lenient = true;
         }
 
         const response = await fetch('/api/codec', {

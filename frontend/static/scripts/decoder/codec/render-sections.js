@@ -135,6 +135,30 @@ function buildEncodeSections(type, data) {
     return [section];
 }
 
+// One line per finding: where it is and what it says. Built from text nodes
+// only -- a finding's message can quote the input.
+function buildFindingsList(findings) {
+    const block = document.createElement('div');
+    block.className = 'decoder-warning decoder-findings';
+
+    const heading = document.createElement('p');
+    heading.className = 'decoder-findings-heading';
+    heading.textContent = findings.length === 1 ? '1 finding' : `${findings.length} findings`;
+    block.appendChild(heading);
+
+    const list = document.createElement('ul');
+    findings.forEach((finding) => {
+        const item = document.createElement('li');
+        const offset = Number.isInteger(finding?.offset) ? `offset ${finding.offset}` : 'offset ?';
+        const path = typeof finding?.path === 'string' ? finding.path : '';
+        const message = typeof finding?.message === 'string' ? finding.message : '';
+        item.textContent = `${offset} · ${path} — ${message}`;
+        list.appendChild(item);
+    });
+    block.appendChild(list);
+    return block;
+}
+
 export function renderDecodedResult(container, payload, mode = 'decode') {
     container.innerHTML = '';
 
@@ -161,7 +185,17 @@ export function renderDecodedResult(container, payload, mode = 'decode') {
 
     container.appendChild(header);
 
-    if (Array.isArray(payload.malformed) && payload.malformed.length > 0) {
+    if (payload.decodeMode === 'lenient') {
+        const note = document.createElement('div');
+        note.className = 'decoder-warning';
+        note.textContent = 'Decoded in lenient mode (best effort); skipped items are listed below.';
+        container.appendChild(note);
+    }
+
+    const findings = Array.isArray(payload.findings) ? payload.findings : [];
+    if (findings.length > 0) {
+        container.appendChild(buildFindingsList(findings));
+    } else if (Array.isArray(payload.malformed) && payload.malformed.length > 0) {
         const warning = document.createElement('div');
         warning.className = 'decoder-warning';
         warning.textContent = `Malformed segments: ${payload.malformed.join(', ')}`;
