@@ -110,6 +110,63 @@ def test_a_merge_that_cannot_read_the_record_does_not_overwrite_it(gcs, monkeypa
     assert _stored_payload(gcs) == ORIGINAL
 
 
+def test_a_merge_whose_write_landed_but_whose_reply_was_lost_is_stored(gcs, monkeypatch):
+    # A conditional upload is one attempt; a reply lost after the write landed
+    # used to answer "Unable to store artifact" for an artifact that was stored.
+    original = artifacts.upload_bytes_if_generation
+
+    def _lands_then_fails(*args, **kwargs):
+        original(*args, **kwargs)
+        raise ConnectionError("connection reset after the write")
+
+    monkeypatch.setattr(artifacts, "upload_bytes_if_generation", _lands_then_fails)
+
+    assert artifacts.store_credential_artifact(
+        STORAGE_ID, {"registrationDetailSnapshot": {"a": 1}}, merge=True, session_id=SESSION
+    ) is True
+    assert _stored_payload(gcs) == {**ORIGINAL, "registrationDetailSnapshot": {"a": 1}}
+
+
+def test_a_merge_whose_write_failed_before_it_landed_says_so(gcs, monkeypatch):
+    def _fails(*_args, **_kwargs):
+        raise ConnectionError("bucket unreachable")
+
+    monkeypatch.setattr(artifacts, "upload_bytes_if_generation", _fails)
+
+    assert artifacts.store_credential_artifact(STORAGE_ID, {"late": True}, merge=True, session_id=SESSION) is False
+    assert _stored_payload(gcs) == ORIGINAL
+
+
+def test_a_lost_reply_that_cannot_be_checked_is_not_reported_as_stored(gcs, monkeypatch):
+    blob_name = artifacts._artifact_blob(STORAGE_ID, SESSION)
+    original = artifacts.upload_bytes_if_generation
+
+    def _lands_then_fails_and_goes_dark(*args, **kwargs):
+        original(*args, **kwargs)
+        gcs.failing[blob_name] = fake_gcs.ServiceUnavailable("503")
+        raise ConnectionError("connection reset after the write")
+
+    monkeypatch.setattr(artifacts, "upload_bytes_if_generation", _lands_then_fails_and_goes_dark)
+
+    assert artifacts.store_credential_artifact(STORAGE_ID, {"late": True}, merge=True, session_id=SESSION) is False
+
+
+def test_a_lost_reply_counts_as_stored_only_if_the_record_holds_every_merged_value(gcs, monkeypatch):
+    blob_name = artifacts._artifact_blob(STORAGE_ID, SESSION)
+
+    def _someone_else_wins_then_the_reply_is_lost(*_args, **_kwargs):
+        record = json.loads(gcs.objects[blob_name][0])
+        record["payload"]["registrationDetailSnapshot"] = {"a": 2}
+        gcs.put(blob_name, json.dumps(record).encode())
+        raise ConnectionError("connection reset")
+
+    monkeypatch.setattr(artifacts, "upload_bytes_if_generation", _someone_else_wins_then_the_reply_is_lost)
+
+    assert artifacts.store_credential_artifact(
+        STORAGE_ID, {"registrationDetailSnapshot": {"a": 1}}, merge=True, session_id=SESSION
+    ) is False
+
+
 def _merge_in_a_process(root, key, start):
     os.environ.pop("FIDO_SERVER_GCS_ENABLED", None)
     from server.app import credential_artifacts as child

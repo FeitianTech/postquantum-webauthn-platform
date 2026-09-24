@@ -332,8 +332,32 @@ def _merge_on_gcs(storage_id: str, session_id: str, payload: dict[str, Any], tim
             ):
                 return True
         except Exception:
-            return False
+            # The write may have landed with only its reply lost: what is stored now says.
+            return _merge_is_stored(blob_name, payload)
     return False
+
+
+def _merge_is_stored(blob_name: str, update: dict[str, Any]) -> bool:
+    """Whether the stored record holds every value ``update`` merges in; ``False`` if it cannot be read."""
+
+    try:
+        stored, _generation = download_bytes_with_generation(blob_name)
+    except Exception:
+        return False
+    record = _decode_record(stored)
+    return isinstance(record, dict) and _holds(record.get("payload"), update)
+
+
+def _holds(payload: Any, update: dict[str, Any]) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    for key, value in update.items():
+        if isinstance(value, dict) and isinstance(payload.get(key), dict):
+            if not _holds(payload[key], value):
+                return False
+        elif key not in payload or payload[key] != value:
+            return False
+    return True
 
 
 def delete_credential_artifact(storage_id: Any, *, session_id: str | None = None) -> bool:
