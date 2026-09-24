@@ -186,7 +186,10 @@ def _list_credential_blob_names(session_id: str) -> Iterable[tuple[str, str]]:
     seen_users = set()
     for search_prefix in search_prefixes:
         try:
-            blob_names = list(list_blob_names(search_prefix))
+            # The flat legacy copies sit directly under the user folder, beside
+            # every session's folder: list only that level, not every session's objects.
+            delimiter = "/" if search_prefix == legacy_prefix else None
+            blob_names = list(list_blob_names(search_prefix, delimiter=delimiter))
         except Exception as exc:
             # A listing that stopped part-way must not pass for a shorter one.
             raise StorageReadError(f"Could not list the credentials under {search_prefix}") from exc

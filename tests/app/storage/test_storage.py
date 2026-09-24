@@ -137,8 +137,8 @@ def test_iter_credentials_includes_legacy_entries(monkeypatch):
 
     prefixes = []
 
-    def fake_list_blob_names(prefix: str):
-        prefixes.append(prefix)
+    def fake_list_blob_names(prefix: str, *, delimiter=None):
+        prefixes.append((prefix, delimiter))
         if prefix == legacy_prefix:
             yield legacy_blob
 
@@ -153,8 +153,8 @@ def test_iter_credentials_includes_legacy_entries(monkeypatch):
     entries = list(credentials.iter_credentials(session_id=session_id))
 
     assert entries == [(name, [["from-legacy"]])]
-    assert prefixes[0] == new_prefix
-    assert legacy_prefix in prefixes
+    # The session's own folder, then only the objects directly under the user folder.
+    assert prefixes == [(new_prefix, None), (legacy_prefix, "/")]
 
 
 def test_iter_credentials_skips_nested_legacy_duplicates(monkeypatch):
@@ -168,7 +168,8 @@ def test_iter_credentials_skips_nested_legacy_duplicates(monkeypatch):
     new_prefix = credentials._build_search_prefix(credentials._credential_prefix(session_id))
     legacy_prefix = credentials._build_search_prefix(credentials._USER_FOLDER_PREFIX)
 
-    def fake_list_blob_names(prefix: str):
+    def fake_list_blob_names(prefix: str, *, delimiter=None):
+        # A listing that ignored the delimiter: the nested copy is still filtered out.
         if prefix == new_prefix:
             yield primary_blob
         elif prefix == legacy_prefix:
@@ -196,7 +197,7 @@ def test_a_failed_listing_raises_instead_of_listing_the_rest(monkeypatch):
     primary_prefix = credentials._build_search_prefix(credentials._credential_prefix(session_id))
     legacy_prefix = credentials._build_search_prefix(credentials._USER_FOLDER_PREFIX)
 
-    def fake_list_blob_names(prefix: str):
+    def fake_list_blob_names(prefix: str, *, delimiter=None):
         if prefix == primary_prefix:
 
             class _Generator:
@@ -258,7 +259,7 @@ def test_iter_credentials_skips_corrupted_payload(monkeypatch):
     blob_name = credentials._credential_blob(username, session_id)
     primary_prefix = credentials._build_search_prefix(credentials._credential_prefix(session_id))
 
-    def fake_list_blob_names(prefix: str):
+    def fake_list_blob_names(prefix: str, *, delimiter=None):
         if prefix == primary_prefix:
             yield blob_name
 

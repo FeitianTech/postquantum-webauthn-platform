@@ -96,7 +96,7 @@ class _Gcs:
         self.bucket.failing[self.put_legacy(name, _records("unreachable"))] = fake_gcs.ServiceUnavailable("503")
 
     def break_listing(self):
-        def _unavailable(prefix="", max_results=None):
+        def _unavailable(prefix="", max_results=None, delimiter=None):
             raise fake_gcs.ServiceUnavailable("503")
 
         self.bucket.list_blobs = _unavailable
@@ -154,8 +154,11 @@ def test_a_listing_that_fails_is_an_error_not_an_empty_store(backend):
     backend.put_current(NAME, _records("alice"))
     backend.break_listing()
 
-    with pytest.raises(StorageReadError):
+    with pytest.raises(StorageReadError) as raised:
         list(backend.store.iter_credentials(session_id=SESSION))
+    if backend.store._using_gcs():
+        # The bucket's own error, not a stand-in that could not take the call.
+        assert isinstance(raised.value.__cause__, fake_gcs.ServiceUnavailable)
 
 
 def test_the_error_names_the_copy_and_keeps_its_cause(backend):

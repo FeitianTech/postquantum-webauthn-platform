@@ -98,7 +98,7 @@ def test_list_credential_blob_names_filters_duplicates_nested_and_invalid_entrie
     primary_blob = f"{primary_prefix}alice_credential_data.pkl"
     legacy_blob = f"{legacy_prefix}bob_credential_data.pkl"
 
-    def _list(prefix: str):
+    def _list(prefix: str, *, delimiter=None):
         if prefix == primary_prefix:
             return iter(
                 [
@@ -131,7 +131,7 @@ def test_list_credential_blob_names_avoids_duplicate_search_prefixes(storage_loc
     calls = []
 
     monkeypatch.setattr(storage, "_credential_prefix", lambda _sid: storage._USER_FOLDER_PREFIX)
-    monkeypatch.setattr(storage, "list_blob_names", lambda prefix: calls.append(prefix) or iter([]))
+    monkeypatch.setattr(storage, "list_blob_names", lambda prefix, *, delimiter=None: calls.append(prefix) or iter([]))
 
     assert list(storage._list_credential_blob_names("session-a")) == []
     assert len(calls) == 1
