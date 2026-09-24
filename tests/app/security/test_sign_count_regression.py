@@ -286,3 +286,32 @@ def test_advanced_reports_not_supported_for_zero_counters(config_module, advance
     assert response.status_code == 200, response.get_json()
     assert response.get_json()["status"] == "OK"
     assert response.get_json()["signCountStatus"] == "not-supported"
+
+
+def test_the_credential_list_shows_the_counter_of_the_last_authentication(config_module, credential_store):
+    authenticator = Authenticator()
+    client = config_module.app.test_client()
+    _register(client, authenticator, counter=5)
+    assert _authenticate(client, authenticator, counter=9).status_code == 200
+
+    listed = client.get("/api/credentials")
+
+    assert listed.status_code == 200
+    # Not 5, the counter the authenticator reported at registration.
+    assert [entry["signCount"] for entry in listed.get_json()] == [9]
+    assert credential_store(authenticator.credential_id) == 9
+
+
+def test_a_dict_backed_record_lists_its_stored_counter(simple_module):
+    from server.app.routes.simple import credential_list
+
+    record = {
+        "credential_data": {"credential_id": b"id", "public_key": {3: -7}},
+        "auth_data": {"counter": 1, "flags": {}},
+        "user_info": {},
+        "sign_count": 7,
+    }
+
+    assert credential_list.build_credential_info_from_dict_credential_data(EMAIL, record)["signCount"] == 7
+    record.pop("sign_count")
+    assert credential_list.build_credential_info_from_dict_credential_data(EMAIL, record)["signCount"] == 1
