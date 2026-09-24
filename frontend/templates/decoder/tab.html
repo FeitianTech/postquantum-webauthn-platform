@@ -64,7 +64,6 @@
                                         <span class="decoder-format-name">Binary:</span>
                                         <span class="decoder-format-chip">Authenticator data</span>
                                         <span class="decoder-format-chip">Signature fields</span>
-                                        <span class="decoder-format-chip">Unclassified binary summaries</span>
                                     </li>
                                     <li>
                                         <span class="decoder-format-name">PEM:</span>
@@ -91,6 +90,13 @@
                                     data-gramm_editor="false"
                                     data-enable-grammarly="false"
                                 ></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="checkbox-label" for="decoder-lenient">
+                                    <input type="checkbox" id="decoder-lenient">
+                                    <span>Best effort (lenient): read CBOR that is not well-formed as far as it goes</span>
+                                </label>
                             </div>
 
                             <div class="form-group">

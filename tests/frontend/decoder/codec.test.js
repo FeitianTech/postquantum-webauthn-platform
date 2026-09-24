@@ -24,6 +24,7 @@ function buildCodecDom() {
 
     <section id="codec-decode-panel" class="is-active"></section>
     <textarea id="decoder-input"></textarea>
+    <input type="checkbox" id="decoder-lenient">
     <p id="decoder-description">Decoder help text</p>
     <div id="decoder-output">
       <div id="decoded-content"></div>
@@ -356,6 +357,88 @@ describe('codec UI', () => {
     const labels = Array.from(document.querySelectorAll('#decoded-content dt')).map((dt) => dt.textContent);
     expect(labels).toEqual(expect.arrayContaining(['1', '3', '-1', '-2', '-3']));
     expect(labels.filter((label) => label === '1')).toHaveLength(1);
+  });
+
+  it('lists findings with their offset and path, as text', async () => {
+    document.getElementById('decoder-input').value = 'a201010102';
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: vi.fn().mockResolvedValue({
+        success: true,
+        type: 'CBOR',
+        decodeMode: 'strict',
+        findings: [
+          { code: 'duplicate-map-key', offset: 3, path: '${1}', message: 'map key 1 appears twice' },
+          { code: 'trailing-bytes', offset: 5, path: '$', message: '<img src=x onerror="alert(1)">' },
+        ],
+        malformed: ['map key 1 appears twice', '<img src=x onerror="alert(1)">'],
+        data: { decodedValue: { '1': 2 } },
+      }),
+    });
+
+    await processCodec('decode');
+
+    const items = Array.from(document.querySelectorAll('#decoded-content .decoder-findings li'));
+    expect(items.map((item) => item.textContent)).toEqual([
+      'offset 3 · ${1} — map key 1 appears twice',
+      'offset 5 · $ — <img src=x onerror="alert(1)">',
+    ]);
+    expect(document.querySelector('#decoded-content img')).toBeNull();
+    expect(document.querySelector('.decoder-findings-heading').textContent).toBe('2 findings');
+    // The findings list replaces the one-line summary of the same messages.
+    expect(document.getElementById('decoded-content').textContent).not.toContain('Malformed segments');
+  });
+
+  it('says when a decode was lenient', async () => {
+    document.getElementById('decoder-input').value = '48aabb';
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: vi.fn().mockResolvedValue({
+        success: true,
+        type: 'CBOR',
+        decodeMode: 'lenient',
+        findings: [{ code: 'truncated', category: 'skipped', offset: 0, path: '$', message: 'byte string declares 8 bytes; 2 remain' }],
+        data: { decodedValue: 'aabb' },
+      }),
+    });
+
+    await processCodec('decode');
+
+    const text = document.getElementById('decoded-content').textContent;
+    expect(text).toContain('Decoded in lenient mode (best effort); skipped items are listed below.');
+    expect(text).toContain('offset 0 · $ — byte string declares 8 bytes; 2 remain');
+  });
+
+  it('asks for a lenient decode only when the box is ticked', async () => {
+    const ok = () => ({ ok: true, status: 200, json: vi.fn().mockResolvedValue({ success: true, data: {} }) });
+    document.getElementById('decoder-input').value = 'a10102';
+
+    fetch.mockResolvedValueOnce(ok());
+    await processCodec('decode');
+    expect(JSON.parse(fetch.mock.calls.at(-1)[1].body)).toEqual({ payload: 'a10102', mode: 'decode' });
+
+    document.getElementById('decoder-lenient').checked = true;
+    fetch.mockResolvedValueOnce(ok());
+    await processCodec('decode');
+    expect(JSON.parse(fetch.mock.calls.at(-1)[1].body)).toEqual({ payload: 'a10102', mode: 'decode', lenient: true });
+  });
+
+  it('keeps the malformed line for responses without findings, such as the encoder', async () => {
+    switchCodecMode('encode');
+    document.getElementById('encoder-format').value = 'json';
+    document.getElementById('encoder-input').value = '{"payload":"ok"}';
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: vi.fn().mockResolvedValue({ success: true, type: 'JSON', malformed: ['dropped key'], data: {} }),
+    });
+
+    await processCodec('encode');
+
+    expect(document.getElementById('encoded-content').textContent).toContain('Malformed segments: dropped key');
+    expect(JSON.parse(fetch.mock.calls.at(-1)[1].body)).not.toHaveProperty('lenient');
   });
 
   it('renders decodedValue labels and rejects boolean payloads for binary encode formats', async () => {

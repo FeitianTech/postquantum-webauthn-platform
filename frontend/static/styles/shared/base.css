@@ -805,6 +805,17 @@ body.header-menu-open { overflow: hidden; }
     margin: 0;
 }
 
+.decoder-findings-heading {
+    margin: 0;
+}
+
+.decoder-findings ul {
+    margin: 0.35rem 0 0;
+    padding-left: 1.2rem;
+    font-weight: 400;
+    word-break: break-word;
+}
+
 .decoder-sections { display: flex; flex-direction: column; gap: 1.1rem; }
 
 .decoder-section { padding: 0; }
