@@ -156,27 +156,30 @@ def _decode_public_key_credential(
 
     decoded["response"] = response_details
 
+    extra, located = interpretations.for_public_key_credential(
+        credential,
+        _cbor_map_or_none(attestation_entry[0]) if attestation_entry else None,
+        authenticator_entry[0] if authenticator_entry else None,
+    )
     result = {
         "format": format_label,
         "inputEncoding": "json",
         "decoded": decoded,
-        "extraData": interpretations.for_public_key_credential(
-            credential,
-            _cbor_map_or_none(attestation_entry[0]) if attestation_entry else None,
-            authenticator_entry[0] if authenticator_entry else None,
-        ),
+        "extraData": extra,
     }
-    ctap._attach_findings(result, findings)
+    ctap._attach_findings(result, findings + located)
     return result
 
 
-def _cbor_map_or_none(data: bytes) -> Mapping[Any, Any] | None:
+def _cbor_map_or_none(data: bytes) -> tuple[Mapping[Any, Any], dict[str, Any], bytes] | None:
+    """The CBOR map ``data`` holds, with its node and bytes; ``None`` if it holds no map."""
+
     try:
         node, _end, _ = cbor_parser.decode_item(data)
     except cbor_parser._CborDecodingError:
         return None
     value = cbor_parser._structure_to_value(node)
-    return value if isinstance(value, Mapping) else None
+    return (value, node, data) if isinstance(value, Mapping) else None
 
 
 def _read_nested(
@@ -384,15 +387,15 @@ def _try_decode_attestation_object(data: bytes, encoding: str) -> dict[str, Any]
     except Exception:
         return None
 
+    extra, located = interpretations.for_attestation_object(cbor_parser._structure_to_value(node), node, data)
     result: dict[str, Any] = {
         "format": "Attestation object (CBOR)",
         "inputEncoding": encoding,
         "decoded": details,
         "binary": _binary_summary(data, encoding),
-        "extraData": interpretations.for_attestation_object(cbor_parser._structure_to_value(node)),
+        "extraData": extra,
     }
-    findings = canonical.check(node, data) + ctap._trailing_findings(data, end)
-    ctap._attach_findings(result, findings + authenticator_data_findings.for_member(node, data, ("authData",)))
+    ctap._attach_findings(result, canonical.check(node, data) + ctap._trailing_findings(data, end) + located)
     return result
 
 
@@ -402,14 +405,15 @@ def _try_decode_authenticator_data(data: bytes, encoding: str) -> dict[str, Any]
     except Exception:
         return None
 
+    extra, located = interpretations.for_authenticator_data(data)
     result = {
         "format": "Authenticator data (binary)",
         "inputEncoding": encoding,
         "decoded": details,
         "binary": _binary_summary(data, encoding),
-        "extraData": interpretations.for_authenticator_data(data),
+        "extraData": extra,
     }
-    ctap._attach_findings(result, authenticator_data_findings.check(data, 0, "$"))
+    ctap._attach_findings(result, located)
     return result
 
 
@@ -611,8 +615,12 @@ def _read_attestation_object(data: bytes) -> tuple[dict[str, Any], dict[str, Any
     if not isinstance(value, Mapping):
         raise ValueError("An attestation object is a CBOR map.")
     fmt, auth_data, att_stmt = value.get("fmt"), value.get("authData"), value.get("attStmt")
-    if not isinstance(fmt, str) or not isinstance(auth_data, bytes) or not isinstance(att_stmt, Mapping):
-        raise ValueError("An attestation object has a text fmt, byte string authData and map attStmt.")
+    # WebAuthn L3 section 8.9: a compound statement's attStmt is an array.
+    statement = isinstance(att_stmt, Mapping) or (fmt == "compound" and isinstance(att_stmt, list))
+    if not isinstance(fmt, str) or not isinstance(auth_data, bytes) or not statement:
+        raise ValueError(
+            "An attestation object has a text fmt, byte string authData and map attStmt (an array for compound)."
+        )
 
     try:
         authenticator_data = _describe_authenticator_data_bytes(auth_data)

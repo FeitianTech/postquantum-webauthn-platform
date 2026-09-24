@@ -46,7 +46,7 @@ def check(auth_data: bytes, base_offset: int, path: str) -> list[dict[str, Any]]
     """Check the CBOR items in ``auth_data`` and report bytes after them."""
 
     findings: list[dict[str, Any]] = []
-    items, offset = _embedded_items(auth_data)
+    items, offset = embedded_items(auth_data)
     for name, node in items:
         findings += canonical.relocate(canonical.check(node, auth_data), base_offset, f"{path}<{name}>")
     if offset is None:
@@ -75,14 +75,14 @@ def check(auth_data: bytes, base_offset: int, path: str) -> list[dict[str, Any]]
 def extensions(auth_data: bytes) -> Any:
     """The extensions ``auth_data`` carries under its ED flag, or ``MISSING``."""
 
-    items, _end = _embedded_items(auth_data)
+    items, _end = embedded_items(auth_data)
     for name, node in items:
         if name == "extensions":
             return _structure_to_value(node)
     return MISSING
 
 
-def _embedded_items(auth_data: bytes) -> tuple[list[tuple[str, dict[str, Any]]], int | None]:
+def embedded_items(auth_data: bytes) -> tuple[list[tuple[str, dict[str, Any]]], int | None]:
     """The CBOR items the flags announce, and where they end (``None``: unreadable)."""
 
     items: list[tuple[str, dict[str, Any]]] = []

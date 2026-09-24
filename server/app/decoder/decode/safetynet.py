@@ -15,10 +15,8 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
-from cryptography import x509
-from cryptography.hazmat.primitives import hashes
-
 from ... import encoding
+from . import certificate_summary
 
 NOT_VERIFIED = (
     "NOT VERIFIED: the JWS signature, its certificate chain, the nonce "
@@ -79,14 +77,4 @@ def _certificate(entry: Any) -> dict[str, Any]:
     der = encoding.try_decode_base64(entry) if isinstance(entry, str) else None
     if der is None:
         return {"error": "an x5c entry is base64 DER; this is not"}
-    try:
-        certificate = x509.load_der_x509_certificate(der)
-    except ValueError as exc:
-        return {"error": f"not an X.509 certificate: {exc}"}
-    return {
-        "subject": certificate.subject.rfc4514_string(),
-        "issuer": certificate.issuer.rfc4514_string(),
-        "notValidBefore": certificate.not_valid_before_utc.isoformat(),
-        "notValidAfter": certificate.not_valid_after_utc.isoformat(),
-        "sha256": certificate.fingerprint(hashes.SHA256()).hex(),
-    }
+    return certificate_summary.summarize(der)
