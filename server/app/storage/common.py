@@ -12,6 +12,7 @@ from werkzeug.security import safe_join
 from .cloud import build_blob_name, normalise_blob_prefix
 
 __all__ = [
+    "InvalidStorageIdentifier",
     "assert_contained_blob_name",
     "build_session_root_prefix",
     "build_session_scoped_prefix",
@@ -27,6 +28,14 @@ __all__ = [
 # supplied data. ``.`` and ``..`` traverse, the empty string collapses a key.
 _RESERVED_SEGMENTS = frozenset({"", ".", ".."})
 _PATH_SEPARATORS = ("/", "\\")
+
+
+class InvalidStorageIdentifier(ValueError):
+    """A caller-supplied name or session id the store refuses to build a path from.
+
+    Raised before anything is touched. A route that hands storage such a name
+    has a bad request, not a server fault: the app answers 400 for it.
+    """
 
 
 def using_gcs_backend(is_enabled: Callable[[], bool]) -> bool:
@@ -117,33 +126,36 @@ def validate_storage_component(
     instead of silently writing somewhere unexpected.
     """
 
-    cleaned = normalize_nonempty_str(value, type_error=type_error, empty_error=empty_error)
+    try:
+        cleaned = normalize_nonempty_str(value, type_error=type_error, empty_error=empty_error)
+    except ValueError as exc:
+        raise InvalidStorageIdentifier(str(exc)) from None
 
     if "\x00" in cleaned:
-        raise ValueError("Storage identifier contains a null byte")
+        raise InvalidStorageIdentifier("Storage identifier contains a null byte")
 
     if any(ord(char) < 0x20 or ord(char) == 0x7F for char in cleaned):
-        raise ValueError("Storage identifier contains control characters")
+        raise InvalidStorageIdentifier("Storage identifier contains control characters")
 
     for separator in _PATH_SEPARATORS:
         if separator in cleaned:
-            raise ValueError("Storage identifier contains a path separator")
+            raise InvalidStorageIdentifier("Storage identifier contains a path separator")
 
     # ``os.altsep`` is ``/`` on Windows and ``None`` on POSIX; both real
     # separators are already covered above, this keeps the check honest if a
     # platform ever adds another one.
     for separator in (os.sep, os.altsep):
         if separator and separator in cleaned:
-            raise ValueError("Storage identifier contains a path separator")
+            raise InvalidStorageIdentifier("Storage identifier contains a path separator")
 
     if cleaned.startswith("."):
-        raise ValueError("Storage identifier starts with a dot")
+        raise InvalidStorageIdentifier("Storage identifier starts with a dot")
 
     if ".." in cleaned:
-        raise ValueError("Storage identifier contains a parent directory reference")
+        raise InvalidStorageIdentifier("Storage identifier contains a parent directory reference")
 
     if os.path.isabs(cleaned) or posixpath.isabs(cleaned):
-        raise ValueError("Storage identifier is an absolute path")
+        raise InvalidStorageIdentifier("Storage identifier is an absolute path")
 
     return cleaned
 
@@ -163,12 +175,12 @@ def resolve_contained_path(
 
     joined = safe_join(root, *components)
     if joined is None:
-        raise ValueError(error)
+        raise InvalidStorageIdentifier(error)
 
     root_real = os.path.realpath(root)
     target_real = os.path.realpath(joined)
     if target_real != root_real and not target_real.startswith(root_real + os.sep):
-        raise ValueError(error)
+        raise InvalidStorageIdentifier(error)
 
     return joined
 
@@ -188,16 +200,16 @@ def assert_contained_blob_name(
     """
 
     if not isinstance(blob_name, str) or not blob_name:
-        raise ValueError(error)
+        raise InvalidStorageIdentifier(error)
 
     if "\x00" in blob_name or "\\" in blob_name:
-        raise ValueError(error)
+        raise InvalidStorageIdentifier(error)
 
     if any(segment in _RESERVED_SEGMENTS for segment in blob_name.split("/")):
-        raise ValueError(error)
+        raise InvalidStorageIdentifier(error)
 
     normalised_prefix = normalise_blob_prefix(prefix)
     if normalised_prefix and not blob_name.startswith(normalised_prefix):
-        raise ValueError(error)
+        raise InvalidStorageIdentifier(error)
 
     return blob_name

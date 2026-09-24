@@ -115,7 +115,6 @@ def prepare_register_complete_inputs(
         return None, (jsonify({"error": "Username is required in user.name"}), 400)
 
     metadata_session_id = metadata.ensure_metadata_session_id()
-    credentials.readkey(username, session_id=metadata_session_id)
 
     auth_selection = public_key.get("authenticatorSelection", {})
     if isinstance(auth_selection, Mapping):
