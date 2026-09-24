@@ -12,6 +12,7 @@ from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.x509.oid import NameOID
 
 from . import encoding
+from .webauthn import signature_algorithms
 
 __all__ = [
     "build_entry_id",
@@ -343,51 +344,6 @@ def _extract_attestation_key_identifiers(
     return values
 
 
-def _normalise_signature_algorithm_name(name: str) -> str:
-    text = (name or "").strip()
-    if not text:
-        return ""
-
-    lowered = text.lower()
-    if "ecdsa" in lowered:
-        return "ECDSA"
-    if "rsassa-pss" in lowered:
-        return "RSASSA-PSS"
-    if "rsa" in lowered:
-        return "RSASSA-PKCS1-v1_5"
-    if "ed25519" in lowered:
-        return "ED25519"
-    if "ed448" in lowered:
-        return "ED448"
-    if "dsa" in lowered:
-        return "DSA"
-
-    return text.replace("-", "").replace(" ", "").upper()
-
-
-def _format_hash_value(value: Any) -> str:
-    if value in (None, ""):
-        return ""
-    text = str(value).strip()
-    if not text:
-        return ""
-    lower = text.lower().replace(" ", "").replace("-", "")
-    if lower.startswith("sha") and lower[3:].isdigit():
-        return f"SHA{lower[3:]}"
-    return text.replace("-", "").replace(" ", "").upper()
-
-
-def _derive_certificate_algorithm_info(algorithm_name: str, hash_name: str) -> str:
-    components = []
-    formatted_algorithm = _normalise_signature_algorithm_name(algorithm_name)
-    formatted_hash = _format_hash_value(hash_name)
-
-    for part in (formatted_algorithm, formatted_hash):
-        if part and (not components or components[-1].lower() != part.lower()):
-            components.append(part)
-    return "_".join(components)
-
-
 def _decode_der_certificate(value: Any) -> bytes | None:
     if isinstance(value, (bytes, bytearray, memoryview)):
         return bytes(value)
@@ -417,15 +373,19 @@ def _summarise_attestation_certificates(certificates: Sequence[Any]) -> tuple[li
             continue
 
         try:
-            hash_name = certificate.signature_hash_algorithm.name
+            hash_algorithm = certificate.signature_hash_algorithm
         except (UnsupportedAlgorithm, ValueError):
-            hash_name = ""
+            hash_algorithm = None
 
         oid = getattr(certificate.signature_algorithm_oid, "_name", None)
         if not isinstance(oid, str) or oid.lower() == "unknown oid":
             oid = getattr(certificate.signature_algorithm_oid, "dotted_string", "") or ""
 
-        algorithm_info = _derive_certificate_algorithm_info(oid, hash_name)
+        # An EdDSA signature has no separate hash: cryptography answers None.
+        hash_name = hash_algorithm.name if hash_algorithm is not None else signature_algorithms.implied_hash_name(oid)
+        algorithm_info = signature_algorithms.join_algorithm_info(
+            signature_algorithms.normalise_signature_algorithm_name(oid), hash_name
+        )
         if algorithm_info and algorithm_info.lower() not in seen_algorithms:
             seen_algorithms.add(algorithm_info.lower())
             algorithm_infos.append(algorithm_info)

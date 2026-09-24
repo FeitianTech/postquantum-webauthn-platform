@@ -4,6 +4,7 @@ import types
 from datetime import date, datetime, timezone
 
 import server.app.mds_snapshot as m
+from server.app.webauthn import signature_algorithms as names
 
 
 def test_basic_mapping_string_list_and_byte_helpers():
@@ -120,18 +121,18 @@ def test_name_identifier_aaguid_and_identifier_list_resolution():
 
 
 def test_algorithm_and_certificate_decoding_helpers(monkeypatch):
-    assert m._normalise_signature_algorithm_name('ecdsa-with-sha256') == 'ECDSA'
-    assert m._normalise_signature_algorithm_name('rsassa-pss') == 'RSASSA-PSS'
-    assert m._normalise_signature_algorithm_name('rsa encryption') == 'RSASSA-PKCS1-v1_5'
-    assert m._normalise_signature_algorithm_name('ed25519') == 'ED25519'
-    assert m._normalise_signature_algorithm_name('ed448') == 'ED448'
-    assert m._normalise_signature_algorithm_name('dsa') == 'DSA'
-    assert m._normalise_signature_algorithm_name('custom-alg') == 'CUSTOMALG'
+    assert names.normalise_signature_algorithm_name('ecdsa-with-sha256') == 'ECDSA'
+    assert names.normalise_signature_algorithm_name('rsassa-pss') == 'RSASSA-PSS'
+    assert names.normalise_signature_algorithm_name('rsa encryption') == 'RSASSA-PKCS1-v1_5'
+    assert names.normalise_signature_algorithm_name('ed25519') == 'ED25519'
+    assert names.normalise_signature_algorithm_name('ed448') == 'ED448'
+    assert names.normalise_signature_algorithm_name('dsa') == 'DSA'
+    assert names.normalise_signature_algorithm_name('custom-alg') == 'CUSTOMALG'
 
-    assert m._format_hash_value('sha256') == 'SHA256'
-    assert m._format_hash_value(' SHA-1 ') == 'SHA1'
-    assert m._format_hash_value('') == ''
-    assert m._derive_certificate_algorithm_info('ecdsa', 'sha256') == 'ECDSA_SHA256'
+    assert names.format_hash_name('sha256') == 'SHA256'
+    assert names.format_hash_name(' SHA-1 ') == 'SHA1'
+    assert names.format_hash_name('') == ''
+    assert names.join_algorithm_info(names.normalise_signature_algorithm_name('ecdsa'), 'sha256') == 'ECDSA_SHA256'
 
     assert m._decode_der_certificate(b'bytes') == b'bytes'
     assert m._decode_der_certificate('YQ') == b'a'
@@ -261,10 +262,10 @@ def test_mds_snapshot_residual_branch_cases(monkeypatch):
     assert forced == ['A']
     monkeypatch.setattr(m, '_extract_list', original_extract_list)
 
-    assert m._normalise_signature_algorithm_name('   ') == ''
+    assert names.normalise_signature_algorithm_name('   ') == ''
     assert m._format_enum('A--B') == 'A B'
-    assert m._format_hash_value('   ') == ''
-    assert m._format_hash_value('abc-123') == 'ABC123'
+    assert names.format_hash_name('   ') == ''
+    assert names.format_hash_name('abc-123') == 'ABC123'
     assert m._decode_der_certificate('   ') is None
 
     # summarizer: duplicate algorithms and non-string/blank CN values are skipped
