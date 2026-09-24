@@ -64,7 +64,7 @@ steps:
       - pqcwebauthn
       - --platform=managed
       - --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/postquantum-webauthn-platform/pqcwebauthn:$COMMIT_SHA
-      - --labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID
+      - --labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID,gcb-trigger-id=$_TRIGGER_ID
       - --region=asia-northeast1
       - --quiet
 
@@ -75,7 +75,8 @@ options:
   logging: CLOUD_LOGGING_ONLY
   # The production trigger defines substitutions (_AR_HOSTNAME, _SERVICE_NAME, ...)
   # that this file does not use. Cloud Build rejects a build with unused
-  # substitutions unless they are allowed loosely.
+  # substitutions unless they are allowed loosely. _TRIGGER_ID is used, for the
+  # label that links the Cloud Run service to its trigger; a manual build leaves it empty.
   substitutionOption: ALLOW_LOOSE
 
 timeout: 1500s
