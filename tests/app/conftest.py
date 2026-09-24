@@ -146,6 +146,13 @@ def advanced_registration():
 
 
 @pytest.fixture
+def advanced_registration_record():
+    """The submodule that builds a verified advanced registration's record and stored credential."""
+
+    return _advanced_fragment("registration_record")
+
+
+@pytest.fixture
 def advanced_summary():
     """The submodule that builds the advanced response summaries."""
 
