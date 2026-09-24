@@ -7,6 +7,8 @@ import pickle
 
 import pytest
 
+from server.app.storage.common import StorageReadError
+
 
 @pytest.fixture
 def storage_local(monkeypatch, tmp_path):
@@ -208,44 +210,54 @@ def test_iter_credentials_handles_missing_session_directory(storage_local):
     assert list(storage.iter_credentials(session_id="missing-session")) == []
 
 
-def test_iter_credentials_skips_unreadable_empty_and_non_list_payloads(storage_local, monkeypatch):
+def test_iter_credentials_skips_and_counts_empty_and_non_list_payloads(storage_local):
     storage, _ = storage_local
 
     session_dir = storage._local_directory("session-a", create=True)
 
-    unreadable_name = "unreadable_credential_data.pkl"
-    empty_name = "empty_credential_data.pkl"
-    badtype_name = "badtype_credential_data.pkl"
-
-    with open(os.path.join(session_dir, unreadable_name), "wb") as handle:
-        handle.write(pickle.dumps(["unused"]))
-    with open(os.path.join(session_dir, empty_name), "wb") as handle:
+    with open(os.path.join(session_dir, "empty_credential_data.pkl"), "wb") as handle:
         handle.write(b"")
-    with open(os.path.join(session_dir, badtype_name), "wb") as handle:
+    with open(os.path.join(session_dir, "badtype_credential_data.pkl"), "wb") as handle:
         handle.write(pickle.dumps({"not": "a-list"}))
 
+    # No username: not a credential file at all, so neither read nor counted.
     with open(os.path.join(storage.basepath, "_credential_data.pkl"), "wb") as handle:
         handle.write(b"")
 
-    legacy_bad_path = storage._legacy_local_filename("legacybad")
-    with open(legacy_bad_path, "wb") as handle:
-        handle.write(pickle.dumps(["unused"]))
-
-    legacy_empty_path = storage._legacy_local_filename("legacyempty")
-    with open(legacy_empty_path, "wb") as handle:
+    with open(storage._legacy_local_filename("legacyempty"), "wb") as handle:
         handle.write(b"")
+
+    undecodable = []
+    assert list(storage.iter_credentials(session_id="session-a", undecodable=undecodable)) == []
+    assert sorted(undecodable) == ["badtype", "empty", "legacyempty"]
+
+
+@pytest.mark.parametrize("where", ["session", "legacy-flat"])
+def test_iter_credentials_raises_on_a_file_it_cannot_open(storage_local, monkeypatch, where):
+    storage, _ = storage_local
+
+    session_dir = storage._local_directory("session-a", create=True)
+    with open(os.path.join(session_dir, "alice_credential_data.pkl"), "wb") as handle:
+        handle.write(pickle.dumps([{"ok": True}]))
+    if where == "session":
+        blocked = os.path.join(session_dir, "unreadable_credential_data.pkl")
+    else:
+        blocked = storage._legacy_local_filename("legacybad")
+    with open(blocked, "wb") as handle:
+        handle.write(pickle.dumps(["unused"]))
 
     real_open = open
 
     def _open(path, mode="r", *args, **kwargs):
-        path_str = str(path)
-        if path_str.endswith(unreadable_name) or path_str == legacy_bad_path:
+        if str(path) == blocked:
             raise OSError("blocked")
         return real_open(path, mode, *args, **kwargs)
 
     monkeypatch.setattr("builtins.open", _open)
 
-    assert list(storage.iter_credentials(session_id="session-a")) == []
+    # Skipping it would list alice alone, as if the other user had no credentials.
+    with pytest.raises(StorageReadError, match="Could not read"):
+        list(storage.iter_credentials(session_id="session-a"))
 
 
 def test_list_credentials_returns_mapping_from_iterator(storage_local, monkeypatch):

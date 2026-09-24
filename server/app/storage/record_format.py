@@ -23,9 +23,10 @@ from ..env_flags import parse_env_flag
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "UndecodableRecords",
+    "decode_payload",
     "encode_records",
     "legacy_pickle_reads_enabled",
-    "load_payload",
     "restricted_pickle_loads",
 ]
 
@@ -199,6 +200,10 @@ def encode_records(records: Any) -> bytes:
     return json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
+class UndecodableRecords(ValueError):
+    """Stored bytes that are not a credential list. The message never quotes them."""
+
+
 def _decode_records(payload: bytes) -> list[Any] | None:
     """Decode a JSON credential payload, or return ``None`` if it is not JSON."""
 
@@ -208,35 +213,42 @@ def _decode_records(payload: bytes) -> list[Any] | None:
         return None
 
     if isinstance(parsed, dict) and isinstance(parsed.get("credentials"), list):
-        return [_decode_value(item) for item in parsed["credentials"]]
-    if isinstance(parsed, list):
+        items = parsed["credentials"]
+    elif isinstance(parsed, list):
         # Tolerate a bare list in case something wrote one directly.
-        return [_decode_value(item) for item in parsed]
-    return None
+        items = parsed
+    else:
+        raise UndecodableRecords("it is JSON but not a credential list")
+    try:
+        return [_decode_value(item) for item in items]
+    except Exception as exc:
+        raise UndecodableRecords(f"its JSON records do not decode ({type(exc).__name__})") from None
 
 
-def load_payload(payload: bytes, *, source: str) -> list[Any] | None:
+def decode_payload(payload: bytes) -> list[Any]:
     """Turn stored bytes into a credential list, JSON first, legacy pickle second.
 
     The format is sniffed from the content rather than the file extension so a
     half-migrated store (or a ``.json`` object holding older bytes) still reads.
+    Bytes that are neither raise :class:`UndecodableRecords`, naming the reason
+    and never the content: an unpickling error's own message quotes the bytes.
     """
 
     if not payload:
-        return None
+        raise UndecodableRecords("it is empty")
 
     decoded = _decode_records(payload)
     if decoded is not None:
         return decoded
 
     if not legacy_pickle_reads_enabled():
-        logger.warning("Ignoring non-JSON credential payload at %s", source)
-        return None
+        raise UndecodableRecords("it is not JSON, and legacy pickle reads are disabled")
 
     try:
         legacy = restricted_pickle_loads(payload)
     except Exception as exc:
-        logger.warning("Unable to read legacy credential payload at %s: %s", source, exc)
-        return None
+        raise UndecodableRecords(f"it is neither JSON nor a legacy pickle this server loads ({type(exc).__name__})") from None
 
-    return legacy if isinstance(legacy, list) else None
+    if not isinstance(legacy, list):
+        raise UndecodableRecords("it is a legacy pickle that does not hold a list")
+    return legacy

@@ -329,7 +329,7 @@ def test_simple_credentials_route_covers_scalar_registration_metadata_and_listin
     monkeypatch.setattr(
         storage_module,
         "iter_credentials",
-        lambda session_id=None: iter(
+        lambda session_id=None, **_kwargs: iter(
             [
                 ("broken@example.com", None),
                 ("mixed@example.com", [dict_backed, object_backed]),
@@ -341,7 +341,7 @@ def test_simple_credentials_route_covers_scalar_registration_metadata_and_listin
         response = client.get("/api/credentials")
 
     assert response.status_code == 200
-    payload = response.get_json()
+    payload = response.get_json()["credentials"]
     assert len(payload) == 2
 
     dict_id = base64.b64encode(b"dict-fallback-cred").decode("utf-8")

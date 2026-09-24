@@ -298,7 +298,7 @@ def test_the_credential_list_shows_the_counter_of_the_last_authentication(config
 
     assert listed.status_code == 200
     # Not 5, the counter the authenticator reported at registration.
-    assert [entry["signCount"] for entry in listed.get_json()] == [9]
+    assert [entry["signCount"] for entry in listed.get_json()["credentials"]] == [9]
     assert credential_store(authenticator.credential_id) == 9
 
 
