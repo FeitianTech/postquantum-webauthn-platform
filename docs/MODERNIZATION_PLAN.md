@@ -1312,6 +1312,26 @@ vitest 293 -> 293, ruff clean, coverage 96.15% -> **96.45%**.
 - Still open from Phase 17: `readkey`/`iter_credentials` skip unreadable blobs; authentication falls back to the
   client's counter when the server read fails.
 
+**Phase 18 — tech-lead verification (2026-09-24):**
+- macOS 2480 passed / 4 skipped, coverage 96%, vitest 293, ruff clean, `tests/app/security/` 105.
+  **Linux (python:3.14 in Docker, run independently) 2466 passed / 5 skipped.**
+- **Every one of the 29 commits passes pytest on its own** (run commit by commit in a worktree).
+- **The golden records describe the old code:** the harness, copied onto the untouched 550a5e8f tree,
+  passes 35/35 there. A one-byte change to one advanced-registration response field on that tree fails
+  9 of 35, so the harness is sensitive.
+- **The race tests fail on the old code for the stated reason**, not on fixtures: with the new tests and
+  conftests copied onto 550a5e8f, 14 fail. Eight concurrent registrations keep only the existing
+  credential and one of the eight, and the artifact merges lose the other writer's key. On the new code
+  they passed 15/15 repeated runs.
+- My own AST count agrees with the report: `raising=False` setattr/setitem 417 -> 12, functions over 80
+  lines 34 -> 14, modules over 700 lines 6 -> 3. The nine allowlisted pairs are builtins shadowed in one
+  module and Windows-only `ctypes` names.
+- The URL map (31 rules) and the decoder's output on the nine fixed payloads are identical to 550a5e8f.
+- The golden files contain no private key and no machine path.
+- Queued: when the server's credential read fails, simple authentication checks the signature counter
+  against the client-supplied value alone, which the client can omit. A missing record may fall back; a
+  failed read should fail closed.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
