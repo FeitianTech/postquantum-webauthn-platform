@@ -35,6 +35,7 @@ from . import (
     response,
 )
 from .authenticator_data import _describe_authenticator_data_bytes, _LocatedError
+from .json_input import _try_parse_json
 
 _PEM_CERT_PATTERN = re.compile(
     r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
@@ -357,13 +358,6 @@ def _decode_binary_field(value: Any) -> tuple[bytes, str] | None:
     if isinstance(value, (bytes, bytearray, memoryview)):
         return bytes(value), "binary"
     return None
-
-
-def _try_parse_json(value: str) -> Any | None:
-    try:
-        return json.loads(value)
-    except (ValueError, TypeError):
-        return None
 
 
 def _looks_like_pem(value: str) -> bool:
