@@ -1086,6 +1086,52 @@ key `h'01'` or text `"1"` reads as member 1). Bytes left inside authData show as
 not a finding; the COSE key and extensions inside authData are not canonical-checked. An attestationObject
 nested in PublicKeyCredential JSON does not surface its findings. The CTAP nesting limit (4) is not reported.
 
+### Phase 16 — M5c: decoder features — DONE (2026-09-24), verified. **M5 (codec) COMPLETE.**
+25 commits. New interpretation modules, each beside (never replacing) the decoded value:
+`decode/get_info.py` (authenticatorGetInfo), `decode/extensions.py` (CTAP 2.2 §12, WebAuthn L3 §10),
+`decode/attestation_statement.py` with `tpm_structures.py`, `android_key.py`, `safetynet.py`,
+`apple_anonymous.py` (WebAuthn L3 §8.2-8.9), and `decoder/cose_tables.py` (IANA/RFC 9052/9053/8230/9964,
+shared with the encoder). Everything "shows, does not verify" and each attestation view lists what it did
+not check. DER is read only through `cryptography` (`x509`, `hazmat.asn1`). `decode/ctap.py` 900 -> 891.
+
+Tech-lead verification:
+- **getInfo members checked against the published CTAP 2.2 PS §6.4: all 29 (0x01-0x1D) match exactly.**
+- **Extension identifiers checked against §12: all 7 covered** (credBlob, credProtect, hmac-secret,
+  hmac-secret-mc, minPinLength, pinComplexityPolicy, thirdPartyPayment); the repo's extra names are the
+  legitimate related identifiers (getCredBlob, hmacCreateSecret/hmacGetSecret, largeBlob, largeBlobKey).
+- Real Yubico getInfo vector decodes as `GetInfo response` with GUID
+  `f8a011f3-8c0a-4d15-8006-17111f9edc7d` and explained options ("absent means: not supported").
+- Part B: text-keyed `"2"`/`"3"` no longer read as CTAP members; 5-level nesting -> `nesting-depth`
+  finding; bytes left inside authData -> `authdata-trailing-bytes` at `${2}`.
+- **Valid input unchanged:** the nine fixed payloads decode identically on `5775d0bb` and HEAD, ignoring only
+  the two new keys (`PYTHONPATH` set explicitly for the old tree).
+- No `innerHTML` added; template inline-handler count 96 -> 96, now pinned by a test.
+- Suites 2125 -> **2325** / 4 skipped, vitest 287 -> **293**, ruff clean, security 78, coverage 96%.
+- Agent-reported: 54 of 65 new Part B tests fail on the old tree (the 11 others are controls or pin
+  already-correct behaviour); 19-payload valid-input diff including real tpm/u2f/packed/safetynet/apple vectors.
+
+Honesty notes from the agent, correctly flagged: there is **no real android-key vector** in the repo, nor a
+real packed self-attestation, ED-flag authData or clientExtensionResults — those tests use WebAuthn L3 §16
+spec test vectors, labelled as such. The TCG TPM spec PDFs are bot-walled, so TPM constants are cross-checked
+against fido2's verifier and the real Windows Hello vector (Part 2 §6.3/§6.9 unchecked). Two real vectors
+break their own format's syntax and the decoder now says so: the fido2 TPM capture has no `ver` (§8.3), and
+the Apple capture carries an `alg` §8.8 does not define.
+
+**Shared memory:** the agent added `pre-change-tree-comparisons` — the editable fido2 install puts the repo on
+`sys.path`, so an old-tree *script* can silently import current code. The tech lead re-checked that its own
+earlier old-vs-new probes used `sys.path.insert(0, cwd)` and did import the old tree (a worktree at
+`7f2e8d52` correctly lacks `factory.py`), so past diffs stand.
+
+**Found but not fixed — decoder input honesty, queued for Phase 17:**
+- **JSON can silently drop a map entry:** integer key `1` and text `"1"`, or `h'01'` and `"01"`, collapse to
+  one JSON key and an entry disappears from `decodedValue`/`ctapDecoded`. This breaks the decoder's own
+  "never drop a field" rule.
+- **Hex made only of digits is read as JSON** (e.g. `818181...`); Phase 14 fixed only the single-byte case.
+- Text member names still label CTAP members ("fmt", "rpId"); user/descriptor maps read integer keys 1-4 as
+  id/name; the encoder ignores unknown top-level keys of decoded JSON; bare authData with trailing bytes falls
+  through to plain CBOR; getInfo checks none of §6.4's MUSTs; "uvm" (WebAuthn L2) is labelled unknown;
+  ML-DSA is not in AOSP's Algorithm enum yet; interpreted fields display alphabetically (Flask sorts keys).
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
