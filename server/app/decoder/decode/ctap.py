@@ -9,7 +9,7 @@ from fido2.webauthn import AuthenticatorData
 from ...encoding import encode_base64
 from ...webauthn.attestation import encode_base64url
 from .. import ctap_tables
-from . import cbor_parser, pipeline, response
+from . import canonical, cbor_parser, pipeline, response
 from .cbor_parser import (
     _CborDecodingError,
     _structure_to_value,
@@ -847,12 +847,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
     if ctap_decoded is None:
         decoded_payload["decodedValue"] = _stringify_mapping_keys(_hex_json_safe(hex_decoded_value))
 
-    warnings: list[str] = []
-    # Bytes after the item are reported, never decoded as more items and never
-    # dropped, padding included: all 0x00 is what an unstripped HID report ends with.
-    if remaining:
-        note = " (all 0x00/0xff: HID report padding?)" if _is_padding_bytes(remaining) else ""
-        warnings.append(f"Trailing {len(remaining)} byte(s) after CBOR payload{note}.")
+    findings = canonical.check(node, data) + _trailing_findings(data, end)
 
     if ctap_details is not None:
         ctap_details["payloadLength"] = consumed_total
@@ -868,6 +863,36 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
         "decoded": decoded_payload,
         "binary": pipeline._binary_summary(data, encoding),
     }
-    if warnings:
-        result["malformed"] = warnings
+    _attach_findings(result, findings)
     return result
+
+
+def _trailing_findings(data: bytes, end: int) -> list[dict[str, Any]]:
+    """Report the bytes after the top-level item: never decoded, never dropped.
+
+    All 0x00 (or 0xff) is what an unstripped HID report ends with, and is
+    reported as such -- still reported.
+    """
+
+    remaining = data[end:]
+    if not remaining:
+        return []
+    note = " (all 0x00/0xff: HID report padding?)" if _is_padding_bytes(remaining) else ""
+    return [
+        {
+            "code": "trailing-bytes",
+            "category": "trailing",
+            "offset": end,
+            "path": "$",
+            "length": len(remaining),
+            "hex": remaining.hex(),
+            "message": f"Trailing {len(remaining)} byte(s) after CBOR payload{note}.",
+        }
+    ]
+
+
+def _attach_findings(result: dict[str, Any], findings: list[dict[str, Any]]) -> None:
+    ordered = sorted(findings, key=lambda finding: finding["offset"])
+    result["findings"] = ordered
+    if ordered:
+        result["malformed"] = [finding["message"] for finding in ordered]

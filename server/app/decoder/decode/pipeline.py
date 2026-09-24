@@ -26,7 +26,7 @@ from ...webauthn.attestation import (
     serialize_attestation_certificate,
     summarize_authenticator_extensions,
 )
-from . import cbor_parser, ctap, response
+from . import canonical, cbor_parser, ctap, response
 
 _PEM_CERT_PATTERN = re.compile(
     r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
@@ -299,18 +299,17 @@ def _try_decode_certificate_bytes(data: bytes, encoding: str) -> dict[str, Any] 
 
 def _try_decode_attestation_object(data: bytes, encoding: str) -> dict[str, Any] | None:
     try:
-        details, end = _read_attestation_object(data)
+        details, node, end = _read_attestation_object(data)
     except Exception:
         return None
 
-    result = {
+    result: dict[str, Any] = {
         "format": "Attestation object (CBOR)",
         "inputEncoding": encoding,
         "decoded": details,
         "binary": _binary_summary(data, encoding),
     }
-    if end < len(data):
-        result["malformed"] = [f"Trailing {len(data) - end} byte(s) after CBOR payload."]
+    ctap._attach_findings(result, canonical.check(node, data) + ctap._trailing_findings(data, end))
     return result
 
 
@@ -488,8 +487,8 @@ def _describe_authenticator_data_bytes(data: bytes) -> dict[str, Any]:
     return details
 
 
-def _read_attestation_object(data: bytes) -> tuple[dict[str, Any], int]:
-    """Read a WebAuthn attestation object; return its details and where it ends.
+def _read_attestation_object(data: bytes) -> tuple[dict[str, Any], dict[str, Any], int]:
+    """Read a WebAuthn attestation object: its details, its CBOR node, where it ends.
 
     It is a CBOR map with a text ``fmt``, a byte string ``authData`` holding
     valid authenticator data, and a map ``attStmt``; anything else raises.
@@ -514,11 +513,11 @@ def _read_attestation_object(data: bytes) -> tuple[dict[str, Any], int]:
     if certificate_details is not None:
         details["attestationCertificate"] = certificate_details
 
-    return details, end
+    return details, node, end
 
 
 def _parse_attestation_object(data: bytes) -> dict[str, Any]:
-    details, end = _read_attestation_object(data)
+    details, _node, end = _read_attestation_object(data)
     if end != len(data):
         raise ValueError("Extraneous data after the attestation object.")
     return details

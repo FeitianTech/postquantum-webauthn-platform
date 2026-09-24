@@ -67,10 +67,13 @@ def _build_decoder_payload(result: dict[str, Any]) -> dict[str, Any]:
                     unique.append(qualifier)
             type_label = f"{base_type} ({'; '.join(unique)})"
 
+    findings = result.get("findings")
     return {
         "success": True,
         "type": type_label,
         "data": data,
+        "decodeMode": result.get("decodeMode", "strict"),
+        "findings": findings if isinstance(findings, list) else [],
         "malformed": malformed,
     }
 
