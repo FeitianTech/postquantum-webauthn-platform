@@ -107,7 +107,14 @@ Main route modules:
   info, authenticator data, relying-party and debug views, stored credential) and
   `registration_persistence.py` saves it -- appending to the user's credential list by
   compare-and-swap, retrying a lost race up to eight times, 409 after that -- then
-  updates the session list and the device log.
+  updates the session list and the device log. `authentication.py` checks the
+  signature counter against the larger of the stored and the browser's copy. It
+  fails closed: stored records that could not be read reject the assertion with 503
+  (the browser's copy alone can be omitted or lowered); records that were read but
+  hold nothing for the credential fall back to the browser's copy. `credential_list.py`
+  answers `GET /api/credentials` with `{"credentials": [...]}` plus `unreadableCount`
+  (and the `X-Unreadable-Credentials` header) when a stored copy did not decode or a
+  record could not be shown, and 503 when the store could not be read.
 - `server/app/routes/advanced/`
   Advanced WebAuthn begin/complete endpoints, algorithm handling, request
   validation, metadata-heavy flows. Same shape: rules on the `advanced` blueprint
@@ -136,28 +143,51 @@ Related backend modules:
 - `server/app/webauthn/attestation/`
   Attestation parsing and validation. `checks.py` (the checks), `trust.py`, `pqc.py`,
   `classical.py`. `certificates.py` serialises a certificate and extracts an
-  attestation's details; it draws on `certificate_names.py` (a leaf: name and
-  signature-algorithm spellings), `certificate_extensions.py` (one handler per
-  extension), `certificate_public_keys.py` (loadable keys, and the best effort for
-  one cryptography will not load) and `certificate_summary.py` (the text summary, a
+  attestation's details; it draws on `certificate_names.py` (a leaf: name
+  spellings), `certificate_extensions.py` (one handler per extension; signed
+  certificate timestamps are records, never `str()` of cryptography's objects),
+  `certificate_public_keys.py` (loadable keys, and the best effort for one
+  cryptography will not load) and `certificate_summary.py` (the text summary, a
   section at a time).
+- `server/app/webauthn/signature_algorithms.py`
+  The one spelling of a certificate's signature algorithm (`ECDSA_SHA256`,
+  `ED25519_SHA512`), for the certificate view and the MDS explorer
+  (`mds_snapshot.py`) alike. A leaf outside the attestation package, whose
+  `__init__` imports the whole stack: `tools/update_mds_snapshot.py` reaches it
+  without Flask, which `tests/app/tooling/test_update_mds_snapshot.py` checks in a
+  fresh interpreter.
 - `server/app/webauthn/metadata/`
   FIDO MDS resolution: `blob.py`, `snapshots` via `effective.py`, `sessions.py`.
 - `server/app/webauthn/pqc.py`
   The ML-DSA adapter.
 - `server/app/storage/`
-  Persistence: `credentials.py`, `session_metadata.py`, `cloud.py`, `common.py`.
+  Persistence: `credentials.py`, `record_format.py` (the JSON envelope and the
+  restricted reader for legacy `.pkl` copies), `session_metadata.py`, `cloud.py`,
+  `common.py`.
   Every read-modify-write of credential records (the signature counter, appending a
   registration) goes through `read_for_update` / `save_if_unchanged`,
   compare-and-swap: a GCS generation precondition, or locally an `flock` on the
   file's `.lock` beside it (`common.file_lock`, with `common.replace_file` and
-  `common.file_digest`). `delkey` removes the current file under that lock too, so a
-  delete cannot land inside a save. Credential artifacts (`server/app/credential_artifacts.py`)
-  merge the same way: conditional on the generation on GCS, under the record's
-  `flock` locally; a merge that cannot read the record refuses rather than overwrite
-  it. A name the
-  store refuses raises `common.InvalidStorageIdentifier`, a `ValueError` that
-  `routes/errors.py` answers with 400 and no traceback.
+  `common.file_digest`). `delkey` empties the current copy -- it leaves it in place,
+  holding no records, whenever any copy existed -- and removes every legacy copy,
+  locally under that lock. A save whose records came from a legacy copy holds "there
+  is no current copy" as its version; a removed current copy would make that true
+  again and let the save write deleted records back.
+  A store read tells three cases apart. Nothing stored is fine. A copy or a listing
+  that cannot be read (an I/O or Cloud Storage error) raises `common.StorageReadError`,
+  never a shorter list; `routes/errors.py` answers 503. Content that does not decode
+  is logged by file or object name (never its content) and skipped, and
+  `iter_credentials` / `list_credentials` count it in their `undecodable` list. The
+  first copy that exists is the user's: an older one never stands in for it.
+  `read_for_update` refuses a current copy it cannot decode
+  (`credentials.CredentialsUndecodable`) rather than let the save replace it unread.
+  Credential artifacts (`server/app/credential_artifacts.py`) are kept per session
+  on both backends (locally `<artifact dir>/<session>/`) and merge the same way:
+  conditional on the generation on GCS, under the record's `flock` locally. A merge
+  that cannot read the record refuses rather than overwrite it, and one whose write
+  raised is re-read: it counts as stored if the record holds every merged value.
+  A name the store refuses raises `common.InvalidStorageIdentifier`, a `ValueError`
+  that `routes/errors.py` answers with 400 and no traceback.
 - `server/app/decoder/`
   Decoder/encoder logic used by the developer tooling UI: `decode/` and `encode/`.
   `ctap_tables.py` is the one CTAP table both read (command and status bytes,
@@ -256,7 +286,7 @@ Repo test layout:
 
 If you are changing only UI logic plus lightweight server responses, prefer targeted tests over the full suite first.
 
-Three tests guard the code itself rather than its behaviour:
+Four checks guard the code and the checkout rather than behaviour:
 
 - `tests/app/tooling/test_no_silent_monkeypatch.py` fails on a
   `monkeypatch.setattr(..., raising=False)` (or `mock.patch(..., create=True)`):
@@ -278,6 +308,14 @@ Three tests guard the code itself rather than its behaviour:
   reviewed before committing. `material.py` builds the keys and certificates
   deterministically; the only frozen input is ML-DSA signatures (`inputs/frozen.json`),
   since ML-DSA signing is randomised.
+- `tests/conftest.py` fails the run when a test created, changed or removed anything
+  under `server/runtime/`, `instance/` or the MDS snapshot files in `frontend/static/`.
+  What is there mixes the owner's local data with old test leftovers: the guard
+  compares listings from before and after the run, and never deletes. Give a test its
+  own stores in `tmp_path`. `tests/app/conftest.py` also points the session-metadata
+  store at a directory of the run's for the whole session: a session-cleanup thread
+  can outlive the test that started it, and one that lists the checkout's directory
+  removes the inactive sessions it finds there.
 
 For a test that needs an app configured differently, use the `make_app` fixture in
 `tests/app/conftest.py` (or `app` / `client`): it calls `create_app()` with a fixed
