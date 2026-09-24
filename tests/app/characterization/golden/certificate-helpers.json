@@ -573,7 +573,7 @@
   "dsa-with-sha1": "DSA",
   "ML-DSA-44": "DSA",
   "some thing-else": "SOMETHINGELSE",
-  "rsassaPss": "RSASSA-PKCS1-v1_5"
+  "rsassaPss": "RSASSA-PSS"
  },
  "hash": {
   "None": "",
