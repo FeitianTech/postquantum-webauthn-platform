@@ -1346,6 +1346,104 @@ vitest 293 -> 293, ruff clean, coverage 96.15% -> **96.45%**.
   against the client-supplied value alone, which the client can omit. A missing record may fall back; a
   failed read should fail closed.
 
+### Phase 19 — backend correctness leftovers — DONE (2026-09-24)
+11 commits, 56d87b96..the record's own, each gated on pytest, vitest and ruff exit codes and each re-run
+afterwards on its own tree in a worktree. (231f6f99 and ed279cdc, between Phase 18 and this phase, were made
+in the same checkout by another session and are not this phase's.) Every new test was also run on the
+untouched 383f4a15 tree, adapted only where it imports a name that did not exist yet.
+
+**Step 1, fail-closed signature counter.** A failed read of the stored records now rejects simple
+authentication: 503 `{"error": ...}`, nothing saved, no session key but the ceremony's own consumed, one
+warning line naming the cause and no traceback. A read that works but holds no record for the credential
+still falls back to the browser's copy; `InvalidStorageIdentifier` stays 400. The counter stage moved out of
+`authenticate_complete` into `enforce_sign_count` (191 -> 137 lines). **On 383f4a15** the read-failure test
+fails both ways (with and without a client `signCount`): a credential stored at counter 10 authenticates
+at 5 with `200 {"status": "OK", "signCount": 5}`.
+
+**Step 2, reads that fail are not "fewer credentials".** `download_bytes` returns `None` for a missing
+object and raises otherwise; locally only `FileNotFoundError` is "not there". The store now tells three
+cases apart: not found (fine); unreadable (`common.StorageReadError`, an `OSError`, raised from the cause,
+naming the copy); undecodable (a warning naming the file or object and the reason, never the content --
+an unpickling error's own message quotes the bytes -- then skipped and counted). The first copy that
+exists is the user's: an older, stale copy never stands in for a newer undecodable one.
+`read_for_update` refuses an undecodable current copy (`CredentialsUndecodable`) rather than let the save
+replace it unread; the counter check then fails closed too. A failed GCS listing raises instead of warning.
+`GET /api/credentials` answers 503 on a read error and `{"credentials": [...], "unreadableCount": n}`
+when copies did not decode (the `X-Unreadable-Credentials` header stays); `DELETE` deletes undecodable
+users too; `routes/errors.py` answers `StorageReadError` with 503 everywhere else (`downloadcred` said 404).
+The record format moved to `storage/record_format.py` first, which took `credentials.py` from 771 to under
+700 lines (its ratchet entry is gone). Frontend: no code requests `/api/credentials` (none ever did), so there
+was no list to add the line to. `attachments.build_credential_attachment_map` lets `StorageReadError` out
+rather than return a map missing credentials, which a hint check would read as "no attachment recorded".
+**On 383f4a15**: 26 of 32 storage tests fail (`readkey` returns the stale legacy copy or `[]` instead of
+raising, `iter_credentials` skips an unreadable entry, a failed listing lists the rest); with the real store,
+one user's unreadable file gives `200` and the other user's credentials alone, `downloadcred` gives 404,
+`DELETE` reports `removed: 1` and leaves the undecodable user.
+
+**Step 3, legacy records cannot be resurrected.** A save from a legacy read holds "there is no current copy"
+as its version; a delete that removed the legacy copy (and any current copy) made that true again. `delkey`
+now empties the current copy instead of removing it whenever any copy existed, and removes every legacy
+copy, locally under the current copy's lock. That also closes the case where another save made the
+current copy and dropped the session `.pkl`, so the delete found no legacy copy at all. A deleted user is
+not listed (an emptied copy holds no records). Race test in the style of `test_registration_race.py`, local
+and fake GCS: a real registration held after its read while a real `/api/deletepub` runs. **On 383f4a15**
+the deleted credential comes back beside the new one on both backends, and the save after
+"save, discard `.pkl`, delete" returns `True`.
+
+**Step 4, artifacts.** A merge whose conditional upload raised re-reads the record and reports success only
+if it holds every merged value (**on 383f4a15**: `False` for a write that landed). Local artifacts live under
+`<artifact dir>/<session>/`, as on GCS; the old flat files are not read -- local development data only. **On
+383f4a15** session B loads, overwrites and deletes session A's artifact by its id. **Deviation:** the
+characterization harness records the paths of files a request writes, so this regenerated nine route
+goldens; the diff is 17 `stored[].file` values, `artifacts/<sha>.json` -> `artifacts/<session>/<sha>.json`,
+contents identical (checked field by field). It is its own commit (2e1e3f44).
+
+**Step 5, SCTs as data.** Each SCT is its version, log ID (hex), timestamp (ISO 8601 UTC, milliseconds), entry
+type, signature hash and signature algorithm. The harness's memory-address scrub is gone. Only
+`golden/certificates.json` was regenerated; its diff is two fields of `safetynet-0`, the SCT extension's
+`value` and the SCT lines of `summary`.
+
+**Step 6, one source for algorithm names.** The three helpers in `mds_snapshot.py` spell X.509 signature
+algorithms from OIDs; `describe_algorithm` and `cose_tables` name COSE algorithm identifiers, which the MDS
+entry does not carry, and `cose_tables` imports Flask through the decoder package. The spellings moved to
+`webauthn/signature_algorithms.py`, a Flask-free leaf that `certificate_names` and `mds_snapshot` both use
+(`certificate_names` itself cannot be imported without Flask, and from `mds_snapshot` not at all: circular).
+The copy had drifted: **on 383f4a15** an Ed25519- or Ed448-signed root raises `AttributeError` in the MDS
+summary; now `ED25519_SHA512` / `ED448_SHAKE256`, as in the certificate view. New: a fresh-interpreter test that
+`tools.update_mds_snapshot` imports no `flask` module. The existing in-process check cannot see it: with a
+probe `import flask` added to `mds_snapshot`, it still passed and the new test failed.
+
+**Step 7, tests do not write into the checkout.** `tests/conftest.py` fails the run when anything under
+`server/runtime/`, `instance/` or the MDS snapshot files was created, changed or removed, comparing listings;
+it deletes nothing. The leaks: `test_advanced_registration_reports_a_replayed_challenge` (a session directory
+per run) and `test_prune_helper_and_request_session_identifier_paths` (refreshed `cookie-session`'s marker);
+the security `simple_storage` / `advanced_storage` fixtures and that test now use `tmp_path`. Three fixtures
+(17 tests) that also patched `config.SESSION_METADATA_DIR`, which nothing reads, dropped it. Worse than
+writes: the suite **deleted** session directories in the checkout -- a cleanup thread removes sessions
+inactive for 14 days from whatever directory it lists, and can outlive the test that started it. A stale
+probe directory planted in a worktree was removed by the 383f4a15 suite; `tests/app/conftest.py` now points
+the session-metadata store at the run's own directory for the whole session, and three runs later the probe
+was intact. **On 383f4a15** the guard fails the run: 4 entries created, the stale probe removed. During this
+phase, before the guard, the suite removed 101 of the 102 pre-existing directories in
+`server/runtime/session-metadata/` (each held only an empty `.last-access` marker; names such as
+`victim-namespace` are test fixtures) and my runs added 21; neither was undone, per the brief.
+
+**Tests.** macOS 2480 -> **2556** passed / 4 skipped; Linux (python:3.14, Docker) 2466 -> **2542** / 5;
+`tests/app/security/` 105 -> **120**; vitest 293 -> 293; ruff clean; coverage 96.45% -> **96.49%**; vitest
+coverage unchanged. Functions over 80 lines still 14 (`authenticate_complete` 191 -> 137); modules over 700
+**3 -> 2**.
+
+**Found but not fixed:**
+- Both certificate views spell RSA-PSS `RSASSA-PKCS1-v1_5`: cryptography names the OID `rsassaPss`, which the
+  `"rsassa-pss"` test misses. Fixing it changes certificate goldens.
+- Credential artifacts still read a GCS download error as "no artifact" (`_read_record`), and a non-merge store
+  then overwrites; step 2 covered the credential store only.
+- Registration answers 500, not 503, when the store cannot be read (authentication and the list say 503).
+- `build_credential_attachment_map` has had no caller since 73afe6ac (2025-09-26).
+- A GCS listing lists every object under `user-data/`, every session's, to find the flat legacy copies.
+- The guard does not cover the legacy stores in the source tree (`server/app/session-credentials/`,
+  `server/app/*_credential_data.pkl`); `test_storage_local_contracts.py` reads the former unredirected.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
