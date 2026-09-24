@@ -3,6 +3,7 @@ from __future__ import annotations
 import builtins
 import ctypes
 import struct
+import types
 
 import pytest
 
@@ -111,7 +112,8 @@ def test_enumerate_parses_pnpinfo_and_description(monkeypatch):
         olen.contents.value = len(payload)
         return 0
 
-    monkeypatch.setattr(freebsd.libc, "sysctlbyname", _sysctlbyname, raising=False)
+    # glibc has no sysctlbyname, so the test brings a libc of its own.
+    monkeypatch.setattr(freebsd, "libc", types.SimpleNamespace(sysctlbyname=_sysctlbyname))
 
     devices = list(freebsd._enumerate())
 
@@ -142,7 +144,8 @@ def test_enumerate_skips_failed_pnpinfo_and_sets_none_for_missing_desc(monkeypat
             return -1
         return -1
 
-    monkeypatch.setattr(freebsd.libc, "sysctlbyname", _sysctlbyname, raising=False)
+    # glibc has no sysctlbyname, so the test brings a libc of its own.
+    monkeypatch.setattr(freebsd, "libc", types.SimpleNamespace(sysctlbyname=_sysctlbyname))
 
     devices = list(freebsd._enumerate())
 
