@@ -114,8 +114,15 @@ def local_store(monkeypatch, tmp_path, storage_module):
     return storage_module
 
 
+def _legacy_copy(store, name):
+    # The flat pre-session file: a copy delkey removes rather than empties.
+    with open(store._legacy_local_filename(name), "wb") as handle:
+        handle.write(store.record_format.encode_records([{"credential_data": "legacy"}]))
+
+
 def test_delkey_raises_when_a_file_it_should_delete_stays(monkeypatch, local_store):
     local_store.savekey("alice", [{"credential_data": "x"}], session_id=_SESSION)
+    _legacy_copy(local_store, "alice")
     real_remove = os.remove
 
     def _remove(path):
@@ -136,6 +143,7 @@ def test_delkey_of_a_name_with_nothing_stored_is_not_an_error(local_store):
 def test_the_endpoint_reports_a_file_it_could_not_delete(client, monkeypatch, session_id, local_store):
     local_store.savekey("alice@example.com", [{"credential_data": "x"}], session_id=_SESSION)
     local_store.savekey("bob@example.com", [{"credential_data": "x"}], session_id=_SESSION)
+    _legacy_copy(local_store, "bob@example.com")
     real_remove = os.remove
 
     def _remove(path):

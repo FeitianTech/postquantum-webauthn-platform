@@ -148,7 +148,7 @@ def test_a_conditional_gcs_upload_is_not_retried_by_the_client_library(gcs_store
     assert gcs_store.upload_retries[-1] is None
 
 
-def test_a_delete_during_a_save_waits_for_it_and_leaves_nothing(local_store, monkeypatch):
+def test_a_delete_during_a_save_waits_for_it_and_leaves_no_records(local_store, monkeypatch):
     # The save is paused inside the store's lock, between its check and its
     # rename. A delete that did not take the lock would remove the file there,
     # and the rename would then write the deleted records back.
@@ -179,7 +179,9 @@ def test_a_delete_during_a_save_waits_for_it_and_leaves_nothing(local_store, mon
     deleter.join(10)
 
     assert saved == [True]
-    assert not os.path.exists(path)
+    # Emptied, not removed: see delkey.
+    with open(path, "rb") as handle:
+        assert store.record_format.decode_payload(handle.read()) == []
     assert store.readkey(NAME, session_id=SESSION) == []
 
 
