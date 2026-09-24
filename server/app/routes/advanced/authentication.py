@@ -319,16 +319,21 @@ def _server_supports_algorithm(algorithm: int | None) -> bool:
 def advanced_authenticate_complete():
     data = request.get_json(silent=True) or {}
 
-    # Determined up front (peek, not pop) so that every response below can
-    # report it: the advanced flow may be permissive, never silent.
-    challenge_source = (
-        CHALLENGE_SOURCE_SERVER
-        if session.get("advanced_auth_state") is not None
-        else CHALLENGE_SOURCE_CLIENT
-    )
+    # Consumed before anything can fail, as in the simple flow: an early error
+    # burns the challenge too, so a replay is always labelled as one. The
+    # request editor is permissive, so a replayed or stale server challenge is
+    # reported via ``challengeStatus`` rather than rejected -- on every response.
+    state = session.pop("advanced_auth_state", None)
+    if state is not None:
+        challenge_source = CHALLENGE_SOURCE_SERVER
+        challenge_status = consume_ceremony_state(state)
+    else:
+        challenge_source = CHALLENGE_SOURCE_CLIENT
+        challenge_status = CHALLENGE_STATUS_NOT_TRACKED
 
     def _fail(payload: dict[str, Any], status: int = 400):
         payload.setdefault("challengeSource", challenge_source)
+        payload.setdefault("challengeStatus", challenge_status)
         return jsonify(payload), status
 
     response = data.get("__assertion_response")
@@ -441,14 +446,7 @@ def advanced_authenticate_complete():
             )
         return _fail(response_payload)
 
-    state = session.pop("advanced_auth_state", None)
-    if state is not None:
-        # The request editor is permissive, so a replayed or stale server
-        # challenge is reported via ``challengeStatus`` rather than rejected.
-        # It is still consumed, so a replay is always labelled as one.
-        challenge_status = consume_ceremony_state(state)
-    else:
-        challenge_status = CHALLENGE_STATUS_NOT_TRACKED
+    if state is None:
         fallback_state = data.get("__session_state")
         if isinstance(fallback_state, Mapping):
             state = fallback_state
