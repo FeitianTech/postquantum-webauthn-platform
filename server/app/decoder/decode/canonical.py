@@ -3,7 +3,10 @@
 CTAP 2.2, "Message Encoding", requires the CTAP2 canonical CBOR encoding form:
 integers and lengths as short as possible, no indefinite-length items, map keys
 sorted by major type, then encoded length, then bytewise, and no tags. RFC 8949
-section 5.6 adds that a map with a duplicate key is not valid CBOR at all.
+section 5.6 adds that a map with a duplicate key is not valid CBOR at all. The
+same section of CTAP 2.2 limits nesting to "at most four (4) levels of any
+combination of CBOR maps and/or CBOR arrays"; the first map or array at a fifth
+level is reported, its contents are not reported again.
 
 ``check`` walks a node tree from ``cbor_parser`` and returns one finding per
 violation, each with the byte offset and path of the item at fault. It reads
@@ -16,6 +19,9 @@ from typing import Any
 
 from ..ctap2_order import ctap2_key_order
 from .cbor_parser import _diagnostic_key
+
+# CTAP 2.2 section 8, "Message Encoding": the deepest maps and arrays may nest.
+_MAX_NESTING = 4
 
 _KINDS = {
     0: "integer",
@@ -32,7 +38,7 @@ def check(node: Mapping[str, Any], data: bytes) -> list[dict[str, Any]]:
     """Return the CTAP2 canonical-form violations in ``node``, in byte order."""
 
     findings: list[dict[str, Any]] = []
-    _check_node(node, data, "$", findings)
+    _check_node(node, data, "$", findings, 0)
     return findings
 
 
@@ -85,11 +91,30 @@ def _check_head(node: Mapping[str, Any], data: bytes, path: str, findings: list[
     )
 
 
-def _check_node(node: Mapping[str, Any], data: bytes, path: str, findings: list[dict[str, Any]]) -> None:
+def _check_node(
+    node: Mapping[str, Any], data: bytes, path: str, findings: list[dict[str, Any]], depth: int
+) -> None:
+    """Check ``node``; ``depth`` counts the maps and arrays around it."""
+
     if not isinstance(node, Mapping) or node.get("type") == "invalid":
         return
     major_type = node.get("majorType")
     offset = node.get("offset")
+    if major_type in (4, 5):
+        depth += 1
+        if depth == _MAX_NESTING + 1:
+            findings.append(
+                {
+                    "code": "nesting-depth",
+                    "category": "limit",
+                    "offset": offset,
+                    "path": path,
+                    "message": (
+                        f"{_KINDS[major_type]} nested {depth} levels deep; CTAP2 allows at most "
+                        f"{_MAX_NESTING} levels of maps and arrays"
+                    ),
+                }
+            )
 
     if node.get("indefinite"):
         findings.append(
@@ -105,17 +130,17 @@ def _check_node(node: Mapping[str, Any], data: bytes, path: str, findings: list[
 
     if major_type in (2, 3):
         for index, chunk in enumerate(node.get("chunks") or node.get("segments") or []):
-            _check_node(chunk, data, f"{path}<chunk {index}>", findings)
+            _check_node(chunk, data, f"{path}<chunk {index}>", findings, depth)
     elif major_type == 4:
         for index, item in enumerate(node.get("items") or []):
-            _check_node(item, data, f"{path}[{index}]", findings)
+            _check_node(item, data, f"{path}[{index}]", findings, depth)
     elif major_type == 5:
-        _check_map(node, data, path, findings)
+        _check_map(node, data, path, findings, depth)
     elif major_type == 6:
         findings.append(
             _finding("tag", offset, path, f"tag {node.get('tag')}; CTAP2 canonical CBOR has no tags")
         )
-        _check_node(node.get("value") or {}, data, f"{path}<tag>", findings)
+        _check_node(node.get("value") or {}, data, f"{path}<tag>", findings, depth)
 
 
 def _key_identity(key: Mapping[str, Any], encoded: bytes) -> tuple[Any, ...]:
@@ -131,7 +156,9 @@ def _key_identity(key: Mapping[str, Any], encoded: bytes) -> tuple[Any, ...]:
     return ("encoded", encoded)
 
 
-def _check_map(node: Mapping[str, Any], data: bytes, path: str, findings: list[dict[str, Any]]) -> None:
+def _check_map(
+    node: Mapping[str, Any], data: bytes, path: str, findings: list[dict[str, Any]], depth: int
+) -> None:
     seen: dict[tuple[Any, ...], int] = {}
     previous: tuple[bytes, Mapping[str, Any]] | None = None
     for entry in node.get("entries") or []:
@@ -141,7 +168,7 @@ def _check_map(node: Mapping[str, Any], data: bytes, path: str, findings: list[d
         entry_path = entry.get("path") or path
         key_offset = key["offset"]
         encoded = data[key_offset : key["end"]]
-        _check_node(key, data, entry_path, findings)
+        _check_node(key, data, entry_path, findings, depth)
 
         identity = _key_identity(key, encoded)
         if identity in seen:
@@ -167,4 +194,4 @@ def _check_map(node: Mapping[str, Any], data: bytes, path: str, findings: list[d
                     )
                 )
         previous = (encoded, key)
-        _check_node(value, data, entry_path, findings)
+        _check_node(value, data, entry_path, findings, depth)
