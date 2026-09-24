@@ -8,7 +8,6 @@ from fido2.webauthn import AuthenticatorData
 
 from .. import ctap_tables
 from . import (
-    authenticator_data_findings,
     canonical,
     cbor_parser,
     get_info,
@@ -217,8 +216,9 @@ def _looks_like_make_credential_output(value: Mapping[Any, Any]) -> bool:
         att_stmt_value = None
     att_stmt_bytes = _coerce_cbor_bytes(att_stmt_value)
     att_stmt_map = att_stmt_value if isinstance(att_stmt_value, Mapping) else None
+    compound = fmt_value == "compound" and isinstance(att_stmt_value, list)
     return fmt_value is not None and auth_data_bytes is not None and (
-        att_stmt_map is not None or att_stmt_bytes is not None
+        att_stmt_map is not None or att_stmt_bytes is not None or compound
     )
 
 
@@ -607,7 +607,8 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] |
     att_stmt_map = att_stmt_entry if isinstance(att_stmt_entry, Mapping) else None
     if not isinstance(fmt, str) or not fmt.strip() or auth_data_bytes is None:
         return None
-    if att_stmt_map is None and att_stmt_bytes is None and att_stmt_entry is not None:
+    compound = fmt == "compound" and isinstance(att_stmt_entry, list)
+    if att_stmt_map is None and att_stmt_bytes is None and att_stmt_entry is not None and not compound:
         return None
 
     interpreted: dict[str, Any] = {}
@@ -836,9 +837,8 @@ def _try_decode_cbor(data: bytes, encoding: str, *, lenient: bool = False) -> di
     if ctap_decoded is None:
         decoded_payload["decodedValue"] = _stringify_mapping_keys(_hex_json_safe(hex_decoded_value))
 
-    findings = canonical.check(node, data) + skipped + _trailing_findings(data, end)
-    if classification in ("make_credential_output", "get_assertion_output"):
-        findings += authenticator_data_findings.for_member(node, data, (2, "authData"))
+    extra, located = interpretations.for_ctap(classification, base_value, node, data)
+    findings = canonical.check(node, data) + skipped + _trailing_findings(data, end) + located
 
     if ctap_details is not None:
         ctap_details["payloadLength"] = consumed_total
@@ -854,7 +854,7 @@ def _try_decode_cbor(data: bytes, encoding: str, *, lenient: bool = False) -> di
         "decoded": decoded_payload,
         "binary": pipeline._binary_summary(data, encoding),
         "decodeMode": "lenient" if lenient else "strict",
-        "extraData": interpretations.for_ctap(classification, base_value),
+        "extraData": extra,
     }
     _attach_findings(result, findings)
     return result
