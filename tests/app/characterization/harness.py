@@ -30,7 +30,6 @@ import difflib
 import hashlib
 import json
 import os
-import re
 import secrets
 import sys
 import time
@@ -279,14 +278,8 @@ class Recorder:
         return {"scenario": self.name, "requests": self.records}
 
 
-# ``str()`` of some cryptography extension values (the SCT list of a SafetyNet
-# certificate) embeds the object's memory address, which changes every run.
-_MEMORY_ADDRESS = re.compile(r" object at 0x[0-9a-f]+>")
-
-
 def render(record: Any) -> str:
-    text = json.dumps(record, indent=1, sort_keys=False, ensure_ascii=True) + "\n"
-    return _MEMORY_ADDRESS.sub(" object at 0x...>", text)
+    return json.dumps(record, indent=1, sort_keys=False, ensure_ascii=True) + "\n"
 
 
 def check_golden(relative: str, record: Any) -> None:
