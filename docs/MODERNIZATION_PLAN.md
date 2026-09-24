@@ -264,12 +264,16 @@ Noted: reported image growth of +55MB from `apt-get upgrade` did not reproduce f
 (`@vitest/mocker`; the fix needs vitest 4.1.11, which npm 10.9.8 cannot install).
 
 ### Owner decisions (2026-09-24) — settled, do not re-raise
-- **Deploy gate: approved.** The Cloud Build trigger is to build from `cloudbuild.yaml`, so its test
+- **Deploy gate: DONE (2026-09-24).** The Cloud Build trigger builds from `cloudbuild.yaml`, so its test
   steps gate every deploy. `gcloud builds triggers update github ... --build-config=cloudbuild.yaml`
   fails with `INVALID_ARGUMENT`: the trigger carries an inline `build`, and a trigger may not have
   both. The switch is a re-import of the same trigger with `filename: cloudbuild.yaml` and no `build`.
   Both test steps were run beforehand in their exact images (`python:3.12-slim`: 2466 passed /
   5 skipped; `node:22-slim`: 293 passed).
+  Proven on a manual run of `main` (build `0ff71eaa`, commit `ed279cdc`): Python tests and Frontend
+  tests ran in parallel first, Build waited for both, and revision `pqcwebauthn-00436` carries the
+  commit, build and trigger labels. Two imports of the backup file reverted the switch by mistake; the
+  backup of the inline trigger is kept out of the repo and offered only when a rollback is needed.
 - **Branch protection on `main`: off.** The bot PR flow is a convention, not enforced.
 - **`BOT_PR_TOKEN`: not set.** Bot pull requests get no CI run until someone pushes to them.
 - **Git history rewrite: deferred, the tech lead's call on timing.** Planned for the final-audit
@@ -1443,6 +1447,24 @@ coverage unchanged. Functions over 80 lines still 14 (`authenticate_complete` 19
 - A GCS listing lists every object under `user-data/`, every session's, to find the flat legacy copies.
 - The guard does not cover the legacy stores in the source tree (`server/app/session-credentials/`,
   `server/app/*_credential_data.pkl`); `test_storage_local_contracts.py` reads the former unredirected.
+
+**Phase 19 — tech-lead verification (2026-09-24):**
+- macOS 2556 passed / 4 skipped, coverage 96%, vitest 293, ruff clean, `tests/app/security/` 120.
+  **Linux (python:3.14 in Docker, run independently) 2542 passed / 5 skipped.**
+- **Every one of the 11 commits passes pytest on its own.** The two commits between 383f4a15 and the
+  phase (`231f6f99`, `ed279cdc`) are the tech lead's; the agent named them rather than claiming them.
+- The new tests, copied onto the pre-phase tree, fail there for the stated reasons: a credential stored
+  at counter 10 authenticates at 5 (`200 OK`) when the store read fails; a deleted credential comes back
+  beside a racing registration's (local and fake GCS).
+- The checkout guard works: a full run left `server/runtime/session-metadata/` at the same 22 entries.
+- `2e1e3f44` regenerated route goldens against the brief's rule; the diff is exactly 17 artifact paths
+  (`artifacts/<sha>.json` -> `artifacts/<session>/<sha>.json`) and nothing else. Accepted: per-session
+  scoping changes those paths by design. The session folder is a validated name under a contained path.
+- `GET /api/credentials` changed from a bare list to `{"credentials": [...]}`; nothing in the frontend,
+  docs or tools reads it.
+- Not new: the simple flow takes `email` from the complete request's query string, so a client can point
+  the counter check at a user with no record. That is the Phase 1 known limitation (server records keyed
+  by browser namespace, client-supplied public keys), not a regression.
 
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
