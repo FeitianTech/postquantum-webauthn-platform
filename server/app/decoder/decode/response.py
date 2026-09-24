@@ -158,6 +158,12 @@ def _convert_public_key_credential_data(result: Mapping[str, Any]) -> dict[str, 
     if response_extras:
         payload["responseDetails"] = response_extras
 
+    # A field that did not decode says where it stopped, in the section it names.
+    for field in ("attestationObject", "authenticatorData", "clientDataJSON"):
+        entry = response.get(field) if isinstance(response, Mapping) else None
+        if isinstance(entry, Mapping) and "parseError" in entry:
+            payload.setdefault(field, {})["parseError"] = entry["parseError"]
+
     return payload
 
 

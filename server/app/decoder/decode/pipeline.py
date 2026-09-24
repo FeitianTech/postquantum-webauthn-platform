@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import re
 import uuid
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from cryptography import x509
@@ -100,6 +100,7 @@ def _decode_public_key_credential(
 
     attestation_entry = _decode_binary_field(response_mapping.get("attestationObject"))
     authenticator_entry = _decode_binary_field(response_mapping.get("authenticatorData"))
+    findings: list[dict[str, Any]] = []
 
     format_label = "PublicKeyCredential"
     if attestation_entry:
@@ -108,7 +109,7 @@ def _decode_public_key_credential(
         response_details["attestationObject"] = {
             "raw": response_mapping.get("attestationObject"),
             "binary": _binary_summary(att_bytes, att_encoding),
-            "details": _parse_attestation_object(att_bytes),
+            **_read_nested("response.attestationObject", att_bytes, _nested_attestation_object, findings),
         }
 
     if authenticator_entry:
@@ -118,7 +119,7 @@ def _decode_public_key_credential(
         response_details["authenticatorData"] = {
             "raw": response_mapping.get("authenticatorData"),
             "binary": _binary_summary(auth_bytes, auth_encoding),
-            "details": _describe_authenticator_data_bytes(auth_bytes),
+            **_read_nested("response.authenticatorData", auth_bytes, _nested_authenticator_data, findings),
         }
 
     client_data_entry = _decode_binary_field(response_mapping.get("clientDataJSON"))
@@ -127,7 +128,7 @@ def _decode_public_key_credential(
         response_details["clientDataJSON"] = {
             "raw": response_mapping.get("clientDataJSON"),
             "binary": _binary_summary(client_bytes, client_encoding),
-            "details": _describe_client_data_from_bytes(client_bytes),
+            **_read_nested("response.clientDataJSON", client_bytes, _nested_client_data, findings),
         }
 
     signature_entry = _decode_binary_field(response_mapping.get("signature"))
@@ -148,11 +149,69 @@ def _decode_public_key_credential(
 
     decoded["response"] = response_details
 
-    return {
+    result = {
         "format": format_label,
         "inputEncoding": "json",
         "decoded": decoded,
     }
+    ctap._attach_findings(result, findings)
+    return result
+
+
+def _read_nested(
+    source: str,
+    data: bytes,
+    read: Callable[[bytes], tuple[dict[str, Any], list[dict[str, Any]]]],
+    findings: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Decode one binary field of a PublicKeyCredential, reporting where it fails.
+
+    A field that does not decode is shown as sent, with ``parseError`` saying
+    where it stops; the rest of the credential still decodes. Each finding
+    carries ``source``, and its offset counts from that field's decoded bytes.
+    """
+
+    try:
+        details, nested = read(data)
+    except ValueError as exc:
+        offset, path, reason = _error_location(exc)
+        findings.append(
+            {
+                "code": "parse-error",
+                "category": "malformed",
+                "offset": offset,
+                "path": path,
+                "message": f"{source} does not decode: {reason}",
+                "source": source,
+            }
+        )
+        return {"parseError": {"offset": offset, "path": path, "reason": reason}}
+    findings.extend({**finding, "source": source} for finding in nested)
+    return {"details": details}
+
+
+def _error_location(exc: ValueError) -> tuple[int, str, str]:
+    if isinstance(exc, (cbor_parser._CborDecodingError, _LocatedError)):
+        return exc.offset, exc.path, exc.reason
+    if isinstance(exc, json.JSONDecodeError):
+        return exc.pos, "$", exc.msg
+    if isinstance(exc, UnicodeDecodeError):
+        return exc.start, "$", f"not UTF-8 ({exc.reason})"
+    return 0, "$", str(exc)
+
+
+def _nested_attestation_object(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    details, node, end = _read_attestation_object(data)
+    findings = canonical.check(node, data) + ctap._trailing_findings(data, end)
+    return details, findings + authenticator_data_findings.for_member(node, data, ("authData",))
+
+
+def _nested_authenticator_data(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    return _describe_authenticator_data_bytes(data), authenticator_data_findings.check(data, 0, "$")
+
+
+def _nested_client_data(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    return _describe_client_data_from_bytes(data), []
 
 
 def _decode_pem_certificates(text: str) -> dict[str, Any]:
@@ -414,7 +473,7 @@ def _read_authenticator_data(data: bytes) -> dict[str, Any]:
     """
 
     if len(data) < 37:
-        raise ValueError("Authenticator data is shorter than its 37-byte header.")
+        raise _LocatedError("authenticator data is shorter than its 37-byte header", len(data), "$")
     flags = data[32]
     fields: dict[str, Any] = {
         "rpIdHash": data[:32],
@@ -425,26 +484,47 @@ def _read_authenticator_data(data: bytes) -> dict[str, Any]:
 
     if flags & AuthenticatorData.FLAG.AT:
         if len(data) - offset < 18:
-            raise ValueError("Attested credential data is truncated.")
+            raise _LocatedError("attested credential data is shorter than its 18-byte header", offset, "$")
         aaguid = data[offset : offset + 16]
         id_length = int.from_bytes(data[offset + 16 : offset + 18], "big")
         offset += 18
         if offset + id_length > len(data):
-            raise ValueError("The credential ID is truncated.")
+            raise _LocatedError(f"the credential ID declares {id_length} bytes; {len(data) - offset} remain", offset, "$")
         credential_id = data[offset : offset + id_length]
-        node, offset, _ = cbor_parser.decode_item(data, offset + id_length)
+        key_offset = offset + id_length
+        node, offset = _read_embedded_item(data, key_offset, "credentialPublicKey")
         public_key = cbor_parser._structure_to_value(node)
         if not isinstance(public_key, Mapping):
-            raise ValueError("The credential public key is not a COSE_Key map.")
+            raise _LocatedError("the credential public key is not a COSE_Key map", key_offset, "$<credentialPublicKey>")
         fields["attestedCredentialData"] = (aaguid, credential_id, public_key)
 
     if flags & AuthenticatorData.FLAG.ED:
-        node, offset, _ = cbor_parser.decode_item(data, offset)
+        node, offset = _read_embedded_item(data, offset, "extensions")
         fields["extensions"] = cbor_parser._structure_to_value(node)
 
     if offset != len(data):
-        raise ValueError("Wrong length")
+        raise _LocatedError(f"{len(data) - offset} byte(s) after what the AT and ED flags account for", offset, "$")
     return fields
+
+
+class _LocatedError(ValueError):
+    """Bytes that are well-formed CBOR, or none at all, but not the structure expected there."""
+
+    def __init__(self, reason: str, offset: int, path: str) -> None:
+        super().__init__(f"{reason} (offset {offset}, {path})")
+        self.reason = reason
+        self.offset = offset
+        self.path = path
+
+
+def _read_embedded_item(data: bytes, offset: int, name: str) -> tuple[dict[str, Any], int]:
+    """Parse the CBOR item authData holds at ``offset``; an error names the item."""
+
+    try:
+        node, end, _ = cbor_parser.decode_item(data, offset)
+    except cbor_parser._CborDecodingError as exc:
+        raise cbor_parser._CborDecodingError(exc.reason, exc.offset, f"$<{name}>{exc.path[1:]}") from exc
+    return node, end
 
 
 def _describe_authenticator_data_bytes(data: bytes) -> dict[str, Any]:
@@ -511,10 +591,17 @@ def _read_attestation_object(data: bytes) -> tuple[dict[str, Any], dict[str, Any
     if not isinstance(fmt, str) or not isinstance(auth_data, bytes) or not isinstance(att_stmt, Mapping):
         raise ValueError("An attestation object has a text fmt, byte string authData and map attStmt.")
 
+    try:
+        authenticator_data = _describe_authenticator_data_bytes(auth_data)
+    except (cbor_parser._CborDecodingError, _LocatedError) as exc:
+        member = authenticator_data_findings.member_node(node, ("authData",))
+        start = member["end"] - member["length"] if member and not member.get("indefinite") else 0
+        path = member["path"] if member else "$"
+        raise type(exc)(exc.reason, start + exc.offset, path + exc.path[1:]) from exc
     details: dict[str, Any] = {
         "attestationFormat": fmt,
         "attestationStatement": make_json_safe(att_stmt),
-        "authenticatorData": _describe_authenticator_data_bytes(auth_data),
+        "authenticatorData": authenticator_data,
         "cbor": make_json_safe(value),
     }
 
