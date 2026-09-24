@@ -30,9 +30,16 @@ def formatting():
 
 @pytest.fixture
 def certificates():
-    """The submodule that serializes, summarises and details X.509 certificates."""
+    """The submodule that serializes X.509 certificates and extracts attestation details."""
 
     return _fragment("certificates")
+
+
+@pytest.fixture
+def certificate_extensions():
+    """The submodule that shows an X.509 extension's value."""
+
+    return _fragment("certificate_extensions")
 
 
 @pytest.fixture
