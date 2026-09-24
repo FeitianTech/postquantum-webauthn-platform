@@ -12,13 +12,11 @@ from . import (
     canonical,
     cbor_parser,
     get_info,
+    interpretations,
     pipeline,
     response,
 )
-from .cbor_parser import (
-    _CborDecodingError,
-    _structure_to_value,
-)
+from .cbor_parser import _CborDecodingError, _structure_to_value
 from .keys import MISSING, key_identity
 from .keys import MISSING as _MISSING
 from .keys import coerce_cbor_bytes as _coerce_cbor_bytes
@@ -856,6 +854,7 @@ def _try_decode_cbor(data: bytes, encoding: str, *, lenient: bool = False) -> di
         "decoded": decoded_payload,
         "binary": pipeline._binary_summary(data, encoding),
         "decodeMode": "lenient" if lenient else "strict",
+        "extraData": interpretations.for_ctap(classification, base_value),
     }
     _attach_findings(result, findings)
     return result
