@@ -102,11 +102,29 @@ Main route modules:
 - `server/app/routes/simple/`
   Simple WebAuthn begin/complete endpoints. `__init__.py` holds the Flask rules on
   the `simple` blueprint (`bp`); `registration.py`, `authentication.py` and
-  `credential_list.py` hold the bodies.
+  `credential_list.py` hold the bodies. `registration.py` runs register-complete's
+  stages: `registration_record.py` builds the record (attestation summary, credential
+  info, authenticator data, relying-party and debug views, stored credential) and
+  `registration_persistence.py` saves it -- appending to the user's credential list by
+  compare-and-swap, retrying a lost race up to eight times, 409 after that -- then
+  updates the session list and the device log.
 - `server/app/routes/advanced/`
   Advanced WebAuthn begin/complete endpoints, algorithm handling, request
   validation, metadata-heavy flows. Same shape: rules on the `advanced` blueprint
   in `__init__.py`, bodies in `registration.py`, `authentication.py`, `artifacts.py`.
+  The bodies are short orchestrators over modules named for their stage:
+  registration begin in `registration_options.py` (request checks, RP and server,
+  authenticator selection, exclude list, extensions) with the algorithm offer in
+  `algorithms.py`; registration complete in `registration_inputs.py` (request, state,
+  fido2 verification), `registration_attestation.py` (origin allowlist, attestation
+  checks and their summary), `registration_record.py` (credential info, debug view,
+  relying-party view, stored credential) and `registration_persistence.py` (artifact,
+  device log, answer); authentication in `assertion_credentials.py` (which stored
+  credentials may answer), `assertion_options.py` (begin's server, UV, extensions) and
+  `assertion_verification.py` (fido2's verdict and the answer). The challenge-source
+  names live in `constants.py`, the binary request-field decode in `binary.py`, the
+  attachment-hint check in `server/app/attachments.py`. The try blocks and the order
+  of session reads in the bodies are behaviour; keep moved code inside them.
 - `server/app/routes/general.py`
   Index page, metadata bootstrap helpers, decoder endpoints, misc app routes, on
   the `general` blueprint. `static_assets.py` has its own `static_assets`
@@ -116,17 +134,28 @@ Main route modules:
 Related backend modules:
 
 - `server/app/webauthn/attestation/`
-  Attestation parsing and validation. `certificates.py`, `checks.py`, `trust.py`,
-  `pqc.py`, `classical.py`.
+  Attestation parsing and validation. `checks.py` (the checks), `trust.py`, `pqc.py`,
+  `classical.py`. `certificates.py` serialises a certificate and extracts an
+  attestation's details; it draws on `certificate_names.py` (a leaf: name and
+  signature-algorithm spellings), `certificate_extensions.py` (one handler per
+  extension), `certificate_public_keys.py` (loadable keys, and the best effort for
+  one cryptography will not load) and `certificate_summary.py` (the text summary, a
+  section at a time).
 - `server/app/webauthn/metadata/`
   FIDO MDS resolution: `blob.py`, `snapshots` via `effective.py`, `sessions.py`.
 - `server/app/webauthn/pqc.py`
   The ML-DSA adapter.
 - `server/app/storage/`
   Persistence: `credentials.py`, `session_metadata.py`, `cloud.py`, `common.py`.
-  A read-modify-write of credential records (the signature counter) goes through
-  `read_for_update` / `save_if_unchanged`, compare-and-swap: a GCS generation
-  precondition, or locally an `flock` on the file's `.lock` beside it. A name the
+  Every read-modify-write of credential records (the signature counter, appending a
+  registration) goes through `read_for_update` / `save_if_unchanged`,
+  compare-and-swap: a GCS generation precondition, or locally an `flock` on the
+  file's `.lock` beside it (`common.file_lock`, with `common.replace_file` and
+  `common.file_digest`). `delkey` removes the current file under that lock too, so a
+  delete cannot land inside a save. Credential artifacts (`server/app/credential_artifacts.py`)
+  merge the same way: conditional on the generation on GCS, under the record's
+  `flock` locally; a merge that cannot read the record refuses rather than overwrite
+  it. A name the
   store refuses raises `common.InvalidStorageIdentifier`, a `ValueError` that
   `routes/errors.py` answers with 400 and no traceback.
 - `server/app/decoder/`
@@ -165,8 +194,9 @@ Related backend modules:
   DER is read only through `cryptography` (`x509` and `hazmat.asn1`), never by hand.
   Findings inside authData, a nested PublicKeyCredential field or a TPM structure
   carry the input offset and path (`${2}<credentialPublicKey>{1}`; a nested field's
-  findings add `source`). `decode/ctap.py` is at its size limit: put new code in a
-  module named for what it does. The encoder refuses a decoded-JSON member it cannot
+  findings add `source`). `decode/ctap.py` is over the module size limit and may
+  only shrink (`tests/app/tooling/test_code_size_ratchet.py` holds it at its current
+  length): put new code in a module named for what it does. The encoder refuses a decoded-JSON member it cannot
   rebuild rather than dropping it.
 
 Each of these packages keeps its public surface in `__init__.py` and its
@@ -225,6 +255,29 @@ Repo test layout:
   Hardware tests. These are skipped unless explicitly enabled.
 
 If you are changing only UI logic plus lightweight server responses, prefer targeted tests over the full suite first.
+
+Three tests guard the code itself rather than its behaviour:
+
+- `tests/app/tooling/test_no_silent_monkeypatch.py` fails on a
+  `monkeypatch.setattr(..., raising=False)` (or `mock.patch(..., create=True)`):
+  such a patch keeps passing after the name it patches moves, while patching
+  nothing. Its `ALLOWED` list holds the few that must create an attribute, each
+  with the reason it cannot exist (a builtin shadowed in one module, a
+  Windows-only `ctypes` name).
+- `tests/app/tooling/test_code_size_ratchet.py` fails on a function over 80 lines
+  or a module over 700 in `server/app`, except those listed at their current
+  length. Entries only go down: shrink one and lower its entry, get one under the
+  limit and remove it; never raise one. Split along the stages of the work, not by
+  line count.
+- `tests/app/characterization/` records what the ceremony routes, the decoder and
+  the attestation serialisers answer, byte for byte, in a pinned environment
+  (fixed clock, seeded randomness, stores in a temporary directory, no MDS), and
+  compares with `golden/`. An intended change of output, or a dependency bump that
+  changes it (cryptography's extension text, say), is regenerated with
+  `CHARACTERIZATION_WRITE=1 pytest tests/app/characterization` and the diff
+  reviewed before committing. `material.py` builds the keys and certificates
+  deterministically; the only frozen input is ML-DSA signatures (`inputs/frozen.json`),
+  since ML-DSA signing is randomised.
 
 For a test that needs an app configured differently, use the `make_app` fixture in
 `tests/app/conftest.py` (or `app` / `client`): it calls `create_app()` with a fixed
@@ -327,8 +380,6 @@ it configures that app and no other. Do not `importlib.reload` config modules.
 - Global functions are intentionally exposed from `frontend/static/scripts/main.js` for template event handlers.
 - The simple and advanced tabs share the saved credential display, so re-render logic can have cross-tab side effects.
 - Flask session state matters in begin/complete flows. Be careful not to break the fallback `__session_state` handling.
-- `server/app/routes/advanced/registration.py` is large (about 1,300 lines). Search
-  before editing and make the smallest safe change.
 - The local `fido2/` directory is part of the repo. Do not assume behavior matches the latest upstream package.
 
 ## Good First Step For Most Tasks
