@@ -18,7 +18,7 @@ from . import (
     verifier,
 )
 
-__all__ = ["MetadataDownloadError", "download_metadata_blob", "get_mds_verifier",
+__all__ = ["download_metadata_blob", "get_mds_verifier",
            "load_metadata_cache_entry", "format_last_modified_header", "store_metadata_cache_entry",
            "load_cached_metadata_snapshot", "load_packaged_explorer_summary", "load_effective_explorer_snapshot",
            "load_effective_full_snapshot", "resolve_effective_metadata_entry", "ensure_metadata_session_id",
@@ -26,7 +26,6 @@ __all__ = ["MetadataDownloadError", "download_metadata_blob", "get_mds_verifier"
            "delete_session_metadata_item", "expand_metadata_entry_payloads",
            "metadata_entry_trust_anchor_status", "maybe_store_uploaded_metadata_file"]
 
-MetadataDownloadError = blob.MetadataDownloadError
 SessionMetadataItem = sessions.SessionMetadataItem
 
 # Constants shared with the fragments.

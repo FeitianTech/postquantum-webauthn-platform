@@ -23,21 +23,6 @@ from . import state as _state
 logger = logging.getLogger(__name__)
 
 
-class MetadataDownloadError(Exception):
-    """Raised when the FIDO MDS metadata cannot be downloaded."""
-
-    def __init__(
-        self,
-        message: str,
-        *,
-        status_code: int | None = None,
-        retry_after: str | None = None,
-    ) -> None:
-        super().__init__(message)
-        self.status_code = status_code
-        self.retry_after = retry_after
-
-
 def _parse_http_datetime(value: str | None) -> datetime | None:
     """Best-effort parsing of an HTTP date header into an aware datetime."""
 
