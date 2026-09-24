@@ -49,43 +49,21 @@ def test_try_decode_cbor_reports_bytes_after_a_make_credential_response_and_keep
     assert result["malformed"]
 
 
-def test_try_decode_cbor_status_fallback_promotes_get_assertion_and_records_trailing_warning(monkeypatch, ctap):
+def test_try_decode_cbor_does_not_call_a_status_prefixed_auth_data_map_a_get_assertion_response():
+    # A status byte says "response", not which command it answers. A map with
+    # only authData is neither response shape, so it is not labelled as one.
     decode_module = pytest.importorskip("server.app.decoder.decode")
+    from fido2 import cbor
 
     auth_data = _build_attested_auth_data(sign_count=3)
-    base_structure = {
-        "byteLength": 1,
-        "summary": "map[1]",
-        "length": 1,
-        "entries": [],
-    }
+    data = b"\x00" + cbor.encode({"authData": auth_data}) + b"\x12\x34"
 
-    monkeypatch.setattr(
-        ctap,
-        "_decode_cbor_sequence",
-        lambda _payload: (
-            [base_structure],
-            [{"authData": auth_data}],
-            1,
-            b"\x12\x34",
-        ),
-    )
-    monkeypatch.setattr(
-        ctap,
-        "_repair_get_assertion_entries",
-        lambda structure, value, raw_bytes=None: (structure, value, None),
-    )
+    result = decode_module._try_decode_cbor(data, "hex")
 
-    result = decode_module._try_decode_cbor(b"\x00\xa0", "hex")
-
-    assert result is not None
     decoded = result["decoded"]
     assert decoded["ctap"]["kind"] == "status"
-    assert "expandedJson" in decoded
-    assert any("signature" in key for key in decoded["expandedJson"])
-    assert decoded["ctap"]["trailingBytesHex"] == "1234"
-    assert "malformed" in result
-    assert any("Trailing 2 byte(s) after CBOR payload." in message for message in result["malformed"])
+    assert "expandedJson" not in decoded
+    assert result["malformed"]
 
 
 def test_format_public_key_credential_summary_uses_response_fallback_algorithm_and_renders_sections():

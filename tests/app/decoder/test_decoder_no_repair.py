@@ -27,6 +27,16 @@ ES256_MAKE_CREDENTIAL_DUMP = (
     "31e4711d55358e77187abd021a366a974fc41e"
 )
 
+# The "Get Assertion ES256 Output" dump. Its rpIdHash (sha256("localhost")) has
+# lost its 0x88, so authData's 37 bytes swallow the 0x03 key of the signature.
+ES256_GET_ASSERTION_DUMP = (
+    "00a501a2626964581911402ef9ec5f449eb8ea1d5f645a0e585f6372797074616e6564747970656a7075626c6963"
+    "2d6b657902582549960de50e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976305000000040358473045"
+    "022100aad84e3fddd28d95223a4c33f94245788f99f2bbfdd94c700109ffd336f2b6022062a8f2dab99c1945cfb03c"
+    "ab0a77fa8e4f591389aebfbcaae22d4af126f6d1c304a36269645065fd82a31143f78f40697a0938af90646e616d65"
+    "66615f757365726b646973706c61794e616d6567412e20557365720501"
+)
+
 
 def _decode(text: str) -> dict[str, Any]:
     decode_module = pytest.importorskip("server.app.decoder.decode")
@@ -92,3 +102,11 @@ def test_bytes_after_an_attestation_object_are_never_read_as_its_signature():
 
     assert junk.hex() not in json.dumps(result["data"])
     assert result["malformed"]
+
+
+def test_the_get_assertion_dump_with_a_lost_byte_is_not_given_a_signature():
+    result = _decode(ES256_GET_ASSERTION_DUMP)
+
+    items = list(_walk_items(result))
+    assert not any("signature" in str(key) and item is not None for key, item in items)
+    assert "signatureLength" not in result["data"].get("ctap", {})

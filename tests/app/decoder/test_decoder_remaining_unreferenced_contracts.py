@@ -38,11 +38,6 @@ def test_remaining_cbor_key_float_and_lenient_helpers():
     assert decode_module._lenient_read_uint(24, b"\x7f", 0) == (0x7F, 1)
     assert decode_module._lenient_read_uint(25, b"\x00", 0) == (0, 1)
 
-    raw = cbor2.dumps(3) + cbor2.dumps(b"S" * 32) + cbor2.dumps(4) + cbor2.dumps({"id": "user"})
-    signature_start = raw.find(b"S")
-    trailing_offset = decode_module._locate_get_assertion_trailing_offset(raw, signature_start)
-    assert trailing_offset >= signature_start
-
 
 def test_remaining_mapping_and_auth_data_format_helpers():
     decode_module = pytest.importorskip("server.app.decoder.decode")
