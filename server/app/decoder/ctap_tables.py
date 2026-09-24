@@ -250,3 +250,49 @@ UV_MODALITY: dict[int, str] = {
     0x00000800: "passcode_external",
     0x00001000: "pattern_external",
 }
+
+# CTAP 2.2 section 12, "Defined Extensions": each extension identifier and the
+# section that defines it.
+EXTENSIONS: dict[str, str] = {
+    "credProtect": "12.1",
+    "credBlob": "12.2",
+    "largeBlobKey": "12.3",
+    "largeBlob": "12.4",
+    "minPinLength": "12.5",
+    "pinComplexityPolicy": "12.6",
+    "hmac-secret": "12.7",
+    "hmac-secret-mc": "12.8",
+    "thirdPartyPayment": "12.9",
+}
+
+# CTAP 2.2 section 12.1, the credProtect values.
+CRED_PROTECT_LEVELS: dict[int, str] = {
+    0x01: "userVerificationOptional",
+    0x02: "userVerificationOptionalWithCredentialIDList",
+    0x03: "userVerificationRequired",
+}
+
+# CTAP 2.2 section 12.7, the hmac-secret getAssertion input map (section 12.8
+# sends the same map in makeCredential for hmac-secret-mc).
+HMAC_SECRET_INPUT: dict[int, str] = {
+    0x01: "keyAgreement",
+    0x02: "saltEnc",
+    0x03: "saltAuth",
+    0x04: "pinUvAuthProtocol",
+}
+
+# CTAP 2.2 section 12.4, the largeBlob CDDL: largeblob-makeCredential-inputs,
+# largeblob-inputs (getAssertion) and the unsigned outputs, largeblob-outputs
+# with the makeCredential {"supported": true}.
+LARGE_BLOB_MAKE_CREDENTIAL_INPUT: tuple[str, ...] = ("support",)
+LARGE_BLOB_GET_ASSERTION_INPUT: tuple[str, ...] = ("read", "write", "originalSize")
+LARGE_BLOB_OUTPUTS: tuple[str, ...] = ("supported", "written", "blob", "originalSize")
+
+# The client extension outputs CTAP 2.2 section 12 defines (the "Client extension
+# output" of each extension), by the section that defines them.
+CLIENT_EXTENSION_OUTPUTS: dict[str, str] = {
+    "credBlob": "12.2",
+    "getCredBlob": "12.2",
+    "hmacCreateSecret": "12.7",
+    "hmacGetSecret": "12.7",
+}

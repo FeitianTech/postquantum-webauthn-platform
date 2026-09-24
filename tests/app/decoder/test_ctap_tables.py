@@ -187,3 +187,47 @@ def test_certification_ids_and_uv_modality_bits():
         0x800: "passcode_external",
         0x1000: "pattern_external",
     }
+
+
+def test_the_extension_table_is_ctap_2_2_section_12_and_agrees_with_fido2():
+    from fido2.ctap2.extensions import (
+        CredBlobExtension,
+        CredProtectExtension,
+        HmacSecretExtension,
+        LargeBlobExtension,
+        MinPinLengthExtension,
+        ThirdPartyPaymentExtension,
+    )
+
+    assert ctap_tables.EXTENSIONS == {
+        "credProtect": "12.1",
+        "credBlob": "12.2",
+        "largeBlobKey": "12.3",
+        "largeBlob": "12.4",
+        "minPinLength": "12.5",
+        "pinComplexityPolicy": "12.6",
+        "hmac-secret": "12.7",
+        "hmac-secret-mc": "12.8",
+        "thirdPartyPayment": "12.9",
+    }
+    for name in (
+        CredProtectExtension.NAME,
+        CredBlobExtension.NAME,
+        LargeBlobExtension.NAME,
+        MinPinLengthExtension.NAME,
+        HmacSecretExtension.NAME,
+        HmacSecretExtension.MC_NAME,
+        ThirdPartyPaymentExtension.NAME,
+    ):
+        assert name in ctap_tables.EXTENSIONS
+    # Section 12.1's table, in the order fido2 lists the policies.
+    assert ctap_tables.CRED_PROTECT_LEVELS == {
+        number: policy.value for number, policy in enumerate(CredProtectExtension.POLICY, 1)
+    }
+    assert ctap_tables.HMAC_SECRET_INPUT == {1: "keyAgreement", 2: "saltEnc", 3: "saltAuth", 4: "pinUvAuthProtocol"}
+    assert ctap_tables.CLIENT_EXTENSION_OUTPUTS == {
+        "credBlob": "12.2",
+        "getCredBlob": "12.2",
+        "hmacCreateSecret": "12.7",
+        "hmacGetSecret": "12.7",
+    }
