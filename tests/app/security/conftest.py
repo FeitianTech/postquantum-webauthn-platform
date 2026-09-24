@@ -28,10 +28,18 @@ def advanced_module():
     return pytest.importorskip("server.app.routes.advanced")
 
 
+def _session_metadata_in(tmp_path, monkeypatch) -> None:
+    # A ceremony creates the caller's metadata session directory.
+    from server.app.storage import session_metadata
+
+    monkeypatch.setattr(session_metadata, "SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
+
+
 @pytest.fixture
-def simple_storage(simple_module, monkeypatch, device_logs_module, storage_module) -> dict[str, Any]:
+def simple_storage(simple_module, monkeypatch, tmp_path, device_logs_module, storage_module) -> dict[str, Any]:
     """Neutralise simple-flow persistence and capture what it would store."""
 
+    _session_metadata_in(tmp_path, monkeypatch)
     saved: dict[str, Any] = {}
 
     def _save_if_unchanged(email, credentials, version, *, session_id=None):
@@ -47,9 +55,10 @@ def simple_storage(simple_module, monkeypatch, device_logs_module, storage_modul
 
 
 @pytest.fixture
-def advanced_storage(advanced_module, monkeypatch, credential_artifacts_module, device_logs_module) -> list[Any]:
+def advanced_storage(advanced_module, monkeypatch, tmp_path, credential_artifacts_module, device_logs_module) -> list[Any]:
     """Neutralise advanced-flow persistence and capture stored artifacts."""
 
+    _session_metadata_in(tmp_path, monkeypatch)
     stored: list[Any] = []
 
     def _store(storage_id, payload, *, session_id=None):
