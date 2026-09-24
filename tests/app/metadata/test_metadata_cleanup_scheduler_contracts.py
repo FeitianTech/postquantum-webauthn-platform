@@ -74,7 +74,7 @@ def test_schedule_inactive_session_cleanup_falls_back_inline_when_thread_start_f
 
     monkeypatch.setattr(time, "time", lambda: 250.0)
     monkeypatch.setattr(sessions, "_cleanup_async_enabled", lambda: True)
-    monkeypatch.setattr(threading, "Thread", _FailingThread, raising=False)
+    monkeypatch.setattr(threading, "Thread", _FailingThread)
     monkeypatch.setattr(
         sessions,
         "_maybe_cleanup_inactive_sessions",
@@ -145,7 +145,6 @@ def test_maybe_cleanup_inactive_sessions_deletes_only_stale_and_continues_on_del
         session_store,
         "delete_session",
         _delete_session,
-        raising=False,
     )
 
     warnings = []
@@ -153,7 +152,6 @@ def test_maybe_cleanup_inactive_sessions_deletes_only_stale_and_continues_on_del
         sessions.logger,
         "warning",
         lambda *args, **kwargs: warnings.append((args, kwargs)),
-        raising=False,
     )
 
     metadata_module._maybe_cleanup_inactive_sessions(now=now)

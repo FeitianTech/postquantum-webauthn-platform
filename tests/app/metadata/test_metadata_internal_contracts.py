@@ -42,7 +42,7 @@ def test_normalise_session_identifier_rejects_path_separators(monkeypatch):
 
     assert metadata_module._normalise_session_identifier("session/abc") is None
 
-    monkeypatch.setattr(os, "altsep", "\\", raising=False)
+    monkeypatch.setattr(os, "altsep", "\\")
     assert metadata_module._normalise_session_identifier("session\\abc") is None
 
 

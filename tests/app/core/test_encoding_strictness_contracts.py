@@ -125,7 +125,6 @@ def test_mds_certificate_route_decodes_base64url_without_truncation(monkeypatch)
         general_module,
         "serialize_attestation_certificate",
         lambda data: {"length": len(data), "hex": data.hex()},
-        raising=False,
     )
 
     urlsafe = base64.urlsafe_b64encode(certificate).decode("ascii").rstrip("=")
@@ -152,7 +151,6 @@ def test_mds_certificate_route_refuses_plain_text_with_400(monkeypatch):
         general_module,
         "serialize_attestation_certificate",
         lambda data: {"length": len(data), "hex": data.hex()},
-        raising=False,
     )
 
     with config_module.app.test_client() as client:

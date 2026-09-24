@@ -53,7 +53,7 @@ def packaged_metadata_env(monkeypatch, tmp_path, metadata_state, blob):
     monkeypatch.setattr(blob, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
     monkeypatch.setattr(blob, "MDS_METADATA_CACHE_PATH", str(cache_path))
     monkeypatch.setattr(blob, "MDS_EXPLORER_PATH", str(explorer_path))
-    monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(verified_path), raising=False)
+    monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
 
     # Reset cached state.
 
@@ -61,7 +61,6 @@ def packaged_metadata_env(monkeypatch, tmp_path, metadata_state, blob):
         general_module,
         "_metadata_bootstrap_state",
         {"started": False, "completed": False, "marker": None, "cache_loaded": False},
-        raising=False,
     )
 
     return general_module, metadata_module
@@ -129,17 +128,15 @@ def test_index_html_skips_eager_bootstrap_by_default(monkeypatch, app_config):
         general_module,
         "startup_fail_fast_enabled",
         lambda: False,
-        raising=False,
     )
     monkeypatch.setattr(
         general_module,
         "ensure_metadata_bootstrapped",
         lambda **kwargs: bootstrap_calls.append(kwargs),
-        raising=False,
     )
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
-    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {}, raising=False)
-    monkeypatch.setattr(general_module, "render_template", lambda *_args, **_kwargs: "ok", raising=False)
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {})
+    monkeypatch.setattr(general_module, "render_template", lambda *_args, **_kwargs: "ok")
 
     with config_module.app.test_request_context("/index.html"):
         result = general_module.index_html()
@@ -159,17 +156,15 @@ def test_index_html_bootstraps_when_strict(monkeypatch, app_config):
         general_module,
         "startup_fail_fast_enabled",
         lambda: True,
-        raising=False,
     )
     monkeypatch.setattr(
         general_module,
         "ensure_metadata_bootstrapped",
         lambda **kwargs: bootstrap_calls.append(kwargs),
-        raising=False,
     )
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
-    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {}, raising=False)
-    monkeypatch.setattr(general_module, "render_template", lambda *_args, **_kwargs: "ok", raising=False)
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {})
+    monkeypatch.setattr(general_module, "render_template", lambda *_args, **_kwargs: "ok")
 
     with config_module.app.test_request_context("/index.html"):
         result = general_module.index_html()
@@ -182,12 +177,11 @@ def test_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         general_module,
         "load_effective_explorer_snapshot",
         lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test"}]},
-        raising=False,
     )
 
     with config_module.app.test_client() as client:
@@ -203,12 +197,11 @@ def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_con
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         general_module,
         "load_effective_full_snapshot",
         lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test", "metadataStatement": {}}]},
-        raising=False,
     )
 
     with config_module.app.test_client() as client:
@@ -224,7 +217,7 @@ def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch, app_con
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
 
     with config_module.app.test_client() as client:
         response = client.get("/api/mds/metadata/resolve")
@@ -237,12 +230,11 @@ def test_resolve_metadata_entry_returns_not_found(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         general_module,
         "resolve_effective_metadata_entry",
         lambda **_kwargs: None,
-        raising=False,
     )
 
     with config_module.app.test_client() as client:
@@ -256,12 +248,11 @@ def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         general_module,
         "resolve_effective_metadata_entry",
         lambda **_kwargs: {"entryId": "aaguid:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "name": "Demo"},
-        raising=False,
     )
 
     with config_module.app.test_client() as client:
@@ -280,9 +271,9 @@ def test_index_page_emits_accessible_global_loader_markup(monkeypatch, app_confi
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
-    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {"entryCount": 0}, raising=False)
-    monkeypatch.setattr(general_module, "_should_bootstrap_metadata_on_index", lambda: False, raising=False)
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {"entryCount": 0})
+    monkeypatch.setattr(general_module, "_should_bootstrap_metadata_on_index", lambda: False)
 
     with config_module.app.test_client() as client:
         response = client.get("/index.html")
@@ -311,31 +302,27 @@ def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         general_module,
         "expand_metadata_entry_payloads",
         lambda payload: [payload],
-        raising=False,
     )
-    monkeypatch.setattr(general_module, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False, raising=False)
+    monkeypatch.setattr(general_module, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False)
     monkeypatch.setattr(
         general_module,
         "save_session_metadata_item",
         lambda payload, original_filename=None: {"payload": payload, "original_filename": original_filename},
-        raising=False,
     )
     monkeypatch.setattr(
         general_module,
         "serialize_session_metadata_item",
         lambda item: {"storedFilename": "custom.json", "originalFilename": item["original_filename"]},
-        raising=False,
     )
     monkeypatch.setattr(
         general_module,
         "load_effective_full_snapshot",
         lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test"}]},
-        raising=False,
     )
 
     with config_module.app.test_client() as client:
@@ -353,13 +340,12 @@ def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
-    monkeypatch.setattr(general_module, "delete_session_metadata_item", lambda _name: True, raising=False)
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(general_module, "delete_session_metadata_item", lambda _name: True)
     monkeypatch.setattr(
         general_module,
         "load_effective_full_snapshot",
         lambda: {"meta": {"entryCount": 3}, "entries": [{"entryId": "aaguid:test"}]},
-        raising=False,
     )
 
     with config_module.app.test_client() as client:
@@ -373,9 +359,9 @@ def test_index_page_supports_gzip_compression(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id", raising=False)
-    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {"entryCount": 0}, raising=False)
-    monkeypatch.setattr(general_module, "_should_bootstrap_metadata_on_index", lambda: False, raising=False)
+    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {"entryCount": 0})
+    monkeypatch.setattr(general_module, "_should_bootstrap_metadata_on_index", lambda: False)
 
     with config_module.app.test_client() as client:
         response = client.get("/index.html", headers={"Accept-Encoding": "gzip"})

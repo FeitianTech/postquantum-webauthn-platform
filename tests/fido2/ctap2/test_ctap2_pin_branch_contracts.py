@@ -110,7 +110,6 @@ def test_get_pin_token_branches_and_permission_forwarding(monkeypatch):
         modern_client_pin,
         "_get_shared_secret",
         lambda: ({"k": "v"}, b"shared"),
-        raising=False,
     )
 
     token = modern_client_pin.get_pin_token(
@@ -138,7 +137,6 @@ def test_get_pin_token_branches_and_permission_forwarding(monkeypatch):
         legacy_client_pin,
         "_get_shared_secret",
         lambda: ({"k": "v"}, b"shared"),
-        raising=False,
     )
 
     token_legacy = legacy_client_pin.get_pin_token(
@@ -179,7 +177,6 @@ def test_get_uv_token_and_retry_helpers(monkeypatch):
         client_pin,
         "_get_shared_secret",
         lambda: ({"k": "v"}, b"shared"),
-        raising=False,
     )
 
     event = object()

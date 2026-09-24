@@ -50,7 +50,7 @@ def _load_win_api_module(monkeypatch, *, api_version: int = 9):
             return self._libs[name]
 
     monkeypatch.setattr(ctypes, "WinDLL", lambda _name: None, raising=False)
-    monkeypatch.setattr(ctypes, "LibraryLoader", _FakeLoader, raising=False)
+    monkeypatch.setattr(ctypes, "LibraryLoader", _FakeLoader)
     monkeypatch.setattr(ctypes, "HRESULT", ctypes.c_long, raising=False)
 
     spec = importlib.util.spec_from_file_location(module_name, win_api_path)
@@ -224,7 +224,6 @@ def test_win_api_option_structs_cover_legacy_credential_list_fallback(monkeypatc
             "WebAuthNGetAssertionOptions": 1,
             "WebAuthNMakeCredentialOptions": 1,
         }.get(class_name, 1),
-        raising=False,
     )
 
     get_opts = module.WebAuthNGetAssertionOptions(

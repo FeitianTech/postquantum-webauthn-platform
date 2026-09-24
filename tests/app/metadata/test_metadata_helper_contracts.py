@@ -175,7 +175,6 @@ def test_prune_helper_and_request_session_identifier_paths(monkeypatch, session_
         session_store,
         "prune_session",
         lambda _sid: (_ for _ in ()).throw(RuntimeError("ignore prune errors")),
-        raising=False,
     )
     metadata_module._prune_session_metadata_directory("session-1")
 

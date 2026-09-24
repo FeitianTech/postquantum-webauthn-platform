@@ -147,7 +147,7 @@ def test_mldsa_from_cryptography_key_calls_coercion(monkeypatch, cls, alg_id, pa
         called["key_type"] = type(public_key).__name__
         return b"normalized"
 
-    monkeypatch.setattr(cose, "_coerce_mldsa_public_key_bytes", _fake_coerce, raising=False)
+    monkeypatch.setattr(cose, "_coerce_mldsa_public_key_bytes", _fake_coerce)
     key = cls.from_cryptography_key(_raw_ec_public_key())
 
     assert key[3] == alg_id

@@ -12,14 +12,13 @@ import pytest
 def storage_local(monkeypatch, tmp_path):
     storage = pytest.importorskip("server.app.storage.credentials")
 
-    monkeypatch.setattr(storage, "basepath", str(tmp_path), raising=False)
+    monkeypatch.setattr(storage, "basepath", str(tmp_path))
     monkeypatch.setattr(
         storage,
         "_LOCAL_CREDENTIAL_BASE",
         str(tmp_path / "session-credentials"),
-        raising=False,
     )
-    monkeypatch.setattr(storage, "_using_gcs", lambda: False, raising=False)
+    monkeypatch.setattr(storage, "_using_gcs", lambda: False)
 
     os.makedirs(storage._LOCAL_CREDENTIAL_BASE, exist_ok=True)
 
@@ -69,7 +68,6 @@ def test_resolve_session_id_uses_explicit_value_or_metadata_fallback(storage_loc
         metadata_module,
         "ensure_metadata_session_id",
         lambda: "fallback-session",
-        raising=False,
     )
 
     assert storage._resolve_session_id("   ") == "fallback-session"

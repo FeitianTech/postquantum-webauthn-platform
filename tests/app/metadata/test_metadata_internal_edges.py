@@ -95,7 +95,6 @@ def test_load_session_metadata_info_and_clone_helpers(metadata_module, monkeypat
         session_store,
         "read_file",
         lambda _sid, _name: b'{"uploaded_at":"now"}',
-        raising=False,
     )
     assert metadata_module._load_session_metadata_info("session", "entry.meta.json") == {
         "uploaded_at": "now"
@@ -105,7 +104,6 @@ def test_load_session_metadata_info_and_clone_helpers(metadata_module, monkeypat
         session_store,
         "read_file",
         lambda _sid, _name: b"not-json",
-        raising=False,
     )
     assert metadata_module._load_session_metadata_info("session", "entry.meta.json") == {}
 

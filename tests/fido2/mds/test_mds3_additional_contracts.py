@@ -219,7 +219,6 @@ def test_ca_lookup_paths_cover_filter_metadata_and_root_selection(monkeypatch):
         verifier_chain_source,
         "find_entry_by_chain",
         lambda _chain: chain_entry,
-        raising=False,
     )
     no_aaguid_auth_data = SimpleNamespace(credential_data=SimpleNamespace(aaguid=None))
     assert verifier_chain_source.ca_lookup(attestation_result, no_aaguid_auth_data) == matching_root
@@ -232,14 +231,13 @@ def test_find_entry_and_evaluate_attestation_helpers(monkeypatch):
     def _mark_entry(_att_obj, _client_hash):
         _last_entry.set("entry-marker")
 
-    monkeypatch.setattr(verifier, "verify_attestation", _mark_entry, raising=False)
+    monkeypatch.setattr(verifier, "verify_attestation", _mark_entry)
     assert verifier.find_entry(object(), b"hash") == "entry-marker"
 
     monkeypatch.setattr(
         verifier,
         "verify_attestation",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(UntrustedAttestation()),
-        raising=False,
     )
     assert verifier.find_entry(object(), b"hash") is None
 
@@ -248,7 +246,7 @@ def test_find_entry_and_evaluate_attestation_helpers(monkeypatch):
         _last_lookup_source.set("chain")
         return "trust-details"
 
-    monkeypatch.setattr(verifier, "collect_trust_path_details", _collect, raising=False)
+    monkeypatch.setattr(verifier, "collect_trust_path_details", _collect)
     evaluation = verifier.evaluate_attestation(object(), b"hash")
     assert evaluation.trust_path == "trust-details"
     assert evaluation.metadata_entry == "evaluated-entry"
@@ -259,7 +257,7 @@ def test_parse_blob_without_trust_anchor_logs_warning(monkeypatch):
     import fido2.mds3 as mds3_module
 
     warnings = []
-    monkeypatch.setattr(mds3_module.logger, "warn", lambda message: warnings.append(message), raising=False)
+    monkeypatch.setattr(mds3_module.logger, "warn", lambda message: warnings.append(message))
 
     blob = _build_blob({"alg": "ES256", "typ": "JWT"}, _minimal_payload())
     parsed = parse_blob(blob, None)
@@ -295,9 +293,9 @@ def test_parse_blob_trust_anchor_paths_cover_leaf_fallback_and_public_key_errors
         captured["leaf_der"] = der
         return _LeafCert()
 
-    monkeypatch.setattr(mds3_module, "verify_x509_chain", _verify_chain, raising=False)
-    monkeypatch.setattr(mds3_module.x509, "load_der_x509_certificate", _load_cert, raising=False)
-    monkeypatch.setattr(mds3_module.CoseKey, "for_name", lambda _alg: _CoseClass, raising=False)
+    monkeypatch.setattr(mds3_module, "verify_x509_chain", _verify_chain)
+    monkeypatch.setattr(mds3_module.x509, "load_der_x509_certificate", _load_cert)
+    monkeypatch.setattr(mds3_module.CoseKey, "for_name", lambda _alg: _CoseClass)
 
     header_with_chain = {"alg": "ES256", "x5c": [base64.b64encode(b"leaf-cert").decode("ascii")]}
     parse_blob(_build_blob(header_with_chain, _minimal_payload()), b"trust-root")
@@ -320,7 +318,6 @@ def test_parse_blob_trust_anchor_paths_cover_leaf_fallback_and_public_key_errors
         mds3_module.x509,
         "load_der_x509_certificate",
         lambda *_args, **_kwargs: _UnsupportedLeafCert(),
-        raising=False,
     )
     with pytest.raises(ValueError, match="does not expose a supported public key"):
         parse_blob(_build_blob({"alg": "ES256"}, _minimal_payload()), b"trust-root")
@@ -336,7 +333,7 @@ def test_verify_blob_certificate_chain_tries_prefixes_until_trust_root_matches(m
         if len(chain) != 3:
             raise InvalidSignature("incomplete path")
 
-    monkeypatch.setattr(mds3_module, "verify_x509_chain", _verify, raising=False)
+    monkeypatch.setattr(mds3_module, "verify_x509_chain", _verify)
     _verify_blob_certificate_chain([b"leaf", b"ca", b"cross"], b"root")
     assert calls == [
         [b"leaf", b"root"],
@@ -351,7 +348,6 @@ def test_verify_blob_certificate_chain_raises_when_no_prefix_reaches_trust_root(
         mds3_module,
         "verify_x509_chain",
         lambda _chain: (_ for _ in ()).throw(InvalidSignature("bad chain")),
-        raising=False,
     )
     with pytest.raises(InvalidSignature, match="bad chain"):
         _verify_blob_certificate_chain([b"leaf", b"ca"], b"root")

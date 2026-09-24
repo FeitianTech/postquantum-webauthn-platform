@@ -63,6 +63,6 @@ def test_determine_rp_id_handles_missing_host_and_loopback_fallback(monkeypatch)
 
 
 def test_normalise_request_host_returns_raw_value_when_urlsplit_has_no_hostname(monkeypatch):
-    monkeypatch.setattr(relying_party, "urlsplit", lambda _value: SimpleNamespace(hostname=None), raising=False)
+    monkeypatch.setattr(relying_party, "urlsplit", lambda _value: SimpleNamespace(hostname=None))
 
     assert relying_party._normalise_request_host("host-without-parse") == "host-without-parse"

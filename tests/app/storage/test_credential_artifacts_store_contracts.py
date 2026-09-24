@@ -6,8 +6,8 @@ import pytest
 @pytest.fixture
 def artifact_module(monkeypatch, tmp_path):
     module = pytest.importorskip("server.app.credential_artifacts")
-    monkeypatch.setattr(module, "_ARTIFACT_DIR", str(tmp_path), raising=False)
-    monkeypatch.setattr(module, "_using_gcs", lambda: False, raising=False)
+    monkeypatch.setattr(module, "_ARTIFACT_DIR", str(tmp_path))
+    monkeypatch.setattr(module, "_using_gcs", lambda: False)
     return module
 
 
@@ -97,7 +97,7 @@ def test_store_credential_artifact_merge_recursively_updates_nested_payload(arti
 
 def test_store_credential_artifact_merge_preserves_created_at_and_updates_updated_at(artifact_module, monkeypatch):
     time_values = iter([100.0, 250.0])
-    monkeypatch.setattr(artifact_module.time, "time", lambda: next(time_values), raising=False)
+    monkeypatch.setattr(artifact_module.time, "time", lambda: next(time_values))
 
     assert artifact_module.store_credential_artifact(
         "cred-time",
@@ -156,7 +156,6 @@ def test_resolve_session_id_falls_back_to_metadata_session(monkeypatch, artifact
         metadata_module,
         "ensure_metadata_session_id",
         lambda: "metadata-session",
-        raising=False,
     )
 
     resolved = artifact_module._resolve_session_id("   ")
@@ -172,35 +171,33 @@ def test_user_root_prefix_rejects_invalid_session_identifiers(artifact_module):
 
 
 def test_read_record_gcs_handles_download_failures_and_invalid_json(artifact_module, monkeypatch):
-    monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True, raising=False)
+    monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True)
 
     monkeypatch.setattr(
         artifact_module,
         "download_bytes",
         lambda _blob: (_ for _ in ()).throw(RuntimeError("download failed")),
-        raising=False,
     )
     assert artifact_module._read_record("cred-1", "session-a") is None
 
-    monkeypatch.setattr(artifact_module, "download_bytes", lambda _blob: b"", raising=False)
+    monkeypatch.setattr(artifact_module, "download_bytes", lambda _blob: b"")
     assert artifact_module._read_record("cred-1", "session-a") is None
 
-    monkeypatch.setattr(artifact_module, "download_bytes", lambda _blob: b"\xff", raising=False)
+    monkeypatch.setattr(artifact_module, "download_bytes", lambda _blob: b"\xff")
     assert artifact_module._read_record("cred-1", "session-a") is None
 
-    monkeypatch.setattr(artifact_module, "download_bytes", lambda _blob: b"{invalid", raising=False)
+    monkeypatch.setattr(artifact_module, "download_bytes", lambda _blob: b"{invalid")
     assert artifact_module._read_record("cred-1", "session-a") is None
 
 
 def test_write_record_gcs_uploads_json_payload(artifact_module, monkeypatch):
-    monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True, raising=False)
+    monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True)
 
     uploads = []
     monkeypatch.setattr(
         artifact_module,
         "upload_bytes",
         lambda blob, payload, *, content_type=None: uploads.append((blob, payload, content_type)),
-        raising=False,
     )
 
     artifact_module._write_record("cred-1", "session-a", {"payload": {"ok": True}})
@@ -213,33 +210,31 @@ def test_write_record_gcs_uploads_json_payload(artifact_module, monkeypatch):
 
 
 def test_delete_record_gcs_returns_false_when_existence_check_fails(artifact_module, monkeypatch):
-    monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True, raising=False)
+    monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True)
     monkeypatch.setattr(
         artifact_module,
         "blob_exists",
         lambda _blob: (_ for _ in ()).throw(RuntimeError("exists failed")),
-        raising=False,
     )
-    monkeypatch.setattr(artifact_module, "delete_blob", lambda *_args, **_kwargs: None, raising=False)
+    monkeypatch.setattr(artifact_module, "delete_blob", lambda *_args, **_kwargs: None)
 
     assert artifact_module._delete_record("cred-1", "session-a") is False
 
 
 def test_delete_record_gcs_returns_false_when_delete_fails(artifact_module, monkeypatch):
-    monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True, raising=False)
-    monkeypatch.setattr(artifact_module, "blob_exists", lambda _blob: True, raising=False)
+    monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True)
+    monkeypatch.setattr(artifact_module, "blob_exists", lambda _blob: True)
     monkeypatch.setattr(
         artifact_module,
         "delete_blob",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("delete failed")),
-        raising=False,
     )
 
     assert artifact_module._delete_record("cred-1", "session-a") is False
 
 
 def test_load_credential_artifact_returns_none_for_non_mapping_payload(artifact_module, monkeypatch):
-    monkeypatch.setattr(artifact_module, "_read_record", lambda *_args, **_kwargs: {"payload": [1, 2, 3]}, raising=False)
+    monkeypatch.setattr(artifact_module, "_read_record", lambda *_args, **_kwargs: {"payload": [1, 2, 3]})
 
     assert artifact_module.load_credential_artifact("cred-1", session_id="session-a") is None
 
@@ -254,7 +249,6 @@ def test_store_credential_artifact_merge_handles_non_dict_existing_payload(artif
             "updatedAt": 123.0,
             "payload": "not-a-dict",
         },
-        raising=False,
     )
 
     written = {}
@@ -264,8 +258,8 @@ def test_store_credential_artifact_merge_handles_non_dict_existing_payload(artif
         written["session_id"] = session_id
         written["record"] = record
 
-    monkeypatch.setattr(artifact_module, "_write_record", _capture_write, raising=False)
-    monkeypatch.setattr(artifact_module.time, "time", lambda: 456.0, raising=False)
+    monkeypatch.setattr(artifact_module, "_write_record", _capture_write)
+    monkeypatch.setattr(artifact_module.time, "time", lambda: 456.0)
 
     stored = artifact_module.store_credential_artifact(
         "cred-1",
@@ -285,7 +279,6 @@ def test_store_credential_artifact_returns_false_when_write_raises(artifact_modu
         artifact_module,
         "_write_record",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("write failed")),
-        raising=False,
     )
 
     assert (
@@ -305,7 +298,7 @@ def test_delete_credential_artifact_rejects_invalid_storage_id(artifact_module):
 def test_using_gcs_depends_on_flag_and_bucket(monkeypatch):
     artifact_module = pytest.importorskip("server.app.credential_artifacts")
 
-    monkeypatch.setattr(artifact_module, "gcs_enabled", lambda: True, raising=False)
+    monkeypatch.setattr(artifact_module, "gcs_enabled", lambda: True)
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "bucket-a")
     assert artifact_module._using_gcs() is True
 
@@ -319,7 +312,6 @@ def test_resolve_session_id_falls_back_for_non_string(monkeypatch, artifact_modu
         metadata_module,
         "ensure_metadata_session_id",
         lambda: "metadata-non-string-fallback",
-        raising=False,
     )
 
     assert artifact_module._resolve_session_id(object()) == "metadata-non-string-fallback"

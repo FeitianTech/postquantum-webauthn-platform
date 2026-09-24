@@ -12,12 +12,12 @@ def session_metadata_env(monkeypatch, tmp_path, metadata_state, session_store, a
     session_dir = tmp_path / "sessions"
     session_dir.mkdir()
 
-    monkeypatch.setattr(app_config, "SESSION_METADATA_DIR", str(session_dir), raising=False)
-    monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(session_dir), raising=False)
+    monkeypatch.setattr(app_config, "SESSION_METADATA_DIR", str(session_dir))
+    monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(session_dir))
 
-    monkeypatch.setattr(session_store, "gcs_enabled", lambda: False, raising=False)
-    monkeypatch.setattr(session_store, "_using_gcs", lambda: False, raising=False)
-    monkeypatch.setattr(session_store, "_local_last_cleanup", 0.0, raising=False)
+    monkeypatch.setattr(session_store, "gcs_enabled", lambda: False)
+    monkeypatch.setattr(session_store, "_using_gcs", lambda: False)
+    monkeypatch.setattr(session_store, "_local_last_cleanup", 0.0)
 
 
     return app_config.app, metadata

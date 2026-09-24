@@ -10,11 +10,11 @@ def metadata_local_env(monkeypatch, tmp_path, metadata_state, session_store, app
     session_dir = tmp_path / "session-metadata"
     session_dir.mkdir()
 
-    monkeypatch.setattr(app_config, "SESSION_METADATA_DIR", str(session_dir), raising=False)
-    monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(session_dir), raising=False)
+    monkeypatch.setattr(app_config, "SESSION_METADATA_DIR", str(session_dir))
+    monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(session_dir))
 
-    monkeypatch.setattr(session_store, "gcs_enabled", lambda: False, raising=False)
-    monkeypatch.setattr(session_store, "_using_gcs", lambda: False, raising=False)
+    monkeypatch.setattr(session_store, "gcs_enabled", lambda: False)
+    monkeypatch.setattr(session_store, "_using_gcs", lambda: False)
 
 
     return metadata, session_store, app_config.app
@@ -62,7 +62,7 @@ def test_save_session_metadata_item_surfaces_storage_failures(metadata_local_env
         calls.append("write")
         raise OSError("disk full")
 
-    monkeypatch.setattr(session_store, "write_file", _failing_write, raising=False)
+    monkeypatch.setattr(session_store, "write_file", _failing_write)
 
     with app.test_request_context("/"):
         metadata.ensure_metadata_session_id()
@@ -125,7 +125,6 @@ def test_delete_session_metadata_item_validates_session_filename_and_storage_err
             session_store,
             "delete_file",
             lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("cannot delete")),
-            raising=False,
         )
 
         with pytest.raises(RuntimeError, match="Failed to delete"):

@@ -23,7 +23,6 @@ def test_metadata_validation_and_info_loader_residual_guards(metadata_module, mo
         session_store,
         "read_file",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("missing")),
-        raising=False,
     )
     assert metadata_module._load_session_metadata_info("session", "entry.meta.json") == {}
 
@@ -31,7 +30,6 @@ def test_metadata_validation_and_info_loader_residual_guards(metadata_module, mo
         session_store,
         "read_file",
         lambda *_args, **_kwargs: b"[]",
-        raising=False,
     )
     assert metadata_module._load_session_metadata_info("session", "entry.meta.json") == {}
 
@@ -88,7 +86,6 @@ def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_
         session_store,
         "file_mtime",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("mtime-failure")),
-        raising=False,
     )
 
     saved = metadata_module.save_session_metadata_item({"payload": "ok"}, original_filename="demo.json")
@@ -105,7 +102,7 @@ def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_modu
     )
     assert metadata_module.load_metadata_cache_entry() == {}
 
-    monkeypatch.setattr(os.path, "getmtime", lambda _path: (_ for _ in ()).throw(OSError("no-mtime")), raising=False)
+    monkeypatch.setattr(os.path, "getmtime", lambda _path: (_ for _ in ()).throw(OSError("no-mtime")))
     monkeypatch.setattr(
         blob,
         "open",  # shadows the builtin; the module has none
@@ -116,7 +113,7 @@ def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_modu
     assert loaded is None
     assert mtime is None
 
-    monkeypatch.setattr(os.path, "getmtime", lambda _path: 123.0, raising=False)
+    monkeypatch.setattr(os.path, "getmtime", lambda _path: 123.0)
     monkeypatch.setattr(
         blob,
         "open",  # shadows the builtin; the module has none
@@ -132,7 +129,7 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
     def _getmtime(path):
         raise OSError("mtime-missing")
 
-    monkeypatch.setattr(os.path, "getmtime", _getmtime, raising=False)
+    monkeypatch.setattr(os.path, "getmtime", _getmtime)
     monkeypatch.setattr(blob, "_load_verified_metadata_payload", lambda: None)
     snapshot, marker = metadata_module._load_base_explorer_snapshot()
     assert snapshot is None
@@ -143,7 +140,7 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
             return 10.0
         return 5.0
 
-    monkeypatch.setattr(os.path, "getmtime", _getmtime_ordered, raising=False)
+    monkeypatch.setattr(os.path, "getmtime", _getmtime_ordered)
     monkeypatch.setattr(
         blob,
         "open",  # shadows the builtin; the module has none

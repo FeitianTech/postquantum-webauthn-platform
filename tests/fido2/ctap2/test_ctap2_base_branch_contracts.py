@@ -108,7 +108,7 @@ def test_ctap2_wrapper_and_option_selection_branches(monkeypatch):
         return {1: "ok"}
 
     ctap = _bare_ctap(lambda *_args: b"\x00", options={"credMgmt": True, "bioEnroll": True})
-    monkeypatch.setattr(ctap, "send_cbor", _send, raising=False)
+    monkeypatch.setattr(ctap, "send_cbor", _send)
 
     assert ctap.info is ctap._info
 
@@ -161,21 +161,20 @@ def test_ctap2_wrapper_and_option_selection_branches(monkeypatch):
 
 def test_get_next_assertion_and_get_assertions_paths(monkeypatch):
     ctap = _bare_ctap(lambda *_args: b"\x00")
-    monkeypatch.setattr(ctap, "send_cbor", lambda *_args, **_kwargs: {1: "payload"}, raising=False)
+    monkeypatch.setattr(ctap, "send_cbor", lambda *_args, **_kwargs: {1: "payload"})
 
     sentinel = object()
     monkeypatch.setattr(
         base_module.AssertionResponse,
         "from_dict",
         classmethod(lambda cls, value: sentinel),
-        raising=False,
     )
     assert ctap.get_next_assertion() is sentinel
 
     first = types.SimpleNamespace(number_of_credentials=3)
     tail = [object(), object()]
-    monkeypatch.setattr(ctap, "get_assertion", lambda *_args, **_kwargs: first, raising=False)
-    monkeypatch.setattr(ctap, "get_next_assertion", lambda: tail.pop(0), raising=False)
+    monkeypatch.setattr(ctap, "get_assertion", lambda *_args, **_kwargs: first)
+    monkeypatch.setattr(ctap, "get_next_assertion", lambda: tail.pop(0))
     assertions = ctap.get_assertions("rp-id", b"hash")
     assert assertions[0] is first
     assert len(assertions) == 3
@@ -187,8 +186,8 @@ def test_get_next_assertion_and_get_assertions_paths(monkeypatch):
         called["count"] += 1
         return object()
 
-    monkeypatch.setattr(ctap, "get_assertion", lambda *_args, **_kwargs: first_single, raising=False)
-    monkeypatch.setattr(ctap, "get_next_assertion", _unexpected_next, raising=False)
+    monkeypatch.setattr(ctap, "get_assertion", lambda *_args, **_kwargs: first_single)
+    monkeypatch.setattr(ctap, "get_next_assertion", _unexpected_next)
     assert ctap.get_assertions("rp-id", b"hash") == [first_single]
     assert called["count"] == 0
 

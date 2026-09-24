@@ -126,7 +126,7 @@ def test_encode_payload_text_errors_when_alias_resolves_without_handler(monkeypa
 
     patched_handlers = dict(encode_module._ENCODING_HANDLERS)
     patched_handlers.pop("json", None)
-    monkeypatch.setattr(encode_module, "_ENCODING_HANDLERS", patched_handlers, raising=False)
+    monkeypatch.setattr(encode_module, "_ENCODING_HANDLERS", patched_handlers)
 
     with pytest.raises(ValueError, match="Unsupported encoder format"):
         encode_module.encode_payload_text('{"ok":true}', "json")
