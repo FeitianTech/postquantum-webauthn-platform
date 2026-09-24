@@ -5,10 +5,10 @@ from collections.abc import Mapping
 from typing import Any
 
 from fido2.cose import _get_mldsa_parameter_details
-from fido2.webauthn import AttestationObject
 
 from ... import encoding
 from ...webauthn import pqc
+from . import cbor_parser
 
 # The IANA "COSE Key Types" registry. 7 is AKP, the algorithm key pair type
 # ML-DSA keys use: the parameter set comes from alg (3), the key from pub (-1).
@@ -212,11 +212,9 @@ def _extract_authenticator_bytes_from_attestation(attestation_entry: Any) -> byt
         return None
 
     try:
-        attestation = AttestationObject(attestation_bytes)
-    except Exception:
+        node, _, _ = cbor_parser.decode_item(attestation_bytes)
+    except ValueError:
         return None
-
-    try:
-        return bytes(attestation.auth_data)
-    except Exception:
-        return None
+    attestation = cbor_parser._structure_to_value(node)
+    auth_data = attestation.get("authData") if isinstance(attestation, Mapping) else None
+    return auth_data if isinstance(auth_data, bytes) else None

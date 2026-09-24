@@ -3,14 +3,14 @@ from __future__ import annotations
 
 import json
 import re
+import uuid
 from collections.abc import Mapping, Sequence
 from typing import Any
 
 from cryptography import x509
 
-from fido2 import cbor
 from fido2.utils import ByteBuffer
-from fido2.webauthn import AttestationObject, AuthenticatorData, CollectedClientData
+from fido2.webauthn import AuthenticatorData, CollectedClientData
 
 from ...encoding import (
     EncodingError,
@@ -26,7 +26,7 @@ from ...webauthn.attestation import (
     serialize_attestation_certificate,
     summarize_authenticator_extensions,
 )
-from . import ctap, response
+from . import cbor_parser, ctap, response
 
 _PEM_CERT_PATTERN = re.compile(
     r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
@@ -299,16 +299,19 @@ def _try_decode_certificate_bytes(data: bytes, encoding: str) -> dict[str, Any] 
 
 def _try_decode_attestation_object(data: bytes, encoding: str) -> dict[str, Any] | None:
     try:
-        details = _parse_attestation_object(data)
+        details, end = _read_attestation_object(data)
     except Exception:
         return None
 
-    return {
+    result = {
         "format": "Attestation object (CBOR)",
         "inputEncoding": encoding,
         "decoded": details,
         "binary": _binary_summary(data, encoding),
     }
+    if end < len(data):
+        result["malformed"] = [f"Trailing {len(data) - end} byte(s) after CBOR payload."]
+    return result
 
 
 def _try_decode_authenticator_data(data: bytes, encoding: str) -> dict[str, Any] | None:
@@ -393,13 +396,56 @@ def _describe_client_data_from_bytes(data: bytes) -> dict[str, Any]:
     return details
 
 
+def _read_authenticator_data(data: bytes) -> dict[str, Any]:
+    """Split authenticator data into its fields, or raise ``ValueError``.
+
+    Accepts exactly what fido2's ``AuthenticatorData`` accepts -- a 37-byte
+    header, the attested credential data its AT flag announces, the extensions
+    its ED flag announces, and nothing after them -- but reads the credential
+    public key and the extensions with the decoder's own strict CBOR parser.
+    """
+
+    if len(data) < 37:
+        raise ValueError("Authenticator data is shorter than its 37-byte header.")
+    flags = data[32]
+    fields: dict[str, Any] = {
+        "rpIdHash": data[:32],
+        "flags": flags,
+        "counter": int.from_bytes(data[33:37], "big"),
+    }
+    offset = 37
+
+    if flags & AuthenticatorData.FLAG.AT:
+        if len(data) - offset < 18:
+            raise ValueError("Attested credential data is truncated.")
+        aaguid = data[offset : offset + 16]
+        id_length = int.from_bytes(data[offset + 16 : offset + 18], "big")
+        offset += 18
+        if offset + id_length > len(data):
+            raise ValueError("The credential ID is truncated.")
+        credential_id = data[offset : offset + id_length]
+        node, offset, _ = cbor_parser.decode_item(data, offset + id_length)
+        public_key = cbor_parser._structure_to_value(node)
+        if not isinstance(public_key, Mapping):
+            raise ValueError("The credential public key is not a COSE_Key map.")
+        fields["attestedCredentialData"] = (aaguid, credential_id, public_key)
+
+    if flags & AuthenticatorData.FLAG.ED:
+        node, offset, _ = cbor_parser.decode_item(data, offset)
+        fields["extensions"] = cbor_parser._structure_to_value(node)
+
+    if offset != len(data):
+        raise ValueError("Wrong length")
+    return fields
+
+
 def _describe_authenticator_data_bytes(data: bytes) -> dict[str, Any]:
-    auth_data = AuthenticatorData(data)
-    flags = auth_data.flags
+    fields = _read_authenticator_data(data)
+    flags = fields["flags"]
 
     flag_details = {
-        "value": int(flags),
-        "bitfield": f"0b{int(flags):08b}",
+        "value": flags,
+        "bitfield": f"0b{flags:08b}",
         "userPresent": bool(flags & AuthenticatorData.FLAG.UP),
         "userVerified": bool(flags & AuthenticatorData.FLAG.UV),
         "backupEligibility": bool(flags & AuthenticatorData.FLAG.BE),
@@ -411,24 +457,25 @@ def _describe_authenticator_data_bytes(data: bytes) -> dict[str, Any]:
 
     details: dict[str, Any] = {
         "rpIdHash": {
-            "hex": auth_data.rp_id_hash.hex(),
-            "base64url": encode_base64url(auth_data.rp_id_hash),
+            "hex": fields["rpIdHash"].hex(),
+            "base64url": encode_base64url(fields["rpIdHash"]),
         },
         "flags": flag_details,
-        "signCount": auth_data.counter,
+        "signCount": fields["counter"],
     }
 
-    credential_data = auth_data.credential_data
+    credential_data = fields.get("attestedCredentialData")
     if credential_data is not None:
+        aaguid, credential_id, public_key = credential_data
         details["attestedCredentialData"] = {
-            "aaguid": str(credential_data.aaguid),
-            "aaguidHex": credential_data.aaguid.hex(),
-            "credentialId": _binary_summary(credential_data.credential_id, "binary"),
-            "publicKey": make_json_safe(dict(credential_data.public_key)),
+            "aaguid": str(uuid.UUID(bytes=aaguid)),
+            "aaguidHex": aaguid.hex(),
+            "credentialId": _binary_summary(credential_id, "binary"),
+            "publicKey": make_json_safe(dict(public_key)),
         }
 
-    extensions = auth_data.extensions
-    if extensions is not None:
+    if "extensions" in fields:
+        extensions = fields["extensions"]
         extensions_payload: dict[str, Any] = {
             "raw": make_json_safe(extensions),
         }
@@ -441,19 +488,39 @@ def _describe_authenticator_data_bytes(data: bytes) -> dict[str, Any]:
     return details
 
 
-def _parse_attestation_object(data: bytes) -> dict[str, Any]:
-    attestation = AttestationObject(data)
+def _read_attestation_object(data: bytes) -> tuple[dict[str, Any], int]:
+    """Read a WebAuthn attestation object; return its details and where it ends.
+
+    It is a CBOR map with a text ``fmt``, a byte string ``authData`` holding
+    valid authenticator data, and a map ``attStmt``; anything else raises.
+    """
+
+    node, end, _ = cbor_parser.decode_item(data)
+    value = cbor_parser._structure_to_value(node)
+    if not isinstance(value, Mapping):
+        raise ValueError("An attestation object is a CBOR map.")
+    fmt, auth_data, att_stmt = value.get("fmt"), value.get("authData"), value.get("attStmt")
+    if not isinstance(fmt, str) or not isinstance(auth_data, bytes) or not isinstance(att_stmt, Mapping):
+        raise ValueError("An attestation object has a text fmt, byte string authData and map attStmt.")
+
     details: dict[str, Any] = {
-        "attestationFormat": attestation.fmt,
-        "attestationStatement": make_json_safe(attestation.att_stmt),
-        "authenticatorData": _describe_authenticator_data_bytes(bytes(attestation.auth_data)),
-        "cbor": make_json_safe(cbor.decode(data)),
+        "attestationFormat": fmt,
+        "attestationStatement": make_json_safe(att_stmt),
+        "authenticatorData": _describe_authenticator_data_bytes(auth_data),
+        "cbor": make_json_safe(value),
     }
 
-    certificate_details = _extract_attestation_certificate(attestation.att_stmt)
+    certificate_details = _extract_attestation_certificate(att_stmt)
     if certificate_details is not None:
         details["attestationCertificate"] = certificate_details
 
+    return details, end
+
+
+def _parse_attestation_object(data: bytes) -> dict[str, Any]:
+    details, end = _read_attestation_object(data)
+    if end != len(data):
+        raise ValueError("Extraneous data after the attestation object.")
     return details
 
 
