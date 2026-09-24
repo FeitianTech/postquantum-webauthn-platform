@@ -329,8 +329,16 @@ def certificate(
     extensions: list[tuple[Any, bool]] = (),
     signing_key: Any = None,
     issuer: x509.Name = CA_NAME,
+    algorithm: Any = None,
+    rsa_padding: Any = None,
+    ecdsa_deterministic: bool | None = None,
 ) -> bytes:
-    """A certificate for ``public_key``, signed by the fixed Ed25519 CA unless told otherwise."""
+    """A certificate for ``public_key``, signed by the fixed Ed25519 CA unless told otherwise.
+
+    ``algorithm`` (the hash), ``rsa_padding`` and ``ecdsa_deterministic`` go to
+    cryptography's ``sign`` for an RSA or EC signing key; an EC signature is only
+    byte-stable with ``ecdsa_deterministic=True``.
+    """
 
     builder = (
         x509.CertificateBuilder()
@@ -343,7 +351,10 @@ def certificate(
     )
     for extension, critical in extensions:
         builder = builder.add_extension(extension, critical=critical)
-    return builder.sign(signing_key or ca_key(), None).public_bytes(serialization.Encoding.DER)
+    signed = builder.sign(
+        signing_key or ca_key(), algorithm, rsa_padding=rsa_padding, ecdsa_deterministic=ecdsa_deterministic
+    )
+    return signed.public_bytes(serialization.Encoding.DER)
 
 
 def _octet_string(payload: bytes) -> bytes:
@@ -426,6 +437,16 @@ def generated_certificates() -> dict[str, bytes]:
 
     certificates["frozen-mldsa-44-signed"] = bytes.fromhex(_frozen("certificate:mldsa-44-signed", _mldsa_signed))
     certificates["malformed-der"] = certificates["generated-ec-p256"][:40]
+    certificates["generated-rsa-pss-sha256"] = certificate(
+        ec_key("subject-under-rsa-pss").public_key(),
+        common_name="Signed With RSASSA-PSS",
+        serial=0x55,
+        signing_key=rsa_key("issuer-rsa"),
+        issuer=_name("RSA Issuer"),
+        algorithm=hashes.SHA256(),
+        # A zero-length salt keeps the signature, and so the record, byte-stable.
+        rsa_padding=padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=0),
+    )
     return certificates
 
 
