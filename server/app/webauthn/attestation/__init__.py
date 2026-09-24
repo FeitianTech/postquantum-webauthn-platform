@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from . import (
     aaguid,
+    certificate_extensions,
     certificate_names,
     certificates,
     checks,
@@ -68,8 +69,8 @@ _normalise_signature_algorithm_name = certificate_names._normalise_signature_alg
 format_x509_name = certificate_names.format_x509_name
 
 # Certificate extension serialisation.
-_parse_fido_transport_bitfield = certificates._parse_fido_transport_bitfield
-_serialize_extension_value = certificates._serialize_extension_value
+_parse_fido_transport_bitfield = certificate_extensions._parse_fido_transport_bitfield
+_serialize_extension_value = certificate_extensions._serialize_extension_value
 
 # Public-key serialisation.
 _build_unknown_public_key_info = certificates._build_unknown_public_key_info

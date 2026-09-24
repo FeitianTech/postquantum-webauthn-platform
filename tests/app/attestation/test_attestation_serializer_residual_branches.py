@@ -81,7 +81,7 @@ def test_attestation_helper_residual_branches(monkeypatch, certificates, attesta
     assert "Nested:" in fallback["summary"]
 
 
-def test_serialize_attestation_certificate_mocked_certificate_residual_paths(monkeypatch, certificates, attestation_module):
+def test_serialize_attestation_certificate_mocked_certificate_residual_paths(monkeypatch, certificates, certificate_extensions, attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     class _Extensions(list):
@@ -166,7 +166,7 @@ def test_serialize_attestation_certificate_mocked_certificate_residual_paths(mon
         {"include_oid_in_header": False},
     )
     monkeypatch.setattr(
-        certificates,
+        certificate_extensions,
         "_serialize_extension_value",
         lambda _ext: {"skip": "", "nested": [None, {"k": "v"}]},
     )
