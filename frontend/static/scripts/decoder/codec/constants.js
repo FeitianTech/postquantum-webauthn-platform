@@ -75,6 +75,16 @@ export const SPECIAL_LABELS = {
     uuid: 'UUID',
     uncompressedPoint: 'Uncompressed point',
     x5c: 'X5C',
+    getInfoResponse: 'GetInfo response',
+    extensionsDecoded: 'Extensions (interpreted)',
+    attestationStatementDecoded: 'Attestation statement (interpreted)',
+    attestationTypesSupported: 'Attestation types supported',
+    defaultWhenAbsent: 'Default when absent',
+    notChecked: 'Not checked',
+    notInSyntax: 'Not in the format\'s syntax',
+    parseError: 'Parse error',
+    keyDescription: 'Key description',
+    spec: 'Spec',
 };
 
 export const MODE_CONFIG = {
