@@ -1,371 +1,26 @@
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
-import time
-import uuid
 from collections.abc import Mapping
-from datetime import datetime, timezone
 from typing import Any
 
 from flask import jsonify, request, session
 
-from fido2 import cbor
-from fido2.webauthn import (
-    PublicKeyCredentialUserEntity,
-)
+from fido2.webauthn import PublicKeyCredentialUserEntity
 
-from ... import (
-    config,
-    credential_artifacts,
-    device_logs,
-)
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
-from ...encoding import encode_base64, encode_base64url
-from ...storage import credentials
-from ...webauthn import attestation, pqc
-from .. import binary_helpers
+from ...webauthn import attestation
 from . import (
     algorithms,
-    binary,
     constants,
+    registration_attestation,
     registration_inputs,
     registration_options,
-    summary,
-    tracing,
+    registration_persistence,
+    registration_record,
 )
 
 logger = logging.getLogger(__name__)
-
-
-def build_registration_material(
-    *,
-    auth_data: Any,
-    attestation_format: Any,
-    attestation_statement: Any,
-    attestation_certificate_details: Any,
-    attestation_certificates_details: Any,
-    client_extension_results: Any,
-    credential_info: dict[str, Any],
-    response: Any,
-    user_handle: bytes,
-    resolved_rp_id: str,
-    resident_key_required: bool,
-    attestation_rp_id_hash_valid: Any,
-    attestation_checks_safe: Any,
-    attestation_summary: Any,
-) -> dict[str, Any]:
-    credential_data = auth_data.credential_data
-    credential_id_bytes = getattr(credential_data, "credential_id", b"") or b""
-    credential_id_hex = credential_id_bytes.hex() if credential_id_bytes else None
-    credential_id_b64 = (
-        encode_base64(credential_id_bytes) if credential_id_bytes else None
-    )
-    credential_id_b64url = (
-        encode_base64url(credential_id_bytes)
-        if credential_id_bytes
-        else None
-    )
-
-    aaguid_hex = None
-    aaguid_guid = None
-    aaguid_bytes: bytes | None = None
-    aaguid_value = getattr(credential_data, "aaguid", None)
-    if aaguid_value is not None:
-        try:
-            aaguid_bytes = bytes(aaguid_value)
-        except (TypeError, ValueError):
-            aaguid_bytes = None
-        if aaguid_bytes is not None and len(aaguid_bytes) == 16:
-            aaguid_hex = aaguid_bytes.hex()
-            try:
-                aaguid_guid = str(uuid.UUID(bytes=aaguid_bytes))
-            except ValueError:
-                aaguid_guid = None
-
-    if aaguid_hex:
-        credential_info["properties"]["aaguid"] = aaguid_hex
-        credential_info["properties"]["aaguidHex"] = aaguid_hex
-    if aaguid_guid:
-        credential_info["properties"]["aaguidGuid"] = aaguid_guid
-
-    flags_dict = {
-        "AT": bool(auth_data.flags & auth_data.FLAG.AT),
-        "BE": bool(auth_data.flags & auth_data.FLAG.BE),
-        "BS": bool(auth_data.flags & auth_data.FLAG.BS),
-        "ED": bool(auth_data.flags & auth_data.FLAG.ED),
-        "UP": bool(auth_data.flags & auth_data.FLAG.UP),
-        "UV": bool(auth_data.flags & auth_data.FLAG.UV),
-    }
-
-    auth_data_bytes = bytes(auth_data)
-    authenticator_data_hex = auth_data_bytes.hex()
-    authenticator_data_hash = hashlib.sha256(auth_data_bytes).hexdigest()
-    registration_timestamp = tracing.datetime_from_timestamp(credential_info["registration_time"])
-
-    rp_id_hash_hex = ""
-    rp_id_hash_b64 = ""
-    try:
-        rp_id_hash_bytes = bytes(getattr(auth_data, "rp_id_hash", b""))
-    except (TypeError, ValueError):
-        rp_id_hash_bytes = b""
-    else:
-        rp_id_hash_hex = rp_id_hash_bytes.hex()
-        rp_id_hash_b64 = encode_base64url(rp_id_hash_bytes)
-
-    expected_rp_hash_bytes = hashlib.sha256((resolved_rp_id or "").encode("utf-8")).digest()
-    expected_rp_hash_hex = expected_rp_hash_bytes.hex()
-    expected_rp_hash_b64 = encode_base64url(expected_rp_hash_bytes)
-
-    if attestation_rp_id_hash_valid is None:
-        attestation_rp_id_hash_valid = rp_id_hash_bytes == expected_rp_hash_bytes
-
-    if rp_id_hash_hex:
-        credential_info["properties"]["rpIdHash"] = rp_id_hash_hex
-    if rp_id_hash_b64:
-        credential_info["properties"]["rpIdHashBase64"] = rp_id_hash_b64
-    credential_info["properties"]["rpIdHashExpected"] = expected_rp_hash_hex
-    credential_info["properties"]["rpIdHashExpectedBase64"] = expected_rp_hash_b64
-
-    cred_props = (
-        client_extension_results.get("credProps") if isinstance(client_extension_results, dict) else None
-    )
-    if isinstance(cred_props, dict) and "rk" in cred_props:
-        resident_key_result = bool(cred_props.get("rk"))
-    elif isinstance(cred_props, bool):
-        resident_key_result = bool(cred_props)
-    else:
-        resident_key_result = bool(auth_data.flags & auth_data.FLAG.BE) or bool(resident_key_required)
-
-    credential_info["properties"]["residentKey"] = bool(resident_key_result)
-    credential_info["resident_key"] = bool(resident_key_result)
-    credential_info["properties"]["authenticatorDataHash"] = authenticator_data_hash
-
-    large_blob_result = False
-    if isinstance(client_extension_results, dict) and "largeBlob" in client_extension_results:
-        large_blob_value = client_extension_results.get("largeBlob")
-        if isinstance(large_blob_value, dict):
-            large_blob_result = bool(
-                large_blob_value.get("supported")
-                or large_blob_value.get("written")
-                or large_blob_value.get("blob")
-                or large_blob_value.get("result")
-            )
-        else:
-            large_blob_result = bool(large_blob_value)
-
-    rp_info = {
-        "aaguid": {"raw": aaguid_hex, "guid": aaguid_guid},
-        "attestationFmt": attestation_format,
-        "attestationObject": credential_info.get("attestation_object"),
-        "createdAt": registration_timestamp,
-        "credentialId": credential_id_hex,
-        "credentialIdBase64": credential_id_b64,
-        "credentialIdBase64Url": credential_id_b64url,
-        "rpIdHash": rp_id_hash_hex,
-        "rpIdHashBase64": rp_id_hash_b64,
-        "rpIdHashExpected": expected_rp_hash_hex,
-        "rpIdHashExpectedBase64": expected_rp_hash_b64,
-        "rpIdHashMatch": bool(attestation_rp_id_hash_valid),
-        "authenticatorDataHash": authenticator_data_hash,
-        "device": {"name": "Unknown device", "type": "unknown"},
-        "largeBlob": large_blob_result,
-        "publicKeyAlgorithm": credential_info.get("publicKeyAlgorithm"),
-        "registrationData": {
-            "authenticatorData": authenticator_data_hex,
-            "authenticatorDataHash": authenticator_data_hash,
-            "clientExtensionResults": credentials.convert_bytes_for_json(client_extension_results),
-            "flags": flags_dict,
-            "signatureCounter": auth_data.counter,
-            "attestationChecks": attestation_checks_safe,
-            "attestationSummary": attestation_summary,
-        },
-        "residentKey": resident_key_result,
-        "userHandle": {
-            "base64": encode_base64(user_handle),
-            "base64url": encode_base64url(user_handle),
-            "hex": user_handle.hex(),
-        },
-    }
-
-    if attestation_certificate_details:
-        rp_info["attestationCertificate"] = attestation_certificate_details
-    if attestation_certificates_details:
-        rp_info["attestationCertificates"] = attestation_certificates_details
-
-    credential_info["relying_party"] = attestation.make_json_safe(rp_info)
-
-    user_handle_b64url = encode_base64url(user_handle)
-    user_handle_b64 = encode_base64(user_handle)
-
-    stored_properties = credentials.convert_bytes_for_json(credential_info.get("properties", {}))
-    stored_extensions = credentials.convert_bytes_for_json(client_extension_results)
-
-    public_key_b64 = None
-    public_key_b64url = None
-    credential_public_key = getattr(auth_data.credential_data, "public_key", None)
-    if isinstance(credential_public_key, Mapping):
-        try:
-            public_key_cbor_bytes = cbor.encode(dict(credential_public_key))
-        except Exception:
-            public_key_cbor_bytes = None
-        if public_key_cbor_bytes:
-            public_key_b64 = encode_base64(public_key_cbor_bytes)
-            public_key_b64url = encode_base64url(public_key_cbor_bytes)
-
-    stored_credential: dict[str, Any] = {
-        "type": "advanced",
-        "userName": credential_info["user_info"]["name"],
-        "displayName": credential_info["user_info"]["display_name"],
-        "residentKey": bool(resident_key_result),
-        "largeBlob": bool(large_blob_result),
-        "authenticatorAttachment": credential_info.get("authenticator_attachment"),
-        "credentialId": credential_id_b64,
-        "credentialIdBase64Url": credential_id_b64url,
-        "credentialIdHex": credential_id_hex,
-        "aaguid": encode_base64url(aaguid_bytes) if aaguid_bytes else None,
-        "aaguidHex": aaguid_hex,
-        "aaguidGuid": aaguid_guid,
-        "publicKeyAlgorithm": credential_info.get("publicKeyAlgorithm"),
-        "publicKey": public_key_b64,
-        "publicKeyBase64": public_key_b64,
-        "publicKeyBase64Url": public_key_b64url,
-        "publicKeyBytes": credential_info.get("publicKeyBytes"),
-        "publicKeyCose": credential_info.get("publicKeyCose"),
-        "publicKeyType": credential_info.get("publicKeyType"),
-        "signCount": getattr(auth_data, "counter", 0),
-        "createdAt": credential_info["registration_time"],
-        "clientExtensionOutputs": stored_extensions,
-        "attestationFormat": attestation_format,
-        "attestationStatement": credentials.convert_bytes_for_json(attestation_statement),
-        "attestationObject": credentials.convert_bytes_for_json(credential_info.get("attestation_object")),
-        "authenticatorData": authenticator_data_hex,
-        "authenticatorDataHash": authenticator_data_hash,
-        "clientDataJSON": credentials.convert_bytes_for_json(credential_info.get("client_data_json")),
-        "relyingParty": attestation.make_json_safe(rp_info),
-        "properties": stored_properties,
-        "registrationResponse": credential_info.get("registration_response"),
-        "userHandle": user_handle_b64,
-        "userHandleBase64": user_handle_b64,
-        "userHandleBase64Url": user_handle_b64url,
-        "userHandleHex": user_handle.hex(),
-    }
-
-    stored_credential = credentials.convert_bytes_for_json(
-        {k: v for k, v in stored_credential.items() if v is not None}
-    )
-
-    return {
-        "storedCredential": stored_credential,
-        "rpInfo": rp_info,
-        "credentialIdBytes": credential_id_bytes,
-        "aaguidBytes": aaguid_bytes,
-    }
-
-
-def finalize_registration_completion(
-    *,
-    stored_credential: dict[str, Any],
-    rp_info: dict[str, Any],
-    metadata_summary: Any,
-    response: Any,
-    metadata_session_id: str,
-    username: str,
-    warnings: list[str],
-    debug_info: dict[str, Any],
-    algoname: str,
-    resolved_rp_id: str,
-    credential_id_bytes: bytes,
-    aaguid_bytes: bytes | None,
-    auth_data: Any,
-    attestation_format: Any,
-    attestation_object_b64: Any,
-    client_data_json_b64: Any,
-    user_handle: bytes,
-    display_name: str,
-) -> Any:
-    artifact_record = json.loads(json.dumps(stored_credential))
-    storage_id_source = (
-        artifact_record.get("credentialIdBase64Url")
-        or artifact_record.get("credentialIdHex")
-        or ""
-    )
-    storage_id = summary._generate_storage_id(str(storage_id_source))
-
-    artifact_payload = {"schemaVersion": 1, "storedCredential": artifact_record}
-    try:
-        artifact_stored = credential_artifacts.store_credential_artifact(
-            storage_id,
-            artifact_payload,
-            session_id=metadata_session_id,
-        )
-    except Exception:
-        logger.exception(
-            "Failed to store advanced credential artifact for user %s",
-            username,
-        )
-        return jsonify({"error": "Unable to persist credential artifact."}), 500
-
-    if not artifact_stored:
-        logger.error(
-            "Advanced credential artifact was not stored for user %s",
-            username,
-        )
-        return jsonify({"error": "Unable to persist credential artifact."}), 500
-
-    summary_credential = summary._summarize_stored_credential(artifact_record, storage_id)
-
-    metadata_description: str | None = None
-    if isinstance(metadata_summary, Mapping):
-        raw_description = metadata_summary.get("description")
-        if isinstance(raw_description, str):
-            metadata_description = raw_description
-
-    transports_field = response.get("transports") if isinstance(response, Mapping) else None
-    transports: list[str] | None = None
-    if isinstance(transports_field, list):
-        transports = [str(item) for item in transports_field if isinstance(item, str)]
-
-    raw_public_key = getattr(auth_data.credential_data, "public_key", {})
-    if isinstance(raw_public_key, Mapping):
-        cose_public_key = dict(raw_public_key)
-    else:
-        try:
-            cose_public_key = dict(raw_public_key)
-        except Exception:
-            cose_public_key = {}
-
-    event = device_logs.RegistrationEvent(
-        timestamp=datetime.now(timezone.utc),
-        rp_id=resolved_rp_id,
-        user_id=user_handle,
-        user_name=str(username or ""),
-        user_display_name=str(display_name or username or ""),
-        credential_id=credential_id_bytes,
-        public_key_cose=cose_public_key,
-        sign_count=int(getattr(auth_data, "counter", 0)),
-        transports=transports,
-        aaguid=aaguid_bytes or None,
-        device_name_mds=metadata_description,
-        attestation_format=str(attestation_format or ""),
-        attestation_object=binary_helpers.decode_base64url_bytes(attestation_object_b64),
-        client_data_json=binary_helpers.decode_base64url_bytes(client_data_json_b64),
-    )
-
-    device_logs.record_registration_event(event)
-
-    response_payload: dict[str, Any] = {
-        "status": "OK",
-        "algo": algoname,
-        **debug_info,
-        "relyingParty": rp_info,
-        "storedCredential": summary_credential,
-    }
-    if warnings:
-        response_payload["warnings"] = warnings
-
-    return jsonify(response_payload)
 
 
 def advanced_register_complete():
@@ -388,305 +43,23 @@ def _register_complete(data: Mapping[str, Any], session_state: Any, state_trace:
     prepared, error_response = registration_inputs.prepare_register_complete_inputs(data)
     if error_response is not None:
         return error_response
-    if prepared is None:
-        return jsonify({"error": "Invalid request"}), 400
 
     response = prepared["response"]
-    original_request = prepared["originalRequest"]
-    public_key = prepared["publicKey"]
-    user_info = prepared["userInfo"]
-    username = prepared["username"]
-    display_name = prepared["displayName"]
-    metadata_session_id = prepared["metadataSessionId"]
-    allowed_attachments = prepared["allowedAttachments"]
-    resident_key_requested = prepared["residentKeyRequested"]
-    resident_key_required = prepared["residentKeyRequired"]
-    attestation_format = prepared["attestationFormat"]
-    attestation_statement = prepared["attestationStatement"]
-    attestation_certificate_details = prepared["attestationCertificateDetails"]
-    attestation_certificates_details = prepared["attestationCertificatesDetails"]
-    attestation_object_b64 = prepared["attestationObjectB64"]
-    raw_attestation_object = prepared["rawAttestationObject"]
-    client_data_json_b64 = prepared["clientDataJsonB64"]
-    client_data_json = prepared["clientDataJson"]
-    client_extension_results = prepared["clientExtensionResults"]
-    min_pin_length_value = prepared["minPinLengthValue"]
-    authenticator_attachment_response = prepared["authenticatorAttachmentResponse"]
-
-    warnings: list[str] = []
-
     try:
-        state_ctx, state_error = registration_inputs.resolve_state_and_registration_server(data=data,
-            original_request=original_request,
-            public_key=public_key,
+        state_ctx, state_error = registration_inputs.resolve_state_and_registration_server(
+            data=data,
+            original_request=prepared["originalRequest"],
+            public_key=prepared["publicKey"],
             response=response if isinstance(response, Mapping) else {},
-            attestation_format=attestation_format,
-            attestation_statement=attestation_statement,
-            raw_attestation_object=raw_attestation_object,
+            attestation_format=prepared["attestationFormat"],
+            attestation_statement=prepared["attestationStatement"],
+            raw_attestation_object=prepared["rawAttestationObject"],
             trace=state_trace,
             session_state=session_state,
         )
         if state_error is not None:
             return _with_challenge_source(state_error, state_trace)
-        if state_ctx is None:
-            return jsonify(
-                {
-                    "error": "Registration state not found",
-                    "challengeSource": state_trace["challengeSource"],
-                }
-            ), 400
-
-        state = state_ctx["state"]
-        stored_original_request = state_ctx["storedOriginalRequest"]
-        resolved_rp_id = state_ctx["resolvedRpId"]
-        auth_data = state_ctx["authData"]
-
-        stored_public_key: Mapping[str, Any] | None = None
-        if isinstance(stored_original_request, Mapping):
-            stored_public_key = stored_original_request.get("publicKey")
-            if not isinstance(stored_public_key, Mapping):
-                stored_public_key = None
-
-        public_key_for_checks: Mapping[str, Any] | None = (
-            stored_public_key if isinstance(stored_public_key, Mapping) else public_key
-        )
-
-        # The origin the ceremony claims, read from clientDataJSON -- NOT from
-        # the request's own Origin header, which the caller also controls.
-        ceremony_origin = config.extract_client_data_origin(
-            response.get("response") if isinstance(response, Mapping) else None
-        )
-        if not config.is_origin_allowed(ceremony_origin):
-            return jsonify(
-                {
-                    "error": (
-                        "Ceremony origin is not permitted by the configured "
-                        "FIDO_SERVER_ALLOWED_ORIGINS allowlist."
-                    ),
-                    "challengeSource": state_trace["challengeSource"],
-                }
-            ), 400
-
-        expected_origin = config.determine_expected_origin(ceremony_origin) or (
-            request.host_url.rstrip("/")
-        )
-        attestation_checks = attestation.perform_attestation_checks(
-            response if isinstance(response, Mapping) else {},
-            state if isinstance(state, Mapping) else None,
-            public_key_for_checks,
-            auth_data,
-            expected_origin,
-            resolved_rp_id,
-        )
-
-        attestation_signature_valid = attestation_checks.get("signature_valid")
-        attestation_root_valid = attestation_checks.get("root_valid")
-        attestation_rp_id_hash_valid = attestation_checks.get("rp_id_hash_valid")
-        attestation_aaguid_match = attestation_checks.get("aaguid_match")
-        attestation_checks_safe = attestation.make_json_safe(attestation_checks)
-
-        attestation_warnings = attestation_checks.get("warnings")
-        if isinstance(attestation_warnings, list):
-            for message in attestation_warnings:
-                if isinstance(message, str):
-                    stripped = message.strip()
-                    if stripped:
-                        warnings.append(stripped)
-
-        attestation_errors: list[str] = []
-        raw_attestation_errors = attestation_checks.get("errors")
-        if isinstance(raw_attestation_errors, list):
-            attestation_errors = [
-                str(message) for message in raw_attestation_errors if str(message).strip()
-            ]
-
-        attestation_summary = {
-            "signatureValid": attestation_signature_valid,
-            "rootValid": attestation_root_valid,
-            "rpIdHashValid": attestation_rp_id_hash_valid,
-            "aaguidMatch": attestation_aaguid_match,
-            "errors": attestation_errors,
-            "verified": not attestation_errors,
-        }
-        pqc_signature_valid = attestation_checks.get("pqc_signature_valid")
-        if pqc_signature_valid is not None:
-            attestation_summary["pqcSignatureValid"] = pqc_signature_valid
-        metadata_summary = attestation_checks_safe.get("metadata")
-        if isinstance(metadata_summary, Mapping):
-            attestation_summary["metadata"] = metadata_summary
-        warnings_summary = attestation_checks_safe.get("warnings")
-        if isinstance(warnings_summary, list) and warnings_summary:
-            attestation_summary["warnings"] = warnings_summary
-
-        authenticator_extensions_summary: dict[str, Any] = {}
-        if hasattr(auth_data, "extensions"):
-            authenticator_extensions = getattr(auth_data, "extensions")
-            if isinstance(authenticator_extensions, Mapping):
-                authenticator_extensions_summary = attestation.summarize_authenticator_extensions(
-                    authenticator_extensions
-                )
-
-        user_id_value = user_info.get("id", "")
-        if user_id_value:
-            try:
-                user_handle = binary._decode_request_binary(user_id_value)
-            except (ValueError, TypeError):
-                user_handle = username.encode("utf-8")
-        else:
-            user_handle = username.encode("utf-8")
-
-        credential_info = {
-            "credential_data": auth_data.credential_data,
-            "auth_data": auth_data,
-            "user_info": {
-                "name": username,
-                "display_name": display_name,
-                "user_handle": user_handle,
-            },
-            "registration_time": time.time(),
-            "client_data_json": client_data_json or "",
-            "attestation_object": raw_attestation_object or "",
-            "attestation_format": attestation_format,
-            "attestation_statement": attestation_statement,
-            "attestation_certificates": attestation_certificates_details,
-            "client_extension_outputs": client_extension_results,
-            "authenticator_attachment": authenticator_attachment_response,
-            "original_webauthn_request": original_request,
-            "properties": {
-                "excludeCredentialsSentCount": len(public_key.get("excludeCredentials", [])),
-                "excludeCredentialsUsed": False,
-                "credentialIdLength": len(auth_data.credential_data.credential_id),
-                "fakeCredentialIdLengthRequested": None,
-                "hintsSent": public_key.get("hints", []),
-                "resolvedAuthenticatorAttachments": allowed_attachments,
-                "authenticatorAttachment": authenticator_attachment_response,
-                "largeBlobRequested": public_key.get("extensions", {}).get("largeBlob", {}),
-                "largeBlobClientOutput": client_extension_results.get("largeBlob", {}),
-                "residentKeyRequested": resident_key_requested,
-                "residentKeyRequired": bool(resident_key_required),
-                "attestationSignatureValid": attestation_signature_valid,
-                "attestationRootValid": attestation_root_valid,
-                "attestationRpIdHashValid": attestation_rp_id_hash_valid,
-                "attestationAaguidMatch": attestation_aaguid_match,
-                "attestationChecks": attestation_checks_safe,
-                "attestationSummary": attestation_summary,
-            },
-        }
-
-        if min_pin_length_value is not None:
-            credential_info["properties"]["minPinLength"] = min_pin_length_value
-        if attestation_certificates_details:
-            credential_info["attestationCertificates"] = attestation_certificates_details
-            credential_info["properties"]["attestationCertificates"] = attestation_certificates_details
-
-        credentials.add_public_key_material(credential_info, getattr(auth_data.credential_data, "public_key", {}))
-        attestation.augment_aaguid_fields(credential_info)
-        if authenticator_extensions_summary:
-            credential_info["authenticator_extensions"] = authenticator_extensions_summary
-        if attestation_certificate_details is not None:
-            credential_info["attestation_certificate"] = attestation_certificate_details
-        if isinstance(response, Mapping):
-            credential_info["registration_response"] = attestation.make_json_safe(response)
-
-        credential_public_key_value = getattr(auth_data.credential_data, "public_key", None)
-        raw_alg_value: Any = None
-        if isinstance(credential_public_key_value, Mapping):
-            if 3 in credential_public_key_value:
-                raw_alg_value = credential_public_key_value[3]
-            elif "alg" in credential_public_key_value:
-                raw_alg_value = credential_public_key_value["alg"]
-        else:
-            try:
-                raw_alg_value = credential_public_key_value[3]  # type: ignore[index]
-            except Exception:
-                raw_alg_value = None
-
-        algo = algorithms._coerce_cose_algorithm(raw_alg_value)
-        credential_info["publicKeyAlgorithm"] = algo
-        algoname = pqc.describe_algorithm(algo)
-        pqc.log_algorithm_selection("registration", algo)
-
-        pub_key_params = public_key.get("pubKeyCredParams", [])
-        algorithms_used = [param.get("alg") for param in pub_key_params if isinstance(param, dict) and "alg" in param]
-        debug_info = {
-            "attestationFormat": attestation_format,
-            "algorithmsUsed": algorithms_used or ([algo] if algo is not None else []),
-            "excludeCredentialsUsed": bool(public_key.get("excludeCredentials")),
-            "hintsUsed": public_key.get("hints", []),
-            "actualResidentKey": bool(auth_data.flags & 0x04) if hasattr(auth_data, "flags") else False,
-            "attestationSignatureValid": attestation_signature_valid,
-            "attestationRootValid": attestation_root_valid,
-            "attestationRpIdHashValid": attestation_rp_id_hash_valid,
-            "attestationAaguidMatch": attestation_aaguid_match,
-            "attestationChecks": attestation_checks_safe,
-            "attestationSummary": attestation_summary,
-            "attestationErrors": attestation_errors,
-            "attestationVerified": not attestation_errors,
-            "challengeSource": state_trace["challengeSource"],
-        }
-
-        extensions_requested = public_key.get("extensions", {})
-        if not isinstance(extensions_requested, dict):
-            extensions_requested = {}
-        cred_protect_requested = extensions_requested.get("credentialProtectionPolicy")
-        if cred_protect_requested is None:
-            cred_protect_requested = extensions_requested.get("credProtect")
-        if isinstance(cred_protect_requested, int):
-            debug_info["credProtectUsed"] = {
-                1: "userVerificationOptional",
-                2: "userVerificationOptionalWithCredentialIDList",
-                3: "userVerificationRequired",
-            }.get(cred_protect_requested, cred_protect_requested)
-        elif cred_protect_requested:
-            debug_info["credProtectUsed"] = cred_protect_requested
-        else:
-            debug_info["credProtectUsed"] = "none"
-
-        enforce_requested = extensions_requested.get("enforceCredentialProtectionPolicy")
-        if enforce_requested is None:
-            enforce_requested = extensions_requested.get("enforceCredProtect")
-        debug_info["enforceCredProtectUsed"] = bool(enforce_requested)
-
-        material = build_registration_material(auth_data=auth_data,
-            attestation_format=attestation_format,
-            attestation_statement=attestation_statement,
-            attestation_certificate_details=attestation_certificate_details,
-            attestation_certificates_details=attestation_certificates_details,
-            client_extension_results=client_extension_results,
-            credential_info=credential_info,
-            response=response,
-            user_handle=user_handle,
-            resolved_rp_id=resolved_rp_id,
-            resident_key_required=bool(resident_key_required),
-            attestation_rp_id_hash_valid=attestation_rp_id_hash_valid,
-            attestation_checks_safe=attestation_checks_safe,
-            attestation_summary=attestation_summary,
-        )
-
-        if authenticator_extensions_summary:
-            material["rpInfo"]["registrationData"]["authenticatorExtensions"] = attestation.make_json_safe(
-                authenticator_extensions_summary
-            )
-
-        return finalize_registration_completion(stored_credential=material["storedCredential"],
-            rp_info=material["rpInfo"],
-            metadata_summary=metadata_summary,
-            response=response,
-            metadata_session_id=metadata_session_id,
-            username=username,
-            warnings=warnings,
-            debug_info=debug_info,
-            algoname=algoname,
-            resolved_rp_id=resolved_rp_id,
-            credential_id_bytes=material["credentialIdBytes"],
-            aaguid_bytes=material.get("aaguidBytes"),
-            auth_data=auth_data,
-            attestation_format=attestation_format,
-            attestation_object_b64=attestation_object_b64,
-            client_data_json_b64=client_data_json_b64,
-            user_handle=user_handle,
-            display_name=display_name,
-        )
+        return _record_verified_registration(prepared, state_ctx, state_trace)
     except Exception as exc:
         return jsonify(
             {
@@ -694,6 +67,88 @@ def _register_complete(data: Mapping[str, Any], session_state: Any, state_trace:
                 "challengeSource": state_trace["challengeSource"],
             }
         ), 400
+
+
+def _record_verified_registration(
+    prepared: Mapping[str, Any], state_ctx: Mapping[str, Any], state_trace: Mapping[str, Any]
+) -> Any:
+    """What follows fido2 accepting a registration: checks, record, artifact, answer."""
+
+    response = prepared["response"]
+    public_key = prepared["publicKey"]
+    auth_data = state_ctx["authData"]
+
+    attestation_checks, origin_error = registration_attestation.check_origin_and_attestation(
+        response=response,
+        state_ctx=state_ctx,
+        public_key=public_key,
+        challenge_source=state_trace["challengeSource"],
+    )
+    if origin_error is not None:
+        return origin_error
+
+    analysis = registration_attestation.summarise_attestation(attestation_checks)
+    extensions_summary = registration_attestation.authenticator_extensions_summary(auth_data)
+    user_handle = registration_record.resolve_user_handle(prepared["userInfo"], prepared["username"])
+    credential_info = registration_record.build_credential_info(
+        prepared=prepared,
+        auth_data=auth_data,
+        analysis=analysis,
+        user_handle=user_handle,
+        extensions_summary=extensions_summary,
+    )
+    algo, algoname = registration_record.resolve_algorithm(credential_info, auth_data)
+    debug_info = registration_record.build_debug_info(
+        public_key=public_key,
+        attestation_format=prepared["attestationFormat"],
+        auth_data=auth_data,
+        analysis=analysis,
+        algo=algo,
+        challenge_source=state_trace["challengeSource"],
+    )
+
+    material = registration_record.build_registration_material(
+        auth_data=auth_data,
+        attestation_format=prepared["attestationFormat"],
+        attestation_statement=prepared["attestationStatement"],
+        attestation_certificate_details=prepared["attestationCertificateDetails"],
+        attestation_certificates_details=prepared["attestationCertificatesDetails"],
+        client_extension_results=prepared["clientExtensionResults"],
+        credential_info=credential_info,
+        response=response,
+        user_handle=user_handle,
+        resolved_rp_id=state_ctx["resolvedRpId"],
+        resident_key_required=bool(prepared["residentKeyRequired"]),
+        attestation_rp_id_hash_valid=analysis["rpIdHashValid"],
+        attestation_checks_safe=analysis["checksSafe"],
+        attestation_summary=analysis["summary"],
+    )
+
+    if extensions_summary:
+        material["rpInfo"]["registrationData"]["authenticatorExtensions"] = attestation.make_json_safe(
+            extensions_summary
+        )
+
+    return registration_persistence.finalize_registration_completion(
+        stored_credential=material["storedCredential"],
+        rp_info=material["rpInfo"],
+        metadata_summary=analysis["metadataSummary"],
+        response=response,
+        metadata_session_id=prepared["metadataSessionId"],
+        username=prepared["username"],
+        warnings=analysis["warnings"],
+        debug_info=debug_info,
+        algoname=algoname,
+        resolved_rp_id=state_ctx["resolvedRpId"],
+        credential_id_bytes=material["credentialIdBytes"],
+        aaguid_bytes=material.get("aaguidBytes"),
+        auth_data=auth_data,
+        attestation_format=prepared["attestationFormat"],
+        attestation_object_b64=prepared["attestationObjectB64"],
+        client_data_json_b64=prepared["clientDataJsonB64"],
+        user_handle=user_handle,
+        display_name=prepared["displayName"],
+    )
 
 
 def _with_challenge_source(
