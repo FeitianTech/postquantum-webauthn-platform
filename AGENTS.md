@@ -131,6 +131,16 @@ Related backend modules:
   algorithm names come from `webauthn/pqc.py`'s `describe_algorithm`. Do not add
   another copy of either. Encoder bytes come only from `encode/cbor_canonical.py`,
   which writes CTAP2-canonical CBOR; do not serialise encoder output with cbor2.
+  Decoder input is parsed only by `decode/cbor_parser.py`: strict, failing with
+  the offset and path where input stops being well-formed; lenient only when a
+  request sends `"lenient": true`, and the response then lists what it skipped.
+  Never decode input with `fido2.cbor`, cbor2 or fido2's `AttestationObject` /
+  `AuthenticatorData` (`test_decoder_parses_cbor_only_itself.py` checks).
+  `decode/canonical.py` reports CTAP2 canonical-form violations as `findings` on
+  every decode; the CTAP2 key order is `decoder/ctap2_order.py`, shared with the
+  encoder. The decoder shows what was sent: it never synthesizes or drops a field
+  (the old "repair" code did, for a set of corrupt captures), and bytes after the
+  top-level item are reported, never decoded or dropped.
 
 Each of these packages keeps its public surface in `__init__.py` and its
 implementation in submodules named for what they do. Import the submodule you
