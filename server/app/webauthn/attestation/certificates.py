@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import re
 import textwrap
 from collections.abc import Mapping, Sequence
 from datetime import datetime
@@ -12,7 +11,7 @@ from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, rsa
-from cryptography.x509.oid import ExtensionOID, NameOID
+from cryptography.x509.oid import ExtensionOID
 
 from fido2.cose import (
     describe_mldsa_oid,
@@ -24,110 +23,10 @@ from fido2.webauthn import RegistrationResponse
 
 from ... import encoding
 from ...encoding import encode_base64
-from . import formatting, trust
+from . import certificate_names, formatting, trust
 from .constants import EXTENSION_DISPLAY_METADATA
 
 logger = logging.getLogger(__name__)
-
-_HASH_NORMALISE_PATTERN = re.compile(r"sha-?(\d{3})$", re.IGNORECASE)
-
-
-def format_x509_name(name: Any) -> str:
-    try:
-        return name.rfc4514_string()
-    except Exception:
-        return str(name)
-
-
-def _format_algorithm_component(value: Any) -> str:
-    if value in (None, ""):
-        return ""
-    text = str(value).strip()
-    if not text or text == "—":
-        return ""
-    return text.replace(" ", "")
-
-
-def _format_hash_value(value: Any) -> str:
-    if value in (None, ""):
-        return ""
-    text = str(value).strip()
-    if not text:
-        return ""
-    match = _HASH_NORMALISE_PATTERN.match(text)
-    if match:
-        return f"SHA{match.group(1)}"
-    return text.replace("-", "").replace(" ", "").upper()
-
-
-def _normalise_signature_algorithm_name(name: str) -> str:
-    text = (name or "").strip()
-    if not text:
-        return ""
-
-    lowered = text.lower()
-    if "ecdsa" in lowered:
-        return "ECDSA"
-    if "rsassa-pss" in lowered:
-        return "RSASSA-PSS"
-    if "rsa" in lowered:
-        return "RSASSA-PKCS1-v1_5"
-    if "ed25519" in lowered:
-        return "ED25519"
-    if "ed448" in lowered:
-        return "ED448"
-    if "dsa" in lowered:
-        return "DSA"
-
-    return text.replace("-", "").replace(" ", "").upper()
-
-
-def _derive_certificate_algorithm_info(signature_info: Mapping[str, Any]) -> str:
-    if not isinstance(signature_info, Mapping):
-        return ""
-
-    algorithm_component = ""
-    raw_algorithm_name: Any = signature_info.get("algorithm")
-    if isinstance(raw_algorithm_name, Mapping):
-        raw_algorithm_name = raw_algorithm_name.get("name")
-    if isinstance(raw_algorithm_name, str):
-        algorithm_component = _normalise_signature_algorithm_name(raw_algorithm_name)
-
-    hash_component = ""
-    hash_info = signature_info.get("hash")
-    if isinstance(hash_info, Mapping):
-        hash_component = hash_info.get("name") or ""
-    elif hash_info not in (None, ""):
-        hash_component = hash_info
-    if not hash_component:
-        sig_name = signature_info.get("algorithm")
-        if isinstance(sig_name, str):
-            lowered = sig_name.lower()
-            if "ed25519" in lowered:
-                hash_component = "SHA512"
-            elif "ed448" in lowered:
-                hash_component = "SHAKE256"
-
-    components = []
-    for part in (
-        _format_algorithm_component(algorithm_component),
-        _format_hash_value(hash_component),
-    ):
-        if part and (not components or part.lower() != components[-1].lower()):
-            components.append(part)
-
-    return "_".join(components)
-
-
-def _extract_common_names(name: Any) -> list[str]:
-    values: list[str] = []
-    for attribute in name.get_attributes_for_oid(NameOID.COMMON_NAME):
-        value = attribute.value
-        if isinstance(value, str):
-            text = value.strip()
-            if text:
-                values.append(text)
-    return values
 
 
 def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> tuple[dict[str, Any], list[tuple[str, Any]]]:
@@ -360,7 +259,7 @@ def _serialize_extension_value(ext: Any) -> Any:
             )
         if value.authority_cert_issuer:
             serialized["Authority Cert Issuer"] = [
-                format_x509_name(name) for name in value.authority_cert_issuer
+                certificate_names.format_x509_name(name) for name in value.authority_cert_issuer
             ]
         return serialized
     if isinstance(value, x509.BasicConstraints):
@@ -459,7 +358,7 @@ def _build_certificate_summary(
         f"Certificate Serial Number: {serial_decimal} ({serial_hex})"
     )
     _append_line(f"Signature Algorithm: {signature_algorithm}")
-    _append_line(f"Issuer: {format_x509_name(certificate.issuer)}")
+    _append_line(f"Issuer: {certificate_names.format_x509_name(certificate.issuer)}")
 
     _append_blank_line()
     _append_line("Validity:")
@@ -467,7 +366,7 @@ def _build_certificate_summary(
     _append_line(f"    Not After: {_isoformat(not_valid_after)}")
 
     _append_blank_line()
-    _append_line(f"Subject: {format_x509_name(certificate.subject)}")
+    _append_line(f"Subject: {certificate_names.format_x509_name(certificate.subject)}")
 
     pk_summary_entries: list[tuple[str, Any]] = []
     if public_key is None:
@@ -792,8 +691,8 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
         "oid": signature_algorithm_oid,
         "details": signature_algorithm_details,
     }
-    algorithm_info = _derive_certificate_algorithm_info(signature_details)
-    subject_common_names = _extract_common_names(certificate.subject)
+    algorithm_info = certificate_names._derive_certificate_algorithm_info(signature_details)
+    subject_common_names = certificate_names._extract_common_names(certificate.subject)
 
     def _isoformat(value: datetime) -> str:
         return trust._ensure_utc_datetime(value).isoformat()
@@ -811,12 +710,12 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
         "signatureAlgorithm": signature_algorithm,
         "signatureAlgorithmOid": signature_algorithm_oid,
         "signatureAlgorithmDetails": signature_algorithm_details,
-        "issuer": format_x509_name(certificate.issuer),
+        "issuer": certificate_names.format_x509_name(certificate.issuer),
         "validity": {
             "notBefore": _isoformat(not_valid_before),
             "notAfter": _isoformat(not_valid_after),
         },
-        "subject": format_x509_name(certificate.subject),
+        "subject": certificate_names.format_x509_name(certificate.subject),
         "subjectCommonNames": subject_common_names,
         "publicKeyInfo": public_key_info,
         "algorithmInfo": algorithm_info,
