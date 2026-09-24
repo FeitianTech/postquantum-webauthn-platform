@@ -37,11 +37,9 @@ summarize_authenticator_extensions = attestation.summarize_authenticator_extensi
 # Mapping-key coercion and JSON-safety helpers.
 _MISSING = keys.MISSING
 _coerce_cbor_bytes = keys.coerce_cbor_bytes
-_generate_key_variants = keys.generate_key_variants
 _get_mapping_entry = keys.get_mapping_entry
 _hex_json_safe = keys.hex_json_safe
-_int_to_key_bytes = keys.int_to_key_bytes
-_key_variant_identity = keys.key_variant_identity
+_key_identity = keys.key_identity
 _make_hex_only = keys.make_hex_only
 _stringify_mapping_keys = keys.stringify_mapping_keys
 

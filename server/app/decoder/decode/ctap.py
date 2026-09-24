@@ -14,7 +14,7 @@ from .cbor_parser import (
     _CborDecodingError,
     _structure_to_value,
 )
-from .keys import MISSING
+from .keys import MISSING, key_identity
 from .keys import MISSING as _MISSING
 from .keys import coerce_cbor_bytes as _coerce_cbor_bytes
 from .keys import get_mapping_entry as _get_mapping_entry
@@ -79,7 +79,7 @@ def _convert_ctap_credential_descriptor(entry: Any) -> Any:
     for key in entry:
         if key in {"id", "type", "transports"} or key in {1, 2, 3}:
             continue
-        descriptor[str(key)] = _hex_json_safe(entry[key])
+        descriptor[_format_ctap_entry_key(key, None)] = _hex_json_safe(entry[key])
 
     return descriptor
 
@@ -99,12 +99,10 @@ _GET_ASSERTION_RESPONSE_LABELS = _labels(ctap_tables.GET_ASSERTION_RESPONSE)
 
 
 def _resolve_ctap_label(label_map: Mapping[Any, str], key: Any) -> str | None:
-    if key in label_map:
-        return label_map[key]
-    key_str = str(key)
-    if key_str in label_map:
-        return label_map[key_str]
-    return None
+    # Only the integer 1 is member 1: a text "1" or a byte string h'01' is not.
+    if isinstance(key, bool) or not isinstance(key, (int, str)):
+        return None
+    return label_map.get(key)
 
 
 def _format_ctap_entry_key(key: Any, label: str | None) -> str:
@@ -137,21 +135,18 @@ def _build_labeled_ctap_map(
                 handler = handlers[label]
             elif key in handlers:
                 handler = handlers[key]
-            elif str(key) in handlers:
-                handler = handlers[str(key)]
             value = mapping[key]
             if handler is not None:
                 result[formatted_key] = handler(value)
             else:
                 result[formatted_key] = _hex_json_safe(value)
-            seen_keys.add(key)
-            seen_keys.add(str(key))
+            seen_keys.add(key_identity(key))
             if label is not None:
                 seen_labels.add(label)
 
     for missing in missing_keys:
         label = _resolve_ctap_label(labels, missing)
-        if missing in seen_keys or str(missing) in seen_keys:
+        if key_identity(missing) in seen_keys:
             continue
         if label is not None and label in seen_labels:
             continue
@@ -161,8 +156,6 @@ def _build_labeled_ctap_map(
             handler = handlers[label]
         elif missing in handlers:
             handler = handlers[missing]
-        elif str(missing) in handlers:
-            handler = handlers[str(missing)]
         if handler is not None:
             result.setdefault(formatted_key, handler(None))
         else:
@@ -172,16 +165,16 @@ def _build_labeled_ctap_map(
 
 
 def _looks_like_make_credential_request(value: Mapping[Any, Any]) -> bool:
-    client_hash_entry = _get_mapping_entry(value, 1, "1", "clientDataHash")
+    client_hash_entry = _get_mapping_entry(value, 1, "clientDataHash")
     client_hash_bytes = _coerce_cbor_bytes(client_hash_entry)
     if client_hash_bytes is None:
         return False
-    if _extract_mapping_string(value, (1, "1", "fmt")) is not None:
+    if _extract_mapping_string(value, (1, "fmt")) is not None:
         return False
-    if _extract_mapping_bytes(value, (2, "2", "authData")) is not None:
+    if _extract_mapping_bytes(value, (2, "authData")) is not None:
         return False
-    rp_entry = _get_mapping_entry(value, 2, "2", "rp")
-    user_entry = _get_mapping_entry(value, 3, "3", "user")
+    rp_entry = _get_mapping_entry(value, 2, "rp")
+    user_entry = _get_mapping_entry(value, 3, "user")
     if rp_entry is MISSING or user_entry is MISSING:
         return False
     return True
@@ -214,9 +207,9 @@ def _looks_like_get_assertion_request(value: Mapping[Any, Any]) -> bool:
 
 
 def _looks_like_make_credential_output(value: Mapping[Any, Any]) -> bool:
-    fmt_value = _extract_mapping_string(value, (1, "1", "fmt"))
-    auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
-    att_stmt_value = _get_mapping_entry(value, 3, "3", "attStmt")
+    fmt_value = _extract_mapping_string(value, (1, "fmt"))
+    auth_data_bytes = _extract_mapping_bytes(value, (2, "authData"))
+    att_stmt_value = _get_mapping_entry(value, 3, "attStmt")
     if att_stmt_value is MISSING:
         att_stmt_value = None
     att_stmt_bytes = _coerce_cbor_bytes(att_stmt_value)
@@ -227,8 +220,8 @@ def _looks_like_make_credential_output(value: Mapping[Any, Any]) -> bool:
 
 
 def _looks_like_get_assertion_output(value: Mapping[Any, Any]) -> bool:
-    auth_data_bytes = _extract_mapping_bytes(value, (2, "2", "authData"))
-    signature_bytes = _extract_mapping_bytes(value, (3, "3", "signature"))
+    auth_data_bytes = _extract_mapping_bytes(value, (2, "authData"))
+    signature_bytes = _extract_mapping_bytes(value, (3, "signature"))
     return auth_data_bytes is not None and signature_bytes is not None
 
 
@@ -609,11 +602,11 @@ def _interpret_ctap_kind(value: Any, classification: str) -> dict[str, Any] | No
 
 
 def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] | None:
-    fmt = _get_mapping_entry(value, 1, "1", "fmt")
+    fmt = _get_mapping_entry(value, 1, "fmt")
     fmt = fmt if fmt is not _MISSING else None
-    auth_data_entry = _get_mapping_entry(value, 2, "2", "authData")
+    auth_data_entry = _get_mapping_entry(value, 2, "authData")
     auth_data_bytes = _coerce_cbor_bytes(auth_data_entry)
-    att_stmt_entry = _get_mapping_entry(value, 3, "3", "attStmt")
+    att_stmt_entry = _get_mapping_entry(value, 3, "attStmt")
     if att_stmt_entry is _MISSING:
         att_stmt_entry = None
     att_stmt_bytes = _coerce_cbor_bytes(att_stmt_entry)
@@ -665,8 +658,8 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] |
 def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | None:
     if _looks_like_get_assertion_request(value):
         return None
-    auth_data_entry = _get_mapping_entry(value, 2, "2", "authData")
-    signature_entry = _get_mapping_entry(value, 3, "3", "signature")
+    auth_data_entry = _get_mapping_entry(value, 2, "authData")
+    signature_entry = _get_mapping_entry(value, 3, "signature")
     auth_data_bytes = _coerce_cbor_bytes(auth_data_entry)
     signature_bytes = _coerce_cbor_bytes(signature_entry)
     if auth_data_bytes is None:
@@ -674,7 +667,7 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | N
 
     interpreted: dict[str, Any] = {}
 
-    credential_entry = _get_mapping_entry(value, 1, "1", "credential")
+    credential_entry = _get_mapping_entry(value, 1, "credential")
     if credential_entry is not _MISSING and credential_entry is not None:
         interpreted["1 (credential)"] = _convert_ctap_credential_descriptor(credential_entry)
 
@@ -686,7 +679,7 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | N
     else:
         interpreted["3 (signature)"] = None
 
-    user_entry = _get_mapping_entry(value, 4, "4", "user")
+    user_entry = _get_mapping_entry(value, 4, "user")
     if user_entry is not _MISSING and user_entry is not None:
         interpreted["4 (user)"] = _convert_ctap_user(user_entry)
 

@@ -23,8 +23,8 @@ def _auth_data_bytes() -> bytes:
 def test_remaining_cbor_key_float_and_structure_helpers():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    assert decode_module._key_variant_identity(b"x") == ("bytes", b"x")
-    assert decode_module._key_variant_identity(7) == ("other", 7)
+    assert decode_module._key_identity(b"x") == ("bytes", b"x")
+    assert decode_module._key_identity(7) == ("int", 7)
 
     assert decode_module._float_summary(float("inf")) == "float(+Infinity)"
     assert decode_module._float_summary(float("-inf")) == "float(-Infinity)"
