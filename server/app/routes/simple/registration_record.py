@@ -20,8 +20,20 @@ from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials
 from ...webauthn import attestation
 
+# What the registration answer calls the credential's algorithm. Compared with
+# ``==`` rather than looked up: a crafted COSE key's alg need not be hashable.
+_ALGORITHM_NAMES = (
+    (-50, "ML-DSA-87 (PQC)"),
+    (-49, "ML-DSA-65 (PQC)"),
+    (-48, "ML-DSA-44 (PQC)"),
+    (-7, "ES256 (ECDSA)"),
+    (-257, "RS256 (RSA)"),
+)
 
-def initialize_registration_context(ctx: dict[str, Any]) -> None:
+
+def _attestation_summary(ctx: Mapping[str, Any]) -> tuple[dict[str, Any], Any, list[str]]:
+    """The attestation summary, the metadata summary, and the attestation warnings as text."""
+
     attestation_summary = {
         "signatureValid": ctx["attestation_signature_valid"],
         "rootValid": ctx["attestation_root_valid"],
@@ -47,8 +59,11 @@ def initialize_registration_context(ctx: dict[str, Any]) -> None:
                 filtered_warnings.append(message)
         if filtered_warnings:
             attestation_summary["warnings"] = filtered_warnings
+    return attestation_summary, metadata_summary, warnings
 
-    credential_info: dict[str, Any] = {
+
+def _credential_info(ctx: Mapping[str, Any]) -> dict[str, Any]:
+    return {
         "credential_data": ctx["auth_data"].credential_data,
         "auth_data": ctx["auth_data"],
         "user_info": {
@@ -89,6 +104,28 @@ def initialize_registration_context(ctx: dict[str, Any]) -> None:
         },
     }
 
+
+def _record_aaguid(credential_properties: dict[str, Any], credential_data: Any) -> None:
+    aaguid_value = getattr(credential_data, "aaguid", None)
+    if aaguid_value is not None:
+        try:
+            aaguid_bytes = bytes(aaguid_value)
+        except Exception:
+            aaguid_bytes = None
+        if aaguid_bytes is not None and len(aaguid_bytes) == 16:
+            aaguid_hex = aaguid_bytes.hex()
+            credential_properties["aaguid"] = aaguid_hex
+            credential_properties["aaguidHex"] = aaguid_hex
+            try:
+                credential_properties["aaguidGuid"] = str(uuid.UUID(bytes=aaguid_bytes))
+            except ValueError:
+                pass
+
+
+def initialize_registration_context(ctx: dict[str, Any]) -> None:
+    attestation_summary, metadata_summary, warnings = _attestation_summary(ctx)
+    credential_info = _credential_info(ctx)
+
     credential_properties = credential_info["properties"]
     credential_properties["attestationSignatureValid"] = ctx["attestation_signature_valid"]
     credential_properties["attestationRootValid"] = ctx["attestation_root_valid"]
@@ -119,21 +156,7 @@ def initialize_registration_context(ctx: dict[str, Any]) -> None:
     if isinstance(ctx["response"], Mapping):
         credential_info["registration_response"] = attestation.make_json_safe(ctx["response"])
 
-    credential_data = ctx["auth_data"].credential_data
-    aaguid_value = getattr(credential_data, "aaguid", None)
-    if aaguid_value is not None:
-        try:
-            aaguid_bytes = bytes(aaguid_value)
-        except Exception:
-            aaguid_bytes = None
-        if aaguid_bytes is not None and len(aaguid_bytes) == 16:
-            aaguid_hex = aaguid_bytes.hex()
-            credential_properties["aaguid"] = aaguid_hex
-            credential_properties["aaguidHex"] = aaguid_hex
-            try:
-                credential_properties["aaguidGuid"] = str(uuid.UUID(bytes=aaguid_bytes))
-            except ValueError:
-                pass
+    _record_aaguid(credential_properties, ctx["auth_data"].credential_data)
 
     ctx["metadata_summary"] = metadata_summary
     ctx["warnings"] = warnings
@@ -161,27 +184,12 @@ def populate_authenticator_data_context(ctx: dict[str, Any]) -> None:
         ctx["credential_properties"]["authenticatorDataHash"] = authenticator_data_hash
 
     algo = ctx["auth_data"].credential_data.public_key[3]
-    if algo == -50:
-        algoname = "ML-DSA-87 (PQC)"
-    elif algo == -49:
-        algoname = "ML-DSA-65 (PQC)"
-    elif algo == -48:
-        algoname = "ML-DSA-44 (PQC)"
-    elif algo == -7:
-        algoname = "ES256 (ECDSA)"
-    elif algo == -257:
-        algoname = "RS256 (RSA)"
-    else:
-        algoname = "Other (Classical)"
+    algoname = next((name for alg, name in _ALGORITHM_NAMES if algo == alg), "Other (Classical)")
 
     flags_value = getattr(ctx["auth_data"], "flags", 0)
     flags_dict = {
-        "UP": bool(flags_value & getattr(ctx["auth_data"].FLAG, "UP", 0)),
-        "UV": bool(flags_value & getattr(ctx["auth_data"].FLAG, "UV", 0)),
-        "BE": bool(flags_value & getattr(ctx["auth_data"].FLAG, "BE", 0)),
-        "BS": bool(flags_value & getattr(ctx["auth_data"].FLAG, "BS", 0)),
-        "AT": bool(flags_value & getattr(ctx["auth_data"].FLAG, "AT", 0)),
-        "ED": bool(flags_value & getattr(ctx["auth_data"].FLAG, "ED", 0)),
+        flag: bool(flags_value & getattr(ctx["auth_data"].FLAG, flag, 0))
+        for flag in ("UP", "UV", "BE", "BS", "AT", "ED")
     }
 
     rp_id_hash_bytes = getattr(ctx["auth_data"], "rp_id_hash", b"")
@@ -226,14 +234,10 @@ def populate_authenticator_data_context(ctx: dict[str, Any]) -> None:
     ctx["expected_rp_hash_b64"] = expected_rp_hash_b64
 
 
-def populate_rp_debug_context(ctx: dict[str, Any]) -> None:
-    registration_timestamp = datetime.fromtimestamp(
-        ctx["credential_info"]["registration_time"], timezone.utc
-    ).isoformat()
-
+def _large_blob_result(client_extension_results: Any) -> bool:
     large_blob_result = False
-    if isinstance(ctx["client_extension_results"], Mapping) and "largeBlob" in ctx["client_extension_results"]:
-        large_blob_value = ctx["client_extension_results"].get("largeBlob")
+    if isinstance(client_extension_results, Mapping) and "largeBlob" in client_extension_results:
+        large_blob_value = client_extension_results.get("largeBlob")
         if isinstance(large_blob_value, Mapping):
             large_blob_result = bool(
                 large_blob_value.get("supported")
@@ -243,29 +247,28 @@ def populate_rp_debug_context(ctx: dict[str, Any]) -> None:
             )
         else:
             large_blob_result = bool(large_blob_value)
+    return large_blob_result
 
-    credential_id_bytes = ctx["auth_data"].credential_data.credential_id
-    credential_id_hex = credential_id_bytes.hex()
-    credential_id_b64 = encode_base64(credential_id_bytes)
-    credential_id_b64u = encode_base64url(credential_id_bytes)
 
-    try:
-        aaguid_bytes = bytes(ctx["auth_data"].credential_data.aaguid)
-    except Exception:
-        aaguid_bytes = b""
-
-    cose_public_key = dict(getattr(ctx["auth_data"].credential_data, "public_key", {}))
-    public_key_bytes = cbor.encode(cose_public_key)
-
-    user_handle_value = ctx["credential_info"]["user_info"].get("user_handle")
+def _user_handle_bytes(user_info: Mapping[str, Any]) -> bytes:
+    user_handle_value = user_info.get("user_handle")
     if isinstance(user_handle_value, (bytes, bytearray, memoryview)):
-        user_handle_bytes = bytes(user_handle_value)
-    else:
-        user_handle_bytes = str(user_handle_value or "").encode("utf-8")
-    user_handle_b64 = encode_base64(user_handle_bytes)
-    user_handle_b64u = encode_base64url(user_handle_bytes)
-    user_handle_hex = user_handle_bytes.hex()
+        return bytes(user_handle_value)
+    return str(user_handle_value or "").encode("utf-8")
 
+
+def _relying_party_info(
+    ctx: Mapping[str, Any],
+    *,
+    registration_timestamp: str,
+    credential_ids: tuple[str, str, str],
+    aaguid_bytes: bytes,
+    large_blob_result: bool,
+    user_handle_bytes: bytes,
+) -> dict[str, Any]:
+    """The relying party's view of the registration, as the answer reports it."""
+
+    credential_id_hex, credential_id_b64, credential_id_b64u = credential_ids
     rp_registration_data = {
         "authenticatorData": ctx["authenticator_data_hex"],
         "authenticatorDataHash": ctx["authenticator_data_hash"],
@@ -294,9 +297,9 @@ def populate_rp_debug_context(ctx: dict[str, Any]) -> None:
         "publicKeyAlgorithm": ctx["algo"],
         "registrationData": rp_registration_data,
         "userHandle": {
-            "base64": user_handle_b64,
-            "base64url": user_handle_b64u,
-            "hex": user_handle_hex,
+            "base64": encode_base64(user_handle_bytes),
+            "base64url": encode_base64url(user_handle_bytes),
+            "hex": user_handle_bytes.hex(),
         },
     }
 
@@ -305,10 +308,11 @@ def populate_rp_debug_context(ctx: dict[str, Any]) -> None:
             "raw": aaguid_bytes.hex(),
             "guid": str(uuid.UUID(bytes=aaguid_bytes)) if len(aaguid_bytes) == 16 else None,
         }
+    return rp_info
 
-    ctx["credential_info"]["relying_party"] = attestation.make_json_safe(rp_info)
 
-    debug_info = {
+def _debug_info(ctx: Mapping[str, Any]) -> dict[str, Any]:
+    return {
         "attestationFormat": ctx["attestation_format"],
         "algorithmsUsed": [ctx["algo"]],
         "excludeCredentialsUsed": False,
@@ -322,15 +326,47 @@ def populate_rp_debug_context(ctx: dict[str, Any]) -> None:
         "rpIdHashExpected": ctx["expected_rp_hash_hex"],
     }
 
+
+def populate_rp_debug_context(ctx: dict[str, Any]) -> None:
+    registration_timestamp = datetime.fromtimestamp(
+        ctx["credential_info"]["registration_time"], timezone.utc
+    ).isoformat()
+    large_blob_result = _large_blob_result(ctx["client_extension_results"])
+
+    credential_id_bytes = ctx["auth_data"].credential_data.credential_id
+    credential_ids = (
+        credential_id_bytes.hex(),
+        encode_base64(credential_id_bytes),
+        encode_base64url(credential_id_bytes),
+    )
+
+    try:
+        aaguid_bytes = bytes(ctx["auth_data"].credential_data.aaguid)
+    except Exception:
+        aaguid_bytes = b""
+
+    cose_public_key = dict(getattr(ctx["auth_data"].credential_data, "public_key", {}))
+    public_key_bytes = cbor.encode(cose_public_key)
+    user_handle_bytes = _user_handle_bytes(ctx["credential_info"]["user_info"])
+
+    rp_info = _relying_party_info(
+        ctx,
+        registration_timestamp=registration_timestamp,
+        credential_ids=credential_ids,
+        aaguid_bytes=aaguid_bytes,
+        large_blob_result=large_blob_result,
+        user_handle_bytes=user_handle_bytes,
+    )
+    ctx["credential_info"]["relying_party"] = attestation.make_json_safe(rp_info)
+    debug_info = _debug_info(ctx)
+
     ctx["credential_id_bytes"] = credential_id_bytes
-    ctx["credential_id_hex"] = credential_id_hex
-    ctx["credential_id_b64"] = credential_id_b64
-    ctx["credential_id_b64u"] = credential_id_b64u
+    ctx["credential_id_hex"], ctx["credential_id_b64"], ctx["credential_id_b64u"] = credential_ids
     ctx["aaguid_bytes"] = aaguid_bytes
     ctx["cose_public_key"] = cose_public_key
     ctx["public_key_bytes"] = public_key_bytes
     ctx["user_handle_bytes"] = user_handle_bytes
-    ctx["user_handle_b64u"] = user_handle_b64u
+    ctx["user_handle_b64u"] = encode_base64url(user_handle_bytes)
     ctx["rp_info"] = rp_info
     ctx["debug_info"] = debug_info
 
