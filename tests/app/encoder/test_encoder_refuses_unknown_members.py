@@ -74,7 +74,9 @@ def test_two_keys_for_one_member_are_refused():
         _encode({"ctapDecoded": {"makeCredentialResponse": structure}})
 
 
-@pytest.mark.parametrize("response", [MAKE_CREDENTIAL_RESPONSE, GET_ASSERTION_RESPONSE])
+@pytest.mark.parametrize(
+    "response", [MAKE_CREDENTIAL_RESPONSE, GET_ASSERTION_RESPONSE], ids=["makeCredential", "getAssertion"]
+)
 def test_real_device_responses_still_encode_back_to_the_same_bytes(response):
     message = b"\x00" + response
 
