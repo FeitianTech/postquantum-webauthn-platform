@@ -1,51 +1,111 @@
-"""Strict CBOR parsing primitives for decoder internals."""
+"""The decoder's one CBOR parser.
+
+Strict by default: anything that is not well-formed CBOR (RFC 8949) raises
+``_CborDecodingError`` with the byte offset and the path of the item at fault.
+It never guesses, never truncates and never skips.
+
+Lenient only when a caller asks for it: the parse then keeps what is there --
+the bytes a truncated string does have, the items a short array does have --
+steps over bytes it cannot read, and records every such step in ``skipped``.
+
+Every node records where it sits in the input (``offset``/``end``) and how its
+head was written (``info``/``argument``), which is what the canonical-form
+check in ``canonical.py`` reads. Offsets count from the start of ``data``.
+"""
 from __future__ import annotations
 
 import math
 import struct
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from ...encoding import decode_hex, encode_base64
 from ...webauthn.attestation import encode_base64url
 
+# Deep enough for any WebAuthn or CTAP structure; shallow enough that hostile
+# input cannot exhaust the interpreter's recursion limit.
+_MAX_DEPTH = 64
+
+_MAJOR_TYPE_NAMES = {
+    0: "unsigned integer",
+    1: "negative integer",
+    2: "byte string",
+    3: "text string",
+    4: "array",
+    5: "map",
+    6: "tag",
+    7: "simple value or float",
+}
+
 
 class _CborDecodingError(ValueError):
-    """Internal error raised when a CBOR payload cannot be parsed."""
+    """Raised when input is not well-formed CBOR, with where it went wrong."""
 
-    def __init__(self, message: str, offset: int) -> None:
-        super().__init__(message)
+    def __init__(self, message: str, offset: int, path: str = "$") -> None:
+        super().__init__(f"Not well-formed CBOR at offset {offset} ({path}): {message}")
+        self.reason = message
         self.offset = offset
+        self.path = path
 
 
-def _ensure_cbor_available(data: bytes, offset: int, length: int) -> None:
-    if length < 0 or offset + length > len(data):
-        raise _CborDecodingError("Unexpected end of CBOR data.", offset)
+@dataclass(frozen=True)
+class CborDiagnostic:
+    """A CBOR value JSON has no spelling for, in CBOR diagnostic notation.
+
+    ``undefined``, ``simple(16)``, ``NaN`` and ``Infinity`` are values JSON
+    cannot hold; ``true``, ``null`` and ``1.5`` become one of these when they
+    are map keys, so they cannot collide with the integer or text keys JSON
+    would otherwise turn them into.
+    """
+
+    diagnostic: str
+
+    def __str__(self) -> str:
+        return self.diagnostic
+
+
+class _ParseState:
+    __slots__ = ("data", "lenient", "skipped")
+
+    def __init__(self, data: bytes, lenient: bool) -> None:
+        self.data = data
+        self.lenient = lenient
+        self.skipped: list[dict[str, Any]] = []
+
+    def problem(self, code: str, message: str, offset: int, path: str) -> None:
+        """Raise in strict mode; in lenient mode, record the step and go on."""
+
+        if not self.lenient:
+            raise _CborDecodingError(message, offset, path)
+        self.skipped.append(
+            {"code": code, "category": "skipped", "offset": offset, "path": path, "message": message}
+        )
+
+
+def _count(number: int, noun: str) -> str:
+    return f"{number} {noun}" if number == 1 else f"{number} {noun}s"
 
 
 def _read_cbor_length(
     info: int, data: bytes, offset: int, *, allow_indefinite: bool = False
 ) -> tuple[int | None, int]:
+    """Read an item's argument. ``offset`` is just past the initial byte."""
+
     if info < 24:
         return info, offset
-    if info == 24:
-        _ensure_cbor_available(data, offset, 1)
-        return data[offset], offset + 1
-    if info == 25:
-        _ensure_cbor_available(data, offset, 2)
-        return int.from_bytes(data[offset : offset + 2], "big"), offset + 2
-    if info == 26:
-        _ensure_cbor_available(data, offset, 4)
-        return int.from_bytes(data[offset : offset + 4], "big"), offset + 4
-    if info == 27:
-        _ensure_cbor_available(data, offset, 8)
-        return int.from_bytes(data[offset : offset + 8], "big"), offset + 8
-    if info == 30:
-        _ensure_cbor_available(data, offset, 8)
-        return int.from_bytes(data[offset : offset + 8], "big"), offset + 8
-    if info == 31 and allow_indefinite:
-        return None, offset
-    raise _CborDecodingError("Unsupported CBOR additional information.", offset)
+    if info <= 27:
+        size = 1 << (info - 24)
+        if offset + size > len(data):
+            raise _CborDecodingError(
+                f"the head needs {_count(size, 'more byte')}; {len(data) - offset} remain", offset - 1
+            )
+        return int.from_bytes(data[offset : offset + size], "big"), offset + size
+    if info == 31:
+        if allow_indefinite:
+            return None, offset
+        raise _CborDecodingError("indefinite length is not allowed for this major type", offset - 1)
+    raise _CborDecodingError(f"additional information {info} is reserved", offset - 1)
 
 
 def _float_summary(value: float) -> str:
@@ -56,355 +116,360 @@ def _float_summary(value: float) -> str:
     return f"float({value})"
 
 
-def _parse_cbor_item(data: bytes, offset: int) -> tuple[dict[str, Any], int]:
-    if offset >= len(data):
-        raise _CborDecodingError("Unexpected end of CBOR data.", offset)
+def _text_summary(value: str) -> str:
+    return f'"{value if len(value) <= 32 else value[:29] + "..."}"'
 
+
+def _byte_node(raw: bytes, **fields: Any) -> dict[str, Any]:
+    node: dict[str, Any] = {
+        "majorType": 2,
+        "type": "byte string",
+        "length": len(raw),
+        "hex": raw.hex(),
+        "base64": encode_base64(raw),
+        "base64url": encode_base64url(raw),
+    }
+    node.update(fields)
+    node["summary"] = f"bytes[{node['length']}]"
+    if "declaredLength" in node:
+        node["summary"] += f" (truncated from {node['declaredLength']})"
+    return node
+
+
+def _invalid_node(state: _ParseState, start: int, end: int, major_type: int) -> dict[str, Any]:
+    raw = state.data[start:end]
+    return {
+        "majorType": major_type,
+        "type": "invalid",
+        "hex": raw.hex(),
+        "summary": f"invalid(h'{raw.hex()}')",
+        "offset": start,
+        "end": end,
+    }
+
+
+def _key_path(path: str, key_node: Mapping[str, Any]) -> str:
+    return f"{path}{{{_diagnostic_key(key_node)}}}"
+
+
+def _diagnostic_key(node: Mapping[str, Any]) -> str:
+    node_type = node.get("type")
+    if node_type in ("unsigned", "negative"):
+        return str(node.get("value"))
+    if node_type == "text string" and isinstance(node.get("value"), str):
+        return f'"{node["value"]}"'
+    if node_type == "byte string":
+        return f"h'{node.get('hex', '')}'"
+    return str(node.get("summary", "?"))
+
+
+def _parse_cbor_item(
+    data: bytes,
+    offset: int,
+    *,
+    state: _ParseState | None = None,
+    path: str = "$",
+    depth: int = 0,
+) -> tuple[dict[str, Any], int]:
+    """Parse the item at ``offset``; return its node and the offset after it."""
+
+    if state is None:
+        state = _ParseState(data, lenient=False)
+    if depth > _MAX_DEPTH:
+        raise _CborDecodingError(f"items are nested more than {_MAX_DEPTH} deep", offset, path)
+    if offset >= len(data):
+        raise _CborDecodingError("the data ends where an item should start", offset, path)
+
+    start = offset
     initial = data[offset]
-    offset += 1
     major_type = initial >> 5
     info = initial & 0x1F
+    offset += 1
+
+    try:
+        argument, offset = _read_cbor_length(
+            info, data, offset, allow_indefinite=major_type in (2, 3, 4, 5) or (major_type == 7 and info == 31)
+        )
+    except _CborDecodingError as exc:
+        if major_type == 7 and info in (25, 26, 27):
+            precision = ("half", "single", "double")[info - 25]
+            message = f"a {precision}-precision float needs {1 << (info - 24)} bytes"
+        else:
+            message = exc.reason
+        code = "reserved-additional-info" if 28 <= info <= 30 else (
+            "truncated" if info <= 27 else "invalid-indefinite-length"
+        )
+        state.problem(code, message, start, path)
+        end = len(data) if code == "truncated" else start + 1
+        return _invalid_node(state, start, end, major_type), end
+
+    head = {"offset": start, "info": info, "argument": argument}
 
     if major_type == 0:
-        if info == 30:
-            node = {
-                "majorType": 0,
-                "type": "unsigned",
-                "value": 30,
-                "summary": "30",
-            }
-            return node, offset
-        value, offset = _read_cbor_length(info, data, offset)
-        if value is None:
-            raise _CborDecodingError("Invalid indefinite length for unsigned integer.", offset)
-        node = {"majorType": 0, "type": "unsigned", "value": value, "summary": str(value)}
+        node = {"majorType": 0, "type": "unsigned", "value": argument, "summary": str(argument)}
+    elif major_type == 1:
+        value = -1 - argument
+        node = {"majorType": 1, "type": "negative", "value": value, "summary": str(value)}
+    elif major_type in (2, 3):
+        node, offset = _parse_string(state, major_type, argument, offset, start, path, depth)
+    elif major_type == 4:
+        node, offset = _parse_array(state, argument, offset, path, depth)
+    elif major_type == 5:
+        node, offset = _parse_map(state, argument, offset, path, depth)
+    elif major_type == 6:
+        tagged_item, offset = _parse_cbor_item(data, offset, state=state, path=f"{path}<tag>", depth=depth + 1)
+        node = {"majorType": 6, "type": "tag", "tag": argument, "value": tagged_item, "summary": f"tag({argument})"}
+    else:
+        node, offset = _parse_simple_or_float(state, info, argument, offset, start, path)
+
+    for key, value in head.items():
+        node.setdefault(key, value)
+    node["end"] = offset
+    return node, offset
+
+
+def _parse_string(
+    state: _ParseState, major_type: int, length: int | None, offset: int, start: int, path: str, depth: int
+) -> tuple[dict[str, Any], int]:
+    data = state.data
+    kind = _MAJOR_TYPE_NAMES[major_type]
+
+    if length is None:
+        chunks: list[dict[str, Any]] = []
+        while True:
+            if offset >= len(data):
+                state.problem("truncated", f"indefinite-length {kind} has no break byte", start, path)
+                break
+            if data[offset] == 0xFF:
+                offset += 1
+                break
+            chunk_start = offset
+            chunk_path = f"{path}<chunk {len(chunks)}>"
+            chunk, offset = _parse_cbor_item(data, offset, state=state, path=chunk_path, depth=depth + 1)
+            if chunk.get("majorType") != major_type or chunk.get("indefinite") or chunk.get("type") == "invalid":
+                state.problem(
+                    "invalid-indefinite-chunk",
+                    f"a chunk of an indefinite-length {kind} must be a definite-length {kind}",
+                    chunk_start,
+                    chunk_path,
+                )
+                continue
+            chunks.append(chunk)
+        if major_type == 2:
+            raw = b"".join(decode_hex(chunk["hex"]) for chunk in chunks)
+            return _byte_node(raw, indefinite=True, chunks=chunks), offset
+        text = "".join(chunk.get("value", "") for chunk in chunks if isinstance(chunk.get("value"), str))
+        node = {
+            "majorType": 3,
+            "type": "text string",
+            "length": len(text.encode("utf-8")),
+            "value": text,
+            "indefinite": True,
+            "segments": chunks,
+            "summary": _text_summary(text),
+        }
         return node, offset
 
-    if major_type == 1:
-        if info == 30:
-            actual = -31
-            node = {"majorType": 1, "type": "negative", "value": actual, "summary": str(actual)}
-            return node, offset
-        value, offset = _read_cbor_length(info, data, offset)
-        if value is None:
-            raise _CborDecodingError("Invalid indefinite length for negative integer.", offset)
-        actual = -1 - value
-        node = {"majorType": 1, "type": "negative", "value": actual, "summary": str(actual)}
-        return node, offset
-
-    if major_type == 2:
-        length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
-        if length is None:
-            segments: list[dict[str, Any]] = []
-            raw_segments: list[bytes] = []
-            while True:
-                if offset >= len(data):
-                    break
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                try:
-                    segment, offset = _parse_cbor_item(data, offset)
-                except _CborDecodingError:
-                    break
-                if segment.get("majorType") != 2:
-                    raise _CborDecodingError(
-                        "Indefinite byte string segment is not a byte string.", offset
-                    )
-                segments.append(segment)
-                segment_hex = segment.get("hex")
-                segment_data = decode_hex(segment_hex) if isinstance(segment_hex, str) else b""
-                raw_segments.append(segment_data)
-            raw = b"".join(raw_segments)
-            node = {
-                "majorType": 2,
-                "type": "byte string",
-                "length": len(raw),
-                "hex": raw.hex(),
-                "base64": encode_base64(raw),
-                "base64url": encode_base64url(raw),
-                "indefinite": True,
-                "chunks": segments,
-            }
-            node["summary"] = f"bytes[{node['length']}]"
-            return node, offset
-        try:
-            _ensure_cbor_available(data, offset, length)
-        except _CborDecodingError:
-            available = max(len(data) - offset, 0)
-            raw = data[offset : offset + available]
-            offset += available
-            node = {
-                "majorType": 2,
-                "type": "byte string",
-                "length": length,
-                "hex": raw.hex(),
-                "base64": encode_base64(raw),
-                "base64url": encode_base64url(raw),
-                "truncated": True,
-            }
-            node["summary"] = f"bytes[{available}] (truncated from {length})"
-            return node, offset
+    available = len(data) - offset
+    if length > available:
+        state.problem("truncated", f"{kind} declares {_count(length, 'byte')}; {available} remain", start, path)
+        raw = data[offset:]
+        offset = len(data)
+        if major_type == 2:
+            return _byte_node(raw, declaredLength=length, truncated=True), offset
+    else:
         raw = data[offset : offset + length]
         offset += length
-        node = {
-            "majorType": 2,
-            "type": "byte string",
-            "length": length,
+        if major_type == 2:
+            return _byte_node(raw), offset
+
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        state.problem("invalid-utf8", "text string is not valid UTF-8", start, path)
+        return {
+            "majorType": 3,
+            "type": "text string",
+            "length": len(raw),
             "hex": raw.hex(),
-            "base64": encode_base64(raw),
-            "base64url": encode_base64url(raw),
-        }
-        node["summary"] = f"bytes[{length}]"
-        return node, offset
+            "error": "Invalid UTF-8 in text string.",
+            "summary": f"text[{len(raw)}]",
+        }, offset
+    node = {"majorType": 3, "type": "text string", "length": len(raw), "value": text, "summary": _text_summary(text)}
+    if len(raw) < length:
+        node.update(declaredLength=length, truncated=True)
+    return node, offset
 
-    if major_type == 3:
-        length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
+
+def _parse_array(
+    state: _ParseState, length: int | None, offset: int, path: str, depth: int
+) -> tuple[dict[str, Any], int]:
+    data = state.data
+    items: list[dict[str, Any]] = []
+    node: dict[str, Any] = {"majorType": 4, "type": "array"}
+    if length is None:
+        node["indefinite"] = True
+        while True:
+            if offset >= len(data):
+                state.problem("truncated", "indefinite-length array has no break byte", offset, path)
+                break
+            if data[offset] == 0xFF:
+                offset += 1
+                break
+            item, offset = _parse_cbor_item(data, offset, state=state, path=f"{path}[{len(items)}]", depth=depth + 1)
+            items.append(item)
+    else:
+        for index in range(length):
+            if offset >= len(data):
+                state.problem(
+                    "truncated",
+                    f"array declares {_count(length, 'item')}; the data ends after {index}",
+                    offset,
+                    f"{path}[{index}]",
+                )
+                node["declaredLength"] = length
+                break
+            item, offset = _parse_cbor_item(data, offset, state=state, path=f"{path}[{index}]", depth=depth + 1)
+            items.append(item)
+    node.update(length=len(items), items=items, summary=f"array[{len(items)}]")
+    return node, offset
+
+
+def _parse_map(
+    state: _ParseState, length: int | None, offset: int, path: str, depth: int
+) -> tuple[dict[str, Any], int]:
+    data = state.data
+    entries: list[dict[str, Any]] = []
+    node: dict[str, Any] = {"majorType": 5, "type": "map"}
+    index = 0
+    while True:
         if length is None:
-            segments: list[dict[str, Any]] = []
-            text_parts: list[str] = []
-            while True:
-                if offset >= len(data):
-                    break
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                try:
-                    segment, offset = _parse_cbor_item(data, offset)
-                except _CborDecodingError:
-                    break
-                if segment.get("majorType") != 3:
-                    raise _CborDecodingError(
-                        "Indefinite text string segment is not a text string.", offset
-                    )
-                segments.append(segment)
-                text_parts.append(str(segment.get("value", "")))
-            value = "".join(text_parts)
-            byte_length = len(value.encode("utf-8"))
-            node = {
-                "majorType": 3,
-                "type": "text string",
-                "length": byte_length,
-                "value": value,
-                "indefinite": True,
-                "segments": segments,
-            }
-            summary = value if len(value) <= 32 else f"{value[:29]}..."
-            node["summary"] = f'"{summary}"'
-            return node, offset
-        _ensure_cbor_available(data, offset, length)
-        raw = data[offset : offset + length]
-        offset += length
-        try:
-            value = raw.decode("utf-8")
-            summary = value if len(value) <= 32 else f"{value[:29]}..."
-            node = {
-                "majorType": 3,
-                "type": "text string",
-                "length": length,
-                "value": value,
-                "summary": f'"{summary}"',
-            }
-        except UnicodeDecodeError:
-            node = {
-                "majorType": 3,
-                "type": "text string",
-                "length": length,
-                "hex": raw.hex(),
-                "error": "Invalid UTF-8 in text string.",
-                "summary": f"text[{length}]",
-            }
-        return node, offset
+            if offset >= len(data):
+                state.problem("truncated", "indefinite-length map has no break byte", offset, path)
+                break
+            if data[offset] == 0xFF:
+                offset += 1
+                break
+        elif index >= length:
+            break
+        elif offset >= len(data):
+            entries_text = f"{length} entry" if length == 1 else f"{length} entries"
+            state.problem("truncated", f"map declares {entries_text}; the data ends after {index}", offset, path)
+            node["declaredLength"] = length
+            break
+        key, offset = _parse_cbor_item(data, offset, state=state, path=f"{path}<key {index}>", depth=depth + 1)
+        value_path = _key_path(path, key)
+        if offset >= len(data) or (length is None and data[offset] == 0xFF):
+            state.problem("missing-map-value", f"map key {_diagnostic_key(key)} has no value", key["offset"], value_path)
+            if length is not None:
+                node["declaredLength"] = length
+            if offset < len(data):
+                offset += 1
+            break
+        value, offset = _parse_cbor_item(data, offset, state=state, path=value_path, depth=depth + 1)
+        entry: dict[str, Any] = {"keySummary": key.get("summary"), "key": key, "value": value, "path": value_path}
+        if value.get("summary") is not None:
+            entry["valueSummary"] = value["summary"]
+        entries.append(entry)
+        index += 1
+    if length is None:
+        node["indefinite"] = True
+    node.update(length=len(entries), entries=entries, summary=f"map[{len(entries)}]")
+    return node, offset
 
-    if major_type == 4:
-        length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
-        items: list[dict[str, Any]] = []
-        if length is None:
-            while True:
-                if offset >= len(data):
-                    break
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                try:
-                    item, offset = _parse_cbor_item(data, offset)
-                except _CborDecodingError:
-                    break
-                items.append(item)
-            length = len(items)
-            node = {
-                "majorType": 4,
-                "type": "array",
-                "length": length,
-                "items": items,
-                "indefinite": True,
-            }
-        else:
-            for _ in range(length):
-                if offset >= len(data):
-                    break
-                try:
-                    item, offset = _parse_cbor_item(data, offset)
-                except _CborDecodingError:
-                    break
-                items.append(item)
-            node = {"majorType": 4, "type": "array", "length": length, "items": items}
-        node["summary"] = f"array[{node['length']}]"
-        return node, offset
 
-    if major_type == 5:
-        length, offset = _read_cbor_length(info, data, offset, allow_indefinite=True)
-        entries: list[dict[str, Any]] = []
-        if length is None:
-            while True:
-                if offset >= len(data):
-                    break
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                try:
-                    key, offset = _parse_cbor_item(data, offset)
-                    if offset >= len(data):
-                        break
-                    if data[offset] == 0xFF:
-                        break
-                    value, offset = _parse_cbor_item(data, offset)
-                except _CborDecodingError:
-                    break
-                entry = {
-                    "keySummary": key.get("summary"),
-                    "key": key,
-                    "value": value,
-                }
-                summary = value.get("summary")
-                if summary is not None:
-                    entry["valueSummary"] = summary
-                entries.append(entry)
-            length = len(entries)
-            node = {
-                "majorType": 5,
-                "type": "map",
-                "length": length,
-                "entries": entries,
-                "indefinite": True,
-            }
-        else:
-            for _ in range(length):
-                if offset >= len(data):
-                    break
-                try:
-                    key, offset = _parse_cbor_item(data, offset)
-                    value, offset = _parse_cbor_item(data, offset)
-                except _CborDecodingError:
-                    break
-                entry = {
-                    "keySummary": key.get("summary"),
-                    "key": key,
-                    "value": value,
-                }
-                summary = value.get("summary")
-                if summary is not None:
-                    entry["valueSummary"] = summary
-                entries.append(entry)
-            node = {"majorType": 5, "type": "map", "length": length, "entries": entries}
-        node["summary"] = f"map[{node['length']}]"
-        return node, offset
+def _parse_simple_or_float(
+    state: _ParseState, info: int, argument: int | None, offset: int, start: int, path: str
+) -> tuple[dict[str, Any], int]:
+    if info == 31:
+        state.problem("unexpected-break", "a break byte (0xff) outside an indefinite-length item", start, path)
+        return _invalid_node(state, start, offset, 7), offset
+    if info in (25, 26, 27):
+        raw = state.data[offset - (1 << (info - 24)) : offset]
+        value = struct.unpack((">e", ">f", ">d")[info - 25], raw)[0]
+        precision = ("half", "single", "double")[info - 25]
+        return {"majorType": 7, "type": "float", "precision": precision, "value": value,
+                "summary": _float_summary(value)}, offset
+    if info == 20:
+        return {"majorType": 7, "type": "boolean", "value": False, "summary": "false"}, offset
+    if info == 21:
+        return {"majorType": 7, "type": "boolean", "value": True, "summary": "true"}, offset
+    if info == 22:
+        return {"majorType": 7, "type": "null", "summary": "null"}, offset
+    if info == 23:
+        return {"majorType": 7, "type": "undefined", "summary": "undefined"}, offset
+    if info == 24 and argument is not None and argument < 32:
+        state.problem("invalid-simple-value", f"simple value {argument} must be written in one byte", start, path)
+        return _invalid_node(state, start, offset, 7), offset
+    return {"majorType": 7, "type": "simple", "value": argument, "summary": f"simple({argument})"}, offset
 
-    if major_type == 6:
-        tag_value, offset = _read_cbor_length(info, data, offset)
-        if tag_value is None:
-            raise _CborDecodingError("Invalid indefinite length for CBOR tag.", offset)
-        tagged_item, offset = _parse_cbor_item(data, offset)
-        node = {
-            "majorType": 6,
-            "type": "tag",
-            "tag": tag_value,
-            "value": tagged_item,
-            "summary": f"tag({tag_value})",
-        }
-        return node, offset
 
-    if major_type == 7:
-        if info == 20:
-            return {"majorType": 7, "type": "boolean", "value": False, "summary": "false"}, offset
-        if info == 21:
-            return {"majorType": 7, "type": "boolean", "value": True, "summary": "true"}, offset
-        if info == 22:
-            return {"majorType": 7, "type": "null", "summary": "null"}, offset
-        if info == 23:
-            return {"majorType": 7, "type": "undefined", "summary": "undefined"}, offset
-        if info == 24:
-            _ensure_cbor_available(data, offset, 1)
-            simple_value = data[offset]
-            offset += 1
-            summary = f"simple({simple_value})"
-            return {
-                "majorType": 7,
-                "type": "simple",
-                "value": simple_value,
-                "summary": summary,
-            }, offset
-        if info == 25:
-            _ensure_cbor_available(data, offset, 2)
-            raw = data[offset : offset + 2]
-            offset += 2
-            value = struct.unpack(">e", raw)[0]
-            return {
-                "majorType": 7,
-                "type": "float",
-                "precision": "half",
-                "value": value,
-                "summary": _float_summary(value),
-            }, offset
-        if info == 26:
-            _ensure_cbor_available(data, offset, 4)
-            raw = data[offset : offset + 4]
-            offset += 4
-            value = struct.unpack(">f", raw)[0]
-            return {
-                "majorType": 7,
-                "type": "float",
-                "precision": "single",
-                "value": value,
-                "summary": _float_summary(value),
-            }, offset
-        if info == 27:
-            _ensure_cbor_available(data, offset, 8)
-            raw = data[offset : offset + 8]
-            offset += 8
-            value = struct.unpack(">d", raw)[0]
-            return {
-                "majorType": 7,
-                "type": "float",
-                "precision": "double",
-                "value": value,
-                "summary": _float_summary(value),
-            }, offset
-        if info == 31:
-            raise _CborDecodingError("Unexpected break code outside indefinite container.", offset)
-        summary = f"simple({info})"
-        return {"majorType": 7, "type": "simple", "value": info, "summary": summary}, offset
+def decode_item(
+    data: bytes, offset: int = 0, *, lenient: bool = False
+) -> tuple[dict[str, Any], int, list[dict[str, Any]]]:
+    """Parse one CBOR item starting at ``offset``.
 
-    raise _CborDecodingError("Unsupported CBOR major type.", offset)
+    Returns the item's node, the offset just past it, and -- in lenient mode --
+    what the parse stepped over. Bytes after the item are left to the caller.
+    """
+
+    state = _ParseState(data, lenient)
+    node, end = _parse_cbor_item(data, offset, state=state)
+    return node, end, state.skipped
 
 
 def _decode_cbor_structure(data: bytes) -> tuple[dict[str, Any], int]:
-    node, offset = _parse_cbor_item(data, 0)
+    node, offset, _ = decode_item(data)
     node.setdefault("byteLength", offset)
     return node, offset
+
+
+def _map_key(key_node: Mapping[str, Any]) -> Any:
+    key = _structure_to_value(key_node)
+    # JSON spells every key as text, so 1, 1.0 and true -- three different CBOR
+    # keys -- would all become "1"/"True"; Python already folds 1 == 1.0 == True.
+    if key is None or isinstance(key, (bool, float)):
+        return CborDiagnostic(_diagnostic_value(key_node))
+    return key
+
+
+def _diagnostic_value(node: Mapping[str, Any]) -> str:
+    node_type = node.get("type")
+    if node_type == "boolean":
+        return "true" if node.get("value") else "false"
+    if node_type == "null":
+        return "null"
+    if node_type == "float":
+        value = node.get("value")
+        if isinstance(value, float) and math.isnan(value):
+            return "NaN"
+        if isinstance(value, float) and math.isinf(value):
+            return "Infinity" if value > 0 else "-Infinity"
+        return repr(value)
+    return str(node.get("summary"))
 
 
 def _structure_to_value(node: Mapping[str, Any]) -> Any:
     major_type = node.get("majorType")
     node_type = node.get("type")
 
+    if node_type == "invalid":
+        return CborDiagnostic(str(node.get("summary")))
+
     if major_type in (0, 1, 7):
         if node_type == "null":
             return None
         if node_type == "undefined":
-            return None
+            return CborDiagnostic("undefined")
+        if node_type == "simple":
+            return CborDiagnostic(f"simple({node.get('value')})")
         if node_type == "boolean":
             return bool(node.get("value"))
+        if node_type == "float":
+            value = node.get("value")
+            if isinstance(value, float) and not math.isfinite(value):
+                return CborDiagnostic(_diagnostic_value(node))
+            return value
         return node.get("value")
 
     if major_type == 2:
@@ -426,6 +491,8 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
         text_value = node.get("value")
         if isinstance(text_value, str):
             return text_value
+        if isinstance(node.get("hex"), str):
+            return CborDiagnostic(f"h'{node['hex']}' (not UTF-8)")
         return ""
 
     if major_type == 4:
@@ -444,14 +511,14 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
                 continue
             key_node = entry.get("key")
             value_node = entry.get("value")
-            key = _structure_to_value(key_node) if isinstance(key_node, Mapping) else None
+            if not isinstance(key_node, Mapping):
+                continue
+            key = _map_key(key_node)
             value = (
                 _structure_to_value(value_node)
                 if isinstance(value_node, Mapping)
                 else value_node
             )
-            if key is None:
-                continue
             try:
                 result[key] = value
             except TypeError:
@@ -468,261 +535,3 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
         return {"tag": node.get("tag"), "value": converted}
 
     return node.get("value")
-
-
-def _lenient_read_uint(info: int, data: bytes, offset: int) -> tuple[int, int]:
-    if info <= 23:
-        return info, offset
-    if info == 24:
-        if offset >= len(data):
-            return 0, offset
-        return data[offset], offset + 1
-    if info == 25:
-        if offset + 2 > len(data):
-            return 0, len(data)
-        return int.from_bytes(data[offset : offset + 2], "big"), offset + 2
-    if info == 26:
-        if offset + 4 > len(data):
-            return 0, len(data)
-        return int.from_bytes(data[offset : offset + 4], "big"), offset + 4
-    if info == 27:
-        if offset + 8 > len(data):
-            return 0, len(data)
-        return int.from_bytes(data[offset : offset + 8], "big"), offset + 8
-    if info in {28, 29, 30}:
-        return info, offset
-    return 0, offset
-
-
-def _lenient_decode_from(data: bytes, offset: int = 0) -> tuple[Any, int]:
-    if offset >= len(data):
-        return None, len(data)
-
-    initial = data[offset]
-    offset += 1
-    major_type = initial >> 5
-    info = initial & 0x1F
-
-    if major_type == 0:
-        value, offset = _lenient_read_uint(info, data, offset)
-        return value, offset
-
-    if major_type == 1:
-        value, offset = _lenient_read_uint(info, data, offset)
-        return -1 - value, offset
-
-    if major_type == 2:
-        if info == 31:
-            chunks: list[bytes] = []
-            while offset < len(data):
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                chunk, offset = _lenient_decode_from(data, offset)
-                if isinstance(chunk, bytes):
-                    chunks.append(chunk)
-                else:
-                    break
-            return b"".join(chunks), offset
-        length, offset = _lenient_read_uint(info, data, offset)
-        length = min(length, len(data) - offset)
-        raw = data[offset : offset + length]
-        offset += length
-        return raw, offset
-
-    if major_type == 3:
-        if info == 31:
-            parts: list[str] = []
-            while offset < len(data):
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                segment, offset = _lenient_decode_from(data, offset)
-                if isinstance(segment, str):
-                    parts.append(segment)
-            return "".join(parts), offset
-        length, offset = _lenient_read_uint(info, data, offset)
-        length = min(length, len(data) - offset)
-        raw = data[offset : offset + length]
-        offset += length
-        try:
-            value = raw.decode("utf-8")
-        except UnicodeDecodeError:
-            value = raw.decode("utf-8", errors="replace")
-        return value, offset
-
-    if major_type == 4:
-        items: list[Any] = []
-        if info == 31:
-            while offset < len(data):
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                item, offset = _lenient_decode_from(data, offset)
-                if item is None and offset >= len(data):
-                    break
-                items.append(item)
-            return items, offset
-        length, offset = _lenient_read_uint(info, data, offset)
-        for _ in range(length):
-            if offset >= len(data):
-                break
-            item, offset = _lenient_decode_from(data, offset)
-            if item is None and offset >= len(data):
-                break
-            items.append(item)
-        return items, offset
-
-    if major_type == 5:
-        mapping: dict[Any, Any] = {}
-        if info == 31:
-            while offset < len(data):
-                if data[offset] == 0xFF:
-                    offset += 1
-                    break
-                key, offset = _lenient_decode_from(data, offset)
-                value, offset = _lenient_decode_from(data, offset)
-                if key is None or value is None:
-                    break
-                try:
-                    mapping[key] = value
-                except TypeError:
-                    mapping[str(key)] = value
-            return mapping, offset
-        length, offset = _lenient_read_uint(info, data, offset)
-        for _ in range(length):
-            if offset >= len(data):
-                break
-            key, offset = _lenient_decode_from(data, offset)
-            if key is None and offset >= len(data):
-                break
-            value, offset = _lenient_decode_from(data, offset)
-            if value is None and offset >= len(data):
-                break
-            try:
-                mapping[key] = value
-            except TypeError:
-                mapping[str(key)] = value
-        return mapping, offset
-
-    if major_type == 6:
-        tag_value, offset = _lenient_read_uint(info, data, offset)
-        tagged_item, offset = _lenient_decode_from(data, offset)
-        return {"tag": tag_value, "value": tagged_item}, offset
-
-    if major_type == 7:
-        if info == 20:
-            return False, offset
-        if info == 21:
-            return True, offset
-        if info == 22:
-            return None, offset
-        if info == 23:
-            return None, offset
-        if info == 24:
-            if offset < len(data):
-                value = data[offset]
-            else:
-                value = 0
-            return value, offset + 1
-        if info == 25:
-            if offset + 2 <= len(data):
-                raw = data[offset : offset + 2]
-                offset += 2
-                return struct.unpack(">e", raw)[0], offset
-            return 0.0, len(data)
-        if info == 26:
-            if offset + 4 <= len(data):
-                raw = data[offset : offset + 4]
-                offset += 4
-                return struct.unpack(">f", raw)[0], offset
-            return 0.0, len(data)
-        if info == 27:
-            if offset + 8 <= len(data):
-                raw = data[offset : offset + 8]
-                offset += 8
-                return struct.unpack(">d", raw)[0], offset
-            return 0.0, len(data)
-        return info, offset
-
-    return None, offset
-
-
-def _decode_cbor_sequence_impl(
-    payload: bytes,
-    *,
-    cbor_decode_from: Callable[[bytes], tuple[Any, bytes]],
-    cbor_decoder_factory: Callable[[bytes], tuple[Any, int]],
-    decode_cbor_structure: Callable[[bytes], tuple[dict[str, Any], int]],
-    structure_to_value: Callable[[dict[str, Any]], Any],
-    lenient_decode_from: Callable[[bytes, int], tuple[Any, int]],
-    json_safe_with_stringified_keys: Callable[[Any], Any],
-    cbor_error_type: type,
-) -> tuple[list[dict[str, Any]], list[Any], int, bytes]:
-    structures: list[dict[str, Any]] = []
-    values: list[Any] = []
-    consumed_total = 0
-    remaining = payload
-
-    while remaining:
-        predecoded_structure: dict[str, Any] | None = None
-        try:
-            value, rest_after_value = cbor_decode_from(remaining)
-            consumed_value = len(remaining) - len(rest_after_value)
-        except Exception:
-            try:
-                value, consumed_value = cbor_decoder_factory(remaining)
-            except Exception:
-                try:
-                    structure, consumed_fallback = decode_cbor_structure(remaining)
-                except cbor_error_type:
-                    try:
-                        value, consumed_fallback = lenient_decode_from(remaining, 0)
-                    except Exception:
-                        break
-                    else:
-                        consumed_value = consumed_fallback
-                        structure = {
-                            "summary": "Decoded value (lenient)",
-                            "type": type(value).__name__,
-                            "value": json_safe_with_stringified_keys(value),
-                            "byteLength": consumed_fallback,
-                            "lenient": True,
-                        }
-                        predecoded_structure = structure
-                else:
-                    value = structure_to_value(structure)
-                    consumed_value = consumed_fallback
-                    predecoded_structure = structure
-
-        if consumed_value is None or consumed_value <= 0:
-            break
-
-        try:
-            if predecoded_structure is not None:
-                structure = predecoded_structure
-                consumed_struct = predecoded_structure.get("byteLength", consumed_value)
-            else:
-                structure, consumed_struct = decode_cbor_structure(remaining)
-            consumed = consumed_struct
-        except cbor_error_type:
-            structure = {
-                "summary": "Decoded value",
-                "type": type(value).__name__,
-                "value": json_safe_with_stringified_keys(value),
-                "byteLength": consumed_value,
-            }
-            consumed = consumed_value
-        else:
-            if consumed <= 0:
-                consumed = consumed_value
-
-        if consumed <= 0:
-            break
-
-        structures.append(structure)
-        values.append(value)
-        consumed_total += consumed
-        remaining = remaining[consumed:]
-
-    return structures, values, consumed_total, remaining

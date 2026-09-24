@@ -180,34 +180,6 @@ def test_late_summary_extension_and_client_data_helpers_cover_fallback_rendering
     assert any(line == "Binary:\t" for line in generic_lines)
 
 
-def test_lenient_decode_variants_cover_tag_and_truncated_float_branches():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    tagged, tagged_offset = decode_module._lenient_decode_from(b"\xc1\x01")
-    assert tagged == {"tag": 1, "value": 1}
-    assert tagged_offset == 2
-
-    simple_value, simple_offset = decode_module._lenient_decode_from(b"\xf8")
-    assert simple_value == 0
-    assert simple_offset == 2
-
-    float_value, float_offset = decode_module._lenient_decode_from(b"\xfa\x00")
-    assert float_value == 0.0
-    assert float_offset == 2
-
-    text_value, text_offset = decode_module._lenient_decode_from(b"\x7f\x01\xff")
-    assert text_value == ""
-    assert text_offset == 3
-
-    array_value, array_offset = decode_module._lenient_decode_from(b"\x81")
-    assert array_value == []
-    assert array_offset == 1
-
-    map_value, map_offset = decode_module._lenient_decode_from(b"\xa1")
-    assert map_value == {}
-    assert map_offset == 1
-
-
 def test_ctap_interpretation_variants_cover_request_guard_and_attstmt_bytes(monkeypatch, ctap):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
@@ -243,27 +215,18 @@ def test_ctap_interpretation_variants_cover_request_guard_and_attstmt_bytes(monk
     assert "10" not in interpreted_assertion
 
 
-def test_try_decode_cbor_warns_for_trailing_bytes_and_records_ignored_padding(monkeypatch, ctap):
+def test_try_decode_cbor_reports_trailing_bytes_and_padding_alike():
+    # MAKE_CREDENTIAL, the integer 42, then two more bytes. Padding is reported
+    # as well, as padding: nothing after the item goes unmentioned.
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    monkeypatch.setattr(
-        ctap,
-        "_decode_cbor_sequence",
-        lambda _payload: ([{"byteLength": 1}], [42], 1, b"\x11\x22"),
-    )
-    result = decode_module._try_decode_cbor(b"\x01\xaa", "hex")
-    assert result is not None
-    assert any("Trailing 2 byte(s)" in msg for msg in result.get("malformed", []))
+    result = decode_module._try_decode_cbor(b"\x01\x18\x2a\x11\x22", "hex")
+    assert result["malformed"] == ["Trailing 2 byte(s) after CBOR payload."]
     assert result["decoded"]["ctap"]["trailingBytesHex"] == "1122"
+    assert result["decoded"]["ctap"]["payloadLength"] == 2
 
-    monkeypatch.setattr(
-        ctap,
-        "_decode_cbor_sequence",
-        lambda _payload: ([{"byteLength": 1}], [42], 1, b"\x00\xff"),
-    )
-    result_padding = decode_module._try_decode_cbor(b"\x01\xaa", "hex")
-    assert result_padding is not None
+    result_padding = decode_module._try_decode_cbor(b"\x01\x18\x2a\x00\xff", "hex")
     assert result_padding["decoded"]["ctap"]["ignoredPaddingBytes"] == 2
-    assert all(
-        "Trailing" not in msg for msg in result_padding.get("malformed", [])
-    )
+    assert result_padding["malformed"] == [
+        "Trailing 2 byte(s) after CBOR payload (all 0x00/0xff: HID report padding?)."
+    ]

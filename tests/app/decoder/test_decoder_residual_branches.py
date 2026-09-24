@@ -62,21 +62,21 @@ def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(mo
     details, _, _ = decode_module._parse_authenticator_data_bytes(auth_with_cose_int)
     assert details["attestedCredentialData"]["credentialPublicKey"] == 5
 
+    # Extensions that are not well-formed CBOR are shown as their bytes with
+    # where they break, not dropped.
+    broken_extensions = cbor.encode({"ext": True})[:-1]
     extension_payload = (
         hashlib.sha256(b"example.com").digest()
         + bytes([AuthenticatorData.FLAG.ED])
         + (1).to_bytes(4, "big")
-        + cbor.encode({"ext": True})
-    )
-
-    monkeypatch.setattr(
-        cbor_parser,
-        "_lenient_decode_from",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("decode-error")),
+        + broken_extensions
     )
     details, _, trailing = decode_module._parse_authenticator_data_bytes(extension_payload)
-    assert "extensions" not in details
-    assert trailing == cbor.encode({"ext": True})
+    assert details["extensions"] == broken_extensions.hex()
+    assert details["parseError"] == (
+        'extensions is not well-formed CBOR at authData offset 38: map key "ext" has no value'
+    )
+    assert trailing == b""
 
     # _format_json_block exception branch.
     assert decode_module._format_json_block(None) == []

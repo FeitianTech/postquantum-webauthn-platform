@@ -94,57 +94,59 @@ def test_decode_binary_input_has_no_lenient_fallback_when_strict_decoding_fails(
         decode_module._decode_binary_input("AQID")
 
 
-def test_cbor_parser_handles_indefinite_container_breaks_partial_data_and_parser_failures(monkeypatch, cbor_parser):
+def test_read_cbor_length_reads_arguments_and_rejects_reserved_additional_information():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     assert decode_module._read_cbor_length(25, b"\x00\x01", 0) == (1, 2)
     assert decode_module._read_cbor_length(27, b"\x00" * 8, 0) == (0, 8)
-    assert decode_module._read_cbor_length(30, b"\x00" * 8, 0) == (0, 8)
+    with pytest.raises(decode_module._CborDecodingError, match="additional information 30 is reserved"):
+        decode_module._read_cbor_length(30, b"\x00" * 8, 1)
 
-    with pytest.raises(decode_module._CborDecodingError):
-        decode_module._parse_cbor_item(b"", 0)
 
-    byte_indefinite_empty, _ = decode_module._parse_cbor_item(b"\x5f", 0)
-    byte_indefinite_error, _ = decode_module._parse_cbor_item(b"\x5f\xd8", 0)
-    assert byte_indefinite_empty["length"] == 0
-    assert byte_indefinite_error["length"] == 0
+@pytest.mark.parametrize(
+    ("data", "reason"),
+    [
+        (b"", "the data ends where an item should start"),
+        (b"\x5f", "indefinite-length byte string has no break byte"),
+        (b"\x5f\xd8", "the head needs 1 more byte; 0 remain"),
+        (b"\x7f", "indefinite-length text string has no break byte"),
+        (b"\x7f\xd8", "the head needs 1 more byte; 0 remain"),
+        (b"\x9f\xd8", "the head needs 1 more byte; 0 remain"),
+        (b"\x82\x01", "array declares 2 items; the data ends after 1"),
+        (b"\x82\xd8", "the head needs 1 more byte; 0 remain"),
+        (b"\xbf", "indefinite-length map has no break byte"),
+        (b"\xbf\x61a", 'map key "a" has no value'),
+        (b"\xbf\xd8", "the head needs 1 more byte; 0 remain"),
+        (b"\xa1", "map declares 1 entry; the data ends after 0"),
+        (b"\xa1\xd8", "the head needs 1 more byte; 0 remain"),
+        (b"\x1f", "indefinite length is not allowed for this major type"),
+        (b"\x3f", "indefinite length is not allowed for this major type"),
+        (b"\xdf", "indefinite length is not allowed for this major type"),
+    ],
+)
+def test_cbor_parser_rejects_partial_and_invalid_items(data, reason):
+    decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    text_indefinite_empty, _ = decode_module._parse_cbor_item(b"\x7f", 0)
-    text_indefinite_error, _ = decode_module._parse_cbor_item(b"\x7f\xd8", 0)
-    assert text_indefinite_empty["value"] == ""
-    assert text_indefinite_error["value"] == ""
+    with pytest.raises(decode_module._CborDecodingError) as caught:
+        decode_module._parse_cbor_item(data, 0)
 
-    array_indefinite_break, _ = decode_module._parse_cbor_item(b"\x9f\xff", 0)
-    array_indefinite_parse_error, _ = decode_module._parse_cbor_item(b"\x9f\xd8", 0)
-    array_definite_short, _ = decode_module._parse_cbor_item(b"\x82\x01", 0)
-    array_definite_parse_error, _ = decode_module._parse_cbor_item(b"\x82\xd8", 0)
-    assert array_indefinite_break["length"] == 0
-    assert array_indefinite_parse_error["length"] == 0
-    assert array_definite_short["length"] == 2 and len(array_definite_short["items"]) == 1
-    assert array_definite_parse_error["length"] == 2 and array_definite_parse_error["items"] == []
+    assert caught.value.reason == reason
 
-    map_indefinite_empty, _ = decode_module._parse_cbor_item(b"\xbf", 0)
-    map_indefinite_missing_value, _ = decode_module._parse_cbor_item(b"\xbf\x61a", 0)
-    map_indefinite_parse_error, _ = decode_module._parse_cbor_item(b"\xbf\xd8", 0)
-    map_definite_empty, _ = decode_module._parse_cbor_item(b"\xa1", 0)
-    map_definite_parse_error, _ = decode_module._parse_cbor_item(b"\xa1\xd8", 0)
-    assert map_indefinite_empty["entries"] == []
-    assert map_indefinite_missing_value["entries"] == []
-    assert map_indefinite_parse_error["entries"] == []
-    assert map_definite_empty["entries"] == []
-    assert map_definite_parse_error["entries"] == []
 
-    monkeypatch.setattr(
-        cbor_parser,
-        "_read_cbor_length",
-        lambda *_args, **_kwargs: (None, 1),
-    )
-    with pytest.raises(decode_module._CborDecodingError, match="Invalid indefinite length for unsigned integer"):
-        decode_module._parse_cbor_item(b"\x00", 0)
-    with pytest.raises(decode_module._CborDecodingError, match="Invalid indefinite length for negative integer"):
-        decode_module._parse_cbor_item(b"\x20", 0)
-    with pytest.raises(decode_module._CborDecodingError, match="Invalid indefinite length for CBOR tag"):
-        decode_module._parse_cbor_item(b"\xc0", 0)
+def test_cbor_parser_accepts_an_empty_indefinite_array_and_closes_partial_containers_only_when_lenient():
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+
+    empty, end = decode_module._parse_cbor_item(b"\x9f\xff", 0)
+    assert (empty["length"], empty["indefinite"], end) == (0, True, 2)
+
+    short_array, _, skipped = decode_module.decode_item(b"\x82\x01", lenient=True)
+    assert short_array["length"] == 1
+    assert short_array["declaredLength"] == 2
+    assert [entry["code"] for entry in skipped] == ["truncated"]
+
+    orphan_key, _, skipped = decode_module.decode_item(b"\xbf\x61a", lenient=True)
+    assert orphan_key["entries"] == []
+    assert [entry["code"] for entry in skipped] == ["missing-map-value"]
 
 
 def test_parse_simple_major_type_values_and_structure_to_value_fallback_branches():
@@ -156,7 +158,9 @@ def test_parse_simple_major_type_values_and_structure_to_value_fallback_branches
     assert decode_module._parse_cbor_item(b"\xf0", 0)[0]["summary"] == "simple(16)"
 
     assert decode_module._structure_to_value({"majorType": 7, "type": "null"}) is None
-    assert decode_module._structure_to_value({"majorType": 7, "type": "undefined"}) is None
+    assert decode_module._structure_to_value({"majorType": 7, "type": "undefined"}) == decode_module.CborDiagnostic(
+        "undefined"
+    )
     assert decode_module._structure_to_value({"majorType": 7, "type": "boolean", "value": 0}) is False
     assert decode_module._structure_to_value({"majorType": 2, "hex": "not-hex"}) == b""
     assert decode_module._structure_to_value({"majorType": 3, "value": 123}) == ""

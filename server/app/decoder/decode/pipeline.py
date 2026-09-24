@@ -230,15 +230,9 @@ def _decode_binary_payload(data: bytes, encoding: str) -> dict[str, Any]:
     if authenticator_result is not None:
         return authenticator_result
 
-    cbor_result = ctap._try_decode_cbor(data, encoding)
-    if cbor_result is not None:
-        return cbor_result
-
-    return {
-        "format": "Binary data",
-        "inputEncoding": encoding,
-        "decoded": _binary_summary(data, encoding),
-    }
+    # Whatever is left is read as CBOR, strictly: input that is not
+    # well-formed CBOR fails here, with the offset where it goes wrong.
+    return ctap._try_decode_cbor(data, encoding)
 
 
 def _sniff_binary_input(value: str) -> SniffResult:

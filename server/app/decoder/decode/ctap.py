@@ -2,21 +2,16 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from io import BytesIO
 from typing import Any
 
-import cbor2
-
-from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
 from ...encoding import encode_base64
-from ...webauthn.attestation import encode_base64url, make_json_safe
+from ...webauthn.attestation import encode_base64url
 from .. import ctap_tables
 from . import cbor_parser, pipeline, response
 from .cbor_parser import (
     _CborDecodingError,
-    _decode_cbor_sequence_impl,
     _structure_to_value,
 )
 from .keys import MISSING
@@ -335,18 +330,23 @@ def _summarize_bytes_for_json(data: bytes) -> dict[str, Any]:
 
 
 def _parse_authenticator_data_bytes(data: bytes) -> tuple[dict[str, Any], bytes, bytes]:
+    """Read authenticator data as far as its flags describe it.
+
+    Returns the details, the bytes the flags account for, and any bytes after
+    them. The credential public key and the extensions are read with the strict
+    parser; one that is not well-formed is shown as hex with a ``parseError``
+    saying where, never completed or skipped.
+    """
+
     details: dict[str, Any] = {}
     if len(data) < 37:
         details["parseError"] = "Authenticator data shorter than minimum header."
         return details, data, b""
 
-    offset = 0
-    rp_id_hash = data[offset : offset + 32]
-    offset += 32
-    flags_byte = data[offset]
-    offset += 1
-    sign_count = int.from_bytes(data[offset : offset + 4], "big")
-    offset += 4
+    rp_id_hash = data[:32]
+    flags_byte = data[32]
+    sign_count = int.from_bytes(data[33:37], "big")
+    offset = 37
 
     details["rpIdHash"] = rp_id_hash.hex()
     details["flags"] = {
@@ -361,27 +361,20 @@ def _parse_authenticator_data_bytes(data: bytes) -> tuple[dict[str, Any], bytes,
     }
     details["signCount"] = sign_count
 
-    def _decode_cbor_item(buffer: bytes) -> tuple[Any, int]:
-        value, consumed = cbor_parser._lenient_decode_from(buffer, 0)
-        return value, consumed
-
-    at_flag = bool(flags_byte & AuthenticatorData.FLAG.AT)
-    ed_flag = bool(flags_byte & AuthenticatorData.FLAG.ED)
-
-    attested_trailing = b""
-    if at_flag:
+    if flags_byte & AuthenticatorData.FLAG.AT:
         attested: dict[str, Any] = {}
+        details["attestedCredentialData"] = attested
         remaining = len(data) - offset
         if remaining < 18:
-            attested["parseError"] = "Attested credential data truncated."
+            attested["parseError"] = (
+                f"Attested credential data truncated: it needs at least 18 bytes, {remaining} remain."
+            )
             offset = len(data)
         else:
             aaguid = data[offset : offset + 16]
-            offset += 16
-            declared_len = int.from_bytes(data[offset : offset + 2], "big")
-            offset += 2
-            remaining = len(data) - offset
-            actual_len = min(declared_len, remaining if remaining >= 0 else 0)
+            declared_len = int.from_bytes(data[offset + 16 : offset + 18], "big")
+            offset += 18
+            actual_len = min(declared_len, len(data) - offset)
             credential_id = data[offset : offset + actual_len]
             offset += actual_len
 
@@ -391,45 +384,29 @@ def _parse_authenticator_data_bytes(data: bytes) -> tuple[dict[str, Any], bytes,
             attested["credentialId"] = credential_id.hex()
             if actual_len != declared_len:
                 attested["lengthMismatch"] = True
+                attested["parseError"] = (
+                    f"The credential ID declares {declared_len} bytes; {actual_len} remain."
+                )
+            elif offset < len(data):
+                offset = _read_embedded_cbor(data, offset, attested, "credentialPublicKey")
 
-            cose_raw = data[offset:]
-            if cose_raw:
-                try:
-                    cose_value, consumed = _decode_cbor_item(cose_raw)
-                except Exception:
-                    cose_value, consumed = None, 0
-                if consumed > 0:
-                    offset += consumed
-                    if isinstance(cose_value, Mapping):
-                        attested["credentialPublicKey"] = _hex_json_safe(cose_value)
-                    else:
-                        attested["credentialPublicKey"] = _hex_json_safe(cose_value)
-                    attested_trailing = cose_raw[consumed:]
-                else:
-                    attested["credentialPublicKey"] = cose_raw.hex()
-                    offset = len(data)
-            details["attestedCredentialData"] = attested
+    if flags_byte & AuthenticatorData.FLAG.ED and offset < len(data):
+        offset = _read_embedded_cbor(data, offset, details, "extensions")
 
-    extensions_trailing = b""
-    if ed_flag and offset < len(data):
-        try:
-            ext_value, consumed = _decode_cbor_item(data[offset:])
-        except Exception:
-            ext_value, consumed = None, 0
-        if consumed > 0:
-            offset += consumed
-            if isinstance(ext_value, Mapping):
-                details["extensions"] = _hex_json_safe(ext_value)
-            else:
-                details["extensions"] = _hex_json_safe(ext_value)
-            extensions_trailing = data[offset:]
-        else:
-            extensions_trailing = data[offset:]
-            offset = len(data)
+    return details, data[:offset], data[offset:]
 
-    trimmed = data[:offset]
-    trailing = b"".join(part for part in [attested_trailing, extensions_trailing, data[offset:]] if part)
-    return details, trimmed, trailing
+
+def _read_embedded_cbor(data: bytes, offset: int, target: dict[str, Any], field: str) -> int:
+    try:
+        node, end, _ = cbor_parser.decode_item(data, offset)
+    except _CborDecodingError as exc:
+        target[field] = data[offset:].hex()
+        target["parseError"] = (
+            f"{field} is not well-formed CBOR at authData offset {exc.offset}: {exc.reason}"
+        )
+        return len(data)
+    target[field] = _hex_json_safe(_structure_to_value(node))
+    return end
 
 
 def _format_auth_data_for_expanded_json(auth_data_bytes: bytes) -> tuple[dict[str, Any], bytes]:
@@ -807,28 +784,6 @@ def _is_padding_bytes(data: bytes) -> bool:
     return all(byte in (0x00, 0xFF) for byte in data)
 
 
-def _json_safe_with_stringified_keys(value: Any) -> Any:
-    return _stringify_mapping_keys(make_json_safe(value))
-
-
-def _decode_cbor_sequence(payload: bytes) -> tuple[list[dict[str, Any]], list[Any], int, bytes]:
-    def _cbor2_decode_with_consumed(data: bytes) -> tuple[Any, int]:
-        fp = BytesIO(data)
-        decoder = cbor2.CBORDecoder(fp)
-        return decoder.decode(), fp.tell()
-
-    return _decode_cbor_sequence_impl(
-        payload,
-        cbor_decode_from=cbor.decode_from,
-        cbor_decoder_factory=_cbor2_decode_with_consumed,
-        decode_cbor_structure=cbor_parser._decode_cbor_structure,
-        structure_to_value=_structure_to_value,
-        lenient_decode_from=lambda data, offset=0: cbor_parser._lenient_decode_from(data, offset),
-        json_safe_with_stringified_keys=_json_safe_with_stringified_keys,
-        cbor_error_type=_CborDecodingError,
-    )
-
-
 def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
     if not data:
         return None
@@ -850,12 +805,13 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
             "binary": pipeline._binary_summary(data, encoding),
         }
 
-    structures, values, consumed_total, remaining = _decode_cbor_sequence(payload)
-    if not structures:
-        return None
-
-    base_value = values[0]
-    extra_values = values[1:]
+    # One item, parsed strictly. A payload that is not well-formed raises with
+    # its offset, counted from the first input byte, prefix included.
+    start = len(data) - len(payload)
+    node, end, _skipped = cbor_parser.decode_item(data, start)
+    base_value = _structure_to_value(node)
+    consumed_total = end - start
+    remaining = data[end:]
 
     classification = _classify_ctap_payload(base_value, ctap_details)
 
@@ -879,7 +835,7 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
             expanded_json = _build_make_credential_request_expanded_json(base_value)
         elif classification == "get_assertion_input":
             expanded_json = _build_get_assertion_request_expanded_json(base_value)
-    elif base_value is not None:
+    else:
         hex_decoded_value = _hex_json_safe(base_value)
 
     if ctap_decoded is not None:
@@ -888,30 +844,22 @@ def _try_decode_cbor(data: bytes, encoding: str) -> dict[str, Any] | None:
     if expanded_json:
         decoded_payload["expandedJson"] = _stringify_mapping_keys(_hex_json_safe(expanded_json))
 
-    if ctap_decoded is None and hex_decoded_value is not None:
+    if ctap_decoded is None:
         decoded_payload["decodedValue"] = _stringify_mapping_keys(_hex_json_safe(hex_decoded_value))
 
     warnings: list[str] = []
+    # Bytes after the item are reported, never decoded as more items and never
+    # dropped, padding included: all 0x00 is what an unstripped HID report ends with.
+    if remaining:
+        note = " (all 0x00/0xff: HID report padding?)" if _is_padding_bytes(remaining) else ""
+        warnings.append(f"Trailing {len(remaining)} byte(s) after CBOR payload{note}.")
 
     if ctap_details is not None:
         ctap_details["payloadLength"] = consumed_total
-
-    if extra_values:
-        warnings.append(f"Detected {len(extra_values)} additional CBOR object(s) following the primary payload.")
-
-    trailing = remaining
-    ignored_padding = 0
-    if trailing:
-        if _is_padding_bytes(trailing):
-            ignored_padding = len(trailing)
-        else:
-            warnings.append(f"Trailing {len(trailing)} byte(s) after CBOR payload.")
-
-    if ctap_details is not None:
-        if ignored_padding:
-            ctap_details["ignoredPaddingBytes"] = ignored_padding
-        if trailing and not _is_padding_bytes(trailing):
-            ctap_details["trailingBytesHex"] = trailing.hex()
+        if remaining and _is_padding_bytes(remaining):
+            ctap_details["ignoredPaddingBytes"] = len(remaining)
+        elif remaining:
+            ctap_details["trailingBytesHex"] = remaining.hex()
         decoded_payload["ctap"] = _stringify_mapping_keys(ctap_details)
 
     result: dict[str, Any] = {

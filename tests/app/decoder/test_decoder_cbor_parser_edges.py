@@ -3,17 +3,19 @@ import pytest
 from fido2.utils import ByteBuffer
 
 
-def test_parse_cbor_item_unsigned_negative_and_special_integer_forms():
+def test_parse_cbor_item_reads_one_byte_integers_and_rejects_reserved_additional_information():
+    # 0x1e and 0x3e use additional information 30, which RFC 8949 reserves:
+    # they are not the integers 30 and -31.
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    unsigned_30, offset_u = decode_module._parse_cbor_item(bytes([0x1E]), 0)
-    negative_31, offset_n = decode_module._parse_cbor_item(bytes([0x3E]), 0)
+    unsigned_23, offset_u = decode_module._parse_cbor_item(bytes([0x17]), 0)
+    negative_24, offset_n = decode_module._parse_cbor_item(bytes([0x37]), 0)
+    assert (unsigned_23["value"], unsigned_23["summary"], offset_u) == (23, "23", 1)
+    assert (negative_24["value"], offset_n) == (-24, 1)
 
-    assert unsigned_30["value"] == 30
-    assert unsigned_30["summary"] == "30"
-    assert negative_31["value"] == -31
-    assert offset_u == 1
-    assert offset_n == 1
+    for initial in (0x1C, 0x1D, 0x1E, 0x3E, 0x5C, 0xFE):
+        with pytest.raises(decode_module._CborDecodingError, match="is reserved"):
+            decode_module._parse_cbor_item(bytes([initial]), 0)
 
 
 def test_parse_cbor_item_byte_string_indefinite_and_truncated_forms():
@@ -27,10 +29,15 @@ def test_parse_cbor_item_byte_string_indefinite_and_truncated_forms():
     assert indefinite_node["summary"] == "bytes[3]"
     assert indefinite_offset == len(b"\x5f\x42ab\x41c\xff")
 
-    truncated_node, truncated_offset = decode_module._parse_cbor_item(b"\x58\x05xy", 0)
+    with pytest.raises(decode_module._CborDecodingError, match="byte string declares 5 bytes; 2 remain"):
+        decode_module._parse_cbor_item(b"\x58\x05xy", 0)
+
+    truncated_node, truncated_offset, skipped = decode_module.decode_item(b"\x58\x05xy", lenient=True)
     assert truncated_node["truncated"] is True
-    assert "truncated" in truncated_node["summary"]
+    assert truncated_node["hex"] == b"xy".hex()
+    assert truncated_node["declaredLength"] == 5
     assert truncated_offset == len(b"\x58\x05xy")
+    assert skipped[0]["message"] == "byte string declares 5 bytes; 2 remain"
 
 
 def test_parse_cbor_item_text_string_indefinite_and_invalid_utf8():
@@ -41,9 +48,13 @@ def test_parse_cbor_item_text_string_indefinite_and_invalid_utf8():
     assert text_node["value"] == "hi!"
     assert text_node["indefinite"] is True
 
-    invalid_utf8_node, _ = decode_module._parse_cbor_item(b"\x63\xff\xff\xff", 0)
+    with pytest.raises(decode_module._CborDecodingError, match="not valid UTF-8"):
+        decode_module._parse_cbor_item(b"\x63\xff\xff\xff", 0)
+
+    invalid_utf8_node, _, skipped = decode_module.decode_item(b"\x63\xff\xff\xff", lenient=True)
     assert invalid_utf8_node["type"] == "text string"
     assert invalid_utf8_node["error"] == "Invalid UTF-8 in text string."
+    assert [entry["code"] for entry in skipped] == ["invalid-utf8"]
 
 
 def test_parse_cbor_item_array_map_tag_and_simple_float_values():
@@ -89,26 +100,27 @@ def test_structure_to_value_handles_chunks_and_unhashable_map_keys():
     assert converted["[1]"] == 7
 
 
-def test_lenient_decode_handles_indefinite_containers_and_incomplete_scalars():
+def test_decode_item_reads_indefinite_containers_and_never_makes_up_a_short_float():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    value, offset = decode_module._lenient_decode_from(b"\x9f\x01\x02\xff", 0)
-    assert value == [1, 2]
+    node, offset, _ = decode_module.decode_item(b"\x9f\x01\x02\xff")
+    assert decode_module._structure_to_value(node) == [1, 2]
     assert offset == len(b"\x9f\x01\x02\xff")
 
-    mapping, _ = decode_module._lenient_decode_from(b"\xbf\x61a\x01\xff", 0)
-    assert mapping == {"a": 1}
+    node, _, _ = decode_module.decode_item(b"\xbf\x61a\x01\xff")
+    assert decode_module._structure_to_value(node) == {"a": 1}
 
-    float_value, float_offset = decode_module._lenient_decode_from(b"\xfb\x00\x00", 0)
-    assert float_value == 0.0
-    assert float_offset == len(b"\xfb\x00\x00")
+    # Two of a double's eight bytes: not 0.0.
+    with pytest.raises(decode_module._CborDecodingError, match="double-precision float needs 8 bytes"):
+        decode_module.decode_item(b"\xfb\x00\x00")
+    node, offset, skipped = decode_module.decode_item(b"\xfb\x00\x00", lenient=True)
+    assert node["type"] == "invalid"
+    assert offset == 3
+    assert [entry["code"] for entry in skipped] == ["truncated"]
 
 
 def test_read_length_and_availability_helpers_raise_expected_errors():
     decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    with pytest.raises(decode_module._CborDecodingError):
-        decode_module._ensure_cbor_available(b"\x00", 1, 1)
 
     with pytest.raises(decode_module._CborDecodingError):
         decode_module._read_cbor_length(31, b"", 0, allow_indefinite=False)

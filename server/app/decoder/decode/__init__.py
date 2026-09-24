@@ -56,21 +56,15 @@ _extract_bytes_from_binary = binary._extract_bytes_from_binary
 _extract_hex_from_binary = binary._extract_hex_from_binary
 _resolve_cose_algorithm = binary._resolve_cose_algorithm
 
-# Strict CBOR parsing primitives.
+# The one CBOR parser: strict, lenient only when asked.
+CborDiagnostic = cbor_parser.CborDiagnostic
 _CborDecodingError = cbor_parser._CborDecodingError
 _decode_cbor_structure = cbor_parser._decode_cbor_structure
-_ensure_cbor_available = cbor_parser._ensure_cbor_available
 _float_summary = cbor_parser._float_summary
 _parse_cbor_item = cbor_parser._parse_cbor_item
 _read_cbor_length = cbor_parser._read_cbor_length
-
-# Lenient CBOR decoding primitives.
-_lenient_decode_from = cbor_parser._lenient_decode_from
-_lenient_read_uint = cbor_parser._lenient_read_uint
 _structure_to_value = cbor_parser._structure_to_value
-
-# CBOR sequence decoding.
-_decode_cbor_sequence_impl = cbor_parser._decode_cbor_sequence_impl
+decode_item = cbor_parser.decode_item
 
 # Certificate extension serialisation.
 _DEVICE_IDENTIFIER_NAMES = certificates._DEVICE_IDENTIFIER_NAMES
@@ -152,11 +146,9 @@ _try_decode_authenticator_data = pipeline._try_decode_authenticator_data
 _try_decode_certificate_bytes = pipeline._try_decode_certificate_bytes
 _try_parse_json = pipeline._try_parse_json
 
-# CBOR sequence decoding and CTAP repair.
-_decode_cbor_sequence = ctap._decode_cbor_sequence
+# CTAP prefix byte and CBOR payload decoding.
 _extract_ctap_prefix = ctap._extract_ctap_prefix
 _is_padding_bytes = ctap._is_padding_bytes
-_json_safe_with_stringified_keys = ctap._json_safe_with_stringified_keys
 _try_decode_cbor = ctap._try_decode_cbor
 
 # CTAP field parsers and converters.

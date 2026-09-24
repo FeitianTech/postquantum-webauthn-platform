@@ -55,8 +55,8 @@ def test_parse_authenticator_data_bytes_parses_attested_and_extension_sections_w
     assert details["flags"]["ED"] is True
     assert details["attestedCredentialData"]["credentialId"] == "aabb"
     assert details["extensions"]["credProtect"] == 1
-    assert trailing.startswith(extensions)
-    assert trailing.endswith(trailer)
+    # Only the bytes after the extensions trail; the extensions were read.
+    assert trailing == trailer
     assert trimmed == payload[: len(payload) - len(trailer)]
 
 
