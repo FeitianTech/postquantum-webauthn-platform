@@ -34,13 +34,14 @@ def simple_storage(simple_module, monkeypatch, device_logs_module, storage_modul
 
     saved: dict[str, Any] = {}
 
-    def _savekey(email, credentials, *, session_id=None):
+    def _save_if_unchanged(email, credentials, version, *, session_id=None):
         saved["email"] = email
         saved["credentials"] = credentials
         saved["session_id"] = session_id
+        return True
 
-    monkeypatch.setattr(storage_module, "savekey", _savekey)
-    monkeypatch.setattr(storage_module, "readkey", lambda *_a, **_k: [])
+    monkeypatch.setattr(storage_module, "save_if_unchanged", _save_if_unchanged)
+    monkeypatch.setattr(storage_module, "read_for_update", lambda *_a, **_k: ([], None))
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
     return saved
 

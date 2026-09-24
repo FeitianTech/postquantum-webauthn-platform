@@ -41,7 +41,6 @@ def _install_register_begin_server(monkeypatch, advanced_module, captured: dict,
 
 def _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module, advanced_tracing):
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(storage_module, "readkey", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(attestation_module, "augment_aaguid_fields", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)

@@ -11,12 +11,12 @@ from __future__ import annotations
 import multiprocessing
 import os
 import threading
-import types
 
 import pytest
 
-from server.app.storage import cloud
 from server.app.storage import credentials as store
+
+from . import fake_gcs
 
 SESSION = "session-cas"
 NAME = "alice@example.com"
@@ -113,60 +113,9 @@ def test_of_three_processes_that_read_the_same_version_one_writes(local_store):
 # -- GCS: an object generation precondition ----------------------------------
 
 
-# Stand-ins for google.api_core.exceptions. Other test modules replace that
-# module in sys.modules with a stub that has no PreconditionFailed, so the fake
-# bucket brings its own and the cloud module is pointed at them.
-class _NotFound(Exception):
-    pass
-
-
-class _PreconditionFailed(Exception):
-    pass
-
-
-class _Bucket:
-    def __init__(self):
-        self.objects: dict[str, tuple[bytes, int]] = {}
-        self.next_generation = 1
-        self.upload_retries: list[object] = []
-
-    def blob(self, name):
-        return _Blob(self, name)
-
-
-class _Blob:
-    def __init__(self, bucket, name):
-        self.bucket = bucket
-        self.name = name
-        self.generation = None
-
-    def download_as_bytes(self):
-        if self.name not in self.bucket.objects:
-            raise _NotFound(self.name)
-        data, self.generation = self.bucket.objects[self.name]
-        return data
-
-    def upload_from_string(self, data, content_type=None, if_generation_match=None, retry="default"):
-        self.bucket.upload_retries.append(retry)
-        current = self.bucket.objects.get(self.name, (None, 0))[1]
-        if if_generation_match is not None and if_generation_match != current:
-            raise _PreconditionFailed(f"{self.name} is at generation {current}")
-        self.bucket.objects[self.name] = (bytes(data), self.bucket.next_generation)
-        self.bucket.next_generation += 1
-
-    def delete(self):
-        self.bucket.objects.pop(self.name, None)
-
-
 @pytest.fixture
 def gcs_store(monkeypatch):
-    bucket = _Bucket()
-    exceptions = types.SimpleNamespace(
-        NotFound=_NotFound, PreconditionFailed=_PreconditionFailed, GoogleAPICallError=OSError, RetryError=OSError
-    )
-    monkeypatch.setitem(vars(cloud), "gcs_exceptions", exceptions)
-    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: bucket)
-    monkeypatch.setattr(store, "_using_gcs", lambda: True)
+    bucket = fake_gcs.install(monkeypatch, store)
     store.savekey(NAME, [{"sign_count": 5}], session_id=SESSION)
     return bucket
 

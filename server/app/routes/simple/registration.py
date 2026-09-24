@@ -27,6 +27,7 @@ from ...challenge_registry import (
 )
 from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials
+from ...storage.common import InvalidStorageIdentifier
 from ...webauthn import attestation, metadata
 from .. import binary_helpers
 from . import parsing
@@ -277,10 +278,15 @@ def build_stored_credential_context(ctx: dict[str, Any]) -> None:
     ctx["stored_credential"] = stored_credential
 
 
-def _persist_registered_credential_entry(ctx: dict[str, Any]) -> Any | None:
-    metadata_session_id = metadata.ensure_metadata_session_id()
-    existing_credentials = credentials.readkey(ctx["uname"], session_id=metadata_session_id)
+# A registration appends to the user's stored list by compare-and-swap. It loses
+# only when another write landed between its read and its save, and each of those
+# writers saves once, so N registrations racing for one user lose at most N - 1
+# times each. Eight covers eight at once in one browser namespace.
+_CREDENTIAL_SAVE_ATTEMPTS = 8
+_PERSIST_FAILED = "Unable to persist registered credential."
 
+
+def _build_credential_entry(ctx: dict[str, Any]) -> dict[str, Any]:
     credential_entry = {
         "credential_data": ctx["auth_data"].credential_data,
         "auth_data": ctx["auth_data"],
@@ -307,19 +313,62 @@ def _persist_registered_credential_entry(ctx: dict[str, Any]) -> Any | None:
         credential_entry["attestation_object_decoded"] = attestation.make_json_safe(
             ctx["parsed_attestation_object"]
         )
+    return credential_entry
 
-    if isinstance(existing_credentials, list):
-        existing_credentials.append(credential_entry)
-    else:
-        existing_credentials = [credential_entry]
+
+def _credential_is_stored(uname: str, credential_id: bytes, metadata_session_id: str) -> bool:
+    """Whether a save that raised had landed anyway (a reply lost after the write)."""
 
     try:
-        credentials.savekey(ctx["uname"], existing_credentials, session_id=metadata_session_id)
+        records = credentials.readkey(uname, session_id=metadata_session_id)
     except Exception:
-        logger.exception("Failed to persist registered credential for %s", ctx["uname"])
-        return jsonify({"error": "Unable to persist registered credential."}), 500
+        return False
+    return any(
+        bytes(getattr(record.get("credential_data"), "credential_id", b"") or b"") == credential_id
+        for record in records
+        if isinstance(record, Mapping)
+    )
 
-    return None
+
+def _persist_registered_credential_entry(ctx: dict[str, Any]) -> Any | None:
+    metadata_session_id = metadata.ensure_metadata_session_id()
+    uname = ctx["uname"]
+    credential_entry = _build_credential_entry(ctx)
+
+    for _attempt in range(_CREDENTIAL_SAVE_ATTEMPTS):
+        try:
+            records, version = credentials.read_for_update(uname, session_id=metadata_session_id)
+        except InvalidStorageIdentifier:
+            # A name the store refuses is the caller's error: the app answers 400.
+            raise
+        except Exception:
+            # Never append to an empty list read in error: the save would
+            # replace every credential the user has.
+            logger.exception("Failed to read the stored credentials of %s", uname)
+            return jsonify({"error": _PERSIST_FAILED}), 500
+
+        try:
+            if credentials.save_if_unchanged(uname, [*records, credential_entry], version, session_id=metadata_session_id):
+                return None
+        except Exception:
+            if _credential_is_stored(uname, bytes(ctx["auth_data"].credential_data.credential_id), metadata_session_id):
+                return None
+            logger.exception("Failed to persist registered credential for %s", uname)
+            return jsonify({"error": _PERSIST_FAILED}), 500
+        logger.info("The stored credentials of %s changed while saving a registration; reading them again", uname)
+
+    logger.warning("Rejected a registration for %s: its stored credentials kept changing", uname)
+    return (
+        jsonify(
+            {
+                "error": (
+                    "The stored credentials changed while this one was being saved, too many times, "
+                    "so the registration was not saved. Please try again."
+                )
+            }
+        ),
+        409,
+    )
 
 
 def _update_session_simple_credentials(ctx: dict[str, Any]) -> None:
