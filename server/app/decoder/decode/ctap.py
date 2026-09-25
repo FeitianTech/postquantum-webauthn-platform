@@ -363,18 +363,7 @@ def _try_decode_cbor(data: bytes, encoding: str, *, lenient: bool = False) -> di
     ctap_details = dict(ctap_info) if ctap_info is not None else None
 
     if not payload:
-        decoded_payload: dict[str, Any] = {
-            "decodedValue": {"summary": "Empty CBOR payload", "byteLength": 0},
-        }
-        if ctap_details is not None:
-            ctap_details["payloadLength"] = 0
-            decoded_payload["ctap"] = _stringify_mapping_keys(ctap_details)
-        return {
-            "format": "CBOR",
-            "inputEncoding": encoding,
-            "decoded": decoded_payload,
-            "binary": pipeline._binary_summary(data, encoding),
-        }
+        return _empty_payload(data, encoding, ctap_details)
 
     # One item, parsed strictly unless the caller asked for lenient parsing. A
     # payload that is not well-formed raises with its offset, counted from the
@@ -382,53 +371,15 @@ def _try_decode_cbor(data: bytes, encoding: str, *, lenient: bool = False) -> di
     start = len(data) - len(payload)
     node, end, skipped = cbor_parser.decode_item(data, start, lenient=lenient)
     base_value = _structure_to_value(node)
-    consumed_total = end - start
-    remaining = data[end:]
 
     classification = _classify_ctap_payload(base_value, ctap_details)
-
-    decoded_payload: dict[str, Any] = {}
-
-    expanded_json: dict[str, Any] | None = None
-    ctap_decoded: dict[str, Any] | None = None
-    hex_decoded_value: Any | None = None
-
-    if isinstance(base_value, Mapping):
-        hex_decoded_value = _hex_json_safe(base_value)
-        interpreted = _interpret_ctap_kind(base_value, classification)
-        if interpreted is not None:
-            ctap_decoded = _stringify_mapping_keys(_hex_json_safe(interpreted))
-
-        if classification == "make_credential_output":
-            expanded_json = _build_make_credential_expanded_json(base_value)
-        elif classification == "get_assertion_output":
-            expanded_json = _build_get_assertion_expanded_json(base_value)
-        elif classification == "make_credential_input":
-            expanded_json = _build_make_credential_request_expanded_json(base_value)
-        elif classification == "get_assertion_input":
-            expanded_json = _build_get_assertion_request_expanded_json(base_value)
-    else:
-        hex_decoded_value = _hex_json_safe(base_value)
-
-    if ctap_decoded is not None:
-        decoded_payload["ctapDecoded"] = ctap_decoded
-
-    if expanded_json:
-        decoded_payload["expandedJson"] = _stringify_mapping_keys(_hex_json_safe(expanded_json))
-
-    if ctap_decoded is None:
-        decoded_payload["decodedValue"] = _stringify_mapping_keys(_hex_json_safe(hex_decoded_value))
+    decoded_payload = _payload_views(base_value, classification)
 
     extra, located = interpretations.for_ctap(classification, base_value, node, data)
     findings = canonical.check(node, data) + key_collisions.check(node) + skipped + _trailing_findings(data, end) + located + prefix_not_read(data)
 
     if ctap_details is not None:
-        ctap_details["payloadLength"] = consumed_total
-        if remaining and _is_padding_bytes(remaining):
-            ctap_details["ignoredPaddingBytes"] = len(remaining)
-        elif remaining:
-            ctap_details["trailingBytesHex"] = remaining.hex()
-        decoded_payload["ctap"] = _stringify_mapping_keys(ctap_details)
+        decoded_payload["ctap"] = _framing(ctap_details, end - start, data[end:])
 
     result: dict[str, Any] = {
         "format": "CBOR",
@@ -440,3 +391,63 @@ def _try_decode_cbor(data: bytes, encoding: str, *, lenient: bool = False) -> di
     }
     _attach_findings(result, findings)
     return result
+
+
+def _empty_payload(data: bytes, encoding: str, ctap_details: dict[str, Any] | None) -> dict[str, Any]:
+    """A CTAP command or status byte with nothing after it."""
+
+    decoded_payload: dict[str, Any] = {
+        "decodedValue": {"summary": "Empty CBOR payload", "byteLength": 0},
+    }
+    if ctap_details is not None:
+        ctap_details["payloadLength"] = 0
+        decoded_payload["ctap"] = _stringify_mapping_keys(ctap_details)
+    return {
+        "format": "CBOR",
+        "inputEncoding": encoding,
+        "decoded": decoded_payload,
+        "binary": pipeline._binary_summary(data, encoding),
+    }
+
+
+# The expanded JSON builder of each CTAP message that has one.
+_EXPANDED_JSON_BUILDERS: dict[str, Callable[[Mapping[Any, Any]], dict[str, Any]]] = {
+    "make_credential_output": lambda value: _build_make_credential_expanded_json(value),
+    "get_assertion_output": lambda value: _build_get_assertion_expanded_json(value),
+    "make_credential_input": lambda value: _build_make_credential_request_expanded_json(value),
+    "get_assertion_input": lambda value: _build_get_assertion_request_expanded_json(value),
+}
+
+
+def _payload_views(base_value: Any, classification: str) -> dict[str, Any]:
+    """``ctapDecoded`` and ``expandedJson`` for a CTAP message; ``decodedValue`` for anything else."""
+
+    decoded_payload: dict[str, Any] = {}
+    ctap_decoded: dict[str, Any] | None = None
+    expanded_json: dict[str, Any] | None = None
+    if isinstance(base_value, Mapping):
+        interpreted = _interpret_ctap_kind(base_value, classification)
+        if interpreted is not None:
+            ctap_decoded = _stringify_mapping_keys(_hex_json_safe(interpreted))
+        builder = _EXPANDED_JSON_BUILDERS.get(classification)
+        if builder is not None:
+            expanded_json = builder(base_value)
+
+    if ctap_decoded is not None:
+        decoded_payload["ctapDecoded"] = ctap_decoded
+    if expanded_json:
+        decoded_payload["expandedJson"] = _stringify_mapping_keys(_hex_json_safe(expanded_json))
+    if ctap_decoded is None:
+        decoded_payload["decodedValue"] = _stringify_mapping_keys(_hex_json_safe(_hex_json_safe(base_value)))
+    return decoded_payload
+
+
+def _framing(ctap_details: dict[str, Any], payload_length: int, remaining: bytes) -> dict[str, Any]:
+    """``data.ctap``: the command or status byte, and what the payload after it left."""
+
+    ctap_details["payloadLength"] = payload_length
+    if remaining and _is_padding_bytes(remaining):
+        ctap_details["ignoredPaddingBytes"] = len(remaining)
+    elif remaining:
+        ctap_details["trailingBytesHex"] = remaining.hex()
+    return _stringify_mapping_keys(ctap_details)
