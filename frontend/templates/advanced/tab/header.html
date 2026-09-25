@@ -16,8 +16,8 @@
     <div class="advanced-header__meta">
         <div class="status" id="advanced-status"></div>
         <div class="sub-tabs">
-            <button id="registration-tab-btn" class="sub-tab active" onclick="switchSubTab('registration')">Registration</button>
-            <button id="authentication-tab-btn" class="sub-tab" onclick="switchSubTab('authentication')">Authentication</button>
+            <button id="registration-tab-btn" class="sub-tab active" data-action="switch-sub-tab" data-sub-tab="registration">Registration</button>
+            <button id="authentication-tab-btn" class="sub-tab" data-action="switch-sub-tab" data-sub-tab="authentication">Authentication</button>
         </div>
     </div>
     <div class="ceremony-result" id="advanced-ceremony-result" role="status" aria-live="polite" hidden></div>

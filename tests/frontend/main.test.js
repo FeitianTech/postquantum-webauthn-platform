@@ -9,8 +9,7 @@ vi.mock('../../frontend/static/scripts/shared/webauthn/json-ponyfill.js', () => 
 
 vi.mock('../../frontend/static/scripts/shared/ui/navigation.js', () => ({
   switchTab: vi.fn(),
-  switchSubTab: vi.fn(),
-  toggleSection: vi.fn(),
+  bindNavigationActions: vi.fn(),
   initializeNavigationMenu: vi.fn(() => ({
     open: vi.fn(),
     close: vi.fn(),
@@ -144,7 +143,7 @@ import { initializeAdvancedSettingsNavigation } from '../../frontend/static/scri
 import { loadSavedCredentials, setMdsNavigation, updateAllowCredentialsDropdown } from '../../frontend/static/scripts/advanced/credentials/index.js';
 import { updateJsonEditor, updateJsonFromForm } from '../../frontend/static/scripts/advanced/editor/index.js';
 import { handleJsonEditorKeydown } from '../../frontend/static/scripts/advanced/editor/utils.js';
-import { initializeNavigationMenu, switchTab } from '../../frontend/static/scripts/shared/ui/navigation.js';
+import { bindNavigationActions, initializeNavigationMenu, switchTab } from '../../frontend/static/scripts/shared/ui/navigation.js';
 import { initializeSimpleUsername, randomizeUserIdentity } from '../../frontend/static/scripts/shared/auth/username.js';
 import { closeModal, initializeStickyHeader, toggleJsonEditorExpansion } from '../../frontend/static/scripts/shared/ui/core.js';
 import { initializeAnalyzeBrowser } from '../../frontend/static/scripts/shared/browser/analyze.js';
@@ -231,6 +230,7 @@ describe('main startup and wiring', () => {
 
     expect(initializeAnalyzeBrowser).toHaveBeenCalledTimes(1);
     expect(registerHintsChangeCallback).toHaveBeenCalledTimes(1);
+    expect(bindNavigationActions).toHaveBeenCalledTimes(1);
     expect(setMdsNavigation).toHaveBeenCalledWith({
       switchTab,
       highlightRow: highlightAuthenticatorRowByAaguid,
