@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { cx } from '@/lib/cx';
+import { useOverlayRoot } from '@/lib/useOverlayRoot';
 
 import { IconButton } from './Button';
 import { CloseIcon } from './icons';
@@ -83,7 +84,7 @@ export function Overlay({
   className,
   children,
 }: OverlayProps) {
-  const [target, setTarget] = useState<HTMLElement | null>(null);
+  const target = useOverlayRoot();
   const [mounted, setMounted] = useState(open);
   const [shown, setShown] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -91,10 +92,6 @@ export function Overlay({
   const returnFocusRef = useRef(returnFocusTo);
   onCloseRef.current = onClose;
   returnFocusRef.current = returnFocusTo;
-
-  useEffect(() => {
-    setTarget(document.getElementById('overlay-root') ?? document.body);
-  }, []);
 
   useEffect(() => {
     if (open) {
