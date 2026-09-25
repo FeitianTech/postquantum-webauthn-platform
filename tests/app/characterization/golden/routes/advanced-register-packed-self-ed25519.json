@@ -126,7 +126,7 @@
     ],
     [
      "Content-Length",
-     "9882"
+     "9879"
     ],
     [
      "X-Content-Type-Options",
@@ -178,7 +178,7 @@
      }
     }
    ],
-   "bodySha256": "ddce9553dbe3929b63ee92715f2f338282e82c43f6b1847efa303f86b2e75bb8",
+   "bodySha256": "44e7c4891ec69b145012c6fb40e13577b0db119fbb118f149acc288d4485135e",
    "body": {
     "actualResidentKey": true,
     "algo": "EdDSA",
@@ -405,7 +405,7 @@
      "attestationFormat": "packed",
      "clientExtensionOutputs": {},
      "createdAt": 1790000000.0,
-     "credentialId": "82wp6a6k5qtS/SKwtOva7IZ5ixdbHMkZSp2iHe5MZCU=",
+     "credentialId": "82wp6a6k5qtS_SKwtOva7IZ5ixdbHMkZSp2iHe5MZCU",
      "credentialIdBase64Url": "82wp6a6k5qtS_SKwtOva7IZ5ixdbHMkZSp2iHe5MZCU",
      "credentialIdHex": "f36c29e9aea4e6ab52fd22b0b4ebdaec86798b175b1cc9194a9da21dee4c6425",
      "displayName": "A. User",
@@ -458,13 +458,13 @@
       "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
       "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
      },
-     "publicKey": "pAEBAycgBiFYIMeGk8ZtMtfSNKJbhBbTtDkWCOnaORR8r4yL/LqxNIEl",
+     "publicKey": "pAEBAycgBiFYIMeGk8ZtMtfSNKJbhBbTtDkWCOnaORR8r4yL_LqxNIEl",
      "publicKeyAlgorithm": -8,
      "publicKeyBase64": "pAEBAycgBiFYIMeGk8ZtMtfSNKJbhBbTtDkWCOnaORR8r4yL/LqxNIEl",
      "publicKeyBase64Url": "pAEBAycgBiFYIMeGk8ZtMtfSNKJbhBbTtDkWCOnaORR8r4yL_LqxNIEl",
      "publicKeyCose": {
       "-1": 6,
-      "-2": "x4aTxm0y19I0oluEFtO0ORYI6do5FHyvjIv8urE0gSU=",
+      "-2": "x4aTxm0y19I0oluEFtO0ORYI6do5FHyvjIv8urE0gSU",
       "1": 1,
       "3": -8
      },
@@ -503,7 +503,7 @@
      "signCount": 0,
      "storageId": "82wp6a6k5qtS_SKwtOva7IZ5::1a0c4506c00::de402f3397aa41e3ad0732a1222b43f4",
      "type": "advanced",
-     "userHandle": "dXNlci1oYW5kbGU=",
+     "userHandle": "dXNlci1oYW5kbGU",
      "userHandleBase64": "dXNlci1oYW5kbGU=",
      "userHandleBase64Url": "dXNlci1oYW5kbGU",
      "userHandleHex": "757365722d68616e646c65",
@@ -516,7 +516,7 @@
    "stored": [
     {
      "file": "artifacts/cQUQf5EliGThHs2boeS0VepH7C5DXjV-PqfXfYXsTS0/d932fdc2c432c7050ce6b728173357d2a53f73df2a0673588ef329a3019a00f5.json",
-     "sha256": "0a6f9e575365e840e9ee45c24a228b1f4ff16685febe1aeb95c57cc220291c94",
+     "sha256": "930a6e31df292dd854f386183f2d0ea68a70431bcc9fb3869d9c33b8072b1c9b",
      "content": {
       "storageId": "82wp6a6k5qtS_SKwtOva7IZ5::1a0c4506c00::de402f3397aa41e3ad0732a1222b43f4",
       "createdAt": 1790000000.0,
@@ -529,21 +529,21 @@
         "displayName": "A. User",
         "residentKey": false,
         "largeBlob": false,
-        "credentialId": "82wp6a6k5qtS/SKwtOva7IZ5ixdbHMkZSp2iHe5MZCU=",
+        "credentialId": "82wp6a6k5qtS_SKwtOva7IZ5ixdbHMkZSp2iHe5MZCU",
         "credentialIdBase64Url": "82wp6a6k5qtS_SKwtOva7IZ5ixdbHMkZSp2iHe5MZCU",
         "credentialIdHex": "f36c29e9aea4e6ab52fd22b0b4ebdaec86798b175b1cc9194a9da21dee4c6425",
         "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
         "aaguidHex": "00000000000000000000000000000000",
         "aaguidGuid": "00000000-0000-0000-0000-000000000000",
         "publicKeyAlgorithm": -8,
-        "publicKey": "pAEBAycgBiFYIMeGk8ZtMtfSNKJbhBbTtDkWCOnaORR8r4yL/LqxNIEl",
+        "publicKey": "pAEBAycgBiFYIMeGk8ZtMtfSNKJbhBbTtDkWCOnaORR8r4yL_LqxNIEl",
         "publicKeyBase64": "pAEBAycgBiFYIMeGk8ZtMtfSNKJbhBbTtDkWCOnaORR8r4yL/LqxNIEl",
         "publicKeyBase64Url": "pAEBAycgBiFYIMeGk8ZtMtfSNKJbhBbTtDkWCOnaORR8r4yL_LqxNIEl",
         "publicKeyCose": {
          "1": 1,
          "3": -8,
          "-1": 6,
-         "-2": "x4aTxm0y19I0oluEFtO0ORYI6do5FHyvjIv8urE0gSU="
+         "-2": "x4aTxm0y19I0oluEFtO0ORYI6do5FHyvjIv8urE0gSU"
         },
         "publicKeyType": 1,
         "signCount": 0,
@@ -552,7 +552,7 @@
         "attestationFormat": "packed",
         "attestationStatement": {
          "alg": -8,
-         "sig": "ZvBVgFmdOqs/lVCfujgunTyijUVOHeOMydSzPuP7FstixDkiAxR7cVwdG6EOg/ziy2LUERiZ/EZGez0KvD9xDg=="
+         "sig": "ZvBVgFmdOqs_lVCfujgunTyijUVOHeOMydSzPuP7FstixDkiAxR7cVwdG6EOg_ziy2LUERiZ_EZGez0KvD9xDg"
         },
         "attestationObject": "o2NmbXRmcGFja2VkZ2F0dFN0bXSiY2FsZydjc2lnWEBm8FWAWZ06qz-VUJ-6OC6dPKKNRU4d44zJ1LM-4_sWy2LEOSIDFHtxXB0boQ6D_OLLYtQRGJn8RkZ7PQq8P3EOaGF1dGhEYXRhWIFJlg3liA6MaHQ0Fw9kdmBbj-SuuaKGMseZXPO6gx2XY0UAAAAAAAAAAAAAAAAAAAAAAAAAAAAg82wp6a6k5qtS_SKwtOva7IZ5ixdbHMkZSp2iHe5MZCWkAQEDJyAGIVggx4aTxm0y19I0oluEFtO0ORYI6do5FHyvjIv8urE0gSU",
         "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97634500000000000000000000000000000000000000000020f36c29e9aea4e6ab52fd22b0b4ebdaec86798b175b1cc9194a9da21dee4c6425a4010103272006215820c78693c66d32d7d234a25b8416d3b4391608e9da39147caf8c8bfcbab1348125",
@@ -790,7 +790,7 @@
          },
          "type": "public-key"
         },
-        "userHandle": "dXNlci1oYW5kbGU=",
+        "userHandle": "dXNlci1oYW5kbGU",
         "userHandleBase64": "dXNlci1oYW5kbGU=",
         "userHandleBase64Url": "dXNlci1oYW5kbGU",
         "userHandleHex": "757365722d68616e646c65"

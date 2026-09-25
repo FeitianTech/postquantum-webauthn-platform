@@ -263,7 +263,7 @@
     ],
     [
      "Content-Length",
-     "12529"
+     "12524"
     ],
     [
      "X-Content-Type-Options",
@@ -315,7 +315,7 @@
      }
     }
    ],
-   "bodySha256": "e00e3716f85f41aeda3b2c5c80b28989992fba7198fe1ba93b8e00bb51c2229f",
+   "bodySha256": "2ade3e0c84083ab1a51e3b53a09a532f191cd22ef4133be04c5825d643fffdaa",
    "body": {
     "actualResidentKey": false,
     "algo": "ES256 (ECDSA)",
@@ -455,7 +455,7 @@
      "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiVU10WVZQWnhTQUJleHZVT2czcTFNczllU0pNVU9iQW9IQW9SeEk3MHZZayIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
      "clientExtensionOutputs": {},
      "createdAt": 1790000000.0,
-     "credentialId": "5DtR/jQWBFBqSfcR6X4S8bwALAPlgv9WEimtVKbw5uk=",
+     "credentialId": "5DtR_jQWBFBqSfcR6X4S8bwALAPlgv9WEimtVKbw5uk",
      "credentialIdBase64Url": "5DtR_jQWBFBqSfcR6X4S8bwALAPlgv9WEimtVKbw5uk",
      "credentialIdHex": "e43b51fe341604506a49f711e97e12f1bc002c03e582ff561229ad54a6f0e6e9",
      "displayName": "user@example.com",
@@ -545,13 +545,13 @@
       "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
       "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
      },
-     "publicKey": "pQECAyYgASFYIMsL22UCqHs8SLkr65/AAJMh3ixuUVtHkAncM4qfvLoKIlggknq/F6PnfF7mWUokiQEtpH7mA7GPOV7S7L6ZdB2BBVI=",
+     "publicKey": "pQECAyYgASFYIMsL22UCqHs8SLkr65_AAJMh3ixuUVtHkAncM4qfvLoKIlggknq_F6PnfF7mWUokiQEtpH7mA7GPOV7S7L6ZdB2BBVI",
      "publicKeyAlgorithm": -7,
      "publicKeyBase64Url": "pQECAyYgASFYIMsL22UCqHs8SLkr65_AAJMh3ixuUVtHkAncM4qfvLoKIlggknq_F6PnfF7mWUokiQEtpH7mA7GPOV7S7L6ZdB2BBVI",
-     "publicKeyBytes": "pQECAyYgASFYIMsL22UCqHs8SLkr65/AAJMh3ixuUVtHkAncM4qfvLoKIlggknq/F6PnfF7mWUokiQEtpH7mA7GPOV7S7L6ZdB2BBVI=",
+     "publicKeyBytes": "pQECAyYgASFYIMsL22UCqHs8SLkr65_AAJMh3ixuUVtHkAncM4qfvLoKIlggknq_F6PnfF7mWUokiQEtpH7mA7GPOV7S7L6ZdB2BBVI",
      "publicKeyCose": {
-      "-3": "knq/F6PnfF7mWUokiQEtpH7mA7GPOV7S7L6ZdB2BBVI=",
-      "-2": "ywvbZQKoezxIuSvrn8AAkyHeLG5RW0eQCdwzip+8ugo=",
+      "-3": "knq_F6PnfF7mWUokiQEtpH7mA7GPOV7S7L6ZdB2BBVI",
+      "-2": "ywvbZQKoezxIuSvrn8AAkyHeLG5RW0eQCdwzip-8ugo",
       "-1": 1,
       "1": 2,
       "3": -7

@@ -106,7 +106,7 @@ def test_credentials_get_serializes_dict_backed_entries(monkeypatch, metadata_mo
     assert entry["email"] == "dict@example.com"
     assert entry["userName"] == "dict@example.com"
     assert entry["displayName"] == "Dict User"
-    assert entry["credentialId"] == base64.b64encode(b"cred-dict").decode("utf-8")
+    assert entry["credentialId"] == base64.urlsafe_b64encode(b"cred-dict").decode("utf-8").rstrip("=")
     assert entry["signCount"] == 9
     assert entry["algorithm"] == -7
     assert entry["publicKeyAlgorithm"] == -7
@@ -188,7 +188,7 @@ def test_credentials_get_serializes_object_backed_entries_and_derives_authentica
 
     entry = payload[0]
     assert entry["email"] == "object@example.com"
-    assert entry["credentialId"] == base64.b64encode(b"cred-object").decode("utf-8")
+    assert entry["credentialId"] == base64.urlsafe_b64encode(b"cred-object").decode("utf-8").rstrip("=")
     assert entry["algorithm"] == -8
     assert entry["publicKeyAlgorithm"] == -8
     assert entry["signCount"] == 12
@@ -241,7 +241,7 @@ def test_credentials_get_handles_bare_credential_objects_and_skips_malformed(mon
 
     entry = payload[0]
     assert entry["email"] == "bare@example.com"
-    assert entry["credentialId"] == base64.b64encode(b"bare-credential").decode("utf-8")
+    assert entry["credentialId"] == base64.urlsafe_b64encode(b"bare-credential").decode("utf-8").rstrip("=")
     assert entry["type"] == "WebAuthn"
     assert entry["signCount"] == 0
     assert entry["algorithm"] == -7

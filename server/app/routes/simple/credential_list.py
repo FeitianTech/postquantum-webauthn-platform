@@ -7,7 +7,7 @@ from typing import Any
 from flask import jsonify, request
 
 from ...attachments import normalize_attachment
-from ...encoding import encode_base64, encode_base64url
+from ...encoding import encode_base64url
 from ...storage import credentials as credential_store
 from ...storage.common import StorageReadError
 from ...webauthn import attestation, metadata
@@ -76,10 +76,10 @@ def build_credential_info_from_dict_credential_data(
 
     credential_info = {
         "email": email,
-        "credentialId": encode_base64(cred_data["credential_id"]),
+        "credentialId": encode_base64url(cred_data["credential_id"]),
         "userName": user_info.get("name", email),
         "displayName": user_info.get("display_name", email),
-        "userHandle": encode_base64(
+        "userHandle": encode_base64url(
             user_info.get("user_handle", cred_data["credential_id"])
         )
         if user_info.get("user_handle")
@@ -196,10 +196,10 @@ def build_credential_info_from_object_credential_data(
 
     credential_info = {
         "email": email,
-        "credentialId": encode_base64(cred_data.credential_id),
+        "credentialId": encode_base64url(cred_data.credential_id),
         "userName": user_info.get("name", email),
         "displayName": user_info.get("display_name", email),
-        "userHandle": encode_base64(user_info.get("user_handle"))
+        "userHandle": encode_base64url(user_info.get("user_handle"))
         if user_info.get("user_handle")
         else None,
         "algorithm": cred_data.public_key[3]
@@ -264,7 +264,7 @@ def build_credential_info_from_bare_credential(email: str, cred: Any) -> dict[st
 
     credential_info = {
         "email": email,
-        "credentialId": encode_base64(cred.credential_id),
+        "credentialId": encode_base64url(cred.credential_id),
         "userName": email,
         "displayName": email,
         "userHandle": None,

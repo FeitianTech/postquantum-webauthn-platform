@@ -220,7 +220,7 @@
     ],
     [
      "Content-Length",
-     "12529"
+     "12524"
     ],
     [
      "X-Content-Type-Options",
@@ -272,7 +272,7 @@
      }
     }
    ],
-   "bodySha256": "e9d21a4c43d0ecf4f5c1d7e469affad4ebaea3768c9e135a1918245943944556",
+   "bodySha256": "2f2337fe520377a9d7d91de7924a3df56ae22734c98e9fe981937697fa705fd5",
    "body": {
     "actualResidentKey": false,
     "algo": "ES256 (ECDSA)",
@@ -412,7 +412,7 @@
      "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQlMzV1hyUTk0eXUxSU0wZ1F5dXVHVkRNUkwyMFJYT0lnQ3hWR1NsMm1WcyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
      "clientExtensionOutputs": {},
      "createdAt": 1790000000.0,
-     "credentialId": "bvEU3nQtcja9DuaJ0PHAfo5eQGygwl2qirzX5XC9CiE=",
+     "credentialId": "bvEU3nQtcja9DuaJ0PHAfo5eQGygwl2qirzX5XC9CiE",
      "credentialIdBase64Url": "bvEU3nQtcja9DuaJ0PHAfo5eQGygwl2qirzX5XC9CiE",
      "credentialIdHex": "6ef114de742d7236bd0ee689d0f1c07e8e5e406ca0c25daa8abcd7e570bd0a21",
      "displayName": "user@example.com",
@@ -502,13 +502,13 @@
       "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
       "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
      },
-     "publicKey": "pQECAyYgASFYIAfVYnvHdGJSEXI+LQxWQQEbIHufII8HpwWLbW/JAmsQIlgg07NoYlNzDOW4jodt19K+TBvWMpY7oWbRMfKQY3xE+A4=",
+     "publicKey": "pQECAyYgASFYIAfVYnvHdGJSEXI-LQxWQQEbIHufII8HpwWLbW_JAmsQIlgg07NoYlNzDOW4jodt19K-TBvWMpY7oWbRMfKQY3xE-A4",
      "publicKeyAlgorithm": -7,
      "publicKeyBase64Url": "pQECAyYgASFYIAfVYnvHdGJSEXI-LQxWQQEbIHufII8HpwWLbW_JAmsQIlgg07NoYlNzDOW4jodt19K-TBvWMpY7oWbRMfKQY3xE-A4",
-     "publicKeyBytes": "pQECAyYgASFYIAfVYnvHdGJSEXI+LQxWQQEbIHufII8HpwWLbW/JAmsQIlgg07NoYlNzDOW4jodt19K+TBvWMpY7oWbRMfKQY3xE+A4=",
+     "publicKeyBytes": "pQECAyYgASFYIAfVYnvHdGJSEXI-LQxWQQEbIHufII8HpwWLbW_JAmsQIlgg07NoYlNzDOW4jodt19K-TBvWMpY7oWbRMfKQY3xE-A4",
      "publicKeyCose": {
-      "-3": "07NoYlNzDOW4jodt19K+TBvWMpY7oWbRMfKQY3xE+A4=",
-      "-2": "B9Vie8d0YlIRcj4tDFZBARsge58gjwenBYttb8kCaxA=",
+      "-3": "07NoYlNzDOW4jodt19K-TBvWMpY7oWbRMfKQY3xE-A4",
+      "-2": "B9Vie8d0YlIRcj4tDFZBARsge58gjwenBYttb8kCaxA",
       "-1": 1,
       "1": 2,
       "3": -7
@@ -1431,7 +1431,7 @@
     ],
     [
      "Content-Length",
-     "12529"
+     "12524"
     ],
     [
      "X-Content-Type-Options",
@@ -1483,7 +1483,7 @@
      }
     }
    ],
-   "bodySha256": "6e3cf0d17176768372dfa60df0f4861e9027707b6b201643e5b965bc470df3f1",
+   "bodySha256": "8ca9161db7bc1e673b616aacf4a6c66e4fab76781437353aa4b8ef630e3611a6",
    "body": {
     "actualResidentKey": false,
     "algo": "ES256 (ECDSA)",
@@ -1623,7 +1623,7 @@
      "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiRGJJbGtvYkdfWkQ3UHpsMnptM0ltb3NNZ1NEbHhKckRCMlJJNDVFOEZSayIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
      "clientExtensionOutputs": {},
      "createdAt": 1790000000.0,
-     "credentialId": "U5/lFp4uI6Lw6z2i0uGNuzR/OzmUlfxu4iWzzdiomVc=",
+     "credentialId": "U5_lFp4uI6Lw6z2i0uGNuzR_OzmUlfxu4iWzzdiomVc",
      "credentialIdBase64Url": "U5_lFp4uI6Lw6z2i0uGNuzR_OzmUlfxu4iWzzdiomVc",
      "credentialIdHex": "539fe5169e2e23a2f0eb3da2d2e18dbb347f3b399495fc6ee225b3cdd8a89957",
      "displayName": "user@example.com",
@@ -1713,13 +1713,13 @@
       "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
       "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
      },
-     "publicKey": "pQECAyYgASFYIChnOZ/FrciM/toXPg6Xng8w731UCLPW7Hwx+lTAEmhdIlggrTV6YKhtwAoGgWepwHwcTNoXFjYYSHIixAw14GJDj28=",
+     "publicKey": "pQECAyYgASFYIChnOZ_FrciM_toXPg6Xng8w731UCLPW7Hwx-lTAEmhdIlggrTV6YKhtwAoGgWepwHwcTNoXFjYYSHIixAw14GJDj28",
      "publicKeyAlgorithm": -7,
      "publicKeyBase64Url": "pQECAyYgASFYIChnOZ_FrciM_toXPg6Xng8w731UCLPW7Hwx-lTAEmhdIlggrTV6YKhtwAoGgWepwHwcTNoXFjYYSHIixAw14GJDj28",
-     "publicKeyBytes": "pQECAyYgASFYIChnOZ/FrciM/toXPg6Xng8w731UCLPW7Hwx+lTAEmhdIlggrTV6YKhtwAoGgWepwHwcTNoXFjYYSHIixAw14GJDj28=",
+     "publicKeyBytes": "pQECAyYgASFYIChnOZ_FrciM_toXPg6Xng8w731UCLPW7Hwx-lTAEmhdIlggrTV6YKhtwAoGgWepwHwcTNoXFjYYSHIixAw14GJDj28",
      "publicKeyCose": {
-      "-3": "rTV6YKhtwAoGgWepwHwcTNoXFjYYSHIixAw14GJDj28=",
-      "-2": "KGc5n8WtyIz+2hc+DpeeDzDvfVQIs9bsfDH6VMASaF0=",
+      "-3": "rTV6YKhtwAoGgWepwHwcTNoXFjYYSHIixAw14GJDj28",
+      "-2": "KGc5n8WtyIz-2hc-DpeeDzDvfVQIs9bsfDH6VMASaF0",
       "-1": 1,
       "1": 2,
       "3": -7

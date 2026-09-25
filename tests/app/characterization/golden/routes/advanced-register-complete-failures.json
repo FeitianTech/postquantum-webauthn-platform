@@ -333,7 +333,7 @@
     ],
     [
      "Content-Length",
-     "9673"
+     "9668"
     ],
     [
      "X-Content-Type-Options",
@@ -385,7 +385,7 @@
      }
     }
    ],
-   "bodySha256": "d36b924d02882cd77981bc33c234777fa42a47b3071975a8b3730f4d20abfa6b",
+   "bodySha256": "8715c39a29a71eefb97c68eaeb3474b97d7c2787304f9f4cc647cb3e9c32964a",
    "body": {
     "actualResidentKey": true,
     "algo": "ES256 (ECDSA)",
@@ -582,7 +582,7 @@
      "attestationFormat": "none",
      "clientExtensionOutputs": {},
      "createdAt": 1790000000.0,
-     "credentialId": "O+aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU=",
+     "credentialId": "O-aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU",
      "credentialIdBase64Url": "O-aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU",
      "credentialIdHex": "3be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5",
      "displayName": "A. User",
@@ -630,14 +630,14 @@
       "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
       "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
      },
-     "publicKey": "pQECAyYgASFYIG+FF+DmUlPm46YMFIlpZ0u/THw1hNrPH/Mo7I8rcEUAIlggtcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg=",
+     "publicKey": "pQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
      "publicKeyAlgorithm": -7,
      "publicKeyBase64": "pQECAyYgASFYIG+FF+DmUlPm46YMFIlpZ0u/THw1hNrPH/Mo7I8rcEUAIlggtcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg=",
      "publicKeyBase64Url": "pQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
      "publicKeyCose": {
       "-1": 1,
-      "-2": "b4UX4OZSU+bjpgwUiWlnS79MfDWE2s8f8yjsjytwRQA=",
-      "-3": "tcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg=",
+      "-2": "b4UX4OZSU-bjpgwUiWlnS79MfDWE2s8f8yjsjytwRQA",
+      "-3": "tcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
       "1": 2,
       "3": -7
      },
@@ -676,7 +676,7 @@
      "signCount": 0,
      "storageId": "O-aakOAtlR6RWHdApN4rXqGK::1a0c4506c00::11104dd440fd4448b42ae058ba84b657",
      "type": "advanced",
-     "userHandle": "dXNlci1oYW5kbGU=",
+     "userHandle": "dXNlci1oYW5kbGU",
      "userHandleBase64": "dXNlci1oYW5kbGU=",
      "userHandleBase64Url": "dXNlci1oYW5kbGU",
      "userHandleHex": "757365722d68616e646c65",
@@ -686,7 +686,7 @@
    "stored": [
     {
      "file": "artifacts/RCwQ_e2mdacpbW9TWRyln6Yfq7alEzciAIw_aJmbqK8/1556ed03d42b6fa819390dfecd2e0c56f33656e3b9643f82e651793dfb6cf07f.json",
-     "sha256": "eef5d57144c219233d24ebfdbddad519872cd4379e0e3ca0f257f479be192726",
+     "sha256": "bd5d7542e9b3a6980ae09722de6977612fc42e5465589bd0a4b0f02caf31ed80",
      "content": {
       "storageId": "O-aakOAtlR6RWHdApN4rXqGK::1a0c4506c00::11104dd440fd4448b42ae058ba84b657",
       "createdAt": 1790000000.0,
@@ -699,22 +699,22 @@
         "displayName": "A. User",
         "residentKey": false,
         "largeBlob": false,
-        "credentialId": "O+aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU=",
+        "credentialId": "O-aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU",
         "credentialIdBase64Url": "O-aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU",
         "credentialIdHex": "3be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5",
         "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
         "aaguidHex": "00000000000000000000000000000000",
         "aaguidGuid": "00000000-0000-0000-0000-000000000000",
         "publicKeyAlgorithm": -7,
-        "publicKey": "pQECAyYgASFYIG+FF+DmUlPm46YMFIlpZ0u/THw1hNrPH/Mo7I8rcEUAIlggtcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg=",
+        "publicKey": "pQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
         "publicKeyBase64": "pQECAyYgASFYIG+FF+DmUlPm46YMFIlpZ0u/THw1hNrPH/Mo7I8rcEUAIlggtcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg=",
         "publicKeyBase64Url": "pQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
         "publicKeyCose": {
          "1": 2,
          "3": -7,
          "-1": 1,
-         "-2": "b4UX4OZSU+bjpgwUiWlnS79MfDWE2s8f8yjsjytwRQA=",
-         "-3": "tcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg="
+         "-2": "b4UX4OZSU-bjpgwUiWlnS79MfDWE2s8f8yjsjytwRQA",
+         "-3": "tcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg"
         },
         "publicKeyType": 2,
         "signCount": 0,
@@ -930,7 +930,7 @@
          },
          "type": "public-key"
         },
-        "userHandle": "dXNlci1oYW5kbGU=",
+        "userHandle": "dXNlci1oYW5kbGU",
         "userHandleBase64": "dXNlci1oYW5kbGU=",
         "userHandleBase64Url": "dXNlci1oYW5kbGU",
         "userHandleHex": "757365722d68616e646c65"
@@ -1009,7 +1009,7 @@
     ],
     [
      "Content-Length",
-     "9676"
+     "9671"
     ],
     [
      "X-Content-Type-Options",
@@ -1061,7 +1061,7 @@
      }
     }
    ],
-   "bodySha256": "80de784f7978825dc59b7a74ed132101b390cb857c1c4fbc061a54a18045ca72",
+   "bodySha256": "15cc892bafd007fdf27788e117ab26025d6d8b64a59d890fb5ba1b0c8f286629",
    "body": {
     "actualResidentKey": true,
     "algo": "ES256 (ECDSA)",
@@ -1258,7 +1258,7 @@
      "attestationFormat": "none",
      "clientExtensionOutputs": {},
      "createdAt": 1790000000.0,
-     "credentialId": "O+aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU=",
+     "credentialId": "O-aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU",
      "credentialIdBase64Url": "O-aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU",
      "credentialIdHex": "3be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5",
      "displayName": "A. User",
@@ -1306,14 +1306,14 @@
       "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
       "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
      },
-     "publicKey": "pQECAyYgASFYIG+FF+DmUlPm46YMFIlpZ0u/THw1hNrPH/Mo7I8rcEUAIlggtcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg=",
+     "publicKey": "pQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
      "publicKeyAlgorithm": -7,
      "publicKeyBase64": "pQECAyYgASFYIG+FF+DmUlPm46YMFIlpZ0u/THw1hNrPH/Mo7I8rcEUAIlggtcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg=",
      "publicKeyBase64Url": "pQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
      "publicKeyCose": {
       "-1": 1,
-      "-2": "b4UX4OZSU+bjpgwUiWlnS79MfDWE2s8f8yjsjytwRQA=",
-      "-3": "tcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg=",
+      "-2": "b4UX4OZSU-bjpgwUiWlnS79MfDWE2s8f8yjsjytwRQA",
+      "-3": "tcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
       "1": 2,
       "3": -7
      },
@@ -1352,7 +1352,7 @@
      "signCount": 0,
      "storageId": "O-aakOAtlR6RWHdApN4rXqGK::1a0c4506c00::65bb1f918a5843eaa4a40336688b7e69",
      "type": "advanced",
-     "userHandle": "dXNlci1oYW5kbGU=",
+     "userHandle": "dXNlci1oYW5kbGU",
      "userHandleBase64": "dXNlci1oYW5kbGU=",
      "userHandleBase64Url": "dXNlci1oYW5kbGU",
      "userHandleHex": "757365722d68616e646c65",
@@ -1362,7 +1362,7 @@
    "stored": [
     {
      "file": "artifacts/RCwQ_e2mdacpbW9TWRyln6Yfq7alEzciAIw_aJmbqK8/3175a16ee727e093aef7ed1c0312a0e0a08ab32b419fc170e1eb25fc0c183037.json",
-     "sha256": "beb7a60e82d02cb3e135dc447b9b39262f39ddd67a4aedc70a5571af35d4221b",
+     "sha256": "dff037479910f09e2e0a9985edb39c3f19748b25403e0de5e6c060d2c23867bb",
      "content": {
       "storageId": "O-aakOAtlR6RWHdApN4rXqGK::1a0c4506c00::65bb1f918a5843eaa4a40336688b7e69",
       "createdAt": 1790000000.0,
@@ -1375,22 +1375,22 @@
         "displayName": "A. User",
         "residentKey": false,
         "largeBlob": false,
-        "credentialId": "O+aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU=",
+        "credentialId": "O-aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU",
         "credentialIdBase64Url": "O-aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU",
         "credentialIdHex": "3be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5",
         "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
         "aaguidHex": "00000000000000000000000000000000",
         "aaguidGuid": "00000000-0000-0000-0000-000000000000",
         "publicKeyAlgorithm": -7,
-        "publicKey": "pQECAyYgASFYIG+FF+DmUlPm46YMFIlpZ0u/THw1hNrPH/Mo7I8rcEUAIlggtcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg=",
+        "publicKey": "pQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
         "publicKeyBase64": "pQECAyYgASFYIG+FF+DmUlPm46YMFIlpZ0u/THw1hNrPH/Mo7I8rcEUAIlggtcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg=",
         "publicKeyBase64Url": "pQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
         "publicKeyCose": {
          "1": 2,
          "3": -7,
          "-1": 1,
-         "-2": "b4UX4OZSU+bjpgwUiWlnS79MfDWE2s8f8yjsjytwRQA=",
-         "-3": "tcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg="
+         "-2": "b4UX4OZSU-bjpgwUiWlnS79MfDWE2s8f8yjsjytwRQA",
+         "-3": "tcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg"
         },
         "publicKeyType": 2,
         "signCount": 0,
@@ -1606,7 +1606,7 @@
          },
          "type": "public-key"
         },
-        "userHandle": "dXNlci1oYW5kbGU=",
+        "userHandle": "dXNlci1oYW5kbGU",
         "userHandleBase64": "dXNlci1oYW5kbGU=",
         "userHandleBase64Url": "dXNlci1oYW5kbGU",
         "userHandleHex": "757365722d68616e646c65"
@@ -2364,7 +2364,7 @@
     ],
     [
      "Content-Length",
-     "9836"
+     "9831"
     ],
     [
      "X-Content-Type-Options",
@@ -2416,7 +2416,7 @@
      }
     }
    ],
-   "bodySha256": "18f5b44d648e9435e3afd8c90cb7ce0579fbfe690fa82602dbed99d34abd8107",
+   "bodySha256": "64ab1c3246907c07efd7fe753b32bffe3af9326aa0229287eebd33115a23130c",
    "body": {
     "actualResidentKey": true,
     "algo": "ES256 (ECDSA)",
@@ -2623,7 +2623,7 @@
      "attestationFormat": "none",
      "clientExtensionOutputs": {},
      "createdAt": 1790000000.0,
-     "credentialId": "O+aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU=",
+     "credentialId": "O-aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU",
      "credentialIdBase64Url": "O-aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU",
      "credentialIdHex": "3be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5",
      "displayName": "A. User",
@@ -2673,14 +2673,14 @@
       "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
       "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
      },
-     "publicKey": "pQECAyYgASFYIG+FF+DmUlPm46YMFIlpZ0u/THw1hNrPH/Mo7I8rcEUAIlggtcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg=",
+     "publicKey": "pQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
      "publicKeyAlgorithm": -7,
      "publicKeyBase64": "pQECAyYgASFYIG+FF+DmUlPm46YMFIlpZ0u/THw1hNrPH/Mo7I8rcEUAIlggtcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg=",
      "publicKeyBase64Url": "pQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
      "publicKeyCose": {
       "-1": 1,
-      "-2": "b4UX4OZSU+bjpgwUiWlnS79MfDWE2s8f8yjsjytwRQA=",
-      "-3": "tcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg=",
+      "-2": "b4UX4OZSU-bjpgwUiWlnS79MfDWE2s8f8yjsjytwRQA",
+      "-3": "tcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
       "1": 2,
       "3": -7
      },
@@ -2719,7 +2719,7 @@
      "signCount": 0,
      "storageId": "O-aakOAtlR6RWHdApN4rXqGK::1a0c4506c00::f86a88600dee46a3bfe2b6122d09b5d5",
      "type": "advanced",
-     "userHandle": "dXNlci1oYW5kbGU=",
+     "userHandle": "dXNlci1oYW5kbGU",
      "userHandleBase64": "dXNlci1oYW5kbGU=",
      "userHandleBase64Url": "dXNlci1oYW5kbGU",
      "userHandleHex": "757365722d68616e646c65",
@@ -2729,7 +2729,7 @@
    "stored": [
     {
      "file": "artifacts/RCwQ_e2mdacpbW9TWRyln6Yfq7alEzciAIw_aJmbqK8/18d9a8fd4a5f0233b08a7bb809aa4f6219dad83169dd03676b85c9781de9cc93.json",
-     "sha256": "4a0b4a042f6b4e3756a08aef9e31603ee6e836887c8e503e0c5f6da8f83fbe51",
+     "sha256": "0fa6a4e2b99fee15e2a1421687aea51b42fafb95554e6c262b7d3c7eb5a2def4",
      "content": {
       "storageId": "O-aakOAtlR6RWHdApN4rXqGK::1a0c4506c00::f86a88600dee46a3bfe2b6122d09b5d5",
       "createdAt": 1790000000.0,
@@ -2742,22 +2742,22 @@
         "displayName": "A. User",
         "residentKey": false,
         "largeBlob": false,
-        "credentialId": "O+aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU=",
+        "credentialId": "O-aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU",
         "credentialIdBase64Url": "O-aakOAtlR6RWHdApN4rXqGKPpDGxadSbYehdpbcsNU",
         "credentialIdHex": "3be69a90e02d951e91587740a4de2b5ea18a3e90c6c5a7526d87a17696dcb0d5",
         "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
         "aaguidHex": "00000000000000000000000000000000",
         "aaguidGuid": "00000000-0000-0000-0000-000000000000",
         "publicKeyAlgorithm": -7,
-        "publicKey": "pQECAyYgASFYIG+FF+DmUlPm46YMFIlpZ0u/THw1hNrPH/Mo7I8rcEUAIlggtcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg=",
+        "publicKey": "pQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
         "publicKeyBase64": "pQECAyYgASFYIG+FF+DmUlPm46YMFIlpZ0u/THw1hNrPH/Mo7I8rcEUAIlggtcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg=",
         "publicKeyBase64Url": "pQECAyYgASFYIG-FF-DmUlPm46YMFIlpZ0u_THw1hNrPH_Mo7I8rcEUAIlggtcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg",
         "publicKeyCose": {
          "1": 2,
          "3": -7,
          "-1": 1,
-         "-2": "b4UX4OZSU+bjpgwUiWlnS79MfDWE2s8f8yjsjytwRQA=",
-         "-3": "tcNTROm/q4sWm8RWSjM/B4gwuocGQU4pxrBgd1hR3kg="
+         "-2": "b4UX4OZSU-bjpgwUiWlnS79MfDWE2s8f8yjsjytwRQA",
+         "-3": "tcNTROm_q4sWm8RWSjM_B4gwuocGQU4pxrBgd1hR3kg"
         },
         "publicKeyType": 2,
         "signCount": 0,
@@ -2981,7 +2981,7 @@
          },
          "type": "public-key"
         },
-        "userHandle": "dXNlci1oYW5kbGU=",
+        "userHandle": "dXNlci1oYW5kbGU",
         "userHandleBase64": "dXNlci1oYW5kbGU=",
         "userHandleBase64Url": "dXNlci1oYW5kbGU",
         "userHandleHex": "757365722d68616e646c65"

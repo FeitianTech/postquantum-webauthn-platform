@@ -33,8 +33,9 @@ prefix) can change the reading of a string, so ``allow_separators`` defaults to
 Encoding
 --------
 ``base64url`` output is **unpadded** (the WebAuthn wire convention).
-``base64`` output is **padded** standard base64, and is only used where a
-consumer genuinely requires it -- see ``storage.convert_bytes_for_json``.
+``base64`` output is **padded** standard base64, and is only used for a field
+whose name says so (``derBase64``, ``publicKeyBase64``, the codec's ``base64``
+views); every other byte field in an API response is base64url.
 """
 from __future__ import annotations
 

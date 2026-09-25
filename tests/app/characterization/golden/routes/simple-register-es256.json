@@ -220,7 +220,7 @@
     ],
     [
      "Content-Length",
-     "12529"
+     "12524"
     ],
     [
      "X-Content-Type-Options",
@@ -272,7 +272,7 @@
      }
     }
    ],
-   "bodySha256": "33615b242785594def71b4ddf3d7c257f24f930bdf7e6cb5c9392835f938c405",
+   "bodySha256": "e343b97a4aa2d471fc4b53de5b3bab446559913ac1f81090c25fd1c818aa4118",
    "body": {
     "actualResidentKey": false,
     "algo": "ES256 (ECDSA)",
@@ -412,7 +412,7 @@
      "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiazM1LUQ2d0V0b3VxUS1aeHhvSjA1NnFqWXN6anR4aEl3Rk90NklJWWhodyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
      "clientExtensionOutputs": {},
      "createdAt": 1790000000.0,
-     "credentialId": "t0QZievwTqmQrciJwJ+SL9RtBhRiQAlGJwrOmUt4C8I=",
+     "credentialId": "t0QZievwTqmQrciJwJ-SL9RtBhRiQAlGJwrOmUt4C8I",
      "credentialIdBase64Url": "t0QZievwTqmQrciJwJ-SL9RtBhRiQAlGJwrOmUt4C8I",
      "credentialIdHex": "b7441989ebf04ea990adc889c09f922fd46d061462400946270ace994b780bc2",
      "displayName": "user@example.com",
@@ -502,13 +502,13 @@
       "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
       "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
      },
-     "publicKey": "pQECAyYgASFYIPDte+PayVxRRiRWM2MbJGm8Xoc9mWIcRP91SxI3Nky3IlggnDCAjTfqetN+WL7xzeN1aOWECKdsq7aX4wvHzQTJq5w=",
+     "publicKey": "pQECAyYgASFYIPDte-PayVxRRiRWM2MbJGm8Xoc9mWIcRP91SxI3Nky3IlggnDCAjTfqetN-WL7xzeN1aOWECKdsq7aX4wvHzQTJq5w",
      "publicKeyAlgorithm": -7,
      "publicKeyBase64Url": "pQECAyYgASFYIPDte-PayVxRRiRWM2MbJGm8Xoc9mWIcRP91SxI3Nky3IlggnDCAjTfqetN-WL7xzeN1aOWECKdsq7aX4wvHzQTJq5w",
-     "publicKeyBytes": "pQECAyYgASFYIPDte+PayVxRRiRWM2MbJGm8Xoc9mWIcRP91SxI3Nky3IlggnDCAjTfqetN+WL7xzeN1aOWECKdsq7aX4wvHzQTJq5w=",
+     "publicKeyBytes": "pQECAyYgASFYIPDte-PayVxRRiRWM2MbJGm8Xoc9mWIcRP91SxI3Nky3IlggnDCAjTfqetN-WL7xzeN1aOWECKdsq7aX4wvHzQTJq5w",
      "publicKeyCose": {
-      "-3": "nDCAjTfqetN+WL7xzeN1aOWECKdsq7aX4wvHzQTJq5w=",
-      "-2": "8O1749rJXFFGJFYzYxskabxehz2ZYhxE/3VLEjc2TLc=",
+      "-3": "nDCAjTfqetN-WL7xzeN1aOWECKdsq7aX4wvHzQTJq5w",
+      "-2": "8O1749rJXFFGJFYzYxskabxehz2ZYhxE_3VLEjc2TLc",
       "-1": 1,
       "1": 2,
       "3": -7

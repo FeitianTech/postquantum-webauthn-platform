@@ -544,7 +544,7 @@
     ],
     [
      "Content-Length",
-     "9759"
+     "9754"
     ],
     [
      "X-Content-Type-Options",
@@ -596,7 +596,7 @@
      }
     }
    ],
-   "bodySha256": "ca04567d3f9022bed41fb2a5c95ac4fedd96869c2747e5d3b43a2bcaecaf82f9",
+   "bodySha256": "ed9fc66bfff2c0d8e2bc76e78d9020941453736f83f775bd7e4aeaab5ac03cc9",
    "body": {
     "actualResidentKey": true,
     "algo": "ES256 (ECDSA)",
@@ -796,7 +796,7 @@
      "authenticatorAttachment": "platform",
      "clientExtensionOutputs": {},
      "createdAt": 1790000000.0,
-     "credentialId": "LrxwznWkjGWGsqdKfSkzMbKZbAzQNtVfd2FL5lX1zMM=",
+     "credentialId": "LrxwznWkjGWGsqdKfSkzMbKZbAzQNtVfd2FL5lX1zMM",
      "credentialIdBase64Url": "LrxwznWkjGWGsqdKfSkzMbKZbAzQNtVfd2FL5lX1zMM",
      "credentialIdHex": "2ebc70ce75a48c6586b2a74a7d293331b2996c0cd036d55f77614be655f5ccc3",
      "displayName": "A. User",
@@ -848,14 +848,14 @@
       "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
       "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
      },
-     "publicKey": "pQECAyYgASFYIBMCAIE5S9wzWpJgEIP6eU05/aBdZM6+M/+Y0AMOwZIVIlggE900EpIcKua19XpJYv69AVmOX1cRqG52IUKa/zQJr/k=",
+     "publicKey": "pQECAyYgASFYIBMCAIE5S9wzWpJgEIP6eU05_aBdZM6-M_-Y0AMOwZIVIlggE900EpIcKua19XpJYv69AVmOX1cRqG52IUKa_zQJr_k",
      "publicKeyAlgorithm": -7,
      "publicKeyBase64": "pQECAyYgASFYIBMCAIE5S9wzWpJgEIP6eU05/aBdZM6+M/+Y0AMOwZIVIlggE900EpIcKua19XpJYv69AVmOX1cRqG52IUKa/zQJr/k=",
      "publicKeyBase64Url": "pQECAyYgASFYIBMCAIE5S9wzWpJgEIP6eU05_aBdZM6-M_-Y0AMOwZIVIlggE900EpIcKua19XpJYv69AVmOX1cRqG52IUKa_zQJr_k",
      "publicKeyCose": {
       "-1": 1,
-      "-2": "EwIAgTlL3DNakmAQg/p5TTn9oF1kzr4z/5jQAw7BkhU=",
-      "-3": "E900EpIcKua19XpJYv69AVmOX1cRqG52IUKa/zQJr/k=",
+      "-2": "EwIAgTlL3DNakmAQg_p5TTn9oF1kzr4z_5jQAw7BkhU",
+      "-3": "E900EpIcKua19XpJYv69AVmOX1cRqG52IUKa_zQJr_k",
       "1": 2,
       "3": -7
      },
@@ -894,7 +894,7 @@
      "signCount": 0,
      "storageId": "LrxwznWkjGWGsqdKfSkzMbKZ::1a0c4506c00::613322c0f3aa4961a148ca72349f3cf7",
      "type": "advanced",
-     "userHandle": "dXNlci1oYW5kbGU=",
+     "userHandle": "dXNlci1oYW5kbGU",
      "userHandleBase64": "dXNlci1oYW5kbGU=",
      "userHandleBase64Url": "dXNlci1oYW5kbGU",
      "userHandleHex": "757365722d68616e646c65",
@@ -904,7 +904,7 @@
    "stored": [
     {
      "file": "artifacts/kpRg_O2-4WdYcMXuIeaPyooYbOoV_G8vL7e8g5UpjfY/cc157796b1ece2328cad0b96a1928c99b329a778cd5d4774bf3deb7aef3bcdf8.json",
-     "sha256": "0a2dcfa07db6f256438ce3049134805f04cb58581be42059ab2bcbef66f63dc9",
+     "sha256": "d9b8c3993bb82208d9a92545ee269d430f2ea295bec5476b3c25ea660ad35c65",
      "content": {
       "storageId": "LrxwznWkjGWGsqdKfSkzMbKZ::1a0c4506c00::613322c0f3aa4961a148ca72349f3cf7",
       "createdAt": 1790000000.0,
@@ -918,22 +918,22 @@
         "residentKey": false,
         "largeBlob": false,
         "authenticatorAttachment": "platform",
-        "credentialId": "LrxwznWkjGWGsqdKfSkzMbKZbAzQNtVfd2FL5lX1zMM=",
+        "credentialId": "LrxwznWkjGWGsqdKfSkzMbKZbAzQNtVfd2FL5lX1zMM",
         "credentialIdBase64Url": "LrxwznWkjGWGsqdKfSkzMbKZbAzQNtVfd2FL5lX1zMM",
         "credentialIdHex": "2ebc70ce75a48c6586b2a74a7d293331b2996c0cd036d55f77614be655f5ccc3",
         "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
         "aaguidHex": "00000000000000000000000000000000",
         "aaguidGuid": "00000000-0000-0000-0000-000000000000",
         "publicKeyAlgorithm": -7,
-        "publicKey": "pQECAyYgASFYIBMCAIE5S9wzWpJgEIP6eU05/aBdZM6+M/+Y0AMOwZIVIlggE900EpIcKua19XpJYv69AVmOX1cRqG52IUKa/zQJr/k=",
+        "publicKey": "pQECAyYgASFYIBMCAIE5S9wzWpJgEIP6eU05_aBdZM6-M_-Y0AMOwZIVIlggE900EpIcKua19XpJYv69AVmOX1cRqG52IUKa_zQJr_k",
         "publicKeyBase64": "pQECAyYgASFYIBMCAIE5S9wzWpJgEIP6eU05/aBdZM6+M/+Y0AMOwZIVIlggE900EpIcKua19XpJYv69AVmOX1cRqG52IUKa/zQJr/k=",
         "publicKeyBase64Url": "pQECAyYgASFYIBMCAIE5S9wzWpJgEIP6eU05_aBdZM6-M_-Y0AMOwZIVIlggE900EpIcKua19XpJYv69AVmOX1cRqG52IUKa_zQJr_k",
         "publicKeyCose": {
          "1": 2,
          "3": -7,
          "-1": 1,
-         "-2": "EwIAgTlL3DNakmAQg/p5TTn9oF1kzr4z/5jQAw7BkhU=",
-         "-3": "E900EpIcKua19XpJYv69AVmOX1cRqG52IUKa/zQJr/k="
+         "-2": "EwIAgTlL3DNakmAQg_p5TTn9oF1kzr4z_5jQAw7BkhU",
+         "-3": "E900EpIcKua19XpJYv69AVmOX1cRqG52IUKa_zQJr_k"
         },
         "publicKeyType": 2,
         "signCount": 0,
@@ -1154,7 +1154,7 @@
          },
          "type": "public-key"
         },
-        "userHandle": "dXNlci1oYW5kbGU=",
+        "userHandle": "dXNlci1oYW5kbGU",
         "userHandleBase64": "dXNlci1oYW5kbGU=",
         "userHandleBase64Url": "dXNlci1oYW5kbGU",
         "userHandleHex": "757365722d68616e646c65"

@@ -126,7 +126,7 @@
     ],
     [
      "Content-Length",
-     "9673"
+     "9668"
     ],
     [
      "X-Content-Type-Options",
@@ -178,7 +178,7 @@
      }
     }
    ],
-   "bodySha256": "8dfa68bfeb5b5f4abceb0cdb88de56292c5e9d410233947baf507aecf50c9729",
+   "bodySha256": "81612331c5652e97417160641e4d84ff5d1bb9253e9f59dff3826bee118ccf54",
    "body": {
     "actualResidentKey": true,
     "algo": "ES256 (ECDSA)",
@@ -375,7 +375,7 @@
      "attestationFormat": "none",
      "clientExtensionOutputs": {},
      "createdAt": 1790000000.0,
-     "credentialId": "THBi3GyG+MexchMynbz3x5NvGe5iGSPJDYpBGvL7i9Y=",
+     "credentialId": "THBi3GyG-MexchMynbz3x5NvGe5iGSPJDYpBGvL7i9Y",
      "credentialIdBase64Url": "THBi3GyG-MexchMynbz3x5NvGe5iGSPJDYpBGvL7i9Y",
      "credentialIdHex": "4c7062dc6c86f8c7b17213329dbcf7c7936f19ee621923c90d8a411af2fb8bd6",
      "displayName": "A. User",
@@ -423,14 +423,14 @@
       "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
       "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
      },
-     "publicKey": "pQECAyYgASFYIDMAqV/ceu7i7Gw9sutq4PjEPKbbjqmToYzZWR03vPwCIlggivkDu6wVP/oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg=",
+     "publicKey": "pQECAyYgASFYIDMAqV_ceu7i7Gw9sutq4PjEPKbbjqmToYzZWR03vPwCIlggivkDu6wVP_oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg",
      "publicKeyAlgorithm": -7,
      "publicKeyBase64": "pQECAyYgASFYIDMAqV/ceu7i7Gw9sutq4PjEPKbbjqmToYzZWR03vPwCIlggivkDu6wVP/oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg=",
      "publicKeyBase64Url": "pQECAyYgASFYIDMAqV_ceu7i7Gw9sutq4PjEPKbbjqmToYzZWR03vPwCIlggivkDu6wVP_oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg",
      "publicKeyCose": {
       "-1": 1,
-      "-2": "MwCpX9x67uLsbD2y62rg+MQ8ptuOqZOhjNlZHTe8/AI=",
-      "-3": "ivkDu6wVP/oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg=",
+      "-2": "MwCpX9x67uLsbD2y62rg-MQ8ptuOqZOhjNlZHTe8_AI",
+      "-3": "ivkDu6wVP_oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg",
       "1": 2,
       "3": -7
      },
@@ -469,7 +469,7 @@
      "signCount": 7,
      "storageId": "THBi3GyG-MexchMynbz3x5Nv::1a0c4506c00::abb1b052d88044e486bb1446aa6a1e87",
      "type": "advanced",
-     "userHandle": "dXNlci1oYW5kbGU=",
+     "userHandle": "dXNlci1oYW5kbGU",
      "userHandleBase64": "dXNlci1oYW5kbGU=",
      "userHandleBase64Url": "dXNlci1oYW5kbGU",
      "userHandleHex": "757365722d68616e646c65",
@@ -479,7 +479,7 @@
    "stored": [
     {
      "file": "artifacts/szCDHLxETTCKJ8LLZMt8h4oRkUkXqEH-veDgEl9PHMI/8cedae684cc0008b408c5da52374f9d489ef8111f09983afd2201521ec297c09.json",
-     "sha256": "7a0d267e847ebcd7443018454d7c77795b71f092c4bc8337e6a29cf409663ee7",
+     "sha256": "0fa27f012a7df9a01ce345b00364269a9855467fbca8320d48a29d468142e02f",
      "content": {
       "storageId": "THBi3GyG-MexchMynbz3x5Nv::1a0c4506c00::abb1b052d88044e486bb1446aa6a1e87",
       "createdAt": 1790000000.0,
@@ -492,22 +492,22 @@
         "displayName": "A. User",
         "residentKey": false,
         "largeBlob": false,
-        "credentialId": "THBi3GyG+MexchMynbz3x5NvGe5iGSPJDYpBGvL7i9Y=",
+        "credentialId": "THBi3GyG-MexchMynbz3x5NvGe5iGSPJDYpBGvL7i9Y",
         "credentialIdBase64Url": "THBi3GyG-MexchMynbz3x5NvGe5iGSPJDYpBGvL7i9Y",
         "credentialIdHex": "4c7062dc6c86f8c7b17213329dbcf7c7936f19ee621923c90d8a411af2fb8bd6",
         "aaguid": "ABEiM0RVZneImaq7zN3u_w",
         "aaguidHex": "00112233445566778899aabbccddeeff",
         "aaguidGuid": "00112233-4455-6677-8899-aabbccddeeff",
         "publicKeyAlgorithm": -7,
-        "publicKey": "pQECAyYgASFYIDMAqV/ceu7i7Gw9sutq4PjEPKbbjqmToYzZWR03vPwCIlggivkDu6wVP/oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg=",
+        "publicKey": "pQECAyYgASFYIDMAqV_ceu7i7Gw9sutq4PjEPKbbjqmToYzZWR03vPwCIlggivkDu6wVP_oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg",
         "publicKeyBase64": "pQECAyYgASFYIDMAqV/ceu7i7Gw9sutq4PjEPKbbjqmToYzZWR03vPwCIlggivkDu6wVP/oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg=",
         "publicKeyBase64Url": "pQECAyYgASFYIDMAqV_ceu7i7Gw9sutq4PjEPKbbjqmToYzZWR03vPwCIlggivkDu6wVP_oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg",
         "publicKeyCose": {
          "1": 2,
          "3": -7,
          "-1": 1,
-         "-2": "MwCpX9x67uLsbD2y62rg+MQ8ptuOqZOhjNlZHTe8/AI=",
-         "-3": "ivkDu6wVP/oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg="
+         "-2": "MwCpX9x67uLsbD2y62rg-MQ8ptuOqZOhjNlZHTe8_AI",
+         "-3": "ivkDu6wVP_oBEKxHEVurqEqp4Q7zkRyxRmqawViw2Lg"
         },
         "publicKeyType": 2,
         "signCount": 7,
@@ -723,7 +723,7 @@
          },
          "type": "public-key"
         },
-        "userHandle": "dXNlci1oYW5kbGU=",
+        "userHandle": "dXNlci1oYW5kbGU",
         "userHandleBase64": "dXNlci1oYW5kbGU=",
         "userHandleBase64Url": "dXNlci1oYW5kbGU",
         "userHandleHex": "757365722d68616e646c65"

@@ -573,24 +573,19 @@ def list_credentials(
 
 
 def convert_bytes_for_json(obj: Any) -> Any:
-    """Recursively convert bytes-like objects to base64 strings for JSON serialization.
+    """Recursively convert bytes-like objects to base64url strings for JSON serialization.
 
-    NOTE: this is the *API response* encoding, not the storage encoding, and it
-    deliberately stays standard base64 (``+``/``/``, padded) while the rest of
-    the server speaks base64url.
+    This is the *API response* encoding: unpadded base64url, like every byte field
+    the server sends. The frontend decodes these with the strict
+    ``base64UrlToBytes`` in ``frontend/static/scripts/shared/utils/base64.js``;
+    records a browser saved when this answered standard base64 are re-spelled
+    when they are read (``shared/storage/local/record-migration.js``), and the
+    server reads either spelling back (``routes/binary_helpers.py``).
 
-    The reason is the receiving end. ``base64ToHex`` and ``base64ToUint8Array``
-    in ``frontend/static/scripts/shared/utils/binary.js`` pass these values
-    straight to ``atob``, and ``atob`` throws on ``-``/``_``. Certificate
-    rendering (``advanced/credential-display/certificate-core.js``) and the
-    credential detail views (``advanced/credentials/utils.js``) both go through
-    those helpers, so switching this function alone would break them; the two
-    have to move together, and that is a frontend change.
-
-    The on-disk/GCS format uses unpadded base64url; see ``_encode_value``.
+    The on-disk/GCS format uses the same unpadded base64url; see ``_encode_value``.
     """
     if isinstance(obj, (bytes, bytearray, memoryview)):
-        return encoding.encode_base64(bytes(obj))
+        return encoding.encode_base64url(bytes(obj))
     if isinstance(obj, dict):
         return {k: convert_bytes_for_json(v) for k, v in obj.items()}
     if isinstance(obj, list):
