@@ -3,7 +3,9 @@
 WebAuthn L3 section 8.5: attStmt.response is the UTF-8 result of SafetyNet's
 getJwsResult(), a JWS in compact serialization (RFC 7515 section 7.1):
 BASE64URL(header) "." BASE64URL(payload) "." BASE64URL(signature). The header
-and payload are decoded as JSON, the header's x5c certificates (base64 DER,
+and payload are decoded as JSON (``json_input``: a repeated key is listed in
+the part's ``findings``, and ``interpretations`` reports it where the response
+is), the header's x5c certificates (base64 DER,
 RFC 7515 section 4.1.6) as X.509 with ``cryptography``; the signature is shown
 as bytes. None of it is verified: not the signature, not its chain to
 attest.android.com, not the nonce, not ctsProfileMatch. And the format is
@@ -16,7 +18,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from ... import encoding
-from . import certificate_summary
+from . import certificate_summary, json_input
 
 NOT_VERIFIED = (
     "NOT VERIFIED: the JWS signature, its certificate chain, the nonce "
@@ -66,11 +68,14 @@ def _json_part(name: str, part: str) -> dict[str, Any]:
     if data is None:
         return {"error": f"the {name} part is not base64url"}
     try:
-        return {"json": json.loads(data.decode("utf-8"))}
+        value, findings = json_input.read_bytes(data)
     except UnicodeDecodeError as exc:
         return {"error": f"the {name} is not UTF-8 (at byte {exc.start})"}
+    except json_input.JsonConstantError as exc:
+        return {"error": f"the {name} is not JSON: {exc.reason} (at byte {exc.offset})", "text": data.decode("utf-8")}
     except json.JSONDecodeError as exc:
         return {"error": f"the {name} is not JSON: {exc.msg} at character {exc.pos}", "text": data.decode("utf-8")}
+    return {"json": value, "findings": findings} if findings else {"json": value}
 
 
 def _certificate(entry: Any) -> dict[str, Any]:

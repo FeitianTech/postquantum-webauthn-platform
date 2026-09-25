@@ -175,7 +175,34 @@ def _attestation(
                 "message": error["message"],
             }
         )
-    return findings
+    return findings + _safetynet_findings(view, statement_node)
+
+
+def _safetynet_findings(view: Mapping[str, Any], statement_node: Mapping[str, Any] | None) -> list[dict[str, Any]]:
+    """A key repeated in a SafetyNet JWS's header or payload, where the response holding it is in the input.
+
+    JSON gives no position, so each is placed at the response byte string, with a
+    path that goes on into the JWS part.
+    """
+
+    fields = view.get("fields") if isinstance(view.get("fields"), Mapping) else {}
+    response_view = fields.get("response")
+    member = authenticator_data_findings.member_node(statement_node, ("response",)) if statement_node else None
+    if not isinstance(response_view, Mapping) or member is None or member.get("indefinite"):
+        return []
+    located = []
+    for part, label in (("header", "JWS header"), ("payload", "JWS payload")):
+        section = response_view.get(part)
+        for finding in section.get("findings", []) if isinstance(section, Mapping) else []:
+            located.append(
+                {
+                    **finding,
+                    "offset": member["end"] - member["length"],
+                    "path": f"{member['path']}<{label}>{finding['path'].removeprefix('$')}",
+                    "source": f"SafetyNet {label}",
+                }
+            )
+    return located
 
 
 def _add_auth_data(
