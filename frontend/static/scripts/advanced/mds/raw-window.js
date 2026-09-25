@@ -1,3 +1,44 @@
+import { el } from '../../shared/ui/dom.js';
+
+// The popup is an about:blank document, so it shares this page's
+// Content-Security-Policy: its rules come from a stylesheet (no <style>, no style
+// attribute), and its document is built with DOM calls, never parsed from markup.
+const RAW_WINDOW_STYLESHEET = new URL('../../../styles/advanced/mds-raw-window.css', import.meta.url).href;
+
+function buildRawWindowDocument(doc, { titleText, subtitleText }) {
+    const subtitle = el('p', { attrs: { id: 'mds-raw-subtitle' }, text: subtitleText || '' });
+    subtitle.style.display = subtitleText ? '' : 'none';
+
+    // A document takes one root element, and replaceChildren checks that before it
+    // removes the old one, so the old root goes first.
+    doc.documentElement?.remove();
+    doc.append(
+        el('html', { attrs: { lang: 'en' } },
+            el('head', {},
+                el('title', { text: titleText }),
+                el('link', { attrs: { rel: 'stylesheet', href: RAW_WINDOW_STYLESHEET } }),
+            ),
+            el('body', {},
+                el('div', { className: 'raw-window' },
+                    el('header', {},
+                        el('h1', { attrs: { id: 'mds-raw-title' }, text: titleText }),
+                        subtitle,
+                    ),
+                    el('textarea', {
+                        attrs: {
+                            id: 'mds-raw-textarea',
+                            readonly: true,
+                            spellcheck: 'false',
+                            wrap: 'off',
+                            'aria-label': 'Raw authenticator metadata',
+                        },
+                    }),
+                ),
+            ),
+        ),
+    );
+}
+
 export function openAuthenticatorRawWindow({
     state,
     formatDetailSubtitle,
@@ -68,90 +109,10 @@ export function openAuthenticatorRawWindow({
     const titleText = titleParts.join(' – ');
     const subtitleText = formatDetailSubtitle(entry);
 
-    const template = `<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Authenticator Raw Data</title>
-    <style>
-        :root { color-scheme: light; }
-        body {
-            margin: 0;
-            font-family: 'SFMono-Regular', 'JetBrains Mono', 'Fira Code', monospace;
-            background: #f4f7fb;
-            color: #0f2740;
-        }
-        .raw-window {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-        header {
-            padding: 1rem 1.5rem;
-            background: #ffffff;
-            border-bottom: 1px solid rgba(15, 39, 64, 0.12);
-        }
-        h1 {
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 700;
-        }
-        p {
-            margin: 0.35rem 0 0;
-            font-size: 0.85rem;
-            color: #48607a;
-        }
-        textarea {
-            flex: 1;
-            width: 100%;
-            border: none;
-            resize: none;
-            padding: 1.25rem;
-            background: #ffffff;
-            font-family: 'SFMono-Regular', 'JetBrains Mono', 'Fira Code', monospace;
-            font-size: 0.85rem;
-            line-height: 1.5;
-            color: inherit;
-            box-sizing: border-box;
-            outline: none;
-        }
-        textarea:focus {
-            outline: none;
-        }
-    </style>
-</head>
-<body>
-    <div class="raw-window">
-        <header>
-            <h1 id="mds-raw-title">Authenticator Raw Data</h1>
-            <p id="mds-raw-subtitle" style="display: none;"></p>
-        </header>
-        <textarea id="mds-raw-textarea" readonly spellcheck="false" wrap="off" aria-label="Raw authenticator metadata"></textarea>
-    </div>
-</body>
-</html>`;
-
+    // Discards what the popup held, as before; neither call parses markup.
     doc.open();
-    doc.write(template);
     doc.close();
-
-    doc.title = titleText;
-
-    const titleEl = doc.getElementById('mds-raw-title');
-    if (titleEl) {
-        titleEl.textContent = titleText;
-    }
-
-    const subtitleEl = doc.getElementById('mds-raw-subtitle');
-    if (subtitleEl) {
-        if (subtitleText) {
-            subtitleEl.textContent = subtitleText;
-            subtitleEl.style.display = '';
-        } else {
-            subtitleEl.textContent = '';
-            subtitleEl.style.display = 'none';
-        }
-    }
+    buildRawWindowDocument(doc, { titleText, subtitleText });
 
     const textarea = doc.getElementById('mds-raw-textarea');
     if (textarea) {

@@ -1,0 +1,55 @@
+/* The authenticator raw-data popup (scripts/advanced/mds/raw-window.js). The
+   popup is an about:blank document that shares the page's CSP, whose style-src
+   has no 'unsafe-inline', so its rules live here rather than in a <style>. */
+
+:root { color-scheme: light; }
+
+body {
+    margin: 0;
+    font-family: 'SFMono-Regular', 'JetBrains Mono', 'Fira Code', monospace;
+    background: #f4f7fb;
+    color: #0f2740;
+}
+
+.raw-window {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+header {
+    padding: 1rem 1.5rem;
+    background: #ffffff;
+    border-bottom: 1px solid rgba(15, 39, 64, 0.12);
+}
+
+h1 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+p {
+    margin: 0.35rem 0 0;
+    font-size: 0.85rem;
+    color: #48607a;
+}
+
+textarea {
+    flex: 1;
+    width: 100%;
+    border: none;
+    resize: none;
+    padding: 1.25rem;
+    background: #ffffff;
+    font-family: 'SFMono-Regular', 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: inherit;
+    box-sizing: border-box;
+    outline: none;
+}
+
+textarea:focus {
+    outline: none;
+}
