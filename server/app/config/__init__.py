@@ -28,6 +28,7 @@ app, in the order ``factory.INIT_STEPS`` fixes.
 - ``origins``: the exact-origin allowlist and the origin helpers.
 - ``attestation_trust``: operator-trusted attestation CAs.
 - ``mds``: where the MDS snapshot and the session metadata live.
+- ``web_export``: where the new UI's static export is (``web/out``), served at ``/beta``.
 - ``relying_party``: the RP ID and name, and ``create_fido_server``.
 
 ``app`` is still an attribute of this package, for callers written against the
