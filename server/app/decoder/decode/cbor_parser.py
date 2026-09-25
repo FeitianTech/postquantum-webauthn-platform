@@ -22,6 +22,7 @@ from typing import Any
 
 from ...encoding import decode_hex, encode_base64
 from ...webauthn.attestation import encode_base64url
+from .. import edn
 
 # Deep enough for any WebAuthn or CTAP structure; shallow enough that hostile
 # input cannot exhaust the interpreter's recursion limit.
@@ -440,15 +441,28 @@ def _map_key(key_node: Mapping[str, Any]) -> Any:
     key = _structure_to_value(key_node)
     node_type = key_node.get("type")
     kind = _KEY_KINDS.get(node_type, node_type) if isinstance(node_type, str) else ""
+    # A NaN key is spelled by its bits: NaNs with different payloads are different keys.
+    if isinstance(key, CborDiagnostic) and key.diagnostic == "NaN":
+        return CborDiagnostic(_edn_or(key_node, "NaN"), kind)
     # Python folds 1 == 1.0 == True, three different CBOR keys, into one.
     if key is None or isinstance(key, (bool, float)):
         return CborDiagnostic(_diagnostic_value(key_node), kind)
     if isinstance(key, CborDiagnostic):
         return CborDiagnostic(key.diagnostic, kind)
-    # An array, map or tag key: spelled as before, and a key of its own type.
+    # An array, map or tag key: a key of its own type, spelled in EDN, which
+    # ``keys.read_json_key`` can read back.
     if isinstance(key, (list, dict)):
-        return CborDiagnostic(str(key), kind)
+        return CborDiagnostic(_edn_or(key_node, str(key)), kind)
     return key
+
+
+def _edn_or(node: Mapping[str, Any], fallback: str) -> str:
+    """``node`` in EDN, on one line; ``fallback`` for a node the lenient parser damaged."""
+
+    try:
+        return edn.spell(node, inline=True)
+    except (KeyError, TypeError, ValueError):
+        return fallback
 
 
 def _diagnostic_value(node: Mapping[str, Any]) -> str:
