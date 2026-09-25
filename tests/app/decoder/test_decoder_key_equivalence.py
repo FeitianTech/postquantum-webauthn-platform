@@ -106,3 +106,19 @@ def test_a_text_key_with_a_chunk_that_is_not_utf8_is_identified_by_its_bytes(hex
 
     assert result["data"]["decodedValue"] == decoded
     assert [finding["code"] for finding in result["findings"]].count("duplicate-map-key") == duplicates
+
+
+@pytest.mark.parametrize(
+    ("hex_text", "decoded"),
+    [
+        # (_ h'01', "a") and h'01': the text chunk is skipped, and the key keeps h'01'.
+        ("a2 5f 4101 6161 ff 01 4101 02", {"01": 2}),
+        # (_ "a", h'01') and "a": the byte-string chunk is skipped, and the key keeps "a".
+        ("a2 7f 6161 4101 ff 01 6161 02", {"a": 2}),
+    ],
+)
+def test_a_lenient_string_key_that_lost_a_chunk_is_the_key_of_what_it_kept(hex_text, decoded):
+    result = decode_payload_text(hex_text.replace(" ", ""), lenient=True)
+
+    assert result["data"]["decodedValue"] == decoded
+    assert [finding["code"] for finding in result["findings"]].count("duplicate-map-key") == 1
