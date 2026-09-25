@@ -8,9 +8,19 @@
 //
 // A table value is a function, called for a click, or an object with click,
 // mouseenter and mouseleave handlers. Each is called as handler(control, event)
-// and looked up when the event arrives.
+// and looked up when the event arrives. callWith() makes the usual handler: call
+// a function with some of the control's data-* values, and nothing else.
 
 const HOVER_EVENTS = ['mouseenter', 'mouseleave'];
+
+/**
+ * A handler that calls fn with the control's data-* values named by names, in
+ * order, and with nothing else: callWith(switchTab, 'tab') calls
+ * switchTab(control.dataset.tab), callWith(simpleRegister) calls simpleRegister().
+ */
+export function callWith(fn, ...names) {
+    return control => fn(...names.map(name => control.dataset[name]));
+}
 
 function handlerFor(table, name, type) {
     if (!name || !Object.hasOwn(table, name)) {

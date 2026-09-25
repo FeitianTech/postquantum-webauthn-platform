@@ -1,6 +1,6 @@
 import { state } from '../state.js';
 import { updateJsonEditor } from '../../advanced/editor/index.js';
-import { bindActions } from './actions.js';
+import { bindActions, callWith } from './actions.js';
 import { dismissAllTransientMessages } from './status.js';
 
 const HEADER_MOBILE_BREAKPOINT = 900;
@@ -284,8 +284,8 @@ export function toggleSection(sectionId, eventOrElement) {
 }
 
 export const navigationActions = {
-    'switch-tab': control => switchTab(control.dataset.tab),
-    'switch-sub-tab': control => switchSubTab(control.dataset.subTab),
+    'switch-tab': callWith(switchTab, 'tab'),
+    'switch-sub-tab': callWith(switchSubTab, 'subTab'),
 };
 
 // On the document: the sticky mini-header shows a copy of the top navigation
