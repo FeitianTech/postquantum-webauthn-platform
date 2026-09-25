@@ -1,7 +1,8 @@
 import {
-    base64ToBase64Url,
-    base64UrlToHex,
-} from '../../../shared/utils/binary.js';
+    base64UrlToBytes,
+    bytesToBase64,
+    bytesToBase64Url,
+} from '../../../shared/utils/base64.js';
 import {
     describeCoseAlgorithm,
     describeCoseKeyType,
@@ -30,25 +31,37 @@ function codeBlock(text) {
     return el('div', { className: 'credential-code-block', text });
 }
 
+function identifierRows(value) {
+    let bytes;
+    try {
+        bytes = base64UrlToBytes(value);
+    } catch (error) {
+        return [
+            codeBlock(value),
+            el('div', { style: 'font-style: italic; color: #6c757d;', text: 'Not valid base64url: shown as stored.' }),
+        ];
+    }
+    const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+    return [
+        el('div', {}, el('strong', { text: 'b64' })),
+        codeBlock(bytesToBase64(bytes)),
+        el('div', {}, el('strong', { text: 'b64u' })),
+        codeBlock(bytesToBase64Url(bytes)),
+        el('div', {}, el('strong', { text: 'hex' })),
+        codeBlock(hex),
+    ];
+}
+
+// An identifier the record keeps as base64url, shown in each spelling of its bytes.
 function buildEncodedIdentifierSection({
     title,
-    base64Value,
+    value,
 }) {
-    const encodedValue = base64ToBase64Url(base64Value);
-    const hexValue = base64UrlToHex(encodedValue);
-
     return el('div', { style: 'margin-top: 0.5rem;' },
         el('div', {}, el('strong', { text: title })),
         el('div', {
             style: "font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem; word-break: break-word; overflow-wrap: anywhere;",
-        },
-        el('div', {}, el('strong', { text: 'b64' })),
-        codeBlock(base64Value),
-        el('div', {}, el('strong', { text: 'b64u' })),
-        codeBlock(encodedValue),
-        el('div', {}, el('strong', { text: 'hex' })),
-        codeBlock(hexValue),
-        ),
+        }, identifierRows(value)),
     );
 }
 
@@ -61,10 +74,10 @@ export function buildUserInfoSection(cred, aaguidSection) {
             }),
         ),
         cred.userHandle
-            ? buildEncodedIdentifierSection({ title: 'User handle (User ID):', base64Value: cred.userHandle })
+            ? buildEncodedIdentifierSection({ title: 'User handle (User ID):', value: cred.userHandle })
             : null,
         cred.credentialId
-            ? buildEncodedIdentifierSection({ title: 'Credential ID:', base64Value: cred.credentialId })
+            ? buildEncodedIdentifierSection({ title: 'Credential ID:', value: cred.credentialId })
             : null,
         aaguidSection,
     );

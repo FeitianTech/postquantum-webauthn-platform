@@ -8,10 +8,17 @@ function identifierRows(section) {
 }
 
 describe('the credential ID shown in the detail view', () => {
-  it('shows the stored value under b64 as it is', () => {
+  it('shows each spelling of the bytes the stored base64url holds', () => {
     // The browser's credential.id, base64url, is what the advanced tab stores.
     const section = buildUserInfoSection({ userName: 'alice', credentialId: '-_8BAg' }, null);
 
-    expect(identifierRows(section)).toEqual({ b64: '-_8BAg', b64u: '-_8BAg', hex: 'fbff0102' });
+    expect(identifierRows(section)).toEqual({ b64: '+/8BAg==', b64u: '-_8BAg', hex: 'fbff0102' });
+  });
+
+  it('shows a value that is not base64url as stored, and says so', () => {
+    const section = buildUserInfoSection({ userName: 'alice', userHandle: '+/8BAg==' }, null);
+
+    expect(identifierRows(section).b64).toBe('+/8BAg==');
+    expect(section.textContent).toContain('Not valid base64url: shown as stored.');
   });
 });
