@@ -93,9 +93,6 @@ vi.mock('../../../../frontend/static/scripts/advanced/ui/display-utils.js', () =
   describeCoseAlgorithm: vi.fn((alg) => `ALG(${String(alg)})`),
   describeCoseKeyType: vi.fn((value) => `KEYTYPE(${String(value)})`),
   describeMldsaParameterSet: vi.fn(() => ''),
-  escapeHtml: vi.fn((value) => String(value || '').replaceAll('<', '&lt;').replaceAll('>', '&gt;')),
-  formatBoolean: vi.fn((value) => (value ? 'Yes' : 'No')),
-  renderAttestationResultRow: vi.fn((label, value, suffix = '') => `<div>${label}:${String(value)}${suffix}</div>`),
 }));
 
 vi.mock('../../../../frontend/static/scripts/advanced/credentials/utils.js', () => ({
