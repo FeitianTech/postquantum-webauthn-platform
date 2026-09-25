@@ -74,3 +74,18 @@ def test_each_pair_is_read_one_way_and_every_other_reading_is_named(name, text, 
         if finding["code"] == "ambiguous-input" and finding["alsoValidAs"] in others:
             assert finding["message"].startswith(f"the input is also {finding['alsoValidAs']}")
             assert finding["message"].endswith("which comes first in the decoder's order of readings (decode/ambiguous_input.py)")
+
+
+# {1: ["FIDO_2_0"], 3: aaguid, 5: 1200}, a getInfo response of 34 bytes; padded with zero bytes to 37,
+# after SUCCESS or with no CTAP byte, byte 32 (0x19, 0x04) has neither AT nor ED.
+_GET_INFO_34 = "a3" "018168" + b"FIDO_2_0".hex() + "0350" "2fc0579f811347eab116bb5a8db9202a" "051904b0"
+_PADDED_TO_37 = [("after SUCCESS", "00" + _GET_INFO_34 + "0000"), ("with no CTAP byte", _GET_INFO_34 + "000000")]
+
+
+@pytest.mark.parametrize(("name", "text"), _PADDED_TO_37, ids=[name for name, _text in _PADDED_TO_37])
+def test_a_ctap_message_padded_to_37_bytes_is_read_as_authenticator_data_without_a_word(name, text):
+    result = decode_payload_text(text)
+
+    assert len(bytes.fromhex(text)) == 37
+    assert result["type"] == "Authenticator data"
+    assert _named(result) == []
