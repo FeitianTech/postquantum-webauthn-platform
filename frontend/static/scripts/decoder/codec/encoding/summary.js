@@ -111,20 +111,18 @@ function encodedByteLength(summary) {
 /**
  * The encoded bytes an encoder answer holds: the section's label, the views and
  * the byte length (null when the summary gives none). Null when the answer has
- * no summary with a view to show.
+ * no summary.
  */
 export function describeEncodedOutput(data) {
     const summaryInfo = findEncodedSummary(data);
     if (!summaryInfo) {
         return null;
     }
-    const formats = listEncodedFormats(summaryInfo.summary);
-    if (formats.length === 0) {
-        return null;
-    }
+    // A summary is found by a hex, base64 or base64url that is not blank, so it
+    // always has a view to show.
     return {
-        label: summaryInfo.label || 'Encoded output',
-        formats,
+        label: summaryInfo.label,
+        formats: listEncodedFormats(summaryInfo.summary),
         byteLength: encodedByteLength(summaryInfo.summary),
     };
 }
