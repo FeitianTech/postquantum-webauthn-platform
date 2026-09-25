@@ -1,5 +1,4 @@
 import {state} from '../../shared/state.js';
-import {escapeHtml} from '../ui/display-utils.js';
 import {
     getCredentialIdHex,
     getCredentialUserHandleHex,
@@ -238,7 +237,6 @@ export function updateCredentialsDisplay() {
         clearCredentialFlashQueue,
         describeCredentialAlgorithmTag,
         deriveCredentialStatusIndicators,
-        escapeHtml,
         handleCredentialMdsClick,
         triggerCredentialFlash,
         showCredentialDetails,

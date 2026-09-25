@@ -1,3 +1,5 @@
+import {el} from '../../shared/ui/dom.js';
+
 export function updateAllowCredentialsDropdownRuntime(deps) {
     const {
         state,
@@ -146,6 +148,110 @@ function resolveCredentialAction(candidate, globalName) {
     return typeof globalCandidate === 'function' ? globalCandidate : null;
 }
 
+function statusColour(value) {
+    if (value === true) {
+        return '#11b66d';
+    }
+    if (value === false) {
+        return '#dc3545';
+    }
+    return '#6c757d';
+}
+
+function buildCredentialCard(cred, index, {
+    credentialIdHex,
+    featureLabels,
+    indicators,
+    deletionInProgress,
+    handleCredentialMdsClick,
+    removeCredential,
+    openCredentialDetails,
+}) {
+    const {
+        signatureStatus,
+        rootStatus,
+        rpidStatus,
+        aaguidStatus,
+        metadataAvailable,
+        aaguidGuid,
+    } = indicators;
+
+    const statusLine = el('div', { style: 'font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;' },
+        el('span', { style: `color: ${statusColour(signatureStatus)};`, text: 'Signature' }),
+        el('span', { style: `margin-left: 0.75rem; color: ${statusColour(rootStatus)};`, text: 'Root' }),
+        el('span', { style: `margin-left: 0.75rem; color: ${statusColour(rpidStatus)};`, text: 'RPID' }),
+        el('span', { style: `margin-left: 0.75rem; color: ${statusColour(aaguidStatus)};`, text: 'AAGUID' }),
+    );
+
+    const featureTags = featureLabels.length > 0
+        ? el('div', { className: 'credential-feature-tags' },
+            featureLabels.map(label => el('span', { className: 'credential-feature-tag', text: label })))
+        : null;
+
+    let mdsButton = null;
+    if (aaguidGuid && (rootStatus === true || metadataAvailable)) {
+        mdsButton = el('button', {
+            className: 'btn btn-small btn-secondary credential-mds-button',
+            attrs: { type: 'button', title: 'Open authenticator metadata' },
+            dataset: { aaguid: aaguidGuid.toLowerCase() },
+            text: 'FIDO MDS',
+        });
+        mdsButton.addEventListener('click', handleCredentialMdsClick);
+    }
+
+    const deleteButton = el('button', {
+        className: 'btn btn-small btn-danger credential-delete-button',
+        attrs: {
+            disabled: deletionInProgress,
+            'aria-disabled': deletionInProgress ? 'true' : null,
+        },
+        dataset: { credentialIndex: index },
+        text: 'Delete',
+    });
+    deleteButton.addEventListener('click', event => {
+        event.stopPropagation();
+        const deleteIndex = readCredentialIndex(deleteButton);
+        if (deleteIndex === null || !removeCredential) {
+            return;
+        }
+        removeCredential(deleteIndex);
+    });
+
+    const item = el('div', {
+        className: 'credential-item',
+        attrs: { role: 'button', tabindex: '0' },
+        dataset: {
+            credentialId: (credentialIdHex || '').toLowerCase(),
+            credentialIndex: index,
+        },
+    },
+    el('div', { style: 'flex: 1; min-width: 0;' },
+        el('div', {
+            style: 'font-weight: 600; color: #0f2740; font-size: 0.95rem; margin-bottom: 0.25rem;',
+            text: cred.userName || cred.username || cred.email || 'Unknown User',
+        }),
+        statusLine,
+        featureTags,
+    ),
+    el('div', { className: 'credential-item-actions' }, mdsButton, deleteButton),
+    );
+
+    if (openCredentialDetails) {
+        item.addEventListener('click', () => {
+            openCredentialDetails(index);
+        });
+        item.addEventListener('keydown', event => {
+            if (event.key !== 'Enter' && event.key !== ' ') {
+                return;
+            }
+            event.preventDefault();
+            openCredentialDetails(index);
+        });
+    }
+
+    return item;
+}
+
 export function updateCredentialsDisplayRuntime(deps) {
     const {
         state,
@@ -158,7 +264,6 @@ export function updateCredentialsDisplayRuntime(deps) {
         clearCredentialFlashQueue,
         describeCredentialAlgorithmTag,
         deriveCredentialStatusIndicators,
-        escapeHtml,
         handleCredentialMdsClick,
         triggerCredentialFlash,
         showCredentialDetails,
@@ -189,19 +294,16 @@ export function updateCredentialsDisplayRuntime(deps) {
         return;
     }
 
-    const emptyStateHtml = '<p style="color: #6c757d;">No credentials registered yet.</p>';
-
     if (!hasCredentials) {
         lists.forEach(list => {
-            list.innerHTML = emptyStateHtml;
+            list.replaceChildren(el('p', { style: 'color: #6c757d;', text: 'No credentials registered yet.' }));
         });
         clearCredentialFlashQueue();
         runPostUpdate();
         return;
     }
 
-    const itemsHtml = state.storedCredentials.map((cred, index) => {
-        const credentialIdHex = getCredentialIdHex(cred);
+    const cardInputs = state.storedCredentials.map(cred => {
         const featureLabels = [];
         const algorithmTag = describeCredentialAlgorithmTag(cred);
         if (algorithmTag) {
@@ -213,91 +315,22 @@ export function updateCredentialsDisplayRuntime(deps) {
         if (cred.largeBlob === true || cred.largeBlobSupported === true) {
             featureLabels.push('Large blob');
         }
-
-        const featureTagsHtml = featureLabels.length > 0
-            ? `<div class="credential-feature-tags">${featureLabels.map(label => `<span class="credential-feature-tag">${escapeHtml(label)}</span>`).join('')}</div>`
-            : '';
-
-        const {
-            signatureStatus,
-            rootStatus,
-            rpidStatus,
-            aaguidStatus,
-            metadataAvailable,
-            aaguidGuid,
-        } = deriveCredentialStatusIndicators(cred);
-
-        const pickStatusColor = value => {
-            if (value === true) {
-                return '#11b66d';
-            }
-            if (value === false) {
-                return '#dc3545';
-            }
-            return '#6c757d';
+        return {
+            credentialIdHex: getCredentialIdHex(cred),
+            featureLabels,
+            indicators: deriveCredentialStatusIndicators(cred),
         };
-        const signatureColor = pickStatusColor(signatureStatus);
-        const rootColor = pickStatusColor(rootStatus);
-        const rpidColor = pickStatusColor(rpidStatus);
-        const aaguidColor = pickStatusColor(aaguidStatus);
+    });
 
-        const mdsButtonHtml = (aaguidGuid && (rootStatus === true || metadataAvailable))
-            ? `<button type="button" class="btn btn-small btn-secondary credential-mds-button" data-aaguid="${escapeHtml(aaguidGuid.toLowerCase())}" title="Open authenticator metadata">FIDO MDS</button>`
-            : '';
-        const deleteButtonDisabledAttributes = deletionInProgress
-            ? ' disabled aria-disabled="true"'
-            : '';
-        const deleteButtonHtml = `<button class="btn btn-small btn-danger credential-delete-button"${deleteButtonDisabledAttributes} data-credential-index="${index}">Delete</button>`;
-        const actionsHtml = `<div class="credential-item-actions">${mdsButtonHtml}${deleteButtonHtml}</div>`;
-
-        return `
-        <div class="credential-item" data-credential-id="${escapeHtml((credentialIdHex || '').toLowerCase())}" data-credential-index="${index}" role="button" tabindex="0">
-            <div style="flex: 1; min-width: 0;">
-                <div style="font-weight: 600; color: #0f2740; font-size: 0.95rem; margin-bottom: 0.25rem;">${escapeHtml(cred.userName || cred.username || cred.email || 'Unknown User')}</div>
-                <div style="font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">
-                    <span style="color: ${signatureColor};">Signature</span>
-                    <span style="margin-left: 0.75rem; color: ${rootColor};">Root</span>
-                    <span style="margin-left: 0.75rem; color: ${rpidColor};">RPID</span>
-                    <span style="margin-left: 0.75rem; color: ${aaguidColor};">AAGUID</span>
-                </div>
-                ${featureTagsHtml}
-            </div>
-            ${actionsHtml}
-        </div>
-        `;
-    }).join('');
-
+    // Each list gets its own nodes: the same card cannot sit in two lists.
     lists.forEach(list => {
-        list.innerHTML = itemsHtml;
-        list.querySelectorAll('.credential-mds-button').forEach(button => {
-            button.addEventListener('click', handleCredentialMdsClick);
-        });
-        list.querySelectorAll('.credential-delete-button').forEach(button => {
-            button.addEventListener('click', event => {
-                event.stopPropagation();
-                const index = readCredentialIndex(button);
-                if (index === null || !removeCredential) {
-                    return;
-                }
-                removeCredential(index);
-            });
-        });
-        list.querySelectorAll('.credential-item').forEach(item => {
-            const index = readCredentialIndex(item);
-            if (index === null || !openCredentialDetails) {
-                return;
-            }
-            item.addEventListener('click', () => {
-                openCredentialDetails(index);
-            });
-            item.addEventListener('keydown', event => {
-                if (event.key !== 'Enter' && event.key !== ' ') {
-                    return;
-                }
-                event.preventDefault();
-                openCredentialDetails(index);
-            });
-        });
+        list.replaceChildren(...state.storedCredentials.map((cred, index) => buildCredentialCard(cred, index, {
+            ...cardInputs[index],
+            deletionInProgress,
+            handleCredentialMdsClick,
+            removeCredential,
+            openCredentialDetails,
+        })));
     });
 
     clearCredentialFlashQueue();

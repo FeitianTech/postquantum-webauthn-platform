@@ -24,12 +24,6 @@ _INSERT = re.compile(r"\binsertAdjacentHTML\s*\(")
 
 # (path under frontend/static/scripts, the right-hand side as written) -> reason.
 ALLOWED: dict[tuple[str, str], str] = {
-    ("advanced/credential-display/list-render.js", "emptyStateHtml"): (
-        "the cards' empty state, a constant string; goes when the cards are built as DOM"
-    ),
-    ("advanced/credential-display/list-render.js", "itemsHtml"): (
-        "the credential cards, stored values escaped one by one; goes when the cards are built as DOM"
-    ),
     ("advanced/credential-display/registration-compose-runtime.js", "bodyHtml"): (
         "the certificate and authenticator-data sub-modal, values escaped; goes when it is built as DOM"
     ),
