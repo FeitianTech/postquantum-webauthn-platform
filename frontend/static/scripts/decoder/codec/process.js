@@ -1,3 +1,4 @@
+import { FailedResponseError, readFailedResponse } from '../../shared/api/failed-response.js';
 import {
     hideProgress,
     hideStatus,
@@ -124,21 +125,15 @@ export async function processCodec(mode = getSelectedDecoderMode()) {
             body: JSON.stringify(body),
         });
 
+        if (!response.ok) {
+            throw new FailedResponseError(await readFailedResponse(response));
+        }
+
         let payload = null;
         try {
             payload = await response.json();
         } catch (parseError) {
-            if (!response.ok) {
-                throw new Error(`Server responded with status ${response.status}`);
-            }
             throw new Error('Failed to parse decoder response.');
-        }
-
-        if (!response.ok) {
-            const message = payload && payload.error
-                ? payload.error
-                : `Server responded with status ${response.status}`;
-            throw new Error(message);
         }
 
         if (summaryContainer) {

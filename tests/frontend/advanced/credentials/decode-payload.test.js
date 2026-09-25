@@ -17,7 +17,7 @@ describe('the decode request behind the registration details', () => {
   it('answering 400 with a JSON error', async () => {
     fetch.mockResolvedValueOnce(failedResponse(400, { error: 'The payload is not valid CBOR.' }));
 
-    await expect(decodePayloadThroughApi('AQID')).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: {"error":"The payload is not valid CBOR."}]`);
+    await expect(decodePayloadThroughApi('AQID')).rejects.toThrowErrorMatchingInlineSnapshot(`[FailedResponseError: The payload is not valid CBOR.]`);
   });
 
   it('answering 413', async () => {
@@ -25,6 +25,6 @@ describe('the decode request behind the registration details', () => {
       error: 'The request is larger than the limit of 8388608 bytes this server accepts.',
     }));
 
-    await expect(decodePayloadThroughApi('AQID')).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: {"error":"The request is larger than the limit of 8388608 bytes this server accepts."}]`);
+    await expect(decodePayloadThroughApi('AQID')).rejects.toThrowErrorMatchingInlineSnapshot(`[FailedResponseError: The request is larger than the limit of 8388608 bytes this server accepts. Send a smaller request.]`);
   });
 });
