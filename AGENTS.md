@@ -106,8 +106,9 @@ Main route modules:
   stages: `registration_record.py` builds the record (attestation summary, credential
   info, authenticator data, relying-party and debug views, stored credential) and
   `registration_persistence.py` saves it -- appending to the user's credential list by
-  compare-and-swap, retrying a lost race up to eight times, 409 after that -- then
-  updates the session list and the device log. `authentication.py` checks the
+  compare-and-swap, retrying a lost race up to eight times, 409 after that, and 503
+  when the stored list could not be read or did not decode -- then updates the
+  session list and the device log. `authentication.py` checks the
   signature counter against the larger of the stored and the browser's copy. It
   fails closed: stored records that could not be read reject the assertion with 503
   (the browser's copy alone can be omitted or lowered); records that were read but
@@ -151,7 +152,8 @@ Related backend modules:
   section at a time).
 - `server/app/webauthn/signature_algorithms.py`
   The one spelling of a certificate's signature algorithm (`ECDSA_SHA256`,
-  `ED25519_SHA512`), for the certificate view and the MDS explorer
+  `ED25519_SHA512`, `RSASSA-PSS_SHA256` with the hash from the PSS parameters,
+  `ECDSA_SHA3-256`, `ML-DSA-44` with no hash), for the certificate view and the MDS explorer
   (`mds_snapshot.py`) alike. A leaf outside the attestation package, whose
   `__init__` imports the whole stack: `tools/update_mds_snapshot.py` reaches it
   without Flask, which `tests/app/tooling/test_update_mds_snapshot.py` checks in a
@@ -180,12 +182,22 @@ Related backend modules:
   `iter_credentials` / `list_credentials` count it in their `undecodable` list. The
   first copy that exists is the user's: an older one never stands in for it.
   `read_for_update` refuses a current copy it cannot decode
-  (`credentials.CredentialsUndecodable`) rather than let the save replace it unread.
+  (`credentials.CredentialsUndecodable`) rather than let the save replace it unread,
+  and with no current copy it refuses a first legacy copy that does not decode: the
+  save would shadow it, and delete a session `.pkl`, unread.
   Credential artifacts (`server/app/credential_artifacts.py`) are kept per session
   on both backends (locally `<artifact dir>/<session>/`) and merge the same way:
-  conditional on the generation on GCS, under the record's `flock` locally. A merge
-  that cannot read the record refuses rather than overwrite it, and one whose write
-  raised is re-read: it counts as stored if the record holds every merged value.
+  conditional on the generation on GCS, under the record's `flock` locally. Their
+  reads keep the same three cases: an artifact that cannot be read raises
+  `StorageReadError` (503), one that does not decode is logged by name and treated
+  as absent. A merge that cannot read the record, or whose record does not decode,
+  refuses rather than overwrite it, and one whose write raised is re-read: it counts
+  as stored if the record holds every merged value.
+  Listings stay inside what they need: the legacy pass lists `user-data/` with the
+  `/` delimiter, so it never walks every session's objects, and
+  `session_metadata.list_sessions` reads session names as prefixes
+  (`cloud.list_prefixes`), so a flat legacy object is not a session.
+  `tests/app/storage/fake_gcs.py` records each listing's prefix and delimiter.
   A name the store refuses raises `common.InvalidStorageIdentifier`, a `ValueError`
   that `routes/errors.py` answers with 400 and no traceback.
 - `server/app/decoder/`
@@ -224,10 +236,81 @@ Related backend modules:
   DER is read only through `cryptography` (`x509` and `hazmat.asn1`), never by hand.
   Findings inside authData, a nested PublicKeyCredential field or a TPM structure
   carry the input offset and path (`${2}<credentialPublicKey>{1}`; a nested field's
-  findings add `source`). `decode/ctap.py` is over the module size limit and may
-  only shrink (`tests/app/tooling/test_code_size_ratchet.py` holds it at its current
-  length): put new code in a module named for what it does. The encoder refuses a decoded-JSON member it cannot
-  rebuild rather than dropping it.
+  findings add `source`). `decode/ctap.py` and `decode/pipeline.py` are under the
+  module size limit now; keep them there by putting new code in a module named for
+  what it does, as `ctap_prefix.py` (the command or status byte), `findings.py`
+  (collecting and ordering findings), `ctap_responses.py` (makeCredential and
+  getAssertion response views), `authenticator_data.py`, `json_input.py`,
+  `edn_view.py`, `key_equivalence.py` and `ctap_conformance.py` are. The encoder
+  refuses a decoded-JSON member it cannot rebuild rather than dropping it; that
+  includes a CTAP member whose value is null.
+
+  `decodedValue` is JSON, so it is lossy by nature: it cannot show a key's CBOR
+  type, a head's width, a chunked string, a float's width, a NaN's payload or a
+  duplicated key. `data.edn` is the lossless view beside it, the item in extended
+  diagnostic notation (RFC 8949 section 8, draft-ietf-cbor-edn-literals), written by
+  `decoder/edn/spell.py` with an encoding indicator only where the bytes differ from
+  preferred serialisation. It is given for CBOR readings (a plain item, a CTAP
+  message's item past its command or status byte, which stays in `data.ctap`, and
+  an attestation object), and only when it is exact: `decode/edn_view.py` reads the
+  text back and compares it with the item's bytes, so a tree the lenient parser
+  could not read whole gets no EDN rather than a wrong one (`spell` itself refuses a
+  node whose text would not span its bytes, which catches damage the lenient parser
+  leaves unmarked). The encoder's EDN input
+  (format `EDN`, also `edn (exact bytes)` and `cbor (edn)`) is `decoder/edn/reader.py`:
+  it writes exactly the bytes the text notates -- map order, duplicate keys, head
+  and float widths as written, never canonicalised -- and refuses, with the offset in
+  the text as sent, reserved indicators, an indicator too narrow for its value, a
+  float not exact at its width or beyond a double's range, `simple(24..31)`, a signed
+  tag number, a `(_ ...)` chunk that is not a byte or text string, a lone surrogate,
+  items nested more than 64 deep (the decoder's limit), a CBOR sequence and an
+  integer beyond 64 bits.
+  That last is a deliberate departure from the EDN draft, which reads such an
+  integer as a bignum: write the tag, `2(h'...')`. So encoder bytes come from
+  `encode/cbor_canonical.py` for JSON input and from `edn` for EDN input, and every
+  CBOR head either writes goes through `decoder/cbor_head.py`. Decode then encode of
+  `data.edn` gives back the input's bytes: `tests/app/decoder/test_edn_round_trip.py`
+  proves it with Hypothesis over generated items (`tests/app/cbor_items.py`: every
+  head width, chunked and zero-chunk strings, duplicate keys, nested tags, raw-bit
+  floats) and over every CBOR input in the goldens and fixtures
+  (`tests/app/codec_corpus.py`), at the module and at the API. Hypothesis writes
+  `.hypothesis/` in the working directory whatever its `database` setting, so
+  `tests/conftest.py` points `HYPOTHESIS_STORAGE_DIRECTORY` at a temporary directory
+  and loads a derandomized profile with no example database.
+
+  Map keys are equal by RFC 8949 section 5.6.1 (`decode/key_equivalence.py`): 1.0 at
+  any width is one key, -0.0 and 0.0 are one key, a chunked string equals the same
+  text unchunked, NaNs differ by payload, 1 and 1.0 differ. Equal keys are one entry
+  of `decodedValue` (the later value) and one `duplicate-map-key` finding at the entry
+  kept, whose `earlier` lists every earlier entry's offsets and key and value in EDN;
+  inside a value the decoded value drops, `kept` is null and the message says none is
+  kept (`duplicate-json-key` does the same).
+  A key `json_keys` spells with its type is written by `keys.qualified_key_text` and
+  read back only by `keys.read_json_key`, which the encoder uses for every object key
+  it writes: `"1" (text)`, `h'01' (bytes)`, `1.5 (float)`, `[1, 2] (array)`. A key
+  that looks typed (an EDN literal, then ` (<kind>)`) but whose kind is unknown, or
+  one a lenient decode could not read, is an error naming the key; anything else is
+  a text key, so `Temperature (C)` stays text. Two JSON keys that make equal CBOR
+  keys are refused, naming both. JSON input is read by `decode/json_input.py`, which
+  reports a key given twice in one object as `duplicate-json-key` (the path, the
+  value kept and the values dropped; no offset, which the JSON reader cannot give);
+  the encoder refuses such input and points at EDN, which can express it. The
+  encoder shows the JSON it was given back with its keys as written (`keys.as_written`
+  marks them `JsonLabel`), so its own output can be pasted back in.
+
+  The encoder never reads a plain map as a CTAP message. It encodes CTAP from
+  `ctapDecoded`, from `expandedJson` beside a `ctap` object, or from the
+  `ctap-webauthn` format; anything else in format `CBOR` is generic CBOR, so
+  `{"1": "a"}` is `a161316161`. A makeCredential or getAssertion view shows every
+  key of the map, spelling a non-integer key with its type, and
+  `decode/ctap_conformance.py` reports each as `ctap-non-integer-key`.
+
+  `malformed` lists the messages of the findings that the input is not well-formed
+  (RFC 8949 appendix F, trailing bytes included) or not in CTAP2 canonical form: the
+  categories `skipped`, `malformed`, `trailing` and `canonical` in
+  `decode/findings.py`. Notes about how the input was read or shown
+  (`ambiguous-input`, `json-key-collision`, `duplicate-json-key`, `ctap-prefix-not-read`,
+  `ctap-non-integer-key`, a CTAP limit) are in `findings` only.
 
 Each of these packages keeps its public surface in `__init__.py` and its
 implementation in submodules named for what they do. Import the submodule you
@@ -309,7 +392,9 @@ Four checks guard the code and the checkout rather than behaviour:
   deterministically; the only frozen input is ML-DSA signatures (`inputs/frozen.json`),
   since ML-DSA signing is randomised.
 - `tests/conftest.py` fails the run when a test created, changed or removed anything
-  under `server/runtime/`, `instance/` or the MDS snapshot files in `frontend/static/`.
+  under `server/runtime/`, `instance/`, the legacy credential stores
+  (`server/app/session-credentials/`, `server/app/*_credential_data.pkl`),
+  `.hypothesis/` or the MDS snapshot files in `frontend/static/`.
   What is there mixes the owner's local data with old test leftovers: the guard
   compares listings from before and after the run, and never deletes. Give a test its
   own stores in `tmp_path`. `tests/app/conftest.py` also points the session-metadata
