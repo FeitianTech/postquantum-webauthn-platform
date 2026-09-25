@@ -4,14 +4,19 @@ import { SPECIAL_LABELS } from './constants.js';
 // "1" (text), h'01' (bytes) or true (boolean) #2, or a key in EDN such as
 // [1, 2] or float'7e01'. It is shown exactly as written; the encoder reads it back.
 const TYPED_KEY = /^.+ \((?:text|bytes|boolean|float|null|undefined|simple value|array|map|tag|text, not UTF-8|invalid|diagnostic notation)\)(?: #\d+)?$/s;
-const EDN_KEY_START = /^(?:"|'|h'|float'|simple\(|\[|\{)/;
+const EDN_KEY_START = /^(?:"|'|h'|float'|simple\(|invalid\(|\[|\{)/;
+// A number or an EDN word the decoder spelled a key as, perhaps with a width
+// (-Infinity, NaN_2, 5e-324, 1.5_3, true), or a tag (1(1.5_3)): the field-name
+// rewriting below would turn "-Infinity" into "Infinity" and "NaN_2" into "Na N 2".
+const EDN_SCALAR_KEY = /^(?:-?(?:NaN|Infinity|\d+(?:\.\d+)?(?:e[+-]?\d+)?)(?:_[0-3])?|true|false|null|undefined)$/;
+const EDN_TAG_KEY = /^\d+(?:_[0-3])?\(/;
 
 export function formatKey(key) {
     if (typeof key !== 'string' || key.length === 0) {
         return 'Value';
     }
 
-    if (TYPED_KEY.test(key) || EDN_KEY_START.test(key)) {
+    if (TYPED_KEY.test(key) || EDN_KEY_START.test(key) || EDN_SCALAR_KEY.test(key) || EDN_TAG_KEY.test(key)) {
         return key;
     }
 

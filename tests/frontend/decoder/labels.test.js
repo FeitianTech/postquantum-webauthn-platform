@@ -39,6 +39,28 @@ describe('decoder key labels', () => {
     }
   });
 
+  it('shows a key the decoder spelled as a number or an EDN word exactly as written', () => {
+    // These were rewritten: Infinity, Na N 2, 1(1.5 3), 5e 324, Na N, True, Invalid(h'ff').
+    for (const key of [
+      '-Infinity',
+      'Infinity',
+      'NaN',
+      'NaN_2',
+      '1(1.5_3)',
+      '24_0(0)',
+      '5e-324',
+      '1.5_3',
+      '-0.0',
+      'true',
+      'null',
+      "invalid(h'ff')",
+      'invalid(array[2] at offset 1)',
+    ]) {
+      expect(formatKey(key)).toBe(key);
+    }
+    expect(formatKey('-Infinity')).not.toBe(formatKey('Infinity'));
+  });
+
   it('still formats a field name that only mentions a type', () => {
     expect(formatKey('credentialId')).toBe('Credential ID');
     expect(formatKey('1 (fmt)')).toBe('1 (fmt)');
