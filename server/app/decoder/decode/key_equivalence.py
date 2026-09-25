@@ -12,7 +12,8 @@ tags by number and content; simple values by value (``simple(21)`` is
 The decoded value keeps one entry per identity; ``canonical`` reports a map
 that holds two as ``duplicate-map-key``. A node the lenient parser could not
 read (invalid, text that is not UTF-8, whole or in one chunk) is identified by
-its raw bytes.
+its raw bytes, and a string it read past a skipped chunk by its offset: what is
+left of it is no string it equals.
 """
 from __future__ import annotations
 

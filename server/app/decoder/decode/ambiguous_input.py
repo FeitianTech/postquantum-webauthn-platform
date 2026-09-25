@@ -50,7 +50,7 @@ command or status byte and one CBOR item; authenticator data. Pairs that occur:
 - a CTAP byte, alone, and one CBOR item: ``05`` is TIMEOUT and the integer 5;
   and JSON text: ``31`` is also the text "1";
 - JSON text and one CBOR item: the bytes "85" are the integer -54;
-- JSON text and a CTAP message: "\n1" (0a 31) is CREDENTIAL_MGMT and -18;
+- JSON text and a CTAP message: a line feed and 1 (0a 31) is CREDENTIAL_MGMT and -18;
 - JSON text and authenticator data: 37 bytes of JSON whose byte 32 is flags
   without AT or ED;
 - a CTAP message and one CBOR item: 41 00 is CREDENTIAL_MGMT_PRE and 0, or the
