@@ -37,7 +37,9 @@ _DEFAULT_CONTENT_SECURITY_POLICY = "; ".join(
         "form-action 'self'",
         "img-src 'self' data:",
         "font-src 'self' https://fonts.gstatic.com",
-        # The Google Fonts stylesheet linked from index.html.
+        # The Google Fonts stylesheet linked from index.html. Only the current
+        # UI uses it (and fonts.gstatic.com above): the new UI at /beta
+        # self-hosts Geist. Both origins go at the cutover (docs/UI_MIGRATION.md).
         "style-src 'self' https://fonts.googleapis.com",
         "script-src 'self'",
         "connect-src 'self'",

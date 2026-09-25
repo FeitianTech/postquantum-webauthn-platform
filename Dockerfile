@@ -1,5 +1,20 @@
 # syntax=docker/dockerfile:1.7
 
+# Stage 0: the new UI (web/, docs/UI_MIGRATION.md), built into static files.
+# Production never runs Node: only web/out reaches the runtime image, where
+# Flask serves it at /beta. The CSP scan runs on the very export that ships.
+FROM node:22-slim AS web
+
+ENV NEXT_TELEMETRY_DISABLED=1
+
+WORKDIR /src/web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY web/ ./
+# The logic modules web/ imports in place until the cutover.
+COPY frontend/static/scripts /src/frontend/static/scripts
+RUN npm run build && npm run check:csp
+
 # Stage 1: Builder
 FROM python:3.12-slim AS builder
 
@@ -64,6 +79,7 @@ COPY --from=builder /install /usr/local
 # holds local credential artifacts and .dockerignore does not exclude it.
 COPY server/app /app/server/app
 COPY frontend /app/frontend
+COPY --from=web /src/web/out /app/web/out
 COPY gunicorn.conf.py /app/gunicorn.conf.py
 COPY tools/build_static_assets.py /tmp/build_static_assets.py
 # The MDS snapshot is not in the image (see .dockerignore); the server fetches it
@@ -73,10 +89,12 @@ COPY tools/__init__.py tools/update_mds_snapshot.py /app/tools/
 
 # Precompile the server's bytecode at build time; PYTHONDONTWRITEBYTECODE only
 # stops writes at runtime, so every cold start would otherwise recompile it.
-# Static assets get a content-hash build id and precompressed .gz variants.
+# Static assets get a content-hash build id and precompressed .gz variants; the
+# web export, whose file names carry their own hashes, gets the .gz variants.
 RUN rm -rf /usr/local/lib/python3.12/ensurepip \
     && python -m compileall -q -j 0 /app/server \
     && python /tmp/build_static_assets.py /app/frontend/static \
+    && python /tmp/build_static_assets.py --precompress-only /app/web/out \
     && rm /tmp/build_static_assets.py
 
 WORKDIR /app
