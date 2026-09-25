@@ -82,10 +82,18 @@ def test_every_generated_item_the_decoder_reads_as_cbor_encodes_back_from_its_ed
     event(f"decoder reading: {_through_the_decoder_and_encoder(data)}")
 
 
+# The corpus's items the decoder reads as something else, by precedence: the
+# bytes "85" (38 35) are JSON text before they are the CBOR integer -54.
+_READ_OTHERWISE = {"literal:3835": "UTF-8 JSON text"}
+
+
 @pytest.mark.parametrize(("name", "data"), sorted(codec_corpus.corpus().items()), ids=lambda value: str(value)[:60])
 def test_every_item_in_the_repository_encodes_back_from_the_edn_the_decoder_shows(name, data):
     reading = _through_the_decoder_and_encoder(data)
 
+    if name in _READ_OTHERWISE:
+        assert reading == _READ_OTHERWISE[name]
+        return
     # The corpus's one-byte items (0x00, 0x01, 0x0a, 0x17, 0x40) are lone CTAP bytes.
     assert reading.startswith("CBOR") or (len(data) == 1 and reading == "a lone CTAP command or status byte")
 
