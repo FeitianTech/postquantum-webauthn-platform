@@ -187,6 +187,22 @@ def test_simple_increasing_sign_count_succeeds_and_is_persisted(config_module, c
         assert credential_store(authenticator.credential_id) == counter
 
 
+def test_simple_success_reports_the_counter_state(config_module, credential_store):
+    zero = Authenticator()
+    client = config_module.app.test_client()
+    _register(client, zero, counter=0)
+    no_counter = _authenticate(client, zero, counter=0)
+
+    counting = Authenticator()
+    _register(client, counting, counter=5)
+    increased = _authenticate(client, counting, counter=6)
+
+    assert no_counter.status_code == 200, no_counter.get_json()
+    assert increased.status_code == 200, increased.get_json()
+    assert "signCountStatus" not in no_counter.get_json()
+    assert "signCountStatus" not in increased.get_json()
+
+
 def test_simple_counter_with_base64url_only_characters_is_read_correctly(config_module, credential_store):
     """authenticatorData is base64url; a standard-alphabet decode mishandles it.
 
