@@ -70,6 +70,7 @@ def for_attestation_object(value: Mapping[Any, Any], node: Mapping[str, Any], da
     _add_auth_data(blocks, auth_data, extensions.MAKE_CREDENTIAL_OUTPUT, '${"authData"}')
     findings += _attestation(extra, value.get("fmt"), value.get("attStmt"), auth_data, node, data, ("attStmt",))
     _extensions(extra, blocks)
+    extra.update(edn_view.extra(node, data))
     return extra, findings
 
 
