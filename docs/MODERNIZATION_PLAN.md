@@ -2024,6 +2024,28 @@ ignores report-uri, so in this pane reports go nowhere.
 - `shared/utils/binary.js` reads `window.__binaryFormat`, which only tests set.
 - `img-src 'self' data:` blocks remote icons in custom metadata (unchanged by this phase).
 
+**Phase 24 — tech-lead verification (2026-09-25):**
+- pytest 4702 / 4, vitest 532 -> **557**, frontend coverage 84.22 / 69.54 / 92.71 / 84.27, ruff clean.
+- **Every one of the 19 commits passes pytest and vitest on its own, from a cleaned tree, and none leaves
+  `instance/`.**
+- Counts, independently: inline `on*=` 0, writes to `window` 0, executing inline `<script>` 0, `style=` in
+  templates 0, `setAttribute('style')` 0, markup sinks and `document.write` 0. The 125 handler attributes sat
+  on 96 elements (67 clicks, 29 hover pairs); 100 elements now carry `data-action`, so none lost its action.
+- Headers from the app: `script-src 'self'`, `style-src 'self' https://fonts.googleapis.com`, no
+  `'unsafe-inline'`; Trusted Types report-only; `Reporting-Endpoints`. The report endpoint answers 204 to a
+  legacy and a Reporting-API body with one log line each, 413 to 600 KiB, 204 to a flood of 60 while logging at
+  most its budget, and never logs the page's query string or the script sample.
+- **In a real browser with the strict policy, zero CSP violations and zero page errors** across the tabs and
+  sub-tabs, Codec decode and encode, the MDS filter and detail, the Analyze Browser panel (Escape closes it),
+  a real hover of an info popup, and the ceremony buttons: simple and advanced registration reach
+  `navigator.credentials.create` (advanced offering -48, -49, -50, -8, -7, -257), advanced assertion reaches
+  `/api/advanced/authenticate/begin` (404 with no credentials, as expected).
+- A synthetic `mouseover` makes an info popup measure itself while hidden and cache a 26 px width; a real hover
+  is correct on both trees. Worth fixing when keyboard focus opens the popups (Phase 26).
+- Cloud Run sets no `FIDO_SERVER_CONTENT_SECURITY_POLICY`, so the new policy applies as written. It also sets
+  **neither `FIDO_SERVER_RP_ID` nor `FIDO_SERVER_ALLOWED_ORIGINS`**: production runs the development-only
+  Host-header fallback of S3 and logs its warning at every start. Raised with the owner.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
