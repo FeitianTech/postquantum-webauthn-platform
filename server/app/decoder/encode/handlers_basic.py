@@ -69,6 +69,9 @@ def _normalize_encoding_format(value: str) -> str:
         "der": "der",
         "pem": "pem",
         "cose": "cose",
+        "edn": "edn",
+        "cbor (edn)": "edn",
+        "edn (exact bytes)": "edn",
     }
 
     if normalized in aliases:
