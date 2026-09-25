@@ -7,7 +7,9 @@ A Content-Security-Policy whose ``script-src`` and ``style-src`` carry no
   ``frontend/static/styles``;
 - a script that sets a ``style`` attribute (``setAttribute('style', ...)``):
   views style through CSSOM (``element.style``), which the policy allows, and
-  ``shared/ui/dom.js`` ``el()`` applies its ``style`` option that way.
+  ``shared/ui/dom.js`` ``el()`` applies its ``style`` option that way;
+- markup in a script that carries an ``on...=`` handler or a ``style=``
+  attribute (a tag written in a string, as the MDS raw-data popup once was).
 
 Each ``ALLOWED_*`` dict names what still does, each with the reason. It may only
 shrink: an entry that no longer matches fails the test, so a converted file must
@@ -24,9 +26,16 @@ _SCRIPTS = _ROOT / "frontend" / "static" / "scripts"
 _TEMPLATES = _ROOT / "frontend" / "templates"
 
 _STYLE_ATTRIBUTE = re.compile(r"""\bsetAttribute\s*\(\s*(['"`])style\1""")
+# A tag written out in a string: ``<name``, attributes, then an inline handler or style.
+_MARKUP_ATTRIBUTE = re.compile(
+    r"""<[a-zA-Z][\w-]*(?:\s+[\w:-]+(?:\s*=\s*(?:\\?"[^"<>]*\\?"|'[^'<>]*'))?)*\s+(on[a-zA-Z]+|style)\s*="""
+)
 
 # path under frontend/static/scripts -> reason.
 ALLOWED_STYLE_ATTRIBUTES: dict[str, str] = {}
+
+# (path under frontend/static/scripts, attribute) -> reason.
+ALLOWED_MARKUP_ATTRIBUTES: dict[tuple[str, str], str] = {}
 
 # (path under frontend/templates, attribute) -> reason.
 ALLOWED_TEMPLATE_ATTRIBUTES: dict[tuple[str, str], str] = {}
@@ -149,3 +158,53 @@ def test_the_reader_finds_style_attributes():
     ])
 
     assert find_style_attributes(source) == [1, 2]
+
+
+def find_markup_attributes(text: str) -> list[tuple[int, str]]:
+    """(line, attribute) for each tag written in ``text`` with a handler or a style."""
+
+    return [
+        (number, match.group(1).lower())
+        for number, code in _code_lines(text)
+        for match in _MARKUP_ATTRIBUTE.finditer(code)
+    ]
+
+
+def _script_markup_attributes() -> list[tuple[str, int, str]]:
+    return [
+        (path.relative_to(_SCRIPTS).as_posix(), line, name)
+        for path in sorted(_SCRIPTS.rglob("*.js"))
+        for line, name in find_markup_attributes(path.read_text(encoding="utf-8"))
+    ]
+
+
+def test_script_markup_carries_no_inline_attributes():
+    found = [
+        f"{path}:{line} {name}="
+        for path, line, name in _script_markup_attributes()
+        if (path, name) not in ALLOWED_MARKUP_ATTRIBUTES
+    ]
+
+    assert found == [], "build the element with shared/ui/dom.js and style it from a stylesheet"
+
+
+def test_allowed_markup_attributes_still_exist():
+    current = {(path, name) for path, _line, name in _script_markup_attributes()}
+
+    stale = sorted(f"{path} {name}=" for path, name in ALLOWED_MARKUP_ATTRIBUTES if (path, name) not in current)
+
+    assert stale == [], "no longer there: remove these entries from ALLOWED_MARKUP_ATTRIBUTES"
+
+
+def test_the_reader_finds_markup_attributes():
+    source = "\n".join([
+        r"""const a = '<p id="x" style="display: none;"></p>';""",
+        r"""const b = `<button type="button" onclick="go()">Go</button>`;""",
+        r"""const c = "<div class=\"x\" onMouseEnter=\"show(this)\">";""",
+        r"""for (let i = 0; i<len; i += 1) { const style = 'x'; }""",
+        r"""node.style = value; node.onclick = handler;""",
+        r"""const d = '<p data-style="x" data-onclick="y">';""",
+        r"""// const e = '<p style="x">';""",
+    ])
+
+    assert find_markup_attributes(source) == [(1, "style"), (2, "onclick"), (3, "onmouseenter")]
