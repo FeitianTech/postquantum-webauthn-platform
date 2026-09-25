@@ -16,6 +16,7 @@ import {
 } from '../advanced/credentials/index.js';
 import { printRegistrationDebug, printAuthenticationDebug } from '../shared/debug/auth.js';
 import { state } from '../shared/state.js';
+import { bindActions, callWith } from '../shared/ui/actions.js';
 import {
     getSimpleCredentialsForEmail,
     saveSimpleCredential,
@@ -232,4 +233,13 @@ export async function simpleAuthenticate() {
         hideProgress('simple');
         simpleAuthenticateState = null;
     }
+}
+
+export const simpleActions = {
+    'simple-register': callWith(simpleRegister),
+    'simple-authenticate': callWith(simpleAuthenticate),
+};
+
+export function bindSimpleActions() {
+    return bindActions(document.getElementById('simple-tab'), simpleActions);
 }

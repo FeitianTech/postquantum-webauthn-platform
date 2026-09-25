@@ -10,8 +10,14 @@ const AREA_LOCAL_ACTIONS = new Set(['close', 'copy-report']);
 
 async function loadActionTables() {
   const navigation = await import(`${SCRIPTS}/shared/ui/navigation.js`);
+  const simple = await import(`${SCRIPTS}/simple/auth-simple.js`);
+  const username = await import(`${SCRIPTS}/shared/auth/username.js`);
+  const credentials = await import(`${SCRIPTS}/advanced/credentials/index.js`);
   return {
     navigation: navigation.navigationActions,
+    simple: simple.simpleActions,
+    username: username.usernameActions,
+    credentials: credentials.credentialActions,
   };
 }
 

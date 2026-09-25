@@ -1,5 +1,6 @@
 import { updateJsonEditor } from '../../advanced/editor/index.js';
 import { randomizeUserId } from '../../advanced/auth/forms.js';
+import { bindActions, callWith } from '../ui/actions.js';
 
 export function generateRandom10DigitUsername() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -48,4 +49,13 @@ export function initializeSimpleUsername() {
 
 export function randomizeSimpleUsername() {
     setSimpleUsernameValue();
+}
+
+export const usernameActions = {
+    'randomize-simple-username': callWith(randomizeSimpleUsername),
+};
+
+// On the document: the simple and the advanced tab each have a username control.
+export function bindUsernameActions() {
+    return bindActions(document, usernameActions);
 }

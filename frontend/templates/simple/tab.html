@@ -14,7 +14,7 @@
                             <label for="simple-email">Username</label>
                             <div class="input-with-button simple-username-input">
                                 <input type="text" id="simple-email" class="form-control simple-username-field" placeholder="Enter username">
-                                <button type="button" class="btn btn-small refresh-icon" onclick="randomizeSimpleUsername()" title="Generate random username" aria-label="Generate random username">
+                                <button type="button" class="btn btn-small refresh-icon" data-action="randomize-simple-username" title="Generate random username" aria-label="Generate random username">
                                     <svg class="icon-refresh" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                         <path d="M21 2v6h-6" />
                                         <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
@@ -26,8 +26,8 @@
                         </div>
 
                         <div class="form-group">
-                            <button class="btn" onclick="simpleRegister()">Register Passkey</button>
-                            <button class="btn btn-secondary" onclick="simpleAuthenticate()">Authenticate</button>
+                            <button class="btn" data-action="simple-register">Register Passkey</button>
+                            <button class="btn btn-secondary" data-action="simple-authenticate">Authenticate</button>
                         </div>
 
                         <div class="progress" id="simple-progress">
@@ -47,7 +47,7 @@
                                     class="btn btn-small btn-danger"
                                     id="simple-clear-credentials"
                                     data-credentials-clear
-                                    onclick="clearAllCredentials()"
+                                    data-action="clear-all-credentials"
                                 >
                                     Clear All
                                 </button>
