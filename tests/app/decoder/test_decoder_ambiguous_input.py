@@ -16,10 +16,12 @@ from server.app.decoder.decode import ambiguous_input
 
 
 def _ambiguity(result: dict) -> list[tuple[str, str]]:
+    """The finding about the text's hexadecimal and JSON-number readings; the bytes' readings are other tests'."""
+
     return [
         (finding["readAs"], finding["alsoValidAs"])
         for finding in result["findings"]
-        if finding["code"] == "ambiguous-input"
+        if finding["code"] == "ambiguous-input" and {finding["readAs"], finding["alsoValidAs"]} == {"hex", "json"}
     ]
 
 

@@ -10,6 +10,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from . import get_info
+from .ambiguous_input import finding
 from .keys import MISSING
 from .keys import coerce_cbor_bytes as _coerce_cbor_bytes
 from .keys import get_mapping_entry as _get_mapping_entry
@@ -123,3 +124,44 @@ def _classify_ctap_payload(value: Any, prefix: Mapping[str, Any] | None) -> str:
     if kind == "status":
         return _classify_ctap_response(value)
     return _classify_ctap_map(value)
+
+
+# What each shape is called in a finding.
+SHAPE_NAMES = {
+    "make_credential_output": "a makeCredential response",
+    "get_assertion_output": "a getAssertion response",
+    "get_info_output": "a getInfo response",
+    "make_credential_input": "a makeCredential request",
+    "get_assertion_input": "a getAssertion request",
+}
+_RESPONSE_SHAPES = {
+    "make_credential_output": _looks_like_make_credential_output,
+    "get_assertion_output": _looks_like_get_assertion_output,
+    "get_info_output": get_info.looks_like_get_info,
+}
+_REQUEST_SHAPES = {
+    "make_credential_input": _looks_like_make_credential_request,
+    "get_assertion_input": _looks_like_get_assertion_request,
+}
+PLAIN_MAP = "a CBOR map that is no CTAP message"
+
+
+def shape_findings(value: Any, prefix: Mapping[str, Any] | None, classification: str) -> list[dict[str, Any]]:
+    """An ``ambiguous-input`` finding for each other CTAP message ``value``'s shape is.
+
+    A command byte decides, so there is none after one. After a status byte the
+    response shapes are the candidates; with no byte, every shape is, and so is
+    the plain map the item also is.
+    """
+
+    kind = prefix.get("kind") if isinstance(prefix, Mapping) else None
+    if kind == "command" or not isinstance(value, Mapping):
+        return []
+    shapes = dict(_RESPONSE_SHAPES) if kind == "status" else {**_RESPONSE_SHAPES, **_REQUEST_SHAPES}
+    matching = [name for name, looks_like in shapes.items() if looks_like(value)]
+    taken = SHAPE_NAMES.get(classification, PLAIN_MAP)
+    others = [SHAPE_NAMES[name] for name in matching if name != classification]
+    if kind is None and classification != "other":
+        taken += " with no CTAP command or status byte"
+        others.append(PLAIN_MAP)
+    return [finding(taken, other) for other in others]
