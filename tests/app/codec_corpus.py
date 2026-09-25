@@ -183,3 +183,40 @@ def corpus() -> dict[str, bytes]:
     unusable = [name for name, item in items.items() if _whole_item(item) is None]
     assert not unusable, unusable
     return items
+
+
+def _ctap_literals() -> dict[str, bytes]:
+    """Hex text under tests/, and hex or base64url in the golden records, that is a CTAP byte and one whole map."""
+
+    found: dict[bytes, str] = {}
+
+    def keep(data: bytes, where: str) -> None:
+        if len(data) > 2 and (data[0] in COMMANDS or data[0] in STATUSES) and data[1] >> 5 == 5 and _whole_item(data[1:]):
+            found.setdefault(data, where)
+
+    for path in sorted(_TESTS.rglob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                text = node.value.replace(" ", "")
+                if _HEX.fullmatch(text):
+                    keep(bytes.fromhex(text), f"literal:{text[:24]}")
+    for path in sorted((_TESTS / "app" / "characterization").rglob("*.json")):
+        for value in re.findall(r'"([0-9A-Za-z_+/=-]{8,})"', path.read_text(encoding="utf-8")):
+            for data in _binary_readings(value):
+                keep(data, f"golden:{path.stem}:{data.hex()[:16]}")
+    return {where: data for data, where in found.items()}
+
+
+@functools.cache
+def ctap_messages() -> dict[str, bytes]:
+    """Every CTAP message the repository holds, its command or status byte kept: name -> bytes.
+
+    The corpus's items (a map sent without a CTAP byte), with every CTAP byte
+    and item under tests/ and in the golden records. Which of them the decoder
+    reads as a CTAP message is the decoder's to say.
+    """
+
+    messages = dict(corpus())
+    for name, data in _ctap_literals().items():
+        messages.setdefault(f"ctap:{name}", data)
+    return messages
