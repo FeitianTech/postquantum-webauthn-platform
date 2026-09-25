@@ -25,6 +25,7 @@ from flask import (
 
 from .. import encoding
 from ..config import MDS_METADATA_VERIFIED_PATH
+from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
 from ..decoder import decode_payload_text, encode_payload_text
 from ..env_flags import parse_env_flag
 from ..mds_provisioning import ensure_snapshot_available
@@ -307,6 +308,8 @@ def api_list_custom_metadata():
 
 @bp.route("/api/mds/metadata/upload", methods=["POST"])
 def api_upload_custom_metadata():
+    # Its own limit, before the body is read: the whole MDS metadata (config/request_limits.py).
+    request.max_content_length = current_app.config[METADATA_UPLOAD_LIMIT_KEY]
     ensure_metadata_session_id()
 
     file_entries = request.files.getlist("files") if request.files else []

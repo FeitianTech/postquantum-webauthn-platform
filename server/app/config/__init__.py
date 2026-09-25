@@ -24,6 +24,7 @@ app, in the order ``factory.INIT_STEPS`` fixes.
   ``after_request`` handler is registered after ``compression``'s, and Flask runs
   them in reverse, so the headers are set before the body is compressed.
 - ``session_cookie``: the session cookie's flags and lifetime.
+- ``request_limits``: how large a request body the app reads.
 - ``origins``: the exact-origin allowlist and the origin helpers.
 - ``attestation_trust``: operator-trusted attestation CAs.
 - ``mds``: where the MDS snapshot and the session metadata live.

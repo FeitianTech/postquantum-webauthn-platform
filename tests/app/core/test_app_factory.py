@@ -15,6 +15,7 @@ from server.app.config import (
     origins,
     proxy,
     relying_party,
+    request_limits,
     security_headers,
     session_cookie,
     session_secret,
@@ -40,6 +41,7 @@ def test_init_steps_are_pinned_in_order():
         attestation_trust,
         origins,
         relying_party,
+        request_limits,
         security_headers,
         session_cookie,
     )
