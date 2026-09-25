@@ -14,9 +14,13 @@ readers (``test_html_sinks.py``, ``test_inline_code.py``):
 - nothing written to ``window`` / ``globalThis`` / ``self``, and no ``atob``
   (``shared/utils/base64.js`` decodes strictly).
 
-And the Analyze Browser's logic (``frontend/static/scripts/shared/browser``) is
-imported, never copied (docs/UI_MIGRATION.md): no module in ``web/src`` defines a
-name those modules export, or carries one of their sentences.
+And the logic both UIs share is imported, never copied (docs/UI_MIGRATION.md):
+no module in ``web/src`` defines a name the logic modules export, or carries one
+of their sentences. The logic modules are ``LOGIC_ROOTS`` (the Analyze Browser's,
+the Codec's, the failed-response reader), every module ``web/src`` imports through
+``@legacy/``, and everything those import in turn. None of them touches the DOM:
+the legacy UI's views stay in their own modules, and the export pre-renders these
+in Node.
 
 Each ``ALLOWED`` dict may only shrink; an entry that no longer matches fails.
 """
@@ -30,8 +34,26 @@ from tests.app.tooling.test_inline_code import find_global_writes, find_style_at
 
 _ROOT = Path(__file__).resolve().parents[3]
 _WEB_SRC = _ROOT / "web" / "src"
-_LEGACY_LOGIC = _ROOT / "frontend" / "static" / "scripts" / "shared" / "browser"
-LOGIC_MODULES = ("identity.js", "probe.js", "report.js", "webauthn-facts.js")
+_SCRIPTS = _ROOT / "frontend" / "static" / "scripts"
+
+# Paths under frontend/static/scripts. A later surface adds its logic here when it
+# splits it out of a view, before web/ imports it.
+LOGIC_ROOTS = (
+    "shared/browser/identity.js",
+    "shared/browser/probe.js",
+    "shared/browser/report.js",
+    "shared/browser/webauthn-facts.js",
+    "shared/api/failed-response.js",
+    "decoder/codec/constants.js",
+    "decoder/codec/labels.js",
+    "decoder/codec/request.js",
+    "decoder/codec/result.js",
+    "decoder/codec/values.js",
+    "decoder/codec/encoding/binary.js",
+    "decoder/codec/encoding/can-encode.js",
+    "decoder/codec/encoding/format.js",
+    "decoder/codec/encoding/summary.js",
+)
 
 _RULES: dict[str, re.Pattern[str]] = {
     "dangerouslySetInnerHTML": re.compile(r"\bdangerouslySetInnerHTML\b"),
@@ -134,30 +156,112 @@ def test_the_reader_finds_each_rule_break():
     ]
 
 
+_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.S)
+# `import ... from '...'`, `export ... from '...'` (across lines) and `import '...'`.
+_IMPORT = re.compile(r"""^\s*(?:import|export)\b[^;'"`]*?\bfrom\s*['"]([^'"]+)['"]|^\s*import\s*['"]([^'"]+)['"]""", re.M)
+_DOM = re.compile(r"\bdocument\b|\brequestAnimationFrame\b|\bcreateElement\b|\bHTMLElement\b")
+
+
+def _without_comments(text: str) -> str:
+    return "\n".join(code for _number, code in _code_lines(_BLOCK_COMMENT.sub("", text)))
+
+
+def _imports(text: str) -> list[str]:
+    return [match.group(1) or match.group(2) for match in _IMPORT.finditer(_without_comments(text))]
+
+
+def _web_legacy_imports() -> set[str]:
+    return {
+        specifier.removeprefix("@legacy/")
+        for path in _shipped_sources()
+        for specifier in _imports(path.read_text(encoding="utf-8"))
+        if specifier.startswith("@legacy/")
+    }
+
+
+def logic_modules() -> list[Path]:
+    """LOGIC_ROOTS, what web/src imports through @legacy/, and all they import, as paths."""
+
+    scripts = _SCRIPTS.resolve()
+    queue = [scripts / name for name in (*LOGIC_ROOTS, *_web_legacy_imports())]
+    seen: set[Path] = set()
+    while queue:
+        path = queue.pop().resolve()
+        if path in seen:
+            continue
+        assert path.is_relative_to(scripts), f"{path} is outside frontend/static/scripts"
+        assert path.is_file(), f"{path.relative_to(scripts)} does not exist"
+        seen.add(path)
+        queue += [path.parent / spec for spec in _imports(path.read_text(encoding="utf-8")) if spec.startswith(".")]
+    return sorted(seen)
+
+
 def _logic_exports() -> set[str]:
     names: set[str] = set()
-    for module in LOGIC_MODULES:
-        text = (_LEGACY_LOGIC / module).read_text(encoding="utf-8")
-        names.update(re.findall(r"^export\s+(?:async\s+)?(?:function|const|let|class)\s+([A-Za-z_$][\w$]*)", text, re.M))
+    for path in logic_modules():
+        text = _without_comments(path.read_text(encoding="utf-8"))
+        names.update(re.findall(r"^export\s+(?:async\s+)?(?:function\*?|const|let|class)\s+([A-Za-z_$][\w$]*)", text, re.M))
+        for listed in re.findall(r"^export\s*\{([^}]*)\}", text, re.M):
+            for item in listed.split(","):
+                name = item.split(" as ")[-1].strip()
+                if name and name != "default":
+                    names.add(name)
     return names
 
 
 def _logic_sentences() -> set[str]:
     sentences: set[str] = set()
-    for module in LOGIC_MODULES:
-        text = (_LEGACY_LOGIC / module).read_text(encoding="utf-8")
-        for match in re.finditer(r"'((?:[^'\\\n]|\\.){24,})'|\"((?:[^\"\\\n]|\\.){24,})\"", text):
-            literal = match.group(1) or match.group(2)
+    for path in logic_modules():
+        text = _without_comments(path.read_text(encoding="utf-8"))
+        for match in re.finditer(r"'((?:[^'\\\n]|\\.){24,})'|\"((?:[^\"\\\n]|\\.){24,})\"|`((?:[^`\\\n]|\\.){24,})`", text):
+            literal = match.group(1) or match.group(2) or match.group(3)
             if " " in literal and "${" not in literal:
                 sentences.add(literal.replace("\\'", "'"))
     return sentences
+
+
+def test_the_logic_modules_touch_no_dom():
+    touching = {}
+    for path in logic_modules():
+        text = _without_comments(path.read_text(encoding="utf-8"))
+        found = sorted({match.group(0) for match in _DOM.finditer(text)})
+        found += sorted(spec for spec in _imports(text) if "/ui/" in spec or spec.startswith("../ui/"))
+        if found:
+            touching[path.relative_to(_SCRIPTS.resolve()).as_posix()] = found
+    assert touching == {}
+
+
+def test_the_reader_follows_imports_and_reads_every_export():
+    text = "\n".join(
+        [
+            "import {",
+            "    a,",
+            "    b,",
+            "} from './one.js';",
+            "import './two.js';",
+            "export { c } from './three.js';",
+            "// import { d } from './comment.js';",
+            "/* import { e } from './block.js'; */",
+        ]
+    )
+    assert _imports(text) == ["./one.js", "./two.js", "./three.js"]
+    assert _without_comments("const a = 1; // note\n/* gone */const b = 'https://x';") == "const a = 1;\nconst b = 'https://x';"
+
+
+def test_every_logic_module_is_found():
+    found = {path.relative_to(_SCRIPTS.resolve()).as_posix() for path in logic_modules()}
+    assert set(LOGIC_ROOTS) <= found
+    assert _web_legacy_imports() <= found
 
 
 def test_the_logic_modules_are_imported_not_copied():
     names = _logic_exports()
     sentences = _logic_sentences()
     assert {"readIdentityInputs", "determineIdentity", "gatherWebAuthnFacts", "gatherAnalysis"} <= names
+    assert {"formatKey", "describeCodecResult", "classifyCodecValue", "requestCodec", "readFailedResponse"} <= names
     assert "from User-Agent Client Hints" in sentences
+    assert "Decoded in lenient mode (best effort); skipped items are listed below." in sentences
+    assert "Attestation statement (interpreted)" in sentences
 
     definition = re.compile(r"\b(?:function|const|let|var|class)\s+(" + "|".join(sorted(names)) + r")\b")
     copied = {}
