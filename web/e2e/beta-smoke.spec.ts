@@ -114,7 +114,9 @@ test.describe('/beta', () => {
     await page.getByRole('button', { name: 'Menu' }).click();
     const sheet = page.getByRole('dialog', { name: 'Menu' });
     await expect(sheet).toBeVisible();
-    await expect(sheet.getByRole('link', { name: 'View project on GitHub' })).toBeVisible();
+    const github = sheet.getByRole('link', { name: 'View project on GitHub' });
+    await expect(github).toBeVisible();
+    await expect(github).toHaveAttribute('href', 'https://github.com/FeitianTech/postquantum-webauthn-platform');
     await sheet.getByRole('button', { name: 'FIDO MDS Authenticators' }).click();
     await expect(sheet).toBeHidden();
     await expect(page.getByRole('tabpanel', { name: 'FIDO MDS Authenticators' })).toBeVisible();

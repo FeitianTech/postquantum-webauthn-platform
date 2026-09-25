@@ -9,7 +9,7 @@ import { SECTIONS, SECTION_OPTIONS, type SectionId } from '@/lib/sections';
 
 import { NAV_ID } from './SectionPanel';
 
-export const GITHUB_URL = 'https://github.com/rainzhang05/python-fido2-webauthn-test';
+export const GITHUB_URL = 'https://github.com/FeitianTech/postquantum-webauthn-platform';
 export const ANALYZE_PANEL_ID = 'analyze-browser-panel';
 
 type HeaderProps = {
