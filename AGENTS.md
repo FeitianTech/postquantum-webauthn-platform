@@ -75,8 +75,11 @@ Flask app setup starts in:
   What `create_app()` is built from: `application.py` (`build_app()`),
   `logs.py`, `session_secret.py`, `compression.py`, `proxy.py`,
   `session_cookie.py`, `security_headers.py`, `origins.py`, `attestation_trust.py`,
-  `mds.py`, `relying_party.py` (RP ID, `create_fido_server`), `paths.py`. Importing
-  it configures nothing. The routes call `config.create_fido_server` /
+  `mds.py`, `relying_party.py` (RP ID, `create_fido_server`), `paths.py`,
+  `request_limits.py` (`MAX_CONTENT_LENGTH`, 8 MiB, and the metadata upload's own
+  16 MiB, chosen from the sizes measured in Phase 21 and settable in the
+  environment; a larger body is answered 413 in JSON by `routes/errors.py`).
+  Importing it configures nothing. The routes call `config.create_fido_server` /
   `config.determine_rp_id` through the package, so route tests patch those on the
   package; patch every other name in its submodule.
 - `config.app` is a lazy alias for `server.app.app.app`, kept so the tests written
@@ -92,7 +95,10 @@ Flask app setup starts in:
   `tests/app/core/test_logging_reaches_stderr.py` checks that under gunicorn.
 - On Cloud Run (`K_SERVICE` set) the app refuses to start without
   `FIDO_SERVER_SECRET_KEY` or a readable `FIDO_SERVER_SECRET_KEY_FILE`; only local
-  development generates and persists `instance/session-secret.key`.
+  development generates and persists `instance/session-secret.key`. A test run
+  never does: `tests/conftest.py` sets a test `FIDO_SERVER_SECRET_KEY` when it is
+  imported, before any test module imports the entry point, and a test of the
+  secret's own handling removes it with `monkeypatch.delenv`.
 - `server/app/mds_trust.py`
   The MDS trust anchor. A leaf on purpose: `tools/update_mds_snapshot.py` imports
   it without anything from Flask.
@@ -259,15 +265,19 @@ Four checks guard the code and the checkout rather than behaviour:
   reviewed before committing. `material.py` builds the keys and certificates
   deterministically; the only frozen input is ML-DSA signatures (`inputs/frozen.json`),
   since ML-DSA signing is randomised.
-- `tests/conftest.py` fails the run when a test created, changed or removed anything
-  under `server/runtime/`, `instance/`, the legacy credential stores
-  (`server/app/session-credentials/`, `server/app/*_credential_data.pkl`),
-  `.hypothesis/` or the MDS snapshot files in `frontend/static/`.
-  What is there mixes the owner's local data with old test leftovers: the guard
-  compares listings from before and after the run, and never deletes. Give a test its
-  own stores in `tmp_path`. `tests/app/conftest.py` also points the session-metadata
-  store at a directory of the run's for the whole session: a session-cleanup thread
-  can outlive the test that started it, and one that lists the checkout's directory
+- `tests/checkout_guard.py`, a pytest plugin `tests/conftest.py` loads, fails the run
+  when a test created, changed or removed anything under `server/runtime/`,
+  `instance/`, the legacy credential stores (`server/app/session-credentials/`,
+  `server/app/*_credential_data.pkl`), `.hypothesis/` or the MDS snapshot files in
+  `frontend/static/`. What is there mixes the owner's local data with old test
+  leftovers: the guard compares a listing taken in `pytest_configure`, before any
+  test module is collected (so a write made while importing one is seen), with one
+  taken when the session finishes, and never deletes.
+  `tests/app/tooling/test_checkout_guard.py` runs it in a subprocess rooted at a
+  directory of its own (`--checkout-root`). Give a test its own stores in
+  `tmp_path`. `tests/app/conftest.py` also points the session-metadata store at a
+  directory of the run's for the whole session: a session-cleanup thread can
+  outlive the test that started it, and one that lists the checkout's directory
   removes the inactive sessions it finds there.
 
 For a test that needs an app configured differently, use the `make_app` fixture in
