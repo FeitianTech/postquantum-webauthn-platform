@@ -14,6 +14,7 @@ from . import (
     cbor_parser,
     certificates,
     ctap,
+    json_input,
     keys,
     pipeline,
     response,
@@ -142,7 +143,7 @@ _looks_like_pem = pipeline._looks_like_pem
 _try_decode_attestation_object = pipeline._try_decode_attestation_object
 _try_decode_authenticator_data = pipeline._try_decode_authenticator_data
 _try_decode_certificate_bytes = pipeline._try_decode_certificate_bytes
-_try_parse_json = pipeline._try_parse_json
+_try_parse_json = json_input._try_parse_json
 
 # CTAP prefix byte and CBOR payload decoding.
 _extract_ctap_prefix = ctap._extract_ctap_prefix
