@@ -1749,6 +1749,20 @@ The frontend only: no server code, no new window globals, no inline handlers.
 - The state colours are literals like the rest of the stylesheet (no dark mode yet, Q2); each state also has
   its words and a mark, so none depends on colour.
 
+**Phase 22 — tech-lead verification (2026-09-25):**
+- pytest 4653 / 4, vitest 301 -> **390**, frontend coverage 83.02 / 66.96 / 91.77 / 83.09 (floors held),
+  `analyze.js` 98.7% of lines, the new modules 100%; ruff clean. No inline handler or window global added
+  (still 125 and 42); the new modules write no HTML strings.
+- **Every one of the 9 commits passes pytest and vitest on its own.**
+- **In a real browser** (the built-in Chromium, brand list only "Chromium" 152): before, the panel said
+  "Google Chrome" and listed USB, HID, BLE and "Cable / Serial" from WebUSB/WebHID/Web Bluetooth/Web Serial;
+  after, "Chromium-based browser", 152.0.7977.130, Blink, macOS, each with its source, all 24 capabilities
+  (9 spec-defined with plain labels, 14 extensions, `immediateGet` as unrecognised), the transports statement
+  and the ML-DSA note. Tab stays inside the dialog, Escape closes it and focus returns to the button.
+- Under the pane's Android emulation (UA and Client Hints say Android; `navigator.platform` still says
+  MacIntel with 5 touch points, the iPadOS pattern) the panel says Google Chrome, 152, Blink, **Android from
+  Client Hints**: the iPadOS rule does not misfire. No horizontal scroll at 375 px.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
