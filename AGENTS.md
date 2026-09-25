@@ -205,7 +205,7 @@ Related backend modules:
   `ctap_tables.py` is the one CTAP table both read (command and status bytes,
   request parameters, response members), derived from the vendored `fido2`; COSE
   algorithm names come from `webauthn/pqc.py`'s `describe_algorithm`. Do not add
-  another copy of either. Encoder bytes come only from `encode/cbor_canonical.py`,
+  another copy of either. Encoder bytes come only from `decoder/cbor_canonical.py`,
   which writes CTAP2-canonical CBOR; do not serialise encoder output with cbor2.
   Decoder input is parsed only by `decode/cbor_parser.py`: strict, failing with
   the offset and path where input stops being well-formed; lenient only when a
@@ -267,7 +267,7 @@ Related backend modules:
   integer beyond 64 bits.
   That last is a deliberate departure from the EDN draft, which reads such an
   integer as a bignum: write the tag, `2(h'...')`. So encoder bytes come from
-  `encode/cbor_canonical.py` for JSON input and from `edn` for EDN input, and every
+  `decoder/cbor_canonical.py` for JSON input and from `edn` for EDN input, and every
   CBOR head either writes goes through `decoder/cbor_head.py`. Decode then encode of
   `data.edn` gives back the input's bytes: `tests/app/decoder/test_edn_round_trip.py`
   proves it with Hypothesis over generated items (`tests/app/cbor_items.py`: every

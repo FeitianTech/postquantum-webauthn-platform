@@ -15,6 +15,13 @@ from cbor2 import (  # noqa: F401  # re-exported for callers and tests
     undefined,
 )
 
+from ..cbor_canonical import (
+    _CanonicalCBOREncoder,  # noqa: F401  # re-exported for callers and tests
+    _encode_canonical_float,  # noqa: F401  # re-exported for callers and tests
+    _encode_major_type_with_length,  # noqa: F401  # re-exported for callers and tests
+    _encode_unsigned_integer,  # noqa: F401  # re-exported for callers and tests
+)
+
 # Many imported names are intentionally re-exported for callers and tests that
 # reach encoder internals directly via `server.app.decoder.encode`.
 from ..decode.json_input import read as read_json
@@ -29,12 +36,6 @@ from .binary_extract import (
     _extract_binary_input,  # noqa: F401  # re-exported for callers and tests
     _extract_generic_binary_payload,  # noqa: F401  # re-exported for callers and tests
     _normalize_pem_label,  # noqa: F401  # re-exported for callers and tests
-)
-from .cbor_canonical import (
-    _CanonicalCBOREncoder,  # noqa: F401  # re-exported for callers and tests
-    _encode_canonical_float,  # noqa: F401  # re-exported for callers and tests
-    _encode_major_type_with_length,  # noqa: F401  # re-exported for callers and tests
-    _encode_unsigned_integer,  # noqa: F401  # re-exported for callers and tests
 )
 from .ctap_encode import (
     _determine_ctap_prefix,  # noqa: F401  # re-exported for callers and tests
