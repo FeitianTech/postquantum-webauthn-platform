@@ -33,10 +33,9 @@ export async function decodePayloadThroughApi(payload) {
 
 export async function showRegistrationResultModalRuntime(credentialJson, relyingPartyInfo, options = {}, deps = {}) {
     const {
-        composeRegistrationDetailHtml,
+        composeRegistrationDetail,
         updateAdvancedCredentialRegistrationSnapshot,
         loadSavedCredentials,
-        bindRegistrationDetailButtons,
         autoResizeCertificateTextareas,
     } = deps;
 
@@ -61,7 +60,7 @@ export async function showRegistrationResultModalRuntime(credentialJson, relying
         relyingPartyInfo?.registrationData?.attestation_certificates,
     );
 
-    const registrationDetail = await composeRegistrationDetailHtml({
+    const registrationDetail = await composeRegistrationDetail({
         credentialJson,
         relyingPartyInfo,
         attestationObjectValue,
@@ -88,8 +87,7 @@ export async function showRegistrationResultModalRuntime(credentialJson, relying
         }
     }
 
-    modalBody.innerHTML = registrationDetail.html;
-    bindRegistrationDetailButtons(modalBody);
+    modalBody.replaceChildren(registrationDetail.view);
 
     modalBody.scrollTop = 0;
     if (typeof modalBody.scrollTo === 'function') {

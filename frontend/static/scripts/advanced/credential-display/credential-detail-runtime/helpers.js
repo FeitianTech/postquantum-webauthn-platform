@@ -19,17 +19,3 @@ export function pickFirstObject(...candidates) {
     }
     return null;
 }
-
-export function combineRegistrationHtmlSections(html, attestationSectionHtml, combinedHtml) {
-    const normalizedCombinedHtml = typeof combinedHtml === 'string' ? combinedHtml : '';
-    if (normalizedCombinedHtml) {
-        return normalizedCombinedHtml;
-    }
-
-    const normalizedHtml = typeof html === 'string' ? html : '';
-    const normalizedAttestationHtml = typeof attestationSectionHtml === 'string'
-        ? attestationSectionHtml
-        : '';
-
-    return [normalizedHtml, normalizedAttestationHtml].filter(Boolean).join('');
-}

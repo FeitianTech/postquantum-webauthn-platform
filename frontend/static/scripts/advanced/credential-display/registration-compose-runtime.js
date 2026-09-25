@@ -2,11 +2,8 @@ import {
     base64UrlToJson,
     base64UrlToUtf8String,
 } from '../../shared/utils/binary.js';
-import {
-    escapeHtml,
-} from '../ui/display-utils.js';
 import {closeModal, openModal} from '../../shared/ui/core.js';
-import {el} from '../../shared/ui/dom.js';
+import {el, fragment} from '../../shared/ui/dom.js';
 import {
     formatCertificateDetails,
     autoResizeCertificateTextareas,
@@ -36,6 +33,62 @@ import {
 import {
     registrationDetailState,
 } from './state.js';
+
+const SECTION_STYLE = 'margin-bottom: 1.5rem;';
+const SECTION_HEADING_STYLE = 'color: #0072CE; margin-bottom: 0.75rem;';
+const PLACEHOLDER_STYLE = 'font-style: italic; color: #6c757d;';
+const ERROR_STYLE = 'color: #dc3545; font-size: 0.9rem;';
+
+function placeholder(text, extraStyle = '') {
+    return el('div', { style: `${PLACEHOLDER_STYLE}${extraStyle}`, text });
+}
+
+function preformatted(text) {
+    return el('pre', { className: 'modal-pre', text });
+}
+
+function attestationObjectJson(attestationObject, attestationFormatRaw) {
+    const attestationDisplay = sanitiseAttestationObjectForDisplay(
+        attestationObject,
+        attestationFormatRaw,
+    ) || attestationObject;
+    try {
+        return JSON.stringify(attestationDisplay, null, 2);
+    } catch (error) {
+        try {
+            return JSON.stringify(attestationObject, null, 2);
+        } catch (jsonError) {
+            return '';
+        }
+    }
+}
+
+function certificateButton(label, displayIndex) {
+    const button = el('button', {
+        className: 'btn btn-small registration-attestation-cert-button',
+        attrs: { type: 'button' },
+        dataset: { certIndex: displayIndex },
+        text: label,
+    });
+    button.addEventListener('click', event => {
+        event.preventDefault();
+        openAttestationCertificateDetail(displayIndex);
+    });
+    return button;
+}
+
+function authenticatorDataButton() {
+    const button = el('button', {
+        className: 'btn btn-small btn-secondary registration-authenticator-data-button',
+        attrs: { type: 'button' },
+        text: 'Authenticator Data',
+    });
+    button.addEventListener('click', event => {
+        event.preventDefault();
+        openAuthenticatorDataDetail();
+    });
+    return button;
+}
 
 export function buildAttestationSection({
     attestationObjectValue = '',
@@ -76,120 +129,63 @@ export function buildAttestationSection({
         || attestationHasCertificates;
 
     if (!hasAttestation) {
-        return '';
+        return null;
     }
 
     const hasAuthenticatorData = Boolean(registrationDetailState.authenticatorData);
-    const authenticatorButtonMarkup = hasAuthenticatorData
-        ? '<button type="button" class="btn btn-small btn-secondary registration-authenticator-data-button">Authenticator Data</button>'
-        : '';
     const shouldShowAuthenticatorError = !hasAuthenticatorData && authenticatorDataValue && authenticatorDecodeError;
 
-    let attestationContent;
-    const attestationHeading = '<h4 style="font-weight: 600; color: #0f2740; margin-bottom: 0.5rem;">Attestation Object</h4>';
+    let attestationBody;
     if (attestationObject) {
-        let attestationJson;
-        const attestationDisplay = sanitiseAttestationObjectForDisplay(
-            attestationObject,
-            attestationFormatRaw,
-        ) || attestationObject;
-        try {
-            attestationJson = JSON.stringify(attestationDisplay, null, 2);
-        } catch (error) {
-            attestationJson = '';
-        }
-
-        if (!attestationJson && attestationObject) {
-            try {
-                attestationJson = JSON.stringify(attestationObject, null, 2);
-            } catch (jsonError) {
-                attestationJson = '';
-            }
-        }
-
-        const attestationBody = attestationJson
-            ? `<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(attestationJson)}</textarea>`
-            : '<div style="font-style: italic; color: #6c757d;">Unable to prepare decoded attestationObject.</div>';
-
-        attestationContent = `
-            <div style="margin-bottom: 0.75rem;">
-                ${attestationHeading}
-                ${attestationBody}
-            </div>
-        `;
+        const attestationJson = attestationObjectJson(attestationObject, attestationFormatRaw);
+        attestationBody = attestationJson
+            ? certificateTextarea(attestationJson)
+            : placeholder('Unable to prepare decoded attestationObject.');
     } else if (attestationObjectValue) {
-        const message = attestationDecodeError || 'Unable to decode attestationObject.';
-        attestationContent = `
-            <div style="margin-bottom: 0.75rem;">
-                ${attestationHeading}
-                <div style="color: #dc3545; font-size: 0.9rem;">${escapeHtml(message)}</div>
-            </div>
-        `;
+        attestationBody = el('div', {
+            style: ERROR_STYLE,
+            text: attestationDecodeError || 'Unable to decode attestationObject.',
+        });
     } else {
-        attestationContent = `
-            <div style="margin-bottom: 0.75rem;">
-                ${attestationHeading}
-                <div style="font-style: italic; color: #6c757d;">No attestationObject was provided.</div>
-            </div>
-        `;
+        attestationBody = placeholder('No attestationObject was provided.');
     }
 
-    const buttonRowSegments = [];
-    let certificateMessageHtml = '';
-
+    const buttons = [];
+    let certificateMessage = null;
     if (attestationHasCertificates) {
         const singleCertificate = certificateInfos.length === 1;
         certificateInfos.forEach((info, displayIndex) => {
-            const label = singleCertificate
-                ? 'Attestation Certificate'
-                : `Attestation Certificate ${displayIndex + 1}`;
-            buttonRowSegments.push(`<button type="button" class="btn btn-small registration-attestation-cert-button" data-cert-index="${displayIndex}">${escapeHtml(label)}</button>`);
+            buttons.push(certificateButton(
+                singleCertificate ? 'Attestation Certificate' : `Attestation Certificate ${displayIndex + 1}`,
+                displayIndex,
+            ));
         });
     } else if (hasAttestationObject || hasAttestationValue || attestationStatementHasContent) {
-        certificateMessageHtml = '<div style="font-style: italic; color: #6c757d; margin-top: 0.75rem;">No attestation certificates available.</div>';
+        certificateMessage = placeholder('No attestation certificates available.', ' margin-top: 0.75rem;');
     }
 
-    if (authenticatorButtonMarkup) {
-        buttonRowSegments.push(authenticatorButtonMarkup);
+    if (hasAuthenticatorData) {
+        buttons.push(authenticatorDataButton());
     }
 
-    const buttonRowHtml = buttonRowSegments.length
-        ? `<div class="registration-detail-button-row">${buttonRowSegments.join('')}</div>`
-        : '';
-
-    const authenticatorMessageHtml = shouldShowAuthenticatorError
-        ? `<div style="color: #dc3545; font-size: 0.9rem; margin-top: 0.75rem;">${escapeHtml(authenticatorDecodeError)}</div>`
-        : '';
-
-    return `
-        <section style="margin-bottom: 1.5rem;">
-            <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Attestation Information</h3>
-            ${attestationContent}
-            ${buttonRowHtml}
-            ${certificateMessageHtml}
-            ${authenticatorMessageHtml}
-        </section>
-    `;
+    return el('section', { style: SECTION_STYLE },
+        el('h3', { style: SECTION_HEADING_STYLE, text: 'Attestation Information' }),
+        el('div', { style: 'margin-bottom: 0.75rem;' },
+            el('h4', {
+                style: 'font-weight: 600; color: #0f2740; margin-bottom: 0.5rem;',
+                text: 'Attestation Object',
+            }),
+            attestationBody,
+        ),
+        buttons.length ? el('div', { className: 'registration-detail-button-row' }, buttons) : null,
+        certificateMessage,
+        shouldShowAuthenticatorError
+            ? el('div', { style: `${ERROR_STYLE} margin-top: 0.75rem;`, text: authenticatorDecodeError })
+            : null,
+    );
 }
 
-export async function composeRegistrationDetailHtml({
-    credentialJson = null,
-    relyingPartyInfo = null,
-    attestationObjectValue = '',
-    attestationObjectDecoded = null,
-    authenticatorDataValue = '',
-    authenticatorDataHex = '',
-    fallbackCertificates = [],
-    fallbackClientData = null,
-    fallbackParsedClientData = null,
-    includeAttestationSection = true,
-    preferFallbackCertificates = false,
-    snapshotState = null,
-} = {}) {
-    const credentialDisplay = credentialJson && typeof credentialJson === 'object'
-        ? JSON.stringify(credentialJson, null, 2)
-        : '';
-
+function describeClientData(credentialJson, fallbackClientData, fallbackParsedClientData) {
     const fallbackClientDataString = typeof fallbackClientData === 'string'
         ? fallbackClientData.trim()
         : '';
@@ -211,24 +207,79 @@ export async function composeRegistrationDetailHtml({
         parsedClientData = fallbackParsedClientData;
     }
 
-    let clientDataDisplay = '';
     if (parsedClientData) {
-        clientDataDisplay = JSON.stringify(parsedClientData, null, 2);
-    } else if (clientDataBase64) {
-        clientDataDisplay = base64UrlToUtf8String(clientDataBase64) || clientDataBase64;
-    } else if (fallbackClientDataString) {
-        clientDataDisplay = fallbackClientDataString;
-    } else if (fallbackParsedClientData && typeof fallbackParsedClientData === 'object') {
-        clientDataDisplay = JSON.stringify(fallbackParsedClientData, null, 2);
+        return JSON.stringify(parsedClientData, null, 2);
     }
+    if (clientDataBase64) {
+        return base64UrlToUtf8String(clientDataBase64) || clientDataBase64;
+    }
+    if (fallbackClientDataString) {
+        return fallbackClientDataString;
+    }
+    if (fallbackParsedClientData && typeof fallbackParsedClientData === 'object') {
+        return JSON.stringify(fallbackParsedClientData, null, 2);
+    }
+    return '';
+}
 
-    const credentialSection = credentialDisplay
-        ? `<pre class="modal-pre">${escapeHtml(credentialDisplay)}</pre>`
-        : '<div style="font-style: italic; color: #6c757d;">No credential response captured.</div>';
+function buildResponseSections(credentialJson, clientDataDisplay, relyingPartyCopy) {
+    const credentialDisplay = credentialJson && typeof credentialJson === 'object'
+        ? JSON.stringify(credentialJson, null, 2)
+        : '';
+    const relyingPartyDisplay = relyingPartyCopy
+        ? JSON.stringify(relyingPartyCopy, null, 2)
+        : '';
 
-    const clientDataSection = clientDataDisplay
-        ? `<pre class="modal-pre">${escapeHtml(clientDataDisplay)}</pre>`
-        : '<div style="font-style: italic; color: #6c757d;">No clientDataJSON available.</div>';
+    return [
+        el('section', { style: SECTION_STYLE },
+            el('h3', { style: SECTION_HEADING_STYLE, text: 'Authenticator Response' }),
+            el('ol', { style: 'padding-left: 1.25rem; margin: 0;' },
+                el('li', { style: 'margin-bottom: 1rem;' },
+                    el('div', {
+                        style: 'font-weight: 600; margin-bottom: 0.5rem;',
+                        text: 'Response for navigator.credentials.create()',
+                    }),
+                    credentialDisplay
+                        ? preformatted(credentialDisplay)
+                        : placeholder('No credential response captured.'),
+                ),
+                el('li', {},
+                    el('div', { style: 'font-weight: 600; margin-bottom: 0.5rem;', text: 'Parsed clientDataJSON' }),
+                    clientDataDisplay
+                        ? preformatted(clientDataDisplay)
+                        : placeholder('No clientDataJSON available.'),
+                ),
+            ),
+        ),
+        el('section', { style: SECTION_STYLE },
+            el('h3', { style: SECTION_HEADING_STYLE, text: 'Server-retrieved Data' }),
+            relyingPartyDisplay
+                ? preformatted(relyingPartyDisplay)
+                : placeholder('No relying party data returned.'),
+        ),
+    ];
+}
+
+/**
+ * The registration's detail view, built from data: the browser's response, the
+ * client data, the relying party's view and the attestation. Returns the view as
+ * a fragment of fresh nodes, with the state the snapshot keeps and the relying
+ * party view it showed.
+ */
+export async function composeRegistrationDetail({
+    credentialJson = null,
+    relyingPartyInfo = null,
+    attestationObjectValue = '',
+    attestationObjectDecoded = null,
+    authenticatorDataValue = '',
+    authenticatorDataHex = '',
+    fallbackCertificates = [],
+    fallbackClientData = null,
+    fallbackParsedClientData = null,
+    preferFallbackCertificates = false,
+    snapshotState = null,
+} = {}) {
+    const clientDataDisplay = describeClientData(credentialJson, fallbackClientData, fallbackParsedClientData);
 
     // A saved snapshot already holds the decoded attestation and certificates:
     // show those as they are, without asking the server to decode again.
@@ -272,34 +323,6 @@ export async function composeRegistrationDetailHtml({
 
     const relyingPartyCopy = sanitizeRelyingPartyInfo(relyingPartyInfo, authenticatorSummary);
 
-    const relyingPartyDisplay = relyingPartyCopy
-        ? JSON.stringify(relyingPartyCopy, null, 2)
-        : '';
-
-    const relyingPartySection = relyingPartyDisplay
-        ? `<pre class="modal-pre">${escapeHtml(relyingPartyDisplay)}</pre>`
-        : '<div style="font-style: italic; color: #6c757d;">No relying party data returned.</div>';
-
-    let html = `
-        <section style="margin-bottom: 1.5rem;">
-            <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Authenticator Response</h3>
-            <ol style="padding-left: 1.25rem; margin: 0;">
-                <li style="margin-bottom: 1rem;">
-                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Response for navigator.credentials.create()</div>
-                    ${credentialSection}
-                </li>
-                <li>
-                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Parsed clientDataJSON</div>
-                    ${clientDataSection}
-                </li>
-            </ol>
-        </section>
-        <section style="margin-bottom: 1.5rem;">
-            <h3 style="color: #0072CE; margin-bottom: 0.75rem;">Server-retrieved Data</h3>
-            ${relyingPartySection}
-        </section>
-    `;
-
     const attestationObject = registrationDetailState.attestationObject;
     const attestationFormatFromRp = typeof relyingPartyInfo?.attestationFmt === 'string'
         ? relyingPartyInfo.attestationFmt
@@ -316,7 +339,7 @@ export async function composeRegistrationDetailHtml({
             ? attestationObjectDecoded.attStmt
             : null;
 
-    const attestationSectionHtml = buildAttestationSection({
+    const attestationSection = buildAttestationSection({
         attestationObjectValue: detailPreparation.attestationObjectValue,
         attestationDecodeError: detailPreparation.attestationDecodeError,
         attestationFormatRaw,
@@ -325,46 +348,11 @@ export async function composeRegistrationDetailHtml({
         authenticatorDecodeError: detailPreparation.authenticatorDecodeError,
     });
 
-    if (includeAttestationSection && attestationSectionHtml) {
-        html += attestationSectionHtml;
-    }
-
-    const stateSnapshot = captureRegistrationDetailState(detailPreparation);
-
     return {
-        html,
-        attestationSectionHtml,
-        combinedHtml: includeAttestationSection
-            ? html
-            : [html, attestationSectionHtml].filter(Boolean).join(''),
-        stateSnapshot,
+        view: fragment(buildResponseSections(credentialJson, clientDataDisplay, relyingPartyCopy), attestationSection),
+        stateSnapshot: captureRegistrationDetailState(detailPreparation),
         relyingPartyCopy,
     };
-}
-
-export function bindRegistrationDetailButtons(scope) {
-    if (!scope) {
-        return;
-    }
-
-    const certificateButtons = scope.querySelectorAll('.registration-attestation-cert-button');
-    certificateButtons.forEach(button => {
-        button.addEventListener('click', event => {
-            event.preventDefault();
-            const indexValue = Number(button.getAttribute('data-cert-index'));
-            if (!Number.isNaN(indexValue)) {
-                openAttestationCertificateDetail(indexValue);
-            }
-        });
-    });
-
-    const authenticatorButtonEl = scope.querySelector('.registration-authenticator-data-button');
-    if (authenticatorButtonEl) {
-        authenticatorButtonEl.addEventListener('click', event => {
-            event.preventDefault();
-            openAuthenticatorDataDetail();
-        });
-    }
 }
 
 export function certificateTextarea(text) {

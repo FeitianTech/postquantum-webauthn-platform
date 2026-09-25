@@ -19,7 +19,7 @@ import {
   buildPublicKeySection,
   buildUserInfoSection,
 } from '../../../../frontend/static/scripts/advanced/credential-display/credential-detail-runtime/sections-main.js';
-import { composeRegistrationDetailHtml } from '../../../../frontend/static/scripts/advanced/credential-display/registration-compose-runtime.js';
+import { composeRegistrationDetail } from '../../../../frontend/static/scripts/advanced/credential-display/registration-compose-runtime.js';
 
 const IMG_PAYLOAD = '<img src=x onerror="window.__xss=1">';
 // describeCoseAlgorithm / resolveCredentialAlgorithmIdentifier coerce any value
@@ -154,25 +154,24 @@ describe('credential detail sections escape untrusted values', () => {
   });
 });
 
-describe('registration detail composition escapes before the HTML is persisted', () => {
+describe('registration detail composition', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     delete window.__xss;
   });
 
-  // The composed HTML is written into the localStorage snapshot verbatim
-  // (registration-result.js) and replayed into innerHTML on later page loads, so the
-  // escaping performed here is what keeps that stored copy inert.
-  it('escapes hostile server and credential values in the composed markup', async () => {
-    const result = await composeRegistrationDetailHtml({
+  it('shows hostile server and credential values as text', async () => {
+    const result = await composeRegistrationDetail({
       credentialJson: { id: IMG_PAYLOAD, type: 'public-key', response: {} },
       relyingPartyInfo: { userName: IMG_PAYLOAD, attestationFmt: IMG_PAYLOAD },
     });
 
-    const container = render(result.combinedHtml || result.html);
+    const container = document.createElement('div');
+    container.append(result.view);
+    document.body.append(container);
     expect(container.querySelector('img')).toBeNull();
     expect(container.querySelector('script')).toBeNull();
-    // The payload survives as inert text inside the JSON dumps (its quotes are
+    // The payload survives as text inside the JSON dumps (its quotes are
     // backslash-escaped by JSON.stringify), never as markup.
     expect(container.textContent).toContain('<img src=x onerror=');
     expect(window.__xss).toBeUndefined();
