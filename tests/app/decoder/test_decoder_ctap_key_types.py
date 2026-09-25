@@ -79,7 +79,8 @@ def test_a_command_byte_labels_only_integer_keys_as_parameters():
     request = _decode(message, prefix="01")["data"]["ctapDecoded"]["makeCredentialRequest"]
 
     assert "2 (rp)" in request
-    assert "1" in request
+    # A non-integer key of a CTAP map is shown with its type.
+    assert '"1" (text)' in request
     assert "1 (clientDataHash)" not in request
 
 
@@ -145,7 +146,7 @@ def test_a_command_byte_does_not_label_a_text_named_member():
     request = _decode(message, prefix="02")["data"]["ctapDecoded"]["getAssertionRequest"]
 
     assert request["1 (rpId)"] == "example.com"
-    assert request["rpId"] == "other.example"
+    assert request['"rpId" (text)'] == "other.example"
     assert "rpId (rpId)" not in request
 
 
@@ -154,7 +155,7 @@ def test_a_text_named_client_data_hash_gets_no_member_label():
 
     request = _decode(message, prefix="01")["data"]["ctapDecoded"]["makeCredentialRequest"]
 
-    assert request["clientDataHash"] == _CLIENT_DATA_HASH.hex()
+    assert request['"clientDataHash" (text)'] == _CLIENT_DATA_HASH.hex()
     assert "clientDataHash (clientDataHash)" not in request
 
 

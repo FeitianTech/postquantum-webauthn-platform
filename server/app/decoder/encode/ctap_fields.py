@@ -98,6 +98,12 @@ def _reject_unknown_members(structure: Mapping[Any, Any], kind: str) -> None:
             raise ValueError(
                 f"{kind} member {number} ({members[number]}) is given twice, as {claimed[number]!r} and {key!r}."
             )
+        elif structure[key] is None:
+            # The builders read a null member as absent: encoding would drop it.
+            raise ValueError(
+                f"{kind} member {number} ({members[number]}) is null. CTAP defines no null member, and "
+                "the encoder does not drop one: encode this map from its EDN."
+            )
         else:
             claimed[number] = key
     if unknown:
