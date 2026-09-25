@@ -1,10 +1,9 @@
 import {
-    base64ToUint8Array,
     base64UrlToHex,
-    base64UrlToUint8Array,
     bytesToHex,
     hexToUint8Array,
 } from '../../shared/utils/binary.js';
+import {base64ToBytes, base64UrlToBytes} from '../../shared/utils/base64.js';
 import {addCertificatesToRegistrationState} from './certificate-state.js';
 import {cloneJson} from './data-utils.js';
 import {decodePayloadThroughApi} from './registration-result.js';
@@ -86,26 +85,30 @@ export async function computeAuthenticatorDataHash() {
         }
     }
 
-    if (!bytes) {
-        for (const candidate of base64UrlCandidates) {
-            const converted = base64UrlToUint8Array(candidate);
+    // base64url, and a value under a `base64` key standard base64: each read
+    // strictly, and a candidate that does not decode is passed over.
+    const decodeFirst = (candidates, decode) => {
+        for (const candidate of candidates) {
+            let converted = null;
+            try {
+                converted = decode(candidate);
+            } catch (error) {
+                converted = null;
+            }
             if (converted && converted.length) {
                 recordHexCandidate(bytesToHex(converted));
-                bytes = converted;
-                break;
+                return converted;
             }
         }
+        return null;
+    };
+
+    if (!bytes) {
+        bytes = decodeFirst(base64UrlCandidates, base64UrlToBytes);
     }
 
     if (!bytes) {
-        for (const candidate of base64Candidates) {
-            const converted = base64ToUint8Array(candidate);
-            if (converted && converted.length) {
-                recordHexCandidate(bytesToHex(converted));
-                bytes = converted;
-                break;
-            }
-        }
+        bytes = decodeFirst(base64Candidates, base64ToBytes);
     }
 
     if (!bytes || !bytes.length) {

@@ -1,4 +1,5 @@
-import {base64ToHex} from '../../shared/utils/binary.js';
+import {bytesToHex} from '../../shared/utils/binary.js';
+import {base64ToBytes} from '../../shared/utils/base64.js';
 import {normaliseAaguidValue} from '../credentials/utils.js';
 
 const AAGUID_EXTENSION_OID = '1.3.6.1.4.1.45724.1.1.4';
@@ -162,7 +163,8 @@ export function normaliseCertificateEntryForModal(entry) {
             || entry.parsed?.derBase64;
         if (typeof derBase64 === 'string' && derBase64.trim() !== '') {
             try {
-                rawHex = base64ToHex(derBase64.trim());
+                // derBase64 is named for its encoding: standard base64, padded.
+                rawHex = bytesToHex(base64ToBytes(derBase64.trim()));
             } catch (error) {
                 rawHex = null;
             }

@@ -29,7 +29,7 @@ export class Base64Error extends Error {
     }
 }
 
-function decodeBody(body, values, name) {
+function decodeBody(body, values, name, { allowStrayBits = false } = {}) {
     if (body.length % 4 === 1) {
         throw new Base64Error(`${name} cannot be ${body.length} characters long`);
     }
@@ -50,7 +50,7 @@ function decodeBody(body, values, name) {
             offset += 1;
         }
     }
-    if (bits > 0 && (buffer & ((1 << bits) - 1)) !== 0) {
+    if (!allowStrayBits && bits > 0 && (buffer & ((1 << bits) - 1)) !== 0) {
         throw new Base64Error(`${name} ends in bits that belong to no byte`);
     }
     return bytes;
@@ -80,6 +80,21 @@ export function base64ToBytes(text) {
         throw new Base64Error('base64 padding does not match its length');
     }
     return decodeBody(body, STANDARD_VALUES, 'base64');
+}
+
+/**
+ * atob()'s forgiving decode, without atob: whitespace ignored, padding optional,
+ * stray bits in the last character dropped, either alphabet. Only for text a
+ * person typed into the request editor; bytes from the server are decoded with
+ * base64UrlToBytes or base64ToBytes.
+ */
+export function forgivingBase64ToBytes(text) {
+    requireString(text, 'base64');
+    let body = text.replace(/[\t\n\f\r ]+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+    if (body.length % 4 === 0) {
+        body = body.replace(/==?$/, '');
+    }
+    return decodeBody(body, STANDARD_VALUES, 'base64', { allowStrayBits: true });
 }
 
 function encode(bytes, alphabet) {
