@@ -6,12 +6,11 @@ from typing import Any
 
 from ..cbor_canonical import _canonical_cbor_dumps, _canonicalize_cbor_structure
 from ..decode import _binary_summary, _hex_json_safe, _stringify_mapping_keys
+from . import ctap_framing
 from .constants import _CTAP_FIELD_LABELS, _CTAP_PREFIX_DETAILS, _CTAP_REQUIRED_FIELDS
 from .cose_key import encode_cose_key
 from .ctap_encode import (
-    _determine_ctap_prefix,
     _encode_ctap_from_decoded,
-    _encode_ctap_from_structure,
     _encode_get_assertion_request,
     _encode_get_assertion_response,
     _encode_make_credential_request,
@@ -44,19 +43,18 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> d
             encoded_map, ctap_kind = _encode_ctap_from_decoded(ctap_decoded)
             if encoded_map is None:
                 raise ValueError("ctapDecoded names no CTAP message to encode.")
+            framing = ctap_framing.require(ctap_metadata, "ctapDecoded")
+            ctap_framing.check_message(framing, ctap_kind)
             ctap_source = ctap_decoded.get(ctap_kind) if isinstance(ctap_decoded.get(ctap_kind), Mapping) else ctap_decoded
         elif ctap_metadata is not None and isinstance(expanded, Mapping):
-            encoded_map, ctap_kind = _encode_ctap_from_structure(expanded)
-            if encoded_map is None:
-                raise ValueError("expandedJson is not a makeCredential or getAssertion request or response.")
+            framing = ctap_framing.require(ctap_metadata, "expandedJson")
+            ctap_kind = ctap_framing.message(framing, "expandedJson")
+            encoded_map, ctap_kind = _encode_ctap_from_decoded({ctap_kind: expanded})
             ctap_source = expanded
 
     if encoded_map is not None:
-        prefix_code, prefix_kind = _determine_ctap_prefix(ctap_metadata, ctap_kind)
         payload_bytes = _canonical_cbor_dumps(encoded_map)
-        full_bytes = (
-            bytes([prefix_code]) + payload_bytes if prefix_code is not None else payload_bytes
-        )
+        full_bytes = ctap_framing.frame(framing, payload_bytes)
         canonical_structure = _canonicalize_cbor_structure(encoded_map)
         payload: dict[str, Any] = {
             "binary": _binary_summary(full_bytes, "cbor"),
@@ -74,12 +72,7 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> d
                 if ctap_kind
                 else _stringify_mapping_keys(_hex_json_safe(canonical_ctap_source)),
             )
-        if prefix_code is not None:
-            payload["ctap"] = {
-                "code": prefix_code,
-                "codeHex": f"0x{prefix_code:02x}",
-                "kind": prefix_kind,
-            }
+        payload["ctap"] = dict(framing)
         qualifier = f"encoded {ctap_kind}" if ctap_kind else "encoded"
         return _prepare_encoder_response(base_type, payload, qualifier=qualifier)
 

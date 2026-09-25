@@ -151,7 +151,7 @@ def test_bytes_after_a_make_credential_response_are_reported_with_the_response()
 def test_zero_padding_after_a_response_is_reported_too():
     result = _decode("00a10102" + "00" * 8)
 
-    assert result["data"]["ctap"]["ignoredPaddingBytes"] == 8
+    assert result["data"]["ctap"]["paddingBytes"] == 8
     assert result["malformed"] == ["Trailing 8 byte(s) after CBOR payload (all 0x00/0xff: HID report padding?)."]
 
 

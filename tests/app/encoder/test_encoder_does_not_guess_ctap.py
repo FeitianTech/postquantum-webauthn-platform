@@ -50,5 +50,5 @@ def test_the_decoders_ctap_view_pasted_into_the_encoder_is_still_a_ctap_message(
 
     encoded = encode_payload_text(json.dumps(decoded), "CBOR (canonical)")
 
-    # A response decoded without its status byte is encoded with SUCCESS in front.
-    assert encoded["data"]["binary"]["hex"] == (message if message[0] == 0 else b"\x00" + message).hex()
+    # A response decoded without its status byte is encoded without one: data.ctap says none was sent.
+    assert encoded["data"]["binary"]["hex"] == message.hex()

@@ -228,7 +228,7 @@ def test_try_decode_cbor_reports_trailing_bytes_and_padding_alike():
     assert result["decoded"]["ctap"]["payloadLength"] == 2
 
     result_padding = decode_module._try_decode_cbor(b"\x01\x18\x2a\x00\xff", "hex")
-    assert result_padding["decoded"]["ctap"]["ignoredPaddingBytes"] == 2
+    assert result_padding["decoded"]["ctap"]["paddingBytes"] == 2
     assert result_padding["malformed"] == [
         "Trailing 2 byte(s) after CBOR payload (all 0x00/0xff: HID report padding?)."
     ]

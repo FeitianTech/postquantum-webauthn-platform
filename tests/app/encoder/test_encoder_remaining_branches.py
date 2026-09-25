@@ -57,10 +57,8 @@ def test_extract_binary_input_candidate_priority_string_and_sequence_paths():
         encode_module._extract_binary_input({"value": {"bad": True}}, "field")
 
 
-def test_encode_ctap_from_decoded_and_structure_none_paths():
+def test_encode_ctap_from_decoded_none_paths():
     encode_module = pytest.importorskip("server.app.decoder.encode")
-
-    assert encode_module._encode_ctap_from_structure("not-mapping") == (None, None)
 
     assert encode_module._encode_ctap_from_decoded({}) == (None, None)
     with pytest.raises(ValueError, match="ctapDecoded.makeCredentialRequest must be an object"):

@@ -21,7 +21,7 @@ export const SPECIAL_LABELS = {
     ctap: 'CTAP metadata',
     binary: 'Binary summary',
     ctapDecoded: 'CTAP decoded',
-    ignoredPaddingBytes: 'Ignored padding bytes',
+    paddingBytes: 'Padding bytes (all 00 or ff)',
     trailingBytesHex: 'Trailing bytes (hex)',
     makeCredentialResponse: 'MakeCredential response',
     getAssertionResponse: 'GetAssertion response',

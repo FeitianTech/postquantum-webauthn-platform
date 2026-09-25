@@ -143,7 +143,8 @@ def _whole_reading_taken(name: str, result: Result) -> str:
 
     if name in ("CBOR", "one CTAP message or CBOR item", "an attestation object"):
         framing = (result.get("decoded") or {}).get("ctap")
-        return CTAP_MESSAGE if isinstance(framing, Mapping) and framing.get("payloadLength") else CBOR_ITEM
+        sent_a_byte = isinstance(framing, Mapping) and framing.get("code") is not None
+        return CTAP_MESSAGE if sent_a_byte and framing.get("payloadLength") else CBOR_ITEM
     return name
 
 

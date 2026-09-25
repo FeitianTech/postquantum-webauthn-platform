@@ -129,12 +129,13 @@ def test_encode_ctap_webauthn_rejects_negative_numeric_field_ids():
         )
 
 
-def test_encode_cbor_uses_ctap_metadata_codehex_prefix_when_provided():
+def test_encode_cbor_writes_the_byte_the_ctap_framing_names():
     encode_module = pytest.importorskip("server.app.decoder.encode")
 
     challenge_hash = b"\x11" * 32
     payload = {
         "ctap": {
+            "code": 2,
             "codeHex": "0x02",
             "kind": "command",
         },

@@ -7,49 +7,6 @@ def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
-def test_encode_ctap_from_structure_detects_all_ctap_shapes():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
-    make_req, make_req_kind = encode_module._encode_ctap_from_structure(
-        {
-            "clientDataHash": _b64url(b"\x00" * 32),
-            "rp": {"id": "example.com", "name": "Example"},
-            "user": {"id": _b64url(b"user"), "name": "user", "displayName": "User"},
-            "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
-        }
-    )
-    assert make_req_kind == "makeCredentialRequest"
-    assert make_req[1] == b"\x00" * 32
-
-    get_req, get_req_kind = encode_module._encode_ctap_from_structure(
-        {
-            "rpId": "example.com",
-            "clientDataHash": _b64url(b"\x11" * 32),
-        }
-    )
-    assert get_req_kind == "getAssertionRequest"
-    assert get_req[1] == "example.com"
-
-    make_resp, make_resp_kind = encode_module._encode_ctap_from_structure(
-        {
-            "fmt": "packed",
-            "authData": _b64url(b"\x22" * 37),
-        }
-    )
-    assert make_resp_kind == "makeCredentialResponse"
-    assert make_resp[1] == "packed"
-
-    get_resp, get_resp_kind = encode_module._encode_ctap_from_structure(
-        {
-            "credential": {"id": _b64url(b"cred"), "type": "public-key"},
-            "authData": _b64url(b"\x33" * 37),
-            "signature": _b64url(b"\x44" * 64),
-        }
-    )
-    assert get_resp_kind == "getAssertionResponse"
-    assert get_resp[3] == b"\x44" * 64
-
-
 def test_encode_ctap_from_decoded_encodes_its_one_message_and_none_for_non_mapping():
     encode_module = pytest.importorskip("server.app.decoder.encode")
 
@@ -74,20 +31,6 @@ def test_encode_ctap_from_decoded_encodes_its_one_message_and_none_for_non_mappi
         )
 
     assert encode_module._encode_ctap_from_decoded("not-a-mapping") == (None, None)
-
-
-def test_determine_ctap_prefix_prefers_metadata_and_falls_back_to_defaults():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
-    prefix, kind = encode_module._determine_ctap_prefix({"codeHex": "0x02", "kind": "command"}, None)
-    assert prefix == 0x02
-    assert kind == "command"
-
-    prefix2, kind2 = encode_module._determine_ctap_prefix({"codeHex": "bad"}, "getAssertionRequest")
-    assert (prefix2, kind2) == (0x02, "command")
-
-    assert encode_module._determine_ctap_prefix(None, "makeCredentialResponse") == (0x00, "status")
-    assert encode_module._determine_ctap_prefix(None, None) == (None, None)
 
 
 def test_ctap_key_match_and_value_lookup_handle_labeled_variants_case_insensitively():
