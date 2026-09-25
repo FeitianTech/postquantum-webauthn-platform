@@ -2,7 +2,8 @@
 
 The format reads a map numbered by CTAP members. Given a decoder answer, it
 took the first numbered map it found in it and guessed which message it was
-from its values' lengths.
+from its values' lengths; now a view, beside its framing, is rebuilt as format
+CBOR rebuilds it (``encode/ctap_views.py``), exactly.
 """
 from __future__ import annotations
 
@@ -23,13 +24,25 @@ def _encode(message: bytes) -> bytes:
     return bytes.fromhex(encode_payload_text(json.dumps(decoded), _FORMAT)["data"]["binary"]["hex"])
 
 
-def test_a_make_credential_response_with_fmt_none_is_taken_for_a_request():
-    # "none" is base64 of three bytes; the format took it for a clientDataHash.
-    message = b"\x00" + _canonical_cbor_dumps({1: "none", 2: _AUTH_DATA, 3: {}})
+@pytest.mark.parametrize(
+    "message",
+    [
+        # "none" is base64 of three bytes; the format took it for a clientDataHash.
+        b"\x00" + _canonical_cbor_dumps({1: "none", 2: _AUTH_DATA, 3: {}}),
+        # A response decoded without its status byte came back with one.
+        GET_ASSERTION_RESPONSE,
+        b"\x00" + GET_ASSERTION_RESPONSE,
+    ],
+    ids=["fmt none", "no status byte", "status byte"],
+)
+def test_a_decoder_view_is_rebuilt_as_it_is(message):
+    assert _encode(message) == message
 
-    with pytest.raises(ValueError, match=r"Field 0x01 \(clientDataHash\) must be exactly 32 bytes for MakeCredential request"):
-        _encode(message)
 
+def test_a_hand_written_numbered_map_is_still_read_as_the_format_reads_one():
+    body = {"01": "example.com", "02": "22" * 32}
 
-def test_a_response_decoded_without_its_status_byte_comes_back_with_one():
-    assert _encode(GET_ASSERTION_RESPONSE) == b"\x00" + GET_ASSERTION_RESPONSE
+    encoded = encode_payload_text(json.dumps(body), _FORMAT)
+
+    assert encoded["type"] == "CBOR (CTAP/WebAuthn Data) (encoded getAssertionRequest)"
+    assert encoded["data"]["binary"]["hex"].startswith("02a2")

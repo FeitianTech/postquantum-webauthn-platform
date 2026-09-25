@@ -46,6 +46,9 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> d
 
 
 def _encode_ctap_webauthn_value(parsed: Any) -> dict[str, Any]:
+    # The decoder's view of a CTAP message is rebuilt as it is, as format CBOR rebuilds it.
+    if isinstance(parsed, Mapping) and (answer := ctap_views.encode(parsed, "CBOR (CTAP/WebAuthn Data)")):
+        return answer
     numeric_map, ctap_type = _extract_ctap_numeric_payload(parsed)
 
     field_labels = _CTAP_FIELD_LABELS.get(ctap_type, {})
