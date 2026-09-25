@@ -285,24 +285,25 @@ async function renderAuthenticatorDataDetail() {
 }
 
 // Whether each view ran the payload on the code of this commit. A view "runs" it
-// when data became an element or an on* attribute, or a handler fired.
+// when data became an element or an on* attribute, or a handler fired. Until
+// registration details were built from data, the three stored-HTML paths did.
 const VIEWS = [
   ['saved-credential cards', renderCards, false],
   ['allow-credentials options', renderAllowList, false],
   ['credential detail modal', () => renderDetail(hostileRecord()), false],
   ['credential detail modal, snapshot saved in this browser', () => renderDetail(hostileRecord({
     registrationDetailSnapshot: { html: STORED_HTML, combinedHtml: STORED_HTML, state: {} },
-  })), true],
+  })), false],
   ['credential detail modal, raw registrationDetailHtml key', () => renderDetail(hostileRecord({
     registrationDetailHtml: STORED_HTML,
-  })), true],
+  })), false],
   ['credential detail modal, snapshot from the server artifact', () => {
     fetchCredentialArtifact.mockResolvedValueOnce({
       storedCredential: { displayName: hostile('artifact.displayName') },
       registrationDetailSnapshot: { html: STORED_HTML, combinedHtml: STORED_HTML, state: {} },
     });
     return renderDetail(hostileRecord());
-  }, true],
+  }, false],
   ['registration result modal', renderRegistrationResult, false],
   ['attestation certificate sub-modal', renderCertificateDetail, false],
   ['authenticator data sub-modal', renderAuthenticatorDataDetail, false],

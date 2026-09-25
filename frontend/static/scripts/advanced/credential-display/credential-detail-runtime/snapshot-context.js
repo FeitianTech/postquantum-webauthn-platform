@@ -2,10 +2,6 @@ import {
     applyRegistrationDetailSnapshot,
     EMPTY_DETAIL_PREPARATION,
 } from '../registration-state-runtime.js';
-import {
-    combineRegistrationHtmlSections,
-    pickFirstString,
-} from './helpers.js';
 
 // A snapshot that holds the registration as data (schemaVersion 2 and later).
 // Anything else -- an older snapshot, or none -- leaves the credential to be
@@ -27,41 +23,22 @@ export function readSnapshotResponse(snapshot) {
     return credential || relyingParty ? { credential, relyingParty } : null;
 }
 
+// The saved registration detail, as data. Markup is never read from a snapshot or
+// from a record: older snapshots carried composed HTML, and records could carry
+// registrationDetailHtml-style keys; the view is built from data instead.
 export function resolveRegistrationSnapshotContext(cred) {
-    const registrationDetailSnapshot = (() => {
-        const objectCandidates = [
-            cred.registrationDetailSnapshot,
-            cred.registration_detail_snapshot,
-            cred.registrationDetailCopy,
-            cred.registration_detail_copy,
-        ];
-
-        for (const candidate of objectCandidates) {
-            if (candidate && typeof candidate === 'object') {
-                return candidate;
-            }
-        }
-
-        const htmlCopy = pickFirstString(
-            cred.registrationDetailHtml,
-            cred.registration_detail_html,
-            cred.registrationDetailCombinedHtml,
-            cred.registration_detail_combined_html,
-        );
-
-        if (htmlCopy) {
-            return { combinedHtml: htmlCopy };
-        }
-
-        return null;
-    })();
+    const registrationDetailSnapshot = [
+        cred.registrationDetailSnapshot,
+        cred.registration_detail_snapshot,
+        cred.registrationDetailCopy,
+        cred.registration_detail_copy,
+    ].find(candidate => candidate && typeof candidate === 'object') || null;
 
     if (!registrationDetailSnapshot) {
         return {
             detailPreparation: null,
             snapshotState: null,
             snapshotResponse: null,
-            combinedRegistrationHtml: '',
         };
     }
 
@@ -72,16 +49,9 @@ export function resolveRegistrationSnapshotContext(cred) {
     const detailPreparation = applyRegistrationDetailSnapshot(registrationDetailSnapshot)
         || { ...EMPTY_DETAIL_PREPARATION };
 
-    const combinedRegistrationHtml = combineRegistrationHtmlSections(
-        registrationDetailSnapshot.html,
-        registrationDetailSnapshot.attestationSectionHtml,
-        registrationDetailSnapshot.combinedHtml,
-    );
-
     return {
         detailPreparation,
         snapshotState,
         snapshotResponse: readSnapshotResponse(registrationDetailSnapshot),
-        combinedRegistrationHtml,
     };
 }

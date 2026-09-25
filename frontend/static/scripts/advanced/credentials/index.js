@@ -53,9 +53,8 @@ import {
 } from '../credential-display/deletion.js';
 import {showRegistrationResultModalRuntime} from '../credential-display/registration-result.js';
 import {
-    bindRegistrationDetailButtons as bindRegistrationDetailButtonsRuntime,
     closeRegistrationDetailModalRuntime,
-    composeRegistrationDetailHtml as composeRegistrationDetailHtmlRuntime,
+    composeRegistrationDetail,
 } from '../credential-display/registration-compose-runtime.js';
 import {showCredentialDetailsRuntime} from '../credential-display/credential-detail-runtime.js';
 import {
@@ -69,6 +68,7 @@ import {
     removeSimpleCredential as removeSimpleCredentialFromLocal,
     updateAdvancedCredentialRegistrationSnapshot,
 } from '../../shared/storage/local.js';
+import {sanitiseRegistrationDetailSnapshot} from '../../shared/storage/local/snapshot-sanitize.js';
 import {deleteCredentialArtifact, fetchCredentialArtifact} from '../../shared/storage/artifacts-client.js';
 
 export {queueAuthenticatedCredentialFlash, queueFailedCredentialFlash};
@@ -134,15 +134,20 @@ async function hydrateCredentialFromServer(cred) {
 
         if (storedCredential && typeof storedCredential === 'object') {
             Object.keys(storedCredential).forEach(key => {
-                cred[key] = storedCredential[key];
+                if (key !== 'registrationDetailSnapshot') {
+                    cred[key] = storedCredential[key];
+                }
             });
         }
 
-        const snapshotCandidate = artifact.registrationDetailSnapshot
-            || storedCredential?.registrationDetailSnapshot;
-        if (snapshotCandidate && typeof snapshotCandidate === 'object') {
-            cred.registrationDetailSnapshot = snapshotCandidate;
-            void updateAdvancedCredentialRegistrationSnapshot(storageId, snapshotCandidate);
+        // The artifact holds whatever a browser uploaded; its snapshot is kept
+        // only as far as the sanitiser allows, like one saved locally.
+        const snapshot = sanitiseRegistrationDetailSnapshot(
+            artifact.registrationDetailSnapshot || storedCredential?.registrationDetailSnapshot,
+        );
+        if (snapshot) {
+            cred.registrationDetailSnapshot = snapshot;
+            void updateAdvancedCredentialRegistrationSnapshot(storageId, snapshot);
         }
 
         cred.__artifactHydrated = storageId;
@@ -162,40 +167,6 @@ function handleCredentialMdsClick(event) {
         showSharedCredentialStatus,
         navigateToMdsAuthenticator,
     });
-}
-
-async function composeRegistrationDetailHtml({
-    credentialJson = null,
-    relyingPartyInfo = null,
-    attestationObjectValue = '',
-    attestationObjectDecoded = null,
-    authenticatorDataValue = '',
-    authenticatorDataHex = '',
-    fallbackCertificates = [],
-    fallbackClientData = null,
-    fallbackParsedClientData = null,
-    includeAttestationSection = true,
-    preferFallbackCertificates = false,
-    snapshotState = null,
-} = {}) {
-    return composeRegistrationDetailHtmlRuntime({
-        credentialJson,
-        relyingPartyInfo,
-        attestationObjectValue,
-        attestationObjectDecoded,
-        authenticatorDataValue,
-        authenticatorDataHex,
-        fallbackCertificates,
-        fallbackClientData,
-        fallbackParsedClientData,
-        includeAttestationSection,
-        preferFallbackCertificates,
-        snapshotState,
-    });
-}
-
-function bindRegistrationDetailButtons(scope) {
-    bindRegistrationDetailButtonsRuntime(scope);
 }
 
 export function closeRegistrationDetailModal() {
@@ -268,10 +239,9 @@ export async function showCredentialDetails(index) {
 
 export async function showRegistrationResultModal(credentialJson, relyingPartyInfo, options = {}) {
     await showRegistrationResultModalRuntime(credentialJson, relyingPartyInfo, options, {
-        composeRegistrationDetailHtml,
+        composeRegistrationDetail,
         updateAdvancedCredentialRegistrationSnapshot,
         loadSavedCredentials,
-        bindRegistrationDetailButtons,
         autoResizeCertificateTextareas,
     });
 }

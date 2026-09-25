@@ -13,14 +13,12 @@ import {
     clearAaguidStatus,
 } from '../navigation.js';
 import {
-    bindRegistrationDetailButtons,
-    composeRegistrationDetailHtml,
+    composeRegistrationDetail,
 } from '../registration-compose-runtime.js';
 import {
     resetRegistrationDetailState,
 } from '../state.js';
 import {
-    combineRegistrationHtmlSections,
     pickFirstString,
 } from './helpers.js';
 import {
@@ -81,7 +79,6 @@ export async function showCredentialDetailsRuntime(index, deps = {}) {
         detailPreparation,
         snapshotState,
         snapshotResponse,
-        combinedRegistrationHtml: snapshotCombinedRegistrationHtml,
     } = resolveRegistrationSnapshotContext(cred);
 
     const {
@@ -101,30 +98,20 @@ export async function showCredentialDetailsRuntime(index, deps = {}) {
         detailPreparation,
     });
 
-    let combinedRegistrationHtml = snapshotCombinedRegistrationHtml;
-    if (!combinedRegistrationHtml) {
-        const registrationDetailResult = await composeRegistrationDetailHtml({
-            credentialJson: snapshotResponse?.credential
-                || (Object.keys(registrationCredential).length ? registrationCredential : null),
-            relyingPartyInfo: snapshotResponse?.relyingParty || relyingPartyInfo,
-            attestationObjectValue,
-            attestationObjectDecoded,
-            authenticatorDataValue: authenticatorDataForDetail,
-            authenticatorDataHex,
-            fallbackCertificates,
-            fallbackClientData: fallbackClientDataString,
-            fallbackParsedClientData: fallbackClientDataObject,
-            includeAttestationSection: false,
-            preferFallbackCertificates: Array.isArray(fallbackCertificates) && fallbackCertificates.length > 0,
-            snapshotState: snapshotResponse ? snapshotState : null,
-        });
-
-        combinedRegistrationHtml = combineRegistrationHtmlSections(
-            registrationDetailResult.html,
-            registrationDetailResult.attestationSectionHtml,
-            registrationDetailResult.combinedHtml,
-        );
-    }
+    const registrationDetail = await composeRegistrationDetail({
+        credentialJson: snapshotResponse?.credential
+            || (Object.keys(registrationCredential).length ? registrationCredential : null),
+        relyingPartyInfo: snapshotResponse?.relyingParty || relyingPartyInfo,
+        attestationObjectValue,
+        attestationObjectDecoded,
+        authenticatorDataValue: authenticatorDataForDetail,
+        authenticatorDataHex,
+        fallbackCertificates,
+        fallbackClientData: fallbackClientDataString,
+        fallbackParsedClientData: fallbackClientDataObject,
+        preferFallbackCertificates: Array.isArray(fallbackCertificates) && fallbackCertificates.length > 0,
+        snapshotState: snapshotResponse ? snapshotState : null,
+    });
 
     const attestationFormatRaw = pickFirstString(
         cred.attestationFormat,
@@ -153,13 +140,13 @@ export async function showCredentialDetailsRuntime(index, deps = {}) {
         buildAuthenticatorDataSection(cred),
         buildExtensionsSection(cred),
         buildPublicKeySection(cred),
-        buildRegistrationDetailSection(combinedRegistrationHtml),
+        buildRegistrationDetailSection(),
     ].filter(Boolean).join('');
 
     const finalDetailsHtml = [propertiesSectionHtml, detailsHtml].filter(Boolean).join('');
 
     modalBody.innerHTML = finalDetailsHtml;
-    bindRegistrationDetailButtons(modalBody);
+    modalBody.querySelector('.credential-registration-copy')?.replaceChildren(registrationDetail.view);
 
     const statusEl = modalBody.querySelector('.credential-aaguid-status');
     if (statusEl) {

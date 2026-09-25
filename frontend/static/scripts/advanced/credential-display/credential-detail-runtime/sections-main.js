@@ -138,16 +138,9 @@ export function buildPublicKeySection(cred) {
         </div>`;
 }
 
-export function buildRegistrationDetailSection(combinedRegistrationHtml) {
-    if (combinedRegistrationHtml) {
-        return `
-        <div class="credential-registration-copy">
-            ${combinedRegistrationHtml}
-        </div>`;
-    }
-
+// The registration detail is built as nodes (registration-compose-runtime.js) and
+// placed into this container.
+export function buildRegistrationDetailSection() {
     return `
-        <div class="credential-registration-copy">
-            <div style="font-style: italic; color: #6c757d;">Registration detail data is not available for this credential.</div>
-        </div>`;
+        <div class="credential-registration-copy"></div>`;
 }
