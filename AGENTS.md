@@ -31,6 +31,11 @@ The repo includes both the application and a local `fido2/` library copy used by
 
 ## Frontend Map
 
+**The UI is moving to Next.js + Tailwind CSS in `web/` (Phases 25–30).** Read
+`docs/UI_MIGRATION.md` before changing anything under `frontend/` or `web/`: it holds the owner's design
+direction, the binding architecture (Pages Router static export served by Flask, the strict CSP kept) and
+the content-parity rule.
+
 The app is a multi-tab UI wired together from `frontend/static/scripts/main.js`.
 
 Important frontend entry points:
