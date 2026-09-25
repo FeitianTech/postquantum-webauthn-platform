@@ -26,7 +26,7 @@ describe('the app shell', () => {
     expect(analyze).toHaveAttribute('aria-haspopup', 'dialog');
     expect(analyze).toHaveAttribute('aria-controls', 'analyze-browser-panel');
     const github = screen.getByRole('link', { name: 'View project on GitHub' });
-    expect(github).toHaveAttribute('href', 'https://github.com/rainzhang05/python-fido2-webauthn-test');
+    expect(github).toHaveAttribute('href', 'https://github.com/FeitianTech/postquantum-webauthn-platform');
     expect(github).toHaveAttribute('target', '_blank');
     expect(github).toHaveAttribute('rel', 'noopener noreferrer');
   });
