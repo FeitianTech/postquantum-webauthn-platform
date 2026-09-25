@@ -8,6 +8,7 @@ from . import (
     canonical,
     cbor_parser,
     ctap_classify,
+    ctap_self_check,
     ctap_views,
     interpretations,
     key_collisions,
@@ -57,7 +58,12 @@ def _try_decode_cbor(data: bytes, encoding: str, *, lenient: bool = False) -> di
     ctap_decoded = decoded_payload.get("ctapDecoded")
     message = next(iter(ctap_decoded)) if isinstance(ctap_decoded, Mapping) else None
     if ctap_details is not None or message is not None:
-        decoded_payload["ctap"] = _framing(ctap_details, message, end - start, data[end:])
+        framing = decoded_payload["ctap"] = _framing(ctap_details, message, end - start, data[end:])
+        if message is not None:
+            # The encoder rebuilds the view in canonical form: say so where that is not these bytes.
+            reason = ctap_self_check.check(message, ctap_decoded[message], framing, data, findings)
+            if reason is not None:
+                framing["notRebuildable"] = reason
 
     result: dict[str, Any] = {
         "format": "CBOR",
