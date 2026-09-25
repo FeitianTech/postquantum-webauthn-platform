@@ -30,6 +30,13 @@ def require(framing: Mapping[str, Any] | None, view: str) -> Mapping[str, Any]:
     trailing = framing.get("trailingBytesHex")
     if trailing is not None and (not isinstance(trailing, str) or encoding.try_decode_hex(trailing) is None):
         raise ValueError("ctap.trailingBytesHex must be hex.")
+    reason = framing.get("notRebuildable")
+    if reason:
+        raise ValueError(
+            f"This {view} does not give back the bytes it was read from ({reason}). Encode data.edn with the EDN "
+            "format for them, after the byte in ctap.code; or remove ctap.notRebuildable to write the view in "
+            "CTAP2 canonical form."
+        )
     return framing
 
 
