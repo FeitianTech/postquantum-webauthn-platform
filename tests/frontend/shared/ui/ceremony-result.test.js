@@ -68,7 +68,7 @@ describe('ceremony result panel', () => {
 
     expect(rows('simple')).toEqual([[
       'Signature counter',
-      'not reported The server reported "<img src=x onerror=alert(1)>".',
+      'The server reported "<img src=x onerror=alert(1)>".',
     ]]);
     expect(panel('simple').querySelector('img')).toBeNull();
   });

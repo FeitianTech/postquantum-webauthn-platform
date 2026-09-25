@@ -43,8 +43,8 @@ function counterRow({ signCount, signCountStatus, consequence }) {
         ? SIGN_COUNT_SENTENCES[signCountStatus] || `The server reported "${signCountStatus}".`
         : 'The server did not say how this counter compares with the stored one.';
     return row('Signature counter',
-        el('span', { className: 'ceremony-result__value', text: hasCount ? String(signCount) : 'not reported' }),
-        ' ',
+        hasCount ? el('span', { className: 'ceremony-result__value', text: String(signCount) }) : null,
+        hasCount ? ' ' : null,
         sentence,
         signCountStatus === 'regressed' && consequence ? ` ${consequence}` : null,
     );

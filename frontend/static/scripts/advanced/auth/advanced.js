@@ -32,6 +32,7 @@ import {
 } from '../credentials/index.js';
 import { printRegistrationDebug, printAuthenticationDebug } from '../../shared/debug/auth.js';
 import { FailedResponseError, readFailedResponse } from '../../shared/api/failed-response.js';
+import { clearCeremonyResult, showCeremonyResult } from '../../shared/ui/ceremony-result.js';
 import { state } from '../../shared/state.js';
 import {
     saveAdvancedCredential,
@@ -198,6 +199,7 @@ export async function advancedRegister() {
         allowedAttachments = enforceHintsForAdvanced(publicKey);
 
         hideStatus('advanced');
+        clearCeremonyResult('advanced');
         showProgress('advanced', 'Starting advanced registration...');
 
         const response = await fetch('/api/advanced/register/begin', {
@@ -396,6 +398,7 @@ export async function advancedAuthenticate() {
         }
 
         hideStatus('advanced');
+        clearCeremonyResult('advanced');
         showProgress('advanced', 'Detecting credentials...');
 
         const storedCredentials = prepareAdvancedCredentialsForServer();
@@ -485,6 +488,12 @@ export async function advancedAuthenticate() {
             printAuthenticationDebug(assertion, assertOptions, data);
 
             showStatus('advanced', 'Advanced authentication successful!', 'success');
+            showCeremonyResult('advanced', {
+                title: 'Last authentication',
+                signCount: data.signCount,
+                signCountStatus: data.signCountStatus,
+                consequence: 'The advanced tab reports this and does not reject the assertion.',
+            });
 
             if (data.authenticatedCredentialId) {
                 updateAdvancedCredentialSignCount(

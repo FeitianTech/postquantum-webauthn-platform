@@ -5,6 +5,7 @@ import {
     parseRequestOptionsFromJSON
 } from '../shared/webauthn/json-ponyfill.js';
 import { FailedResponseError, readFailedResponse } from '../shared/api/failed-response.js';
+import { clearCeremonyResult, showCeremonyResult } from '../shared/ui/ceremony-result.js';
 import { convertExtensionsForClient } from '../shared/utils/binary.js';
 import { showStatus, hideStatus, showProgress, hideProgress } from '../shared/ui/status.js';
 import {
@@ -34,6 +35,7 @@ export async function simpleRegister() {
 
     try {
         hideStatus('simple');
+        clearCeremonyResult('simple');
         showProgress('simple', 'Starting registration...');
 
         const registrationPayload = {};
@@ -128,6 +130,7 @@ export async function simpleAuthenticate() {
 
     try {
         hideStatus('simple');
+        clearCeremonyResult('simple');
         showProgress('simple', 'Starting authentication...');
 
         const storedCredentials = getSimpleCredentialsForEmail(email);
@@ -182,6 +185,11 @@ export async function simpleAuthenticate() {
             printAuthenticationDebug(assertion, getOptions, data);
 
             showStatus('simple', 'Authentication successful! You have been verified.', 'success');
+            showCeremonyResult('simple', {
+                title: 'Last authentication',
+                signCount: data.signCount,
+                signCountStatus: data.signCountStatus,
+            });
 
             if (data.authenticatedCredentialId) {
                 updateSimpleCredentialSignCount(
@@ -199,6 +207,11 @@ export async function simpleAuthenticate() {
                 queueFailedCredentialFlash(failure.failedCredentialId);
                 updateCredentialsDisplay();
             }
+            showCeremonyResult('simple', {
+                title: 'Last authentication',
+                signCountStatus: failure.signCountStatus,
+                consequence: 'Authentication was rejected.',
+            });
             throw new FailedResponseError(failure);
         }
 
