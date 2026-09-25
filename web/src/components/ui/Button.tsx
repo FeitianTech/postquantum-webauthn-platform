@@ -38,6 +38,11 @@ const VARIANTS: Record<ButtonVariant, string> = {
   quiet: 'bg-transparent text-accent-ink enabled:hover-or-demo:bg-accent-tint enabled:active-or-demo:bg-accent-tint-strong',
 };
 
+// The same look for a link that goes somewhere, such as "Open the current interface".
+export function buttonClassName({ variant = 'primary', size = 'md' }: { variant?: ButtonVariant; size?: ButtonSize } = {}) {
+  return cx(BASE, SIZES[size], VARIANTS[variant], 'no-underline');
+}
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   { variant = 'primary', size = 'md', busy = false, icon, disabled, className, children, type = 'button', ...props },
   ref,

@@ -239,3 +239,10 @@
     box-shadow: var(--shadow-segment);
   }
 }
+
+@keyframes section-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
