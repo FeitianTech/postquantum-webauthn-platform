@@ -165,3 +165,21 @@ def shape_findings(value: Any, prefix: Mapping[str, Any] | None, classification:
         taken += " with no CTAP command or status byte"
         others.append(PLAIN_MAP)
     return [finding(taken, other) for other in others]
+
+
+def has_a_message_shape(value: Any, prefix: Mapping[str, Any] | None) -> bool:
+    """Whether ``value`` has the shape of a CTAP message the byte before it allows.
+
+    Unlike the classification, a command byte does not decide on its own here:
+    its parameters must have its request's shape too. A map the shape of no
+    message is not read as one on the byte alone where another reading of the
+    bytes is at stake (``readings``).
+    """
+
+    if not isinstance(value, Mapping):
+        return False
+    kind = prefix.get("kind") if isinstance(prefix, Mapping) else None
+    if kind == "command":
+        classification = _REQUEST_KIND_BY_COMMAND.get(prefix.get("command"))
+        return classification is not None and _REQUEST_SHAPES[classification](value)
+    return _classify_ctap_payload(value, prefix) != "other"

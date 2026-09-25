@@ -68,11 +68,15 @@ otherwise); PEM; hexadecimal (an even number of digits, `0x` only at the start,
 is no hexadecimal: `abc` is base64 (69 b7).
 
 Bytes, in order: a lone CTAP command or status byte; PEM text; JSON text; a DER
-certificate; an attestation object; one CTAP message or one CBOR item, whole;
-authenticator data; CBOR, leniently when asked. One item comes before
-authenticator data on purpose: about a quarter of all 37-byte items have a byte
-32 without the AT and ED flags (a real 37-byte getInfo response is one), while
-authenticator data that is also one item is a chance in tens of thousands.
+certificate; an attestation object; one CTAP message or one CBOR item, whole; a
+CTAP message and the bytes after it (its framing keeps them), when the map has a
+CTAP message's shape; authenticator data; CBOR, leniently when asked. One item,
+or a CTAP message, comes before authenticator data on purpose: about a quarter
+of all 37-byte items have a byte 32 without the AT and ED flags (a 37-byte
+getInfo response is one, or one padded to 37 bytes), while authenticator data
+that is also one of them is a chance in tens of thousands. The shape is what
+keeps it so for a message with bytes after it: a command byte and any map would
+take an rpIdHash that starts with 01 a0.
 
 What is the same item read for more is not named: an attestation object is one
 CBOR item, client data is JSON text. What is named besides the bytes' readings:

@@ -9,7 +9,7 @@ import json
 
 import pytest
 
-from server.app.decoder import decode_payload_text
+from server.app.decoder import decode_payload_text, encode_payload_text
 
 # 37 bytes of JSON text whose byte 32, "1" (0x31), is authenticator-data flags without AT or ED.
 _JSON_37 = ('"' + "z" * 31 + "1" + "zzz" + '"').encode()
@@ -79,13 +79,39 @@ def test_each_pair_is_read_one_way_and_every_other_reading_is_named(name, text, 
 # {1: ["FIDO_2_0"], 3: aaguid, 5: 1200}, a getInfo response of 34 bytes; padded with zero bytes to 37,
 # after SUCCESS or with no CTAP byte, byte 32 (0x19, 0x04) has neither AT nor ED.
 _GET_INFO_34 = "a3" "018168" + b"FIDO_2_0".hex() + "0350" "2fc0579f811347eab116bb5a8db9202a" "051904b0"
-_PADDED_TO_37 = [("after SUCCESS", "00" + _GET_INFO_34 + "0000"), ("with no CTAP byte", _GET_INFO_34 + "000000")]
+_AND_BYTES = ("a CTAP message and the bytes after it", "authenticator data")
+_PADDED_TO_37 = [
+    # (name, input, type read as, the padding kept in data.ctap, what is named)
+    ("after SUCCESS", "00" + _GET_INFO_34 + "0000", "CBOR (SUCCESS status; GetInfo response)", "0000", [_AND_BYTES]),
+    (
+        "with no CTAP byte",
+        _GET_INFO_34 + "000000",
+        "CBOR (GetInfo response)",
+        "000000",
+        [("a getInfo response with no CTAP command or status byte", "a CBOR map that is no CTAP message"), _AND_BYTES],
+    ),
+]
 
 
-@pytest.mark.parametrize(("name", "text"), _PADDED_TO_37, ids=[name for name, _text in _PADDED_TO_37])
-def test_a_ctap_message_padded_to_37_bytes_is_read_as_authenticator_data_without_a_word(name, text):
+@pytest.mark.parametrize(
+    ("name", "text", "read_as", "padding", "named"), _PADDED_TO_37, ids=[row[0] for row in _PADDED_TO_37]
+)
+def test_a_ctap_message_padded_to_37_bytes_is_read_as_that_message_and_authenticator_data_is_named(
+    name, text, read_as, padding, named
+):
     result = decode_payload_text(text)
 
     assert len(bytes.fromhex(text)) == 37
+    assert result["type"] == read_as
+    assert result["data"]["ctap"]["trailingBytesHex"] == padding
+    assert _named(result) == named
+    assert encode_payload_text(json.dumps(result["data"]), "CBOR")["data"]["binary"]["hex"] == text
+
+
+def test_a_command_byte_before_a_map_not_its_requests_shape_padded_to_37_bytes_stays_authenticator_data():
+    # 0x01 (MAKE_CREDENTIAL) and {} are how 1 rpIdHash in 65536 starts: a command byte alone does not make
+    # the bytes after the map a CTAP message's.
+    result = decode_payload_text("01a0" + "00" * 35)
+
     assert result["type"] == "Authenticator data"
     assert _named(result) == []
