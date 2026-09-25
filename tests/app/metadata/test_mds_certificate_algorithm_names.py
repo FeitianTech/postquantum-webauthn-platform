@@ -167,18 +167,18 @@ def _spelled(name: str) -> str:
         ("id-hash-ml-dsa-44-with-sha512", "HashML-DSA-44_SHA512"),
         ("2.16.840.1.101.3.4.3.32", "HashML-DSA-44_SHA512"),
         # DSA with SHA-384, SHA-512 and SHA3.
-        ("2.16.840.1.101.3.4.3.3", "2.16.840.1.101.3.4.3.3"),
-        ("2.16.840.1.101.3.4.3.4", "2.16.840.1.101.3.4.3.4"),
-        ("2.16.840.1.101.3.4.3.5", "2.16.840.1.101.3.4.3.5"),
-        ("2.16.840.1.101.3.4.3.8", "2.16.840.1.101.3.4.3.8"),
+        ("2.16.840.1.101.3.4.3.3", "DSA_SHA384"),
+        ("2.16.840.1.101.3.4.3.4", "DSA_SHA512"),
+        ("2.16.840.1.101.3.4.3.5", "DSA_SHA3-224"),
+        ("2.16.840.1.101.3.4.3.8", "DSA_SHA3-512"),
         ("id-dsa-with-sha3-256", "DSA_SHA3-256"),
         ("dsa-with-sha384", "DSA_SHA384"),
         # SLH-DSA and HashSLH-DSA (FIPS 205).
-        ("2.16.840.1.101.3.4.3.20", "2.16.840.1.101.3.4.3.20"),
-        ("SLH-DSA-SHA2-128s", "DSA"),
-        ("id-slh-dsa-shake-256f", "DSA"),
-        ("2.16.840.1.101.3.4.3.35", "2.16.840.1.101.3.4.3.35"),
-        ("2.16.840.1.101.3.4.3.46", "2.16.840.1.101.3.4.3.46"),
+        ("2.16.840.1.101.3.4.3.20", "SLH-DSA-SHA2-128s"),
+        ("SLH-DSA-SHA2-128s", "SLH-DSA-SHA2-128s"),
+        ("id-slh-dsa-shake-256f", "SLH-DSA-SHAKE-256f"),
+        ("2.16.840.1.101.3.4.3.35", "HashSLH-DSA-SHA2-128s_SHA256"),
+        ("2.16.840.1.101.3.4.3.46", "HashSLH-DSA-SHAKE-256f_SHAKE256"),
     ],
 )
 def test_how_a_signature_algorithm_without_a_hash_from_cryptography_is_spelled(name, spelled):
@@ -187,7 +187,7 @@ def test_how_a_signature_algorithm_without_a_hash_from_cryptography_is_spelled(n
 
 @pytest.mark.parametrize(
     ("algorithm", "expected"),
-    [(hashes.SHA384(), "2.16.840.1.101.3.4.3.3"), (hashes.SHA512(), "2.16.840.1.101.3.4.3.4")],
+    [(hashes.SHA384(), "DSA_SHA384"), (hashes.SHA512(), "DSA_SHA512")],
     ids=["dsa-sha384", "dsa-sha512"],
 )
 def test_a_dsa_certificate_signed_with_sha384_or_sha512_is_named_in_both_views(algorithm, expected):
@@ -229,3 +229,37 @@ def test_a_composite_ml_dsa_signature_is_named_whole_by_oid_or_name(oid, name):
     assert _spelled(oid) == expected
     assert _spelled(name) == expected
     assert _spelled(expected) == expected
+
+
+# NIST CSOR sigAlgs, 2.16.840.1.101.3.4.3.1 to .46, as the register lists them.
+_NIST_SIG_ALGS = [
+    "id-dsa-with-sha224", "id-dsa-with-sha256", "id-dsa-with-sha384", "id-dsa-with-sha512",
+    "id-dsa-with-sha3-224", "id-dsa-with-sha3-256", "id-dsa-with-sha3-384", "id-dsa-with-sha3-512",
+    "id-ecdsa-with-sha3-224", "id-ecdsa-with-sha3-256", "id-ecdsa-with-sha3-384", "id-ecdsa-with-sha3-512",
+    "id-rsassa-pkcs1-v1-5-with-sha3-224", "id-rsassa-pkcs1-v1-5-with-sha3-256",
+    "id-rsassa-pkcs1-v1-5-with-sha3-384", "id-rsassa-pkcs1-v1-5-with-sha3-512",
+    "id-ml-dsa-44", "id-ml-dsa-65", "id-ml-dsa-87",
+    "id-slh-dsa-sha2-128s", "id-slh-dsa-sha2-128f", "id-slh-dsa-sha2-192s", "id-slh-dsa-sha2-192f",
+    "id-slh-dsa-sha2-256s", "id-slh-dsa-sha2-256f", "id-slh-dsa-shake-128s", "id-slh-dsa-shake-128f",
+    "id-slh-dsa-shake-192s", "id-slh-dsa-shake-192f", "id-slh-dsa-shake-256s", "id-slh-dsa-shake-256f",
+    "id-hash-ml-dsa-44-with-sha512", "id-hash-ml-dsa-65-with-sha512", "id-hash-ml-dsa-87-with-sha512",
+    "id-hash-slh-dsa-sha2-128s-with-sha256", "id-hash-slh-dsa-sha2-128f-with-sha256",
+    "id-hash-slh-dsa-sha2-192s-with-sha512", "id-hash-slh-dsa-sha2-192f-with-sha512",
+    "id-hash-slh-dsa-sha2-256s-with-sha512", "id-hash-slh-dsa-sha2-256f-with-sha512",
+    "id-hash-slh-dsa-shake-128s-with-shake128", "id-hash-slh-dsa-shake-128f-with-shake128",
+    "id-hash-slh-dsa-shake-192s-with-shake256", "id-hash-slh-dsa-shake-192f-with-shake256",
+    "id-hash-slh-dsa-shake-256s-with-shake256", "id-hash-slh-dsa-shake-256f-with-shake256",
+]
+
+
+@pytest.mark.parametrize("arc", range(1, 47), ids=lambda arc: _NIST_SIG_ALGS[arc - 1])
+def test_every_nist_signature_oid_is_spelled_as_its_registered_name_is(arc):
+    oid, name = f"2.16.840.1.101.3.4.3.{arc}", _NIST_SIG_ALGS[arc - 1]
+
+    spelled = _spelled(oid)
+
+    assert not spelled.startswith("2.16.840"), spelled
+    # A name the register gives the hash in spells the same as the OID; the
+    # ECDSA, RSA and SHA3 ones take their hash from the certificate.
+    if not (9 <= arc <= 16):
+        assert _spelled(name) == spelled
