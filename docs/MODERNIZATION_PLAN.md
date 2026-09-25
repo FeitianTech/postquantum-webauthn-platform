@@ -1903,6 +1903,23 @@ fields. At 375 px the panel stacks its rows, with no horizontal scroll.
   a COSE key.
 - No test inventories the window globals (Phase 24).
 
+**Phase 23 — tech-lead verification (2026-09-25):**
+- pytest 4659 / 4, vitest 390 -> **532**, frontend coverage 84.22 / 69.38 / 92.61 / 84.26, ruff clean.
+- **Every one of the 35 commits passes pytest and vitest on its own, from a cleaned tree, and none leaves
+  `instance/`** (three parallel worktrees).
+- **The stored-XSS hole, reproduced and closed in a real browser.** A record in the old format, planted in
+  `localStorage` with `registrationDetailHtml` / snapshot HTML holding an `<img onerror>` payload: on f55bc1d6,
+  opening its detail modal injected two live `<img>` and **ran the payload**; on 1324018a the modal is built
+  from data, nothing is injected or run, and reading the record rewrote it without the markup and with its
+  padded base64 IDs re-spelled as base64url (`AQIDBAUGBwg=` -> `AQIDBAUGBwg`).
+- **Goldens, independently:** every changed value in the 19 changed files is either the same bytes re-spelled
+  base64 -> base64url (225), a derived hash or length (79), or `signCountStatus` on the simple authentication
+  200 (2), which arrived in its own commit (`e3045368`).
+- **The guards bite:** in a scratch copy, a `${...}` assignment to `innerHTML`, an `insertAdjacentHTML` call and
+  an `atob(` each fail `test_html_sinks.py` / `test_frontend_base64.py`, naming file and line.
+- The agent's two memory notes (jsdom traps that make a frontend test prove nothing; running ceremonies in the
+  built-in browser with an in-page software authenticator) are accurate and kept.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
