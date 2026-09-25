@@ -191,7 +191,16 @@ def test_read_record_gcs_raises_on_a_download_error_and_skips_what_does_not_deco
     assert artifact_module._read_record("cred-1", "session-a") is None
 
     # Content that does not decode is logged by name, never its content, and skipped.
-    for content in (b"", b"\xff-secret", b"{invalid-secret", b'["secret list"]'):
+    undecodable = (
+        b"",
+        b"\xff-secret",
+        b"{invalid-secret",
+        b'["secret list"]',
+        # JSON that json.loads still refuses: a ValueError past Python's digit limit, a RecursionError.
+        b'{"secret": ' + b"1" * 5000 + b"}",
+        b"[" * 200000 + b"]" * 200000,
+    )
+    for content in undecodable:
         monkeypatch.setattr(artifact_module, "download_bytes", lambda _blob, content=content: content)
         caplog.clear()
         with caplog.at_level("WARNING", logger="server.app.credential_artifacts"):
@@ -213,19 +222,20 @@ def test_read_record_local_raises_when_the_file_cannot_be_read(artifact_module):
         artifact_module.load_credential_artifact("cred-dir", session_id="session-a")
 
 
-def test_a_local_merge_refuses_a_record_that_does_not_decode(artifact_module):
+@pytest.mark.parametrize("stored", ["{broken-json", '{"n": ' + "1" * 5000 + "}", "[" * 200000 + "]" * 200000])
+def test_a_local_merge_refuses_a_record_that_does_not_decode(artifact_module, stored):
     from server.app.storage.common import StorageReadError
 
     path = artifact_module._artifact_path("cred-corrupt", "session-a")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as handle:
-        handle.write("{broken-json")
+        handle.write(stored)
 
     with pytest.raises(StorageReadError) as raised:
         artifact_module.store_credential_artifact("cred-corrupt", {"x": 1}, merge=True, session_id="session-a")
     assert isinstance(raised.value.__cause__, artifact_module.ArtifactUndecodable)
     with open(path, encoding="utf-8") as handle:
-        assert handle.read() == "{broken-json"
+        assert handle.read() == stored
     # A store that replaces the record outright does not read it, and may.
     assert artifact_module.store_credential_artifact("cred-corrupt", {"x": 1}, session_id="session-a") is True
 

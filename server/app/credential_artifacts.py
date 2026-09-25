@@ -185,8 +185,9 @@ def _decode_stored(payload: bytes | None, source: str) -> dict[str, Any] | None:
         return None
     try:
         record = json.loads(payload.decode("utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        # The reason, never the content.
+    except (ValueError, RecursionError) as exc:
+        # Not UTF-8, not JSON, a number Python will not convert, nesting too deep
+        # to parse. The reason, never the content.
         raise ArtifactUndecodable(f"Could not decode {source}: {type(exc).__name__}") from None
     if not isinstance(record, dict):
         raise ArtifactUndecodable(f"Could not decode {source}: a {type(record).__name__}, not a record")
@@ -216,15 +217,6 @@ def _record_to_merge_into(storage_id: str, session_id: str) -> dict[str, Any] | 
 
 def _encode_record(record: dict[str, Any]) -> bytes:
     return json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-
-
-def _decode_record(payload: bytes | None) -> dict[str, Any] | None:
-    if not payload:
-        return None
-    try:
-        return json.loads(payload.decode("utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return None
 
 
 def _write_record(storage_id: str, session_id: str, record: dict[str, Any]) -> None:
@@ -403,7 +395,10 @@ def _merge_is_stored(blob_name: str, update: dict[str, Any]) -> bool:
         stored, _generation = download_bytes_with_generation(blob_name)
     except Exception:
         return False
-    record = _decode_record(stored)
+    try:
+        record = _decode_stored(stored, blob_name)
+    except ArtifactUndecodable:
+        return False
     return isinstance(record, dict) and _holds(record.get("payload"), update)
 
 
