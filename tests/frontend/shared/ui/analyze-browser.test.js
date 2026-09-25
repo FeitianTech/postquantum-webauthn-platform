@@ -109,6 +109,9 @@ describe('analyze-browser panel', () => {
   });
 
   afterEach(() => {
+    // Each test initializes a panel with its own document listener; close them all so
+    // none still traps Tab in a later test.
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     while (installed.length > 0) {
       const [target, name] = installed.pop();
       delete target[name];
@@ -442,6 +445,91 @@ describe('analyze-browser panel', () => {
       await vi.runAllTimersAsync();
       expect(status.textContent).toBe('Report copied to the clipboard.');
       expect(fallback.hidden).toBe(true);
+    });
+  });
+
+  describe('as a dialog', () => {
+    function pressTab(shiftKey = false) {
+      const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true });
+      document.activeElement.dispatchEvent(event);
+      return event.defaultPrevented;
+    }
+
+    it('is a labelled modal dialog that takes focus when it opens', async () => {
+      installBrowser();
+      const { panel } = await openAnalyzedPanel();
+      const dialog = panel.querySelector('[role="dialog"]');
+
+      expect(dialog.getAttribute('aria-modal')).toBe('true');
+      expect(document.getElementById(dialog.getAttribute('aria-labelledby')).textContent).toBe('Browser Analysis');
+      expect(document.activeElement).toBe(dialog);
+    });
+
+    it('gives focus back to the Analyze Browser button when it closes, by Escape or by the close button', async () => {
+      installBrowser();
+      const { panel, trigger } = await openAnalyzedPanel();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(panel.hidden).toBe(true);
+      expect(document.activeElement).toBe(trigger);
+
+      trigger.click();
+      await vi.runAllTimersAsync();
+      expect(document.activeElement).toBe(panel.querySelector('[role="dialog"]'));
+      panel.querySelector('.mds-custom-panel__close').click();
+      expect(document.activeElement).toBe(trigger);
+    });
+
+    it('keeps Tab and Shift+Tab inside the dialog', async () => {
+      installBrowser();
+      const { panel } = await openAnalyzedPanel();
+      const close = panel.querySelector('.mds-custom-panel__close');
+      const copy = panel.querySelector('[data-action="copy-report"]');
+
+      // From the dialog itself: Shift+Tab goes to the last control, Tab to the first.
+      expect(pressTab(true)).toBe(true);
+      expect(document.activeElement).toBe(copy);
+      expect(pressTab()).toBe(true);
+      expect(document.activeElement).toBe(close);
+      expect(pressTab(true)).toBe(true);
+      expect(document.activeElement).toBe(copy);
+
+      // Between the first and the last, the browser moves focus as usual.
+      close.focus();
+      expect(pressTab()).toBe(false);
+      copy.focus();
+      expect(pressTab(true)).toBe(false);
+
+      // Focus that has left the dialog is brought back.
+      document.body.focus();
+      const outside = document.createElement('button');
+      document.body.appendChild(outside);
+      outside.focus();
+      expect(pressTab()).toBe(true);
+      expect(document.activeElement).toBe(close);
+    });
+
+    it('counts the report text among the controls once it is shown', async () => {
+      installBrowser();
+      install(navigator, 'clipboard', undefined);
+      const { panel } = await openAnalyzedPanel();
+      panel.querySelector('[data-action="copy-report"]').click();
+      await vi.runAllTimersAsync();
+
+      const fallback = panel.querySelector('[data-role="report-text"]');
+      expect(document.activeElement).toBe(fallback);
+      expect(pressTab()).toBe(true);
+      expect(document.activeElement).toBe(panel.querySelector('.mds-custom-panel__close'));
+    });
+
+    it('leaves Tab alone while it is closed', async () => {
+      installBrowser();
+      buildAnalyzeDom();
+      const { initializeAnalyzeBrowser } = await loadAnalyzeBrowser();
+      initializeAnalyzeBrowser();
+
+      document.querySelector('[data-analyze-browser-trigger]').focus();
+      expect(pressTab()).toBe(false);
     });
   });
 

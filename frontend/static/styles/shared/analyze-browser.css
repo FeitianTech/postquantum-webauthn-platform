@@ -58,6 +58,9 @@
     overflow: hidden;
 }
 
+/* The dialog takes focus when it opens, so a screen reader reads its name; it is not a control. */
+.analyze-browser-panel .mds-custom-panel__dialog:focus { outline: none; }
+
 .analyze-browser-panel .mds-custom-panel__backdrop { z-index: 0; }
 .analyze-browser-panel .mds-custom-panel__dialog { z-index: 1; }
 

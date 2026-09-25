@@ -13,6 +13,7 @@ import {
 } from './webauthn-facts.js';
 
 const IDENTITY_FIELDS = ['name', 'version', 'engine', 'system'];
+const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 const DEFINED_ORDER = Object.keys(CLIENT_CAPABILITY_LABELS);
 
 const CAPABILITY_GROUPS = [
@@ -194,8 +195,27 @@ function openPanel(panel) {
     requestAnimationFrame(() => {
         panel.classList.add('is-open');
         updateGlobalScrollLock();
-        panel.querySelector('[data-action="close"]').focus({ preventScroll: true });
+        panel.querySelector('[data-role="dialog"]').focus({ preventScroll: true });
     });
+}
+
+// Tab and Shift+Tab go round the dialog's controls and never leave it.
+function keepFocusInside(event, dialog) {
+    const focusable = Array.from(dialog.querySelectorAll(FOCUSABLE)).filter(
+        node => !node.disabled && !node.closest('[hidden]'),
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    const inside = active !== dialog && dialog.contains(active);
+
+    if (event.shiftKey && (!inside || active === first)) {
+        event.preventDefault();
+        last.focus();
+    } else if (!event.shiftKey && (!inside || active === last)) {
+        event.preventDefault();
+        first.focus();
+    }
 }
 
 function closePanel(panel) {
@@ -241,8 +261,13 @@ export function initializeAnalyzeBrowser() {
     });
 
     document.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && panel.classList.contains('is-open')) {
+        if (!panel.classList.contains('is-open')) {
+            return;
+        }
+        if (event.key === 'Escape') {
             handleClose();
+        } else if (event.key === 'Tab') {
+            keepFocusInside(event, panel.querySelector('[data-role="dialog"]'));
         }
     });
 
