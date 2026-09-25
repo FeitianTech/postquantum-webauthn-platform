@@ -3,7 +3,9 @@
 CTAP 2.2, "Message Encoding", requires the CTAP2 canonical CBOR encoding form:
 integers and lengths as short as possible, no indefinite-length items, map keys
 sorted by major type, then encoded length, then bytewise, and no tags. RFC 8949
-section 5.6 adds that a map with a duplicate key is not valid CBOR at all. The
+section 5.6 adds that a map with a duplicate key is not valid CBOR at all: two
+keys are the same key when section 5.6.1 says so, however each was written
+(``key_equivalence``). The
 same section of CTAP 2.2 limits nesting to "at most four (4) levels of any
 combination of CBOR maps and/or CBOR arrays"; the first map or array at a fifth
 level is reported, its contents are not reported again.
@@ -18,6 +20,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from ..ctap2_order import ctap2_key_order
+from . import key_equivalence
 from .cbor_parser import _diagnostic_key
 
 # CTAP 2.2 section 8, "Message Encoding": the deepest maps and arrays may nest.
@@ -156,19 +159,6 @@ def _check_node(
         _check_node(node.get("value") or {}, data, f"{path}<tag>", findings, depth)
 
 
-def _key_identity(key: Mapping[str, Any], encoded: bytes) -> tuple[Any, ...]:
-    """What makes two map keys the same key, however each was written."""
-
-    key_type = key.get("type")
-    if key_type in ("unsigned", "negative"):
-        return ("integer", key.get("value"))
-    if key_type == "text string" and not key.get("indefinite"):
-        return ("text", key.get("value"))
-    if key_type == "byte string":
-        return ("bytes", key.get("hex"))
-    return ("encoded", encoded)
-
-
 def _check_map(
     node: Mapping[str, Any], data: bytes, path: str, findings: list[dict[str, Any]], depth: int
 ) -> None:
@@ -183,7 +173,7 @@ def _check_map(
         encoded = data[key_offset : key["end"]]
         _check_node(key, data, entry_path, findings, depth)
 
-        identity = _key_identity(key, encoded)
+        identity = key_equivalence.identity(key)
         if identity in seen:
             findings.append(
                 _finding(
