@@ -128,14 +128,29 @@ def _safetynet_attestation_object(header: bytes, payload: bytes) -> bytes:
     )
 
 
-def test_a_repeated_key_in_the_jws_header_or_payload_is_not_reported():
+def test_a_repeated_key_in_the_jws_header_or_payload_is_reported_at_the_response():
     from server.app.decoder import decode_payload_text
 
-    result = decode_payload_text(
-        _safetynet_attestation_object(b'{"alg": "RS256", "alg": "ES256"}', b'{"nonce": "a", "nonce": "b"}').hex()
-    )
+    data = _safetynet_attestation_object(b'{"alg": "RS256", "alg": "ES256"}', b'{"nonce": "a", "nonce": "b"}')
+    result = decode_payload_text(data.hex())
 
     response = result["data"]["attestationStatementDecoded"]["fields"]["response"]
     assert response["header"]["json"] == {"alg": "ES256"}
     assert response["payload"]["json"] == {"nonce": "b"}
-    assert "duplicate-json-key" not in [finding["code"] for finding in result["findings"]]
+    repeated = [finding for finding in result["findings"] if finding["code"] == "duplicate-json-key"]
+    # Each is placed where the response's bytes start in the input.
+    start = data.index(b"eyJ")
+    assert [(f["offset"], f["path"], f["source"], f["kept"], f["dropped"]) for f in repeated] == [
+        (start, '${"attStmt"}{"response"}<JWS header>{"alg"}', "SafetyNet JWS header", "ES256", ["RS256"]),
+        (start, '${"attStmt"}{"response"}<JWS payload>{"nonce"}', "SafetyNet JWS payload", "b", ["a"]),
+    ]
+    assert result["malformed"] == []
+
+
+def test_a_jws_header_holding_nan_is_not_json():
+    view = safetynet.read_response(f"{_b64url(b'{\"alg\": NaN}')}.e30.AA")
+
+    assert view["header"] == {
+        "error": "the header is not JSON: NaN is not JSON: RFC 8259 has no NaN or Infinity (at byte 8)",
+        "text": '{"alg": NaN}',
+    }
