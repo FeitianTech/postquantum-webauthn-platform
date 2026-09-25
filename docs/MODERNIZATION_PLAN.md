@@ -2046,6 +2046,113 @@ ignores report-uri, so in this pane reports go nowhere.
   **neither `FIDO_SERVER_RP_ID` nor `FIDO_SERVER_ALLOWED_ORIGINS`**: production runs the development-only
   Host-header fallback of S3 and logs its warning at every start. Raised with the owner.
 
+### Phase 25 — the new UI's foundation at /beta, with the Analyze Browser panel as its first surface — DONE (2026-09-25)
+25 commits, 35849441..the record's own (ee84eafe, the charter, comes before them), all this phase's, each gated
+on pytest (under coverage, with its 95% floor), root vitest (with its floors), ruff and, from the first `web/`
+commit on, web's typecheck, unit tests (with their floors from the commit that set them), build and CSP scan.
+Every commit before the record was re-run afterwards on its own tree in one detached worktree, cleaned
+(`git clean -fdx`, `node_modules` kept only while its lockfile was unchanged) before each: all 24 pass pytest
+under coverage with its floor, root vitest with its floors and ruff, the 22 with `web/` also typecheck, web
+vitest (with the floors once set), the build and the CSP scan, and none writes to `instance/` or
+`server/runtime/`. Not pushed: the tech lead verifies and pushes.
+Owner decision for this phase: the top bar's highlight is white with a hairline and a soft shadow (asked with the
+three options the charter allows).
+
+**What there is now.** `web/`: Next.js 15.5 (Pages Router), React 19, TypeScript 5.9 strict, Tailwind CSS 4.3,
+`output: 'export'`, `basePath: '/beta'`, Geist and Geist Mono self-hosted from the `geist` package. Flask
+serves the export at `/beta`; the legacy UI at `/` is unchanged. The export holds 4 HTML files (`/beta`,
+`/beta/design`, `404`, `500`) and 40 script elements, all files or JSON; the CSP scan finds 0 violations in the
+checkout, inside the image's build and in a Linux container.
+
+**A — the project** (948a9190, db8375f8). Its own `package.json` and lock (all 8 `@next/swc-*`, 12
+`@tailwindcss/oxide-*`, 22 `lightningcss-*` and 15 `@rolldown/binding-*` platform builds; `npm ci` in the image's
+Linux stage proves it), `tests/app/tooling/test_npm_lockfiles.py` for both locks. Next 15 pins `postcss` 8.4.31,
+which `npm audit` flags (one high, one moderate, build time only); `web/package.json` overrides it with 8.5.28
+and the audit is clean. The build type-checks `tsconfig.build.json` (no tests), so the image needs no fixtures;
+`next-env.d.ts`, which references `.next/`, is ignored and `src/next-types.d.ts` gives `npm run typecheck` the
+same types before a build. Next's own 404/500/error pages carry style attributes, so the export ships its own.
+
+**B — the design system** (db8375f8, f4e60933, 25e9cbf2, 24af9cdc, 2a29d23e, 228656ed). Tokens in
+`globals.css` with Tailwind's palette, type scale, radii and shadows cleared: white surfaces, `#1d1d1f` /
+`#6e6e73` text, hairlines, accent `#0071e3`, semantic tints, radii 6/10/14/20, shadows for floating layers,
+`--ease` motion. Text fields (`data-text-field`) show no focus effect; every other control keeps a 2 px
+`:focus-visible` ring. Thirteen primitives in `components/ui/`. `/beta/design` shows each in every state
+(hover, keyboard focus and pressed shown still through `data-demo`).
+
+**C — the shell** (aa4feb74, 3fcf6684, 4efb798f). Header with the title, the four sections, Analyze Browser and
+GitHub; one row from 1280 px, two from 900, title and Menu below (the rest in a sheet). The footer as today
+(`tools/update_footer_year.py` now rolls both footers, 8b2bf074). Sections switch on the page, mirrored in the
+hash; all four show a note leading to `/` (the brief said three; none is ported yet). The highlight is one element
+moved through the CSSOM; a browser run caught it jumping instead of sliding (a ResizeObserver re-created on each
+change reports at once and snapped it), fixed with a unit test and a browser test that each fail before.
+
+**D — Analyze Browser** (35849441, 53e96554, 60b84123, b5606618). `docs/ui-parity/analyze-browser.md` lists the
+current panel first (53 items), then maps each to its component, its test and its browser check; none is
+unmapped. `shared/browser/report.js` takes the report, capability grouping and clipboard logic out of the DOM
+module `analyze.js`, so both UIs import one copy (`@legacy/*`, `experimental.externalDir`); the legacy tests pass
+unchanged and `report.test.js` covers it at 100%. `tests/app/tooling/test_web_source_rules.py` fails if `web/src`
+redefines a logic export or repeats one of its sentences (it caught the design page doing so).
+
+**E — Flask** (286161fd, f1371abb). `routes/web_export.py`: HTML `no-cache`, `/beta/_next/static/` immutable for a
+year with `.gz` copies, the export's 404 page for unknown paths (never 304 or 206), a plain 404 with no export,
+the same security headers as `/` (26 tests on a fixture export; pytest needs no Node).
+
+**F — the CSP** stays as it was: `web/scripts/check-export-csp.mjs` (parse5) and its tests; the Google Fonts
+origins stay until the cutover (charter).
+
+**G — pipeline** (87a87b31, 7b1776a5, 4ef7572c). A `node:22-slim` stage builds and scans the export; the runtime
+image gets `web/out` only, precompressed. Built locally: `/beta` `no-cache`, a chunk immutable and gzipped,
+`/beta/design` 200, unknown 404, `/` 200; `ci-docker.yml` checks the same. Cloud Build's `Web tests` step
+(typecheck, unit tests with floors, build, CSP scan) gates Build. `ci-web.yml` (web job, e2e job),
+`ci-security.yml` audits `web/` at moderate, Dependabot watches `/web` (no majors of next, typescript).
+
+**H — browser tests** (dbc16de9). Playwright 1.63, Chromium 153, a virtual CTAP2 authenticator on USB through the
+DevTools WebAuthn domain, Flask with every store in a temporary directory. A real registration and
+authentication in the current UI's Simple tab (the server verified the signatures; the sign count advanced);
+`/beta`: sections by click and hash, the slide (and no slide under reduced motion), Analyze Browser open, Copy
+report read back from the clipboard, Escape and focus back, the phone sheet, no sideways scroll at 375 px, and
+on the design page no focus effect on a text field, a ring on each control, no grey fill. A fixture fails any
+test on a console error, page error, CSP violation or report. 7 tests, green on macOS and on Linux. They run in
+GitHub CI only this phase (charter).
+
+**Seen in a real browser** (the desktop app's Chromium 152, Flask with the strict policy, stores and secret in
+the scratchpad, nothing written to the checkout). `/beta` and `/beta/design` at 1440, 1024 and 375 px, and the
+Analyze Browser panel: identity "Chromium-based browser" 152.0.7977.130, Blink, macOS, each "from User-Agent
+Client Hints"; 32 facts (6, 2 and 24 capabilities in 9 / 14 / 1); focus on the panel, the page `inert`, no scroll
+lock; Shift+Tab to the close button, Tab round to Copy report; Copy report refused by the clipboard (the pane's
+document is not focused) with the red message, the report shown, focused and selected, and Tab from it back
+round; Escape, the close button and the backdrop each close it with focus back on the button; reopened at the
+top with the copy status kept; Tab left alone while closed. The legacy panel at `/` gives the same answers and
+the same copy path after the `report.js` move. **No console message, CSP or Trusted Types violation from any
+of it.** The pane was hidden and took no pointer clicks, so it was driven through the DOM; screenshots and the
+slide (transitions slowed tenfold through the DevTools Animation domain: 53 distinct positions over 69 frames)
+come from Playwright's Chromium, which also reported no console problem at any width.
+
+**Tests.**
+- pytest 4704 → **4742** passed / 4 skipped; coverage 97%. Linux (python:3.12, Docker, `git archive` of HEAD)
+  **4728** / 5, the usual 14 fewer and one more skip than macOS. ruff clean.
+- root vitest 557 → **566**, coverage 84.22 / 69.54 / 92.71 / 84.27 → **84.24 / 69.57 / 92.75 / 84.29** (84.25 /
+  69.58 / 92.75 / 84.30 in another run of the same tree: the last digit moves between runs); floors held.
+- web vitest: **99** tests in 12 files, coverage **97.83 / 93.63 / 96.89 / 99.10**, floors 97 / 92 / 96 / 98.
+- web typecheck clean; CSP scan 4 HTML files, 40 script elements, **0 violations**.
+- Playwright: **7** passed on macOS; **7** passed on Linux in `mcr.microsoft.com/playwright:v1.63.0-noble` from
+  a `git archive` of HEAD (no MDS snapshot; `npm ci`, the build and the CSP scan inside), as the CI job runs them.
+
+**Found but not fixed:**
+- A click on `/beta` before the page hydrates does nothing, as a click before `main.js` did at `/`.
+- The Analyze Browser questions took about 3 s in the desktop app's Chromium on macOS (both UIs), with only the
+  disabled button to show it; the panel says nothing while it waits (as before).
+- Both UIs' GitHub link, `rainzhang05/python-fido2-webauthn-test`, reaches
+  `FeitianTech/postquantum-webauthn-platform` only through GitHub's redirect.
+- Text fields have no focus indicator but the caret (the owner's direction); WCAG 2.4.7 asks for a visible one.
+- Toast, Drawer, the table primitives and MonoValue have no user yet; pause-on-hover for toasts and the sorting
+  UI's details wait for Phases 27–28. MonoValue truncates an AAGUID in a narrow column (with Show all and copy);
+  the MDS table must give AAGUIDs room (charter: never broken).
+- `npm run dev` is not under the CSP (Next's dev overlay runs inline code); only the export is scanned.
+- The legacy ceremony test allows one console 404 at `/` without the MDS snapshot (CI has none).
+- Not run on GitHub yet (not pushed): `ci-web.yml`'s two jobs, the new `ci-security.yml` steps, `ci-docker.yml`'s
+  `/beta` checks, and Cloud Build's `Web tests` step.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
