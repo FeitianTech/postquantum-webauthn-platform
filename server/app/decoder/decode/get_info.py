@@ -1,7 +1,8 @@
-"""Read an authenticatorGetInfo response: CTAP 2.2 section 6.4.
+"""What an authenticatorGetInfo response means: CTAP 2.2 section 6.4, as ``data.getInfoDecoded``.
 
-Every member is labelled from ``ctap_tables.GET_INFO_RESPONSE``, and every value
-is shown as sent, with what it means beside it where the spec says:
+``ctapDecoded.getInfoResponse`` shows every member as sent (``ctap_views``), and
+the encoder rebuilds it; this is beside it, labelled the same way, and says what
+each member means where the spec says:
 
 * aaguid as a GUID;
 * each option ID with what its value means and the default when it is absent
@@ -23,7 +24,13 @@ from typing import Any
 
 from ...webauthn import pqc
 from .. import ctap_tables
-from .keys import MISSING, get_mapping_entry, hex_json_safe, json_items
+from .keys import (
+    MISSING,
+    get_mapping_entry,
+    hex_json_safe,
+    json_items,
+    qualified_key_text,
+)
 
 _AAGUID_LENGTH = 16
 
@@ -42,11 +49,21 @@ def looks_like_get_info(value: Any) -> bool:
 
 
 def interpret_get_info(value: Mapping[Any, Any]) -> dict[str, Any]:
+    """``data.getInfoDecoded``: what each member means, labelled as ``ctapDecoded`` labels it."""
+
     interpreted: dict[str, Any] = {}
     for label, key, entry in json_items(value, _member_label):
         name = ctap_tables.GET_INFO_RESPONSE.get(key) if _is_member_number(key) else None
-        interpreted[label] = _MEMBER_VIEWS.get(name, hex_json_safe)(entry) if name else hex_json_safe(entry)
+        if name:
+            interpreted[label] = _MEMBER_VIEWS.get(name, hex_json_safe)(entry)
+        else:
+            note = _NOT_DEFINED if _is_member_number(key) else _NOT_A_MEMBER
+            interpreted[label] = {"value": hex_json_safe(entry), "note": note}
     return interpreted
+
+
+_NOT_DEFINED = "not a member CTAP 2.2 section 6.4 defines"
+_NOT_A_MEMBER = "not a member: CTAP 2.2 numbers members with integer keys"
 
 
 def _is_member_number(key: Any) -> bool:
@@ -54,10 +71,11 @@ def _is_member_number(key: Any) -> bool:
 
 
 def _member_label(key: Any, text: str) -> str:
+    # As every CTAP view labels a member: "N (name)", the number alone, or the key with its type.
     if not _is_member_number(key):
-        return f"{text} (not a member: CTAP 2.2 numbers members with integer keys)"
+        return qualified_key_text(key)
     name = ctap_tables.GET_INFO_RESPONSE.get(key)
-    return f"{text} ({name})" if name else f"{text} (not defined in CTAP 2.2)"
+    return f"{text} ({name})" if name else text
 
 
 def _aaguid(value: Any) -> Any:

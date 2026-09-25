@@ -77,6 +77,7 @@ export const SPECIAL_LABELS = {
     uncompressedPoint: 'Uncompressed point',
     x5c: 'X5C',
     getInfoResponse: 'GetInfo response',
+    getInfoDecoded: 'GetInfo (interpreted)',
     extensionsDecoded: 'Extensions (interpreted)',
     attestationStatementDecoded: 'Attestation statement (interpreted)',
     attestationTypesSupported: 'Attestation types supported',

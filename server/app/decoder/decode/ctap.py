@@ -9,7 +9,6 @@ from . import (
     cbor_parser,
     ctap_classify,
     ctap_views,
-    get_info,
     interpretations,
     key_collisions,
     pipeline,
@@ -94,7 +93,8 @@ def _payload_views(node: Mapping[str, Any], base_value: Any, classification: str
 
     message = MESSAGE_NAMES.get(classification) if isinstance(base_value, Mapping) else None
     if message == "getInfoResponse":
-        return {"ctapDecoded": _stringify_mapping_keys(_hex_json_safe({message: get_info.interpret_get_info(base_value)}))}
+        # What its members mean is beside it, in getInfoDecoded (interpretations.py).
+        return {"ctapDecoded": {message: ctap_views.view(message, node)}}
     if message is not None:
         shown = ctap_views.view(message, node)
         return {"ctapDecoded": {message: shown}, "expandedJson": shown}

@@ -23,25 +23,26 @@ describe('decoder sections for getInfo, extensions and attestation formats', () 
     document.body.textContent = '';
   });
 
-  it('shows a getInfo response with its options explained', () => {
+  it('shows a getInfo response as sent, with its options explained beside it', () => {
     const container = render({
       success: true,
       type: 'CBOR (SUCCESS status; GetInfo response)',
       data: {
-        ctapDecoded: {
-          getInfoResponse: {
-            '1 (versions)': ['FIDO_2_0'],
-            '4 (options)': {
-              rk: { value: true, meaning: 'can create discoverable credentials', defaultWhenAbsent: 'false' },
-              vendorThing: { value: true, known: false, meaning: 'not an option ID CTAP 2.2 section 6.4 defines' },
-            },
+        ctap: { code: 0 },
+        getInfoDecoded: {
+          '1 (versions)': ['FIDO_2_0'],
+          '4 (options)': {
+            rk: { value: true, meaning: 'can create discoverable credentials', defaultWhenAbsent: 'false' },
+            vendorThing: { value: true, known: false, meaning: 'not an option ID CTAP 2.2 section 6.4 defines' },
           },
         },
-        ctap: { code: 0 },
+        ctapDecoded: {
+          getInfoResponse: { '1 (versions)': ['FIDO_2_0'], '4 (options)': { rk: true, vendorThing: true } },
+        },
       },
     });
 
-    expect(headings(container)).toEqual(['CTAP decoded', 'CTAP metadata']);
+    expect(headings(container)).toEqual(['CTAP decoded', 'GetInfo (interpreted)', 'CTAP metadata']);
     const terms = Array.from(container.querySelectorAll('dt')).map((term) => term.textContent);
     expect(terms).toEqual(expect.arrayContaining(['GetInfo response', 'Default when absent']));
     expect(container.textContent).toContain('can create discoverable credentials');

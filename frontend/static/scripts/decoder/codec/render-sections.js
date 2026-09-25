@@ -95,6 +95,7 @@ function buildSections(type, data) {
         'X.509 certificate': ['raw', 'pem', 'parsedX5c', 'certificates'],
         CBOR: [
             'ctapDecoded',
+            'getInfoDecoded',
             'attestationStatementDecoded',
             'extensionsDecoded',
             'expandedJson',

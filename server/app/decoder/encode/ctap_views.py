@@ -18,7 +18,13 @@ from . import ctap_framing
 from .handlers_basic import _prepare_encoder_response
 
 # The messages whose views the encoder rebuilds.
-REBUILT = ("makeCredentialRequest", "getAssertionRequest", "makeCredentialResponse", "getAssertionResponse")
+REBUILT = (
+    "makeCredentialRequest",
+    "getAssertionRequest",
+    "makeCredentialResponse",
+    "getAssertionResponse",
+    "getInfoResponse",
+)
 
 
 def one_message(ctap_decoded: Mapping[str, Any]) -> tuple[str, Mapping[str, Any]]:
