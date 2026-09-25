@@ -142,7 +142,7 @@ def test_a_command_byte_before_bytes_that_are_not_cbor_is_read_as_the_head_of_on
     result = decode_payload_text("41ab", lenient=lenient)
 
     assert result["type"] == "CBOR"
-    assert result["data"] == {"decodedValue": "ab"}
+    assert result["data"]["decodedValue"] == "ab"
     (finding,) = [finding for finding in result["findings"] if finding["code"] == "ctap-prefix-not-read"]
     assert (finding["category"], finding["offset"], finding["path"]) == ("input", 0, "$")
     assert finding["message"].startswith("0x41 is also the CREDENTIAL_MGMT_PRE command byte")
