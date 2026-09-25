@@ -111,18 +111,22 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, p
     with pytest.raises(ValueError, match="Decoder input is empty"):
         decode_module.decode_payload_text("   ")
 
-    monkeypatch.setattr(pipeline, "_read_json", lambda _v: ({"a": 1}, []))
-    monkeypatch.setattr(pipeline, "_decode_json_object", lambda value, raw_text=None: {"kind": "json", "raw": raw_text, "value": value})
+    monkeypatch.setattr(pipeline, "_read_json", lambda _v, **_kwargs: ({"a": 1}, []))
+    monkeypatch.setattr(
+        pipeline, "_decode_json_object", lambda value, raw_text=None, **_kwargs: {"kind": "json", "raw": raw_text, "value": value}
+    )
     monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"wrapped": result})
     assert decode_module.decode_payload_text(" {\"a\": 1} ") == {
-        "wrapped": {"kind": "json", "raw": '{"a": 1}', "value": {"a": 1}}
+        "wrapped": {"kind": "json", "raw": '{"a": 1}', "value": {"a": 1}, "decodeMode": "strict"}
     }
 
-    monkeypatch.setattr(pipeline, "_read_json", lambda _v: (None, []))
+    monkeypatch.setattr(pipeline, "_read_json", lambda _v, **_kwargs: (None, []))
     monkeypatch.setattr(pipeline, "_looks_like_pem", lambda _v: True)
     monkeypatch.setattr(pipeline, "_decode_pem_certificates", lambda _v: {"kind": "pem"})
     monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"pem": result})
-    assert decode_module.decode_payload_text("-----BEGIN CERTIFICATE-----") == {"pem": {"kind": "pem"}}
+    assert decode_module.decode_payload_text("-----BEGIN CERTIFICATE-----") == {
+        "pem": {"kind": "pem", "decodeMode": "strict"}
+    }
 
     monkeypatch.setattr(pipeline, "_looks_like_pem", lambda _v: False)
     monkeypatch.setattr(pipeline, "_decode_binary_input", lambda _v: (b"\x01\x02", "hex"))
@@ -133,7 +137,7 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, p
     )
     monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"bin": result})
     assert decode_module.decode_payload_text("0102") == {
-        "bin": {"kind": "bin", "data": b"\x01\x02", "encoding": "hex", "lenient": False}
+        "bin": {"kind": "bin", "data": b"\x01\x02", "encoding": "hex", "lenient": False, "decodeMode": "strict"}
     }
     assert decode_module.decode_payload_text("0102", lenient=True)["bin"]["lenient"] is True
 
@@ -217,7 +221,7 @@ def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(m
     assert pem_result["binary"] == {"hex": "616263"}
 
     monkeypatch.setattr(pipeline, "_try_decode_utf8", lambda _data: '{"k": 1}')
-    monkeypatch.setattr(pipeline, "_read_json", lambda _text: ({"k": 1}, []))
+    monkeypatch.setattr(pipeline, "_read_json", lambda _text, **_kwargs: ({"k": 1}, []))
     monkeypatch.setattr(pipeline, "_is_client_data_dict", lambda _obj: False)
 
     json_result = decode_module._decode_binary_payload(b"abc", "hex")

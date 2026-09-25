@@ -41,14 +41,14 @@ def _utf8_json(data: bytes, encoding: str, lenient: bool) -> Result | None:
     text = pipeline._try_decode_utf8(data)
     if not text:
         return None
-    json_obj, json_findings = pipeline._read_json(text)
+    json_obj, json_findings = pipeline._read_json(text, lenient=lenient, in_bytes=True)
     if json_obj is None:
         return None
     if isinstance(json_obj, Mapping) and pipeline._is_client_data_dict(json_obj):
         result = {
             "format": "WebAuthn client data (binary)",
             "inputEncoding": encoding,
-            "decoded": pipeline._describe_client_data_from_bytes(data),
+            "decoded": pipeline._describe_client_data_from_bytes(data, lenient=lenient),
             "binary": pipeline._binary_summary(data, encoding),
         }
     else:
