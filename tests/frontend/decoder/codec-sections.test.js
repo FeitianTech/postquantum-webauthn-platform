@@ -10,7 +10,8 @@ function render(payload) {
 }
 
 function headings(container) {
-  return Array.from(container.querySelectorAll('.decoder-section > h4')).map((heading) => heading.textContent);
+  return Array.from(container.querySelectorAll('.decoder-section > h4, .decoder-section > summary > h4'))
+    .map((heading) => heading.textContent);
 }
 
 function badges(element) {
@@ -166,3 +167,62 @@ describe('decoder sections for getInfo, extensions and attestation formats', () 
     expect(container.textContent).toContain('<img src=x onerror="alert(2)">');
   });
 });
+
+describe('the EDN view', () => {
+  beforeEach(() => {
+    document.body.textContent = '';
+  });
+
+  it('shows the item as EDN in a closed section after the decoded value', () => {
+    const container = render({
+      success: true,
+      type: 'CBOR',
+      data: { edn: '{1: "a", 1: "b"}', decodedValue: { 1: 'b' } },
+      findings: [],
+      malformed: [],
+    });
+
+    expect(headings(container)).toEqual(['Decoded value', 'EDN (exact bytes)']);
+    const section = container.querySelector('details.decoder-edn');
+    expect(section.open).toBe(false);
+    expect(section.querySelector('pre.decoder-edn-text').textContent).toBe('{1: "a", 1: "b"}');
+  });
+
+  it('comes after an attestation object\'s interpreted sections', () => {
+    const container = render({
+      success: true,
+      type: 'Attestation object',
+      data: { edn: '{"fmt": "none"}', attestationObject: { fmt: 'none' } },
+    });
+
+    expect(headings(container)).toEqual(['Attestation object', 'EDN (exact bytes)']);
+  });
+
+  it('writes the notation as text, never as markup', () => {
+    const container = render({
+      success: true,
+      type: 'CBOR',
+      data: { edn: '"<img src=x onerror=alert(1)>"' },
+    });
+
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('pre.decoder-edn-text').textContent).toBe('"<img src=x onerror=alert(1)>"');
+  });
+});
+
+describe('findings without an offset', () => {
+  it('shows a JSON finding by its path alone', () => {
+    const container = render({
+      success: true,
+      type: 'JSON',
+      data: { json: { a: 2 } },
+      findings: [{ code: 'duplicate-json-key', offset: null, path: '${"a"}', message: 'object key "a" appears twice' }],
+      malformed: [],
+    });
+
+    expect(Array.from(container.querySelectorAll('.decoder-findings li')).map((item) => item.textContent)).toEqual([
+      '${"a"} — object key "a" appears twice',
+    ]);
+  });
+});
+

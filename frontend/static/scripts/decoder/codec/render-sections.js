@@ -9,7 +9,32 @@ import {
 import { formatKey } from './labels.js';
 import { renderExpandedJson, renderValue } from './render-values.js';
 
+// The item as extended diagnostic notation: the bytes exactly, which can be
+// long, so the section starts closed. Text only: the notation quotes the input.
+function createEdnSection(value) {
+    const section = document.createElement('details');
+    section.className = 'decoder-section decoder-edn';
+
+    const summary = document.createElement('summary');
+    const heading = document.createElement('h4');
+    heading.textContent = formatKey('edn');
+    summary.appendChild(heading);
+    section.appendChild(summary);
+
+    const body = document.createElement('div');
+    body.className = 'decoder-section-body';
+    const text = document.createElement('pre');
+    text.className = 'decoder-pre decoder-edn-text';
+    text.textContent = typeof value === 'string' ? value : JSON.stringify(value);
+    body.appendChild(text);
+    section.appendChild(body);
+    return section;
+}
+
 function createSection(key, value) {
+    if (key === 'edn') {
+        return createEdnSection(value);
+    }
     const section = document.createElement('div');
     section.className = 'decoder-section';
 
@@ -63,6 +88,7 @@ function buildSections(type, data) {
             'authenticatorData',
             'extensionsDecoded',
             'extensions',
+            'edn',
         ],
         'Authenticator data': ['authenticatorData'],
         'WebAuthn client data': ['clientDataJSON'],
@@ -74,6 +100,7 @@ function buildSections(type, data) {
             'expandedJson',
             'decodedValue',
             'ctap',
+            'edn',
         ],
     };
 
@@ -164,12 +191,13 @@ function buildFindingsList(findings) {
     const list = document.createElement('ul');
     findings.forEach((finding) => {
         const item = document.createElement('li');
-        const offset = Number.isInteger(finding?.offset) ? `offset ${finding.offset}` : 'offset ?';
+        // A finding in JSON has a path and no offset: it is shown by its path alone.
+        const offset = Number.isInteger(finding?.offset) ? `offset ${finding.offset} · ` : '';
         const path = typeof finding?.path === 'string' ? finding.path : '';
         const message = typeof finding?.message === 'string' ? finding.message : '';
         // A finding inside a PublicKeyCredential field counts its offset from that field.
         const source = typeof finding?.source === 'string' ? `${finding.source}: ` : '';
-        item.textContent = `${source}${offset} · ${path} — ${message}`;
+        item.textContent = `${source}${offset}${path} — ${message}`;
         list.appendChild(item);
     });
     block.appendChild(list);
