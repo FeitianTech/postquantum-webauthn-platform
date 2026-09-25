@@ -59,6 +59,16 @@ class _Local:
             handle.write(data)
         return self._legacy(name)
 
+    def put_session_pickle(self, name, data):
+        path = self.store._local_filename(name, SESSION, create=True, suffix=self.store._PICKLE_SUFFIX)
+        with open(path, "wb") as handle:
+            handle.write(data)
+        return path
+
+    def holds(self, source):
+        with open(source, "rb") as handle:
+            return handle.read()
+
     def break_current(self, name):
         os.makedirs(self._current(name))
 
@@ -88,6 +98,14 @@ class _Gcs:
         blob = self.store._legacy_credential_blob(name)
         self.bucket.put(blob, data)
         return blob
+
+    def put_session_pickle(self, name, data):
+        blob = self.store._credential_blob(name, SESSION, suffix=self.store._PICKLE_SUFFIX)
+        self.bucket.put(blob, data)
+        return blob
+
+    def holds(self, source):
+        return self.bucket.objects[source][0]
 
     def break_current(self, name):
         self.bucket.failing[self.put_current(name, _records("unreachable"))] = fake_gcs.ServiceUnavailable("503")
@@ -249,3 +267,26 @@ def test_read_for_update_refuses_to_replace_a_current_copy_it_cannot_decode(back
 
     with pytest.raises(backend.store.CredentialsUndecodable):
         backend.store.read_for_update(NAME, session_id=SESSION)
+
+
+@pytest.mark.parametrize("copy", ["session pickle", "legacy"])
+def test_read_for_update_refuses_to_replace_an_only_copy_it_cannot_decode(backend, copy):
+    # With no current copy the save writes one: it would shadow this copy, and
+    # remove a session .pkl, without anyone having read it.
+    put = backend.put_session_pickle if copy == "session pickle" else backend.put_legacy
+    source = put(NAME, b"not a credential record")
+
+    with pytest.raises(backend.store.CredentialsUndecodable, match="Could not decode"):
+        backend.store.read_for_update(NAME, session_id=SESSION)
+    assert backend.holds(source) == b"not a credential record"
+    # Reads that only show records still skip it.
+    assert backend.store.readkey(NAME, session_id=SESSION) == []
+
+
+def test_read_for_update_reads_an_only_legacy_copy_that_decodes(backend):
+    backend.put_legacy(NAME, _records("legacy"))
+
+    records, version = backend.store.read_for_update(NAME, session_id=SESSION)
+
+    assert records == [{"credential_data": "legacy"}]
+    assert backend.store.save_if_unchanged(NAME, [*records, {"credential_data": "new"}], version, session_id=SESSION)
