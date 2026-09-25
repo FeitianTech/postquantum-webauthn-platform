@@ -89,10 +89,12 @@ _CREDENTIAL_SUFFIXES = (_JSON_SUFFIX, _PICKLE_SUFFIX)
 
 
 class CredentialsUndecodable(Exception):
-    """The current copy of a user's credentials exists, but its content does not decode.
+    """The user's copy of their credentials exists, but its content does not decode.
 
     Raised by :func:`read_for_update` alone: the save that follows would replace
-    a copy nobody could read. Reads that only show records skip it with a warning.
+    a copy nobody could read -- the current copy, or with no current copy the
+    first legacy one, which the new current copy shadows and a session ``.pkl``
+    is removed with. Reads that only show records skip it with a warning.
     """
 
 
@@ -308,8 +310,9 @@ def read_for_update(name: str, *, session_id: str | None = None) -> tuple[list[A
 
     The version is opaque: the object's generation on GCS (0 when there is no
     object), the SHA-256 of the file locally (``None`` when there is no file).
-    Hand it to :func:`save_if_unchanged`. A current copy that does not decode
-    raises :class:`CredentialsUndecodable` rather than reading as ``[]``.
+    Hand it to :func:`save_if_unchanged`. The copy the records come from -- the
+    current one, or with none the first legacy one -- raises
+    :class:`CredentialsUndecodable` rather than reading as ``[]`` when it does not decode.
     """
 
     resolved_session = _resolve_session_id(session_id)
@@ -325,8 +328,13 @@ def read_for_update(name: str, *, session_id: str | None = None) -> tuple[list[A
         version = hashlib.sha256(payload).hexdigest() if payload is not None else None
 
     if payload is None:
-        # No current copy: the records, if any, are a legacy one's.
-        return readkey(name, session_id=resolved_session), version
+        # No current copy: the records, if any, are the first legacy copy's. The
+        # save writes a current copy over them and drops a session .pkl, so one
+        # that does not decode is refused here as the current copy is.
+        first = _first_copy(name, resolved_session)
+        if first is None:
+            return [], version
+        source, payload = first
     try:
         return record_format.decode_payload(payload), version
     except record_format.UndecodableRecords as exc:
@@ -403,16 +411,24 @@ def readkey(name: str, *, session_id: str | None = None) -> list[Any]:
     not decode is skipped with a warning naming it, and reads as ``[]``.
     """
 
-    resolved_session = _resolve_session_id(session_id)
+    first = _first_copy(name, _resolve_session_id(session_id))
+    if first is None:
+        return []
+    return _decode_copy(first[1], first[0]) or []
+
+
+def _first_copy(name: str, session_id: str) -> tuple[str, bytes] | None:
+    """The first of ``name``'s copies that exists, newest first, and its bytes; ``None`` for none."""
+
     if _using_gcs():
-        candidates, read = _candidate_gcs_blob_names(name, resolved_session), _read_gcs_copy
+        candidates, read = _candidate_gcs_blob_names(name, session_id), _read_gcs_copy
     else:
-        candidates, read = _candidate_local_paths(name, resolved_session), _read_local_copy
+        candidates, read = _candidate_local_paths(name, session_id), _read_local_copy
     for source in candidates:
         payload = read(source)
         if payload is not None:
-            return _decode_copy(payload, source) or []
-    return []
+            return source, payload
+    return None
 
 
 def delkey(name: str, *, session_id: str | None = None) -> None:
