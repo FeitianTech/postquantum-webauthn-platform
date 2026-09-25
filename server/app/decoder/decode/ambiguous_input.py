@@ -34,8 +34,12 @@ The bytes, in order (``readings.py``):
 3. JSON text, in UTF-8 (client data, or any other JSON).
 4. A DER certificate.
 5. An attestation object: one CBOR item, read as WebAuthn's attestation object.
-6. Authenticator data.
-7. CBOR: one item after an optional CTAP command or status byte (and whatever
+6. One CTAP message or one CBOR item, whole: before authenticator data, because
+   about a quarter of all 37-byte items have a byte 32 without the AT and ED
+   flags (a real 37-byte getInfo response is one), while authenticator data that
+   is also one item is a chance in tens of thousands.
+7. Authenticator data.
+8. CBOR: one item after an optional CTAP command or status byte (and whatever
    follows it, reported), or, when asked, a lenient reading of what is not
    well-formed.
 
@@ -54,7 +58,7 @@ command or status byte and one CBOR item; authenticator data. Pairs that occur:
   and ``ctap-prefix-not-read`` names the command);
 - one CBOR item or a CTAP message, and authenticator data: any 37 bytes that
   are one item, whose byte 32 has neither AT nor ED -- a 37-byte getInfo
-  response, say;
+  response, say. Read as the item;
 - PEM text, and anything else: PEM armour is none of the others, so none;
 - a DER certificate, and anything else: no pair is known (0x30, SEQUENCE, is
   the CBOR integer -17 with bytes after it), but the check is made.
