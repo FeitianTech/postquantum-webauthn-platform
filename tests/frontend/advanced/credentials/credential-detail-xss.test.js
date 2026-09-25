@@ -1,16 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-// Only the hex decoder is stubbed: the real implementation runs the value through
-// atob(), which throws on a hostile (non-base64) payload before the markup is ever
-// built. Everything else - including base64ToBase64Url, which passes a hostile value
-// through almost untouched - stays real.
-vi.mock('../../../../frontend/static/scripts/shared/utils/binary.js', async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    base64UrlToHex: vi.fn(() => 'deadbeef'),
-  };
-});
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
   buildAttestationFormatSection,
@@ -79,7 +67,7 @@ describe('credential detail sections show untrusted values as text', () => {
     expectRenderedAsText(html, IMG_PAYLOAD);
   });
 
-  it('escapes encoded identifier values taken from storage', () => {
+  it('shows identifier values taken from storage as text, even when they are not base64url', () => {
     const html = buildUserInfoSection(
       { userName: 'alice', userHandle: IMG_PAYLOAD, credentialId: IMG_PAYLOAD },
       null,
@@ -88,7 +76,8 @@ describe('credential detail sections show untrusted values as text', () => {
     const container = render(html);
     expect(container.querySelector('img')).toBeNull();
     expect(container.textContent).toContain(IMG_PAYLOAD);
-    expect(container.querySelectorAll('.credential-code-block').length).toBe(6);
+    // Neither decodes, so each is shown once, as stored.
+    expect(container.querySelectorAll('.credential-code-block').length).toBe(2);
   });
 
   it('escapes the authenticator-reported attestation format', () => {
