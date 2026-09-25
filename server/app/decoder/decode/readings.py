@@ -21,7 +21,7 @@ from typing import Any
 
 from cryptography import x509
 
-from . import cbor_parser, ctap, ctap_prefix, json_input, pipeline
+from . import ambiguous_input, cbor_parser, ctap, ctap_prefix, json_input, pipeline
 from .ambiguous_input import finding
 
 Result = dict[str, Any]
@@ -90,6 +90,17 @@ def _attestation_object(data: bytes, encoding: str, lenient: bool) -> Result | N
     return pipeline._try_decode_attestation_object(data, encoding)
 
 
+def _one_ctap_message(data: bytes, encoding: str, lenient: bool) -> Result | None:
+    # Before authenticator data: about a quarter of all 37-byte CBOR items have a
+    # byte 32 without the AT and ED flags, and a real 37-byte getInfo response is
+    # one of them, while authenticator data that is also one item (its rpIdHash
+    # starting with the head of an item exactly 37 bytes long) is a chance in
+    # tens of thousands.
+    if ambiguous_input.is_one_ctap_message(data):
+        return ctap._try_decode_cbor(data, encoding, lenient=lenient)
+    return None
+
+
 def _authenticator_data(data: bytes, encoding: str, lenient: bool) -> Result | None:
     return pipeline._try_decode_authenticator_data(data, encoding)
 
@@ -107,6 +118,7 @@ BINARY_READINGS: tuple[tuple[str, Reading], ...] = (
     (JSON_TEXT, _utf8_json),
     (DER_CERTIFICATE, _der_certificate),
     ("an attestation object", _attestation_object),
+    ("one CTAP message or CBOR item", _one_ctap_message),
     (AUTHENTICATOR_DATA, _authenticator_data),
     ("CBOR", _cbor),
 )
@@ -129,7 +141,7 @@ def read_binary(data: bytes, encoding: str, *, lenient: bool = False) -> Result:
 def _whole_reading_taken(name: str, result: Result) -> str:
     """Which whole reading a result is: CBOR after a CTAP byte, or an attestation object as the CBOR it is."""
 
-    if name in ("CBOR", "an attestation object"):
+    if name in ("CBOR", "one CTAP message or CBOR item", "an attestation object"):
         framing = (result.get("decoded") or {}).get("ctap")
         return CTAP_MESSAGE if isinstance(framing, Mapping) and framing.get("payloadLength") else CBOR_ITEM
     return name
