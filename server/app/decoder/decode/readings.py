@@ -8,8 +8,8 @@ Two readings can both read one input whole (``ambiguous_input`` lists every
 such pair). The decoder never picks silently: each reading that reads the
 bytes whole, other than the one taken, is named in an ``ambiguous-input``
 finding. "Whole" is strict whatever the request asked for: one well-formed CBOR
-item and nothing after it, authenticator data exactly as long as its flags say,
-JSON as RFC 8259 has it.
+item and nothing after it, a CTAP message whose framing keeps the bytes after it,
+authenticator data exactly as long as its flags say, JSON as RFC 8259 has it.
 
 The readings reach the pipeline's helpers through the module, so a test that
 patches one there patches it here too.
@@ -21,7 +21,15 @@ from typing import Any
 
 from cryptography import x509
 
-from . import ambiguous_input, cbor_parser, ctap, ctap_prefix, json_input, pipeline
+from . import (
+    ambiguous_input,
+    cbor_parser,
+    ctap,
+    ctap_classify,
+    ctap_prefix,
+    json_input,
+    pipeline,
+)
 from .ambiguous_input import finding
 
 Result = dict[str, Any]
@@ -34,6 +42,7 @@ JSON_TEXT = "JSON text"
 DER_CERTIFICATE = "a DER certificate"
 CBOR_ITEM = "one CBOR item"
 CTAP_MESSAGE = "a CTAP command or status byte and one CBOR item"
+CTAP_MESSAGE_AND_BYTES = "a CTAP message and the bytes after it"
 AUTHENTICATOR_DATA = "authenticator data"
 
 
@@ -101,6 +110,16 @@ def _one_ctap_message(data: bytes, encoding: str, lenient: bool) -> Result | Non
     return None
 
 
+def _ctap_message_and_bytes(data: bytes, encoding: str, lenient: bool) -> Result | None:
+    # A CTAP message and bytes after it -- zero padding to a HID frame, say -- is
+    # whole too: its framing keeps them (trailingBytesHex). Before authenticator
+    # data for the reason one item is; and only a map the shape of a CTAP message
+    # counts, after a command byte too, which an rpIdHash all but never starts.
+    if _is_ctap_message_and_bytes(data):
+        return ctap._try_decode_cbor(data, encoding, lenient=lenient)
+    return None
+
+
 def _authenticator_data(data: bytes, encoding: str, lenient: bool) -> Result | None:
     return pipeline._try_decode_authenticator_data(data, encoding)
 
@@ -119,6 +138,7 @@ BINARY_READINGS: tuple[tuple[str, Reading], ...] = (
     (DER_CERTIFICATE, _der_certificate),
     ("an attestation object", _attestation_object),
     ("one CTAP message or CBOR item", _one_ctap_message),
+    (CTAP_MESSAGE_AND_BYTES, _ctap_message_and_bytes),
     (AUTHENTICATOR_DATA, _authenticator_data),
     ("CBOR", _cbor),
 )
@@ -207,6 +227,16 @@ def _is_ctap_message(data: bytes) -> bool:
     return prefix is not None and bool(payload) and _is_cbor_item(payload)
 
 
+def _is_ctap_message_and_bytes(data: bytes) -> bool:
+    prefix, payload = ctap._extract_ctap_prefix(data)
+    try:
+        node, end, _skipped = cbor_parser.decode_item(data, len(data) - len(payload))
+    except (cbor_parser._CborDecodingError, RecursionError):
+        return False
+    value = cbor_parser._structure_to_value(node)
+    return end < len(data) and ctap_classify.has_a_message_shape(value, prefix)
+
+
 def _is_authenticator_data(data: bytes) -> bool:
     try:
         pipeline._describe_authenticator_data_bytes(data)
@@ -222,5 +252,6 @@ _WHOLE: tuple[tuple[str, Callable[[bytes], bool]], ...] = (
     (DER_CERTIFICATE, _is_der_certificate),
     (CBOR_ITEM, _is_cbor_item),
     (CTAP_MESSAGE, _is_ctap_message),
+    (CTAP_MESSAGE_AND_BYTES, _is_ctap_message_and_bytes),
     (AUTHENTICATOR_DATA, _is_authenticator_data),
 )

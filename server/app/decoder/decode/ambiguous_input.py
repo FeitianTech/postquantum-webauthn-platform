@@ -38,14 +38,20 @@ The bytes, in order (``readings.py``):
    about a quarter of all 37-byte items have a byte 32 without the AT and ED
    flags (a real 37-byte getInfo response is one), while authenticator data that
    is also one item is a chance in tens of thousands.
-7. Authenticator data.
-8. CBOR: one item after an optional CTAP command or status byte (and whatever
+7. A CTAP message and the bytes after it, which its framing keeps (padding to
+   a HID frame, say): a map the shape of a CTAP message -- after a command
+   byte, its request's shape -- after an optional CTAP byte. Before
+   authenticator data for the reason one item is; the shape keeps out an
+   rpIdHash that happens to start with a command byte and a map.
+8. Authenticator data.
+9. CBOR: one item after an optional CTAP command or status byte (and whatever
    follows it, reported), or, when asked, a lenient reading of what is not
    well-formed.
 
 The readings that read bytes whole, for these findings: a CTAP command or
 status byte; PEM text; JSON text; a DER certificate; one CBOR item; a CTAP
-command or status byte and one CBOR item; authenticator data. Pairs that occur:
+command or status byte and one CBOR item; a CTAP message and the bytes after
+it; authenticator data. Pairs that occur:
 
 - a CTAP byte, alone, and one CBOR item: ``05`` is TIMEOUT and the integer 5;
   and JSON text: ``31`` is also the text "1";
@@ -59,6 +65,8 @@ command or status byte and one CBOR item; authenticator data. Pairs that occur:
 - one CBOR item or a CTAP message, and authenticator data: any 37 bytes that
   are one item, whose byte 32 has neither AT nor ED -- a 37-byte getInfo
   response, say. Read as the item;
+- a CTAP message and the bytes after it, and authenticator data: a CTAP message
+  padded to 37 bytes whose byte 32 has neither AT nor ED. Read as the message;
 - PEM text, and anything else: PEM armour is none of the others, so none;
 - a DER certificate, and anything else: no pair is known (0x30, SEQUENCE, is
   the CBOR integer -17 with bytes after it), but the check is made.
