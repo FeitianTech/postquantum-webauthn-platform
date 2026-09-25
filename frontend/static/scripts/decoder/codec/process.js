@@ -1,4 +1,3 @@
-import { FailedResponseError, readFailedResponse } from '../../shared/api/failed-response.js';
 import {
     hideProgress,
     hideStatus,
@@ -10,12 +9,20 @@ import {
     resetScrollPosition,
     updateDecoderEmptyState,
 } from './dom-state.js';
-import { canEncodeToFormat, getCanonicalEncoderFormat } from './encoding.js';
 import {
     getSelectedDecoderMode,
     resolveCodecConfig,
 } from './mode.js';
 import { renderDecodedResult } from './render-sections.js';
+import {
+    buildCodecRequest,
+    codecFailureText,
+    codecProgressText,
+    codecRawJson,
+    codecSuccessText,
+    requestCodec,
+    validateCodecInput,
+} from './request.js';
 
 function updateDecodeEmptyState(mode) {
     if (mode === 'decode') {
@@ -35,46 +42,19 @@ export async function processCodec(mode = getSelectedDecoderMode()) {
     }
 
     const inputValue = input.value;
-    if (!inputValue.trim()) {
-        const message = mode === 'encode'
-            ? 'Encoder input is empty. Provide JSON to encode.'
-            : 'Codec input is empty. Please paste something to process.';
-        showStatus(config.statusKey, message, 'error');
-        updateDecodeEmptyState(mode);
-        return;
-    }
-
     let targetFormat = null;
     if (mode === 'encode') {
         const formatSelect = config.formatSelectId
             ? document.getElementById(config.formatSelectId)
             : null;
         targetFormat = formatSelect ? formatSelect.value : '';
-        if (!targetFormat || !targetFormat.trim()) {
-            showStatus(config.statusKey, 'Select an encoding format before encoding.', 'error');
-            return;
-        }
+    }
 
-        // EDN is not JSON: it goes to the server as written, which reads it and
-        // names the offset where it is not valid.
-        if (getCanonicalEncoderFormat(targetFormat) !== 'edn') {
-            let parsedValue;
-            try {
-                parsedValue = JSON.parse(inputValue);
-            } catch (parseError) {
-                showStatus(config.statusKey, 'Encoder expects valid JSON input.', 'error');
-                return;
-            }
-
-            if (!canEncodeToFormat(parsedValue, targetFormat)) {
-                showStatus(
-                    config.statusKey,
-                    `Input cannot be converted into ${targetFormat}.`,
-                    'error',
-                );
-                return;
-            }
-        }
+    const invalid = validateCodecInput(mode, inputValue, targetFormat);
+    if (invalid) {
+        showStatus(config.statusKey, invalid, 'error');
+        updateDecodeEmptyState(mode);
+        return;
     }
 
     const outputPanel = document.getElementById(config.outputId);
@@ -103,44 +83,23 @@ export async function processCodec(mode = getSelectedDecoderMode()) {
 
     updateDecodeEmptyState(mode);
 
-    const actionText = mode === 'encode' ? 'Encoding…' : 'Decoding…';
+    const actionText = codecProgressText(mode);
     showProgress(config.statusKey, actionText);
     if (progressText) {
         progressText.textContent = actionText;
     }
 
     try {
-        const body = { payload: inputValue, mode };
-        if (mode === 'encode') {
-            body.format = targetFormat;
-        } else if (document.getElementById('decoder-lenient')?.checked) {
-            body.lenient = true;
-        }
-
-        const response = await fetch('/api/codec', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(body),
-        });
-
-        if (!response.ok) {
-            throw new FailedResponseError(await readFailedResponse(response));
-        }
-
-        let payload = null;
-        try {
-            payload = await response.json();
-        } catch (parseError) {
-            throw new Error('Failed to parse decoder response.');
-        }
+        const lenient = mode !== 'encode' && Boolean(document.getElementById('decoder-lenient')?.checked);
+        const payload = await requestCodec(
+            buildCodecRequest(mode, inputValue, { format: targetFormat, lenient }),
+        );
 
         if (summaryContainer) {
             renderDecodedResult(summaryContainer, payload, mode);
         }
         if (rawContent) {
-            rawContent.textContent = JSON.stringify(payload, null, 2);
+            rawContent.textContent = codecRawJson(payload);
             resetScrollPosition(rawContent);
         }
         if (outputPanel) {
@@ -150,10 +109,7 @@ export async function processCodec(mode = getSelectedDecoderMode()) {
             toggleButton.disabled = !rawContent || rawContent.textContent.trim().length === 0;
         }
 
-        const successMessage = mode === 'encode'
-            ? 'Payload encoded successfully!'
-            : 'Response decoded successfully!';
-        showStatus(config.statusKey, successMessage, 'success');
+        showStatus(config.statusKey, codecSuccessText(mode), 'success');
 
         updateDecodeEmptyState(mode);
     } catch (error) {
@@ -167,9 +123,7 @@ export async function processCodec(mode = getSelectedDecoderMode()) {
             closeModal(config.rawModalId);
         }
 
-        const message = error instanceof Error ? error.message : String(error);
-        const failurePrefix = mode === 'encode' ? 'Encoding failed' : 'Decoding failed';
-        showStatus(config.statusKey, `${failurePrefix}: ${message}`, 'error');
+        showStatus(config.statusKey, codecFailureText(mode, error), 'error');
 
         updateDecodeEmptyState(mode);
     } finally {
