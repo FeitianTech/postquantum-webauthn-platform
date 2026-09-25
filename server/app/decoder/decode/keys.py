@@ -146,22 +146,45 @@ def read_json_key(label: str) -> Any:
     numbered (two keys shared the spelling) raises ``ValueError`` naming it.
     """
 
+    if typed_spelling(label) is None:
+        return str(label)
+    try:
+        return read_typed(label, noun="key")
+    except TypedSpellingError as exc:
+        raise _unreadable(label, exc.reason) from None
+
+
+class TypedSpellingError(ValueError):
+    """A typed spelling that names no value: ``reason`` says why."""
+
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+        super().__init__(reason)
+
+
+def read_typed(label: str, *, noun: str = "value") -> Any:
+    """The CBOR value the typed spelling ``label`` names: text, bytes, or a ``CborDiagnostic`` of its EDN.
+
+    Raises ``TypedSpellingError`` for a numbered spelling, a kind this module does
+    not write, EDN that does not read, or EDN of another kind than it says.
+    """
+
     match = typed_spelling(label)
     if match is None:
-        return str(label)
+        raise TypedSpellingError("it is not spelled as a typed value, <EDN> (<kind>)")
     spelling, kind = match["spelling"], match["kind"]
     if match["numbered"]:
-        raise _unreadable(label, "a numbered spelling names neither of the keys that shared it; use the map's EDN")
+        raise TypedSpellingError("a numbered spelling names neither of the keys that shared it; use the map's EDN")
     if kind in _UNREADABLE_KINDS:
-        raise _unreadable(label, "the decoder could not read that key; nothing rebuilds it")
+        raise TypedSpellingError(f"the decoder could not read that {noun}; nothing rebuilds it")
     if kind not in _KINDS:
-        raise _unreadable(label, f"({kind}) is not a key type; a text key spelled so is written \"...\" (text)")
+        raise TypedSpellingError(f"({kind}) is not a {noun} type; a text {noun} spelled so is written \"...\" (text)")
     try:
         encoded = edn.encode(spelling)
     except ValueError as exc:
-        raise _unreadable(label, str(exc)) from None
+        raise TypedSpellingError(str(exc)) from None
     if not _KINDS[kind](encoded[0]):
-        raise _unreadable(label, f"{spelling} is not a {kind}")
+        raise TypedSpellingError(f"{spelling} is not a {kind}")
     if kind == "text":
         return decode_item(encoded)[0]["value"]
     if kind == "bytes":
