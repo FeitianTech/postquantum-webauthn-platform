@@ -322,4 +322,9 @@ describe('mds-utils', () => {
     expect(decodeBase64Url('aGVsbG8')).toBe('hello');
     expect(decodeBase64Url('8J-MjQ')).toBe('🌍');
   });
+
+  it('decodes standard, padded base64 as well', () => {
+    expect(decodeBase64Url('aGVsbG8=')).toBe('hello');
+    expect(decodeBase64Url('8J+MjQ==')).toBe('🌍');
+  });
 });
