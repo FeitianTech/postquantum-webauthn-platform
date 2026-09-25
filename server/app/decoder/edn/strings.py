@@ -36,9 +36,9 @@ def read_quoted(source: str, start: int, quote_mark: str = '"') -> tuple[str, in
     """The string literal opening at ``source[start]``; returns its text and the offset after it.
 
     JSON's escapes, EDN's ``\\u{hex}`` for any scalar value, and a surrogate pair
-    written as two ``\\u`` escapes. A lone surrogate, a raw control character
-    other than a line feed, or a missing closing quote raises ``ValueError``
-    with the offset in ``source``.
+    written as two ``\\u`` escapes. A lone surrogate, escaped or not (a JSON
+    request can carry one), a raw control character other than a line feed, or a
+    missing closing quote raises ``ValueError`` with the offset in ``source``.
     """
 
     position = start + 1
@@ -55,6 +55,8 @@ def read_quoted(source: str, start: int, quote_mark: str = '"') -> tuple[str, in
             continue
         if ord(character) < 0x20 and character != "\n":
             raise _error(position, f"an unescaped control character U+{ord(character):04X} in a string")
+        if 0xD800 <= ord(character) <= 0xDFFF:
+            raise _error(position, f"a lone surrogate U+{ord(character):04X}, which UTF-8 cannot encode")
         parts.append(character)
         position += 1
 
