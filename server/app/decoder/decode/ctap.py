@@ -20,7 +20,7 @@ from .cbor_parser import _CborDecodingError, _structure_to_value
 from .ctap_prefix import _extract_ctap_prefix, _is_padding_bytes, prefix_not_read
 from .ctap_responses import _interpret_get_assertion_map, _interpret_make_credential_map
 from .findings import _attach_findings, _trailing_findings
-from .keys import MISSING, JsonLabel, json_items, key_identity
+from .keys import MISSING, JsonLabel, json_items, key_identity, qualified_key_text
 from .keys import coerce_cbor_bytes as _coerce_cbor_bytes
 from .keys import get_mapping_entry as _get_mapping_entry
 from .keys import hex_json_safe as _hex_json_safe
@@ -101,6 +101,10 @@ def _build_labeled_ctap_map(
 
     if isinstance(mapping, Mapping):
         def labelled(key: Any, text: str) -> str:
+            # CTAP numbers members with integers: any other key is shown with its
+            # type, so that the text "rp" is never read back as member 2.
+            if isinstance(key, bool) or not isinstance(key, int):
+                return qualified_key_text(key)
             label = _resolve_ctap_label(labels, key)
             return f"{text} ({label})" if label else text
 

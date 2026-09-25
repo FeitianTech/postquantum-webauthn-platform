@@ -1,18 +1,20 @@
 """The makeCredential and getAssertion response views of a CTAP map (``ctapDecoded``).
 
-The members are read by their integer keys (CTAP 2.2 section 6.1.2 and 6.2.2).
+The members are read by their integer keys (CTAP 2.2 section 6.1.2 and 6.2.2);
+every other entry is shown too, with its type where it is not an integer, and
+``ctap_conformance`` reports such a key.
 The conversions they share with the rest of ``ctap`` are looked up there when
 called, so a test that patches ``ctap`` patches them here too.
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from .. import ctap_tables
 from . import ctap, response
 from .keys import MISSING as _MISSING
-from .keys import JsonLabel
+from .keys import JsonLabel, json_items, qualified_key_text
 from .keys import coerce_cbor_bytes as _coerce_cbor_bytes
 from .keys import get_mapping_entry as _get_mapping_entry
 from .keys import hex_json_safe as _hex_json_safe
@@ -34,94 +36,78 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] |
     if att_stmt_map is None and att_stmt_bytes is None and att_stmt_entry is not None and not compound:
         return None
 
-    interpreted: dict[str, Any] = {}
-    interpreted["1 (fmt)"] = fmt
-
-    auth_data_details, _auth_trailing = ctap._format_auth_data_for_expanded_json(auth_data_bytes)
-    interpreted["2 (authData)"] = auth_data_details
-
-    if isinstance(att_stmt_map, Mapping):
-        att_stmt_details = response._convert_attestation_statement({"attestationStatement": att_stmt_map})
-        sig_value = att_stmt_map.get("sig")
-        sig_bytes = _coerce_cbor_bytes(sig_value)
-        if sig_bytes is not None:
-            att_stmt_details["sig"] = sig_bytes.hex()
-        interpreted["3 (attStmt)"] = att_stmt_details
-    else:
-        if att_stmt_bytes is not None:
-            interpreted["3 (attStmt)"] = att_stmt_bytes.hex()
-        else:
-            interpreted["3 (attStmt)"] = _hex_json_safe(att_stmt_entry)
-
-    members = ctap_tables.MAKE_CREDENTIAL_RESPONSE
-    for key, label in members.items():
-        if key <= 3:
-            continue
-        candidate = _get_mapping_entry(value, key)
-        if candidate is _MISSING:
-            continue
-        interpreted[f"{key} ({label})"] = ctap._convert_optional_ctap_field(candidate)
-
-    extra_keys = [
-        key
-        for key in value.keys()
-        if isinstance(key, int) and key not in members
-    ]
-    for key in sorted(extra_keys):
-        interpreted[f"{key}"] = _hex_json_safe(value[key])
-
-    return _labelled(interpreted)
+    converters = {1: lambda fmt: fmt, 2: _auth_data_view, 3: _attestation_statement_view}
+    return _member_view(value, ctap_tables.MAKE_CREDENTIAL_RESPONSE, converters)
 
 
 def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | None:
     if ctap._looks_like_get_assertion_request(value):
         return None
-    auth_data_entry = _get_mapping_entry(value, 2)
-    signature_entry = _get_mapping_entry(value, 3)
-    auth_data_bytes = _coerce_cbor_bytes(auth_data_entry)
-    signature_bytes = _coerce_cbor_bytes(signature_entry)
-    if auth_data_bytes is None:
+    if _coerce_cbor_bytes(_get_mapping_entry(value, 2)) is None:
         return None
 
-    interpreted: dict[str, Any] = {}
-
-    credential_entry = _get_mapping_entry(value, 1)
-    if credential_entry is not _MISSING and credential_entry is not None:
-        interpreted["1 (credential)"] = ctap._convert_ctap_credential_descriptor(credential_entry)
-
-    auth_data_details, _auth_trailing = ctap._format_auth_data_for_expanded_json(auth_data_bytes)
-    interpreted["2 (authData)"] = auth_data_details
-
-    if signature_bytes is not None:
-        interpreted["3 (signature)"] = signature_bytes.hex()
-    else:
-        interpreted["3 (signature)"] = None
-
-    user_entry = _get_mapping_entry(value, 4)
-    if user_entry is not _MISSING and user_entry is not None:
-        interpreted["4 (user)"] = ctap._convert_ctap_user(user_entry)
-
-    members = ctap_tables.GET_ASSERTION_RESPONSE
-    for key, label in members.items():
-        if key <= 4:
-            continue
-        candidate = _get_mapping_entry(value, key)
-        if candidate is _MISSING:
-            continue
-        interpreted[f"{key} ({label})"] = ctap._convert_optional_ctap_field(candidate)
-
-    extra_keys = [
-        key
-        for key in value.keys()
-        if isinstance(key, int) and key not in members
-    ]
-    for key in sorted(extra_keys):
-        interpreted[f"{key}"] = _hex_json_safe(value[key])
-
-    return _labelled(interpreted)
+    converters = {1: _credential_view, 2: _auth_data_view, 3: _signature_view, 4: _user_view}
+    view = _member_view(value, ctap_tables.GET_ASSERTION_RESPONSE, converters)
+    # No signature at all (only a direct call gets here): the member is shown, as null.
+    view.setdefault(JsonLabel("3 (signature)"), None)
+    return view
 
 
-def _labelled(interpreted: dict[str, Any]) -> dict[str, Any]:
-    # The member labels ("1 (fmt)") are spelled here, not keys of the input:
-    # later passes over the view keep them as they are.
-    return {JsonLabel(label): value for label, value in interpreted.items()}
+def _member_view(
+    value: Mapping[Any, Any], members: Mapping[int, str], converters: Mapping[int, Callable[[Any], Any]]
+) -> dict[str, Any]:
+    """Every entry of ``value``, in the order sent: members labelled, null ones too.
+
+    An integer that is no member is shown by its number. Any other key -- a CTAP
+    map numbers its members with integers -- is shown with its type, so that
+    neither a reader nor the encoder takes the text "fmt" for member 1.
+    """
+
+    def decorate(key: Any, text: str) -> str:
+        if isinstance(key, bool) or not isinstance(key, int):
+            return qualified_key_text(key)
+        label = members.get(key)
+        return f"{text} ({label})" if label else text
+
+    view: dict[str, Any] = {}
+    for label, key, raw in json_items(value, decorate):
+        member = key if isinstance(key, int) and not isinstance(key, bool) else None
+        if member in converters:
+            view[label] = converters[member](raw)
+        elif member in members:
+            view[label] = ctap._convert_optional_ctap_field(raw)
+        else:
+            view[label] = _hex_json_safe(raw)
+    return view
+
+
+def _auth_data_view(raw: Any) -> Any:
+    auth_data = _coerce_cbor_bytes(raw)
+    if auth_data is None:
+        return _hex_json_safe(raw)
+    details, _trailing = ctap._format_auth_data_for_expanded_json(auth_data)
+    return details
+
+
+def _attestation_statement_view(raw: Any) -> Any:
+    if isinstance(raw, Mapping):
+        details = response._convert_attestation_statement({"attestationStatement": raw})
+        signature = _coerce_cbor_bytes(raw.get("sig"))
+        if signature is not None:
+            details["sig"] = signature.hex()
+        return details
+    statement_bytes = _coerce_cbor_bytes(raw)
+    return statement_bytes.hex() if statement_bytes is not None else _hex_json_safe(raw)
+
+
+def _credential_view(raw: Any) -> Any:
+    return None if raw is None else ctap._convert_ctap_credential_descriptor(raw)
+
+
+def _signature_view(raw: Any) -> Any:
+    signature = _coerce_cbor_bytes(raw)
+    return signature.hex() if signature is not None else _hex_json_safe(raw)
+
+
+def _user_view(raw: Any) -> Any:
+    return None if raw is None else ctap._convert_ctap_user(raw)
