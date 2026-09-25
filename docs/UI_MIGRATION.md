@@ -78,7 +78,8 @@ motion that honours `prefers-reduced-motion`.
 - The top bar's four sections use a segmented control on a white track with a hairline border. The active
   highlight is one element that slides to the chosen tab (transform, about 280 ms on the `--ease` curve), with
   no slide under `prefers-reduced-motion`. The same control is used for the Registration / Authentication and
-  Decode / Encode switches.
+  Decode / Encode switches. The highlight is white with a hairline and a soft shadow (the owner's choice,
+  2026-09-25): the one shadow outside a floating layer.
 - Hierarchy through type, space and hairlines rather than fills: large, confident page titles; restrained
   colour (one accent, plus semantic success, warning and danger); shadows only on floating layers (menus,
   popovers, drawers, modals, toasts).
@@ -115,14 +116,41 @@ mid-UUID (mono, with copy). Enhance where it helps along the way. All data shown
   credential saved in one UI works in the other.
 - **Reuse logic, rewrite views.** The logic modules (storage and record migration, base64, the Analyze
   Browser's identity and WebAuthn facts, the failed-response reader, request and option building, the JSON
-  editor's synchronisation, codec request handling, MDS filtering and sorting, certificate parsing) move into
-  `web/` with their tests and keep their behaviour. React components replace the code that builds DOM. No
-  legacy markup strings, no `dangerouslySetInnerHTML`, no `innerHTML`.
+  editor's synchronisation, codec request handling, MDS filtering and sorting, certificate parsing) keep their
+  behaviour and have one copy. Until the cutover they stay in `frontend/static/scripts`, where the legacy UI
+  runs them, and `web/` imports them in place (`experimental.externalDir`, the `@legacy/*` alias); at the
+  cutover they move into `web/` with their tests. Logic still inside a view module is first moved out into a
+  DOM-free module both UIs import (Phase 25: `shared/browser/report.js` out of `analyze.js`).
+  `tests/app/tooling/test_web_source_rules.py` fails if `web/src` redefines an imported module's export or
+  repeats its sentences. React components replace the code that builds DOM. No legacy markup strings, no
+  `dangerouslySetInnerHTML`, no `innerHTML`.
 - The server stays the API. Only additive endpoints: for example the data `index.html` inlines today becomes
   JSON a page fetches.
 - **Tests:** vitest with Testing Library for components; the moved logic tests keep passing; Playwright
   end-to-end tests in Chromium with its virtual authenticator (the DevTools WebAuthn domain) run real
   registrations and authentications in CI. The Cloud Build gate builds `web/` and runs its unit tests.
+  The Playwright tests run in GitHub CI (`ci-web.yml`) and not yet in Cloud Build: they need Python, Node
+  and Chromium in one step and are the kind most likely to flake, and today they guard only `/beta` and one
+  legacy ceremony. They join the Cloud Build gate at the cutover, when `/` is the new UI.
+- **The CSP during the migration:** unchanged. The Google Fonts origins (`https://fonts.googleapis.com` in
+  `style-src`, `https://fonts.gstatic.com` in `font-src`) stay until the cutover because the legacy UI loads
+  its fonts from there; `web/` self-hosts Geist and needs neither. Remove both at the cutover.
+
+## Decisions made in Phase 25 (2026-09-25)
+
+- **Sections not yet ported** show their title, their description and a short note with a link to the
+  current UI at `/` (a plain link: `next/link` would add `/beta`). In Phase 25 that is all four.
+- **Section switching** is client-side; the URL hash (`#simple`, `#advanced`, `#codec`, `#mds`, the legacy tab
+  ids) is written with `replaceState`, read after hydration and followed on `hashchange`.
+- **Overlays** (Dialog, Drawer, Sheet) are one portal-based overlay rather than the native `<dialog>`, to keep
+  the legacy panel's focus behaviour exactly (the panel takes focus; Tab and Shift+Tab wrap; Escape and the
+  backdrop close; focus returns to the trigger) and to be testable in jsdom. The page behind is `inert` while
+  one is open and is not scroll-locked, as the legacy panel was not.
+- **Toasts** are white with a hairline, a floating shadow and a coloured dot, not a dark pill.
+- **`/beta` paths** with no file answer 404 with the export's own `404.html` (a plain 404 with no export).
+- **Dependencies:** Next 15 pins a `postcss` with advisories; `web/package.json` overrides it with a fixed
+  release. Dependabot skips majors of `next` and `typescript`. If an advisory is ever fixed only in a newer
+  Next major, the owner decides between the upgrade and the charter's Next 15; the audit threshold stays.
 
 ## Content parity (every surface phase)
 
@@ -134,9 +162,9 @@ new component and check it in a browser. A phase is not done while an item is un
 
 | Phase | Surface |
 |---|---|
-| 25 | Foundation: `web/`, tokens and primitives, the app shell, Flask serving `/beta`, the CSP scan, the build and CI pipeline, Playwright with a virtual authenticator; the Analyze Browser panel as the pilot |
+| 25 | Foundation: `web/`, tokens and primitives, the app shell, Flask serving `/beta`, the CSP scan, the build and CI pipeline, Playwright with a virtual authenticator; the Analyze Browser panel as the pilot. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 25) |
 | 26 | Codec |
 | 27 | MDS explorer: the table and filters, the detail page, certificates, custom metadata, raw views (split in two if the plan shows it is too large for one) |
 | 28 | Saved credentials (cards, detail modal, registration result) and the Simple tab |
 | 29 | Advanced tab: registration and authentication forms, JSON editor, drawer, result modals |
-| 30 | Cutover: `/` serves the new UI; the legacy templates, scripts and styles and `new_design/` are deleted; the MDS snapshot files move out of `frontend/static/` |
+| 30 | Cutover: `/` serves the new UI; the legacy templates, scripts and styles and `new_design/` are deleted; the MDS snapshot files move out of `frontend/static/`; the logic modules move into `web/`; the Google Fonts origins leave the CSP; the Playwright tests join the Cloud Build gate |
