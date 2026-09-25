@@ -15,6 +15,12 @@ if "HYPOTHESIS_STORAGE_DIRECTORY" not in os.environ:
     os.environ["HYPOTHESIS_STORAGE_DIRECTORY"] = _HYPOTHESIS_STORAGE
     atexit.register(shutil.rmtree, _HYPOTHESIS_STORAGE, ignore_errors=True)
 
+# An app built with no secret generates one and persists it in instance/. The
+# entry point (server.app.app) builds its app on import, and tests import it --
+# some while they are collected -- so every app the tests build gets this secret
+# before anything is imported. A test of the secret's resolution removes it.
+os.environ.setdefault("FIDO_SERVER_SECRET_KEY", "test-session-secret-0123456789abcdef")
+
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 # Where the app keeps state on a developer's machine -- including the legacy
 # credential stores in the source tree, which are still read -- and the MDS

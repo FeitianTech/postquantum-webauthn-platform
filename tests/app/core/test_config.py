@@ -119,36 +119,33 @@ def test_env_flag_with_true_values():
             assert _env_flag("TEST_FLAG") is True, f"Failed for value: {value}"
 
 
-def test_resolve_secret_key_from_env():
+def test_resolve_secret_key_from_env(monkeypatch):
     """Test secret key resolution from environment variable."""
     from server.app.factory import create_app
 
     test_key = "test-secret-key"
+    monkeypatch.setenv("FIDO_SERVER_SECRET_KEY", test_key)
 
-    with mock.patch.dict(os.environ, {"FIDO_SERVER_SECRET_KEY": test_key}, clear=False):
-        # The environment is read when the app is built.
-        app = create_app()
+    # The environment is read when the app is built.
+    app = create_app()
 
     assert app.secret_key == test_key.encode("utf-8")
 
 
-def test_resolve_secret_key_from_file(tmp_path):
+def test_resolve_secret_key_from_file(tmp_path, monkeypatch):
     """Test secret key resolution from file."""
     # Create a temporary secret key file
     secret_file = tmp_path / "secret.key"
     secret_content = b"file-secret-key-content"
     secret_file.write_bytes(secret_content)
-    
+
     from server.app.factory import create_app
 
-    with mock.patch.dict(os.environ, {
-        "FIDO_SERVER_SECRET_KEY_FILE": str(secret_file)
-    }, clear=False):
-        # Clear the direct env key
-        if "FIDO_SERVER_SECRET_KEY" in os.environ:
-            del os.environ["FIDO_SERVER_SECRET_KEY"]
+    monkeypatch.setenv("FIDO_SERVER_SECRET_KEY_FILE", str(secret_file))
+    # The file is read only when no key is given directly.
+    monkeypatch.delenv("FIDO_SERVER_SECRET_KEY", raising=False)
 
-        app = create_app()
+    app = create_app()
 
     assert app.secret_key == secret_content
 
@@ -158,24 +155,20 @@ def test_resolve_secret_key_generates_and_stores(tmp_path, monkeypatch):
     # Set up a clean instance path
     instance_path = tmp_path / "instance"
     instance_path.mkdir()
-    
-    # Clear environment variables
-    env_clear = {}
-    if "FIDO_SERVER_SECRET_KEY" in os.environ:
-        env_clear["FIDO_SERVER_SECRET_KEY"] = None
-    if "FIDO_SERVER_SECRET_KEY_FILE" in os.environ:
-        env_clear["FIDO_SERVER_SECRET_KEY_FILE"] = None
-    
-    with mock.patch.dict(os.environ, env_clear, clear=False):
-        from server.app.config.session_secret import _resolve_secret_key
 
-        secret = _resolve_secret_key(types.SimpleNamespace(instance_path=str(instance_path)))
+    # Neither a key nor a key file: the tests' own secret is removed too.
+    monkeypatch.delenv("FIDO_SERVER_SECRET_KEY", raising=False)
+    monkeypatch.delenv("FIDO_SERVER_SECRET_KEY_FILE", raising=False)
 
-        # Should have generated a key and stored it for the next start.
-        assert len(secret) == 32
-        assert (instance_path / "session-secret.key").read_bytes() == secret
-        # A second resolution reads the stored key instead of generating one.
-        assert _resolve_secret_key(types.SimpleNamespace(instance_path=str(instance_path))) == secret
+    from server.app.config.session_secret import _resolve_secret_key
+
+    secret = _resolve_secret_key(types.SimpleNamespace(instance_path=str(instance_path)))
+
+    # Should have generated a key and stored it for the next start.
+    assert len(secret) == 32
+    assert (instance_path / "session-secret.key").read_bytes() == secret
+    # A second resolution reads the stored key instead of generating one.
+    assert _resolve_secret_key(types.SimpleNamespace(instance_path=str(instance_path))) == secret
 
 
 def test_parse_trusted_ca_subjects():
