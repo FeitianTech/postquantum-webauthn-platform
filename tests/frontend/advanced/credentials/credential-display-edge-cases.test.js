@@ -24,9 +24,6 @@ vi.mock('../../../../frontend/static/scripts/advanced/ui/display-utils.js', () =
   describeCoseAlgorithm: vi.fn((alg) => `ALG(${String(alg)})`),
   describeCoseKeyType: vi.fn((type) => `KEYTYPE(${String(type)})`),
   describeMldsaParameterSet: vi.fn(() => ''),
-  escapeHtml: vi.fn((value) => String(value || '')),
-  formatBoolean: vi.fn((value) => (value ? 'Yes' : 'No')),
-  renderAttestationResultRow: vi.fn((label, value) => `<div>${label}:${String(value)}</div>`),
 }));
 
 vi.mock('../../../../frontend/static/scripts/advanced/credentials/utils.js', () => ({
