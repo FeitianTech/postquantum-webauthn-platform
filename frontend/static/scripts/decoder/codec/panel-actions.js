@@ -31,7 +31,7 @@ export function clearCodec(mode = getSelectedDecoderMode()) {
         resetScrollPosition(input);
     }
     if (summary) {
-        summary.innerHTML = '';
+        summary.replaceChildren();
     }
     if (rawContent) {
         rawContent.textContent = '';

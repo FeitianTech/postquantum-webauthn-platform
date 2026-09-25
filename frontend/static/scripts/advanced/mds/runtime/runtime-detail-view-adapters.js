@@ -91,7 +91,7 @@ export function createMdsDetailViewAdapters(config = {}) {
         if (!target) {
             return;
         }
-        target.innerHTML = '';
+        target.replaceChildren();
         const content = buildDetailContent(entry, {
             onOpenCertificatePage: openCertificatePage,
         });

@@ -63,7 +63,7 @@ function renderFakeCredentialList(type = 'exclude') {
     }
 
     const list = ensureList(type);
-    container.innerHTML = '';
+    container.replaceChildren();
 
     if (!list.length) {
         const empty = document.createElement('div');

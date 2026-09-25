@@ -62,7 +62,7 @@ export function renderMdsTable(state, entries, options = {}, deps = {}) {
     };
 
     const tbody = state.tableBody;
-    tbody.innerHTML = '';
+    tbody.replaceChildren();
 
     if (!entries.length) {
         const emptyRow = document.createElement('tr');

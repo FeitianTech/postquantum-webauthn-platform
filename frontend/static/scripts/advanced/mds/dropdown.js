@@ -99,7 +99,7 @@ export class FilterDropdown {
         if (!this.list) {
             return;
         }
-        this.list.innerHTML = '';
+        this.list.replaceChildren();
 
         const items = this.filtered.length ? this.filtered : [];
         if (!items.length) {

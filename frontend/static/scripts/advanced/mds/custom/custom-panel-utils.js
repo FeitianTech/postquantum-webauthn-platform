@@ -80,7 +80,7 @@ export function updateCustomMetadataList(state, items) {
         return;
     }
 
-    list.innerHTML = '';
+    list.replaceChildren();
 
     const entries = Array.isArray(items) ? items : [];
     if (!entries.length) {
