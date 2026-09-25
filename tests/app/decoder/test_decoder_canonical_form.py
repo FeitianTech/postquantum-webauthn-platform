@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 
 from fido2 import cbor
+from server.app.decoder import decode_payload_text
 
 
 def _decode(hex_text: str) -> dict[str, Any]:
@@ -190,10 +191,38 @@ def test_findings_are_listed_in_byte_order_with_trailing_bytes_last():
     assert (trailing["category"], trailing["length"], trailing["hex"]) == ("trailing", 1, "ff")
 
 
-def test_malformed_lists_every_finding_message():
+def test_malformed_lists_the_findings_about_form_and_only_those():
+    # {1: 1, 1: 2}: a duplicate key is not canonical, so it is in malformed.
     result = _decode("a201010102")
 
     assert result["malformed"] == [finding["message"] for finding in result["findings"]]
+
+
+@pytest.mark.parametrize(
+    ("payload", "code", "in_malformed"),
+    [
+        ("a2 01 01 01 02", "duplicate-map-key", True),  # canonical
+        ("1801", "non-shortest-integer", True),  # canonical
+        ("a1 01 02 ff", "trailing-bytes", True),  # trailing: RFC 8949 appendix F, "too much data"
+        ("a2 01 6161 6131 6162", "json-key-collision", False),  # how the view spells keys
+        ("8101", "ambiguous-input", False),  # which reading of the input was taken
+        ("8181818181 01", "nesting-depth", False),  # a CTAP limit, not a matter of form
+        ("41ab", "ctap-prefix-not-read", False),
+    ],
+)
+def test_a_finding_is_in_malformed_only_when_it_is_about_form(payload, code, in_malformed):
+    result = _decode(payload.replace(" ", ""))
+    findings = [finding for finding in result["findings"] if finding["code"] == code]
+
+    assert findings
+    assert all((finding["message"] in result["malformed"]) is in_malformed for finding in findings)
+
+
+def test_a_note_alone_leaves_malformed_empty():
+    result = decode_payload_text('{"a": 1, "a": 2}')
+
+    assert [finding["code"] for finding in result["findings"]] == ["duplicate-json-key"]
+    assert result["malformed"] == []
 
 
 def test_a_ctap_message_is_checked_with_offsets_counting_its_prefix_byte():

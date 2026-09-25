@@ -5,6 +5,15 @@ from typing import Any
 
 from .ctap_prefix import _is_padding_bytes
 
+# What ``malformed`` lists: findings that the input is not well-formed CBOR --
+# a step the lenient parser took ("skipped"), a structure inside the input that
+# does not parse ("malformed"), bytes after the item ("trailing": RFC 8949
+# appendix F counts "too much data") -- or not in CTAP2 canonical form
+# ("canonical", duplicate keys included). Notes about the input or its reading
+# (ambiguous input, JSON key collisions, the CTAP nesting limit, JSON duplicate
+# keys, CTAP conformance) are findings, not "malformed".
+MALFORMED_CATEGORIES = frozenset({"skipped", "malformed", "trailing", "canonical"})
+
 
 def _trailing_findings(data: bytes, end: int) -> list[dict[str, Any]]:
     """Report the bytes after the top-level item: never decoded, never dropped.
@@ -34,8 +43,9 @@ def _attach_findings(result: dict[str, Any], findings: list[dict[str, Any]]) -> 
     # A finding in JSON has a path and no offset (None): it sorts first.
     ordered = sorted(findings, key=lambda finding: (finding.get("source", ""), _offset(finding)))
     result["findings"] = ordered
-    if ordered:
-        result["malformed"] = [finding["message"] for finding in ordered]
+    malformed = [finding["message"] for finding in ordered if finding.get("category") in MALFORMED_CATEGORIES]
+    if malformed:
+        result["malformed"] = malformed
 
 
 def _offset(finding: dict[str, Any]) -> int:

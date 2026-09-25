@@ -98,6 +98,9 @@ def test_a_truncated_cert_info_is_a_finding_located_in_the_input():
     assert finding["offset"] == data.index(statement["certInfo"]) + 44
     assert finding["message"] == "certInfo.extraData needs 20 byte(s); 6 remain at offset 44"
     assert result["data"]["attestationStatementDecoded"]["fields"]["certInfo"]["error"]["offset"] == 44
+    # A structure in the input that does not parse: malformed, as a PublicKeyCredential field's parse-error is.
+    assert finding["category"] == "malformed"
+    assert finding["message"] in result["malformed"]
 
 
 def test_android_key_decodes_the_key_description():

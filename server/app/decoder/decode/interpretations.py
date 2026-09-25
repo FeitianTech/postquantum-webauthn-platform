@@ -169,7 +169,7 @@ def _attestation(
         findings.append(
             {
                 "code": "tpm-structure",
-                "category": "attestation",
+                "category": "malformed",  # a TPM structure that does not parse
                 "offset": start + error["offset"],
                 "path": member["path"],
                 "message": error["message"],
