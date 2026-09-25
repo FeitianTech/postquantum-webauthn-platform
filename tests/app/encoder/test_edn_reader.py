@@ -120,6 +120,10 @@ def test_edn_is_encoded_to_exactly_the_bytes_it_notates(text, expected):
         ("wat", 0, "expected an item"),
         ('"abc', 0, "never closed"),
         ('"\\ud800"', 1, "high surrogate"),
+        # Unescaped: text holding a lone surrogate reaches the reader from a JSON request.
+        ('"\ud800"', 1, "lone surrogate U\\+D800"),
+        ("'a\udc00'", 2, "lone surrogate U\\+DC00"),
+        ('[1, "ab\ud83d"]', 7, "lone surrogate U\\+D83D"),
         ('"\\x"', 1, "unknown escape"),
         ('"a\tb"', 2, "control character"),
         ("/ open", 0, "never closed"),
@@ -156,3 +160,13 @@ def test_edn_nested_deeper_than_the_decoder_reads_is_refused_with_its_offset(tex
     # Not a RecursionError (HTTP 500): a refusal, as the decoder refuses the bytes.
     with pytest.raises(ValueError, match=f"^EDN is not valid at offset {offset}: items are nested more than 64 deep"):
         edn.encode(text)
+
+
+def test_the_codec_endpoint_refuses_a_lone_surrogate_with_its_offset(client):
+    # JSON can carry "\\ud800"; the reader must refuse it, not fail encoding it as UTF-8.
+    response = client.post("/api/codec", json={"payload": '["\ud800"]', "mode": "encode", "format": "EDN"})
+
+    assert response.status_code == 422
+    assert response.get_json()["error"] == (
+        "EDN is not valid at offset 2: a lone surrogate U+D800, which UTF-8 cannot encode"
+    )
