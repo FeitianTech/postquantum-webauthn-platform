@@ -72,7 +72,7 @@ def test_hooks_and_blueprints_are_registered_in_order(app):
         security_headers.set_security_headers,
     ]
     assert app.before_request_funcs[None] == [static_assets._hide_private_static_files]
-    assert list(app.blueprints) == ["static_assets", "advanced", "general", "simple"]
+    assert list(app.blueprints) == ["static_assets", "advanced", "general", "simple", "csp_report"]
     assert app.jinja_env.globals["asset_url"] is static_assets.asset_url
 
 

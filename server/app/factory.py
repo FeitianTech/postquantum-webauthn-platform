@@ -26,7 +26,7 @@ from .config import (
     session_cookie,
     session_secret,
 )
-from .routes import advanced, errors, general, simple
+from .routes import advanced, csp_report, errors, general, simple
 
 __all__ = ["INIT_STEPS", "create_app"]
 
@@ -42,7 +42,7 @@ CONFIG_SOURCES = (
 
 
 def _register_blueprints(app: Flask) -> None:
-    for blueprint in (advanced.bp, general.bp, simple.bp):
+    for blueprint in (advanced.bp, general.bp, simple.bp, csp_report.bp):
         app.register_blueprint(blueprint)
     errors.init_app(app)
 
