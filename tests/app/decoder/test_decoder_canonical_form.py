@@ -37,6 +37,7 @@ def test_a_duplicate_map_key_is_reported_with_both_offsets():
     # The earlier entry is not lost: the finding carries it, and the EDN shows both.
     assert result["findings"][0]["earlier"] == [{"offset": 1, "valueOffset": 2, "key": "1", "value": "1"}]
     assert result["findings"][0]["kept"] == "later"
+    assert result["findings"][0]["key"] == "1"
     assert result["data"]["edn"] == "{1: 1, 1: 2}"
 
 
@@ -72,6 +73,27 @@ def test_a_duplicate_label_inside_a_credential_public_key_is_located_in_the_inpu
     assert finding["offset"] == cose_start + 3
     assert finding["path"] == '${"authData"}<credentialPublicKey>{1}'
     assert finding["earlier"] == [{"offset": cose_start + 1, "valueOffset": cose_start + 2, "key": "1", "value": "2"}]
+    # The message quotes the same input offsets, not ones counted from authData.
+    assert finding["message"] == (
+        f"map key 1 appears twice (first at offset {cose_start + 1}); the decoded value keeps this later entry, "
+        f"and drops the earlier value 2 (offset {cose_start + 2})"
+    )
+    assert finding["message"] in result["malformed"]
+
+
+def test_a_duplicate_label_inside_a_ctap_response_is_quoted_at_its_input_offsets():
+    # MAKE_CREDENTIAL's response: status 00, then {1: "none", 2: authData, 3: {}}.
+    cose = bytes.fromhex("a3 01 02 01 02 03 26".replace(" ", ""))
+    auth_data = bytes(32) + b"\x41" + bytes(4) + bytes(16) + b"\x00\x01" + b"\x07" + cose
+    response = b"\x00" + cbor.encode({1: "none", 2: auth_data, 3: {}})
+    cose_start = response.index(auth_data) + 56
+
+    result = _decode(response.hex())
+
+    (finding,) = [finding for finding in result["findings"] if finding["code"] == "duplicate-map-key"]
+    assert (finding["offset"], finding["earlier"][0]["offset"]) == (cose_start + 3, cose_start + 1)
+    assert f"first at offset {cose_start + 1});" in finding["message"]
+    assert finding["message"].endswith(f"drops the earlier value 2 (offset {cose_start + 2})")
 
 
 def test_a_duplicate_inside_chunked_authenticator_data_points_at_the_string():
@@ -89,6 +111,8 @@ def test_a_duplicate_inside_chunked_authenticator_data_points_at_the_string():
     (finding,) = [finding for finding in result["findings"] if finding["code"] == "duplicate-map-key"]
     assert finding["offset"] == string_offset
     assert finding["earlier"][0]["offset"] == finding["earlier"][0]["valueOffset"] == string_offset
+    assert f"first at offset {string_offset});" in finding["message"]
+    assert f"drops the earlier value 2 (offset {string_offset}) (inside an indefinite-length" in finding["message"]
 
 
 def test_a_non_shortest_integer_is_reported_where_it_is_written():
