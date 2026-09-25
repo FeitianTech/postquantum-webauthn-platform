@@ -1,12 +1,10 @@
-import { writeToClipboard } from '@legacy/shared/browser/report.js';
 import { useEffect, useRef, useState } from 'react';
 
 import { cx } from '@/lib/cx';
 
 import { IconButton } from './Button';
 import { CheckIcon, CopyIcon } from './icons';
-
-const COPIED_MS = 2000;
+import { copyStatusText, selectContents, useCopy } from './useCopy';
 
 type MonoValueProps = {
   value: string;
@@ -22,7 +20,7 @@ export function MonoValue({ value, label, className }: MonoValueProps) {
   const codeRef = useRef<HTMLElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
-  const [copy, setCopy] = useState<{ state: 'idle' | 'copied' | 'failed'; reason?: string }>({ state: 'idle' });
+  const { outcome, copy } = useCopy();
 
   useEffect(() => {
     const code = codeRef.current;
@@ -35,28 +33,10 @@ export function MonoValue({ value, label, className }: MonoValueProps) {
     return () => observer.disconnect();
   }, [value]);
 
-  useEffect(() => {
-    if (copy.state !== 'copied') return undefined;
-    const timer = setTimeout(() => setCopy({ state: 'idle' }), COPIED_MS);
-    return () => clearTimeout(timer);
-  }, [copy]);
-
   const onCopy = async () => {
-    const failure = await writeToClipboard(value);
-    if (failure === null) {
-      setCopy({ state: 'copied' });
-      return;
-    }
-    setCopy({ state: 'failed', reason: failure });
+    if (await copy(value)) return;
     setExpanded(true);
-    const code = codeRef.current;
-    const selection = window.getSelection();
-    if (code && selection) {
-      const range = document.createRange();
-      range.selectNodeContents(code);
-      selection.removeAllRanges();
-      selection.addRange(range);
-    }
+    selectContents(codeRef.current);
   };
 
   return (
@@ -84,16 +64,12 @@ export function MonoValue({ value, label, className }: MonoValueProps) {
         <IconButton
           size="sm"
           label={`Copy ${label}`}
-          icon={copy.state === 'copied' ? <CheckIcon className="text-success" /> : <CopyIcon />}
+          icon={outcome.state === 'copied' ? <CheckIcon className="text-success" /> : <CopyIcon />}
           onClick={onCopy}
         />
       </span>
-      <span role="status" className={cx('text-caption', copy.state === 'failed' ? 'text-danger' : 'sr-only')}>
-        {copy.state === 'copied'
-          ? `${label} copied.`
-          : copy.state === 'failed'
-            ? `Could not copy: ${copy.reason}${/[.!?]$/.test(copy.reason ?? '') ? '' : '.'} It is shown in full and selected, to copy by hand.`
-            : ''}
+      <span role="status" className={cx('text-caption', outcome.state === 'failed' ? 'text-danger' : 'sr-only')}>
+        {copyStatusText(label, outcome)}
       </span>
     </span>
   );
