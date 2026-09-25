@@ -1519,6 +1519,31 @@ coverage unchanged (82.58 / 66.44 / 91.33 / 82.69). Modules over 700 lines 2 -> 
 - `delete_credential_artifact` and `_user_root_prefix` are reached only by tests; no scenario covers a failed
   write after a successful read in registration.
 
+**Phase 20 — tech-lead verification (2026-09-24):**
+- macOS 3912 passed / 4 skipped in about 29 s, coverage 96.6%, vitest 301, ruff clean, `tests/app/security/` 126.
+  **Linux (python:3.14 in Docker, run independently) 3898 passed / 5 skipped.**
+- **Every one of the 64 commits passes pytest on its own**, all run in a worktree (the agent re-ran 39).
+- **Independent round trip.** My own CBOR generator, written apart from `tests/app/cbor_items.py`,
+  through the real API (decode, take `data.edn`, encode as EDN, compare): **4481 of 4481 exact** over three
+  seeds, covering about 16,000 wide heads, 10,000 tags, 3,000 duplicate keys, 1,000 zero-chunk strings and
+  5,700 raw-bit floats (NaN payloads, subnormals, infinities).
+- The four behaviours are as reported. Every EDN refusal I tried is a 422 with the offset in the text as sent
+  (with leading spaces too), never a 500; 1000-deep nesting stops at depth 65.
+- On the nine fixed payloads the only change is the new `data.edn` on the five CBOR readings; findings and
+  values are identical to 7e805ba8.
+- Goldens: the spelling fixes change only spelling fields (an RSA-PSS certificate was shown as
+  RSASSA-PKCS1-v1_5, ML-DSA certificates as "DSA"); `6f5aec50` changes only `edn`, the body hashes and
+  lengths; simple registration's unreadable store went 500 -> 503.
+- The Hypothesis profile is derandomized with no deadline and no database, so it cannot flake the Cloud Build
+  gate; the runtime image is built `--no-dev`, so Hypothesis stays out of production; no `.hypothesis/`
+  appeared in the checkout.
+- The decoder UI shows both key-collision and duplicate-key findings and the EDN section
+  (`{1: "a", "1": "b", 1: "c"}`), served from an export of `main`.
+- Found, all older than this phase, queued for Phase 21: a 37-byte input that is one well-formed CBOR item is
+  read as authenticator data with no finding naming the CBOR reading; JSON *input* containing NaN or Infinity
+  is echoed back bare, so the response is not valid JSON; the app sets no `MAX_CONTENT_LENGTH` (the EDN encoder
+  took a 400 KB input).
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
