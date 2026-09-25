@@ -90,6 +90,17 @@ test.describe('/beta', () => {
     await expect(dialog.locator('[data-fact="secureContext"] [data-state]')).toHaveAttribute('data-state', 'yes');
     await expect(dialog.getByRole('region', { name: 'Post-quantum' })).toContainText('-48 ML-DSA-44, -49 ML-DSA-65, -50 ML-DSA-87');
 
+    // Copy report, with the page allowed to use the clipboard: the raw findings
+    // as JSON, and the words of the current panel.
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await dialog.getByRole('button', { name: 'Copy report' }).click();
+    await expect(dialog.getByRole('status')).toHaveText('Report copied to the clipboard.');
+    const report = JSON.parse(await page.evaluate(() => navigator.clipboard.readText()));
+    expect(Object.keys(report)).toEqual(['report', 'generatedAt', 'page', 'identity', 'webauthn']);
+    expect(report.page).toMatch(/^http:\/\/localhost:\d+$/);
+    expect(Object.keys(report.webauthn.facts)).toHaveLength(8);
+    await expect(dialog.getByRole('textbox', { name: 'Browser analysis report, as JSON' })).toBeHidden();
+
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
     await expect(trigger).toBeFocused();
