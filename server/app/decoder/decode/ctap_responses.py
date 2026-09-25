@@ -12,7 +12,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from .. import ctap_tables
-from . import ctap, response
+from . import ctap, ctap_classify, response
 from .keys import MISSING as _MISSING
 from .keys import JsonLabel, json_items, qualified_key_text
 from .keys import coerce_cbor_bytes as _coerce_cbor_bytes
@@ -41,7 +41,7 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] |
 
 
 def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | None:
-    if ctap._looks_like_get_assertion_request(value):
+    if ctap_classify._looks_like_get_assertion_request(value):
         return None
     if _coerce_cbor_bytes(_get_mapping_entry(value, 2)) is None:
         return None
