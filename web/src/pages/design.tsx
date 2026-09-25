@@ -281,7 +281,9 @@ function Segments() {
   return (
     <>
       <Example label="The top bar's sections: one highlight slides to the chosen tab (it jumps under reduced motion)">
-        <SegmentedControl label="Sections (demo)" idBase="design-sections" options={SECTION_OPTIONS} value={section} onChange={setSection} />
+        <div className="max-w-full overflow-x-auto pb-1">
+          <SegmentedControl label="Sections (demo)" idBase="design-sections" options={SECTION_OPTIONS} value={section} onChange={setSection} />
+        </div>
         <p id={segmentIds('design-sections', section).panel} className="mt-2 text-caption text-ink-muted">
           Chosen: {section}. Arrow keys, Home and End move between tabs.
         </p>

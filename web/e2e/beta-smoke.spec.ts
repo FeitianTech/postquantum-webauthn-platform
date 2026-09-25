@@ -88,6 +88,13 @@ test.describe('/beta', () => {
     expect(width).toBeLessThanOrEqual(375);
     await page.keyboard.press('Escape');
     await expect(page.getByRole('button', { name: 'Menu' })).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Analyze Browser' })).toBeHidden();
+
+    // Neither page scrolls sideways on a phone.
+    for (const path of ['/beta', '/beta/design']) {
+      await page.goto(path);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth), path).toBeLessThanOrEqual(375);
+    }
   });
 
   test('keeps the design rules: no focus effect on text fields, a focus ring on controls, no grey fill', async ({ page }) => {

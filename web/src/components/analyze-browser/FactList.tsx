@@ -31,7 +31,7 @@ type FactRowProps = { id: string; label: string; api?: string | null; fact: Fact
 export function FactRow({ id, label, api, fact }: FactRowProps) {
   return (
     <li data-fact={id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1.5 py-3">
-      <div className="min-w-0 flex-1 basis-60">
+      <div className="min-w-0 flex-1 basis-44">
         <span data-role="label" className="block text-body font-medium text-ink">
           {label}
         </span>
