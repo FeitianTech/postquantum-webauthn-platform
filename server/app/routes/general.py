@@ -306,6 +306,15 @@ def api_list_custom_metadata():
     return jsonify({"items": items})
 
 
+def _refuse_json_constant(constant: str) -> Any:
+    raise ValueError(f"{constant} is not JSON (RFC 8259 has no NaN or Infinity)")
+
+
+def _read_metadata_json(text: str) -> Any:
+    # RFC 8259's JSON: the metadata is answered back, and NaN would make that answer not JSON.
+    return json.loads(text, parse_constant=_refuse_json_constant)
+
+
 @bp.route("/api/mds/metadata/upload", methods=["POST"])
 def api_upload_custom_metadata():
     # Its own limit, before the body is read: the whole MDS metadata (config/request_limits.py).
@@ -342,7 +351,7 @@ def api_upload_custom_metadata():
             continue
 
         try:
-            payload: dict[str, Any] = json.loads(text)
+            payload: dict[str, Any] = _read_metadata_json(text)
         except ValueError as exc:
             errors.append(f"{trimmed}: {exc}")
             continue
