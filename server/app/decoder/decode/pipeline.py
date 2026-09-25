@@ -1,6 +1,7 @@
 """Top-level decode pipeline helpers."""
 from __future__ import annotations
 
+import functools
 import json
 import re
 from collections.abc import Callable, Mapping, Sequence
@@ -45,9 +46,9 @@ _PEM_CERT_PATTERN = re.compile(
 )
 
 
-def _decode_json_object(value: Any, raw_text: str | None = None) -> dict[str, Any]:
+def _decode_json_object(value: Any, raw_text: str | None = None, *, lenient: bool = False) -> dict[str, Any]:
     if isinstance(value, Mapping) and _is_public_key_credential(value):
-        return _decode_public_key_credential(value, raw_text=raw_text)
+        return _decode_public_key_credential(value, raw_text=raw_text, lenient=lenient)
 
     if isinstance(value, Mapping) and _is_client_data_dict(value):
         details = _build_client_data_details(value, raw_text=raw_text)
@@ -65,14 +66,14 @@ def _decode_json_object(value: Any, raw_text: str | None = None) -> dict[str, An
 
 
 def _decode_public_key_credential(
-    credential: Mapping[str, Any], raw_text: str | None = None
+    credential: Mapping[str, Any], raw_text: str | None = None, *, lenient: bool = False
 ) -> dict[str, Any]:
     response = credential.get("response")
     response_mapping: Mapping[str, Any] = response if isinstance(response, Mapping) else {}
 
     decoded = _credential_fields(credential, raw_text)
     findings: list[dict[str, Any]] = []
-    response_details, attestation_entry, authenticator_entry = _response_fields(response_mapping, findings)
+    response_details, attestation_entry, authenticator_entry = _response_fields(response_mapping, findings, lenient)
     decoded["response"] = response_details
 
     format_label = "PublicKeyCredential"
@@ -138,7 +139,7 @@ _RESPONSE_BINARY_FIELDS = ("attestationObject", "authenticatorData", "clientData
 
 
 def _response_fields(
-    response_mapping: Mapping[str, Any], findings: list[dict[str, Any]]
+    response_mapping: Mapping[str, Any], findings: list[dict[str, Any]], lenient: bool = False
 ) -> tuple[dict[str, Any], tuple[bytes, str] | None, tuple[bytes, str] | None]:
     """The response's members, each binary one decoded; and its attestation object and authenticator data."""
 
@@ -148,7 +149,7 @@ def _response_fields(
     readers = {
         "attestationObject": _nested_attestation_object,
         "authenticatorData": _nested_authenticator_data,
-        "clientDataJSON": _nested_client_data,
+        "clientDataJSON": functools.partial(_nested_client_data, lenient=lenient),
     }
     entries: dict[str, tuple[bytes, str] | None] = {}
     for name in _RESPONSE_BINARY_FIELDS:
@@ -210,7 +211,7 @@ def _read_nested(
 
 
 def _error_location(exc: ValueError) -> tuple[int, str, str]:
-    if isinstance(exc, (cbor_parser._CborDecodingError, _LocatedError)):
+    if isinstance(exc, (cbor_parser._CborDecodingError, _LocatedError, json_input.JsonConstantError)):
         return exc.offset, exc.path, exc.reason
     if isinstance(exc, json.JSONDecodeError):
         return exc.pos, "$", exc.msg
@@ -229,12 +230,12 @@ def _nested_authenticator_data(data: bytes) -> tuple[dict[str, Any], list[dict[s
     return _describe_authenticator_data_bytes(data), authenticator_data_findings.check(data, 0, "$")
 
 
-def _nested_client_data(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    parsed, findings = json_input.read(data.decode("utf-8"))
+def _nested_client_data(data: bytes, *, lenient: bool = False) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    parsed, findings = json_input.read_bytes(data, lenient=lenient)
     if not isinstance(parsed, dict):
         # WebAuthn L3 section 5.8.1: a JSON object. Anything else has no client data to show.
         raise ValueError(f"client data is JSON, but not an object: {json.dumps(parsed)[:40]}")
-    return _describe_client_data_from_bytes(data), findings
+    return _describe_client_data_from_bytes(data, lenient=lenient), findings
 
 
 def _decode_pem_certificates(text: str) -> dict[str, Any]:
@@ -386,7 +387,9 @@ def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:
 
     CBOR is parsed strictly. ``lenient`` asks for a best-effort parse of CBOR
     that is not well-formed; the response then says so (``decodeMode``) and
-    lists each item it kept partially or stepped over.
+    lists each item it kept partially or stepped over. JSON is RFC 8259's: text
+    holding NaN or Infinity is refused with its offset, unless ``lenient`` (see
+    ``json_input``).
 
     Text that is both hexadecimal and a JSON number is read by the precedence
     in ``ambiguous_input``, and the response names the reading not taken.
@@ -396,12 +399,13 @@ def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:
     if not trimmed:
         raise ValueError("Decoder input is empty.")
 
-    parsed_json, json_findings = _read_json(trimmed)
+    # Offsets count from the input as sent, blank space before it included.
+    parsed_json, json_findings = _read_json(trimmed, lenient=lenient, base=len(value) - len(value.lstrip()))
     ambiguity = ambiguous_input.check(trimmed, parsed_json)
     if ambiguity is not None and ambiguity["readAs"] == "hex":
         parsed_json, json_findings = None, []
     if parsed_json is not None:
-        result = _decode_json_object(parsed_json, raw_text=trimmed)
+        result = _decode_json_object(parsed_json, raw_text=trimmed, lenient=lenient)
     elif _looks_like_pem(trimmed):
         result = _decode_pem_certificates(trimmed)
     else:
@@ -411,12 +415,14 @@ def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:
     noted = ([ambiguity] if ambiguity is not None else []) + json_findings
     if noted:
         ctap._attach_findings(result, [*noted, *(result.get("findings") or [])])
+    # JSON is read leniently too, not only CBOR: the answer says how it was read.
+    result.setdefault("decodeMode", "lenient" if lenient else "strict")
     return response._prepare_decoder_response(result)
 
 
-def _describe_client_data_from_bytes(data: bytes) -> dict[str, Any]:
+def _describe_client_data_from_bytes(data: bytes, *, lenient: bool = False) -> dict[str, Any]:
     text = data.decode("utf-8")
-    parsed, _repeated = json_input.read(text)
+    parsed, _repeated = json_input.read(text, lenient=lenient)
     details = _build_client_data_details(parsed, raw_text=text)
 
     try:
