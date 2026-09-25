@@ -1,9 +1,9 @@
 <div class="form-group">
     <div class="label-with-info">
         <label for="large-blob-reg">largeBlob</label>
-        <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+        <div class="info-icon" data-action="info-popup">
             <div class="info-popup">
-                <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                <div class="language-toggle" data-action="toggle-language">ENG</div>
                 <div class="text-en active">
                     Request the Large blob storage (largeBlob) extension. This extension may be used to store arbitrary data with the credential.<br><br>
                     If the authenticator supports the extension, an extension output of largeBlob: { supported: true } will be returned. Use the largeBlob extension during an authentication ceremony to read or write the BLOB value.
@@ -27,9 +27,9 @@
             <input type="checkbox" id="prf-reg">
             <span>prf</span>
         </label>
-        <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+        <div class="info-icon" data-action="info-popup">
             <div class="info-popup">
-                <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                <div class="language-toggle" data-action="toggle-language">ENG</div>
                 <div class="text-en active">
                     Request the Pseudo-random function (prf) extension. This extension may be used to derive deterministically-random values to use as key material, for example.<br><br>
                     With CTAP authenticators, this requires that the authenticator supports the hmac-secret extension.<br><br>

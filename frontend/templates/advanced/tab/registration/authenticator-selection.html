@@ -7,9 +7,9 @@
         <div class="form-group">
             <div class="label-with-info">
                 <label for="authenticator-attachment">Authenticator Attachment</label>
-                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                <div class="info-icon" data-action="info-popup">
                     <div class="info-popup">
-                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="language-toggle" data-action="toggle-language">ENG</div>
                         <div class="text-en active">
                             Select whether an authenticator integrated into the client platform ("platform") or an external device ("cross-platform") should be used. If unspecified, either kind of authenticator is allowed. By default, a cross-platform authenticator is requested.
                         </div>
@@ -28,9 +28,9 @@
         <div class="form-group">
             <div class="label-with-info">
                 <label for="resident-key">Resident Key</label>
-                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                <div class="info-icon" data-action="info-popup">
                     <div class="info-popup">
-                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="language-toggle" data-action="toggle-language">ENG</div>
                         <div class="text-en active">
                             A resident key can be used for "username-less" authentication, i.e., with an empty allowCredentials parameter.<br><br>
                             If "discouraged", a non-resident key will be created if possible. If "preferred", a resident key will be created if possible. If "required", a resident key will be created and the user is shown an error if this fails. If unspecified, the default is "discouraged".
@@ -51,9 +51,9 @@
         <div class="form-group">
             <div class="label-with-info">
                 <label for="user-verification-reg">User Verification</label>
-                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                <div class="info-icon" data-action="info-popup">
                     <div class="info-popup">
-                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="language-toggle" data-action="toggle-language">ENG</div>
                         <div class="text-en active">
                             Select whether user verification (UV), for example a PIN or biometric, should be used.<br><br>
                             If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If no preference is set, the default is "preferred".
@@ -74,9 +74,9 @@
         <div class="form-group">
             <div class="label-with-info">
                 <label for="attestation">Attestation</label>
-                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                <div class="info-icon" data-action="info-popup">
                     <div class="info-popup">
-                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="language-toggle" data-action="toggle-language">ENG</div>
                         <div class="text-en active">
                             Select whether the Relying Party (RP) requires authenticator attestation. Attestation is a way to prove what kind of authenticator is used.<br><br>
                             If "none", no authenticator attestation will be returned. If "indirect", some kind of attestation will be returned if possible, but it may be anonymized by an attestation proxy. If "direct", the authenticator's original attestation will be returned, if any. If "enterprise", the authenticator is requested to produce an individually identifying attestation. By default, "direct" is used.
@@ -101,9 +101,9 @@
                     <input type="checkbox" id="exclude-credentials" checked>
                     <span>Exclude Credentials</span>
                 </label>
-                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                <div class="info-icon" data-action="info-popup">
                     <div class="info-popup">
-                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="language-toggle" data-action="toggle-language">ENG</div>
                         <div class="text-en active">
                             Whether to include an excludeCredentials argument. This is used to prevent creating multiple credentials for the same account by excluding already registered credentials during registration.
                         </div>
@@ -117,9 +117,9 @@
         <div class="form-group">
             <div class="label-with-info">
                 <label for="fake-cred-length-reg">Fake credential ID length</label>
-                <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+                <div class="info-icon" data-action="info-popup">
                     <div class="info-popup">
-                        <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                        <div class="language-toggle" data-action="toggle-language">ENG</div>
                         <div class="text-en active">
                             Add a random credential ID of the given length to excludeCredentials. May be useful for testing edge cases and conformance.
                         </div>

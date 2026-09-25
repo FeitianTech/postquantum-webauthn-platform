@@ -1,9 +1,9 @@
 <div class="form-group">
     <div class="label-with-info">
         <label>Public Key Credential Parameters</label>
-        <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+        <div class="info-icon" data-action="info-popup">
             <div class="info-popup">
-                <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                <div class="language-toggle" data-action="toggle-language">ENG</div>
                 <div class="text-en active">
                     The signature algorithms supported by the Relying Party (RP). The authenticator will be choosing the most preferred algorithm that it supports. It is recommended to include at least ES256, EdDSA and RS256.
                 </div>
@@ -142,9 +142,9 @@
 <div class="form-group">
     <div class="label-with-info">
         <label>Hints</label>
-        <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+        <div class="info-icon" data-action="info-popup">
             <div class="info-popup">
-                <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                <div class="language-toggle" data-action="toggle-language">ENG</div>
                 <div class="text-en active">
                     Registration hints to guide the user-agent in interacting with the user.<br><br>
                     These hints are not requirements, and do not bind the user-agent, but may guide it in providing the best experience by using contextual information that the Relying Party has about the request. Hints are provided in order of decreasing preference so, if two hints are contradictory, the first one controls. Hints may also overlap: if a more-specific hint is defined a Relying Party may still wish to send less specific ones for user-agents that may not recognise the more specific one. In this case the most specific hint should be sent before the less-specific ones.<br><br>

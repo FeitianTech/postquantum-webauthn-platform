@@ -10,9 +10,7 @@ import {
     initializeNavigationMenu,
 } from './shared/ui/navigation.js';
 import {
-    showInfoPopup,
-    hideInfoPopup,
-    toggleLanguage,
+    bindCoreActions,
     toggleJsonEditorExpansion,
     updateGlobalScrollLock,
     closeModal,
@@ -107,6 +105,7 @@ bindAdvancedActions();
 bindResetActions();
 bindFormActions();
 bindEditorActions();
+bindCoreActions();
 
 const TEXT_INPUT_TYPES = new Set([
     'text',
@@ -457,9 +456,6 @@ window.parseCreationOptionsFromJSON = parseCreationOptionsFromJSON;
 window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
 window.updateGlobalScrollLock = updateGlobalScrollLock;
-window.showInfoPopup = showInfoPopup;
-window.hideInfoPopup = hideInfoPopup;
-window.toggleLanguage = toggleLanguage;
 window.processCodec = processCodec;
 window.clearCodec = clearCodec;
 window.toggleRawCodec = toggleRawCodec;

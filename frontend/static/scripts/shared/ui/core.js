@@ -1,3 +1,5 @@
+import { bindActions } from './actions.js';
+
 let hideTimeout;
 
 const BASE_MODAL_Z_INDEX = 1200;
@@ -792,4 +794,15 @@ export function resetStickyHeader(header) {
         return;
     }
     controller.reset();
+}
+
+// The info icons beside the advanced options and their English / Chinese toggle.
+// The handlers take the control itself, as the inline attributes passed `this`.
+export const coreActions = {
+    'info-popup': { mouseenter: showInfoPopup, mouseleave: hideInfoPopup },
+    'toggle-language': toggleLanguage,
+};
+
+export function bindCoreActions() {
+    return bindActions(document, coreActions);
 }

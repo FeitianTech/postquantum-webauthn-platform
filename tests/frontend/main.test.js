@@ -17,9 +17,7 @@ vi.mock('../../frontend/static/scripts/shared/ui/navigation.js', () => ({
 }));
 
 vi.mock('../../frontend/static/scripts/shared/ui/core.js', () => ({
-  showInfoPopup: vi.fn(),
-  hideInfoPopup: vi.fn(),
-  toggleLanguage: vi.fn(),
+  bindCoreActions: vi.fn(),
   toggleJsonEditorExpansion: vi.fn(),
   updateGlobalScrollLock: vi.fn(),
   closeModal: vi.fn(),
@@ -155,7 +153,7 @@ import { handleJsonEditorKeydown } from '../../frontend/static/scripts/advanced/
 import { bindNavigationActions, initializeNavigationMenu, switchTab } from '../../frontend/static/scripts/shared/ui/navigation.js';
 import { bindUsernameActions, initializeSimpleUsername, randomizeUserIdentity } from '../../frontend/static/scripts/shared/auth/username.js';
 import { bindSimpleActions } from '../../frontend/static/scripts/simple/auth-simple.js';
-import { closeModal, initializeStickyHeader, toggleJsonEditorExpansion } from '../../frontend/static/scripts/shared/ui/core.js';
+import { bindCoreActions, closeModal, initializeStickyHeader, toggleJsonEditorExpansion } from '../../frontend/static/scripts/shared/ui/core.js';
 import { initializeAnalyzeBrowser } from '../../frontend/static/scripts/shared/browser/analyze.js';
 import { initializeLoader, loaderComplete, loaderSetPhase } from '../../frontend/static/scripts/shared/utils/loader.js';
 
@@ -248,6 +246,7 @@ describe('main startup and wiring', () => {
     expect(bindResetActions).toHaveBeenCalledTimes(1);
     expect(bindFormActions).toHaveBeenCalledTimes(1);
     expect(bindEditorActions).toHaveBeenCalledTimes(1);
+    expect(bindCoreActions).toHaveBeenCalledTimes(1);
     expect(setMdsNavigation).toHaveBeenCalledWith({
       switchTab,
       highlightRow: highlightAuthenticatorRowByAaguid,
