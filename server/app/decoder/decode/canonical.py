@@ -143,9 +143,14 @@ def _check_head(node: Mapping[str, Any], data: bytes, path: str, findings: list[
 
 
 def _check_node(
-    node: Mapping[str, Any], data: bytes, path: str, findings: list[dict[str, Any]], depth: int
+    node: Mapping[str, Any], data: bytes, path: str, findings: list[dict[str, Any]], depth: int, dropped: bool = False
 ) -> None:
-    """Check ``node``; ``depth`` counts the maps and arrays around it."""
+    """Check ``node``; ``depth`` counts the maps and arrays around it.
+
+    ``dropped``: the node sits in a map value the decoded value drops for a later
+    duplicate key. Its findings still point at its bytes, but a duplicate key in
+    it is one the decoded value keeps no entry of.
+    """
 
     if not isinstance(node, Mapping) or node.get("type") == "invalid":
         return
@@ -181,38 +186,41 @@ def _check_node(
 
     if major_type in (2, 3):
         for index, chunk in enumerate(node.get("chunks") or node.get("segments") or []):
-            _check_node(chunk, data, f"{path}<chunk {index}>", findings, depth)
+            _check_node(chunk, data, f"{path}<chunk {index}>", findings, depth, dropped)
     elif major_type == 4:
         for index, item in enumerate(node.get("items") or []):
-            _check_node(item, data, f"{path}[{index}]", findings, depth)
+            _check_node(item, data, f"{path}[{index}]", findings, depth, dropped)
     elif major_type == 5:
-        _check_map(node, data, path, findings, depth)
+        _check_map(node, data, path, findings, depth, dropped)
     elif major_type == 6:
         findings.append(
             _finding("tag", offset, path, f"tag {node.get('tag')}; CTAP2 canonical CBOR has no tags")
         )
-        _check_node(node.get("value") or {}, data, f"{path}<tag>", findings, depth)
+        _check_node(node.get("value") or {}, data, f"{path}<tag>", findings, depth, dropped)
 
 
 def _check_map(
-    node: Mapping[str, Any], data: bytes, path: str, findings: list[dict[str, Any]], depth: int
+    node: Mapping[str, Any], data: bytes, path: str, findings: list[dict[str, Any]], depth: int, dropped: bool
 ) -> None:
+    entries = [entry for entry in node.get("entries") or [] if isinstance(entry.get("key"), Mapping)]
+    identities = [key_equivalence.identity(entry["key"]) for entry in entries]
+    # The decoded value keeps the last entry of each key (cbor_parser._map_value).
+    last = {identity: index for index, identity in enumerate(identities)}
     seen: dict[Any, list[Mapping[str, Any]]] = {}
     previous: tuple[bytes, Mapping[str, Any]] | None = None
-    for entry in node.get("entries") or []:
-        key, value = entry.get("key"), entry.get("value")
-        if not isinstance(key, Mapping) or key.get("type") == "invalid":
-            continue
+    for index, (entry, identity) in enumerate(zip(entries, identities)):
+        key, value = entry["key"], entry.get("value")
         entry_path = entry.get("path") or path
+        seen.setdefault(identity, []).append(entry)
+        if key.get("type") == "invalid":
+            # A key the lenient parser could not read has no order to check; its value does.
+            _check_node(value, data, entry_path, findings, depth, dropped or last[identity] != index)
+            continue
         key_offset = key["offset"]
         encoded = data[key_offset : key["end"]]
-        _check_node(key, data, entry_path, findings, depth)
+        _check_node(key, data, entry_path, findings, depth, dropped)
 
-        identity = key_equivalence.identity(key)
-        if identity in seen:
-            seen[identity].append(entry)
-        else:
-            seen[identity] = [entry]
+        if len(seen[identity]) == 1:
             if previous is not None and ctap2_key_order(encoded) < ctap2_key_order(previous[0]):
                 findings.append(
                     _finding(
@@ -224,16 +232,21 @@ def _check_map(
                     )
                 )
         previous = (encoded, key)
-        _check_node(value, data, entry_path, findings, depth)
+        _check_node(value, data, entry_path, findings, depth, dropped or last[identity] != index)
     # One finding per repeated key, at the entry the decoded value keeps: the last.
     for occurrences in seen.values():
         if len(occurrences) > 1:
             kept = occurrences[-1]
-            findings.append(_duplicate(kept["key"], kept.get("path") or path, occurrences[:-1]))
+            findings.append(_duplicate(kept["key"], kept.get("path") or path, occurrences[:-1], dropped))
 
 
-def _duplicate(key: Mapping[str, Any], path: str, earlier: list[Mapping[str, Any]]) -> dict[str, Any]:
-    """The finding for ``key``, the entry the decoded value keeps, after ``earlier`` ones: each, as EDN."""
+def _duplicate(
+    key: Mapping[str, Any], path: str, earlier: list[Mapping[str, Any]], dropped: bool = False
+) -> dict[str, Any]:
+    """The finding for ``key``, the entry the decoded value keeps, after ``earlier`` ones: each, as EDN.
+
+    ``dropped``: the map is inside a value the decoded value drops, so it keeps none of them.
+    """
 
     entries = [
         {
@@ -245,7 +258,7 @@ def _duplicate(key: Mapping[str, Any], path: str, earlier: list[Mapping[str, Any
         for entry in earlier
     ]
     finding = _finding("duplicate-map-key", key["offset"], path, "")
-    finding.update(key=_diagnostic_key(key), earlier=entries, kept="later")
+    finding.update(key=_diagnostic_key(key), earlier=entries, kept=None if dropped else "later")
     return _with_duplicate_message(finding)
 
 
@@ -258,12 +271,14 @@ def _with_duplicate_message(finding: dict[str, Any]) -> dict[str, Any]:
     count = len(entries) + 1
     times, which = ("twice", "later") if count == 2 else (f"{count} times", "last")
     dropped = ", ".join(f"{_short(entry['value'])} (offset {entry['valueOffset']})" for entry in entries)
+    values = f"value{'s' if len(entries) > 1 else ''} {dropped}"
+    if finding["kept"] is None:
+        kept = f"the decoded value keeps none of them: the map is inside a value it drops (the earlier {values})"
+    else:
+        kept = f"the decoded value keeps this {which} entry, and drops the earlier {values}"
     return {
         **finding,
-        "message": (
-            f"map key {finding['key']} appears {times} (first at offset {entries[0]['offset']}); the decoded value "
-            f"keeps this {which} entry, and drops the earlier value{'s' if len(entries) > 1 else ''} {dropped}"
-        ),
+        "message": f"map key {finding['key']} appears {times} (first at offset {entries[0]['offset']}); {kept}",
     }
 
 

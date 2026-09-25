@@ -58,6 +58,38 @@ def test_a_key_repeated_three_times_is_one_finding_at_the_entry_kept():
     )
 
 
+def test_a_duplicate_inside_a_value_the_decoded_value_drops_says_it_keeps_neither_entry():
+    # {1: {2: 1, 2: 2}, 1: {2: 3, 2: 4}}: the first inner map is dropped whole.
+    result = _decode("a2 01 a2 0201 0202 01 a2 0203 0204".replace(" ", ""))
+
+    assert result["data"]["decodedValue"] == {"1": {"2": 4}}
+    found = {finding["offset"]: finding for finding in result["findings"] if finding["code"] == "duplicate-map-key"}
+    assert sorted(found) == [5, 7, 11]
+    # Before: offset 5 said "the decoded value keeps this later entry", the value 2 it does not hold.
+    assert found[5]["kept"] is None
+    assert "the decoded value keeps none of them: the map is inside a value it drops" in found[5]["message"]
+    assert (found[7]["kept"], found[11]["kept"]) == ("later", "later")
+    assert all(finding["message"] in result["malformed"] for finding in found.values())
+
+
+@pytest.mark.parametrize(
+    ("hex_text", "decoded", "located"),
+    [
+        # Two keys the lenient parser could not read, the same bytes: one entry, and now said so.
+        ("a2 ff01 ff02", {"invalid(h'ff')": 2}, [("duplicate-map-key", 3, "${invalid(h'ff')}")]),
+        ("a2 1c01 1c02", {"invalid(h'1c')": 2}, [("duplicate-map-key", 3, "${invalid(h'1c')}")]),
+        # A duplicate inside the value of an unreadable key is checked like any other.
+        ("a1 ff a2 0101 0102", {"invalid(h'ff')": {"1": 2}}, [("duplicate-map-key", 5, "${invalid(h'ff')}{1}")]),
+    ],
+)
+def test_a_lenient_read_reports_duplicates_under_keys_it_could_not_read(hex_text, decoded, located):
+    decode_module = pytest.importorskip("server.app.decoder.decode")
+    result = decode_module.decode_payload_text(hex_text.replace(" ", ""), lenient=True)
+
+    assert result["data"]["decodedValue"] == decoded
+    assert [entry for entry in _located(result) if entry[0] == "duplicate-map-key"] == located
+
+
 def test_a_duplicate_label_inside_a_credential_public_key_is_located_in_the_input():
     from server.app.decoder import edn
 
