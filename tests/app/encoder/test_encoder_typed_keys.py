@@ -56,6 +56,10 @@ def test_a_typed_spelling_is_read_as_the_key_it_names(label, key):
         ("true (float)", "true is not a float"),
         ("true (boolean) #2", "a numbered spelling"),
         ("h'ff' (not UTF-8) (text, not UTF-8)", "could not read that key"),
+        ("invalid(h'1c') (invalid)", "could not read that key"),
+        ("invalid(array[2] at offset 1) (invalid)", "could not read that key"),
+        ("0x1p2000 (float)", "beyond the range of a double"),
+        ("[" * 70 + "]" * 70 + " (array)", "nested more than 64 deep"),
     ],
 )
 def test_a_spelling_it_does_not_recognise_is_an_error_naming_the_key(label, reason):
@@ -69,7 +73,9 @@ def test_a_spelling_it_does_not_recognise_is_an_error_naming_the_key(label, reas
 @pytest.mark.parametrize(
     "key_item",
     ["6131", "4101", "f5", "f6", "f7", "f0", "f93e00", "fb3ff8000000000000", "f97e01", "8201 6161", "a10102",
-     "c101", "7f6161ff", "f97c00"],
+     "c101", "7f6161ff", "f97c00",
+     # A NaN or an infinity wider than it needs: NaN_2, NaN_3, Infinity_2, -Infinity_3.
+     "fa7fc00000", "fb7ff8000000000000", "fa7f800000", "fbfff0000000000000"],
 )
 def test_the_spelling_of_every_key_the_decoder_makes_reads_back_to_it(key_item):
     node = decode_item(bytes.fromhex(f"a1{key_item.replace(' ', '')}00"))[0]
@@ -190,3 +196,24 @@ def test_the_cbor_view_still_spells_a_text_key_that_looks_typed_with_its_type():
 
     assert data["binary"]["hex"] == "a167312028666d742901"
     assert data["decodedValue"] == {'"1 (fmt)" (text)': 1}
+
+
+def test_two_damaged_container_keys_that_print_alike_stay_two_entries_the_encoder_refuses():
+    # {[<reserved 1c>, 1(1)]: 0, [<reserved 1c>, {"tag": 1, "value": 1}]: 1}, read leniently.
+    item = "a2 821c c101 00 821c a263746167016576616c756501 01".replace(" ", "")
+
+    decoded = decode_payload_text(item, lenient=True)["data"]["decodedValue"]
+
+    # Before: one entry, keyed by the Python repr both printed as, and the value 0 gone.
+    assert decoded == {"invalid(array[2] at offset 1)": 0, "invalid(array[2] at offset 6)": 1}
+    with pytest.raises(ValueError, match="could not read that key"):
+        encode_payload_text(json.dumps({f"{label} (invalid)": value for label, value in decoded.items()}), "cbor")
+
+
+def test_a_lenient_key_the_decoder_could_not_read_is_refused_by_the_encoder_not_written_as_text():
+    # {<reserved 1c>: 0, "invalid(h'1c')": 1}: the spellings clash, so each is written with its type.
+    decoded = decode_payload_text("a21c006e696e76616c69642868273163272901", lenient=True)["data"]["decodedValue"]
+
+    assert list(decoded) == ["invalid(h'1c') (invalid)", '"invalid(h\'1c\')" (text)']
+    with pytest.raises(ValueError, match="invalid\\(h'1c'\\) \\(invalid\\)"):
+        encode_payload_text(json.dumps(decoded), "cbor")

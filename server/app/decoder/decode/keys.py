@@ -33,8 +33,10 @@ _UNREADABLE_KINDS = {"text, not UTF-8", "invalid", "diagnostic notation"}
 # "<spelling> (<kind>)", perhaps numbered " #2" -- where the spelling starts as an
 # EDN literal does, so that "Temperature (C)" stays a text key.
 _TYPED_SPELLING = re.compile(r"(?P<spelling>.+) \((?P<kind>[^()]+)\)(?P<numbered> #[0-9]+)?", re.DOTALL)
+# NaN and Infinity may carry a width, NaN_2 (fa7fc00000); invalid(...) is how a
+# lenient decode names a key it could not read.
 _EDN_LITERAL_START = re.compile(
-    r"""["'\[{0-9-]|h'|float'|simple\(|(?:true|false|null|undefined|NaN|Infinity)(?![A-Za-z0-9_])"""
+    r"""["'\[{0-9-]|h'|float'|simple\(|invalid\(|(?:true|false|null|undefined|(?:NaN|Infinity)(?:_[0-3])?)(?![A-Za-z0-9_])"""
 )
 
 

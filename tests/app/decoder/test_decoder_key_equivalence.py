@@ -78,15 +78,17 @@ def test_a_nan_node_without_its_bits_is_identified_by_the_bits_of_its_value():
     assert key_equivalence.identity(built) == key_equivalence.identity(parsed) == ("nan", 1 << 63)
 
 
-def test_a_damaged_container_key_is_shown_by_its_summary_as_an_invalid_key():
+def test_a_damaged_container_key_is_shown_by_its_summary_and_offset_as_an_invalid_key():
     from server.app.decoder.decode import cbor_parser
 
     # {[{_ 1: <missing>}]: 5}, read leniently: the key's inner map lost its value.
     node, _end, _skipped = cbor_parser.decode_item(bytes.fromhex("a181bf01ff05"), lenient=True)
     (key,) = cbor_parser._structure_to_value(node)
 
-    assert (key.diagnostic, key.kind) == ("array[1]", "invalid")
-    assert decode_payload_text("a181bf01ff05", lenient=True)["data"]["decodedValue"] == {"array[1]": 5}
+    assert (key.diagnostic, key.kind) == ("invalid(array[1] at offset 1)", "invalid")
+    assert decode_payload_text("a181bf01ff05", lenient=True)["data"]["decodedValue"] == {
+        "invalid(array[1] at offset 1)": 5
+    }
 
 
 @pytest.mark.parametrize(
