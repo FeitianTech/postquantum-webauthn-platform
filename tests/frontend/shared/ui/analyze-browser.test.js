@@ -341,6 +341,110 @@ describe('analyze-browser panel', () => {
     expect(publicKeyCredential.getClientCapabilities).toHaveBeenCalledTimes(1);
   });
 
+  describe('Copy report', () => {
+    async function copyWith(clipboard) {
+      installBrowser();
+      install(navigator, 'clipboard', clipboard);
+      const { panel } = await openAnalyzedPanel();
+      panel.querySelector('[data-action="copy-report"]').click();
+      await vi.runAllTimersAsync();
+      return {
+        panel,
+        status: panel.querySelector('[data-role="copy-status"]'),
+        fallback: panel.querySelector('[data-role="report-text"]'),
+      };
+    }
+
+    it('copies the raw findings as JSON and says so in a live region', async () => {
+      const writeText = vi.fn(async () => {});
+      const { status, fallback } = await copyWith({ writeText });
+
+      expect(status.getAttribute('role')).toBe('status');
+      expect(status.getAttribute('aria-live')).toBe('polite');
+      expect(status.textContent).toBe('Report copied to the clipboard.');
+      expect(status.dataset.outcome).toBe('copied');
+      expect(fallback.hidden).toBe(true);
+      expect(writeText).toHaveBeenCalledTimes(1);
+
+      const report = JSON.parse(writeText.mock.calls[0][0]);
+      expect(report).toMatchObject({
+        report: 'Analyze Browser',
+        page: 'http://localhost',
+        identity: {
+          name: 'Chromium-based browser',
+          version: '152.0.7977.130',
+          engine: 'Blink',
+          system: 'macOS',
+          sources: { name: 'client-hints', version: 'client-hints', engine: 'client-hints', system: 'client-hints' },
+          inputs: {
+            userAgent: CHROMIUM_ONLY.userAgent,
+            platform: 'MacIntel',
+            maxTouchPoints: 0,
+            userAgentData: {
+              brands: [{ brand: 'Not?A_Brand', version: '24' }, { brand: 'Chromium', version: '152' }],
+              mobile: false,
+              platform: 'macOS',
+            },
+            highEntropyValues: {
+              fullVersionList: [
+                { brand: 'Not?A_Brand', version: '24.0.0.0' },
+                { brand: 'Chromium', version: '152.0.7977.130' },
+              ],
+              platformVersion: '15.0.0',
+            },
+            brave: null,
+          },
+        },
+        webauthn: {
+          facts: {
+            secureContext: { state: 'yes' },
+            webauthnApi: { state: 'yes' },
+            conditionalMediation: { state: 'yes' },
+            parseCreationOptionsFromJSON: { state: 'yes' },
+            parseRequestOptionsFromJSON: { state: 'yes' },
+            toJSON: { state: 'yes' },
+            userVerifyingPlatformAuthenticator: { state: 'yes' },
+            hybridTransport: { state: 'yes' },
+          },
+          clientCapabilities: { state: 'yes', returned: CHROMIUM_152_CAPABILITIES, omitted: [] },
+        },
+      });
+      expect(Number.isNaN(Date.parse(report.generatedAt))).toBe(false);
+    });
+
+    it('says why copying failed and shows the report selected, to copy by hand', async () => {
+      const writeText = vi.fn(async () => {
+        throw new DOMException('Write permission denied.', 'NotAllowedError');
+      });
+      const { status, fallback } = await copyWith({ writeText });
+
+      expect(status.dataset.outcome).toBe('failed');
+      expect(status.textContent).toBe(
+        'Could not copy the report (NotAllowedError: Write permission denied.). It is below, selected, to copy by hand.',
+      );
+      expect(fallback.hidden).toBe(false);
+      expect(document.activeElement).toBe(fallback);
+      expect(fallback.selectionStart).toBe(0);
+      expect(fallback.selectionEnd).toBe(fallback.value.length);
+      expect(JSON.parse(fallback.value).identity.name).toBe('Chromium-based browser');
+    });
+
+    it('says the clipboard is not available when the page has none, and hides the fallback after a later success', async () => {
+      const { panel, status, fallback } = await copyWith(undefined);
+
+      expect(status.textContent).toBe(
+        'Could not copy the report (the clipboard is not available on this page). It is below, selected, to copy by hand.',
+      );
+      expect(fallback.hidden).toBe(false);
+
+      install(navigator, 'clipboard', { writeText: vi.fn(async () => {}) });
+      panel.querySelector('[data-action="copy-report"]').click();
+      await vi.runAllTimersAsync();
+      expect(status.textContent).toBe('Report copied to the clipboard.');
+      expect(fallback.hidden).toBe(true);
+    });
+  });
+
   it('closes from the close button, the backdrop and Escape, and ignores other clicks', async () => {
     installBrowser();
     const { panel, trigger } = await openAnalyzedPanel();
