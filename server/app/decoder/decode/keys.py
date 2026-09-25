@@ -92,6 +92,17 @@ def qualified_key_text(key: Any) -> str:
     return f"{key} ({type(key).__name__})"
 
 
+class JsonLabel(str):
+    """A map key ``json_keys`` has already spelled for JSON.
+
+    The decoder passes one map through ``json_items`` more than once (the
+    decoded value, then the response); a label from an earlier pass is kept as
+    it is, never spelled again as though it were a text key of the input.
+    """
+
+    __slots__ = ()
+
+
 def json_keys(keys: Sequence[Any], decorate: Callable[[Any, str], str] | None = None) -> list[str]:
     """The JSON key each of a map's ``keys`` is shown under; no two are alike.
 
@@ -104,12 +115,17 @@ def json_keys(keys: Sequence[Any], decorate: Callable[[Any, str], str] | None = 
     """
 
     def spell(key: Any, text: str) -> str:
+        if isinstance(key, JsonLabel):
+            return key
         return decorate(key, text) if decorate is not None else text
 
     labels = [spell(key, key_text(key)) for key in keys]
     clashing = _clashing([key_text(key) for key in keys]) | _clashing(labels)
     qualified: set[int] = set()
-    while todo := {index for index in clashing - qualified if not _is_int(keys[index])}:
+    def respellable(index: int) -> bool:
+        return not _is_int(keys[index]) and not isinstance(keys[index], JsonLabel)
+
+    while todo := {index for index in clashing - qualified if respellable(index)}:
         for index in todo:
             labels[index] = spell(keys[index], qualified_key_text(keys[index]))
         qualified |= todo
@@ -123,7 +139,7 @@ def json_keys(keys: Sequence[Any], decorate: Callable[[Any, str], str] | None = 
         while candidate in used:
             number += 1
             candidate = f"{label} #{number}"
-        labels[index] = candidate
+        labels[index] = JsonLabel(candidate)
         used.add(candidate)
     return labels
 
