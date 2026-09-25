@@ -1544,6 +1544,112 @@ coverage unchanged (82.58 / 66.44 / 91.33 / 82.69). Modules over 700 lines 2 -> 
   is echoed back bare, so the response is not valid JSON; the app sets no `MAX_CONTENT_LENGTH` (the EDN encoder
   took a 400 KB input).
 
+### Phase 21 — CTAP views rebuild their bytes, every reading not taken is named, the backend is closed — DONE (2026-09-25)
+52 commits, 64dcf3e2..the record's own, all this phase's, each gated on pytest, vitest and ruff exit codes.
+Every commit before the record was re-run afterwards on its own tree in one detached worktree, cleaned
+(`git clean -fdx`) before each: pytest passes at all 51, none leaves `instance/`, and vitest passes at the two
+frontend commits. Every behaviour change follows a commit whose test records the old behaviour, which the fix
+then edits (14 such record commits; a 15th records a scenario for the dead-code deletion).
+
+**Part A.**
+- A1/A2/A6, CTAP views. The values in a view have one spelling, `decoder/ctap_view.py`, with an exact reader.
+  Bytes are hex; text that would read as something else is written `"…" (text)`; a null stays null; floats,
+  tags, simple values and undefined are written in EDN with their type. Member labels and the rebuild are in
+  `decoder/ctap_message.py`, and `decode/ctap_views.py` is the one view builder. `data.ctap` is the framing:
+  `code` (null when no byte was sent), `message` and `trailingBytesHex`. A self-check marks a view the encoder
+  cannot rebuild (non-canonical, or lenient damage) as `notRebuildable`, saying why. The encoder has one path
+  for a view (`encode/ctap_views.py`), for format CBOR and the CTAP/WebAuthn format alike, and refuses by
+  name. `ctap_responses.py` is deleted, with the `{"sig"}`/`{"value"}` wrappers and the invented
+  `"3 (signature)": null`. getInfo is shown as sent, and its meanings are in `data.getInfoDecoded`.
+  - Proof, `tests/app/encoder/test_ctap_view_round_trip.py` through `/api/codec`, both formats:
+    - generated: 250 passing examples for each of the 5 messages, 0 failing, with its own canonical writer;
+    - the repository: 32 CTAP messages (16 maps, each also after its CTAP byte). 28 are exact, and the 4
+      that are not canonical (fido2's `_MC_RESP` and `a301667061636b6564025900`) are refused, naming
+      `non-shortest-length` at its offset.
+    - Before the phase, the same 32 in format CBOR gave 7 exact, 11 other bytes with no word, and 14
+      refused. The test, adapted only for the missing `data.ctap`, fails 29 of 36 on 64dcf3e2.
+  - An independent run with fresh seeds, outside the derandomized profile: 2000 per message, 10,000
+    through the API, all exact in both formats. An earlier run of 5000 found one case the fixed seed had
+    missed: a getInfo response padded to 37 bytes was read as authenticator data without a word. It is fixed
+    (`0a96f4e7`, `efd198ff`): a CTAP message and the bytes after it are a reading before authenticator data,
+    for a map with a CTAP message's shape.
+- A3, readings.
+  - `decode/readings.py` is an ordered table, each reading with a strict "reads the whole input" test.
+  - Every other whole reading is named in an `ambiguous-input` finding. The order and every pair, each with
+    an example, are in `decode/ambiguous_input.py`.
+  - Owner's decision: one CBOR item or CTAP message comes before authenticator data. `9823`+`01`×35 is now
+    CBOR, naming authenticator data (it was "Authenticator data"), and so is a 37-byte getInfo response.
+  - `null` is JSON null (it was a 422). `0x` counts only at the start (`a0xb` is no longer hex `ab`). An odd
+    number of hex digits is read as base64.
+  - `4100` names h'00'; `0a31` names CREDENTIAL_MGMT and -18; a bare map names every CTAP shape it fits.
+- A4, NaN and Infinity.
+  - Strict: 422 with the offset and path. Lenient: a `json-nan-or-infinity` finding, shown as
+    `{"diagnostic": "NaN"}`.
+  - The encoder refuses them with the offset, and so does the metadata upload.
+  - Before, `{"a": NaN}` was answered with a bare `NaN` by decode, by encode as CBOR (`a16161f97e00`) and by
+    encode as JSON. `test_codec_answers_are_json.py` now reads every answer over the corpus with a parser that
+    refuses NaN.
+- A5, SafetyNet. A key repeated in the JWS header or payload is `duplicate-json-key` at the `response` member,
+  with `source` "SafetyNet JWS header" or "SafetyNet JWS payload".
+- A7, lenient keys. A string key that lost a chunk is equal only to itself, and is spelled
+  `invalid(bytes[1] at offset 1)`.
+- A8, signature algorithm names. RSA-PSS is spelled RSASSA-PSS. Also named:
+  - the 18 composite ML-DSA names and OIDs from draft 19;
+  - HashML-DSA;
+  - DSA with SHA-384, SHA-512 and SHA3;
+  - SLH-DSA and HashSLH-DSA, from the NIST arcs.
+
+**Part B.**
+- B1, test secret and checkout guard.
+  - `tests/conftest.py` sets a test secret when it is imported.
+  - The checkout guard is a plugin, `tests/checkout_guard.py`. It takes its listing in `pytest_configure`,
+    before collection, and a subprocess test proves that a write during collection fails the run.
+  - Proof: a full run in a fresh worktree at 64dcf3e2 left `instance/session-secret.key`, and so did the
+    Linux run. Every commit from `a12291b0` on leaves none in the worktree run, and neither does the Linux
+    run at HEAD.
+- B2, request size limit.
+  - Measured:
+    - ML-DSA-87 advanced registration with its full chain: about 41 KB;
+    - its credential artifact: about 61 KB;
+    - that attestation object as decoder hex: about 60 KB;
+    - authentication: about 3.7 KB per ML-DSA-87 credential, bounded by the browser's local storage (about
+      5 MB);
+    - a result snapshot at its caps: under 1 MB;
+    - the whole-MDS metadata upload: about 7.4 MB.
+  - Limits: `MAX_CONTENT_LENGTH` 8 MiB, and 16 MiB for the metadata upload, which sets its own limit on the
+    request. Both can be set in the environment.
+  - A larger body gets a JSON 413 from `routes/errors.py`. Tests cover exactly the limit and one byte over on
+    `/api/decode`, `/api/codec`, a ceremony route and the upload.
+- B3, dead code. `delete_credential_artifact`, `_delete_record` and both `_user_root_prefix` helpers are
+  deleted.
+  - New golden `routes/simple-register-save-fails.json`: a save that raises gives 500, and one that lands then
+    raises counts as stored.
+
+**Part C.** The decoder rules are in `docs/DECODER.md` and the storage rules in `docs/STORAGE.md`, each moved
+as written and then brought up to date. AGENTS.md keeps a summary of each, with "read … before changing"; it
+went from 522 lines to 400.
+
+**Tests.**
+- macOS: 3912 → **4653** passed / 4 skipped. Linux (python:3.14, Docker): 3898 → **4639** / 5.
+- `tests/app/security/`: 126 → **126**. vitest: 301 → **301**.
+- ruff clean. Coverage 96.59% → **96.63%**.
+- Characterization goldens: the only new one is `simple-register-save-fails.json`. None was regenerated;
+  `CHARACTERIZATION_WRITE=1` leaves the tree clean.
+
+**Found but not fixed:**
+- The CTAP/WebAuthn format still guesses for a numeric map written by hand without a view
+  (`encode/ctap_numeric.py`, `ctap_encode.py`). It picks a message from the members present and adds a
+  command byte: `{"1": …, "2": …, "3": …, "4": …}` becomes `01a4…`.
+- For makeCredential and getAssertion, `expandedJson` is now the same view as `ctapDecoded`. Dropping one is
+  a UI decision.
+- The old Entrust composite OIDs (2.16.840.1.114027.80.8.1.x) are not named; the draft-19 OIDs are.
+- The repository holds no makeCredential request as CBOR data; the generated ones cover it.
+- In `decodedValue`, a key the lenient parser damaged is plain text, `invalid(…)`, so a text key with that
+  content would read the same. EDN and the CTAP views are exact.
+- Flask's JSON provider still writes a float NaN bare. The codec never hands it one (the corpus test proves
+  that), but no guard covers the other routes.
+- No input that is both JSON and base64 has turned up in practice; the pair is documented and checked.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
