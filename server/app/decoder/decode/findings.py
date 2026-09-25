@@ -31,7 +31,13 @@ def _trailing_findings(data: bytes, end: int) -> list[dict[str, Any]]:
 
 
 def _attach_findings(result: dict[str, Any], findings: list[dict[str, Any]]) -> None:
-    ordered = sorted(findings, key=lambda finding: (finding.get("source", ""), finding["offset"]))
+    # A finding in JSON has a path and no offset (None): it sorts first.
+    ordered = sorted(findings, key=lambda finding: (finding.get("source", ""), _offset(finding)))
     result["findings"] = ordered
     if ordered:
         result["malformed"] = [finding["message"] for finding in ordered]
+
+
+def _offset(finding: dict[str, Any]) -> int:
+    offset = finding.get("offset")
+    return offset if isinstance(offset, int) else -1

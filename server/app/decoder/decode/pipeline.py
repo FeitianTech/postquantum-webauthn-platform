@@ -31,11 +31,12 @@ from . import (
     cbor_parser,
     ctap,
     interpretations,
+    json_input,
     key_collisions,
     response,
 )
 from .authenticator_data import _describe_authenticator_data_bytes, _LocatedError
-from .json_input import _try_parse_json
+from .json_input import read_or_none as _read_json
 
 _PEM_CERT_PATTERN = re.compile(
     r"-----BEGIN CERTIFICATE-----\s*(?P<body>.*?)\s*-----END CERTIFICATE-----",
@@ -237,7 +238,8 @@ def _nested_authenticator_data(data: bytes) -> tuple[dict[str, Any], list[dict[s
 
 
 def _nested_client_data(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    return _describe_client_data_from_bytes(data), []
+    details = _describe_client_data_from_bytes(data)
+    return details, json_input.read(data.decode("utf-8"))[1]
 
 
 def _decode_pem_certificates(text: str) -> dict[str, Any]:
@@ -286,22 +288,25 @@ def _decode_binary_payload(data: bytes, encoding: str, *, lenient: bool = False)
         return result
 
     if text_version:
-        json_obj = _try_parse_json(text_version)
+        json_obj, json_findings = _read_json(text_version)
         if json_obj is not None:
             if isinstance(json_obj, Mapping) and _is_client_data_dict(json_obj):
-                details = _describe_client_data_from_bytes(data)
-                return {
+                result = {
                     "format": "WebAuthn client data (binary)",
                     "inputEncoding": encoding,
-                    "decoded": details,
+                    "decoded": _describe_client_data_from_bytes(data),
                     "binary": _binary_summary(data, encoding),
                 }
-            return {
-                "format": "JSON (binary)",
-                "inputEncoding": encoding,
-                "decoded": json_obj,
-                "binary": _binary_summary(data, encoding),
-            }
+            else:
+                result = {
+                    "format": "JSON (binary)",
+                    "inputEncoding": encoding,
+                    "decoded": json_obj,
+                    "binary": _binary_summary(data, encoding),
+                }
+            if json_findings:
+                ctap._attach_findings(result, json_findings)
+            return result
 
     certificate_result = _try_decode_certificate_bytes(data, encoding)
     if certificate_result is not None:
@@ -445,10 +450,10 @@ def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:
     if not trimmed:
         raise ValueError("Decoder input is empty.")
 
-    parsed_json = _try_parse_json(trimmed)
+    parsed_json, json_findings = _read_json(trimmed)
     ambiguity = ambiguous_input.check(trimmed, parsed_json)
     if ambiguity is not None and ambiguity["readAs"] == "hex":
-        parsed_json = None
+        parsed_json, json_findings = None, []
     if parsed_json is not None:
         result = _decode_json_object(parsed_json, raw_text=trimmed)
     elif _looks_like_pem(trimmed):
@@ -457,14 +462,15 @@ def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:
         data, encoding = _decode_binary_input(trimmed)
         result = _decode_binary_payload(data, encoding, lenient=lenient)
 
-    if ambiguity is not None:
-        ctap._attach_findings(result, [ambiguity, *(result.get("findings") or [])])
+    noted = ([ambiguity] if ambiguity is not None else []) + json_findings
+    if noted:
+        ctap._attach_findings(result, [*noted, *(result.get("findings") or [])])
     return response._prepare_decoder_response(result)
 
 
 def _describe_client_data_from_bytes(data: bytes) -> dict[str, Any]:
     text = data.decode("utf-8")
-    parsed = json.loads(text)
+    parsed, _repeated = json_input.read(text)
     details = _build_client_data_details(parsed, raw_text=text)
 
     try:
