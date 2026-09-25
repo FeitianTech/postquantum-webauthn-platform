@@ -1,3 +1,4 @@
+import { base64UrlToBytes } from '../../../shared/utils/base64.js';
 export function createSummaryItem(label, value, options = {}) {
     if (!label) {
         return null;
@@ -71,16 +72,7 @@ export function determinePublicKeyAlgorithm(info) {
     return type;
 }
 
+// Base64url text as UTF-8, decoded strictly: one spelling per byte string.
 export function decodeBase64Url(value) {
-    let base64 = value.replace(/-/g, '+').replace(/_/g, '/');
-    const padding = base64.length % 4;
-    if (padding) {
-        base64 += '='.repeat(4 - padding);
-    }
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) {
-        bytes[i] = binary.charCodeAt(i);
-    }
-    return new TextDecoder().decode(bytes);
+    return new TextDecoder().decode(base64UrlToBytes(value));
 }
