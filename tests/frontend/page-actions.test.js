@@ -18,6 +18,7 @@ async function loadActionTables() {
   const forms = await import(`${SCRIPTS}/advanced/auth/forms.js`);
   const editor = await import(`${SCRIPTS}/advanced/editor/index.js`);
   const core = await import(`${SCRIPTS}/shared/ui/core.js`);
+  const codec = await import(`${SCRIPTS}/decoder/codec.js`);
   return {
     navigation: navigation.navigationActions,
     simple: simple.simpleActions,
@@ -28,6 +29,7 @@ async function loadActionTables() {
     forms: forms.formActions,
     editor: editor.editorActions,
     core: core.coreActions,
+    codec: codec.codecActions,
   };
 }
 

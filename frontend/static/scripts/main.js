@@ -33,12 +33,7 @@ import { bindResetActions } from './advanced/ui/resets.js';
 import { initializeSimpleUsername, randomizeUserIdentity, bindUsernameActions } from './shared/auth/username.js';
 import { bindSimpleActions } from './simple/auth-simple.js';
 import { bindAdvancedActions } from './advanced/auth/advanced.js';
-import {
-    processCodec,
-    clearCodec,
-    toggleRawCodec,
-    switchCodecMode
-} from './decoder/codec.js';
+import { bindCodecActions } from './decoder/codec.js';
 import {
     bindEditorActions,
     updateJsonEditor,
@@ -106,6 +101,7 @@ bindResetActions();
 bindFormActions();
 bindEditorActions();
 bindCoreActions();
+bindCodecActions();
 
 const TEXT_INPUT_TYPES = new Set([
     'text',
@@ -456,13 +452,7 @@ window.parseCreationOptionsFromJSON = parseCreationOptionsFromJSON;
 window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
 window.updateGlobalScrollLock = updateGlobalScrollLock;
-window.processCodec = processCodec;
-window.clearCodec = clearCodec;
-window.toggleRawCodec = toggleRawCodec;
-window.clearDecoder = clearCodec;
-window.toggleRawDecoder = toggleRawCodec;
 window.closeModal = closeModal;
-window.switchCodecMode = switchCodecMode;
 window.showCredentialDetails = showCredentialDetails;
 window.navigateToMdsAuthenticator = navigateToMdsAuthenticator;
 window.closeCredentialModal = closeCredentialModal;
