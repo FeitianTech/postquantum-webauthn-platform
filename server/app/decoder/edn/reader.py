@@ -211,7 +211,7 @@ class _Reader:
         except ValueError:
             # Python converts at most 4300 decimal digits: far beyond 64 bits in any case.
             raise self.error(_BEYOND_64_BITS, start) from None
-        return self.integer(value, start)
+        return self.integer(value, start, signed=literal[0] in "+-")
 
     def float_literal(self, literal: str, read: Callable[[str], float], start: int) -> bytes:
         """A decimal or hex float literal: finite, or refused -- never rounded to infinity."""
@@ -233,11 +233,14 @@ class _Reader:
         except ValueError as exc:
             raise self.error(str(exc), start) from None
 
-    def integer(self, value: int, start: int) -> bytes:
+    def integer(self, value: int, start: int, *, signed: bool = False) -> bytes:
         if not -(1 << 64) <= value <= _MAX_ARGUMENT:
             raise self.error(_BEYOND_64_BITS, start)
         info = self.head_info(self.spec(), start, indefinite_allowed=False)
-        if value >= 0 and self.peek() == "(":
+        if self.peek() == "(":
+            # RFC 8949 section 8: a tag number is an unsigned integer; -0(1) is not tag 0.
+            if signed:
+                raise self.error("a tag number is an unsigned integer, written without a sign", start)
             return self.tag(value, info, start)
         major_type, argument = (0, value) if value >= 0 else (1, -1 - value)
         return self.head(major_type, argument, info, start)
