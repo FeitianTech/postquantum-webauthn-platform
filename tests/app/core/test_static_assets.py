@@ -120,3 +120,20 @@ def test_build_tool_writes_build_id_and_gzip_variants(tmp_path):
 
     (static_root / "app.js").write_text("console.log('changed');\n", encoding="utf-8")
     assert tool.compute_build_id(static_root) != first_id
+
+
+def test_build_tool_precompresses_the_web_export_without_a_build_id(tmp_path, capsys):
+    tool = _load_build_tool()
+    export = tmp_path / "web" / "out"
+    (export / "_next" / "static" / "chunks").mkdir(parents=True)
+    (export / "_next" / "static" / "chunks" / "main-abc.js").write_text("console.log('x');\n" * 200, encoding="utf-8")
+    (export / "index.html").write_text("<p>page</p>" * 200, encoding="utf-8")
+    (export / "font.woff2").write_bytes(b"wOF2" * 500)
+
+    assert tool.main(["build_static_assets.py", "--precompress-only", str(export)]) == 0
+
+    assert (export / "_next" / "static" / "chunks" / "main-abc.js.gz").exists()
+    assert (export / "index.html.gz").exists()
+    assert not (export / "font.woff2.gz").exists()
+    assert not (tmp_path / "web" / "BUILD_ID").exists()
+    assert "Precompressed 2 files under" in capsys.readouterr().out

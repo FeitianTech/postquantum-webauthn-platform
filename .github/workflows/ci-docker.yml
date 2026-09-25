@@ -46,6 +46,17 @@ jobs:
           main_js=$(curl -fsS http://localhost:8080/ | grep -o '/assets/[^"]*/scripts/main.js' | head -1)
           curl -fsS -D - -o /dev/null -H 'Accept-Encoding: gzip' "http://localhost:8080${main_js}" \
             | grep -i -E '^(cache-control: public, max-age=31536000, immutable|content-encoding: gzip)'
+          # The new UI at /beta (docs/UI_MIGRATION.md): the export is in the image,
+          # its HTML revalidates, and its hashed assets are immutable and gzipped.
+          curl -fsS -D /tmp/beta.headers -o /tmp/beta.html http://localhost:8080/beta
+          grep -qi '^cache-control: no-cache' /tmp/beta.headers
+          curl -fsS -o /dev/null http://localhost:8080/beta/design
+          chunk=$(grep -o '/beta/_next/static/chunks/[^"]*\.js' /tmp/beta.html | head -1)
+          test -n "$chunk"
+          curl -fsS -D /tmp/chunk.headers -o /dev/null -H 'Accept-Encoding: gzip' "http://localhost:8080${chunk}"
+          grep -qi '^cache-control: public, max-age=31536000, immutable' /tmp/chunk.headers
+          grep -qi '^content-encoding: gzip' /tmp/chunk.headers
+          echo "/beta serves the export: ${chunk} is immutable and gzipped"
 
       - name: Show container logs
         if: always()

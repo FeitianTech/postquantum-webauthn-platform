@@ -5,6 +5,9 @@ Writes ``frontend/BUILD_ID`` (a content hash used in versioned asset URLs) and a
 precompressed ``.gz`` copy of each compressible file, so the server neither
 gzips assets per request nor serves a stale file under a new URL.
 Run at image build time; outputs are not committed.
+
+``--precompress-only DIR`` writes the ``.gz`` copies and nothing else: the new
+UI's export (``web/out``) carries content hashes in its own file names.
 """
 
 from __future__ import annotations
@@ -56,6 +59,11 @@ def precompress(static_root: Path) -> int:
 
 
 def main(argv: list[str]) -> int:
+    if len(argv) > 2 and argv[1] == "--precompress-only":
+        root = Path(argv[2]).resolve()
+        written = precompress(root)
+        print(f"Precompressed {written} files under {root}.")
+        return 0
     static_root = Path(argv[1]).resolve() if len(argv) > 1 else DEFAULT_STATIC_ROOT
     build_id = compute_build_id(static_root)
     written = precompress(static_root)
