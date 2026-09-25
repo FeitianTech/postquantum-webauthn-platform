@@ -10,6 +10,7 @@ from __future__ import annotations
 import pytest
 
 from server.app.decoder import edn
+from server.app.decoder.edn import reader
 
 
 @pytest.mark.parametrize(
@@ -110,4 +111,31 @@ def test_edn_is_encoded_to_exactly_the_bytes_it_notates(text, expected):
 )
 def test_edn_that_cannot_be_encoded_is_refused_with_its_offset(text, offset, reason):
     with pytest.raises(ValueError, match=f"^EDN is not valid at offset {offset}: .*{reason}"):
+        edn.encode(text)
+
+
+def test_edn_nested_as_deep_as_the_decoder_reads_is_encoded():
+    from server.app.decoder.decode import cbor_parser
+
+    assert reader._MAX_DEPTH == cbor_parser._MAX_DEPTH
+    data = edn.encode("[" * 64 + "0" + "]" * 64)
+
+    assert data == bytes([0x81]) * 64 + b"\x00"
+    cbor_parser.decode_item(data)
+
+
+@pytest.mark.parametrize(
+    ("text", "offset"),
+    [
+        ("[" * 65 + "0" + "]" * 65, 65),
+        ("[" * 10000, 65),
+        ("{1: " * 70 + "0" + "}" * 70, 257),  # the key of the map at depth 64
+        ("1(" * 300 + "0" + ")" * 300, 130),
+        ("<<" * 350 + ">>" * 350, 130),
+        ("(_ " * 70 + "h''" + ")" * 70, 195),
+    ],
+)
+def test_edn_nested_deeper_than_the_decoder_reads_is_refused_with_its_offset(text, offset):
+    # Not a RecursionError (HTTP 500): a refusal, as the decoder refuses the bytes.
+    with pytest.raises(ValueError, match=f"^EDN is not valid at offset {offset}: items are nested more than 64 deep"):
         edn.encode(text)
