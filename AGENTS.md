@@ -49,6 +49,23 @@ Important frontend entry points:
   Browser-side stored credential records and serialization sent back to the server.
 - `frontend/static/styles/shared/layout.css`
   Shared layout and credential card animation styles.
+- `frontend/static/scripts/shared/browser/`
+  The Analyze Browser panel (header button). It reports what the browser says and
+  says where each answer came from, or that it cannot know; it never guesses.
+  `identity.js` copies what the browser exposes (`readIdentityInputs`) and names the
+  browser, version, engine and system from that copy (`determineIdentity`, a pure
+  function): a brand's version is never another brand's, "Google Chrome" only when
+  the brand list says so, "Chromium-based browser" for a list of only Chromium.
+  `webauthn-facts.js` asks the WebAuthn questions and keeps each answer in one of
+  four states (`yes`, `no`, `unavailable` when the method is missing, `undetermined`
+  when it threw, with why); it also reads `getClientCapabilities()`. `analyze.js`
+  renders both, copies the raw findings as JSON, and handles the dialog (focus in,
+  Tab kept inside, Escape, focus back to the button). `probe.js` reads an API that
+  may be missing or throw. Web pages cannot ask which authenticator transports a
+  browser supports: do not reintroduce WebUSB/WebHID/Web Bluetooth/Web Serial
+  checks, which say nothing about WebAuthn. The identity cases are real
+  user-agent strings with their Client Hints in
+  `tests/frontend/shared/browser/identity-matrix.js`; add a browser there.
 
 Important templates:
 
@@ -56,6 +73,7 @@ Important templates:
 - `frontend/templates/advanced/tab.html`
 - `frontend/templates/decoder/tab.html`
 - `frontend/templates/shared/navigation.html`
+- `frontend/templates/shared/analyze-browser.html` (the panel's test renders this file)
 
 ## Backend Map
 
