@@ -178,7 +178,7 @@ describe('codec UI', () => {
       json: vi.fn().mockRejectedValue(new Error('bad json')),
     });
     await processCodec('decode');
-    expect(showStatus).toHaveBeenLastCalledWith('decoder', 'Decoding failed: Server responded with status 500', 'error');
+    expect(showStatus).toHaveBeenLastCalledWith('decoder', 'Decoding failed: The server failed while handling the request.', 'error');
   });
 
   it('renders rich decode structures and hides the empty-state description', async () => {
@@ -516,13 +516,13 @@ describe('codec messages for failed responses', () => {
     }));
     await processCodec('decode');
 
-    expect(showStatus.mock.calls.at(-1)[1]).toMatchInlineSnapshot(`"Decoding failed: The request is larger than the limit of 8388608 bytes this server accepts."`);
+    expect(showStatus.mock.calls.at(-1)[1]).toMatchInlineSnapshot(`"Decoding failed: The request is larger than the limit of 8388608 bytes this server accepts. Send a smaller request."`);
   });
 
   it('decode answering 503 as HTML from a proxy', async () => {
     fetch.mockResolvedValueOnce(failedResponse(503, '<html><body><h1>503 Service Unavailable</h1></body></html>', 'text/html'));
     await processCodec('decode');
 
-    expect(showStatus.mock.calls.at(-1)[1]).toMatchInlineSnapshot(`"Decoding failed: Server responded with status 503"`);
+    expect(showStatus.mock.calls.at(-1)[1]).toMatchInlineSnapshot(`"Decoding failed: The server is unavailable. Try again in a moment."`);
   });
 });

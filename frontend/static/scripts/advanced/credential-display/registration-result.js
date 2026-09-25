@@ -1,3 +1,4 @@
+import {FailedResponseError, readFailedResponse} from '../../shared/api/failed-response.js';
 import {openModal} from '../../shared/ui/core.js';
 import {collectTruthyEntries} from './data-utils.js';
 
@@ -14,8 +15,7 @@ export async function decodePayloadThroughApi(payload) {
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Unable to decode payload.');
+        throw new FailedResponseError(await readFailedResponse(response));
     }
 
     const json = await response.json();
