@@ -1,5 +1,27 @@
-import { base64UrlToHex } from '../utils/binary.js';
+import { base64UrlToBytes } from '../utils/base64.js';
 import { extractHexFromJsonFormat } from '../../advanced/credentials/utils.js';
+
+function bytesOf(value) {
+    if (value instanceof ArrayBuffer) {
+        return new Uint8Array(value);
+    }
+    if (ArrayBuffer.isView(value)) {
+        return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+    }
+    return base64UrlToBytes(value);
+}
+
+// The challenge the authenticator signed, in hex, from the credential's
+// clientDataJSON: an ArrayBuffer on the browser's own credential, base64url in
+// its JSON form. '' when it cannot be read.
+function challengeHexOf(response) {
+    try {
+        const clientData = JSON.parse(new TextDecoder().decode(bytesOf(response.clientDataJSON)));
+        return Array.from(base64UrlToBytes(clientData.challenge), byte => byte.toString(16).padStart(2, '0')).join('');
+    } catch (error) {
+        return '';
+    }
+}
 
 export function printRegistrationDebug(credential, createOptions, serverResponse) {
     const clientExtensions = credential.getClientExtensionResults
@@ -20,16 +42,7 @@ export function printRegistrationDebug(credential, createOptions, serverResponse
     const fakeCredLength = window.lastFakeCredLength || 0;
     console.log('fake credential id length:', fakeCredLength);
 
-    let challengeHex = '';
-    if (credential.response && credential.response.clientDataJSON) {
-        try {
-            const clientData = JSON.parse(atob(credential.response.clientDataJSON));
-            challengeHex = base64UrlToHex(clientData.challenge);
-        } catch (e) {
-            // ignore
-        }
-    }
-    console.log('challenge hex code:', challengeHex);
+    console.log('challenge hex code:', credential.response ? challengeHexOf(credential.response) : '');
 
     const pubKeyCredParams = serverData.algorithmsUsed || [];
     console.log('pubkeycredparam used:', pubKeyCredParams);
@@ -83,16 +96,7 @@ export function printAuthenticationDebug(assertion, requestOptions, serverRespon
     const fakeCredLength = window.lastFakeCredLength || 0;
     console.log('Fake credential ID length:', fakeCredLength);
 
-    let challengeHex = '';
-    if (assertion.response && assertion.response.clientDataJSON) {
-        try {
-            const clientData = JSON.parse(atob(assertion.response.clientDataJSON));
-            challengeHex = base64UrlToHex(clientData.challenge);
-        } catch (e) {
-            // ignore
-        }
-    }
-    console.log('challenge hex code:', challengeHex);
+    console.log('challenge hex code:', assertion.response ? challengeHexOf(assertion.response) : '');
 
     const hints = serverData.hintsUsed || [];
     console.log('hints:', hints);
