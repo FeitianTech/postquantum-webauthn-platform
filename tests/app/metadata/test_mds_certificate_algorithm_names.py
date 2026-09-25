@@ -55,7 +55,7 @@ def _pss(hash_algorithm):
         (ec.generate_private_key(ec.SECP256R1()), hashes.SHA256(), None, "ECDSA_SHA256"),
         (ec.generate_private_key(ec.SECP384R1()), hashes.SHA384(), None, "ECDSA_SHA384"),
         (_RSA_KEY, hashes.SHA256(), None, "RSASSA-PKCS1-v1_5_SHA256"),
-        # cryptography names the OID "rsassaPss"; both views read it as PKCS#1 v1.5.
+        # cryptography names the OID "rsassaPss"; both views used to read it as PKCS#1 v1.5.
         (_RSA_KEY, hashes.SHA256(), _pss(hashes.SHA256()), "RSASSA-PSS_SHA256"),
         (_RSA_KEY, hashes.SHA384(), _pss(hashes.SHA384()), "RSASSA-PSS_SHA384"),
         (ed25519.Ed25519PrivateKey.generate(), None, None, "ED25519_SHA512"),

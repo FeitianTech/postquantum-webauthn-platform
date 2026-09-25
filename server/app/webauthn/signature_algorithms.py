@@ -49,9 +49,12 @@ def format_hash_name(value: Any) -> str:
 
 # RSASSA-PSS (RFC 4055): cryptography names it "rsassaPss", others "RSASSA-PSS".
 _RSASSA_PSS_OID = "1.2.840.113549.1.1.10"
-# NIST's signature OIDs (2.16.840.1.101.3.4.3.x), which cryptography 50 does not
-# name: ECDSA and RSA PKCS#1 v1.5 with SHA3 (the hash is read from the
-# certificate), and pure ML-DSA (FIPS 204), which has no separate hash.
+# NIST's signature OIDs (2.16.840.1.101.3.4.3.x) as a dotted OID reaches this
+# module: ECDSA and RSA PKCS#1 v1.5 with SHA3 (.9-.16), which cryptography 50
+# names "Unknown OID", so the callers pass the dotted form (the hash is read from
+# the certificate); and pure ML-DSA (FIPS 204, .17-.19), which has no separate
+# hash. cryptography 50 names ML-DSA itself, and those names meet the ML-DSA
+# pattern below; the OIDs are here for a dotted form from any other source.
 _NIST_SIGNATURE_OIDS = {
     **{f"2.16.840.1.101.3.4.3.{arc}": "ECDSA" for arc in (9, 10, 11, 12)},
     **{f"2.16.840.1.101.3.4.3.{arc}": "RSASSA-PKCS1-v1_5" for arc in (13, 14, 15, 16)},
