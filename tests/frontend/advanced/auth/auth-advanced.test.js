@@ -474,7 +474,7 @@ describe('auth-advanced', () => {
     await advancedAuthenticate();
 
     const finalMessage = showStatus.mock.calls.at(-1)[1];
-    expect(finalMessage).toContain('Advanced authentication failed: Authentication failed (502)');
+    expect(finalMessage).toContain('Advanced authentication failed: The server could not be reached.');
     expect(hideProgress).toHaveBeenCalledWith('advanced');
   });
 
@@ -619,11 +619,11 @@ describe('advanced tab messages for failed responses', () => {
   }
 
   it('registration complete answering 409', async () => {
-    expect(await registerAgainst(failedResponse(409, { error: STORE_CHANGED }))).toMatchInlineSnapshot(`"Credential registration failed: Registration failed: {"error":"The stored credentials changed while this one was being saved, too many times, so the registration was not saved. Please try again."} The authenticator may not support: resident key requirement, selected signature algorithms."`);
+    expect(await registerAgainst(failedResponse(409, { error: STORE_CHANGED }))).toMatchInlineSnapshot(`"Credential registration failed: The stored credentials changed while this one was being saved, too many times, so the registration was not saved. Please try again."`);
   });
 
   it('registration complete answering 503', async () => {
-    expect(await registerAgainst(failedResponse(503, { error: STORE_UNREADABLE }))).toMatchInlineSnapshot(`"Credential registration failed: Registration failed: {"error":"The stored credentials could not be read. Please try again."} The authenticator may not support: resident key requirement, selected signature algorithms."`);
+    expect(await registerAgainst(failedResponse(503, { error: STORE_UNREADABLE }))).toMatchInlineSnapshot(`"Credential registration failed: The stored credentials could not be read. Please try again."`);
   });
 
   it('registration complete answering 400 with an expired ceremony state', async () => {
@@ -631,25 +631,18 @@ describe('advanced tab messages for failed responses', () => {
       error: STATE_EXPIRED,
       challengeSource: 'server-session',
       challengeStatus: 'expired',
-    }))).toMatchInlineSnapshot(`"Credential registration failed: Registration failed: {"error":"Registration state not found or has expired. Please restart the registration process.","challengeSource":"server-session","challengeStatus":"expired"} The authenticator may not support: resident key requirement, selected signature algorithms."`);
+    }))).toMatchInlineSnapshot(`"Credential registration failed: Registration state not found or has expired. Please restart the registration process."`);
   });
 
   it('registration complete answering 400 as HTML', async () => {
-    expect(await registerAgainst(failedResponse(400, WERKZEUG_400, 'text/html; charset=utf-8'))).toMatchInlineSnapshot(`
-      "Credential registration failed: Registration failed: <!doctype html>
-      <html lang=en>
-      <title>400 Bad Request</title>
-      <h1>Bad Request</h1>
-      <p>The browser (or proxy) sent a request that this server could not understand.</p>
-       The authenticator may not support: resident key requirement, selected signature algorithms."
-    `);
+    expect(await registerAgainst(failedResponse(400, WERKZEUG_400, 'text/html; charset=utf-8'))).toMatchInlineSnapshot(`"Credential registration failed: The server could not accept the request. Start the ceremony again."`);
   });
 
   it('registration begin answering 413', async () => {
     fetch.mockResolvedValueOnce(failedResponse(413, { error: TOO_LARGE }));
     await advancedRegister();
 
-    expect(showStatus.mock.calls.at(-1)[1]).toMatchInlineSnapshot(`"Credential registration failed: Server error: {"error":"The request is larger than the limit of 8388608 bytes this server accepts."} The authenticator may not support: resident key requirement."`);
+    expect(showStatus.mock.calls.at(-1)[1]).toMatchInlineSnapshot(`"Credential registration failed: The request is larger than the limit of 8388608 bytes this server accepts. Send a smaller request."`);
   });
 
   async function authenticateAgainst(...responses) {

@@ -31,6 +31,7 @@ import {
     updateCredentialsDisplay,
 } from '../credentials/index.js';
 import { printRegistrationDebug, printAuthenticationDebug } from '../../shared/debug/auth.js';
+import { FailedResponseError, readFailedResponse } from '../../shared/api/failed-response.js';
 import { state } from '../../shared/state.js';
 import {
     saveAdvancedCredential,
@@ -87,6 +88,15 @@ function maybeRandomizeAdvancedAuthenticationFields() {
 }
 
 const COMMON_SUPPORTED_ALGORITHMS = new Set([-7, -257, -8]);
+// The DOMException names navigator.credentials.create() rejects with.
+const AUTHENTICATOR_ERROR_NAMES = new Set([
+    'NotAllowedError',
+    'NotSupportedError',
+    'InvalidStateError',
+    'ConstraintError',
+    'UnknownError',
+    'AbortError',
+]);
 
 function collectPotentialUnsupportedFeatures(publicKeyOptions, convertedExtensions, createOptions) {
     const issues = [];
@@ -197,8 +207,7 @@ export async function advancedRegister() {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Server error: ${errorText}`);
+            throw new FailedResponseError(await readFailedResponse(response));
         }
 
         const json = await response.json();
@@ -332,8 +341,7 @@ export async function advancedRegister() {
             setTimeout(loadSavedCredentials, 1000);
             advancedRegisterState = null;
         } else {
-            const errorText = await result.text();
-            throw new Error(`Registration failed: ${errorText}`);
+            throw new FailedResponseError(await readFailedResponse(result));
         }
     } catch (error) {
         const errorName = error && typeof error === 'object' ? error.name : undefined;
@@ -348,7 +356,11 @@ export async function advancedRegister() {
             errorMessage = 'Security error - check your connection and try again';
         }
 
-        const potentialIssues = collectPotentialUnsupportedFeatures(publicKey, convertedExtensions, createOptions);
+        // Only a refusal from the authenticator can be about what it supports; a
+        // server's answer says what it means on its own.
+        const potentialIssues = AUTHENTICATOR_ERROR_NAMES.has(errorName)
+            ? collectPotentialUnsupportedFeatures(publicKey, convertedExtensions, createOptions)
+            : [];
         const detailMessage = potentialIssues.length
             ? ` The authenticator may not support: ${potentialIssues.join(', ')}.`
             : '';
@@ -399,24 +411,11 @@ export async function advancedAuthenticate() {
         });
 
         if (!response.ok) {
-            let errorText = await response.text();
-            let parsedError;
-            try {
-                parsedError = JSON.parse(errorText);
-            } catch (parseError) {
-                parsedError = null;
-            }
-
-            const messageFromJson = parsedError && typeof parsedError.error === 'string'
-                ? parsedError.error
-                : null;
-
-            if (response.status === 404 && !messageFromJson) {
+            const failure = await readFailedResponse(response);
+            if (response.status === 404 && !failure.body?.error) {
                 throw new Error('No credentials detected. Please register a credential first.');
             }
-
-            const fallback = messageFromJson || errorText || `Server error (${response.status})`;
-            throw new Error(fallback);
+            throw new FailedResponseError(failure);
         }
 
         const json = await response.json();
@@ -499,22 +498,12 @@ export async function advancedAuthenticate() {
             maybeRandomizeAdvancedAuthenticationFields();
             advancedAuthenticateState = null;
         } else {
-            let errorText = await result.text();
-            let parsedError;
-            try {
-                parsedError = JSON.parse(errorText);
-            } catch (parseError) {
-                parsedError = null;
-            }
-            if (parsedError && typeof parsedError.failedCredentialId === 'string') {
-                queueFailedCredentialFlash(parsedError.failedCredentialId);
+            const failure = await readFailedResponse(result);
+            if (failure.failedCredentialId) {
+                queueFailedCredentialFlash(failure.failedCredentialId);
                 updateCredentialsDisplay();
             }
-            const messageFromJson = parsedError && typeof parsedError.error === 'string'
-                ? parsedError.error
-                : null;
-            const fallback = messageFromJson || errorText || `Authentication failed (${result.status})`;
-            throw new Error(fallback);
+            throw new FailedResponseError(failure);
         }
     } catch (error) {
         let errorMessage = error.message;
