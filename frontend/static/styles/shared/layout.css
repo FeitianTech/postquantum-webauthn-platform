@@ -358,7 +358,18 @@
     display: none;
 }
 
+/* A message shown and hidden like an error that is not one (a capability note). */
+.error-message.error-message--muted { color: #6c757d; }
+
+/* A read-only field filled from another one (the display name from the username). */
+.form-control.form-control--derived {
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+
 /* ─── Credentials panel ───────────────────────────────────── */
+
+.credential-list-empty { color: #6c757d; }
 
 .credentials-panel {
     background: var(--surface-color);
