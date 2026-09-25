@@ -66,18 +66,23 @@ export function SegmentedControl<T extends string>({
     [value],
   );
 
+  const placeLatest = useRef(place);
+  placeLatest.current = place;
+
   useIsomorphicLayoutEffect(() => {
     place(chosenHere.current);
     chosenHere.current = false;
   }, [place]);
 
+  // One observer for the control's life. A new observer reports at once, so
+  // one made on every change of value would cut each slide short.
   useEffect(() => {
     const list = listRef.current;
     if (!list || typeof ResizeObserver === 'undefined') return undefined;
-    const observer = new ResizeObserver(() => place(false));
+    const observer = new ResizeObserver(() => placeLatest.current(false));
     observer.observe(list);
     return () => observer.disconnect();
-  }, [place]);
+  }, []);
 
   const choose = (next: T) => {
     if (next !== value) {

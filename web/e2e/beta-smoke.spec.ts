@@ -46,6 +46,33 @@ test.describe('/beta', () => {
     await page.keyboard.press('Tab');
   });
 
+  for (const motion of ['no-preference', 'reduce'] as const) {
+    test(`moves the one highlight to the chosen section: ${motion === 'reduce' ? 'jumping under reduced motion' : 'sliding'}`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: motion });
+      await page.goto('/beta');
+      // Transitions at a tenth of their speed, so the middle of a slide can be seen.
+      const devtools = await page.context().newCDPSession(page);
+      await devtools.send('Animation.enable');
+      await devtools.send('Animation.setPlaybackRate', { playbackRate: 0.1 });
+      const highlight = page.locator('[data-segment-highlight]');
+      const x = () => highlight.evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).m41);
+      const target = page.getByRole('tab', { name: 'FIDO MDS Authenticators' });
+      const from = await x();
+      const to = await target.evaluate((element) => (element as HTMLElement).offsetLeft);
+
+      await target.click();
+      await page.waitForTimeout(700);
+      const during = await x();
+      if (motion === 'reduce') {
+        expect(during).toBeCloseTo(to, 0);
+      } else {
+        expect(during).toBeGreaterThan(from + 10);
+        expect(during).toBeLessThan(to - 10);
+        await expect.poll(x, { timeout: 6000 }).toBeCloseTo(to, 0);
+      }
+    });
+  }
+
   test('opens the Analyze Browser panel, and Escape closes it and gives focus back', async ({ page }) => {
     await page.goto('/beta');
     const trigger = page.getByRole('button', { name: 'Analyze Browser' });
