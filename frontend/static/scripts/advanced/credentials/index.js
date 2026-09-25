@@ -5,6 +5,7 @@ import {
     getStoredCredentialAttachment,
     normaliseAaguidValue,
 } from './utils.js';
+import {bindActions, callWith} from '../../shared/ui/actions.js';
 import {closeModal} from '../../shared/ui/core.js';
 import {dismissAllTransientMessages} from '../../shared/ui/status.js';
 import {updateJsonEditor} from '../editor/index.js';
@@ -292,4 +293,13 @@ export async function clearAllCredentials() {
         loadSavedCredentials,
         hideSharedCredentialProgress,
     });
+}
+
+export const credentialActions = {
+    'clear-all-credentials': callWith(clearAllCredentials),
+};
+
+// On the document: both tabs have a Clear All button.
+export function bindCredentialActions() {
+    return bindActions(document, credentialActions);
 }

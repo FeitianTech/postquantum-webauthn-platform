@@ -49,11 +49,13 @@ vi.mock('../../frontend/static/scripts/shared/auth/username.js', () => ({
   initializeSimpleUsername: vi.fn(),
   randomizeUserIdentity: vi.fn(),
   randomizeSimpleUsername: vi.fn(),
+  bindUsernameActions: vi.fn(),
 }));
 
 vi.mock('../../frontend/static/scripts/simple/auth-simple.js', () => ({
   simpleRegister: vi.fn(),
   simpleAuthenticate: vi.fn(),
+  bindSimpleActions: vi.fn(),
 }));
 
 vi.mock('../../frontend/static/scripts/advanced/auth/advanced.js', () => ({
@@ -90,6 +92,7 @@ vi.mock('../../frontend/static/scripts/advanced/credentials/index.js', () => ({
   clearAllCredentials: vi.fn(),
   updateAllowCredentialsDropdown: vi.fn(),
   setMdsNavigation: vi.fn(),
+  bindCredentialActions: vi.fn(),
 }));
 
 vi.mock('../../frontend/static/scripts/advanced/mds/index.js', () => ({
@@ -140,11 +143,12 @@ import {
   waitForMetadataLoad,
 } from '../../frontend/static/scripts/advanced/mds/index.js';
 import { initializeAdvancedSettingsNavigation } from '../../frontend/static/scripts/advanced/ui/settings-nav.js';
-import { loadSavedCredentials, setMdsNavigation, updateAllowCredentialsDropdown } from '../../frontend/static/scripts/advanced/credentials/index.js';
+import { bindCredentialActions, loadSavedCredentials, setMdsNavigation, updateAllowCredentialsDropdown } from '../../frontend/static/scripts/advanced/credentials/index.js';
 import { updateJsonEditor, updateJsonFromForm } from '../../frontend/static/scripts/advanced/editor/index.js';
 import { handleJsonEditorKeydown } from '../../frontend/static/scripts/advanced/editor/utils.js';
 import { bindNavigationActions, initializeNavigationMenu, switchTab } from '../../frontend/static/scripts/shared/ui/navigation.js';
-import { initializeSimpleUsername, randomizeUserIdentity } from '../../frontend/static/scripts/shared/auth/username.js';
+import { bindUsernameActions, initializeSimpleUsername, randomizeUserIdentity } from '../../frontend/static/scripts/shared/auth/username.js';
+import { bindSimpleActions } from '../../frontend/static/scripts/simple/auth-simple.js';
 import { closeModal, initializeStickyHeader, toggleJsonEditorExpansion } from '../../frontend/static/scripts/shared/ui/core.js';
 import { initializeAnalyzeBrowser } from '../../frontend/static/scripts/shared/browser/analyze.js';
 import { initializeLoader, loaderComplete, loaderSetPhase } from '../../frontend/static/scripts/shared/utils/loader.js';
@@ -231,6 +235,9 @@ describe('main startup and wiring', () => {
     expect(initializeAnalyzeBrowser).toHaveBeenCalledTimes(1);
     expect(registerHintsChangeCallback).toHaveBeenCalledTimes(1);
     expect(bindNavigationActions).toHaveBeenCalledTimes(1);
+    expect(bindSimpleActions).toHaveBeenCalledTimes(1);
+    expect(bindUsernameActions).toHaveBeenCalledTimes(1);
+    expect(bindCredentialActions).toHaveBeenCalledTimes(1);
     expect(setMdsNavigation).toHaveBeenCalledWith({
       switchTab,
       highlightRow: highlightAuthenticatorRowByAaguid,
@@ -317,7 +324,6 @@ describe('main startup and wiring', () => {
     modal.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(closeModal).toHaveBeenCalledWith('modal-a');
 
-    expect(window.simpleRegister).toBeDefined();
     expect(window.advancedAuthenticate).toBeDefined();
     expect(window.clearDecoder).toBeDefined();
   });

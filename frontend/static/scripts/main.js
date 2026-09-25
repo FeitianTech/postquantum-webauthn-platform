@@ -35,11 +35,8 @@ import {
     resetRegistrationForm,
     resetAuthenticationForm
 } from './advanced/ui/resets.js';
-import { initializeSimpleUsername, randomizeUserIdentity, randomizeSimpleUsername } from './shared/auth/username.js';
-import {
-    simpleRegister,
-    simpleAuthenticate
-} from './simple/auth-simple.js';
+import { initializeSimpleUsername, randomizeUserIdentity, bindUsernameActions } from './shared/auth/username.js';
+import { bindSimpleActions } from './simple/auth-simple.js';
 import {
     advancedRegister,
     advancedAuthenticate
@@ -70,7 +67,8 @@ import {
     deleteCredential,
     clearAllCredentials,
     updateAllowCredentialsDropdown,
-    setMdsNavigation
+    setMdsNavigation,
+    bindCredentialActions
 } from './advanced/credentials/index.js';
 import {
     finaliseHighlightedAuthenticatorRow,
@@ -110,6 +108,9 @@ initializeAnalyzeBrowser();
 // script-src needs no 'unsafe-inline'); each owning module binds its own, here,
 // as soon as the page's markup is there.
 bindNavigationActions();
+bindSimpleActions();
+bindUsernameActions();
+bindCredentialActions();
 
 const TEXT_INPUT_TYPES = new Set([
     'text',
@@ -469,9 +470,6 @@ window.randomizeLargeBlobWrite = randomizeLargeBlobWrite;
 window.resetRegistrationForm = resetRegistrationForm;
 window.resetAuthenticationForm = resetAuthenticationForm;
 window.randomizeUserIdentity = randomizeUserIdentity;
-window.randomizeSimpleUsername = randomizeSimpleUsername;
-window.simpleRegister = simpleRegister;
-window.simpleAuthenticate = simpleAuthenticate;
 window.advancedRegister = advancedRegister;
 window.advancedAuthenticate = advancedAuthenticate;
 window.processCodec = processCodec;
