@@ -1,5 +1,8 @@
 """authenticatorGetInfo responses are read member by member: CTAP 2.2 section 6.4.
 
+``ctapDecoded.getInfoResponse`` shows each member as sent, labelled as every CTAP
+view labels a member; ``getInfoDecoded``, beside it, says what each means.
+
 Built on the real getInfo response in tests/fido2/ctap2/test_ctap2.py (a
 FIDO_2_0 security key), with and without its status byte, and on a map that
 carries every member CTAP 2.2 defines, since no device captured here returns
@@ -13,6 +16,7 @@ import cbor2
 import pytest
 
 from server.app.decoder import decode_payload_text, encode_payload_text
+from server.app.decoder.cbor_canonical import _canonical_cbor_dumps
 from server.app.webauthn import pqc
 from tests.app.decoder.real_vectors import GET_INFO, GET_INFO_EXTRA_KEY
 
@@ -52,16 +56,22 @@ _EVERY_MEMBER = {
 
 
 def _get_info(data: bytes) -> dict:
-    return decode_payload_text(data.hex())["data"]["ctapDecoded"]["getInfoResponse"]
+    """What each member of the getInfo response ``data`` means: ``data.getInfoDecoded``."""
+
+    return decode_payload_text(data.hex())["data"]["getInfoDecoded"]
 
 
 def test_a_real_get_info_response_after_its_status_byte():
     result = decode_payload_text("00" + GET_INFO.hex())
-    info = result["data"]["ctapDecoded"]["getInfoResponse"]
+    info = result["data"]["getInfoDecoded"]
 
     assert result["type"] == "CBOR (SUCCESS status; GetInfo response)"
     assert result["findings"] == []
     assert "decodedValue" not in result["data"]
+    # As sent: the aaguid as its bytes, the options as their values.
+    shown = result["data"]["ctapDecoded"]["getInfoResponse"]
+    assert shown["3 (aaguid)"] == _AAGUID.hex()
+    assert shown["4 (options)"]["rk"] is True
     assert info["1 (versions)"] == ["U2F_V2", "FIDO_2_0"]
     assert info["2 (extensions)"] == ["uvm", "hmac-secret"]
     assert info["3 (aaguid)"] == {"hex": _AAGUID.hex(), "guid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d"}
@@ -87,13 +97,16 @@ def test_a_bare_get_info_map_is_read_the_same_way():
     result = decode_payload_text(GET_INFO.hex())
 
     assert result["type"] == "CBOR (GetInfo response)"
-    assert result["data"]["ctapDecoded"]["getInfoResponse"] == _get_info(b"\x00" + GET_INFO)
+    assert result["data"]["getInfoDecoded"] == _get_info(b"\x00" + GET_INFO)
+    assert result["data"]["ctap"]["code"] is None
 
 
 def test_a_member_ctap_does_not_define_is_shown_and_labelled():
-    info = _get_info(b"\x00" + GET_INFO_EXTRA_KEY)
+    decoded = decode_payload_text((b"\x00" + GET_INFO_EXTRA_KEY).hex())["data"]
 
-    assert info["99 (not defined in CTAP 2.2)"] == 1234
+    # Labelled as every CTAP view labels an integer CTAP 2.2 does not define: by its number.
+    assert decoded["ctapDecoded"]["getInfoResponse"]["99"] == 1234
+    assert decoded["getInfoDecoded"]["99"] == {"value": 1234, "note": "not a member CTAP 2.2 section 6.4 defines"}
 
 
 def test_every_ctap_2_2_member_is_labelled():
@@ -194,9 +207,16 @@ def test_values_of_the_wrong_shape_are_shown_as_sent_with_a_note():
 
 
 def test_a_key_that_is_not_an_integer_is_kept_and_labelled():
-    info = _get_info(cbor2.dumps({1: ["FIDO_2_0"], 3: _AAGUID, "extra": b"\x01"}))
+    result = decode_payload_text(cbor2.dumps({1: ["FIDO_2_0"], 3: _AAGUID, "extra": b"\x01"}).hex())
 
-    assert info["extra (not a member: CTAP 2.2 numbers members with integer keys)"] == "01"
+    assert result["data"]["ctapDecoded"]["getInfoResponse"]['"extra" (text)'] == "01"
+    assert result["data"]["getInfoDecoded"]['"extra" (text)'] == {
+        "value": "01",
+        "note": "not a member: CTAP 2.2 numbers members with integer keys",
+    }
+    assert [finding["path"] for finding in result["findings"] if finding["code"] == "ctap-non-integer-key"] == [
+        '${"extra"}'
+    ]
 
 
 @pytest.mark.parametrize(
@@ -228,8 +248,10 @@ def test_the_codec_route_returns_the_get_info_view(client):
     assert response.get_json()["data"]["ctapDecoded"]["getInfoResponse"]["5 (maxMsgSize)"] == 1200
 
 
-def test_the_encoder_refuses_a_decoded_get_info_rather_than_encode_the_wrapper():
-    decoded = decode_payload_text("00" + GET_INFO.hex())["data"]
+@pytest.mark.parametrize(
+    "message", [b"\x00" + GET_INFO, GET_INFO, b"\x00" + _canonical_cbor_dumps(_EVERY_MEMBER)], ids=["real", "bare", "every"]
+)
+def test_the_encoder_rebuilds_a_decoded_get_info_from_its_view(message):
+    decoded = decode_payload_text(message.hex())["data"]
 
-    with pytest.raises(ValueError, match="getInfoResponse is not a CTAP message the encoder builds"):
-        encode_payload_text(json.dumps(decoded), "cbor")
+    assert encode_payload_text(json.dumps(decoded), "cbor")["data"]["binary"]["hex"] == message.hex()

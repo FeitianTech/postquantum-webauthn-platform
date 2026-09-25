@@ -63,8 +63,8 @@ def test_two_messages_in_ctap_decoded_are_refused():
 
 
 def test_a_message_the_encoder_does_not_build_is_refused():
-    with pytest.raises(ValueError, match="ctapDecoded.getInfoResponse is not a CTAP message the encoder builds"):
-        _encode({"ctapDecoded": {"getInfoResponse": {"1 (versions)": ["FIDO_2_0"]}}})
+    with pytest.raises(ValueError, match="ctapDecoded.clientPinResponse is not a CTAP message the encoder builds"):
+        _encode({"ctapDecoded": {"clientPinResponse": {"1 (keyAgreement)": {}}}})
 
 
 def test_two_keys_for_one_member_are_refused():

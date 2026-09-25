@@ -3,7 +3,8 @@
 CTAP 2.2 section 6 numbers the members of each command's parameters and each
 response with integer keys. A map the decoder reads as a makeCredential or
 getAssertion request or response may still hold a text, byte-string or other
-key; its view shows it, with its type, and this reports it where it is.
+key, and so may a getInfo response; its view shows it, with its type, and this
+reports it where it is.
 """
 from __future__ import annotations
 
@@ -17,6 +18,7 @@ _KINDS = {
     "get_assertion_input": "getAssertion request",
     "make_credential_output": "makeCredential response",
     "get_assertion_output": "getAssertion response",
+    "get_info_output": "getInfo response",
 }
 
 

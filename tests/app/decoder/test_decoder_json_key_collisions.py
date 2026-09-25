@@ -156,8 +156,9 @@ def test_a_collision_inside_authenticator_data_is_located_there():
 def test_get_info_keeps_a_byte_string_key_beside_its_text_twin():
     interpreted = get_info.interpret_get_info({1: ["FIDO_2_1"], 3: bytes(16), b"\x01": "bytes", "01": "text"})
 
-    assert interpreted["h'01' (bytes) (not a member: CTAP 2.2 numbers members with integer keys)"] == "bytes"
-    assert interpreted['"01" (text) (not a member: CTAP 2.2 numbers members with integer keys)'] == "text"
+    note = "not a member: CTAP 2.2 numbers members with integer keys"
+    assert interpreted["h'01' (bytes)"] == {"value": "bytes", "note": note}
+    assert interpreted['"01" (text)'] == {"value": "text", "note": note}
 
 
 def test_get_info_options_keep_colliding_option_keys():

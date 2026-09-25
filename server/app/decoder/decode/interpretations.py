@@ -20,6 +20,7 @@ from . import (
     ctap_conformance,
     edn_view,
     extensions,
+    get_info,
 )
 from .keys import MISSING, get_mapping_entry
 
@@ -40,7 +41,10 @@ def for_ctap(classification: str, value: Any, node: Mapping[str, Any], data: byt
         # CTAP members; one that did not read as one (its authData does not
         # parse) is still interpreted as what it is.
         return for_attestation_object(value, node, data)
-    if classification == "make_credential_input":
+    if classification == "get_info_output":
+        # Beside the view, which shows every member as sent.
+        extra["getInfoDecoded"] = get_info.interpret_get_info(value)
+    elif classification == "make_credential_input":
         _add(blocks, get_mapping_entry(value, 6), extensions.MAKE_CREDENTIAL_INPUT, "extensions (0x06)", "${6}")
     elif classification == "get_assertion_input":
         _add(blocks, get_mapping_entry(value, 4), extensions.GET_ASSERTION_INPUT, "extensions (0x04)", "${4}")
