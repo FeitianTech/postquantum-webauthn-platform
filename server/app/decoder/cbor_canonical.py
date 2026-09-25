@@ -1,4 +1,8 @@
-"""CTAP2-canonical CBOR serialization for encoder flows.
+"""CTAP2-canonical CBOR serialization: the one writer of CBOR from values.
+
+It sits beside ``cbor_head`` and ``ctap2_order`` rather than in ``encode/``, so
+that the decoder can reach it too without importing the encoder package, which
+imports the decoder's.
 
 CTAP2 sorts map keys by major type, then by the length of the encoded key, then
 bytewise (CTAP 2.2 section 8, "CTAP2 canonical CBOR encoding form"). That is
@@ -17,10 +21,10 @@ from typing import Any
 
 from cbor2 import CBORSimpleValue, CBORTag, undefined
 
-from .. import edn
-from ..cbor_head import encode_head
-from ..ctap2_order import ctap2_key_order
-from ..decode.cbor_parser import CborDiagnostic
+from . import edn
+from .cbor_head import encode_head
+from .ctap2_order import ctap2_key_order
+from .decode.cbor_parser import CborDiagnostic
 
 
 def _canonical_cbor_dumps(value: Any) -> bytes:

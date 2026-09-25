@@ -1,8 +1,7 @@
 """One CTAP2 map key order, read by the encoder and the canonical-form check."""
 from __future__ import annotations
 
-from server.app.decoder import ctap2_order
-from server.app.decoder.encode import cbor_canonical
+from server.app.decoder import cbor_canonical, ctap2_order
 
 
 def test_keys_sort_by_major_type_then_encoded_length_then_bytes():

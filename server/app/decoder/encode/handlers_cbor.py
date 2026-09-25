@@ -4,8 +4,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from ..cbor_canonical import _canonical_cbor_dumps, _canonicalize_cbor_structure
 from ..decode import _binary_summary, _hex_json_safe, _stringify_mapping_keys
-from .cbor_canonical import _canonical_cbor_dumps, _canonicalize_cbor_structure
 from .constants import _CTAP_FIELD_LABELS, _CTAP_PREFIX_DETAILS, _CTAP_REQUIRED_FIELDS
 from .cose_key import encode_cose_key
 from .ctap_encode import (

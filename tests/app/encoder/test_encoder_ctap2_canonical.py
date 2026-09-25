@@ -17,8 +17,7 @@ import cbor2
 import pytest
 
 from fido2 import cbor
-from server.app.decoder import encode_payload_text
-from server.app.decoder.encode import cbor_canonical
+from server.app.decoder import cbor_canonical, encode_payload_text
 
 
 def test_the_known_divergence_is_encoded_ctap2_canonically():
