@@ -2153,6 +2153,28 @@ come from Playwright's Chromium, which also reported no console problem at any w
 - Not run on GitHub yet (not pushed): `ci-web.yml`'s two jobs, the new `ci-security.yml` steps, `ci-docker.yml`'s
   `/beta` checks, and Cloud Build's `Web tests` step.
 
+**Phase 25 — tech-lead verification (2026-09-25):**
+- pytest 4742 / 4, root vitest 566, web vitest 99, ruff and typecheck clean.
+- **Every one of the 25 commits passes pytest, the root vitest and (where `web/` exists) web's vitest and
+  typecheck on its own, from a cleaned tree, and none leaves `instance/`.**
+- **Built independently from a clean `npm ci`** of `main`: the export scans clean with the project's scanner
+  and with the tech lead's (4 HTML files; no executing inline script, style attribute, `<style>`, `on*`
+  attribute, or asset from outside `/beta/`). Flask serves `/beta`, `/beta/` and `/beta/design` with
+  `no-cache` and the strict CSP, an unknown path with the export's 404, hashed assets `immutable` for a year and
+  gzipped; `/` is unchanged.
+- **Playwright 7/7** from the clean copy, including a real Simple-tab registration and authentication through
+  Chromium's virtual authenticator (register/begin, complete, authenticate/begin, complete: all 200).
+- **The owner's design rules, measured in the browser:** zero grey backgrounds across the design page (every
+  component in every state); a text field focused by a real click and then not hovered looks exactly as
+  unfocused (no outline, no shadow, same border; the darker hairline seen first was hover); a link reached by
+  Tab shows a 2 px accent ring; the top-bar highlight slides (29 distinct positions over 63 frames, 0.28 s on
+  the charter's curve) and the hash follows (`#codec`); no horizontal scroll at 375 px, and `#advanced` deep
+  links.
+- **Analyze Browser parity, text for text:** every line the legacy panel shows appears in the new one; the one
+  line only the legacy DOM holds is the iOS/iPadOS WebKit note, hidden there too off Apple devices, mapped
+  (AB-I5) and unit-tested.
+- The agent left an untracked `.claude/launch.json` (its own scratch config); removed.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
