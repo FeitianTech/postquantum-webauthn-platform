@@ -324,5 +324,7 @@ def test_the_codec_endpoint_returns_findings_and_the_decode_mode(client):
 def test_canonical_input_has_no_findings():
     result = _decode(cbor.encode({1: "packed", 2: b"\x01", 3: {"alg": -7, "sig": b"\x02"}}).hex())
 
-    assert result["findings"] == []
+    # Only which reading was taken (a makeCredential response, sent with no status
+    # byte): nothing about its form.
+    assert [finding for finding in result["findings"] if finding["category"] != "input"] == []
     assert result["malformed"] == []

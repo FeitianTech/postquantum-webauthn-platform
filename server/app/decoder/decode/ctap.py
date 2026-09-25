@@ -8,6 +8,7 @@ from .. import ctap_tables
 from . import (
     canonical,
     cbor_parser,
+    ctap_classify,
     get_info,
     interpretations,
     key_collisions,
@@ -377,6 +378,7 @@ def _try_decode_cbor(data: bytes, encoding: str, *, lenient: bool = False) -> di
 
     extra, located = interpretations.for_ctap(classification, base_value, node, data)
     findings = canonical.check(node, data) + key_collisions.check(node) + skipped + _trailing_findings(data, end) + located + prefix_not_read(data)
+    findings += ctap_classify.shape_findings(base_value, ctap_details, classification)
 
     if ctap_details is not None:
         decoded_payload["ctap"] = _framing(ctap_details, end - start, data[end:])

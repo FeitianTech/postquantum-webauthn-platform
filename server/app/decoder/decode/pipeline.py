@@ -18,6 +18,7 @@ from ...encoding import (
     encode_base64,
     sniff,
     try_decode_base64,
+    try_decode_base64url,
 )
 from ...webauthn.attestation import (
     colon_hex,
@@ -48,7 +49,12 @@ _PEM_CERT_PATTERN = re.compile(
 
 def _decode_json_object(value: Any, raw_text: str | None = None, *, lenient: bool = False) -> dict[str, Any]:
     if isinstance(value, Mapping) and _is_public_key_credential(value):
-        return _decode_public_key_credential(value, raw_text=raw_text, lenient=lenient)
+        result = _decode_public_key_credential(value, raw_text=raw_text, lenient=lenient)
+        if _is_client_data_dict(value):
+            # Its members make client data too; a response member makes it a credential first.
+            also = ambiguous_input.finding("a PublicKeyCredential", "client data")
+            ctap._attach_findings(result, [also, *(result.get("findings") or [])])
+        return result
 
     if isinstance(value, Mapping) and _is_client_data_dict(value):
         details = _build_client_data_details(value, raw_text=raw_text)
@@ -431,11 +437,12 @@ def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:
     if ambiguity is not None and ambiguity["readAs"] == "hex":
         parsed_json, json_findings = json_input.NOT_JSON, []
     if parsed_json is not json_input.NOT_JSON:
-        result = _decode_json_object(parsed_json, raw_text=trimmed, lenient=lenient)
+        result, taken = _decode_json_object(parsed_json, raw_text=trimmed, lenient=lenient), "json"
     elif _looks_like_pem(trimmed):
-        result = _decode_pem_certificates(trimmed)
+        result, taken = _decode_pem_certificates(trimmed), "pem"
     else:
         data, encoding = _decode_binary_input(trimmed)
+        taken = "hex" if encoding == "hex" else "base64"
         try:
             result = _decode_binary_payload(data, encoding, lenient=lenient)
         except ValueError as exc:
@@ -444,12 +451,35 @@ def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:
                 raise
             raise _ReadAsBase64Error(exc, digits) from exc
 
-    noted = ([ambiguity] if ambiguity is not None else []) + json_findings
+    noted = ([ambiguity] if ambiguity is not None else []) + _other_text_readings(trimmed, taken) + json_findings
     if noted:
         ctap._attach_findings(result, [*noted, *(result.get("findings") or [])])
     # JSON is read leniently too, not only CBOR: the answer says how it was read.
     result.setdefault("decodeMode", "lenient" if lenient else "strict")
     return response._prepare_decoder_response(result)
+
+
+def _other_text_readings(text: str, taken: str) -> list[dict[str, Any]]:
+    """The later text readings that read ``text`` whole: PEM inside JSON, and base64 some reading reads whole.
+
+    The text's order is JSON, PEM, hexadecimal, base64; JSON digits that are also
+    hexadecimal have ``ambiguous_input.check``'s finding.
+    """
+
+    found: list[dict[str, Any]] = []
+    if taken == "json" and _looks_like_pem(text):
+        try:
+            _decode_pem_certificates(text)
+        except ValueError:
+            pass
+        else:
+            found.append(ambiguous_input.finding("json", "pem"))
+    if taken != "base64":
+        data = try_decode_base64url(text) or try_decode_base64(text)
+        whole = readings.reads_whole(data) if data else []
+        if whole:
+            found.append(ambiguous_input.finding(taken, "base64", f" ({len(data)} bytes, read whole as {whole[0]})"))
+    return found
 
 
 def _describe_client_data_from_bytes(data: bytes, *, lenient: bool = False) -> dict[str, Any]:

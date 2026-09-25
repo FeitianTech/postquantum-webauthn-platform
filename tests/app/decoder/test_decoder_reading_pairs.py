@@ -21,35 +21,56 @@ _CREDENTIAL_AND_CLIENT_DATA = json.dumps(
     {"type": "webauthn.get", "challenge": "AAAA", "origin": "https://x", "id": "x", "response": {"signature": "AAAA"}}
 )
 
+_LONE = "a CTAP command or status byte"
+_MESSAGE = "a CTAP command or status byte and one CBOR item"
+_BARE = "a makeCredential response with no CTAP command or status byte"
+
 PAIRS = [
-    # (name, input, type read as today)
-    ("a lone CTAP byte, or the CBOR integer 5", "05", "CBOR (TIMEOUT status)"),
-    ("a lone CTAP byte, or the CBOR integer -18, or the JSON text 1", "31", "CBOR (PIN_INVALID status)"),
-    ("CREDENTIAL_MGMT_PRE and 0, or the byte string h'00'", "4100", "CBOR (CREDENTIAL_MGMT_PRE command)"),
-    ("the JSON text 85, or the CBOR integer -54", "3835", "JSON"),
-    ("CREDENTIAL_MGMT and -18, or the JSON text 1 after a newline", "0a31", "JSON"),
-    ("one CBOR item, or authenticator data", "9823" + "01" * 35, "Authenticator data"),
-    ("a getInfo response, or authenticator data", _GET_INFO_37.hex(), "Authenticator data"),
-    ("JSON text, or authenticator data", _JSON_37.hex(), "JSON"),
-    ("a makeCredential response or a getAssertion request, with no CTAP byte", _BARE_MAP, "CBOR (MakeCredential response)"),
-    ("a PublicKeyCredential, or client data", _CREDENTIAL_AND_CLIENT_DATA, "PublicKeyCredential"),
-    ("hexadecimal (ea e0), or base64 (the text item \"4\")", "eAE0", "CBOR"),
+    # (name, input, type read as, reading taken, the others named)
+    ("a lone CTAP byte, or the CBOR integer 5", "05", "CBOR (TIMEOUT status)", _LONE, ["one CBOR item"]),
+    (
+        "a lone CTAP byte, or the CBOR integer -18, or the JSON text 1",
+        "31",
+        "CBOR (PIN_INVALID status)",
+        _LONE,
+        ["JSON text", "one CBOR item"],
+    ),
+    ("CREDENTIAL_MGMT_PRE and 0, or the byte string h'00'", "4100", "CBOR (CREDENTIAL_MGMT_PRE command)", _MESSAGE,
+     ["one CBOR item"]),
+    ("the JSON text 85, or the CBOR integer -54", "3835", "JSON", "JSON text", ["one CBOR item"]),
+    ("CREDENTIAL_MGMT and -18, or the JSON text 1 after a newline", "0a31", "JSON", "JSON text", [_MESSAGE]),
+    ("one CBOR item, or authenticator data", "9823" + "01" * 35, "Authenticator data", "authenticator data",
+     ["one CBOR item"]),
+    ("a getInfo response, or authenticator data", _GET_INFO_37.hex(), "Authenticator data", "authenticator data",
+     [_MESSAGE]),
+    ("JSON text, or authenticator data", _JSON_37.hex(), "JSON", "JSON text", ["authenticator data"]),
+    ("a makeCredential response or a getAssertion request, with no CTAP byte", _BARE_MAP,
+     "CBOR (MakeCredential response)", _BARE, ["a getAssertion request", "a CBOR map that is no CTAP message"]),
+    ("a PublicKeyCredential, or client data", _CREDENTIAL_AND_CLIENT_DATA, "PublicKeyCredential",
+     "a PublicKeyCredential", ["client data"]),
+    ("hexadecimal (ea e0), or base64 (the text item \"4\")", "eAE0", "CBOR", "hex", ["base64"]),
 ]
 
 
-def _named_alternatives(result: dict) -> list[str]:
-    """What the ambiguous-input findings name besides the text's JSON-number or hexadecimal reading."""
+def _named(result: dict) -> list[tuple[str, str]]:
+    """What the ambiguous-input findings name, besides the text's JSON-number or hexadecimal reading."""
 
     return [
-        finding["alsoValidAs"]
+        (finding["readAs"], finding["alsoValidAs"])
         for finding in result["findings"]
-        if finding["code"] == "ambiguous-input" and finding["alsoValidAs"] not in ("json", "hex")
+        if finding["code"] == "ambiguous-input" and {finding["readAs"], finding["alsoValidAs"]} != {"hex", "json"}
     ]
 
 
-@pytest.mark.parametrize(("name", "text", "read_as"), PAIRS, ids=[name for name, _text, _read in PAIRS])
-def test_each_pair_is_read_one_way_and_the_other_reading_is_not_named(name, text, read_as):
+@pytest.mark.parametrize(
+    ("name", "text", "read_as", "taken", "others"), PAIRS, ids=[row[0] for row in PAIRS]
+)
+def test_each_pair_is_read_one_way_and_every_other_reading_is_named(name, text, read_as, taken, others):
     result = decode_payload_text(text)
 
     assert result["type"] == read_as
-    assert _named_alternatives(result) == []
+    assert _named(result) == [(taken, other) for other in others]
+    for finding in result["findings"]:
+        if finding["code"] == "ambiguous-input" and finding["alsoValidAs"] in others:
+            assert finding["message"].startswith(f"the input is also {finding['alsoValidAs']}")
+            assert finding["message"].endswith("which comes first in the decoder's order of readings (decode/ambiguous_input.py)")
