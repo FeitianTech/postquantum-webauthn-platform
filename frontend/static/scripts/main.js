@@ -70,9 +70,14 @@ import {
     closeRegistrationDetailModal,
     deleteCredential,
     clearAllCredentials,
-    updateAllowCredentialsDropdown
+    updateAllowCredentialsDropdown,
+    setMdsNavigation
 } from './advanced/credentials/index.js';
-import './advanced/mds/index.js';
+import {
+    finaliseHighlightedAuthenticatorRow,
+    highlightAuthenticatorRowByAaguid,
+    resolveEntryByAaguid
+} from './advanced/mds/index.js';
 import { registerHintsChangeCallback } from './advanced/auth/hints.js';
 import { handleJsonEditorKeydown } from './advanced/editor/utils.js';
 import {
@@ -92,6 +97,13 @@ import {
 } from './shared/utils/loader.js';
 
 registerHintsChangeCallback(() => updateAllowCredentialsDropdown());
+
+setMdsNavigation({
+    switchTab,
+    highlightRow: highlightAuthenticatorRowByAaguid,
+    resolveEntry: resolveEntryByAaguid,
+    finaliseHighlight: finaliseHighlightedAuthenticatorRow,
+});
 
 initializeAnalyzeBrowser();
 

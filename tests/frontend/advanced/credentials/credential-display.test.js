@@ -201,6 +201,7 @@ import {
   navigateToMdsAuthenticator,
   queueAuthenticatedCredentialFlash,
   queueFailedCredentialFlash,
+  setMdsNavigation,
   showCredentialDetails,
   showRegistrationResultModal,
   updateAllowCredentialsDropdown,
@@ -248,15 +249,20 @@ function decodeResponse(payload) {
 }
 
 describe('credential-display', () => {
+  let mds;
+
   beforeEach(() => {
     vi.clearAllMocks();
     buildDom();
 
     state.storedCredentials = [];
-    window.switchTab = vi.fn();
-    window.highlightMdsAuthenticatorRow = vi.fn(() => ({ highlighted: true, entry: { aaguid: '00112233445566778899aabbccddeeff' } }));
-    window.finaliseMdsAuthenticatorHighlight = vi.fn(() => true);
-    window.resolveMdsEntryByAaguid = vi.fn().mockResolvedValue({ aaguid: '00112233445566778899aabbccddeeff' });
+    mds = {
+      switchTab: vi.fn(),
+      highlightRow: vi.fn(() => ({ highlighted: true, entry: { aaguid: '00112233445566778899aabbccddeeff' } })),
+      finaliseHighlight: vi.fn(() => true),
+      resolveEntry: vi.fn().mockResolvedValue({ aaguid: '00112233445566778899aabbccddeeff' }),
+    };
+    setMdsNavigation(mds);
 
     globalThis.fetch = vi.fn().mockResolvedValue(
       decodeResponse({
@@ -472,7 +478,7 @@ describe('credential-display', () => {
     expect(mdsButton).not.toBeNull();
 
     // Force navigateToMdsAuthenticator() to return undefined from missing integration.
-    delete window.highlightMdsAuthenticatorRow;
+    setMdsNavigation({ ...mds, highlightRow: null });
 
     mdsButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -539,11 +545,11 @@ describe('credential-display', () => {
     `;
 
     const success = await navigateToMdsAuthenticator('00112233-4455-6677-8899-aabbccddeeff');
-    expect(window.switchTab).toHaveBeenCalledWith('mds', { preserveMessages: true });
+    expect(mds.switchTab).toHaveBeenCalledWith('mds', { preserveMessages: true });
     expect(success).toEqual(expect.objectContaining({ highlighted: true }));
     expect(closeModal).toHaveBeenCalledWith('credentialModal');
 
-    window.resolveMdsEntryByAaguid.mockResolvedValueOnce(null);
+    mds.resolveEntry.mockResolvedValueOnce(null);
     const missing = await navigateToMdsAuthenticator('00112233-4455-6677-8899-aabbccddeeff');
     expect(missing).toEqual({ highlighted: false, entry: null });
   });
@@ -786,15 +792,22 @@ describe('credential-display', () => {
       </div>
     `;
 
-    delete window.highlightMdsAuthenticatorRow;
+    setMdsNavigation({ ...mds, highlightRow: null });
     const unavailable = navigateToMdsAuthenticator('00112233-4455-6677-8899-aabbccddeeff');
     expect(unavailable).toBeUndefined();
 
-    window.highlightMdsAuthenticatorRow = vi.fn()
-      .mockResolvedValueOnce({ highlighted: true, entry: { aaguid: '00112233445566778899aabbccddeeff' } })
-      .mockResolvedValueOnce({ highlighted: false, entry: { aaguid: '00112233445566778899aabbccddeeff' } });
-    window.finaliseMdsAuthenticatorHighlight = vi.fn(() => false);
-    window.resolveMdsEntryByAaguid = vi.fn().mockResolvedValue({ aaguid: '00112233445566778899aabbccddeeff' });
+    setMdsNavigation(null);
+    expect(navigateToMdsAuthenticator('00112233-4455-6677-8899-aabbccddeeff')).toBeUndefined();
+    expect(mds.switchTab).not.toHaveBeenCalled();
+
+    setMdsNavigation({
+      ...mds,
+      highlightRow: vi.fn()
+        .mockResolvedValueOnce({ highlighted: true, entry: { aaguid: '00112233445566778899aabbccddeeff' } })
+        .mockResolvedValueOnce({ highlighted: false, entry: { aaguid: '00112233445566778899aabbccddeeff' } }),
+      finaliseHighlight: vi.fn(() => false),
+      resolveEntry: vi.fn().mockResolvedValue({ aaguid: '00112233445566778899aabbccddeeff' }),
+    });
 
     const result = await navigateToMdsAuthenticator('00112233-4455-6677-8899-aabbccddeeff');
     expect(result).toEqual(

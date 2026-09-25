@@ -7,7 +7,8 @@ vi.mock('../../../../frontend/static/scripts/shared/utils/loader.js', () => ({
   loaderSetProgress: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/ui/core.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/ui/core.js', async (importOriginal) => ({
+  updateGlobalScrollLock: (await importOriginal()).updateGlobalScrollLock,
   initializeStickyHeaderForElement: vi.fn(() => {
     const miniHeader = document.createElement('div');
     const miniInner = document.createElement('div');
@@ -379,13 +380,13 @@ describe('mds explorer', () => {
     await new Promise((resolve) => setTimeout(resolve, 550));
     expect(document.getElementById('mds-certificate-page').hidden).toBe(true);
 
-    const highlighted = await window.highlightMdsAuthenticatorRow('00112233-4455-6677-8899-aabbccddeeff', {
+    const highlighted = await module.highlightAuthenticatorRowByAaguid('00112233-4455-6677-8899-aabbccddeeff', {
       waitForVisibility: false,
       scrollBehavior: 'auto',
     });
     expect(highlighted.highlighted).toBe(true);
 
-    const resolved = await window.resolveMdsEntryByAaguid('00112233-4455-6677-8899-aabbccddeeff');
+    const resolved = await module.resolveEntryByAaguid('00112233-4455-6677-8899-aabbccddeeff');
     expect(resolved?.name).toBe('Alpha Key');
 
     const loaded = await module.waitForMetadataLoad();
@@ -698,20 +699,11 @@ describe('mds explorer', () => {
     expect(rawTextarea).not.toBeNull();
     expect(rawTextarea.value).toContain('metadataStatement');
 
-    const highlighted = await window.highlightMdsAuthenticatorRow('00112233-4455-6677-8899-aabbccddeeff', {
+    const highlighted = await module.highlightAuthenticatorRowByAaguid('00112233-4455-6677-8899-aabbccddeeff', {
       waitForVisibility: false,
       scrollBehavior: 'auto',
     });
     expect(highlighted.highlighted).toBe(true);
-
-    const focused = await window.focusMdsAuthenticator('00112233-4455-6677-8899-aabbccddeeff');
-    expect(focused?.name).toBe('Resolved Alpha');
-
-    const opened = await window.openMdsAuthenticatorModal('00112233-4455-6677-8899-aabbccddeeff');
-    expect(opened?.name).toBe('Resolved Alpha');
-
-    const loadState = window.getMdsLoadState();
-    expect(loadState).toEqual(expect.objectContaining({ hasLoaded: true }));
 
     const loaded = await module.waitForMetadataLoad();
     expect(loaded).toBe(true);
@@ -888,7 +880,7 @@ describe('mds explorer', () => {
   });
 
   it('supports sorting on every table column and finalizing deferred row highlight', async () => {
-    await import('../../../../frontend/static/scripts/advanced/mds/index.js');
+    const module = await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1200);
 
@@ -900,14 +892,14 @@ describe('mds explorer', () => {
       expect(button.getAttribute('data-sort-direction')).not.toBe('none');
     });
 
-    const highlighted = await window.highlightMdsAuthenticatorRow('00112233-4455-6677-8899-aabbccddeeff', {
+    const highlighted = await module.highlightAuthenticatorRowByAaguid('00112233-4455-6677-8899-aabbccddeeff', {
       deferScroll: true,
       waitForVisibility: true,
       focusRow: false,
     });
     expect(highlighted.highlighted).toBe(true);
 
-    const finalized = window.finaliseMdsAuthenticatorHighlight({ behavior: 'auto', focus: false });
+    const finalized = module.finaliseHighlightedAuthenticatorRow({ behavior: 'auto', focus: false });
     expect(finalized).toBe(true);
     expect(document.querySelector('tr.mds-row--highlight')).not.toBeNull();
   });

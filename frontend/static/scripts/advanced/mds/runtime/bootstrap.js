@@ -36,13 +36,6 @@ export function bootstrapMds(deps = {}) {
         getInitialSnapshotPayload,
         applyExplorerSnapshot,
         loadMdsData,
-        openAuthenticatorModalByAaguid,
-        focusAuthenticatorByAaguid,
-        highlightAuthenticatorRowByAaguid,
-        finaliseHighlightedAuthenticatorRow,
-        waitForMetadataLoad,
-        getMdsLoadStateSnapshot,
-        resolveEntryByAaguid,
     } = deps;
 
     if (typeof window !== 'undefined') {
@@ -131,14 +124,4 @@ export function bootstrapMds(deps = {}) {
             void loadMdsData();
         }
     });
-
-    if (typeof window !== 'undefined') {
-        window.openMdsAuthenticatorModal = openAuthenticatorModalByAaguid;
-        window.focusMdsAuthenticator = focusAuthenticatorByAaguid;
-        window.highlightMdsAuthenticatorRow = highlightAuthenticatorRowByAaguid;
-        window.finaliseMdsAuthenticatorHighlight = finaliseHighlightedAuthenticatorRow;
-        window.waitForMdsLoad = waitForMetadataLoad;
-        window.getMdsLoadState = getMdsLoadStateSnapshot;
-        window.resolveMdsEntryByAaguid = resolveEntryByAaguid;
-    }
 }

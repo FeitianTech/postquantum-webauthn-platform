@@ -7,7 +7,8 @@ vi.mock('../../../../frontend/static/scripts/shared/utils/loader.js', () => ({
   loaderSetProgress: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/ui/core.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/ui/core.js', async (importOriginal) => ({
+  updateGlobalScrollLock: (await importOriginal()).updateGlobalScrollLock,
   initializeStickyHeaderForElement: vi.fn(() => {
     const miniHeader = document.createElement('div');
     const miniInner = document.createElement('div');
@@ -319,17 +320,17 @@ describe('mds edge cases', () => {
 
     globalThis.fetch = vi.fn(() => Promise.resolve(jsonResponse({ items: [] })));
 
-    await import('../../../../frontend/static/scripts/advanced/mds/index.js');
+    const module = await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 1, 1200);
 
-    const missing = await window.highlightMdsAuthenticatorRow('00000000-0000-0000-0000-000000000000', {
+    const missing = await module.highlightAuthenticatorRowByAaguid('00000000-0000-0000-0000-000000000000', {
       waitForVisibility: false,
       scrollBehavior: 'auto',
     });
     expect(missing).toEqual(expect.objectContaining({ highlighted: false, entry: null }));
 
-    const highlighted = await window.highlightMdsAuthenticatorRow('00112233-4455-6677-8899-aabbccddeeff', {
+    const highlighted = await module.highlightAuthenticatorRowByAaguid('00112233-4455-6677-8899-aabbccddeeff', {
       waitForVisibility: false,
       scrollBehavior: 'auto',
     });

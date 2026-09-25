@@ -105,6 +105,7 @@ import {
   clearAllCredentials,
   deleteCredential,
   navigateToMdsAuthenticator,
+  setMdsNavigation,
   showCredentialDetails,
   showRegistrationResultModal,
 } from '../../../../frontend/static/scripts/advanced/credentials/index.js';
@@ -132,6 +133,8 @@ function buildDom() {
 }
 
 describe('credential-display edge cases', () => {
+  let mds;
+
   beforeEach(() => {
     vi.clearAllMocks();
     buildDom();
@@ -144,10 +147,13 @@ describe('credential-display edge cases', () => {
       text: vi.fn().mockResolvedValue('{}'),
     });
 
-    window.switchTab = vi.fn();
-    window.highlightMdsAuthenticatorRow = vi.fn(() => ({ highlighted: true, entry: { aaguid: '00112233445566778899aabbccddeeff' } }));
-    window.resolveMdsEntryByAaguid = vi.fn().mockResolvedValue({ aaguid: '00112233445566778899aabbccddeeff' });
-    window.finaliseMdsAuthenticatorHighlight = vi.fn(() => true);
+    mds = {
+      switchTab: vi.fn(),
+      highlightRow: vi.fn(() => ({ highlighted: true, entry: { aaguid: '00112233445566778899aabbccddeeff' } })),
+      resolveEntry: vi.fn().mockResolvedValue({ aaguid: '00112233445566778899aabbccddeeff' }),
+      finaliseHighlight: vi.fn(() => true),
+    };
+    setMdsNavigation(mds);
   });
 
   it('reports shared error status when simple or advanced deletion fails', async () => {
@@ -221,7 +227,7 @@ describe('credential-display edge cases', () => {
       </div>
     `;
 
-    window.resolveMdsEntryByAaguid = vi.fn().mockResolvedValueOnce(null);
+    setMdsNavigation({ ...mds, resolveEntry: vi.fn().mockResolvedValueOnce(null) });
 
     const missingResult = await navigateToMdsAuthenticator('00112233-4455-6677-8899-aabbccddeeff');
     expect(missingResult).toEqual({ highlighted: false, entry: null });
@@ -239,8 +245,11 @@ describe('credential-display edge cases', () => {
       </div>
     `;
 
-    window.switchTab = vi.fn(() => {
-      throw new Error('tab-switch-failed');
+    setMdsNavigation({
+      ...mds,
+      switchTab: vi.fn(() => {
+        throw new Error('tab-switch-failed');
+      }),
     });
 
     const result = await navigateToMdsAuthenticator('00112233-4455-6677-8899-aabbccddeeff');
