@@ -6,7 +6,14 @@ import {
   base64UrlToBytes,
   bytesToBase64,
   bytesToBase64Url,
+  forgivingBase64ToBytes,
 } from '../../../../frontend/static/scripts/shared/utils/base64.js';
+import {
+  base64ToHex,
+  base64ToUint8Array,
+  base64UrlToHex,
+  base64UrlToUint8Array,
+} from '../../../../frontend/static/scripts/shared/utils/binary.js';
 
 const text = (value) => Uint8Array.from(value, (character) => character.charCodeAt(0));
 
@@ -73,5 +80,37 @@ describe('strict base64 and base64url', () => {
       expect(error.name).toBe('Base64Error');
       expect(error.message).toBe('base64url has "*" at position 4, outside its alphabet');
     }
+  });
+});
+
+describe('forgiving base64, for text a person typed', () => {
+  it.each([
+    ['padded standard', 'Zm9vYg==', 'foob'],
+    ['unpadded standard', 'Zm9vYg', 'foob'],
+    ['base64url', '-_8', 'ûÿ'],
+    ['whitespace inside', 'Zm9v\n Yg==', 'foob'],
+    ['stray bits in the last character', 'Zh', 'f'],
+  ])('reads %s as atob did', (_label, value, expected) => {
+    expect(String.fromCharCode(...forgivingBase64ToBytes(value))).toBe(expected);
+  });
+
+  it.each([
+    ['a length no bytes have', 'Zm9vY'],
+    ['a character from neither alphabet', 'Zm9v*g'],
+  ])('still refuses %s', (_label, value) => {
+    expect(() => forgivingBase64ToBytes(value)).toThrow(Base64Error);
+  });
+});
+
+describe('binary.js decoders built on it', () => {
+  it('reads either alphabet as base64url, and only the standard one as base64', () => {
+    expect(base64UrlToHex('-_8')).toBe('fbff');
+    expect(base64UrlToHex('+/8=')).toBe('fbff');
+    expect(base64ToHex('+/8=')).toBe('fbff');
+    expect(() => base64ToHex('-_8')).toThrow(Base64Error);
+    expect(() => base64ToUint8Array('-_8')).toThrow(Base64Error);
+    expect(Array.from(base64UrlToUint8Array('-_8'))).toEqual([0xfb, 0xff]);
+    expect(base64ToHex('')).toBe('');
+    expect(base64UrlToUint8Array('')).toBeNull();
   });
 });
