@@ -60,25 +60,28 @@ def test_parse_authenticator_data_bytes_parses_attested_and_extension_sections_w
     assert trimmed == payload[: len(payload) - len(trailer)]
 
 
-def test_build_get_assertion_expanded_json_reports_bytes_after_auth_data_without_reading_them_as_members():
-    # Bytes after the end authData's flags describe are reported as they are.
-    # They are not read as the response's signature, user or other members.
-    decode_module = pytest.importorskip("server.app.decoder.decode")
+def _view(message: str, value: dict) -> dict:
+    """The decoder's view of ``value``, a ``message``, built from its parsed nodes."""
 
+    from server.app.decoder.decode import cbor_parser, ctap_views
+
+    return ctap_views.view(message, cbor_parser.decode_item(cbor2.dumps(value))[0])
+
+
+def test_bytes_after_auth_data_are_reported_not_read_as_members_and_nothing_is_added():
+    # Bytes after the end authData's flags describe are reported as they are.
+    # They are not read as the response's signature, user or other members, and
+    # no member the map did not hold is shown, not even as null.
     pairs = [(3, b"\xAA"), (4, {1: b"\x01", 2: "user@example.com", 3: "User"}), (5, 2)]
     auth_data = _auth_data_with_trailing_pairs(pairs)
-    tail = auth_data[37:]
 
-    result = decode_module._build_get_assertion_expanded_json({2: auth_data})
+    result = _view("getAssertionResponse", {2: auth_data})
 
-    assert result["3 (signature)"] is None
-    assert result["2 (authData)"]["trailingBytesHex"] == tail.hex()
-    assert set(result) == {"2 (authData)", "3 (signature)"}
+    assert result["2 (authData)"]["trailingBytesHex"] == auth_data[37:].hex()
+    assert set(result) == {"2 (authData)"}
 
 
-def test_interpret_get_assertion_map_leaves_signature_missing_when_only_auth_data_trailing_bytes_hold_one():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
+def test_a_get_assertion_view_shows_only_what_the_map_held():
     auth_data = _auth_data_with_trailing_pairs(
         [
             (3, b"\x11\x22"),
@@ -87,51 +90,46 @@ def test_interpret_get_assertion_map_leaves_signature_missing_when_only_auth_dat
             (10, b"\xCC"),
         ]
     )
-    value = {
-        1: {2: "public-key", 1: b"\x10"},
-        2: auth_data,
-        7: b"\x0A",
-    }
 
-    interpreted = decode_module._interpret_get_assertion_map(value)
+    shown = _view("getAssertionResponse", {1: {2: "public-key", 1: b"\x10"}, 2: auth_data, 7: b"\x0A"})
 
-    assert interpreted is not None
-    assert interpreted["3 (signature)"] is None
-    assert interpreted["7 (largeBlobKey)"] == "0a"
-    assert interpreted["2 (authData)"]["trailingBytesHex"] == auth_data[37:].hex()
-    for recovered in ("4 (user)", "8 (unsignedExtensionOutputs)", "trailingFields"):
-        assert recovered not in interpreted
+    assert set(shown) == {"1 (credential)", "2 (authData)", "7 (largeBlobKey)"}
+    assert shown["1 (credential)"] == {"2": "public-key", "1": "10"}
+    assert shown["7 (largeBlobKey)"] == "0a"
+    assert shown["2 (authData)"]["trailingBytesHex"] == auth_data[37:].hex()
 
 
-def test_interpret_make_credential_map_handles_attstmt_optional_fields_and_extras():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
+def test_a_make_credential_view_shows_every_member_as_sent_and_each_certificate_with_its_bytes():
     auth_data = _auth_data_with_trailing_pairs([(7, b"\x99")])
-    value = {
-        1: "packed",
-        2: auth_data,
-        3: {"alg": -7, "sig": b"\x01\x02", "x5c": [_GSR2_DER]},
-        4: b"\x05",
-        5: b"\x06",
-        6: {"example": b"\x07"},
-        99: b"\x08",
-    }
 
-    interpreted = decode_module._interpret_make_credential_map(value)
+    shown = _view(
+        "makeCredentialResponse",
+        {
+            1: "packed",
+            2: auth_data,
+            3: {"alg": -7, "sig": b"\x01\x02", "x5c": [_GSR2_DER]},
+            4: b"\x05",
+            5: b"\x06",
+            6: {"example": b"\x07"},
+            99: b"\x08",
+        },
+    )
 
-    assert interpreted is not None
-    assert interpreted["1 (fmt)"] == "packed"
-    assert interpreted["3 (attStmt)"]["sig"] == "0102"
-    assert interpreted["4 (epAtt)"] == "05"
-    assert interpreted["5 (largeBlobKey)"] == "06"
-    assert interpreted["6 (unsignedExtensionOutputs)"]["example"] == "07"
-    assert interpreted["99"] == "08"
-    assert "2 (authData trailing)" not in interpreted
-    assert interpreted["2 (authData)"]["trailingBytesHex"] == auth_data[37:].hex()
+    assert shown["1 (fmt)"] == "packed"
+    assert shown["3 (attStmt)"]["sig"] == "0102"
+    assert shown["3 (attStmt)"]["alg"] == -7
+    (certificate,) = shown["3 (attStmt)"]["x5c"]
+    assert certificate["raw"] == _GSR2_DER.hex()
+    assert "parsedX5c" in certificate
+    assert shown["4 (epAtt)"] == "05"
+    assert shown["5 (largeBlobKey)"] == "06"
+    assert shown["6 (unsignedExtensionOutputs)"] == {"example": "07"}
+    assert shown["99"] == "08"
+    assert shown["2 (authData)"]["trailingBytesHex"] == auth_data[37:].hex()
 
 
-def test_interpret_ctap_cbor_value_prefers_make_credential_request_classification():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
+def test_a_bare_map_of_a_make_credential_request_is_shown_as_one():
+    from server.app.decoder import decode_payload_text
 
     value = {
         1: b"\x11" * 32,
@@ -140,59 +138,42 @@ def test_interpret_ctap_cbor_value_prefers_make_credential_request_classificatio
         4: [{"type": "public-key", "alg": -7}],
     }
 
-    interpreted = decode_module._interpret_ctap_cbor_value(value)
+    mapped = decode_payload_text(cbor2.dumps(value).hex())["data"]["ctapDecoded"]["makeCredentialRequest"]
 
-    assert interpreted is not None
-    assert "makeCredentialRequest" in interpreted
-    mapped = interpreted["makeCredentialRequest"]
     assert mapped["1 (clientDataHash)"] == (b"\x11" * 32).hex()
     assert mapped["2 (rp)"]["id"] == "example.com"
 
 
-def test_convert_ctap_user_shows_a_non_map_user_as_it_was_sent():
+def test_a_user_that_is_no_map_is_shown_as_it_was_sent():
     # A user entity sent as a byte string or as text is not re-read as CBOR,
     # base64 or hex to turn it into a map.
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     encoded = cbor2.dumps({1: b"\xAA\xBB", 2: "alice"})
-    assert decode_module._convert_ctap_user(encoded) == encoded.hex()
+    request = {1: b"\x11" * 32, 2: {"id": "example.com"}, 4: [{"type": "public-key", "alg": -7}]}
 
+    assert _view("makeCredentialRequest", {**request, 3: encoded})["3 (user)"] == encoded.hex()
     encoded_text = base64.urlsafe_b64encode(encoded).decode("ascii").rstrip("=")
-    assert decode_module._convert_ctap_user(encoded_text) == encoded_text
+    assert _view("makeCredentialRequest", {**request, 3: encoded_text})["3 (user)"] == encoded_text
 
 
-def test_convert_ctap_user_keeps_byte_string_keys_distinct_from_text_keys():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
+def test_a_user_shows_each_member_with_its_type():
+    request = {1: b"\x11" * 32, 2: {"id": "example.com"}, 4: [{"type": "public-key", "alg": -7}]}
 
-    converted = decode_module._convert_ctap_user(
-        {"id": b"\xAA\xBB", "name": b"alice", "displayName": "Alice", b"role": "admin"}
-    )
+    user = _view(
+        "makeCredentialRequest",
+        {**request, 3: {"id": b"\xAA\xBB", "name": b"alice", "displayName": "Alice", b"role": "admin"}},
+    )["3 (user)"]
 
-    assert converted["id"] == "aabb"
-    assert converted["name"]["text"] == "alice"
-    assert converted["displayName"] == "Alice"
-    assert converted[b"role".hex()] == "admin"
-    assert "role" not in converted
+    # A name sent as bytes is shown as the bytes it is, never as text read from them.
+    assert user == {"id": "aabb", "name": "616c696365", "displayName": "Alice", "h'726f6c65' (bytes)": "admin"}
 
 
-def test_convert_ctap_credential_descriptor_supports_bytes_mapping_and_extra_keys():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
+def test_a_credential_descriptor_shows_every_member():
+    descriptor = _view(
+        "getAssertionRequest",
+        {1: "example.com", 2: b"\x22" * 32, 3: [{"id": b"\x01\x02", "type": "public-key", "transports": ["usb", "nfc"], 9: b"\x03"}]},
+    )["3 (allowList)"][0]
 
-    assert decode_module._convert_ctap_credential_descriptor(b"\xAB") == "ab"
-
-    descriptor = decode_module._convert_ctap_credential_descriptor(
-        {
-            "id": b"\x01\x02",
-            "type": "public-key",
-            "transports": ["usb", "nfc"],
-            9: b"\x03",
-        }
-    )
-
-    assert descriptor["id"] == "0102"
-    assert descriptor["type"] == "public-key"
-    assert descriptor["transports"] == ["usb", "nfc"]
-    assert descriptor["9"] == "03"
+    assert descriptor == {"id": "0102", "type": "public-key", "transports": ["usb", "nfc"], "9": "03"}
 
 
 def test_try_decode_cbor_interprets_prefixed_get_assertion_request_payload():

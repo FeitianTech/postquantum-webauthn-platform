@@ -77,25 +77,8 @@ def test_parse_authenticator_data_bytes_reads_extensions_and_reports_bytes_after
     assert trailing == b"\x99"
 
 
-def test_convert_ctap_user_attestation_entry_and_payload_helpers_cover_remaining_edges():
+def test_attestation_entry_and_payload_helpers_cover_remaining_edges():
     decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    assert decode_module._convert_ctap_user(b"\x80") == "80"
-    assert decode_module._convert_ctap_user("not-binary") == "not-binary"
-    assert decode_module._convert_ctap_user(123) == 123
-
-    converted_user = decode_module._convert_ctap_user(
-        {
-            "id": b"uid",
-            "name": "alice",
-            "displayName": "Alice",
-            "icon": b"\xff",
-            "extra": True,
-        }
-    )
-    assert converted_user["id"] == "756964"
-    assert "icon" in converted_user
-    assert converted_user["extra"] is True
 
     assert decode_module._convert_attestation_entry("not-mapping") == {}
 

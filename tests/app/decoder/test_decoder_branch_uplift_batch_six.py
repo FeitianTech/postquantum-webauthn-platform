@@ -2,49 +2,9 @@ from __future__ import annotations
 
 import hashlib
 
-import cbor2
 import pytest
 
 from fido2.webauthn import AuthenticatorData
-
-
-def test_build_labeled_ctap_map_resolves_handlers_and_missing_keys_across_all_paths():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    mapping = {
-        1: "alpha-value",
-        9: "int-handler-value",
-        3: "string-handler-value",
-    }
-    labels = {
-        1: "alpha",
-        9: "nine",
-        10: "ten",
-        12: "twelve",
-    }
-    handlers = {
-        "alpha": lambda value: f"label:{value}",
-        9: lambda value: f"int:{value}",
-        "3": lambda value: f"str:{value}",
-        "ten": lambda value: "missing-ten" if value is None else value,
-        11: lambda value: "missing-eleven" if value is None else value,
-    }
-
-    result = decode_module._build_labeled_ctap_map(
-        mapping,
-        labels,
-        handlers,
-        missing_keys=(10, 11, 12),
-    )
-
-    assert result["1 (alpha)"] == "label:alpha-value"
-    # Handlers are found by member name only, never by the raw key: not the
-    # integer 9's, and not the text "3"'s.
-    assert result["9 (nine)"] == "int-handler-value"
-    assert result["3"] == "string-handler-value"
-    assert result["10 (ten)"] == "missing-ten"
-    assert result["11"] is None
-    assert result["12 (twelve)"] is None
 
 
 def test_looks_like_get_assertion_request_rejects_signature_or_authdata_binary_shapes():
@@ -69,40 +29,6 @@ def test_looks_like_get_assertion_request_rejects_signature_or_authdata_binary_s
         )
         is False
     )
-
-
-def test_interpret_get_assertion_map_leaves_a_missing_signature_missing(monkeypatch, ctap):
-    # Bytes left over inside authData are not read as the response's missing
-    # members: the signature stays missing and nothing else is added.
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    # The tail is the CBOR of {3: h'736967', 5: 2, 9: "x"} without its map
-    # header: what the old repair read back as a signature and members.
-    tail = cbor2.dumps(3) + cbor2.dumps(b"sig") + cbor2.dumps(5) + cbor2.dumps(2) + cbor2.dumps(9) + cbor2.dumps("x")
-    monkeypatch.setattr(
-        ctap,
-        "_format_auth_data_for_expanded_json",
-        lambda _auth_data: ({"flags": {}}, tail),
-    )
-
-    interpreted = decode_module._interpret_get_assertion_map(
-        {
-            2: b"auth-data",
-            4: {"name": "front-user"},
-            99: "extra",
-        }
-    )
-
-    # The patch is what the interpreter read (it looks the helper up on ctap).
-    assert interpreted["2 (authData)"] == {"flags": {}}
-    assert interpreted["3 (signature)"] is None
-    assert interpreted["4 (user)"] == {"name": "front-user"}
-    assert interpreted["99"] == "extra"
-    assert "trailingFields" not in interpreted
-    assert "5 (numberOfCredentials)" not in interpreted
-
-    direct_signature = decode_module._interpret_get_assertion_map({2: b"auth", 3: b"sig"})
-    assert direct_signature["3 (signature)"] == b"sig".hex()
 
 
 def test_describe_authenticator_data_bytes_includes_extensions_summary_when_mapping_present():

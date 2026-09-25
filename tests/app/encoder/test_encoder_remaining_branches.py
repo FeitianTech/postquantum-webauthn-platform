@@ -57,13 +57,12 @@ def test_extract_binary_input_candidate_priority_string_and_sequence_paths():
         encode_module._extract_binary_input({"value": {"bad": True}}, "field")
 
 
-def test_encode_ctap_from_decoded_none_paths():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
+def test_a_ctap_view_names_one_message_the_encoder_builds():
+    from server.app.decoder.encode import ctap_views
 
-    assert encode_module._encode_ctap_from_decoded({}) == (None, None)
+    with pytest.raises(ValueError, match="ctapDecoded names no CTAP message"):
+        ctap_views.one_message({})
     with pytest.raises(ValueError, match="ctapDecoded.makeCredentialRequest must be an object"):
-        encode_module._encode_ctap_from_decoded({"makeCredentialRequest": "not-a-map"})
+        ctap_views.one_message({"makeCredentialRequest": "not-a-map"})
     with pytest.raises(ValueError, match="ctapDecoded holds 2 messages"):
-        encode_module._encode_ctap_from_decoded(
-            {"makeCredentialRequest": "not-a-map", "getAssertionRequest": "still-not-a-map"}
-        )
+        ctap_views.one_message({"makeCredentialRequest": "not-a-map", "getAssertionRequest": "still-not-a-map"})

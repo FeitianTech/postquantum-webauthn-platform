@@ -5,13 +5,12 @@ integer key and dropped the rest -- a text key, a byte-string key, a boolean
 key -- and dropped member 1 (credential) or 4 (user) when it was null, while
 the decoded value, which the view replaces, was not shown at all. A key that is
 not an integer is shown with its type in every makeCredential and getAssertion
-view, so that neither a reader nor the encoder takes the text "fmt" for member 1.
+view, so that neither a reader nor the encoder takes the text "fmt" for member 1;
+and the encoder writes back each of them, null or not, as the view shows it.
 """
 from __future__ import annotations
 
 import json
-
-import pytest
 
 from server.app.decoder import decode_payload_text, edn
 from server.app.decoder.encode import encode_payload_text
@@ -47,21 +46,21 @@ def test_a_request_view_shows_a_text_key_with_its_type():
     assert request == {"1 (rpId)": "example.com", "2 (clientDataHash)": "11" * 32, '"rpId" (text)': "other.example"}
 
 
-def test_a_view_with_a_null_member_is_refused_by_the_encoder_not_encoded_without_it():
+def test_a_view_with_a_null_member_encodes_back_to_the_null_it_holds():
     # The builders read null as absent: 00 a4 01 f6 ... came back as 00 a2 ... before.
     decoded = decode_payload_text(GET_ASSERTION_WITH_NULLS)["data"]
     view = {key: value for key, value in decoded["ctapDecoded"]["getAssertionResponse"].items() if key != '"note" (text)'}
 
-    with pytest.raises(ValueError, match=r"getAssertionResponse member 1 \(credential\) is null"):
-        encode_payload_text(json.dumps({"ctapDecoded": {"getAssertionResponse": view}, "ctap": decoded["ctap"]}), "cbor")
+    encoded = encode_payload_text(json.dumps({"ctapDecoded": {"getAssertionResponse": view}, "ctap": {"code": 0}}), "cbor")
+
+    assert encoded["data"]["binary"]["hex"] == "00" + edn.encode(f"{{1: null, 2: h'{AUTH_DATA}', 3: h'01020304', 4: null}}").hex()
 
 
-def test_a_view_with_a_non_integer_key_is_refused_by_the_encoder():
+def test_a_view_with_a_non_integer_key_encodes_back_to_its_bytes():
     decoded = decode_payload_text(GET_ASSERTION_WITH_NULLS)["data"]
 
-    with pytest.raises(ValueError, match=r"""key '"note" \(text\)' is a text key, not a CTAP member"""):
-        encode_payload_text(json.dumps(decoded), "cbor")
-    # Its EDN rebuilds it exactly.
+    assert encode_payload_text(json.dumps(decoded), "cbor")["data"]["binary"]["hex"] == GET_ASSERTION_WITH_NULLS
+    # So does its EDN.
     assert "00" + encode_payload_text(decoded["edn"], "EDN")["data"]["binary"]["hex"] == GET_ASSERTION_WITH_NULLS
 
 

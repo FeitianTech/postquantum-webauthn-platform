@@ -61,9 +61,6 @@ def test_parse_cbor_item_covers_simple_and_single_double_precision_float_paths()
 def test_att_stmt_extension_header_and_authenticator_data_fallback_helpers():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
-    assert decode_module._format_att_stmt_for_expanded_json(b"\xaa")["sig"] == "aa"
-    assert decode_module._format_att_stmt_for_expanded_json(7)["value"] == 7
-
     assert (
         decode_module._format_certificate_extension_header(
             {

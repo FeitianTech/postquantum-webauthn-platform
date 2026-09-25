@@ -6,11 +6,10 @@ from typing import Any
 
 from ..cbor_canonical import _canonical_cbor_dumps, _canonicalize_cbor_structure
 from ..decode import _binary_summary, _hex_json_safe, _stringify_mapping_keys
-from . import ctap_framing
+from . import ctap_views
 from .constants import _CTAP_FIELD_LABELS, _CTAP_PREFIX_DETAILS, _CTAP_REQUIRED_FIELDS
 from .cose_key import encode_cose_key
 from .ctap_encode import (
-    _encode_ctap_from_decoded,
     _encode_get_assertion_request,
     _encode_get_assertion_response,
     _encode_make_credential_request,
@@ -25,56 +24,15 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> d
     """JSON as CTAP2-canonical CBOR; a CTAP message only from the decoder's explicit CTAP view.
 
     That view is ``ctapDecoded``, or ``expandedJson`` beside the ``ctap``
-    metadata of its command or status byte; either must build, or the encoder
-    says why. Any other object is a plain map -- even one whose keys look like
+    framing that names its message (``ctap_views``); either must rebuild, or the
+    encoder says why. Any other object is a plain map -- even one whose keys look like
     CTAP members ("1", "fmt", "signature"): the encoder does not guess.
     """
 
-    ctap_source: Mapping[str, Any] | None = None
-    ctap_kind: str | None = None
-    ctap_metadata: Mapping[str, Any] | None = None
-    encoded_map: Mapping[Any, Any] | None = None
-
     if isinstance(parsed, Mapping):
-        ctap_metadata = parsed.get("ctap") if isinstance(parsed.get("ctap"), Mapping) else None
-        ctap_decoded = parsed.get("ctapDecoded")
-        expanded = parsed.get("expandedJson")
-        if isinstance(ctap_decoded, Mapping):
-            encoded_map, ctap_kind = _encode_ctap_from_decoded(ctap_decoded)
-            if encoded_map is None:
-                raise ValueError("ctapDecoded names no CTAP message to encode.")
-            framing = ctap_framing.require(ctap_metadata, "ctapDecoded")
-            ctap_framing.check_message(framing, ctap_kind)
-            ctap_source = ctap_decoded.get(ctap_kind) if isinstance(ctap_decoded.get(ctap_kind), Mapping) else ctap_decoded
-        elif ctap_metadata is not None and isinstance(expanded, Mapping):
-            framing = ctap_framing.require(ctap_metadata, "expandedJson")
-            ctap_kind = ctap_framing.message(framing, "expandedJson")
-            encoded_map, ctap_kind = _encode_ctap_from_decoded({ctap_kind: expanded})
-            ctap_source = expanded
-
-    if encoded_map is not None:
-        payload_bytes = _canonical_cbor_dumps(encoded_map)
-        full_bytes = ctap_framing.frame(framing, payload_bytes)
-        canonical_structure = _canonicalize_cbor_structure(encoded_map)
-        payload: dict[str, Any] = {
-            "binary": _binary_summary(full_bytes, "cbor"),
-            "encodedValue": _stringify_mapping_keys(
-                _hex_json_safe(canonical_structure)
-            ),
-        }
-        if ctap_source is not None and isinstance(ctap_source, Mapping):
-            canonical_ctap_source = _canonicalize_cbor_structure(ctap_source)
-            payload.setdefault(
-                "ctapDecoded",
-                _stringify_mapping_keys(
-                    _hex_json_safe({ctap_kind: canonical_ctap_source})
-                )
-                if ctap_kind
-                else _stringify_mapping_keys(_hex_json_safe(canonical_ctap_source)),
-            )
-        payload["ctap"] = dict(framing)
-        qualifier = f"encoded {ctap_kind}" if ctap_kind else "encoded"
-        return _prepare_encoder_response(base_type, payload, qualifier=qualifier)
+        answer = ctap_views.encode(parsed, base_type)
+        if answer is not None:
+            return answer
 
     parsed = with_cbor_keys(parsed)
     payload_bytes = _canonical_cbor_dumps(parsed)

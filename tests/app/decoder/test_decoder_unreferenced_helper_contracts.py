@@ -27,30 +27,6 @@ def _attestation_object_bytes() -> bytes:
     return bytes(AttestationObject.create("none", auth_data, {}))
 
 
-def test_ctap_label_key_and_map_building_helpers():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    assert decode_module._resolve_ctap_label({1: "one", "2": "two"}, 1) == "one"
-    assert decode_module._resolve_ctap_label({1: "one", "2": "two"}, 2) is None
-    assert decode_module._resolve_ctap_label({1: "one", "2": "two"}, "2") is None
-    assert decode_module._resolve_ctap_label({1: "one"}, b"\x01") is None
-    assert decode_module._resolve_ctap_label({1: "one"}, True) is None
-    assert decode_module._resolve_ctap_label({1: "one"}, 99) is None
-
-    assert decode_module._format_ctap_entry_key(b"\xaa", "blob") == "aa (blob)"
-    assert decode_module._format_ctap_entry_key(7, None) == "7"
-
-    built = decode_module._build_labeled_ctap_map(
-        {1: b"\x01", 2: {"x": 1}, "unknown": b"\xff"},
-        {1: "clientDataHash", 2: "rp", 3: "missingKey"},
-        {"clientDataHash": decode_module._convert_optional_ctap_field},
-        missing_keys=(3,),
-    )
-    assert "1 (clientDataHash)" in built
-    assert built["1 (clientDataHash)"] == "01"
-    assert "3 (missingKey)" in built
-
-
 def test_ctap_shape_detection_and_classification_helpers():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
@@ -71,68 +47,6 @@ def test_ctap_shape_detection_and_classification_helpers():
     assert decode_module._classify_ctap_map(get_output) == "get_assertion_output"
     assert decode_module._classify_ctap_map(make_request) == "make_credential_input"
     assert decode_module._classify_ctap_map(get_request) == "get_assertion_input"
-
-
-def test_ctap_field_converters_and_auth_data_format_helpers():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    auth_data = _auth_data_bytes()
-
-    allow_list = decode_module._convert_ctap_allow_list(
-        [{"type": "public-key", "id": b"\x01\x02"}]
-    )
-    assert allow_list[0]["id"] == "0102"
-
-    pub_key_params = decode_module._convert_pub_key_cred_params(
-        [{"alg": -7, "type": "public-key"}]
-    )
-    assert pub_key_params[0]["alg"] == -7
-
-    auth_field = decode_module._convert_auth_data_field(auth_data)
-    assert auth_field["signCount"] == 4
-    assert auth_field["rpIdHash"]
-
-    assert decode_module._convert_signature_field(b"\xaa\xbb") == "aabb"
-    assert decode_module._convert_signature_field(None) is None
-
-    att_stmt = decode_module._convert_att_stmt_field({"sig": b"\xaa", "alg": -7})
-    assert att_stmt["sig"] == "aa"
-    assert att_stmt["alg"] == -7
-
-    user_value = decode_module._convert_ctap_user_field({"id": b"\x99", "name": b"alice"})
-    assert user_value["id"] == "99"
-
-
-def test_expanded_ctap_json_builder_helpers():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    client_data_hash = b"\x22" * 32
-    auth_data = _auth_data_bytes()
-
-    make_request = {
-        1: client_data_hash,
-        2: {"id": "example.com", "name": "Example"},
-        3: {1: b"\x01", 2: b"alice"},
-        4: [{"type": "public-key", "alg": -7}],
-    }
-    get_request = {1: "example.com", 2: client_data_hash, 3: [{"id": b"\x01"}]}
-
-    make_response = {1: "packed", 2: auth_data, 3: {"alg": -7, "sig": b"\xaa"}}
-    get_response = {1: {"id": b"\x01"}, 2: auth_data}
-
-    make_request_expanded = decode_module._build_make_credential_request_expanded_json(make_request)
-    get_request_expanded = decode_module._build_get_assertion_request_expanded_json(get_request)
-    make_response_expanded = decode_module._build_make_credential_expanded_json(make_response)
-
-    assert any("clientDataHash" in key for key in make_request_expanded)
-    assert any("rpId" in key for key in get_request_expanded)
-    assert any("attStmt" in key for key in make_response_expanded)
-
-    # A getAssertion response without its signature shows the signature as
-    # missing; nothing is searched for one elsewhere.
-    get_response_expanded = decode_module._build_get_assertion_expanded_json(get_response)
-    signature_key = next(k for k in get_response_expanded if "signature" in k)
-    assert get_response_expanded[signature_key] is None
 
 
 def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, response, binary):

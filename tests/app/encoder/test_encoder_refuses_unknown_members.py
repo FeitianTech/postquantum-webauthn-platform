@@ -40,12 +40,12 @@ def _encode(body: dict) -> bytes:
         (b"\x02" + cbor2.dumps({1: "example.com", 2: bytes(32), 12: b"\xab"}), "getAssertionRequest"),
     ],
 )
-def test_a_member_ctap_does_not_define_is_refused_not_dropped(message, kind):
+def test_a_member_ctap_does_not_define_is_encoded_back_not_dropped(message, kind):
     decoded = _decoded(message)
     assert kind in decoded["ctapDecoded"]
 
-    with pytest.raises(ValueError, match=f"{kind} has no member '(9|12)' in CTAP 2.2"):
-        _encode(decoded)
+    # Shown by its number alone, and written back as the view shows it.
+    assert _encode(decoded) == message
 
 
 def test_bytes_after_authdata_are_encoded_back():
@@ -70,8 +70,8 @@ def test_a_message_the_encoder_does_not_build_is_refused():
 def test_two_keys_for_one_member_are_refused():
     structure = {"1": "none", "1 (fmt)": "packed", "2 (authData)": _AUTH_DATA.hex(), "3 (attStmt)": {}}
 
-    with pytest.raises(ValueError, match=r"member 1 \(fmt\) is given twice"):
-        _encode({"ctapDecoded": {"makeCredentialResponse": structure}})
+    with pytest.raises(ValueError, match=r"member 1 is given twice"):
+        _encode({"ctapDecoded": {"makeCredentialResponse": structure}, "ctap": {"code": 0}})
 
 
 @pytest.mark.parametrize(

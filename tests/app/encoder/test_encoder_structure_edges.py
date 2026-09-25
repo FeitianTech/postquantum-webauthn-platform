@@ -7,30 +7,15 @@ def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
-def test_encode_ctap_from_decoded_encodes_its_one_message_and_none_for_non_mapping():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
+def test_a_ctap_view_holds_one_message():
+    from server.app.decoder.encode import ctap_views
 
-    make_request = {
-        "clientDataHash": _b64url(b"\xaa" * 32),
-        "rp": {"id": "example.com", "name": "Example"},
-        "user": {"id": _b64url(b"user"), "name": "user", "displayName": "User"},
-        "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
-    }
-    encoded, kind = encode_module._encode_ctap_from_decoded({"makeCredentialRequest": make_request})
+    message, view = ctap_views.one_message({"makeCredentialRequest": {"1 (clientDataHash)": "aa" * 32}})
 
-    assert kind == "makeCredentialRequest"
-    assert encoded[1] == b"\xaa" * 32
-
+    assert (message, view) == ("makeCredentialRequest", {"1 (clientDataHash)": "aa" * 32})
     # Two messages: encoding the first would drop the second without a word.
     with pytest.raises(ValueError, match="ctapDecoded holds 2 messages"):
-        encode_module._encode_ctap_from_decoded(
-            {
-                "makeCredentialRequest": make_request,
-                "getAssertionRequest": {"rpId": "ignored.example", "clientDataHash": _b64url(b"\xbb" * 32)},
-            }
-        )
-
-    assert encode_module._encode_ctap_from_decoded("not-a-mapping") == (None, None)
+        ctap_views.one_message({"makeCredentialRequest": {}, "getAssertionRequest": {}})
 
 
 def test_ctap_key_match_and_value_lookup_handle_labeled_variants_case_insensitively():

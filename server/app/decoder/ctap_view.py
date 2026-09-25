@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from . import edn
@@ -86,14 +86,25 @@ def spell_text(text: str) -> str:
 def spell_map(node: Mapping[str, Any]) -> dict[str, Any]:
     """A map node as a JSON object: every entry, each key by ``key_label``."""
 
+    return labelled(node, key_label, lambda entry: spell(entry["value"]))
+
+
+def labelled(
+    node: Mapping[str, Any],
+    label_of: Callable[[Mapping[str, Any]], str],
+    value_of: Callable[[Mapping[str, Any]], Any],
+) -> dict[str, Any]:
+    """A map node's entries as a JSON object: ``label_of`` each key node, ``value_of`` each entry (key and value)."""
+
     spelled: dict[str, Any] = {}
     for entry in node.get("entries") or []:
-        label, number = key_label(entry["key"]), 1
+        label, number = label_of(entry["key"]), 1
         while (candidate := label if number == 1 else f"{label} #{number}") in spelled:
             # Keys the decoder counts as one (a repeated key): the view cannot
             # hold both, and the check marks it; the later is numbered, not lost.
             number += 1
-        spelled[candidate] = spell(entry["value"])
+        # A label, never spelled again as though it were a text key the input held.
+        spelled[keys.JsonLabel(candidate)] = value_of(entry)
     return spelled
 
 

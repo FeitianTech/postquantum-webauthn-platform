@@ -27,37 +27,6 @@ _MAKE_CREDENTIAL_RESPONSE = "makeCredentialResponse"
 _GET_ASSERTION_RESPONSE = "getAssertionResponse"
 
 
-def _encode_ctap_from_decoded(
-    decoded: Mapping[str, Any]
-) -> tuple[dict[int, Any] | None, str | None]:
-    if not isinstance(decoded, Mapping):
-        return None, None
-
-    # The decoder has already said which CTAP map this is; classifying the
-    # fields again could read a request as a response.
-    encoders = {
-        _MAKE_CREDENTIAL_REQUEST: _encode_make_credential_request,
-        _GET_ASSERTION_REQUEST: _encode_get_assertion_request,
-        _MAKE_CREDENTIAL_RESPONSE: _encode_make_credential_response,
-        _GET_ASSERTION_RESPONSE: _encode_get_assertion_response,
-    }
-    others = [key for key in decoded if key not in encoders]
-    if others:
-        raise ValueError(
-            f"ctapDecoded.{others[0]} is not a CTAP message the encoder builds; it builds "
-            f"{', '.join(encoders)}."
-        )
-    if len(decoded) > 1:
-        raise ValueError(f"ctapDecoded holds {len(decoded)} messages ({', '.join(decoded)}); give it one.")
-    for key, encoder in encoders.items():
-        entry = decoded.get(key)
-        if isinstance(entry, Mapping):
-            return encoder(entry), key
-        if entry is not None:
-            raise ValueError(f"ctapDecoded.{key} must be an object for encoding.")
-    return None, None
-
-
 def _encode_make_credential_request(structure: Mapping[str, Any]) -> dict[int, Any]:
     _reject_misnamed_request_fields(structure, _MAKE_CREDENTIAL_REQUEST)
     _reject_unknown_members(structure, _MAKE_CREDENTIAL_REQUEST)

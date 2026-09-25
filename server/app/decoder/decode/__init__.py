@@ -109,26 +109,13 @@ _format_json_block = summary._format_json_block
 _parse_attested_data = summary._parse_attested_data
 
 # CTAP map classification and labels.
-_GET_ASSERTION_REQUEST_LABELS = ctap._GET_ASSERTION_REQUEST_LABELS
-_GET_ASSERTION_RESPONSE_LABELS = ctap._GET_ASSERTION_RESPONSE_LABELS
-_MAKE_CREDENTIAL_REQUEST_LABELS = ctap._MAKE_CREDENTIAL_REQUEST_LABELS
-_MAKE_CREDENTIAL_RESPONSE_LABELS = ctap._MAKE_CREDENTIAL_RESPONSE_LABELS
-_build_labeled_ctap_map = ctap._build_labeled_ctap_map
 _classify_ctap_map = ctap_classify._classify_ctap_map
-_format_ctap_entry_key = ctap._format_ctap_entry_key
 _looks_like_get_assertion_output = ctap_classify._looks_like_get_assertion_output
 _looks_like_get_assertion_request = ctap_classify._looks_like_get_assertion_request
 _looks_like_make_credential_output = ctap_classify._looks_like_make_credential_output
 _looks_like_make_credential_request = ctap_classify._looks_like_make_credential_request
-_resolve_ctap_label = ctap._resolve_ctap_label
 
-# CTAP field conversion leaves.
-_convert_ctap_credential_descriptor = ctap._convert_ctap_credential_descriptor
-_convert_optional_ctap_field = ctap._convert_optional_ctap_field
-
-# CTAP trailing-field repair helpers.
-
-# CTAP make-credential repair helpers.
+# CTAP map member readers.
 _extract_mapping_bytes = ctap_classify._extract_mapping_bytes
 _extract_mapping_string = ctap_classify._extract_mapping_string
 
@@ -152,39 +139,9 @@ _extract_ctap_prefix = ctap._extract_ctap_prefix
 _is_padding_bytes = ctap._is_padding_bytes
 _try_decode_cbor = ctap._try_decode_cbor
 
-# CTAP field parsers and converters.
-_convert_att_stmt_field = ctap._convert_att_stmt_field
-_convert_auth_data_field = ctap._convert_auth_data_field
-_convert_ctap_allow_list = ctap._convert_ctap_allow_list
-_convert_ctap_user = ctap._convert_ctap_user
-_convert_ctap_user_field = ctap._convert_ctap_user_field
-_convert_pub_key_cred_params = ctap._convert_pub_key_cred_params
-_convert_signature_field = ctap._convert_signature_field
-_convert_user_text_value = ctap._convert_user_text_value
-_format_att_stmt_for_expanded_json = ctap._format_att_stmt_for_expanded_json
+# Authenticator data inside a CTAP view.
 _format_auth_data_for_expanded_json = ctap_auth_data._format_auth_data_for_expanded_json
 _parse_authenticator_data_bytes = ctap_auth_data._parse_authenticator_data_bytes
-
-# CTAP interpretation and expanded JSON.
-_GET_ASSERTION_REQUEST_HANDLERS = ctap._GET_ASSERTION_REQUEST_HANDLERS
-_GET_ASSERTION_RESPONSE_HANDLERS = ctap._GET_ASSERTION_RESPONSE_HANDLERS
-_MAKE_CREDENTIAL_REQUEST_HANDLERS = ctap._MAKE_CREDENTIAL_REQUEST_HANDLERS
-_MAKE_CREDENTIAL_RESPONSE_HANDLERS = ctap._MAKE_CREDENTIAL_RESPONSE_HANDLERS
-_build_get_assertion_expanded_json = ctap._build_get_assertion_expanded_json
-_build_get_assertion_request_expanded_json = (
-    ctap._build_get_assertion_request_expanded_json
-)
-_build_make_credential_expanded_json = ctap._build_make_credential_expanded_json
-_build_make_credential_request_expanded_json = (
-    ctap._build_make_credential_request_expanded_json
-)
-_interpret_ctap_cbor_value = ctap._interpret_ctap_cbor_value
-_interpret_get_assertion_map = ctap._interpret_get_assertion_map
-_interpret_get_assertion_request_map = ctap._interpret_get_assertion_request_map
-_interpret_make_credential_map = ctap._interpret_make_credential_map
-_interpret_make_credential_request_map = (
-    ctap._interpret_make_credential_request_map
-)
 
 # Client data and authenticator data details.
 _binary_summary = pipeline._binary_summary

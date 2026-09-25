@@ -15,7 +15,8 @@ def test_a_member_is_labelled_by_its_number_and_name():
     assert ctap_message.member_label("makeCredentialResponse", _key("01")) == "1 (fmt)"
     assert ctap_message.member_label("getInfoResponse", _key("03")) == "3 (aaguid)"
     assert ctap_message.member_label("makeCredentialResponse", _key("1863")) == "99"
-    assert ctap_message.member_label("makeCredentialResponse", _key("63666d74")) == "fmt"
+    # Text always with its type: a CTAP message numbers its members.
+    assert ctap_message.member_label("makeCredentialResponse", _key("63666d74")) == '"fmt" (text)'
     assert ctap_message.member_label("makeCredentialResponse", _key("6131")) == '"1" (text)'
 
 

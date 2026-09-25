@@ -8,11 +8,12 @@ def _b64url(data: bytes) -> str:
 
 
 def _make_make_credential_request_payload() -> dict:
+    # A view's members by number, its values in the view's spelling: bytes as hex.
     return {
-        "clientDataHash": _b64url(b"\x11" * 32),
-        "rp": {"id": "example.com", "name": "Example"},
-        "user": {"id": _b64url(b"user"), "name": "alice", "displayName": "Alice"},
-        "pubKeyCredParams": [{"alg": -7, "type": "public-key"}],
+        "1 (clientDataHash)": (b"\x11" * 32).hex(),
+        "2 (rp)": {"id": "example.com", "name": "Example"},
+        "3 (user)": {"id": b"user".hex(), "name": "alice", "displayName": "Alice"},
+        "4 (pubKeyCredParams)": [{"alg": -7, "type": "public-key"}],
     }
 
 
@@ -32,7 +33,7 @@ def test_encode_cbor_value_prefers_ctap_decoded_when_present():
 
 def test_encode_cbor_value_reads_ctap_only_from_an_explicit_view():
     encode_module = pytest.importorskip("server.app.decoder.encode")
-    expanded = {"rpId": "example.com", "clientDataHash": _b64url(b"\x22" * 32)}
+    expanded = {"1 (rpId)": "example.com", "2 (clientDataHash)": (b"\x22" * 32).hex()}
 
     # A ctapDecoded naming something the encoder does not build is refused, not skipped.
     with pytest.raises(ValueError, match="ctapDecoded.unknown is not a CTAP message the encoder builds"):
@@ -50,7 +51,7 @@ def test_encode_cbor_value_reads_ctap_only_from_an_explicit_view():
         encode_module._encode_cbor_value({"expandedJson": {"x": 1}, "ctap": {"code": 2}})
 
     # ... and without it, just a map.
-    plain = encode_module._encode_cbor_value({"expandedJson": expanded})
+    plain = encode_module._encode_cbor_value({"expandedJson": {"rpId": "example.com"}})
     assert plain["type"] == "CBOR (canonical) (encoded)"
     assert "ctap" not in plain["data"]
 

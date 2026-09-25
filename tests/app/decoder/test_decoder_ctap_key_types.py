@@ -11,7 +11,7 @@ import cbor2
 import pytest
 
 from server.app.decoder import decode_payload_text
-from server.app.decoder.decode import ctap, keys
+from server.app.decoder.decode import keys
 
 _AUTH_DATA = bytes(32) + b"\x01" + (5).to_bytes(4, "big")
 _SIGNATURE = bytes.fromhex("3006020101020101")
@@ -85,10 +85,12 @@ def test_a_command_byte_labels_only_integer_keys_as_parameters():
 
 
 def test_a_byte_string_key_in_a_credential_descriptor_is_not_its_id():
-    descriptor = ctap._convert_ctap_credential_descriptor({b"\x01": b"\xaa", "type": "public-key"})
+    message = {1: "example.com", 2: _CLIENT_DATA_HASH, 3: [{b"\x01": b"\xaa", "type": "public-key"}]}
+
+    (descriptor,) = _decode(message, prefix="02")["data"]["ctapDecoded"]["getAssertionRequest"]["3 (allowList)"]
 
     assert "id" not in descriptor
-    assert descriptor["01"] == "aa"
+    assert descriptor["h'01' (bytes)"] == "aa"
     assert descriptor["type"] == "public-key"
 
 
@@ -103,12 +105,16 @@ def test_get_mapping_entry_does_not_cross_key_types():
     assert keys.get_mapping_entry(mapping, True) is keys.MISSING
 
 
-def test_resolve_ctap_label_reads_only_integer_members():
-    labels = ctap._GET_ASSERTION_RESPONSE_LABELS
+def test_only_an_integer_key_is_labelled_as_a_member():
+    from server.app.decoder import ctap_message
+    from server.app.decoder.decode import cbor_parser
 
-    assert ctap._resolve_ctap_label(labels, 2) == "authData"
-    assert ctap._resolve_ctap_label(labels, "2") is None
-    assert ctap._resolve_ctap_label(labels, b"\x02") is None
+    def label(key) -> str:
+        return ctap_message.member_label("getAssertionResponse", cbor_parser.decode_item(cbor2.dumps(key))[0])
+
+    assert label(2) == "2 (authData)"
+    assert label("2") == '"2" (text)'
+    assert label(b"\x02") == "h'02' (bytes)"
 
 
 # A CTAP member label applies only to the key type and context the spec defines:

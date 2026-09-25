@@ -82,18 +82,12 @@ def test_a_numbered_key_matches_a_field_only_under_that_fields_name():
     assert encode_module._ctap_key_matches("2 (authData trailing)", {"2", "authdata", "2 (authdata)"}) is False
 
 
-def test_the_kind_ctap_decoded_names_picks_the_encoder():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
+def test_the_message_ctap_decoded_names_is_the_one_its_members_are_read_as():
+    from server.app.decoder import ctap_message
 
-    mapping, kind = encode_module._encode_ctap_from_decoded(
-        {
-            "getAssertionRequest": {
-                "1 (rpId)": "example.com",
-                "2 (clientDataHash)": "22" * 32,
-                "5 (options)": {"up": True},
-            }
-        }
+    members = ctap_message.read_members(
+        "getAssertionRequest",
+        {"1 (rpId)": "example.com", "2 (clientDataHash)": "22" * 32, "5 (options)": {"up": True}},
     )
 
-    assert kind == "getAssertionRequest"
-    assert mapping == {1: "example.com", 2: b"\x22" * 32, 5: {"up": True}}
+    assert members == {1: "example.com", 2: b"\x22" * 32, 5: {"up": True}}
