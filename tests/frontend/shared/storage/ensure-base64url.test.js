@@ -12,8 +12,12 @@ describe('ensureBase64Url', () => {
     expect(ensureBase64Url(value)).toBe(expected);
   });
 
-  it('reads text that is neither base64 nor hex as hex, pair by pair, into other bytes', () => {
-    // "no" -> 0, "t " -> 0, " b" -> 0x0b, "as" -> 0x0a, ...
-    expect(ensureBase64Url('not base64!')).toBe('AAC6AGQA');
+  it('keeps text that is neither base64 nor hex as written', () => {
+    expect(ensureBase64Url('not base64!')).toBe('not base64!');
+  });
+
+  it('refuses standard base64 whose last character carries stray bits', () => {
+    // atob() read "Zh==" as "f"; the strict decoder does not, and it is not hex.
+    expect(ensureBase64Url('Zh==')).toBe('Zh==');
   });
 });
