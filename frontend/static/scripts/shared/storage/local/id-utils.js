@@ -1,3 +1,4 @@
+import { base64ToBytes, bytesToBase64Url } from '../../utils/base64.js';
 import { isNonEmptyString } from './common.js';
 
 export function normaliseCredentialId(record) {
@@ -44,6 +45,10 @@ export function generateRandomIdSegment() {
     return `${random}${randomB}`;
 }
 
+// A stored identifier as base64url. Base64url (hex digits included, as before)
+// is kept as it is; standard base64 is decoded strictly and the same bytes
+// re-spelled. Anything else is returned as written rather than read as some
+// other bytes.
 export function ensureBase64Url(value) {
     if (typeof value !== 'string' || !value.trim()) {
         return '';
@@ -53,19 +58,9 @@ export function ensureBase64Url(value) {
         return trimmed;
     }
     try {
-        const decoded = atob(trimmed);
-        return btoa(decoded).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        return bytesToBase64Url(base64ToBytes(trimmed));
     } catch (error) {
-        try {
-            const bytes = new Uint8Array(trimmed.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-            let binary = '';
-            bytes.forEach(byte => {
-                binary += String.fromCharCode(byte);
-            });
-            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-        } catch (innerError) {
-            return trimmed;
-        }
+        return trimmed;
     }
 }
 
