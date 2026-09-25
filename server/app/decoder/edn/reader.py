@@ -14,7 +14,8 @@ Written exactly as notated: map order, duplicate keys, head widths and float
 widths are the text's, never canonicalised. Refused, each with the offset in
 the text: reserved indicators ``_4``..``_7``, an indicator too narrow for its
 value, a float not exact at its width, ``simple(24)``..``simple(31)``, more than
-one top-level item (a CBOR sequence), and an integer beyond 64 bits -- which the
+one top-level item (a CBOR sequence), items nested more than 64 deep (the
+decoder's limit), and an integer beyond 64 bits -- which the
 EDN draft (section 2.2) reads as a bignum tag; here it must be written as one,
 ``2(h'..')``, so that the tag is visible in the text.
 """
@@ -40,6 +41,9 @@ _WORDS = {
     "false": b"\xf4", "true": b"\xf5", "null": b"\xf6", "undefined": b"\xf7",
 }
 _MAX_ARGUMENT = (1 << 64) - 1
+# decode/cbor_parser's limit: an item nested more than 64 deep is refused, so
+# whatever this reader writes, the decoder reads. Embedded CBOR counts too.
+_MAX_DEPTH = 64
 
 
 def encode(text: str) -> bytes:
@@ -60,6 +64,7 @@ class _Reader:
     def __init__(self, text: str) -> None:
         self.text = text
         self.position = 0
+        self.depth = 0
 
     # -- positions, blank space and comments ---------------------------------------
 
@@ -142,6 +147,15 @@ class _Reader:
     # -- items -----------------------------------------------------------------------
 
     def item(self) -> bytes:
+        if self.depth > _MAX_DEPTH:
+            raise self.error(f"items are nested more than {_MAX_DEPTH} deep")
+        self.depth += 1
+        try:
+            return self._item()
+        finally:
+            self.depth -= 1
+
+    def _item(self) -> bytes:
         start = self.position
         character = self.peek()
         if character == "[":
