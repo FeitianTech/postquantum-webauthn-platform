@@ -7,10 +7,10 @@ from server.app.decoder import decode_payload_text
 from server.app.decoder.decode import pipeline
 
 
-def test_the_json_text_null_is_read_as_base64():
-    assert pipeline._decode_binary_input("null") == (b"\x9e\xe9\x65", "base64 or base64url")
-    with pytest.raises(ValueError, match="additional information 30 is reserved"):
-        decode_payload_text("null")
+def test_the_json_text_null_is_json_null():
+    # It is also base64 (9e e9 65), bytes no reading reads whole.
+    assert decode_payload_text("null")["data"] == {"json": None}
+    assert decode_payload_text(b"null".hex())["data"] == {"json": None}
 
 
 def test_a_0x_inside_hexadecimal_digits_is_dropped():

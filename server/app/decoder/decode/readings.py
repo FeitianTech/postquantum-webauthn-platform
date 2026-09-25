@@ -12,7 +12,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from . import ctap, pipeline
+from . import ctap, json_input, pipeline
 
 Result = dict[str, Any]
 Reading = Callable[[bytes, str, bool], "Result | None"]
@@ -42,7 +42,7 @@ def _utf8_json(data: bytes, encoding: str, lenient: bool) -> Result | None:
     if not text:
         return None
     json_obj, json_findings = pipeline._read_json(text, lenient=lenient, in_bytes=True)
-    if json_obj is None:
+    if json_obj is json_input.NOT_JSON:
         return None
     if isinstance(json_obj, Mapping) and pipeline._is_client_data_dict(json_obj):
         result = {

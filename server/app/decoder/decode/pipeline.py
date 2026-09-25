@@ -403,8 +403,8 @@ def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:
     parsed_json, json_findings = _read_json(trimmed, lenient=lenient, base=len(value) - len(value.lstrip()))
     ambiguity = ambiguous_input.check(trimmed, parsed_json)
     if ambiguity is not None and ambiguity["readAs"] == "hex":
-        parsed_json, json_findings = None, []
-    if parsed_json is not None:
+        parsed_json, json_findings = json_input.NOT_JSON, []
+    if parsed_json is not json_input.NOT_JSON:
         result = _decode_json_object(parsed_json, raw_text=trimmed, lenient=lenient)
     elif _looks_like_pem(trimmed):
         result = _decode_pem_certificates(trimmed)
