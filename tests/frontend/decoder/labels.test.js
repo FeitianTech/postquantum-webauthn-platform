@@ -65,4 +65,12 @@ describe('decoder key labels', () => {
     expect(formatKey('credentialId')).toBe('Credential ID');
     expect(formatKey('1 (fmt)')).toBe('1 (fmt)');
   });
+
+  it('says "Value" for a key with nothing to show, and keeps a short all-capitals key', () => {
+    expect(formatKey('')).toBe('Value');
+    expect(formatKey(7)).toBe('Value');
+    expect(formatKey('__')).toBe('Value');
+    expect(formatKey('UV')).toBe('UV');
+    expect(formatKey('RK2')).toBe('RK2');
+  });
 });

@@ -1,5 +1,7 @@
 import { defineConfig } from 'vitest/config';
 
+const FULL = { statements: 100, branches: 100, functions: 100, lines: 100 };
+
 export default defineConfig({
   test: {
     environment: 'jsdom',
@@ -21,8 +23,6 @@ export default defineConfig({
       exclude: [
         'tests/frontend/**',
         'frontend/static/scripts/shared/storage/local.js',
-        'frontend/static/scripts/decoder/codec.js',
-        'frontend/static/scripts/decoder/codec/**',
       ],
       // A floor, not a target. Set just under the numbers measured on
       // 2026-09-17 (82.59 statements / 66.46 branches / 91.33 functions /
@@ -33,6 +33,9 @@ export default defineConfig({
         branches: 66,
         functions: 91,
         lines: 82,
+        // The Codec's logic, which the new UI in web/ imports: every line and branch.
+        'frontend/static/scripts/decoder/codec/{constants,labels,request,result,values}.js': FULL,
+        'frontend/static/scripts/decoder/codec/encoding/{can-encode,format,summary}.js': FULL,
       },
     },
   },
