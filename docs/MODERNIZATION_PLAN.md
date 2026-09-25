@@ -1920,6 +1920,110 @@ fields. At 375 px the panel stacks its rows, with no horizontal scroll.
 - The agent's two memory notes (jsdom traps that make a frontend test prove nothing; running ceremonies in the
   built-in browser with an in-page software authenticator) are accurate and kept.
 
+### Phase 24 — a strict Content-Security-Policy, and the code shape that allows it — DONE (2026-09-25)
+19 commits, d14fdc9e..the record's own, all this phase's, each gated on pytest (under coverage, with its 95%
+floor), vitest (with the coverage floors) and ruff exit codes. Every commit before the record was re-run
+afterwards on its own tree in one detached worktree, cleaned (`git clean -fdx`) before each: pytest under
+coverage with its floor, vitest with its floors, and ruff pass at all 18, and none leaves `instance/`.
+Owner decision for this phase: the two literal markup strings left after the `innerHTML = ''` clears are built
+with `el()` too, and `test_html_sinks.py` now allows no markup sink at all.
+
+**Counts, before → after.** Inline `on*=` handlers in templates 125 → **0**; `window.* =` in `main.js` 42 → **0**
+(all writes to `window` in `frontend/static/scripts` 56 → **0**); executing inline `<script>` 1 → **0**;
+`style=` in templates 5 plus 1 in a JS string plus `el()`'s `setAttribute('style')` → **0**; Trusted Types
+sinks (`innerHTML` / `document.write`) 13 → **0**.
+
+**Headers, before → after** (every response; the 31 route goldens were regenerated and a scratch comparison
+showed they change in these three headers and nothing else):
+- `Content-Security-Policy`: `... style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self'
+  'unsafe-inline'; ...` → `default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none';
+  frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com;
+  style-src 'self' https://fonts.googleapis.com; script-src 'self'; connect-src 'self'; manifest-src 'self';
+  worker-src 'self'; report-uri /api/csp-report; report-to csp`.
+- `Content-Security-Policy-Report-Only`: none → `require-trusted-types-for 'script'; report-uri /api/csp-report;
+  report-to csp`. Enforcing it waits for the final audit, once production shows no reports.
+- `Reporting-Endpoints`: none → `csp="/api/csp-report"`. Each of the three is settable in the environment.
+
+**A — styles through CSSOM and stylesheets** (01342998, d8b08798, 36446851). `el()` applies `style` with
+`style.cssText`; the five template `style=` attributes are classes in `styles/shared/layout.css` (computed
+colours, background and display compared in the browser before and after: identical). The MDS raw-data popup
+is an `about:blank` window, so it shares the page's policy: it was a `document.write` of a page with an inline
+`<style>`; it is now built with `el()` and a `<link>` to `styles/advanced/mds-raw-window.css` (element boxes
+identical to the old popup in Chromium; the document is now in quirks mode, as an unparsed `about:blank` is,
+with no difference in its layout). It gained its first test.
+
+**B — no markup sinks** (34b31d28, 280bd685). The ten `innerHTML = ''` clears are `replaceChildren()`; the
+allow-credentials options and the MDS error fallback are `el()`. `test_html_sinks.py` now fails on any
+`innerHTML` / `outerHTML`, `insertAdjacentHTML`, `document.write`, `parseFromString`, `createContextualFragment`
+or `setHTMLUnsafe`, and `test_decoder_dom_rules.py` on any `innerHTML` in the decoder.
+
+**C — `data-action`, one delegated listener per area** (acdd0855 .. e00a19b7). The pattern the Analyze Browser
+panel already used: a control names its action (`data-action="switch-tab" data-tab="codec"`), and the module
+that owns the behaviour exports a table and binds it with `bindActions(root, table)` on the root of its area --
+the tab, or `document` when its controls span areas (the sticky mini-header clones the navigation; the modals
+sit outside the tabs). Each table binds to one root, so nothing fires twice; `callWith(fn, 'tab')` builds the
+entries; hover entries dispatch only for the element that names them, as `onmouseenter` did; disabled controls
+are skipped. `main.js` binds at the moment it used to assign the globals. The MDS highlight functions reach the
+credential view through `setMdsNavigation`, which `main.js` calls, instead of `window`; the four MDS functions
+only `window` reached (`openMdsAuthenticatorModal`, `focusMdsAuthenticator`, `getMdsLoadState`,
+`waitForMdsLoad`) are gone, as are `toggleSection`'s search of `onclick` text, `list-render.js`'s `window`
+fallback and `window.lastFakeCredLength` (read from `state`). `tests/frontend/page-actions.test.js` renders the
+real templates, loads the real `main.js` and checks every `[data-action]` runs exactly its owner's entry.
+
+**D — the page's data is a JSON block** (7badaf4a). `<script type="application/json" id="initial-mds-info">`,
+read by `shared/utils/page-data.js`. The credential-records and MDS-snapshot seams are blocks the tests write
+(`tests/frontend/page-data-helper.js`); the server renders neither, as before.
+
+**E — reporting** (00ebbc6a, 01f00eef). `POST /api/csp-report` (`routes/csp_report.py`, `csp_reports.py`) reads
+report-uri and report-to bodies and logs each violation as one WARNING line,
+`CSP violation: directive=<d> blocked=<b> path=<p>` (a Trusted Types report names its sink:
+`trusted-types-sink(Element.innerHTML)`); fields are printable ASCII, 200 characters each; nothing else is kept.
+Bodies over 512 KiB get a 413 without a log line per request; a token bucket per app (burst 30, 30 a minute)
+bounds a flood and says how many it dropped. `tests/app/tooling/test_inline_code.py` guards templates and
+scripts against all of the above coming back.
+
+**Seen in a real browser** (the desktop app's Chromium 152, strict policy on, stores and secret in a scratch
+directory, nothing written to the checkout; ceremonies by a software authenticator installed in the page, ES256
+in WebCrypto, `none` attestation, whose signatures the server verified). A click on a tab before `main.js` has
+loaded (the script held back 8 s): before, `Uncaught ReferenceError: switchTab is not defined`; now nothing is
+thrown and the click does nothing, and the same button works once the app is ready. Deliberately injected, an
+inline script (not run), a `style` attribute (not applied) and an `innerHTML` string (applied, reported) produced
+exactly four console messages and four `securitypolicyviolation` events. Then, by real clicks unless noted: every
+top tab, and the mini-header's copy of Codec after scrolling; both advanced sub-tabs; an info popup by hover and
+its language toggle; every randomize button (script clicks; the three disabled ones did nothing); JSON editor
+Save and Reset, both form Resets (script clicks); a simple registration and authentication; the credential
+detail modal and its close; an advanced registration, its result modal, the Authenticator Data sub-modal and both
+closes; an advanced authentication ("server-session … First use."); Codec decode and encode, both Raw modals and
+Clear; the Analyze Browser panel; the MDS explorer (517 entries, a name filter to 83, a detail, a certificate,
+Raw); Clear All in both tabs. **No CSP or Trusted Types violation, and no uncaught error, from any of it** (the
+console held only the four injected messages; the page's own listener recorded none). The raw-data popup cannot
+open in the app's browser pane, which blocks every popup, so the module was run into a same-origin
+`about:blank` frame under the strict policy: styled from its stylesheet, no violation.
+Reports reach the endpoint: a report-uri body from curl, and from the browser with a report-uri-only policy
+(three reports, three lines, sinks named). The pane generates report-to reports (a `ReportingObserver` sees
+them) but did not upload any within several minutes, with the endpoint relative or absolute; Chromium then
+ignores report-uri, so in this pane reports go nowhere.
+
+**Tests.**
+- vitest 532 → **557**, coverage 84.22 / 69.38 / 92.61 / 84.26 → **84.22 / 69.54 / 92.71 / 84.27**
+  (statements / branches / functions / lines); floors held at every commit.
+- pytest 4659 → **4702** passed / 4 skipped; coverage 97%; Linux (python:3.14, Docker) at 01f00eef **4688** / 5,
+  the usual 14 fewer and one more skip than macOS. ruff clean.
+
+**Found but not fixed:**
+- report-to delivery was not seen in the app's browser pane (above); check the Cloud Run logs for
+  `CSP violation` lines after the deploy, and that the service does not set `FIDO_SERVER_CONTENT_SECURITY_POLICY`,
+  which replaces the whole policy (nothing in the repository sets it).
+- The popup's own violations would be reported nowhere: Chromium does not give an `about:blank` popup the page's
+  `Reporting-Endpoints`.
+- A click before `main.js` has loaded is ignored rather than queued.
+- The info icons and language toggles are `<div>`s, unreachable by keyboard (as before).
+- The mini-header's copy of the navigation duplicates `id="primary-navigation"`.
+- `toggleSection` is exported, tested and called by nothing.
+- The `initial-mds-snapshot` and `initial-credential-records` blocks exist only for the tests.
+- `shared/utils/binary.js` reads `window.__binaryFormat`, which only tests set.
+- `img-src 'self' data:` blocks remote icons in custom metadata (unchanged by this phase).
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
@@ -1936,6 +2040,7 @@ Tests previously ran against the global interpreter, whose packages matched noth
 - CSP ships with `script-src 'self' 'unsafe-inline'` — **not strict**. Blockers: 125 inline
   `on*=` handlers in templates, the inline bootstrap `<script>` in `index.html`, 5 inline
   `style=` attributes. `test_csp_script_src_is_documented_as_not_strict` fails once they are gone.
+  **Done in Phase 24:** `script-src 'self'`, `style-src 'self' https://fonts.googleapis.com`.
 - `_schedule_session_cookie` still sets `SameSite=None` on the metadata cookie over HTTPS.
 - `fido2/server.py:438` eagerly f-string-logs every authenticated credential ID.
 - A custom `FIDO_SERVER_CREDENTIAL_DIR` inside the repo is not gitignored.
@@ -2024,7 +2129,7 @@ Raised during the S4 fix; **not** regressions, but tracked so they are not lost.
 
 4. **125 inline `on*=` handlers remain, now all in `frontend/templates/*.html`** — zero
    remain in `frontend/static/scripts`. Clearing the templates is the remaining
-   prerequisite for a CSP without `'unsafe-inline'` (Q3/S7).
+   prerequisite for a CSP without `'unsafe-inline'` (Q3/S7). **Done in Phase 24: none remain.**
 
 ### S5. Advisory checks never gate — MAJOR
 `attestation_parts/checks_*.py` compute `origin_mismatch`, `algorithm_not_allowed`,
@@ -2047,6 +2152,7 @@ No CSP, X-Frame-Options, X-Content-Type-Options, HSTS, Referrer-Policy, or
 Permissions-Policy on any response. `SESSION_COOKIE_SECURE` never set;
 `PERMANENT_SESSION_LIFETIME` 31 days. Needs `ProxyFix` for Cloud Run's TLS-terminating proxy.
 Note: a real CSP is blocked until the 145 inline `on*=` handlers are removed (see Q3).
+**Done in Phase 24:** the handlers are gone and the CSP has no `'unsafe-inline'`.
 
 ### S8. Unconditional secret-adjacent logging — MAJOR
 `fido2/cose.py:761-785` `_log_signature_debug` `print()`s authenticatorData,
@@ -2544,6 +2650,8 @@ MDS module via `window.*` instead of importing it.
 
 **145 inline `on*=` attributes** across 24 templates, plus 2 generated into `innerHTML` at
 `list-render.js:228,232` — these hard-block any CSP.
+**Phase 24:** no window global and no inline handler remains (`data-action`, `shared/ui/actions.js`); the
+MDS integration reaches the credential view through `main.js` (`setMdsNavigation`), not `window`.
 
 No build step: `tools/build_static_assets.py` only hashes and gzips. **All 167 modules
 (852 KB) are eagerly reachable from `main.js` with zero dynamic `import()`**; the ~75-module
@@ -2609,4 +2717,5 @@ waves. Only `main.js` is preloaded; no `modulepreload` for the other 166. A sing
 12. **Q1** — rewrite browser/capability detection.
 13. **C2** — un-fork fido2, ML-DSA as a plugin.
 14. **A5/A6** — MDS out of git, release automation, preview/rollback.
-15. **Q2/Q3/Q4** — design tokens, dark mode, a11y, CSP (needs Q4 inline handlers gone).
+15. **Q2/Q3/Q4** — design tokens, dark mode, a11y, CSP (needs Q4 inline handlers gone). CSP and the Q4
+    handlers and globals: **done in Phase 24.**

@@ -70,12 +70,40 @@ Important frontend entry points:
   How every view that shows data is built: `el(tag, {className, attrs, dataset,
   style, text}, ...children)` and `fragment()`. Strings become text nodes or
   attribute values, never markup, and an `on*`, `innerHTML`, `outerHTML` or `srcdoc`
-  attribute throws; handlers are added with `addEventListener`. Never assign data to
-  `innerHTML`/`outerHTML` or pass it to `insertAdjacentHTML`: a guard allows only
-  `''` or a literal with no `${}` (see Testing Guidance). The credential cards, the
-  credential detail modal (`credential-detail-runtime/`, `detail-nodes.js`), the
-  registration result and its certificate / authenticator-data sub-modal
-  (`registration-compose-runtime.js`) are built this way.
+  attribute throws; handlers are added with `addEventListener`. The `style` option
+  is applied through CSSOM (`element.style`), which the CSP allows. No script hands
+  the browser markup to parse -- no `innerHTML`/`outerHTML`, `insertAdjacentHTML`,
+  `document.write`, `DOMParser`, even with a fixed string, since each is a Trusted
+  Types sink; empty a container with `replaceChildren()` (see Testing Guidance). The
+  credential cards, the credential detail modal (`credential-detail-runtime/`,
+  `detail-nodes.js`), the registration result and its certificate / authenticator-data
+  sub-modal (`registration-compose-runtime.js`) and the MDS raw-data popup
+  (`advanced/mds/raw-window.js`, an `about:blank` window that shares the page's CSP,
+  styled by `styles/advanced/mds-raw-window.css`) are built this way.
+- `frontend/static/scripts/shared/ui/actions.js`
+  How a template control does something. The markup names the action,
+  `data-action="switch-tab"`, with any argument in another `data-*` attribute
+  (`data-tab="codec"`), and never holds code: there is no inline `on*=` handler and
+  nothing is put on `window`. The module that owns the behaviour exports a table
+  (`navigationActions`, `formActions`, `codecActions`, ...) and a `bind...Actions()`
+  that calls `bindActions(root, table)`: one delegated listener on the root of the
+  area its controls sit in -- the tab, or `document` when they span areas (the
+  sticky mini-header shows a clone of the top navigation) -- so a table entry never
+  fires twice. `callWith(fn, 'tab')` makes the usual entry; an entry may also be
+  `{ mouseenter, mouseleave }` (the info popups), dispatched only for the element
+  that names the action. A disabled control is skipped. `main.js` calls the binders
+  when it loads; a click before then does nothing. Names are local to their area, as
+  the Analyze Browser panel's `close` / `copy-report` are.
+  `tests/frontend/page-actions.test.js` renders the real templates
+  (`tests/frontend/page-template.js`), loads `main.js` and checks that every
+  `[data-action]` runs exactly its owner's entry; add a new owner's table there.
+- `frontend/static/scripts/shared/utils/page-data.js`
+  The page's data for its scripts: `index.html` renders
+  `<script type="application/json" id="initial-mds-info">`, which the browser never
+  runs, and `readPageData(id)` parses it. `initial-mds-snapshot` and
+  `initial-credential-records` are read the same way; the server renders neither
+  (the page reads the browser's storage), tests give theirs through
+  `tests/frontend/page-data-helper.js` (`setup.js` writes the defaults).
 - Registration detail snapshots (`registrationDetailSnapshot`, schemaVersion 2) hold
   the registration as data -- `state` (decoded attestation, certificates,
   authenticator data) and `response` (`credential`, `relyingParty`) -- never markup.
@@ -140,7 +168,13 @@ Flask app setup starts in:
 - `server/app/config/`
   What `create_app()` is built from: `application.py` (`build_app()`),
   `logs.py`, `session_secret.py`, `compression.py`, `proxy.py`,
-  `session_cookie.py`, `security_headers.py`, `origins.py`, `attestation_trust.py`,
+  `session_cookie.py`, `security_headers.py` (a strict CSP -- `script-src 'self'`,
+  `style-src 'self' https://fonts.googleapis.com`, no `'unsafe-inline'` -- plus a
+  `Content-Security-Policy-Report-Only` with `require-trusted-types-for 'script'`,
+  both reporting to `/api/csp-report` by `report-uri` and, through
+  `Reporting-Endpoints`, `report-to`; each settable in the environment, and
+  `FIDO_SERVER_CONTENT_SECURITY_POLICY` replaces the whole enforced policy),
+  `origins.py`, `attestation_trust.py`,
   `mds.py`, `relying_party.py` (RP ID, `create_fido_server`), `paths.py`,
   `request_limits.py` (`MAX_CONTENT_LENGTH`, 8 MiB, and the metadata upload's own
   16 MiB, chosen from the sizes measured in Phase 21 and settable in the
@@ -212,6 +246,15 @@ Main route modules:
   the `general` blueprint. `static_assets.py` has its own `static_assets`
   blueprint. Endpoint names are therefore `general.index`, `simple.register_begin`
   and so on; nothing refers to them today (no `url_for`).
+- `server/app/routes/csp_report.py`
+  `POST /api/csp-report`, on the `csp_report` blueprint: where browsers send CSP
+  and Trusted Types violations. It bounds the body itself (512 KiB, answered 413
+  without `errors.py`'s per-request log line), and `server/app/csp_reports.py` reads
+  both wire formats and logs each violation as one WARNING line,
+  `CSP violation: directive=... blocked=... path=...`, keeping nothing else (no
+  query, user agent, address or sample). A token bucket per app (burst 30, 30 a
+  minute) bounds a flood and says how many lines it dropped. A breakage the policy
+  causes in production shows in the Cloud Run logs as these lines.
 
 Related backend modules:
 
@@ -311,12 +354,19 @@ Repo test layout:
 
 If you are changing only UI logic plus lightweight server responses, prefer targeted tests over the full suite first.
 
-Six checks guard the code and the checkout rather than behaviour:
+Seven checks guard the code and the checkout rather than behaviour:
 
-- `tests/app/tooling/test_html_sinks.py` reads every `.innerHTML` / `.outerHTML`
-  assignment and `insertAdjacentHTML` call in `frontend/static/scripts` and fails
-  unless it is given `''` or one string or template literal with no `${}`. Its
+- `tests/app/tooling/test_html_sinks.py` fails on any `.innerHTML` / `.outerHTML`
+  assignment, `insertAdjacentHTML`, `document.write`, `parseFromString`,
+  `createContextualFragment` or `setHTMLUnsafe` in `frontend/static/scripts`, fixed
+  string or not: each is a Trusted Types sink the report-only policy reports. Its
   `ALLOWED` list is empty; an entry needs its reason and may only be removed.
+- `tests/app/tooling/test_inline_code.py` keeps out what the strict CSP refuses:
+  an `on*=` attribute, a `style=` attribute or a `<script>` without `src` (other
+  than `type="application/json"`) in a template; `setAttribute('style')` or markup
+  written in a string with an `on...=` or `style=` in a script; and any write to
+  `window` / `globalThis` / `self` (assignment, `delete`, `Object.assign`,
+  `defineProperty`). Its `ALLOWED_*` dicts are empty and may only shrink.
 - `tests/app/tooling/test_frontend_base64.py` fails on any `atob(` in
   `frontend/static/scripts` outside its `ALLOWED` list, which holds only the
   vendored `json-ponyfill.js`.
@@ -456,7 +506,7 @@ it configures that app and no other. Do not `importlib.reload` config modules.
 ## Repo-Specific Gotchas
 
 - The frontend is plain JS modules, not React/Vue.
-- Global functions are intentionally exposed from `frontend/static/scripts/main.js` for template event handlers.
+- Templates hold no code: a control names its action with `data-action`, and nothing is put on `window` (`shared/ui/actions.js`). The CSP has no `'unsafe-inline'`, so an inline handler, `<script>` or `style=` added back simply does not run.
 - The simple and advanced tabs share the saved credential display, so re-render logic can have cross-tab side effects.
 - Flask session state matters in begin/complete flows. Be careful not to break the fallback `__session_state` handling.
 - The local `fido2/` directory is part of the repo. Do not assume behavior matches the latest upstream package.
