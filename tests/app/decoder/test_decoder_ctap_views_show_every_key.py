@@ -63,3 +63,36 @@ def test_a_view_with_a_non_integer_key_is_refused_by_the_encoder():
         encode_payload_text(json.dumps(decoded), "cbor")
     # Its EDN rebuilds it exactly.
     assert "00" + encode_payload_text(decoded["edn"], "EDN")["data"]["binary"]["hex"] == GET_ASSERTION_WITH_NULLS
+
+
+def _non_integer_keys(result: dict) -> list[tuple[int, str]]:
+    return [(finding["offset"], finding["path"]) for finding in result["findings"] if finding["code"] == "ctap-non-integer-key"]
+
+
+def test_a_non_integer_key_in_a_ctap_map_is_a_finding_where_it_is():
+    result = decode_payload_text(GET_ASSERTION_WITH_NULLS)
+
+    note_offset = bytes.fromhex(GET_ASSERTION_WITH_NULLS).index(b"\x64note")
+    assert _non_integer_keys(result) == [(note_offset, '${"note"}')]
+    (finding,) = [finding for finding in result["findings"] if finding["code"] == "ctap-non-integer-key"]
+    assert finding["category"] == "ctap"
+    assert finding["message"].startswith('map key "note" is not an integer: CTAP 2.2 section 6 numbers the members of a getAssertion response')
+
+
+def test_a_request_with_a_text_key_is_reported_too():
+    item = edn.encode('{1: "example.com", 2: h\'' + "11" * 32 + '\', "rpId": "other.example", h\'01\': 0}')
+
+    result = decode_payload_text("02" + item.hex())
+
+    assert [path for _offset, path in _non_integer_keys(result)] == ['${"rpId"}', "${h'01'}"]
+
+
+def test_a_conformant_ctap_message_and_a_plain_map_have_no_such_finding():
+    from tests.app.decoder.real_vectors import (
+        GET_ASSERTION_RESPONSE,
+        GET_INFO,
+        MAKE_CREDENTIAL_RESPONSE,
+    )
+
+    for message in (MAKE_CREDENTIAL_RESPONSE, GET_ASSERTION_RESPONSE, GET_INFO, b"\xa1\x61\x61\x01"):
+        assert _non_integer_keys(decode_payload_text(message.hex())) == []
