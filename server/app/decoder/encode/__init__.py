@@ -18,6 +18,7 @@ from cbor2 import (  # noqa: F401  # re-exported for callers and tests
 # Many imported names are intentionally re-exported for callers and tests that
 # reach encoder internals directly via `server.app.decoder.encode`.
 from ..decode.json_input import read as read_json
+from ..decode.keys import as_written
 from .binary_decode import (
     _maybe_decode_bytes,  # noqa: F401  # re-exported for callers and tests
     _require_bytes,  # noqa: F401  # re-exported for callers and tests
@@ -122,7 +123,8 @@ def encode_payload_text(value: str, target_format: str) -> dict[str, Any]:
     if handler is None:
         raise ValueError(f"Unsupported encoder format: {target_format}")
 
-    return handler(parsed)
+    # Keys are shown back as they were written; the CBOR key each spells is read where it is encoded.
+    return handler(as_written(parsed))
 
 
 _ENCODING_HANDLERS: dict[str, Callable[[Any], dict[str, Any]]] = {

@@ -182,6 +182,22 @@ class JsonLabel(str):
     __slots__ = ()
 
 
+def as_written(value: Any) -> Any:
+    """``value`` read from JSON, every object key in it a label as a person wrote it.
+
+    The encoder shows back what it was given (a pasted ``ctapDecoded``, a JSON
+    document, client data): each key as it was written, never spelled again as
+    though it were a CBOR text key the decoder read (``json_keys``). Where the
+    encoder needs the CBOR key a label spells, it reads it with ``read_json_key``.
+    """
+
+    if isinstance(value, dict):
+        return {JsonLabel(key) if isinstance(key, str) else key: as_written(entry) for key, entry in value.items()}
+    if isinstance(value, list):
+        return [as_written(item) for item in value]
+    return value
+
+
 def json_keys(keys: Sequence[Any], decorate: Callable[[Any, str], str] | None = None) -> list[str]:
     """The JSON key each of a map's ``keys`` is shown under; no two are alike.
 
