@@ -35,8 +35,8 @@ def for_member(root: Mapping[str, Any], data: bytes, keys: Sequence[Any]) -> lis
         # has an input offset of its own; each finding points at the string.
         chunks = b"".join(bytes.fromhex(chunk["hex"]) for chunk in node.get("chunks") or [])
         return [
-            {**finding, "offset": node["offset"], "message": f"{finding['message']} (inside an indefinite-length byte string)"}
-            for finding in check(chunks, 0, node["path"])
+            {**finding, "message": f"{finding['message']} (inside an indefinite-length byte string)"}
+            for finding in canonical.pin_to(check(chunks, 0, node["path"]), node["offset"])
         ]
     start = node["end"] - node["length"]
     return check(data[start : node["end"]], start, node["path"])

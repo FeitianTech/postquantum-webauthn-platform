@@ -29,9 +29,65 @@ def test_a_duplicate_map_key_is_reported_with_both_offsets():
     assert result["data"]["decodedValue"] == {"1": 2}
     assert _located(result) == [("duplicate-map-key", 3, "${1}")]
     assert result["findings"][0]["message"] == (
-        "map key 1 appears twice (first at offset 1); the decoded value keeps this later entry"
+        "map key 1 appears twice (first at offset 1); the decoded value keeps this later entry, "
+        "and drops the earlier value 1 (offset 2)"
     )
     assert result["findings"][0]["category"] == "canonical"
+    # The earlier entry is not lost: the finding carries it, and the EDN shows both.
+    assert result["findings"][0]["earlier"] == [{"offset": 1, "valueOffset": 2, "key": "1", "value": "1"}]
+    assert result["findings"][0]["kept"] == "later"
+    assert result["data"]["edn"] == "{1: 1, 1: 2}"
+
+
+def test_a_key_repeated_three_times_is_one_finding_at_the_entry_kept():
+    # {1: "a", 2: 0, 1: "b", 1: [1, 2]}
+    result = _decode("a4 01 6161 02 00 01 6162 01 820102".replace(" ", ""))
+
+    assert result["data"]["decodedValue"] == {"1": [1, 2], "2": 0}
+    (finding,) = [finding for finding in result["findings"] if finding["code"] == "duplicate-map-key"]
+    assert (finding["offset"], finding["path"]) == (9, "${1}")
+    assert finding["earlier"] == [
+        {"offset": 1, "valueOffset": 2, "key": "1", "value": '"a"'},
+        {"offset": 6, "valueOffset": 7, "key": "1", "value": '"b"'},
+    ]
+    assert finding["message"] == (
+        'map key 1 appears 3 times (first at offset 1); the decoded value keeps this last entry, '
+        'and drops the earlier values "a" (offset 2), "b" (offset 7)'
+    )
+
+
+def test_a_duplicate_label_inside_a_credential_public_key_is_located_in_the_input():
+    from server.app.decoder import edn
+
+    # A COSE key {1: 2, 1: 2, 3: -7} inside authData inside an attestation object.
+    cose = bytes.fromhex("a3 01 02 01 02 03 26".replace(" ", ""))
+    auth_data = bytes(32) + b"\x41" + bytes(4) + bytes(16) + b"\x00\x01" + b"\x07" + cose
+    attestation_object = edn.encode(f'{{"fmt": "none", "attStmt": {{}}, "authData": h\'{auth_data.hex()}\'}}')
+    cose_start = attestation_object.index(auth_data) + 56
+
+    result = _decode(attestation_object.hex())
+
+    (finding,) = [finding for finding in result["findings"] if finding["code"] == "duplicate-map-key"]
+    assert finding["offset"] == cose_start + 3
+    assert finding["path"] == '${"authData"}<credentialPublicKey>{1}'
+    assert finding["earlier"] == [{"offset": cose_start + 1, "valueOffset": cose_start + 2, "key": "1", "value": "2"}]
+
+
+def test_a_duplicate_inside_chunked_authenticator_data_points_at_the_string():
+    from server.app.decoder import edn
+
+    cose = bytes.fromhex("a3 01 02 01 02 03 26".replace(" ", ""))
+    auth_data = bytes(32) + b"\x41" + bytes(4) + bytes(16) + b"\x00\x01" + b"\x07" + cose
+    half = len(auth_data) // 2
+    text = f'{{"fmt": "none", "attStmt": {{}}, "authData": (_ h\'{auth_data[:half].hex()}\', h\'{auth_data[half:].hex()}\')}}'
+    attestation_object = edn.encode(text)
+    string_offset = attestation_object.index(b"\x5f")
+
+    result = _decode(attestation_object.hex())
+
+    (finding,) = [finding for finding in result["findings"] if finding["code"] == "duplicate-map-key"]
+    assert finding["offset"] == string_offset
+    assert finding["earlier"][0]["offset"] == finding["earlier"][0]["valueOffset"] == string_offset
 
 
 def test_a_non_shortest_integer_is_reported_where_it_is_written():
