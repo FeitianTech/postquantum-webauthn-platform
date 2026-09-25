@@ -152,6 +152,7 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch, co
             "hintsUsed": [],
             "authenticatedCredentialId": _b64url(credential_id),
             "signCount": 7,
+            "signCountStatus": "ok",
         }
 
         with client.session_transaction() as session_state:
