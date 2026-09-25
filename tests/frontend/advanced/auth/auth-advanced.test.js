@@ -690,6 +690,8 @@ describe('advanced authentication result panel', () => {
       authenticatedCredentialId: 'AQ',
       signCount: 4,
       signCountStatus: 'regressed',
+      challengeSource: 'server-session',
+      challengeStatus: 'fresh',
     }));
 
     await advancedAuthenticate();
@@ -698,8 +700,53 @@ describe('advanced authentication result panel', () => {
     expect(panel.hidden).toBe(false);
     expect(panel.dataset.verdict).toBe('warning');
     expect(panel.textContent).toBe(
-      'Last authenticationSignature counter4 Not higher than the counter the server stored: the authenticator may have been cloned. The advanced tab reports this and does not reject the assertion.',
+      'Last authenticationSignature counter4 Not higher than the counter the server stored: the authenticator may have been cloned. The advanced tab reports this and does not reject the assertion.'
+      + 'Challengeserver-session Issued by this server for this ceremony. First use.',
     );
     expect(showStatus).toHaveBeenCalledWith('advanced', 'Advanced authentication successful!', 'success');
+  });
+
+  it('says where the challenge of a failed authentication came from', async () => {
+    fetch.mockResolvedValueOnce(jsonResponse({ __session_state: 's', publicKey: { challenge: 'AQID' } }));
+    fetch.mockResolvedValueOnce(jsonResponse({
+      error: 'Invalid signature.',
+      challengeSource: 'client-supplied',
+      challengeStatus: 'not-tracked',
+    }, false, 400));
+
+    await advancedAuthenticate();
+
+    expect(document.getElementById('advanced-ceremony-result').textContent).toBe(
+      'Last authenticationChallengeclient-supplied Taken from the request, not issued by this server. Not tracked for reuse.',
+    );
+  });
+
+  it('says where the challenge of a registration came from, whether it succeeded or not', async () => {
+    document.getElementById('json-editor').value = JSON.stringify({
+      publicKey: { rp: { name: 'RP' }, user: { name: 'alice' }, challenge: { $hex: 'abcd' }, pubKeyCredParams: [] },
+    });
+    enforceAuthenticatorAttachmentWithHints.mockImplementation(() => []);
+    parseCreationOptionsFromJSON.mockImplementation((value) => value);
+    create.mockResolvedValue({ rawId: new Uint8Array([1]).buffer, id: 'AQ', toJSON: () => ({ id: 'AQ' }) });
+    const panel = document.getElementById('advanced-ceremony-result');
+
+    fetch.mockResolvedValueOnce(jsonResponse({ __session_state: 's', publicKey: { challenge: 'AQID' } }));
+    fetch.mockResolvedValueOnce(jsonResponse({ algo: 'ES256', challengeSource: 'server-session', challengeStatus: 'fresh' }));
+    await advancedRegister();
+    expect(panel.textContent).toBe('Last registrationChallengeserver-session Issued by this server for this ceremony. First use.');
+
+    fetch.mockResolvedValueOnce(jsonResponse({ __session_state: 's', publicKey: { challenge: 'AQID' } }));
+    fetch.mockResolvedValueOnce(jsonResponse({
+      error: 'Registration state not found or has expired. Please restart the registration process.',
+      challengeSource: 'server-session',
+      challengeStatus: 'expired',
+    }, false, 400));
+    await advancedRegister();
+    expect(panel.textContent).toBe('Last registrationChallengeserver-session Issued by this server for this ceremony. Expired before it was used.');
+
+    fetch.mockResolvedValueOnce(jsonResponse({ __session_state: 's', publicKey: { challenge: 'AQID' } }));
+    fetch.mockResolvedValueOnce(jsonResponse({ error: 'The request is larger than the limit of 8388608 bytes this server accepts.' }, false, 413));
+    await advancedRegister();
+    expect(panel.textContent).toBe('Last registrationChallengeNot reported by the server.');
   });
 });

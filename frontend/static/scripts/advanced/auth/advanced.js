@@ -294,6 +294,13 @@ export async function advancedRegister() {
             const completionWarnings = Array.isArray(data?.warnings)
                 ? data.warnings.filter(msg => typeof msg === 'string' && msg.trim().length > 0)
                 : [];
+            showCeremonyResult('advanced', {
+                title: 'Last registration',
+                showChallenge: true,
+                challengeSource: data.challengeSource,
+                challengeStatus: data.challengeStatus,
+            });
+
             const successMessage = `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`;
             if (completionWarnings.length > 0) {
                 showStatus('advanced', `${successMessage} ${completionWarnings.join(' ')}`, 'warning');
@@ -343,7 +350,14 @@ export async function advancedRegister() {
             setTimeout(loadSavedCredentials, 1000);
             advancedRegisterState = null;
         } else {
-            throw new FailedResponseError(await readFailedResponse(result));
+            const failure = await readFailedResponse(result);
+            showCeremonyResult('advanced', {
+                title: 'Last registration',
+                showChallenge: true,
+                challengeSource: failure.challengeSource,
+                challengeStatus: failure.challengeStatus,
+            });
+            throw new FailedResponseError(failure);
         }
     } catch (error) {
         const errorName = error && typeof error === 'object' ? error.name : undefined;
@@ -493,6 +507,9 @@ export async function advancedAuthenticate() {
                 signCount: data.signCount,
                 signCountStatus: data.signCountStatus,
                 consequence: 'The advanced tab reports this and does not reject the assertion.',
+                showChallenge: true,
+                challengeSource: data.challengeSource,
+                challengeStatus: data.challengeStatus,
             });
 
             if (data.authenticatedCredentialId) {
@@ -512,6 +529,13 @@ export async function advancedAuthenticate() {
                 queueFailedCredentialFlash(failure.failedCredentialId);
                 updateCredentialsDisplay();
             }
+            showCeremonyResult('advanced', {
+                title: 'Last authentication',
+                signCountStatus: failure.signCountStatus,
+                showChallenge: true,
+                challengeSource: failure.challengeSource,
+                challengeStatus: failure.challengeStatus,
+            });
             throw new FailedResponseError(failure);
         }
     } catch (error) {
