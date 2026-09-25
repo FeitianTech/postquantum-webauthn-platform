@@ -3,26 +3,102 @@
 A Content-Security-Policy whose ``script-src`` and ``style-src`` carry no
 ``'unsafe-inline'`` refuses what these checks keep out of the source:
 
+- a ``style`` attribute in a template: its rule belongs in a stylesheet under
+  ``frontend/static/styles``;
 - a script that sets a ``style`` attribute (``setAttribute('style', ...)``):
   views style through CSSOM (``element.style``), which the policy allows, and
   ``shared/ui/dom.js`` ``el()`` applies its ``style`` option that way.
 
-``ALLOWED`` names what still does, each with the reason. It may only shrink: an
-entry that no longer matches fails the test, so a converted file must also
-leave the list.
+Each ``ALLOWED_*`` dict names what still does, each with the reason. It may only
+shrink: an entry that no longer matches fails the test, so a converted file must
+also leave the list.
 """
 from __future__ import annotations
 
 import re
+from html.parser import HTMLParser
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[3]
 _SCRIPTS = _ROOT / "frontend" / "static" / "scripts"
+_TEMPLATES = _ROOT / "frontend" / "templates"
 
 _STYLE_ATTRIBUTE = re.compile(r"""\bsetAttribute\s*\(\s*(['"`])style\1""")
 
 # path under frontend/static/scripts -> reason.
 ALLOWED_STYLE_ATTRIBUTES: dict[str, str] = {}
+
+# (path under frontend/templates, attribute) -> reason.
+ALLOWED_TEMPLATE_ATTRIBUTES: dict[tuple[str, str], str] = {}
+
+
+class _Tags(HTMLParser):
+    """Every start tag of a template: (line, tag, attributes)."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.tags: list[tuple[int, str, list[tuple[str, str | None]]]] = []
+
+    def handle_starttag(self, tag, attrs):
+        self.tags.append((self.getpos()[0], tag, attrs))
+
+    handle_startendtag = handle_starttag
+
+
+def template_tags(text: str) -> list[tuple[int, str, list[tuple[str, str | None]]]]:
+    parser = _Tags()
+    parser.feed(text)
+    parser.close()
+    return parser.tags
+
+
+def find_inline_attributes(text: str) -> list[tuple[int, str]]:
+    """(line, attribute) for each attribute of ``text`` a strict policy refuses."""
+
+    return [
+        (line, name)
+        for line, _tag, attrs in template_tags(text)
+        for name, _value in attrs
+        if name == "style"
+    ]
+
+
+def _template_attributes() -> list[tuple[str, int, str]]:
+    return [
+        (path.relative_to(_TEMPLATES).as_posix(), line, name)
+        for path in sorted(_TEMPLATES.rglob("*.html"))
+        for line, name in find_inline_attributes(path.read_text(encoding="utf-8"))
+    ]
+
+
+def test_templates_carry_no_inline_attributes():
+    found = [
+        f"{path}:{line} {name}="
+        for path, line, name in _template_attributes()
+        if (path, name) not in ALLOWED_TEMPLATE_ATTRIBUTES
+    ]
+
+    assert found == [], "move the style into a stylesheet"
+
+
+def test_allowed_template_attributes_still_exist():
+    current = {(path, name) for path, _line, name in _template_attributes()}
+
+    stale = sorted(f"{path} {name}=" for path, name in ALLOWED_TEMPLATE_ATTRIBUTES if (path, name) not in current)
+
+    assert stale == [], "no longer there: remove these entries from ALLOWED_TEMPLATE_ATTRIBUTES"
+
+
+def test_the_template_reader_finds_inline_attributes():
+    source = "\n".join([
+        '<p style="color: red">x</p>',
+        '<p class="muted" data-style="x">{{ value }}</p>',
+        '{% include \'part.html\' %}',
+        '<input readonly STYLE="a: b">',
+        '<!-- <p style="in a comment"> -->',
+    ])
+
+    assert find_inline_attributes(source) == [(1, "style"), (4, "style")]
 
 
 def _code_lines(text: str):

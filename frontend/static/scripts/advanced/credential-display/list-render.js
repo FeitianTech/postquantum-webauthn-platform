@@ -296,7 +296,7 @@ export function updateCredentialsDisplayRuntime(deps) {
 
     if (!hasCredentials) {
         lists.forEach(list => {
-            list.replaceChildren(el('p', { style: 'color: #6c757d;', text: 'No credentials registered yet.' }));
+            list.replaceChildren(el('p', { className: 'credential-list-empty', text: 'No credentials registered yet.' }));
         });
         clearCredentialFlashQueue();
         runPostUpdate();
