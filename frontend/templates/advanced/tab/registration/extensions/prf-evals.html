@@ -17,7 +17,7 @@
     </div>
     <div class="input-with-button">
         <input type="text" id="prf-eval-first-reg" class="form-control" placeholder="Hex value">
-        <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('first', 'reg')" title="Generate random PRF evaluation data">
+        <button class="btn btn-small refresh-icon" data-action="randomize-prf-eval" data-eval="first" data-form="reg" title="Generate random PRF evaluation data">
             {% include 'advanced/tab/_refresh-icon.html' %}
         </button>
     </div>
@@ -42,7 +42,7 @@
     </div>
     <div class="input-with-button">
         <input type="text" id="prf-eval-second-reg" class="form-control" placeholder="Hex value" disabled>
-        <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('second', 'reg')" disabled title="Generate random PRF evaluation data">
+        <button class="btn btn-small refresh-icon" data-action="randomize-prf-eval" data-eval="second" data-form="reg" disabled title="Generate random PRF evaluation data">
             {% include 'advanced/tab/_refresh-icon.html' %}
         </button>
     </div>

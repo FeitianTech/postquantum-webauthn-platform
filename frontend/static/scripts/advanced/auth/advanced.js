@@ -22,6 +22,7 @@ import {
     hideProgress
 } from '../../shared/ui/status.js';
 import { randomizeChallenge, randomizePrfEval, randomizeLargeBlobWrite } from './forms.js';
+import { bindActions, callWith } from '../../shared/ui/actions.js';
 import { randomizeUserIdentity } from '../../shared/auth/username.js';
 import {
     showRegistrationResultModal,
@@ -563,4 +564,13 @@ function enforceHintsForAdvanced(publicKey) {
         showStatus('advanced', error?.message || 'Invalid hint configuration.', 'error');
         throw error;
     }
+}
+
+export const advancedActions = {
+    'advanced-register': callWith(advancedRegister),
+    'advanced-authenticate': callWith(advancedAuthenticate),
+};
+
+export function bindAdvancedActions() {
+    return bindActions(document.getElementById('advanced-tab'), advancedActions);
 }

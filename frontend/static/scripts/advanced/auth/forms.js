@@ -10,6 +10,7 @@ import {
 import { getCredentialIdHex } from '../credentials/utils.js';
 import { showStatus } from '../../shared/ui/status.js';
 import { updateJsonEditor } from '../editor/index.js';
+import { bindActions, callWith } from '../../shared/ui/actions.js';
 
 function credentialSupportsLargeBlob(cred) {
     if (!cred || typeof cred !== 'object') {
@@ -423,4 +424,14 @@ export function updateAuthenticationExtensionAvailability() {
 
     checkLargeBlobCapability({ selectedCredential });
     updatePrfAvailability(selectedCredential);
+}
+
+export const formActions = {
+    'randomize-challenge': callWith(randomizeChallenge, 'form'),
+    'randomize-prf-eval': callWith(randomizePrfEval, 'eval', 'form'),
+    'randomize-large-blob-write': callWith(randomizeLargeBlobWrite),
+};
+
+export function bindFormActions() {
+    return bindActions(document.getElementById('advanced-tab'), formActions);
 }

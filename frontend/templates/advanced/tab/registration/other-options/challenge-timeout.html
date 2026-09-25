@@ -15,7 +15,7 @@
     </div>
     <div class="input-with-button">
         <input type="text" id="challenge-reg" class="form-control" placeholder="Auto-generated hex value">
-        <button class="btn btn-small refresh-icon" onclick="randomizeChallenge('reg')" title="Generate new random challenge">
+        <button class="btn btn-small refresh-icon" data-action="randomize-challenge" data-form="reg" title="Generate new random challenge">
             {% include 'advanced/tab/_refresh-icon.html' %}
         </button>
     </div>

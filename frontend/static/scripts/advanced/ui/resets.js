@@ -7,6 +7,7 @@ import { randomizeUserIdentity } from '../../shared/auth/username.js';
 import { updateJsonEditor } from '../editor/index.js';
 import { clearFakeExcludeCredentials, clearFakeAllowCredentials } from '../auth/exclude-credentials.js';
 import { updateAllowCredentialsDropdown } from '../credentials/index.js';
+import { bindActions, callWith } from '../../shared/ui/actions.js';
 
 export function resetRegistrationForm() {
     randomizeUserIdentity();
@@ -92,4 +93,13 @@ export function resetAuthenticationForm() {
     validatePrfInputs('auth');
     updateAuthenticationExtensionAvailability();
     updateJsonEditor();
+}
+
+export const resetActions = {
+    'reset-registration-form': callWith(resetRegistrationForm),
+    'reset-authentication-form': callWith(resetAuthenticationForm),
+};
+
+export function bindResetActions() {
+    return bindActions(document.getElementById('advanced-tab'), resetActions);
 }
