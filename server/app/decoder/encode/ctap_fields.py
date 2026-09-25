@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
+from ..decode.keys import read_json_key, typed_key_kind
 from .binary_decode import (
     _maybe_decode_bytes,
     _require_bytes,
@@ -11,6 +12,24 @@ from .binary_decode import (
 )
 from .binary_extract import _restore_generic_structure
 from .constants import _CTAP_FIELD_LABELS, _CTAP_LABELED_KEY_PATTERN
+from .typed_keys import add_key
+
+
+def _reject_typed_keys(structure: Mapping[Any, Any], kind: str) -> None:
+    """Refuse a typed key spelling at member level: ``"fmt" (text)`` is a text key, not member 1.
+
+    CTAP numbers its members with integer keys; the decoder shows any other key
+    of a CTAP map with its type. Its value's JSON cannot say whether a string was
+    bytes or text, so it is not passed through either.
+    """
+
+    for key in structure:
+        named = typed_key_kind(key)
+        if named is not None:
+            raise ValueError(
+                f"{kind} key {key!r} is a {named} key, not a CTAP member (CTAP numbers its members with "
+                "integers). The encoder does not guess its value's type: encode this map from its EDN."
+            )
 
 
 def _reject_misnamed_request_fields(
@@ -29,6 +48,7 @@ def _reject_misnamed_request_fields(
     for on purpose and is left alone.
     """
 
+    _reject_typed_keys(structure, kind)
     members = _CTAP_FIELD_LABELS[kind]
     command = kind.removesuffix("Request")
     known_names = {name.lower() for name in members.values()}
@@ -59,6 +79,7 @@ def _reject_unknown_members(structure: Mapping[Any, Any], kind: str) -> None:
     only one of them could be encoded.
     """
 
+    _reject_typed_keys(structure, kind)
     members = _CTAP_FIELD_LABELS[kind]
     claimed: dict[int, Any] = {}
     unknown: list[str] = []
@@ -181,8 +202,11 @@ def _encode_attestation_statement(value: Any) -> Any:
     if not isinstance(value, Mapping):
         return _require_bytes(value, "attStmt")
 
-    statement: dict[str, Any] = {}
-    for key, entry in value.items():
+    statement: dict[Any, Any] = {}
+    spelled: dict[Any, Any] = {}
+    for label, entry in value.items():
+        key = read_json_key(label) if isinstance(label, str) else label
+        add_key(statement, spelled, key, label, "attStmt")
         if key == "sig":
             statement["sig"] = _require_bytes(entry, "attStmt.sig")
         elif key == "x5c":
@@ -213,11 +237,17 @@ def _encode_ctap_user(value: Any) -> dict[str, Any]:
     if "icon" in mapping and mapping["icon"] is not None:
         result["icon"] = _ensure_text(str(mapping["icon"]), "user.icon")
 
-    for key, entry in mapping.items():
-        if key in {"id", "name", "displayName", "icon"}:
+    spelled: dict[Any, Any] = {}
+    for label in ("id", "name", "displayName", "icon"):
+        if label in mapping:
+            add_key(result, spelled, label, label, "user")
+    for label, entry in mapping.items():
+        if label in {"id", "name", "displayName", "icon"}:
             continue
+        key = read_json_key(label) if isinstance(label, str) else label
+        add_key(result, spelled, key, label, "user")
         decoded = _maybe_decode_bytes(entry)
-        result[str(key)] = decoded if decoded is not None else _restore_generic_structure(entry)
+        result[key] = decoded if decoded is not None else _restore_generic_structure(entry)
 
     return result
 
@@ -243,11 +273,17 @@ def _encode_credential_descriptor(value: Any) -> Any:
     if "transports" in mapping:
         descriptor["transports"] = _restore_generic_structure(mapping["transports"])
 
-    for key, entry in mapping.items():
-        if key in {"type", "id", "transports"}:
+    spelled: dict[Any, Any] = {}
+    for label in ("type", "id", "transports"):
+        if label in mapping:
+            add_key(descriptor, spelled, label, label, "credential descriptor")
+    for label, entry in mapping.items():
+        if label in {"type", "id", "transports"}:
             continue
+        key = read_json_key(label) if isinstance(label, str) else label
+        add_key(descriptor, spelled, key, label, "credential descriptor")
         decoded_entry = _maybe_decode_bytes(entry)
-        descriptor[str(key)] = (
+        descriptor[key] = (
             decoded_entry
             if decoded_entry is not None
             else _restore_generic_structure(entry)

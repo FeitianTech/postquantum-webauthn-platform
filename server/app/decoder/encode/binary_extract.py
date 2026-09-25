@@ -8,6 +8,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from .binary_decode import _maybe_decode_bytes, _require_bytes
+from .typed_keys import with_cbor_keys
 
 
 def _extract_generic_binary_payload(value: Any) -> bytes:
@@ -120,8 +121,5 @@ def _extract_binary_input(value: Any, field_name: str) -> bytes:
 
 
 def _restore_generic_structure(value: Any) -> Any:
-    if isinstance(value, Mapping):
-        return {str(key): _restore_generic_structure(val) for key, val in value.items()}
-    if isinstance(value, list):
-        return [_restore_generic_structure(item) for item in value]
-    return value
+    # Keys are read as the decoder wrote them: a typed spelling is the key it names.
+    return with_cbor_keys(value)

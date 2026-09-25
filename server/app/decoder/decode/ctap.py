@@ -20,7 +20,7 @@ from .cbor_parser import _CborDecodingError, _structure_to_value
 from .ctap_prefix import _extract_ctap_prefix, _is_padding_bytes, prefix_not_read
 from .ctap_responses import _interpret_get_assertion_map, _interpret_make_credential_map
 from .findings import _attach_findings, _trailing_findings
-from .keys import MISSING, json_items, key_identity
+from .keys import MISSING, JsonLabel, json_items, key_identity
 from .keys import coerce_cbor_bytes as _coerce_cbor_bytes
 from .keys import get_mapping_entry as _get_mapping_entry
 from .keys import hex_json_safe as _hex_json_safe
@@ -85,9 +85,7 @@ def _format_ctap_entry_key(key: Any, label: str | None) -> str:
         key_display = bytes(key).hex()
     else:
         key_display = str(key)
-    if label:
-        return f"{key_display} ({label})"
-    return key_display
+    return JsonLabel(f"{key_display} ({label})" if label else key_display)
 
 
 def _build_labeled_ctap_map(

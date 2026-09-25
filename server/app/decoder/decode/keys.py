@@ -2,15 +2,40 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from fido2.utils import ByteBuffer
 
-from .cbor_parser import CborDiagnostic
+from .. import edn
+from .cbor_parser import CborDiagnostic, decode_item
 
 MISSING = object()
+
+# The kinds ``qualified_key_text`` writes after a key's EDN spelling, and the
+# initial byte a key of each kind is encoded with.
+_KINDS: dict[str, Callable[[int], bool]] = {
+    "text": lambda first: first >> 5 == 3,
+    "bytes": lambda first: first >> 5 == 2,
+    "array": lambda first: first >> 5 == 4,
+    "map": lambda first: first >> 5 == 5,
+    "tag": lambda first: first >> 5 == 6,
+    "boolean": lambda first: first in (0xF4, 0xF5),
+    "null": lambda first: first == 0xF6,
+    "undefined": lambda first: first == 0xF7,
+    "float": lambda first: first in (0xF9, 0xFA, 0xFB),
+    "simple value": lambda first: 0xE0 <= first <= 0xF3 or first == 0xF8,
+}
+# What a lenient decode spells a key it could not read with: nothing rebuilds it.
+_UNREADABLE_KINDS = {"text, not UTF-8", "invalid", "diagnostic notation"}
+# "<spelling> (<kind>)", perhaps numbered " #2" -- where the spelling starts as an
+# EDN literal does, so that "Temperature (C)" stays a text key.
+_TYPED_SPELLING = re.compile(r"(?P<spelling>.+) \((?P<kind>[^()]+)\)(?P<numbered> #[0-9]+)?", re.DOTALL)
+_EDN_LITERAL_START = re.compile(
+    r"""["'\[{0-9-]|h'|float'|simple\(|(?:true|false|null|undefined|NaN|Infinity)(?![A-Za-z0-9_])"""
+)
 
 
 def key_identity(key: Any) -> tuple[str, Any]:
@@ -92,6 +117,60 @@ def qualified_key_text(key: Any) -> str:
     return f"{key} ({type(key).__name__})"
 
 
+def typed_spelling(label: str) -> re.Match[str] | None:
+    """The parts of ``label`` if it is spelled like a typed key: an EDN literal, then `` (<kind>)``."""
+
+    match = _TYPED_SPELLING.fullmatch(label)
+    return match if match and _EDN_LITERAL_START.match(match["spelling"]) else None
+
+
+def typed_key_kind(label: Any) -> str | None:
+    """The kind ``label`` names when it is a typed key spelling ``qualified_key_text`` writes."""
+
+    match = typed_spelling(label) if isinstance(label, str) else None
+    return match["kind"] if match and (match["kind"] in _KINDS or match["kind"] in _UNREADABLE_KINDS) else None
+
+
+def read_json_key(label: str) -> Any:
+    """The CBOR map key a JSON key spells: the reader paired with ``qualified_key_text``.
+
+    A typed spelling gives the key it spells: ``"1" (text)`` the text "1",
+    ``h'01' (bytes)`` the bytes, ``1.5 (float)``, ``true (boolean)``, ``[1, 2]
+    (array)`` and the rest a ``CborDiagnostic`` the canonical encoder writes from
+    its EDN. Anything else is a text key, which is JSON's meaning of it: ``"1"``
+    is the text "1" (the decoder's plain spelling of the integer 1 is lossy, as
+    ``decodedValue`` is; its EDN is not). A label spelled like a typed key that
+    names no kind this module writes, holds EDN that does not read, or is
+    numbered (two keys shared the spelling) raises ``ValueError`` naming it.
+    """
+
+    match = typed_spelling(label)
+    if match is None:
+        return str(label)
+    spelling, kind = match["spelling"], match["kind"]
+    if match["numbered"]:
+        raise _unreadable(label, "a numbered spelling names neither of the keys that shared it; use the map's EDN")
+    if kind in _UNREADABLE_KINDS:
+        raise _unreadable(label, "the decoder could not read that key; nothing rebuilds it")
+    if kind not in _KINDS:
+        raise _unreadable(label, f"({kind}) is not a key type; a text key spelled so is written \"...\" (text)")
+    try:
+        encoded = edn.encode(spelling)
+    except ValueError as exc:
+        raise _unreadable(label, str(exc)) from None
+    if not _KINDS[kind](encoded[0]):
+        raise _unreadable(label, f"{spelling} is not a {kind}")
+    if kind == "text":
+        return decode_item(encoded)[0]["value"]
+    if kind == "bytes":
+        return bytes.fromhex(decode_item(encoded)[0]["hex"])
+    return CborDiagnostic(spelling, kind)
+
+
+def _unreadable(label: str, reason: str) -> ValueError:
+    return ValueError(f"The key {json.dumps(label, ensure_ascii=False)} is not a key the encoder can read: {reason}.")
+
+
 class JsonLabel(str):
     """A map key ``json_keys`` has already spelled for JSON.
 
@@ -121,6 +200,13 @@ def json_keys(keys: Sequence[Any], decorate: Callable[[Any, str], str] | None = 
 
     labels = [spell(key, key_text(key)) for key in keys]
     clashing = _clashing([key_text(key) for key in keys]) | _clashing(labels)
+    # A text key spelled like a typed key ("1" (text), 1 (fmt)) is spelled with
+    # its type, so that read_json_key reads it back as the text it is.
+    clashing |= {
+        index
+        for index, key in enumerate(keys)
+        if isinstance(key, str) and not isinstance(key, JsonLabel) and typed_spelling(key)
+    }
     qualified: set[int] = set()
     def respellable(index: int) -> bool:
         return not _is_int(keys[index]) and not isinstance(keys[index], JsonLabel)
