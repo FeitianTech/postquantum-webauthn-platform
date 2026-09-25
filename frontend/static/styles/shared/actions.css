@@ -140,6 +140,61 @@
     color: #1e3a5f;
 }
 
+/* ─── Ceremony result panel ───────────────────────────────── */
+
+.ceremony-result {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius-lg);
+    background: #eff6ff;
+    color: #1e3a5f;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.ceremony-result[hidden] {
+    display: none;
+}
+
+.ceremony-result[data-verdict="warning"] {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #78350f;
+}
+
+.ceremony-result__title {
+    margin: 0 0 0.4rem;
+    font-weight: 600;
+}
+
+.ceremony-result__rows {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 0.35rem 0.75rem;
+    margin: 0;
+}
+
+.ceremony-result__rows dt {
+    font-weight: 600;
+}
+
+.ceremony-result__rows dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.ceremony-result__value {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+}
+
+@media (max-width: 480px) {
+    .ceremony-result__rows {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 /* ─── Mobile ──────────────────────────────────────────────── */
 
 @media (max-width: 640px) {
