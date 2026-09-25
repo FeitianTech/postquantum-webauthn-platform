@@ -16,10 +16,10 @@ export function updateAllowCredentialsDropdownRuntime(deps) {
 
     const currentValue = allowCredentialsSelect.value;
 
-    allowCredentialsSelect.innerHTML = `
-        <option value="all">All credentials</option>
-        <option value="empty">Empty (resident key only)</option>
-    `;
+    allowCredentialsSelect.replaceChildren(
+        el('option', { attrs: { value: 'all' }, text: 'All credentials' }),
+        el('option', { attrs: { value: 'empty' }, text: 'Empty (resident key only)' }),
+    );
 
     const selectedHints = collectSelectedHints ? collectSelectedHints('registration') : [];
     let attachmentFilters = deriveAllowedAttachmentsFromHints(selectedHints);
