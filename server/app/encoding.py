@@ -272,7 +272,9 @@ def sniff(
     if not cleaned:
         raise EncodingError("no binary data present")
 
-    hex_candidate = re.sub(r"0[xX]|:", "", cleaned) if allow_separators else cleaned
+    # A 0x prefix, as decode_hex allows it: at the start only. Inside the text
+    # it is no separator, and "a0xb" is base64, not the hex "ab".
+    hex_candidate = re.sub(r"\A0[xX]|:", "", cleaned) if allow_separators else cleaned
     if hex_candidate and _HEX_ALPHABET.fullmatch(hex_candidate):
         odd = bool(len(hex_candidate) % 2)
         data = decode_hex(
