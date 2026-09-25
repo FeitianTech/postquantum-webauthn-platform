@@ -297,9 +297,12 @@ export async function clearAllCredentials() {
 
 export const credentialActions = {
     'clear-all-credentials': callWith(clearAllCredentials),
+    'close-credential-modal': callWith(closeCredentialModal),
+    'close-registration-result-modal': callWith(closeRegistrationResultModal),
+    'close-registration-detail-modal': callWith(closeRegistrationDetailModal),
 };
 
-// On the document: both tabs have a Clear All button.
+// On the document: both tabs have a Clear All button, and the modals sit outside them.
 export function bindCredentialActions() {
     return bindActions(document, credentialActions);
 }

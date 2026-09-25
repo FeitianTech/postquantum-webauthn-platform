@@ -3,6 +3,9 @@
 A Content-Security-Policy whose ``script-src`` and ``style-src`` carry no
 ``'unsafe-inline'`` refuses what these checks keep out of the source:
 
+- an inline event handler in a template (``onclick=``, ``onmouseenter=``, ...):
+  a control names what it does with ``data-action``, and the module that owns
+  the behaviour binds it (``shared/ui/actions.js``);
 - a ``style`` attribute in a template: its rule belongs in a stylesheet under
   ``frontend/static/styles``;
 - a script that sets a ``style`` attribute (``setAttribute('style', ...)``):
@@ -68,7 +71,7 @@ def find_inline_attributes(text: str) -> list[tuple[int, str]]:
         (line, name)
         for line, _tag, attrs in template_tags(text)
         for name, _value in attrs
-        if name == "style"
+        if name == "style" or name.startswith("on")
     ]
 
 
@@ -87,7 +90,7 @@ def test_templates_carry_no_inline_attributes():
         if (path, name) not in ALLOWED_TEMPLATE_ATTRIBUTES
     ]
 
-    assert found == [], "move the style into a stylesheet"
+    assert found == [], "name the action with data-action, and move a style into a stylesheet"
 
 
 def test_allowed_template_attributes_still_exist():
@@ -105,9 +108,11 @@ def test_the_template_reader_finds_inline_attributes():
         '{% include \'part.html\' %}',
         '<input readonly STYLE="a: b">',
         '<!-- <p style="in a comment"> -->',
+        '<button type="button" onclick="go()" data-action="go">Go</button>',
+        '<div class="info-icon" onMouseEnter="show(this)" data-onclick="x"></div>',
     ])
 
-    assert find_inline_attributes(source) == [(1, "style"), (4, "style")]
+    assert find_inline_attributes(source) == [(1, "style"), (4, "style"), (6, "onclick"), (7, "onmouseenter")]
 
 
 def _code_lines(text: str):
@@ -208,26 +213,3 @@ def test_the_reader_finds_markup_attributes():
     ])
 
     assert find_markup_attributes(source) == [(1, "style"), (2, "onclick"), (3, "onmouseenter")]
-
-
-# Until the last inline handler is gone: each function a template's on*= attribute
-# still calls must still be put on window by main.js, or that control stops working
-# with nothing in the tests to say so.
-_MAIN = _SCRIPTS / "main.js"
-_CALLED = re.compile(r"([A-Za-z_$][\w$]*)\s*\(")
-_WINDOW_NAME = re.compile(r"^window\.([A-Za-z_$][\w$]*)\s*=", re.MULTILINE)
-
-
-def test_inline_handlers_still_find_their_function():
-    exposed = set(_WINDOW_NAME.findall(_MAIN.read_text(encoding="utf-8")))
-    missing = sorted(
-        f"{path.relative_to(_TEMPLATES).as_posix()}:{line} {name}()"
-        for path in sorted(_TEMPLATES.rglob("*.html"))
-        for line, _tag, attrs in template_tags(path.read_text(encoding="utf-8"))
-        for attribute, value in attrs
-        if attribute.startswith("on") and value
-        for name in _CALLED.findall(value)
-        if name not in exposed
-    )
-
-    assert missing == [], "convert these controls to data-action before removing their window name"

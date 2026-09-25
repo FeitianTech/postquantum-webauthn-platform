@@ -47,9 +47,6 @@ import {
     loadSavedCredentials,
     showCredentialDetails,
     navigateToMdsAuthenticator,
-    closeCredentialModal,
-    closeRegistrationResultModal,
-    closeRegistrationDetailModal,
     deleteCredential,
     updateAllowCredentialsDropdown,
     setMdsNavigation,
@@ -452,12 +449,8 @@ window.parseCreationOptionsFromJSON = parseCreationOptionsFromJSON;
 window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
 window.updateGlobalScrollLock = updateGlobalScrollLock;
-window.closeModal = closeModal;
 window.showCredentialDetails = showCredentialDetails;
 window.navigateToMdsAuthenticator = navigateToMdsAuthenticator;
-window.closeCredentialModal = closeCredentialModal;
-window.closeRegistrationResultModal = closeRegistrationResultModal;
-window.closeRegistrationDetailModal = closeRegistrationDetailModal;
 window.deleteCredential = deleteCredential;
 window.editCreateOptions = editCreateOptions;
 window.editAssertOptions = editAssertOptions;
