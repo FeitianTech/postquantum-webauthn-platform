@@ -53,3 +53,61 @@ jobs:
       # style attribute, nothing the strict CSP refuses.
       - name: Scan the export against the CSP
         run: npm run check:csp
+
+  # Browser tests: Playwright in Chromium, whose virtual authenticator (the
+  # DevTools WebAuthn domain) answers real registrations and authentications,
+  # against Flask serving the current UI at / and the export at /beta, under
+  # the strict CSP. Cloud Build does not run these yet (docs/UI_MIGRATION.md).
+  e2e:
+    name: Browser tests (Playwright, virtual authenticator)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.15"
+
+      - name: Install Python dependencies
+        run: uv sync --locked --python 3.12
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci --no-audit --no-fund
+
+      - name: Build the static export
+        working-directory: web
+        run: npm run build
+
+      - name: Install Chromium
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run the browser tests
+        working-directory: web
+        env:
+          E2E_PYTHON: ${{ github.workspace }}/.venv/bin/python
+        run: npm run e2e
+
+      - name: Keep the report of a failed run
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: |
+            web/playwright-report
+            web/test-results
+          retention-days: 7
