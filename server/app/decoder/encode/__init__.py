@@ -99,8 +99,9 @@ def encode_payload_text(value: str, target_format: str) -> dict[str, Any]:
 
     canonical = _normalize_encoding_format(target_format)
     if canonical == "edn":
-        # EDN is not JSON: its text is the item, read by decoder/edn.
-        return _encode_edn_value(trimmed)
+        # EDN is not JSON: its text is the item, read by decoder/edn -- as sent,
+        # so that the offset a refusal names counts the text's leading blank space.
+        return _encode_edn_value(value)
 
     try:
         parsed, repeated = read_json(trimmed)

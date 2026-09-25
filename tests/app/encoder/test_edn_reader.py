@@ -170,3 +170,17 @@ def test_the_codec_endpoint_refuses_a_lone_surrogate_with_its_offset(client):
     assert response.get_json()["error"] == (
         "EDN is not valid at offset 2: a lone surrogate U+D800, which UTF-8 cannot encode"
     )
+
+
+@pytest.mark.parametrize(("text", "offset"), [("\n\n  [1, 256_0]", 8), ("\t[1, 256_0]\n", 5), ("[1, 256_0]", 4)])
+def test_an_encoder_refusal_counts_the_offset_in_the_text_as_sent(client, text, offset):
+    response = client.post("/api/codec", json={"payload": text, "mode": "encode", "format": "EDN"})
+
+    assert response.status_code == 422
+    assert response.get_json()["error"].startswith(f"EDN is not valid at offset {offset}: 256 does not fit")
+
+
+def test_edn_between_blank_lines_is_encoded():
+    from server.app.decoder.encode import encode_payload_text
+
+    assert encode_payload_text("\n  [1, 2]\n\n", "EDN")["data"]["binary"]["hex"] == "820102"
