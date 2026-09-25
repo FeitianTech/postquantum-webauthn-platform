@@ -19,6 +19,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from .. import edn
 from ..ctap2_order import ctap2_key_order
 from . import key_equivalence
 from .cbor_parser import _diagnostic_key
@@ -50,10 +51,38 @@ def relocate(findings: list[dict[str, Any]], base_offset: int, path_prefix: str)
 
     ``base_offset`` is where the byte string's content starts in the input and
     ``path_prefix`` names the item inside it, e.g. ``${2}<credentialPublicKey>``.
+    The offsets a duplicate key's earlier entries carry move with it.
     """
 
     return [
-        {**finding, "offset": finding["offset"] + base_offset, "path": path_prefix + finding["path"][1:]}
+        {
+            **finding,
+            "offset": finding["offset"] + base_offset,
+            "path": path_prefix + finding["path"][1:],
+            **({"earlier": [_moved(entry, base_offset) for entry in finding["earlier"]]} if "earlier" in finding else {}),
+        }
+        for finding in findings
+    ]
+
+
+def _moved(entry: Mapping[str, Any], base_offset: int) -> dict[str, Any]:
+    return {**entry, "offset": entry["offset"] + base_offset, "valueOffset": entry["valueOffset"] + base_offset}
+
+
+def pin_to(findings: list[dict[str, Any]], offset: int) -> list[dict[str, Any]]:
+    """Findings about CBOR inside a chunked byte string, every offset pointed at the string itself.
+
+    Its bytes are not contiguous in the input, so nothing inside it has an input
+    offset of its own.
+    """
+
+    return [
+        {
+            **finding,
+            "offset": offset,
+            **({"earlier": [{**entry, "offset": offset, "valueOffset": offset} for entry in finding["earlier"]]}
+               if "earlier" in finding else {}),
+        }
         for finding in findings
     ]
 
@@ -162,7 +191,7 @@ def _check_node(
 def _check_map(
     node: Mapping[str, Any], data: bytes, path: str, findings: list[dict[str, Any]], depth: int
 ) -> None:
-    seen: dict[tuple[Any, ...], int] = {}
+    seen: dict[Any, list[Mapping[str, Any]]] = {}
     previous: tuple[bytes, Mapping[str, Any]] | None = None
     for entry in node.get("entries") or []:
         key, value = entry.get("key"), entry.get("value")
@@ -175,17 +204,9 @@ def _check_map(
 
         identity = key_equivalence.identity(key)
         if identity in seen:
-            findings.append(
-                _finding(
-                    "duplicate-map-key",
-                    key_offset,
-                    entry_path,
-                    f"map key {_diagnostic_key(key)} appears twice (first at offset {seen[identity]}); "
-                    "the decoded value keeps this later entry",
-                )
-            )
+            seen[identity].append(entry)
         else:
-            seen[identity] = key_offset
+            seen[identity] = [entry]
             if previous is not None and ctap2_key_order(encoded) < ctap2_key_order(previous[0]):
                 findings.append(
                     _finding(
@@ -198,3 +219,45 @@ def _check_map(
                 )
         previous = (encoded, key)
         _check_node(value, data, entry_path, findings, depth)
+    # One finding per repeated key, at the entry the decoded value keeps: the last.
+    for occurrences in seen.values():
+        if len(occurrences) > 1:
+            kept = occurrences[-1]
+            findings.append(_duplicate(kept["key"], kept.get("path") or path, occurrences[:-1]))
+
+
+def _duplicate(key: Mapping[str, Any], path: str, earlier: list[Mapping[str, Any]]) -> dict[str, Any]:
+    """The finding for ``key``, the entry the decoded value keeps, after ``earlier`` ones: each, as EDN."""
+
+    entries = [
+        {
+            "offset": entry["key"]["offset"],
+            "valueOffset": entry["value"]["offset"],
+            "key": _edn(entry["key"]),
+            "value": _edn(entry["value"]),
+        }
+        for entry in earlier
+    ]
+    count = len(entries) + 1
+    times, which = ("twice", "later") if count == 2 else (f"{count} times", "last")
+    dropped = ", ".join(f"{_short(entry['value'])} (offset {entry['valueOffset']})" for entry in entries)
+    finding = _finding(
+        "duplicate-map-key",
+        key["offset"],
+        path,
+        f"map key {_diagnostic_key(key)} appears {times} (first at offset {entries[0]['offset']}); the decoded value "
+        f"keeps this {which} entry, and drops the earlier value{'s' if len(entries) > 1 else ''} {dropped}",
+    )
+    finding.update(earlier=entries, kept="later")
+    return finding
+
+
+def _edn(node: Mapping[str, Any]) -> str:
+    try:
+        return edn.spell(node, inline=True)
+    except (KeyError, TypeError, ValueError):
+        return str(node.get("summary", "?"))
+
+
+def _short(text: str) -> str:
+    return text if len(text) <= 40 else f"{text[:37]}..."
