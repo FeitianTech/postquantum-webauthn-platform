@@ -55,11 +55,16 @@ def test_decoder_rejects_plain_english_text(pipeline):
         decode.decode_payload_text(PLAIN_TEXT)
 
 
-def test_decoder_rejects_odd_length_hex_instead_of_left_padding_it(pipeline):
-    """``abc`` is not ``0abc``; guessing a leading nibble invents data."""
+def test_decoder_never_left_pads_odd_length_hex(pipeline):
+    """``abc`` is not ``0abc``; guessing a leading nibble invents data.
 
+    It is base64 (69 b7), and read as that; odd-length digits that are not
+    base64 either are refused.
+    """
+
+    assert pipeline._decode_binary_input("abc") == (b"\x69\xb7", "base64 or base64url")
     with pytest.raises(ValueError):
-        pipeline._decode_binary_input("abc")
+        pipeline._decode_binary_input("abcde")
 
     assert pipeline._decode_binary_input("0abc") == (b"\x0a\xbc", "hex")
 

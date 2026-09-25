@@ -19,6 +19,14 @@ def test_0x_is_a_hexadecimal_prefix_only_at_the_start():
     assert pipeline._decode_binary_input("0Xde:ad") == (b"\xde\xad", "hex")
 
 
-def test_an_odd_number_of_hexadecimal_digits_is_no_reading():
-    with pytest.raises(ValueError, match="does not appear to be valid base64, base64url, or hexadecimal"):
-        pipeline._decode_binary_input("abc")
+def test_an_odd_number_of_hexadecimal_digits_is_read_as_the_base64_it_may_be():
+    # "abc" is no hexadecimal, but it is base64: 69 b7.
+    assert pipeline._decode_binary_input("abc") == (b"\x69\xb7", "base64 or base64url")
+    with pytest.raises(ValueError, match=r"text string declares 9 bytes.*read as base64: as hexadecimal, its 3 digits") as refused:
+        decode_payload_text("abc")
+    assert refused.value.offset == 0
+
+
+def test_an_odd_number_of_hexadecimal_digits_that_is_no_base64_says_so():
+    with pytest.raises(ValueError, match="Input is 5 hexadecimal digits, an odd number, so no bytes; and it is not base64"):
+        decode_payload_text("abcde")

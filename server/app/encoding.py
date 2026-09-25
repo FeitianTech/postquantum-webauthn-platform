@@ -261,7 +261,7 @@ def sniff(
 ) -> SniffResult:
     """Decode ``text`` and report which encoding actually matched.
 
-    Precedence is hex, then base64url, then base64. The encoding is decided by
+    Precedence is hex (an even number of digits), then base64url, then base64. The encoding is decided by
     which strict decoder succeeded -- never by scanning for ``-``/``_`` and
     assuming. When the input is confined to ``A-Za-z0-9`` both base64 variants
     decode to the same bytes; that is reported as ``base64`` with
@@ -277,11 +277,14 @@ def sniff(
     hex_candidate = re.sub(r"\A0[xX]|:", "", cleaned) if allow_separators else cleaned
     if hex_candidate and _HEX_ALPHABET.fullmatch(hex_candidate):
         odd = bool(len(hex_candidate) % 2)
-        data = decode_hex(
-            hex_candidate,
-            allow_odd_length=allow_odd_length_hex,
-        )
-        return SniffResult(data, HEX, lenient=odd and allow_odd_length_hex)
+        # An odd number of digits is no hexadecimal -- unless padding one is asked
+        # for -- so the text is read as base64 below, if it is that.
+        if not odd or allow_odd_length_hex:
+            data = decode_hex(
+                hex_candidate,
+                allow_odd_length=allow_odd_length_hex,
+            )
+            return SniffResult(data, HEX, lenient=odd and allow_odd_length_hex)
 
     has_url_chars = "-" in cleaned or "_" in cleaned
     has_std_chars = "+" in cleaned or "/" in cleaned
