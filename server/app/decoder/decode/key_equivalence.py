@@ -11,7 +11,8 @@ tags by number and content; simple values by value (``simple(21)`` is
 ``identity(node)`` is the same for two nodes exactly when they are equivalent.
 The decoded value keeps one entry per identity; ``canonical`` reports a map
 that holds two as ``duplicate-map-key``. A node the lenient parser could not
-read (invalid, text that is not UTF-8) is identified by its raw bytes.
+read (invalid, text that is not UTF-8, whole or in one chunk) is identified by
+its raw bytes.
 """
 from __future__ import annotations
 
@@ -30,6 +31,9 @@ def identity(node: Mapping[str, Any]) -> Hashable:
     """What makes ``node`` the key it is, in the generic data model."""
 
     kind = node.get("type")
+    raw_text = unreadable_text_hex(node)
+    if raw_text is not None:
+        return ("raw", 3, raw_text)
     if kind == "invalid" or "error" in node:
         return ("raw", node.get("majorType"), node.get("hex"))
     major_type = node.get("majorType")
@@ -53,6 +57,26 @@ def identity(node: Mapping[str, Any]) -> Hashable:
     if kind in ("null", "undefined"):
         return ("simple", _SIMPLE_NUMBERS[kind])
     return ("simple", node.get("value"))
+
+
+def unreadable_text_hex(node: Mapping[str, Any]) -> str | None:
+    """A text string's bytes, in hex, when they are not UTF-8 -- whole, or in one of its chunks.
+
+    The lenient parser gives such an indefinite string the ``value`` of its
+    readable chunks alone, which would make it the same key as that shorter text.
+    """
+
+    if node.get("majorType") != 3:
+        return None
+    if "error" in node:
+        return node.get("hex")
+    segments = node.get("segments") or []
+    if not any("error" in segment for segment in segments):
+        return None
+    return "".join(
+        segment.get("hex", "") if "error" in segment else str(segment.get("value", "")).encode("utf-8").hex()
+        for segment in segments
+    )
 
 
 def _float_identity(node: Mapping[str, Any]) -> Hashable:

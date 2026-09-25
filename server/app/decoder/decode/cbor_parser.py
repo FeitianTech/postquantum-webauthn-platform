@@ -439,6 +439,10 @@ _KEY_KINDS = {"simple": "simple value", "text string": "text, not UTF-8"}
 
 
 def _map_key(key_node: Mapping[str, Any]) -> Any:
+    # Text with a chunk that is not UTF-8 is not the text of its readable chunks.
+    raw_text = key_equivalence.unreadable_text_hex(key_node)
+    if raw_text is not None and "error" not in key_node:
+        return CborDiagnostic(f"h'{raw_text}' (not UTF-8)", "text, not UTF-8")
     key = _structure_to_value(key_node)
     node_type = key_node.get("type")
     kind = _KEY_KINDS.get(node_type, node_type) if isinstance(node_type, str) else ""
