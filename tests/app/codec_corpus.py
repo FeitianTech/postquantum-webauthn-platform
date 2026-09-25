@@ -7,13 +7,18 @@ characterization goldens are built from; registration responses built as the
 golden scenarios build them; the vendored fido2 tests' CBOR vectors and CTAP
 responses (one of them not canonical); every hex literal under ``tests/`` that
 holds an item, with a leading CTAP command or status byte dropped where there
-is one; and the COSE keys and extensions inside every authenticator data above.
+is one; every array, map or tag the characterization golden records and inputs
+hold, in hex or base64url; and the COSE keys and extensions inside every
+authenticator data above.
 """
 from __future__ import annotations
 
 import ast
 import base64
+import binascii
 import functools
+import json
+import re
 from pathlib import Path
 
 from server.app.decoder.ctap_tables import COMMANDS, STATUSES
@@ -98,6 +103,51 @@ def _hex_literals() -> dict[str, bytes]:
     return {f"literal:{key[:24]}": item for key, item in found.items()}
 
 
+_HEX = re.compile(r"(?:[0-9a-fA-F]{2})+")
+_BASE64 = re.compile(r"[A-Za-z0-9+/_-]+={0,2}")
+
+
+def _golden_items() -> dict[str, bytes]:
+    """Every array, map and tag longer than 8 bytes that a characterization record holds as text.
+
+    A string is tried as hex, then as base64url or base64, with a leading CTAP
+    command or status byte dropped where there is one. Scalars are left out: any
+    short string reads as some scalar. Each item is named by the first record
+    and JSON path it was found at.
+    """
+
+    found: dict[bytes, str] = {}
+
+    def visit(value, where: str) -> None:
+        if isinstance(value, dict):
+            for key, entry in value.items():
+                visit(entry, f"{where}.{key}")
+        elif isinstance(value, list):
+            for index, entry in enumerate(value):
+                visit(entry, f"{where}[{index}]")
+        elif isinstance(value, str) and len(value) > 8:
+            for data in _binary_readings(value):
+                for candidate in (data, data[1:]) if data[0] in COMMANDS or data[0] in STATUSES else (data,):
+                    if len(candidate) > 8 and candidate[0] >> 5 in (4, 5, 6) and _whole_item(candidate):
+                        found.setdefault(candidate, where)
+
+    for path in sorted((_TESTS / "app" / "characterization").rglob("*.json")):
+        visit(json.loads(path.read_text(encoding="utf-8")), path.stem)
+    return {f"golden:{where}": item for item, where in found.items()}
+
+
+def _binary_readings(text: str) -> list[bytes]:
+    readings = []
+    if _HEX.fullmatch(text):
+        readings.append(bytes.fromhex(text))
+    if _BASE64.fullmatch(text):
+        try:
+            readings.append(base64.b64decode(text.replace("-", "+").replace("_", "/") + "=" * (-len(text) % 4)))
+        except (binascii.Error, ValueError):
+            pass
+    return [data for data in readings if data]
+
+
 @functools.cache
 def corpus() -> dict[str, bytes]:
     """Name -> item, for every source above."""
@@ -118,6 +168,7 @@ def corpus() -> dict[str, bytes]:
         items[f"fido2-cbor-vector:{hex_text}"] = bytes.fromhex(hex_text)
     items["fido2-client:_MC_RESP (not canonical)"] = _CLIENT_MC_RESP
     items.update(_hex_literals())
+    items.update(_golden_items())
 
     auth_data_sources = {name: value for name, value in vars(real_vectors).items() if name.endswith("_AUTH_DATA")}
     for name, value in list(items.items()):
