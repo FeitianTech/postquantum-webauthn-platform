@@ -185,16 +185,22 @@ def _merge_in_a_process(root, key, start):
     from server.app import credential_artifacts as child
 
     child._ARTIFACT_DIR = root
-    read = child._read_record
+    # The read a merge extends: slowed so that, without the lock, the two merges'
+    # read-then-write windows overlap and one update is lost.
+    read = child._record_to_merge_into
+    slowed = []
 
     def _slow_read(*args, **kwargs):
         record = read(*args, **kwargs)
+        slowed.append(True)
         time.sleep(0.5)
         return record
 
-    child._read_record = _slow_read
+    child._record_to_merge_into = _slow_read
     start.wait()
     assert child.store_credential_artifact(STORAGE_ID, {key: True}, merge=True, session_id=SESSION)
+    # Were the read not the one the merge does, the test would pass without the lock.
+    assert slowed == [True]
 
 
 def test_two_processes_merging_one_artifact_keep_both_updates(monkeypatch, tmp_path):
