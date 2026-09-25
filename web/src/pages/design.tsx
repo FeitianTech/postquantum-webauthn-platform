@@ -7,6 +7,7 @@ import { STATE_TONES } from '@/components/analyze-browser/FactList';
 import { Badge, StatusChip } from '@/components/ui/Badge';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Card, CardHeader } from '@/components/ui/Card';
+import { CodeBlock } from '@/components/ui/CodeBlock';
 import { Select, TextArea, TextField } from '@/components/ui/Field';
 import { CloseIcon, CopyIcon, InfoIcon } from '@/components/ui/icons';
 import { InfoPopover } from '@/components/ui/InfoPopover';
@@ -33,6 +34,23 @@ const DEMO_STATES = [
 const AAGUID = 'ee882879-721c-4913-9775-3dfcce97072a';
 const PUBLIC_KEY =
   'pQECAyYgASFYIJzXm9a0WX1ifXaCxk7t5tLVEQ4g7tJjKY2QwHqHjfhVIlggLp8XoUXbA2vD6Hbpu8Q0T8SrXl1zVx2k5K6vJdGf3dI';
+// A long block: a decoded answer as the raw view shows it, and a long hex line.
+const LONG_BLOCK = JSON.stringify(
+  {
+    success: true,
+    type: 'CBOR',
+    data: {
+      decodedValue: { 1: 'c', '"1" (text)': 'b' },
+      edn: '{1: "a", "1": "b", 1: "c"}',
+      hex: 'a3016161613161620161630000000000000000000000000000000000000000000000000000000000000000000000000000000000',
+    },
+    decodeMode: 'strict',
+    findings: [{ code: 'json-key-collision', category: 'rendering', offset: 0, path: '$' }],
+    malformed: [],
+  },
+  null,
+  2,
+);
 
 function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: ReactNode }) {
   return (
@@ -373,6 +391,12 @@ function Display() {
         </Example>
         <Example label="MonoValue — long: truncated, with Show all and copy">
           <MonoValue value={PUBLIC_KEY} label="public key" className="max-w-72" />
+        </Example>
+        <Example label="CodeBlock — short: whole, with copy">
+          <CodeBlock value={'{1: "a", "1": "b", 1: "c"}'} label="EDN (exact bytes)" />
+        </Example>
+        <Example label="CodeBlock — long: collapsed to a height, with Show all and copy; lines wrap">
+          <CodeBlock value={LONG_BLOCK} label="Raw codec output" />
         </Example>
       </Grid>
       <Example label="Table primitives: the table scrolls inside its own frame; headers sort">
