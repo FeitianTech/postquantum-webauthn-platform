@@ -30,7 +30,6 @@ from .storage.cloud import (
 from .storage.common import (
     StorageReadError,
     assert_contained_blob_name,
-    build_session_root_prefix,
     build_session_scoped_prefix,
     file_lock,
     resolve_contained_path,
@@ -42,7 +41,6 @@ from .storage.common import (
 __all__ = [
     "store_credential_artifact",
     "load_credential_artifact",
-    "delete_credential_artifact",
     "delete_credential_artifact_with_status",
 ]
 
@@ -109,15 +107,6 @@ def _artifact_path(storage_id: str, session_id: str) -> str:
 def _artifact_filename(storage_id: str) -> str:
     digest = hashlib.sha256(storage_id.encode("utf-8")).hexdigest()
     return f"{digest}.json"
-
-
-def _user_root_prefix(session_id: str) -> str:
-    return build_session_root_prefix(
-        session_id,
-        user_folder_prefix=_USER_FOLDER_PREFIX,
-        type_error="Session identifier must be a string",
-        empty_error="Session identifier must be a string",
-    )
 
 
 def _artifact_prefix(session_id: str) -> str:
@@ -227,28 +216,6 @@ def _write_record(storage_id: str, session_id: str, record: dict[str, Any]) -> N
 
     _ensure_directory(session_id)
     _write_file(_artifact_path(storage_id, session_id), record)
-
-
-def _delete_record(storage_id: str, session_id: str) -> bool:
-    if _using_gcs():
-        blob_name = _artifact_blob(storage_id, session_id)
-        try:
-            existed = blob_exists(blob_name)
-        except Exception:
-            existed = False
-        try:
-            delete_blob(blob_name, missing_ok=True)
-        except Exception:
-            return False
-        return existed
-
-    try:
-        _remove_locked(_artifact_path(storage_id, session_id))
-    except FileNotFoundError:
-        return False
-    except OSError:
-        return False
-    return True
 
 
 def _remove_locked(path: str) -> None:
@@ -412,19 +379,6 @@ def _holds(payload: Any, update: dict[str, Any]) -> bool:
         elif key not in payload or payload[key] != value:
             return False
     return True
-
-
-def delete_credential_artifact(storage_id: Any, *, session_id: str | None = None) -> bool:
-    """Delete the stored artifact for ``storage_id`` if it exists."""
-
-    normalised = _normalise_storage_id(storage_id)
-    if not normalised:
-        return False
-
-    resolved_session = _resolve_session_id(session_id)
-
-    with _lock_for(normalised, resolved_session):
-        return _delete_record(normalised, resolved_session)
 
 
 def delete_credential_artifact_with_status(
