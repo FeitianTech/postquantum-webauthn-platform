@@ -26,6 +26,8 @@ from server.app.decoder.edn import reader
         ("100000.0", "fa47c35000"), ("1e3", "f963d0"), ("1.0e+20", "fb4415af1d78b58c40"), ("-0.0", "f98000"),
         ("0x1.8p0", "f93e00"), ("-0x1.8p1_3", "fbc008000000000000"), (".5", "f93800"), ("2.", "f94000"),
         ("NaN", "f97e00"), ("NaN_2", "fa7fc00000"), ("Infinity", "f97c00"), ("-Infinity_3", "fbfff0000000000000"),
+        # The largest double, written either way, is in range.
+        ("1.7976931348623157e308", "fb7fefffffffffffff"), ("0x1.fffffffffffffp1023", "fb7fefffffffffffff"),
         ("float'7e01'", "f97e01"), ("float'fe00'", "f9fe00"), ("float'7fc00001'", "fa7fc00001"),
         ("float'7ff8000000000001'", "fb7ff8000000000001"),
         # Byte strings every way, with their widths.
@@ -66,6 +68,13 @@ def test_edn_is_encoded_to_exactly_the_bytes_it_notates(text, expected):
         ("5_x", 0, "no encoding indicator _x"),
         ("5_", 0, "indefinite length is only for"),
         ("1.1_1", 0, "not exact"),
+        # A finite literal is never rounded to infinity (HTTP 500 for a hex float, before).
+        ("1e999", 0, "1e999 is beyond the range of a double"),
+        ("-1.8e308", 0, "beyond the range of a double"),
+        ("0x1p1024", 0, "beyond the range of a double"),
+        ("-0x1p1024", 0, "beyond the range of a double"),
+        ("0x1.fffffffffffff8p1023", 0, "beyond the range of a double"),
+        ("[0, 0x1p99999]", 4, "beyond the range of a double"),
         ("1.5_0", 0, "_1, _2 or _3"),
         ("simple(24)", 0, "not a simple value"),
         ("simple(256)", 0, "not a simple value"),
