@@ -1650,6 +1650,27 @@ went from 522 lines to 400.
   that), but no guard covers the other routes.
 - No input that is both JSON and base64 has turned up in practice; the pair is documented and checked.
 
+**Phase 21 — tech-lead verification (2026-09-25):**
+- macOS 4653 passed / 4 skipped, coverage 96.63%, vitest 301, ruff clean, `tests/app/security/` 126.
+  **Linux (python:3.14 in Docker) 4639 / 5, pytest exit 0, and no `instance/` left in the fresh tree.**
+- **Every one of the 52 commits passes pytest on its own, from a tree cleaned with `git clean -fdx`, and none
+  leaves `instance/`** (run in three parallel worktrees).
+- **Independent CTAP round trip.** Messages built with my own CTAP2-canonical encoder (independent of the app
+  and of fido2): makeCredential and getAssertion requests (extensions, hmac-secret's integer-keyed maps, PIN
+  parameters), getInfo, and both responses (a null user icon; packed attestation with attested credential
+  data), each with its byte, bare, and with trailing bytes, in both encoder formats: **30 of 30 exact**. On
+  64dcf3e2 the same 30 gave 4 exact, **20 silently different bytes** and 6 refused.
+- A3/A4 as reported; every response I tried is strict JSON; a realistic 37-byte authenticator data still reads
+  as authenticator data with no ambiguity.
+- The 8 MiB limit holds at the byte: exactly 8,388,608 is read, 8,388,609 is a JSON 413.
+- The docs split kept every rule: 49 of the 59 old decoder and storage sentences are verbatim in
+  `docs/DECODER.md` / `docs/STORAGE.md`, and the other 10 are this phase's intended updates, each present in
+  its new form.
+- On the nine fixed payloads the only change is `data.ctap.message` on the two CTAP ones.
+- Queued for the backend queue (Phases 27-28): the "CBOR (CTAP/WebAuthn Data)" format still guesses a command
+  byte for a hand-written numeric map; Flask's JSON writer can still write a bare NaN outside the codec; the
+  encoder accepts the UI's format labels but not its own internal name `ctap-webauthn`.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
