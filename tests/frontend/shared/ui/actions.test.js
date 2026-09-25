@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { bindActions } from '../../../../frontend/static/scripts/shared/ui/actions.js';
+import { bindActions, callWith } from '../../../../frontend/static/scripts/shared/ui/actions.js';
 
 function hover(element, type) {
   element.dispatchEvent(new MouseEvent(type, { bubbles: false }));
@@ -147,5 +147,23 @@ describe('bindActions', () => {
     unbind();
 
     expect(go).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('callWith', () => {
+  it('passes the named data-* values in order, and nothing else', () => {
+    const fn = vi.fn(() => 'done');
+    const control = document.createElement('button');
+    control.dataset.eval = 'first';
+    control.dataset.form = 'reg';
+
+    expect(callWith(fn, 'eval', 'form')(control, new MouseEvent('click'))).toBe('done');
+    expect(fn).toHaveBeenLastCalledWith('first', 'reg');
+
+    callWith(fn)(control, new MouseEvent('click'));
+    expect(fn).toHaveBeenLastCalledWith();
+
+    callWith(fn, 'missing')(control);
+    expect(fn).toHaveBeenLastCalledWith(undefined);
   });
 });
