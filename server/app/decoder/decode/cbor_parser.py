@@ -23,6 +23,7 @@ from typing import Any
 from ...encoding import decode_hex, encode_base64
 from ...webauthn.attestation import encode_base64url
 from .. import edn
+from . import key_equivalence
 
 # Deep enough for any WebAuthn or CTAP structure; shallow enough that hostile
 # input cannot exhaust the interpreter's recursion limit.
@@ -549,12 +550,18 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
 
 
 def _map_value(node: Mapping[str, Any]) -> dict[Any, Any]:
-    """A map node's entries as a dict: each key by ``_map_key``, a later entry replacing an earlier one."""
+    """A map node's entries as a dict: one entry per key.
+
+    Keys are the same key when RFC 8949 section 5.6.1 says so, however each was
+    written (``key_equivalence``): the entry is spelled as the first of them and
+    holds the value of the last, which ``canonical`` reports as a duplicate.
+    """
 
     entries = node.get("entries")
     if not isinstance(entries, Sequence):
         return {}
     result: dict[Any, Any] = {}
+    spelled: dict[Any, Any] = {}
     for entry in entries:
         if not isinstance(entry, Mapping):
             continue
@@ -562,7 +569,7 @@ def _map_value(node: Mapping[str, Any]) -> dict[Any, Any]:
         value_node = entry.get("value")
         if not isinstance(key_node, Mapping):
             continue
-        key = _map_key(key_node)
+        key = spelled.setdefault(key_equivalence.identity(key_node), _map_key(key_node))
         result[key] = (
             _structure_to_value(value_node)
             if isinstance(value_node, Mapping)

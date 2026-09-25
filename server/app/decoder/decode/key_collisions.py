@@ -15,6 +15,7 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
+from . import key_equivalence
 from .cbor_parser import _map_key
 from .keys import key_text, qualified_key_text
 
@@ -41,17 +42,18 @@ def _walk(node: Any, path: str, findings: list[dict[str, Any]]) -> None:
 
 
 def _check_map(node: Mapping[str, Any], path: str, findings: list[dict[str, Any]]) -> None:
-    # The keys the decoded map holds, as it holds them: a duplicate is one key.
-    keys: dict[Any, None] = {}
+    # The keys the decoded map holds, as it holds them: equivalent keys are one
+    # key, spelled as the first of them (cbor_parser._map_value).
+    keys: dict[Any, Any] = {}
     for entry in node.get("entries") or []:
         key_node, entry_path = entry.get("key"), entry.get("path") or path
         if isinstance(key_node, Mapping) and key_node.get("type") != "invalid":
-            keys.setdefault(_map_key(key_node))
+            keys.setdefault(key_equivalence.identity(key_node), _map_key(key_node))
             _walk(key_node, entry_path, findings)
         _walk(entry.get("value"), entry_path, findings)
 
     groups: dict[str, list[Any]] = {}
-    for key in keys:
+    for key in keys.values():
         groups.setdefault(key_text(key), []).append(key)
     shared = {text: group for text, group in groups.items() if len(group) > 1}
     if not shared:
