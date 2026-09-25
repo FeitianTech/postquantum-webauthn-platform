@@ -151,3 +151,42 @@ def test_a_user_entity_whose_keys_collide_in_json_is_refused_naming_both():
 
     with pytest.raises(ValueError, match=r'The keys "5" and "\\"5\\" \(text\)" at user name the same CBOR key'):
         encode_payload_text(json.dumps(decoded), "cbor")
+
+
+def test_the_encoder_shows_a_pasted_ctap_view_as_written_and_takes_its_own_output_back():
+    from tests.app.decoder.real_vectors import MAKE_CREDENTIAL_RESPONSE
+
+    prefix = "00"  # the status byte
+    data = decode_payload_text(prefix + MAKE_CREDENTIAL_RESPONSE.hex())["data"]
+    first = encode_payload_text(json.dumps(data), "CBOR (canonical)")["data"]
+
+    # Before: '"1 (fmt)" (text)' and so on, beside bytes whose keys are the integers 1, 2, 3.
+    assert sorted(first["ctapDecoded"]["makeCredentialResponse"]) == ["1 (fmt)", "2 (authData)", "3 (attStmt)"]
+    assert first["binary"]["hex"] == prefix + MAKE_CREDENTIAL_RESPONSE.hex()
+    again = encode_payload_text(json.dumps(first), "CBOR (canonical)")["data"]
+    assert again["binary"]["hex"] == first["binary"]["hex"]
+
+
+def test_a_json_document_is_shown_back_with_its_keys_as_written():
+    text = '{"-1 (kty)": 2, "2024 (draft)": "x", "a": {"1 (fmt)": 1}}'
+
+    data = encode_payload_text(text, "JSON (binary)")["data"]
+
+    assert data["json"] == json.loads(text)
+
+
+def test_client_data_is_shown_back_with_its_keys_as_written():
+    text = '{"type": "webauthn.create", "challenge": "AAAA", "origin": "https://example.com", "1 (fmt)": 1}'
+
+    shown = encode_payload_text(text, "client data")["data"]["clientDataJSON"]["json"]
+
+    assert shown == json.loads(text)
+
+
+def test_the_cbor_view_still_spells_a_text_key_that_looks_typed_with_its_type():
+    # The echo shows keys as written; decodedValue shows the CBOR keys encoded, and
+    # the text key "1 (fmt)" is spelled so that it reads back as text.
+    data = encode_payload_text('{"\\"1 (fmt)\\" (text)": 1}', "CBOR (canonical)")["data"]
+
+    assert data["binary"]["hex"] == "a167312028666d742901"
+    assert data["decodedValue"] == {'"1 (fmt)" (text)': 1}
