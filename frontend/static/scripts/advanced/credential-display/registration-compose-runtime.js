@@ -28,7 +28,9 @@ import {
     sanitizeRelyingPartyInfo,
 } from './sanitize-common.js';
 import {
+    applyRegistrationDetailSnapshot,
     captureRegistrationDetailState,
+    EMPTY_DETAIL_PREPARATION,
     prepareRegistrationDetailState,
 } from './registration-state-runtime.js';
 import {
@@ -182,6 +184,7 @@ export async function composeRegistrationDetailHtml({
     fallbackParsedClientData = null,
     includeAttestationSection = true,
     preferFallbackCertificates = false,
+    snapshotState = null,
 } = {}) {
     const credentialDisplay = credentialJson && typeof credentialJson === 'object'
         ? JSON.stringify(credentialJson, null, 2)
@@ -227,14 +230,18 @@ export async function composeRegistrationDetailHtml({
         ? `<pre class="modal-pre">${escapeHtml(clientDataDisplay)}</pre>`
         : '<div style="font-style: italic; color: #6c757d;">No clientDataJSON available.</div>';
 
-    const detailPreparation = await prepareRegistrationDetailState({
-        attestationObjectValue,
-        attestationObjectDecoded,
-        authenticatorDataValue,
-        fallbackCertificates,
-        relyingPartyInfo,
-        preferFallbackCertificates,
-    });
+    // A saved snapshot already holds the decoded attestation and certificates:
+    // show those as they are, without asking the server to decode again.
+    const detailPreparation = snapshotState && typeof snapshotState === 'object'
+        ? applyRegistrationDetailSnapshot(snapshotState) || { ...EMPTY_DETAIL_PREPARATION }
+        : await prepareRegistrationDetailState({
+            attestationObjectValue,
+            attestationObjectDecoded,
+            authenticatorDataValue,
+            fallbackCertificates,
+            relyingPartyInfo,
+            preferFallbackCertificates,
+        });
 
     const authDataState = registrationDetailState.authenticatorData;
     if (authDataState) {
@@ -331,6 +338,7 @@ export async function composeRegistrationDetailHtml({
             ? html
             : [html, attestationSectionHtml].filter(Boolean).join(''),
         stateSnapshot,
+        relyingPartyCopy,
     };
 }
 

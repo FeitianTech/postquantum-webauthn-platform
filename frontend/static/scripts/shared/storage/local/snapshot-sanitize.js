@@ -3,6 +3,7 @@ import {
     MAX_AUTH_DATA_HEX_LENGTH,
     MAX_DETAIL_STRING_LENGTH,
     MAX_SNAPSHOT_HTML_LENGTH,
+    MAX_SNAPSHOT_RESPONSE_LENGTH,
     SNAPSHOT_ATTESTATION_STRIP_KEYS,
     SNAPSHOT_AUTH_DATA_STRIP_KEYS,
     SNAPSHOT_CERT_STRIP_KEYS,
@@ -188,6 +189,32 @@ function sanitiseRegistrationDetailStateSnapshot(state) {
     return Object.keys(sanitised).length ? sanitised : null;
 }
 
+function fitsInSnapshot(value) {
+    try {
+        return JSON.stringify(value).length <= MAX_SNAPSHOT_RESPONSE_LENGTH;
+    } catch (error) {
+        return false;
+    }
+}
+
+// The registration as data: the response the browser returned and the relying
+// party's view of it. Each is kept whole or not at all.
+function sanitiseSnapshotResponse(response) {
+    if (!response || typeof response !== 'object') {
+        return null;
+    }
+
+    const sanitised = {};
+    ['credential', 'relyingParty'].forEach(key => {
+        const clone = cloneJsonValue(response[key]);
+        if (clone && typeof clone === 'object' && !Array.isArray(clone) && fitsInSnapshot(clone)) {
+            sanitised[key] = clone;
+        }
+    });
+
+    return Object.keys(sanitised).length ? sanitised : null;
+}
+
 export function sanitiseRegistrationDetailSnapshot(snapshot) {
     if (!snapshot || typeof snapshot !== 'object') {
         return null;
@@ -220,6 +247,11 @@ export function sanitiseRegistrationDetailSnapshot(snapshot) {
     const stateClone = sanitiseRegistrationDetailStateSnapshot(snapshot.state || snapshot.stateSnapshot || {});
     if (stateClone) {
         sanitised.state = stateClone;
+    }
+
+    const responseClone = sanitiseSnapshotResponse(snapshot.response);
+    if (responseClone) {
+        sanitised.response = responseClone;
     }
 
     return Object.keys(sanitised).length ? sanitised : null;

@@ -588,10 +588,16 @@ describe('credential-display', () => {
     expect(updateAdvancedCredentialRegistrationSnapshot).toHaveBeenCalledWith(
       'storage-1',
       expect.objectContaining({
-        schemaVersion: 1,
-        html: expect.any(String),
+        schemaVersion: 2,
+        state: expect.any(Object),
+        response: {
+          credential: credentialJson,
+          relyingParty: expect.objectContaining({ authenticatorDataHash: expect.any(String) }),
+        },
       }),
     );
+    const savedSnapshot = updateAdvancedCredentialRegistrationSnapshot.mock.calls[0][1];
+    expect(Object.keys(savedSnapshot).filter((key) => /html/i.test(key))).toEqual([]);
     expect(openModal).toHaveBeenCalledWith('registrationResultModal');
     expect(document.getElementById('registrationResultBody').innerHTML).toContain('Authenticator Response');
     expect(document.getElementById('registrationResultBody').innerHTML).toContain('Server-retrieved Data');
@@ -651,6 +657,70 @@ describe('credential-display', () => {
     expect(openModal).toHaveBeenCalledWith('credentialModal');
     expect(document.getElementById('modalBody').innerHTML).toContain('User info at creation');
     expect(document.getElementById('modalBody').innerHTML).toContain('Properties');
+  });
+
+  it('builds the detail modal from a data snapshot without asking the server again', async () => {
+    const credentialJson = {
+      id: 'credential-data',
+      response: {
+        clientDataJSON: btoa(JSON.stringify({ challenge: 'from-snapshot' })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, ''),
+        attestationObject: 'AQID',
+      },
+    };
+    state.storedCredentials = [
+      {
+        type: 'advanced',
+        userName: 'Snapshot Data User',
+        credentialId: 'AQID',
+        credentialIdHex: '010203',
+        storageId: 'data-snapshot-storage',
+        registrationDetailSnapshot: {
+          schemaVersion: 2,
+          state: {
+            attestationObject: { fmt: 'packed', attStmt: {} },
+            attestationCertificates: [{ parsedX5c: { summary: 'Snapshot data certificate' } }],
+            visibleAttestationCertificateIndices: [0],
+            authenticatorData: { raw: '0a0b0c' },
+            authenticatorDataHex: '0a0b0c',
+          },
+          response: {
+            credential: credentialJson,
+            relyingParty: { attestationFmt: 'packed', rpName: 'Snapshot RP' },
+          },
+        },
+      },
+    ];
+    globalThis.fetch = vi.fn();
+
+    await showCredentialDetails(0);
+
+    expect(fetchCredentialArtifact).not.toHaveBeenCalledWith('data-snapshot-storage');
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    const body = document.getElementById('modalBody');
+    expect(body.textContent).toContain('credential-data');
+    expect(body.textContent).toContain('from-snapshot');
+    expect(body.textContent).toContain('Snapshot RP');
+
+    body.querySelector('.registration-attestation-cert-button').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.getElementById('registrationDetailModalBody').textContent).toContain('Snapshot data certificate');
+  });
+
+  it('still asks for the artifact when the saved snapshot is an older one', async () => {
+    state.storedCredentials = [
+      {
+        type: 'advanced',
+        userName: 'Older Snapshot User',
+        credentialId: 'AQID',
+        credentialIdHex: '010203',
+        storageId: 'older-snapshot-storage',
+        registrationDetailSnapshot: { schemaVersion: 1, state: { authenticatorDataHex: '0a0b' } },
+      },
+    ];
+
+    await showCredentialDetails(0);
+
+    expect(fetchCredentialArtifact).toHaveBeenCalledWith('older-snapshot-storage');
+    expect(openModal).toHaveBeenCalledWith('credentialModal');
   });
 
   it('deletes credentials and clears all credentials across simple/advanced stores', async () => {

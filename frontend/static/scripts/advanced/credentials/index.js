@@ -176,6 +176,7 @@ async function composeRegistrationDetailHtml({
     fallbackParsedClientData = null,
     includeAttestationSection = true,
     preferFallbackCertificates = false,
+    snapshotState = null,
 } = {}) {
     return composeRegistrationDetailHtmlRuntime({
         credentialJson,
@@ -189,6 +190,7 @@ async function composeRegistrationDetailHtml({
         fallbackParsedClientData,
         includeAttestationSection,
         preferFallbackCertificates,
+        snapshotState,
     });
 }
 

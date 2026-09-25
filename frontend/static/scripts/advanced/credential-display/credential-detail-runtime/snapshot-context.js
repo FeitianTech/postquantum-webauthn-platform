@@ -7,6 +7,26 @@ import {
     pickFirstString,
 } from './helpers.js';
 
+// A snapshot that holds the registration as data (schemaVersion 2 and later).
+// Anything else -- an older snapshot, or none -- leaves the credential to be
+// completed from its server artifact.
+export function readSnapshotResponse(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object' || !(Number(snapshot.schemaVersion) >= 2)) {
+        return null;
+    }
+    const response = snapshot.response;
+    if (!response || typeof response !== 'object') {
+        return null;
+    }
+    const credential = response.credential && typeof response.credential === 'object'
+        ? response.credential
+        : null;
+    const relyingParty = response.relyingParty && typeof response.relyingParty === 'object'
+        ? response.relyingParty
+        : null;
+    return credential || relyingParty ? { credential, relyingParty } : null;
+}
+
 export function resolveRegistrationSnapshotContext(cred) {
     const registrationDetailSnapshot = (() => {
         const objectCandidates = [
@@ -40,6 +60,7 @@ export function resolveRegistrationSnapshotContext(cred) {
         return {
             detailPreparation: null,
             snapshotState: null,
+            snapshotResponse: null,
             combinedRegistrationHtml: '',
         };
     }
@@ -60,6 +81,7 @@ export function resolveRegistrationSnapshotContext(cred) {
     return {
         detailPreparation,
         snapshotState,
+        snapshotResponse: readSnapshotResponse(registrationDetailSnapshot),
         combinedRegistrationHtml,
     };
 }
