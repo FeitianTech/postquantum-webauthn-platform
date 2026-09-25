@@ -157,22 +157,22 @@ def _spelled(name: str) -> str:
         ("RSA-PSS", "RSASSA-PSS"),
         ("rsaPSS", "RSASSA-PSS"),
         # Composite ML-DSA (draft-ietf-lamps-pq-composite-sigs-19).
-        ("id-MLDSA44-ECDSA-P256-SHA256", "ECDSA"),
-        ("MLDSA65-RSA3072-PSS-SHA512", "ML-DSA-65"),
-        ("id-MLDSA87-Ed448-SHAKE256", "ML-DSA-87_SHAKE256"),
-        ("1.3.6.1.5.5.7.6.40", "1.3.6.1.5.5.7.6.40"),
-        ("1.3.6.1.5.5.7.6.51", "1.3.6.1.5.5.7.6.51"),
+        ("id-MLDSA44-ECDSA-P256-SHA256", "MLDSA44-ECDSA-P256-SHA256"),
+        ("MLDSA65-RSA3072-PSS-SHA512", "MLDSA65-RSA3072-PSS-SHA512"),
+        ("id-MLDSA87-Ed448-SHAKE256", "MLDSA87-Ed448-SHAKE256"),
+        ("1.3.6.1.5.5.7.6.40", "MLDSA44-ECDSA-P256-SHA256"),
+        ("1.3.6.1.5.5.7.6.51", "MLDSA87-Ed448-SHAKE256"),
         # HashML-DSA (FIPS 204 section 5.4).
-        ("HashML-DSA-65", "ML-DSA-65"),
-        ("id-hash-ml-dsa-44-with-sha512", "ML-DSA-44"),
-        ("2.16.840.1.101.3.4.3.32", "2.16.840.1.101.3.4.3.32"),
+        ("HashML-DSA-65", "HashML-DSA-65"),
+        ("id-hash-ml-dsa-44-with-sha512", "HashML-DSA-44_SHA512"),
+        ("2.16.840.1.101.3.4.3.32", "HashML-DSA-44_SHA512"),
         # DSA with SHA-384, SHA-512 and SHA3.
         ("2.16.840.1.101.3.4.3.3", "2.16.840.1.101.3.4.3.3"),
         ("2.16.840.1.101.3.4.3.4", "2.16.840.1.101.3.4.3.4"),
         ("2.16.840.1.101.3.4.3.5", "2.16.840.1.101.3.4.3.5"),
         ("2.16.840.1.101.3.4.3.8", "2.16.840.1.101.3.4.3.8"),
-        ("id-dsa-with-sha3-256", "DSA"),
-        ("dsa-with-sha384", "DSA"),
+        ("id-dsa-with-sha3-256", "DSA_SHA3-256"),
+        ("dsa-with-sha384", "DSA_SHA384"),
         # SLH-DSA and HashSLH-DSA (FIPS 205).
         ("2.16.840.1.101.3.4.3.20", "2.16.840.1.101.3.4.3.20"),
         ("SLH-DSA-SHA2-128s", "DSA"),
@@ -197,3 +197,35 @@ def test_a_dsa_certificate_signed_with_sha384_or_sha512_is_named_in_both_views(a
 
     assert algorithms == [expected]
     assert serialize_attestation_certificate(der)["algorithmInfo"] == expected
+
+
+# draft-ietf-lamps-pq-composite-sigs-19, section 6, as the draft lists them.
+_COMPOSITE_ML_DSA = [
+    ("1.3.6.1.5.5.7.6.37", "id-MLDSA44-RSA2048-PSS-SHA256"),
+    ("1.3.6.1.5.5.7.6.38", "id-MLDSA44-RSA2048-PKCS15-SHA256"),
+    ("1.3.6.1.5.5.7.6.39", "id-MLDSA44-Ed25519-SHA512"),
+    ("1.3.6.1.5.5.7.6.40", "id-MLDSA44-ECDSA-P256-SHA256"),
+    ("1.3.6.1.5.5.7.6.41", "id-MLDSA65-RSA3072-PSS-SHA512"),
+    ("1.3.6.1.5.5.7.6.42", "id-MLDSA65-RSA3072-PKCS15-SHA512"),
+    ("1.3.6.1.5.5.7.6.43", "id-MLDSA65-RSA4096-PSS-SHA512"),
+    ("1.3.6.1.5.5.7.6.44", "id-MLDSA65-RSA4096-PKCS15-SHA512"),
+    ("1.3.6.1.5.5.7.6.45", "id-MLDSA65-ECDSA-P256-SHA512"),
+    ("1.3.6.1.5.5.7.6.46", "id-MLDSA65-ECDSA-P384-SHA512"),
+    ("1.3.6.1.5.5.7.6.47", "id-MLDSA65-ECDSA-brainpoolP256r1-SHA512"),
+    ("1.3.6.1.5.5.7.6.48", "id-MLDSA65-Ed25519-SHA512"),
+    ("1.3.6.1.5.5.7.6.49", "id-MLDSA87-ECDSA-P384-SHA512"),
+    ("1.3.6.1.5.5.7.6.50", "id-MLDSA87-ECDSA-brainpoolP384r1-SHA512"),
+    ("1.3.6.1.5.5.7.6.51", "id-MLDSA87-Ed448-SHAKE256"),
+    ("1.3.6.1.5.5.7.6.52", "id-MLDSA87-RSA3072-PSS-SHA512"),
+    ("1.3.6.1.5.5.7.6.53", "id-MLDSA87-RSA4096-PSS-SHA512"),
+    ("1.3.6.1.5.5.7.6.54", "id-MLDSA87-ECDSA-P521-SHA512"),
+]
+
+
+@pytest.mark.parametrize(("oid", "name"), _COMPOSITE_ML_DSA, ids=[name for _oid, name in _COMPOSITE_ML_DSA])
+def test_a_composite_ml_dsa_signature_is_named_whole_by_oid_or_name(oid, name):
+    expected = name.removeprefix("id-")
+
+    assert _spelled(oid) == expected
+    assert _spelled(name) == expected
+    assert _spelled(expected) == expected

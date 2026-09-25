@@ -52,17 +52,65 @@ _RSASSA_PSS_OID = "1.2.840.113549.1.1.10"
 # NIST's signature OIDs (2.16.840.1.101.3.4.3.x) as a dotted OID reaches this
 # module: ECDSA and RSA PKCS#1 v1.5 with SHA3 (.9-.16), which cryptography 50
 # names "Unknown OID", so the callers pass the dotted form (the hash is read from
-# the certificate); and pure ML-DSA (FIPS 204, .17-.19), which has no separate
-# hash. cryptography 50 names ML-DSA itself, and those names meet the ML-DSA
-# pattern below; the OIDs are here for a dotted form from any other source.
-_NIST_SIGNATURE_OIDS = {
-    **{f"2.16.840.1.101.3.4.3.{arc}": "ECDSA" for arc in (9, 10, 11, 12)},
-    **{f"2.16.840.1.101.3.4.3.{arc}": "RSASSA-PKCS1-v1_5" for arc in (13, 14, 15, 16)},
-    "2.16.840.1.101.3.4.3.17": "ML-DSA-44",
-    "2.16.840.1.101.3.4.3.18": "ML-DSA-65",
-    "2.16.840.1.101.3.4.3.19": "ML-DSA-87",
+# the certificate); pure ML-DSA (FIPS 204, .17-.19), which has no separate hash
+# (cryptography 50 names ML-DSA itself, and those names meet the ML-DSA pattern
+# below; the OIDs are here for a dotted form from any other source); and
+# HashML-DSA (FIPS 204 section 5.4, .32-.34), whose OID fixes its pre-hash,
+# SHA-512, which the certificate names nowhere else. Each OID gives the algorithm
+# and the hash it fixes ("" where the certificate names it or there is none).
+_NIST_SIGNATURE_OIDS: dict[str, tuple[str, str]] = {
+    **{f"2.16.840.1.101.3.4.3.{arc}": ("ECDSA", "") for arc in (9, 10, 11, 12)},
+    **{f"2.16.840.1.101.3.4.3.{arc}": ("RSASSA-PKCS1-v1_5", "") for arc in (13, 14, 15, 16)},
+    "2.16.840.1.101.3.4.3.17": ("ML-DSA-44", ""),
+    "2.16.840.1.101.3.4.3.18": ("ML-DSA-65", ""),
+    "2.16.840.1.101.3.4.3.19": ("ML-DSA-87", ""),
+    "2.16.840.1.101.3.4.3.32": ("HashML-DSA-44", "SHA512"),
+    "2.16.840.1.101.3.4.3.33": ("HashML-DSA-65", "SHA512"),
+    "2.16.840.1.101.3.4.3.34": ("HashML-DSA-87", "SHA512"),
 }
+# Composite ML-DSA (draft-ietf-lamps-pq-composite-sigs-19, section 6): ML-DSA and
+# a traditional signature under one OID, 1.3.6.1.5.5.7.6.37 to .54 in this order.
+# Each is spelled as the draft names it, without "id-". The name fixes the
+# pre-hash, so no hash is joined to it.
+_COMPOSITE_NAMES = (
+    "MLDSA44-RSA2048-PSS-SHA256",
+    "MLDSA44-RSA2048-PKCS15-SHA256",
+    "MLDSA44-Ed25519-SHA512",
+    "MLDSA44-ECDSA-P256-SHA256",
+    "MLDSA65-RSA3072-PSS-SHA512",
+    "MLDSA65-RSA3072-PKCS15-SHA512",
+    "MLDSA65-RSA4096-PSS-SHA512",
+    "MLDSA65-RSA4096-PKCS15-SHA512",
+    "MLDSA65-ECDSA-P256-SHA512",
+    "MLDSA65-ECDSA-P384-SHA512",
+    "MLDSA65-ECDSA-brainpoolP256r1-SHA512",
+    "MLDSA65-Ed25519-SHA512",
+    "MLDSA87-ECDSA-P384-SHA512",
+    "MLDSA87-ECDSA-brainpoolP384r1-SHA512",
+    "MLDSA87-Ed448-SHAKE256",
+    "MLDSA87-RSA3072-PSS-SHA512",
+    "MLDSA87-RSA4096-PSS-SHA512",
+    "MLDSA87-ECDSA-P521-SHA512",
+)
+_COMPOSITE_OIDS = {f"1.3.6.1.5.5.7.6.{37 + index}": name for index, name in enumerate(_COMPOSITE_NAMES)}
+_COMPOSITE_BY_COMPACT = {name.lower().replace("-", ""): name for name in _COMPOSITE_NAMES}
 _ML_DSA_PATTERN = re.compile(r"mldsa(44|65|87)?")
+_HASH_ML_DSA_PATTERN = re.compile(r"hashmldsa(44|65|87)")
+# A name that says its hash: "id-hash-ml-dsa-44-with-sha512", "dsa-with-sha384".
+_WITH_HASH_PATTERN = re.compile(r"with-?(sha3-?\d{3}|sha-?\d{3}|shake-?\d{3})$", re.IGNORECASE)
+
+
+def _compact(text: str) -> str:
+    return text.lower().replace("-", "").replace("_", "").replace(" ", "")
+
+
+def _composite(text: str) -> str | None:
+    """The composite ML-DSA ``text`` names, by OID or by name (with or without "id-")."""
+
+    if text in _COMPOSITE_OIDS:
+        return _COMPOSITE_OIDS[text]
+    compact = _compact(text)
+    return _COMPOSITE_BY_COMPACT.get(compact[2:] if compact.startswith("id") else compact)
 
 
 def normalise_signature_algorithm_name(name: str) -> str:
@@ -71,6 +119,8 @@ def normalise_signature_algorithm_name(name: str) -> str:
     RSASSA-PSS is told from PKCS#1 v1.5, and ML-DSA from DSA, by name or OID; a
     signature's hash (RSASSA-PSS's is the one its parameters name) is read from
     the certificate by the callers and passed to :func:`join_algorithm_info`.
+    A composite ML-DSA signature is named whole, before any part of its name
+    could be read as ECDSA, RSA or ML-DSA alone; HashML-DSA before ML-DSA.
     """
 
     text = (name or "").strip()
@@ -78,9 +128,15 @@ def normalise_signature_algorithm_name(name: str) -> str:
         return ""
 
     if text in _NIST_SIGNATURE_OIDS:
-        return _NIST_SIGNATURE_OIDS[text]
+        return _NIST_SIGNATURE_OIDS[text][0]
+    composite = _composite(text)
+    if composite:
+        return composite
     lowered = text.lower()
-    compact = lowered.replace("-", "").replace("_", "").replace(" ", "")
+    compact = _compact(text)
+    hash_ml_dsa = _HASH_ML_DSA_PATTERN.search(compact)
+    if hash_ml_dsa:
+        return f"HashML-DSA-{hash_ml_dsa.group(1)}"
     if "ecdsa" in lowered:
         return "ECDSA"
     if "rsassapss" in compact or "rsapss" in compact or text == _RSASSA_PSS_OID:
@@ -103,14 +159,25 @@ def normalise_signature_algorithm_name(name: str) -> str:
 
 
 def implied_hash_name(algorithm_name: str) -> str:
-    """The hash an EdDSA signature fixes, which the certificate does not name separately."""
+    """The hash a signature's name or OID fixes, which the certificate does not name separately.
 
-    lowered = algorithm_name.lower()
+    EdDSA's (SHA-512 for Ed25519, SHAKE256 for Ed448), the one an OID in the table
+    above fixes, and the one a name says it is "with". A composite's name holds
+    its own, so it gets none here.
+    """
+
+    text = (algorithm_name or "").strip()
+    if text in _NIST_SIGNATURE_OIDS:
+        return _NIST_SIGNATURE_OIDS[text][1]
+    if _composite(text):
+        return ""
+    lowered = text.lower()
     if "ed25519" in lowered:
         return "SHA512"
     if "ed448" in lowered:
         return "SHAKE256"
-    return ""
+    with_hash = _WITH_HASH_PATTERN.search(text)
+    return with_hash.group(1) if with_hash else ""
 
 
 def join_algorithm_info(algorithm_component: str, hash_component: Any) -> str:
