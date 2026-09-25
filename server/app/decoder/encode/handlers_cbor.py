@@ -19,6 +19,7 @@ from .ctap_encode import (
 )
 from .ctap_numeric import _extract_ctap_numeric_payload, _normalize_ctap_extra_value
 from .handlers_basic import _prepare_encoder_response
+from .typed_keys import with_cbor_keys
 
 
 def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> dict[str, Any]:
@@ -82,6 +83,7 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> d
         qualifier = f"encoded {ctap_kind}" if ctap_kind else "encoded"
         return _prepare_encoder_response(base_type, payload, qualifier=qualifier)
 
+    parsed = with_cbor_keys(parsed)
     payload_bytes = _canonical_cbor_dumps(parsed)
     payload = {
         "binary": _binary_summary(payload_bytes, "cbor"),

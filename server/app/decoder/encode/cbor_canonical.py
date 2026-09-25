@@ -6,6 +6,7 @@ not RFC 7049's canonical order, which sorts by length first and is what
 ``cbor2.dumps(canonical=True)`` writes: ``{24: 0, "": 0}`` is ``a2 1818 00 6000``
 in CTAP2 and ``a2 6000 1818 00`` in RFC 7049. Every byte the encoder emits
 comes from ``_CanonicalCBOREncoder``; nothing is handed to cbor2 to serialise.
+A typed key the JSON spelled (``1.5 (float)``) is written exactly as its EDN.
 """
 from __future__ import annotations
 
@@ -16,8 +17,10 @@ from typing import Any
 
 from cbor2 import CBORSimpleValue, CBORTag, undefined
 
+from .. import edn
 from ..cbor_head import encode_head
 from ..ctap2_order import ctap2_key_order
+from ..decode.cbor_parser import CborDiagnostic
 
 
 def _canonical_cbor_dumps(value: Any) -> bytes:
@@ -43,6 +46,9 @@ class _CanonicalCBOREncoder:
         return self._canonicalize(value)
 
     def _encode(self, value: Any) -> bytes:
+        if isinstance(value, CborDiagnostic):
+            # A typed map key read back from its EDN (decode/keys.read_json_key).
+            return edn.encode(value.diagnostic)
         if isinstance(value, Mapping):
             return self._encode_map(value)
         if isinstance(value, CBORSimpleValue):

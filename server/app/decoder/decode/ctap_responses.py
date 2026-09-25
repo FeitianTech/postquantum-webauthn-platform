@@ -12,6 +12,7 @@ from typing import Any
 from .. import ctap_tables
 from . import ctap, response
 from .keys import MISSING as _MISSING
+from .keys import JsonLabel
 from .keys import coerce_cbor_bytes as _coerce_cbor_bytes
 from .keys import get_mapping_entry as _get_mapping_entry
 from .keys import hex_json_safe as _hex_json_safe
@@ -69,7 +70,7 @@ def _interpret_make_credential_map(value: Mapping[Any, Any]) -> dict[str, Any] |
     for key in sorted(extra_keys):
         interpreted[f"{key}"] = _hex_json_safe(value[key])
 
-    return interpreted
+    return _labelled(interpreted)
 
 
 def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | None:
@@ -117,4 +118,10 @@ def _interpret_get_assertion_map(value: Mapping[Any, Any]) -> dict[str, Any] | N
     for key in sorted(extra_keys):
         interpreted[f"{key}"] = _hex_json_safe(value[key])
 
-    return interpreted
+    return _labelled(interpreted)
+
+
+def _labelled(interpreted: dict[str, Any]) -> dict[str, Any]:
+    # The member labels ("1 (fmt)") are spelled here, not keys of the input:
+    # later passes over the view keep them as they are.
+    return {JsonLabel(label): value for label, value in interpreted.items()}
