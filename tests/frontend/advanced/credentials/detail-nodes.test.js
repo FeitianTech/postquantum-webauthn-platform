@@ -10,18 +10,18 @@ const PAYLOAD = '<img src=x onerror="window.__xss=1">';
 
 describe('detail nodes', () => {
   it.each([
-    [true, 'true', '#11b66d'],
-    [' TRUE ', 'true', '#11b66d'],
-    [false, 'false', '#c62828'],
-    ['false', 'false', '#c62828'],
-    [null, 'N/A', '#6c757d'],
-    [undefined, 'N/A', '#6c757d'],
-    [PAYLOAD, PAYLOAD, '#6c757d'],
+    [true, 'true', 'rgb(17, 182, 109)'],
+    [' TRUE ', 'true', 'rgb(17, 182, 109)'],
+    [false, 'false', 'rgb(198, 40, 40)'],
+    ['false', 'false', 'rgb(198, 40, 40)'],
+    [null, 'N/A', 'rgb(108, 117, 125)'],
+    [undefined, 'N/A', 'rgb(108, 117, 125)'],
+    [PAYLOAD, PAYLOAD, 'rgb(108, 117, 125)'],
   ])('shows %j as %s', (value, text, colour) => {
     const node = booleanValue(value);
 
     expect(node.textContent).toBe(text);
-    expect(node.getAttribute('style')).toContain(colour);
+    expect(node.style.color).toBe(colour);
     expect(node.querySelector('img')).toBeNull();
   });
 
@@ -40,7 +40,7 @@ describe('detail nodes', () => {
     const line = labelledLine('Name:', PAYLOAD, { style: 'margin-bottom: 0.5rem;' });
 
     expect(line.textContent).toBe(`Name: ${PAYLOAD}`);
-    expect(line.getAttribute('style')).toBe('margin-bottom: 0.5rem;');
+    expect(line.style.marginBottom).toBe('0.5rem');
     expect(line.querySelector('img')).toBeNull();
   });
 });

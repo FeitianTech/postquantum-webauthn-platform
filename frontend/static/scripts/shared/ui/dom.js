@@ -34,7 +34,9 @@ function appendChildren(parent, children) {
  * Create an element.
  *
  * options: className, attrs (name -> value; true sets an empty attribute, false,
- * null and undefined leave it out), dataset, style (a literal from code) and text.
+ * null and undefined leave it out), dataset, style (a literal from code, applied
+ * through CSSOM: the CSP's style-src has no 'unsafe-inline', which refuses a style
+ * attribute but not element.style) and text.
  * Children are appended after text: strings and numbers as text nodes, Nodes as
  * they are, arrays flattened, null / undefined / booleans skipped.
  */
@@ -68,7 +70,7 @@ export function el(tag, options = {}, ...children) {
         }
     }
     if (style) {
-        node.setAttribute('style', style);
+        node.style.cssText = style;
     }
     if (text !== null && text !== undefined) {
         node.textContent = String(text);

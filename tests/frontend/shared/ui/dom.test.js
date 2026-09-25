@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { el, fragment } from '../../../../frontend/static/scripts/shared/ui/dom.js';
 
@@ -24,7 +24,7 @@ describe('el', () => {
     expect(node.dataset.credentialId).toBe(PAYLOAD);
     expect(node.dataset.index).toBe('3');
     expect('skipped' in node.dataset).toBe(false);
-    expect(node.getAttribute('style')).toBe('color: #0f2740;');
+    expect(node.style.color).toBe('rgb(15, 39, 64)');
     expect(node.textContent).toBe(PAYLOAD);
     expect(node.querySelector('img')).toBeNull();
   });
@@ -43,6 +43,17 @@ describe('el', () => {
     const node = el('p', { text: 'first' }, el('span', { text: 'second' }));
 
     expect(node.textContent).toBe('firstsecond');
+  });
+
+  it('applies style through CSSOM, never as a style attribute a strict CSP refuses', () => {
+    const setAttribute = vi.spyOn(Element.prototype, 'setAttribute');
+
+    const node = el('p', { style: 'color: #6c757d; margin-top: 0.75rem;' });
+
+    expect(setAttribute).not.toHaveBeenCalled();
+    expect(node.style.color).toBe('rgb(108, 117, 125)');
+    expect(node.style.marginTop).toBe('0.75rem');
+    setAttribute.mockRestore();
   });
 
   it('accepts no options at all', () => {
