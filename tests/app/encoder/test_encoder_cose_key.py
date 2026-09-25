@@ -144,3 +144,10 @@ def test_the_parameter_tables_are_rfc_9052_9053_and_8230():
         4: {-1: "k"},
         7: {-1: "pub", -2: "priv"},
     }
+
+
+@pytest.mark.parametrize("kty", [{}, [1], True, 1.5])
+def test_a_kty_that_is_neither_an_integer_nor_text_is_refused(kty):
+    # Before: TypeError (unhashable) for {} and [1], and /api/codec answered 500.
+    with pytest.raises(ValueError, match=r"kty \(label 1\) is an integer or text"):
+        encode_payload_text(json.dumps({"1": kty, "3": -7}), "COSE")

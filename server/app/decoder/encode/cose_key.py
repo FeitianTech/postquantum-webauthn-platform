@@ -35,6 +35,9 @@ def encode_cose_key(parsed: Any) -> dict[str, Any]:
     kty = labelled.get(1)
     if kty is None:
         raise ValueError("A COSE_Key needs kty (label 1): RFC 9052 section 7.1.")
+    if isinstance(kty, bool) or not isinstance(kty, (int, str)):
+        # RFC 9052 section 7.1: kty is tstr / int. A list or an object would not even look up.
+        raise ValueError(f"COSE key kty (label 1) is an integer or text, not {type(kty).__name__}: RFC 9052 section 7.1.")
     parameters = {**cose_tables.COMMON_PARAMETERS, **cose_tables.KEY_TYPE_PARAMETERS.get(kty, {})}
     cose_key = {label: _value(label, value, parameters, kty) for label, value in labelled.items()}
 
