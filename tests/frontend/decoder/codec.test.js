@@ -49,6 +49,7 @@ function buildCodecDom() {
       <option value=""></option>
       <option value="json">json</option>
       <option value="pem">pem</option>
+      <option value="EDN">EDN (exact bytes)</option>
     </select>
   `;
 }
@@ -228,6 +229,31 @@ describe('codec UI', () => {
     expect(document.querySelector('.decoder-expanded-json')).not.toBeNull();
     expect(document.getElementById('decoder-description').style.display).toBe('none');
     expect(document.getElementById('decoder-toggle-raw').disabled).toBe(false);
+  });
+
+  it('sends EDN to the encoder as written, without reading it as JSON', async () => {
+    switchCodecMode('encode');
+    document.getElementById('encoder-format').value = 'EDN';
+    const text = '{1: "a", 1: "b"} / not JSON /';
+    document.getElementById('encoder-input').value = text;
+
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: vi.fn().mockResolvedValue({
+        success: true,
+        type: 'EDN (encoded)',
+        data: { binary: { hex: 'a2016161016162', base64: 'ogFhYQFhYg==', base64url: 'ogFhYQFhYg', length: 7, encoding: 'cbor' } },
+        malformed: [],
+      }),
+    });
+
+    await processCodec('encode');
+
+    expect(showStatus).not.toHaveBeenCalledWith('encoder', 'Encoder expects valid JSON input.', 'error');
+    const [, request] = fetch.mock.calls[0];
+    expect(JSON.parse(request.body)).toEqual({ payload: text, mode: 'encode', format: 'EDN' });
+    expect(document.getElementById('encoded-content').textContent).toContain('a2016161016162');
   });
 
   it('handles encode server failure and nested encoded summary rendering', async () => {

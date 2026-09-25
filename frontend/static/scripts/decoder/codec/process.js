@@ -9,7 +9,7 @@ import {
     resetScrollPosition,
     updateDecoderEmptyState,
 } from './dom-state.js';
-import { canEncodeToFormat } from './encoding.js';
+import { canEncodeToFormat, getCanonicalEncoderFormat } from './encoding.js';
 import {
     getSelectedDecoderMode,
     resolveCodecConfig,
@@ -54,21 +54,25 @@ export async function processCodec(mode = getSelectedDecoderMode()) {
             return;
         }
 
-        let parsedValue;
-        try {
-            parsedValue = JSON.parse(inputValue);
-        } catch (parseError) {
-            showStatus(config.statusKey, 'Encoder expects valid JSON input.', 'error');
-            return;
-        }
+        // EDN is not JSON: it goes to the server as written, which reads it and
+        // names the offset where it is not valid.
+        if (getCanonicalEncoderFormat(targetFormat) !== 'edn') {
+            let parsedValue;
+            try {
+                parsedValue = JSON.parse(inputValue);
+            } catch (parseError) {
+                showStatus(config.statusKey, 'Encoder expects valid JSON input.', 'error');
+                return;
+            }
 
-        if (!canEncodeToFormat(parsedValue, targetFormat)) {
-            showStatus(
-                config.statusKey,
-                `Input cannot be converted into ${targetFormat}.`,
-                'error',
-            );
-            return;
+            if (!canEncodeToFormat(parsedValue, targetFormat)) {
+                showStatus(
+                    config.statusKey,
+                    `Input cannot be converted into ${targetFormat}.`,
+                    'error',
+                );
+                return;
+            }
         }
     }
 

@@ -119,6 +119,8 @@ export const MODE_CONFIG = {
 export const ENCODER_FORMAT_ALIASES = new Map([
     ['cbor', 'cbor'],
     ['cbor (canonical)', 'cbor'],
+    ['edn', 'edn'],
+    ['edn (exact bytes)', 'edn'],
     ['json', 'json'],
     ['json (binary)', 'json'],
     ['der', 'der'],
