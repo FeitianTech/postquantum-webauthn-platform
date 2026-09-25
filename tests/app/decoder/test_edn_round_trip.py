@@ -100,7 +100,7 @@ def test_the_codec_endpoint_encodes_edn_and_names_where_it_is_not_valid(client):
 
     refused = client.post("/api/codec", json={"payload": "[1, 256_0]", "mode": "encode", "format": "EDN"})
     assert refused.status_code == 422
-    assert refused.get_json() == {"error": "EDN is not valid at offset 4: 256 does not fit in a 1-byte argument"}
+    assert refused.get_json() == {"error": "EDN is not valid at offset 4: 256 does not fit in a 1-byte argument", "offset": 4}
 
 
 def test_the_corpus_holds_every_attestation_object_the_route_goldens_record():

@@ -50,6 +50,14 @@ _BEYOND_64_BITS = "an integer beyond 64 bits: write it as a bignum tag, 2(h'..')
 _MAX_DEPTH = 64
 
 
+class EdnError(ValueError):
+    """EDN that is not valid, with the offset in the text as sent where it stops being valid."""
+
+    def __init__(self, reason: str, offset: int) -> None:
+        self.offset = offset
+        super().__init__(f"EDN is not valid at offset {offset}: {reason}")
+
+
 def encode(text: str) -> bytes:
     """The bytes of the one CBOR item ``text`` notates; ``ValueError`` names the offset where it goes wrong."""
 
@@ -72,8 +80,8 @@ class _Reader:
 
     # -- positions, blank space and comments ---------------------------------------
 
-    def error(self, reason: str, offset: int | None = None) -> ValueError:
-        return ValueError(f"EDN is not valid at offset {self.position if offset is None else offset}: {reason}")
+    def error(self, reason: str, offset: int | None = None) -> EdnError:
+        return EdnError(reason, self.position if offset is None else offset)
 
     def at_end(self) -> bool:
         return self.position >= len(self.text)

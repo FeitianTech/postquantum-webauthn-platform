@@ -410,16 +410,20 @@ def api_delete_custom_metadata(stored_filename: str):
     )
 
 
+def _refusal(exc: ValueError) -> dict[str, Any]:
+    body: dict[str, Any] = {"error": str(exc)}
+    # A parse error says where the input stops being well-formed (CBOR, EDN, JSON).
+    for field in ("offset", "path"):
+        if hasattr(exc, field):
+            body[field] = getattr(exc, field)
+    return body
+
+
 def _perform_decode(decoder_input: str, *, lenient: bool = False):
     try:
         return decode_payload_text(decoder_input, lenient=lenient), 200
     except ValueError as exc:
-        body = {"error": str(exc)}
-        # A CBOR parse error says where the input stops being well-formed.
-        for field in ("offset", "path"):
-            if hasattr(exc, field):
-                body[field] = getattr(exc, field)
-        return body, 422
+        return _refusal(exc), 422
     except Exception as exc:  # pylint: disable=broad-except
         logger.exception("Failed to decode payload: %s", exc)
         return {"error": "Unable to decode payload."}, 500
@@ -429,7 +433,7 @@ def _perform_encode(encoder_input: str, target_format: str):
     try:
         return encode_payload_text(encoder_input, target_format), 200
     except ValueError as exc:
-        return {"error": str(exc)}, 422
+        return _refusal(exc), 422
     except Exception as exc:  # pylint: disable=broad-except
         logger.exception("Failed to encode payload: %s", exc)
         return {"error": "Unable to encode payload."}, 500
