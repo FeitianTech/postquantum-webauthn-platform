@@ -69,12 +69,34 @@ def _decode_public_key_credential(
     response = credential.get("response")
     response_mapping: Mapping[str, Any] = response if isinstance(response, Mapping) else {}
 
-    response_details: dict[str, Any] = {
-        key: value
-        for key, value in response_mapping.items()
-        if key
-        not in {"attestationObject", "clientDataJSON", "authenticatorData", "signature", "userHandle"}
+    decoded = _credential_fields(credential, raw_text)
+    findings: list[dict[str, Any]] = []
+    response_details, attestation_entry, authenticator_entry = _response_fields(response_mapping, findings)
+    decoded["response"] = response_details
+
+    format_label = "PublicKeyCredential"
+    if attestation_entry:
+        format_label = "PublicKeyCredential (registration)"
+    elif authenticator_entry:
+        format_label = "PublicKeyCredential (authentication)"
+
+    extra, located = interpretations.for_public_key_credential(
+        credential,
+        _cbor_map_or_none(attestation_entry[0]) if attestation_entry else None,
+        authenticator_entry[0] if authenticator_entry else None,
+    )
+    result = {
+        "format": format_label,
+        "inputEncoding": "json",
+        "decoded": decoded,
+        "extraData": extra,
     }
+    ctap._attach_findings(result, findings + located)
+    return result
+
+
+def _credential_fields(credential: Mapping[str, Any], raw_text: str | None) -> dict[str, Any]:
+    """The credential's own members: id, type, attachment, transports, rawId, extension results."""
 
     decoded: dict[str, Any] = {
         "id": credential.get("id"),
@@ -107,71 +129,40 @@ def _decode_public_key_credential(
 
     if raw_text is not None:
         decoded["rawJson"] = raw_text
+    return decoded
 
-    attestation_entry = _decode_binary_field(response_mapping.get("attestationObject"))
-    authenticator_entry = _decode_binary_field(response_mapping.get("authenticatorData"))
-    findings: list[dict[str, Any]] = []
 
-    format_label = "PublicKeyCredential"
-    if attestation_entry:
-        format_label = "PublicKeyCredential (registration)"
-        att_bytes, att_encoding = attestation_entry
-        response_details["attestationObject"] = {
-            "raw": response_mapping.get("attestationObject"),
-            "binary": _binary_summary(att_bytes, att_encoding),
-            **_read_nested("response.attestationObject", att_bytes, _nested_attestation_object, findings),
-        }
+# The response members that hold bytes; _response_fields decodes the first three too.
+_RESPONSE_BINARY_FIELDS = ("attestationObject", "authenticatorData", "clientDataJSON", "signature", "userHandle")
 
-    if authenticator_entry:
-        if format_label == "PublicKeyCredential":
-            format_label = "PublicKeyCredential (authentication)"
-        auth_bytes, auth_encoding = authenticator_entry
-        response_details["authenticatorData"] = {
-            "raw": response_mapping.get("authenticatorData"),
-            "binary": _binary_summary(auth_bytes, auth_encoding),
-            **_read_nested("response.authenticatorData", auth_bytes, _nested_authenticator_data, findings),
-        }
 
-    client_data_entry = _decode_binary_field(response_mapping.get("clientDataJSON"))
-    if client_data_entry:
-        client_bytes, client_encoding = client_data_entry
-        response_details["clientDataJSON"] = {
-            "raw": response_mapping.get("clientDataJSON"),
-            "binary": _binary_summary(client_bytes, client_encoding),
-            **_read_nested("response.clientDataJSON", client_bytes, _nested_client_data, findings),
-        }
+def _response_fields(
+    response_mapping: Mapping[str, Any], findings: list[dict[str, Any]]
+) -> tuple[dict[str, Any], tuple[bytes, str] | None, tuple[bytes, str] | None]:
+    """The response's members, each binary one decoded; and its attestation object and authenticator data."""
 
-    signature_entry = _decode_binary_field(response_mapping.get("signature"))
-    if signature_entry:
-        sig_bytes, sig_encoding = signature_entry
-        response_details["signature"] = {
-            "raw": response_mapping.get("signature"),
-            "binary": _binary_summary(sig_bytes, sig_encoding),
-        }
-
-    user_handle_entry = _decode_binary_field(response_mapping.get("userHandle"))
-    if user_handle_entry:
-        handle_bytes, handle_encoding = user_handle_entry
-        response_details["userHandle"] = {
-            "raw": response_mapping.get("userHandle"),
-            "binary": _binary_summary(handle_bytes, handle_encoding),
-        }
-
-    decoded["response"] = response_details
-
-    extra, located = interpretations.for_public_key_credential(
-        credential,
-        _cbor_map_or_none(attestation_entry[0]) if attestation_entry else None,
-        authenticator_entry[0] if authenticator_entry else None,
-    )
-    result = {
-        "format": format_label,
-        "inputEncoding": "json",
-        "decoded": decoded,
-        "extraData": extra,
+    response_details: dict[str, Any] = {
+        key: value for key, value in response_mapping.items() if key not in _RESPONSE_BINARY_FIELDS
     }
-    ctap._attach_findings(result, findings + located)
-    return result
+    readers = {
+        "attestationObject": _nested_attestation_object,
+        "authenticatorData": _nested_authenticator_data,
+        "clientDataJSON": _nested_client_data,
+    }
+    entries: dict[str, tuple[bytes, str] | None] = {}
+    for name in _RESPONSE_BINARY_FIELDS:
+        entry = entries[name] = _decode_binary_field(response_mapping.get(name))
+        if not entry:
+            continue
+        field_bytes, field_encoding = entry
+        response_details[name] = {
+            "raw": response_mapping.get(name),
+            "binary": _binary_summary(field_bytes, field_encoding),
+        }
+        read = readers.get(name)
+        if read is not None:
+            response_details[name].update(_read_nested(f"response.{name}", field_bytes, read, findings))
+    return response_details, entries["attestationObject"], entries["authenticatorData"]
 
 
 def _cbor_map_or_none(data: bytes) -> tuple[Mapping[Any, Any], dict[str, Any], bytes] | None:
