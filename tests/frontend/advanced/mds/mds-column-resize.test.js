@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setPageData } from '../../page-data-helper.js';
 
 vi.mock('../../../../frontend/static/scripts/shared/utils/loader.js', () => ({
   loaderIsActive: vi.fn(() => false),
@@ -204,12 +205,12 @@ describe('mds explorer column resizing', () => {
     vi.resetModules();
     buildMdsDom();
 
-    window.__INITIAL_MDS_INFO__ = {
+    setPageData('initial-mds-info', {
       entryCount: 1,
       no: 41,
       generatedAt: '2026-04-06T12:00:00Z',
-    };
-    window.__INITIAL_MDS_SNAPSHOT__ = {
+    });
+    setPageData('initial-mds-snapshot', {
       meta: {
         entryCount: 1,
         no: 41,
@@ -217,7 +218,7 @@ describe('mds explorer column resizing', () => {
       },
       entries: makeSnapshotEntries(),
       legalHeader: 'FIDO legal header',
-    };
+    });
 
     globalThis.fetch = vi.fn((url) => {
       if (String(url).includes('/api/mds/decode-certificate')) {

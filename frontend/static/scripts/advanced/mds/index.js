@@ -1,3 +1,4 @@
+import { readPageData } from '../../shared/utils/page-data.js';
 import { FILTER_LOOKUP, UPDATE_BUTTON_STATES } from './constants.js';
 import { formatEnum, normaliseAaguid, normaliseEnumKey, transformEntry, upgradeEntryToFull } from './utils.js';
 import {
@@ -146,23 +147,15 @@ const {
     resetCustomMetadataCache: () => {},
 });
 
-if (typeof window !== 'undefined') {
-    if (window.__INITIAL_MDS_INFO__ && typeof window.__INITIAL_MDS_INFO__ === 'object') {
-        initialMdsInfo = window.__INITIAL_MDS_INFO__;
-    }
-    if (window.__INITIAL_MDS_SNAPSHOT__ && typeof window.__INITIAL_MDS_SNAPSHOT__ === 'object') {
-        initialMdsSnapshot = window.__INITIAL_MDS_SNAPSHOT__;
-    }
-    try {
-        delete window.__INITIAL_MDS_INFO__;
-    } catch (error) {
-        window.__INITIAL_MDS_INFO__ = undefined;
-    }
-    try {
-        delete window.__INITIAL_MDS_SNAPSHOT__;
-    } catch (error) {
-        window.__INITIAL_MDS_SNAPSHOT__ = undefined;
-    }
+// The packaged snapshot's summary, from the page (index.html). A whole snapshot
+// can be given the same way; the server renders none, the tests do.
+const pageMdsInfo = readPageData('initial-mds-info');
+if (pageMdsInfo && typeof pageMdsInfo === 'object') {
+    initialMdsInfo = pageMdsInfo;
+}
+const pageMdsSnapshot = readPageData('initial-mds-snapshot');
+if (pageMdsSnapshot && typeof pageMdsSnapshot === 'object') {
+    initialMdsSnapshot = pageMdsSnapshot;
 }
 
 function clearMetadataCache() {

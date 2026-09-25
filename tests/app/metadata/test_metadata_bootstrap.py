@@ -295,7 +295,9 @@ def test_index_page_emits_accessible_global_loader_markup(monkeypatch, app_confi
     assert '/fido-mds3.explorer.full.json"' in body
     assert 'src="/assets/' in body and '/scripts/main.js"' in body
     assert '"customEntriesState": "unknown"' in body
-    assert '__INITIAL_CREDENTIAL_RECORDS__' in body
+    # The summary rides in a JSON block, not in a script that sets a global.
+    assert '<script type="application/json" id="initial-mds-info">{' in body
+    assert '__INITIAL_' not in body
 
 
 def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):

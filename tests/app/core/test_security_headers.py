@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib
+import re
 from datetime import timedelta
 
 import pytest
@@ -60,9 +61,14 @@ def test_index_still_renders_under_the_shipped_csp(client):
     body = response.get_data(as_text=True)
     assert "<title>" in body
     assert "scripts/main.js" in body
-    # The inline bootstrap block and the inline handlers are still there, which
-    # is exactly why script-src still needs 'unsafe-inline'.
-    assert "__INITIAL_MDS_INFO__" in body
+    # No inline code: every script is a file, or JSON the browser never runs.
+    scripts = re.findall(r"<script\b([^>]*)>", body)
+    assert scripts
+    assert [
+        attributes for attributes in scripts
+        if "src=" not in attributes and 'type="application/json"' not in attributes
+    ] == []
+    assert '<script type="application/json" id="initial-mds-info">' in body
 
 
 def test_clickjacking_is_refused_two_ways(client):

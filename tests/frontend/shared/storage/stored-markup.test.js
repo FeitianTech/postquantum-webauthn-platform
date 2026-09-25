@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { removePageData } from '../../page-data-helper.js';
 
 vi.mock('../../../../frontend/static/scripts/shared/storage/artifacts-client.js', () => ({
   fetchCredentialArtifactsBulk: vi.fn(),
@@ -32,7 +33,7 @@ function savedRecord() {
 async function loadStorage() {
   vi.resetModules();
   // As index.html does: no boot records, so the module reads localStorage.
-  window.__INITIAL_CREDENTIAL_RECORDS__ = null;
+  removePageData('initial-credential-records');
   return import('../../../../frontend/static/scripts/shared/storage/local.js');
 }
 

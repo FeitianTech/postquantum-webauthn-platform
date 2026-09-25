@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { removePageData } from '../../page-data-helper.js';
 
 import { ADVANCED_RECORD, SIMPLE_RECORD } from './pre-phase-23-records.js';
 import { base64ToBytes, base64UrlToBytes } from '../../../../frontend/static/scripts/shared/utils/base64.js';
@@ -19,7 +20,7 @@ async function loadStorage(records) {
   localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify(records));
   vi.resetModules();
   // As index.html does: no boot records, so the module reads localStorage.
-  window.__INITIAL_CREDENTIAL_RECORDS__ = null;
+  removePageData('initial-credential-records');
   return import('../../../../frontend/static/scripts/shared/storage/local.js');
 }
 

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setPageData } from '../../page-data-helper.js';
 
 vi.mock('../../../../frontend/static/scripts/shared/utils/loader.js', () => ({
   loaderIsActive: vi.fn(() => false),
@@ -240,8 +241,8 @@ describe('mds edge cases', () => {
     vi.resetModules();
     buildMdsDom();
 
-    window.__INITIAL_MDS_INFO__ = {};
-    window.__INITIAL_MDS_SNAPSHOT__ = {};
+    setPageData('initial-mds-info', {});
+    setPageData('initial-mds-snapshot', {});
   });
 
   it('recovers from transient explorer failure when retry is clicked', async () => {
@@ -312,11 +313,11 @@ describe('mds edge cases', () => {
   });
 
   it('applies tab-change side effects and handles missing highlight target', async () => {
-    window.__INITIAL_MDS_SNAPSHOT__ = {
+    setPageData('initial-mds-snapshot', {
       meta: { entryCount: 1, no: 83, generatedAt: '2026-04-06T00:00:00Z' },
       entries: makeSnapshotEntries(),
       legalHeader: 'FIDO legal header',
-    };
+    });
 
     globalThis.fetch = vi.fn(() => Promise.resolve(jsonResponse({ items: [] })));
 
@@ -355,11 +356,11 @@ describe('mds edge cases', () => {
   });
 
   it('shows warning for non-json drop and error message when upload fails', async () => {
-    window.__INITIAL_MDS_SNAPSHOT__ = {
+    setPageData('initial-mds-snapshot', {
       meta: { entryCount: 1, no: 84, generatedAt: '2026-04-06T00:00:00Z' },
       entries: makeSnapshotEntries(),
       legalHeader: 'FIDO legal header',
-    };
+    });
 
     globalThis.fetch = vi.fn((url) => {
       if (String(url).includes('api/mds/metadata/upload')) {

@@ -55,15 +55,7 @@
         <p>&copy; 2026 Feitian Technologies Co., Ltd. All rights reserved.</p>
         <p>This is an independent testing platform and is <strong>not affiliated with or endorsed by</strong> the FIDO Alliance, W3C, or Open Quantum Safe.</p>
     </footer>
-    <script>
-        (function () {
-            window.__INITIAL_MDS_INFO__ = {{ initial_mds_info | tojson }};
-            // Legacy credential migration and deduplication are handled by
-            // frontend/static/scripts/shared/storage/local.js.
-            // Keep this global contract for startup/tests.
-            window.__INITIAL_CREDENTIAL_RECORDS__ = null;
-        })();
-    </script>
+    <script type="application/json" id="initial-mds-info">{{ initial_mds_info | tojson }}</script>
     <script type="module" src="{{ asset_url('scripts/main.js') }}"></script>
 </body>
 </html>
