@@ -9,7 +9,9 @@ duplicates. Reading the text back with :func:`..edn.encode` gives the same bytes
 
 The node is the one ``decode/cbor_parser`` builds; a node the lenient parser
 damaged (truncated, invalid, with items dropped) cannot be spelled exactly and
-raises ``ValueError``.
+raises ``ValueError``. Not every damage marks the node -- a map key whose value
+is missing, a chunk skipped, a break byte absent -- so the text is read back and
+must span as many bytes as the node does.
 """
 from __future__ import annotations
 
@@ -18,6 +20,7 @@ from typing import Any
 
 from ..cbor_head import INDEFINITE, shortest_info
 from . import floats, strings
+from .reader import encode
 
 _INDENT = "  "
 
@@ -25,7 +28,11 @@ _INDENT = "  "
 def spell(node: Mapping[str, Any], *, inline: bool = False) -> str:
     """``node`` as EDN; ``inline`` keeps it on one line (a container of containers otherwise spans several)."""
 
-    return _item(node, 0, inline)
+    text = _item(node, 0, inline)
+    offset, end = node.get("offset"), node.get("end")
+    if isinstance(offset, int) and isinstance(end, int) and len(encode(text)) != end - offset:
+        raise ValueError("the lenient parser dropped or supplied bytes that no spelling of this item shows")
+    return text
 
 
 def _item(node: Mapping[str, Any], depth: int, inline: bool) -> str:

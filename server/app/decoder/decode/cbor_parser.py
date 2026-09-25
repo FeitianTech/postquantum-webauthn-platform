@@ -444,7 +444,7 @@ def _map_key(key_node: Mapping[str, Any]) -> Any:
     kind = _KEY_KINDS.get(node_type, node_type) if isinstance(node_type, str) else ""
     # A NaN key is spelled by its bits: NaNs with different payloads are different keys.
     if isinstance(key, CborDiagnostic) and key.diagnostic == "NaN":
-        return CborDiagnostic(_edn_or(key_node, "NaN"), kind)
+        return _edn_or(key_node, "NaN", kind)
     # Python folds 1 == 1.0 == True, three different CBOR keys, into one.
     if key is None or isinstance(key, (bool, float)):
         return CborDiagnostic(_diagnostic_value(key_node), kind)
@@ -453,17 +453,22 @@ def _map_key(key_node: Mapping[str, Any]) -> Any:
     # An array, map or tag key: a key of its own type, spelled in EDN, which
     # ``keys.read_json_key`` can read back.
     if isinstance(key, (list, dict)):
-        return CborDiagnostic(_edn_or(key_node, str(key)), kind)
+        return _edn_or(key_node, str(key_node.get("summary")), kind)
     return key
 
 
-def _edn_or(node: Mapping[str, Any], fallback: str) -> str:
-    """``node`` in EDN, on one line; ``fallback`` for a node the lenient parser damaged."""
+def _edn_or(node: Mapping[str, Any], fallback: str, kind: str) -> CborDiagnostic:
+    """``node`` in EDN, on one line, a key of its ``kind``.
+
+    A node the lenient parser damaged has no exact spelling: it is shown by
+    ``fallback`` (its summary) as an invalid key, as an invalid node is, which
+    the encoder refuses rather than rebuild as something else.
+    """
 
     try:
-        return edn.spell(node, inline=True)
+        return CborDiagnostic(edn.spell(node, inline=True), kind)
     except (KeyError, TypeError, ValueError):
-        return fallback
+        return CborDiagnostic(fallback, "invalid")
 
 
 def _diagnostic_value(node: Mapping[str, Any]) -> str:

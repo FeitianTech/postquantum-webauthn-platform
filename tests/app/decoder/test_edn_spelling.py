@@ -95,6 +95,12 @@ def test_a_node_built_without_its_head_is_spelled_as_the_shortest():
         "43 0102",  # a byte string cut short
         "a1 6161",  # a map whose one key has no value: the entry is dropped
         "82 01",  # an array missing an item
+        # Damage that leaves no mark on the node: the spelling would be well formed, and wrong.
+        "bf 01 ff",  # an indefinite map whose key has no value ({_ } before)
+        "5f 01 4102 ff",  # an indefinite string with a chunk skipped ((_ h'02') before)
+        "9f 01",  # an indefinite array with no break byte ([_ 1] before)
+        "bf 0102",  # an indefinite map with no break byte
+        "82 9f01ff 5f01ff",  # damage inside a definite container
     ],
 )
 def test_an_item_the_lenient_parser_could_not_read_whole_is_not_spelled(hex_text):
