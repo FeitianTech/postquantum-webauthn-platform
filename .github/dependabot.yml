@@ -9,6 +9,20 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+  # The new UI's own lock (web/package-lock.json), audited the same way. The
+  # charter (docs/UI_MIGRATION.md) names Next.js 15; TypeScript stays on 5,
+  # which Next 15's build checks with.
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   # uv.lock is the Python lockfile the image, CI and local venvs install from.
   - package-ecosystem: "uv"
@@ -31,3 +45,7 @@ updates:
       - dependency-name: "python"
         versions:
           - ">=3.13"
+      # The web stage builds on Node 22, as CI and Cloud Build do.
+      - dependency-name: "node"
+        versions:
+          - ">=23"

@@ -82,6 +82,26 @@ jobs:
         if: always()
         run: npm audit --audit-level=low || true
 
+      # web/ is the new UI (docs/UI_MIGRATION.md). Its tree is the build
+      # toolchain plus React and Next's client runtime, which ship in the static
+      # export; no Node runs in production. The same moderate bar as above. Next
+      # 15 pins a postcss with known advisories; web/package.json overrides it
+      # with a fixed release rather than lowering this threshold. A finding
+      # fixed only in a newer Next major goes to the owner, since the charter
+      # names Next 15.
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci --no-audit --no-fund
+
+      - name: Audit web dependencies
+        working-directory: web
+        run: npm audit --audit-level=moderate
+
+      - name: Report web advisories below the failure threshold
+        if: always()
+        working-directory: web
+        run: npm audit --audit-level=low || true
+
   container-image:
     name: Container image scan
     runs-on: ubuntu-latest
