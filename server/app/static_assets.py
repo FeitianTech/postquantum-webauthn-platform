@@ -15,12 +15,12 @@ from werkzeug.security import safe_join
 
 from .config import _FRONTEND_ROOT, _FRONTEND_STATIC_ROOT
 
-__all__ = ["BUILD_ID", "asset_url", "bp", "init_app"]
+__all__ = ["BUILD_ID", "asset_url", "bp", "init_app", "send_precompressed"]
 
 _BUILD_ID_ENV = "FIDO_SERVER_BUILD_ID"
 _DEV_BUILD_ID = "dev"
-_IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
-_REVALIDATE_CACHE_CONTROL = "no-cache"
+IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
+REVALIDATE_CACHE_CONTROL = "no-cache"
 
 # Large MDS source files the server reads from disk but browsers never request.
 _PRIVATE_STATIC_FILES = frozenset(
@@ -89,6 +89,20 @@ def versioned_static_asset(build_id: str, filename: str):
     if path is None or not os.path.isfile(path):
         abort(404)
 
+    # Only the current build's URLs are immutable; a page from a previous
+    # deploy may still request its own build id and must revalidate.
+    if build_id == BUILD_ID and BUILD_ID != _DEV_BUILD_ID:
+        return send_precompressed(path, IMMUTABLE_CACHE_CONTROL)
+    return send_precompressed(path, REVALIDATE_CACHE_CONTROL)
+
+
+def send_precompressed(path: str, cache_control: str):
+    """Send ``path``, or its build-time ``.gz`` copy when the client accepts gzip.
+
+    Conditional (ETag, 304) like any static file. ``Vary: Accept-Encoding`` is
+    added whenever a ``.gz`` copy exists, so a cache keeps both.
+    """
+
     mimetype = mimetypes.guess_type(path)[0] or "application/octet-stream"
     gzip_path = f"{path}.gz"
     has_gzip_variant = os.path.isfile(gzip_path)
@@ -104,11 +118,5 @@ def versioned_static_asset(build_id: str, filename: str):
         response.headers["Content-Encoding"] = "gzip"
     if has_gzip_variant:
         response.vary.add("Accept-Encoding")
-
-    # Only the current build's URLs are immutable; a page from a previous
-    # deploy may still request its own build id and must revalidate.
-    if build_id == BUILD_ID and BUILD_ID != _DEV_BUILD_ID:
-        response.headers["Cache-Control"] = _IMMUTABLE_CACHE_CONTROL
-    else:
-        response.headers["Cache-Control"] = _REVALIDATE_CACHE_CONTROL
+    response.headers["Cache-Control"] = cache_control
     return response
