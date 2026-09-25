@@ -13,22 +13,18 @@ from flask import Flask, current_app, has_request_context, request
 
 _SECURITY_HEADERS_MARKER = "_postquantum_security_headers"
 
-# TODO(csp-strict): drop ``'unsafe-inline'`` from ``script-src`` (ideally moving to
-# a per-response nonce) once the inline event handlers are gone.
-#
-# BLOCKER: ``frontend/templates/**/*.html`` still carries 125 inline ``on*="..."``
-# attributes -- concentrated in the advanced registration/authentication option
-# panels -- plus the inline ``<script>`` in ``frontend/templates/index.html`` that
-# seeds ``window.__INITIAL_MDS_INFO__``.  Inline event handlers cannot be
-# nonced; they need either ``'unsafe-inline'`` or ``'unsafe-hashes'`` with a hash
-# per handler.  Shipping ``script-src 'self'`` today would dead-stop the UI, so
-# the handlers have to be moved into ``frontend/static/scripts`` first.
-#
-# Be clear about what this buys: with ``'unsafe-inline'`` present the script
-# policy blocks third-party script origins, ``eval``/``new Function`` and
-# ``javascript:`` URLs, but it does NOT stop an injected inline ``<script>`` or
-# ``on*=`` attribute.  It is defence in depth, not XSS containment.  The
-# non-script directives below are genuinely strict.
+# Violation reports go to routes/csp_report.py, which logs each in one line:
+# report-uri for Firefox and Safari, report-to (the "csp" endpoint of
+# Reporting-Endpoints) for Chromium, which then ignores report-uri.
+_REPORT_ENDPOINT = "/api/csp-report"
+_REPORT_GROUP = "csp"
+_REPORTING = (f"report-uri {_REPORT_ENDPOINT}", f"report-to {_REPORT_GROUP}")
+
+# Strict: no 'unsafe-inline' for scripts or styles. The templates hold no inline
+# handler, script or style attribute (tests/app/tooling/test_inline_code.py keeps
+# it so): controls name their action with data-action, the page's data is a
+# <script type="application/json"> block, and scripts style through CSSOM
+# (element.style), which style-src does not govern.
 _DEFAULT_CONTENT_SECURITY_POLICY = "; ".join(
     (
         "default-src 'self'",
@@ -41,16 +37,25 @@ _DEFAULT_CONTENT_SECURITY_POLICY = "; ".join(
         "form-action 'self'",
         "img-src 'self' data:",
         "font-src 'self' https://fonts.gstatic.com",
-        # 5 inline style="" attributes in the templates, plus the Google Fonts
-        # stylesheet linked from index.html.
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        # See TODO(csp-strict) above: 125 inline on*= handlers block 'self'-only.
-        "script-src 'self' 'unsafe-inline'",
+        # The Google Fonts stylesheet linked from index.html.
+        "style-src 'self' https://fonts.googleapis.com",
+        "script-src 'self'",
         "connect-src 'self'",
         "manifest-src 'self'",
         "worker-src 'self'",
+        *_REPORTING,
     )
 )
+
+# Trusted Types, report-only: every string given to a sink that parses HTML or
+# loads script (innerHTML, document.write, ...) is reported, and nothing is
+# blocked. No script gives one a string (tests/app/tooling/test_html_sinks.py);
+# enforcing it waits for the final audit, once production reports none.
+_DEFAULT_CONTENT_SECURITY_POLICY_REPORT_ONLY = "; ".join(
+    ("require-trusted-types-for 'script'", *_REPORTING)
+)
+
+_DEFAULT_REPORTING_ENDPOINTS = f'{_REPORT_GROUP}="{_REPORT_ENDPOINT}"'
 
 _DEFAULT_PERMISSIONS_POLICY = ", ".join(
     (
@@ -87,6 +92,10 @@ def config_from_env() -> dict[str, Any]:
     return {
         "CONTENT_SECURITY_POLICY": os.environ.get("FIDO_SERVER_CONTENT_SECURITY_POLICY")
         or _DEFAULT_CONTENT_SECURITY_POLICY,
+        "CONTENT_SECURITY_POLICY_REPORT_ONLY": os.environ.get("FIDO_SERVER_CONTENT_SECURITY_POLICY_REPORT_ONLY")
+        or _DEFAULT_CONTENT_SECURITY_POLICY_REPORT_ONLY,
+        "REPORTING_ENDPOINTS": os.environ.get("FIDO_SERVER_REPORTING_ENDPOINTS")
+        or _DEFAULT_REPORTING_ENDPOINTS,
         "PERMISSIONS_POLICY": os.environ.get("FIDO_SERVER_PERMISSIONS_POLICY")
         or _DEFAULT_PERMISSIONS_POLICY,
         "STRICT_TRANSPORT_SECURITY": os.environ.get("FIDO_SERVER_STRICT_TRANSPORT_SECURITY")
@@ -106,6 +115,14 @@ def set_security_headers(response):
     policy = current_app.config.get("CONTENT_SECURITY_POLICY")
     if policy:
         headers.setdefault("Content-Security-Policy", policy)
+
+    report_only_policy = current_app.config.get("CONTENT_SECURITY_POLICY_REPORT_ONLY")
+    if report_only_policy:
+        headers.setdefault("Content-Security-Policy-Report-Only", report_only_policy)
+
+    reporting_endpoints = current_app.config.get("REPORTING_ENDPOINTS")
+    if reporting_endpoints:
+        headers.setdefault("Reporting-Endpoints", reporting_endpoints)
 
     permissions_policy = current_app.config.get("PERMISSIONS_POLICY")
     if permissions_policy:
