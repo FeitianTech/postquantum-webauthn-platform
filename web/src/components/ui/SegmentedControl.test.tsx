@@ -35,13 +35,18 @@ beforeEach(() => {
   vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
     return layoutOf(this).width;
   });
+  // Like a browser's, a new observer reports once as soon as it observes.
   vi.stubGlobal(
     'ResizeObserver',
     class {
+      callback: () => void;
       constructor(callback: () => void) {
+        this.callback = callback;
         observers.push(callback);
       }
-      observe() {}
+      observe() {
+        this.callback();
+      }
       disconnect() {}
     },
   );
@@ -112,7 +117,7 @@ describe('SegmentedControl', () => {
     expect(document.querySelectorAll('[data-segment-highlight]')).toHaveLength(1);
   });
 
-  it('slides the highlight to a tab chosen by click', async () => {
+  it('slides the highlight to a tab chosen by click, and keeps one resize observer', async () => {
     const onChange = vi.fn();
     render(<Harness onChange={onChange} />);
     const instant = recordInstant();
@@ -125,6 +130,7 @@ describe('SegmentedControl', () => {
     expect(highlight().style.transform).toBe('translateX(367px)');
     expect(highlight().style.width).toBe('70px');
     expect(instant.records).toEqual([]);
+    expect(observers).toHaveLength(1);
     instant.stop();
   });
 
