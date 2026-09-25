@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { escapeHtml } from '../../../../frontend/static/scripts/advanced/ui/display-utils.js';
 import { updateCredentialsDisplayRuntime } from '../../../../frontend/static/scripts/advanced/credential-display/list-render.js';
 
 const IMG_PAYLOAD = '<img src=x onerror="window.__xss=1">';
@@ -33,7 +32,6 @@ function createDeps(storedCredentials, overrides = {}) {
       metadataAvailable: true,
       aaguidGuid: '00112233-4455-6677-8899-aabbccddeeff',
     }),
-    escapeHtml,
     handleCredentialMdsClick: vi.fn(),
     triggerCredentialFlash: vi.fn(),
     showCredentialDetails: vi.fn(),
@@ -42,15 +40,15 @@ function createDeps(storedCredentials, overrides = {}) {
   };
 }
 
-describe('credential list rendering escapes untrusted values', () => {
+describe('credential list rendering shows untrusted values as text', () => {
   beforeEach(() => {
     buildDom();
     delete window.__xss;
   });
 
-  // Positive control: proves the assertions below are sensitive. Interpolating the
-  // payload without escapeHtml really does create an <img> element in jsdom, so a
-  // regression that drops the escape would fail the tests that follow.
+  // Positive control: proves the assertions below are sensitive. Parsing the
+  // payload as markup really does create an <img> element in jsdom, so a
+  // regression that builds the cards from strings would fail the tests that follow.
   it('would detect an unescaped interpolation', () => {
     getList().innerHTML = `<div class="credential-item"><div>${IMG_PAYLOAD}</div></div>`;
 
