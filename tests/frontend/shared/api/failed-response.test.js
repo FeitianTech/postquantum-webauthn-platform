@@ -99,6 +99,34 @@ describe('readFailedResponse', () => {
     expect(failure.body.failedCredentialId).toBe('AQID');
   });
 
+  it('keeps where the codec says the input stops being well-formed', async () => {
+    const failure = await readFailedResponse(response(422, {
+      error: 'Not JSON at offset 6 (${"a"}): NaN is not JSON.',
+      offset: 6,
+      path: '${"a"}',
+    }));
+
+    expect(failure).toMatchObject({ status: 422, text: 'Not JSON at offset 6 (${"a"}): NaN is not JSON.', offset: 6, path: '${"a"}' });
+  });
+
+  it.each([
+    ['no offset or path', { error: 'No.' }],
+    ['an offset that is not a whole number', { error: 'No.', offset: 1.5, path: '' }],
+    ['a negative offset and a path that is not text', { error: 'No.', offset: -1, path: 7 }],
+    ['an offset written as text', { error: 'No.', offset: '6', path: null }],
+  ])('names no offset or path for %s', async (_name, body) => {
+    const failure = await readFailedResponse(response(422, body));
+
+    expect(failure.offset).toBeNull();
+    expect(failure.path).toBeNull();
+  });
+
+  it('names no offset or path without a JSON body', async () => {
+    const failure = await readFailedResponse(response(500, WERKZEUG_400, 'text/html'));
+
+    expect(failure).toMatchObject({ offset: null, path: null });
+  });
+
   it('does not show a long plain-text body', async () => {
     const failure = await readFailedResponse(response(500, 'x'.repeat(301), 'text/plain'));
 

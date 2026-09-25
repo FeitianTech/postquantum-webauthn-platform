@@ -96,6 +96,7 @@ describe('codec request: sending it', () => {
     expect(error).toBeInstanceOf(FailedResponseError);
     expect(error.message).toBe(body.error);
     expect(error.failure.body).toEqual(body);
+    expect(error.failure).toMatchObject({ offset: 6, path: '${"a"}' });
   });
 
   it('says so when a success is not JSON', async () => {

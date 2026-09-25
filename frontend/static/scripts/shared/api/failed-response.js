@@ -2,7 +2,8 @@
 //
 // The server answers errors as JSON: {"error": "..."} plus, depending on the
 // route, failedCredentialId, signCountStatus, challengeSource and
-// challengeStatus. A few answers are not JSON (Werkzeug's HTML for abort(),
+// challengeStatus, or (the codec) the offset and path where the input stops
+// being well-formed. A few answers are not JSON (Werkzeug's HTML for abort(),
 // a proxy's error page); those are described by their status instead of shown
 // as markup. Where the server's message does not already say what to do, a
 // sentence for the status is added.
@@ -82,6 +83,17 @@ function stringField(body, key) {
     return body && typeof body[key] === 'string' && body[key].trim() ? body[key].trim() : null;
 }
 
+// A byte offset the server named: a whole number, not negative.
+function offsetField(body) {
+    const offset = body ? body.offset : undefined;
+    return Number.isInteger(offset) && offset >= 0 ? offset : null;
+}
+
+// A path the server named, exactly as written (`$`, `${1}`, `${"a"}`).
+function pathField(body) {
+    return body && typeof body.path === 'string' && body.path ? body.path : null;
+}
+
 function adviceFor(status, message, { body, hasServerMessage }) {
     if (SAYS_WHAT_TO_DO.test(message)) {
         return '';
@@ -128,6 +140,8 @@ export async function readFailedResponse(response) {
         signCountStatus: stringField(body, 'signCountStatus'),
         challengeSource: stringField(body, 'challengeSource'),
         challengeStatus: stringField(body, 'challengeStatus'),
+        offset: offsetField(body),
+        path: pathField(body),
     };
 }
 
