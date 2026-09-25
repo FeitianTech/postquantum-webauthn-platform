@@ -2,6 +2,7 @@
 // WebAuthn, each answer shown with where it came from, or why there is none.
 
 import { updateGlobalScrollLock } from '../ui/core.js';
+import { el } from '../ui/dom.js';
 import { SOURCE_TEXT, determineIdentity, readIdentityInputs } from './identity.js';
 import { attempt, describeError } from './probe.js';
 import {
@@ -23,12 +24,7 @@ const CAPABILITY_GROUPS = [
 ];
 
 function element(tag, className, text) {
-    const node = document.createElement(tag);
-    node.className = className;
-    if (text !== undefined) {
-        node.textContent = text;
-    }
-    return node;
+    return el(tag, { className, text });
 }
 
 function stateBadge(state) {
