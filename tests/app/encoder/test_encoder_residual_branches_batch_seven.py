@@ -12,7 +12,8 @@ def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
-def test_encode_cbor_value_uses_root_mapping_as_ctap_source():
+def test_encode_cbor_value_never_reads_a_plain_map_as_ctap():
+    # A root map with CTAP member names was read as a makeCredential response.
     encode_module = pytest.importorskip("server.app.decoder.encode")
 
     payload = {
@@ -23,8 +24,9 @@ def test_encode_cbor_value_uses_root_mapping_as_ctap_source():
     encoded = encode_module._encode_cbor_value(payload)
 
     assert encoded["success"] is True
-    assert "ctapDecoded" in encoded["data"]
-    assert "makeCredentialResponse" in encoded["data"]["ctapDecoded"]
+    assert encoded["type"] == "CBOR (canonical) (encoded)"
+    assert "ctapDecoded" not in encoded["data"]
+    assert encoded["data"]["binary"]["hex"].startswith("a263666d74646e6f6e65")
 
 
 def test_extract_ctap_numeric_payload_salvage_classification_errors_are_preserved():

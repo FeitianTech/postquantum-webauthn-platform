@@ -22,6 +22,14 @@ from .handlers_basic import _prepare_encoder_response
 
 
 def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> dict[str, Any]:
+    """JSON as CTAP2-canonical CBOR; a CTAP message only from the decoder's explicit CTAP view.
+
+    That view is ``ctapDecoded``, or ``expandedJson`` beside the ``ctap``
+    metadata of its command or status byte; either must build, or the encoder
+    says why. Any other object is a plain map -- even one whose keys look like
+    CTAP members ("1", "fmt", "signature"): the encoder does not guess.
+    """
+
     ctap_source: Mapping[str, Any] | None = None
     ctap_kind: str | None = None
     ctap_metadata: Mapping[str, Any] | None = None
@@ -29,24 +37,18 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> d
 
     if isinstance(parsed, Mapping):
         ctap_metadata = parsed.get("ctap") if isinstance(parsed.get("ctap"), Mapping) else None
-
         ctap_decoded = parsed.get("ctapDecoded")
+        expanded = parsed.get("expandedJson")
         if isinstance(ctap_decoded, Mapping):
             encoded_map, ctap_kind = _encode_ctap_from_decoded(ctap_decoded)
-            if encoded_map is not None:
-                ctap_source = ctap_decoded.get(ctap_kind) if isinstance(ctap_decoded.get(ctap_kind), Mapping) else ctap_decoded
-
-        if encoded_map is None:
-            expanded = parsed.get("expandedJson")
-            if isinstance(expanded, Mapping):
-                encoded_map, ctap_kind = _encode_ctap_from_structure(expanded)
-                if encoded_map is not None:
-                    ctap_source = expanded
-
-        if encoded_map is None:
-            encoded_map, ctap_kind = _encode_ctap_from_structure(parsed)
-            if encoded_map is not None:
-                ctap_source = parsed
+            if encoded_map is None:
+                raise ValueError("ctapDecoded names no CTAP message to encode.")
+            ctap_source = ctap_decoded.get(ctap_kind) if isinstance(ctap_decoded.get(ctap_kind), Mapping) else ctap_decoded
+        elif ctap_metadata is not None and isinstance(expanded, Mapping):
+            encoded_map, ctap_kind = _encode_ctap_from_structure(expanded)
+            if encoded_map is None:
+                raise ValueError("expandedJson is not a makeCredential or getAssertion request or response.")
+            ctap_source = expanded
 
     if encoded_map is not None:
         prefix_code, prefix_kind = _determine_ctap_prefix(ctap_metadata, ctap_kind)

@@ -103,7 +103,7 @@ def test_the_encoder_refuses_a_get_assertion_large_blob_key(field):
     with pytest.raises(ValueError, match="getAssertion"):
         _encode({"ctapDecoded": {"getAssertionRequest": _get_assertion_structure(**field)}})
     with pytest.raises(ValueError, match="getAssertion"):
-        _encode({"expandedJson": _get_assertion_structure(**field)})
+        _encode({"expandedJson": _get_assertion_structure(**field), "ctap": {"code": 2, "kind": "command"}})
 
 
 def test_the_ctap_webauthn_encoder_refuses_a_get_assertion_large_blob_key():
