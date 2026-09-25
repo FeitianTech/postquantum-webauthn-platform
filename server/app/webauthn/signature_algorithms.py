@@ -47,7 +47,7 @@ def format_hash_name(value: Any) -> str:
     return text.replace("-", "").replace(" ", "").upper()
 
 
-# RSASSA-PSS (RFC 4055): cryptography names it "rsassaPss", others "RSASSA-PSS".
+# RSASSA-PSS (RFC 4055): cryptography names it "rsassaPss", others "RSASSA-PSS" or "RSA-PSS".
 _RSASSA_PSS_OID = "1.2.840.113549.1.1.10"
 # NIST's signature OIDs (2.16.840.1.101.3.4.3.x) as a dotted OID reaches this
 # module: ECDSA and RSA PKCS#1 v1.5 with SHA3 (.9-.16), which cryptography 50
@@ -83,7 +83,8 @@ def normalise_signature_algorithm_name(name: str) -> str:
     compact = lowered.replace("-", "").replace("_", "").replace(" ", "")
     if "ecdsa" in lowered:
         return "ECDSA"
-    if "rsassapss" in compact or text == _RSASSA_PSS_OID:
+    if "rsassapss" in compact or "rsapss" in compact or text == _RSASSA_PSS_OID:
+        # "RSA-PSS" and "rsaPSS" too: OpenSSL's and other tools' spelling of it.
         return "RSASSA-PSS"
     ml_dsa = _ML_DSA_PATTERN.search(compact)
     if ml_dsa:

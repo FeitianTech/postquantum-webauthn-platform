@@ -154,8 +154,8 @@ def _spelled(name: str) -> str:
 @pytest.mark.parametrize(
     ("name", "spelled"),
     [
-        ("RSA-PSS", "RSASSA-PKCS1-v1_5"),
-        ("rsaPSS", "RSASSA-PKCS1-v1_5"),
+        ("RSA-PSS", "RSASSA-PSS"),
+        ("rsaPSS", "RSASSA-PSS"),
         # Composite ML-DSA (draft-ietf-lamps-pq-composite-sigs-19).
         ("id-MLDSA44-ECDSA-P256-SHA256", "ECDSA"),
         ("MLDSA65-RSA3072-PSS-SHA512", "ML-DSA-65"),
