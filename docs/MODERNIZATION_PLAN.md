@@ -1671,6 +1671,84 @@ went from 522 lines to 400.
   byte for a hand-written numeric map; Flask's JSON writer can still write a bare NaN outside the codec; the
   encoder accepts the UI's format labels but not its own internal name `ctap-webauthn`.
 
+### Phase 22 — the Analyze Browser panel reports what the browser says, and says when it cannot know — DONE (2026-09-25)
+9 commits, 4b86b9c3..the record's own, all this phase's, each gated on pytest, vitest and ruff exit codes.
+Every commit before the record was re-run afterwards on its own tree in one detached worktree, cleaned
+(`git clean -fdx`) before each: pytest (4653 / 4 skipped), vitest with the coverage floors, and ruff pass at all
+8, and none leaves `instance/`.
+The frontend only: no server code, no new window globals, no inline handlers.
+
+- Identity, `shared/browser/identity.js`. `readIdentityInputs()` copies what the browser exposes (user-agent
+  string, `navigator.platform`, `maxTouchPoints`, the Client Hints brand list, `mobile` and `platform`,
+  `fullVersionList` and `platformVersion`, `navigator.brave.isBrave()`), recording any read that throws.
+  `determineIdentity()` is a pure function of that copy and gives name, version, engine and system, each with
+  its source: Client Hints, the user-agent string ("which browsers reduce and can be spoofed"),
+  `navigator.brave`, `navigator.platform` with a touch screen, or the iOS rule.
+  - "Google Chrome" only when the brand list names it, or with no Client Hints when the user-agent string says
+    Chrome and no other product token claims it. A list of only "Chromium" is "Chromium-based browser"; a
+    browser's own brand (Microsoft Edge, Opera, Samsung Internet, Brave, anything else) is used as written;
+    Edg/, OPR/ and SamsungBrowser/ name the browser when the list does not.
+  - A version is the named brand's own, full from `fullVersionList` when granted, else its major; never
+    another brand's. Brave known only by `navigator.brave` has no version of its own: "Not reported". A version
+    reduced to `<major>.0.0.0`, in the user-agent string or in `fullVersionList`, shows only the major.
+  - iPadOS is `navigator.platform` "MacIntel" with `maxTouchPoints` > 1. On iOS and iPadOS the engine is
+    WebKit and the panel says WebAuthn there is Safari's.
+- WebAuthn, `shared/browser/webauthn-facts.js`. Each answer is Yes, No, Not available in this browser (the
+  method is missing) or Could not be determined (it threw, or did not answer a boolean; the reason is shown).
+  Nothing says "Unknown". Facts: secure context, the API, conditional mediation, the three JSON helpers, the
+  user-verifying platform authenticator, and hybrid. A presence check (the JSON helpers) has no "No", and the
+  API row has none either: missing is "Not available", with a note naming what is missing and, on an insecure
+  page, why.
+- Client capabilities: every key `getClientCapabilities()` returns. The nine the WebAuthn Level 3 spec defines
+  (checked against the Recommendation and the editor's draft, 2026-09-25) have a plain label, in the spec's
+  order; `extension:*` are grouped; anything else is shown as written (Chromium 152 returns `immediateGet`,
+  which neither document defines). The defined keys the browser left out are named, since the spec says an
+  absent key means its availability is not known. A missing method says it is a Level 3 feature this
+  browser does not offer.
+- "Supported Transports" is gone, with the WebUSB, WebHID, Web NFC, Web Bluetooth and Web Serial tests and
+  `isExternalCTAP2SecurityKeySupported`. The Authenticators section shows the built-in authenticator and
+  hybrid, and says USB, NFC and Bluetooth security keys cannot be detected from a page.
+- A post-quantum note: the browser passes ML-DSA (COSE -48, -49, -50) through; only a registration in the
+  Advanced Authentication tab shows what a credential uses.
+- Copy report: the raw findings as JSON (the identity inputs, every fact and state, the capabilities as
+  returned), through `navigator.clipboard.writeText`, announced in a `role="status"` region. When the copy
+  fails the reason is shown and the JSON appears selected in a read-only text box to copy by hand; that is
+  what happens in the Claude desktop app's browser, which denies clipboard writes.
+- Dialog: `role="dialog"`, `aria-modal`, labelled by its heading; the dialog takes focus on open, Tab and
+  Shift+Tab stay inside it, Escape closes it, and focus goes back to the Analyze Browser button, which now
+  carries `aria-haspopup="dialog"` and `aria-controls`. Checked by keyboard in a real browser.
+- Seen in a real browser (the desktop app's Chromium 152, brand list `Not?A_Brand`, `Chromium`): before,
+  "Google Chrome 152.0.7977.130 / macOS", WebAuthn API, platform and cross-platform authenticator Yes,
+  transports Internal, Hybrid, USB, HID, BLE, Cable / Serial. After, "Chromium-based browser 152.0.7977.130 /
+  Blink / macOS", each from User-Agent Client Hints; all eight facts Yes; 24 capabilities (9 defined, 14
+  extensions with `cmtgKey` and `crossDeviceFallbackUrl` No, `immediateGet` unrecognised). The panel fits a
+  375-pixel viewport with no horizontal scroll.
+
+**Tests.**
+- vitest: 301 → **390**. The identity matrix is 23 real user-agent strings with their Client Hints
+  (`tests/frontend/shared/browser/identity-matrix.js`): Chrome on Windows, macOS, Linux, Android and ChromeOS,
+  a Chromium-only list with and without full versions, Edge, Brave by its brand and by `navigator.brave` alone,
+  Opera, Samsung Internet by its brand and by its token, Firefox desktop and Android, Safari on macOS, iPadOS
+  Safari in desktop mode, iPhone Safari, CriOS, FxiOS, EdgiOS, and Chrome and Edge without Client Hints. The
+  panel test renders `frontend/templates/shared/analyze-browser.html` itself.
+- Coverage 82.58 / 66.44 / 91.33 / 82.69 → **83.02 / 66.96 / 91.77 / 83.09** (statements / branches /
+  functions / lines). `analyze.js` lines 89.2% → **98.66%**; `identity.js`, `webauthn-facts.js` and `probe.js`
+  100%.
+- pytest 4653 passed / 4 skipped, unchanged. ruff clean.
+
+**Found but not fixed:**
+- The page behind the panel still scrolls: `updateGlobalScrollLock()` does not count the panel. That was
+  removed on purpose in 2e22a3a0 ("scroll-friendly"), so it stays.
+- Legacy EdgeHTML ("Edge/18") is read as a Chromium-based browser on Blink. It has been out of support
+  since 2021.
+- The iOS rule assumes WebKit. A browser shipping its own engine under the EU's iOS exception would be
+  misreported, if one appears; its user-agent string would need a token to tell.
+- The ML-DSA note is the brief's statement; it was not checked per browser and platform authenticator here
+  (a platform authenticator picks from what it supports; a security key receives the list).
+- The analysis is cached for the page's life, so enrolling a fingerprint needs a reload to show.
+- The state colours are literals like the rest of the stylesheet (no dark mode yet, Q2); each state also has
+  its words and a mark, so none depends on colour.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
@@ -2266,7 +2344,7 @@ reports macOS** (`:72-75` — the `maxTouchPoints` discriminator is defeated by 
 `&&` with a UA check that is always false in desktop mode).
 
 Note this is masked by the test suite: `analyze-browser.test.js:237` sets a synthetic UA so
-the brand path opens; the Brave case passes in test and fails in Brave.
+the brand path opens; the Brave case passes in test and fails in Brave. **Done in Phase 22.**
 
 ### Q2. UI has no dark mode and fails contrast
 Zero `prefers-color-scheme`/`[data-theme]`/`color-scheme` anywhere. 46 CSS custom
