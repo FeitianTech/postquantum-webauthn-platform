@@ -66,6 +66,54 @@ Important frontend entry points:
   checks, which say nothing about WebAuthn. The identity cases are real
   user-agent strings with their Client Hints in
   `tests/frontend/shared/browser/identity-matrix.js`; add a browser there.
+- `frontend/static/scripts/shared/ui/dom.js`
+  How every view that shows data is built: `el(tag, {className, attrs, dataset,
+  style, text}, ...children)` and `fragment()`. Strings become text nodes or
+  attribute values, never markup, and an `on*`, `innerHTML`, `outerHTML` or `srcdoc`
+  attribute throws; handlers are added with `addEventListener`. Never assign data to
+  `innerHTML`/`outerHTML` or pass it to `insertAdjacentHTML`: a guard allows only
+  `''` or a literal with no `${}` (see Testing Guidance). The credential cards, the
+  credential detail modal (`credential-detail-runtime/`, `detail-nodes.js`), the
+  registration result and its certificate / authenticator-data sub-modal
+  (`registration-compose-runtime.js`) are built this way.
+- Registration detail snapshots (`registrationDetailSnapshot`, schemaVersion 2) hold
+  the registration as data -- `state` (decoded attestation, certificates,
+  authenticator data) and `response` (`credential`, `relyingParty`) -- never markup.
+  `snapshot-sanitize.js` keeps each `response` part whole or drops it; the detail modal
+  builds from a v2 snapshot without a request and otherwise hydrates the credential
+  from its server artifact. Composed HTML from older versions, and the raw
+  `registrationDetailHtml`-style keys, are never read.
+- `frontend/static/scripts/shared/api/failed-response.js`
+  The one reader of a failed response, for both tabs, the codec and the decode
+  request: `readFailedResponse(response)` gives the server's `error` (or short plain
+  text; never an HTML page), `failedCredentialId`, `signCountStatus`,
+  `challengeSource`, `challengeStatus` and the body, and adds what to do for a 400
+  about the ceremony state, 409, 413 and 503 unless the message already says;
+  `FailedResponseError` carries it. Do not show a raw response body.
+- `frontend/static/scripts/shared/ui/ceremony-result.js`
+  The panel under each tab's buttons (`#simple-ceremony-result`,
+  `#advanced-ceremony-result`) that says what the server made of the last ceremony:
+  the signature counter with a sentence for `ok`, `not-supported` and `regressed`
+  (a possible clone; a warning), and in the advanced tab where the challenge came
+  from (`challengeSource`, `challengeStatus`). Not a `.status` toast: it stays until
+  the next ceremony starts.
+- `frontend/static/scripts/shared/utils/base64.js`
+  Bytes on the wire are base64url, unpadded, in every field the server sends; a
+  field named for base64 (`derBase64`, `publicKeyBase64`, `userHandleBase64`, the
+  codec's `base64` views) is standard base64. Decode API data with the strict
+  `base64UrlToBytes` (or `base64ToBytes` for such a field): one spelling per byte
+  string, anything else throws `Base64Error`. `forgivingBase64ToBytes` does what
+  `atob` did and is only for text a person typed (the editor's helpers in
+  `binary.js` use it). No `atob` outside the vendored `shared/webauthn/json-ponyfill.js`.
+- `frontend/static/scripts/shared/storage/local/record-migration.js`
+  Brings records saved by earlier versions to today's format as they are read
+  (`storage-core.js`, and artifacts in `hydrateCredentialFromServer`), persisting
+  when anything changed: drops stored registration markup, and re-spells standard
+  base64 as base64url in the known byte fields (`credentialId`, `publicKey`,
+  `publicKeyBytes`, `userHandle`, `publicKeyCose` strings, `attestationStatement`
+  byte strings). Fields named for base64, extension outputs and properties are left
+  alone. Add a step here, with an old-format fixture in
+  `tests/frontend/shared/storage/`, when a stored format changes.
 
 Important templates:
 
@@ -136,7 +184,9 @@ Main route modules:
   signature counter against the larger of the stored and the browser's copy. It
   fails closed: stored records that could not be read reject the assertion with 503
   (the browser's copy alone can be omitted or lowered); records that were read but
-  hold nothing for the credential fall back to the browser's copy. `credential_list.py`
+  hold nothing for the credential fall back to the browser's copy. The 200 and the
+  regression rejection carry `signCountStatus` (`server/app/webauthn/sign_count.py`),
+  which the tab's result panel shows. `credential_list.py`
   answers `GET /api/credentials` with `{"credentials": [...]}` plus `unreadableCount`
   (and the `X-Unreadable-Credentials` header) when a stored copy did not decode or a
   record could not be shown, and 503 when the store could not be read.
@@ -261,7 +311,15 @@ Repo test layout:
 
 If you are changing only UI logic plus lightweight server responses, prefer targeted tests over the full suite first.
 
-Four checks guard the code and the checkout rather than behaviour:
+Six checks guard the code and the checkout rather than behaviour:
+
+- `tests/app/tooling/test_html_sinks.py` reads every `.innerHTML` / `.outerHTML`
+  assignment and `insertAdjacentHTML` call in `frontend/static/scripts` and fails
+  unless it is given `''` or one string or template literal with no `${}`. Its
+  `ALLOWED` list is empty; an entry needs its reason and may only be removed.
+- `tests/app/tooling/test_frontend_base64.py` fails on any `atob(` in
+  `frontend/static/scripts` outside its `ALLOWED` list, which holds only the
+  vendored `json-ponyfill.js`.
 
 - `tests/app/tooling/test_no_silent_monkeypatch.py` fails on a
   `monkeypatch.setattr(..., raising=False)` (or `mock.patch(..., create=True)`):
@@ -280,7 +338,9 @@ Four checks guard the code and the checkout rather than behaviour:
   compares with `golden/`. An intended change of output, or a dependency bump that
   changes it (cryptography's extension text, say), is regenerated with
   `CHARACTERIZATION_WRITE=1 pytest tests/app/characterization` and the diff
-  reviewed before committing. `material.py` builds the keys and certificates
+  reviewed before committing; `python tests/app/characterization/encoding_diff.py
+  [REVISION]` shows whether a golden diff is byte spellings only. `material.py`
+  builds the keys and certificates
   deterministically; the only frozen input is ML-DSA signatures (`inputs/frozen.json`),
   since ML-DSA signing is randomised.
 - `tests/checkout_guard.py`, a pytest plugin `tests/conftest.py` loads, fails the run

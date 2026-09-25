@@ -1763,6 +1763,146 @@ The frontend only: no server code, no new window globals, no inline handlers.
   MacIntel with 5 touch points, the iPadOS pattern) the panel says Google Chrome, 152, Blink, **Android from
   Client Hints**: the iPadOS rule does not misfire. No horizontal scroll at 375 px.
 
+### Phase 23 — the UI renders what it is given safely, shows what the server says, and speaks base64url — DONE (2026-09-25)
+35 commits, f55bc1d6..the record's own, all this phase's, each gated on pytest, vitest (with the coverage floors)
+and ruff exit codes. Every commit before the record was re-run afterwards on its own tree in one detached
+worktree, cleaned (`git clean -fdx`) before each: pytest, vitest with the coverage floors, and ruff pass at all
+34, and none leaves `instance/`.
+Owner decisions for this phase: byte fields with no label move to base64url and fields named for base64 stay
+standard; the simple 200 gains `signCountStatus`; each tab gets a result panel that stays; registration
+snapshots saved by earlier versions lose their HTML and the view is rebuilt from data.
+
+**A — views that show data are built as DOM.**
+- The choice: DOM, through one factory, `shared/ui/dom.js` (`el(tag, {className, attrs, dataset, style, text},
+  ...children)`, `fragment()`), rather than an escaping template helper. Nothing from data is ever parsed as
+  HTML, so there is no attribute, URL or tag context to get wrong and no "trusted fragment" marker to misuse; the
+  guard can allow nothing; and it removes the stored-markup replay instead of wrapping it. `el()` refuses `on*`,
+  `innerHTML`, `outerHTML` and `srcdoc` attributes; handlers are attached with `addEventListener` where the
+  element is made. The Analyze Browser panel's local helper now uses it.
+- Converted: the saved-credential cards (`list-render.js`), the credential detail modal (`sections-main.js`,
+  `sections-properties.js`, `sections-aaguid.js`, the new `detail-nodes.js`, `entry.js`), the registration result
+  modal and the certificate / authenticator-data sub-modal (`registration-compose-runtime.js`,
+  `registration-result.js`). `escapeHtml`, `formatBoolean` and `renderAttestationResultRow` had no callers left
+  and were deleted with their tests.
+- The one hole was the registration-detail snapshot: `registration-result.js` saved composed HTML in
+  localStorage and on the server artifact (`PUT …/snapshot`, stored unchecked), and the detail modal replayed it,
+  along with raw `registrationDetailHtml`-style keys that `hydrateCredentialFromServer` copied from any artifact.
+  New snapshots are `schemaVersion: 2` — `state` plus `response: {credential, relyingParty}`, each part kept whole
+  or dropped, never cut — and the modal builds its three registration sections from them with no request.
+  Markup is never read: `snapshot-context.js` ignores it, `snapshot-sanitize.js` keeps no HTML key on any path
+  (local write, prefetch, hydration), and `record-migration.js` drops it from saved records on read, persisting
+  once; a snapshot left with nothing is removed, and a credential without a v2 snapshot is completed from its
+  server artifact as before. Closes S4-followup 1–3.
+- Hostile record (`tests/frontend/advanced/credentials/hostile-record.test.js`): every string field — user name,
+  display name, email, RP id and name, extension outputs and keys, certificate subject, issuer, validity, key and
+  extension names and values, AAGUID fields, the MDS and custom-metadata descriptions, the metadata warning —
+  set to payloads that break text, double- and single-quoted attributes, `<textarea>` and `<pre>`. Nine views
+  through their real runtimes. vitest's jsdom compiles inline handlers, so the test fires `error` on every
+  `<img>` and `load` on every `<svg>`; the payload marks `<html data-xss>` as well as `window.__xss`, because a
+  handler runs in jsdom's own global. **Before** (commit 5ae0e4dd): the detail modal ran the payload through all
+  three replay paths — a snapshot saved in this browser, a raw `registrationDetailHtml` key, and a snapshot from
+  the server artifact; the cards, the allow-list options, the detail modal from record fields, the registration
+  result modal and both sub-modals showed it as text. **After** (fedc9625 onwards): none runs it.
+- Guard, `tests/app/tooling/test_html_sinks.py`: every `.innerHTML` / `.outerHTML` assignment and
+  `insertAdjacentHTML` call in `frontend/static/scripts` must be `''` or one literal with no `${}` (the right-hand
+  side is read character by character; a unit test pins the reader). It started with the five built sinks
+  allowlisted and emptied as each view moved; an allowlisted entry that no longer matches fails, so it only
+  shrinks. It ends empty.
+
+**B — what the server says.**
+- `signCountStatus` (`ok`, `not-supported`, `regressed`): the simple 200 now carries it
+  (`enforce_sign_count` returns the verdict it computed; `authenticate_complete` shrank 137 → 126 lines and its
+  ratchet entry with it); the two simple-authenticate goldens gained that one key. Recorded first:
+  b657aaed asserted its absence.
+- `shared/ui/ceremony-result.js` and a `role="status"` panel in each tab (`#simple-ceremony-result` under the
+  simple buttons, `#advanced-ceremony-result` in the advanced header; not a `.status` toast, so it stays until the
+  next ceremony). Counter row: "Signature counter N" and a sentence per state — `regressed` says the authenticator
+  may have been cloned, in the warning style, with what the tab did (simple: rejected; advanced: reported, not
+  rejected). Advanced challenge row after registration and authentication, success or failure: `server-session`
+  / `client-supplied` with `fresh` / `replayed` (warning) / `expired` / `not-tracked`; a 413 reports neither, so
+  "Not reported by the server."
+- One reader, `shared/api/failed-response.js`, used by both tabs, the codec and the registration detail's decode
+  request: the server's `error` (or short plain text, never an HTML page), `failedCredentialId`,
+  `signCountStatus`, `challengeSource`, `challengeStatus` and the body; for a 400 about the ceremony state (or an
+  HTML 400), 409, 413 and 503 it adds what to do unless the message already says. "The authenticator may not
+  support: …" is added only to errors the browser threw.
+- Advanced tab, **before**: 409 → `Credential registration failed: Registration failed:
+  {"error":"The stored credentials changed while this one was being saved, too many times, so the registration
+  was not saved. Please try again."} The authenticator may not support: resident key requirement, selected
+  signature algorithms.`; 503 → the same with `{"error":"The stored credentials could not be read. Please try
+  again."}`. **After**: `Credential registration failed: The stored credentials changed while this one was being
+  saved, too many times, so the registration was not saved. Please try again.` and `Credential registration
+  failed: The stored credentials could not be read. Please try again.`; a 413 adds "Send a smaller request."; an
+  HTML 400 reads "The server could not accept the request. Start the ceremony again." (No advanced route answers
+  409 today; simple registration and simple authentication do.) Authentication result, **before**: the toast
+  "Advanced authentication successful!" only; **after**: the panel "Signature counter 2 Higher than the last
+  counter the server saw for this credential, as it should be." and the challenge row.
+
+**C — base64url end to end.**
+- Server: `convert_bytes_for_json` answers base64url, and so do the unlabeled `credentialId`, `publicKey`,
+  `publicKeyBytes` and `userHandle` of both register-complete records and `GET /api/credentials`. Fields named for
+  base64 (`credentialIdBase64`, `publicKeyBase64`, `userHandleBase64`, `userHandle.base64`, `derBase64`,
+  `subjectPublicKeyInfoBase64`, the codec's `base64` views) are unchanged. Input already read both spellings.
+- Goldens, one commit (3216de5e) holding only the encoding change, its pytest fixes and the regeneration;
+  `tests/app/characterization/encoding_diff.py` compares them with the previous commit: 19 files, 225 values
+  re-spelled from base64 to base64url with the same bytes each (credentialId 46, publicKey 45, userHandle 32,
+  publicKeyBytes 21, COSE -1/-2/-3 13/33/29, attestation sig 4, x5c 2), 46 body hashes and 29 Content-Length
+  headers changed with them, **0 other differences**. Against the commit before B1 it lists the added
+  `signCountStatus` as a difference, as it should.
+- Frontend: `shared/utils/base64.js` — `base64UrlToBytes` (unpadded, its alphabet only, no whitespace, zero
+  stray bits) and `base64ToBytes` (padded standard, for fields named for it), throwing `Base64Error`; RFC 4648
+  vectors. `forgivingBase64ToBytes` does what `atob` did, for editor input only, and `binary.js`'s helpers use it.
+  Strict decoding at the API-data sites: the debug challenge (`clientDataJSON` is an ArrayBuffer on the browser's
+  credential, so `atob` always threw and the challenge was always logged as `''`), the detail view's identifiers
+  (b64 / b64u / hex from the decoded bytes; the "b64" row showed the stored base64url before), `ensureBase64Url`
+  (it read non-base64 text as hex pair by pair: "not base64!" became `AAC6AGQA`), the MDS helper, certificate
+  `derBase64`, and the authenticator-data candidates. `tests/app/tooling/test_frontend_base64.py` fails on `atob(`
+  anywhere but the vendored `shared/webauthn/json-ponyfill.js`.
+- Migration on read (`record-migration.js`, from `storage-core.js` and on hydrated artifacts): standard base64 in
+  `credentialId`, `publicKey`, `publicKeyBytes`, `userHandle`, the `publicKeyCose` strings and the
+  `attestationStatement` byte strings is decoded strictly and re-spelled; fields named for base64, `ver`,
+  extension outputs and properties are left alone. Tested with records copied from the pre-change goldens
+  (`tests/frontend/shared/storage/pre-phase-23-records.js`): the values read back as base64url holding the same
+  bytes, the record is saved once and not again, labeled fields are untouched, the credential and user-handle hex
+  are unchanged, and a simple record saved without `credentialIdBase64Url` is now found by the ID the server
+  reports (452c772b recorded that it was not).
+
+**Seen in a real browser** (the desktop app's Chromium, the app on port 5123 with its runtime, credential store
+and secret in a scratch directory; nothing was written to the checkout). The browser hands WebAuthn to macOS's
+own passkey prompt, which cannot be driven from here, so the ceremonies used a software authenticator installed
+in the page for the check (ES256 in WebCrypto, `none` attestation), whose signatures the server verified. In the
+advanced tab: a registration refused by the server ("Authenticator attachment is not permitted by the selected
+hints.") with the challenge row; the retry reused the editor's challenge and the panel said "Used before: this is
+a replay" in the warning style, which nothing showed before; a fresh registration ("server-session … First use.");
+the result modal and both sub-modals built as DOM; an authentication with "Signature counter 2 Higher than …";
+one with the counter set back to 1: "Not higher than the counter the server stored: the authenticator may have
+been cloned. The advanced tab reports this and does not reject the assertion."; the detail modal's three
+registration sections from v2 snapshots, localStorage holding no HTML and no standard base64 in the unlabeled
+fields. At 375 px the panel stacks its rows, with no horizontal scroll.
+
+**Tests.**
+- vitest 390 → **532**, coverage 83.02 / 66.96 / 91.77 / 83.09 → **84.22 / 69.38 / 92.61 / 84.26**
+  (statements / branches / functions / lines); floors held at every commit.
+- pytest 4653 → **4659** passed / 4 skipped; Linux (python:3.14, Docker) at 3216de5e **4645** / 5, the usual
+  14 fewer and one more skip than macOS. ruff clean.
+
+**Found but not fixed:**
+- The vendored `json-ponyfill.js` keeps `atob` for the server's request options; the guard names it.
+- The MDS modules (`mds/custom/custom-metadata-actions.js`, `mds/metadata/explorer-load.js`,
+  `explorer-state-loader.js`, `certificate-decode.js`) and `artifacts-client.js` `jsonFetch` still read failed
+  responses their own way.
+- `advanced/credentials/utils.js`'s sniffers (hex, then base64, then base64url for the same field) and
+  `normalizeToHex` stay tolerant; they no longer use `atob`.
+- `clientExtensionOutputs` and `properties` saved before this phase keep standard base64 (display only).
+- Server artifacts saved before this phase keep standard base64 and snapshot HTML until re-uploaded; the frontend
+  migrates and sanitises them when it reads them. `api_put_advanced_credential_snapshot` still stores any object.
+- `simple/authentication.py` still answers `abort(404)` / `abort(400)` as Werkzeug HTML (the reader copes).
+- The simple regression rejection carries the verdict but not the received counter as a field (it is in the
+  message), so the panel shows the verdict without a number there.
+- `advanced-server-payload.js` falls back to `btoa(JSON.stringify(publicKeyCose))` as a "public key", which is not
+  a COSE key.
+- No test inventories the window globals (Phase 24).
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
@@ -1775,7 +1915,7 @@ Tests previously ran against the global interpreter, whose packages matched noth
 - A traversal `?email=` now raises `ValueError` in storage → HTTP 500. Map to 400 in routes. **Done in Phase 17.**
 - `session_metadata_store.py` builds paths via the same shared prefix helpers; not yet contained.
 - `storage.py` `convert_bytes_for_json` emits standard base64 while storage uses base64url.
-  Unifying needs a paired frontend change: `binary.js` decodes it with bare `atob()`.
+  Unifying needs a paired frontend change: `binary.js` decodes it with bare `atob()`. **Done in Phase 23.**
 - CSP ships with `script-src 'self' 'unsafe-inline'` — **not strict**. Blockers: 125 inline
   `on*=` handlers in templates, the inline bootstrap `<script>` in `index.html`, 5 inline
   `style=` attributes. `test_csp_script_src_is_documented_as_not_strict` fails once they are gone.
@@ -1838,6 +1978,8 @@ Further sinks: `sections-main.js:29,31,33,71,84,85,98,121,133`;
 
 ### S4-followup. Latent remote-HTML sink and deferred snapshot refactor
 Raised during the S4 fix; **not** regressions, but tracked so they are not lost.
+**Items 1-3 done in Phase 23**: the views are built as DOM, snapshots hold the registration as data
+(schemaVersion 2), and markup is never read from a snapshot, a record or an artifact.
 
 1. **Cross-layer safety dependency (do next).**
    `credential-detail-runtime/snapshot-context.js:25-30` accepts
