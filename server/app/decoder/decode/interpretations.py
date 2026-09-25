@@ -14,7 +14,13 @@ from typing import Any
 
 from fido2.webauthn import AuthenticatorData
 
-from . import attestation_statement, authenticator_data_findings, edn_view, extensions
+from . import (
+    attestation_statement,
+    authenticator_data_findings,
+    ctap_conformance,
+    edn_view,
+    extensions,
+)
 from .keys import MISSING, get_mapping_entry
 
 _AUTH_DATA_LOCATION = "authenticator data extensions (ED flag)"
@@ -59,7 +65,7 @@ def for_ctap(classification: str, value: Any, node: Mapping[str, Any], data: byt
             findings += _attestation(extra, fmt, att_stmt, auth_data, node, data, (3,))
     _extensions(extra, blocks)
     extra.update(edn_view.extra(node, data))
-    return extra, findings
+    return extra, findings + ctap_conformance.non_integer_keys(classification, node)
 
 
 def for_attestation_object(value: Mapping[Any, Any], node: Mapping[str, Any], data: bytes) -> Interpretation:
