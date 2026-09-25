@@ -2,14 +2,11 @@
 from __future__ import annotations
 
 import importlib
-import os
-import re
 from datetime import timedelta
 
 import pytest
 
 config_module = pytest.importorskip("server.app.config")
-config_paths = pytest.importorskip("server.app.config.paths")
 config_proxy = pytest.importorskip("server.app.config.proxy")
 config_session_cookie = pytest.importorskip("server.app.config.session_cookie")
 config_security_headers = pytest.importorskip("server.app.config.security_headers")
@@ -105,31 +102,15 @@ def test_csp_locks_down_the_non_script_directives(client):
     assert "'unsafe-inline'" not in csp["default-src"]
 
 
-def test_csp_script_src_is_documented_as_not_strict(client):
-    """The 125 inline on*= handlers still force 'unsafe-inline' for scripts.
+def test_csp_script_src_still_allows_inline_scripts(client):
+    """'unsafe-inline' stays in script-src while index.html seeds its data with an inline <script>.
 
-    This test exists to fail loudly if the templates are cleaned up (or if the
-    policy is tightened) so the TODO in config/security_headers.py gets retired
-    deliberately.
+    The templates hold no inline on*= handler any more (tests/app/tooling/test_inline_code.py
+    keeps it so); the strict policy comes once the inline script is a data block.
     """
 
     csp = _parse_csp(client.get("/").headers["Content-Security-Policy"])
     assert csp["script-src"] == ["'self'", "'unsafe-inline'"]
-
-    template_root = config_paths._FRONTEND_TEMPLATE_ROOT
-    handler_pattern = re.compile(r"\son[a-zA-Z]+\s*=\s*\"")
-    inline_handlers = 0
-    for dirpath, _dirnames, filenames in os.walk(template_root):
-        for filename in filenames:
-            if not filename.endswith(".html"):
-                continue
-            with open(os.path.join(dirpath, filename), encoding="utf-8") as handle:
-                inline_handlers += len(handler_pattern.findall(handle.read()))
-
-    assert inline_handlers > 0, (
-        "No inline on*= handlers remain -- drop 'unsafe-inline' from script-src "
-        "and retire the TODO(csp-strict) note in server/app/config/security_headers.py."
-    )
 
 
 def test_security_headers_do_not_clobber_an_explicit_value():
