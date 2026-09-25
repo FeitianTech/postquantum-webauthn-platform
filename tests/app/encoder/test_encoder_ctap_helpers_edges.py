@@ -156,18 +156,7 @@ def test_binary_decoding_helpers_and_ctap_structure_detection():
 
     assert encode_module._extract_binary_input([1, 2], "field") == b"\x01\x02"
 
-    with pytest.raises(ValueError, match="ctapDecoded.ignored is not a CTAP message"):
-        encode_module._encode_ctap_from_decoded({"ignored": "value"})
+    from server.app.decoder.encode import ctap_views
 
-    decoded_map, kind = encode_module._encode_ctap_from_decoded(
-        {
-            "makeCredentialRequest": {
-                "clientDataHash": _b64url(b"\x01" * 32),
-                "rp": {"id": "example.com"},
-                "user": {"id": _b64url(b"user")},
-                "pubKeyCredParams": [{"alg": -7, "type": "public-key"}],
-            },
-        }
-    )
-    assert kind == "makeCredentialRequest"
-    assert decoded_map is not None
+    with pytest.raises(ValueError, match="ctapDecoded.ignored is not a CTAP message"):
+        ctap_views.one_message({"ignored": "value"})

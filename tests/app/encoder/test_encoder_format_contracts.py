@@ -141,8 +141,8 @@ def test_encode_cbor_writes_the_byte_the_ctap_framing_names():
         },
         "ctapDecoded": {
             "getAssertionRequest": {
-                "rpId": "example.com",
-                "clientDataHash": {"base64url": _b64url(challenge_hash)},
+                "1 (rpId)": "example.com",
+                "2 (clientDataHash)": challenge_hash.hex(),
             }
         },
     }

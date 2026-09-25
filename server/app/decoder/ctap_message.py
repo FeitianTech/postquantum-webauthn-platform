@@ -3,7 +3,7 @@
 A view is ``{message: {label: value}}``, ``message`` one of ``MESSAGES``. Its
 members are labelled as CTAP 2.2 section 6 numbers them: ``"1 (fmt)"`` for a
 member, the number alone for an integer the message does not define, and any
-other key with its type (``ctap_view.key_label``). Every value is spelled by
+other key with its type, text too (``"rpId" (text)``). Every value is spelled by
 ``ctap_view``, except two shown interpreted in place, each carrying the exact
 bytes it was read from, which alone are read back:
 
@@ -52,6 +52,10 @@ def member_label(message: str, key_node: Mapping[str, Any]) -> str:
         number = key_node["value"]
         name = MESSAGES[message].get(number)
         return f"{number} ({name})" if name else str(number)
+    if key_node.get("majorType") == 3 and "value" in key_node and not key_node.get("damaged"):
+        # Always with its type: a CTAP message numbers its members, so the text
+        # "rpId" is never read back as member 1.
+        return f"{json.dumps(key_node['value'], ensure_ascii=False)} (text)"
     return ctap_view.key_label(key_node)
 
 

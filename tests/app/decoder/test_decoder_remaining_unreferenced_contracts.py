@@ -47,32 +47,6 @@ def test_remaining_mapping_and_auth_data_format_helpers():
     assert auth_details["signCount"] == 3
     assert isinstance(trailing, bytes)
 
-    att_stmt = decode_module._format_att_stmt_for_expanded_json(
-        {"sig": b"\xaa\xbb", "x5c": [], "alg": -7}
-    )
-    assert att_stmt["sig"] == "aabb"
-    assert att_stmt["alg"] == -7
-
-
-def test_remaining_interpret_request_map_helpers():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    make_request = {
-        1: b"\x22" * 32,
-        2: {"id": "example.com", "name": "Example"},
-        3: {1: b"\x01", 2: b"alice"},
-        4: [{"type": "public-key", "alg": -7}],
-    }
-    get_request = {1: "example.com", 2: b"\x22" * 32, 3: [{"id": b"\x01"}]}
-
-    interpreted_make = decode_module._interpret_make_credential_request_map(make_request)
-    interpreted_get = decode_module._interpret_get_assertion_request_map(get_request)
-
-    assert interpreted_make is not None
-    assert interpreted_get is not None
-    assert any("clientDataHash" in key for key in interpreted_make)
-    assert any("rpId" in key for key in interpreted_get)
-
 
 def test_remaining_certificate_conversion_and_summary_helpers(monkeypatch, response):
     decode_module = pytest.importorskip("server.app.decoder.decode")

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 
-import cbor2
 import pytest
 
 
@@ -178,43 +177,6 @@ def test_late_summary_extension_and_client_data_helpers_cover_fallback_rendering
         {"format": "Opaque blob", "decoded": None, "binary": {"hex": "aabb"}}
     )
     assert any(line == "Binary:\t" for line in generic_lines)
-
-
-def test_ctap_interpretation_variants_cover_request_guard_and_attstmt_bytes(monkeypatch, ctap):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    auth_data = _auth_header(flags=0x01, sign_count=9)
-
-    make_with_byte_attstmt = {1: "packed", 2: auth_data, 3: b"\xaa\xbb", 9: b"\x01"}
-    interpreted_make = decode_module._interpret_make_credential_map(make_with_byte_attstmt)
-    assert interpreted_make is not None
-    assert interpreted_make["3 (attStmt)"] == "aabb"
-    assert interpreted_make["9"] == "01"
-
-    assert decode_module._interpret_make_credential_map({1: "packed", 2: auth_data, 3: 5}) is None
-
-    assert decode_module._interpret_get_assertion_map({1: "example.com", 2: b"\x00" * 32}) is None
-
-    # Text names are not CTAP members: only the integer-keyed map is a request.
-    assert decode_module._interpret_ctap_cbor_value({"rpId": "example.com", "clientDataHash": b"\x10" * 32}) is None
-    interpreted_request = decode_module._interpret_ctap_cbor_value({1: "example.com", 2: b"\x10" * 32})
-    assert interpreted_request is not None
-    assert "getAssertionRequest" in interpreted_request
-    assert decode_module._interpret_ctap_cbor_value("not-a-map") is None
-
-    trailing = cbor2.dumps(3) + cbor2.dumps("not-bytes") + cbor2.dumps(10) + cbor2.dumps(1)
-    monkeypatch.setattr(
-        ctap,
-        "_format_auth_data_for_expanded_json",
-        lambda _auth: ({"rpIdHash": "00" * 32}, trailing),
-    )
-    interpreted_assertion = decode_module._interpret_get_assertion_map({2: auth_data})
-    assert interpreted_assertion is not None
-    # The patch is what the interpreter read (it looks the helper up on ctap).
-    assert interpreted_assertion["2 (authData)"] == {"rpIdHash": "00" * 32}
-    assert interpreted_assertion["3 (signature)"] is None
-    assert "trailingFields" not in interpreted_assertion
-    assert "10" not in interpreted_assertion
 
 
 def test_try_decode_cbor_reports_trailing_bytes_and_padding_alike():

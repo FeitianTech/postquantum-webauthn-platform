@@ -142,21 +142,22 @@ def test_the_integer_1_spelled_plainly_is_not_guessed_back():
     assert edn.encode(result["data"]["edn"]).hex() == "a201616161316162"
 
 
-def test_a_typed_key_at_ctap_member_level_is_refused_as_not_a_member():
+def test_a_text_key_at_ctap_member_level_is_written_back_as_the_text_it_is():
     auth = "00" * 32 + "01" + "00000001"
     view = {"getAssertionResponse": {"2 (authData)": {"raw": auth}, "3 (signature)": "0102", '"fmt" (text)': "x"}}
 
-    with pytest.raises(ValueError, match=r'is a text key, not a CTAP member'):
-        encode_payload_text(json.dumps({"ctapDecoded": view, "ctap": {"code": 0}}), "cbor")
+    encoded = encode_payload_text(json.dumps({"ctapDecoded": view, "ctap": {"code": 0}}), "cbor")
+
+    assert encoded["data"]["binary"]["hex"] == "00" + edn.encode(f"{{2: h'{auth}', 3: h'0102', \"fmt\": \"x\"}}").hex()
 
 
-def test_a_user_entity_whose_keys_collide_in_json_is_refused_naming_both():
+def test_a_user_entity_with_an_integer_key_and_its_text_twin_keeps_both():
     auth = "00" * 32 + "01" + "00000001"
-    item = edn.encode(f"{{2: h'{auth}', 3: h'0102', 4: {{\"id\": h'01', 5: \"integer\", \"5\": \"text\"}}}}")
+    item = edn.encode(f"{{2: h'{auth}', 3: h'0102', 4: {{5: \"integer\", \"5\": \"text\", \"id\": h'01'}}}}")
     decoded = decode_payload_text(item.hex())["data"]
 
-    with pytest.raises(ValueError, match=r'The keys "5" and "\\"5\\" \(text\)" at user name the same CBOR key'):
-        encode_payload_text(json.dumps(decoded), "cbor")
+    assert decoded["ctapDecoded"]["getAssertionResponse"]["4 (user)"] == {"5": "integer", '"5" (text)': "text", "id": "01"}
+    assert encode_payload_text(json.dumps(decoded), "cbor")["data"]["binary"]["hex"] == item.hex()
 
 
 def test_the_encoder_shows_a_pasted_ctap_view_as_written_and_takes_its_own_output_back():

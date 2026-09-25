@@ -29,22 +29,6 @@ def _build_attestation_bytes() -> bytes:
     return bytes(attestation)
 
 
-def test_convert_optional_and_user_helpers_cover_binary_and_text_paths():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    assert decode_module._convert_optional_ctap_field(b"\x01\x02") == "0102"
-    assert decode_module._convert_optional_ctap_field({"k": b"\xaa"}) == {"k": "aa"}
-
-    assert decode_module._convert_user_text_value("Alice") == "Alice"
-
-    binary_text = decode_module._convert_user_text_value(b"Alice")
-    assert binary_text["text"] == "Alice"
-    assert binary_text["binary"]["hex"] == "416c696365"
-
-    binary_non_text = decode_module._convert_user_text_value(b"\xff")
-    assert binary_non_text["hex"] == "ff"
-
-
 def test_describe_client_data_from_bytes_success_and_collected_client_data_fallback(monkeypatch, pipeline):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 

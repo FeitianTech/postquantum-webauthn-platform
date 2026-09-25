@@ -8,22 +8,6 @@ from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
 
-def test_build_labeled_ctap_map_covers_seen_key_seen_label_and_string_missing_handler():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    result = decode_module._build_labeled_ctap_map(
-        mapping={1: "present"},
-        labels={1: "shared", 2: "shared", 4: "four", 5: "five"},
-        handlers={"4": lambda _value: "handled-via-string", 5: lambda _value: "handled-via-int"},
-        missing_keys=(1, 2, 4, 5),
-    )
-
-    assert result["1 (shared)"] == "present"
-    # Handlers are found by member name only, under neither the text "4" nor the integer 5.
-    assert result["4 (four)"] is None
-    assert result["5 (five)"] is None
-
-
 def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(monkeypatch, cbor_parser, ctap):
     decode_module = pytest.importorskip("server.app.decoder.decode")
     # _extract_attestation_certificate and _convert_certificate_bytes/payload guards.

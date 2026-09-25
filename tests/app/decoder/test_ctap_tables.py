@@ -12,7 +12,6 @@ from dataclasses import fields
 
 from fido2.ctap2.base import AssertionResponse, AttestationResponse, Ctap2
 from server.app.decoder import ctap_tables
-from server.app.decoder.decode import ctap
 from server.app.decoder.encode import constants
 
 
@@ -78,27 +77,20 @@ def test_response_members_follow_the_fido2_dataclasses():
 
 
 def test_the_decoder_and_encoder_read_the_same_tables():
+    from server.app.decoder import ctap_message
+
     tables = {
-        "makeCredentialRequest": (ctap_tables.MAKE_CREDENTIAL_PARAMETERS, ctap._MAKE_CREDENTIAL_REQUEST_LABELS),
-        "getAssertionRequest": (ctap_tables.GET_ASSERTION_PARAMETERS, ctap._GET_ASSERTION_REQUEST_LABELS),
-        "makeCredentialResponse": (ctap_tables.MAKE_CREDENTIAL_RESPONSE, ctap._MAKE_CREDENTIAL_RESPONSE_LABELS),
-        "getAssertionResponse": (ctap_tables.GET_ASSERTION_RESPONSE, ctap._GET_ASSERTION_RESPONSE_LABELS),
+        "makeCredentialRequest": ctap_tables.MAKE_CREDENTIAL_PARAMETERS,
+        "getAssertionRequest": ctap_tables.GET_ASSERTION_PARAMETERS,
+        "makeCredentialResponse": ctap_tables.MAKE_CREDENTIAL_RESPONSE,
+        "getAssertionResponse": ctap_tables.GET_ASSERTION_RESPONSE,
     }
-    for kind, (table, decoder_labels) in tables.items():
+    for kind, table in tables.items():
         assert constants._CTAP_FIELD_LABELS[kind] is table
-        # Numbers only: a text key named like a member is not that member.
-        assert decoder_labels == table
-        assert all(isinstance(key, int) for key in decoder_labels)
-
-
-def test_every_decoder_handler_is_keyed_by_a_name_in_its_table():
-    for handlers, table in (
-        (ctap._MAKE_CREDENTIAL_REQUEST_HANDLERS, ctap_tables.MAKE_CREDENTIAL_PARAMETERS),
-        (ctap._GET_ASSERTION_REQUEST_HANDLERS, ctap_tables.GET_ASSERTION_PARAMETERS),
-        (ctap._MAKE_CREDENTIAL_RESPONSE_HANDLERS, ctap_tables.MAKE_CREDENTIAL_RESPONSE),
-        (ctap._GET_ASSERTION_RESPONSE_HANDLERS, ctap_tables.GET_ASSERTION_RESPONSE),
-    ):
-        assert set(handlers) == set(table.values())
+        # The views label, and the encoder reads back, by these numbers.
+        assert ctap_message.MESSAGES[kind] is table
+        assert all(isinstance(key, int) for key in table)
+    assert ctap_message.MESSAGES["getInfoResponse"] is ctap_tables.GET_INFO_RESPONSE
 
 
 def test_get_info_members_are_ctap_2_2_section_6_4():

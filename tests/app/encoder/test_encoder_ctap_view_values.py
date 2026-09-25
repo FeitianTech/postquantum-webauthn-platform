@@ -1,6 +1,9 @@
-"""The values inside a CTAP view, decoded and encoded back: what the round trip keeps of what the bytes held.
+"""The values inside a CTAP view, decoded and encoded back: the view carries what the bytes held.
 
-Each message is canonical, so its view could give back exactly its bytes.
+Each message is canonical, and its view gives back exactly its bytes: the text
+"14574037" is no byte string, a null is no absent member, an integer key inside
+an extension is no text, a tag is no map, an x5c entry is never dropped, and a
+statement that is no map is shown as the value it is, with no wrapper.
 """
 from __future__ import annotations
 
@@ -27,52 +30,38 @@ def _round_trip(message: bytes) -> bytes:
     return bytes.fromhex(encode_payload_text(json.dumps(decoded), "CBOR")["data"]["binary"]["hex"])
 
 
-CHANGED = [
-    # SafetyNet's ver, the text "14574037", comes back as the bytes 14 57 40 37.
+MESSAGES = [
+    # SafetyNet's ver, the text "14574037", is shown as '"14574037" (text)'.
     ("SafetyNet ver", _message(0, {1: "android-safetynet", 2: _AUTH_DATA, 3: {"ver": "14574037", "response": b"x.y.z"}})),
-    # A null user icon is dropped.
     ("null user icon", _message(1, {1: _HASH, 2: {"id": "example.com"}, 3: {"id": b"u", "icon": None}, 4: _PARAMS})),
-    # hmac-secret's integer keys come back as text.
     ("nested integer keys", _message(2, {1: "example.com", 2: _HASH, 4: {"hmac-secret": {1: {1: 2}, 2: _HASH}}})),
-    # A byte string inside an extension comes back as text.
     ("bytes in an extension", _message(2, {1: "example.com", 2: _HASH, 4: {"x": b"\xab\xcd"}})),
-    # A tag comes back as a map {"tag": 2, "value": "01"}.
     ("tag in an extension", _message(2, {1: "example.com", 2: _HASH, 4: {"x": CborDiagnostic("2(h'01')", "tag")}})),
-    # An x5c entry that is no byte string is dropped; an x5c that is no array comes back empty.
     ("x5c entry not bytes", _message(0, {1: "packed", 2: _AUTH_DATA, 3: {"alg": -7, "sig": b"s", "x5c": [1, b"\x01"]}})),
     ("x5c not an array", _message(0, {1: "packed", 2: _AUTH_DATA, 3: {"alg": -7, "sig": b"s", "x5c": b"\x01"}})),
-]
-
-REFUSED = [
-    # A user name sent as bytes is shown as {"text", "binary"}, which the encoder refuses.
-    (
-        "user name bytes",
-        _message(1, {1: _HASH, 2: {"id": "example.com"}, 3: {"id": b"u", "name": b"alice"}, 4: _PARAMS}),
-        "user.name must be a non-empty string",
-    ),
-    # A compound statement, an array, is refused as not bytes.
-    (
-        "compound statement",
-        _message(0, {1: "compound", 2: _AUTH_DATA, 3: [{"fmt": "none", "attStmt": {}}]}),
-        "Unable to interpret attStmt as binary data",
-    ),
+    ("user name bytes", _message(1, {1: _HASH, 2: {"id": "example.com"}, 3: {"id": b"u", "name": b"alice"}, 4: _PARAMS})),
+    ("compound statement", _message(0, {1: "compound", 2: _AUTH_DATA, 3: [{"fmt": "none", "attStmt": {}}]})),
+    ("attestation statement bytes", _message(0, {1: "packed", 2: _AUTH_DATA, 3: b"\x01\x02"})),
 ]
 
 
-@pytest.mark.parametrize(("name", "message"), CHANGED, ids=[name for name, _ in CHANGED])
-def test_a_view_encodes_back_to_other_bytes(name, message):
-    assert _round_trip(message) != message
+@pytest.mark.parametrize(("name", "message"), MESSAGES, ids=[name for name, _ in MESSAGES])
+def test_a_view_encodes_back_to_its_own_bytes(name, message):
+    assert _round_trip(message) == message
 
 
-@pytest.mark.parametrize(("name", "message", "refusal"), REFUSED, ids=[name for name, _m, _r in REFUSED])
-def test_a_view_is_refused(name, message, refusal):
-    with pytest.raises(ValueError, match=refusal):
-        _round_trip(message)
+def test_a_view_shows_what_the_bytes_held_and_nothing_else():
+    shown = {name: decode_payload_text(message.hex())["data"] for name, message in MESSAGES}
 
-
-def test_expanded_json_wraps_an_attestation_statement_that_is_not_a_map():
-    as_bytes = decode_payload_text(_message(0, {1: "packed", 2: _AUTH_DATA, 3: b"\x01\x02"}).hex())["data"]
-    as_array = decode_payload_text(REFUSED[1][1].hex())["data"]
-
-    assert as_bytes["expandedJson"]["3 (attStmt)"] == {"sig": "0102"}
-    assert as_array["expandedJson"]["3 (attStmt)"] == {"value": [{"fmt": "none", "attStmt": {}}]}
+    assert shown["SafetyNet ver"]["ctapDecoded"]["makeCredentialResponse"]["3 (attStmt)"]["ver"] == '"14574037" (text)'
+    assert shown["null user icon"]["ctapDecoded"]["makeCredentialRequest"]["3 (user)"] == {"id": "75", "icon": None}
+    assert shown["tag in an extension"]["ctapDecoded"]["getAssertionRequest"]["4 (extensions)"] == {"x": "2(h'01') (tag)"}
+    assert shown["user name bytes"]["ctapDecoded"]["makeCredentialRequest"]["3 (user)"]["name"] == "616c696365"
+    x5c = shown["x5c entry not bytes"]["ctapDecoded"]["makeCredentialResponse"]["3 (attStmt)"]["x5c"]
+    assert x5c[0] == 1 and x5c[1]["raw"] == "01"
+    assert shown["x5c not an array"]["ctapDecoded"]["makeCredentialResponse"]["3 (attStmt)"]["x5c"] == "01"
+    # No wrapper around a statement that is no map: expandedJson is the view.
+    for name in ("compound statement", "attestation statement bytes"):
+        assert shown[name]["expandedJson"] == shown[name]["ctapDecoded"]["makeCredentialResponse"]
+    assert shown["attestation statement bytes"]["expandedJson"]["3 (attStmt)"] == "0102"
+    assert shown["compound statement"]["expandedJson"]["3 (attStmt)"] == [{"fmt": "none", "attStmt": {}}]
