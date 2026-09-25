@@ -69,6 +69,7 @@ import {
     updateAdvancedCredentialRegistrationSnapshot,
 } from '../../shared/storage/local.js';
 import {sanitiseRegistrationDetailSnapshot} from '../../shared/storage/local/snapshot-sanitize.js';
+import {migrateStoredRecord} from '../../shared/storage/local/record-migration.js';
 import {deleteCredentialArtifact, fetchCredentialArtifact} from '../../shared/storage/artifacts-client.js';
 
 export {queueAuthenticatedCredentialFlash, queueFailedCredentialFlash};
@@ -128,9 +129,13 @@ async function hydrateCredentialFromServer(cred) {
             return null;
         }
 
-        const storedCredential = artifact.storedCredential && typeof artifact.storedCredential === 'object'
-            ? artifact.storedCredential
-            : artifact;
+        // Artifacts saved before this version hold standard base64 where they now
+        // hold base64url; read them the way saved records are read.
+        const { record: storedCredential } = migrateStoredRecord(
+            artifact.storedCredential && typeof artifact.storedCredential === 'object'
+                ? artifact.storedCredential
+                : artifact,
+        );
 
         if (storedCredential && typeof storedCredential === 'object') {
             Object.keys(storedCredential).forEach(key => {
