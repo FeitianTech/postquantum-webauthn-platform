@@ -70,22 +70,17 @@ export async function showRegistrationResultModalRuntime(credentialJson, relying
     });
 
     if (storageId && registrationDetail) {
-        // SECURITY: these fields persist composed markup into the localStorage
-        // snapshot, which is replayed straight into innerHTML by
-        // credential-detail-runtime/entry.js on later page loads. Only HTML built by
-        // composeRegistrationDetailHtml() may be stored here: every value it
-        // interpolates is passed through escapeHtml() first, which is what keeps the
-        // stored copy inert. Never widen this payload with markup from another source.
-        // TODO: persist structured data instead of composed HTML so the replay path
-        // stops trusting stored markup at all.
+        // The registration is kept as data -- the response and the relying
+        // party's view of it, with the decoded attestation in `state` -- and the
+        // detail modal builds its view from that. No markup is stored.
         const snapshotPayload = {
-            schemaVersion: 1,
+            schemaVersion: 2,
             capturedAt: new Date().toISOString(),
-            html: registrationDetail.html || '',
-            attestationSectionHtml: registrationDetail.attestationSectionHtml || '',
-            combinedHtml: registrationDetail.combinedHtml
-                || [registrationDetail.html, registrationDetail.attestationSectionHtml].filter(Boolean).join(''),
             state: registrationDetail.stateSnapshot || {},
+            response: {
+                credential: credentialJson,
+                relyingParty: registrationDetail.relyingPartyCopy || null,
+            },
         };
 
         if (await updateAdvancedCredentialRegistrationSnapshot(storageId, snapshotPayload)) {

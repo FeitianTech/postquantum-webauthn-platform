@@ -90,6 +90,9 @@ export const LOCAL_HEAVY_RELYING_PARTY_KEYS = [
 ];
 
 export const MAX_SNAPSHOT_HTML_LENGTH = 120000;
+// A registration response or relying-party view longer than this, as JSON, is left
+// out of a snapshot rather than cut: a cut value would no longer decode.
+export const MAX_SNAPSHOT_RESPONSE_LENGTH = 120000;
 export const MAX_DETAIL_STRING_LENGTH = 48000;
 export const MAX_AUTH_DATA_HEX_LENGTH = 8192;
 export const MAX_AUTH_DATA_HASH_LENGTH = 1024;

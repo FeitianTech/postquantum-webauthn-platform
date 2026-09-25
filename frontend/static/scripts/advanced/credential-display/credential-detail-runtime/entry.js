@@ -41,6 +41,7 @@ import {
     buildPropertiesSection,
 } from './sections-properties.js';
 import {
+    readSnapshotResponse,
     resolveRegistrationSnapshotContext,
 } from './snapshot-context.js';
 
@@ -54,13 +55,11 @@ export async function showCredentialDetailsRuntime(index, deps = {}) {
         return;
     }
 
-    const hasLocalRegistrationSnapshot = Boolean(
-        cred.type !== 'simple'
-        && cred.registrationDetailSnapshot
-        && typeof cred.registrationDetailSnapshot === 'object',
-    );
+    // Only a snapshot that holds the registration as data spares the artifact
+    // request: an older one lacks the response the sections are built from.
+    const hasLocalRegistrationData = Boolean(readSnapshotResponse(cred.registrationDetailSnapshot));
 
-    if (cred.type !== 'simple' && !hasLocalRegistrationSnapshot) {
+    if (cred.type !== 'simple' && !hasLocalRegistrationData) {
         const restoreCursor = applyGlobalCursor('progress');
         try {
             if (typeof hydrateCredentialFromServer === 'function') {
@@ -81,6 +80,7 @@ export async function showCredentialDetailsRuntime(index, deps = {}) {
     const {
         detailPreparation,
         snapshotState,
+        snapshotResponse,
         combinedRegistrationHtml: snapshotCombinedRegistrationHtml,
     } = resolveRegistrationSnapshotContext(cred);
 
@@ -104,8 +104,9 @@ export async function showCredentialDetailsRuntime(index, deps = {}) {
     let combinedRegistrationHtml = snapshotCombinedRegistrationHtml;
     if (!combinedRegistrationHtml) {
         const registrationDetailResult = await composeRegistrationDetailHtml({
-            credentialJson: Object.keys(registrationCredential).length ? registrationCredential : null,
-            relyingPartyInfo,
+            credentialJson: snapshotResponse?.credential
+                || (Object.keys(registrationCredential).length ? registrationCredential : null),
+            relyingPartyInfo: snapshotResponse?.relyingParty || relyingPartyInfo,
             attestationObjectValue,
             attestationObjectDecoded,
             authenticatorDataValue: authenticatorDataForDetail,
@@ -115,6 +116,7 @@ export async function showCredentialDetailsRuntime(index, deps = {}) {
             fallbackParsedClientData: fallbackClientDataObject,
             includeAttestationSection: false,
             preferFallbackCertificates: Array.isArray(fallbackCertificates) && fallbackCertificates.length > 0,
+            snapshotState: snapshotResponse ? snapshotState : null,
         });
 
         combinedRegistrationHtml = combineRegistrationHtmlSections(
