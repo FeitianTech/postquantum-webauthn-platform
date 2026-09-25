@@ -667,3 +667,39 @@ describe('advanced tab messages for failed responses', () => {
     )).toMatchInlineSnapshot(`"Advanced authentication failed: The stored signature counter changed during authentication more than once, so authentication was rejected. Please try again."`);
   });
 });
+
+describe('advanced authentication result panel', () => {
+  beforeEach(() => {
+    buildDom();
+    document.body.insertAdjacentHTML('beforeend', '<div class="ceremony-result" id="advanced-ceremony-result" role="status" hidden></div>');
+    vi.clearAllMocks();
+    ensureAuthenticationHintsAllowed.mockImplementation(() => []);
+    convertExtensionsForClient.mockImplementation((value) => value);
+    normalizeClientExtensionResults.mockImplementation((value) => value);
+    prepareAdvancedCredentialsForServer.mockImplementation(() => []);
+    parseRequestOptionsFromJSON.mockImplementation((value) => value);
+    document.getElementById('json-editor').value = JSON.stringify({ publicKey: { challenge: { $hex: '1234' } } });
+    get.mockResolvedValue({ toJSON: () => ({ id: 'AQ' }) });
+  });
+
+  it('reports a counter that went backwards without rejecting the assertion', async () => {
+    fetch.mockResolvedValueOnce(jsonResponse({ __session_state: 's', publicKey: { challenge: 'AQID' } }));
+    fetch.mockResolvedValueOnce(jsonResponse({
+      status: 'OK',
+      verified: true,
+      authenticatedCredentialId: 'AQ',
+      signCount: 4,
+      signCountStatus: 'regressed',
+    }));
+
+    await advancedAuthenticate();
+
+    const panel = document.getElementById('advanced-ceremony-result');
+    expect(panel.hidden).toBe(false);
+    expect(panel.dataset.verdict).toBe('warning');
+    expect(panel.textContent).toBe(
+      'Last authenticationSignature counter4 Not higher than the counter the server stored: the authenticator may have been cloned. The advanced tab reports this and does not reject the assertion.',
+    );
+    expect(showStatus).toHaveBeenCalledWith('advanced', 'Advanced authentication successful!', 'success');
+  });
+});

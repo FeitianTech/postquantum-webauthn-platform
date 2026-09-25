@@ -358,3 +358,65 @@ describe('simple tab messages for failed responses', () => {
     )).toMatchInlineSnapshot(`"The stored signature counter could not be read, so authentication was rejected. Please try again."`);
   });
 });
+
+describe('simple authentication result panel', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <input id="simple-email" value="user@example.com" />
+      <div class="ceremony-result" id="simple-ceremony-result" role="status" aria-live="polite" hidden></div>
+    `;
+    vi.clearAllMocks();
+    parseRequestOptionsFromJSON.mockImplementation((value) => value);
+    get.mockResolvedValue({ toJSON: () => ({ id: 'AQ' }) });
+    getSimpleCredentialsForEmail.mockReturnValue([{ credentialId: 'AQ', publicKey: 'cHVibGlj' }]);
+  });
+
+  function panelText() {
+    const panel = document.getElementById('simple-ceremony-result');
+    return panel.hidden ? null : panel.textContent;
+  }
+
+  it('shows the counter and what the server made of it', async () => {
+    fetch.mockResolvedValueOnce(jsonResponse({ __session_state: 's', publicKey: {} }));
+    fetch.mockResolvedValueOnce(jsonResponse({
+      status: 'OK',
+      authenticatedCredentialId: 'AQ',
+      signCount: 0,
+      signCountStatus: 'not-supported',
+    }));
+
+    await simpleAuthenticate();
+
+    expect(panelText()).toBe(
+      'Last authenticationSignature counter0 This authenticator keeps no counter: it reported 0, as synced passkeys do, so the counter cannot show whether it was cloned.',
+    );
+  });
+
+  it('warns when the counter went backwards and authentication was rejected', async () => {
+    fetch.mockResolvedValueOnce(jsonResponse({ __session_state: 's', publicKey: {} }));
+    fetch.mockResolvedValueOnce(jsonResponse({
+      error: 'Signature counter did not increase (stored 7, received 7). This authenticator may have been cloned, so authentication was rejected.',
+      failedCredentialId: 'AQ',
+      signCountStatus: 'regressed',
+    }, false, 400));
+
+    await simpleAuthenticate();
+
+    const panel = document.getElementById('simple-ceremony-result');
+    expect(panel.dataset.verdict).toBe('warning');
+    expect(panelText()).toContain('the authenticator may have been cloned. Authentication was rejected.');
+    expect(queueFailedCredentialFlash).toHaveBeenCalledWith('AQ');
+  });
+
+  it('clears the last result when another ceremony starts', async () => {
+    const panel = document.getElementById('simple-ceremony-result');
+    panel.hidden = false;
+    panel.textContent = 'stale';
+    fetch.mockResolvedValueOnce(jsonResponse({ error: 'The stored credentials could not be read. Please try again.' }, false, 503));
+
+    await simpleRegister();
+
+    expect(panel.hidden).toBe(true);
+    expect(panel.textContent).toBe('');
+  });
+});
