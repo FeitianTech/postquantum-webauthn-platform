@@ -34,9 +34,9 @@ def test_storage_identifier_validators_reject_invalid_inputs(storage_local):
     storage, _ = storage_local
 
     with pytest.raises(ValueError):
-        storage._user_root_prefix(None)
+        storage._credential_prefix(None)
     with pytest.raises(ValueError):
-        storage._user_root_prefix("   ")
+        storage._credential_prefix("   ")
 
     with pytest.raises(ValueError):
         storage._credential_blob(None, "session-a")

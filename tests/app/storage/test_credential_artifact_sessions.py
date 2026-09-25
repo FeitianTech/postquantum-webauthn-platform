@@ -40,7 +40,7 @@ def test_another_session_cannot_overwrite_or_delete_it(root):
 
     assert artifacts.store_credential_artifact(STORAGE_ID, {"other": True}, session_id="session-b")
     assert artifacts.delete_credential_artifact_with_status(STORAGE_ID, session_id="session-b") == "deleted"
-    assert artifacts.delete_credential_artifact(STORAGE_ID, session_id="session-b") is False
+    assert artifacts.delete_credential_artifact_with_status(STORAGE_ID, session_id="session-b") == "absent"
 
     assert artifacts.load_credential_artifact(STORAGE_ID, session_id="session-a") == PAYLOAD
 

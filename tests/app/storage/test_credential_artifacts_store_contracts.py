@@ -29,8 +29,8 @@ def test_store_load_delete_credential_artifact_round_trip_local(artifact_module)
     loaded = artifact_module.load_credential_artifact("cred-1", session_id="session-a")
     assert loaded == payload
 
-    deleted = artifact_module.delete_credential_artifact("cred-1", session_id="session-a")
-    assert deleted is True
+    deleted = artifact_module.delete_credential_artifact_with_status("cred-1", session_id="session-a")
+    assert deleted == "deleted"
 
     assert artifact_module.load_credential_artifact("cred-1", session_id="session-a") is None
 
@@ -132,8 +132,8 @@ def test_load_credential_artifact_returns_none_for_corrupt_json_local(artifact_m
     assert artifact_module.load_credential_artifact("cred-corrupt", session_id="session-a") is None
 
 
-def test_delete_credential_artifact_returns_false_when_missing(artifact_module):
-    assert artifact_module.delete_credential_artifact("missing", session_id="session-a") is False
+def test_delete_credential_artifact_reports_a_missing_artifact_as_absent(artifact_module):
+    assert artifact_module.delete_credential_artifact_with_status("missing", session_id="session-a") == "absent"
 
 
 def test_artifact_blob_is_session_scoped(artifact_module):
@@ -162,12 +162,12 @@ def test_resolve_session_id_falls_back_to_metadata_session(monkeypatch, artifact
     assert resolved == "metadata-session"
 
 
-def test_user_root_prefix_rejects_invalid_session_identifiers(artifact_module):
+def test_artifact_prefix_rejects_invalid_session_identifiers(artifact_module):
     with pytest.raises(ValueError):
-        artifact_module._user_root_prefix(None)
+        artifact_module._artifact_prefix(None)
 
     with pytest.raises(ValueError):
-        artifact_module._user_root_prefix("   ")
+        artifact_module._artifact_prefix("   ")
 
 
 def test_read_record_gcs_raises_on_a_download_error_and_skips_what_does_not_decode(artifact_module, monkeypatch, caplog):
@@ -259,7 +259,7 @@ def test_write_record_gcs_uploads_json_payload(artifact_module, monkeypatch):
     assert content_type == "application/json"
 
 
-def test_delete_record_gcs_returns_false_when_existence_check_fails(artifact_module, monkeypatch):
+def test_delete_on_gcs_fails_when_the_existence_check_fails(artifact_module, monkeypatch):
     monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True)
     monkeypatch.setattr(
         artifact_module,
@@ -268,10 +268,10 @@ def test_delete_record_gcs_returns_false_when_existence_check_fails(artifact_mod
     )
     monkeypatch.setattr(artifact_module, "delete_blob", lambda *_args, **_kwargs: None)
 
-    assert artifact_module._delete_record("cred-1", "session-a") is False
+    assert artifact_module.delete_credential_artifact_with_status("cred-1", session_id="session-a") == "failed"
 
 
-def test_delete_record_gcs_returns_false_when_delete_fails(artifact_module, monkeypatch):
+def test_delete_on_gcs_fails_when_the_delete_fails(artifact_module, monkeypatch):
     monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True)
     monkeypatch.setattr(artifact_module, "blob_exists", lambda _blob: True)
     monkeypatch.setattr(
@@ -280,7 +280,7 @@ def test_delete_record_gcs_returns_false_when_delete_fails(artifact_module, monk
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("delete failed")),
     )
 
-    assert artifact_module._delete_record("cred-1", "session-a") is False
+    assert artifact_module.delete_credential_artifact_with_status("cred-1", session_id="session-a") == "failed"
 
 
 def test_load_credential_artifact_returns_none_for_non_mapping_payload(artifact_module, monkeypatch):
@@ -342,7 +342,7 @@ def test_store_credential_artifact_returns_false_when_write_raises(artifact_modu
 
 
 def test_delete_credential_artifact_rejects_invalid_storage_id(artifact_module):
-    assert artifact_module.delete_credential_artifact("   ", session_id="session-a") is False
+    assert artifact_module.delete_credential_artifact_with_status("   ", session_id="session-a") == "failed"
 
 
 def test_using_gcs_depends_on_flag_and_bucket(monkeypatch):
@@ -367,7 +367,7 @@ def test_resolve_session_id_falls_back_for_non_string(monkeypatch, artifact_modu
     assert artifact_module._resolve_session_id(object()) == "metadata-non-string-fallback"
 
 
-def test_delete_record_local_returns_false_on_oserror(artifact_module, monkeypatch):
+def test_delete_locally_fails_on_oserror(artifact_module, monkeypatch):
     storage_id = "cred-oserror"
     path = artifact_module._artifact_path(storage_id, "session-a")
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -380,7 +380,7 @@ def test_delete_record_local_returns_false_on_oserror(artifact_module, monkeypat
         lambda _path: (_ for _ in ()).throw(OSError("remove failed")),
     )
 
-    assert artifact_module._delete_record(storage_id, "session-a") is False
+    assert artifact_module.delete_credential_artifact_with_status(storage_id, session_id="session-a") == "failed"
 
 
 def test_load_credential_artifact_rejects_non_string_storage_id(artifact_module):

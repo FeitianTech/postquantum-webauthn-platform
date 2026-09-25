@@ -36,7 +36,6 @@ from .cloud import (
 from .common import (
     StorageReadError,
     assert_contained_blob_name,
-    build_session_root_prefix,
     build_session_scoped_prefix,
     file_digest,
     file_lock,
@@ -115,13 +114,6 @@ def _validate_session_id(session_id: Any) -> str:
         session_id,
         type_error="Session identifier must be a string",
         empty_error="Session identifier is empty",
-    )
-
-
-def _user_root_prefix(session_id: str) -> str:
-    return build_session_root_prefix(
-        _validate_session_id(session_id),
-        user_folder_prefix=_USER_FOLDER_PREFIX,
     )
 
 
