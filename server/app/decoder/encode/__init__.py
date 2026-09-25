@@ -84,6 +84,7 @@ from .handlers_cbor import (
     _encode_cose_value,
     _encode_ctap_webauthn_value,
 )
+from .handlers_edn import _encode_edn_value
 
 __all__ = ["encode_payload_text"]
 
@@ -95,6 +96,11 @@ def encode_payload_text(value: str, target_format: str) -> dict[str, Any]:
     if not trimmed:
         raise ValueError("Encoder input is empty.")
 
+    canonical = _normalize_encoding_format(target_format)
+    if canonical == "edn":
+        # EDN is not JSON: its text is the item, read by decoder/edn.
+        return _encode_edn_value(trimmed)
+
     try:
         parsed = json.loads(trimmed)
     except json.JSONDecodeError as exc:  # pragma: no cover - defensive guard
@@ -102,7 +108,6 @@ def encode_payload_text(value: str, target_format: str) -> dict[str, Any]:
             "Encoder expects a JSON document describing the value to encode."
         ) from exc
 
-    canonical = _normalize_encoding_format(target_format)
     handler = _ENCODING_HANDLERS.get(canonical)
     if handler is None:
         raise ValueError(f"Unsupported encoder format: {target_format}")
