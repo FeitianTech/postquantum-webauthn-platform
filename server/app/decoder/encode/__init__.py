@@ -17,6 +17,7 @@ from cbor2 import (  # noqa: F401  # re-exported for callers and tests
 
 # Many imported names are intentionally re-exported for callers and tests that
 # reach encoder internals directly via `server.app.decoder.encode`.
+from ..decode.json_input import read as read_json
 from .binary_decode import (
     _maybe_decode_bytes,  # noqa: F401  # re-exported for callers and tests
     _require_bytes,  # noqa: F401  # re-exported for callers and tests
@@ -102,11 +103,19 @@ def encode_payload_text(value: str, target_format: str) -> dict[str, Any]:
         return _encode_edn_value(trimmed)
 
     try:
-        parsed = json.loads(trimmed)
+        parsed, repeated = read_json(trimmed)
     except json.JSONDecodeError as exc:  # pragma: no cover - defensive guard
         raise ValueError(
             "Encoder expects a JSON document describing the value to encode."
         ) from exc
+    if repeated:
+        # json.loads would keep one of the values: refuse rather than drop one.
+        first = repeated[0]
+        raise ValueError(
+            f"The JSON repeats the key {json.dumps(first['key'], ensure_ascii=False)} at {first['path']}, "
+            "and encoding it would drop a value. Remove one, or write the item in EDN (format \"EDN\"), "
+            "which can repeat a key."
+        )
 
     handler = _ENCODING_HANDLERS.get(canonical)
     if handler is None:
