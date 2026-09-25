@@ -51,16 +51,20 @@ def relocate(findings: list[dict[str, Any]], base_offset: int, path_prefix: str)
 
     ``base_offset`` is where the byte string's content starts in the input and
     ``path_prefix`` names the item inside it, e.g. ``${2}<credentialPublicKey>``.
-    The offsets a duplicate key's earlier entries carry move with it.
+    The offsets a duplicate key's earlier entries carry move with it, and so do
+    the ones its message quotes.
     """
 
     return [
-        {
-            **finding,
-            "offset": finding["offset"] + base_offset,
-            "path": path_prefix + finding["path"][1:],
-            **({"earlier": [_moved(entry, base_offset) for entry in finding["earlier"]]} if "earlier" in finding else {}),
-        }
+        _with_duplicate_message(
+            {
+                **finding,
+                "offset": finding["offset"] + base_offset,
+                "path": path_prefix + finding["path"][1:],
+                **({"earlier": [_moved(entry, base_offset) for entry in finding["earlier"]]}
+                   if "earlier" in finding else {}),
+            }
+        )
         for finding in findings
     ]
 
@@ -77,12 +81,14 @@ def pin_to(findings: list[dict[str, Any]], offset: int) -> list[dict[str, Any]]:
     """
 
     return [
-        {
-            **finding,
-            "offset": offset,
-            **({"earlier": [{**entry, "offset": offset, "valueOffset": offset} for entry in finding["earlier"]]}
-               if "earlier" in finding else {}),
-        }
+        _with_duplicate_message(
+            {
+                **finding,
+                "offset": offset,
+                **({"earlier": [{**entry, "offset": offset, "valueOffset": offset} for entry in finding["earlier"]]}
+                   if "earlier" in finding else {}),
+            }
+        )
         for finding in findings
     ]
 
@@ -238,18 +244,27 @@ def _duplicate(key: Mapping[str, Any], path: str, earlier: list[Mapping[str, Any
         }
         for entry in earlier
     ]
+    finding = _finding("duplicate-map-key", key["offset"], path, "")
+    finding.update(key=_diagnostic_key(key), earlier=entries, kept="later")
+    return _with_duplicate_message(finding)
+
+
+def _with_duplicate_message(finding: dict[str, Any]) -> dict[str, Any]:
+    """A duplicate key's message, written from the finding's own fields: again whenever its offsets move."""
+
+    if finding.get("code") != "duplicate-map-key":
+        return finding
+    entries = finding["earlier"]
     count = len(entries) + 1
     times, which = ("twice", "later") if count == 2 else (f"{count} times", "last")
     dropped = ", ".join(f"{_short(entry['value'])} (offset {entry['valueOffset']})" for entry in entries)
-    finding = _finding(
-        "duplicate-map-key",
-        key["offset"],
-        path,
-        f"map key {_diagnostic_key(key)} appears {times} (first at offset {entries[0]['offset']}); the decoded value "
-        f"keeps this {which} entry, and drops the earlier value{'s' if len(entries) > 1 else ''} {dropped}",
-    )
-    finding.update(earlier=entries, kept="later")
-    return finding
+    return {
+        **finding,
+        "message": (
+            f"map key {finding['key']} appears {times} (first at offset {entries[0]['offset']}); the decoded value "
+            f"keeps this {which} entry, and drops the earlier value{'s' if len(entries) > 1 else ''} {dropped}"
+        ),
+    }
 
 
 def _edn(node: Mapping[str, Any]) -> str:
