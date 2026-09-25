@@ -151,3 +151,12 @@ def test_a_kty_that_is_neither_an_integer_nor_text_is_refused(kty):
     # Before: TypeError (unhashable) for {} and [1], and /api/codec answered 500.
     with pytest.raises(ValueError, match=r"kty \(label 1\) is an integer or text"):
         encode_payload_text(json.dumps({"1": kty, "3": -7}), "COSE")
+
+
+def test_a_byte_string_of_an_odd_number_of_hex_digits_is_read_as_base64_never_padded():
+    # "abc" is no hexadecimal; as base64 it is 69 b7. It is never 0a bc.
+    response = _encode({"1": 4, "-1": "abc"})
+
+    assert bytes.fromhex(response["data"]["binary"]["hex"]) == cbor2.dumps({1: 4, -1: b"\x69\xb7"})
+    with pytest.raises(ValueError, match=r"COSE key k \(label -1\) is not hex or base64url"):
+        _encode({"1": 4, "-1": "abcde"})

@@ -289,9 +289,35 @@ def _sniff_binary_input(value: str) -> SniffResult:
     try:
         return sniff(value)
     except EncodingError as exc:
+        digits = _odd_hex_digits(value)
+        if digits:
+            raise ValueError(
+                f"Input is {digits} hexadecimal digits, an odd number, so no bytes; and it is not base64 either."
+            ) from exc
         raise ValueError(
             "Input does not appear to be valid base64, base64url, or hexadecimal data."
         ) from exc
+
+
+_HEX_TEXT = re.compile(r"(?:0[xX])?[0-9A-Fa-f:]+")
+
+
+def _odd_hex_digits(value: str) -> int:
+    """How many hexadecimal digits ``value`` is, when it is an odd number of them; else 0."""
+
+    text = "".join(value.split())
+    digits = len(text.removeprefix("0x").removeprefix("0X").replace(":", ""))
+    return digits if _HEX_TEXT.fullmatch(text) and digits % 2 else 0
+
+
+class _ReadAsBase64Error(ValueError):
+    """Odd-length hexadecimal digits read as base64, whose bytes then did not decode."""
+
+    def __init__(self, exc: ValueError, digits: int) -> None:
+        for field in ("offset", "path"):
+            if hasattr(exc, field):
+                setattr(self, field, getattr(exc, field))
+        super().__init__(f"{exc} (the input was read as base64: as hexadecimal, its {digits} digits are an odd number)")
 
 
 def _decode_binary_input(value: str) -> tuple[bytes, str]:
@@ -410,7 +436,13 @@ def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:
         result = _decode_pem_certificates(trimmed)
     else:
         data, encoding = _decode_binary_input(trimmed)
-        result = _decode_binary_payload(data, encoding, lenient=lenient)
+        try:
+            result = _decode_binary_payload(data, encoding, lenient=lenient)
+        except ValueError as exc:
+            digits = _odd_hex_digits(trimmed) if encoding != "hex" else 0
+            if not digits:
+                raise
+            raise _ReadAsBase64Error(exc, digits) from exc
 
     noted = ([ambiguity] if ambiguity is not None else []) + json_findings
     if noted:
