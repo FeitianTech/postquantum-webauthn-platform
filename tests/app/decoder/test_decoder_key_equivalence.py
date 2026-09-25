@@ -111,14 +111,28 @@ def test_a_text_key_with_a_chunk_that_is_not_utf8_is_identified_by_its_bytes(hex
 @pytest.mark.parametrize(
     ("hex_text", "decoded"),
     [
-        # (_ h'01', "a") and h'01': the text chunk is skipped, and the key keeps h'01'.
-        ("a2 5f 4101 6161 ff 01 4101 02", {"01": 2}),
-        # (_ "a", h'01') and "a": the byte-string chunk is skipped, and the key keeps "a".
-        ("a2 7f 6161 4101 ff 01 6161 02", {"a": 2}),
+        # (_ h'01', "a") and h'01': the text chunk is skipped, so the first key is not
+        # h'01'. It used to be, and replaced the second's entry as a duplicate of it.
+        ("a2 5f 4101 6161 ff 01 4101 02", {"invalid(bytes[1] at offset 1)": 1, "01": 2}),
+        # (_ "a", h'01') and "a": the byte-string chunk is skipped, so the first is not "a".
+        ("a2 7f 6161 4101 ff 01 6161 02", {'invalid("a" at offset 1)': 1, "a": 2}),
     ],
 )
-def test_a_lenient_string_key_that_lost_a_chunk_is_the_key_of_what_it_kept(hex_text, decoded):
+def test_a_lenient_string_key_that_lost_a_chunk_is_no_other_key(hex_text, decoded):
     result = decode_payload_text(hex_text.replace(" ", ""), lenient=True)
 
     assert result["data"]["decodedValue"] == decoded
-    assert [finding["code"] for finding in result["findings"]].count("duplicate-map-key") == 1
+    assert "duplicate-map-key" not in [finding["code"] for finding in result["findings"]]
+    # The skipped chunk is reported where it is; no EDN is given for what was not read whole.
+    assert "invalid-indefinite-chunk" in [finding["code"] for finding in result["findings"]]
+    assert "edn" not in result["data"]
+
+
+def test_a_damaged_string_key_is_an_invalid_key_named_by_its_summary_and_offset():
+    node, _end, _skipped = cbor_parser.decode_item(bytes.fromhex("a25f41016161ff01410102"), lenient=True)
+    first, second = cbor_parser._structure_to_value(node)
+
+    assert (first.diagnostic, first.kind) == ("invalid(bytes[1] at offset 1)", "invalid")
+    assert second == b"\x01"
+    assert key_equivalence.identity(node["entries"][0]["key"]) == ("damaged", 1)
+    assert key_equivalence.identity(node["entries"][1]["key"]) == ("bytes", "01")

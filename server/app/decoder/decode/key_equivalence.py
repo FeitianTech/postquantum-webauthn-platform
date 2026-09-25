@@ -31,6 +31,9 @@ def identity(node: Mapping[str, Any]) -> Hashable:
     """What makes ``node`` the key it is, in the generic data model."""
 
     kind = node.get("type")
+    if damaged_string(node):
+        # Only itself: what the lenient parser kept of it is some other string.
+        return ("damaged", node.get("offset"))
     raw_text = unreadable_text_hex(node)
     if raw_text is not None:
         return ("raw", 3, raw_text)
@@ -57,6 +60,12 @@ def identity(node: Mapping[str, Any]) -> Hashable:
     if kind in ("null", "undefined"):
         return ("simple", _SIMPLE_NUMBERS[kind])
     return ("simple", node.get("value"))
+
+
+def damaged_string(node: Mapping[str, Any]) -> bool:
+    """A byte or text string the lenient parser did not read whole: one of its chunks was skipped."""
+
+    return node.get("majorType") in (2, 3) and bool(node.get("damaged"))
 
 
 def unreadable_text_hex(node: Mapping[str, Any]) -> str | None:
