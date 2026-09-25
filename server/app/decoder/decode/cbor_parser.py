@@ -457,7 +457,8 @@ def _map_key(key_node: Mapping[str, Any]) -> Any:
     # An array, map or tag key: a key of its own type, spelled in EDN, which
     # ``keys.read_json_key`` can read back.
     if isinstance(key, (list, dict)):
-        return _edn_or(key_node, str(key_node.get("summary")), kind)
+        # Damaged, it is named by what and where it is: two such keys never share a spelling.
+        return _edn_or(key_node, f"invalid({key_node.get('summary')} at offset {key_node.get('offset')})", kind)
     return key
 
 
@@ -465,8 +466,8 @@ def _edn_or(node: Mapping[str, Any], fallback: str, kind: str) -> CborDiagnostic
     """``node`` in EDN, on one line, a key of its ``kind``.
 
     A node the lenient parser damaged has no exact spelling: it is shown by
-    ``fallback`` (its summary) as an invalid key, as an invalid node is, which
-    the encoder refuses rather than rebuild as something else.
+    ``fallback`` as an invalid key, as an invalid node is, which the encoder
+    refuses rather than rebuild as something else.
     """
 
     try:
