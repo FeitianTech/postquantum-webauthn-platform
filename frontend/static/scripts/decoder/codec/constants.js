@@ -15,6 +15,7 @@ export const SPECIAL_LABELS = {
     cose: 'COSE key',
     counter: 'Counter',
     expandedJson: 'Expanded JSON',
+    edn: 'EDN (exact bytes)',
     decodedValue: 'Decoded value',
     encodedValue: 'Encoded value',
     ctap: 'CTAP metadata',

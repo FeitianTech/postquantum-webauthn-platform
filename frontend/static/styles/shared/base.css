@@ -869,6 +869,12 @@ body.header-menu-open { overflow: hidden; }
 
 .decoder-section-body { margin-top: 0.55rem; }
 
+.decoder-edn > summary { cursor: pointer; }
+
+.decoder-edn > summary h4 { display: inline; }
+
+.decoder-edn-text { white-space: pre; overflow-x: auto; }
+
 .codec-encoded-body { display: flex; flex-direction: column; gap: 0.75rem; }
 
 .codec-encoded-formats { display: flex; flex-direction: column; gap: 0.6rem; }
