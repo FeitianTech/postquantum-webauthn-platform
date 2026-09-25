@@ -101,3 +101,22 @@ def test_the_codec_endpoint_encodes_edn_and_names_where_it_is_not_valid(client):
     refused = client.post("/api/codec", json={"payload": "[1, 256_0]", "mode": "encode", "format": "EDN"})
     assert refused.status_code == 422
     assert refused.get_json() == {"error": "EDN is not valid at offset 4: 256 does not fit in a 1-byte argument"}
+
+
+def test_the_corpus_holds_every_attestation_object_the_route_goldens_record():
+    # Read here without the corpus's own reader: every "attestationObject" string in a route golden.
+    import base64
+    import re
+    from pathlib import Path
+
+    golden = Path(codec_corpus.__file__).parent / "characterization" / "golden" / "routes"
+    recorded = {
+        base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+        for path in golden.glob("*.json")
+        for value in re.findall(r'"attestationObject": "([A-Za-z0-9_-]+)"', path.read_text(encoding="utf-8"))
+    }
+    held = set(codec_corpus.corpus().values())
+
+    # Among them: ML-DSA-44 self attestation, packed x5c with extensions, Ed25519 packed self.
+    assert len(recorded) > 10
+    assert recorded <= held
