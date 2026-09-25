@@ -13,6 +13,7 @@ import base64
 import json
 
 import cbor2
+import pytest
 
 from server.app.decoder import decode_payload_text
 from tests.app.decoder.real_vectors import (
@@ -145,3 +146,14 @@ def test_client_data_that_is_not_utf8_is_reported_where_it_stops():
 
     assert result["data"]["clientDataJSON"]["parseError"]["offset"] == 10
     assert result["data"]["clientDataJSON"]["parseError"]["reason"].startswith("not UTF-8")
+
+
+@pytest.mark.parametrize("client_data", [b"[1]", b"null", b"1", b'"x"'])
+def test_client_data_that_is_json_but_not_an_object_is_a_located_parse_error(client_data):
+    # Before: AttributeError, and the endpoint answered 500.
+    result = _credential(attestationObject=_ATTESTATION, clientDataJSON=client_data)
+
+    parse_error = result["data"]["clientDataJSON"]["parseError"]
+    assert (parse_error["offset"], parse_error["path"]) == (0, "$")
+    assert parse_error["reason"].startswith("client data is JSON, but not an object")
+    assert result["data"]["attestationObject"]["fmt"] == "packed"

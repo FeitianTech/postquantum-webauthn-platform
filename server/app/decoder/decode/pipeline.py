@@ -238,8 +238,11 @@ def _nested_authenticator_data(data: bytes) -> tuple[dict[str, Any], list[dict[s
 
 
 def _nested_client_data(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    details = _describe_client_data_from_bytes(data)
-    return details, json_input.read(data.decode("utf-8"))[1]
+    parsed, findings = json_input.read(data.decode("utf-8"))
+    if not isinstance(parsed, dict):
+        # WebAuthn L3 section 5.8.1: a JSON object. Anything else has no client data to show.
+        raise ValueError(f"client data is JSON, but not an object: {json.dumps(parsed)[:40]}")
+    return _describe_client_data_from_bytes(data), findings
 
 
 def _decode_pem_certificates(text: str) -> dict[str, Any]:
