@@ -46,6 +46,21 @@ def test_repeated_keys_are_found_at_any_depth():
     assert (found['${"list"}[0]{"k"}']["kept"], found['${"list"}[0]{"k"}']["dropped"]) == ("w", ["v"])
 
 
+def test_a_repeat_inside_a_dropped_value_says_the_decoded_value_keeps_none_of_it():
+    result = decode_payload_text('{"a": {"b": 1, "b": 2}, "a": {"b": 3, "b": 4}}')
+
+    assert result["data"]["json"] == {"a": {"b": 4}}
+    found = [(finding["path"], finding["kept"], finding["dropped"]) for finding in result["findings"]]
+    # Before: ('${"a"}{"b"}', 2, [1]), a kept value the decoded value does not hold.
+    assert sorted(found, key=str) == sorted(
+        [('${"a"}{"b"}', None, [1, 2]), ('${"a"}{"b"}', 4, [3]), ('${"a"}', {"b": 4}, [{"b": 2}])], key=str
+    )
+    (inside,) = [finding for finding in result["findings"] if finding["kept"] is None]
+    assert inside["message"] == (
+        'object key "b" appears twice; the decoded value keeps none of them: the object is inside a value it drops (1, 2)'
+    )
+
+
 def test_json_without_a_repeated_key_is_unchanged():
     assert decode_payload_text('{"a": 1, "b": {"a": 2}}')["findings"] == []
 
