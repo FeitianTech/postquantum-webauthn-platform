@@ -1,5 +1,8 @@
 import { formatKey } from '../labels.js';
 
+const ENCODED_FORMAT_ORDER = ['hex', 'base64', 'base64url', 'colonHex'];
+const ENCODED_FORMAT_SKIP_KEYS = new Set(['encoding']);
+
 function looksLikeBinarySummary(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
         return false;
@@ -67,4 +70,61 @@ export function findEncodedSummary(value, label = '') {
     }
 
     return null;
+}
+
+/**
+ * The views of the encoded bytes, each `{key, label, value}`: Hex, Base64,
+ * Base64url and Colon Hex first, then any other string the summary holds
+ * (not `encoding`); blank ones are left out.
+ */
+export function listEncodedFormats(summary) {
+    if (!summary || typeof summary !== 'object') {
+        return [];
+    }
+
+    const formats = [];
+    const usedKeys = new Set();
+    const add = (key, value) => {
+        if (typeof value !== 'string' || !value.trim()) {
+            return;
+        }
+        formats.push({ key, label: formatKey(key), value });
+        usedKeys.add(key);
+    };
+
+    ENCODED_FORMAT_ORDER.forEach((key) => add(key, summary[key]));
+    Object.entries(summary).forEach(([key, value]) => {
+        if (!usedKeys.has(key) && !ENCODED_FORMAT_SKIP_KEYS.has(key)) {
+            add(key, value);
+        }
+    });
+    return formats;
+}
+
+function encodedByteLength(summary) {
+    const byteLength = typeof summary?.byteLength === 'number'
+        ? summary.byteLength
+        : summary?.length;
+    return typeof byteLength === 'number' && Number.isFinite(byteLength) ? byteLength : null;
+}
+
+/**
+ * The encoded bytes an encoder answer holds: the section's label, the views and
+ * the byte length (null when the summary gives none). Null when the answer has
+ * no summary with a view to show.
+ */
+export function describeEncodedOutput(data) {
+    const summaryInfo = findEncodedSummary(data);
+    if (!summaryInfo) {
+        return null;
+    }
+    const formats = listEncodedFormats(summaryInfo.summary);
+    if (formats.length === 0) {
+        return null;
+    }
+    return {
+        label: summaryInfo.label || 'Encoded output',
+        formats,
+        byteLength: encodedByteLength(summaryInfo.summary),
+    };
 }

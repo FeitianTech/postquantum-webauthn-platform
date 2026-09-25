@@ -1,16 +1,13 @@
-import { formatKey } from '../labels.js';
+import { listEncodedFormats } from './summary.js';
 
-const ENCODED_FORMAT_ORDER = ['hex', 'base64', 'base64url', 'colonHex'];
-const ENCODED_FORMAT_SKIP_KEYS = new Set(['encoding']);
-
-function createEncodedFormatBlock(key, value) {
+function createEncodedFormatBlock({ label, value }) {
     const block = document.createElement('div');
     block.className = 'codec-encoded-format';
 
-    const label = document.createElement('div');
-    label.className = 'codec-encoded-label';
-    label.textContent = formatKey(key);
-    block.appendChild(label);
+    const labelElement = document.createElement('div');
+    labelElement.className = 'codec-encoded-label';
+    labelElement.textContent = label;
+    block.appendChild(labelElement);
 
     const pre = document.createElement('pre');
     pre.className = 'decoder-pre codec-encoded-value';
@@ -20,38 +17,11 @@ function createEncodedFormatBlock(key, value) {
     return block;
 }
 
-function appendStringFormatBlock(blocks, usedKeys, key, value) {
-    if (typeof value !== 'string') {
-        return;
-    }
-
-    if (!value.trim()) {
-        return;
-    }
-
-    blocks.push(createEncodedFormatBlock(key, value));
-    usedKeys.add(key);
+// One labelled block per view of the encoded bytes (listEncodedFormats).
+export function createEncodedFormatBlocks(formats) {
+    return formats.map(createEncodedFormatBlock);
 }
 
 export function createEncodedFormatElements(summary) {
-    if (!summary || typeof summary !== 'object') {
-        return [];
-    }
-
-    const blocks = [];
-    const usedKeys = new Set();
-
-    ENCODED_FORMAT_ORDER.forEach((key) => {
-        appendStringFormatBlock(blocks, usedKeys, key, summary[key]);
-    });
-
-    Object.entries(summary).forEach(([key, value]) => {
-        if (usedKeys.has(key) || ENCODED_FORMAT_SKIP_KEYS.has(key)) {
-            return;
-        }
-
-        appendStringFormatBlock(blocks, usedKeys, key, value);
-    });
-
-    return blocks;
+    return createEncodedFormatBlocks(listEncodedFormats(summary));
 }

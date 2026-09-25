@@ -1,23 +1,21 @@
-import {
-    createEncodedFormatElements,
-    findEncodedSummary,
-} from './encoding.js';
+import { createEncodedFormatBlocks } from './encoding/format-elements.js';
 import {
     autoSizeRawTextarea,
     resetScrollPosition,
 } from './dom-state.js';
-import { formatKey } from './labels.js';
 import { renderExpandedJson, renderValue } from './render-values.js';
+import { describeCodecResult } from './result.js';
+import { codecEdnText } from './values.js';
 
 // The item as extended diagnostic notation: the bytes exactly, which can be
 // long, so the section starts closed. Text only: the notation quotes the input.
-function createEdnSection(value) {
+function createEdnSection({ label, value }) {
     const section = document.createElement('details');
     section.className = 'decoder-section decoder-edn';
 
     const summary = document.createElement('summary');
     const heading = document.createElement('h4');
-    heading.textContent = formatKey('edn');
+    heading.textContent = label;
     summary.appendChild(heading);
     section.appendChild(summary);
 
@@ -25,132 +23,46 @@ function createEdnSection(value) {
     body.className = 'decoder-section-body';
     const text = document.createElement('pre');
     text.className = 'decoder-pre decoder-edn-text';
-    text.textContent = typeof value === 'string' ? value : JSON.stringify(value);
+    text.textContent = codecEdnText(value);
     body.appendChild(text);
     section.appendChild(body);
     return section;
 }
 
-function createSection(key, value) {
-    if (key === 'edn') {
-        return createEdnSection(value);
+function createSection(view) {
+    if (view.kind === 'edn') {
+        return createEdnSection(view);
     }
     const section = document.createElement('div');
     section.className = 'decoder-section';
 
     const heading = document.createElement('h4');
-    heading.textContent = formatKey(key);
+    heading.textContent = view.label;
     section.appendChild(heading);
 
     const body = document.createElement('div');
     body.className = 'decoder-section-body';
-    if (key === 'expandedJson') {
-        const textarea = renderExpandedJson(value);
+    if (view.kind === 'expandedJson') {
+        const textarea = renderExpandedJson(view.value);
         body.appendChild(textarea);
         requestAnimationFrame(() => {
             autoSizeRawTextarea(textarea);
             resetScrollPosition(textarea);
         });
     } else {
-        body.appendChild(renderValue(value));
+        body.appendChild(renderValue(view.value));
     }
 
     section.appendChild(body);
     return section;
 }
 
-function buildSections(type, data) {
-    const sections = [];
-
-    if (data === undefined) {
-        return sections;
-    }
-
-    if (data === null || typeof data !== 'object' || Array.isArray(data)) {
-        sections.push(createSection(type || 'Data', data));
-        return sections;
-    }
-
-    const orderMap = {
-        PublicKeyCredential: [
-            'credential',
-            'attestationObject',
-            'attestationStatementDecoded',
-            'authenticatorData',
-            'clientDataJSON',
-            'clientExtensionResults',
-            'extensionsDecoded',
-            'responseDetails',
-        ],
-        'Attestation object': [
-            'attestationObject',
-            'attestationStatementDecoded',
-            'authenticatorData',
-            'extensionsDecoded',
-            'extensions',
-            'edn',
-        ],
-        'Authenticator data': ['authenticatorData'],
-        'WebAuthn client data': ['clientDataJSON'],
-        'X.509 certificate': ['raw', 'pem', 'parsedX5c', 'certificates'],
-        CBOR: [
-            'ctapDecoded',
-            'getInfoDecoded',
-            'attestationStatementDecoded',
-            'extensionsDecoded',
-            'expandedJson',
-            'decodedValue',
-            'ctap',
-            'edn',
-        ],
-    };
-
-    const usedKeys = new Set();
-    const baseType = typeof type === 'string'
-        ? type.split(' (', 1)[0]
-        : '';
-    const preferredOrder = orderMap[baseType] || [];
-
-    preferredOrder.forEach((key) => {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-            const section = createSection(key, data[key]);
-            if (section) {
-                sections.push(section);
-                usedKeys.add(key);
-            }
-        }
-    });
-
-    Object.keys(data).forEach((key) => {
-        if (usedKeys.has(key)) {
-            return;
-        }
-        const section = createSection(key, data[key]);
-        if (section) {
-            sections.push(section);
-        }
-    });
-
-    return sections;
-}
-
-function buildEncodeSections(type, data) {
-    const summaryInfo = findEncodedSummary(data);
-    if (!summaryInfo) {
-        return buildSections(type, data);
-    }
-
-    const { label, summary } = summaryInfo;
-    const formatBlocks = createEncodedFormatElements(summary);
-    if (formatBlocks.length === 0) {
-        return buildSections(type, data);
-    }
-
+function createEncodedSection(encoded) {
     const section = document.createElement('div');
     section.className = 'decoder-section codec-encoded-section';
 
     const heading = document.createElement('h4');
-    heading.textContent = label || 'Encoded output';
+    heading.textContent = encoded.label;
     section.appendChild(heading);
 
     const body = document.createElement('div');
@@ -158,47 +70,35 @@ function buildEncodeSections(type, data) {
 
     const formatsContainer = document.createElement('div');
     formatsContainer.className = 'codec-encoded-formats';
-    formatBlocks.forEach(block => formatsContainer.appendChild(block));
+    createEncodedFormatBlocks(encoded.formats).forEach(block => formatsContainer.appendChild(block));
     body.appendChild(formatsContainer);
 
-    const byteLength = typeof summary?.byteLength === 'number'
-        ? summary.byteLength
-        : typeof summary?.length === 'number'
-            ? summary.length
-            : null;
-
-    if (typeof byteLength === 'number' && Number.isFinite(byteLength)) {
+    if (encoded.byteLength !== null) {
         const meta = document.createElement('div');
         meta.className = 'codec-encoded-meta';
-        meta.textContent = `Byte length: ${byteLength}`;
+        meta.textContent = `Byte length: ${encoded.byteLength}`;
         body.appendChild(meta);
     }
 
     section.appendChild(body);
-    return [section];
+    return section;
 }
 
 // One line per finding: where it is and what it says. Built from text nodes
 // only -- a finding's message can quote the input.
-function buildFindingsList(findings) {
+function buildFindingsList(heading, findings) {
     const block = document.createElement('div');
     block.className = 'decoder-warning decoder-findings';
 
-    const heading = document.createElement('p');
-    heading.className = 'decoder-findings-heading';
-    heading.textContent = findings.length === 1 ? '1 finding' : `${findings.length} findings`;
-    block.appendChild(heading);
+    const headingElement = document.createElement('p');
+    headingElement.className = 'decoder-findings-heading';
+    headingElement.textContent = heading;
+    block.appendChild(headingElement);
 
     const list = document.createElement('ul');
     findings.forEach((finding) => {
         const item = document.createElement('li');
-        // A finding in JSON has a path and no offset: it is shown by its path alone.
-        const offset = Number.isInteger(finding?.offset) ? `offset ${finding.offset} · ` : '';
-        const path = typeof finding?.path === 'string' ? finding.path : '';
-        const message = typeof finding?.message === 'string' ? finding.message : '';
-        // A finding inside a PublicKeyCredential field counts its offset from that field.
-        const source = typeof finding?.source === 'string' ? `${finding.source}: ` : '';
-        item.textContent = `${source}${offset}${path} — ${message}`;
+        item.textContent = finding.line;
         list.appendChild(item);
     });
     block.appendChild(list);
@@ -208,10 +108,11 @@ function buildFindingsList(findings) {
 export function renderDecodedResult(container, payload, mode = 'decode') {
     container.replaceChildren();
 
-    if (!payload || typeof payload !== 'object') {
+    const view = describeCodecResult(payload, mode);
+    if (view.empty) {
         const empty = document.createElement('div');
         empty.className = 'decoder-empty';
-        empty.textContent = 'No decoded data available.';
+        empty.textContent = view.empty;
         container.appendChild(empty);
         return;
     }
@@ -220,48 +121,45 @@ export function renderDecodedResult(container, payload, mode = 'decode') {
     header.className = 'decoder-summary-header';
 
     const statusPill = document.createElement('span');
-    statusPill.className = `decoder-pill ${payload.success ? 'success' : 'error'}`;
-    statusPill.textContent = payload.success ? 'Success' : 'Error';
+    statusPill.className = `decoder-pill ${view.success ? 'success' : 'error'}`;
+    statusPill.textContent = view.pill;
     header.appendChild(statusPill);
 
     const typeEl = document.createElement('span');
     typeEl.className = 'decoder-type';
-    typeEl.textContent = payload.type || 'Decoded data';
+    typeEl.textContent = view.type;
     header.appendChild(typeEl);
 
     container.appendChild(header);
 
-    if (payload.decodeMode === 'lenient') {
+    if (view.lenientNote) {
         const note = document.createElement('div');
         note.className = 'decoder-warning';
-        note.textContent = 'Decoded in lenient mode (best effort); skipped items are listed below.';
+        note.textContent = view.lenientNote;
         container.appendChild(note);
     }
 
-    const findings = Array.isArray(payload.findings) ? payload.findings : [];
-    if (findings.length > 0) {
-        container.appendChild(buildFindingsList(findings));
-    } else if (Array.isArray(payload.malformed) && payload.malformed.length > 0) {
+    if (view.findings.length > 0) {
+        container.appendChild(buildFindingsList(view.findingsHeading, view.findings));
+    } else if (view.malformed) {
         const warning = document.createElement('div');
         warning.className = 'decoder-warning';
-        warning.textContent = `Malformed segments: ${payload.malformed.join(', ')}`;
+        warning.textContent = view.malformed;
         container.appendChild(warning);
     }
 
     const sectionsWrapper = document.createElement('div');
     sectionsWrapper.className = 'decoder-sections';
 
-    const sections = mode === 'encode'
-        ? buildEncodeSections(payload.type, payload.data)
-        : buildSections(payload.type, payload.data);
-
-    if (sections.length === 0) {
+    if (view.encoded) {
+        sectionsWrapper.appendChild(createEncodedSection(view.encoded));
+    } else if (view.noSections) {
         const emptySection = document.createElement('div');
         emptySection.className = 'decoder-empty';
-        emptySection.textContent = 'No structured data available.';
+        emptySection.textContent = view.noSections;
         sectionsWrapper.appendChild(emptySection);
     } else {
-        sections.forEach((section) => sectionsWrapper.appendChild(section));
+        view.sections.forEach((section) => sectionsWrapper.appendChild(createSection(section)));
     }
 
     container.appendChild(sectionsWrapper);

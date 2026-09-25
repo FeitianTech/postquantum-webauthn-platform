@@ -1,24 +1,6 @@
-import { formatKey } from './labels.js';
+import { classifyCodecValue, codecExpandedJson } from './values.js';
 
-// What the server says about an interpreted value, shown before it: an
-// identifier nothing defines, something shown but not verified, a format the
-// spec deprecates. Text only.
-function badgesFor(value) {
-    const badges = [];
-    if (value.known === false) {
-        badges.push(['unknown', 'Unknown']);
-    }
-    if (typeof value.verification === 'string' && /not verified/i.test(value.verification)) {
-        badges.push(['not-verified', 'Not verified']);
-    }
-    if (value.deprecated === true || typeof value.deprecated === 'string') {
-        badges.push(['deprecated', 'Deprecated']);
-    }
-    return badges;
-}
-
-function withBadges(value, element) {
-    const badges = badgesFor(value);
+function withBadges(badges, element) {
     if (badges.length === 0) {
         return element;
     }
@@ -36,79 +18,48 @@ function withBadges(value, element) {
     return wrapper;
 }
 
+function textElement(tag, className, text) {
+    const element = document.createElement(tag);
+    element.className = className;
+    element.textContent = text;
+    return element;
+}
+
 export function renderValue(value) {
-    if (value === null || value === undefined) {
-        const span = document.createElement('span');
-        span.className = 'decoder-empty';
-        span.textContent = String(value);
-        return span;
+    const view = classifyCodecValue(value);
+
+    if (view.kind === 'empty') {
+        return textElement('span', 'decoder-empty', view.text);
     }
-
-    if (typeof value === 'string') {
-        const isMultiline = value.includes('\n') || value.length > 80;
-        const element = document.createElement(isMultiline ? 'pre' : 'span');
-        element.className = isMultiline ? 'decoder-pre' : 'decoder-inline';
-        element.textContent = value;
-        return element;
+    if (view.kind === 'block') {
+        return textElement('pre', 'decoder-pre', view.text);
     }
-
-    if (typeof value === 'number' || typeof value === 'boolean') {
-        const span = document.createElement('span');
-        span.className = 'decoder-primitive';
-        span.textContent = String(value);
-        return span;
+    if (view.kind === 'inline') {
+        return textElement('span', 'decoder-inline', view.text);
     }
-
-    if (Array.isArray(value)) {
-        if (value.length === 0) {
-            const span = document.createElement('span');
-            span.className = 'decoder-empty';
-            span.textContent = '[]';
-            return span;
-        }
-
+    if (view.kind === 'list') {
         const list = document.createElement('ol');
         list.className = 'decoder-list';
-        value.forEach((item) => {
+        view.items.forEach((item) => {
             const listItem = document.createElement('li');
             listItem.appendChild(renderValue(item));
             list.appendChild(listItem);
         });
         return list;
     }
-
-    if (typeof value === 'object') {
-        const entries = Object.entries(value);
-        if (entries.length === 0) {
-            const span = document.createElement('span');
-            span.className = 'decoder-empty';
-            span.textContent = '{}';
-            return span;
-        }
-
+    if (view.kind === 'map') {
         const definition = document.createElement('dl');
         definition.className = 'decoder-definition';
-
-        entries.forEach(([childKey, childValue]) => {
-            const term = document.createElement('dt');
-            term.className = 'decoder-term';
-            term.textContent = formatKey(childKey);
-
+        view.entries.forEach((entry) => {
+            definition.appendChild(textElement('dt', 'decoder-term', entry.label));
             const detail = document.createElement('dd');
             detail.className = 'decoder-details';
-            detail.appendChild(renderValue(childValue));
-
-            definition.appendChild(term);
+            detail.appendChild(renderValue(entry.value));
             definition.appendChild(detail);
         });
-
-        return withBadges(value, definition);
+        return withBadges(view.badges, definition);
     }
-
-    const span = document.createElement('span');
-    span.className = 'decoder-primitive';
-    span.textContent = String(value);
-    return span;
+    return textElement('span', 'decoder-primitive', view.text);
 }
 
 export function renderExpandedJson(value) {
@@ -117,13 +68,6 @@ export function renderExpandedJson(value) {
     textarea.setAttribute('readonly', '');
     textarea.setAttribute('spellcheck', 'false');
     textarea.wrap = 'off';
-
-    const payload = { 'decoded json': value === undefined ? null : value };
-    try {
-        textarea.value = JSON.stringify(payload, null, 2);
-    } catch (error) {
-        textarea.value = 'Unable to render expanded JSON';
-    }
-
+    textarea.value = codecExpandedJson(value);
     return textarea;
 }
