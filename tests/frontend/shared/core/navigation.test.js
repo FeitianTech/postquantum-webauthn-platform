@@ -36,7 +36,7 @@ function buildTabDom() {
     <div id="authentication-form" class="sub-tab-content"></div>
     <div class="advanced-header__actions-group" data-subtab="registration"></div>
     <div class="advanced-header__actions-group" data-subtab="authentication"></div>
-    <div class="section-header" onclick="toggleSection('details')">
+    <div class="section-header">
       <span class="expand-icon"></span>
     </div>
     <div id="details"></div>
@@ -134,7 +134,7 @@ describe('navigation', () => {
     expect(document.getElementById('details').classList.contains('expanded')).toBe(false);
   });
 
-  it('falls back to parent and onclick-header resolution when toggling sections', async () => {
+  it('falls back to the parent\'s header, and toggles the content alone without one', async () => {
     const { toggleSection } = await loadNavigation();
 
     document.body.innerHTML = `
@@ -145,14 +145,16 @@ describe('navigation', () => {
       <div id="target-container">
         <div id="query-fallback"></div>
       </div>
-      <div class="section-header" onclick="toggleSection('query-fallback')"><span class="expand-icon"></span></div>
+      <div class="section-header" id="unrelated-header"><span class="expand-icon"></span></div>
     `;
 
     toggleSection('parent-fallback');
     expect(document.getElementById('parent-fallback').classList.contains('expanded')).toBe(true);
+    expect(document.querySelector('#wrapper-a .section-header').classList.contains('expanded')).toBe(true);
 
     toggleSection('query-fallback');
     expect(document.getElementById('query-fallback').classList.contains('expanded')).toBe(true);
+    expect(document.getElementById('unrelated-header').classList.contains('expanded')).toBe(false);
   });
 
   it('supports explicit event/header inputs when toggling sections', async () => {
@@ -290,5 +292,44 @@ describe('navigation', () => {
 
     expect(document.getElementById('query-target').classList.contains('expanded')).toBe(true);
     expect(document.getElementById('nested-header').classList.contains('expanded')).toBe(true);
+  });
+
+  it('switches tabs and sub-tabs from their data-action, in the header and in a copy of it', async () => {
+    const { bindNavigationActions } = await loadNavigation();
+    // An earlier test resets the module registry, so read the state navigation.js sees.
+    const { state: navigationState } = await import('../../../../frontend/static/scripts/shared/state.js');
+    document.body.innerHTML = `
+      <nav class="nav-tabs">
+        <button class="nav-tab active" data-action="switch-tab" data-tab="simple">Simple</button>
+        <button class="nav-tab" data-action="switch-tab" data-tab="advanced">Advanced</button>
+      </nav>
+      <div class="header-mini">
+        <nav class="nav-tabs">
+          <button class="nav-tab" data-action="switch-tab" data-tab="codec">Codec</button>
+        </nav>
+      </div>
+      <div id="simple-tab" class="tab-content active"></div>
+      <div id="advanced-tab" class="tab-content">
+        <button id="registration-tab-btn" class="sub-tab active" data-action="switch-sub-tab" data-sub-tab="registration">R</button>
+        <button id="authentication-tab-btn" class="sub-tab" data-action="switch-sub-tab" data-sub-tab="authentication">A</button>
+        <div id="registration-form" class="sub-tab-content active"></div>
+        <div id="authentication-form" class="sub-tab-content"></div>
+      </div>
+      <div id="codec-tab" class="tab-content"></div>
+    `;
+    navigationState.currentSubTab = 'registration';
+    const unbind = bindNavigationActions();
+
+    document.querySelector('[data-tab="advanced"]').click();
+    expect(document.getElementById('advanced-tab').classList.contains('active')).toBe(true);
+    expect(document.getElementById('simple-tab').classList.contains('active')).toBe(false);
+
+    document.getElementById('authentication-tab-btn').click();
+    expect(navigationState.currentSubTab).toBe('authentication');
+    expect(document.getElementById('authentication-form').classList.contains('active')).toBe(true);
+
+    document.querySelector('.header-mini [data-tab="codec"]').click();
+    expect(document.getElementById('codec-tab').classList.contains('active')).toBe(true);
+    unbind();
   });
 });

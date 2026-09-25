@@ -208,3 +208,26 @@ def test_the_reader_finds_markup_attributes():
     ])
 
     assert find_markup_attributes(source) == [(1, "style"), (2, "onclick"), (3, "onmouseenter")]
+
+
+# Until the last inline handler is gone: each function a template's on*= attribute
+# still calls must still be put on window by main.js, or that control stops working
+# with nothing in the tests to say so.
+_MAIN = _SCRIPTS / "main.js"
+_CALLED = re.compile(r"([A-Za-z_$][\w$]*)\s*\(")
+_WINDOW_NAME = re.compile(r"^window\.([A-Za-z_$][\w$]*)\s*=", re.MULTILINE)
+
+
+def test_inline_handlers_still_find_their_function():
+    exposed = set(_WINDOW_NAME.findall(_MAIN.read_text(encoding="utf-8")))
+    missing = sorted(
+        f"{path.relative_to(_TEMPLATES).as_posix()}:{line} {name}()"
+        for path in sorted(_TEMPLATES.rglob("*.html"))
+        for line, _tag, attrs in template_tags(path.read_text(encoding="utf-8"))
+        for attribute, value in attrs
+        if attribute.startswith("on") and value
+        for name in _CALLED.findall(value)
+        if name not in exposed
+    )
+
+    assert missing == [], "convert these controls to data-action before removing their window name"

@@ -6,8 +6,7 @@ import {
 } from './shared/webauthn/json-ponyfill.js';
 import {
     switchTab,
-    switchSubTab,
-    toggleSection,
+    bindNavigationActions,
     initializeNavigationMenu,
 } from './shared/ui/navigation.js';
 import {
@@ -106,6 +105,11 @@ setMdsNavigation({
 });
 
 initializeAnalyzeBrowser();
+
+// Controls name their action with data-action (no inline handlers, so the CSP's
+// script-src needs no 'unsafe-inline'); each owning module binds its own, here,
+// as soon as the page's markup is there.
+bindNavigationActions();
 
 const TEXT_INPUT_TYPES = new Set([
     'text',
@@ -455,10 +459,7 @@ window.get = get;
 window.parseCreationOptionsFromJSON = parseCreationOptionsFromJSON;
 window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
 
-window.switchTab = switchTab;
 window.updateGlobalScrollLock = updateGlobalScrollLock;
-window.switchSubTab = switchSubTab;
-window.toggleSection = toggleSection;
 window.showInfoPopup = showInfoPopup;
 window.hideInfoPopup = hideInfoPopup;
 window.toggleLanguage = toggleLanguage;
