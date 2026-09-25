@@ -53,6 +53,7 @@ export function randomizeSimpleUsername() {
 
 export const usernameActions = {
     'randomize-simple-username': callWith(randomizeSimpleUsername),
+    'randomize-user-identity': callWith(randomizeUserIdentity),
 };
 
 // On the document: the simple and the advanced tab each have a username control.

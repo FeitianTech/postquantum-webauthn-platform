@@ -49,7 +49,7 @@
             </div>
             <div class="input-with-button">
                 <input type="text" id="large-blob-write" class="form-control" placeholder="Hex value" disabled>
-                <button class="btn btn-small refresh-icon" onclick="randomizeLargeBlobWrite()" disabled title="Generate random large blob data">
+                <button class="btn btn-small refresh-icon" data-action="randomize-large-blob-write" disabled title="Generate random large blob data">
                     {% include 'advanced/tab/_refresh-icon.html' %}
                 </button>
             </div>
@@ -74,7 +74,7 @@
             </div>
             <div class="input-with-button">
                 <input type="text" id="prf-eval-first-auth" class="form-control" placeholder="Hex value">
-                <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('first', 'auth')" title="Generate random PRF evaluation data">
+                <button class="btn btn-small refresh-icon" data-action="randomize-prf-eval" data-eval="first" data-form="auth" title="Generate random PRF evaluation data">
                     {% include 'advanced/tab/_refresh-icon.html' %}
                 </button>
             </div>
@@ -100,7 +100,7 @@
             </div>
             <div class="input-with-button">
                 <input type="text" id="prf-eval-second-auth" class="form-control" placeholder="Hex value" disabled>
-                <button class="btn btn-small refresh-icon" onclick="randomizePrfEval('second', 'auth')" disabled title="Generate random PRF evaluation data">
+                <button class="btn btn-small refresh-icon" data-action="randomize-prf-eval" data-eval="second" data-form="auth" disabled title="Generate random PRF evaluation data">
                     {% include 'advanced/tab/_refresh-icon.html' %}
                 </button>
             </div>

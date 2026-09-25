@@ -13,11 +13,19 @@ async function loadActionTables() {
   const simple = await import(`${SCRIPTS}/simple/auth-simple.js`);
   const username = await import(`${SCRIPTS}/shared/auth/username.js`);
   const credentials = await import(`${SCRIPTS}/advanced/credentials/index.js`);
+  const advanced = await import(`${SCRIPTS}/advanced/auth/advanced.js`);
+  const resets = await import(`${SCRIPTS}/advanced/ui/resets.js`);
+  const forms = await import(`${SCRIPTS}/advanced/auth/forms.js`);
+  const editor = await import(`${SCRIPTS}/advanced/editor/index.js`);
   return {
     navigation: navigation.navigationActions,
     simple: simple.simpleActions,
     username: username.usernameActions,
     credentials: credentials.credentialActions,
+    advanced: advanced.advancedActions,
+    resets: resets.resetActions,
+    forms: forms.formActions,
+    editor: editor.editorActions,
   };
 }
 

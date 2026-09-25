@@ -21,7 +21,6 @@ import {
 import {
     updateFieldLabels,
     randomizeChallenge,
-    randomizePrfEval,
     randomizeLargeBlobWrite,
     validatePrfInputs,
     validateUserIdInput,
@@ -29,18 +28,13 @@ import {
     validatePrfEvalInputs,
     validateLargeBlobWriteInput,
     checkLargeBlobCapability,
-    updateAuthenticationExtensionAvailability
+    updateAuthenticationExtensionAvailability,
+    bindFormActions
 } from './advanced/auth/forms.js';
-import {
-    resetRegistrationForm,
-    resetAuthenticationForm
-} from './advanced/ui/resets.js';
+import { bindResetActions } from './advanced/ui/resets.js';
 import { initializeSimpleUsername, randomizeUserIdentity, bindUsernameActions } from './shared/auth/username.js';
 import { bindSimpleActions } from './simple/auth-simple.js';
-import {
-    advancedRegister,
-    advancedAuthenticate
-} from './advanced/auth/advanced.js';
+import { bindAdvancedActions } from './advanced/auth/advanced.js';
 import {
     processCodec,
     clearCodec,
@@ -48,8 +42,7 @@ import {
     switchCodecMode
 } from './decoder/codec.js';
 import {
-    saveJsonEditor,
-    resetJsonEditor,
+    bindEditorActions,
     updateJsonEditor,
     updateJsonFromForm,
     editCreateOptions,
@@ -65,7 +58,6 @@ import {
     closeRegistrationResultModal,
     closeRegistrationDetailModal,
     deleteCredential,
-    clearAllCredentials,
     updateAllowCredentialsDropdown,
     setMdsNavigation,
     bindCredentialActions
@@ -111,6 +103,10 @@ bindNavigationActions();
 bindSimpleActions();
 bindUsernameActions();
 bindCredentialActions();
+bindAdvancedActions();
+bindResetActions();
+bindFormActions();
+bindEditorActions();
 
 const TEXT_INPUT_TYPES = new Set([
     'text',
@@ -464,14 +460,6 @@ window.updateGlobalScrollLock = updateGlobalScrollLock;
 window.showInfoPopup = showInfoPopup;
 window.hideInfoPopup = hideInfoPopup;
 window.toggleLanguage = toggleLanguage;
-window.randomizeChallenge = randomizeChallenge;
-window.randomizePrfEval = randomizePrfEval;
-window.randomizeLargeBlobWrite = randomizeLargeBlobWrite;
-window.resetRegistrationForm = resetRegistrationForm;
-window.resetAuthenticationForm = resetAuthenticationForm;
-window.randomizeUserIdentity = randomizeUserIdentity;
-window.advancedRegister = advancedRegister;
-window.advancedAuthenticate = advancedAuthenticate;
 window.processCodec = processCodec;
 window.clearCodec = clearCodec;
 window.toggleRawCodec = toggleRawCodec;
@@ -479,15 +467,12 @@ window.clearDecoder = clearCodec;
 window.toggleRawDecoder = toggleRawCodec;
 window.closeModal = closeModal;
 window.switchCodecMode = switchCodecMode;
-window.saveJsonEditor = saveJsonEditor;
-window.resetJsonEditor = resetJsonEditor;
 window.showCredentialDetails = showCredentialDetails;
 window.navigateToMdsAuthenticator = navigateToMdsAuthenticator;
 window.closeCredentialModal = closeCredentialModal;
 window.closeRegistrationResultModal = closeRegistrationResultModal;
 window.closeRegistrationDetailModal = closeRegistrationDetailModal;
 window.deleteCredential = deleteCredential;
-window.clearAllCredentials = clearAllCredentials;
 window.editCreateOptions = editCreateOptions;
 window.editAssertOptions = editAssertOptions;
 window.applyJsonChanges = applyJsonChanges;

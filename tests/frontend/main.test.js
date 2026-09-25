@@ -38,11 +38,13 @@ vi.mock('../../frontend/static/scripts/advanced/auth/forms.js', () => ({
   validateLargeBlobWriteInput: vi.fn(),
   checkLargeBlobCapability: vi.fn(),
   updateAuthenticationExtensionAvailability: vi.fn(),
+  bindFormActions: vi.fn(),
 }));
 
 vi.mock('../../frontend/static/scripts/advanced/ui/resets.js', () => ({
   resetRegistrationForm: vi.fn(),
   resetAuthenticationForm: vi.fn(),
+  bindResetActions: vi.fn(),
 }));
 
 vi.mock('../../frontend/static/scripts/shared/auth/username.js', () => ({
@@ -61,6 +63,7 @@ vi.mock('../../frontend/static/scripts/simple/auth-simple.js', () => ({
 vi.mock('../../frontend/static/scripts/advanced/auth/advanced.js', () => ({
   advancedRegister: vi.fn(),
   advancedAuthenticate: vi.fn(),
+  bindAdvancedActions: vi.fn(),
 }));
 
 vi.mock('../../frontend/static/scripts/decoder/codec.js', () => ({
@@ -79,6 +82,7 @@ vi.mock('../../frontend/static/scripts/advanced/editor/index.js', () => ({
   editAssertOptions: vi.fn(),
   applyJsonChanges: vi.fn(),
   cancelJsonEdit: vi.fn(),
+  bindEditorActions: vi.fn(),
 }));
 
 vi.mock('../../frontend/static/scripts/advanced/credentials/index.js', () => ({
@@ -134,7 +138,8 @@ vi.mock('../../frontend/static/scripts/shared/utils/loader.js', () => ({
 }));
 
 import { createFakeAllowCredential, createFakeExcludeCredential, removeFakeAllowCredential, removeFakeExcludeCredential } from '../../frontend/static/scripts/advanced/auth/exclude-credentials.js';
-import { checkLargeBlobCapability, randomizeChallenge, randomizeLargeBlobWrite, randomizePrfEval, updateAuthenticationExtensionAvailability, updateFieldLabels, validateChallengeInputs, validateLargeBlobWriteInput, validatePrfEvalInputs, validatePrfInputs, validateUserIdInput } from '../../frontend/static/scripts/advanced/auth/forms.js';
+import { bindAdvancedActions } from '../../frontend/static/scripts/advanced/auth/advanced.js';
+import { bindFormActions, checkLargeBlobCapability, randomizeChallenge, randomizeLargeBlobWrite, randomizePrfEval, updateAuthenticationExtensionAvailability, updateFieldLabels, validateChallengeInputs, validateLargeBlobWriteInput, validatePrfEvalInputs, validatePrfInputs, validateUserIdInput } from '../../frontend/static/scripts/advanced/auth/forms.js';
 import { registerHintsChangeCallback } from '../../frontend/static/scripts/advanced/auth/hints.js';
 import {
   finaliseHighlightedAuthenticatorRow,
@@ -143,8 +148,9 @@ import {
   waitForMetadataLoad,
 } from '../../frontend/static/scripts/advanced/mds/index.js';
 import { initializeAdvancedSettingsNavigation } from '../../frontend/static/scripts/advanced/ui/settings-nav.js';
+import { bindResetActions } from '../../frontend/static/scripts/advanced/ui/resets.js';
 import { bindCredentialActions, loadSavedCredentials, setMdsNavigation, updateAllowCredentialsDropdown } from '../../frontend/static/scripts/advanced/credentials/index.js';
-import { updateJsonEditor, updateJsonFromForm } from '../../frontend/static/scripts/advanced/editor/index.js';
+import { bindEditorActions, updateJsonEditor, updateJsonFromForm } from '../../frontend/static/scripts/advanced/editor/index.js';
 import { handleJsonEditorKeydown } from '../../frontend/static/scripts/advanced/editor/utils.js';
 import { bindNavigationActions, initializeNavigationMenu, switchTab } from '../../frontend/static/scripts/shared/ui/navigation.js';
 import { bindUsernameActions, initializeSimpleUsername, randomizeUserIdentity } from '../../frontend/static/scripts/shared/auth/username.js';
@@ -238,6 +244,10 @@ describe('main startup and wiring', () => {
     expect(bindSimpleActions).toHaveBeenCalledTimes(1);
     expect(bindUsernameActions).toHaveBeenCalledTimes(1);
     expect(bindCredentialActions).toHaveBeenCalledTimes(1);
+    expect(bindAdvancedActions).toHaveBeenCalledTimes(1);
+    expect(bindResetActions).toHaveBeenCalledTimes(1);
+    expect(bindFormActions).toHaveBeenCalledTimes(1);
+    expect(bindEditorActions).toHaveBeenCalledTimes(1);
     expect(setMdsNavigation).toHaveBeenCalledWith({
       switchTab,
       highlightRow: highlightAuthenticatorRowByAaguid,
@@ -324,7 +334,6 @@ describe('main startup and wiring', () => {
     modal.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(closeModal).toHaveBeenCalledWith('modal-a');
 
-    expect(window.advancedAuthenticate).toBeDefined();
     expect(window.clearDecoder).toBeDefined();
   });
 
