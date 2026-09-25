@@ -85,7 +85,7 @@ export async function processCodec(mode = getSelectedDecoderMode()) {
     const progressText = document.getElementById(config.progressTextId);
 
     if (summaryContainer) {
-        summaryContainer.innerHTML = '';
+        summaryContainer.replaceChildren();
     }
     if (rawContent) {
         rawContent.textContent = '';

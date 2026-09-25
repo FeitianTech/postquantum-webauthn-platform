@@ -33,7 +33,7 @@ export function resetExplorerStateInState(message, variant = 'info', deps = {}) 
         state.defaultStatus = { text: message, variant, title: '' };
         if (state.tableBody) {
             const tbody = state.tableBody;
-            tbody.innerHTML = '';
+            tbody.replaceChildren();
             const emptyRow = document.createElement('tr');
             emptyRow.className = 'mds-empty-row';
             const cell = document.createElement('td');

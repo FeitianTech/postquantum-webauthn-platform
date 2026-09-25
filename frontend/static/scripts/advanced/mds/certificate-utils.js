@@ -24,7 +24,7 @@ export function setCertificateSummaryContent(state, content) {
         return;
     }
     const container = state.certificateSummary;
-    container.innerHTML = '';
+    container.replaceChildren();
     if (content instanceof Node) {
         container.appendChild(content);
     } else if (typeof content === 'string' && content.trim()) {

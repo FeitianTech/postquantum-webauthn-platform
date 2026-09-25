@@ -206,7 +206,7 @@ function buildFindingsList(findings) {
 }
 
 export function renderDecodedResult(container, payload, mode = 'decode') {
-    container.innerHTML = '';
+    container.replaceChildren();
 
     if (!payload || typeof payload !== 'object') {
         const empty = document.createElement('div');
