@@ -4,7 +4,8 @@ Each ``for_*`` function returns two things: the ``extraData`` of a decoder
 result -- keys the response puts into ``data`` next to the decoded value,
 never in place of any of it -- and the findings about what is inside the
 byte strings it read (authData, certInfo, pubArea), located in the input. A
-value with nothing to interpret adds nothing.
+value with nothing to interpret adds nothing. A CBOR item read at the top of the
+input also gets its exact EDN (``edn_view``).
 """
 from __future__ import annotations
 
@@ -13,7 +14,7 @@ from typing import Any
 
 from fido2.webauthn import AuthenticatorData
 
-from . import attestation_statement, authenticator_data_findings, extensions
+from . import attestation_statement, authenticator_data_findings, edn_view, extensions
 from .keys import MISSING, get_mapping_entry
 
 _AUTH_DATA_LOCATION = "authenticator data extensions (ED flag)"
@@ -57,6 +58,7 @@ def for_ctap(classification: str, value: Any, node: Mapping[str, Any], data: byt
             _, att_stmt = _member(value, (3,))
             findings += _attestation(extra, fmt, att_stmt, auth_data, node, data, (3,))
     _extensions(extra, blocks)
+    extra.update(edn_view.extra(node, data))
     return extra, findings
 
 
