@@ -13,6 +13,11 @@ metadata:
     cloud.googleapis.com/location: asia-northeast1
   annotations:
     run.googleapis.com/ingress: all
+    # The site is public because the invoker IAM check is off: the service has no
+    # IAM bindings, not even allUsers. `services replace` resets an annotation
+    # this file leaves out, so without this line applying the file answers 403
+    # to every visitor.
+    run.googleapis.com/invoker-iam-disabled: "true"
 spec:
   template:
     metadata:
