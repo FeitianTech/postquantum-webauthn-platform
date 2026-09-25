@@ -44,3 +44,13 @@ server/runtime
 instance
 node_modules
 coverage
+
+# The web/ build runs inside the image's own Node stage; local installs and
+# outputs are not context. new_design/ is an untracked visual reference.
+web/node_modules
+web/.next
+web/out
+web/coverage
+web/test-results
+web/playwright-report
+new_design

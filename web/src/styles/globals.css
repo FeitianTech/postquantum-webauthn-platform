@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans, system-ui), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono, ui-monospace), SFMono-Regular, Menlo, monospace;
+}
+
+@layer base {
+  html {
+    background: #ffffff;
+    color: #1d1d1f;
+    color-scheme: light;
+  }
+}
