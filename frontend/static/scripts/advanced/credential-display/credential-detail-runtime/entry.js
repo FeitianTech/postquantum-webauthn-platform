@@ -124,29 +124,24 @@ export async function showCredentialDetailsRuntime(index, deps = {}) {
     );
 
     const attestationContext = extractCredentialAttestationContext(cred);
-    const aaguidSectionHtml = buildAaguidSection(cred, attestationContext);
 
-    const propertiesSectionHtml = buildPropertiesSection({
-        cred,
-        attestationContext,
-        fallbackCertificates,
-        certificateAaguidHex,
-        authDataAaguidHex,
-    });
-
-    const detailsHtml = [
-        buildUserInfoSection(cred, aaguidSectionHtml),
+    modalBody.replaceChildren(
+        buildPropertiesSection({
+            cred,
+            attestationContext,
+            fallbackCertificates,
+            certificateAaguidHex,
+            authDataAaguidHex,
+        }),
+        buildUserInfoSection(cred, buildAaguidSection(cred, attestationContext)),
         buildAttestationFormatSection(attestationFormatRaw || 'none'),
-        buildAuthenticatorDataSection(cred),
-        buildExtensionsSection(cred),
-        buildPublicKeySection(cred),
-        buildRegistrationDetailSection(),
-    ].filter(Boolean).join('');
-
-    const finalDetailsHtml = [propertiesSectionHtml, detailsHtml].filter(Boolean).join('');
-
-    modalBody.innerHTML = finalDetailsHtml;
-    modalBody.querySelector('.credential-registration-copy')?.replaceChildren(registrationDetail.view);
+        ...[
+            buildAuthenticatorDataSection(cred),
+            buildExtensionsSection(cred),
+            buildPublicKeySection(cred),
+        ].filter(Boolean),
+        buildRegistrationDetailSection(registrationDetail.view),
+    );
 
     const statusEl = modalBody.querySelector('.credential-aaguid-status');
     if (statusEl) {

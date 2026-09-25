@@ -1,9 +1,7 @@
 import {
     hexToGuid,
 } from '../../../shared/utils/binary.js';
-import {
-    escapeHtml,
-} from '../../ui/display-utils.js';
+import {el, fragment} from '../../../shared/ui/dom.js';
 import {
     deriveAaguidDisplayValues,
     deriveAaguidFromCredentialData,
@@ -11,11 +9,10 @@ import {
 } from '../../credentials/utils.js';
 
 function renderAaguidValue(label, value) {
-    return `
-            <div class="credential-aaguid-value">
-                <span class="credential-aaguid-value-label">${label}</span>
-                <div class="credential-code-block">${escapeHtml(value || 'N/A')}</div>
-            </div>`;
+    return el('div', { className: 'credential-aaguid-value' },
+        el('span', { className: 'credential-aaguid-value-label', text: label }),
+        el('div', { className: 'credential-code-block', text: value || 'N/A' }),
+    );
 }
 
 function resolveAaguidHex(cred, attestationContext) {
@@ -99,22 +96,19 @@ export function buildAaguidSection(cred, attestationContext) {
 
     const hasAaguid = Boolean(normalizedAaguidHex);
 
-    const sections = [
-        renderAaguidValue('b64', hasAaguid && aaguidB64 ? aaguidB64 : 'N/A'),
-        renderAaguidValue('b64u', hasAaguid && aaguidB64u ? aaguidB64u : 'N/A'),
-        renderAaguidValue('hex', hasAaguid ? normalizedAaguidHex : 'N/A'),
-        renderAaguidValue('guid', aaguidGuid || 'N/A'),
-    ];
-
-    return `
-        <div class="credential-aaguid-row">
-            <span class="credential-aaguid-label">AAGUID</span>
-        </div>
-        <div class="credential-aaguid-status" role="status" aria-live="polite">
-            <span class="credential-aaguid-spinner" aria-hidden="true" hidden></span>
-            <span class="credential-aaguid-status-text"></span>
-        </div>
-        <div class="credential-aaguid-values">
-            ${sections.join('')}
-        </div>`;
+    return fragment(
+        el('div', { className: 'credential-aaguid-row' },
+            el('span', { className: 'credential-aaguid-label', text: 'AAGUID' }),
+        ),
+        el('div', { className: 'credential-aaguid-status', attrs: { role: 'status', 'aria-live': 'polite' } },
+            el('span', { className: 'credential-aaguid-spinner', attrs: { 'aria-hidden': 'true', hidden: true } }),
+            el('span', { className: 'credential-aaguid-status-text' }),
+        ),
+        el('div', { className: 'credential-aaguid-values' },
+            renderAaguidValue('b64', hasAaguid && aaguidB64 ? aaguidB64 : 'N/A'),
+            renderAaguidValue('b64u', hasAaguid && aaguidB64u ? aaguidB64u : 'N/A'),
+            renderAaguidValue('hex', hasAaguid ? normalizedAaguidHex : 'N/A'),
+            renderAaguidValue('guid', aaguidGuid || 'N/A'),
+        ),
+    );
 }

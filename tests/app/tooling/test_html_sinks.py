@@ -23,11 +23,7 @@ _ASSIGNMENT = re.compile(r"\.(?:inner|outer)HTML\s*(\+?=)(?!=)")
 _INSERT = re.compile(r"\binsertAdjacentHTML\s*\(")
 
 # (path under frontend/static/scripts, the right-hand side as written) -> reason.
-ALLOWED: dict[tuple[str, str], str] = {
-    ("advanced/credential-display/credential-detail-runtime/entry.js", "finalDetailsHtml"): (
-        "the credential detail sections, values escaped; goes when they are built as DOM"
-    ),
-}
+ALLOWED: dict[tuple[str, str], str] = {}
 
 
 def _read_quoted(text: str, start: int) -> tuple[str, int] | None:

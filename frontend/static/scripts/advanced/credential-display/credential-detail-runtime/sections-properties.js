@@ -1,8 +1,9 @@
+import {el} from '../../../shared/ui/dom.js';
 import {
-    escapeHtml,
-    formatBoolean,
-    renderAttestationResultRow,
-} from '../../ui/display-utils.js';
+    attestationResultRow,
+    booleanValue,
+    labelledLine,
+} from '../detail-nodes.js';
 import {
     extractMinPinLengthValue,
 } from '../../credentials/utils.js';
@@ -15,9 +16,9 @@ import {
     pickFirstString,
 } from './helpers.js';
 
-function buildRootChecksHtml(rootChecksRaw) {
+function buildRootChecks(rootChecksRaw) {
     if (!rootChecksRaw || typeof rootChecksRaw !== 'object') {
-        return '';
+        return null;
     }
 
     const rootCheckDescriptors = [
@@ -25,8 +26,7 @@ function buildRootChecksHtml(rootChecksRaw) {
         { key: 'chain', altKey: 'chain', label: 'Chain' },
     ];
 
-    const rootCheckParts = [];
-    for (const descriptor of rootCheckDescriptors) {
+    const rootCheckParts = rootCheckDescriptors.map(descriptor => {
         let rawValue = rootChecksRaw[descriptor.key];
         if (rawValue === undefined) {
             rawValue = rootChecksRaw[descriptor.altKey];
@@ -42,16 +42,14 @@ function buildRootChecksHtml(rootChecksRaw) {
                 ? '#dc3545'
                 : '#6c757d';
 
-        rootCheckParts.push(
-            `<span style="color: ${color}; font-weight: 600;">${descriptor.label}</span>`,
-        );
-    }
+        return el('span', { style: `color: ${color}; font-weight: 600;`, text: descriptor.label });
+    });
 
-    if (!rootCheckParts.length) {
-        return '';
-    }
-
-    return ` <span style="margin-left: 0.5rem; color: #6c757d;">(${rootCheckParts.join(', ')})</span>`;
+    return el('span', { style: 'margin-left: 0.5rem; color: #6c757d;' },
+        '(',
+        rootCheckParts.flatMap((part, index) => (index ? [', ', part] : [part])),
+        ')',
+    );
 }
 
 export function buildPropertiesSection({
@@ -113,7 +111,7 @@ export function buildPropertiesSection({
         }
     }
 
-    const rootChecksHtml = buildRootChecksHtml(rootChecksRaw);
+    const rootChecks = buildRootChecks(rootChecksRaw);
 
     const attestationRpIdHashValue = normaliseAttestationResultValue(
         resolveCredentialAttestationValue(
@@ -131,35 +129,35 @@ export function buildPropertiesSection({
         attestationContext,
     });
 
-    const attestationChecksNoticeHtml = `
-        <p style="margin: 0 0 0.65rem; color: #6c757d; font-size: 0.9rem; line-height: 1.5;">
-            In formal WebAuthn, any <strong>false</strong> result below causes registration to fail.
-            This platform keeps registration valid for data inspection purposes. 
-        </p>`;
+    const attestationChecksNotice = el('p', {
+        style: 'margin: 0 0 0.65rem; color: #6c757d; font-size: 0.9rem; line-height: 1.5;',
+    },
+    'In formal WebAuthn, any ',
+    el('strong', { text: 'false' }),
+    ' result below causes registration to fail. This platform keeps registration valid for data inspection purposes.',
+    );
 
-    const attestationRowsHtml = [
-        renderAttestationResultRow('Signature Valid', attestationSignatureValue),
-        renderAttestationResultRow('Root Valid', attestationRootValue, rootChecksHtml),
-        renderAttestationResultRow('RPID Hash Valid', attestationRpIdHashValue),
-        renderAttestationResultRow('AAGUID Match', attestationAaguidMatchValue),
-    ].join('');
-
-    const metadataWarningHtml = metadataWarningMessage
-        ? `<div style="margin-top: 0.4rem; color: #c47f16; font-size: 0.85rem;">${escapeHtml(metadataWarningMessage)}</div>`
-        : '';
-
-    return `
-    <div style="margin-bottom: 1.5rem;">
-        <h4 style="color: #0072CE; margin-bottom: 0.5rem;">Properties</h4>
-        <div style="font-size: 0.9rem; line-height: 1.4;">
-            <div><strong>Discoverable (resident key):</strong> ${formatBoolean(discoverableValue)}</div>
-            <div><strong>Supports largeBlob:</strong> ${formatBoolean(largeBlobSupported)}</div>
-            ${minPinLengthValue !== null ? `<div><strong>Authenticator minPinLength:</strong> ${escapeHtml(String(minPinLengthValue))}</div>` : ''}
-            <div style="margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid rgba(0, 114, 206, 0.15);">
-                ${attestationChecksNoticeHtml}
-                ${attestationRowsHtml}
-                ${metadataWarningHtml}
-            </div>
-        </div>
-    </div>`;
+    return el('div', { style: 'margin-bottom: 1.5rem;' },
+        el('h4', { style: 'color: #0072CE; margin-bottom: 0.5rem;', text: 'Properties' }),
+        el('div', { style: 'font-size: 0.9rem; line-height: 1.4;' },
+            el('div', {}, el('strong', { text: 'Discoverable (resident key):' }), ' ', booleanValue(discoverableValue)),
+            el('div', {}, el('strong', { text: 'Supports largeBlob:' }), ' ', booleanValue(largeBlobSupported)),
+            minPinLengthValue !== null
+                ? labelledLine('Authenticator minPinLength:', String(minPinLengthValue))
+                : null,
+            el('div', { style: 'margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid rgba(0, 114, 206, 0.15);' },
+                attestationChecksNotice,
+                attestationResultRow('Signature Valid', attestationSignatureValue),
+                attestationResultRow('Root Valid', attestationRootValue, rootChecks),
+                attestationResultRow('RPID Hash Valid', attestationRpIdHashValue),
+                attestationResultRow('AAGUID Match', attestationAaguidMatchValue),
+                metadataWarningMessage
+                    ? el('div', {
+                        style: 'margin-top: 0.4rem; color: #c47f16; font-size: 0.85rem;',
+                        text: metadataWarningMessage,
+                    })
+                    : null,
+            ),
+        ),
+    );
 }

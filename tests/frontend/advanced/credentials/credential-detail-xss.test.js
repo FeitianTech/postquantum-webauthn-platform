@@ -27,15 +27,21 @@ const IMG_PAYLOAD = '<img src=x onerror="window.__xss=1">';
 // actually reach the raw `Algorithm (${alg})` interpolation.
 const DIGITLESS_PAYLOAD = '<img src=x onerror="window.__xss=true">';
 
-function render(html) {
+// The builders return nodes. A string is parsed as markup, which only the
+// positive control below does, to show what an injected element looks like.
+function render(content) {
   const container = document.createElement('div');
-  container.innerHTML = html;
+  if (typeof content === 'string') {
+    container.innerHTML = content;
+  } else {
+    container.append(...[content].flat().filter(Boolean));
+  }
   document.body.appendChild(container);
   return container;
 }
 
-function expectRenderedAsText(html, payload) {
-  const container = render(html);
+function expectRenderedAsText(node, payload) {
+  const container = render(node);
   expect(container.querySelector('img')).toBeNull();
   expect(container.querySelector('script')).toBeNull();
   expect(container.textContent).toContain(payload);
@@ -43,7 +49,7 @@ function expectRenderedAsText(html, payload) {
   return container;
 }
 
-describe('credential detail sections escape untrusted values', () => {
+describe('credential detail sections show untrusted values as text', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     delete window.__xss;
@@ -56,19 +62,19 @@ describe('credential detail sections escape untrusted values', () => {
   });
 
   it('renders a script-bearing userName as text instead of an element', () => {
-    const html = buildUserInfoSection({ userName: IMG_PAYLOAD }, '');
+    const html = buildUserInfoSection({ userName: IMG_PAYLOAD }, null);
 
     expectRenderedAsText(html, IMG_PAYLOAD);
   });
 
   it('renders a script-bearing displayName as text instead of an element', () => {
-    const html = buildUserInfoSection({ userName: 'alice', displayName: IMG_PAYLOAD }, '');
+    const html = buildUserInfoSection({ userName: 'alice', displayName: IMG_PAYLOAD }, null);
 
     expectRenderedAsText(html, IMG_PAYLOAD);
   });
 
   it('renders a script-bearing email fallback as text instead of an element', () => {
-    const html = buildUserInfoSection({ email: IMG_PAYLOAD }, '');
+    const html = buildUserInfoSection({ email: IMG_PAYLOAD }, null);
 
     expectRenderedAsText(html, IMG_PAYLOAD);
   });
@@ -76,7 +82,7 @@ describe('credential detail sections escape untrusted values', () => {
   it('escapes encoded identifier values taken from storage', () => {
     const html = buildUserInfoSection(
       { userName: 'alice', userHandle: IMG_PAYLOAD, credentialId: IMG_PAYLOAD },
-      '',
+      null,
     );
 
     const container = render(html);
@@ -141,7 +147,7 @@ describe('credential detail sections escape untrusted values', () => {
         signCount: 7,
       }),
       buildPublicKeySection({ publicKeyAlgorithm: -7, publicKeyType: 2 }),
-    ].join(''));
+    ]);
 
     const text = container.textContent;
     expect(text).toContain('alice');
