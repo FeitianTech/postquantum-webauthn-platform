@@ -5,13 +5,17 @@ session directory under server/runtime/ on every run, and a stray session
 cleanup there removed a hundred earlier ones.
 
 What the guarded paths hold already mixes the owner's local data with earlier
-test runs' leftovers, so the guard compares listings taken before and after,
-and never cleans. It is a pytest plugin (``tests/conftest.py`` loads it) rooted
-at the checkout, or at ``--checkout-root``, which is how its own test points it
-at a directory of its own.
+test runs' leftovers, so the guard compares a listing taken before the tests are
+collected -- a module that writes while it is imported is seen -- with one taken
+when the session finishes, and never cleans. A difference fails the run.
+
+It is a pytest plugin (``tests/conftest.py`` loads it) rooted at the checkout,
+or at ``--checkout-root``, which is how its own test points it at a directory of
+its own.
 """
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -81,13 +85,27 @@ def problems(before: dict[str, object], after: dict[str, object]) -> str | None:
     )
 
 
-@pytest.fixture(scope="session", autouse=True)
-def _no_writes_into_the_checkout(request):
-    """Fail the run if a test created, changed or removed app state in the checkout."""
+_BEFORE = pytest.StashKey[dict]()
 
-    base = root(request.config)
-    before = listing(base)
-    yield
-    found = problems(before, listing(base))
-    if found:
-        pytest.fail(found, pytrace=False)
+
+def pytest_configure(config: pytest.Config) -> None:
+    # Before collection: a test module that writes while it is imported is seen too.
+    config.stash[_BEFORE] = listing(root(config))
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_sessionfinish(session: pytest.Session) -> None:
+    before = session.config.stash.get(_BEFORE, None)
+    if before is None:
+        return
+    found = problems(before, listing(root(session.config)))
+    if not found:
+        return
+    reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+    if reporter is not None:
+        reporter.write("\n")
+        reporter.write_sep("=", "checkout guard", red=True)
+        reporter.write_line(found)
+    else:  # -p no:terminal
+        sys.stderr.write(found + "\n")
+    session.exitstatus = pytest.ExitCode.TESTS_FAILED

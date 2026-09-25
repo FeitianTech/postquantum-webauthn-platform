@@ -53,9 +53,9 @@ def test_a_write_made_by_a_test_fails_the_run(tmp_path):
     assert "instance/session-secret.key" in run.stdout
 
 
-def test_a_write_made_while_the_tests_are_collected_is_not_seen(tmp_path):
+def test_a_write_made_while_the_tests_are_collected_fails_the_run(tmp_path):
     run = _run(tmp_path, _WRITES_WHILE_COLLECTED)
 
-    # The guard lists the checkout when the first test starts: collection is over.
-    assert run.returncode == 0, run.stdout
-    assert "instance/session-secret.key" not in run.stdout
+    # The guard lists the checkout before collection, when pytest is configured.
+    assert run.returncode != 0, run.stdout
+    assert "instance/session-secret.key" in run.stdout
