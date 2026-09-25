@@ -44,6 +44,7 @@ _WORDS = {
     "false": b"\xf4", "true": b"\xf5", "null": b"\xf6", "undefined": b"\xf7",
 }
 _MAX_ARGUMENT = (1 << 64) - 1
+_BEYOND_64_BITS = "an integer beyond 64 bits: write it as a bignum tag, 2(h'..') or 3(h'..')"
 # decode/cbor_parser's limit: an item nested more than 64 deep is refused, so
 # whatever this reader writes, the decoder reads. Embedded CBOR counts too.
 _MAX_DEPTH = 64
@@ -203,12 +204,13 @@ class _Reader:
         body = literal.lstrip("+-")
         if body[:2].lower() == "0x" and "p" in body.lower():
             return self.float_literal(literal, float.fromhex, start)
-        if body[:2].lower() in ("0x", "0o", "0b"):
-            value = int(literal.replace("+", ""), 0)
-        elif any(c in body for c in ".eE"):
+        if any(c in body for c in ".eE") and body[:2].lower() != "0x":
             return self.float_literal(literal, float, start)
-        else:
-            value = int(literal)
+        try:
+            value = int(literal.replace("+", ""), 0) if body[:2].lower() in ("0x", "0o", "0b") else int(literal)
+        except ValueError:
+            # Python converts at most 4300 decimal digits: far beyond 64 bits in any case.
+            raise self.error(_BEYOND_64_BITS, start) from None
         return self.integer(value, start)
 
     def float_literal(self, literal: str, read: Callable[[str], float], start: int) -> bytes:
@@ -233,7 +235,7 @@ class _Reader:
 
     def integer(self, value: int, start: int) -> bytes:
         if not -(1 << 64) <= value <= _MAX_ARGUMENT:
-            raise self.error("an integer beyond 64 bits: write it as a bignum tag, 2(h'..') or 3(h'..')", start)
+            raise self.error(_BEYOND_64_BITS, start)
         info = self.head_info(self.spec(), start, indefinite_allowed=False)
         if value >= 0 and self.peek() == "(":
             return self.tag(value, info, start)

@@ -80,6 +80,10 @@ def test_edn_is_encoded_to_exactly_the_bytes_it_notates(text, expected):
         ("simple(256)", 0, "not a simple value"),
         ("18446744073709551616", 0, "beyond 64 bits"),
         ("-18446744073709551617", 0, "beyond 64 bits"),
+        # However long: Python's own limit on converting decimal text is not the message.
+        ("1" * 4301, 0, "beyond 64 bits: write it as a bignum tag"),
+        ("[0, -" + "9" * 5000 + "]", 4, "beyond 64 bits: write it as a bignum tag"),
+        ("0x" + "f" * 5000, 0, "beyond 64 bits"),
         ("h'0'", 0, "pairs of hex digits"),
         ("h'zz'", 0, "pairs of hex digits"),
         ("b64'@@'", 0, "not base64"),
