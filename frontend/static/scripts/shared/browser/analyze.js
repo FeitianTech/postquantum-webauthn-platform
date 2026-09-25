@@ -179,7 +179,8 @@ async function copyReport(panel, analysis) {
         return;
     }
     status.dataset.outcome = 'failed';
-    status.textContent = `Could not copy the report (${failure}). It is below, selected, to copy by hand.`;
+    const reason = /[.!?]$/.test(failure) ? failure : `${failure}.`;
+    status.textContent = `Could not copy the report: ${reason} The report is below, selected, to copy by hand.`;
     fallback.value = text;
     fallback.hidden = false;
     fallback.focus();

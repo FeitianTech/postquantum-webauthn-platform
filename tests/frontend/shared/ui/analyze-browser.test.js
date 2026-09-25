@@ -423,7 +423,7 @@ describe('analyze-browser panel', () => {
 
       expect(status.dataset.outcome).toBe('failed');
       expect(status.textContent).toBe(
-        'Could not copy the report (NotAllowedError: Write permission denied.). It is below, selected, to copy by hand.',
+        'Could not copy the report: NotAllowedError: Write permission denied. The report is below, selected, to copy by hand.',
       );
       expect(fallback.hidden).toBe(false);
       expect(document.activeElement).toBe(fallback);
@@ -436,7 +436,7 @@ describe('analyze-browser panel', () => {
       const { panel, status, fallback } = await copyWith(undefined);
 
       expect(status.textContent).toBe(
-        'Could not copy the report (the clipboard is not available on this page). It is below, selected, to copy by hand.',
+        'Could not copy the report: the clipboard is not available on this page. The report is below, selected, to copy by hand.',
       );
       expect(fallback.hidden).toBe(false);
 
