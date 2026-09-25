@@ -568,3 +568,109 @@ describe('auth-advanced', () => {
     expect(finalMessage).toContain('Credential registration failed: Unsupported hint combination');
   });
 });
+
+// What the advanced tab shows when the server answers with an error. The bodies
+// are the server's own (routes/errors.py, simple and advanced routes).
+const WERKZEUG_400 = '<!doctype html>\n<html lang=en>\n<title>400 Bad Request</title>\n<h1>Bad Request</h1>\n<p>The browser (or proxy) sent a request that this server could not understand.</p>\n';
+const STORE_CHANGED = 'The stored credentials changed while this one was being saved, too many times, so the registration was not saved. Please try again.';
+const STORE_UNREADABLE = 'The stored credentials could not be read. Please try again.';
+const TOO_LARGE = 'The request is larger than the limit of 8388608 bytes this server accepts.';
+const STATE_EXPIRED = 'Registration state not found or has expired. Please restart the registration process.';
+
+function failedResponse(status, body, contentType = 'application/json') {
+  const text = typeof body === 'string' ? body : JSON.stringify(body);
+  return {
+    ok: false,
+    status,
+    headers: new Headers({ 'Content-Type': contentType }),
+    json: vi.fn(async () => JSON.parse(text)),
+    text: vi.fn().mockResolvedValue(text),
+  };
+}
+
+describe('advanced tab messages for failed responses', () => {
+  beforeEach(() => {
+    buildDom();
+    vi.clearAllMocks();
+    document.getElementById('json-editor').value = JSON.stringify({
+      publicKey: {
+        rp: { name: 'RP' },
+        user: { name: 'alice' },
+        challenge: { $hex: 'abcd' },
+        pubKeyCredParams: [{ type: 'public-key', alg: -50 }],
+        authenticatorSelection: { residentKey: 'required' },
+      },
+    });
+    enforceAuthenticatorAttachmentWithHints.mockImplementation(() => []);
+    ensureAuthenticationHintsAllowed.mockImplementation(() => []);
+    convertExtensionsForClient.mockImplementation((value) => value);
+    normalizeClientExtensionResults.mockImplementation((value) => value);
+    prepareAdvancedCredentialsForServer.mockImplementation(() => []);
+    parseCreationOptionsFromJSON.mockReturnValue({ publicKey: { pubKeyCredParams: [{ type: 'public-key', alg: -50 }] } });
+    parseRequestOptionsFromJSON.mockImplementation((value) => value);
+    create.mockResolvedValue({ rawId: new Uint8Array([1]).buffer, id: 'AQ', toJSON: () => ({ id: 'AQ' }) });
+  });
+
+  async function registerAgainst(completeResponse) {
+    fetch.mockResolvedValueOnce(jsonResponse({ __session_state: 's', publicKey: { challenge: { $base64url: 'AQID' } } }));
+    fetch.mockResolvedValueOnce(completeResponse);
+    await advancedRegister();
+    return showStatus.mock.calls.at(-1)[1];
+  }
+
+  it('registration complete answering 409', async () => {
+    expect(await registerAgainst(failedResponse(409, { error: STORE_CHANGED }))).toMatchInlineSnapshot(`"Credential registration failed: Registration failed: {"error":"The stored credentials changed while this one was being saved, too many times, so the registration was not saved. Please try again."} The authenticator may not support: resident key requirement, selected signature algorithms."`);
+  });
+
+  it('registration complete answering 503', async () => {
+    expect(await registerAgainst(failedResponse(503, { error: STORE_UNREADABLE }))).toMatchInlineSnapshot(`"Credential registration failed: Registration failed: {"error":"The stored credentials could not be read. Please try again."} The authenticator may not support: resident key requirement, selected signature algorithms."`);
+  });
+
+  it('registration complete answering 400 with an expired ceremony state', async () => {
+    expect(await registerAgainst(failedResponse(400, {
+      error: STATE_EXPIRED,
+      challengeSource: 'server-session',
+      challengeStatus: 'expired',
+    }))).toMatchInlineSnapshot(`"Credential registration failed: Registration failed: {"error":"Registration state not found or has expired. Please restart the registration process.","challengeSource":"server-session","challengeStatus":"expired"} The authenticator may not support: resident key requirement, selected signature algorithms."`);
+  });
+
+  it('registration complete answering 400 as HTML', async () => {
+    expect(await registerAgainst(failedResponse(400, WERKZEUG_400, 'text/html; charset=utf-8'))).toMatchInlineSnapshot(`
+      "Credential registration failed: Registration failed: <!doctype html>
+      <html lang=en>
+      <title>400 Bad Request</title>
+      <h1>Bad Request</h1>
+      <p>The browser (or proxy) sent a request that this server could not understand.</p>
+       The authenticator may not support: resident key requirement, selected signature algorithms."
+    `);
+  });
+
+  it('registration begin answering 413', async () => {
+    fetch.mockResolvedValueOnce(failedResponse(413, { error: TOO_LARGE }));
+    await advancedRegister();
+
+    expect(showStatus.mock.calls.at(-1)[1]).toMatchInlineSnapshot(`"Credential registration failed: Server error: {"error":"The request is larger than the limit of 8388608 bytes this server accepts."} The authenticator may not support: resident key requirement."`);
+  });
+
+  async function authenticateAgainst(...responses) {
+    document.getElementById('json-editor').value = JSON.stringify({ publicKey: { challenge: { $hex: '1234' } } });
+    get.mockResolvedValue({ toJSON: () => ({ id: 'AQ' }) });
+    responses.forEach((response) => fetch.mockResolvedValueOnce(response));
+    await advancedAuthenticate();
+    return showStatus.mock.calls.at(-1)[1];
+  }
+
+  it('authentication begin answering 503', async () => {
+    expect(await authenticateAgainst(failedResponse(503, { error: STORE_UNREADABLE }))).toMatchInlineSnapshot(`"Advanced authentication failed: The stored credentials could not be read. Please try again."`);
+  });
+
+  it('authentication complete answering 409', async () => {
+    expect(await authenticateAgainst(
+      jsonResponse({ __session_state: 's', publicKey: { challenge: 'AQID' } }),
+      failedResponse(409, {
+        error: 'The stored signature counter changed during authentication more than once, so authentication was rejected. Please try again.',
+        failedCredentialId: 'AQ',
+      }),
+    )).toMatchInlineSnapshot(`"Advanced authentication failed: The stored signature counter changed during authentication more than once, so authentication was rejected. Please try again."`);
+  });
+});

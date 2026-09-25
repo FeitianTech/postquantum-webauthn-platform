@@ -490,3 +490,39 @@ describe('codec UI', () => {
     expect(showStatus).toHaveBeenLastCalledWith('encoder', 'Input cannot be converted into pem.', 'error');
   });
 });
+
+describe('codec messages for failed responses', () => {
+  beforeEach(() => {
+    buildCodecDom();
+    vi.clearAllMocks();
+    switchCodecMode('decode');
+    document.getElementById('decoder-input').value = 'AQID';
+  });
+
+  function failedResponse(status, body, contentType = 'application/json') {
+    const text = typeof body === 'string' ? body : JSON.stringify(body);
+    return {
+      ok: false,
+      status,
+      headers: new Headers({ 'Content-Type': contentType }),
+      json: vi.fn(async () => JSON.parse(text)),
+      text: vi.fn().mockResolvedValue(text),
+    };
+  }
+
+  it('decode answering 413', async () => {
+    fetch.mockResolvedValueOnce(failedResponse(413, {
+      error: 'The request is larger than the limit of 8388608 bytes this server accepts.',
+    }));
+    await processCodec('decode');
+
+    expect(showStatus.mock.calls.at(-1)[1]).toMatchInlineSnapshot(`"Decoding failed: The request is larger than the limit of 8388608 bytes this server accepts."`);
+  });
+
+  it('decode answering 503 as HTML from a proxy', async () => {
+    fetch.mockResolvedValueOnce(failedResponse(503, '<html><body><h1>503 Service Unavailable</h1></body></html>', 'text/html'));
+    await processCodec('decode');
+
+    expect(showStatus.mock.calls.at(-1)[1]).toMatchInlineSnapshot(`"Decoding failed: Server responded with status 503"`);
+  });
+});

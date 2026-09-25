@@ -281,3 +281,87 @@ describe('auth-simple', () => {
     expect(showStatus).toHaveBeenCalledWith('simple', 'User cancelled or authenticator not available', 'error');
   });
 });
+
+// What the simple tab shows when the server answers with an error. The bodies
+// are the server's own (routes/errors.py, routes/simple/*).
+const WERKZEUG_400 = '<!doctype html>\n<html lang=en>\n<title>400 Bad Request</title>\n<h1>Bad Request</h1>\n<p>The browser (or proxy) sent a request that this server could not understand.</p>\n';
+
+function failedResponse(status, body, contentType = 'application/json') {
+  const text = typeof body === 'string' ? body : JSON.stringify(body);
+  return {
+    ok: false,
+    status,
+    headers: new Headers({ 'Content-Type': contentType }),
+    json: vi.fn(async () => JSON.parse(text)),
+    text: vi.fn().mockResolvedValue(text),
+  };
+}
+
+describe('simple tab messages for failed responses', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<input id="simple-email" value="user@example.com" />';
+    vi.clearAllMocks();
+    parseCreationOptionsFromJSON.mockImplementation((value) => value);
+    parseRequestOptionsFromJSON.mockImplementation((value) => value);
+    create.mockResolvedValue({ toJSON: () => ({ id: 'AQ' }) });
+    get.mockResolvedValue({ toJSON: () => ({ id: 'AQ' }) });
+    getSimpleCredentialsForEmail.mockReturnValue([{ credentialId: 'AQ', publicKey: 'cHVibGlj' }]);
+  });
+
+  async function registerAgainst(...responses) {
+    responses.forEach((response) => fetch.mockResolvedValueOnce(response));
+    await simpleRegister();
+    return showStatus.mock.calls.at(-1)[1];
+  }
+
+  async function authenticateAgainst(...responses) {
+    responses.forEach((response) => fetch.mockResolvedValueOnce(response));
+    await simpleAuthenticate();
+    return showStatus.mock.calls.at(-1)[1];
+  }
+
+  it('registration begin answering 503', async () => {
+    expect(await registerAgainst(failedResponse(503, {
+      error: 'The stored credentials could not be read. Please try again.',
+    }))).toMatchInlineSnapshot(`"Server error: {"error":"The stored credentials could not be read. Please try again."}"`);
+  });
+
+  it('registration complete answering 409', async () => {
+    expect(await registerAgainst(
+      jsonResponse({ __session_state: 's', publicKey: {} }),
+      failedResponse(409, {
+        error: 'The stored credentials changed while this one was being saved, too many times, so the registration was not saved. Please try again.',
+      }),
+    )).toMatchInlineSnapshot(`"Registration failed: {"error":"The stored credentials changed while this one was being saved, too many times, so the registration was not saved. Please try again."}"`);
+  });
+
+  it('registration complete answering 413', async () => {
+    expect(await registerAgainst(
+      jsonResponse({ __session_state: 's', publicKey: {} }),
+      failedResponse(413, { error: 'The request is larger than the limit of 8388608 bytes this server accepts.' }),
+    )).toMatchInlineSnapshot(`"Registration failed: {"error":"The request is larger than the limit of 8388608 bytes this server accepts."}"`);
+  });
+
+  it('authentication complete answering 400 as HTML', async () => {
+    expect(await authenticateAgainst(
+      jsonResponse({ __session_state: 's', publicKey: {} }),
+      failedResponse(400, WERKZEUG_400, 'text/html; charset=utf-8'),
+    )).toMatchInlineSnapshot(`
+      "<!doctype html>
+      <html lang=en>
+      <title>400 Bad Request</title>
+      <h1>Bad Request</h1>
+      <p>The browser (or proxy) sent a request that this server could not understand.</p>
+      "
+    `);
+  });
+
+  it('authentication complete answering 503 for the stored counter', async () => {
+    expect(await authenticateAgainst(
+      jsonResponse({ __session_state: 's', publicKey: {} }),
+      failedResponse(503, {
+        error: 'The stored signature counter could not be read, so authentication was rejected. Please try again.',
+      }),
+    )).toMatchInlineSnapshot(`"The stored signature counter could not be read, so authentication was rejected. Please try again."`);
+  });
+});
