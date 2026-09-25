@@ -87,3 +87,20 @@ def test_a_damaged_container_key_is_shown_by_its_summary_as_an_invalid_key():
 
     assert (key.diagnostic, key.kind) == ("array[1]", "invalid")
     assert decode_payload_text("a181bf01ff05", lenient=True)["data"]["decodedValue"] == {"array[1]": 5}
+
+
+@pytest.mark.parametrize(
+    ("hex_text", "decoded", "duplicates"),
+    [
+        # (_ "a", <0xff>) and "a": two keys. Before, the first read as "a", replaced the
+        # second's entry and was reported as a duplicate of it.
+        ("a2 7f 6161 61ff ff 01 6161 02", {"h'61ff' (not UTF-8)": 1, "a": 2}, 0),
+        # (_ "a", <0xff>) and the same bytes unchunked: one key, however chunked.
+        ("a2 7f 6161 61ff ff 01 6261ff 02", {"h'61ff' (not UTF-8)": 2}, 1),
+    ],
+)
+def test_a_text_key_with_a_chunk_that_is_not_utf8_is_identified_by_its_bytes(hex_text, decoded, duplicates):
+    result = decode_payload_text(hex_text.replace(" ", ""), lenient=True)
+
+    assert result["data"]["decodedValue"] == decoded
+    assert [finding["code"] for finding in result["findings"]].count("duplicate-map-key") == duplicates
