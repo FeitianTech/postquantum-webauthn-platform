@@ -674,6 +674,31 @@ def _(r: Recorder) -> None:
     _simple_register(r, r.client(), m.Authenticator("simple-unwritable"))
 
 
+@scenario("simple-register-save-fails")
+def _(r: Recorder) -> None:
+    from server.app.storage import credentials
+
+    client = r.client()
+    # A stored credential, so the read before each save below reads a record.
+    _simple_register(r, client, m.Authenticator("simple-save-first"))
+    write = credentials.replace_file
+
+    def _fails(path: str, payload: bytes) -> None:
+        raise OSError("no space left on device")
+
+    # The read succeeds; the write raises before anything lands.
+    r.env.monkeypatch.setattr(credentials, "replace_file", _fails)
+    _simple_register(r, client, m.Authenticator("simple-save-fails"))
+
+    def _lands_then_fails(path: str, payload: bytes) -> None:
+        write(path, payload)
+        raise OSError("connection reset after the write")
+
+    # The write lands, then raises: the re-read finds the credential stored.
+    r.env.monkeypatch.setattr(credentials, "replace_file", _lands_then_fails)
+    _simple_register(r, client, m.Authenticator("simple-save-lands"))
+
+
 @scenario("advanced-register-artifact-store-fails")
 def _(r: Recorder) -> None:
     from server.app import credential_artifacts
