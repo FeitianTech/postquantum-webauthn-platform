@@ -220,7 +220,7 @@
     ],
     [
      "Content-Length",
-     "11846"
+     "11844"
     ],
     [
      "X-Content-Type-Options",
@@ -272,7 +272,7 @@
      }
     }
    ],
-   "bodySha256": "a62bbb9dc22790700b81996d9b11fe44c88d1e1aa7b0eaa47f4eeb00b742c6e9",
+   "bodySha256": "daedb0bcf5b0e4efd99e76fc6e1c42c2919883e0fcfed6cfcc9bcbe4d94b88a7",
    "body": {
     "actualResidentKey": false,
     "algo": "Other (Classical)",
@@ -412,7 +412,7 @@
      "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiWG1rb1FLeHVRMklaTTBYcVF4M0lBNG1DSFRZOEZoOGphY2NmN0RWSkFPNCIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
      "clientExtensionOutputs": {},
      "createdAt": 1790000000.0,
-     "credentialId": "slVQ3GqpVIhha1iZEQ969Ysvm3FGgF98b3zvlkQ7xSE=",
+     "credentialId": "slVQ3GqpVIhha1iZEQ969Ysvm3FGgF98b3zvlkQ7xSE",
      "credentialIdBase64Url": "slVQ3GqpVIhha1iZEQ969Ysvm3FGgF98b3zvlkQ7xSE",
      "credentialIdHex": "b25550dc6aa95488616b5899110f7af58b2f9b7146805f7c6f7cef96443bc521",
      "displayName": "user@example.com",
@@ -507,7 +507,7 @@
      "publicKeyBase64Url": "pAEBAycgBiFYIIHfkY51LpkrXIxu0qGrmVEGH7X3BqWRo9UcGhLdMzsO",
      "publicKeyBytes": "pAEBAycgBiFYIIHfkY51LpkrXIxu0qGrmVEGH7X3BqWRo9UcGhLdMzsO",
      "publicKeyCose": {
-      "-2": "gd+RjnUumStcjG7SoauZUQYftfcGpZGj1RwaEt0zOw4=",
+      "-2": "gd-RjnUumStcjG7SoauZUQYftfcGpZGj1RwaEt0zOw4",
       "-1": 6,
       "1": 1,
       "3": -8

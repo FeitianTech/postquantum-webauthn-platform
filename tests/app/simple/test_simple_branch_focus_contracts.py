@@ -344,8 +344,8 @@ def test_simple_credentials_route_covers_scalar_registration_metadata_and_listin
     payload = response.get_json()["credentials"]
     assert len(payload) == 2
 
-    dict_id = base64.b64encode(b"dict-fallback-cred").decode("utf-8")
-    object_id = base64.b64encode(b"object-fallback-cred").decode("utf-8")
+    dict_id = base64.urlsafe_b64encode(b"dict-fallback-cred").decode("utf-8").rstrip("=")
+    object_id = base64.urlsafe_b64encode(b"object-fallback-cred").decode("utf-8").rstrip("=")
 
     dict_entry = next(item for item in payload if item["credentialId"] == dict_id)
     assert dict_entry["registrationResponse"] == "opaque-registration-response"

@@ -220,7 +220,7 @@
     ],
     [
      "Content-Length",
-     "12529"
+     "12524"
     ],
     [
      "X-Content-Type-Options",
@@ -272,7 +272,7 @@
      }
     }
    ],
-   "bodySha256": "a4d3d3254daee75b6664d6bb3b7bc1a9e0fc8b73eaa21c6c93724f48b02bab8e",
+   "bodySha256": "43934e525254484e23a99ac3d7c7a9ff89e4e04d0ba69de86e51ae9145c56fd0",
    "body": {
     "actualResidentKey": false,
     "algo": "ES256 (ECDSA)",
@@ -412,7 +412,7 @@
      "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiU3lBdTFFRVZ6Zl9JMU1zLW5oSHhId1ZwUDlWR1pNTjhud1lRS2lWeTBISSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3QiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
      "clientExtensionOutputs": {},
      "createdAt": 1790000000.0,
-     "credentialId": "hc3wKwT2pzE/moP8MirmB9IeO2Kr5g8EXY7MXMk+FvU=",
+     "credentialId": "hc3wKwT2pzE_moP8MirmB9IeO2Kr5g8EXY7MXMk-FvU",
      "credentialIdBase64Url": "hc3wKwT2pzE_moP8MirmB9IeO2Kr5g8EXY7MXMk-FvU",
      "credentialIdHex": "85cdf02b04f6a7313f9a83fc322ae607d21e3b62abe60f045d8ecc5cc93e16f5",
      "displayName": "user@example.com",
@@ -502,13 +502,13 @@
       "rpIdHashExpected": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
       "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
      },
-     "publicKey": "pQECAyYgASFYIOUXheTw1E+EWQzlvZV436po9IPSSC4v+2KUgHzYdwcBIlggV1x10katy4m49ykeifI0L8XqeWIF6rPx0q0yg5YadZ4=",
+     "publicKey": "pQECAyYgASFYIOUXheTw1E-EWQzlvZV436po9IPSSC4v-2KUgHzYdwcBIlggV1x10katy4m49ykeifI0L8XqeWIF6rPx0q0yg5YadZ4",
      "publicKeyAlgorithm": -7,
      "publicKeyBase64Url": "pQECAyYgASFYIOUXheTw1E-EWQzlvZV436po9IPSSC4v-2KUgHzYdwcBIlggV1x10katy4m49ykeifI0L8XqeWIF6rPx0q0yg5YadZ4",
-     "publicKeyBytes": "pQECAyYgASFYIOUXheTw1E+EWQzlvZV436po9IPSSC4v+2KUgHzYdwcBIlggV1x10katy4m49ykeifI0L8XqeWIF6rPx0q0yg5YadZ4=",
+     "publicKeyBytes": "pQECAyYgASFYIOUXheTw1E-EWQzlvZV436po9IPSSC4v-2KUgHzYdwcBIlggV1x10katy4m49ykeifI0L8XqeWIF6rPx0q0yg5YadZ4",
      "publicKeyCose": {
-      "-3": "V1x10katy4m49ykeifI0L8XqeWIF6rPx0q0yg5YadZ4=",
-      "-2": "5ReF5PDUT4RZDOW9lXjfqmj0g9JILi/7YpSAfNh3BwE=",
+      "-3": "V1x10katy4m49ykeifI0L8XqeWIF6rPx0q0yg5YadZ4",
+      "-2": "5ReF5PDUT4RZDOW9lXjfqmj0g9JILi_7YpSAfNh3BwE",
       "-1": 1,
       "1": 2,
       "3": -7

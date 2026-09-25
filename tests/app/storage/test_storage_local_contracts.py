@@ -303,15 +303,15 @@ def test_convert_bytes_and_public_key_material_helpers(storage_local):
             "nested": [bytearray(b"\x03"), memoryview(b"\x04")],
         }
     )
-    assert converted["raw"] == "AQI="
-    assert converted["nested"] == ["Aw==", "BA=="]
+    assert converted["raw"] == "AQI"
+    assert converted["nested"] == ["Aw", "BA"]
 
     target = {}
     public_key = {1: "type-a", 3: -7, -1: b"\xAA\xBB"}
     storage.add_public_key_material(target, public_key)
 
-    assert target["publicKeyCose"][-1] == "qrs="
-    assert target["publicKeyBytes"] == "qrs="
+    assert target["publicKeyCose"][-1] == "qrs"
+    assert target["publicKeyBytes"] == "qrs"
     assert target["publicKeyType"] == "type-a"
     assert target["publicKeyAlgorithm"] == -7
 

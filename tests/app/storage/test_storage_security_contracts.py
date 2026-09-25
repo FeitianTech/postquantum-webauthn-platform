@@ -671,4 +671,5 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
     rendered = records[0]
     assert rendered["email"] == "alice@example.com"
     assert rendered["publicKeyAlgorithm"] == -7
-    assert base64.b64decode(rendered["credentialId"]) == authenticator.credential_id
+    credential_id = rendered["credentialId"]
+    assert base64.urlsafe_b64decode(credential_id + "=" * (-len(credential_id) % 4)) == authenticator.credential_id
