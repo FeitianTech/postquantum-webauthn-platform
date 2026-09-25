@@ -24,6 +24,8 @@ def client():
 
 EXPECTED_HEADERS = (
     "Content-Security-Policy",
+    "Content-Security-Policy-Report-Only",
+    "Reporting-Endpoints",
     "X-Frame-Options",
     "X-Content-Type-Options",
     "Referrer-Policy",
@@ -108,15 +110,37 @@ def test_csp_locks_down_the_non_script_directives(client):
     assert "'unsafe-inline'" not in csp["default-src"]
 
 
-def test_csp_script_src_still_allows_inline_scripts(client):
-    """'unsafe-inline' stays in script-src while index.html seeds its data with an inline <script>.
+STRICT_CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
+    "frame-src 'none'; form-action 'self'; img-src 'self' data:; "
+    "font-src 'self' https://fonts.gstatic.com; style-src 'self' https://fonts.googleapis.com; "
+    "script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; "
+    "report-uri /api/csp-report; report-to csp"
+)
+TRUSTED_TYPES_REPORT_ONLY = "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+REPORTING_ENDPOINTS = 'csp="/api/csp-report"'
 
-    The templates hold no inline on*= handler any more (tests/app/tooling/test_inline_code.py
-    keeps it so); the strict policy comes once the inline script is a data block.
-    """
 
-    csp = _parse_csp(client.get("/").headers["Content-Security-Policy"])
-    assert csp["script-src"] == ["'self'", "'unsafe-inline'"]
+def test_the_shipped_policies_are_exactly_these(client):
+    """No 'unsafe-inline' anywhere; violations and Trusted Types reports go to /api/csp-report."""
+
+    headers = client.get("/").headers
+    assert headers["Content-Security-Policy"] == STRICT_CONTENT_SECURITY_POLICY
+    assert headers["Content-Security-Policy-Report-Only"] == TRUSTED_TYPES_REPORT_ONLY
+    assert headers["Reporting-Endpoints"] == REPORTING_ENDPOINTS
+    assert "unsafe" not in headers["Content-Security-Policy"]
+
+
+def test_the_policies_can_be_set_in_the_environment(monkeypatch, make_app):
+    monkeypatch.setenv("FIDO_SERVER_CONTENT_SECURITY_POLICY", "default-src 'none'")
+    monkeypatch.setenv("FIDO_SERVER_CONTENT_SECURITY_POLICY_REPORT_ONLY", "script-src 'none'")
+    monkeypatch.setenv("FIDO_SERVER_REPORTING_ENDPOINTS", 'csp="https://reports.example/csp"')
+
+    headers = make_app().test_client().get("/health").headers
+
+    assert headers["Content-Security-Policy"] == "default-src 'none'"
+    assert headers["Content-Security-Policy-Report-Only"] == "script-src 'none'"
+    assert headers["Reporting-Endpoints"] == 'csp="https://reports.example/csp"'
 
 
 def test_security_headers_do_not_clobber_an_explicit_value():
