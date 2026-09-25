@@ -116,3 +116,26 @@ def test_certificates_without_the_nonce_or_that_are_not_certificates():
         "note": "credCert has no 1.2.840.113635.100.8.2 extension"
     }
     assert apple_anonymous.read_certificate(b"junk")["error"].startswith("credCert is not DER X.509")
+
+
+def _safetynet_attestation_object(header: bytes, payload: bytes) -> bytes:
+    from fido2 import cbor
+
+    response = f"{_b64url(header)}.{_b64url(payload)}.{_b64url(b'signature')}".encode()
+    auth_data = hashlib.sha256(b"example.com").digest() + b"\x01" + bytes(4)
+    return cbor.encode(
+        {"fmt": "android-safetynet", "attStmt": {"ver": "14574037", "response": response}, "authData": auth_data}
+    )
+
+
+def test_a_repeated_key_in_the_jws_header_or_payload_is_not_reported():
+    from server.app.decoder import decode_payload_text
+
+    result = decode_payload_text(
+        _safetynet_attestation_object(b'{"alg": "RS256", "alg": "ES256"}', b'{"nonce": "a", "nonce": "b"}').hex()
+    )
+
+    response = result["data"]["attestationStatementDecoded"]["fields"]["response"]
+    assert response["header"]["json"] == {"alg": "ES256"}
+    assert response["payload"]["json"] == {"nonce": "b"}
+    assert "duplicate-json-key" not in [finding["code"] for finding in result["findings"]]
