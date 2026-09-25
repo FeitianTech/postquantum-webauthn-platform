@@ -233,6 +233,29 @@ describe('browser identity edge cases', () => {
     expect(determineIdentity(inputs)).toMatchObject({ name: 'Google Chrome', version: '152' });
   });
 
+  it('gives only the major of a full version list that is itself reduced', async () => {
+    const identity = await identify({
+      userAgent:
+        'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Mobile Safari/537.36',
+      platform: 'Linux armv81',
+      maxTouchPoints: 5,
+      userAgentData: {
+        brands: [{ brand: 'Chromium', version: '152' }, { brand: 'Google Chrome', version: '152' }],
+        mobile: true,
+        platform: 'Android',
+        getHighEntropyValues: async () => ({
+          fullVersionList: [
+            { brand: 'Chromium', version: '152.0.0.0' },
+            { brand: 'Google Chrome', version: '152.0.0.0' },
+          ],
+        }),
+      },
+    });
+
+    expect(identity).toMatchObject({ name: 'Google Chrome', version: '152', system: 'Android' });
+    expect(identity.sources.version).toBe('client-hints');
+  });
+
   it('reads nothing from a missing navigator', async () => {
     await expect(readIdentityInputs(null)).resolves.toEqual({
       userAgent: null,

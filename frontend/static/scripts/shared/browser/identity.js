@@ -150,26 +150,27 @@ function namedBrands(list) {
     return list.filter(entry => entry.brand.trim() !== '' && !GREASE_BRAND.test(entry.brand));
 }
 
+// A reduced version is written "<major>.0.0.0": only the major is known. Reduced
+// user-agent strings write it, and so do browsers that reduce fullVersionList.
+function reducedVersion(version) {
+    const reduced = /^(\d+)\.0\.0\.0$/.exec(version);
+    return reduced ? reduced[1] : version;
+}
+
 // The brand list names the browser; fullVersionList, when granted, gives the full
 // version of the same brand. A brand's version is never taken from another brand.
 function clientHintBrands(inputs) {
     const low = namedBrands(inputs.userAgentData?.brands);
     const full = namedBrands(inputs.highEntropyValues?.fullVersionList);
     const names = low.length > 0 ? low : full;
-    return names.map(({ brand, version }) => ({
-        brand: brand.trim(),
-        version: full.find(entry => entry.brand === brand)?.version || version || null,
-    }));
+    return names.map(({ brand, version }) => {
+        const own = full.find(entry => entry.brand === brand)?.version || version;
+        return { brand: brand.trim(), version: own ? reducedVersion(own) : null };
+    });
 }
 
 function productTokens(ua) {
     return Array.from(ua.matchAll(/([A-Za-z][\w-]*)\/(\d[\w.]*)/g), match => match[1]);
-}
-
-// A reduced user-agent string writes "<major>.0.0.0"; only the major is known.
-function reducedVersion(version) {
-    const reduced = /^(\d+)\.0\.0\.0$/.exec(version);
-    return reduced ? reduced[1] : version;
 }
 
 function fromUserAgentToken(name, version) {
