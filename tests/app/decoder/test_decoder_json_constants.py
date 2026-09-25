@@ -10,7 +10,6 @@ from __future__ import annotations
 import base64
 import io
 import json
-import math
 
 import pytest
 
@@ -116,7 +115,7 @@ def test_client_data_with_nan_in_a_credential_is_read_leniently_and_said_so(clie
     assert body["data"]["clientDataJSON"]["origin"] == "https://x"
 
 
-def test_an_uploaded_metadata_file_with_nan_is_accepted(client, monkeypatch):
+def test_an_uploaded_metadata_file_with_nan_is_refused(client, monkeypatch):
     saved = []
     monkeypatch.setattr(general, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(general, "expand_metadata_entry_payloads", lambda payload: [payload])
@@ -131,5 +130,9 @@ def test_an_uploaded_metadata_file_with_nan_is_accepted(client, monkeypatch):
         content_type="multipart/form-data",
     )
 
-    assert response.status_code == 200
-    assert math.isnan(saved[0]["metadataStatement"]["n"])
+    assert response.status_code == 400
+    assert _strict(response.get_data(as_text=True)) == {
+        "items": [],
+        "errors": ["custom.json: NaN is not JSON (RFC 8259 has no NaN or Infinity)"],
+    }
+    assert saved == []
