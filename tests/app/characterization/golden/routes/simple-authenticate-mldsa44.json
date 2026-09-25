@@ -1080,7 +1080,7 @@
     ],
     [
      "Content-Length",
-     "119"
+     "142"
     ],
     [
      "X-Content-Type-Options",
@@ -1132,11 +1132,12 @@
      }
     }
    ],
-   "bodySha256": "cfef7fe836c0bacd82bba9f83c62702b74208eaa5a53cc10970191497aea82fc",
+   "bodySha256": "54fea46ef33aca08c66aecf6ab990222ac8855f3395309748ef7c40b982bab19",
    "body": {
     "authenticatedCredentialId": "I-x_yx0u_bw6JTjE9_-voaixJvVYFfaqv_zOJg7HAqE",
     "hintsUsed": [],
     "signCount": 2,
+    "signCountStatus": "ok",
     "status": "OK"
    },
    "stored": [

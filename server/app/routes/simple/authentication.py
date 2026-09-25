@@ -200,7 +200,7 @@ def authenticate_complete():
             400,
         )
 
-    rejection = enforce_sign_count(
+    rejection, sign_count_verdict = enforce_sign_count(
         uname,
         authenticated_id_bytes,
         sign_count,
@@ -209,22 +209,27 @@ def authenticate_complete():
     if rejection is not None:
         return rejection
 
-    debug_info = {
-        "hintsUsed": [],
-    }
+    return jsonify(_authenticated_payload(authenticated_id, sign_count, sign_count_verdict))
 
-    response_payload: dict[str, Any] = {
+
+def _authenticated_payload(authenticated_id: str | None, sign_count: int, sign_count_verdict: str) -> dict[str, Any]:
+    """The answer to a verified assertion, with the counter and what the check made of it."""
+
+    return {
         "status": "OK",
-        **debug_info,
+        "hintsUsed": [],
+        "authenticatedCredentialId": authenticated_id,
+        "signCount": sign_count,
+        "signCountStatus": sign_count_verdict,
     }
-    response_payload["authenticatedCredentialId"] = authenticated_id
-    response_payload["signCount"] = sign_count
-
-    return jsonify(response_payload)
 
 
 def enforce_sign_count(uname: Any, credential_id: bytes, sign_count: int, client_sign_count: int | None):
-    """Check ``sign_count`` against the stored counter and store it: ``None``, or the rejection to answer."""
+    """Check ``sign_count`` against the stored counter and store it.
+
+    Returns ``(rejection, status)``: the response to answer instead (or ``None``)
+    and, when the assertion is accepted, the counter status it was accepted with.
+    """
 
     authenticated_id = encode_base64url(credential_id)
     # Check-then-save is compare-and-swap: two authentications that both read
@@ -234,20 +239,21 @@ def enforce_sign_count(uname: Any, credential_id: bytes, sign_count: int, client
         try:
             server_records, version, metadata_session_id = load_server_records(uname)
         except StoredRecordsUnreadable as exc:
-            return _unreadable_counter_rejection(authenticated_id, exc)
+            return _unreadable_counter_rejection(authenticated_id, exc), None
         record_index = find_server_record_index(server_records, credential_id)
         server_record = server_records[record_index] if record_index is not None else None
         stored_sign_count = resolve_stored_sign_count(server_record, client_sign_count)
 
-        if sign_count_status(stored_sign_count, sign_count) == SIGN_COUNT_REGRESSED:
-            return _regressed_counter_rejection(authenticated_id, stored_sign_count, sign_count)
+        verdict = sign_count_status(stored_sign_count, sign_count)
+        if verdict == SIGN_COUNT_REGRESSED:
+            return _regressed_counter_rejection(authenticated_id, stored_sign_count, sign_count), verdict
 
         if server_record is None or record_sign_count(server_record) == sign_count:
-            return None
+            return None, verdict
         server_record[RECORD_SIGN_COUNT_KEY] = sign_count
         try:
             if credentials.save_if_unchanged(uname, server_records, version, session_id=metadata_session_id):
-                return None
+                return None, verdict
         except Exception:
             logger.exception(
                 "Failed to persist signature counter for %s", authenticated_id
@@ -255,7 +261,7 @@ def enforce_sign_count(uname: Any, credential_id: bytes, sign_count: int, client
             return (
                 jsonify({"error": "Unable to persist the signature counter."}),
                 500,
-            )
+            ), None
         logger.info("Signature counter for %s changed while it was being saved; reading it again", authenticated_id)
 
     logger.warning("Rejected assertion for credential %s: its stored counter kept changing", authenticated_id)
@@ -270,7 +276,7 @@ def enforce_sign_count(uname: Any, credential_id: bytes, sign_count: int, client
             }
         ),
         409,
-    )
+    ), None
 
 
 def _unreadable_counter_rejection(authenticated_id: str, exc: Exception):

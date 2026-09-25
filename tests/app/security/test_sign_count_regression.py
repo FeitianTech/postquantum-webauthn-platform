@@ -199,8 +199,8 @@ def test_simple_success_reports_the_counter_state(config_module, credential_stor
 
     assert no_counter.status_code == 200, no_counter.get_json()
     assert increased.status_code == 200, increased.get_json()
-    assert "signCountStatus" not in no_counter.get_json()
-    assert "signCountStatus" not in increased.get_json()
+    assert no_counter.get_json()["signCountStatus"] == "not-supported"
+    assert increased.get_json()["signCountStatus"] == "ok"
 
 
 def test_simple_counter_with_base64url_only_characters_is_read_correctly(config_module, credential_store):
