@@ -76,3 +76,26 @@ def _width(node: Mapping[str, Any]) -> int:
     if precision in _PRECISION_WIDTH:
         return _PRECISION_WIDTH[precision]
     raise ValueError("a float node without its width")
+
+
+def encode(value: float, width: int | None) -> bytes:
+    """``value`` as a CBOR float: at ``width`` (1..3), or at its preferred width when ``None``.
+
+    ``NaN`` is the quiet NaN without a payload at that width. A value the width
+    cannot hold exactly raises ``ValueError``: a notation that says ``1.1_1``
+    names bytes no half-precision float has.
+    """
+
+    if width is None:
+        width = 1 if math.isnan(value) else shortest_width(value)
+    size, fmt = WIDTHS[width]
+    if math.isnan(value):
+        packed = QUIET_NAN[width].to_bytes(size, "big")
+    else:
+        try:
+            packed = struct.pack(fmt, value)
+        except (OverflowError, struct.error):
+            packed = b""
+        if not packed or struct.unpack(fmt, packed)[0] != value:
+            raise ValueError(f"{decimal(value)} is not exact at the width _{width} names")
+    return bytes([0xF8 + width]) + packed
