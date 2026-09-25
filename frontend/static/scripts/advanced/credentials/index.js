@@ -222,8 +222,18 @@ export function updateCredentialsDisplay() {
     });
 }
 
+// The explorer's side of "show this authenticator": switchTab, highlightRow,
+// resolveEntry, finaliseHighlight. main.js sets it; until then the credential
+// view says the integration is unavailable.
+let mdsNavigation = {};
+
+export function setMdsNavigation(navigation) {
+    mdsNavigation = navigation && typeof navigation === 'object' ? { ...navigation } : {};
+}
+
 export function navigateToMdsAuthenticator(aaguid) {
     return navigateToMdsAuthenticatorRuntime(aaguid, {
+        ...mdsNavigation,
         closeCredentialModal,
     });
 }

@@ -38,6 +38,13 @@ export function clearAaguidStatus(statusEl) {
     }
 }
 
+const functionOrNull = value => (typeof value === 'function' ? value : null);
+
+/**
+ * Show an authenticator in the FIDO MDS explorer. deps: closeCredentialModal,
+ * and from the explorer (main.js wires them) switchTab, highlightRow,
+ * resolveEntry and finaliseHighlight.
+ */
 export function navigateToMdsAuthenticatorRuntime(aaguid, deps = {}) {
     const {
         closeCredentialModal,
@@ -47,13 +54,8 @@ export function navigateToMdsAuthenticatorRuntime(aaguid, deps = {}) {
         return;
     }
 
-    const switchToMdsTab = typeof window.switchTab === 'function'
-        ? window.switchTab
-        : null;
-
-    const highlightRow = typeof window.highlightMdsAuthenticatorRow === 'function'
-        ? window.highlightMdsAuthenticatorRow
-        : null;
+    const switchToMdsTab = functionOrNull(deps.switchTab);
+    const highlightRow = functionOrNull(deps.highlightRow);
 
     if (!highlightRow) {
         console.warn('Unable to highlight authenticator row: integration unavailable.');
@@ -62,9 +64,7 @@ export function navigateToMdsAuthenticatorRuntime(aaguid, deps = {}) {
 
     const modalBody = document.getElementById('modalBody');
     const statusEl = modalBody ? modalBody.querySelector('.credential-aaguid-status') : null;
-    const resolveEntryByAaguidGlobal = typeof window.resolveMdsEntryByAaguid === 'function'
-        ? window.resolveMdsEntryByAaguid
-        : null;
+    const resolveEntry = functionOrNull(deps.resolveEntry);
 
     let clearTimer = null;
     const scheduleClear = () => {
@@ -118,9 +118,9 @@ export function navigateToMdsAuthenticatorRuntime(aaguid, deps = {}) {
             }
 
             let resolvedEntry = null;
-            if (resolveEntryByAaguidGlobal) {
+            if (resolveEntry) {
                 try {
-                    resolvedEntry = await resolveEntryByAaguidGlobal(aaguid);
+                    resolvedEntry = await resolveEntry(aaguid);
                 } catch (error) {
                     console.warn('Failed to pre-resolve authenticator metadata entry:', error);
                 }
@@ -193,9 +193,7 @@ export function navigateToMdsAuthenticatorRuntime(aaguid, deps = {}) {
             await waitForNextFrame(2);
 
             let finalised = false;
-            const finaliseHighlight = typeof window.finaliseMdsAuthenticatorHighlight === 'function'
-                ? window.finaliseMdsAuthenticatorHighlight
-                : null;
+            const finaliseHighlight = functionOrNull(deps.finaliseHighlight);
 
             if (finaliseHighlight) {
                 try {

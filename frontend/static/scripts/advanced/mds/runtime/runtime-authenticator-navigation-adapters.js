@@ -1,8 +1,6 @@
 import {
     finaliseHighlightedAuthenticatorRowInState,
-    focusAuthenticatorByAaguidInState,
     highlightAuthenticatorRowByAaguidInState,
-    openAuthenticatorModalByAaguidInState,
     resolveEntryByAaguidInState,
 } from '../authenticator-navigation.js';
 
@@ -15,9 +13,7 @@ export function createAuthenticatorNavigationAdapters(config = {}) {
         loadPromise,
         hasInlineDetail,
         resolveMetadataEntry,
-        openAuthenticatorModal,
         resetFilters,
-        showAuthenticatorDetail,
         hideAuthenticatorDetail,
         waitForElementVisible,
         applyFilters,
@@ -35,21 +31,6 @@ export function createAuthenticatorNavigationAdapters(config = {}) {
             loadPromise,
             hasInlineDetail,
             resolveMetadataEntry,
-        });
-    }
-
-    async function openAuthenticatorModalByAaguid(aaguid) {
-        return openAuthenticatorModalByAaguidInState(aaguid, {
-            resolveEntryByAaguid,
-            openAuthenticatorModal,
-        });
-    }
-
-    async function focusAuthenticatorByAaguid(aaguid) {
-        return focusAuthenticatorByAaguidInState(aaguid, {
-            resolveEntryByAaguid,
-            resetFilters,
-            showAuthenticatorDetail,
         });
     }
 
@@ -77,8 +58,6 @@ export function createAuthenticatorNavigationAdapters(config = {}) {
 
     return {
         resolveEntryByAaguid,
-        openAuthenticatorModalByAaguid,
-        focusAuthenticatorByAaguid,
         highlightAuthenticatorRowByAaguid,
         finaliseHighlightedAuthenticatorRow,
     };

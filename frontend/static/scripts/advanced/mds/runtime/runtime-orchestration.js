@@ -203,13 +203,6 @@ export function setupMdsRuntimeOrchestration({
             getInitialSnapshotPayload,
             applyExplorerSnapshot: dataBindings.applyExplorerSnapshot,
             loadMdsData: dataBindings.loadMdsData,
-            openAuthenticatorModalByAaguid: uiBindings.openAuthenticatorModalByAaguid,
-            focusAuthenticatorByAaguid: uiBindings.focusAuthenticatorByAaguid,
-            highlightAuthenticatorRowByAaguid: uiBindings.highlightAuthenticatorRowByAaguid,
-            finaliseHighlightedAuthenticatorRow: uiBindings.finaliseHighlightedAuthenticatorRow,
-            waitForMetadataLoad: dataBindings.waitForMetadataLoad,
-            getMdsLoadStateSnapshot: dataBindings.getMdsLoadStateSnapshot,
-            resolveEntryByAaguid: uiBindings.resolveEntryByAaguid,
         }),
     );
 

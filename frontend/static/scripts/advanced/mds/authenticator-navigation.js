@@ -41,30 +41,6 @@ export async function resolveEntryByAaguidInState(aaguid, deps = {}) {
     return cached || null;
 }
 
-export async function openAuthenticatorModalByAaguidInState(aaguid, deps = {}) {
-    const { resolveEntryByAaguid, openAuthenticatorModal } = deps;
-
-    const entry = await resolveEntryByAaguid(aaguid);
-    if (!entry) {
-        return null;
-    }
-    await openAuthenticatorModal(entry);
-    return entry;
-}
-
-export async function focusAuthenticatorByAaguidInState(aaguid, deps = {}) {
-    const { resolveEntryByAaguid, resetFilters, showAuthenticatorDetail } = deps;
-
-    const entry = await resolveEntryByAaguid(aaguid);
-    if (!entry) {
-        return null;
-    }
-
-    resetFilters();
-    showAuthenticatorDetail(entry, { scrollIntoView: true });
-    return entry;
-}
-
 export async function highlightAuthenticatorRowByAaguidInState(aaguid, options = {}, deps = {}) {
     const {
         resolveEntryByAaguid,

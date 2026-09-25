@@ -175,6 +175,9 @@ const {
     waitForMetadataLoad: waitForMetadataLoadInternal,
     renderTable,
     findRowByKey,
+    highlightAuthenticatorRowByAaguid,
+    finaliseHighlightedAuthenticatorRow,
+    resolveEntryByAaguid,
 } = setupMdsRuntimeOrchestration({
     getState, setState, getMdsData, setMdsData, setFilteredData, getHasLoaded, setHasLoaded,
     getIsLoading, setIsLoading, getLoadPromise, setLoadPromise, setExplorerPreloadPromise,
@@ -198,6 +201,10 @@ const {
 export async function waitForMetadataLoad() {
     return waitForMetadataLoadInternal();
 }
+
+// What the credential detail view uses to show an authenticator in the explorer;
+// main.js hands them to advanced/credentials (setMdsNavigation).
+export { finaliseHighlightedAuthenticatorRow, highlightAuthenticatorRowByAaguid, resolveEntryByAaguid };
 
 function applyFilters(options = {}) {
     return sortFilterController.applyFilters(options);

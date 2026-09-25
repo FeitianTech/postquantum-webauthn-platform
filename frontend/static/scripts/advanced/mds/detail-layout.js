@@ -1,21 +1,7 @@
+import { updateGlobalScrollLock } from '../../shared/ui/core.js';
+
 export function notifyGlobalScrollLock() {
-    if (typeof window !== 'undefined' && typeof window.updateGlobalScrollLock === 'function') {
-        window.updateGlobalScrollLock();
-        return;
-    }
-
-    if (typeof document === 'undefined') {
-        return;
-    }
-
-    const overlayActive = document.getElementById('json-editor-overlay')?.classList.contains('active');
-    const modalActive = document.querySelector('.modal.open');
-    const mdsModalActive = document.querySelector('.mds-modal:not([hidden])');
-    const detailPageActive = document.querySelector('.mds-detail-page.mds-detail-page--open');
-    const shouldLock = Boolean(overlayActive || modalActive || mdsModalActive || detailPageActive);
-
-    const targets = [document.body, document.documentElement].filter(Boolean);
-    targets.forEach(target => target.classList.toggle('modal-open', shouldLock));
+    updateGlobalScrollLock();
 }
 
 export function resizeCertificateTextareas(state) {

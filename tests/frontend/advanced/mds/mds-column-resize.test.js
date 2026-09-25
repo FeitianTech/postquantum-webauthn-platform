@@ -7,7 +7,8 @@ vi.mock('../../../../frontend/static/scripts/shared/utils/loader.js', () => ({
   loaderSetProgress: vi.fn(),
 }));
 
-vi.mock('../../../../frontend/static/scripts/shared/ui/core.js', () => ({
+vi.mock('../../../../frontend/static/scripts/shared/ui/core.js', async (importOriginal) => ({
+  updateGlobalScrollLock: (await importOriginal()).updateGlobalScrollLock,
   initializeStickyHeaderForElement: vi.fn(() => {
     const miniHeader = document.createElement('div');
     const miniInner = document.createElement('div');

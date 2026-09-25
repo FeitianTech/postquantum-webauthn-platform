@@ -149,13 +149,6 @@ export function createMdsDataExplorerAdapters(config = {}) {
         return getHasLoaded();
     }
 
-    function getMdsLoadStateSnapshot() {
-        return {
-            hasLoaded: getHasLoaded(),
-            isLoading: getIsLoading(),
-        };
-    }
-
     return {
         resetExplorerState,
         applyExplorerSnapshot,
@@ -163,6 +156,5 @@ export function createMdsDataExplorerAdapters(config = {}) {
         resolveMetadataEntry,
         loadMdsData,
         waitForMetadataLoad,
-        getMdsLoadStateSnapshot,
     };
 }

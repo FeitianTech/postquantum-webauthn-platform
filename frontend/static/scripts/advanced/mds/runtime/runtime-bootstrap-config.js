@@ -9,13 +9,6 @@ export function createBootstrapRuntimeConfig({
     getInitialSnapshotPayload,
     applyExplorerSnapshot,
     loadMdsData,
-    openAuthenticatorModalByAaguid,
-    focusAuthenticatorByAaguid,
-    highlightAuthenticatorRowByAaguid,
-    finaliseHighlightedAuthenticatorRow,
-    waitForMetadataLoad,
-    getMdsLoadStateSnapshot,
-    resolveEntryByAaguid,
 }) {
     return {
         handleWindowScroll,
@@ -39,12 +32,5 @@ export function createBootstrapRuntimeConfig({
         getInitialSnapshotPayload,
         applyExplorerSnapshot,
         loadMdsData,
-        openAuthenticatorModalByAaguid,
-        focusAuthenticatorByAaguid,
-        highlightAuthenticatorRowByAaguid,
-        finaliseHighlightedAuthenticatorRow,
-        waitForMetadataLoad,
-        getMdsLoadStateSnapshot,
-        resolveEntryByAaguid,
     };
 }

@@ -90,10 +90,14 @@ vi.mock('../../frontend/static/scripts/advanced/credentials/index.js', () => ({
   deleteCredential: vi.fn(),
   clearAllCredentials: vi.fn(),
   updateAllowCredentialsDropdown: vi.fn(),
+  setMdsNavigation: vi.fn(),
 }));
 
 vi.mock('../../frontend/static/scripts/advanced/mds/index.js', () => ({
   waitForMetadataLoad: vi.fn().mockResolvedValue(true),
+  highlightAuthenticatorRowByAaguid: vi.fn(),
+  finaliseHighlightedAuthenticatorRow: vi.fn(),
+  resolveEntryByAaguid: vi.fn(),
 }));
 
 vi.mock('../../frontend/static/scripts/advanced/auth/hints.js', () => ({
@@ -130,12 +134,17 @@ vi.mock('../../frontend/static/scripts/shared/utils/loader.js', () => ({
 import { createFakeAllowCredential, createFakeExcludeCredential, removeFakeAllowCredential, removeFakeExcludeCredential } from '../../frontend/static/scripts/advanced/auth/exclude-credentials.js';
 import { checkLargeBlobCapability, randomizeChallenge, randomizeLargeBlobWrite, randomizePrfEval, updateAuthenticationExtensionAvailability, updateFieldLabels, validateChallengeInputs, validateLargeBlobWriteInput, validatePrfEvalInputs, validatePrfInputs, validateUserIdInput } from '../../frontend/static/scripts/advanced/auth/forms.js';
 import { registerHintsChangeCallback } from '../../frontend/static/scripts/advanced/auth/hints.js';
-import { waitForMetadataLoad } from '../../frontend/static/scripts/advanced/mds/index.js';
+import {
+  finaliseHighlightedAuthenticatorRow,
+  highlightAuthenticatorRowByAaguid,
+  resolveEntryByAaguid,
+  waitForMetadataLoad,
+} from '../../frontend/static/scripts/advanced/mds/index.js';
 import { initializeAdvancedSettingsNavigation } from '../../frontend/static/scripts/advanced/ui/settings-nav.js';
-import { loadSavedCredentials, updateAllowCredentialsDropdown } from '../../frontend/static/scripts/advanced/credentials/index.js';
+import { loadSavedCredentials, setMdsNavigation, updateAllowCredentialsDropdown } from '../../frontend/static/scripts/advanced/credentials/index.js';
 import { updateJsonEditor, updateJsonFromForm } from '../../frontend/static/scripts/advanced/editor/index.js';
 import { handleJsonEditorKeydown } from '../../frontend/static/scripts/advanced/editor/utils.js';
-import { initializeNavigationMenu } from '../../frontend/static/scripts/shared/ui/navigation.js';
+import { initializeNavigationMenu, switchTab } from '../../frontend/static/scripts/shared/ui/navigation.js';
 import { initializeSimpleUsername, randomizeUserIdentity } from '../../frontend/static/scripts/shared/auth/username.js';
 import { closeModal, initializeStickyHeader, toggleJsonEditorExpansion } from '../../frontend/static/scripts/shared/ui/core.js';
 import { initializeAnalyzeBrowser } from '../../frontend/static/scripts/shared/browser/analyze.js';
@@ -222,6 +231,12 @@ describe('main startup and wiring', () => {
 
     expect(initializeAnalyzeBrowser).toHaveBeenCalledTimes(1);
     expect(registerHintsChangeCallback).toHaveBeenCalledTimes(1);
+    expect(setMdsNavigation).toHaveBeenCalledWith({
+      switchTab,
+      highlightRow: highlightAuthenticatorRowByAaguid,
+      resolveEntry: resolveEntryByAaguid,
+      finaliseHighlight: finaliseHighlightedAuthenticatorRow,
+    });
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await vi.runAllTimersAsync();

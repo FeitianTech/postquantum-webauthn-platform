@@ -25,13 +25,6 @@ function createBootstrapDeps(overrides = {}) {
     getInitialSnapshotPayload: vi.fn(() => null),
     applyExplorerSnapshot: vi.fn(),
     loadMdsData: vi.fn(() => Promise.resolve()),
-    openAuthenticatorModalByAaguid: vi.fn(),
-    focusAuthenticatorByAaguid: vi.fn(),
-    highlightAuthenticatorRowByAaguid: vi.fn(),
-    finaliseHighlightedAuthenticatorRow: vi.fn(),
-    waitForMetadataLoad: vi.fn(),
-    getMdsLoadStateSnapshot: vi.fn(),
-    resolveEntryByAaguid: vi.fn(),
     ...overrides,
   };
 }
