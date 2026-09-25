@@ -1,10 +1,8 @@
-"""CTAP message classification and interpretation for the decoder."""
+"""CTAP messages in the decoder: the command or status byte, the views of each message, the payload read."""
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
-
-from fido2.webauthn import AuthenticatorData
 
 from .. import ctap_tables
 from . import (
@@ -16,40 +14,20 @@ from . import (
     pipeline,
     response,
 )
-from .cbor_parser import _CborDecodingError, _structure_to_value
+from .cbor_parser import _structure_to_value
+from .ctap_auth_data import _format_auth_data_for_expanded_json
+from .ctap_classify import (
+    _classify_ctap_payload,
+    _looks_like_get_assertion_request,
+    _looks_like_make_credential_request,
+)
 from .ctap_prefix import _extract_ctap_prefix, _is_padding_bytes, prefix_not_read
 from .ctap_responses import _interpret_get_assertion_map, _interpret_make_credential_map
 from .findings import _attach_findings, _trailing_findings
-from .keys import MISSING, JsonLabel, json_items, key_identity, qualified_key_text
+from .keys import JsonLabel, json_items, key_identity, qualified_key_text
 from .keys import coerce_cbor_bytes as _coerce_cbor_bytes
-from .keys import get_mapping_entry as _get_mapping_entry
 from .keys import hex_json_safe as _hex_json_safe
 from .keys import stringify_mapping_keys as _stringify_mapping_keys
-
-
-def _extract_mapping_string(value: Mapping[Any, Any], keys: Iterable[Any]) -> str | None:
-    if not isinstance(value, Mapping):
-        return None
-    candidate = _get_mapping_entry(value, *keys)
-    if candidate is MISSING:
-        return None
-    if isinstance(candidate, str):
-        stripped = candidate.strip()
-        if stripped:
-            return stripped
-    return None
-
-
-def _extract_mapping_bytes(value: Mapping[Any, Any], keys: Iterable[Any]) -> bytes | None:
-    if not isinstance(value, Mapping):
-        return None
-    candidate = _get_mapping_entry(value, *keys)
-    if candidate is MISSING:
-        return None
-    candidate_bytes = _coerce_cbor_bytes(candidate)
-    if candidate_bytes is not None:
-        return candidate_bytes
-    return None
 
 
 def _convert_optional_ctap_field(value: Any) -> Any:
@@ -135,91 +113,6 @@ def _build_labeled_ctap_map(
     return result
 
 
-# The shapes read integer members only: CTAP 2.2 section 6 numbers them, and a
-# text "fmt" or "rpId" is some other map's key (a WebAuthn attestation object's).
-
-
-def _looks_like_make_credential_request(value: Mapping[Any, Any]) -> bool:
-    # clientDataHash (1) is bytes; rp (2) is a map, where a response has authData bytes.
-    if _extract_mapping_bytes(value, (1,)) is None or _extract_mapping_bytes(value, (2,)) is not None:
-        return False
-    return _get_mapping_entry(value, 2) is not MISSING and _get_mapping_entry(value, 3) is not MISSING
-
-
-def _looks_like_get_assertion_request(value: Mapping[Any, Any]) -> bool:
-    # rpId (1) and clientDataHash (2); a byte-string 3 is a response's signature.
-    if _extract_mapping_string(value, (1,)) is None or _extract_mapping_bytes(value, (2,)) is None:
-        return False
-    return _extract_mapping_bytes(value, (3,)) is None
-
-
-def _looks_like_make_credential_output(value: Mapping[Any, Any]) -> bool:
-    fmt_value = _extract_mapping_string(value, (1,))
-    auth_data_bytes = _extract_mapping_bytes(value, (2,))
-    att_stmt_value = _get_mapping_entry(value, 3)
-    if att_stmt_value is MISSING:
-        att_stmt_value = None
-    att_stmt_bytes = _coerce_cbor_bytes(att_stmt_value)
-    att_stmt_map = att_stmt_value if isinstance(att_stmt_value, Mapping) else None
-    compound = fmt_value == "compound" and isinstance(att_stmt_value, list)
-    return fmt_value is not None and auth_data_bytes is not None and (
-        att_stmt_map is not None or att_stmt_bytes is not None or compound
-    )
-
-
-def _looks_like_get_assertion_output(value: Mapping[Any, Any]) -> bool:
-    auth_data_bytes = _extract_mapping_bytes(value, (2,))
-    signature_bytes = _extract_mapping_bytes(value, (3,))
-    return auth_data_bytes is not None and signature_bytes is not None
-
-
-def _classify_ctap_response(value: Mapping[Any, Any]) -> str:
-    if _looks_like_make_credential_output(value):
-        return "make_credential_output"
-    if _looks_like_get_assertion_output(value):
-        return "get_assertion_output"
-    if get_info.looks_like_get_info(value):
-        return "get_info_output"
-    return "other"
-
-
-def _classify_ctap_map(value: Mapping[Any, Any]) -> str:
-    classification = _classify_ctap_response(value)
-    if classification != "other":
-        return classification
-    if _looks_like_make_credential_request(value):
-        return "make_credential_input"
-    if _looks_like_get_assertion_request(value):
-        return "get_assertion_input"
-    return "other"
-
-
-# A command byte says which request its parameters are, whatever their shape.
-_REQUEST_KIND_BY_COMMAND = {
-    "MAKE_CREDENTIAL": "make_credential_input",
-    "GET_ASSERTION": "get_assertion_input",
-}
-
-
-def _classify_ctap_payload(value: Any, prefix: Mapping[str, Any] | None) -> str:
-    """Name the CTAP message ``value`` is, reading the byte before it first.
-
-    A command byte decides: its parameters are that command's request. A
-    status byte says only that this is a response, not to which command, so
-    the response shapes are the only candidates. With no prefix byte, all four
-    shapes are.
-    """
-
-    if not isinstance(value, Mapping):
-        return "other"
-    kind = prefix.get("kind") if isinstance(prefix, Mapping) else None
-    if kind == "command":
-        return _REQUEST_KIND_BY_COMMAND.get(prefix.get("command"), "other")
-    if kind == "status":
-        return _classify_ctap_response(value)
-    return _classify_ctap_map(value)
-
-
 def _convert_ctap_allow_list(entry: Any) -> Any:
     if isinstance(entry, Sequence) and not isinstance(entry, (str, bytes, bytearray)):
         return [_convert_ctap_credential_descriptor(item) for item in entry]
@@ -259,95 +152,6 @@ def _convert_ctap_user_field(value: Any) -> Any:
     if value is None:
         return None
     return _convert_ctap_user(value)
-
-
-def _parse_authenticator_data_bytes(data: bytes) -> tuple[dict[str, Any], bytes, bytes]:
-    """Read authenticator data as far as its flags describe it.
-
-    Returns the details, the bytes the flags account for, and any bytes after
-    them. The credential public key and the extensions are read with the strict
-    parser; one that is not well-formed is shown as hex with a ``parseError``
-    saying where, never completed or skipped.
-    """
-
-    details: dict[str, Any] = {}
-    if len(data) < 37:
-        details["parseError"] = "Authenticator data shorter than minimum header."
-        return details, data, b""
-
-    rp_id_hash = data[:32]
-    flags_byte = data[32]
-    sign_count = int.from_bytes(data[33:37], "big")
-    offset = 37
-
-    details["rpIdHash"] = rp_id_hash.hex()
-    details["flags"] = {
-        "value": flags_byte,
-        "bitfield": f"0b{flags_byte:08b}",
-        "UP": bool(flags_byte & AuthenticatorData.FLAG.UP),
-        "UV": bool(flags_byte & AuthenticatorData.FLAG.UV),
-        "BE": bool(flags_byte & AuthenticatorData.FLAG.BE),
-        "BS": bool(flags_byte & AuthenticatorData.FLAG.BS),
-        "AT": bool(flags_byte & AuthenticatorData.FLAG.AT),
-        "ED": bool(flags_byte & AuthenticatorData.FLAG.ED),
-    }
-    details["signCount"] = sign_count
-
-    if flags_byte & AuthenticatorData.FLAG.AT:
-        attested: dict[str, Any] = {}
-        details["attestedCredentialData"] = attested
-        remaining = len(data) - offset
-        if remaining < 18:
-            attested["parseError"] = (
-                f"Attested credential data truncated: it needs at least 18 bytes, {remaining} remain."
-            )
-            offset = len(data)
-        else:
-            aaguid = data[offset : offset + 16]
-            declared_len = int.from_bytes(data[offset + 16 : offset + 18], "big")
-            offset += 18
-            actual_len = min(declared_len, len(data) - offset)
-            credential_id = data[offset : offset + actual_len]
-            offset += actual_len
-
-            attested["aaguid"] = aaguid.hex()
-            attested["credentialIdDeclaredLength"] = declared_len
-            attested["credentialIdActualLength"] = actual_len
-            attested["credentialId"] = credential_id.hex()
-            if actual_len != declared_len:
-                attested["lengthMismatch"] = True
-                attested["parseError"] = (
-                    f"The credential ID declares {declared_len} bytes; {actual_len} remain."
-                )
-            elif offset < len(data):
-                offset = _read_embedded_cbor(data, offset, attested, "credentialPublicKey")
-
-    if flags_byte & AuthenticatorData.FLAG.ED and offset < len(data):
-        offset = _read_embedded_cbor(data, offset, details, "extensions")
-
-    return details, data[:offset], data[offset:]
-
-
-def _read_embedded_cbor(data: bytes, offset: int, target: dict[str, Any], field: str) -> int:
-    try:
-        node, end, _ = cbor_parser.decode_item(data, offset)
-    except _CborDecodingError as exc:
-        target[field] = data[offset:].hex()
-        target["parseError"] = (
-            f"{field} is not well-formed CBOR at authData offset {exc.offset}: {exc.reason}"
-        )
-        return len(data)
-    target[field] = _hex_json_safe(_structure_to_value(node))
-    return end
-
-
-def _format_auth_data_for_expanded_json(auth_data_bytes: bytes) -> tuple[dict[str, Any], bytes]:
-    details, trimmed, trailing = _parse_authenticator_data_bytes(auth_data_bytes)
-    formatted: dict[str, Any] = dict(details)
-    formatted.setdefault("raw", trimmed.hex())
-    if trailing:
-        formatted["trailingBytesHex"] = trailing.hex()
-    return formatted, trailing
 
 
 def _format_att_stmt_for_expanded_json(att_stmt: Any) -> dict[str, Any]:
