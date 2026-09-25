@@ -6,6 +6,7 @@ import {
     escapeHtml,
 } from '../ui/display-utils.js';
 import {closeModal, openModal} from '../../shared/ui/core.js';
+import {el} from '../../shared/ui/dom.js';
 import {
     formatCertificateDetails,
     autoResizeCertificateTextareas,
@@ -358,7 +359,15 @@ export function bindRegistrationDetailButtons(scope) {
     }
 }
 
-function openRegistrationDetailModal(title, bodyHtml) {
+export function certificateTextarea(text) {
+    return el('textarea', {
+        className: 'certificate-textarea',
+        attrs: { readonly: true, spellcheck: 'false', wrap: 'soft' },
+        text,
+    });
+}
+
+function openRegistrationDetailModal(title, body) {
     const modal = document.getElementById('registrationDetailModal');
     const titleEl = document.getElementById('registrationDetailModalTitle');
     const bodyEl = document.getElementById('registrationDetailModalBody');
@@ -367,7 +376,7 @@ function openRegistrationDetailModal(title, bodyHtml) {
     }
 
     titleEl.textContent = title;
-    bodyEl.innerHTML = bodyHtml;
+    bodyEl.replaceChildren(body);
     openModal('registrationDetailModal');
 
     const resize = () => autoResizeCertificateTextareas(bodyEl);
@@ -390,25 +399,28 @@ export function openAttestationCertificateDetail(index) {
     const parsed = normalised.parsedX5c && typeof normalised.parsedX5c === 'object'
         ? normalised.parsedX5c
         : {};
-    const sections = [];
     const errorMessage = typeof parsed.error === 'string' && parsed.error.trim() !== ''
         ? parsed.error.trim()
         : '';
     const summary = formatCertificateDetails(parsed);
 
+    let body;
     if (summary && summary.trim() !== '') {
-        sections.push(`<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${escapeHtml(summary)}</textarea>`);
+        body = certificateTextarea(summary);
     } else if (errorMessage) {
-        sections.push(`<div style="color: #dc3545; font-size: 0.9rem;">${escapeHtml(errorMessage)}</div>`);
+        body = el('div', { style: 'color: #dc3545; font-size: 0.9rem;', text: errorMessage });
     } else {
-        sections.push('<div style="font-style: italic; color: #6c757d;">No decoded certificate details available.</div>');
+        body = el('div', {
+            style: 'font-style: italic; color: #6c757d;',
+            text: 'No decoded certificate details available.',
+        });
     }
 
     const title = singleCertificate
         ? 'Attestation Certificate'
         : `Attestation Certificate ${index + 1}`;
 
-    openRegistrationDetailModal(title, sections.join(''));
+    openRegistrationDetailModal(title, body);
 }
 
 export function openAuthenticatorDataDetail() {
@@ -417,11 +429,7 @@ export function openAuthenticatorDataDetail() {
         return;
     }
 
-    const sections = [];
-    const jsonString = escapeHtml(JSON.stringify(data, null, 2));
-    sections.push(`<textarea class="certificate-textarea" readonly spellcheck="false" wrap="soft">${jsonString}</textarea>`);
-
-    openRegistrationDetailModal('Authenticator Data', sections.join(''));
+    openRegistrationDetailModal('Authenticator Data', certificateTextarea(JSON.stringify(data, null, 2)));
 }
 
 export function closeRegistrationDetailModalRuntime() {

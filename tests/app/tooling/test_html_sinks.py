@@ -24,9 +24,6 @@ _INSERT = re.compile(r"\binsertAdjacentHTML\s*\(")
 
 # (path under frontend/static/scripts, the right-hand side as written) -> reason.
 ALLOWED: dict[tuple[str, str], str] = {
-    ("advanced/credential-display/registration-compose-runtime.js", "bodyHtml"): (
-        "the certificate and authenticator-data sub-modal, values escaped; goes when it is built as DOM"
-    ),
     ("advanced/credential-display/credential-detail-runtime/entry.js", "finalDetailsHtml"): (
         "the credential detail modal, including registration HTML replayed from storage"
     ),
