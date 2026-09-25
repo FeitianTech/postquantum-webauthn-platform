@@ -1,4 +1,5 @@
 import { state } from '../state.js';
+import { Base64Error, forgivingBase64ToBytes } from './base64.js';
 
 export function isValidHex(str) {
     return /^[0-9a-fA-F]*$/.test(str) && str.length > 0;
@@ -22,21 +23,10 @@ export function hexToBase64Url(hexString) {
     return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
+// Tolerant of either alphabet, padding and whitespace: for values a person typed.
 export function base64UrlToHex(base64url) {
     if (!base64url) return '';
-
-    let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-    while (base64.length % 4) {
-        base64 += '=';
-    }
-
-    const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-
-    return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    return bytesToHex(forgivingBase64ToBytes(base64url));
 }
 
 export function base64ToBase64Url(base64) {
@@ -77,23 +67,17 @@ export function hexToJs(hexString) {
     return `new Uint8Array([${bytes.join(', ')}])`;
 }
 
+// Standard base64, tolerant of padding and whitespace: for values a person typed.
 export function base64ToHex(base64) {
     if (!base64) return '';
-    const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+    if (/[-_]/.test(base64)) {
+        throw new Base64Error('base64 has a base64url character');
     }
-    return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    return bytesToHex(forgivingBase64ToBytes(base64));
 }
 
 export function base64UrlToHexFixed(base64url) {
-    if (!base64url) return '';
-    let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-    while (base64.length % 4) {
-        base64 += '=';
-    }
-    return base64ToHex(base64);
+    return base64UrlToHex(base64url);
 }
 
 export function jsToHex(jsString) {
@@ -157,22 +141,15 @@ export function hexToUint8Array(hex) {
 
 export function base64ToUint8Array(base64) {
     if (!base64) return null;
-    const normalized = base64.replace(/\s+/g, '');
-    const binaryString = atob(normalized);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+    if (/[-_]/.test(base64)) {
+        throw new Base64Error('base64 has a base64url character');
     }
-    return bytes;
+    return forgivingBase64ToBytes(base64);
 }
 
 export function base64UrlToUint8Array(base64url) {
     if (!base64url) return null;
-    let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-    while (base64.length % 4) {
-        base64 += '=';
-    }
-    return base64ToUint8Array(base64);
+    return forgivingBase64ToBytes(base64url);
 }
 
 export function base64UrlToUtf8String(base64url) {

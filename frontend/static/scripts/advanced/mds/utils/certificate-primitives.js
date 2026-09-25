@@ -1,4 +1,5 @@
 import { base64UrlToBytes } from '../../../shared/utils/base64.js';
+
 export function createSummaryItem(label, value, options = {}) {
     if (!label) {
         return null;
