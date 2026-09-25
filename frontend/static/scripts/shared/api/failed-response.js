@@ -31,9 +31,11 @@ const START_AGAIN = 'Start the ceremony again.';
 const CEREMONY_STATE = /state not found|has expired|already been used/i;
 const SAYS_WHAT_TO_DO = /\b(try again|restart|start (?:it|the [a-z]+) again)\b/i;
 
+// `context` names the step that failed ("Registration failed"); the message is
+// then "context: text".
 export class FailedResponseError extends Error {
-    constructor(failure) {
-        super(failure.text);
+    constructor(failure, context = '') {
+        super(context ? `${context}: ${failure.text}` : failure.text);
         this.name = 'FailedResponseError';
         this.failure = failure;
     }
@@ -130,6 +132,6 @@ export async function readFailedResponse(response) {
 }
 
 /** Read `response` and throw it as a FailedResponseError. */
-export async function throwFailedResponse(response) {
-    throw new FailedResponseError(await readFailedResponse(response));
+export async function throwFailedResponse(response, context = '') {
+    throw new FailedResponseError(await readFailedResponse(response), context);
 }
