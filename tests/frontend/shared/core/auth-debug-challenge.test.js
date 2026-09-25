@@ -14,6 +14,7 @@ function clientDataBuffer(challenge) {
 
 function loggedChallenge(print, credential) {
   const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+  log.mockClear();
   print(credential, {}, {});
   const line = log.mock.calls.find((call) => call[0] === 'challenge hex code:');
   return line ? line[1] : undefined;
@@ -30,7 +31,17 @@ describe('the challenge printed after a ceremony', () => {
       getClientExtensionResults: () => ({}),
     };
 
-    expect(loggedChallenge(printAuthenticationDebug, credential)).toBe('');
-    expect(loggedChallenge(printRegistrationDebug, credential)).toBe('');
+    expect(loggedChallenge(printAuthenticationDebug, credential)).toBe('fbff0102');
+    expect(loggedChallenge(printRegistrationDebug, credential)).toBe('fbff0102');
+  });
+
+  it('is read from a typed array too, and is empty when there is nothing to read', () => {
+    const view = { response: { clientDataJSON: new Uint8Array(clientDataBuffer('AQID')) }, getClientExtensionResults: () => ({}) };
+    const unreadable = { response: { clientDataJSON: 'not base64url!' }, getClientExtensionResults: () => ({}) };
+    const missing = { getClientExtensionResults: () => ({}) };
+
+    expect(loggedChallenge(printAuthenticationDebug, view)).toBe('010203');
+    expect(loggedChallenge(printAuthenticationDebug, unreadable)).toBe('');
+    expect(loggedChallenge(printRegistrationDebug, missing)).toBe('');
   });
 });
