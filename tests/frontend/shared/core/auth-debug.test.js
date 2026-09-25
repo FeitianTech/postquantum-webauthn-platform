@@ -9,6 +9,7 @@ import {
   printRegistrationDebug,
 } from '../../../../frontend/static/scripts/shared/debug/auth.js';
 import { extractHexFromJsonFormat } from '../../../../frontend/static/scripts/advanced/credentials/utils.js';
+import { state } from '../../../../frontend/static/scripts/shared/state.js';
 
 function toBase64Url(text) {
   return btoa(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -20,13 +21,13 @@ function collectLogs(logSpy) {
 
 describe('auth-debug', () => {
   beforeEach(() => {
-    window.lastFakeCredLength = 0;
+    state.lastFakeCredLength = 0;
   });
 
   it('prints registration debug details from extensions and server payloads', () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    window.lastFakeCredLength = 128;
+    state.lastFakeCredLength = 128;
     const credential = {
       getClientExtensionResults: () => ({
         credProps: { rk: true },
@@ -99,7 +100,7 @@ describe('auth-debug', () => {
   it('prints authentication debug values and derives largeBlob mode', () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    window.lastFakeCredLength = 256;
+    state.lastFakeCredLength = 256;
     const assertion = {
       getClientExtensionResults: () => ({
         largeBlob: { written: true, blob: { c: 3 } },

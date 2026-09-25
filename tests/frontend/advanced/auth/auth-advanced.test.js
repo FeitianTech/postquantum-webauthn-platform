@@ -141,7 +141,6 @@ describe('auth-advanced', () => {
     vi.useFakeTimers();
 
     state.lastFakeCredLength = 0;
-    window.lastFakeCredLength = 0;
   });
 
   afterEach(() => {
@@ -256,7 +255,7 @@ describe('auth-advanced', () => {
     expect(randomizePrfEval).toHaveBeenCalledWith('second', 'reg');
 
     expect(state.lastFakeCredLength).toBe(17);
-    expect(window.lastFakeCredLength).toBe(17);
+    expect('lastFakeCredLength' in window).toBe(false);
 
     expect(showStatus).toHaveBeenCalledWith(
       'advanced',
