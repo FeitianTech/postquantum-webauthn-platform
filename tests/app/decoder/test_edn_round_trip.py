@@ -10,9 +10,10 @@ golden records hold (``tests/app/codec_corpus.py``).
 Through the decoder and the encoder too: for every item the decoder reads as
 CBOR, the ``data.edn`` it answers with, sent to the encoder's EDN input, gives
 back the input -- after the CTAP command or status byte, which ``data.ctap``
-holds. The decoder reads a few items as something else, by precedence: a lone
-byte CTAP names, bytes that are UTF-8 JSON text, bytes shaped like
-authenticator data. Those are named and counted, and nothing else may happen.
+holds. The decoder reads a few items as something else, by precedence
+(``decode/ambiguous_input.py``): a lone byte CTAP names, bytes that are UTF-8
+JSON text. Those carry an ``ambiguous-input`` finding naming the CBOR item they
+also are, and are counted; nothing else may happen.
 """
 from __future__ import annotations
 
@@ -62,10 +63,11 @@ def _through_the_decoder_and_encoder(data: bytes) -> str:
         encoded = encode_payload_text(shown["edn"], "EDN")["data"]["binary"]["hex"]
         assert prefix + bytes.fromhex(encoded) == data, shown["edn"]
         return "CBOR, and its EDN" + (" after a CTAP byte" if prefix else "")
+    # Read as something else: the item it also is is named, never passed over.
+    named = {finding["alsoValidAs"] for finding in result["findings"] if finding["code"] == "ambiguous-input"}
+    assert "one CBOR item" in named, f"{data.hex()} was read as {result['type']}, and the CBOR item is not named"
     if len(data) == 1 and "ctap" in shown:
         return "a lone CTAP command or status byte"
-    if result["type"] == "Authenticator data":
-        return "authenticator data"
     if result["type"] == "JSON" and shown.get("json") == json.loads(data.decode("utf-8")):
         return "UTF-8 JSON text"
     raise AssertionError(f"{data.hex()} was read as {result['type']} and shows no EDN")
@@ -82,20 +84,13 @@ def test_every_generated_item_the_decoder_reads_as_cbor_encodes_back_from_its_ed
     event(f"decoder reading: {_through_the_decoder_and_encoder(data)}")
 
 
-# The corpus's items the decoder reads as something else, by precedence: the
-# bytes "85" (38 35) are JSON text before they are the CBOR integer -54.
-_READ_OTHERWISE = {"literal:3835": "UTF-8 JSON text"}
-
-
 @pytest.mark.parametrize(("name", "data"), sorted(codec_corpus.corpus().items()), ids=lambda value: str(value)[:60])
 def test_every_item_in_the_repository_encodes_back_from_the_edn_the_decoder_shows(name, data):
     reading = _through_the_decoder_and_encoder(data)
 
-    if name in _READ_OTHERWISE:
-        assert reading == _READ_OTHERWISE[name]
-        return
-    # The corpus's one-byte items (0x00, 0x01, 0x0a, 0x17, 0x40) are lone CTAP bytes.
-    assert reading.startswith("CBOR") or (len(data) == 1 and reading == "a lone CTAP command or status byte")
+    # The corpus's one-byte items (0x00, 0x01, 0x0a, 0x17, 0x40) are lone CTAP bytes;
+    # the bytes "85" (38 35) are JSON text before they are the integer -54.
+    assert reading.startswith("CBOR") or reading in ("a lone CTAP command or status byte", "UTF-8 JSON text")
 
 
 def test_the_codec_endpoint_encodes_edn_and_names_where_it_is_not_valid(client):
