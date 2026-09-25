@@ -59,7 +59,8 @@ def _through_the_decoder_and_encoder(data: bytes) -> str:
     readings = [(finding["readAs"], finding["code"]) for finding in result["findings"] if "readAs" in finding]
     assert ("json", "ambiguous-input") not in readings, "read as the JSON number its hex spells"
     if "edn" in shown:
-        prefix = bytes([shown["ctap"]["code"]]) if "ctap" in shown else b""
+        code = (shown.get("ctap") or {}).get("code")
+        prefix = b"" if code is None else bytes([code])
         encoded = encode_payload_text(shown["edn"], "EDN")["data"]["binary"]["hex"]
         assert prefix + bytes.fromhex(encoded) == data, shown["edn"]
         return "CBOR, and its EDN" + (" after a CTAP byte" if prefix else "")

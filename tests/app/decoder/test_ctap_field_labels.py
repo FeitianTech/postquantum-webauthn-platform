@@ -41,7 +41,13 @@ def _decoded(raw: bytes) -> dict:
     return decode_payload_text(raw.hex())["data"]
 
 
+# The framing the decoder gives beside a view: the message's own command or status byte.
+_CODES = {"makeCredentialRequest": 1, "getAssertionRequest": 2, "makeCredentialResponse": 0, "getAssertionResponse": 0}
+
+
 def _encode(body, target: str = "cbor") -> dict:
+    if "ctapDecoded" in body and "ctap" not in body:
+        body = {**body, "ctap": {"code": _CODES[next(iter(body["ctapDecoded"]))]}}
     return encode_payload_text(json.dumps(body), target)
 
 
@@ -103,7 +109,9 @@ def test_the_encoder_refuses_a_get_assertion_large_blob_key(field):
     with pytest.raises(ValueError, match="getAssertion"):
         _encode({"ctapDecoded": {"getAssertionRequest": _get_assertion_structure(**field)}})
     with pytest.raises(ValueError, match="getAssertion"):
-        _encode({"expandedJson": _get_assertion_structure(**field), "ctap": {"code": 2, "kind": "command"}})
+        _encode(
+            {"expandedJson": _get_assertion_structure(**field), "ctap": {"code": 2, "message": "getAssertionRequest"}}
+        )
 
 
 def test_the_ctap_webauthn_encoder_refuses_a_get_assertion_large_blob_key():

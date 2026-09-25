@@ -38,9 +38,7 @@ from .binary_extract import (
     _normalize_pem_label,  # noqa: F401  # re-exported for callers and tests
 )
 from .ctap_encode import (
-    _determine_ctap_prefix,  # noqa: F401  # re-exported for callers and tests
     _encode_ctap_from_decoded,  # noqa: F401  # re-exported for callers and tests
-    _encode_ctap_from_structure,  # noqa: F401  # re-exported for callers and tests
     _encode_get_assertion_request,  # noqa: F401  # re-exported for callers and tests
     _encode_get_assertion_response,  # noqa: F401  # re-exported for callers and tests
     _encode_make_credential_request,  # noqa: F401  # re-exported for callers and tests

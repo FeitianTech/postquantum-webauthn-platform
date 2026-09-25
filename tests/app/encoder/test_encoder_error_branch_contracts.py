@@ -65,9 +65,6 @@ def test_ctap_support_helpers_raise_expected_errors():
     with pytest.raises(ValueError, match="must be a boolean"):
         encode_module._ensure_bool(5, "flag")
 
-    assert encode_module._determine_ctap_prefix({"code": 0x01, "kind": "command"}, None) == (1, "command")
-    assert encode_module._determine_ctap_prefix({}, "unknown") == (None, None)
-
 
 def test_canonical_integer_and_length_helpers_reject_invalid_values():
     encode_module = pytest.importorskip("server.app.decoder.encode")

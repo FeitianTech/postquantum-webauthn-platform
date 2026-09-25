@@ -203,7 +203,7 @@ def test_try_decode_cbor_reports_ctap_padding_bytes_as_padding():
     assert result["format"] == "CBOR"
     ctap = result["decoded"]["ctap"]
     assert ctap["kind"] == "command"
-    assert ctap["ignoredPaddingBytes"] == 2
+    assert ctap["paddingBytes"] == 2
     trailing = [finding["message"] for finding in result["findings"] if finding["code"] == "trailing-bytes"]
     assert trailing == ["Trailing 2 byte(s) after CBOR payload (all 0x00/0xff: HID report padding?)."]
 

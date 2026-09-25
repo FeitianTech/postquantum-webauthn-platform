@@ -380,8 +380,10 @@ def _try_decode_cbor(data: bytes, encoding: str, *, lenient: bool = False) -> di
     findings = canonical.check(node, data) + key_collisions.check(node) + skipped + _trailing_findings(data, end) + located + prefix_not_read(data)
     findings += ctap_classify.shape_findings(base_value, ctap_details, classification)
 
-    if ctap_details is not None:
-        decoded_payload["ctap"] = _framing(ctap_details, end - start, data[end:])
+    ctap_decoded = decoded_payload.get("ctapDecoded")
+    message = next(iter(ctap_decoded)) if isinstance(ctap_decoded, Mapping) else None
+    if ctap_details is not None or message is not None:
+        decoded_payload["ctap"] = _framing(ctap_details, message, end - start, data[end:])
 
     result: dict[str, Any] = {
         "format": "CBOR",
@@ -444,12 +446,23 @@ def _payload_views(base_value: Any, classification: str) -> dict[str, Any]:
     return decoded_payload
 
 
-def _framing(ctap_details: dict[str, Any], payload_length: int, remaining: bytes) -> dict[str, Any]:
-    """``data.ctap``: the command or status byte, and what the payload after it left."""
+def _framing(
+    ctap_details: dict[str, Any] | None, message: str | None, payload_length: int, remaining: bytes
+) -> dict[str, Any]:
+    """``data.ctap``: the message's framing, all the encoder needs besides the view to rebuild the input.
 
-    ctap_details["payloadLength"] = payload_length
-    if remaining and _is_padding_bytes(remaining):
-        ctap_details["ignoredPaddingBytes"] = len(remaining)
-    elif remaining:
-        ctap_details["trailingBytesHex"] = remaining.hex()
-    return _stringify_mapping_keys(ctap_details)
+    ``code`` is the command or status byte sent before the message, or null when
+    none was; ``message`` names the CTAP message ``ctapDecoded`` shows;
+    ``trailingBytesHex`` holds every byte after it, padding (all 0x00 or 0xff,
+    counted in ``paddingBytes``) too.
+    """
+
+    framing = dict(ctap_details) if ctap_details is not None else {"code": None}
+    if message is not None:
+        framing["message"] = message
+    framing["payloadLength"] = payload_length
+    if remaining:
+        framing["trailingBytesHex"] = remaining.hex()
+        if _is_padding_bytes(remaining):
+            framing["paddingBytes"] = len(remaining)
+    return _stringify_mapping_keys(framing)

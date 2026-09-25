@@ -7,7 +7,6 @@ from typing import Any
 from ... import encoding
 from .binary_decode import _require_bytes
 from .binary_extract import _restore_generic_structure
-from .constants import _CTAP_PREFIX_DETAILS
 from .ctap_fields import (
     _encode_allow_list,
     _encode_attestation_statement,
@@ -56,53 +55,6 @@ def _encode_ctap_from_decoded(
             return encoder(entry), key
         if entry is not None:
             raise ValueError(f"ctapDecoded.{key} must be an object for encoding.")
-    return None, None
-
-
-def _encode_ctap_from_structure(
-    structure: Mapping[str, Any]
-) -> tuple[dict[int, Any] | None, str | None]:
-    if not isinstance(structure, Mapping):
-        return None, None
-
-    def present(kind: str, number: int) -> bool:
-        return _get_ctap_member(structure, kind, number) is not None
-
-    if present(_MAKE_CREDENTIAL_RESPONSE, 1) and present(_MAKE_CREDENTIAL_RESPONSE, 2):
-        return _encode_make_credential_response(structure), _MAKE_CREDENTIAL_RESPONSE
-
-    if present(_GET_ASSERTION_RESPONSE, 1) or present(_GET_ASSERTION_RESPONSE, 3):
-        return _encode_get_assertion_response(structure), _GET_ASSERTION_RESPONSE
-
-    if present(_MAKE_CREDENTIAL_REQUEST, 2) and present(_MAKE_CREDENTIAL_REQUEST, 3):
-        return _encode_make_credential_request(structure), _MAKE_CREDENTIAL_REQUEST
-
-    if present(_GET_ASSERTION_REQUEST, 1) and present(_GET_ASSERTION_REQUEST, 2):
-        return _encode_get_assertion_request(structure), _GET_ASSERTION_REQUEST
-
-    return None, None
-
-
-def _determine_ctap_prefix(
-    metadata: Mapping[str, Any] | None,
-    kind: str | None,
-) -> tuple[int | None, str | None]:
-    if isinstance(metadata, Mapping):
-        code = metadata.get("code")
-        if not isinstance(code, int):
-            code_hex = metadata.get("codeHex")
-            if isinstance(code_hex, str):
-                try:
-                    code = int(code_hex, 16)
-                except ValueError:
-                    code = None
-        kind_hint = metadata.get("kind") if isinstance(metadata.get("kind"), str) else None
-        if isinstance(code, int) and 0 <= code <= 0xFF:
-            return code, kind_hint
-
-    if kind in _CTAP_PREFIX_DETAILS:
-        return _CTAP_PREFIX_DETAILS[kind]
-
     return None, None
 
 

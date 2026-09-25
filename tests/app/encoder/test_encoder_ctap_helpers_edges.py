@@ -139,10 +139,6 @@ def test_core_validators_key_matching_and_prefix_determination():
     structure = {"1 (rpId)": "example.com", "2 (clientDataHash)": "hash"}
     assert encode_module._get_ctap_field_value(structure, "rpId", 1) == "example.com"
 
-    assert encode_module._determine_ctap_prefix({"code": 1, "kind": "command"}, None) == (1, "command")
-    assert encode_module._determine_ctap_prefix({"codeHex": "0x02"}, None) == (2, None)
-    assert encode_module._determine_ctap_prefix({"codeHex": "invalid"}, "getAssertionRequest") == (0x02, "command")
-
 
 def test_binary_decoding_helpers_and_ctap_structure_detection():
     encode_module = pytest.importorskip("server.app.decoder.encode")
@@ -175,17 +171,3 @@ def test_binary_decoding_helpers_and_ctap_structure_detection():
     )
     assert kind == "makeCredentialRequest"
     assert decoded_map is not None
-
-    _, kind_mc = encode_module._encode_ctap_from_structure({"fmt": "packed", "authData": _b64url(b"\xaa" * 37)})
-    _, kind_ga = encode_module._encode_ctap_from_structure(
-        {
-            "credential": {"id": _b64url(b"c")},
-            "authData": _b64url(b"\x55" * 37),
-            "signature": _b64url(b"s"),
-        }
-    )
-    _, kind_gar = encode_module._encode_ctap_from_structure({"rpId": "example.com", "clientDataHash": _b64url(b"\x00" * 32)})
-
-    assert kind_mc == "makeCredentialResponse"
-    assert kind_ga == "getAssertionResponse"
-    assert kind_gar == "getAssertionRequest"

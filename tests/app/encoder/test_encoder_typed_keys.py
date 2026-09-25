@@ -147,7 +147,7 @@ def test_a_typed_key_at_ctap_member_level_is_refused_as_not_a_member():
     view = {"getAssertionResponse": {"2 (authData)": {"raw": auth}, "3 (signature)": "0102", '"fmt" (text)': "x"}}
 
     with pytest.raises(ValueError, match=r'is a text key, not a CTAP member'):
-        encode_payload_text(json.dumps({"ctapDecoded": view}), "cbor")
+        encode_payload_text(json.dumps({"ctapDecoded": view, "ctap": {"code": 0}}), "cbor")
 
 
 def test_a_user_entity_whose_keys_collide_in_json_is_refused_naming_both():
