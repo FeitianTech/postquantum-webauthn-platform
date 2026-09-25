@@ -1,15 +1,20 @@
-"""Frontend scripts write markup only as fixed text from the code itself.
+"""Frontend scripts never hand the browser a string to parse as markup.
 
-Every ``.innerHTML`` / ``.outerHTML`` assignment and every ``insertAdjacentHTML``
-call in ``frontend/static/scripts`` must be given ``''`` or a single string or
-template literal with no ``${...}`` in it. Anything else -- a variable, a call,
-a concatenation, ``+=`` -- is a string built at run time, and a string built at
-run time sooner or later carries data. Views that show data build it with
-``shared/ui/dom.js`` (createElement and textContent) instead.
+There is no ``.innerHTML`` / ``.outerHTML`` assignment, no ``insertAdjacentHTML``,
+``document.write`` / ``writeln``, ``parseFromString``, ``createContextualFragment``
+or ``setHTMLUnsafe`` / ``parseHTMLUnsafe`` call in ``frontend/static/scripts``.
+Views build DOM with ``shared/ui/dom.js`` (createElement and textContent) and
+empty a container with ``replaceChildren()``.
 
-``ALLOWED`` names the sinks that still take a built string, each with the reason.
-It may only shrink: an entry that no longer matches a sink fails the test, so a
-converted view must also leave the list.
+A string built at run time sooner or later carries data; a fixed one does not,
+but each of these calls is a Trusted Types sink all the same. The report-only
+policy (``require-trusted-types-for 'script'`` in ``config/security_headers.py``)
+reports every string given to one, and enforcing it waits until production
+reports none, so none is written.
+
+``ALLOWED`` names the sinks that remain, each with the reason. It may only
+shrink: an entry that no longer matches a sink fails the test, so a converted
+view must also leave the list.
 """
 from __future__ import annotations
 
@@ -19,147 +24,83 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[3]
 _SCRIPTS = _ROOT / "frontend" / "static" / "scripts"
 
-_ASSIGNMENT = re.compile(r"\.(?:inner|outer)HTML\s*(\+?=)(?!=)")
-_INSERT = re.compile(r"\binsertAdjacentHTML\s*\(")
+_SINK = re.compile(
+    r"\.(?:inner|outer)HTML\s*\+?=(?!=)"
+    r"|\binsertAdjacentHTML\s*\("
+    r"|\b\w*[dD]oc(?:ument)?\.write(?:ln)?\s*\("
+    r"|\bparseFromString\s*\("
+    r"|\bcreateContextualFragment\s*\("
+    r"|\b(?:set|parse)HTMLUnsafe\s*\("
+)
 
-# (path under frontend/static/scripts, the right-hand side as written) -> reason.
+# (path under frontend/static/scripts, the line as written, stripped) -> reason.
 ALLOWED: dict[tuple[str, str], str] = {}
 
 
-def _read_quoted(text: str, start: int) -> tuple[str, int] | None:
-    """The literal opening at ``start`` and the index after it, or None if unterminated."""
+def _code(line: str) -> str:
+    """The line without a ``//`` tail, or nothing for a comment line."""
 
-    quote = text[start]
-    index = start + 1
-    while index < len(text):
-        char = text[index]
-        if char == "\\":
-            index += 2
-            continue
-        if char == quote:
-            return text[start + 1:index], index + 1
-        if char == "\n" and quote != "`":
-            return None
-        index += 1
-    return None
+    code = line.split("//", 1)[0]
+    return "" if code.lstrip().startswith(("*", "/*")) else code
 
 
-def _literal_verdict(text: str, start: int, terminators: str) -> tuple[bool, str]:
-    """Whether the expression at ``start`` is one markup-free literal, and its source."""
+def find_sinks(text: str) -> list[tuple[int, str]]:
+    """Every sink in ``text``: (line, the line as written, stripped)."""
 
-    index = start
-    while index < len(text) and text[index] in " \t\r\n":
-        index += 1
-    end = index
-    while end < len(text) and text[end] not in terminators:
-        if text[end] in "'\"`":
-            quoted = _read_quoted(text, end)
-            end = quoted[1] if quoted else len(text)
-            continue
-        end += 1
-    source = text[index:end].strip()
-
-    if index >= len(text) or text[index] not in "'\"`":
-        return False, source
-    quoted = _read_quoted(text, index)
-    if quoted is None:
-        return False, source
-    body, after = quoted
-    if text[index] == "`" and "${" in body:
-        return False, source
-    rest = after
-    while rest < len(text) and text[rest] in " \t\r\n":
-        rest += 1
-    return rest < len(text) and text[rest] in terminators, source
-
-
-def _is_comment(text: str, position: int) -> bool:
-    line_start = text.rfind("\n", 0, position) + 1
-    before = text[line_start:position]
-    stripped = before.lstrip()
-    return "//" in before or stripped.startswith("*") or stripped.startswith("/*")
-
-
-def find_sinks(text: str) -> list[tuple[int, str, bool]]:
-    """Every sink in ``text``: (line, right-hand side as written, whether it is allowed as is)."""
-
-    sinks: list[tuple[int, str, bool]] = []
-    for match in _ASSIGNMENT.finditer(text):
-        if _is_comment(text, match.start()):
-            continue
-        is_literal, source = _literal_verdict(text, match.end(), ";")
-        allowed = is_literal and match.group(1) == "="
-        sinks.append((text.count("\n", 0, match.start()) + 1, source, allowed))
-    for match in _INSERT.finditer(text):
-        if _is_comment(text, match.start()):
-            continue
-        comma = text.find(",", match.end())
-        if comma < 0:
-            sinks.append((text.count("\n", 0, match.start()) + 1, text[match.end():].strip(), False))
-            continue
-        is_literal, source = _literal_verdict(text, comma + 1, ")")
-        sinks.append((text.count("\n", 0, match.start()) + 1, source, is_literal))
-    return sinks
-
-
-def _script_sinks() -> list[tuple[str, int, str, bool]]:
     return [
-        (path.relative_to(_SCRIPTS).as_posix(), line, source, allowed)
+        (number, line.strip())
+        for number, line in enumerate(text.splitlines(), 1)
+        if _SINK.search(_code(line))
+    ]
+
+
+def _script_sinks() -> list[tuple[str, int, str]]:
+    return [
+        (path.relative_to(_SCRIPTS).as_posix(), line, source)
         for path in sorted(_SCRIPTS.rglob("*.js"))
-        for line, source, allowed in find_sinks(path.read_text(encoding="utf-8"))
+        for line, source in find_sinks(path.read_text(encoding="utf-8"))
     ]
 
 
-def test_markup_sinks_take_only_fixed_text():
-    built = [
-        f"{path}:{line} = {source}"
-        for path, line, source, allowed in _script_sinks()
-        if not allowed and (path, source) not in ALLOWED
+def test_scripts_parse_no_markup():
+    found = [
+        f"{path}:{line} {source}"
+        for path, line, source in _script_sinks()
+        if (path, source) not in ALLOWED
     ]
 
-    assert built == [], (
-        "these sinks take a string built at run time; build the view with "
-        "shared/ui/dom.js instead"
+    assert found == [], (
+        "these hand the browser markup to parse; build the view with shared/ui/dom.js "
+        "and empty a container with replaceChildren()"
     )
 
 
 def test_allowed_sinks_still_exist():
-    current = {(path, source) for path, _line, source, allowed in _script_sinks() if not allowed}
+    current = {(path, source) for path, _line, source in _script_sinks()}
 
-    stale = sorted(f"{path} = {source}" for path, source in ALLOWED if (path, source) not in current)
+    stale = sorted(f"{path}: {source}" for path, source in ALLOWED if (path, source) not in current)
 
     assert stale == [], "no longer a sink: remove these entries from ALLOWED"
 
 
-def test_the_reader_tells_fixed_text_from_built_strings():
+def test_the_reader_finds_every_sink():
     source = "\n".join([
         "el.innerHTML = '';",
-        'el.innerHTML = "";',
-        "el.innerHTML = '<p>fixed</p>';",
-        "el.innerHTML = `",
-        "    <option value=\"all\">All</option>",
-        "`;",
         "el.innerHTML = `<p>${name}</p>`;",
-        "el.innerHTML = html;",
-        "el.innerHTML = '<p>' + name + '</p>';",
-        "el.innerHTML += '';",
+        "el.innerHTML += row;",
         "el.outerHTML = markup;",
         "el.insertAdjacentHTML('beforeend', '<hr>');",
-        "el.insertAdjacentHTML('beforeend', row);",
+        "document.write(template);",
+        "popupDoc.writeln('<p>');",
+        "new DOMParser().parseFromString(text, 'text/html');",
+        "range.createContextualFragment(markup);",
+        "el.setHTMLUnsafe(markup);",
         "// el.innerHTML = notCode;",
+        " * document.write(inDocs);",
         "if (el.innerHTML === '') {}",
+        "el.replaceChildren();",
+        "writer.write(chunk);",
+        "const doc = viewer.document;",
     ])
 
-    assert find_sinks(source) == [
-        (1, "''", True),
-        (2, '""', True),
-        (3, "'<p>fixed</p>'", True),
-        (4, '`\n    <option value="all">All</option>\n`', True),
-        (7, "`<p>${name}</p>`", False),
-        (8, "html", False),
-        (9, "'<p>' + name + '</p>'", False),
-        (10, "''", False),
-        (11, "markup", False),
-        (12, "'<hr>'", True),
-        (13, "row", False),
-    ]
+    assert [line for line, _source in find_sinks(source)] == list(range(1, 11))

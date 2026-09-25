@@ -1,3 +1,5 @@
+import { el } from '../../../shared/ui/dom.js';
+
 const PRELOAD_FALLBACK_DELAY_MS = 10000;
 const IDLE_CALLBACK_TIMEOUT_MS = 4000;
 const IDLE_FALLBACK_DELAY_MS = 1500;
@@ -91,10 +93,14 @@ export function bootstrapMds(deps = {}) {
             }
         } catch (error) {
             console.error('Failed to initialise the FIDO MDS tab:', error);
-            tabElement.innerHTML = `
-            <div class="section mds-section">
-                <div class="mds-status mds-status-error">Unable to load authenticator explorer. Check the console for details.</div>
-            </div>`;
+            tabElement.replaceChildren(
+                el('div', { className: 'section mds-section' },
+                    el('div', {
+                        className: 'mds-status mds-status-error',
+                        text: 'Unable to load authenticator explorer. Check the console for details.',
+                    }),
+                ),
+            );
             return;
         }
 
