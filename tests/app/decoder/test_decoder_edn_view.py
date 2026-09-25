@@ -66,3 +66,15 @@ def test_the_endpoint_answers_with_the_edn(client):
 
     assert response.status_code == 200
     assert response.get_json()["data"]["edn"] == '{1: "a"}'
+
+
+def test_an_attestation_object_shows_its_edn_too():
+    from tests.app.decoder.real_vectors import (
+        WEBAUTHN_L3_PACKED_SELF_ATTESTATION_OBJECT as ATTESTATION_OBJECT,
+    )
+
+    data = decode_payload_text(ATTESTATION_OBJECT.hex())["data"]
+
+    assert "attestationObject" in data
+    assert data["edn"].startswith('{\n  "fmt": "packed",')
+    assert edn.encode(data["edn"]) == ATTESTATION_OBJECT
