@@ -14,6 +14,7 @@ import pytest
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import (
+    dsa,
     ec,
     ed448,
     ed25519,
@@ -43,6 +44,7 @@ def _self_signed(key, algorithm, common_name, rsa_padding=None) -> bytes:
 
 
 _RSA_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+_DSA_KEY = dsa.generate_private_key(key_size=2048)
 
 
 def _pss(hash_algorithm):
@@ -135,3 +137,63 @@ def test_a_signature_algorithm_is_named_by_name_or_oid(name, expected):
     from server.app.webauthn import signature_algorithms
 
     assert signature_algorithms.normalise_signature_algorithm_name(name) == expected
+
+
+def _spelled(name: str) -> str:
+    """A signature algorithm's spelling from its name or dotted OID alone, as both views make it without a hash."""
+
+    from server.app.webauthn import signature_algorithms
+
+    return signature_algorithms.join_algorithm_info(
+        signature_algorithms.normalise_signature_algorithm_name(name),
+        signature_algorithms.implied_hash_name(name),
+    )
+
+
+# The names and OIDs cryptography 50 cannot name, or names some other way.
+@pytest.mark.parametrize(
+    ("name", "spelled"),
+    [
+        ("RSA-PSS", "RSASSA-PKCS1-v1_5"),
+        ("rsaPSS", "RSASSA-PKCS1-v1_5"),
+        # Composite ML-DSA (draft-ietf-lamps-pq-composite-sigs-19).
+        ("id-MLDSA44-ECDSA-P256-SHA256", "ECDSA"),
+        ("MLDSA65-RSA3072-PSS-SHA512", "ML-DSA-65"),
+        ("id-MLDSA87-Ed448-SHAKE256", "ML-DSA-87_SHAKE256"),
+        ("1.3.6.1.5.5.7.6.40", "1.3.6.1.5.5.7.6.40"),
+        ("1.3.6.1.5.5.7.6.51", "1.3.6.1.5.5.7.6.51"),
+        # HashML-DSA (FIPS 204 section 5.4).
+        ("HashML-DSA-65", "ML-DSA-65"),
+        ("id-hash-ml-dsa-44-with-sha512", "ML-DSA-44"),
+        ("2.16.840.1.101.3.4.3.32", "2.16.840.1.101.3.4.3.32"),
+        # DSA with SHA-384, SHA-512 and SHA3.
+        ("2.16.840.1.101.3.4.3.3", "2.16.840.1.101.3.4.3.3"),
+        ("2.16.840.1.101.3.4.3.4", "2.16.840.1.101.3.4.3.4"),
+        ("2.16.840.1.101.3.4.3.5", "2.16.840.1.101.3.4.3.5"),
+        ("2.16.840.1.101.3.4.3.8", "2.16.840.1.101.3.4.3.8"),
+        ("id-dsa-with-sha3-256", "DSA"),
+        ("dsa-with-sha384", "DSA"),
+        # SLH-DSA and HashSLH-DSA (FIPS 205).
+        ("2.16.840.1.101.3.4.3.20", "2.16.840.1.101.3.4.3.20"),
+        ("SLH-DSA-SHA2-128s", "DSA"),
+        ("id-slh-dsa-shake-256f", "DSA"),
+        ("2.16.840.1.101.3.4.3.35", "2.16.840.1.101.3.4.3.35"),
+        ("2.16.840.1.101.3.4.3.46", "2.16.840.1.101.3.4.3.46"),
+    ],
+)
+def test_how_a_signature_algorithm_without_a_hash_from_cryptography_is_spelled(name, spelled):
+    assert _spelled(name) == spelled
+
+
+@pytest.mark.parametrize(
+    ("algorithm", "expected"),
+    [(hashes.SHA384(), "2.16.840.1.101.3.4.3.3"), (hashes.SHA512(), "2.16.840.1.101.3.4.3.4")],
+    ids=["dsa-sha384", "dsa-sha512"],
+)
+def test_a_dsa_certificate_signed_with_sha384_or_sha512_is_named_in_both_views(algorithm, expected):
+    der = _self_signed(_DSA_KEY, algorithm, "Root")
+
+    algorithms, _names = mds_snapshot._summarise_attestation_certificates([der])
+
+    assert algorithms == [expected]
+    assert serialize_attestation_certificate(der)["algorithmInfo"] == expected
