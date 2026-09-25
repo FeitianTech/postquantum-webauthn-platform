@@ -96,7 +96,8 @@ describe('local-storage edge cases', () => {
     const records = JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY));
     const snapshot = records[0].registrationDetailSnapshot;
 
-    expect(snapshot.html).toBe('<section>combined-fallback</section>');
+    expect(snapshot.html).toBeUndefined();
+    expect(snapshot.combinedHtml).toBeUndefined();
     expect(snapshot.state.visibleAttestationCertificateIndices).toEqual([1]);
     expect(snapshot.state.attestationCertificates[0].parsedX5c.extensions[0].raw).toBeUndefined();
     expect(snapshot.state.authenticatorData.rawBuffer).toBeUndefined();
@@ -110,7 +111,11 @@ describe('local-storage edge cases', () => {
 
     await expect(storage.updateAdvancedCredentialRegistrationSnapshot('', { html: '<p>x</p>' })).resolves.toBe(false);
     await expect(storage.updateAdvancedCredentialRegistrationSnapshot('missing::storage', null)).resolves.toBe(false);
+    // Markup alone is not a snapshot: nothing is kept or uploaded.
     await expect(storage.updateAdvancedCredentialRegistrationSnapshot('missing::storage', { html: 'x' })).resolves.toBe(false);
+    await expect(storage.updateAdvancedCredentialRegistrationSnapshot('missing::storage', {
+      state: { authenticatorDataHex: '0a0b' },
+    })).resolves.toBe(false);
 
     expect(storage.removeAdvancedCredential('', null)).toBe(false);
     expect(updateCredentialSnapshot).toHaveBeenCalledTimes(1);

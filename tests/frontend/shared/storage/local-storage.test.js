@@ -115,6 +115,7 @@ describe('local-storage module', () => {
       'adv-2::storage': {
         registrationDetailSnapshot: {
           html: '<p>summary</p>',
+          state: { authenticatorDataHex: '0a0b' },
         },
       },
     });
@@ -130,14 +131,14 @@ describe('local-storage module', () => {
 
     expect(await storage.ensureAdvancedCredentialSnapshotsPrefetched()).toBe(true);
     const afterPrefetch = JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY));
-    expect(afterPrefetch[0].registrationDetailSnapshot.html).toBe('<p>summary</p>');
+    expect(afterPrefetch[0].registrationDetailSnapshot).toEqual({ state: { authenticatorDataHex: '0a0b' } });
 
+    const dataSnapshot = { schemaVersion: 2, response: { credential: { id: 'adv-2' } } };
     expect(await storage.updateAdvancedCredentialRegistrationSnapshot('adv-2::storage', {
+      ...dataSnapshot,
       html: '<p>updated</p>',
     })).toBe(true);
-    expect(updateCredentialSnapshot).toHaveBeenCalledWith('adv-2::storage', {
-      html: '<p>updated</p>',
-    });
+    expect(updateCredentialSnapshot).toHaveBeenCalledWith('adv-2::storage', dataSnapshot);
   });
 
   it('migrates legacy storage keys into unified records and removes legacy keys', async () => {
@@ -272,7 +273,7 @@ describe('local-storage module', () => {
         credentialId: 'already-snapshotted',
         storageId: 'already-snapshotted::storage',
         hasServerArtifact: true,
-        registrationDetailSnapshot: { html: '<p>exists</p>' },
+        registrationDetailSnapshot: { html: '<p>exists</p>', state: { authenticatorDataHex: '0a0b' } },
       },
       {
         type: 'advanced',
@@ -302,7 +303,8 @@ describe('local-storage module', () => {
 
     const records = JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY));
     const updated = records.find((record) => record.storageId === 'needs-snapshot::storage');
-    expect(updated.registrationDetailSnapshot.html).toBe('<p>prefetched</p>');
+    expect(updated.registrationDetailSnapshot.html).toBeUndefined();
+    expect(updated.registrationDetailSnapshot.state.authenticatorDataHex).toBe('aa'.repeat(10));
   });
 
   it('sanitizes registration snapshots and returns upload result when local record is unchanged', async () => {
@@ -347,13 +349,13 @@ describe('local-storage module', () => {
       'missing::storage',
       expect.objectContaining({
         schemaVersion: 1,
-        html: expect.any(String),
         state: expect.any(Object),
       }),
     );
 
     const uploadedSnapshot = updateCredentialSnapshot.mock.calls[0][1];
-    expect(uploadedSnapshot.html.length).toBeLessThanOrEqual(120000);
+    expect(uploadedSnapshot.html).toBeUndefined();
+    expect(uploadedSnapshot.combinedHtml).toBeUndefined();
     expect(uploadedSnapshot.state.authenticatorDataHex.length).toBeLessThanOrEqual(8192);
     expect(uploadedSnapshot.state.authenticatorDataHash.length).toBeLessThanOrEqual(1024);
     expect(uploadedSnapshot.state.attestationCertificates[0].parsedX5c.derBase64).toBeUndefined();

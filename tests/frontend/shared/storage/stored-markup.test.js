@@ -41,15 +41,40 @@ describe('registration markup saved by an earlier version', () => {
     window.localStorage.clear();
   });
 
-  it('is read back as it was saved', async () => {
+  it('is dropped when the record is read, and the record saved without it', async () => {
     localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([savedRecord()]));
 
     const storage = await loadStorage();
     const [record] = storage.getAllAdvancedCredentials();
 
-    expect(record.registrationDetailHtml).toBe(MARKUP);
-    expect(record.registration_detail_combined_html).toBe(MARKUP);
-    expect(record.registrationDetailSnapshot.html).toBe(MARKUP);
-    expect(record.registrationDetailSnapshot.state).toEqual({ authenticatorDataHex: '0a0b' });
+    expect(record.registrationDetailHtml).toBeUndefined();
+    expect(record.registration_detail_combined_html).toBeUndefined();
+    expect(record.registrationDetailSnapshot).toEqual({ schemaVersion: 1, state: { authenticatorDataHex: '0a0b' } });
+    expect(record.userName).toBe('alice');
+
+    const [saved] = JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY));
+    expect(JSON.stringify(saved)).not.toContain('<section>');
+    expect(saved.registrationDetailSnapshot.state).toEqual({ authenticatorDataHex: '0a0b' });
+  });
+
+  it('takes the snapshot away when markup was all it held', async () => {
+    const record = savedRecord();
+    delete record.registrationDetailSnapshot.state;
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([record]));
+
+    const storage = await loadStorage();
+
+    expect(storage.getAllAdvancedCredentials()[0].registrationDetailSnapshot).toBeUndefined();
+  });
+
+  it('leaves a record without markup as it is', async () => {
+    const record = { type: 'advanced', credentialId: 'AQID', storageId: 'AQID::storage', userName: 'bob' };
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([record]));
+    const before = localStorage.getItem(SHARED_STORAGE_KEY);
+
+    const storage = await loadStorage();
+    storage.getAllAdvancedCredentials();
+
+    expect(localStorage.getItem(SHARED_STORAGE_KEY)).toBe(before);
   });
 });
