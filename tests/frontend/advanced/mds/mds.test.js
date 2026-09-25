@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setPageData } from '../../page-data-helper.js';
 
 vi.mock('../../../../frontend/static/scripts/shared/utils/loader.js', () => ({
   loaderIsActive: vi.fn(() => false),
@@ -272,12 +273,12 @@ describe('mds explorer', () => {
     buildMdsDom();
     vi.resetModules();
 
-    window.__INITIAL_MDS_INFO__ = {
+    setPageData('initial-mds-info', {
       entryCount: 2,
       no: 7,
       generatedAt: '2026-04-03T12:00:00Z',
-    };
-    window.__INITIAL_MDS_SNAPSHOT__ = {
+    });
+    setPageData('initial-mds-snapshot', {
       meta: {
         entryCount: 2,
         no: 7,
@@ -285,7 +286,7 @@ describe('mds explorer', () => {
       },
       entries: makeSnapshotEntries(),
       legalHeader: 'FIDO legal header',
-    };
+    });
 
     globalThis.fetch = vi.fn((url) => {
       if (String(url).includes('/api/mds/decode-certificate')) {
@@ -490,8 +491,8 @@ describe('mds explorer', () => {
   });
 
   it('falls back to empty-state message when explorer endpoint returns 404', async () => {
-    window.__INITIAL_MDS_INFO__ = {};
-    window.__INITIAL_MDS_SNAPSHOT__ = {};
+    setPageData('initial-mds-info', {});
+    setPageData('initial-mds-snapshot', {});
 
     globalThis.fetch = vi.fn((url) => {
       if (String(url).includes('api/mds/metadata/explorer/full')) {
@@ -633,7 +634,7 @@ describe('mds explorer', () => {
       isLightweightEntry: false,
     };
 
-    window.__INITIAL_MDS_SNAPSHOT__ = {
+    setPageData('initial-mds-snapshot', {
       meta: {
         entryCount: 2,
         no: 10,
@@ -641,7 +642,7 @@ describe('mds explorer', () => {
       },
       entries: lightweightEntries,
       legalHeader: 'FIDO legal header',
-    };
+    });
 
     const popupDocument = document.implementation.createHTMLDocument('popup');
     const popupWindow = {
@@ -917,13 +918,10 @@ describe('mds explorer', () => {
           mode: 'fallback',
           values: ['one', 'two'],
         },
-        toJSON() {
-          throw new Error('serialization blocked');
-        },
       },
     };
 
-    window.__INITIAL_MDS_SNAPSHOT__ = {
+    setPageData('initial-mds-snapshot', {
       meta: {
         entryCount: 2,
         no: 12,
@@ -931,7 +929,7 @@ describe('mds explorer', () => {
       },
       entries,
       legalHeader: 'FIDO legal header',
-    };
+    });
 
     const popupDocument = document.implementation.createHTMLDocument('popup');
     const popupWindow = {
@@ -957,9 +955,16 @@ describe('mds explorer', () => {
       return Promise.resolve(jsonResponse({ items: [] }));
     });
 
-    await import('../../../../frontend/static/scripts/advanced/mds/index.js');
+    const module = await import('../../../../frontend/static/scripts/advanced/mds/index.js');
     document.dispatchEvent(new Event('DOMContentLoaded'));
     await waitForCondition(() => document.querySelectorAll('#mds-table-body tr').length === 2, 1200);
+
+    // The page's data is JSON, so the entry the explorer holds is made to refuse
+    // serialisation once it is loaded.
+    const loaded = await module.resolveEntryByAaguid('00112233-4455-6677-8899-aabbccddeeff');
+    loaded.rawEntry.toJSON = () => {
+      throw new Error('serialization blocked');
+    };
 
     const firstNameButton = document.querySelector('.mds-name-button');
     firstNameButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));

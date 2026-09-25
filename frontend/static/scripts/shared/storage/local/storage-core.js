@@ -6,22 +6,21 @@ import {
 import { safeParse } from './common.js';
 import { ensureRecordType, getRecordIdentifier } from './id-utils.js';
 import { migrateStoredRecord } from './record-migration.js';
+import { readPageData } from '../../utils/page-data.js';
 
-let bootUnifiedCredentialRecords = (
-    typeof window !== 'undefined'
-    && Array.isArray(window.__INITIAL_CREDENTIAL_RECORDS__)
-)
-    ? window.__INITIAL_CREDENTIAL_RECORDS__.filter(item => item && typeof item === 'object')
-    : null;
-
-function setBootUnifiedCredentialRecords(records) {
-    bootUnifiedCredentialRecords = Array.isArray(records)
+function recordsOrNull(records) {
+    return Array.isArray(records)
         ? records.filter(item => item && typeof item === 'object')
         : null;
+}
 
-    if (typeof window !== 'undefined') {
-        window.__INITIAL_CREDENTIAL_RECORDS__ = bootUnifiedCredentialRecords || [];
-    }
+// The records read so far. The page gives none (the server renders no
+// "initial-credential-records" block), so the first read is the browser's
+// storage; tests give their records in that block instead.
+let bootUnifiedCredentialRecords = recordsOrNull(readPageData('initial-credential-records'));
+
+function setBootUnifiedCredentialRecords(records) {
+    bootUnifiedCredentialRecords = recordsOrNull(records);
 }
 
 export function readStoredCredentials(storageKey) {

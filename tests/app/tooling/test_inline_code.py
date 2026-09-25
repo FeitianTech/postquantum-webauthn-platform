@@ -8,6 +8,10 @@ A Content-Security-Policy whose ``script-src`` and ``style-src`` carry no
   the behaviour binds it (``shared/ui/actions.js``);
 - a ``style`` attribute in a template: its rule belongs in a stylesheet under
   ``frontend/static/styles``;
+- a ``<script>`` in a template that the browser would run inline: a script is a
+  file (``src=``), and data for the scripts is a
+  ``<script type="application/json">`` block that ``shared/utils/page-data.js``
+  reads;
 - a script that sets a ``style`` attribute (``setAttribute('style', ...)``):
   views style through CSSOM (``element.style``), which the policy allows, and
   ``shared/ui/dom.js`` ``el()`` applies its ``style`` option that way;
@@ -49,16 +53,7 @@ ALLOWED_MARKUP_ATTRIBUTES: dict[tuple[str, str], str] = {}
 ALLOWED_TEMPLATE_ATTRIBUTES: dict[tuple[str, str], str] = {}
 
 # path under frontend/static/scripts -> reason.
-ALLOWED_GLOBAL_WRITES: dict[str, str] = {
-    "advanced/mds/index.js": (
-        "deletes window.__INITIAL_MDS_INFO__ / __INITIAL_MDS_SNAPSHOT__ once read; they "
-        "become JSON data blocks with the inline <script> in index.html"
-    ),
-    "shared/storage/local/storage-core.js": (
-        "mirrors its record cache to window.__INITIAL_CREDENTIAL_RECORDS__, the tests' "
-        "seam; it becomes a JSON data block with the inline <script>"
-    ),
-}
+ALLOWED_GLOBAL_WRITES: dict[str, str] = {}
 
 _GLOBAL = r"(?:window|globalThis|self)"
 _ASSIGN = r"\s*(?:[-+*/%&|^]|\*\*|<<|>>>?|&&|\|\||\?\?)?=(?!=)"
@@ -90,15 +85,25 @@ def template_tags(text: str) -> list[tuple[int, str, list[tuple[str, str | None]
     return parser.tags
 
 
-def find_inline_attributes(text: str) -> list[tuple[int, str]]:
-    """(line, attribute) for each attribute of ``text`` a strict policy refuses."""
+def _runs_inline(tag: str, attrs: list[tuple[str, str | None]]) -> bool:
+    if tag != "script":
+        return False
+    values = dict(attrs)
+    return "src" not in values and (values.get("type") or "").strip().lower() != "application/json"
 
-    return [
-        (line, name)
-        for line, _tag, attrs in template_tags(text)
-        for name, _value in attrs
-        if name == "style" or name.startswith("on")
-    ]
+
+def find_inline_attributes(text: str) -> list[tuple[int, str]]:
+    """(line, attribute) for each attribute of ``text`` a strict policy refuses.
+
+    An inline script is reported as its ``<script>`` tag.
+    """
+
+    found = []
+    for line, tag, attrs in template_tags(text):
+        if _runs_inline(tag, attrs):
+            found.append((line, "<script>"))
+        found.extend((line, name) for name, _value in attrs if name == "style" or name.startswith("on"))
+    return found
 
 
 def _template_attributes() -> list[tuple[str, int, str]]:
@@ -116,7 +121,10 @@ def test_templates_carry_no_inline_attributes():
         if (path, name) not in ALLOWED_TEMPLATE_ATTRIBUTES
     ]
 
-    assert found == [], "name the action with data-action, and move a style into a stylesheet"
+    assert found == [], (
+        "name the action with data-action, move a style into a stylesheet, and give "
+        "scripts data in a <script type=\"application/json\"> block"
+    )
 
 
 def test_allowed_template_attributes_still_exist():
@@ -136,9 +144,15 @@ def test_the_template_reader_finds_inline_attributes():
         '<!-- <p style="in a comment"> -->',
         '<button type="button" onclick="go()" data-action="go">Go</button>',
         '<div class="info-icon" onMouseEnter="show(this)" data-onclick="x"></div>',
+        '<script>window.x = 1;</script>',
+        '<script type="module" src="/assets/x/scripts/main.js"></script>',
+        '<script type="application/json" id="initial-mds-info">{{ info | tojson }}</script>',
+        '<script type="module">import "./x.js";</script>',
     ])
 
-    assert find_inline_attributes(source) == [(1, "style"), (4, "style"), (6, "onclick"), (7, "onmouseenter")]
+    assert find_inline_attributes(source) == [
+        (1, "style"), (4, "style"), (6, "onclick"), (7, "onmouseenter"), (8, "<script>"), (11, "<script>"),
+    ]
 
 
 def _code_lines(text: str):

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { removePageData, setPageData } from '../../page-data-helper.js';
 
 vi.mock('../../../../frontend/static/scripts/shared/storage/artifacts-client.js', () => ({
   fetchCredentialArtifactsBulk: vi.fn(),
@@ -22,7 +23,7 @@ const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
 describe('local-storage edge cases', () => {
   beforeEach(() => {
     window.localStorage.clear();
-    window.__INITIAL_CREDENTIAL_RECORDS__ = [];
+    setPageData('initial-credential-records', []);
     fetchCredentialArtifactsBulk.mockReset();
     updateCredentialSnapshot.mockReset();
     uploadCredentialArtifact.mockReset();
@@ -53,7 +54,7 @@ describe('local-storage edge cases', () => {
   });
 
   it('prefetches snapshots from storedCredential fallback and sanitizes nested fields', async () => {
-    window.__INITIAL_CREDENTIAL_RECORDS__ = null;
+    removePageData('initial-credential-records');
 
     localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([
       {
@@ -153,7 +154,7 @@ describe('local-storage edge cases', () => {
   });
 
   it('filters boot records and clears simple/advanced partitions independently', async () => {
-    window.__INITIAL_CREDENTIAL_RECORDS__ = [
+    setPageData('initial-credential-records', [
       null,
       'not-an-object',
       {
@@ -168,7 +169,7 @@ describe('local-storage edge cases', () => {
         storageId: 'boot-advanced::storage',
         publicKey: 'cHVibGlj',
       },
-    ];
+    ]);
 
     const storage = await loadLocalStorageModule();
     const ordered = storage.getAllStoredCredentialsInOrder();
