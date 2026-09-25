@@ -199,3 +199,34 @@ describe('MonoValue', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Could not copy: the clipboard is not available on this page.');
   });
 });
+
+describe('InfoPopover placement', () => {
+  const rect = (top: number, left: number, width: number, height: number) =>
+    ({ top, left, width, height, bottom: top + height, right: left + width, x: left, y: top, toJSON() {} }) as DOMRect;
+  const viewport = { width: 1000, height: 800 };
+
+  it('opens below and from the left when it fits', async () => {
+    const { placePopup } = await import('./InfoPopover');
+    expect(placePopup(rect(120, 40, 336, 200), rect(90, 40, 20, 20), viewport)).toEqual({ side: 'bottom', align: 'start' });
+  });
+
+  it('opens above when there is no room below and more above, and from the right at the right edge', async () => {
+    const { placePopup } = await import('./InfoPopover');
+    expect(placePopup(rect(760, 700, 336, 200), rect(730, 700, 20, 20), viewport)).toEqual({ side: 'top', align: 'end' });
+    expect(placePopup(rect(130, 40, 336, 700), rect(100, 40, 20, 20), viewport)).toEqual({ side: 'bottom', align: 'start' });
+  });
+
+  it('applies the placement it measures', async () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return this.getAttribute('role') === 'group' ? rect(900, 900, 336, 200) : rect(870, 900, 20, 20);
+    });
+    render(<InfoPopover label="Near the corner" en={<p>English</p>} zh={<p>中文</p>} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Near the corner' }));
+
+    const popup = screen.getByRole('group', { name: 'Near the corner' });
+    expect(popup).toHaveAttribute('data-side', 'top');
+    expect(popup).toHaveAttribute('data-align', 'end');
+    expect(popup.className).toContain('bottom-full');
+    vi.restoreAllMocks();
+  });
+});
