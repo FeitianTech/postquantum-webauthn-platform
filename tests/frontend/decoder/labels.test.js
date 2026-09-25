@@ -21,4 +21,26 @@ describe('decoder key labels', () => {
     expect(formatKey('sign-count')).toBe('Sign Count');
     expect(formatKey('authData')).toBe('Auth Data');
   });
+
+  it('shows a typed key spelling or a key in EDN exactly as the decoder wrote it', () => {
+    // These were rewritten: H'01' (bytes), " 1" (text), True (boolean) #2, "a B" (text).
+    for (const key of [
+      "h'01' (bytes)",
+      '"-1" (text)',
+      'true (boolean) #2',
+      '"a_b" (text)',
+      '1.5 (float)',
+      '[1, 2] (array)',
+      "float'7e01'",
+      '["a", "b"]',
+      'null (null)',
+    ]) {
+      expect(formatKey(key)).toBe(key);
+    }
+  });
+
+  it('still formats a field name that only mentions a type', () => {
+    expect(formatKey('credentialId')).toBe('Credential ID');
+    expect(formatKey('1 (fmt)')).toBe('1 (fmt)');
+  });
 });
