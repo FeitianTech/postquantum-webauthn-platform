@@ -1,14 +1,241 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens (docs/UI_MIGRATION.md). Light only, white everywhere: grey is
+ * only ever a text colour or a hairline. Tailwind's default palette, type scale,
+ * radii and shadows are cleared first, so a grey fill cannot be written by
+ * accident; everything a component may use is named here.
+ */
+@theme {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  /* Surfaces: the page and every component are white. */
+  --color-canvas: #ffffff;
+  --color-surface: #ffffff;
+
+  /* Text. Secondary text is the only grey, and it is text. */
+  --color-ink: #1d1d1f;
+  --color-ink-muted: #6e6e73;
+  --color-ink-faint: #86868b;
+
+  /* Hairlines: a divider, a control's border, a hovered control's border. */
+  --color-line: rgba(0, 0, 0, 0.08);
+  --color-line-strong: rgba(0, 0, 0, 0.14);
+  --color-line-hover: rgba(0, 0, 0, 0.26);
+
+  /* The one accent, and its tint for selected and hovered states. */
+  --color-accent: #0071e3;
+  --color-accent-hover: #0077ed;
+  --color-accent-press: #006edb;
+  --color-accent-ink: #0062c4;
+  --color-accent-tint: rgba(0, 113, 227, 0.08);
+  --color-accent-tint-strong: rgba(0, 113, 227, 0.14);
+  --color-accent-line: rgba(0, 113, 227, 0.32);
+
+  /* Semantic colours: tints are colours, never grey. */
+  --color-success: #1a7f37;
+  --color-success-tint: #e9f7ee;
+  --color-success-line: rgba(26, 127, 55, 0.28);
+  --color-warning: #b25000;
+  --color-warning-tint: #fff4e5;
+  --color-warning-line: rgba(178, 80, 0, 0.28);
+  --color-danger: #d70015;
+  --color-danger-hover: #bf0013;
+  --color-danger-tint: #fff0f0;
+  --color-danger-line: rgba(215, 0, 21, 0.26);
+
+  /* What dims the page under a dialog, drawer or sheet. Not a component. */
+  --color-scrim: rgba(0, 0, 0, 0.22);
+
+  /* Type scale: a size, its line height, and for titles a tracking and weight. */
+  --text-*: initial;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.125rem;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.3125rem;
+  --text-body--letter-spacing: -0.006em;
+  --text-body-lg: 0.9375rem;
+  --text-body-lg--line-height: 1.375rem;
+  --text-body-lg--letter-spacing: -0.008em;
+  --text-title-sm: 1rem;
+  --text-title-sm--line-height: 1.375rem;
+  --text-title-sm--letter-spacing: -0.012em;
+  --text-title: 1.125rem;
+  --text-title--line-height: 1.5rem;
+  --text-title--letter-spacing: -0.016em;
+  --text-heading: clamp(1.375rem, 1.1rem + 0.9vw, 1.625rem);
+  --text-heading--line-height: 1.2;
+  --text-heading--letter-spacing: -0.02em;
+  --text-display: clamp(1.75rem, 1.35rem + 1.5vw, 2.25rem);
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.024em;
+
+  /* Radii. */
+  --radius-*: initial;
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+
+  /* Shadows are for floating layers: popovers, menus, dialogs, drawers, toasts.
+     The one exception is the segmented control's white highlight on its white
+     track (the owner's choice, 2026-09-25). */
+  --shadow-*: initial;
+  --shadow-float-sm: 0 4px 14px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-float: 0 12px 32px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.05);
+  --shadow-float-lg: 0 24px 64px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-segment: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+
+  /* Motion. */
+  --ease-*: initial;
+  --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Layout. */
+  --container-page: 85rem;
+  --container-prose: 40rem;
+  --breakpoint-menu: 56.25rem;
+  --breakpoint-wide: 80rem;
+}
+
 @theme inline {
   --font-sans: var(--font-geist-sans, system-ui), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: var(--font-geist-mono, ui-monospace), SFMono-Regular, Menlo, monospace;
+  --font-mono: var(--font-geist-mono, ui-monospace), SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+:root {
+  --duration-fast: 160ms;
+  --duration-base: 280ms;
+  --duration-slow: 480ms;
+  --header-height: 3.75rem;
+}
+
+/*
+ * The design page shows hover, keyboard focus and pressed states without a
+ * pointer: an element with data-demo="hover" (or "focus", "active") gets the
+ * same styles. Components use these variants in place of hover:/focus-visible:/active:.
+ */
+@custom-variant hover-or-demo {
+  @media (hover: hover) {
+    &:hover {
+      @slot;
+    }
+  }
+  &[data-demo~="hover"] {
+    @slot;
+  }
+}
+
+@custom-variant focus-or-demo {
+  &:focus-visible {
+    @slot;
+  }
+  &[data-demo~="focus"] {
+    @slot;
+  }
+}
+
+@custom-variant active-or-demo {
+  &:active {
+    @slot;
+  }
+  &[data-demo~="active"] {
+    @slot;
+  }
 }
 
 @layer base {
   html {
-    background: #ffffff;
-    color: #1d1d1f;
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
     color-scheme: light;
+    font-family: var(--font-sans);
+    font-size: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-padding-top: calc(var(--header-height) + 1rem);
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    letter-spacing: var(--text-body--letter-spacing);
+  }
+
+  ::selection {
+    background-color: rgba(0, 113, 227, 0.18);
+  }
+
+  /* Keyboard focus is visible on every control: buttons, links, tabs, switches,
+     chips, selects. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Text fields show no focus effect of any kind (the owner's direction): no
+     outline, ring, glow, shadow or border change. The caret shows focus. */
+  [data-text-field],
+  [data-text-field]:focus,
+  [data-text-field]:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+
+  /* A dialog panel takes focus when it opens so the next Tab lands inside it;
+     the panel itself is not a control. */
+  [data-overlay-panel]:focus,
+  [data-overlay-panel]:focus-visible {
+    outline: none;
+  }
+
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+  }
+
+  a {
+    color: var(--color-accent-ink);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer base {
+  /* The design page's still image of keyboard focus, as :focus-visible draws it. */
+  [data-demo~="focus"]:not([data-text-field]) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Before the segmented control has measured itself (before hydration), the
+     chosen segment draws its own highlight, so the page never shows none. */
+  [data-segmented]:not([data-ready]) [role="tab"][aria-selected="true"] {
+    background-color: var(--color-surface);
+    box-shadow: var(--shadow-segment);
   }
 }
