@@ -13,7 +13,8 @@ items, as the EDN draft allows, and a trailing one.
 Written exactly as notated: map order, duplicate keys, head widths and float
 widths are the text's, never canonicalised. Refused, each with the offset in
 the text: reserved indicators ``_4``..``_7``, an indicator too narrow for its
-value, a float not exact at its width, ``simple(24)``..``simple(31)``, more than
+value, a float not exact at its width, a float literal beyond the range of a
+double (rather than rounded to infinity), ``simple(24)``..``simple(31)``, more than
 one top-level item (a CBOR sequence), items nested more than 64 deep (the
 decoder's limit), and an integer beyond 64 bits -- which the
 EDN draft (section 2.2) reads as a bignum tag; here it must be written as one,
@@ -23,7 +24,9 @@ from __future__ import annotations
 
 import base64
 import binascii
+import math
 import re
+from collections.abc import Callable
 
 from ..cbor_head import INDEFINITE, encode_head
 from . import floats, strings
@@ -199,14 +202,25 @@ class _Reader:
         self.position = match.end()
         body = literal.lstrip("+-")
         if body[:2].lower() == "0x" and "p" in body.lower():
-            return self.float_value(float.fromhex(literal), start)
+            return self.float_literal(literal, float.fromhex, start)
         if body[:2].lower() in ("0x", "0o", "0b"):
             value = int(literal.replace("+", ""), 0)
         elif any(c in body for c in ".eE"):
-            return self.float_value(float(literal), start)
+            return self.float_literal(literal, float, start)
         else:
             value = int(literal)
         return self.integer(value, start)
+
+    def float_literal(self, literal: str, read: Callable[[str], float], start: int) -> bytes:
+        """A decimal or hex float literal: finite, or refused -- never rounded to infinity."""
+
+        try:
+            value = read(literal)
+        except OverflowError:
+            value = math.inf
+        if math.isinf(value):
+            raise self.error(f"{literal} is beyond the range of a double; Infinity is written Infinity", start)
+        return self.float_value(value, start)
 
     def float_value(self, value: float, start: int) -> bytes:
         spec = self.spec()
