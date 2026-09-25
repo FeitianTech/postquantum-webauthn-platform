@@ -3,6 +3,7 @@
 
 import { updateGlobalScrollLock } from '../ui/core.js';
 import { SOURCE_TEXT, determineIdentity, readIdentityInputs } from './identity.js';
+import { attempt, describeError } from './probe.js';
 import {
     AUTHENTICATOR_FACTS,
     CLIENT_CAPABILITY_LABELS,
@@ -121,7 +122,67 @@ function renderAnalysis(panel, analysis) {
 
 async function gatherAnalysis() {
     const [inputs, webauthn] = await Promise.all([readIdentityInputs(), gatherWebAuthnFacts()]);
-    return { inputs, identity: determineIdentity(inputs), webauthn };
+    return {
+        generatedAt: new Date().toISOString(),
+        page: location.origin,
+        inputs,
+        identity: determineIdentity(inputs),
+        webauthn,
+    };
+}
+
+// The raw findings, for a bug report: what was read, and every answer and state.
+function buildReport(analysis) {
+    const { identity, inputs, webauthn } = analysis;
+    const { state, note, returned, omitted } = webauthn.clientCapabilities;
+    return {
+        report: 'Analyze Browser',
+        generatedAt: analysis.generatedAt,
+        page: analysis.page,
+        identity: {
+            name: identity.name,
+            version: identity.version,
+            engine: identity.engine,
+            system: identity.system,
+            sources: identity.sources,
+            inputs,
+        },
+        webauthn: {
+            facts: webauthn.facts,
+            clientCapabilities: { state, ...(note ? { note } : {}), returned, omitted },
+        },
+    };
+}
+
+async function copyReport(panel, analysis) {
+    const status = panel.querySelector('[data-role="copy-status"]');
+    const fallback = panel.querySelector('[data-role="report-text"]');
+    const text = JSON.stringify(buildReport(analysis), null, 2);
+
+    const clipboard = attempt(() => navigator.clipboard).value;
+    let failure = null;
+    if (typeof clipboard?.writeText !== 'function') {
+        failure = 'the clipboard is not available on this page';
+    } else {
+        try {
+            await clipboard.writeText(text);
+        } catch (error) {
+            failure = describeError(error);
+        }
+    }
+
+    if (failure === null) {
+        status.dataset.outcome = 'copied';
+        status.textContent = 'Report copied to the clipboard.';
+        fallback.hidden = true;
+        return;
+    }
+    status.dataset.outcome = 'failed';
+    status.textContent = `Could not copy the report (${failure}). It is below, selected, to copy by hand.`;
+    fallback.value = text;
+    fallback.hidden = false;
+    fallback.focus();
+    fallback.select();
 }
 
 function openPanel(panel) {
@@ -168,9 +229,14 @@ export function initializeAnalyzeBrowser() {
 
     panel.addEventListener('click', event => {
         const target = event.target;
-        if (target instanceof Element && target.closest('[data-action="close"]')) {
+        if (!(target instanceof Element)) {
+            return;
+        }
+        if (target.closest('[data-action="close"]')) {
             event.preventDefault();
             handleClose();
+        } else if (target.closest('[data-action="copy-report"]')) {
+            copyReport(panel, analysis);
         }
     });
 

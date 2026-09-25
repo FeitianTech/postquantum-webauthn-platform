@@ -13,7 +13,19 @@
             </svg>
         </button>
         <div class="analyze-browser-panel__content">
-            <h2 id="analyze-browser-heading" class="analyze-browser-panel__heading">Browser Analysis</h2>
+            <div class="analyze-browser-panel__header">
+                <h2 id="analyze-browser-heading" class="analyze-browser-panel__heading">Browser Analysis</h2>
+                <button type="button" class="analyze-browser-panel__copy" data-action="copy-report">Copy report</button>
+            </div>
+            <p class="analyze-browser-panel__copy-status" data-role="copy-status" role="status" aria-live="polite"></p>
+            <textarea
+                class="analyze-browser-panel__report"
+                data-role="report-text"
+                aria-label="Browser analysis report, as JSON"
+                rows="10"
+                readonly
+                hidden
+            ></textarea>
             <dl class="analyze-browser-panel__summary">
                 <div class="analyze-browser-panel__summary-item" data-identity="name">
                     <dt>Browser</dt>
