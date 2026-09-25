@@ -1,0 +1,55 @@
+name: CI / Web
+
+on:
+  # push is filtered to main so a same-repo PR is checked once (by
+  # pull_request) instead of twice; main still gets a post-merge run.
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The new UI (web/, docs/UI_MIGRATION.md): a Next.js static export that
+  # Flask serves at /beta.
+  web:
+    name: Typecheck, unit tests, build and CSP scan
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      # npm ci installs exactly web/package-lock.json, which must list every
+      # platform's native build (tests/app/tooling/test_npm_lockfiles.py).
+      - name: Install web dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # --coverage so the floors in web/vitest.config.mts are enforced.
+      - name: Unit tests
+        run: npm run test:coverage
+
+      - name: Build the static export
+        run: npm run build
+
+      # Every exported HTML file: no inline script that runs, no <style>, no
+      # style attribute, nothing the strict CSP refuses.
+      - name: Scan the export against the CSP
+        run: npm run check:csp
