@@ -4,7 +4,9 @@ The head is as short as the argument allows unless ``info`` names the
 additional information to write: 0..23 carries the argument itself, 24..27 an
 argument of 1, 2, 4 or 8 bytes after the initial byte, 31 an indefinite length
 (no argument). The canonical encoder always writes the shortest; the EDN
-encoder writes whatever width a notation's encoding indicator asks for.
+encoder writes whatever width a notation's encoding indicator asks for. A head
+no well-formed item has is refused: an indefinite length on anything but a
+string, array or map, and a simple value below 32 in two bytes (section 3.3).
 """
 from __future__ import annotations
 
@@ -32,6 +34,10 @@ def encode_head(major_type: int, argument: int | None, info: int | None = None) 
     if info == INDEFINITE:
         if argument is not None:
             raise ValueError("an indefinite-length head carries no argument")
+        if major_type not in (2, 3, 4, 5):
+            raise ValueError(
+                f"an indefinite length is for byte and text strings, arrays and maps, not major type {major_type}"
+            )
         return bytes([(major_type << 5) | INDEFINITE])
     if not isinstance(argument, int) or argument < 0:
         raise ValueError("a CBOR head's argument is a non-negative integer")
@@ -44,6 +50,8 @@ def encode_head(major_type: int, argument: int | None, info: int | None = None) 
     width = ARGUMENT_BYTES.get(info)
     if width is None:
         raise ValueError(f"additional information {info} is reserved")
+    if major_type == 7 and info == 24 and argument < 32:
+        raise ValueError(f"simple value {argument} is written in the initial byte; a two-byte head holds 32..255")
     if argument >= 1 << (8 * width):
         raise ValueError(f"{argument} does not fit in a {width}-byte argument")
     return bytes([(major_type << 5) | info]) + argument.to_bytes(width, "big")

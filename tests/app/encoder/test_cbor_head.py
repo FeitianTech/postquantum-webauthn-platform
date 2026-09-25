@@ -30,6 +30,24 @@ def test_an_indefinite_length_head_has_no_argument():
         encode_head(4, 1, 31)
 
 
+@pytest.mark.parametrize("major_type", [0, 1, 6, 7])
+def test_only_a_string_array_or_map_has_an_indefinite_length(major_type):
+    # 1f, 3f and df are not well-formed; ff is the break byte, not a head.
+    with pytest.raises(ValueError, match=f"not major type {major_type}"):
+        encode_head(major_type, None, 31)
+
+
+@pytest.mark.parametrize("argument", [0, 23, 24, 31])
+def test_a_simple_value_below_32_is_never_written_in_two_bytes(argument):
+    # f8 00 .. f8 1f are not well-formed (RFC 8949 section 3.3).
+    with pytest.raises(ValueError, match="initial byte"):
+        encode_head(7, argument, 24)
+
+
+def test_a_simple_value_of_32_or_more_takes_two_bytes():
+    assert [encode_head(7, value).hex() for value in (5, 32, 255)] == ["e5", "f820", "f8ff"]
+
+
 @pytest.mark.parametrize(
     ("major_type", "argument", "info", "message"),
     [(0, 256, 24, "does not fit"), (0, 24, 23, "is the argument itself"), (0, 1, 28, "reserved"),
