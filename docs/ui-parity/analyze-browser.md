@@ -133,4 +133,4 @@ Nothing the panel shows or does was dropped. What looks or sits differently:
 - On a phone the header shows the title and Menu; Analyze Browser is in the menu sheet (it was a full-width
   button in the header), and focus returns to the Menu button when the panel closes.
 - While the panel is open the page behind it is `inert`, not only kept out of Tab.
-- The panel fades and rises in (not under `prefers-reduced-motion`); the old one appeared at once when closed.
+- The panel rises in as it fades in, and fades out on closing (the old one faded in and vanished at once); the new one does not move under `prefers-reduced-motion`.

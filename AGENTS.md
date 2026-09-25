@@ -24,6 +24,9 @@ The repo includes both the application and a local `fido2/` library copy used by
   Frontend behavior, organized by feature area.
 - `frontend/static/styles/`
   Shared and advanced-tab CSS.
+- `web/`
+  The new UI (Next.js 15 Pages Router, TypeScript, Tailwind CSS v4), exported as static
+  files that Flask serves at `/beta` until the cutover. See "The new UI (`web/`)" below.
 - `tests/`
   App, library, PQC, and optional device tests.
 - `fido2/`
@@ -35,6 +38,72 @@ The repo includes both the application and a local `fido2/` library copy used by
 `docs/UI_MIGRATION.md` before changing anything under `frontend/` or `web/`: it holds the owner's design
 direction, the binding architecture (Pages Router static export served by Flask, the strict CSP kept) and
 the content-parity rule.
+
+### The new UI (`web/`)
+
+Phase 25 laid the foundation; each later phase ports one surface (docs/UI_MIGRATION.md,
+"Phases"). Until the cutover the legacy UI stays at `/` and the new one lives at `/beta`,
+unlisted.
+
+- `web/src/pages/`: `index.tsx` (the app shell), `design.tsx` (the unlisted
+  `/beta/design` review page: every component in every state), `404.tsx`, `500.tsx`
+  and `_error.tsx` (Next's own error pages use style attributes the CSP refuses),
+  `_app.tsx` (Geist and Geist Mono from the `geist` package, self-hosted through
+  `next/font/local`; the fonts' variables sit on a wrapper holding `#app-root` and
+  `#overlay-root`, so portalled overlays inherit them) and `_document.tsx`.
+- `web/src/styles/globals.css`: the design tokens (`@theme`). Tailwind's palette,
+  type scale, radii and shadows are cleared first, so only named tokens exist: white
+  surfaces, grey only as text and hairlines, one accent, semantic tints, shadows for
+  floating layers (and the segmented highlight). Text fields carry `data-text-field`
+  and show no focus effect; every other control keeps the `:focus-visible` ring. The
+  `hover-or-demo` / `focus-or-demo` / `active-or-demo` variants let the design page
+  show a state still through `data-demo`.
+- `web/src/components/ui/`: the primitives (Button and IconButton, the text fields
+  and Select, Switch, ToggleChip, SegmentedControl, Card, Badge and StatusChip,
+  Overlay with Dialog / Drawer / Sheet, Toast, InfoPopover, the table primitives,
+  MonoValue, KeyValueGrid). `SegmentedControl` moves its one highlight through the
+  CSSOM (`element.style`) from a ref, never a `style` prop.
+- `web/src/components/shell/`: the header (title, the four sections, Analyze Browser,
+  GitHub; the phone menu sheet below 900 px), the footer, the sections' panels.
+  `web/src/lib/useSection.ts` keeps the section in the URL hash (`#simple`,
+  `#advanced`, `#codec`, `#mds`) with `replaceState`.
+- `web/src/components/analyze-browser/`: the first ported surface, over the logic
+  modules in `frontend/static/scripts/shared/browser/`, imported through the
+  `@legacy/*` alias (`experimental.externalDir`), never copied. They move into
+  `web/` at the cutover. `docs/ui-parity/analyze-browser.md` maps every item of the
+  old panel to the new one.
+- `web/scripts/check-export-csp.mjs`: parses every HTML file of the export and
+  fails on an inline script that would run, a `<style>`, a style attribute, an `on*`
+  attribute, a `javascript:` URL or a script or stylesheet from outside `/beta/`.
+- `web/e2e/`: Playwright in Chromium. `serve-flask.mjs` starts Flask with every store
+  in a temporary directory; `virtual-authenticator.ts` adds a CTAP2 authenticator
+  through the DevTools WebAuthn domain; `fixtures.ts` fails a test on any console
+  error, page error, CSP violation or report. `simple-ceremony.spec.ts` registers and
+  authenticates on the current UI at `/`; `beta-smoke.spec.ts` covers `/beta`.
+
+Rules for `web/src` (`tests/app/tooling/test_web_source_rules.py` holds them):
+no `style` prop (the export would render a style attribute), no
+`dangerouslySetInnerHTML` or other markup sink, no `<style>` / `<script>`, no
+`next/script`, no `eval`, nothing written to `window`, no `atob`, and no copy of
+the logic modules' exports or sentences. No `Suspense` on the server-rendered path:
+React would put an inline script in the export. Links to the current UI are plain
+`<a href="/">` (`next/link` adds `/beta`).
+
+Running it locally (Node 22):
+
+- `cd web && npm ci`
+- `npm run dev`: the dev server at `http://localhost:3000/beta`, proxying `/api` to
+  Flask at `FLASK_URL` (default `http://localhost:8000`, `python -m server.app.app`).
+  WebAuthn ceremonies need the Flask origin; use the export for those.
+- `npm run build`: the export in `web/out`, which Flask serves at `/beta`
+  (`FIDO_SERVER_WEB_EXPORT_ROOT` points elsewhere). Without a build `/beta` is a 404.
+- `npm run typecheck`, `npm test` (vitest, jsdom, Testing Library),
+  `npm run test:coverage` (with the floors in `web/vitest.config.mts`),
+  `npm run check:csp` (after a build), and `npm run e2e` (after a build; Chromium
+  once with `npx playwright install chromium`; `E2E_PYTHON` names the Python with
+  the app's dependencies, `.venv/bin/python` by default).
+
+### The current UI (`frontend/`)
 
 The app is a multi-tab UI wired together from `frontend/static/scripts/main.js`.
 
@@ -63,9 +132,10 @@ Important frontend entry points:
   the brand list says so, "Chromium-based browser" for a list of only Chromium.
   `webauthn-facts.js` asks the WebAuthn questions and keeps each answer in one of
   four states (`yes`, `no`, `unavailable` when the method is missing, `undetermined`
-  when it threw, with why); it also reads `getClientCapabilities()`. `analyze.js`
-  renders both, copies the raw findings as JSON, and handles the dialog (focus in,
-  Tab kept inside, Escape, focus back to the button). `probe.js` reads an API that
+  when it threw, with why); it also reads `getClientCapabilities()`. `report.js`
+  gathers both, groups the capabilities, builds the report and copies it, with no
+  DOM: the new UI imports it too. `analyze.js` renders the legacy panel and handles
+  its dialog (focus in, Tab kept inside, Escape, focus back to the button). `probe.js` reads an API that
   may be missing or throw. Web pages cannot ask which authenticator transports a
   browser supports: do not reintroduce WebUSB/WebHID/Web Bluetooth/Web Serial
   checks, which say nothing about WebAuthn. The identity cases are real
@@ -248,7 +318,12 @@ Main route modules:
   of session reads in the bodies are behaviour; keep moved code inside them.
 - `server/app/routes/general.py`
   Index page, metadata bootstrap helpers, decoder endpoints, misc app routes, on
-  the `general` blueprint. `static_assets.py` has its own `static_assets`
+  the `general` blueprint. `routes/web_export.py` (the `web_export` blueprint) serves
+  the new UI's export at `/beta`: HTML `no-cache`, `/beta/_next/static/` immutable for
+  a year with the build-time `.gz` copies (`static_assets.send_precompressed`), the
+  export's `404.html` for an unknown path, a plain 404 with no export; the export
+  root is `config/web_export.py` (`web/out`, or `FIDO_SERVER_WEB_EXPORT_ROOT`).
+  `static_assets.py` has its own `static_assets`
   blueprint. Endpoint names are therefore `general.index`, `simple.register_begin`
   and so on; nothing refers to them today (no `url_for`).
 - `server/app/routes/csp_report.py`
@@ -359,7 +434,7 @@ Repo test layout:
 
 If you are changing only UI logic plus lightweight server responses, prefer targeted tests over the full suite first.
 
-Seven checks guard the code and the checkout rather than behaviour:
+Nine checks guard the code and the checkout rather than behaviour:
 
 - `tests/app/tooling/test_html_sinks.py` fails on any `.innerHTML` / `.outerHTML`
   assignment, `insertAdjacentHTML`, `document.write`, `parseFromString`,
@@ -375,6 +450,16 @@ Seven checks guard the code and the checkout rather than behaviour:
 - `tests/app/tooling/test_frontend_base64.py` fails on any `atob(` in
   `frontend/static/scripts` outside its `ALLOWED` list, which holds only the
   vendored `json-ponyfill.js`.
+
+- `tests/app/tooling/test_web_source_rules.py` holds `web/src` to the same rules,
+  with the readers of the two tests above, plus no `style` prop, no
+  `dangerouslySetInnerHTML`, `<style>`/`<script>`, `next/script` or `eval`, and no
+  copy of the Analyze Browser logic modules (their exports or their sentences).
+  Its `ALLOWED` dict is empty and may only shrink.
+- `tests/app/tooling/test_npm_lockfiles.py` fails when a lockfile (root or `web/`)
+  lacks an optional dependency one of its packages declares: the per-platform
+  native builds (`@next/swc-*`, `@tailwindcss/oxide-*`, `lightningcss-*`,
+  `@rolldown/binding-*`) the Linux runner and the image need.
 
 - `tests/app/tooling/test_no_silent_monkeypatch.py` fails on a
   `monkeypatch.setattr(..., raising=False)` (or `mock.patch(..., create=True)`):
@@ -484,15 +569,28 @@ it configures that app and no other. Do not `importlib.reload` config modules.
 - `fido2/hid/macos.py` is omitted from coverage on purpose: its only test module
   skips itself off Darwin, so measuring it made the total depend on the runner's
   OS and the floor could not hold on both.
-- Frontend installs use `npm ci` everywhere. `package-lock.json` must list all
-  fifteen `@rolldown/binding-*` platform packages -- vitest pulls rolldown and
-  the Linux runner needs its own. If a lock regeneration drops them, delete
-  `node_modules` and `package-lock.json` and run `npm install` from clean; npm
-  prunes foreign-platform optional dependencies when it reconciles against a
-  partial tree (npm/cli#4828).
+- Frontend installs use `npm ci` everywhere, at the root and in `web/`. Each
+  `package-lock.json` must list every platform's native build (fifteen
+  `@rolldown/binding-*` at the root; in `web/` also `@next/swc-*`,
+  `@tailwindcss/oxide-*` and `lightningcss-*`) -- the Linux runner and the image
+  need their own; `test_npm_lockfiles.py` checks it. If a lock regeneration drops
+  them, delete `node_modules` and `package-lock.json` and run `npm install` from
+  clean; npm prunes foreign-platform optional dependencies when it reconciles
+  against a partial tree (npm/cli#4828).
+- `web/package.json` overrides the `postcss` Next 15 pins (8.4.31, with advisories)
+  with a fixed release, so `npm audit` stays clean without leaving Next 15. Dependabot
+  (`/web`) skips majors of `next`, `typescript` and `@types/node`: the charter names
+  Next 15, whose build type-checks with TypeScript 5.
+- `ci-web.yml` runs `web/`'s typecheck, unit tests with coverage floors, build and
+  CSP scan, and the Playwright browser tests. `cloudbuild.yaml`'s `Web tests` step
+  runs all but the browser tests before any image is built; the browser tests join
+  the Cloud Build gate at the cutover (docs/UI_MIGRATION.md).
+- The `Dockerfile`'s first stage (`node:22-slim`) builds `web/` and scans the export;
+  only `web/out` reaches the runtime image, at `/app/web/out`, precompressed by
+  `tools/build_static_assets.py --precompress-only`. No Node runs in production.
 - `ci-security.yml` fails the build on a `pip-audit` finding against `uv.lock`,
-  on `npm audit --audit-level=high`, and on a fixable HIGH/CRITICAL Trivy
-  finding in the image. Each threshold is justified in a comment next to it. If
+  on `npm audit --audit-level=moderate` at the root and in `web/`, and on a fixable
+  HIGH/CRITICAL Trivy finding in the image. Each threshold is justified in a comment next to it. If
   a scan starts failing, fix the dependency -- do not widen the threshold.
 - The runtime stage of the `Dockerfile` runs `apt-get upgrade`. Removing it puts
   thirteen fixable HIGH/CRITICAL Debian CVEs back into the image.
@@ -510,7 +608,7 @@ it configures that app and no other. Do not `importlib.reload` config modules.
 
 ## Repo-Specific Gotchas
 
-- The frontend is plain JS modules, not React/Vue.
+- The current UI (`frontend/`) is plain JS modules; the new UI (`web/`) is React through Next.js, exported as static files.
 - Templates hold no code: a control names its action with `data-action`, and nothing is put on `window` (`shared/ui/actions.js`). The CSP has no `'unsafe-inline'`, so an inline handler, `<script>` or `style=` added back simply does not run.
 - The simple and advanced tabs share the saved credential display, so re-render logic can have cross-tab side effects.
 - Flask session state matters in begin/complete flows. Be careful not to break the fallback `__session_state` handling.
