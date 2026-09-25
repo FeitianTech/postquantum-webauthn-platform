@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type ReactNode, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { type KeyboardEvent, type ReactNode, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 
 import { cx } from '@/lib/cx';
 
@@ -6,6 +6,16 @@ import { InfoIcon } from './icons';
 
 const HIDE_DELAY_MS = 200;
 const OPENED = 'info-popover-open';
+const EDGE = 8;
+
+// Below the trigger and from its left by default; above it when there is no
+// room below and more above, and from its right when it would leave the screen.
+export function placePopup(popup: DOMRect, trigger: DOMRect, viewport: { width: number; height: number }) {
+  const roomBelow = viewport.height - trigger.bottom;
+  const side = popup.bottom > viewport.height - EDGE && trigger.top > roomBelow ? 'top' : 'bottom';
+  const align = popup.right > viewport.width - EDGE ? 'end' : 'start';
+  return { side, align } as const;
+}
 
 type InfoPopoverProps = {
   /** What the popover explains, for the trigger's name: "About prf eval first". */
@@ -23,6 +33,7 @@ export function InfoPopover({ label, en, zh }: InfoPopoverProps) {
   const [open, setOpen] = useState(false);
   const [pinned, setPinned] = useState(false);
   const [language, setLanguage] = useState<'en' | 'zh'>('en');
+  const [placement, setPlacement] = useState<ReturnType<typeof placePopup>>({ side: 'bottom', align: 'start' });
   const rootRef = useRef<HTMLSpanElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -50,6 +61,21 @@ export function InfoPopover({ label, en, zh }: InfoPopoverProps) {
       clearTimeout(hideTimer.current);
     };
   }, [id, close]);
+
+  useLayoutEffect(() => {
+    const popup = popupRef.current;
+    const trigger = triggerRef.current;
+    if (!open || !popup || !trigger) {
+      setPlacement({ side: 'bottom', align: 'start' });
+      return;
+    }
+    setPlacement(
+      placePopup(popup.getBoundingClientRect(), trigger.getBoundingClientRect(), {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      }),
+    );
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -112,9 +138,13 @@ export function InfoPopover({ label, en, zh }: InfoPopoverProps) {
         role="group"
         aria-label={label}
         hidden={!open}
+        data-side={placement.side}
+        data-align={placement.align}
         className={cx(
-          'absolute top-full left-[-0.75rem] z-40 mt-2 w-[min(21rem,calc(100vw-2rem))] rounded-md border border-line',
+          'absolute z-40 w-[min(21rem,calc(100vw-2rem))] rounded-md border border-line',
           'bg-surface p-4 pb-11 text-label leading-[1.55] font-normal text-ink shadow-float',
+          placement.side === 'top' ? 'bottom-full mb-2' : 'top-full mt-2',
+          placement.align === 'end' ? 'right-[-0.75rem]' : 'left-[-0.75rem]',
         )}
       >
         <div lang="en" hidden={language !== 'en'}>
