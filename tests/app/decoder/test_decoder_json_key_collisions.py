@@ -176,3 +176,18 @@ def test_extension_entries_keep_colliding_identifiers():
 def test_json_keys_never_returns_two_alike_whatever_decorate_does():
     assert keys.json_keys([1, 2], lambda key, text: "same") == ["same", "same #2"]
     assert keys.json_keys([1, "1", '"1" (text)']) == ["1", '"1" (text)', '"\\"1\\" (text)" (text)']
+
+
+def test_a_map_spelled_once_is_not_spelled_again():
+    # The decoder passes one map through json_items several times (the decoded
+    # value, then the response); a label from an earlier pass is kept as it is.
+    from server.app.decoder.decode import keys
+    from server.app.decoder.decode.cbor_parser import CborDiagnostic
+
+    value = {1: "a", "1": "b", b"\x01": "c", "01": "d", CborDiagnostic("true", "boolean"): "e", "true": "f"}
+    once = keys.make_hex_only(value)
+
+    assert all(isinstance(label, keys.JsonLabel) for label in once)
+    assert keys.stringify_mapping_keys(keys.make_hex_only(once)) == once
+    assert keys.json_ready(once) == once
+    assert list(once) == ["1", '"1" (text)', "h'01' (bytes)", '"01" (text)', "true (boolean)", '"true" (text)']
