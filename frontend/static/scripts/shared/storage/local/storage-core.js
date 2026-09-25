@@ -5,6 +5,7 @@ import {
 } from './constants.js';
 import { safeParse } from './common.js';
 import { ensureRecordType, getRecordIdentifier } from './id-utils.js';
+import { migrateStoredRecord } from './record-migration.js';
 
 let bootUnifiedCredentialRecords = (
     typeof window !== 'undefined'
@@ -49,12 +50,15 @@ export function persistStoredCredentials(storageKey, records) {
 export function readUnifiedCredentialRecords() {
     const combined = [];
     const seen = new Set();
+    let recordsMigrated = false;
 
     const addRecords = (records, fallbackType = 'simple') => {
         if (!Array.isArray(records) || !records.length) {
             return;
         }
-        records.forEach(record => {
+        records.forEach(stored => {
+            const { record, changed } = migrateStoredRecord(stored);
+            recordsMigrated = recordsMigrated || changed;
             const clone = ensureRecordType(record, fallbackType);
             if (!clone) {
                 return;
@@ -78,7 +82,7 @@ export function readUnifiedCredentialRecords() {
     const legacyAdvanced = readStoredCredentials(LEGACY_ADVANCED_STORAGE_KEY);
     const legacySimple = readStoredCredentials(LEGACY_SIMPLE_STORAGE_KEY);
 
-    let needsMigration = false;
+    let needsMigration = recordsMigrated;
 
     if (legacyAdvanced.length) {
         needsMigration = true;

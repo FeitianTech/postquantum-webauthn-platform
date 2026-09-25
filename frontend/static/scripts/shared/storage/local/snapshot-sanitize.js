@@ -2,7 +2,6 @@ import {
     MAX_AUTH_DATA_HASH_LENGTH,
     MAX_AUTH_DATA_HEX_LENGTH,
     MAX_DETAIL_STRING_LENGTH,
-    MAX_SNAPSHOT_HTML_LENGTH,
     MAX_SNAPSHOT_RESPONSE_LENGTH,
     SNAPSHOT_ATTESTATION_STRIP_KEYS,
     SNAPSHOT_AUTH_DATA_STRIP_KEYS,
@@ -230,20 +229,6 @@ export function sanitiseRegistrationDetailSnapshot(snapshot) {
         sanitised.capturedAt = snapshot.capturedAt.trim();
     }
 
-    if (typeof snapshot.html === 'string' && snapshot.html.trim()) {
-        sanitised.html = truncateString(snapshot.html.trim(), MAX_SNAPSHOT_HTML_LENGTH);
-    }
-
-    if (typeof snapshot.attestationSectionHtml === 'string' && snapshot.attestationSectionHtml.trim()) {
-        sanitised.attestationSectionHtml = truncateString(snapshot.attestationSectionHtml.trim(), MAX_SNAPSHOT_HTML_LENGTH);
-    }
-
-    if (!sanitised.html && typeof snapshot.combinedHtml === 'string' && snapshot.combinedHtml.trim()) {
-        sanitised.html = truncateString(snapshot.combinedHtml.trim(), MAX_SNAPSHOT_HTML_LENGTH);
-    } else if (typeof snapshot.combinedHtml === 'string' && snapshot.combinedHtml.trim()) {
-        sanitised.combinedHtml = truncateString(snapshot.combinedHtml.trim(), MAX_SNAPSHOT_HTML_LENGTH);
-    }
-
     const stateClone = sanitiseRegistrationDetailStateSnapshot(snapshot.state || snapshot.stateSnapshot || {});
     if (stateClone) {
         sanitised.state = stateClone;
@@ -254,5 +239,7 @@ export function sanitiseRegistrationDetailSnapshot(snapshot) {
         sanitised.response = responseClone;
     }
 
-    return Object.keys(sanitised).length ? sanitised : null;
+    // Composed HTML, which older snapshots carried, is not kept: the view is built
+    // from the state and the response. A snapshot with neither holds nothing.
+    return sanitised.state || sanitised.response ? sanitised : null;
 }
