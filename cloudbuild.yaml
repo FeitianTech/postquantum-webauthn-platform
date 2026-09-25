@@ -8,8 +8,9 @@
 # GitHub Actions and Cloud Build are independent pipelines: a red CI run does
 # not stop a trigger from firing. The test steps below are therefore the gate
 # that actually stands between a commit on main and production. They run first
-# and in parallel; Build waits for both, so a failing suite fails the build
-# before an image is ever pushed.
+# and in parallel; Build waits for all three, so a failing suite fails the build
+# before an image is ever pushed. The Playwright browser tests run in GitHub CI
+# only (ci-web.yml) until the cutover; see docs/UI_MIGRATION.md.
 
 steps:
   - name: python:3.12-slim
@@ -37,11 +38,31 @@ steps:
         npm ci
         npm run test:frontend
 
+  # The new UI (web/, docs/UI_MIGRATION.md): typecheck, its unit tests with
+  # their coverage floors, the static export, and the export's CSP scan. The
+  # image builds web/ again in its own stage (and scans it again); this step is
+  # the gate, and fails before any image exists.
+  - name: node:22-slim
+    id: Web tests
+    waitFor: ['-']
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        cd web
+        npm ci --no-audit --no-fund
+        npm run typecheck
+        npm run test:coverage
+        npm run build
+        npm run check:csp
+
   - name: gcr.io/cloud-builders/docker
     id: Build
     waitFor:
       - Python tests
       - Frontend tests
+      - Web tests
     args:
       - build
       - -t
