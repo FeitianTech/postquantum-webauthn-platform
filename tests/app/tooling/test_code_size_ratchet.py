@@ -24,7 +24,6 @@ MAX_MODULE_LINES = 700
 
 LONG_FUNCTIONS: dict[str, int] = {
     "server/app/config/session_secret.py::_resolve_secret_key": 84,
-    "server/app/decoder/decode/ctap.py::_try_decode_cbor": 85,
     "server/app/decoder/decode/pipeline.py::_decode_public_key_credential": 109,
     "server/app/decoder/decode/response.py::_build_credential_payload": 88,
     "server/app/mds_snapshot.py::build_explorer_entry": 131,
