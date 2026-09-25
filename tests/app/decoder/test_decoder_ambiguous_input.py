@@ -30,6 +30,11 @@ def _ambiguity(result: dict) -> list[tuple[str, str]]:
         ("8101", [1]),
         ("10", 16),
         ("1901f4", None),  # not digits only: never JSON, so never ambiguous
+        # A one-byte byte string: 0x41 is also a command byte, and what follows it
+        # alone is no item. These used to be read as JSON numbers, "not one item".
+        ("4118", "18"),
+        ("4161", "61"),
+        ("4142", "42"),
     ],
 )
 def test_digits_that_are_one_cbor_item_are_read_as_hex(text, decoded):
@@ -110,6 +115,8 @@ def test_the_endpoint_reads_digit_hex_as_cbor(client):
         (b"\x12\x34", False),  # one item, then a byte
         (b"\x99", False),  # truncated
         (b"\x00", True),  # SUCCESS
+        (b"\x41\x18", True),  # h'18': 0x41 then 0x18 alone is no item, but the two are one
+        (b"\x41\xa1\x01", False),  # neither reading is well-formed
     ],
 )
 def test_is_one_ctap_message(data, expected):

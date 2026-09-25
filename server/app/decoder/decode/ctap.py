@@ -17,7 +17,7 @@ from . import (
     response,
 )
 from .cbor_parser import _CborDecodingError, _structure_to_value
-from .ctap_prefix import _extract_ctap_prefix, _is_padding_bytes
+from .ctap_prefix import _extract_ctap_prefix, _is_padding_bytes, prefix_not_read
 from .ctap_responses import _interpret_get_assertion_map, _interpret_make_credential_map
 from .findings import _attach_findings, _trailing_findings
 from .keys import MISSING, json_items, key_identity
@@ -614,7 +614,7 @@ def _try_decode_cbor(data: bytes, encoding: str, *, lenient: bool = False) -> di
         decoded_payload["decodedValue"] = _stringify_mapping_keys(_hex_json_safe(hex_decoded_value))
 
     extra, located = interpretations.for_ctap(classification, base_value, node, data)
-    findings = canonical.check(node, data) + key_collisions.check(node) + skipped + _trailing_findings(data, end) + located
+    findings = canonical.check(node, data) + key_collisions.check(node) + skipped + _trailing_findings(data, end) + located + prefix_not_read(data)
 
     if ctap_details is not None:
         ctap_details["payloadLength"] = consumed_total

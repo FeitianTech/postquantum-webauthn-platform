@@ -132,3 +132,37 @@ def test_the_encoder_prefixes_ctap_messages_with_fido2_codes():
         "makeCredentialResponse": (int(CtapError.ERR.SUCCESS), "status"),
         "getAssertionResponse": (int(CtapError.ERR.SUCCESS), "status"),
     }
+
+
+@pytest.mark.parametrize("lenient", [False, True])
+def test_a_command_byte_before_bytes_that_are_not_cbor_is_read_as_the_head_of_one_item(lenient):
+    # h'ab': 0x41 is a one-byte byte string's head and the CREDENTIAL_MGMT_PRE
+    # command byte. Read as the command, what follows (0xab) is not CBOR, and a
+    # well-formed item was reported as "Not well-formed CBOR".
+    result = decode_payload_text("41ab", lenient=lenient)
+
+    assert result["type"] == "CBOR"
+    assert result["data"] == {"decodedValue": "ab"}
+    (finding,) = [finding for finding in result["findings"] if finding["code"] == "ctap-prefix-not-read"]
+    assert (finding["category"], finding["offset"], finding["path"]) == ("input", 0, "$")
+    assert finding["message"].startswith("0x41 is also the CREDENTIAL_MGMT_PRE command byte")
+
+
+@pytest.mark.parametrize(
+    ("text", "type_label"),
+    [
+        ("4100", "CBOR (CREDENTIAL_MGMT_PRE command)"),  # both readings parse: the command's is kept
+        ("41a0", "CBOR (CREDENTIAL_MGMT_PRE command)"),
+        ("00a0", "CBOR (SUCCESS status)"),
+        ("0101", "CBOR (MAKE_CREDENTIAL command)"),
+        ("01", "CBOR (MAKE_CREDENTIAL command or INVALID_COMMAND status)"),  # a lone byte stays a lone byte
+        ("04", "CBOR (GET_INFO command or INVALID_SEQ status)"),
+        ("07", "CBOR (RESET command)"),
+        ("40", "CBOR (BIO_ENROLLMENT_PRE command or UNAUTHORIZED_PERMISSION status)"),
+    ],
+)
+def test_a_command_byte_whose_payload_parses_is_still_read_as_the_command(text, type_label):
+    result = decode_payload_text(text)
+
+    assert result["type"] == type_label
+    assert "ctap-prefix-not-read" not in [finding["code"] for finding in result["findings"]]
