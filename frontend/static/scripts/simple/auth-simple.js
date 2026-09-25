@@ -67,7 +67,6 @@ export async function simpleRegister() {
         }
 
         state.lastFakeCredLength = 0;
-        window.lastFakeCredLength = 0;
 
         showProgress('simple', 'Connecting your authenticator device...');
 
@@ -162,7 +161,6 @@ export async function simpleAuthenticate() {
         const getOptions = parseRequestOptionsFromJSON(optionsWithoutState);
 
         state.lastFakeCredLength = 0;
-        window.lastFakeCredLength = 0;
 
         showProgress('simple', 'Connecting your authenticator device...');
 

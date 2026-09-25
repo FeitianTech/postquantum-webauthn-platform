@@ -236,6 +236,7 @@ describe('main startup and wiring', () => {
   });
 
   it('runs startup flow on DOMContentLoaded and binds key UI listeners', async () => {
+    const globalsBefore = new Set(Object.getOwnPropertyNames(window));
     await importMainFresh();
 
     expect(initializeAnalyzeBrowser).toHaveBeenCalledTimes(1);
@@ -335,6 +336,10 @@ describe('main startup and wiring', () => {
     const modal = document.getElementById('modal-a');
     modal.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(closeModal).toHaveBeenCalledWith('modal-a');
+
+    // Templates name their actions with data-action; nothing is put on window.
+    const added = Object.getOwnPropertyNames(window).filter(name => !globalsBefore.has(name));
+    expect(added).toEqual([]);
 
   });
 

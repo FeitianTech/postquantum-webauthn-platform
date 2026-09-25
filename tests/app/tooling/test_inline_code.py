@@ -14,6 +14,11 @@ A Content-Security-Policy whose ``script-src`` and ``style-src`` carry no
 - markup in a script that carries an ``on...=`` handler or a ``style=``
   attribute (a tag written in a string, as the MDS raw-data popup once was).
 
+And scripts put nothing on ``window`` (or ``globalThis`` / ``self``): no
+assignment, no ``delete``, no ``Object.assign`` / ``defineProperty`` onto it.
+Inline handlers were what needed functions there; a module imports what it
+uses, and ``main.js`` hands one module another's functions when it must.
+
 Each ``ALLOWED_*`` dict names what still does, each with the reason. It may only
 shrink: an entry that no longer matches fails the test, so a converted file must
 also leave the list.
@@ -42,6 +47,27 @@ ALLOWED_MARKUP_ATTRIBUTES: dict[tuple[str, str], str] = {}
 
 # (path under frontend/templates, attribute) -> reason.
 ALLOWED_TEMPLATE_ATTRIBUTES: dict[tuple[str, str], str] = {}
+
+# path under frontend/static/scripts -> reason.
+ALLOWED_GLOBAL_WRITES: dict[str, str] = {
+    "advanced/mds/index.js": (
+        "deletes window.__INITIAL_MDS_INFO__ / __INITIAL_MDS_SNAPSHOT__ once read; they "
+        "become JSON data blocks with the inline <script> in index.html"
+    ),
+    "shared/storage/local/storage-core.js": (
+        "mirrors its record cache to window.__INITIAL_CREDENTIAL_RECORDS__, the tests' "
+        "seam; it becomes a JSON data block with the inline <script>"
+    ),
+}
+
+_GLOBAL = r"(?:window|globalThis|self)"
+_ASSIGN = r"\s*(?:[-+*/%&|^]|\*\*|<<|>>>?|&&|\|\||\?\?)?=(?!=)"
+_GLOBAL_WRITE = re.compile(
+    rf"(?<![\w$.]){_GLOBAL}\s*\.\s*[A-Za-z_$][\w$]*{_ASSIGN}"
+    rf"|(?<![\w$.]){_GLOBAL}\s*\[[^\]]*\]{_ASSIGN}"
+    rf"|\bdelete\s+{_GLOBAL}\s*[.\[]"
+    rf"|\bObject\s*\.\s*(?:assign|defineProperty|defineProperties)\s*\(\s*{_GLOBAL}\b"
+)
 
 
 class _Tags(HTMLParser):
@@ -213,3 +239,53 @@ def test_the_reader_finds_markup_attributes():
     ])
 
     assert find_markup_attributes(source) == [(1, "style"), (2, "onclick"), (3, "onmouseenter")]
+
+
+def find_global_writes(text: str) -> list[int]:
+    """The lines of ``text`` that write to window, globalThis or self."""
+
+    return [number for number, code in _code_lines(text) if _GLOBAL_WRITE.search(code)]
+
+
+def _scripts_writing_globals() -> dict[str, list[int]]:
+    found: dict[str, list[int]] = {}
+    for path in sorted(_SCRIPTS.rglob("*.js")):
+        lines = find_global_writes(path.read_text(encoding="utf-8"))
+        if lines:
+            found[path.relative_to(_SCRIPTS).as_posix()] = lines
+    return found
+
+
+def test_scripts_put_nothing_on_window():
+    found = {path: lines for path, lines in _scripts_writing_globals().items() if path not in ALLOWED_GLOBAL_WRITES}
+
+    assert found == {}, "import what the module needs instead of reading it from window"
+
+
+def test_allowed_global_writes_still_exist():
+    stale = sorted(set(ALLOWED_GLOBAL_WRITES) - set(_scripts_writing_globals()))
+
+    assert stale == [], "no longer writes to window: remove these entries from ALLOWED_GLOBAL_WRITES"
+
+
+def test_the_reader_finds_global_writes():
+    source = "\n".join([
+        "window.switchTab = switchTab;",
+        "window.lastFakeCredLength=0;",
+        "globalThis.foo ??= {};",
+        "self['bar'] = 1;",
+        "window.count += 1;",
+        "delete window.__INITIAL_MDS_INFO__;",
+        "Object.assign(window, { a });",
+        "Object.defineProperty(globalThis, 'b', {});",
+        "window.location.href = url;",
+        "if (window.foo === bar) {}",
+        "const nav = globalThis.navigator;",
+        "window.addEventListener('resize', onResize);",
+        "state.window = value;",
+        "mywindow.x = 1;",
+        "// window.commented = out;",
+        "if (window.innerWidth >= 900) {}",
+    ])
+
+    assert find_global_writes(source) == [1, 2, 3, 4, 5, 6, 7, 8]

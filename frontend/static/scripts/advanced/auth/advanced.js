@@ -247,7 +247,6 @@ export async function advancedRegister() {
         }
 
         state.lastFakeCredLength = parseInt(document.getElementById('fake-cred-length-reg').value) || 0;
-        window.lastFakeCredLength = state.lastFakeCredLength;
 
         showProgress('advanced', 'Connecting your authenticator device...');
 
@@ -453,7 +452,6 @@ export async function advancedAuthenticate() {
         }
 
         state.lastFakeCredLength = parseInt(document.getElementById('fake-cred-length-auth').value) || 0;
-        window.lastFakeCredLength = state.lastFakeCredLength;
 
         showProgress('advanced', 'Connecting your authenticator device...');
 

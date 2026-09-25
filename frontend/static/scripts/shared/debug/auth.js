@@ -1,4 +1,5 @@
 import { base64UrlToBytes } from '../utils/base64.js';
+import { state } from '../state.js';
 import { extractHexFromJsonFormat } from '../../advanced/credentials/utils.js';
 
 function bytesOf(value) {
@@ -39,7 +40,7 @@ export function printRegistrationDebug(credential, createOptions, serverResponse
     const excludeCredentials = serverData.excludeCredentialsUsed || false;
     console.log('exclude credentials:', excludeCredentials);
 
-    const fakeCredLength = window.lastFakeCredLength || 0;
+    const fakeCredLength = state.lastFakeCredLength || 0;
     console.log('fake credential id length:', fakeCredLength);
 
     console.log('challenge hex code:', credential.response ? challengeHexOf(credential.response) : '');
@@ -93,7 +94,7 @@ export function printAuthenticationDebug(assertion, requestOptions, serverRespon
         : (assertion.clientExtensionResults || {});
     const serverData = serverResponse || {};
 
-    const fakeCredLength = window.lastFakeCredLength || 0;
+    const fakeCredLength = state.lastFakeCredLength || 0;
     console.log('Fake credential ID length:', fakeCredLength);
 
     console.log('challenge hex code:', assertion.response ? challengeHexOf(assertion.response) : '');

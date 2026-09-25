@@ -63,7 +63,6 @@ describe('auth-simple', () => {
   beforeEach(() => {
     document.body.innerHTML = '<input id="simple-email" />';
     state.lastFakeCredLength = 123;
-    window.lastFakeCredLength = 123;
     vi.clearAllMocks();
   });
 
@@ -103,7 +102,7 @@ describe('auth-simple', () => {
     });
     expect(loadSavedCredentials).toHaveBeenCalled();
     expect(state.lastFakeCredLength).toBe(0);
-    expect(window.lastFakeCredLength).toBe(0);
+    expect('lastFakeCredLength' in window).toBe(false);
     expect(hideProgress).toHaveBeenCalledWith('simple');
   });
 

@@ -140,12 +140,8 @@ function readCredentialIndex(element) {
     return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function resolveCredentialAction(candidate, globalName) {
-    if (typeof candidate === 'function') {
-        return candidate;
-    }
-    const globalCandidate = typeof window !== 'undefined' ? window[globalName] : undefined;
-    return typeof globalCandidate === 'function' ? globalCandidate : null;
+function resolveCredentialAction(candidate) {
+    return typeof candidate === 'function' ? candidate : null;
 }
 
 function statusColour(value) {
@@ -270,8 +266,8 @@ export function updateCredentialsDisplayRuntime(deps) {
         deleteCredential,
     } = deps;
 
-    const openCredentialDetails = resolveCredentialAction(showCredentialDetails, 'showCredentialDetails');
-    const removeCredential = resolveCredentialAction(deleteCredential, 'deleteCredential');
+    const openCredentialDetails = resolveCredentialAction(showCredentialDetails);
+    const removeCredential = resolveCredentialAction(deleteCredential);
 
     const hasCredentials = state.storedCredentials.length > 0;
     const flashRequest = readPendingCredentialFlash();

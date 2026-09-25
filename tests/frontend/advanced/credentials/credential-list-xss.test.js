@@ -202,11 +202,12 @@ describe('credential list uses listener bindings instead of inline handlers', ()
     expect(deps.deleteCredential).not.toHaveBeenCalled();
   });
 
-  it('falls back to the global handlers when none are injected', () => {
-    const globalDetails = vi.fn();
-    const globalDelete = vi.fn();
-    window.showCredentialDetails = globalDetails;
-    window.deleteCredential = globalDelete;
+  it('does nothing for a card or its delete button when no handler is injected', () => {
+    // A same-named function on window is never looked up (there were window
+    // fallbacks before Phase 24; main.js puts nothing on window now).
+    const onWindow = vi.fn();
+    window.showCredentialDetails = onWindow;
+    window.deleteCredential = onWindow;
 
     const deps = createDeps([{ userName: 'alice', credentialIdHex: 'aabb' }], {
       showCredentialDetails: undefined,
@@ -215,11 +216,12 @@ describe('credential list uses listener bindings instead of inline handlers', ()
     updateCredentialsDisplayRuntime(deps);
 
     const list = getList();
-    list.querySelector('.credential-item').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    list.querySelector('.credential-delete-button').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(() => {
+      list.querySelector('.credential-item').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      list.querySelector('.credential-delete-button').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    }).not.toThrow();
 
-    expect(globalDetails).toHaveBeenCalledWith(0);
-    expect(globalDelete).toHaveBeenCalledWith(0);
+    expect(onWindow).not.toHaveBeenCalled();
 
     delete window.showCredentialDetails;
     delete window.deleteCredential;

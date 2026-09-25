@@ -70,7 +70,6 @@ beforeEach(() => {
   window.__INITIAL_CREDENTIAL_RECORDS__ = [];
   window.__INITIAL_MDS_INFO__ = {};
   window.__INITIAL_MDS_SNAPSHOT__ = {};
-  window.lastFakeCredLength = 0;
 
   Object.defineProperty(window, 'innerWidth', {
     value: 1280,

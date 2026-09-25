@@ -1,10 +1,4 @@
 import {
-    create,
-    get,
-    parseCreationOptionsFromJSON,
-    parseRequestOptionsFromJSON
-} from './shared/webauthn/json-ponyfill.js';
-import {
     switchTab,
     bindNavigationActions,
     initializeNavigationMenu,
@@ -12,7 +6,6 @@ import {
 import {
     bindCoreActions,
     toggleJsonEditorExpansion,
-    updateGlobalScrollLock,
     closeModal,
     initializeStickyHeader,
 } from './shared/ui/core.js';
@@ -37,17 +30,10 @@ import { bindCodecActions } from './decoder/codec.js';
 import {
     bindEditorActions,
     updateJsonEditor,
-    updateJsonFromForm,
-    editCreateOptions,
-    editAssertOptions,
-    applyJsonChanges,
-    cancelJsonEdit
+    updateJsonFromForm
 } from './advanced/editor/index.js';
 import {
     loadSavedCredentials,
-    showCredentialDetails,
-    navigateToMdsAuthenticator,
-    deleteCredential,
     updateAllowCredentialsDropdown,
     setMdsNavigation,
     bindCredentialActions
@@ -442,20 +428,6 @@ async function runDeferredStartupTasks(jsonEditorElement) {
     await delay(300);
     checkLargeBlobCapability();
 }
-
-window.create = create;
-window.get = get;
-window.parseCreationOptionsFromJSON = parseCreationOptionsFromJSON;
-window.parseRequestOptionsFromJSON = parseRequestOptionsFromJSON;
-
-window.updateGlobalScrollLock = updateGlobalScrollLock;
-window.showCredentialDetails = showCredentialDetails;
-window.navigateToMdsAuthenticator = navigateToMdsAuthenticator;
-window.deleteCredential = deleteCredential;
-window.editCreateOptions = editCreateOptions;
-window.editAssertOptions = editAssertOptions;
-window.applyJsonChanges = applyJsonChanges;
-window.cancelJsonEdit = cancelJsonEdit;
 
 document.addEventListener('DOMContentLoaded', () => {
     void (async () => {
