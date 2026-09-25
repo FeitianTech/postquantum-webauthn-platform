@@ -30,24 +30,28 @@ def test_encode_cbor_value_prefers_ctap_decoded_when_present():
     assert result["data"]["ctap"]["code"] == 1
 
 
-def test_encode_cbor_value_falls_back_from_decoded_to_expanded_structure():
+def test_encode_cbor_value_reads_ctap_only_from_an_explicit_view():
     encode_module = pytest.importorskip("server.app.decoder.encode")
+    expanded = {"rpId": "example.com", "clientDataHash": _b64url(b"\x22" * 32)}
 
     # A ctapDecoded naming something the encoder does not build is refused, not skipped.
     with pytest.raises(ValueError, match="ctapDecoded.unknown is not a CTAP message the encoder builds"):
         encode_module._encode_cbor_value({"ctapDecoded": {"unknown": {"x": 1}}})
+    # An empty one is refused too, rather than falling through to guessing.
+    with pytest.raises(ValueError, match="ctapDecoded names no CTAP message"):
+        encode_module._encode_cbor_value({"ctapDecoded": {}, "expandedJson": expanded})
 
-    parsed = {
-        "ctapDecoded": {},
-        "expandedJson": {
-            "rpId": "example.com",
-            "clientDataHash": _b64url(b"\x22" * 32),
-        },
-    }
-
-    result = encode_module._encode_cbor_value(parsed)
+    # expandedJson is a CTAP view beside the ctap metadata of its command byte...
+    result = encode_module._encode_cbor_value({"expandedJson": expanded, "ctap": {"codeHex": "0x02", "kind": "command"}})
     assert result["success"] is True
     assert "getAssertionRequest" in result["type"]
+    with pytest.raises(ValueError, match="expandedJson is not a makeCredential or getAssertion"):
+        encode_module._encode_cbor_value({"expandedJson": {"x": 1}, "ctap": {"code": 2}})
+
+    # ... and without it, just a map.
+    plain = encode_module._encode_cbor_value({"expandedJson": expanded})
+    assert plain["type"] == "CBOR (canonical) (encoded)"
+    assert "ctap" not in plain["data"]
 
 
 def test_encode_cbor_value_non_ctap_path_and_normalize_format_empty_error():
