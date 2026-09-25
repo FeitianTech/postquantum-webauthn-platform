@@ -33,6 +33,7 @@ from . import (
     interpretations,
     json_input,
     key_collisions,
+    readings,
     response,
 )
 from .authenticator_data import _describe_authenticator_data_bytes, _LocatedError
@@ -267,57 +268,8 @@ def _decode_pem_certificates(text: str) -> dict[str, Any]:
 
 
 def _decode_binary_payload(data: bytes, encoding: str, *, lenient: bool = False) -> dict[str, Any]:
-    # A single byte CTAP names is a status or command byte. Read as text it is
-    # at most an ASCII digit, which would otherwise be shown as a JSON number:
-    # 0x31 (PIN_INVALID) as 1.
-    if len(data) == 1 and ctap._extract_ctap_prefix(data)[0] is not None:
-        return ctap._try_decode_cbor(data, encoding, lenient=lenient)
-
-    text_version = _try_decode_utf8(data)
-
-    if text_version and _looks_like_pem(text_version):
-        result = _decode_pem_certificates(text_version)
-        result["inputEncoding"] = encoding
-        result["binary"] = _binary_summary(data, encoding)
-        return result
-
-    if text_version:
-        json_obj, json_findings = _read_json(text_version)
-        if json_obj is not None:
-            if isinstance(json_obj, Mapping) and _is_client_data_dict(json_obj):
-                result = {
-                    "format": "WebAuthn client data (binary)",
-                    "inputEncoding": encoding,
-                    "decoded": _describe_client_data_from_bytes(data),
-                    "binary": _binary_summary(data, encoding),
-                }
-            else:
-                result = {
-                    "format": "JSON (binary)",
-                    "inputEncoding": encoding,
-                    "decoded": json_obj,
-                    "binary": _binary_summary(data, encoding),
-                }
-            if json_findings:
-                ctap._attach_findings(result, json_findings)
-            return result
-
-    certificate_result = _try_decode_certificate_bytes(data, encoding)
-    if certificate_result is not None:
-        return certificate_result
-
-    attestation_result = _try_decode_attestation_object(data, encoding)
-    if attestation_result is not None:
-        return attestation_result
-
-    authenticator_result = _try_decode_authenticator_data(data, encoding)
-    if authenticator_result is not None:
-        return authenticator_result
-
-    # Whatever is left is read as CBOR, strictly: input that is not
-    # well-formed CBOR fails here, with the offset where it goes wrong. Only a
-    # request for lenient decoding reads past that, and it lists what it skipped.
-    return ctap._try_decode_cbor(data, encoding, lenient=lenient)
+    # The readings, in order, are decode/readings.py's.
+    return readings.read_binary(data, encoding, lenient=lenient)
 
 
 def _sniff_binary_input(value: str) -> SniffResult:
