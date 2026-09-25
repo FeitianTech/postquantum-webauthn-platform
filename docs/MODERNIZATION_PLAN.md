@@ -1466,6 +1466,59 @@ coverage unchanged. Functions over 80 lines still 14 (`authenticate_complete` 19
   the counter check at a user with no record. That is the Phase 1 known limitation (server records keyed
   by browser namespace, client-supplied public keys), not a regression.
 
+### Phase 20 — the codec reports what it read and rebuilds what it showed; Phase 19 leftovers — DONE (2026-09-24)
+64 commits, 7e805ba8..the record's own, all this phase's, each gated on pytest, vitest and ruff exit codes.
+The first 39 were re-run afterwards on their own trees in fresh worktrees (all pass; vitest too for the three
+frontend commits); the 23 fixes after the review were each gated on main as they were committed. New tests
+were run on 7e805ba8 (or on the commit before their fix), adapted only for new import names, and fail there.
+
+**Part B.** B6: the checkout guard covers `server/app/session-credentials/`, `server/app/*_credential_data.pkl`
+and `.hypothesis/`; the fixture that read the legacy store unredirected is redirected. B4: the attachment map
+and `extract_credential_data` are gone. B3: simple registration answers 503 when the store cannot be read or
+does not decode (golden `simple-register-store-unwritable`: 500 -> 503). B2: credential artifacts keep the
+three cases on both backends; a merge over a record it cannot read or decode refuses (503). B5: the legacy
+GCS pass lists `user-data/` with the `/` delimiter; S1: sessions are listed as prefixes. B1: RSA-PSS is spelled
+`RSASSA-PSS_<hash from the PSS parameters>`; ML-DSA and SHA3 by name too (goldens `certificates`,
+`certificate-helpers`; new RSA-PSS, ECDSA-SHA3 and RSA-SHA3 certificates in the material).
+
+**Part A.** `data.edn` is the item in EDN beside `decodedValue`, self-checked; the encoder's EDN input writes
+exactly the bytes a text notates (`decoder/edn/`, heads from `decoder/cbor_head.py`). Hypothesis proves
+decode -> EDN -> encode over generated items (3000 examples at the module, 1000 through the API, on Python
+3.14 and 3.12) and a corpus of 412 items (every CBOR input in tests, fixtures and golden records; 404 read as
+CBOR with EDN, 3 as CBOR after a CTAP byte, 5 as lone CTAP bytes). Keys are equal by RFC 8949 section 5.6.1;
+`duplicate-map-key` carries every earlier entry; `duplicate-json-key` names path, kept and dropped. The
+encoder never reads a plain map as CTAP; typed key spellings are read only by `keys.read_json_key`; CTAP
+response views show every key and `ctap-non-integer-key`; `malformed` holds only form findings; the UI shows
+EDN in a collapsible section and keys as the decoder wrote them. 0x41 before one byte that is not CBOR is
+read from the first byte (`41ab` is h'ab'). Golden `decoder-attestation-objects` gains `edn` (8 bodies).
+
+**Review and fixes.** A six-dimension adversarial review with a skeptic per finding confirmed 23 defects,
+fixed in 23 commits: the EDN reader accepted `(_ 1)`, crashed on deep nesting and hex-float overflow,
+counted offsets from stripped text, accepted `-0(1)`; `spell` wrote exact-looking EDN for unmarked lenient
+damage; a duplicate key's message quoted authData-relative offsets; duplicates inside dropped values
+claimed a kept value; the encoder respelled the keys it echoed and could not take its own output back;
+`NaN_2` and `invalid(...)` keys were written as text; non-object client data and a non-scalar COSE `kty`
+answered 500; and pre-existing: registration deleted an undecodable legacy `.pkl` unread.
+
+**Tests.** macOS 2556 -> **3912** passed / 4 skipped; Linux (python:3.14, Docker) 2542 -> **3898** / 5;
+`tests/app/security/` 120 -> **126**; vitest 293 -> **301**; ruff clean; coverage 96.49% -> **96.59%**; vitest
+coverage unchanged (82.58 / 66.44 / 91.33 / 82.69). Modules over 700 lines 2 -> **0**.
+
+**Found but not fixed:**
+- Tests write `instance/session-secret.key` into a fresh checkout: the `tests/app/conftest.py` `_app()` helper
+  builds the entry-point app without a secret, and the guard lists after collection, when
+  `test_security_headers.py` has already written it. A subset run in a fresh worktree fails the guard.
+- The CTAP decode -> encode loop still guesses inside nested maps (attStmt `ver` "14574037" becomes bytes,
+  a null user `icon` is dropped, nested integer keys become text); a bare response map comes back with a
+  `00` status byte; `ctap.trailingBytesHex` is dropped; `expandedJson` invents `{"sig": ...}`/`{"value": [...]}`.
+- The SafetyNet JWS header and payload are read with `json.loads`: a repeated key is not reported.
+- JSON NaN is emitted as invalid JSON; getInfo's label style differs from the typed spelling.
+- `signature_algorithms` still spells the names `RSA-PSS` and composite/HashML-DSA names wrongly and leaves
+  DSA-with-SHA384/512 and DSA-with-SHA3 as dotted OIDs (no caller passes them; unchanged from before).
+- Lenient decoding: a byte-string key with a skipped chunk still merges with the bytes it lost.
+- `delete_credential_artifact` and `_user_root_prefix` are reached only by tests; no scenario covers a failed
+  write after a successful read in registration.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
