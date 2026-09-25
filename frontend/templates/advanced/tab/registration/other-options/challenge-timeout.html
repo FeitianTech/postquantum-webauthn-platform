@@ -1,9 +1,9 @@
 <div class="form-group">
     <div class="label-with-info">
         <label for="challenge-reg">Challenge (hex)</label>
-        <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+        <div class="info-icon" data-action="info-popup">
             <div class="info-popup">
-                <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                <div class="language-toggle" data-action="toggle-language">ENG</div>
                 <div class="text-en active">
                     The cryptographic challenge to be signed by the authenticator, used to prevent replay attacks.
                 </div>
@@ -24,9 +24,9 @@
 <div class="form-group">
     <div class="label-with-info">
         <label for="timeout-reg">Timeout (milliseconds)</label>
-        <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+        <div class="info-icon" data-action="info-popup">
             <div class="info-popup">
-                <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                <div class="language-toggle" data-action="toggle-language">ENG</div>
                 <div class="text-en active">
                     How long the Relying Party (RP) is willing to wait for the registration ceremony to complete. If the registration ceremony takes longer than this (or the adjusted value, in case the client overrides it), the ceremony will be aborted with a timeout message shown to the user. This may be silently overridden by the client.
                 </div>

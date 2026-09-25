@@ -17,6 +17,7 @@ async function loadActionTables() {
   const resets = await import(`${SCRIPTS}/advanced/ui/resets.js`);
   const forms = await import(`${SCRIPTS}/advanced/auth/forms.js`);
   const editor = await import(`${SCRIPTS}/advanced/editor/index.js`);
+  const core = await import(`${SCRIPTS}/shared/ui/core.js`);
   return {
     navigation: navigation.navigationActions,
     simple: simple.simpleActions,
@@ -26,6 +27,7 @@ async function loadActionTables() {
     resets: resets.resetActions,
     forms: forms.formActions,
     editor: editor.editorActions,
+    core: core.coreActions,
   };
 }
 

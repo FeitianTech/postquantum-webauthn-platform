@@ -1,9 +1,9 @@
 <div class="form-group">
     <div class="label-with-info">
         <label for="prf-eval-first-reg">prf eval first</label>
-        <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+        <div class="info-icon" data-action="info-popup">
             <div class="info-popup">
-                <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                <div class="language-toggle" data-action="toggle-language">ENG</div>
                 <div class="text-en active">
                     The first prf extension input to evaluate. If set, the client extension outputs will include a prf.results.first output if the client and authenticator both support the extension.<br><br>
                     Many authenticators support evaluating the PRF only in authentication ceremonies, in which case the PRF extension output is just prf: { enabled: true } without any PRF outputs. To evaluate the PRF, perform an authentication ceremony with the same PRF inputs.
@@ -26,9 +26,9 @@
 <div class="form-group">
     <div class="label-with-info">
         <label for="prf-eval-second-reg">prf eval second</label>
-        <div class="info-icon" onmouseenter="showInfoPopup(this)" onmouseleave="hideInfoPopup(this)">
+        <div class="info-icon" data-action="info-popup">
             <div class="info-popup">
-                <div class="language-toggle" onclick="toggleLanguage(this)">ENG</div>
+                <div class="language-toggle" data-action="toggle-language">ENG</div>
                 <div class="text-en active">
                     The second prf extension input to evaluate. If set, the client extension outputs will include a prf.results.second output if the client and authenticator both support the extension.<br><br>
                     This is optional and can be used alongside the first PRF evaluation input for additional key derivation capabilities.
