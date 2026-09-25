@@ -129,7 +129,7 @@ class _Reader:
             raise self.error(f"encoding indicator _{spec} is reserved", start)
         raise self.error(f"no encoding indicator _{spec}", start)
 
-    def head(self, major_type: int, argument: int, info: int | None, start: int) -> bytes:
+    def head(self, major_type: int, argument: int | None, info: int | None, start: int) -> bytes:
         if info == -1:  # _i: the argument in the initial byte itself
             if argument >= 24:
                 raise self.error(f"_i holds an argument of 0..23 in the initial byte, not {argument}", start)
@@ -287,26 +287,33 @@ class _Reader:
         self.expect("(_")
         if not self.skip():
             raise self.error("(_ is followed by blank space")
-        chunks = self.sequence(")")
+        starts: list[int] = []
+        chunks = self.sequence(")", starts)
         self.expect(")")
-        return self.indefinite_string(chunks, start)
+        return self.indefinite_string(list(zip(starts, chunks)), start)
 
     def indefinite_sequence(self, start: int, prefix: str) -> bytes:
         self.position += len(prefix)
-        chunks = self.sequence(">>")
+        starts: list[int] = []
+        chunks = self.sequence(">>", starts)
         self.expect(">>")
         if not chunks:
             return b"\x5f\xff" if prefix == "ilbs<<" else b"\x7f\xff"
-        return self.indefinite_string(chunks, start, 2 if prefix == "ilbs<<" else 3)
+        return self.indefinite_string(list(zip(starts, chunks)), start, 2 if prefix == "ilbs<<" else 3)
 
-    def indefinite_string(self, chunks: list[bytes], start: int, major_type: int | None = None) -> bytes:
+    def indefinite_string(self, chunks: list[tuple[int, bytes]], start: int, major_type: int | None = None) -> bytes:
+        """``(_ ...)``: the chunks, each at its offset in the text, are definite strings of one type."""
+
         if not chunks:
             raise self.error("(_ ) names no chunks: write ''_ or \"\"_ for an empty indefinite string", start)
-        major_type = major_type if major_type is not None else chunks[0][0] >> 5
-        for chunk in chunks:
+        if major_type is None:
+            major_type = chunks[0][1][0] >> 5
+        for offset, chunk in chunks:
+            if chunk[0] >> 5 not in (2, 3):
+                raise self.error("a chunk of an indefinite-length string is a byte or text string", offset)
             if chunk[0] >> 5 != major_type or chunk[0] & 0x1F == INDEFINITE:
-                raise self.error("an indefinite string's chunks are definite strings of its own type", start)
-        return bytes([(major_type << 5) | INDEFINITE]) + b"".join(chunks) + b"\xff"
+                raise self.error("an indefinite string's chunks are definite strings of its own type", offset)
+        return self.head(major_type, None, INDEFINITE, start) + b"".join(chunk for _, chunk in chunks) + b"\xff"
 
     def embedded(self, start: int) -> bytes:
         self.expect("<<")
@@ -316,14 +323,19 @@ class _Reader:
 
     # -- containers --------------------------------------------------------------------
 
-    def sequence(self, closing: str) -> list[bytes]:
-        """Items up to ``closing``: separated by a comma or blank space, a trailing comma allowed."""
+    def sequence(self, closing: str, starts: list[int] | None = None) -> list[bytes]:
+        """Items up to ``closing``: separated by a comma or blank space, a trailing comma allowed.
+
+        ``starts``, when given, receives the offset in the text where each item starts.
+        """
 
         items: list[bytes] = []
         self.skip()
         while not self.text.startswith(closing, self.position):
             if self.at_end():
                 raise self.error(f"expected {closing!r}")
+            if starts is not None:
+                starts.append(self.position)
             items.append(self.item())
             separated = self.skip()
             if self.at_end():
@@ -345,7 +357,7 @@ class _Reader:
         self.expect(closing)
         count = len(parts) // 2 if pairs else len(parts)
         if info == INDEFINITE:
-            return bytes([(major_type << 5) | INDEFINITE]) + b"".join(parts) + b"\xff"
+            return self.head(major_type, None, INDEFINITE, start) + b"".join(parts) + b"\xff"
         return self.head(major_type, count, info, start) + b"".join(parts)
 
     def entries(self, closing: str) -> list[bytes]:
