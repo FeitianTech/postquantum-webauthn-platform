@@ -21,6 +21,7 @@ from .config import (
     origins,
     proxy,
     relying_party,
+    request_limits,
     security_headers,
     session_cookie,
     session_secret,
@@ -34,6 +35,7 @@ CONFIG_SOURCES = (
     attestation_trust,
     origins,
     relying_party,
+    request_limits,
     security_headers,
     session_cookie,
 )
