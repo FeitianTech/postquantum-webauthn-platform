@@ -140,4 +140,10 @@ describe('throwFailedResponse', () => {
     expect(error.message).toBe('Too large. Send a smaller request.');
     expect(error.failure.status).toBe(413);
   });
+
+  it('names the step that failed when told it', async () => {
+    const error = await throwFailedResponse(response(409, ''), 'Registration failed').catch((thrown) => thrown);
+
+    expect(error.message).toBe('Registration failed: The stored credentials changed while the request was handled. Try again.');
+  });
 });

@@ -4,6 +4,7 @@ import {
     parseCreationOptionsFromJSON,
     parseRequestOptionsFromJSON
 } from '../shared/webauthn/json-ponyfill.js';
+import { FailedResponseError, readFailedResponse } from '../shared/api/failed-response.js';
 import { convertExtensionsForClient } from '../shared/utils/binary.js';
 import { showStatus, hideStatus, showProgress, hideProgress } from '../shared/ui/status.js';
 import {
@@ -44,8 +45,7 @@ export async function simpleRegister() {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Server error: ${errorText}`);
+            throw new FailedResponseError(await readFailedResponse(response), 'Registration could not start');
         }
 
         const json = await response.json();
@@ -97,8 +97,7 @@ export async function simpleRegister() {
             setTimeout(loadSavedCredentials, 1000);
             simpleRegisterState = null;
         } else {
-            const errorText = await result.text();
-            throw new Error(`Registration failed: ${errorText}`);
+            throw new FailedResponseError(await readFailedResponse(result), 'Registration failed');
         }
 
     } catch (error) {
@@ -150,8 +149,7 @@ export async function simpleAuthenticate() {
             if (response.status === 404) {
                 throw new Error('No credentials found for this username. Please register first.');
             }
-            const errorText = await response.text();
-            throw new Error(`Server error: ${errorText}`);
+            throw new FailedResponseError(await readFailedResponse(response), 'Authentication could not start');
         }
 
         const json = await response.json();
@@ -196,23 +194,12 @@ export async function simpleAuthenticate() {
             }
             simpleAuthenticateState = null;
         } else {
-            const errorText = await result.text();
-            let parsedError = null;
-            try {
-                parsedError = JSON.parse(errorText);
-            } catch (parseError) {
-                parsedError = null;
-            }
-
-            if (parsedError && typeof parsedError.failedCredentialId === 'string') {
-                queueFailedCredentialFlash(parsedError.failedCredentialId);
+            const failure = await readFailedResponse(result);
+            if (failure.failedCredentialId) {
+                queueFailedCredentialFlash(failure.failedCredentialId);
                 updateCredentialsDisplay();
             }
-
-            const message = parsedError && typeof parsedError.error === 'string'
-                ? parsedError.error
-                : (errorText || `Authentication failed (${result.status})`);
-            throw new Error(message);
+            throw new FailedResponseError(failure);
         }
 
     } catch (error) {

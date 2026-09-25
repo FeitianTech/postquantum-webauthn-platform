@@ -213,7 +213,7 @@ describe('auth-simple', () => {
     });
 
     await simpleAuthenticate();
-    expect(showStatus).toHaveBeenCalledWith('simple', 'Authentication failed (401)', 'error');
+    expect(showStatus).toHaveBeenCalledWith('simple', 'The server answered with status 401.', 'error');
 
     get.mockRejectedValueOnce({ name: 'InvalidStateError', message: 'invalid state' });
     fetch.mockResolvedValueOnce(jsonResponse({ publicKey: {} }));
@@ -266,7 +266,7 @@ describe('auth-simple', () => {
       json: vi.fn().mockRejectedValue(new Error('no json')),
     });
     await simpleAuthenticate();
-    expect(showStatus).toHaveBeenCalledWith('simple', 'Server error: backend down', 'error');
+    expect(showStatus).toHaveBeenCalledWith('simple', 'Authentication could not start: backend down', 'error');
 
     getSimpleCredentialsForEmail.mockReturnValueOnce([{ credentialId: 'cred-1', publicKey: 'cHVibGlj' }]);
     prepareCredentialsForServer.mockReturnValueOnce([{ credentialId: 'cred-1', publicKey: 'cHVibGlj' }]);
@@ -323,7 +323,7 @@ describe('simple tab messages for failed responses', () => {
   it('registration begin answering 503', async () => {
     expect(await registerAgainst(failedResponse(503, {
       error: 'The stored credentials could not be read. Please try again.',
-    }))).toMatchInlineSnapshot(`"Server error: {"error":"The stored credentials could not be read. Please try again."}"`);
+    }))).toMatchInlineSnapshot(`"Registration could not start: The stored credentials could not be read. Please try again."`);
   });
 
   it('registration complete answering 409', async () => {
@@ -332,28 +332,21 @@ describe('simple tab messages for failed responses', () => {
       failedResponse(409, {
         error: 'The stored credentials changed while this one was being saved, too many times, so the registration was not saved. Please try again.',
       }),
-    )).toMatchInlineSnapshot(`"Registration failed: {"error":"The stored credentials changed while this one was being saved, too many times, so the registration was not saved. Please try again."}"`);
+    )).toMatchInlineSnapshot(`"Registration failed: The stored credentials changed while this one was being saved, too many times, so the registration was not saved. Please try again."`);
   });
 
   it('registration complete answering 413', async () => {
     expect(await registerAgainst(
       jsonResponse({ __session_state: 's', publicKey: {} }),
       failedResponse(413, { error: 'The request is larger than the limit of 8388608 bytes this server accepts.' }),
-    )).toMatchInlineSnapshot(`"Registration failed: {"error":"The request is larger than the limit of 8388608 bytes this server accepts."}"`);
+    )).toMatchInlineSnapshot(`"Registration failed: The request is larger than the limit of 8388608 bytes this server accepts. Send a smaller request."`);
   });
 
   it('authentication complete answering 400 as HTML', async () => {
     expect(await authenticateAgainst(
       jsonResponse({ __session_state: 's', publicKey: {} }),
       failedResponse(400, WERKZEUG_400, 'text/html; charset=utf-8'),
-    )).toMatchInlineSnapshot(`
-      "<!doctype html>
-      <html lang=en>
-      <title>400 Bad Request</title>
-      <h1>Bad Request</h1>
-      <p>The browser (or proxy) sent a request that this server could not understand.</p>
-      "
-    `);
+    )).toMatchInlineSnapshot(`"The server could not accept the request. Start the ceremony again."`);
   });
 
   it('authentication complete answering 503 for the stored counter', async () => {
