@@ -32,26 +32,31 @@ export function Header({ section, onSection, onAnalyze, analyzing, analyzeButton
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white/85 backdrop-blur-xl backdrop-saturate-150">
       <div className="mx-auto flex min-h-(--header-height) w-full max-w-page flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5 sm:px-6 lg:px-8">
-        <h1 className="min-w-0 text-title-sm font-semibold text-ink">FIDO2/WebAuthn PQC Developer Tools</h1>
+        <h1 className="min-w-0 flex-1 text-title-sm font-semibold text-ink wide:flex-none">
+          FIDO2/WebAuthn PQC Developer Tools
+        </h1>
         <nav
           aria-label="Section navigation"
           className="order-last hidden w-full min-w-0 overflow-x-auto menu:flex wide:order-none wide:w-auto wide:flex-1 wide:justify-center"
         >
           <SegmentedControl label="Sections" idBase={NAV_ID} options={SECTION_OPTIONS} value={section} onChange={onSection} />
         </nav>
-        <div className="ml-auto flex items-center gap-2">
-          <Button
-            ref={analyzeButtonRef}
-            variant="secondary"
-            size="sm"
-            className="hidden menu:inline-flex"
-            aria-haspopup="dialog"
-            aria-controls={ANALYZE_PANEL_ID}
-            disabled={analyzing}
-            onClick={(event) => onAnalyze(event.currentTarget)}
-          >
-            Analyze Browser
-          </Button>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {/* On a phone Analyze Browser is in the menu sheet. The wrapper hides
+              it: a class on the button itself would lose to its inline-flex. */}
+          <span className="hidden menu:inline-flex">
+            <Button
+              ref={analyzeButtonRef}
+              variant="secondary"
+              size="sm"
+              aria-haspopup="dialog"
+              aria-controls={ANALYZE_PANEL_ID}
+              disabled={analyzing}
+              onClick={(event) => onAnalyze(event.currentTarget)}
+            >
+              Analyze Browser
+            </Button>
+          </span>
           <a
             href={GITHUB_URL}
             target="_blank"

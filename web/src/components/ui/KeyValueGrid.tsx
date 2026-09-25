@@ -19,12 +19,12 @@ const COLUMNS = {
 } as const;
 
 // Labels and values as a description list: one column on a phone, two on a
-// tablet, up to four on a wide screen. Separated by hairlines, not tiles.
+// tablet, up to four on a wide screen. Separated by space, not tiles or lines.
 export function KeyValueGrid({ items, columns = 3 }: { items: KeyValueItem[]; columns?: keyof typeof COLUMNS }) {
   return (
     <dl className={cx('grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2', COLUMNS[columns])}>
       {items.map((item) => (
-        <div key={item.key} data-item={item.key} className="min-w-0 border-t border-line pt-3">
+        <div key={item.key} data-item={item.key} className="min-w-0">
           <dt className="text-caption text-ink-muted">{item.label}</dt>
           <dd className="mt-1 min-w-0">
             <span
