@@ -31,6 +31,16 @@ export default defineConfig({
       // Pages only compose components (the design page is a gallery); the
       // components and hooks they use carry the tests.
       exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/pages/**'],
+      // A floor, not a target: set just under what was measured on 2026-09-25
+      // (97.82 statements / 93.63 branches / 96.89 functions / 99.09 lines), so
+      // a real regression fails the run. Raise them as coverage rises; never
+      // lower them to go green.
+      thresholds: {
+        statements: 97,
+        branches: 92,
+        functions: 96,
+        lines: 98,
+      },
     },
   },
 });
