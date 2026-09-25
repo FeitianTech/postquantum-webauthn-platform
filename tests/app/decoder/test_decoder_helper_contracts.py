@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from fido2.utils import ByteBuffer
+from server.app.decoder.decode import json_input
 
 
 def test_extract_ctap_prefix_handles_empty_command_status_and_unknown_codes():
@@ -120,7 +121,7 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, p
         "wrapped": {"kind": "json", "raw": '{"a": 1}', "value": {"a": 1}, "decodeMode": "strict"}
     }
 
-    monkeypatch.setattr(pipeline, "_read_json", lambda _v, **_kwargs: (None, []))
+    monkeypatch.setattr(pipeline, "_read_json", lambda _v, **_kwargs: (json_input.NOT_JSON, []))
     monkeypatch.setattr(pipeline, "_looks_like_pem", lambda _v: True)
     monkeypatch.setattr(pipeline, "_decode_pem_certificates", lambda _v: {"kind": "pem"})
     monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"pem": result})
