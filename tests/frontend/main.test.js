@@ -69,6 +69,7 @@ vi.mock('../../frontend/static/scripts/decoder/codec.js', () => ({
   clearCodec: vi.fn(),
   toggleRawCodec: vi.fn(),
   switchCodecMode: vi.fn(),
+  bindCodecActions: vi.fn(),
 }));
 
 vi.mock('../../frontend/static/scripts/advanced/editor/index.js', () => ({
@@ -153,6 +154,7 @@ import { handleJsonEditorKeydown } from '../../frontend/static/scripts/advanced/
 import { bindNavigationActions, initializeNavigationMenu, switchTab } from '../../frontend/static/scripts/shared/ui/navigation.js';
 import { bindUsernameActions, initializeSimpleUsername, randomizeUserIdentity } from '../../frontend/static/scripts/shared/auth/username.js';
 import { bindSimpleActions } from '../../frontend/static/scripts/simple/auth-simple.js';
+import { bindCodecActions } from '../../frontend/static/scripts/decoder/codec.js';
 import { bindCoreActions, closeModal, initializeStickyHeader, toggleJsonEditorExpansion } from '../../frontend/static/scripts/shared/ui/core.js';
 import { initializeAnalyzeBrowser } from '../../frontend/static/scripts/shared/browser/analyze.js';
 import { initializeLoader, loaderComplete, loaderSetPhase } from '../../frontend/static/scripts/shared/utils/loader.js';
@@ -247,6 +249,7 @@ describe('main startup and wiring', () => {
     expect(bindFormActions).toHaveBeenCalledTimes(1);
     expect(bindEditorActions).toHaveBeenCalledTimes(1);
     expect(bindCoreActions).toHaveBeenCalledTimes(1);
+    expect(bindCodecActions).toHaveBeenCalledTimes(1);
     expect(setMdsNavigation).toHaveBeenCalledWith({
       switchTab,
       highlightRow: highlightAuthenticatorRowByAaguid,
@@ -333,7 +336,6 @@ describe('main startup and wiring', () => {
     modal.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(closeModal).toHaveBeenCalledWith('modal-a');
 
-    expect(window.clearDecoder).toBeDefined();
   });
 
   it('completes startup without waiting for FIDO MDS metadata and announces readiness', async () => {

@@ -11,7 +11,7 @@
                             role="tab"
                             aria-selected="true"
                             aria-controls="codec-decode-panel"
-                            onclick="switchCodecMode('decode')"
+                            data-action="switch-codec-mode" data-mode="decode"
                         >
                             Decode
                         </button>
@@ -22,7 +22,7 @@
                             role="tab"
                             aria-selected="false"
                             aria-controls="codec-encode-panel"
-                            onclick="switchCodecMode('encode')"
+                            data-action="switch-codec-mode" data-mode="encode"
                         >
                             Encode
                         </button>
@@ -101,8 +101,8 @@
                             </div>
 
                             <div class="form-group">
-                                <button class="btn" id="decoder-submit" onclick="processCodec('decode')">Decode</button>
-                                <button class="btn btn-secondary" onclick="clearCodec('decode')">Clear</button>
+                                <button class="btn" id="decoder-submit" data-action="process-codec" data-mode="decode">Decode</button>
+                                <button class="btn btn-secondary" data-action="clear-codec" data-mode="decode">Clear</button>
                             </div>
 
                             <div class="progress" id="decoder-progress">
@@ -118,7 +118,7 @@
                                             class="btn btn-secondary decoder-raw-button"
                                             type="button"
                                             id="decoder-toggle-raw"
-                                            onclick="toggleRawCodec('decode')"
+                                            data-action="toggle-raw-codec" data-mode="decode"
                                             disabled
                                         >
                                             Raw
@@ -167,8 +167,8 @@
                             </div>
 
                             <div class="form-group">
-                                <button class="btn" id="encoder-submit" onclick="processCodec('encode')">Encode</button>
-                                <button class="btn btn-secondary" onclick="clearCodec('encode')">Clear</button>
+                                <button class="btn" id="encoder-submit" data-action="process-codec" data-mode="encode">Encode</button>
+                                <button class="btn btn-secondary" data-action="clear-codec" data-mode="encode">Clear</button>
                             </div>
 
                             <div class="progress" id="encoder-progress">
@@ -184,7 +184,7 @@
                                             class="btn btn-secondary decoder-raw-button"
                                             type="button"
                                             id="encoder-toggle-raw"
-                                            onclick="toggleRawCodec('encode')"
+                                            data-action="toggle-raw-codec" data-mode="encode"
                                             disabled
                                         >
                                             Raw
