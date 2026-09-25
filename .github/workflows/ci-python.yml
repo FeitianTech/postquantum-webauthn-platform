@@ -63,6 +63,7 @@ jobs:
               "server.app.routes.csp_report",
               "server.app.routes.general",
               "server.app.routes.simple",
+              "server.app.routes.web_export",
           ]
 
           for module in modules:

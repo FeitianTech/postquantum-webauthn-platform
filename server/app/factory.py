@@ -25,8 +25,10 @@ from .config import (
     security_headers,
     session_cookie,
     session_secret,
+    web_export,
 )
 from .routes import advanced, csp_report, errors, general, simple
+from .routes import web_export as web_export_routes
 
 __all__ = ["INIT_STEPS", "create_app"]
 
@@ -38,11 +40,12 @@ CONFIG_SOURCES = (
     request_limits,
     security_headers,
     session_cookie,
+    web_export,
 )
 
 
 def _register_blueprints(app: Flask) -> None:
-    for blueprint in (advanced.bp, general.bp, simple.bp, csp_report.bp):
+    for blueprint in (advanced.bp, general.bp, simple.bp, csp_report.bp, web_export_routes.bp):
         app.register_blueprint(blueprint)
     errors.init_app(app)
 
