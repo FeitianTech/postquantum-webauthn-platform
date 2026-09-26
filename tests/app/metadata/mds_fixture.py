@@ -78,6 +78,48 @@ USER_VERIFICATION_METHODS = (
     "none",
 )
 
+# Every method above, in combinations: a passcode with a fingerprint, a pattern
+# alone, the rest alone; each descriptor the detail page shows, with every
+# property it has.
+USER_VERIFICATION_COMBINATIONS = [
+    [
+        {
+            "userVerificationMethod": "passcode_internal",
+            "caDesc": {"base": 10, "minLength": 6, "maxRetries": 8, "blockSlowdown": 30},
+        },
+        {
+            "userVerificationMethod": "fingerprint_internal",
+            "baDesc": {
+                "selfAttestedFRR": 0.01,
+                "selfAttestedFAR": 0.00002,
+                "maxTemplates": 5,
+                "maxRetries": 5,
+                "blockSlowdown": 30,
+            },
+        },
+    ],
+    [{"userVerificationMethod": "pattern_internal", "paDesc": {"minComplexity": 9, "maxRetries": 5, "blockSlowdown": 60}}],
+    *(
+        [{"userVerificationMethod": method}]
+        for method in USER_VERIFICATION_METHODS
+        if method not in {"passcode_internal", "fingerprint_internal", "pattern_internal"}
+    ),
+]
+
+# Every getInfo field the detail page names, for one FIDO2 entry.
+FULL_GET_INFO = {
+    "options": {"rk": True, "up": True, "uv": False, "plat": False, "clientPin": True, "credMgmt": True},
+    "maxCredentialCountInList": 8,
+    "maxCredentialIdLength": 128,
+    "maxSerializedLargeBlobArray": 1024,
+    "minPINLength": 6,
+    "firmwareVersion": 327941,
+    "maxCredBlobLength": 32,
+    "maxRPIDsForSetMinPINLength": 1,
+    "remainingDiscoverableCredentials": 25,
+    "algorithms": [{"type": "public-key", "alg": -7}, {"type": "public-key", "alg": -8}],
+}
+
 
 def _b64(der: bytes) -> str:
     return base64.b64encode(der).decode("ascii")
@@ -126,14 +168,26 @@ def _ed25519_root(label: str, common_name: str, serial: int) -> str:
     return _b64(material.certificate(key.public_key(), common_name=common_name, serial=serial))
 
 
-def _status(status: str, date: str, descriptor: str | None = None, number: str | None = None) -> dict[str, Any]:
+def _status(
+    status: str,
+    date: str,
+    descriptor: str | None = None,
+    number: str | None = None,
+    *,
+    url: str | None = None,
+    version: int | None = None,
+) -> dict[str, Any]:
     report: dict[str, Any] = {"status": status, "effectiveDate": date}
+    if version is not None:
+        report["authenticatorVersion"] = version
     if descriptor:
         report["certificationDescriptor"] = descriptor
     if number:
         report["certificateNumber"] = number
         report["certificationPolicyVersion"] = "1.4.0"
         report["certificationRequirementsVersion"] = "1.3"
+    if url:
+        report["url"] = url
     return report
 
 
@@ -148,6 +202,8 @@ def _statement(
     attachment: tuple[str, ...] = ("external", "wired", "nfc"),
     algorithms: tuple[str, ...] = ("secp256r1_ecdsa_sha256_raw", "ed25519_eddsa_sha512_raw"),
     transports: tuple[str, ...] = ("usb", "nfc"),
+    verification: list[list[dict[str, Any]]] | None = None,
+    get_info: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     statement: dict[str, Any] = {
         "legalHeader": LEGAL_HEADER,
@@ -159,7 +215,7 @@ def _statement(
         "authenticationAlgorithms": list(algorithms),
         "publicKeyAlgAndEncodings": ["cose"],
         "attestationTypes": ["basic_full"],
-        "userVerificationDetails": [[{"userVerificationMethod": method}] for method in methods],
+        "userVerificationDetails": verification or [[{"userVerificationMethod": method}] for method in methods],
         "keyProtection": list(key_protection),
         "matcherProtection": ["on_chip"],
         "cryptoStrength": 128,
@@ -177,6 +233,7 @@ def _statement(
             "maxMsgSize": 1200,
             "pinUvAuthProtocols": [1, 2],
             "transports": list(transports),
+            **(get_info or {}),
         }
     return statement
 
@@ -209,8 +266,27 @@ def _entries() -> list[dict[str, Any]]:
             1,
             "Fixture Security Key L1",
             "2026-09-01",
-            [_status("FIDO_CERTIFIED_L1", "2026-09-01", "Fixture Security Key", "FIDO20020260901001")],
+            [
+                _status("NOT_FIDO_CERTIFIED", "2025-11-03", version=1),
+                _status(
+                    "FIDO_CERTIFIED_L1",
+                    "2026-03-16",
+                    "Fixture Security Key",
+                    "FIDO20020260316001",
+                    url="https://fixture.example/certificates/FIDO20020260316001",
+                    version=1,
+                ),
+                _status(
+                    "FIDO_CERTIFIED_L1",
+                    "2026-09-01",
+                    "Fixture Security Key",
+                    "FIDO20020260901001",
+                    url="https://fixture.example/certificates/FIDO20020260901001",
+                    version=2,
+                ),
+            ],
             roots=[ec_root],
+            get_info=FULL_GET_INFO,
         ),
         _fido2(
             2,
@@ -264,6 +340,7 @@ def _entries() -> list[dict[str, Any]]:
             [_status("FIDO_CERTIFIED_L2", "2026-03-03", "Fixture Biometric Key", "FIDO20020260303007")],
             roots=[ec_root],
             methods=USER_VERIFICATION_METHODS,
+            verification=USER_VERIFICATION_COMBINATIONS,
             icon="green",
         ),
         _fido2(
