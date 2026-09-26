@@ -1,4 +1,5 @@
 import { MISSING_METADATA_MESSAGE } from '@legacy/advanced/mds/constants.js';
+import { EXPLORER_NO_MATCHES } from '@legacy/advanced/mds/explorer/status.js';
 import { useRef } from 'react';
 
 import { Button } from '@/components/ui/Button';
@@ -8,11 +9,12 @@ import { SECTIONS } from '@/lib/sections';
 
 import { EntryCount, StatusLine } from './ExplorerHeader';
 import { ExplorerTable } from './ExplorerTable';
+import { FilterBar } from './FilterBar';
 import { ListState } from './ListState';
 import { useExplorerView } from './useExplorerView';
 import { type Explorer, useMdsExplorer } from './useMdsExplorer';
 
-function listState(explorer: Explorer) {
+function listState(explorer: Explorer, view: ReturnType<typeof useExplorerView>) {
   if (explorer.phase === 'failed' && !explorer.entries.length) {
     return (
       <ListState
@@ -31,6 +33,19 @@ function listState(explorer: Explorer) {
     return <ListState busy>Authenticator metadata is loading…</ListState>;
   }
   if (explorer.missing) return <ListState>{MISSING_METADATA_MESSAGE}</ListState>;
+  if (!view.shown.size) {
+    return (
+      <ListState
+        action={
+          <Button variant="secondary" size="sm" onClick={view.clearFilters}>
+            Clear filters
+          </Button>
+        }
+      >
+        {EXPLORER_NO_MATCHES}
+      </ListState>
+    );
+  }
   return null;
 }
 
@@ -70,15 +85,24 @@ export function MdsSection({ active }: { active: boolean }) {
         />
       </div>
       <div className="mt-6">
+        <FilterBar
+          filters={view.filters}
+          options={view.options}
+          activeFilters={view.activeFilters}
+          onChange={view.setFilter}
+          onClear={view.clearFilters}
+        />
+      </div>
+      <div className="mt-6">
         <ExplorerTable
           rows={view.rows}
           shown={view.shown}
           sort={view.sort}
           onSort={view.onSort}
-          filteredColumns={new Set()}
+          filteredColumns={view.filteredColumns}
           expanded={view.expanded}
           onToggle={view.onToggle}
-          state={listState(explorer)}
+          state={listState(explorer, view)}
           frameRef={frameRef}
         />
       </div>
