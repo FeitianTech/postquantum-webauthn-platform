@@ -40,7 +40,10 @@ reader and writer follows the one setting: the server's metadata loaders
 (`/assets/<build id>/fido-mds3.explorer.full.json`, served from that directory with its
 `.gz` sibling). The page is given that URL as `snapshotUrl` only while the file is there
 and its meta matches the verified snapshot; otherwise it asks the explorer API, which
-answers from the verified snapshot either way. Flask's own static route
+answers from the verified snapshot either way. The URL ends in `?v=<serial>.<digest>`
+(the digest of the snapshot's ETag and generation time), which the route ignores: the
+file is cached as immutable for a year and changes at runtime without a deploy, so a
+new snapshot has to be a new URL. Flask's own static route
 still serves `frontend/static` at `/`; nothing the pages use reads the snapshot from
 there.
 

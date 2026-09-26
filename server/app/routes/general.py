@@ -1,6 +1,7 @@
 """General application routes."""
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import logging
@@ -9,6 +10,7 @@ from collections.abc import Mapping
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Any
+from urllib.parse import quote
 
 from flask import (
     Blueprint,
@@ -202,11 +204,21 @@ def _initial_custom_entries_state(metadata_session_id: str | None) -> str:
 
 def _packaged_snapshot_url() -> str | None:
     """Where browsers load the packaged snapshot from, or None when there is no
-    file there that the explorer API would agree with (the page then asks the API)."""
+    file there that the explorer API would agree with (the page then asks the API).
 
-    if load_packaged_snapshot_meta() is None:
+    The asset URL is cached for a year, but the file changes at runtime (Cloud
+    Storage, an upstream refresh) while the build id changes only on a deploy, so
+    the URL carries the snapshot's own version: its serial number and a digest of
+    its ETag and generation time. The static route ignores the query."""
+
+    meta = load_packaged_snapshot_meta()
+    if meta is None:
         return None
-    return asset_url(_MDS_EXPLORER_FULL_STATIC_FILENAME)
+    digest = hashlib.sha256(
+        json.dumps([meta.get("etag"), meta.get("generatedAt")]).encode("utf-8")
+    ).hexdigest()[:12]
+    version = quote(f"{meta.get('no')}.{digest}", safe=".")
+    return f"{asset_url(_MDS_EXPLORER_FULL_STATIC_FILENAME)}?v={version}"
 
 
 def _initial_mds_info() -> dict[str, Any]:

@@ -5,6 +5,7 @@ The new UI at /beta asks for what the current UI's index inlines as
 """
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import re
@@ -28,13 +29,18 @@ def _upload(client):
     )
 
 
+def _version(meta):
+    digest = hashlib.sha256(json.dumps([meta["etag"], meta["generatedAt"]]).encode("utf-8")).hexdigest()[:12]
+    return f"{meta['no']}.{digest}"
+
+
 def test_a_new_session_gets_the_packaged_summary_and_the_static_snapshot(mds_fixture_snapshot, client):
     answer = client.get("/api/mds/metadata/info")
 
     assert answer.status_code == 200
     assert answer.get_json() == {
         **_summary(),
-        "snapshotUrl": asset_url("fido-mds3.explorer.full.json"),
+        "snapshotUrl": f"{asset_url('fido-mds3.explorer.full.json')}?v={_version(_summary())}",
         "customEntriesState": "none",
     }
     assert client.get_cookie("session") is not None
@@ -65,6 +71,34 @@ def test_a_known_session_says_what_its_last_explorer_answer_held(mds_fixture_sna
     assert _upload(client).status_code == 200
     client.get("/api/mds/metadata/explorer/full")
     assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "present"
+
+
+def test_the_snapshot_url_names_the_snapshots_version_which_the_static_route_ignores(mds_fixture_snapshot, client):
+    url = client.get("/api/mds/metadata/info").get_json()["snapshotUrl"]
+
+    assert url.endswith("?v=7." + url.rsplit(".", 1)[1])
+    assert len(url.rsplit(".", 1)[1]) == 12
+    with client.get(url) as static:
+        assert static.status_code == 200
+        assert static.data == (mds_fixture_snapshot / mds_snapshot_dir.EXPLORER_FULL).read_bytes()
+
+
+def test_a_new_snapshot_is_a_new_url(mds_fixture_snapshot, client):
+    before = client.get("/api/mds/metadata/info").get_json()["snapshotUrl"]
+
+    # A refresh writes every file again: the same serial, a new ETag and time.
+    for name, key in (
+        (mds_snapshot_dir.EXPLORER_FULL_META, "generatedAt"),
+        (mds_snapshot_dir.EXPLORER_META, "generatedAt"),
+        (mds_snapshot_dir.VERIFIED_META, "generated_at"),
+    ):
+        path = mds_fixture_snapshot / name
+        meta = json.loads(path.read_text(encoding="utf-8"))
+        path.write_text(json.dumps({**meta, "etag": '"fixture-8"', key: "2026-09-27T08:00:00+00:00"}), encoding="utf-8")
+
+    after = client.get("/api/mds/metadata/info").get_json()["snapshotUrl"]
+    assert after != before
+    assert after.split("?")[0] == before.split("?")[0]
 
 
 def test_without_a_snapshot_it_names_no_snapshot_url(client):

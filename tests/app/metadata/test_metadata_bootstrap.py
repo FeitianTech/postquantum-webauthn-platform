@@ -290,7 +290,7 @@ def test_index_page_emits_accessible_global_loader_markup(monkeypatch, app_confi
     # MDS data must not block page rendering: no synchronous snapshot script.
     assert 'fido-mds3.explorer.bootstrap.js' not in body
     assert '"snapshotUrl": "/assets/' in body
-    assert '/fido-mds3.explorer.full.json"' in body
+    assert '/fido-mds3.explorer.full.json?v=7.' in body
     assert 'src="/assets/' in body and '/scripts/main.js"' in body
     assert '"customEntriesState": "unknown"' in body
     # The summary rides in a JSON block, not in a script that sets a global.
