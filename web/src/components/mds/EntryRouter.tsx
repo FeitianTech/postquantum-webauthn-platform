@@ -89,6 +89,7 @@ export function EntryRouter({ route, entries, phase }: { route: SectionRoute; en
           onRetry={retry}
           onOpenCertificate={openCertificate}
           busyCertificate={busy}
+          active={!certificate}
         />
       </div>
       {entry && certificate ? (

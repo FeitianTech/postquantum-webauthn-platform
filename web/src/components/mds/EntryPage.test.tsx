@@ -282,6 +282,35 @@ describe('the MDS entry page', () => {
     header.remove();
   });
 
+  it('MDS-D1: keeps the condensed header away while a certificate covers the entry', () => {
+    let report: IntersectionObserverCallback = () => {};
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(callback: IntersectionObserverCallback) {
+          report = callback;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    const entry = L1();
+    const page = (active: boolean) => (
+      <EntryPage entryId={entry.entryId} detail={{ phase: 'found', entry }} onBack={vi.fn()} onRetry={vi.fn()} active={active} />
+    );
+    const { rerender } = renderPage(page(true));
+    act(() => report([{ isIntersecting: false, boundingClientRect: { top: -40 } } as IntersectionObserverEntry], {} as IntersectionObserver));
+    const bar = document.querySelector<HTMLElement>('[data-condensed-header]')!;
+    expect(bar).toBeVisible();
+    rerender(
+      <>
+        <div id="app-root">{page(false)}</div>
+        <div id="overlay-root" />
+      </>,
+    );
+    expect(document.querySelector<HTMLElement>('[data-condensed-header]')).not.toBeVisible();
+  });
+
   it('MDS-J2: says it is opening while the list loads and locating while the server is asked', () => {
     const { rerender } = render(<EntryPage entryId="aaguid:x" detail={{ phase: 'waiting' }} onBack={vi.fn()} onRetry={vi.fn()} />);
     expect(screen.getByRole('status')).toHaveTextContent('Opening authenticator metadata...');

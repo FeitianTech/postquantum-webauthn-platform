@@ -1,4 +1,7 @@
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+
+import { useOverlayRoot } from '@/lib/useOverlayRoot';
 
 import { BackButton } from './EntryHeader';
 
@@ -12,13 +15,16 @@ function shellHeaderBottom() {
 // A page's condensed header: once its own heading has scrolled under the shell's
 // header, a white bar with a hairline (no shadow: it is not a floating layer)
 // stays there with Back, the title and what else the page puts in it. It is
-// fixed rather than sticky, so showing it moves nothing on the page.
+// fixed rather than sticky, so showing it moves nothing on the page, and it is
+// in the overlay layer, beside the app: a section sliding in (a transform) would
+// otherwise carry it along. `active` is false while the page is covered by another.
 export function CondensedBar({
   watch,
   title,
   subtitle,
   onBack,
   backTitle,
+  active = true,
   children,
 }: {
   watch: RefObject<HTMLElement | null>;
@@ -26,14 +32,16 @@ export function CondensedBar({
   subtitle?: string;
   onBack: () => void;
   backTitle: string;
+  active?: boolean;
   children?: ReactNode;
 }) {
+  const root = useOverlayRoot();
   const barRef = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState(false);
 
   useEffect(() => {
     const target = watch.current;
-    if (!target || typeof IntersectionObserver === 'undefined') return undefined;
+    if (!target || !root || typeof IntersectionObserver === 'undefined') return undefined;
     let observer: IntersectionObserver | null = null;
     const observe = () => {
       observer?.disconnect();
@@ -51,10 +59,11 @@ export function CondensedBar({
       window.removeEventListener('resize', observe);
       observer?.disconnect();
     };
-  }, [watch]);
+  }, [watch, root]);
 
-  return (
-    <div ref={barRef} data-condensed-header="" hidden={!shown} className="fixed inset-x-0 z-30 border-b border-line bg-white">
+  if (!root) return null;
+  return createPortal(
+    <div ref={barRef} data-condensed-header="" hidden={!shown || !active} className="fixed inset-x-0 z-30 border-b border-line bg-white">
       <div className="mx-auto flex w-full max-w-page items-center gap-3 px-4 py-2 sm:px-6 lg:px-8">
         <BackButton onBack={onBack} title={backTitle} />
         <div className="min-w-0 flex-1">
@@ -69,6 +78,7 @@ export function CondensedBar({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    root,
   );
 }

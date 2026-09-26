@@ -19,12 +19,22 @@ type EntryPageProps = {
   /** Opens a certificate's page (MdsSection gives it once it shows them). */
   onOpenCertificate?: (number: number, certificate: string) => void;
   busyCertificate?: number | null;
+  /** False while another page (a certificate) covers this one. */
+  active?: boolean;
 };
 
 // An authenticator opened from the list or a link (#mds/<entryId>): everything
 // the current page shows of it, in its order, as sections; and while it is not
 // there yet, or cannot be, what the jump from a saved credential says.
-export function EntryPage({ entryId, detail, onBack, onRetry, onOpenCertificate, busyCertificate = null }: EntryPageProps) {
+export function EntryPage({
+  entryId,
+  detail,
+  onBack,
+  onRetry,
+  onOpenCertificate,
+  busyCertificate = null,
+  active = true,
+}: EntryPageProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const rawOpener = useRef<HTMLButtonElement | null>(null);
   const [rawOpen, setRawOpen] = useState(false);
@@ -53,6 +63,7 @@ export function EntryPage({ entryId, detail, onBack, onRetry, onOpenCertificate,
           subtitle={entrySubtitleText(detail.entry)}
           onBack={onBack}
           backTitle="Return to authenticator list"
+          active={active}
         >
           <RawButton hasRaw={hasRaw} onRaw={openRaw} size="sm" />
         </CondensedBar>
