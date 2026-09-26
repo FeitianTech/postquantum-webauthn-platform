@@ -76,9 +76,10 @@ def test_flask_serves_the_fixture(mds_fixture_snapshot, client):
     assert answer.status_code == 200
     assert [entry["entryId"] for entry in answer.get_json()["entries"]] == [entry["entryId"] for entry in entries]
 
-    static = client.get("/assets/dev/fido-mds3.explorer.full.json")
-    assert static.status_code == 200
-    assert static.data == (mds_fixture_snapshot / mds_snapshot_dir.EXPLORER_FULL).read_bytes()
+    # A file response holds the file open until it is closed.
+    with client.get("/assets/dev/fido-mds3.explorer.full.json") as static:
+        assert static.status_code == 200
+        assert static.data == (mds_fixture_snapshot / mds_snapshot_dir.EXPLORER_FULL).read_bytes()
 
     resolved = client.get("/api/mds/metadata/resolve", query_string={"aaid": "F1D0#0012"})
     assert resolved.status_code == 200
