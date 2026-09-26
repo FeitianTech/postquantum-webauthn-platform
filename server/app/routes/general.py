@@ -23,7 +23,7 @@ from flask import (
     session,
 )
 
-from .. import encoding
+from .. import encoding, mds_snapshot_dir
 from ..config import MDS_METADATA_VERIFIED_PATH
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
 from ..decoder import decode_payload_text, encode_payload_text
@@ -174,7 +174,7 @@ def index():
     return index_html()
 
 
-_MDS_EXPLORER_FULL_STATIC_FILENAME = "fido-mds3.explorer.full.json"
+_MDS_EXPLORER_FULL_STATIC_FILENAME = mds_snapshot_dir.EXPLORER_FULL
 _MDS_CUSTOM_ENTRIES_SESSION_KEY = "fido.mds.custom"
 
 

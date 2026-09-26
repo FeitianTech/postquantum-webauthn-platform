@@ -31,6 +31,7 @@ import os
 import threading
 from pathlib import Path
 
+from . import mds_snapshot_dir
 from .config import _FRONTEND_STATIC_ROOT
 from .env_flags import parse_env_flag
 from .storage import cloud
@@ -50,20 +51,12 @@ __all__ = [
 # their .meta.json companions are generated together and describe each other, so
 # they are provisioned together too; mixing generations would make the freshness
 # check in metadata/blob.py compare mismatched snapshots.
-SNAPSHOT_FILENAMES = (
-    "blob.jwt",
-    "fido-mds3.verified.json",
-    "fido-mds3.verified.json.meta.json",
-    "fido-mds3.explorer.json",
-    "fido-mds3.explorer.json.meta.json",
-    "fido-mds3.explorer.full.json",
-    "fido-mds3.explorer.full.json.meta.json",
-)
+SNAPSHOT_FILENAMES = mds_snapshot_dir.SNAPSHOT_FILENAMES
 
 # Browsers fetch the full explorer snapshot as a versioned static asset, so it
 # needs the precompressed sibling that tools/build_static_assets.py would have
 # written at image build time had the file been present then.
-PRECOMPRESSED_FILENAMES = frozenset({"fido-mds3.explorer.full.json"})
+PRECOMPRESSED_FILENAMES = mds_snapshot_dir.BROWSER_FILENAMES
 _MIN_COMPRESS_BYTES = 1024
 
 _DEFAULT_BLOB_PREFIX = "mds"

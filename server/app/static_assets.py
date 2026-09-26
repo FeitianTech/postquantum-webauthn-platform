@@ -13,6 +13,7 @@ import os
 from flask import Blueprint, Flask, abort, request, send_file
 from werkzeug.security import safe_join
 
+from . import mds_snapshot_dir
 from .config import _FRONTEND_ROOT, _FRONTEND_STATIC_ROOT
 
 __all__ = ["BUILD_ID", "asset_url", "bp", "init_app", "send_precompressed"]
@@ -23,13 +24,7 @@ IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
 REVALIDATE_CACHE_CONTROL = "no-cache"
 
 # Large MDS source files the server reads from disk but browsers never request.
-_PRIVATE_STATIC_FILES = frozenset(
-    {
-        "blob.jwt",
-        "fido-mds3.verified.json",
-        "fido-mds3.explorer.json",
-    }
-)
+_PRIVATE_STATIC_FILES = mds_snapshot_dir.PRIVATE_FILENAMES
 
 _STATIC_ROOT = str(_FRONTEND_STATIC_ROOT)
 

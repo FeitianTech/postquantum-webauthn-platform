@@ -18,6 +18,7 @@ if str(REPO_ROOT) not in sys.path:
 
 # Imported after the sys.path bootstrap above.
 from fido2.mds3 import parse_blob  # noqa: E402
+from server.app import mds_snapshot_dir  # noqa: E402
 from server.app.mds_snapshot import (  # noqa: E402
     build_bootstrap_snapshot,
     build_explorer_snapshot,
@@ -27,19 +28,19 @@ from server.app.mds_trust import FIDO_METADATA_TRUST_ROOT_CERT  # noqa: E402
 FRONTEND_STATIC_DIR = REPO_ROOT / "frontend" / "static"
 
 MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
-MDS_METADATA_FILENAME = "blob.jwt"
+MDS_METADATA_FILENAME = mds_snapshot_dir.BLOB
 
 MDS_DOWNLOAD_MAX_ATTEMPTS = 5
 MDS_DOWNLOAD_BACKOFF_BASE_SECONDS = 10
 MDS_RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
 MDS_RETRY_AFTER_CAP_SECONDS = 120
 MDS_METADATA_PATH = FRONTEND_STATIC_DIR / MDS_METADATA_FILENAME
-MDS_METADATA_VERIFIED_PATH = FRONTEND_STATIC_DIR / "fido-mds3.verified.json"
-MDS_METADATA_CACHE_PATH = Path(str(MDS_METADATA_VERIFIED_PATH) + ".meta.json")
-MDS_EXPLORER_PATH = FRONTEND_STATIC_DIR / "fido-mds3.explorer.json"
-MDS_EXPLORER_META_PATH = Path(str(MDS_EXPLORER_PATH) + ".meta.json")
-MDS_EXPLORER_FULL_PATH = FRONTEND_STATIC_DIR / "fido-mds3.explorer.full.json"
-MDS_EXPLORER_FULL_META_PATH = Path(str(MDS_EXPLORER_FULL_PATH) + ".meta.json")
+MDS_METADATA_VERIFIED_PATH = FRONTEND_STATIC_DIR / mds_snapshot_dir.VERIFIED
+MDS_METADATA_CACHE_PATH = FRONTEND_STATIC_DIR / mds_snapshot_dir.VERIFIED_META
+MDS_EXPLORER_PATH = FRONTEND_STATIC_DIR / mds_snapshot_dir.EXPLORER
+MDS_EXPLORER_META_PATH = FRONTEND_STATIC_DIR / mds_snapshot_dir.EXPLORER_META
+MDS_EXPLORER_FULL_PATH = FRONTEND_STATIC_DIR / mds_snapshot_dir.EXPLORER_FULL
+MDS_EXPLORER_FULL_META_PATH = FRONTEND_STATIC_DIR / mds_snapshot_dir.EXPLORER_FULL_META
 
 
 
