@@ -106,7 +106,14 @@ export function useMdsExplorer(active: boolean): Explorer {
     void load(EXPLORER_REFRESHED_NOTE, true);
   }, [load]);
 
-  const applySnapshot = useCallback((snapshot: MdsSnapshot) => show(snapshot, CUSTOM_METADATA_UPDATED_NOTE), [show]);
+  const applySnapshot = useCallback(
+    (snapshot: MdsSnapshot) => {
+      // Newer than any load still out: that load's answer is dropped.
+      generation.current += 1;
+      show(snapshot, CUSTOM_METADATA_UPDATED_NOTE);
+    },
+    [show],
+  );
   const reload = useCallback(() => load(CUSTOM_METADATA_UPDATED_NOTE, true), [load]);
 
   return { phase, entries, status, missing: isMissing, version, retry, applySnapshot, reload };

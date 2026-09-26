@@ -1,6 +1,6 @@
 import { MISSING_METADATA_MESSAGE } from '@legacy/advanced/mds/constants.js';
 import { EXPLORER_NO_MATCHES } from '@legacy/advanced/mds/explorer/status.js';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { segmentIds } from '@/components/ui/SegmentedControl';
@@ -10,6 +10,7 @@ import { SECTIONS } from '@/lib/sections';
 import { EntryCount, StatusLine } from './ExplorerHeader';
 import { ExplorerTable } from './ExplorerTable';
 import { FilterBar } from './FilterBar';
+import { ManageMetadataDialog } from './ManageMetadataDialog';
 import { ListState } from './ListState';
 import { useExplorerView } from './useExplorerView';
 import { type Explorer, useMdsExplorer } from './useMdsExplorer';
@@ -58,6 +59,8 @@ export function MdsSection({ active }: { active: boolean }) {
   const explorer = useMdsExplorer(active);
   const view = useExplorerView(explorer.entries, explorer.version);
   const frameRef = useRef<HTMLDivElement>(null);
+  const manageRef = useRef<HTMLButtonElement>(null);
+  const [managing, setManaging] = useState(false);
 
   return (
     <section
@@ -75,6 +78,15 @@ export function MdsSection({ active }: { active: boolean }) {
             <EntryCount shown={view.shown.size} total={explorer.entries.length} />
           </div>
         </div>
+        <Button
+          ref={manageRef}
+          variant="secondary"
+          aria-haspopup="dialog"
+          aria-expanded={managing}
+          onClick={() => setManaging(true)}
+        >
+          Manage Metadata
+        </Button>
       </div>
       <div className="mt-5">
         <StatusLine
@@ -106,6 +118,13 @@ export function MdsSection({ active }: { active: boolean }) {
           frameRef={frameRef}
         />
       </div>
+      <ManageMetadataDialog
+        open={managing}
+        onClose={() => setManaging(false)}
+        returnFocusTo={() => manageRef.current}
+        onSnapshot={explorer.applySnapshot}
+        onReload={explorer.reload}
+      />
     </section>
   );
 }

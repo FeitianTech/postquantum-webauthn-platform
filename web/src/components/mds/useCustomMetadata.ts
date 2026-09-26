@@ -1,0 +1,165 @@
+import {
+  CHOOSE_METADATA_FILES,
+  DELETE_METADATA_FAILED,
+  DELETE_PROGRESS,
+  UPLOADING_METADATA,
+  UPLOAD_METADATA_FAILED,
+  UPLOAD_PROGRESS,
+  customMetadataItemLabel,
+  describeCustomMetadataItem,
+  describeDeleteAnswer,
+  describeFileSelection,
+  describeUploadAnswer,
+  removedCustomMetadataMessage,
+  removingCustomMetadataMessage,
+  requestCustomMetadataDelete,
+  requestCustomMetadataList,
+  requestCustomMetadataUpload,
+} from '@legacy/advanced/mds/explorer/custom-metadata.js';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import type { MdsSnapshot } from './model';
+
+export type MessageVariant = 'info' | 'success' | 'warning' | 'error';
+export type PanelMessage = { text: string; variant: MessageVariant };
+export type CustomItem = { name: string; storedFilename: string; deleteLabel: string; details: string };
+
+type Answer = { response: Response; payload: unknown };
+
+const selection = describeFileSelection as (files: File[]) => { accepted: File[]; message: PanelMessage | null };
+const uploadAnswer = describeUploadAnswer as (
+  response: Response,
+  payload: unknown,
+) => { ok: boolean; message: string; variant: MessageVariant; snapshot?: MdsSnapshot | null };
+const deleteAnswer = describeDeleteAnswer as (
+  response: Response,
+  payload: unknown,
+) => { ok: boolean; message?: string; variant?: MessageVariant; snapshot?: MdsSnapshot | null };
+const describeItem = describeCustomMetadataItem as (item: unknown) => CustomItem;
+const itemLabel = customMetadataItemLabel as (name: string) => string;
+const removing = removingCustomMetadataMessage as (name: string) => string;
+const removed = removedCustomMetadataMessage as (name: string) => string;
+const upload = requestCustomMetadataUpload as (files: File[]) => Promise<Answer>;
+const remove = requestCustomMetadataDelete as (storedFilename: string) => Promise<Answer>;
+const list = requestCustomMetadataList as () => Promise<unknown[]>;
+
+// How long the last progress sentence stays, as the current UI's overlay did.
+const SUCCESS_MS = 520;
+const FAILURE_MS = 720;
+
+// Manage Trusted Metadata's work, in the current panel's steps and words
+// (custom/custom-metadata-actions.js): choosing files (only .json ones are sent),
+// uploading, deleting, and the files uploaded in this session, which the current
+// panel never lists. An answer with the session's snapshot is shown at once; one
+// without makes the explorer load the session's list again. Unlike the current
+// panel, a refusal keeps the server's reason, and the progress is a line in the
+// dialog rather than an overlay over the page.
+export function useCustomMetadata({
+  onSnapshot,
+  onReload,
+}: {
+  onSnapshot: (snapshot: MdsSnapshot) => void;
+  onReload: () => Promise<void>;
+}) {
+  const [items, setItems] = useState<CustomItem[]>([]);
+  const [message, setMessage] = useState<PanelMessage | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [removingFile, setRemovingFile] = useState<string | null>(null);
+  const settle = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => clearTimeout(settle.current ?? undefined), []);
+
+  const step = (text: string) => {
+    clearTimeout(settle.current ?? undefined);
+    setProgress(text);
+  };
+  const finish = (text: string, ms: number) => {
+    setProgress(text);
+    settle.current = setTimeout(() => setProgress(null), ms);
+  };
+
+  const refresh = useCallback(async () => {
+    try {
+      setItems((await list()).map(describeItem));
+    } catch {
+      // The list shown stays as it was.
+    }
+  }, []);
+
+  const applyAnswer = async (snapshot: MdsSnapshot | null | undefined, progressSteps: { applying: string; later: string }) => {
+    if (snapshot) {
+      step(progressSteps.applying);
+      onSnapshot(snapshot);
+    } else {
+      step(progressSteps.later);
+      await onReload();
+    }
+  };
+
+  const sendFiles = async (files: File[]) => {
+    if (!files.length) {
+      setMessage({ text: CHOOSE_METADATA_FILES, variant: 'warning' });
+      return;
+    }
+    setBusy(true);
+    setMessage({ text: UPLOADING_METADATA, variant: 'info' });
+    step(UPLOAD_PROGRESS.start);
+    try {
+      step(UPLOAD_PROGRESS.uploading);
+      const { response, payload } = await upload(files);
+      const answer = uploadAnswer(response, payload);
+      setMessage({ text: answer.message, variant: answer.variant });
+      if (!answer.ok) {
+        finish(UPLOAD_PROGRESS.failure, FAILURE_MS);
+        return;
+      }
+      await applyAnswer(answer.snapshot, { applying: UPLOAD_PROGRESS.applying, later: UPLOAD_PROGRESS.reloading });
+      finish(UPLOAD_PROGRESS.success, SUCCESS_MS);
+      await refresh();
+    } catch {
+      setMessage({ text: UPLOAD_METADATA_FAILED, variant: 'error' });
+      finish(UPLOAD_PROGRESS.failure, FAILURE_MS);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const choose = async (files: File[]) => {
+    const { accepted, message: chosen } = selection(files);
+    if (chosen) setMessage(chosen);
+    if (!accepted.length) return;
+    await sendFiles(accepted);
+  };
+
+  const deleteItem = async (item: CustomItem) => {
+    const label = itemLabel(item.name);
+    setBusy(true);
+    setRemovingFile(item.storedFilename);
+    setMessage({ text: removing(label), variant: 'info' });
+    step(DELETE_PROGRESS.start);
+    try {
+      step(DELETE_PROGRESS.removing);
+      const { response, payload } = await remove(item.storedFilename);
+      const answer = deleteAnswer(response, payload);
+      if (!answer.ok) {
+        setMessage({ text: answer.message!, variant: answer.variant! });
+        finish(answer.variant === 'error' ? DELETE_PROGRESS.failure : DELETE_PROGRESS.unchanged, FAILURE_MS);
+        await refresh();
+        return;
+      }
+      await applyAnswer(answer.snapshot, { applying: DELETE_PROGRESS.applying, later: DELETE_PROGRESS.refreshing });
+      setMessage({ text: removed(label), variant: 'success' });
+      finish(DELETE_PROGRESS.success, SUCCESS_MS);
+      await refresh();
+    } catch {
+      setMessage({ text: DELETE_METADATA_FAILED, variant: 'error' });
+      finish(DELETE_PROGRESS.failure, FAILURE_MS);
+    } finally {
+      setBusy(false);
+      setRemovingFile(null);
+    }
+  };
+
+  return { items, message, progress, busy, removingFile, refresh, choose, deleteItem };
+}
