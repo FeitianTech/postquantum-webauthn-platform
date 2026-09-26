@@ -25,6 +25,12 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts'],
+    // Cloud Build runs pytest, the root vitest and this suite at once on one
+    // two-vCPU machine, where this suite takes about ten times as long as on
+    // GitHub's runner (measured 2026-09-26: 388 s against 40 s). Vitest's default
+    // five seconds a test failed the MDS dialog's tests there, and only there.
+    // A test that hangs still fails, after thirty seconds.
+    testTimeout: 30_000,
     coverage: {
       provider: 'v8',
       reportsDirectory: './coverage',
