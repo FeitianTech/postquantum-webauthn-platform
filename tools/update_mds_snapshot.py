@@ -253,13 +253,35 @@ def _build_cache_state(
     }
 
 
+def snapshot_files(
+    blob: bytes,
+    verified_snapshot: dict[str, object],
+    cache_state: dict[str, object],
+) -> dict[str, bytes]:
+    """The seven files of a snapshot, by name, as the server reads them: the BLOB,
+    the verified payload and its cache state, and the explorer views built from
+    them. Pure: tests/app/metadata/mds_fixture.py builds its fixture with it."""
+
+    explorer_snapshot = build_explorer_snapshot(verified_snapshot, cache_state)
+    # The full snapshot is what the explorer API returns for a session without
+    # uploaded metadata; browsers load it as a cacheable static file.
+    full_snapshot = _finalise_base_full_snapshot(
+        build_bootstrap_snapshot(verified_snapshot, cache_state)
+    )
+    return {
+        mds_snapshot_dir.BLOB: blob,
+        mds_snapshot_dir.VERIFIED: _serialise_json(verified_snapshot).encode("utf-8"),
+        mds_snapshot_dir.VERIFIED_META: _serialise_json(cache_state).encode("utf-8"),
+        mds_snapshot_dir.EXPLORER: _serialise_json(explorer_snapshot).encode("utf-8"),
+        mds_snapshot_dir.EXPLORER_META: _serialise_json(explorer_snapshot.get("meta", {})).encode("utf-8"),
+        mds_snapshot_dir.EXPLORER_FULL: _serialise_compact_json(full_snapshot).encode("utf-8"),
+        mds_snapshot_dir.EXPLORER_FULL_META: _serialise_json(full_snapshot.get("meta", {})).encode("utf-8"),
+    }
+
+
 def _build_verified_snapshot(blob: bytes) -> dict[str, object]:
     payload = parse_blob(blob, FIDO_METADATA_TRUST_ROOT_CERT)
     return dict(payload)
-
-
-def _write_cache_state(cache_state: dict[str, object]) -> bool:
-    return _write_if_changed(_path(mds_snapshot_dir.VERIFIED_META), _serialise_json(cache_state))
 
 
 def _publish_to_cloud_storage() -> int:
@@ -315,14 +337,7 @@ def main(argv: list[str] | None = None) -> int:
         blob_unchanged=blob_unchanged,
         verified_snapshot=verified_snapshot,
     )
-    explorer_snapshot = build_explorer_snapshot(verified_snapshot, cache_state)
-    explorer_meta = explorer_snapshot.get("meta", {})
-    # The full snapshot is what the explorer API returns for a session without
-    # uploaded metadata; browsers load it as a cacheable static file.
-    full_snapshot = _finalise_base_full_snapshot(
-        build_bootstrap_snapshot(verified_snapshot, cache_state)
-    )
-    full_meta = full_snapshot.get("meta", {})
+    files = snapshot_files(new_blob, verified_snapshot, cache_state)
 
     if verify_only:
         print(
@@ -332,13 +347,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     changed = False
-    changed |= _write_if_changed(_path(mds_snapshot_dir.BLOB), new_blob)
-    changed |= _write_if_changed(_path(mds_snapshot_dir.VERIFIED), _serialise_json(verified_snapshot))
-    changed |= _write_cache_state(cache_state)
-    changed |= _write_if_changed(_path(mds_snapshot_dir.EXPLORER), _serialise_json(explorer_snapshot))
-    changed |= _write_if_changed(_path(mds_snapshot_dir.EXPLORER_META), _serialise_json(explorer_meta))
-    changed |= _write_if_changed(_path(mds_snapshot_dir.EXPLORER_FULL), _serialise_compact_json(full_snapshot))
-    changed |= _write_if_changed(_path(mds_snapshot_dir.EXPLORER_FULL_META), _serialise_json(full_meta))
+    for name, data in files.items():
+        changed |= _write_if_changed(_path(name), data)
 
     if changed:
         print("Packaged metadata snapshot refreshed.")

@@ -310,7 +310,7 @@ def test_build_cache_state_sets_fresh_values_when_blob_changed(monkeypatch):
     }
 
 
-def test_build_verified_snapshot_and_write_cache_state_delegation(monkeypatch, isolated_mds_paths):
+def test_build_verified_snapshot_and_snapshot_files(monkeypatch, isolated_mds_paths):
     seen = {}
 
     def _fake_parse_blob(blob, cert):
@@ -324,17 +324,19 @@ def test_build_verified_snapshot_and_write_cache_state_delegation(monkeypatch, i
     assert seen["blob"] == b"blob-data"
     assert seen["cert"] == updater.FIDO_METADATA_TRUST_ROOT_CERT
 
-    delegated = {}
-
-    def _fake_write_if_changed(path: Path, payload: str | bytes):
-        delegated["path"] = path
-        delegated["payload"] = payload
-        return True
-
-    monkeypatch.setattr(updater, "_write_if_changed", _fake_write_if_changed)
-    assert updater._write_cache_state({"a": 1}) is True
-    assert delegated["path"] == _file(mds_snapshot_dir.VERIFIED_META)
-    assert delegated["payload"] == '{\n  "a": 1\n}\n'
+    monkeypatch.setattr(
+        updater, "build_explorer_snapshot", lambda _verified, _cache: {"entries": [], "meta": {"kind": "e"}}
+    )
+    monkeypatch.setattr(
+        updater, "build_bootstrap_snapshot", lambda _verified, _cache: {"entries": [{}], "meta": {}}
+    )
+    files = updater.snapshot_files(b"blob-data", verified, {"a": 1})
+    assert tuple(files) == mds_snapshot_dir.SNAPSHOT_FILENAMES
+    assert files["blob.jwt"] == b"blob-data"
+    assert files["fido-mds3.verified.json.meta.json"] == b'{\n  "a": 1\n}\n'
+    assert json.loads(files["fido-mds3.explorer.json.meta.json"]) == {"kind": "e"}
+    assert json.loads(files["fido-mds3.explorer.full.json"])["meta"]["baseEntryCount"] == 1
+    assert not any(_file(name).exists() for name in mds_snapshot_dir.SNAPSHOT_FILENAMES)
 
 
 def test_main_reports_refresh_then_up_to_date(monkeypatch, isolated_mds_paths, capsys):
