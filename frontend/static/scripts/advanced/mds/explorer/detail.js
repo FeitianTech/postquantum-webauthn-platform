@@ -45,21 +45,17 @@ export function formatDetailSubtitle(entry) {
         .join(' • ');
 }
 
+// One list item (never null: the list reader drops empty items first).
 function rawDisplayString(value) {
-    if (value === undefined || value === null) {
-        return '';
-    }
     if (typeof value === 'string') {
         return value;
     }
     if (typeof value === 'number' || typeof value === 'bigint') {
         return String(value);
     }
-    if (typeof value === 'boolean') {
-        return value ? 'true' : 'false';
-    }
     try {
-        // A function or a symbol has no JSON: nothing to show.
+        // true as "true", an object as its JSON; a function or a symbol has no
+        // JSON: nothing to show.
         return JSON.stringify(value) ?? '';
     } catch {
         try {

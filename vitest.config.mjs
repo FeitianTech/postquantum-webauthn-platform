@@ -37,7 +37,7 @@ export default defineConfig({
         'frontend/static/scripts/decoder/codec/{constants,labels,request,result,values}.js': FULL,
         'frontend/static/scripts/decoder/codec/encoding/{can-encode,format,summary}.js': FULL,
         // The MDS explorer's logic, which web/ imports: every line and branch.
-        'frontend/static/scripts/advanced/mds/explorer/{columns,custom-metadata,filter-sort,loading,options,rows,status}.js': FULL,
+        'frontend/static/scripts/advanced/mds/explorer/{columns,custom-metadata,detail,filter-sort,loading,options,rows,status}.js': FULL,
         'frontend/static/scripts/advanced/mds/{constants,sort-filter-normalise}.js': FULL,
         'frontend/static/scripts/advanced/mds/metadata/{explorer-source,metadata-helpers}.js': FULL,
         'frontend/static/scripts/advanced/mds/utils/{extractors,formatters,resolvers,status-reports}.js': FULL,
