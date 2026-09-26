@@ -226,6 +226,21 @@ describe('the MDS table: column widths', () => {
     expect(separator('Name')).toHaveAttribute('title', 'Drag to resize column');
   });
 
+  it('starts the Icon column as wide as an icon on a phone, its name read but not shown, and keeps a width a person set', () => {
+    const query = vi.spyOn(window, 'matchMedia').mockImplementation(
+      (media: string) => ({ matches: media === '(max-width: 639px)', media, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList,
+    );
+    renderTable();
+    expect(width(0)).toBe('44px');
+    expect(document.querySelector('table')!.style.width).toBe('2712px');
+    expect(within(header('Icon')).getByText('Icon')).toHaveClass('max-sm:sr-only');
+    expect(within(header('Name')).getByText('Name')).not.toHaveClass('max-sm:sr-only');
+    expect(separator('Icon')).toHaveAttribute('aria-valuemin', '40');
+    fireEvent.keyDown(separator('Icon'), { key: 'ArrowLeft' });
+    expect(width(0)).toBe('40px');
+    query.mockRestore();
+  });
+
   it('MDS-R1: resizes from the keyboard, never under the minimum', () => {
     renderTable();
     fireEvent.keyDown(separator('Name'), { key: 'ArrowRight' });

@@ -24,6 +24,9 @@ const KEY_STEP = 16;
 const COLUMNS_PROPERTY = '--mds-columns';
 const ROWS_BEFORE_BACK_TO_TOP = 5;
 
+// Below the `sm` breakpoint.
+const PHONE = '(max-width: 639px)';
+
 function minimumWidth(column: ExplorerColumn) {
   return 'min' in column ? column.min : MDS_MIN_COLUMN_WIDTH;
 }
@@ -118,7 +121,8 @@ function HeaderCell({
           direction !== 'none' && 'text-ink',
         )}
       >
-        <span className="truncate">{column.header}</span>
+        {/* On a phone the Icon column is only as wide as an icon: its name is read, not shown. */}
+        <span className={cx('truncate', 'phoneWidth' in column && 'max-sm:sr-only')}>{column.header}</span>
         {filtered ? (
           <>
             <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-accent" />
@@ -217,6 +221,18 @@ export function ExplorerTable({
     table.style.setProperty(COLUMNS_PROPERTY, widths.map((width) => `${width}px`).join(' '));
     table.style.width = `${widths.reduce((sum, width) => sum + width, 0)}px`;
   }, [widths]);
+
+  // A phone starts with the narrower columns (after hydration: the exported page
+  // has the wide ones, and a width is in its markup).
+  useLayoutEffect(() => {
+    if (!window.matchMedia(PHONE).matches) return;
+    setWidths((current) =>
+      current.map((width, index) => {
+        const column = EXPLORER_COLUMNS[index];
+        return 'phoneWidth' in column && width === column.width ? column.phoneWidth : width;
+      }),
+    );
+  }, []);
 
   const resize = useCallback((index: number, width: number) => {
     setWidths((current) => {

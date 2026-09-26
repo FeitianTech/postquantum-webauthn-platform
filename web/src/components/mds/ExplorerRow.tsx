@@ -155,7 +155,7 @@ export const ExplorerRow = memo(function ExplorerRow({ entry, hidden, expanded, 
         open && 'cursor-pointer hover-or-demo:bg-accent-tint',
       )}
     >
-      <Cell expanded={expanded} className="py-1">
+      <Cell expanded={expanded} className="py-1 max-sm:px-2">
         {entry.icon ? (
           <img src={entry.icon} alt={iconAlt(entry)} loading="lazy" decoding="async" className="size-7 object-contain" />
         ) : (

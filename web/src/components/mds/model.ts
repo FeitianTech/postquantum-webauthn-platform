@@ -115,9 +115,10 @@ export const identifierName = identifierLabel as (entry: MdsEntry) => string;
 
 // The 13 columns, in the current UI's order, with its headers; `list` names the
 // entry's list a tag column shows. The widths are where each column starts (the
-// ID column fits a whole AAGUID and its copy button); a person can resize them.
+// ID column fits a whole AAGUID and its copy button; on a phone the Icon column
+// starts narrower, only as wide as its icon); a person can resize them.
 export const EXPLORER_COLUMNS = [
-  { key: 'icon', header: 'Icon', width: 72 },
+  { key: 'icon', header: 'Icon', width: 72, phoneWidth: 44, min: 40 },
   { key: 'name', header: 'Name', width: 280 },
   { key: 'protocol', header: 'Protocol', width: 104 },
   { key: 'certification', header: 'Certification', width: 300 },
@@ -130,7 +131,7 @@ export const EXPLORER_COLUMNS = [
   { key: 'algorithmInfo', header: 'Algorithm Info', width: 220, list: 'certificateAlgorithmInfoList' },
   { key: 'commonName', header: 'CN', width: 260, list: 'certificateCommonNameList' },
   { key: 'dateUpdated', header: 'Date Updated', width: 132 },
-] as const satisfies readonly { key: string; header: string; width: number; min?: number; list?: keyof MdsEntry }[];
+] as const satisfies readonly { key: string; header: string; width: number; phoneWidth?: number; min?: number; list?: keyof MdsEntry }[];
 
 export type ExplorerColumn = (typeof EXPLORER_COLUMNS)[number];
 export type ColumnKey = ExplorerColumn['key'];
