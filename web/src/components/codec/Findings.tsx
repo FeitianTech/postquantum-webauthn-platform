@@ -11,7 +11,7 @@ export function Findings({ heading, findings }: { heading: string; findings: Fin
       <h4 id="codec-findings-heading" className="text-label font-semibold text-ink">
         {heading}
       </h4>
-      <ul className="mt-2 divide-y divide-line border-y border-line">
+      <ul className="mt-2 divide-y divide-line border-t border-line">
         {findings.map((finding, index) => (
           <li
             key={index}
