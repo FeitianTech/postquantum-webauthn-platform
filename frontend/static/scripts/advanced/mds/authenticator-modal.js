@@ -1,3 +1,6 @@
+import { resolveQueryForEntry } from './explorer/entry-link.js';
+import { RAW_DATA_BUTTON_TITLE, RAW_DATA_UNAVAILABLE_TITLE } from './raw-data.js';
+
 export function openAuthenticatorRawWindowInState(state, deps = {}) {
     const {
         openAuthenticatorRawDataWindow,
@@ -27,7 +30,7 @@ export function updateAuthenticatorRawButtonInState(state, entry, deps = {}) {
 
     button.disabled = !hasRawData;
     button.setAttribute('aria-disabled', hasRawData ? 'false' : 'true');
-    button.setAttribute('title', hasRawData ? 'View raw authenticator data' : 'Raw authenticator data unavailable');
+    button.setAttribute('title', hasRawData ? RAW_DATA_BUTTON_TITLE : RAW_DATA_UNAVAILABLE_TITLE);
     if (hasRawData) {
         button.removeAttribute('tabindex');
     } else {
@@ -44,7 +47,6 @@ export async function openAuthenticatorModalInState(state, entry, deps = {}) {
 
     const {
         hasInlineDetail,
-        normaliseAaguid,
         resolveMetadataEntry,
         hideScrollTopButton,
         updateAuthenticatorRawButton,
@@ -56,17 +58,8 @@ export async function openAuthenticatorModalInState(state, entry, deps = {}) {
     } = deps;
 
     if (entry && !hasInlineDetail(entry)) {
-        const query = {};
-        if (typeof entry.entryId === 'string' && entry.entryId) {
-            query.entryId = entry.entryId;
-        } else if (typeof entry.aaguid === 'string' && entry.aaguid) {
-            query.aaguid = normaliseAaguid(entry.aaguid);
-        } else if (typeof entry.id === 'string' && entry.id) {
-            query.aaid = entry.id;
-        }
-
         try {
-            const resolved = await resolveMetadataEntry(query);
+            const resolved = await resolveMetadataEntry(resolveQueryForEntry(entry));
             if (resolved) {
                 entry = resolved;
             }

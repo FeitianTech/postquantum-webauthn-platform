@@ -1,3 +1,6 @@
+// The raw view's text: JSON indented by four spaces, with what JSON cannot write
+// written out (big integers, maps, sets, bytes, cycles), and a line per key when
+// JSON cannot write the value at all. No DOM.
 const RAW_TEXT_INDENT = '    ';
 
 function isPlainObject(value) {
@@ -12,11 +15,7 @@ function formatRawPrimitive(value) {
         return 'null';
     }
     if (typeof value === 'string') {
-        try {
-            return JSON.stringify(value);
-        } catch (error) {
-            return `"${value.replace(/"/g, '\\"')}"`;
-        }
+        return JSON.stringify(value);
     }
     if (typeof value === 'number' || typeof value === 'bigint') {
         return String(value);
@@ -39,59 +38,50 @@ function buildAuthenticatorRawLines(value, depth = 0, label) {
     const indent = RAW_TEXT_INDENT.repeat(depth);
     const lines = [];
 
-    const addLine = text => {
-        if (text !== undefined && text !== null) {
-            lines.push(text);
-        }
-    };
-
     if (label !== undefined) {
         if (Array.isArray(value)) {
-            addLine(`${indent}${label}:`);
+            lines.push(`${indent}${label}:`);
             if (!value.length) {
-                addLine(`${indent}${RAW_TEXT_INDENT}[]`);
+                lines.push(`${indent}${RAW_TEXT_INDENT}[]`);
                 return lines;
             }
             value.forEach(item => {
                 if (Array.isArray(item) || isPlainObject(item)) {
-                    const childLines = buildAuthenticatorRawLines(item, depth + 1);
-                    lines.push(...childLines);
+                    lines.push(...buildAuthenticatorRawLines(item, depth + 1));
                 } else {
-                    addLine(`${indent}${RAW_TEXT_INDENT}${formatRawPrimitive(item)}`);
+                    lines.push(`${indent}${RAW_TEXT_INDENT}${formatRawPrimitive(item)}`);
                 }
             });
             return lines;
         }
 
         if (isPlainObject(value)) {
-            addLine(`${indent}${label}:`);
+            lines.push(`${indent}${label}:`);
             const keys = Object.keys(value);
             if (!keys.length) {
-                addLine(`${indent}${RAW_TEXT_INDENT}{}`);
+                lines.push(`${indent}${RAW_TEXT_INDENT}{}`);
                 return lines;
             }
             keys.forEach(key => {
-                const childLines = buildAuthenticatorRawLines(value[key], depth + 1, key);
-                lines.push(...childLines);
+                lines.push(...buildAuthenticatorRawLines(value[key], depth + 1, key));
             });
             return lines;
         }
 
-        addLine(`${indent}${label}: ${formatRawPrimitive(value)}`);
+        lines.push(`${indent}${label}: ${formatRawPrimitive(value)}`);
         return lines;
     }
 
     if (Array.isArray(value)) {
         if (!value.length) {
-            addLine(`${indent}[]`);
+            lines.push(`${indent}[]`);
             return lines;
         }
         value.forEach(item => {
             if (Array.isArray(item) || isPlainObject(item)) {
-                const childLines = buildAuthenticatorRawLines(item, depth + 1);
-                lines.push(...childLines);
+                lines.push(...buildAuthenticatorRawLines(item, depth + 1));
             } else {
-                addLine(`${indent}${RAW_TEXT_INDENT}${formatRawPrimitive(item)}`);
+                lines.push(`${indent}${RAW_TEXT_INDENT}${formatRawPrimitive(item)}`);
             }
         });
         return lines;
@@ -100,46 +90,38 @@ function buildAuthenticatorRawLines(value, depth = 0, label) {
     if (isPlainObject(value)) {
         const keys = Object.keys(value);
         if (!keys.length) {
-            addLine(`${indent}{}`);
+            lines.push(`${indent}{}`);
             return lines;
         }
         keys.forEach(key => {
-            const childLines = buildAuthenticatorRawLines(value[key], depth, key);
-            lines.push(...childLines);
+            lines.push(...buildAuthenticatorRawLines(value[key], depth, key));
         });
         return lines;
     }
 
-    addLine(`${indent}${formatRawPrimitive(value)}`);
+    lines.push(`${indent}${formatRawPrimitive(value)}`);
     return lines;
 }
 
 export function stringifyAuthenticatorRawData(value) {
-    const seen = typeof WeakSet === 'function' ? new WeakSet() : null;
+    const seen = new WeakSet();
     const replacer = (key, currentValue) => {
         if (typeof currentValue === 'bigint') {
             return currentValue.toString();
         }
-        if (typeof Map !== 'undefined' && currentValue instanceof Map) {
+        if (currentValue instanceof Map) {
             return Object.fromEntries(currentValue);
         }
-        if (typeof Set !== 'undefined' && currentValue instanceof Set) {
+        if (currentValue instanceof Set) {
             return Array.from(currentValue);
         }
-        if (typeof ArrayBuffer !== 'undefined') {
-            if (currentValue instanceof ArrayBuffer) {
-                return Array.from(new Uint8Array(currentValue));
-            }
-            if (typeof ArrayBuffer.isView === 'function' && ArrayBuffer.isView(currentValue)) {
-                const view = new Uint8Array(
-                    currentValue.buffer,
-                    currentValue.byteOffset || 0,
-                    currentValue.byteLength || currentValue.length || 0,
-                );
-                return Array.from(view);
-            }
+        if (currentValue instanceof ArrayBuffer) {
+            return Array.from(new Uint8Array(currentValue));
         }
-        if (currentValue && typeof currentValue === 'object' && seen) {
+        if (ArrayBuffer.isView(currentValue)) {
+            return Array.from(new Uint8Array(currentValue.buffer, currentValue.byteOffset, currentValue.byteLength));
+        }
+        if (currentValue && typeof currentValue === 'object') {
             if (seen.has(currentValue)) {
                 return '[Circular]';
             }
@@ -151,7 +133,6 @@ export function stringifyAuthenticatorRawData(value) {
     try {
         return JSON.stringify(value, replacer, 4);
     } catch (error) {
-        const lines = buildAuthenticatorRawLines(value);
-        return lines.join('\n');
+        return buildAuthenticatorRawLines(value).join('\n');
     }
 }

@@ -1,3 +1,4 @@
+import { requestResolvedEntry } from '../explorer/entry-link.js';
 import { indexEntriesByAaguid, prepareSnapshotEntries } from '../explorer/loading.js';
 import { explorerLoadedStatus } from '../explorer/status.js';
 import { loadMdsDataInState as loadMdsDataFromModule } from './explorer-load.js';
@@ -153,37 +154,12 @@ export function integrateResolvedEntryInState(entry, deps = {}) {
     return entry;
 }
 
+// The current page opens with what the list had when the server refuses (it
+// never shows the refusal) or answers without an entry.
 export async function resolveMetadataEntryInState(query, deps = {}) {
-    const {
-        mdsResolvePath,
-        integrateResolvedEntry,
-    } = deps;
-
-    const params = new URLSearchParams();
-    Object.entries(query || {}).forEach(([key, value]) => {
-        if (typeof value === 'string' && value) {
-            params.set(key, value);
-        }
-    });
-
-    if (!params.toString()) {
-        return null;
-    }
-
-    const response = await fetch(`${mdsResolvePath}?${params.toString()}`, {
-        cache: 'no-store',
-    });
-    if (!response.ok) {
-        return null;
-    }
-
-    const payload = await response.json();
-    const resolved = payload?.entry;
-    if (!resolved || typeof resolved !== 'object') {
-        return null;
-    }
-
-    return integrateResolvedEntry(resolved);
+    const { integrateResolvedEntry } = deps;
+    const { entry } = await requestResolvedEntry(query);
+    return entry ? integrateResolvedEntry(entry) : null;
 }
 
 export async function loadMdsDataInState(statusNote, options = {}, deps = {}) {

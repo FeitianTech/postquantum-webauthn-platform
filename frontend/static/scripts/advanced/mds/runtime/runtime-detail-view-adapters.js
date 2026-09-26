@@ -238,7 +238,6 @@ export function createMdsDetailViewAdapters(config = {}) {
     async function openAuthenticatorModalProxy(entry) {
         return openAuthenticatorModalInState(getState(), entry, {
             hasInlineDetail,
-            normaliseAaguid,
             resolveMetadataEntry,
             hideScrollTopButton,
             updateAuthenticatorRawButton,

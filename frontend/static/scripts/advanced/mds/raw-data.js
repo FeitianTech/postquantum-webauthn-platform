@@ -1,3 +1,25 @@
+// The raw view of an explorer entry, for both UIs: the entry rebuilt as MDS
+// publishes it, and the words around it. No DOM.
+export const RAW_DATA_TITLE = 'Authenticator Raw Data';
+export const RAW_DATA_LABEL = 'Raw authenticator metadata';
+export const RAW_DATA_BUTTON_TITLE = 'View raw authenticator data';
+export const RAW_DATA_UNAVAILABLE_TITLE = 'Raw authenticator data unavailable';
+
+// "${name} – Authenticator Raw Data", or the second part alone without a name.
+export function authenticatorRawTitle(entry) {
+    const name = typeof entry?.name === 'string' ? entry.name.trim() : '';
+    return name ? `${name} – ${RAW_DATA_TITLE}` : RAW_DATA_TITLE;
+}
+
+// A statement that can take a field (JSON would not show one on a list).
+function isStatement(value) {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+// The entry as MDS publishes it: its own BLOB entry when it has one, else its
+// statement with the roots and key identifiers the explorer took out of it put
+// back, its status reports, AAGUID, id and time of the last status change. The
+// entry is not changed: a statement that gains a field is a copy.
 export function getAuthenticatorRawData(entry) {
     if (!entry || typeof entry !== 'object') {
         return null;
@@ -16,13 +38,15 @@ export function getAuthenticatorRawData(entry) {
     }
 
     if (
-        base.metadataStatement
-        && typeof base.metadataStatement === 'object'
+        isStatement(base.metadataStatement)
         && base.metadataStatement.attestationRootCertificates === undefined
         && Array.isArray(entry.attestationCertificates)
         && entry.attestationCertificates.length
     ) {
-        base.metadataStatement.attestationRootCertificates = entry.attestationCertificates;
+        base.metadataStatement = {
+            ...base.metadataStatement,
+            attestationRootCertificates: entry.attestationCertificates,
+        };
     }
 
     if (base.attestationCertificateKeyIdentifiers === undefined) {
@@ -32,11 +56,13 @@ export function getAuthenticatorRawData(entry) {
         if (identifiers.length) {
             base.attestationCertificateKeyIdentifiers = identifiers;
             if (
-                base.metadataStatement
-                && typeof base.metadataStatement === 'object'
+                isStatement(base.metadataStatement)
                 && base.metadataStatement.attestationCertificateKeyIdentifiers === undefined
             ) {
-                base.metadataStatement.attestationCertificateKeyIdentifiers = identifiers;
+                base.metadataStatement = {
+                    ...base.metadataStatement,
+                    attestationCertificateKeyIdentifiers: identifiers,
+                };
             }
         }
     }

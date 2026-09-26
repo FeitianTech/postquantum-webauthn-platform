@@ -1,7 +1,6 @@
 import {
     COLUMN_COUNT,
     MDS_EXPLORER_FULL_PATH,
-    MDS_RESOLVE_PATH,
     MISSING_METADATA_MESSAGE,
 } from '../constants.js';
 import {
@@ -107,7 +106,6 @@ export function createDataRuntime({
         normaliseSnapshotInfo: normaliseSnapshotInfoValue,
         cloneMetadataEntry: cloneMetadataEntryValue,
         hasInlineDetail: hasInlineDetailValue,
-        mdsResolvePath: MDS_RESOLVE_PATH,
         mdsExplorerFullPath: MDS_EXPLORER_FULL_PATH,
         explorerSource: createExplorerSource(initialMdsInfo),
         missingMetadataMessage: MISSING_METADATA_MESSAGE,

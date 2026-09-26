@@ -38,7 +38,6 @@ export function createMdsDataExplorerAdapters(config = {}) {
         setColumnResizersEnabled,
         updateCount,
         columnCount,
-        mdsResolvePath,
         mdsExplorerFullPath,
         explorerSource,
         missingMetadataMessage,
@@ -100,7 +99,6 @@ export function createMdsDataExplorerAdapters(config = {}) {
 
     async function resolveMetadataEntry(query) {
         return resolveMetadataEntryInState(query, {
-            mdsResolvePath,
             integrateResolvedEntry,
         });
     }

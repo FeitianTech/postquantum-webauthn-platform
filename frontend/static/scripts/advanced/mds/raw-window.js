@@ -1,4 +1,5 @@
 import { el } from '../../shared/ui/dom.js';
+import { RAW_DATA_LABEL, authenticatorRawTitle } from './raw-data.js';
 
 // The popup is an about:blank document, so it shares this page's
 // Content-Security-Policy: its rules come from a stylesheet (no <style>, no style
@@ -30,7 +31,7 @@ function buildRawWindowDocument(doc, { titleText, subtitleText }) {
                             readonly: true,
                             spellcheck: 'false',
                             wrap: 'off',
-                            'aria-label': 'Raw authenticator metadata',
+                            'aria-label': RAW_DATA_LABEL,
                         },
                     }),
                 ),
@@ -101,12 +102,7 @@ export function openAuthenticatorRawWindow({
         return;
     }
 
-    const titleParts = [];
-    if (entry?.name && typeof entry.name === 'string' && entry.name.trim()) {
-        titleParts.push(entry.name.trim());
-    }
-    titleParts.push('Authenticator Raw Data');
-    const titleText = titleParts.join(' – ');
+    const titleText = authenticatorRawTitle(entry);
     const subtitleText = formatDetailSubtitle(entry);
 
     // Discards what the popup held, as before; neither call parses markup.

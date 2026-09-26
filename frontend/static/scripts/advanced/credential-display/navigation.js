@@ -1,3 +1,5 @@
+import { ENTRY_LINK_MESSAGES } from '../mds/explorer/entry-link.js';
+
 function setAaguidStatus(statusEl, message, { showSpinner = false } = {}) {
     if (!(statusEl instanceof HTMLElement)) {
         return;
@@ -110,7 +112,7 @@ export function navigateToMdsAuthenticatorRuntime(aaguid, deps = {}) {
     const run = async () => {
         try {
             if (statusEl) {
-                showSpinnerStatus('Locating metadata entry...');
+                showSpinnerStatus(ENTRY_LINK_MESSAGES.locating);
             }
 
             if (switchToMdsTab) {
@@ -128,7 +130,7 @@ export function navigateToMdsAuthenticatorRuntime(aaguid, deps = {}) {
 
             if (!resolvedEntry) {
                 if (statusEl) {
-                    setAaguidStatus(statusEl, 'Authenticator metadata not found.', { showSpinner: false });
+                    setAaguidStatus(statusEl, ENTRY_LINK_MESSAGES.notFound, { showSpinner: false });
                     scheduleClear();
                 }
                 return { highlighted: false, entry: null };
@@ -162,7 +164,7 @@ export function navigateToMdsAuthenticatorRuntime(aaguid, deps = {}) {
             };
 
             if (statusEl) {
-                showSpinnerStatus('Locating metadata entry...');
+                showSpinnerStatus(ENTRY_LINK_MESSAGES.locating);
             }
 
             const preparation = await invokeHighlight({
@@ -178,8 +180,8 @@ export function navigateToMdsAuthenticatorRuntime(aaguid, deps = {}) {
             if (!preparation.highlighted) {
                 if (statusEl) {
                     const message = resolvedEntry
-                        ? 'Unable to locate metadata entry.'
-                        : 'Authenticator metadata not found.';
+                        ? ENTRY_LINK_MESSAGES.notLocated
+                        : ENTRY_LINK_MESSAGES.notFound;
                     setAaguidStatus(statusEl, message, { showSpinner: false });
                     scheduleClear();
                 }
@@ -187,7 +189,7 @@ export function navigateToMdsAuthenticatorRuntime(aaguid, deps = {}) {
             }
 
             if (statusEl) {
-                showSpinnerStatus('Opening authenticator metadata...');
+                showSpinnerStatus(ENTRY_LINK_MESSAGES.opening);
             }
 
             await waitForNextFrame(2);
@@ -222,8 +224,8 @@ export function navigateToMdsAuthenticatorRuntime(aaguid, deps = {}) {
 
             if (statusEl) {
                 const message = resolvedEntry
-                    ? 'Unable to locate metadata entry.'
-                    : 'Authenticator metadata not found.';
+                    ? ENTRY_LINK_MESSAGES.notLocated
+                    : ENTRY_LINK_MESSAGES.notFound;
                 setAaguidStatus(statusEl, message, { showSpinner: false });
                 scheduleClear();
             }
@@ -232,7 +234,7 @@ export function navigateToMdsAuthenticatorRuntime(aaguid, deps = {}) {
         } catch (error) {
             console.error('Failed to highlight authenticator row.', error);
             if (statusEl) {
-                setAaguidStatus(statusEl, 'Unable to open authenticator metadata.', { showSpinner: false });
+                setAaguidStatus(statusEl, ENTRY_LINK_MESSAGES.failed, { showSpinner: false });
                 scheduleClear();
             }
             return { highlighted: false, entry: null, error };
@@ -261,7 +263,7 @@ export function handleCredentialMdsClickRuntime(event, deps = {}) {
     }
 
     dismissAllTransientMessages();
-    showSharedCredentialProgress('Locating metadata entry...');
+    showSharedCredentialProgress(ENTRY_LINK_MESSAGES.locating);
 
     const finish = () => {
         hideSharedCredentialProgress();
@@ -272,13 +274,13 @@ export function handleCredentialMdsClickRuntime(event, deps = {}) {
         navigationResult = navigateToMdsAuthenticator(aaguid);
     } catch (error) {
         console.error('Failed to navigate to authenticator metadata.', error);
-        showSharedCredentialStatus('Unable to open authenticator metadata.', 'error');
+        showSharedCredentialStatus(ENTRY_LINK_MESSAGES.failed, 'error');
         finish();
         return;
     }
 
     if (navigationResult === undefined) {
-        showSharedCredentialStatus('Authenticator metadata entry unavailable.', 'warning');
+        showSharedCredentialStatus(ENTRY_LINK_MESSAGES.unavailable, 'warning');
         finish();
         return;
     }
@@ -286,20 +288,20 @@ export function handleCredentialMdsClickRuntime(event, deps = {}) {
     Promise.resolve(navigationResult)
         .then(result => {
             if (!result) {
-                showSharedCredentialStatus('Authenticator metadata entry unavailable.', 'warning');
+                showSharedCredentialStatus(ENTRY_LINK_MESSAGES.unavailable, 'warning');
                 return;
             }
             if (result.error) {
-                showSharedCredentialStatus('Unable to open authenticator metadata.', 'error');
+                showSharedCredentialStatus(ENTRY_LINK_MESSAGES.failed, 'error');
                 return;
             }
             if (result.highlighted !== true) {
-                showSharedCredentialStatus('Authenticator metadata not found.', 'warning');
+                showSharedCredentialStatus(ENTRY_LINK_MESSAGES.notFound, 'warning');
             }
         })
         .catch(error => {
             console.error('Failed to navigate to authenticator metadata.', error);
-            showSharedCredentialStatus('Unable to open authenticator metadata.', 'error');
+            showSharedCredentialStatus(ENTRY_LINK_MESSAGES.failed, 'error');
         })
         .finally(finish);
 }
