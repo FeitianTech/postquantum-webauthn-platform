@@ -2,10 +2,8 @@ import { formatEnum } from './formatters.js';
 
 export function extractAttestationKeyIdentifiers(metadata, entry) {
     const map = new Map();
+    // extractList has already dropped the empty values.
     const addValue = value => {
-        if (value === undefined || value === null) {
-            return;
-        }
         const text = String(value).trim();
         if (!text) {
             return;
