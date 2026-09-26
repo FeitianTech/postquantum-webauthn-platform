@@ -218,6 +218,16 @@ describe('the MDS entry page', () => {
     expect(JSON.parse(text).metadataStatement.attestationRootCertificates).toEqual(entry.attestationCertificates);
     expect(within(dialog).getByRole('button', { name: 'Copy Raw authenticator metadata' })).toBeInTheDocument();
 
+    const saved: Blob[] = [];
+    Object.assign(URL, { createObjectURL: (blob: Blob) => (saved.push(blob), 'blob:x'), revokeObjectURL: vi.fn() });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      expect(this.download).toBe('aaguid-f1d0f1d0-0000-4000-8000-000000000001.json');
+    });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Download JSON' }));
+    expect(click).toHaveBeenCalledTimes(1);
+    await expect(saved[0].text()).resolves.toBe(text);
+    click.mockRestore();
+
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(raw).toHaveFocus();
