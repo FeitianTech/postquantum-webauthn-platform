@@ -6,14 +6,15 @@ metadata service: seven files totalling about 30 MB, produced together by
 
 | File | Size | Read by |
 | --- | --- | --- |
-| `blob.jwt` | 10 MB | the server, to re-verify the signed BLOB |
+| `blob.jwt` | 10 MB | the updater, to tell whether the BLOB changed (the server does not read it) |
 | `fido-mds3.verified.json` | 7.1 MB | the server, as the base metadata payload |
 | `fido-mds3.explorer.json` | 5.5 MB | the server, for the explorer table |
 | `fido-mds3.explorer.full.json` | 7.1 MB | the browser, as a cacheable static asset |
 | `*.meta.json` (three files) | ~1 KB | the freshness check and the explorer banner |
 
-All seven live under `frontend/static/`. **None of them is tracked in git** and
-none is baked into the container image.
+All seven live in one directory: `frontend/static/`, unless
+`FIDO_SERVER_MDS_SNAPSHOT_DIR` names another (see "Where the files are").
+**None of them is tracked in git** and none is baked into the container image.
 
 ## Why they are not in git
 
@@ -28,9 +29,29 @@ history: the old blobs stay reachable from the ~79 commits that introduced them.
 Reclaiming that space needs a history rewrite, which is a separate, deliberate
 decision because it changes every commit id.
 
+## Where the files are
+
+`server/app/mds_snapshot_dir.py` names the seven files once and says where they are:
+`snapshot_dir()` reads `FIDO_SERVER_MDS_SNAPSHOT_DIR` whenever a path is needed, and
+without it answers `frontend/static`. It is a leaf with no Flask import, so every
+reader and writer follows the one setting: the server's metadata loaders
+(`webauthn/metadata/blob.py`), `/api/mds/metadata/base`, the provisioning below,
+`tools/update_mds_snapshot.py`, and the packaged snapshot browsers load
+(`/assets/<build id>/fido-mds3.explorer.full.json`, the `snapshotUrl` the page is
+given, served from that directory with its `.gz` sibling). Flask's own static route
+still serves `frontend/static` at `/`; nothing the pages use reads the snapshot from
+there.
+
+The tests use it to keep off a developer's real snapshot: `tests/conftest.py` points
+every test at an empty directory of the run's, and a test that needs a snapshot
+points it at a copy of `tests/fixtures/mds/snapshot` (a small synthetic snapshot
+built by `tests/app/metadata/mds_fixture.py` with the updater's own code). The browser
+tests' Flask (`web/e2e/serve-flask.mjs`) serves such a copy too. Phase 30 moves the
+snapshot out of `frontend/static` by changing the default here.
+
 ## How the snapshot reaches the application
 
-`server/app/mds_provisioning.py` materialises the files into `frontend/static/`
+`server/app/mds_provisioning.py` materialises the files into the snapshot directory
 on demand, trying three tiers in order. It runs once per process, from the
 background warm-up on a Cloud Run cold start and from the metadata bootstrap
 otherwise.
@@ -58,15 +79,18 @@ have produced had the file been present at image build time.
 
 ### When no tier succeeds
 
-The application still starts and serves. `/health` and `/` work; the metadata
-APIs return `404` with "Verified metadata snapshot is not available", and the
-explorer shows no entries. This is the behaviour that already existed for a
-missing snapshot — the relocation did not introduce a new failure mode.
+The application still starts and serves. `/health` and `/` work; the explorer APIs
+answer `200` with no entries (their `404` branch is not reached: the snapshot they
+compose always has its counts), `/api/mds/metadata/base` answers `404` with
+"Verified metadata snapshot is not available", the packaged file at `snapshotUrl` is
+a `404`, and the explorer shows no entries (`/beta` says the packaged metadata is
+unavailable). This is the behaviour that already existed for a missing snapshot —
+the relocation did not introduce a new failure mode.
 
 ## Working locally without Cloud Storage
 
 Run the updater once. It fetches and verifies the BLOB and writes all seven
-files into `frontend/static/`, where they are gitignored:
+files into the snapshot directory (`frontend/static/`, where they are gitignored):
 
 ```bash
 python tools/update_mds_snapshot.py

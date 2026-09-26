@@ -175,6 +175,53 @@ mid-UUID (mono, with copy). Enhance where it helps along the way. All data shown
 - **Parity check**: `web/e2e/parity.ts` compares what a region shows in both UIs, word for word per section, each
   expected difference with its reason. Each later surface adds its own parity spec over it.
 
+## Decisions made in Phase 27A (2026-09-26)
+
+- **The split.** 27A ports the list page; 27B the authenticator detail page, the certificate page, the raw views
+  and the jump from a saved credential. Until 27B an entry opened at `/beta` shows its name and identifier (with
+  copy), Back, and a plain link to the full page in the current interface.
+- **Filters** are a bar above the table, each field labelled with its column (six to a row on a wide screen, four at
+  1024 px, down to one on a phone, where the bar folds behind "Show filters"), not a second header row. The bar says
+  how many filters are in use and has one "Clear filters"; a filtered column's header carries an accent dot. The
+  seven filters with a list are ARIA 1.2 comboboxes (the listbox, the arrow keys wrapping, Enter picking the option
+  highlighted, Escape closing the list and then clearing); User Verification and Algorithms show their list whole.
+- **The table** sits in a frame that scrolls both ways by itself, at most the window's height: the header row stays in
+  view, the sideways scrollbar is always within reach, and the page never scrolls sideways. Rows are one line (41 px),
+  left-aligned; a long value ends in an ellipsis with the whole value as the cell's tooltip, and a row expands (the
+  chevron before its name) to show every word, lists as pills. Certification is one badge for the level, coloured by
+  status, the descriptor and number after it; the ID is Geist Mono on one line with copy; icons are 28 px.
+- **Performance.** Every row stays in the page (find-in-page and the parity check read them all), but each row is a
+  grid on one column template (`--mds-columns`, set through the CSSOM, as the resized widths are) rather than a table
+  row, so `content-visibility: auto` lets the browser skip laying out and painting rows out of view: bringing back
+  all 517 rows went from 41 ms of layout to under 2. The table roles are written out, since the display is not a
+  table's. Filtering follows the typing through `useDeferredValue`. No dependency was added.
+- **Sorting** is announced with `aria-sort`; the columns resize from the keyboard too (a focusable separator).
+- **An entry is a URL**: `#mds/<entryId>` (the id encoded, its colons kept; an AAID's `#` as `%23`). Opening one
+  pushes a history entry (switching sections still replaces the hash), so the browser's Back and the page's Back both
+  return to the list, which stayed mounted: its filters, sort, widths and scroll are as they were, and the focus is on
+  the row. While the app shell is shown, Next's router is told (`beforePopState`) to leave Back to the page: it would
+  otherwise put back the URL it remembers from before a section switch.
+- **Manage Trusted Metadata** is a `Dialog` (focus in, Escape and the backdrop close it, focus back to its button). It
+  lists the files the session uploaded, with Delete (the current panel never fills its list; the owner chose to fix
+  that in `/beta` only), shows the progress as a line inside the dialog rather than an overlay over the tab, and keeps
+  the server's reason for a refused upload or delete.
+- **Loading** starts the first time the section is shown, from `GET /api/mds/metadata/info` (what the index inlines,
+  built by the same function). With no snapshot the table says the packaged metadata is unavailable (the current
+  table says that no authenticator matches the filters).
+- **The server** gains, additively: the info endpoint; `FIDO_SERVER_MDS_SNAPSHOT_DIR`, read whenever a path is needed
+  from a Flask-free leaf (`server/app/mds_snapshot_dir.py`) that the loaders, the provisioning, the served snapshot and
+  the updater follow (the first step of Phase 30's move); upload and delete recording whether the session has uploads,
+  so a reload never loads the packaged file over the session's own. The legacy scripts request the MDS endpoints by
+  absolute path.
+- **Tests and fixtures.** Every test runs against an empty snapshot directory of its own run; the MDS tests serve a
+  small synthetic snapshot (`tests/fixtures/mds`) built with the updater's own code, which the browser tests' Flask
+  serves too. `web/e2e/parity.ts` gains a row reader; `mds-parity.spec.ts` compares the two tables row by row.
+- **Never shown, not ported:** "Refresh Metadata" and what only it reaches, the floating sideways scrollbar, the
+  client's row builder for a payload without `entryId`, the inlined snapshot page data. They go with the legacy tree at
+  the cutover rather than now: the legacy tests exercise them, and rewriting those tests for code about to be deleted
+  buys nothing. The snapshot URL's year-long immutable caching (the snapshot changes at runtime, the build id only on a
+  deploy) is reported, not changed (the owner's decision).
+
 ## Content parity (every surface phase)
 
 Before porting a surface, list everything it shows and every action it offers, from the current app (the
@@ -187,7 +234,7 @@ new component and check it in a browser. A phase is not done while an item is un
 |---|---|
 | 25 | Foundation: `web/`, tokens and primitives, the app shell, Flask serving `/beta`, the CSP scan, the build and CI pipeline, Playwright with a virtual authenticator; the Analyze Browser panel as the pilot. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 25) |
 | 26 | Codec. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 26) |
-| 27A | MDS explorer, the list page: the header, counts and status line, the table with its sorting, filters and resizing, Back to top, Manage Trusted Metadata, and the route that opens an entry (`#mds/<entryId>`). The explorer is 75 modules and 10,294 lines of JavaScript, seven times the Codec, so Phase 27 is split in two (docs/ui-parity/mds.md marks each item 27A or 27B) |
+| 27A | MDS explorer, the list page: the header, counts and status line, the table with its sorting, filters and resizing, Back to top, Manage Trusted Metadata, and the route that opens an entry (`#mds/<entryId>`). The explorer is 75 modules and 10,294 lines of JavaScript, seven times the Codec, so Phase 27 is split in two (docs/ui-parity/mds.md marks each item 27A or 27B). **Done** (see docs/MODERNIZATION_PLAN.md, Phase 27A) |
 | 27B | MDS explorer, the rest: the authenticator detail page, the certificate page, the raw views, and the jump from a saved credential to its entry |
 | 28 | Saved credentials (cards, detail modal, registration result) and the Simple tab |
 | 29 | Advanced tab: registration and authentication forms, JSON editor, drawer, result modals |

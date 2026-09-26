@@ -69,9 +69,13 @@ unlisted.
 - `web/src/components/shell/`: the header (title, the four sections, Analyze Browser,
   GitHub; the phone menu sheet below 900 px), the footer, the sections' panels
   (`SectionPanel` for a section not ported yet; `AppShell` renders a ported one's own
-  component, `CodecSection` for `#codec`).
+  component, `CodecSection` for `#codec`, `MdsSection` for `#mds`).
   `web/src/lib/useSection.ts` keeps the section in the URL hash (`#simple`,
-  `#advanced`, `#codec`, `#mds`) with `replaceState`.
+  `#advanced`, `#codec`, `#mds`) with `replaceState`, and what is open inside one
+  after a slash (`#mds/<entryId>`, `routeFromHash` / `hashPath` in `sections.ts`) with
+  `pushState`, so the browser's Back closes it; it tells Next's router
+  (`beforePopState`) to leave Back to the page, which would otherwise put an older URL
+  back.
 - `web/src/components/analyze-browser/`: the first ported surface, over the logic
   modules in `frontend/static/scripts/shared/browser/`, imported through the
   `@legacy/*` alias (`experimental.externalDir`), never copied. They move into
@@ -91,11 +95,32 @@ unlisted.
   `tests/app/tooling/test_web_codec_answers.py` keeps equal to what `/api/codec`
   answers (`CODEC_ANSWERS_WRITE=1` rewrites it). `docs/ui-parity/codec.md` maps every
   item of the old tab.
+- `web/src/components/mds/`: the MDS explorer's list page (Phase 27A; the detail
+  page, certificates, raw views and the jump from a credential are 27B).
+  `MdsSection` (the header and count, the status line, the filter bar, the table, the
+  entry view, Manage Metadata), `useMdsExplorer` (GET `/api/mds/metadata/info`, then
+  the packaged snapshot or the session's list, the status sentences, Retry, a snapshot
+  from an upload shown at once), `useExplorerView` (filters through
+  `useDeferredValue`, their options, the sort reset per snapshot, expanded rows),
+  `ExplorerTable` / `ExplorerRow` (13 columns in a frame that scrolls both ways, the
+  header sticky; every row in the page, each a grid on one column template set
+  through the CSSOM (`--mds-columns`) with `content-visibility: auto`, so rows out of
+  view are neither laid out nor painted; explicit table roles; one-line cells with
+  their tooltip, a row expands; resizing by pointer and keys; Back to top),
+  `FilterBar` / `FilterCombobox` (the 11 filters above the table, the seven with a list
+  as ARIA comboboxes), `ManageMetadataDialog` / `useCustomMetadata`, `EntryView` (27A's
+  stub), `ListState`, `model.ts` (the types and the casts of the imported logic, the
+  columns' and filters' template words). The logic is
+  `frontend/static/scripts/advanced/mds/explorer/*.js` and the leaves under it.
+  Component tests render the fixture snapshot (`tests/fixtures/mds`, through the
+  `@test-fixtures` alias; `src/test/mds.ts` answers `fetch` like Flask serving it).
+  `docs/ui-parity/mds.md` maps every item of the old tab.
 - `web/scripts/check-export-csp.mjs`: parses every HTML file of the export and
   fails on an inline script that would run, a `<style>`, a style attribute, an `on*`
   attribute, a `javascript:` URL or a script or stylesheet from outside `/beta/`.
 - `web/e2e/`: Playwright in Chromium. `serve-flask.mjs` starts Flask with every store
-  in a temporary directory; `virtual-authenticator.ts` adds a CTAP2 authenticator
+  in a temporary directory and a copy of the MDS fixture as its snapshot
+  (`FIDO_SERVER_MDS_SNAPSHOT_DIR`); `virtual-authenticator.ts` adds a CTAP2 authenticator
   through the DevTools WebAuthn domain; `fixtures.ts` fails a test on any console
   error, page error, CSP violation or report. `simple-ceremony.spec.ts` registers and
   authenticates on the current UI at `/`; `beta-smoke.spec.ts` covers `/beta`;
@@ -104,13 +129,16 @@ unlisted.
   (layout, separators and controls set aside), each expected difference with its
   reason; `codec-parity.spec.ts` runs it over inputs from `tests/app/codec_corpus.py`
   (read through `E2E_PYTHON`), and a later surface's parity spec uses it the same way.
+  `readShownRows` reads a table a row at a time, keyed by a cell (controls' text kept);
+  `mds-parity.spec.ts` compares the MDS tables' rows for several filters and a sort,
+  and `mds.spec.ts` covers the MDS list.
 
 Rules for `web/src` (`tests/app/tooling/test_web_source_rules.py` holds them):
 no `style` prop (the export would render a style attribute), no
 `dangerouslySetInnerHTML` or other markup sink, no `<style>` / `<script>`, no
 `next/script`, no `eval`, nothing written to `window`, no `atob`, and no copy of
 the logic modules' exports or sentences. The logic modules are the test's
-`LOGIC_ROOTS` (Analyze Browser's, the Codec's, the failed-response reader) plus
+`LOGIC_ROOTS` (Analyze Browser's, the Codec's, the MDS explorer's, the failed-response reader) plus
 whatever `web/src` imports through `@legacy/`, followed through their imports, and
 none of them may touch the DOM: a surface splits its logic out of its view first
 and adds it to `LOGIC_ROOTS`. No `Suspense` on the server-rendered path:
@@ -187,6 +215,20 @@ Important frontend entry points:
   `mode.js`, `dom-state.js`, `panel-actions.js`). The root coverage counts the whole
   Codec, and holds the logic leaves at 100 % (`vitest.config.mjs`). A failed codec
   request's `offset` and `path` are in `readFailedResponse`'s answer.
+- `frontend/static/scripts/advanced/mds/explorer/`
+  The MDS explorer's logic, DOM-free, which both UIs import: `loading.js` (which
+  source and in what order, what an answer means, the entries shown, GET
+  `/api/mds/metadata/info`), `status.js` (the status line's sentences, the count),
+  `filter-sort.js` (matching, sorting, the click cycle), `options.js` (each filter's
+  list), `rows.js` (cell fallbacks, the certification badge, the identifier's kind),
+  `columns.js`, `custom-metadata.js` (Manage Trusted Metadata's requests and every
+  message). The legacy views call them. The server builds every row
+  (`mds_snapshot.build_explorer_entry`); the client's own row builder
+  (`utils/entry-transform.js`, the lazy loader) is only for a payload without
+  `entryId`, which the server never sends, and goes at the cutover
+  (`docs/ui-parity/mds.md`, "Never shown"). The paths in `constants.js` are absolute,
+  so they resolve the same from `/beta/`. `explorer/*.js` and the leaves under them are
+  held at 100 % (`vitest.config.mjs`).
 - `frontend/static/scripts/shared/ui/dom.js`
   How every view that shows data is built: `el(tag, {className, attrs, dataset,
   style, text}, ...children)` and `fragment()`. Strings become text nodes or
@@ -323,6 +365,12 @@ Flask app setup starts in:
 - `server/app/mds_trust.py`
   The MDS trust anchor. A leaf on purpose: `tools/update_mds_snapshot.py` imports
   it without anything from Flask.
+- `server/app/mds_snapshot_dir.py`
+  Where the MDS snapshot is: its seven file names and `snapshot_dir()`, which reads
+  `FIDO_SERVER_MDS_SNAPSHOT_DIR` whenever a path is needed (default
+  `frontend/static`). A Flask-free leaf too: the server (`webauthn/metadata/blob.py`,
+  `routes/general.py`), the provisioning, the served snapshot
+  (`/assets/<id>/fido-mds3.explorer.full.json`) and the updater all follow it.
 
 Main route modules:
 
@@ -364,7 +412,9 @@ Main route modules:
   of session reads in the bodies are behaviour; keep moved code inside them.
 - `server/app/routes/general.py`
   Index page, metadata bootstrap helpers, decoder endpoints, misc app routes, on
-  the `general` blueprint. `routes/web_export.py` (the `web_export` blueprint) serves
+  the `general` blueprint. `_initial_mds_info()` builds what the index inlines as
+  `initial-mds-info` and what `GET /api/mds/metadata/info` answers (no-store,
+  `Vary: Cookie`); an upload or delete records whether the session has uploads. `routes/web_export.py` (the `web_export` blueprint) serves
   the new UI's export at `/beta`: HTML `no-cache`, `/beta/_next/static/` immutable for
   a year with the build-time `.gz` copies (`static_assets.send_precompressed`), the
   export's `404.html` for an unknown path, a plain 404 with no export; the export
@@ -546,7 +596,14 @@ Ten checks guard the code and the checkout rather than behaviour:
   `tmp_path`. `tests/app/conftest.py` also points the session-metadata store at a
   directory of the run's for the whole session: a session-cleanup thread can
   outlive the test that started it, and one that lists the checkout's directory
-  removes the inactive sessions it finds there.
+  removes the inactive sessions it finds there. `tests/conftest.py` points
+  `FIDO_SERVER_MDS_SNAPSHOT_DIR` at an empty directory of the run's (and turns the
+  upstream refresh off), so no test reads a developer's real snapshot; a test that
+  needs one uses `mds_fixture_snapshot` (`tests/app/metadata/conftest.py`), a copy of
+  the fixture in `tests/fixtures/mds/`. That fixture is built by
+  `tests/app/metadata/mds_fixture.py` with the updater's own `snapshot_files()` from a
+  synthetic, signed BLOB; `test_mds_fixture.py` fails when the committed files differ
+  (`MDS_FIXTURE_WRITE=1` rewrites them).
 
 For a test that needs an app configured differently, use the `make_app` fixture in
 `tests/app/conftest.py` (or `app` / `client`): it calls `create_app()` with a fixed
@@ -651,8 +708,10 @@ it configures that app and no other. Do not `importlib.reload` config modules.
   and **not baked into the image**. `server/app/mds_provisioning.py` fetches it at
   runtime: local files, then Cloud Storage, then a verified upstream refresh.
 - Working locally: run `python tools/update_mds_snapshot.py` once. Without it the
-  metadata APIs return 404 and the explorer is empty; that is the documented
-  fallback, not a bug.
+  explorer APIs answer 200 with no entry (and `/api/mds/metadata/base` 404), and the
+  explorer is empty; that is the documented fallback, not a bug.
+- `FIDO_SERVER_MDS_SNAPSHOT_DIR` puts the snapshot elsewhere (`server/app/mds_snapshot_dir.py`);
+  the browser tests and pytest point it at a copy of `tests/fixtures/mds/snapshot`.
 - Never commit those files and never write a test that reads the real snapshot
   path. `docs/MDS_SNAPSHOT.md` has the full picture.
 
