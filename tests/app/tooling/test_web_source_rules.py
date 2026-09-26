@@ -71,6 +71,9 @@ _RULES: dict[str, re.Pattern[str]] = {
     "style prop": re.compile(r"(?<=\s)style=\{"),
     "<style> or <script> element": re.compile(r"<(?:style|script)\b"),
     "next/script": re.compile(r"""['"]next/script['"]"""),
+    # Next's router adds page scripts after following a next/link, which the
+    # Trusted Types policy reports, and it adds /beta to the path: links are <a>.
+    "next/link": re.compile(r"""['"]next/link['"]"""),
     "eval": re.compile(r"(?<![\w$.])eval\s*\(|\bnew\s+Function\s*\("),
     "atob": re.compile(r"(?<![\w$.])atob\s*\("),
 }
@@ -140,6 +143,7 @@ def test_the_reader_finds_each_rule_break():
             "<p style={{ color: 'red' }} />",
             "<style>{css}</style>",
             "import Script from 'next/script';",
+            "import Link from \"next/link\";",
             "eval(code); const f = new Function('a', 'b');",
             "const bytes = atob(text);",
             "node.innerHTML = markup;",
@@ -157,11 +161,12 @@ def test_the_reader_finds_each_rule_break():
         (4, "style prop"),
         (5, "<style> or <script> element"),
         (6, "next/script"),
-        (7, "eval"),
-        (8, "atob"),
-        (9, "markup sink"),
-        (10, "setAttribute('style')"),
-        (11, "write to window"),
+        (7, "next/link"),
+        (8, "eval"),
+        (9, "atob"),
+        (10, "markup sink"),
+        (11, "setAttribute('style')"),
+        (12, "write to window"),
     ]
 
 

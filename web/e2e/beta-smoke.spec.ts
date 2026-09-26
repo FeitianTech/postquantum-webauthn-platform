@@ -143,6 +143,23 @@ test.describe('/beta', () => {
     }
   });
 
+  test('leads from the 404 page to the new interface by a plain link, so Back shows the 404 page again', async ({ page, watch }) => {
+    // The missing page's own status; a Trusted Types report would still fail the test.
+    watch.allow(/status of 404/);
+    const missing = await page.goto('/beta/no-such-page');
+    expect(missing?.status()).toBe(404);
+    await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
+
+    await page.getByRole('link', { name: 'Go to the new interface' }).click();
+    await expect(page.getByRole('tablist', { name: 'Sections' })).toBeVisible();
+    expect(new URL(page.url()).pathname).toMatch(/^\/beta\/?$/);
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/beta\/no-such-page$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
+    await expect(page.getByRole('tablist', { name: 'Sections' })).toHaveCount(0);
+  });
+
   test('keeps the design rules: no focus effect on text fields, a focus ring on controls, no grey fill', async ({ page }) => {
     await page.goto('/beta/design');
 
