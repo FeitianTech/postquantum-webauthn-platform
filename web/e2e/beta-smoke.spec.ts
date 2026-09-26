@@ -1,5 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 
+import { greyFills } from './design-rules';
 import { expect, test } from './fixtures';
 
 // The new UI at /beta, served by Flask from the built export under the strict
@@ -174,21 +175,8 @@ test.describe('/beta', () => {
       expect(await control.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('solid');
     }
 
-    // No neutral grey background anywhere (white, colours and tints only). The
-    // scrim that dims the page under a dialog is not a component.
-    const greys = await page.evaluate(() => {
-      const found: string[] = [];
-      for (const element of document.querySelectorAll<HTMLElement>('body *')) {
-        if (element.getClientRects().length === 0 || element.matches('[data-overlay-backdrop]')) continue;
-        const colour = getComputedStyle(element).backgroundColor;
-        const parts = colour.match(/[\d.]+/g)?.map(Number) ?? [];
-        const [r, g, b, a = 1] = parts;
-        if (parts.length < 3 || a === 0) continue;
-        const neutral = Math.max(r, g, b) - Math.min(r, g, b) < 6;
-        if (neutral && Math.min(r, g, b) < 250) found.push(`${element.tagName.toLowerCase()}.${element.className}: ${colour}`);
-      }
-      return found;
-    });
+    // No neutral grey background anywhere (white, colours and tints only).
+    const greys = await greyFills(page);
     expect(greys).toEqual([]);
   });
 });
