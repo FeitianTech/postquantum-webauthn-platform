@@ -43,6 +43,7 @@ from ..webauthn.metadata import (
     load_effective_explorer_snapshot,
     load_effective_full_snapshot,
     load_packaged_explorer_summary,
+    load_packaged_snapshot_meta,
     maybe_store_uploaded_metadata_file,
     resolve_effective_metadata_entry,
     save_session_metadata_item,
@@ -199,18 +200,29 @@ def _initial_custom_entries_state(metadata_session_id: str | None) -> str:
     return stored if stored in ("none", "present") else "unknown"
 
 
+def _packaged_snapshot_url() -> str | None:
+    """Where browsers load the packaged snapshot from, or None when there is no
+    file there that the explorer API would agree with (the page then asks the API)."""
+
+    if load_packaged_snapshot_meta() is None:
+        return None
+    return asset_url(_MDS_EXPLORER_FULL_STATIC_FILENAME)
+
+
 def _initial_mds_info() -> dict[str, Any]:
     """What the MDS explorer starts from: the packaged snapshot's summary (absent
-    without a snapshot), the URL of the packaged snapshot, and whether this
-    session has uploaded metadata. The current UI's index inlines it; the new UI
-    asks ``/api/mds/metadata/info`` for it."""
+    without a snapshot), the URL of the packaged snapshot (absent without one),
+    and whether this session has uploaded metadata. The current UI's index
+    inlines it; the new UI asks ``/api/mds/metadata/info`` for it."""
 
     if _should_bootstrap_metadata_on_index():
         ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
     metadata_session_id = ensure_metadata_session_id()
 
     initial_mds_info = dict(load_packaged_explorer_summary() or {})
-    initial_mds_info["snapshotUrl"] = asset_url(_MDS_EXPLORER_FULL_STATIC_FILENAME)
+    snapshot_url = _packaged_snapshot_url()
+    if snapshot_url:
+        initial_mds_info["snapshotUrl"] = snapshot_url
     initial_mds_info["customEntriesState"] = _initial_custom_entries_state(
         metadata_session_id
     )

@@ -142,6 +142,19 @@ describe('explorer loading with a snapshot source', () => {
     expect(deps.resetExplorerState).not.toHaveBeenCalled();
   });
 
+  it('asks the API alone when the page names no packaged snapshot', async () => {
+    globalThis.fetch = vi.fn(() => Promise.resolve(jsonResponse(SNAPSHOT)));
+    const deps = createLoadDeps({
+      explorerSource: createExplorerSource({ customEntriesState: 'none' }),
+    });
+
+    await loadMdsDataInState('', {}, deps);
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/mds/metadata/explorer/full', { cache: 'no-store' });
+    expect(deps.applyExplorerSnapshot).toHaveBeenCalledWith(SNAPSHOT, '');
+  });
+
   it('falls back to the API when the static request throws', async () => {
     globalThis.fetch = vi.fn(url => {
       if (url === '/snap.json') {

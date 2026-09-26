@@ -37,8 +37,10 @@ without it answers `frontend/static`. It is a leaf with no Flask import, so ever
 reader and writer follows the one setting: the server's metadata loaders
 (`webauthn/metadata/blob.py`), `/api/mds/metadata/base`, the provisioning below,
 `tools/update_mds_snapshot.py`, and the packaged snapshot browsers load
-(`/assets/<build id>/fido-mds3.explorer.full.json`, the `snapshotUrl` the page is
-given, served from that directory with its `.gz` sibling). Flask's own static route
+(`/assets/<build id>/fido-mds3.explorer.full.json`, served from that directory with its
+`.gz` sibling). The page is given that URL as `snapshotUrl` only while the file is there
+and its meta matches the verified snapshot; otherwise it asks the explorer API, which
+answers from the verified snapshot either way. Flask's own static route
 still serves `frontend/static` at `/`; nothing the pages use reads the snapshot from
 there.
 
@@ -82,9 +84,9 @@ have produced had the file been present at image build time.
 The application still starts and serves. `/health` and `/` work; the explorer APIs
 answer `200` with no entries (their `404` branch is not reached: the snapshot they
 compose always has its counts), `/api/mds/metadata/base` answers `404` with
-"Verified metadata snapshot is not available", the packaged file at `snapshotUrl` is
-a `404`, and the explorer shows no entries (`/beta` says the packaged metadata is
-unavailable). This is the behaviour that already existed for a missing snapshot —
+"Verified metadata snapshot is not available", the page is given no `snapshotUrl` (so
+it requests no missing file), and the explorer shows no entries (`/beta` says the
+packaged metadata is unavailable). This is the behaviour that already existed for a missing snapshot —
 the relocation did not introduce a new failure mode.
 
 ## Working locally without Cloud Storage

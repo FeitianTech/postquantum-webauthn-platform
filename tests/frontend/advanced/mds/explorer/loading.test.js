@@ -65,6 +65,14 @@ describe('explorer loading: which source answers', () => {
     expect(globalThis.fetch).toHaveBeenCalledWith(MDS_EXPLORER_FULL_PATH, { cache: 'no-store' });
   });
 
+  it('asks the API alone when the page names no packaged snapshot', async () => {
+    globalThis.fetch = vi.fn(async () => answer(SNAPSHOT));
+    const source = createExplorerSource({ customEntriesState: 'none' });
+    await expect(requestExplorerSnapshot(source)).resolves.toMatchObject({ payload: SNAPSHOT });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledWith(MDS_EXPLORER_FULL_PATH, { cache: 'no-store' });
+  });
+
   it('keeps the packaged file when it answers with an object', async () => {
     globalThis.fetch = vi.fn(async () => answer(SNAPSHOT));
     const source = createExplorerSource({ snapshotUrl: '/snap.json', customEntriesState: 'none' });

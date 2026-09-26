@@ -57,6 +57,18 @@ describe('the MDS section', () => {
     ]);
   });
 
+  it('MDS-L3: asks the API alone when the server names no packaged snapshot', async () => {
+    const { snapshotUrl: _url, ...info } = FIXTURE_INFO;
+    const fetch = stubFetch(fixtureRoutes({ '/api/mds/metadata/info': () => json(info) }));
+    renderSection();
+
+    await waitFor(() => expect(bodyRows()).toHaveLength(FIXTURE_ENTRIES.length));
+    expect(fetch.mock.calls.map(([url, init]) => [url, init?.cache])).toEqual([
+      ['/api/mds/metadata/info', 'no-store'],
+      ['/api/mds/metadata/explorer/full', 'no-store'],
+    ]);
+  });
+
   it('MDS-H3/S4: counts the entries and says what it loaded, with the legal header as a tooltip', async () => {
     stubFetch(fixtureRoutes());
     renderSection();

@@ -270,6 +270,7 @@ def test_index_page_emits_accessible_global_loader_markup(monkeypatch, app_confi
 
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {"entryCount": 0})
+    monkeypatch.setattr(general_module, "load_packaged_snapshot_meta", lambda: {"no": 7})
     monkeypatch.setattr(general_module, "_should_bootstrap_metadata_on_index", lambda: False)
 
     with config_module.app.test_client() as client:

@@ -20,7 +20,8 @@ from . import (
 
 __all__ = ["download_metadata_blob", "get_mds_verifier",
            "load_metadata_cache_entry", "format_last_modified_header", "store_metadata_cache_entry",
-           "load_cached_metadata_snapshot", "load_packaged_explorer_summary", "load_effective_explorer_snapshot",
+           "load_cached_metadata_snapshot", "load_packaged_explorer_summary", "load_packaged_snapshot_meta",
+           "load_effective_explorer_snapshot",
            "load_effective_full_snapshot", "resolve_effective_metadata_entry", "ensure_metadata_session_id",
            "list_session_metadata_items", "save_session_metadata_item", "serialize_session_metadata_item",
            "delete_session_metadata_item", "expand_metadata_entry_payloads",
@@ -82,6 +83,7 @@ _load_packaged_explorer_meta = blob._load_packaged_explorer_meta
 _load_base_explorer_snapshot = blob._load_base_explorer_snapshot
 _load_base_full_snapshot = blob._load_base_full_snapshot
 load_packaged_explorer_summary = blob.load_packaged_explorer_summary
+load_packaged_snapshot_meta = blob.load_packaged_snapshot_meta
 
 # Session cleanup worker and scheduling.
 _touch_session_last_access = sessions._touch_session_last_access
