@@ -53,6 +53,15 @@ LOGIC_ROOTS = (
     "decoder/codec/encoding/can-encode.js",
     "decoder/codec/encoding/format.js",
     "decoder/codec/encoding/summary.js",
+    "advanced/mds/constants.js",
+    "advanced/mds/metadata/explorer-source.js",
+    "advanced/mds/explorer/columns.js",
+    "advanced/mds/explorer/custom-metadata.js",
+    "advanced/mds/explorer/filter-sort.js",
+    "advanced/mds/explorer/loading.js",
+    "advanced/mds/explorer/options.js",
+    "advanced/mds/explorer/rows.js",
+    "advanced/mds/explorer/status.js",
 )
 
 _RULES: dict[str, re.Pattern[str]] = {
@@ -262,6 +271,9 @@ def test_the_logic_modules_are_imported_not_copied():
     assert "from User-Agent Client Hints" in sentences
     assert "Decoded in lenient mode (best effort); skipped items are listed below." in sentences
     assert "Attestation statement (interpreted)" in sentences
+    assert {"matchesExplorerFilters", "requestExplorerSnapshot", "buildLoadedStatus", "describeUploadAnswer"} <= names
+    assert "No authenticators match the selected filters." in sentences
+    assert "Packaged FIDO metadata is available. Explorer data is loading in the background." in sentences
 
     definition = re.compile(r"\b(?:function|const|let|var|class)\s+(" + "|".join(sorted(names)) + r")\b")
     copied = {}
