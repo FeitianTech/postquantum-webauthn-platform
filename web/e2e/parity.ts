@@ -14,6 +14,8 @@ export type ExpectedDifference = {
   only: 'legacy' | 'beta';
   /** The words, as one token each. */
   token: RegExp;
+  /** Only in this section (its heading); anywhere without one. */
+  section?: string;
   reason: string;
 };
 
@@ -116,7 +118,9 @@ export function compareShownText(legacy: ShownSection[], beta: ShownSection[], e
         const extra = lines.length - (theirs.get(token)?.length ?? 0);
         if (extra <= 0) continue;
         const line = unmatched(lines, theirs.get(token) ?? [])[0] ?? lines[0];
-        const reason = expected.find((entry) => entry.only === only && entry.token.test(token))?.reason;
+        const reason = expected.find(
+          (entry) => entry.only === only && entry.token.test(token) && (entry.section === undefined || entry.section === heading),
+        )?.reason;
         differences.push({ section: heading, only, token, count: extra, line, ...(reason ? { reason } : {}) });
       }
     }

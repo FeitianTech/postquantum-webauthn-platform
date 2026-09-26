@@ -35,6 +35,18 @@ test('finds a missing, an extra and a doubled word, section by section', () => {
   ]);
 });
 
+test('explains a difference only in the section an expected difference names', () => {
+  const legacy = [{ heading: 'Details', lines: ['Base: 10'] }, { heading: 'Other', lines: ['Base: 10'] }];
+  const beta = [{ heading: 'Details', lines: ['Base: 10', 'FAR: 0.1'] }, { heading: 'Other', lines: ['Base: 10', 'FAR: 0.1'] }];
+  const differences = compareShownText(legacy, beta, [{ only: 'beta', token: /^(FAR|0\.1)$/, section: 'Details', reason: 'new' }]);
+  expect(differences.map(({ section, token, reason }) => [section, token, reason ?? null])).toEqual([
+    ['Details', 'FAR', 'new'],
+    ['Details', '0.1', 'new'],
+    ['Other', 'FAR', null],
+    ['Other', '0.1', null],
+  ]);
+});
+
 test('reads text by section, skipping controls and what is hidden, with closed details and text areas', async ({ page }) => {
   await page.setContent(`
     <div id="region">
