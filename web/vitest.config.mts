@@ -10,6 +10,8 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: '@legacy-tests', replacement: here('../tests/frontend') },
+      // The MDS fixture snapshot (tests/fixtures/mds): real server answers to render.
+      { find: '@test-fixtures', replacement: here('../tests/fixtures') },
       { find: '@legacy', replacement: here('../frontend/static/scripts') },
       { find: '@', replacement: here('./src') },
       // next/font only runs inside Next's compiler; tests get the class names.

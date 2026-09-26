@@ -18,7 +18,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@legacy/*": ["../frontend/static/scripts/*"],
-      "@legacy-tests/*": ["../tests/frontend/*"]
+      "@legacy-tests/*": ["../tests/frontend/*"],
+      "@test-fixtures/*": ["../tests/fixtures/*"]
     }
   },
   "include": ["next-env.d.ts", "src/**/*.ts", "src/**/*.tsx", "scripts/**/*.ts", "e2e/**/*.ts", "*.ts", "*.mts"],

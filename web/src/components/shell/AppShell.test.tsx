@@ -1,12 +1,19 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { fixtureRoutes, stubFetch } from '@/test/mds';
 import { renderPage } from '@/test/page';
 
 import { AppShell } from './AppShell';
 
 beforeEach(() => {
   window.history.replaceState({ fromNext: true }, '', '/beta');
+  // The MDS section loads the fixture snapshot when it is first shown.
+  stubFetch(fixtureRoutes());
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe('the app shell', () => {
@@ -71,9 +78,11 @@ describe('the app shell', () => {
     expect(window.history.length).toBe(1);
 
     await userEvent.click(screen.getByRole('tab', { name: 'FIDO MDS Authenticators' }));
-    expect(screen.getByRole('tabpanel', { name: 'FIDO MDS Authenticators' })).toHaveTextContent(
-      'Explore the authenticators published by the FIDO Metadata Service (MDS).',
-    );
+    const mds = screen.getByRole('tabpanel', { name: 'FIDO MDS Authenticators' });
+    expect(mds).toHaveTextContent('Explore the authenticators published by the FIDO Metadata Service (MDS).');
+    // The MDS list has moved too: it loads its entries, and leads nowhere else.
+    expect(within(mds).queryByRole('link', { name: 'Open the current interface' })).toBeNull();
+    expect(await within(mds).findByRole('table', { name: 'FIDO MDS authenticators' })).toBeInTheDocument();
   });
 
   it('opens the section the hash names, and follows the hash when it changes', async () => {

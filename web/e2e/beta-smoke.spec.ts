@@ -32,7 +32,7 @@ test.describe('/beta', () => {
 
     for (const [name, hash, ported] of [
       ['Codec', 'codec', true],
-      ['FIDO MDS Authenticators', 'mds', false],
+      ['FIDO MDS Authenticators', 'mds', true],
       ['Advanced Authentication', 'advanced', false],
     ] as const) {
       const tab = tabs.getByRole('tab', { name });

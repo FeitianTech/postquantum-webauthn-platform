@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { AnalyzeBrowserDialog, type CopyResult } from '@/components/analyze-browser/AnalyzeBrowserDialog';
 import { CodecSection } from '@/components/codec/CodecSection';
+import { MdsSection } from '@/components/mds/MdsSection';
 import { useBrowserAnalysis } from '@/components/analyze-browser/useBrowserAnalysis';
 import { SECTIONS } from '@/lib/sections';
 import { useSection } from '@/lib/useSection';
@@ -24,6 +25,8 @@ export function AppShell() {
         {SECTIONS.map((option) =>
           option.id === 'codec' ? (
             <CodecSection key={option.id} active={option.id === section} />
+          ) : option.id === 'mds' ? (
+            <MdsSection key={option.id} active={option.id === section} />
           ) : (
             <SectionPanel key={option.id} id={option.id} active={option.id === section} />
           ),
