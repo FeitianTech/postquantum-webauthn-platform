@@ -2460,6 +2460,138 @@ untouched.
   file in `test_flask_serves_the_fixture`. The current tab's timestamp fallback reads
   `/fido-mds3.verified.json.meta.json` through Flask's static route, which does not follow the snapshot directory.
 
+### Phase 27B — the MDS explorer's entry page, certificate page and raw view at /beta#mds — DONE (2026-09-26)
+30 commits, 17daf1b3..the record's own, all this phase's, each gated on pytest (under coverage, with its 95% floor),
+root vitest (with its floors), web's typecheck, unit tests (with their floors), build and CSP scan, and ruff (the
+commits that change only Python, only docs, only the legacy logic or only browser tests ran the gates their change
+can reach, the rest being the previous commit's). Every commit before the record was re-run afterwards on its
+own tree in one detached worktree, cleaned (`git clean -fdx`, `node_modules` linked: no lockfile changed) before each:
+all 29 pass ruff, pytest under coverage with its floor (the checkout guard among it), root vitest with its floors,
+web's typecheck, vitest with its floors, the build and the CSP scan, and leave nothing but ruff's cache behind. Not
+pushed: the tech lead verifies and pushes.
+Planned in plan mode and approved before any code; a review of the plan against the code found six problems before
+they happened (a refactor commit red under the `explorer/*.js` 100 % glob, a bootstrap test pinning `snapshotUrl`, a
+widened private-file set that would have 404ed the snapshot URL itself, the `utils.js` barrel reaching the DOM, no
+`IntersectionObserver` in jsdom, the Back button's name).
+
+**What there is now.** `/beta#mds/<entryId>` is the authenticator's page: Back, the name, the subtitle (the AAGUID and
+ID in Geist Mono with copy, the protocol as a badge) and Raw; then Overview, Metadata Statement, User Verification
+Details, Attestation Root Certificates, Authenticator Get Info and Status Reports, in the current page's order, as
+sections (a heading and a hairline, no cards), identifiers in Geist Mono with copy, chips that wrap, long text across
+the grid, the status reports a table that stacks on a phone. A condensed header stays under the top bar once the title
+has scrolled away. "Certificate n" decodes with its button busy and opens `#mds/<entryId>/certificate/<n>`: the
+subject, the issuer, the summary (Public Key, Signature), Raw and Decoded Output as blocks with copy; both Backs return
+to the entry with the focus on that button, and a link or a reload decodes on the page. Raw is a dialog with the entry
+as MDS publishes it, copy, Show all and "Download JSON". An entry the list does not hold is asked of the server, with
+its sentences and Retry. `#mds/aaguid:<aaguid>` is an AAGUID's entry, and `openMdsEntryForAaguid` / `useOpenMdsEntry`
+open it from another section as one history entry (Phase 28's credential cards). The current tab at `/` is unchanged
+and runs on the same logic.
+
+**A — parity** (17daf1b3, 511d5823). `docs/ui-parity/mds.md`'s 27B rows were read again from the code first (every
+field's rule, the empty headings, the counts that skip, the resolve sentences the current page never shows, the
+certificate page's back label, the loading cursor, the popup's size and reuse, "Changed:" that fido2 drops), then every
+row was mapped to its component, test and browser check; "What changed (27B)" and "The parity check (27B)" were added.
+
+**B — the tech lead's findings on 27A** (d3ddf1c3, 2780f9d2, feb5e77e, de8b54f2, fa559e38, 237586a8). (e) The
+fixture's Flask test closes its file response. (c) `snapshotUrl` is given only while the packaged file is there and its
+meta matches the verified snapshot (`blob.load_packaged_snapshot_meta`); otherwise both UIs ask the API, which they
+already did without one; tests in both UIs. (b) The URL carries `?v=<serial>.<12 hex of sha256(etag, generatedAt)>`,
+which the route ignores. (d) The current tab's fallback request for `fido-mds3.verified.json.meta.json` is gone (only
+the client's row builder, MDS-Z4, reached it), and Flask's root static route and the versioned route serve no snapshot
+file but the browsers' copy (`static_assets._SNAPSHOT_FILES`, apart from `PRIVATE_FILENAMES`, which the versioned route
+also reads); `docs/MDS_SNAPSHOT.md` says so. (a) The error pages' "Go to the new interface" is a plain `<a
+href="/beta">`, `test_web_source_rules.py` refuses `next/link`, and `keepBackForThePage` leaves Back to Next for any
+path that is not the shell's; a browser test (404, the link, Back shows the 404 page, no Trusted Types report) failed
+on the old export, both ways the tech lead saw, and passes. (f) and (g) are under E.
+
+**C — logic out of the views** (318990d2, 33b001f5, ab0a4f27, dac7fbb4, 263046e4, 5d3143dc). Three DOM-free modules in
+`advanced/mds/explorer/`: `detail.js` (the detail page's sections, fields, labels, order and quirks, out of
+`detail-content.js`, `detail-render-utils.js`, `detail-user-sections.js`, `detail-status-reports.js` and the runtime's
+title rule; `detail-authenticator-info.js` is gone, its section drawn by the generic renderer), `certificate.js` (the
+decode request and its sentences, the title, the summary's items and sections, out of `certificate-page.js`,
+`certificate-utils.js`, `utils/certificate-{sections,primitives}.js` and `metadata/certificate-decode.js`) and
+`entry-link.js` (the resolve request and query, `entryIdForAaguid`, the credential jump's six sentences, out of
+`authenticator-modal.js`, `explorer-state-loader.js` and `credential-display/navigation.js`). `raw-data.js` gains the
+raw view's words and title and copies the statement instead of writing into the entry; `raw-stringify.js` loses the
+guards no input reaches. The legacy views render the models; the legacy tests passed unchanged across the three
+refactor commits, and each refactor was also checked against the previous commit's tree in a scratch worktree: the
+same HTML for all 32 fixture entries and edge cases, the same certificate DOM for real decode answers, the same raw
+text for Maps, Sets, bytes, cycles and a throwing `toJSON`. The refactor commits narrowed the `explorer/*.js` 100 %
+glob to the 27A files and each test commit widened it back; all five modules are held at 100 % per file and are in
+`LOGIC_ROOTS`.
+
+**D — the fixture** (460ff368). Fixture Security Key L1 gains a history of three status reports (with `url` and
+`authenticatorVersion`; the newest unchanged) and every getInfo field the page names; the key with every user
+verification method gains combinations with `caDesc`, `baDesc` and `paDesc` (fido2's required keys included). The
+list's rows, counts, order and 27A parity are unchanged (`explorer.json` and the metas did not change).
+
+**E — the views** (bcd922ae, 852b67cc, c3f88f5f, 7fd2cb8b, 74cdd600, 0371c1ad, bc8e9167, a596c92c, db23eac5, 6e116f0d).
+`lib/sections.ts` / `useSection.ts`: a section's path is segments, each encoded on its own (27A's URLs read the same);
+`close(parent)`, `replace(path)`; `useSectionNavigation()` from the shell. `web/src/components/mds/`: `EntryRouter`,
+`useEntryDetail`, `EntryPage`, `EntryHeader`, `EntrySections`, `UserVerification`, `StatusReports` (the `ui/Table`
+primitives' first user, `Table` and `THead` taking classes and roles), `CondensedBar`, `CertificatePage`,
+`CertificateSummary`, `useCertificateDecode`, `RawEntryDialog`, `entryLink.ts`, `entryModel.ts`; `lib/download.ts`;
+`KeyValueGrid` gains `plain` and `wide`. A first look in a browser moved the subtitle's identifiers to a line of their
+own on a phone (the Raw button squeezed the AAGUID) and aligned the certificate numbers. (f) At 375 px the Icon column
+was 72 of 341 px (21 %; the reported 40 % was the space before the name's text, the icon and the chevron's indent): on a
+phone it now starts at 44 px, its header word read but not shown, its minimum 40. (g) A white fade over the frame's
+right edge while it scrolls further, beside the vertical scrollbar, recomputed on scroll and resize. The browser tests
+found the condensed header misplaced while a section slides in (a `translate` makes an ancestor the containing block of
+`position: fixed`): it now renders in the overlay layer, and is kept away while a certificate covers the entry. A last
+commit (e4c43ba5) tests the views' remaining branches (a list value's lines, a summary with a section only, a
+whitespace certificate, an entry without roots, a resolve answer without an entry, an answer for an entry no longer
+shown, the decode cache on its own) and drops the guards no value reaches.
+
+**F — browser tests** (c00ccfe6, 91cd7d2d). `mds-entry.spec.ts` (10 tests): an entry by a click (every section) and by
+URL and after a reload (the descriptors), a certificate with its button held busy, both Backs to the button, a copy of
+the raw certificate read back, a certificate by link and by reload, the raw view (the clipboard's JSON, the downloaded
+file equal to it, Escape and focus), the condensed header under the top bar, 375 px (no sideways scroll on the three
+views, every status-report cell inside the viewport, no grey), and the AAGUID link (listed; resolved through the server
+when `page.route` strips the entry from the list; unknown, with both 404 sentences). `mds.spec.ts` gains the phone's
+Icon column (under 15 % of the frame) and the fade. `parity.ts`'s expected differences may name a section (proved by
+`parity.spec.ts`); `mds-entry-parity.spec.ts` compares five entries' pages, a certificate and the raw view: **the same
+sections, order and words; the only differences are the `baDesc` / `paDesc` words under User Verification Details,
+each explained; the certificate has none, and the raw view's title, subtitle and text are identical.**
+
+**Seen in a real browser.** Flask from an untracked launch file, stores and secret in the scratchpad, a scratch copy
+of the owner's 517-entry snapshot through `FIDO_SERVER_MDS_SNAPSHOT_DIR` (its stale local verified meta means no
+`snapshotUrl` now: both UIs load from the API), the strict CSP and the Trusted Types report-only policy. The desktop
+app's pane: the list, YubiKey Bio Series' page; no console message. Playwright's Chromium 153 at 1440, 1024 and 375 px:
+YubiKey Bio Series (FIDO2, getInfo, three reports) by a click on its row and the browser's Back, YubiKey 5 Series (U2F,
+six roots), Touch ID, Face ID, or Passcode (UAF, `aaid:4e4e#4005`), Ledger Nano X (descriptors), a Yubico certificate
+by its button with both Backs returning the focus to "Certificate 2", the raw view, the AAGUID URL, 404 then Back, and
+`/` (517 rows, its own detail page's six sections); **no console, CSP or Trusted Types message, no sideways scroll at
+any width.** Screenshots in the scratchpad (and of the fixture at both widths during the work). Nothing written to the
+checkout's stores or snapshot.
+
+**Tests.**
+- pytest 4779 → **4784** passed / 4 skipped; coverage 97%. Linux (python:3.14, Docker, `git archive` of 4f6fc46a)
+  **4770** / 5, the usual 14 fewer and one more skip than macOS. ruff clean.
+- root vitest 711 → **753**, coverage 85.58 / 72.35 / 93.29 / 85.63 → **86.32 / 73.93 / 93.50 / 86.39**; floors held,
+  the five new logic modules at 100 % per file.
+- web vitest 249 → **298** tests in 29 files, coverage 98.56 / 95.28 / 98.29 / 99.42 → **98.71 / 96.08 / 98.43 / 99.53**,
+  floors 97 / 92 / 96 / 98.
+- web typecheck clean; CSP scan 4 HTML files, 38 script elements (40 before: the error pages no longer load
+  `next/link`), **0 violations**.
+- Playwright 52 → **73** passed on macOS (Chromium 153); **73** on Linux in `mcr.microsoft.com/playwright:v1.63.0-noble`
+  from a `git archive` of 4f6fc46a (`uv sync`, `npm ci`, the build and the CSP scan inside), as the CI job runs them;
+  73 again on macOS at e4c43ba5.
+
+**Found but not fixed:**
+- Status reports' `certificate`, `sunsetDate` and `certificationProfiles` are shown by neither UI; fido2 drops the last
+  two, and a report's `timeOfLastStatusChange`, so the current page's "Changed:" never shows on a packaged snapshot.
+- `/api/mds/metadata/resolve` answers packaged entries through fido2's dataclasses, dropping any field fido2 does not
+  model (the packaged snapshot keeps them).
+- `--header-height` is static, but the header takes two rows between 900 and 1280 px; its users (scroll padding, the
+  Codec's sticky column, the MDS frame's height) assume one. The condensed header measures the header instead.
+- The owner's local `fido-mds3.verified.json.meta.json` is still an old test's (27A): now the page is given no
+  `snapshotUrl` locally, as intended; re-running the updater fixes it.
+- The current page still ignores resolve's sentences and keeps its certificate page's back label; `/beta` fixes both.
+- MDS-J2's "Unable to locate metadata entry." has no counterpart in `/beta` (only a row highlight could fail).
+- `tests/app/core/test_static_assets.py` leaves four file responses open (ResourceWarning); the new test closes its own.
+- The download was checked in Playwright's Chromium; whether the desktop app's pane saves downloads was not checked.
+- Not run on GitHub yet (not pushed): `ci-web.yml`'s e2e job now runs `mds-entry.spec.ts` and `mds-entry-parity.spec.ts`.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
