@@ -187,7 +187,8 @@ new component and check it in a browser. A phase is not done while an item is un
 |---|---|
 | 25 | Foundation: `web/`, tokens and primitives, the app shell, Flask serving `/beta`, the CSP scan, the build and CI pipeline, Playwright with a virtual authenticator; the Analyze Browser panel as the pilot. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 25) |
 | 26 | Codec. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 26) |
-| 27 | MDS explorer: the table and filters, the detail page, certificates, custom metadata, raw views (split in two if the plan shows it is too large for one) |
+| 27A | MDS explorer, the list page: the header, counts and status line, the table with its sorting, filters and resizing, Back to top, Manage Trusted Metadata, and the route that opens an entry (`#mds/<entryId>`). The explorer is 75 modules and 10,294 lines of JavaScript, seven times the Codec, so Phase 27 is split in two (docs/ui-parity/mds.md marks each item 27A or 27B) |
+| 27B | MDS explorer, the rest: the authenticator detail page, the certificate page, the raw views, and the jump from a saved credential to its entry |
 | 28 | Saved credentials (cards, detail modal, registration result) and the Simple tab |
 | 29 | Advanced tab: registration and authentication forms, JSON editor, drawer, result modals |
 | 30 | Cutover: `/` serves the new UI; the legacy templates, scripts and styles and `new_design/` are deleted; the MDS snapshot files move out of `frontend/static/`; the logic modules move into `web/`; the Google Fonts origins leave the CSP; the Playwright tests join the Cloud Build gate |
