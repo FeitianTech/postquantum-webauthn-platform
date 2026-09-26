@@ -15,10 +15,13 @@ import { ChevronDownIcon } from '@/components/ui/icons';
 import { cx } from '@/lib/cx';
 
 import { ExplorerRow } from './ExplorerRow';
+import { ROW_GRID } from './grid';
 import { EXPLORER_COLUMNS, type ExplorerColumn, type ExplorerSort, type MdsEntry } from './model';
 
 const normaliseWidths = normaliseExplorerColumnWidths as (widths: number[], minWidth?: number) => number[];
 const KEY_STEP = 16;
+// The columns' widths, set on the table and read by every row's grid.
+const COLUMNS_PROPERTY = '--mds-columns';
 const ROWS_BEFORE_BACK_TO_TOP = 5;
 
 function minimumWidth(column: ExplorerColumn) {
@@ -103,8 +106,9 @@ function HeaderCell({
   return (
     <th
       scope="col"
+      role="columnheader"
       aria-sort={ariaSort}
-      className="relative h-10 border-b border-line bg-surface px-3 text-caption font-medium whitespace-nowrap text-ink-muted"
+      className="relative flex h-10 items-center border-b border-line bg-surface px-3 text-caption font-medium whitespace-nowrap text-ink-muted"
     >
       <button
         type="button"
@@ -185,8 +189,13 @@ export type ExplorerTableProps = {
 
 // The 13 columns in a frame that scrolls both ways by itself: the header stays in
 // view as the list scrolls, the sideways scrollbar is always within reach, and
-// the page never scrolls sideways. Widths are set on the columns through the
-// CSSOM (the CSP refuses style attributes).
+// the page never scrolls sideways. Every row is in the page (find-in-page finds
+// it), but each row is a grid on the one column template, not a table row, so
+// the browser can skip laying out and painting the rows out of view
+// (content-visibility, which table rows do not take): a filter that brings back
+// all 517 rows lays out only those in view. The table roles are written out,
+// since the display is not a table's. Widths are set through the CSSOM (the CSP
+// refuses style attributes).
 export function ExplorerTable({
   rows,
   shown,
@@ -205,9 +214,7 @@ export function ExplorerTable({
   useLayoutEffect(() => {
     const table = tableRef.current;
     if (!table) return;
-    table.querySelectorAll('col').forEach((col, index) => {
-      col.style.width = `${widths[index]}px`;
-    });
+    table.style.setProperty(COLUMNS_PROPERTY, widths.map((width) => `${width}px`).join(' '));
     table.style.width = `${widths.reduce((sum, width) => sum + width, 0)}px`;
   }, [widths]);
 
@@ -228,15 +235,9 @@ export function ExplorerTable({
         // status) is clipped by the frame instead of widening the page.
         className="relative max-h-[calc(100dvh-var(--header-height)-2rem)] min-h-80 overflow-auto overscroll-x-contain rounded-md border border-line"
       >
-        <table ref={tableRef} className="table-fixed border-separate border-spacing-0 text-left text-body">
-          <caption className="sr-only">FIDO MDS authenticators</caption>
-          <colgroup>
-            {EXPLORER_COLUMNS.map((column) => (
-              <col key={column.key} />
-            ))}
-          </colgroup>
-          <thead className="sticky top-0 z-10">
-            <tr>
+        <table ref={tableRef} role="table" aria-label="FIDO MDS authenticators" className="block text-left text-body">
+          <thead role="rowgroup" className="sticky top-0 z-10 block bg-surface">
+            <tr role="row" className={ROW_GRID}>
               {EXPLORER_COLUMNS.map((column, index) => (
                 <HeaderCell
                   key={column.key}
@@ -251,10 +252,10 @@ export function ExplorerTable({
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody role="rowgroup" className="block">
             {state ? (
-              <tr>
-                <td colSpan={EXPLORER_COLUMNS.length} className="p-0">
+              <tr role="row" className="block">
+                <td role="cell" colSpan={EXPLORER_COLUMNS.length} className="block p-0">
                   {state}
                 </td>
               </tr>

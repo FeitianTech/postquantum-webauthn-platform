@@ -75,7 +75,7 @@ test.describe('/beta#mds', () => {
 
   test('resizes a column by keyboard and by dragging', async ({ page }) => {
     await openList(page);
-    const width = () => page.locator('[data-mds-frame] col').nth(2).evaluate((col: HTMLTableColElement) => col.getBoundingClientRect().width);
+    const width = async () => (await header(page, 'Protocol').boundingBox())!.width;
     const before = await width();
     const handle = section(page).getByRole('separator', { name: 'Resize Protocol column' });
     await handle.focus();

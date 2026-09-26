@@ -69,6 +69,8 @@ describe('the MDS table: its columns', () => {
     renderTable();
     expect(screen.getAllByRole('columnheader').map((cell) => cell.querySelector('button span')?.textContent)).toEqual(HEADERS);
     expect(screen.getByRole('table', { name: 'FIDO MDS authenticators' })).toBeInTheDocument();
+    // Each row is a grid on the table's columns, which the browser skips laying out while it is out of view.
+    expect(rowOf(FIXTURE_ENTRIES[0])).toHaveClass('grid', '[content-visibility:auto]');
   });
 
   it('MDS-C1..13: shows each column of an entry', () => {
@@ -214,9 +216,9 @@ describe('the MDS table: sorting', () => {
 
 describe('the MDS table: column widths', () => {
   const separator = (name: string) => screen.getByRole('separator', { name: `Resize ${name} column` });
-  const width = (index: number) => document.querySelectorAll('col')[index].style.width;
+  const width = (index: number) => document.querySelector('table')!.style.getPropertyValue('--mds-columns').split(' ')[index];
 
-  it('MDS-R1: sets each column width on the table, and every header but the last can be resized', () => {
+  it('MDS-R1: sets the column widths on the table, which every row lines up on, and every header but the last can be resized', () => {
     renderTable();
     expect(width(1)).toBe('280px');
     expect(document.querySelector('table')!.style.width).toBe('2740px');

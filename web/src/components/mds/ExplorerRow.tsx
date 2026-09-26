@@ -8,6 +8,7 @@ import { copyStatusText, selectContents, useCopy } from '@/components/ui/useCopy
 import { cx } from '@/lib/cx';
 import { entryHashPath } from '@/lib/sections';
 
+import { ROW_GRID } from './grid';
 import { EXPLORER_COLUMNS, type MdsEntry, certificationBadge, identifierName } from './model';
 
 const iconAlt = iconAltText as (entry: MdsEntry) => string;
@@ -16,9 +17,10 @@ const iconAlt = iconAltText as (entry: MdsEntry) => string;
 function Cell({ expanded, title, className, children }: { expanded: boolean; title?: string; className?: string; children: ReactNode }) {
   return (
     <td
+      role="cell"
       title={expanded ? undefined : title}
       className={cx(
-        'border-b border-line px-3 py-1.5 align-top text-ink',
+        'block min-w-0 border-b border-line px-3 py-1.5 text-ink',
         expanded ? 'break-words whitespace-normal' : 'truncate whitespace-nowrap',
         className,
       )}
@@ -140,11 +142,18 @@ export const ExplorerRow = memo(function ExplorerRow({ entry, hidden, expanded, 
 
   return (
     <tr
+      role="row"
       hidden={hidden}
       data-entry-id={entry.entryId}
       aria-expanded={expanded}
       onClick={onRowClick}
-      className={cx('transition-colors duration-(--duration-fast)', open && 'cursor-pointer hover-or-demo:bg-accent-tint')}
+      className={cx(
+        ROW_GRID,
+        // Out of view, a row is neither laid out nor painted; it keeps the size it last had.
+        '[contain-intrinsic-size:auto_2.5625rem] [content-visibility:auto]',
+        'transition-colors duration-(--duration-fast)',
+        open && 'cursor-pointer hover-or-demo:bg-accent-tint',
+      )}
     >
       <Cell expanded={expanded} className="py-1">
         {entry.icon ? (
