@@ -401,14 +401,20 @@ def api_upload_custom_metadata():
 
             saved_items.append(serialize_session_metadata_item(item))
 
-    status_code = 200 if saved_items else 400
+    return _upload_answer(saved_items, errors)
+
+
+def _upload_answer(saved_items: list[Any], errors: list[str]):
+    """What an upload answers: the files saved, what was refused, and the explorer
+    snapshot with them when any was saved (400 when none was)."""
+
     response: dict[str, Any] = {"items": saved_items}
     if errors:
         response["errors"] = errors
     if saved_items:
         response["snapshot"] = load_effective_full_snapshot()
 
-    return _no_store_json_response(response, status=status_code)
+    return _no_store_json_response(response, status=200 if saved_items else 400)
 
 
 @bp.route("/api/mds/metadata/custom/<string:stored_filename>", methods=["DELETE"])
