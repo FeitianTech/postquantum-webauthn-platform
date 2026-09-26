@@ -201,6 +201,33 @@ test.describe('/beta#mds', () => {
     expect(await greyFills(page, '#nav-panel-mds')).toEqual([]);
   });
 
+  test('gives the icon a narrow column on a phone', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await openList(page);
+    const icon = (await header(page, 'Icon').boundingBox())!;
+    const width = await frame(page).evaluate((element) => element.clientWidth);
+    expect(icon.width / width).toBeLessThan(0.15);
+    await expect(header(page, 'Icon')).toHaveAccessibleName(/^Icon/);
+  });
+
+  test('fades the table\'s right edge while it can scroll further that way', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await openList(page);
+    const fade = section(page).locator('[data-mds-fade]');
+    await expect(fade).toBeVisible();
+    const [frameBox, fadeBox] = [(await frame(page).boundingBox())!, (await fade.boundingBox())!];
+    expect(Math.abs(frameBox.x + frameBox.width - (fadeBox.x + fadeBox.width))).toBeLessThanOrEqual(20);
+    expect(await greyFills(page, '#nav-panel-mds')).toEqual([]);
+    await frame(page).evaluate((element) => {
+      element.scrollLeft = element.scrollWidth;
+    });
+    await expect(fade).toBeHidden();
+    await frame(page).evaluate((element) => {
+      element.scrollLeft = 0;
+    });
+    await expect(fade).toBeVisible();
+  });
+
   test('keeps the header row in view while the list scrolls', async ({ page }) => {
     await openList(page);
     await frame(page).evaluate((element) => {
