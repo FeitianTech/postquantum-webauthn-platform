@@ -123,7 +123,15 @@ function ModePanel({ mode, active, codec }: { mode: CodecMode; active: boolean; 
   );
 
   return (
-    <div role="tabpanel" id={ids.panel} aria-labelledby={ids.tab} hidden={!active} data-codec-mode={mode}>
+    // Shown again, a panel comes in as a section does (the current panel fades in too).
+    <div
+      role="tabpanel"
+      id={ids.panel}
+      aria-labelledby={ids.tab}
+      hidden={!active}
+      data-codec-mode={mode}
+      className="animate-[section-in_var(--duration-slow)_var(--ease-out)] motion-reduce:animate-none"
+    >
       <Workspace input={input} output={output} />
       <RawDialog
         mode={mode}

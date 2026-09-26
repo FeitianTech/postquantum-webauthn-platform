@@ -83,6 +83,9 @@ describe('the Codec section', () => {
     expect(decodePanel()).toBeVisible();
     expect(encodePanel()).toHaveAttribute('role', 'tabpanel');
     expect(encodePanel()).not.toBeVisible();
+    // Each panel comes in as it is shown, and holds still under reduced motion (CX-M4).
+    expect(encodePanel().className).toContain('animate-[section-in');
+    expect(encodePanel().className).toContain('motion-reduce:animate-none');
   });
 
   it('keeps each mode\'s input and answer across switches (CX-M2, CX-M5)', async () => {
