@@ -12,11 +12,14 @@ export type SectionRoute = { subPath: string; open: (subPath: string) => void; c
 
 // Next's router answers Back for pages it navigated between, putting back the
 // URL it remembers; this page has one route and keeps its own history in the
-// hash, so the router is told to leave Back to the page. Outside Next (the unit
-// tests) there is no router to tell.
+// hash, so the router is told to leave Back to the page while Back stays on this
+// page's path. Back to another path (a page Next showed before this one) is
+// Next's. The router asks from its popstate handler, once the URL has changed.
+// Outside Next (the unit tests) there is no router to tell.
 function keepBackForThePage() {
+  const here = window.location.pathname;
   try {
-    Router.beforePopState(() => false);
+    Router.beforePopState(() => window.location.pathname !== here);
     return () => Router.beforePopState(() => true);
   } catch {
     return () => {};
