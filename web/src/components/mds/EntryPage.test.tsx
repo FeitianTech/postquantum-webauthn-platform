@@ -1,6 +1,6 @@
 // The MDS entry page over the fixture's real entries (tests/fixtures/mds). The
 // IDs name the items of docs/ui-parity/mds.md.
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ToastProvider } from '@/components/ui/Toast';
@@ -221,6 +221,55 @@ describe('the MDS entry page', () => {
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(raw).toHaveFocus();
+  });
+
+  it('MDS-D1: keeps a condensed header in view once the title has scrolled under the top bar', async () => {
+    const observers: { callback: IntersectionObserverCallback; options?: IntersectionObserverInit; disconnect: ReturnType<typeof vi.fn> }[] = [];
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        disconnect = vi.fn();
+        constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+          observers.push({ callback, options, disconnect: this.disconnect });
+        }
+        observe() {}
+      },
+    );
+    const header = document.createElement('header');
+    header.setAttribute('data-shell-header', '');
+    header.getBoundingClientRect = () => ({ bottom: 57 }) as DOMRect;
+    document.body.append(header);
+    const entry = L1();
+    const { onBack } = renderEntry(entry);
+
+    const bar = document.querySelector<HTMLElement>('[data-condensed-header]')!;
+    expect(bar).not.toBeVisible();
+    expect(bar.style.top).toBe('57px');
+    expect(observers[0].options).toEqual({ rootMargin: '-57px 0px 0px 0px' });
+
+    const scroll = (isIntersecting: boolean, top: number) =>
+      act(() => observers.at(-1)!.callback([{ isIntersecting, boundingClientRect: { top } } as IntersectionObserverEntry], {} as IntersectionObserver));
+    scroll(false, 200);
+    expect(bar).not.toBeVisible();
+    scroll(false, -40);
+    expect(bar).toBeVisible();
+    expect(within(bar).getByText('Fixture Security Key L1')).toHaveAttribute('title', 'Fixture Security Key L1');
+    expect(within(bar).getByText(`AAGUID: ${entry.aaguid} • FIDO2`)).toBeInTheDocument();
+
+    const raw = within(bar).getByRole('button', { name: 'Raw' });
+    await userEvent.click(raw);
+    await screen.findByRole('dialog');
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(raw).toHaveFocus());
+    await userEvent.click(within(bar).getByRole('button', { name: 'Back' }));
+    expect(onBack).toHaveBeenCalledTimes(1);
+
+    act(() => window.dispatchEvent(new Event('resize')));
+    expect(observers[0].disconnect).toHaveBeenCalled();
+    expect(observers).toHaveLength(2);
+    scroll(true, 0);
+    expect(bar).not.toBeVisible();
+    header.remove();
   });
 
   it('MDS-J2: says it is opening while the list loads and locating while the server is asked', () => {

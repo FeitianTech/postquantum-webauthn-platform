@@ -30,7 +30,7 @@ export function Header({ section, onSection, onAnalyze, analyzing, analyzeButton
   const menuButton = useRef<HTMLButtonElement>(null);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-white/85 backdrop-blur-xl backdrop-saturate-150">
+    <header data-shell-header="" className="sticky top-0 z-40 border-b border-line bg-white/85 backdrop-blur-xl backdrop-saturate-150">
       <div className="mx-auto flex min-h-(--header-height) w-full max-w-page flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5 sm:px-6 lg:px-8">
         <h1 className="min-w-0 flex-1 text-title-sm font-semibold text-ink wide:flex-none">
           FIDO2/WebAuthn PQC Developer Tools

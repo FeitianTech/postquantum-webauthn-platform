@@ -1,11 +1,12 @@
 import { ENTRY_LINK_MESSAGES } from '@legacy/advanced/mds/explorer/entry-link.js';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/icons';
 
-import { BackButton, EntryHeader } from './EntryHeader';
-import { entrySections, rawData } from './entryModel';
+import { CondensedBar } from './CondensedBar';
+import { BackButton, EntryHeader, RawButton } from './EntryHeader';
+import { entrySections, entrySubtitleText, entryTitle, rawData } from './entryModel';
 import { EntrySections } from './EntrySections';
 import { RawEntryDialog } from './RawEntryDialog';
 import type { EntryDetail } from './useEntryDetail';
@@ -25,7 +26,7 @@ type EntryPageProps = {
 // there yet, or cannot be, what the jump from a saved credential says.
 export function EntryPage({ entryId, detail, onBack, onRetry, onOpenCertificate, busyCertificate = null }: EntryPageProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const rawButtonRef = useRef<HTMLButtonElement>(null);
+  const rawOpener = useRef<HTMLButtonElement | null>(null);
   const [rawOpen, setRawOpen] = useState(false);
   const entry = detail.phase === 'found' ? detail.entry : null;
   const sections = useMemo(() => (entry ? entrySections(entry) : []), [entry]);
@@ -37,24 +38,32 @@ export function EntryPage({ entryId, detail, onBack, onRetry, onOpenCertificate,
   }, [entryId, detail.phase]);
 
   let body;
+  // Raw is in the header and in the condensed bar: focus goes back to the one used.
+  const openRaw = (event: MouseEvent<HTMLButtonElement>) => {
+    rawOpener.current = event.currentTarget;
+    setRawOpen(true);
+  };
+
   if (detail.phase === 'found') {
     body = (
       <>
-        <EntryHeader
-          ref={headingRef}
-          entry={detail.entry}
-          hasRaw={hasRaw}
+        <CondensedBar
+          watch={headingRef}
+          title={entryTitle(detail.entry)}
+          subtitle={entrySubtitleText(detail.entry)}
           onBack={onBack}
-          onRaw={() => setRawOpen(true)}
-          rawButtonRef={rawButtonRef}
-        />
+          backTitle="Return to authenticator list"
+        >
+          <RawButton hasRaw={hasRaw} onRaw={openRaw} size="sm" />
+        </CondensedBar>
+        <EntryHeader ref={headingRef} entry={detail.entry} hasRaw={hasRaw} onBack={onBack} onRaw={openRaw} />
         <EntrySections
           sections={sections}
           entry={detail.entry}
           idBase="mds-entry"
           certificates={{ onOpen: onOpenCertificate, busy: busyCertificate }}
         />
-        <RawEntryDialog entry={detail.entry} open={rawOpen} onClose={() => setRawOpen(false)} returnFocusTo={() => rawButtonRef.current} />
+        <RawEntryDialog entry={detail.entry} open={rawOpen} onClose={() => setRawOpen(false)} returnFocusTo={() => rawOpener.current} />
       </>
     );
   } else if (detail.phase === 'waiting' || detail.phase === 'resolving') {

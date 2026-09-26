@@ -1,5 +1,5 @@
 import { RAW_DATA_BUTTON_TITLE, RAW_DATA_UNAVAILABLE_TITLE } from '@legacy/advanced/mds/raw-data.js';
-import { type Ref, forwardRef } from 'react';
+import { type MouseEvent, forwardRef } from 'react';
 
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -37,17 +37,40 @@ function Subtitle({ entry }: { entry: MdsEntry }) {
   );
 }
 
+export function RawButton({
+  hasRaw,
+  onRaw,
+  size = 'md',
+}: {
+  hasRaw: boolean;
+  onRaw: (event: MouseEvent<HTMLButtonElement>) => void;
+  size?: 'sm' | 'md';
+}) {
+  return (
+    <Button
+      className="shrink-0"
+      variant="secondary"
+      size={size}
+      disabled={!hasRaw}
+      title={hasRaw ? RAW_DATA_BUTTON_TITLE : RAW_DATA_UNAVAILABLE_TITLE}
+      aria-haspopup="dialog"
+      onClick={onRaw}
+    >
+      Raw
+    </Button>
+  );
+}
+
 type EntryHeaderProps = {
   entry: MdsEntry;
   hasRaw: boolean;
   onBack: () => void;
-  onRaw: () => void;
-  rawButtonRef: Ref<HTMLButtonElement>;
+  onRaw: (event: MouseEvent<HTMLButtonElement>) => void;
 };
 
 // Back, the entry's name (else "Authenticator"), its subtitle and Raw.
 export const EntryHeader = forwardRef<HTMLHeadingElement, EntryHeaderProps>(function EntryHeader(
-  { entry, hasRaw, onBack, onRaw, rawButtonRef },
+  { entry, hasRaw, onBack, onRaw },
   headingRef,
 ) {
   return (
@@ -57,17 +80,7 @@ export const EntryHeader = forwardRef<HTMLHeadingElement, EntryHeaderProps>(func
         <h3 ref={headingRef} tabIndex={-1} className="min-w-0 text-heading font-semibold break-words text-ink outline-none">
           {entryTitle(entry)}
         </h3>
-        <Button
-          ref={rawButtonRef}
-          className="shrink-0"
-          variant="secondary"
-          disabled={!hasRaw}
-          title={hasRaw ? RAW_DATA_BUTTON_TITLE : RAW_DATA_UNAVAILABLE_TITLE}
-          aria-haspopup="dialog"
-          onClick={onRaw}
-        >
-          Raw
-        </Button>
+        <RawButton hasRaw={hasRaw} onRaw={onRaw} />
       </div>
       <Subtitle entry={entry} />
     </div>
