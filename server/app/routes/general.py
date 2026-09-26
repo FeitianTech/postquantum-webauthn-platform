@@ -413,6 +413,8 @@ def _upload_answer(saved_items: list[Any], errors: list[str]):
         response["errors"] = errors
     if saved_items:
         response["snapshot"] = load_effective_full_snapshot()
+        # A reload must now load this session's own list, not the packaged snapshot.
+        _remember_custom_entries_state(response["snapshot"])
 
     return _no_store_json_response(response, status=200 if saved_items else 400)
 
@@ -433,9 +435,9 @@ def api_delete_custom_metadata(stored_filename: str):
             status=404,
         )
 
-    return _no_store_json_response(
-        {"deleted": True, "snapshot": load_effective_full_snapshot()}
-    )
+    snapshot = load_effective_full_snapshot()
+    _remember_custom_entries_state(snapshot)
+    return _no_store_json_response({"deleted": True, "snapshot": snapshot})
 
 
 def _refusal(exc: ValueError) -> dict[str, Any]:

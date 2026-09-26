@@ -76,3 +76,17 @@ def test_without_a_snapshot_it_still_names_the_snapshot_url(client):
 
 def test_only_get_is_answered(client):
     assert client.post("/api/mds/metadata/info").status_code == 405
+
+
+def test_an_upload_and_a_delete_record_whether_the_session_has_uploads(mds_fixture_snapshot, client):
+    # The session last saw no uploads: its page may load the packaged snapshot.
+    client.get("/api/mds/metadata/explorer/full")
+    assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "none"
+
+    # After an upload a reload must ask the session's own list, not the packaged one.
+    assert _upload(client).status_code == 200
+    assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "present"
+
+    stored = client.get("/api/mds/metadata/custom").get_json()["items"][0]["source"]["storedFilename"]
+    assert client.delete(f"/api/mds/metadata/custom/{stored}").status_code == 200
+    assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "none"
