@@ -2427,6 +2427,39 @@ untouched.
 - Not run on GitHub yet (not pushed): `ci-web.yml`'s e2e job now serves the fixture and runs `mds.spec.ts` and
   `mds-parity.spec.ts`.
 
+**Phase 27A — tech-lead verification (2026-09-26):**
+- **Every one of the 28 commits passes on its own tree**, run in three detached worktrees and cleaned (`git clean
+  -fdx`, `node_modules` kept) before each: pytest (4752 → 4779 / 4), the root vitest (616 → 711), web's vitest
+  (167 → 249) and typecheck; afterwards `git status --ignored` shows nothing left behind (no `instance/`, no
+  `server/runtime/`). One author, bare subjects, no dependency changed.
+- **Built independently from a clean `npm ci`** of `main`: the CSP scan finds 0 violations. **Playwright 52/52** from
+  the clean copy (the fixture snapshot).
+- **Parity on the owner's real snapshot, by the tech lead's own script** (Flask from the clean copy, a scratch copy of
+  the 517-entry snapshot, stores in the scratchpad): all **517 rows × 13 cells** read the same in the current table
+  and in `/beta`, in the same order (separators `•` and `,` set aside); **12 filter sets** of the tech lead's
+  (name, protocol U2F and UAF, a certification level, a transport, a user-verification method, an algorithm, a CN,
+  part of an AAGUID, three filters at once, algorithm info, no match) give the same rows, order and words; **13 sort
+  states** (Date Updated, Certification, User Verification, CN, Protocol and Name, each clicked twice, plus the
+  default) give the same order and direction.
+- **`GET /api/mds/metadata/info`** answers what the index inlines (same keys), `no-store`, `Vary: Cookie`. With no
+  snapshot the explorer APIs answer 200 with no entry and `/base` 404, as `docs/MDS_SNAPSHOT.md` now says.
+- **The upload fix, in a browser:** an upload shows its entry at once (518), survives a reload in `/beta` and shows in
+  the current UI (`customEntriesState` "present", "Including 1 session metadata entry"); Delete removes it (517) and
+  the state returns to "none". Escape closes the dialog and gives focus back to Manage Metadata.
+- **Entry and Back:** a row opened by a real click goes to `#mds/akid:…`; the browser's Back restores the U2F filter
+  (136), the scroll position and focus on the row.
+- **The owner's design rules, measured:** zero grey fills on the page (the only translucent black is the closed
+  overlays' 0×0 scrims); a filter field focused by a real click and not hovered is exactly as unfocused (border,
+  shadow, outline); the combobox works by arrow keys and Enter; no sideways page scroll at 1440, 1024 and 375 px, the
+  table scrolling inside its frame; the 954-character CN truncates with the whole value as its tooltip.
+- **Found by the tech lead:** after the 404 page's "Go to the new interface" (a `next/link`), the browser's Back
+  changes the URL to the 404 path but leaves the app on screen: `useSection` hands every Back to the page
+  (`Router.beforePopState(() => false)`); the same link makes Next's router add two page scripts, which the Trusted
+  Types report-only policy reports (`HTMLScriptElement src`). Phase 25's link, 27A's Back. Two warnings are new:
+  `fido2/utils.py`'s `websafe_decode` deprecation on the BLOB path the fixture test now exercises, and an unclosed
+  file in `test_flask_serves_the_fixture`. The current tab's timestamp fallback reads
+  `/fido-mds3.verified.json.meta.json` through Flask's static route, which does not follow the snapshot directory.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
