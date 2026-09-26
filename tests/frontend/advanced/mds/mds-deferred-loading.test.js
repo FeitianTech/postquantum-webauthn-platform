@@ -83,7 +83,7 @@ describe('explorer snapshot source', () => {
       kind: 'static',
     });
     expect(source.resolve({ forceReload: true })).toEqual({
-      url: 'api/mds/metadata/explorer/full',
+      url: '/api/mds/metadata/explorer/full',
       cache: 'reload',
       kind: 'api',
     });
@@ -97,7 +97,7 @@ describe('explorer snapshot source', () => {
 
   it('falls back to the session API when state is unknown or no static URL exists', () => {
     expect(createExplorerSource({ snapshotUrl: '/snap.json', customEntriesState: 'unknown' }).resolve()).toEqual({
-      url: 'api/mds/metadata/explorer/full',
+      url: '/api/mds/metadata/explorer/full',
       cache: 'no-store',
       kind: 'api',
     });
@@ -137,7 +137,7 @@ describe('explorer loading with a snapshot source', () => {
 
     await loadMdsDataInState('', {}, deps);
 
-    expect(globalThis.fetch).toHaveBeenNthCalledWith(2, 'api/mds/metadata/explorer/full', { cache: 'no-store' });
+    expect(globalThis.fetch).toHaveBeenNthCalledWith(2, '/api/mds/metadata/explorer/full', { cache: 'no-store' });
     expect(deps.applyExplorerSnapshot).toHaveBeenCalledWith(SNAPSHOT, '');
     expect(deps.resetExplorerState).not.toHaveBeenCalled();
   });

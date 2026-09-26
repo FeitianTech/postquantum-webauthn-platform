@@ -400,7 +400,7 @@ describe('mds explorer', () => {
     );
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      'api/mds/metadata/explorer/full',
+      '/api/mds/metadata/explorer/full',
       expect.objectContaining({ cache: 'reload' }),
     );
     expect(document.getElementById('mds-status').textContent).toContain('Loaded 2 authenticators.');
@@ -606,7 +606,7 @@ describe('mds explorer', () => {
     expect(messages.textContent).toContain('Metadata uploaded with warnings:');
     expect(document.getElementById('mds-status').textContent).toContain('Custom metadata updated.');
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      'api/mds/metadata/upload',
+      '/api/mds/metadata/upload',
       expect.objectContaining({ method: 'POST' }),
     );
 
@@ -870,7 +870,7 @@ describe('mds explorer', () => {
     );
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      'api/mds/metadata/upload',
+      '/api/mds/metadata/upload',
       expect.objectContaining({ method: 'POST' }),
     );
 
