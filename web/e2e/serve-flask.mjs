@@ -1,10 +1,10 @@
 // Starts the Flask app for the browser tests, as production runs it but with
-// every store in a temporary directory (nothing is written to the checkout) and
-// the relying party pinned to localhost. Stops Flask and removes the directory
-// when Playwright stops it.
+// every store in a temporary directory (nothing is written to the checkout), the
+// MDS fixture as its snapshot and the relying party pinned to localhost. Stops
+// Flask and removes the directory when Playwright stops it.
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -12,6 +12,11 @@ const repo = resolve(import.meta.dirname, '..', '..');
 const port = process.env.E2E_PORT ?? '5151';
 const python = process.env.E2E_PYTHON ?? join(repo, '.venv', 'bin', 'python');
 const stores = mkdtempSync(join(tmpdir(), 'pqc-e2e-'));
+// The small synthetic MDS snapshot (tests/fixtures/mds), copied so nothing Flask
+// does lands in the checkout: the same entries on every machine, never the
+// developer's real snapshot, and none in CI without it.
+const mdsSnapshot = join(stores, 'mds-snapshot');
+cpSync(join(repo, 'tests', 'fixtures', 'mds', 'snapshot'), mdsSnapshot, { recursive: true });
 
 const flask = spawn(
   python,
@@ -31,6 +36,8 @@ const flask = spawn(
       FIDO_SERVER_RP_ID: 'localhost',
       FIDO_SERVER_ALLOWED_ORIGINS: `http://localhost:${port}`,
       FIDO_SERVER_WEB_EXPORT_ROOT: join(repo, 'web', 'out'),
+      FIDO_SERVER_MDS_SNAPSHOT_DIR: mdsSnapshot,
+      FIDO_SERVER_MDS_FETCH_UPSTREAM: '0',
     },
   },
 );

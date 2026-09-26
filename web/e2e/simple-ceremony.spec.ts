@@ -4,11 +4,7 @@ import { addVirtualAuthenticator } from './virtual-authenticator';
 // The current UI at /, end to end: a real registration and authentication in
 // the Simple tab, answered by Chromium's virtual authenticator and verified by
 // the server. Later phases run the same ceremonies against /beta.
-test('registers a passkey and authenticates with it in the Simple tab', async ({ page, watch }) => {
-  // Without the MDS snapshot (CI has none: docs/MDS_SNAPSHOT.md) the current
-  // UI's explorer loads it in the background and gets a 404, the documented
-  // fallback. Nothing else may reach the console.
-  watch.allow(/^console error: Failed to load resource: .* 404 .*\/fido-mds3\.explorer(\.full)?\.json\)$/);
+test('registers a passkey and authenticates with it in the Simple tab', async ({ page }) => {
   const authenticator = await addVirtualAuthenticator(page);
   await page.goto('/');
   await expect(page.locator('body')).toHaveClass(/app-loaded/);

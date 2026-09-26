@@ -99,9 +99,7 @@ test.describe('the Codec reads the same in both UIs', () => {
   ];
 
   for (const { label, input, lenient } of cases) {
-    test(label, async ({ page, watch }) => {
-      // Without the MDS snapshot (CI has none) the current UI's explorer gets a 404, the documented fallback.
-      watch.allow(/^console error: Failed to load resource: .* 404 .*\/fido-mds3\.explorer(\.full)?\.json\)$/);
+    test(label, async ({ page }) => {
       const text = input ? `${'before' in input ? input.before : ''}${hex[input.name]}${'after' in input ? input.after : ''}` : LENIENT.hex;
 
       const legacy = await legacyText(page, text, lenient);
