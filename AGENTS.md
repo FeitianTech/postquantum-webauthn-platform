@@ -61,10 +61,15 @@ unlisted.
 - `web/src/components/ui/`: the primitives (Button and IconButton, the text fields
   and Select, Switch, ToggleChip, SegmentedControl, Card, Badge and StatusChip,
   Overlay with Dialog / Drawer / Sheet, Toast, InfoPopover, the table primitives,
-  MonoValue, KeyValueGrid). `SegmentedControl` moves its one highlight through the
-  CSSOM (`element.style`) from a ref, never a `style` prop.
+  MonoValue, CodeBlock, KeyValueGrid). `SegmentedControl` moves its one highlight through the
+  CSSOM (`element.style`) from a ref, never a `style` prop. `CodeBlock` is data text
+  (EDN, JSON, PEM, hex) on white: it wraps instead of scrolling the page, starts
+  collapsed at 16 rem with "Show all" when long (the whole text stays in the DOM),
+  and copies; `useCopy` is the copy logic it shares with `MonoValue`.
 - `web/src/components/shell/`: the header (title, the four sections, Analyze Browser,
-  GitHub; the phone menu sheet below 900 px), the footer, the sections' panels.
+  GitHub; the phone menu sheet below 900 px), the footer, the sections' panels
+  (`SectionPanel` for a section not ported yet; `AppShell` renders a ported one's own
+  component, `CodecSection` for `#codec`).
   `web/src/lib/useSection.ts` keeps the section in the URL hash (`#simple`,
   `#advanced`, `#codec`, `#mds`) with `replaceState`.
 - `web/src/components/analyze-browser/`: the first ported surface, over the logic
@@ -72,6 +77,20 @@ unlisted.
   `@legacy/*` alias (`experimental.externalDir`), never copied. They move into
   `web/` at the cutover. `docs/ui-parity/analyze-browser.md` maps every item of the
   old panel to the new one.
+- `web/src/components/codec/`: the Codec (Phase 26). `CodecSection` (the Decode /
+  Encode `SegmentedControl`, both panels mounted, input beside output from 1280 px),
+  `useCodec` (one panel's input, options, answer and failure: checks before it
+  clears, a busy button, Clear drops an answer still coming), `CodecOutput` (header,
+  lenient note, `Findings` with the category chip, sections), `ValueView` (a decoded
+  value by `values.js`'s rules; a nested map under its label, side by side only where
+  a container query finds room), `EncodedOutput`, `RawDialog`, `FailureNotice`
+  (failures stay in the panel, with the 422's offset and path), `SupportedInputs`.
+  `model.ts` types the logic imported from `frontend/static/scripts/decoder/codec/`
+  (`request.js`, `result.js`, `values.js`, `encoding/summary.js`), which both UIs use.
+  Its tests render real answers: `web/src/test/codec-answers.json`, which
+  `tests/app/tooling/test_web_codec_answers.py` keeps equal to what `/api/codec`
+  answers (`CODEC_ANSWERS_WRITE=1` rewrites it). `docs/ui-parity/codec.md` maps every
+  item of the old tab.
 - `web/scripts/check-export-csp.mjs`: parses every HTML file of the export and
   fails on an inline script that would run, a `<style>`, a style attribute, an `on*`
   attribute, a `javascript:` URL or a script or stylesheet from outside `/beta/`.
@@ -79,13 +98,22 @@ unlisted.
   in a temporary directory; `virtual-authenticator.ts` adds a CTAP2 authenticator
   through the DevTools WebAuthn domain; `fixtures.ts` fails a test on any console
   error, page error, CSP violation or report. `simple-ceremony.spec.ts` registers and
-  authenticates on the current UI at `/`; `beta-smoke.spec.ts` covers `/beta`.
+  authenticates on the current UI at `/`; `beta-smoke.spec.ts` covers `/beta`;
+  `codec.spec.ts` the Codec; `design-rules.ts` finds grey fills. `parity.ts` compares
+  what a region shows in the current UI and in `/beta`, word for word per section
+  (layout, separators and controls set aside), each expected difference with its
+  reason; `codec-parity.spec.ts` runs it over inputs from `tests/app/codec_corpus.py`
+  (read through `E2E_PYTHON`), and a later surface's parity spec uses it the same way.
 
 Rules for `web/src` (`tests/app/tooling/test_web_source_rules.py` holds them):
 no `style` prop (the export would render a style attribute), no
 `dangerouslySetInnerHTML` or other markup sink, no `<style>` / `<script>`, no
 `next/script`, no `eval`, nothing written to `window`, no `atob`, and no copy of
-the logic modules' exports or sentences. No `Suspense` on the server-rendered path:
+the logic modules' exports or sentences. The logic modules are the test's
+`LOGIC_ROOTS` (Analyze Browser's, the Codec's, the failed-response reader) plus
+whatever `web/src` imports through `@legacy/`, followed through their imports, and
+none of them may touch the DOM: a surface splits its logic out of its view first
+and adds it to `LOGIC_ROOTS`. No `Suspense` on the server-rendered path:
 React would put an inline script in the export. Links to the current UI are plain
 `<a href="/">` (`next/link` adds `/beta`).
 
@@ -94,7 +122,12 @@ Running it locally (Node 22):
 - `cd web && npm ci`
 - `npm run dev`: the dev server at `http://localhost:3000/beta`, proxying `/api` to
   Flask at `FLASK_URL` (default `http://localhost:8000`, `python -m server.app.app`).
-  WebAuthn ceremonies need the Flask origin; use the export for those.
+  WebAuthn ceremonies need the Flask origin; use the export for those. It sends
+  Flask's CSP (`web/scripts/dev-csp.mjs`) with only the two allowances the dev server
+  needs (`'unsafe-eval'` in `script-src`, `style-src-elem 'unsafe-inline'`), so an
+  inline script, a style attribute or another origin shows as a violation in the
+  console while developing; `tests/app/tooling/test_web_dev_csp.py` keeps the copy
+  equal to Flask's defaults.
 - `npm run build`: the export in `web/out`, which Flask serves at `/beta`
   (`FIDO_SERVER_WEB_EXPORT_ROOT` points elsewhere). Without a build `/beta` is a 404.
 - `npm run typecheck`, `npm test` (vitest, jsdom, Testing Library),
@@ -141,6 +174,19 @@ Important frontend entry points:
   checks, which say nothing about WebAuthn. The identity cases are real
   user-agent strings with their Client Hints in
   `tests/frontend/shared/browser/identity-matrix.js`; add a browser there.
+- `frontend/static/scripts/decoder/codec/`
+  The Codec tab. Its logic is DOM-free and both UIs import it: `request.js` (the
+  checks before a request, `POST /api/codec`, the progress, success and failure
+  sentences, the raw view's JSON), `result.js` (what the output shows for an answer
+  and in what order: pill, type, lenient note, findings, malformed line, sections by
+  type), `values.js` (how one value is shown, and the interpretation badges),
+  `labels.js` / `constants.js` (`formatKey`, the 88 labels), and in `encoding/`
+  `summary.js` (the encoded bytes' views and length), `can-encode.js`, `format.js`,
+  `binary.js`. The legacy views build their DOM over them: `process.js`,
+  `render-sections.js`, `render-values.js`, `encoding/format-elements.js` (plus
+  `mode.js`, `dom-state.js`, `panel-actions.js`). The root coverage counts the whole
+  Codec, and holds the logic leaves at 100 % (`vitest.config.mjs`). A failed codec
+  request's `offset` and `path` are in `readFailedResponse`'s answer.
 - `frontend/static/scripts/shared/ui/dom.js`
   How every view that shows data is built: `el(tag, {className, attrs, dataset,
   style, text}, ...children)` and `fragment()`. Strings become text nodes or
@@ -190,7 +236,7 @@ Important frontend entry points:
   The one reader of a failed response, for both tabs, the codec and the decode
   request: `readFailedResponse(response)` gives the server's `error` (or short plain
   text; never an HTML page), `failedCredentialId`, `signCountStatus`,
-  `challengeSource`, `challengeStatus` and the body, and adds what to do for a 400
+  `challengeSource`, `challengeStatus`, a codec refusal's `offset` and `path`, and the body, and adds what to do for a 400
   about the ceremony state, 409, 413 and 503 unless the message already says;
   `FailedResponseError` carries it. Do not show a raw response body.
 - `frontend/static/scripts/shared/ui/ceremony-result.js`
@@ -434,7 +480,7 @@ Repo test layout:
 
 If you are changing only UI logic plus lightweight server responses, prefer targeted tests over the full suite first.
 
-Nine checks guard the code and the checkout rather than behaviour:
+Ten checks guard the code and the checkout rather than behaviour:
 
 - `tests/app/tooling/test_html_sinks.py` fails on any `.innerHTML` / `.outerHTML`
   assignment, `insertAdjacentHTML`, `document.write`, `parseFromString`,
@@ -454,8 +500,12 @@ Nine checks guard the code and the checkout rather than behaviour:
 - `tests/app/tooling/test_web_source_rules.py` holds `web/src` to the same rules,
   with the readers of the two tests above, plus no `style` prop, no
   `dangerouslySetInnerHTML`, `<style>`/`<script>`, `next/script` or `eval`, and no
-  copy of the Analyze Browser logic modules (their exports or their sentences).
-  Its `ALLOWED` dict is empty and may only shrink.
+  copy of the logic modules web imports (their exports or their sentences:
+  `LOGIC_ROOTS` and every `@legacy/` import, followed through their imports), which
+  must also touch no DOM. Its `ALLOWED` dict is empty and may only shrink.
+- `tests/app/tooling/test_web_dev_csp.py` fails when the policy `npm run dev` sends
+  (`web/scripts/dev-csp.mjs`) is no longer Flask's default; the dev server's two
+  allowances and their reasons are held by `web/scripts/dev-csp.test.ts`.
 - `tests/app/tooling/test_npm_lockfiles.py` fails when a lockfile (root or `web/`)
   lacks an optional dependency one of its packages declares: the per-platform
   native builds (`@next/swc-*`, `@tailwindcss/oxide-*`, `lightningcss-*`,
