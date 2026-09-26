@@ -2175,6 +2175,114 @@ come from Playwright's Chromium, which also reported no console problem at any w
   (AB-I5) and unit-tested.
 - The agent left an untracked `.claude/launch.json` (its own scratch config); removed.
 
+### Phase 26 — the Codec at /beta, with nothing it shows left out — DONE (2026-09-25)
+18 commits, 55be1676..the record's own, all this phase's, each gated on pytest (under coverage, with its 95%
+floor), root vitest (with its floors), web's typecheck, unit tests (with their floors), build and CSP scan, and
+ruff. Every commit before the record was re-run afterwards on its own tree in one detached worktree, cleaned (`git
+clean -fdx`, `node_modules` kept: no lockfile changed) before each: all 17 pass pytest under coverage with its
+floor, root vitest with its floors, ruff, web's typecheck, vitest with its floors, the build and the CSP scan, and
+none writes to `instance/` or `server/runtime/`. Not pushed: the tech lead verifies and pushes.
+
+**What there is now.** `/beta#codec` is the Codec: Decode and Encode on the top bar's sliding
+`SegmentedControl`, each panel with its own input and answer, the input beside the output from 1280 px (sticky
+while a long answer scrolls) and above it below that. The output shows the header (Success / Error, the type,
+Raw), the lenient note, the findings (a category chip, the source, offset and path in Geist Mono, the message),
+then every section in the current panel's order; Encode shows each view of the bytes and their length. EDN,
+Expanded JSON, PEM, long values and the raw views are white `CodeBlock`s with copy and "Show all". Supported
+Inputs is the output column's empty state. A refusal stays in its panel with its offset and path. The current
+Codec at `/` is unchanged and runs on the same logic modules.
+
+**A — parity** (55be1676, 67eae588). `docs/ui-parity/codec.md` lists the current tab first (73 items: the switch,
+both inputs, every status and validation message verbatim, Supported Inputs, the output header, findings,
+sections and their order, all 88 labels and `formatKey`'s rules and quirks, value rendering, EDN, Expanded JSON,
+interpretation, CTAP metadata with padding and trailing bytes, certificates, the raw views, the encoder's seven
+formats and every view of the bytes, Clear), then maps each to its component, its test and its browser check;
+none is unmapped. "What changed" lists every difference of presentation or behaviour.
+
+**B — logic out of the views** (e220496d, 7354578e, 49fde2bb, a9a20165, 26231246). `decoder/codec/request.js`
+(the checks, `POST /api/codec`, the sentences, the raw JSON) out of `process.js`; `result.js` (what the output
+shows and in what order) and `values.js` (how a value is shown, the badges) out of `render-sections.js` and
+`render-values.js`; `encoding/summary.js` gains the encoded views and length (out of `format-elements.js`);
+`canEncodeToFormat` moves to the leaf `encoding/can-encode.js`, so the barrels that re-export DOM builders stay out
+of web's imports. The legacy tests passed unchanged across both refactor commits; the new modules are tested to
+100 % and held there per file in `vitest.config.mjs`, whose old exclusion of the whole Codec from the root coverage
+is gone (it was 96 % covered). `readFailedResponse` now keeps a refusal's `offset` and `path`.
+`test_web_source_rules.py` now covers `LOGIC_ROOTS` plus every `@legacy/` import of `web/src`, followed through
+their imports, reads `export { … }` lists and strips comments before reading sentences, and fails if any of those
+modules touches the DOM.
+
+**C — the views** (f3ae5494, ba70fc25, dc96814a, 9eeb95a1, e472d850). `ui/CodeBlock` (and `useCopy`, shared with
+`MonoValue`); `web/src/components/codec/` (`CodecSection`, `useCodec`, `CodecOutput`, `Findings`, `ValueView`,
+`EncodedOutput`, `RawDialog`, `FailureNotice`, `SupportedInputs`, `model.ts`). The component tests render real
+answers: the eight attestation objects the characterization goldens record and `web/src/test/codec-answers.json`
+(14 answers of `/api/codec`: the duplicate/colliding map, NaN strict and lenient, CBOR read leniently, getInfo
+framed, a padded makeCredential response, a certificate, one encode per format), which
+`tests/app/tooling/test_web_codec_answers.py` keeps equal to what the server answers. A first look in a browser
+found deep certificate details squeezed past the right edge; nested maps now go under their label and sit side by
+side only where a container query finds room.
+
+**D — small fixes.** Both UIs' GitHub link points at `FeitianTech/postquantum-webauthn-platform` (a0d75660; a
+legacy template test and an e2e check hold it). `npm run dev` sends Flask's CSP, its Trusted Types report-only
+policy and `Reporting-Endpoints` (b15ff7d9, `web/scripts/dev-csp.mjs`) with only the two allowances Next 15.5's dev
+server needs, each with its reason: `'unsafe-eval'` in `script-src` (it forces `eval-source-map`) and
+`style-src-elem 'unsafe-inline'` (its injected `<style>` elements); `style-src-attr` falls back to `style-src`.
+`test_web_dev_csp.py` fails when the copy differs from `security_headers.py`'s defaults. Two items of Phase 25's
+"Found but not fixed" are therefore fixed.
+
+**E — browser tests** (740d6110, 2c2feac9). `web/e2e/codec.spec.ts`: the duplicate/colliding map (both findings
+with category, offset and path; the EDN), `{"a": NaN}` strictly (the sentence, and `6` and `${"a"}` in their own
+elements) and leniently (the finding), the decoded EDN encoded back to exactly `a301616161316162016163`, one encode
+in each of the seven formats, both raw views (×, Escape, focus back on Raw), input beside output at 1440 px and
+below it at 375 px with no sideways scroll, and no grey fill in the section. `web/e2e/parity.ts` +
+`codec-parity.spec.ts`: twelve inputs from `tests/app/codec_corpus.py` (read through `E2E_PYTHON`) decoded in both
+UIs and compared word for word per section; **all match**, and the only words `/beta` adds are the findings'
+categories (`rendering`, `canonical`, `input`, `trailing`, `skipped`), each listed with its reason.
+`parity.spec.ts` proves the comparison sees a missing, an extra and a doubled word. `beta-smoke.spec.ts`'s
+highlight locators are scoped to the top bar (the Codec has its own highlight).
+
+**Seen in a real browser** (the desktop app's Chromium 152, Flask with the strict policy, stores and secret in the
+scratchpad, nothing written to the checkout). `/beta#codec` at 1440, 1024 and 375 px: the empty state, the
+duplicate/colliding map (two findings with chips, the EDN), a TPM attestation object (certificate details nested
+five deep, readable at 375 px, long values collapsed with Show all), `{"a": NaN}` refused with offset 6 and path
+`${"a"}`, EDN encoded back to its eleven bytes (hex, base64, base64url, colon hex), Raw opened and closed by
+Escape with focus back on Raw and the page no longer `inert`; no sideways scroll at any width. `npm run dev` under
+the new headers: the page loads styled with Fast Refresh connected and no violation; a style attribute and an
+inline script added from the console were refused and reported (and the Trusted Types report-only policy reported
+the script text); the Codec worked through the dev server's `/api` proxy. The current Codec at `/` after the
+split: the same findings lines, sections, EDN, raw modal, encoded views and refusal sentence. **No CSP or Trusted
+Types message from any of it**; the only console lines are the 422s of the two strict refusals. Screenshots at the
+three widths come from Playwright's Chromium 153 with a tall viewport (its full-page capture re-lays the page out
+mid-capture and caught a block measuring itself collapsed; the state before and after is right).
+
+**Tests.**
+- pytest 4742 → **4752** passed / 4 skipped; coverage 97%. Linux (python:3.12, Docker, `git archive` of the
+  last commit before the record) **4738** / 5, the usual 14 fewer and one more skip than macOS. ruff clean.
+- root vitest 566 → **616**, coverage 84.24 / 69.57 / 92.75 / 84.29 → **84.85 / 70.52 / 93.09 / 84.90** (84.86 / 70.53
+  / 93.09 / 84.91 in other runs of the same tree; the Codec now counted); floors held, the Codec's logic leaves at
+  100 % per file.
+- web vitest 99 → **167** tests in 17 files, coverage 97.83 / 93.63 / 96.89 / 99.10 → **98.20 / 95.37 / 98.10 /
+  99.31**, floors 97 / 92 / 96 / 98.
+- web typecheck clean; CSP scan 4 HTML files, 40 script elements, **0 violations**.
+- Playwright 7 → **33** passed on macOS (Chromium 153); **33** on Linux in
+  `mcr.microsoft.com/playwright:v1.63.0-noble` from a `git archive` (no MDS snapshot; `uv sync`, `npm ci`, the build
+  and the CSP scan inside).
+
+**Found but not fixed:**
+- The parity check compares decoded output; the encoder's output is checked format by format against the server's
+  answers (`codec.spec.ts`), not text for text against the current UI.
+- `formatKey`'s quirks are kept for parity: `json` → "Json", `notRebuildable` → "NOT Rebuildable",
+  `getAssertionRequest` → "GET Assertion Request".
+- `encoding/binary.js` has two branches no input reaches (a string blank after trimming cannot reach them); it is
+  counted but not held at 100 %.
+- A text area resized taller than the window, in the sticky input column at 1280 px and wider, shows its lower part
+  only once the output has scrolled to its end.
+- The desktop app's Chromium never uploads `report-to` reports (Phase 24), so the dev-server violations were seen in
+  the console, not in Flask's log.
+- `web/src/test/codec-answers.json` is rewritten with `CODEC_ANSWERS_WRITE=1` when the decoder's answers change, as
+  the characterization goldens are; its test says so when it fails.
+- Not run on GitHub yet (not pushed): `ci-web.yml`'s e2e job now runs the Codec and parity specs, which read the
+  corpus through `E2E_PYTHON` (the job sets it).
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
