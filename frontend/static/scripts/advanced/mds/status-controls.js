@@ -1,3 +1,4 @@
+import { mergeFilterOptions } from './explorer/options.js';
 import { formatEntryCount } from './explorer/status.js';
 
 export function updateCount(state, filtered, total) {
@@ -99,7 +100,7 @@ export function setUpdateButtonMode(state, mode, buttonStates) {
     }
 }
 
-export function updateOptionLists(state, optionSets, filterLookup, formatEnum) {
+export function updateOptionLists(state, optionSets, filterLookup) {
     if (!state) {
         return;
     }
@@ -109,15 +110,6 @@ export function updateOptionLists(state, optionSets, filterLookup, formatEnum) {
         if (!dropdown) {
             return;
         }
-        const config = filterLookup[key];
-        const optionList = Array.from(values).filter(Boolean);
-        if (config?.staticOptions) {
-            const staticValues = config.staticOptions
-                .map(option => formatEnum(option))
-                .filter(Boolean);
-            optionList.push(...staticValues);
-        }
-        const unique = Array.from(new Set(optionList));
-        dropdown.setOptions(unique);
+        dropdown.setOptions(mergeFilterOptions(values, filterLookup[key]));
     });
 }

@@ -1,3 +1,5 @@
+import { NO_MATCHING_OPTIONS, matchingFilterOptions, sortFilterOptions } from './explorer/options.js';
+
 let activeDropdown = null;
 
 export class FilterDropdown {
@@ -56,9 +58,7 @@ export class FilterDropdown {
     }
 
     setOptions(options) {
-        const unique = Array.from(new Set(options.filter(Boolean)));
-        unique.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-        this.options = unique;
+        this.options = sortFilterOptions(options);
         this.filter(this.input.value);
     }
 
@@ -86,12 +86,7 @@ export class FilterDropdown {
     }
 
     filter(query) {
-        const value = (query || '').trim().toLowerCase();
-        if (!value) {
-            this.filtered = [...this.options];
-        } else {
-            this.filtered = this.options.filter(option => option.toLowerCase().includes(value));
-        }
+        this.filtered = matchingFilterOptions(this.options, query);
         this.render();
     }
 
@@ -108,7 +103,7 @@ export class FilterDropdown {
             }
             const empty = document.createElement('li');
             empty.className = 'mds-filter-dropdown__empty';
-            empty.textContent = 'No matches';
+            empty.textContent = NO_MATCHING_OPTIONS;
             this.list.appendChild(empty);
             return;
         }

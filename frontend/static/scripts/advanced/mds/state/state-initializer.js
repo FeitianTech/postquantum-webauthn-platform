@@ -7,6 +7,7 @@ import {
     setupTableElementsAndScrollSync,
 } from './state-initializer-dom.js';
 import { registerMdsTabChangeHandler } from './state-initializer-tab-change.js';
+import { staticFilterOptions } from '../explorer/options.js';
 
 export function initializeMdsState(root, deps) {
     const {
@@ -16,7 +17,6 @@ export function initializeMdsState(root, deps) {
         DEFAULT_SORT_DIRECTION,
         SORT_NONE,
         createFilterDropdown,
-        formatEnum,
         normaliseSnapshotInfo,
         initialMdsInfo,
         customMetadataItems,
@@ -112,10 +112,7 @@ export function initializeMdsState(root, deps) {
             const dropdown = createFilterDropdown(input, value => updateFilter(key, value), config);
             dropdowns[key] = dropdown;
             if (Array.isArray(config.staticOptions)) {
-                const initialOptions = config.staticOptions
-                    .map(option => formatEnum(option))
-                    .filter(Boolean);
-                dropdown.setOptions(initialOptions);
+                dropdown.setOptions(staticFilterOptions(config));
             }
         }
     });

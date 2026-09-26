@@ -1,4 +1,3 @@
-import { CERTIFICATION_OPTIONS } from '../constants.js';
 import { extractAttestationKeyIdentifiers, extractList, extractTransports, extractUserVerification } from './extractors.js';
 import { formatCertification, formatDate, formatEnum, formatProtocol } from './formatters.js';
 import { normaliseIcon, resolveAaguid, resolveIdentifier, resolveName } from './resolvers.js';
@@ -51,33 +50,7 @@ function buildCommonTransformedFields(entry, index, metadata) {
     };
 }
 
-export function collectOptionSets(data) {
-    const sets = {
-        protocol: new Set(),
-        certification: new Set(CERTIFICATION_OPTIONS.map(option => formatEnum(option))),
-        userVerification: new Set(),
-        attachment: new Set(),
-        transports: new Set(),
-        keyProtection: new Set(),
-        algorithms: new Set(),
-    };
-
-    data.forEach(entry => {
-        if (entry.protocol) {
-            sets.protocol.add(entry.protocol);
-        }
-        if (entry.certificationStatus) {
-            sets.certification.add(formatEnum(entry.certificationStatus));
-        }
-        entry.userVerificationList.forEach(value => sets.userVerification.add(value));
-        entry.attachmentList.forEach(value => sets.attachment.add(value));
-        entry.transportsList.forEach(value => sets.transports.add(value));
-        entry.keyProtectionList.forEach(value => sets.keyProtection.add(value));
-        entry.algorithmsList.forEach(value => sets.algorithms.add(value));
-    });
-
-    return sets;
-}
+export { collectOptionSets } from '../explorer/options.js';
 
 export function transformEntry(entry, index = 0) {
     const metadata = entry?.metadataStatement ?? {};

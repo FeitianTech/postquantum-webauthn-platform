@@ -1,6 +1,6 @@
 import { readPageData } from '../../shared/utils/page-data.js';
 import { FILTER_LOOKUP, UPDATE_BUTTON_STATES } from './constants.js';
-import { formatEnum, normaliseAaguid, normaliseEnumKey, transformEntry, upgradeEntryToFull } from './utils.js';
+import { normaliseAaguid, transformEntry, upgradeEntryToFull } from './utils.js';
 import {
     setStatus as setStatusInState,
     setUpdateButtonBusy as setUpdateButtonBusyInState,
@@ -111,7 +111,6 @@ const {
     setFilteredData,
     renderTable: (entries, options) => renderTable(entries, options),
     updateCount: (filtered, total) => updateCount(filtered, total),
-    normaliseEnumKey,
     defaultMinColumnWidth: DEFAULT_MIN_COLUMN_WIDTH,
     floatingScrollSideMargin: FLOATING_SCROLL_SIDE_MARGIN,
     floatingScrollBottomMargin: FLOATING_SCROLL_BOTTOM_MARGIN,
@@ -281,5 +280,5 @@ async function refreshMetadata() {
 }
 
 function updateOptionLists(optionSets) {
-    return updateOptionListsInState(mdsState, optionSets, FILTER_LOOKUP, formatEnum);
+    return updateOptionListsInState(mdsState, optionSets, FILTER_LOOKUP);
 }

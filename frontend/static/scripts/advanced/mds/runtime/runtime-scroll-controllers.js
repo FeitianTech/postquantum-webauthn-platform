@@ -37,7 +37,6 @@ export function createScrollControllers({
     setFilteredData,
     renderTable,
     updateCount,
-    normaliseEnumKey,
     defaultMinColumnWidth = 64,
     floatingScrollSideMargin = 16,
     floatingScrollBottomMargin = 24,
@@ -105,7 +104,6 @@ export function createScrollControllers({
         setFilteredData,
         renderTable,
         updateCount,
-        normaliseEnumKey,
     });
 
     return {

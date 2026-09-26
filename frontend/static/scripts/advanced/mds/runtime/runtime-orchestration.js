@@ -1,6 +1,5 @@
 import { FILTER_CONFIG, FILTER_LOOKUP } from '../constants.js';
 import { createFilterDropdown } from '../dropdown.js';
-import { formatEnum } from '../utils.js';
 import {
     formatSnapshotTimestamp as formatSnapshotTimestampValue,
     normaliseSnapshotInfo as normaliseSnapshotInfoValue,
@@ -96,7 +95,6 @@ export function setupMdsRuntimeOrchestration({
                 DEFAULT_SORT_DIRECTION,
                 SORT_NONE,
                 createFilterDropdown,
-                formatEnum,
                 normaliseSnapshotInfo: normaliseSnapshotInfoValue,
                 initialMdsInfo,
                 customMetadataItems,
