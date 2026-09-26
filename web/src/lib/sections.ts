@@ -28,36 +28,50 @@ export type SectionId = (typeof SECTIONS)[number]['id'];
 
 export const DEFAULT_SECTION: SectionId = 'simple';
 
-/** A section, and what follows it in the hash: `#mds/aaguid:…` is the MDS section and an entry. */
-export type Route = { section: SectionId; subPath: string };
+/**
+ * A section, and what is open in it: the hash's segments after the section's,
+ * each decoded on its own. `#mds/aaguid:…/certificate/1` is the MDS section and
+ * `['aaguid:…', 'certificate', '1']`.
+ */
+export type Route = { section: SectionId; path: string[] };
+
+function decodeSegment(segment: string) {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
+// A segment as the hash holds it: encoded (an AAID's # and any /) with its
+// colons kept readable: `aaguid:…`.
+function encodeSegment(segment: string) {
+  return encodeURIComponent(segment).replace(/%3A/gi, ':');
+}
 
 export function routeFromHash(hash: string): Route | null {
-  const raw = hash.replace(/^#/, '');
-  const slash = raw.indexOf('/');
-  const id = slash === -1 ? raw : raw.slice(0, slash);
+  const [id, ...rest] = hash.replace(/^#/, '').split('/');
   const section = SECTIONS.find((candidate) => candidate.id === id)?.id;
   if (!section) return null;
-  if (slash === -1) return { section, subPath: '' };
-  const rest = raw.slice(slash + 1);
-  try {
-    return { section, subPath: decodeURIComponent(rest) };
-  } catch {
-    return { section, subPath: rest };
-  }
+  return { section, path: rest.filter(Boolean).map(decodeSegment) };
 }
 
 export function sectionFromHash(hash: string): SectionId | null {
   return routeFromHash(hash)?.section ?? null;
 }
 
-// A place in the URL, after the #: the section, then what is open in it, encoded
-// (an AAID's # especially) with its colons kept readable: `mds/aaguid:…`.
-export function hashPath(section: SectionId, subPath = '') {
-  return subPath ? `${section}/${encodeURIComponent(subPath).replace(/%3A/gi, ':')}` : section;
+// A place in the URL, after the #: the section, then what is open in it.
+export function hashPath(section: SectionId, path: readonly string[] = []) {
+  return [section, ...path.map(encodeSegment)].join('/');
 }
 
 export function entryHashPath(entryId: string) {
-  return hashPath('mds', entryId);
+  return hashPath('mds', [entryId]);
+}
+
+/** An entry's attestation certificate, numbered from 1 as its page lists them. */
+export function certificateHashPath(entryId: string, number: number) {
+  return hashPath('mds', [entryId, 'certificate', String(number)]);
 }
 
 export const SECTION_OPTIONS = SECTIONS.map((section) => ({ value: section.id, label: section.label }));

@@ -5,42 +5,45 @@ import { CodecSection } from '@/components/codec/CodecSection';
 import { MdsSection } from '@/components/mds/MdsSection';
 import { useBrowserAnalysis } from '@/components/analyze-browser/useBrowserAnalysis';
 import { SECTIONS } from '@/lib/sections';
-import { useSection } from '@/lib/useSection';
+import { SectionNavigationProvider, useSection } from '@/lib/useSection';
 
 import { Footer } from './Footer';
 import { Header } from './Header';
 import { SectionPanel } from './SectionPanel';
 
 // The page: the header, the chosen section, the footer, and the Analyze
-// Browser panel, which floats above everything.
+// Browser panel, which floats above everything. A section opens something in
+// another through useSectionNavigation().
 export function AppShell() {
-  const [section, setSection, route] = useSection();
+  const [section, setSection, route, go] = useSection();
   const browser = useBrowserAnalysis();
   const [copy, setCopy] = useState<CopyResult | null>(null);
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <Header section={section} onSection={setSection} onAnalyze={browser.request} analyzing={browser.running} />
-      <main className="mx-auto w-full max-w-page flex-1 px-4 pt-10 pb-16 sm:px-6 sm:pt-14 lg:px-8">
-        {SECTIONS.map((option) =>
-          option.id === 'codec' ? (
-            <CodecSection key={option.id} active={option.id === section} />
-          ) : option.id === 'mds' ? (
-            <MdsSection key={option.id} active={option.id === section} route={route} />
-          ) : (
-            <SectionPanel key={option.id} id={option.id} active={option.id === section} />
-          ),
-        )}
-      </main>
-      <Footer />
-      <AnalyzeBrowserDialog
-        open={browser.open}
-        onClose={browser.close}
-        analysis={browser.analysis}
-        returnFocusTo={browser.returnFocusTo}
-        copy={copy}
-        onCopied={setCopy}
-      />
-    </div>
+    <SectionNavigationProvider value={go}>
+      <div className="flex min-h-dvh flex-col">
+        <Header section={section} onSection={setSection} onAnalyze={browser.request} analyzing={browser.running} />
+        <main className="mx-auto w-full max-w-page flex-1 px-4 pt-10 pb-16 sm:px-6 sm:pt-14 lg:px-8">
+          {SECTIONS.map((option) =>
+            option.id === 'codec' ? (
+              <CodecSection key={option.id} active={option.id === section} />
+            ) : option.id === 'mds' ? (
+              <MdsSection key={option.id} active={option.id === section} route={route} />
+            ) : (
+              <SectionPanel key={option.id} id={option.id} active={option.id === section} />
+            ),
+          )}
+        </main>
+        <Footer />
+        <AnalyzeBrowserDialog
+          open={browser.open}
+          onClose={browser.close}
+          analysis={browser.analysis}
+          returnFocusTo={browser.returnFocusTo}
+          copy={copy}
+          onCopied={setCopy}
+        />
+      </div>
+    </SectionNavigationProvider>
   );
 }

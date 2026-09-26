@@ -54,7 +54,7 @@ function listState(explorer: Explorer, view: ReturnType<typeof useExplorerView>)
 
 type ListPlace = { entryId: string; windowY: number; top: number; left: number };
 
-const CLOSED: SectionRoute = { subPath: '', open: () => {}, close: () => {} };
+const CLOSED: SectionRoute = { path: [], open: () => {}, close: () => {} };
 
 // The FIDO MDS section: every authenticator the FIDO Metadata Service
 // publishes, with what the current UI's explorer shows of each, in a table that
@@ -71,14 +71,14 @@ export function MdsSection({ active, route = CLOSED }: { active: boolean; route?
   const [managing, setManaging] = useState(false);
   const place = useRef<ListPlace | null>(null);
   const shownEntry = useRef('');
-  const openEntryId = route.subPath;
+  const openEntryId = route.path[0] ?? '';
   const { open } = route;
 
   const openEntry = useCallback(
     (entryId: string) => {
       const frame = frameRef.current;
       place.current = { entryId, windowY: window.scrollY, top: frame?.scrollTop ?? 0, left: frame?.scrollLeft ?? 0 };
-      open(entryId);
+      open([entryId]);
     },
     [open],
   );
@@ -140,7 +140,7 @@ export function MdsSection({ active, route = CLOSED }: { active: boolean; route?
             entryId={openEntryId}
             entry={explorer.entries.find((entry) => entry.entryId === openEntryId) ?? null}
             loading={explorer.phase === 'idle' || explorer.phase === 'loading'}
-            onBack={route.close}
+            onBack={() => route.close()}
           />
         </div>
       ) : null}
