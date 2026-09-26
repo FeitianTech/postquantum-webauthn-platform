@@ -59,11 +59,14 @@ LOGIC_ROOTS = (
     "advanced/mds/explorer/columns.js",
     "advanced/mds/explorer/custom-metadata.js",
     "advanced/mds/explorer/detail.js",
+    "advanced/mds/explorer/entry-link.js",
     "advanced/mds/explorer/filter-sort.js",
     "advanced/mds/explorer/loading.js",
     "advanced/mds/explorer/options.js",
     "advanced/mds/explorer/rows.js",
     "advanced/mds/explorer/status.js",
+    "advanced/mds/raw-data.js",
+    "advanced/mds/raw-stringify.js",
 )
 
 _RULES: dict[str, re.Pattern[str]] = {
