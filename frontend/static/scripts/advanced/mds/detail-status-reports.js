@@ -1,16 +1,18 @@
-import { formatDate } from './utils.js';
+// The detail page's status reports table, from explorer/detail.js's rows.
+import { MISSING_CELL_TEXT } from './explorer/rows.js';
 
-export function renderStatusReports(reports) {
-    const list = Array.isArray(reports) ? reports : [];
-    if (!list.length) {
-        return null;
-    }
+function textCell(text) {
+    const cell = document.createElement('td');
+    cell.textContent = text;
+    return cell;
+}
 
+export function renderStatusReports(columns, rows) {
     const table = document.createElement('table');
     table.className = 'mds-status-table';
     const thead = document.createElement('thead');
     const headRow = document.createElement('tr');
-    ['Status', 'Effective Date', 'Authenticator Version', 'Certificate Number', 'Descriptor'].forEach(label => {
+    columns.forEach(label => {
         const th = document.createElement('th');
         th.textContent = label;
         headRow.appendChild(th);
@@ -19,72 +21,30 @@ export function renderStatusReports(reports) {
     table.appendChild(thead);
 
     const tbody = document.createElement('tbody');
-    list.forEach(report => {
-        if (!report || typeof report !== 'object') {
-            return;
-        }
+    rows.forEach(report => {
         const row = document.createElement('tr');
-
-        const statusCell = document.createElement('td');
-        statusCell.textContent = report.status !== undefined && report.status !== null
-            ? String(report.status)
-            : '—';
-        row.appendChild(statusCell);
-
-        const dateCell = document.createElement('td');
-        dateCell.textContent = report.effectiveDate !== undefined && report.effectiveDate !== null
-            ? String(report.effectiveDate)
-            : '—';
-        row.appendChild(dateCell);
-
-        const versionCell = document.createElement('td');
-        versionCell.textContent = report.authenticatorVersion !== undefined && report.authenticatorVersion !== null
-            ? String(report.authenticatorVersion)
-            : '—';
-        row.appendChild(versionCell);
-
-        const certificateCell = document.createElement('td');
-        certificateCell.textContent = report.certificateNumber ? String(report.certificateNumber) : '—';
-        row.appendChild(certificateCell);
+        row.appendChild(textCell(report.status));
+        row.appendChild(textCell(report.effectiveDate));
+        row.appendChild(textCell(report.authenticatorVersion));
+        row.appendChild(textCell(report.certificateNumber));
 
         const descriptorCell = document.createElement('td');
         const descriptorContainer = document.createElement('div');
         descriptorContainer.className = 'mds-status-descriptor';
-
-        const descriptorParts = [];
-        if (report.certificationDescriptor) {
-            descriptorParts.push(String(report.certificationDescriptor));
-        }
-        if (report.url) {
-            descriptorParts.push(String(report.url));
-        }
-        if (descriptorParts.length) {
+        if (report.descriptor) {
             const descriptorLine = document.createElement('div');
-            descriptorLine.textContent = descriptorParts.join(' • ');
+            descriptorLine.textContent = report.descriptor;
             descriptorContainer.appendChild(descriptorLine);
         }
-
-        const metadataLines = [];
-        if (report.certificationPolicyVersion) {
-            metadataLines.push(`Policy: ${report.certificationPolicyVersion}`);
-        }
-        if (report.certificationRequirementsVersion) {
-            metadataLines.push(`Requirements: ${report.certificationRequirementsVersion}`);
-        }
-        if (report.timeOfLastStatusChange) {
-            metadataLines.push(`Changed: ${formatDate(report.timeOfLastStatusChange)}`);
-        }
-        if (metadataLines.length) {
+        if (report.details) {
             const metaLine = document.createElement('div');
             metaLine.className = 'mds-status-meta';
-            metaLine.textContent = metadataLines.join(' • ');
+            metaLine.textContent = report.details;
             descriptorContainer.appendChild(metaLine);
         }
-
         if (!descriptorContainer.childElementCount) {
-            descriptorContainer.textContent = '—';
+            descriptorContainer.textContent = MISSING_CELL_TEXT;
         }
-
         descriptorCell.appendChild(descriptorContainer);
         row.appendChild(descriptorCell);
 

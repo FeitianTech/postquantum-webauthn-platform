@@ -1,5 +1,4 @@
-import { extractList } from './utils.js';
-
+// The detail page's DOM pieces; what goes in them is explorer/detail.js's.
 export function createDetailSection(title) {
     const section = document.createElement('section');
     section.className = 'mds-detail-section';
@@ -62,11 +61,6 @@ export function appendDetailGrid(section, items) {
 }
 
 export function createChipList(label, values) {
-    const items = Array.isArray(values) ? values.filter(Boolean) : [];
-    if (!items.length) {
-        return null;
-    }
-
     const wrapper = document.createElement('div');
     wrapper.className = 'mds-detail-item';
     const labelEl = document.createElement('div');
@@ -74,7 +68,7 @@ export function createChipList(label, values) {
     labelEl.textContent = label;
     const list = document.createElement('div');
     list.className = 'mds-detail-list';
-    items.forEach(value => {
+    values.forEach(value => {
         const chip = document.createElement('span');
         chip.className = 'mds-detail-chip';
         chip.textContent = value;
@@ -85,55 +79,14 @@ export function createChipList(label, values) {
     return wrapper;
 }
 
-export function createCodeValueList(values) {
-    const items = extractList(values)
-        .map(value => (value === undefined || value === null ? '' : String(value).trim()))
-        .filter(Boolean);
-    if (!items.length) {
-        return null;
-    }
-
+export function createCodeValueList(codes) {
     const container = document.createElement('div');
     container.className = 'mds-detail-code-values';
-    items.forEach(value => {
+    codes.forEach(value => {
         const code = document.createElement('code');
         code.className = 'mds-detail-code';
         code.textContent = value;
         container.appendChild(code);
     });
     return container;
-}
-
-function toRawDisplayString(value) {
-    if (value === undefined || value === null) {
-        return '';
-    }
-    if (typeof value === 'string') {
-        return value;
-    }
-    if (typeof value === 'number' || typeof value === 'bigint') {
-        return String(value);
-    }
-    if (typeof value === 'boolean') {
-        return value ? 'true' : 'false';
-    }
-    try {
-        return JSON.stringify(value);
-    } catch (error) {
-        try {
-            return String(value);
-        } catch (stringError) {
-            return '';
-        }
-    }
-}
-
-export function formatRawListValues(value) {
-    return extractList(value)
-        .map(item => toRawDisplayString(item))
-        .filter(text => text !== '');
-}
-
-export function formatAuthenticatorInfoValues(value) {
-    return formatRawListValues(value);
 }

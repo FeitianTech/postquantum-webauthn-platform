@@ -1,7 +1,7 @@
 import { COLUMN_COUNT } from '../constants.js';
 import { normaliseAaguid, renderCertificateSummary } from '../utils.js';
 import { buildDetailContent } from '../detail-content.js';
-import { formatDetailSubtitle } from '../detail-user-sections.js';
+import { formatDetailSubtitle } from '../explorer/detail.js';
 import { getAuthenticatorRawData } from '../raw-data.js';
 import { stringifyAuthenticatorRawData } from '../raw-stringify.js';
 import { openAuthenticatorRawWindow as openAuthenticatorRawDataWindow } from '../raw-window.js';

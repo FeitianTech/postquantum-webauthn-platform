@@ -1,3 +1,5 @@
+import { detailTitle } from '../explorer/detail.js';
+
 export function createMdsDetailViewAdapters(config = {}) {
     const {
         getState,
@@ -78,7 +80,7 @@ export function createMdsDetailViewAdapters(config = {}) {
 
     function applyDetailHeader(entry, titleEl, subtitleEl) {
         if (titleEl) {
-            titleEl.textContent = entry?.name?.trim() ? entry.name : 'Authenticator';
+            titleEl.textContent = detailTitle(entry);
         }
         if (subtitleEl) {
             subtitleEl.textContent = formatDetailSubtitle(entry);
