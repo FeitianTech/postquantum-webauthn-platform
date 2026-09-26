@@ -14,6 +14,8 @@ export type SectionRoute = {
   open: (path: string[]) => void;
   /** Goes back to `parent` (the list by default): the browser's Back when this page opened what is shown. */
   close: (parent?: string[]) => void;
+  /** Shows `path` in place of what the URL names (one this page does not know). */
+  replace: (path: string[]) => void;
 };
 
 /** Opens `path` in another section, as a history entry of its own, so Back returns here. */
@@ -104,5 +106,13 @@ export function useSection(): [SectionId, (section: SectionId) => void, SectionR
     [section],
   );
 
-  return [section, choose, { path, open, close }, go];
+  const replace = useCallback(
+    (nextPath: string[]) => {
+      setPath(nextPath);
+      writeUrl('replaceState', window.history.state, hashPath(section, nextPath));
+    },
+    [section],
+  );
+
+  return [section, choose, { path, open, close, replace }, go];
 }

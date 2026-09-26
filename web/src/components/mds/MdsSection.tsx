@@ -8,14 +8,13 @@ import { NAV_ID } from '@/components/shell/SectionPanel';
 import { SECTIONS } from '@/lib/sections';
 import type { SectionRoute } from '@/lib/useSection';
 
-import { EntryPage } from './EntryPage';
+import { EntryRouter } from './EntryRouter';
 import { EntryCount, StatusLine } from './ExplorerHeader';
 import { ExplorerTable } from './ExplorerTable';
 import { FilterBar } from './FilterBar';
 import { ManageMetadataDialog } from './ManageMetadataDialog';
 import { ListState } from './ListState';
 import { useExplorerView } from './useExplorerView';
-import { useEntryDetail } from './useEntryDetail';
 import { type Explorer, useMdsExplorer } from './useMdsExplorer';
 
 function listState(explorer: Explorer, view: ReturnType<typeof useExplorerView>) {
@@ -55,7 +54,7 @@ function listState(explorer: Explorer, view: ReturnType<typeof useExplorerView>)
 
 type ListPlace = { entryId: string; windowY: number; top: number; left: number };
 
-const CLOSED: SectionRoute = { path: [], open: () => {}, close: () => {} };
+const CLOSED: SectionRoute = { path: [], open: () => {}, close: () => {}, replace: () => {} };
 
 // The FIDO MDS section: every authenticator the FIDO Metadata Service
 // publishes, with what the current UI's explorer shows of each, in a table that
@@ -73,7 +72,6 @@ export function MdsSection({ active, route = CLOSED }: { active: boolean; route?
   const place = useRef<ListPlace | null>(null);
   const shownEntry = useRef('');
   const openEntryId = route.path[0] ?? '';
-  const entry = useEntryDetail(openEntryId, explorer.entries, explorer.phase);
   const { open } = route;
 
   const openEntry = useCallback(
@@ -138,7 +136,7 @@ export function MdsSection({ active, route = CLOSED }: { active: boolean; route?
       </div>
       {openEntryId ? (
         <div className="mt-8">
-          <EntryPage entryId={openEntryId} detail={entry.detail} onBack={() => route.close()} onRetry={entry.retry} />
+          <EntryRouter route={route} entries={explorer.entries} phase={explorer.phase} />
         </div>
       ) : null}
       <div hidden={Boolean(openEntryId)} data-mds-list="">

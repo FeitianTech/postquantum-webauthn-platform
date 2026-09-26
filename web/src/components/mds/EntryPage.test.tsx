@@ -310,7 +310,7 @@ describe('an entry the list does not hold (MDS-D2)', () => {
             FIDO MDS Authenticators
           </button>
         </div>
-        <MdsSection active route={{ path: [entryId], open: vi.fn(), close }} />
+        <MdsSection active route={{ path: [entryId], open: vi.fn(), close, replace: vi.fn() }} />
       </ToastProvider>,
     );
     return { close };

@@ -1,0 +1,161 @@
+// An MDS entry's attestation root certificate (MDS-X1..X4) through the whole
+// page: the button, the decode, the URL (#mds/<entryId>/certificate/<n>), the
+// page, and Back to the entry.
+import { act, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+import { AppShell } from '@/components/shell/AppShell';
+import { ToastProvider } from '@/components/ui/Toast';
+import { entryNamed, fixtureRoutes, json, stubFetch } from '@/test/mds';
+import { renderPage } from '@/test/page';
+
+// What POST /api/mds/decode-certificate answers for the fixture's EC root (its shape).
+const DETAILS = {
+  subject: 'C=SE, O=Characterization Test, OU=Authenticator Attestation, CN=Fixture FIDO2 Attestation Root',
+  issuer: 'C=SE, O=Characterization Test, OU=Authenticator Attestation, CN=Fixture FIDO2 Attestation Root',
+  validity: { notBefore: '2024-01-01T00:00:00+00:00', notAfter: '2044-01-01T00:00:00+00:00' },
+  serialNumber: { decimal: '1001', hex: '03E9' },
+  publicKeyInfo: { type: 'EC', algorithm: { name: 'ECDSA', namedCurve: 'secp256r1' }, keySize: 256, uncompressedPoint: '04ABCD' },
+  signature: { algorithm: 'ECDSA_SHA256', hash: 'sha256', hex: '3045022100' },
+  summary: 'Version: 3 (0x2)\nSerial Number: 1001',
+};
+
+const L1 = () => entryNamed('Fixture Security Key L1');
+const firstCertificate = () => (L1().attestationCertificates as string[])[0];
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
+}
+
+function renderApp(hash: string, decodeRoute = () => json({ details: DETAILS }) as Response | Promise<Response>) {
+  window.history.replaceState({ fromNext: true }, '', `/beta${hash}`);
+  const fetch = stubFetch(fixtureRoutes({ '/api/mds/decode-certificate': decodeRoute }));
+  renderPage(
+    <ToastProvider>
+      <AppShell />
+    </ToastProvider>,
+  );
+  return fetch;
+}
+
+const decodeCalls = (fetch: ReturnType<typeof stubFetch>) =>
+  fetch.mock.calls.filter(([url]) => String(url) === '/api/mds/decode-certificate');
+
+beforeEach(() => {
+  Element.prototype.scrollIntoView = vi.fn();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe('an attestation certificate of an MDS entry', () => {
+  it('MDS-X1..X4: decodes with its button busy, opens under the entry, and Back returns to the button', async () => {
+    const pending = deferred<Response>();
+    const fetch = renderApp(`#mds/${L1().entryId}`, () => pending.promise);
+    const button = await screen.findByRole('button', { name: 'Certificate 1' });
+
+    await userEvent.click(button);
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(decodeCalls(fetch)[0][1]).toMatchObject({ method: 'POST', body: JSON.stringify({ certificate: firstCertificate() }) });
+    await act(async () => pending.resolve(json({ details: DETAILS })));
+
+    const heading = await screen.findByRole('heading', { level: 3, name: DETAILS.subject });
+    expect(heading).toHaveFocus();
+    expect(window.location.hash).toBe(`#mds/${L1().entryId}/certificate/1`);
+    const page = document.querySelector<HTMLElement>('[data-mds-certificate]')!;
+    expect(page).toHaveTextContent(DETAILS.issuer);
+    for (const label of ['Subject', 'Issuer', 'Not Before', 'Not After', 'Serial Number', 'Serial Number (Hex)']) {
+      expect(page.querySelector(`[data-item="${label}"]`)).not.toBeNull();
+    }
+    expect(within(page).getAllByRole('heading', { level: 4 }).map((node) => node.textContent)).toEqual([
+      'Public Key',
+      'Signature',
+      'Raw',
+      'Decoded Output',
+    ]);
+    expect(within(page).getByRole('button', { name: 'Copy serial number' })).toBeInTheDocument();
+    expect(within(page).getByRole('button', { name: 'Copy raw certificate' })).toBeInTheDocument();
+    expect(page.querySelectorAll('pre')[2]).toHaveTextContent(firstCertificate());
+    expect(page.querySelectorAll('pre')[3].textContent).toBe(DETAILS.summary);
+    expect(document.querySelector('[data-mds-entry]')!.parentElement).not.toBeVisible();
+
+    const back = within(page).getByRole('button', { name: 'Back' });
+    expect(back).toHaveAttribute('title', 'Return to Fixture Security Key L1');
+    await userEvent.click(back);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Certificate 1' })).toHaveFocus());
+    expect(window.location.hash).toBe(`#mds/${L1().entryId}`);
+
+    // Decoded once: opening it again uses the answer.
+    await userEvent.click(screen.getByRole('button', { name: 'Certificate 1' }));
+    await screen.findByRole('heading', { level: 3, name: DETAILS.subject });
+    expect(decodeCalls(fetch)).toHaveLength(1);
+    act(() => window.history.back());
+    await waitFor(() => expect(screen.getByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeVisible());
+  });
+
+  it('decodes on the page when a link opens it, and its Back shows the entry', async () => {
+    const pending = deferred<Response>();
+    renderApp(`#mds/${L1().entryId}/certificate/1`, () => pending.promise);
+    expect(await screen.findByText('Decoding certificate 1…')).toBeInTheDocument();
+    await act(async () => pending.resolve(json({ details: DETAILS })));
+    await screen.findByRole('heading', { level: 3, name: DETAILS.subject });
+
+    const length = window.history.length;
+    await userEvent.click(within(document.querySelector<HTMLElement>('[data-mds-certificate]')!).getByRole('button', { name: 'Back' }));
+    expect(window.location.hash).toBe(`#mds/${L1().entryId}`);
+    expect(window.history.length).toBe(length);
+    expect(screen.getByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeVisible();
+  });
+
+  it('MDS-X2: opens on a failure too, with the sentence, the server reason, and a new try from the entry', async () => {
+    let answer = () => json({ error: 'Invalid certificate encoding.' }, 400);
+    const fetch = renderApp(`#mds/${L1().entryId}`, () => answer());
+    await userEvent.click(await screen.findByRole('button', { name: 'Certificate 1' }));
+
+    expect(await screen.findByRole('heading', { level: 3, name: 'Attestation Certificate' })).toBeInTheDocument();
+    const page = document.querySelector<HTMLElement>('[data-mds-certificate]')!;
+    expect(within(page).getByRole('alert')).toHaveTextContent('Certificate decode failed with status 400');
+    expect(within(page).getByRole('alert')).toHaveTextContent('Invalid certificate encoding.');
+    expect(page.querySelectorAll('pre')[1].textContent).toBe('Certificate decode failed with status 400');
+
+    answer = () => json({ details: DETAILS });
+    await userEvent.click(within(page).getByRole('button', { name: 'Back' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Certificate 1' }));
+    expect(await screen.findByRole('heading', { level: 3, name: DETAILS.subject })).toBeInTheDocument();
+    expect(decodeCalls(fetch)).toHaveLength(2);
+  });
+
+  it('MDS-X2: says a decode that could not be sent', async () => {
+    renderApp(`#mds/${L1().entryId}/certificate/1`, () => {
+      throw new TypeError('Failed to fetch');
+    });
+    expect(await screen.findByRole('alert')).toHaveTextContent('Failed to fetch');
+  });
+
+  it('MDS-X1: says there is nothing to summarise, and keeps Decoded Output', async () => {
+    renderApp(`#mds/${L1().entryId}/certificate/1`, () => json({ details: { summary: 'Unable to parse attestation certificate' } }));
+    expect(await screen.findByText('No decoded certificate details available.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(document.querySelectorAll('[data-mds-certificate] pre')[1].textContent).toBe('Unable to parse attestation certificate');
+  });
+
+  it('shows the entry for a certificate it does not have, and says so in the URL', async () => {
+    renderApp(`#mds/${L1().entryId}/certificate/9`);
+    expect(await screen.findByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeVisible();
+    await waitFor(() => expect(window.location.hash).toBe(`#mds/${L1().entryId}`));
+  });
+
+  it('leaves an entry\'s page alone when the list is left while a certificate decodes', async () => {
+    const pending = deferred<Response>();
+    renderApp(`#mds/${L1().entryId}`, () => pending.promise);
+    await userEvent.click(await screen.findByRole('button', { name: 'Certificate 1' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }));
+    await act(async () => pending.resolve(json({ details: DETAILS })));
+    expect(window.location.hash).toBe('#mds');
+  });
+});

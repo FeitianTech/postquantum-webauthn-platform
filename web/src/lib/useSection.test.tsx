@@ -52,6 +52,13 @@ describe('the section in the URL, inside Next', () => {
     act(() => result.current[2].close());
     expect(window.location.hash).toBe('#mds');
     expect(result.current[2].path).toEqual([]);
+
+    // A path the page does not know is replaced, leaving no entry behind.
+    const length = window.history.length;
+    act(() => result.current[2].replace(['aaguid:z']));
+    expect(window.location.hash).toBe('#mds/aaguid:z');
+    expect(result.current[2].path).toEqual(['aaguid:z']);
+    expect(window.history.length).toBe(length);
   });
 
   it('opens something in another section as an entry Back returns from', () => {
