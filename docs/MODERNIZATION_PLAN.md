@@ -2283,6 +2283,25 @@ mid-capture and caught a block measuring itself collapsed; the state before and 
 - Not run on GitHub yet (not pushed): `ci-web.yml`'s e2e job now runs the Codec and parity specs, which read the
   corpus through `E2E_PYTHON` (the job sets it).
 
+**Phase 26 — tech-lead verification (2026-09-26):**
+- **Every one of the 18 commits passes on its own tree**, run in three detached worktrees (six commits each)
+  and cleaned (`git clean -fdx`, `node_modules` kept) before each: pytest (4742 → 4752 / 4), the root
+  vitest (566 → 616), web's vitest (99 → 167) and typecheck; none leaves anything under `instance/` or
+  `server/runtime/`. Bare subjects, one author, no dependency changed.
+- **Built independently from a clean `npm ci`** of `main`: the export's CSP scan finds 0 violations; Flask serves
+  `/beta#codec` from it.
+- **Playwright 33/33** from the clean copy.
+- **Parity, checked by the tech lead's own script** on ten inputs outside the agent's corpus (a `none` and a
+  `packed` ML-DSA attestation, authenticator data, a PublicKeyCredential JSON, clientDataJSON in base64url, a
+  makeCredential response and a getAssertion request in hex, a COSE key, plain JSON, a map with duplicate keys):
+  **all 452 text items the current Codec shows appear in `/beta`**; the duplicate-key findings carry their
+  category chip, offset, path and message.
+- **Encode:** the EDN `{1: "a", "1": "b", 1: "c"}` gives exactly `a301616161316162016163`, length 11, in all
+  seven formats (colon hex included).
+- **The owner's design rules, measured in the browser:** input beside output at 1440 px, **zero grey
+  backgrounds** in the section, no sideways scroll at 375 px. Test entries written to `localStorage` removed
+  afterwards.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
