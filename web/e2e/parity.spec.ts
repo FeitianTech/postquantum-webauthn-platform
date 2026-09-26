@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { compareShownText, describeDifferences, readShownText } from './parity';
+import { compareShownText, describeDifferences, readShownRows, readShownText } from './parity';
 
 // The parity check itself: it must see a missing, an extra and a doubled word,
 // and read a region as the comparison expects.
@@ -48,5 +48,20 @@ test('reads text by section, skipping controls and what is hidden, with closed d
     { heading: 'Decoded value', lines: ['1', 'c'] },
     { heading: 'EDN (exact bytes)', lines: ['{1: "a",', '1: "c"}'] },
     { heading: 'Expanded JSON', lines: ['{"decoded json": 1}'] },
+  ]);
+});
+
+test('reads a table a row at a time, keyed by a cell, keeping the text of controls and skipping what is hidden', async ({ page }) => {
+  await page.setContent(`
+    <table><tbody>
+      <tr><td><img alt="An icon"></td><td><button>Key one</button></td><td>abc<span class="sr-only">copied</span><span aria-hidden="true">×</span></td></tr>
+      <tr hidden><td></td><td>Hidden</td><td>def</td></tr>
+      <tr><td>N/A</td><td><a href="#x">Key two</a></td><td>ghi</td></tr>
+    </tbody></table>
+    <style>.sr-only { position: absolute; }</style>`);
+  const rows = await readShownRows(page.locator('tbody'), 'tr:not([hidden])', 2);
+  expect(rows).toEqual([
+    { heading: 'abc', lines: ['Key one', 'abc'] },
+    { heading: 'ghi', lines: ['N/A', 'Key two', 'ghi'] },
   ]);
 });

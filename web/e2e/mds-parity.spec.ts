@@ -1,0 +1,94 @@
+import type { Page } from '@playwright/test';
+
+import { expect, test } from './fixtures';
+import { type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownRows } from './parity';
+
+// What the current MDS table and /beta's show for the same filters, over the
+// fixture snapshot serve-flask.mjs serves (tests/fixtures/mds): every row's
+// cells word for word (layout, separators and controls' own labels set aside:
+// parity.ts), the rows keyed by their ID, and the order of the rows. Every
+// difference must be one listed below, with its reason.
+
+// The legacy filters are plain fields; /beta's are labelled by their column.
+const CASES = [
+  { label: 'no filter', filters: {} },
+  { label: 'protocol Uaf', filters: { protocol: ['#mds-filter-protocol', 'Protocol', 'Uaf'] } },
+  { label: 'certification FIDO Certified L2', filters: { certification: ['#mds-filter-certification', 'Certification', 'FIDO Certified L2'] } },
+  { label: 'certification FIDO Certified (every level)', filters: { certification: ['#mds-filter-certification', 'Certification', 'FIDO Certified'] } },
+  { label: 'name Security Key', filters: { name: ['#mds-filter-name', 'Name', 'Security Key'] } },
+  { label: 'user verification and transports', filters: { uv: ['#mds-filter-user-verification', 'User Verification', 'Fingerprint Internal'], transports: ['#mds-filter-transports', 'Transports', 'Nfc'] } },
+] as const;
+
+// Nothing is expected to differ: the words are the server's, in both tables.
+const EXPECTED: ExpectedDifference[] = [];
+
+async function legacyRows(page: Page, filters: Record<string, readonly string[]>) {
+  await page.goto('/');
+  await expect(page.locator('body')).toHaveClass(/app-loaded/);
+  await page.locator('.nav-tab[data-tab="mds"]').first().click();
+  const body = page.locator('#mds-table-body');
+  await expect(body.locator('tr:not(.mds-empty-row)')).toHaveCount(32);
+  for (const [selector, , value] of Object.values(filters)) {
+    await page.locator(selector).fill(value);
+    await page.keyboard.press('Escape');
+    // The field's own Escape clears it only when its dropdown is closed.
+    if ((await page.locator(selector).inputValue()) !== value) await page.locator(selector).fill(value);
+  }
+  return readShownRows(body, 'tr:not(.mds-empty-row)', 4);
+}
+
+async function betaRows(page: Page, filters: Record<string, readonly string[]>) {
+  await page.goto('/beta#mds');
+  const section = page.getByRole('tabpanel', { name: 'FIDO MDS Authenticators' });
+  await expect(section.locator('tbody tr[data-entry-id]:not([hidden])')).toHaveCount(32);
+  const bar = section.getByRole('region', { name: 'Filters' });
+  for (const [, label, value] of Object.values(filters)) {
+    const field = bar.getByRole('combobox', { name: label, exact: true }).or(bar.getByRole('searchbox', { name: label, exact: true }));
+    await field.fill(value);
+    await field.press('Tab');
+  }
+  return readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 4);
+}
+
+const keys = (rows: ShownSection[]) => rows.map((row) => row.heading);
+
+test.describe('the MDS table reads the same in both UIs', () => {
+  const report: string[] = [];
+
+  test.afterAll(async ({}, testInfo) => {
+    await testInfo.attach('mds-parity.txt', { body: report.join('\n') || 'no differences', contentType: 'text/plain' });
+    console.log(report.join('\n') || 'no differences');
+  });
+
+  for (const { label, filters } of CASES) {
+    test(label, async ({ page }) => {
+      const legacy = await legacyRows(page, filters);
+      const beta = await betaRows(page, filters);
+      expect(legacy.length, 'the current UI showed rows').toBeGreaterThan(0);
+      expect(keys(beta), 'the same rows, in the same order').toEqual(keys(legacy));
+
+      const differences = compareShownText(legacy, beta, EXPECTED);
+      report.push(`${label} (${legacy.length} rows):`, ...describeDifferences(differences).map((line) => `  ${line}`));
+      expect(describeDifferences(differences.filter((difference) => !difference.reason))).toEqual([]);
+    });
+  }
+
+  test('sorted by name, both ways', async ({ page }) => {
+    await legacyRows(page, {});
+    await page.locator('.mds-sort-button[data-sort-key="name"]').click();
+    const legacyUp = keys(await readShownRows(page.locator('#mds-table-body'), 'tr:not(.mds-empty-row)', 4));
+    await page.locator('.mds-sort-button[data-sort-key="name"]').click();
+    const legacyDown = keys(await readShownRows(page.locator('#mds-table-body'), 'tr:not(.mds-empty-row)', 4));
+
+    await betaRows(page, {});
+    const section = page.getByRole('tabpanel', { name: 'FIDO MDS Authenticators' });
+    const name = section.getByRole('columnheader', { name: /^Name/ }).getByRole('button');
+    await name.click();
+    const betaUp = keys(await readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 4));
+    await name.click();
+    const betaDown = keys(await readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 4));
+
+    expect(betaUp).toEqual(legacyUp);
+    expect(betaDown).toEqual(legacyDown);
+  });
+});

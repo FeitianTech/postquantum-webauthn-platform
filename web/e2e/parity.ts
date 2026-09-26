@@ -132,3 +132,31 @@ export function describeDifferences(differences: Difference[]) {
       ` (in "${line}")${reason ? ` — ${reason}` : ' — UNEXPLAINED'}`,
   );
 }
+
+// Chrome only: what assistive technology does not read, and what a page marks as
+// not content. Unlike SKIP, controls count, since a table's cells may hold their
+// data in a control (the current MDS table's names are buttons).
+const ROW_SKIP = '[aria-hidden="true"], .sr-only, [hidden], script, style, img, [data-parity-skip]';
+
+/**
+ * The text of each row `rowSelector` finds in `region`, a section per row headed
+ * by the text of its cell number `keyColumn` (0-based), one line per cell. The
+ * rows come in the order shown, so a caller can compare the order too.
+ */
+export function readShownRows(region: Locator, rowSelector: string, keyColumn: number): Promise<ShownSection[]> {
+  return region.evaluate(
+    (root, { rowSelector: selector, keyColumn: key, skip }) => {
+      const tidy = (text: string) => text.replace(/\s+/g, ' ').trim();
+      const read = (node: Node): string => {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? '';
+        if (!(node instanceof Element) || node.matches(skip)) return '';
+        return [...node.childNodes].map(read).join(' ');
+      };
+      return [...root.querySelectorAll(selector)].map((row) => {
+        const cells = [...row.querySelectorAll(':scope > td')].map((cell) => tidy(read(cell)));
+        return { heading: cells[key] ?? '', lines: cells.filter(Boolean) };
+      });
+    },
+    { rowSelector, keyColumn, skip: ROW_SKIP },
+  );
+}
