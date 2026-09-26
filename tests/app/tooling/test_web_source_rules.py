@@ -55,6 +55,7 @@ LOGIC_ROOTS = (
     "decoder/codec/encoding/summary.js",
     "advanced/mds/constants.js",
     "advanced/mds/metadata/explorer-source.js",
+    "advanced/mds/explorer/certificate.js",
     "advanced/mds/explorer/columns.js",
     "advanced/mds/explorer/custom-metadata.js",
     "advanced/mds/explorer/detail.js",
