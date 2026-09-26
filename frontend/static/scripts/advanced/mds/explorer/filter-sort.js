@@ -217,3 +217,7 @@ export function clearExplorerFilters(filters) {
     });
     return { filters: cleared, changed };
 }
+
+export function countActiveExplorerFilters(filters) {
+    return Object.values(filters || {}).filter(value => typeof value === 'string' && value.trim()).length;
+}

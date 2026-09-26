@@ -36,6 +36,8 @@ export default defineConfig({
         // The Codec's logic, which the new UI in web/ imports: every line and branch.
         'frontend/static/scripts/decoder/codec/{constants,labels,request,result,values}.js': FULL,
         'frontend/static/scripts/decoder/codec/encoding/{can-encode,format,summary}.js': FULL,
+        // The MDS explorer's logic, which web/ imports: every line and branch.
+        'frontend/static/scripts/advanced/mds/explorer/*.js': FULL,
       },
     },
   },

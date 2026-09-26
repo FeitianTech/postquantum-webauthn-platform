@@ -1,7 +1,7 @@
 // Manage Trusted Metadata's requests and everything it says, for both UIs: the
 // legacy tab's panel (custom/*.js, runtime/runtime-custom-metadata-adapters.js)
 // and web's dialog. No DOM.
-import { CUSTOM_METADATA_DELETE_PATH, CUSTOM_METADATA_UPLOAD_PATH } from '../constants.js';
+import { CUSTOM_METADATA_DELETE_PATH, CUSTOM_METADATA_LIST_PATH, CUSTOM_METADATA_UPLOAD_PATH } from '../constants.js';
 import { splitAcceptedFiles } from '../metadata/metadata-helpers.js';
 
 export const CUSTOM_METADATA_UPDATED_NOTE = 'Custom metadata updated.';
@@ -162,4 +162,11 @@ export function describeCustomMetadataItem(item) {
     }
 
     return { name, storedFilename, deleteLabel: `Delete ${name}`, details: details.join(' · ') };
+}
+
+// The files uploaded in this session (GET /api/mds/metadata/custom), newest first.
+export async function requestCustomMetadataList({ signal, path = CUSTOM_METADATA_LIST_PATH } = {}) {
+    const response = await fetch(path, { cache: 'no-store', signal });
+    const payload = await readCustomMetadataAnswer(response);
+    return response.ok && Array.isArray(payload?.items) ? payload.items : [];
 }

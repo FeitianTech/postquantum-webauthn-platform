@@ -1,7 +1,7 @@
 // Where the explorer's entries come from and what an answer means, for both UIs:
 // the legacy tab (metadata/explorer-load.js, explorer-state-loader.js) and web's
 // MDS section. No DOM.
-import { MDS_EXPLORER_FULL_PATH, MISSING_METADATA_MESSAGE } from '../constants.js';
+import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MISSING_METADATA_MESSAGE } from '../constants.js';
 import { cloneMetadataEntry, hasInlineDetail } from '../metadata/metadata-helpers.js';
 import { normaliseAaguid } from '../utils/resolvers.js';
 
@@ -127,4 +127,29 @@ export function indexEntriesByAaguid(entries, resolvedEntryCache = new Map()) {
         }
     });
     return byAaguid;
+}
+
+// What the page starts from (GET /api/mds/metadata/info: the packaged summary,
+// `snapshotUrl` and `customEntriesState`), which the legacy page reads from the
+// index instead. Null when it cannot be had: the explorer then asks the API.
+export async function fetchExplorerInfo({ signal } = {}) {
+    try {
+        const response = await fetch(MDS_INFO_PATH, { cache: 'no-store', signal });
+        if (!response.ok) {
+            return null;
+        }
+        const payload = await response.json();
+        return payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : null;
+    } catch (error) {
+        if (error && error.name === 'AbortError') {
+            throw error;
+        }
+        return null;
+    }
+}
+
+// No entry at all: the server has no snapshot (it answers 200 with nothing in
+// it) and no metadata was uploaded.
+export function isMissingSnapshot(snapshot) {
+    return !Array.isArray(snapshot?.entries) || snapshot.entries.length === 0;
 }

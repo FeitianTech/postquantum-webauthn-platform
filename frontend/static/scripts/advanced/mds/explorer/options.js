@@ -1,7 +1,7 @@
 // The options a filter offers, for both UIs: the legacy tab's dropdowns
 // (dropdown.js, status-controls.js, state/state-initializer.js) and web's
 // comboboxes. No DOM.
-import { CERTIFICATION_OPTIONS } from '../constants.js';
+import { CERTIFICATION_OPTIONS, FILTER_CONFIG } from '../constants.js';
 import { formatEnum } from '../utils/formatters.js';
 
 export const NO_MATCHING_OPTIONS = 'No matches';
@@ -65,4 +65,17 @@ export function matchingFilterOptions(options, query) {
         return [...options];
     }
     return options.filter(option => option.toLowerCase().includes(value));
+}
+
+// Every option filter's list, as shown, for the entries loaded (none yet: only
+// the static certification statuses).
+export function explorerFilterOptionLists(entries) {
+    const sets = collectOptionSets(entries);
+    const lists = {};
+    FILTER_CONFIG.forEach(config => {
+        if (config.optionsKey) {
+            lists[config.key] = sortFilterOptions(mergeFilterOptions(sets[config.optionsKey], config));
+        }
+    });
+    return lists;
 }
