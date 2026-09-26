@@ -14,7 +14,7 @@ import { SectionPanel } from './SectionPanel';
 // The page: the header, the chosen section, the footer, and the Analyze
 // Browser panel, which floats above everything.
 export function AppShell() {
-  const [section, setSection] = useSection();
+  const [section, setSection, route] = useSection();
   const browser = useBrowserAnalysis();
   const [copy, setCopy] = useState<CopyResult | null>(null);
 
@@ -26,7 +26,7 @@ export function AppShell() {
           option.id === 'codec' ? (
             <CodecSection key={option.id} active={option.id === section} />
           ) : option.id === 'mds' ? (
-            <MdsSection key={option.id} active={option.id === section} />
+            <MdsSection key={option.id} active={option.id === section} route={route} />
           ) : (
             <SectionPanel key={option.id} id={option.id} active={option.id === section} />
           ),

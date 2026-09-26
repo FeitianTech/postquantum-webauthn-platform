@@ -50,10 +50,14 @@ export function sectionFromHash(hash: string): SectionId | null {
   return routeFromHash(hash)?.section ?? null;
 }
 
-// An MDS entry's place in the URL, after the #: `mds/aaguid:…`, the id encoded
-// (an AAID's # especially) with its colons kept readable.
+// A place in the URL, after the #: the section, then what is open in it, encoded
+// (an AAID's # especially) with its colons kept readable: `mds/aaguid:…`.
+export function hashPath(section: SectionId, subPath = '') {
+  return subPath ? `${section}/${encodeURIComponent(subPath).replace(/%3A/gi, ':')}` : section;
+}
+
 export function entryHashPath(entryId: string) {
-  return `mds/${encodeURIComponent(entryId).replace(/%3A/gi, ':')}`;
+  return hashPath('mds', entryId);
 }
 
 export const SECTION_OPTIONS = SECTIONS.map((section) => ({ value: section.id, label: section.label }));
