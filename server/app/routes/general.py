@@ -199,8 +199,12 @@ def _initial_custom_entries_state(metadata_session_id: str | None) -> str:
     return stored if stored in ("none", "present") else "unknown"
 
 
-@bp.route("/index.html")
-def index_html():
+def _initial_mds_info() -> dict[str, Any]:
+    """What the MDS explorer starts from: the packaged snapshot's summary (absent
+    without a snapshot), the URL of the packaged snapshot, and whether this
+    session has uploaded metadata. The current UI's index inlines it; the new UI
+    asks ``/api/mds/metadata/info`` for it."""
+
     if _should_bootstrap_metadata_on_index():
         ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
     metadata_session_id = ensure_metadata_session_id()
@@ -210,10 +214,14 @@ def index_html():
     initial_mds_info["customEntriesState"] = _initial_custom_entries_state(
         metadata_session_id
     )
+    return initial_mds_info
 
+
+@bp.route("/index.html")
+def index_html():
     return render_template(
         "index.html",
-        initial_mds_info=initial_mds_info,
+        initial_mds_info=_initial_mds_info(),
     )
 
 
@@ -223,6 +231,12 @@ def _no_store_json_response(payload: Mapping[str, Any], status: int = 200):
     response.headers["Cache-Control"] = "no-store"
     response.headers["Vary"] = "Cookie"
     return response
+
+
+@bp.route("/api/mds/metadata/info", methods=["GET"])
+def api_get_metadata_info():
+    # Per session (customEntriesState), so never cached and keyed on the cookie.
+    return _no_store_json_response(_initial_mds_info())
 
 
 @bp.route("/api/mds/metadata/explorer", methods=["GET"])
