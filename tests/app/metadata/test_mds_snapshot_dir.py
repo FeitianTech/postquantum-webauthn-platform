@@ -59,3 +59,10 @@ def test_the_server_reads_the_snapshot_where_the_setting_says(monkeypatch, tmp_p
 
     assert blob._path(mds_snapshot_dir.VERIFIED) == os.fspath(tmp_path / "fido-mds3.verified.json")
     assert blob._load_verified_metadata_payload() == payload
+
+
+def test_the_test_run_never_reads_the_checkout_snapshot():
+    # tests/conftest.py points the run at an empty directory of its own.
+    assert mds_snapshot_dir.snapshot_dir() != mds_snapshot_dir.DEFAULT_SNAPSHOT_DIR
+    assert not any(mds_snapshot_dir.snapshot_file(name).exists() for name in mds_snapshot_dir.SNAPSHOT_FILENAMES)
+    assert os.environ["FIDO_SERVER_MDS_FETCH_UPSTREAM"] == "0"

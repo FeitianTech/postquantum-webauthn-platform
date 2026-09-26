@@ -15,6 +15,17 @@ if "HYPOTHESIS_STORAGE_DIRECTORY" not in os.environ:
     os.environ["HYPOTHESIS_STORAGE_DIRECTORY"] = _HYPOTHESIS_STORAGE
     atexit.register(shutil.rmtree, _HYPOTHESIS_STORAGE, ignore_errors=True)
 
+# The MDS snapshot is read from (and, by the provisioning and the updater, written
+# to) FIDO_SERVER_MDS_SNAPSHOT_DIR, else frontend/static, where a developer's real
+# snapshot lives. Every test starts from an empty directory of this run's instead,
+# whatever the shell exports: no test reads or writes the real snapshot, and a
+# test that needs one points the setting at a fixture of its own
+# (tests/app/metadata/conftest.py). Nothing is fetched from upstream either.
+_MDS_SNAPSHOT_DIR = tempfile.mkdtemp(prefix="mds-snapshot-")
+os.environ["FIDO_SERVER_MDS_SNAPSHOT_DIR"] = _MDS_SNAPSHOT_DIR
+os.environ["FIDO_SERVER_MDS_FETCH_UPSTREAM"] = "0"
+atexit.register(shutil.rmtree, _MDS_SNAPSHOT_DIR, ignore_errors=True)
+
 # An app built with no secret generates one and persists it in instance/. The
 # entry point (server.app.app) builds its app on import, and tests import it --
 # some while they are collected -- so every app the tests build gets this secret
