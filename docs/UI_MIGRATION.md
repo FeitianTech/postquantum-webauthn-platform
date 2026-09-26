@@ -222,6 +222,46 @@ mid-UUID (mono, with copy). Enhance where it helps along the way. All data shown
   buys nothing. The snapshot URL's year-long immutable caching (the snapshot changes at runtime, the build id only on a
   deploy) is reported, not changed (the owner's decision).
 
+## Decisions made in Phase 27B (2026-09-26)
+
+- **An entry is a page, a certificate is a page under it.** `#mds/<entryId>` shows the entry under the section's title
+  (the list stays in the page, hidden); `#mds/<entryId>/certificate/<n>` (n counting the non-empty certificates from 1,
+  as "Certificate n" does) shows one attestation root over the entry, which stays in the page. The hash's parts after
+  the section are segments, each encoded on its own. The page's Back and the browser's return one level at a time,
+  with the focus on what was opened; a path the page does not know shows the entry and the URL is corrected.
+- **Sections, not cards.** Each of the detail page's sections is a heading and a hairline; fields sit on a grid in
+  regular weight (long text across it), chips wrap, the user-verification combinations are a list with hairlines.
+  Identifiers (AAGUID, AAID, key identifiers, the getInfo AAGUID, certificate and serial numbers) are Geist Mono, whole,
+  with copy. Certification is the list's badge. The status reports use the `ui/Table` primitives (their first user) and
+  stack on a phone, each value after its column's name, which CSS writes from `data-label`.
+- **The condensed header** is a white bar with a hairline, no shadow, under the top bar once a page's title has
+  scrolled away: Back, the title and subtitle truncated with their `title`, and Raw. It is fixed rather than sticky, so
+  showing it moves nothing, and it renders in the overlay layer, because a section sliding in (a transform) would
+  otherwise carry it along.
+- **An entry the list does not hold** (a link to another session's upload, an entry gone since) is asked of
+  `GET /api/mds/metadata/resolve`, and the server's sentences are shown; MDS-J2's sentences say what happens meanwhile
+  and after. The current page keeps ignoring them.
+- **The raw view is a dialog**, not a popup window: popups are blocked in some browsers and in the desktop app's
+  browser pane, and the Codec's raw views are dialogs. It keeps the window's title, subtitle and text (checked equal),
+  with copy, Show all and "Download JSON".
+- **The link from a saved credential opens the entry's page**, `#mds/aaguid:<aaguid>` (the entry's own id), rather than
+  highlighting a row, which a URL cannot keep; it leaves the list's filters as they are. `openMdsEntryForAaguid` and
+  `useOpenMdsEntry` open it as one pushed history entry through the shell's `useSectionNavigation`, so Back returns to
+  the credential. Phase 28 puts it on the cards.
+- **User-verification descriptors** (new, the owner may veto): the biometric and pattern accuracy (`baDesc`, `paDesc`)
+  are shown beside the code accuracy the current page shows; the parity check lists them as expected, in that section
+  only.
+- **A failed certificate decode** keeps the current sentence; `/beta` adds the server's reason under it.
+- **Back keeps 27A's form**: a button named "Back" with the title "Return to authenticator list" (or "Return to ${name}"
+  from a certificate), rather than a "←" whose label and title are the other way round.
+- **Links are plain `<a>`**, `next/link` included: following one made Next's router add page scripts (which the Trusted
+  Types policy reports) and left the browser's Back on the app with the 404's URL. The source rules refuse it, and the
+  shell leaves Back to Next for any path that is not its own.
+- **The snapshot's URL carries its version** (`?v=<serial>.<digest of ETag and generation time>`, which the route
+  ignores), reversing 27A's report-only decision at the tech lead's request: the file changes at runtime while its URL
+  was cached for a year. The page is given that URL only while the file is there and matches the verified snapshot, and
+  no route serves any other snapshot file.
+
 ## Content parity (every surface phase)
 
 Before porting a surface, list everything it shows and every action it offers, from the current app (the
@@ -235,7 +275,7 @@ new component and check it in a browser. A phase is not done while an item is un
 | 25 | Foundation: `web/`, tokens and primitives, the app shell, Flask serving `/beta`, the CSP scan, the build and CI pipeline, Playwright with a virtual authenticator; the Analyze Browser panel as the pilot. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 25) |
 | 26 | Codec. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 26) |
 | 27A | MDS explorer, the list page: the header, counts and status line, the table with its sorting, filters and resizing, Back to top, Manage Trusted Metadata, and the route that opens an entry (`#mds/<entryId>`). The explorer is 75 modules and 10,294 lines of JavaScript, seven times the Codec, so Phase 27 is split in two (docs/ui-parity/mds.md marks each item 27A or 27B). **Done** (see docs/MODERNIZATION_PLAN.md, Phase 27A) |
-| 27B | MDS explorer, the rest: the authenticator detail page, the certificate page, the raw views, and the jump from a saved credential to its entry |
+| 27B | MDS explorer, the rest: the authenticator detail page, the certificate page, the raw views, and the jump from a saved credential to its entry. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 27B) |
 | 28 | Saved credentials (cards, detail modal, registration result) and the Simple tab |
 | 29 | Advanced tab: registration and authentication forms, JSON editor, drawer, result modals |
 | 30 | Cutover: `/` serves the new UI; the legacy templates, scripts and styles and `new_design/` are deleted; the MDS snapshot files move out of `frontend/static/`; the logic modules move into `web/`; the Google Fonts origins leave the CSP; the Playwright tests join the Cloud Build gate |

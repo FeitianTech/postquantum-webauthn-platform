@@ -65,17 +65,24 @@ unlisted.
   CSSOM (`element.style`) from a ref, never a `style` prop. `CodeBlock` is data text
   (EDN, JSON, PEM, hex) on white: it wraps instead of scrolling the page, starts
   collapsed at 16 rem with "Show all" when long (the whole text stays in the DOM),
-  and copies; `useCopy` is the copy logic it shares with `MonoValue`.
+  and copies; `useCopy` is the copy logic it shares with `MonoValue`. `KeyValueGrid`
+  items can be `plain` (regular weight) and `wide` (the whole row); `Table` and `THead`
+  take classes and roles (their first user is the MDS status reports).
 - `web/src/components/shell/`: the header (title, the four sections, Analyze Browser,
   GitHub; the phone menu sheet below 900 px), the footer, the sections' panels
   (`SectionPanel` for a section not ported yet; `AppShell` renders a ported one's own
   component, `CodecSection` for `#codec`, `MdsSection` for `#mds`).
   `web/src/lib/useSection.ts` keeps the section in the URL hash (`#simple`,
-  `#advanced`, `#codec`, `#mds`) with `replaceState`, and what is open inside one
-  after a slash (`#mds/<entryId>`, `routeFromHash` / `hashPath` in `sections.ts`) with
-  `pushState`, so the browser's Back closes it; it tells Next's router
-  (`beforePopState`) to leave Back to the page, which would otherwise put an older URL
-  back.
+  `#advanced`, `#codec`, `#mds`) with `replaceState`, and what is open inside one as
+  segments after it (`#mds/<entryId>/certificate/<n>`, each segment encoded on its own:
+  `routeFromHash` / `hashPath` in `sections.ts`): `open(path)` pushes, so the browser's
+  Back closes one level; `close(parent)` goes back, or on a link replaces with the
+  parent; `replace(path)` corrects a path the page does not know. It tells Next's
+  router (`beforePopState`) to leave Back to the page while Back stays on this page's
+  path (Next would otherwise put an older URL back), and to Next for any other path.
+  `AppShell` gives sections `useSectionNavigation()`, which opens something in another
+  section as one pushed entry. The header carries `data-shell-header` (the MDS pages'
+  condensed header sits under it). `lib/download.ts` saves text as a file.
 - `web/src/components/analyze-browser/`: the first ported surface, over the logic
   modules in `frontend/static/scripts/shared/browser/`, imported through the
   `@legacy/*` alias (`experimental.externalDir`), never copied. They move into
@@ -95,10 +102,9 @@ unlisted.
   `tests/app/tooling/test_web_codec_answers.py` keeps equal to what `/api/codec`
   answers (`CODEC_ANSWERS_WRITE=1` rewrites it). `docs/ui-parity/codec.md` maps every
   item of the old tab.
-- `web/src/components/mds/`: the MDS explorer's list page (Phase 27A; the detail
-  page, certificates, raw views and the jump from a credential are 27B).
-  `MdsSection` (the header and count, the status line, the filter bar, the table, the
-  entry view, Manage Metadata), `useMdsExplorer` (GET `/api/mds/metadata/info`, then
+- `web/src/components/mds/`: the MDS explorer (Phases 27A, the list, and 27B, the rest).
+  `MdsSection` (the header and count, the status line, the filter bar, the table, an
+  open entry, Manage Metadata), `useMdsExplorer` (GET `/api/mds/metadata/info`, then
   the packaged snapshot or the session's list, the status sentences, Retry, a snapshot
   from an upload shown at once), `useExplorerView` (filters through
   `useDeferredValue`, their options, the sort reset per snapshot, expanded rows),
@@ -106,12 +112,26 @@ unlisted.
   header sticky; every row in the page, each a grid on one column template set
   through the CSSOM (`--mds-columns`) with `content-visibility: auto`, so rows out of
   view are neither laid out nor painted; explicit table roles; one-line cells with
-  their tooltip, a row expands; resizing by pointer and keys; Back to top),
-  `FilterBar` / `FilterCombobox` (the 11 filters above the table, the seven with a list
-  as ARIA comboboxes), `ManageMetadataDialog` / `useCustomMetadata`, `EntryView` (27A's
-  stub), `ListState`, `model.ts` (the types and the casts of the imported logic, the
-  columns' and filters' template words). The logic is
-  `frontend/static/scripts/advanced/mds/explorer/*.js` and the leaves under it.
+  their tooltip, a row expands; resizing by pointer and keys; the Icon column narrow
+  on a phone; a white fade on the right edge while the frame scrolls further; Back to
+  top), `FilterBar` / `FilterCombobox` (the 11 filters above the table, the seven with
+  a list as ARIA comboboxes), `ManageMetadataDialog` / `useCustomMetadata`, `ListState`,
+  `model.ts` (the types and the casts of the imported logic, the columns' and filters'
+  template words). An entry (27B): `EntryRouter` (`#mds/<entryId>` and
+  `…/certificate/<n>`; the entry stays in the page under a certificate, Back returns to
+  its button; an unknown path is corrected), `useEntryDetail` (the entry from the
+  list, else `GET /api/mds/metadata/resolve`, with MDS-J2's sentences and Retry),
+  `EntryPage` / `EntryHeader` / `EntrySections` / `UserVerification` / `StatusReports`
+  (the sections as headings and hairlines, identifiers in Geist Mono with copy, the
+  reports stacking on a phone), `CondensedBar` (a white bar under the top bar once a
+  page's title has scrolled away; in the overlay layer, since a section sliding in is
+  a transform), `CertificatePage` / `CertificateSummary` / `useCertificateDecode` (one
+  decode per certificate), `RawEntryDialog` (the entry as MDS publishes it, copy, a
+  JSON download), `entryLink.ts` (`mdsEntryPath(aaguid)`, `openMdsEntryForAaguid`,
+  `useOpenMdsEntry`: how Phase 28's saved credentials open an AAGUID's entry, the URL
+  being `#mds/aaguid:<aaguid>`) and `entryModel.ts` (their types and casts). The logic
+  is `frontend/static/scripts/advanced/mds/explorer/*.js`, `raw-data.js`,
+  `raw-stringify.js` and the leaves under them.
   Component tests render the fixture snapshot (`tests/fixtures/mds`, through the
   `@test-fixtures` alias; `src/test/mds.ts` answers `fetch` like Flask serving it).
   `docs/ui-parity/mds.md` maps every item of the old tab.
@@ -128,22 +148,27 @@ unlisted.
   what a region shows in the current UI and in `/beta`, word for word per section
   (layout, separators and controls set aside), each expected difference with its
   reason; `codec-parity.spec.ts` runs it over inputs from `tests/app/codec_corpus.py`
-  (read through `E2E_PYTHON`), and a later surface's parity spec uses it the same way.
+  (read through `E2E_PYTHON`), and a later surface's parity spec uses it the same way;
+  an expected difference may be scoped to one section.
   `readShownRows` reads a table a row at a time, keyed by a cell (controls' text kept);
   `mds-parity.spec.ts` compares the MDS tables' rows for several filters and a sort,
-  and `mds.spec.ts` covers the MDS list.
+  `mds-entry-parity.spec.ts` five entries' pages, a certificate and the raw view,
+  `mds.spec.ts` covers the MDS list and `mds-entry.spec.ts` an entry, its certificates,
+  its raw view and the AAGUID link.
 
 Rules for `web/src` (`tests/app/tooling/test_web_source_rules.py` holds them):
 no `style` prop (the export would render a style attribute), no
 `dangerouslySetInnerHTML` or other markup sink, no `<style>` / `<script>`, no
-`next/script`, no `eval`, nothing written to `window`, no `atob`, and no copy of
-the logic modules' exports or sentences. The logic modules are the test's
+`next/script`, no `next/link` (following one makes Next's router add page scripts,
+which the Trusted Types policy reports, and leaves the browser's Back on the app), no
+`eval`, nothing written to `window`, no `atob`, and no copy of
+the logic modules' exports or sentences (comments count). The logic modules are the test's
 `LOGIC_ROOTS` (Analyze Browser's, the Codec's, the MDS explorer's, the failed-response reader) plus
 whatever `web/src` imports through `@legacy/`, followed through their imports, and
 none of them may touch the DOM: a surface splits its logic out of its view first
 and adds it to `LOGIC_ROOTS`. No `Suspense` on the server-rendered path:
-React would put an inline script in the export. Links to the current UI are plain
-`<a href="/">` (`next/link` adds `/beta`).
+React would put an inline script in the export. Links are plain: `<a href="/">` to the
+current UI, `<a href="/beta">` to the new one.
 
 Running it locally (Node 22):
 
@@ -222,13 +247,20 @@ Important frontend entry points:
   `filter-sort.js` (matching, sorting, the click cycle), `options.js` (each filter's
   list), `rows.js` (cell fallbacks, the certification badge, the identifier's kind),
   `columns.js`, `custom-metadata.js` (Manage Trusted Metadata's requests and every
-  message). The legacy views call them. The server builds every row
+  message), and for an entry `detail.js` (the detail page's sections, fields, labels
+  and order: `detailSections`), `certificate.js` (the decode request and its sentences,
+  a certificate's title and summary: `describeCertificate`) and `entry-link.js` (the
+  resolve request, `entryIdForAaguid`, the credential jump's sentences). `raw-data.js`
+  and `raw-stringify.js` (the raw view: the entry as MDS publishes it, its text, its
+  words) are logic too. The legacy views call them. The server builds every row
   (`mds_snapshot.build_explorer_entry`); the client's own row builder
   (`utils/entry-transform.js`, the lazy loader) is only for a payload without
   `entryId`, which the server never sends, and goes at the cutover
   (`docs/ui-parity/mds.md`, "Never shown"). The paths in `constants.js` are absolute,
-  so they resolve the same from `/beta/`. `explorer/*.js` and the leaves under them are
-  held at 100 % (`vitest.config.mjs`).
+  so they resolve the same from `/beta/`. `explorer/*.js`, the raw view's two modules
+  and the leaves under them are held at 100 % (`vitest.config.mjs`). They import the
+  leaves (`utils/formatters.js`, ...), never the `utils.js` barrel, which reaches the
+  legacy DOM builders.
 - `frontend/static/scripts/shared/ui/dom.js`
   How every view that shows data is built: `el(tag, {className, attrs, dataset,
   style, text}, ...children)` and `fragment()`. Strings become text nodes or
@@ -414,7 +446,10 @@ Main route modules:
   Index page, metadata bootstrap helpers, decoder endpoints, misc app routes, on
   the `general` blueprint. `_initial_mds_info()` builds what the index inlines as
   `initial-mds-info` and what `GET /api/mds/metadata/info` answers (no-store,
-  `Vary: Cookie`); an upload or delete records whether the session has uploads. `routes/web_export.py` (the `web_export` blueprint) serves
+  `Vary: Cookie`); its `snapshotUrl` is there only while the packaged file is there with
+  a meta that matches the verified snapshot, and carries `?v=<serial>.<digest>` (the
+  file changes at runtime; its URL is cached for a year). An upload or delete records
+  whether the session has uploads. `routes/web_export.py` (the `web_export` blueprint) serves
   the new UI's export at `/beta`: HTML `no-cache`, `/beta/_next/static/` immutable for
   a year with the build-time `.gz` copies (`static_assets.send_precompressed`), the
   export's `404.html` for an unknown path, a plain 404 with no export; the export
@@ -712,6 +747,10 @@ it configures that app and no other. Do not `importlib.reload` config modules.
   explorer is empty; that is the documented fallback, not a bug.
 - `FIDO_SERVER_MDS_SNAPSHOT_DIR` puts the snapshot elsewhere (`server/app/mds_snapshot_dir.py`);
   the browser tests and pytest point it at a copy of `tests/fixtures/mds/snapshot`.
+- Browsers get one snapshot file, the explorer's, at its versioned URL from the snapshot
+  directory; Flask's root static route and the versioned route refuse every other
+  snapshot name and the `.gz` sibling (`static_assets._SNAPSHOT_FILES`), since what sits in
+  `frontend/static` may be another snapshot.
 - Never commit those files and never write a test that reads the real snapshot
   path. `docs/MDS_SNAPSHOT.md` has the full picture.
 
