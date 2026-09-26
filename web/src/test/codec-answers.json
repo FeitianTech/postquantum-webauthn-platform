@@ -1,0 +1,926 @@
+{
+  "decode-duplicate-and-colliding-keys": {
+    "request": {
+      "payload": "a301616161316162016163",
+      "mode": "decode"
+    },
+    "status": 200,
+    "answer": {
+      "data": {
+        "decodedValue": {
+          "\"1\" (text)": "b",
+          "1": "c"
+        },
+        "edn": "{1: \"a\", \"1\": \"b\", 1: \"c\"}"
+      },
+      "decodeMode": "strict",
+      "findings": [
+        {
+          "category": "rendering",
+          "code": "json-key-collision",
+          "keys": [
+            "1",
+            "\"1\" (text)"
+          ],
+          "message": "map keys 1 and \"1\" (text) both read \"1\" as JSON keys; each is shown with its type so that neither entry replaces the other",
+          "offset": 0,
+          "path": "$"
+        },
+        {
+          "category": "canonical",
+          "code": "duplicate-map-key",
+          "earlier": [
+            {
+              "key": "1",
+              "offset": 1,
+              "value": "\"a\"",
+              "valueOffset": 2
+            }
+          ],
+          "kept": "later",
+          "key": "1",
+          "message": "map key 1 appears twice (first at offset 1); the decoded value keeps this later entry, and drops the earlier value \"a\" (offset 2)",
+          "offset": 8,
+          "path": "${1}"
+        }
+      ],
+      "malformed": [
+        "map key 1 appears twice (first at offset 1); the decoded value keeps this later entry, and drops the earlier value \"a\" (offset 2)"
+      ],
+      "success": true,
+      "type": "CBOR"
+    }
+  },
+  "decode-nan-strict": {
+    "request": {
+      "payload": "{\"a\": NaN}",
+      "mode": "decode"
+    },
+    "status": 422,
+    "answer": {
+      "error": "Not JSON at offset 6 (${\"a\"}): NaN is not JSON: RFC 8259 has no NaN or Infinity. The decoder reads it when asked to read leniently; EDN writes it (NaN, Infinity, -Infinity).",
+      "offset": 6,
+      "path": "${\"a\"}"
+    }
+  },
+  "decode-nan-lenient": {
+    "request": {
+      "payload": "{\"a\": NaN}",
+      "mode": "decode",
+      "lenient": true
+    },
+    "status": 200,
+    "answer": {
+      "data": {
+        "json": {
+          "a": {
+            "diagnostic": "NaN"
+          }
+        }
+      },
+      "decodeMode": "lenient",
+      "findings": [
+        {
+          "category": "malformed",
+          "code": "json-nan-or-infinity",
+          "message": "NaN at offset 6 is not JSON (RFC 8259 has no NaN or Infinity); read leniently, it is shown as {\"diagnostic\": \"NaN\"}",
+          "offset": 6,
+          "path": "${\"a\"}"
+        }
+      ],
+      "malformed": [
+        "NaN at offset 6 is not JSON (RFC 8259 has no NaN or Infinity); read leniently, it is shown as {\"diagnostic\": \"NaN\"}"
+      ],
+      "success": true,
+      "type": "JSON"
+    }
+  },
+  "decode-cbor-not-well-formed-lenient": {
+    "request": {
+      "payload": "a2010203",
+      "mode": "decode",
+      "lenient": true
+    },
+    "status": 200,
+    "answer": {
+      "data": {
+        "decodedValue": {
+          "1": 2
+        }
+      },
+      "decodeMode": "lenient",
+      "findings": [
+        {
+          "category": "skipped",
+          "code": "missing-map-value",
+          "message": "map key 3 has no value",
+          "offset": 3,
+          "path": "${3}"
+        }
+      ],
+      "malformed": [
+        "map key 3 has no value"
+      ],
+      "success": true,
+      "type": "CBOR"
+    }
+  },
+  "decode-get-info-framed": {
+    "request": {
+      "payload": "00a60182665532465f5632684649444f5f325f3002826375766d6b686d61632d7365637265740350f8a011f38c0a4d15800617111f9edc7d04a462726bf5627570f564706c6174f469636c69656e7450696ef4051904b0068101",
+      "mode": "decode"
+    },
+    "status": 200,
+    "answer": {
+      "data": {
+        "ctap": {
+          "code": 0,
+          "codeHex": "0x00",
+          "kind": "status",
+          "meaning": "SUCCESS status",
+          "message": "getInfoResponse",
+          "payloadLength": 89,
+          "status": "SUCCESS"
+        },
+        "ctapDecoded": {
+          "getInfoResponse": {
+            "1 (versions)": [
+              "U2F_V2",
+              "FIDO_2_0"
+            ],
+            "2 (extensions)": [
+              "uvm",
+              "hmac-secret"
+            ],
+            "3 (aaguid)": "f8a011f38c0a4d15800617111f9edc7d",
+            "4 (options)": {
+              "clientPin": false,
+              "plat": false,
+              "rk": true,
+              "up": true
+            },
+            "5 (maxMsgSize)": 1200,
+            "6 (pinUvAuthProtocols)": [
+              1
+            ]
+          }
+        },
+        "edn": "{\n  1: [\"U2F_V2\", \"FIDO_2_0\"],\n  2: [\"uvm\", \"hmac-secret\"],\n  3: h'f8a011f38c0a4d15800617111f9edc7d',\n  4: {\"rk\": true, \"up\": true, \"plat\": false, \"clientPin\": false},\n  5: 1200,\n  6: [1]\n}",
+        "getInfoDecoded": {
+          "1 (versions)": [
+            "U2F_V2",
+            "FIDO_2_0"
+          ],
+          "2 (extensions)": [
+            "uvm",
+            "hmac-secret"
+          ],
+          "3 (aaguid)": {
+            "guid": "f8a011f3-8c0a-4d15-8006-17111f9edc7d",
+            "hex": "f8a011f38c0a4d15800617111f9edc7d"
+          },
+          "4 (options)": {
+            "alwaysUv": {
+              "meaning": "not sent; absent means: not supported",
+              "sent": false,
+              "value": null
+            },
+            "authnrCfg": {
+              "meaning": "not sent; absent means: not supported",
+              "sent": false,
+              "value": null
+            },
+            "bioEnroll": {
+              "meaning": "not sent; absent means: not supported",
+              "sent": false,
+              "value": null
+            },
+            "clientPin": {
+              "defaultWhenAbsent": "not supported: the authenticator cannot accept a PIN from the client",
+              "meaning": "accepts a PIN from the client, but no PIN has been set yet",
+              "value": false
+            },
+            "credMgmt": {
+              "meaning": "not sent; absent means: not supported",
+              "sent": false,
+              "value": null
+            },
+            "credentialMgmtPreview": {
+              "meaning": "not sent; absent means: not supported",
+              "sent": false,
+              "value": null
+            },
+            "ep": {
+              "meaning": "not sent; absent means: not supported",
+              "sent": false,
+              "value": null
+            },
+            "largeBlobs": {
+              "meaning": "not sent; absent means: not supported",
+              "sent": false,
+              "value": null
+            },
+            "makeCredUvNotRqd": {
+              "meaning": "not sent; absent means: false",
+              "sent": false,
+              "value": null
+            },
+            "noMcGaPermissionsWithClientPin": {
+              "meaning": "not sent; absent means: false",
+              "sent": false,
+              "value": null
+            },
+            "perCredMgmtRO": {
+              "meaning": "not sent; absent means: not supported",
+              "sent": false,
+              "value": null
+            },
+            "pinUvAuthToken": {
+              "meaning": "not sent; absent means: not supported",
+              "sent": false,
+              "value": null
+            },
+            "plat": {
+              "defaultWhenAbsent": "false",
+              "meaning": "not a platform device",
+              "value": false
+            },
+            "rk": {
+              "defaultWhenAbsent": "false",
+              "meaning": "can create discoverable credentials, so it can answer getAssertion without an allowList",
+              "value": true
+            },
+            "setMinPINLength": {
+              "meaning": "not sent; absent means: not supported",
+              "sent": false,
+              "value": null
+            },
+            "up": {
+              "defaultWhenAbsent": "true",
+              "meaning": "can test user presence",
+              "value": true
+            },
+            "userVerificationMgmtPreview": {
+              "meaning": "not sent; absent means: not supported",
+              "sent": false,
+              "value": null
+            },
+            "uv": {
+              "meaning": "not sent; absent means: not supported: no built-in user verification method",
+              "sent": false,
+              "value": null
+            },
+            "uvAcfg": {
+              "meaning": "not sent; absent means: not supported",
+              "sent": false,
+              "value": null
+            },
+            "uvBioEnroll": {
+              "meaning": "not sent; absent means: not supported",
+              "sent": false,
+              "value": null
+            }
+          },
+          "5 (maxMsgSize)": 1200,
+          "6 (pinUvAuthProtocols)": [
+            1
+          ]
+        }
+      },
+      "decodeMode": "strict",
+      "findings": [],
+      "malformed": [],
+      "success": true,
+      "type": "CBOR (SUCCESS status; GetInfo response)"
+    }
+  },
+  "decode-make-credential-padded": {
+    "request": {
+      "payload": "00a301667061636b65640258c40021f5fc0b85cd22e60623bcd7d1ca48948909249b4776eb515154e57b66ae12410000001cf8a011f38c0a4d15800617111f9edc7d0040fe3aac036d14c1e1c65518b698dd1da8f596bc33e11072813466c6bf3845691509b80fb76d59309b8d39e0a93452688f6ca3a39a76f3fc52744fb73948b15783a5010203262001215820643566c206dd00227005fa5de69320616ca268043a38f08bde2e9dc45a5cafaf225820171353b2932434703726aae579fa6542432861fe591e481ea22d63997e1a529003a363616c67266373696758483046022100cc1ef43edf07de8f208c21619c78a565ddcf4150766ad58781193be8e0a742ed022100f1ed7c7243e45b7d8e5bda6b1abf10af7391789d1ef21b70bd69fed48dba4cb163783563815901973082019330820138a003020102020900859b726cb24b4c29300a06082a8648ce3d0403023047310b300906035504061302555331143012060355040a0c0b59756269636f205465737431223020060355040b0c1941757468656e74696361746f72204174746573746174696f6e301e170d3136313230343131353530305a170d3236313230323131353530305a3047310b300906035504061302555331143012060355040a0c0b59756269636f205465737431223020060355040b0c1941757468656e74696361746f72204174746573746174696f6e3059301306072a8648ce3d020106082a8648ce3d03010703420004ad11eb0e8852e53ad5dfed86b41e6134a18ec4e1af8f221a3c7d6e636c80ea13c3d504ff2e76211bb44525b196c44cb4849979cf6f896ecd2bb860de1bf4376ba30d300b30090603551d1304023000300a06082a8648ce3d0403020349003046022100e9a39f1b03197525f7373e10ce77e78021731b94d0c03f3fda1fd22db3d030e7022100c4faec3445a820cf43129cdb00aabefd9ae2d874f9c5d343cb2f113da23723f30000000000",
+      "mode": "decode"
+    },
+    "status": 200,
+    "answer": {
+      "data": {
+        "attestationStatementDecoded": {
+          "attestationTypesSupported": "Basic, Self, AttCA",
+          "fields": {
+            "alg": {
+              "name": "ES256 (ECDSA)",
+              "value": -7
+            },
+            "attestationType": "Basic or AttCA (x5c present; which one depends on the trust anchor)",
+            "sig": {
+              "hex": "3046022100cc1ef43edf07de8f208c21619c78a565ddcf4150766ad58781193be8e0a742ed022100f1ed7c7243e45b7d8e5bda6b1abf10af7391789d1ef21b70bd69fed48dba4cb1",
+              "length": 72
+            },
+            "x5c": {
+              "certificates": [
+                {
+                  "issuer": "OU=Authenticator Attestation,O=Yubico Test,C=US",
+                  "notValidAfter": "2026-12-02T11:55:00+00:00",
+                  "notValidBefore": "2016-12-04T11:55:00+00:00",
+                  "sha256": "b8419fed7762c6e690ca9f0e01c8fe70b46bcdb9119256843a6b8a51a0160ccd",
+                  "subject": "OU=Authenticator Attestation,O=Yubico Test,C=US"
+                }
+              ],
+              "count": 1
+            }
+          },
+          "fmt": "packed",
+          "known": true,
+          "notChecked": [
+            "sig over authenticatorData || clientDataHash",
+            "the attestation certificate requirements of section 8.2.1",
+            "the x5c chain up to a trust anchor",
+            "for self attestation: that alg matches the credential public key and sig verifies under it"
+          ],
+          "spec": "WebAuthn L3 section 8.2",
+          "verification": "not verified: the decoder shows this statement; it checks no signature, chain or value in it"
+        },
+        "ctap": {
+          "code": 0,
+          "codeHex": "0x00",
+          "kind": "status",
+          "meaning": "SUCCESS status",
+          "message": "makeCredentialResponse",
+          "paddingBytes": 5,
+          "payloadLength": 708,
+          "status": "SUCCESS",
+          "trailingBytesHex": "0000000000"
+        },
+        "ctapDecoded": {
+          "makeCredentialResponse": {
+            "1 (fmt)": "packed",
+            "2 (authData)": {
+              "attestedCredentialData": {
+                "aaguid": "f8a011f38c0a4d15800617111f9edc7d",
+                "credentialId": "fe3aac036d14c1e1c65518b698dd1da8f596bc33e11072813466c6bf3845691509b80fb76d59309b8d39e0a93452688f6ca3a39a76f3fc52744fb73948b15783",
+                "credentialIdActualLength": 64,
+                "credentialIdDeclaredLength": 64,
+                "credentialPublicKey": {
+                  "-1": 1,
+                  "-2": "643566c206dd00227005fa5de69320616ca268043a38f08bde2e9dc45a5cafaf",
+                  "-3": "171353b2932434703726aae579fa6542432861fe591e481ea22d63997e1a5290",
+                  "1": 2,
+                  "3": -7
+                }
+              },
+              "flags": {
+                "AT": true,
+                "BE": false,
+                "BS": false,
+                "ED": false,
+                "UP": true,
+                "UV": false,
+                "bitfield": "0b01000001",
+                "value": 65
+              },
+              "raw": "0021f5fc0b85cd22e60623bcd7d1ca48948909249b4776eb515154e57b66ae12410000001cf8a011f38c0a4d15800617111f9edc7d0040fe3aac036d14c1e1c65518b698dd1da8f596bc33e11072813466c6bf3845691509b80fb76d59309b8d39e0a93452688f6ca3a39a76f3fc52744fb73948b15783a5010203262001215820643566c206dd00227005fa5de69320616ca268043a38f08bde2e9dc45a5cafaf225820171353b2932434703726aae579fa6542432861fe591e481ea22d63997e1a5290",
+              "rpIdHash": "0021f5fc0b85cd22e60623bcd7d1ca48948909249b4776eb515154e57b66ae12",
+              "signCount": 28
+            },
+            "3 (attStmt)": {
+              "alg": -7,
+              "sig": "3046022100cc1ef43edf07de8f208c21619c78a565ddcf4150766ad58781193be8e0a742ed022100f1ed7c7243e45b7d8e5bda6b1abf10af7391789d1ef21b70bd69fed48dba4cb1",
+              "x5c": [
+                {
+                  "parsedX5c": {
+                    "algorithmInfo": "ECDSA_SHA256",
+                    "derBase64": "MIIBkzCCATigAwIBAgIJAIWbcmyyS0wpMAoGCCqGSM49BAMCMEcxCzAJBgNVBAYTAlVTMRQwEgYDVQQKDAtZdWJpY28gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjAeFw0xNjEyMDQxMTU1MDBaFw0yNjEyMDIxMTU1MDBaMEcxCzAJBgNVBAYTAlVTMRQwEgYDVQQKDAtZdWJpY28gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABK0R6w6IUuU61d/thrQeYTShjsThr48iGjx9bmNsgOoTw9UE/y52IRu0RSWxlsRMtISZec9viW7NK7hg3hv0N2ujDTALMAkGA1UdEwQCMAAwCgYIKoZIzj0EAwIDSQAwRgIhAOmjnxsDGXUl9zc+EM5354AhcxuU0MA/P9of0i2z0DDnAiEAxPrsNEWoIM9DEpzbAKq+/Zri2HT5xdNDyy8RPaI3I/M=",
+                    "extensions": [
+                      {
+                        "critical": false,
+                        "displayHeader": "X509v3 Basic Constraints",
+                        "friendlyName": "X509v3 Basic Constraints",
+                        "includeOidInHeader": false,
+                        "name": "X509v3 Basic Constraints",
+                        "oid": "2.5.29.19",
+                        "value": {
+                          "CA": "FALSE"
+                        }
+                      }
+                    ],
+                    "fingerprints": {
+                      "md5": "258973834b253d03e2964003499d1bfa",
+                      "sha1": "14be9fb024160f9bf39015278d505f3ee832c960",
+                      "sha256": "b8419fed7762c6e690ca9f0e01c8fe70b46bcdb9119256843a6b8a51a0160ccd"
+                    },
+                    "issuer": "OU=Authenticator Attestation,O=Yubico Test,C=US",
+                    "pem": "-----BEGIN CERTIFICATE-----\nMIIBkzCCATigAwIBAgIJAIWbcmyyS0wpMAoGCCqGSM49BAMCMEcxCzAJBgNVBAYT\nAlVTMRQwEgYDVQQKDAtZdWJpY28gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRv\nciBBdHRlc3RhdGlvbjAeFw0xNjEyMDQxMTU1MDBaFw0yNjEyMDIxMTU1MDBaMEcx\nCzAJBgNVBAYTAlVTMRQwEgYDVQQKDAtZdWJpY28gVGVzdDEiMCAGA1UECwwZQXV0\naGVudGljYXRvciBBdHRlc3RhdGlvbjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IA\nBK0R6w6IUuU61d/thrQeYTShjsThr48iGjx9bmNsgOoTw9UE/y52IRu0RSWxlsRM\ntISZec9viW7NK7hg3hv0N2ujDTALMAkGA1UdEwQCMAAwCgYIKoZIzj0EAwIDSQAw\nRgIhAOmjnxsDGXUl9zc+EM5354AhcxuU0MA/P9of0i2z0DDnAiEAxPrsNEWoIM9D\nEpzbAKq+/Zri2HT5xdNDyy8RPaI3I/M=\n-----END CERTIFICATE-----",
+                    "publicKeyInfo": {
+                      "algorithm": {
+                        "name": "ECDSA",
+                        "namedCurve": "secp256r1"
+                      },
+                      "curve": "secp256r1",
+                      "keySize": 256,
+                      "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErRHrDohS5TrV3+2GtB5hNKGOxOGvjyIaPH1uY2yA6hPD1QT/LnYhG7RFJbGWxEy0hJl5z2+Jbs0ruGDeG/Q3aw==",
+                      "type": "ECC",
+                      "uncompressedPoint": "04:ad:11:eb:0e:88:52:e5:3a:d5:df:ed:86:b4:1e:61:34:a1:8e:c4:e1:af:8f:22:1a:3c:7d:6e:63:6c:80:ea:13:c3:d5:04:ff:2e:76:21:1b:b4:45:25:b1:96:c4:4c:b4:84:99:79:cf:6f:89:6e:cd:2b:b8:60:de:1b:f4:37:6b"
+                    },
+                    "serialNumber": {
+                      "decimal": "9627414439607880745",
+                      "hex": "0x859b726cb24b4c29"
+                    },
+                    "signature": {
+                      "algorithm": "ecdsa-with-SHA256",
+                      "colon": "30:46:02:21:00:e9:a3:9f:1b:03:19:75:25:f7:37:3e:10:ce:77:e7:80:21:73:1b:94:d0:c0:3f:3f:da:1f:d2:2d:b3:d0:30:e7:02:21:00:c4:fa:ec:34:45:a8:20:cf:43:12:9c:db:00:aa:be:fd:9a:e2:d8:74:f9:c5:d3:43:cb:2f:11:3d:a2:37:23:f3",
+                      "details": null,
+                      "hash": {
+                        "name": "sha256"
+                      },
+                      "hex": "3046022100e9a39f1b03197525f7373e10ce77e78021731b94d0c03f3fda1fd22db3d030e7022100c4faec3445a820cf43129cdb00aabefd9ae2d874f9c5d343cb2f113da23723f3",
+                      "lines": [
+                        "30:46:02:21:00:e9:a3:9f:1b:03:19:75:25:f7:37:3e",
+                        "10:ce:77:e7:80:21:73:1b:94:d0:c0:3f:3f:da:1f:d2",
+                        "2d:b3:d0:30:e7:02:21:00:c4:fa:ec:34:45:a8:20:cf",
+                        "43:12:9c:db:00:aa:be:fd:9a:e2:d8:74:f9:c5:d3:43",
+                        "cb:2f:11:3d:a2:37:23:f3"
+                      ],
+                      "oid": "1.2.840.10045.4.3.2"
+                    },
+                    "signatureAlgorithm": "ecdsa-with-SHA256",
+                    "signatureAlgorithmDetails": null,
+                    "signatureAlgorithmOid": "1.2.840.10045.4.3.2",
+                    "subject": "OU=Authenticator Attestation,O=Yubico Test,C=US",
+                    "subjectCommonNames": [],
+                    "validity": {
+                      "notAfter": "2026-12-02T11:55:00+00:00",
+                      "notBefore": "2016-12-04T11:55:00+00:00"
+                    },
+                    "version": {
+                      "display": "3 (0x2)",
+                      "hex": "0x2",
+                      "numeric": 3
+                    }
+                  },
+                  "pem": "-----BEGIN CERTIFICATE-----\nMIIBkzCCATigAwIBAgIJAIWbcmyyS0wpMAoGCCqGSM49BAMCMEcxCzAJBgNVBAYT\nAlVTMRQwEgYDVQQKDAtZdWJpY28gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRv\nciBBdHRlc3RhdGlvbjAeFw0xNjEyMDQxMTU1MDBaFw0yNjEyMDIxMTU1MDBaMEcx\nCzAJBgNVBAYTAlVTMRQwEgYDVQQKDAtZdWJpY28gVGVzdDEiMCAGA1UECwwZQXV0\naGVudGljYXRvciBBdHRlc3RhdGlvbjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IA\nBK0R6w6IUuU61d/thrQeYTShjsThr48iGjx9bmNsgOoTw9UE/y52IRu0RSWxlsRM\ntISZec9viW7NK7hg3hv0N2ujDTALMAkGA1UdEwQCMAAwCgYIKoZIzj0EAwIDSQAw\nRgIhAOmjnxsDGXUl9zc+EM5354AhcxuU0MA/P9of0i2z0DDnAiEAxPrsNEWoIM9D\nEpzbAKq+/Zri2HT5xdNDyy8RPaI3I/M=\n-----END CERTIFICATE-----",
+                  "raw": "3082019330820138a003020102020900859b726cb24b4c29300a06082a8648ce3d0403023047310b300906035504061302555331143012060355040a0c0b59756269636f205465737431223020060355040b0c1941757468656e74696361746f72204174746573746174696f6e301e170d3136313230343131353530305a170d3236313230323131353530305a3047310b300906035504061302555331143012060355040a0c0b59756269636f205465737431223020060355040b0c1941757468656e74696361746f72204174746573746174696f6e3059301306072a8648ce3d020106082a8648ce3d03010703420004ad11eb0e8852e53ad5dfed86b41e6134a18ec4e1af8f221a3c7d6e636c80ea13c3d504ff2e76211bb44525b196c44cb4849979cf6f896ecd2bb860de1bf4376ba30d300b30090603551d1304023000300a06082a8648ce3d0403020349003046022100e9a39f1b03197525f7373e10ce77e78021731b94d0c03f3fda1fd22db3d030e7022100c4faec3445a820cf43129cdb00aabefd9ae2d874f9c5d343cb2f113da23723f3"
+                }
+              ]
+            }
+          }
+        },
+        "edn": "{\n  1: \"packed\",\n  2: h'0021f5fc0b85cd22e60623bcd7d1ca48948909249b4776eb515154e57b66ae12410000001cf8a011f38c0a4d15800617111f9edc7d0040fe3aac036d14c1e1c65518b698dd1da8f596bc33e11072813466c6bf3845691509b80fb76d59309b8d39e0a93452688f6ca3a39a76f3fc52744fb73948b15783a5010203262001215820643566c206dd00227005fa5de69320616ca268043a38f08bde2e9dc45a5cafaf225820171353b2932434703726aae579fa6542432861fe591e481ea22d63997e1a5290',\n  3: {\n    \"alg\": -7,\n    \"sig\": h'3046022100cc1ef43edf07de8f208c21619c78a565ddcf4150766ad58781193be8e0a742ed022100f1ed7c7243e45b7d8e5bda6b1abf10af7391789d1ef21b70bd69fed48dba4cb1',\n    \"x5c\": [h'3082019330820138a003020102020900859b726cb24b4c29300a06082a8648ce3d0403023047310b300906035504061302555331143012060355040a0c0b59756269636f205465737431223020060355040b0c1941757468656e74696361746f72204174746573746174696f6e301e170d3136313230343131353530305a170d3236313230323131353530305a3047310b300906035504061302555331143012060355040a0c0b59756269636f205465737431223020060355040b0c1941757468656e74696361746f72204174746573746174696f6e3059301306072a8648ce3d020106082a8648ce3d03010703420004ad11eb0e8852e53ad5dfed86b41e6134a18ec4e1af8f221a3c7d6e636c80ea13c3d504ff2e76211bb44525b196c44cb4849979cf6f896ecd2bb860de1bf4376ba30d300b30090603551d1304023000300a06082a8648ce3d0403020349003046022100e9a39f1b03197525f7373e10ce77e78021731b94d0c03f3fda1fd22db3d030e7022100c4faec3445a820cf43129cdb00aabefd9ae2d874f9c5d343cb2f113da23723f3']\n  }\n}",
+        "expandedJson": {
+          "1 (fmt)": "packed",
+          "2 (authData)": {
+            "attestedCredentialData": {
+              "aaguid": "f8a011f38c0a4d15800617111f9edc7d",
+              "credentialId": "fe3aac036d14c1e1c65518b698dd1da8f596bc33e11072813466c6bf3845691509b80fb76d59309b8d39e0a93452688f6ca3a39a76f3fc52744fb73948b15783",
+              "credentialIdActualLength": 64,
+              "credentialIdDeclaredLength": 64,
+              "credentialPublicKey": {
+                "-1": 1,
+                "-2": "643566c206dd00227005fa5de69320616ca268043a38f08bde2e9dc45a5cafaf",
+                "-3": "171353b2932434703726aae579fa6542432861fe591e481ea22d63997e1a5290",
+                "1": 2,
+                "3": -7
+              }
+            },
+            "flags": {
+              "AT": true,
+              "BE": false,
+              "BS": false,
+              "ED": false,
+              "UP": true,
+              "UV": false,
+              "bitfield": "0b01000001",
+              "value": 65
+            },
+            "raw": "0021f5fc0b85cd22e60623bcd7d1ca48948909249b4776eb515154e57b66ae12410000001cf8a011f38c0a4d15800617111f9edc7d0040fe3aac036d14c1e1c65518b698dd1da8f596bc33e11072813466c6bf3845691509b80fb76d59309b8d39e0a93452688f6ca3a39a76f3fc52744fb73948b15783a5010203262001215820643566c206dd00227005fa5de69320616ca268043a38f08bde2e9dc45a5cafaf225820171353b2932434703726aae579fa6542432861fe591e481ea22d63997e1a5290",
+            "rpIdHash": "0021f5fc0b85cd22e60623bcd7d1ca48948909249b4776eb515154e57b66ae12",
+            "signCount": 28
+          },
+          "3 (attStmt)": {
+            "alg": -7,
+            "sig": "3046022100cc1ef43edf07de8f208c21619c78a565ddcf4150766ad58781193be8e0a742ed022100f1ed7c7243e45b7d8e5bda6b1abf10af7391789d1ef21b70bd69fed48dba4cb1",
+            "x5c": [
+              {
+                "parsedX5c": {
+                  "algorithmInfo": "ECDSA_SHA256",
+                  "derBase64": "MIIBkzCCATigAwIBAgIJAIWbcmyyS0wpMAoGCCqGSM49BAMCMEcxCzAJBgNVBAYTAlVTMRQwEgYDVQQKDAtZdWJpY28gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjAeFw0xNjEyMDQxMTU1MDBaFw0yNjEyMDIxMTU1MDBaMEcxCzAJBgNVBAYTAlVTMRQwEgYDVQQKDAtZdWJpY28gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABK0R6w6IUuU61d/thrQeYTShjsThr48iGjx9bmNsgOoTw9UE/y52IRu0RSWxlsRMtISZec9viW7NK7hg3hv0N2ujDTALMAkGA1UdEwQCMAAwCgYIKoZIzj0EAwIDSQAwRgIhAOmjnxsDGXUl9zc+EM5354AhcxuU0MA/P9of0i2z0DDnAiEAxPrsNEWoIM9DEpzbAKq+/Zri2HT5xdNDyy8RPaI3I/M=",
+                  "extensions": [
+                    {
+                      "critical": false,
+                      "displayHeader": "X509v3 Basic Constraints",
+                      "friendlyName": "X509v3 Basic Constraints",
+                      "includeOidInHeader": false,
+                      "name": "X509v3 Basic Constraints",
+                      "oid": "2.5.29.19",
+                      "value": {
+                        "CA": "FALSE"
+                      }
+                    }
+                  ],
+                  "fingerprints": {
+                    "md5": "258973834b253d03e2964003499d1bfa",
+                    "sha1": "14be9fb024160f9bf39015278d505f3ee832c960",
+                    "sha256": "b8419fed7762c6e690ca9f0e01c8fe70b46bcdb9119256843a6b8a51a0160ccd"
+                  },
+                  "issuer": "OU=Authenticator Attestation,O=Yubico Test,C=US",
+                  "pem": "-----BEGIN CERTIFICATE-----\nMIIBkzCCATigAwIBAgIJAIWbcmyyS0wpMAoGCCqGSM49BAMCMEcxCzAJBgNVBAYT\nAlVTMRQwEgYDVQQKDAtZdWJpY28gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRv\nciBBdHRlc3RhdGlvbjAeFw0xNjEyMDQxMTU1MDBaFw0yNjEyMDIxMTU1MDBaMEcx\nCzAJBgNVBAYTAlVTMRQwEgYDVQQKDAtZdWJpY28gVGVzdDEiMCAGA1UECwwZQXV0\naGVudGljYXRvciBBdHRlc3RhdGlvbjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IA\nBK0R6w6IUuU61d/thrQeYTShjsThr48iGjx9bmNsgOoTw9UE/y52IRu0RSWxlsRM\ntISZec9viW7NK7hg3hv0N2ujDTALMAkGA1UdEwQCMAAwCgYIKoZIzj0EAwIDSQAw\nRgIhAOmjnxsDGXUl9zc+EM5354AhcxuU0MA/P9of0i2z0DDnAiEAxPrsNEWoIM9D\nEpzbAKq+/Zri2HT5xdNDyy8RPaI3I/M=\n-----END CERTIFICATE-----",
+                  "publicKeyInfo": {
+                    "algorithm": {
+                      "name": "ECDSA",
+                      "namedCurve": "secp256r1"
+                    },
+                    "curve": "secp256r1",
+                    "keySize": 256,
+                    "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErRHrDohS5TrV3+2GtB5hNKGOxOGvjyIaPH1uY2yA6hPD1QT/LnYhG7RFJbGWxEy0hJl5z2+Jbs0ruGDeG/Q3aw==",
+                    "type": "ECC",
+                    "uncompressedPoint": "04:ad:11:eb:0e:88:52:e5:3a:d5:df:ed:86:b4:1e:61:34:a1:8e:c4:e1:af:8f:22:1a:3c:7d:6e:63:6c:80:ea:13:c3:d5:04:ff:2e:76:21:1b:b4:45:25:b1:96:c4:4c:b4:84:99:79:cf:6f:89:6e:cd:2b:b8:60:de:1b:f4:37:6b"
+                  },
+                  "serialNumber": {
+                    "decimal": "9627414439607880745",
+                    "hex": "0x859b726cb24b4c29"
+                  },
+                  "signature": {
+                    "algorithm": "ecdsa-with-SHA256",
+                    "colon": "30:46:02:21:00:e9:a3:9f:1b:03:19:75:25:f7:37:3e:10:ce:77:e7:80:21:73:1b:94:d0:c0:3f:3f:da:1f:d2:2d:b3:d0:30:e7:02:21:00:c4:fa:ec:34:45:a8:20:cf:43:12:9c:db:00:aa:be:fd:9a:e2:d8:74:f9:c5:d3:43:cb:2f:11:3d:a2:37:23:f3",
+                    "details": null,
+                    "hash": {
+                      "name": "sha256"
+                    },
+                    "hex": "3046022100e9a39f1b03197525f7373e10ce77e78021731b94d0c03f3fda1fd22db3d030e7022100c4faec3445a820cf43129cdb00aabefd9ae2d874f9c5d343cb2f113da23723f3",
+                    "lines": [
+                      "30:46:02:21:00:e9:a3:9f:1b:03:19:75:25:f7:37:3e",
+                      "10:ce:77:e7:80:21:73:1b:94:d0:c0:3f:3f:da:1f:d2",
+                      "2d:b3:d0:30:e7:02:21:00:c4:fa:ec:34:45:a8:20:cf",
+                      "43:12:9c:db:00:aa:be:fd:9a:e2:d8:74:f9:c5:d3:43",
+                      "cb:2f:11:3d:a2:37:23:f3"
+                    ],
+                    "oid": "1.2.840.10045.4.3.2"
+                  },
+                  "signatureAlgorithm": "ecdsa-with-SHA256",
+                  "signatureAlgorithmDetails": null,
+                  "signatureAlgorithmOid": "1.2.840.10045.4.3.2",
+                  "subject": "OU=Authenticator Attestation,O=Yubico Test,C=US",
+                  "subjectCommonNames": [],
+                  "validity": {
+                    "notAfter": "2026-12-02T11:55:00+00:00",
+                    "notBefore": "2016-12-04T11:55:00+00:00"
+                  },
+                  "version": {
+                    "display": "3 (0x2)",
+                    "hex": "0x2",
+                    "numeric": 3
+                  }
+                },
+                "pem": "-----BEGIN CERTIFICATE-----\nMIIBkzCCATigAwIBAgIJAIWbcmyyS0wpMAoGCCqGSM49BAMCMEcxCzAJBgNVBAYT\nAlVTMRQwEgYDVQQKDAtZdWJpY28gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRv\nciBBdHRlc3RhdGlvbjAeFw0xNjEyMDQxMTU1MDBaFw0yNjEyMDIxMTU1MDBaMEcx\nCzAJBgNVBAYTAlVTMRQwEgYDVQQKDAtZdWJpY28gVGVzdDEiMCAGA1UECwwZQXV0\naGVudGljYXRvciBBdHRlc3RhdGlvbjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IA\nBK0R6w6IUuU61d/thrQeYTShjsThr48iGjx9bmNsgOoTw9UE/y52IRu0RSWxlsRM\ntISZec9viW7NK7hg3hv0N2ujDTALMAkGA1UdEwQCMAAwCgYIKoZIzj0EAwIDSQAw\nRgIhAOmjnxsDGXUl9zc+EM5354AhcxuU0MA/P9of0i2z0DDnAiEAxPrsNEWoIM9D\nEpzbAKq+/Zri2HT5xdNDyy8RPaI3I/M=\n-----END CERTIFICATE-----",
+                "raw": "3082019330820138a003020102020900859b726cb24b4c29300a06082a8648ce3d0403023047310b300906035504061302555331143012060355040a0c0b59756269636f205465737431223020060355040b0c1941757468656e74696361746f72204174746573746174696f6e301e170d3136313230343131353530305a170d3236313230323131353530305a3047310b300906035504061302555331143012060355040a0c0b59756269636f205465737431223020060355040b0c1941757468656e74696361746f72204174746573746174696f6e3059301306072a8648ce3d020106082a8648ce3d03010703420004ad11eb0e8852e53ad5dfed86b41e6134a18ec4e1af8f221a3c7d6e636c80ea13c3d504ff2e76211bb44525b196c44cb4849979cf6f896ecd2bb860de1bf4376ba30d300b30090603551d1304023000300a06082a8648ce3d0403020349003046022100e9a39f1b03197525f7373e10ce77e78021731b94d0c03f3fda1fd22db3d030e7022100c4faec3445a820cf43129cdb00aabefd9ae2d874f9c5d343cb2f113da23723f3"
+              }
+            ]
+          }
+        }
+      },
+      "decodeMode": "strict",
+      "findings": [
+        {
+          "category": "trailing",
+          "code": "trailing-bytes",
+          "hex": "0000000000",
+          "length": 5,
+          "message": "Trailing 5 byte(s) after CBOR payload (all 0x00/0xff: HID report padding?).",
+          "offset": 709,
+          "path": "$"
+        }
+      ],
+      "malformed": [
+        "Trailing 5 byte(s) after CBOR payload (all 0x00/0xff: HID report padding?)."
+      ],
+      "success": true,
+      "type": "CBOR (SUCCESS status; MakeCredential response)"
+    }
+  },
+  "decode-certificate": {
+    "request": {
+      "payload": "-----BEGIN CERTIFICATE-----\nMIICtzCCAZ+gAwIBAgIEHTEzDTANBgkqhkiG9w0BAQsFADAqMSgwJgYDVQQDDB9Z\ndWJpY28gUHJldmlldyBGSURPIEF0dGVzdGF0aW9uMB4XDTE4MDMyODA2MzkyNFoX\nDTE5MDMyODA2MzkyNFowbjELMAkGA1UEBhMCU0UxEjAQBgNVBAoMCVl1YmljbyBB\nQjEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwwe\nWXViaWNvIFUyRiBFRSBTZXJpYWwgNDg5NzYzNTk3MFkwEwYHKoZIzj0CAQYIKoZI\nzj0DAQcDQgAEfXHoNnyv0Ops8NYeTGpBa6W7bY+tUtsjia0Hlp8PRjv93d3CnTnT\nGZFj7klXWjM2wEszCdYH9hYMgeAjNz4Bl6NsMGowIgYJKwYBBAGCxAoCBBUxLjMu\nNi4xLjQuMS40MTQ4Mi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwIQYLKwYBBAGC\n5RwBAQQEEgQQ+KAR84wKTRWABhcRH57cfTAMBgNVHRMBAf8EAjAAMA0GCSqGSIb3\nDQEBCwUAA4IBAQCbkEzq2+HxmFSG/q0Cuuqnflq05uUrfmomZqTcBuJBV4FpGTtj\n2t7FsreGBaEosuA/f+Kpjq60IZ9SIgmV9ADOFdYwzwWYumYtcWJFnxrR/GIwZzdt\nTkCRvmWsGjPYVhuZlsBSnsGBbRcQeGOE1eh4OqH3R0y5n+j1pjp5/0VDgDYcKZ1n\ny1zHx58NjAn4hJsFAPbWJUCMd8u8Jt3uEctYG+t5RxN61PBarzi9mNoQBC3crCd2\nBKOVpbPqqIpci7J6tZyBJ9Wda7ul8RUGv3t1/adWGgg3xG8CX9VNzxAU/I0XyFlQ\nesV9Sx3qmUhd8LqPNNABA8Pu8u87v+x6ZhPe\n-----END CERTIFICATE-----",
+      "mode": "decode"
+    },
+    "status": 200,
+    "answer": {
+      "data": {
+        "parsedX5c": {
+          "algorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
+          "derBase64": "MIICtzCCAZ+gAwIBAgIEHTEzDTANBgkqhkiG9w0BAQsFADAqMSgwJgYDVQQDDB9ZdWJpY28gUHJldmlldyBGSURPIEF0dGVzdGF0aW9uMB4XDTE4MDMyODA2MzkyNFoXDTE5MDMyODA2MzkyNFowbjELMAkGA1UEBhMCU0UxEjAQBgNVBAoMCVl1YmljbyBBQjEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweWXViaWNvIFUyRiBFRSBTZXJpYWwgNDg5NzYzNTk3MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfXHoNnyv0Ops8NYeTGpBa6W7bY+tUtsjia0Hlp8PRjv93d3CnTnTGZFj7klXWjM2wEszCdYH9hYMgeAjNz4Bl6NsMGowIgYJKwYBBAGCxAoCBBUxLjMuNi4xLjQuMS40MTQ4Mi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwIQYLKwYBBAGC5RwBAQQEEgQQ+KAR84wKTRWABhcRH57cfTAMBgNVHRMBAf8EAjAAMA0GCSqGSIb3DQEBCwUAA4IBAQCbkEzq2+HxmFSG/q0Cuuqnflq05uUrfmomZqTcBuJBV4FpGTtj2t7FsreGBaEosuA/f+Kpjq60IZ9SIgmV9ADOFdYwzwWYumYtcWJFnxrR/GIwZzdtTkCRvmWsGjPYVhuZlsBSnsGBbRcQeGOE1eh4OqH3R0y5n+j1pjp5/0VDgDYcKZ1ny1zHx58NjAn4hJsFAPbWJUCMd8u8Jt3uEctYG+t5RxN61PBarzi9mNoQBC3crCd2BKOVpbPqqIpci7J6tZyBJ9Wda7ul8RUGv3t1/adWGgg3xG8CX9VNzxAU/I0XyFlQesV9Sx3qmUhd8LqPNNABA8Pu8u87v+x6ZhPe",
+          "extensions": [
+            {
+              "critical": false,
+              "displayHeader": null,
+              "friendlyName": "Yubico: Device identifier",
+              "includeOidInHeader": true,
+              "name": "Yubico: Device identifier",
+              "oid": "1.3.6.1.4.1.41482.2",
+              "value": {
+                "Device identifier": "1.3.6.1.4.1.41482.1.2",
+                "Hex value": "312e332e362e312e342e312e34313438322e312e32"
+              }
+            },
+            {
+              "critical": false,
+              "displayHeader": null,
+              "friendlyName": "FIDO: Transports",
+              "includeOidInHeader": true,
+              "name": "FIDO: Transports",
+              "oid": "1.3.6.1.4.1.45724.2.1.1",
+              "value": {
+                "Hex value": "03020430",
+                "Transports": "USB NFC"
+              }
+            },
+            {
+              "critical": false,
+              "displayHeader": null,
+              "friendlyName": "FIDO: Device AAGUID",
+              "includeOidInHeader": true,
+              "name": "FIDO: Device AAGUID",
+              "oid": "1.3.6.1.4.1.45724.1.1.4",
+              "value": {
+                "AAGUID": "f8a011f38c0a4d15800617111f9edc7d"
+              }
+            },
+            {
+              "critical": true,
+              "displayHeader": "X509v3 Basic Constraints",
+              "friendlyName": "X509v3 Basic Constraints",
+              "includeOidInHeader": false,
+              "name": "X509v3 Basic Constraints",
+              "oid": "2.5.29.19",
+              "value": {
+                "CA": "FALSE"
+              }
+            }
+          ],
+          "fingerprints": {
+            "md5": "c3d3834e80e9a879c79d4c993db40ff8",
+            "sha1": "3a59814c22d3c5cf5d0e687dba02b9ac46574d76",
+            "sha256": "cb3645299b81be94c780eae789c5fabba2ccfc5059aaa21dd7e3564b10ce480c"
+          },
+          "issuer": "CN=Yubico Preview FIDO Attestation",
+          "pem": "-----BEGIN CERTIFICATE-----\nMIICtzCCAZ+gAwIBAgIEHTEzDTANBgkqhkiG9w0BAQsFADAqMSgwJgYDVQQDDB9Z\ndWJpY28gUHJldmlldyBGSURPIEF0dGVzdGF0aW9uMB4XDTE4MDMyODA2MzkyNFoX\nDTE5MDMyODA2MzkyNFowbjELMAkGA1UEBhMCU0UxEjAQBgNVBAoMCVl1YmljbyBB\nQjEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwwe\nWXViaWNvIFUyRiBFRSBTZXJpYWwgNDg5NzYzNTk3MFkwEwYHKoZIzj0CAQYIKoZI\nzj0DAQcDQgAEfXHoNnyv0Ops8NYeTGpBa6W7bY+tUtsjia0Hlp8PRjv93d3CnTnT\nGZFj7klXWjM2wEszCdYH9hYMgeAjNz4Bl6NsMGowIgYJKwYBBAGCxAoCBBUxLjMu\nNi4xLjQuMS40MTQ4Mi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwIQYLKwYBBAGC\n5RwBAQQEEgQQ+KAR84wKTRWABhcRH57cfTAMBgNVHRMBAf8EAjAAMA0GCSqGSIb3\nDQEBCwUAA4IBAQCbkEzq2+HxmFSG/q0Cuuqnflq05uUrfmomZqTcBuJBV4FpGTtj\n2t7FsreGBaEosuA/f+Kpjq60IZ9SIgmV9ADOFdYwzwWYumYtcWJFnxrR/GIwZzdt\nTkCRvmWsGjPYVhuZlsBSnsGBbRcQeGOE1eh4OqH3R0y5n+j1pjp5/0VDgDYcKZ1n\ny1zHx58NjAn4hJsFAPbWJUCMd8u8Jt3uEctYG+t5RxN61PBarzi9mNoQBC3crCd2\nBKOVpbPqqIpci7J6tZyBJ9Wda7ul8RUGv3t1/adWGgg3xG8CX9VNzxAU/I0XyFlQ\nesV9Sx3qmUhd8LqPNNABA8Pu8u87v+x6ZhPe\n-----END CERTIFICATE-----",
+          "publicKeyInfo": {
+            "algorithm": {
+              "name": "ECDSA",
+              "namedCurve": "secp256r1"
+            },
+            "curve": "secp256r1",
+            "keySize": 256,
+            "subjectPublicKeyInfoBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfXHoNnyv0Ops8NYeTGpBa6W7bY+tUtsjia0Hlp8PRjv93d3CnTnTGZFj7klXWjM2wEszCdYH9hYMgeAjNz4Blw==",
+            "type": "ECC",
+            "uncompressedPoint": "04:7d:71:e8:36:7c:af:d0:ea:6c:f0:d6:1e:4c:6a:41:6b:a5:bb:6d:8f:ad:52:db:23:89:ad:07:96:9f:0f:46:3b:fd:dd:dd:c2:9d:39:d3:19:91:63:ee:49:57:5a:33:36:c0:4b:33:09:d6:07:f6:16:0c:81:e0:23:37:3e:01:97"
+          },
+          "rawPem": "-----BEGIN CERTIFICATE-----\nMIICtzCCAZ+gAwIBAgIEHTEzDTANBgkqhkiG9w0BAQsFADAqMSgwJgYDVQQDDB9Z\ndWJpY28gUHJldmlldyBGSURPIEF0dGVzdGF0aW9uMB4XDTE4MDMyODA2MzkyNFoX\nDTE5MDMyODA2MzkyNFowbjELMAkGA1UEBhMCU0UxEjAQBgNVBAoMCVl1YmljbyBB\nQjEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwwe\nWXViaWNvIFUyRiBFRSBTZXJpYWwgNDg5NzYzNTk3MFkwEwYHKoZIzj0CAQYIKoZI\nzj0DAQcDQgAEfXHoNnyv0Ops8NYeTGpBa6W7bY+tUtsjia0Hlp8PRjv93d3CnTnT\nGZFj7klXWjM2wEszCdYH9hYMgeAjNz4Bl6NsMGowIgYJKwYBBAGCxAoCBBUxLjMu\nNi4xLjQuMS40MTQ4Mi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwIQYLKwYBBAGC\n5RwBAQQEEgQQ+KAR84wKTRWABhcRH57cfTAMBgNVHRMBAf8EAjAAMA0GCSqGSIb3\nDQEBCwUAA4IBAQCbkEzq2+HxmFSG/q0Cuuqnflq05uUrfmomZqTcBuJBV4FpGTtj\n2t7FsreGBaEosuA/f+Kpjq60IZ9SIgmV9ADOFdYwzwWYumYtcWJFnxrR/GIwZzdt\nTkCRvmWsGjPYVhuZlsBSnsGBbRcQeGOE1eh4OqH3R0y5n+j1pjp5/0VDgDYcKZ1n\ny1zHx58NjAn4hJsFAPbWJUCMd8u8Jt3uEctYG+t5RxN61PBarzi9mNoQBC3crCd2\nBKOVpbPqqIpci7J6tZyBJ9Wda7ul8RUGv3t1/adWGgg3xG8CX9VNzxAU/I0XyFlQ\nesV9Sx3qmUhd8LqPNNABA8Pu8u87v+x6ZhPe\n-----END CERTIFICATE-----",
+          "serialNumber": {
+            "decimal": "489763597",
+            "hex": "0x1d31330d"
+          },
+          "signature": {
+            "algorithm": "sha256WithRSAEncryption",
+            "colon": "9b:90:4c:ea:db:e1:f1:98:54:86:fe:ad:02:ba:ea:a7:7e:5a:b4:e6:e5:2b:7e:6a:26:66:a4:dc:06:e2:41:57:81:69:19:3b:63:da:de:c5:b2:b7:86:05:a1:28:b2:e0:3f:7f:e2:a9:8e:ae:b4:21:9f:52:22:09:95:f4:00:ce:15:d6:30:cf:05:98:ba:66:2d:71:62:45:9f:1a:d1:fc:62:30:67:37:6d:4e:40:91:be:65:ac:1a:33:d8:56:1b:99:96:c0:52:9e:c1:81:6d:17:10:78:63:84:d5:e8:78:3a:a1:f7:47:4c:b9:9f:e8:f5:a6:3a:79:ff:45:43:80:36:1c:29:9d:67:cb:5c:c7:c7:9f:0d:8c:09:f8:84:9b:05:00:f6:d6:25:40:8c:77:cb:bc:26:dd:ee:11:cb:58:1b:eb:79:47:13:7a:d4:f0:5a:af:38:bd:98:da:10:04:2d:dc:ac:27:76:04:a3:95:a5:b3:ea:a8:8a:5c:8b:b2:7a:b5:9c:81:27:d5:9d:6b:bb:a5:f1:15:06:bf:7b:75:fd:a7:56:1a:08:37:c4:6f:02:5f:d5:4d:cf:10:14:fc:8d:17:c8:59:50:7a:c5:7d:4b:1d:ea:99:48:5d:f0:ba:8f:34:d0:01:03:c3:ee:f2:ef:3b:bf:ec:7a:66:13:de",
+            "details": null,
+            "hash": {
+              "name": "sha256"
+            },
+            "hex": "9b904ceadbe1f1985486fead02baeaa77e5ab4e6e52b7e6a2666a4dc06e241578169193b63dadec5b2b78605a128b2e03f7fe2a98eaeb4219f52220995f400ce15d630cf0598ba662d7162459f1ad1fc623067376d4e4091be65ac1a33d8561b9996c0529ec1816d1710786384d5e8783aa1f7474cb99fe8f5a63a79ff454380361c299d67cb5cc7c79f0d8c09f8849b0500f6d625408c77cbbc26ddee11cb581beb7947137ad4f05aaf38bd98da10042ddcac277604a395a5b3eaa88a5c8bb27ab59c8127d59d6bbba5f11506bf7b75fda7561a0837c46f025fd54dcf1014fc8d17c859507ac57d4b1dea99485df0ba8f34d00103c3eef2ef3bbfec7a6613de",
+            "lines": [
+              "9b:90:4c:ea:db:e1:f1:98:54:86:fe:ad:02:ba:ea:a7",
+              "7e:5a:b4:e6:e5:2b:7e:6a:26:66:a4:dc:06:e2:41:57",
+              "81:69:19:3b:63:da:de:c5:b2:b7:86:05:a1:28:b2:e0",
+              "3f:7f:e2:a9:8e:ae:b4:21:9f:52:22:09:95:f4:00:ce",
+              "15:d6:30:cf:05:98:ba:66:2d:71:62:45:9f:1a:d1:fc",
+              "62:30:67:37:6d:4e:40:91:be:65:ac:1a:33:d8:56:1b",
+              "99:96:c0:52:9e:c1:81:6d:17:10:78:63:84:d5:e8:78",
+              "3a:a1:f7:47:4c:b9:9f:e8:f5:a6:3a:79:ff:45:43:80",
+              "36:1c:29:9d:67:cb:5c:c7:c7:9f:0d:8c:09:f8:84:9b",
+              "05:00:f6:d6:25:40:8c:77:cb:bc:26:dd:ee:11:cb:58",
+              "1b:eb:79:47:13:7a:d4:f0:5a:af:38:bd:98:da:10:04",
+              "2d:dc:ac:27:76:04:a3:95:a5:b3:ea:a8:8a:5c:8b:b2",
+              "7a:b5:9c:81:27:d5:9d:6b:bb:a5:f1:15:06:bf:7b:75",
+              "fd:a7:56:1a:08:37:c4:6f:02:5f:d5:4d:cf:10:14:fc",
+              "8d:17:c8:59:50:7a:c5:7d:4b:1d:ea:99:48:5d:f0:ba",
+              "8f:34:d0:01:03:c3:ee:f2:ef:3b:bf:ec:7a:66:13:de"
+            ],
+            "oid": "1.2.840.113549.1.1.11"
+          },
+          "signatureAlgorithm": "sha256WithRSAEncryption",
+          "signatureAlgorithmDetails": null,
+          "signatureAlgorithmOid": "1.2.840.113549.1.1.11",
+          "subject": "CN=Yubico U2F EE Serial 489763597,OU=Authenticator Attestation,O=Yubico AB,C=SE",
+          "subjectCommonNames": [
+            "Yubico U2F EE Serial 489763597"
+          ],
+          "validity": {
+            "notAfter": "2019-03-28T06:39:24+00:00",
+            "notBefore": "2018-03-28T06:39:24+00:00"
+          },
+          "version": {
+            "display": "3 (0x2)",
+            "hex": "0x2",
+            "numeric": 3
+          }
+        },
+        "pem": "-----BEGIN CERTIFICATE-----\nMIICtzCCAZ+gAwIBAgIEHTEzDTANBgkqhkiG9w0BAQsFADAqMSgwJgYDVQQDDB9Z\ndWJpY28gUHJldmlldyBGSURPIEF0dGVzdGF0aW9uMB4XDTE4MDMyODA2MzkyNFoX\nDTE5MDMyODA2MzkyNFowbjELMAkGA1UEBhMCU0UxEjAQBgNVBAoMCVl1YmljbyBB\nQjEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwwe\nWXViaWNvIFUyRiBFRSBTZXJpYWwgNDg5NzYzNTk3MFkwEwYHKoZIzj0CAQYIKoZI\nzj0DAQcDQgAEfXHoNnyv0Ops8NYeTGpBa6W7bY+tUtsjia0Hlp8PRjv93d3CnTnT\nGZFj7klXWjM2wEszCdYH9hYMgeAjNz4Bl6NsMGowIgYJKwYBBAGCxAoCBBUxLjMu\nNi4xLjQuMS40MTQ4Mi4xLjIwEwYLKwYBBAGC5RwCAQEEBAMCBDAwIQYLKwYBBAGC\n5RwBAQQEEgQQ+KAR84wKTRWABhcRH57cfTAMBgNVHRMBAf8EAjAAMA0GCSqGSIb3\nDQEBCwUAA4IBAQCbkEzq2+HxmFSG/q0Cuuqnflq05uUrfmomZqTcBuJBV4FpGTtj\n2t7FsreGBaEosuA/f+Kpjq60IZ9SIgmV9ADOFdYwzwWYumYtcWJFnxrR/GIwZzdt\nTkCRvmWsGjPYVhuZlsBSnsGBbRcQeGOE1eh4OqH3R0y5n+j1pjp5/0VDgDYcKZ1n\ny1zHx58NjAn4hJsFAPbWJUCMd8u8Jt3uEctYG+t5RxN61PBarzi9mNoQBC3crCd2\nBKOVpbPqqIpci7J6tZyBJ9Wda7ul8RUGv3t1/adWGgg3xG8CX9VNzxAU/I0XyFlQ\nesV9Sx3qmUhd8LqPNNABA8Pu8u87v+x6ZhPe\n-----END CERTIFICATE-----",
+        "raw": "308202b73082019fa00302010202041d31330d300d06092a864886f70d01010b0500302a3128302606035504030c1f59756269636f2050726576696577204649444f204174746573746174696f6e301e170d3138303332383036333932345a170d3139303332383036333932345a306e310b300906035504061302534531123010060355040a0c0959756269636f20414231223020060355040b0c1941757468656e74696361746f72204174746573746174696f6e3127302506035504030c1e59756269636f205532462045452053657269616c203438393736333539373059301306072a8648ce3d020106082a8648ce3d030107034200047d71e8367cafd0ea6cf0d61e4c6a416ba5bb6d8fad52db2389ad07969f0f463bfdddddc29d39d3199163ee49575a3336c04b3309d607f6160c81e023373e0197a36c306a302206092b0601040182c40a020415312e332e362e312e342e312e34313438322e312e323013060b2b0601040182e51c0201010404030204303021060b2b0601040182e51c01010404120410f8a011f38c0a4d15800617111f9edc7d300c0603551d130101ff04023000300d06092a864886f70d01010b050003820101009b904ceadbe1f1985486fead02baeaa77e5ab4e6e52b7e6a2666a4dc06e241578169193b63dadec5b2b78605a128b2e03f7fe2a98eaeb4219f52220995f400ce15d630cf0598ba662d7162459f1ad1fc623067376d4e4091be65ac1a33d8561b9996c0529ec1816d1710786384d5e8783aa1f7474cb99fe8f5a63a79ff454380361c299d67cb5cc7c79f0d8c09f8849b0500f6d625408c77cbbc26ddee11cb581beb7947137ad4f05aaf38bd98da10042ddcac277604a395a5b3eaa88a5c8bb27ab59c8127d59d6bbba5f11506bf7b75fda7561a0837c46f025fd54dcf1014fc8d17c859507ac57d4b1dea99485df0ba8f34d00103c3eef2ef3bbfec7a6613de"
+      },
+      "decodeMode": "strict",
+      "findings": [],
+      "malformed": [],
+      "success": true,
+      "type": "X.509 certificate"
+    }
+  },
+  "encode-cbor": {
+    "request": {
+      "payload": "{\"a\": 1}",
+      "mode": "encode",
+      "format": "CBOR (canonical)"
+    },
+    "status": 200,
+    "answer": {
+      "data": {
+        "binary": {
+          "base64": "oWFhAQ==",
+          "base64url": "oWFhAQ",
+          "colonHex": "a1:61:61:01",
+          "encoding": "cbor",
+          "hex": "a1616101",
+          "length": 4
+        },
+        "decodedValue": {
+          "a": 1
+        }
+      },
+      "malformed": [],
+      "success": true,
+      "type": "CBOR (canonical) (encoded)"
+    }
+  },
+  "encode-edn": {
+    "request": {
+      "payload": "{1: \"a\", \"1\": \"b\", 1: \"c\"}",
+      "mode": "encode",
+      "format": "EDN"
+    },
+    "status": 200,
+    "answer": {
+      "data": {
+        "binary": {
+          "base64": "owFhYWExYWIBYWM=",
+          "base64url": "owFhYWExYWIBYWM",
+          "colonHex": "a3:01:61:61:61:31:61:62:01:61:63",
+          "encoding": "cbor",
+          "hex": "a301616161316162016163",
+          "length": 11
+        }
+      },
+      "malformed": [],
+      "success": true,
+      "type": "EDN (encoded)"
+    }
+  },
+  "encode-ctap": {
+    "request": {
+      "payload": "{\"01\": \"example.com\", \"02\": \"2222222222222222222222222222222222222222222222222222222222222222\"}",
+      "mode": "encode",
+      "format": "CBOR (CTAP/WebAuthn Data)"
+    },
+    "status": 200,
+    "answer": {
+      "data": {
+        "binary": {
+          "base64": "AqIBa2V4YW1wbGUuY29tAlggIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+          "base64url": "AqIBa2V4YW1wbGUuY29tAlggIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI",
+          "colonHex": "02:a2:01:6b:65:78:61:6d:70:6c:65:2e:63:6f:6d:02:58:20:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22:22",
+          "encoding": "cbor",
+          "hex": "02a2016b6578616d706c652e636f6d0258202222222222222222222222222222222222222222222222222222222222222222",
+          "length": 50
+        },
+        "ctap": {
+          "code": 2,
+          "codeHex": "0x02",
+          "kind": "command"
+        },
+        "ctapDecoded": {
+          "getAssertionRequest": {
+            "clientDataHash": "2222222222222222222222222222222222222222222222222222222222222222",
+            "rpId": "example.com"
+          }
+        },
+        "encodedValue": {
+          "1": "example.com",
+          "2": "2222222222222222222222222222222222222222222222222222222222222222"
+        }
+      },
+      "malformed": [],
+      "success": true,
+      "type": "CBOR (CTAP/WebAuthn Data) (encoded getAssertionRequest)"
+    }
+  },
+  "encode-json": {
+    "request": {
+      "payload": "{\"a\": 1}",
+      "mode": "encode",
+      "format": "JSON (binary)"
+    },
+    "status": 200,
+    "answer": {
+      "data": {
+        "binary": {
+          "base64": "ewogICJhIjogMQp9",
+          "base64url": "ewogICJhIjogMQp9",
+          "colonHex": "7b:0a:20:20:22:61:22:3a:20:31:0a:7d",
+          "encoding": "json",
+          "hex": "7b0a20202261223a20310a7d",
+          "length": 12
+        },
+        "json": {
+          "a": 1
+        },
+        "text": "{\n  \"a\": 1\n}"
+      },
+      "malformed": [],
+      "success": true,
+      "type": "JSON (encoded)"
+    }
+  },
+  "encode-der": {
+    "request": {
+      "payload": "{\"binary\": {\"base64url\": \"AQIDBAU\"}}",
+      "mode": "encode",
+      "format": "DER"
+    },
+    "status": 200,
+    "answer": {
+      "data": {
+        "binary": {
+          "base64": "AQIDBAU=",
+          "base64url": "AQIDBAU",
+          "colonHex": "01:02:03:04:05",
+          "encoding": "der",
+          "hex": "0102030405",
+          "length": 5
+        },
+        "derBase64": "AQIDBAU="
+      },
+      "malformed": [],
+      "success": true,
+      "type": "DER (encoded)"
+    }
+  },
+  "encode-pem": {
+    "request": {
+      "payload": "{\"hex\": \"0102030405\"}",
+      "mode": "encode",
+      "format": "PEM"
+    },
+    "status": 200,
+    "answer": {
+      "data": {
+        "binary": {
+          "base64": "AQIDBAU=",
+          "base64url": "AQIDBAU",
+          "colonHex": "01:02:03:04:05",
+          "encoding": "pem",
+          "hex": "0102030405",
+          "length": 5
+        },
+        "pem": "-----BEGIN DATA-----\nAQIDBAU=\n-----END DATA-----"
+      },
+      "malformed": [],
+      "success": true,
+      "type": "PEM (encoded)"
+    }
+  },
+  "encode-cose": {
+    "request": {
+      "payload": "{\"1\": 2, \"3\": -7, \"-1\": 1, \"-2\": \"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f\", \"-3\": \"202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f\"}",
+      "mode": "encode",
+      "format": "COSE"
+    },
+    "status": 200,
+    "answer": {
+      "data": {
+        "binary": {
+          "base64": "pQECAyYgASFYIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fIlggICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=",
+          "base64url": "pQECAyYgASFYIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fIlggICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8",
+          "colonHex": "a5:01:02:03:26:20:01:21:58:20:00:01:02:03:04:05:06:07:08:09:0a:0b:0c:0d:0e:0f:10:11:12:13:14:15:16:17:18:19:1a:1b:1c:1d:1e:1f:22:58:20:20:21:22:23:24:25:26:27:28:29:2a:2b:2c:2d:2e:2f:30:31:32:33:34:35:36:37:38:39:3a:3b:3c:3d:3e:3f",
+          "encoding": "cbor",
+          "hex": "a5010203262001215820000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f225820202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+          "length": 77
+        },
+        "encodedValue": {
+          "-1": 1,
+          "-2": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+          "-3": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+          "1": 2,
+          "3": -7
+        }
+      },
+      "malformed": [],
+      "success": true,
+      "type": "COSE (COSE_Key)"
+    }
+  }
+}

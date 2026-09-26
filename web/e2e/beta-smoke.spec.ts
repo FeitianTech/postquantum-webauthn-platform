@@ -8,8 +8,11 @@ import { expect, test } from './fixtures';
 
 const SECTIONS = ['Simple Authentication', 'Advanced Authentication', 'Codec', 'FIDO MDS Authenticators'];
 
+// The top bar's highlight (the Codec's Decode / Encode switch has its own).
+const sectionHighlight = (page: Page) => page.getByRole('tablist', { name: 'Sections' }).locator('[data-segment-highlight]');
+
 async function highlightSitsOn(page: Page, tab: Locator) {
-  const highlight = page.locator('[data-segment-highlight]').first();
+  const highlight = sectionHighlight(page);
   await expect
     .poll(async () => {
       const [h, t] = await Promise.all([highlight.boundingBox(), tab.boundingBox()]);
@@ -26,16 +29,18 @@ test.describe('/beta', () => {
     await expect(page.getByRole('tabpanel', { name: 'Simple Authentication' })).toBeVisible();
     await highlightSitsOn(page, tabs.getByRole('tab', { name: 'Simple Authentication' }));
 
-    for (const [name, hash] of [
-      ['Codec', 'codec'],
-      ['FIDO MDS Authenticators', 'mds'],
-      ['Advanced Authentication', 'advanced'],
+    for (const [name, hash, ported] of [
+      ['Codec', 'codec', true],
+      ['FIDO MDS Authenticators', 'mds', false],
+      ['Advanced Authentication', 'advanced', false],
     ] as const) {
       const tab = tabs.getByRole('tab', { name });
       await tab.click();
       const panel = page.getByRole('tabpanel', { name });
       await expect(panel).toBeVisible();
-      await expect(panel.getByRole('link', { name: 'Open the current interface' })).toHaveAttribute('href', '/');
+      const note = panel.getByRole('link', { name: 'Open the current interface' });
+      if (ported) await expect(note).toHaveCount(0);
+      else await expect(note).toHaveAttribute('href', '/');
       await expect(page).toHaveURL(new RegExp(`/beta#${hash}$`));
       await highlightSitsOn(page, tab);
     }
@@ -54,7 +59,7 @@ test.describe('/beta', () => {
       const devtools = await page.context().newCDPSession(page);
       await devtools.send('Animation.enable');
       await devtools.send('Animation.setPlaybackRate', { playbackRate: 0.1 });
-      const highlight = page.locator('[data-segment-highlight]');
+      const highlight = sectionHighlight(page);
       const x = () => highlight.evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).m41);
       const target = page.getByRole('tab', { name: 'FIDO MDS Authenticators' });
       const from = await x();
