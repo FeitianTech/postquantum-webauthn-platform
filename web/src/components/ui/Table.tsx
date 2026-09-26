@@ -8,10 +8,24 @@ type Strip<T> = Omit<T, 'style'>;
 
 // A table that scrolls sideways inside its own frame, so the page never does.
 // White header, hairlines between rows, compact left-aligned cells.
-export function Table({ caption, className, children }: { caption?: ReactNode; className?: string; children: ReactNode }) {
+export function Table({
+  caption,
+  className,
+  tableClassName,
+  role,
+  children,
+}: {
+  caption?: ReactNode;
+  className?: string;
+  /** Classes for the table itself (the frame takes `className`). */
+  tableClassName?: string;
+  /** Written out when a layout changes the table's display, which drops its implicit role. */
+  role?: 'table';
+  children: ReactNode;
+}) {
   return (
     <div className={cx('w-full min-w-0 overflow-x-auto rounded-md border border-line', className)}>
-      <table className="w-full border-collapse text-left text-body">
+      <table role={role} className={cx('w-full border-collapse text-left text-body', tableClassName)}>
         {caption ? <caption className="sr-only">{caption}</caption> : null}
         {children}
       </table>
@@ -19,12 +33,22 @@ export function Table({ caption, className, children }: { caption?: ReactNode; c
   );
 }
 
-export function THead({ sticky = false, children }: { sticky?: boolean; children: ReactNode }) {
-  return <thead className={cx('bg-surface', sticky && 'sticky top-0 z-10')}>{children}</thead>;
+type GroupProps = Strip<HTMLAttributes<HTMLTableSectionElement>>;
+
+export function THead({ sticky = false, className, children, ...props }: GroupProps & { sticky?: boolean }) {
+  return (
+    <thead className={cx('bg-surface', sticky && 'sticky top-0 z-10', className)} {...props}>
+      {children}
+    </thead>
+  );
 }
 
-export function TBody({ children }: { children: ReactNode }) {
-  return <tbody>{children}</tbody>;
+export function TBody({ className, children, ...props }: GroupProps) {
+  return (
+    <tbody className={className} {...props}>
+      {children}
+    </tbody>
+  );
 }
 
 export function Tr({ className, children, ...props }: Strip<HTMLAttributes<HTMLTableRowElement>>) {

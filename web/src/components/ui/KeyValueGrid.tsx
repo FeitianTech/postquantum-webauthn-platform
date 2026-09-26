@@ -10,6 +10,10 @@ export type KeyValueItem = {
   /** A line under the value, such as where it came from. */
   hint?: ReactNode;
   mono?: boolean;
+  /** Running text rather than a figure: regular weight. */
+  plain?: boolean;
+  /** Takes the whole row: long text wraps across the grid's width. */
+  wide?: boolean;
 };
 
 const COLUMNS = {
@@ -24,14 +28,14 @@ export function KeyValueGrid({ items, columns = 3 }: { items: KeyValueItem[]; co
   return (
     <dl className={cx('grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2', COLUMNS[columns])}>
       {items.map((item) => (
-        <div key={item.key} data-item={item.key} className="min-w-0">
+        <div key={item.key} data-item={item.key} className={cx('min-w-0', item.wide && 'col-span-full')}>
           <dt className="text-caption text-ink-muted">{item.label}</dt>
           <dd className="mt-1 min-w-0">
             <span
               data-role="value"
               className={cx(
                 'block break-words text-ink',
-                item.mono ? 'font-mono text-label' : 'text-body-lg font-semibold',
+                item.mono ? 'font-mono text-label' : item.plain ? 'text-body-lg' : 'text-body-lg font-semibold',
               )}
             >
               {item.value}

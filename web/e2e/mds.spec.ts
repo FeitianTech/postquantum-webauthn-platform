@@ -179,7 +179,9 @@ test.describe('/beta#mds', () => {
   test('opens an entry a link names, an AAID with its # encoded', async ({ page }) => {
     await page.goto('/beta#mds/aaid:F1D0%230012');
     await expect(section(page).getByRole('heading', { level: 3, name: 'Fixture UAF Authenticator' })).toBeVisible();
-    await expect(section(page).locator('[data-mds-entry]').getByText('F1D0#0012', { exact: true })).toBeVisible();
+    const entry = section(page).locator('[data-mds-entry]');
+    await expect(entry.locator('[data-entry-subtitle]').getByText('F1D0#0012', { exact: true })).toBeVisible();
+    await expect(entry.locator('[data-section="overview"]').getByText('F1D0#0012', { exact: true })).toBeVisible();
     await section(page).getByRole('button', { name: 'Back' }).click();
     await expect(rows(page)).toHaveCount(32);
   });

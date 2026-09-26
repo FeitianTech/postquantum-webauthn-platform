@@ -85,9 +85,11 @@ describe('an MDS entry in the URL', () => {
     expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ block: 'center' });
   });
 
-  it('says when a link names an entry the list does not have', async () => {
+  it('asks the server for an entry the list does not have, and says when it has none', async () => {
     renderApp('#mds/aaguid:not-listed');
-    expect(await screen.findByRole('heading', { level: 3, name: 'Authenticator not found' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 3, name: 'Authenticator metadata not found.' })).toBeInTheDocument();
+    expect(screen.getByText('Metadata entry not found.')).toBeInTheDocument();
+    expect(screen.getByText('aaguid:not-listed')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(list()).toBeVisible();
   });

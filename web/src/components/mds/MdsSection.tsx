@@ -8,13 +8,14 @@ import { NAV_ID } from '@/components/shell/SectionPanel';
 import { SECTIONS } from '@/lib/sections';
 import type { SectionRoute } from '@/lib/useSection';
 
-import { EntryView } from './EntryView';
+import { EntryPage } from './EntryPage';
 import { EntryCount, StatusLine } from './ExplorerHeader';
 import { ExplorerTable } from './ExplorerTable';
 import { FilterBar } from './FilterBar';
 import { ManageMetadataDialog } from './ManageMetadataDialog';
 import { ListState } from './ListState';
 import { useExplorerView } from './useExplorerView';
+import { useEntryDetail } from './useEntryDetail';
 import { type Explorer, useMdsExplorer } from './useMdsExplorer';
 
 function listState(explorer: Explorer, view: ReturnType<typeof useExplorerView>) {
@@ -72,6 +73,7 @@ export function MdsSection({ active, route = CLOSED }: { active: boolean; route?
   const place = useRef<ListPlace | null>(null);
   const shownEntry = useRef('');
   const openEntryId = route.path[0] ?? '';
+  const entry = useEntryDetail(openEntryId, explorer.entries, explorer.phase);
   const { open } = route;
 
   const openEntry = useCallback(
@@ -136,12 +138,7 @@ export function MdsSection({ active, route = CLOSED }: { active: boolean; route?
       </div>
       {openEntryId ? (
         <div className="mt-8">
-          <EntryView
-            entryId={openEntryId}
-            entry={explorer.entries.find((entry) => entry.entryId === openEntryId) ?? null}
-            loading={explorer.phase === 'idle' || explorer.phase === 'loading'}
-            onBack={() => route.close()}
-          />
+          <EntryPage entryId={openEntryId} detail={entry.detail} onBack={() => route.close()} onRetry={entry.retry} />
         </div>
       ) : null}
       <div hidden={Boolean(openEntryId)} data-mds-list="">
