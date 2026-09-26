@@ -40,7 +40,7 @@ function Workspace({ input, output }: { input: ReactNode; output: ReactNode }) {
       <div className="min-w-0 wide:sticky wide:top-[calc(var(--header-height)+1.5rem)] wide:self-start" data-codec-column="input">
         {input}
       </div>
-      <div className="min-w-0 rounded-lg border border-line bg-surface p-5 sm:p-6" data-codec-column="output">
+      <div className="min-w-0 self-start rounded-lg border border-line bg-surface p-4 sm:p-6" data-codec-column="output">
         {output}
       </div>
     </div>

@@ -43,11 +43,16 @@ describe('a decoded value', () => {
     expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['U2F_V2', 'FIDO_2_0']);
   });
 
-  it('labels a map\'s keys, keeps keys spelled as data as written, and indents a nested map (CX-V6, CX-X4)', () => {
-    const container = show({ fmt: 'packed', '-1': 1, 'h\'01\' (bytes)': 2, flags: { UP: true } });
-    expect(screen.getAllByRole('term').map((term) => term.textContent)).toEqual(['Format', '-1', "h'01' (bytes)", 'Flags', 'UP']);
-    const nested = container.querySelectorAll('dl')[1].parentElement!;
-    expect(nested.className).toContain('border-l');
+  it('labels a map\'s keys, keeps keys spelled as data as written and in mono, and indents what a map holds (CX-V6, CX-X4)', () => {
+    const container = show({ fmt: 'packed', '-1': 1, 'h\'01\' (bytes)': 2, flags: { UP: true }, x5c: ['a'] });
+    const terms = screen.getAllByRole('term');
+    expect(terms.map((term) => term.textContent)).toEqual(['Format', '-1', "h'01' (bytes)", 'Flags', 'UP', 'X5C']);
+    expect(terms.map((term) => term.className.includes('font-mono'))).toEqual([false, true, true, false, true, false]);
+    const nested = Array.from(container.querySelectorAll('[data-entry="nested"] > dd'));
+    expect(nested).toHaveLength(2);
+    nested.forEach((body) => expect(body.className).toContain('border-l'));
+    // Side by side only where the map has room.
+    expect(terms[0].parentElement!.className).toContain('@md:grid-cols-');
   });
 
   it('puts the interpretation badges before the map, each in its tone (CX-V7)', () => {
