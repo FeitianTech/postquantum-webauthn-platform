@@ -6,7 +6,9 @@ import type { CertificateSummary as Summary, SummaryItem } from './entryModel';
 
 function ItemValue({ item, context }: { item: SummaryItem; context: string }) {
   const name = `${context}${item.label}`.toLowerCase();
-  if (item.code) return <CodeBlock value={item.value ?? ''} label={name} />;
+  // An item has a value, or its lines (explorer/certificate.js).
+  const value = item.value as string;
+  if (item.code) return <CodeBlock value={value} label={name} />;
   if (item.lines) {
     return (
       <span className="flex flex-col">
@@ -17,8 +19,8 @@ function ItemValue({ item, context }: { item: SummaryItem; context: string }) {
     );
   }
   // The serial numbers are identifiers: Geist Mono, whole, with copy.
-  if (item.label.startsWith('Serial Number')) return <MonoValue value={item.value ?? ''} label={name} />;
-  return <span className="[overflow-wrap:anywhere]">{item.value}</span>;
+  if (item.label.startsWith('Serial Number')) return <MonoValue value={value} label={name} />;
+  return <span className="[overflow-wrap:anywhere]">{value}</span>;
 }
 
 function Items({ items, context = '' }: { items: SummaryItem[]; context?: string }) {

@@ -87,7 +87,7 @@ export function EntryPage({
         </p>
       </>
     );
-  } else if (detail.phase === 'missing' || detail.phase === 'failed') {
+  } else {
     const failed = detail.phase === 'failed';
     body = (
       <>

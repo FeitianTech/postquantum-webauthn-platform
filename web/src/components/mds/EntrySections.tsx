@@ -22,13 +22,14 @@ function FieldValue({ field, entry }: { field: DetailField; entry: MdsEntry }) {
       </span>
     );
   }
-  const value = field.value ?? '';
+  // A field without codes has a value (explorer/detail.js).
+  const value = field.value as string;
   if (field.identifier) {
     // The overview's Identifier is the entry's id, named by its kind.
     const label = field.label === 'Identifier' ? identifierName(entry) : field.label;
     return <MonoValue value={value} label={label} />;
   }
-  if (field.label === 'Certification' && value === entry.certification) {
+  if (field.label === 'Certification') {
     const badge = certificationBadge(entry);
     return (
       <span className="flex flex-wrap items-center gap-x-2 gap-y-1">

@@ -75,9 +75,10 @@ export function EntryRouter({ route, entries, phase }: { route: SectionRoute; en
     document.querySelector<HTMLElement>(`[data-mds-entry] [data-certificate="${left}"]`)?.focus({ preventScroll: true });
   }, [shown]);
 
+  const shownCertificate = certificate?.certificate ?? '';
   const decodeShown = useCallback(() => {
-    if (certificate) void decode(certificate.certificate);
-  }, [certificate, decode]);
+    void decode(shownCertificate);
+  }, [decode, shownCertificate]);
 
   return (
     <>

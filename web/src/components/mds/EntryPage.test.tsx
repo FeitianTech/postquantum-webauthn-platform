@@ -337,6 +337,30 @@ describe('the MDS entry page', () => {
   });
 });
 
+describe('the MDS entry page: what an entry may lack', () => {
+  it('MDS-D3: shows a level with nothing after it', () => {
+    renderEntry(entryNamed('Fixture Uncertified Key'));
+    expect(field(section('overview'), 'Certification')).toHaveTextContent(/^NOT FIDO Certified$/);
+  });
+
+  it('MDS-D5/D8: shows a method known only by its accuracy, and a descriptor or a version line alone', () => {
+    renderEntry({
+      ...L1(),
+      metadataStatement: { userVerificationDetails: [[{ caDesc: { base: 36, minLength: 4 } }]] },
+      statusReports: [
+        { status: 'FIDO_CERTIFIED', url: 'https://example.com/only-the-url' },
+        { status: 'FIDO_CERTIFIED', certificationPolicyVersion: '1.4.0' },
+      ],
+    } as unknown as MdsEntry);
+    const combination = section('userVerification').querySelector('[data-combination]')!;
+    expect(combination).toHaveTextContent(/^Combination 1Base: 36 • Min length: 4$/);
+    expect(combination.querySelector('.font-mono')).toBeNull();
+    const [urlOnly, versionOnly] = within(section('statusReports')).getAllByRole('row').slice(1);
+    expect(within(urlOnly).getAllByRole('cell')[4]).toHaveTextContent(/^https:\/\/example.com\/only-the-url$/);
+    expect(within(versionOnly).getAllByRole('cell')[4]).toHaveTextContent(/^Policy: 1.4.0$/);
+  });
+});
+
 describe('an entry the list does not hold (MDS-D2)', () => {
   const uploaded = { ...entryNamed('Fixture Certified Key'), entryId: 'aaguid:f1d0f1d0-0000-4000-8000-000000000099', name: 'Fixture Uploaded Key' };
 
@@ -403,6 +427,53 @@ describe('an entry the list does not hold (MDS-D2)', () => {
     );
     renderSection(uploaded.entryId);
     expect(await screen.findByRole('heading', { level: 3, name: 'Fixture Uploaded Key' })).toBeInTheDocument();
+  });
+
+  it('says the entry is not found when the server answers without one, and a failure that is not an error', async () => {
+    stubFetch(fixtureRoutes({ '/api/mds/metadata/resolve': () => json({ entry: null }) }));
+    renderSection('aaguid:unanswered');
+    expect(await screen.findByRole('heading', { level: 3, name: 'Authenticator metadata not found.' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('says a failure that is not an error without a sentence of its own', async () => {
+    stubFetch(
+      fixtureRoutes({
+        '/api/mds/metadata/resolve': () => {
+          throw 'offline';
+        },
+      }),
+    );
+    renderSection('aaguid:unreachable');
+    expect(await screen.findByRole('heading', { level: 3, name: 'Unable to open authenticator metadata.' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('forgets an answer for an entry no longer shown', async () => {
+    let release!: (response: Response) => void;
+    stubFetch(fixtureRoutes({ '/api/mds/metadata/resolve': () => new Promise<Response>((resolve) => (release = resolve)) }));
+    const view = (entryId: string) => (
+      <ToastProvider>
+        <div role="tablist" aria-label="Sections">
+          <button type="button" role="tab" id="nav-tab-mds" aria-selected="true">
+            FIDO MDS Authenticators
+          </button>
+        </div>
+        <MdsSection active route={{ path: [entryId], open: vi.fn(), close: vi.fn(), replace: vi.fn() }} />
+      </ToastProvider>
+    );
+    const { rerender } = renderPage(view('aaguid:first'));
+    await screen.findByText('Locating metadata entry...');
+    const first = release;
+    rerender(
+      <>
+        <div id="app-root">{view('aaguid:second')}</div>
+        <div id="overlay-root" />
+      </>,
+    );
+    await act(async () => first(json({ entry: { ...L1(), entryId: 'aaguid:first', name: 'Too late' } })));
+    expect(screen.queryByRole('heading', { level: 3, name: 'Too late' })).toBeNull();
+    expect(screen.getByText('Locating metadata entry...')).toBeInTheDocument();
   });
 
   it('asks the server for a listed entry that came without its detail', async () => {

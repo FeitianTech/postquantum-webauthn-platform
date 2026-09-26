@@ -27,7 +27,7 @@ export function useEntryDetail(entryId: string, entries: MdsEntry[], phase: Expl
   const [resolved, setResolved] = useState<Resolved | null>(null);
   const [attempt, setAttempt] = useState(0);
 
-  const listed = entryId ? entries.find((entry) => entry.entryId === entryId) : undefined;
+  const listed = entries.find((entry) => entry.entryId === entryId);
   const fromList = listed && hasDetail(listed) ? listed : null;
   const listLoading = phase === 'idle' || phase === 'loading';
   const mustAsk = Boolean(entryId) && !fromList && (Boolean(listed) || !listLoading);

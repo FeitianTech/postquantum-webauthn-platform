@@ -144,6 +144,54 @@ describe('an attestation certificate of an MDS entry', () => {
     expect(document.querySelectorAll('[data-mds-certificate] pre')[1].textContent).toBe('Unable to parse attestation certificate');
   });
 
+  it('MDS-X3: gives a value that is a list a line for each', async () => {
+    renderApp(`#mds/${L1().entryId}/certificate/1`, () =>
+      json({ details: { subject: ['CN=First', '', 'CN=Second'], serialNumber: { hex: '0A' } } }),
+    );
+    const subject = await waitFor(() => {
+      const value = document.querySelector<HTMLElement>('[data-mds-certificate] [data-item="Subject"] [data-role="value"]');
+      expect(value).not.toBeNull();
+      return value!;
+    });
+    expect([...subject.querySelectorAll('.flex-col > span')].map((line) => line.textContent)).toEqual(['CN=First', 'CN=Second']);
+  });
+
+  it('MDS-X3: shows a summary that has only a section', async () => {
+    renderApp(`#mds/${L1().entryId}/certificate/1`, () => json({ details: { signature: { algorithm: 'ECDSA_SHA256' } } }));
+    await waitFor(() => expect(document.querySelector('[data-mds-certificate] [data-section="Signature"]')).not.toBeNull());
+    const page = document.querySelector<HTMLElement>('[data-mds-certificate]')!;
+    expect(page.querySelector('[data-item="Subject"]')).toBeNull();
+    expect(page.querySelector('[data-section="Signature"] [data-item="Algorithm"]')).toHaveTextContent('ECDSA_SHA256');
+  });
+
+  it('opens nothing for a certificate that is only whitespace, nor for an entry without certificates', async () => {
+    const blank = { ...L1(), entryId: 'aaguid:blank', name: 'Blank Root', attestationCertificates: ['  '] };
+    const bare = { ...L1(), entryId: 'aaguid:bare', name: 'No Roots', attestationCertificates: [] };
+    window.history.replaceState({ fromNext: true }, '', '/beta#mds/aaguid:blank/certificate/1');
+    const fetch = stubFetch(
+      fixtureRoutes({
+        '/api/mds/metadata/resolve': (_init, url) => json({ entry: url.includes('blank') ? blank : bare }),
+      }),
+    );
+    renderPage(
+      <ToastProvider>
+        <AppShell />
+      </ToastProvider>,
+    );
+    expect(await screen.findByRole('heading', { level: 3, name: 'Blank Root' })).toBeVisible();
+    await waitFor(() => expect(window.location.hash).toBe('#mds/aaguid:blank'));
+    await userEvent.click(screen.getByRole('button', { name: 'Certificate 1' }));
+    expect(window.location.hash).toBe('#mds/aaguid:blank');
+    expect(decodeCalls(fetch)).toHaveLength(0);
+
+    act(() => {
+      window.history.replaceState({ fromNext: true }, '', '/beta#mds/aaguid:bare/certificate/1');
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    expect(await screen.findByRole('heading', { level: 3, name: 'No Roots' })).toBeVisible();
+    await waitFor(() => expect(window.location.hash).toBe('#mds/aaguid:bare'));
+  });
+
   it('shows the entry for a certificate it does not have, and says so in the URL', async () => {
     renderApp(`#mds/${L1().entryId}/certificate/9`);
     expect(await screen.findByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeVisible();

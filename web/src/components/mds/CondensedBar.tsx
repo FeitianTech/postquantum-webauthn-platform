@@ -41,12 +41,13 @@ export function CondensedBar({
 
   useEffect(() => {
     const target = watch.current;
-    if (!target || !root || typeof IntersectionObserver === 'undefined') return undefined;
+    const bar = barRef.current;
+    if (!target || !bar || typeof IntersectionObserver === 'undefined') return undefined;
     let observer: IntersectionObserver | null = null;
     const observe = () => {
       observer?.disconnect();
       const top = shellHeaderBottom();
-      if (barRef.current) barRef.current.style.top = `${top}px`;
+      bar.style.top = `${top}px`;
       observer = new IntersectionObserver(
         ([entry]) => setShown(!entry.isIntersecting && entry.boundingClientRect.top < top),
         { rootMargin: `${-top}px 0px 0px 0px` },
