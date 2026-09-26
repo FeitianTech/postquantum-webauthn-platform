@@ -1,0 +1,2880 @@
+{
+  "entries": [
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000001",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000001",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw",
+          "ed25519_eddsa_sha512_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000001",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Security Key L1",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "passcode_external"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020260901001",
+          "certificationDescriptor": "Fixture Security Key",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2026-09-01",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2026-09-01"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000002",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000002",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIDbDCCAlSgAwIBAgICA+owDQYJKoZIhvcNAQELBQAweDELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjElMCMGA1UEAwwcRml4dHVyZSBSU0EgQXR0ZXN0YXRpb24gUm9vdDAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFoweDELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjElMCMGA1UEAwwcRml4dHVyZSBSU0EgQXR0ZXN0YXRpb24gUm9vdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAPl5PNcWVcBz47ZYfCCq1lmjEg/sCAe4XuEliTt9Ma2B9c+suFQx9WlvMPME2PCJCSEXq+EArqyjUBt/J1v2BnTp/125l17bPFL1ng2vwnCOEhmunWxuPf0NY3PAEKiheRKU+AhGLNNvRjEXZBEWD4ArlBIuKp5HxHfhzefrqn2KlPbh3qJ3+Km9jryJ/j9HT4D5a6VUbyoUmsKfWhmOmKVIiKxxOck5BQfmp0FUxDHXo1FIGJ2OUJCgcijRRj3JvLy/fEj+aSnz+eE2+Wtt/NSIBZaUykx4AsYmaftT/9puzkoUBb8GVgRLg5rUfnxujzKJZUHYpfiFjEIBUB9fWtUCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEASDZAoIR6CDoAqz8oJ5szVfqIaL+Gei3QDz58MjWrptZ0XybuJYizJjDzpFAvSSqWjmvDNn5MFTcbkdnvRXb64KFvdstyYOxXK5I6HgNCTlpSq0Z1hP1pu+BeK2JG6zs6JXuSVT4bug7TATZ4+O+2mcLaODnEMU3PrPBQAUUctYDwm94LJkSeKKxY6rIJcUh2/tix7HvJL8u26kXR3wDGlC3X9GU5QB158ESCxaIJV1U2y7QhkCXC7Sp4c1SFxtaryjBxm/uTWzKZKWzR/0ru0aUxAtagRSwNdQfWRWI4fgmouHc2nGFkUYmVuRdiKscEQN9yoXVgbCi6dGi3i2EaFQ=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw",
+          "ed25519_eddsa_sha512_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000002",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc",
+            "ble"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Security Key L2",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "fingerprint_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "passcode_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020260815002",
+          "certificationDescriptor": "Fixture Security Key L2",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2026-08-15",
+          "status": "FIDO_CERTIFIED_L2"
+        }
+      ],
+      "timeOfLastStatusChange": "2026-08-15"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000003",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000003",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIBTzCCAQGgAwIBAgICA+swBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfDELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEpMCcGA1UEAwwgRml4dHVyZSBFZDI1NTE5IEF0dGVzdGF0aW9uIFJvb3QwKjAFBgMrZXADIQCVOkidv4x1dS3MznN12V3JevygGSsfjkKngkWk1skn/jAFBgMrZXADQQAuMQevenOOhfniZ2CaYMt09z0m7q0nhwVLod/TJCQza2JnjdXaj66ndoGKabQTGEXlqCRU2AMnfkSKGQv4WzQH"
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw",
+          "ed25519_eddsa_sha512_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000003",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Certified Key",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "passcode_external"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020260710003",
+          "certificationDescriptor": "Fixture Certified Key",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2026-07-10",
+          "status": "FIDO_CERTIFIED"
+        }
+      ],
+      "timeOfLastStatusChange": "2026-07-10"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000004",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000004",
+        "attachmentHint": [
+          "internal"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw",
+          "ed25519_eddsa_sha512_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000004",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "internal",
+            "hybrid"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Uncertified Key",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "software"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "passcode_external"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "effectiveDate": "2026-06-01",
+          "status": "NOT_FIDO_CERTIFIED"
+        }
+      ],
+      "timeOfLastStatusChange": "2026-06-01"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000005",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000005",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw",
+          "ed25519_eddsa_sha512_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000005",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Revoked Key",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "passcode_external"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020230110005",
+          "certificationDescriptor": "Fixture Revoked Key",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2023-01-10",
+          "status": "FIDO_CERTIFIED_L1"
+        },
+        {
+          "effectiveDate": "2026-05-20",
+          "status": "REVOKED"
+        }
+      ],
+      "timeOfLastStatusChange": "2026-05-20"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000006",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000006",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "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"
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw",
+          "ed25519_eddsa_sha512_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000006",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Key With Many Attestation Roots",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "passcode_external"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020260402006",
+          "certificationDescriptor": "Fixture Key With Many Roots",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2026-04-02",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2026-04-02"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000007",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000007",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw",
+          "ed25519_eddsa_sha512_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000007",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Key With Every User Verification Method",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "fingerprint_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "passcode_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "voiceprint_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "faceprint_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "location_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "eyeprint_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "pattern_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "handprint_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "passcode_external"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "none"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020260303007",
+          "certificationDescriptor": "Fixture Biometric Key",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2026-03-03",
+          "status": "FIDO_CERTIFIED_L2"
+        }
+      ],
+      "timeOfLastStatusChange": "2026-03-03"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000008",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000008",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw",
+          "ed25519_eddsa_sha512_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000008",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Authenticator With A Deliberately Long Description, Written To Show How The Explorer Truncates A Name While Keeping It Visible.",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "passcode_external"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020260214008",
+          "certificationDescriptor": "Fixture Long Name Key",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2026-02-14",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2026-02-14"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000009",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000009",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw",
+          "ed25519_eddsa_sha512_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000009",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Key Without An Icon",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "passcode_external"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "effectiveDate": "2026-01-05",
+          "status": "NOT_FIDO_CERTIFIED"
+        }
+      ],
+      "timeOfLastStatusChange": "2026-01-05"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000010",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000010",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw",
+          "ed25519_eddsa_sha512_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000010",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Key Without Status Reports",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ],
+          [
+            {
+              "userVerificationMethod": "passcode_external"
+            }
+          ]
+        ]
+      },
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-12-12"
+    },
+    {
+      "attestationCertificateKeyIdentifiers": [
+        "f1d0000000000000000000000000000000000011"
+      ],
+      "metadataStatement": {
+        "attachmentHint": [
+          "external",
+          "wired"
+        ],
+        "attestationCertificateKeyIdentifiers": [
+          "f1d0000000000000000000000000000000000011"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture U2F Key",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "u2f",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "U2F100020251111011",
+          "certificationDescriptor": "Fixture U2F Key",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-11-11",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-11-11"
+    },
+    {
+      "aaid": "F1D0#0012",
+      "metadataStatement": {
+        "aaid": "F1D0#0012",
+        "attachmentHint": [
+          "internal"
+        ],
+        "attestationRootCertificates": [
+          "MIIBTzCCAQGgAwIBAgICA+swBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfDELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEpMCcGA1UEAwwgRml4dHVyZSBFZDI1NTE5IEF0dGVzdGF0aW9uIFJvb3QwKjAFBgMrZXADIQCVOkidv4x1dS3MznN12V3JevygGSsfjkKngkWk1skn/jAFBgMrZXADQQAuMQevenOOhfniZ2CaYMt09z0m7q0nhwVLod/TJCQza2JnjdXaj66ndoGKabQTGEXlqCRU2AMnfkSKGQv4WzQH"
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture UAF Authenticator",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "tee"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "uaf",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "fingerprint_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "UAF100020251010012",
+          "certificationDescriptor": "Fixture UAF Authenticator",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-10-10",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-10-10"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000020",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000020",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000020",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 01",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100020",
+          "certificationDescriptor": "Fixture Filler Key 01",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-01-01",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-01-01"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000021",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000021",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000021",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 02",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100021",
+          "certificationDescriptor": "Fixture Filler Key 02",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-02-02",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-02-02"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000022",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000022",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000022",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 03",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100022",
+          "certificationDescriptor": "Fixture Filler Key 03",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-03-03",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-03-03"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000023",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000023",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000023",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 04",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100023",
+          "certificationDescriptor": "Fixture Filler Key 04",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-04-04",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-04-04"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000024",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000024",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000024",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 05",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100024",
+          "certificationDescriptor": "Fixture Filler Key 05",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-05-05",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-05-05"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000025",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000025",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000025",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 06",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100025",
+          "certificationDescriptor": "Fixture Filler Key 06",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-06-06",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-06-06"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000026",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000026",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000026",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 07",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100026",
+          "certificationDescriptor": "Fixture Filler Key 07",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-07-07",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-07-07"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000027",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000027",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000027",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 08",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100027",
+          "certificationDescriptor": "Fixture Filler Key 08",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-08-08",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-08-08"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000028",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000028",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000028",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 09",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100028",
+          "certificationDescriptor": "Fixture Filler Key 09",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-09-09",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-09-09"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000029",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000029",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000029",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 10",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100029",
+          "certificationDescriptor": "Fixture Filler Key 10",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-01-10",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-01-10"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000030",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000030",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000030",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 11",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100030",
+          "certificationDescriptor": "Fixture Filler Key 11",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-02-11",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-02-11"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000031",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000031",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000031",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 12",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100031",
+          "certificationDescriptor": "Fixture Filler Key 12",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-03-12",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-03-12"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000032",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000032",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000032",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 13",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100032",
+          "certificationDescriptor": "Fixture Filler Key 13",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-04-13",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-04-13"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000033",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000033",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000033",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 14",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100033",
+          "certificationDescriptor": "Fixture Filler Key 14",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-05-14",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-05-14"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000034",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000034",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000034",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 15",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100034",
+          "certificationDescriptor": "Fixture Filler Key 15",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-06-15",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-06-15"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000035",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000035",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000035",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 16",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100035",
+          "certificationDescriptor": "Fixture Filler Key 16",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-07-16",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-07-16"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000036",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000036",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000036",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 17",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100036",
+          "certificationDescriptor": "Fixture Filler Key 17",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-08-17",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-08-17"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000037",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000037",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000037",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 18",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100037",
+          "certificationDescriptor": "Fixture Filler Key 18",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-09-18",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-09-18"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000038",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000038",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000038",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 19",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100038",
+          "certificationDescriptor": "Fixture Filler Key 19",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-01-19",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-01-19"
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000039",
+      "metadataStatement": {
+        "aaguid": "f1d0f1d0-0000-4000-8000-000000000039",
+        "attachmentHint": [
+          "external",
+          "wired",
+          "nfc"
+        ],
+        "attestationRootCertificates": [
+          "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
+        ],
+        "attestationTypes": [
+          "basic_full"
+        ],
+        "authenticationAlgorithms": [
+          "secp256r1_ecdsa_sha256_raw"
+        ],
+        "authenticatorGetInfo": {
+          "aaguid": "f1d0f1d0000040008000000000000039",
+          "extensions": [
+            "credProtect",
+            "hmac-secret"
+          ],
+          "maxMsgSize": 1200,
+          "options": {
+            "clientPin": true,
+            "plat": false,
+            "rk": true,
+            "up": true
+          },
+          "pinUvAuthProtocols": [
+            1,
+            2
+          ],
+          "transports": [
+            "usb",
+            "nfc"
+          ],
+          "versions": [
+            "FIDO_2_0",
+            "FIDO_2_1"
+          ]
+        },
+        "authenticatorVersion": 2,
+        "cryptoStrength": 128,
+        "description": "Fixture Filler Key 20",
+        "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+        "keyProtection": [
+          "hardware",
+          "secure_element"
+        ],
+        "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+        "matcherProtection": [
+          "on_chip"
+        ],
+        "protocolFamily": "fido2",
+        "publicKeyAlgAndEncodings": [
+          "cose"
+        ],
+        "schema": 3,
+        "tcDisplay": [],
+        "upv": [
+          {
+            "major": 1,
+            "minor": 1
+          }
+        ],
+        "userVerificationDetails": [
+          [
+            {
+              "userVerificationMethod": "presence_internal"
+            }
+          ]
+        ]
+      },
+      "statusReports": [
+        {
+          "certificateNumber": "FIDO20020250100039",
+          "certificationDescriptor": "Fixture Filler Key 20",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "1.3",
+          "effectiveDate": "2025-01-01",
+          "status": "FIDO_CERTIFIED_L1"
+        }
+      ],
+      "timeOfLastStatusChange": "2025-01-01"
+    }
+  ],
+  "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+  "nextUpdate": "2026-10-20",
+  "no": 7
+}

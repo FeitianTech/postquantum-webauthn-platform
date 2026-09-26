@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import shutil
+
 import pytest
 
 # The caches the metadata submodules share, with the value each one holds
@@ -97,3 +99,18 @@ def verifier():
     """The fragment that defines the metadata merge and verifier helpers."""
 
     return pytest.importorskip("server.app.webauthn.metadata.verifier")
+
+
+@pytest.fixture
+def mds_fixture_snapshot(monkeypatch, tmp_path, metadata_state):
+    """The fixture snapshot (tests/fixtures/mds/snapshot), copied into this test's
+    directory and made the snapshot directory. Copied, never served in place, so
+    nothing a test does lands in the checkout; with fresh modification times,
+    since the metadata caches key on them."""
+
+    from tests.app.metadata import mds_fixture
+
+    target = tmp_path / "mds-snapshot"
+    shutil.copytree(mds_fixture.SNAPSHOT_DIR, target, copy_function=shutil.copy)
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(target))
+    return target

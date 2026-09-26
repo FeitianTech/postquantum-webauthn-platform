@@ -1,0 +1,12 @@
+{
+  "entryCount": 32,
+  "etag": "\"fixture-7\"",
+  "fetchedAt": "2026-09-20T08:00:00+00:00",
+  "generatedAt": "2026-09-20T08:00:00+00:00",
+  "lastModified": "Sun, 20 Sep 2026 08:00:00 GMT",
+  "lastModifiedIso": "2026-09-20T08:00:00+00:00",
+  "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+  "nextUpdate": "2026-10-20",
+  "no": 7,
+  "source": "packaged"
+}

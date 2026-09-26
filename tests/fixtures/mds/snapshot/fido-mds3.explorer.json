@@ -1,0 +1,2001 @@
+{
+  "entries": [
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000001",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw",
+        "ED25519 Eddsa SHA512 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Security Key \u2022 (FIDO20020260901001)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2026-09-01",
+      "dateUpdated": "Sep 1, 2026",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000001",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000001",
+      "index": 0,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Security Key L1",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2026-09-01",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Passcode External, Presence Internal",
+      "userVerificationList": [
+        "Passcode External",
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000002",
+      "algorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw",
+        "ED25519 Eddsa SHA512 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
+      "certificateAlgorithmInfoList": [
+        "RSASSA-PKCS1-v1_5_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture RSA Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture RSA Attestation Root",
+      "certification": "FIDO Certified L2 \u2022 Fixture Security Key L2 \u2022 (FIDO20020260815002)",
+      "certificationStatus": "FIDO_CERTIFIED_L2",
+      "commonName": "Fixture RSA Attestation Root",
+      "dateTooltip": "2026-08-15",
+      "dateUpdated": "Aug 15, 2026",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000002",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000002",
+      "index": 1,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Security Key L2",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2026-08-15",
+      "transports": "Ble, Nfc, Usb",
+      "transportsList": [
+        "Ble",
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Fingerprint Internal, Passcode Internal, Presence Internal",
+      "userVerificationList": [
+        "Fingerprint Internal",
+        "Passcode Internal",
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000003",
+      "algorithmInfo": "ED25519_SHA512",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw",
+        "ED25519 Eddsa SHA512 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ED25519_SHA512",
+      "certificateAlgorithmInfoList": [
+        "ED25519_SHA512"
+      ],
+      "certificateCommonNameList": [
+        "Fixture Ed25519 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture Ed25519 Attestation Root",
+      "certification": "FIDO Certified \u2022 Fixture Certified Key \u2022 (FIDO20020260710003)",
+      "certificationStatus": "FIDO_CERTIFIED",
+      "commonName": "Fixture Ed25519 Attestation Root",
+      "dateTooltip": "2026-07-10",
+      "dateUpdated": "Jul 10, 2026",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000003",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+      "id": "f1d0f1d0-0000-4000-8000-000000000003",
+      "index": 2,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Certified Key",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2026-07-10",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Passcode External, Presence Internal",
+      "userVerificationList": [
+        "Passcode External",
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000004",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw",
+        "ED25519 Eddsa SHA512 Raw"
+      ],
+      "attachment": "Internal",
+      "attachmentList": [
+        "Internal"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "NOT FIDO Certified",
+      "certificationStatus": "NOT_FIDO_CERTIFIED",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2026-06-01",
+      "dateUpdated": "Jun 1, 2026",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000004",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000004",
+      "index": 3,
+      "isLightweightEntry": true,
+      "keyProtection": "Software",
+      "keyProtectionList": [
+        "Software"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Uncertified Key",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2026-06-01",
+      "transports": "Hybrid, Internal",
+      "transportsList": [
+        "Hybrid",
+        "Internal"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Passcode External, Presence Internal",
+      "userVerificationList": [
+        "Passcode External",
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000005",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw",
+        "ED25519 Eddsa SHA512 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "Revoked",
+      "certificationStatus": "REVOKED",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2026-05-20",
+      "dateUpdated": "May 20, 2026",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000005",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000005",
+      "index": 4,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Revoked Key",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2026-05-20",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Passcode External, Presence Internal",
+      "userVerificationList": [
+        "Passcode External",
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000006",
+      "algorithmInfo": "ED25519_SHA512",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw",
+        "ED25519 Eddsa SHA512 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ED25519_SHA512",
+      "certificateAlgorithmInfoList": [
+        "ED25519_SHA512"
+      ],
+      "certificateCommonNameList": [
+        "Fixture Authenticator Attestation Root Certificate Authority 01",
+        "Fixture Authenticator Attestation Root Certificate Authority 02",
+        "Fixture Authenticator Attestation Root Certificate Authority 03",
+        "Fixture Authenticator Attestation Root Certificate Authority 04",
+        "Fixture Authenticator Attestation Root Certificate Authority 05",
+        "Fixture Authenticator Attestation Root Certificate Authority 06",
+        "Fixture Authenticator Attestation Root Certificate Authority 07",
+        "Fixture Authenticator Attestation Root Certificate Authority 08",
+        "Fixture Authenticator Attestation Root Certificate Authority 09",
+        "Fixture Authenticator Attestation Root Certificate Authority 10",
+        "Fixture Authenticator Attestation Root Certificate Authority 11",
+        "Fixture Authenticator Attestation Root Certificate Authority 12",
+        "Fixture Authenticator Attestation Root Certificate Authority 13",
+        "Fixture Authenticator Attestation Root Certificate Authority 14",
+        "Fixture Authenticator Attestation Root Certificate Authority 15"
+      ],
+      "certificateCommonNames": "Fixture Authenticator Attestation Root Certificate Authority 01, Fixture Authenticator Attestation Root Certificate Authority 02, Fixture Authenticator Attestation Root Certificate Authority 03, Fixture Authenticator Attestation Root Certificate Authority 04, Fixture Authenticator Attestation Root Certificate Authority 05, Fixture Authenticator Attestation Root Certificate Authority 06, Fixture Authenticator Attestation Root Certificate Authority 07, Fixture Authenticator Attestation Root Certificate Authority 08, Fixture Authenticator Attestation Root Certificate Authority 09, Fixture Authenticator Attestation Root Certificate Authority 10, Fixture Authenticator Attestation Root Certificate Authority 11, Fixture Authenticator Attestation Root Certificate Authority 12, Fixture Authenticator Attestation Root Certificate Authority 13, Fixture Authenticator Attestation Root Certificate Authority 14, Fixture Authenticator Attestation Root Certificate Authority 15",
+      "certification": "FIDO Certified L1 \u2022 Fixture Key With Many Roots \u2022 (FIDO20020260402006)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture Authenticator Attestation Root Certificate Authority 01, Fixture Authenticator Attestation Root Certificate Authority 02, Fixture Authenticator Attestation Root Certificate Authority 03, Fixture Authenticator Attestation Root Certificate Authority 04, Fixture Authenticator Attestation Root Certificate Authority 05, Fixture Authenticator Attestation Root Certificate Authority 06, Fixture Authenticator Attestation Root Certificate Authority 07, Fixture Authenticator Attestation Root Certificate Authority 08, Fixture Authenticator Attestation Root Certificate Authority 09, Fixture Authenticator Attestation Root Certificate Authority 10, Fixture Authenticator Attestation Root Certificate Authority 11, Fixture Authenticator Attestation Root Certificate Authority 12, Fixture Authenticator Attestation Root Certificate Authority 13, Fixture Authenticator Attestation Root Certificate Authority 14, Fixture Authenticator Attestation Root Certificate Authority 15",
+      "dateTooltip": "2026-04-02",
+      "dateUpdated": "Apr 2, 2026",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000006",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000006",
+      "index": 5,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Key With Many Attestation Roots",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2026-04-02",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Passcode External, Presence Internal",
+      "userVerificationList": [
+        "Passcode External",
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000007",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw",
+        "ED25519 Eddsa SHA512 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L2 \u2022 Fixture Biometric Key \u2022 (FIDO20020260303007)",
+      "certificationStatus": "FIDO_CERTIFIED_L2",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2026-03-03",
+      "dateUpdated": "Mar 3, 2026",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000007",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000007",
+      "index": 6,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Key With Every User Verification Method",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2026-03-03",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Eyeprint Internal, Faceprint Internal, Fingerprint Internal, Handprint Internal, Location Internal, None, Passcode External, Passcode Internal, Pattern Internal, Presence Internal, Voiceprint Internal",
+      "userVerificationList": [
+        "Eyeprint Internal",
+        "Faceprint Internal",
+        "Fingerprint Internal",
+        "Handprint Internal",
+        "Location Internal",
+        "None",
+        "Passcode External",
+        "Passcode Internal",
+        "Pattern Internal",
+        "Presence Internal",
+        "Voiceprint Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000008",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw",
+        "ED25519 Eddsa SHA512 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Long Name Key \u2022 (FIDO20020260214008)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2026-02-14",
+      "dateUpdated": "Feb 14, 2026",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000008",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000008",
+      "index": 7,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Authenticator With A Deliberately Long Description, Written To Show How The Explorer Truncates A Name While Keeping It Visible.",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2026-02-14",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Passcode External, Presence Internal",
+      "userVerificationList": [
+        "Passcode External",
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000009",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw",
+        "ED25519 Eddsa SHA512 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "NOT FIDO Certified",
+      "certificationStatus": "NOT_FIDO_CERTIFIED",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2026-01-05",
+      "dateUpdated": "Jan 5, 2026",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000009",
+      "icon": "",
+      "id": "f1d0f1d0-0000-4000-8000-000000000009",
+      "index": 8,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Key Without An Icon",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2026-01-05",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Passcode External, Presence Internal",
+      "userVerificationList": [
+        "Passcode External",
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000010",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw, ED25519 Eddsa SHA512 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw",
+        "ED25519 Eddsa SHA512 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "",
+      "certificationStatus": "",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-12-12",
+      "dateUpdated": "Dec 12, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000010",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+      "id": "f1d0f1d0-0000-4000-8000-000000000010",
+      "index": 9,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Key Without Status Reports",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-12-12",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Passcode External, Presence Internal",
+      "userVerificationList": [
+        "Passcode External",
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired",
+      "attachmentList": [
+        "External",
+        "Wired"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture U2F Key \u2022 (U2F100020251111011)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-11-11",
+      "dateUpdated": "Nov 11, 2025",
+      "entryId": "akid:f1d0000000000000000000000000000000000011",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+      "id": "f1d0000000000000000000000000000000000011",
+      "index": 10,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture U2F Key",
+      "protocol": "U2F",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-11-11",
+      "transports": "",
+      "transportsList": [],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "",
+      "algorithmInfo": "ED25519_SHA512",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "Internal",
+      "attachmentList": [
+        "Internal"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ED25519_SHA512",
+      "certificateAlgorithmInfoList": [
+        "ED25519_SHA512"
+      ],
+      "certificateCommonNameList": [
+        "Fixture Ed25519 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture Ed25519 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture UAF Authenticator \u2022 (UAF100020251010012)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture Ed25519 Attestation Root",
+      "dateTooltip": "2025-10-10",
+      "dateUpdated": "Oct 10, 2025",
+      "entryId": "aaid:F1D0#0012",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+      "id": "F1D0#0012",
+      "index": 11,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Tee",
+      "keyProtectionList": [
+        "Hardware",
+        "Tee"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture UAF Authenticator",
+      "protocol": "Uaf",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-10-10",
+      "transports": "",
+      "transportsList": [],
+      "trustAnchorStatus": true,
+      "userVerification": "Fingerprint Internal",
+      "userVerificationList": [
+        "Fingerprint Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000020",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 01 \u2022 (FIDO20020250100020)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-01-01",
+      "dateUpdated": "Jan 1, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000020",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000020",
+      "index": 12,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 01",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-01-01",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000021",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 02 \u2022 (FIDO20020250100021)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-02-02",
+      "dateUpdated": "Feb 2, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000021",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000021",
+      "index": 13,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 02",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-02-02",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000022",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 03 \u2022 (FIDO20020250100022)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-03-03",
+      "dateUpdated": "Mar 3, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000022",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+      "id": "f1d0f1d0-0000-4000-8000-000000000022",
+      "index": 14,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 03",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-03-03",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000023",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 04 \u2022 (FIDO20020250100023)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-04-04",
+      "dateUpdated": "Apr 4, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000023",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000023",
+      "index": 15,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 04",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-04-04",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000024",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 05 \u2022 (FIDO20020250100024)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-05-05",
+      "dateUpdated": "May 5, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000024",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000024",
+      "index": 16,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 05",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-05-05",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000025",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 06 \u2022 (FIDO20020250100025)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-06-06",
+      "dateUpdated": "Jun 6, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000025",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+      "id": "f1d0f1d0-0000-4000-8000-000000000025",
+      "index": 17,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 06",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-06-06",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000026",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 07 \u2022 (FIDO20020250100026)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-07-07",
+      "dateUpdated": "Jul 7, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000026",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000026",
+      "index": 18,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 07",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-07-07",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000027",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 08 \u2022 (FIDO20020250100027)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-08-08",
+      "dateUpdated": "Aug 8, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000027",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000027",
+      "index": 19,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 08",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-08-08",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000028",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 09 \u2022 (FIDO20020250100028)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-09-09",
+      "dateUpdated": "Sep 9, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000028",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+      "id": "f1d0f1d0-0000-4000-8000-000000000028",
+      "index": 20,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 09",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-09-09",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000029",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 10 \u2022 (FIDO20020250100029)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-01-10",
+      "dateUpdated": "Jan 10, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000029",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000029",
+      "index": 21,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 10",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-01-10",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000030",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 11 \u2022 (FIDO20020250100030)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-02-11",
+      "dateUpdated": "Feb 11, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000030",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000030",
+      "index": 22,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 11",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-02-11",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000031",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 12 \u2022 (FIDO20020250100031)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-03-12",
+      "dateUpdated": "Mar 12, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000031",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+      "id": "f1d0f1d0-0000-4000-8000-000000000031",
+      "index": 23,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 12",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-03-12",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000032",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 13 \u2022 (FIDO20020250100032)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-04-13",
+      "dateUpdated": "Apr 13, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000032",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000032",
+      "index": 24,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 13",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-04-13",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000033",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 14 \u2022 (FIDO20020250100033)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-05-14",
+      "dateUpdated": "May 14, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000033",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000033",
+      "index": 25,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 14",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-05-14",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000034",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 15 \u2022 (FIDO20020250100034)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-06-15",
+      "dateUpdated": "Jun 15, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000034",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+      "id": "f1d0f1d0-0000-4000-8000-000000000034",
+      "index": 26,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 15",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-06-15",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000035",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 16 \u2022 (FIDO20020250100035)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-07-16",
+      "dateUpdated": "Jul 16, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000035",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000035",
+      "index": 27,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 16",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-07-16",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000036",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 17 \u2022 (FIDO20020250100036)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-08-17",
+      "dateUpdated": "Aug 17, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000036",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000036",
+      "index": 28,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 17",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-08-17",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000037",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 18 \u2022 (FIDO20020250100037)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-09-18",
+      "dateUpdated": "Sep 18, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000037",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATUlEQVR42mP4TyXAQBeDpjKgI5INwjSCkHEMpBmB2zgGMk3BMIsWBpFqCqpZVDeIPFOQzBo1aAAMGnzpaFDmNWoWI9Qs2Khc1A5gLQIAVq374ZzxQkQAAAAASUVORK5CYII=",
+      "id": "f1d0f1d0-0000-4000-8000-000000000037",
+      "index": 29,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 18",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-09-18",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000038",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 19 \u2022 (FIDO20020250100038)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-01-19",
+      "dateUpdated": "Jan 19, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000038",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DGAofoyGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAJ+2rOFZWpOBAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000038",
+      "index": 30,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 19",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-01-19",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    },
+    {
+      "aaguid": "f1d0f1d0-0000-4000-8000-000000000039",
+      "algorithmInfo": "ECDSA_SHA256",
+      "algorithms": "SECP256R1 Ecdsa SHA256 Raw",
+      "algorithmsList": [
+        "SECP256R1 Ecdsa SHA256 Raw"
+      ],
+      "attachment": "External, Wired, Nfc",
+      "attachmentList": [
+        "External",
+        "Wired",
+        "Nfc"
+      ],
+      "attestationCertificates": [],
+      "attestationKeyIdentifiers": [],
+      "certificateAlgorithmInfo": "ECDSA_SHA256",
+      "certificateAlgorithmInfoList": [
+        "ECDSA_SHA256"
+      ],
+      "certificateCommonNameList": [
+        "Fixture FIDO2 Attestation Root"
+      ],
+      "certificateCommonNames": "Fixture FIDO2 Attestation Root",
+      "certification": "FIDO Certified L1 \u2022 Fixture Filler Key 20 \u2022 (FIDO20020250100039)",
+      "certificationStatus": "FIDO_CERTIFIED_L1",
+      "commonName": "Fixture FIDO2 Attestation Root",
+      "dateTooltip": "2025-01-01",
+      "dateUpdated": "Jan 1, 2025",
+      "entryId": "aaguid:f1d0f1d0-0000-4000-8000-000000000039",
+      "icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAATklEQVR42mP4TyXAQA+DTI5HoiGSDcI0gqBxDCQZgcc4BvJMwTSLBgaRagqaWdQ2iDxTkM0aNYj+Bg2+dDQo8xo1ixFqFmxULmoHshYBAIpNrOG1ZQeZAAAAAElFTkSuQmCC",
+      "id": "f1d0f1d0-0000-4000-8000-000000000039",
+      "index": 31,
+      "isLightweightEntry": true,
+      "keyProtection": "Hardware, Secure Element",
+      "keyProtectionList": [
+        "Hardware",
+        "Secure Element"
+      ],
+      "metadataStatement": null,
+      "name": "Fixture Filler Key 20",
+      "protocol": "FIDO2",
+      "rawEntry": null,
+      "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
+      "snapshotNextUpdate": "2026-10-20",
+      "snapshotNo": 7,
+      "source": "packaged",
+      "sourceInfo": null,
+      "statusReports": [],
+      "timeOfLastStatusChange": "2025-01-01",
+      "transports": "Nfc, Usb",
+      "transportsList": [
+        "Nfc",
+        "Usb"
+      ],
+      "trustAnchorStatus": true,
+      "userVerification": "Presence Internal",
+      "userVerificationList": [
+        "Presence Internal"
+      ]
+    }
+  ],
+  "meta": {
+    "entryCount": 32,
+    "etag": "\"fixture-7\"",
+    "fetchedAt": "2026-09-20T08:00:00+00:00",
+    "generatedAt": "2026-09-20T08:00:00+00:00",
+    "lastModified": "Sun, 20 Sep 2026 08:00:00 GMT",
+    "lastModifiedIso": "2026-09-20T08:00:00+00:00",
+    "legalHeader": "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+    "nextUpdate": "2026-10-20",
+    "no": 7,
+    "source": "packaged"
+  }
+}
