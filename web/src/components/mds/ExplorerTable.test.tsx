@@ -214,6 +214,33 @@ describe('the MDS table: sorting', () => {
   });
 });
 
+describe('the MDS table: its frame', () => {
+  it('fades its right edge while it can scroll further that way, beside its scrollbar', () => {
+    renderTable();
+    const frame = document.querySelector<HTMLDivElement>('[data-mds-frame]')!;
+    const fade = document.querySelector<HTMLElement>('[data-mds-fade]')!;
+    const size = { scrollWidth: 2740, clientWidth: 941, offsetWidth: 958, clientHeight: 600, offsetHeight: 617 };
+    for (const [key, value] of Object.entries(size)) Object.defineProperty(frame, key, { configurable: true, value });
+
+    fireEvent.scroll(frame);
+    expect(fade).toBeVisible();
+    expect(fade).toHaveAttribute('aria-hidden', 'true');
+    expect(fade.style.right).toBe('16px');
+    expect(fade.style.bottom).toBe('16px');
+
+    frame.scrollLeft = 2740 - 941;
+    fireEvent.scroll(frame);
+    expect(fade).not.toBeVisible();
+
+    frame.scrollLeft = 0;
+    Object.defineProperty(frame, 'offsetWidth', { configurable: true, value: 942 });
+    Object.defineProperty(frame, 'offsetHeight', { configurable: true, value: 601 });
+    fireEvent.scroll(frame);
+    expect(fade.style.right).toBe('1px');
+    expect(fade.style.bottom).toBe('1px');
+  });
+});
+
 describe('the MDS table: column widths', () => {
   const separator = (name: string) => screen.getByRole('separator', { name: `Resize ${name} column` });
   const width = (index: number) => document.querySelector('table')!.style.getPropertyValue('--mds-columns').split(' ')[index];

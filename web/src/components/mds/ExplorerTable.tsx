@@ -24,6 +24,52 @@ const KEY_STEP = 16;
 const COLUMNS_PROPERTY = '--mds-columns';
 const ROWS_BEFORE_BACK_TO_TOP = 5;
 
+// A quiet sign that the table goes on to the right: a white fade over the
+// frame's right edge while it can scroll further that way (never a grey fill or a
+// shadow), inside the frame's border and beside its vertical scrollbar.
+function EdgeFade({
+  frameRef,
+  tableRef,
+}: {
+  frameRef: RefObject<HTMLDivElement | null>;
+  tableRef: RefObject<HTMLTableElement | null>;
+}) {
+  const fadeRef = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState(false);
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return undefined;
+    const measure = () => {
+      setMore(frame.scrollLeft + frame.clientWidth < frame.scrollWidth - 1);
+      const fade = fadeRef.current;
+      if (!fade) return;
+      // The frame's border is 1 px; what else it gives up is its scrollbars.
+      fade.style.right = `${Math.max(1, frame.offsetWidth - frame.clientWidth - 1)}px`;
+      fade.style.bottom = `${Math.max(1, frame.offsetHeight - frame.clientHeight - 1)}px`;
+    };
+    measure();
+    frame.addEventListener('scroll', measure, { passive: true });
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(frame);
+    if (tableRef.current) observer?.observe(tableRef.current);
+    return () => {
+      frame.removeEventListener('scroll', measure);
+      observer?.disconnect();
+    };
+  }, [frameRef, tableRef]);
+
+  return (
+    <div
+      ref={fadeRef}
+      aria-hidden="true"
+      data-mds-fade=""
+      hidden={!more}
+      className="pointer-events-none absolute top-px z-[15] w-10 rounded-r-[13px] bg-linear-to-l from-white to-transparent"
+    />
+  );
+}
+
 // Below the `sm` breakpoint.
 const PHONE = '(max-width: 639px)';
 
@@ -289,6 +335,7 @@ export function ExplorerTable({
           </tbody>
         </table>
       </div>
+      <EdgeFade frameRef={frameRef} tableRef={tableRef} />
       <BackToTop frameRef={frameRef} />
     </div>
   );
