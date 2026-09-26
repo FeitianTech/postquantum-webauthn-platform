@@ -73,7 +73,7 @@ afterEach(() => {
 });
 
 describe('the Codec section', () => {
-  it('has its title, description and the Decode / Encode switch, Decode first (CX-T1, CX-M1)', () => {
+  it('has its title, description and the Decode / Encode switch, Decode first (CX-T1, CX-M1, CX-M4)', () => {
     const section = renderCodec();
     expect(within(section).getByRole('heading', { level: 2, name: 'Codec' })).toBeInTheDocument();
     expect(section).toHaveTextContent('Decode or encode WebAuthn payloads to inspect their underlying data formats.');
@@ -158,8 +158,9 @@ describe('decoding', () => {
     ]);
   });
 
-  it('says a refusal in the current words, with the offset and path in their own place, and shows no answer (CX-S8, CX-S11)', async () => {
-    fetchMock.mockResolvedValueOnce(reply('decode-duplicate-and-colliding-keys')).mockResolvedValueOnce(reply('decode-nan-strict'));
+  it('says a refusal in the current words, with the offset and path in their own place, and shows no answer (CX-O1, CX-S8, CX-S11)', async () => {
+    const refusal = deferred<Response>();
+    fetchMock.mockResolvedValueOnce(reply('decode-duplicate-and-colliding-keys')).mockReturnValueOnce(refusal.promise);
     renderCodec();
     await typeInto(decodePanel(), 'a301616161316162016163');
     await userEvent.click(within(decodePanel()).getByRole('button', { name: 'Decode' }));
@@ -167,6 +168,9 @@ describe('decoding', () => {
 
     await typeInto(decodePanel(), '{"a": NaN}');
     await userEvent.click(within(decodePanel()).getByRole('button', { name: 'Decode' }));
+    // The last answer goes before the next request is answered.
+    expect(within(decodePanel()).queryByRole('region', { name: 'Codec Output' })).toBeNull();
+    await act(async () => refusal.resolve(reply('decode-nan-strict')));
     const alert = await within(decodePanel()).findByRole('alert');
     expect(alert.querySelector('[data-role="failure-text"]')).toHaveTextContent(
       `Decoding failed: ${String(RECORDED['decode-nan-strict'].answer.error)}`,

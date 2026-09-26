@@ -143,6 +143,18 @@ describe('the Codec output in its other states', () => {
     expect(row.querySelector('[data-role="path"]')).toHaveTextContent('${"type"}');
   });
 
+  it('shows a message that quotes markup as text (CX-F5)', () => {
+    const output = show({
+      success: true,
+      type: 'JSON',
+      data: { json: '<img src=x onerror=alert(1)>' },
+      findings: [{ category: 'json', path: '$', message: 'object key "<b>x</b>" appears twice' }],
+    });
+    expect(output.querySelector('img, b')).toBeNull();
+    expect(output.querySelector('[data-role="message"]')).toHaveTextContent('object key "<b>x</b>" appears twice');
+    expect(output).toHaveTextContent('<img src=x onerror=alert(1)>');
+  });
+
   it('shows a top-level Expanded JSON as a block of JSON (CX-N2)', () => {
     const output = show({ success: true, type: 'CBOR', data: { expandedJson: { a: 1 } } });
     expect(output.querySelector('[data-codec-section="expandedJson"] pre')!.textContent).toBe('{\n  "decoded json": {\n    "a": 1\n  }\n}');
