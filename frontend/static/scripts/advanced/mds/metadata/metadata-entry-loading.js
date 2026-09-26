@@ -20,7 +20,6 @@ export async function applyMetadataEntriesInState(metadata, options = {}, deps =
         setByAaguid,
         formatSnapshotTimestamp,
         initialMdsInfo,
-        mdsVerifiedMetaPath,
         collectOptionSets,
         updateOptionLists,
         populateCertificateDerivedInfo,
@@ -105,22 +104,10 @@ export async function applyMetadataEntriesInState(metadata, options = {}, deps =
     });
     setByAaguid(map);
 
-    let lastUpdatedDate =
+    const lastUpdatedDate =
         formatSnapshotTimestamp(metadata?.meta || metadata)
         || formatSnapshotTimestamp(initialMdsInfo)
         || '';
-
-    if (!lastUpdatedDate) {
-        try {
-            const metaResponse = await fetch(mdsVerifiedMetaPath, { cache: 'no-store' });
-            if (metaResponse.ok) {
-                const metaData = await metaResponse.json();
-                lastUpdatedDate = formatSnapshotTimestamp(metaData) || '';
-            }
-        } catch {
-            lastUpdatedDate = '';
-        }
-    }
 
     const optionSets = collectOptionSets(entries);
     updateOptionLists(optionSets);

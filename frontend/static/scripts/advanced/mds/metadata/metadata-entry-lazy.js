@@ -16,7 +16,6 @@ export async function applyMetadataEntriesLazyInState(metadata, options = {}, de
         setByAaguid,
         formatSnapshotTimestamp,
         initialMdsInfo,
-        mdsVerifiedMetaPath,
         collectOptionSets,
         updateOptionLists,
         applyFilters,
@@ -96,22 +95,10 @@ export async function applyMetadataEntriesLazyInState(metadata, options = {}, de
     });
     setByAaguid(map);
 
-    let lastUpdatedDate =
+    const lastUpdatedDate =
         formatSnapshotTimestamp(metadata?.meta || metadata)
         || formatSnapshotTimestamp(initialMdsInfo)
         || '';
-
-    if (!lastUpdatedDate) {
-        try {
-            const metaResponse = await fetch(mdsVerifiedMetaPath, { cache: 'no-store' });
-            if (metaResponse.ok) {
-                const metaData = await metaResponse.json();
-                lastUpdatedDate = formatSnapshotTimestamp(metaData) || '';
-            }
-        } catch {
-            lastUpdatedDate = '';
-        }
-    }
 
     updateOptionLists(collectOptionSets(entries));
 

@@ -85,6 +85,31 @@ def test_private_mds_source_files_are_not_served(assets_env):
         assert client.get(f"/assets/abc123def456/{name}").status_code == 404
 
 
+def test_no_snapshot_file_is_served_but_the_browsers_copy_at_its_versioned_url(assets_env, monkeypatch, tmp_path):
+    static_assets, client, _source = assets_env
+    from server.app import mds_snapshot_dir
+
+    snapshot = tmp_path / "snapshot"
+    snapshot.mkdir()
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(snapshot))
+    # frontend/static is the default snapshot directory, so a copy may sit there
+    # too: Flask's own static rule is pointed at the fixture's static root.
+    static_root = Path(static_assets._STATIC_ROOT)
+    monkeypatch.setattr(client.application, "static_folder", str(static_root))
+    names = [*mds_snapshot_dir.SNAPSHOT_FILENAMES, "fido-mds3.explorer.full.json.gz"]
+    for name in names:
+        (static_root / name).write_text("{}", encoding="utf-8")
+        (snapshot / name).write_text("{}", encoding="utf-8")
+
+    with client.get("/favicon.ico") as other:
+        assert other.status_code == 200
+    for name in names:
+        with client.get(f"/{name}") as root:
+            assert root.status_code == 404, name
+        with client.get(f"/assets/abc123def456/{name}") as versioned:
+            assert versioned.status_code == (200 if name == mds_snapshot_dir.EXPLORER_FULL else 404), name
+
+
 def test_asset_url_uses_build_id(assets_env):
     static_assets, _client, _source = assets_env
 

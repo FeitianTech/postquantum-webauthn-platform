@@ -23,8 +23,14 @@ _DEV_BUILD_ID = "dev"
 IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
 REVALIDATE_CACHE_CONTROL = "no-cache"
 
-# Large MDS source files the server reads from disk but browsers never request.
-_PRIVATE_STATIC_FILES = mds_snapshot_dir.PRIVATE_FILENAMES
+# Of the MDS snapshot's files (and the .gz sibling the provisioning writes next to
+# the browsers' copy), browsers get only that copy, at its versioned URL, from the
+# snapshot directory. frontend/static is only the default directory: what sits
+# there may be another snapshot, so no route serves the rest, nor any of them at
+# the site root.
+_SNAPSHOT_FILES = frozenset(mds_snapshot_dir.SNAPSHOT_FILENAMES) | frozenset(
+    f"{name}.gz" for name in mds_snapshot_dir.BROWSER_FILENAMES
+)
 
 _STATIC_ROOT = str(_FRONTEND_STATIC_ROOT)
 
@@ -50,12 +56,12 @@ def asset_url(filename: str) -> str:
     return f"/assets/{BUILD_ID}/{filename.lstrip('/')}"
 
 
-def _is_private_static_file(filename: str) -> bool:
-    return filename.strip("/") in _PRIVATE_STATIC_FILES
+def _is_snapshot_file(filename: str) -> bool:
+    return filename.strip("/") in _SNAPSHOT_FILES
 
 
 def _hide_private_static_files():
-    if _is_private_static_file(request.path):
+    if _is_snapshot_file(request.path):
         abort(404)
     return None
 
@@ -64,9 +70,9 @@ bp = Blueprint("static_assets", __name__)
 
 
 def init_app(app: Flask) -> None:
-    """Serve versioned assets, hide the private MDS files, expose ``asset_url``.
+    """Serve versioned assets, hide the MDS snapshot files, expose ``asset_url``.
 
-    The hook is registered on the app, not the blueprint, because the private
+    The hook is registered on the app, not the blueprint, because the snapshot
     files would otherwise be served by Flask's own ``static`` rule.
     """
 
@@ -77,7 +83,7 @@ def init_app(app: Flask) -> None:
 
 @bp.route("/assets/<build_id>/<path:filename>")
 def versioned_static_asset(build_id: str, filename: str):
-    if _is_private_static_file(filename):
+    if _is_snapshot_file(filename) and filename not in mds_snapshot_dir.BROWSER_FILENAMES:
         abort(404)
 
     # The snapshot the page loads is wherever the snapshot directory is

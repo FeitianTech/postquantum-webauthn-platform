@@ -43,9 +43,15 @@ and its meta matches the verified snapshot; otherwise it asks the explorer API, 
 answers from the verified snapshot either way. The URL ends in `?v=<serial>.<digest>`
 (the digest of the snapshot's ETag and generation time), which the route ignores: the
 file is cached as immutable for a year and changes at runtime without a deploy, so a
-new snapshot has to be a new URL. Flask's own static route
-still serves `frontend/static` at `/`; nothing the pages use reads the snapshot from
-there.
+new snapshot has to be a new URL.
+
+Flask's own static route still serves `frontend/static` at `/`, but never a snapshot
+file: the seven names and the `.gz` sibling are refused there (a copy in
+`frontend/static` may be another snapshot than the directory's), and the versioned
+route serves only the browsers' copy, from the snapshot directory. Nothing the pages
+use asks for any other snapshot file (the current UI's fallback request for
+`fido-mds3.verified.json.meta.json` is gone: the page's info carries the timestamp
+whenever there is a snapshot).
 
 The tests use it to keep off a developer's real snapshot: `tests/conftest.py` points
 every test at an empty directory of the run's, and a test that needs a snapshot

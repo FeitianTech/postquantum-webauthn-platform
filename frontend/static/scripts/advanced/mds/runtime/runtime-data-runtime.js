@@ -2,7 +2,6 @@ import {
     COLUMN_COUNT,
     MDS_EXPLORER_FULL_PATH,
     MDS_RESOLVE_PATH,
-    MDS_VERIFIED_META_PATH,
     MISSING_METADATA_MESSAGE,
 } from '../constants.js';
 import {
@@ -96,7 +95,6 @@ export function createDataRuntime({
         normaliseAaguid,
         formatSnapshotTimestamp,
         initialMdsInfo,
-        mdsVerifiedMetaPath: MDS_VERIFIED_META_PATH,
         collectOptionSets,
         updateOptionLists,
         applyFilters,
