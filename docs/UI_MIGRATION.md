@@ -120,7 +120,8 @@ mid-UUID (mono, with copy). Enhance where it helps along the way. All data shown
   behaviour and have one copy. Until the cutover they stay in `frontend/static/scripts`, where the legacy UI
   runs them, and `web/` imports them in place (`experimental.externalDir`, the `@legacy/*` alias); at the
   cutover they move into `web/` with their tests. Logic still inside a view module is first moved out into a
-  DOM-free module both UIs import (Phase 25: `shared/browser/report.js` out of `analyze.js`).
+  DOM-free module both UIs import (Phase 25: `shared/browser/report.js` out of `analyze.js`; Phase 26:
+  `decoder/codec/request.js`, `result.js` and `values.js` out of the Codec's renderers).
   `tests/app/tooling/test_web_source_rules.py` fails if `web/src` redefines an imported module's export or
   repeats its sentences. React components replace the code that builds DOM. No legacy markup strings, no
   `dangerouslySetInnerHTML`, no `innerHTML`.
@@ -139,7 +140,7 @@ mid-UUID (mono, with copy). Enhance where it helps along the way. All data shown
 ## Decisions made in Phase 25 (2026-09-25)
 
 - **Sections not yet ported** show their title, their description and a short note with a link to the
-  current UI at `/` (a plain link: `next/link` would add `/beta`). In Phase 25 that is all four.
+  current UI at `/` (a plain link: `next/link` would add `/beta`). In Phase 25 that was all four; since Phase 26, three.
 - **Section switching** is client-side; the URL hash (`#simple`, `#advanced`, `#codec`, `#mds`, the legacy tab
   ids) is written with `replaceState`, read after hydration and followed on `hashchange`.
 - **Overlays** (Dialog, Drawer, Sheet) are one portal-based overlay rather than the native `<dialog>`, to keep
@@ -152,6 +153,28 @@ mid-UUID (mono, with copy). Enhance where it helps along the way. All data shown
   release. Dependabot skips majors of `next` and `typescript`. If an advisory is ever fixed only in a newer
   Next major, the owner decides between the upgrade and the charter's Next 15; the audit threshold stays.
 
+## Decisions made in Phase 26 (2026-09-25)
+
+- **The Codec's layout**: from 1280 px the input column sits beside the output (the input stays in view, sticky,
+  while a long answer scrolls); below that one above the other. "Supported Inputs" is the output column's empty
+  state. The Decode / Encode switch is the top bar's `SegmentedControl`, small.
+- **Messages**: a success is a toast (as before); a failure or a refused input stays in its panel, in red, until
+  that panel's next run or Clear, with the refusal's offset and path shown on their own. A toast that leaves after
+  five seconds cannot hold where the input stops being well-formed.
+- **Findings** show the category as a chip (amber when the server also counts the finding as malformed), which the
+  current UI left out; the source, offset and path are in Geist Mono.
+- **Blocks** (`ui/CodeBlock`): EDN, Expanded JSON, PEM, long hex and the raw views are white blocks with copy; a long
+  one starts at 16 rem with "Show all", and the whole text stays in the page. The EDN block is open at once (the
+  current UI keeps it in a closed disclosure).
+- **Nested values**: a map or list inside a map goes under its label, indented behind a hairline; a label and a
+  plain value sit side by side only where the map has room (a container query), so nothing deep is squeezed.
+- **Raw views stay dialogs** (`Dialog`), titled as before; they now close on Escape and give focus back to "Raw".
+- **`npm run dev` sends Flask's CSP**, with only the two allowances the dev server needs (`'unsafe-eval'` for its
+  eval source maps, `style-src-elem 'unsafe-inline'` for its injected style elements); a style attribute, an inline
+  script or another origin is refused there as in production. The export still carries none of that.
+- **Parity check**: `web/e2e/parity.ts` compares what a region shows in both UIs, word for word per section, each
+  expected difference with its reason. Each later surface adds its own parity spec over it.
+
 ## Content parity (every surface phase)
 
 Before porting a surface, list everything it shows and every action it offers, from the current app (the
@@ -163,7 +186,7 @@ new component and check it in a browser. A phase is not done while an item is un
 | Phase | Surface |
 |---|---|
 | 25 | Foundation: `web/`, tokens and primitives, the app shell, Flask serving `/beta`, the CSP scan, the build and CI pipeline, Playwright with a virtual authenticator; the Analyze Browser panel as the pilot. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 25) |
-| 26 | Codec |
+| 26 | Codec. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 26) |
 | 27 | MDS explorer: the table and filters, the detail page, certificates, custom metadata, raw views (split in two if the plan shows it is too large for one) |
 | 28 | Saved credentials (cards, detail modal, registration result) and the Simple tab |
 | 29 | Advanced tab: registration and authentication forms, JSON editor, drawer, result modals |
