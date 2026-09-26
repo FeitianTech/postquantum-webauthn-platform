@@ -23,9 +23,12 @@ class NoResizeObserver {
   disconnect() {}
 }
 
-Object.defineProperty(window, 'matchMedia', { configurable: true, writable: true, value: matchMedia });
-Object.defineProperty(window, 'ResizeObserver', { configurable: true, writable: true, value: NoResizeObserver });
-Object.defineProperty(window, 'scrollTo', { configurable: true, writable: true, value: () => {} });
+// A test of Node-side code (the Next config) runs without a window.
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'matchMedia', { configurable: true, writable: true, value: matchMedia });
+  Object.defineProperty(window, 'ResizeObserver', { configurable: true, writable: true, value: NoResizeObserver });
+  Object.defineProperty(window, 'scrollTo', { configurable: true, writable: true, value: () => {} });
+}
 
 afterEach(() => {
   vi.useRealTimers();

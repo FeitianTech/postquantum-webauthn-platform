@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 import { PHASE_DEVELOPMENT_SERVER } from 'next/constants.js';
 
+import { developmentHeaders } from './scripts/dev-csp.mjs';
+
 export default function nextConfig(phase) {
   const developing = phase === PHASE_DEVELOPMENT_SERVER;
   return {
@@ -27,6 +29,11 @@ export default function nextConfig(phase) {
           async rewrites() {
             const flask = process.env.FLASK_URL ?? 'http://localhost:8000';
             return [{ source: '/api/:path*', destination: `${flask}/api/:path*`, basePath: false }];
+          },
+          // Flask's CSP, so a violation shows while developing (scripts/dev-csp.mjs).
+          // Flask sends it with the export; headers() does not apply to one.
+          async headers() {
+            return [{ source: '/:path*', headers: developmentHeaders() }];
           },
         }
       : {}),
