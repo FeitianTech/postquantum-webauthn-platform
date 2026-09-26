@@ -1,3 +1,5 @@
+import { METADATA_UPDATE_CANCELLED, METADATA_UPDATE_DEFAULT_MESSAGE } from '../explorer/custom-metadata.js';
+
 export function showMetadataUpdateOverlayInState(state, message, options = {}) {
     const overlay = state?.updateOverlay;
     const messageEl = state?.updateOverlayMessage;
@@ -47,7 +49,7 @@ export function showMetadataUpdateOverlayInState(state, message, options = {}) {
 
     const initialMessage = typeof message === 'string' && message.trim()
         ? message.trim()
-        : 'MDS is updating…';
+        : METADATA_UPDATE_DEFAULT_MESSAGE;
     messageEl.textContent = initialMessage;
 
     if (cancelButton instanceof HTMLButtonElement) {
@@ -123,13 +125,13 @@ export async function runWithMetadataUpdateOverlayInState(state, task, options =
 
     const startMessage = typeof options.startMessage === 'string' && options.startMessage.trim()
         ? options.startMessage.trim()
-        : 'MDS is updating…';
+        : METADATA_UPDATE_DEFAULT_MESSAGE;
     const successMessage = typeof options.successMessage === 'string' && options.successMessage.trim()
         ? options.successMessage.trim()
         : '';
     const cancelMessage = typeof options.cancelMessage === 'string' && options.cancelMessage.trim()
         ? options.cancelMessage.trim()
-        : 'Metadata update cancelled.';
+        : METADATA_UPDATE_CANCELLED;
     const failureMessage = typeof options.failureMessage === 'string' && options.failureMessage.trim()
         ? options.failureMessage.trim()
         : '';

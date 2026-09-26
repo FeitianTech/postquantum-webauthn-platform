@@ -1,3 +1,4 @@
+import { MISSING_CELL_TEXT } from './explorer/rows.js';
 import { EXPLORER_NO_MATCHES } from './explorer/status.js';
 
 export function renderMdsTable(state, entries, options = {}, deps = {}) {
@@ -104,8 +105,8 @@ export function renderMdsTable(state, entries, options = {}, deps = {}) {
 
         row.appendChild(createIconCell(entry));
         row.appendChild(createNameCell(entry));
-        row.appendChild(createTextCell(entry.protocol || '—'));
-        row.appendChild(createTextCell(entry.certification || '—'));
+        row.appendChild(createTextCell(entry.protocol || MISSING_CELL_TEXT));
+        row.appendChild(createTextCell(entry.certification || MISSING_CELL_TEXT));
         row.appendChild(createIdCell(entry.id));
         row.appendChild(createTagCell(entry.userVerificationList));
         row.appendChild(createTagCell(entry.attachmentList));
@@ -114,7 +115,7 @@ export function renderMdsTable(state, entries, options = {}, deps = {}) {
         row.appendChild(createTagCell(entry.algorithmsList));
         row.appendChild(createTagCell(entry.certificateAlgorithmInfoList));
         row.appendChild(createTagCell(entry.certificateCommonNameList));
-        row.appendChild(createTextCell(entry.dateUpdated || '—', entry.dateTooltip));
+        row.appendChild(createTextCell(entry.dateUpdated || MISSING_CELL_TEXT, entry.dateTooltip));
 
         fragment.appendChild(row);
     });

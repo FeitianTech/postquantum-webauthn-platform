@@ -1,3 +1,4 @@
+import { NO_CUSTOM_METADATA, describeCustomMetadataItem } from '../explorer/custom-metadata.js';
 import { createCustomPanelScrollGuard } from './custom-panel-scroll-guard.js';
 
 export function createAbortError() {
@@ -86,7 +87,7 @@ export function updateCustomMetadataList(state, items) {
     if (!entries.length) {
         const emptyItem = document.createElement('li');
         emptyItem.className = 'mds-custom-panel__list-item mds-custom-panel__list-item--empty';
-        emptyItem.textContent = 'No custom metadata has been added yet.';
+        emptyItem.textContent = NO_CUSTOM_METADATA;
         list.appendChild(emptyItem);
         return;
     }
@@ -95,13 +96,7 @@ export function updateCustomMetadataList(state, items) {
         const listItem = document.createElement('li');
         listItem.className = 'mds-custom-panel__list-item';
 
-        const name =
-            (item?.source?.originalFilename && String(item.source.originalFilename).trim()) ||
-            (item?.source?.storedFilename && String(item.source.storedFilename).trim()) ||
-            'metadata.json';
-
-        const storedFilename =
-            (item?.source?.storedFilename && String(item.source.storedFilename).trim()) || '';
+        const { name, storedFilename, deleteLabel, details } = describeCustomMetadataItem(item);
 
         if (storedFilename) {
             listItem.dataset.filename = storedFilename;
@@ -123,8 +118,8 @@ export function updateCustomMetadataList(state, items) {
             deleteButton.type = 'button';
             deleteButton.className = 'mds-custom-panel__delete-button';
             deleteButton.textContent = 'Delete';
-            deleteButton.setAttribute('aria-label', `Delete ${name}`);
-            deleteButton.title = `Delete ${name}`;
+            deleteButton.setAttribute('aria-label', deleteLabel);
+            deleteButton.title = deleteLabel;
             deleteButton.addEventListener('click', event => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -146,22 +141,10 @@ export function updateCustomMetadataList(state, items) {
 
         listItem.appendChild(headerEl);
 
-        const details = [];
-        const uploadedAtRaw = item?.source?.uploadedAt;
-        if (typeof uploadedAtRaw === 'string' && uploadedAtRaw) {
-            const parsed = new Date(uploadedAtRaw);
-            if (!Number.isNaN(parsed.getTime())) {
-                details.push(`Uploaded ${parsed.toLocaleString()}`);
-            }
-        }
-        if (item?.legalHeader) {
-            details.push('Includes legal header');
-        }
-
-        if (details.length) {
+        if (details) {
             const detailEl = document.createElement('span');
             detailEl.className = 'mds-custom-panel__item-details';
-            detailEl.textContent = details.join(' · ');
+            detailEl.textContent = details;
             listItem.appendChild(detailEl);
         }
 

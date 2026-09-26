@@ -1,3 +1,5 @@
+import { describeFileSelection } from '../explorer/custom-metadata.js';
+
 export function createCustomMetadataAdapters(config = {}) {
     const {
         getState,
@@ -96,19 +98,11 @@ export function createCustomMetadataAdapters(config = {}) {
     }
 
     async function handleCustomFileSelection(files) {
-        const { accepted, rejected } = splitAcceptedFiles(files);
-
-        if (rejected.length) {
-            setCustomMetadataMessage(
-                `Ignored non-JSON files: ${rejected.join(', ')}`,
-                'warning',
-            );
+        const { accepted, message } = describeFileSelection(files);
+        if (message) {
+            setCustomMetadataMessage(message.text, message.variant);
         }
-
         if (!accepted.length) {
-            if (!rejected.length) {
-                setCustomMetadataMessage('Please select one or more JSON files.', 'warning');
-            }
             return;
         }
 

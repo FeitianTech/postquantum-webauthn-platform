@@ -1,6 +1,7 @@
 import { readPageData } from '../../shared/utils/page-data.js';
 import { FILTER_LOOKUP, UPDATE_BUTTON_STATES } from './constants.js';
 import { normaliseAaguid, transformEntry, upgradeEntryToFull } from './utils.js';
+import { MDS_MIN_COLUMN_WIDTH } from './explorer/columns.js';
 import {
     setStatus as setStatusInState,
     setUpdateButtonBusy as setUpdateButtonBusyInState,
@@ -81,7 +82,7 @@ function setRetryButtonVisible(visible) {
     button.setAttribute('aria-hidden', visible ? 'false' : 'true');
 }
 
-const DEFAULT_MIN_COLUMN_WIDTH = 64;
+const DEFAULT_MIN_COLUMN_WIDTH = MDS_MIN_COLUMN_WIDTH;
 const FLOATING_SCROLL_BOTTOM_MARGIN = 24;
 const FLOATING_SCROLL_SIDE_MARGIN = 16;
 const {

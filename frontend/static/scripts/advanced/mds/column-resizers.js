@@ -1,5 +1,6 @@
 import { createColumnResizerPointerHandlers } from './column-resizers-pointer.js';
 import { applyWidthsToCellsInDom } from './column-resizers-apply-widths.js';
+import { normaliseExplorerColumnWidths } from './explorer/columns.js';
 
 export function createColumnResizerController({
     getState,
@@ -11,15 +12,7 @@ export function createColumnResizerController({
     scheduleRowHeightLock,
 }) {
     function normaliseColumnWidths(widths) {
-        if (!Array.isArray(widths)) {
-            return [];
-        }
-        return widths.map(value => {
-            if (!Number.isFinite(value) || value <= 0) {
-                return defaultMinColumnWidth;
-            }
-            return Math.max(Math.round(value), defaultMinColumnWidth);
-        });
+        return normaliseExplorerColumnWidths(widths, defaultMinColumnWidth);
     }
 
     function applyWidthsToCells(cells, widths) {

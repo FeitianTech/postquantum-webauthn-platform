@@ -1,3 +1,5 @@
+import { MISSING_CELL_TEXT, NO_ICON_TEXT, iconAltText } from './explorer/rows.js';
+
 export function createTextCell(text, title) {
     const cell = document.createElement('td');
     cell.textContent = text;
@@ -10,11 +12,11 @@ export function createTextCell(text, title) {
 export function createNameCell(entry, { onShowAuthenticatorDetail } = {}) {
     const cell = document.createElement('td');
     cell.classList.add('mds-cell-name');
-    const label = entry?.name || '—';
+    const label = entry?.name || MISSING_CELL_TEXT;
     const trimmed = label.trim();
 
-    if (!entry || !trimmed || trimmed === '—') {
-        cell.textContent = label || '—';
+    if (!entry || !trimmed || trimmed === MISSING_CELL_TEXT) {
+        cell.textContent = label || MISSING_CELL_TEXT;
         return cell;
     }
 
@@ -34,7 +36,7 @@ export function createNameCell(entry, { onShowAuthenticatorDetail } = {}) {
 }
 
 export function createIdCell(id) {
-    const cell = createTextCell(id || '—');
+    const cell = createTextCell(id || MISSING_CELL_TEXT);
     cell.classList.add('mds-cell-id');
     return cell;
 }
@@ -47,12 +49,12 @@ export function createIconCell(entry) {
     if (entry.icon) {
         const img = document.createElement('img');
         img.src = entry.icon;
-        img.alt = `${entry.name || 'Authenticator'} icon`;
+        img.alt = iconAltText(entry);
         wrapper.appendChild(img);
     } else {
         const placeholder = document.createElement('span');
         placeholder.className = 'mds-icon-placeholder';
-        placeholder.textContent = 'N/A';
+        placeholder.textContent = NO_ICON_TEXT;
         wrapper.appendChild(placeholder);
     }
 
@@ -65,7 +67,7 @@ export function createTagCell(items, neutral = false) {
     const values = Array.isArray(items) ? items : [];
 
     if (!values.length) {
-        cell.textContent = '—';
+        cell.textContent = MISSING_CELL_TEXT;
         return cell;
     }
 
