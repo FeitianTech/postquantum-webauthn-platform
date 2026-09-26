@@ -24,8 +24,7 @@ def metadata_module(monkeypatch, tmp_path, metadata_state, blob):
     os.utime(explorer_path, (1_000.0, 1_000.0))
     os.utime(verified_path, (1_000.5, 1_000.5))
 
-    monkeypatch.setattr(blob, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
-    monkeypatch.setattr(blob, "MDS_EXPLORER_PATH", str(explorer_path))
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
 
     builds = []
     monkeypatch.setattr(

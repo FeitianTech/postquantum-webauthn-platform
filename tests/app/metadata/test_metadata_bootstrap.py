@@ -50,10 +50,7 @@ def packaged_metadata_env(monkeypatch, tmp_path, metadata_state, blob):
         encoding="utf-8",
     )
 
-    monkeypatch.setattr(blob, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
-    monkeypatch.setattr(blob, "MDS_METADATA_CACHE_PATH", str(cache_path))
-    monkeypatch.setattr(blob, "MDS_EXPLORER_PATH", str(explorer_path))
-    monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
 
     # Reset cached state.
 

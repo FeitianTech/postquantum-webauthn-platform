@@ -152,8 +152,8 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
     pytest.importorskip("server.app.app")
 
     with config_module.app.test_client() as client:
-        missing_path = tmp_path / "missing.json"
-        monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(missing_path))
+        # One snapshot directory per case, each holding the verified file as named.
+        monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path / "missing"))
 
         missing_response = client.get("/api/mds/metadata/base")
         assert missing_response.status_code == 404
@@ -161,9 +161,10 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
             "error": "Verified metadata snapshot is not available."
         }
 
-        corrupted_path = tmp_path / "corrupted.json"
-        corrupted_path.write_text("{bad", encoding="utf-8")
-        monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(corrupted_path))
+        corrupted_dir = tmp_path / "corrupted"
+        corrupted_dir.mkdir()
+        (corrupted_dir / "fido-mds3.verified.json").write_text("{bad", encoding="utf-8")
+        monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(corrupted_dir))
 
         corrupted_response = client.get("/api/mds/metadata/base")
         assert corrupted_response.status_code == 500
@@ -171,10 +172,13 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
             "error": "Verified metadata snapshot is corrupted."
         }
 
-        valid_path = tmp_path / "valid.json"
+        valid_dir = tmp_path / "valid"
+        valid_dir.mkdir()
         valid_payload = {"entries": [{"entryId": "test-entry"}]}
-        valid_path.write_text('{"entries":[{"entryId":"test-entry"}]}', encoding="utf-8")
-        monkeypatch.setattr(general_module, "MDS_METADATA_VERIFIED_PATH", str(valid_path))
+        (valid_dir / "fido-mds3.verified.json").write_text(
+            '{"entries":[{"entryId":"test-entry"}]}', encoding="utf-8"
+        )
+        monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(valid_dir))
 
         valid_response = client.get("/api/mds/metadata/base")
         assert valid_response.status_code == 200

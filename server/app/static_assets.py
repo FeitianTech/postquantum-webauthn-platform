@@ -80,7 +80,12 @@ def versioned_static_asset(build_id: str, filename: str):
     if _is_private_static_file(filename):
         abort(404)
 
-    path = safe_join(_STATIC_ROOT, filename)
+    # The snapshot the page loads is wherever the snapshot directory is
+    # (server.app.mds_snapshot_dir); every other asset is in frontend/static.
+    root = _STATIC_ROOT
+    if filename in mds_snapshot_dir.BROWSER_FILENAMES:
+        root = os.fspath(mds_snapshot_dir.snapshot_dir())
+    path = safe_join(root, filename)
     if path is None or not os.path.isfile(path):
         abort(404)
 

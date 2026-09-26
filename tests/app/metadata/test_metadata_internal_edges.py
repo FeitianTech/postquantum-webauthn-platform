@@ -193,8 +193,8 @@ def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_mo
 
 
 def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metadata_module, monkeypatch, tmp_path, metadata_state, blob):
-    verified_path = tmp_path / "verified.json"
-    explorer_path = tmp_path / "explorer.json"
+    verified_path = tmp_path / "fido-mds3.verified.json"
+    explorer_path = tmp_path / "fido-mds3.explorer.json"
 
     verified_path.write_text(
         json.dumps({"legalHeader": "L", "no": 1, "nextUpdate": "2099-01-01", "entries": []}),
@@ -209,8 +209,7 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metada
     os.utime(verified_path, (now - 10, now - 10))
     os.utime(explorer_path, (now, now))
 
-    monkeypatch.setattr(blob, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
-    monkeypatch.setattr(blob, "MDS_EXPLORER_PATH", str(explorer_path))
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
     monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_cache", None)
     monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_mtime", None)
 

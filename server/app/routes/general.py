@@ -24,7 +24,6 @@ from flask import (
 )
 
 from .. import encoding, mds_snapshot_dir
-from ..config import MDS_METADATA_VERIFIED_PATH
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
 from ..decoder import decode_payload_text, encode_payload_text
 from ..env_flags import parse_env_flag
@@ -151,7 +150,7 @@ def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
     else:
         logger.warning(
             "Packaged FIDO MDS metadata snapshot not found at %s.",
-            MDS_METADATA_VERIFIED_PATH,
+            mds_snapshot_dir.snapshot_file(mds_snapshot_dir.VERIFIED),
         )
 
     _mark_bootstrap_completed_for_today()
@@ -286,7 +285,7 @@ def api_resolve_metadata_entry():
 
 @bp.route("/api/mds/metadata/base", methods=["GET"])
 def api_get_verified_metadata():
-    metadata_path = MDS_METADATA_VERIFIED_PATH
+    metadata_path = mds_snapshot_dir.snapshot_file(mds_snapshot_dir.VERIFIED)
     try:
         with open(metadata_path, "r", encoding="utf-8") as metadata_file:
             payload = json.load(metadata_file)

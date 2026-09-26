@@ -25,8 +25,6 @@ from server.app.mds_snapshot import (  # noqa: E402
 )
 from server.app.mds_trust import FIDO_METADATA_TRUST_ROOT_CERT  # noqa: E402
 
-FRONTEND_STATIC_DIR = REPO_ROOT / "frontend" / "static"
-
 MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
 MDS_METADATA_FILENAME = mds_snapshot_dir.BLOB
 
@@ -34,13 +32,13 @@ MDS_DOWNLOAD_MAX_ATTEMPTS = 5
 MDS_DOWNLOAD_BACKOFF_BASE_SECONDS = 10
 MDS_RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
 MDS_RETRY_AFTER_CAP_SECONDS = 120
-MDS_METADATA_PATH = FRONTEND_STATIC_DIR / MDS_METADATA_FILENAME
-MDS_METADATA_VERIFIED_PATH = FRONTEND_STATIC_DIR / mds_snapshot_dir.VERIFIED
-MDS_METADATA_CACHE_PATH = FRONTEND_STATIC_DIR / mds_snapshot_dir.VERIFIED_META
-MDS_EXPLORER_PATH = FRONTEND_STATIC_DIR / mds_snapshot_dir.EXPLORER
-MDS_EXPLORER_META_PATH = FRONTEND_STATIC_DIR / mds_snapshot_dir.EXPLORER_META
-MDS_EXPLORER_FULL_PATH = FRONTEND_STATIC_DIR / mds_snapshot_dir.EXPLORER_FULL
-MDS_EXPLORER_FULL_META_PATH = FRONTEND_STATIC_DIR / mds_snapshot_dir.EXPLORER_FULL_META
+
+
+def _path(name: str) -> Path:
+    """A snapshot file, in the directory the server reads it from
+    (``FIDO_SERVER_MDS_SNAPSHOT_DIR``, else ``frontend/static``)."""
+
+    return mds_snapshot_dir.snapshot_file(name)
 
 
 
@@ -87,8 +85,8 @@ def store_metadata_cache_entry(
         "entryCount": entry_count,
     }
     try:
-        MDS_METADATA_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        MDS_METADATA_CACHE_PATH.write_text(
+        _path(mds_snapshot_dir.VERIFIED_META).parent.mkdir(parents=True, exist_ok=True)
+        _path(mds_snapshot_dir.VERIFIED_META).write_text(
             json.dumps(payload, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
@@ -148,7 +146,7 @@ def _fetch_remote_blob_with_retry() -> tuple[bytes, str | None, str | None]:
 
 
 def _write_blob(blob: bytes) -> None:
-    path = Path(MDS_METADATA_PATH)
+    path = _path(mds_snapshot_dir.BLOB)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(blob)
 
@@ -189,10 +187,10 @@ def _write_if_changed(path: Path, payload: str | bytes) -> bool:
 
 
 def _load_existing_cache() -> dict[str, object]:
-    if not MDS_METADATA_CACHE_PATH.exists():
+    if not _path(mds_snapshot_dir.VERIFIED_META).exists():
         return {}
     try:
-        data = json.loads(MDS_METADATA_CACHE_PATH.read_text(encoding="utf-8"))
+        data = json.loads(_path(mds_snapshot_dir.VERIFIED_META).read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return {}
     return data if isinstance(data, dict) else {}
@@ -261,7 +259,7 @@ def _build_verified_snapshot(blob: bytes) -> dict[str, object]:
 
 
 def _write_cache_state(cache_state: dict[str, object]) -> bool:
-    return _write_if_changed(MDS_METADATA_CACHE_PATH, _serialise_json(cache_state))
+    return _write_if_changed(_path(mds_snapshot_dir.VERIFIED_META), _serialise_json(cache_state))
 
 
 def _publish_to_cloud_storage() -> int:
@@ -278,7 +276,7 @@ def _publish_to_cloud_storage() -> int:
         return 1
 
     for filename in mds_provisioning.SNAPSHOT_FILENAMES:
-        path = FRONTEND_STATIC_DIR / filename
+        path = _path(filename)
         if not path.is_file():
             print(f"::error::Snapshot file {filename} is missing; nothing published.")
             return 1
@@ -287,7 +285,7 @@ def _publish_to_cloud_storage() -> int:
         blob_name = mds_provisioning.snapshot_blob_name(filename)
         cloud.upload_bytes(
             blob_name,
-            (FRONTEND_STATIC_DIR / filename).read_bytes(),
+            _path(filename).read_bytes(),
             content_type="application/json" if filename.endswith(".json") else None,
         )
         print(f"Published {filename} to {blob_name}.")
@@ -305,7 +303,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"::error::Failed to download metadata BLOB: {exc}")
         return 1
 
-    current_path = Path(MDS_METADATA_PATH)
+    current_path = _path(mds_snapshot_dir.BLOB)
     blob_unchanged = current_path.exists() and current_path.read_bytes() == new_blob
 
     verified_snapshot = _build_verified_snapshot(new_blob)
@@ -334,13 +332,13 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     changed = False
-    changed |= _write_if_changed(MDS_METADATA_PATH, new_blob)
-    changed |= _write_if_changed(MDS_METADATA_VERIFIED_PATH, _serialise_json(verified_snapshot))
+    changed |= _write_if_changed(_path(mds_snapshot_dir.BLOB), new_blob)
+    changed |= _write_if_changed(_path(mds_snapshot_dir.VERIFIED), _serialise_json(verified_snapshot))
     changed |= _write_cache_state(cache_state)
-    changed |= _write_if_changed(MDS_EXPLORER_PATH, _serialise_json(explorer_snapshot))
-    changed |= _write_if_changed(MDS_EXPLORER_META_PATH, _serialise_json(explorer_meta))
-    changed |= _write_if_changed(MDS_EXPLORER_FULL_PATH, _serialise_compact_json(full_snapshot))
-    changed |= _write_if_changed(MDS_EXPLORER_FULL_META_PATH, _serialise_json(full_meta))
+    changed |= _write_if_changed(_path(mds_snapshot_dir.EXPLORER), _serialise_json(explorer_snapshot))
+    changed |= _write_if_changed(_path(mds_snapshot_dir.EXPLORER_META), _serialise_json(explorer_meta))
+    changed |= _write_if_changed(_path(mds_snapshot_dir.EXPLORER_FULL), _serialise_compact_json(full_snapshot))
+    changed |= _write_if_changed(_path(mds_snapshot_dir.EXPLORER_FULL_META), _serialise_json(full_meta))
 
     if changed:
         print("Packaged metadata snapshot refreshed.")

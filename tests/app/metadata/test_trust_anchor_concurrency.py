@@ -132,9 +132,7 @@ def test_concurrent_cold_loads_parse_base_metadata_once(metadata_module, monkeyp
     # The real snapshot is generated, not tracked, so this stands in for it.
     verified_path = tmp_path / "fido-mds3.verified.json"
     verified_path.write_text("{}", encoding="utf-8")
-    monkeypatch.setattr(
-        blob, "MDS_METADATA_VERIFIED_PATH", str(verified_path)
-    )
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
     verified_mtime = os.path.getmtime(verified_path)
 
     def _slow_fallback():

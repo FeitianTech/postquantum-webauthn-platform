@@ -13,6 +13,7 @@ import pytest
 from cryptography import x509
 
 import tools.update_mds_snapshot as updater
+from server.app import mds_snapshot_dir
 
 
 def test_metadata_trust_root_is_globalsign_r46():
@@ -24,31 +25,12 @@ def test_metadata_trust_root_is_globalsign_r46():
 @pytest.fixture
 def isolated_mds_paths(monkeypatch, tmp_path):
     static_dir = tmp_path / "frontend" / "static"
-    monkeypatch.setattr(updater, "FRONTEND_STATIC_DIR", static_dir)
-    monkeypatch.setattr(updater, "MDS_METADATA_PATH", static_dir / "blob.jwt")
-    monkeypatch.setattr(updater, "MDS_METADATA_VERIFIED_PATH", static_dir / "fido-mds3.verified.json")
-    monkeypatch.setattr(
-        updater,
-        "MDS_METADATA_CACHE_PATH",
-        static_dir / "fido-mds3.verified.json.meta.json",
-    )
-    monkeypatch.setattr(updater, "MDS_EXPLORER_PATH", static_dir / "fido-mds3.explorer.json")
-    monkeypatch.setattr(
-        updater,
-        "MDS_EXPLORER_META_PATH",
-        static_dir / "fido-mds3.explorer.json.meta.json",
-    )
-    monkeypatch.setattr(
-        updater,
-        "MDS_EXPLORER_FULL_PATH",
-        static_dir / "fido-mds3.explorer.full.json",
-    )
-    monkeypatch.setattr(
-        updater,
-        "MDS_EXPLORER_FULL_META_PATH",
-        static_dir / "fido-mds3.explorer.full.json.meta.json",
-    )
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(static_dir))
     return static_dir
+
+
+def _file(name):
+    return mds_snapshot_dir.snapshot_file(name)
 
 
 def test_module_import_inserts_repo_root_when_missing(monkeypatch):
@@ -158,7 +140,7 @@ def test_store_metadata_cache_entry_writes_expected_payload(isolated_mds_paths):
         entry_count=7,
     )
 
-    cache_payload = json.loads(updater.MDS_METADATA_CACHE_PATH.read_text(encoding="utf-8"))
+    cache_payload = json.loads(_file(mds_snapshot_dir.VERIFIED_META).read_text(encoding="utf-8"))
     assert cache_payload == {
         "entryCount": 7,
         "etag": '"abc"',
@@ -215,7 +197,7 @@ def test_fetch_remote_blob_uses_expected_request_contract(monkeypatch):
 
 def test_write_blob_write_if_changed_and_serialisers(isolated_mds_paths, tmp_path):
     updater._write_blob(b"initial")
-    assert updater.MDS_METADATA_PATH.read_bytes() == b"initial"
+    assert _file(mds_snapshot_dir.BLOB).read_bytes() == b"initial"
 
     target = tmp_path / "nested" / "payload.txt"
     assert updater._write_if_changed(target, "hello") is True
@@ -246,14 +228,14 @@ def test_write_blob_write_if_changed_and_serialisers(isolated_mds_paths, tmp_pat
 def test_load_existing_cache_handles_missing_invalid_and_non_dict(isolated_mds_paths):
     assert updater._load_existing_cache() == {}
 
-    updater.MDS_METADATA_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    updater.MDS_METADATA_CACHE_PATH.write_text("not-json", encoding="utf-8")
+    _file(mds_snapshot_dir.VERIFIED_META).parent.mkdir(parents=True, exist_ok=True)
+    _file(mds_snapshot_dir.VERIFIED_META).write_text("not-json", encoding="utf-8")
     assert updater._load_existing_cache() == {}
 
-    updater.MDS_METADATA_CACHE_PATH.write_text("[1, 2, 3]", encoding="utf-8")
+    _file(mds_snapshot_dir.VERIFIED_META).write_text("[1, 2, 3]", encoding="utf-8")
     assert updater._load_existing_cache() == {}
 
-    updater.MDS_METADATA_CACHE_PATH.write_text('{"fetched_at": "x"}', encoding="utf-8")
+    _file(mds_snapshot_dir.VERIFIED_META).write_text('{"fetched_at": "x"}', encoding="utf-8")
     assert updater._load_existing_cache() == {"fetched_at": "x"}
 
 
@@ -351,7 +333,7 @@ def test_build_verified_snapshot_and_write_cache_state_delegation(monkeypatch, i
 
     monkeypatch.setattr(updater, "_write_if_changed", _fake_write_if_changed)
     assert updater._write_cache_state({"a": 1}) is True
-    assert delegated["path"] == updater.MDS_METADATA_CACHE_PATH
+    assert delegated["path"] == _file(mds_snapshot_dir.VERIFIED_META)
     assert delegated["payload"] == '{\n  "a": 1\n}\n'
 
 
@@ -391,9 +373,9 @@ def test_main_reports_refresh_then_up_to_date(monkeypatch, isolated_mds_paths, c
     assert first == 0
     assert "Packaged metadata snapshot refreshed." in first_output
 
-    assert updater.MDS_METADATA_PATH.read_bytes() == b"same-blob"
-    assert json.loads(updater.MDS_METADATA_VERIFIED_PATH.read_text(encoding="utf-8"))["no"] == 99
-    assert json.loads(updater.MDS_EXPLORER_META_PATH.read_text(encoding="utf-8")) == {"kind": "explorer"}
+    assert _file(mds_snapshot_dir.BLOB).read_bytes() == b"same-blob"
+    assert json.loads(_file(mds_snapshot_dir.VERIFIED).read_text(encoding="utf-8"))["no"] == 99
+    assert json.loads(_file(mds_snapshot_dir.EXPLORER_META).read_text(encoding="utf-8")) == {"kind": "explorer"}
     expected_full_meta = {
         "kind": "full",
         "entryCount": 1,
@@ -401,8 +383,8 @@ def test_main_reports_refresh_then_up_to_date(monkeypatch, isolated_mds_paths, c
         "customEntryCount": 0,
         "hasCustomEntries": False,
     }
-    assert json.loads(updater.MDS_EXPLORER_FULL_META_PATH.read_text(encoding="utf-8")) == expected_full_meta
-    assert json.loads(updater.MDS_EXPLORER_FULL_PATH.read_text(encoding="utf-8")) == {
+    assert json.loads(_file(mds_snapshot_dir.EXPLORER_FULL_META).read_text(encoding="utf-8")) == expected_full_meta
+    assert json.loads(_file(mds_snapshot_dir.EXPLORER_FULL).read_text(encoding="utf-8")) == {
         "entries": [{"name": "demo"}],
         "meta": expected_full_meta,
     }
@@ -444,8 +426,8 @@ def test_verify_only_checks_the_blob_without_writing_files(stubbed_refresh, caps
     assert updater.main(["--verify-only"]) == 0
 
     assert "no. 42" in capsys.readouterr().out
-    assert not updater.MDS_METADATA_PATH.exists()
-    assert not updater.MDS_METADATA_VERIFIED_PATH.exists()
+    assert not _file(mds_snapshot_dir.BLOB).exists()
+    assert not _file(mds_snapshot_dir.VERIFIED).exists()
 
 
 def test_gcs_upload_publishes_every_snapshot_file(stubbed_refresh, monkeypatch, capsys):
@@ -458,9 +440,6 @@ def test_gcs_upload_publishes_every_snapshot_file(stubbed_refresh, monkeypatch, 
         cloud,
         "upload_bytes",
         lambda name, data, content_type=None: uploaded.__setitem__(name, data),
-    )
-    monkeypatch.setattr(
-        mds_provisioning, "_FRONTEND_STATIC_ROOT", stubbed_refresh
     )
 
     assert updater.main(["--gcs-upload"]) == 0

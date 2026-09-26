@@ -133,8 +133,8 @@ def test_delete_session_metadata_item_validates_session_filename_and_storage_err
 def test_load_verified_metadata_helpers_handle_invalid_and_missing_payloads(metadata_local_env, monkeypatch, tmp_path, blob, session_store):
     metadata, _session_store, _app = metadata_local_env
 
-    verified_path = tmp_path / "verified.json"
-    monkeypatch.setattr(blob, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
+    verified_path = tmp_path / "fido-mds3.verified.json"
 
     assert metadata._load_verified_metadata_payload() is None
 

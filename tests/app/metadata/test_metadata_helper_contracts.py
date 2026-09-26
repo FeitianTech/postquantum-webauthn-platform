@@ -151,8 +151,9 @@ def test_cache_cleaning_formatting_and_store_helper(tmp_path, monkeypatch, blob)
     assert iso_value == "2015-10-21T07:28:00+00:00"
     assert metadata_module._format_last_modified("not-a-date") == "not-a-date"
 
-    cache_path = tmp_path / "cache" / "metadata-cache.json"
-    monkeypatch.setattr(blob, "MDS_METADATA_CACHE_PATH", str(cache_path))
+    # The directory does not exist yet: the store makes it.
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path / "cache"))
+    cache_path = tmp_path / "cache" / "fido-mds3.verified.json.meta.json"
 
     metadata_module._store_metadata_cache_entry(
         last_modified_header="Wed, 21 Oct 2015 07:28:00 GMT",

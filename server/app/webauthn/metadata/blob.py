@@ -11,16 +11,17 @@ from typing import Any
 
 from fido2.mds3 import MetadataBlobPayload
 
-from ...config import (
-    MDS_EXPLORER_FULL_PATH,
-    MDS_EXPLORER_PATH,
-    MDS_METADATA_CACHE_PATH,
-    MDS_METADATA_VERIFIED_PATH,
-)
+from ... import mds_snapshot_dir
 from ...mds_snapshot import build_bootstrap_snapshot, build_explorer_snapshot
 from . import state as _state
 
 logger = logging.getLogger(__name__)
+
+
+def _path(name: str) -> str:
+    """A snapshot file's path, in the directory the setting names now."""
+
+    return os.fspath(mds_snapshot_dir.snapshot_file(name))
 
 
 def _parse_http_datetime(value: str | None) -> datetime | None:
@@ -75,7 +76,7 @@ def load_metadata_cache_entry() -> dict[str, str | None]:
     """Load cached metadata headers used for conditional download requests."""
 
     try:
-        with open(MDS_METADATA_CACHE_PATH, "r", encoding="utf-8") as cache_file:
+        with open(_path(mds_snapshot_dir.VERIFIED_META), "r", encoding="utf-8") as cache_file:
             cached = json.load(cache_file)
     except (OSError, ValueError, TypeError):
         return {}
@@ -114,8 +115,8 @@ def _store_metadata_cache_entry(
     }
 
     try:
-        os.makedirs(os.path.dirname(MDS_METADATA_CACHE_PATH), exist_ok=True)
-        with open(MDS_METADATA_CACHE_PATH, "w", encoding="utf-8") as cache_file:
+        os.makedirs(os.path.dirname(_path(mds_snapshot_dir.VERIFIED_META)), exist_ok=True)
+        with open(_path(mds_snapshot_dir.VERIFIED_META), "w", encoding="utf-8") as cache_file:
             json.dump(payload, cache_file, indent=2, sort_keys=True)
             cache_file.write("\n")
     except OSError:
@@ -164,7 +165,7 @@ def load_cached_metadata_snapshot() -> bool:
 
 def _load_base_metadata() -> tuple[MetadataBlobPayload | None, float | None]:
     try:
-        verified_mtime = os.path.getmtime(MDS_METADATA_VERIFIED_PATH)
+        verified_mtime = os.path.getmtime(_path(mds_snapshot_dir.VERIFIED))
     except OSError:
         verified_mtime = None
 
@@ -207,19 +208,19 @@ def _load_verified_metadata_fallback() -> tuple[MetadataBlobPayload | None, floa
     """Load the bundled verified metadata snapshot shipped with the application."""
 
     try:
-        fallback_mtime = os.path.getmtime(MDS_METADATA_VERIFIED_PATH)
+        fallback_mtime = os.path.getmtime(_path(mds_snapshot_dir.VERIFIED))
     except OSError:
         fallback_mtime = None
 
     try:
-        with open(MDS_METADATA_VERIFIED_PATH, "r", encoding="utf-8") as fallback_file:
+        with open(_path(mds_snapshot_dir.VERIFIED), "r", encoding="utf-8") as fallback_file:
             payload = json.load(fallback_file)
     except FileNotFoundError:
         return None, fallback_mtime
     except (OSError, json.JSONDecodeError) as exc:
         logger.warning(
             "Unable to load verified metadata fallback %s: %s",
-            MDS_METADATA_VERIFIED_PATH,
+            _path(mds_snapshot_dir.VERIFIED),
             exc,
         )
         return None, fallback_mtime
@@ -229,7 +230,7 @@ def _load_verified_metadata_fallback() -> tuple[MetadataBlobPayload | None, floa
     except Exception as exc:  # pylint: disable=broad-except
         logger.warning(
             "Verified metadata fallback %s is invalid: %s",
-            MDS_METADATA_VERIFIED_PATH,
+            _path(mds_snapshot_dir.VERIFIED),
             exc,
         )
         return None, fallback_mtime
@@ -237,7 +238,7 @@ def _load_verified_metadata_fallback() -> tuple[MetadataBlobPayload | None, floa
 
 def _load_verified_metadata_payload() -> dict[str, Any] | None:
     try:
-        with open(MDS_METADATA_VERIFIED_PATH, "r", encoding="utf-8") as fallback_file:
+        with open(_path(mds_snapshot_dir.VERIFIED), "r", encoding="utf-8") as fallback_file:
             payload = json.load(fallback_file)
     except (FileNotFoundError, OSError, json.JSONDecodeError):
         return None
@@ -256,11 +257,11 @@ def _load_packaged_explorer_meta(snapshot_path: str | None = None) -> dict[str, 
     not preserve their relative order. Defaults to the explorer snapshot.
     """
 
-    path = snapshot_path or MDS_EXPLORER_PATH
+    path = snapshot_path or _path(mds_snapshot_dir.EXPLORER)
     try:
         with open(path + ".meta.json", "r", encoding="utf-8") as handle:
             explorer_meta = json.load(handle)
-        with open(MDS_METADATA_VERIFIED_PATH + ".meta.json", "r", encoding="utf-8") as handle:
+        with open(_path(mds_snapshot_dir.VERIFIED_META), "r", encoding="utf-8") as handle:
             verified_meta = json.load(handle)
     except (OSError, json.JSONDecodeError):
         return None
@@ -285,12 +286,12 @@ def _load_packaged_explorer_meta(snapshot_path: str | None = None) -> dict[str, 
 
 def _load_base_explorer_snapshot() -> tuple[dict[str, Any] | None, tuple[float | None, float | None] | None]:
     try:
-        explorer_mtime = os.path.getmtime(MDS_EXPLORER_PATH)
+        explorer_mtime = os.path.getmtime(_path(mds_snapshot_dir.EXPLORER))
     except OSError:
         explorer_mtime = None
 
     try:
-        verified_mtime = os.path.getmtime(MDS_METADATA_VERIFIED_PATH)
+        verified_mtime = os.path.getmtime(_path(mds_snapshot_dir.VERIFIED))
     except OSError:
         verified_mtime = None
 
@@ -317,7 +318,7 @@ def _load_base_explorer_snapshot() -> tuple[dict[str, Any] | None, tuple[float |
         )
         if packaged_is_current:
             try:
-                with open(MDS_EXPLORER_PATH, "r", encoding="utf-8") as explorer_file:
+                with open(_path(mds_snapshot_dir.EXPLORER), "r", encoding="utf-8") as explorer_file:
                     loaded = json.load(explorer_file)
             except (OSError, json.JSONDecodeError):
                 loaded = None
@@ -336,7 +337,7 @@ def _load_base_explorer_snapshot() -> tuple[dict[str, Any] | None, tuple[float |
 
 def _load_base_full_snapshot() -> tuple[dict[str, Any] | None, float | None]:
     try:
-        verified_mtime = os.path.getmtime(MDS_METADATA_VERIFIED_PATH)
+        verified_mtime = os.path.getmtime(_path(mds_snapshot_dir.VERIFIED))
     except OSError:
         verified_mtime = None
 
@@ -357,9 +358,9 @@ def _load_base_full_snapshot() -> tuple[dict[str, Any] | None, float | None]:
 
         # The packaged full snapshot is built by the same code as the fallback
         # below; loading it avoids re-parsing every attestation certificate.
-        if _load_packaged_explorer_meta(MDS_EXPLORER_FULL_PATH) is not None:
+        if _load_packaged_explorer_meta(_path(mds_snapshot_dir.EXPLORER_FULL)) is not None:
             try:
-                with open(MDS_EXPLORER_FULL_PATH, "r", encoding="utf-8") as full_file:
+                with open(_path(mds_snapshot_dir.EXPLORER_FULL), "r", encoding="utf-8") as full_file:
                     loaded = json.load(full_file)
             except (OSError, json.JSONDecodeError):
                 loaded = None

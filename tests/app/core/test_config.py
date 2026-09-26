@@ -215,30 +215,15 @@ def test_basepath():
     assert path_obj.exists()
 
 
-def test_mds_metadata_paths():
-    """Test MDS metadata path constants."""
-    from pathlib import Path
+def test_mds_metadata_paths(monkeypatch):
+    """The snapshot's files are absolute paths in one directory."""
+    from server.app import mds_snapshot_dir
 
-    from server.app.config import (
-        MDS_METADATA_CACHE_PATH,
-        MDS_METADATA_PATH,
-        MDS_METADATA_VERIFIED_PATH,
-    )
-    
-    # All paths should exist as strings or Path objects
-    assert MDS_METADATA_PATH is not None
-    assert MDS_METADATA_CACHE_PATH is not None
-    assert MDS_METADATA_VERIFIED_PATH is not None
-    
-    # Convert to Path for validation
-    path1 = Path(MDS_METADATA_PATH) if isinstance(MDS_METADATA_PATH, str) else MDS_METADATA_PATH
-    path2 = Path(MDS_METADATA_CACHE_PATH) if isinstance(MDS_METADATA_CACHE_PATH, str) else MDS_METADATA_CACHE_PATH
-    path3 = Path(MDS_METADATA_VERIFIED_PATH) if isinstance(MDS_METADATA_VERIFIED_PATH, str) else MDS_METADATA_VERIFIED_PATH
-    
-    # Paths should be absolute
-    assert path1.is_absolute()
-    assert path2.is_absolute()
-    assert path3.is_absolute()
+    monkeypatch.delenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", raising=False)
+    for name in mds_snapshot_dir.SNAPSHOT_FILENAMES:
+        path = mds_snapshot_dir.snapshot_file(name)
+        assert path.is_absolute()
+        assert path.parent == mds_snapshot_dir.DEFAULT_SNAPSHOT_DIR
 
 
 def test_mds_metadata_url():

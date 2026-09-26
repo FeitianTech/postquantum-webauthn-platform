@@ -27,7 +27,8 @@ app, in the order ``factory.INIT_STEPS`` fixes.
 - ``request_limits``: how large a request body the app reads.
 - ``origins``: the exact-origin allowlist and the origin helpers.
 - ``attestation_trust``: operator-trusted attestation CAs.
-- ``mds``: where the MDS snapshot and the session metadata live.
+- ``mds``: where the MDS comes from and where the session metadata lives (the
+  snapshot's own files: ``server.app.mds_snapshot_dir``).
 - ``web_export``: where the new UI's static export is (``web/out``), served at ``/beta``.
 - ``relying_party``: the RP ID and name, and ``create_fido_server``.
 
@@ -64,12 +65,7 @@ __all__ = [
     "is_origin_allowed",
     "normalise_origin",
     "warn_if_development_rp_configuration",
-    "MDS_METADATA_CACHE_PATH",
-    "MDS_EXPLORER_META_PATH",
-    "MDS_EXPLORER_PATH",
     "MDS_METADATA_FILENAME",
-    "MDS_METADATA_PATH",
-    "MDS_METADATA_VERIFIED_PATH",
     "MDS_METADATA_URL",
     "SESSION_METADATA_DIR",
     "FIDO_METADATA_TRUST_ROOT_CERT",
@@ -81,14 +77,8 @@ _FRONTEND_ROOT = paths._FRONTEND_ROOT
 _FRONTEND_STATIC_ROOT = paths._FRONTEND_STATIC_ROOT
 _SERVER_RUNTIME_ROOT = paths._SERVER_RUNTIME_ROOT
 basepath = paths.basepath
-MDS_EXPLORER_FULL_PATH = mds.MDS_EXPLORER_FULL_PATH
-MDS_EXPLORER_META_PATH = mds.MDS_EXPLORER_META_PATH
-MDS_EXPLORER_PATH = mds.MDS_EXPLORER_PATH
-MDS_METADATA_CACHE_PATH = mds.MDS_METADATA_CACHE_PATH
 MDS_METADATA_FILENAME = mds.MDS_METADATA_FILENAME
-MDS_METADATA_PATH = mds.MDS_METADATA_PATH
 MDS_METADATA_URL = mds.MDS_METADATA_URL
-MDS_METADATA_VERIFIED_PATH = mds.MDS_METADATA_VERIFIED_PATH
 SESSION_METADATA_DIR = mds.SESSION_METADATA_DIR
 
 # The relying party.

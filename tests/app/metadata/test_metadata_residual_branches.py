@@ -6,6 +6,8 @@ from types import MappingProxyType, SimpleNamespace
 
 import pytest
 
+from server.app import mds_snapshot_dir
+
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
@@ -136,7 +138,7 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
     assert marker == (None, None)
 
     def _getmtime_ordered(path):
-        if path == blob.MDS_EXPLORER_PATH:
+        if path == blob._path(mds_snapshot_dir.EXPLORER):
             return 10.0
         return 5.0
 

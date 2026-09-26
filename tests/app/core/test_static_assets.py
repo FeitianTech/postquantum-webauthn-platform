@@ -137,3 +137,32 @@ def test_build_tool_precompresses_the_web_export_without_a_build_id(tmp_path, ca
     assert not (export / "font.woff2.gz").exists()
     assert not (tmp_path / "web" / "BUILD_ID").exists()
     assert "Precompressed 2 files under" in capsys.readouterr().out
+
+
+def test_the_snapshot_the_page_loads_is_served_from_the_snapshot_directory(assets_env, monkeypatch, tmp_path):
+    _static_assets, client, _source = assets_env
+    snapshot_dir = tmp_path / "snapshot"
+    snapshot_dir.mkdir()
+    body = b'{"entries": [], "meta": {"no": 7}}' * 64
+    (snapshot_dir / "fido-mds3.explorer.full.json").write_bytes(body)
+    (snapshot_dir / "fido-mds3.explorer.full.json.gz").write_bytes(gzip.compress(body))
+    (snapshot_dir / "fido-mds3.verified.json").write_bytes(b"{}")
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(snapshot_dir))
+
+    plain = client.get("/assets/abc123def456/fido-mds3.explorer.full.json")
+    assert plain.status_code == 200
+    assert plain.data == body
+    assert plain.headers["Cache-Control"] == "public, max-age=31536000, immutable"
+
+    compressed = client.get(
+        "/assets/abc123def456/fido-mds3.explorer.full.json", headers={"Accept-Encoding": "gzip"}
+    )
+    assert compressed.headers["Content-Encoding"] == "gzip"
+    assert gzip.decompress(compressed.data) == body
+
+    # Only that file: the private sources stay hidden, other assets stay in frontend/static.
+    assert client.get("/assets/abc123def456/fido-mds3.verified.json").status_code == 404
+    assert client.get("/assets/abc123def456/favicon.ico").status_code == 200
+
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path / "empty"))
+    assert client.get("/assets/abc123def456/fido-mds3.explorer.full.json").status_code == 404

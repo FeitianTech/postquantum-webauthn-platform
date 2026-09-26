@@ -428,8 +428,9 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
 
 
 def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_path, metadata_state, blob, effective):
-    cache_path = tmp_path / "cache" / "metadata-cache.json"
-    monkeypatch.setattr(blob, "MDS_METADATA_CACHE_PATH", str(cache_path))
+    # The cache first, in a directory of its own, then the snapshot in another.
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path / "cache"))
+    cache_path = tmp_path / "cache" / "fido-mds3.verified.json.meta.json"
 
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     cache_path.write_text("[]", encoding="utf-8")
@@ -500,8 +501,10 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     assert metadata_state._base_metadata_source is None
     assert metadata_state._base_metadata_trust_verified is None
 
-    verified_path = tmp_path / "verified.json"
-    monkeypatch.setattr(blob, "MDS_METADATA_VERIFIED_PATH", str(verified_path))
+    snapshot_dir = tmp_path / "snapshot"
+    snapshot_dir.mkdir()
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(snapshot_dir))
+    verified_path = snapshot_dir / "fido-mds3.verified.json"
 
     missing_loaded, _ = metadata_module._load_verified_metadata_fallback()
     assert missing_loaded is None
@@ -529,9 +532,8 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     assert cached_snapshot == {"meta": {"entryCount": 9}}
     assert cached_marker == explorer_cache_marker
 
-    explorer_path = tmp_path / "explorer.json"
+    explorer_path = snapshot_dir / "fido-mds3.explorer.json"
     explorer_path.write_text("{invalid-json", encoding="utf-8")
-    monkeypatch.setattr(blob, "MDS_EXPLORER_PATH", str(explorer_path))
     monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_cache", None)
     monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_mtime", None)
     monkeypatch.setattr(blob, "load_metadata_cache_entry", lambda: {"etag": "x"})

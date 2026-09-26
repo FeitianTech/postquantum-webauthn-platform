@@ -6,7 +6,13 @@ it without building the Flask app. docs/MDS_SNAPSHOT.md has the whole picture.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
+
+# Where the snapshot is, when not frontend/static. Read whenever a path is needed
+# (not at import), so the updater, the provisioning at a cold start and every
+# request agree, and a test or a browser run can serve a fixture of its own.
+SNAPSHOT_DIR_ENV = "FIDO_SERVER_MDS_SNAPSHOT_DIR"
 
 BLOB = "blob.jwt"
 VERIFIED = "fido-mds3.verified.json"
@@ -41,7 +47,9 @@ DEFAULT_SNAPSHOT_DIR = Path(__file__).resolve().parents[2] / "frontend" / "stati
 def snapshot_dir() -> Path:
     """The directory the snapshot is read from and written to."""
 
-    return DEFAULT_SNAPSHOT_DIR
+    configured = (os.environ.get(SNAPSHOT_DIR_ENV) or "").strip()
+    # absolute(), not resolve(): a path compared as text stays as it was given.
+    return Path(configured).expanduser().absolute() if configured else DEFAULT_SNAPSHOT_DIR
 
 
 def snapshot_file(name: str) -> Path:

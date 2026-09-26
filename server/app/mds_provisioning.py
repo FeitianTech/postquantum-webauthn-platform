@@ -4,7 +4,9 @@ The snapshot is a ~30 MB set of generated files (the signed BLOB, the verified
 payload and the explorer views). It is not tracked in git and is not baked into
 the container image, so a daily refresh no longer rewrites repository history or
 invalidates a Docker layer. Instead the files are materialised into
-``frontend/static`` on demand, in three tiers:
+the snapshot directory (``frontend/static`` unless
+``FIDO_SERVER_MDS_SNAPSHOT_DIR`` names another, ``server.app.mds_snapshot_dir``) on
+demand, in three tiers:
 
 1. **Local files.** Anything already on disk is used as-is. This is the path a
    developer gets after running ``python tools/update_mds_snapshot.py`` once,
@@ -32,7 +34,6 @@ import threading
 from pathlib import Path
 
 from . import mds_snapshot_dir
-from .config import _FRONTEND_STATIC_ROOT
 from .env_flags import parse_env_flag
 from .storage import cloud
 
@@ -68,7 +69,7 @@ _provision_state: dict[str, object] = {"attempted": False, "source": None}
 
 
 def snapshot_path(filename: str) -> Path:
-    return Path(_FRONTEND_STATIC_ROOT) / filename
+    return mds_snapshot_dir.snapshot_file(filename)
 
 
 def snapshot_blob_name(filename: str) -> str:
@@ -182,7 +183,7 @@ def _upload_to_gcs(filenames: tuple[str, ...]) -> None:
 
 
 def ensure_snapshot_available(*, force: bool = False) -> str:
-    """Materialise the MDS snapshot into ``frontend/static``.
+    """Materialise the MDS snapshot into the snapshot directory.
 
     Returns the tier that satisfied the request: ``"local"``, ``"gcs"``,
     ``"upstream"`` or ``"unavailable"``. Runs at most once per process unless
