@@ -1,9 +1,12 @@
+import { formatEntryCount } from './explorer/status.js';
+
 export function updateCount(state, filtered, total) {
+    const text = formatEntryCount(filtered, total);
     if (state?.countEl) {
-        state.countEl.textContent = filtered.toLocaleString();
+        state.countEl.textContent = text.count;
     }
     if (state?.totalEl) {
-        state.totalEl.textContent = total ? `of ${total.toLocaleString()} total` : '';
+        state.totalEl.textContent = text.total;
     }
 }
 

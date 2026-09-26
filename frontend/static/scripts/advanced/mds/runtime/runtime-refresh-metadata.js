@@ -1,3 +1,10 @@
+import {
+    EXPLORER_BUSY_STATUS,
+    EXPLORER_REFRESHED_NOTE,
+    explorerLoadingStatus,
+    explorerRefreshFailure,
+} from '../explorer/status.js';
+
 export async function refreshMetadataInState(deps = {}) {
     const {
         getIsUpdating,
@@ -16,10 +23,7 @@ export async function refreshMetadataInState(deps = {}) {
     }
 
     if (getIsLoading()) {
-        setStatus(
-            'Metadata is currently loading. Please wait for the current operation to finish.',
-            'info',
-        );
+        setStatus(EXPLORER_BUSY_STATUS, 'info');
         return;
     }
 
@@ -31,16 +35,12 @@ export async function refreshMetadataInState(deps = {}) {
     }
 
     try {
-        setStatus('Refreshing authenticator explorer…', 'info');
+        setStatus(explorerLoadingStatus(true), 'info');
         clearMetadataCache();
-        await loadMdsData('Explorer refreshed.', { forceReload: true });
+        await loadMdsData(EXPLORER_REFRESHED_NOTE, { forceReload: true });
     } catch (error) {
         console.error('Failed to refresh authenticator explorer:', error);
-        const message =
-            error instanceof Error && error.message
-                ? error.message
-                : 'Unable to refresh the packaged authenticator explorer.';
-        setStatus(message, 'error');
+        setStatus(explorerRefreshFailure(error), 'error');
         setRetryButtonVisible(true);
     } finally {
         setUpdateButtonBusy(false);

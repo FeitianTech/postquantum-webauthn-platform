@@ -3,8 +3,8 @@ import {
     applyMetadataEntriesLazyInState,
     startBackgroundMetadataLoadingInState,
 } from '../metadata/metadata-entry-loading.js';
+import { buildLoadedStatus as buildLoadedStatusFromSnapshot } from '../explorer/status.js';
 import {
-    buildLoadedStatus as buildLoadedStatusFromSnapshot,
     finalizeBackgroundLoading as finalizeBackgroundLoadingState,
     populateCertificateDerivedInfoForBatch as populateCertificateDerivedInfoForBatchEntries,
     populateCertificateDerivedInfoInternal as populateCertificateDerivedInfoForEntries,

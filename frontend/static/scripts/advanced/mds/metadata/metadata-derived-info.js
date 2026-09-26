@@ -139,26 +139,3 @@ export function finalizeBackgroundLoading({ metadata, lastUpdatedDate, mdsData, 
         }
     }
 }
-
-export function buildLoadedStatus(snapshot, note, formatSnapshotTimestamp) {
-    const meta = snapshot?.meta && typeof snapshot.meta === 'object' ? snapshot.meta : {};
-    const entryCount = Array.isArray(snapshot?.entries) ? snapshot.entries.length : 0;
-    const parts = [`Loaded ${entryCount.toLocaleString()} authenticators.`];
-
-    const lastUpdated = formatSnapshotTimestamp(meta);
-    if (lastUpdated) {
-        parts.push(`Last updated ${lastUpdated}.`);
-    }
-
-    if (Number.isFinite(meta?.customEntryCount) && meta.customEntryCount > 0) {
-        const count = Number(meta.customEntryCount);
-        const suffix = count === 1 ? 'entry' : 'entries';
-        parts.push(`Including ${count.toLocaleString()} session metadata ${suffix}.`);
-    }
-
-    if (note) {
-        parts.push(note);
-    }
-
-    return parts.join(' ');
-}

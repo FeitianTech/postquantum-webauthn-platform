@@ -1,3 +1,5 @@
+import { EXPLORER_NO_MATCHES } from './explorer/status.js';
+
 export function renderMdsTable(state, entries, options = {}, deps = {}) {
     if (!state?.tableBody) {
         return;
@@ -69,7 +71,7 @@ export function renderMdsTable(state, entries, options = {}, deps = {}) {
         emptyRow.className = 'mds-empty-row';
         const cell = document.createElement('td');
         cell.colSpan = COLUMN_COUNT;
-        cell.textContent = 'No authenticators match the selected filters.';
+        cell.textContent = EXPLORER_NO_MATCHES;
         emptyRow.appendChild(cell);
         tbody.appendChild(emptyRow);
         hideScrollTopButton();

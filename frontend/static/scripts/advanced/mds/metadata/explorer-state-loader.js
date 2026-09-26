@@ -1,3 +1,5 @@
+import { indexEntriesByAaguid, prepareSnapshotEntries } from '../explorer/loading.js';
+import { explorerLoadedStatus } from '../explorer/status.js';
 import { loadMdsDataInState as loadMdsDataFromModule } from './explorer-load.js';
 
 export function resetExplorerStateInState(message, variant = 'info', deps = {}) {
@@ -49,13 +51,10 @@ export function applyExplorerSnapshotInState(snapshot, note = '', deps = {}) {
     const {
         getState,
         normaliseSnapshotInfo,
-        cloneMetadataEntry,
-        hasInlineDetail,
         getResolvedEntryCache,
         setMdsData,
         resetSortState,
         setUpdateButtonMode,
-        normaliseAaguid,
         collectOptionSets,
         updateOptionLists,
         applyFilters,
@@ -73,37 +72,16 @@ export function applyExplorerSnapshotInState(snapshot, note = '', deps = {}) {
     }
 
     const meta = snapshot?.meta && typeof snapshot.meta === 'object' ? snapshot.meta : {};
-    const incomingEntries = Array.isArray(snapshot?.entries) ? snapshot.entries : [];
     state.metadataSnapshotInfo = normaliseSnapshotInfo(meta);
 
     const resolvedEntryCache = getResolvedEntryCache();
-
-    const entries = incomingEntries
-        .map(entry => cloneMetadataEntry(entry))
-        .filter(entry => entry && typeof entry === 'object')
-        .map(entry => {
-            if (hasInlineDetail(entry)) {
-                entry.isLightweightEntry = false;
-            }
-            const cached = entry.entryId ? resolvedEntryCache.get(entry.entryId) : null;
-            return cached && typeof cached === 'object' ? { ...entry, ...cached } : entry;
-        });
+    const entries = prepareSnapshotEntries(snapshot, resolvedEntryCache);
 
     setMdsData(entries);
     resetSortState();
     setUpdateButtonMode('update');
 
-    const byAaguid = new Map();
-    entries.forEach(entry => {
-        const key = normaliseAaguid(entry?.aaguid || entry?.id);
-        if (key) {
-            byAaguid.set(key, entry);
-        }
-        if (entry?.entryId) {
-            resolvedEntryCache.set(entry.entryId, entry);
-        }
-    });
-    state.byAaguid = byAaguid;
+    state.byAaguid = indexEntriesByAaguid(entries, resolvedEntryCache);
 
     updateOptionLists(collectOptionSets(entries));
     applyFilters();
@@ -113,15 +91,10 @@ export function applyExplorerSnapshotInState(snapshot, note = '', deps = {}) {
 
     setHasLoaded(true);
 
-    const statusMessage = buildLoadedStatus(snapshot, note);
-    const statusVariant = entries.length ? 'success' : 'info';
-    setStatus(statusMessage, statusVariant);
+    const status = explorerLoadedStatus(snapshot, note, entries.length, buildLoadedStatus);
+    setStatus(status.text, status.variant);
 
-    state.defaultStatus = {
-        text: statusMessage,
-        variant: statusVariant,
-        title: typeof meta.legalHeader === 'string' ? meta.legalHeader : '',
-    };
+    state.defaultStatus = status;
 
     if (state.statusEl) {
         if (state.defaultStatus.title) {
