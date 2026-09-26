@@ -17,8 +17,8 @@ export type FilterBarProps = {
 };
 
 // The 11 filters, each labelled with its column, above the table rather than
-// squeezed into a second header row: 4 to a row on a wide screen, down to one on
-// a phone, where they fold away behind a button. How many are in use, and one
+// squeezed into a second header row: 6 to a row on a wide screen (two rows),
+// down to one on a phone, where they fold away behind a button. How many are in use, and one
 // button that clears them all.
 export function FilterBar({ filters, options, activeFilters, onChange, onClear }: FilterBarProps) {
   const [open, setOpen] = useState(false);
@@ -55,7 +55,7 @@ export function FilterBar({ filters, options, activeFilters, onChange, onClear }
       <div
         id={gridId}
         className={cx(
-          'mt-3 grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 wide:grid-cols-4',
+          'mt-3 grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-4 wide:grid-cols-6',
           open ? 'grid' : 'hidden menu:grid',
         )}
       >
