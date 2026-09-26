@@ -1,4 +1,4 @@
-const CERTIFICATE_DECODE_API_PATH = '/api/mds/decode-certificate';
+import { requestCertificateDecode } from '../explorer/certificate.js';
 
 function buildEntryIndexByAaguid(mdsData, normaliseAaguid) {
     const index = new Map();
@@ -79,22 +79,6 @@ function ensureLazyLoaderEntriesHydrated(cleanedCertificate, deps = {}) {
     }
 }
 
-async function requestDecodedCertificate(cleanedCertificate) {
-    const response = await fetch(CERTIFICATE_DECODE_API_PATH, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ certificate: cleanedCertificate }),
-        cache: 'no-store',
-    });
-
-    if (!response.ok) {
-        throw new Error(`Certificate decode failed with status ${response.status}`);
-    }
-
-    const payload = await response.json();
-    return payload?.details ?? null;
-}
-
 export async function decodeCertificateWithState(certificateBase64, deps = {}) {
     const {
         normaliseCertificateBase64,
@@ -112,7 +96,7 @@ export async function decodeCertificateWithState(certificateBase64, deps = {}) {
 
     ensureLazyLoaderEntriesHydrated(cleaned, deps);
 
-    const details = await requestDecodedCertificate(cleaned);
+    const details = await requestCertificateDecode(cleaned);
     certificateCache.set(cleaned, details);
     return details;
 }

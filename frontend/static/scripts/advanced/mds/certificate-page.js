@@ -1,3 +1,5 @@
+import { describeCertificate } from './explorer/certificate.js';
+
 export async function openCertificatePageInState(state, certificate, sourceButton = null, deps = {}) {
     if (!state?.certificatePage) {
         return;
@@ -8,7 +10,6 @@ export async function openCertificatePageInState(state, certificate, sourceButto
         decodeCertificate,
         setCertificateFieldContent,
         formatCertificateInput,
-        formatCertificateOutput,
         setCertificateSummaryContent,
         renderCertificateSummary,
         hideScrollTopButton,
@@ -56,47 +57,20 @@ export async function openCertificatePageInState(state, certificate, sourceButto
         state.certificateInput.scrollLeft = 0;
     }
 
-    if (decodeError) {
-        const message = decodeError instanceof Error ? decodeError.message : 'Unable to decode certificate.';
-        if (state.certificateOutput) {
-            setCertificateFieldContent(state.certificateOutput, message);
-            state.certificateOutput.scrollTop = 0;
-            state.certificateOutput.scrollLeft = 0;
-        }
-        setCertificateSummaryContent(message);
-        if (state.certificateTitle) {
-            state.certificateTitle.textContent = 'Attestation Certificate';
-        }
-        if (state.certificateSubtitle) {
-            state.certificateSubtitle.textContent = '';
-            state.certificateSubtitle.hidden = true;
-        }
-    } else {
-        if (state.certificateOutput) {
-            setCertificateFieldContent(state.certificateOutput, formatCertificateOutput(details));
-            state.certificateOutput.scrollTop = 0;
-            state.certificateOutput.scrollLeft = 0;
-        }
-        const summaryContent = renderCertificateSummary(details);
-        if (summaryContent) {
-            setCertificateSummaryContent(summaryContent);
-        } else {
-            setCertificateSummaryContent('No decoded certificate details available.');
-        }
-        const subject = details && typeof details.subject === 'string' ? details.subject.trim() : '';
-        if (state.certificateTitle) {
-            state.certificateTitle.textContent = subject || 'Attestation Certificate';
-        }
-        const issuer = details && typeof details.issuer === 'string' ? details.issuer.trim() : '';
-        if (state.certificateSubtitle) {
-            if (issuer) {
-                state.certificateSubtitle.textContent = issuer;
-                state.certificateSubtitle.hidden = false;
-            } else {
-                state.certificateSubtitle.textContent = '';
-                state.certificateSubtitle.hidden = true;
-            }
-        }
+    const view = describeCertificate(decodeError ? { error: decodeError } : { details });
+    if (state.certificateOutput) {
+        setCertificateFieldContent(state.certificateOutput, view.output);
+        state.certificateOutput.scrollTop = 0;
+        state.certificateOutput.scrollLeft = 0;
+    }
+    const summaryContent = view.summary ? renderCertificateSummary(details) : null;
+    setCertificateSummaryContent(summaryContent || view.message);
+    if (state.certificateTitle) {
+        state.certificateTitle.textContent = view.title;
+    }
+    if (state.certificateSubtitle) {
+        state.certificateSubtitle.textContent = view.subtitle;
+        state.certificateSubtitle.hidden = !view.subtitle;
     }
 
     hideScrollTopButton();

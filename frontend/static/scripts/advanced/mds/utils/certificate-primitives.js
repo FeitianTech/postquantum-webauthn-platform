@@ -1,76 +1,49 @@
 import { base64UrlToBytes } from '../../../shared/utils/base64.js';
+import { certificateSummaryItem } from '../explorer/certificate.js';
 
-export function createSummaryItem(label, value, options = {}) {
-    if (!label) {
-        return null;
-    }
+export { determinePublicKeyAlgorithm } from '../explorer/certificate.js';
 
-    const resolved = Array.isArray(value) ? value.filter(Boolean) : value;
-    const isArray = Array.isArray(resolved);
-    const scalar = !isArray ? resolved : null;
-    const text = typeof scalar === 'string' ? scalar.trim() : scalar;
-
-    if ((!isArray && (text === undefined || text === null || text === '')) || (isArray && !resolved.length)) {
-        return null;
-    }
-
-    const item = document.createElement('li');
-    item.className = 'mds-certificate-summary__item';
+// One summary line's DOM, from explorer/certificate.js's item.
+export function renderSummaryItem(item) {
+    const element = document.createElement('li');
+    element.className = 'mds-certificate-summary__item';
 
     const labelEl = document.createElement('div');
     labelEl.className = 'mds-certificate-summary__label';
-    if (typeof options.variant === 'string') {
-        const variant = options.variant.toLowerCase();
-        if (variant === 'primary') {
-            labelEl.classList.add('mds-certificate-summary__label--primary');
-        }
+    if (item.primary) {
+        labelEl.classList.add('mds-certificate-summary__label--primary');
     }
-    labelEl.textContent = label;
-    item.appendChild(labelEl);
+    labelEl.textContent = item.label;
+    element.appendChild(labelEl);
 
     const valueEl = document.createElement('div');
     valueEl.className = 'mds-certificate-summary__value';
 
-    if (options.code) {
+    if (item.code) {
         const codeEl = document.createElement('code');
         codeEl.className = 'mds-certificate-summary__code';
-        codeEl.textContent = String(value);
+        codeEl.textContent = item.value;
         valueEl.appendChild(codeEl);
-    } else if (isArray) {
-        resolved.forEach(entry => {
+    } else if (item.lines) {
+        item.lines.forEach(entry => {
             const line = document.createElement('div');
-            line.textContent = String(entry);
+            line.textContent = entry;
             valueEl.appendChild(line);
         });
     } else {
-        valueEl.textContent = String(text);
+        valueEl.textContent = item.value;
     }
 
-    item.appendChild(valueEl);
-    return item;
+    element.appendChild(valueEl);
+    return element;
 }
 
-export function determinePublicKeyAlgorithm(info) {
-    if (!info || typeof info !== 'object') {
-        return '';
-    }
-    const algorithm = info.algorithm;
-    if (algorithm) {
-        if (typeof algorithm === 'string') {
-            const algorithmName = algorithm.trim();
-            if (algorithmName) {
-                return algorithmName;
-            }
-        }
-        if (typeof algorithm === 'object') {
-            const name = typeof algorithm.name === 'string' ? algorithm.name.trim() : '';
-            if (name) {
-                return name;
-            }
-        }
-    }
-    const type = typeof info.type === 'string' ? info.type.trim() : '';
-    return type;
+export function createSummaryItem(label, value, options = {}) {
+    const item = certificateSummaryItem(label, value, {
+        primary: typeof options.variant === 'string' && options.variant.toLowerCase() === 'primary',
+        code: Boolean(options.code),
+    });
+    return item ? renderSummaryItem(item) : null;
 }
 
 // Base64url text as UTF-8, decoded strictly: one spelling per byte string.

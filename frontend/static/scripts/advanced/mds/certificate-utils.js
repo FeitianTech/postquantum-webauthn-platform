@@ -1,22 +1,7 @@
-export function normaliseCertificateBase64(value) {
-    if (typeof value !== 'string') {
-        return '';
-    }
-    return value.replace(/\s+/g, '').trim();
-}
+export { formatCertificateOutput, normaliseCertificateBase64 } from './explorer/certificate.js';
 
 export function formatCertificateInput(value) {
     return typeof value === 'string' ? value : '';
-}
-
-export function formatCertificateOutput(details) {
-    if (!details || typeof details !== 'object') {
-        return 'No decoded certificate details available.';
-    }
-    if (typeof details.summary === 'string' && details.summary.trim()) {
-        return details.summary.trim();
-    }
-    return JSON.stringify(details, null, 2);
 }
 
 export function setCertificateSummaryContent(state, content) {

@@ -15,7 +15,6 @@ import {
 import {
     applyCertificateLoadingCursorVisibility as applyCertificateLoadingCursorVisibilityByCount,
     formatCertificateInput as formatCertificateInputValue,
-    formatCertificateOutput as formatCertificateOutputValue,
     setCertificateFieldContent as setCertificateFieldContentValue,
     setCertificateSummaryContent as setCertificateSummaryContentInState,
 } from '../certificate-utils.js';
@@ -116,7 +115,6 @@ export function createDetailRuntime({
         hideAuthenticatorDetailInState,
         normaliseCertificateBase64,
         formatCertificateInput: formatCertificateInputValue,
-        formatCertificateOutput: formatCertificateOutputValue,
         setCertificateSummaryContentInState,
         setCertificateFieldContentValue,
         applyCertificateLoadingCursorVisibilityByCount,
