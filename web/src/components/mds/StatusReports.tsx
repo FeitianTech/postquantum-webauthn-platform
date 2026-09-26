@@ -9,7 +9,7 @@ import type { StatusReportRow } from './entryModel';
 // data-label, in CSS: no text is added to the page); the roles are written out,
 // since the stacked display drops a table's own.
 const STACK_CELL =
-  'max-sm:flex max-sm:gap-3 max-sm:px-0 max-sm:py-1 max-sm:before:w-36 max-sm:before:shrink-0 max-sm:before:text-caption max-sm:before:text-ink-muted max-sm:before:content-[attr(data-label)]';
+  'max-sm:flex max-sm:items-baseline max-sm:gap-3 max-sm:px-0 max-sm:py-1 max-sm:before:w-32 max-sm:before:shrink-0 max-sm:before:text-caption max-sm:before:text-ink-muted max-sm:before:content-[attr(data-label)]';
 
 // "Status Reports": every report, as published, in a table on the ui/Table
 // primitives. Long descriptors and URLs wrap in their column.
@@ -42,7 +42,7 @@ export function StatusReports({ columns, rows }: { columns: string[]; rows: Stat
               {row.certificateNumber === MISSING_CELL_TEXT ? (
                 row.certificateNumber
               ) : (
-                <MonoValue value={row.certificateNumber} label="certificate number" className="max-w-56" />
+                <MonoValue value={row.certificateNumber} label="certificate number" className="-my-1 max-w-56" />
               )}
             </Td>
             <Td role="cell" data-label={descriptor} className={`min-w-64 align-top max-sm:min-w-0 ${STACK_CELL}`}>

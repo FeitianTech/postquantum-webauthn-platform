@@ -1,6 +1,7 @@
 import { RAW_DATA_BUTTON_TITLE, RAW_DATA_UNAVAILABLE_TITLE } from '@legacy/advanced/mds/raw-data.js';
-import { type Ref, forwardRef, Fragment } from 'react';
+import { type Ref, forwardRef } from 'react';
 
+import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { MonoValue } from '@/components/ui/MonoValue';
 
@@ -15,30 +16,24 @@ export function BackButton({ onBack, title }: { onBack: () => void; title: strin
   );
 }
 
-// The subtitle's parts: "AAGUID: …", "ID: …" (both copyable) and the protocol.
+// The subtitle's parts: "AAGUID: …" and "ID: …" (copyable; on a phone the value
+// takes its own line rather than being cut) and the protocol.
 function Subtitle({ entry }: { entry: MdsEntry }) {
   const parts = entrySubtitle(entry);
   if (!parts.length) return null;
   return (
-    <p data-entry-subtitle="" className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-body text-ink-muted">
-      {parts.map((part, index) => (
-        <Fragment key={`${part.label}-${part.value}`}>
-          {index ? (
-            <span aria-hidden="true" className="text-ink-faint">
-              •
-            </span>
-          ) : null}
-          {part.label ? (
-            <span className="inline-flex max-w-full min-w-0 items-center gap-1.5">
-              <span className="shrink-0">{part.label}:</span>
-              <MonoValue value={part.value} label={part.label === 'ID' ? identifierName(entry) : part.label} />
-            </span>
-          ) : (
-            <span>{part.value}</span>
-          )}
-        </Fragment>
-      ))}
-    </p>
+    <div data-entry-subtitle="" className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-body text-ink-muted">
+      {parts.map((part) =>
+        part.label ? (
+          <span key={part.label} className="flex max-w-full min-w-0 flex-wrap items-center gap-x-1.5">
+            <span className="shrink-0">{part.label}:</span>
+            <MonoValue value={part.value} label={part.label === 'ID' ? identifierName(entry) : part.label} />
+          </span>
+        ) : (
+          <Badge key="protocol">{part.value}</Badge>
+        ),
+      )}
+    </div>
   );
 }
 
@@ -58,15 +53,13 @@ export const EntryHeader = forwardRef<HTMLHeadingElement, EntryHeaderProps>(func
   return (
     <div data-entry-header="">
       <BackButton onBack={onBack} title="Return to authenticator list" />
-      <div className="mt-6 flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
-        <div className="min-w-0 flex-1">
-          <h3 ref={headingRef} tabIndex={-1} className="text-heading font-semibold break-words text-ink outline-none">
-            {entryTitle(entry)}
-          </h3>
-          <Subtitle entry={entry} />
-        </div>
+      <div className="mt-6 flex items-start justify-between gap-4">
+        <h3 ref={headingRef} tabIndex={-1} className="min-w-0 text-heading font-semibold break-words text-ink outline-none">
+          {entryTitle(entry)}
+        </h3>
         <Button
           ref={rawButtonRef}
+          className="shrink-0"
           variant="secondary"
           disabled={!hasRaw}
           title={hasRaw ? RAW_DATA_BUTTON_TITLE : RAW_DATA_UNAVAILABLE_TITLE}
@@ -76,6 +69,7 @@ export const EntryHeader = forwardRef<HTMLHeadingElement, EntryHeaderProps>(func
           Raw
         </Button>
       </div>
+      <Subtitle entry={entry} />
     </div>
   );
 });
