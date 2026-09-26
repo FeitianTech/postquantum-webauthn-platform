@@ -2302,6 +2302,131 @@ mid-capture and caught a block measuring itself collapsed; the state before and 
   backgrounds** in the section, no sideways scroll at 375 px. Test entries written to `localStorage` removed
   afterwards.
 
+### Phase 27A — the MDS explorer's list page at /beta#mds — DONE (2026-09-26)
+28 commits, 87d874de..the record's own, all this phase's, each gated on pytest (under coverage, with its 95% floor),
+root vitest (with its floors), web's typecheck, unit tests (with their floors), build and CSP scan, and ruff (the
+commits that change only Python, only docs or only browser tests ran the gates their change can reach, the rest being
+the previous commit's). Every commit before the record was re-run afterwards on its own tree in one detached worktree, cleaned (`git clean
+-fdx`, `node_modules` linked: no lockfile changed) before each: all 27 pass ruff, pytest under coverage with its floor
+(the checkout guard among it), root vitest with its floors, web's typecheck, vitest with its floors, the build and the
+CSP scan. Not pushed: the tech lead verifies and pushes.
+Owner decisions for this phase, asked while planning: the current panel's empty uploads list is fixed in `/beta`
+only; the snapshot URL's immutable caching is reported, not changed.
+
+**What there is now.** `/beta#mds` is the MDS explorer's list: the title, the count ("Entries: 12 of 517 total") and
+Manage Metadata; the status line with every sentence the current tab says, the legal header as its tooltip, Retry
+after a failure; a bar of the 11 filters above the table (six to a row on a wide screen, folded on a phone; the seven
+with a list as ARIA comboboxes, User Verification and Algorithms whole), how many are in use and one Clear filters;
+the 13 columns in a frame that scrolls both ways by itself, the header row in view, compact one-line rows with every
+long value as a tooltip and a row that expands to show every word, certification as one badge, AAGUIDs in Geist Mono
+with copy, sorting (`aria-sort`) and resizing (pointer and keys); Back to top; Manage Trusted Metadata as a dialog
+with the session's uploads listed; and a row that opens its entry at `#mds/<entryId>` (a stub until 27B) with the
+browser's Back and the page's returning to the list as it was. The current tab at `/` is unchanged and runs on the
+same logic modules.
+
+**A — parity** (87d874de, c676fe76). `docs/ui-parity/mds.md` lists the whole tab first (92 items, 75 for 27A and 17 for 27B: the
+header and count, how and from where the data loads, every status sentence, the 13 columns and their quirks, sorting,
+the 11 filters and their options, resizing, the empty rows, Back to top, Manage Trusted Metadata with every message
+and overlay text, the detail page, the certificate page, the raw view, the jump from a credential), and what the page
+never shows (six more, MDS-Z1..Z6: "Refresh Metadata", the floating scrollbar, the client's row builder for a payload without
+`entryId`, the inlined snapshot page data), deleted at the cutover. Every 27A item is then mapped to its component, its
+test and its browser check; "What changed" lists every difference. The 27A/27B split is in the charter's phase table.
+
+**B — logic out of the views** (f1b7d32e, 22249a61, 7ceeff98, 15802c6c, 87a46020, 24cd7577, 4322f4b2). The legacy
+MDS paths are absolute (identical at `/`, and they resolve from `/beta/`; the six test expectations that pinned the
+relative strings changed with them). Seven DOM-free modules in `advanced/mds/explorer/`: `loading.js` (the source order
+and fallback, what an answer means, the entries shown, the info request), `status.js`, `filter-sort.js`, `options.js`,
+`rows.js`, `columns.js`, `custom-metadata.js`; the legacy views call them, and the legacy tests passed unchanged
+across the three refactor commits. The new modules, and the pure leaves under them (`constants.js`,
+`explorer-source.js`, `metadata-helpers.js`, `sort-filter-normalise.js`, `utils/{formatters,status-reports,resolvers,
+extractors}.js`), are held at 100 % per file; `LOGIC_ROOTS` gains them.
+
+**C — the server, additively** (39bdfa4f, 9df3bfca, 1e8eecbc, 97c31a24, 56458fb7, a951416f, fa687d9e, 5625e3cc).
+`server/app/mds_snapshot_dir.py`, a Flask-free leaf, names the seven files once and reads
+`FIDO_SERVER_MDS_SNAPSHOT_DIR` whenever a path is needed (default `frontend/static`); the loaders, `/api/mds/metadata/base`,
+the provisioning, the served `/assets/<id>/fido-mds3.explorer.full.json` and the updater follow it (12 test files moved
+from patching copied constants to one `setenv`). `tests/conftest.py` points every test at an empty directory of the run's
+and turns the upstream refresh off. The updater's seven files come from one pure `snapshot_files()`, which
+`tests/app/metadata/mds_fixture.py` uses to build `tests/fixtures/mds` (428 KB): a synthetic MDS3 BLOB it signs itself
+(RS256, keys from `characterization/material.py`), 32 entries (FIDO2, U2F, UAF; every certification level and a
+revocation; a CN list of 973 characters, 11 user-verification methods, a 135-character name; an entry without icon or
+status reports; an AAID with its `#`), and a statement to upload; `test_mds_fixture.py` keeps it equal to its generator.
+`GET /api/mds/metadata/info` answers what the index inlines, built by the same `_initial_mds_info()`, no-store and
+`Vary: Cookie`. Upload and delete now record whether the session has uploads (before, a reload after an upload could
+load the packaged file over the session's own; a test failed first), after the upload route was split for the size
+ratchet.
+
+**D — the views** (7ae2ba65, 05a3fe82, 5dffa311, 2a8350bb, ff5b014b, 1edaf761). `web/src/components/mds/`:
+`MdsSection`, `useMdsExplorer`, `useExplorerView`, `ExplorerTable` / `ExplorerRow`, `FilterBar` / `FilterCombobox`,
+`ManageMetadataDialog` / `useCustomMetadata`, `EntryView`, `ListState`, `model.ts`; `lib/sections.ts` and
+`useSection.ts` read and write `#mds/<entryId>` (a pushed history entry; Next's router is told to leave Back to the
+page). A first browser run caught the table's screen-reader status spans widening the page at 375 px (their
+containing block was outside the scrolling frame); the frame is now positioned. The component tests render the fixture
+snapshot through a new `@test-fixtures` alias.
+
+**E — browser tests** (cb55a286, 205f9ec8, e1b9eacc). `serve-flask.mjs` serves a copy of the fixture, so no spec
+allows the snapshot's 404 any more. `mds.spec.ts` (11 tests): the load, `/beta/#mds` with no request under
+`/beta/api/`, filters, clear and sort, resize by keys and drag, the 973-character CN reachable (every pill inside its
+cell), an AAGUID copied and read back from the clipboard, the fixture statement uploaded, its row shown, deleted, the
+dialog closed by Escape with focus back, a row opened by a click and by Enter and closed by the page's Back and the
+browser's (filters, sort, scroll and focus kept), a deep link to an AAID, 375 px with no sideways scroll, no grey fill,
+the header in view while the list scrolls. `parity.ts` gains `readShownRows` (proved by `parity.spec.ts`);
+`mds-parity.spec.ts` reads both tables row by row for six filter sets and the name sort both ways: **every set shows
+the same rows in the same order and the same words; no expected difference is needed.**
+
+**Filter timing, on the owner's 517-entry snapshot** (Playwright's Chromium 153, headless, 1440 × 900, 11 runs each,
+median / p90): a character typed in Name, keystroke to rows updated 13.7 / 14.2 ms, to the frame that paints them
+25.8 / 26.3 ms; the filter cleared back to 517 rows 17.0 / 17.4 and 28.0 / 28.3 ms; a character in CN 12.8 / 13.0 and
+26.8 / 27.1 ms; a certification picked from its list 24.1 / 24.4 and 33.8 / 34.0 ms; a sort of 517 rows 3.5 / 3.8 and
+15.4 / 15.4 ms. The Event Timing API's longest keydown, input or click was 32 ms. The first version laid out every row
+(showing all 517 took 41 ms of layout and 24 ms of paint, measured without React); rows are now grids with
+`content-visibility: auto` and it takes under 2 ms. No dependency was added.
+
+**Seen in a real browser.** The desktop app's Chromium 152 at `http://localhost:8765/beta#mds` (Flask from an untracked
+scratch launch file, stores and secret in the scratchpad, the owner's snapshot only read), the strict CSP and the
+Trusted Types report-only policy: the list, a filter, Clear, a sort, Manage Metadata, an entry and the browser's Back
+after a section switch (which Next would otherwise undo), and the current tab at `/` (517 rows, the same status
+sentence and count as `/beta`); **no console message of any kind.** Screenshots at 1440, 1024 and 375 px (the list, a
+whole list open, an expanded row scrolled sideways, the dialog after an upload, an entry, the list after Back) come
+from Playwright's Chromium 153, which also reported no console, CSP or Trusted Types message; no sideways page scroll at
+any width, with a row expanded too; an upload gave 518 rows and its delete 517. The snapshot files and `instance/` were
+untouched.
+
+**Tests.**
+- pytest 4752 → **4779** passed / 4 skipped; coverage 97%. Linux (python:3.14, Docker, `git archive` of 1edaf761)
+  **4765** / 5, the usual 14 fewer and one more skip than macOS. ruff clean.
+- root vitest 616 → **711**, coverage 84.86 / 70.53 / 93.09 / 84.91 → **85.58 / 72.35 / 93.29 / 85.63**; floors held,
+  the MDS logic at 100 % per file.
+- web vitest 167 → **249** tests in 25 files, coverage 98.20 / 95.37 / 98.10 / 99.31 → **98.56 / 95.28 / 98.29 / 99.42**,
+  floors 97 / 92 / 96 / 98.
+- web typecheck clean; CSP scan 4 HTML files, 40 script elements, **0 violations**.
+- Playwright 33 → **52** passed on macOS (Chromium 153); **52** on Linux in `mcr.microsoft.com/playwright:v1.63.0-noble`
+  from a `git archive` of db3d92bf (`uv sync`, `npm ci`, the build and the CSP scan inside), as the CI job runs them.
+
+**Found but not fixed:**
+- The snapshot's URL (`/assets/<BUILD_ID>/fido-mds3.explorer.full.json`) is cached immutable for a year, but the file
+  changes at runtime (Cloud Storage or upstream) while the build id changes only on a deploy: a browser can keep an old
+  snapshot until the next deploy (the owner: report only).
+- The current panel's uploads list is never filled, so its Delete never shows; its backdrop and Escape do not close it;
+  a refused upload's reason is replaced by "Failed to upload metadata files."; only AAGUID rows can be highlighted from a
+  credential. Fixed in `/beta` only (the owner, for the list); the rest goes at the cutover.
+- The owner's local `frontend/static/fido-mds3.verified.json.meta.json` is an old test's output (etag `abc123`, 2015,
+  written on 2026-09-17, before the checkout guard): the packaged summary does not match it, so the server rebuilds the
+  explorer from `verified.json`, and a session that reads the API sees "Last updated" as the rebuild time. Re-running
+  `python tools/update_mds_snapshot.py` fixes it.
+- Without a snapshot, `snapshotUrl` is still sent, so both UIs request the missing file (a console 404) before asking
+  the API.
+- The updater writes no `.gz` sibling for the browser's snapshot; only a Cloud Storage download does.
+- Session entries restart `index` at 0, so they tie with packaged entries in the sort's last tie-break.
+- The dropdown quirks of the current tab (ArrowUp with nothing chosen lands on the next-to-last option; Enter can pick
+  an option not shown) are kept there; `/beta` follows the ARIA pattern.
+- "Refresh Metadata" and the rest of MDS-Z1..Z6 stay in the legacy tree until the cutover.
+- The `ui/Table` primitives still have no user: the MDS table needed a positioned frame that scrolls both ways and rows
+  that are grids (`content-visibility`), which the primitives do not offer. `MonoValue` has its first user (the entry
+  view).
+- Not run on GitHub yet (not pushed): `ci-web.yml`'s e2e job now serves the fixture and runs `mds.spec.ts` and
+  `mds-parity.spec.ts`.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
