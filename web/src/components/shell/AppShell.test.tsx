@@ -51,7 +51,8 @@ describe('the app shell', () => {
     expect(panel).toHaveTextContent('Register and authenticate with passkeys using default presets.');
     expect(panel).toHaveTextContent('Simple Authentication has not moved to the new interface yet.');
     expect(within(panel).getByRole('link', { name: 'Open the current interface' })).toHaveAttribute('href', '/');
-    expect(screen.getAllByRole('tabpanel', { hidden: true })).toHaveLength(4);
+    // The four sections' panels (the Codec's Decode and Encode panels are tabpanels too).
+    expect(screen.getAllByRole('tabpanel', { hidden: true }).filter((element) => element.id.startsWith('nav-panel-'))).toHaveLength(4);
   });
 
   it('switches sections on the page and writes the section to the hash, keeping the history state', async () => {
@@ -60,6 +61,9 @@ describe('the app shell', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Codec' }));
     const panel = screen.getByRole('tabpanel', { name: 'Codec' });
     expect(panel).toHaveTextContent('Decode or encode WebAuthn payloads to inspect their underlying data formats.');
+    // The Codec has moved: it leads nowhere else.
+    expect(within(panel).queryByRole('link', { name: 'Open the current interface' })).toBeNull();
+    expect(within(panel).getByRole('tablist', { name: 'Codec mode' })).toBeInTheDocument();
     expect(screen.queryByRole('tabpanel', { name: 'Simple Authentication' })).toBeNull();
     expect(window.location.hash).toBe('#codec');
     expect(window.location.pathname).toBe('/beta');
