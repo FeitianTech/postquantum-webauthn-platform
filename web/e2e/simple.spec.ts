@@ -197,7 +197,7 @@ test.describe('/beta#simple', () => {
     await expect(rows(page)).toHaveCount(1);
   });
 
-  for (const width of [1440, 1024, 375]) {
+  for (const width of [1440, 1024, 800, 375]) {
     test(`never scrolls the page sideways at ${width} px, and has no grey fill`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await openBeta(page);
@@ -209,6 +209,13 @@ test.describe('/beta#simple', () => {
       await expect(rows(page)).toHaveCount(2);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
       expect(await greyFills(page, '#nav-panel-simple')).toEqual([]);
+      if (width >= 800) {
+        // Where a row has room, its identifiers are whole: never cut when they fit.
+        const cut = await rows(page).locator('[data-row-values] code').evaluateAll((codes) =>
+          codes.filter((code) => code.scrollWidth > code.clientWidth).map((code) => code.textContent),
+        );
+        expect(cut).toEqual([]);
+      }
     });
   }
 });

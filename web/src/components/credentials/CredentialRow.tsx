@@ -45,7 +45,7 @@ export function CredentialRow({ row, busy, flash, onOpen, onDelete }: Credential
       data-flash={flash ?? undefined}
       onClick={openFromRow}
       className={cx(
-        'cursor-pointer border-t border-line px-5 py-4 transition-colors duration-(--duration-base) first:border-t-0 motion-reduce:transition-none',
+        '@container cursor-pointer border-t border-line px-5 py-4 transition-colors duration-(--duration-base) first:border-t-0 motion-reduce:transition-none',
         'hover-or-demo:bg-accent-tint/40 data-[flash=failure]:bg-danger-tint data-[flash=success]:bg-success-tint',
       )}
     >
@@ -77,22 +77,6 @@ export function CredentialRow({ row, busy, flash, onOpen, onDelete }: Credential
               ))}
             </ul>
           ) : null}
-          <dl data-row-values="" className="mt-3 grid min-w-0 cursor-auto grid-cols-1 gap-x-6 gap-y-2 md:grid-cols-2">
-            <div className="min-w-0">
-              <dt className="text-caption text-ink-muted">Credential ID</dt>
-              <dd className="mt-0.5 min-w-0">
-                <MonoValue value={row.credentialId} label="credential ID" />
-              </dd>
-            </div>
-            {row.aaguid ? (
-              <div className="min-w-0">
-                <dt className="text-caption text-ink-muted">AAGUID</dt>
-                <dd className="mt-0.5 min-w-0">
-                  <MonoValue value={row.aaguid} label="AAGUID" />
-                </dd>
-              </div>
-            ) : null}
-          </dl>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           {row.mdsAaguid ? (
@@ -105,6 +89,24 @@ export function CredentialRow({ row, busy, flash, onOpen, onDelete }: Credential
           </Button>
         </div>
       </div>
+      {/* The identifiers under the row, across its width, so a whole one fits:
+          one per line, side by side only where the row has room for both. */}
+      <dl data-row-values="" className="mt-3 grid min-w-0 cursor-auto grid-cols-1 gap-x-6 gap-y-2 @3xl:grid-cols-2">
+        <div className="min-w-0">
+          <dt className="text-caption text-ink-muted">Credential ID</dt>
+          <dd className="mt-0.5 min-w-0">
+            <MonoValue value={row.credentialId} label="credential ID" />
+          </dd>
+        </div>
+        {row.aaguid ? (
+          <div className="min-w-0">
+            <dt className="text-caption text-ink-muted">AAGUID</dt>
+            <dd className="mt-0.5 min-w-0">
+              <MonoValue value={row.aaguid} label="AAGUID" />
+            </dd>
+          </div>
+        ) : null}
+      </dl>
       {mdsMessage ? (
         <p role="status" className="mt-2 text-caption text-warning">
           {mdsMessage}
