@@ -32,42 +32,39 @@ def assets_env(monkeypatch, tmp_path):
 def test_current_build_assets_are_immutable_and_precompressed(assets_env):
     _static_assets, client, source = assets_env
 
-    response = client.get(
+    with client.get(
         "/assets/abc123def456/scripts/main.js", headers={"Accept-Encoding": "gzip, br"}
-    )
+    ) as response:
+        assert response.status_code == 200
+        assert response.headers["Content-Encoding"] == "gzip"
+        assert response.headers["Cache-Control"] == "public, max-age=31536000, immutable"
+        assert "Accept-Encoding" in response.headers["Vary"]
+        assert response.mimetype in {"text/javascript", "application/javascript"}
+        assert response.headers.get("ETag")
+        assert gzip.decompress(response.data) == source
 
-    assert response.status_code == 200
-    assert response.headers["Content-Encoding"] == "gzip"
-    assert response.headers["Cache-Control"] == "public, max-age=31536000, immutable"
-    assert "Accept-Encoding" in response.headers["Vary"]
-    assert response.mimetype in {"text/javascript", "application/javascript"}
-    assert response.headers.get("ETag")
-    assert gzip.decompress(response.data) == source
-
-    revalidated = client.get(
+    with client.get(
         "/assets/abc123def456/scripts/main.js",
         headers={"Accept-Encoding": "gzip", "If-None-Match": response.headers["ETag"]},
-    )
-    assert revalidated.status_code == 304
+    ) as revalidated:
+        assert revalidated.status_code == 304
 
 
 def test_identity_encoding_when_gzip_not_accepted(assets_env):
     _static_assets, client, source = assets_env
 
-    response = client.get("/assets/abc123def456/scripts/main.js", headers={"Accept-Encoding": "identity"})
-
-    assert response.status_code == 200
-    assert response.headers.get("Content-Encoding") is None
-    assert response.data == source
+    with client.get("/assets/abc123def456/scripts/main.js", headers={"Accept-Encoding": "identity"}) as response:
+        assert response.status_code == 200
+        assert response.headers.get("Content-Encoding") is None
+        assert response.data == source
 
 
 def test_other_build_ids_must_revalidate(assets_env):
     _static_assets, client, _source = assets_env
 
-    response = client.get("/assets/0ldbu1ld/favicon.ico")
-
-    assert response.status_code == 200
-    assert response.headers["Cache-Control"] == "no-cache"
+    with client.get("/assets/0ldbu1ld/favicon.ico") as response:
+        assert response.status_code == 200
+        assert response.headers["Cache-Control"] == "no-cache"
 
 
 def test_asset_route_rejects_traversal_and_missing_files(assets_env):
@@ -174,20 +171,21 @@ def test_the_snapshot_the_page_loads_is_served_from_the_snapshot_directory(asset
     (snapshot_dir / "fido-mds3.verified.json").write_bytes(b"{}")
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(snapshot_dir))
 
-    plain = client.get("/assets/abc123def456/fido-mds3.explorer.full.json")
-    assert plain.status_code == 200
-    assert plain.data == body
-    assert plain.headers["Cache-Control"] == "public, max-age=31536000, immutable"
+    with client.get("/assets/abc123def456/fido-mds3.explorer.full.json") as plain:
+        assert plain.status_code == 200
+        assert plain.data == body
+        assert plain.headers["Cache-Control"] == "public, max-age=31536000, immutable"
 
-    compressed = client.get(
+    with client.get(
         "/assets/abc123def456/fido-mds3.explorer.full.json", headers={"Accept-Encoding": "gzip"}
-    )
-    assert compressed.headers["Content-Encoding"] == "gzip"
-    assert gzip.decompress(compressed.data) == body
+    ) as compressed:
+        assert compressed.headers["Content-Encoding"] == "gzip"
+        assert gzip.decompress(compressed.data) == body
 
     # Only that file: the private sources stay hidden, other assets stay in frontend/static.
     assert client.get("/assets/abc123def456/fido-mds3.verified.json").status_code == 404
-    assert client.get("/assets/abc123def456/favicon.ico").status_code == 200
+    with client.get("/assets/abc123def456/favicon.ico") as other:
+        assert other.status_code == 200
 
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path / "empty"))
     assert client.get("/assets/abc123def456/fido-mds3.explorer.full.json").status_code == 404
