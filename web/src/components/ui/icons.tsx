@@ -92,6 +92,18 @@ export function AlertIcon(props: IconProps) {
   );
 }
 
+// Two arrows turning round: generate again (the current UI's refresh icon, on a 16 grid).
+export function RefreshIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M14 1.5v4h-4" />
+      <path d="M2 8a6 6 0 0 1 10-4.47L14 5.5" />
+      <path d="M2 14.5v-4h4" />
+      <path d="M14 8a6 6 0 0 1-10 4.47L2 10.5" />
+    </Icon>
+  );
+}
+
 export function ExternalIcon(props: IconProps) {
   return (
     <Icon {...props}>

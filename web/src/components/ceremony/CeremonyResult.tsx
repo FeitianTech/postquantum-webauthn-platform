@@ -9,8 +9,9 @@ import { type CeremonyResultInput, describeResultPanel } from './model';
 // signature counter and its verdict (and in the Advanced tab where the challenge
 // came from). It stays until the next ceremony starts, unlike a toast, so a
 // warning that an authenticator may have been cloned does not leave by itself.
-// A warning is amber with a mark; otherwise white with a hairline. The live
-// region is always in the page, so a screen reader hears it fill.
+// Set off by a hairline above it (it sits inside its tab's card: no card in a
+// card); a warning is an amber box with a mark. The live region is always in
+// the page, so a screen reader hears it fill.
 export function CeremonyResult({ result }: { result: CeremonyResultInput | null }) {
   const view = result ? describeResultPanel(result) : null;
   return (
@@ -21,8 +22,7 @@ export function CeremonyResult({ result }: { result: CeremonyResultInput | null 
       data-ceremony-result=""
       data-verdict={view?.warning ? 'warning' : undefined}
       className={cx(
-        'rounded-sm border px-4 py-3',
-        view?.warning ? 'border-warning-line bg-warning-tint' : 'border-line bg-surface',
+        view?.warning ? 'rounded-sm border border-warning-line bg-warning-tint px-4 py-3' : 'border-t border-line pt-4',
       )}
     >
       {view ? (
