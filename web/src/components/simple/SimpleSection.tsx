@@ -1,3 +1,6 @@
+import { useCallback, useEffect } from 'react';
+
+import { CredentialDetailDialog } from '@/components/credentials/CredentialDetailDialog';
 import { SavedCredentials } from '@/components/credentials/SavedCredentials';
 import { NAV_ID } from '@/components/shell/SectionPanel';
 import { segmentIds } from '@/components/ui/SegmentedControl';
@@ -9,6 +12,16 @@ import type { SectionRoute } from '@/lib/useSection';
 export function SimpleSection({ active, route }: { active: boolean; route: SectionRoute }) {
   const section = SECTIONS.find((candidate) => candidate.id === 'simple')!;
   const ids = segmentIds(NAV_ID, 'simple');
+  const { path, replace, close } = route;
+  // What the URL may open here: a credential's details, #simple/credential/<key>.
+  const known = path.length === 0 || (path[0] === 'credential' && path.length === 2);
+  const openKey = known && path.length ? path[1] : '';
+  const backToList = useCallback(() => replace([]), [replace]);
+
+  // A path this section does not know shows the list, and the URL says so.
+  useEffect(() => {
+    if (!known) backToList();
+  }, [known, backToList]);
 
   return (
     <section
@@ -24,6 +37,7 @@ export function SimpleSection({ active, route }: { active: boolean; route: Secti
         <div className="min-w-0" data-simple-column="ceremony" />
         <SavedCredentials onOpen={(key) => route.open(['credential', key])} />
       </div>
+      <CredentialDetailDialog openKey={openKey} onClose={() => close()} onUnknown={backToList} />
     </section>
   );
 }
