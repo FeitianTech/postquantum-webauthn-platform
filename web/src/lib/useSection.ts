@@ -21,6 +21,9 @@ export type SectionRoute = {
 /** Opens `path` in another section, as a history entry of its own, so Back returns here. */
 export type GoToSection = (section: SectionId, path: string[]) => void;
 
+/** The route of a section not shown: nothing open in it, and nothing it can open. */
+export const CLOSED_ROUTE: SectionRoute = { path: [], open: () => {}, close: () => {}, replace: () => {} };
+
 const SectionNavigation = createContext<GoToSection>(() => {});
 
 export const SectionNavigationProvider = SectionNavigation.Provider;
@@ -63,8 +66,12 @@ export function useSection(): [SectionId, (section: SectionId) => void, SectionR
   const [path, setPath] = useState<string[]>([]);
 
   useEffect(() => {
+    // No hash is the default section (the page's own URL, which Back returns to
+    // after a section opened something in another); a hash naming no section is
+    // left alone.
     const follow = () => {
-      const route = routeFromHash(window.location.hash);
+      const hash = window.location.hash.replace(/^#/, '');
+      const route = hash ? routeFromHash(hash) : { section: DEFAULT_SECTION, path: [] };
       if (!route) return;
       setSection(route.section);
       setPath(route.path);

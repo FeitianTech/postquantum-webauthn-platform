@@ -1,6 +1,7 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { keepRecords } from '@/test/credentials';
 import { fixtureRoutes, stubFetch } from '@/test/mds';
 import { renderPage } from '@/test/page';
 
@@ -80,14 +81,15 @@ describe('the app shell', () => {
     expect(within(footer).getByText('not affiliated with or endorsed by').tagName).toBe('STRONG');
   });
 
-  it('opens on Simple Authentication, whose note leads to the current interface', () => {
+  it('opens on Simple Authentication, with the saved credentials beside it', async () => {
     renderPage(<AppShell />);
     const panel = screen.getByRole('tabpanel', { name: 'Simple Authentication' });
 
     expect(within(panel).getByRole('heading', { level: 2, name: 'Simple Authentication' })).toBeInTheDocument();
     expect(panel).toHaveTextContent('Register and authenticate with passkeys using default presets.');
-    expect(panel).toHaveTextContent('Simple Authentication has not moved to the new interface yet.');
-    expect(within(panel).getByRole('link', { name: 'Open the current interface' })).toHaveAttribute('href', '/');
+    // Simple Authentication has moved: it leads nowhere else.
+    expect(within(panel).queryByRole('link', { name: 'Open the current interface' })).toBeNull();
+    expect(await within(panel).findByText('No credentials registered yet.')).toBeVisible();
     // The four sections' panels (the Codec's Decode and Encode panels are tabpanels too).
     expect(screen.getAllByRole('tabpanel', { hidden: true }).filter((element) => element.id.startsWith('nav-panel-'))).toHaveLength(4);
   });
@@ -156,5 +158,24 @@ describe('the app shell', () => {
     await userEvent.click(menu);
     await userEvent.click(within(await screen.findByRole('dialog', { name: 'Menu' })).getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(menu).toHaveAttribute('aria-expanded', 'false'));
+  });
+  it('CRED-J1: opens a saved credential\'s FIDO MDS entry, and Back returns to the Simple tab', async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    keepRecords([
+      { type: 'simple', credentialId: 'AQID', email: 'alice', aaguidHex: 'f1d0f1d0000040008000000000000001', attestationSummary: { rootValid: true } },
+    ]);
+    renderPage(<AppShell />);
+    const panel = screen.getByRole('tabpanel', { name: 'Simple Authentication' });
+    const link = await within(panel).findByRole('button', { name: 'FIDO MDS' });
+    expect(link).toHaveAttribute('title', 'Open authenticator metadata');
+
+    await userEvent.click(link);
+    expect(window.location.hash).toBe('#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000001');
+    expect(await screen.findByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeVisible();
+
+    act(() => window.history.back());
+    await waitFor(() => expect(screen.getByRole('tabpanel', { name: 'Simple Authentication' })).toBeVisible());
+    expect(window.location.hash).toBe('');
+    keepRecords();
   });
 });

@@ -74,6 +74,25 @@ describe('the section in the URL, inside Next', () => {
     expect(window.history.length).toBe(length + 1);
   });
 
+  it('shows the default section for the page\'s URL without a hash, and leaves a hash naming no section alone', () => {
+    window.history.replaceState({ fromNext: true }, '', '/beta#codec');
+    const { result } = renderHook(() => useSection());
+    expect(result.current[0]).toBe('codec');
+
+    act(() => {
+      window.history.replaceState(null, '', '/beta#elsewhere');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(result.current[0]).toBe('codec');
+
+    act(() => {
+      window.history.replaceState(null, '', '/beta');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(result.current[0]).toBe('simple');
+    expect(result.current[2].path).toEqual([]);
+  });
+
   it('gives a section the shell\'s way to open something in another, and nothing outside the shell', () => {
     const go = vi.fn();
     const inside = renderHook(() => useSectionNavigation(), {
