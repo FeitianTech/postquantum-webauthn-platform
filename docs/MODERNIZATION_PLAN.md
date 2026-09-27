@@ -2622,6 +2622,201 @@ checkout's stores or snapshot.
   three), resolve's fido2 dataclasses dropping unmodelled fields, and `fido2/utils.py`'s `websafe_decode`
   deprecation on the BLOB path.
 
+### Phase 28A — the Simple tab and the saved credentials at /beta#simple — DONE (2026-09-27)
+23 commits, b7b74d5c..the record's own, all this phase's (one author, bare subjects; the range starts after the tech
+lead's timeout commit, b163738d), each gated on pytest (under coverage, with its 95% floor), root vitest (with its
+floors), web's typecheck, unit tests (with their floors), build and CSP scan, and ruff (the commits that change only
+docs or only browser tests ran the gates their change can reach). Every commit before the record was re-run afterwards
+on its own tree in one detached worktree, cleaned (`git clean -fdx`, `node_modules` linked: no lockfile changed) before
+each: all 22 pass every gate and leave nothing behind but Python's byte caches. Not pushed: the tech lead verifies and
+pushes.
+Planned in plan mode and approved before any code. The surface measured about 8,200 lines (not 5,750), and the logic
+`/beta` would import was 60–97 % covered, so the phase was split as the brief allows (the charter's phase table):
+**28A** the Simple tab, its ceremonies and the saved-credential list with the records shared by both UIs, plus the six
+fixes from 27B's verification; **28B** the credential detail and the registration result with its certificate and
+authenticator-data views. A review of the plan against the code found eleven problems before they happened: mock
+factories that leave names out (reading one throws), a card test driven by injected functions, storage to be passed in
+as parameters, today's call order that tests queue answers for, `local.js` reading the page, the storage's read cache
+hiding writes in web tests, records read before hydration, collisions with the ~150 exports web's closure gains,
+expected 4xx in the browser tests, the index already waiting in strict mode, and `AppShell.test`'s "not moved yet".
+
+**What there is now.** `/beta#simple` is the Simple tab. From 1024 px the form (Username with a button for a random
+one, Register Passkey and Authenticate side by side, the progress line, a failure in place, the result panel) stays
+in view beside Saved Credentials; below, one above the other. A success is a toast with the current sentence; a
+failure stays in red under the buttons, with `readFailedResponse`'s sentences, until the next ceremony; the result
+panel gives the signature counter's verdict, a regression in amber. Saved Credentials lists every record both UIs
+keep, in stored order, with the count beside the heading. Each row has:
+- the name, a button that opens the details;
+- Signature, Root, RPID and AAGUID as chips with a mark;
+- the tags;
+- FIDO MDS (the entry's page; Back returns to the list) and Delete;
+- the credential ID and AAGUID in Geist Mono with copy.
+
+Delete and Clear All ask in a dialog. The row a ceremony used is tinted for 2.2 s. A credential's details open in a
+dialog at `#simple/credential/<key>`, which until 28B names it, gives its ID and links to the current interface. A
+credential registered, used, deleted or cleared in either UI shows so in the other. The current tab at `/` is
+unchanged and runs on the same logic.
+
+**A — parity** (b7b74d5c, 279caa3b). `docs/ui-parity/simple.md` (SIM-T/F/R/A/E/M/C/S) and
+`docs/ui-parity/credentials.md` (CRED-L/C/D/W/J/S/M/G/Z) list every item verbatim, from the running UI, the templates
+and the scripts, 28A's and 28B's alike with a Phase column. The second commit maps every 28A item to its component, test
+and browser check, and adds "What changed (28A)" and "The parity check (28A)". Left for later: the Advanced tab's
+allow-credentials list (CRED-L6, Phase 29); the snapshot sanitiser (CRED-S6), the detail's sections (CRED-M2..M9;
+CRED-M1 is 28A's dialog) and the registration result (CRED-G1..G6), all 28B.
+
+**B — the tech lead's findings on 27B** (b9a2f070, 5c6f9678, 7ab5b5ec, a1d978e9, 6d7538c4, 47ef9091).
+- (e) `test_static_assets.py` reads every file response in a `with` block; it passes under `-W error::ResourceWarning`.
+- (a) A cold instance's MDS endpoints wait for the provisioning under way.
+  - `explorer`, `explorer/full`, `resolve`, `base`, the upload and the custom delete call `ensure_snapshot_available()`
+    first (`_waits_for_the_snapshot`), and so does `GET /api/mds/metadata/info`. While the warm-up holds the lock
+    they wait on it; after its first attempt they return at once. This also closes a race: `explorer/full` could cache
+    its costly fallback while Cloud Storage was still writing the files.
+  - The versioned route waits only for the browsers' snapshot file.
+  - The index does not wait in the default mode: its inline info then has no `snapshotUrl`, and the page asks the
+    API, which waits. In strict mode it already waited.
+  - `tests/app/metadata/test_mds_provisioning_wait.py` holds a Cloud Storage download on an event. Info,
+    `explorer/full`, `resolve` and the snapshot file are still waiting after 0.2 s and answer with the entries once it
+    is released; the index answers meanwhile. The event is set and every thread joined in `finally`.
+  - `docs/MDS_SNAPSHOT.md` says so.
+- (f) `CertificatePage.test.tsx`'s walk-through is four tests: the busy button and request; the page, URL and focus;
+  Back's focus; decoded once, then the browser's Back. This phase's tests are one behaviour each.
+- (b) `KeyValueGrid` items take `identifier`: the whole row from 640 to 1023 px, two of three columns from 1024 to
+  1279 px, one from 1280 px. `EntrySections` sets it for identifier and code fields. A unit test, and a browser check
+  at 700, 1024, 1100, 1279, 1280 and 1440 px that the Overview's Identifier and AAGUID and getInfo's AAGUID are whole,
+  with no "Show all".
+- (c) The header row has a fixed minimum height. A `ResizeObserver` on `[data-shell-header]` (and one measurement on
+  mount) sets `--header-height` on `<html>` through the CSSOM, and the CSS default stays for the export's first paint.
+  The scroll padding, the Codec's sticky column, the MDS frame and the Simple form now follow the header's second row.
+  A unit test, and a browser check at 1100 px: the variable equals the header's height, and the MDS frame fits under it.
+- (d) `ExplorerTable` listens to the phone query. A default-width Icon column narrows on entering a phone width and
+  widens on leaving it; a width the person resized is kept. A unit test with a stub that keeps the listener, and a
+  browser check: loaded at 1024 px and narrowed to 375 px, the column is under 15 % of the frame; widened, 72 px again.
+
+**C — logic out of the views** (b5dab60b, d9f2873d, aafbbc56, 5965106b, 97d5f408, 85726eba). Legacy import paths stay,
+since the current UI's tests mock modules by path. What `/beta` needs moved into leaves, which the old modules wrap or
+re-export:
+- **Storage.** `storage-core.js` no longer reads the page when it loads; it exports `seedUnifiedCredentialRecords`.
+  `shared/storage/local.js` is the current UI's barrel, which seeds from `initial-credential-records` and re-exports
+  the new DOM-free `records.js`; `/beta` imports `records.js`. The April exclusion of `local.js` from coverage is gone.
+- **Ceremonies.**
+  - `simple/ceremony.js` holds:
+    - the protocol (begin, the ponyfill, complete), with `__session_state` and the extension merge;
+    - the debug prints and the failure contexts;
+    - the sentences: error names, progress, success;
+    - `registerSimplePasskey` and `authenticateSimplePasskey`.
+  - `shared/ceremony/result.js` (`describeCeremonyResult`) holds the counter's and the challenge's sentences.
+  - `shared/auth/random-username.js` holds the random username.
+  - `auth-simple.js` and `ceremony-result.js` are views over them. They keep `local.js`'s storage calls, in today's
+    order.
+- **The list.**
+  - `advanced/credentials/saved-list.js`: the records' mapping; `describeCredentialCard`, which takes the indicators,
+    the algorithm tag and the ID as values; the flash key; the warm-up.
+  - `delete-flow.js`: deleting and clearing, with their questions, progress and outcomes; `confirm` is injected.
+  - `algorithm-tag.js`, which takes its COSE describer as a parameter.
+  - `advanced/cose-labels.js`: the three describers, which `display-utils.js` re-exports.
+  - `list-render.js`, `flash.js`, `deletion.js`, `algorithm.js` and `credentials/index.js` wrap them.
+
+The legacy tests passed unchanged across the three refactor commits. The card refactor was also checked against the
+previous commit's tree in a scratch worktree: the same HTML for seven records.
+
+The test commits hold every file at 100 % per file:
+- the new modules and the whole of `shared/storage/`;
+- `failed-response`, `debug/auth`, `binary`, `base64` and `state`;
+- `credentials/utils`, `attestation-context`, `certificate-core` and `advanced/constants`.
+
+Guards no value reaches were dropped rather than covered with mocks: each claim was checked, one by probing the base64
+decoder. They were in the storage modules, `binary`, `base64` (a padding check no strict decode reaches), the credential
+helpers, the attestation context and the certificate helpers. All these files are in `LOGIC_ROOTS`, except `local.js`
+(it reads the page); the vendored ponyfill is checked for the DOM, not held. The ceremonies are tested over the server's
+recorded answers: `tests/frontend/simple/ceremony-answers.js` reads the characterization goldens, and web's component
+tests reuse it through the existing `@legacy-tests` alias, so there is one copy and no new alias (the plan's
+`@characterization`).
+
+**D — the views** (3cf5bbc2, 17d9e2a8, 6d6b98ef, a5f679d5, 13f52b17).
+- `ui/ConfirmDialog`: an alertdialog with focus on Cancel and a × named "Close". `Overlay` gains `initialFocus`,
+  `size`, `role` and `describedBy`. The design page shows both.
+- `ceremony/CeremonyResult`: its live region is always present, hidden while empty; a warning is amber.
+- `credentials/`:
+  - `SavedCredentialsProvider` / `useSavedCredentials`, at the shell's level so Phase 29's drawer shares it. It reads
+    the records after hydration and after each change, and runs the warm-up, deleting, clearing, busy, the notice and
+    the flash.
+  - `SavedCredentials`, `CredentialRow`, `CredentialDetailDialog` (the stub) and `model.ts`.
+- `simple/`: `SimpleSection`, `useSimpleCeremony` and `model.ts`.
+- `useSection`, two changes, both found by component tests:
+  - A section is given the route only while it is shown (`CLOSED_ROUTE`): a hidden MDS section was receiving Simple's
+    path.
+  - A URL without a hash is the default section: Back from an MDS entry, opened from the list at `/beta`, left MDS
+    showing.
+- Test helpers: `src/test/fetch.ts` and `src/test/credentials.ts`, which also resets the storage's read cache.
+- A look in the desktop app's pane at about 800 px found the identifiers squeezed beside the checks ("AQI…"). They now
+  sit under the row, and a container query sets them side by side only where the row has room for both; the browser
+  check failed on the old layout at 800 and 1024 px and passes.
+
+**E — browser tests** (c16e53b0, ecd91fe5, 13f52b17).
+- `simple.spec.ts` (12 tests), with Chromium's virtual authenticator:
+  - register and authenticate in `/beta`, and a failure in place;
+  - a passkey registered in `/beta` listed, used and deleted at `/`, and one registered at `/` listed, used and deleted
+    in `/beta`;
+  - Clear All in `/beta` with an advanced record whose artifact is absent (the warning), and Clear All at `/`;
+  - the details at their URL, with Back, Forward and reload;
+  - FIDO MDS to the fixture's entry, and Back to `#simple`;
+  - 1440, 1024, 800 and 375 px: no sideways scroll, no grey fill, the identifiers whole from 800 px.
+- `simple-parity.spec.ts` (3 tests): **the tab shows the same headings and words; the only differences are listed with
+  their reasons (the template's never-shown "Processing...", the new count). Four stored records (simple packed/x5c,
+  simple ML-DSA-65, advanced packed/x5c, one with a fixture AAGUID) show the same words in the same order, the same
+  actions and the same check verdicts; the only differences are the account's name, shown as a button and checked
+  equal on its own, and the identifiers each row now shows. The result panel after an authentication in each UI
+  differs only in the counter's value, and the success sentences are equal.**
+
+**Seen in a real browser.** Flask ran from `e2e/serve-flask.mjs` on a spare port, with every store in a temporary
+directory, the MDS fixture as its snapshot, the strict CSP and the Trusted Types report-only policy.
+- **The desktop app's pane:**
+  - the list, with a seeded record;
+  - FIDO MDS to the entry, and Back to `#simple`;
+  - the details dialog;
+  - `/` listing the same record;
+  - no console message. The record was removed from the pane's storage afterwards.
+  - Ceremonies were not run in the pane (macOS shows its own passkey prompt).
+- **Playwright's Chromium**, with the virtual authenticator:
+  - at 1440, 1024, 800 and 375 px: empty, registered, authenticated, the details, and a question;
+  - at 1100 px, an MDS entry's Overview, whole, and the list under a measured 105 px header;
+  - the MDS list loaded at 1100 px and narrowed to 375 px, with a 44 px Icon column.
+  - **No console, CSP or Trusted Types message, and no sideways scroll.**
+- Screenshots are in the scratchpad. Nothing was written to the checkout's stores or snapshot.
+
+**Tests.**
+- pytest 4784 → **4789** passed / 4 skipped; coverage 97%. Linux (python:3.14, Docker, `git archive` of 13f52b17):
+  **4775** / 5, the usual 14 fewer and one more skip than macOS. ruff clean.
+- root vitest 753 → **1140**, coverage 86.32 / 73.93 / 93.50 / 86.39 → **88.86 / 78.54 / 94.20 / 88.79**; floors
+  held, every file above at 100 %.
+- web vitest 298 → **354** tests in 34 files (29 before), coverage 98.71 / 96.08 / 98.43 / 99.53 →
+  **98.78 / 95.51 / 98.86 / 99.67**, floors 97 / 92 / 96 / 98.
+- web typecheck clean; CSP scan 4 HTML files, 38 script elements, **0 violations**.
+- Playwright 73 → **96** passed on macOS (Chromium 153); **96** on Linux in `mcr.microsoft.com/playwright:v1.63.0-noble`
+  from a `git archive` of 7de4c5a2 (`uv sync`, `npm ci`, the build and the CSP scan inside), as the CI job runs them.
+
+**Found but not fixed:**
+- `normaliseAaguidValue` throws `Base64Error` for a string that looks like base64 but has no valid length (a stored
+  AAGUID of "abcde"), and `deriveCredentialStatusIndicators` passes it on, which stops the list's drawing in both UIs.
+  Only a hand-edited record holds one.
+- The storage keeps what it read for the page's life, in both UIs: a change made in another tab shows after a reload.
+- `GET /api/credentials` and its `unreadableCount` are used by neither UI (CRED-Z1).
+- A registration's own MDS lookup during a cold provisioning is not waited on.
+- A COSE algorithm outside the table is tagged "ALGORITHM" in both UIs.
+- The warm-up reports a change for every advanced record with an artifact, so the list is read once more than needed
+  after each read.
+- After a deletion, focus falls to the page, since the row's Delete button is gone.
+- `/beta` reads the list once after a registration; the current tab reads it again a second later.
+- Not run on GitHub yet (not pushed): `ci-web.yml`'s e2e job now runs `simple.spec.ts` and `simple-parity.spec.ts`.
+
+**What 28B carries:**
+- the detail's sections (CRED-M2..M9);
+- the registration result with its certificate and authenticator-data views as levels inside the same dialog
+  (CRED-G1..G6);
+- the artifact hydration on opening (CRED-M1's rest) and the snapshot sanitiser (CRED-S6);
+- `credential-detail-runtime/*`, `registration-*`, `certificate-state`, `sanitize-*`, `formatting` and `data-utils`,
+  split and held as 28A's modules are.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
