@@ -38,6 +38,36 @@ describe('the app shell', () => {
     expect(github).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
+  it('measures the header into --header-height, and again when its size changes', () => {
+    const watching = new Map<Element, ResizeObserverCallback>();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(private callback: ResizeObserverCallback) {}
+        observe(target: Element) {
+          watching.set(target, this.callback);
+        }
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    let height = 61;
+    const measured = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return { height: this.matches('[data-shell-header]') ? height : 0 } as DOMRect;
+    });
+    const { unmount } = renderPage(<AppShell />);
+    const variable = () => document.documentElement.style.getPropertyValue('--header-height');
+    expect(variable()).toBe('61px');
+
+    height = 105;
+    act(() => watching.get(document.querySelector('[data-shell-header]')!)!([], {} as ResizeObserver));
+    expect(variable()).toBe('105px');
+
+    unmount();
+    expect(variable()).toBe('');
+    measured.mockRestore();
+  });
+
   it('keeps the footer text of the current UI', () => {
     renderPage(<AppShell />);
     const footer = screen.getByRole('contentinfo');

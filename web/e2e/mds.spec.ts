@@ -228,6 +228,17 @@ test.describe('/beta#mds', () => {
     await expect(fade).toBeVisible();
   });
 
+  test('fits the table\'s frame under the header when the header takes two rows', async ({ page }) => {
+    await page.setViewportSize({ width: 1100, height: 800 });
+    await openList(page);
+    const shellHeight = (await page.locator('[data-shell-header]').boundingBox())!.height;
+    expect(shellHeight).toBeGreaterThan(90);
+    const variable = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--header-height'));
+    expect(Number.parseFloat(variable)).toBeCloseTo(shellHeight, 0);
+    const frameHeight = (await frame(page).boundingBox())!.height;
+    expect(frameHeight).toBeLessThanOrEqual(800 - shellHeight - 32 + 1);
+  });
+
   test('keeps the header row in view while the list scrolls', async ({ page }) => {
     await openList(page);
     await frame(page).evaluate((element) => {

@@ -1,4 +1,4 @@
-import { type Ref, useRef, useState } from 'react';
+import { type Ref, type RefObject, useLayoutEffect, useRef, useState } from 'react';
 
 import { Button, buttonClassName } from '@/components/ui/Button';
 import { GitHubIcon, MenuIcon } from '@/components/ui/icons';
@@ -21,6 +21,29 @@ type HeaderProps = {
   analyzeButtonRef?: Ref<HTMLButtonElement>;
 };
 
+// The header's height, in --header-height on <html>, which the page's sticky and
+// window-high parts subtract (the scroll padding, the Codec's input column, the
+// MDS table's frame, the Simple tab's form): one row on a phone and on a wide
+// screen, two between 900 and 1280 px, where the sections wrap. The stylesheet's
+// 3.75rem is the first paint's; the header is measured once it is in the page,
+// and again whenever its size changes. Set through the CSSOM, which the CSP
+// allows; React does not hydrate <html>, so the export and the page agree.
+function useHeaderHeightVariable(header: RefObject<HTMLElement | null>) {
+  useLayoutEffect(() => {
+    const element = header.current;
+    if (!element) return undefined;
+    const root = document.documentElement;
+    const measure = () => root.style.setProperty('--header-height', `${element.getBoundingClientRect().height}px`);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty('--header-height');
+    };
+  }, [header]);
+}
+
 // The top bar: the title, the four sections (a segmented control whose highlight
 // slides), Analyze Browser and GitHub. On a wide screen it is one row; between
 // 900 and 1280 px the sections take a second row; on a phone they move into a
@@ -28,10 +51,16 @@ type HeaderProps = {
 export function Header({ section, onSection, onAnalyze, analyzing, analyzeButtonRef }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  useHeaderHeightVariable(headerRef);
 
   return (
-    <header data-shell-header="" className="sticky top-0 z-40 border-b border-line bg-white/85 backdrop-blur-xl backdrop-saturate-150">
-      <div className="mx-auto flex min-h-(--header-height) w-full max-w-page flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5 sm:px-6 lg:px-8">
+    <header
+      ref={headerRef}
+      data-shell-header=""
+      className="sticky top-0 z-40 border-b border-line bg-white/85 backdrop-blur-xl backdrop-saturate-150"
+    >
+      <div className="mx-auto flex min-h-15 w-full max-w-page flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5 sm:px-6 lg:px-8">
         <h1 className="min-w-0 flex-1 text-title-sm font-semibold text-ink wide:flex-none">
           FIDO2/WebAuthn PQC Developer Tools
         </h1>
