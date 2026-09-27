@@ -54,7 +54,7 @@ afterEach(() => {
 });
 
 describe('an attestation certificate of an MDS entry', () => {
-  it('MDS-X1..X4: decodes with its button busy, opens under the entry, and Back returns to the button', async () => {
+  it('MDS-X1: keeps its button busy while the certificate is decoded', async () => {
     const pending = deferred<Response>();
     const fetch = renderApp(`#mds/${L1().entryId}`, () => pending.promise);
     const button = await screen.findByRole('button', { name: 'Certificate 1' });
@@ -63,6 +63,12 @@ describe('an attestation certificate of an MDS entry', () => {
     expect(button).toHaveAttribute('aria-busy', 'true');
     expect(decodeCalls(fetch)[0][1]).toMatchObject({ method: 'POST', body: JSON.stringify({ certificate: firstCertificate() }) });
     await act(async () => pending.resolve(json({ details: DETAILS })));
+    await screen.findByRole('heading', { level: 3, name: DETAILS.subject });
+  });
+
+  it('MDS-X1..X3: opens at its own URL over the entry, with the summary, Raw and Decoded Output', async () => {
+    renderApp(`#mds/${L1().entryId}`);
+    await userEvent.click(await screen.findByRole('button', { name: 'Certificate 1' }));
 
     const heading = await screen.findByRole('heading', { level: 3, name: DETAILS.subject });
     expect(heading).toHaveFocus();
@@ -83,19 +89,30 @@ describe('an attestation certificate of an MDS entry', () => {
     expect(page.querySelectorAll('pre')[2]).toHaveTextContent(firstCertificate());
     expect(page.querySelectorAll('pre')[3].textContent).toBe(DETAILS.summary);
     expect(document.querySelector('[data-mds-entry]')!.parentElement).not.toBeVisible();
+  });
 
-    const back = within(page).getByRole('button', { name: 'Back' });
+  it('MDS-X4: its Back returns to the entry, with the focus on the certificate\'s button', async () => {
+    renderApp(`#mds/${L1().entryId}`);
+    await userEvent.click(await screen.findByRole('button', { name: 'Certificate 1' }));
+    await screen.findByRole('heading', { level: 3, name: DETAILS.subject });
+
+    const back = within(document.querySelector<HTMLElement>('[data-mds-certificate]')!).getByRole('button', { name: 'Back' });
     expect(back).toHaveAttribute('title', 'Return to Fixture Security Key L1');
     await userEvent.click(back);
     await waitFor(() => expect(screen.getByRole('button', { name: 'Certificate 1' })).toHaveFocus());
     expect(window.location.hash).toBe(`#mds/${L1().entryId}`);
+  });
 
-    // Decoded once: opening it again uses the answer.
+  it('MDS-X2, X4: decodes a certificate once, and the browser\'s Back returns to the entry', async () => {
+    const fetch = renderApp(`#mds/${L1().entryId}`);
+    await userEvent.click(await screen.findByRole('button', { name: 'Certificate 1' }));
+    await screen.findByRole('heading', { level: 3, name: DETAILS.subject });
+    act(() => window.history.back());
+    await waitFor(() => expect(screen.getByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeVisible());
+
     await userEvent.click(screen.getByRole('button', { name: 'Certificate 1' }));
     await screen.findByRole('heading', { level: 3, name: DETAILS.subject });
     expect(decodeCalls(fetch)).toHaveLength(1);
-    act(() => window.history.back());
-    await waitFor(() => expect(screen.getByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeVisible());
   });
 
   it('decodes on the page when a link opens it, and its Back shows the entry', async () => {
