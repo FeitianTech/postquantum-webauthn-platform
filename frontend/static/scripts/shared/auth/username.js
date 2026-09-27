@@ -1,15 +1,9 @@
 import { updateJsonEditor } from '../../advanced/editor/index.js';
 import { randomizeUserId } from '../../advanced/auth/forms.js';
 import { bindActions, callWith } from '../ui/actions.js';
+import { generateRandom10DigitUsername } from './random-username.js';
 
-export function generateRandom10DigitUsername() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < 10; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-}
+export { generateRandom10DigitUsername };
 
 export function randomizeUsername() {
     const randomUsername = generateRandom10DigitUsername();
