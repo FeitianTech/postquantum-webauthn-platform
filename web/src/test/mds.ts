@@ -3,9 +3,10 @@
 // answers like Flask serving it.
 import summary from '@test-fixtures/mds/snapshot/fido-mds3.explorer.json.meta.json';
 import full from '@test-fixtures/mds/snapshot/fido-mds3.explorer.full.json';
-import { vi } from 'vitest';
 
 import type { MdsEntry, MdsSnapshot } from '@/components/mds/model';
+
+import { type Route, json } from './fetch';
 
 export const FIXTURE_SNAPSHOT = full as unknown as MdsSnapshot;
 export const FIXTURE_ENTRIES = FIXTURE_SNAPSHOT.entries as MdsEntry[];
@@ -16,23 +17,7 @@ export function entryNamed(name: string) {
   return FIXTURE_ENTRIES.find((entry) => entry.name === name)!;
 }
 
-export function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-}
-
-type Route = (init: RequestInit | undefined, url: string) => Response | Promise<Response>;
-
-// A fetch answering by path; anything else is a 404 the test did not expect.
-export function stubFetch(routes: Record<string, Route>) {
-  const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.pathname : input.url;
-    const path = url.split('?')[0];
-    const route = routes[path];
-    return route ? route(init, url) : json({ error: `Unexpected ${path}` }, 404);
-  });
-  vi.stubGlobal('fetch', fetch);
-  return fetch;
-}
+export { json, stubFetch } from './fetch';
 
 // GET /api/mds/metadata/resolve as Flask answers it: the entry an entryId,
 // AAGUID or AAID names, else its 404.

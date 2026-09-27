@@ -1,13 +1,16 @@
 import { SOURCE_TEXT } from '@legacy/shared/browser/identity.js';
 import { STATE_TEXT } from '@legacy/shared/browser/webauthn-facts.js';
+import { SIMPLE_CEREMONY_TEXT } from '@legacy/simple/ceremony.js';
 import Head from 'next/head';
 import { type ReactNode, useState } from 'react';
 
 import { STATE_TONES } from '@/components/analyze-browser/FactList';
+import { CeremonyResult } from '@/components/ceremony/CeremonyResult';
 import { Badge, StatusChip } from '@/components/ui/Badge';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { CodeBlock } from '@/components/ui/CodeBlock';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Select, TextArea, TextField } from '@/components/ui/Field';
 import { CloseIcon, CopyIcon, InfoIcon } from '@/components/ui/icons';
 import { InfoPopover } from '@/components/ui/InfoPopover';
@@ -342,6 +345,14 @@ function Display() {
   return (
     <>
       <Row>
+        <Example label="Ceremony result — as the server said it, and a warning">
+          <div className="flex flex-col gap-3">
+            <CeremonyResult result={{ title: 'Last authentication', signCount: 6, signCountStatus: 'ok' }} />
+            <CeremonyResult
+              result={{ title: 'Last authentication', signCountStatus: 'regressed', consequence: SIMPLE_CEREMONY_TEXT.rejected }}
+            />
+          </div>
+        </Example>
         <Example label="Badge tones">
           <div className="flex flex-wrap gap-2">
             <Badge tone="accent">ML-DSA-65</Badge>
@@ -453,6 +464,7 @@ function Floating() {
   const [dialog, setDialog] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [sheet, setSheet] = useState(false);
+  const [confirm, setConfirm] = useState(false);
   return (
     <>
       <Row>
@@ -489,6 +501,9 @@ function Floating() {
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => setDialog(true)}>
               Open dialog
+            </Button>
+            <Button variant="danger" onClick={() => setConfirm(true)}>
+              Ask before deleting
             </Button>
             <Button variant="secondary" onClick={() => setDrawer(true)}>
               Open drawer
@@ -540,6 +555,14 @@ function Floating() {
           <p className="text-body text-ink-muted">A drawer slides in from the right, as the saved credentials will.</p>
         </OverlayBody>
       </Drawer>
+      <ConfirmDialog
+        open={confirm}
+        title="Delete credential"
+        question="A question before something that cannot be undone. The focus starts on Cancel."
+        confirmLabel="Delete"
+        onConfirm={() => setConfirm(false)}
+        onCancel={() => setConfirm(false)}
+      />
       <Sheet open={sheet} onClose={() => setSheet(false)} labelledBy="design-sheet-title">
         <OverlayHeader titleId="design-sheet-title" title="Sheet" closeLabel="Close sheet" onClose={() => setSheet(false)} />
         <OverlayBody>

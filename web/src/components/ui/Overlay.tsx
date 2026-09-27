@@ -20,6 +20,13 @@ type OverlayProps = {
   label?: string;
   /** Where focus goes when it closes; by default what had focus when it opened. */
   returnFocusTo?: () => HTMLElement | null;
+  /** Where focus goes when it opens; by default the panel itself. */
+  initialFocus?: () => HTMLElement | null;
+  /** A dialog's width: most hold data; a question is narrow. */
+  size?: 'md' | 'sm';
+  /** "alertdialog" for a question that interrupts, described by `describedBy`. */
+  role?: 'dialog' | 'alertdialog';
+  describedBy?: string;
   className?: string;
   children: ReactNode;
 };
@@ -58,7 +65,7 @@ export function keepFocusInside(event: KeyboardEvent, panel: HTMLElement) {
 
 const PANELS: Record<OverlayVariant, string> = {
   dialog:
-    'top-1/2 left-1/2 w-[min(calc(100vw-2rem),60rem)] max-h-[min(88vh,60rem)] -translate-x-1/2 -translate-y-1/2 ' +
+    'top-1/2 left-1/2 max-h-[min(88vh,60rem)] -translate-x-1/2 -translate-y-1/2 ' +
     'group-data-[state=closed]:translate-y-[calc(-50%+0.5rem)] group-data-[state=closed]:scale-[0.98] ' +
     'group-data-[state=closed]:opacity-0',
   drawer:
@@ -68,6 +75,11 @@ const PANELS: Record<OverlayVariant, string> = {
     'inset-x-3 top-3 max-h-[calc(100dvh-1.5rem)] origin-top ' +
     'group-data-[state=closed]:-translate-y-2 group-data-[state=closed]:scale-[0.98] group-data-[state=closed]:opacity-0',
 };
+
+const DIALOG_WIDTHS = {
+  md: 'w-[min(calc(100vw-2rem),60rem)]',
+  sm: 'w-[min(calc(100vw-2rem),28rem)]',
+} as const;
 
 // What every floating layer shares: rendered into #overlay-root (a sibling of
 // the app, which is made inert while it is open), a scrim that closes it, the
@@ -81,6 +93,10 @@ export function Overlay({
   labelledBy,
   label,
   returnFocusTo,
+  initialFocus,
+  size = 'md',
+  role = 'dialog',
+  describedBy,
   className,
   children,
 }: OverlayProps) {
@@ -90,8 +106,10 @@ export function Overlay({
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const returnFocusRef = useRef(returnFocusTo);
+  const initialFocusRef = useRef(initialFocus);
   onCloseRef.current = onClose;
   returnFocusRef.current = returnFocusTo;
+  initialFocusRef.current = initialFocus;
 
   useEffect(() => {
     if (open) {
@@ -110,7 +128,7 @@ export function Overlay({
     const giveBackTo = returnFocusRef.current?.() ?? (document.activeElement as HTMLElement | null);
 
     for (const scroller of panel.querySelectorAll<HTMLElement>('[data-overlay-scroll]')) scroller.scrollTop = 0;
-    panel.focus({ preventScroll: true });
+    (initialFocusRef.current?.() ?? panel).focus({ preventScroll: true });
     const app = document.getElementById('app-root');
     const inert = app && !app.contains(panel) ? app : null;
     inert?.setAttribute('inert', '');
@@ -151,9 +169,10 @@ export function Overlay({
       {mounted ? (
         <div
           ref={panelRef}
-          role="dialog"
+          role={role}
           aria-modal="true"
           aria-labelledby={labelledBy}
+          aria-describedby={describedBy}
           aria-label={labelledBy ? undefined : label}
           tabIndex={-1}
           data-overlay-panel=""
@@ -162,6 +181,7 @@ export function Overlay({
             'transition-[opacity,translate,scale] ease-standard',
             variant === 'drawer' ? 'duration-(--duration-slow)' : 'duration-(--duration-base)',
             PANELS[variant],
+            variant === 'dialog' && DIALOG_WIDTHS[size],
             className,
           )}
         >
