@@ -61,28 +61,59 @@ unlisted.
 - `web/src/components/ui/`: the primitives (Button and IconButton, the text fields
   and Select, Switch, ToggleChip, SegmentedControl, Card, Badge and StatusChip,
   Overlay with Dialog / Drawer / Sheet, Toast, InfoPopover, the table primitives,
-  MonoValue, CodeBlock, KeyValueGrid). `SegmentedControl` moves its one highlight through the
+  MonoValue, CodeBlock, KeyValueGrid, ConfirmDialog). `SegmentedControl` moves its one highlight through the
   CSSOM (`element.style`) from a ref, never a `style` prop. `CodeBlock` is data text
   (EDN, JSON, PEM, hex) on white: it wraps instead of scrolling the page, starts
   collapsed at 16 rem with "Show all" when long (the whole text stays in the DOM),
   and copies; `useCopy` is the copy logic it shares with `MonoValue`. `KeyValueGrid`
-  items can be `plain` (regular weight) and `wide` (the whole row); `Table` and `THead`
-  take classes and roles (their first user is the MDS status reports).
+  items can be `plain` (regular weight), `wide` (the whole row) and `identifier` (two
+  columns below 1280 px, so a whole AAGUID fits); `Table` and `THead` take classes and
+  roles (their first user is the MDS status reports). `Overlay` takes a dialog's `size`
+  (`sm` for a question), its `role` (`alertdialog`, `describedBy`) and `initialFocus`;
+  `ConfirmDialog` asks before something that cannot be undone (focus on Cancel) in
+  place of the browser's `confirm`.
 - `web/src/components/shell/`: the header (title, the four sections, Analyze Browser,
   GitHub; the phone menu sheet below 900 px), the footer, the sections' panels
   (`SectionPanel` for a section not ported yet; `AppShell` renders a ported one's own
-  component, `CodecSection` for `#codec`, `MdsSection` for `#mds`).
+  component, `SimpleSection` for `#simple`, `CodecSection` for `#codec`, `MdsSection` for
+  `#mds`, and gives the route only to the section shown: the others get `CLOSED_ROUTE`).
+  The header measures itself into `--header-height` on `<html>` (a `ResizeObserver`,
+  through the CSSOM): it takes two rows between 900 and 1280 px, and the scroll padding,
+  the Codec's sticky column, the MDS frame and the Simple form follow it.
   `web/src/lib/useSection.ts` keeps the section in the URL hash (`#simple`,
   `#advanced`, `#codec`, `#mds`) with `replaceState`, and what is open inside one as
   segments after it (`#mds/<entryId>/certificate/<n>`, each segment encoded on its own:
   `routeFromHash` / `hashPath` in `sections.ts`): `open(path)` pushes, so the browser's
   Back closes one level; `close(parent)` goes back, or on a link replaces with the
-  parent; `replace(path)` corrects a path the page does not know. It tells Next's
+  parent; `replace(path)` corrects a path the page does not know. No hash is the default
+  section (the page's own URL, which Back returns to after a section opened something in
+  another). It tells Next's
   router (`beforePopState`) to leave Back to the page while Back stays on this page's
   path (Next would otherwise put an older URL back), and to Next for any other path.
   `AppShell` gives sections `useSectionNavigation()`, which opens something in another
   section as one pushed entry. The header carries `data-shell-header` (the MDS pages'
   condensed header sits under it). `lib/download.ts` saves text as a file.
+- `web/src/components/simple/` and `web/src/components/credentials/`: the Simple tab and
+  the saved credentials (Phase 28A). `SimpleSection` (the form's card beside the list's
+  from 1024 px, the form sticky under the header), `useSimpleCeremony` (the username, a
+  busy button, each step's sentence, a success as a toast, a failure in place, the result
+  panel, the row a ceremony used tinted), `model.ts` (the casts of `simple/ceremony.js`,
+  `shared/auth/random-username.js` and the storage). `SavedCredentialsProvider` /
+  `useSavedCredentials` (at the shell's level, so the Advanced drawer shares it in Phase
+  29: the records from `shared/storage/records.js`, read after hydration and after each
+  change, the warm-up after each read, delete and Clear All through
+  `advanced/credentials/delete-flow.js`, the tint), `SavedCredentials` (one card: the
+  heading, the count, Clear All; the rows; the questions in `ConfirmDialog`),
+  `CredentialRow` (the name opening the details, the checks as `StatusChip`s, the tags,
+  the credential ID and AAGUID in Geist Mono under the row, FIDO MDS through 27B's
+  `useOpenMdsEntry`, Delete), `CredentialDetailDialog` (`#simple/credential/<key>`, a
+  stub until 28B: the name, the id, a link to the current interface), `model.ts`.
+  `web/src/components/ceremony/CeremonyResult.tsx` is the result panel (Phase 29 adds
+  its challenge row). Their tests render the characterization goldens' real answers
+  through `tests/frontend/simple/ceremony-answers.js` (`@legacy-tests`; the root tests use
+  it too), which also stands in for the authenticator; `src/test/credentials.ts` keeps
+  records in the storage and forgets its read cache, `src/test/fetch.ts` answers `fetch`
+  by path. `docs/ui-parity/simple.md` and `credentials.md` map every item.
 - `web/src/components/analyze-browser/`: the first ported surface, over the logic
   modules in `frontend/static/scripts/shared/browser/`, imported through the
   `@legacy/*` alias (`experimental.externalDir`), never copied. They move into
@@ -154,7 +185,10 @@ unlisted.
   `mds-parity.spec.ts` compares the MDS tables' rows for several filters and a sort,
   `mds-entry-parity.spec.ts` five entries' pages, a certificate and the raw view,
   `mds.spec.ts` covers the MDS list and `mds-entry.spec.ts` an entry, its certificates,
-  its raw view and the AAGUID link.
+  its raw view and the AAGUID link. `simple.spec.ts` registers and authenticates in
+  `/beta`, and proves the saved credentials shared both ways (registered in one UI,
+  listed, used, deleted and cleared in the other); `simple-parity.spec.ts` compares the
+  tab, each row with its checks' verdicts, the result panel and the success sentences.
 
 Rules for `web/src` (`tests/app/tooling/test_web_source_rules.py` holds them):
 no `style` prop (the export would render a style attribute), no
@@ -163,7 +197,8 @@ no `style` prop (the export would render a style attribute), no
 which the Trusted Types policy reports, and leaves the browser's Back on the app), no
 `eval`, nothing written to `window`, no `atob`, and no copy of
 the logic modules' exports or sentences (comments count). The logic modules are the test's
-`LOGIC_ROOTS` (Analyze Browser's, the Codec's, the MDS explorer's, the failed-response reader) plus
+`LOGIC_ROOTS` (Analyze Browser's, the Codec's, the MDS explorer's, the failed-response reader,
+the saved credentials' storage, the Simple tab's ceremonies and what a credential's row shows) plus
 whatever `web/src` imports through `@legacy/`, followed through their imports, and
 none of them may touch the DOM: a surface splits its logic out of its view first
 and adds it to `LOGIC_ROOTS`. No `Suspense` on the server-rendered path:
@@ -205,8 +240,23 @@ Important frontend entry points:
   Advanced JSON editor state and synchronization.
 - `frontend/static/scripts/shared/ui/navigation.js`
   Top-level tab switching and advanced sub-tab switching.
-- `frontend/static/scripts/shared/storage/local.js`
-  Browser-side stored credential records and serialization sent back to the server.
+- `frontend/static/scripts/shared/storage/records.js` and `local.js`
+  Browser-side stored credential records and serialization sent back to the server:
+  one `localStorage` array both UIs read and write. `records.js` is the API and reads no
+  page; `local.js`, the current UI's barrel, seeds it from the `initial-credential-records`
+  page data its tests give (`seedUnifiedCredentialRecords`) and re-exports it. The storage
+  keeps what it read for the page's life. Held at 100 % per file.
+- `frontend/static/scripts/simple/ceremony.js`
+  The Simple tab's two ceremonies with no DOM (the requests, the ponyfill, every step's
+  and outcome's sentence, the result panel's input); `auth-simple.js` is the current
+  tab's view over it, keeping the storage calls its tests mock. The new UI runs it too.
+- `frontend/static/scripts/advanced/credentials/saved-list.js`, `delete-flow.js`,
+  `algorithm-tag.js`, and `advanced/cose-labels.js`
+  What a saved credential's row shows (`describeCredentialCard`, given the indicators,
+  the algorithm's tag and the hex id as values), the list's records and warm-up,
+  deleting and clearing (given `confirm`, the storage and where messages go), a
+  credential's algorithm and tag (given the COSE describer). The current views render
+  them with the functions their tests inject or mock; the new UI with the real ones.
 - `frontend/static/styles/shared/layout.css`
   Shared layout and credential card animation styles.
 - `frontend/static/scripts/shared/browser/`
@@ -313,7 +363,7 @@ Important frontend entry points:
   `challengeSource`, `challengeStatus`, a codec refusal's `offset` and `path`, and the body, and adds what to do for a 400
   about the ceremony state, 409, 413 and 503 unless the message already says;
   `FailedResponseError` carries it. Do not show a raw response body.
-- `frontend/static/scripts/shared/ui/ceremony-result.js`
+- `frontend/static/scripts/shared/ui/ceremony-result.js` (over `shared/ceremony/result.js`)
   The panel under each tab's buttons (`#simple-ceremony-result`,
   `#advanced-ceremony-result`) that says what the server made of the last ceremony:
   the signature counter with a sentence for `ok`, `not-supported` and `regressed`
@@ -448,7 +498,10 @@ Main route modules:
   `initial-mds-info` and what `GET /api/mds/metadata/info` answers (no-store,
   `Vary: Cookie`); its `snapshotUrl` is there only while the packaged file is there with
   a meta that matches the verified snapshot, and carries `?v=<serial>.<digest>` (the
-  file changes at runtime; its URL is cached for a year). An upload or delete records
+  file changes at runtime; its URL is cached for a year). The routes that read the
+  snapshot, and the browsers' snapshot file at its versioned URL, wait for a provisioning
+  under way (`ensure_snapshot_available()`, which a cold instance's warm-up is running);
+  the index does not (unless it bootstraps the metadata itself). An upload or delete records
   whether the session has uploads. `routes/web_export.py` (the `web_export` blueprint) serves
   the new UI's export at `/beta`: HTML `no-cache`, `/beta/_next/static/` immutable for
   a year with the build-time `.gz` copies (`static_assets.send_precompressed`), the

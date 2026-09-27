@@ -140,7 +140,7 @@ mid-UUID (mono, with copy). Enhance where it helps along the way. All data shown
 ## Decisions made in Phase 25 (2026-09-25)
 
 - **Sections not yet ported** show their title, their description and a short note with a link to the
-  current UI at `/` (a plain link: `next/link` would add `/beta`). In Phase 25 that was all four; since Phase 26, three.
+  current UI at `/` (a plain link: `next/link` would add `/beta`). In Phase 25 that was all four; since Phase 26, three; since Phase 28A, one (Advanced).
 - **Section switching** is client-side; the URL hash (`#simple`, `#advanced`, `#codec`, `#mds`, the legacy tab
   ids) is written with `replaceState`, read after hydration and followed on `hashchange`.
 - **Overlays** (Dialog, Drawer, Sheet) are one portal-based overlay rather than the native `<dialog>`, to keep
@@ -262,6 +262,45 @@ mid-UUID (mono, with copy). Enhance where it helps along the way. All data shown
   was cached for a year. The page is given that URL only while the file is there and matches the verified snapshot, and
   no route serves any other snapshot file.
 
+## Decisions made in Phase 28A (2026-09-27)
+
+- **The split.** The surface is about 8,200 lines, and the logic `/beta` imports was 60–97 % covered, so Phase 28 is two:
+  28A the Simple tab, its ceremonies and the saved-credential list, with the records shared by both UIs; 28B the
+  credential detail and the registration result with its certificate and authenticator-data views. Until 28B a
+  credential's details open at their URL with its name, its id and a plain link to the current interface.
+- **Legacy import paths stay.** The current UI's tests mock modules by path; a module `/beta` needs that reads the page
+  or imports a `/ui/` module has the part `/beta` needs moved into a leaf, and the old module wraps or re-exports it
+  (the storage's page-data seed moved to `shared/storage/local.js` over the new `records.js`; the algorithm's tag took
+  its COSE describer as a parameter). Where a current view is driven by injected functions, the new model takes their
+  results as values (`describeCredentialCard`).
+- **Held at 100 % per file**: the storage, the ceremonies and the result panel's sentences, what a row shows, deleting
+  and clearing, and what they rest on (`failed-response`, `debug/auth`, `binary`, `base64`, `state`, the credential
+  helpers, the attestation context, the certificate helpers, the COSE names). Guards no value reaches were dropped
+  rather than covered with mocks; the vendored WebAuthn ponyfill is checked for the DOM, not held.
+- **Layout.** The Simple tab is two cards from 1024 px: the form (about 26 rem, sticky under the measured header) and
+  the saved credentials; one above the other below. One control height, the label above the field, the random
+  username a button inside the field, Register Passkey and Authenticate at one width.
+- **Messages.** A success is a toast; a failure stays in place until the next ceremony (an empty username is the
+  field's error); the progress is a line with a spinner and the pressed button busy; neither button can be pressed
+  again meanwhile. The result panel is set off by a hairline inside the form's card, and a warning is an amber box.
+- **The saved credentials** are one component the Advanced drawer will reuse (Phase 29), its state in a provider at
+  the shell's level: a card with the count (new) and Clear All, rows separated by hairlines, the checks as chips with a
+  mark and a word for screen readers, the tags as badges, and (as the brief asks) the credential ID and AAGUID in Geist
+  Mono with copy under the row, whole wherever the row has room. The row a ceremony used is tinted for 2.2 s. The
+  records are read after hydration and after every change, and warmed up after each read as the current list is.
+- **Questions in a dialog.** Delete and Clear All ask in `ui/ConfirmDialog` (focus on Cancel) with the current
+  sentences, not the browser's `confirm`, which some embedded browsers block and none lets the page style.
+- **A credential's details are a `Dialog` with a URL** (`#simple/credential/<key>`, the storage's own identifier): Back,
+  Escape and × close it, a link or a reload opens it, an unknown key corrects the URL. A dialog rather than a drawer:
+  the details are wide (JSON, hex, certificates), and in Phase 29 they open from the Advanced tab's drawer. In 28B the
+  certificate and authenticator-data views become levels inside the same dialog, not overlays on overlays.
+- **Routes.** A section is given the route only while it is shown (`CLOSED_ROUTE` otherwise), and the page's URL
+  without a hash is the default section, so Back from an entry another section opened returns there.
+- **The fixes from 27B's verification:** a cold instance's MDS endpoints and the browsers' snapshot wait for the
+  provisioning under way (the index does not); the MDS entry's identifiers take two columns below 1280 px; the header
+  is measured into `--header-height`; the MDS table's Icon column follows the window's width; the static asset tests
+  close their responses; long component tests are split, one behaviour each.
+
 ## Content parity (every surface phase)
 
 Before porting a surface, list everything it shows and every action it offers, from the current app (the
@@ -276,7 +315,7 @@ new component and check it in a browser. A phase is not done while an item is un
 | 26 | Codec. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 26) |
 | 27A | MDS explorer, the list page: the header, counts and status line, the table with its sorting, filters and resizing, Back to top, Manage Trusted Metadata, and the route that opens an entry (`#mds/<entryId>`). The explorer is 75 modules and 10,294 lines of JavaScript, seven times the Codec, so Phase 27 is split in two (docs/ui-parity/mds.md marks each item 27A or 27B). **Done** (see docs/MODERNIZATION_PLAN.md, Phase 27A) |
 | 27B | MDS explorer, the rest: the authenticator detail page, the certificate page, the raw views, and the jump from a saved credential to its entry. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 27B) |
-| 28A | The Simple tab (its form, both ceremonies, the ceremony result panel) and the saved-credential list (its rows, delete, Clear All, the jump to FIDO MDS), the records shared by both UIs, and the credential detail's dialog and URL with a stub body. The surface is 8,200 lines, and the logic web imports is 60–97 % covered before this phase holds it at 100 %, so Phase 28 is split in two (docs/ui-parity/credentials.md marks each item 28A or 28B) |
+| 28A | The Simple tab (its form, both ceremonies, the ceremony result panel) and the saved-credential list (its rows, delete, Clear All, the jump to FIDO MDS), the records shared by both UIs, and the credential detail's dialog and URL with a stub body. The surface is 8,200 lines, and the logic web imports is 60–97 % covered before this phase holds it at 100 %, so Phase 28 is split in two (docs/ui-parity/credentials.md marks each item 28A or 28B). **Done** (see docs/MODERNIZATION_PLAN.md, Phase 28A) |
 | 28B | Saved credentials, the rest: the credential detail's every section, and the registration result with its certificate and authenticator-data views |
 | 29 | Advanced tab: registration and authentication forms, JSON editor, drawer, result modals |
 | 30 | Cutover: `/` serves the new UI; the legacy templates, scripts and styles and `new_design/` are deleted; the MDS snapshot files move out of `frontend/static/`; the logic modules move into `web/`; the Google Fonts origins leave the CSP; the Playwright tests join the Cloud Build gate |
