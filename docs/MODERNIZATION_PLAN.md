@@ -2817,6 +2817,35 @@ directory, the MDS fixture as its snapshot, the strict CSP and the Trusted Types
 - `credential-detail-runtime/*`, `registration-*`, `certificate-state`, `sanitize-*`, `formatting` and `data-utils`,
   split and held as 28A's modules are.
 
+**Phase 27B deploy (2026-09-27), recorded here:** the Cloud Build gate failed twice on test timing only (GitHub CI
+green both times; production stayed on the last good revision): the gate runs its three suites at once on one
+two-vCPU machine, about ten times slower than GitHub. Reproduced on the Mac by running the three suites together at
+background priority (15 web and 6 root failures), then fixed: web tests 60 s each and Testing Library's
+`asyncUtilTimeout` 10 s (dfc1a44d), root tests 30 s (b163738d). Live on revision 00448: the packaged snapshot at
+`…/fido-mds3.explorer.full.json?v=282.ff46ea208539`, `immutable` for a year. A cold instance then took more than 45 s
+to provision the snapshot, while the MDS endpoints answered empty (fixed in 28A, 5c6f9678).
+
+**Phase 28A — tech-lead verification (2026-09-27):**
+- **Every one of the 23 commits passes on its own tree**, run in three detached worktrees and cleaned before each:
+  pytest (4784 → 4789 / 4), the root vitest (753 → 1140), web's vitest (298 → 354) and typecheck; nothing left behind.
+  One author, bare subjects, no dependency changed; the range starts after the tech lead's b163738d.
+- **Built independently from a clean `npm ci`**: CSP scan 0 violations. **Playwright 96/96** from the clean copy.
+- **Ceremonies and shared records, by the tech lead's own script** (Playwright's Chromium with a CTAP2 virtual
+  authenticator on USB, since the Simple tab asks for a cross-platform one; Flask from the clean copy on the MDS
+  fixture): registered and authenticated in `/beta` (the result panel's counter sentence); the current UI listed that
+  credential and authenticated with it, and registered a second; `/beta` listed the second and authenticated with it;
+  every word of the current list appears in `/beta`'s; Delete in `/beta` asked first ("Are you sure you want to delete
+  the credential for tl28a-two? This action cannot be undone.") and the current UI no longer listed it; Clear All in the
+  current UI left `/beta` empty. No console error, CSP or Trusted Types message.
+- **The owner's design rules, measured:** no grey fill and no sideways scroll at 1440, 1024 and 375 px; the Username
+  field focused by a real click and left unhovered looks as unfocused; `--header-height` follows the header (61 px,
+  105 px where it wraps between 960 and 1100 px, 65 px on a phone). The 27B fixes: an MDS entry's Overview shows its
+  identifiers whole from 1024 to 1440 px, and the table's Icon column follows the window (72 → 44 → 72 px).
+- **Found by the tech lead:** the Simple registration's success toast names an EdDSA credential "Other (Classical)":
+  `routes/simple/registration_record.py` keeps its own table of five algorithms (a second copy of the COSE registry,
+  without EdDSA and ES384, which the Simple tab offers). At 375 px a saved credential's AAGUID and credential ID are
+  cut with "Show all" (the card's padding), where the MDS page fits a whole AAGUID.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
