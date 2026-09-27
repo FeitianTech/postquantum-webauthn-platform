@@ -211,3 +211,23 @@ test.describe('the link to an AAGUID\'s MDS entry', () => {
     await expect(entryPage(page).getByRole('alert')).toHaveText('Metadata entry not found.');
   });
 });
+
+test.describe('an MDS entry\'s identifiers', () => {
+  for (const width of [700, 1024, 1100, 1279, 1280, 1440]) {
+    test(`are whole at ${width} px, with no Show all`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await openEntry(page);
+      for (const [key, label] of [
+        ['overview', 'Identifier'],
+        ['overview', 'AAGUID'],
+        ['authenticatorGetInfo', 'AAGUID'],
+      ]) {
+        const code = part(page, key).locator(`[data-item="${label}"] code`);
+        await expect(code).toHaveText(/^[0-9a-f-]{36}$/);
+        const fits = await code.evaluate((node) => node.scrollWidth <= node.clientWidth);
+        expect(fits, `${key} ${label} at ${width} px`).toBe(true);
+        await expect(part(page, key).locator(`[data-item="${label}"]`).getByRole('button', { name: 'Show all' })).toHaveCount(0);
+      }
+    });
+  }
+});

@@ -50,6 +50,7 @@ function Fields({ fields, entry }: { fields: DetailField[]; entry: MdsEntry }) {
         value: <FieldValue field={field} entry={entry} />,
         plain: true,
         wide: RUNNING_TEXT.has(field.label) || (field.value?.length ?? 0) > WIDE_TEXT,
+        identifier: Boolean(field.identifier || field.codes),
       }))}
     />
   );

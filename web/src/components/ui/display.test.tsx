@@ -85,6 +85,24 @@ describe('KeyValueGrid', () => {
     expect(list.querySelector('[data-item="aaguid"] [data-role="value"]')!.className).toContain('font-mono');
     expect(list.querySelector('[data-item="aaguid"] [data-role="hint"]')).toBeNull();
   });
+
+  it('gives an identifier two columns until a wide screen, and long text the whole row', () => {
+    render(
+      <KeyValueGrid
+        items={[
+          { key: 'aaguid', label: 'AAGUID', value: 'ee882879-721c-4913-9775-3dfcce97072a', identifier: true },
+          { key: 'legal', label: 'Legal Header', value: 'Long text', wide: true, identifier: true },
+          { key: 'protocol', label: 'Protocol', value: 'FIDO2' },
+        ]}
+      />,
+    );
+    const item = (key: string) => document.querySelector(`[data-item="${key}"]`)!.className;
+    expect(item('aaguid')).toContain('sm:col-span-2');
+    expect(item('aaguid')).toContain('wide:col-span-1');
+    expect(item('legal')).toContain('col-span-full');
+    expect(item('legal')).not.toContain('sm:col-span-2');
+    expect(item('protocol')).not.toMatch(/col-span/);
+  });
 });
 
 describe('Table', () => {
