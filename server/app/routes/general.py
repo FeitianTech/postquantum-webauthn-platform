@@ -1,6 +1,7 @@
 """General application routes."""
 from __future__ import annotations
 
+import functools
 import hashlib
 import io
 import json
@@ -221,12 +222,34 @@ def _packaged_snapshot_url() -> str | None:
     return f"{asset_url(_MDS_EXPLORER_FULL_STATIC_FILENAME)}?v={version}"
 
 
-def _initial_mds_info() -> dict[str, Any]:
+def _waits_for_the_snapshot(view):
+    """A route that reads the MDS snapshot waits for a provisioning under way.
+
+    A cold instance provisions the snapshot in the background (about 20 s from
+    Cloud Storage, ``startup.start_background_warmup``); until that finishes the
+    route would answer as if there were no snapshot. ``ensure_snapshot_available``
+    waits on the provisioning's lock, and after the first attempt returns at once.
+    """
+
+    @functools.wraps(view)
+    def wrapper(*args, **kwargs):
+        ensure_snapshot_available()
+        return view(*args, **kwargs)
+
+    return wrapper
+
+
+def _initial_mds_info(*, wait_for_the_snapshot: bool = False) -> dict[str, Any]:
     """What the MDS explorer starts from: the packaged snapshot's summary (absent
     without a snapshot), the URL of the packaged snapshot (absent without one),
     and whether this session has uploaded metadata. The current UI's index
-    inlines it; the new UI asks ``/api/mds/metadata/info`` for it."""
+    inlines it; the new UI asks ``/api/mds/metadata/info`` for it, which waits for
+    a provisioning under way. The index does not wait (unless it bootstraps the
+    metadata itself), so a cold instance's first page is not held: without a
+    snapshot yet its explorer asks the API, which waits."""
 
+    if wait_for_the_snapshot:
+        ensure_snapshot_available()
     if _should_bootstrap_metadata_on_index():
         ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
     metadata_session_id = ensure_metadata_session_id()
@@ -260,10 +283,11 @@ def _no_store_json_response(payload: Mapping[str, Any], status: int = 200):
 @bp.route("/api/mds/metadata/info", methods=["GET"])
 def api_get_metadata_info():
     # Per session (customEntriesState), so never cached and keyed on the cookie.
-    return _no_store_json_response(_initial_mds_info())
+    return _no_store_json_response(_initial_mds_info(wait_for_the_snapshot=True))
 
 
 @bp.route("/api/mds/metadata/explorer", methods=["GET"])
+@_waits_for_the_snapshot
 def api_get_explorer_metadata():
     ensure_metadata_session_id()
     snapshot = load_effective_explorer_snapshot()
@@ -277,6 +301,7 @@ def api_get_explorer_metadata():
 
 
 @bp.route("/api/mds/metadata/explorer/full", methods=["GET"])
+@_waits_for_the_snapshot
 def api_get_full_explorer_metadata():
     ensure_metadata_session_id()
     snapshot = load_effective_full_snapshot()
@@ -290,6 +315,7 @@ def api_get_full_explorer_metadata():
 
 
 @bp.route("/api/mds/metadata/resolve", methods=["GET"])
+@_waits_for_the_snapshot
 def api_resolve_metadata_entry():
     ensure_metadata_session_id()
 
@@ -322,6 +348,7 @@ def api_resolve_metadata_entry():
 
 
 @bp.route("/api/mds/metadata/base", methods=["GET"])
+@_waits_for_the_snapshot
 def api_get_verified_metadata():
     metadata_path = mds_snapshot_dir.snapshot_file(mds_snapshot_dir.VERIFIED)
     try:
@@ -353,6 +380,7 @@ def _read_metadata_json(text: str) -> Any:
 
 
 @bp.route("/api/mds/metadata/upload", methods=["POST"])
+@_waits_for_the_snapshot
 def api_upload_custom_metadata():
     # Its own limit, before the body is read: the whole MDS metadata (config/request_limits.py).
     request.max_content_length = current_app.config[METADATA_UPLOAD_LIMIT_KEY]
@@ -444,6 +472,7 @@ def _upload_answer(saved_items: list[Any], errors: list[str]):
 
 
 @bp.route("/api/mds/metadata/custom/<string:stored_filename>", methods=["DELETE"])
+@_waits_for_the_snapshot
 def api_delete_custom_metadata(stored_filename: str):
     ensure_metadata_session_id()
     try:

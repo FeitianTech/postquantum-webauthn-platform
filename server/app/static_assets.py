@@ -15,6 +15,7 @@ from werkzeug.security import safe_join
 
 from . import mds_snapshot_dir
 from .config import _FRONTEND_ROOT, _FRONTEND_STATIC_ROOT
+from .mds_provisioning import ensure_snapshot_available
 
 __all__ = ["BUILD_ID", "asset_url", "bp", "init_app", "send_precompressed"]
 
@@ -87,9 +88,12 @@ def versioned_static_asset(build_id: str, filename: str):
         abort(404)
 
     # The snapshot the page loads is wherever the snapshot directory is
-    # (server.app.mds_snapshot_dir); every other asset is in frontend/static.
+    # (server.app.mds_snapshot_dir); every other asset is in frontend/static. On
+    # a cold instance it may still be being provisioned: wait for that (only
+    # this file waits; after the first attempt it returns at once).
     root = _STATIC_ROOT
     if filename in mds_snapshot_dir.BROWSER_FILENAMES:
+        ensure_snapshot_available()
         root = os.fspath(mds_snapshot_dir.snapshot_dir())
     path = safe_join(root, filename)
     if path is None or not os.path.isfile(path):
