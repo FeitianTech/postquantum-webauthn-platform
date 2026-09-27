@@ -65,11 +65,9 @@ export function persistCredentialPartitions(simpleRecords, advancedRecords, opti
     const nextRecords = [];
 
     if (Array.isArray(current) && current.length) {
+        // Every stored record is an object, so each has a key.
         current.forEach(record => {
             const key = buildRecordKey(record);
-            if (!key) {
-                return;
-            }
             const entry = entryMap.get(key);
             if (entry) {
                 nextRecords.push(entry.record);

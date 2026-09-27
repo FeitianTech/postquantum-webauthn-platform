@@ -18,11 +18,8 @@ function extractAlgorithm(record) {
     return undefined;
 }
 
+// Called with an object (the source is filtered to objects first).
 function extractPublicKey(record) {
-    if (!record || typeof record !== 'object') {
-        return '';
-    }
-
     const preferredCandidates = [
         record.publicKey,
         record.publicKeyBase64,

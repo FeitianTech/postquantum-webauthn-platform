@@ -90,11 +90,8 @@ function sanitiseCertificateEntryForSnapshot(entry) {
     return Object.keys(clone).length ? clone : null;
 }
 
+// Called with an object (sanitiseRegistrationDetailStateSnapshot checks).
 function sanitiseDetailPreparationSnapshot(preparation) {
-    if (!preparation || typeof preparation !== 'object') {
-        return null;
-    }
-
     return {
         attestationObjectValue: truncateString(preparation.attestationObjectValue || '', MAX_DETAIL_STRING_LENGTH),
         attestationDecodeError: truncateString(preparation.attestationDecodeError || '', MAX_DETAIL_STRING_LENGTH),
@@ -139,10 +136,7 @@ function sanitiseRegistrationDetailStateSnapshot(state) {
     const sanitised = {};
 
     if (state.detailPreparation && typeof state.detailPreparation === 'object') {
-        const detailClone = sanitiseDetailPreparationSnapshot(state.detailPreparation);
-        if (detailClone) {
-            sanitised.detailPreparation = detailClone;
-        }
+        sanitised.detailPreparation = sanitiseDetailPreparationSnapshot(state.detailPreparation);
     }
 
     if (state.attestationObject && typeof state.attestationObject === 'object') {

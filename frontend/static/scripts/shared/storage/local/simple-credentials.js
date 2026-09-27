@@ -10,16 +10,9 @@ import {
 import { readUnifiedCredentialRecords } from './storage-core.js';
 import { prepareAdvancedCredentialForStorage } from './advanced-storage-shaping.js';
 
-function cloneCredential(record) {
-    if (!record || typeof record !== 'object') {
-        return null;
-    }
-    return { ...record };
-}
-
 export function getAllSimpleCredentials() {
     const { simple } = partitionRecords(readUnifiedCredentialRecords());
-    return simple.map(cloneCredential).filter(Boolean);
+    return simple.map(record => ({ ...record }));
 }
 
 export function getSimpleCredentialsForEmail(email) {

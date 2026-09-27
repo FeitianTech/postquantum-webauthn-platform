@@ -30,38 +30,13 @@ import {
     updateSimpleCredentialSignCount,
 } from './local/simple-credentials.js';
 
-function cloneCredential(record) {
-    if (!record || typeof record !== 'object') {
-        return null;
-    }
-    return { ...record };
-}
-
+// Every record, simple and advanced, in the order stored. The unified read gives
+// only objects typed "simple" or "advanced" (local/storage-core.js); each is a
+// copy, so a caller cannot change the stored records by changing it.
 export function getAllStoredCredentialsInOrder() {
-    const orderedRecords = readUnifiedCredentialRecords();
-    if (!Array.isArray(orderedRecords) || !orderedRecords.length) {
-        return [];
-    }
-
-    return orderedRecords
-        .map(record => {
-            if (!record || typeof record !== 'object') {
-                return null;
-            }
-
-            if ((record.type || 'simple') === 'advanced') {
-                const clone = cloneAdvancedStoredRecord(record);
-                return clone || null;
-            }
-
-            const clone = cloneCredential(record);
-            if (!clone) {
-                return null;
-            }
-            clone.type = clone.type === 'advanced' ? 'advanced' : 'simple';
-            return clone;
-        })
-        .filter(Boolean);
+    return readUnifiedCredentialRecords().map(record => (
+        record.type === 'advanced' ? cloneAdvancedStoredRecord(record) : { ...record }
+    ));
 }
 
 export {

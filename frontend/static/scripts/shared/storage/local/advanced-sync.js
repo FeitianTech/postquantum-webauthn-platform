@@ -31,18 +31,15 @@ async function synchroniseAdvancedCredentialArtifacts() {
     let changed = false;
     const updatedRecords = [];
 
+    // readStoredCredentials keeps only objects; one without a type is simple.
     for (const record of records) {
-        if (!record || typeof record !== 'object') {
-            continue;
-        }
         if ((record.type || 'simple') !== 'advanced') {
             updatedRecords.push(record);
             continue;
         }
 
         const working = { ...record, type: 'advanced' };
-        ensureAdvancedCredentialStorageId(working);
-        const storageId = isNonEmptyString(working.storageId) ? working.storageId.trim() : '';
+        const storageId = ensureAdvancedCredentialStorageId(working);
 
         const needsUpload = (
             !working.hasServerArtifact
@@ -52,7 +49,7 @@ async function synchroniseAdvancedCredentialArtifacts() {
         let artifactAvailable = Boolean(working.hasServerArtifact);
 
         if (needsUpload && storageId) {
-            const artifactRecord = cloneJsonValue(record) || record;
+            const artifactRecord = cloneJsonValue(record);
             const payload = {
                 schemaVersion: SERVER_ARTIFACT_VERSION,
                 storedCredential: artifactRecord,
@@ -65,13 +62,9 @@ async function synchroniseAdvancedCredentialArtifacts() {
 
         let recordForStorage = record;
         if (artifactAvailable) {
-            const summary = summariseAdvancedCredentialForLocal(working, storageId, { hasArtifact: artifactAvailable });
-            if (summary) {
-                recordForStorage = summary;
-            }
-            if (recordForStorage !== record) {
-                changed = true;
-            }
+            // Always a new object, so the stored copy changes.
+            recordForStorage = summariseAdvancedCredentialForLocal(working, storageId, { hasArtifact: artifactAvailable });
+            changed = true;
         }
 
         updatedRecords.push(recordForStorage);
@@ -104,8 +97,9 @@ async function synchroniseAdvancedCredentialSnapshots() {
     const missingStorageIds = [];
     const seen = new Set();
 
+    // The unified read gives only objects, each typed.
     records.forEach(record => {
-        if (!record || typeof record !== 'object' || (record.type || 'simple') !== 'advanced') {
+        if (record.type !== 'advanced') {
             return;
         }
 
@@ -131,14 +125,12 @@ async function synchroniseAdvancedCredentialSnapshots() {
         return false;
     }
 
+    // An object whatever the server answered (artifacts-client.js).
     const artifacts = await fetchCredentialArtifactsBulk(missingStorageIds);
-    if (!artifacts || typeof artifacts !== 'object') {
-        return false;
-    }
 
     let changed = false;
     const updatedRecords = records.map(record => {
-        if (!record || typeof record !== 'object' || (record.type || 'simple') !== 'advanced') {
+        if (record.type !== 'advanced') {
             return record;
         }
 

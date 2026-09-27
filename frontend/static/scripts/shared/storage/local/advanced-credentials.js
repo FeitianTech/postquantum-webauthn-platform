@@ -25,10 +25,6 @@ export function saveAdvancedCredential(rawCredential) {
     }
 
     const credential = cloneAdvancedCredential(rawCredential);
-    if (!credential) {
-        return null;
-    }
-
     credential.type = 'advanced';
 
     const credentialId = normaliseAdvancedCredentialId(credential);
@@ -37,7 +33,7 @@ export function saveAdvancedCredential(rawCredential) {
     }
 
     credential.credentialIdBase64Url = ensureBase64Url(credentialId);
-    let storageId = ensureAdvancedCredentialStorageId(credential, { forceNew: !isNonEmptyString(credential.storageId) });
+    const storageId = ensureAdvancedCredentialStorageId(credential, { forceNew: !isNonEmptyString(credential.storageId) });
 
     const { simpleRecords, advancedRecords } = readAdvancedCredentialPartitions();
 
@@ -58,12 +54,12 @@ export function saveAdvancedCredential(rawCredential) {
         return false;
     });
 
+    // Stored advanced records are objects that each have a storage id
+    // (readAdvancedCredentialPartitions). One with this credential's storage id
+    // or credential id is replaced, so none left has this storage id.
     const filteredAdvanced = [];
     advancedRecords.forEach(record => {
-        if (!record || typeof record !== 'object') {
-            return;
-        }
-        const recordStorageId = isNonEmptyString(record.storageId) ? record.storageId.trim() : '';
+        const recordStorageId = record.storageId;
         const recordId = normaliseAdvancedCredentialId(record) || normaliseCredentialId(record);
         if ((recordStorageId && storageId && recordStorageId === storageId) || (recordId && recordId === credentialId)) {
             if (!mergedEmail) {
@@ -88,17 +84,8 @@ export function saveAdvancedCredential(rawCredential) {
         credential.signCount = Number.isFinite(mergedSignCount) ? Number(mergedSignCount) : 0;
     }
 
-    if (storageId && filteredAdvanced.some(item => item && typeof item === 'object' && item.storageId === storageId)) {
-        storageId = ensureAdvancedCredentialStorageId(credential, { forceNew: true });
-    }
-
-    const sanitisedStored = filteredAdvanced
-        .map(item => prepareAdvancedCredentialForStorage(item))
-        .filter(Boolean);
+    const sanitisedStored = filteredAdvanced.map(item => prepareAdvancedCredentialForStorage(item));
     const sanitisedCredential = prepareAdvancedCredentialForStorage(credential);
-    if (!sanitisedCredential) {
-        return null;
-    }
 
     const updatedAdvanced = sanitisedStored.concat(sanitisedCredential);
     if (persistCredentialPartitions(filteredSimple, updatedAdvanced, { prepareAdvancedCredentialForStorage })) {
@@ -106,12 +93,8 @@ export function saveAdvancedCredential(rawCredential) {
     }
 
     const aggressivelyTrimmedStored = filteredAdvanced
-        .map(item => prepareAdvancedCredentialForStorage(item, { aggressive: true }))
-        .filter(Boolean);
+        .map(item => prepareAdvancedCredentialForStorage(item, { aggressive: true }));
     const aggressivelyTrimmedCredential = prepareAdvancedCredentialForStorage(credential, { aggressive: true });
-    if (!aggressivelyTrimmedCredential) {
-        return null;
-    }
 
     const aggressiveSet = aggressivelyTrimmedStored.concat(aggressivelyTrimmedCredential);
     if (persistCredentialPartitions(filteredSimple, aggressiveSet, { prepareAdvancedCredentialForStorage })) {
@@ -126,9 +109,6 @@ export function removeAdvancedCredential(credentialId, storageId = null) {
     const storageKey = isNonEmptyString(storageId) ? storageId.trim() : '';
     const { simpleRecords, advancedRecords } = readAdvancedCredentialPartitions();
     const filteredAdvanced = advancedRecords.filter(record => {
-        if (!record || typeof record !== 'object') {
-            return false;
-        }
         if (storageKey) {
             return record.storageId !== storageKey;
         }
@@ -159,9 +139,6 @@ export function updateAdvancedCredentialSignCount(credentialId, signCount, stora
     const { simpleRecords, advancedRecords } = readAdvancedCredentialPartitions();
     let updated = false;
     const updatedAdvanced = advancedRecords.map(record => {
-        if (!record || typeof record !== 'object') {
-            return record;
-        }
         if (storageKey) {
             if (record.storageId !== storageKey) {
                 return record;
@@ -176,9 +153,6 @@ export function updateAdvancedCredentialSignCount(credentialId, signCount, stora
     });
 
     const updatedSimple = simpleRecords.map(record => {
-        if (!record || typeof record !== 'object') {
-            return record;
-        }
         const recordId = normaliseCredentialId(record);
         if (!recordId || recordId !== id) {
             return record;

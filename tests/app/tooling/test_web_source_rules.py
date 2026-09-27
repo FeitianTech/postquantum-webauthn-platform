@@ -67,6 +67,23 @@ LOGIC_ROOTS = (
     "advanced/mds/explorer/status.js",
     "advanced/mds/raw-data.js",
     "advanced/mds/raw-stringify.js",
+    # The saved credentials' storage. Not shared/storage/local.js: the current UI's
+    # barrel seeds it from the page's data.
+    "shared/storage/records.js",
+    "shared/storage/artifacts-client.js",
+    "shared/storage/local/advanced-credentials.js",
+    "shared/storage/local/advanced-server-payload.js",
+    "shared/storage/local/advanced-snapshot-update.js",
+    "shared/storage/local/advanced-storage-shaping.js",
+    "shared/storage/local/advanced-sync.js",
+    "shared/storage/local/common.js",
+    "shared/storage/local/constants.js",
+    "shared/storage/local/id-utils.js",
+    "shared/storage/local/partition-core.js",
+    "shared/storage/local/record-migration.js",
+    "shared/storage/local/simple-credentials.js",
+    "shared/storage/local/snapshot-sanitize.js",
+    "shared/storage/local/storage-core.js",
 )
 
 _RULES: dict[str, re.Pattern[str]] = {

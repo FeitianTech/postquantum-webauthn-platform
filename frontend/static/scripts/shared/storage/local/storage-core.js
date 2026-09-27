@@ -59,10 +59,8 @@ export function readUnifiedCredentialRecords() {
         records.forEach(stored => {
             const { record, changed } = migrateStoredRecord(stored);
             recordsMigrated = recordsMigrated || changed;
+            // Only objects are stored (safeParse and the seed drop the rest).
             const clone = ensureRecordType(record, fallbackType);
-            if (!clone) {
-                return;
-            }
             const identifier = getRecordIdentifier(clone);
             if (!identifier || seen.has(identifier)) {
                 return;

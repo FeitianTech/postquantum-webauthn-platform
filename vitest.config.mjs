@@ -28,7 +28,6 @@ export default defineConfig({
       ],
       exclude: [
         'tests/frontend/**',
-        'frontend/static/scripts/shared/storage/local.js',
       ],
       // A floor, not a target. Set just under the numbers measured on
       // 2026-09-17 (82.59 statements / 66.46 branches / 91.33 functions /
@@ -47,6 +46,9 @@ export default defineConfig({
         'frontend/static/scripts/advanced/mds/{constants,raw-data,raw-stringify,sort-filter-normalise}.js': FULL,
         'frontend/static/scripts/advanced/mds/metadata/{explorer-source,metadata-helpers}.js': FULL,
         'frontend/static/scripts/advanced/mds/utils/{extractors,formatters,resolvers,status-reports}.js': FULL,
+        // The saved credentials' storage, which both UIs read and write: every line and branch.
+        'frontend/static/scripts/shared/storage/{artifacts-client,local,records}.js': FULL,
+        'frontend/static/scripts/shared/storage/local/*.js': FULL,
       },
     },
   },

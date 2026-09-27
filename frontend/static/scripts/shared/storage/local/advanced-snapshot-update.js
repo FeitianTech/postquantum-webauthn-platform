@@ -20,8 +20,9 @@ export async function updateAdvancedCredentialRegistrationSnapshot(storageId, sn
 
     const records = readUnifiedCredentialRecords();
     let changed = false;
+    // The unified read gives only objects, each typed.
     const updatedRecords = records.map(record => {
-        if (!record || typeof record !== 'object' || (record.type || 'simple') !== 'advanced') {
+        if (record.type !== 'advanced') {
             return record;
         }
 

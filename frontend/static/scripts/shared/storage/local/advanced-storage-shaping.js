@@ -27,19 +27,15 @@ import {
 } from './snapshot-sanitize.js';
 import { readUnifiedCredentialRecords } from './storage-core.js';
 
+// Called with an object (summariseAdvancedCredentialForLocal checks).
 function summarisePropertiesForLocal(properties) {
-    if (!properties || typeof properties !== 'object') {
-        return null;
-    }
     const clone = { ...properties };
     removeObjectKeys(clone, LOCAL_HEAVY_PROPERTY_KEYS);
     return Object.keys(clone).length ? clone : null;
 }
 
+// Called with an object (summariseAdvancedCredentialForLocal checks).
 function summariseRelyingPartyForLocal(relyingParty) {
-    if (!relyingParty || typeof relyingParty !== 'object') {
-        return null;
-    }
     const clone = { ...relyingParty };
     removeObjectKeys(clone, LOCAL_HEAVY_RELYING_PARTY_KEYS);
     return Object.keys(clone).length ? clone : null;
@@ -181,18 +177,14 @@ export function readAdvancedCredentialPartitions() {
     const { simple, advanced } = partitionRecords(readUnifiedCredentialRecords());
     let needsPersist = false;
 
-    const advancedRecords = advanced
-        .map(record => {
-            const clone = cloneAdvancedStoredRecord(record);
-            if (!clone) {
-                return null;
-            }
-            if (clone.storageId && clone.storageId !== record.storageId) {
-                needsPersist = true;
-            }
-            return clone;
-        })
-        .filter(Boolean);
+    // Every partitioned record is an object, and each clone has a storage id.
+    const advancedRecords = advanced.map(record => {
+        const clone = cloneAdvancedStoredRecord(record);
+        if (clone.storageId !== record.storageId) {
+            needsPersist = true;
+        }
+        return clone;
+    });
 
     if (needsPersist) {
         persistCredentialPartitions(simple, advancedRecords, { prepareAdvancedCredentialForStorage });
