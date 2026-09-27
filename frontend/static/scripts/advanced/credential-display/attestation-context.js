@@ -223,11 +223,7 @@ export function deriveCredentialStatusIndicators(cred) {
 
     let aaguidGuid = '';
     if (primaryAaguidHex && primaryAaguidHex.length === 32) {
-        try {
-            aaguidGuid = hexToGuid(primaryAaguidHex);
-        } catch (error) {
-            aaguidGuid = '';
-        }
+        aaguidGuid = hexToGuid(primaryAaguidHex);
     }
 
     return {

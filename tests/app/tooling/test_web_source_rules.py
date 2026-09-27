@@ -89,6 +89,14 @@ LOGIC_ROOTS = (
     "simple/ceremony.js",
     "shared/ceremony/result.js",
     "shared/auth/random-username.js",
+    # What a saved credential's card shows, deleting and clearing, and the
+    # algorithm's names (the credential helpers they use are followed from there).
+    "advanced/credentials/saved-list.js",
+    "advanced/credentials/delete-flow.js",
+    "advanced/credentials/algorithm-tag.js",
+    "advanced/credentials/utils.js",
+    "advanced/credential-display/attestation-context.js",
+    "advanced/cose-labels.js",
 )
 
 _RULES: dict[str, re.Pattern[str]] = {

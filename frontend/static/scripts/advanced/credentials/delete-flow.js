@@ -182,14 +182,12 @@ export async function clearSavedCredentials(deps) {
     dismissAllTransientMessages();
     showSharedCredentialProgress(DELETE_TEXT.clearing);
 
-    let deletedCount = 0;
     let absentCount = 0;
     let failedCount = 0;
 
     try {
         if (simpleCount > 0) {
             clearLocalSimpleCredentials();
-            deletedCount += simpleCount;
         }
 
         const advancedDeleteOperations = advancedCredentials.map(async credential => {
@@ -227,7 +225,6 @@ export async function clearSavedCredentials(deps) {
         const advancedResults = await Promise.all(advancedDeleteOperations);
         advancedResults.forEach(result => {
             if (result.status === 'deleted') {
-                deletedCount += 1;
                 return;
             }
             if (result.status === 'absent') {
@@ -249,12 +246,8 @@ export async function clearSavedCredentials(deps) {
             return;
         }
 
-        if (deletedCount > 0) {
-            showSharedCredentialStatus(DELETE_TEXT.deleted, 'success');
-            return;
-        }
-
-        showSharedCredentialStatus(DELETE_TEXT.nothingToClear, 'info');
+        // Something was saved (else the flow ended above), and none failed or was absent.
+        showSharedCredentialStatus(DELETE_TEXT.deleted, 'success');
     } catch (error) {
         console.error('Failed to clear saved credentials.', error);
         showSharedCredentialStatus(DELETE_TEXT.clearFailed, 'error');

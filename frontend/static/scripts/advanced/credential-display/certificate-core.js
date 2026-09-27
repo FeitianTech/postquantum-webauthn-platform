@@ -146,7 +146,7 @@ export function normaliseCertificateEntryForModal(entry) {
         normalised.parsedX5c = entry.parsedX5c;
     } else if (entry.parsed && typeof entry.parsed === 'object') {
         normalised.parsedX5c = entry.parsed;
-    } else if (typeof entry === 'object') {
+    } else {
         normalised.parsedX5c = entry;
     }
 

@@ -31,20 +31,15 @@ export function normaliseAaguidValue(value) {
             return trimmed.toLowerCase();
         }
 
+        // Either decoder gives hex for text it reads, and throws for text it cannot.
         const base64Pattern = /^[A-Za-z0-9+/=]+$/;
         if (base64Pattern.test(trimmed)) {
-            const decodedHex = base64ToHex(trimmed);
-            if (decodedHex) {
-                return decodedHex.toLowerCase();
-            }
+            return base64ToHex(trimmed).toLowerCase();
         }
 
         const base64UrlPattern = /^[A-Za-z0-9_-]+$/;
         if (base64UrlPattern.test(trimmed)) {
-            const decodedHex = base64UrlToHex(trimmed);
-            if (decodedHex) {
-                return decodedHex.toLowerCase();
-            }
+            return base64UrlToHex(trimmed).toLowerCase();
         }
 
         const cleaned = trimmed.replace(/[^0-9a-fA-F]/g, '');
@@ -296,22 +291,16 @@ export function extractAaguidFromAuthDataHex(authDataHex) {
         return '';
     }
 
+    // Hex digits only, and long enough: the flags byte and the AAGUID are there.
     const flagsHex = sanitized.substr(64, 2);
     const flagsValue = Number.parseInt(flagsHex, 16);
-    if (!Number.isFinite(flagsValue)) {
-        return '';
-    }
     const hasAttestedCredentialData = (flagsValue & 0x40) !== 0;
     if (!hasAttestedCredentialData) {
         return '';
     }
 
     const aaguidStart = (32 + 1 + 4) * 2;
-    const aaguidHex = sanitized.substr(aaguidStart, 32);
-    if (aaguidHex.length !== 32) {
-        return '';
-    }
-    return aaguidHex;
+    return sanitized.substr(aaguidStart, 32);
 }
 
 export function deriveAaguidFromCredentialData(cred) {
@@ -349,12 +338,9 @@ export function getCoseMapValue(coseMap, key) {
     if (!coseMap || typeof coseMap !== 'object') {
         return undefined;
     }
+    // A number key finds its string key too: property keys are strings.
     if (Object.prototype.hasOwnProperty.call(coseMap, key)) {
         return coseMap[key];
-    }
-    const stringKey = String(key);
-    if (Object.prototype.hasOwnProperty.call(coseMap, stringKey)) {
-        return coseMap[stringKey];
     }
     return undefined;
 }

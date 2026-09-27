@@ -125,11 +125,9 @@ export function describeCredentialAlgorithmTagWith(credential, describeCoseAlgor
         }
     }
 
+    // A finite number: its text has a digit.
     if (identifier !== null && identifier !== undefined) {
-        const identifierText = String(identifier).replace(/[^0-9a-z-]/gi, '');
-        if (identifierText) {
-            return `COSE${identifierText}`.toUpperCase();
-        }
+        return `COSE${String(identifier).replace(/[^0-9a-z-]/gi, '')}`.toUpperCase();
     }
 
     return 'Unknown';
