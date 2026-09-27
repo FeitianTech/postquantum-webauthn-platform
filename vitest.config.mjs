@@ -12,6 +12,12 @@ export default defineConfig({
     },
     setupFiles: ['./tests/frontend/setup.js'],
     include: ['tests/frontend/**/*.test.js'],
+    // The Cloud Build gate runs pytest, this suite and web's at once on one
+    // two-vCPU machine. Under that load (reproduced locally on 2026-09-27) the
+    // heaviest tests here (the import smoke test, the page actions, the MDS
+    // explorer's) passed five seconds, vitest's default. A test that hangs still
+    // fails, after thirty seconds.
+    testTimeout: 30_000,
     coverage: {
       provider: 'v8',
       all: true,
