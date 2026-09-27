@@ -2592,6 +2592,36 @@ checkout's stores or snapshot.
 - The download was checked in Playwright's Chromium; whether the desktop app's pane saves downloads was not checked.
 - Not run on GitHub yet (not pushed): `ci-web.yml`'s e2e job now runs `mds-entry.spec.ts` and `mds-entry-parity.spec.ts`.
 
+**Phase 27B — tech-lead verification (2026-09-27):**
+- **Every one of the 30 commits passes on its own tree**, run in three detached worktrees and cleaned before each:
+  pytest (4779 → 4784 / 4), the root vitest (711 → 753), web's vitest (249 → 298) and typecheck; nothing left behind.
+  One author, bare subjects, no dependency changed; the range starts after the tech lead's timeout commit (30b8183f).
+- **Built independently from a clean `npm ci`**: CSP scan 0 violations. **Playwright 73/73** from the clean copy.
+- **Entry parity on the owner's real snapshot, by the tech lead's own reader** (Flask from the clean copy, a scratch
+  copy of the 517-entry snapshot): five entries of the tech lead's choosing, none of the agent's (NEOWAVE WINKEO V2.0
+  with four status reports; YubiKey 5 NFC KVZR57 with six root certificates and four user-verification combinations;
+  Ledger Nano X with six; the UAF `aaid:4e4e#4005`; the U2F `akid:d8031911…`), read section by section in the current
+  detail page and in `/beta`: **every section holds the same words in the same order**, apart from `/beta`'s "Show
+  all" controls and the UAF entry's biometric descriptors (`baDesc`, the enhancement the report names).
+  **The certificate page** (KVZR57's certificate 2) holds the same 811 words (plus three "Show all"; the current
+  page's "←" aside). **The raw view** is the current popup's text byte for byte (11,838 characters, captured by
+  pointing the current page's `window.open` at a same-origin frame), with the same title and subtitle.
+- **Server:** with metas that agree (the scratch copy's verified meta aligned as production's are), the page gets
+  `…/fido-mds3.explorer.full.json?v=282.600060512c06` and loads it (200); every other snapshot file, and the `.gz`
+  sibling, answers 404 at the root and the versioned route. An AAGUID the snapshot does not hold says
+  "Authenticator metadata not found." with the server's reason.
+- **Navigation:** a certificate at `#mds/<entry>/certificate/2`; its Back returns to the entry with focus on
+  "Certificate 2"; the 404 page's link is now a full load, and Back shows "Page not found" again, with no Trusted
+  Types or CSP message. The condensed header holds Back, the name, the AAGUID and Raw once the title has scrolled
+  away. No grey fill on the entry page or in the raw dialog; the phone's Icon column is 44 px when loaded at 375 px.
+- **Found by the tech lead:** between about 900 and 1280 px the entry's Overview (three columns) cuts the Identifier and
+  the AAGUID ("9eb7eabc-9db5-49a1-b6c3-55… Show all") although the page has room (1440 and 375 px show them whole);
+  the phone Icon column is chosen at load, so a window narrowed afterwards keeps 72 px; item 6h (a cold instance's
+  MDS endpoints wait for the provisioning under way) was not in the brief the agent received. For Phase 31: status
+  reports' `certificate`, `sunsetDate`, `certificationProfiles` and `timeOfLastStatusChange` (fido2 drops the last
+  three), resolve's fido2 dataclasses dropping unmodelled fields, and `fido2/utils.py`'s `websafe_decode`
+  deprecation on the BLOB path.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
