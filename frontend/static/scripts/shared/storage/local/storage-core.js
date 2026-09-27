@@ -6,7 +6,6 @@ import {
 import { safeParse } from './common.js';
 import { ensureRecordType, getRecordIdentifier } from './id-utils.js';
 import { migrateStoredRecord } from './record-migration.js';
-import { readPageData } from '../../utils/page-data.js';
 
 function recordsOrNull(records) {
     return Array.isArray(records)
@@ -14,12 +13,14 @@ function recordsOrNull(records) {
         : null;
 }
 
-// The records read so far. The page gives none (the server renders no
-// "initial-credential-records" block), so the first read is the browser's
-// storage; tests give their records in that block instead.
-let bootUnifiedCredentialRecords = recordsOrNull(readPageData('initial-credential-records'));
+// The records read so far; until the first read, none, and the first read is
+// the browser's storage. The current UI's barrel (../local.js) seeds them from
+// the page's "initial-credential-records" block, which the server never renders
+// and tests give; this module reads no page, so the new UI can import it.
+let bootUnifiedCredentialRecords = null;
 
-function setBootUnifiedCredentialRecords(records) {
+/** Sets the records read so far (null: the next read is the browser's storage). */
+export function seedUnifiedCredentialRecords(records) {
     bootUnifiedCredentialRecords = recordsOrNull(records);
 }
 
@@ -97,7 +98,7 @@ export function readUnifiedCredentialRecords() {
         persistUnifiedCredentialRecords(combined);
     }
 
-    setBootUnifiedCredentialRecords(combined);
+    seedUnifiedCredentialRecords(combined);
     return combined;
 }
 
@@ -107,7 +108,7 @@ export function persistUnifiedCredentialRecords(records) {
         : [];
     const success = persistStoredCredentials(SHARED_STORAGE_KEY, payload);
     if (success) {
-        setBootUnifiedCredentialRecords(payload);
+        seedUnifiedCredentialRecords(payload);
     }
     if (success && typeof window !== 'undefined' && window.localStorage) {
         try {
