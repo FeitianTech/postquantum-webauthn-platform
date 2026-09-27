@@ -1,4 +1,9 @@
 import {el} from '../../shared/ui/dom.js';
+import {
+    SAVED_LIST_TEXT,
+    describeCredentialCard,
+    listSavedCredentials,
+} from '../credentials/saved-list.js';
 
 export function updateAllowCredentialsDropdownRuntime(deps) {
     const {
@@ -94,38 +99,11 @@ export async function loadSavedCredentialsRuntime(deps) {
         scheduleCredentialBackgroundWarmup,
     } = deps;
 
-    const orderedRecords = getAllStoredCredentialsInOrder();
-
-    const mappedCredentials = orderedRecords.map(record => {
-        if ((record.type || 'simple') === 'advanced') {
-            const relyingPartyInfo = record && typeof record === 'object' ? record.relyingParty : null;
-            const relyingPartyAaguid = relyingPartyInfo && typeof relyingPartyInfo === 'object'
-                ? relyingPartyInfo.aaguid
-                : null;
-            const normalizedAaguidHex = normaliseAaguidValue(
-                record.aaguidHex || record.aaguid || relyingPartyAaguid,
-            );
-
-            return {
-                ...record,
-                type: record.type || 'advanced',
-                storageId: record.storageId || record.localStorageId || null,
-                localStorageId: record.storageId || record.localStorageId || null,
-                aaguidHex: normalizedAaguidHex || record.aaguidHex || null,
-                credentialIdHex: getCredentialIdHex(record),
-                userHandleHex: getCredentialUserHandleHex(record),
-            };
-        }
-
-        return {
-            ...record,
-            type: 'simple',
-            credentialIdHex: getCredentialIdHex(record),
-            userHandleHex: getCredentialUserHandleHex(record),
-        };
+    state.storedCredentials = listSavedCredentials(getAllStoredCredentialsInOrder(), {
+        normaliseAaguidValue,
+        getCredentialIdHex,
+        getCredentialUserHandleHex,
     });
-
-    state.storedCredentials = mappedCredentials;
     updateCredentialsDisplay();
     updateJsonEditor();
     void scheduleCredentialBackgroundWarmup();
@@ -154,42 +132,30 @@ function statusColour(value) {
     return '#6c757d';
 }
 
-function buildCredentialCard(cred, index, {
-    credentialIdHex,
-    featureLabels,
-    indicators,
+function buildCredentialCard(card, index, {
     deletionInProgress,
     handleCredentialMdsClick,
     removeCredential,
     openCredentialDetails,
 }) {
-    const {
-        signatureStatus,
-        rootStatus,
-        rpidStatus,
-        aaguidStatus,
-        metadataAvailable,
-        aaguidGuid,
-    } = indicators;
-
     const statusLine = el('div', { style: 'font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;' },
-        el('span', { style: `color: ${statusColour(signatureStatus)};`, text: 'Signature' }),
-        el('span', { style: `margin-left: 0.75rem; color: ${statusColour(rootStatus)};`, text: 'Root' }),
-        el('span', { style: `margin-left: 0.75rem; color: ${statusColour(rpidStatus)};`, text: 'RPID' }),
-        el('span', { style: `margin-left: 0.75rem; color: ${statusColour(aaguidStatus)};`, text: 'AAGUID' }),
+        card.checks.map((check, position) => el('span', {
+            style: `${position ? 'margin-left: 0.75rem; ' : ''}color: ${statusColour(check.value)};`,
+            text: check.label,
+        })),
     );
 
-    const featureTags = featureLabels.length > 0
+    const featureTags = card.tags.length > 0
         ? el('div', { className: 'credential-feature-tags' },
-            featureLabels.map(label => el('span', { className: 'credential-feature-tag', text: label })))
+            card.tags.map(label => el('span', { className: 'credential-feature-tag', text: label })))
         : null;
 
     let mdsButton = null;
-    if (aaguidGuid && (rootStatus === true || metadataAvailable)) {
+    if (card.mdsAaguid) {
         mdsButton = el('button', {
             className: 'btn btn-small btn-secondary credential-mds-button',
-            attrs: { type: 'button', title: 'Open authenticator metadata' },
-            dataset: { aaguid: aaguidGuid.toLowerCase() },
+            attrs: { type: 'button', title: SAVED_LIST_TEXT.openMetadata },
+            dataset: { aaguid: card.mdsAaguid },
             text: 'FIDO MDS',
         });
         mdsButton.addEventListener('click', handleCredentialMdsClick);
@@ -217,14 +183,14 @@ function buildCredentialCard(cred, index, {
         className: 'credential-item',
         attrs: { role: 'button', tabindex: '0' },
         dataset: {
-            credentialId: (credentialIdHex || '').toLowerCase(),
+            credentialId: card.credentialIdHex,
             credentialIndex: index,
         },
     },
     el('div', { style: 'flex: 1; min-width: 0;' },
         el('div', {
             style: 'font-weight: 600; color: #0f2740; font-size: 0.95rem; margin-bottom: 0.25rem;',
-            text: cred.userName || cred.username || cred.email || 'Unknown User',
+            text: card.name,
         }),
         statusLine,
         featureTags,
@@ -292,36 +258,25 @@ export function updateCredentialsDisplayRuntime(deps) {
 
     if (!hasCredentials) {
         lists.forEach(list => {
-            list.replaceChildren(el('p', { className: 'credential-list-empty', text: 'No credentials registered yet.' }));
+            list.replaceChildren(el('p', { className: 'credential-list-empty', text: SAVED_LIST_TEXT.empty }));
         });
         clearCredentialFlashQueue();
         runPostUpdate();
         return;
     }
 
-    const cardInputs = state.storedCredentials.map(cred => {
-        const featureLabels = [];
+    const cards = state.storedCredentials.map(cred => {
         const algorithmTag = describeCredentialAlgorithmTag(cred);
-        if (algorithmTag) {
-            featureLabels.push(algorithmTag);
-        }
-        if (cred.residentKey === true || cred.discoverable === true) {
-            featureLabels.push('Discoverable');
-        }
-        if (cred.largeBlob === true || cred.largeBlobSupported === true) {
-            featureLabels.push('Large blob');
-        }
-        return {
+        return describeCredentialCard(cred, {
+            algorithmTag,
             credentialIdHex: getCredentialIdHex(cred),
-            featureLabels,
             indicators: deriveCredentialStatusIndicators(cred),
-        };
+        });
     });
 
     // Each list gets its own nodes: the same card cannot sit in two lists.
     lists.forEach(list => {
-        list.replaceChildren(...state.storedCredentials.map((cred, index) => buildCredentialCard(cred, index, {
-            ...cardInputs[index],
+        list.replaceChildren(...cards.map((card, index) => buildCredentialCard(card, index, {
             deletionInProgress,
             handleCredentialMdsClick,
             removeCredential,

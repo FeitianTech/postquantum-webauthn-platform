@@ -53,6 +53,7 @@ import {
     deleteCredentialRuntime,
 } from '../credential-display/deletion.js';
 import {showRegistrationResultModalRuntime} from '../credential-display/registration-result.js';
+import {warmSavedCredentials} from './saved-list.js';
 import {
     closeRegistrationDetailModalRuntime,
     composeRegistrationDetail,
@@ -78,21 +79,11 @@ export {formatCertificateDetails, autoResizeCertificateTextareas};
 
 function scheduleCredentialBackgroundWarmup() {
     if (!getCredentialBackgroundWarmupPromise()) {
-        const warmupPromise = (async () => {
-            const [artifactChanged, snapshotChanged] = await Promise.all([
-                ensureAdvancedCredentialArtifactsSynced(),
-                ensureAdvancedCredentialSnapshotsPrefetched(),
-            ]);
-            const changed = Boolean(artifactChanged || snapshotChanged);
-            if (changed) {
-                await loadSavedCredentials();
-            }
-            return changed;
-        })()
-            .catch(error => {
-                console.warn('Failed to warm saved credential state', error);
-                return false;
-            })
+        const warmupPromise = warmSavedCredentials({
+            syncArtifacts: ensureAdvancedCredentialArtifactsSynced,
+            prefetchSnapshots: ensureAdvancedCredentialSnapshotsPrefetched,
+            reload: loadSavedCredentials,
+        })
             .finally(() => {
                 setCredentialBackgroundWarmupPromise(null);
             });

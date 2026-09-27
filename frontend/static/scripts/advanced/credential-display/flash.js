@@ -1,4 +1,4 @@
-import {normalizeToHex} from '../../shared/utils/binary.js';
+import {credentialFlashKey} from '../credentials/saved-list.js';
 import {
     clearPendingCredentialFlash,
     getPendingCredentialFlash,
@@ -10,23 +10,15 @@ const CREDENTIAL_FLASH_CLASS_BY_VARIANT = {
     failure: 'credential-item--recent-auth-failure',
 };
 
-function normaliseCredentialIdToHex(credentialId) {
-    if (typeof credentialId !== 'string') {
-        return '';
-    }
-    const normalized = normalizeToHex(credentialId.trim());
-    return normalized ? normalized.toLowerCase() : '';
-}
-
 export function queueAuthenticatedCredentialFlash(credentialId) {
-    const credentialHex = normaliseCredentialIdToHex(credentialId);
+    const credentialHex = credentialFlashKey(credentialId);
     setPendingCredentialFlash(credentialHex
         ? { credentialHex, variant: 'success' }
         : null);
 }
 
 export function queueFailedCredentialFlash(credentialId) {
-    const credentialHex = normaliseCredentialIdToHex(credentialId);
+    const credentialHex = credentialFlashKey(credentialId);
     setPendingCredentialFlash(credentialHex
         ? { credentialHex, variant: 'failure' }
         : null);
