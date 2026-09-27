@@ -268,6 +268,43 @@ describe('the MDS table: column widths', () => {
     query.mockRestore();
   });
 
+  it('narrows the Icon column when the window narrows to a phone, and widens it back', () => {
+    let phone = false;
+    const listeners = new Set<(event: MediaQueryListEvent) => void>();
+    const query = vi.spyOn(window, 'matchMedia').mockImplementation(
+      (media: string) =>
+        ({
+          get matches() {
+            return media === '(max-width: 639px)' && phone;
+          },
+          media,
+          addEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => listeners.add(listener),
+          removeEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => listeners.delete(listener),
+        }) as unknown as MediaQueryList,
+    );
+    const resize = (narrow: boolean) => {
+      phone = narrow;
+      act(() => listeners.forEach((listener) => listener({ matches: narrow } as MediaQueryListEvent)));
+    };
+    const { unmount } = renderTable();
+    expect(width(0)).toBe('72px');
+
+    resize(true);
+    expect(width(0)).toBe('44px');
+    resize(false);
+    expect(width(0)).toBe('72px');
+
+    fireEvent.keyDown(separator('Icon'), { key: 'ArrowRight' });
+    resize(true);
+    expect(width(0)).toBe('88px');
+    resize(false);
+    expect(width(0)).toBe('88px');
+
+    unmount();
+    expect(listeners.size).toBe(0);
+    query.mockRestore();
+  });
+
   it('MDS-R1: resizes from the keyboard, never under the minimum', () => {
     renderTable();
     fireEvent.keyDown(separator('Name'), { key: 'ArrowRight' });

@@ -210,6 +210,17 @@ test.describe('/beta#mds', () => {
     await expect(header(page, 'Icon')).toHaveAccessibleName(/^Icon/);
   });
 
+  test('narrows the icon column when the window narrows to a phone after loading', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await openList(page);
+    await page.setViewportSize({ width: 375, height: 812 });
+    await expect
+      .poll(async () => (await header(page, 'Icon').boundingBox())!.width / (await frame(page).evaluate((element) => element.clientWidth)))
+      .toBeLessThan(0.15);
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await expect.poll(async () => (await header(page, 'Icon').boundingBox())!.width).toBeCloseTo(72, 0);
+  });
+
   test('fades the table\'s right edge while it can scroll further that way', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await openList(page);

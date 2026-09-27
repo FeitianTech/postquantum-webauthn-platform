@@ -268,16 +268,26 @@ export function ExplorerTable({
     table.style.width = `${widths.reduce((sum, width) => sum + width, 0)}px`;
   }, [widths]);
 
-  // A phone starts with the narrower columns (after hydration: the exported page
-  // has the wide ones, and a width is in its markup).
+  // A phone has the narrower columns, and the table follows the window as it
+  // narrows to a phone's width or widens from one (after hydration: the exported
+  // page has the wide columns, and a width is in its markup). A width a person
+  // set is kept.
   useLayoutEffect(() => {
-    if (!window.matchMedia(PHONE).matches) return;
-    setWidths((current) =>
-      current.map((width, index) => {
-        const column = EXPLORER_COLUMNS[index];
-        return 'phoneWidth' in column && width === column.width ? column.phoneWidth : width;
-      }),
-    );
+    const phone = window.matchMedia(PHONE);
+    const follow = (narrow: boolean) =>
+      setWidths((current) =>
+        current.map((width, index) => {
+          const column = EXPLORER_COLUMNS[index];
+          if (!('phoneWidth' in column)) return width;
+          if (narrow && width === column.width) return column.phoneWidth;
+          if (!narrow && width === column.phoneWidth) return column.width;
+          return width;
+        }),
+      );
+    if (phone.matches) follow(true);
+    const onChange = (event: MediaQueryListEvent) => follow(event.matches);
+    phone.addEventListener('change', onChange);
+    return () => phone.removeEventListener('change', onChange);
   }, []);
 
   const resize = useCallback((index: number, width: number) => {
