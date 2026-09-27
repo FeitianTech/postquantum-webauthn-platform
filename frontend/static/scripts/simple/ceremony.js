@@ -76,8 +76,9 @@ function splitSessionState(json) {
     return [sessionState, options];
 }
 
+// The ponyfill's create() and get() give every credential its toJSON().
 function credentialToJson(credential, sessionState) {
-    const json = credential.toJSON ? credential.toJSON() : JSON.parse(JSON.stringify(credential));
+    const json = credential.toJSON();
     if (sessionState) {
         json.__session_state = sessionState;
     }
@@ -102,7 +103,7 @@ export async function registerSimplePasskey(email, { onProgress = () => {} } = {
     const createOptions = parseCreationOptionsFromJSON(options);
     const convertedExtensions = convertExtensionsForClient(originalExtensions);
     if (convertedExtensions) {
-        createOptions.publicKey = createOptions.publicKey || {};
+        // The parsed options always hold publicKey (the ponyfill requires it).
         createOptions.publicKey.extensions = {
             ...(createOptions.publicKey.extensions || {}),
             ...convertedExtensions,

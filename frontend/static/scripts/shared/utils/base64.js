@@ -74,12 +74,10 @@ export function base64ToBytes(text) {
     if (text.length % 4 !== 0) {
         throw new Base64Error('base64 must be padded to a multiple of four characters');
     }
+    // A multiple of four with its padding, so the body's length always matches it;
+    // a third "=" is left in the body, which refuses it.
     const padding = text.endsWith('==') ? 2 : text.endsWith('=') ? 1 : 0;
-    const body = text.slice(0, text.length - padding);
-    if (body.length % 4 !== (padding ? 4 - padding : 0)) {
-        throw new Base64Error('base64 padding does not match its length');
-    }
-    return decodeBody(body, STANDARD_VALUES, 'base64');
+    return decodeBody(text.slice(0, text.length - padding), STANDARD_VALUES, 'base64');
 }
 
 /**

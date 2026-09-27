@@ -509,7 +509,7 @@ function Floating() {
             <Button variant="secondary" onClick={() => toast({ tone: 'warning', message: 'The signature counter did not advance.' })}>
               Warning
             </Button>
-            <Button variant="secondary" onClick={() => toast({ tone: 'danger', message: 'User cancelled or authenticator not available' })}>
+            <Button variant="secondary" onClick={() => toast({ tone: 'danger', message: 'The authenticator did not answer in time.' })}>
               Danger
             </Button>
           </div>

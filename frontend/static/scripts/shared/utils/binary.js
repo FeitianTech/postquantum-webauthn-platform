@@ -155,8 +155,8 @@ export function base64UrlToUint8Array(base64url) {
 export function base64UrlToUtf8String(base64url) {
     if (!base64url) return null;
     if (!state.utf8Decoder) return null;
+    // Bytes, or a throw: forgivingBase64ToBytes never gives null for text.
     const bytes = base64UrlToUint8Array(base64url);
-    if (!bytes) return null;
     try {
         return state.utf8Decoder.decode(bytes);
     } catch (error) {
@@ -227,13 +227,10 @@ export function normalizeClientExtensionResults(results) {
 export function jsonValueToUint8Array(jsonValue) {
     if (!jsonValue) return null;
 
+    // An ArrayBuffer or a view of one.
     const directBuffer = bufferSourceToUint8Array(jsonValue);
     if (directBuffer) {
         return directBuffer;
-    }
-
-    if (ArrayBuffer.isView(jsonValue)) {
-        return new Uint8Array(jsonValue.buffer.slice(jsonValue.byteOffset, jsonValue.byteOffset + jsonValue.byteLength));
     }
 
     if (typeof jsonValue === 'string') {

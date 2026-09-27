@@ -49,6 +49,14 @@ export default defineConfig({
         // The saved credentials' storage, which both UIs read and write: every line and branch.
         'frontend/static/scripts/shared/storage/{artifacts-client,local,records}.js': FULL,
         'frontend/static/scripts/shared/storage/local/*.js': FULL,
+        // The Simple tab's ceremonies and what they rest on, which web/ imports: every line and branch.
+        'frontend/static/scripts/simple/ceremony.js': FULL,
+        'frontend/static/scripts/shared/ceremony/result.js': FULL,
+        'frontend/static/scripts/shared/auth/random-username.js': FULL,
+        'frontend/static/scripts/shared/api/failed-response.js': FULL,
+        'frontend/static/scripts/shared/debug/auth.js': FULL,
+        'frontend/static/scripts/shared/utils/{base64,binary}.js': FULL,
+        'frontend/static/scripts/shared/state.js': FULL,
       },
     },
   },

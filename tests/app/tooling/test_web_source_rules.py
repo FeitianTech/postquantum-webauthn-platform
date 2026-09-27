@@ -84,6 +84,11 @@ LOGIC_ROOTS = (
     "shared/storage/local/simple-credentials.js",
     "shared/storage/local/snapshot-sanitize.js",
     "shared/storage/local/storage-core.js",
+    # The Simple tab's ceremonies and the result panel's sentences (the WebAuthn
+    # ponyfill, the debug printer and the byte helpers are followed from there).
+    "simple/ceremony.js",
+    "shared/ceremony/result.js",
+    "shared/auth/random-username.js",
 )
 
 _RULES: dict[str, re.Pattern[str]] = {
