@@ -140,9 +140,10 @@ mid-UUID (mono, with copy). Enhance where it helps along the way. All data shown
 ## Decisions made in Phase 25 (2026-09-25)
 
 - **Sections not yet ported** show their title, their description and a short note with a link to the
-  current UI at `/` (a plain link: `next/link` would add `/beta`). In Phase 25 that was all four; since Phase 26, three; since Phase 28A, one (Advanced).
+  current UI at `/` (a plain link: `next/link` would add `/beta`). In Phase 25 that was all four; since Phase 26, three; since Phase 28A, one (Advanced); since Phase 29B, none.
 - **Section switching** is client-side; the URL hash (`#simple`, `#advanced`, `#codec`, `#mds`, the legacy tab
-  ids) is written with `replaceState`, read after hydration and followed on `hashchange`.
+  ids) is written with `replaceState`, read after hydration and followed on `hashchange`. (Since Phase 29B the export
+  chooses no section and the hash is read before the hydrated page's first frame.)
 - **Overlays** (Dialog, Drawer, Sheet) are one portal-based overlay rather than the native `<dialog>`, to keep
   the legacy panel's focus behaviour exactly (the panel takes focus; Tab and Shift+Tab wrap; Escape and the
   backdrop close; focus returns to the trigger) and to be testable in jsdom. The page behind is `inert` while
@@ -355,7 +356,8 @@ mid-UUID (mono, with copy). Enhance where it helps along the way. All data shown
   sentence; either way the form keeps the last request it could read, and the text is still what is sent. The keys a
   request carries beside `publicKey` survive a form change (the current editor drops them at the next one); the editor's
   Reset keeps them and the toolbar's drops them. What the form cannot hold (`rp.id`, transports, the order of hints and
-  algorithms) is sent as typed and dropped by the next form change, as today.
+  algorithms) is sent as typed and dropped by the next form change, as today. (Phase 29B: a form change now keeps
+  them, in both UIs.)
 - **The reading holds what the form writes, in both UIs.** `build(read(build(s)))` equals `build(s)` for every setting
   (a property test): largeBlob, the prf switch and a missing attachment (Unspecified, not Cross-Platform) are read back.
   With edits applying as they parse, the last would have flipped the form on any unrelated edit.
@@ -389,6 +391,41 @@ mid-UUID (mono, with copy). Enhance where it helps along the way. All data shown
   default request asks for a cross-platform authenticator; the Advanced specs reuse the credential-detail parity's
   helpers (`web/e2e/credential-views.ts`).
 
+## Decisions made in Phase 29B (2026-09-28)
+
+- **Before hydration nothing is chosen** (the owner's choice). The export is the same HTML for every hash and no inline
+  script may read it, so it shows the header and footer with no section selected and no section's content; `useSection`
+  reads the hash in a layout effect, and the hydrated page's first frame shows the hash's section (a first hash naming
+  no section opens the default). A placement the segmented control does not slide is instant for the tabs' colours too
+  (the 160 ms fade from Simple is gone), and nothing enters (`section-in`) for what the page opens with: an entrance
+  plays only for what the person brings up (`lib/entrance.ts`). A Playwright test records every frame of hashed loads
+  with the scripts held back.
+- **A form change rewrites only what it changes**, in both UIs and both ceremonies (`json-editor/request-patch.js`):
+  the form's request before and after the change is compared, and only what differs is written over the editor's
+  text; objects follow key by key, lists of credentials, algorithms and hints member by member, a byte value whole.
+  So a typed `rp.id` or `rpId`, transports, another user's credential, an ID no saved credential has, the typed order
+  and a timeout of 0 survive; when nothing was typed the text is the form's, byte for byte, as before. At `/` the
+  editor keeps the form's last request as its baseline (a sub-tab switch and the resets rebuild), so an edit not yet
+  saved survives an unrelated field change; Save keeps its merge. `timeout: 0` is read and built as 0 in both UIs.
+- **Hints are optional.** The option that required one, and the two sentences only it reached, are deleted.
+- **One request per segment.** The Authentication segment has its own form, JSON editor, edit and last result (the
+  current tab has one editor, rebuilt on a switch); one ceremony runs at a time.
+- **The credential selection** keeps the current rules (registration hints decide what Allow Credentials offers,
+  authentication hints what is sent; a choice that goes falls back to All). The reading of an edit keeps the choice
+  when the list is what it builds, so an unrelated edit never flips All to the one credential it builds, and reads IDs
+  no saved credential has as the fake allow IDs, in both UIs.
+- **largeBlob and prf** the saved credentials cannot use are locked (white, faded) with the current notes, and their
+  values cleared, as today; the words of the notes and of Allow Credentials' first choices come from the logic modules.
+- **Authentication's Reset leaves the registration form alone** (the owner's choice; the current reset re-checks the
+  ML-DSA algorithms there) and keeps the Hash Algorithm, as today.
+- **Messages** as 29A: a success is a toast, a failure (and the hints' refusal) stays in place with the result panel;
+  no dialog after an authentication.
+- **Legacy import paths stay; the logic moves into leaves**, each compared against the tree before it (the request
+  text and form for 1,180 states, the ceremony's calls over 16 recorded cases: equal) and held at 100 %:
+  `authentication-request.js`, `allow-credentials.js`, `capabilities.js`, `assertion.js` (not `ceremony.js`, already
+  held) and `request-patch.js`. A characterization scenario records advanced authentications of credentials the tab
+  registered, which the tests of both UIs use.
+
 ## Content parity (every surface phase)
 
 Before porting a surface, list everything it shows and every action it offers, from the current app (the
@@ -406,5 +443,5 @@ new component and check it in a browser. A phase is not done while an item is un
 | 28A | The Simple tab (its form, both ceremonies, the ceremony result panel) and the saved-credential list (its rows, delete, Clear All, the jump to FIDO MDS), the records shared by both UIs, and the credential detail's dialog and URL with a stub body. The surface is 8,200 lines, and the logic web imports is 60–97 % covered before this phase holds it at 100 %, so Phase 28 is split in two (docs/ui-parity/credentials.md marks each item 28A or 28B). **Done** (see docs/MODERNIZATION_PLAN.md, Phase 28A) |
 | 28B | Saved credentials, the rest: the credential detail's every section, and the registration result with its certificate and authenticator-data views as levels of one dialog, each at its URL; the fixes 28A and its verification found. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 28B) |
 | 29A | Advanced tab, first half: the tab's frame (the Registration / Authentication switch, the toolbar, the saved credentials in a drawer over Phase 28's list and details, the result panel with its challenge row), one request that the form and the JSON editor both show and change, the registration form and the registration ceremony with its result (28B's dialog levels); the fixes 28B's verification found. The surface is about 3,700 lines of script and 1,300 of templates, 55 controls and 29 info popups, and the editor's logic is 52–88 % covered and inside view modules, so Phase 29 is split in two (docs/ui-parity/advanced.md marks each item 29A or 29B). **Done** (see docs/MODERNIZATION_PLAN.md, Phase 29A) |
-| 29B | Advanced tab, the rest: the authentication form (the credential selection and allowCredentials, the fake allow IDs, the hints, the hash algorithm, largeBlob and prf with their capability checks), the authentication ceremony and its result |
+| 29B | Advanced tab, the rest: the authentication form (the credential selection and allowCredentials, the fake allow IDs, the hints, the hash algorithm, largeBlob and prf with their capability checks), the authentication ceremony and its result; the fixes 29A's report found. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 29B) |
 | 30 | Cutover: `/` serves the new UI; the legacy templates, scripts and styles and `new_design/` are deleted; the MDS snapshot files move out of `frontend/static/`; the logic modules move into `web/`; the Google Fonts origins leave the CSP; the Playwright tests join the Cloud Build gate |

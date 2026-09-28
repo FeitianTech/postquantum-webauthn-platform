@@ -101,7 +101,14 @@ unlisted.
   `pqcOpened: n`: it goes back that many entries, then replaces a first level reached by a
   link; switching sections drops the depth). No hash is the default
   section (the page's own URL, which Back returns to after a section opened something in
-  another). It tells Next's
+  another). The export chooses no section (its HTML is the same for every hash): the
+  first render has none, and a layout effect reads the hash before the hydrated page's
+  first frame, so a hashed load never shows Simple first; a first hash that names no
+  section opens the default. `SegmentedControl` takes no value (no tab chosen), and a
+  placement it does not slide is instant for the tabs' colours too (`data-instant` on the
+  list, `in-data-instant:transition-none`). `lib/entrance.ts` (`useEntrance`) gives a
+  section, a Codec mode or an MDS page its entrance only for what the person brings up
+  (after a key, a pointer or the history moves), never for what the URL opens. It tells Next's
   router (`beforePopState`) to leave Back to the page while Back stays on this page's
   path (Next would otherwise put an older URL back), and to Next for any other path.
   `AppShell` gives sections `useSectionNavigation()`, which opens something in another
@@ -149,32 +156,48 @@ unlisted.
   it too), which also stands in for the authenticator; `src/test/credentials.ts` keeps
   records in the storage and forgets its read cache, `src/test/fetch.ts` answers `fetch`
   by path. `docs/ui-parity/simple.md` and `credentials.md` map every item.
-- `web/src/components/advanced/`: the Advanced tab (Phase 29A: its frame and registration;
-  the Authentication segment says it has not moved yet and links to `/` until 29B).
+- `web/src/components/advanced/`: the Advanced tab (Phases 29A, its frame and registration,
+  and 29B, authentication).
   `AdvancedSection` (the toolbar: the Registration / Authentication `SegmentedControl`,
-  Saved Credentials with its count, Reset, Create Credential; the progress line, a failure
-  in place, `CeremonyResult` with its challenge row; the form beside the JSON editor from
-  1280 px; `CredentialDetailDialog` at `#advanced/credential/<key>/…`), `CredentialsDrawer`
+  Saved Credentials with its count, and the segment's Reset and Create Credential or
+  Assert Credential; the segment's own progress line, failure in place and `CeremonyResult`
+  with its challenge row; each segment's form beside its JSON editor from 1280 px, both
+  segments mounted; one ceremony at a time; `CredentialDetailDialog` at
+  `#advanced/credential/<key>/…`), `CredentialsDrawer`
   (the saved credentials in a `Drawer` over `SavedCredentialList`, the count and Clear All
-  in its header; not a URL, closed on leaving the section), `useAdvancedRequest` (a reducer
-  whose text is the request, what the ceremony sends: a form change rebuilds it with
-  `buildCreationOptions`, keeping the keys beside `publicKey`; an edit is read by
-  `readEditedRequest`, and one the form can read updates the form at once; one that does
-  not parse or that a check refuses leaves the form as it was and says why and where; the
-  host and the random values set after hydration), `RegistrationForm` (four section cards,
-  each a container-query grid of field rows) over `FieldControls` (`SelectField`,
-  `SwitchField`, `ChipGroupField` / `Chip`, `HexField` with its refresh button,
-  `FakeCredentialField`, `About`, the info popup), `JsonEditor` (a Geist Mono textarea
-  named by its heading, the keys of `json-editing.js`, the note with the line and column
-  and Go to line, Reset), `useRegistrationCeremony` (the shared ceremony: a busy button,
+  in its header; not a URL, closed on leaving the section), `requestEditor.ts` (what both
+  requests keep alike: the text is the request, the keys an edit holds beside `publicKey`,
+  the edit's reading, and the form's request the text last followed; `followedText` writes
+  a form change over the text with `followForm` (`request-patch.js`), so what the form did
+  not change stays as typed; a background change (the saved credentials) leaves text that
+  does not parse alone; `resetText` is the editor's Reset), `useAdvancedRequest`
+  (registration's: a form change follows the form; an edit is read by `readEditedRequest`,
+  and one the form can read updates the form at once and becomes the baseline; one that
+  does not parse or that a check refuses leaves the form as it was and says why and where;
+  the host and the random values set after hydration), `useAuthenticationRequest`
+  (authentication's, the same way: Allow Credentials' choices from the saved credentials
+  the registration settings' hints or attachment allow (`allowChoices`), a choice that
+  goes falling back to All, and largeBlob and prf cleared where the credentials cannot use
+  them (`settled`); it starts once the saved list is read; its Reset keeps the Hash
+  Algorithm and leaves the registration alone), `RegistrationForm` and
+  `AuthenticationForm` (section cards, each a container-query grid of field rows) over
+  `FieldControls` (`FormSection`, `toggled` (a set's order kept), `SelectField` (options,
+  locked, some options unusable, a note), `SwitchField`, `ChipGroupField` / `Chip`,
+  `HexField` with its refresh button and a note, `FakeCredentialField`, `About`, the info
+  popup), `JsonEditor` (by scope: a Geist Mono textarea named by its heading, the keys of
+  `json-editing.js`, the note with the line and column and Go to line, Reset),
+  `useRegistrationCeremony` (the shared ceremony: a busy button,
   the steps' sentences, toasts, a failure in place; the record and its snapshot saved,
   then the dialog opened at the registration with the detail one Back below, only while
-  the tab is shown), `fieldText.ts` (the templates' labels, options, errors and info popups
-  in English and 中文, generated from `frontend/templates/advanced/tab/`) and `model.ts`
-  (the casts of the logic below). Tests: `src/test/advanced.tsx` renders the form and reads
-  the editor; the recorded registrations come through
+  the tab is shown), `useAuthenticationCeremony` (over `assertion.js`: the toast, the
+  result with the counter and the challenge, the counter kept, the row tinted green or
+  red, the values drawn again; no dialog), `fieldText.ts` (the templates' labels, options,
+  errors and info popups in English and 中文, generated from
+  `frontend/templates/advanced/tab/`, without the words logic modules hold) and `model.ts`
+  (the casts of the logic below). Tests: `src/test/advanced.tsx` renders either form with
+  its editor; the recorded registrations and authentications come through
   `tests/frontend/advanced/auth/advanced-answers.js` (`@legacy-tests`), which also stands
-  in for the authenticator. `docs/ui-parity/advanced.md` maps every item, 29A or 29B.
+  in for the authenticator. `docs/ui-parity/advanced.md` maps every item.
 - `web/src/components/analyze-browser/`: the first ported surface, over the logic
   modules in `frontend/static/scripts/shared/browser/`, imported through the
   `@legacy/*` alias (`experimental.externalDir`), never copied. They move into
@@ -235,7 +258,8 @@ unlisted.
   (`FIDO_SERVER_MDS_SNAPSHOT_DIR`); `virtual-authenticator.ts` adds a CTAP2 authenticator
   through the DevTools WebAuthn domain; `fixtures.ts` fails a test on any console
   error, page error, CSP violation or report. `simple-ceremony.spec.ts` registers and
-  authenticates on the current UI at `/`; `beta-smoke.spec.ts` covers `/beta`;
+  authenticates on the current UI at `/`; `beta-smoke.spec.ts` covers `/beta` (and a
+  hashed load of each section, frame by frame, with the scripts held back);
   `codec.spec.ts` the Codec; `design-rules.ts` finds grey fills. `parity.ts` compares
   what a region shows in the current UI and in `/beta`, word for word per section
   (layout, separators and controls set aside), each expected difference with its
@@ -256,12 +280,15 @@ unlisted.
   with the current UI (its helpers, `credential-views.ts`, shared with the Advanced parity);
   `simple-parity.spec.ts` compares the
   tab, each row with its checks' verdicts, the result panel and the success sentences.
-  `advanced.spec.ts` registers in `/beta#advanced` from the form and from an edited JSON,
-  refuses an edit that does not parse, opens a credential from the drawer, uses
-  credentials across both UIs and fits 1440 / 1024 / 375 px; `advanced-parity.spec.ts`
-  compares the registration form's words, its info popups (English and 中文), its choices,
-  the editor's text byte for byte for the same settings, and a registration's details, with
-  the current tab. Every section is mounted: scope a query to its tabpanel.
+  `advanced.spec.ts` registers and authenticates in `/beta#advanced` from the form and
+  from an edited JSON, refuses an edit that does not parse, keeps what an edit typed
+  through a form change, says a refused authentication in place (Hash Algorithm SHA-512),
+  opens a credential from the drawer, uses credentials across both UIs (chosen in Allow
+  Credentials) and fits 1440 / 1024 / 375 px in each segment; `advanced-parity.spec.ts`
+  compares each form's words, its info popups (English and 中文), its choices, the editor's
+  text byte for byte for the same settings, a registration's details and an
+  authentication's result, with the current tab. Every section is mounted, and both
+  Advanced segments: scope a query to its tabpanel (`#advanced-ceremony-panel-<segment>`).
 
 Rules for `web/src` (`tests/app/tooling/test_web_source_rules.py` holds them):
 no `style` prop (the export would render a style attribute), no
@@ -272,8 +299,9 @@ which the Trusted Types policy reports, and leaves the browser's Back on the app
 the logic modules' exports or sentences (comments count). The logic modules are the test's
 `LOGIC_ROOTS` (Analyze Browser's, the Codec's, the MDS explorer's, the failed-response reader,
 the saved credentials' storage, the Simple tab's ceremonies, what a credential's row shows, a
-credential's details and registration view with their state, and the Advanced tab's request,
-editor, form rules and registration ceremony) plus
+credential's details and registration view with their state, and the Advanced tab's requests,
+editor, form change, form rules, Allow Credentials choices, extensions' availability and both
+ceremonies) plus
 whatever `web/src` imports through `@legacy/`, followed through their imports, and
 none of them may touch the DOM: a surface splits its logic out of its view first
 and adds it to `LOGIC_ROOTS`. No `Suspense` on the server-rendered path:
@@ -367,12 +395,25 @@ Important frontend entry points:
   `auth/hex-input.js`, `auth/ceremony.js` (`registerAdvancedCredential(text, …)` sends the
   editor's text; its sentences; the hint rules, the storage and the values the form reads
   passed in) and `credential-display/registration-snapshot.js`
-  (`keepRegistrationSnapshot`). The current modules keep their paths and wrap or re-export
+  (`keepRegistrationSnapshot`). Authentication's (Phase 29B): `json-editor/authentication-request.js`
+  (`authenticationDefaults`, `buildRequestOptions`, `readRequestOptions` (reading back
+  everything the form writes: a list the choice builds keeps it, IDs no saved credential
+  has are the fake allow IDs), `changeAuthentication`, `withAvailability`,
+  `authenticationControls`), `auth/allow-credentials.js` (the choices and their words,
+  given the attachment filter and the record helpers; `keptChoice`),
+  `auth/capabilities.js` (largeBlob and prf availability and their notes) and
+  `auth/assertion.js` (`authenticateAdvancedCredential(text, …)`: the hints' check, the
+  records sent, the Hash Algorithm and the fake length passed in; it returns the result
+  panel's input and a refused credential's ID). `json-editor/request-patch.js`
+  (`patchRequest`, `followForm`) applies a form change to the editor's text in both UIs:
+  the current `editor-flow.js` keeps the form's last request as its baseline
+  (`updateJsonEditor` follows, `rebuildJsonEditor` for a reset; a sub-tab switch
+  rebuilds). The current modules keep their paths and wrap or re-export
   them (`hints.js`, `exclude-credentials.js`, `forms.js`, `creation-options.js`,
-  `form-sync.js`, `editor-flow.js`, `dom-helpers.js`, `resets.js`, `advanced.js`,
-  `registration-result.js`), since their tests mock by path. Held at 100 % per file with
-  the editor's `schema.js`, `validation-*.js` and `merge-prune.js`, and `LOGIC_ROOTS`.
-  Authentication's half moves in Phase 29B.
+  `request-options.js`, `form-sync.js`, `editor-flow.js`, `dom-helpers.js`, `resets.js`,
+  `advanced.js`, `list-render.js`, `registration-result.js`), since their tests mock by
+  path. Held at 100 % per file with the editor's `schema.js`, `validation-*.js` and
+  `merge-prune.js`, and `LOGIC_ROOTS`.
 - `frontend/static/styles/shared/layout.css`
   Shared layout and credential card animation styles.
 - `frontend/static/scripts/shared/browser/`

@@ -3189,6 +3189,129 @@ tinted), authentication's Reset (ADV-X2) and the Advanced tab's info-popup parit
   beside the form at 1440 px and under it at 1024 and 375 px; no grey fill and no sideways scroll at the three widths;
   the editor focused by a real click looks as unfocused. No console, CSP or Trusted Types message.
 
+### Phase 29B — the Advanced tab's authentication at /beta#advanced — DONE (2026-09-28)
+14 commits, 7a77c695..the record's own, all this phase's (one author, bare subjects, no co-author lines; the range starts
+after the tech lead's 53764ed1). Each commit that changes code or tests was gated before it was made on its exact tree:
+the staged change applied to a clean detached worktree of its parent (`node_modules` linked, Python run from that tree),
+then pytest under coverage (its 95 % floor), the root vitest (its floors), web's typecheck, unit tests (their floors),
+build and CSP scan, and ruff; a commit was made only when every gate passed (the gate stopped one: a spec's type, fixed
+before the commit). The per-commit gate runs no Playwright: the whole suite ran after the shell change (commit 2), the
+section change (12) and the specs (13), and the Advanced specs before each commit that changed `/` (6, 9). Not pushed:
+the tech lead verifies and pushes.
+Planned in plan mode and approved before any code. A review of the first draft against the code found 21 problems before
+they happened (among them: a new fake-ID export the legacy mock factories lacked, which would have thrown; recursing into
+`{"$hex"}` values, which would have spelled a byte value two ways; a background list reload rebuilding text that does
+not parse; the `section-in` gate itself starting the animation; a hash naming no section leaving the page blank; the
+capability notes in the templates' error divs, which a generated `fieldText` would have copied). Two questions went to
+the owner: before hydration `/beta` chooses no section; authentication's Reset leaves the registration form alone.
+
+**What there is now.** `/beta#advanced` runs both ceremonies. The Authentication segment has its own form and JSON
+editor over one request, as registration's:
+- Credential Selection (User Verification; Allow Credentials: All, Empty and the saved credentials the registration's
+  hints or attachment allow, a choice that goes falling back to All; the fake allow IDs), Other Options (the challenge,
+  the timeout, the hints as chips, the Hash Algorithm) and Extensions (largeBlob and its value to write, the two prf
+  evaluations), locked with the current notes where the saved credentials cannot use them;
+- the editor (CredentialRequestOptions): an edit the form can read updates it at once; one that does not parse says
+  where; one a check refuses says which, naming Assert Credential.
+Assert Credential runs the current tab's own ceremony: the progress, the success toast, the result panel with the
+signature counter and the challenge, the counter kept, the credential's row tinted green (red for the one a refusal
+names), the values drawn again; no dialog. Each segment keeps its own request, edit and last result; one ceremony runs at
+a time. Every section of `/beta` is now ported. The current tab at `/` runs on the same logic, changed only by the fixes.
+
+**A — the fixes from 29A's report** (7a77c695, 63be92cc, 58db391b; the reading 7ec333bb).
+- (c) 7a77c695: the option that required a hint and its two sentences are deleted; no ceremony requires one.
+- (b) 63be92cc: the export chooses no section and `useSection` reads the hash in a layout effect, so the hydrated page's
+  first frame shows the hash's section; `SegmentedControl` takes no value, marks itself ready before it measures and
+  makes every jump instant for the tabs' colours too (the 160 ms fade came from `transition-colors` on the labels and
+  from the pre-ready highlight fading once the control was ready); `lib/entrance.ts` plays the entrance only for what
+  the person brings up. `beta-smoke.spec.ts` records every frame of `/beta`, `#advanced`, `#codec`, `#mds` and an MDS
+  entry with the scripts held back: none selects another section, runs a transition in the tabs or a `section-in`.
+- (a) 58db391b, in both UIs and both ceremonies: `json-editor/request-patch.js` writes over the editor's text only what a
+  form change changed in the form's request (objects key by key, lists of credentials, algorithms and hints member by
+  member, byte values whole); a typed `rp.id` or `rpId`, transports, another user's credential, an ID no saved
+  credential has, the order of hints and algorithms and a timeout of 0 survive, each tested in both UIs and both
+  scopes. `/beta` keeps a baseline per request; `/`'s `editor-flow.js` keeps the form's last request (`rebuildJsonEditor`
+  for the resets; a sub-tab switch rebuilds). `timeout: 0` is read and built as 0. Writing it found a bug in the draft
+  merge: a member the person had deleted came back when the form added another.
+- 7ec333bb, in both UIs: the authentication's reading holds what the form writes (a property test over 1,440
+  settings): a list All builds stays All (the current reading flipped it to the one credential), a request without
+  prf, largeBlob or hints turns them off, and IDs no saved credential has become the fake allow IDs
+  (`setFakeAllowCredentials`, which the two editor tests' mock factories now provide). One legacy assertion changed
+  with it, named in the commit.
+
+**B — logic out of the views** (refactors fd48ddb9, 2ee4516e; held by 6941a3c8, 98fffd74; recorded by 3b534fd5).
+- New DOM-free leaves, the current modules keeping their paths and wrapping them: `json-editor/authentication-request.js`
+  (the defaults, `buildRequestOptions`, `readRequestOptions`, the rules, the locks), `auth/allow-credentials.js` (the
+  choices and their words, given the attachment filter and the record helpers the legacy tests mock),
+  `auth/capabilities.js` (largeBlob and prf availability and their notes) and `auth/assertion.js` (the ceremony and its
+  sentences; `ceremony.js` was already held at 100 %).
+- Each refactor passed the legacy tests unchanged and was compared, in a scratch worktree, against the tree before it:
+  the request text and the form for 1,180 states (the choices, the requests, the availability, the reading, the reset)
+  and the ceremony's calls, toasts, result and requests over 16 recorded cases were equal.
+- Held at 100 % per file and in `LOGIC_ROOTS`, with `request-patch.js`. Guards no value reaches were dropped after
+  checking the callers and the legacy mocks (a descriptor's spelling that is never missing, the assertion's `toJSON`
+  fallback, which the ponyfill and the mocks always provide); those the legacy mocks reach were kept and covered.
+- 3b534fd5: a characterization scenario, `advanced-authentication-answers`: two advanced registrations (one reporting
+  largeBlob and prf), then authentications of the first (a first use, a lower counter, a bad signature, the
+  client-supplied state, a begin with no credentials). `advanced-answers.js` gives both UIs' tests its records, answers
+  and a recorded assertion.
+
+**C — the views** (5e900e44, 3ec63a88, d97b62e2).
+- 5e900e44: what a request's text keeps (`requestEditor.ts`), the JSON editor by scope, `FormSection` and `toggled` (a
+  set's order kept) shared, the select and byte fields with a locked state and a note.
+- 3ec63a88: `useAuthenticationRequest`, `AuthenticationForm`, the templates' words (`fieldText.ts`, generated without
+  the words the logic holds), the casts; tests for every field, rule and note, the editor both ways and the fixes.
+- d97b62e2: `useAuthenticationCeremony` and the segment in `AdvancedSection`; tests over the recorded answers, each
+  waiting on what answers (the request made, the result panel, the stored counter), never on a progress sentence.
+- Found in d97b62e2: two specs that looked in the whole Advanced panel found the Authentication segment's twins; they
+  now look in the registration segment (`#advanced-ceremony-panel-registration`).
+
+**D — browser tests** (96df6fa0). `advanced.spec.ts` authenticates from the form and from an edited JSON (the begin
+request is the edit), says a refused authentication in place (Hash Algorithm SHA-512) with the result and the row
+tinted, chooses in Allow Credentials a credential registered in the other UI (both ways), keeps a typed `rp.id` and
+timeout of 0 through a form change, and fits 1440, 1024 and 375 px in the Authentication segment.
+`advanced-parity.spec.ts` compares the authentication's words, popups, choices, request text and result (below).
+
+**The parity result.**
+- The authentication form: the same three headings and the same words, section by section, **with no difference**; the
+  largeBlob and prf notes equal.
+- The info popups: all 11, the same labels in the same order, in English and 中文.
+- The choices: Allow Credentials (with two saved credentials), User Verification, Hash Algorithm, largeBlob and the
+  hints, the same labels in the same order.
+- The editor's text for the same challenge: **equal byte for byte** with the defaults and at three further steps (user
+  verification, timeout and a hint; one credential, largeBlob written and both prf evaluations; Empty and largeBlob read).
+- The result after authenticating the same credential in each UI: the same words (the counter's value set aside).
+
+**Seen in a real browser.** Playwright's Chromium with a CTAP 2.1 virtual authenticator on USB (largeBlob and prf), Flask
+from `e2e/serve-flask.mjs` with temporary stores, the MDS fixture, the strict CSP and the Trusted Types report-only
+policy, at 1440, 1024 and 375 px: a registration then both ceremonies in `/beta#advanced` (success, the result panel, a
+refusal in place), an edit that does not parse, the extensions locked with their notes, the current tab authenticating
+the `/beta` credential chosen in Allow Credentials, `/`'s editor keeping an unsaved edit through a field change and
+reading a fake ID back at Save, and hashed loads of the other sections. **No CSP or Trusted Types message and no
+sideways scroll**; the only console message was the refused authentication's own 400. Nothing needed a fix. The
+screenshots are in the session's scratchpad.
+
+**Tests.**
+- pytest: 4857 → **4876** passed / 4 skipped (the new scenario and its codec corpus cases); coverage 97 %.
+- Linux (python:3.14, Docker, `git archive` of 96df6fa0): **4862** / 5, the usual 14 fewer and one more skip. ruff is clean.
+- Root vitest: 1884 → **1951** tests in 136 files. Coverage 91.77 / 85.07 / 94.55 / 91.73 → **91.96 / 85.82 / 94.65 /
+  91.91**. The floors held, and every held file is at 100 %.
+- Web vitest: 434 → **466** tests in 39 files. Coverage 98.66 / 93.51 / 98.7 / 99.59 → **98.49 / 92.94 / 98.41 / 99.49**;
+  the floors are 97 / 92 / 96 / 98.
+- Web typecheck is clean. The CSP scan found 4 HTML files, 38 script elements and **0 violations**.
+- Playwright: 126 → **145** passed on macOS (Chromium).
+
+**Found but not fixed:**
+- The allow list offers credentials by the registration form's hints and attachment but sends them by the
+  authentication hints (kept for parity), and offers simple credentials, which only advanced records are sent with, so
+  choosing one fails at the server.
+- `credentialSupportsPrf` counts `prf: {enabled: false}` as support.
+- At `/`, Save keeps its merge, which still writes `rp.id` from the host; the sub-tab switch rebuilds its one editor;
+  and saving an authentication request without extensions clears the registration's credProps, minPinLength and
+  credProtect. `/beta` does none of these; they go with the current UI at the cutover.
+- The Hash Algorithm travels beside the request (`__hash_algorithm`), not in the editor's text, as today.
+- Not run on GitHub yet (nothing is pushed): `ci-web.yml`'s e2e job now runs the new tests.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
