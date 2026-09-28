@@ -1,10 +1,7 @@
-import { type KeyboardEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import { type KeyboardEvent, type ReactNode, useCallback, useEffect, useRef } from 'react';
 
 import { cx } from '@/lib/cx';
-
-// useLayoutEffect in the browser (the highlight is placed before paint), and no
-// warning when the page is rendered for the static export.
-const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+import { useIsomorphicLayoutEffect } from '@/lib/useIsomorphicLayoutEffect';
 
 export type SegmentOption<T extends string> = { value: T; label: ReactNode };
 
@@ -12,7 +9,8 @@ type SegmentedControlProps<T extends string> = {
   /** The accessible name of the tab list. */
   label: string;
   options: readonly SegmentOption<T>[];
-  value: T;
+  /** None chooses no tab (the top bar before the page knows the section). */
+  value: T | null;
   onChange: (value: T) => void;
   /** Tab ids are `${idBase}-tab-${value}`; each tab controls `${idBase}-panel-${value}`. */
   idBase: string;
@@ -31,7 +29,8 @@ const PREVIOUS_KEYS = new Set(['ArrowLeft', 'ArrowUp']);
 // The highlight is placed through the CSSOM (element.style), which the CSP
 // allows, never through a style attribute. It jumps rather than slides on its
 // first placement, on a resize and when the value changes from outside (the URL
-// hash), and never slides under prefers-reduced-motion.
+// hash), and never slides under prefers-reduced-motion; when it jumps, the tabs'
+// colours change at once too, so no tab fades from the one chosen before.
 export function SegmentedControl<T extends string>({
   label,
   options,
@@ -50,18 +49,25 @@ export function SegmentedControl<T extends string>({
     (slide: boolean) => {
       const list = listRef.current;
       const highlight = highlightRef.current;
-      const tab = tabs.current.get(value);
+      const tab = value === null ? undefined : tabs.current.get(value);
       if (!list || !highlight || !tab) return;
-      if (!slide) highlight.dataset.instant = '';
+      if (!slide) {
+        highlight.dataset.instant = '';
+        list.dataset.instant = '';
+      }
+      // Ready before the styles are applied, so the chosen tab's own highlight
+      // (drawn until then) goes with the jump rather than fading after it.
+      highlight.dataset.ready = '';
+      list.dataset.ready = '';
+      // Measuring applies the styles, with transitions off when it jumps.
       highlight.style.width = `${tab.offsetWidth}px`;
       highlight.style.transform = `translateX(${tab.offsetLeft}px)`;
       if (!slide) {
         // Apply the position with transitions off, then turn them back on.
         void highlight.offsetWidth;
         delete highlight.dataset.instant;
+        delete list.dataset.instant;
       }
-      highlight.dataset.ready = '';
-      list.dataset.ready = '';
     },
     [value],
   );
@@ -127,7 +133,7 @@ export function SegmentedControl<T extends string>({
           'data-instant:transition-none data-ready:opacity-100 motion-reduce:transition-none',
         )}
       />
-      {options.map((option) => {
+      {options.map((option, index) => {
         const selected = option.value === value;
         const ids = segmentIds(idBase, option.value);
         return (
@@ -142,11 +148,11 @@ export function SegmentedControl<T extends string>({
             id={ids.tab}
             aria-selected={selected}
             aria-controls={ids.panel}
-            tabIndex={selected ? 0 : -1}
+            tabIndex={selected || (value === null && index === 0) ? 0 : -1}
             onClick={() => choose(option.value)}
             className={cx(
               'relative inline-flex shrink-0 items-center justify-center rounded-full font-medium whitespace-nowrap',
-              'text-ink-muted transition-colors duration-(--duration-fast) hover-or-demo:text-ink',
+              'text-ink-muted transition-colors duration-(--duration-fast) hover-or-demo:text-ink in-data-instant:transition-none',
               'aria-selected:font-semibold aria-selected:text-ink',
               size === 'sm' ? 'h-7 px-3 text-label' : 'h-8 px-4 text-label',
             )}

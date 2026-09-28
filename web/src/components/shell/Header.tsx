@@ -7,12 +7,12 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { cx } from '@/lib/cx';
 import { APP_TITLE, NAV_ID, SECTION_OPTIONS, SECTIONS, type SectionId } from '@/lib/sections';
 
-
 export const GITHUB_URL = 'https://github.com/FeitianTech/postquantum-webauthn-platform';
 export const ANALYZE_PANEL_ID = 'analyze-browser-panel';
 
 type HeaderProps = {
-  section: SectionId;
+  /** None before the page has read the URL: no section is chosen. */
+  section: SectionId | null;
   onSection: (section: SectionId) => void;
   /** Opens the Analyze Browser panel; focus returns to `from` when it closes. */
   onAnalyze: (from: HTMLElement | null) => void;

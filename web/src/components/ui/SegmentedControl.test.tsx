@@ -57,8 +57,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function Harness({ initial = 'simple', onChange }: { initial?: Section; onChange?: (value: Section) => void }) {
-  const [value, setValue] = useState<Section>(initial);
+function Harness({ initial = 'simple', onChange }: { initial?: Section | null; onChange?: (value: Section) => void }) {
+  const [value, setValue] = useState<Section | null>(initial);
   return (
     <>
       <SegmentedControl
@@ -80,12 +80,12 @@ function Harness({ initial = 'simple', onChange }: { initial?: Section; onChange
 
 const highlight = () => document.querySelector<HTMLElement>('[data-segment-highlight]')!;
 
-function recordInstant() {
+function recordInstant(element: HTMLElement = highlight()) {
   const records: string[] = [];
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) records.push(mutation.attributeName ?? '');
   });
-  observer.observe(highlight(), { attributes: true, attributeFilter: ['data-instant'] });
+  observer.observe(element, { attributes: true, attributeFilter: ['data-instant'] });
   return { records, stop: () => observer.disconnect() };
 }
 
@@ -134,6 +134,25 @@ describe('SegmentedControl', () => {
     instant.stop();
   });
 
+  it('chooses no tab without a value, keeps the first reachable, and jumps to the first value it is given', async () => {
+    render(<Harness initial={null} />);
+    const tabs = screen.getAllByRole('tab');
+
+    expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['false', 'false', 'false', 'false']);
+    expect(tabs.map((tab) => tab.tabIndex)).toEqual([0, -1, -1, -1]);
+    expect(highlight()).not.toHaveAttribute('data-ready');
+    expect(screen.getByRole('tablist')).not.toHaveAttribute('data-ready');
+    const tabsInstant = recordInstant(screen.getByRole('tablist'));
+
+    await userEvent.click(screen.getByRole('button', { name: 'from outside' }));
+    await Promise.resolve();
+    expect(screen.getByRole('tab', { name: 'FIDO MDS Authenticators' })).toHaveAttribute('aria-selected', 'true');
+    expect(highlight().style.transform).toBe('translateX(439px)');
+    expect(highlight()).toHaveAttribute('data-ready');
+    expect(tabsInstant.records.length).toBeGreaterThan(0);
+    tabsInstant.stop();
+  });
+
   it('does not report a click on the tab already chosen', async () => {
     const onChange = vi.fn();
     render(<Harness onChange={onChange} />);
@@ -141,14 +160,20 @@ describe('SegmentedControl', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('jumps rather than slides when the value changes from outside, or the list resizes', async () => {
+  it('jumps rather than slides when the value changes from outside, or the list resizes, the tabs\' colours too', async () => {
     render(<Harness />);
     const instant = recordInstant();
+    const tabsInstant = recordInstant(screen.getByRole('tablist'));
 
     await userEvent.click(screen.getByRole('button', { name: 'from outside' }));
     await Promise.resolve();
     expect(highlight().style.transform).toBe('translateX(439px)');
     expect(instant.records.length).toBeGreaterThan(0);
+    // The list is instant while the new choice is styled, so no tab fades.
+    expect(tabsInstant.records.length).toBeGreaterThan(0);
+    expect(screen.getByRole('tablist')).not.toHaveAttribute('data-instant');
+    expect(screen.getByRole('tab', { name: 'Codec' }).className).toContain('in-data-instant:transition-none');
+    tabsInstant.stop();
 
     LAYOUT.mds = { left: 500, width: 210 };
     act(() => observers.forEach((callback) => callback()));

@@ -3,6 +3,7 @@ import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/icons';
+import { useEntrance } from '@/lib/entrance';
 
 import { CondensedBar } from './CondensedBar';
 import { BackButton, EntryHeader, RawButton } from './EntryHeader';
@@ -35,6 +36,7 @@ export function EntryPage({
   busyCertificate = null,
   active = true,
 }: EntryPageProps) {
+  const entrance = useEntrance(true);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const rawOpener = useRef<HTMLButtonElement | null>(null);
   const [rawOpen, setRawOpen] = useState(false);
@@ -113,7 +115,7 @@ export function EntryPage({
   }
 
   return (
-    <div data-mds-entry={entryId} className="animate-[section-in_var(--duration-slow)_var(--ease-out)] motion-reduce:animate-none">
+    <div data-mds-entry={entryId} className={entrance}>
       {body}
     </div>
   );

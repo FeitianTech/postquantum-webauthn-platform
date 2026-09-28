@@ -9,6 +9,36 @@ afterEach(() => {
   window.history.replaceState(null, '', '/beta');
 });
 
+describe('the first section', () => {
+  // The exported HTML is the same for every hash: its render chooses no section,
+  // and the hash is read before the hydrated page's first frame.
+  function renders() {
+    const seen: Array<string | null> = [];
+    const hook = renderHook(() => {
+      const result = useSection();
+      seen.push(result[0]);
+      return result;
+    });
+    return { seen, ...hook };
+  }
+
+  it('is none in the first render, then the section the hash names, before the frame is painted', () => {
+    window.history.replaceState(null, '', '/beta#advanced');
+    const { seen, result } = renders();
+    expect(seen[0]).toBeNull();
+    expect(result.current[0]).toBe('advanced');
+    expect(seen.filter((section) => section === 'simple')).toEqual([]);
+  });
+
+  it('is the default with no hash, or with a hash that names no section', () => {
+    expect(renders().result.current[0]).toBe('simple');
+    window.history.replaceState(null, '', '/beta#nothing');
+    const { result } = renders();
+    expect(result.current[0]).toBe('simple');
+    expect(window.location.hash).toBe('#nothing');
+  });
+});
+
 describe('the section in the URL, inside Next', () => {
   it('leaves Back to the page while it is shown, and gives it back to Next after', () => {
     const { unmount } = renderHook(() => useSection());

@@ -6,6 +6,7 @@ import { Select, TextArea } from '@/components/ui/Field';
 import { Spinner } from '@/components/ui/icons';
 import { SegmentedControl, segmentIds } from '@/components/ui/SegmentedControl';
 import { Switch } from '@/components/ui/Switch';
+import { useEntrance } from '@/lib/entrance';
 import { NAV_ID, SECTIONS } from '@/lib/sections';
 
 import { CodecOutput } from './CodecOutput';
@@ -47,6 +48,7 @@ function Workspace({ input, output }: { input: ReactNode; output: ReactNode }) {
 }
 
 function ModePanel({ mode, active, codec }: { mode: CodecMode; active: boolean; codec: CodecPanelState }) {
+  const entrance = useEntrance(active);
   const [rawOpen, setRawOpen] = useState(false);
   const rawButtonRef = useRef<HTMLButtonElement>(null);
   const ids = segmentIds(MODE_ID, mode);
@@ -129,7 +131,7 @@ function ModePanel({ mode, active, codec }: { mode: CodecMode; active: boolean; 
       aria-labelledby={ids.tab}
       hidden={!active}
       data-codec-mode={mode}
-      className="animate-[section-in_var(--duration-slow)_var(--ease-out)] motion-reduce:animate-none"
+      className={entrance}
     >
       <Workspace input={input} output={output} />
       <RawDialog
@@ -147,6 +149,7 @@ function ModePanel({ mode, active, codec }: { mode: CodecMode; active: boolean; 
 // value back to bytes. Each mode keeps its own input and answer.
 export function CodecSection({ active }: { active: boolean }) {
   const section = SECTIONS.find((candidate) => candidate.id === 'codec')!;
+  const entrance = useEntrance(active);
   const ids = segmentIds(NAV_ID, 'codec');
   const [mode, setMode] = useState<CodecMode>('decode');
   const decode = useCodec('decode');
@@ -158,7 +161,7 @@ export function CodecSection({ active }: { active: boolean }) {
       id={ids.panel}
       aria-labelledby={ids.tab}
       hidden={!active}
-      className="animate-[section-in_var(--duration-slow)_var(--ease-out)] motion-reduce:animate-none"
+      className={entrance}
     >
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
         <div className="min-w-0">

@@ -1,7 +1,8 @@
 import Router from 'next/router';
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useRef, useState } from 'react';
 
 import { DEFAULT_SECTION, type SectionId, hashPath, routeFromHash } from './sections';
+import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect';
 
 // A history entry this page pushed to open something inside a section (an MDS
 // entry, its certificate), so the page's own Back can be the browser's. Its
@@ -63,27 +64,31 @@ function writeUrl(method: 'pushState' | 'replaceState', state: unknown, path: st
 }
 
 // The chosen section, switched on the page and mirrored in the URL hash, so a
-// link or a reload opens the same section. The hash is read after the page has
-// hydrated (reading it while rendering would differ from the exported HTML).
-// Switching sections writes it with replaceState, so it does not fill the
-// history; opening something inside a section (#mds/<entryId>, then
+// link or a reload opens the same section. The exported HTML is the same for
+// every hash, so it chooses no section; the hash is read once the page has
+// hydrated, before that first frame is painted, so the page never shows another
+// section first. Switching sections writes it with replaceState, so it does not
+// fill the history; opening something inside a section (#mds/<entryId>, then
 // #mds/<entryId>/certificate/<n>) pushes an entry, so the browser's Back and the
 // page's Back both close it, one level at a time. Next's own history state is
 // kept. Editing the hash, and Back and Forward, are followed.
-export function useSection(): [SectionId, (section: SectionId) => void, SectionRoute, GoToSection] {
-  const [section, setSection] = useState<SectionId>(DEFAULT_SECTION);
+export function useSection(): [SectionId | null, (section: SectionId) => void, SectionRoute, GoToSection] {
+  const [section, setSection] = useState<SectionId | null>(null);
   const [path, setPath] = useState<string[]>([]);
   // Where closing every level lands, once the browser has gone back.
   const landing = useRef<string[] | null>(null);
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     // No hash is the default section (the page's own URL, which Back returns to
-    // after a section opened something in another); a hash naming no section is
-    // left alone.
-    const follow = () => {
+    // after a section opened something in another). A hash naming no section
+    // opens the page on the default one, and later is left alone.
+    const follow = (first: boolean) => {
       const hash = window.location.hash.replace(/^#/, '');
       const route = hash ? routeFromHash(hash) : { section: DEFAULT_SECTION, path: [] };
-      if (!route) return;
+      if (!route) {
+        if (first) setSection(DEFAULT_SECTION);
+        return;
+      }
       const wanted = landing.current;
       landing.current = null;
       // Gone back past every level this page pushed: the first was reached by a
@@ -95,13 +100,14 @@ export function useSection(): [SectionId, (section: SectionId) => void, SectionR
       setSection(route.section);
       setPath(route.path);
     };
-    follow();
-    window.addEventListener('hashchange', follow);
-    window.addEventListener('popstate', follow);
+    const followLater = () => follow(false);
+    follow(true);
+    window.addEventListener('hashchange', followLater);
+    window.addEventListener('popstate', followLater);
     const release = keepBackForThePage();
     return () => {
-      window.removeEventListener('hashchange', follow);
-      window.removeEventListener('popstate', follow);
+      window.removeEventListener('hashchange', followLater);
+      window.removeEventListener('popstate', followLater);
       release();
     };
   }, []);
@@ -122,7 +128,9 @@ export function useSection(): [SectionId, (section: SectionId) => void, SectionR
     writeUrl('pushState', { ...entry, [PUSHED]: pushedDepth(entry) + 1 }, hashPath(next, nextPath));
   }, []);
 
-  const open = useCallback((nextPath: string[]) => go(section, nextPath), [go, section]);
+  // Only the section shown is given these (CLOSED_ROUTE otherwise), so they
+  // are never called before a section is chosen.
+  const open = useCallback((nextPath: string[]) => go(section!, nextPath), [go, section]);
 
   const close = useCallback(
     (parent: string[] = []) => {
@@ -131,7 +139,7 @@ export function useSection(): [SectionId, (section: SectionId) => void, SectionR
         return;
       }
       setPath(parent);
-      writeUrl('replaceState', window.history.state, hashPath(section, parent));
+      writeUrl('replaceState', window.history.state, hashPath(section!, parent));
     },
     [section],
   );
@@ -139,7 +147,7 @@ export function useSection(): [SectionId, (section: SectionId) => void, SectionR
   const replace = useCallback(
     (nextPath: string[]) => {
       setPath(nextPath);
-      writeUrl('replaceState', window.history.state, hashPath(section, nextPath));
+      writeUrl('replaceState', window.history.state, hashPath(section!, nextPath));
     },
     [section],
   );

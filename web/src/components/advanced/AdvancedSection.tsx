@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button, buttonClassName } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/icons';
 import { SegmentedControl, segmentIds } from '@/components/ui/SegmentedControl';
+import { useEntrance } from '@/lib/entrance';
 import { NAV_ID, SECTIONS } from '@/lib/sections';
 import type { SectionRoute } from '@/lib/useSection';
 
@@ -31,6 +32,7 @@ const CEREMONIES = [
 // measured header) while the form scrolls; below it on narrower ones.
 export function AdvancedSection({ active, route }: { active: boolean; route: SectionRoute }) {
   const section = SECTIONS.find((candidate) => candidate.id === 'advanced')!;
+  const entrance = useEntrance(active);
   const ids = segmentIds(NAV_ID, 'advanced');
   const [ceremony, setCeremony] = useState<Ceremony>('registration');
   const saved = useSavedCredentials();
@@ -78,7 +80,7 @@ export function AdvancedSection({ active, route }: { active: boolean; route: Sec
       id={ids.panel}
       aria-labelledby={ids.tab}
       hidden={!active}
-      className="animate-[section-in_var(--duration-slow)_var(--ease-out)] motion-reduce:animate-none"
+      className={entrance}
     >
       <h2 className="text-display font-semibold text-ink">{section.label}</h2>
       <p className="mt-2 max-w-prose text-body-lg text-ink-muted">{section.description}</p>

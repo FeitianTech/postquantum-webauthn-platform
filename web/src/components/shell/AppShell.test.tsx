@@ -18,6 +18,21 @@ afterEach(() => {
 });
 
 describe('the app shell', () => {
+  // First in the file: before the person has pressed anything.
+  it('opens on the section the URL names, simply there; a section the person brings up comes in', async () => {
+    window.history.replaceState({ fromNext: true }, '', '/beta#advanced');
+    renderPage(<AppShell />);
+    const advanced = screen.getByRole('tabpanel', { name: 'Advanced Authentication' });
+
+    expect(screen.getByRole('tab', { name: 'Advanced Authentication' })).toHaveAttribute('aria-selected', 'true');
+    expect(advanced.className).not.toContain('animate-[section-in');
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Codec' }));
+    expect(screen.getByRole('tabpanel', { name: 'Codec' }).className).toContain('animate-[section-in');
+    await userEvent.click(screen.getByRole('tab', { name: 'Advanced Authentication' }));
+    expect(screen.getByRole('tabpanel', { name: 'Advanced Authentication' }).className).toContain('animate-[section-in');
+  });
+
   it('shows the title, the four sections, Analyze Browser and GitHub', () => {
     renderPage(<AppShell />);
 

@@ -57,6 +57,64 @@ test.describe('/beta', () => {
     await page.keyboard.press('Tab');
   });
 
+  // The exported page is the same for every hash; until the scripts arrive it
+  // chooses no section, and the hydrated page's first frame shows the hash's.
+  // Each frame from the first is recorded while the scripts are held back.
+  for (const [hash, section] of [
+    ['', 'simple'],
+    ['#advanced', 'advanced'],
+    ['#codec', 'codec'],
+    ['#mds', 'mds'],
+    ['#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000002', 'mds'],
+  ] as const) {
+    test(`loads /beta${hash} on its section from the first frame, with no fade or entrance`, async ({ page }) => {
+      await page.route('**/beta/_next/static/**', async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        await route.continue();
+      });
+      await page.addInitScript(() => {
+        const frames: Array<{ selected: string[]; shown: string[]; moving: string[] }> = [];
+        (globalThis as unknown as { pqcFrames: typeof frames }).pqcFrames = frames;
+        const record = () => {
+          const tabs = document.querySelector('[role="tablist"][aria-label="Sections"]');
+          if (tabs) {
+            frames.push({
+              selected: [...tabs.querySelectorAll('[role="tab"][aria-selected="true"]')].map((tab) => tab.id),
+              shown: [...document.querySelectorAll('[role="tabpanel"][id^="nav-panel-"]:not([hidden])')].map((panel) => panel.id),
+              moving: document
+                .getAnimations()
+                .filter((animation) =>
+                  animation instanceof CSSTransition
+                    ? tabs.contains((animation.effect as KeyframeEffect).target)
+                    : animation instanceof CSSAnimation && animation.animationName === 'section-in',
+                )
+                .map((animation) => (animation instanceof CSSTransition ? `transition ${animation.transitionProperty}` : 'section-in')),
+            });
+          }
+          requestAnimationFrame(record);
+        };
+        requestAnimationFrame(record);
+      });
+
+      await page.goto(`/beta${hash}`);
+      const tab = page.getByRole('tablist', { name: 'Sections' }).getByRole('tab', { name: SECTIONS[['simple', 'advanced', 'codec', 'mds'].indexOf(section)] });
+      await expect(tab).toHaveAttribute('aria-selected', 'true');
+      await highlightSitsOn(page, tab);
+      await page.waitForTimeout(700);
+      const frames = await page.evaluate(() => (globalThis as unknown as { pqcFrames: Array<{ selected: string[]; shown: string[]; moving: string[] }> }).pqcFrames);
+
+      // Frames before the scripts, then the section's: never another section, never a fade.
+      expect(frames.length).toBeGreaterThan(10);
+      expect(frames[0]).toEqual({ selected: [], shown: [], moving: [] });
+      for (const frame of frames) {
+        expect(frame.selected.filter((id) => id !== `nav-tab-${section}`)).toEqual([]);
+        expect(frame.shown.filter((id) => id !== `nav-panel-${section}`)).toEqual([]);
+        expect(frame.moving).toEqual([]);
+      }
+      expect(frames.at(-1)).toEqual({ selected: [`nav-tab-${section}`], shown: [`nav-panel-${section}`], moving: [] });
+    });
+  }
+
   for (const motion of ['no-preference', 'reduce'] as const) {
     test(`moves the one highlight to the chosen section: ${motion === 'reduce' ? 'jumping under reduced motion' : 'sliding'}`, async ({ page }) => {
       await page.emulateMedia({ reducedMotion: motion });

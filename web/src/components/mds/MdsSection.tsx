@@ -4,6 +4,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { segmentIds } from '@/components/ui/SegmentedControl';
+import { useEntrance } from '@/lib/entrance';
 import { NAV_ID, SECTIONS } from '@/lib/sections';
 import { CLOSED_ROUTE, type SectionRoute } from '@/lib/useSection';
 
@@ -60,6 +61,7 @@ type ListPlace = { entryId: string; windowY: number; top: number; left: number }
 // filters, sort, widths and scroll, with the focus on the row.
 export function MdsSection({ active, route = CLOSED_ROUTE }: { active: boolean; route?: SectionRoute }) {
   const section = SECTIONS.find((candidate) => candidate.id === 'mds')!;
+  const entrance = useEntrance(active);
   const ids = segmentIds(NAV_ID, 'mds');
   const explorer = useMdsExplorer(active);
   const view = useExplorerView(explorer.entries, explorer.version);
@@ -110,7 +112,7 @@ export function MdsSection({ active, route = CLOSED_ROUTE }: { active: boolean; 
       id={ids.panel}
       aria-labelledby={ids.tab}
       hidden={!active}
-      className="animate-[section-in_var(--duration-slow)_var(--ease-out)] motion-reduce:animate-none"
+      className={entrance}
     >
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
         <div className="min-w-0">

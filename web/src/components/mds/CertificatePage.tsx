@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import { CodeBlock } from '@/components/ui/CodeBlock';
 import { Spinner } from '@/components/ui/icons';
+import { useEntrance } from '@/lib/entrance';
 
 import { CertificateSummary } from './CertificateSummary';
 import { CondensedBar } from './CondensedBar';
@@ -28,6 +29,7 @@ export function CertificatePage({
   onDecode: () => void;
   onBack: () => void;
 }) {
+  const entrance = useEntrance(true);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const backTitle = `Return to ${entryTitle(entry)}`;
   const idBase = `mds-certificate-${certificate.number}`;
@@ -53,7 +55,7 @@ export function CertificatePage({
   }
 
   return (
-    <div data-mds-certificate={certificate.number} className="animate-[section-in_var(--duration-slow)_var(--ease-out)] motion-reduce:animate-none">
+    <div data-mds-certificate={certificate.number} className={entrance}>
       <CondensedBar watch={headingRef} title={view.title} subtitle={view.subtitle} onBack={onBack} backTitle={backTitle} />
       <BackButton onBack={onBack} title={backTitle} />
       <h3 ref={headingRef} tabIndex={-1} className="mt-6 text-heading font-semibold break-words text-ink outline-none">

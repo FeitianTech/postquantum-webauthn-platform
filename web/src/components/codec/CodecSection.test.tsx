@@ -73,7 +73,7 @@ afterEach(() => {
 });
 
 describe('the Codec section', () => {
-  it('has its title, description and the Decode / Encode switch, Decode first (CX-T1, CX-M1, CX-M4)', () => {
+  it('has its title, description and the Decode / Encode switch, Decode first (CX-T1, CX-M1, CX-M4)', async () => {
     const section = renderCodec();
     expect(within(section).getByRole('heading', { level: 2, name: 'Codec' })).toBeInTheDocument();
     expect(section).toHaveTextContent('Decode or encode WebAuthn payloads to inspect their underlying data formats.');
@@ -83,7 +83,10 @@ describe('the Codec section', () => {
     expect(decodePanel()).toBeVisible();
     expect(encodePanel()).toHaveAttribute('role', 'tabpanel');
     expect(encodePanel()).not.toBeVisible();
-    // Each panel comes in as it is shown, and holds still under reduced motion (CX-M4).
+    // The panel the page opens with is simply there; one the person brings up
+    // comes in, and holds still under reduced motion (CX-M4).
+    expect(decodePanel().className).not.toContain('animate-[section-in');
+    await userEvent.click(within(modes).getByRole('tab', { name: 'Encode' }));
     expect(encodePanel().className).toContain('animate-[section-in');
     expect(encodePanel().className).toContain('motion-reduce:animate-none');
   });
