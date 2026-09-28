@@ -3312,6 +3312,28 @@ screenshots are in the session's scratchpad.
 - The Hash Algorithm travels beside the request (`__hash_algorithm`), not in the editor's text, as today.
 - Not run on GitHub yet (nothing is pushed): `ci-web.yml`'s e2e job now runs the new tests.
 
+**Phase 29B — tech-lead verification (2026-09-28):**
+- **Every one of the 14 commits passes on its own tree** (pytest 4857 → 4876 / 4, root vitest 1884 → 1951, web's vitest
+  434 → 466, typecheck) and leaves nothing behind. One author, bare subjects, no dependency changed; no golden changed
+  (one new scenario, `advanced-authentication-answers`).
+- **Built independently from a clean `npm ci`**: CSP scan 0 violations. **Playwright 145/145** from the clean copy.
+- **Reviewed:** `request-patch.js` is a three-way merge of the text as typed, the form's request before the change and
+  after it: what the change left alone stays as typed (keys the form does not hold included), what still reads as
+  before takes after's value, credentials, algorithms and hints merge member by member in the typed order, byte
+  values stay whole.
+- **By the tech lead's own scripts** (Playwright's Chromium, a CTAP2 virtual authenticator on USB, Flask from the clean
+  copy): `/beta` registered an advanced credential and asserted it with All credentials (the result panel: "Signature
+  counter 2 Higher than the last counter…", "Challenge server-session Issued by this server for this ceremony. First
+  use."); Allow Credentials offered the credential the current tab registered, and choosing it put one entry in
+  `allowCredentials` and authenticated; the current tab asserted the credential `/beta` registered (counter 3, the same
+  sentences). **Fix (a):** `rp.id` "localhost", `timeout: 0` and an excluded credential with transports typed into the
+  editor all survived a change of User Verification in the form. **Fix (b):** hashed loads of `#codec`, `#mds` and
+  `#advanced` went from no tab selected straight to theirs, never through Simple (every `aria-selected` change
+  recorded from the first mutation). No grey fill and no sideways scroll in the Authentication segment at 1440, 1024
+  and 375 px; no console, CSP or Trusted Types message.
+- **For the cutover:** `web/src/pages/_document.tsx` marks every page `noindex` (right for an unlisted `/beta`); at `/`
+  it would take the site out of search engines. The current page's favicon is not in the export.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
