@@ -660,6 +660,35 @@ def _(r: Recorder) -> None:
         r.post(client, "/api/decode", json={"payload": payload.hex()})
 
 
+@scenario("registration-detail-decodes")
+def _(r: Recorder) -> None:
+    """What a saved credential's details ask the decoder: each Simple registration's
+    attestation object as the browser keeps it (base64url), decoded as the detail's
+    registration view asks, and one authenticator data on its own (the fallback
+    when an attestation decode holds none). One registration per algorithm the
+    details must show, ML-DSA included, and one with an attestation certificate."""
+
+    client = r.client()
+    registrations = [
+        _simple_register(r, client, m.Authenticator("detail-es256", aaguid=AAGUID)),
+        _simple_register(r, client, m.Authenticator("detail-ed25519", key_type="ed25519")),
+        _simple_register(r, client, m.Authenticator("detail-mldsa65", key_type="ML-DSA-65")),
+        _simple_register(
+            r,
+            client,
+            m.Authenticator("detail-x5c", aaguid=AAGUID),
+            attestation="x5c",
+            extension_results={"credProps": {"rk": True}, "largeBlob": {"supported": True}, "minPinLength": 8},
+            attachment="cross-platform",
+            transports=["usb", "nfc"],
+        ),
+    ]
+    stored = [response.get_json()["storedCredential"] for response in registrations]
+    for record in stored:
+        r.post(client, "/api/decode", json={"payload": record["attestationObject"]})
+    r.post(client, "/api/decode", json={"payload": stored[0]["authenticatorData"]})
+
+
 # -- storage failures and RP fallbacks -------------------------------------------------
 
 
