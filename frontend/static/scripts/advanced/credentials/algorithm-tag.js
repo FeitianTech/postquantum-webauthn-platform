@@ -112,7 +112,11 @@ export function describeCredentialAlgorithmTagWith(credential, describeCoseAlgor
     }
 
     const description = describeCredentialAlgorithmWith(credential, describeCoseAlgorithm);
-    if (typeof description === 'string' && description.trim()) {
+    // The COSE labels' own word for an identifier they do not know, "Algorithm
+    // (-46)", names nothing: such an algorithm is tagged by its identifier, as the
+    // server names it ("COSE alg -46").
+    const unnamed = identifier !== null && description === `Algorithm (${identifier})`;
+    if (!unnamed && typeof description === 'string' && description.trim()) {
         const prefix = description.split('(')[0].trim();
         if (prefix) {
             const normalized = prefix.replace(/[^0-9a-z]+/gi, '');

@@ -82,8 +82,9 @@ describe('describeCredentialAlgorithmTagWith', () => {
     expect(describeCredentialAlgorithmTagWith({}, describeCoseAlgorithm)).toBe('Unknown');
   });
 
-  it('tags an unlisted algorithm with the word the COSE labels describe it by', () => {
-    expect(describeCredentialAlgorithmTagWith({ publicKeyAlgorithm: HSS_LMS }, describeCoseAlgorithm)).toBe('ALGORITHM');
+  it('tags an algorithm the COSE labels do not name by its identifier, not by their word "Algorithm"', () => {
+    expect(describeCredentialAlgorithmTagWith({ publicKeyAlgorithm: HSS_LMS }, describeCoseAlgorithm)).toBe('COSE-46');
+    expect(describeCredentialAlgorithmTagWith({ publicKeyAlgorithm: '-46' }, describeCoseAlgorithm)).toBe('COSE-46');
   });
 
   it('tags an unlisted algorithm with the name before its description\'s parenthesis', () => {
