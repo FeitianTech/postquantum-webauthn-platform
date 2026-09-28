@@ -216,9 +216,8 @@ describe('the settings a request says', () => {
     expect(read({ authenticatorSelection: { userVerification: '' } }).settings).toMatchObject({ residentKey: 'discouraged', userVerification: 'preferred' });
   });
 
-  it('read an attachment it does not name, or no selection, as Cross-Platform', () => {
+  it('read an attachment it does not name as Cross-Platform', () => {
     expect(read({ authenticatorSelection: { authenticatorAttachment: 'other' } }).settings.attachment).toBe('cross-platform');
-    expect(read({}, {}).settings.attachment).toBe('cross-platform');
   });
 
   it('exclude credentials when the list has any, and give the IDs no saved credential has as the fake ones', () => {
@@ -226,9 +225,13 @@ describe('the settings a request says', () => {
     const excludeCredentials = [{ id: { $hex: 'aa11' } }, { id: { $hex: 'bb22' } }, { id: { $hex: 'CAFE' } }, { id: {} }, 'text'];
     expect(read({ excludeCredentials }, context)).toMatchObject({ settings: { excludeCredentials: true }, fakeExcludeCredentials: ['CAFE'] });
     expect(read({ excludeCredentials: [] }, { storedCredentials: null })).toMatchObject({
-      settings: { excludeCredentials: false },
+      settings: { excludeCredentials: true },
       fakeExcludeCredentials: [],
     });
+  });
+
+  it('stop excluding credentials when the request has no list', () => {
+    expect(read({}).settings.excludeCredentials).toBe(false);
   });
 
   it('take the extensions it gives, and the prf evaluations it has', () => {
@@ -302,5 +305,58 @@ describe('the fields the form cannot change', () => {
       enforceCredProtect: false,
       prfSecond: false,
     });
+  });
+});
+
+describe('a request read back into the form', () => {
+  // Each setting the form holds, varied on its own and in a few combinations.
+  const variations = [
+    {},
+    { attachment: 'platform' },
+    { attachment: 'unspecified' },
+    { residentKey: 'required', userVerification: 'discouraged', attestation: 'none' },
+    { residentKey: 'preferred', userVerification: 'required', attestation: 'enterprise' },
+    { excludeCredentials: false },
+    { algorithms: [-7] },
+    { algorithms: [-49, -8, -39] },
+    { hints: ['hybrid'] },
+    { hints: ['client-device', 'security-key'] },
+    { credProps: false, minPinLength: true },
+    { credProtect: 'userVerificationRequired', enforceCredProtect: false },
+    { credProtect: 'userVerificationOptionalWithCredentialIDList' },
+    { largeBlob: 'preferred' },
+    { largeBlob: 'required', residentKey: 'required' },
+    { prf: true, prfFirst: 'aa'.repeat(32) },
+    { prf: true, prfFirst: 'aa'.repeat(32), prfSecond: 'bb'.repeat(32) },
+    { prf: true },
+    { prf: false, prfFirst: 'aa'.repeat(32), prfSecond: 'bb'.repeat(32) },
+    { attachment: 'unspecified', largeBlob: 'required', prf: true, prfFirst: 'cc'.repeat(32), hints: ['hybrid'], excludeCredentials: false },
+  ];
+  const fakes = ['cafe'];
+
+  it('builds the same request again, whatever the form held before', () => {
+    for (const variation of variations) {
+      for (const before of [settings(variation), settings({ prf: true, prfFirst: 'dd'.repeat(32), prfSecond: 'ee'.repeat(32), largeBlob: 'preferred', attachment: 'platform' }), settings({ excludeCredentials: false })]) {
+        const request = buildCreationOptions(settings(variation), { ...CONTEXT, fakeExcludeCredentials: fakes });
+        const read = readCreationOptions(request.publicKey, before, {});
+        const again = buildCreationOptions(read.settings, { ...CONTEXT, fakeExcludeCredentials: read.fakeExcludeCredentials });
+        expect(again, JSON.stringify(variation)).toEqual(request);
+      }
+    }
+  });
+
+  it('keeps the prf switch on while its first evaluation is still empty', () => {
+    const { settings: read } = readCreationOptions(build({ prf: true }), settings({ prf: true }));
+    expect(read.prf).toBe(true);
+  });
+
+  it('keeps excluding credentials when the request excludes none, as the form cannot tell', () => {
+    expect(readCreationOptions(build({ excludeCredentials: true }), settings()).settings.excludeCredentials).toBe(true);
+    expect(readCreationOptions(build({ excludeCredentials: false }), settings({ excludeCredentials: false })).settings.excludeCredentials).toBe(false);
+  });
+
+  it('reads no attachment as Unspecified', () => {
+    expect(readCreationOptions({ authenticatorSelection: { residentKey: 'preferred' } }, settings()).settings.attachment).toBe('unspecified');
+    expect(readCreationOptions({}, settings()).settings.attachment).toBe('unspecified');
   });
 });

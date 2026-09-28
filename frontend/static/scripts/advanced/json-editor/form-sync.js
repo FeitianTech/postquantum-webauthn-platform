@@ -67,6 +67,8 @@ export function updateRegistrationFormFromJson(publicKey) {
         enforceCredProtectCheckbox.checked = settings.enforceCredProtect;
         enforceCredProtectCheckbox.disabled = !settings.credProtect;
     }
+    setValue('large-blob-reg', settings.largeBlob);
+    setChecked('prf-reg', settings.prf);
     setValue('prf-eval-first-reg', settings.prfFirst);
     setValue('prf-eval-second-reg', settings.prfSecond);
 

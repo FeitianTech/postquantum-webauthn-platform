@@ -244,24 +244,28 @@ export function readCreationOptions(publicKey, previous, context = {}) {
         settings.algorithms = ALGORITHM_OPTIONS.filter(option => chosen.has(option.alg)).map(option => option.alg);
     }
 
+    // No attachment is what Unspecified builds; one the form does not name reads as Cross-Platform.
     const selection = publicKey.authenticatorSelection;
+    const attachmentValue = selection?.authenticatorAttachment;
+    settings.attachment = attachmentValue === undefined
+        ? 'unspecified'
+        : ['platform', 'cross-platform', 'unspecified'].includes(attachmentValue) ? attachmentValue : 'cross-platform';
     if (selection) {
-        const attachmentValue = selection.authenticatorAttachment;
-        settings.attachment = ['platform', 'cross-platform', 'unspecified'].includes(attachmentValue)
-            ? attachmentValue
-            : 'cross-platform';
         settings.residentKey = selection.requireResidentKey === true
             ? 'required'
             : selection.residentKey || 'discouraged';
         if (Object.prototype.hasOwnProperty.call(selection, 'userVerification')) {
             settings.userVerification = selection.userVerification || 'preferred';
         }
-    } else {
-        settings.attachment = 'cross-platform';
     }
 
+    // An empty list is what excluding builds with nothing to exclude: it says nothing of the switch.
     const excludeArray = Array.isArray(publicKey.excludeCredentials) ? publicKey.excludeCredentials : [];
-    settings.excludeCredentials = excludeArray.length > 0;
+    if (excludeArray.length > 0) {
+        settings.excludeCredentials = true;
+    } else if (!Array.isArray(publicKey.excludeCredentials)) {
+        settings.excludeCredentials = false;
+    }
     const storedIds = new Set(
         (context.storedCredentials || [])
             .map(cred => (cred.credentialIdHex || getCredentialIdHex(cred) || '').toLowerCase())
@@ -278,28 +282,22 @@ export function readCreationOptions(publicKey, previous, context = {}) {
         }
     });
 
-    const extensions = publicKey.extensions;
-    if (extensions) {
-        settings.credProps = !!extensions.credProps;
-        settings.minPinLength = !!extensions.minPinLength;
-        settings.credProtect = extensions.credentialProtectionPolicy || '';
-        settings.enforceCredProtect = settings.credProtect ? !!extensions.enforceCredentialProtectionPolicy : true;
+    const extensions = publicKey.extensions || {};
+    settings.credProps = !!extensions.credProps;
+    settings.minPinLength = !!extensions.minPinLength;
+    settings.credProtect = extensions.credentialProtectionPolicy || '';
+    settings.enforceCredProtect = settings.credProtect ? !!extensions.enforceCredentialProtectionPolicy : true;
+    settings.largeBlob = ['preferred', 'required'].includes(extensions.largeBlob?.support) ? extensions.largeBlob.support : '';
 
-        if (extensions.prf && extensions.prf.eval) {
-            const prfFirstValue = decodeJsonBinaryToHex(extensions.prf.eval.first);
-            if (prfFirstValue) {
-                settings.prfFirst = prfFirstValue;
-            }
-            const prfSecondValue = decodeJsonBinaryToHex(extensions.prf.eval.second);
-            if (prfSecondValue) {
-                settings.prfSecond = prfSecondValue;
-            }
-        }
+    // The evaluations the request asks for turn prf on; a request without them
+    // turns it off, unless it was on with no first evaluation yet (which builds none).
+    const prfFirstValue = decodeJsonBinaryToHex(extensions.prf?.eval?.first);
+    if (prfFirstValue) {
+        settings.prf = true;
+        settings.prfFirst = prfFirstValue;
+        settings.prfSecond = decodeJsonBinaryToHex(extensions.prf.eval.second);
     } else {
-        settings.credProps = false;
-        settings.minPinLength = false;
-        settings.credProtect = '';
-        settings.enforceCredProtect = true;
+        settings.prf = previous.prf && !previous.prfFirst;
     }
 
     settings.hints = Array.isArray(publicKey.hints) ? publicKey.hints : [];
