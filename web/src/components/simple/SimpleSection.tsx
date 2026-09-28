@@ -3,12 +3,11 @@ import { useCallback, useEffect } from 'react';
 import { CeremonyResult } from '@/components/ceremony/CeremonyResult';
 import { CredentialDetailDialog } from '@/components/credentials/CredentialDetailDialog';
 import { SavedCredentials } from '@/components/credentials/SavedCredentials';
-import { NAV_ID } from '@/components/shell/SectionPanel';
 import { Button, IconButton } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/Field';
 import { RefreshIcon, Spinner } from '@/components/ui/icons';
 import { segmentIds } from '@/components/ui/SegmentedControl';
-import { SECTIONS } from '@/lib/sections';
+import { NAV_ID, SECTIONS } from '@/lib/sections';
 import type { SectionRoute } from '@/lib/useSection';
 
 import { useSimpleCeremony } from './useSimpleCeremony';

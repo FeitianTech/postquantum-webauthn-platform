@@ -11,8 +11,8 @@ import { Button, IconButton } from '@/components/ui/Button';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { CodeBlock } from '@/components/ui/CodeBlock';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Select, TextArea, TextField } from '@/components/ui/Field';
-import { CloseIcon, CopyIcon, InfoIcon } from '@/components/ui/icons';
+import { FieldRow, Select, TextArea, TextField } from '@/components/ui/Field';
+import { CloseIcon, CopyIcon, InfoIcon, PlusIcon, RefreshIcon } from '@/components/ui/icons';
 import { InfoPopover } from '@/components/ui/InfoPopover';
 import { KeyValueGrid } from '@/components/ui/KeyValueGrid';
 import { MonoValue } from '@/components/ui/MonoValue';
@@ -21,7 +21,7 @@ import { SegmentedControl, segmentIds } from '@/components/ui/SegmentedControl';
 import { Switch, ToggleChip } from '@/components/ui/Switch';
 import { TBody, THead, Table, Td, Th, Tr } from '@/components/ui/Table';
 import { ToastProvider, useToast } from '@/components/ui/Toast';
-import { SECTION_OPTIONS } from '@/lib/sections';
+import { APP_TITLE, SECTION_OPTIONS } from '@/lib/sections';
 
 // Unlisted: every component in every state, for review (docs/UI_MIGRATION.md).
 // Hover, keyboard focus and pressed are shown still through data-demo, which
@@ -264,6 +264,39 @@ function Switches() {
         <Switch label="Disabled, off" checked={false} onCheckedChange={() => {}} disabled />
         <Switch label="Disabled, on" checked onCheckedChange={() => {}} disabled hint="Not changeable here" />
       </Grid>
+      <Example label="Field rows: a switch, a set of chips and a byte field, each with its label and ⓘ above, at one control height">
+        <Grid>
+          <Switch
+            label="Exclude Credentials"
+            checked={on}
+            onCheckedChange={setOn}
+            aside={<InfoPopover label="About Exclude Credentials" en="Whether the request lists credentials to exclude." zh="请求是否列出要排除的凭据。" />}
+          />
+          <FieldRow label="Hints" group aside={<InfoPopover label="About Hints" en="How the browser may ask for an authenticator." zh="浏览器如何请求认证器。" />}>
+            {(ids) => (
+              <div role="group" aria-labelledby={ids.labelId} className="flex min-h-10 flex-wrap items-center gap-2">
+                {['Client-device', 'Hybrid', 'Security-key'].map((name) => (
+                  <ToggleChip key={name} pressed={chips.includes(name)} onPressedChange={() => toggle(name)}>
+                    {name}
+                  </ToggleChip>
+                ))}
+              </div>
+            )}
+          </FieldRow>
+          <TextField
+            label="Challenge (hex)"
+            mono
+            defaultValue="00112233445566778899aabbccddeeff"
+            trailing={<IconButton size="sm" label="Generate new random challenge" icon={<RefreshIcon />} onClick={() => {}} />}
+          />
+          <TextField
+            label="Fake credential ID length"
+            type="number"
+            defaultValue="128"
+            trailing={<IconButton size="sm" label="Generate fake credential ID" icon={<PlusIcon />} onClick={() => {}} />}
+          />
+        </Grid>
+      </Example>
       <Example label="ToggleChip — a set chosen in any combination (algorithms, hints)">
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-2">
@@ -596,7 +629,7 @@ export default function DesignPage() {
   return (
     <ToastProvider>
       <Head>
-        <title>Design system · FIDO2/WebAuthn PQC Developer Tools</title>
+        <title>{`Design system · ${APP_TITLE}`}</title>
       </Head>
       <main className="mx-auto flex w-full max-w-page flex-col gap-12 px-4 pt-12 pb-20 sm:px-6 lg:px-8">
         <header>

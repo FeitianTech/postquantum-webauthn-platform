@@ -4,8 +4,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { segmentIds } from '@/components/ui/SegmentedControl';
-import { NAV_ID } from '@/components/shell/SectionPanel';
-import { SECTIONS } from '@/lib/sections';
+import { NAV_ID, SECTIONS } from '@/lib/sections';
 import { CLOSED_ROUTE, type SectionRoute } from '@/lib/useSection';
 
 import { EntryRouter } from './EntryRouter';

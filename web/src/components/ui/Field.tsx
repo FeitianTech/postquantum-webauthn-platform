@@ -20,18 +20,17 @@ type RowProps = {
   className?: string;
 };
 
+type FieldRowProps = RowProps & {
+  /** A set of controls (role="group", named by `labelId`) rather than one: the label names no control. */
+  group?: boolean;
+  children: (ids: RowIds) => ReactNode;
+};
+
 type RowIds = { controlId: string; labelId: string; describedBy: string | undefined };
 
 // One field row for every control: the label above, the control, then a hint or
 // an error. Heights and baselines therefore line up in a grid whatever the control.
-function FieldRow({
-  label,
-  hint,
-  error,
-  aside,
-  className,
-  children,
-}: RowProps & { children: (ids: RowIds) => ReactNode }) {
+function FieldRow({ label, hint, error, aside, className, group = false, children }: FieldRowProps) {
   const base = useId();
   const ids: RowIds = {
     controlId: `${base}-control`,
@@ -41,9 +40,15 @@ function FieldRow({
   return (
     <div className={cx('flex min-w-0 flex-col gap-1.5', className)}>
       <div className="flex min-h-5 items-center gap-1.5">
-        <label id={ids.labelId} htmlFor={ids.controlId} className="text-label font-medium text-ink">
-          {label}
-        </label>
+        {group ? (
+          <span id={ids.labelId} className="text-label font-medium text-ink">
+            {label}
+          </span>
+        ) : (
+          <label id={ids.labelId} htmlFor={ids.controlId} className="text-label font-medium text-ink">
+            {label}
+          </label>
+        )}
         {aside}
       </div>
       {children(ids)}

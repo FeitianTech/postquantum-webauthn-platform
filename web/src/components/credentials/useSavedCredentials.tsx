@@ -23,7 +23,7 @@ export const FLASH_MS = 2200;
 export type ListNotice = { tone: Exclude<ListTone, 'success'>; text: string };
 export type RowFlash = { key: string; variant: 'success' | 'failure' };
 
-type SavedCredentialsState = {
+export type SavedCredentialsState = {
   /** False until the browser's storage has been read (after hydration). */
   loaded: boolean;
   rows: CredentialRowView[];

@@ -6,8 +6,7 @@ import { Select, TextArea } from '@/components/ui/Field';
 import { Spinner } from '@/components/ui/icons';
 import { SegmentedControl, segmentIds } from '@/components/ui/SegmentedControl';
 import { Switch } from '@/components/ui/Switch';
-import { NAV_ID } from '@/components/shell/SectionPanel';
-import { SECTIONS } from '@/lib/sections';
+import { NAV_ID, SECTIONS } from '@/lib/sections';
 
 import { CodecOutput } from './CodecOutput';
 import { FailureNotice } from './FailureNotice';

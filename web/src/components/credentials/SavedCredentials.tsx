@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { type ReactNode, type RefObject, useEffect, useId, useRef, useState } from 'react';
 
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -8,7 +8,7 @@ import { cx } from '@/lib/cx';
 
 import { CredentialRow } from './CredentialRow';
 import { CLEAR_ALL_QUESTION, type CredentialRowView, LIST_TEXT, deleteQuestion } from './model';
-import { useSavedCredentials } from './useSavedCredentials';
+import { type SavedCredentialsState, useSavedCredentials } from './useSavedCredentials';
 
 const NOTICE_TONES = {
   error: 'border-danger-line bg-danger-tint text-danger',
@@ -18,22 +18,31 @@ const NOTICE_TONES = {
 
 type Question = { kind: 'one'; row: CredentialRowView; from: HTMLButtonElement } | { kind: 'all'; from: HTMLButtonElement };
 
-// Every saved credential, simple and advanced, as one card: the heading with how
-// many there are and Clear All on one line, then a row per credential separated
-// by hairlines, or the empty sentence. Deleting one, or all, asks first in a
-// dialog. The Simple tab shows it beside its form; the Advanced tab's drawer
-// shows the same list (Phase 29). `onOpen` opens a credential's details.
-export function SavedCredentials({ onOpen }: { onOpen: (key: string) => void }) {
+export type CredentialDeletion = {
+  saved: SavedCredentialsState;
+  listRef: RefObject<HTMLUListElement | null>;
+  /** Asks before deleting one credential, or all of them, from the button pressed. */
+  ask: (question: Question) => void;
+  /** The question's dialog, to render beside the list. */
+  dialog: ReactNode;
+};
+
+/**
+ * Deleting saved credentials, wherever the list is shown: the question asked
+ * first in a dialog, then where the focus goes once the deletion has ended (the
+ * button that asked may be gone with its row): that row's Delete if the row is
+ * still there (the server refused), else the next row's name, else the previous
+ * one's, else `fallback` (the list's heading).
+ */
+export function useCredentialDeletion(fallback: () => HTMLElement | null): CredentialDeletion {
   const saved = useSavedCredentials();
-  const headingId = useId();
   // The last question stays while its dialog closes, so its words do not change.
   const [question, setQuestion] = useState<Question | null>(null);
   const [asking, setAsking] = useState(false);
-  const count = saved.rows.length;
-  const headingRef = useRef<HTMLHeadingElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  // Where the focus goes once a deletion has ended: the row it left (by key and
-  // place), or the heading after Clear All.
+  const fallbackRef = useRef(fallback);
+  fallbackRef.current = fallback;
+  // The row a deletion left (by key and place), or none after Clear All.
   const [ended, setEnded] = useState<{ key: string | null; index: number } | null>(null);
 
   const ask = (next: Question) => {
@@ -52,9 +61,6 @@ export function SavedCredentials({ onOpen }: { onOpen: (key: string) => void }) 
     }
   };
 
-  // The button that asked may be gone with its row: the focus goes to that row's
-  // Delete if the row is still there (the server refused), else to the next
-  // row's name, else the previous one's, else the list's heading.
   useEffect(() => {
     if (!ended || saved.busy) return;
     setEnded(null);
@@ -63,36 +69,74 @@ export function SavedCredentials({ onOpen }: { onOpen: (key: string) => void }) 
     const target = kept
       ? kept.querySelector<HTMLElement>('[data-role="delete"]')
       : (rows[ended.index] ?? rows[ended.index - 1])?.querySelector<HTMLElement>('[data-role="name"]');
-    (target ?? headingRef.current)?.focus();
+    (target ?? fallbackRef.current())?.focus();
   }, [ended, saved.busy, saved.rows]);
 
+  const dialog = (
+    <ConfirmDialog
+      open={asking}
+      title={question?.kind === 'one' ? 'Delete credential' : 'Clear All'}
+      question={question?.kind === 'one' ? deleteQuestion(question.row.credential) : CLEAR_ALL_QUESTION}
+      confirmLabel={question?.kind === 'one' ? 'Delete' : 'Clear All'}
+      onConfirm={() => void answer()}
+      onCancel={() => setAsking(false)}
+      returnFocusTo={() => question?.from ?? null}
+    />
+  );
+  return { saved, listRef, ask, dialog };
+}
+
+/** How many there are, once the list has been read. */
+export function CredentialCount({ saved }: { saved: SavedCredentialsState }) {
+  return saved.loaded ? (
+    <Badge tone="neutral" data-count="">
+      {saved.rows.length}
+    </Badge>
+  ) : null;
+}
+
+/** What the list is doing (deleting, clearing), beside its heading. */
+export function CredentialProgress({ saved }: { saved: SavedCredentialsState }) {
+  return saved.progress ? (
+    <span role="status" className="flex items-center gap-1.5 text-label text-ink-muted" data-role="progress">
+      <Spinner />
+      {saved.progress}
+    </span>
+  ) : null;
+}
+
+export function ClearAllButton({ deletion, className }: { deletion: CredentialDeletion; className?: string }) {
+  const { saved, ask } = deletion;
   return (
-    <section aria-labelledby={headingId} className="min-w-0 rounded-lg border border-line bg-surface" data-saved-credentials="">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 pt-5 pb-4">
-        <h3 id={headingId} ref={headingRef} tabIndex={-1} className="text-title-sm font-semibold whitespace-nowrap text-ink outline-none">
-          Saved Credentials
-        </h3>
-        {saved.loaded ? (
-          <Badge tone="neutral" data-count="">
-            {count}
-          </Badge>
-        ) : null}
-        {saved.progress ? (
-          <span role="status" className="flex items-center gap-1.5 text-label text-ink-muted" data-role="progress">
-            <Spinner />
-            {saved.progress}
-          </span>
-        ) : null}
-        <Button
-          variant="danger"
-          size="sm"
-          className="ml-auto"
-          disabled={!count || saved.busy}
-          onClick={(event) => ask({ kind: 'all', from: event.currentTarget })}
-        >
-          Clear All
-        </Button>
-      </div>
+    <Button
+      variant="danger"
+      size="sm"
+      className={className}
+      disabled={!saved.rows.length || saved.busy}
+      onClick={(event) => ask({ kind: 'all', from: event.currentTarget })}
+    >
+      Clear All
+    </Button>
+  );
+}
+
+/**
+ * The list itself: the notice of the last deletion, then a row per credential
+ * separated by hairlines, or the empty sentence. `onOpen` opens a credential's
+ * details.
+ */
+export function SavedCredentialList({
+  deletion,
+  labelledBy,
+  onOpen,
+}: {
+  deletion: CredentialDeletion;
+  labelledBy: string;
+  onOpen: (key: string) => void;
+}) {
+  const { saved, listRef, ask } = deletion;
+  return (
+    <>
       {saved.notice ? (
         <p
           role={saved.notice.tone === 'error' ? 'alert' : 'status'}
@@ -102,8 +146,8 @@ export function SavedCredentials({ onOpen }: { onOpen: (key: string) => void }) 
           {saved.notice.text}
         </p>
       ) : null}
-      {count ? (
-        <ul ref={listRef} aria-labelledby={headingId} className="border-t border-line">
+      {saved.rows.length ? (
+        <ul ref={listRef} aria-labelledby={labelledBy} className="border-t border-line">
           {saved.rows.map((row) => (
             <CredentialRow
               key={row.key}
@@ -120,15 +164,31 @@ export function SavedCredentials({ onOpen }: { onOpen: (key: string) => void }) 
           {LIST_TEXT.empty}
         </p>
       )}
-      <ConfirmDialog
-        open={asking}
-        title={question?.kind === 'one' ? 'Delete credential' : 'Clear All'}
-        question={question?.kind === 'one' ? deleteQuestion(question.row.credential) : CLEAR_ALL_QUESTION}
-        confirmLabel={question?.kind === 'one' ? 'Delete' : 'Clear All'}
-        onConfirm={() => void answer()}
-        onCancel={() => setAsking(false)}
-        returnFocusTo={() => question?.from ?? null}
-      />
+    </>
+  );
+}
+
+// Every saved credential, simple and advanced, as one card: the heading with how
+// many there are and Clear All on one line, then the list. Deleting one, or all,
+// asks first in a dialog. The Simple tab shows it beside its form; the Advanced
+// tab's drawer shows the same list. `onOpen` opens a credential's details.
+export function SavedCredentials({ onOpen }: { onOpen: (key: string) => void }) {
+  const headingId = useId();
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const deletion = useCredentialDeletion(() => headingRef.current);
+
+  return (
+    <section aria-labelledby={headingId} className="min-w-0 rounded-lg border border-line bg-surface" data-saved-credentials="">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 pt-5 pb-4">
+        <h3 id={headingId} ref={headingRef} tabIndex={-1} className="text-title-sm font-semibold whitespace-nowrap text-ink outline-none">
+          Saved Credentials
+        </h3>
+        <CredentialCount saved={deletion.saved} />
+        <CredentialProgress saved={deletion.saved} />
+        <ClearAllButton deletion={deletion} className="ml-auto" />
+      </div>
+      <SavedCredentialList deletion={deletion} labelledBy={headingId} onOpen={onOpen} />
+      {deletion.dialog}
     </section>
   );
 }

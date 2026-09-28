@@ -5,9 +5,8 @@ import { GitHubIcon, MenuIcon } from '@/components/ui/icons';
 import { Sheet } from '@/components/ui/Overlay';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { cx } from '@/lib/cx';
-import { SECTIONS, SECTION_OPTIONS, type SectionId } from '@/lib/sections';
+import { APP_TITLE, NAV_ID, SECTION_OPTIONS, SECTIONS, type SectionId } from '@/lib/sections';
 
-import { NAV_ID } from './SectionPanel';
 
 export const GITHUB_URL = 'https://github.com/FeitianTech/postquantum-webauthn-platform';
 export const ANALYZE_PANEL_ID = 'analyze-browser-panel';
@@ -61,9 +60,7 @@ export function Header({ section, onSection, onAnalyze, analyzing, analyzeButton
       className="sticky top-0 z-40 border-b border-line bg-white/85 backdrop-blur-xl backdrop-saturate-150"
     >
       <div className="mx-auto flex min-h-15 w-full max-w-page flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5 sm:px-6 lg:px-8">
-        <h1 className="min-w-0 flex-1 text-title-sm font-semibold text-ink wide:flex-none">
-          FIDO2/WebAuthn PQC Developer Tools
-        </h1>
+        <h1 className="min-w-0 flex-1 text-title-sm font-semibold text-ink wide:flex-none">{APP_TITLE}</h1>
         <nav
           aria-label="Section navigation"
           className="order-last hidden w-full min-w-0 overflow-x-auto menu:flex wide:order-none wide:w-auto wide:flex-1 wide:justify-center"

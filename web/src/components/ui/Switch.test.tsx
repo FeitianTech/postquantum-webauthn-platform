@@ -43,6 +43,14 @@ describe('Switch', () => {
   });
 });
 
+describe('Switch beside something', () => {
+  it('shows what sits beside its label, such as an info popup', () => {
+    render(<Switch label="credProps" checked onCheckedChange={() => {}} aside={<button type="button">About credProps</button>} />);
+    expect(screen.getByRole('switch', { name: 'credProps' })).toBeChecked();
+    expect(screen.getByRole('button', { name: 'About credProps' })).toBeInTheDocument();
+  });
+});
+
 describe('ToggleChip', () => {
   function Chip() {
     const [pressed, setPressed] = useState(false);

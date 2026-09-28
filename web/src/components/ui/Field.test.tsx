@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { Select, TextArea, TextField } from './Field';
+import { FieldRow, Select, TextArea, TextField } from './Field';
 
 describe('TextField', () => {
   it('is labelled, described by its hint, and typed into', async () => {
@@ -80,5 +80,22 @@ describe('Select', () => {
       </Select>,
     );
     expect(screen.getByLabelText('Hints')).toHaveAttribute('aria-invalid', 'true');
+  });
+});
+
+describe('FieldRow for a set of controls', () => {
+  it('names a group with its label, which names no single control', () => {
+    render(
+      <FieldRow label="Hints" group aside={<span>ⓘ</span>}>
+        {(ids) => (
+          <div role="group" aria-labelledby={ids.labelId}>
+            <button type="button">Hybrid</button>
+          </div>
+        )}
+      </FieldRow>,
+    );
+    expect(screen.getByRole('group', { name: 'Hints' })).toContainElement(screen.getByRole('button', { name: 'Hybrid' }));
+    expect(document.querySelector('label')).toBeNull();
+    expect(screen.getByText('ⓘ')).toBeInTheDocument();
   });
 });

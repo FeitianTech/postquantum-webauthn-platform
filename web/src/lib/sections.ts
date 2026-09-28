@@ -26,6 +26,12 @@ export const SECTIONS = [
 
 export type SectionId = (typeof SECTIONS)[number]['id'];
 
+/** The top bar's name for its sections' tabs and panels (segmentIds). */
+export const NAV_ID = 'nav';
+
+/** The page's title, which the Advanced tab's requests also name their relying party with. */
+export const APP_TITLE = 'FIDO2/WebAuthn PQC Developer Tools';
+
 export const DEFAULT_SECTION: SectionId = 'simple';
 
 /**

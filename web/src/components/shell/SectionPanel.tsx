@@ -1,8 +1,6 @@
 import { buttonClassName } from '@/components/ui/Button';
 import { segmentIds } from '@/components/ui/SegmentedControl';
-import { SECTIONS, type SectionId } from '@/lib/sections';
-
-export const NAV_ID = 'nav';
+import { NAV_ID, SECTIONS, type SectionId } from '@/lib/sections';
 
 // A section that has not moved to the new interface yet: its title, its
 // description, and the way to the current interface, where it works today.

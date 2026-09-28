@@ -47,18 +47,21 @@ type SwitchProps = SwitchControlProps & {
   /** Said beside the switch, such as what "on" does. */
   description?: ReactNode;
   hint?: ReactNode;
+  /** Something beside the label, such as an InfoPopover. */
+  aside?: ReactNode;
 };
 
 // A switch in a field row: the label above, like every other control, and the
 // switch in a control-height row so a grid of fields lines up.
-export function Switch({ label, description, hint, className, ...props }: SwitchProps) {
+export function Switch({ label, description, hint, aside, className, ...props }: SwitchProps) {
   const base = useId();
   return (
     <div className={cx('flex min-w-0 flex-col gap-1.5', className)}>
-      <div className="flex min-h-5 items-center">
+      <div className="flex min-h-5 items-center gap-1.5">
         <span id={`${base}-label`} className="text-label font-medium text-ink">
           {label}
         </span>
+        {aside}
       </div>
       <div className="flex h-10 items-center gap-3">
         <SwitchControl

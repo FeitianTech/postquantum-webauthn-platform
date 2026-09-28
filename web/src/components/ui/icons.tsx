@@ -33,6 +33,14 @@ export function CloseIcon(props: IconProps) {
   );
 }
 
+export function PlusIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M8 3.5v9M3.5 8h9" />
+    </Icon>
+  );
+}
+
 export function CheckIcon(props: IconProps) {
   return (
     <Icon {...props}>
