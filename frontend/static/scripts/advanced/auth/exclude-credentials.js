@@ -1,17 +1,24 @@
 import { state } from '../../shared/state.js';
 import { generateRandomHex, convertFormat, getCurrentBinaryFormat } from '../../shared/utils/binary.js';
 import { showStatus } from '../../shared/ui/status.js';
+import {
+    FAKE_CREDENTIAL_TEXT,
+    fakeCredentialLength,
+    fakeCredentialSize,
+    normaliseFakeCredentialList,
+    withoutFakeCredential,
+} from './fake-credentials.js';
 
 const LIST_CONFIG = {
     exclude: {
         stateKey: 'generatedExcludeCredentials',
         containerId: 'fake-cred-generated-list',
-        emptyMessage: 'No fake credential IDs added.',
+        emptyMessage: FAKE_CREDENTIAL_TEXT.noExclude,
     },
     allow: {
         stateKey: 'generatedAllowCredentials',
         containerId: 'fake-cred-auth-generated-list',
-        emptyMessage: 'No fake allow credential IDs added.',
+        emptyMessage: FAKE_CREDENTIAL_TEXT.noAllow,
     },
 };
 
@@ -26,17 +33,6 @@ function ensureList(type = 'exclude') {
         state[config.stateKey] = [];
     }
     return state[config.stateKey];
-}
-
-function normaliseHex(value) {
-    if (typeof value !== 'string') {
-        return '';
-    }
-    const trimmed = value.trim();
-    if (!trimmed) {
-        return '';
-    }
-    return trimmed.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
 }
 
 function getListContainer(type = 'exclude') {
@@ -92,7 +88,7 @@ function renderFakeCredentialList(type = 'exclude') {
 
         const meta = document.createElement('div');
         meta.className = 'fake-credential-meta';
-        meta.textContent = `${Math.floor(hex.length / 2)} bytes`;
+        meta.textContent = fakeCredentialSize(hex);
         footer.appendChild(meta);
 
         const actions = document.createElement('div');
@@ -120,15 +116,7 @@ function getFakeCredentials(type = 'exclude') {
 
 function setFakeCredentials(type = 'exclude', hexList = []) {
     const list = ensureList(type);
-    list.splice(0, list.length);
-    if (Array.isArray(hexList)) {
-        hexList.forEach(value => {
-            const normalised = normaliseHex(value);
-            if (normalised) {
-                list.push(normalised);
-            }
-        });
-    }
+    list.splice(0, list.length, ...normaliseFakeCredentialList(hexList));
     renderFakeCredentialList(type);
 }
 
@@ -137,18 +125,16 @@ function clearFakeCredentials(type = 'exclude') {
 }
 
 function createFakeCredential(type = 'exclude', length) {
-    const parsed = Number.parseInt(length, 10);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-        showStatus('advanced', 'Please enter a valid fake credential ID length (at least 1 byte).', 'error');
+    const { bytes, error, notice } = fakeCredentialLength(length);
+    if (error) {
+        showStatus('advanced', error, 'error');
         return null;
     }
-
-    const safeLength = Math.min(parsed, 4096);
-    if (parsed !== safeLength) {
-        showStatus('advanced', 'Credential IDs are limited to 4096 bytes. Generated value truncated to maximum length.', 'info');
+    if (notice) {
+        showStatus('advanced', notice, 'info');
     }
 
-    const hexValue = generateRandomHex(safeLength);
+    const hexValue = generateRandomHex(bytes);
     const list = ensureList(type);
     list.push(hexValue);
     renderFakeCredentialList(type);
@@ -157,11 +143,11 @@ function createFakeCredential(type = 'exclude', length) {
 
 function removeFakeCredential(type = 'exclude', index) {
     const list = ensureList(type);
-    const parsed = Number.parseInt(index, 10);
-    if (!Number.isInteger(parsed) || parsed < 0 || parsed >= list.length) {
+    const remaining = withoutFakeCredential(list, index);
+    if (!remaining) {
         return false;
     }
-    list.splice(parsed, 1);
+    list.splice(0, list.length, ...remaining);
     renderFakeCredentialList(type);
     return true;
 }

@@ -1,25 +1,12 @@
-const ALGORITHM_CHECKBOX_CONFIG = [
-    { id: 'param-mldsa44', alg: -48, label: 'ML-DSA-44', requiredForFormSync: false },
-    { id: 'param-mldsa65', alg: -49, label: 'ML-DSA-65', requiredForFormSync: false },
-    { id: 'param-mldsa87', alg: -50, label: 'ML-DSA-87', requiredForFormSync: false },
-    { id: 'param-eddsa', alg: -8, label: 'EdDSA', requiredForFormSync: true },
-    { id: 'param-es256', alg: -7, label: 'ES256', requiredForFormSync: true },
-    { id: 'param-rs256', alg: -257, label: 'RS256', requiredForFormSync: true },
-    { id: 'param-es384', alg: -35, label: 'ES384', requiredForFormSync: true },
-    { id: 'param-es512', alg: -36, label: 'ES512', requiredForFormSync: true },
-    { id: 'param-rs384', alg: -258, label: 'RS384', requiredForFormSync: true },
-    { id: 'param-rs512', alg: -259, label: 'RS512', requiredForFormSync: true },
-    { id: 'param-rs1', alg: -65535, label: 'RS1', requiredForFormSync: true },
-    { id: 'param-ed25519', alg: -19, label: 'Ed25519', requiredForFormSync: true },
-    { id: 'param-es256k', alg: -47, label: 'ES256K', requiredForFormSync: true },
-    { id: 'param-esp256', alg: -9, label: 'ESP256', requiredForFormSync: true },
-    { id: 'param-esp384', alg: -51, label: 'ESP384', requiredForFormSync: true },
-    { id: 'param-esp512', alg: -52, label: 'ESP512', requiredForFormSync: true },
-    { id: 'param-ps256', alg: -37, label: 'PS256', requiredForFormSync: true },
-    { id: 'param-ps384', alg: -38, label: 'PS384', requiredForFormSync: true },
-    { id: 'param-ps512', alg: -39, label: 'PS512', requiredForFormSync: true },
-    { id: 'param-ed448', alg: -53, label: 'Ed448', requiredForFormSync: true },
-];
+import { ALGORITHM_OPTIONS } from './algorithm-options.js';
+
+// The form's checkboxes, param-<key>: the ML-DSA ones may be absent from a page.
+const ALGORITHM_CHECKBOX_CONFIG = ALGORITHM_OPTIONS.map(({ key, alg, label, pqc }) => ({
+    id: `param-${key}`,
+    alg,
+    label,
+    requiredForFormSync: !pqc,
+}));
 
 const ALGORITHM_BY_ID = new Map(ALGORITHM_CHECKBOX_CONFIG.map(entry => [entry.alg, entry]));
 

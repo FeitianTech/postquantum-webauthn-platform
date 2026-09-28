@@ -3,11 +3,9 @@ import {
     convertFormat,
     generateRandomHex,
     getCurrentBinaryFormat,
-    base64ToHex,
-    base64UrlToHexFixed,
-    jsToHex
 } from '../../shared/utils/binary.js';
 import { getCredentialIdHex } from '../credentials/utils.js';
+import { hexInputIsValid } from './hex-input.js';
 import { showStatus } from '../../shared/ui/status.js';
 import { updateJsonEditor } from '../editor/index.js';
 import { bindActions, callWith } from '../../shared/ui/actions.js';
@@ -111,50 +109,15 @@ export function validateHexInput(inputId, errorId, minBytes = 0) {
     if (!input || !error) {
         return true;
     }
-    const value = input.value.trim();
-    const format = getCurrentBinaryFormat();
 
-    if (!value) {
+    if (hexInputIsValid(input.value, minBytes)) {
         error.style.display = 'none';
         input.classList.remove('error');
         return true;
     }
-
-    let isValid = false;
-    let hexValue = '';
-
-    try {
-        switch (format) {
-            case 'hex':
-                isValid = /^[0-9a-fA-F]+$/.test(value) && value.length >= minBytes * 2;
-                hexValue = value;
-                break;
-            case 'b64':
-                hexValue = base64ToHex(value);
-                isValid = hexValue.length >= minBytes * 2;
-                break;
-            case 'b64u':
-                hexValue = base64UrlToHexFixed(value);
-                isValid = hexValue.length >= minBytes * 2;
-                break;
-            case 'js':
-                hexValue = jsToHex(value);
-                isValid = hexValue.length >= minBytes * 2;
-                break;
-        }
-    } catch (e) {
-        isValid = false;
-    }
-
-    if (!isValid) {
-        error.style.display = 'block';
-        input.classList.add('error');
-        return false;
-    } else {
-        error.style.display = 'none';
-        input.classList.remove('error');
-        return true;
-    }
+    error.style.display = 'block';
+    input.classList.add('error');
+    return false;
 }
 
 export function randomizeUserId() {
