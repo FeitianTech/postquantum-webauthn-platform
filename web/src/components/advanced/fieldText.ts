@@ -1,5 +1,5 @@
-// The Advanced forms' own words, as the current templates give them
-// (frontend/templates/advanced/tab/registration/*.html and authentication/*.html):
+// The Advanced forms' own words, as the current UI's templates gave them until
+// Phase 30 (advanced/tab/registration/*.html and authentication/*.html):
 // each field's label, placeholder, options, the title of the button in it, its
 // error, and its info popup in English and 中文 (a paragraph each). The labels
 // of the byte fields carry " (hex)", as the current form writes them once the

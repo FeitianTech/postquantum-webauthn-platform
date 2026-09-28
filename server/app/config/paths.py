@@ -26,7 +26,6 @@ def _discover_project_root(package_root: Path) -> Path:
 _PROJECT_ROOT = _discover_project_root(_PACKAGE_ROOT)
 _FRONTEND_ROOT = _PROJECT_ROOT / "frontend"
 _FRONTEND_STATIC_ROOT = _FRONTEND_ROOT / "static"
-_FRONTEND_TEMPLATE_ROOT = _FRONTEND_ROOT / "templates"
 _SERVER_RUNTIME_ROOT = Path(
     os.environ.get(
         "FIDO_SERVER_RUNTIME_ROOT",

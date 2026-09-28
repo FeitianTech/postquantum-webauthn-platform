@@ -1,27 +1,19 @@
-"""Nothing in the page needs a policy that allows inline code or inline style.
+"""Nothing in the scripts needs a policy that allows inline code or inline style.
 
 A Content-Security-Policy whose ``script-src`` and ``style-src`` carry no
 ``'unsafe-inline'`` refuses what these checks keep out of the source:
 
-- an inline event handler in a template (``onclick=``, ``onmouseenter=``, ...):
-  a control names what it does with ``data-action``, and the module that owns
-  the behaviour binds it (``shared/ui/actions.js``);
-- a ``style`` attribute in a template: its rule belongs in a stylesheet under
-  ``frontend/static/styles``;
-- a ``<script>`` in a template that the browser would run inline: a script is a
-  file (``src=``), and data for the scripts is a
-  ``<script type="application/json">`` block that ``shared/utils/page-data.js``
-  reads;
 - a script that sets a ``style`` attribute (``setAttribute('style', ...)``):
-  views style through CSSOM (``element.style``), which the policy allows, and
-  ``shared/ui/dom.js`` ``el()`` applies its ``style`` option that way;
+  code styles through CSSOM (``element.style``), which the policy allows;
 - markup in a script that carries an ``on...=`` handler or a ``style=``
   attribute (a tag written in a string, as the MDS raw-data popup once was).
 
 And scripts put nothing on ``window`` (or ``globalThis`` / ``self``): no
-assignment, no ``delete``, no ``Object.assign`` / ``defineProperty`` onto it.
-Inline handlers were what needed functions there; a module imports what it
-uses, and ``main.js`` hands one module another's functions when it must.
+assignment, no ``delete``, no ``Object.assign`` / ``defineProperty`` onto it; a
+module imports what it uses. The pages themselves are the new UI's static export,
+which ``web/scripts/check-export-csp.mjs`` scans for inline scripts, style
+elements and attributes and ``on*`` handlers (the current UI's templates, which
+these tests also read, went in Phase 30).
 
 Each ``ALLOWED_*`` dict names what still does, each with the reason. It may only
 shrink: an entry that no longer matches fails the test, so a converted file must
@@ -30,12 +22,10 @@ also leave the list.
 from __future__ import annotations
 
 import re
-from html.parser import HTMLParser
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[3]
 _SCRIPTS = _ROOT / "frontend" / "static" / "scripts"
-_TEMPLATES = _ROOT / "frontend" / "templates"
 
 _STYLE_ATTRIBUTE = re.compile(r"""\bsetAttribute\s*\(\s*(['"`])style\1""")
 # A tag written out in a string: ``<name``, attributes, then an inline handler or style.
@@ -49,9 +39,6 @@ ALLOWED_STYLE_ATTRIBUTES: dict[str, str] = {}
 # (path under frontend/static/scripts, attribute) -> reason.
 ALLOWED_MARKUP_ATTRIBUTES: dict[tuple[str, str], str] = {}
 
-# (path under frontend/templates, attribute) -> reason.
-ALLOWED_TEMPLATE_ATTRIBUTES: dict[tuple[str, str], str] = {}
-
 # path under frontend/static/scripts -> reason.
 ALLOWED_GLOBAL_WRITES: dict[str, str] = {}
 
@@ -63,96 +50,6 @@ _GLOBAL_WRITE = re.compile(
     rf"|\bdelete\s+{_GLOBAL}\s*[.\[]"
     rf"|\bObject\s*\.\s*(?:assign|defineProperty|defineProperties)\s*\(\s*{_GLOBAL}\b"
 )
-
-
-class _Tags(HTMLParser):
-    """Every start tag of a template: (line, tag, attributes)."""
-
-    def __init__(self) -> None:
-        super().__init__(convert_charrefs=True)
-        self.tags: list[tuple[int, str, list[tuple[str, str | None]]]] = []
-
-    def handle_starttag(self, tag, attrs):
-        self.tags.append((self.getpos()[0], tag, attrs))
-
-    handle_startendtag = handle_starttag
-
-
-def template_tags(text: str) -> list[tuple[int, str, list[tuple[str, str | None]]]]:
-    parser = _Tags()
-    parser.feed(text)
-    parser.close()
-    return parser.tags
-
-
-def _runs_inline(tag: str, attrs: list[tuple[str, str | None]]) -> bool:
-    if tag != "script":
-        return False
-    values = dict(attrs)
-    return "src" not in values and (values.get("type") or "").strip().lower() != "application/json"
-
-
-def find_inline_attributes(text: str) -> list[tuple[int, str]]:
-    """(line, attribute) for each attribute of ``text`` a strict policy refuses.
-
-    An inline script is reported as its ``<script>`` tag.
-    """
-
-    found = []
-    for line, tag, attrs in template_tags(text):
-        if _runs_inline(tag, attrs):
-            found.append((line, "<script>"))
-        found.extend((line, name) for name, _value in attrs if name == "style" or name.startswith("on"))
-    return found
-
-
-def _template_attributes() -> list[tuple[str, int, str]]:
-    return [
-        (path.relative_to(_TEMPLATES).as_posix(), line, name)
-        for path in sorted(_TEMPLATES.rglob("*.html"))
-        for line, name in find_inline_attributes(path.read_text(encoding="utf-8"))
-    ]
-
-
-def test_templates_carry_no_inline_attributes():
-    found = [
-        f"{path}:{line} {name}="
-        for path, line, name in _template_attributes()
-        if (path, name) not in ALLOWED_TEMPLATE_ATTRIBUTES
-    ]
-
-    assert found == [], (
-        "name the action with data-action, move a style into a stylesheet, and give "
-        "scripts data in a <script type=\"application/json\"> block"
-    )
-
-
-def test_allowed_template_attributes_still_exist():
-    current = {(path, name) for path, _line, name in _template_attributes()}
-
-    stale = sorted(f"{path} {name}=" for path, name in ALLOWED_TEMPLATE_ATTRIBUTES if (path, name) not in current)
-
-    assert stale == [], "no longer there: remove these entries from ALLOWED_TEMPLATE_ATTRIBUTES"
-
-
-def test_the_template_reader_finds_inline_attributes():
-    source = "\n".join([
-        '<p style="color: red">x</p>',
-        '<p class="muted" data-style="x">{{ value }}</p>',
-        '{% include \'part.html\' %}',
-        '<input readonly STYLE="a: b">',
-        '<!-- <p style="in a comment"> -->',
-        '<button type="button" onclick="go()" data-action="go">Go</button>',
-        '<div class="info-icon" onMouseEnter="show(this)" data-onclick="x"></div>',
-        '<script>window.x = 1;</script>',
-        '<script type="module" src="/assets/x/scripts/main.js"></script>',
-        '<script type="application/json" id="initial-mds-info">{{ info | tojson }}</script>',
-        '<script type="module">import "./x.js";</script>',
-    ])
-
-    assert find_inline_attributes(source) == [
-        (1, "style"), (4, "style"), (6, "onclick"), (7, "onmouseenter"), (8, "<script>"), (11, "<script>"),
-    ]
 
 
 def _code_lines(text: str):
