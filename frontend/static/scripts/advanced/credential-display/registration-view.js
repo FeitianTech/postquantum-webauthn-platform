@@ -180,7 +180,14 @@ export function describeClientData(credentialJson, fallbackClientData, fallbackP
         return JSON.stringify(parsedClientData, null, 2);
     }
     if (clientDataBase64) {
-        return base64UrlToUtf8String(clientDataBase64) || clientDataBase64;
+        // Text that is not base64url of anything is shown as it is stored.
+        let text = null;
+        try {
+            text = base64UrlToUtf8String(clientDataBase64);
+        } catch (error) {
+            text = null;
+        }
+        return text || clientDataBase64;
     }
     if (fallbackClientDataString) {
         return fallbackClientDataString;

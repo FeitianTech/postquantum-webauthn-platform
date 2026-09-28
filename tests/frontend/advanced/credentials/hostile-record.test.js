@@ -380,3 +380,17 @@ describe('a record whose stored AAGUID no spelling reads', () => {
     expect(root.textContent).toContain('AAGUID');
   });
 });
+
+describe('a record whose client data is not base64url', () => {
+  beforeEach(() => {
+    buildDom();
+    globalThis.fetch = vi.fn(async () => decodeResponse());
+  });
+
+  it('still opens its details, the client data as it is stored', async () => {
+    const root = await renderDetail({ type: 'simple', userName: 'odd', credentialId: 'AQID', clientDataJSON: 'abcde' });
+
+    expect(root.textContent).toContain('Parsed clientDataJSON');
+    expect(root.textContent).toContain('abcde');
+  });
+});
