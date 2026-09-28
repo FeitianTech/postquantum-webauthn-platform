@@ -105,6 +105,17 @@ export function CredentialRow({ row, busy, flash, onOpen, onDelete }: Credential
               <MonoValue value={row.aaguid} label="AAGUID" />
             </dd>
           </div>
+        ) : row.aaguidUnreadable ? (
+          // Kept as stored, and said to be unreadable, rather than left out.
+          <div className="min-w-0" data-unreadable="aaguid">
+            <dt className="flex items-center gap-2 text-caption text-ink-muted">
+              AAGUID
+              <Badge tone="warning">Unreadable</Badge>
+            </dt>
+            <dd className="mt-0.5 min-w-0">
+              <MonoValue value={row.aaguidUnreadable} label="stored AAGUID" />
+            </dd>
+          </div>
         ) : null}
       </dl>
       {mdsMessage ? (

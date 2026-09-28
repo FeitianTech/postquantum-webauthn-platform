@@ -110,6 +110,17 @@ describe('the saved credentials', () => {
     expect(row.querySelector('code')).toHaveTextContent('AQID');
   });
 
+  it('lists a credential whose stored AAGUID no spelling reads with the others, that AAGUID as stored and marked', async () => {
+    renderList([ES256, { type: 'simple', userName: 'unreadable', credentialId: 'AQID', aaguid: 'abcde' }, MLDSA]);
+    await waitFor(() => expect(rows()).toHaveLength(3));
+    const row = rowNamed('unreadable');
+    const stored = row.querySelector('[data-unreadable="aaguid"]') as HTMLElement;
+    expect(stored).toHaveTextContent('AAGUIDUnreadable');
+    expect(stored.querySelector('code')).toHaveTextContent('abcde');
+    expect(within(row).getByRole('button', { name: 'Copy stored AAGUID' })).toBeInTheDocument();
+    expect(within(row).queryByRole('button', { name: 'FIDO MDS' })).toBeNull();
+  });
+
   it('CRED-C7: opens a credential\'s details from its name or its row, and not from its controls', async () => {
     const { onOpen } = renderList([ES256]);
     const row = await waitFor(() => rowNamed('user@example.com'));

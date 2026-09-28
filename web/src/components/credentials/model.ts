@@ -53,6 +53,8 @@ export type CredentialCardView = {
   credentialIdHex: string;
   credentialId: string;
   aaguid: string;
+  /** A stored AAGUID no spelling reads, as stored ('' when there is none). */
+  aaguidUnreadable: string;
 };
 
 export type CredentialRowView = CredentialCardView & { key: string; credential: SavedCredential };
