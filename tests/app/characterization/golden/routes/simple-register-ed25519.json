@@ -228,7 +228,7 @@
     ],
     [
      "Content-Length",
-     "11844"
+     "11832"
     ],
     [
      "X-Content-Type-Options",
@@ -288,10 +288,10 @@
      }
     }
    ],
-   "bodySha256": "daedb0bcf5b0e4efd99e76fc6e1c42c2919883e0fcfed6cfcc9bcbe4d94b88a7",
+   "bodySha256": "364ea651f6af11f81d089a66aa38edeba814721361f95e81c09f18a7266cf3ef",
    "body": {
     "actualResidentKey": false,
-    "algo": "Other (Classical)",
+    "algo": "EdDSA",
     "algorithmsUsed": [
      -8
     ],

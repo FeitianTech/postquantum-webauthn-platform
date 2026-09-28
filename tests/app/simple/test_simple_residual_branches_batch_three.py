@@ -123,7 +123,8 @@ def test_serialize_credential_for_session_accepts_hex_aaguid_alias():
         (-50, "ML-DSA-87 (PQC)"),
         (-49, "ML-DSA-65 (PQC)"),
         (-48, "ML-DSA-44 (PQC)"),
-        (-123, "Other (Classical)"),
+        (-8, "EdDSA"),
+        (-123, "COSE alg -123"),
     ],
 )
 def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monkeypatch, algorithm: int, expected_name: str, metadata_module, device_logs_module, attestation_module, storage_module, config_module):

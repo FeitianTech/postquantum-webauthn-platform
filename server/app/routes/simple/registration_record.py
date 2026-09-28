@@ -18,17 +18,8 @@ from fido2 import cbor
 
 from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials
-from ...webauthn import attestation
-
-# What the registration answer calls the credential's algorithm. Compared with
-# ``==`` rather than looked up: a crafted COSE key's alg need not be hashable.
-_ALGORITHM_NAMES = (
-    (-50, "ML-DSA-87 (PQC)"),
-    (-49, "ML-DSA-65 (PQC)"),
-    (-48, "ML-DSA-44 (PQC)"),
-    (-7, "ES256 (ECDSA)"),
-    (-257, "RS256 (RSA)"),
-)
+from ...webauthn import attestation, pqc
+from ..advanced import algorithms
 
 
 def _attestation_summary(ctx: Mapping[str, Any]) -> tuple[dict[str, Any], Any, list[str]]:
@@ -184,7 +175,10 @@ def populate_authenticator_data_context(ctx: dict[str, Any]) -> None:
         ctx["credential_properties"]["authenticatorDataHash"] = authenticator_data_hash
 
     algo = ctx["auth_data"].credential_data.public_key[3]
-    algoname = next((name for alg, name in _ALGORITHM_NAMES if algo == alg), "Other (Classical)")
+    # Named as the advanced route names it: the one COSE name table is
+    # ``pqc.describe_algorithm``. A crafted key's alg need not be an int, or even
+    # hashable; the coercion gives None ("Unknown") for one it cannot read.
+    algoname = pqc.describe_algorithm(algorithms._coerce_cose_algorithm(algo))
 
     flags_value = getattr(ctx["auth_data"], "flags", 0)
     flags_dict = {
