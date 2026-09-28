@@ -42,33 +42,32 @@ export function credentialSupportsLargeBlob(cred) {
     return false;
 }
 
+// A prf report says the credential has prf unless it says `enabled: false`
+// (what a registration's output says of an authenticator without it) and holds
+// no results.
+function reportsPrf(value) {
+    if (!value) {
+        return false;
+    }
+    if (typeof value !== 'object') {
+        return true;
+    }
+    if (value.results || value.eval || value.first || value.second) {
+        return true;
+    }
+    return value.enabled !== false && Object.keys(value).length > 0;
+}
+
 export function credentialSupportsPrf(cred) {
     if (!cred || typeof cred !== 'object') {
         return false;
     }
     const clientOutputs = cred.clientExtensionOutputs;
-    if (clientOutputs && typeof clientOutputs === 'object') {
-        const value = clientOutputs.prf;
-        if (value) {
-            if (typeof value === 'object') {
-                if (value.results || value.eval || value.first || value.second) {
-                    return true;
-                }
-                if (Object.keys(value).length > 0) {
-                    return true;
-                }
-            } else {
-                return true;
-            }
-        }
+    if (clientOutputs && typeof clientOutputs === 'object' && reportsPrf(clientOutputs.prf)) {
+        return true;
     }
     const properties = cred.properties;
-    if (properties && typeof properties === 'object') {
-        if (properties.prf) {
-            return true;
-        }
-    }
-    return false;
+    return Boolean(properties && typeof properties === 'object' && reportsPrf(properties.prf));
 }
 
 /** The saved credential whose ID is the hex given (in any case), or null. */

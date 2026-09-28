@@ -178,6 +178,15 @@ describe('the extensions', () => {
     expect(field('prf eval first (hex)')).toHaveAccessibleDescription('No credentials with prf support available.');
   });
 
+  it('ADV-AB3: counts no prf for a credential whose registration said prf is not enabled', async () => {
+    const disabled = { ...PLAIN, clientExtensionOutputs: { prf: { enabled: false } } };
+    renderAuthenticationForm([disabled]);
+    await ready();
+
+    expect(field('prf eval first (hex)')).toBeDisabled();
+    expect(field('prf eval first (hex)')).toHaveAccessibleDescription('No credentials with prf support available.');
+  });
+
   it('ADV-AB2, ADV-AB3: judge a chosen credential alone, clearing what it cannot ask for', async () => {
     renderAuthenticationForm([CAPABLE, PLAIN]);
     await ready();

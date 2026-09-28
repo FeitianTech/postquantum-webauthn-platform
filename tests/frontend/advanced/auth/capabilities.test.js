@@ -31,12 +31,16 @@ describe('what a credential supports', () => {
     expect(credentialSupportsLargeBlob({ properties: 'none' })).toBe(false);
   });
 
-  it('prf: said by its extension outputs, whatever they hold, or its properties', () => {
+  it('prf: said by its extension outputs or its properties, unless they say it is not enabled', () => {
     expect(credentialSupportsPrf(undefined)).toBe(false);
     expect(credentialSupportsPrf(7)).toBe(false);
-    for (const output of [{ results: {} }, { eval: {} }, { first: 'x' }, { second: 'x' }, { enabled: false }, 'present']) {
+    for (const output of [{ results: {} }, { eval: {} }, { first: 'x' }, { second: 'x' }, { enabled: true }, { enabled: false, results: {} }, 'present']) {
       expect(credentialSupportsPrf({ clientExtensionOutputs: { prf: output } })).toBe(true);
     }
+    expect(credentialSupportsPrf({ clientExtensionOutputs: { prf: { enabled: false } } })).toBe(false);
+    expect(credentialSupportsPrf({ properties: { prf: { enabled: false } } })).toBe(false);
+    expect(credentialSupportsPrf({ properties: { prf: true } })).toBe(true);
+    expect(credentialSupportsPrf({ clientExtensionOutputs: { prf: { enabled: false } }, properties: { prf: { enabled: true } } })).toBe(true);
     expect(credentialSupportsPrf({ clientExtensionOutputs: { prf: {} } })).toBe(false);
     expect(credentialSupportsPrf({ clientExtensionOutputs: { prf: 0 } })).toBe(false);
     expect(credentialSupportsPrf({ clientExtensionOutputs: 'none' })).toBe(false);
