@@ -1,9 +1,10 @@
-// The registration form's own words, as the current templates give them
-// (frontend/templates/advanced/tab/registration/*.html): each field's label,
-// placeholder, options, the title of the button in it, its error, and its info
-// popup in English and 中文 (a paragraph each). The labels of the byte fields
-// carry " (hex)", as the current form writes them once the page has loaded.
-// The logic's words come from the modules web/ imports.
+// The Advanced forms' own words, as the current templates give them
+// (frontend/templates/advanced/tab/registration/*.html and authentication/*.html):
+// each field's label, placeholder, options, the title of the button in it, its
+// error, and its info popup in English and 中文 (a paragraph each). The labels
+// of the byte fields carry " (hex)", as the current form writes them once the
+// page has loaded. The logic's words come from the modules web/ imports: Allow
+// Credentials' first two choices and the largeBlob and prf notes among them.
 
 export type FieldAbout = { en: string[]; zh: string[] };
 export type FieldText = {
@@ -177,6 +178,105 @@ export const REGISTRATION_FIELDS = {
     about: {
       en: ['The second prf extension input to evaluate. If set, the client extension outputs will include a prf.results.second output if the client and authenticator both support the extension.', 'This is optional and can be used alongside the first PRF evaluation input for additional key derivation capabilities.'],
       zh: ['要评估的第二个 prf 扩展输入。如果设置，如果客户端和认证器都支持该扩展，客户端扩展输出将包含 prf.results.second 输出。', '这是可选的，可以与第一个 PRF 评估输入一起使用，以获得额外的密钥派生功能。'],
+    },
+  },
+} satisfies Record<string, FieldText>;
+
+export const AUTHENTICATION_SECTIONS = ['Credential Selection', 'Other Options', 'Extensions'] as const;
+
+export const AUTHENTICATION_FIELDS = {
+  userVerification: {
+    label: 'User Verification',
+    options: [{ value: 'preferred', label: 'Preferred (default)' }, { value: 'discouraged', label: 'Discouraged' }, { value: 'required', label: 'Required' }],
+    about: {
+      en: ['Select whether user verification (UV), for example a PIN or biometric, should be used.', 'If "discouraged", UV will not be used if possible. If "preferred", UV will be used if possible. If "required", UV will be used and the user is shown an error if this fails. If no preference is set, the default is "preferred".'],
+      zh: ['选择是否应使用用户验证（UV），例如 PIN 或生物识别。', '如果设为"discouraged"，在可能的情况下不会使用 UV。如果设为"preferred"，在可能的情况下会使用 UV。如果设为"required"，将使用 UV，失败时向用户显示错误。如果未设置偏好，默认值为"preferred"。'],
+    },
+  },
+  allowCredentials: {
+    label: 'Allow Credentials',
+    about: {
+      en: ['Choose how to set the allowCredentials argument. This is used to select which credentials are eligible for this assertion, and to provide key handles for server-side credentials. This typically means that the user needs to be identified before issuing the WebAuthn challenge, so that the Relying Party (RP) can retrieve the correct allowCredentials values.', 'Select "All" to include all credentials registered in the session (see the pane on the right).', 'Select "Empty" to remove the allowCredentials argument. This means that only discoverable credentials can be used for the assertion.', 'Select a saved credential option to include only the specific chosen credential.'],
+      zh: ['选择如何设置 allowCredentials 参数。这用于选择哪些凭据符合此断言条件，并为服务器端凭据提供密钥句柄。这通常意味着在发出 WebAuthn 挑战之前需要识别用户，以便依赖方（RP）可以检索正确的 allowCredentials 值。', '选择"All"以包含会话中注册的所有凭据（请参见右侧窗格）。', '选择"Empty"以删除 allowCredentials 参数。这意味着只有可发现的凭据可用于断言。', '选择保存的凭据选项以仅包含特定选择的凭据。'],
+    },
+  },
+  fakeCredLength: {
+    label: 'Fake credential ID length',
+    button: 'Generate fake credential ID',
+    about: {
+      en: ['Add a random credential ID of the given length to allowCredentials. May be useful for testing edge cases and conformance.'],
+      zh: ['向 allowCredentials 添加给定长度的随机凭据 ID。可能对测试边缘情况和合规性有用。'],
+    },
+  },
+  challenge: {
+    label: 'Challenge (hex)',
+    placeholder: 'Auto-generated hex value',
+    button: 'Generate new random challenge',
+    error: 'Invalid hex value (minimum 16 bytes required)',
+    about: {
+      en: ['The cryptographic challenge to be signed by the authenticator, used to prevent replay attacks.'],
+      zh: ['要由认证器签名的加密挑战，用于防止重放攻击。'],
+    },
+  },
+  timeout: {
+    label: 'Timeout (milliseconds)',
+    about: {
+      en: ['How long the Relying Party (RP) is willing to wait for the authentication ceremony to complete. If the authentication ceremony takes longer than this (or the adjusted value, in case the client overrides it), the ceremony will be aborted with a timeout message shown to the user. This may be silently overridden by the client.'],
+      zh: ['依赖方（RP）等待身份验证完成的时间。如果身份验证时间超过此值，验证过程将被中止，并向用户显示超时消息。时间数值可能会被客户端静默覆盖。'],
+    },
+  },
+  hints: {
+    label: 'Hints',
+    options: [{ value: 'client-device', label: 'Client-device' }, { value: 'hybrid', label: 'Hybrid' }, { value: 'security-key', label: 'Security-key' }],
+    about: {
+      en: ['Registration hints to guide the user-agent in interacting with the user.', 'These hints are not requirements, and do not bind the user-agent, but may guide it in providing the best experience by using contextual information that the Relying Party has about the request. Hints are provided in order of decreasing preference so, if two hints are contradictory, the first one controls. Hints may also overlap: if a more-specific hint is defined a Relying Party may still wish to send less specific ones for user-agents that may not recognise the more specific one. In this case the most specific hint should be sent before the less-specific ones.', 'Hints MAY contradict information contained in credential transports and authenticatorAttachment. When this occurs, the hints take precedence.'],
+      zh: ['注册提示用于指导用户代理与用户交互。', '这些提示不是强制要求，也不约束用户代理，但可利用依赖方掌握的上下文信息，引导其提供最佳体验。提示按优先级从高到低排列，因此若两个提示相互矛盾，则以前面的提示为准。提示也可以有重叠：如果定义了更具体的提示，依赖方仍可同时发送不那么具体的提示，以便那些可能无法识别更具体提示的用户代理使用。在这种情况下，应先发送最具体的提示，再发送较不具体的提示。', '提示可以与凭据传输方式和 authenticatorAttachment 中的信息相矛盾。如发生矛盾，应以提示为准。'],
+    },
+  },
+  hashAlgorithm: {
+    label: 'Hash Algorithm',
+    options: [{ value: 'SHA-256', label: 'SHA-256' }, { value: 'SHA-512', label: 'SHA-512' }, { value: 'SHA-384', label: 'SHA-384' }, { value: 'SHA-1', label: 'SHA-1' }, { value: 'SHA3-256', label: 'SHA3-256' }, { value: 'SHA3-384', label: 'SHA3-384' }, { value: 'SHA3-512', label: 'SHA3-512' }],
+    about: {
+      en: ['The hashing algorithm to use when hashing the client data JSON during assertion verification. This is a developer tool feature that allows testing different hash algorithms in the signature verification process.'],
+      zh: ['在断言验证期间对客户端数据 JSON 进行哈希处理时使用的哈希算法。这是一个开发者工具功能，允许在签名验证过程中测试不同的哈希算法。'],
+    },
+  },
+  largeBlob: {
+    label: 'largeBlob',
+    options: [{ value: '', label: 'Unspecified (default)' }, { value: 'read', label: 'Read' }, { value: 'write', label: 'Write' }],
+    about: {
+      en: ['Request the Large blob storage (largeBlob) extension. This extension may be used to store arbitrary data with the credential.', 'If set to "read", the output will be of the form largeBlob: { blob: ArrayBuffer } if both client and authenticator support the extension and the authenticator contains a matching BLOB value. Otherwise the output will be largeBlob: {} if the client supports the extension.', 'If set to "write", the output will be largeBlob: { written: true } if the BLOB was successfully written to the authenticator, and otherwise largeBlob: { written: false } if the client supports the extension.', 'If the client does not support the extension, no largeBlob output will be present.'],
+      zh: ['请求Large blob 存储（largeBlob）扩展。此扩展可用于与凭据一起存储任意数据。', '如果设置为"read"，如果客户端和认证器都支持该扩展且认证器包含匹配的 BLOB 值，输出将为 largeBlob: { blob: ArrayBuffer }。否则，如果客户端支持该扩展，输出将为 largeBlob: {}。', '如果设置为"write"，如果 BLOB 成功写入认证器，输出将为 largeBlob: { written: true }，否则如果客户端支持该扩展，将为 largeBlob: { written: false }。', '如果客户端不支持该扩展，将不存在 largeBlob 输出。'],
+    },
+  },
+  largeBlobWrite: {
+    label: 'largeBlob write (hex)',
+    placeholder: 'Hex value',
+    button: 'Generate random large blob data',
+    error: 'Invalid hex value',
+    about: {
+      en: ['The BLOB value to write to the authenticator.'],
+      zh: ['要写入认证器的 BLOB 值。'],
+    },
+  },
+  prfFirst: {
+    label: 'prf eval first (hex)',
+    placeholder: 'Hex value',
+    button: 'Generate random PRF evaluation data',
+    error: 'Invalid hex value (exactly 32 bytes required)',
+    about: {
+      en: ['Request the Pseudo-random function (prf) extension and set the first prf extension input to evaluate. This extension may be used to derive deterministically-random values to use as key material, for example.', 'If set, the client extension outputs will include a prf.results.first output if the client and authenticator both support the extension.'],
+      zh: ['请求伪随机函数（prf）扩展并设置要评估的第一个 prf 扩展输入。例如，此扩展可用于派生确定性随机值作为密钥材料。', '如果设置，如果客户端和认证器都支持该扩展，客户端扩展输出将包含 prf.results.first 输出。'],
+    },
+  },
+  prfSecond: {
+    label: 'prf eval second (hex)',
+    placeholder: 'Hex value',
+    button: 'Generate random PRF evaluation data',
+    error: 'Invalid hex value (exactly 32 bytes required)',
+    about: {
+      en: ['The second prf extension input to evaluate. If set, the client extension outputs will include a prf.results.second output if the client and authenticator both support the extension.', 'A second output may be useful to rotate key material via a single WebAuthn ceremony.'],
+      zh: ['要评估的第二个 prf 扩展输入。如果设置，如果客户端和认证器都支持该扩展，客户端扩展输出将包含 prf.results.second 输出。', '第二个输出可能有助于通过单个 WebAuthn 仪式轮换密钥材料。'],
     },
   },
 } satisfies Record<string, FieldText>;

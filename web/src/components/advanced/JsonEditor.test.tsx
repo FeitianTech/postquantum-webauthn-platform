@@ -5,7 +5,9 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { editor, publicKey, renderForm } from '@/test/advanced';
+import { advancedAuthentications } from '@legacy-tests/advanced/auth/advanced-answers.js';
+
+import { authEditor, authPublicKey, editor, publicKey, renderAuthenticationForm, renderForm } from '@/test/advanced';
 import { keepRecords, savedRecord } from '@/test/credentials';
 
 const field = (name: string) => screen.getByLabelText(name) as HTMLInputElement;
@@ -207,5 +209,95 @@ describe('the editor\'s keys', () => {
     await userEvent.keyboard('{Escape}');
     await userEvent.tab();
     expect(editor()).not.toHaveFocus();
+  });
+});
+
+describe('the authentication\'s editor', () => {
+  const { records } = advancedAuthentications() as { records: Record<string, unknown>[] };
+  const [CAPABLE, PLAIN] = records;
+  const CAPABLE_ID = CAPABLE.credentialIdHex as string;
+
+  async function authReady() {
+    await waitFor(() => expect(authEditor().value).toContain('"publicKey"'));
+  }
+
+  function authEdited(change: (root: { publicKey: Record<string, unknown> } & Record<string, unknown>) => void) {
+    const root = JSON.parse(authEditor().value);
+    change(root);
+    return JSON.stringify(root, null, 2);
+  }
+
+  it('ADV-J2, ADV-J4: gives the form what an edit asks for, as it parses', async () => {
+    renderAuthenticationForm([CAPABLE, PLAIN]);
+    await authReady();
+    const text = authEdited((root) => {
+      root.publicKey.userVerification = 'required';
+      root.publicKey.allowCredentials = [{ type: 'public-key', id: { $hex: CAPABLE_ID } }, { type: 'public-key', id: { $hex: 'ffee' } }];
+      root.publicKey.extensions = { largeBlob: { read: true }, prf: { eval: { first: { $hex: '11'.repeat(32) } } } };
+      root.publicKey.hints = ['hybrid'];
+    });
+
+    fireEvent.change(authEditor(), { target: { value: text } });
+
+    expect(field('User Verification')).toHaveValue('required');
+    expect(field('Allow Credentials')).toHaveValue(CAPABLE_ID);
+    expect(field('largeBlob')).toHaveValue('read');
+    expect(field('prf eval first (hex)')).toHaveValue('11'.repeat(32));
+    expect(screen.getByRole('button', { name: 'Hybrid' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('2 bytes')).toBeInTheDocument();
+    expect(authEditor()).toHaveValue(text);
+    expect(note()).toBeNull();
+  });
+
+  it('ADV-J4, ADV-J7: says where an edit does not parse, and which check refuses one, the form keeping the last request', async () => {
+    renderAuthenticationForm([CAPABLE]);
+    await authReady();
+    const refused = authEdited((root) => {
+      root.publicKey.rpId = '';
+      root.publicKey.userVerification = 'required';
+    });
+
+    fireEvent.change(authEditor(), { target: { value: '{\n  "publicKey": [\n' } });
+    expect(note()).toHaveAttribute('role', 'alert');
+    expect(note()!.querySelector('[data-location]')).toHaveTextContent('Line 3, column 1');
+
+    fireEvent.change(authEditor(), { target: { value: refused } });
+    expect(note()).toHaveTextContent('JSON validation failed: publicKey.rpId must be a non-empty string when provided.');
+    expect(note()).toHaveTextContent('Assert Credential sends this JSON as it is.');
+    expect(field('User Verification')).toHaveValue('preferred');
+  });
+
+  it('keeps what an edit typed through a form change: rpId, transports, an ID no saved credential has, the order of hints, a timeout of 0', async () => {
+    renderAuthenticationForm([CAPABLE, PLAIN]);
+    await authReady();
+    fireEvent.change(authEditor(), {
+      target: {
+        value: authEdited((root) => {
+          root.publicKey.rpId = 'example.com';
+          root.publicKey.allowCredentials = [
+            { type: 'public-key', id: { $hex: CAPABLE_ID }, transports: ['usb'] },
+            { type: 'public-key', id: { $hex: PLAIN.credentialIdHex } },
+            { type: 'public-key', id: { $hex: 'ffee' } },
+          ];
+          root.publicKey.hints = ['security-key', 'hybrid'];
+          root.publicKey.timeout = 0;
+        }),
+      },
+    });
+    expect(field('Timeout (milliseconds)')).toHaveValue(0);
+
+    await userEvent.selectOptions(field('User Verification'), 'discouraged');
+
+    expect(authPublicKey()).toMatchObject({
+      userVerification: 'discouraged',
+      rpId: 'example.com',
+      allowCredentials: [
+        { type: 'public-key', id: { $hex: CAPABLE_ID }, transports: ['usb'] },
+        { type: 'public-key', id: { $hex: PLAIN.credentialIdHex } },
+        { type: 'public-key', id: { $hex: 'ffee' } },
+      ],
+      hints: ['security-key', 'hybrid'],
+      timeout: 0,
+    });
   });
 });

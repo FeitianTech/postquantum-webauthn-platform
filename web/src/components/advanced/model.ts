@@ -1,12 +1,15 @@
 // The Advanced tab's logic comes from the modules both UIs share
-// (docs/UI_MIGRATION.md): the registration's request and the form's settings
-// (advanced/json-editor/registration-request.js, algorithm-options.js), the
-// JSON editor (json-editor/editor-model.js, advanced/editor/json-editing.js),
-// the hints' rules, the fake credential IDs and the byte fields' check
-// (advanced/auth/hint-rules.js, fake-credentials.js, hex-input.js), the
-// registration ceremony (advanced/auth/ceremony.js) and the snapshot its result
-// keeps (credential-display/registration-snapshot.js). These are the types web/
-// reads them through.
+// (docs/UI_MIGRATION.md): the registration's and the authentication's requests
+// and the forms' settings (advanced/json-editor/registration-request.js,
+// authentication-request.js, algorithm-options.js), a form change over the
+// editor's text (json-editor/request-patch.js), the JSON editor
+// (json-editor/editor-model.js, advanced/editor/json-editing.js), the hints'
+// rules, the fake credential IDs, the byte fields' check, the Allow Credentials
+// choices and the extensions' availability (advanced/auth/hint-rules.js,
+// fake-credentials.js, hex-input.js, allow-credentials.js, capabilities.js),
+// the two ceremonies (advanced/auth/ceremony.js, assertion.js) and the snapshot
+// a registration's result keeps (credential-display/registration-snapshot.js).
+// These are the types web/ reads them through.
 import { ADVANCED_CEREMONY_TEXT, advancedRegisteredMessage, advancedRegistrationFailureText, registerAdvancedCredential } from '@legacy/advanced/auth/ceremony.js';
 import {
   FAKE_CREDENTIAL_TEXT,
@@ -15,14 +18,34 @@ import {
   normaliseFakeCredentialList,
   withoutFakeCredential,
 } from '@legacy/advanced/auth/fake-credentials.js';
+import { ALLOW_CREDENTIALS_TEXT, allowCredentialChoices, keptChoice, registrationAttachmentFilter } from '@legacy/advanced/auth/allow-credentials.js';
+import { ADVANCED_ASSERTION_TEXT, advancedAuthenticationFailureText, authenticateAdvancedCredential } from '@legacy/advanced/auth/assertion.js';
+import { authenticationAvailability } from '@legacy/advanced/auth/capabilities.js';
 import { hexInputIsValid } from '@legacy/advanced/auth/hex-input.js';
-import { HINT_VALUES, applyAuthenticatorAttachmentPreference, enforceAuthenticatorAttachmentWithHints } from '@legacy/advanced/auth/hint-rules.js';
+import {
+  HINT_VALUES,
+  applyAuthenticatorAttachmentPreference,
+  deriveAllowedAttachmentsFromHints,
+  enforceAuthenticatorAttachmentWithHints,
+  ensureAuthenticationHintsAllowed,
+} from '@legacy/advanced/auth/hint-rules.js';
+import { describeCoseAlgorithm } from '@legacy/advanced/cose-labels.js';
+import { describeCredentialAlgorithmWith } from '@legacy/advanced/credentials/algorithm-tag.js';
+import { getCredentialIdHex, getStoredCredentialAttachment } from '@legacy/advanced/credentials/utils.js';
 import { decodePayloadThroughApi } from '@legacy/advanced/credential-display/decode-payload.js';
 import { keepRegistrationSnapshot } from '@legacy/advanced/credential-display/registration-snapshot.js';
 import { createRegistrationState } from '@legacy/advanced/credential-display/registration-state.js';
 import { composeRegistration } from '@legacy/advanced/credential-display/registration-view.js';
 import { applyJsonEditorAutoIndent, applyTabIndentation, wrapSelectionWithPair } from '@legacy/advanced/editor/json-editing.js';
 import { ALGORITHM_OPTIONS } from '@legacy/advanced/json-editor/algorithm-options.js';
+import {
+  authenticationControls,
+  authenticationDefaults,
+  buildRequestOptions,
+  changeAuthentication,
+  readRequestOptions,
+  withAvailability,
+} from '@legacy/advanced/json-editor/authentication-request.js';
 import { EDITOR_TEXT, editorTitle, readEditedRequest, requestText, topLevelExtras } from '@legacy/advanced/json-editor/editor-model.js';
 import { followForm } from '@legacy/advanced/json-editor/request-patch.js';
 import {
@@ -33,7 +56,12 @@ import {
   registrationDefaults,
 } from '@legacy/advanced/json-editor/registration-request.js';
 import { generateRandom10DigitUsername } from '@legacy/shared/auth/random-username.js';
-import { saveAdvancedCredential, updateAdvancedCredentialRegistrationSnapshot } from '@legacy/shared/storage/records.js';
+import {
+  prepareAdvancedCredentialsForServer,
+  saveAdvancedCredential,
+  updateAdvancedCredentialRegistrationSnapshot,
+  updateAdvancedCredentialSignCount,
+} from '@legacy/shared/storage/records.js';
 import { generateRandomHex } from '@legacy/shared/utils/binary.js';
 
 import type { CeremonyResultInput } from '@/components/ceremony/model';
@@ -168,3 +196,81 @@ export function keepSnapshot(credentialJson: Json, relyingPartyInfo: Json | null
     },
   );
 }
+
+// The authentication's request and form.
+/** The authentication form's settings (authentication-request.js): byte fields as hex text, numbers as text. */
+export type AuthenticationSettings = {
+  userVerification: string;
+  /** `all`, `empty`, or a saved credential's ID (hex). */
+  allowCredentials: string;
+  fakeCredLength: string;
+  challenge: string;
+  timeout: string;
+  hints: string[];
+  hashAlgorithm: string;
+  largeBlob: string;
+  largeBlobWrite: string;
+  prfFirst: string;
+  prfSecond: string;
+};
+export type AuthenticationField = keyof AuthenticationSettings;
+export type AllowChoice = { value: string; label: string; attachment: string };
+export type Availability = { available: boolean; message: string };
+export type Availabilities = { largeBlob: Availability; prf: Availability };
+type AuthenticationContext = { hostname: string; storedCredentials: SavedCredential[]; fakeAllowCredentials: string[] };
+
+export const authDefaults = authenticationDefaults as () => Omit<AuthenticationSettings, 'challenge'>;
+export const buildAuthRequest = buildRequestOptions as (settings: AuthenticationSettings, context: AuthenticationContext) => { publicKey: Json };
+export const readAuthRequest = readRequestOptions as (
+  publicKey: Json,
+  previous: AuthenticationSettings,
+  context: { storedCredentials: SavedCredential[]; choices: string[] },
+) => { settings: AuthenticationSettings; fakeAllowCredentials: string[] };
+export const changeAuth = changeAuthentication as <F extends AuthenticationField>(
+  settings: AuthenticationSettings,
+  field: F,
+  value: AuthenticationSettings[F],
+) => AuthenticationSettings;
+export const settleAvailability = withAvailability as (settings: AuthenticationSettings, availability: Availabilities) => AuthenticationSettings;
+export const lockedAuthFields = authenticationControls as (
+  settings: AuthenticationSettings,
+  availability: Availabilities,
+) => { largeBlob: boolean; largeBlobWrite: boolean; prfFirst: boolean; prfSecond: boolean };
+export const availabilityOf = authenticationAvailability as (storedCredentials: SavedCredential[], selection: string) => Availabilities;
+
+export const ALLOW_WORDS = ALLOW_CREDENTIALS_TEXT as { all: string; empty: string };
+export const keptAllowChoice = keptChoice as (choices: AllowChoice[], value: string) => string;
+/** The saved credentials Allow Credentials offers, filtered by the registration form's hints, else its attachment. */
+export function allowChoices(storedCredentials: SavedCredential[], registration: { hints: string[]; attachment: string }): AllowChoice[] {
+  const attachments = (registrationAttachmentFilter as (hintAttachments: string[], attachment: string) => string[])(
+    (deriveAllowedAttachmentsFromHints as (hints: string[]) => string[])(registration.hints),
+    registration.attachment,
+  );
+  return (allowCredentialChoices as (stored: SavedCredential[], helpers: object) => AllowChoice[])(storedCredentials, {
+    attachments,
+    getCredentialIdHex,
+    getStoredCredentialAttachment,
+    describeAlgorithm: (credential: SavedCredential) =>
+      (describeCredentialAlgorithmWith as (record: SavedCredential, describe: unknown) => string)(credential, describeCoseAlgorithm),
+  });
+}
+
+// The authentication ceremony.
+export const ASSERTION_WORDS = ADVANCED_ASSERTION_TEXT as Record<'authenticated' | 'lastAuthentication', string>;
+export type AuthenticationAnswer = { authenticatedCredentialId?: string; signCount?: number; [field: string]: unknown };
+export type AuthenticationOutcome =
+  | { authenticated: true; answer: AuthenticationAnswer; result: CeremonyResultInput }
+  | { authenticated: false; text: string; result?: CeremonyResultInput; failedCredentialId?: string };
+type AssertionOptions = {
+  ensureHints: (publicKey: Json) => unknown;
+  prepareForServer: () => unknown[];
+  hashAlgorithm: () => string;
+  fakeCredentialLength: () => number;
+  onStart: () => void;
+  onProgress: (text: string) => void;
+};
+export const authenticate = authenticateAdvancedCredential as unknown as (text: string, options: AssertionOptions) => Promise<AuthenticationOutcome>;
+export const assertionFailureText = advancedAuthenticationFailureText as (error: unknown) => string;
+export const checkHints = ensureAuthenticationHintsAllowed as (publicKey: Json, options: { storedCredentials: SavedCredential[] }) => string[];
+export const recordsForServer = prepareAdvancedCredentialsForServer as () => unknown[];
+export const keepAdvancedSignCount = updateAdvancedCredentialSignCount as (credentialId: string, signCount?: number) => void;

@@ -1,0 +1,226 @@
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+
+import type { SavedCredential } from '@/components/credentials/model';
+import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
+
+import {
+  type AllowChoice,
+  type AuthenticationField,
+  type AuthenticationSettings,
+  allowChoices,
+  authDefaults,
+  availabilityOf,
+  buildAuthRequest,
+  changeAuth,
+  extrasOf,
+  fakeLength,
+  fakeList,
+  keptAllowChoice,
+  randomHex,
+  readAuthRequest,
+  readEdit,
+  settleAvailability,
+  withoutFake,
+} from './model';
+import { NO_TEXT, type RequestText, followedText, rebuiltText, resetText } from './requestEditor';
+
+// An authentication's request as the Advanced tab holds it, as the
+// registration's is (./useAdvancedRequest.ts): the JSON editor's text is the
+// request, the form a view of it; a form change rewrites in the text only what
+// it changed, an edit the form can follow updates the form at once. Allow
+// Credentials offers the saved credentials the registration form's hints (or
+// its attachment) allow, and falls back to All when its choice goes; whether
+// largeBlob and prf can be asked for follows the saved credentials and the
+// choice, clearing what they cannot ask for, as the current form does.
+
+type RequestState = RequestText & {
+  settings: AuthenticationSettings;
+  /** The fake credential IDs allowCredentials carries after the saved ones (hex). */
+  fakeAllow: string[];
+  /** What the fake ID field says about the last length asked for. */
+  fakeMessage: { tone: 'error' | 'info'; text: string } | null;
+  started: boolean;
+};
+
+type Context = { hostname: string; storedCredentials: SavedCredential[]; choices: AllowChoice[] };
+
+type Action =
+  | { type: 'start'; settings: AuthenticationSettings; context: Context }
+  | { type: 'change'; field: AuthenticationField; value: AuthenticationSettings[AuthenticationField]; context: Context }
+  | { type: 'settings'; settings: AuthenticationSettings; context: Context }
+  | { type: 'fake-add'; hex: string | null; message: RequestState['fakeMessage']; context: Context }
+  | { type: 'fake-remove'; index: number; context: Context }
+  | { type: 'edit'; text: string; context: Context }
+  | { type: 'context'; context: Context }
+  | { type: 'reset-editor'; context: Context };
+
+function formRequestOf(settings: AuthenticationSettings, fakeAllow: string[], context: Context) {
+  return buildAuthRequest(settings, { hostname: context.hostname, storedCredentials: context.storedCredentials, fakeAllowCredentials: fakeAllow });
+}
+
+/** The settings as the saved credentials leave them: a choice still offered, and only the extensions they can use. */
+function settled(settings: AuthenticationSettings, context: Context): AuthenticationSettings {
+  const allowCredentials = keptAllowChoice(context.choices, settings.allowCredentials);
+  return settleAvailability({ ...settings, allowCredentials }, availabilityOf(context.storedCredentials, allowCredentials));
+}
+
+function followed(current: RequestState, context: Context, background = false): RequestState {
+  return followedText(current, formRequestOf(current.settings, current.fakeAllow, context), 'authentication', background);
+}
+
+function reduce(current: RequestState, action: Action): RequestState {
+  switch (action.type) {
+    case 'start': {
+      const settings = settled(action.settings, action.context);
+      return rebuiltText(
+        { ...NO_TEXT, settings, fakeAllow: [], fakeMessage: null, started: true },
+        formRequestOf(settings, [], action.context),
+      );
+    }
+    case 'change': {
+      const changed = changeAuth(current.settings, action.field, action.value);
+      // A credential chosen is judged alone: what it cannot ask for goes.
+      const settings = action.field === 'allowCredentials' ? settled(changed, action.context) : changed;
+      return followed({ ...current, settings }, action.context);
+    }
+    case 'settings':
+      return followed({ ...current, settings: action.settings }, action.context);
+    case 'fake-add':
+      return followed(
+        { ...current, fakeAllow: action.hex ? [...current.fakeAllow, action.hex] : current.fakeAllow, fakeMessage: action.message },
+        action.context,
+      );
+    case 'fake-remove':
+      return followed({ ...current, fakeAllow: withoutFake(current.fakeAllow, action.index) ?? current.fakeAllow, fakeMessage: null }, action.context);
+    case 'context':
+      return followed({ ...current, settings: settled(current.settings, action.context) }, action.context, true);
+    case 'reset-editor':
+      return resetText(current, formRequestOf(current.settings, current.fakeAllow, action.context), 'authentication');
+    case 'edit': {
+      const edit = readEdit(action.text, 'authentication');
+      if (edit.status !== 'accepted') return { ...current, text: action.text, edit };
+      const read = readAuthRequest(edit.root.publicKey, current.settings, {
+        storedCredentials: action.context.storedCredentials,
+        choices: ['all', 'empty', ...action.context.choices.map((choice) => choice.value)],
+      });
+      const fakeAllow = fakeList(read.fakeAllowCredentials);
+      return {
+        ...current,
+        settings: read.settings,
+        fakeAllow,
+        extras: extrasOf(edit.root),
+        text: action.text,
+        edit: null,
+        // What the form now says, which the next form change is measured from.
+        formRequest: formRequestOf(read.settings, fakeAllow, action.context),
+      };
+    }
+  }
+}
+
+const EMPTY: RequestState = {
+  ...NO_TEXT,
+  settings: { ...authDefaults(), challenge: '' },
+  fakeAllow: [],
+  fakeMessage: null,
+  started: false,
+};
+
+/** The registration form's choices that decide which saved credentials Allow Credentials offers. */
+export type RegistrationFilter = { hints: string[]; attachment: string };
+
+export function useAuthenticationRequest(registration: RegistrationFilter) {
+  const saved = useSavedCredentials();
+  const [current, dispatch] = useReducer(reduce, EMPTY);
+  const storedCredentials = useMemo(() => saved.rows.map((row) => row.credential), [saved.rows]);
+  const { hints, attachment } = registration;
+  const choices = useMemo(() => allowChoices(storedCredentials, { hints, attachment }), [storedCredentials, hints, attachment]);
+  const contextRef = useRef<Context>({ hostname: '', storedCredentials, choices });
+  contextRef.current = { ...contextRef.current, storedCredentials, choices };
+  const context = () => contextRef.current;
+
+  // Once the saved credentials have been read (after hydration), as the current
+  // tab fills its form once it has loaded them: a challenge and a largeBlob
+  // value to write, drawn at random.
+  useEffect(() => {
+    if (!saved.loaded || current.started) return;
+    contextRef.current = { ...contextRef.current, hostname: window.location.hostname };
+    dispatch({ type: 'start', settings: { ...authDefaults(), challenge: randomHex(32), largeBlobWrite: randomHex(32) }, context: contextRef.current });
+  }, [saved.loaded, current.started]);
+
+  // The saved credentials, or what the registration form lets Allow Credentials
+  // offer, changed: a choice that went falls back to All.
+  const started = useRef(false);
+  started.current = current.started;
+  useEffect(() => {
+    if (started.current) dispatch({ type: 'context', context: contextRef.current });
+  }, [storedCredentials, choices]);
+
+  const change = useCallback(<F extends AuthenticationField>(field: F, value: AuthenticationSettings[F]) => {
+    dispatch({ type: 'change', field, value, context: context() });
+  }, []);
+
+  const settingsRef = useRef(current.settings);
+  settingsRef.current = current.settings;
+  const update = useCallback((next: Partial<AuthenticationSettings>) => {
+    dispatch({ type: 'settings', settings: { ...settingsRef.current, ...next }, context: context() });
+  }, []);
+
+  const randomizeChallenge = useCallback(() => update({ challenge: randomHex(32) }), [update]);
+  const randomizePrf = useCallback((which: 'prfFirst' | 'prfSecond') => update({ [which]: randomHex(32) }), [update]);
+  const randomizeLargeBlobWrite = useCallback(() => update({ largeBlobWrite: randomHex(32) }), [update]);
+
+  /** After an authentication, the values the current tab draws again: those that are not empty. */
+  const redraw = useCallback(() => {
+    const now = settingsRef.current;
+    update({
+      ...(now.challenge.trim() ? { challenge: randomHex(32) } : {}),
+      ...(now.prfFirst.trim() ? { prfFirst: randomHex(32) } : {}),
+      ...(now.prfSecond.trim() ? { prfSecond: randomHex(32) } : {}),
+      ...(now.largeBlobWrite.trim() ? { largeBlobWrite: randomHex(32) } : {}),
+    });
+  }, [update]);
+
+  const addFake = useCallback(() => {
+    const { bytes, error, notice } = fakeLength(settingsRef.current.fakeCredLength);
+    const message = error ? ({ tone: 'error', text: error } as const) : notice ? ({ tone: 'info', text: notice } as const) : null;
+    dispatch({ type: 'fake-add', hex: bytes ? randomHex(bytes) : null, message, context: context() });
+  }, []);
+  const removeFake = useCallback((index: number) => dispatch({ type: 'fake-remove', index, context: context() }), []);
+
+  const editText = useCallback((text: string) => dispatch({ type: 'edit', text, context: context() }), []);
+  const resetEditor = useCallback(() => dispatch({ type: 'reset-editor', context: context() }), []);
+  // The toolbar's Reset: the defaults with a new challenge, the fake IDs and the
+  // edit's keys gone; the Hash Algorithm stays, as in the current tab.
+  const resetForm = useCallback(() => {
+    dispatch({
+      type: 'start',
+      settings: { ...authDefaults(), hashAlgorithm: settingsRef.current.hashAlgorithm, challenge: randomHex(32) },
+      context: context(),
+    });
+  }, []);
+
+  const availability = useMemo(
+    () => availabilityOf(storedCredentials, current.settings.allowCredentials),
+    [storedCredentials, current.settings.allowCredentials],
+  );
+
+  return {
+    ...current,
+    choices,
+    availability,
+    storedCredentials,
+    change,
+    randomizeChallenge,
+    randomizePrf,
+    randomizeLargeBlobWrite,
+    redraw,
+    addFake,
+    removeFake,
+    editText,
+    resetEditor,
+    resetForm,
+  };
+}
+
+export type AuthenticationRequest = ReturnType<typeof useAuthenticationRequest>;
