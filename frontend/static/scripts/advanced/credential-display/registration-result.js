@@ -1,5 +1,5 @@
 import {openModal} from '../../shared/ui/core.js';
-import {registrationResultInput, registrationSnapshotPayload} from './registration-view.js';
+import {keepRegistrationSnapshot} from './registration-snapshot.js';
 
 export async function showRegistrationResultModalRuntime(credentialJson, relyingPartyInfo, options = {}, deps = {}) {
     const {
@@ -16,25 +16,12 @@ export async function showRegistrationResultModalRuntime(credentialJson, relying
 
     const { storageId = null } = options || {};
 
-    const registrationDetail = await composeRegistrationDetail({
-        credentialJson,
-        relyingPartyInfo,
-        ...registrationResultInput(credentialJson, relyingPartyInfo),
-    });
-
-    if (storageId && registrationDetail) {
-        // The registration is kept as data -- the response and the relying
-        // party's view of it, with the decoded attestation in `state` -- and the
-        // detail modal builds its view from that. No markup is stored.
-        const snapshotPayload = registrationSnapshotPayload({
-            stateSnapshot: registrationDetail.stateSnapshot,
-            credentialJson,
-            relyingPartyCopy: registrationDetail.relyingPartyCopy,
-        }, new Date().toISOString());
-
-        if (await updateAdvancedCredentialRegistrationSnapshot(storageId, snapshotPayload)) {
-            await loadSavedCredentials();
-        }
+    const { composed: registrationDetail, saved } = await keepRegistrationSnapshot(
+        { credentialJson, relyingPartyInfo, storageId },
+        { compose: composeRegistrationDetail, saveSnapshot: updateAdvancedCredentialRegistrationSnapshot },
+    );
+    if (saved) {
+        await loadSavedCredentials();
     }
 
     modalBody.replaceChildren(registrationDetail.view);

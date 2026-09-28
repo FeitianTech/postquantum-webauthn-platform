@@ -1,14 +1,10 @@
 import {
-    create,
     get,
-    parseCreationOptionsFromJSON,
     parseRequestOptionsFromJSON
 } from '../../shared/webauthn/json-ponyfill.js';
 import {
     convertExtensionsForClient,
     normalizeClientExtensionResults,
-    bufferSourceToUint8Array,
-    bytesToHex,
 } from '../../shared/utils/binary.js';
 import {
     ensureAuthenticationHintsAllowed,
@@ -31,7 +27,7 @@ import {
     queueFailedCredentialFlash,
     updateCredentialsDisplay,
 } from '../credentials/index.js';
-import { printRegistrationDebug, printAuthenticationDebug } from '../../shared/debug/auth.js';
+import { printAuthenticationDebug } from '../../shared/debug/auth.js';
 import { FailedResponseError, readFailedResponse } from '../../shared/api/failed-response.js';
 import { clearCeremonyResult, showCeremonyResult } from '../../shared/ui/ceremony-result.js';
 import { state } from '../../shared/state.js';
@@ -40,8 +36,13 @@ import {
     prepareAdvancedCredentialsForServer,
     updateAdvancedCredentialSignCount,
 } from '../../shared/storage/local.js';
+import {
+    ADVANCED_CEREMONY_TEXT,
+    advancedRegisteredMessage,
+    advancedRegistrationFailureText,
+    registerAdvancedCredential,
+} from './ceremony.js';
 
-let advancedRegisterState = null;
 let advancedAuthenticateState = null;
 
 function maybeRandomizeAdvancedRegistrationFields() {
@@ -89,301 +90,52 @@ function maybeRandomizeAdvancedAuthenticationFields() {
     }
 }
 
-const COMMON_SUPPORTED_ALGORITHMS = new Set([-7, -257, -8]);
-// The DOMException names navigator.credentials.create() rejects with.
-const AUTHENTICATOR_ERROR_NAMES = new Set([
-    'NotAllowedError',
-    'NotSupportedError',
-    'InvalidStateError',
-    'ConstraintError',
-    'UnknownError',
-    'AbortError',
-]);
-
-function collectPotentialUnsupportedFeatures(publicKeyOptions, convertedExtensions, createOptions) {
-    const issues = [];
-
-    if (!publicKeyOptions || typeof publicKeyOptions !== 'object') {
-        return issues;
-    }
-
-    const selection = publicKeyOptions.authenticatorSelection && typeof publicKeyOptions.authenticatorSelection === 'object'
-        ? publicKeyOptions.authenticatorSelection
-        : {};
-
-    if (selection.requireResidentKey === true || selection.residentKey === 'required') {
-        issues.push('resident key requirement');
-    }
-    if (selection.userVerification === 'required') {
-        issues.push('user verification requirement');
-    }
-
-    const extensionSources = [];
-    if (publicKeyOptions.extensions && typeof publicKeyOptions.extensions === 'object') {
-        extensionSources.push(publicKeyOptions.extensions);
-    }
-    if (convertedExtensions && typeof convertedExtensions === 'object') {
-        extensionSources.push(convertedExtensions);
-    }
-
-    const extensionLabels = [
-        ['largeBlob', 'largeBlob extension'],
-        ['prf', 'prf extension'],
-        ['minPinLength', 'minPinLength extension'],
-        ['credentialProtectionPolicy', 'credProtect extension'],
-        ['credProps', 'credProps extension'],
-    ];
-
-    extensionSources.forEach(source => {
-        extensionLabels.forEach(([key, label]) => {
-            if (source && Object.prototype.hasOwnProperty.call(source, key) && !issues.includes(label)) {
-                issues.push(label);
-            }
-        });
-    });
-
-    const pubKeyOptions = createOptions && typeof createOptions === 'object' && createOptions.publicKey && typeof createOptions.publicKey === 'object'
-        ? createOptions.publicKey
-        : null;
-    const params = pubKeyOptions && Array.isArray(pubKeyOptions.pubKeyCredParams)
-        ? pubKeyOptions.pubKeyCredParams
-        : [];
-
-    if (params.length) {
-        const algValues = params
-            .map(param => (param && typeof param === 'object' ? param.alg : undefined))
-            .filter(value => typeof value === 'number');
-        if (algValues.length) {
-            const hasCommon = algValues.some(value => COMMON_SUPPORTED_ALGORITHMS.has(value));
-            if (!hasCommon) {
-                issues.push('selected signature algorithms');
-            }
-        }
-    }
-
-    return issues;
-}
-
 export async function advancedRegister() {
-    let publicKey = null;
-    let allowedAttachments = [];
-    let convertedExtensions = null;
-    let createOptions = null;
-
+    let outcome = null;
     try {
-        const jsonText = document.getElementById('json-editor').value;
-        const parsed = JSON.parse(jsonText);
-
-        if (!parsed.publicKey) {
-            throw new Error('Invalid JSON structure: Missing "publicKey" property');
-        }
-
-        publicKey = parsed.publicKey;
-
-        if (!publicKey.rp) {
-            throw new Error('Invalid CredentialCreationOptions: Missing required "rp" property');
-        }
-        if (!publicKey.user) {
-            throw new Error('Invalid CredentialCreationOptions: Missing required "user" property');
-        }
-        if (!publicKey.challenge) {
-            throw new Error('Invalid CredentialCreationOptions: Missing required "challenge" property');
-        }
-
-        if (document.getElementById('min-pin-length')?.checked) {
-            if (!publicKey.extensions || typeof publicKey.extensions !== 'object') {
-                publicKey.extensions = {};
-            }
-            publicKey.extensions.minPinLength = true;
-        }
-
-        allowedAttachments = enforceHintsForAdvanced(publicKey);
-
-        hideStatus('advanced');
-        clearCeremonyResult('advanced');
-        showProgress('advanced', 'Starting advanced registration...');
-
-        const response = await fetch('/api/advanced/register/begin', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(parsed)
+        outcome = await registerAdvancedCredential(document.getElementById('json-editor').value, {
+            enforceHints: enforceHintsForAdvanced,
+            applyAttachmentPreference: applyAuthenticatorAttachmentPreference,
+            minPinLength: () => Boolean(document.getElementById('min-pin-length')?.checked),
+            fakeCredentialLength: () => parseInt(document.getElementById('fake-cred-length-reg').value) || 0,
+            onStart: () => {
+                hideStatus('advanced');
+                clearCeremonyResult('advanced');
+            },
+            onProgress: text => showProgress('advanced', text),
+            onWarning: text => showStatus('advanced', text, 'warning'),
+            onResult: result => showCeremonyResult('advanced', result),
         });
-
-        if (!response.ok) {
-            throw new FailedResponseError(await readFailedResponse(response));
+        if (!outcome.registered) {
+            showStatus('advanced', outcome.text, 'error');
+            return;
         }
 
-        const json = await response.json();
-        advancedRegisterState = json?.__session_state ?? null;
+        const message = advancedRegisteredMessage(outcome.answer);
+        showStatus('advanced', message.text, message.tone);
 
-        const warnings = Array.isArray(json?.warnings)
-            ? json.warnings.filter((msg) => typeof msg === 'string' && msg.trim().length > 0)
-            : [];
-        if (warnings.length > 0) {
-            showStatus('advanced', warnings.join(' '), 'warning');
+        maybeRandomizeAdvancedRegistrationFields();
+
+        let savedCredentialRecord = null;
+        if (outcome.record) {
+            const saved = saveAdvancedCredential(outcome.record);
+            if (saved) {
+                savedCredentialRecord = saved;
+                loadSavedCredentials();
+            }
         }
 
-        const optionsJson = { ...(json || {}) };
-        delete optionsJson.warnings;
-        delete optionsJson.__session_state;
-
-        const originalExtensions = optionsJson?.publicKey?.extensions;
-        createOptions = parseCreationOptionsFromJSON(optionsJson);
-
-        applyAuthenticatorAttachmentPreference(
-            createOptions,
-            allowedAttachments,
-            json?.publicKey,
-            publicKey,
+        await showRegistrationResultModal(
+            outcome.credentialJson,
+            outcome.answer.relyingParty || null,
+            {
+                storageId: savedCredentialRecord?.storageId || null,
+            },
         );
-
-        convertedExtensions = convertExtensionsForClient(originalExtensions);
-        if (convertedExtensions) {
-            createOptions.publicKey = createOptions.publicKey || {};
-            createOptions.publicKey.extensions = {
-                ...(createOptions.publicKey.extensions || {}),
-                ...convertedExtensions
-            };
-        }
-
-        state.lastFakeCredLength = parseInt(document.getElementById('fake-cred-length-reg').value) || 0;
-
-        showProgress('advanced', 'Connecting your authenticator device...');
-
-        const credential = await create(createOptions);
-
-        const authenticatorAttachment = credential && typeof credential === 'object'
-            ? credential.authenticatorAttachment ?? null
-            : null;
-        const credentialJson = credential.toJSON ? credential.toJSON() : JSON.parse(JSON.stringify(credential));
-        if (authenticatorAttachment !== undefined) {
-            credentialJson.authenticatorAttachment = authenticatorAttachment;
-        }
-        const extensionResults = credential.getClientExtensionResults
-            ? credential.getClientExtensionResults()
-            : (credential.clientExtensionResults || {});
-        const normalizedExtensionResults = normalizeClientExtensionResults(extensionResults);
-        const existingExtensionResults = credentialJson.clientExtensionResults || {};
-        if (normalizedExtensionResults && typeof normalizedExtensionResults === 'object' &&
-            Object.keys(normalizedExtensionResults).length > 0) {
-            credentialJson.clientExtensionResults = {
-                ...existingExtensionResults,
-                ...normalizedExtensionResults,
-            };
-        } else if (credentialJson.clientExtensionResults === undefined) {
-            credentialJson.clientExtensionResults = existingExtensionResults;
-        }
-
-        showProgress('advanced', 'Completing registration...');
-
-        const result = await fetch('/api/advanced/register/complete', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                ...parsed,
-                __credential_response: credentialJson,
-                __session_state: advancedRegisterState,
-            }),
-        });
-
-        if (result.ok) {
-            const data = await result.json();
-
-            printRegistrationDebug(credential, createOptions, data);
-
-            const completionWarnings = Array.isArray(data?.warnings)
-                ? data.warnings.filter(msg => typeof msg === 'string' && msg.trim().length > 0)
-                : [];
-            showCeremonyResult('advanced', {
-                title: 'Last registration',
-                showChallenge: true,
-                challengeSource: data.challengeSource,
-                challengeStatus: data.challengeStatus,
-            });
-
-            const successMessage = `Advanced registration successful! Algorithm: ${data.algo || 'Unknown'}`;
-            if (completionWarnings.length > 0) {
-                showStatus('advanced', `${successMessage} ${completionWarnings.join(' ')}`, 'warning');
-            } else {
-                showStatus('advanced', successMessage, 'success');
-            }
-
-            maybeRandomizeAdvancedRegistrationFields();
-
-            let savedCredentialRecord = null;
-
-            if (data.storedCredential && typeof data.storedCredential === 'object') {
-                const rawIdBytes = bufferSourceToUint8Array(credential.rawId);
-                const credentialIdFromBrowser = typeof credential.id === 'string' && credential.id.trim()
-                    ? credential.id.trim()
-                    : '';
-                const credentialIdBase64Url = credentialIdFromBrowser
-                    || data.storedCredential.credentialIdBase64Url
-                    || data.storedCredential.credentialId
-                    || '';
-                const credentialIdHexFromBrowser = rawIdBytes && rawIdBytes.length
-                    ? bytesToHex(rawIdBytes)
-                    : '';
-
-                const saved = saveAdvancedCredential({
-                    ...data.storedCredential,
-                    id: credentialIdBase64Url || data.storedCredential.id,
-                    credentialId: credentialIdBase64Url || data.storedCredential.credentialId,
-                    credentialIdBase64Url,
-                    credentialIdHex: credentialIdHexFromBrowser || data.storedCredential.credentialIdHex,
-                    userName: data.storedCredential.userName || publicKey?.user?.name || '',
-                });
-                if (saved) {
-                    savedCredentialRecord = saved;
-                    loadSavedCredentials();
-                }
-            }
-
-            await showRegistrationResultModal(
-                credentialJson,
-                data.relyingParty || null,
-                {
-                    storageId: savedCredentialRecord?.storageId || null,
-                },
-            );
-
-            advancedRegisterState = null;
-        } else {
-            const failure = await readFailedResponse(result);
-            showCeremonyResult('advanced', {
-                title: 'Last registration',
-                showChallenge: true,
-                challengeSource: failure.challengeSource,
-                challengeStatus: failure.challengeStatus,
-            });
-            throw new FailedResponseError(failure);
-        }
     } catch (error) {
-        const errorName = error && typeof error === 'object' ? error.name : undefined;
-        let errorMessage = error && typeof error === 'object' && typeof error.message === 'string'
-            ? error.message
-            : String(error);
-        if (errorName === 'NotAllowedError') {
-            errorMessage = 'User cancelled or authenticator not available';
-        } else if (errorName === 'InvalidStateError') {
-            errorMessage = 'Authenticator is already registered for this account';
-        } else if (errorName === 'SecurityError') {
-            errorMessage = 'Security error - check your connection and try again';
-        }
-
-        // Only a refusal from the authenticator can be about what it supports; a
-        // server's answer says what it means on its own.
-        const potentialIssues = AUTHENTICATOR_ERROR_NAMES.has(errorName)
-            ? collectPotentialUnsupportedFeatures(publicKey, convertedExtensions, createOptions)
-            : [];
-        const detailMessage = potentialIssues.length
-            ? ` The authenticator may not support: ${potentialIssues.join(', ')}.`
-            : '';
-
-        showStatus('advanced', `Credential registration failed: ${errorMessage}${detailMessage}`, 'error');
+        showStatus('advanced', advancedRegistrationFailureText(error, outcome ?? {}), 'error');
     } finally {
         hideProgress('advanced');
-        advancedRegisterState = null;
     }
 }
 
@@ -405,7 +157,7 @@ export async function advancedAuthenticate() {
         try {
             ensureAuthenticationHintsAllowed(publicKey);
         } catch (hintError) {
-            const message = hintError?.message || 'Invalid hint configuration.';
+            const message = hintError?.message || ADVANCED_CEREMONY_TEXT.invalidHints;
             showStatus('advanced', message, 'error');
             return;
         }
@@ -558,7 +310,7 @@ function enforceHintsForAdvanced(publicKey) {
         const resolved = enforceAuthenticatorAttachmentWithHints(publicKey);
         return Array.isArray(resolved) ? resolved : [];
     } catch (error) {
-        showStatus('advanced', error?.message || 'Invalid hint configuration.', 'error');
+        showStatus('advanced', error?.message || ADVANCED_CEREMONY_TEXT.invalidHints, 'error');
         throw error;
     }
 }
