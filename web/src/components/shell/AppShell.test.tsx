@@ -84,7 +84,7 @@ describe('the app shell', () => {
     measured.mockRestore();
   });
 
-  it('keeps the footer text of the current UI', () => {
+  it('keeps the footer text the site has always had', () => {
     renderPage(<AppShell />);
     const footer = screen.getByRole('contentinfo');
 

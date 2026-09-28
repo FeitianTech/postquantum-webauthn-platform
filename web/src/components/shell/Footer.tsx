@@ -1,5 +1,5 @@
-// The footer as the current UI has it (frontend/templates/index.html). The year
-// is kept current by tools/update_footer_year.py, which edits this file too.
+// The footer the site has always had (before Phase 30, frontend/templates/index.html).
+// Its year is kept current by tools/update_footer_year.py, which edits this file.
 export function Footer() {
   return (
     <footer className="mx-auto flex w-full max-w-page flex-wrap gap-x-6 gap-y-1 border-t border-line px-4 pt-5 pb-8 text-caption text-ink-muted sm:px-6 lg:px-8">

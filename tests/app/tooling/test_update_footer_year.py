@@ -88,11 +88,8 @@ def test_main_updates_every_footer_it_is_given(tmp_path: Path, capsys):
     assert "Updated footer year to 2027" in capsys.readouterr().out
 
 
-def test_the_defaults_are_both_uis_footers_and_each_holds_the_year():
-    assert updater.DEFAULT_PATHS == (
-        updater.REPO_ROOT / "frontend" / "templates" / "index.html",
-        updater.REPO_ROOT / "web" / "src" / "components" / "shell" / "Footer.tsx",
-    )
+def test_the_default_is_the_sites_footer_and_it_holds_the_year():
+    assert updater.DEFAULT_PATHS == (updater.REPO_ROOT / "web" / "src" / "components" / "shell" / "Footer.tsx",)
     for path in updater.DEFAULT_PATHS:
         assert updater.FOOTER_YEAR_PATTERN.search(path.read_text(encoding="utf-8")), path
 

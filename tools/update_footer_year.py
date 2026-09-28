@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Update the footer copyright year in the current UI's template and the new UI's footer."""
+"""Update the footer copyright year in the site's footer (web/)."""
 
 from __future__ import annotations
 
@@ -10,10 +10,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_HTML_PATH = REPO_ROOT / "frontend" / "templates" / "index.html"
-# The new UI in web/ (docs/UI_MIGRATION.md) writes the same footer.
 DEFAULT_WEB_FOOTER_PATH = REPO_ROOT / "web" / "src" / "components" / "shell" / "Footer.tsx"
-DEFAULT_PATHS = (DEFAULT_HTML_PATH, DEFAULT_WEB_FOOTER_PATH)
+DEFAULT_PATHS = (DEFAULT_WEB_FOOTER_PATH,)
 
 FOOTER_YEAR_PATTERN = re.compile(
     r"(?P<prefix>©|&copy;)\s+\d{4}\s+Feitian Technologies Co\., Ltd\."
@@ -45,7 +43,7 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         action="append",
         dest="paths",
-        help="A file containing the copyright footer; repeat for several (default: both UIs' footers).",
+        help="A file containing the copyright footer; repeat for several (default: the site's footer).",
     )
     parser.add_argument(
         "--year",
