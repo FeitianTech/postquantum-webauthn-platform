@@ -71,7 +71,11 @@ unlisted.
   roles (their first user is the MDS status reports). `Overlay` takes a dialog's `size`
   (`sm` for a question), its `role` (`alertdialog`, `describedBy`) and `initialFocus`;
   `ConfirmDialog` asks before something that cannot be undone (focus on Cancel) in
-  place of the browser's `confirm`.
+  place of the browser's `confirm`. `OverlayHeader` takes `back` for a level inside a
+  panel (`BackButton`, "Back" titled with where it returns to, which the MDS pages use
+  too). `MonoValue` measures whether a value fits as if its "Show all" were not there,
+  and again when the fonts arrive; `wrapOnPhone` gives it a phone's whole width, the
+  copy button at the top right of the nearest positioned box (beside the value's label).
 - `web/src/components/shell/`: the header (title, the four sections, Analyze Browser,
   GitHub; the phone menu sheet below 900 px), the footer, the sections' panels
   (`SectionPanel` for a section not ported yet; `AppShell` renders a ported one's own
@@ -85,7 +89,10 @@ unlisted.
   segments after it (`#mds/<entryId>/certificate/<n>`, each segment encoded on its own:
   `routeFromHash` / `hashPath` in `sections.ts`): `open(path)` pushes, so the browser's
   Back closes one level; `close(parent)` goes back, or on a link replaces with the
-  parent; `replace(path)` corrects a path the page does not know. No hash is the default
+  parent; `replace(path)` corrects a path the page does not know; `closeAll(parent)`
+  closes every level this page opened in one step (the pushed mark holds the depth,
+  `pqcOpened: n`: it goes back that many entries, then replaces a first level reached by a
+  link; switching sections drops the depth). No hash is the default
   section (the page's own URL, which Back returns to after a section opened something in
   another). It tells Next's
   router (`beforePopState`) to leave Back to the page while Back stays on this page's
@@ -106,8 +113,25 @@ unlisted.
   heading, the count, Clear All; the rows; the questions in `ConfirmDialog`),
   `CredentialRow` (the name opening the details, the checks as `StatusChip`s, the tags,
   the credential ID and AAGUID in Geist Mono under the row, FIDO MDS through 27B's
-  `useOpenMdsEntry`, Delete), `CredentialDetailDialog` (`#simple/credential/<key>`, a
-  stub until 28B: the name, the id, a link to the current interface), `model.ts`.
+  `useOpenMdsEntry`, Delete; a stored AAGUID no spelling reads shown as stored and
+  marked; on a phone each identifier the row's width), `model.ts`. The provider follows
+  another tab's change (the storage event) and gives the focus, after a deletion, to the
+  next row's name, else the previous one's, else the list's heading.
+  `CredentialDetailDialog` (Phase 28B) is one `Dialog` with four levels, each a pushed
+  history entry: the detail (`#simple/credential/<key>`), the registration
+  (`…/registration`), a certificate (`…/registration/certificate/<n>`, counted from 1 as
+  their buttons are) and the authenticator data (`…/registration/authenticator-data`);
+  the header's Back and the browser's go up one level (the focus on what opened the one
+  left), ×, Escape and the backdrop `closeAll`; a level the credential lacks is corrected
+  to the one above. It takes the section's route, so the Advanced tab reuses it (Phase
+  29). `credentials/detail/`: `model.ts` (the casts of the logic below),
+  `useCredentialDetail` (an advanced record completed from its artifact first, on a copy,
+  remembered by storage id for the page; then everything composed once into a
+  registration state of its own), `DetailSections` (the detail's sections in the MDS
+  entry page's language: a heading and a hairline each, values as `StatusChip`s, every
+  identifier's spellings in Geist Mono with copy, FIDO MDS beside the AAGUID) and
+  `RegistrationLevels` (the registration, a certificate with 27B's `CertificateSummary`
+  above its text, the authenticator data).
   `web/src/components/ceremony/CeremonyResult.tsx` is the result panel (Phase 29 adds
   its challenge row). Their tests render the characterization goldens' real answers
   through `tests/frontend/simple/ceremony-answers.js` (`@legacy-tests`; the root tests use
@@ -187,7 +211,12 @@ unlisted.
   `mds.spec.ts` covers the MDS list and `mds-entry.spec.ts` an entry, its certificates,
   its raw view and the AAGUID link. `simple.spec.ts` registers and authenticates in
   `/beta`, and proves the saved credentials shared both ways (registered in one UI,
-  listed, used, deleted and cleared in the other); `simple-parity.spec.ts` compares the
+  listed, used, deleted and cleared in the other); `credential-detail.spec.ts` opens a
+  credential's every level (registered in either UI, by click and by URL, Back through
+  the levels, 1440 / 1024 / 375 px, another tab followed) and
+  `credential-detail-parity.spec.ts` compares the details, the registration, each
+  certificate's and the authenticator data's text, and an advanced registration's result,
+  with the current UI; `simple-parity.spec.ts` compares the
   tab, each row with its checks' verdicts, the result panel and the success sentences.
 
 Rules for `web/src` (`tests/app/tooling/test_web_source_rules.py` holds them):
@@ -198,7 +227,8 @@ which the Trusted Types policy reports, and leaves the browser's Back on the app
 `eval`, nothing written to `window`, no `atob`, and no copy of
 the logic modules' exports or sentences (comments count). The logic modules are the test's
 `LOGIC_ROOTS` (Analyze Browser's, the Codec's, the MDS explorer's, the failed-response reader,
-the saved credentials' storage, the Simple tab's ceremonies and what a credential's row shows) plus
+the saved credentials' storage, the Simple tab's ceremonies, what a credential's row shows, and a
+credential's details and registration view with their state) plus
 whatever `web/src` imports through `@legacy/`, followed through their imports, and
 none of them may touch the DOM: a surface splits its logic out of its view first
 and adds it to `LOGIC_ROOTS`. No `Suspense` on the server-rendered path:
@@ -245,7 +275,9 @@ Important frontend entry points:
   one `localStorage` array both UIs read and write. `records.js` is the API and reads no
   page; `local.js`, the current UI's barrel, seeds it from the `initial-credential-records`
   page data its tests give (`seedUnifiedCredentialRecords`) and re-exports it. The storage
-  keeps what it read for the page's life. Held at 100 % per file.
+  keeps what it read until another tab changes it: `followStoredCredentialChanges` drops
+  what was read on the storage event (so the next write builds on the other tab's
+  records) and calls back; both UIs follow it. Held at 100 % per file.
 - `frontend/static/scripts/simple/ceremony.js`
   The Simple tab's two ceremonies with no DOM (the requests, the ponyfill, every step's
   and outcome's sentence, the result panel's input); `auth-simple.js` is the current
@@ -255,8 +287,25 @@ Important frontend entry points:
   What a saved credential's row shows (`describeCredentialCard`, given the indicators,
   the algorithm's tag and the hex id as values), the list's records and warm-up,
   deleting and clearing (given `confirm`, the storage and where messages go), a
-  credential's algorithm and tag (given the COSE describer). The current views render
-  them with the functions their tests inject or mock; the new UI with the real ones.
+  credential's algorithm and tag (given the COSE describer; an algorithm the labels do
+  not name is tagged `COSE${id}`). The current views render them with the functions
+  their tests inject or mock; the new UI with the real ones.
+- `frontend/static/scripts/advanced/credential-display/` and `advanced/credentials/hydrate.js`
+  A saved credential's details and the registration view, whose logic is DOM-free and
+  both UIs build from (Phase 28B): `registration-state.js` (the registration's state,
+  always passed in: the current UI keeps one, `state.js`'s `registrationDetailState`,
+  which its second modal reads when a button is pressed; the new UI one per credential),
+  `registration-view.js` (what the registration view, a certificate's and the
+  authenticator data's own views show, as data; `composeRegistration`; the snapshot a
+  registration keeps), `decode-payload.js` (`POST /api/decode`), `certificate-text.js`,
+  the sanitisers, `credential-detail-runtime/detail-sections.js` (one describer per
+  section, with the current builders' own inputs, since their tests call them) and
+  `compose.js` (`needsArtifact`, `composeCredentialDetail`), and `hydrate.js` (the
+  artifact merged into a record, given the fetch and the snapshot's save). The current
+  views (`sections-*.js`, `registration-compose-runtime.js`, `entry.js`,
+  `registration-result.js`, `detail-nodes.js`) render the data; `registration-state-runtime.js`
+  and `certificate-state.js` bind the current UI's one state. All are held at 100 % per
+  file (`vitest.config.mjs`) and are `LOGIC_ROOTS`.
 - `frontend/static/styles/shared/layout.css`
   Shared layout and credential card animation styles.
 - `frontend/static/scripts/shared/browser/`
@@ -499,8 +548,11 @@ Main route modules:
   `Vary: Cookie`); its `snapshotUrl` is there only while the packaged file is there with
   a meta that matches the verified snapshot, and carries `?v=<serial>.<digest>` (the
   file changes at runtime; its URL is cached for a year). The routes that read the
-  snapshot, and the browsers' snapshot file at its versioned URL, wait for a provisioning
-  under way (`ensure_snapshot_available()`, which a cold instance's warm-up is running);
+  snapshot, the browsers' snapshot file at its versioned URL, and both registrations'
+  complete (which look the new credential's AAGUID up and record what they found), wait
+  for a provisioning under way (`mds_provisioning.waits_for_the_snapshot`, over
+  `ensure_snapshot_available()`, which a cold instance's warm-up is running; the tests make
+  the process's first attempt at session start, `tests/app/conftest.py`);
   the index does not (unless it bootstraps the metadata itself). An upload or delete records
   whether the session has uploads. `routes/web_export.py` (the `web_export` blueprint) serves
   the new UI's export at `/beta`: HTML `no-cache`, `/beta/_next/static/` immutable for

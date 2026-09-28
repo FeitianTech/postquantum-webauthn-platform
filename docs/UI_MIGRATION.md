@@ -301,6 +301,46 @@ mid-UUID (mono, with copy). Enhance where it helps along the way. All data shown
   is measured into `--header-height`; the MDS table's Icon column follows the window's width; the static asset tests
   close their responses; long component tests are split, one behaviour each.
 
+## Decisions made in Phase 28B (2026-09-27)
+
+- **A credential's details are one dialog with levels, each a URL** (the owner's choice for the registration): the
+  detail (`#simple/credential/<key>`), the registration (`…/registration`, its own level rather than the detail's last
+  sections), a certificate (`…/registration/certificate/<n>`) and the authenticator data (`…/registration/authenticator-data`).
+  Each level is a pushed history entry: the header's Back and the browser's go up one, with the focus on what opened
+  the level left; ×, Escape and the backdrop close them all in one step (`useSection`'s `closeAll`, the depth kept in
+  the pushed mark); a link or a reload opens any level, and one the credential lacks is corrected to the level above.
+  The parent levels stay in the page, hidden, their scroll kept. Levels, not modals over modals: the current second
+  modal reads whichever registration was composed last.
+- **After a Simple registration only the toast shows**, as today (the owner's choice); the registration is reached from
+  the new credential's details. Phase 29's advanced registration opens the same dialog at `…/registration`.
+- **The detail in the MDS entry page's language**: each section a heading and a hairline, never a card in the dialog;
+  true, false and N/A as `StatusChip`s; every identifier's spellings in Geist Mono with copy, whole where they fit;
+  JSON as `CodeBlock`s. **A certificate's level** shows the MDS certificate page's summary above the current text (the
+  owner's choice; the parity check lists the summary's words). FIDO MDS sits beside the AAGUID (the current modal
+  keeps a status line for that jump that nothing fills). The credential's name is the detail's title.
+- **Logic out of the views, the state passed in.** The current registration view kept one module-level state its second
+  modal read at click time; `registration-state.js` takes the state as a parameter, the current UI binding its one
+  (`registration-state-runtime.js`, `certificate-state.js`), the new UI one per credential. What the sections, the
+  registration view and its sub-views show is data (`detail-sections.js`, `registration-view.js`, composed by
+  `compose.js`), rendered by the current builders (whose signatures stay: their tests call them) and by React. Each
+  refactor left the current modal's HTML byte for byte equal for eight records (a scratch comparison against the tree
+  before it). Held at 100 % per file; guards no value reaches were dropped, each claim checked.
+- **The artifact** is fetched when an advanced record's details open without a v2 snapshot, on a copy, remembered by
+  storage id for the page; a failure says the logged sentence in the dialog, and the details show what the browser
+  keeps.
+- **Fixes found or asked for, in both UIs:** a stored AAGUID with no base64 length no longer stops the list or the
+  details (shown as stored, marked unreadable), and a dashed GUID reads as one; client data that is not base64url is
+  shown as stored; another tab's change is followed (the storage event), which also stops a stale tab's write
+  overwriting another's; the warm-up reads the list again only after a real change; a registration reads the list
+  once (the current tab's second read a second later dated from when the list came from the server); an algorithm the
+  COSE labels do not name is tagged `COSE${id}`; the Simple registration names its algorithm from `describe_algorithm`
+  (EdDSA was "Other (Classical)"); both registrations wait for a cold instance's snapshot provisioning, as the MDS
+  routes do; after a deletion the focus goes to the next row, else the previous one, else the list's heading.
+- **Phone widths.** On a phone an identifier's copy button sits beside its label and the value has the row's (or the
+  dialog's) whole width, whole: an AAGUID on one line, a longer credential ID wrapping rather than cut; a long name
+  wraps. `MonoValue` measures overflow as if its "Show all" were not there, and again when the fonts arrive: before,
+  a value measured in the fallback font kept its "Show all" and stayed cut.
+
 ## Content parity (every surface phase)
 
 Before porting a surface, list everything it shows and every action it offers, from the current app (the
@@ -316,6 +356,6 @@ new component and check it in a browser. A phase is not done while an item is un
 | 27A | MDS explorer, the list page: the header, counts and status line, the table with its sorting, filters and resizing, Back to top, Manage Trusted Metadata, and the route that opens an entry (`#mds/<entryId>`). The explorer is 75 modules and 10,294 lines of JavaScript, seven times the Codec, so Phase 27 is split in two (docs/ui-parity/mds.md marks each item 27A or 27B). **Done** (see docs/MODERNIZATION_PLAN.md, Phase 27A) |
 | 27B | MDS explorer, the rest: the authenticator detail page, the certificate page, the raw views, and the jump from a saved credential to its entry. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 27B) |
 | 28A | The Simple tab (its form, both ceremonies, the ceremony result panel) and the saved-credential list (its rows, delete, Clear All, the jump to FIDO MDS), the records shared by both UIs, and the credential detail's dialog and URL with a stub body. The surface is 8,200 lines, and the logic web imports is 60–97 % covered before this phase holds it at 100 %, so Phase 28 is split in two (docs/ui-parity/credentials.md marks each item 28A or 28B). **Done** (see docs/MODERNIZATION_PLAN.md, Phase 28A) |
-| 28B | Saved credentials, the rest: the credential detail's every section, and the registration result with its certificate and authenticator-data views |
+| 28B | Saved credentials, the rest: the credential detail's every section, and the registration result with its certificate and authenticator-data views as levels of one dialog, each at its URL; the fixes 28A and its verification found. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 28B) |
 | 29 | Advanced tab: registration and authentication forms, JSON editor, drawer, result modals |
 | 30 | Cutover: `/` serves the new UI; the legacy templates, scripts and styles and `new_design/` are deleted; the MDS snapshot files move out of `frontend/static/`; the logic modules move into `web/`; the Google Fonts origins leave the CSP; the Playwright tests join the Cloud Build gate |
