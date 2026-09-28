@@ -304,6 +304,16 @@ describe('composeRegistration', () => {
     });
   });
 
+  it('hashes the authenticator data the attestation object held once its base64url is known, and keeps both in the snapshot', async () => {
+    const record = simpleRecord('es256');
+    const { state, composed } = await compose({ ...registrationOptions('es256'), authenticatorDataValue: record.authenticatorData });
+    expect([state.authenticatorDataHex, state.authenticatorDataHash]).toEqual([record.authenticatorDataHex, record.authenticatorDataHash]);
+    expect(composed.stateSnapshot).toMatchObject({
+      authenticatorDataHex: record.authenticatorDataHex,
+      authenticatorDataHash: record.authenticatorDataHash,
+    });
+  });
+
   it('keeps the record\'s authenticator data beside the decoded one', async () => {
     const record = simpleRecord('es256');
     const { decode, state } = await compose({ ...registrationOptions('es256'), authenticatorDataValue: record.authenticatorData });

@@ -205,6 +205,17 @@ describe('hashAuthenticatorData', () => {
     expect(await hashed(` ${hexOf(entry).toUpperCase()} `)).toMatchObject({ hex: hexOf(entry), hash: hashOf(entry) });
   });
 
+  it('reads authenticator data given as base64url text as base64url, not as the hex digits among it', async () => {
+    const entry = es256();
+    expect(await hashed(entry.authenticatorData)).toMatchObject({ hex: hexOf(entry), hash: hashOf(entry) });
+  });
+
+  it('reads hex text with spaces or colons between its bytes', async () => {
+    const entry = es256();
+    const spaced = hexOf(entry).match(/../g).join(': ');
+    expect(await hashed({ raw: spaced })).toMatchObject({ hex: hexOf(entry), hash: hashOf(entry) });
+  });
+
   it('passes over hex that is odd or has no digits, and a spelling that does not decode', async () => {
     const entry = es256();
     const data = { raw: 'abc', hex: 'zz', base64url: '@@@@', base64: base64Of(entry) };

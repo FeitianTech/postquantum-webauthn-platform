@@ -142,10 +142,12 @@ export async function hashAuthenticatorData(state) {
 
     let bytes = null;
 
-    // The first candidate that reads gives the hex: hex text, else base64url, else base64.
+    // The first candidate that reads gives the hex: hex text (spaces and colons
+    // aside), else base64url, else base64. Text with other characters is not
+    // hex: base64url text is read as base64url below.
     for (const candidate of hexCandidates) {
-        const normalized = candidate.replace(/[^0-9a-f]/gi, '').toLowerCase();
-        if (!normalized || normalized.length % 2 !== 0) {
+        const normalized = candidate.replace(/[\s:]/g, '').toLowerCase();
+        if (!/^[0-9a-f]+$/.test(normalized) || normalized.length % 2 !== 0) {
             continue;
         }
         state.authenticatorDataHex = normalized;

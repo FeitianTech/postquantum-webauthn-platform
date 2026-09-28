@@ -20,6 +20,7 @@ import {
 import {
     applyRegistrationSnapshot,
     captureRegistrationState,
+    hashAuthenticatorData,
     prepareRegistrationState,
     visibleStateCertificates,
 } from './registration-state.js';
@@ -242,7 +243,13 @@ export async function composeRegistration({
         }
     }
 
-    // Both are text: the snapshot's (applyRegistrationSnapshot) or the hash's (prepareRegistrationState).
+    // The decoder's authenticator data holds no bytes of its own, so the hash
+    // (prepareRegistrationState) found none until the base64url was attached above.
+    if (state.authenticatorData && !state.authenticatorDataHash) {
+        await hashAuthenticatorData(state);
+    }
+
+    // Both are text: the snapshot's (applyRegistrationSnapshot) or the hash's.
     const authenticatorSummary = {
         authenticatorDataHex: state.authenticatorDataHex,
         authenticatorDataHash: state.authenticatorDataHash,
