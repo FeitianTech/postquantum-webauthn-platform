@@ -129,10 +129,13 @@ export function SavedCredentialList({
   deletion,
   labelledBy,
   onOpen,
+  topRule = true,
 }: {
   deletion: CredentialDeletion;
   labelledBy: string;
   onOpen: (key: string) => void;
+  /** A hairline above the rows, when nothing above draws one. */
+  topRule?: boolean;
 }) {
   const { saved, listRef, ask } = deletion;
   return (
@@ -147,7 +150,7 @@ export function SavedCredentialList({
         </p>
       ) : null}
       {saved.rows.length ? (
-        <ul ref={listRef} aria-labelledby={labelledBy} className="border-t border-line">
+        <ul ref={listRef} aria-labelledby={labelledBy} className={cx(topRule && 'border-t border-line')}>
           {saved.rows.map((row) => (
             <CredentialRow
               key={row.key}
@@ -160,7 +163,7 @@ export function SavedCredentialList({
           ))}
         </ul>
       ) : (
-        <p className="border-t border-line px-5 py-8 text-body text-ink-muted" data-role="empty">
+        <p className={cx('px-5 py-8 text-body text-ink-muted', topRule && 'border-t border-line')} data-role="empty">
           {LIST_TEXT.empty}
         </p>
       )}

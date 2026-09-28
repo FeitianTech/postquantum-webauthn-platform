@@ -7,7 +7,7 @@ import {
   SavedCredentialList,
   useCredentialDeletion,
 } from '@/components/credentials/SavedCredentials';
-import { Drawer, OverlayBody, OverlayHeader } from '@/components/ui/Overlay';
+import { Drawer, OverlayHeader } from '@/components/ui/Overlay';
 
 export const DRAWER_ID = 'advanced-saved-credentials';
 
@@ -44,16 +44,17 @@ export function CredentialsDrawer({
         onClose={onClose}
         actions={<ClearAllButton deletion={deletion} />}
       />
-      <OverlayBody className="px-0 py-0 sm:px-0">
+      {/* The rows run to the drawer's edges, their hairlines with them: no body padding. */}
+      <div data-overlay-scroll="" className="min-h-0 flex-1 overflow-y-auto pb-4">
         {deletion.saved.progress ? (
           <div className="px-5 pt-4">
             <CredentialProgress saved={deletion.saved} />
           </div>
         ) : null}
-        <div className="pt-4">
-          <SavedCredentialList deletion={deletion} labelledBy={titleId} onOpen={onOpen} />
+        <div className={deletion.saved.notice ? 'pt-4' : undefined}>
+          <SavedCredentialList deletion={deletion} labelledBy={titleId} onOpen={onOpen} topRule={false} />
         </div>
-      </OverlayBody>
+      </div>
       {deletion.dialog}
     </Drawer>
   );
