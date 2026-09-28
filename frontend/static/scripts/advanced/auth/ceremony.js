@@ -179,24 +179,19 @@ export function readCreationRequest(text) {
 }
 
 // The credential as the server is sent it: its JSON (the ponyfill's create()
-// gives every credential its toJSON()), with its attachment and every client
-// extension result, read from the credential when it can give them.
+// gives every credential its toJSON(), which reads the credential's extension
+// results and always holds them), with its attachment and every client
+// extension result, their byte values as hex.
 function registrationCredentialJson(credential) {
     const credentialJson = credential.toJSON();
     credentialJson.authenticatorAttachment = credential.authenticatorAttachment ?? null;
-    const extensionResults = credential.getClientExtensionResults
-        ? credential.getClientExtensionResults()
-        : (credential.clientExtensionResults || {});
-    const normalizedExtensionResults = normalizeClientExtensionResults(extensionResults);
-    const existingExtensionResults = credentialJson.clientExtensionResults || {};
+    const normalizedExtensionResults = normalizeClientExtensionResults(credential.getClientExtensionResults());
     if (normalizedExtensionResults && typeof normalizedExtensionResults === 'object' &&
         Object.keys(normalizedExtensionResults).length > 0) {
         credentialJson.clientExtensionResults = {
-            ...existingExtensionResults,
+            ...credentialJson.clientExtensionResults,
             ...normalizedExtensionResults,
         };
-    } else if (credentialJson.clientExtensionResults === undefined) {
-        credentialJson.clientExtensionResults = existingExtensionResults;
     }
     return credentialJson;
 }
@@ -315,7 +310,7 @@ export async function registerAdvancedCredential(text, {
         if (convertedExtensions) {
             // Extensions to convert come with a publicKey, which the parsed options keep.
             createOptions.publicKey.extensions = {
-                ...(createOptions.publicKey.extensions || {}),
+                ...createOptions.publicKey.extensions,
                 ...convertedExtensions
             };
         }

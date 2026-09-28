@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { removePageData } from '../../page-data-helper.js';
+import { loadStorage, seedRecords } from './seed.js';
 
 vi.mock('../../../../frontend/static/scripts/shared/storage/artifacts-client.js', () => ({
   fetchCredentialArtifactsBulk: vi.fn(),
@@ -30,11 +30,10 @@ function savedRecord() {
   };
 }
 
-async function loadStorage() {
-  vi.resetModules();
-  // As index.html does: no boot records, so the module reads localStorage.
-  removePageData('initial-credential-records');
-  return import('../../../../frontend/static/scripts/shared/storage/local.js');
+async function loadStored() {
+  // As a page does: no boot records, so the module reads localStorage.
+  seedRecords(null);
+  return loadStorage();
 }
 
 describe('registration markup saved by an earlier version', () => {
@@ -45,7 +44,7 @@ describe('registration markup saved by an earlier version', () => {
   it('is dropped when the record is read, and the record saved without it', async () => {
     localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([savedRecord()]));
 
-    const storage = await loadStorage();
+    const storage = await loadStored();
     const [record] = storage.getAllAdvancedCredentials();
 
     expect(record.registrationDetailHtml).toBeUndefined();
@@ -63,7 +62,7 @@ describe('registration markup saved by an earlier version', () => {
     delete record.registrationDetailSnapshot.state;
     localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([record]));
 
-    const storage = await loadStorage();
+    const storage = await loadStored();
 
     expect(storage.getAllAdvancedCredentials()[0].registrationDetailSnapshot).toBeUndefined();
   });
@@ -73,7 +72,7 @@ describe('registration markup saved by an earlier version', () => {
     localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([record]));
     const before = localStorage.getItem(SHARED_STORAGE_KEY);
 
-    const storage = await loadStorage();
+    const storage = await loadStored();
     storage.getAllAdvancedCredentials();
 
     expect(localStorage.getItem(SHARED_STORAGE_KEY)).toBe(before);

@@ -30,14 +30,15 @@ export default defineConfig({
         'tests/frontend/**',
       ],
       // A floor, not a target. Set just under the numbers measured on
-      // 2026-09-17 (82.59 statements / 66.46 branches / 91.33 functions /
-      // 82.71 lines) so a real regression fails the run but ordinary churn
-      // does not. Raise these when coverage rises; never lower them to go green.
+      // 2026-09-28, once the current UI's views had gone (99.96 statements /
+      // 99.79 branches / 100 functions / 99.96 lines), so a real regression
+      // fails the run but ordinary churn does not. Raise these when coverage
+      // rises; never lower them to go green.
       thresholds: {
-        statements: 82,
-        branches: 66,
-        functions: 91,
-        lines: 82,
+        statements: 99.5,
+        branches: 99.5,
+        functions: 99.5,
+        lines: 99.5,
         // The Codec's logic, which the new UI in web/ imports: every line and branch.
         'frontend/static/scripts/decoder/codec/{constants,labels,request,result,values}.js': FULL,
         'frontend/static/scripts/decoder/codec/encoding/{can-encode,format,summary}.js': FULL,
@@ -47,7 +48,7 @@ export default defineConfig({
         'frontend/static/scripts/advanced/mds/metadata/{explorer-source,metadata-helpers}.js': FULL,
         'frontend/static/scripts/advanced/mds/utils/{extractors,formatters,resolvers,status-reports}.js': FULL,
         // The saved credentials' storage, which both UIs read and write: every line and branch.
-        'frontend/static/scripts/shared/storage/{artifacts-client,local,records}.js': FULL,
+        'frontend/static/scripts/shared/storage/{artifacts-client,records}.js': FULL,
         'frontend/static/scripts/shared/storage/local/*.js': FULL,
         // The Simple tab's ceremonies and what they rest on, which web/ imports: every line and branch.
         'frontend/static/scripts/simple/ceremony.js': FULL,

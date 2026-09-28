@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, vi } from 'vitest';
-import { setPageData } from './page-data-helper.js';
 
 class NoopResizeObserver {
   observe() {}
@@ -67,10 +66,6 @@ beforeEach(() => {
     value: sessionStorage,
     configurable: true,
   });
-
-  setPageData('initial-credential-records', []);
-  setPageData('initial-mds-info', {});
-  setPageData('initial-mds-snapshot', {});
 
   Object.defineProperty(window, 'innerWidth', {
     value: 1280,

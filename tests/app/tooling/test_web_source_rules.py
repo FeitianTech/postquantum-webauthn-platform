@@ -67,8 +67,7 @@ LOGIC_ROOTS = (
     "advanced/mds/explorer/status.js",
     "advanced/mds/raw-data.js",
     "advanced/mds/raw-stringify.js",
-    # The saved credentials' storage. Not shared/storage/local.js: the current UI's
-    # barrel seeds it from the page's data.
+    # The saved credentials' storage.
     "shared/storage/records.js",
     "shared/storage/artifacts-client.js",
     "shared/storage/local/advanced-credentials.js",

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { removePageData } from '../../page-data-helper.js';
+import { loadStorage, seedRecords } from './seed.js';
 
 import { ADVANCED_RECORD, SIMPLE_RECORD } from './pre-phase-23-records.js';
 import { base64ToBytes, base64UrlToBytes } from '../../../../frontend/static/scripts/shared/utils/base64.js';
@@ -16,12 +16,11 @@ vi.mock('../../../../frontend/static/scripts/shared/storage/artifacts-client.js'
 
 const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
 
-async function loadStorage(records) {
+async function loadStored(records) {
   localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify(records));
-  vi.resetModules();
-  // As index.html does: no boot records, so the module reads localStorage.
-  removePageData('initial-credential-records');
-  return import('../../../../frontend/static/scripts/shared/storage/local.js');
+  // As a page does: no boot records, so the module reads localStorage.
+  seedRecords(null);
+  return loadStorage();
 }
 
 function bytesOf(value) {
@@ -36,7 +35,7 @@ describe('credential records saved before base64url', () => {
   });
 
   it('are read back in base64url, holding the same bytes', async () => {
-    const storage = await loadStorage([SIMPLE_RECORD, ADVANCED_RECORD]);
+    const storage = await loadStored([SIMPLE_RECORD, ADVANCED_RECORD]);
 
     const [simple] = storage.getAllSimpleCredentials();
     const [advanced] = storage.getAllAdvancedCredentials();
@@ -62,7 +61,7 @@ describe('credential records saved before base64url', () => {
 
   it('keep fields named for base64, extension outputs and text as they were', async () => {
     const statement = { ...SIMPLE_RECORD.attestationStatement, ver: '2.0' };
-    const storage = await loadStorage([
+    const storage = await loadStored([
       { ...SIMPLE_RECORD, attestationStatement: statement },
       ADVANCED_RECORD,
     ]);
@@ -79,7 +78,7 @@ describe('credential records saved before base64url', () => {
   });
 
   it('are saved once in the new spelling, and read again without another save', async () => {
-    const storage = await loadStorage([SIMPLE_RECORD]);
+    const storage = await loadStored([SIMPLE_RECORD]);
     const setItem = vi.spyOn(window.localStorage, 'setItem');
 
     storage.getAllSimpleCredentials();
@@ -87,7 +86,7 @@ describe('credential records saved before base64url', () => {
     expect(saved.publicKey).toBe(SIMPLE_RECORD.publicKeyBase64Url);
 
     vi.resetModules();
-    const again = await import('../../../../frontend/static/scripts/shared/storage/local.js');
+    const again = await import('../../../../frontend/static/scripts/shared/storage/records.js');
     setItem.mockClear();
     again.getAllSimpleCredentials();
     expect(setItem).not.toHaveBeenCalled();
@@ -97,7 +96,7 @@ describe('credential records saved before base64url', () => {
   it('a simple record saved without credentialIdBase64Url is found by the ID the server reports', async () => {
     const legacy = { ...SIMPLE_RECORD };
     delete legacy.credentialIdBase64Url;
-    const storage = await loadStorage([legacy]);
+    const storage = await loadStored([legacy]);
 
     const updated = storage.updateSimpleCredentialSignCount(
       'user@example.com',
@@ -110,7 +109,7 @@ describe('credential records saved before base64url', () => {
   });
 
   it('still name the same credential and user handle', async () => {
-    const storage = await loadStorage([SIMPLE_RECORD, ADVANCED_RECORD]);
+    const storage = await loadStored([SIMPLE_RECORD, ADVANCED_RECORD]);
 
     const [simple] = storage.getAllSimpleCredentials();
     const [advanced] = storage.getAllAdvancedCredentials();

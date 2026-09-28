@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  canEncodeToFormat,
-  createEncodedFormatElements,
-  findEncodedSummary,
-} from '../../../frontend/static/scripts/decoder/codec/encoding.js';
+// The Codec's encoding leaves, which the current UI's tests reached through its
+// decoder/codec/encoding.js barrel until Phase 30 removed it with its views.
+import { canEncodeToFormat } from '../../../frontend/static/scripts/decoder/codec/encoding/can-encode.js';
+import { findEncodedSummary } from '../../../frontend/static/scripts/decoder/codec/encoding/summary.js';
 
 describe('codec encoding helpers', () => {
   it('validates canonical and aliased encoder formats', () => {
@@ -61,26 +60,5 @@ describe('codec encoding helpers', () => {
 
     expect(arraySummary).not.toBeNull();
     expect(arraySummary?.label).toBe('Response details');
-  });
-
-  it('creates ordered encoded format blocks while skipping unsupported keys', () => {
-    const blocks = createEncodedFormatElements({
-      base64url: 'qrvM3Q',
-      encoding: 'cbor',
-      base64: 'qrvM3Q==',
-      custom: 'custom-value',
-      hex: 'aabbccdd',
-      ignoredEmpty: '   ',
-    });
-
-    expect(blocks).toHaveLength(4);
-    const labels = blocks.map((block) => block.querySelector('.codec-encoded-label')?.textContent);
-    expect(labels).toEqual(['Hex', 'Base64', 'Base64url', 'Custom']);
-
-    const firstValue = blocks[0].querySelector('.codec-encoded-value')?.textContent;
-    expect(firstValue).toBe('aabbccdd');
-
-    expect(createEncodedFormatElements(null)).toEqual([]);
-    expect(createEncodedFormatElements('string')).toEqual([]);
   });
 });

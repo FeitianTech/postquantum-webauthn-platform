@@ -105,7 +105,7 @@ export async function registerSimplePasskey(email, { onProgress = () => {} } = {
     if (convertedExtensions) {
         // The parsed options always hold publicKey (the ponyfill requires it).
         createOptions.publicKey.extensions = {
-            ...(createOptions.publicKey.extensions || {}),
+            ...createOptions.publicKey.extensions,
             ...convertedExtensions,
         };
     }

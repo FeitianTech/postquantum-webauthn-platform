@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { removePageData, setPageData } from '../../page-data-helper.js';
+import { loadStorage, seedRecords } from './seed.js';
 
 vi.mock('../../../../frontend/static/scripts/shared/storage/artifacts-client.js', () => ({
   fetchCredentialArtifactsBulk: vi.fn(),
@@ -14,8 +14,7 @@ import {
 } from '../../../../frontend/static/scripts/shared/storage/artifacts-client.js';
 
 async function loadLocalStorageModule() {
-  vi.resetModules();
-  return import('../../../../frontend/static/scripts/shared/storage/local.js');
+  return loadStorage();
 }
 
 const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
@@ -23,7 +22,7 @@ const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
 describe('local-storage module', () => {
   beforeEach(() => {
     window.localStorage.clear();
-    setPageData('initial-credential-records', []);
+    seedRecords([]);
     fetchCredentialArtifactsBulk.mockReset();
     updateCredentialSnapshot.mockReset();
     uploadCredentialArtifact.mockReset();
@@ -143,7 +142,7 @@ describe('local-storage module', () => {
   });
 
   it('migrates legacy storage keys into unified records and removes legacy keys', async () => {
-    removePageData('initial-credential-records');
+    seedRecords(null);
 
     localStorage.setItem('postquantum-webauthn.simpleCredentials', JSON.stringify([
       {
@@ -178,7 +177,7 @@ describe('local-storage module', () => {
   });
 
   it('updates advanced records when saving matching simple credentials', async () => {
-    removePageData('initial-credential-records');
+    seedRecords(null);
 
     localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([
       {
@@ -260,7 +259,7 @@ describe('local-storage module', () => {
   });
 
   it('prefetches snapshots only for missing advanced records with server artifacts', async () => {
-    removePageData('initial-credential-records');
+    seedRecords(null);
 
     localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([
       {
