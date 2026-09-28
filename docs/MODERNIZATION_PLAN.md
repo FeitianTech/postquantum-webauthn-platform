@@ -3006,6 +3006,171 @@ the strict CSP and the Trusted Types report-only policy).
   stored `aaguid` is base64url, `AAAAAAAAAAAAAAAAAAAAAA`, whose characters are all hex digits, and the detail reads it
   as hex (eleven bytes of 0xAA), although the record also holds `aaguidHex` and `properties.aaguidGuid`.
 
+### Phase 29A — the Advanced tab's registration at /beta#advanced — DONE (2026-09-28)
+22 commits and this record, b1ceedcd..the record's own, all this phase's (one author, bare subjects; the range starts
+after the tech lead's e5af886f). Each commit that changes code or tests was gated before it was made on its exact
+tree: the staged change applied to a clean detached worktree of its parent (`git clean -fdx`, `node_modules` linked,
+Python run from that tree), then pytest under coverage (its 95 % floor), the root vitest (its floors), web's typecheck,
+unit tests (their floors), build and CSP scan, and ruff; a commit was made only when every gate passed. The
+per-commit gate does not run Playwright: the whole suite ran after the browser-test commit and again on the last
+commit. Not pushed: the tech lead verifies and pushes.
+Planned in plan mode and approved before any code. One question went to the owner, who chose that an edit to the
+JSON applies as it parses (Save goes). A review of the first draft against the code found 22 problems before they
+happened (among them: the draft would have stopped sending the editor's text, which the current ceremony sends as
+typed; pruning throws on an empty user name; the relying party's name in a logic module would fail the no-copy rule
+against the header; the AAGUID fix as drafted broke three legacy test files; overlays paint in portal order).
+Phase 29 is split (the charter): 29A is the frame, the request and its JSON editor, and registration; 29B is
+authentication. `docs/ui-parity/advanced.md` lists 114 items (and 4 never shown): 77 are ported here and 37 are left
+to 29B.
+
+**What there is now.** `/beta#advanced` shows the tab's heading, then a toolbar: the Registration / Authentication
+switch, Saved Credentials with its count, Reset and Create Credential. Under the toolbar sit the progress line, a
+failure and the result panel with its challenge row. Registration has two parts:
+- The form: four section cards of field rows, with switches, toggle chips (ML-DSA grouped) and byte fields in Geist
+  Mono with their refresh buttons.
+- The JSON editor, beside the form from 1280 px (sticky, as tall as the window) and under it below that. Its text is
+  the request. The form follows every edit it can read. An edit that does not parse says where. Reset rebuilds the
+  text.
+
+Create Credential then:
+- registers through the current tab's own ceremony and saves the record and its snapshot;
+- opens Phase 28B's dialog at the registration, with the detail one Back below.
+
+The saved credentials are a drawer over Phase 28's list; a name opens the details over it. The Authentication segment
+says it has not moved yet and links to `/`. The current tab at `/` is unchanged apart from the fixes below, and runs on
+the same logic.
+
+**A — the plan and the fixes** (b1ceedcd; bff388d0, 0490805e, b5c8ace2, 93e7be80, 51a7665b; 6192d741, 87c7373c).
+- b1ceedcd: the parity list (every item marked 29A or 29B) and the split in the charter.
+- 28B's findings, fixed in both UIs, each with a test that failed before:
+  - (b) bff388d0: "Version: 3 (0x2)" no longer repeats the hex.
+  - (c) 0490805e: a certificate known only by its summary keeps that summary in the attestation's JSON (no
+    `{certificateIndex}`).
+  - (a) b5c8ace2: a stored AAGUID of 22 base64url characters is read as base64url (strictly), and the explicit hex and
+    GUID fields are read first. The all-zero AAGUID Chrome sends without attestation showed eleven bytes of 0xAA.
+  - (a′) 93e7be80: the authenticator data is hashed once its base64url is attached, and base64url text is read as
+    base64url, not as the hex digits among it.
+  - (d) 51a7665b: the current UI's second modal shows the registration its buttons belong to (a copy of the state
+    taken when the view was drawn).
+- 6192d741: a pre-existing race in a 28B component test (it waited for the dialog's title, which shows before the
+  details are composed) failed 3/3 under load. The test now waits for the level.
+- 87c7373c: `ui/Overlay` stacks layers. The z-index comes from the depth, only the top layer takes Escape and Tab, the
+  layers under it are inert, and the focus returns layer by layer.
+
+**B — logic out of the views** (refactors d4812f62, 8096421c, 684c5b2b; held by 221b1439, 2b5995bd, 89c0c6ff; fixed
+by d03c6d0b; recorded by aefc57ac).
+- New DOM-free leaves. The current modules keep their paths and wrap or re-export them, because the legacy tests mock
+  by path:
+  - `auth/hint-rules.js`, `auth/fake-credentials.js`, `auth/hex-input.js`;
+  - `editor/json-editing.js`, `json-editor/algorithm-options.js`;
+  - `json-editor/registration-request.js`: the defaults, `buildCreationOptions`, `readCreationOptions`,
+    `changeRegistration` and `registrationControls`;
+  - `json-editor/editor-model.js`: the editor's sentences, parsing, `locateJsonSyntaxError` and `readEditedRequest`;
+  - `auth/ceremony.js`: `registerAdvancedCredential` and its sentences;
+  - `credential-display/registration-snapshot.js`: `keepRegistrationSnapshot`.
+- Each refactor passed the legacy tests unchanged. Each was also compared, in a scratch copy, against the tree before
+  it:
+  - the editor's text and the form for nine builds, nine saves and two resets were equal;
+  - the ceremony's events, record and toasts over six recorded registrations were equal (only `capturedAt` differs).
+- Held at 100 % per file, and in `LOGIC_ROOTS`: the nine leaves and the five editor modules they rest on (`schema.js`,
+  `validation-common.js`, `validation-registration.js`, `validation-authentication.js`, `merge-prune.js`). Guards no
+  value reaches were dropped. Each such claim was checked against the callers and the ponyfill first; four branches
+  the legacy mocks reach were restored.
+- d03c6d0b, in both UIs: reading a request back now holds every value the form writes (largeBlob, the prf switch, no
+  attachment as Unspecified, an empty exclude list leaving the switch as it was). A property test checks
+  `build(read(build(s)))` = `build(s)`, and a legacy test failed before the fix.
+- aefc57ac: a characterization scenario, `advanced-registration-detail-decodes`. It holds three advanced registrations
+  and the decoder's answers for their attestation objects and authenticator data. The tests of both UIs use these
+  registrations, and `tests/frontend/advanced/auth/advanced-answers.js` stands in for the authenticator.
+
+**C — the views** (2e4e6676, 151a9f95, 793dcabb, a5addd01, fbc9b425).
+- 2e4e6676: `SavedCredentialList` split out of its card (the deletion questions with it); `FieldRow` for a group; the
+  Switch's `aside`; a plus icon; `NAV_ID` and `APP_TITLE` in `lib/sections.ts`.
+- 151a9f95: the form and the editor over one request:
+  - `advanced/useAdvancedRequest.ts`, a reducer whose text is the request;
+  - `RegistrationForm.tsx` and `FieldControls.tsx`;
+  - `fieldText.ts`: the templates' words, generated from them;
+  - `JsonEditor.tsx`: the keys, the note with "Line L, column C" and Go to line.
+- 793dcabb: `AdvancedSection.tsx` (the toolbar, the switch, Reset, the result panel), `CredentialsDrawer.tsx` and
+  `useRegistrationCeremony.ts`. `SectionPanel` goes; every section is ported.
+- a5addd01 and fbc9b425 came from the browser check:
+  - the drawer's rows now run to its edges;
+  - the editor's Reset now says "JSON editor reset to current settings.", as the current editor does.
+- Component tests over the recorded answers: every field and rule, both Resets, the editor both ways (accepted,
+  refused, unparsed with its location), the keys, the drawer (a detail and a question over it, Escape closing one
+  layer), and the registration: progress, warnings, toast, a failure in place, the challenge row, the record, the
+  snapshot PUT, the dialog at `…/registration` and Back to the detail. Every test that answers a request waits for it.
+
+**D — browser tests** (6e47ec70).
+- `advanced.spec.ts` (9 tests) uses Chromium's virtual authenticator on USB. The default request asks for a
+  cross-platform authenticator. It covers:
+  - registering from the form: the result panel, the registration level, Back to the detail, the fields drawn again;
+  - registering from an edited JSON (ES256 only): the begin request is the edit;
+  - an edit that does not parse: "Line 4, column 3", the form kept, no request;
+  - the drawer, with a detail over it and Escape one layer at a time;
+  - a credential registered in `/beta` that the current tab authenticates with;
+  - a credential registered at `/` listed and opened in `/beta`;
+  - 1440, 1024 and 375 px.
+- `advanced-parity.spec.ts` (5 tests; the result is below). `credential-views.ts` holds the helpers it shares with
+  `credential-detail-parity.spec.ts`.
+- `beta-smoke.spec.ts` counts Advanced as ported.
+- Found in this commit: from 793dcabb the page held two `[data-ceremony-result]` panels, so `simple-parity.spec.ts`
+  failed at 793dcabb and 89c0c6ff. The per-commit gate does not run Playwright. The spec now looks inside the Simple
+  tabpanel.
+
+**The parity result.**
+- The registration form: the same four headings and the same words, section by section, **with no difference**.
+- The info popups: all 18 with the same labels in the same order, in English and 中文.
+- The algorithms and hints: the same labels in the same order.
+- The editor's text: for the same User ID, user name and challenge it is **equal byte for byte**, both for the defaults
+  and with fifteen settings changed.
+- A registration made in `/beta`: the current modal shows the words `/beta`'s detail and registration levels show. The
+  only differences are the three 28B listed with their reasons. Each certificate's text and the authenticator data's
+  are equal.
+
+**Seen in a real browser.** Flask ran from `e2e/serve-flask.mjs` on a spare port, with temporary stores, the MDS
+fixture, the strict CSP and the Trusted Types report-only policy. The browser was Playwright's Chromium with the
+virtual authenticator, at 1440, 1024 and 375 px. The check covered:
+- the form;
+- an edit that does not parse;
+- a registration and its result;
+- the drawer;
+- the Authentication note;
+- `/` unchanged.
+
+**No console, CSP or Trusted Types message, and no sideways scroll.** The check found the drawer's padding and the
+missing Reset toast, both fixed (C). The screenshots are in the session's scratchpad.
+
+**Tests.**
+- pytest: 4829 → **4857** passed / 4 skipped (the new scenario and its codec corpus cases); coverage 97 %.
+- Linux (python:3.14, Docker, `git archive` of fbc9b425): **4843** / 5, the usual 14 fewer and one more skip. ruff
+  is clean.
+- Root vitest: 1511 → **1884** tests in 131 files. Coverage 90.53 / 82.28 / 94.15 / 90.47 → **91.76 / 85.06 / 94.55 /
+  91.72**. The floors held, and every held file is at 100 %.
+- Web vitest: 387 → **434** tests in 37 files. Coverage 98.8 / 94.44 / 98.8 / 99.58 → **98.66 / 93.51 / 98.7 /
+  99.59**; the floors are 97 / 92 / 96 / 98.
+- Web typecheck is clean. The CSP scan found 4 HTML files, 38 script elements and **0 violations**.
+- Playwright: 112 → **126** passed on macOS (Chromium). The web unit tests passed 6 of 6 repeats while pytest and the
+  root suite ran alongside.
+
+**Found but not fixed:**
+- The per-commit gate runs no browser test, so a spec can break between the commits that run them: `simple-parity`
+  was red for two commits (D). Cloud Build does not run them either, until the cutover.
+- What the form cannot hold is sent as typed and dropped by the next form change, in both UIs, as today: `rp.id`,
+  transports, another user's IDs in `excludeCredentials`, the order of hints and algorithms, `timeout: 0`.
+- The current `main.js` keeps its field listeners, a second copy of `changeRegistration`'s rules, until the cutover.
+- The current editor keeps Save, with its merge and prune, and its fake-ID messages as toasts. The two UIs now differ
+  there by the owner's choice.
+- "Please select at least one authenticator hint before continuing." and "Selected hints do not map to any
+  authenticator attachments." are still reachable only with `requireSelection: true`, which no caller passes
+  (ADV-Z4). `hint-rules.js` keeps them, held at 100 %; 29B decides whether authentication uses them.
+- Not run on GitHub yet (nothing is pushed): `ci-web.yml`'s e2e job now runs the two new specs.
+
+**What 29B carries.** The authentication form (ADV-A, AB, I19–I29), its request (`authentication-request.js`, ADV-J7),
+the allow list from the saved credentials (`auth/allow-credentials.js`), largeBlob and prf with their capability
+checks (`auth/capabilities.js`), the authentication ceremony and its result (ADV-U, P2, G2; the counter row and the row
+tinted), authentication's Reset (ADV-X2) and the Advanced tab's info-popup parity for them.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:

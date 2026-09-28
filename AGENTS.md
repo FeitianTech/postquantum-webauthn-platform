@@ -71,16 +71,23 @@ unlisted.
   roles (their first user is the MDS status reports). `Overlay` takes a dialog's `size`
   (`sm` for a question), its `role` (`alertdialog`, `describedBy`) and `initialFocus`;
   `ConfirmDialog` asks before something that cannot be undone (focus on Cancel) in
-  place of the browser's `confirm`. `OverlayHeader` takes `back` for a level inside a
+  place of the browser's `confirm`. Overlays stack: a module-level list of the open
+  layers, each one's z-index from its depth (whatever the portals' order), only the top
+  one handling Escape and Tab, those under it inert until it closes, the focus returned
+  layer by layer (a question or a credential's details open over the Advanced drawer).
+  `FieldRow` takes `group` for a set of controls (`role="group"` named by its label),
+  `Switch` an `aside`. `OverlayHeader` takes `back` for a level inside a
   panel (`BackButton`, "Back" titled with where it returns to, which the MDS pages use
   too). `MonoValue` measures whether a value fits as if its "Show all" were not there,
   and again when the fonts arrive; `wrapOnPhone` gives it a phone's whole width, the
   copy button at the top right of the nearest positioned box (beside the value's label).
 - `web/src/components/shell/`: the header (title, the four sections, Analyze Browser,
-  GitHub; the phone menu sheet below 900 px), the footer, the sections' panels
-  (`SectionPanel` for a section not ported yet; `AppShell` renders a ported one's own
-  component, `SimpleSection` for `#simple`, `CodecSection` for `#codec`, `MdsSection` for
-  `#mds`, and gives the route only to the section shown: the others get `CLOSED_ROUTE`).
+  GitHub; the phone menu sheet below 900 px), the footer, and `AppShell`, which renders
+  each section's own component (`SimpleSection` for `#simple`, `AdvancedSection` for
+  `#advanced`, `CodecSection` for `#codec`, `MdsSection` for `#mds`), all mounted, and
+  gives the route only to the section shown: the others get `CLOSED_ROUTE`. `NAV_ID` and
+  `APP_TITLE` (the header's title, which is also the relying party's name the Advanced
+  request carries) are in `lib/sections.ts`.
   The header measures itself into `--header-height` on `<html>` (a `ResizeObserver`,
   through the CSSOM): it takes two rows between 900 and 1280 px, and the scroll padding,
   the Codec's sticky column, the MDS frame and the Simple form follow it.
@@ -106,11 +113,13 @@ unlisted.
   busy button, each step's sentence, a success as a toast, a failure in place, the result
   panel, the row a ceremony used tinted), `model.ts` (the casts of `simple/ceremony.js`,
   `shared/auth/random-username.js` and the storage). `SavedCredentialsProvider` /
-  `useSavedCredentials` (at the shell's level, so the Advanced drawer shares it in Phase
-  29: the records from `shared/storage/records.js`, read after hydration and after each
-  change, the warm-up after each read, delete and Clear All through
-  `advanced/credentials/delete-flow.js`, the tint), `SavedCredentials` (one card: the
-  heading, the count, Clear All; the rows; the questions in `ConfirmDialog`),
+  `useSavedCredentials` (at the shell's level, so the Advanced drawer shares it: the
+  records from `shared/storage/records.js`, read after hydration and after each change,
+  the warm-up after each read, delete and Clear All through
+  `advanced/credentials/delete-flow.js`, the tint), `SavedCredentials` (the Simple tab's
+  card: the heading, the count, Clear All, over `SavedCredentialList`, the rows, which the
+  Advanced drawer holds too; `useCredentialDeletion` keeps the questions in
+  `ConfirmDialog` and where the focus goes when no row is left),
   `CredentialRow` (the name opening the details, the checks as `StatusChip`s, the tags,
   the credential ID and AAGUID in Geist Mono under the row, FIDO MDS through 27B's
   `useOpenMdsEntry`, Delete; a stored AAGUID no spelling reads shown as stored and
@@ -123,8 +132,9 @@ unlisted.
   their buttons are) and the authenticator data (`…/registration/authenticator-data`);
   the header's Back and the browser's go up one level (the focus on what opened the one
   left), ×, Escape and the backdrop `closeAll`; a level the credential lacks is corrected
-  to the one above. It takes the section's route, so the Advanced tab reuses it (Phase
-  29). `credentials/detail/`: `model.ts` (the casts of the logic below),
+  to the one above. It takes the section's route, so the Advanced tab reuses it
+  (`#advanced/credential/<key>/…`), and `returnFocusTo`. `credentials/detail/`: `model.ts`
+  (the casts of the logic below),
   `useCredentialDetail` (an advanced record completed from its artifact first, on a copy,
   remembered by storage id for the page; then everything composed once into a
   registration state of its own), `DetailSections` (the detail's sections in the MDS
@@ -132,12 +142,39 @@ unlisted.
   identifier's spellings in Geist Mono with copy, FIDO MDS beside the AAGUID) and
   `RegistrationLevels` (the registration, a certificate with 27B's `CertificateSummary`
   above its text, the authenticator data).
-  `web/src/components/ceremony/CeremonyResult.tsx` is the result panel (Phase 29 adds
-  its challenge row). Their tests render the characterization goldens' real answers
+  `web/src/components/ceremony/CeremonyResult.tsx` is the result panel (`showChallenge`
+  adds the Advanced tab's challenge row). Their tests render the characterization
+  goldens' real answers
   through `tests/frontend/simple/ceremony-answers.js` (`@legacy-tests`; the root tests use
   it too), which also stands in for the authenticator; `src/test/credentials.ts` keeps
   records in the storage and forgets its read cache, `src/test/fetch.ts` answers `fetch`
   by path. `docs/ui-parity/simple.md` and `credentials.md` map every item.
+- `web/src/components/advanced/`: the Advanced tab (Phase 29A: its frame and registration;
+  the Authentication segment says it has not moved yet and links to `/` until 29B).
+  `AdvancedSection` (the toolbar: the Registration / Authentication `SegmentedControl`,
+  Saved Credentials with its count, Reset, Create Credential; the progress line, a failure
+  in place, `CeremonyResult` with its challenge row; the form beside the JSON editor from
+  1280 px; `CredentialDetailDialog` at `#advanced/credential/<key>/…`), `CredentialsDrawer`
+  (the saved credentials in a `Drawer` over `SavedCredentialList`, the count and Clear All
+  in its header; not a URL, closed on leaving the section), `useAdvancedRequest` (a reducer
+  whose text is the request, what the ceremony sends: a form change rebuilds it with
+  `buildCreationOptions`, keeping the keys beside `publicKey`; an edit is read by
+  `readEditedRequest`, and one the form can read updates the form at once; one that does
+  not parse or that a check refuses leaves the form as it was and says why and where; the
+  host and the random values set after hydration), `RegistrationForm` (four section cards,
+  each a container-query grid of field rows) over `FieldControls` (`SelectField`,
+  `SwitchField`, `ChipGroupField` / `Chip`, `HexField` with its refresh button,
+  `FakeCredentialField`, `About`, the info popup), `JsonEditor` (a Geist Mono textarea
+  named by its heading, the keys of `json-editing.js`, the note with the line and column
+  and Go to line, Reset), `useRegistrationCeremony` (the shared ceremony: a busy button,
+  the steps' sentences, toasts, a failure in place; the record and its snapshot saved,
+  then the dialog opened at the registration with the detail one Back below, only while
+  the tab is shown), `fieldText.ts` (the templates' labels, options, errors and info popups
+  in English and 中文, generated from `frontend/templates/advanced/tab/`) and `model.ts`
+  (the casts of the logic below). Tests: `src/test/advanced.tsx` renders the form and reads
+  the editor; the recorded registrations come through
+  `tests/frontend/advanced/auth/advanced-answers.js` (`@legacy-tests`), which also stands
+  in for the authenticator. `docs/ui-parity/advanced.md` maps every item, 29A or 29B.
 - `web/src/components/analyze-browser/`: the first ported surface, over the logic
   modules in `frontend/static/scripts/shared/browser/`, imported through the
   `@legacy/*` alias (`experimental.externalDir`), never copied. They move into
@@ -216,8 +253,15 @@ unlisted.
   the levels, 1440 / 1024 / 375 px, another tab followed) and
   `credential-detail-parity.spec.ts` compares the details, the registration, each
   certificate's and the authenticator data's text, and an advanced registration's result,
-  with the current UI; `simple-parity.spec.ts` compares the
+  with the current UI (its helpers, `credential-views.ts`, shared with the Advanced parity);
+  `simple-parity.spec.ts` compares the
   tab, each row with its checks' verdicts, the result panel and the success sentences.
+  `advanced.spec.ts` registers in `/beta#advanced` from the form and from an edited JSON,
+  refuses an edit that does not parse, opens a credential from the drawer, uses
+  credentials across both UIs and fits 1440 / 1024 / 375 px; `advanced-parity.spec.ts`
+  compares the registration form's words, its info popups (English and 中文), its choices,
+  the editor's text byte for byte for the same settings, and a registration's details, with
+  the current tab. Every section is mounted: scope a query to its tabpanel.
 
 Rules for `web/src` (`tests/app/tooling/test_web_source_rules.py` holds them):
 no `style` prop (the export would render a style attribute), no
@@ -227,8 +271,9 @@ which the Trusted Types policy reports, and leaves the browser's Back on the app
 `eval`, nothing written to `window`, no `atob`, and no copy of
 the logic modules' exports or sentences (comments count). The logic modules are the test's
 `LOGIC_ROOTS` (Analyze Browser's, the Codec's, the MDS explorer's, the failed-response reader,
-the saved credentials' storage, the Simple tab's ceremonies, what a credential's row shows, and a
-credential's details and registration view with their state) plus
+the saved credentials' storage, the Simple tab's ceremonies, what a credential's row shows, a
+credential's details and registration view with their state, and the Advanced tab's request,
+editor, form rules and registration ceremony) plus
 whatever `web/src` imports through `@legacy/`, followed through their imports, and
 none of them may touch the DOM: a surface splits its logic out of its view first
 and adds it to `LOGIC_ROOTS`. No `Suspense` on the server-rendered path:
@@ -306,6 +351,28 @@ Important frontend entry points:
   `registration-result.js`, `detail-nodes.js`) render the data; `registration-state-runtime.js`
   and `certificate-state.js` bind the current UI's one state. All are held at 100 % per
   file (`vitest.config.mjs`) and are `LOGIC_ROOTS`.
+- The Advanced tab's logic, DOM-free, which both UIs run (Phase 29A), under
+  `frontend/static/scripts/advanced/`: `json-editor/registration-request.js`
+  (`registrationDefaults`, with no random values; `buildCreationOptions(settings,
+  context)`, the relying party's name, host,
+  stored credentials and fake IDs passed in; `readCreationOptions`, the settings a request
+  says, reading back everything the form writes; `changeRegistration`, the form's rules,
+  whose DOM copy `main.js` keeps until the cutover; `registrationControls`;
+  `decodeJsonBinaryToHex`), `json-editor/editor-model.js` (the editor's titles and
+  sentences, `requestText`, the structure checks, `topLevelExtras`,
+  `locateJsonSyntaxError`'s line and column, `readEditedRequest`: unparsed, refused or
+  accepted), `json-editor/algorithm-options.js` (the algorithm table, ML-DSA first),
+  `editor/json-editing.js` (the editor's keys over a `{value, selectionStart,
+  selectionEnd}` copy), `auth/hint-rules.js`, `auth/fake-credentials.js`,
+  `auth/hex-input.js`, `auth/ceremony.js` (`registerAdvancedCredential(text, …)` sends the
+  editor's text; its sentences; the hint rules, the storage and the values the form reads
+  passed in) and `credential-display/registration-snapshot.js`
+  (`keepRegistrationSnapshot`). The current modules keep their paths and wrap or re-export
+  them (`hints.js`, `exclude-credentials.js`, `forms.js`, `creation-options.js`,
+  `form-sync.js`, `editor-flow.js`, `dom-helpers.js`, `resets.js`, `advanced.js`,
+  `registration-result.js`), since their tests mock by path. Held at 100 % per file with
+  the editor's `schema.js`, `validation-*.js` and `merge-prune.js`, and `LOGIC_ROOTS`.
+  Authentication's half moves in Phase 29B.
 - `frontend/static/styles/shared/layout.css`
   Shared layout and credential card animation styles.
 - `frontend/static/scripts/shared/browser/`
