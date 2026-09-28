@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { greyFills } from './design-rules';
 import { expect, test } from './fixtures';
 
-// An MDS entry's page, its certificates and its raw view at /beta#mds/<entryId>
+// An MDS entry's page, its certificates and its raw view at /#mds/<entryId>
 // in Chromium, against Flask serving the fixture snapshot (tests/fixtures/mds,
 // through serve-flask.mjs) and decoding its certificates, under the strict CSP.
 
@@ -26,13 +26,13 @@ const part = (page: Page, key: string) => entryPage(page).locator(`[data-section
 const pageWidth = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth);
 
 async function openEntry(page: Page, entryId = L1) {
-  await page.goto(`/beta#mds/${entryId}`);
+  await page.goto(`/#mds/${entryId}`);
   await expect(entryPage(page).getByRole('heading', { level: 3 })).toBeVisible();
 }
 
-test.describe('/beta#mds/<entryId>', () => {
+test.describe('/#mds/<entryId>', () => {
   test('opens an entry from its row, with every section the current page shows', async ({ page }) => {
-    await page.goto('/beta#mds');
+    await page.goto('/#mds');
     await section(page).locator(`tbody tr[data-entry-id="${L1}"]`).getByRole('link').click();
     await expect(page).toHaveURL(new RegExp(`#mds/${L1}$`));
     await expect(entryPage(page).getByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeFocused();
@@ -108,7 +108,7 @@ test.describe('/beta#mds/<entryId>', () => {
   });
 
   test('decodes a certificate a link or a reload opens', async ({ page }) => {
-    await page.goto(`/beta#mds/${L1}/certificate/1`);
+    await page.goto(`/#mds/${L1}/certificate/1`);
     await expect(certificatePage(page).getByRole('heading', { level: 3, name: ROOT_SUBJECT })).toBeVisible();
     await page.reload();
     await expect(certificatePage(page).getByRole('heading', { level: 3, name: ROOT_SUBJECT })).toBeVisible();
@@ -183,7 +183,7 @@ test.describe('/beta#mds/<entryId>', () => {
 
 test.describe('the link to an AAGUID\'s MDS entry', () => {
   test('opens a listed entry by its URL', async ({ page }) => {
-    await page.goto('/beta#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000002');
+    await page.goto('/#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000002');
     await expect(entryPage(page).getByRole('heading', { level: 3, name: 'Fixture Security Key L2' })).toBeVisible();
   });
 
@@ -198,7 +198,7 @@ test.describe('the link to an AAGUID\'s MDS entry', () => {
       });
     }
     const resolved = page.waitForRequest((request) => request.url().includes('/api/mds/metadata/resolve?entryId='));
-    await page.goto(`/beta#mds/${L1}`);
+    await page.goto(`/#mds/${L1}`);
     expect((await resolved).url()).toContain(`entryId=${encodeURIComponent(L1)}`);
     await expect(entryPage(page).getByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeVisible();
     await expect(entryPage(page).getByRole('heading', { level: 4 })).toHaveText(SECTIONS);
@@ -206,7 +206,7 @@ test.describe('the link to an AAGUID\'s MDS entry', () => {
 
   test('says when the metadata has no entry for the AAGUID', async ({ page, watch }) => {
     watch.allow(/status of 404/);
-    await page.goto('/beta#mds/aaguid:00000000-0000-4000-8000-00000000abcd');
+    await page.goto('/#mds/aaguid:00000000-0000-4000-8000-00000000abcd');
     await expect(entryPage(page).getByRole('heading', { level: 3, name: 'Authenticator metadata not found.' })).toBeVisible();
     await expect(entryPage(page).getByRole('alert')).toHaveText('Metadata entry not found.');
   });

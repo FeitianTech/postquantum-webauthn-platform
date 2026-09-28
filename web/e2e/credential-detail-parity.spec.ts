@@ -8,13 +8,13 @@ import { recorded } from './recorded';
 
 // What a saved credential's details and its registration showed in the current UI
 // at / (the modal, its registration view, the second modal for a certificate or
-// the authenticator data) and show in /beta (the dialog's levels), for the same
+// the authenticator data) and show in the new UI (the dialog's levels), for the same
 // stored records and for an advanced credential registered at /: word for word
 // per section (layout, separators and controls' own labels set aside:
 // parity.ts), and each certificate's and the authenticator data's text equal.
 // Every difference must be one listed below, with its reason. The current UI's
 // side is its recording; the advanced registration's keeps the records it wrote,
-// which /beta is given (recorded.ts).
+// which the new UI is given (recorded.ts).
 
 type DetailRecording = { sections: ShownSection[]; subViews: Record<string, string> };
 
@@ -35,17 +35,17 @@ const RECORDS = ['es256', 'eddsa', 'mldsa65', 'x5c'].map((name, index) => ({
   email: `${name}@example.com`,
 })) as Record<string, unknown>[];
 
-test.describe('a saved credential\'s details in / and in /beta', () => {
+test.describe('a saved credential\'s details, as the current UI showed them', () => {
   for (const record of RECORDS) {
     const name = record.userName as string;
     test(`show the same words, section by section, and the same certificates and authenticator data: ${name}`, async ({ page }) => {
       const current = recorded<DetailRecording>('credential-detail-parity', name);
       const { sections: legacy, subViews: legacySubs } = current;
 
-      await page.goto('/beta#simple');
+      await page.goto('/#simple');
       await keep(page, RECORDS);
       await page.reload();
-      await page.goto(`/beta#simple/credential/id:${record.credentialIdBase64Url}`);
+      await page.goto(`/#simple/credential/id:${record.credentialIdBase64Url}`);
       const detail = await betaLevel(page, 'detail', 'h4');
       await page.getByRole('dialog').getByRole('button', { name: 'Show registration details' }).click();
       const registration = await betaLevel(page, 'registration', 'h4, [data-parity-heading]');
@@ -59,15 +59,15 @@ test.describe('a saved credential\'s details in / and in /beta', () => {
     });
   }
 
-  test('an advanced registration\'s result at / shows the words its registration level shows in /beta', async ({ page }) => {
+  test('an advanced registration\'s result at / shows the words its registration level shows in the new UI', async ({ page }) => {
     const current = recorded<DetailRecording & { records: object[] }>('credential-detail-parity', 'an advanced registration at the current UI');
     const { sections: legacy, subViews: legacySubs } = current;
 
-    await page.goto('/beta#simple');
+    await page.goto('/#simple');
     await keep(page, current.records);
     await page.reload();
     const key = await page.locator('li[data-credential-key]').first().getAttribute('data-credential-key');
-    await page.goto(`/beta#simple/credential/${encodeURIComponent(key!).replace(/%3A/gi, ':')}/registration`);
+    await page.goto(`/#simple/credential/${encodeURIComponent(key!).replace(/%3A/gi, ':')}/registration`);
     const beta = await betaLevel(page, 'registration', 'h4, [data-parity-heading]');
     const betaSubs = await betaSubViews(page);
 

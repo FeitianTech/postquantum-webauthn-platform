@@ -8,7 +8,7 @@ import { type ExpectedDifference, type ShownSection, compareShownText, describeD
 import { recorded } from './recorded';
 
 // What an MDS entry's page, one of its certificates and its raw view showed in the
-// current UI at / and show in /beta, over the fixture snapshot serve-flask.mjs
+// current UI at / and show in the new UI, over the fixture snapshot serve-flask.mjs
 // serves (tests/fixtures/mds): each page's text word for word, section by section
 // (layout, separators and controls' own labels set aside: parity.ts), and the raw
 // view's text exactly. Every difference must be one listed below, with its reason.
@@ -30,7 +30,7 @@ const EXPECTED: ExpectedDifference[] = [
     only: 'beta',
     section: 'User Verification Details',
     token: /^(Self-attested|FRR|FAR|Max|templates|retries|Block|slowdown|Min|complexity|\d+(\.\d+)?)$/,
-    reason: 'the biometric (baDesc) and pattern (paDesc) accuracy, which the current page leaves out (new in /beta)',
+    reason: 'the biometric (baDesc) and pattern (paDesc) accuracy, which the current page left out (new in the new UI)',
   },
 ];
 
@@ -42,7 +42,7 @@ async function upload(page: Page) {
 }
 
 async function betaEntry(page: Page, entryId: string, name: string) {
-  await page.goto(`/beta#mds/${encodeURIComponent(entryId).replace(/%3A/g, ':')}`);
+  await page.goto(`/#mds/${encodeURIComponent(entryId).replace(/%3A/g, ':')}`);
   const entry = page.locator('[data-mds-entry]');
   await expect(entry.getByRole('heading', { level: 3, name })).toBeVisible();
   return entry;
@@ -75,7 +75,7 @@ test.describe('the MDS entry page reads the same in both UIs', () => {
   test('a certificate: its summary and decoded output', async ({ page }) => {
     const legacy = recorded<ShownSection[]>('mds-entry-parity', 'a certificate');
 
-    await page.goto('/beta#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000002/certificate/1');
+    await page.goto('/#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000002/certificate/1');
     const betaPage = page.locator('[data-mds-certificate]');
     await expect(betaPage.locator('pre').last()).toContainText('Version');
     const beta = await readShownText(betaPage, 'h4');

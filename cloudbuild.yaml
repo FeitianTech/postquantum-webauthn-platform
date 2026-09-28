@@ -10,7 +10,7 @@
 # that actually stands between a commit on main and production. They run first
 # and in parallel; Build waits for all three, so a failing suite fails the build
 # before an image is ever pushed. The Playwright browser tests run in GitHub CI
-# only (ci-web.yml) until the cutover; see docs/UI_MIGRATION.md.
+# only (ci-web.yml) until they join this gate in Phase 30B; see docs/UI_MIGRATION.md.
 
 steps:
   - name: python:3.12-slim

@@ -6,7 +6,7 @@ vi.mock('next/router', () => ({ default: { beforePopState } }));
 const { CLOSED_ROUTE, SectionNavigationProvider, useSection, useSectionNavigation } = await import('./useSection');
 
 afterEach(() => {
-  window.history.replaceState(null, '', '/beta');
+  window.history.replaceState(null, '', '/');
 });
 
 describe('the first section', () => {
@@ -23,7 +23,7 @@ describe('the first section', () => {
   }
 
   it('is none in the first render, then the section the hash names, before the frame is painted', () => {
-    window.history.replaceState(null, '', '/beta#advanced');
+    window.history.replaceState(null, '', '/#advanced');
     const { seen, result } = renders();
     expect(seen[0]).toBeNull();
     expect(result.current[0]).toBe('advanced');
@@ -32,7 +32,7 @@ describe('the first section', () => {
 
   it('is the default with no hash, or with a hash that names no section', () => {
     expect(renders().result.current[0]).toBe('simple');
-    window.history.replaceState(null, '', '/beta#nothing');
+    window.history.replaceState(null, '', '/#nothing');
     const { result } = renders();
     expect(result.current[0]).toBe('simple');
     expect(window.location.hash).toBe('#nothing');
@@ -50,21 +50,21 @@ describe('the section in the URL, inside Next', () => {
   });
 
   it('leaves Back to Next for a URL whose path is not this page', () => {
-    window.history.replaceState(null, '', '/beta#mds');
+    window.history.replaceState(null, '', '/#mds');
     const { unmount } = renderHook(() => useSection());
     const decide = beforePopState.mock.calls.at(-1)![0];
 
     // Next asks once the URL has changed: another entry of this page's hash, or another page.
-    window.history.replaceState(null, '', '/beta#codec');
+    window.history.replaceState(null, '', '/#codec');
     expect(decide({})).toBe(false);
-    window.history.replaceState(null, '', '/beta/no-such-page');
+    window.history.replaceState(null, '', '/no-such-page');
     expect(decide({})).toBe(true);
     unmount();
-    window.history.replaceState(null, '', '/beta');
+    window.history.replaceState(null, '', '/');
   });
 
   it('opens a level at a time and goes back one level, by the browser or to the parent', () => {
-    window.history.replaceState(null, '', '/beta#mds');
+    window.history.replaceState(null, '', '/#mds');
     const { result } = renderHook(() => useSection());
     expect(result.current[0]).toBe('mds');
 
@@ -75,7 +75,7 @@ describe('the section in the URL, inside Next', () => {
     expect(window.history.state).toEqual({ pqcOpened: 2 });
 
     // A link to the certificate: Back replaces it with its entry, then the list.
-    window.history.replaceState(null, '', '/beta#mds/aaguid:y/certificate/2');
+    window.history.replaceState(null, '', '/#mds/aaguid:y/certificate/2');
     act(() => result.current[2].close(['aaguid:y']));
     expect(window.location.hash).toBe('#mds/aaguid:y');
     expect(result.current[2].path).toEqual(['aaguid:y']);
@@ -92,7 +92,7 @@ describe('the section in the URL, inside Next', () => {
   });
 
   it('opens something in another section as an entry Back returns from', () => {
-    window.history.replaceState({ fromNext: true }, '', '/beta#simple');
+    window.history.replaceState({ fromNext: true }, '', '/#simple');
     const { result } = renderHook(() => useSection());
     const length = window.history.length;
 
@@ -105,18 +105,18 @@ describe('the section in the URL, inside Next', () => {
   });
 
   it('shows the default section for the page\'s URL without a hash, and leaves a hash naming no section alone', () => {
-    window.history.replaceState({ fromNext: true }, '', '/beta#codec');
+    window.history.replaceState({ fromNext: true }, '', '/#codec');
     const { result } = renderHook(() => useSection());
     expect(result.current[0]).toBe('codec');
 
     act(() => {
-      window.history.replaceState(null, '', '/beta#elsewhere');
+      window.history.replaceState(null, '', '/#elsewhere');
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
     expect(result.current[0]).toBe('codec');
 
     act(() => {
-      window.history.replaceState(null, '', '/beta');
+      window.history.replaceState(null, '', '/');
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
     expect(result.current[0]).toBe('simple');
@@ -137,7 +137,7 @@ describe('the section in the URL, inside Next', () => {
 
 describe('closing every level at once', () => {
   it('goes back as many entries as levels were opened, to the list', async () => {
-    window.history.replaceState(null, '', '/beta#simple');
+    window.history.replaceState(null, '', '/#simple');
     const { result } = renderHook(() => useSection());
     act(() => result.current[2].open(['credential', 'k']));
     act(() => result.current[2].open(['credential', 'k', 'registration']));
@@ -151,7 +151,7 @@ describe('closing every level at once', () => {
   });
 
   it('replaces a first level reached by a link with the list, after going back past the rest', async () => {
-    window.history.replaceState(null, '', '/beta#simple/credential/k/registration');
+    window.history.replaceState(null, '', '/#simple/credential/k/registration');
     const { result } = renderHook(() => useSection());
     act(() => result.current[2].open(['credential', 'k', 'registration', 'authenticator-data']));
 
@@ -161,7 +161,7 @@ describe('closing every level at once', () => {
   });
 
   it('replaces a level reached by a link with the list, adding no entry', () => {
-    window.history.replaceState({ fromNext: true }, '', '/beta#simple/credential/k');
+    window.history.replaceState({ fromNext: true }, '', '/#simple/credential/k');
     const { result } = renderHook(() => useSection());
     const length = window.history.length;
 
@@ -172,7 +172,7 @@ describe('closing every level at once', () => {
   });
 
   it('forgets the levels of an entry another section takes the place of', () => {
-    window.history.replaceState({ fromNext: true, pqcOpened: 2 }, '', '/beta#mds/aaguid:x/certificate/1');
+    window.history.replaceState({ fromNext: true, pqcOpened: 2 }, '', '/#mds/aaguid:x/certificate/1');
     const { result } = renderHook(() => useSection());
 
     act(() => result.current[1]('simple'));

@@ -28,7 +28,7 @@ const KEPT = savedRecord('advanced-register-packed-x5c-everything', { userName: 
 let authenticator: ReturnType<typeof installAuthenticator>;
 
 function renderSection(records: object[] = [], routes = {}) {
-  window.history.replaceState({ fromNext: true }, '', '/beta#advanced');
+  window.history.replaceState({ fromNext: true }, '', '/#advanced');
   keepRecords(records);
   const fetch = stubFetch({
     ...warmUpRoutes(),

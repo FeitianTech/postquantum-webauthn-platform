@@ -5,7 +5,7 @@ import type { Page } from '@playwright/test';
 import { greyFills } from './design-rules';
 import { expect, test } from './fixtures';
 
-// The Codec at /beta against the real server, under the strict CSP.
+// The Codec at /#codec against the real server, under the strict CSP.
 
 type Recorded = { request: { payload: string; format?: string }; answer: { data: { binary: { hex: string } } } };
 // The server's answers the unit tests render (tests/app/tooling/test_web_codec_answers.py keeps them current).
@@ -18,7 +18,7 @@ const FAILED_422 = /^console error: Failed to load resource: the server responde
 const panel = (page: Page, mode: 'decode' | 'encode') => page.locator(`#codec-mode-panel-${mode}`);
 
 async function openCodec(page: Page) {
-  await page.goto('/beta#codec');
+  await page.goto('/#codec');
   await expect(page.getByRole('tabpanel', { name: 'Codec' })).toBeVisible();
 }
 
@@ -38,7 +38,7 @@ async function encode(page: Page, format: string, input: string) {
   return encoding;
 }
 
-test.describe('the Codec at /beta', () => {
+test.describe('the Codec', () => {
   test('decodes a map with a repeated key and two keys that collide: both findings, and the EDN', async ({ page }) => {
     await openCodec(page);
     await expect(panel(page, 'decode').getByRole('region', { name: 'Supported Inputs' })).toBeVisible();

@@ -114,16 +114,15 @@ def test_the_browsers_snapshot_file_waits_and_then_is_served(slow_provisioning, 
         assert response.status_code == 200
 
 
-def test_the_index_page_does_not_wait(slow_provisioning, client, monkeypatch):
-    from server.app.routes import general
+def test_the_page_does_not_wait(slow_provisioning, make_app, export_root):
+    from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
 
-    monkeypatch.setattr(general, "_should_bootstrap_metadata_on_index", lambda: False)
+    client = make_app({WEB_EXPORT_ROOT_KEY: str(export_root)}).test_client()
     thread, answer = _get_in_a_thread(client, "/")
     thread.join(5)
 
-    assert not thread.is_alive(), "the index waited for the provisioning"
+    assert not thread.is_alive(), "the page waited for the provisioning"
     assert answer["response"].status_code == 200
-    assert '"snapshotUrl"' not in answer["response"].get_data(as_text=True)
 
 
 # -- a registration's own lookup of its authenticator --------------------------------

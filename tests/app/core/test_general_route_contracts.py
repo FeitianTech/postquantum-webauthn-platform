@@ -500,13 +500,6 @@ def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
     with config_module.app.test_client() as client:
         monkeypatch.setattr(general_module, "_should_bootstrap_metadata_on_index", lambda: False)
         monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
-        monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {})
-        monkeypatch.setattr(general_module, "render_template", lambda *_args, **_kwargs: "index-body")
-        index_response = client.get("/")
-        assert index_response.status_code == 200
-        assert index_response.get_data(as_text=True) == "index-body"
-
-        monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
         monkeypatch.setattr(general_module, "load_effective_explorer_snapshot", lambda: {})
         monkeypatch.setattr(general_module, "load_effective_full_snapshot", lambda: {})
 

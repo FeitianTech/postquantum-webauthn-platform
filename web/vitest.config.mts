@@ -21,7 +21,7 @@ export default defineConfig({
   server: { fs: { allow: [here('..')] } },
   test: {
     environment: 'jsdom',
-    environmentOptions: { jsdom: { url: 'http://localhost/beta' } },
+    environmentOptions: { jsdom: { url: 'http://localhost/' } },
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts'],

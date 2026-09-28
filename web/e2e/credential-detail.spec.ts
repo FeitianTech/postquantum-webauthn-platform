@@ -7,7 +7,7 @@ import { greyFills } from './design-rules';
 import { expect, test } from './fixtures';
 import { addVirtualAuthenticator } from './virtual-authenticator';
 
-// A saved credential's details at /beta#simple/credential/<key> in Chromium,
+// A saved credential's details at /#simple/credential/<key> in Chromium,
 // against Flask serving the export under the strict CSP: the detail, the
 // registration's level and under it a certificate's and the authenticator data's,
 // each at its own URL, Back going up one; for credentials registered by
@@ -39,7 +39,7 @@ const detailSection = (page: Page, title: string) => shownLevel(page).locator(`[
 const username = () => `e2e-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 
 async function openBeta(page: Page, hash = '#simple') {
-  await page.goto(`/beta${hash}`);
+  await page.goto(`/${hash}`);
   await expect(section(page).locator('[data-count]')).toBeVisible();
 }
 
@@ -59,7 +59,7 @@ async function openDetailOf(page: Page, name: string) {
   await expect(dialog(page).getByRole('button', { name: 'Show registration details' })).toBeVisible();
 }
 
-test.describe('a saved credential\'s details in /beta', () => {
+test.describe('a saved credential\'s details', () => {
   test('show every section of a credential registered here, its registration and authenticator data, Back going up a level', async ({ page }) => {
     await addVirtualAuthenticator(page);
     await openBeta(page);
@@ -98,7 +98,7 @@ test.describe('a saved credential\'s details in /beta', () => {
     await expect(dialog(page).getByRole('button', { name: 'Show registration details' })).toBeVisible();
     await page.goBack();
     await expect(dialog(page)).toBeHidden();
-    await expect(page).toHaveURL(/\/beta#simple$/);
+    await expect(page).toHaveURL(/\/#simple$/);
   });
 
   test('open a certificate from a link or a reload, and × closes every level from there', async ({ page }) => {
@@ -106,7 +106,7 @@ test.describe('a saved credential\'s details in /beta', () => {
     await keep(page, [named(X5C, 'x5c@example.com')]);
     await page.reload();
     const url = `#simple/credential/id:${X5C.credentialIdBase64Url}/registration/certificate/1`;
-    await page.goto(`/beta${url}`);
+    await page.goto(`/${url}`);
 
     await expect(dialog(page).getByRole('heading', { level: 2 })).toHaveText('Attestation Certificate');
     await expect(shownLevel(page).locator('[data-certificate-subject]')).toContainText('CN=Characterization Attestation Leaf');
@@ -116,14 +116,14 @@ test.describe('a saved credential\'s details in /beta', () => {
 
     await dialog(page).getByRole('button', { name: 'Close credential details' }).click();
     await expect(dialog(page)).toBeHidden();
-    await expect(page).toHaveURL(/\/beta#simple$/);
+    await expect(page).toHaveURL(/\/#simple$/);
   });
 
   test('show an ES256 credential the server registered, and correct a level it does not have', async ({ page }) => {
     await openBeta(page);
     await keep(page, [named(ES256, 'es256@example.com')]);
     await page.reload();
-    await page.goto(`/beta#simple/credential/id:${ES256.credentialIdBase64Url}/registration/certificate/1`);
+    await page.goto(`/#simple/credential/id:${ES256.credentialIdBase64Url}/registration/certificate/1`);
 
     await expect(page).toHaveURL(new RegExp(`#simple/credential/id:${ES256.credentialIdBase64Url}/registration$`));
     await expect(detailSection(page, 'Attestation Information')).toContainText('No attestation certificates available.');
@@ -195,7 +195,7 @@ test.describe('another tab', () => {
 
   test('two tabs holding an advanced credential with an artifact settle, without waking each other for ever', async ({ page, context }) => {
     await addVirtualAuthenticator(page);
-    await page.goto('/beta#advanced');
+    await page.goto('/#advanced');
     await page.getByRole('tabpanel', { name: 'Advanced Authentication' }).getByRole('button', { name: 'Create Credential' }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Registration Details' })).toBeVisible();
 

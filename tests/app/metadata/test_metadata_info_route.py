@@ -1,20 +1,17 @@
 """GET /api/mds/metadata/info: what the MDS explorer starts from, as JSON.
 
-The new UI at /beta asks for what the current UI's index inlines as
-``initial-mds-info``; one function builds both.
+The page asks for it when the MDS section is first shown (before Phase 30 the
+current UI's index inlined the same as ``initial-mds-info``).
 """
 from __future__ import annotations
 
 import hashlib
 import io
 import json
-import re
 
 from server.app import mds_snapshot_dir
 from server.app.static_assets import asset_url
 from tests.app.metadata import mds_fixture
-
-_INLINE = re.compile(r'<script type="application/json" id="initial-mds-info">(.*?)</script>', re.S)
 
 
 def _summary():
@@ -52,13 +49,6 @@ def test_the_answer_is_per_session_and_never_cached(mds_fixture_snapshot, client
 
     assert answer.headers["Cache-Control"] == "no-store"
     assert "Cookie" in answer.headers["Vary"]
-
-
-def test_it_is_what_the_index_inlines(mds_fixture_snapshot, make_app):
-    index = make_app().test_client().get("/")
-    inlined = json.loads(_INLINE.search(index.get_data(as_text=True)).group(1))
-
-    assert make_app().test_client().get("/api/mds/metadata/info").get_json() == inlined
 
 
 def test_a_known_session_says_what_its_last_explorer_answer_held(mds_fixture_snapshot, client):

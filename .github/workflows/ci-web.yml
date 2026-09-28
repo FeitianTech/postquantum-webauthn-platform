@@ -15,8 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # The new UI (web/, docs/UI_MIGRATION.md): a Next.js static export that
-  # Flask serves at /beta.
+  # The site's UI (web/, docs/UI_MIGRATION.md): a Next.js static export that
+  # Flask serves at /.
   web:
     name: Typecheck, unit tests, build and CSP scan
     runs-on: ubuntu-latest
@@ -56,8 +56,8 @@ jobs:
 
   # Browser tests: Playwright in Chromium, whose virtual authenticator (the
   # DevTools WebAuthn domain) answers real registrations and authentications,
-  # against Flask serving the current UI at / and the export at /beta, under
-  # the strict CSP. Cloud Build does not run these yet (docs/UI_MIGRATION.md).
+  # against Flask serving the export at /, under the strict CSP. Cloud Build
+  # does not run these yet: they join its gate in Phase 30B (docs/UI_MIGRATION.md).
   e2e:
     name: Browser tests (Playwright, virtual authenticator)
     runs-on: ubuntu-latest

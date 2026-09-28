@@ -630,6 +630,8 @@ export default function DesignPage() {
     <ToastProvider>
       <Head>
         <title>{`Design system · ${APP_TITLE}`}</title>
+        {/* Unlisted, and kept out of search engines. */}
+        <meta name="robots" content="noindex" />
       </Head>
       <main className="mx-auto flex w-full max-w-page flex-col gap-12 px-4 pt-12 pb-20 sm:px-6 lg:px-8">
         <header>

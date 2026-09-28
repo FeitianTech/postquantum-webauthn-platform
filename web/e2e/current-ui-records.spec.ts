@@ -25,14 +25,14 @@ const dialog = (page: Page) => page.getByRole('dialog');
 const advanced = (page: Page) => page.getByRole('tabpanel', { name: 'Advanced Authentication' });
 
 async function openWithRecords(page: Page, hash: string) {
-  await page.goto(`/beta${hash}`);
+  await page.goto(`/${hash}`);
   await keep(page, records);
   await page.reload();
 }
 
 const base64url = (base64: string) => base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-test.describe('what the current UI stored, in /beta', () => {
+test.describe('what the current UI stored, in the new UI', () => {
   test('lists both credentials, and opens each one\'s details (the Advanced one\'s registration from its saved snapshot)', async ({ page }) => {
     await openWithRecords(page, '#simple');
     await expect(rows(page)).toHaveCount(2);
@@ -42,7 +42,7 @@ test.describe('what the current UI stored, in /beta', () => {
     await dialog(page).getByRole('button', { name: 'Close credential details' }).click();
 
     const key = await rows(page).filter({ hasText: ADVANCED }).getAttribute('data-credential-key');
-    await page.goto(`/beta#simple/credential/${encodeURIComponent(key!).replace(/%3A/gi, ':')}/registration`);
+    await page.goto(`/#simple/credential/${encodeURIComponent(key!).replace(/%3A/gi, ':')}/registration`);
     const registration = dialog(page).locator('[data-level="registration"]');
     await expect(registration).toContainText('Response for navigator.credentials.create()');
     await expect(registration.locator('[data-section="Authenticator Response"]')).toContainText('"type": "webauthn.create"');

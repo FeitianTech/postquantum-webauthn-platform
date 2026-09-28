@@ -12,8 +12,8 @@ const kinds = (html: string) => scanHtml(html).findings.map((finding: { kind: st
 describe('the export CSP scan', () => {
   it('accepts what a Pages Router export holds', () => {
     const html = page(
-      '<link rel="stylesheet" href="/beta/_next/static/css/a.css"><noscript data-n-css=""></noscript>' +
-        '<script defer nomodule src="/beta/_next/static/chunks/polyfills.js"></script>',
+      '<link rel="stylesheet" href="/_next/static/css/a.css"><noscript data-n-css=""></noscript>' +
+        '<script defer nomodule src="/_next/static/chunks/polyfills.js"></script>',
       '<div id="__next"><svg viewBox="0 0 16 16"><path d="M0 0"/></svg></div>' +
         '<script id="__NEXT_DATA__" type="application/json">{"props":{}}</script>',
     );
@@ -36,14 +36,16 @@ describe('the export CSP scan', () => {
   });
 
   it('refuses handlers, javascript: URLs and srcdoc', () => {
-    expect(kinds(page('', '<img src="/beta/a.png" onerror="x()">'))).toEqual(['event handler attribute']);
+    expect(kinds(page('', '<img src="/a.png" onerror="x()">'))).toEqual(['event handler attribute']);
     expect(kinds(page('', '<a href=" JavaScript:alert(1)">x</a>'))).toEqual(['javascript: URL']);
     expect(kinds(page('', '<iframe srcdoc="<p>x</p>"></iframe>'))).toEqual(['srcdoc attribute']);
   });
 
-  it('refuses scripts and stylesheets from outside the base path', () => {
+  it('refuses scripts and stylesheets from anywhere but the export\'s /_next/', () => {
     expect(kinds(page('<script src="https://cdn.example/x.js"></script>'))).toEqual(['script from elsewhere']);
-    expect(kinds(page('<script src="/_next/static/x.js"></script>'))).toEqual(['script from elsewhere']);
+    expect(kinds(page('<script src="//cdn.example/_next/x.js"></script>'))).toEqual(['script from elsewhere']);
+    expect(kinds(page('<script src="/scripts/x.js"></script>'))).toEqual(['script from elsewhere']);
+    expect(kinds(page('<script src="/beta/_next/static/x.js"></script>'))).toEqual(['script from elsewhere']);
     expect(kinds(page('<link rel="preload stylesheet" href="https://fonts.googleapis.com/css">'))).toEqual([
       'stylesheet from elsewhere',
     ]);
@@ -68,7 +70,7 @@ describe('the export CSP scan', () => {
 
     it('scans every HTML file, in subdirectories too, and names the file of each finding', () => {
       exportWith({
-        'index.html': page('<script src="/beta/a.js"></script>'),
+        'index.html': page('<script src="/_next/a.js"></script>'),
         'nested/design.html': page('', '<p style="x"></p>'),
         '_next/static/a.js': 'console.log(1)',
       });

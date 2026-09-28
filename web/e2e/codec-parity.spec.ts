@@ -4,7 +4,7 @@ import { expect, test } from './fixtures';
 import { type Difference, type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownText } from './parity';
 import { recorded } from './recorded';
 
-// The text the current Codec showed and the text /beta shows, for the same inputs
+// The text the current Codec showed and the text the new UI shows, for the same inputs
 // from tests/app/codec_corpus.py, compared word for word per section once
 // layout and separators are set aside (parity.ts). Every difference must be one
 // listed below, with its reason. The current Codec's side is its recording, which
@@ -29,7 +29,7 @@ const INPUTS = [
 // The corpus holds only strictly well-formed items; this one is read leniently.
 const LENIENT = { hex: 'a2010203', note: 'CBOR that is not well-formed, read leniently' };
 
-// What /beta shows that the current UI does not, and why.
+// What the new UI shows that the current UI did not, and why.
 const EXPECTED: ExpectedDifference[] = [
   {
     only: 'beta',
@@ -39,7 +39,7 @@ const EXPECTED: ExpectedDifference[] = [
 ];
 
 async function betaText(page: Page, input: string, lenient: boolean) {
-  await page.goto('/beta#codec');
+  await page.goto('/#codec');
   const decoding = page.locator('#codec-mode-panel-decode');
   await decoding.getByRole('textbox', { name: 'Input to decode' }).fill(input);
   if (lenient) await decoding.getByRole('switch', { name: 'Best effort (lenient)' }).click();

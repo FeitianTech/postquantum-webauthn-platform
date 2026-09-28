@@ -1,8 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // Browser tests: Chromium, with its virtual authenticator (the DevTools
-// WebAuthn domain) standing in for a security key, against Flask serving both
-// the current UI at / and the built export at /beta. Build first:
+// WebAuthn domain) standing in for a security key, against Flask serving the
+// built export at /. Build first:
 // `npm run build && npm run e2e`.
 const PORT = Number(process.env.E2E_PORT ?? 5151);
 

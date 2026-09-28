@@ -132,7 +132,7 @@ export function compareShownText(legacy: ShownSection[], beta: ShownSection[], e
 export function describeDifferences(differences: Difference[]) {
   return differences.map(
     ({ section, only, token, count: extra, line, reason }) =>
-      `[${section || 'header'}] only in ${only === 'beta' ? '/beta' : 'the recording'}: "${token}"${extra > 1 ? ` ×${extra}` : ''}` +
+      `[${section || 'header'}] only in ${only === 'beta' ? 'the new UI' : 'the recording'}: "${token}"${extra > 1 ? ` ×${extra}` : ''}` +
       ` (in "${line}")${reason ? ` — ${reason}` : ' — UNEXPLAINED'}`,
   );
 }

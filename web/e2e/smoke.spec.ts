@@ -1,12 +1,17 @@
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+
 import type { Locator, Page } from '@playwright/test';
 
 import { greyFills } from './design-rules';
 import { expect, test } from './fixtures';
 
-// The new UI at /beta, served by Flask from the built export under the strict
-// CSP: the shell, the sections, the Analyze Browser panel, the phone menu, and
-// the design system's rules checked on the design page in a real browser.
+// The site at /, served by Flask from the built export under the strict CSP:
+// the shell, the sections, the Analyze Browser panel, the phone menu, the 404
+// page, the old /beta links, and the design system's rules checked on the
+// design page in a real browser.
 
+const repo = resolve(import.meta.dirname, '..', '..');
 const SECTIONS = ['Simple Authentication', 'Advanced Authentication', 'Codec', 'FIDO MDS Authenticators'];
 
 // The top bar's highlight (the Codec's Decode / Encode switch has its own).
@@ -22,9 +27,9 @@ async function highlightSitsOn(page: Page, tab: Locator) {
     .toBeLessThanOrEqual(1);
 }
 
-test.describe('/beta', () => {
+test.describe('the app shell', () => {
   test('switches sections on the page and by the hash, and no section leads to the current UI', async ({ page }) => {
-    await page.goto('/beta');
+    await page.goto('/');
     const tabs = page.getByRole('tablist', { name: 'Sections' });
     await expect(tabs.getByRole('tab')).toHaveText(SECTIONS.map((name) => `${name}${name}`));
     await expect(page.getByRole('tabpanel', { name: 'Simple Authentication' })).toBeVisible();
@@ -38,7 +43,7 @@ test.describe('/beta', () => {
       const tab = tabs.getByRole('tab', { name });
       await tab.click();
       await expect(page.getByRole('tabpanel', { name })).toBeVisible();
-      await expect(page).toHaveURL(new RegExp(`/beta#${hash}$`));
+      await expect(page).toHaveURL(new RegExp(`/#${hash}$`));
       await highlightSitsOn(page, tab);
     }
 
@@ -48,7 +53,7 @@ test.describe('/beta', () => {
     await expect(advanced.getByRole('button', { name: 'Assert Credential' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Open the current interface' })).toHaveCount(0);
 
-    await page.goto('/beta#codec');
+    await page.goto('/#codec');
     await expect(page.getByRole('tabpanel', { name: 'Codec' })).toBeVisible();
     await expect(tabs.getByRole('tab', { name: 'Codec' })).toHaveAttribute('aria-selected', 'true');
     await page.keyboard.press('Tab');
@@ -64,8 +69,8 @@ test.describe('/beta', () => {
     ['#mds', 'mds'],
     ['#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000002', 'mds'],
   ] as const) {
-    test(`loads /beta${hash} on its section from the first frame, with no fade or entrance`, async ({ page }) => {
-      await page.route('**/beta/_next/static/**', async (route) => {
+    test(`loads /${hash} on its section from the first frame, with no fade or entrance`, async ({ page }) => {
+      await page.route('**/_next/static/**', async (route) => {
         await new Promise((resolve) => setTimeout(resolve, 600));
         await route.continue();
       });
@@ -93,7 +98,7 @@ test.describe('/beta', () => {
         requestAnimationFrame(record);
       });
 
-      await page.goto(`/beta${hash}`);
+      await page.goto(`/${hash}`);
       const tab = page.getByRole('tablist', { name: 'Sections' }).getByRole('tab', { name: SECTIONS[['simple', 'advanced', 'codec', 'mds'].indexOf(section)] });
       await expect(tab).toHaveAttribute('aria-selected', 'true');
       await highlightSitsOn(page, tab);
@@ -115,7 +120,7 @@ test.describe('/beta', () => {
   for (const motion of ['no-preference', 'reduce'] as const) {
     test(`moves the one highlight to the chosen section: ${motion === 'reduce' ? 'jumping under reduced motion' : 'sliding'}`, async ({ page }) => {
       await page.emulateMedia({ reducedMotion: motion });
-      await page.goto('/beta');
+      await page.goto('/');
       // Transitions at a tenth of their speed, so the middle of a slide can be seen.
       const devtools = await page.context().newCDPSession(page);
       await devtools.send('Animation.enable');
@@ -140,7 +145,7 @@ test.describe('/beta', () => {
   }
 
   test('opens the Analyze Browser panel, and Escape closes it and gives focus back', async ({ page }) => {
-    await page.goto('/beta');
+    await page.goto('/');
     const trigger = page.getByRole('button', { name: 'Analyze Browser' });
     await trigger.click();
 
@@ -174,7 +179,7 @@ test.describe('/beta', () => {
 
   test('on a phone, the sections, Analyze Browser and GitHub are in the menu sheet', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/beta');
+    await page.goto('/');
     await expect(page.getByRole('tablist', { name: 'Sections' })).toBeHidden();
 
     await page.getByRole('button', { name: 'Menu' }).click();
@@ -197,31 +202,31 @@ test.describe('/beta', () => {
     await expect(page.getByRole('button', { name: 'Analyze Browser' })).toBeHidden();
 
     // Neither page scrolls sideways on a phone.
-    for (const path of ['/beta', '/beta/design']) {
+    for (const path of ['/', '/design']) {
       await page.goto(path);
       expect(await page.evaluate(() => document.documentElement.scrollWidth), path).toBeLessThanOrEqual(375);
     }
   });
 
-  test('leads from the 404 page to the new interface by a plain link, so Back shows the 404 page again', async ({ page, watch }) => {
+  test('leads from the 404 page to the home page by a plain link, so Back shows the 404 page again', async ({ page, watch }) => {
     // The missing page's own status; a Trusted Types report would still fail the test.
     watch.allow(/status of 404/);
-    const missing = await page.goto('/beta/no-such-page');
+    const missing = await page.goto('/no-such-page');
     expect(missing?.status()).toBe(404);
     await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
 
-    await page.getByRole('link', { name: 'Go to the new interface' }).click();
+    await page.getByRole('link', { name: 'Go to the home page' }).click();
     await expect(page.getByRole('tablist', { name: 'Sections' })).toBeVisible();
-    expect(new URL(page.url()).pathname).toMatch(/^\/beta\/?$/);
+    expect(new URL(page.url()).pathname).toBe('/');
 
     await page.goBack();
-    await expect(page).toHaveURL(/\/beta\/no-such-page$/);
+    await expect(page).toHaveURL(/\/no-such-page$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
     await expect(page.getByRole('tablist', { name: 'Sections' })).toHaveCount(0);
   });
 
   test('keeps the design rules: no focus effect on text fields, a focus ring on controls, no grey fill', async ({ page }) => {
-    await page.goto('/beta/design');
+    await page.goto('/design');
 
     // Text fields: focus changes nothing around them.
     const field = page.getByLabel('Filled');
@@ -255,5 +260,65 @@ test.describe('/beta', () => {
     // No neutral grey background anywhere (white, colours and tints only).
     const greys = await greyFills(page);
     expect(greys).toEqual([]);
+  });
+});
+
+// Where the new UI was reviewed before the cutover: every /beta link lands where it
+// pointed, the hash kept across the redirect.
+test.describe('an old /beta link', () => {
+  test('is answered by a permanent redirect to the same path at /, not cached', async ({ page }) => {
+    for (const [from, to] of [
+      ['/beta', '/'],
+      ['/beta/design', '/design'],
+      ['/beta?x=1', '/?x=1'],
+    ]) {
+      const answer = await page.request.get(from, { maxRedirects: 0 });
+      expect(answer.status(), from).toBe(308);
+      expect(answer.headers()['location'], from).toBe(to);
+      expect(answer.headers()['cache-control'], from).toBe('no-cache');
+    }
+  });
+
+  test('to a section or an MDS entry opens it', async ({ page }) => {
+    await page.goto('/beta#advanced');
+    await expect(page).toHaveURL(/\/#advanced$/);
+    await expect(page.getByRole('tabpanel', { name: 'Advanced Authentication' })).toBeVisible();
+
+    await page.goto('/beta?from=old#codec');
+    await expect(page).toHaveURL(/\/\?from=old#codec$/);
+    await expect(page.getByRole('tabpanel', { name: 'Codec' })).toBeVisible();
+
+    await page.goto('/beta#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000001');
+    await expect(page).toHaveURL(/\/#mds\/aaguid:f1d0f1d0-0000-4000-8000-000000000001$/);
+    await expect(page.locator('[data-mds-entry]').getByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeVisible();
+  });
+
+  test('to a saved credential\'s registration opens that level', async ({ page }) => {
+    const registered = JSON.parse(
+      readFileSync(join(repo, 'tests', 'app', 'characterization', 'golden', 'routes', 'registration-detail-decodes.json'), 'utf8'),
+    ).requests.find((entry: { request: string }) => entry.request.includes('/register/complete')).body.storedCredential;
+    await page.goto('/');
+    await page.evaluate((record) => window.localStorage.setItem('postquantum-webauthn.credentials', JSON.stringify([record])), {
+      ...registered,
+      type: 'simple',
+      userName: 'old-link@example.com',
+      email: 'old-link@example.com',
+    });
+
+    await page.goto(`/beta#simple/credential/id:${registered.credentialIdBase64Url}/registration`);
+    await expect(page).toHaveURL(new RegExp(`/#simple/credential/id:${registered.credentialIdBase64Url}/registration$`));
+    await expect(page.getByRole('dialog').locator('[data-level="registration"]')).toBeVisible();
+  });
+
+  test('to the design page or a missing page lands on it', async ({ page, watch }) => {
+    watch.allow(/status of 404/);
+    await page.goto('/beta/design');
+    await expect(page).toHaveURL(/\/design$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeVisible();
+
+    const missing = await page.goto('/beta/no-such-page');
+    expect(missing?.status()).toBe(404);
+    await expect(page).toHaveURL(/\/no-such-page$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
   });
 });

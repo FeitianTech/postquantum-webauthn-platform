@@ -9,7 +9,7 @@ import { entryNamed, fixtureRoutes, stubFetch } from '@/test/mds';
 import { renderPage } from '@/test/page';
 
 function renderApp(hash: string) {
-  window.history.replaceState({ fromNext: true }, '', `/beta${hash}`);
+  window.history.replaceState({ fromNext: true }, '', `/${hash}`);
   stubFetch(fixtureRoutes());
   renderPage(
     <ToastProvider>

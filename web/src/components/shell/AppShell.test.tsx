@@ -8,7 +8,7 @@ import { renderPage } from '@/test/page';
 import { AppShell } from './AppShell';
 
 beforeEach(() => {
-  window.history.replaceState({ fromNext: true }, '', '/beta');
+  window.history.replaceState({ fromNext: true }, '', '/');
   // The MDS section loads the fixture snapshot when it is first shown.
   stubFetch(fixtureRoutes());
 });
@@ -20,7 +20,7 @@ afterEach(() => {
 describe('the app shell', () => {
   // First in the file: before the person has pressed anything.
   it('opens on the section the URL names, simply there; a section the person brings up comes in', async () => {
-    window.history.replaceState({ fromNext: true }, '', '/beta#advanced');
+    window.history.replaceState({ fromNext: true }, '', '/#advanced');
     renderPage(<AppShell />);
     const advanced = screen.getByRole('tabpanel', { name: 'Advanced Authentication' });
 
@@ -120,7 +120,7 @@ describe('the app shell', () => {
     expect(within(panel).getByRole('tablist', { name: 'Codec mode' })).toBeInTheDocument();
     expect(screen.queryByRole('tabpanel', { name: 'Simple Authentication' })).toBeNull();
     expect(window.location.hash).toBe('#codec');
-    expect(window.location.pathname).toBe('/beta');
+    expect(window.location.pathname).toBe('/');
     expect(window.history.state).toEqual({ fromNext: true });
     expect(window.history.length).toBe(1);
 
@@ -133,7 +133,7 @@ describe('the app shell', () => {
   });
 
   it('opens the section the hash names, and follows the hash when it changes', async () => {
-    window.history.replaceState(null, '', '/beta#advanced');
+    window.history.replaceState(null, '', '/#advanced');
     renderPage(<AppShell />);
 
     expect(await screen.findByRole('tabpanel', { name: 'Advanced Authentication' })).toHaveTextContent(

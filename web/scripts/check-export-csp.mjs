@@ -4,7 +4,8 @@
 // no 'unsafe-inline'). Every HTML file under the export is parsed and fails on:
 // an inline <script> that would run (anything but type="application/json"), a
 // <style> element, a style attribute, an on* handler attribute, a javascript:
-// URL, an srcdoc, or a script or stylesheet from outside the base path.
+// URL, an srcdoc, or a script or stylesheet from anywhere but the export's own
+// /_next/ (the site's root is the export: the base path is empty).
 //
 //   node scripts/check-export-csp.mjs out
 
@@ -14,7 +15,7 @@ import { pathToFileURL } from 'node:url';
 
 import { parse } from 'parse5';
 
-export const BASE_PATH = '/beta';
+export const OWN_PREFIX = '/_next/';
 const URL_ATTRIBUTES = new Set(['href', 'src', 'action', 'formaction', 'xlink:href']);
 
 function attributes(node) {
@@ -22,7 +23,7 @@ function attributes(node) {
 }
 
 function isOwn(url) {
-  return typeof url === 'string' && url.startsWith(`${BASE_PATH}/`);
+  return typeof url === 'string' && url.startsWith(OWN_PREFIX);
 }
 
 function inspect(node, findings, counts) {

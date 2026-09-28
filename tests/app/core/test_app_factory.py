@@ -75,7 +75,9 @@ def test_hooks_and_blueprints_are_registered_in_order(app):
     ]
     assert app.before_request_funcs[None] == [static_assets._hide_private_static_files]
     assert list(app.blueprints) == ["static_assets", "advanced", "general", "simple", "csp_report", "web_export"]
-    assert app.jinja_env.globals["asset_url"] is static_assets.asset_url
+    # No static rule of Flask's own: the page rule (routes/web_export.py) is the site's catch-all.
+    assert app.static_folder is None
+    assert "static" not in app.view_functions
 
 
 def test_proxy_fix_wraps_the_app_only_behind_a_trusted_proxy(monkeypatch, make_app):
@@ -91,7 +93,10 @@ def test_proxy_fix_wraps_the_app_only_behind_a_trusted_proxy(monkeypatch, make_a
     assert (wrapped.x_host, wrapped.x_port, wrapped.x_prefix) == (0, 0, 0)
 
 
-def test_gzipped_response_still_carries_the_security_headers(client):
+def test_gzipped_response_still_carries_the_security_headers(make_app, export_root):
+    from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
+
+    client = make_app({WEB_EXPORT_ROOT_KEY: str(export_root)}).test_client()
     response = client.get("/", base_url="https://localhost", headers={"Accept-Encoding": "gzip"})
 
     assert response.status_code == 200

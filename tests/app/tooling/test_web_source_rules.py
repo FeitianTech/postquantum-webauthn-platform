@@ -156,7 +156,7 @@ _RULES: dict[str, re.Pattern[str]] = {
     "<style> or <script> element": re.compile(r"<(?:style|script)\b"),
     "next/script": re.compile(r"""['"]next/script['"]"""),
     # Next's router adds page scripts after following a next/link, which the
-    # Trusted Types policy reports, and it adds /beta to the path: links are <a>.
+    # Trusted Types policy reports, and it keeps the browser's Back on the app: links are <a>.
     "next/link": re.compile(r"""['"]next/link['"]"""),
     "eval": re.compile(r"(?<![\w$.])eval\s*\(|\bnew\s+Function\s*\("),
     "atob": re.compile(r"(?<![\w$.])atob\s*\("),

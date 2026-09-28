@@ -4,9 +4,8 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        {/* Unlisted while the migration runs (docs/UI_MIGRATION.md). */}
-        <meta name="robots" content="noindex" />
         <meta name="color-scheme" content="light" />
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
       </Head>
       <body>
         <Main />

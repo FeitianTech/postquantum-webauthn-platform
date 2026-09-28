@@ -13,7 +13,7 @@ export function ErrorPage({ title, message }: ErrorPageProps) {
       <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
       <p>{message}</p>
       <p className="flex flex-wrap gap-4">
-        <a href="/beta">Go to the new interface</a>
+        <a href="/">Go to the home page</a>
       </p>
     </main>
   );

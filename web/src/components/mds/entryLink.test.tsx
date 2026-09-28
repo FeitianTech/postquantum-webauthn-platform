@@ -13,7 +13,7 @@ const AAGUID = 'F1D0F1D0-0000-4000-8000-000000000001';
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  window.history.replaceState(null, '', '/beta');
+  window.history.replaceState(null, '', '/');
 });
 
 describe('opening an AAGUID\'s MDS entry', () => {
@@ -32,7 +32,7 @@ describe('opening an AAGUID\'s MDS entry', () => {
   });
 
   it('opens it from another section as one history entry, which Back leaves', () => {
-    window.history.replaceState({ fromNext: true }, '', '/beta#simple');
+    window.history.replaceState({ fromNext: true }, '', '/#simple');
     const { result } = renderHook(() => {
       const [section, , route, go] = useSection();
       return { section, route, open: (aaguid: string) => openMdsEntryForAaguid(aaguid, go) };
@@ -57,7 +57,7 @@ describe('opening an AAGUID\'s MDS entry', () => {
   });
 
   it('shows the entry at its URL', async () => {
-    window.history.replaceState({ fromNext: true }, '', `/beta${mdsEntryPath(AAGUID)}`);
+    window.history.replaceState({ fromNext: true }, '', `/${mdsEntryPath(AAGUID)}`);
     stubFetch(fixtureRoutes());
     renderPage(
       <ToastProvider>

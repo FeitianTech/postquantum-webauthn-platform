@@ -1,4 +1,3 @@
-import gzip
 import io
 import json
 from datetime import datetime, timezone
@@ -114,7 +113,7 @@ def test_metadata_not_available_is_warning_pqc():
     assert "metadata_not_available" not in outcome["errors"]
 
 
-def test_index_html_skips_eager_bootstrap_by_default(monkeypatch, app_config):
+def test_the_mds_info_skips_eager_bootstrap_by_default(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
@@ -133,16 +132,16 @@ def test_index_html_skips_eager_bootstrap_by_default(monkeypatch, app_config):
     )
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {})
-    monkeypatch.setattr(general_module, "render_template", lambda *_args, **_kwargs: "ok")
+    monkeypatch.setattr(general_module, "load_packaged_snapshot_meta", lambda: None)
 
-    with config_module.app.test_request_context("/index.html"):
-        result = general_module.index_html()
+    with config_module.app.test_request_context("/api/mds/metadata/info"):
+        result = general_module._initial_mds_info()
 
-    assert result == "ok"
+    assert result == {"customEntriesState": "unknown"}
     assert bootstrap_calls == []
 
 
-def test_index_html_bootstraps_when_strict(monkeypatch, app_config):
+def test_the_mds_info_bootstraps_when_strict(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
@@ -161,12 +160,12 @@ def test_index_html_bootstraps_when_strict(monkeypatch, app_config):
     )
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {})
-    monkeypatch.setattr(general_module, "render_template", lambda *_args, **_kwargs: "ok")
+    monkeypatch.setattr(general_module, "load_packaged_snapshot_meta", lambda: None)
 
-    with config_module.app.test_request_context("/index.html"):
-        result = general_module.index_html()
+    with config_module.app.test_request_context("/api/mds/metadata/info"):
+        result = general_module._initial_mds_info()
 
-    assert result == "ok"
+    assert result == {"customEntriesState": "unknown"}
     assert bootstrap_calls == [{"skip_if_reloader_parent": False}]
 
 
@@ -264,40 +263,6 @@ def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
     }
 
 
-def test_index_page_emits_accessible_global_loader_markup(monkeypatch, app_config):
-    general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
-
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {"entryCount": 0})
-    monkeypatch.setattr(general_module, "load_packaged_snapshot_meta", lambda: {"no": 7})
-    monkeypatch.setattr(general_module, "_should_bootstrap_metadata_on_index", lambda: False)
-
-    with config_module.app.test_client() as client:
-        response = client.get("/index.html")
-
-    body = response.get_data(as_text=True)
-    assert response.status_code == 200
-    assert 'id="app-loader"' in body
-    assert 'class="app-loader"' in body
-    assert 'role="status"' in body
-    assert 'aria-live="polite"' in body
-    assert '>Loading<' in body
-    assert 'id="app-loader-status"' not in body
-    assert 'id="app-loader-progress"' not in body
-    assert 'id="app-loader-percentage"' not in body
-    assert 'templates/advanced/mds-content.html' not in body
-    # MDS data must not block page rendering: no synchronous snapshot script.
-    assert 'fido-mds3.explorer.bootstrap.js' not in body
-    assert '"snapshotUrl": "/assets/' in body
-    assert '/fido-mds3.explorer.full.json?v=7.' in body
-    assert 'src="/assets/' in body and '/scripts/main.js"' in body
-    assert '"customEntriesState": "unknown"' in body
-    # The summary rides in a JSON block, not in a script that sets a global.
-    assert '<script type="application/json" id="initial-mds-info">{' in body
-    assert '__INITIAL_' not in body
-
-
 def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
@@ -355,19 +320,3 @@ def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
     assert response.get_json()["snapshot"]["meta"]["entryCount"] == 3
 
 
-def test_index_page_supports_gzip_compression(monkeypatch, app_config):
-    general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
-
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {"entryCount": 0})
-    monkeypatch.setattr(general_module, "_should_bootstrap_metadata_on_index", lambda: False)
-
-    with config_module.app.test_client() as client:
-        response = client.get("/index.html", headers={"Accept-Encoding": "gzip"})
-
-    assert response.status_code == 200
-    assert response.headers.get("Content-Encoding") == "gzip"
-    assert "Accept-Encoding" in response.headers.get("Vary", "")
-    body = gzip.decompress(response.data).decode("utf-8")
-    assert "<!DOCTYPE html>" in body

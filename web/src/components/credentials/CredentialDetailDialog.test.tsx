@@ -23,7 +23,7 @@ const keyOf = (record: Record<string, unknown>) => `id:${record.credentialIdBase
 const urlOf = (record: Record<string, unknown>, ...levels: string[]) => ['#simple/credential', keyOf(record), ...levels].join('/');
 
 function renderShell(records: Record<string, unknown>[], hash = '', routes = {}) {
-  window.history.replaceState({ fromNext: true }, '', `/beta${hash}`);
+  window.history.replaceState({ fromNext: true }, '', `/${hash}`);
   keepRecords(records);
   const fetch = stubFetch({ ...warmUpRoutes(), '/api/decode': decodeRoute(), ...routes });
   renderPage(<AppShell />);
@@ -334,7 +334,7 @@ describe('a saved credential\'s details, the levels', () => {
     await waitFor(() => expect(window.location.hash).toBe(urlOf(X5C, 'registration')));
     await screen.findByRole('heading', { level: 2, name: 'Registration Details' });
 
-    window.history.replaceState({ fromNext: true }, '', `/beta${urlOf(X5C, 'elsewhere')}`);
+    window.history.replaceState({ fromNext: true }, '', `/${urlOf(X5C, 'elsewhere')}`);
     await act(async () => {
       window.dispatchEvent(new PopStateEvent('popstate'));
     });

@@ -19,7 +19,6 @@ from flask import (
     g,
     has_app_context,
     jsonify,
-    render_template,
     request,
     send_file,
     session,
@@ -171,11 +170,6 @@ def health():
     return response
 
 
-@bp.route("/")
-def index():
-    return index_html()
-
-
 _MDS_EXPLORER_FULL_STATIC_FILENAME = mds_snapshot_dir.EXPLORER_FULL
 _MDS_CUSTOM_ENTRIES_SESSION_KEY = "fido.mds.custom"
 
@@ -221,17 +215,15 @@ def _packaged_snapshot_url() -> str | None:
     return f"{asset_url(_MDS_EXPLORER_FULL_STATIC_FILENAME)}?v={version}"
 
 
-def _initial_mds_info(*, wait_for_the_snapshot: bool = False) -> dict[str, Any]:
+def _initial_mds_info() -> dict[str, Any]:
     """What the MDS explorer starts from: the packaged snapshot's summary (absent
     without a snapshot), the URL of the packaged snapshot (absent without one),
-    and whether this session has uploaded metadata. The current UI's index
-    inlines it; the new UI asks ``/api/mds/metadata/info`` for it, which waits for
-    a provisioning under way. The index does not wait (unless it bootstraps the
-    metadata itself), so a cold instance's first page is not held: without a
-    snapshot yet its explorer asks the API, which waits."""
+    and whether this session has uploaded metadata. The page asks
+    ``/api/mds/metadata/info`` for it, which waits for a provisioning under way;
+    the page itself is static and never waits. (The flag that bootstraps the
+    metadata here is named for the index that inlined this before Phase 30.)"""
 
-    if wait_for_the_snapshot:
-        ensure_snapshot_available()
+    ensure_snapshot_available()
     if _should_bootstrap_metadata_on_index():
         ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
     metadata_session_id = ensure_metadata_session_id()
@@ -246,14 +238,6 @@ def _initial_mds_info(*, wait_for_the_snapshot: bool = False) -> dict[str, Any]:
     return initial_mds_info
 
 
-@bp.route("/index.html")
-def index_html():
-    return render_template(
-        "index.html",
-        initial_mds_info=_initial_mds_info(),
-    )
-
-
 def _no_store_json_response(payload: Mapping[str, Any], status: int = 200):
     response = jsonify(payload)
     response.status_code = status
@@ -265,7 +249,7 @@ def _no_store_json_response(payload: Mapping[str, Any], status: int = 200):
 @bp.route("/api/mds/metadata/info", methods=["GET"])
 def api_get_metadata_info():
     # Per session (customEntriesState), so never cached and keyed on the cookie.
-    return _no_store_json_response(_initial_mds_info(wait_for_the_snapshot=True))
+    return _no_store_json_response(_initial_mds_info())
 
 
 @bp.route("/api/mds/metadata/explorer", methods=["GET"])

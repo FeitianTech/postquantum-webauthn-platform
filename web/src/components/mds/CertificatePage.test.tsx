@@ -32,7 +32,7 @@ function deferred<T>() {
 }
 
 function renderApp(hash: string, decodeRoute = () => json({ details: DETAILS }) as Response | Promise<Response>) {
-  window.history.replaceState({ fromNext: true }, '', `/beta${hash}`);
+  window.history.replaceState({ fromNext: true }, '', `/${hash}`);
   const fetch = stubFetch(fixtureRoutes({ '/api/mds/decode-certificate': decodeRoute }));
   renderPage(
     <ToastProvider>
@@ -184,7 +184,7 @@ describe('an attestation certificate of an MDS entry', () => {
   it('opens nothing for a certificate that is only whitespace, nor for an entry without certificates', async () => {
     const blank = { ...L1(), entryId: 'aaguid:blank', name: 'Blank Root', attestationCertificates: ['  '] };
     const bare = { ...L1(), entryId: 'aaguid:bare', name: 'No Roots', attestationCertificates: [] };
-    window.history.replaceState({ fromNext: true }, '', '/beta#mds/aaguid:blank/certificate/1');
+    window.history.replaceState({ fromNext: true }, '', '/#mds/aaguid:blank/certificate/1');
     const fetch = stubFetch(
       fixtureRoutes({
         '/api/mds/metadata/resolve': (_init, url) => json({ entry: url.includes('blank') ? blank : bare }),
@@ -202,7 +202,7 @@ describe('an attestation certificate of an MDS entry', () => {
     expect(decodeCalls(fetch)).toHaveLength(0);
 
     act(() => {
-      window.history.replaceState({ fromNext: true }, '', '/beta#mds/aaguid:bare/certificate/1');
+      window.history.replaceState({ fromNext: true }, '', '/#mds/aaguid:bare/certificate/1');
       window.dispatchEvent(new HashChangeEvent('hashchange'));
     });
     expect(await screen.findByRole('heading', { level: 3, name: 'No Roots' })).toBeVisible();

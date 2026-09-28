@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { expect } from './fixtures';
 import { type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownText } from './parity';
 
-// A saved credential's details and registration in /beta's dialog levels, for the
+// A saved credential's details and registration in the new UI's dialog levels, for the
 // parity specs, which compare them with what the current modal at / showed (its
 // registration view, the second modal for a certificate or the authenticator
 // data), as recorded.

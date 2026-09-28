@@ -29,7 +29,7 @@ app, in the order ``factory.INIT_STEPS`` fixes.
 - ``attestation_trust``: operator-trusted attestation CAs.
 - ``mds``: where the MDS comes from and where the session metadata lives (the
   snapshot's own files: ``server.app.mds_snapshot_dir``).
-- ``web_export``: where the new UI's static export is (``web/out``), served at ``/beta``.
+- ``web_export``: where the new UI's static export is (``web/out``), served at ``/``.
 - ``relying_party``: the RP ID and name, and ``create_fido_server``.
 
 ``app`` is still an attribute of this package, for callers written against the

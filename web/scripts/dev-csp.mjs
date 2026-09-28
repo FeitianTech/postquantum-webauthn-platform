@@ -68,7 +68,7 @@ export function developmentPolicy() {
   return policy.map((entry) => entry.join(' ')).join('; ');
 }
 
-/** The headers `next dev` sends with every page and asset under /beta. */
+/** The headers `next dev` sends with every page and asset. */
 export function developmentHeaders() {
   return [
     { key: 'Content-Security-Policy', value: developmentPolicy() },

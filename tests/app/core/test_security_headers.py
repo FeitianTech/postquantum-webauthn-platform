@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import importlib
-import re
 from datetime import timedelta
 
 import pytest
@@ -18,8 +17,12 @@ app = config_module.app
 
 
 @pytest.fixture
-def client():
-    return app.test_client()
+def client(make_app, export_root):
+    """The app with a small export of the new UI, so / answers its page."""
+
+    from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
+
+    return make_app({WEB_EXPORT_ROOT_KEY: str(export_root)}).test_client()
 
 
 EXPECTED_HEADERS = (
@@ -55,22 +58,14 @@ def test_every_expected_header_is_present(client, path, header):
     assert response.headers.get(header), f"{header} missing from {path}"
 
 
-def test_index_still_renders_under_the_shipped_csp(client):
-    """A policy that breaks the page is worse than no policy."""
+def test_the_page_is_served_under_the_shipped_csp(client):
+    """The page is the export, which web/scripts/check-export-csp.mjs scans for
+    anything the policy refuses; here it is served with the policy."""
 
     response = client.get("/")
     assert response.status_code == 200
-    body = response.get_data(as_text=True)
-    assert "<title>" in body
-    assert "scripts/main.js" in body
-    # No inline code: every script is a file, or JSON the browser never runs.
-    scripts = re.findall(r"<script\b([^>]*)>", body)
-    assert scripts
-    assert [
-        attributes for attributes in scripts
-        if "src=" not in attributes and 'type="application/json"' not in attributes
-    ] == []
-    assert '<script type="application/json" id="initial-mds-info">' in body
+    assert "<title>" in response.get_data(as_text=True)
+    assert "script-src 'self'" in response.headers["Content-Security-Policy"]
 
 
 def test_clickjacking_is_refused_two_ways(client):

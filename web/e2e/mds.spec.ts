@@ -5,7 +5,7 @@ import type { Locator, Page } from '@playwright/test';
 import { greyFills } from './design-rules';
 import { expect, test } from './fixtures';
 
-// The MDS list at /beta#mds in Chromium, against Flask serving the fixture
+// The MDS list at /#mds in Chromium, against Flask serving the fixture
 // snapshot (tests/fixtures/mds, through serve-flask.mjs) under the strict CSP.
 
 const repo = resolve(import.meta.dirname, '..', '..');
@@ -23,7 +23,7 @@ const filter = (page: Page, name: string) => {
 const header = (page: Page, name: string) => section(page).getByRole('columnheader', { name: new RegExp(`^${name}`) });
 const frame = (page: Page) => section(page).locator('[data-mds-frame]');
 
-async function openList(page: Page, path = '/beta#mds') {
+async function openList(page: Page, path = '/#mds') {
   await page.goto(path);
   await expect(rows(page)).toHaveCount(32);
 }
@@ -32,7 +32,7 @@ async function names(list: Locator) {
   return list.locator('a[data-entry-link]').allTextContents();
 }
 
-test.describe('/beta#mds', () => {
+test.describe('/#mds', () => {
   test('loads the fixture: the count, the status line, the 13 columns', async ({ page }) => {
     await openList(page);
     await expect(section(page).getByText(/^Entries:/)).toHaveText('Entries: 32 of 32 total');
@@ -43,7 +43,7 @@ test.describe('/beta#mds', () => {
     await expect(header(page, 'Date Updated')).toHaveAttribute('aria-sort', 'descending');
   });
 
-  test('loads with the absolute URLs from /beta/ too', async ({ page }) => {
+  test('loads from an old /beta/ link too, asking the API at its own path', async ({ page }) => {
     const requests: string[] = [];
     page.on('request', (request) => requests.push(new URL(request.url()).pathname));
     await openList(page, '/beta/#mds');
@@ -177,7 +177,7 @@ test.describe('/beta#mds', () => {
   });
 
   test('opens an entry a link names, an AAID with its # encoded', async ({ page }) => {
-    await page.goto('/beta#mds/aaid:F1D0%230012');
+    await page.goto('/#mds/aaid:F1D0%230012');
     await expect(section(page).getByRole('heading', { level: 3, name: 'Fixture UAF Authenticator' })).toBeVisible();
     const entry = section(page).locator('[data-mds-entry]');
     await expect(entry.locator('[data-entry-subtitle]').getByText('F1D0#0012', { exact: true })).toBeVisible();

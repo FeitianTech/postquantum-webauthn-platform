@@ -9,7 +9,7 @@ import { recorded } from './recorded';
 import { addVirtualAuthenticator } from './virtual-authenticator';
 
 // What the Simple tab and the saved credentials showed in the current UI at / and
-// show in /beta: the tab's own words, each saved credential's row for the same
+// show in the new UI: the tab's own words, each saved credential's row for the same
 // stored records (both UIs read the one localStorage array), the result panel
 // after an authentication in each, and the success sentences; word for word
 // (layout, separators and controls' own labels set aside: parity.ts). Every
@@ -44,7 +44,7 @@ function rowExpected(name: string, row: Locator): Promise<ExpectedDifference[]> 
       {
         only: 'legacy' as const,
         token: account,
-        reason: 'the account\'s name, which /beta shows as the button that opens the details (controls\' labels are set aside; the names are checked equal)',
+        reason: 'the account\'s name, which the new UI shows as the button that opens the details (controls\' labels are set aside; the names are checked equal)',
       },
       {
         only: 'beta' as const,
@@ -64,7 +64,7 @@ function rowExpected(name: string, row: Locator): Promise<ExpectedDifference[]> 
 }
 
 // Each check's verdict: the current card said it by the word's colour (green,
-// red, grey), recorded as passed, failed or unknown; /beta by the chip's tone (and
+// red, grey), recorded as passed, failed or unknown; the new UI by the chip's tone (and
 // a word for screen readers).
 function betaVerdicts(row: Locator) {
   return row.evaluate((element) =>
@@ -80,13 +80,13 @@ async function keep(page: Page, records: object[]) {
 }
 
 async function openBeta(page: Page) {
-  await page.goto('/beta#simple');
+  await page.goto('/#simple');
   await expect(page.locator('[data-saved-credentials] [data-count]')).toBeVisible();
 }
 
 type RowRecording = { name: string; sections: ShownSection[]; buttons: string[]; checks: string[] };
 
-test.describe('the Simple tab in / and in /beta', () => {
+test.describe('the Simple tab, as the current UI showed it', () => {
   test('shows the same words', async ({ page }) => {
     const legacy = recorded<ShownSection[]>('simple-parity', 'the tab');
     await openBeta(page);
@@ -138,7 +138,7 @@ test.describe('the Simple tab in / and in /beta', () => {
     const legacyPanel = current.panel;
 
     const counter: ExpectedDifference[] = [
-      { only: 'legacy', token: /^\d+$/, reason: 'the counter, which each authentication raises (the same credential was used in /beta first)' },
+      { only: 'legacy', token: /^\d+$/, reason: 'the counter, which each authentication raises (the same credential was used in the new UI first)' },
       { only: 'beta', token: /^\d+$/, reason: 'the counter, which each authentication raises' },
     ];
     const differences = compareShownText(legacyPanel, betaPanel, counter);

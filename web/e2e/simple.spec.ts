@@ -7,7 +7,7 @@ import { greyFills } from './design-rules';
 import { expect, test } from './fixtures';
 import { addVirtualAuthenticator } from './virtual-authenticator';
 
-// The Simple tab at /beta#simple in Chromium, against Flask serving the export
+// The Simple tab at /#simple in Chromium, against Flask serving the export
 // under the strict CSP: real registrations and authentications answered by
 // Chromium's virtual authenticator, and the saved credentials in the one
 // localStorage array (what the current UI wrote there: current-ui-records.spec.ts).
@@ -27,7 +27,7 @@ const rows = (page: Page) => list(page).locator('li[data-credential-key]');
 const username = () => `e2e-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 
 async function openBeta(page: Page, hash = '#simple') {
-  await page.goto(`/beta${hash}`);
+  await page.goto(`/${hash}`);
   await expect(list(page).locator('[data-count]')).toBeVisible();
 }
 
@@ -46,7 +46,7 @@ async function storedCount(page: Page) {
   return page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) ?? '[]').length, STORAGE_KEY);
 }
 
-test.describe('/beta#simple', () => {
+test.describe('/#simple', () => {
   test('registers a passkey and authenticates with it, saying each outcome and what the server made of it', async ({ page }) => {
     const authenticator = await addVirtualAuthenticator(page);
     await openBeta(page);
@@ -107,7 +107,7 @@ test.describe('/beta#simple', () => {
     await expect(page).toHaveURL(new RegExp(`#simple/credential/id:${record.credentialIdBase64Url}$`));
     await page.goBack();
     await expect(detail).toBeHidden();
-    await expect(page).toHaveURL(/\/beta#simple$/);
+    await expect(page).toHaveURL(/\/#simple$/);
 
     await page.goForward();
     await expect(detail).toBeVisible();
@@ -126,7 +126,7 @@ test.describe('/beta#simple', () => {
     await expect(page.getByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeVisible();
 
     await page.goBack();
-    await expect(page).toHaveURL(/\/beta#simple$/);
+    await expect(page).toHaveURL(/\/#simple$/);
     await expect(rows(page)).toHaveCount(1);
   });
 

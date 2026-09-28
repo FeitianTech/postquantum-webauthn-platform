@@ -30,8 +30,8 @@ test('finds a missing, an extra and a doubled word, section by section', () => {
   ]);
   expect(describeDifferences(differences).slice(0, 3)).toEqual([
     '[header] only in the recording: "8" (in "offset 8 · ${1} — map key 1 appears twice") — UNEXPLAINED',
-    '[header] only in /beta: "Codec" (in "Codec") — UNEXPLAINED',
-    '[header] only in /beta: "canonical" (in "canonical") — a new chip',
+    '[header] only in the new UI: "Codec" (in "Codec") — UNEXPLAINED',
+    '[header] only in the new UI: "canonical" (in "canonical") — a new chip',
   ]);
 });
 

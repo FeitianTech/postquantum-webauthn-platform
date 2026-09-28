@@ -5,7 +5,7 @@ import { greyFills } from './design-rules';
 import { expect, test } from './fixtures';
 import { addVirtualAuthenticator } from './virtual-authenticator';
 
-// The Advanced tab at /beta#advanced in Chromium, against Flask serving the
+// The Advanced tab at /#advanced in Chromium, against Flask serving the
 // export under the strict CSP: registrations answered by Chromium's virtual
 // authenticator (a CTAP2 key on USB: the default request asks for a
 // cross-platform one), from the form and from an edited JSON; and the saved
@@ -16,7 +16,7 @@ const editor = (page: Page) => section(page).getByRole('textbox', { name: 'JSON 
 const dialog = (page: Page) => page.getByRole('dialog', { name: /Registration Details|Credential Details/ });
 
 async function openBeta(page: Page) {
-  await page.goto('/beta#advanced');
+  await page.goto('/#advanced');
   await expect(editor(page)).toHaveValue(/"publicKey"/);
 }
 
@@ -36,7 +36,7 @@ async function box(locator: Locator) {
   return found;
 }
 
-test.describe('/beta#advanced', () => {
+test.describe('/#advanced', () => {
   test('registers from the form, keeps the credential, and opens its registration with the detail under it', async ({ page }) => {
     const authenticator = await addVirtualAuthenticator(page);
     await openBeta(page);
@@ -162,7 +162,7 @@ async function toAuthentication(page: Page) {
   await expect(authEditor(page)).toHaveValue(/"publicKey"/);
 }
 
-/** Registers in /beta#advanced and closes the details the registration opens; gives the saved record. */
+/** Registers in #advanced and closes the details the registration opens; gives the saved record. */
 async function registerInBeta(page: Page) {
   await openBeta(page);
   await register(page);
@@ -172,7 +172,7 @@ async function registerInBeta(page: Page) {
   return records.at(-1) as { credentialIdHex: string; userName: string; signCount?: number };
 }
 
-test.describe('/beta#advanced authentication', () => {
+test.describe('/#advanced authentication', () => {
   test('authenticates from the form: the counter and the challenge, the counter kept, the row tinted', async ({ page }) => {
     await addVirtualAuthenticator(page);
     await registerInBeta(page);

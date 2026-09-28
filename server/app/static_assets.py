@@ -71,14 +71,13 @@ bp = Blueprint("static_assets", __name__)
 
 
 def init_app(app: Flask) -> None:
-    """Serve versioned assets, hide the MDS snapshot files, expose ``asset_url``.
+    """Serve versioned assets and hide the MDS snapshot files.
 
-    The hook is registered on the app, not the blueprint, because the snapshot
-    files would otherwise be served by Flask's own ``static`` rule.
+    The hook is registered on the app, not the blueprint, because a snapshot file
+    at the site root would otherwise reach the page rule (``routes/web_export.py``).
     """
 
     app.before_request(_hide_private_static_files)
-    app.jinja_env.globals["asset_url"] = asset_url
     app.register_blueprint(bp)
 
 

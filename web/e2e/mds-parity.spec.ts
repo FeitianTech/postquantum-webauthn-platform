@@ -4,14 +4,14 @@ import { expect, test } from './fixtures';
 import { type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownRows } from './parity';
 import { recorded } from './recorded';
 
-// What the current MDS table showed and what /beta's shows for the same filters,
+// What the current MDS table showed and what the new UI's shows for the same filters,
 // over the fixture snapshot serve-flask.mjs serves (tests/fixtures/mds): every
 // row's cells word for word (layout, separators and controls' own labels set
 // aside: parity.ts), the rows keyed by their ID, and the order of the rows. Every
 // difference must be one listed below, with its reason. The current table's side
 // is its recording (recorded.ts).
 
-// /beta's filters are labelled by their column.
+// The new UI's filters are labelled by their column.
 const CASES = [
   { label: 'no filter', filters: {} },
   { label: 'protocol Uaf', filters: { protocol: ['#mds-filter-protocol', 'Protocol', 'Uaf'] } },
@@ -25,7 +25,7 @@ const CASES = [
 const EXPECTED: ExpectedDifference[] = [];
 
 async function betaRows(page: Page, filters: Record<string, readonly string[]>) {
-  await page.goto('/beta#mds');
+  await page.goto('/#mds');
   const section = page.getByRole('tabpanel', { name: 'FIDO MDS Authenticators' });
   await expect(section.locator('tbody tr[data-entry-id]:not([hidden])')).toHaveCount(32);
   const bar = section.getByRole('region', { name: 'Filters' });
