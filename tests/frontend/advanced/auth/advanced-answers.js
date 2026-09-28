@@ -49,3 +49,57 @@ export function recordedCredential({ begin, complete }) {
     getClientExtensionResults: () => ({ credProps: { rk: false } }),
   };
 }
+
+// Real advanced authentications (scenario advanced-authentication-answers): two
+// credentials the tab registered, the first reporting largeBlob and prf
+// support, then authentications of the first.
+export const AUTHENTICATION_SCENARIO = 'advanced-authentication-answers';
+
+/**
+ * The records the tab keeps for the two registrations (the server's stored
+ * credentials: the capable one first), and each authentication's answers:
+ * `first` (a first use), `regressed` (a counter lower than the stored one),
+ * `refused` (a bad signature, naming the credential), `clientSupplied` (a
+ * complete with no server state), each `{begin, complete}` (clientSupplied has
+ * the begin of the refused one's request, none of its own); and `none`, the
+ * begin answered for no stored credential.
+ */
+export function advancedAuthentications() {
+  const answers = goldenAnswers(AUTHENTICATION_SCENARIO);
+  const records = answers
+    .filter(({ request }) => request.includes('/register/complete'))
+    .map(({ body }) => ({ ...body.storedCredential, type: 'advanced' }));
+  const begins = answers.filter(({ request }) => request.includes('/authenticate/begin'));
+  const completes = answers.filter(({ request }) => request.includes('/authenticate/complete'));
+  return {
+    records,
+    first: { begin: begins[0], complete: completes[0] },
+    regressed: { begin: begins[1], complete: completes[1] },
+    refused: { begin: begins[2], complete: completes[2] },
+    clientSupplied: { begin: begins[2], complete: completes[3] },
+    none: begins[3],
+  };
+}
+
+/**
+ * The assertion navigator.credentials.get() gave for a recorded
+ * authentication: the credential's id, and client data naming the begin
+ * answer's challenge.
+ */
+export function recordedAssertion({ begin, complete }, extensionResults = {}) {
+  const id = complete.body.authenticatedCredentialId ?? complete.body.failedCredentialId;
+  const clientData = { type: 'webauthn.get', challenge: begin.body.publicKey.challenge, origin: 'https://localhost' };
+  return {
+    type: 'public-key',
+    id,
+    rawId: bytes(id),
+    authenticatorAttachment: 'cross-platform',
+    response: {
+      clientDataJSON: new TextEncoder().encode(JSON.stringify(clientData)).buffer,
+      authenticatorData: new Uint8Array(37).buffer,
+      signature: new Uint8Array([0x30, 0x44]).buffer,
+      userHandle: null,
+    },
+    getClientExtensionResults: () => extensionResults,
+  };
+}

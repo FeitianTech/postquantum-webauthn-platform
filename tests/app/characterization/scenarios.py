@@ -723,6 +723,39 @@ def _(r: Recorder) -> None:
         r.post(client, "/api/decode", json={"payload": response.get_json()["relyingParty"]["attestationObject"]})
 
 
+@scenario("advanced-authentication-answers")
+def _(r: Recorder) -> None:
+    """What the Advanced tab's authentication is answered for credentials it
+    registered: one whose browser reported largeBlob and prf support, one that
+    reported neither (no prf key at all); then authentications of the first,
+    whose id the answers name: a first use, a counter lower than the stored one
+    (reported, not rejected), a bad signature (refused, naming the credential),
+    the client-supplied state once the server's is gone, and a begin with no
+    stored credential. The challenge is fixed, so every server challenge after
+    the first is a replay."""
+
+    client = r.client()
+    capable = m.Authenticator("adv-answers-capable", aaguid=AAGUID)
+    plain = m.Authenticator("adv-answers-plain", aaguid=AAGUID)
+    _advanced_register(
+        r, client, capable, attachment="cross-platform", transports=["usb"],
+        extension_results={"credProps": {"rk": True}, "largeBlob": {"supported": True}, "prf": {"enabled": True}},
+    )
+    _advanced_register(r, client, plain, attachment="cross-platform", transports=["usb"])
+    entries = [
+        capable.stored_credential_entry(declared_algorithm=-7),
+        plain.stored_credential_entry(declared_algorithm=-7),
+    ]
+    _advanced_authenticate(r, client, capable, entries=entries, counter=1)
+    _advanced_authenticate(r, client, capable, entries=[{**entries[0], "signCount": 10}, entries[1]], counter=2)
+    _advanced_authenticate(r, client, capable, entries=entries, counter=3, valid=False)
+    _advanced_authenticate(
+        r, client, capable, entries=entries, counter=4, begin=False,
+        extra={"__session_state": {"challenge": b64u(b"\x71" * 32), "user_verification": "preferred"}},
+    )
+    r.post(client, "/api/advanced/authenticate/begin", json={"publicKey": _auth_options(), "__storedCredentials": []})
+
+
 # -- storage failures and RP fallbacks -------------------------------------------------
 
 
