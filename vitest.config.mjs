@@ -67,7 +67,7 @@ export default defineConfig({
         'frontend/static/scripts/advanced/credentials/hydrate.js': FULL,
         'frontend/static/scripts/advanced/{constants,cose-labels}.js': FULL,
         // The Advanced tab's form with no page, which web/ imports: every line and branch.
-        'frontend/static/scripts/advanced/auth/{allow-credentials,capabilities,ceremony,fake-credentials,hex-input,hint-rules}.js': FULL,
+        'frontend/static/scripts/advanced/auth/{allow-credentials,assertion,capabilities,ceremony,fake-credentials,hex-input,hint-rules}.js': FULL,
         'frontend/static/scripts/advanced/credential-display/registration-snapshot.js': FULL,
         'frontend/static/scripts/advanced/editor/json-editing.js': FULL,
         'frontend/static/scripts/advanced/json-editor/{algorithm-options,authentication-request,editor-model,merge-prune,registration-request,schema}.js': FULL,

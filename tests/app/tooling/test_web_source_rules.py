@@ -134,8 +134,10 @@ LOGIC_ROOTS = (
     "advanced/json-editor/validation-registration.js",
     "advanced/json-editor/validation-authentication.js",
     "advanced/json-editor/merge-prune.js",
-    # The Advanced tab's registration ceremony, and the snapshot its result keeps.
+    # The Advanced tab's registration and authentication ceremonies, and the
+    # snapshot a registration's result keeps.
     "advanced/auth/ceremony.js",
+    "advanced/auth/assertion.js",
     "advanced/credential-display/registration-snapshot.js",
     # The authentication's request and the form's settings, the Allow Credentials
     # choices, and whether the saved credentials can use largeBlob and prf.

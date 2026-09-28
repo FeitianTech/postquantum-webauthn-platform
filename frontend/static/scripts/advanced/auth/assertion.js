@@ -54,16 +54,12 @@ export function readAssertionRequest(text) {
     return parsed;
 }
 
-// The assertion as the server is sent it: its JSON, with its attachment and
-// every client extension result, read from the assertion when it can give them.
+// The assertion as the server is sent it: its JSON (the ponyfill's get() gives
+// every assertion its toJSON()), with its attachment and every client
+// extension result, read from the assertion when it can give them.
 function assertionJson(assertion) {
-    const authenticatorAttachment = assertion && typeof assertion === 'object'
-        ? assertion.authenticatorAttachment ?? null
-        : null;
-    const json = assertion.toJSON ? assertion.toJSON() : JSON.parse(JSON.stringify(assertion));
-    if (authenticatorAttachment !== undefined) {
-        json.authenticatorAttachment = authenticatorAttachment;
-    }
+    const json = assertion.toJSON();
+    json.authenticatorAttachment = assertion.authenticatorAttachment ?? null;
     const extensionResults = assertion.getClientExtensionResults
         ? assertion.getClientExtensionResults()
         : (assertion.clientExtensionResults || {});
@@ -116,7 +112,7 @@ export async function authenticateAdvancedCredential(text, {
         try {
             ensureHints(parsed.publicKey);
         } catch (hintError) {
-            return { authenticated: false, text: hintError?.message || ADVANCED_CEREMONY_TEXT.invalidHints };
+            return { authenticated: false, text: hintError.message || ADVANCED_CEREMONY_TEXT.invalidHints };
         }
 
         onStart();
@@ -138,14 +134,14 @@ export async function authenticateAdvancedCredential(text, {
 
         const json = await response.json();
         const sessionState = json?.__session_state ?? null;
-        const optionsJson = { ...(json || {}) };
+        const optionsJson = { ...json };
         delete optionsJson.__session_state;
-        const originalExtensions = optionsJson?.publicKey?.extensions;
+        const originalExtensions = optionsJson.publicKey?.extensions;
         const assertOptions = parseRequestOptionsFromJSON(optionsJson);
 
         const convertedExtensions = convertExtensionsForClient(originalExtensions);
         if (convertedExtensions) {
-            assertOptions.publicKey = assertOptions.publicKey || {};
+            // Extensions to convert come with a publicKey, which the parsed options keep.
             assertOptions.publicKey.extensions = {
                 ...(assertOptions.publicKey.extensions || {}),
                 ...convertedExtensions
