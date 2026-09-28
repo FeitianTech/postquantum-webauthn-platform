@@ -33,8 +33,7 @@ export function applyJsonEditorAutoIndent(editor) {
     const lineStart = before.lastIndexOf('\n') + 1;
     const currentLine = before.slice(lineStart);
     const trimmedLine = currentLine.trimEnd();
-    const baseIndentMatch = currentLine.match(/^\s*/);
-    const baseIndent = baseIndentMatch ? baseIndentMatch[0] : '';
+    const baseIndent = currentLine.match(/^\s*/)[0];
     const closesImmediately = /^\s*[\}\]]/.test(after);
 
     let extraIndent = '';
@@ -123,7 +122,7 @@ export function applyTabIndentation(editor, isShift) {
             editor.selectionEnd = newPos;
         } else {
             const leadingSpaces = value.slice(lineStart, selectionStart).match(/^ +/);
-            if (leadingSpaces && leadingSpaces[0].length > 0) {
+            if (leadingSpaces) {
                 const removeCount = Math.min(leadingSpaces[0].length, JSON_EDITOR_INDENT_UNIT.length);
                 editor.value = value.slice(0, lineStart) + value.slice(lineStart + removeCount);
                 const newPos = Math.max(lineStart, selectionStart - removeCount);

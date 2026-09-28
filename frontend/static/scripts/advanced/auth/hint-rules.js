@@ -57,10 +57,6 @@ export function applyAuthenticatorAttachmentPreference(targetOptions, allowedAtt
         ? targetOptions.publicKey
         : targetOptions;
 
-    if (!publicKey || typeof publicKey !== 'object') {
-        return;
-    }
-
     const normalizedResolved = Array.isArray(allowedAttachments)
         ? allowedAttachments.map(normalizeAttachmentValue).filter(Boolean)
         : [];
@@ -97,10 +93,8 @@ export function applyAuthenticatorAttachmentPreference(targetOptions, allowedAtt
             if (Array.isArray(source.hints)) {
                 const derived = deriveAllowedAttachmentsFromHints(source.hints);
                 if (derived.length === 1) {
-                    preferredAttachment = normalizeAttachmentValue(derived[0]);
-                    if (preferredAttachment) {
-                        break;
-                    }
+                    preferredAttachment = derived[0];
+                    break;
                 }
             }
         }
@@ -193,7 +187,7 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
                 if (!hexId) {
                     return false;
                 }
-                const matchingCredential = (storedCredentials || []).find(cred => {
+                const matchingCredential = storedCredentials.find(cred => {
                     const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
                     if (!credentialIdHex) {
                         return false;
@@ -212,7 +206,7 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
         } else if (publicKey.allowCredentials.length === 0 && Array.isArray(storedCredentials) && storedCredentials.length > 0) {
             if (resolvedAttachments.length === 1) {
                 const allowedValue = resolvedAttachments[0];
-                const fallbackCredential = (storedCredentials || []).find(cred => {
+                const fallbackCredential = storedCredentials.find(cred => {
                     const attachment = getStoredCredentialAttachment(cred);
                     return attachment && attachment === allowedValue;
                 });
@@ -228,9 +222,9 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
                     }
                 }
             } else {
-                const fallbackSource = (storedCredentials || []).filter(cred => {
+                const fallbackSource = storedCredentials.filter(cred => {
                     const attachment = getStoredCredentialAttachment(cred);
-                    return !resolvedAttachments.length || (attachment && resolvedAttachments.includes(attachment));
+                    return attachment && resolvedAttachments.includes(attachment);
                 });
                 const fallbackCredentials = fallbackSource
                     .map(cred => {
@@ -239,13 +233,9 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
                             return null;
                         }
                         const formatValue = convertFormat(credentialIdHex, 'hex', getCurrentBinaryFormat());
-                        const formattedId = currentFormatToJsonFormat(formatValue);
-                        if (!formattedId || typeof formattedId !== 'object') {
-                            return null;
-                        }
                         return {
                             type: 'public-key',
-                            id: formattedId,
+                            id: currentFormatToJsonFormat(formatValue),
                         };
                     })
                     .filter(Boolean);

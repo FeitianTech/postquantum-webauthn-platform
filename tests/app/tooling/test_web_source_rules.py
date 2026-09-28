@@ -117,6 +117,13 @@ LOGIC_ROOTS = (
     "advanced/credential-display/credential-detail-runtime/registration-candidates.js",
     "advanced/credential-display/credential-detail-runtime/helpers.js",
     "advanced/credentials/hydrate.js",
+    # The Advanced tab's form with no page: the hints' rules, the fake credential
+    # IDs, the byte fields' check, the JSON editor's key edits, the algorithms.
+    "advanced/auth/hint-rules.js",
+    "advanced/auth/fake-credentials.js",
+    "advanced/auth/hex-input.js",
+    "advanced/editor/json-editing.js",
+    "advanced/json-editor/algorithm-options.js",
 )
 
 _RULES: dict[str, re.Pattern[str]] = {

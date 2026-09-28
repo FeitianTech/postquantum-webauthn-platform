@@ -66,6 +66,10 @@ export default defineConfig({
         'frontend/static/scripts/advanced/credential-display/credential-detail-runtime/{compose,detail-sections,helpers,registration-candidates,registration-context,snapshot-context}.js': FULL,
         'frontend/static/scripts/advanced/credentials/hydrate.js': FULL,
         'frontend/static/scripts/advanced/{constants,cose-labels}.js': FULL,
+        // The Advanced tab's form with no page, which web/ imports: every line and branch.
+        'frontend/static/scripts/advanced/auth/{fake-credentials,hex-input,hint-rules}.js': FULL,
+        'frontend/static/scripts/advanced/editor/json-editing.js': FULL,
+        'frontend/static/scripts/advanced/json-editor/algorithm-options.js': FULL,
       },
     },
   },
