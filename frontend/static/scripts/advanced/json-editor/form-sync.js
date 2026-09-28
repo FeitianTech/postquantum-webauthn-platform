@@ -1,9 +1,6 @@
 import { state } from '../../shared/state.js';
 import { applyHintsToCheckboxes } from '../auth/hints.js';
-import {
-    extractHexFromJsonFormat,
-    getCredentialIdHex,
-} from '../credentials/utils.js';
+import { extractHexFromJsonFormat } from '../credentials/utils.js';
 import { setFakeExcludeCredentials } from '../auth/exclude-credentials.js';
 import {
     applyRegistrationAlgorithmSelection,
@@ -13,178 +10,67 @@ import {
     decodeJsonBinaryToHex,
     dispatchChangeEvent,
 } from './dom-helpers.js';
+import { readRegistrationForm } from './creation-options.js';
+import { readCreationOptions } from './registration-request.js';
 
+// The registration form set to what the request says (./registration-request.js),
+// in the order the fields were always written; Authenticator Attachment is
+// announced as changed.
 export function updateRegistrationFormFromJson(publicKey) {
-    if (publicKey.user) {
-        if (publicKey.user.id) {
-            const userIdValue = decodeJsonBinaryToHex(publicKey.user.id);
-            if (userIdValue) {
-                document.getElementById('user-id').value = userIdValue;
-            }
+    const { settings, fakeExcludeCredentials } = readCreationOptions(publicKey, readRegistrationForm(), {
+        storedCredentials: state.storedCredentials,
+    });
+    const field = id => document.getElementById(id);
+    const setValue = (id, value) => {
+        if (field(id)) {
+            field(id).value = value;
         }
-        if (publicKey.user.name) {
-            document.getElementById('user-name').value = publicKey.user.name;
+    };
+    const setChecked = (id, checked) => {
+        if (field(id)) {
+            field(id).checked = checked;
         }
-        if (publicKey.user.displayName) {
-            document.getElementById('user-display-name').value = publicKey.user.displayName;
-        }
-    }
+    };
 
-    if (publicKey.challenge) {
-        const challengeValue = decodeJsonBinaryToHex(publicKey.challenge);
-        if (challengeValue) {
-            document.getElementById('challenge-reg').value = challengeValue;
-        }
-    }
+    setValue('user-id', settings.userId);
+    setValue('user-name', settings.userName);
+    setValue('user-display-name', settings.displayName);
+    setValue('challenge-reg', settings.challenge);
+    setValue('timeout-reg', settings.timeout);
+    setValue('attestation', settings.attestation);
 
-    if (publicKey.timeout) {
-        document.getElementById('timeout-reg').value = publicKey.timeout.toString();
-    }
-
-    if (Object.prototype.hasOwnProperty.call(publicKey, 'attestation')) {
-        document.getElementById('attestation').value = publicKey.attestation || 'direct';
-    }
-
-    if (publicKey.pubKeyCredParams && Array.isArray(publicKey.pubKeyCredParams)) {
+    if (Array.isArray(publicKey.pubKeyCredParams)) {
         clearRegistrationAlgorithmCheckboxesForFormSync();
-
-        publicKey.pubKeyCredParams.forEach(param => {
-            if (param && Object.prototype.hasOwnProperty.call(param, 'alg')) {
-                applyRegistrationAlgorithmSelection(param.alg);
-            }
-        });
+        settings.algorithms.forEach(applyRegistrationAlgorithmSelection);
     }
 
-    if (publicKey.authenticatorSelection) {
-        const attachmentElement = document.getElementById('authenticator-attachment');
-        if (attachmentElement) {
-            const attachmentValue = publicKey.authenticatorSelection.authenticatorAttachment;
-            let normalizedAttachment = 'cross-platform';
-            if (attachmentValue === 'platform' || attachmentValue === 'cross-platform') {
-                normalizedAttachment = attachmentValue;
-            } else if (attachmentValue === 'unspecified') {
-                normalizedAttachment = 'unspecified';
-            }
-            attachmentElement.value = normalizedAttachment;
-            dispatchChangeEvent(attachmentElement);
-        }
-
-        const residentKeyElement = document.getElementById('resident-key');
-        if (residentKeyElement) {
-            let residentKeySetting = publicKey.authenticatorSelection.residentKey || 'discouraged';
-            if (publicKey.authenticatorSelection.requireResidentKey === true) {
-                residentKeySetting = 'required';
-            }
-            residentKeyElement.value = residentKeySetting;
-        }
-
-        if (Object.prototype.hasOwnProperty.call(publicKey.authenticatorSelection, 'userVerification')) {
-            const userVerificationValue = publicKey.authenticatorSelection.userVerification || 'preferred';
-            document.getElementById('user-verification-reg').value = userVerificationValue;
-        }
-    } else {
-        const attachmentElement = document.getElementById('authenticator-attachment');
-        if (attachmentElement) {
-            attachmentElement.value = 'cross-platform';
-            dispatchChangeEvent(attachmentElement);
-        }
+    const attachmentElement = field('authenticator-attachment');
+    if (attachmentElement) {
+        attachmentElement.value = settings.attachment;
+        dispatchChangeEvent(attachmentElement);
     }
+    setValue('resident-key', settings.residentKey);
+    setValue('user-verification-reg', settings.userVerification);
 
-    const excludeCredentialsCheckbox = document.getElementById('exclude-credentials');
+    const excludeCredentialsCheckbox = field('exclude-credentials');
     if (excludeCredentialsCheckbox) {
-        const excludeArray = Array.isArray(publicKey.excludeCredentials)
-            ? publicKey.excludeCredentials
-            : [];
-        excludeCredentialsCheckbox.checked = excludeArray.length > 0;
-
-        const storedIds = new Set(
-            (state.storedCredentials || [])
-                .map(cred => (cred.credentialIdHex || getCredentialIdHex(cred) || '').toLowerCase())
-                .filter(Boolean),
-        );
-
-        const fakeHexList = [];
-        excludeArray.forEach(entry => {
-            if (!entry || typeof entry !== 'object') {
-                return;
-            }
-            const hexValue = extractHexFromJsonFormat(entry.id);
-            if (!hexValue) {
-                return;
-            }
-            const normalised = hexValue.toLowerCase();
-            if (!storedIds.has(normalised)) {
-                fakeHexList.push(hexValue);
-            }
-        });
-
-        setFakeExcludeCredentials(fakeHexList);
+        excludeCredentialsCheckbox.checked = settings.excludeCredentials;
+        setFakeExcludeCredentials(fakeExcludeCredentials);
     }
 
-    if (publicKey.extensions) {
-        const credPropsCheckbox = document.getElementById('cred-props');
-        if (credPropsCheckbox) {
-            credPropsCheckbox.checked = !!publicKey.extensions.credProps;
-        }
-
-        const minPinLengthCheckbox = document.getElementById('min-pin-length');
-        if (minPinLengthCheckbox) {
-            minPinLengthCheckbox.checked = !!publicKey.extensions.minPinLength;
-        }
-
-        const credProtectSelect = document.getElementById('cred-protect');
-        const enforceCredProtectCheckbox = document.getElementById('enforce-cred-protect');
-        if (credProtectSelect && enforceCredProtectCheckbox) {
-            const policy = publicKey.extensions.credentialProtectionPolicy || '';
-            credProtectSelect.value = policy;
-            if (policy) {
-                enforceCredProtectCheckbox.disabled = false;
-                enforceCredProtectCheckbox.checked = !!publicKey.extensions.enforceCredentialProtectionPolicy;
-            } else {
-                enforceCredProtectCheckbox.checked = true;
-                enforceCredProtectCheckbox.disabled = true;
-            }
-        }
-
-        if (publicKey.extensions.prf && publicKey.extensions.prf.eval) {
-            if (publicKey.extensions.prf.eval.first) {
-                const prfFirstValue = decodeJsonBinaryToHex(publicKey.extensions.prf.eval.first);
-                if (prfFirstValue) {
-                    document.getElementById('prf-eval-first-reg').value = prfFirstValue;
-                }
-            }
-            if (publicKey.extensions.prf.eval.second) {
-                const prfSecondValue = decodeJsonBinaryToHex(publicKey.extensions.prf.eval.second);
-                if (prfSecondValue) {
-                    document.getElementById('prf-eval-second-reg').value = prfSecondValue;
-                }
-            }
-        }
-    } else {
-        const credPropsCheckbox = document.getElementById('cred-props');
-        if (credPropsCheckbox) {
-            credPropsCheckbox.checked = false;
-        }
-
-        const minPinLengthCheckbox = document.getElementById('min-pin-length');
-        if (minPinLengthCheckbox) {
-            minPinLengthCheckbox.checked = false;
-        }
-
-        const credProtectSelect = document.getElementById('cred-protect');
-        const enforceCredProtectCheckbox = document.getElementById('enforce-cred-protect');
-        if (credProtectSelect && enforceCredProtectCheckbox) {
-            credProtectSelect.value = '';
-            enforceCredProtectCheckbox.checked = true;
-            enforceCredProtectCheckbox.disabled = true;
-        }
+    setChecked('cred-props', settings.credProps);
+    setChecked('min-pin-length', settings.minPinLength);
+    const credProtectSelect = field('cred-protect');
+    const enforceCredProtectCheckbox = field('enforce-cred-protect');
+    if (credProtectSelect && enforceCredProtectCheckbox) {
+        credProtectSelect.value = settings.credProtect;
+        enforceCredProtectCheckbox.checked = settings.enforceCredProtect;
+        enforceCredProtectCheckbox.disabled = !settings.credProtect;
     }
+    setValue('prf-eval-first-reg', settings.prfFirst);
+    setValue('prf-eval-second-reg', settings.prfSecond);
 
-    if (Array.isArray(publicKey.hints)) {
-        applyHintsToCheckboxes(publicKey.hints, 'registration');
-    } else {
-        applyHintsToCheckboxes([], 'registration');
-    }
+    applyHintsToCheckboxes(settings.hints, 'registration');
 }
 
 export function updateAuthenticationFormFromJson(publicKey) {

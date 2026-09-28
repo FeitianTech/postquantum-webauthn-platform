@@ -1,0 +1,342 @@
+// A registration's request (CredentialCreationOptions) and the form's settings
+// it is built from, with no page: the settings' defaults, the request they
+// build, what a request says the settings are, and the rules one setting's
+// change applies to others. DOM-free: the current form reads and writes its
+// fields around these (./creation-options.js, ./form-sync.js, ../ui/resets.js)
+// and the new UI keeps the settings as data.
+import {
+    base64UrlToHex,
+    convertFormat,
+    currentFormatToJsonFormat,
+    getCurrentBinaryFormat,
+} from '../../shared/utils/binary.js';
+import {
+    extractHexFromJsonFormat,
+    getCredentialIdHex,
+    getCredentialUserHandleHex,
+} from '../credentials/utils.js';
+import { ALGORITHM_OPTIONS } from './algorithm-options.js';
+
+/**
+ * The settings the form starts from and a reset returns to, without the values
+ * drawn at random (the user ID, name and display name, and the challenge).
+ * Byte fields are hex text as typed; the timeout and the fake ID length are text.
+ */
+export function registrationDefaults() {
+    return {
+        timeout: '90000',
+        attachment: 'cross-platform',
+        residentKey: 'discouraged',
+        userVerification: 'preferred',
+        attestation: 'direct',
+        excludeCredentials: true,
+        fakeCredLength: '128',
+        algorithms: ALGORITHM_OPTIONS
+            .filter(option => option.pqc || ['eddsa', 'es256', 'rs256'].includes(option.key))
+            .map(option => option.alg),
+        hints: [],
+        credProps: true,
+        minPinLength: false,
+        credProtect: '',
+        enforceCredProtect: true,
+        largeBlob: '',
+        prf: false,
+        prfFirst: '',
+        prfSecond: '',
+    };
+}
+
+/** A byte value as the request writes it ({"$hex": …} for the page's hex), or '' for none. */
+function requestBytes(value) {
+    return currentFormatToJsonFormat(value);
+}
+
+// The saved credentials of this user (its user handle is the User ID) first,
+// then the fake IDs, each in the page's byte spelling.
+function excludedCredentials(settings, { storedCredentials = [], fakeExcludeCredentials = [] }) {
+    const excludeList = [];
+    const currentBinaryFormat = getCurrentBinaryFormat();
+    const userIdHex = (convertFormat(settings.userId, currentBinaryFormat, 'hex') || '').toLowerCase();
+
+    if (userIdHex && Array.isArray(storedCredentials) && storedCredentials.length > 0) {
+        storedCredentials.forEach(cred => {
+            const handleHex = getCredentialUserHandleHex(cred);
+            const credentialIdHex = getCredentialIdHex(cred);
+
+            if (handleHex && credentialIdHex && handleHex === userIdHex) {
+                excludeList.push({
+                    type: 'public-key',
+                    id: {
+                        $hex: credentialIdHex,
+                    },
+                });
+            }
+        });
+    }
+
+    fakeExcludeCredentials.forEach(hexValue => {
+        if (!hexValue) {
+            return;
+        }
+
+        let idValue = { $hex: hexValue };
+        try {
+            const formattedValue = convertFormat(hexValue, 'hex', currentBinaryFormat);
+            const jsonValue = currentFormatToJsonFormat(formattedValue);
+            if (jsonValue && typeof jsonValue === 'object') {
+                idValue = jsonValue;
+            }
+        } catch (error) {
+            // Fall back to hex representation on conversion errors
+        }
+
+        excludeList.push({
+            type: 'public-key',
+            id: idValue,
+        });
+    });
+    return excludeList;
+}
+
+/**
+ * The request the settings build, `{ publicKey }`. context: rpName and
+ * hostname (the relying party), storedCredentials (the list's records, whose
+ * IDs of this user are excluded), fakeExcludeCredentials (hex).
+ */
+export function buildCreationOptions(settings, context = {}) {
+    const publicKey = {
+        rp: {
+            name: context.rpName,
+            id: context.hostname,
+        },
+        user: {
+            id: requestBytes(settings.userId),
+            name: settings.userName,
+            displayName: settings.displayName,
+        },
+        challenge: requestBytes(settings.challenge),
+        pubKeyCredParams: ALGORITHM_OPTIONS
+            .filter(option => settings.algorithms.includes(option.alg))
+            .map(option => ({ type: 'public-key', alg: option.alg })),
+        timeout: parseInt(settings.timeout) || 90000,
+        authenticatorSelection: {},
+        attestation: settings.attestation || 'direct',
+        extensions: {},
+    };
+
+    const authenticatorAttachment = settings.attachment || 'cross-platform';
+    if (authenticatorAttachment !== 'unspecified') {
+        publicKey.authenticatorSelection.authenticatorAttachment = authenticatorAttachment;
+    }
+
+    const residentKeyValue = settings.residentKey || 'discouraged';
+    publicKey.authenticatorSelection.residentKey = residentKeyValue;
+    publicKey.authenticatorSelection.requireResidentKey = residentKeyValue === 'required';
+
+    if (settings.userVerification) {
+        publicKey.authenticatorSelection.userVerification = settings.userVerification;
+    }
+
+    publicKey.excludeCredentials = settings.excludeCredentials ? excludedCredentials(settings, context) : [];
+
+    if (settings.credProps) {
+        publicKey.extensions.credProps = true;
+    }
+    if (settings.minPinLength) {
+        publicKey.extensions.minPinLength = true;
+    }
+
+    if (settings.credProtect) {
+        publicKey.extensions.credentialProtectionPolicy = settings.credProtect;
+        if (settings.enforceCredProtect) {
+            publicKey.extensions.enforceCredentialProtectionPolicy = true;
+        }
+    }
+
+    if (settings.largeBlob) {
+        publicKey.extensions.largeBlob = { support: settings.largeBlob };
+    }
+
+    if (settings.prf && settings.prfFirst) {
+        publicKey.extensions.prf = {
+            eval: {
+                first: requestBytes(settings.prfFirst),
+            },
+        };
+        if (settings.prfSecond) {
+            publicKey.extensions.prf.eval.second = requestBytes(settings.prfSecond);
+        }
+    }
+
+    if (settings.hints.length > 0) {
+        publicKey.hints = settings.hints;
+    }
+
+    return { publicKey };
+}
+
+/** A byte value the request holds, as hex: {"$hex"}, {"$base64url"}, {"$base64"} or base64url text. */
+export function decodeJsonBinaryToHex(value) {
+    if (!value) {
+        return '';
+    }
+
+    if (value.$base64) {
+        return base64UrlToHex(value.$base64);
+    }
+    if (value.$base64url) {
+        return base64UrlToHex(value.$base64url);
+    }
+    if (value.$hex) {
+        return value.$hex;
+    }
+    if (typeof value === 'string') {
+        return base64UrlToHex(value);
+    }
+
+    return '';
+}
+
+/**
+ * The settings a request says, over the ones the form has (`previous`): what it
+ * gives replaces them, what it leaves out stays. Also the IDs its
+ * excludeCredentials holds that are not saved credentials' (context:
+ * storedCredentials), as the fake IDs, as they are spelled there.
+ */
+export function readCreationOptions(publicKey, previous, context = {}) {
+    const settings = { ...previous };
+
+    if (publicKey.user) {
+        if (publicKey.user.id) {
+            const userIdValue = decodeJsonBinaryToHex(publicKey.user.id);
+            if (userIdValue) {
+                settings.userId = userIdValue;
+            }
+        }
+        if (publicKey.user.name) {
+            settings.userName = publicKey.user.name;
+        }
+        if (publicKey.user.displayName) {
+            settings.displayName = publicKey.user.displayName;
+        }
+    }
+
+    if (publicKey.challenge) {
+        const challengeValue = decodeJsonBinaryToHex(publicKey.challenge);
+        if (challengeValue) {
+            settings.challenge = challengeValue;
+        }
+    }
+
+    if (publicKey.timeout) {
+        settings.timeout = publicKey.timeout.toString();
+    }
+
+    if (Object.prototype.hasOwnProperty.call(publicKey, 'attestation')) {
+        settings.attestation = publicKey.attestation || 'direct';
+    }
+
+    if (Array.isArray(publicKey.pubKeyCredParams)) {
+        const chosen = new Set();
+        publicKey.pubKeyCredParams.forEach(param => {
+            if (param && Object.prototype.hasOwnProperty.call(param, 'alg')) {
+                const alg = typeof param.alg === 'string' ? Number.parseInt(param.alg, 10) : param.alg;
+                chosen.add(alg);
+            }
+        });
+        settings.algorithms = ALGORITHM_OPTIONS.filter(option => chosen.has(option.alg)).map(option => option.alg);
+    }
+
+    const selection = publicKey.authenticatorSelection;
+    if (selection) {
+        const attachmentValue = selection.authenticatorAttachment;
+        settings.attachment = ['platform', 'cross-platform', 'unspecified'].includes(attachmentValue)
+            ? attachmentValue
+            : 'cross-platform';
+        settings.residentKey = selection.requireResidentKey === true
+            ? 'required'
+            : selection.residentKey || 'discouraged';
+        if (Object.prototype.hasOwnProperty.call(selection, 'userVerification')) {
+            settings.userVerification = selection.userVerification || 'preferred';
+        }
+    } else {
+        settings.attachment = 'cross-platform';
+    }
+
+    const excludeArray = Array.isArray(publicKey.excludeCredentials) ? publicKey.excludeCredentials : [];
+    settings.excludeCredentials = excludeArray.length > 0;
+    const storedIds = new Set(
+        (context.storedCredentials || [])
+            .map(cred => (cred.credentialIdHex || getCredentialIdHex(cred) || '').toLowerCase())
+            .filter(Boolean),
+    );
+    const fakeExcludeCredentials = [];
+    excludeArray.forEach(entry => {
+        if (!entry || typeof entry !== 'object') {
+            return;
+        }
+        const hexValue = extractHexFromJsonFormat(entry.id);
+        if (hexValue && !storedIds.has(hexValue.toLowerCase())) {
+            fakeExcludeCredentials.push(hexValue);
+        }
+    });
+
+    const extensions = publicKey.extensions;
+    if (extensions) {
+        settings.credProps = !!extensions.credProps;
+        settings.minPinLength = !!extensions.minPinLength;
+        settings.credProtect = extensions.credentialProtectionPolicy || '';
+        settings.enforceCredProtect = settings.credProtect ? !!extensions.enforceCredentialProtectionPolicy : true;
+
+        if (extensions.prf && extensions.prf.eval) {
+            const prfFirstValue = decodeJsonBinaryToHex(extensions.prf.eval.first);
+            if (prfFirstValue) {
+                settings.prfFirst = prfFirstValue;
+            }
+            const prfSecondValue = decodeJsonBinaryToHex(extensions.prf.eval.second);
+            if (prfSecondValue) {
+                settings.prfSecond = prfSecondValue;
+            }
+        }
+    } else {
+        settings.credProps = false;
+        settings.minPinLength = false;
+        settings.credProtect = '';
+        settings.enforceCredProtect = true;
+    }
+
+    settings.hints = Array.isArray(publicKey.hints) ? publicKey.hints : [];
+
+    return { settings, fakeExcludeCredentials };
+}
+
+/**
+ * The settings after one of them changes, with the rules the form applies:
+ * the user name is also the display name; a credProtect of Unspecified
+ * enforces it; a resident key that is not required cannot ask for largeBlob;
+ * an empty first prf evaluation empties the second.
+ */
+export function changeRegistration(settings, field, value) {
+    const next = { ...settings, [field]: value };
+    if (field === 'userName') {
+        next.displayName = value;
+    }
+    if (field === 'credProtect' && !value) {
+        next.enforceCredProtect = true;
+    }
+    if (field === 'residentKey' && value !== 'required' && ['preferred', 'required'].includes(next.largeBlob)) {
+        next.largeBlob = '';
+    }
+    if (field === 'prfFirst' && !value) {
+        next.prfSecond = '';
+    }
+    return next;
+}
+
+/** Which of the settings' fields the form cannot change as they stand. */
+export function registrationControls(settings) {
+    return {
+        enforceCredProtect: !settings.credProtect,
+        prfSecond: !settings.prfFirst,
+    };
+}

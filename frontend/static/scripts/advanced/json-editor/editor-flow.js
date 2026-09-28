@@ -23,6 +23,14 @@ import {
     validateAuthenticationPublicKey,
 } from './validation-authentication.js';
 import { validateRegistrationPublicKey } from './validation-registration.js';
+import {
+    EDITOR_TEXT,
+    editorTitle,
+    parseEditorRequest,
+    requestText,
+    resetFailedText,
+    validationFailedText,
+} from './editor-model.js';
 
 function buildOptionsForCurrentScope(scope) {
     if (scope === 'authentication') {
@@ -66,38 +74,25 @@ function setJsonEditorContent(content) {
 
 export function updateJsonEditor() {
     let options = {};
-    let title = 'JSON Editor';
 
     if (state.currentSubTab === 'registration') {
         options = getCredentialCreationOptions();
-        title = 'JSON Editor (CredentialCreationOptions)';
     } else if (state.currentSubTab === 'authentication') {
         options = getCredentialRequestOptions();
-        title = 'JSON Editor (CredentialRequestOptions)';
     }
 
-    const sortedOptions = sortObjectKeys(options);
-    setJsonEditorContent(JSON.stringify(sortedOptions, null, 2));
+    setJsonEditorContent(requestText(options));
 
     const titleElement = document.querySelector('.json-editor-column h3');
     if (titleElement) {
-        titleElement.textContent = title;
+        titleElement.textContent = editorTitle(state.currentSubTab);
     }
 }
 
 export function saveJsonEditor() {
     try {
         const editor = document.getElementById('json-editor');
-        const jsonText = editor ? editor.value : '';
-        const parsed = JSON.parse(jsonText || '{}');
-
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-            throw new Error('Invalid JSON structure.');
-        }
-
-        if (!parsed.publicKey || typeof parsed.publicKey !== 'object') {
-            throw new Error('Invalid JSON structure: Missing "publicKey" object.');
-        }
+        const parsed = parseEditorRequest(editor ? editor.value : '');
 
         const scope = state.currentSubTab === 'authentication' ? 'authentication' : 'registration';
 
@@ -109,13 +104,11 @@ export function saveJsonEditor() {
             updateAuthenticationFormFromJson(parsed.publicKey);
         }
 
-        const merged = mergeParsedJsonWithForm(parsed, scope);
-        const sorted = sortObjectKeys(merged);
-        setJsonEditorContent(JSON.stringify(sorted, null, 2));
+        setJsonEditorContent(requestText(mergeParsedJsonWithForm(parsed, scope)));
 
-        showStatus('advanced', 'JSON changes saved successfully!', 'success');
+        showStatus('advanced', EDITOR_TEXT.saved, 'success');
     } catch (error) {
-        showStatus('advanced', `JSON validation failed: ${error.message}`, 'error');
+        showStatus('advanced', validationFailedText(error.message), 'error');
     }
 }
 
@@ -133,12 +126,10 @@ export function resetJsonEditor() {
     }
 
     try {
-        const merged = mergeParsedJsonWithForm(parsed, scope);
-        const sorted = sortObjectKeys(merged);
-        setJsonEditorContent(JSON.stringify(sorted, null, 2));
-        showStatus('advanced', 'JSON editor reset to current settings.', 'info');
+        setJsonEditorContent(requestText(mergeParsedJsonWithForm(parsed, scope)));
+        showStatus('advanced', EDITOR_TEXT.reset, 'info');
     } catch (error) {
-        showStatus('advanced', `Unable to reset JSON editor: ${error.message}`, 'error');
+        showStatus('advanced', resetFailedText(error.message), 'error');
     }
 }
 

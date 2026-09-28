@@ -8,52 +8,43 @@ import { updateJsonEditor } from '../editor/index.js';
 import { clearFakeExcludeCredentials, clearFakeAllowCredentials } from '../auth/exclude-credentials.js';
 import { updateAllowCredentialsDropdown } from '../credentials/index.js';
 import { bindActions, callWith } from '../../shared/ui/actions.js';
+import { HINT_VALUES } from '../auth/hint-rules.js';
+import { ALGORITHM_OPTIONS } from '../json-editor/algorithm-options.js';
+import { registrationDefaults } from '../json-editor/registration-request.js';
 
 export function resetRegistrationForm() {
     randomizeUserIdentity();
+    const defaults = registrationDefaults();
 
-    document.getElementById('authenticator-attachment').value = 'cross-platform';
-    document.getElementById('resident-key').value = 'discouraged';
-    document.getElementById('user-verification-reg').value = 'preferred';
-    document.getElementById('attestation').value = 'direct';
-    document.getElementById('exclude-credentials').checked = true;
-    document.getElementById('fake-cred-length-reg').value = '128';
+    document.getElementById('authenticator-attachment').value = defaults.attachment;
+    document.getElementById('resident-key').value = defaults.residentKey;
+    document.getElementById('user-verification-reg').value = defaults.userVerification;
+    document.getElementById('attestation').value = defaults.attestation;
+    document.getElementById('exclude-credentials').checked = defaults.excludeCredentials;
+    document.getElementById('fake-cred-length-reg').value = defaults.fakeCredLength;
 
     randomizeChallenge('reg');
-    document.getElementById('timeout-reg').value = '90000';
-    document.getElementById('param-eddsa').checked = true;
-    document.getElementById('param-es256').checked = true;
-    document.getElementById('param-rs256').checked = true;
-    document.getElementById('param-es384').checked = false;
-    document.getElementById('param-es512').checked = false;
-    document.getElementById('param-rs384').checked = false;
-    document.getElementById('param-rs512').checked = false;
-    document.getElementById('param-rs1').checked = false;
-    document.getElementById('param-ed25519').checked = false;
-    document.getElementById('param-es256k').checked = false;
-    document.getElementById('param-esp256').checked = false;
-    document.getElementById('param-esp384').checked = false;
-    document.getElementById('param-esp512').checked = false;
-    document.getElementById('param-ps256').checked = false;
-    document.getElementById('param-ps384').checked = false;
-    document.getElementById('param-ps512').checked = false;
-    document.getElementById('param-ed448').checked = false;
-    if (document.getElementById('param-mldsa44')) document.getElementById('param-mldsa44').checked = true;
-    if (document.getElementById('param-mldsa65')) document.getElementById('param-mldsa65').checked = true;
-    if (document.getElementById('param-mldsa87')) document.getElementById('param-mldsa87').checked = true;
-    document.getElementById('hint-client-device').checked = false;
-    document.getElementById('hint-hybrid').checked = false;
-    document.getElementById('hint-security-key').checked = false;
+    document.getElementById('timeout-reg').value = defaults.timeout;
+    // A page may leave the ML-DSA checkboxes out.
+    ALGORITHM_OPTIONS.forEach(({ key, alg, pqc }) => {
+        const checkbox = document.getElementById(`param-${key}`);
+        if (checkbox || !pqc) {
+            checkbox.checked = defaults.algorithms.includes(alg);
+        }
+    });
+    HINT_VALUES.forEach(hint => {
+        document.getElementById(`hint-${hint}`).checked = defaults.hints.includes(hint);
+    });
 
-    document.getElementById('cred-props').checked = true;
-    document.getElementById('min-pin-length').checked = false;
-    document.getElementById('cred-protect').value = '';
-    document.getElementById('enforce-cred-protect').checked = true;
+    document.getElementById('cred-props').checked = defaults.credProps;
+    document.getElementById('min-pin-length').checked = defaults.minPinLength;
+    document.getElementById('cred-protect').value = defaults.credProtect;
+    document.getElementById('enforce-cred-protect').checked = defaults.enforceCredProtect;
     document.getElementById('enforce-cred-protect').disabled = true;
-    document.getElementById('large-blob-reg').value = '';
-    document.getElementById('prf-reg').checked = false;
-    document.getElementById('prf-eval-first-reg').value = '';
-    document.getElementById('prf-eval-second-reg').value = '';
+    document.getElementById('large-blob-reg').value = defaults.largeBlob;
+    document.getElementById('prf-reg').checked = defaults.prf;
+    document.getElementById('prf-eval-first-reg').value = defaults.prfFirst;
+    document.getElementById('prf-eval-second-reg').value = defaults.prfSecond;
     document.getElementById('prf-eval-second-reg').disabled = true;
 
     clearFakeExcludeCredentials();

@@ -1,25 +1,5 @@
-import { base64UrlToHex } from '../../shared/utils/binary.js';
-
-export function decodeJsonBinaryToHex(value) {
-    if (!value) {
-        return '';
-    }
-
-    if (value.$base64) {
-        return base64UrlToHex(value.$base64);
-    }
-    if (value.$base64url) {
-        return base64UrlToHex(value.$base64url);
-    }
-    if (value.$hex) {
-        return value.$hex;
-    }
-    if (typeof value === 'string') {
-        return base64UrlToHex(value);
-    }
-
-    return '';
-}
+// The byte values a request holds are read by ./registration-request.js.
+export { decodeJsonBinaryToHex } from './registration-request.js';
 
 export function dispatchChangeEvent(element) {
     try {
