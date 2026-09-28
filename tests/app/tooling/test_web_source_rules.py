@@ -144,6 +144,8 @@ LOGIC_ROOTS = (
     "advanced/json-editor/authentication-request.js",
     "advanced/auth/allow-credentials.js",
     "advanced/auth/capabilities.js",
+    # A form change applied to the request the editor holds.
+    "advanced/json-editor/request-patch.js",
 )
 
 _RULES: dict[str, re.Pattern[str]] = {

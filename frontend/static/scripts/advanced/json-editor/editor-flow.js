@@ -19,6 +19,7 @@ import {
 } from './creation-options.js';
 import { getCredentialRequestOptions } from './request-options.js';
 import { isPlainObject } from './schema.js';
+import { followForm } from './request-patch.js';
 import {
     validateAuthenticationPublicKey,
 } from './validation-authentication.js';
@@ -39,8 +40,7 @@ function buildOptionsForCurrentScope(scope) {
     return getCredentialCreationOptions();
 }
 
-function mergeParsedJsonWithForm(parsedRoot, scope) {
-    const latestOptions = buildOptionsForCurrentScope(scope);
+function mergeParsedJsonWithForm(parsedRoot, scope, latestOptions) {
     const latestPublicKey = latestOptions?.publicKey || {};
 
     if (!isPlainObject(parsedRoot)) {
@@ -72,21 +72,39 @@ function setJsonEditorContent(content) {
     jsonEditor.scrollLeft = 0;
 }
 
+// The form's request the editor's text last followed, and for which sub-tab.
+let formRequest = null;
+
+// Rewrites in the editor what the form's request changed since the text last
+// followed it (./request-patch.js), keeping the rest as typed; on another
+// sub-tab, or with nothing followed yet, the form's request.
 export function updateJsonEditor() {
     let options = {};
+    const scope = state.currentSubTab;
 
-    if (state.currentSubTab === 'registration') {
+    if (scope === 'registration') {
         options = getCredentialCreationOptions();
-    } else if (state.currentSubTab === 'authentication') {
+    } else if (scope === 'authentication') {
         options = getCredentialRequestOptions();
     }
 
-    setJsonEditorContent(requestText(options));
+    const editor = document.getElementById('json-editor');
+    const followed = formRequest && formRequest.scope === scope && editor
+        ? followForm(editor.value, formRequest.request, options)
+        : requestText(options);
+    formRequest = { scope, request: options };
+    setJsonEditorContent(followed);
 
     const titleElement = document.querySelector('.json-editor-column h3');
     if (titleElement) {
         titleElement.textContent = editorTitle(state.currentSubTab);
     }
+}
+
+/** The editor's text rebuilt from the form, whatever it held (a reset, a switch). */
+export function rebuildJsonEditor() {
+    formRequest = null;
+    updateJsonEditor();
 }
 
 export function saveJsonEditor() {
@@ -104,7 +122,10 @@ export function saveJsonEditor() {
             updateAuthenticationFormFromJson(parsed.publicKey);
         }
 
-        setJsonEditorContent(requestText(mergeParsedJsonWithForm(parsed, scope)));
+        const latestOptions = buildOptionsForCurrentScope(scope);
+        const followed = { scope, request: JSON.parse(JSON.stringify(latestOptions)) };
+        setJsonEditorContent(requestText(mergeParsedJsonWithForm(parsed, scope, latestOptions)));
+        formRequest = followed;
 
         showStatus('advanced', EDITOR_TEXT.saved, 'success');
     } catch (error) {
@@ -126,7 +147,10 @@ export function resetJsonEditor() {
     }
 
     try {
-        setJsonEditorContent(requestText(mergeParsedJsonWithForm(parsed, scope)));
+        const latestOptions = buildOptionsForCurrentScope(scope);
+        const followed = { scope, request: JSON.parse(JSON.stringify(latestOptions)) };
+        setJsonEditorContent(requestText(mergeParsedJsonWithForm(parsed, scope, latestOptions)));
+        formRequest = followed;
         showStatus('advanced', EDITOR_TEXT.reset, 'info');
     } catch (error) {
         showStatus('advanced', resetFailedText(error.message), 'error');

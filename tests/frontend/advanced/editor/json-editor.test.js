@@ -133,6 +133,7 @@ import {
   getAdvancedCreateOptions,
   getCredentialCreationOptions,
   getCredentialRequestOptions,
+  rebuildJsonEditor,
   resetJsonEditor,
   saveJsonEditor,
   updateAuthenticationFormFromJson,
@@ -606,6 +607,57 @@ describe('json-editor', () => {
     expect(document.getElementById('prf-eval-first-auth').value).toBe('');
     expect(document.getElementById('prf-eval-second-auth').value).toBe('');
     expect(applyHintsToCheckboxes).toHaveBeenLastCalledWith([], 'authentication');
+  });
+
+  it('keeps what an edit typed through a form change, and rewrites only what the change touches', () => {
+    state.currentSubTab = 'registration';
+    rebuildJsonEditor();
+    const editor = document.getElementById('json-editor');
+    const typed = JSON.parse(editor.value);
+    typed.publicKey.rp.id = 'example.com';
+    typed.publicKey.timeout = 0;
+    typed.publicKey.excludeCredentials[0].transports = ['usb'];
+    typed.publicKey.excludeCredentials.push({ type: 'public-key', id: { $hex: 'bb22' } });
+    typed.publicKey.pubKeyCredParams.reverse();
+    typed.note = 'kept';
+    editor.value = JSON.stringify(typed);
+
+    document.getElementById('cred-props').checked = false;
+    updateJsonEditor();
+    const followed = JSON.parse(editor.value);
+    expect(followed.publicKey.extensions).not.toHaveProperty('credProps');
+    expect(followed.publicKey.rp.id).toBe('example.com');
+    expect(followed.publicKey.timeout).toBe(0);
+    expect(followed.publicKey.excludeCredentials).toEqual([
+      { type: 'public-key', id: { $hex: 'aa11' }, transports: ['usb'] },
+      { type: 'public-key', id: { $hex: 'ff99' } },
+      { type: 'public-key', id: { $hex: 'bb22' } },
+    ]);
+    expect(followed.publicKey.pubKeyCredParams).toEqual(typed.publicKey.pubKeyCredParams);
+    expect(followed.note).toBe('kept');
+
+    // Text that does not parse is rebuilt from the form.
+    editor.value = '{ nope';
+    updateJsonEditor();
+    expect(JSON.parse(editor.value).publicKey.rp.id).toBe(window.location.hostname);
+
+    // Another sub-tab starts from its form; an edit's rpId and an ID no saved credential has stay there too.
+    state.currentSubTab = 'authentication';
+    updateJsonEditor();
+    const request = JSON.parse(editor.value);
+    request.publicKey.rpId = 'example.com';
+    request.publicKey.allowCredentials.push({ type: 'public-key', id: { $hex: 'dd44' } });
+    editor.value = JSON.stringify(request);
+    document.getElementById('user-verification-auth').value = 'required';
+    updateJsonEditor();
+    const authentication = JSON.parse(editor.value).publicKey;
+    expect(authentication.userVerification).toBe('required');
+    expect(authentication.rpId).toBe('example.com');
+    expect(authentication.allowCredentials.map((descriptor) => descriptor.id.$hex)).toEqual(['bb22', 'ee88', 'dd44']);
+
+    // A reset rebuilds whatever the editor held.
+    rebuildJsonEditor();
+    expect(JSON.parse(editor.value).publicKey.rpId).toBe(window.location.hostname);
   });
 
   it('supports advanced JSON edit/apply/cancel and in-mode refresh behavior', () => {

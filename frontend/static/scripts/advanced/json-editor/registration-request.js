@@ -46,6 +46,12 @@ export function registrationDefaults() {
     };
 }
 
+/** The timeout typed, in milliseconds; a field left empty (or not a number) is 90000. */
+export function requestTimeout(text) {
+    const timeout = parseInt(text);
+    return Number.isNaN(timeout) ? 90000 : timeout;
+}
+
 /** A byte value as the request writes it ({"$hex": …} for the page's hex), or '' for none. */
 function requestBytes(value) {
     return currentFormatToJsonFormat(value);
@@ -115,7 +121,7 @@ export function buildCreationOptions(settings, context = {}) {
         pubKeyCredParams: ALGORITHM_OPTIONS
             .filter(option => settings.algorithms.includes(option.alg))
             .map(option => ({ type: 'public-key', alg: option.alg })),
-        timeout: parseInt(settings.timeout) || 90000,
+        timeout: requestTimeout(settings.timeout),
         authenticatorSelection: {},
         attestation: settings.attestation || 'direct',
         extensions: {},
@@ -225,7 +231,7 @@ export function readCreationOptions(publicKey, previous, context = {}) {
         }
     }
 
-    if (publicKey.timeout) {
+    if (publicKey.timeout || publicKey.timeout === 0) {
         settings.timeout = publicKey.timeout.toString();
     }
 

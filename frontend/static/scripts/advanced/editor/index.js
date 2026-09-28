@@ -14,6 +14,7 @@ export {
     cancelJsonEdit,
     editAssertOptions,
     editCreateOptions,
+    rebuildJsonEditor,
     resetJsonEditor,
     saveJsonEditor,
     updateJsonEditor,

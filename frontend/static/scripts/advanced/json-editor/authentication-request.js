@@ -15,7 +15,7 @@ import {
     getStoredCredentialAttachment,
 } from '../credentials/utils.js';
 import { deriveAllowedAttachmentsFromHints } from '../auth/hint-rules.js';
-import { decodeJsonBinaryToHex } from './registration-request.js';
+import { decodeJsonBinaryToHex, requestTimeout } from './registration-request.js';
 
 /**
  * The settings the form starts from and a reset returns to, without the values
@@ -86,7 +86,7 @@ export function buildRequestOptions(settings, context = {}) {
     const hints = settings.hints;
     const publicKey = {
         challenge: currentFormatToJsonFormat(settings.challenge),
-        timeout: parseInt(settings.timeout) || 90000,
+        timeout: requestTimeout(settings.timeout),
         rpId: context.hostname,
         allowCredentials: [],
         userVerification: settings.userVerification || 'preferred',
@@ -195,7 +195,7 @@ export function readRequestOptions(publicKey, previous, context = {}) {
         }
     }
 
-    if (publicKey.timeout) {
+    if (publicKey.timeout || publicKey.timeout === 0) {
         settings.timeout = publicKey.timeout.toString();
     }
 

@@ -24,6 +24,7 @@ import { composeRegistration } from '@legacy/advanced/credential-display/registr
 import { applyJsonEditorAutoIndent, applyTabIndentation, wrapSelectionWithPair } from '@legacy/advanced/editor/json-editing.js';
 import { ALGORITHM_OPTIONS } from '@legacy/advanced/json-editor/algorithm-options.js';
 import { EDITOR_TEXT, editorTitle, readEditedRequest, requestText, topLevelExtras } from '@legacy/advanced/json-editor/editor-model.js';
+import { followForm } from '@legacy/advanced/json-editor/request-patch.js';
 import {
   buildCreationOptions,
   changeRegistration,
@@ -113,6 +114,8 @@ export const titleOf = editorTitle as (scope: 'registration' | 'authentication')
 export const textOf = requestText as (options: unknown) => string;
 export const readEdit = readEditedRequest as (text: string, scope: 'registration' | 'authentication') => EditedRequest;
 export const extrasOf = topLevelExtras as (root: unknown) => Json;
+/** The editor's text after the form's request went from `before` to `after`, the rest kept as typed. */
+export const follow = followForm as (text: string, before: { publicKey: Json }, after: { publicKey: Json }, extras?: Json) => string;
 
 /** A textarea's state, which the editor's key edits change. */
 export type EditorState = { value: string; selectionStart: number; selectionEnd: number };

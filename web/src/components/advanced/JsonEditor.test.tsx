@@ -2,10 +2,11 @@
 // request the ceremony sends, as text, which the form and the editor both change.
 // An edit applies as it parses (the owner's choice); one that does not says why
 // and where, and the form keeps the last request it could read.
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { editor, publicKey, renderForm } from '@/test/advanced';
+import { keepRecords, savedRecord } from '@/test/credentials';
 
 const field = (name: string) => screen.getByLabelText(name) as HTMLInputElement;
 const note = () => document.querySelector<HTMLElement>('[data-edit]');
@@ -84,7 +85,7 @@ describe('the editor', () => {
     expect(editor()).toHaveValue(text);
   });
 
-  it('keeps the keys an edit adds beside publicKey when the form changes, and a form change replaces the rest of the edit', async () => {
+  it('keeps the keys an edit adds beside publicKey when the form changes, and rebuilds text that does not parse', async () => {
     renderForm();
     await ready();
     fireEvent.change(editor(), { target: { value: edited((root) => void (root.note = 'mine')) } });
@@ -112,6 +113,71 @@ describe('the editor', () => {
     expect(await screen.findByText('JSON editor reset to current settings.')).toBeInTheDocument();
     expect(note()).toBeNull();
     expect(JSON.parse(editor().value)).toMatchObject({ extra: { b: 2 }, publicKey: { timeout: 90000 } });
+  });
+});
+
+describe('a form change over an edit', () => {
+  const OTHER = savedRecord('advanced-register-packed-x5c-everything', { userName: 'other@example.com' });
+  const chip = (name: string) => screen.getByRole('button', { name });
+
+  it('rewrites only what it changes: rp.id, transports, another user\'s credential, the order of hints and algorithms and a timeout of 0 stay as typed', async () => {
+    renderForm([OTHER]);
+    await ready();
+    await userEvent.click(chip('Client-device'));
+    await userEvent.click(chip('Security-key'));
+    fireEvent.change(editor(), {
+      target: {
+        value: edited((root) => {
+          root.publicKey.rp = { ...(root.publicKey.rp as object), id: 'example.com' };
+          root.publicKey.excludeCredentials = [{ type: 'public-key', id: { $hex: OTHER.credentialIdHex }, transports: ['usb'] }];
+          root.publicKey.hints = ['security-key', 'client-device'];
+          root.publicKey.pubKeyCredParams = [...(root.publicKey.pubKeyCredParams as unknown[])].reverse();
+          root.publicKey.timeout = 0;
+        }),
+      },
+    });
+    expect(field('Timeout (milliseconds)')).toHaveValue(0);
+
+    await userEvent.click(screen.getByRole('switch', { name: 'credProps' }));
+
+    expect(publicKey().extensions).not.toHaveProperty('credProps');
+    expect(publicKey()).toMatchObject({
+      rp: { id: 'example.com' },
+      excludeCredentials: [{ type: 'public-key', id: { $hex: OTHER.credentialIdHex }, transports: ['usb'] }],
+      hints: ['security-key', 'client-device'],
+      timeout: 0,
+    });
+    expect(publicKey().pubKeyCredParams.map((param: { alg: number }) => param.alg)).toEqual([-257, -7, -8, -50, -49, -48]);
+
+    // A hint put in goes where the form lists it before the others, which keep their typed order.
+    await userEvent.click(chip('Hybrid'));
+    expect(publicKey().hints).toEqual(['hybrid', 'security-key', 'client-device']);
+    expect(publicKey().rp.id).toBe('example.com');
+  });
+
+  it('follows a change of the saved credentials over an edit, and leaves text that does not parse as it is', async () => {
+    renderForm();
+    await ready();
+    const userId = field('User ID (hex)').value;
+    fireEvent.change(editor(), { target: { value: edited((root) => void (root.publicKey.rp = { name: 'Mine', id: 'example.com' })) } });
+
+    // Another tab saves a credential of this user.
+    act(() => {
+      keepRecords([{ ...OTHER, userHandleHex: userId, userHandle: undefined }]);
+      window.dispatchEvent(new StorageEvent('storage', { key: null }));
+    });
+    await waitFor(() => expect(publicKey().excludeCredentials).toEqual([{ type: 'public-key', id: { $hex: OTHER.credentialIdHex } }]));
+    expect(publicKey().rp).toEqual({ name: 'Mine', id: 'example.com' });
+
+    fireEvent.change(editor(), { target: { value: '{ "publicKey": ' } });
+    await act(async () => {
+      keepRecords([]);
+      window.dispatchEvent(new StorageEvent('storage', { key: null }));
+    });
+    expect(editor()).toHaveValue('{ "publicKey": ');
+    // The person's next form change rebuilds it, from the list as it now is.
+    await userEvent.click(screen.getByRole('switch', { name: 'credProps' }));
+    expect(publicKey().excludeCredentials).toEqual([]);
   });
 });
 

@@ -30,12 +30,15 @@ function AboutFor({ field }: { field: keyof typeof FIELDS }) {
   return <About label={text.label} about={text.about} />;
 }
 
-/** A set held in the settings, one member toggled. */
+/**
+ * A set held in the settings, one member toggled: the rest keep their order (an
+ * edit's included); one put in goes before the first that `order` puts after it.
+ */
 function toggled<T>(set: T[], member: T, pressed: boolean, order: T[]) {
-  const next = new Set(set);
-  if (pressed) next.add(member);
-  else next.delete(member);
-  return order.filter((value) => next.has(value));
+  if (!pressed) return set.filter((value) => value !== member);
+  if (set.includes(member)) return set;
+  const at = set.findIndex((value) => order.indexOf(value) > order.indexOf(member));
+  return at < 0 ? [...set, member] : [...set.slice(0, at), member, ...set.slice(at)];
 }
 
 // The registration's form: User Identity, Authenticator Selection, Other Options

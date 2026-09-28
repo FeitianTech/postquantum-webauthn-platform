@@ -4,7 +4,7 @@ import {
     updateAuthenticationExtensionAvailability
 } from '../auth/forms.js';
 import { randomizeUserIdentity } from '../../shared/auth/username.js';
-import { updateJsonEditor } from '../editor/index.js';
+import { rebuildJsonEditor } from '../editor/index.js';
 import { clearFakeExcludeCredentials, clearFakeAllowCredentials } from '../auth/exclude-credentials.js';
 import { updateAllowCredentialsDropdown } from '../credentials/index.js';
 import { bindActions, callWith } from '../../shared/ui/actions.js';
@@ -51,7 +51,7 @@ export function resetRegistrationForm() {
     clearFakeExcludeCredentials();
 
     updateAllowCredentialsDropdown();
-    updateJsonEditor();
+    rebuildJsonEditor();
 }
 
 export function resetAuthenticationForm() {
@@ -85,7 +85,7 @@ export function resetAuthenticationForm() {
     validatePrfInputs('reg');
     validatePrfInputs('auth');
     updateAuthenticationExtensionAvailability();
-    updateJsonEditor();
+    rebuildJsonEditor();
 }
 
 export const resetActions = {

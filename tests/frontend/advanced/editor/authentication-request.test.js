@@ -165,7 +165,7 @@ describe('the settings a request says', () => {
     });
     expect(next).toMatchObject({ challenge: CHALLENGE, timeout: '90000', userVerification: 'preferred', largeBlob: 'read', largeBlobWrite: '77', prfFirst: '', prfSecond: '' });
     expect(read({ extensions: { largeBlob: { write: { $hex: '' } } } }).settings).toMatchObject({ largeBlob: 'write', largeBlobWrite: '77' });
-    expect(read({ timeout: 0 }).settings.timeout).toBe('90000');
+    expect(read({ timeout: 0 }).settings.timeout).toBe('0');
   });
 
   it('reads Empty without allowCredentials, and nothing of the choice from an empty list or one that is not a list', () => {

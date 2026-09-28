@@ -194,8 +194,10 @@ describe('the settings a request says', () => {
   });
 
   it('keep what it leaves out, or gives as nothing', () => {
-    const { settings: kept } = read({ user: { id: {}, name: '' }, challenge: {}, timeout: 0 });
+    const { settings: kept } = read({ user: { id: {}, name: '' }, challenge: {} });
     expect(kept).toMatchObject({ userId: 'ffff', userName: 'bob', displayName: 'Bob', challenge: CHALLENGE, timeout: '5000', attestation: 'none' });
+    // A timeout of 0 is a timeout the request gives.
+    expect(read({ timeout: 0 }).settings.timeout).toBe('0');
     expect(read({}).settings.algorithms).toEqual(previous.algorithms);
   });
 

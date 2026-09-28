@@ -11,7 +11,7 @@ vi.mock('../../../../frontend/static/scripts/shared/auth/username.js', () => ({
 }));
 
 vi.mock('../../../../frontend/static/scripts/advanced/editor/index.js', () => ({
-  updateJsonEditor: vi.fn(),
+  rebuildJsonEditor: vi.fn(),
 }));
 
 vi.mock('../../../../frontend/static/scripts/advanced/auth/exclude-credentials.js', () => ({
@@ -33,7 +33,7 @@ import {
   clearFakeExcludeCredentials,
 } from '../../../../frontend/static/scripts/advanced/auth/exclude-credentials.js';
 import { updateAllowCredentialsDropdown } from '../../../../frontend/static/scripts/advanced/credentials/index.js';
-import { updateJsonEditor } from '../../../../frontend/static/scripts/advanced/editor/index.js';
+import { rebuildJsonEditor } from '../../../../frontend/static/scripts/advanced/editor/index.js';
 import { randomizeUserIdentity } from '../../../../frontend/static/scripts/shared/auth/username.js';
 import {
   resetAuthenticationForm,
@@ -130,7 +130,7 @@ describe('resets', () => {
     expect(randomizeChallenge).toHaveBeenCalledWith('reg');
     expect(clearFakeExcludeCredentials).toHaveBeenCalledTimes(1);
     expect(updateAllowCredentialsDropdown).toHaveBeenCalledTimes(1);
-    expect(updateJsonEditor).toHaveBeenCalledTimes(1);
+    expect(rebuildJsonEditor).toHaveBeenCalledTimes(1);
 
     expect(document.getElementById('authenticator-attachment').value).toBe('cross-platform');
     expect(document.getElementById('resident-key').value).toBe('discouraged');
@@ -160,7 +160,7 @@ describe('resets', () => {
     expect(validatePrfInputs).toHaveBeenCalledWith('reg');
     expect(validatePrfInputs).toHaveBeenCalledWith('auth');
     expect(updateAuthenticationExtensionAvailability).toHaveBeenCalledTimes(1);
-    expect(updateJsonEditor).toHaveBeenCalledTimes(1);
+    expect(rebuildJsonEditor).toHaveBeenCalledTimes(1);
 
     expect(document.getElementById('user-verification-auth').value).toBe('preferred');
     expect(document.getElementById('allow-credentials').value).toBe('all');
