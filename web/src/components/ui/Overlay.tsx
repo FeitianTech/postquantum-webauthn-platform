@@ -33,6 +33,13 @@ type OverlayProps = {
 };
 
 const EXIT_MS = 200;
+// The layers open at once, bottom to top: a question over the drawer it came
+// from, a credential's details over the list in it. Only the top one takes
+// Escape and Tab; those under it are inert, as the page is, until it closes; and
+// each paints above the one under it, whatever the order of their roots in
+// #overlay-root (a layer's root is there from its first render).
+const LAYERS: HTMLElement[] = [];
+const LOWEST_LAYER = 50;
 const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 export function focusableIn(panel: HTMLElement): HTMLElement[] {
@@ -104,6 +111,7 @@ export function Overlay({
   const target = useOverlayRoot();
   const [mounted, setMounted] = useState(open);
   const [shown, setShown] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const returnFocusRef = useRef(returnFocusTo);
@@ -124,10 +132,14 @@ export function Overlay({
   }, [open]);
 
   useEffect(() => {
+    const root = rootRef.current;
     const panel = panelRef.current;
-    if (!open || !mounted || !panel) return undefined;
+    if (!open || !mounted || !root || !panel) return undefined;
     const giveBackTo = returnFocusRef.current?.() ?? (document.activeElement as HTMLElement | null);
 
+    LAYERS.at(-1)?.setAttribute('inert', '');
+    LAYERS.push(root);
+    root.style.zIndex = String(LOWEST_LAYER + LAYERS.length - 1);
     for (const scroller of panel.querySelectorAll<HTMLElement>('[data-overlay-scroll]')) scroller.scrollTop = 0;
     (initialFocusRef.current?.() ?? panel).focus({ preventScroll: true });
     const app = document.getElementById('app-root');
@@ -135,6 +147,7 @@ export function Overlay({
     inert?.setAttribute('inert', '');
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (LAYERS.at(-1) !== root) return;
       if (event.key === 'Escape') {
         event.preventDefault();
         onCloseRef.current();
@@ -145,7 +158,11 @@ export function Overlay({
     document.addEventListener('keydown', onKeyDown);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      inert?.removeAttribute('inert');
+      const wasTop = LAYERS.at(-1) === root;
+      // Its z-index stays while it fades out above the layer it leaves.
+      LAYERS.splice(LAYERS.indexOf(root), 1);
+      if (wasTop) LAYERS.at(-1)?.removeAttribute('inert');
+      if (!LAYERS.length) inert?.removeAttribute('inert');
       if (giveBackTo?.isConnected) giveBackTo.focus({ preventScroll: true });
     };
   }, [open, mounted]);
@@ -153,6 +170,7 @@ export function Overlay({
   if (!target) return null;
   return createPortal(
     <div
+      ref={rootRef}
       id={id}
       hidden={!mounted}
       data-overlay={variant}

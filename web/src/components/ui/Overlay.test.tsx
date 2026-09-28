@@ -197,3 +197,95 @@ describe('a level inside a dialog', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 });
+
+// A question asked from inside a drawer, or a credential's details opened from
+// the list in it: two layers at once.
+function Stacked({ questionRootFirst = false }: { questionRootFirst?: boolean }) {
+  const [drawer, setDrawer] = useState(false);
+  const [question, setQuestion] = useState(false);
+  const layers = [
+    <Drawer key="drawer" id="drawer" open={drawer} onClose={() => setDrawer(false)} label="Saved Credentials">
+      <button type="button" onClick={() => setQuestion(true)}>
+        Delete credential
+      </button>
+      <button type="button">Clear All</button>
+    </Drawer>,
+    <Dialog key="question" id="question" open={question} onClose={() => setQuestion(false)} label="Delete credential?" size="sm">
+      <button type="button">Cancel</button>
+      <button type="button">Delete</button>
+    </Dialog>,
+  ];
+  return (
+    <>
+      <div id="app-root">
+        <button type="button" onClick={() => setDrawer(true)}>
+          Saved Credentials
+        </button>
+      </div>
+      <div id="overlay-root" />
+      {questionRootFirst ? layers.reverse() : layers}
+    </>
+  );
+}
+
+async function frame() {
+  await act(async () => {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  });
+}
+
+async function openBoth() {
+  await userEvent.click(screen.getByRole('button', { name: 'Saved Credentials' }));
+  await frame();
+  await userEvent.click(screen.getByRole('button', { name: 'Delete credential' }));
+  await frame();
+}
+
+describe('layers over layers', () => {
+  it('make the layer under the top one inert, and let Escape close the top one alone', async () => {
+    render(<Stacked />);
+    await openBoth();
+
+    expect(document.getElementById('drawer')).toHaveAttribute('inert');
+    expect(document.getElementById('question')).not.toHaveAttribute('inert');
+    await userEvent.keyboard('{Escape}');
+    expect(document.getElementById('question')).toHaveAttribute('data-state', 'closed');
+    expect(document.getElementById('drawer')).toHaveAttribute('data-state', 'open');
+    expect(document.getElementById('drawer')).not.toHaveAttribute('inert');
+    expect(screen.getByRole('button', { name: 'Delete credential' })).toHaveFocus();
+  });
+
+  it('keep Tab inside the top layer', async () => {
+    render(<Stacked />);
+    await openBoth();
+
+    await userEvent.tab();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    await userEvent.tab();
+    expect(screen.getByRole('button', { name: 'Delete' })).toHaveFocus();
+    await userEvent.tab();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+  });
+
+  it('keep the page inert until the last layer closes, then give focus back to what opened the first', async () => {
+    render(<Stacked />);
+    await openBoth();
+
+    await userEvent.keyboard('{Escape}');
+    expect(document.getElementById('app-root')).toHaveAttribute('inert');
+    await userEvent.keyboard('{Escape}');
+    expect(document.getElementById('drawer')).toHaveAttribute('data-state', 'closed');
+    expect(document.getElementById('app-root')).not.toHaveAttribute('inert');
+    expect(screen.getByRole('button', { name: 'Saved Credentials' })).toHaveFocus();
+  });
+
+  it('paint each layer above the one under it, whatever the order of their roots', async () => {
+    render(<Stacked questionRootFirst />);
+    await openBoth();
+
+    const drawer = document.getElementById('drawer')!;
+    const question = document.getElementById('question')!;
+    expect(question.compareDocumentPosition(drawer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(Number(question.style.zIndex)).toBeGreaterThan(Number(drawer.style.zIndex));
+  });
+});
