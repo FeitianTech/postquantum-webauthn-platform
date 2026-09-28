@@ -4,7 +4,13 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { advancedDecodeAnswer, advancedRegistrations, recordedCredential } from '@legacy-tests/advanced/auth/advanced-answers.js';
+import {
+  advancedAuthentications,
+  advancedDecodeAnswer,
+  advancedRegistrations,
+  recordedAssertion,
+  recordedCredential,
+} from '@legacy-tests/advanced/auth/advanced-answers.js';
 import { answerResponse, goldenAnswers, installAuthenticator } from '@legacy-tests/simple/ceremony-answers.js';
 
 import { forgetCompletedRecords } from '@/components/credentials/detail/useCredentialDetail';
@@ -76,16 +82,20 @@ describe('the Advanced tab', () => {
     expect(screen.getByText('Configure WebAuthn registration and authentication requests with detailed settings.')).toBeVisible();
   });
 
-  it('ADV-T4, ADV-T5: switches between Registration and Authentication, which points to the current interface for now', async () => {
+  it('ADV-T4, ADV-T5, ADV-T6: switches between Registration and Authentication, each with its form, its editor and its buttons', async () => {
     renderSection();
     await ready();
 
     expect(button('Create Credential')).toBeVisible();
     await userEvent.click(screen.getByRole('tab', { name: 'Authentication' }));
     expect(screen.queryByRole('button', { name: 'Create Credential' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Open the current interface' })).toHaveAttribute('href', '/');
+    expect(button('Assert Credential')).toBeVisible();
+    expect(screen.getByRole('textbox', { name: 'JSON Editor (CredentialRequestOptions)' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Credential Selection' })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Open the current interface' })).toBeNull();
     await userEvent.click(screen.getByRole('tab', { name: 'Registration' }));
     expect(button('Create Credential')).toBeVisible();
+    expect(screen.getByRole('textbox', { name: 'JSON Editor (CredentialCreationOptions)' })).toBeVisible();
   });
 });
 
@@ -245,5 +255,143 @@ describe('a registration', () => {
 
     expect(await screen.findByText(/^Credential registration failed: /, { selector: '[data-role="failure"]' })).toBeInTheDocument();
     expect(requestsTo(fetch, '/api/advanced/register/begin')).toEqual([]);
+  });
+});
+
+describe('an authentication', () => {
+  const recorded = advancedAuthentications();
+  const [CAPABLE, PLAIN] = recorded.records as Record<string, unknown>[];
+  const CAPABLE_ID = CAPABLE.credentialIdBase64Url as string;
+  const authText = () => (screen.getByRole('textbox', { name: 'JSON Editor (CredentialRequestOptions)' }) as HTMLTextAreaElement).value;
+  const result = () => document.querySelector<HTMLElement>('#nav-panel-advanced [data-ceremony-result]');
+
+  /** The routes of an authentication the server answers as recorded. */
+  function authenticationRoutes(authentication: { begin: Answer; complete?: Answer }) {
+    return {
+      '/api/advanced/authenticate/begin': answer(authentication.begin),
+      ...(authentication.complete ? { '/api/advanced/authenticate/complete': answer(authentication.complete) } : {}),
+    };
+  }
+
+  async function onAuthentication(routes: object, get: unknown = recordedAssertion(recorded.first)) {
+    authenticator = installAuthenticator(vi, { get: get as ReturnType<typeof recordedAssertion> });
+    const fetch = renderSection([CAPABLE, PLAIN], routes);
+    await ready();
+    await userEvent.click(screen.getByRole('tab', { name: 'Authentication' }));
+    await waitFor(() => expect(authText()).toContain('"publicKey"'));
+    return fetch;
+  }
+
+  it('ADV-U2, ADV-U3: sends the editor\'s request with the saved credentials, then the assertion, the session state and the hash algorithm', async () => {
+    const fetch = await onAuthentication(authenticationRoutes(recorded.first));
+    await userEvent.selectOptions(screen.getByLabelText('Hash Algorithm'), 'SHA-384');
+    const request = JSON.parse(authText());
+
+    await userEvent.click(button('Assert Credential'));
+
+    await waitFor(() => expect(requestsTo(fetch, '/api/advanced/authenticate/complete')).toHaveLength(1));
+    const begin = JSON.parse(String(requestsTo(fetch, '/api/advanced/authenticate/begin')[0].body));
+    expect(begin.publicKey).toEqual(request.publicKey);
+    expect(begin.__storedCredentials.map((entry: { credentialId: string }) => entry.credentialId)).toEqual([CAPABLE_ID, PLAIN.credentialIdBase64Url]);
+    const complete = JSON.parse(String(requestsTo(fetch, '/api/advanced/authenticate/complete')[0].body));
+    expect(complete.__hash_algorithm).toBe('SHA-384');
+    expect(complete.__session_state).toEqual((recorded.first.begin.body as { __session_state: unknown }).__session_state);
+    expect(complete.__assertion_response.id).toBe(CAPABLE_ID);
+  });
+
+  it('ADV-U4, ADV-P2, ADV-G2: says it succeeded, shows the counter and the challenge, keeps the counter, tints the row and draws a new challenge, with no dialog', async () => {
+    await onAuthentication(authenticationRoutes(recorded.first));
+    const challenge = (screen.getByLabelText('Challenge (hex)', { selector: '#nav-panel-advanced [data-authentication-form] input' }) as HTMLInputElement).value;
+
+    await userEvent.click(button('Assert Credential'));
+
+    expect(await screen.findByText('Advanced authentication successful!')).toBeInTheDocument();
+    await waitFor(() => expect(result()).toHaveTextContent('Last authentication'));
+    expect(result()!.querySelector('[data-row="Signature counter"]')).toHaveTextContent(
+      '1 Higher than the last counter the server saw for this credential, as it should be.',
+    );
+    expect(result()!.querySelector('[data-row="Challenge"]')).toHaveTextContent('server-session Issued by this server for this ceremony. First use.');
+    await waitFor(() => expect(storedRecords()[0]).toMatchObject({ signCount: 1 }));
+    await waitFor(() => expect(document.querySelector('#nav-panel-simple li[data-credential-key]')).toHaveAttribute('data-flash', 'success'));
+    const now = screen.getByLabelText('Challenge (hex)', { selector: '#nav-panel-advanced [data-authentication-form] input' }) as HTMLInputElement;
+    expect(now.value).toMatch(/^[0-9a-f]{64}$/);
+    expect(now.value).not.toBe(challenge);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(window.location.hash).toBe('#advanced');
+  });
+
+  it('ADV-P2: reports a counter that went backwards, and that this tab does not reject the assertion', async () => {
+    await onAuthentication(authenticationRoutes(recorded.regressed), recordedAssertion(recorded.regressed));
+
+    await userEvent.click(button('Assert Credential'));
+
+    await waitFor(() => expect(result()).toHaveTextContent('Last authentication'));
+    expect(result()!.querySelector('[data-row="Signature counter"]')).toHaveTextContent(
+      'The advanced tab reports this and does not reject the assertion.',
+    );
+    expect(result()).toHaveAttribute('data-verdict', 'warning');
+  });
+
+  it('ADV-U5: says in place why the server refused it, tints the credential it names, and shows where the challenge came from', async () => {
+    const fetch = await onAuthentication(authenticationRoutes(recorded.refused), recordedAssertion(recorded.refused));
+
+    await userEvent.click(button('Assert Credential'));
+
+    await waitFor(() => expect(requestsTo(fetch, '/api/advanced/authenticate/complete')).toHaveLength(1));
+    expect(await screen.findByText(/^Advanced authentication failed: Invalid signature\./, { selector: '[data-role="failure"]' })).toBeInTheDocument();
+    expect(result()!.querySelector('[data-row="Challenge"]')).toHaveTextContent('server-session');
+    await waitFor(() => expect(document.querySelector('#nav-panel-simple li[data-credential-key]')).toHaveAttribute('data-flash', 'failure'));
+    expect(storedRecords()[0]).not.toHaveProperty('signCount', 3);
+  });
+
+  it('ADV-U2: says there are no credentials when the server finds none', async () => {
+    await onAuthentication(authenticationRoutes({ begin: recorded.none }));
+
+    await userEvent.click(button('Assert Credential'));
+
+    expect(await screen.findByText('Advanced authentication failed: No credentials detected. Please register a credential first.')).toBeInTheDocument();
+    expect(authenticator.get).not.toHaveBeenCalled();
+  });
+
+  it('ADV-U5: says the browser\'s refusal by its name', async () => {
+    const refuse = () => Promise.reject(Object.assign(new Error('refused'), { name: 'NotAllowedError' }));
+    await onAuthentication(authenticationRoutes(recorded.first), refuse);
+
+    await userEvent.click(button('Assert Credential'));
+
+    expect(await screen.findByText('Advanced authentication failed: User cancelled or no compatible authenticator detected')).toBeInTheDocument();
+  });
+
+  it('ADV-U1: refuses an editor text that does not parse, asking nothing of the server', async () => {
+    const fetch = await onAuthentication(authenticationRoutes(recorded.first));
+    fireEvent.change(screen.getByRole('textbox', { name: 'JSON Editor (CredentialRequestOptions)' }), { target: { value: '{"publicKey": {}}' } });
+
+    await userEvent.click(button('Assert Credential'));
+
+    expect(
+      await screen.findByText('Advanced authentication failed: Invalid CredentialRequestOptions: Missing required "challenge" property'),
+    ).toBeInTheDocument();
+    expect(requestsTo(fetch, '/api/advanced/authenticate/begin')).toEqual([]);
+  });
+
+  it('runs one ceremony at a time, and keeps each segment\'s own request and last result', async () => {
+    let answerGet: (value: unknown) => void = () => {};
+    const pending = () => new Promise((resolve) => (answerGet = resolve));
+    await onAuthentication(authenticationRoutes(recorded.first), pending);
+    fireEvent.change(screen.getByLabelText('Timeout (milliseconds)', { selector: '#nav-panel-advanced [data-authentication-form] input' }), {
+      target: { value: '4321' },
+    });
+
+    await userEvent.click(button('Assert Credential'));
+    await waitFor(() => expect(authenticator.get).toHaveBeenCalled());
+    await userEvent.click(screen.getByRole('tab', { name: 'Registration' }));
+    expect(button('Create Credential')).toBeDisabled();
+    expect(result()).not.toBeVisible();
+
+    await act(async () => answerGet(recordedAssertion(recorded.first)));
+    await waitFor(() => expect(button('Create Credential')).toBeEnabled());
+    await userEvent.click(screen.getByRole('tab', { name: 'Authentication' }));
+    await waitFor(() => expect(result()).toHaveTextContent('Last authentication'));
+    expect(JSON.parse(authText()).publicKey.timeout).toBe(4321);
   });
 });

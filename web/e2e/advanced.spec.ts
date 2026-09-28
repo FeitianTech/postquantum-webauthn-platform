@@ -153,7 +153,7 @@ test.describe('/beta#advanced', () => {
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
       expect(await greyFills(page, '#nav-panel-advanced')).toEqual([]);
       const form = await box(section(page).locator('[data-registration-form]'));
-      const json = await box(section(page).locator('[data-json-editor]'));
+      const json = await box(section(page).locator('#advanced-ceremony-panel-registration [data-json-editor]'));
       if (width >= 1280) expect(json.x).toBeGreaterThanOrEqual(form.x + form.width);
       else expect(json.y).toBeGreaterThanOrEqual(form.y + form.height);
 

@@ -118,7 +118,7 @@ test.describe('the Advanced tab\'s registration in / and in /beta', () => {
     const legacyChanged = await page.locator('#json-editor').inputValue();
 
     await openBeta(page);
-    const form = beta(page);
+    const form = beta(page).locator('#advanced-ceremony-panel-registration');
     await form.getByLabel('User ID (hex)', { exact: true }).fill(USER_ID);
     await form.getByLabel('User Name', { exact: true }).fill(USER_NAME);
     await form.getByLabel('Challenge (hex)', { exact: true }).fill(CHALLENGE);

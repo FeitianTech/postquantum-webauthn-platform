@@ -46,10 +46,11 @@ test.describe('/beta', () => {
       await highlightSitsOn(page, tab);
     }
 
-    // The Advanced tab's authentication moves in Phase 29B.
+    // The Advanced tab's authentication moved in Phase 29B: every section is ported.
     const advanced = page.getByRole('tabpanel', { name: 'Advanced Authentication' });
     await advanced.getByRole('tab', { name: 'Authentication' }).click();
-    await expect(advanced.getByRole('link', { name: 'Open the current interface' })).toHaveAttribute('href', '/');
+    await expect(advanced.getByRole('button', { name: 'Assert Credential' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open the current interface' })).toHaveCount(0);
 
     await page.goto('/beta#codec');
     await expect(page.getByRole('tabpanel', { name: 'Codec' })).toBeVisible();

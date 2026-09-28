@@ -4,17 +4,20 @@ import { CeremonyResult } from '@/components/ceremony/CeremonyResult';
 import { CredentialDetailDialog } from '@/components/credentials/CredentialDetailDialog';
 import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
 import { Badge } from '@/components/ui/Badge';
-import { Button, buttonClassName } from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/icons';
 import { SegmentedControl, segmentIds } from '@/components/ui/SegmentedControl';
 import { useEntrance } from '@/lib/entrance';
 import { NAV_ID, SECTIONS } from '@/lib/sections';
 import type { SectionRoute } from '@/lib/useSection';
 
+import { AuthenticationForm } from './AuthenticationForm';
 import { CredentialsDrawer, DRAWER_ID } from './CredentialsDrawer';
 import { JsonEditor } from './JsonEditor';
 import { RegistrationForm } from './RegistrationForm';
 import { useAdvancedRequest } from './useAdvancedRequest';
+import { useAuthenticationCeremony } from './useAuthenticationCeremony';
+import { useAuthenticationRequest } from './useAuthenticationRequest';
 import { useRegistrationCeremony } from './useRegistrationCeremony';
 
 type Ceremony = 'registration' | 'authentication';
@@ -37,6 +40,7 @@ export function AdvancedSection({ active, route }: { active: boolean; route: Sec
   const [ceremony, setCeremony] = useState<Ceremony>('registration');
   const saved = useSavedCredentials();
   const request = useAdvancedRequest();
+  const assertion = useAuthenticationRequest({ hints: request.settings.hints, attachment: request.settings.attachment });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerButton = useRef<HTMLButtonElement>(null);
   const createButton = useRef<HTMLButtonElement>(null);
@@ -58,6 +62,7 @@ export function AdvancedSection({ active, route }: { active: boolean; route: Sec
     routeRef.current.open(['credential', key, 'registration']);
   }, []);
   const registration = useRegistrationCeremony(request, openRegistration);
+  const authentication = useAuthenticationCeremony(assertion);
 
   const { path, replace } = route;
   // What the URL may open here: a credential's details, #advanced/credential/<key>,
@@ -73,7 +78,9 @@ export function AdvancedSection({ active, route }: { active: boolean; route: Sec
     if (!active) setDrawerOpen(false);
   }, [active]);
 
-  const running = registration.running;
+  // One ceremony at a time: the browser asks the authenticator one thing at once.
+  const running = registration.running || authentication.running;
+  const shown = ceremony === 'registration' ? registration : authentication;
   return (
     <section
       role="tabpanel"
@@ -108,31 +115,44 @@ export function AdvancedSection({ active, route }: { active: boolean; route: Sec
               <Button variant="secondary" disabled={running} onClick={request.resetForm}>
                 Reset
               </Button>
-              <Button ref={createButton} busy={running} onClick={() => void registration.register()}>
+              <Button
+                ref={createButton}
+                busy={registration.running}
+                disabled={authentication.running}
+                onClick={() => void registration.register()}
+              >
                 Create Credential
               </Button>
             </>
-          ) : null}
+          ) : (
+            <>
+              <Button variant="secondary" disabled={running} onClick={assertion.resetForm}>
+                Reset
+              </Button>
+              <Button busy={authentication.running} disabled={registration.running} onClick={() => void authentication.assert()}>
+                Assert Credential
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
-      {ceremony === 'registration' ? (
-        <div className="mt-5 flex flex-col gap-4 empty:hidden">
-          {registration.progress ? (
-            <p role="status" className="flex items-center gap-2 text-body text-ink-muted" data-role="progress">
-              <Spinner />
-              {registration.progress}
-            </p>
-          ) : null}
-          {registration.failure ? (
-            <p role="alert" className="rounded-sm border border-danger-line bg-danger-tint px-4 py-3 text-body text-danger wrap-anywhere" data-role="failure">
-              {registration.failure}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
+      {/* What the ceremony of the segment shown is doing, or what stopped it. */}
+      <div className="mt-5 flex flex-col gap-4 empty:hidden">
+        {shown.progress ? (
+          <p role="status" className="flex items-center gap-2 text-body text-ink-muted" data-role="progress">
+            <Spinner />
+            {shown.progress}
+          </p>
+        ) : null}
+        {shown.failure ? (
+          <p role="alert" className="rounded-sm border border-danger-line bg-danger-tint px-4 py-3 text-body text-danger wrap-anywhere" data-role="failure">
+            {shown.failure}
+          </p>
+        ) : null}
+      </div>
       <div className="mt-4 empty:hidden">
-        <CeremonyResult result={ceremony === 'registration' ? registration.result : null} />
+        <CeremonyResult result={shown.result} />
       </div>
 
       <div
@@ -152,15 +172,12 @@ export function AdvancedSection({ active, route }: { active: boolean; route: Sec
         id={segmentIds(CEREMONY_ID, 'authentication').panel}
         aria-labelledby={segmentIds(CEREMONY_ID, 'authentication').tab}
         hidden={ceremony !== 'authentication'}
-        className="mt-6 flex max-w-2xl flex-col gap-4 rounded-lg border border-line p-6 sm:flex-row sm:items-center sm:justify-between"
+        className="mt-6 grid grid-cols-1 gap-6 wide:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] wide:gap-8"
       >
-        <p className="text-body text-ink">
-          Authentication has not moved to the new interface yet. It works as before in the current interface.
-        </p>
-        {/* A plain link: next/link would add the /beta base path. */}
-        <a href="/" className={buttonClassName({ variant: 'secondary', size: 'sm' })}>
-          Open the current interface
-        </a>
+        <AuthenticationForm request={assertion} />
+        <div className="min-w-0 wide:sticky wide:top-[calc(var(--header-height)+1.5rem)] wide:h-[calc(100dvh-var(--header-height)-3rem)] wide:self-start">
+          <JsonEditor scope="authentication" request={assertion} />
+        </div>
       </div>
 
       <CredentialsDrawer
