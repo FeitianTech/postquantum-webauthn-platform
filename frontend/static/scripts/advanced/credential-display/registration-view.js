@@ -20,7 +20,6 @@ import {
 import {
     applyRegistrationSnapshot,
     captureRegistrationState,
-    EMPTY_DETAIL_PREPARATION,
     prepareRegistrationState,
     visibleStateCertificates,
 } from './registration-state.js';
@@ -189,13 +188,7 @@ export function describeClientData(credentialJson, fallbackClientData, fallbackP
         }
         return text || clientDataBase64;
     }
-    if (fallbackClientDataString) {
-        return fallbackClientDataString;
-    }
-    if (fallbackParsedClientData && typeof fallbackParsedClientData === 'object') {
-        return JSON.stringify(fallbackParsedClientData, null, 2);
-    }
-    return '';
+    return fallbackClientDataString;
 }
 
 /**
@@ -221,7 +214,7 @@ export async function composeRegistration({
     // A saved snapshot already holds the decoded attestation and certificates:
     // show those as they are, without asking the server to decode again.
     const detailPreparation = snapshotState && typeof snapshotState === 'object'
-        ? applyRegistrationSnapshot(state, snapshotState) || { ...EMPTY_DETAIL_PREPARATION }
+        ? applyRegistrationSnapshot(state, snapshotState)
         : await prepareRegistrationState(state, {
             attestationObjectValue,
             attestationObjectDecoded,
@@ -249,13 +242,10 @@ export async function composeRegistration({
         }
     }
 
+    // Both are text: the snapshot's (applyRegistrationSnapshot) or the hash's (prepareRegistrationState).
     const authenticatorSummary = {
-        authenticatorDataHex: typeof state.authenticatorDataHex === 'string'
-            ? state.authenticatorDataHex
-            : '',
-        authenticatorDataHash: typeof state.authenticatorDataHash === 'string'
-            ? state.authenticatorDataHash
-            : '',
+        authenticatorDataHex: state.authenticatorDataHex,
+        authenticatorDataHash: state.authenticatorDataHash,
     };
 
     const relyingPartyCopy = sanitizeRelyingPartyInfo(relyingPartyInfo, authenticatorSummary);
@@ -311,9 +301,8 @@ export function describeAttestationCertificate(state, index) {
         return null;
     }
 
-    const parsed = normalised.parsedX5c && typeof normalised.parsedX5c === 'object'
-        ? normalised.parsedX5c
-        : {};
+    // normaliseCertificateEntryForModal always gives parsedX5c an object.
+    const parsed = normalised.parsedX5c;
     const error = typeof parsed.error === 'string' ? parsed.error.trim() : '';
     const text = formatCertificateDetails(parsed).trim();
 

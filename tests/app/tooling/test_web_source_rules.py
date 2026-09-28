@@ -108,6 +108,15 @@ LOGIC_ROOTS = (
     "advanced/credential-display/sanitize-common.js",
     "advanced/credential-display/data-utils.js",
     "advanced/credential-display/credential-detail-runtime/snapshot-context.js",
+    # What the details and the registration view show, composed, and the
+    # artifact's hydration.
+    "advanced/credential-display/registration-view.js",
+    "advanced/credential-display/credential-detail-runtime/compose.js",
+    "advanced/credential-display/credential-detail-runtime/detail-sections.js",
+    "advanced/credential-display/credential-detail-runtime/registration-context.js",
+    "advanced/credential-display/credential-detail-runtime/registration-candidates.js",
+    "advanced/credential-display/credential-detail-runtime/helpers.js",
+    "advanced/credentials/hydrate.js",
 )
 
 _RULES: dict[str, re.Pattern[str]] = {

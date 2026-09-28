@@ -124,14 +124,7 @@ export function buildRegistrationContext(cred, {
         cred.credentialIdBase64,
     );
 
-    let credentialIdBase64Url = '';
-    if (credentialIdBase64) {
-        try {
-            credentialIdBase64Url = base64ToBase64Url(credentialIdBase64);
-        } catch {
-            credentialIdBase64Url = credentialIdBase64;
-        }
-    }
+    const credentialIdBase64Url = credentialIdBase64 ? base64ToBase64Url(credentialIdBase64) : '';
 
     if (credentialIdBase64Url) {
         if (!registrationCredential.id) {

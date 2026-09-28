@@ -62,7 +62,9 @@ export default defineConfig({
         'frontend/static/scripts/advanced/credential-display/{attestation-context,certificate-core}.js': FULL,
         // A saved credential's details and registration view, which web/ imports: every line and branch.
         'frontend/static/scripts/advanced/credential-display/{certificate-text,data-utils,decode-payload,registration-state,sanitize-attestation-object,sanitize-common,state}.js': FULL,
-        'frontend/static/scripts/advanced/credential-display/credential-detail-runtime/snapshot-context.js': FULL,
+        'frontend/static/scripts/advanced/credential-display/registration-view.js': FULL,
+        'frontend/static/scripts/advanced/credential-display/credential-detail-runtime/{compose,detail-sections,helpers,registration-candidates,registration-context,snapshot-context}.js': FULL,
+        'frontend/static/scripts/advanced/credentials/hydrate.js': FULL,
         'frontend/static/scripts/advanced/{constants,cose-labels}.js': FULL,
       },
     },

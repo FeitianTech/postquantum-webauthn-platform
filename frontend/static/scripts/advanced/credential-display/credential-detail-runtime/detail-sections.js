@@ -265,14 +265,7 @@ export function describeAaguid(cred, attestationContext) {
         aaguidB64u,
     } = deriveAaguidDisplayValues(resolveAaguidHex(cred, attestationContext));
 
-    let aaguidGuid = '';
-    if (normalizedAaguidHex && normalizedAaguidHex.length === 32) {
-        try {
-            aaguidGuid = hexToGuid(normalizedAaguidHex);
-        } catch {
-            aaguidGuid = '';
-        }
-    }
+    const aaguidGuid = normalizedAaguidHex && normalizedAaguidHex.length === 32 ? hexToGuid(normalizedAaguidHex) : '';
 
     const hasAaguid = Boolean(normalizedAaguidHex);
     const or = value => value || DETAIL_TEXT.notAvailable;

@@ -64,8 +64,8 @@ export async function composeCredentialDetail(cred, { state, decode, describers 
     });
 
     const registration = await composeRegistration({
-        credentialJson: snapshotResponse?.credential
-            || (Object.keys(registrationCredential).length ? registrationCredential : null),
+        // Never empty: the context gives it a type and a response.
+        credentialJson: snapshotResponse?.credential || registrationCredential,
         relyingPartyInfo: snapshotResponse?.relyingParty || relyingPartyInfo,
         attestationObjectValue,
         attestationObjectDecoded,

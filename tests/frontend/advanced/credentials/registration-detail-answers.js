@@ -1,6 +1,8 @@
 // Real registrations for the registration view's tests: the server's answers as
 // the characterization goldens record them (tests/app/characterization, kept
 // equal to the server; CHARACTERIZATION_WRITE=1 rewrites them).
+import { vi } from 'vitest';
+
 import { goldenAnswers, goldenArtifact } from '../../simple/ceremony-answers.js';
 
 // registration-detail-decodes: four Simple registrations (ES256 with AAGUID
@@ -58,4 +60,36 @@ export function advancedArtifact() {
 export function advancedComplete() {
   const answers = goldenAnswers('advanced-register-packed-x5c-everything');
   return structuredClone(answers.find(({ request }) => request === 'POST /api/advanced/register/complete').body);
+}
+
+// The same answers by the names the details' tests use.
+
+/** A Simple registration's register-complete answer, a fresh copy each time. */
+export function completeAnswer(name) {
+  return registration(name).complete;
+}
+
+/** The record a Simple registration saved in the browser, a fresh copy each time. */
+export function simpleRecord(name) {
+  return registration(name).storedCredential;
+}
+
+/** What POST /api/decode answered for a Simple registration's attestation object, a fresh copy. */
+export function attestationDecodeAnswer(name) {
+  return registration(name).attestationDecode;
+}
+
+/** The decoder as the view calls it, answering every recorded payload, as a mock to count its calls. */
+export function recordedDecoder() {
+  return vi.fn(goldenDecode(...NAMES.map(registration)));
+}
+
+/** The advanced registration's register-complete answer, a fresh copy. */
+export function advancedCompleteAnswer() {
+  return advancedComplete();
+}
+
+/** The record the advanced registration saved in the browser (type 'advanced', with its storageId). */
+export function advancedRecord() {
+  return advancedComplete().storedCredential;
 }
