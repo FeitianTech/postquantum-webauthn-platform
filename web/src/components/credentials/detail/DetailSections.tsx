@@ -112,15 +112,17 @@ function Spellings({ title, values, context }: { title: string; values: { label:
   return (
     <div data-identifier={title} className="min-w-0">
       <p className="text-caption text-ink-muted">{bare(title)}</p>
+      {/* Each spelling beside its name; on a phone under it, the copy button
+          beside the name, so a whole AAGUID has the line to itself. */}
       <dl className="mt-1.5 space-y-1.5">
         {values.map((entry) => (
-          <div key={entry.label} className="grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] items-baseline gap-x-3">
-            <dt className="text-label text-ink-muted">{entry.label}</dt>
+          <div key={entry.label} className="relative grid min-w-0 grid-cols-1 items-baseline gap-x-3 sm:grid-cols-[3rem_minmax(0,1fr)]">
+            <dt className="text-label text-ink-muted max-sm:flex max-sm:min-h-8 max-sm:items-center max-sm:pr-10">{entry.label}</dt>
             <dd className="min-w-0">
               {entry.value === DETAIL_WORDS.notAvailable ? (
                 <span className="text-body text-ink-muted">{entry.value}</span>
               ) : (
-                <MonoValue value={entry.value} label={`${context} (${entry.label})`} />
+                <MonoValue value={entry.value} label={`${context} (${entry.label})`} wrapOnPhone />
               )}
             </dd>
           </div>

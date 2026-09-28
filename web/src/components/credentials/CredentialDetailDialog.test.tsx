@@ -218,7 +218,7 @@ describe('a saved credential\'s details, the registration', () => {
     expect(window.location.hash).toBe(urlOf(X5C, 'registration', 'certificate', '1'));
     expect(within(dialog()).getByRole('heading', { level: 2, name: 'Attestation Certificate' })).toBeVisible();
     const level = shownLevel();
-    expect(level.querySelector('[data-certificate-summary] h4')).toHaveTextContent('CN=');
+    expect(level.querySelector('[data-certificate-subject]')).toHaveTextContent('CN=');
     expect(section('Decoded Output').querySelector('pre')).toHaveTextContent('Signature Algorithm:');
   });
 

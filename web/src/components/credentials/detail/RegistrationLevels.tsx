@@ -89,8 +89,9 @@ export function RegistrationLevel({
   onAuthenticatorData: () => void;
 }) {
   const { response } = registration;
+  // The level starts under the dialog's header: its first section needs no hairline.
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 [&>section:first-child]:border-t-0 [&>section:first-child]:pt-0">
       <DetailSection id={`${idBase}-response`} title={REGISTRATION_WORDS.responseTitle}>
         <ol className="list-decimal space-y-5 pl-5 marker:text-ink-muted">
           <li className="min-w-0 pl-1">
@@ -147,7 +148,11 @@ export function CertificateLevel({ view, idBase }: { view: CertificateView; idBa
     <div className="space-y-8">
       {subject || issuer || summary ? (
         <div data-certificate-summary="" className="space-y-6">
-          {subject ? <h4 className="text-title font-semibold break-words text-ink">{subject}</h4> : null}
+          {subject ? (
+            <h4 className="text-title font-semibold break-words text-ink" data-certificate-subject="">
+              {subject}
+            </h4>
+          ) : null}
           {issuer ? <p className="-mt-4 text-body-lg break-words text-ink-muted">{issuer}</p> : null}
           {summary ? <CertificateSummary summary={summary} idBase={idBase} /> : null}
         </div>

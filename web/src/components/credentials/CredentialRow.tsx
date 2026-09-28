@@ -1,4 +1,4 @@
-import { type MouseEvent, useState } from 'react';
+import { type MouseEvent, type ReactNode, useState } from 'react';
 
 import { useOpenMdsEntry } from '@/components/mds/entryLink';
 import { Badge, StatusChip } from '@/components/ui/Badge';
@@ -23,6 +23,32 @@ type CredentialRowProps = {
   onOpen: () => void;
   onDelete: (button: HTMLButtonElement) => void;
 };
+
+function Identifier({
+  label,
+  value,
+  copyLabel,
+  marker,
+  unreadable = false,
+}: {
+  label: string;
+  value: string;
+  copyLabel: string;
+  marker?: ReactNode;
+  unreadable?: boolean;
+}) {
+  return (
+    <div className="relative min-w-0" data-unreadable={unreadable ? 'aaguid' : undefined}>
+      <dt className="flex items-center gap-2 text-caption text-ink-muted max-sm:min-h-8 max-sm:pr-10">
+        {label}
+        {marker}
+      </dt>
+      <dd className="mt-0.5 min-w-0">
+        <MonoValue value={value} label={copyLabel} wrapOnPhone />
+      </dd>
+    </div>
+  );
+}
 
 // A saved credential: its name (which opens its details, as a click anywhere in
 // the row but its controls does), its four checks, its tags, its credential id
@@ -55,7 +81,7 @@ export function CredentialRow({ row, busy, flash, onOpen, onDelete }: Credential
             type="button"
             data-role="name"
             onClick={onOpen}
-            className="max-w-full truncate rounded-xs text-left text-title-sm font-semibold text-ink hover-or-demo:underline"
+            className="max-w-full rounded-xs text-left text-title-sm font-semibold break-words text-ink [overflow-wrap:anywhere] hover-or-demo:underline"
           >
             {row.name}
           </button>
@@ -91,32 +117,22 @@ export function CredentialRow({ row, busy, flash, onOpen, onDelete }: Credential
         </div>
       </div>
       {/* The identifiers under the row, across its width, so a whole one fits:
-          one per line, side by side only where the row has room for both. */}
+          one per line, side by side only where the row has room for both. On a
+          phone the copy button sits beside the label and the value has the
+          line to itself, whole. */}
       <dl data-row-values="" className="mt-3 grid min-w-0 cursor-auto grid-cols-1 gap-x-6 gap-y-2 @3xl:grid-cols-2">
-        <div className="min-w-0">
-          <dt className="text-caption text-ink-muted">Credential ID</dt>
-          <dd className="mt-0.5 min-w-0">
-            <MonoValue value={row.credentialId} label="credential ID" />
-          </dd>
-        </div>
+        <Identifier label="Credential ID" value={row.credentialId} copyLabel="credential ID" />
         {row.aaguid ? (
-          <div className="min-w-0">
-            <dt className="text-caption text-ink-muted">AAGUID</dt>
-            <dd className="mt-0.5 min-w-0">
-              <MonoValue value={row.aaguid} label="AAGUID" />
-            </dd>
-          </div>
+          <Identifier label="AAGUID" value={row.aaguid} copyLabel="AAGUID" />
         ) : row.aaguidUnreadable ? (
           // Kept as stored, and said to be unreadable, rather than left out.
-          <div className="min-w-0" data-unreadable="aaguid">
-            <dt className="flex items-center gap-2 text-caption text-ink-muted">
-              AAGUID
-              <Badge tone="warning">Unreadable</Badge>
-            </dt>
-            <dd className="mt-0.5 min-w-0">
-              <MonoValue value={row.aaguidUnreadable} label="stored AAGUID" />
-            </dd>
-          </div>
+          <Identifier
+            label="AAGUID"
+            marker={<Badge tone="warning">Unreadable</Badge>}
+            value={row.aaguidUnreadable}
+            copyLabel="stored AAGUID"
+            unreadable
+          />
         ) : null}
       </dl>
       {mdsMessage ? (
