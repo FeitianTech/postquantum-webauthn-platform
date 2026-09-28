@@ -1,5 +1,9 @@
 # Saved credentials — content parity
 
+> **Since Phase 30A (2026-09-28)** the current UI this list describes is gone: the files cited are in the
+> history (`git show <commit>:<path>`), and the parity specs it cites compare the new UI with recordings of what
+> the current UI showed (`web/e2e/recorded/`, made before it was removed), not with the running current UI.
+
 Everything the current UI shows and does with saved credentials, taken from the running code at `b163738d`: the list
 both tabs show (`frontend/templates/simple/tab.html:41-65`, `advanced/tab/credentials-column.html`), the credential
 detail and registration views (`shared/modals/credential-details.html`, `registration-result.html`), the 28 modules

@@ -3334,6 +3334,128 @@ screenshots are in the session's scratchpad.
 - **For the cutover:** `web/src/pages/_document.tsx` marks every page `noindex` (right for an unlisted `/beta`); at `/`
   it would take the site out of search engines. The current page's favicon is not in the export.
 
+### Phase 30A — the cutover's switch: the new UI at /, the current UI removed — DONE (2026-09-28)
+14 commits, 59776020..the record's own, all this phase's (one author, bare subjects, no co-author lines; the range starts
+after the tech lead's 84b1d41d). Each commit that changes code or tests was gated before it was made on its exact tree:
+the staged change applied to a clean detached worktree of its parent (`node_modules` linked, Python run from that tree),
+then pytest under coverage (its 95 % floor), the root vitest (its floors), web's typecheck, unit tests (their floors),
+build and CSP scan, and ruff; a commit was made only when every gate passed (the gate stopped one: an import block's
+spacing, fixed before the commit). The whole Playwright suite ran on the tree of every commit that changes what a page
+shows or how the tests read it (1, 2, 5, 6, 9, 12, and on HEAD); the smoke spec on 3's; the Advanced specs on 13's. Not
+pushed: the tech lead verifies and pushes. Every commit is safe to deploy on its own; 5 is the cutover, and 6 needs 5.
+Planned in plan mode and approved before any code. A review of the first draft against the code found 14 problems before
+they happened (among them: a redirect built by joining text sent `/beta/%09/evil.example` to `//evil.example`; two root
+tests read templates when loaded, so deleting templates before views was red; pytest's `/` depended on whether `web/out`
+had been built, which the Python CI job never does and Cloud Build's web step does while pytest runs; masking the live
+parity cases could not be made reliable, and recording the stored records they wrote made it unnecessary). One question
+went to the owner, where `new_design/` goes after 30B: it is removed, once the new UI is the only UI.
+
+**What there is now.** `/` is the new UI: Flask serves the export at the site's root (HTML `no-cache`, `/_next/static/`
+immutable for a year and gzipped, the export's 404 page for an unknown path), with the favicon the current page had, the
+same title and no `noindex` (the design page, now `/design`, keeps one). `/beta` and every `/beta/…` path answer a
+permanent redirect to the same path at `/`, the hash kept by the browser. Flask renders nothing: the index, its inlined
+page data, its template folder and its root static rule are gone. The CSP names no origin but the site's. The current
+UI's templates, views, styles and their tests are deleted; what is left of `frontend/` is the logic `web/` imports, with
+its tests, until 30B moves it. The parity specs compare the new UI with recordings of what the current UI showed.
+
+**A — the recordings** (59776020, 3dd0b506).
+- 59776020: `web/e2e/recorded.ts` and 45 recordings (`web/e2e/recorded/`): with `PARITY_RECORD=1` each parity case read
+  the current UI at `/` and wrote its side; otherwise it reads the file. Codec cases keep their input; the live cases
+  (an advanced registration's result at `/`, a `/beta` registration in the current modal) keep the stored records the
+  ceremony wrote, and `/beta` is read for the same credential, so nothing is masked. A record-only spec wrote what the
+  current UI stores for a Simple and an Advanced registration, with the virtual authenticator's keys (CDP base64).
+  Proof: two recordings were byte-identical in every deterministic case (the three live files differ by construction);
+  every case passed reading them; a word changed in a recording failed its case.
+- 3dd0b506: the current-UI readers and record mode gone; the cross-UI tests (9) replaced by
+  `current-ui-records.spec.ts` (both records listed, their details and the Advanced one's registration from its snapshot,
+  Delete with its question and Clear All, and the Advanced one authenticated once `WebAuthn.addCredential` puts its key
+  back); two-tab tests with two `/beta` tabs; `simple-ceremony.spec.ts` deleted.
+
+**B — the switch** (a90d5655, 9dbd3729, e383043e, b7976c5f, 88854854).
+- a90d5655: the 404 page's link to the current interface goes.
+- 9dbd3729: `tests/conftest.py` points `FIDO_SERVER_WEB_EXPORT_ROOT` at an empty directory of the run's; the small export
+  the tests build is a shared fixture (`export_root`, `tests/app/web_export_files.py`).
+- e383043e, the cutover: `basePath` removed; `routes/web_export.py` serves `/` and `/<path>` (a path under `api/` a plain
+  404) and redirects `/beta…` (308, `url_for` then the query, `no-cache`); `static_folder=None`; `general.index` and
+  `index_html` gone; the favicon in `web/public/`; `noindex` on `/design` only; the export scan's own prefix `/_next/`;
+  every `/beta` in the unit tests and specs; `beta-smoke.spec.ts` → `smoke.spec.ts` with the old links' tests; the Docker
+  smoke checks `/`. Tests hold that no rule with a path of its own falls to the catch-all, that `/beta` never redirects to
+  another origin (`%09`, `%5C`, `//`, `%2F%2F`), and the method refusals as before.
+- b7976c5f: `font-src 'self'`, `style-src 'self'`; the 34 characterization goldens regenerated, each of the 222 changed
+  lines the CSP string and nothing else; the dev server's copy and its test.
+- 88854854: the footer-year tool, its workflow and tests edit the site's footer only.
+
+**C — the deletion** (397dab71, 70772c19, 470d6afe, 79e08cca).
+- A coverage run of the kept tests alone showed ten files held at 100 % losing lines only the view tests reached.
+  397dab71 gave the live ones tests of their own (the MDS source and summary helpers, a failed answer with no content
+  type, a detail preparation's missing values, an authenticator reporting no extension results).
+- 70772c19: the 122 view modules and the 48 tests that needed one or a template; the storage tests that reached the kept
+  storage through the `local.js` barrel kept, re-pointed at `records.js` and seeded directly (`seed.js`); the MDS and
+  codec leaves' tests kept without their barrels; three guards only the deleted tests' mocks reached dropped (a credential
+  without `getClientExtensionResults`, whose ponyfill `toJSON` would already have thrown; two `|| {}` inside a spread);
+  every held file at 100 %, and the root floors raised from 82/66/91/82 to 99.5.
+- 470d6afe: the 32 templates, 16 stylesheets and the header icon; Flask's template folder; the template halves of
+  `test_inline_code.py` and `test_decoder_dom_rules.py`.
+- 79e08cca: CI, the gate and the Dockerfile say what the frontend steps still carry.
+
+**D — the fixes held for parity** (6c2ad3a0, 2427ee2e), each with tests that failed before.
+- 6c2ad3a0: the Advanced authentication works over the advanced records its ceremony sends: Allow Credentials no longer
+  offers a Simple credential and All no longer lists one; the offer follows the authentication's own hints, not the
+  registration form's, derived inside the request's reducer, so a hint toggle or an edit that refuses the chosen
+  credential brings All back (the edit's text is still sent as typed).
+- 2427ee2e: `prf: {enabled: false}` (in the outputs or the properties) is no prf support.
+
+**What changed for a visitor.**
+- `/` and `/index.html`: the new UI (was the Flask-rendered page); `/design` the review page, `noindex`;
+  `/favicon.ico` from the export.
+- `/beta`, `/beta/…`: 308 to the same path at `/` with the query, `Cache-Control: no-cache` (was the new UI).
+- An unknown path: the export's 404 page (was Flask's plain 404); an unknown `/api/…` path: a plain 404, as before.
+  `/scripts/…`, `/styles/…`, `/github-icon.png` at the root: gone.
+- `Content-Security-Policy`: `font-src 'self'; style-src 'self'` (was with `https://fonts.gstatic.com` and
+  `https://fonts.googleapis.com`); every other header as before.
+- In the Advanced authentication: no Simple credential offered or sent; the offer follows the authentication's hints; a
+  credential whose registration said prf is not enabled no longer unlocks prf.
+
+**Seen in a real browser.** Playwright's Chromium with a CTAP 2.1 virtual authenticator on USB (largeBlob and prf),
+Flask from `e2e/serve-flask.mjs` on a spare port with temporary stores, the MDS fixture, the strict CSP and the Trusted
+Types report-only policy, at 1440, 1024 and 375 px: every section at `/`; `/beta`, `/beta#advanced`, `/beta#codec`,
+`/beta#mds/<entry>` and `/beta/design` landing where they pointed; a Simple registration and authentication and an
+Advanced registration and authentication (the result panels as before); the MDS list (32 rows) and an entry; the Codec.
+No sideways scroll; **no console, CSP or Trusted Types message**. Headers: `/` 200 `no-cache`, a chunk immutable and
+gzipped, `/beta` 308 `Location: /` `no-cache`, `/beta/design?x=1` 308 `/design?x=1`, the CSP without Google Fonts, no
+`noindex` on `/`, one on `/design`, the favicon linked. The screenshots are in the session's scratchpad.
+
+**Tests.**
+- pytest: 4876 → **4891** passed / 4 skipped; coverage 97 %.
+- Linux (python:3.14, Docker, `git archive` of 2427ee2e): **4877** / 5, the usual 14 fewer and one more skip. ruff is clean.
+- Root vitest: 1951 tests in 136 files → **1597 in 94** (the views' tests gone). Coverage 91.96 / 85.82 / 94.65 / 91.91 →
+  **99.96 / 99.79 / 100 / 99.96**; the floors 82 / 66 / 91 / 82 → 99.5; every held file at 100 %.
+- Web vitest: 466 → **470** tests in 39 files. Coverage 98.49 / 92.94 / 98.41 / 99.49 → **98.49 / 92.96 / 98.42 / 99.49**;
+  the floors 97 / 92 / 96 / 98.
+- Web typecheck is clean. The CSP scan found 4 HTML files, 38 script elements and **0 violations**.
+- Playwright: 145 → **142** passed on macOS (the legacy ceremony and 9 cross-UI tests gone; 3 over the stored records and
+  4 for the old links added).
+
+**Found but not fixed:**
+- Dead exports the deleted views were the last to use remain in the logic (`advanced/credential-display/state.js`'s
+  cursor, flash and warm-up setters, `mergePublicKey` / `pruneUnsupportedProperties`, `MDS_EXPLORER_PATH`,
+  `staticFilterOptions`, `resolveIdentifier` and others: 43 names); their tests keep them at 100 %. 30B's move is the
+  place to drop them.
+- The web source rule's import reader treats `explorer/*.js` in a comment (`web/src/components/mds/model.ts:2`) as the
+  start of a block comment and misses that file's imports; harmless today (the modules are reached otherwise); 30B
+  rewrites the reader.
+- `FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP` is named for the index that inlined the MDS info; it now governs the info
+  route. Renaming a deploy setting is left to the owner.
+- The versioned asset route still serves any file under `frontend/static` (now only the logic's source) besides the
+  snapshot; 30B narrows it with `frontend/` gone.
+- Not run on GitHub yet (nothing is pushed): `ci-docker.yml`'s new smoke checks and `ci-web.yml`'s e2e job.
+
+**What 30B carries.** The logic into `web/` with its tests (the `@legacy` alias and `externalDir` gone), the root
+package, vitest config and the gate's Frontend tests step retired, the snapshot's default directory out of
+`frontend/static` (`var/mds-snapshot/`), `static_assets.py`, `tools/build_static_assets.py`, the Dockerfile and
+docker-compose following, `frontend/` gone, the Playwright tests in the Cloud Build gate (their time and cost measured),
+AGENTS.md's Frontend Map rewritten for one UI, the charter closed, and `new_design/` removed last.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:

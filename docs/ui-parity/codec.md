@@ -1,5 +1,9 @@
 # Codec — content parity
 
+> **Since Phase 30A (2026-09-28)** the current UI this list describes is gone: the files cited are in the
+> history (`git show <commit>:<path>`), and the parity specs it cites compare the new UI with recordings of what
+> the current UI showed (`web/e2e/recorded/`, made before it was removed), not with the running current UI.
+
 Everything the current Codec tab shows and does, taken from the running code at `0c9e483a`
 (`frontend/templates/decoder/tab.html`, `frontend/templates/shared/modals/{decoder,encoder}-raw.html`,
 `frontend/static/scripts/decoder/codec.js` and `codec/**`, `shared/api/failed-response.js`,

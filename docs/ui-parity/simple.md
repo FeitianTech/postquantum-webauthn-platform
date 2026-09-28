@@ -1,5 +1,9 @@
 # Simple tab — content parity
 
+> **Since Phase 30A (2026-09-28)** the current UI this list describes is gone: the files cited are in the
+> history (`git show <commit>:<path>`), and the parity specs it cites compare the new UI with recordings of what
+> the current UI showed (`web/e2e/recorded/`, made before it was removed), not with the running current UI.
+
 Everything the current Simple tab shows and does, taken from the running code at `b163738d`
 (`frontend/templates/simple/tab.html`, `frontend/templates/shared/navigation.html`, `simple/auth-simple.js`,
 `shared/ui/ceremony-result.js`, `shared/ui/status.js`, `shared/api/failed-response.js`, `shared/auth/username.js`,

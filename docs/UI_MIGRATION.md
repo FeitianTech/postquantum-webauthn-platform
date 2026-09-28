@@ -111,15 +111,16 @@ mid-UUID (mono, with copy). Enhance where it helps along the way. All data shown
   strict CSP from Phase 24 (`script-src 'self'`, `style-src 'self'`, no `'unsafe-inline'`) stays as it is. A
   test scans every exported HTML file for executing inline scripts, `<style>` elements and style attributes;
   styles set at run time through the CSSOM are fine.
-- **During the migration the new UI lives at `/beta`** (`basePath`), unlisted, for review. The legacy UI stays
-  at `/` until the cutover phase. Both read and write the same `localStorage` records in the same format, so a
-  credential saved in one UI works in the other.
+- **During the migration the new UI lived at `/beta`** (`basePath`), unlisted, for review, and the legacy UI
+  stayed at `/` until the cutover. Both read and wrote the same `localStorage` records in the same format, so a
+  credential saved in one UI works in the other. **Since Phase 30A the new UI is the site, at `/`**; `/beta`
+  and every `/beta/…` path redirect there permanently.
 - **Reuse logic, rewrite views.** The logic modules (storage and record migration, base64, the Analyze
   Browser's identity and WebAuthn facts, the failed-response reader, request and option building, the JSON
   editor's synchronisation, codec request handling, MDS filtering and sorting, certificate parsing) keep their
-  behaviour and have one copy. Until the cutover they stay in `frontend/static/scripts`, where the legacy UI
-  runs them, and `web/` imports them in place (`experimental.externalDir`, the `@legacy/*` alias); at the
-  cutover they move into `web/` with their tests. Logic still inside a view module is first moved out into a
+  behaviour and have one copy. They stay in `frontend/static/scripts` (where the legacy UI ran them until
+  Phase 30A), and `web/` imports them in place (`experimental.externalDir`, the `@legacy/*` alias); Phase 30B
+  moves them into `web/` with their tests. Logic still inside a view module is first moved out into a
   DOM-free module both UIs import (Phase 25: `shared/browser/report.js` out of `analyze.js`; Phase 26:
   `decoder/codec/request.js`, `result.js` and `values.js` out of the Codec's renderers).
   `tests/app/tooling/test_web_source_rules.py` fails if `web/src` redefines an imported module's export or
@@ -131,11 +132,12 @@ mid-UUID (mono, with copy). Enhance where it helps along the way. All data shown
   end-to-end tests in Chromium with its virtual authenticator (the DevTools WebAuthn domain) run real
   registrations and authentications in CI. The Cloud Build gate builds `web/` and runs its unit tests.
   The Playwright tests run in GitHub CI (`ci-web.yml`) and not yet in Cloud Build: they need Python, Node
-  and Chromium in one step and are the kind most likely to flake, and today they guard only `/beta` and one
-  legacy ceremony. They join the Cloud Build gate at the cutover, when `/` is the new UI.
+  and Chromium in one step and are the kind most likely to flake. They join the Cloud Build gate in Phase 30B
+  (the brief's split: 30A deploys with them in GitHub CI, and the tech lead runs the whole suite before a deploy).
 - **The CSP during the migration:** unchanged. The Google Fonts origins (`https://fonts.googleapis.com` in
-  `style-src`, `https://fonts.gstatic.com` in `font-src`) stay until the cutover because the legacy UI loads
-  its fonts from there; `web/` self-hosts Geist and needs neither. Remove both at the cutover.
+  `style-src`, `https://fonts.gstatic.com` in `font-src`) stayed until the cutover because the legacy UI loaded
+  its fonts from there; `web/` self-hosts Geist and needs neither. Removed in Phase 30A: `font-src 'self'`,
+  `style-src 'self'`.
 
 ## Decisions made in Phase 25 (2026-09-25)
 
@@ -426,6 +428,52 @@ mid-UUID (mono, with copy). Enhance where it helps along the way. All data shown
   held) and `request-patch.js`. A characterization scenario records advanced authentications of credentials the tab
   registered, which the tests of both UIs use.
 
+## Decisions made in Phase 30A (2026-09-28)
+
+- **The split.** 30A is the switch: the export at `/`, the current UI deleted, the CSP without Google Fonts, the
+  fixes held for parity. 30B is the move: the logic into `web/`, the root toolchain retired, the snapshot out of
+  `frontend/static`, `frontend/` gone, the browser tests in the Cloud Build gate. 30B starts after the tech lead
+  has verified and deployed 30A.
+- **The site at `/`.** Flask's own static rule (a root catch-all, which served the favicon) is gone
+  (`static_folder=None`); the export's page rule takes its place, so every rule with a static segment (`/health`,
+  `/api/…`, `/assets/…`, `/beta…`) still matches first and a method mismatch is refused as before. HTML
+  `no-cache`, `/_next/static/` immutable for a year, gzipped from the build's copies; an unknown path the export's
+  404 page, an unknown `/api/…` path a plain 404. Flask renders no template: the index, its inlined
+  `initial-mds-info` and the template folder are gone; `/api/mds/metadata/info` stays.
+- **`/beta` redirects permanently** (308) to the same path at `/` with its query; the browser keeps the hash. The
+  Location is built with `url_for`, since joining text let `/beta/%09/evil.example` point at another origin, and
+  the redirect is `no-cache`, so a rollback is not held in browsers. `/beta/design` is `/design`, still unlisted.
+- **The head of a public site:** no `noindex` (only `/design` keeps one), the current page's favicon (moved into
+  `web/public/`), the same title. The 404 page leads to `/` ("Go to the home page"); nothing links to the current
+  UI any more.
+- **The parity specs compare against recordings.** Before the current UI was deleted, every parity case's side of it
+  was recorded (`web/e2e/recorded/`, `recorded.ts`; the readers are in the commit that added them), then the specs
+  read the files. A case whose ceremony was live keeps the stored records the ceremony wrote, and the new UI is
+  given the same records: no value is masked. The deterministic recordings were byte-identical across two runs.
+  A recording is never edited; a later, intended change of what the new UI shows is an expected difference with its
+  reason. The cross-UI tests became one spec over what the current UI stored (a Simple and an Advanced credential
+  with the virtual authenticator's keys, as visitors' browsers hold them): listed, opened, deleted, and the
+  Advanced one authenticated once its key is back on an authenticator.
+- **What went, and what the logic kept.** The 122 view modules, the templates, the styles and the header icon, and
+  the tests that needed them. Tests that reached kept logic through a view or a barrel were kept on the logic
+  itself (the storage's through `records.js`, the MDS and codec leaves without their barrels), and what only the
+  view tests reached got tests of its own first, so every file held at 100 % stayed there; three guards only those
+  tests' mocks reached were dropped (a credential without `getClientExtensionResults`, whose ponyfill `toJSON`
+  would already have thrown; two `|| {}` in a spread). The root floors rose to 99.5 %.
+- **The fixes held for parity (29B's report).** The Advanced authentication works over the advanced records, which
+  its ceremony sends: Allow Credentials no longer offers a Simple credential (the server refused it), All no longer
+  lists one, and largeBlob and prf are judged over the advanced records. The offer follows the authentication's own
+  hints (what the request sends and what the server filters by), not the registration form's; the choices are
+  derived inside the request's reducer, so an edit or a hint toggle that refuses the chosen credential brings All
+  back. `prf: {enabled: false}` is no longer counted as prf support.
+- **pytest reads no `web/out`**: `tests/conftest.py` points `FIDO_SERVER_WEB_EXPORT_ROOT` at an empty directory of
+  the run's (the Python CI job builds none, and Cloud Build's web step writes it while pytest runs); tests that need
+  pages build a small export (`export_root`).
+- **`new_design/`** is removed, not moved, once the new UI is the only UI (the owner's answer, 2026-09-28): the
+  last step of 30B.
+- **Kept as they are:** the eager-bootstrap flag keeps its index-named environment variable (it now governs the
+  info route; renaming a deploy setting is not this phase's).
+
 ## Content parity (every surface phase)
 
 Before porting a surface, list everything it shows and every action it offers, from the current app (the
@@ -444,4 +492,5 @@ new component and check it in a browser. A phase is not done while an item is un
 | 28B | Saved credentials, the rest: the credential detail's every section, and the registration result with its certificate and authenticator-data views as levels of one dialog, each at its URL; the fixes 28A and its verification found. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 28B) |
 | 29A | Advanced tab, first half: the tab's frame (the Registration / Authentication switch, the toolbar, the saved credentials in a drawer over Phase 28's list and details, the result panel with its challenge row), one request that the form and the JSON editor both show and change, the registration form and the registration ceremony with its result (28B's dialog levels); the fixes 28B's verification found. The surface is about 3,700 lines of script and 1,300 of templates, 55 controls and 29 info popups, and the editor's logic is 52–88 % covered and inside view modules, so Phase 29 is split in two (docs/ui-parity/advanced.md marks each item 29A or 29B). **Done** (see docs/MODERNIZATION_PLAN.md, Phase 29A) |
 | 29B | Advanced tab, the rest: the authentication form (the credential selection and allowCredentials, the fake allow IDs, the hints, the hash algorithm, largeBlob and prf with their capability checks), the authentication ceremony and its result; the fixes 29A's report found. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 29B) |
-| 30 | Cutover: `/` serves the new UI; the legacy templates, scripts and styles and `new_design/` are deleted; the MDS snapshot files move out of `frontend/static/`; the logic modules move into `web/`; the Google Fonts origins leave the CSP; the Playwright tests join the Cloud Build gate |
+| 30A | Cutover, the switch: `/` serves the new UI, `/beta` redirects there, Flask's index goes; the parity cases recorded and the side-by-side tests retired; the Google Fonts origins leave the CSP; the legacy templates, views and styles are deleted; the fixes 29B held for parity. **Done** (see docs/MODERNIZATION_PLAN.md, Phase 30A) |
+| 30B | Cutover, the move: the logic modules move into `web/` with their tests; the root toolchain retired; the MDS snapshot files move out of `frontend/static/`; `frontend/` gone; the Playwright tests join the Cloud Build gate; `new_design/` removed |

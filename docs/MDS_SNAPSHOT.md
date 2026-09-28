@@ -45,10 +45,10 @@ answers from the verified snapshot either way. The URL ends in `?v=<serial>.<dig
 file is cached as immutable for a year and changes at runtime without a deploy, so a
 new snapshot has to be a new URL.
 
-Flask's own static route still serves `frontend/static` at `/`, but never a snapshot
-file: the seven names and the `.gz` sibling are refused there (a copy in
-`frontend/static` may be another snapshot than the directory's), and the versioned
-route serves only the browsers' copy, from the snapshot directory. Nothing the pages
+No route serves a snapshot file at the site's root: the seven names and the `.gz`
+sibling are refused there (the site's root is the UI's export since Phase 30A, and a
+copy in `frontend/static` may be another snapshot than the directory's), and the
+versioned route serves only the browsers' copy, from the snapshot directory. Nothing the pages
 use asks for any other snapshot file (the current UI's fallback request for
 `fido-mds3.verified.json.meta.json` is gone: the page's info carries the timestamp
 whenever there is a snapshot).
@@ -74,9 +74,9 @@ credential's AAGUID up and record what they found for good) call
 `ensure_snapshot_available()` first (`mds_provisioning.waits_for_the_snapshot`): on a cold
 instance they wait for the provisioning under way (about 20 s from Cloud Storage)
 instead of answering meanwhile as if there were no snapshot, and after the first
-attempt they return at once. The index page `/` does not wait (unless it
-bootstraps the metadata itself), so a cold instance's first page is not held: its
-inline info then has no `snapshotUrl`, and the explorer asks the API, which waits.
+attempt they return at once. The pages are static (the UI's export) and never wait,
+so a cold instance's first page is not held; the explorer asks the info route, which
+waits.
 
 1. **Local files.** Anything already on disk is used unchanged. No network.
 2. **Cloud Storage.** With `FIDO_SERVER_GCS_ENABLED` set, missing files are
@@ -105,7 +105,7 @@ The application still starts and serves. `/health` and `/` work; the explorer AP
 answer `200` with no entries (their `404` branch is not reached: the snapshot they
 compose always has its counts), `/api/mds/metadata/base` answers `404` with
 "Verified metadata snapshot is not available", the page is given no `snapshotUrl` (so
-it requests no missing file), and the explorer shows no entries (`/beta` says the
+it requests no missing file), and the explorer shows no entries (it says the
 packaged metadata is unavailable). This is the behaviour that already existed for a missing snapshot —
 the relocation did not introduce a new failure mode.
 

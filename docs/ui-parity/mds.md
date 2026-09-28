@@ -1,5 +1,9 @@
 # FIDO MDS explorer — content parity
 
+> **Since Phase 30A (2026-09-28)** the current UI this list describes is gone: the files cited are in the
+> history (`git show <commit>:<path>`), and the parity specs it cites compare the new UI with recordings of what
+> the current UI showed (`web/e2e/recorded/`, made before it was removed), not with the running current UI.
+
 Everything the current FIDO MDS tab shows and does, taken from the running code at `692b84f7`
 (`frontend/templates/advanced/mds-tab.html`, `mds-content.html`, `frontend/templates/index.html`,
 `frontend/templates/shared/navigation.html`, the 75 modules under `frontend/static/scripts/advanced/mds/`, the

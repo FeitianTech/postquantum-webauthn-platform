@@ -1,5 +1,9 @@
 # Advanced tab — content parity
 
+> **Since Phase 30A (2026-09-28)** the current UI this list describes is gone: the files cited are in the
+> history (`git show <commit>:<path>`), and the parity specs it cites compare the new UI with recordings of what
+> the current UI showed (`web/e2e/recorded/`, made before it was removed), not with the running current UI.
+
 Everything the current Advanced tab shows and does, taken from the running code at `e5af886f`
 (`frontend/templates/advanced/tab.html` and the twenty files under `frontend/templates/advanced/tab/`,
 `frontend/templates/shared/navigation.html`, `index.html`, the scripts under `advanced/auth/`, `advanced/json-editor/`,

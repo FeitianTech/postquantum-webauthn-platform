@@ -18,15 +18,13 @@ The repo includes both the application and a local `fido2/` library copy used by
 
 - `server/app/`
   Flask app, route handlers, configuration, storage, attestation processing, metadata bootstrap, decoder logic.
-- `frontend/templates/`
-  Jinja/HTML templates for the main tabs and shared UI fragments.
-- `frontend/static/scripts/`
-  Frontend behavior, organized by feature area.
-- `frontend/static/styles/`
-  Shared and advanced-tab CSS.
 - `web/`
-  The new UI (Next.js 15 Pages Router, TypeScript, Tailwind CSS v4), exported as static
-  files that Flask serves at `/beta` until the cutover. See "The new UI (`web/`)" below.
+  The site's UI (Next.js 15 Pages Router, TypeScript, Tailwind CSS v4), exported as static
+  files that Flask serves at `/`. See "The UI (`web/`)" below.
+- `frontend/static/scripts/`
+  The DOM-free logic modules `web/` imports (through `@legacy/`), with their tests in
+  `tests/frontend/`, until Phase 30B moves them into `web/`. The current UI they were split
+  out of (its templates, views and styles) went in Phase 30A.
 - `tests/`
   App, library, PQC, and optional device tests.
 - `fido2/`
@@ -34,23 +32,26 @@ The repo includes both the application and a local `fido2/` library copy used by
 
 ## Frontend Map
 
-**The UI is moving to Next.js + Tailwind CSS in `web/` (Phases 25–30).** Read
+**The UI is Next.js + Tailwind CSS in `web/` (Phases 25–30).** Read
 `docs/UI_MIGRATION.md` before changing anything under `frontend/` or `web/`: it holds the owner's design
 direction, the binding architecture (Pages Router static export served by Flask, the strict CSP kept) and
 the content-parity rule.
 
-### The new UI (`web/`)
+### The UI (`web/`)
 
-Phase 25 laid the foundation; each later phase ports one surface (docs/UI_MIGRATION.md,
-"Phases"). Until the cutover the legacy UI stays at `/` and the new one lives at `/beta`,
-unlisted.
+Phase 25 laid the foundation; each later phase ported one surface (docs/UI_MIGRATION.md,
+"Phases"), reviewed at `/beta`. Since Phase 30A it is the site, at `/`; `/beta` and every
+`/beta/…` path answer a permanent redirect (308, `no-cache`) to the same path at `/`, the
+browser keeping the hash. "The current UI" in comments and docs means the Flask-rendered UI
+that Phase 30A removed.
 
 - `web/src/pages/`: `index.tsx` (the app shell), `design.tsx` (the unlisted
-  `/beta/design` review page: every component in every state), `404.tsx`, `500.tsx`
+  `/design` review page, `noindex`: every component in every state), `404.tsx`, `500.tsx`
   and `_error.tsx` (Next's own error pages use style attributes the CSP refuses),
   `_app.tsx` (Geist and Geist Mono from the `geist` package, self-hosted through
   `next/font/local`; the fonts' variables sit on a wrapper holding `#app-root` and
-  `#overlay-root`, so portalled overlays inherit them) and `_document.tsx`.
+  `#overlay-root`, so portalled overlays inherit them) and `_document.tsx` (the favicon,
+  from `web/public/`; no `noindex`: the site is public).
 - `web/src/styles/globals.css`: the design tokens (`@theme`). Tailwind's palette,
   type scale, radii and shadows are cleared first, so only named tokens exist: white
   surfaces, grey only as text and hairlines, one accent, semantic tints, shadows for
@@ -191,9 +192,9 @@ unlisted.
   then the dialog opened at the registration with the detail one Back below, only while
   the tab is shown), `useAuthenticationCeremony` (over `assertion.js`: the toast, the
   result with the counter and the challenge, the counter kept, the row tinted green or
-  red, the values drawn again; no dialog), `fieldText.ts` (the templates' labels, options,
-  errors and info popups in English and 中文, generated from
-  `frontend/templates/advanced/tab/`, without the words logic modules hold) and `model.ts`
+  red, the values drawn again; no dialog), `fieldText.ts` (the labels, options, errors and
+  info popups in English and 中文 the current UI's templates gave, taken from them before
+  they went in Phase 30A and now their only copy, without the words logic modules hold) and `model.ts`
   (the casts of the logic below). Tests: `src/test/advanced.tsx` renders either form with
   its editor; the recorded registrations and authentications come through
   `tests/frontend/advanced/auth/advanced-answers.js` (`@legacy-tests`), which also stands
@@ -212,7 +213,7 @@ unlisted.
   a container query finds room), `EncodedOutput`, `RawDialog`, `FailureNotice`
   (failures stay in the panel, with the 422's offset and path), `SupportedInputs`.
   `model.ts` types the logic imported from `frontend/static/scripts/decoder/codec/`
-  (`request.js`, `result.js`, `values.js`, `encoding/summary.js`), which both UIs use.
+  (`request.js`, `result.js`, `values.js`, `encoding/summary.js`).
   Its tests render real answers: `web/src/test/codec-answers.json`, which
   `tests/app/tooling/test_web_codec_answers.py` keeps equal to what `/api/codec`
   answers (`CODEC_ANSWERS_WRITE=1` rewrites it). `docs/ui-parity/codec.md` maps every
@@ -252,43 +253,36 @@ unlisted.
   `docs/ui-parity/mds.md` maps every item of the old tab.
 - `web/scripts/check-export-csp.mjs`: parses every HTML file of the export and
   fails on an inline script that would run, a `<style>`, a style attribute, an `on*`
-  attribute, a `javascript:` URL or a script or stylesheet from outside `/beta/`.
+  attribute, a `javascript:` URL or a script or stylesheet from anywhere but the export's
+  own `/_next/`.
 - `web/e2e/`: Playwright in Chromium. `serve-flask.mjs` starts Flask with every store
   in a temporary directory and a copy of the MDS fixture as its snapshot
   (`FIDO_SERVER_MDS_SNAPSHOT_DIR`); `virtual-authenticator.ts` adds a CTAP2 authenticator
-  through the DevTools WebAuthn domain; `fixtures.ts` fails a test on any console
-  error, page error, CSP violation or report. `simple-ceremony.spec.ts` registers and
-  authenticates on the current UI at `/`; `beta-smoke.spec.ts` covers `/beta` (and a
-  hashed load of each section, frame by frame, with the scripts held back);
-  `codec.spec.ts` the Codec; `design-rules.ts` finds grey fills. `parity.ts` compares
-  what a region shows in the current UI and in `/beta`, word for word per section
-  (layout, separators and controls set aside), each expected difference with its
-  reason; `codec-parity.spec.ts` runs it over inputs from `tests/app/codec_corpus.py`
-  (read through `E2E_PYTHON`), and a later surface's parity spec uses it the same way;
-  an expected difference may be scoped to one section.
-  `readShownRows` reads a table a row at a time, keyed by a cell (controls' text kept);
-  `mds-parity.spec.ts` compares the MDS tables' rows for several filters and a sort,
-  `mds-entry-parity.spec.ts` five entries' pages, a certificate and the raw view,
-  `mds.spec.ts` covers the MDS list and `mds-entry.spec.ts` an entry, its certificates,
-  its raw view and the AAGUID link. `simple.spec.ts` registers and authenticates in
-  `/beta`, and proves the saved credentials shared both ways (registered in one UI,
-  listed, used, deleted and cleared in the other); `credential-detail.spec.ts` opens a
-  credential's every level (registered in either UI, by click and by URL, Back through
-  the levels, 1440 / 1024 / 375 px, another tab followed) and
-  `credential-detail-parity.spec.ts` compares the details, the registration, each
-  certificate's and the authenticator data's text, and an advanced registration's result,
-  with the current UI (its helpers, `credential-views.ts`, shared with the Advanced parity);
-  `simple-parity.spec.ts` compares the
-  tab, each row with its checks' verdicts, the result panel and the success sentences.
-  `advanced.spec.ts` registers and authenticates in `/beta#advanced` from the form and
-  from an edited JSON, refuses an edit that does not parse, keeps what an edit typed
-  through a form change, says a refused authentication in place (Hash Algorithm SHA-512),
-  opens a credential from the drawer, uses credentials across both UIs (chosen in Allow
-  Credentials) and fits 1440 / 1024 / 375 px in each segment; `advanced-parity.spec.ts`
-  compares each form's words, its info popups (English and 中文), its choices, the editor's
-  text byte for byte for the same settings, a registration's details and an
-  authentication's result, with the current tab. Every section is mounted, and both
-  Advanced segments: scope a query to its tabpanel (`#advanced-ceremony-panel-<segment>`).
+  through the DevTools WebAuthn domain (and puts a recorded credential back on one);
+  `fixtures.ts` fails a test on any console error, page error, CSP violation or report.
+  `smoke.spec.ts` covers the shell (and a hashed load of each section, frame by frame,
+  with the scripts held back), the 404 page and every old `/beta` link landing where it
+  pointed; `codec.spec.ts` the Codec; `design-rules.ts` finds grey fills; `mds.spec.ts`
+  the MDS list and `mds-entry.spec.ts` an entry, its certificates, its raw view and the
+  AAGUID link; `simple.spec.ts` the Simple tab's ceremonies and saved credentials;
+  `credential-detail.spec.ts` a credential's every level (by click and by URL, Back
+  through the levels, 1440 / 1024 / 375 px, another tab followed); `advanced.spec.ts`
+  both Advanced ceremonies from the form and from an edited JSON, a refused edit and a
+  refused authentication, the drawer and the three widths in each segment.
+  **The parity specs compare the new UI with what the current UI showed**, recorded before
+  Phase 30A removed it (`recorded.ts`, the files in `e2e/recorded/`; the readers that
+  recorded them are in the commit that added them): `parity.ts` compares a region's words
+  per section (layout, separators and controls set aside), each expected difference with
+  its reason, and `readShownRows` a table row by row. `codec-parity` (inputs from
+  `tests/app/codec_corpus.py`, kept in each recording), `mds-parity`, `mds-entry-parity`,
+  `simple-parity`, `credential-detail-parity` (helpers in `credential-views.ts`) and
+  `advanced-parity`; a case whose ceremony was live keeps the stored records it wrote, and
+  the new UI is given them. A recording is never edited: a later, intended change of what
+  the new UI shows is an expected difference with its reason. `current-ui-records.spec.ts`
+  loads what the current UI stored (a Simple and an Advanced credential, as visitors'
+  browsers hold them, with the virtual authenticator's keys) and lists, opens, deletes and
+  authenticates with it. Every section is mounted, and both Advanced segments: scope a
+  query to its tabpanel (`#advanced-ceremony-panel-<segment>`).
 
 Rules for `web/src` (`tests/app/tooling/test_web_source_rules.py` holds them):
 no `style` prop (the export would render a style attribute), no
@@ -305,13 +299,13 @@ ceremonies) plus
 whatever `web/src` imports through `@legacy/`, followed through their imports, and
 none of them may touch the DOM: a surface splits its logic out of its view first
 and adds it to `LOGIC_ROOTS`. No `Suspense` on the server-rendered path:
-React would put an inline script in the export. Links are plain: `<a href="/">` to the
-current UI, `<a href="/beta">` to the new one.
+React would put an inline script in the export. Links are plain `<a>` (the 404 page's
+`<a href="/">`).
 
 Running it locally (Node 22):
 
 - `cd web && npm ci`
-- `npm run dev`: the dev server at `http://localhost:3000/beta`, proxying `/api` to
+- `npm run dev`: the dev server at `http://localhost:3000/`, proxying `/api` to
   Flask at `FLASK_URL` (default `http://localhost:8000`, `python -m server.app.app`).
   WebAuthn ceremonies need the Flask origin; use the export for those. It sends
   Flask's CSP (`web/scripts/dev-csp.mjs`) with only the two allowances the dev server
@@ -319,73 +313,57 @@ Running it locally (Node 22):
   inline script, a style attribute or another origin shows as a violation in the
   console while developing; `tests/app/tooling/test_web_dev_csp.py` keeps the copy
   equal to Flask's defaults.
-- `npm run build`: the export in `web/out`, which Flask serves at `/beta`
-  (`FIDO_SERVER_WEB_EXPORT_ROOT` points elsewhere). Without a build `/beta` is a 404.
+- `npm run build`: the export in `web/out`, which Flask serves at `/`
+  (`FIDO_SERVER_WEB_EXPORT_ROOT` points elsewhere). Without a build every page is a 404
+  (the API still answers); pytest never reads `web/out` (`tests/conftest.py` points the
+  setting at an empty directory; a test that needs pages builds a small export, the
+  `export_root` fixture).
 - `npm run typecheck`, `npm test` (vitest, jsdom, Testing Library),
   `npm run test:coverage` (with the floors in `web/vitest.config.mts`),
   `npm run check:csp` (after a build), and `npm run e2e` (after a build; Chromium
   once with `npx playwright install chromium`; `E2E_PYTHON` names the Python with
   the app's dependencies, `.venv/bin/python` by default).
 
-### The current UI (`frontend/`)
+### The logic modules (`frontend/static/scripts/`, until Phase 30B)
 
-The app is a multi-tab UI wired together from `frontend/static/scripts/main.js`.
+What is left of `frontend/` is the DOM-free logic `web/` imports through `@legacy/` (the
+test's `LOGIC_ROOTS` and what they import), with its tests in `tests/frontend/` run by the
+root `vitest.config.mjs` (floors of 99.5 %, most files held at 100 % each). The current UI's
+templates, views (`main.js`, the `shared/ui/` builders, the `data-action` binders, the page
+data reader) and styles went in Phase 30A; Phase 30B moves this logic into `web/`.
 
-Important frontend entry points:
-
-- `frontend/static/scripts/simple/auth-simple.js`
-  Simple register/authenticate flows.
-- `frontend/static/scripts/advanced/auth/advanced.js`
-  Advanced register/authenticate flows.
-- `frontend/static/scripts/advanced/credentials/index.js`
-  Shared saved-credential list, card rendering, credential detail modal, list refresh behavior.
-- `frontend/static/scripts/advanced/editor/index.js`
-  Advanced JSON editor state and synchronization.
-- `frontend/static/scripts/shared/ui/navigation.js`
-  Top-level tab switching and advanced sub-tab switching.
-- `frontend/static/scripts/shared/storage/records.js` and `local.js`
-  Browser-side stored credential records and serialization sent back to the server:
-  one `localStorage` array both UIs read and write. `records.js` is the API and reads no
-  page; `local.js`, the current UI's barrel, seeds it from the `initial-credential-records`
-  page data its tests give (`seedUnifiedCredentialRecords`) and re-exports it. The storage
+- `shared/storage/records.js`
+  Browser-side stored credential records and what is sent back to the server: one
+  `localStorage` array, which visitors' browsers hold from the current UI too (the same
+  format; `web/e2e/current-ui-records.spec.ts`). It reads no page; a test seeds it with
+  `seedUnifiedCredentialRecords` (`tests/frontend/shared/storage/seed.js`). The storage
   keeps what it read until another tab changes it: `followStoredCredentialChanges` drops
   what was read on the storage event (so the next write builds on the other tab's
-  records) and calls back; both UIs follow it. Held at 100 % per file.
-- `frontend/static/scripts/simple/ceremony.js`
-  The Simple tab's two ceremonies with no DOM (the requests, the ponyfill, every step's
-  and outcome's sentence, the result panel's input); `auth-simple.js` is the current
-  tab's view over it, keeping the storage calls its tests mock. The new UI runs it too.
-- `frontend/static/scripts/advanced/credentials/saved-list.js`, `delete-flow.js`,
-  `algorithm-tag.js`, and `advanced/cose-labels.js`
+  records) and calls back.
+- `simple/ceremony.js`
+  The Simple tab's two ceremonies (the requests, the ponyfill, every step's and outcome's
+  sentence, the result panel's input).
+- `advanced/credentials/saved-list.js`, `delete-flow.js`, `algorithm-tag.js`, and
+  `advanced/cose-labels.js`
   What a saved credential's row shows (`describeCredentialCard`, given the indicators,
   the algorithm's tag and the hex id as values), the list's records and warm-up,
-  deleting and clearing (given `confirm`, the storage and where messages go), a
+  deleting and clearing (given the question, the storage and where messages go), a
   credential's algorithm and tag (given the COSE describer; an algorithm the labels do
-  not name is tagged `COSE${id}`). The current views render them with the functions
-  their tests inject or mock; the new UI with the real ones.
-- `frontend/static/scripts/advanced/credential-display/` and `advanced/credentials/hydrate.js`
-  A saved credential's details and the registration view, whose logic is DOM-free and
-  both UIs build from (Phase 28B): `registration-state.js` (the registration's state,
-  always passed in: the current UI keeps one, `state.js`'s `registrationDetailState`,
-  which its second modal reads when a button is pressed; the new UI one per credential),
-  `registration-view.js` (what the registration view, a certificate's and the
-  authenticator data's own views show, as data; `composeRegistration`; the snapshot a
+  not name is tagged `COSE${id}`).
+- `advanced/credential-display/` and `advanced/credentials/hydrate.js`
+  A saved credential's details and the registration view (Phase 28B):
+  `registration-state.js` (the registration's state, always passed in: one per
+  credential), `registration-view.js` (what the registration view, a certificate's and
+  the authenticator data's own views show, as data; `composeRegistration`; the snapshot a
   registration keeps), `decode-payload.js` (`POST /api/decode`), `certificate-text.js`,
   the sanitisers, `credential-detail-runtime/detail-sections.js` (one describer per
-  section, with the current builders' own inputs, since their tests call them) and
-  `compose.js` (`needsArtifact`, `composeCredentialDetail`), and `hydrate.js` (the
-  artifact merged into a record, given the fetch and the snapshot's save). The current
-  views (`sections-*.js`, `registration-compose-runtime.js`, `entry.js`,
-  `registration-result.js`, `detail-nodes.js`) render the data; `registration-state-runtime.js`
-  and `certificate-state.js` bind the current UI's one state. All are held at 100 % per
-  file (`vitest.config.mjs`) and are `LOGIC_ROOTS`.
-- The Advanced tab's logic, DOM-free, which both UIs run (Phase 29A), under
-  `frontend/static/scripts/advanced/`: `json-editor/registration-request.js`
+  section) and `compose.js` (`needsArtifact`, `composeCredentialDetail`), and `hydrate.js`
+  (the artifact merged into a record, given the fetch and the snapshot's save).
+- The Advanced tab's logic, under `advanced/`: `json-editor/registration-request.js`
   (`registrationDefaults`, with no random values; `buildCreationOptions(settings,
-  context)`, the relying party's name, host,
-  stored credentials and fake IDs passed in; `readCreationOptions`, the settings a request
-  says, reading back everything the form writes; `changeRegistration`, the form's rules,
-  whose DOM copy `main.js` keeps until the cutover; `registrationControls`;
+  context)`, the relying party's name, host, stored credentials and fake IDs passed in;
+  `readCreationOptions`, the settings a request says, reading back everything the form
+  writes; `changeRegistration`, the form's rules; `registrationControls`;
   `decodeJsonBinaryToHex`), `json-editor/editor-model.js` (the editor's titles and
   sentences, `requestText`, the structure checks, `topLevelExtras`,
   `locateJsonSyntaxError`'s line and column, `readEditedRequest`: unparsed, refused or
@@ -393,141 +371,78 @@ Important frontend entry points:
   `editor/json-editing.js` (the editor's keys over a `{value, selectionStart,
   selectionEnd}` copy), `auth/hint-rules.js`, `auth/fake-credentials.js`,
   `auth/hex-input.js`, `auth/ceremony.js` (`registerAdvancedCredential(text, …)` sends the
-  editor's text; its sentences; the hint rules, the storage and the values the form reads
-  passed in) and `credential-display/registration-snapshot.js`
-  (`keepRegistrationSnapshot`). Authentication's (Phase 29B): `json-editor/authentication-request.js`
+  editor's text) and `credential-display/registration-snapshot.js`
+  (`keepRegistrationSnapshot`). Authentication's: `json-editor/authentication-request.js`
   (`authenticationDefaults`, `buildRequestOptions`, `readRequestOptions` (reading back
-  everything the form writes: a list the choice builds keeps it, IDs no saved credential
+  everything the form writes: a list the choice builds keeps it, IDs no usable credential
   has are the fake allow IDs), `changeAuthentication`, `withAvailability`,
-  `authenticationControls`), `auth/allow-credentials.js` (the choices and their words,
-  given the attachment filter and the record helpers; `keptChoice`),
-  `auth/capabilities.js` (largeBlob and prf availability and their notes) and
-  `auth/assertion.js` (`authenticateAdvancedCredential(text, …)`: the hints' check, the
-  records sent, the Hash Algorithm and the fake length passed in; it returns the result
-  panel's input and a refused credential's ID). `json-editor/request-patch.js`
-  (`patchRequest`, `followForm`) applies a form change to the editor's text in both UIs:
-  the current `editor-flow.js` keeps the form's last request as its baseline
-  (`updateJsonEditor` follows, `rebuildJsonEditor` for a reset; a sub-tab switch
-  rebuilds). The current modules keep their paths and wrap or re-export
-  them (`hints.js`, `exclude-credentials.js`, `forms.js`, `creation-options.js`,
-  `request-options.js`, `form-sync.js`, `editor-flow.js`, `dom-helpers.js`, `resets.js`,
-  `advanced.js`, `list-render.js`, `registration-result.js`), since their tests mock by
-  path. Held at 100 % per file with the editor's `schema.js`, `validation-*.js` and
-  `merge-prune.js`, and `LOGIC_ROOTS`.
-- `frontend/static/styles/shared/layout.css`
-  Shared layout and credential card animation styles.
-- `frontend/static/scripts/shared/browser/`
-  The Analyze Browser panel (header button). It reports what the browser says and
-  says where each answer came from, or that it cannot know; it never guesses.
-  `identity.js` copies what the browser exposes (`readIdentityInputs`) and names the
-  browser, version, engine and system from that copy (`determineIdentity`, a pure
-  function): a brand's version is never another brand's, "Google Chrome" only when
-  the brand list says so, "Chromium-based browser" for a list of only Chromium.
-  `webauthn-facts.js` asks the WebAuthn questions and keeps each answer in one of
-  four states (`yes`, `no`, `unavailable` when the method is missing, `undetermined`
-  when it threw, with why); it also reads `getClientCapabilities()`. `report.js`
-  gathers both, groups the capabilities, builds the report and copies it, with no
-  DOM: the new UI imports it too. `analyze.js` renders the legacy panel and handles
-  its dialog (focus in, Tab kept inside, Escape, focus back to the button). `probe.js` reads an API that
-  may be missing or throw. Web pages cannot ask which authenticator transports a
-  browser supports: do not reintroduce WebUSB/WebHID/Web Bluetooth/Web Serial
-  checks, which say nothing about WebAuthn. The identity cases are real
-  user-agent strings with their Client Hints in
+  `authenticationControls`), `auth/allow-credentials.js` (`authenticationCredentials`:
+  the advanced records, the only ones the ceremony sends; the choices and their words,
+  given the attachments the authentication's hints allow; `keptChoice`),
+  `auth/capabilities.js` (largeBlob and prf availability and their notes; `prf: {enabled:
+  false}` is no support) and `auth/assertion.js` (`authenticateAdvancedCredential(text,
+  …)`: the hints' check, the records sent, the Hash Algorithm and the fake length passed
+  in; it returns the result panel's input and a refused credential's ID).
+  `json-editor/request-patch.js` (`patchRequest`, `followForm`) applies a form change to
+  the editor's text. With the editor's `schema.js`, `validation-*.js` and `merge-prune.js`.
+- `shared/browser/`
+  The Analyze Browser panel's facts. It reports what the browser says and says where each
+  answer came from, or that it cannot know; it never guesses. `identity.js` copies what
+  the browser exposes (`readIdentityInputs`) and names the browser, version, engine and
+  system from that copy (`determineIdentity`, a pure function): a brand's version is never
+  another brand's, "Google Chrome" only when the brand list says so, "Chromium-based
+  browser" for a list of only Chromium. `webauthn-facts.js` asks the WebAuthn questions and
+  keeps each answer in one of four states (`yes`, `no`, `unavailable` when the method is
+  missing, `undetermined` when it threw, with why); it also reads
+  `getClientCapabilities()`. `report.js` gathers both, groups the capabilities, builds the
+  report and copies it. `probe.js` reads an API that may be missing or throw. Web pages
+  cannot ask which authenticator transports a browser supports: do not reintroduce
+  WebUSB/WebHID/Web Bluetooth/Web Serial checks, which say nothing about WebAuthn. The
+  identity cases are real user-agent strings with their Client Hints in
   `tests/frontend/shared/browser/identity-matrix.js`; add a browser there.
-- `frontend/static/scripts/decoder/codec/`
-  The Codec tab. Its logic is DOM-free and both UIs import it: `request.js` (the
-  checks before a request, `POST /api/codec`, the progress, success and failure
-  sentences, the raw view's JSON), `result.js` (what the output shows for an answer
-  and in what order: pill, type, lenient note, findings, malformed line, sections by
-  type), `values.js` (how one value is shown, and the interpretation badges),
-  `labels.js` / `constants.js` (`formatKey`, the 88 labels), and in `encoding/`
-  `summary.js` (the encoded bytes' views and length), `can-encode.js`, `format.js`,
-  `binary.js`. The legacy views build their DOM over them: `process.js`,
-  `render-sections.js`, `render-values.js`, `encoding/format-elements.js` (plus
-  `mode.js`, `dom-state.js`, `panel-actions.js`). The root coverage counts the whole
-  Codec, and holds the logic leaves at 100 % (`vitest.config.mjs`). A failed codec
-  request's `offset` and `path` are in `readFailedResponse`'s answer.
-- `frontend/static/scripts/advanced/mds/explorer/`
-  The MDS explorer's logic, DOM-free, which both UIs import: `loading.js` (which
-  source and in what order, what an answer means, the entries shown, GET
-  `/api/mds/metadata/info`), `status.js` (the status line's sentences, the count),
-  `filter-sort.js` (matching, sorting, the click cycle), `options.js` (each filter's
-  list), `rows.js` (cell fallbacks, the certification badge, the identifier's kind),
-  `columns.js`, `custom-metadata.js` (Manage Trusted Metadata's requests and every
-  message), and for an entry `detail.js` (the detail page's sections, fields, labels
-  and order: `detailSections`), `certificate.js` (the decode request and its sentences,
-  a certificate's title and summary: `describeCertificate`) and `entry-link.js` (the
-  resolve request, `entryIdForAaguid`, the credential jump's sentences). `raw-data.js`
-  and `raw-stringify.js` (the raw view: the entry as MDS publishes it, its text, its
-  words) are logic too. The legacy views call them. The server builds every row
-  (`mds_snapshot.build_explorer_entry`); the client's own row builder
-  (`utils/entry-transform.js`, the lazy loader) is only for a payload without
-  `entryId`, which the server never sends, and goes at the cutover
-  (`docs/ui-parity/mds.md`, "Never shown"). The paths in `constants.js` are absolute,
-  so they resolve the same from `/beta/`. `explorer/*.js`, the raw view's two modules
-  and the leaves under them are held at 100 % (`vitest.config.mjs`). They import the
-  leaves (`utils/formatters.js`, ...), never the `utils.js` barrel, which reaches the
-  legacy DOM builders.
-- `frontend/static/scripts/shared/ui/dom.js`
-  How every view that shows data is built: `el(tag, {className, attrs, dataset,
-  style, text}, ...children)` and `fragment()`. Strings become text nodes or
-  attribute values, never markup, and an `on*`, `innerHTML`, `outerHTML` or `srcdoc`
-  attribute throws; handlers are added with `addEventListener`. The `style` option
-  is applied through CSSOM (`element.style`), which the CSP allows. No script hands
-  the browser markup to parse -- no `innerHTML`/`outerHTML`, `insertAdjacentHTML`,
-  `document.write`, `DOMParser`, even with a fixed string, since each is a Trusted
-  Types sink; empty a container with `replaceChildren()` (see Testing Guidance). The
-  credential cards, the credential detail modal (`credential-detail-runtime/`,
-  `detail-nodes.js`), the registration result and its certificate / authenticator-data
-  sub-modal (`registration-compose-runtime.js`) and the MDS raw-data popup
-  (`advanced/mds/raw-window.js`, an `about:blank` window that shares the page's CSP,
-  styled by `styles/advanced/mds-raw-window.css`) are built this way.
-- `frontend/static/scripts/shared/ui/actions.js`
-  How a template control does something. The markup names the action,
-  `data-action="switch-tab"`, with any argument in another `data-*` attribute
-  (`data-tab="codec"`), and never holds code: there is no inline `on*=` handler and
-  nothing is put on `window`. The module that owns the behaviour exports a table
-  (`navigationActions`, `formActions`, `codecActions`, ...) and a `bind...Actions()`
-  that calls `bindActions(root, table)`: one delegated listener on the root of the
-  area its controls sit in -- the tab, or `document` when they span areas (the
-  sticky mini-header shows a clone of the top navigation) -- so a table entry never
-  fires twice. `callWith(fn, 'tab')` makes the usual entry; an entry may also be
-  `{ mouseenter, mouseleave }` (the info popups), dispatched only for the element
-  that names the action. A disabled control is skipped. `main.js` calls the binders
-  when it loads; a click before then does nothing. Names are local to their area, as
-  the Analyze Browser panel's `close` / `copy-report` are.
-  `tests/frontend/page-actions.test.js` renders the real templates
-  (`tests/frontend/page-template.js`), loads `main.js` and checks that every
-  `[data-action]` runs exactly its owner's entry; add a new owner's table there.
-- `frontend/static/scripts/shared/utils/page-data.js`
-  The page's data for its scripts: `index.html` renders
-  `<script type="application/json" id="initial-mds-info">`, which the browser never
-  runs, and `readPageData(id)` parses it. `initial-mds-snapshot` and
-  `initial-credential-records` are read the same way; the server renders neither
-  (the page reads the browser's storage), tests give theirs through
-  `tests/frontend/page-data-helper.js` (`setup.js` writes the defaults).
+- `decoder/codec/`
+  The Codec's logic: `request.js` (the checks before a request, `POST /api/codec`, the
+  progress, success and failure sentences, the raw view's JSON), `result.js` (what the
+  output shows for an answer and in what order: pill, type, lenient note, findings,
+  malformed line, sections by type), `values.js` (how one value is shown, and the
+  interpretation badges), `labels.js` / `constants.js` (`formatKey`, the 88 labels), and in
+  `encoding/` `summary.js` (the encoded bytes' views and length), `can-encode.js`,
+  `format.js`, `binary.js`. A failed codec request's `offset` and `path` are in
+  `readFailedResponse`'s answer.
+- `advanced/mds/explorer/`
+  The MDS explorer's logic: `loading.js` (which source and in what order, what an answer
+  means, the entries shown, GET `/api/mds/metadata/info`), `status.js` (the status line's
+  sentences, the count), `filter-sort.js` (matching, sorting, the click cycle),
+  `options.js` (each filter's list), `rows.js` (cell fallbacks, the certification badge,
+  the identifier's kind), `columns.js`, `custom-metadata.js` (Manage Trusted Metadata's
+  requests and every message), and for an entry `detail.js` (the detail page's sections,
+  fields, labels and order: `detailSections`), `certificate.js` (the decode request and its
+  sentences, a certificate's title and summary: `describeCertificate`) and `entry-link.js`
+  (the resolve request, `entryIdForAaguid`, the credential jump's sentences). `raw-data.js`
+  and `raw-stringify.js` (the raw view: the entry as MDS publishes it, its text, its words)
+  are logic too, over the leaves in `utils/` and `metadata/`. The server builds every row
+  (`mds_snapshot.build_explorer_entry`). The paths in `constants.js` are absolute.
 - Registration detail snapshots (`registrationDetailSnapshot`, schemaVersion 2) hold
   the registration as data -- `state` (decoded attestation, certificates,
   authenticator data) and `response` (`credential`, `relyingParty`) -- never markup.
-  `snapshot-sanitize.js` keeps each `response` part whole or drops it; the detail modal
+  `snapshot-sanitize.js` keeps each `response` part whole or drops it; the details dialog
   builds from a v2 snapshot without a request and otherwise hydrates the credential
   from its server artifact. Composed HTML from older versions, and the raw
   `registrationDetailHtml`-style keys, are never read.
-- `frontend/static/scripts/shared/api/failed-response.js`
+- `shared/api/failed-response.js`
   The one reader of a failed response, for both tabs, the codec and the decode
   request: `readFailedResponse(response)` gives the server's `error` (or short plain
   text; never an HTML page), `failedCredentialId`, `signCountStatus`,
-  `challengeSource`, `challengeStatus`, a codec refusal's `offset` and `path`, and the body, and adds what to do for a 400
-  about the ceremony state, 409, 413 and 503 unless the message already says;
-  `FailedResponseError` carries it. Do not show a raw response body.
-- `frontend/static/scripts/shared/ui/ceremony-result.js` (over `shared/ceremony/result.js`)
-  The panel under each tab's buttons (`#simple-ceremony-result`,
-  `#advanced-ceremony-result`) that says what the server made of the last ceremony:
-  the signature counter with a sentence for `ok`, `not-supported` and `regressed`
-  (a possible clone; a warning), and in the advanced tab where the challenge came
-  from (`challengeSource`, `challengeStatus`). Not a `.status` toast: it stays until
-  the next ceremony starts.
-- `frontend/static/scripts/shared/utils/base64.js`
+  `challengeSource`, `challengeStatus`, a codec refusal's `offset` and `path`, and the
+  body, and adds what to do for a 400 about the ceremony state, 409, 413 and 503 unless
+  the message already says; `FailedResponseError` carries it. Do not show a raw response
+  body.
+- `shared/ceremony/result.js`
+  What the result panel under each tab's buttons says of the last ceremony: the signature
+  counter with a sentence for `ok`, `not-supported` and `regressed` (a possible clone; a
+  warning), and in the Advanced tab where the challenge came from (`challengeSource`,
+  `challengeStatus`). It stays until the next ceremony starts.
+- `shared/utils/base64.js`
   Bytes on the wire are base64url, unpadded, in every field the server sends; a
   field named for base64 (`derBase64`, `publicKeyBase64`, `userHandleBase64`, the
   codec's `base64` views) is standard base64. Decode API data with the strict
@@ -535,7 +450,7 @@ Important frontend entry points:
   string, anything else throws `Base64Error`. `forgivingBase64ToBytes` does what
   `atob` did and is only for text a person typed (the editor's helpers in
   `binary.js` use it). No `atob` outside the vendored `shared/webauthn/json-ponyfill.js`.
-- `frontend/static/scripts/shared/storage/local/record-migration.js`
+- `shared/storage/local/record-migration.js`
   Brings records saved by earlier versions to today's format as they are read
   (`storage-core.js`, and artifacts in `hydrateCredentialFromServer`), persisting
   when anything changed: drops stored registration markup, and re-spells standard
@@ -544,14 +459,6 @@ Important frontend entry points:
   byte strings). Fields named for base64, extension outputs and properties are left
   alone. Add a step here, with an old-format fixture in
   `tests/frontend/shared/storage/`, when a stored format changes.
-
-Important templates:
-
-- `frontend/templates/simple/tab.html`
-- `frontend/templates/advanced/tab.html`
-- `frontend/templates/decoder/tab.html`
-- `frontend/templates/shared/navigation.html`
-- `frontend/templates/shared/analyze-browser.html` (the panel's test renders this file)
 
 ## Backend Map
 
@@ -571,7 +478,7 @@ Flask app setup starts in:
   What `create_app()` is built from: `application.py` (`build_app()`),
   `logs.py`, `session_secret.py`, `compression.py`, `proxy.py`,
   `session_cookie.py`, `security_headers.py` (a strict CSP -- `script-src 'self'`,
-  `style-src 'self' https://fonts.googleapis.com`, no `'unsafe-inline'` -- plus a
+  `style-src 'self'`, `font-src 'self'`, no `'unsafe-inline'` and no other origin -- plus a
   `Content-Security-Policy-Report-Only` with `require-trusted-types-for 'script'`,
   both reporting to `/api/csp-report` by `report-uri` and, through
   `Reporting-Endpoints`, `report-to`; each settable in the environment, and
@@ -650,10 +557,10 @@ Main route modules:
   attachment-hint check in `server/app/attachments.py`. The try blocks and the order
   of session reads in the bodies are behaviour; keep moved code inside them.
 - `server/app/routes/general.py`
-  Index page, metadata bootstrap helpers, decoder endpoints, misc app routes, on
-  the `general` blueprint. `_initial_mds_info()` builds what the index inlines as
-  `initial-mds-info` and what `GET /api/mds/metadata/info` answers (no-store,
-  `Vary: Cookie`); its `snapshotUrl` is there only while the packaged file is there with
+  Metadata bootstrap helpers, decoder endpoints, misc app routes, on the `general`
+  blueprint (no page: Flask renders no template since Phase 30A). `_initial_mds_info()`
+  builds what `GET /api/mds/metadata/info` answers (no-store, `Vary: Cookie`; the eager
+  bootstrap flag it reads is still named for the index that inlined it); its `snapshotUrl` is there only while the packaged file is there with
   a meta that matches the verified snapshot, and carries `?v=<serial>.<digest>` (the
   file changes at runtime; its URL is cached for a year). The routes that read the
   snapshot, the browsers' snapshot file at its versioned URL, and both registrations'
@@ -661,15 +568,19 @@ Main route modules:
   for a provisioning under way (`mds_provisioning.waits_for_the_snapshot`, over
   `ensure_snapshot_available()`, which a cold instance's warm-up is running; the tests make
   the process's first attempt at session start, `tests/app/conftest.py`);
-  the index does not (unless it bootstraps the metadata itself). An upload or delete records
-  whether the session has uploads. `routes/web_export.py` (the `web_export` blueprint) serves
-  the new UI's export at `/beta`: HTML `no-cache`, `/beta/_next/static/` immutable for
-  a year with the build-time `.gz` copies (`static_assets.send_precompressed`), the
-  export's `404.html` for an unknown path, a plain 404 with no export; the export
-  root is `config/web_export.py` (`web/out`, or `FIDO_SERVER_WEB_EXPORT_ROOT`).
-  `static_assets.py` has its own `static_assets`
-  blueprint. Endpoint names are therefore `general.index`, `simple.register_begin`
-  and so on; nothing refers to them today (no `url_for`).
+  the pages, being static, never wait. An upload or delete records whether the session has
+  uploads. `routes/web_export.py` (the `web_export` blueprint) serves the site's pages, the
+  UI's export, at `/`: its page rule is the site's catch-all (Flask has no static rule of its
+  own: `static_folder=None`; every rule with a static segment, `/health`, `/api/…`,
+  `/assets/…`, `/beta…`, matches first, and a test holds that), HTML `no-cache`,
+  `/_next/static/` immutable for a year with the build-time `.gz` copies
+  (`static_assets.send_precompressed`), the export's `404.html` for an unknown path, a plain
+  404 under `/api/` or with no export; `/beta` and `/beta/…` answer 308 to the same path at
+  `/` (built with `url_for`, so no path can point it at another origin; `no-cache`). The
+  export root is `config/web_export.py` (`web/out`, or `FIDO_SERVER_WEB_EXPORT_ROOT`).
+  `static_assets.py` has its own `static_assets` blueprint (the snapshot's versioned URL).
+  Endpoint names are therefore `web_export.page`, `simple.register_begin` and so on; only
+  the `/beta` redirect uses `url_for`.
 - `server/app/routes/csp_report.py`
   `POST /api/csp-report`, on the `csp_report` blueprint: where browsers send CSP
   and Trusted Types violations. It bounds the body itself (512 KiB, answered 413
@@ -736,23 +647,24 @@ For authentication work, the important path is usually:
 4. Complete endpoint verifies the response using `create_fido_server(...)`.
 5. Frontend updates local saved credential state and refreshes the shared credential list.
 
-The saved credential cards shown in simple and advanced tabs are rendered by the same shared display module, so UI changes there often affect both tabs.
+The saved credentials shown in the Simple tab and the Advanced drawer are the same list
+(`web/src/components/credentials/`), so UI changes there affect both tabs.
 
 ## Common Places To Edit
 
-- Credential card visuals or behavior:
-  `frontend/static/scripts/advanced/credentials/index.js`
-  `frontend/static/styles/shared/layout.css`
+- Saved credentials' rows, details and registration view:
+  `web/src/components/credentials/`
+  `frontend/static/scripts/advanced/credentials/`, `advanced/credential-display/` (their logic)
 - Simple auth UX:
-  `frontend/static/scripts/simple/auth-simple.js`
+  `web/src/components/simple/`, `frontend/static/scripts/simple/ceremony.js`
   `server/app/routes/simple/`
 - Advanced auth UX:
-  `frontend/static/scripts/advanced/auth/advanced.js`
+  `web/src/components/advanced/`, `frontend/static/scripts/advanced/auth/`
   `server/app/routes/advanced/`
 - JSON editor or advanced request shaping:
-  `frontend/static/scripts/advanced/editor/index.js`
-  `frontend/static/scripts/advanced/auth/forms.js`
-  `frontend/static/scripts/advanced/auth/hints.js`
+  `web/src/components/advanced/requestEditor.ts`, `useAdvancedRequest.ts`,
+  `useAuthenticationRequest.ts`
+  `frontend/static/scripts/advanced/json-editor/`
 
 ## Testing Guidance
 
@@ -786,11 +698,10 @@ Ten checks guard the code and the checkout rather than behaviour:
   string or not: each is a Trusted Types sink the report-only policy reports. Its
   `ALLOWED` list is empty; an entry needs its reason and may only be removed.
 - `tests/app/tooling/test_inline_code.py` keeps out what the strict CSP refuses:
-  an `on*=` attribute, a `style=` attribute or a `<script>` without `src` (other
-  than `type="application/json"`) in a template; `setAttribute('style')` or markup
-  written in a string with an `on...=` or `style=` in a script; and any write to
-  `window` / `globalThis` / `self` (assignment, `delete`, `Object.assign`,
-  `defineProperty`). Its `ALLOWED_*` dicts are empty and may only shrink.
+  `setAttribute('style')` or markup written in a string with an `on...=` or `style=` in
+  a script; and any write to `window` / `globalThis` / `self` (assignment, `delete`,
+  `Object.assign`, `defineProperty`). Its `ALLOWED_*` dicts are empty and may only
+  shrink. (The pages are the export, which `web/scripts/check-export-csp.mjs` scans.)
 - `tests/app/tooling/test_frontend_base64.py` fails on any `atob(` in
   `frontend/static/scripts` outside its `ALLOWED` list, which holds only the
   vendored `json-ponyfill.js`.
@@ -961,17 +872,17 @@ it configures that app and no other. Do not `importlib.reload` config modules.
 - `FIDO_SERVER_MDS_SNAPSHOT_DIR` puts the snapshot elsewhere (`server/app/mds_snapshot_dir.py`);
   the browser tests and pytest point it at a copy of `tests/fixtures/mds/snapshot`.
 - Browsers get one snapshot file, the explorer's, at its versioned URL from the snapshot
-  directory; Flask's root static route and the versioned route refuse every other
-  snapshot name and the `.gz` sibling (`static_assets._SNAPSHOT_FILES`), since what sits in
-  `frontend/static` may be another snapshot.
+  directory; the site's root (the export's page rule, behind `static_assets`' hook) and the
+  versioned route refuse every other snapshot name and the `.gz` sibling
+  (`static_assets._SNAPSHOT_FILES`), since what sits in `frontend/static` may be another
+  snapshot.
 - Never commit those files and never write a test that reads the real snapshot
   path. `docs/MDS_SNAPSHOT.md` has the full picture.
 
 ## Repo-Specific Gotchas
 
-- The current UI (`frontend/`) is plain JS modules; the new UI (`web/`) is React through Next.js, exported as static files.
-- Templates hold no code: a control names its action with `data-action`, and nothing is put on `window` (`shared/ui/actions.js`). The CSP has no `'unsafe-inline'`, so an inline handler, `<script>` or `style=` added back simply does not run.
-- The simple and advanced tabs share the saved credential display, so re-render logic can have cross-tab side effects.
+- The UI (`web/`) is React through Next.js, exported as static files; the logic it imports from `frontend/static/scripts` is plain JS modules with no DOM. The CSP has no `'unsafe-inline'`, so an inline handler, `<script>` or `style` attribute simply does not run (the export scan and the web source rules keep them out).
+- The simple and advanced tabs share the saved credential list, so a change there can have cross-tab side effects.
 - Flask session state matters in begin/complete flows. Be careful not to break the fallback `__session_state` handling.
 - The local `fido2/` directory is part of the repo. Do not assume behavior matches the latest upstream package.
 
