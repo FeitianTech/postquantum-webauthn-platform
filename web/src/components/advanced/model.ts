@@ -108,7 +108,7 @@ export type EditedRequest =
   | { status: 'unparsed'; message: string; location: EditorLocation | null }
   | { status: 'refused'; root: unknown; message: string }
   | { status: 'accepted'; root: { publicKey: Json } & Json };
-export const EDITOR_WORDS = EDITOR_TEXT as Record<'title' | 'registrationTitle' | 'authenticationTitle', string>;
+export const EDITOR_WORDS = EDITOR_TEXT as Record<'title' | 'registrationTitle' | 'authenticationTitle' | 'reset', string>;
 export const titleOf = editorTitle as (scope: 'registration' | 'authentication') => string;
 export const textOf = requestText as (options: unknown) => string;
 export const readEdit = readEditedRequest as (text: string, scope: 'registration' | 'authentication') => EditedRequest;

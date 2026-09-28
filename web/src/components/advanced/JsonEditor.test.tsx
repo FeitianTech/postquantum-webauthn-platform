@@ -99,7 +99,7 @@ describe('the editor', () => {
     expect(JSON.parse(editor().value)).toMatchObject({ note: 'mine', publicKey: { attestation: 'direct' } });
   });
 
-  it('ADV-J5: Reset rebuilds the text from the form, keeping the keys beside publicKey', async () => {
+  it('ADV-J5: Reset rebuilds the text from the form, keeping the keys beside publicKey, and says so', async () => {
     renderForm();
     await ready();
     fireEvent.change(editor(), { target: { value: edited((root) => {
@@ -109,6 +109,7 @@ describe('the editor', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Reset' }));
 
+    expect(await screen.findByText('JSON editor reset to current settings.')).toBeInTheDocument();
     expect(note()).toBeNull();
     expect(JSON.parse(editor().value)).toMatchObject({ extra: { b: 2 }, publicKey: { timeout: 90000 } });
   });

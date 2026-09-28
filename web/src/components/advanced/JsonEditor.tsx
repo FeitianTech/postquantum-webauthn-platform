@@ -3,9 +3,10 @@ import { type KeyboardEvent, useId, useLayoutEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { textControlClassName } from '@/components/ui/Field';
 import { AlertIcon } from '@/components/ui/icons';
+import { useToast } from '@/components/ui/Toast';
 import { cx } from '@/lib/cx';
 
-import { type EditorState, autoIndent, indent, titleOf, wrapPair } from './model';
+import { EDITOR_WORDS, type EditorState, autoIndent, indent, titleOf, wrapPair } from './model';
 import type { AdvancedRequest } from './useAdvancedRequest';
 
 const PAIRS: Record<string, string> = { '{': '}', '[': ']' };
@@ -25,6 +26,11 @@ export function JsonEditor({ request }: { request: AdvancedRequest }) {
   const leaving = useRef(false);
   const title = titleOf('registration');
   const { edit } = request;
+  const toast = useToast();
+  const reset = () => {
+    request.resetEditor();
+    toast({ tone: 'info', message: EDITOR_WORDS.reset });
+  };
 
   useLayoutEffect(() => {
     const selection = pendingSelection.current;
@@ -73,7 +79,7 @@ export function JsonEditor({ request }: { request: AdvancedRequest }) {
         <h3 id={headingId} className="text-title-sm font-semibold break-words text-ink">
           {title}
         </h3>
-        <Button variant="secondary" size="sm" title="Reset JSON to match current settings" onClick={request.resetEditor}>
+        <Button variant="secondary" size="sm" title="Reset JSON to match current settings" onClick={reset}>
           Reset
         </Button>
       </div>
