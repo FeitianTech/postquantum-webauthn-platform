@@ -1,0 +1,36 @@
+[
+  {
+    "heading": "f1d0f1d0-0000-4000-8000-000000000001",
+    "lines": [
+      "Fixture Security Key L1",
+      "FIDO2",
+      "FIDO Certified L1 • Fixture Security Key • (FIDO20020260901001)",
+      "f1d0f1d0-0000-4000-8000-000000000001",
+      "Passcode External Presence Internal",
+      "External Wired Nfc",
+      "Nfc Usb",
+      "Hardware Secure Element",
+      "SECP256R1 Ecdsa SHA256 Raw ED25519 Eddsa SHA512 Raw",
+      "ECDSA_SHA256",
+      "Fixture FIDO2 Attestation Root",
+      "Sep 1, 2026"
+    ]
+  },
+  {
+    "heading": "f1d0f1d0-0000-4000-8000-000000000002",
+    "lines": [
+      "Fixture Security Key L2",
+      "FIDO2",
+      "FIDO Certified L2 • Fixture Security Key L2 • (FIDO20020260815002)",
+      "f1d0f1d0-0000-4000-8000-000000000002",
+      "Fingerprint Internal Passcode Internal Presence Internal",
+      "External Wired Nfc",
+      "Ble Nfc Usb",
+      "Hardware Secure Element",
+      "SECP256R1 Ecdsa SHA256 Raw ED25519 Eddsa SHA512 Raw",
+      "RSASSA-PKCS1-v1_5_SHA256",
+      "Fixture RSA Attestation Root",
+      "Aug 15, 2026"
+    ]
+  }
+]

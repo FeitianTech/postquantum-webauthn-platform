@@ -1,0 +1,31 @@
+{
+  "input": "a241010162303102",
+  "lenient": false,
+  "sections": [
+    {
+      "heading": "",
+      "lines": [
+        "Codec Output",
+        "Success",
+        "CBOR",
+        "1 finding",
+        "offset 0 · $ — map keys h'01' (bytes) and \"01\" (text) both read \"01\" as JSON keys; each is shown with its type so that neither entry replaces the other"
+      ]
+    },
+    {
+      "heading": "Decoded value",
+      "lines": [
+        "\"01\" (text)",
+        "2",
+        "h'01' (bytes)",
+        "1"
+      ]
+    },
+    {
+      "heading": "EDN (exact bytes)",
+      "lines": [
+        "{h'01': 1, \"01\": 2}"
+      ]
+    }
+  ]
+}

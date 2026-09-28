@@ -1,0 +1,130 @@
+[
+  {
+    "heading": "",
+    "lines": [
+      "Fixture Key With Every User Verification Method",
+      "AAGUID: f1d0f1d0-0000-4000-8000-000000000007 • FIDO2"
+    ]
+  },
+  {
+    "heading": "Overview",
+    "lines": [
+      "Identifier",
+      "f1d0f1d0-0000-4000-8000-000000000007",
+      "AAGUID",
+      "f1d0f1d0-0000-4000-8000-000000000007",
+      "Protocol",
+      "FIDO2",
+      "Certification",
+      "FIDO Certified L2 • Fixture Biometric Key • (FIDO20020260303007)",
+      "Authenticator Version",
+      "2",
+      "Date Updated",
+      "Mar 3, 2026"
+    ]
+  },
+  {
+    "heading": "Metadata Statement",
+    "lines": [
+      "Description",
+      "Fixture Key With Every User Verification Method",
+      "Legal Header",
+      "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+      "Schema",
+      "3",
+      "Crypto Strength",
+      "128",
+      "UPV",
+      "1.1",
+      "Authentication Algorithms",
+      "secp256r1_ecdsa_sha256_raw",
+      "ed25519_eddsa_sha512_raw",
+      "Public Key Algorithms",
+      "cose",
+      "Attestation Types",
+      "basic_full",
+      "Key Protection",
+      "hardware",
+      "secure_element",
+      "Matcher Protection",
+      "on_chip",
+      "Attachment Hints",
+      "external",
+      "wired",
+      "nfc"
+    ]
+  },
+  {
+    "heading": "User Verification Details",
+    "lines": [
+      "Combination 1",
+      "passcode_internal",
+      "Base: 10 • Min length: 6 • Max retries: 8 • Block slowdown: 30",
+      "fingerprint_internal",
+      "Combination 2",
+      "pattern_internal",
+      "Combination 3",
+      "presence_internal",
+      "Combination 4",
+      "voiceprint_internal",
+      "Combination 5",
+      "faceprint_internal",
+      "Combination 6",
+      "location_internal",
+      "Combination 7",
+      "eyeprint_internal",
+      "Combination 8",
+      "handprint_internal",
+      "Combination 9",
+      "passcode_external",
+      "Combination 10",
+      "none"
+    ]
+  },
+  {
+    "heading": "Attestation Root Certificates",
+    "lines": []
+  },
+  {
+    "heading": "Authenticator Get Info",
+    "lines": [
+      "AAGUID",
+      "f1d0f1d0-0000-4000-8000-000000000007",
+      "Max Message Size",
+      "1200",
+      "Versions",
+      "FIDO_2_0",
+      "FIDO_2_1",
+      "Extensions",
+      "credProtect",
+      "hmac-secret",
+      "Transports",
+      "usb",
+      "nfc",
+      "pinUvAuth Protocols",
+      "1",
+      "2",
+      "Options",
+      "clientPin: true",
+      "plat: false",
+      "rk: true",
+      "up: true"
+    ]
+  },
+  {
+    "heading": "Status Reports",
+    "lines": [
+      "Status",
+      "Effective Date",
+      "Authenticator Version",
+      "Certificate Number",
+      "Descriptor",
+      "FIDO_CERTIFIED_L2",
+      "2026-03-03",
+      "—",
+      "FIDO20020260303007",
+      "Fixture Biometric Key",
+      "Policy: 1.4.0 • Requirements: 1.3"
+    ]
+  }
+]

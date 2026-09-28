@@ -1,0 +1,50 @@
+{
+  "legacy": [
+    {
+      "heading": "Credential Selection",
+      "lines": [
+        "User Verification",
+        "Preferred (default)",
+        "Discouraged",
+        "Required",
+        "Allow Credentials",
+        "All credentials",
+        "Empty (resident key only)",
+        "Fake credential ID length",
+        "No fake allow credential IDs added."
+      ]
+    },
+    {
+      "heading": "Other Options",
+      "lines": [
+        "Challenge (hex)",
+        "Timeout (milliseconds)",
+        "Hints",
+        "Hash Algorithm",
+        "SHA-256",
+        "SHA-512",
+        "SHA-384",
+        "SHA-1",
+        "SHA3-256",
+        "SHA3-384",
+        "SHA3-512"
+      ]
+    },
+    {
+      "heading": "Extensions",
+      "lines": [
+        "largeBlob",
+        "Unspecified (default)",
+        "Read",
+        "Write",
+        "largeBlob write (hex)",
+        "prf eval first (hex)",
+        "prf eval second (hex)"
+      ]
+    }
+  ],
+  "legacyNotes": [
+    "No largeBlob capable credentials available",
+    "No credentials with prf support available."
+  ]
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "heading": "",
+    "lines": [
+      "Fixture U2F Key",
+      "ID: f1d0000000000000000000000000000000000011 • U2F"
+    ]
+  },
+  {
+    "heading": "Overview",
+    "lines": [
+      "Identifier",
+      "f1d0000000000000000000000000000000000011",
+      "Protocol",
+      "U2F",
+      "Certification",
+      "FIDO Certified L1 • Fixture U2F Key • (U2F100020251111011)",
+      "Authenticator Version",
+      "2",
+      "Date Updated",
+      "Nov 11, 2025"
+    ]
+  },
+  {
+    "heading": "Metadata Statement",
+    "lines": [
+      "Description",
+      "Fixture U2F Key",
+      "Legal Header",
+      "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+      "Schema",
+      "3",
+      "Crypto Strength",
+      "128",
+      "Attestation Certificate Key IDs",
+      "f1d0000000000000000000000000000000000011",
+      "UPV",
+      "1.1",
+      "Authentication Algorithms",
+      "secp256r1_ecdsa_sha256_raw",
+      "Public Key Algorithms",
+      "cose",
+      "Attestation Types",
+      "basic_full",
+      "Key Protection",
+      "hardware",
+      "secure_element",
+      "Matcher Protection",
+      "on_chip",
+      "Attachment Hints",
+      "external",
+      "wired"
+    ]
+  },
+  {
+    "heading": "User Verification Details",
+    "lines": [
+      "Combination 1",
+      "presence_internal"
+    ]
+  },
+  {
+    "heading": "Attestation Root Certificates",
+    "lines": []
+  },
+  {
+    "heading": "Status Reports",
+    "lines": [
+      "Status",
+      "Effective Date",
+      "Authenticator Version",
+      "Certificate Number",
+      "Descriptor",
+      "FIDO_CERTIFIED_L1",
+      "2025-11-11",
+      "—",
+      "U2F100020251111011",
+      "Fixture U2F Key",
+      "Policy: 1.4.0 • Requirements: 1.3"
+    ]
+  }
+]

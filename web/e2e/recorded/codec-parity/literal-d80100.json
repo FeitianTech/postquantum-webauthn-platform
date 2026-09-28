@@ -1,0 +1,32 @@
+{
+  "input": "d80100",
+  "lenient": false,
+  "sections": [
+    {
+      "heading": "",
+      "lines": [
+        "Codec Output",
+        "Success",
+        "CBOR",
+        "2 findings",
+        "offset 0 · $ — tag number 1 has a 2-byte head (d8 01); CTAP2 requires the shortest, 1 byte",
+        "offset 0 · $ — tag 1; CTAP2 canonical CBOR has no tags"
+      ]
+    },
+    {
+      "heading": "Decoded value",
+      "lines": [
+        "TAG",
+        "1",
+        "Value",
+        "0"
+      ]
+    },
+    {
+      "heading": "EDN (exact bytes)",
+      "lines": [
+        "1_0(0)"
+      ]
+    }
+  ]
+}

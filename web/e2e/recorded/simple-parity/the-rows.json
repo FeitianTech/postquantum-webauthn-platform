@@ -1,0 +1,104 @@
+[
+  {
+    "name": "x5c@example.com",
+    "sections": [
+      {
+        "heading": "",
+        "lines": [
+          "x5c@example.com",
+          "Signature",
+          "Root",
+          "RPID",
+          "AAGUID",
+          "ES256"
+        ]
+      }
+    ],
+    "buttons": [
+      "Delete"
+    ],
+    "checks": [
+      "Signature:passed",
+      "Root:unknown",
+      "RPID:passed",
+      "AAGUID:passed"
+    ]
+  },
+  {
+    "name": "ml@example.com",
+    "sections": [
+      {
+        "heading": "",
+        "lines": [
+          "ml@example.com",
+          "Signature",
+          "Root",
+          "RPID",
+          "AAGUID",
+          "MLDSA65"
+        ]
+      }
+    ],
+    "buttons": [
+      "Delete"
+    ],
+    "checks": [
+      "Signature:unknown",
+      "Root:unknown",
+      "RPID:passed",
+      "AAGUID:unknown"
+    ]
+  },
+  {
+    "name": "advanced@example.com",
+    "sections": [
+      {
+        "heading": "",
+        "lines": [
+          "advanced@example.com",
+          "Signature",
+          "Root",
+          "RPID",
+          "AAGUID",
+          "ES256",
+          "Large blob"
+        ]
+      }
+    ],
+    "buttons": [
+      "Delete"
+    ],
+    "checks": [
+      "Signature:passed",
+      "Root:unknown",
+      "RPID:passed",
+      "AAGUID:passed"
+    ]
+  },
+  {
+    "name": "mds@example.com",
+    "sections": [
+      {
+        "heading": "",
+        "lines": [
+          "mds@example.com",
+          "Signature",
+          "Root",
+          "RPID",
+          "AAGUID",
+          "Unknown"
+        ]
+      }
+    ],
+    "buttons": [
+      "FIDO MDS",
+      "Delete"
+    ],
+    "checks": [
+      "Signature:unknown",
+      "Root:passed",
+      "RPID:unknown",
+      "AAGUID:unknown"
+    ]
+  }
+]

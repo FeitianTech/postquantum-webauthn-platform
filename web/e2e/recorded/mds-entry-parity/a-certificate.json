@@ -1,0 +1,113 @@
+[
+  {
+    "heading": "",
+    "lines": [
+      "CN=Fixture RSA Attestation Root,OU=Authenticator Attestation,O=Characterization Test,C=SE",
+      "CN=Fixture RSA Attestation Root,OU=Authenticator Attestation,O=Characterization Test,C=SE",
+      "Subject",
+      "CN=Fixture RSA Attestation Root,OU=Authenticator Attestation,O=Characterization Test,C=SE",
+      "Issuer",
+      "CN=Fixture RSA Attestation Root,OU=Authenticator Attestation,O=Characterization Test,C=SE",
+      "Not Before",
+      "Wed, 01 Jan 2020 00:00:00 GMT",
+      "Not After",
+      "Thu, 31 Dec 2099 00:00:00 GMT",
+      "Serial Number",
+      "1002",
+      "Serial Number (Hex)",
+      "0x3ea"
+    ]
+  },
+  {
+    "heading": "Public Key",
+    "lines": [
+      "Algorithm",
+      "RSASSA-PKCS1-v1_5",
+      "Key Size",
+      "2048 bit",
+      "Public Exponent",
+      "65537",
+      "Modulus",
+      "0xf9793cd71655c073e3b6587c20aad659a3120fec0807b85ee125893b7d31ad81f5cfacb85431f5696f30f304d8f089092117abe100aeaca3501b7f275bf60674e9ff5db9975edb3c52f59e0dafc2708e1219ae9d6c6e3dfd0d6373c010a8a1791294f808462cd36f4631176411160f802b94122e2a9e47c477e1cde7ebaa7d8a94f6e1dea277f8a9bd8ebc89fe3f474f80f96ba5546f2a149ac29f5a198e98a54888ac7139c9390507e6a74154c431d7a35148189d8e5090a07228d1463dc9bcbcbf7c48fe6929f3f9e136f96b6dfcd488059694ca4c7802c62669fb53ffda6ece4a1405bf0656044b839ad47e7c6e8f32896541d8a5f8858c4201501f5f5ad5",
+      "Value",
+      "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA+Xk81xZVwHPjtlh8IKrWWaMSD+wIB7he4SWJO30xrYH1z6y4VDH1aW8w8wTY8IkJIRer4QCurKNQG38nW/YGdOn/XbmXXts8UvWeDa/CcI4SGa6dbG49/Q1jc8AQqKF5EpT4CEYs029GMRdkERYPgCuUEi4qnkfEd+HN5+uqfYqU9uHeonf4qb2OvIn+P0dPgPlrpVRvKhSawp9aGY6YpUiIrHE5yTkFB+anQVTEMdejUUgYnY5QkKByKNFGPcm8vL98SP5pKfP54Tb5a2381IgFlpTKTHgCxiZp+1P/2m7OShQFvwZWBEuDmtR+fG6PMollQdil+IWMQgFQH19a1QIDAQAB"
+    ]
+  },
+  {
+    "heading": "Signature",
+    "lines": [
+      "Algorithm",
+      "sha256WithRSAEncryption",
+      "Hash",
+      "SHA-256",
+      "Value",
+      "483640a0847a083a00ab3f28279b3355fa8868bf867a2dd00f3e7c3235aba6d6745f26ee2588b32630f3a4502f492a968e6bc3367e4c15371b91d9ef4576fae0a16f76cb7260ec572b923a1e03424e5a52ab467584fd69bbe05e2b6246eb3b3a257b92553e1bba0ed3013678f8efb699c2da3839c4314dcfacf05001451cb580f09bde0b26449e28ac58eab209714876fed8b1ec7bc92fcbb6ea45d1df00c6942dd7f46539401d79f04482c5a209575536cbb4219025c2ed2a78735485c6d6abca30719bfb935b3299296cd1ff4aeed1a53102d6a0452c0d7507d64562387e09a8b877369c6164518995b917622ac70440df72a175606c28ba7468b78b611a15"
+    ]
+  },
+  {
+    "heading": "Raw",
+    "lines": [
+      "MIIDbDCCAlSgAwIBAgICA+owDQYJKoZIhvcNAQELBQAweDELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjElMCMGA1UEAwwcRml4dHVyZSBSU0EgQXR0ZXN0YXRpb24gUm9vdDAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFoweDELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjElMCMGA1UEAwwcRml4dHVyZSBSU0EgQXR0ZXN0YXRpb24gUm9vdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAPl5PNcWVcBz47ZYfCCq1lmjEg/sCAe4XuEliTt9Ma2B9c+suFQx9WlvMPME2PCJCSEXq+EArqyjUBt/J1v2BnTp/125l17bPFL1ng2vwnCOEhmunWxuPf0NY3PAEKiheRKU+AhGLNNvRjEXZBEWD4ArlBIuKp5HxHfhzefrqn2KlPbh3qJ3+Km9jryJ/j9HT4D5a6VUbyoUmsKfWhmOmKVIiKxxOck5BQfmp0FUxDHXo1FIGJ2OUJCgcijRRj3JvLy/fEj+aSnz+eE2+Wtt/NSIBZaUykx4AsYmaftT/9puzkoUBb8GVgRLg5rUfnxujzKJZUHYpfiFjEIBUB9fWtUCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEASDZAoIR6CDoAqz8oJ5szVfqIaL+Gei3QDz58MjWrptZ0XybuJYizJjDzpFAvSSqWjmvDNn5MFTcbkdnvRXb64KFvdstyYOxXK5I6HgNCTlpSq0Z1hP1pu+BeK2JG6zs6JXuSVT4bug7TATZ4+O+2mcLaODnEMU3PrPBQAUUctYDwm94LJkSeKKxY6rIJcUh2/tix7HvJL8u26kXR3wDGlC3X9GU5QB158ESCxaIJV1U2y7QhkCXC7Sp4c1SFxtaryjBxm/uTWzKZKWzR/0ru0aUxAtagRSwNdQfWRWI4fgmouHc2nGFkUYmVuRdiKscEQN9yoXVgbCi6dGi3i2EaFQ=="
+    ]
+  },
+  {
+    "heading": "Decoded Output",
+    "lines": [
+      "Version: 3 (0x2)",
+      "Certificate Serial Number: 1002 (0x3ea)",
+      "Signature Algorithm: sha256WithRSAEncryption",
+      "Issuer: CN=Fixture RSA Attestation Root,OU=Authenticator Attestation,O=Characterization Test,C=SE",
+      "Validity:",
+      "Not Before: 2020-01-01T00:00:00+00:00",
+      "Not After: 2099-12-31T00:00:00+00:00",
+      "Subject: CN=Fixture RSA Attestation Root,OU=Authenticator Attestation,O=Characterization Test,C=SE",
+      "Subject Public Key Info:",
+      "Type: RSA",
+      "Public-Key: (2048 bit)",
+      "Modulus:",
+      "f9:79:3c:d7:16:55:c0:73:e3:b6:58:7c:20:aa:d6:59",
+      "a3:12:0f:ec:08:07:b8:5e:e1:25:89:3b:7d:31:ad:81",
+      "f5:cf:ac:b8:54:31:f5:69:6f:30:f3:04:d8:f0:89:09",
+      "21:17:ab:e1:00:ae:ac:a3:50:1b:7f:27:5b:f6:06:74",
+      "e9:ff:5d:b9:97:5e:db:3c:52:f5:9e:0d:af:c2:70:8e",
+      "12:19:ae:9d:6c:6e:3d:fd:0d:63:73:c0:10:a8:a1:79",
+      "12:94:f8:08:46:2c:d3:6f:46:31:17:64:11:16:0f:80",
+      "2b:94:12:2e:2a:9e:47:c4:77:e1:cd:e7:eb:aa:7d:8a",
+      "94:f6:e1:de:a2:77:f8:a9:bd:8e:bc:89:fe:3f:47:4f",
+      "80:f9:6b:a5:54:6f:2a:14:9a:c2:9f:5a:19:8e:98:a5",
+      "48:88:ac:71:39:c9:39:05:07:e6:a7:41:54:c4:31:d7",
+      "a3:51:48:18:9d:8e:50:90:a0:72:28:d1:46:3d:c9:bc",
+      "bc:bf:7c:48:fe:69:29:f3:f9:e1:36:f9:6b:6d:fc:d4",
+      "88:05:96:94:ca:4c:78:02:c6:26:69:fb:53:ff:da:6e",
+      "ce:4a:14:05:bf:06:56:04:4b:83:9a:d4:7e:7c:6e:8f",
+      "32:89:65:41:d8:a5:f8:85:8c:42:01:50:1f:5f:5a:d5",
+      "Exponent: 65537",
+      "Signature Algorithm: sha256WithRSAEncryption",
+      "48:36:40:a0:84:7a:08:3a:00:ab:3f:28:27:9b:33:55",
+      "fa:88:68:bf:86:7a:2d:d0:0f:3e:7c:32:35:ab:a6:d6",
+      "74:5f:26:ee:25:88:b3:26:30:f3:a4:50:2f:49:2a:96",
+      "8e:6b:c3:36:7e:4c:15:37:1b:91:d9:ef:45:76:fa:e0",
+      "a1:6f:76:cb:72:60:ec:57:2b:92:3a:1e:03:42:4e:5a",
+      "52:ab:46:75:84:fd:69:bb:e0:5e:2b:62:46:eb:3b:3a",
+      "25:7b:92:55:3e:1b:ba:0e:d3:01:36:78:f8:ef:b6:99",
+      "c2:da:38:39:c4:31:4d:cf:ac:f0:50:01:45:1c:b5:80",
+      "f0:9b:de:0b:26:44:9e:28:ac:58:ea:b2:09:71:48:76",
+      "fe:d8:b1:ec:7b:c9:2f:cb:b6:ea:45:d1:df:00:c6:94",
+      "2d:d7:f4:65:39:40:1d:79:f0:44:82:c5:a2:09:57:55",
+      "36:cb:b4:21:90:25:c2:ed:2a:78:73:54:85:c6:d6:ab",
+      "ca:30:71:9b:fb:93:5b:32:99:29:6c:d1:ff:4a:ee:d1",
+      "a5:31:02:d6:a0:45:2c:0d:75:07:d6:45:62:38:7e:09",
+      "a8:b8:77:36:9c:61:64:51:89:95:b9:17:62:2a:c7:04",
+      "40:df:72:a1:75:60:6c:28:ba:74:68:b7:8b:61:1a:15",
+      "Fingerprint:",
+      "MD5:",
+      "ff:b2:09:10:84:57:03:83:b9:6c:bd:f3:39:17:1b:7c",
+      "SHA1:",
+      "dd:f8:b1:af:43:eb:5a:50:fd:2f:b1:1d:bc:af:0d:39",
+      "ff:b3:a3:91",
+      "SHA256:",
+      "3a:da:15:58:08:89:ab:93:04:c1:12:c4:6c:ab:6d:cc",
+      "ab:36:40:92:6e:ef:54:78:68:26:59:4b:34:a6:02:24"
+    ]
+  }
+]

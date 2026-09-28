@@ -1,0 +1,32 @@
+{
+  "allow": [
+    "All credentials",
+    "Empty (resident key only)",
+    "capable@example.com (ES256 (-7)) • Cross-platform (Security key / Hybrid)",
+    "plain@example.com (ES256 (-7)) • Cross-platform (Security key / Hybrid)"
+  ],
+  "verification": [
+    "Preferred (default)",
+    "Discouraged",
+    "Required"
+  ],
+  "hash": [
+    "SHA-256",
+    "SHA-512",
+    "SHA-384",
+    "SHA-1",
+    "SHA3-256",
+    "SHA3-384",
+    "SHA3-512"
+  ],
+  "largeBlob": [
+    "Unspecified (default)",
+    "Read",
+    "Write"
+  ],
+  "hints": [
+    "Client-device",
+    "Hybrid",
+    "Security-key"
+  ]
+}

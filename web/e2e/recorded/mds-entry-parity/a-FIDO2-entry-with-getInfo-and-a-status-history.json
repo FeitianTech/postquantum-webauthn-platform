@@ -1,0 +1,144 @@
+[
+  {
+    "heading": "",
+    "lines": [
+      "Fixture Security Key L1",
+      "AAGUID: f1d0f1d0-0000-4000-8000-000000000001 • FIDO2"
+    ]
+  },
+  {
+    "heading": "Overview",
+    "lines": [
+      "Identifier",
+      "f1d0f1d0-0000-4000-8000-000000000001",
+      "AAGUID",
+      "f1d0f1d0-0000-4000-8000-000000000001",
+      "Protocol",
+      "FIDO2",
+      "Certification",
+      "FIDO Certified L1 • Fixture Security Key • (FIDO20020260901001)",
+      "Authenticator Version",
+      "2",
+      "Date Updated",
+      "Sep 1, 2026"
+    ]
+  },
+  {
+    "heading": "Metadata Statement",
+    "lines": [
+      "Description",
+      "Fixture Security Key L1",
+      "Legal Header",
+      "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+      "Schema",
+      "3",
+      "Crypto Strength",
+      "128",
+      "UPV",
+      "1.1",
+      "Authentication Algorithms",
+      "secp256r1_ecdsa_sha256_raw",
+      "ed25519_eddsa_sha512_raw",
+      "Public Key Algorithms",
+      "cose",
+      "Attestation Types",
+      "basic_full",
+      "Key Protection",
+      "hardware",
+      "secure_element",
+      "Matcher Protection",
+      "on_chip",
+      "Attachment Hints",
+      "external",
+      "wired",
+      "nfc"
+    ]
+  },
+  {
+    "heading": "User Verification Details",
+    "lines": [
+      "Combination 1",
+      "presence_internal",
+      "Combination 2",
+      "passcode_external"
+    ]
+  },
+  {
+    "heading": "Attestation Root Certificates",
+    "lines": []
+  },
+  {
+    "heading": "Authenticator Get Info",
+    "lines": [
+      "AAGUID",
+      "f1d0f1d0-0000-4000-8000-000000000001",
+      "Max Message Size",
+      "1200",
+      "Max Credential Count",
+      "8",
+      "Max Credential ID Length",
+      "128",
+      "Max Serialized Large Blob Array",
+      "1024",
+      "Min PIN Length",
+      "6",
+      "Firmware Version",
+      "327941",
+      "Max Cred Blob Length",
+      "32",
+      "Max RP IDs for Set Min PIN Length",
+      "1",
+      "Remaining Discoverable Credentials",
+      "25",
+      "Versions",
+      "FIDO_2_0",
+      "FIDO_2_1",
+      "Extensions",
+      "credProtect",
+      "hmac-secret",
+      "Transports",
+      "usb",
+      "nfc",
+      "Algorithms",
+      "{\"alg\":-7,\"type\":\"public-key\"}",
+      "{\"alg\":-8,\"type\":\"public-key\"}",
+      "pinUvAuth Protocols",
+      "1",
+      "2",
+      "Options",
+      "clientPin: true",
+      "credMgmt: true",
+      "plat: false",
+      "rk: true",
+      "up: true",
+      "uv: false"
+    ]
+  },
+  {
+    "heading": "Status Reports",
+    "lines": [
+      "Status",
+      "Effective Date",
+      "Authenticator Version",
+      "Certificate Number",
+      "Descriptor",
+      "NOT_FIDO_CERTIFIED",
+      "2025-11-03",
+      "1",
+      "—",
+      "—",
+      "FIDO_CERTIFIED_L1",
+      "2026-03-16",
+      "1",
+      "FIDO20020260316001",
+      "Fixture Security Key • https://fixture.example/certificates/FIDO20020260316001",
+      "Policy: 1.4.0 • Requirements: 1.3",
+      "FIDO_CERTIFIED_L1",
+      "2026-09-01",
+      "2",
+      "FIDO20020260901001",
+      "Fixture Security Key • https://fixture.example/certificates/FIDO20020260901001",
+      "Policy: 1.4.0 • Requirements: 1.3"
+    ]
+  }
+]

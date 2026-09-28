@@ -1,0 +1,14 @@
+{
+  "panel": [
+    {
+      "heading": "",
+      "lines": [
+        "Last authentication",
+        "Signature counter",
+        "3",
+        "Higher than the last counter the server saw for this credential, as it should be."
+      ]
+    }
+  ],
+  "registered": "Registration successful! Algorithm: EdDSA"
+}

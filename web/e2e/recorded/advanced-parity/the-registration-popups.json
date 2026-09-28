@@ -1,0 +1,92 @@
+[
+  {
+    "label": "Authenticator Attachment",
+    "en": "\n                            Select whether an authenticator integrated into the client platform (\"platform\") or an external device (\"cross-platform\") should be used. If unspecified, either kind of authenticator is allowed. By default, a cross-platform authenticator is requested.\n                        ",
+    "zh": "\n                            选择是否使用集成在客户端平台中的认证器（“platform”）或外部设备（“cross-platform”）。如果未指定，允许使用任一类型的认证器。默认情况下，将请求 cross-platform 认证器。\n                        "
+  },
+  {
+    "label": "Resident Key",
+    "en": "\n                            A resident key can be used for \"username-less\" authentication, i.e., with an empty allowCredentials parameter.\n                            If \"discouraged\", a non-resident key will be created if possible. If \"preferred\", a resident key will be created if possible. If \"required\", a resident key will be created and the user is shown an error if this fails. If unspecified, the default is \"discouraged\".\n                        ",
+    "zh": "\n                            常驻密钥可用于“无用户名”身份验证，即使用空的 allowCredentials 参数。\n                            如果设为\"discouraged\"，在可能的情况下将创建非常驻密钥。如果设为\"preferred\"，在可能的情况下将创建常驻密钥。如果设为\"required\"，将创建常驻密钥，失败时向用户显示错误。如果未指定（选择unspecified），将默认为\"discouraged\"。\n                        "
+  },
+  {
+    "label": "User Verification",
+    "en": "\n                            Select whether user verification (UV), for example a PIN or biometric, should be used.\n                            If \"discouraged\", UV will not be used if possible. If \"preferred\", UV will be used if possible. If \"required\", UV will be used and the user is shown an error if this fails. If no preference is set, the default is \"preferred\".\n                        ",
+    "zh": "\n                            选择是否应使用用户验证（UV），例如 PIN 或生物识别。\n                            如果设为\"discouraged\"，在可能的情况下不会使用 UV。如果设为\"preferred\"，在可能的情况下会使用 UV。如果设为\"required\"，会使用 UV，失败时向用户显示错误。如果未设置偏好，默认值为\"preferred\"。\n                        "
+  },
+  {
+    "label": "Attestation",
+    "en": "\n                            Select whether the Relying Party (RP) requires authenticator attestation. Attestation is a way to prove what kind of authenticator is used.\n                            If \"none\", no authenticator attestation will be returned. If \"indirect\", some kind of attestation will be returned if possible, but it may be anonymized by an attestation proxy. If \"direct\", the authenticator's original attestation will be returned, if any. If \"enterprise\", the authenticator is requested to produce an individually identifying attestation. By default, \"direct\" is used.\n                        ",
+    "zh": "\n                            选择依赖方（RP）是否需要认证器证明。证明是一种证明使用何种认证器的方式。\n                            如果选择\"none\"，将不返回认证器证明。如果选择\"indirect\"，在可能的情况下会返回某种证明，但可能被证明代理匿名化。如果选择\"direct\"，将返回认证器的原始证明（如果有）。如果选择\"enterprise\"，请求认证器产生个别标识证明。默认情况下，使用\"direct\"。\n                        "
+  },
+  {
+    "label": "Exclude Credentials",
+    "en": "\n                            Whether to include an excludeCredentials argument. This is used to prevent creating multiple credentials for the same account by excluding already registered credentials during registration.\n                        ",
+    "zh": "\n                            是否包含 excludeCredentials 参数。这用于在注册过程中排除已注册的凭据，防止为同一账户创建多个凭据。\n                        "
+  },
+  {
+    "label": "Fake credential ID length",
+    "en": "\n                            Add a random credential ID of the given length to excludeCredentials. May be useful for testing edge cases and conformance.\n                        ",
+    "zh": "\n                            向 excludeCredentials 添加指定长度的随机凭据 ID。可能对测试个别情况和一致性有用。\n                        "
+  },
+  {
+    "label": "Challenge (hex)",
+    "en": "\n                    The cryptographic challenge to be signed by the authenticator, used to prevent replay attacks.\n                ",
+    "zh": "\n                    由认证器签名的加密挑战值，用于防止重放攻击。\n                "
+  },
+  {
+    "label": "Timeout (milliseconds)",
+    "en": "\n                    How long the Relying Party (RP) is willing to wait for the registration ceremony to complete. If the registration ceremony takes longer than this (or the adjusted value, in case the client overrides it), the ceremony will be aborted with a timeout message shown to the user. This may be silently overridden by the client.\n                ",
+    "zh": "\n                    依赖方（RP）等待注册完成的时间。如果注册仪式超过此时间，注册将被中止并向用户显示超时消息。客户端可能会覆盖此设置。\n                "
+  },
+  {
+    "label": "Public Key Credential Parameters",
+    "en": "\n                    The signature algorithms supported by the Relying Party (RP). The authenticator will be choosing the most preferred algorithm that it supports. It is recommended to include at least ES256, EdDSA and RS256.\n                ",
+    "zh": "\n                    依赖方（RP）支持的签名算法。认证器将选择它支持的最优先算法。建议至少包括 ES256、EdDSA 和 RS256。\n                "
+  },
+  {
+    "label": "Hints",
+    "en": "\n                    Registration hints to guide the user-agent in interacting with the user.\n                    These hints are not requirements, and do not bind the user-agent, but may guide it in providing the best experience by using contextual information that the Relying Party has about the request. Hints are provided in order of decreasing preference so, if two hints are contradictory, the first one controls. Hints may also overlap: if a more-specific hint is defined a Relying Party may still wish to send less specific ones for user-agents that may not recognise the more specific one. In this case the most specific hint should be sent before the less-specific ones.\n                    Hints MAY contradict information contained in credential transports and authenticatorAttachment. When this occurs, the hints take precedence.\n                ",
+    "zh": "\n                    注册提示用于指导用户代理与用户交互。\n                    这些提示不是强制要求，也不约束用户代理，但可利用依赖方掌握的上下文信息，引导其提供最佳体验。提示按优先级从高到低排列，因此若两个提示相互矛盾，则以前面的提示为准。提示也可以有重叠：如果定义了更具体的提示，依赖方仍可同时发送不那么具体的提示，以便那些可能无法识别更具体提示的用户代理使用。在这种情况下，应先发送最具体的提示，再发送较不具体的提示。\n                    提示可以与凭据传输方式和 authenticatorAttachment 中的信息相矛盾。如发生矛盾，应以提示为准。\n                "
+  },
+  {
+    "label": "credProps",
+    "en": "\n                    Request the Credential Properties (credProps) extension. This extension may report properties such as whether a discoverable or non-discoverable credential was created.\n                ",
+    "zh": "\n                    请求凭据属性（credProps）扩展。此扩展可能报告属性，例如是否创建了可发现或不可发现的凭据。\n                "
+  },
+  {
+    "label": "minPinLength",
+    "en": "\n                    Request the Minimum PIN Length Extension (minPinLength). This extension may report the authenticator's currently configured minimum PIN length if the Relying Party (RP) is authorized to receive this value.\n                ",
+    "zh": "\n                    请求最小 PIN 长度扩展（minPinLength）。如果依赖方（RP）被授权接收此值，此扩展可能报告认证器当前配置的最小 PIN 长度。\n                "
+  },
+  {
+    "label": "credProtect",
+    "en": "\n                    Request the Credential protection (credProtect) extension. This extension sets whether the authenticator requires user verification (UV) before revealing the existence of a credential. If it does, that also means that the authenticator requires UV before allowing authentication using that credential.\n                ",
+    "zh": "\n                    请求凭据保护（credProtect）扩展。此扩展设置认证器在显示凭据存在之前是否需要用户验证（UV）。如果需要，这也意味着认证器在允许使用该凭据进行身份验证之前需要 UV。\n                "
+  },
+  {
+    "label": "Enforce credProtect",
+    "en": "\n                    Whether to enforce the selected credProtect policy, if any, meaning the registration should fail rather than create a credential that does not satisfy the credProtect policy.\n                    If this is checked and credProtect is set to userVerificationOptionalWithCredentialIDList or userVerificationRequired, and the authenticator cannot satisfy that policy, then the registration will fail. If this is not checked, the registration MAY proceed even if the authenticator cannot satisfy the chosen policy.\n                ",
+    "zh": "\n                    是否强制执行所选的 credProtect 策略（如果有），意味着注册应该失败而不是创建不满足 credProtect 策略的凭据。\n                    如果选中此项且 credProtect 设置为 userVerificationOptionalWithCredentialIDList 或 userVerificationRequired，并且认证器无法满足该策略，则注册将失败。如果未选中，即使认证器无法满足所选策略，注册也可能继续。\n                "
+  },
+  {
+    "label": "largeBlob",
+    "en": "\n                    Request the Large blob storage (largeBlob) extension. This extension may be used to store arbitrary data with the credential.\n                    If the authenticator supports the extension, an extension output of largeBlob: { supported: true } will be returned. Use the largeBlob extension during an authentication ceremony to read or write the BLOB value.\n                ",
+    "zh": "\n                    请求Large blob 存储（largeBlob）扩展。此扩展可用于在凭据中存储任意数据。\n                    如果认证器支持此扩展，将返回 largeBlob: { supported: true } 的扩展输出。在身份验证仪式期间使用 largeBlob 扩展来读取或写入 BLOB 值。\n                "
+  },
+  {
+    "label": "prf",
+    "en": "\n                    Request the Pseudo-random function (prf) extension. This extension may be used to derive deterministically-random values to use as key material, for example.\n                    With CTAP authenticators, this requires that the authenticator supports the hmac-secret extension.\n                    Many authenticators support evaluating the PRF only in authentication ceremonies, in which case the PRF extension output is just prf: { enabled: true } without any PRF outputs. To evaluate the PRF, perform an authentication ceremony with the same PRF inputs.\n                ",
+    "zh": "\n                    请求伪随机函数（prf）扩展。例如，此扩展可用于派生确定性随机值作为密钥材料。\n                    对于 CTAP 认证器，这要求认证器支持 hmac-secret 扩展。\n                    许多认证器仅支持在身份验证仪式中评估 PRF，在这种情况下，PRF 扩展输出只是 prf: { enabled: true }，没有任何 PRF 输出。要评估 PRF，请使用相同的 PRF 输入执行身份验证仪式。\n                "
+  },
+  {
+    "label": "prf eval first (hex)",
+    "en": "\n                    The first prf extension input to evaluate. If set, the client extension outputs will include a prf.results.first output if the client and authenticator both support the extension.\n                    Many authenticators support evaluating the PRF only in authentication ceremonies, in which case the PRF extension output is just prf: { enabled: true } without any PRF outputs. To evaluate the PRF, perform an authentication ceremony with the same PRF inputs.\n                ",
+    "zh": "\n                    要评估的第一个 prf 扩展输入。如果设置，如果客户端和认证器都支持该扩展，客户端扩展输出将包含 prf.results.first 输出。\n                    许多认证器仅支持在身份验证仪式中评估 PRF，在这种情况下，PRF 扩展输出只是 prf: { enabled: true }，没有任何 PRF 输出。要评估 PRF，请使用相同的 PRF 输入执行身份验证仪式。\n                "
+  },
+  {
+    "label": "prf eval second (hex)",
+    "en": "\n                    The second prf extension input to evaluate. If set, the client extension outputs will include a prf.results.second output if the client and authenticator both support the extension.\n                    This is optional and can be used alongside the first PRF evaluation input for additional key derivation capabilities.\n                ",
+    "zh": "\n                    要评估的第二个 prf 扩展输入。如果设置，如果客户端和认证器都支持该扩展，客户端扩展输出将包含 prf.results.second 输出。\n                    这是可选的，可以与第一个 PRF 评估输入一起使用，以获得额外的密钥派生功能。\n                "
+  }
+]

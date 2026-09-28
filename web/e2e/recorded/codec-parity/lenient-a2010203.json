@@ -1,0 +1,24 @@
+{
+  "input": "a2010203",
+  "lenient": true,
+  "sections": [
+    {
+      "heading": "",
+      "lines": [
+        "Codec Output",
+        "Success",
+        "CBOR",
+        "Decoded in lenient mode (best effort); skipped items are listed below.",
+        "1 finding",
+        "offset 3 · ${3} — map key 3 has no value"
+      ]
+    },
+    {
+      "heading": "Decoded value",
+      "lines": [
+        "1",
+        "2"
+      ]
+    }
+  ]
+}

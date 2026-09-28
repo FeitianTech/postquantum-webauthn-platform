@@ -6,6 +6,8 @@ export type VirtualCredential = {
   rpId?: string;
   userHandle?: string;
   signCount: number;
+  /** The private key, PKCS#8 in base64, as the DevTools WebAuthn domain gives it. */
+  privateKey?: string;
 };
 
 type AuthenticatorOptions = {

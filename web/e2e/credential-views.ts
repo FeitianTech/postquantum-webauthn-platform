@@ -33,6 +33,15 @@ export async function keep(page: Page, records: object[]) {
   await page.evaluate(([key, value]) => window.localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify(records)] as const);
 }
 
+/** The stored records, once each holds `field` (a ceremony saves some parts after it says it is done). */
+export async function storedRecords(page: Page, field: string): Promise<object[]> {
+  const read = () => page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) ?? '[]') as Record<string, unknown>[], STORAGE_KEY);
+  await expect.poll(async () => (await read()).every((record) => record[field] !== undefined && record[field] !== null)).toBe(true);
+  const records = await read();
+  expect(records.length).toBeGreaterThan(0);
+  return records;
+}
+
 export async function openCurrent(page: Page) {
   await page.goto('/');
   await expect(page.locator('body')).toHaveClass(/app-loaded/);

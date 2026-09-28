@@ -1,0 +1,29 @@
+[
+  [
+    "EdDSA",
+    "ES256",
+    "RS256",
+    "ES384",
+    "ES512",
+    "RS384",
+    "RS512",
+    "RS1",
+    "Ed25519",
+    "ES256K",
+    "ESP256",
+    "ESP384",
+    "ESP512",
+    "PS256",
+    "PS384",
+    "PS512",
+    "Ed448",
+    "ML-DSA-44",
+    "ML-DSA-65",
+    "ML-DSA-87"
+  ],
+  [
+    "Client-device",
+    "Hybrid",
+    "Security-key"
+  ]
+]

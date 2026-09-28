@@ -4,12 +4,14 @@ import { join, resolve } from 'node:path';
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
-import { type Difference, type ExpectedDifference, compareShownText, describeDifferences, readShownText } from './parity';
+import { type Difference, type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownText } from './parity';
+import { RECORDING, recorded } from './recorded';
 
-// The text the current Codec shows and the text /beta shows, for the same inputs
+// The text the current Codec showed and the text /beta shows, for the same inputs
 // from tests/app/codec_corpus.py, compared word for word per section once
 // layout and separators are set aside (parity.ts). Every difference must be one
-// listed below, with its reason.
+// listed below, with its reason. The current Codec's side is its recording, which
+// keeps the input it was given (recorded.ts).
 
 const repo = resolve(import.meta.dirname, '..', '..');
 const python = process.env.E2E_PYTHON ?? join(repo, '.venv', 'bin', 'python');
@@ -84,7 +86,7 @@ test.describe('the Codec reads the same in both UIs', () => {
   const found: Record<string, Difference[]> = {};
 
   test.beforeAll(() => {
-    hex = corpusHex(INPUTS.map((input) => input.name));
+    if (RECORDING) hex = corpusHex(INPUTS.map((input) => input.name));
   });
 
   test.afterAll(async ({}, testInfo) => {
@@ -100,13 +102,14 @@ test.describe('the Codec reads the same in both UIs', () => {
 
   for (const { label, input, lenient } of cases) {
     test(label, async ({ page }) => {
-      const text = input ? `${'before' in input ? input.before : ''}${hex[input.name]}${'after' in input ? input.after : ''}` : LENIENT.hex;
+      const current = await recorded<{ input: string; lenient: boolean; sections: ShownSection[] }>('codec-parity', label, async () => {
+        const text = input ? `${'before' in input ? input.before : ''}${hex[input.name]}${'after' in input ? input.after : ''}` : LENIENT.hex;
+        return { input: text, lenient, sections: await legacyText(page, text, lenient) };
+      });
+      const beta = await betaText(page, current.input, current.lenient);
+      expect(current.sections.length, 'the current UI showed sections').toBeGreaterThan(1);
 
-      const legacy = await legacyText(page, text, lenient);
-      const beta = await betaText(page, text, lenient);
-      expect(legacy.length, 'the current UI showed sections').toBeGreaterThan(1);
-
-      const differences = compareShownText(legacy, beta, EXPECTED);
+      const differences = compareShownText(current.sections, beta, EXPECTED);
       found[label] = differences;
       expect(describeDifferences(differences.filter((difference) => !difference.reason))).toEqual([]);
     });

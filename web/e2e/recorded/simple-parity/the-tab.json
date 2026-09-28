@@ -1,0 +1,16 @@
+[
+  {
+    "heading": "Simple Authentication",
+    "lines": [
+      "Register and authenticate with passkeys using default presets.",
+      "Username",
+      "Processing..."
+    ]
+  },
+  {
+    "heading": "Saved Credentials",
+    "lines": [
+      "No credentials registered yet."
+    ]
+  }
+]

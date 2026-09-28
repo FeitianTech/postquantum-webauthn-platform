@@ -1,0 +1,65 @@
+[
+  {
+    "heading": "User Identity",
+    "lines": [
+      "User ID (hex)",
+      "User Name",
+      "Display Name"
+    ]
+  },
+  {
+    "heading": "Authenticator Selection",
+    "lines": [
+      "Authenticator Attachment",
+      "Cross-Platform (default)",
+      "Platform",
+      "Unspecified",
+      "Resident Key",
+      "Discouraged (default)",
+      "Preferred",
+      "Required",
+      "User Verification",
+      "Preferred (default)",
+      "Discouraged",
+      "Required",
+      "Attestation",
+      "Direct (default)",
+      "None",
+      "Indirect",
+      "Enterprise",
+      "Exclude Credentials",
+      "Fake credential ID length",
+      "No fake credential IDs added."
+    ]
+  },
+  {
+    "heading": "Other Options",
+    "lines": [
+      "Challenge (hex)",
+      "Timeout (milliseconds)",
+      "Public Key Credential Parameters",
+      "PQC",
+      "Hints"
+    ]
+  },
+  {
+    "heading": "Extensions",
+    "lines": [
+      "credProps",
+      "minPinLength",
+      "credProtect",
+      "Unspecified (default)",
+      "userVerificationOptional",
+      "userVerificationOptionalWithCredentialIDList",
+      "userVerificationRequired",
+      "Enforce credProtect",
+      "largeBlob",
+      "Unspecified (default)",
+      "Preferred",
+      "Required",
+      "prf",
+      "prf eval first (hex)",
+      "prf eval second (hex)"
+    ]
+  }
+]

@@ -4,15 +4,17 @@ import { join, resolve } from 'node:path';
 import type { Locator, Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
-import { type ExpectedDifference, compareShownText, describeDifferences, readShownText } from './parity';
+import { type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownText } from './parity';
+import { recorded } from './recorded';
 import { addVirtualAuthenticator } from './virtual-authenticator';
 
-// What the Simple tab and the saved credentials show in the current UI at / and
-// in /beta: the tab's own words, each saved credential's row for the same stored
-// records (both UIs read the one localStorage array), the result panel after an
-// authentication in each, and the success sentences; word for word (layout,
-// separators and controls' own labels set aside: parity.ts). Every difference
-// must be one listed below, with its reason.
+// What the Simple tab and the saved credentials showed in the current UI at / and
+// show in /beta: the tab's own words, each saved credential's row for the same
+// stored records (both UIs read the one localStorage array), the result panel
+// after an authentication in each, and the success sentences; word for word
+// (layout, separators and controls' own labels set aside: parity.ts). Every
+// difference must be one listed below, with its reason. The current UI's side is
+// its recording (recorded.ts).
 
 const repo = resolve(import.meta.dirname, '..', '..');
 const STORAGE_KEY = 'postquantum-webauthn.credentials';
@@ -97,10 +99,14 @@ async function openBeta(page: Page) {
   await expect(page.locator('[data-saved-credentials] [data-count]')).toBeVisible();
 }
 
+type RowRecording = { name: string; sections: ShownSection[]; buttons: string[]; checks: string[] };
+
 test.describe('the Simple tab in / and in /beta', () => {
   test('shows the same words', async ({ page }) => {
-    await openCurrent(page);
-    const legacy = await readShownText(page.locator('#simple-tab'), 'h2, h3');
+    const legacy = await recorded('simple-parity', 'the tab', async () => {
+      await openCurrent(page);
+      return readShownText(page.locator('#simple-tab'), 'h2, h3');
+    });
     await openBeta(page);
     const beta = await readShownText(page.locator('#nav-panel-simple'), 'h2, h3');
 
@@ -110,34 +116,43 @@ test.describe('the Simple tab in / and in /beta', () => {
   });
 
   test('shows each saved credential with the same words, in the same order', async ({ page }) => {
-    await openCurrent(page);
-    await keep(page, RECORDS);
-    await page.reload();
-    await expect(page.locator('body')).toHaveClass(/app-loaded/);
-    const legacyRows = page.locator('#simple-credentials-list .credential-item');
-    await expect(legacyRows).toHaveCount(RECORDS.length);
+    const legacyRows = await recorded<RowRecording[]>('simple-parity', 'the rows', async () => {
+      await openCurrent(page);
+      await keep(page, RECORDS);
+      await page.reload();
+      await expect(page.locator('body')).toHaveClass(/app-loaded/);
+      const cards = page.locator('#simple-credentials-list .credential-item');
+      await expect(cards).toHaveCount(RECORDS.length);
+      const read: RowRecording[] = [];
+      for (let index = 0; index < RECORDS.length; index += 1) {
+        const card = cards.nth(index);
+        read.push({
+          name: (await card.locator('div > div').first().textContent())!.trim(),
+          sections: await readShownText(card, 'h6'),
+          buttons: (await card.getByRole('button').allTextContents()).map((text) => text.trim()),
+          checks: await legacyVerdicts(card),
+        });
+      }
+      return read;
+    });
+    expect(legacyRows).toHaveLength(RECORDS.length);
 
     await openBeta(page);
+    await keep(page, RECORDS);
+    await page.reload();
     const betaRows = page.locator('[data-saved-credentials] li[data-credential-key]');
     await expect(betaRows).toHaveCount(RECORDS.length);
 
     for (let index = 0; index < RECORDS.length; index += 1) {
-      await openCurrent(page);
-      const legacyRow = page.locator('#simple-credentials-list .credential-item').nth(index);
-      const name = (await legacyRow.locator('div > div').first().textContent())!.trim();
-      const legacy = await readShownText(legacyRow, 'h6');
-      const legacyButtons = await legacyRow.getByRole('button').allTextContents();
-      const legacyChecks = await legacyVerdicts(legacyRow);
-
-      await openBeta(page);
-      const betaRow = page.locator('[data-saved-credentials] li[data-credential-key]').nth(index);
+      const { name, sections: legacy, buttons: legacyButtons, checks: legacyChecks } = legacyRows[index];
+      const betaRow = betaRows.nth(index);
       await expect(betaRow.getByRole('button', { name, exact: true })).toBeVisible();
       const beta = await readShownText(betaRow, 'h6');
       const betaButtons = (await betaRow.getByRole('button').allTextContents()).filter((text) => ['FIDO MDS', 'Delete'].includes(text));
 
       const differences = compareShownText(legacy, beta, await rowExpected(name, betaRow));
       expect(describeDifferences(differences.filter((difference) => !difference.reason)), name).toEqual([]);
-      expect(betaButtons, `${name}'s actions`).toEqual(legacyButtons.map((text) => text.trim()));
+      expect(betaButtons, `${name}'s actions`).toEqual(legacyButtons);
       expect(await betaVerdicts(betaRow), `${name}'s checks`).toEqual(legacyChecks);
       expect(legacyChecks).toHaveLength(4);
     }
@@ -155,11 +170,18 @@ test.describe('the Simple tab in / and in /beta', () => {
     await expect(page.getByText('Authentication successful! You have been verified.')).toBeVisible();
     const betaPanel = await readShownText(page.getByRole('tabpanel', { name: 'Simple Authentication' }).locator('[data-ceremony-result]'), 'h6');
 
-    await openCurrent(page);
-    await page.locator('#simple-email').fill(name);
-    await page.getByRole('button', { name: 'Authenticate', exact: true }).click();
-    await expect(page.locator('#simple-status')).toHaveText('Authentication successful! You have been verified.');
-    const legacyPanel = await readShownText(page.locator('#simple-ceremony-result'), 'h6');
+    const current = await recorded('simple-parity', 'after a registration and an authentication', async () => {
+      await openCurrent(page);
+      await page.locator('#simple-email').fill(name);
+      await page.getByRole('button', { name: 'Authenticate', exact: true }).click();
+      await expect(page.locator('#simple-status')).toHaveText('Authentication successful! You have been verified.');
+      const panel = await readShownText(page.locator('#simple-ceremony-result'), 'h6');
+      await page.locator('#simple-email').fill(`${name}-current`);
+      await page.getByRole('button', { name: 'Register Passkey', exact: true }).click();
+      await expect(page.locator('#simple-status')).toContainText('Registration successful!');
+      return { panel, registered: (await page.locator('#simple-status').textContent())!.trim() };
+    });
+    const legacyPanel = current.panel;
 
     const counter: ExpectedDifference[] = [
       { only: 'legacy', token: /^\d+$/, reason: 'the counter, which each authentication raises (the same credential was used in /beta first)' },
@@ -167,9 +189,6 @@ test.describe('the Simple tab in / and in /beta', () => {
     ];
     const differences = compareShownText(legacyPanel, betaPanel, counter);
     expect(describeDifferences(differences.filter((difference) => !difference.reason))).toEqual([]);
-
-    await page.locator('#simple-email').fill(`${name}-current`);
-    await page.getByRole('button', { name: 'Register Passkey', exact: true }).click();
-    await expect(page.locator('#simple-status')).toHaveText(betaRegistered);
+    expect(betaRegistered.trim()).toBe(current.registered);
   });
 });

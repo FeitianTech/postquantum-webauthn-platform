@@ -1,0 +1,19 @@
+[
+  {
+    "heading": "F1D0#0012",
+    "lines": [
+      "Fixture UAF Authenticator",
+      "Uaf",
+      "FIDO Certified L1 • Fixture UAF Authenticator • (UAF100020251010012)",
+      "F1D0#0012",
+      "Fingerprint Internal",
+      "Internal",
+      "—",
+      "Hardware Tee",
+      "SECP256R1 Ecdsa SHA256 Raw",
+      "ED25519_SHA512",
+      "Fixture Ed25519 Attestation Root",
+      "Oct 10, 2025"
+    ]
+  }
+]

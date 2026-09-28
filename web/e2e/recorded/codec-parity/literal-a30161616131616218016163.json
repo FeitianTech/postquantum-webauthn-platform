@@ -1,0 +1,33 @@
+{
+  "input": "a30161616131616218016163",
+  "lenient": false,
+  "sections": [
+    {
+      "heading": "",
+      "lines": [
+        "Codec Output",
+        "Success",
+        "CBOR",
+        "3 findings",
+        "offset 0 · $ — map keys 1 and \"1\" (text) both read \"1\" as JSON keys; each is shown with its type so that neither entry replaces the other",
+        "offset 8 · ${1} — integer 1 has a 2-byte head (18 01); CTAP2 requires the shortest, 1 byte",
+        "offset 8 · ${1} — map key 1 appears twice (first at offset 1); the decoded value keeps this later entry, and drops the earlier value \"a\" (offset 2)"
+      ]
+    },
+    {
+      "heading": "Decoded value",
+      "lines": [
+        "1",
+        "c",
+        "\"1\" (text)",
+        "b"
+      ]
+    },
+    {
+      "heading": "EDN (exact bytes)",
+      "lines": [
+        "{1: \"a\", \"1\": \"b\", 1_0: \"c\"}"
+      ]
+    }
+  ]
+}

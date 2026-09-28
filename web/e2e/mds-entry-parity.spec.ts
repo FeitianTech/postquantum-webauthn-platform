@@ -5,13 +5,14 @@ import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
 import { type ExpectedDifference, compareShownText, describeDifferences, readShownText } from './parity';
+import { recorded } from './recorded';
 
-// What an MDS entry's page, one of its certificates and its raw view show in the
-// current UI at / and in /beta, over the fixture snapshot serve-flask.mjs serves
-// (tests/fixtures/mds): each page's text word for word, section by section
-// (layout, separators and controls' own labels set aside: parity.ts), and the
-// raw view's text exactly. Every difference must be one listed below, with its
-// reason.
+// What an MDS entry's page, one of its certificates and its raw view showed in the
+// current UI at / and show in /beta, over the fixture snapshot serve-flask.mjs
+// serves (tests/fixtures/mds): each page's text word for word, section by section
+// (layout, separators and controls' own labels set aside: parity.ts), and the raw
+// view's text exactly. Every difference must be one listed below, with its reason.
+// The current UI's side is its recording (recorded.ts).
 
 const repo = resolve(import.meta.dirname, '..', '..');
 const UPLOAD = join(repo, 'tests', 'fixtures', 'mds', 'custom-metadata.json');
@@ -71,7 +72,7 @@ test.describe('the MDS entry page reads the same in both UIs', () => {
     test(entry.label, async ({ page }) => {
       if ('upload' in entry) await upload(page);
       const count = 'upload' in entry ? 33 : 32;
-      const legacy = await readShownText(await legacyEntry(page, entry.name, count), 'h4');
+      const legacy = await recorded('mds-entry-parity', entry.label, async () => readShownText(await legacyEntry(page, entry.name, count), 'h4'));
       const beta = await readShownText(await betaEntry(page, entry.entryId, entry.name), 'h4');
 
       expect(beta.map((section) => section.heading)).toEqual(legacy.map((section) => section.heading));
@@ -85,11 +86,13 @@ test.describe('the MDS entry page reads the same in both UIs', () => {
   }
 
   test('a certificate: its summary and decoded output', async ({ page }) => {
-    const modal = await legacyEntry(page, 'Fixture Security Key L2', 32);
-    await modal.locator('.mds-certificate-button').first().click();
-    const legacyPage = page.locator('#mds-certificate-page');
-    await expect(legacyPage.locator('#mds-certificate-output')).toContainText('Version');
-    const legacy = await readShownText(legacyPage, 'h4, .mds-certificate-summary__heading');
+    const legacy = await recorded('mds-entry-parity', 'a certificate', async () => {
+      const modal = await legacyEntry(page, 'Fixture Security Key L2', 32);
+      await modal.locator('.mds-certificate-button').first().click();
+      const legacyPage = page.locator('#mds-certificate-page');
+      await expect(legacyPage.locator('#mds-certificate-output')).toContainText('Version');
+      return readShownText(legacyPage, 'h4, .mds-certificate-summary__heading');
+    });
 
     await page.goto('/beta#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000002/certificate/1');
     const betaPage = page.locator('[data-mds-certificate]');
@@ -103,12 +106,15 @@ test.describe('the MDS entry page reads the same in both UIs', () => {
   });
 
   test('the raw view: the same text', async ({ page }) => {
-    const modal = await legacyEntry(page, 'Fixture U2F Key', 32);
-    const [popup] = await Promise.all([page.waitForEvent('popup'), modal.locator('#mds-authenticator-modal-raw').click()]);
-    const legacyText = await popup.locator('#mds-raw-textarea').inputValue();
-    const legacyTitle = await popup.locator('#mds-raw-title').textContent();
-    const legacySubtitle = await popup.locator('#mds-raw-subtitle').textContent();
-    await popup.close();
+    const { legacyText, legacyTitle, legacySubtitle } = await recorded('mds-entry-parity', 'the raw view', async () => {
+      const modal = await legacyEntry(page, 'Fixture U2F Key', 32);
+      const [popup] = await Promise.all([page.waitForEvent('popup'), modal.locator('#mds-authenticator-modal-raw').click()]);
+      const text = await popup.locator('#mds-raw-textarea').inputValue();
+      const title = await popup.locator('#mds-raw-title').textContent();
+      const subtitle = await popup.locator('#mds-raw-subtitle').textContent();
+      await popup.close();
+      return { legacyText: text, legacyTitle: title, legacySubtitle: subtitle };
+    });
 
     await betaEntry(page, 'akid:f1d0000000000000000000000000000000000011', 'Fixture U2F Key');
     await page.locator('[data-mds-entry]').getByRole('button', { name: 'Raw' }).last().click();

@@ -1,0 +1,79 @@
+[
+  {
+    "heading": "",
+    "lines": [
+      "Fixture UAF Authenticator",
+      "ID: F1D0#0012 • Uaf"
+    ]
+  },
+  {
+    "heading": "Overview",
+    "lines": [
+      "Identifier",
+      "F1D0#0012",
+      "Protocol",
+      "Uaf",
+      "Certification",
+      "FIDO Certified L1 • Fixture UAF Authenticator • (UAF100020251010012)",
+      "Authenticator Version",
+      "2",
+      "Date Updated",
+      "Oct 10, 2025"
+    ]
+  },
+  {
+    "heading": "Metadata Statement",
+    "lines": [
+      "Description",
+      "Fixture UAF Authenticator",
+      "Legal Header",
+      "Fixture metadata for the tests of this repository; not published by the FIDO Alliance.",
+      "Schema",
+      "3",
+      "Crypto Strength",
+      "128",
+      "UPV",
+      "1.1",
+      "Authentication Algorithms",
+      "secp256r1_ecdsa_sha256_raw",
+      "Public Key Algorithms",
+      "cose",
+      "Attestation Types",
+      "basic_full",
+      "Key Protection",
+      "hardware",
+      "tee",
+      "Matcher Protection",
+      "on_chip",
+      "Attachment Hints",
+      "internal"
+    ]
+  },
+  {
+    "heading": "User Verification Details",
+    "lines": [
+      "Combination 1",
+      "fingerprint_internal"
+    ]
+  },
+  {
+    "heading": "Attestation Root Certificates",
+    "lines": []
+  },
+  {
+    "heading": "Status Reports",
+    "lines": [
+      "Status",
+      "Effective Date",
+      "Authenticator Version",
+      "Certificate Number",
+      "Descriptor",
+      "FIDO_CERTIFIED_L1",
+      "2025-10-10",
+      "—",
+      "UAF100020251010012",
+      "Fixture UAF Authenticator",
+      "Policy: 1.4.0 • Requirements: 1.3"
+    ]
+  }
+]

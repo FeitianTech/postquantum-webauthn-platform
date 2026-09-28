@@ -2,12 +2,14 @@ import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
 import { type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownRows } from './parity';
+import { recorded } from './recorded';
 
-// What the current MDS table and /beta's show for the same filters, over the
-// fixture snapshot serve-flask.mjs serves (tests/fixtures/mds): every row's
-// cells word for word (layout, separators and controls' own labels set aside:
-// parity.ts), the rows keyed by their ID, and the order of the rows. Every
-// difference must be one listed below, with its reason.
+// What the current MDS table showed and what /beta's shows for the same filters,
+// over the fixture snapshot serve-flask.mjs serves (tests/fixtures/mds): every
+// row's cells word for word (layout, separators and controls' own labels set
+// aside: parity.ts), the rows keyed by their ID, and the order of the rows. Every
+// difference must be one listed below, with its reason. The current table's side
+// is its recording (recorded.ts).
 
 // The legacy filters are plain fields; /beta's are labelled by their column.
 const CASES = [
@@ -62,7 +64,7 @@ test.describe('the MDS table reads the same in both UIs', () => {
 
   for (const { label, filters } of CASES) {
     test(label, async ({ page }) => {
-      const legacy = await legacyRows(page, filters);
+      const legacy = await recorded('mds-parity', label, () => legacyRows(page, filters));
       const beta = await betaRows(page, filters);
       expect(legacy.length, 'the current UI showed rows').toBeGreaterThan(0);
       expect(keys(beta), 'the same rows, in the same order').toEqual(keys(legacy));
@@ -74,11 +76,14 @@ test.describe('the MDS table reads the same in both UIs', () => {
   }
 
   test('sorted by name, both ways', async ({ page }) => {
-    await legacyRows(page, {});
-    await page.locator('.mds-sort-button[data-sort-key="name"]').click();
-    const legacyUp = keys(await readShownRows(page.locator('#mds-table-body'), 'tr:not(.mds-empty-row)', 4));
-    await page.locator('.mds-sort-button[data-sort-key="name"]').click();
-    const legacyDown = keys(await readShownRows(page.locator('#mds-table-body'), 'tr:not(.mds-empty-row)', 4));
+    const { legacyUp, legacyDown } = await recorded('mds-parity', 'sorted by name', async () => {
+      await legacyRows(page, {});
+      await page.locator('.mds-sort-button[data-sort-key="name"]').click();
+      const up = keys(await readShownRows(page.locator('#mds-table-body'), 'tr:not(.mds-empty-row)', 4));
+      await page.locator('.mds-sort-button[data-sort-key="name"]').click();
+      const down = keys(await readShownRows(page.locator('#mds-table-body'), 'tr:not(.mds-empty-row)', 4));
+      return { legacyUp: up, legacyDown: down };
+    });
 
     await betaRows(page, {});
     const section = page.getByRole('tabpanel', { name: 'FIDO MDS Authenticators' });

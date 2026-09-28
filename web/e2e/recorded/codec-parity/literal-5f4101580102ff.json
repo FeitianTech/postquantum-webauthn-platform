@@ -1,0 +1,29 @@
+{
+  "input": "5f4101580102ff",
+  "lenient": false,
+  "sections": [
+    {
+      "heading": "",
+      "lines": [
+        "Codec Output",
+        "Success",
+        "CBOR",
+        "2 findings",
+        "offset 0 · $ — indefinite-length byte string; CTAP2 requires definite lengths",
+        "offset 3 · $<chunk 1> — byte string of length 1 has a 2-byte head (58 01); CTAP2 requires the shortest, 1 byte"
+      ]
+    },
+    {
+      "heading": "Decoded value",
+      "lines": [
+        "0102"
+      ]
+    },
+    {
+      "heading": "EDN (exact bytes)",
+      "lines": [
+        "(_ h'01', h'02'_0)"
+      ]
+    }
+  ]
+}
