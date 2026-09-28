@@ -689,6 +689,40 @@ def _(r: Recorder) -> None:
     r.post(client, "/api/decode", json={"payload": stored[0]["authenticatorData"]})
 
 
+@scenario("advanced-registration-detail-decodes")
+def _(r: Recorder) -> None:
+    """What an advanced registration's result asks the decoder: each registration's
+    attestation object as the browser received it (base64url, which the relying
+    party's view repeats), decoded as the result's registration view asks. A none
+    attestation, a packed one with a certificate and every extension, and an ML-DSA
+    one."""
+
+    client = r.client()
+    registrations = [
+        _advanced_register(r, client, m.Authenticator("adv-detail-es256", aaguid=AAGUID)),
+        _advanced_register(
+            r,
+            client,
+            m.Authenticator("adv-detail-x5c", aaguid=AAGUID),
+            options=_options(
+                pubKeyCredParams=[{"type": "public-key", "alg": -7}],
+                authenticatorSelection={"residentKey": "preferred", "authenticatorAttachment": "cross-platform"},
+                extensions=EVERY_EXTENSION,
+            ),
+            attestation="x5c",
+            attachment="cross-platform",
+            transports=["usb", "nfc"],
+            extension_results={"credProps": {"rk": False}, "minPinLength": 6},
+        ),
+        _advanced_register(
+            r, client, m.Authenticator("adv-detail-mldsa44", key_type="ML-DSA-44"), attestation="self",
+            options=_options(pubKeyCredParams=[{"type": "public-key", "alg": -48}]),
+        ),
+    ]
+    for response in registrations:
+        r.post(client, "/api/decode", json={"payload": response.get_json()["relyingParty"]["attestationObject"]})
+
+
 # -- storage failures and RP fallbacks -------------------------------------------------
 
 
