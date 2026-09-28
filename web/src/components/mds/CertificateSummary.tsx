@@ -37,6 +37,11 @@ function Items({ items, context = '' }: { items: SummaryItem[]; context?: string
   );
 }
 
+// An id holds no space: aria-labelledby reads one as two ids ("Public Key").
+function sectionId(idBase: string, title: string) {
+  return `${idBase}-${title.replace(/\s+/g, '-')}`;
+}
+
 // A certificate's summary: its subject, issuer, validity and serial numbers
 // first (emphasised, as the current page does), then its public key and its
 // signature, each under its heading; long values in blocks with copy.
@@ -45,8 +50,8 @@ export function CertificateSummary({ summary, idBase }: { summary: Summary; idBa
     <div className="space-y-8">
       {summary.items.length ? <Items items={summary.items} /> : null}
       {summary.sections.map((section) => (
-        <section key={section.title} aria-labelledby={`${idBase}-${section.title}`} data-section={section.title} className="border-t border-line pt-6">
-          <h4 id={`${idBase}-${section.title}`} className="text-title font-semibold text-ink">
+        <section key={section.title} aria-labelledby={sectionId(idBase, section.title)} data-section={section.title} className="border-t border-line pt-6">
+          <h4 id={sectionId(idBase, section.title)} className="text-title font-semibold text-ink">
             {section.title}
           </h4>
           <div className="mt-4">
