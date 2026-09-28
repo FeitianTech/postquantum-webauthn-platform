@@ -2980,6 +2980,32 @@ the strict CSP and the Trusted Types report-only policy).
 - The snapshot an advanced registration saves (CRED-G6) is built by the shared logic; `/beta` saves it in Phase 29.
 - Not run on GitHub yet (not pushed): `ci-web.yml`'s e2e job now runs the two new specs.
 
+**Phase 28B — tech-lead verification (2026-09-27):**
+- **Every one of the 29 commits passes on its own tree** (pytest 4789 → 4829 / 4, root vitest 1140 → 1511, web's vitest
+  354 → 387 and typecheck) and leaves nothing behind, with one exception under load: at 92159697 (a Python fixture
+  only) one web test failed. Rerun alone it passed three times out of three; run repeatedly while pytest and the root
+  suite competed for the CPU, `EntryPage.test.tsx`'s "forgets an answer for an entry no longer shown" failed 2 times
+  in 8 (`first is not a function`: the test answered the resolve request before the page had sent it, since the
+  sentence shows first). Fixed by the tech lead (22f86934, the test waits for the request); 0 failures in 10 under the
+  same load. One author, bare subjects, no dependency changed. The two changed goldens differ only in `algo`
+  ("Other (Classical)" → "EdDSA") and the length and digest that follow.
+- **Built independently from a clean `npm ci`**: CSP scan 0 violations. **Playwright 112/112** from the clean copy.
+- **By the tech lead's own scripts** (Playwright's Chromium, a CTAP2 virtual authenticator on USB, Flask from the clean
+  copy): the Simple registration's toast says "Algorithm: EdDSA"; a credential's details open by a click at
+  `#simple/credential/<key>`, the registration at `…/registration`, the authenticator data at
+  `…/registration/authenticator-data`; the header's Back goes up one level with the focus on "Authenticator Data";
+  the browser's Back returns to the detail; Escape closes every level (`#simple`); a link to the deepest level opens it
+  after a reload. Every word of the current modal for a credential registered there is in `/beta`'s detail and
+  registration levels, the identifier labels aside (the current page uppercases `b64`, `b64u`, `hex`, `guid`). A
+  stored AAGUID of "abcde" (in `aaguidHex`, which the row reads first) leaves both lists drawn, and `/beta`'s row says
+  "AAGUID Unreadable abcde". A deletion asks, then focuses the next row's name; a second tab drops the row without a
+  reload, with no request in the following 3 s. At 375 px: no sideways scroll or grey fill in the list, the detail or
+  the registration level, and no "Show all" on an identifier (the registration level's two are its long code blocks).
+- **Found by the tech lead (both UIs, before 28B):** a credential whose AAGUID is all zeros (what Chrome sends
+  without attestation) shows AAGUID b64 `qqqqqqqqqqqqqqo=`, hex `aaaaaaaaaaaaaaaaaaaaaa`, guid N/A in its details: the
+  stored `aaguid` is base64url, `AAAAAAAAAAAAAAAAAAAAAA`, whose characters are all hex digits, and the detail reads it
+  as hex (eleven bytes of 0xAA), although the record also holds `aaguidHex` and `properties.aaguidGuid`.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
