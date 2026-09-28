@@ -41,12 +41,12 @@ export async function simpleRegister() {
         const data = await registerSimplePasskey(email, { onProgress: showSimpleProgress });
         showStatus('simple', registeredText(data), 'success');
 
+        // The list is this browser's storage, read at once; the warm-up after the
+        // read reads it again only if it changed something.
         if (data.storedCredential && typeof data.storedCredential === 'object') {
             saveSimpleCredential({ ...data.storedCredential, email });
             loadSavedCredentials();
         }
-
-        setTimeout(loadSavedCredentials, 1000);
     } catch (error) {
         showStatus('simple', ceremonyErrorText(error, 'registration'), 'error');
     } finally {

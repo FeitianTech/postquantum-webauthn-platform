@@ -92,7 +92,14 @@ describe('auth-simple', () => {
       storedCredential: { credentialId: 'cred-1', publicKey: 'cHVibGlj' },
     }));
 
-    await simpleRegister();
+    vi.useFakeTimers();
+    try {
+      await simpleRegister();
+      // Read once: the list is this browser's storage, so nothing is read again a second later.
+      vi.advanceTimersByTime(2000);
+    } finally {
+      vi.useRealTimers();
+    }
 
     expect(create).toHaveBeenCalledWith({ publicKey: { extensions: { credProps: true } } });
     expect(saveSimpleCredential).toHaveBeenCalledWith({
@@ -100,7 +107,7 @@ describe('auth-simple', () => {
       publicKey: 'cHVibGlj',
       email: 'user@example.com',
     });
-    expect(loadSavedCredentials).toHaveBeenCalled();
+    expect(loadSavedCredentials).toHaveBeenCalledTimes(1);
     expect(state.lastFakeCredLength).toBe(0);
     expect('lastFakeCredLength' in window).toBe(false);
     expect(hideProgress).toHaveBeenCalledWith('simple');

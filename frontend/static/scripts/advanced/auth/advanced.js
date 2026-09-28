@@ -347,7 +347,6 @@ export async function advancedRegister() {
                 },
             );
 
-            setTimeout(loadSavedCredentials, 1000);
             advancedRegisterState = null;
         } else {
             const failure = await readFailedResponse(result);

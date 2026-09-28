@@ -245,7 +245,9 @@ describe('auth-advanced', () => {
       { storageId: 'storage-1' },
     );
 
-    expect(loadSavedCredentials).toHaveBeenCalled();
+    // Read once, after the credential is saved; nothing is read again a second later.
+    vi.advanceTimersByTime(2000);
+    expect(loadSavedCredentials).toHaveBeenCalledTimes(1);
     expect(applyAuthenticatorAttachmentPreference).toHaveBeenCalled();
     expect(printRegistrationDebug).toHaveBeenCalled();
 
