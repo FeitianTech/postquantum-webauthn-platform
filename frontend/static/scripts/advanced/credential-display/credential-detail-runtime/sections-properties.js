@@ -4,46 +4,29 @@ import {
     booleanValue,
     labelledLine,
 } from '../detail-nodes.js';
-import {
-    extractMinPinLengthValue,
-} from '../../credentials/utils.js';
-import {
-    computeCredentialAaguidMatchStatus,
-    normaliseAttestationResultValue,
-    resolveCredentialAttestationValue,
-} from '../attestation-context.js';
-import {
-    pickFirstString,
-} from './helpers.js';
+import {DETAIL_TEXT, describeProperties} from './detail-sections.js';
 
-function buildRootChecks(rootChecksRaw) {
-    if (!rootChecksRaw || typeof rootChecksRaw !== 'object') {
+// The current UI's "Properties", built from ./detail-sections.js's data.
+
+function rootCheckColour(value) {
+    if (value === true) {
+        return '#198754';
+    }
+    if (value === false) {
+        return '#dc3545';
+    }
+    return '#6c757d';
+}
+
+function buildRootChecks(rootChecks) {
+    if (!rootChecks) {
         return null;
     }
 
-    const rootCheckDescriptors = [
-        { key: 'fido_mds', altKey: 'fidoMds', label: 'FIDO MDS' },
-        { key: 'chain', altKey: 'chain', label: 'Chain' },
-    ];
-
-    const rootCheckParts = rootCheckDescriptors.map(descriptor => {
-        let rawValue = rootChecksRaw[descriptor.key];
-        if (rawValue === undefined) {
-            rawValue = rootChecksRaw[descriptor.altKey];
-        }
-
-        const status = rawValue === undefined
-            ? null
-            : normaliseAttestationResultValue(rawValue);
-
-        const color = status === true
-            ? '#198754'
-            : status === false
-                ? '#dc3545'
-                : '#6c757d';
-
-        return el('span', { style: `color: ${color}; font-weight: 600;`, text: descriptor.label });
-    });
+    const rootCheckParts = rootChecks.map(check => el('span', {
+        style: `color: ${rootCheckColour(check.value)}; font-weight: 600;`,
+        text: check.label,
+    }));
 
     return el('span', { style: 'margin-left: 0.5rem; color: #6c757d;' },
         '(',
@@ -52,112 +35,38 @@ function buildRootChecks(rootChecksRaw) {
     );
 }
 
-export function buildPropertiesSection({
-    cred,
-    attestationContext,
-    fallbackCertificates,
-    certificateAaguidHex,
-    authDataAaguidHex,
-}) {
-    const {
-        propertiesData,
-        attestationSummaryData,
-        attestationChecksData,
-    } = attestationContext;
-
-    const discoverableValue = cred.residentKey ?? cred.discoverable ?? false;
-    const largeBlobSupported = cred.largeBlob ?? cred.largeBlobSupported ?? false;
-    const minPinLengthValue = extractMinPinLengthValue(cred);
-
-    const metadataWarningMessage = pickFirstString(
-        attestationChecksData?.metadata?.verification_warning,
-        attestationChecksData?.metadata?.verificationWarning,
-        attestationSummaryData?.metadata?.verification_warning,
-        attestationSummaryData?.metadata?.verificationWarning,
-        propertiesData?.metadata?.verification_warning,
-        propertiesData?.metadata?.verificationWarning,
-        cred?.metadata?.verification_warning,
-        cred?.metadata?.verificationWarning,
-    );
-
-    const attestationSignatureValue = normaliseAttestationResultValue(
-        resolveCredentialAttestationValue(
-            cred,
-            'signatureValid',
-            'attestationSignatureValid',
-            attestationContext,
-        ),
-    );
-
-    const attestationRootValue = normaliseAttestationResultValue(
-        resolveCredentialAttestationValue(
-            cred,
-            'rootValid',
-            'attestationRootValid',
-            attestationContext,
-        ),
-    );
-
-    let rootChecksRaw = null;
-    if (
-        attestationContext.attestationChecksData
-        && typeof attestationContext.attestationChecksData === 'object'
-    ) {
-        const checksSource = attestationContext.attestationChecksData;
-        if (checksSource.root_checks && typeof checksSource.root_checks === 'object') {
-            rootChecksRaw = checksSource.root_checks;
-        } else if (checksSource.rootChecks && typeof checksSource.rootChecks === 'object') {
-            rootChecksRaw = checksSource.rootChecks;
-        }
-    }
-
-    const rootChecks = buildRootChecks(rootChecksRaw);
-
-    const attestationRpIdHashValue = normaliseAttestationResultValue(
-        resolveCredentialAttestationValue(
-            cred,
-            'rpIdHashValid',
-            'attestationRpIdHashValid',
-            attestationContext,
-        ),
-    );
-
-    const attestationAaguidMatchValue = computeCredentialAaguidMatchStatus(cred, {
-        certificateEntries: fallbackCertificates,
-        certificateAaguidHex,
-        authDataAaguidHex,
-        attestationContext,
-    });
-
+export function renderPropertiesSection(properties) {
+    const [before, strong, after] = DETAIL_TEXT.checksNote;
     const attestationChecksNotice = el('p', {
         style: 'margin: 0 0 0.65rem; color: #6c757d; font-size: 0.9rem; line-height: 1.5;',
     },
-    'In formal WebAuthn, any ',
-    el('strong', { text: 'false' }),
-    ' result below causes registration to fail. This platform keeps registration valid for data inspection purposes.',
+    before,
+    el('strong', { text: strong }),
+    after,
     );
 
     return el('div', { style: 'margin-bottom: 1.5rem;' },
-        el('h4', { style: 'color: #0072CE; margin-bottom: 0.5rem;', text: 'Properties' }),
+        el('h4', { style: 'color: #0072CE; margin-bottom: 0.5rem;', text: properties.title }),
         el('div', { style: 'font-size: 0.9rem; line-height: 1.4;' },
-            el('div', {}, el('strong', { text: 'Discoverable (resident key):' }), ' ', booleanValue(discoverableValue)),
-            el('div', {}, el('strong', { text: 'Supports largeBlob:' }), ' ', booleanValue(largeBlobSupported)),
-            minPinLengthValue !== null
-                ? labelledLine('Authenticator minPinLength:', String(minPinLengthValue))
+            el('div', {}, el('strong', { text: DETAIL_TEXT.discoverable }), ' ', booleanValue(properties.discoverable)),
+            el('div', {}, el('strong', { text: DETAIL_TEXT.largeBlob }), ' ', booleanValue(properties.largeBlob)),
+            properties.minPinLength !== null
+                ? labelledLine(DETAIL_TEXT.minPinLength, String(properties.minPinLength))
                 : null,
             el('div', { style: 'margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid rgba(0, 114, 206, 0.15);' },
                 attestationChecksNotice,
-                attestationResultRow('Signature Valid', attestationSignatureValue),
-                attestationResultRow('Root Valid', attestationRootValue, rootChecks),
-                attestationResultRow('RPID Hash Valid', attestationRpIdHashValue),
-                attestationResultRow('AAGUID Match', attestationAaguidMatchValue),
-                metadataWarningMessage
+                properties.checks.map(check => attestationResultRow(check.label, check.value, buildRootChecks(check.rootChecks))),
+                properties.warning
                     ? el('div', {
                         style: 'margin-top: 0.4rem; color: #c47f16; font-size: 0.85rem;',
-                        text: metadataWarningMessage,
+                        text: properties.warning,
                     })
                     : null,
             ),
         ),
     );
+}
+
+export function buildPropertiesSection(inputs) {
+    return renderPropertiesSection(describeProperties(inputs));
 }

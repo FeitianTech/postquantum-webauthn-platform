@@ -128,6 +128,11 @@ function buildResponseSections(response) {
     ];
 }
 
+/** The view of a registration composed by ./registration-view.js, as a fragment of fresh nodes. */
+export function renderRegistrationView(composed) {
+    return fragment(buildResponseSections(composed.response), renderAttestationSection(composed.attestation));
+}
+
 /**
  * The registration's detail view, built from data: the browser's response, the
  * client data, the relying party's view and the attestation. Returns the view as
@@ -140,7 +145,7 @@ export async function composeRegistrationDetail(options = {}) {
         decode: decodePayloadThroughApi,
     });
     return {
-        view: fragment(buildResponseSections(composed.response), renderAttestationSection(composed.attestation)),
+        view: renderRegistrationView(composed),
         stateSnapshot: composed.stateSnapshot,
         relyingPartyCopy: composed.relyingPartyCopy,
     };

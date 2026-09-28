@@ -1,9 +1,4 @@
 import {
-    base64UrlToBytes,
-    bytesToBase64,
-    bytesToBase64Url,
-} from '../../../shared/utils/base64.js';
-import {
     describeCoseAlgorithm,
     describeCoseKeyType,
     describeMldsaParameterSet,
@@ -11,14 +6,25 @@ import {
 import {el} from '../../../shared/ui/dom.js';
 import {labelledLine} from '../detail-nodes.js';
 import {
-    getCoseMapValue,
-} from '../../credentials/utils.js';
-import {
-    resolveCredentialAlgorithmIdentifier,
-} from '../algorithm.js';
+    DETAIL_TEXT,
+    describeAttestationFormat,
+    describeAuthenticatorDataFlags,
+    describeExtensions,
+    describePublicKey,
+    describeUserInfo,
+} from './detail-sections.js';
+
+// The current UI's sections of a credential's details, each built from
+// ./detail-sections.js's data (render...), or from the record (build...).
 
 const SECTION_STYLE = 'margin-bottom: 1.5rem;';
 const HEADING_STYLE = 'color: #0072CE; margin-bottom: 0.5rem;';
+
+export const COSE_DESCRIBERS = Object.freeze({
+    describeCoseAlgorithm,
+    describeCoseKeyType,
+    describeMldsaParameterSet,
+});
 
 function section(title, ...children) {
     return el('div', { style: SECTION_STYLE },
@@ -31,126 +37,111 @@ function codeBlock(text) {
     return el('div', { className: 'credential-code-block', text });
 }
 
-function identifierRows(value) {
-    let bytes;
-    try {
-        bytes = base64UrlToBytes(value);
-    } catch (error) {
+function identifierRows(identifier) {
+    if (!identifier.spellings) {
         return [
-            codeBlock(value),
-            el('div', { style: 'font-style: italic; color: #6c757d;', text: 'Not valid base64url: shown as stored.' }),
+            codeBlock(identifier.stored),
+            el('div', { style: 'font-style: italic; color: #6c757d;', text: identifier.note }),
         ];
     }
-    const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
-    return [
-        el('div', {}, el('strong', { text: 'b64' })),
-        codeBlock(bytesToBase64(bytes)),
-        el('div', {}, el('strong', { text: 'b64u' })),
-        codeBlock(bytesToBase64Url(bytes)),
-        el('div', {}, el('strong', { text: 'hex' })),
-        codeBlock(hex),
-    ];
+    return identifier.spellings.flatMap(spelling => [
+        el('div', {}, el('strong', { text: spelling.label })),
+        codeBlock(spelling.value),
+    ]);
 }
 
 // An identifier the record keeps as base64url, shown in each spelling of its bytes.
-function buildEncodedIdentifierSection({
-    title,
-    value,
-}) {
+function buildEncodedIdentifierSection(identifier) {
     return el('div', { style: 'margin-top: 0.5rem;' },
-        el('div', {}, el('strong', { text: title })),
+        el('div', {}, el('strong', { text: identifier.title })),
         el('div', {
             style: "font-family: 'Courier New', monospace; font-size: 0.9rem; margin-left: 1rem; word-break: break-word; overflow-wrap: anywhere;",
-        }, identifierRows(value)),
+        }, identifierRows(identifier)),
     );
 }
 
-export function buildUserInfoSection(cred, aaguidSection) {
-    return section('User info at creation',
+export function renderUserInfoSection(userInfo, aaguidSection) {
+    return section(userInfo.title,
         el('div', { style: 'font-size: 0.9rem; line-height: 1.4;' },
-            labelledLine('Name:', cred.userName || cred.email || 'N/A'),
-            labelledLine('Display name:', cred.displayName || cred.userName || cred.email || 'N/A', {
+            labelledLine(DETAIL_TEXT.name, userInfo.name),
+            labelledLine(DETAIL_TEXT.displayName, userInfo.displayName, {
                 style: 'margin-bottom: 0.5rem;',
             }),
         ),
-        cred.userHandle
-            ? buildEncodedIdentifierSection({ title: 'User handle (User ID):', value: cred.userHandle })
-            : null,
-        cred.credentialId
-            ? buildEncodedIdentifierSection({ title: 'Credential ID:', value: cred.credentialId })
-            : null,
+        ...userInfo.identifiers.map(buildEncodedIdentifierSection),
         aaguidSection,
     );
 }
 
-export function buildAttestationFormatSection(attestationFormatDisplay) {
-    return section('Attestation Format',
-        el('div', { style: 'font-size: 0.9rem;', text: attestationFormatDisplay }),
+export function buildUserInfoSection(cred, aaguidSection) {
+    return renderUserInfoSection(describeUserInfo(cred), aaguidSection);
+}
+
+export function renderAttestationFormatSection(format) {
+    return section(format.title,
+        el('div', { style: 'font-size: 0.9rem;', text: format.value }),
     );
 }
 
-const FLAG_NAMES = ['at', 'be', 'bs', 'ed', 'up', 'uv'];
+export function buildAttestationFormatSection(attestationFormatDisplay) {
+    return renderAttestationFormatSection(describeAttestationFormat(attestationFormatDisplay));
+}
 
-export function buildAuthenticatorDataSection(cred) {
-    if (!cred.flags) {
+export function renderAuthenticatorDataSection(authenticatorData) {
+    if (!authenticatorData) {
         return null;
     }
 
-    const flagLine = el('div', {}, FLAG_NAMES.map((flag, index) => [
+    const flagLine = el('div', {}, authenticatorData.flags.map((flag, index) => [
         index ? ', ' : null,
-        el('strong', { text: `${flag.toUpperCase()}:` }),
-        ` ${String(cred.flags[flag])}`,
+        el('strong', { text: `${flag.name}:` }),
+        ` ${flag.value}`,
     ]));
 
-    return section('Authenticator Data (registration)',
+    return section(authenticatorData.title,
         el('div', { style: 'font-size: 0.9rem; line-height: 1.4;' },
             flagLine,
-            labelledLine('Signature Counter:', String(cred.signCount || 0)),
+            labelledLine(DETAIL_TEXT.signatureCounter, authenticatorData.counter),
         ),
     );
 }
 
-export function buildExtensionsSection(cred) {
-    if (!cred.clientExtensionOutputs || Object.keys(cred.clientExtensionOutputs).length === 0) {
+export function buildAuthenticatorDataSection(cred) {
+    return renderAuthenticatorDataSection(describeAuthenticatorDataFlags(cred));
+}
+
+export function renderExtensionsSection(extensions) {
+    if (!extensions) {
         return null;
     }
 
-    return section('Client extension outputs (registration)',
+    return section(extensions.title,
         el('div', {
             className: 'credential-code-block',
             style: 'font-size: 0.9rem; border-radius: 16px;',
-            text: JSON.stringify(cred.clientExtensionOutputs, null, 2),
+            text: extensions.text,
         }),
     );
 }
 
-export function buildPublicKeySection(cred) {
-    const hasPublicKeyData = cred.publicKeyAlgorithm !== undefined
-        || cred.algorithm !== undefined
-        || (cred.publicKeyCose && Object.keys(cred.publicKeyCose).length > 0);
+export function buildExtensionsSection(cred) {
+    return renderExtensionsSection(describeExtensions(cred));
+}
 
-    if (!hasPublicKeyData) {
+export function renderPublicKeySection(publicKey) {
+    if (!publicKey) {
         return null;
     }
 
-    const coseMap = cred.publicKeyCose || {};
-    const resolvedAlgorithm = resolveCredentialAlgorithmIdentifier(cred);
-    const fallbackAlgorithm = resolvedAlgorithm !== null
-        ? resolvedAlgorithm
-        : getCoseMapValue(coseMap, 3);
-
-    const coseKeyTypeValue = cred.publicKeyType ?? getCoseMapValue(coseMap, 1);
-    const parameterSet = describeMldsaParameterSet(fallbackAlgorithm);
-
-    return section('Public Key',
+    return section(publicKey.title,
         el('div', { style: 'font-size: 0.9rem;' },
-            labelledLine('Algorithm:', describeCoseAlgorithm(fallbackAlgorithm)),
-            coseKeyTypeValue !== undefined && coseKeyTypeValue !== null
-                ? labelledLine('COSE key type:', describeCoseKeyType(coseKeyTypeValue))
-                : null,
-            parameterSet ? labelledLine('ML-DSA parameter set:', parameterSet) : null,
+            publicKey.lines.map(line => labelledLine(line.label, line.value)),
         ),
     );
+}
+
+export function buildPublicKeySection(cred) {
+    return renderPublicKeySection(describePublicKey(cred, COSE_DESCRIBERS));
 }
 
 // The registration detail (registration-compose-runtime.js) goes in this

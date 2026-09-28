@@ -1,11 +1,9 @@
 import {state} from '../../../shared/state.js';
 import {openModal} from '../../../shared/ui/core.js';
 import {
-    extractCredentialAttestationContext,
-} from '../attestation-context.js';
-import {
     applyGlobalCursor,
 } from '../cursor.js';
+import {decodePayloadThroughApi} from '../decode-payload.js';
 import {
     autoResizeCertificateTextareas,
 } from '../formatting.js';
@@ -13,36 +11,34 @@ import {
     clearAaguidStatus,
 } from '../navigation.js';
 import {
-    composeRegistrationDetail,
+    renderRegistrationView,
 } from '../registration-compose-runtime.js';
 import {
-    resetRegistrationDetailState,
+    registrationDetailState,
 } from '../state.js';
 import {
-    pickFirstString,
-} from './helpers.js';
+    composeCredentialDetail,
+    needsArtifact,
+} from './compose.js';
 import {
-    buildRegistrationContext,
-} from './registration-context.js';
-import {
-    buildAaguidSection,
+    renderAaguidSection,
 } from './sections-aaguid.js';
 import {
-    buildAttestationFormatSection,
-    buildAuthenticatorDataSection,
-    buildExtensionsSection,
-    buildPublicKeySection,
     buildRegistrationDetailSection,
-    buildUserInfoSection,
+    COSE_DESCRIBERS,
+    renderAttestationFormatSection,
+    renderAuthenticatorDataSection,
+    renderExtensionsSection,
+    renderPublicKeySection,
+    renderUserInfoSection,
 } from './sections-main.js';
 import {
-    buildPropertiesSection,
+    renderPropertiesSection,
 } from './sections-properties.js';
-import {
-    readSnapshotResponse,
-    resolveRegistrationSnapshotContext,
-} from './snapshot-context.js';
 
+// The current UI's credential detail modal, built from ./compose.js's data over
+// its one registration state (../state.js), which the certificate and
+// authenticator-data views read when their buttons are pressed.
 export async function showCredentialDetailsRuntime(index, deps = {}) {
     const {
         hydrateCredentialFromServer,
@@ -53,11 +49,7 @@ export async function showCredentialDetailsRuntime(index, deps = {}) {
         return;
     }
 
-    // Only a snapshot that holds the registration as data spares the artifact
-    // request: an older one lacks the response the sections are built from.
-    const hasLocalRegistrationData = Boolean(readSnapshotResponse(cred.registrationDetailSnapshot));
-
-    if (cred.type !== 'simple' && !hasLocalRegistrationData) {
+    if (needsArtifact(cred)) {
         const restoreCursor = applyGlobalCursor('progress');
         try {
             if (typeof hydrateCredentialFromServer === 'function') {
@@ -73,74 +65,22 @@ export async function showCredentialDetailsRuntime(index, deps = {}) {
         return;
     }
 
-    resetRegistrationDetailState();
-
-    const {
-        detailPreparation,
-        snapshotState,
-        snapshotResponse,
-    } = resolveRegistrationSnapshotContext(cred);
-
-    const {
-        attestationObjectValue,
-        attestationObjectDecoded,
-        authenticatorDataHex,
-        fallbackCertificates,
-        certificateAaguidHex,
-        authDataAaguidHex,
-        relyingPartyInfo,
-        fallbackClientDataString,
-        fallbackClientDataObject,
-        registrationCredential,
-        authenticatorDataForDetail,
-    } = buildRegistrationContext(cred, {
-        snapshotState,
-        detailPreparation,
+    const detail = await composeCredentialDetail(cred, {
+        state: registrationDetailState,
+        decode: decodePayloadThroughApi,
+        describers: COSE_DESCRIBERS,
     });
-
-    const registrationDetail = await composeRegistrationDetail({
-        credentialJson: snapshotResponse?.credential
-            || (Object.keys(registrationCredential).length ? registrationCredential : null),
-        relyingPartyInfo: snapshotResponse?.relyingParty || relyingPartyInfo,
-        attestationObjectValue,
-        attestationObjectDecoded,
-        authenticatorDataValue: authenticatorDataForDetail,
-        authenticatorDataHex,
-        fallbackCertificates,
-        fallbackClientData: fallbackClientDataString,
-        fallbackParsedClientData: fallbackClientDataObject,
-        preferFallbackCertificates: Array.isArray(fallbackCertificates) && fallbackCertificates.length > 0,
-        snapshotState: snapshotResponse ? snapshotState : null,
-    });
-
-    const attestationFormatRaw = pickFirstString(
-        cred.attestationFormat,
-        cred.attestation_format,
-        cred.attestationFmt,
-        relyingPartyInfo?.attestationFmt,
-        attestationObjectDecoded && typeof attestationObjectDecoded.fmt === 'string'
-            ? attestationObjectDecoded.fmt
-            : '',
-    );
-
-    const attestationContext = extractCredentialAttestationContext(cred);
 
     modalBody.replaceChildren(
-        buildPropertiesSection({
-            cred,
-            attestationContext,
-            fallbackCertificates,
-            certificateAaguidHex,
-            authDataAaguidHex,
-        }),
-        buildUserInfoSection(cred, buildAaguidSection(cred, attestationContext)),
-        buildAttestationFormatSection(attestationFormatRaw || 'none'),
+        renderPropertiesSection(detail.properties),
+        renderUserInfoSection(detail.userInfo, renderAaguidSection(detail.aaguid)),
+        renderAttestationFormatSection(detail.attestationFormat),
         ...[
-            buildAuthenticatorDataSection(cred),
-            buildExtensionsSection(cred),
-            buildPublicKeySection(cred),
+            renderAuthenticatorDataSection(detail.authenticatorData),
+            renderExtensionsSection(detail.extensions),
+            renderPublicKeySection(detail.publicKey),
         ].filter(Boolean),
-        buildRegistrationDetailSection(registrationDetail.view),
+        buildRegistrationDetailSection(renderRegistrationView(detail.registration)),
     );
 
     const statusEl = modalBody.querySelector('.credential-aaguid-status');

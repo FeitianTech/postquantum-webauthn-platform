@@ -53,6 +53,7 @@ import {
     deleteCredentialRuntime,
 } from '../credential-display/deletion.js';
 import {showRegistrationResultModalRuntime} from '../credential-display/registration-result.js';
+import {hydrateCredentialFromServer as hydrateCredential} from './hydrate.js';
 import {warmSavedCredentials} from './saved-list.js';
 import {
     closeRegistrationDetailModalRuntime,
@@ -71,8 +72,6 @@ import {
     removeSimpleCredential as removeSimpleCredentialFromLocal,
     updateAdvancedCredentialRegistrationSnapshot,
 } from '../../shared/storage/local.js';
-import {sanitiseRegistrationDetailSnapshot} from '../../shared/storage/local/snapshot-sanitize.js';
-import {migrateStoredRecord} from '../../shared/storage/local/record-migration.js';
 import {deleteCredentialArtifact, fetchCredentialArtifact} from '../../shared/storage/artifacts-client.js';
 
 export {queueAuthenticatedCredentialFlash, queueFailedCredentialFlash};
@@ -100,61 +99,13 @@ function setCredentialDeletionInProgress(inProgress) {
     updateCredentialsDisplay();
 }
 
-async function hydrateCredentialFromServer(cred) {
-    if (!cred || typeof cred !== 'object') {
-        return null;
-    }
-
-    const storageId = cred.storageId || cred.localStorageId || null;
-    if (!storageId || typeof storageId !== 'string' || !storageId.trim()) {
-        cred.__artifactHydrated = 'missing';
-        return null;
-    }
-
-    if (cred.__artifactHydrated === storageId) {
-        return cred;
-    }
-
-    try {
-        const artifact = await fetchCredentialArtifact(storageId);
-        if (!artifact || typeof artifact !== 'object') {
-            cred.__artifactHydrated = 'missing';
-            return null;
-        }
-
-        // Artifacts saved before this version hold standard base64 where they now
-        // hold base64url; read them the way saved records are read.
-        const { record: storedCredential } = migrateStoredRecord(
-            artifact.storedCredential && typeof artifact.storedCredential === 'object'
-                ? artifact.storedCredential
-                : artifact,
-        );
-
-        if (storedCredential && typeof storedCredential === 'object') {
-            Object.keys(storedCredential).forEach(key => {
-                if (key !== 'registrationDetailSnapshot') {
-                    cred[key] = storedCredential[key];
-                }
-            });
-        }
-
-        // The artifact holds whatever a browser uploaded; its snapshot is kept
-        // only as far as the sanitiser allows, like one saved locally.
-        const snapshot = sanitiseRegistrationDetailSnapshot(
-            artifact.registrationDetailSnapshot || storedCredential?.registrationDetailSnapshot,
-        );
-        if (snapshot) {
-            cred.registrationDetailSnapshot = snapshot;
-            void updateAdvancedCredentialRegistrationSnapshot(storageId, snapshot);
-        }
-
-        cred.__artifactHydrated = storageId;
-        return storedCredential;
-    } catch (error) {
-        console.warn('Unable to fetch credential artifact', error);
-        cred.__artifactHydrated = 'error';
-        return null;
-    }
+// Completes an advanced record from its server artifact (./hydrate.js), saving
+// its snapshot through this interface's storage.
+function hydrateCredentialFromServer(cred) {
+    return hydrateCredential(cred, {
+        fetchCredentialArtifact,
+        saveSnapshot: updateAdvancedCredentialRegistrationSnapshot,
+    });
 }
 
 function handleCredentialMdsClick(event) {
