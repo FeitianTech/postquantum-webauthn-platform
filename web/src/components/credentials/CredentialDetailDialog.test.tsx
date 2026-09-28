@@ -237,7 +237,8 @@ describe('a saved credential\'s details, what some records hold', () => {
   it('CRED-G4: say a certificate could not be parsed, and give no summary for it', async () => {
     const broken = { ...ES256, attestationCertificates: [{ parsedX5c: { error: 'The certificate is not DER.' } }], attestationObject: '' };
     renderShell([broken], urlOf(ES256, 'registration', 'certificate', '1'));
-    await screen.findByRole('heading', { level: 2, name: 'Attestation Certificate' });
+    // The title shows while the details are still being composed: wait for the level.
+    await waitFor(() => expect(shownLevel()).not.toBeNull());
 
     expect(within(shownLevel()).getByRole('alert')).toHaveTextContent('The certificate is not DER.');
     expect(shownLevel().querySelector('[data-certificate-summary]')).toBeNull();
