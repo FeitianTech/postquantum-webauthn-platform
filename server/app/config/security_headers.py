@@ -20,11 +20,11 @@ _REPORT_ENDPOINT = "/api/csp-report"
 _REPORT_GROUP = "csp"
 _REPORTING = (f"report-uri {_REPORT_ENDPOINT}", f"report-to {_REPORT_GROUP}")
 
-# Strict: no 'unsafe-inline' for scripts or styles. The templates hold no inline
-# handler, script or style attribute (tests/app/tooling/test_inline_code.py keeps
-# it so): controls name their action with data-action, the page's data is a
-# <script type="application/json"> block, and scripts style through CSSOM
-# (element.style), which style-src does not govern.
+# Strict: no 'unsafe-inline' for scripts or styles, and no origin but the site's
+# own. The pages are the new UI's static export, which holds no inline script,
+# style element or style attribute (web/scripts/check-export-csp.mjs scans every
+# page); components style through CSSOM (element.style), which style-src does not
+# govern, and the fonts (Geist) are self-hosted.
 _DEFAULT_CONTENT_SECURITY_POLICY = "; ".join(
     (
         "default-src 'self'",
@@ -36,11 +36,8 @@ _DEFAULT_CONTENT_SECURITY_POLICY = "; ".join(
         "frame-src 'none'",
         "form-action 'self'",
         "img-src 'self' data:",
-        "font-src 'self' https://fonts.gstatic.com",
-        # The Google Fonts stylesheet linked from index.html. Only the current
-        # UI uses it (and fonts.gstatic.com above): the new UI at /beta
-        # self-hosts Geist. Both origins go at the cutover (docs/UI_MIGRATION.md).
-        "style-src 'self' https://fonts.googleapis.com",
+        "font-src 'self'",
+        "style-src 'self'",
         "script-src 'self'",
         "connect-src 'self'",
         "manifest-src 'self'",

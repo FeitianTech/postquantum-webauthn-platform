@@ -99,16 +99,16 @@ def test_csp_locks_down_the_non_script_directives(client):
     assert csp["form-action"] == ["'self'"]
     assert csp["connect-src"] == ["'self'"]
     assert csp["frame-src"] == ["'none'"]
-    # Google Fonts is the only third-party origin the templates reference.
-    assert csp["font-src"] == ["'self'", "https://fonts.gstatic.com"]
-    assert "https://fonts.googleapis.com" in csp["style-src"]
+    # No third-party origin: the fonts are self-hosted (Phase 30 removed Google Fonts).
+    assert csp["font-src"] == ["'self'"]
+    assert csp["style-src"] == ["'self'"]
     assert "'unsafe-inline'" not in csp["default-src"]
 
 
 STRICT_CONTENT_SECURITY_POLICY = (
     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
     "frame-src 'none'; form-action 'self'; img-src 'self' data:; "
-    "font-src 'self' https://fonts.gstatic.com; style-src 'self' https://fonts.googleapis.com; "
+    "font-src 'self'; style-src 'self'; "
     "script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; "
     "report-uri /api/csp-report; report-to csp"
 )

@@ -23,7 +23,7 @@ describe('the dev server\'s Content Security Policy', () => {
       if (name !== 'script-src') expect(dev.get(name)).toBe(entry);
     }
     expect(dev.get('script-src')).toBe("script-src 'self' 'unsafe-eval'");
-    expect(dev.get('style-src-elem')).toBe("style-src-elem 'self' https://fonts.googleapis.com 'unsafe-inline'");
+    expect(dev.get('style-src-elem')).toBe("style-src-elem 'self' 'unsafe-inline'");
     expect([...dev.keys()].filter((name) => !flask.has(name))).toEqual(['style-src-elem']);
     expect(DEV_ALLOWANCES.map(({ directive, add }) => `${directive} ${add}`)).toEqual([
       "script-src 'unsafe-eval'",
