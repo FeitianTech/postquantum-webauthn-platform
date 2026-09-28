@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { AdvancedSection } from '@/components/advanced/AdvancedSection';
 import { AnalyzeBrowserDialog, type CopyResult } from '@/components/analyze-browser/AnalyzeBrowserDialog';
 import { CodecSection } from '@/components/codec/CodecSection';
 import { SavedCredentialsProvider } from '@/components/credentials/useSavedCredentials';
@@ -11,7 +12,6 @@ import { CLOSED_ROUTE, SectionNavigationProvider, useSection } from '@/lib/useSe
 
 import { Footer } from './Footer';
 import { Header } from './Header';
-import { SectionPanel } from './SectionPanel';
 
 // The page: the header, the chosen section, the footer, and the Analyze
 // Browser panel, which floats above everything. The saved credentials are
@@ -33,12 +33,12 @@ export function AppShell() {
             {SECTIONS.map((option) =>
               option.id === 'simple' ? (
                 <SimpleSection key={option.id} active={option.id === section} route={routeOf('simple')} />
+              ) : option.id === 'advanced' ? (
+                <AdvancedSection key={option.id} active={option.id === section} route={routeOf('advanced')} />
               ) : option.id === 'codec' ? (
                 <CodecSection key={option.id} active={option.id === section} />
-              ) : option.id === 'mds' ? (
-                <MdsSection key={option.id} active={option.id === section} route={routeOf('mds')} />
               ) : (
-                <SectionPanel key={option.id} id={option.id} active={option.id === section} />
+                <MdsSection key={option.id} active={option.id === section} route={routeOf('mds')} />
               ),
             )}
           </SavedCredentialsProvider>

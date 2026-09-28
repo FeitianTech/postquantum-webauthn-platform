@@ -23,7 +23,7 @@ async function highlightSitsOn(page: Page, tab: Locator) {
 }
 
 test.describe('/beta', () => {
-  test('switches sections on the page and by the hash, and each unported section leads to the current UI', async ({ page }) => {
+  test('switches sections on the page and by the hash, and what is not ported yet leads to the current UI', async ({ page }) => {
     await page.goto('/beta');
     const tabs = page.getByRole('tablist', { name: 'Sections' });
     await expect(tabs.getByRole('tab')).toHaveText(SECTIONS.map((name) => `${name}${name}`));
@@ -33,7 +33,7 @@ test.describe('/beta', () => {
     for (const [name, hash, ported] of [
       ['Codec', 'codec', true],
       ['FIDO MDS Authenticators', 'mds', true],
-      ['Advanced Authentication', 'advanced', false],
+      ['Advanced Authentication', 'advanced', true],
     ] as const) {
       const tab = tabs.getByRole('tab', { name });
       await tab.click();
@@ -45,6 +45,11 @@ test.describe('/beta', () => {
       await expect(page).toHaveURL(new RegExp(`/beta#${hash}$`));
       await highlightSitsOn(page, tab);
     }
+
+    // The Advanced tab's authentication moves in Phase 29B.
+    const advanced = page.getByRole('tabpanel', { name: 'Advanced Authentication' });
+    await advanced.getByRole('tab', { name: 'Authentication' }).click();
+    await expect(advanced.getByRole('link', { name: 'Open the current interface' })).toHaveAttribute('href', '/');
 
     await page.goto('/beta#codec');
     await expect(page.getByRole('tabpanel', { name: 'Codec' })).toBeVisible();

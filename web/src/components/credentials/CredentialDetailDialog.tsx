@@ -48,7 +48,14 @@ const TITLES = { detail: 'Credential Details', registration: 'Registration Detai
  * level the credential does not have is corrected to the one above it. Back in
  * the header goes up a level; ×, Escape and the backdrop close them all.
  */
-export function CredentialDetailDialog({ route }: { route: SectionRoute }) {
+export function CredentialDetailDialog({
+  route,
+  returnFocusTo,
+}: {
+  route: SectionRoute;
+  /** Where the focus goes when the details close; by default what had it when they opened. */
+  returnFocusTo?: () => HTMLElement | null;
+}) {
   const saved = useSavedCredentials();
   const titleId = useId();
   const idBase = useId();
@@ -123,7 +130,13 @@ export function CredentialDetailDialog({ route }: { route: SectionRoute }) {
         : undefined;
 
   return (
-    <Dialog open={Boolean(row)} onClose={() => closeAll()} labelledBy={titleId} className="max-sm:w-[calc(100vw-1rem)]">
+    <Dialog
+      open={Boolean(row)}
+      onClose={() => closeAll()}
+      labelledBy={titleId}
+      returnFocusTo={returnFocusTo}
+      className="max-sm:w-[calc(100vw-1rem)]"
+    >
       <OverlayHeader
         titleId={titleId}
         title={title}
