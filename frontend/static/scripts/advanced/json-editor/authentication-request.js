@@ -38,11 +38,12 @@ export function authenticationDefaults() {
     };
 }
 
-// A credential's ID in the request, in the page's byte spelling; none when it
-// has no spelling there.
+// A credential's ID in the request, in the page's byte spelling.
 function descriptorFor(credentialIdHex) {
-    const formattedId = currentFormatToJsonFormat(convertFormat(credentialIdHex, 'hex', getCurrentBinaryFormat()));
-    return formattedId && typeof formattedId === 'object' ? { type: 'public-key', id: formattedId } : null;
+    return {
+        type: 'public-key',
+        id: currentFormatToJsonFormat(convertFormat(credentialIdHex, 'hex', getCurrentBinaryFormat())),
+    };
 }
 
 /**
@@ -62,11 +63,9 @@ export function allowedCredentials(storedCredentials, selection, allowedAttachme
     };
     const every = () => stored
         .filter(allowedBy)
-        .map(cred => {
-            const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
-            return credentialIdHex ? descriptorFor(credentialIdHex) : null;
-        })
-        .filter(Boolean);
+        .map(cred => cred.credentialIdHex || getCredentialIdHex(cred))
+        .filter(Boolean)
+        .map(descriptorFor);
 
     if (selection === 'all') {
         return every();
@@ -75,11 +74,7 @@ export function allowedCredentials(storedCredentials, selection, allowedAttachme
     if (!selected) {
         return every();
     }
-    if (!allowedBy(selected)) {
-        return [];
-    }
-    const descriptor = descriptorFor(selected.credentialIdHex || getCredentialIdHex(selected));
-    return descriptor ? [descriptor] : [];
+    return allowedBy(selected) ? [descriptorFor(selected.credentialIdHex || getCredentialIdHex(selected))] : [];
 }
 
 /**
@@ -109,24 +104,9 @@ export function buildRequestOptions(settings, context = {}) {
         );
     }
 
-    const fakeAllowCredentials = context.fakeAllowCredentials;
-    if (Array.isArray(fakeAllowCredentials) && fakeAllowCredentials.length) {
-        fakeAllowCredentials.forEach(hexValue => {
-            if (!hexValue) {
-                return;
-            }
-            // Text that is not hex does not convert to another spelling: kept as hex.
-            let idValue = { $hex: hexValue };
-            try {
-                const jsonValue = currentFormatToJsonFormat(convertFormat(hexValue, 'hex', getCurrentBinaryFormat()));
-                if (jsonValue && typeof jsonValue === 'object') {
-                    idValue = jsonValue;
-                }
-            } catch (error) {
-                // Kept as hex.
-            }
-            publicKey.allowCredentials.push({ type: 'public-key', id: idValue });
-        });
+    const fakeAllowCredentials = context.fakeAllowCredentials || [];
+    if (fakeAllowCredentials.length) {
+        publicKey.allowCredentials.push(...fakeAllowCredentials.map(descriptorFor));
         removeAllowCredentials = false;
     }
 

@@ -137,6 +137,11 @@ LOGIC_ROOTS = (
     # The Advanced tab's registration ceremony, and the snapshot its result keeps.
     "advanced/auth/ceremony.js",
     "advanced/credential-display/registration-snapshot.js",
+    # The authentication's request and the form's settings, the Allow Credentials
+    # choices, and whether the saved credentials can use largeBlob and prf.
+    "advanced/json-editor/authentication-request.js",
+    "advanced/auth/allow-credentials.js",
+    "advanced/auth/capabilities.js",
 )
 
 _RULES: dict[str, re.Pattern[str]] = {
