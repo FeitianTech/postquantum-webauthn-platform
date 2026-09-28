@@ -708,6 +708,36 @@ describe('credential-display', () => {
     expect(document.getElementById('registrationDetailModalBody').textContent).toContain('Snapshot data certificate');
   });
 
+  it("opens a view's certificate and authenticator data from the registration that view shows, not the one composed last", async () => {
+    const snapshotFor = (name, hex) => ({
+      schemaVersion: 2,
+      state: {
+        attestationObject: { fmt: 'packed', attStmt: {} },
+        attestationCertificates: [{ parsedX5c: { summary: `Certificate of ${name}` } }],
+        visibleAttestationCertificateIndices: [0],
+        authenticatorData: { raw: hex },
+        authenticatorDataHex: hex,
+      },
+      response: { credential: { id: `credential-${name}`, response: {} }, relyingParty: { attestationFmt: 'packed' } },
+    });
+    state.storedCredentials = [
+      { type: 'advanced', userName: 'first', credentialId: 'AQID', storageId: 'first-storage', registrationDetailSnapshot: snapshotFor('first', '0a0b0c') },
+      { type: 'advanced', userName: 'second', credentialId: 'BAUG', storageId: 'second-storage', registrationDetailSnapshot: snapshotFor('second', '0d0e0f') },
+    ];
+    globalThis.fetch = vi.fn();
+
+    await showCredentialDetails(0);
+    const body = document.getElementById('modalBody');
+    const firstCertificate = body.querySelector('.registration-attestation-cert-button');
+    const firstAuthenticatorData = body.querySelector('.registration-authenticator-data-button');
+    await showCredentialDetails(1);
+
+    firstCertificate.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.getElementById('registrationDetailModalBody').textContent).toContain('Certificate of first');
+    firstAuthenticatorData.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.getElementById('registrationDetailModalBody').textContent).toContain('0a0b0c');
+  });
+
   it('still asks for the artifact when the saved snapshot is an older one', async () => {
     state.storedCredentials = [
       {

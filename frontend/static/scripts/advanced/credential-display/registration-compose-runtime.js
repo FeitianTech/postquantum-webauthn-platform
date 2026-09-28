@@ -29,7 +29,7 @@ function preformatted(text) {
     return el('pre', { className: 'modal-pre', text });
 }
 
-function certificateButton(label, displayIndex) {
+function certificateButton(label, displayIndex, shownState) {
     const button = el('button', {
         className: 'btn btn-small registration-attestation-cert-button',
         attrs: { type: 'button' },
@@ -38,12 +38,12 @@ function certificateButton(label, displayIndex) {
     });
     button.addEventListener('click', event => {
         event.preventDefault();
-        openAttestationCertificateDetail(displayIndex);
+        openAttestationCertificateDetail(displayIndex, shownState);
     });
     return button;
 }
 
-function authenticatorDataButton() {
+function authenticatorDataButton(shownState) {
     const button = el('button', {
         className: 'btn btn-small btn-secondary registration-authenticator-data-button',
         attrs: { type: 'button' },
@@ -51,7 +51,7 @@ function authenticatorDataButton() {
     });
     button.addEventListener('click', event => {
         event.preventDefault();
-        openAuthenticatorDataDetail();
+        openAuthenticatorDataDetail(shownState);
     });
     return button;
 }
@@ -66,14 +66,17 @@ function attestationBody(body) {
     return placeholder(body.text);
 }
 
-function renderAttestationSection(section) {
+// The buttons open what the view shows: a copy of the one state as it was when
+// the view was built (a later composition resets the state with new arrays and
+// objects, so the copy stays whole).
+function renderAttestationSection(section, shownState) {
     if (!section) {
         return null;
     }
 
-    const buttons = section.certificates.map(certificate => certificateButton(certificate.title, certificate.index));
+    const buttons = section.certificates.map(certificate => certificateButton(certificate.title, certificate.index, shownState));
     if (section.hasAuthenticatorData) {
-        buttons.push(authenticatorDataButton());
+        buttons.push(authenticatorDataButton(shownState));
     }
 
     return el('section', { style: SECTION_STYLE },
@@ -94,7 +97,8 @@ function renderAttestationSection(section) {
 }
 
 export function buildAttestationSection(options = {}) {
-    return renderAttestationSection(describeAttestationSection(registrationDetailState, options));
+    const shownState = { ...registrationDetailState };
+    return renderAttestationSection(describeAttestationSection(shownState, options), shownState);
 }
 
 function buildResponseSections(response) {
@@ -130,7 +134,10 @@ function buildResponseSections(response) {
 
 /** The view of a registration composed by ./registration-view.js, as a fragment of fresh nodes. */
 export function renderRegistrationView(composed) {
-    return fragment(buildResponseSections(composed.response), renderAttestationSection(composed.attestation));
+    return fragment(
+        buildResponseSections(composed.response),
+        renderAttestationSection(composed.attestation, { ...registrationDetailState }),
+    );
 }
 
 /**
@@ -179,8 +186,8 @@ function openRegistrationDetailModal(title, body) {
     }
 }
 
-export function openAttestationCertificateDetail(index) {
-    const view = describeAttestationCertificate(registrationDetailState, index);
+export function openAttestationCertificateDetail(index, shownState = registrationDetailState) {
+    const view = describeAttestationCertificate(shownState, index);
     if (!view) {
         return;
     }
@@ -200,8 +207,8 @@ export function openAttestationCertificateDetail(index) {
     openRegistrationDetailModal(view.title, body);
 }
 
-export function openAuthenticatorDataDetail() {
-    const view = describeAuthenticatorData(registrationDetailState);
+export function openAuthenticatorDataDetail(shownState = registrationDetailState) {
+    const view = describeAuthenticatorData(shownState);
     if (!view) {
         return;
     }
