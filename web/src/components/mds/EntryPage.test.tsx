@@ -464,6 +464,8 @@ describe('an entry the list does not hold (MDS-D2)', () => {
     );
     const { rerender } = renderPage(view('aaguid:first'));
     await screen.findByText('Locating metadata entry...');
+    // The sentence shows before the request is sent; under load the request can come later.
+    await waitFor(() => expect(release).toBeTypeOf('function'));
     const first = release;
     rerender(
       <>
