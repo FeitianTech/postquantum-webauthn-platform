@@ -142,8 +142,10 @@ export function formatCertificateDetails(details) {
                 parts.push(version.display.trim());
             }
             if (typeof version.hex === 'string' && version.hex.trim() !== '') {
-                if (!parts.length || parts[parts.length - 1] !== version.hex.trim()) {
-                    parts.push(version.hex.trim());
+                // The server's display already carries the hex ("3 (0x2)").
+                const hex = version.hex.trim();
+                if (!parts.length || (parts[0] !== hex && !parts[0].includes(`(${hex})`))) {
+                    parts.push(hex);
                 }
             }
             if (parts.length > 0) {

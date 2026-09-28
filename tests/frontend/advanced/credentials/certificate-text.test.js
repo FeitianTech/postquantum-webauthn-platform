@@ -28,7 +28,7 @@ describe('formatCertificateDetails', () => {
 
   it('builds an OpenSSL-like text from the fields when there is no summary', () => {
     expect(formatCertificateDetails(decodedCertificate())).toBe([
-      'Version: 3 (0x2) 0x2',
+      'Version: 3 (0x2)',
       'Certificate Serial Number: 7855 / 0x1eaf',
       'Signature Algorithm: ed25519',
       'Issuer: CN=Characterization Test CA',
@@ -85,6 +85,14 @@ describe('formatCertificateDetails', () => {
 describe('the version', () => {
   it('does not repeat a hex that is the display', () => {
     expect(formatCertificateDetails({ version: { display: '0x2', hex: '0x2' } })).toBe('Version: 0x2');
+  });
+
+  it('does not repeat a hex the display already gives in parentheses', () => {
+    expect(formatCertificateDetails({ version: { display: '3 (0x2)', hex: '0x2' } })).toBe('Version: 3 (0x2)');
+  });
+
+  it('adds the hex after a display that does not give it', () => {
+    expect(formatCertificateDetails({ version: { display: '3', hex: '0x2' } })).toBe('Version: 3 0x2');
   });
 
   it('writes the hex alone when there is no display', () => {
