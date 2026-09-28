@@ -3171,6 +3171,24 @@ the allow list from the saved credentials (`auth/allow-credentials.js`), largeBl
 checks (`auth/capabilities.js`), the authentication ceremony and its result (ADV-U, P2, G2; the counter row and the row
 tinted), authentication's Reset (ADV-X2) and the Advanced tab's info-popup parity for them.
 
+**Phase 29A — tech-lead verification (2026-09-28):**
+- **Every one of the 23 commits leaves nothing behind, and 22 pass everything on their own tree** (pytest 4829 → 4857 /
+  4, root vitest 1511 → 1884, web's vitest 387 → 434, typecheck). At 51a7665b one web test failed while three
+  history runs loaded the machine: the Phase 28B race the next commit fixes (6192d741); alone it passes there twice
+  out of twice, and at the head it passes six times out of six under the same load. One author, bare subjects, no
+  dependency changed; the range starts after the tech lead's e5af886f.
+- **Built independently from a clean `npm ci`**: CSP scan 0 violations. **Playwright 126/126** from the clean copy.
+- **By the tech lead's own scripts** (Playwright's Chromium, a CTAP2 virtual authenticator on USB, Flask from the clean
+  copy): the current editor's request and `/beta`'s are the same text, 1172 characters, once the random values
+  (challenge, user id, name, display name) are blanked; Create Credential opens the dialog at
+  `#advanced/credential/<key>/registration`, Back gives the detail, Escape `#advanced`; a name edited in the JSON
+  reaches the form's User Name and registers; a broken edit says "line 2 column 17" and the form keeps the last good
+  request; with the drawer and a credential's details open, one Escape closes the details only and a second the
+  drawer; the current UI lists what `/beta` registered. **The all-zero AAGUID (28B's finding) reads right in both
+  UIs**: b64 `AAAAAAAAAAAAAAAAAAAAAA==`, hex `000…0`, guid `00000000-0000-0000-0000-000000000000`. The editor sits
+  beside the form at 1440 px and under it at 1024 and 375 px; no grey fill and no sideways scroll at the three widths;
+  the editor focused by a real click looks as unfocused. No console, CSP or Trusted Types message.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
