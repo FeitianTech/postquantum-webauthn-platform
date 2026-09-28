@@ -134,6 +134,9 @@ LOGIC_ROOTS = (
     "advanced/json-editor/validation-registration.js",
     "advanced/json-editor/validation-authentication.js",
     "advanced/json-editor/merge-prune.js",
+    # The Advanced tab's registration ceremony, and the snapshot its result keeps.
+    "advanced/auth/ceremony.js",
+    "advanced/credential-display/registration-snapshot.js",
 )
 
 _RULES: dict[str, re.Pattern[str]] = {

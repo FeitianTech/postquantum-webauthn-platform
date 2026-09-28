@@ -178,16 +178,12 @@ export function readCreationRequest(text) {
     return parsed;
 }
 
-// The credential as the server is sent it: its JSON, with its attachment and
-// every client extension result.
+// The credential as the server is sent it: its JSON (the ponyfill's create()
+// gives every credential its toJSON()), with its attachment and every client
+// extension result, read from the credential when it can give them.
 function registrationCredentialJson(credential) {
-    const authenticatorAttachment = credential && typeof credential === 'object'
-        ? credential.authenticatorAttachment ?? null
-        : null;
-    const credentialJson = credential.toJSON ? credential.toJSON() : JSON.parse(JSON.stringify(credential));
-    if (authenticatorAttachment !== undefined) {
-        credentialJson.authenticatorAttachment = authenticatorAttachment;
-    }
+    const credentialJson = credential.toJSON();
+    credentialJson.authenticatorAttachment = credential.authenticatorAttachment ?? null;
     const extensionResults = credential.getClientExtensionResults
         ? credential.getClientExtensionResults()
         : (credential.clientExtensionResults || {});
@@ -303,7 +299,7 @@ export async function registerAdvancedCredential(text, {
         delete optionsJson.warnings;
         delete optionsJson.__session_state;
 
-        const originalExtensions = optionsJson?.publicKey?.extensions;
+        const originalExtensions = optionsJson.publicKey?.extensions;
         const createOptions = parseCreationOptionsFromJSON(optionsJson);
         context.createOptions = createOptions;
 
@@ -317,7 +313,7 @@ export async function registerAdvancedCredential(text, {
         const convertedExtensions = convertExtensionsForClient(originalExtensions);
         context.convertedExtensions = convertedExtensions;
         if (convertedExtensions) {
-            createOptions.publicKey = createOptions.publicKey || {};
+            // Extensions to convert come with a publicKey, which the parsed options keep.
             createOptions.publicKey.extensions = {
                 ...(createOptions.publicKey.extensions || {}),
                 ...convertedExtensions
