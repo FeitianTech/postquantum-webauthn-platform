@@ -1,22 +1,18 @@
 """``/beta`` serves the new UI's static export (``routes/web_export.py``).
 
-Every test builds its own export in ``tmp_path``: pytest never needs Node, and
-never reads a ``web/out`` a local build (or Cloud Build's web step, running
-beside the Python tests) may be writing.
+Every test builds its own export in ``tmp_path`` (the ``export_root`` fixture):
+pytest never needs Node, and never reads a ``web/out`` a local build (or Cloud
+Build's web step, running beside the Python tests) may be writing.
 """
 from __future__ import annotations
 
 import gzip
-from pathlib import Path
 
 import pytest
 
 from server.app.config import paths, web_export
+from tests.app.web_export_files import CHUNK, DESIGN, INDEX, NOT_FOUND, write
 
-INDEX = b"<!DOCTYPE html><html><head><title>New UI</title></head><body>index page " + b"x" * 600 + b"</body></html>"
-DESIGN = b"<!DOCTYPE html><html><body>design page</body></html>"
-NOT_FOUND = b"<!DOCTYPE html><html><body>export 404 page</body></html>"
-CHUNK = b"console.log('chunk');\n" * 200
 SECURITY_HEADERS = (
     "Content-Security-Policy",
     "Content-Security-Policy-Report-Only",
@@ -27,25 +23,6 @@ SECURITY_HEADERS = (
     "Referrer-Policy",
 )
 IMMUTABLE = "public, max-age=31536000, immutable"
-
-
-def _write(path: Path, data: bytes) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(data)
-
-
-@pytest.fixture
-def export_root(tmp_path) -> Path:
-    root = tmp_path / "out"
-    _write(root / "index.html", INDEX)
-    _write(root / "design.html", DESIGN)
-    _write(root / "404.html", NOT_FOUND)
-    _write(root / "500.html", b"<!DOCTYPE html><html><body>500</body></html>")
-    _write(root / "_next" / "static" / "chunks" / "main-abc123.js", CHUNK)
-    _write(root / "_next" / "static" / "chunks" / "main-abc123.js.gz", gzip.compress(CHUNK))
-    _write(root / "_next" / "static" / "media" / "geist.woff2", b"wOF2font")
-    _write(tmp_path / "secret.txt", b"outside the export")
-    return root
 
 
 @pytest.fixture
@@ -174,7 +151,7 @@ def test_without_an_export_beta_is_a_plain_404(make_app, tmp_path):
 
 def test_an_export_without_a_404_page_answers_a_plain_404(make_app, tmp_path):
     root = tmp_path / "out"
-    _write(root / "index.html", INDEX)
+    write(root / "index.html", INDEX)
     client = make_app({web_export.WEB_EXPORT_ROOT_KEY: str(root)}).test_client()
 
     assert client.get("/beta").status_code == 200

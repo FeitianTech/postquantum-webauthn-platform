@@ -26,6 +26,16 @@ os.environ["FIDO_SERVER_MDS_SNAPSHOT_DIR"] = _MDS_SNAPSHOT_DIR
 os.environ["FIDO_SERVER_MDS_FETCH_UPSTREAM"] = "0"
 atexit.register(shutil.rmtree, _MDS_SNAPSHOT_DIR, ignore_errors=True)
 
+# The new UI's static export is served from FIDO_SERVER_WEB_EXPORT_ROOT, else
+# web/out, which a local build -- or Cloud Build's web step, running beside the
+# Python tests -- may be writing, and which the Python CI job never builds. Every
+# test starts from an empty directory of this run's instead, so what a page answers
+# never depends on whether a build happened to run; a test that needs an export
+# builds its own (the export_root fixture, tests/app/conftest.py).
+_WEB_EXPORT_ROOT = tempfile.mkdtemp(prefix="web-export-")
+os.environ["FIDO_SERVER_WEB_EXPORT_ROOT"] = _WEB_EXPORT_ROOT
+atexit.register(shutil.rmtree, _WEB_EXPORT_ROOT, ignore_errors=True)
+
 # An app built with no secret generates one and persists it in instance/. The
 # entry point (server.app.app) builds its app on import, and tests import it --
 # some while they are collected -- so every app the tests build gets this secret

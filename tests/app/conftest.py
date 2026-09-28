@@ -91,6 +91,17 @@ def client(app):
     return app.test_client()
 
 
+@pytest.fixture
+def export_root(tmp_path):
+    """A small static export of the new UI in ``tmp_path/out`` (``web_export_files``),
+    with a ``secret.txt`` beside it that nothing may serve."""
+
+    from tests.app.web_export_files import write, write_export
+
+    write(tmp_path / "secret.txt", b"outside the export")
+    return write_export(tmp_path / "out")
+
+
 def _app():
     """Import the application, which is what registers the Flask routes.
 
