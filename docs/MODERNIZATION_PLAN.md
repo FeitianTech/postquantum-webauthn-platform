@@ -2846,6 +2846,140 @@ to provision the snapshot, while the MDS endpoints answered empty (fixed in 28A,
   without EdDSA and ES384, which the Simple tab offers). At 375 px a saved credential's AAGUID and credential ID are
   cut with "Show all" (the card's padding), where the MDS page fits a whole AAGUID.
 
+### Phase 28B — a saved credential's details and the registration result at /beta#simple — DONE (2026-09-27)
+28 commits and this record, d28fdce0..the record's own, all this phase's (one author, bare subjects; the
+range starts after the tech lead's dcd29de4). Each commit that changes code or tests was gated before it was made on
+its exact tree: the staged change applied to a clean detached worktree of its parent (`git clean -fdx`, `node_modules`
+linked, Python run from that tree), then pytest under coverage (its 95 % floor), the root vitest (its floors), web's
+typecheck, unit tests (their floors), build and CSP scan, and ruff; a commit was made only when every gate passed (one
+that did not, the first `closeAll`, was fixed and gated again). The docs commits and the browser-test commit ran the
+gates they can reach (the browser specs: typecheck and the whole Playwright suite). Not pushed: the tech lead verifies
+and pushes.
+Planned in plan mode and approved before any code. Three questions went to the owner, who chose: the registration is a
+level of its own; after a Simple registration only the toast shows, as today; a certificate's level shows the MDS
+certificate page's summary above the current text. A review of the plan against the code found thirteen problems
+before they happened (among them: `snapshot-context.js` would have written `/beta`'s composition into the current UI's
+state; the legacy section builders' signatures, which their tests call; a race test that would have become
+order-dependent; `closeAll`'s asynchronous jump; the no-copy rule on template labels).
+
+**What there is now.** A saved credential's details at `/beta#simple/credential/<key>` are one dialog with four levels,
+each a history entry: the detail (Properties with the checks and their note, User info at creation with every
+identifier in each spelling, the AAGUID, Attestation Format, Authenticator Data, the extension outputs, Public Key),
+the registration (`…/registration`: the browser's response and its client data, what the server kept, the
+attestation object), a certificate (`…/registration/certificate/<n>`: the MDS page's summary above the current text)
+and the authenticator data (`…/registration/authenticator-data`). Back (the header's or the browser's) goes up one
+level with the focus on what opened it; ×, Escape and the backdrop close them all; a link or a reload opens any level,
+and one the credential lacks is corrected to the level above. An advanced record is first completed from its server
+artifact; a failure says so and the details show what the browser keeps. On a phone every identifier has the width it
+needs. The current modal at `/` is unchanged and runs on the same logic.
+
+**A — the fixes** (06974688, 798af48a, 4d87ce91, 05c5a7dd, 4806eaac, 4b759d48, c51d183d, 4d2b20aa, e7a7afe2, 091e4ae2,
+93ccda6e, 9a71e359, 1f89608e).
+- (d) The Simple registration names its algorithm with `pqc.describe_algorithm` (after the Advanced route's coercion),
+  the one COSE name table: EdDSA was "Other (Classical)". `cose_tables.py` holds no algorithm names and says so. Two
+  goldens changed (`algo` only; the diff reviewed). The frontend tags an algorithm its labels do not name `COSE${id}`,
+  not "ALGORITHM".
+- (c) `waits_for_the_snapshot` moved to `mds_provisioning.py`; both registrations' complete wait for a cold
+  provisioning. Two tests hold a Cloud Storage download on an event and check the registration waits, then records the
+  fixture's entry as available (they fail without the change). A session fixture makes the process's first attempt
+  before any test: `test_registration_race.py`'s warning count would otherwise have depended on run order (it failed
+  alone once the routes waited).
+- (a) `normaliseAaguidValue` no longer throws for text with no base64 length, and reads a dashed GUID as one (it was
+  decoded as base64url into 54 hex characters). The indicators give `aaguidUnreadable`; `/beta`'s row and the details
+  show it as stored, marked. A list with such a record draws every record in both UIs (the legacy test fails without
+  the fix).
+- (e) The warm-up reports a change only when a stored copy changes (it reported one for every advanced record with an
+  artifact).
+- (h) One read after a registration is right (the list is this browser's storage; the second read a second later
+  dated from b9b6898d, when the list came from the server). The current Simple and Advanced tabs drop it.
+- (b) `followStoredCredentialChanges` (`storage-core.js`) drops what was read on the storage event and calls back; the
+  current UI follows it in `bindCredentialActions`, `/beta`'s provider re-reads. Without (e) two tabs would have woken
+  each other for ever; a browser test checks they settle.
+- (f) After a deletion the focus goes to the next row's name, else the previous one's, else the heading; back to
+  Delete on a row the server kept.
+- (g) On a phone an identifier's copy button sits beside its label and the value has the whole width (an AAGUID on one
+  line, a longer credential ID wrapping); a long name wraps. Found in the browser check: `MonoValue` measured
+  overflow with its own "Show all" taking room, so a value measured in the fallback font kept "Show all" and stayed cut
+  even at 1440 px; it now measures as if the button were not there, and again when the fonts arrive.
+- Found by the coverage review: client data that is not base64url made `describeClientData` throw, so the details of
+  such a record did not open in either UI; it is shown as stored.
+
+**B — logic out of the views** (84820ce1, 8d2dcef0, f5925e40), then held (e6e9edde, afd5fac9).
+- `registration-state.js` takes the state as a parameter; the current UI's one (`state.js`) is bound by
+  `registration-state-runtime.js` and `certificate-state.js`, which its second modal still reads when a button is
+  pressed. `decode-payload.js` and `certificate-text.js` came out of views.
+- `registration-view.js`: what the registration view, a certificate's view and the authenticator data's show, as
+  data (`composeRegistration`), and the snapshot a registration keeps; `registration-compose-runtime.js` and
+  `registration-result.js` render it.
+- `credential-detail-runtime/detail-sections.js` (one describer per section, with the builders' own inputs) and
+  `compose.js`; `advanced/credentials/hydrate.js`, given the fetch and the snapshot's save.
+- The legacy tests passed unchanged across the three refactors, and each left the current modal's HTML byte for byte
+  equal for eight records (the detail, its registration and sub-modals, the result modal), compared against the tree
+  before it.
+- Held at 100 % per file, and `LOGIC_ROOTS`: the fifteen modules. The tests render the server's recorded answers (a new
+  characterization scenario, `registration-detail-decodes`, 92159697: four Simple registrations and the decoder's
+  answers for them, which the codec corpus also picks up). Two agents wrote most of the tests, each in a worktree of
+  its own; every guard they called unreachable was checked against its callers before it was dropped, and a
+  few JSON-safety guards stay, covered by passing a value JSON cannot copy.
+
+**C — the views** (346e361a, 226cf34c, 88225fde). `useSection.closeAll` (the pushed mark holds the depth; switching
+sections drops it); `OverlayHeader`'s `back` and `ui/BackButton`; `CredentialDetailDialog` with `credentials/detail/`
+(`useCredentialDetail`, `DetailSections`, `RegistrationLevels`, `model.ts`). Component tests over the recorded answers:
+ES256, EdDSA, ML-DSA-65, a certificate, an advanced record with its artifact, each level, the URLs, Back and focus, ×
+from the deepest, levels corrected, the hydration's failure and its snapshot.
+
+**D — browser tests** (4f1c0a57, 1b02f6ff, 934323b0).
+- `credential-detail.spec.ts` (11 tests), with Chromium's virtual authenticator on USB: a credential registered in
+  `/beta` (the authenticator answers the Simple offer with EdDSA) through every level and back; a certificate by link
+  and reload, × from there; an ES256 recorded registration with a corrected level; registered at `/` opened in `/beta`
+  and the reverse in the current modal; an advanced one registered at `/` opened from its snapshot; the unreadable
+  AAGUID in both UIs; 1440, 1024, 375 px (identifiers whole, no grey, no sideways scroll); two tabs following each
+  other and settling.
+- `credential-detail-parity.spec.ts` (5 tests): **for ES256, EdDSA, ML-DSA-65 and a packed record with a certificate,
+  the current modal and `/beta`'s levels show the same words section by section; the only differences are the three
+  listed with their reasons (the name as the title, the heading of the way to the registration, the parentheses around
+  Root Valid's roots); each certificate's and the authenticator data's text is equal; an advanced registration's
+  result modal at `/` equals `/beta`'s registration level with no difference.**
+- A certificate summary's section ids had spaces, so `aria-labelledby` read two ids (27B's component; fixed).
+
+**Seen in a real browser.** Flask ran from `e2e/serve-flask.mjs` on a spare port (temporary stores, the MDS fixture,
+the strict CSP and the Trusted Types report-only policy).
+- Playwright's Chromium with the virtual authenticator, at 1440, 1024 and 375 px: an EdDSA credential registered in
+  `/beta` and a recorded ES256 one, each through the detail, the registration and the authenticator data; the list; `/`
+  and its modal for the same credential, unchanged. **No console, CSP or Trusted Types message; no sideways scroll;
+  nothing cut.** 33 screenshots in the scratchpad.
+- The desktop app's pane: the list and a credential's details by URL; its only console message was my own probe's 404.
+  The record was removed from the pane's storage afterwards. No ceremony in the pane (macOS's own passkey prompt).
+
+**Tests.**
+- pytest 4789 → **4829** passed / 4 skipped (the new scenario's codec corpus cases, the registration waits, an algorithm
+  case); coverage 97 %. Linux (python:3.14, Docker, `git archive` of f55dc6ef): **4815** / 5, the usual 14 fewer and one
+  more skip. ruff clean.
+- root vitest 1140 → **1511**, coverage 88.86 / 78.54 / 94.20 / 88.79 → **90.53 / 82.28 / 94.15 / 90.47**; floors held,
+  every held file at 100 %.
+- web vitest 354 → **387** tests in 34 files, coverage 98.78 / 95.51 / 98.86 / 99.67 → **98.8 / 94.44 / 98.8 / 99.58**,
+  floors 97 / 92 / 96 / 98.
+- web typecheck clean; CSP scan 4 HTML files, 38 script elements, **0 violations**.
+- Playwright 96 → **112** passed on macOS (Chromium).
+
+**Found but not fixed:**
+- `sanitize-attestation-object.js` sets a certificate's `summary` and then strips every `summary` key: a certificate
+  known only by its summary shows as `{certificateIndex}` in the attestation object's JSON (both UIs).
+- When the attestation decode gives the authenticator data (the usual case), the registration state's hex and hash stay
+  empty, since the hash is computed before the base64url is attached; the snapshot keeps them empty. Nothing shown is
+  lost (the relying party's view carries the server's own), but the state is not what it says.
+- `hashAuthenticatorData` reads any text as hex after deleting its other characters (latent: no caller stores text
+  there).
+- The certificate text repeats the version's hex: "Version: 3 (0x2) 0x2" (both UIs).
+- The current UI's second modal still shows whichever registration was composed last (its one state); `/beta`'s levels
+  do not share one.
+- After a deletion the current UI's focus still falls to the page (fixed in `/beta` only).
+- Chromium's virtual authenticator answers both tabs' default offers with EdDSA; the ES256 checks use a recorded
+  registration.
+- `GET /api/credentials` is still used by neither UI (CRED-Z1).
+- The snapshot an advanced registration saves (CRED-G6) is built by the shared logic; `/beta` saves it in Phase 29.
+- Not run on GitHub yet (not pushed): `ci-web.yml`'s e2e job now runs the two new specs.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
