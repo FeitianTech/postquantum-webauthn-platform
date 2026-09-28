@@ -32,7 +32,10 @@ function Attestation({
   return (
     <DetailSection id={`${idBase}-attestation`} title={REGISTRATION_WORDS.attestationTitle}>
       <div>
-        <h5 className="text-title-sm font-semibold text-ink">{REGISTRATION_WORDS.attestationObject}</h5>
+        {/* A heading of its own in the current view too (the parity check splits there). */}
+        <h5 className="text-title-sm font-semibold text-ink" data-parity-heading="">
+          {REGISTRATION_WORDS.attestationObject}
+        </h5>
         <div className="mt-2">
           {body.kind === 'json' ? (
             <CodeBlock value={body.text} label="attestation object" />
