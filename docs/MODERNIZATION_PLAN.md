@@ -3456,6 +3456,31 @@ package, vitest config and the gate's Frontend tests step retired, the snapshot'
 docker-compose following, `frontend/` gone, the Playwright tests in the Cloud Build gate (their time and cost measured),
 AGENTS.md's Frontend Map rewritten for one UI, the charter closed, and `new_design/` removed last.
 
+**Phase 30A — tech-lead verification (2026-09-28):**
+- **Every one of the 14 commits passes on its own tree** (pytest 4876 → 4891 / 4, root vitest 1951 → 1597 as the view
+  tests went, web's vitest 466 → 470, typecheck) and leaves nothing behind. One author, bare subjects, no dependency
+  changed. The 34 regenerated goldens differ in one line each, 222 in all: the CSP without the two Google Fonts origins.
+- **Built independently from a clean `npm ci`**: CSP scan 0 violations; `favicon.ico` in the export.
+  **Playwright 142/142** from the clean copy.
+- **Reviewed:** `routes/web_export.py`. The redirect's target comes from `url_for`, after the leading slashes are
+  stripped, so every segment is quoted; the query is appended after a same-origin path. The page rule is the catch-all
+  (Werkzeug tries every rule with a static segment first); `/api/...` that no route holds answers the plain 404;
+  `safe_join` refuses a way out of the export.
+- **Flask from the clean copy, probed by the tech lead:** `/`, `/index.html`, `/design` and `/favicon.ico` answer 200
+  `no-cache`; a hashed `/_next/static/` file is `immutable` for a year and gzipped; `/nope` and `/404` the export's 404,
+  `/api/nope` a plain 404; `/beta`, `/beta/` → `/`, `/beta/design` → `/design`, `/beta?x=1&y=2` → `/?x=1&y=2` (308,
+  `no-cache`). No redirect leaves the site: `/beta/%09/evil.example` → `/%09/evil.example`, `/beta/\evil.example` and
+  `/beta/%5Cevil.example` → `/%5Cevil.example`, `/beta//evil.example` and `/beta/%2F%2Fevil.example` 404; a way out of
+  the export 404s, as does the deleted `/assets/.../scripts/main.js`. The CSP's `font-src` and `style-src` are `'self'`;
+  `/` carries no `noindex` and its title as before; `/design` keeps `noindex`.
+- **By the tech lead's own script at `/`** (Playwright's Chromium, a CTAP2 virtual authenticator on USB): the Simple tab
+  registers (EdDSA) and authenticates; the Advanced tab registers (the dialog at
+  `#advanced/credential/<key>/registration`), Allow Credentials offers the advanced credential only (the Simple one no
+  more), and it authenticates; `/beta#codec` lands on `/#codec`; the four sections at 1440, 1024 and 375 px, no
+  sideways scroll, no grey fill; no console, CSP or Trusted Types message.
+- **For 30B:** AGENTS.md is 62 KB; the tech lead's session no longer loads it as instructions. The rewrite for one UI
+  should bring it well under that.
+
 ### Local development
 Tests previously ran against the global interpreter, whose packages matched nothing in
 `requirements.txt` (cryptography 44.0.3, fido2 2.1.1, gunicorn 23). A project venv now exists:
