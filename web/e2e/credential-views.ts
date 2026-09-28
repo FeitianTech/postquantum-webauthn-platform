@@ -3,9 +3,10 @@ import type { Page } from '@playwright/test';
 import { expect } from './fixtures';
 import { type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownText } from './parity';
 
-// A saved credential's details and registration in both UIs, for the parity
-// specs: the current modal at / (its registration view, the second modal for a
-// certificate or the authenticator data) and /beta's dialog levels.
+// A saved credential's details and registration in /beta's dialog levels, for the
+// parity specs, which compare them with what the current modal at / showed (its
+// registration view, the second modal for a certificate or the authenticator
+// data), as recorded.
 
 export const STORAGE_KEY = 'postquantum-webauthn.credentials';
 
@@ -31,42 +32,6 @@ export function expectedFor(name: string): ExpectedDifference[] {
 
 export async function keep(page: Page, records: object[]) {
   await page.evaluate(([key, value]) => window.localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify(records)] as const);
-}
-
-/** The stored records, once each holds `field` (a ceremony saves some parts after it says it is done). */
-export async function storedRecords(page: Page, field: string): Promise<object[]> {
-  const read = () => page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) ?? '[]') as Record<string, unknown>[], STORAGE_KEY);
-  await expect.poll(async () => (await read()).every((record) => record[field] !== undefined && record[field] !== null)).toBe(true);
-  const records = await read();
-  expect(records.length).toBeGreaterThan(0);
-  return records;
-}
-
-export async function openCurrent(page: Page) {
-  await page.goto('/');
-  await expect(page.locator('body')).toHaveClass(/app-loaded/);
-}
-
-export async function legacyDetail(page: Page, name: string) {
-  await page.locator('#simple-credentials-list .credential-item').filter({ hasText: name }).click();
-  await expect(page.locator('#credentialModal')).toBeVisible();
-  await expect(page.locator('#modalBody')).toContainText('Attestation Information');
-  return readShownText(page.locator('#modalBody'), 'h3, h4');
-}
-
-// The second modal's text for each of the modal's certificate and authenticator-data buttons.
-export async function legacySubViews(page: Page, root: string) {
-  const texts: Record<string, string> = {};
-  const buttons = page.locator(`${root} .registration-detail-button-row button`);
-  for (let index = 0; index < (await buttons.count()); index += 1) {
-    const button = buttons.nth(index);
-    const label = (await button.textContent())!.trim();
-    await button.click();
-    await expect(page.locator('#registrationDetailModal')).toBeVisible();
-    texts[label] = await page.locator('#registrationDetailModalBody textarea').inputValue();
-    await page.locator('[data-action="close-registration-detail-modal"]').click();
-  }
-  return texts;
 }
 
 export async function betaLevel(page: Page, level: string, headings: string) {

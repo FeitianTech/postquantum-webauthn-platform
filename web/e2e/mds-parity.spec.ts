@@ -11,7 +11,7 @@ import { recorded } from './recorded';
 // difference must be one listed below, with its reason. The current table's side
 // is its recording (recorded.ts).
 
-// The legacy filters are plain fields; /beta's are labelled by their column.
+// /beta's filters are labelled by their column.
 const CASES = [
   { label: 'no filter', filters: {} },
   { label: 'protocol Uaf', filters: { protocol: ['#mds-filter-protocol', 'Protocol', 'Uaf'] } },
@@ -23,21 +23,6 @@ const CASES = [
 
 // Nothing is expected to differ: the words are the server's, in both tables.
 const EXPECTED: ExpectedDifference[] = [];
-
-async function legacyRows(page: Page, filters: Record<string, readonly string[]>) {
-  await page.goto('/');
-  await expect(page.locator('body')).toHaveClass(/app-loaded/);
-  await page.locator('.nav-tab[data-tab="mds"]').first().click();
-  const body = page.locator('#mds-table-body');
-  await expect(body.locator('tr:not(.mds-empty-row)')).toHaveCount(32);
-  for (const [selector, , value] of Object.values(filters)) {
-    await page.locator(selector).fill(value);
-    await page.keyboard.press('Escape');
-    // The field's own Escape clears it only when its dropdown is closed.
-    if ((await page.locator(selector).inputValue()) !== value) await page.locator(selector).fill(value);
-  }
-  return readShownRows(body, 'tr:not(.mds-empty-row)', 4);
-}
 
 async function betaRows(page: Page, filters: Record<string, readonly string[]>) {
   await page.goto('/beta#mds');
@@ -64,7 +49,7 @@ test.describe('the MDS table reads the same in both UIs', () => {
 
   for (const { label, filters } of CASES) {
     test(label, async ({ page }) => {
-      const legacy = await recorded('mds-parity', label, () => legacyRows(page, filters));
+      const legacy = recorded<ShownSection[]>('mds-parity', label);
       const beta = await betaRows(page, filters);
       expect(legacy.length, 'the current UI showed rows').toBeGreaterThan(0);
       expect(keys(beta), 'the same rows, in the same order').toEqual(keys(legacy));
@@ -76,14 +61,7 @@ test.describe('the MDS table reads the same in both UIs', () => {
   }
 
   test('sorted by name, both ways', async ({ page }) => {
-    const { legacyUp, legacyDown } = await recorded('mds-parity', 'sorted by name', async () => {
-      await legacyRows(page, {});
-      await page.locator('.mds-sort-button[data-sort-key="name"]').click();
-      const up = keys(await readShownRows(page.locator('#mds-table-body'), 'tr:not(.mds-empty-row)', 4));
-      await page.locator('.mds-sort-button[data-sort-key="name"]').click();
-      const down = keys(await readShownRows(page.locator('#mds-table-body'), 'tr:not(.mds-empty-row)', 4));
-      return { legacyUp: up, legacyDown: down };
-    });
+    const { legacyUp, legacyDown } = recorded<{ legacyUp: string[]; legacyDown: string[] }>('mds-parity', 'sorted by name');
 
     await betaRows(page, {});
     const section = page.getByRole('tabpanel', { name: 'FIDO MDS Authenticators' });

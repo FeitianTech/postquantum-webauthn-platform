@@ -1,20 +1,14 @@
-import { execFileSync } from 'node:child_process';
-import { join, resolve } from 'node:path';
-
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
 import { type Difference, type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownText } from './parity';
-import { RECORDING, recorded } from './recorded';
+import { recorded } from './recorded';
 
 // The text the current Codec showed and the text /beta shows, for the same inputs
 // from tests/app/codec_corpus.py, compared word for word per section once
 // layout and separators are set aside (parity.ts). Every difference must be one
 // listed below, with its reason. The current Codec's side is its recording, which
 // keeps the input it was given (recorded.ts).
-
-const repo = resolve(import.meta.dirname, '..', '..');
-const python = process.env.E2E_PYTHON ?? join(repo, '.venv', 'bin', 'python');
 
 // Items of the corpus, and how each is sent: some with a CTAP status byte in
 // front, one with five bytes of HID padding after it.
@@ -44,32 +38,6 @@ const EXPECTED: ExpectedDifference[] = [
   },
 ];
 
-function corpusHex(names: readonly string[]): Record<string, string> {
-  const env: NodeJS.ProcessEnv = { ...process.env, PYTHONDONTWRITEBYTECODE: '1' };
-  delete env.CHARACTERIZATION_WRITE;
-  const script = [
-    'import json, sys',
-    'from tests.app.codec_corpus import corpus',
-    'items = corpus()',
-    'missing = [name for name in sys.argv[1:] if name not in items]',
-    "if missing: sys.exit('not in tests/app/codec_corpus.py: ' + ', '.join(missing))",
-    'print(json.dumps({name: items[name].hex() for name in sys.argv[1:]}))',
-  ].join('\n');
-  return JSON.parse(execFileSync(python, ['-B', '-c', script, ...new Set(names)], { cwd: repo, env, encoding: 'utf8' }));
-}
-
-async function legacyText(page: Page, input: string, lenient: boolean) {
-  await page.goto('/');
-  await expect(page.locator('body')).toHaveClass(/app-loaded/);
-  await page.locator('.nav-tab[data-tab="codec"]').first().click();
-  await page.locator('#decoder-input').fill(input);
-  if (lenient) await page.locator('#decoder-lenient').check();
-  await page.locator('#decoder-submit').click();
-  const output = page.locator('#decoder-output.is-visible');
-  await expect(output).toBeVisible();
-  return readShownText(output, '.decoder-section h4');
-}
-
 async function betaText(page: Page, input: string, lenient: boolean) {
   await page.goto('/beta#codec');
   const decoding = page.locator('#codec-mode-panel-decode');
@@ -82,12 +50,7 @@ async function betaText(page: Page, input: string, lenient: boolean) {
 }
 
 test.describe('the Codec reads the same in both UIs', () => {
-  let hex: Record<string, string> = {};
   const found: Record<string, Difference[]> = {};
-
-  test.beforeAll(() => {
-    if (RECORDING) hex = corpusHex(INPUTS.map((input) => input.name));
-  });
 
   test.afterAll(async ({}, testInfo) => {
     const report = Object.entries(found).flatMap(([label, differences]) => [`${label}:`, ...describeDifferences(differences).map((line) => `  ${line}`)]);
@@ -96,16 +59,13 @@ test.describe('the Codec reads the same in both UIs', () => {
   });
 
   const cases = [
-    ...INPUTS.map((input) => ({ label: `${input.name}${'before' in input ? ` (${input.note})` : ''}`, input, lenient: false })),
-    { label: `lenient ${LENIENT.hex}`, input: null, lenient: true },
+    ...INPUTS.map((input) => `${input.name}${'before' in input ? ` (${input.note})` : ''}`),
+    `lenient ${LENIENT.hex}`,
   ];
 
-  for (const { label, input, lenient } of cases) {
+  for (const label of cases) {
     test(label, async ({ page }) => {
-      const current = await recorded<{ input: string; lenient: boolean; sections: ShownSection[] }>('codec-parity', label, async () => {
-        const text = input ? `${'before' in input ? input.before : ''}${hex[input.name]}${'after' in input ? input.after : ''}` : LENIENT.hex;
-        return { input: text, lenient, sections: await legacyText(page, text, lenient) };
-      });
+      const current = recorded<{ input: string; lenient: boolean; sections: ShownSection[] }>('codec-parity', label);
       const beta = await betaText(page, current.input, current.lenient);
       expect(current.sections.length, 'the current UI showed sections').toBeGreaterThan(1);
 

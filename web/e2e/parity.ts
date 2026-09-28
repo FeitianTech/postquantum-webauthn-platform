@@ -1,11 +1,11 @@
 import type { Locator } from '@playwright/test';
 
-// Does the new UI show what the current one shows? For one surface in both UIs:
-// read the text a region shows, grouped by the section it sits in, and compare
-// the two as multisets of words, so layout, element boundaries, separators
-// ("·", "—", ":") and CSS text-transform do not count, but a missing, extra or
-// doubled word does. Each difference a surface expects is listed with its reason.
-// Later phases use it for their surfaces the way codec-parity.spec.ts does.
+// Does the new UI show what the current one showed? For one surface: read the
+// text a region shows, grouped by the section it sits in, and compare it with
+// what the current UI showed there (its recording, recorded.ts) as multisets of
+// words, so layout, element boundaries, separators ("·", "—", ":") and CSS
+// text-transform do not count, but a missing, extra or doubled word does. Each
+// difference a surface expects is listed with its reason.
 
 export type ShownSection = { heading: string; lines: string[] };
 
@@ -132,7 +132,7 @@ export function compareShownText(legacy: ShownSection[], beta: ShownSection[], e
 export function describeDifferences(differences: Difference[]) {
   return differences.map(
     ({ section, only, token, count: extra, line, reason }) =>
-      `[${section || 'header'}] only in ${only === 'beta' ? '/beta' : 'the current UI'}: "${token}"${extra > 1 ? ` ×${extra}` : ''}` +
+      `[${section || 'header'}] only in ${only === 'beta' ? '/beta' : 'the recording'}: "${token}"${extra > 1 ? ` ×${extra}` : ''}` +
       ` (in "${line}")${reason ? ` — ${reason}` : ' — UNEXPLAINED'}`,
   );
 }

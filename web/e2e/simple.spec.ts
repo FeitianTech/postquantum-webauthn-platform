@@ -9,8 +9,8 @@ import { addVirtualAuthenticator } from './virtual-authenticator';
 
 // The Simple tab at /beta#simple in Chromium, against Flask serving the export
 // under the strict CSP: real registrations and authentications answered by
-// Chromium's virtual authenticator, and the saved credentials both UIs share,
-// in the one localStorage array each reads and writes.
+// Chromium's virtual authenticator, and the saved credentials in the one
+// localStorage array (what the current UI wrote there: current-ui-records.spec.ts).
 
 const repo = resolve(import.meta.dirname, '..', '..');
 const STORAGE_KEY = 'postquantum-webauthn.credentials';
@@ -24,17 +24,11 @@ function goldenStoredCredential(scenario: string) {
 const section = (page: Page) => page.getByRole('tabpanel', { name: 'Simple Authentication' });
 const list = (page: Page) => section(page).locator('[data-saved-credentials]');
 const rows = (page: Page) => list(page).locator('li[data-credential-key]');
-const legacyCards = (page: Page) => page.locator('#simple-credentials-list .credential-item');
 const username = () => `e2e-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 
 async function openBeta(page: Page, hash = '#simple') {
   await page.goto(`/beta${hash}`);
   await expect(list(page).locator('[data-count]')).toBeVisible();
-}
-
-async function openCurrent(page: Page) {
-  await page.goto('/');
-  await expect(page.locator('body')).toHaveClass(/app-loaded/);
 }
 
 async function registerInBeta(page: Page, name: string) {
@@ -83,53 +77,6 @@ test.describe('/beta#simple', () => {
     );
   });
 
-  test('a passkey registered in /beta is listed, used and deleted at /', async ({ page }) => {
-    await addVirtualAuthenticator(page);
-    await openBeta(page);
-    const name = username();
-    await registerInBeta(page, name);
-
-    await openCurrent(page);
-    await expect(legacyCards(page).filter({ hasText: name })).toHaveCount(1);
-    await page.locator('#simple-email').fill(name);
-    await page.getByRole('button', { name: 'Authenticate', exact: true }).click();
-    await expect(page.locator('#simple-status')).toContainText('Authentication successful! You have been verified.');
-
-    page.once('dialog', (dialog) => dialog.accept());
-    await legacyCards(page).filter({ hasText: name }).getByRole('button', { name: 'Delete' }).click();
-    await expect(legacyCards(page)).toHaveCount(0);
-
-    await openBeta(page);
-    await expect(list(page).getByText('No credentials registered yet.')).toBeVisible();
-  });
-
-  test('a passkey registered at / is listed, used and deleted in /beta', async ({ page }) => {
-    await addVirtualAuthenticator(page);
-    await openCurrent(page);
-    const name = username();
-    await page.locator('#simple-email').fill(name);
-    await page.getByRole('button', { name: 'Register Passkey', exact: true }).click();
-    await expect(page.locator('#simple-status')).toContainText('Registration successful! Algorithm:');
-
-    await openBeta(page);
-    await expect(rows(page).filter({ hasText: name })).toHaveCount(1);
-    await section(page).getByRole('textbox', { name: 'Username' }).fill(name);
-    await section(page).getByRole('button', { name: 'Authenticate', exact: true }).click();
-    await expect(page.getByText('Authentication successful! You have been verified.')).toBeVisible();
-
-    await rows(page).filter({ hasText: name }).getByRole('button', { name: 'Delete' }).click();
-    const question = page.getByRole('alertdialog', { name: 'Delete credential' });
-    await expect(question).toContainText(`Are you sure you want to delete the credential for ${name}? This action cannot be undone.`);
-    await expect(question.getByRole('button', { name: 'Cancel' })).toBeFocused();
-    await question.getByRole('button', { name: 'Delete' }).click();
-    await expect(page.getByText('Deletion successful.')).toBeVisible();
-    await expect(rows(page)).toHaveCount(0);
-    expect(await storedCount(page)).toBe(0);
-
-    await openCurrent(page);
-    await expect(legacyCards(page)).toHaveCount(0);
-  });
-
   test('clears every credential, and warns of an advanced one the server no longer held', async ({ page }) => {
     await openBeta(page);
     await keep(page, [
@@ -146,20 +93,6 @@ test.describe('/beta#simple', () => {
     );
     await expect(list(page).getByText('No credentials registered yet.')).toBeVisible();
     expect(await storedCount(page)).toBe(0);
-  });
-
-  test('Clear All at / clears what /beta registered', async ({ page }) => {
-    await addVirtualAuthenticator(page);
-    await openBeta(page);
-    await registerInBeta(page, username());
-
-    await openCurrent(page);
-    page.once('dialog', (dialog) => dialog.accept());
-    await page.locator('#simple-clear-credentials').click();
-    await expect(legacyCards(page)).toHaveCount(0);
-
-    await openBeta(page);
-    await expect(rows(page)).toHaveCount(0);
   });
 
   test('opens a credential\'s details at their own URL, and Back closes them', async ({ page }) => {

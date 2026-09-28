@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 
-import { STORAGE_KEY, openCurrent } from './credential-views';
+import { STORAGE_KEY } from './credential-views';
 import { greyFills } from './design-rules';
 import { expect, test } from './fixtures';
 import { addVirtualAuthenticator } from './virtual-authenticator';
@@ -8,8 +8,8 @@ import { addVirtualAuthenticator } from './virtual-authenticator';
 // The Advanced tab at /beta#advanced in Chromium, against Flask serving the
 // export under the strict CSP: registrations answered by Chromium's virtual
 // authenticator (a CTAP2 key on USB: the default request asks for a
-// cross-platform one), from the form and from an edited JSON; the saved
-// credentials' drawer; and credentials registered in one UI used in the other.
+// cross-platform one), from the form and from an edited JSON; and the saved
+// credentials' drawer. What the current UI registered is current-ui-records.spec.ts's.
 
 const section = (page: Page) => page.getByRole('tabpanel', { name: 'Advanced Authentication' });
 const editor = (page: Page) => section(page).getByRole('textbox', { name: 'JSON Editor (CredentialCreationOptions)' });
@@ -111,34 +111,6 @@ test.describe('/beta#advanced', () => {
     await expect(drawer.getByRole('button', { name, exact: true })).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(drawer).toHaveCount(0);
-  });
-
-  test('registers in /beta a credential the current Advanced tab authenticates with', async ({ page }) => {
-    await addVirtualAuthenticator(page);
-    await openBeta(page);
-    await register(page);
-
-    await openCurrent(page);
-    await page.locator('[data-action="switch-tab"][data-tab="advanced"]').first().click();
-    await page.locator('[data-action="switch-sub-tab"][data-sub-tab="authentication"]').click();
-    await page.locator('[data-action="advanced-authenticate"]').click();
-    await expect(page.locator('#advanced-status')).toHaveText('Advanced authentication successful!');
-  });
-
-  test('lists a credential the current Advanced tab registered, and opens its registration', async ({ page }) => {
-    await addVirtualAuthenticator(page);
-    await openCurrent(page);
-    await page.locator('[data-action="switch-tab"][data-tab="advanced"]').first().click();
-    const name = await page.locator('#user-name').inputValue();
-    await page.locator('[data-action="advanced-register"]').click();
-    await expect(page.locator('#registrationResultModal')).toBeVisible();
-
-    await openBeta(page);
-    await section(page).getByRole('button', { name: 'Saved Credentials 1' }).click();
-    await page.getByRole('dialog', { name: 'Saved Credentials' }).getByRole('button', { name, exact: true }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Show registration details' }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Registration Details' })).toBeVisible();
-    await expect(page.getByRole('dialog').locator('[data-level="registration"]')).toContainText('Response for navigator.credentials.create()');
   });
 
   for (const [width, height] of [
@@ -250,37 +222,6 @@ test.describe('/beta#advanced authentication', () => {
     await expect(result(page)).toContainText('Last authentication');
     await expect(result(page).locator('[data-row="Challenge"]')).toContainText('Issued by this server for this ceremony.');
     await expect(page.locator('#nav-panel-simple li[data-flash="failure"]')).toHaveCount(1);
-  });
-
-  test('registers in /beta a credential the current tab chooses in Allow Credentials and authenticates with', async ({ page }) => {
-    await addVirtualAuthenticator(page);
-    const record = await registerInBeta(page);
-
-    await openCurrent(page);
-    await page.locator('[data-action="switch-tab"][data-tab="advanced"]').first().click();
-    await page.locator('[data-action="switch-sub-tab"][data-sub-tab="authentication"]').click();
-    await page.locator('#allow-credentials').selectOption(record.credentialIdHex);
-    await expect(page.locator('#json-editor')).toHaveValue(new RegExp(record.credentialIdHex));
-    await page.locator('[data-action="advanced-authenticate"]').click();
-    await expect(page.locator('#advanced-status')).toHaveText('Advanced authentication successful!');
-  });
-
-  test('chooses and authenticates with a credential the current tab registered', async ({ page }) => {
-    await addVirtualAuthenticator(page);
-    await openCurrent(page);
-    await page.locator('[data-action="switch-tab"][data-tab="advanced"]').first().click();
-    const name = await page.locator('#user-name').inputValue();
-    await page.locator('[data-action="advanced-register"]').click();
-    await expect(page.locator('#registrationResultModal')).toBeVisible();
-
-    await openBeta(page);
-    await toAuthentication(page);
-    const allow = authentication(page).getByLabel('Allow Credentials', { exact: true });
-    const option = allow.locator('option').filter({ hasText: name });
-    await allow.selectOption(await option.getAttribute('value'));
-    expect(JSON.parse(await authEditor(page).inputValue()).publicKey.allowCredentials).toHaveLength(1);
-    await section(page).getByRole('button', { name: 'Assert Credential' }).click();
-    await expect(page.getByText('Advanced authentication successful!')).toBeVisible();
   });
 
   for (const [width, height] of [

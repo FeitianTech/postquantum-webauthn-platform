@@ -44,6 +44,13 @@ export async function addVirtualAuthenticator(page: Page, options: Authenticator
       const { credentials } = await session.send('WebAuthn.getCredentials', { authenticatorId });
       return credentials as VirtualCredential[];
     },
+    /** Puts a credential back on the authenticator (a recorded one: its key, counter and user handle). */
+    async add({ credentialId, isResidentCredential, rpId, privateKey, userHandle, signCount }: VirtualCredential) {
+      await session.send('WebAuthn.addCredential', {
+        authenticatorId,
+        credential: { credentialId, isResidentCredential, rpId, privateKey: privateKey ?? '', userHandle, signCount },
+      });
+    },
     async remove() {
       await session.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
     },

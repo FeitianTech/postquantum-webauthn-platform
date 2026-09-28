@@ -11,8 +11,8 @@ import { addVirtualAuthenticator } from './virtual-authenticator';
 // against Flask serving the export under the strict CSP: the detail, the
 // registration's level and under it a certificate's and the authenticator data's,
 // each at its own URL, Back going up one; for credentials registered by
-// Chromium's virtual authenticator in either UI, and for the server's recorded
-// registrations (an ES256 one, and one with an attestation certificate).
+// Chromium's virtual authenticator, and for the server's recorded registrations
+// (an ES256 one, and one with an attestation certificate).
 
 const repo = resolve(import.meta.dirname, '..', '..');
 const STORAGE_KEY = 'postquantum-webauthn.credentials';
@@ -134,60 +134,13 @@ test.describe('a saved credential\'s details in /beta', () => {
     );
   });
 
-  test('a credential registered at / opens in /beta, and one registered in /beta opens in the current modal', async ({ page }) => {
-    await addVirtualAuthenticator(page);
-    await page.goto('/');
-    await expect(page.locator('body')).toHaveClass(/app-loaded/);
-    const atCurrent = username();
-    await page.locator('#simple-email').fill(atCurrent);
-    await page.getByRole('button', { name: 'Register Passkey', exact: true }).click();
-    await expect(page.locator('#simple-status')).toContainText('Registration successful! Algorithm: EdDSA');
-
-    await openBeta(page);
-    await openDetailOf(page, atCurrent);
-    await expect(detailSection(page, 'Public Key')).toContainText('EdDSA (-8)');
-    await dialog(page).getByRole('button', { name: 'Close credential details' }).click();
-
-    const atBeta = username();
-    await registerInBeta(page, atBeta);
-    await page.goto('/');
-    await expect(page.locator('body')).toHaveClass(/app-loaded/);
-    await page.locator('#simple-credentials-list .credential-item').filter({ hasText: atBeta }).click();
-    const modal = page.locator('#credentialModal');
-    await expect(modal).toBeVisible();
-    await expect(modal.locator('#modalBody')).toContainText('Properties');
-    await expect(modal.locator('#modalBody')).toContainText(atBeta);
-    await expect(modal.locator('#modalBody')).toContainText('Attestation Information');
-  });
-
-  test('an advanced credential registered at / opens in /beta from its saved snapshot, with its registration', async ({ page }) => {
-    await addVirtualAuthenticator(page);
-    await page.goto('/');
-    await expect(page.locator('body')).toHaveClass(/app-loaded/);
-    await page.locator('[data-action="switch-tab"][data-tab="advanced"]').first().click();
-    await page.locator('[data-action="advanced-register"]').click();
-    await expect(page.locator('#registrationResultModal')).toBeVisible();
-
-    await openBeta(page);
-    const row = rows(page).first();
-    const key = await row.getAttribute('data-credential-key');
-    expect(key).toMatch(/^storage:/);
-    await page.goto(`/beta#simple/credential/${encodeURIComponent(key!).replace(/%3A/gi, ':')}/registration`);
-    await expect(detailSection(page, 'Authenticator Response')).toContainText('"type": "webauthn.create"');
-    await expect(detailSection(page, 'Server-retrieved Data').locator('pre')).toContainText('"rpIdHash"');
-  });
-
-  test('draw a credential whose stored AAGUID no spelling reads, in both UIs', async ({ page }) => {
+  test('draw a credential whose stored AAGUID no spelling reads', async ({ page }) => {
     await openBeta(page);
     const unreadable = { type: 'simple', userName: 'unreadable', credentialId: 'AQID', aaguid: 'abcde' };
     await keep(page, [named(ES256, 'es256@example.com'), unreadable, named(X5C, 'x5c@example.com')]);
     await page.reload();
     await expect(rows(page)).toHaveCount(3);
     await expect(rows(page).filter({ hasText: 'unreadable' }).locator('[data-unreadable="aaguid"]')).toContainText('abcde');
-
-    await page.goto('/');
-    await expect(page.locator('body')).toHaveClass(/app-loaded/);
-    await expect(page.locator('#simple-credentials-list .credential-item')).toHaveCount(3);
   });
 
   for (const width of [1440, 1024, 375]) {
@@ -219,34 +172,32 @@ test.describe('a saved credential\'s details in /beta', () => {
 });
 
 test.describe('another tab', () => {
-  test('a deletion in one tab shows in the other without a reload, in both UIs', async ({ page, context }) => {
+  test('a deletion in one tab shows in the other without a reload', async ({ page, context }) => {
     await openBeta(page);
     await keep(page, [named(ES256, 'first@example.com'), named(X5C, 'second@example.com')]);
     await page.reload();
     await expect(rows(page)).toHaveCount(2);
-    const current = await context.newPage();
-    await current.goto('/');
-    await expect(current.locator('body')).toHaveClass(/app-loaded/);
-    await expect(current.locator('#simple-credentials-list .credential-item')).toHaveCount(2);
+    const other = await context.newPage();
+    await openBeta(other);
+    await expect(rows(other)).toHaveCount(2);
 
     await rows(page).filter({ hasText: 'first@example.com' }).getByRole('button', { name: 'Delete' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
     await expect(rows(page)).toHaveCount(1);
-    await expect(current.locator('#simple-credentials-list .credential-item')).toHaveCount(1);
+    await expect(rows(other)).toHaveCount(1);
 
-    current.once('dialog', (question) => question.accept());
-    await current.locator('#simple-clear-credentials').click();
+    await section(other).getByRole('button', { name: 'Clear All' }).click();
+    await other.getByRole('alertdialog', { name: 'Clear All' }).getByRole('button', { name: 'Clear All' }).click();
+    await expect(rows(other)).toHaveCount(0);
     await expect(rows(page)).toHaveCount(0);
-    await current.close();
+    await other.close();
   });
 
   test('two tabs holding an advanced credential with an artifact settle, without waking each other for ever', async ({ page, context }) => {
     await addVirtualAuthenticator(page);
-    await page.goto('/');
-    await expect(page.locator('body')).toHaveClass(/app-loaded/);
-    await page.locator('[data-action="switch-tab"][data-tab="advanced"]').first().click();
-    await page.locator('[data-action="advanced-register"]').click();
-    await expect(page.locator('#registrationResultModal')).toBeVisible();
+    await page.goto('/beta#advanced');
+    await page.getByRole('tabpanel', { name: 'Advanced Authentication' }).getByRole('button', { name: 'Create Credential' }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Registration Details' })).toBeVisible();
 
     const other = await context.newPage();
     await openBeta(other);

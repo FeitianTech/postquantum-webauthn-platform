@@ -1,21 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import {
-  betaLevel,
-  betaSubViews,
-  expectedFor,
-  keep,
-  legacyDetail,
-  legacySubViews,
-  openCurrent,
-  report,
-  storedRecords,
-} from './credential-views';
+import { betaLevel, betaSubViews, expectedFor, keep, report } from './credential-views';
 import { expect, test } from './fixtures';
-import { type ShownSection, readShownText } from './parity';
+import type { ShownSection } from './parity';
 import { recorded } from './recorded';
-import { addVirtualAuthenticator } from './virtual-authenticator';
 
 // What a saved credential's details and its registration showed in the current UI
 // at / (the modal, its registration view, the second modal for a certificate or
@@ -50,13 +39,7 @@ test.describe('a saved credential\'s details in / and in /beta', () => {
   for (const record of RECORDS) {
     const name = record.userName as string;
     test(`show the same words, section by section, and the same certificates and authenticator data: ${name}`, async ({ page }) => {
-      const current = await recorded<DetailRecording>('credential-detail-parity', name, async () => {
-        await openCurrent(page);
-        await keep(page, RECORDS);
-        await page.reload();
-        await expect(page.locator('body')).toHaveClass(/app-loaded/);
-        return { sections: await legacyDetail(page, name), subViews: await legacySubViews(page, '#modalBody') };
-      });
+      const current = recorded<DetailRecording>('credential-detail-parity', name);
       const { sections: legacy, subViews: legacySubs } = current;
 
       await page.goto('/beta#simple');
@@ -77,16 +60,7 @@ test.describe('a saved credential\'s details in / and in /beta', () => {
   }
 
   test('an advanced registration\'s result at / shows the words its registration level shows in /beta', async ({ page }) => {
-    const current = await recorded<DetailRecording & { records: object[] }>('credential-detail-parity', 'an advanced registration at the current UI', async () => {
-      await addVirtualAuthenticator(page);
-      await openCurrent(page);
-      await page.locator('[data-action="switch-tab"][data-tab="advanced"]').first().click();
-      await page.locator('[data-action="advanced-register"]').click();
-      await expect(page.locator('#registrationResultModal')).toBeVisible();
-      const sections = await readShownText(page.locator('#registrationResultBody'), 'h3, h4');
-      const subViews = await legacySubViews(page, '#registrationResultBody');
-      return { sections, subViews, records: await storedRecords(page, 'registrationDetailSnapshot') };
-    });
+    const current = recorded<DetailRecording & { records: object[] }>('credential-detail-parity', 'an advanced registration at the current UI');
     const { sections: legacy, subViews: legacySubs } = current;
 
     await page.goto('/beta#simple');

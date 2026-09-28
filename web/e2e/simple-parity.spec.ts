@@ -63,19 +63,9 @@ function rowExpected(name: string, row: Locator): Promise<ExpectedDifference[]> 
   );
 }
 
-// Each check's verdict: the current card says it by the word's colour (green,
-// red, grey), /beta by the chip's tone (and a word for screen readers).
-function legacyVerdicts(row: Locator) {
-  return row.evaluate((element) =>
-    Array.from(element.querySelectorAll('span'))
-      .filter((span) => ['Signature', 'Root', 'RPID', 'AAGUID'].includes(span.textContent ?? ''))
-      .map((span) => {
-        const colour = span.style.color;
-        return `${span.textContent}:${colour === 'rgb(17, 182, 109)' ? 'passed' : colour === 'rgb(220, 53, 69)' ? 'failed' : 'unknown'}`;
-      }),
-  );
-}
-
+// Each check's verdict: the current card said it by the word's colour (green,
+// red, grey), recorded as passed, failed or unknown; /beta by the chip's tone (and
+// a word for screen readers).
 function betaVerdicts(row: Locator) {
   return row.evaluate((element) =>
     Array.from(element.querySelectorAll<HTMLElement>('[data-check]')).map((chip) => {
@@ -89,11 +79,6 @@ async function keep(page: Page, records: object[]) {
   await page.evaluate(([key, value]) => window.localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify(records)] as const);
 }
 
-async function openCurrent(page: Page) {
-  await page.goto('/');
-  await expect(page.locator('body')).toHaveClass(/app-loaded/);
-}
-
 async function openBeta(page: Page) {
   await page.goto('/beta#simple');
   await expect(page.locator('[data-saved-credentials] [data-count]')).toBeVisible();
@@ -103,10 +88,7 @@ type RowRecording = { name: string; sections: ShownSection[]; buttons: string[];
 
 test.describe('the Simple tab in / and in /beta', () => {
   test('shows the same words', async ({ page }) => {
-    const legacy = await recorded('simple-parity', 'the tab', async () => {
-      await openCurrent(page);
-      return readShownText(page.locator('#simple-tab'), 'h2, h3');
-    });
+    const legacy = recorded<ShownSection[]>('simple-parity', 'the tab');
     await openBeta(page);
     const beta = await readShownText(page.locator('#nav-panel-simple'), 'h2, h3');
 
@@ -116,25 +98,7 @@ test.describe('the Simple tab in / and in /beta', () => {
   });
 
   test('shows each saved credential with the same words, in the same order', async ({ page }) => {
-    const legacyRows = await recorded<RowRecording[]>('simple-parity', 'the rows', async () => {
-      await openCurrent(page);
-      await keep(page, RECORDS);
-      await page.reload();
-      await expect(page.locator('body')).toHaveClass(/app-loaded/);
-      const cards = page.locator('#simple-credentials-list .credential-item');
-      await expect(cards).toHaveCount(RECORDS.length);
-      const read: RowRecording[] = [];
-      for (let index = 0; index < RECORDS.length; index += 1) {
-        const card = cards.nth(index);
-        read.push({
-          name: (await card.locator('div > div').first().textContent())!.trim(),
-          sections: await readShownText(card, 'h6'),
-          buttons: (await card.getByRole('button').allTextContents()).map((text) => text.trim()),
-          checks: await legacyVerdicts(card),
-        });
-      }
-      return read;
-    });
+    const legacyRows = recorded<RowRecording[]>('simple-parity', 'the rows');
     expect(legacyRows).toHaveLength(RECORDS.length);
 
     await openBeta(page);
@@ -170,17 +134,7 @@ test.describe('the Simple tab in / and in /beta', () => {
     await expect(page.getByText('Authentication successful! You have been verified.')).toBeVisible();
     const betaPanel = await readShownText(page.getByRole('tabpanel', { name: 'Simple Authentication' }).locator('[data-ceremony-result]'), 'h6');
 
-    const current = await recorded('simple-parity', 'after a registration and an authentication', async () => {
-      await openCurrent(page);
-      await page.locator('#simple-email').fill(name);
-      await page.getByRole('button', { name: 'Authenticate', exact: true }).click();
-      await expect(page.locator('#simple-status')).toHaveText('Authentication successful! You have been verified.');
-      const panel = await readShownText(page.locator('#simple-ceremony-result'), 'h6');
-      await page.locator('#simple-email').fill(`${name}-current`);
-      await page.getByRole('button', { name: 'Register Passkey', exact: true }).click();
-      await expect(page.locator('#simple-status')).toContainText('Registration successful!');
-      return { panel, registered: (await page.locator('#simple-status').textContent())!.trim() };
-    });
+    const current = recorded<{ panel: ShownSection[]; registered: string }>('simple-parity', 'after a registration and an authentication');
     const legacyPanel = current.panel;
 
     const counter: ExpectedDifference[] = [

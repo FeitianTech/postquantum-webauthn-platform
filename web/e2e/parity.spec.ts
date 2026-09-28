@@ -29,7 +29,7 @@ test('finds a missing, an extra and a doubled word, section by section', () => {
     ['EDN (exact bytes)', 'legacy', '"c"}', 1, null],
   ]);
   expect(describeDifferences(differences).slice(0, 3)).toEqual([
-    '[header] only in the current UI: "8" (in "offset 8 · ${1} — map key 1 appears twice") — UNEXPLAINED',
+    '[header] only in the recording: "8" (in "offset 8 · ${1} — map key 1 appears twice") — UNEXPLAINED',
     '[header] only in /beta: "Codec" (in "Codec") — UNEXPLAINED',
     '[header] only in /beta: "canonical" (in "canonical") — a new chip',
   ]);
