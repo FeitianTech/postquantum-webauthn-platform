@@ -26,7 +26,8 @@ steps:
         uv sync --locked --python 3.12
         .venv/bin/python -m pytest -q
 
-  # node:22-slim: jsdom 30 pulls undici 8, which needs Node 22 or newer.
+  # The logic web/ imports from frontend/static/scripts, until Phase 30B moves it
+  # into web/. node:22-slim: jsdom 30 pulls undici 8, which needs Node 22 or newer.
   - name: node:22-slim
     id: Frontend tests
     waitFor: ['-']

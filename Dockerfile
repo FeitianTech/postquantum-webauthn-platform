@@ -11,7 +11,7 @@ WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY web/ ./
-# The logic modules web/ imports in place until the cutover.
+# The logic modules web/ imports in place until Phase 30B moves them into web/.
 COPY frontend/static/scripts /src/frontend/static/scripts
 RUN npm run build && npm run check:csp
 
@@ -78,6 +78,8 @@ COPY --from=builder /install /usr/local
 # every module has one import path. Only server/app, not server/: server/runtime
 # holds local credential artifacts and .dockerignore does not exclude it.
 COPY server/app /app/server/app
+# What is left of frontend/ (the logic web/ imports) until Phase 30B: the static
+# asset build gives it the build id the MDS snapshot's URL carries.
 COPY frontend /app/frontend
 COPY --from=web /src/web/out /app/web/out
 COPY gunicorn.conf.py /app/gunicorn.conf.py

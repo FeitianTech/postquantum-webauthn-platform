@@ -15,6 +15,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The logic modules the site's UI (web/) imports, which stay in
+  # frontend/static/scripts until Phase 30B moves them into web/ with their
+  # tests (docs/UI_MIGRATION.md): their tests, with the floors and the 100 %
+  # files in vitest.config.mjs. The current UI's views and their tests are gone.
   frontend-tests:
     runs-on: ubuntu-latest
 
