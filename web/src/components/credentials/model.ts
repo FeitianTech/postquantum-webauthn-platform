@@ -67,6 +67,8 @@ export const LIST_TEXT = SAVED_LIST_TEXT as { empty: string; unknownUser: string
 export const CLEAR_ALL_QUESTION = CLEAR_ALL_CONFIRMATION as string;
 export const deleteQuestion = deleteConfirmation as (credential: SavedCredential) => string;
 export const flashKey = credentialFlashKey as (credentialId: unknown) => string;
+/** A saved record's key in the list, and in its details' URL (the storage's own identifier). */
+export const recordKey = credentialKey as (record: SavedCredential) => string;
 
 /** Every saved credential, simple and advanced, in the order stored. */
 export function readSavedCredentials(): SavedCredential[] {
@@ -82,7 +84,7 @@ export const followOtherTabs = followStoredCredentialChanges as (onChange: () =>
 /** Each row: its key (the storage's own identifier) and what it shows. */
 export function describeRows(credentials: SavedCredential[]): CredentialRowView[] {
   return credentials.map((credential) => ({
-    key: (credentialKey as (record: SavedCredential) => string)(credential),
+    key: recordKey(credential),
     credential,
     ...(describeCredentialCard as (record: SavedCredential, inputs: object) => CredentialCardView)(credential, {
       indicators: deriveCredentialStatusIndicators(credential),

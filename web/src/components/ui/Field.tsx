@@ -76,6 +76,11 @@ function borderFor(error: ReactNode) {
   return error ? 'border-danger' : 'border-line-strong enabled:hover-or-demo:border-line-hover';
 }
 
+/** A text control's look, for one a field row does not hold (named by a heading, say). */
+export function textControlClassName(error?: ReactNode) {
+  return cx(TEXT_FIELD, borderFor(error));
+}
+
 type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'style' | 'id'> &
   RowProps & {
     /** A control inside the field's right edge, such as an IconButton. */
