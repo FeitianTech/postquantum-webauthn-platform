@@ -91,9 +91,14 @@ describe('sanitiseAttestationObjectForDisplay', () => {
   it('keeps in the chain a certificate the view knows only by its summary', () => {
     const certificates = [{ parsedX5c: { summary: ' Version: 3 (0x2) ', pem: '-----BEGIN CERTIFICATE-----' } }];
     const shown = sanitiseAttestationObjectForDisplay({ fmt: 'packed', attStmt: { x5c: ['MIIB'] } }, 'packed', certificates);
-    expect(shown.attStmt.x5c).toHaveLength(1);
-    expect(shown.attStmt.x5c[0]).toMatchObject({ certificateIndex: 1 });
-    expect(shown.attStmt.x5c[0]).not.toHaveProperty('details');
+    expect(shown.attStmt.x5c).toEqual([{ certificateIndex: 1, summary: 'Version: 3 (0x2)' }]);
+  });
+
+  it('shows a certificate with details by its details alone, not its summary as well', () => {
+    const certificate = advancedComplete().relyingParty.attestationCertificate;
+    expect(certificate.summary).toBeTruthy();
+    const shown = sanitiseAttestationObjectForDisplay({ fmt: 'packed', attStmt: { x5c: ['MIIB'] } }, '', [{ parsedX5c: certificate }]);
+    expect(shown.attStmt.x5c).toEqual([{ certificateIndex: 1, details: shownDetails(certificate) }]);
   });
 
   it('shows the certificates that failed to parse when none parsed', () => {

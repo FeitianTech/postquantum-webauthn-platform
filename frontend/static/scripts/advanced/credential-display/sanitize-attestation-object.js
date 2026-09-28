@@ -30,6 +30,9 @@ export function sanitiseAttestationObjectForDisplay(
     }
 
     const certificatesAll = Array.isArray(certificates) ? certificates : [];
+    // A certificate known only by its summary shows that summary; it is put
+    // back once the object's own summaries are stripped below.
+    const summariesOnly = [];
     const { valid: certificateInfos, failures: parseFailureInfos } = partitionCertificateEntries(certificatesAll);
     const shownCertificates = certificateInfos.length
         ? certificateInfos
@@ -84,8 +87,8 @@ export function sanitiseAttestationObjectForDisplay(
                     entry.details = sanitizedDetails;
                 }
 
-                if (summaryText) {
-                    entry.summary = summaryText;
+                if (summaryText && !hasDetails) {
+                    summariesOnly.push({ entry, summaryText });
                 }
 
                 if (errorText) {
@@ -114,6 +117,9 @@ export function sanitiseAttestationObjectForDisplay(
 
     stripCertificateCollections(cloned);
     removeKeysFromObject(cloned, ['summary', 'raw']);
+    summariesOnly.forEach(({ entry, summaryText }) => {
+        entry.summary = summaryText;
+    });
     removeKeysCaseInsensitive(cloned, ['publicKeyHex', 'publicKeyHexLines', 'publicKeyBase64']);
     stripSignatureFormatting(cloned);
 
