@@ -31,6 +31,7 @@ import {
   clearSimpleCredentials,
   ensureAdvancedCredentialArtifactsSynced,
   ensureAdvancedCredentialSnapshotsPrefetched,
+  followStoredCredentialChanges,
   getAllAdvancedCredentials,
   getAllSimpleCredentials,
   getAllStoredCredentialsInOrder,
@@ -74,6 +75,9 @@ export function readSavedCredentials(): SavedCredential[] {
     { normaliseAaguidValue, getCredentialIdHex, getCredentialUserHandleHex },
   );
 }
+
+/** Calls `onChange` when another tab changes the saved credentials; gives the function that stops. */
+export const followOtherTabs = followStoredCredentialChanges as (onChange: () => void) => () => void;
 
 /** Each row: its key (the storage's own identifier) and what it shows. */
 export function describeRows(credentials: SavedCredential[]): CredentialRowView[] {

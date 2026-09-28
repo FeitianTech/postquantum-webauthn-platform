@@ -9,6 +9,7 @@ import {
   type SavedCredential,
   describeRows,
   flashKey,
+  followOtherTabs,
   readSavedCredentials,
   removeCredential,
   removeEveryCredential,
@@ -77,6 +78,10 @@ export function SavedCredentialsProvider({ children }: { children: ReactNode }) 
   // After hydration: on the server there is no storage, so the exported page
   // shows the list empty and reads it here.
   useEffect(refresh, [refresh]);
+
+  // A change another tab makes (either interface) shows here without a reload.
+  // Read again only: that tab warms its own change up.
+  useEffect(() => followOtherTabs(reload), [reload]);
 
   const report = useMemo<DeletionReport>(
     () => ({

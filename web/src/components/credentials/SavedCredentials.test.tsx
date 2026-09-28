@@ -4,7 +4,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ToastProvider } from '@/components/ui/Toast';
-import { keepRecords, savedRecord, storedRecords, warmUpRoutes } from '@/test/credentials';
+import { STORAGE_KEY, keepRecords, savedRecord, storedRecords, warmUpRoutes } from '@/test/credentials';
 import { json, stubFetch } from '@/test/fetch';
 import { renderPage } from '@/test/page';
 
@@ -250,6 +250,18 @@ describe('the warm-up after the list is read', () => {
 });
 
 describe('the saved credentials\' state', () => {
+  it('shows a change another tab makes without a reload', async () => {
+    renderList([ES256]);
+    await waitFor(() => expect(rows()).toHaveLength(1));
+
+    act(() => {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify([ES256, MLDSA]));
+      window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY }));
+    });
+    await waitFor(() => expect(rows()).toHaveLength(2));
+    expect(rowNamed('ml@example.com')).toBeTruthy();
+  });
+
   it('is only given inside its provider', () => {
     const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() => render(<FlashButton id="x" />)).toThrow('useSavedCredentials needs a SavedCredentialsProvider');
