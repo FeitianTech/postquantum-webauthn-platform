@@ -2,10 +2,12 @@
 // explorer/*.js: every branch.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { createExplorerSource } from '../../../../../frontend/static/scripts/advanced/mds/metadata/explorer-source.js';
 import {
   cloneMetadataEntry,
   extractSnapshotTimestamp,
   formatInitialExplorerStatus,
+  formatSnapshotTimestamp,
   normaliseFileList,
   normaliseSnapshotInfo,
 } from '../../../../../frontend/static/scripts/advanced/mds/metadata/metadata-helpers.js';
@@ -23,6 +25,7 @@ import {
 } from '../../../../../frontend/static/scripts/advanced/mds/utils/formatters.js';
 import {
   formatGuidCandidate,
+  normaliseAaguid,
   normaliseIcon,
   resolveName,
 } from '../../../../../frontend/static/scripts/advanced/mds/utils/resolvers.js';
@@ -38,6 +41,30 @@ describe('sort values', () => {
     expect(normaliseSortValueInput(date)).toBe(date.getTime());
     expect(normaliseSortValueInput('—')).toBe('');
     expect(normaliseSortValueInput('   ')).toBe('');
+  });
+
+  it('keeps a number as it is', () => {
+    expect(normaliseSortValueInput(42)).toBe(42);
+  });
+});
+
+describe('the explorer\'s source', () => {
+  it('asks the API afresh for a reload, and when the page names no session state', () => {
+    const source = createExplorerSource({ snapshotUrl: '/snap.json', customEntriesState: 42 });
+    expect(source.resolve()).toEqual({ url: '/api/mds/metadata/explorer/full', cache: 'no-store', kind: 'api' });
+    expect(source.resolve({ forceReload: true })).toEqual({ url: '/api/mds/metadata/explorer/full', cache: 'reload', kind: 'api' });
+    expect(source.fallback({ forceReload: true }).cache).toBe('reload');
+  });
+
+  it('follows what a snapshot says of the session\'s uploads, and nothing else', () => {
+    const source = createExplorerSource({ snapshotUrl: '/snap.json', customEntriesState: 'unknown' });
+    source.noteSnapshotMeta({ hasCustomEntries: false });
+    expect(source.resolve().kind).toBe('static');
+    source.noteSnapshotMeta(null);
+    source.noteSnapshotMeta({ hasCustomEntries: 'yes' });
+    expect(source.resolve().kind).toBe('static');
+    source.noteSnapshotMeta({ hasCustomEntries: true });
+    expect(source.resolve().kind).toBe('api');
   });
 });
 
@@ -60,6 +87,28 @@ describe('snapshot helpers', () => {
 
   it('lists no files from nothing', () => {
     expect(normaliseFileList(null)).toEqual([]);
+  });
+
+  it('lists the files of a list, and nothing else in it', () => {
+    const file = new File(['{}'], 'custom.json');
+    expect(normaliseFileList([file, 'custom.json', null])).toEqual([file]);
+  });
+
+  it('trims a summary\'s text and keeps its other values', () => {
+    expect(normaliseSnapshotInfo({ no: 7, generatedAt: ' 2025-01-02T03:04:05Z ' })).toEqual({ no: 7, generatedAt: '2025-01-02T03:04:05Z' });
+  });
+
+  it('says a snapshot\'s number, count and date, and a date it cannot read as it is', () => {
+    expect(formatSnapshotTimestamp({})).toBeNull();
+    expect(formatSnapshotTimestamp({ generatedAt: 'last Tuesday' })).toBe('last Tuesday');
+    const sentence = formatInitialExplorerStatus({ no: 7, entryCount: 1234, generatedAt: '2025-01-02T03:04:05Z' });
+    expect(sentence).toMatch(/^Snapshot 7 • 1,234 authenticators • last updated .+\. Explorer data is loading in the background\.$/);
+    expect(formatInitialExplorerStatus({ fetchedAt: 'last Tuesday' })).toBe(
+      'last updated last Tuesday. Explorer data is loading in the background.',
+    );
+    expect(formatInitialExplorerStatus({ entryCount: 'many' })).toBe(
+      'Packaged FIDO metadata is available. Explorer data is loading in the background.',
+    );
   });
 });
 
@@ -136,5 +185,12 @@ describe('status reports', () => {
   it('puts reports without a date last', () => {
     const sorted = sortStatusReportsByEffectiveDateDesc([{ status: 'A' }, { effectiveDate: '2024-01-01' }, null, { effectiveDate: 'soon' }]);
     expect(sorted[0]).toEqual({ effectiveDate: '2024-01-01' });
+  });
+});
+
+describe('names and identifiers', () => {
+  it('names no hash from what is not text, and reads a blank AAGUID as none', () => {
+    expect(formatSignatureHashName(42)).toBe('');
+    expect(normaliseAaguid('   ')).toBe('');
   });
 });

@@ -27,6 +27,20 @@ describe('registration snapshot sanitising', () => {
     });
   });
 
+  it('keeps a detail preparation\'s values, and none it lacks', () => {
+    const snapshot = sanitiseRegistrationDetailSnapshot({
+      schemaVersion: 2,
+      state: { detailPreparation: { authenticatorDataValue: 'SZYN5YgO' } },
+    });
+
+    expect(snapshot.state.detailPreparation).toEqual({
+      attestationObjectValue: '',
+      attestationDecodeError: '',
+      authenticatorDataValue: 'SZYN5YgO',
+      authenticatorDecodeError: '',
+    });
+  });
+
   it('leaves out a part that is too long instead of cutting it', () => {
     const long = 'A'.repeat(MAX_SNAPSHOT_RESPONSE_LENGTH);
     const snapshot = sanitiseRegistrationDetailSnapshot({

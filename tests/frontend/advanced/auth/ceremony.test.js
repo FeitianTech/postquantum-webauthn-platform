@@ -385,6 +385,15 @@ describe('registerAdvancedCredential', () => {
     expect(authenticator.create.mock.invocationCallOrder[0]).toBeLessThan(fetch.mock.invocationCallOrder[1]);
   });
 
+  it('sends no extension results as the authenticator reported them, when it reported none', async () => {
+    serving({ [BEGIN]: NONE.begin, [COMPLETE]: NONE.complete });
+    authenticatorGiving({ ...recordedCredential(NONE), getClientExtensionResults: () => null });
+    await registerAdvancedCredential(text(request()), formOptions());
+
+    expect(asked()).toEqual([BEGIN, COMPLETE]);
+    expect(sent(1).body.__credential_response.clientExtensionResults).toBeNull();
+  });
+
   it('completes with the request, the credential as JSON and the session state begin answered', async () => {
     serving({ [BEGIN]: NONE.begin, [COMPLETE]: NONE.complete });
     await registerAdvancedCredential(text(request()), formOptions());

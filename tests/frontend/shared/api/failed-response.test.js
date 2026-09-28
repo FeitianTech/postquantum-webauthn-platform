@@ -146,6 +146,12 @@ describe('readFailedResponse', () => {
     expect(failure.text).toBe('bad payload');
   });
 
+  it('reads a body whose answer names no content type', async () => {
+    const failure = await readFailedResponse({ status: 500, headers: { get: () => null }, text: vi.fn().mockResolvedValue('Out of order') });
+
+    expect(failure.text).toBe('Out of order');
+  });
+
   it('copes with a body that cannot be read, or no response at all', async () => {
     const unreadable = {
       status: 502,
