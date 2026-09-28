@@ -1,44 +1,17 @@
-import { type ReactNode, useId } from 'react';
-
 import { TextField } from '@/components/ui/Field';
 
-import { About, Chip, ChipGroupField, Chips, FakeCredentialField, HexField, SelectField, SwitchField } from './FieldControls';
+import { About, Chip, ChipGroupField, Chips, FakeCredentialField, FormSection, HexField, SelectField, SwitchField, toggled } from './FieldControls';
 import { REGISTRATION_FIELDS, REGISTRATION_SECTIONS } from './fieldText';
 import { ALGORITHMS, FAKE_TEXT, HINTS, lockedFields } from './model';
 import type { AdvancedRequest } from './useAdvancedRequest';
 
 const FIELDS = REGISTRATION_FIELDS;
 
-// One section of the form: a card of its own (no card in a card) whose fields
-// sit on a grid its own width sets: one column, then two, then three.
-function FormSection({ title, children }: { title: string; children: ReactNode }) {
-  const headingId = useId();
-  return (
-    <section aria-labelledby={headingId} className="@container min-w-0 rounded-lg border border-line bg-surface p-5 sm:p-6" data-form-section={title}>
-      <h3 id={headingId} className="text-title-sm font-semibold text-ink">
-        {title}
-      </h3>
-      <div className="mt-5 grid grid-cols-1 gap-x-5 gap-y-5 @lg:grid-cols-2 @3xl:grid-cols-3">{children}</div>
-    </section>
-  );
-}
-
 const WIDE = '@lg:col-span-full';
 
 function AboutFor({ field }: { field: keyof typeof FIELDS }) {
   const text: { label: string; about?: { en: string[]; zh: string[] } } = FIELDS[field];
   return <About label={text.label} about={text.about} />;
-}
-
-/**
- * A set held in the settings, one member toggled: the rest keep their order (an
- * edit's included); one put in goes before the first that `order` puts after it.
- */
-function toggled<T>(set: T[], member: T, pressed: boolean, order: T[]) {
-  if (!pressed) return set.filter((value) => value !== member);
-  if (set.includes(member)) return set;
-  const at = set.findIndex((value) => order.indexOf(value) > order.indexOf(member));
-  return at < 0 ? [...set, member] : [...set.slice(0, at), member, ...set.slice(at)];
 }
 
 // The registration's form: User Identity, Authenticator Selection, Other Options

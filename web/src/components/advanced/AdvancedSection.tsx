@@ -144,7 +144,7 @@ export function AdvancedSection({ active, route }: { active: boolean; route: Sec
       >
         <RegistrationForm request={request} />
         <div className="min-w-0 wide:sticky wide:top-[calc(var(--header-height)+1.5rem)] wide:h-[calc(100dvh-var(--header-height)-3rem)] wide:self-start">
-          <JsonEditor request={request} />
+          <JsonEditor scope="registration" request={request} />
         </div>
       </div>
       <div

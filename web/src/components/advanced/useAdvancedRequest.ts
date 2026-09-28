@@ -5,8 +5,6 @@ import { useSavedCredentials } from '@/components/credentials/useSavedCredential
 import { APP_TITLE } from '@/lib/sections';
 
 import {
-  type CreationOptions,
-  type EditedRequest,
   type RegistrationField,
   type RegistrationSettings,
   buildRequest,
@@ -15,14 +13,13 @@ import {
   extrasOf,
   fakeLength,
   fakeList,
-  follow,
   randomHex,
   randomName,
   readEdit,
   readRequest,
-  textOf,
   withoutFake,
 } from './model';
+import { NO_TEXT, type RequestText, followedText, rebuiltText, resetText } from './requestEditor';
 
 // A registration's request as the Advanced tab holds it: the JSON editor's text
 // is the request (what the ceremony sends, as in the current tab), and the form
@@ -32,20 +29,12 @@ import {
 // applies as it parses). The toolbar's Reset rebuilds the text from nothing;
 // the editor's Reset from the form, keeping the keys beside publicKey.
 
-type RequestState = {
+type RequestState = RequestText & {
   settings: RegistrationSettings;
   /** The fake credential IDs the request excludes after the saved ones (hex). */
   fakeExclude: string[];
   /** What the fake ID field says about the last length asked for. */
   fakeMessage: { tone: 'error' | 'info'; text: string } | null;
-  /** The keys an accepted edit holds beside publicKey. */
-  extras: Record<string, unknown>;
-  /** The editor's text: the request. */
-  text: string;
-  /** What the text is, when the form cannot follow it (unparsed or refused). */
-  edit: EditedRequest | null;
-  /** The form's request the text last followed; none before the first. */
-  formRequest: CreationOptions | null;
 };
 
 type Context = { hostname: string; storedCredentials: SavedCredential[] };
@@ -80,34 +69,17 @@ function formRequestOf(settings: RegistrationSettings, fakeExclude: string[], co
   });
 }
 
-/** The text rebuilt from the form, with the keys beside publicKey. */
-function rebuilt(current: RequestState, context: Context): RequestState {
-  const request = formRequestOf(current.settings, current.fakeExclude, context);
-  return { ...current, text: textOf({ ...current.extras, ...request }), edit: null, formRequest: request };
-}
-
-/**
- * The text after the form's request changed: what changed is written over it
- * (followForm), the rest staying as typed. A change the person did not make
- * (the saved credentials) leaves text that does not parse as it is.
- */
 function followed(current: RequestState, context: Context, background = false): RequestState {
-  const request = formRequestOf(current.settings, current.fakeExclude, context);
-  if (!current.formRequest || (background && current.edit?.status === 'unparsed')) {
-    return current.formRequest ? { ...current, formRequest: request } : rebuilt(current, context);
-  }
-  const text = follow(current.text, current.formRequest, request, current.extras);
-  const reading = readEdit(text, 'registration');
-  return { ...current, text, edit: reading.status === 'accepted' ? null : reading, formRequest: request };
+  return followedText(current, formRequestOf(current.settings, current.fakeExclude, context), 'registration', background);
 }
 
 function reduce(current: RequestState, action: Action): RequestState {
   switch (action.type) {
     case 'start':
     case 'reset':
-      return rebuilt(
-        { settings: action.settings, fakeExclude: [], fakeMessage: null, extras: {}, text: '', edit: null, formRequest: null },
-        action.context,
+      return rebuiltText(
+        { ...NO_TEXT, settings: action.settings, fakeExclude: [], fakeMessage: null },
+        formRequestOf(action.settings, [], action.context),
       );
     case 'change':
       return followed({ ...current, settings: changeSetting(current.settings, action.field, action.value) }, action.context);
@@ -122,12 +94,8 @@ function reduce(current: RequestState, action: Action): RequestState {
       return followed({ ...current, fakeExclude: withoutFake(current.fakeExclude, action.index) ?? current.fakeExclude, fakeMessage: null }, action.context);
     case 'rebuild':
       return followed(current, action.context, true);
-    case 'reset-editor': {
-      // As the current editor's Reset: the form's request, with the keys beside
-      // publicKey that the text holds, if it parses.
-      const reading = readEdit(current.text, 'registration');
-      return rebuilt({ ...current, extras: reading.status === 'unparsed' ? current.extras : extrasOf(reading.root) }, action.context);
-    }
+    case 'reset-editor':
+      return resetText(current, formRequestOf(current.settings, current.fakeExclude, action.context), 'registration');
     case 'edit': {
       const edit = readEdit(action.text, 'registration');
       if (edit.status !== 'accepted') return { ...current, text: action.text, edit };
@@ -148,13 +116,10 @@ function reduce(current: RequestState, action: Action): RequestState {
 }
 
 const EMPTY: RequestState = {
+  ...NO_TEXT,
   settings: { ...defaultSettings(), userId: '', userName: '', displayName: '', challenge: '' },
   fakeExclude: [],
   fakeMessage: null,
-  extras: {},
-  text: '',
-  edit: null,
-  formRequest: null,
 };
 
 export function useAdvancedRequest() {

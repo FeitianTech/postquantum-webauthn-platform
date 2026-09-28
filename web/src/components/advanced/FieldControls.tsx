@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useId } from 'react';
 
 import { Button, IconButton } from '@/components/ui/Button';
 import { FieldRow, Select, TextField } from '@/components/ui/Field';
@@ -15,6 +15,31 @@ import { fakeSize, hexIsValid } from './model';
 // it, the control at one height, its error below; the info popup in English and
 // 中文 as the current one has it.
 
+// One section of a form: a card of its own (no card in a card) whose fields
+// sit on a grid its own width sets: one column, then two, then three.
+export function FormSection({ title, children }: { title: string; children: ReactNode }) {
+  const headingId = useId();
+  return (
+    <section aria-labelledby={headingId} className="@container min-w-0 rounded-lg border border-line bg-surface p-5 sm:p-6" data-form-section={title}>
+      <h3 id={headingId} className="text-title-sm font-semibold text-ink">
+        {title}
+      </h3>
+      <div className="mt-5 grid grid-cols-1 gap-x-5 gap-y-5 @lg:grid-cols-2 @3xl:grid-cols-3">{children}</div>
+    </section>
+  );
+}
+
+/**
+ * A set held in the settings, one member toggled: the rest keep their order (an
+ * edit's included); one put in goes before the first that `order` puts after it.
+ */
+export function toggled<T>(set: T[], member: T, pressed: boolean, order: T[]) {
+  if (!pressed) return set.filter((value) => value !== member);
+  if (set.includes(member)) return set;
+  const at = set.findIndex((value) => order.indexOf(value) > order.indexOf(member));
+  return at < 0 ? [...set, member] : [...set.slice(0, at), member, ...set.slice(at)];
+}
+
 export function About({ label, about }: { label: string; about?: FieldAbout }) {
   if (!about) return null;
   const paragraphs = (texts: string[]) => texts.map((text, index) => <p key={index} className={index ? 'mt-3' : undefined}>{text}</p>);
@@ -23,19 +48,35 @@ export function About({ label, about }: { label: string; about?: FieldAbout }) {
 
 const aboutOf = (text: FieldText) => <About label={text.label} about={text.about} />;
 
+/** A select with the template's options (or those given); some may be unusable, the whole locked, a note under it. */
 export function SelectField({
   text,
   value,
   onChange,
+  options = text.options ?? [],
+  disabled,
+  disabledOptions = [],
+  note,
 }: {
   text: FieldText;
   value: string;
   onChange: (value: string) => void;
+  options?: { value: string; label: string }[];
+  disabled?: boolean;
+  disabledOptions?: string[];
+  note?: string;
 }) {
   return (
-    <Select label={text.label} aside={aboutOf(text)} value={value} onChange={(event) => onChange(event.target.value)}>
-      {text.options?.map((option) => (
-        <option key={option.value} value={option.value}>
+    <Select
+      label={text.label}
+      aside={aboutOf(text)}
+      value={value}
+      disabled={disabled}
+      hint={note || undefined}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value} disabled={disabledOptions.includes(option.value)}>
           {option.label}
         </option>
       ))}
@@ -97,6 +138,7 @@ export function HexField({
   minBytes,
   onRandom,
   disabled,
+  note,
 }: {
   text: FieldText;
   value: string;
@@ -104,6 +146,8 @@ export function HexField({
   minBytes: number;
   onRandom?: () => void;
   disabled?: boolean;
+  /** A sentence under the field, when there is no error. */
+  note?: string;
 }) {
   return (
     <TextField
@@ -113,6 +157,7 @@ export function HexField({
       mono
       value={value}
       disabled={disabled}
+      hint={note || undefined}
       onChange={(event) => onChange(event.target.value)}
       error={hexIsValid(value, minBytes) ? undefined : text.error}
       trailing={

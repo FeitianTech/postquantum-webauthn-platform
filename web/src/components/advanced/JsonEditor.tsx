@@ -7,16 +7,18 @@ import { useToast } from '@/components/ui/Toast';
 import { cx } from '@/lib/cx';
 
 import { EDITOR_WORDS, type EditorState, autoIndent, indent, titleOf, wrapPair } from './model';
-import type { AdvancedRequest } from './useAdvancedRequest';
+import type { RequestEditor, RequestScope } from './requestEditor';
 
 const PAIRS: Record<string, string> = { '{': '}', '[': ']' };
+// The button that sends the request, which a refused edit's note names.
+const SENDS: Record<RequestScope, string> = { registration: 'Create Credential', authentication: 'Assert Credential' };
 
-// The JSON editor beside the form: the request the ceremony sends, as text. An
-// edit applies as it parses: the form follows at once; one that does not parse
-// says why and where, and the form keeps the last request it could read. Tab,
-// Shift+Tab, Enter, { and [ edit as the current editor does; Escape, then Tab,
-// leaves it. Geist Mono for the JSON only.
-export function JsonEditor({ request }: { request: AdvancedRequest }) {
+// The JSON editor beside a ceremony's form: the request the ceremony sends, as
+// text. An edit applies as it parses: the form follows at once; one that does
+// not parse says why and where, and the form keeps the last request it could
+// read. Tab, Shift+Tab, Enter, { and [ edit as the current editor does; Escape,
+// then Tab, leaves it. Geist Mono for the JSON only.
+export function JsonEditor({ scope, request }: { scope: RequestScope; request: RequestEditor }) {
   const headingId = useId();
   const noteId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -24,7 +26,7 @@ export function JsonEditor({ request }: { request: AdvancedRequest }) {
   const pendingSelection = useRef<[number, number] | null>(null);
   // Escape lets the next Tab leave the editor.
   const leaving = useRef(false);
-  const title = titleOf('registration');
+  const title = titleOf(scope);
   const { edit } = request;
   const toast = useToast();
   const reset = () => {
@@ -130,7 +132,7 @@ export function JsonEditor({ request }: { request: AdvancedRequest }) {
             </p>
           ) : null}
           {edit.status === 'refused' ? (
-            <p className="text-label">The form keeps the last request it could read; Create Credential sends this JSON as it is.</p>
+            <p className="text-label">The form keeps the last request it could read; {SENDS[scope]} sends this JSON as it is.</p>
           ) : null}
         </div>
       ) : null}

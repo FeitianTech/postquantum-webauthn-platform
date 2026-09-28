@@ -20,7 +20,7 @@ function Harness() {
         Reset the form
       </button>
       <RegistrationForm request={request} />
-      <JsonEditor request={request} />
+      <JsonEditor scope="registration" request={request} />
     </>
   );
 }
