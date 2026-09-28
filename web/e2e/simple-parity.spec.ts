@@ -153,7 +153,7 @@ test.describe('the Simple tab in / and in /beta', () => {
     const betaRegistered = (await page.locator('[data-toast-viewport]').getByText(/^Registration successful!/).textContent())!;
     await page.getByRole('button', { name: 'Authenticate', exact: true }).click();
     await expect(page.getByText('Authentication successful! You have been verified.')).toBeVisible();
-    const betaPanel = await readShownText(page.locator('[data-ceremony-result]'), 'h6');
+    const betaPanel = await readShownText(page.getByRole('tabpanel', { name: 'Simple Authentication' }).locator('[data-ceremony-result]'), 'h6');
 
     await openCurrent(page);
     await page.locator('#simple-email').fill(name);

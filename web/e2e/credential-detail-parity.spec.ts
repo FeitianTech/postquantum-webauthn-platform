@@ -1,10 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import type { Page } from '@playwright/test';
-
+import { betaLevel, betaSubViews, expectedFor, keep, legacyDetail, legacySubViews, openCurrent, report } from './credential-views';
 import { expect, test } from './fixtures';
-import { type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownText } from './parity';
+import { readShownText } from './parity';
 import { addVirtualAuthenticator } from './virtual-authenticator';
 
 // What a saved credential's details and its registration show in the current UI
@@ -16,7 +15,6 @@ import { addVirtualAuthenticator } from './virtual-authenticator';
 // Every difference must be one listed below, with its reason.
 
 const repo = resolve(import.meta.dirname, '..', '..');
-const STORAGE_KEY = 'postquantum-webauthn.credentials';
 
 // registration-detail-decodes: ES256, EdDSA, ML-DSA-65 and a packed one with a
 // certificate, as the server registered them.
@@ -32,86 +30,6 @@ const RECORDS = ['es256', 'eddsa', 'mldsa65', 'x5c'].map((name, index) => ({
   userName: `${name}@example.com`,
   email: `${name}@example.com`,
 })) as Record<string, unknown>[];
-
-const escape = (word: string) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-function expectedFor(name: string): ExpectedDifference[] {
-  return [
-    { only: 'beta', token: new RegExp(`^${escape(name)}$`), section: '', reason: 'the credential\'s name, the details\' title (new)' },
-    {
-      only: 'beta',
-      token: /^(Registration|Details)$/,
-      section: 'Registration Details',
-      reason: 'the way to the registration\'s own level: its heading (the button\'s label is set aside)',
-    },
-    {
-      only: 'legacy',
-      token: /^[()]$/,
-      section: 'Properties',
-      reason: 'the roots Root Valid tried (FIDO MDS, Chain) are chips, each in its verdict\'s tone, not a list in parentheses',
-    },
-  ];
-}
-
-async function keep(page: Page, records: object[]) {
-  await page.evaluate(([key, value]) => window.localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify(records)] as const);
-}
-
-async function openCurrent(page: Page) {
-  await page.goto('/');
-  await expect(page.locator('body')).toHaveClass(/app-loaded/);
-}
-
-async function legacyDetail(page: Page, name: string) {
-  await page.locator('#simple-credentials-list .credential-item').filter({ hasText: name }).click();
-  await expect(page.locator('#credentialModal')).toBeVisible();
-  await expect(page.locator('#modalBody')).toContainText('Attestation Information');
-  return readShownText(page.locator('#modalBody'), 'h3, h4');
-}
-
-// The second modal's text for each of the modal's certificate and authenticator-data buttons.
-async function legacySubViews(page: Page, root: string) {
-  const texts: Record<string, string> = {};
-  const buttons = page.locator(`${root} .registration-detail-button-row button`);
-  for (let index = 0; index < (await buttons.count()); index += 1) {
-    const button = buttons.nth(index);
-    const label = (await button.textContent())!.trim();
-    await button.click();
-    await expect(page.locator('#registrationDetailModal')).toBeVisible();
-    texts[label] = await page.locator('#registrationDetailModalBody textarea').inputValue();
-    await page.locator('[data-action="close-registration-detail-modal"]').click();
-  }
-  return texts;
-}
-
-async function betaLevel(page: Page, level: string, headings: string) {
-  const root = page.getByRole('dialog').locator(`[data-level="${level}"]`);
-  await expect(root).toBeVisible();
-  return readShownText(root, headings);
-}
-
-// The dialog's certificate and authenticator-data levels' text, by their buttons.
-async function betaSubViews(page: Page) {
-  const texts: Record<string, string> = {};
-  const dialog = page.getByRole('dialog');
-  const buttons = dialog.locator('[data-level="registration"] [data-level-open]');
-  const labels = await buttons.allTextContents();
-  for (const label of labels) {
-    await dialog.locator('[data-level="registration"]').getByRole('button', { name: label.trim(), exact: true }).click();
-    const shown = dialog.locator('[data-level]:not([hidden])');
-    await expect(shown).not.toHaveAttribute('data-level', 'registration');
-    const text = shown.locator('[data-section="Decoded Output"] pre, :scope > div > pre, pre').last();
-    texts[label.trim()] = (await text.textContent()) ?? '';
-    await dialog.getByRole('button', { name: 'Back' }).click();
-    await expect(dialog.locator('[data-level="registration"]')).toBeVisible();
-  }
-  return texts;
-}
-
-function report(legacy: ShownSection[], beta: ShownSection[], expected: ExpectedDifference[]) {
-  const differences = compareShownText(legacy, beta, expected);
-  return describeDifferences(differences.filter((difference) => !difference.reason));
-}
 
 test.describe('a saved credential\'s details in / and in /beta', () => {
   for (const record of RECORDS) {
