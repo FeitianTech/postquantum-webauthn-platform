@@ -43,6 +43,7 @@ vi.mock('../../../../frontend/static/scripts/advanced/auth/exclude-credentials.j
   getFakeExcludeCredentials: vi.fn(() => []),
   getFakeAllowCredentials: vi.fn(() => []),
   setFakeExcludeCredentials: vi.fn(),
+  setFakeAllowCredentials: vi.fn(),
 }));
 
 import { currentFormatToJsonFormat } from '../../../../frontend/static/scripts/shared/utils/binary.js';

@@ -172,6 +172,10 @@ export function setFakeExcludeCredentials(hexList) {
     setFakeCredentials('exclude', hexList);
 }
 
+export function setFakeAllowCredentials(hexList) {
+    setFakeCredentials('allow', hexList);
+}
+
 export function clearFakeExcludeCredentials() {
     clearFakeCredentials('exclude');
 }

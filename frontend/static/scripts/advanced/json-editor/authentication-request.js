@@ -134,13 +134,56 @@ export function buildRequestOptions(settings, context = {}) {
     return { publicKey };
 }
 
+// The IDs (hex) of an allowCredentials list: the saved credentials' (lower
+// case) and the others, each in the list's order.
+function allowListIds(allowCredentials, storedCredentials) {
+    const saved = new Set(
+        (storedCredentials || [])
+            .map(cred => (cred.credentialIdHex || getCredentialIdHex(cred)).toLowerCase())
+            .filter(Boolean),
+    );
+    const savedIds = [];
+    const others = [];
+    allowCredentials.forEach(descriptor => {
+        const hexValue = descriptor && typeof descriptor === 'object' ? extractHexFromJsonFormat(descriptor.id) : '';
+        if (!hexValue) {
+            return;
+        }
+        if (saved.has(hexValue.toLowerCase())) {
+            savedIds.push(hexValue.toLowerCase());
+        } else {
+            others.push(hexValue);
+        }
+    });
+    return { savedIds, others };
+}
+
+// The Allow Credentials choice a list says, the form's (`previous`) kept when
+// it would build the same saved credentials (an edit elsewhere does not change
+// it): one offered credential is that credential, any other list All.
+function allowChoiceOf(savedIds, previous, hints, context) {
+    const built = previous.allowCredentials === 'empty'
+        ? []
+        : allowedCredentials(context.storedCredentials, previous.allowCredentials, deriveAllowedAttachmentsFromHints(hints))
+            .map(descriptor => extractHexFromJsonFormat(descriptor.id).toLowerCase());
+    if (built.join(',') === savedIds.join(',')) {
+        return previous.allowCredentials;
+    }
+    const offered = savedIds.length === 1
+        ? (context.choices || []).find(choice => choice.toLowerCase() === savedIds[0])
+        : undefined;
+    return offered || 'all';
+}
+
 /**
  * The settings a request says, over the ones the form has (`previous`): what it
- * gives replaces them, what it leaves out stays. Allow Credentials becomes
- * Empty without allowCredentials, the one credential it names when that is one
- * of the choices (context.choices: the values the select offers), else All; an
- * empty list leaves it as it was. Also the IDs its allowCredentials holds that
- * are no saved credential's, as the fake IDs (hex).
+ * gives replaces them; what the form writes and the request leaves out is off
+ * (no hints, no prf, no largeBlob), and what the form always writes stays.
+ * Allow Credentials: Empty without allowCredentials; an empty list leaves it as
+ * it was; a list the form's choice would build keeps that choice; one of the
+ * offered credentials (context.choices, their IDs) is that credential; else
+ * All. Also the IDs its allowCredentials holds that are no saved credential's
+ * (context.storedCredentials), as the fake IDs, as they are spelled there.
  */
 export function readRequestOptions(publicKey, previous, context = {}) {
     const settings = { ...previous };
@@ -156,57 +199,43 @@ export function readRequestOptions(publicKey, previous, context = {}) {
         settings.timeout = publicKey.timeout.toString();
     }
 
-    const choices = context.choices || [];
+    settings.hints = Array.isArray(publicKey.hints) ? publicKey.hints : [];
+
+    let fakeAllowCredentials = [];
     if (!Object.prototype.hasOwnProperty.call(publicKey, 'allowCredentials')) {
         settings.allowCredentials = 'empty';
     } else if (!Array.isArray(publicKey.allowCredentials)) {
         settings.allowCredentials = 'all';
     } else if (publicKey.allowCredentials.length > 0) {
-        let desired = 'all';
-        if (publicKey.allowCredentials.length === 1) {
-            const descriptor = publicKey.allowCredentials[0];
-            const extractedHex = descriptor && typeof descriptor === 'object' ? extractHexFromJsonFormat(descriptor.id) : '';
-            if (extractedHex && choices.includes(extractedHex)) {
-                desired = extractedHex;
-            }
-        }
-        settings.allowCredentials = desired;
+        const { savedIds, others } = allowListIds(publicKey.allowCredentials, context.storedCredentials);
+        settings.allowCredentials = allowChoiceOf(savedIds, previous, settings.hints, context);
+        fakeAllowCredentials = others;
     }
 
     if (Object.prototype.hasOwnProperty.call(publicKey, 'userVerification')) {
         settings.userVerification = publicKey.userVerification || 'preferred';
     }
 
-    const extensions = publicKey.extensions;
-    if (extensions) {
-        if (extensions.prf && extensions.prf.eval) {
-            const first = extensions.prf.eval.first ? decodeJsonBinaryToHex(extensions.prf.eval.first) : '';
-            if (first) {
-                settings.prfFirst = first;
-            }
-            const second = extensions.prf.eval.second ? decodeJsonBinaryToHex(extensions.prf.eval.second) : '';
-            if (second) {
-                settings.prfSecond = second;
-            }
+    const extensions = publicKey.extensions || {};
+    const prfFirst = decodeJsonBinaryToHex(extensions.prf?.eval?.first);
+    settings.prfFirst = prfFirst;
+    settings.prfSecond = prfFirst ? decodeJsonBinaryToHex(extensions.prf.eval.second) : '';
+
+    // A Write with nothing to write builds no largeBlob: without one, it stays.
+    const largeBlob = extensions.largeBlob;
+    if (largeBlob?.read) {
+        settings.largeBlob = 'read';
+    } else if (largeBlob?.write) {
+        settings.largeBlob = 'write';
+        const largeBlobValue = decodeJsonBinaryToHex(largeBlob.write);
+        if (largeBlobValue) {
+            settings.largeBlobWrite = largeBlobValue;
         }
-        if (extensions.largeBlob) {
-            if (extensions.largeBlob.read) {
-                settings.largeBlob = 'read';
-            } else if (extensions.largeBlob.write) {
-                settings.largeBlob = 'write';
-                const largeBlobValue = decodeJsonBinaryToHex(extensions.largeBlob.write);
-                if (largeBlobValue) {
-                    settings.largeBlobWrite = largeBlobValue;
-                }
-            }
-        }
+    } else if (!(previous.largeBlob === 'write' && !previous.largeBlobWrite)) {
+        settings.largeBlob = '';
     }
 
-    if (Array.isArray(publicKey.hints)) {
-        settings.hints = publicKey.hints;
-    }
-
-    return { settings, fakeAllowCredentials: [] };
+    return { settings, fakeAllowCredentials };
 }
 
 /** The settings after one of them changes, with the form's rule: an empty first prf evaluation empties the second. */

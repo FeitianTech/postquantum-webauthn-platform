@@ -1,6 +1,6 @@
 import { state } from '../../shared/state.js';
 import { applyHintsToCheckboxes } from '../auth/hints.js';
-import { setFakeExcludeCredentials } from '../auth/exclude-credentials.js';
+import { setFakeAllowCredentials, setFakeExcludeCredentials } from '../auth/exclude-credentials.js';
 import {
     applyRegistrationAlgorithmSelection,
     clearRegistrationAlgorithmCheckboxesForFormSync,
@@ -75,13 +75,14 @@ export function updateRegistrationFormFromJson(publicKey) {
 
 // The authentication form set to what the request says
 // (./authentication-request.js): the fields it changes, Allow Credentials
-// announced as changed. A request without extensions also clears the
-// registration form's credProps, minPinLength and credProtect.
+// announced as changed, and the fake allow IDs. A request without extensions
+// also clears the registration form's credProps, minPinLength and credProtect.
 export function updateAuthenticationFormFromJson(publicKey) {
     const field = id => document.getElementById(id);
     const allowCredentialsSelect = field('allow-credentials');
     const previous = readAuthenticationForm();
-    const { settings } = readRequestOptions(publicKey, previous, {
+    const { settings, fakeAllowCredentials } = readRequestOptions(publicKey, previous, {
+        storedCredentials: state.storedCredentials,
         choices: allowCredentialsSelect ? Array.from(allowCredentialsSelect.options).map(option => option.value) : [],
     });
     const setChanged = (id, key) => {
@@ -96,14 +97,15 @@ export function updateAuthenticationFormFromJson(publicKey) {
         allowCredentialsSelect.value = settings.allowCredentials;
         dispatchChangeEvent(allowCredentialsSelect);
     }
+    setFakeAllowCredentials(fakeAllowCredentials);
     setChanged('user-verification-auth', 'userVerification');
+    setChanged('prf-eval-first-auth', 'prfFirst');
+    setChanged('prf-eval-second-auth', 'prfSecond');
+    setChanged('large-blob-auth', 'largeBlob');
+    setChanged('large-blob-write', 'largeBlobWrite');
+    applyHintsToCheckboxes(settings.hints, 'authentication');
 
-    if (publicKey.extensions) {
-        setChanged('prf-eval-first-auth', 'prfFirst');
-        setChanged('prf-eval-second-auth', 'prfSecond');
-        setChanged('large-blob-auth', 'largeBlob');
-        setChanged('large-blob-write', 'largeBlobWrite');
-    } else {
+    if (!publicKey.extensions) {
         const credPropsCheckbox = document.getElementById('cred-props');
         if (credPropsCheckbox) {
             credPropsCheckbox.checked = false;
@@ -121,9 +123,5 @@ export function updateAuthenticationFormFromJson(publicKey) {
             enforceCredProtectCheckbox.checked = true;
             enforceCredProtectCheckbox.disabled = true;
         }
-    }
-
-    if (Array.isArray(publicKey.hints)) {
-        applyHintsToCheckboxes(publicKey.hints, 'authentication');
     }
 }

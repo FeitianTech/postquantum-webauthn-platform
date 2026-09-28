@@ -122,13 +122,14 @@ describe('the saved credentials a choice allows', () => {
 
 describe('the settings a request says', () => {
   const previous = settings({ prfFirst: '99', largeBlobWrite: '77', hints: ['hybrid'] });
-  const read = (publicKey, context = { choices: ['all', 'empty', 'aa01', 'bb02'] }) => readRequestOptions(publicKey, previous, context);
+  const CHOICES = { storedCredentials: STORED, choices: ['all', 'empty', 'aa01', 'bb02', '0304'] };
+  const read = (publicKey, context = CHOICES, from = previous) => readRequestOptions(publicKey, from, context);
 
-  it('takes what the request gives over the form\'s, and keeps the rest', () => {
+  it('takes what the request gives over the form\'s', () => {
     const { settings: next, fakeAllowCredentials } = read({
       challenge: { $hex: 'c0de' },
       timeout: 333,
-      allowCredentials: [{ type: 'public-key', id: { $hex: 'bb02' } }],
+      allowCredentials: [{ type: 'public-key', id: { $hex: '0304' } }],
       userVerification: 'required',
       extensions: { prf: { eval: { first: { $hex: 'aaaa' }, second: { $hex: 'bbbb' } } }, largeBlob: { write: { $hex: '1234' } } },
       hints: ['client-device'],
@@ -137,7 +138,7 @@ describe('the settings a request says', () => {
       ...previous,
       challenge: 'c0de',
       timeout: '333',
-      allowCredentials: 'bb02',
+      allowCredentials: '0304',
       userVerification: 'required',
       prfFirst: 'aaaa',
       prfSecond: 'bbbb',
@@ -148,29 +149,87 @@ describe('the settings a request says', () => {
     expect(fakeAllowCredentials).toEqual([]);
   });
 
-  it('reads Empty without allowCredentials, All for a list that is not one offered credential, and nothing from an empty list', () => {
-    expect(read({}).settings.allowCredentials).toBe('empty');
-    expect(read({ allowCredentials: 'nope' }).settings.allowCredentials).toBe('all');
-    expect(read({ allowCredentials: [{ id: { $hex: 'aa01' } }, { id: { $hex: 'bb02' } }] }).settings.allowCredentials).toBe('all');
-    expect(read({ allowCredentials: [{ id: { $hex: 'ffff' } }] }).settings.allowCredentials).toBe('all');
-    expect(read({ allowCredentials: [null] }).settings.allowCredentials).toBe('all');
-    expect(read({ allowCredentials: [{ id: { $hex: 'aa01' } }] }, {}).settings.allowCredentials).toBe('all');
-    expect(read({ allowCredentials: [] }).settings.allowCredentials).toBe('all');
-    expect(readRequestOptions({ allowCredentials: [] }, settings({ allowCredentials: 'aa01' })).settings.allowCredentials).toBe('aa01');
+  it('turns off what the form writes and the request leaves out: hints, prf, largeBlob', () => {
+    const { settings: next } = read({ allowCredentials: [], extensions: {} }, CHOICES, settings({ hints: ['hybrid'], prfFirst: '11', prfSecond: '22', largeBlob: 'read' }));
+    expect(next).toMatchObject({ hints: [], prfFirst: '', prfSecond: '', largeBlob: '' });
+    // Without extensions at all, and a Write with nothing to write, which builds none, stays.
+    expect(read({}, CHOICES, settings({ largeBlob: 'write' })).settings).toMatchObject({ largeBlob: 'write', prfFirst: '' });
+    expect(read({}, CHOICES, settings({ largeBlob: 'write', largeBlobWrite: 'beef' })).settings.largeBlob).toBe('');
   });
 
-  it('reads a largeBlob read, a user verification left empty, and ignores what is not there or not a value', () => {
+  it('reads a largeBlob read, a Write with a value it cannot read, and the form\'s own values it always writes', () => {
     const { settings: next } = read({
       challenge: { $hex: '' },
-      timeout: 0,
       userVerification: '',
-      extensions: { largeBlob: { read: true }, prf: { eval: { first: { $hex: '' } } } },
+      extensions: { largeBlob: { read: true }, prf: { eval: { first: { $hex: '' }, second: { $hex: '22' } } } },
     });
-    expect(next).toMatchObject({ challenge: CHALLENGE, timeout: '90000', userVerification: 'preferred', largeBlob: 'read', prfFirst: '99' });
-    expect(read({ extensions: { largeBlob: { write: { $hex: '' } }, prf: {} } }).settings).toMatchObject({ largeBlob: 'write', largeBlobWrite: '77' });
-    expect(read({ extensions: { largeBlob: {} } }).settings.largeBlob).toBe('');
-    expect(read({ extensions: { prf: { eval: { second: { $hex: '22' } } } } }).settings).toMatchObject({ prfFirst: '99', prfSecond: '22' });
-    expect(read({}).settings.hints).toEqual(['hybrid']);
+    expect(next).toMatchObject({ challenge: CHALLENGE, timeout: '90000', userVerification: 'preferred', largeBlob: 'read', largeBlobWrite: '77', prfFirst: '', prfSecond: '' });
+    expect(read({ extensions: { largeBlob: { write: { $hex: '' } } } }).settings).toMatchObject({ largeBlob: 'write', largeBlobWrite: '77' });
+    expect(read({ timeout: 0 }).settings.timeout).toBe('90000');
+  });
+
+  it('reads Empty without allowCredentials, and nothing of the choice from an empty list or one that is not a list', () => {
+    expect(read({}).settings.allowCredentials).toBe('empty');
+    expect(read({ allowCredentials: [] }, CHOICES, settings({ allowCredentials: 'aa01' })).settings.allowCredentials).toBe('aa01');
+    expect(read({ allowCredentials: 'nope' }).settings.allowCredentials).toBe('all');
+  });
+
+  it('keeps the choice when the list is what it builds, even one credential that All builds', () => {
+    const one = [{ type: 'public-key', id: { $hex: 'bb02' } }];
+    // With security-key, All builds bb02 alone: an edit elsewhere does not turn All into bb02.
+    expect(read({ allowCredentials: one, hints: ['security-key'] }, CHOICES, settings()).settings.allowCredentials).toBe('all');
+    expect(read({ allowCredentials: one }, CHOICES, settings()).settings.allowCredentials).toBe('bb02');
+    // A choice the hints refuse builds none; the fake IDs follow.
+    expect(read({ allowCredentials: [{ id: { $hex: 'ffee' } }], hints: ['client-device'] }, CHOICES, settings({ allowCredentials: 'bb02' })).settings.allowCredentials).toBe('bb02');
+    expect(read({ allowCredentials: [{ id: { $hex: 'ffee' } }] }, CHOICES, settings({ allowCredentials: 'empty' })).settings.allowCredentials).toBe('empty');
+  });
+
+  it('reads one offered credential as that credential, in any case, and any other list as All', () => {
+    expect(read({ allowCredentials: [{ id: { $hex: 'AA01' } }] }, CHOICES, settings({ allowCredentials: 'empty' })).settings.allowCredentials).toBe('aa01');
+    expect(read({ allowCredentials: [{ id: { $hex: 'aa01' } }] }, { storedCredentials: STORED }, settings({ allowCredentials: 'empty' })).settings.allowCredentials).toBe('all');
+    expect(read({ allowCredentials: [{ id: { $hex: 'bb02' } }, { id: { $hex: 'aa01' } }] }).settings.allowCredentials).toBe('all');
+    expect(read({ allowCredentials: [null, { id: {} }] }, CHOICES, settings({ allowCredentials: 'aa01' })).settings.allowCredentials).toBe('all');
+  });
+
+  it('gives the IDs no saved credential has as the fake IDs, as they are spelled', () => {
+    const list = [{ id: { $hex: 'aa01' } }, { id: { $hex: 'FFEE' } }, { id: 'AwQ' }, { id: { $hex: 'ddcc' } }];
+    expect(read({ allowCredentials: list }).fakeAllowCredentials).toEqual(['FFEE', 'ddcc']);
+    expect(read({ allowCredentials: list }, {}).fakeAllowCredentials).toEqual(['aa01', 'FFEE', '0304', 'ddcc']);
+    expect(read({}).fakeAllowCredentials).toEqual([]);
+  });
+});
+
+describe('the reading holds what the form writes', () => {
+  const CHOICES = { storedCredentials: STORED, choices: ['all', 'empty', 'aa01', 'bb02', '0304'] };
+  const every = [];
+  for (const userVerification of ['preferred', 'required']) {
+    for (const allowCredentials of ['all', 'empty', 'aa01', 'bb02', '0304']) {
+      for (const hints of [[], ['client-device'], ['security-key', 'hybrid'], ['security-key']]) {
+        for (const [largeBlob, largeBlobWrite] of [['', ''], ['', 'beef'], ['read', ''], ['read', 'beef'], ['write', 'beef'], ['write', '']]) {
+          for (const [prfFirst, prfSecond] of [['', ''], ['11', ''], ['11', '22']]) {
+            for (const fakes of [[], ['ffee']]) {
+              every.push({ settings: settings({ userVerification, allowCredentials, hints, largeBlob, largeBlobWrite, prfFirst, prfSecond, timeout: '1234' }), fakes });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  it(`reads every setting back from the request it builds (${every.length} settings)`, () => {
+    for (const { settings: current, fakes } of every) {
+      const built = buildRequestOptions(current, { ...CONTEXT, fakeAllowCredentials: fakes }).publicKey;
+      const read = readRequestOptions(JSON.parse(JSON.stringify(built)), current, CHOICES);
+      expect(read.settings).toEqual(current);
+      expect(read.fakeAllowCredentials).toEqual(fakes);
+    }
+  });
+
+  it('builds again what it built, from any settings', () => {
+    const odd = settings({ timeout: '', userVerification: '', prfSecond: '22', allowCredentials: 'gone', hints: ['unknown'] });
+    const built = buildRequestOptions(odd, CONTEXT).publicKey;
+    const read = readRequestOptions(JSON.parse(JSON.stringify(built)), odd, CHOICES);
+    expect(buildRequestOptions(read.settings, { ...CONTEXT, fakeAllowCredentials: read.fakeAllowCredentials }).publicKey).toEqual(built);
   });
 });
 

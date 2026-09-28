@@ -112,12 +112,14 @@ vi.mock('../../../../frontend/static/scripts/advanced/auth/exclude-credentials.j
   getFakeExcludeCredentials: vi.fn(() => ['ff99']),
   getFakeAllowCredentials: vi.fn(() => ['ee88']),
   setFakeExcludeCredentials: vi.fn(),
+  setFakeAllowCredentials: vi.fn(),
 }));
 
 import { applyHintsToCheckboxes, registerHintsChangeCallback } from '../../../../frontend/static/scripts/advanced/auth/hints.js';
 import {
   getFakeAllowCredentials,
   getFakeExcludeCredentials,
+  setFakeAllowCredentials,
   setFakeExcludeCredentials,
 } from '../../../../frontend/static/scripts/advanced/auth/exclude-credentials.js';
 import { showStatus } from '../../../../frontend/static/scripts/shared/ui/status.js';
@@ -580,13 +582,30 @@ describe('json-editor', () => {
 
     expect(document.getElementById('challenge-auth').value).toBe('d00d');
     expect(document.getElementById('timeout-auth').value).toBe('333');
-    expect(document.getElementById('allow-credentials').value).toBe('bb22');
+    // With the hint hybrid, All builds bb22 alone: the reading keeps All.
+    expect(document.getElementById('allow-credentials').value).toBe('all');
     expect(document.getElementById('user-verification-auth').value).toBe('required');
     expect(document.getElementById('large-blob-auth').value).toBe('write');
     expect(document.getElementById('large-blob-write').value).toBe('1234');
 
     expect(applyHintsToCheckboxes).toHaveBeenCalledWith(['client-device'], 'registration');
     expect(applyHintsToCheckboxes).toHaveBeenCalledWith(['hybrid'], 'authentication');
+  });
+
+  it('reads an edit\'s other IDs as the fake allow IDs, and turns off what it leaves out', () => {
+    document.getElementById('allow-credentials').value = 'all';
+    updateAuthenticationFormFromJson({
+      challenge: { $hex: 'd00d' },
+      allowCredentials: [{ id: { $hex: 'aa11' } }, { id: { $hex: 'ffee' } }],
+      extensions: {},
+    });
+
+    expect(setFakeAllowCredentials).toHaveBeenLastCalledWith(['ffee']);
+    expect(document.getElementById('allow-credentials').value).toBe('aa11');
+    expect(document.getElementById('large-blob-auth').value).toBe('');
+    expect(document.getElementById('prf-eval-first-auth').value).toBe('');
+    expect(document.getElementById('prf-eval-second-auth').value).toBe('');
+    expect(applyHintsToCheckboxes).toHaveBeenLastCalledWith([], 'authentication');
   });
 
   it('supports advanced JSON edit/apply/cancel and in-mode refresh behavior', () => {
