@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from flask import Blueprint
 
+from ...mds_provisioning import waits_for_the_snapshot
 from .. import binary_helpers
 from . import (
     authentication,
@@ -60,6 +61,7 @@ def register_begin():
 
 
 @bp.route("/api/register/complete", methods=["POST"])
+@waits_for_the_snapshot
 def register_complete():
     return registration.register_complete()
 

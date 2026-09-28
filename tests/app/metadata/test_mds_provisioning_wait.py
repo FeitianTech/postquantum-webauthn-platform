@@ -14,6 +14,13 @@ import pytest
 
 from server.app import mds_provisioning
 from tests.app.metadata import mds_fixture
+from tests.app.security.ceremony_helpers import (
+    ORIGIN,
+    Authenticator,
+    advanced_public_key_options,
+    registration_payload,
+    unb64u,
+)
 
 AAGUID = "f1d0f1d0-0000-4000-8000-000000000001"
 FIXTURE_ENTRIES = 32
@@ -117,3 +124,87 @@ def test_the_index_page_does_not_wait(slow_provisioning, client, monkeypatch):
     assert not thread.is_alive(), "the index waited for the provisioning"
     assert answer["response"].status_code == 200
     assert '"snapshotUrl"' not in answer["response"].get_data(as_text=True)
+
+
+# -- a registration's own lookup of its authenticator --------------------------------
+#
+# Registration complete looks the new credential's AAGUID up in the snapshot (the
+# attestation checks' root validation and metadata entry) and records what it found
+# in the credential for good: answered during a cold provisioning, it would record
+# that no metadata was available.
+
+
+@pytest.fixture
+def stores(monkeypatch, tmp_path, storage_module, device_logs_module):
+    """Every store a registration writes, in this test's own directory."""
+
+    from server.app import credential_artifacts
+    from server.app.storage import session_metadata
+
+    monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
+    monkeypatch.setattr(storage_module, "_LOCAL_CREDENTIAL_BASE", str(tmp_path / "credentials"))
+    monkeypatch.setattr(storage_module, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(tmp_path / "legacy"))
+    monkeypatch.setattr(credential_artifacts, "_ARTIFACT_DIR", str(tmp_path / "artifacts"))
+    monkeypatch.setattr(session_metadata, "SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
+    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
+
+
+def _post_in_a_thread(client, path, body):
+    answer = {}
+    thread = threading.Thread(
+        target=lambda: answer.setdefault("response", client.post(path, json=body, headers={"Origin": ORIGIN})),
+        daemon=True,
+    )
+    thread.start()
+    return thread, answer
+
+
+def _registration_waits_until_released(client, path, body, release):
+    thread, answer = _post_in_a_thread(client, path, body)
+    try:
+        thread.join(0.2)
+        assert thread.is_alive(), f"{path} answered before the snapshot was provisioned"
+    finally:
+        release.set()
+        thread.join(10)
+    assert not thread.is_alive()
+    return answer["response"]
+
+
+def _fixture_authenticator():
+    return Authenticator(credential_id=b"\x07" * 32, aaguid=bytes.fromhex(AAGUID.replace("-", "")))
+
+
+def test_a_simple_registration_waits_and_then_finds_its_authenticator(slow_provisioning, stores, client):
+    begin = client.post("/api/register/begin?email=user@example.com", json={"credentials": []})
+    assert begin.status_code == 200, begin.get_json()
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+
+    response = _registration_waits_until_released(
+        client,
+        "/api/register/complete?email=user@example.com",
+        registration_payload(_fixture_authenticator(), challenge=challenge),
+        slow_provisioning,
+    )
+
+    assert response.status_code == 200, response.get_json()
+    summary = response.get_json()["storedCredential"]["properties"]["attestationSummary"]
+    assert summary["metadata"]["available"] is True
+    assert "metadata_not_available" not in summary.get("warnings", [])
+
+
+def test_an_advanced_registration_waits_and_then_finds_its_authenticator(slow_provisioning, stores, client):
+    options = advanced_public_key_options(challenge=b"\x11" * 32)
+    begin = client.post("/api/advanced/register/begin", json={"publicKey": options})
+    assert begin.status_code == 200, begin.get_json()
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+
+    response = _registration_waits_until_released(
+        client,
+        "/api/advanced/register/complete",
+        {"publicKey": options, "__credential_response": registration_payload(_fixture_authenticator(), challenge=challenge)},
+        slow_provisioning,
+    )
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["attestationSummary"]["metadata"]["available"] is True

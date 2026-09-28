@@ -68,8 +68,10 @@ background warm-up on a Cloud Run cold start and from the metadata bootstrap
 otherwise.
 
 The routes that read the snapshot (`/api/mds/metadata/info`, `explorer`,
-`explorer/full`, `resolve`, `base`, the upload and the delete, and the browsers'
-copy at its versioned URL) call `ensure_snapshot_available()` first: on a cold
+`explorer/full`, `resolve`, `base`, the upload and the delete, the browsers'
+copy at its versioned URL, and both registrations' complete, which look the new
+credential's AAGUID up and record what they found for good) call
+`ensure_snapshot_available()` first (`mds_provisioning.waits_for_the_snapshot`): on a cold
 instance they wait for the provisioning under way (about 20 s from Cloud Storage)
 instead of answering meanwhile as if there were no snapshot, and after the first
 attempt they return at once. The index page `/` does not wait (unless it

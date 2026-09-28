@@ -42,6 +42,23 @@ def _session_metadata_outside_the_checkout(tmp_path_factory):
         yield
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _the_snapshot_provisioning_attempted_once():
+    """Make this process's one provisioning attempt before any test runs.
+
+    The MDS routes and registration complete wait for it, and its first attempt
+    logs a WARNING when no snapshot is available, as in every test run (the
+    snapshot directory is empty, the upstream refresh off). Made here, that one
+    warning does not land inside whichever test happens to come first: a test that
+    counts the warnings a registration logs would otherwise pass or fail by run order.
+    A test that provisions for itself patches the state and the lock it needs.
+    """
+
+    from server.app import mds_provisioning
+
+    mds_provisioning.ensure_snapshot_available()
+
+
 @pytest.fixture
 def make_app():
     """Build a fresh app with ``create_app()``; keyword arguments override config.

@@ -27,6 +27,7 @@ is available, exactly as they already did for a missing snapshot.
 """
 from __future__ import annotations
 
+import functools
 import gzip
 import logging
 import os
@@ -224,3 +225,23 @@ def ensure_snapshot_available(*, force: bool = False) -> str:
         logger.info("Provisioned the FIDO MDS snapshot from %s.", source)
 
     return source
+
+
+def waits_for_the_snapshot(view):
+    """A route that reads the MDS snapshot waits for a provisioning under way.
+
+    A cold instance provisions the snapshot in the background (about 20 s from
+    Cloud Storage, ``startup.start_background_warmup``); until that finishes the
+    route would answer as if there were no snapshot. The MDS routes read it, and
+    so does a registration's own lookup of its authenticator (the attestation
+    checks' root validation and metadata entry), which would otherwise record,
+    for good, that no metadata was available. ``ensure_snapshot_available``
+    waits on the provisioning's lock, and after the first attempt returns at once.
+    """
+
+    @functools.wraps(view)
+    def wrapper(*args, **kwargs):
+        ensure_snapshot_available()
+        return view(*args, **kwargs)
+
+    return wrapper
