@@ -63,6 +63,7 @@ import {
     clearSimpleCredentials as clearLocalSimpleCredentials,
     ensureAdvancedCredentialArtifactsSynced,
     ensureAdvancedCredentialSnapshotsPrefetched,
+    followStoredCredentialChanges,
     getAllAdvancedCredentials,
     getAllSimpleCredentials,
     getAllStoredCredentialsInOrder,
@@ -294,6 +295,8 @@ export const credentialActions = {
 };
 
 // On the document: both tabs have a Clear All button, and the modals sit outside them.
+// A change another tab makes to the saved credentials is drawn here too.
 export function bindCredentialActions() {
+    followStoredCredentialChanges(loadSavedCredentials);
     return bindActions(document, credentialActions);
 }

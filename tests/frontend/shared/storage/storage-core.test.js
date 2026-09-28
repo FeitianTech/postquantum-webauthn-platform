@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  followStoredCredentialChanges,
   persistStoredCredentials,
   persistUnifiedCredentialRecords,
   readStoredCredentials,
@@ -119,6 +120,61 @@ describe('without a window', () => {
     expect(readStoredCredentials(SHARED)).toEqual([]);
     expect(persistStoredCredentials(SHARED, [])).toBe(false);
     expect(persistUnifiedCredentialRecords([simple])).toBe(false);
+  });
+
+  it('follows no other tab', () => {
+    vi.stubGlobal('window', undefined);
+    const stop = followStoredCredentialChanges(() => {});
+    expect(stop()).toBeUndefined();
+  });
+});
+
+describe('another tab\'s changes', () => {
+  // What the browser does when another page of this origin writes: this page's
+  // storage already holds the other tab's value, and a storage event says which key.
+  function anotherTabSaves(key, records) {
+    if (records === null) window.localStorage.clear();
+    else window.localStorage.setItem(key, JSON.stringify(records));
+    window.dispatchEvent(new StorageEvent('storage', { key }));
+  }
+
+  it('reads the browser\'s storage again after another tab saves, and says so', () => {
+    persistUnifiedCredentialRecords([simple]);
+    const changed = vi.fn();
+    const stop = followStoredCredentialChanges(changed);
+
+    anotherTabSaves(SHARED, [simple, advanced]);
+
+    expect(changed).toHaveBeenCalledTimes(1);
+    expect(readUnifiedCredentialRecords().map((record) => record.credentialId)).toEqual(['AQID', 'BAUG']);
+    stop();
+  });
+
+  it('follows the old keys and a cleared storage too', () => {
+    const changed = vi.fn();
+    const stop = followStoredCredentialChanges(changed);
+
+    anotherTabSaves(LEGACY_SIMPLE, [{ credentialId: 'AQID' }]);
+    anotherTabSaves(LEGACY_ADVANCED, [{ credentialId: 'BAUG' }]);
+    anotherTabSaves(null, null);
+
+    expect(changed).toHaveBeenCalledTimes(3);
+    expect(readUnifiedCredentialRecords()).toEqual([]);
+    stop();
+  });
+
+  it('keeps what it read when another key changes, and stops when told', () => {
+    persistUnifiedCredentialRecords([simple]);
+    const changed = vi.fn();
+    const stop = followStoredCredentialChanges(changed);
+
+    anotherTabSaves('something-else', [advanced]);
+    window.localStorage.setItem(SHARED, JSON.stringify([advanced]));
+    expect(readUnifiedCredentialRecords()).toEqual([simple]);
+
+    stop();
+    anotherTabSaves(SHARED, [advanced]);
+    expect(changed).not.toHaveBeenCalled();
   });
 });
 

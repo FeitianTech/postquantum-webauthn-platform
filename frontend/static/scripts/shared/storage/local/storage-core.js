@@ -24,6 +24,31 @@ export function seedUnifiedCredentialRecords(records) {
     bootUnifiedCredentialRecords = recordsOrNull(records);
 }
 
+const STORED_KEYS = [SHARED_STORAGE_KEY, LEGACY_SIMPLE_STORAGE_KEY, LEGACY_ADVANCED_STORAGE_KEY];
+
+/**
+ * Follows another tab's changes to the saved credentials. The browser tells a
+ * page when another page of its origin changes localStorage (a `storage` event,
+ * whose key is null when the storage was cleared); the records read so far are
+ * then dropped, so the next read is the browser's storage and the next write
+ * builds on what the other tab saved, and `onChange` is called. Gives the
+ * function that stops following.
+ */
+export function followStoredCredentialChanges(onChange) {
+    if (typeof window === 'undefined') {
+        return () => {};
+    }
+    const listener = event => {
+        if (event.key !== null && !STORED_KEYS.includes(event.key)) {
+            return;
+        }
+        seedUnifiedCredentialRecords(null);
+        onChange();
+    };
+    window.addEventListener('storage', listener);
+    return () => window.removeEventListener('storage', listener);
+}
+
 export function readStoredCredentials(storageKey) {
     if (typeof window === 'undefined' || !window.localStorage) {
         return [];

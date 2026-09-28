@@ -19,7 +19,7 @@ import {
     updateAdvancedCredentialRegistrationSnapshot,
     updateAdvancedCredentialSignCount,
 } from './local/advanced-credentials.js';
-import { readUnifiedCredentialRecords } from './local/storage-core.js';
+import { followStoredCredentialChanges, readUnifiedCredentialRecords } from './local/storage-core.js';
 import {
     clearSimpleCredentials,
     getAllSimpleCredentials,
@@ -40,6 +40,7 @@ export function getAllStoredCredentialsInOrder() {
 }
 
 export {
+    followStoredCredentialChanges,
     ensureAdvancedCredentialArtifactsSynced,
     ensureAdvancedCredentialSnapshotsPrefetched,
     getAllSimpleCredentials,
