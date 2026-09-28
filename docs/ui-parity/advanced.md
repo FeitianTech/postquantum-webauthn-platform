@@ -223,7 +223,7 @@ Code that the running page never reaches or never shows. It is not ported; it go
 | ADV-Z1 | The settings navigation (`.settings-nav`, the scroll sentinels' targets) | No template renders `.settings-nav`, so `initializeAdvancedSettingsNavigation` returns at once. | `advanced/ui/settings-nav.js` |
 | ADV-Z2 | The flat create / assert JSON mode ("JSON changes applied successfully!", `Invalid JSON: ${message}`, `#apply-json`, `#cancel-json`) and `advanced-options.js` | No template holds `#apply-json` or `#cancel-json` and nothing calls `editCreateOptions` / `editAssertOptions`. | `advanced/json-editor/editor-flow.js:145-232`, `advanced-options.js` |
 | ADV-Z3 | The JSON editor's × ("Close JSON editor"), its expand on click or focus and collapse on Escape, and the overlay behind it | The page's body carries `advanced-inline-json-editor`, whose styles hide the × and the overlay; the editor is always shown in its column. | `advanced/tab/json-editor-column.html:11-16`, `main.js:388-417`, `styles/shared/editor.css:128,150-151` |
-| ADV-Z4 | "Please select at least one authenticator hint before continuing." and "Selected hints do not map to any authenticator attachments." | Said only with `requireSelection: true`, which no caller passes. | `advanced/auth/hints.js:180,189,215` |
+| ADV-Z4 | "Please select at least one authenticator hint before continuing." and "Selected hints do not map to any authenticator attachments." | Said only with `requireSelection: true`, which no caller passed. Deleted in Phase 29B with the option: neither ceremony requires a hint, nor does WebAuthn. | `advanced/auth/hint-rules.js` (was `hints.js:180,189,215`) |
 
 ## What changed (29A)
 

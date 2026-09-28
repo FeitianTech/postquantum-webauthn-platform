@@ -656,12 +656,12 @@ describe('registerAdvancedCredential', () => {
     serving({});
     const options = formOptions({
       enforceHints: vi.fn(() => {
-        throw new Error('Selected hints do not map to any authenticator attachments.');
+        throw new Error('base64 has "!" at position 0, outside its alphabet');
       }),
     });
     const outcome = await registerAdvancedCredential(text(request({ hints: ['unknown'] })), options);
 
-    expect(outcome.text).toBe('Credential registration failed: Selected hints do not map to any authenticator attachments.');
+    expect(outcome.text).toBe('Credential registration failed: base64 has "!" at position 0, outside its alphabet');
     expect(outcome.context.publicKey).toEqual(request({ hints: ['unknown'] }).publicKey);
     expect(asked()).toEqual([]);
     expect(options.onStart).not.toHaveBeenCalled();

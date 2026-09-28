@@ -44,8 +44,8 @@ export function deriveAllowedAttachmentsFromHints(hints) {
 }
 
 export function enforceAuthenticatorAttachmentWithHints(publicKey, options = {}) {
-    const { requireSelection = false, storedCredentials } = options || {};
-    return ensureAuthenticationHintsAllowed(publicKey, { requireSelection, storedCredentials });
+    const { storedCredentials } = options || {};
+    return ensureAuthenticationHintsAllowed(publicKey, { storedCredentials });
 }
 
 export function applyAuthenticatorAttachmentPreference(targetOptions, allowedAttachments, ...fallbackSources) {
@@ -113,20 +113,13 @@ export function applyAuthenticatorAttachmentPreference(targetOptions, allowedAtt
 
 // The stored credentials are the list's (state.storedCredentials) unless given.
 export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
-    const { requireSelection = false, storedCredentials = state.storedCredentials } = options || {};
+    const { storedCredentials = state.storedCredentials } = options || {};
     if (!publicKey || typeof publicKey !== 'object') {
-        if (requireSelection) {
-            throw new Error('Please select at least one authenticator hint before continuing.');
-        }
         return [];
     }
 
     const hints = Array.isArray(publicKey.hints) ? publicKey.hints : [];
     const normalizedHints = hints.map(normalizeHintValue).filter(Boolean);
-
-    if (requireSelection && normalizedHints.length === 0) {
-        throw new Error('Please select at least one authenticator hint before continuing.');
-    }
 
     const resolvedAttachments = [];
     const seen = new Set();
@@ -148,10 +141,6 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
 
     if (!resolvedAttachments.length && selection && Object.prototype.hasOwnProperty.call(selection, 'authenticatorAttachment')) {
         addAttachment(selection.authenticatorAttachment);
-    }
-
-    if (requireSelection && normalizedHints.length > 0 && resolvedAttachments.length === 0) {
-        throw new Error('Selected hints do not map to any authenticator attachments.');
     }
 
     if (Array.isArray(publicKey.allowCredentials) && resolvedAttachments.length > 0) {

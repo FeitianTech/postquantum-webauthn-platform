@@ -179,16 +179,10 @@ describe('the credentials a request allows', () => {
     expect(enforceAuthenticatorAttachmentWithHints({ hints: ['hybrid'] }, null)).toEqual(['cross-platform']);
   });
 
-  it('say, when a hint is required, that one is missing or that the hints imply no attachment', () => {
-    expect(() => ensureAuthenticationHintsAllowed(null, { requireSelection: true })).toThrow(
-      'Please select at least one authenticator hint before continuing.',
-    );
-    expect(() => enforceAuthenticatorAttachmentWithHints({}, { requireSelection: true })).toThrow(
-      'Please select at least one authenticator hint before continuing.',
-    );
-    expect(() => ensureAuthenticationHintsAllowed({ hints: ['unknown'] }, { requireSelection: true })).toThrow(
-      'Selected hints do not map to any authenticator attachments.',
-    );
-    expect(ensureAuthenticationHintsAllowed({ hints: ['hybrid'] }, { requireSelection: true })).toEqual(['cross-platform']);
+  it('require no hint: a missing request, no hints or hints that imply no attachment give none', () => {
+    expect(ensureAuthenticationHintsAllowed(null)).toEqual([]);
+    expect(enforceAuthenticatorAttachmentWithHints({})).toEqual([]);
+    expect(ensureAuthenticationHintsAllowed({ hints: ['unknown'] })).toEqual([]);
+    expect(ensureAuthenticationHintsAllowed({ hints: ['hybrid'] })).toEqual(['cross-platform']);
   });
 });

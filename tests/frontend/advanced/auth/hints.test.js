@@ -53,15 +53,12 @@ describe('hints', () => {
       allowCredentials: [{ id: { $hex: '414243' } }],
       authenticatorSelection: {},
     };
-    expect(ensureAuthenticationHintsAllowed(publicKey, { requireSelection: true })).toEqual(['platform']);
+    expect(ensureAuthenticationHintsAllowed(publicKey)).toEqual(['platform']);
   });
 
-  it('throws when required selections are invalid', () => {
-    expect(() => ensureAuthenticationHintsAllowed({}, { requireSelection: true }))
-      .toThrow('Please select at least one authenticator hint before continuing.');
-
-    expect(() => ensureAuthenticationHintsAllowed({ hints: ['unknown'] }, { requireSelection: true }))
-      .toThrow('Selected hints do not map to any authenticator attachments.');
+  it('requires no hint', () => {
+    expect(ensureAuthenticationHintsAllowed({})).toEqual([]);
+    expect(ensureAuthenticationHintsAllowed({ hints: ['unknown'] })).toEqual([]);
   });
 
   it('handles authentication-scope checkbox application without firing registration callbacks', () => {
@@ -92,7 +89,7 @@ describe('hints', () => {
       authenticatorSelection: {},
     };
 
-    const resolved = ensureAuthenticationHintsAllowed(constrained, { requireSelection: true });
+    const resolved = ensureAuthenticationHintsAllowed(constrained);
     expect(resolved).toEqual(['platform']);
     expect(constrained.allowCredentials).toBeUndefined();
 
@@ -102,7 +99,7 @@ describe('hints', () => {
       authenticatorSelection: {},
     };
 
-    ensureAuthenticationHintsAllowed(fallbackSingle, { requireSelection: true });
+    ensureAuthenticationHintsAllowed(fallbackSingle);
     expect(fallbackSingle.allowCredentials).toEqual([
       {
         type: 'public-key',
@@ -116,7 +113,7 @@ describe('hints', () => {
       authenticatorSelection: {},
     };
 
-    ensureAuthenticationHintsAllowed(fallbackMultiple, { requireSelection: true });
+    ensureAuthenticationHintsAllowed(fallbackMultiple);
     expect(fallbackMultiple.allowCredentials).toHaveLength(2);
   });
 
