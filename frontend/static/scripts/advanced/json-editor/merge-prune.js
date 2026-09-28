@@ -145,10 +145,6 @@ export function pruneUnsupportedProperties(mergedPublicKey, scope) {
             validator({ ...mergedPublicKey });
             return;
         } catch (error) {
-            if (!(error instanceof Error)) {
-                throw error;
-            }
-
             const unsupportedMatch = /(publicKey(?:\.[a-zA-Z0-9]+)*) contains unsupported properties: (.+)/.exec(error.message);
             if (!unsupportedMatch) {
                 throw error;
@@ -160,18 +156,11 @@ export function pruneUnsupportedProperties(mergedPublicKey, scope) {
                 throw error;
             }
 
+            // The validator names the plain object it found the properties in.
             const pathSegments = path.split('.').slice(1);
             let container = mergedPublicKey;
             for (const segment of pathSegments) {
-                if (!isPlainObject(container[segment])) {
-                    container = null;
-                    break;
-                }
                 container = container[segment];
-            }
-
-            if (!isPlainObject(container)) {
-                throw error;
             }
 
             propertyList.forEach(propertyName => {

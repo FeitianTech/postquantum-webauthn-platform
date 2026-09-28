@@ -124,6 +124,16 @@ LOGIC_ROOTS = (
     "advanced/auth/hex-input.js",
     "advanced/editor/json-editing.js",
     "advanced/json-editor/algorithm-options.js",
+    # The registration's request and the JSON editor with no page: the settings,
+    # the request they build and the settings a request says, the editor's
+    # sentences and parsing, the checks an edit passes and the merge a save does.
+    "advanced/json-editor/registration-request.js",
+    "advanced/json-editor/editor-model.js",
+    "advanced/json-editor/schema.js",
+    "advanced/json-editor/validation-common.js",
+    "advanced/json-editor/validation-registration.js",
+    "advanced/json-editor/validation-authentication.js",
+    "advanced/json-editor/merge-prune.js",
 )
 
 _RULES: dict[str, re.Pattern[str]] = {

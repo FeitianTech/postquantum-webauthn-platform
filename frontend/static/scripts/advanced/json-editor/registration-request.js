@@ -79,13 +79,10 @@ function excludedCredentials(settings, { storedCredentials = [], fakeExcludeCred
             return;
         }
 
+        // Text that is not hex does not convert to another spelling: kept as hex.
         let idValue = { $hex: hexValue };
         try {
-            const formattedValue = convertFormat(hexValue, 'hex', currentBinaryFormat);
-            const jsonValue = currentFormatToJsonFormat(formattedValue);
-            if (jsonValue && typeof jsonValue === 'object') {
-                idValue = jsonValue;
-            }
+            idValue = currentFormatToJsonFormat(convertFormat(hexValue, 'hex', currentBinaryFormat));
         } catch (error) {
             // Fall back to hex representation on conversion errors
         }

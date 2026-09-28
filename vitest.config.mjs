@@ -69,7 +69,8 @@ export default defineConfig({
         // The Advanced tab's form with no page, which web/ imports: every line and branch.
         'frontend/static/scripts/advanced/auth/{fake-credentials,hex-input,hint-rules}.js': FULL,
         'frontend/static/scripts/advanced/editor/json-editing.js': FULL,
-        'frontend/static/scripts/advanced/json-editor/algorithm-options.js': FULL,
+        'frontend/static/scripts/advanced/json-editor/{algorithm-options,editor-model,merge-prune,registration-request,schema}.js': FULL,
+        'frontend/static/scripts/advanced/json-editor/validation-{authentication,common,registration}.js': FULL,
       },
     },
   },
