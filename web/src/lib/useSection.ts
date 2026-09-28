@@ -1,11 +1,18 @@
 import Router from 'next/router';
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 import { DEFAULT_SECTION, type SectionId, hashPath, routeFromHash } from './sections';
 
 // A history entry this page pushed to open something inside a section (an MDS
-// entry, its certificate), so the page's own Back can be the browser's.
+// entry, its certificate), so the page's own Back can be the browser's. Its
+// value is how many such entries lead to it, one per level opened, so closing
+// every level at once goes back that many.
 const PUSHED = 'pqcOpened';
+
+function pushedDepth(entry: unknown): number {
+  const value = (entry as Record<string, unknown> | null)?.[PUSHED];
+  return typeof value === 'number' ? value : value ? 1 : 0;
+}
 
 /** What is open inside the section (the hash's segments after `#section/`), and how to open and close it. */
 export type SectionRoute = {
@@ -16,13 +23,15 @@ export type SectionRoute = {
   close: (parent?: string[]) => void;
   /** Shows `path` in place of what the URL names (one this page does not know). */
   replace: (path: string[]) => void;
+  /** Closes every level this page opened, back to `parent` (the list by default), in one step. */
+  closeAll: (parent?: string[]) => void;
 };
 
 /** Opens `path` in another section, as a history entry of its own, so Back returns here. */
 export type GoToSection = (section: SectionId, path: string[]) => void;
 
 /** The route of a section not shown: nothing open in it, and nothing it can open. */
-export const CLOSED_ROUTE: SectionRoute = { path: [], open: () => {}, close: () => {}, replace: () => {} };
+export const CLOSED_ROUTE: SectionRoute = { path: [], open: () => {}, close: () => {}, replace: () => {}, closeAll: () => {} };
 
 const SectionNavigation = createContext<GoToSection>(() => {});
 
@@ -64,6 +73,8 @@ function writeUrl(method: 'pushState' | 'replaceState', state: unknown, path: st
 export function useSection(): [SectionId, (section: SectionId) => void, SectionRoute, GoToSection] {
   const [section, setSection] = useState<SectionId>(DEFAULT_SECTION);
   const [path, setPath] = useState<string[]>([]);
+  // Where closing every level lands, once the browser has gone back.
+  const landing = useRef<string[] | null>(null);
 
   useEffect(() => {
     // No hash is the default section (the page's own URL, which Back returns to
@@ -73,6 +84,14 @@ export function useSection(): [SectionId, (section: SectionId) => void, SectionR
       const hash = window.location.hash.replace(/^#/, '');
       const route = hash ? routeFromHash(hash) : { section: DEFAULT_SECTION, path: [] };
       if (!route) return;
+      const wanted = landing.current;
+      landing.current = null;
+      // Gone back past every level this page pushed: the first was reached by a
+      // link, so it too is replaced by where closing leads.
+      if (wanted && wanted.join('/') !== route.path.join('/')) {
+        route.path = wanted;
+        writeUrl('replaceState', window.history.state, hashPath(route.section, wanted));
+      }
       setSection(route.section);
       setPath(route.path);
     };
@@ -90,13 +109,17 @@ export function useSection(): [SectionId, (section: SectionId) => void, SectionR
   const choose = useCallback((next: SectionId) => {
     setSection(next);
     setPath([]);
-    writeUrl('replaceState', window.history.state, hashPath(next));
+    // Another section in this entry's place: nothing is open in it, so nothing
+    // this page pushed leads to it any more.
+    const { [PUSHED]: _levels, ...kept } = (window.history.state ?? {}) as Record<string, unknown>;
+    writeUrl('replaceState', kept, hashPath(next));
   }, []);
 
   const go = useCallback((next: SectionId, nextPath: string[]) => {
     setSection(next);
     setPath(nextPath);
-    writeUrl('pushState', { ...(window.history.state ?? {}), [PUSHED]: true }, hashPath(next, nextPath));
+    const entry = window.history.state ?? {};
+    writeUrl('pushState', { ...entry, [PUSHED]: pushedDepth(entry) + 1 }, hashPath(next, nextPath));
   }, []);
 
   const open = useCallback((nextPath: string[]) => go(section, nextPath), [go, section]);
@@ -121,5 +144,18 @@ export function useSection(): [SectionId, (section: SectionId) => void, SectionR
     [section],
   );
 
-  return [section, choose, { path, open, close, replace }, go];
+  const closeAll = useCallback(
+    (parent: string[] = []) => {
+      const depth = pushedDepth(window.history.state);
+      if (depth) {
+        landing.current = parent;
+        window.history.go(-depth);
+        return;
+      }
+      replace(parent);
+    },
+    [replace],
+  );
+
+  return [section, choose, { path, open, close, replace, closeAll }, go];
 }

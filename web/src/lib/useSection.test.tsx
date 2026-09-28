@@ -1,9 +1,9 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 
 const beforePopState = vi.fn();
 vi.mock('next/router', () => ({ default: { beforePopState } }));
 
-const { SectionNavigationProvider, useSection, useSectionNavigation } = await import('./useSection');
+const { CLOSED_ROUTE, SectionNavigationProvider, useSection, useSectionNavigation } = await import('./useSection');
 
 afterEach(() => {
   window.history.replaceState(null, '', '/beta');
@@ -42,7 +42,7 @@ describe('the section in the URL, inside Next', () => {
     act(() => result.current[2].open(['aaguid:x', 'certificate', '1']));
     expect(window.location.hash).toBe('#mds/aaguid:x/certificate/1');
     expect(result.current[2].path).toEqual(['aaguid:x', 'certificate', '1']);
-    expect(window.history.state).toEqual({ pqcOpened: true });
+    expect(window.history.state).toEqual({ pqcOpened: 2 });
 
     // A link to the certificate: Back replaces it with its entry, then the list.
     window.history.replaceState(null, '', '/beta#mds/aaguid:y/certificate/2');
@@ -70,7 +70,7 @@ describe('the section in the URL, inside Next', () => {
     expect(result.current[0]).toBe('mds');
     expect(result.current[2].path).toEqual(['aaguid:f1d0f1d0-0000-4000-8000-000000000001']);
     expect(window.location.hash).toBe('#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000001');
-    expect(window.history.state).toEqual({ fromNext: true, pqcOpened: true });
+    expect(window.history.state).toEqual({ fromNext: true, pqcOpened: 1 });
     expect(window.history.length).toBe(length + 1);
   });
 
@@ -105,3 +105,52 @@ describe('the section in the URL, inside Next', () => {
   });
 });
 
+describe('closing every level at once', () => {
+  it('goes back as many entries as levels were opened, to the list', async () => {
+    window.history.replaceState(null, '', '/beta#simple');
+    const { result } = renderHook(() => useSection());
+    act(() => result.current[2].open(['credential', 'k']));
+    act(() => result.current[2].open(['credential', 'k', 'registration']));
+    act(() => result.current[2].open(['credential', 'k', 'registration', 'certificate', '1']));
+    expect(window.history.state).toEqual({ pqcOpened: 3 });
+
+    act(() => result.current[2].closeAll());
+    await waitFor(() => expect(window.location.hash).toBe('#simple'));
+    expect(result.current[2].path).toEqual([]);
+    expect(window.history.state).toBeNull();
+  });
+
+  it('replaces a first level reached by a link with the list, after going back past the rest', async () => {
+    window.history.replaceState(null, '', '/beta#simple/credential/k/registration');
+    const { result } = renderHook(() => useSection());
+    act(() => result.current[2].open(['credential', 'k', 'registration', 'authenticator-data']));
+
+    act(() => result.current[2].closeAll());
+    await waitFor(() => expect(window.location.hash).toBe('#simple'));
+    expect(result.current[2].path).toEqual([]);
+  });
+
+  it('replaces a level reached by a link with the list, adding no entry', () => {
+    window.history.replaceState({ fromNext: true }, '', '/beta#simple/credential/k');
+    const { result } = renderHook(() => useSection());
+    const length = window.history.length;
+
+    act(() => result.current[2].closeAll());
+    expect(window.location.hash).toBe('#simple');
+    expect(result.current[2].path).toEqual([]);
+    expect(window.history.length).toBe(length);
+  });
+
+  it('forgets the levels of an entry another section takes the place of', () => {
+    window.history.replaceState({ fromNext: true, pqcOpened: 2 }, '', '/beta#mds/aaguid:x/certificate/1');
+    const { result } = renderHook(() => useSection());
+
+    act(() => result.current[1]('simple'));
+    expect(window.history.state).toEqual({ fromNext: true });
+    expect(window.location.hash).toBe('#simple');
+  });
+
+  it('has nothing to close in a section not shown', () => {
+    expect(() => CLOSED_ROUTE.closeAll()).not.toThrow();
+  });
+});

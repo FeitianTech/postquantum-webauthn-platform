@@ -373,7 +373,7 @@ describe('an entry the list does not hold (MDS-D2)', () => {
             FIDO MDS Authenticators
           </button>
         </div>
-        <MdsSection active route={{ path: [entryId], open: vi.fn(), close, replace: vi.fn() }} />
+        <MdsSection active route={{ path: [entryId], open: vi.fn(), close, replace: vi.fn(), closeAll: vi.fn() }} />
       </ToastProvider>,
     );
     return { close };
@@ -459,7 +459,7 @@ describe('an entry the list does not hold (MDS-D2)', () => {
             FIDO MDS Authenticators
           </button>
         </div>
-        <MdsSection active route={{ path: [entryId], open: vi.fn(), close: vi.fn(), replace: vi.fn() }} />
+        <MdsSection active route={{ path: [entryId], open: vi.fn(), close: vi.fn(), replace: vi.fn(), closeAll: vi.fn() }} />
       </ToastProvider>
     );
     const { rerender } = renderPage(view('aaguid:first'));

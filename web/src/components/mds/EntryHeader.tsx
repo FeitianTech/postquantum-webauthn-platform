@@ -1,6 +1,7 @@
 import { RAW_DATA_BUTTON_TITLE, RAW_DATA_UNAVAILABLE_TITLE } from '@legacy/advanced/mds/raw-data.js';
 import { type MouseEvent, forwardRef } from 'react';
 
+import { BackButton } from '@/components/ui/BackButton';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { MonoValue } from '@/components/ui/MonoValue';
@@ -8,13 +9,7 @@ import { MonoValue } from '@/components/ui/MonoValue';
 import { entrySubtitle, entryTitle } from './entryModel';
 import { type MdsEntry, identifierName } from './model';
 
-export function BackButton({ onBack, title }: { onBack: () => void; title: string }) {
-  return (
-    <Button variant="secondary" size="sm" title={title} onClick={onBack} icon={<span aria-hidden="true">←</span>}>
-      Back
-    </Button>
-  );
-}
+export { BackButton };
 
 // The subtitle's parts: "AAGUID: …" and "ID: …" (copyable; on a phone the value
 // takes its own line rather than being cut) and the protocol.

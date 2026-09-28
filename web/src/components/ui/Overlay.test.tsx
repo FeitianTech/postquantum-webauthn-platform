@@ -168,3 +168,32 @@ describe('Overlay', () => {
     expect(screen.getByRole('button', { name: 'Show' })).toHaveFocus();
   });
 });
+
+describe('a level inside a dialog', () => {
+  it('has Back before its title, titled with where it returns to', async () => {
+    const onBack = vi.fn();
+    render(
+      <>
+        <div id="app-root" />
+        <div id="overlay-root" />
+        <Dialog open onClose={() => {}} labelledBy="level-title">
+          <OverlayHeader
+            titleId="level-title"
+            title="Registration Details"
+            closeLabel="Close credential details"
+            onClose={() => {}}
+            back={{ onBack, title: 'Return to credential details' }}
+          />
+        </Dialog>
+      </>,
+    );
+
+    const back = await screen.findByRole('button', { name: 'Back' });
+    expect(back).toHaveAttribute('title', 'Return to credential details');
+    expect(back.compareDocumentPosition(screen.getByRole('heading', { name: 'Registration Details' }))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    await userEvent.click(back);
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+});

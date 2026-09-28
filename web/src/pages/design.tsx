@@ -462,6 +462,7 @@ function Display() {
 function Floating() {
   const toast = useToast();
   const [dialog, setDialog] = useState(false);
+  const [dialogLevel, setDialogLevel] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [confirm, setConfirm] = useState(false);
@@ -546,6 +547,24 @@ function Floating() {
           <p className="text-body text-ink-muted">
             Takes focus when it opens, keeps Tab inside, closes on Escape, the close button or the backdrop, and gives
             focus back. The page behind is inert and not scroll-locked.
+          </p>
+          <Button variant="secondary" size="sm" className="mt-4" onClick={() => setDialogLevel(true)}>
+            Open a level
+          </Button>
+        </OverlayBody>
+      </Dialog>
+      <Dialog open={dialogLevel} onClose={() => setDialogLevel(false)} labelledBy="design-dialog-level-title">
+        <OverlayHeader
+          titleId="design-dialog-level-title"
+          title="A level inside a dialog"
+          closeLabel="Close dialog"
+          onClose={() => setDialogLevel(false)}
+          back={{ onBack: () => setDialogLevel(false), title: 'Return to the dialog' }}
+        />
+        <OverlayBody>
+          <p className="text-body text-ink-muted">
+            A level opened inside a dialog (a credential&apos;s registration, one of its certificates) has Back before its
+            title; the close button closes every level.
           </p>
         </OverlayBody>
       </Dialog>

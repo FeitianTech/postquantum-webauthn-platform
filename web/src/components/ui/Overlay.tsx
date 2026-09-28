@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { cx } from '@/lib/cx';
 import { useOverlayRoot } from '@/lib/useOverlayRoot';
 
+import { BackButton } from './BackButton';
 import { IconButton } from './Button';
 import { CloseIcon } from './icons';
 
@@ -200,12 +201,16 @@ type OverlayHeaderProps = {
   closeLabel: string;
   /** Controls beside the title, such as "Copy report". */
   actions?: ReactNode;
+  /** A level inside the panel: Back before the title, to the level it came from. */
+  back?: { onBack: () => void; title: string };
+  className?: string;
 };
 
-export function OverlayHeader({ titleId, title, onClose, closeLabel, actions }: OverlayHeaderProps) {
+export function OverlayHeader({ titleId, title, onClose, closeLabel, actions, back, className }: OverlayHeaderProps) {
   return (
-    <div className="flex shrink-0 items-center gap-3 border-b border-line py-3.5 pr-3.5 pl-6">
-      <h2 id={titleId} className="min-w-0 flex-1 text-title font-semibold text-ink">
+    <div className={cx('flex shrink-0 items-center gap-3 border-b border-line py-3.5 pr-3.5 pl-6', className)}>
+      {back ? <BackButton onBack={back.onBack} title={back.title} /> : null}
+      <h2 id={titleId} className="min-w-0 flex-1 text-title font-semibold break-words text-ink">
         {title}
       </h2>
       {actions}

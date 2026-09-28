@@ -43,7 +43,7 @@ describe('an MDS entry in the URL', () => {
     await userEvent.click(link(entry.entryId));
     expect(window.location.hash).toBe('#mds/akid:f1d0000000000000000000000000000000000011');
     expect(window.history.length).toBe(length + 1);
-    expect(window.history.state).toEqual({ fromNext: true, pqcOpened: true });
+    expect(window.history.state).toEqual({ fromNext: true, pqcOpened: 1 });
     expect(list()).not.toBeVisible();
     expect(screen.getByRole('heading', { level: 3, name: 'Fixture U2F Key' })).toHaveFocus();
     frame().scrollTop = 0;
