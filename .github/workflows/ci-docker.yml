@@ -58,7 +58,7 @@ jobs:
           # Where the new UI was reviewed before the cutover: a permanent redirect.
           curl -sS -D /tmp/beta.headers -o /dev/null http://localhost:8080/beta/design
           grep -qE '^HTTP/[0-9.]+ 308' /tmp/beta.headers
-          grep -qi '^location: /design' /tmp/beta.headers"
+          grep -qi '^location: /design' /tmp/beta.headers
 
       - name: Show container logs
         if: always()
