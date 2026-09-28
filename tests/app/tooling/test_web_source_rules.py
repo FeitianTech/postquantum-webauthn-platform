@@ -97,6 +97,17 @@ LOGIC_ROOTS = (
     "advanced/credentials/utils.js",
     "advanced/credential-display/attestation-context.js",
     "advanced/cose-labels.js",
+    # A saved credential's details and registration view: the registration's
+    # state, the decode, the certificate's text, the sanitisers and the saved
+    # snapshot's context.
+    "advanced/credential-display/decode-payload.js",
+    "advanced/credential-display/certificate-text.js",
+    "advanced/credential-display/registration-state.js",
+    "advanced/credential-display/state.js",
+    "advanced/credential-display/sanitize-attestation-object.js",
+    "advanced/credential-display/sanitize-common.js",
+    "advanced/credential-display/data-utils.js",
+    "advanced/credential-display/credential-detail-runtime/snapshot-context.js",
 )
 
 _RULES: dict[str, re.Pattern[str]] = {

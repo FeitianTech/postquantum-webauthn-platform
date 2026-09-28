@@ -1,7 +1,4 @@
-import {
-    applyRegistrationSnapshot,
-    EMPTY_DETAIL_PREPARATION,
-} from '../registration-state.js';
+import {applyRegistrationSnapshot} from '../registration-state.js';
 import {registrationDetailState} from '../state.js';
 
 // A snapshot that holds the registration as data (schemaVersion 2 and later).
@@ -48,8 +45,7 @@ export function resolveRegistrationSnapshotContext(cred, state = registrationDet
         ? registrationDetailSnapshot.state
         : registrationDetailSnapshot;
 
-    const detailPreparation = applyRegistrationSnapshot(state, registrationDetailSnapshot)
-        || { ...EMPTY_DETAIL_PREPARATION };
+    const detailPreparation = applyRegistrationSnapshot(state, registrationDetailSnapshot);
 
     return {
         detailPreparation,

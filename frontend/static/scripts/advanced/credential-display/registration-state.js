@@ -57,9 +57,8 @@ export function addStateCertificate(state, entry) {
                 && typeof currentEntry.parsedX5c === 'object'
                 ? currentEntry.parsedX5c
                 : null;
-            const newParsed = normalised.parsedX5c && typeof normalised.parsedX5c === 'object'
-                ? normalised.parsedX5c
-                : null;
+            // normaliseCertificateEntryForModal always gives parsedX5c an object.
+            const newParsed = normalised.parsedX5c;
             const currentHasError = Boolean(currentParsed && currentParsed.parseError);
             const newHasError = Boolean(newParsed && newParsed.parseError);
 
@@ -69,18 +68,9 @@ export function addStateCertificate(state, entry) {
             return;
         }
     } else {
-        const duplicate = existing.some(item => {
-            if (item === normalised) {
-                return true;
-            }
-            if (item.pem && normalised.pem && item.pem === normalised.pem) {
-                return true;
-            }
-            if (item.raw && normalised.raw && item.raw === normalised.raw) {
-                return true;
-            }
-            return false;
-        });
+        // Without an identity the entry has no raw bytes either (they would be
+        // its identity), so only its PEM can match another's.
+        const duplicate = existing.some(item => Boolean(item.pem && normalised.pem && item.pem === normalised.pem));
 
         if (duplicate) {
             return;
@@ -152,31 +142,15 @@ export async function hashAuthenticatorData(state) {
 
     let bytes = null;
 
-    const recordHexCandidate = value => {
-        if (state.authenticatorDataHex) {
-            return;
-        }
-        if (typeof value !== 'string') {
-            return;
-        }
-        const trimmed = value.trim();
-        if (!trimmed) {
-            return;
-        }
-        state.authenticatorDataHex = trimmed.toLowerCase();
-    };
-
+    // The first candidate that reads gives the hex: hex text, else base64url, else base64.
     for (const candidate of hexCandidates) {
         const normalized = candidate.replace(/[^0-9a-f]/gi, '').toLowerCase();
         if (!normalized || normalized.length % 2 !== 0) {
             continue;
         }
-        const converted = hexToUint8Array(normalized);
-        if (converted && converted.length) {
-            recordHexCandidate(normalized);
-            bytes = converted;
-            break;
-        }
+        state.authenticatorDataHex = normalized;
+        bytes = hexToUint8Array(normalized);
+        break;
     }
 
     // base64url, and a value under a `base64` key standard base64: each read
@@ -190,7 +164,7 @@ export async function hashAuthenticatorData(state) {
                 converted = null;
             }
             if (converted && converted.length) {
-                recordHexCandidate(bytesToHex(converted));
+                state.authenticatorDataHex = bytesToHex(converted);
                 return converted;
             }
         }
@@ -207,10 +181,6 @@ export async function hashAuthenticatorData(state) {
 
     if (!bytes || !bytes.length) {
         return '';
-    }
-
-    if (!state.authenticatorDataHex) {
-        state.authenticatorDataHex = bytesToHex(bytes);
     }
 
     const crypto = globalThis.crypto;

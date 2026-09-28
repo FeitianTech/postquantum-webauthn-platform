@@ -45,10 +45,6 @@ function appendKeyValueLines(output, value, indentLevel = 0) {
             });
         } else {
             filtered.forEach(item => {
-                if (item === null || item === undefined) {
-                    return;
-                }
-
                 if (typeof item === 'object') {
                     output.push(`${indent}-`);
                     appendKeyValueLines(output, item, indentLevel + 1);
@@ -101,10 +97,8 @@ function appendKeyValueLines(output, value, indentLevel = 0) {
     output.push(`${indent}${String(value)}`);
 }
 
+// A fingerprint's hex, given as text, in lines of 16 colon-separated bytes.
 function hexToColonLines(hexString, bytesPerLine = 16) {
-    if (typeof hexString !== 'string') {
-        return [];
-    }
     let clean = hexString.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
     if (!clean) {
         return [];

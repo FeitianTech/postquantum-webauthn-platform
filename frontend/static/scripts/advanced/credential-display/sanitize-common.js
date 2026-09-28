@@ -206,7 +206,8 @@ export function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
             if (summaryHash) {
                 minimal.authenticatorDataHash = summaryHash;
             }
-            return Object.keys(minimal).length ? minimal : null;
+            // The test above gives it at least one of the two.
+            return minimal;
         }
         return null;
     }
@@ -345,18 +346,14 @@ export function sanitizeParsedCertificateDetails(parsed) {
                     return null;
                 }
 
-                const extCopy = cloneJson(ext);
-                if (!extCopy || typeof extCopy !== 'object') {
-                    return null;
-                }
-
+                // Already a copy (parsedCopy is one).
                 ['raw', 'hex', 'rawHex', 'der', 'derBase64', 'der_base64', 'valueHex'].forEach(key => {
-                    if (Object.prototype.hasOwnProperty.call(extCopy, key)) {
-                        delete extCopy[key];
+                    if (Object.prototype.hasOwnProperty.call(ext, key)) {
+                        delete ext[key];
                     }
                 });
 
-                return extCopy;
+                return ext;
             })
             .filter(Boolean);
     }

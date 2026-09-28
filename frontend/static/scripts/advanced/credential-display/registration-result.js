@@ -1,9 +1,6 @@
 import {openModal} from '../../shared/ui/core.js';
 import {registrationResultInput, registrationSnapshotPayload} from './registration-view.js';
 
-// The decode moved to ./decode-payload.js, which the new UI imports too.
-export {decodePayloadThroughApi} from './decode-payload.js';
-
 export async function showRegistrationResultModalRuntime(credentialJson, relyingPartyInfo, options = {}, deps = {}) {
     const {
         composeRegistrationDetail,

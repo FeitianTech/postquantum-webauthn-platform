@@ -16,11 +16,7 @@ export function normalizeClientDataString(value) {
 
     const base64Pattern = /^[A-Za-z0-9+/=]+$/;
     if (base64Pattern.test(trimmed)) {
-        try {
-            return base64ToBase64Url(trimmed);
-        } catch (error) {
-            return trimmed;
-        }
+        return base64ToBase64Url(trimmed);
     }
 
     return trimmed;
