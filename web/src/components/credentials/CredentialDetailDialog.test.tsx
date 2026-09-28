@@ -6,7 +6,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { AppShell } from '@/components/shell/AppShell';
-import { DETAIL_SCENARIO, artifactAnswer, decodeRoute, keepRecords, savedRecord, warmUpRoutes } from '@/test/credentials';
+import { DETAIL_SCENARIO, artifactAnswer, decodeRoute, keepRecords, savedRecord, storedRecords, warmUpRoutes } from '@/test/credentials';
 import { json, stubFetch } from '@/test/fetch';
 import { renderPage } from '@/test/page';
 
@@ -172,6 +172,59 @@ describe('a saved credential\'s details, the detail', () => {
 
     expect(dialog().querySelector('[data-hydration="failed"]')).toHaveTextContent('Unable to fetch credential artifact');
     expect(section('Properties')).toBeInTheDocument();
+  });
+});
+
+describe('a saved credential\'s details, what some records hold', () => {
+  it('CRED-M1: keep the registration snapshot the artifact brings, so the list reads it again', async () => {
+    const snapshot = {
+      schemaVersion: 2,
+      capturedAt: '2026-09-27T10:00:00Z',
+      state: { authenticatorDataHash: 'abcd' },
+      response: { credential: { id: ADVANCED.credentialIdBase64Url, type: 'public-key', response: {} }, relyingParty: { attestationFmt: 'packed' } },
+    };
+    const path = `/api/advanced/credential-artifacts/${encodeURIComponent(ARTIFACT.storageId)}`;
+    renderShell([ADVANCED], '', {
+      [path]: () => json({ ...ARTIFACT, artifact: { ...ARTIFACT.artifact, registrationDetailSnapshot: snapshot } }),
+      [`${path}/snapshot`]: () => json({ status: 'OK' }),
+    });
+    await openDetail('advanced@example.com');
+
+    await waitFor(() => expect(storedRecords()[0].registrationDetailSnapshot).toMatchObject({ schemaVersion: 2 }));
+    await toRegistration();
+    expect(section('Authenticator Response').querySelector('pre')).toHaveTextContent(ADVANCED.credentialIdBase64Url as string);
+  });
+
+  it('CRED-M2, CRED-M10: give the metadata\'s warning in amber, and FIDO MDS beside the AAGUID when it has an entry', async () => {
+    const known = {
+      ...ES256,
+      aaguidHex: 'f1d0f1d0000040008000000000000001',
+      attestationSummary: { rootValid: true, metadata: { verification_warning: 'The metadata entry is revoked.' } },
+    };
+    renderShell([known]);
+    await openDetail();
+
+    expect(section('Properties').querySelector('[data-warning]')).toHaveTextContent('The metadata entry is revoked.');
+    await userEvent.click(within(section('User info at creation')).getByRole('button', { name: 'FIDO MDS' }));
+    await waitFor(() => expect(window.location.hash).toBe('#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000001'));
+  });
+
+  it('CRED-C4: give a stored AAGUID no spelling reads as stored, marked, under the four N/A spellings', async () => {
+    renderShell([{ ...EDDSA, aaguid: 'abcde', aaguidHex: undefined }]);
+    await openDetail('eddsa@example.com');
+
+    const aaguid = section('User info at creation').querySelector('[data-aaguid]')!;
+    expect(aaguid.querySelector('[data-unreadable="aaguid"]')).toHaveTextContent('Unreadable');
+    expect(aaguid.querySelector('[data-unreadable="aaguid"] code')).toHaveTextContent('abcde');
+  });
+
+  it('CRED-G4: say a certificate could not be parsed, and give no summary for it', async () => {
+    const broken = { ...ES256, attestationCertificates: [{ parsedX5c: { error: 'The certificate is not DER.' } }], attestationObject: '' };
+    renderShell([broken], urlOf(ES256, 'registration', 'certificate', '1'));
+    await screen.findByRole('heading', { level: 2, name: 'Attestation Certificate' });
+
+    expect(within(shownLevel()).getByRole('alert')).toHaveTextContent('The certificate is not DER.');
+    expect(shownLevel().querySelector('[data-certificate-summary]')).toBeNull();
   });
 });
 
