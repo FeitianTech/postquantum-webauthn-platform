@@ -1,7 +1,8 @@
 import {
-    applyRegistrationDetailSnapshot,
+    applyRegistrationSnapshot,
     EMPTY_DETAIL_PREPARATION,
-} from '../registration-state-runtime.js';
+} from '../registration-state.js';
+import {registrationDetailState} from '../state.js';
 
 // A snapshot that holds the registration as data (schemaVersion 2 and later).
 // Anything else -- an older snapshot, or none -- leaves the credential to be
@@ -23,10 +24,11 @@ export function readSnapshotResponse(snapshot) {
     return credential || relyingParty ? { credential, relyingParty } : null;
 }
 
-// The saved registration detail, as data. Markup is never read from a snapshot or
-// from a record: older snapshots carried composed HTML, and records could carry
+// The saved registration detail, as data, applied to `state` (the current UI's
+// one by default). Markup is never read from a snapshot or from a record: older
+// snapshots carried composed HTML, and records could carry
 // registrationDetailHtml-style keys; the view is built from data instead.
-export function resolveRegistrationSnapshotContext(cred) {
+export function resolveRegistrationSnapshotContext(cred, state = registrationDetailState) {
     const registrationDetailSnapshot = [
         cred.registrationDetailSnapshot,
         cred.registration_detail_snapshot,
@@ -46,7 +48,7 @@ export function resolveRegistrationSnapshotContext(cred) {
         ? registrationDetailSnapshot.state
         : registrationDetailSnapshot;
 
-    const detailPreparation = applyRegistrationDetailSnapshot(registrationDetailSnapshot)
+    const detailPreparation = applyRegistrationSnapshot(state, registrationDetailSnapshot)
         || { ...EMPTY_DETAIL_PREPARATION };
 
     return {

@@ -1,3 +1,8 @@
+import {resetRegistrationState} from './registration-state.js';
+
+// The current UI's one registration state, which its certificate and
+// authenticator-data views read when their buttons are pressed; and the list's
+// cursor, flash, warm-up and deletion flags.
 export const registrationDetailState = {
     attestationObject: null,
     attestationCertificates: [],
@@ -58,10 +63,5 @@ export function setCredentialDeletionInProgressFlag(value) {
 }
 
 export function resetRegistrationDetailState() {
-    registrationDetailState.attestationObject = null;
-    registrationDetailState.attestationCertificates = [];
-    registrationDetailState.visibleAttestationCertificateIndices = [];
-    registrationDetailState.authenticatorData = null;
-    registrationDetailState.authenticatorDataHash = '';
-    registrationDetailState.authenticatorDataHex = '';
+    resetRegistrationState(registrationDetailState);
 }

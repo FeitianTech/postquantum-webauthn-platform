@@ -12,9 +12,13 @@ import {
 } from './sanitize-common.js';
 import {cloneJson} from './data-utils.js';
 
+// The attestation object as the registration view shows it: `fmt` first, each
+// x5c certificate replaced by what the view knows of it (`certificates`, the
+// current UI's one state's by default), the raw and formatting keys left out.
 export function sanitiseAttestationObjectForDisplay(
     attestationObject,
-    attestationFormatRaw = ''
+    attestationFormatRaw = '',
+    certificates = registrationDetailState.attestationCertificates,
 ) {
     const cloned = cloneJson(attestationObject || null);
     if (!cloned || typeof cloned !== 'object') {
@@ -25,24 +29,22 @@ export function sanitiseAttestationObjectForDisplay(
         return { fmt: formatValue };
     }
 
-    const certificatesAll = Array.isArray(registrationDetailState.attestationCertificates)
-        ? registrationDetailState.attestationCertificates
-        : [];
+    const certificatesAll = Array.isArray(certificates) ? certificates : [];
     const { valid: certificateInfos, failures: parseFailureInfos } = partitionCertificateEntries(certificatesAll);
-    const certificates = certificateInfos.length
+    const shownCertificates = certificateInfos.length
         ? certificateInfos
         : parseFailureInfos;
 
     if (cloned.attStmt && typeof cloned.attStmt === 'object') {
         const attStmtClone = { ...cloned.attStmt };
         const sourceArray = Array.isArray(attStmtClone.x5c) ? attStmtClone.x5c : [];
-        const maxLength = Math.max(sourceArray.length, certificates.length);
+        const maxLength = Math.max(sourceArray.length, shownCertificates.length);
 
         if (maxLength > 0) {
             const sanitizedChain = [];
 
             for (let index = 0; index < maxLength; index += 1) {
-                const info = certificates[index];
+                const info = shownCertificates[index];
                 const certificateEntry = info && typeof info === 'object' && info.entry ? info.entry : info;
                 const sourceEntry = sourceArray[index];
 

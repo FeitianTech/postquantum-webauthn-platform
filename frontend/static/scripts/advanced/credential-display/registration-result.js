@@ -1,35 +1,8 @@
-import {FailedResponseError, readFailedResponse} from '../../shared/api/failed-response.js';
 import {openModal} from '../../shared/ui/core.js';
 import {collectTruthyEntries} from './data-utils.js';
 
-export async function decodePayloadThroughApi(payload) {
-    const trimmed = typeof payload === 'string' ? payload.trim() : '';
-    if (!trimmed) {
-        throw new Error('Decoder payload must be a non-empty string.');
-    }
-
-    const response = await fetch('/api/decode', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ payload: trimmed })
-    });
-
-    if (!response.ok) {
-        throw new FailedResponseError(await readFailedResponse(response));
-    }
-
-    const json = await response.json();
-    if (json && typeof json === 'object') {
-        if (json.error) {
-            throw new Error(json.error);
-        }
-        if (json.data !== undefined) {
-            return json;
-        }
-    }
-
-    throw new Error('Decoder response did not include data.');
-}
+// The decode moved to ./decode-payload.js, which the new UI imports too.
+export {decodePayloadThroughApi} from './decode-payload.js';
 
 export async function showRegistrationResultModalRuntime(credentialJson, relyingPartyInfo, options = {}, deps = {}) {
     const {
