@@ -6,12 +6,23 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-/** The requests a golden scenario records: each its request line, status and answer. */
-export function goldenAnswers(scenario) {
+/** The requests a golden scenario records, whole: with the files each one stored. */
+export function goldenRequests(scenario) {
   // Not new URL(…, import.meta.url): Vite rewrites that form into an asset URL.
   const path = join(import.meta.dirname, '..', '..', 'app', 'characterization', 'golden', 'routes', `${scenario}.json`);
-  const golden = JSON.parse(readFileSync(path, 'utf8'));
-  return golden.requests.map(({ request, status, body }) => ({ request, status, body }));
+  return JSON.parse(readFileSync(path, 'utf8')).requests;
+}
+
+/** The requests a golden scenario records: each its request line, status and answer. */
+export function goldenAnswers(scenario) {
+  return goldenRequests(scenario).map(({ request, status, body }) => ({ request, status, body }));
+}
+
+/** The artifact the server stored for a golden advanced registration, as GET …/credential-artifacts/<id> answers it. */
+export function goldenArtifact(scenario) {
+  const complete = goldenRequests(scenario).find(({ request, status }) => request.includes('/register/complete') && status === 200);
+  const { content } = complete.stored.find(({ file }) => file.startsWith('artifacts/'));
+  return { storageId: content.storageId, artifact: content.payload };
 }
 
 /** An answer as the browser receives it: JSON, or the recorded page for a non-JSON one. */

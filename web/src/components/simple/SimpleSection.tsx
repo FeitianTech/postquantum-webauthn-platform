@@ -67,10 +67,10 @@ function CeremonyCard() {
 export function SimpleSection({ active, route }: { active: boolean; route: SectionRoute }) {
   const section = SECTIONS.find((candidate) => candidate.id === 'simple')!;
   const ids = segmentIds(NAV_ID, 'simple');
-  const { path, replace, close } = route;
-  // What the URL may open here: a credential's details, #simple/credential/<key>.
-  const known = path.length === 0 || (path[0] === 'credential' && path.length === 2);
-  const openKey = known && path.length ? path[1] : '';
+  const { path, replace } = route;
+  // What the URL may open here: a credential's details, #simple/credential/<key>,
+  // and the levels inside them, which the dialog checks.
+  const known = path.length === 0 || (path[0] === 'credential' && path.length >= 2);
   const backToList = useCallback(() => replace([]), [replace]);
 
   // A path this section does not know shows the list, and the URL says so.
@@ -94,7 +94,7 @@ export function SimpleSection({ active, route }: { active: boolean; route: Secti
         </div>
         <SavedCredentials onOpen={(key) => route.open(['credential', key])} />
       </div>
-      <CredentialDetailDialog openKey={openKey} onClose={() => close()} onUnknown={backToList} />
+      <CredentialDetailDialog route={known ? route : { ...route, path: [] }} />
     </section>
   );
 }
