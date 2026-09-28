@@ -62,23 +62,16 @@ async function synchroniseAdvancedCredentialArtifacts() {
 
         let recordForStorage = record;
         if (artifactAvailable) {
-            // Always a new object, so the stored copy changes.
             recordForStorage = summariseAdvancedCredentialForLocal(working, storageId, { hasArtifact: artifactAvailable });
-            changed = true;
+            // A change only when the stored copy is not already this summary:
+            // a record summarised by an earlier warm-up is left as it is, so
+            // the list is not read again (nor other tabs woken) for nothing.
+            if (JSON.stringify(recordForStorage) !== JSON.stringify(record)) {
+                changed = true;
+            }
         }
 
         updatedRecords.push(recordForStorage);
-
-        if (
-            artifactAvailable
-            && (
-                !working.hasServerArtifact
-                || Number(working.artifactVersion) < SERVER_ARTIFACT_VERSION
-                || recordHasHeavyData(record)
-            )
-        ) {
-            changed = true;
-        }
     }
 
     if (changed) {

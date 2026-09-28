@@ -96,6 +96,19 @@ describe('synchronising advanced credential artifacts', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('reports no change, and writes nothing, for a credential an earlier warm-up summarised', async () => {
+    const fetchMock = answerWith({ status: 'OK' });
+    store([advanced({ storageId: STORAGE_ID, hasServerArtifact: true, artifactVersion: 1 })]);
+    await expect(ensureAdvancedCredentialArtifactsSynced()).resolves.toBe(true);
+    const summarised = window.localStorage.getItem(SHARED_STORAGE_KEY);
+    const setItem = vi.spyOn(window.localStorage, 'setItem');
+
+    await expect(ensureAdvancedCredentialArtifactsSynced()).resolves.toBe(false);
+    expect(setItem).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(SHARED_STORAGE_KEY)).toBe(summarised);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('shares the synchronisation already under way', async () => {
     const first = ensureAdvancedCredentialArtifactsSynced();
 
