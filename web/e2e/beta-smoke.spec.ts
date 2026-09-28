@@ -23,30 +23,26 @@ async function highlightSitsOn(page: Page, tab: Locator) {
 }
 
 test.describe('/beta', () => {
-  test('switches sections on the page and by the hash, and what is not ported yet leads to the current UI', async ({ page }) => {
+  test('switches sections on the page and by the hash, and no section leads to the current UI', async ({ page }) => {
     await page.goto('/beta');
     const tabs = page.getByRole('tablist', { name: 'Sections' });
     await expect(tabs.getByRole('tab')).toHaveText(SECTIONS.map((name) => `${name}${name}`));
     await expect(page.getByRole('tabpanel', { name: 'Simple Authentication' })).toBeVisible();
     await highlightSitsOn(page, tabs.getByRole('tab', { name: 'Simple Authentication' }));
 
-    for (const [name, hash, ported] of [
-      ['Codec', 'codec', true],
-      ['FIDO MDS Authenticators', 'mds', true],
-      ['Advanced Authentication', 'advanced', true],
+    for (const [name, hash] of [
+      ['Codec', 'codec'],
+      ['FIDO MDS Authenticators', 'mds'],
+      ['Advanced Authentication', 'advanced'],
     ] as const) {
       const tab = tabs.getByRole('tab', { name });
       await tab.click();
-      const panel = page.getByRole('tabpanel', { name });
-      await expect(panel).toBeVisible();
-      const note = panel.getByRole('link', { name: 'Open the current interface' });
-      if (ported) await expect(note).toHaveCount(0);
-      else await expect(note).toHaveAttribute('href', '/');
+      await expect(page.getByRole('tabpanel', { name })).toBeVisible();
       await expect(page).toHaveURL(new RegExp(`/beta#${hash}$`));
       await highlightSitsOn(page, tab);
     }
 
-    // The Advanced tab's authentication moved in Phase 29B: every section is ported.
+    // Every section is ported (Phase 29B), and none links to the current UI.
     const advanced = page.getByRole('tabpanel', { name: 'Advanced Authentication' });
     await advanced.getByRole('tab', { name: 'Authentication' }).click();
     await expect(advanced.getByRole('button', { name: 'Assert Credential' })).toBeVisible();

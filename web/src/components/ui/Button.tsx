@@ -38,7 +38,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
   quiet: 'bg-transparent text-accent-ink enabled:hover-or-demo:bg-accent-tint enabled:active-or-demo:bg-accent-tint-strong',
 };
 
-// The same look for a link that goes somewhere, such as "Open the current interface".
+// The same look for a link that goes somewhere, such as GitHub in the header.
 export function buttonClassName({ variant = 'primary', size = 'md' }: { variant?: ButtonVariant; size?: ButtonSize } = {}) {
   return cx(BASE, SIZES[size], VARIANTS[variant], 'no-underline');
 }
