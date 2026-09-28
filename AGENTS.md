@@ -14,6 +14,18 @@ This project is a Flask-based WebAuthn/FIDO2 demo and developer tool focused on:
 
 The repo includes both the application and a local `fido2/` library copy used by the server.
 
+## Commits
+
+Every commit, whoever makes it:
+
+- Goes on `main` directly, no branch, and is small: one change you can describe in a sentence.
+- Has a one-line message: one short sentence (about 70 characters at most) saying what
+  changed in the code, for example "Serve the web export at the site root" or
+  "Read a 22-character AAGUID as base64url". No body, no trailers, no `Co-Authored-By`.
+- Describes the code, never the work around it: no phase or step numbers, no plans,
+  briefs, reviews or verifications ("Record the tech lead's verification ..."), and
+  nothing else that shows how the team organises its work.
+
 ## High-Level Layout
 
 - `server/app/`
