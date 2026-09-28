@@ -1,17 +1,25 @@
 import {el} from '../../shared/ui/dom.js';
 import {
+    ALLOW_CREDENTIALS_TEXT,
+    allowCredentialChoices,
+    keptChoice,
+    registrationAttachmentFilter,
+} from '../auth/allow-credentials.js';
+import {
     SAVED_LIST_TEXT,
     describeCredentialCard,
     listSavedCredentials,
 } from '../credentials/saved-list.js';
 
+// The Allow Credentials select, drawn from ../auth/allow-credentials.js: the
+// saved credentials the registration form's hints (or its attachment) allow,
+// the choice kept, else All, announced as changed.
 export function updateAllowCredentialsDropdownRuntime(deps) {
     const {
         state,
         collectSelectedHints,
         deriveAllowedAttachmentsFromHints,
         getStoredCredentialAttachment,
-        ATTACHMENT_LABELS,
         describeCredentialAlgorithm,
         getCredentialIdHex,
     } = deps;
@@ -21,60 +29,30 @@ export function updateAllowCredentialsDropdownRuntime(deps) {
 
     const currentValue = allowCredentialsSelect.value;
 
+    const selectedHints = collectSelectedHints ? collectSelectedHints('registration') : [];
+    const attachmentSelect = document.getElementById('authenticator-attachment');
+    const attachments = registrationAttachmentFilter(
+        deriveAllowedAttachmentsFromHints(selectedHints),
+        attachmentSelect ? attachmentSelect.value : '',
+    );
+    const choices = allowCredentialChoices(state.storedCredentials, {
+        attachments,
+        getCredentialIdHex,
+        getStoredCredentialAttachment,
+        describeAlgorithm: describeCredentialAlgorithm,
+    });
+
     allowCredentialsSelect.replaceChildren(
-        el('option', { attrs: { value: 'all' }, text: 'All credentials' }),
-        el('option', { attrs: { value: 'empty' }, text: 'Empty (resident key only)' }),
+        el('option', { attrs: { value: 'all' }, text: ALLOW_CREDENTIALS_TEXT.all }),
+        el('option', { attrs: { value: 'empty' }, text: ALLOW_CREDENTIALS_TEXT.empty }),
+        ...choices.map(choice => el('option', {
+            attrs: { value: choice.value },
+            dataset: { attachment: choice.attachment },
+            text: choice.label,
+        })),
     );
 
-    const selectedHints = collectSelectedHints ? collectSelectedHints('registration') : [];
-    let attachmentFilters = deriveAllowedAttachmentsFromHints(selectedHints);
-    if (!attachmentFilters.length) {
-        const attachmentSelect = document.getElementById('authenticator-attachment');
-        const attachmentPreference = attachmentSelect ? attachmentSelect.value : '';
-        if (attachmentPreference === 'platform' || attachmentPreference === 'cross-platform') {
-            attachmentFilters = [attachmentPreference];
-        }
-    }
-
-    const matchesAttachmentPreference = attachmentValue => {
-        if (!attachmentFilters.length) {
-            return true;
-        }
-        if (typeof attachmentValue !== 'string' || !attachmentValue.trim()) {
-            return false;
-        }
-        return attachmentFilters.includes(attachmentValue.trim().toLowerCase());
-    };
-
-    if (state.storedCredentials && state.storedCredentials.length > 0) {
-        state.storedCredentials.forEach((cred, index) => {
-            const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
-            if (!credentialIdHex) {
-                return;
-            }
-
-            const attachmentValue = getStoredCredentialAttachment(cred);
-            if (!matchesAttachmentPreference(attachmentValue)) {
-                return;
-            }
-
-            const credName = cred.userName || cred.username || cred.email || `Credential ${index + 1}`;
-            const algorithmLabel = describeCredentialAlgorithm(cred);
-            const attachmentLabel = attachmentValue
-                ? (ATTACHMENT_LABELS[attachmentValue] || attachmentValue)
-                : '';
-            const labelSuffix = attachmentLabel ? ` • ${attachmentLabel}` : '';
-
-            const option = document.createElement('option');
-            option.value = credentialIdHex;
-            option.textContent = `${credName} (${algorithmLabel})${labelSuffix}`;
-            option.dataset.attachment = attachmentValue || '';
-            allowCredentialsSelect.appendChild(option);
-        });
-    }
-
-    const availableValues = new Set(Array.from(allowCredentialsSelect.options).map(opt => opt.value));
-    const desiredValue = availableValues.has(currentValue) ? currentValue : 'all';
+    const desiredValue = keptChoice(choices, currentValue);
     if (allowCredentialsSelect.value !== desiredValue) {
         allowCredentialsSelect.value = desiredValue;
         try {

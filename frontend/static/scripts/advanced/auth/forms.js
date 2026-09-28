@@ -4,80 +4,11 @@ import {
     generateRandomHex,
     getCurrentBinaryFormat,
 } from '../../shared/utils/binary.js';
-import { getCredentialIdHex } from '../credentials/utils.js';
 import { hexInputIsValid } from './hex-input.js';
+import { findSavedCredential, largeBlobAvailability, prfAvailability } from './capabilities.js';
 import { showStatus } from '../../shared/ui/status.js';
 import { updateJsonEditor } from '../editor/index.js';
 import { bindActions, callWith } from '../../shared/ui/actions.js';
-
-function credentialSupportsLargeBlob(cred) {
-    if (!cred || typeof cred !== 'object') {
-        return false;
-    }
-    if (cred.largeBlob === true || cred.largeBlobSupported === true) {
-        return true;
-    }
-    const clientOutputs = cred.clientExtensionOutputs;
-    if (clientOutputs && typeof clientOutputs === 'object') {
-        const value = clientOutputs.largeBlob;
-        if (value) {
-            if (typeof value === 'object') {
-                if (value.supported || value.written || value.blob || value.result) {
-                    return true;
-                }
-            } else {
-                return true;
-            }
-        }
-    }
-    const properties = cred.properties;
-    if (properties && typeof properties === 'object') {
-        if (properties.largeBlob === true || properties.largeBlobSupported === true) {
-            return true;
-        }
-    }
-    return false;
-}
-
-function credentialSupportsPrf(cred) {
-    if (!cred || typeof cred !== 'object') {
-        return false;
-    }
-    const clientOutputs = cred.clientExtensionOutputs;
-    if (clientOutputs && typeof clientOutputs === 'object') {
-        const value = clientOutputs.prf;
-        if (value) {
-            if (typeof value === 'object') {
-                if (value.results || value.eval || value.first || value.second) {
-                    return true;
-                }
-                if (Object.keys(value).length > 0) {
-                    return true;
-                }
-            } else {
-                return true;
-            }
-        }
-    }
-    const properties = cred.properties;
-    if (properties && typeof properties === 'object') {
-        if (properties.prf) {
-            return true;
-        }
-    }
-    return false;
-}
-
-function findStoredCredentialByHex(hexValue) {
-    if (typeof hexValue !== 'string' || !hexValue) {
-        return null;
-    }
-    const normalised = hexValue.toLowerCase();
-    return (state.storedCredentials || []).find(cred => {
-        const storedHex = (cred.credentialIdHex || getCredentialIdHex(cred) || '').toLowerCase();
-        return storedHex === normalised;
-    }) || null;
-}
 
 export function updateFieldLabels() {
     const format = 'hex';
@@ -252,23 +183,7 @@ export function checkLargeBlobCapability(options = {}) {
     const readOption = largeBlobSelect?.querySelector('option[value="read"]');
     const writeOption = largeBlobSelect?.querySelector('option[value="write"]');
 
-    let hasCapability;
-    let message = '';
-
-    if (selectedCredential) {
-        hasCapability = credentialSupportsLargeBlob(selectedCredential);
-        if (!hasCapability) {
-            message = 'Selected credential does not support largeBlob.';
-        }
-    } else if (state.storedCredentials && state.storedCredentials.length > 0) {
-        hasCapability = state.storedCredentials.some(credentialSupportsLargeBlob);
-        if (!hasCapability) {
-            message = 'No largeBlob capable credentials available';
-        }
-    } else {
-        hasCapability = false;
-        message = 'No largeBlob capable credentials available';
-    }
+    const { available: hasCapability, message } = largeBlobAvailability(state.storedCredentials, selectedCredential);
 
     if (messageElement) {
         if (message) {
@@ -327,24 +242,8 @@ function updatePrfAvailability(selectedCredential) {
         return;
     }
 
-    let shouldDisable = false;
-    let message = '';
-
-    if (selectedCredential) {
-        shouldDisable = !credentialSupportsPrf(selectedCredential);
-        if (shouldDisable) {
-            message = 'Selected credential does not support the prf extension.';
-        }
-    } else if (state.storedCredentials && state.storedCredentials.length > 0) {
-        const anySupport = state.storedCredentials.some(credentialSupportsPrf);
-        if (!anySupport) {
-            shouldDisable = true;
-            message = 'No credentials with prf support available.';
-        }
-    } else {
-        shouldDisable = true;
-        message = 'No credentials with prf support available.';
-    }
+    const { available, message } = prfAvailability(state.storedCredentials, selectedCredential);
+    const shouldDisable = !available;
 
     if (messageElement) {
         if (message) {
@@ -381,7 +280,7 @@ export function updateAuthenticationExtensionAvailability() {
     if (allowSelect) {
         const selectedValue = allowSelect.value;
         if (selectedValue && selectedValue !== 'all' && selectedValue !== 'empty') {
-            selectedCredential = findStoredCredentialByHex(selectedValue);
+            selectedCredential = findSavedCredential(state.storedCredentials, selectedValue);
         }
     }
 

@@ -11,7 +11,6 @@ import {dismissAllTransientMessages} from '../../shared/ui/status.js';
 import {updateJsonEditor} from '../editor/index.js';
 import {checkLargeBlobCapability, updateAuthenticationExtensionAvailability} from '../auth/forms.js';
 import {collectSelectedHints, deriveAllowedAttachmentsFromHints} from '../auth/hints.js';
-import {ATTACHMENT_LABELS} from '../constants.js';
 import {
     clearCredentialFlashQueue,
     queueAuthenticatedCredentialFlash,
@@ -128,7 +127,6 @@ export function updateAllowCredentialsDropdown() {
         collectSelectedHints,
         deriveAllowedAttachmentsFromHints,
         getStoredCredentialAttachment,
-        ATTACHMENT_LABELS,
         describeCredentialAlgorithm,
         getCredentialIdHex,
     });

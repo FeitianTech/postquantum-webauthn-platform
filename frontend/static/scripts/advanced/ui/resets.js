@@ -11,6 +11,7 @@ import { bindActions, callWith } from '../../shared/ui/actions.js';
 import { HINT_VALUES } from '../auth/hint-rules.js';
 import { ALGORITHM_OPTIONS } from '../json-editor/algorithm-options.js';
 import { registrationDefaults } from '../json-editor/registration-request.js';
+import { authenticationDefaults } from '../json-editor/authentication-request.js';
 
 export function resetRegistrationForm() {
     randomizeUserIdentity();
@@ -54,15 +55,16 @@ export function resetRegistrationForm() {
 }
 
 export function resetAuthenticationForm() {
-    document.getElementById('user-verification-auth').value = 'preferred';
-    document.getElementById('allow-credentials').value = 'all';
-    document.getElementById('fake-cred-length-auth').value = '256';
+    const defaults = authenticationDefaults();
+    document.getElementById('user-verification-auth').value = defaults.userVerification;
+    document.getElementById('allow-credentials').value = defaults.allowCredentials;
+    document.getElementById('fake-cred-length-auth').value = defaults.fakeCredLength;
 
     randomizeChallenge('auth');
-    document.getElementById('timeout-auth').value = '90000';
-    document.getElementById('hint-client-device-auth').checked = false;
-    document.getElementById('hint-hybrid-auth').checked = false;
-    document.getElementById('hint-security-key-auth').checked = false;
+    document.getElementById('timeout-auth').value = defaults.timeout;
+    HINT_VALUES.forEach(hint => {
+        document.getElementById(`hint-${hint}-auth`).checked = defaults.hints.includes(hint);
+    });
 
     ['param-mldsa44', 'param-mldsa65', 'param-mldsa87'].forEach(id => {
         const checkbox = document.getElementById(id);
@@ -71,11 +73,11 @@ export function resetAuthenticationForm() {
         }
     });
 
-    document.getElementById('large-blob-auth').value = '';
-    document.getElementById('large-blob-write').value = '';
+    document.getElementById('large-blob-auth').value = defaults.largeBlob;
+    document.getElementById('large-blob-write').value = defaults.largeBlobWrite;
     document.getElementById('large-blob-write').disabled = true;
-    document.getElementById('prf-eval-first-auth').value = '';
-    document.getElementById('prf-eval-second-auth').value = '';
+    document.getElementById('prf-eval-first-auth').value = defaults.prfFirst;
+    document.getElementById('prf-eval-second-auth').value = defaults.prfSecond;
     document.getElementById('prf-eval-second-auth').disabled = true;
 
     clearFakeAllowCredentials();
