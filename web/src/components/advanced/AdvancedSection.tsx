@@ -40,7 +40,7 @@ export function AdvancedSection({ active, route }: { active: boolean; route: Sec
   const [ceremony, setCeremony] = useState<Ceremony>('registration');
   const saved = useSavedCredentials();
   const request = useAdvancedRequest();
-  const assertion = useAuthenticationRequest({ hints: request.settings.hints, attachment: request.settings.attachment });
+  const assertion = useAuthenticationRequest();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerButton = useRef<HTMLButtonElement>(null);
   const createButton = useRef<HTMLButtonElement>(null);

@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   ALLOW_CREDENTIALS_TEXT,
   allowCredentialChoices,
+  authenticationCredentials,
   keptChoice,
-  registrationAttachmentFilter,
 } from '../../../../frontend/static/scripts/advanced/auth/allow-credentials.js';
 import { describeCoseAlgorithm } from '../../../../frontend/static/scripts/advanced/cose-labels.js';
 import { describeCredentialAlgorithmWith } from '../../../../frontend/static/scripts/advanced/credentials/algorithm-tag.js';
@@ -51,11 +51,11 @@ describe('the Allow Credentials choices', () => {
     expect(allowCredentialChoices(undefined, { attachments: [], ...HELPERS })).toEqual([]);
   });
 
-  it('filter by the registration hints\' attachments, else by its Platform or Cross-Platform attachment', () => {
-    expect(registrationAttachmentFilter(['cross-platform'], 'platform')).toEqual(['cross-platform']);
-    expect(registrationAttachmentFilter([], 'platform')).toEqual(['platform']);
-    expect(registrationAttachmentFilter([], 'cross-platform')).toEqual(['cross-platform']);
-    expect(registrationAttachmentFilter([], 'unspecified')).toEqual([]);
+  it('are made from the advanced credentials only, which the ceremony sends', () => {
+    const simple = { ...PLATFORM, type: 'simple' };
+    const advanced = { ...ROAMING, type: 'advanced' };
+    expect(authenticationCredentials([simple, advanced, null, { ...UNATTACHED }])).toEqual([advanced]);
+    expect(authenticationCredentials(undefined)).toEqual([]);
   });
 
   it('keep the choice while it is offered, else fall back to All', () => {

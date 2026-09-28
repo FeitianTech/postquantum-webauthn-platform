@@ -7,6 +7,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { authEditor, authPublicKey, renderAuthenticationForm } from '@/test/advanced';
+import { savedRecord } from '@/test/credentials';
 
 const { records } = advancedAuthentications() as { records: Record<string, unknown>[] };
 // The first reported largeBlob and prf support, the second neither.
@@ -88,16 +89,53 @@ describe('the authentication form, when the page has loaded', () => {
     expect(authPublicKey()).not.toHaveProperty('allowCredentials');
   });
 
-  it('ADV-AB1: offers only the credentials the registration form\'s hints allow, a choice that goes falling back to All', async () => {
+  it('ADV-AB1: offers only the credentials the authentication\'s hints allow, a choice that goes falling back to All', async () => {
+    renderAuthenticationForm([CAPABLE, PLAIN]);
+    await ready();
+    await userEvent.selectOptions(field('Allow Credentials'), PLAIN_ID);
+    const client = within(section('Other Options')).getByRole('button', { name: 'Client-device' });
+
+    await userEvent.click(client);
+    expect(options('Allow Credentials').map((option) => option.value)).toEqual(['all', 'empty']);
+    expect(field('Allow Credentials')).toHaveValue('all');
+    expect(ids()).toEqual([]);
+
+    await userEvent.click(client);
+    expect(options('Allow Credentials').map((option) => option.value)).toEqual(['all', 'empty', CAPABLE_ID, PLAIN_ID]);
+    expect(ids()).toEqual([CAPABLE_ID, PLAIN_ID]);
+  });
+
+  it('ADV-AB1: leaves the offer to the authentication, whatever the registration form\'s hints', async () => {
     renderAuthenticationForm([CAPABLE, PLAIN]);
     await ready();
     await userEvent.selectOptions(field('Allow Credentials'), PLAIN_ID);
 
     await userEvent.click(screen.getByRole('button', { name: 'Registration hint client-device' }));
 
-    expect(options('Allow Credentials').map((option) => option.value)).toEqual(['all', 'empty']);
-    expect(field('Allow Credentials')).toHaveValue('all');
+    expect(options('Allow Credentials').map((option) => option.value)).toEqual(['all', 'empty', CAPABLE_ID, PLAIN_ID]);
+    expect(field('Allow Credentials')).toHaveValue(PLAIN_ID);
+  });
+
+  it('ADV-AB1: offers and sends the advanced credentials only: a Simple one is the Simple tab\'s, which the server refuses here', async () => {
+    const simple = savedRecord('simple-register-es256', { email: 'simple@example.com', userName: 'simple@example.com' });
+    renderAuthenticationForm([CAPABLE, simple, PLAIN]);
+    await ready();
+
+    expect(options('Allow Credentials').map((option) => option.value)).toEqual(['all', 'empty', CAPABLE_ID, PLAIN_ID]);
     expect(ids()).toEqual([CAPABLE_ID, PLAIN_ID]);
+  });
+
+  it('ADV-AB1: reads an edit whose hints refuse the credential it names as All, and sends the edit as typed', async () => {
+    renderAuthenticationForm([CAPABLE, PLAIN]);
+    await ready();
+    await userEvent.selectOptions(field('Allow Credentials'), PLAIN_ID);
+    const edited = { ...authPublicKey(), hints: ['client-device'] };
+
+    fireEvent.change(authEditor(), { target: { value: JSON.stringify({ publicKey: edited }, null, 2) } });
+
+    await waitFor(() => expect(field('Allow Credentials')).toHaveValue('all'));
+    expect(options('Allow Credentials').map((option) => option.value)).toEqual(['all', 'empty']);
+    expect(authPublicKey()).toEqual(edited);
   });
 
   it('ADV-A6: sends the hints chosen, and All the credentials their attachment allows', async () => {

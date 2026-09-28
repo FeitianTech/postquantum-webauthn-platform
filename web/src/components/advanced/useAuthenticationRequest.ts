@@ -20,6 +20,7 @@ import {
   readAuthRequest,
   readEdit,
   settleAvailability,
+  usableForAuthentication,
   withoutFake,
 } from './model';
 import { NO_TEXT, type RequestText, followedText, rebuiltText, resetText } from './requestEditor';
@@ -27,11 +28,13 @@ import { NO_TEXT, type RequestText, followedText, rebuiltText, resetText } from 
 // An authentication's request as the Advanced tab holds it, as the
 // registration's is (./useAdvancedRequest.ts): the JSON editor's text is the
 // request, the form a view of it; a form change rewrites in the text only what
-// it changed, an edit the form can follow updates the form at once. Allow
-// Credentials offers the saved credentials the registration form's hints (or
-// its attachment) allow, and falls back to All when its choice goes; whether
-// largeBlob and prf can be asked for follows the saved credentials and the
-// choice, clearing what they cannot ask for, as the current form does.
+// it changed, an edit the form can follow updates the form at once. The request
+// is made from the saved credentials an authentication can use (the advanced
+// ones, which its ceremony sends). Allow Credentials offers those the
+// authentication's own hints allow (what the request sends, and what the server
+// filters by), and falls back to All when its choice goes; whether largeBlob and
+// prf can be asked for follows those credentials and the choice, clearing what
+// they cannot ask for, as the current form did.
 
 type RequestState = RequestText & {
   settings: AuthenticationSettings;
@@ -42,7 +45,7 @@ type RequestState = RequestText & {
   started: boolean;
 };
 
-type Context = { hostname: string; storedCredentials: SavedCredential[]; choices: AllowChoice[] };
+type Context = { hostname: string; storedCredentials: SavedCredential[] };
 
 type Action =
   | { type: 'start'; settings: AuthenticationSettings; context: Context }
@@ -58,10 +61,21 @@ function formRequestOf(settings: AuthenticationSettings, fakeAllow: string[], co
   return buildAuthRequest(settings, { hostname: context.hostname, storedCredentials: context.storedCredentials, fakeAllowCredentials: fakeAllow });
 }
 
+/** What Allow Credentials offers with these settings: the credentials their hints allow. */
+function choicesFor(settings: AuthenticationSettings, context: Context): AllowChoice[] {
+  return allowChoices(context.storedCredentials, settings.hints);
+}
+
 /** The settings as the saved credentials leave them: a choice still offered, and only the extensions they can use. */
 function settled(settings: AuthenticationSettings, context: Context): AuthenticationSettings {
-  const allowCredentials = keptAllowChoice(context.choices, settings.allowCredentials);
+  const allowCredentials = keptAllowChoice(choicesFor(settings, context), settings.allowCredentials);
   return settleAvailability({ ...settings, allowCredentials }, availabilityOf(context.storedCredentials, allowCredentials));
+}
+
+/** The settings with their choice still offered: a hint that refuses the chosen credential brings All back. */
+function offered(settings: AuthenticationSettings, context: Context): AuthenticationSettings {
+  const allowCredentials = keptAllowChoice(choicesFor(settings, context), settings.allowCredentials);
+  return allowCredentials === settings.allowCredentials ? settings : settled({ ...settings, allowCredentials }, context);
 }
 
 function followed(current: RequestState, context: Context, background = false): RequestState {
@@ -79,8 +93,10 @@ function reduce(current: RequestState, action: Action): RequestState {
     }
     case 'change': {
       const changed = changeAuth(current.settings, action.field, action.value);
-      // A credential chosen is judged alone: what it cannot ask for goes.
-      const settings = action.field === 'allowCredentials' ? settled(changed, action.context) : changed;
+      // A credential chosen is judged alone: what it cannot ask for goes. The
+      // hints change what is offered: a choice they refuse falls back to All.
+      const settings =
+        action.field === 'allowCredentials' ? settled(changed, action.context) : action.field === 'hints' ? offered(changed, action.context) : changed;
       return followed({ ...current, settings }, action.context);
     }
     case 'settings':
@@ -99,20 +115,26 @@ function reduce(current: RequestState, action: Action): RequestState {
     case 'edit': {
       const edit = readEdit(action.text, 'authentication');
       if (edit.status !== 'accepted') return { ...current, text: action.text, edit };
+      // Read against every credential the request can name; then the edit's own
+      // hints decide whether its one credential is offered, else All.
       const read = readAuthRequest(edit.root.publicKey, current.settings, {
         storedCredentials: action.context.storedCredentials,
-        choices: ['all', 'empty', ...action.context.choices.map((choice) => choice.value)],
+        choices: ['all', 'empty', ...allowChoices(action.context.storedCredentials, []).map((choice) => choice.value)],
       });
+      const settings = {
+        ...read.settings,
+        allowCredentials: keptAllowChoice(choicesFor(read.settings, action.context), read.settings.allowCredentials),
+      };
       const fakeAllow = fakeList(read.fakeAllowCredentials);
       return {
         ...current,
-        settings: read.settings,
+        settings,
         fakeAllow,
         extras: extrasOf(edit.root),
         text: action.text,
         edit: null,
         // What the form now says, which the next form change is measured from.
-        formRequest: formRequestOf(read.settings, fakeAllow, action.context),
+        formRequest: formRequestOf(settings, fakeAllow, action.context),
       };
     }
   }
@@ -126,17 +148,13 @@ const EMPTY: RequestState = {
   started: false,
 };
 
-/** The registration form's choices that decide which saved credentials Allow Credentials offers. */
-export type RegistrationFilter = { hints: string[]; attachment: string };
-
-export function useAuthenticationRequest(registration: RegistrationFilter) {
+export function useAuthenticationRequest() {
   const saved = useSavedCredentials();
   const [current, dispatch] = useReducer(reduce, EMPTY);
-  const storedCredentials = useMemo(() => saved.rows.map((row) => row.credential), [saved.rows]);
-  const { hints, attachment } = registration;
-  const choices = useMemo(() => allowChoices(storedCredentials, { hints, attachment }), [storedCredentials, hints, attachment]);
-  const contextRef = useRef<Context>({ hostname: '', storedCredentials, choices });
-  contextRef.current = { ...contextRef.current, storedCredentials, choices };
+  const storedCredentials = useMemo(() => usableForAuthentication(saved.rows.map((row) => row.credential)), [saved.rows]);
+  const choices = useMemo(() => allowChoices(storedCredentials, current.settings.hints), [storedCredentials, current.settings.hints]);
+  const contextRef = useRef<Context>({ hostname: '', storedCredentials });
+  contextRef.current = { ...contextRef.current, storedCredentials };
   const context = () => contextRef.current;
 
   // Once the saved credentials have been read (after hydration), as the current
@@ -148,13 +166,12 @@ export function useAuthenticationRequest(registration: RegistrationFilter) {
     dispatch({ type: 'start', settings: { ...authDefaults(), challenge: randomHex(32), largeBlobWrite: randomHex(32) }, context: contextRef.current });
   }, [saved.loaded, current.started]);
 
-  // The saved credentials, or what the registration form lets Allow Credentials
-  // offer, changed: a choice that went falls back to All.
+  // The saved credentials changed: a choice that went falls back to All.
   const started = useRef(false);
   started.current = current.started;
   useEffect(() => {
     if (started.current) dispatch({ type: 'context', context: contextRef.current });
-  }, [storedCredentials, choices]);
+  }, [storedCredentials]);
 
   const change = useCallback(<F extends AuthenticationField>(field: F, value: AuthenticationSettings[F]) => {
     dispatch({ type: 'change', field, value, context: context() });

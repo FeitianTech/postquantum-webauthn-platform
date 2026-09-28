@@ -42,11 +42,11 @@ export function renderForm(records: object[] = []) {
 export const editor = () => screen.getByRole('textbox', { name: 'JSON Editor (CredentialCreationOptions)' }) as HTMLTextAreaElement;
 export const publicKey = () => JSON.parse(editor().value).publicKey;
 
-// The authentication's form and JSON editor over one request, with what the
-// registration form decides of Allow Credentials (its hints and attachment).
+// The authentication's form and JSON editor over one request, beside the
+// registration's (whose hints no longer decide what Allow Credentials offers).
 function AuthenticationHarness() {
   const registration = useAdvancedRequest();
-  const request = useAuthenticationRequest({ hints: registration.settings.hints, attachment: registration.settings.attachment });
+  const request = useAuthenticationRequest();
   return (
     <>
       <button type="button" onClick={request.resetForm}>

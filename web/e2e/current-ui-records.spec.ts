@@ -68,13 +68,15 @@ test.describe('what the current UI stored, in the new UI', () => {
     expect(await page.evaluate((storageKey) => JSON.parse(window.localStorage.getItem(storageKey) ?? '[]').length, STORAGE_KEY)).toBe(0);
   });
 
-  test('authenticates with the Advanced one, chosen in Allow Credentials, once its key is back on an authenticator', async ({ page }) => {
+  test('authenticates with the Advanced one, chosen in Allow Credentials, once its key is back on an authenticator; the Simple one is not offered', async ({ page }) => {
     const authenticator = await addVirtualAuthenticator(page);
     await authenticator.add(credentials.find((credential) => base64url(credential.credentialId) === advancedRecord.credentialIdBase64Url)!);
     await openWithRecords(page, '#advanced');
     await advanced(page).getByRole('tab', { name: 'Authentication' }).click();
     const form = page.locator('#advanced-ceremony-panel-authentication');
     const allow = form.getByLabel('Allow Credentials', { exact: true });
+    // A simple credential is the Simple tab's: the server refuses it here.
+    await expect(allow.locator('option').filter({ hasText: SIMPLE })).toHaveCount(0);
     await allow.selectOption(await allow.locator('option').filter({ hasText: ADVANCED }).getAttribute('value'));
     const editor = advanced(page).getByRole('textbox', { name: 'JSON Editor (CredentialRequestOptions)' });
     expect(JSON.parse(await editor.inputValue()).publicKey.allowCredentials).toHaveLength(1);

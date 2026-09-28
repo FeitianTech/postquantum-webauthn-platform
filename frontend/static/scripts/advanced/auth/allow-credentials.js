@@ -1,10 +1,9 @@
 // The Allow Credentials select of the Advanced tab's authentication, with no
-// page: its first two choices' words, the saved credentials it offers (those
-// with an ID whose attachment the registration form's hints, or else its
-// Authenticator Attachment, allow), each one's words, and the choice kept when
-// the offer changes. What the credential helpers say of a record is given, as
-// is the algorithm's name. DOM-free: the current select
-// (../credential-display/list-render.js) and the new UI both use it.
+// page: its first two choices' words, the saved credentials an authentication
+// can use (the advanced ones), those it offers (with an ID whose attachment the
+// authentication's hints allow, the attachments given), each one's words, and
+// the choice kept when the offer changes. What the credential helpers say of a
+// record is given, as is the algorithm's name. DOM-free.
 import { ATTACHMENT_LABELS } from '../constants.js';
 
 export const ALLOW_CREDENTIALS_TEXT = {
@@ -13,15 +12,12 @@ export const ALLOW_CREDENTIALS_TEXT = {
 };
 
 /**
- * The attachments the offer is limited to: those the registration's hints
- * imply (given), else the registration's Authenticator Attachment when it is
- * Platform or Cross-Platform, else none (every credential).
+ * The saved credentials an authentication can use: the advanced ones, which its
+ * ceremony sends the server. A simple credential is the Simple tab's: the server
+ * keeps it for that tab's own sign-in, and refuses it here.
  */
-export function registrationAttachmentFilter(hintAttachments, attachment) {
-    if (hintAttachments.length) {
-        return hintAttachments;
-    }
-    return attachment === 'platform' || attachment === 'cross-platform' ? [attachment] : [];
+export function authenticationCredentials(storedCredentials) {
+    return (storedCredentials || []).filter(cred => cred && cred.type === 'advanced');
 }
 
 /**

@@ -18,7 +18,7 @@ import {
   normaliseFakeCredentialList,
   withoutFakeCredential,
 } from '@legacy/advanced/auth/fake-credentials.js';
-import { ALLOW_CREDENTIALS_TEXT, allowCredentialChoices, keptChoice, registrationAttachmentFilter } from '@legacy/advanced/auth/allow-credentials.js';
+import { ALLOW_CREDENTIALS_TEXT, allowCredentialChoices, authenticationCredentials, keptChoice } from '@legacy/advanced/auth/allow-credentials.js';
 import { ADVANCED_ASSERTION_TEXT, advancedAuthenticationFailureText, authenticateAdvancedCredential } from '@legacy/advanced/auth/assertion.js';
 import { authenticationAvailability } from '@legacy/advanced/auth/capabilities.js';
 import { hexInputIsValid } from '@legacy/advanced/auth/hex-input.js';
@@ -240,12 +240,11 @@ export const availabilityOf = authenticationAvailability as (storedCredentials: 
 
 export const ALLOW_WORDS = ALLOW_CREDENTIALS_TEXT as { all: string; empty: string };
 export const keptAllowChoice = keptChoice as (choices: AllowChoice[], value: string) => string;
-/** The saved credentials Allow Credentials offers, filtered by the registration form's hints, else its attachment. */
-export function allowChoices(storedCredentials: SavedCredential[], registration: { hints: string[]; attachment: string }): AllowChoice[] {
-  const attachments = (registrationAttachmentFilter as (hintAttachments: string[], attachment: string) => string[])(
-    (deriveAllowedAttachmentsFromHints as (hints: string[]) => string[])(registration.hints),
-    registration.attachment,
-  );
+/** The saved credentials an authentication can use: the advanced ones, which its ceremony sends. */
+export const usableForAuthentication = authenticationCredentials as (storedCredentials: SavedCredential[]) => SavedCredential[];
+/** The saved credentials Allow Credentials offers: those whose attachment the authentication's hints allow (every one without hints). */
+export function allowChoices(storedCredentials: SavedCredential[], hints: string[]): AllowChoice[] {
+  const attachments = (deriveAllowedAttachmentsFromHints as (hints: string[]) => string[])(hints);
   return (allowCredentialChoices as (stored: SavedCredential[], helpers: object) => AllowChoice[])(storedCredentials, {
     attachments,
     getCredentialIdHex,
