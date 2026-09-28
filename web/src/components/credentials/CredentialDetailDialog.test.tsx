@@ -218,6 +218,22 @@ describe('a saved credential\'s details, what some records hold', () => {
     expect(aaguid.querySelector('[data-unreadable="aaguid"] code')).toHaveTextContent('abcde');
   });
 
+  it('CRED-C3, CRED-M3: read the all-zero AAGUID a record keeps in base64url as sixteen zero bytes, in the row and the details', async () => {
+    const zero = '0'.repeat(32);
+    const zeroGuid = '00000000-0000-0000-0000-000000000000';
+    const properties = { ...(EDDSA.properties as object), aaguid: zero, aaguidHex: zero, aaguidGuid: zeroGuid };
+    renderShell([{ ...EDDSA, aaguid: 'AAAAAAAAAAAAAAAAAAAAAA', aaguidHex: undefined, properties }]);
+    const name = await screen.findByRole('button', { name: 'eddsa@example.com' });
+
+    const row = name.closest('li')!;
+    expect(row).toHaveTextContent(zeroGuid);
+    expect(row.querySelector('[data-unreadable]')).toBeNull();
+    await openDetail('eddsa@example.com');
+    const aaguid = section('User info at creation').querySelector<HTMLElement>('[data-aaguid]')!;
+    for (const spelling of ['AAAAAAAAAAAAAAAAAAAAAA==', zero, zeroGuid]) expect(aaguid).toHaveTextContent(spelling);
+    expect(aaguid).not.toHaveTextContent('aaaaaaaaaaaaaaaaaaaaaa');
+  });
+
   it('CRED-G4: say a certificate could not be parsed, and give no summary for it', async () => {
     const broken = { ...ES256, attestationCertificates: [{ parsedX5c: { error: 'The certificate is not DER.' } }], attestationObject: '' };
     renderShell([broken], urlOf(ES256, 'registration', 'certificate', '1'));

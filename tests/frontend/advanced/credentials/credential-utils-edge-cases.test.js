@@ -43,6 +43,16 @@ describe('normaliseAaguidValue', () => {
   it('finds no AAGUID in a number', () => {
     expect(normaliseAaguidValue(0)).toBe('');
   });
+
+  it('reads 22 characters the strict base64url decoder takes as the sixteen bytes they spell, though every one is a hex digit', () => {
+    // The all-zero AAGUID, which a browser sends when no attestation is asked for.
+    expect(normaliseAaguidValue('AAAAAAAAAAAAAAAAAAAAAA')).toBe('0'.repeat(32));
+    expect(normaliseAaguidValue('0123456789abcdefABCDEA')).toBe('d35db7e39ebbf3d69b71d79f00108310');
+  });
+
+  it('reads 22 hex digits that spell no sixteen bytes in base64url as hex, as before', () => {
+    expect(normaliseAaguidValue('0123456789abcdef012345')).toBe('0123456789abcdef012345');
+  });
 });
 
 describe('extractMinPinLengthValue', () => {

@@ -195,22 +195,29 @@ export function describeUserInfo(cred) {
     };
 }
 
+// The record's own spellings that say what they are come first (hex, GUID),
+// then `aaguid`, which the server writes in base64url.
 function resolveAaguidHex(cred, attestationContext) {
-    let aaguidHex = normaliseAaguidValue(cred.aaguid);
-
     const {
         propertiesData,
         attestationSummaryData,
         attestationChecksData,
     } = attestationContext;
 
+    let aaguidHex = '';
+    for (const explicit of [cred.aaguidHex, cred.aaguidGuid, propertiesData?.aaguidHex, propertiesData?.aaguidGuid]) {
+        aaguidHex = normaliseAaguidValue(explicit);
+        if (aaguidHex) {
+            break;
+        }
+    }
+    if (!aaguidHex) {
+        aaguidHex = normaliseAaguidValue(cred.aaguid);
+    }
+
     const fallbackAaguidCandidates = [
-        cred.aaguidHex,
-        cred.aaguidGuid,
         cred.aaguidRaw,
         propertiesData?.aaguid,
-        propertiesData?.aaguidHex,
-        propertiesData?.aaguidGuid,
         propertiesData?.aaguidRaw,
         attestationSummaryData?.aaguid,
         attestationSummaryData?.aaguidHex,

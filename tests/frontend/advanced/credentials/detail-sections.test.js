@@ -24,6 +24,7 @@ import { advancedRecord, simpleRecord } from './registration-detail-answers.js';
 
 const AAGUID = '00112233445566778899aabbccddeeff';
 const AAGUID_GUID = '00112233-4455-6677-8899-aabbccddeeff';
+const ZERO_GUID = '00000000-0000-0000-0000-000000000000';
 const DESCRIBERS = { describeCoseAlgorithm, describeCoseKeyType, describeMldsaParameterSet };
 
 /** The Properties section for a record, as the details build it. */
@@ -186,6 +187,34 @@ describe('describeAaguid', () => {
 
   it('reads the AAGUID from the authenticator data when nothing else names it', () => {
     expect(aaguid({ authenticatorData: simpleRecord('es256').authenticatorData }).guid).toBe(AAGUID_GUID);
+  });
+
+  it('reads the all-zero AAGUID a record keeps in base64url as sixteen zero bytes', () => {
+    const zero = '0'.repeat(32);
+    const record = {
+      ...simpleRecord('es256'),
+      aaguid: 'AAAAAAAAAAAAAAAAAAAAAA',
+      aaguidHex: zero,
+      properties: { ...simpleRecord('es256').properties, aaguid: zero, aaguidHex: zero, aaguidGuid: ZERO_GUID },
+    };
+    expect(aaguid(record)).toEqual({ b64: 'AAAAAAAAAAAAAAAAAAAAAA==', b64u: 'AAAAAAAAAAAAAAAAAAAAAA', hex: zero, guid: ZERO_GUID });
+    expect(aaguid({ aaguid: 'AAAAAAAAAAAAAAAAAAAAAA' }).guid).toBe(ZERO_GUID);
+  });
+
+  it('reads a base64url AAGUID made only of hex digits as base64url', () => {
+    expect(aaguid({ aaguid: '0123456789abcdefABCDEA' })).toEqual({
+      b64: '0123456789abcdefABCDEA==',
+      b64u: '0123456789abcdefABCDEA',
+      hex: 'd35db7e39ebbf3d69b71d79f00108310',
+      guid: 'd35db7e3-9ebb-f3d6-9b71-d79f00108310',
+    });
+  });
+
+  it("prefers the record's hex and GUID spellings to its base64url one", () => {
+    expect(aaguid({ aaguid: 'AAAAAAAAAAAAAAAAAAAAAA', aaguidHex: AAGUID }).hex).toBe(AAGUID);
+    expect(aaguid({ aaguid: 'AAAAAAAAAAAAAAAAAAAAAA', aaguidGuid: AAGUID_GUID }).hex).toBe(AAGUID);
+    expect(aaguid({ aaguid: 'AAAAAAAAAAAAAAAAAAAAAA', properties: { aaguidHex: AAGUID } }).hex).toBe(AAGUID);
+    expect(aaguid({ aaguid: 'AAAAAAAAAAAAAAAAAAAAAA', properties: { aaguidGuid: AAGUID_GUID } }).hex).toBe(AAGUID);
   });
 
   it('says N/A in each spelling when the AAGUID is unknown', () => {

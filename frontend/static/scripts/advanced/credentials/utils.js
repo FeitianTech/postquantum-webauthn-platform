@@ -7,8 +7,23 @@ import {
     hexToBase64,
     normalizeToHex
 } from '../../shared/utils/binary.js';
+import { base64UrlToBytes } from '../../shared/utils/base64.js';
 
 const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Sixteen bytes in base64url are 22 characters, which as hex would be eleven
+// bytes, no AAGUID's length: the all-zero AAGUID is "AAAAAAAAAAAAAAAAAAAAAA",
+// every character a hex digit. The strict decoder takes only the one spelling.
+function sixteenBytesFromBase64Url(text) {
+    if (text.length !== 22) {
+        return '';
+    }
+    try {
+        return bytesToHex(base64UrlToBytes(text));
+    } catch {
+        return '';
+    }
+}
 
 export function normaliseAaguidValue(value) {
     if (value === null || value === undefined) {
@@ -26,6 +41,11 @@ export function normaliseAaguidValue(value) {
         const trimmed = value.trim();
         if (!trimmed) {
             return '';
+        }
+
+        const sixteenBytes = sixteenBytesFromBase64Url(trimmed);
+        if (sixteenBytes) {
+            return sixteenBytes;
         }
 
         const hexPattern = /^[0-9a-fA-F]+$/;

@@ -183,6 +183,11 @@ describe('deriveCredentialStatusIndicators', () => {
     expect([indicators.aaguidGuid, indicators.aaguidUnreadable, indicators.rootStatus]).toEqual(['', 'abcde', true]);
   });
 
+  it('reads a stored base64url AAGUID made only of hex digits as base64url, the all-zero one included', () => {
+    expect(deriveCredentialStatusIndicators({ aaguid: 'AAAAAAAAAAAAAAAAAAAAAA' }).aaguidGuid).toBe('00000000-0000-0000-0000-000000000000');
+    expect(deriveCredentialStatusIndicators({ aaguid: '0123456789abcdefABCDEA' }).aaguidGuid).toBe('d35db7e3-9ebb-f3d6-9b71-d79f00108310');
+  });
+
   it('reads a stored AAGUID given as a dashed GUID', () => {
     const indicators = deriveCredentialStatusIndicators({ aaguidGuid: '00112233-4455-6677-8899-AABBCCDDEEFF' });
     expect([indicators.aaguidGuid, indicators.aaguidUnreadable]).toEqual(['00112233-4455-6677-8899-aabbccddeeff', '']);
