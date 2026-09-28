@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -30,21 +30,46 @@ export function SavedCredentials({ onOpen }: { onOpen: (key: string) => void }) 
   const [question, setQuestion] = useState<Question | null>(null);
   const [asking, setAsking] = useState(false);
   const count = saved.rows.length;
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  // Where the focus goes once a deletion has ended: the row it left (by key and
+  // place), or the heading after Clear All.
+  const [ended, setEnded] = useState<{ key: string | null; index: number } | null>(null);
 
   const ask = (next: Question) => {
     setQuestion(next);
     setAsking(true);
   };
-  const answer = () => {
+  const answer = async () => {
     setAsking(false);
-    if (question?.kind === 'one') void saved.remove(question.row.credential);
-    else void saved.clearAll();
+    if (question?.kind === 'one') {
+      const index = saved.rows.findIndex((row) => row.key === question.row.key);
+      await saved.remove(question.row.credential);
+      setEnded({ key: question.row.key, index });
+    } else {
+      await saved.clearAll();
+      setEnded({ key: null, index: 0 });
+    }
   };
+
+  // The button that asked may be gone with its row: the focus goes to that row's
+  // Delete if the row is still there (the server refused), else to the next
+  // row's name, else the previous one's, else the list's heading.
+  useEffect(() => {
+    if (!ended || saved.busy) return;
+    setEnded(null);
+    const rows = Array.from(listRef.current?.querySelectorAll<HTMLElement>('li[data-credential-key]') ?? []);
+    const kept = ended.key ? rows.find((row) => row.dataset.credentialKey === ended.key) : undefined;
+    const target = kept
+      ? kept.querySelector<HTMLElement>('[data-role="delete"]')
+      : (rows[ended.index] ?? rows[ended.index - 1])?.querySelector<HTMLElement>('[data-role="name"]');
+    (target ?? headingRef.current)?.focus();
+  }, [ended, saved.busy, saved.rows]);
 
   return (
     <section aria-labelledby={headingId} className="min-w-0 rounded-lg border border-line bg-surface" data-saved-credentials="">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 pt-5 pb-4">
-        <h3 id={headingId} className="text-title-sm font-semibold whitespace-nowrap text-ink">
+        <h3 id={headingId} ref={headingRef} tabIndex={-1} className="text-title-sm font-semibold whitespace-nowrap text-ink outline-none">
           Saved Credentials
         </h3>
         {saved.loaded ? (
@@ -78,7 +103,7 @@ export function SavedCredentials({ onOpen }: { onOpen: (key: string) => void }) 
         </p>
       ) : null}
       {count ? (
-        <ul aria-labelledby={headingId} className="border-t border-line">
+        <ul ref={listRef} aria-labelledby={headingId} className="border-t border-line">
           {saved.rows.map((row) => (
             <CredentialRow
               key={row.key}
@@ -100,7 +125,7 @@ export function SavedCredentials({ onOpen }: { onOpen: (key: string) => void }) 
         title={question?.kind === 'one' ? 'Delete credential' : 'Clear All'}
         question={question?.kind === 'one' ? deleteQuestion(question.row.credential) : CLEAR_ALL_QUESTION}
         confirmLabel={question?.kind === 'one' ? 'Delete' : 'Clear All'}
-        onConfirm={answer}
+        onConfirm={() => void answer()}
         onCancel={() => setAsking(false)}
         returnFocusTo={() => question?.from ?? null}
       />

@@ -53,6 +53,7 @@ export function CredentialRow({ row, busy, flash, onOpen, onDelete }: Credential
         <div className="min-w-0 flex-1 basis-64">
           <button
             type="button"
+            data-role="name"
             onClick={onOpen}
             className="max-w-full truncate rounded-xs text-left text-title-sm font-semibold text-ink hover-or-demo:underline"
           >
@@ -84,7 +85,7 @@ export function CredentialRow({ row, busy, flash, onOpen, onDelete }: Credential
               FIDO MDS
             </Button>
           ) : null}
-          <Button variant="danger" size="sm" disabled={busy} onClick={(event) => onDelete(event.currentTarget)}>
+          <Button variant="danger" size="sm" data-role="delete" disabled={busy} onClick={(event) => onDelete(event.currentTarget)}>
             Delete
           </Button>
         </div>

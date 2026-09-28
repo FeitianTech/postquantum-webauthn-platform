@@ -212,6 +212,47 @@ describe('deleting a saved credential', () => {
   });
 });
 
+describe('the focus once a deletion has ended', () => {
+  const X5C_NAME = 'x5c@example.com';
+
+  async function deleteRow(name: string) {
+    await userEvent.click(within(await waitFor(() => rowNamed(name))).getByRole('button', { name: 'Delete' }));
+    await confirmIn('Delete');
+  }
+
+  it('goes to the next row\'s name', async () => {
+    renderList([ES256, MLDSA, X5C]);
+    await deleteRow('ml@example.com');
+    await waitFor(() => expect(within(rowNamed(X5C_NAME)).getByRole('button', { name: X5C_NAME })).toHaveFocus());
+  });
+
+  it('goes to the previous row\'s name when the last one went', async () => {
+    renderList([ES256, MLDSA]);
+    await deleteRow('ml@example.com');
+    await waitFor(() => expect(within(rowNamed('user@example.com')).getByRole('button', { name: 'user@example.com' })).toHaveFocus());
+  });
+
+  it('goes to the list\'s heading when none is left', async () => {
+    renderList([ES256]);
+    await deleteRow('user@example.com');
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Saved Credentials' })).toHaveFocus());
+  });
+
+  it('goes to the list\'s heading after Clear All', async () => {
+    renderList([ES256, MLDSA]);
+    await waitFor(() => expect(rows()).toHaveLength(2));
+    await userEvent.click(screen.getByRole('button', { name: 'Clear All' }));
+    await confirmIn('Clear All');
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Saved Credentials' })).toHaveFocus());
+  });
+
+  it('goes back to Delete on a row the server refused to delete', async () => {
+    renderList([ADVANCED], { [ADVANCED_PATH]: () => json({ error: 'The stored credentials could not be read.' }, 503) });
+    await deleteRow('advanced@example.com');
+    await waitFor(() => expect(within(rowNamed('advanced@example.com')).getByRole('button', { name: 'Delete' })).toHaveFocus());
+  });
+});
+
 describe('clearing every saved credential', () => {
   it('CRED-D6/D7: asks first, then clears the simple and the advanced ones and says so', async () => {
     renderList([ES256, ADVANCED], { [ADVANCED_PATH]: () => json({ status: 'deleted' }) });
