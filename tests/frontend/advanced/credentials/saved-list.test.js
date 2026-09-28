@@ -117,7 +117,12 @@ describe('what a card shows', () => {
       'f1d0f1d0-0000-4000-8000-000000000001',
     ]);
     const bare = card({}, { credentialIdHex: '', indicators: { ...INDICATORS, aaguidGuid: '' } });
-    expect([bare.credentialId, bare.credentialIdHex, bare.aaguid]).toEqual(['', '', '']);
+    expect([bare.credentialId, bare.credentialIdHex, bare.aaguid, bare.aaguidUnreadable]).toEqual(['', '', '', '']);
+  });
+
+  it('gives a stored AAGUID no spelling reads as it is stored, and no FIDO MDS', () => {
+    const shown = card({}, { indicators: { ...INDICATORS, rootStatus: true, aaguidGuid: '', aaguidUnreadable: 'abcde' } });
+    expect([shown.aaguid, shown.aaguidUnreadable, shown.mdsAaguid]).toEqual(['', 'abcde', '']);
   });
 });
 

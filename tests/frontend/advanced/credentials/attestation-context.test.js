@@ -173,7 +173,23 @@ describe('deriveCredentialStatusIndicators', () => {
     expect(deriveCredentialStatusIndicators({ metadata: { available: 'no' } }).metadataAvailable).toBe(false);
   });
 
-  it('has no GUID for an AAGUID that is not sixteen bytes', () => {
-    expect(deriveCredentialStatusIndicators({ aaguidHex: 'abcd' }).aaguidGuid).toBe('');
+  it('has no GUID for an AAGUID that is not sixteen bytes, and gives the stored one as unreadable', () => {
+    const indicators = deriveCredentialStatusIndicators({ aaguidHex: 'abcd' });
+    expect([indicators.aaguidGuid, indicators.aaguidUnreadable]).toEqual(['', 'abcd']);
+  });
+
+  it('reads a record whose stored AAGUID has no base64 length, rather than throwing', () => {
+    const indicators = deriveCredentialStatusIndicators({ aaguid: ' abcde ', attestationSummary: { rootValid: true } });
+    expect([indicators.aaguidGuid, indicators.aaguidUnreadable, indicators.rootStatus]).toEqual(['', 'abcde', true]);
+  });
+
+  it('reads a stored AAGUID given as a dashed GUID', () => {
+    const indicators = deriveCredentialStatusIndicators({ aaguidGuid: '00112233-4455-6677-8899-AABBCCDDEEFF' });
+    expect([indicators.aaguidGuid, indicators.aaguidUnreadable]).toEqual(['00112233-4455-6677-8899-aabbccddeeff', '']);
+  });
+
+  it('has nothing unreadable without a stored AAGUID, or with one that is not text', () => {
+    expect(deriveCredentialStatusIndicators({}).aaguidUnreadable).toBe('');
+    expect(deriveCredentialStatusIndicators({ aaguid: { raw: [1, 2] } }).aaguidUnreadable).toBe('');
   });
 });

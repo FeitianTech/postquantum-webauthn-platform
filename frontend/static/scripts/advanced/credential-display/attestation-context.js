@@ -213,10 +213,9 @@ export function deriveCredentialStatusIndicators(cred) {
         return false;
     });
 
+    const storedAaguid = cred?.aaguidHex || cred?.aaguid || cred?.aaguidGuid;
     const primaryAaguidHex = normaliseAaguidValue(
-        cred?.aaguidHex
-        || cred?.aaguid
-        || cred?.aaguidGuid
+        storedAaguid
         || authDataAaguidHex
         || certificateAaguidHex
     );
@@ -225,6 +224,9 @@ export function deriveCredentialStatusIndicators(cred) {
     if (primaryAaguidHex && primaryAaguidHex.length === 32) {
         aaguidGuid = hexToGuid(primaryAaguidHex);
     }
+    // The record's own AAGUID, as stored, when it is not sixteen bytes in any
+    // spelling: the list shows it marked as unreadable rather than nothing.
+    const aaguidUnreadable = !aaguidGuid && typeof storedAaguid === 'string' ? storedAaguid.trim() : '';
 
     return {
         attestationContext,
@@ -234,5 +236,6 @@ export function deriveCredentialStatusIndicators(cred) {
         aaguidStatus,
         metadataAvailable,
         aaguidGuid,
+        aaguidUnreadable,
     };
 }

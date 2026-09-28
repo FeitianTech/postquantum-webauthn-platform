@@ -179,6 +179,11 @@ describe('credential-utils', () => {
 
   it('covers additional malformed and fallback credential parsing branches', () => {
     expect(normaliseAaguidValue('0011:2233')).toBe('00112233');
+    // Text that looks like base64 but has no base64 length holds no AAGUID; it is not an error.
+    expect(normaliseAaguidValue('abcde')).toBe('');
+    expect(normaliseAaguidValue('abcdefgh_')).toBe('');
+    // A dashed GUID is read as hex, not decoded as base64url.
+    expect(normaliseAaguidValue('00112233-4455-6677-8899-AABBCCDDEEFF')).toBe('00112233445566778899aabbccddeeff');
     expect(normaliseAaguidValue(new Uint8Array([1, 2, 3, 4]).buffer)).toBe('01020304');
     expect(normaliseAaguidValue({ unknown: true })).toBe('');
 

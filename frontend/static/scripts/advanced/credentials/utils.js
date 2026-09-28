@@ -8,6 +8,8 @@ import {
     normalizeToHex
 } from '../../shared/utils/binary.js';
 
+const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function normaliseAaguidValue(value) {
     if (value === null || value === undefined) {
         return '';
@@ -31,15 +33,24 @@ export function normaliseAaguidValue(value) {
             return trimmed.toLowerCase();
         }
 
-        // Either decoder gives hex for text it reads, and throws for text it cannot.
-        const base64Pattern = /^[A-Za-z0-9+/=]+$/;
-        if (base64Pattern.test(trimmed)) {
-            return base64ToHex(trimmed).toLowerCase();
+        // A dashed GUID is hex: read as base64url, its dashes would be bytes.
+        if (GUID_PATTERN.test(trimmed)) {
+            return normaliseGuidString(trimmed);
         }
 
+        // Either decoder gives hex for text it reads, and throws for text it
+        // cannot ("abcde" has no base64 length): that text holds no AAGUID.
+        const base64Pattern = /^[A-Za-z0-9+/=]+$/;
         const base64UrlPattern = /^[A-Za-z0-9_-]+$/;
-        if (base64UrlPattern.test(trimmed)) {
-            return base64UrlToHex(trimmed).toLowerCase();
+        const decode = base64Pattern.test(trimmed)
+            ? base64ToHex
+            : base64UrlPattern.test(trimmed) ? base64UrlToHex : null;
+        if (decode) {
+            try {
+                return decode(trimmed).toLowerCase();
+            } catch {
+                return '';
+            }
         }
 
         const cleaned = trimmed.replace(/[^0-9a-fA-F]/g, '');

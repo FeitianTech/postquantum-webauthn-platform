@@ -345,3 +345,38 @@ describe('a hostile credential record', () => {
     }
   });
 });
+
+describe('a record whose stored AAGUID no spelling reads', () => {
+  beforeEach(() => {
+    buildDom();
+    globalThis.fetch = vi.fn(async () => decodeResponse());
+    fetchCredentialArtifact.mockResolvedValue(null);
+  });
+
+  // "abcde" looks like base64 but has no base64 length; decoding it threw, and the
+  // throw stopped the whole list's drawing.
+  const records = () => [
+    { type: 'simple', userName: 'first', credentialId: 'AQID', aaguidHex: '00112233445566778899aabbccddeeff' },
+    { type: 'simple', userName: 'unreadable', credentialId: 'BAUG', aaguid: 'abcde' },
+    { type: 'advanced', userName: 'last', credentialId: 'BwgJ', storageId: 'last', aaguidHex: 'abcde' },
+  ];
+
+  it('is drawn with the others, before and after it', () => {
+    state.storedCredentials = records();
+    updateCredentialsDisplay();
+
+    const names = Array.from(document.querySelectorAll('[data-credentials-list] .credential-item'))
+      .map((card) => card.textContent);
+    expect(names).toHaveLength(3);
+    expect(names[0]).toContain('first');
+    expect(names[1]).toContain('unreadable');
+    expect(names[2]).toContain('last');
+  });
+
+  it('still opens its details', async () => {
+    const root = await renderDetail(records()[1]);
+
+    expect(root.textContent).toContain('unreadable');
+    expect(root.textContent).toContain('AAGUID');
+  });
+});

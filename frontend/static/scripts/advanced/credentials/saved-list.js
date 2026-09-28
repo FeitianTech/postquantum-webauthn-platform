@@ -86,7 +86,7 @@ export function describeCredentialCard(credential, { indicators, algorithmTag, c
     if (credential.largeBlob === true || credential.largeBlobSupported === true) {
         tags.push('Large blob');
     }
-    const { aaguidGuid, rootStatus, metadataAvailable } = indicators;
+    const { aaguidGuid, aaguidUnreadable, rootStatus, metadataAvailable } = indicators;
     return {
         name: credential.userName || credential.username || credential.email || SAVED_LIST_TEXT.unknownUser,
         checks: CREDENTIAL_CHECKS.map(check => ({ label: check.label, value: indicators[check.key] })),
@@ -95,6 +95,8 @@ export function describeCredentialCard(credential, { indicators, algorithmTag, c
         credentialIdHex: (credentialIdHex || '').toLowerCase(),
         credentialId: ensureBase64Url(normaliseAdvancedCredentialId(credential)),
         aaguid: aaguidGuid ? aaguidGuid.toLowerCase() : '',
+        // A stored AAGUID no spelling reads, shown as it is stored.
+        aaguidUnreadable: aaguidUnreadable || '',
     };
 }
 
