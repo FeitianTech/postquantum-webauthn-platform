@@ -198,12 +198,18 @@ def resolve_effective_metadata_entry(
         if aaguid_key:
             seen_aaguids.add(aaguid_key)
 
-    base_metadata, _ = blob._load_base_metadata()
+    base_metadata, metadata_mtime = blob._load_base_metadata()
     if base_metadata is None:
         return None
 
-    for index, entry in enumerate(base_metadata.entries):
-        payload = dict(entry)
+    # The entry as the BLOB has it: the dataclasses drop what they do not model.
+    raw_entries = blob._load_base_raw_entries(metadata_mtime)
+    if raw_entries is None or len(raw_entries) != len(base_metadata.entries):
+        raw_entries = [dict(entry) for entry in base_metadata.entries]
+
+    for index, payload in enumerate(raw_entries):
+        if not isinstance(payload, Mapping):
+            continue
         metadata_statement = payload.get("metadataStatement")
         metadata_mapping = metadata_statement if isinstance(metadata_statement, Mapping) else {}
         aaguid_key = normalise_aaguid_key(payload.get("aaguid") or metadata_mapping.get("aaguid"))

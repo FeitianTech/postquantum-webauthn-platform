@@ -114,3 +114,42 @@ def test_serving_the_fixture_never_writes_to_it(mds_fixture_snapshot, client, na
     client.get("/api/mds/metadata/explorer/full")
     assert (mds_fixture.SNAPSHOT_DIR / name).read_bytes() == before
     assert (mds_fixture_snapshot / name).read_bytes() == before
+
+
+def test_resolve_serves_a_packaged_entry_as_the_blob_has_it(mds_fixture_snapshot, client):
+    # fido2's StatusReport models neither sunsetDate nor certificationProfiles,
+    # nor a field no MDS3 version defines yet: none may be lost on the way.
+    blob_entry = next(
+        entry
+        for entry in json.loads((mds_fixture_snapshot / mds_snapshot_dir.VERIFIED).read_text())["entries"]
+        if entry.get("aaguid") == "f1d0f1d0-0000-4000-8000-000000000001"
+    )
+
+    answer = client.get("/api/mds/metadata/resolve", query_string={"aaguid": blob_entry["aaguid"]})
+    assert answer.status_code == 200
+    entry = answer.get_json()["entry"]
+    assert entry["statusReports"] == blob_entry["statusReports"]
+    assert entry["statusReports"][-1]["sunsetDate"] == "2029-09-01"
+    assert entry["statusReports"][-1]["fixtureFutureField"] == "A field no MDS3 version defines"
+    assert entry["rawEntry"] == blob_entry
+    assert entry["timeOfLastStatusChange"] == blob_entry["timeOfLastStatusChange"]
+
+
+def test_raw_entries_follow_only_the_file_the_metadata_was_read_from(mds_fixture_snapshot, monkeypatch):
+    from server.app.webauthn.metadata import blob
+
+    verified = mds_fixture_snapshot / mds_snapshot_dir.VERIFIED
+    mtime = os.path.getmtime(verified)
+
+    assert blob._load_base_raw_entries(None) is None
+    assert blob._load_base_raw_entries(mtime - 1) is None
+    entries = blob._load_base_raw_entries(mtime)
+    assert len(entries) == 32
+    assert blob._load_base_raw_entries(mtime) is entries
+
+    # A payload without an entry list gives none, and a missing file nothing.
+    os.utime(verified, (mtime + 5, mtime + 5))
+    monkeypatch.setattr(blob, "_load_verified_metadata_payload", lambda: {"entries": {}})
+    assert blob._load_base_raw_entries(mtime + 5) is None
+    verified.unlink()
+    assert blob._load_base_raw_entries(mtime + 5) is None

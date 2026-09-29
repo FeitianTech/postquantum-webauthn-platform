@@ -22,6 +22,8 @@ _RUNTIME_STATE_DEFAULTS = {
     "_base_explorer_snapshot_mtime": None,
     "_base_full_snapshot_cache": None,
     "_base_full_snapshot_mtime": None,
+    "_base_raw_entries_cache": None,
+    "_base_raw_entries_mtime": None,
     "_session_metadata_entry_ids": frozenset(),
     "_session_metadata_last_cleanup": 0.0,
     "_session_cleanup_worker": None,

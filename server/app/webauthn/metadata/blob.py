@@ -248,6 +248,29 @@ def _load_verified_metadata_payload() -> dict[str, Any] | None:
     return payload
 
 
+def _load_base_raw_entries(metadata_mtime: float | None) -> list[Any] | None:
+    """The packaged entries as the verified snapshot holds them, every field the
+    BLOB has (``fido2``'s dataclasses drop those they do not model), in the order
+    of ``_load_base_metadata``'s entries. Only while the file is the one those
+    were read from (``metadata_mtime``); None otherwise or without one."""
+
+    try:
+        verified_mtime = os.path.getmtime(_path(mds_snapshot_dir.VERIFIED))
+    except OSError:
+        return None
+    if metadata_mtime is None or verified_mtime != metadata_mtime:
+        return None
+
+    with _state._base_metadata_lock:
+        if _state._base_raw_entries_mtime == verified_mtime:
+            return _state._base_raw_entries_cache
+        payload = _load_verified_metadata_payload()
+        entries = payload.get("entries") if payload is not None else None
+        _state._base_raw_entries_cache = entries if isinstance(entries, list) else None
+        _state._base_raw_entries_mtime = verified_mtime
+        return _state._base_raw_entries_cache
+
+
 def _load_packaged_explorer_meta(snapshot_path: str | None = None) -> dict[str, Any] | None:
     """Return a packaged snapshot's meta when it describes the verified snapshot.
 
