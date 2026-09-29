@@ -21,6 +21,7 @@ from tests.app.security.ceremony_helpers import (
     registration_payload,
     unb64u,
 )
+from tests.app.storage import fake_gcs
 
 AAGUID = "f1d0f1d0-0000-4000-8000-000000000001"
 FIXTURE_ENTRIES = 32
@@ -40,13 +41,16 @@ def slow_provisioning(monkeypatch, tmp_path, metadata_state):
     downloading = threading.Event()
     release = threading.Event()
 
-    def download(blob_name):
+    def download(_blob_name):
         downloading.set()
         release.wait(10)
-        return (mds_fixture.SNAPSHOT_DIR / blob_name.rsplit("/", 1)[-1]).read_bytes()
 
+    monkeypatch.delenv("FIDO_SERVER_MDS_GCS_PREFIX", raising=False)
     monkeypatch.setattr(mds_provisioning.cloud, "gcs_enabled", lambda: True)
-    monkeypatch.setattr(mds_provisioning.cloud, "download_bytes", download)
+    bucket = fake_gcs.install(monkeypatch)
+    for name in mds_provisioning.SNAPSHOT_FILENAMES:
+        bucket.put(f"mds/{name}", (mds_fixture.SNAPSHOT_DIR / name).read_bytes())
+    bucket.on_download.append(download)
 
     warmup = threading.Thread(target=mds_provisioning.ensure_snapshot_available, daemon=True)
     warmup.start()

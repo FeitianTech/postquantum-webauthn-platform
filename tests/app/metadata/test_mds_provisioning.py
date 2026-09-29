@@ -7,7 +7,9 @@ import sys
 
 import pytest
 
-from server.app import mds_snapshot_dir
+from server.app import mds_snapshot_dir, mds_snapshot_sets
+from tests.app.metadata.snapshot_versions import snapshot_version
+from tests.app.storage import fake_gcs
 
 provisioning = pytest.importorskip("server.app.mds_provisioning")
 
@@ -21,6 +23,19 @@ def static_root(monkeypatch, tmp_path):
         provisioning, "_provision_state", {"attempted": False, "source": None}
     )
     return tmp_path
+
+
+@pytest.fixture
+def gcs(monkeypatch):
+    """Cloud Storage on, as an in-memory bucket."""
+
+    monkeypatch.delenv("FIDO_SERVER_MDS_GCS_PREFIX", raising=False)
+    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
+    return fake_gcs.install(monkeypatch)
+
+
+def _local(static_root):
+    return {name: (static_root / name).read_bytes() for name in provisioning.SNAPSHOT_FILENAMES}
 
 
 def _write_all(static_root, payload=b"{}"):
@@ -49,33 +64,40 @@ def test_local_files_are_used_without_touching_cloud_storage(static_root, monkey
     assert provisioning.ensure_snapshot_available() == "local"
 
 
-def test_missing_files_are_downloaded_from_cloud_storage(static_root, monkeypatch):
-    requested = []
-
-    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
-    monkeypatch.setattr(
-        provisioning.cloud,
-        "download_bytes",
-        lambda name: requested.append(name) or b'{"entries": []}',
-    )
+def test_a_new_instance_takes_the_set_the_pointer_names(static_root, gcs):
+    for name, data in snapshot_version(7).items():
+        gcs.put(f"mds/{name}", data)
+    mds_snapshot_sets.publish(snapshot_version(8))
 
     assert provisioning.ensure_snapshot_available() == "gcs"
-    assert requested == [f"mds/{name}" for name in provisioning.SNAPSHOT_FILENAMES]
-    assert provisioning.missing_snapshot_files() == ()
+    assert _local(static_root) == snapshot_version(8)
 
 
-def test_provisioning_result_is_reused_within_a_process(static_root, monkeypatch):
-    calls = []
-    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
-    monkeypatch.setattr(
-        provisioning.cloud,
-        "download_bytes",
-        lambda name: calls.append(name) or b"{}",
-    )
+def test_without_a_pointer_the_flat_objects_are_downloaded(static_root, gcs):
+    for name, data in snapshot_version(7).items():
+        gcs.put(f"mds/{name}", data)
 
     assert provisioning.ensure_snapshot_available() == "gcs"
+    assert _local(static_root) == snapshot_version(7)
+
+
+def test_a_set_that_is_not_the_one_named_falls_back_to_the_flat_objects(static_root, gcs):
+    for name, data in snapshot_version(7).items():
+        gcs.put(f"mds/{name}", data)
+    pointer = mds_snapshot_sets.publish(snapshot_version(8)).pointer
+    gcs.put(pointer["set"] + mds_snapshot_dir.VERIFIED, b"{}")
+
     assert provisioning.ensure_snapshot_available() == "gcs"
-    assert len(calls) == len(provisioning.SNAPSHOT_FILENAMES)
+    assert _local(static_root) == snapshot_version(7)
+
+
+def test_provisioning_result_is_reused_within_a_process(static_root, gcs):
+    mds_snapshot_sets.publish(snapshot_version(8))
+
+    assert provisioning.ensure_snapshot_available() == "gcs"
+    downloads = len(gcs.download_options)
+    assert provisioning.ensure_snapshot_available() == "gcs"
+    assert len(gcs.download_options) == downloads
 
 
 def test_snapshot_is_unavailable_without_cloud_storage_or_upstream(static_root, monkeypatch):
@@ -85,35 +107,35 @@ def test_snapshot_is_unavailable_without_cloud_storage_or_upstream(static_root, 
     assert provisioning.ensure_snapshot_available() == "unavailable"
 
 
-def test_a_cloud_storage_gap_falls_through_to_an_upstream_refresh(static_root, monkeypatch):
-    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
-    monkeypatch.setattr(provisioning.cloud, "download_bytes", lambda name: None)
+def test_an_empty_bucket_falls_through_to_an_upstream_refresh_it_publishes(static_root, gcs, monkeypatch):
+    from tools import update_mds_snapshot
+
     monkeypatch.setenv("FIDO_SERVER_MDS_FETCH_UPSTREAM", "1")
 
-    published = []
-    monkeypatch.setattr(provisioning, "_refresh_from_upstream", lambda: True)
-    monkeypatch.setattr(provisioning, "_upload_to_gcs", lambda names: published.append(names))
+    def _refresh(argv):
+        for name, data in snapshot_version(9).items():
+            mds_snapshot_dir.write_file(static_root / name, data)
+        return 0
+
+    monkeypatch.setattr(update_mds_snapshot, "main", _refresh)
 
     assert provisioning.ensure_snapshot_available() == "upstream"
-    assert published == [provisioning.SNAPSHOT_FILENAMES]
+    pointer, _generation = mds_snapshot_sets.read_pointer()
+    assert pointer["no"] == 9
+    assert mds_snapshot_sets.download_set(pointer) == snapshot_version(9)
 
 
-def test_a_failed_upstream_refresh_leaves_the_snapshot_unavailable(static_root, monkeypatch):
-    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
-    monkeypatch.setattr(provisioning.cloud, "download_bytes", lambda name: None)
+def test_a_failed_upstream_refresh_leaves_the_snapshot_unavailable(static_root, gcs, monkeypatch):
     monkeypatch.setenv("FIDO_SERVER_MDS_FETCH_UPSTREAM", "1")
     monkeypatch.setattr(provisioning, "_refresh_from_upstream", lambda: False)
 
     assert provisioning.ensure_snapshot_available() == "unavailable"
+    assert gcs.objects == {}
 
 
-def test_a_cloud_storage_error_does_not_propagate(static_root, monkeypatch):
-    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
-
-    def _raise(name):
-        raise RuntimeError("bucket unreachable")
-
-    monkeypatch.setattr(provisioning.cloud, "download_bytes", _raise)
+def test_a_cloud_storage_error_does_not_propagate(static_root, gcs, monkeypatch):
+    for name in ("current.json", *provisioning.SNAPSHOT_FILENAMES):
+        gcs.failing[f"mds/{name}"] = fake_gcs.ServiceUnavailable("bucket unreachable")
     monkeypatch.setenv("FIDO_SERVER_MDS_FETCH_UPSTREAM", "0")
 
     assert provisioning.ensure_snapshot_available() == "unavailable"
@@ -195,44 +217,22 @@ def test_upstream_refresh_reports_a_build_without_the_updater(static_root, monke
     assert provisioning._refresh_from_upstream() is False
 
 
-def test_upload_publishes_only_the_files_that_exist(static_root, monkeypatch):
-    uploaded = []
-    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
-    monkeypatch.setattr(
-        provisioning.cloud,
-        "upload_bytes",
-        lambda name, data, content_type=None: uploaded.append((name, content_type)),
-    )
-    (static_root / "blob.jwt").write_bytes(b"blob")
-    (static_root / "fido-mds3.verified.json").write_bytes(b"{}")
-
-    provisioning._upload_to_gcs(provisioning.SNAPSHOT_FILENAMES)
-
-    assert uploaded == [
-        ("mds/blob.jwt", None),
-        ("mds/fido-mds3.verified.json", "application/json"),
-    ]
-
-
-def test_upload_is_skipped_when_cloud_storage_is_disabled(static_root, monkeypatch):
+def test_a_publish_is_skipped_when_cloud_storage_is_disabled(static_root, gcs, monkeypatch):
     monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: False)
+    for name, data in snapshot_version(9).items():
+        (static_root / name).write_bytes(data)
 
-    def _fail(*args, **kwargs):  # pragma: no cover - must not be reached
-        raise AssertionError("Nothing may be uploaded with Cloud Storage disabled.")
-
-    monkeypatch.setattr(provisioning.cloud, "upload_bytes", _fail)
-    (static_root / "blob.jwt").write_bytes(b"blob")
-
-    provisioning._upload_to_gcs(provisioning.SNAPSHOT_FILENAMES)
+    provisioning._publish_to_gcs()
+    assert gcs.objects == {}
 
 
-def test_an_upload_error_does_not_propagate(static_root, monkeypatch):
-    monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
-
-    def _raise(name, data, content_type=None):
+def test_a_publish_error_does_not_propagate(static_root, gcs, monkeypatch):
+    def _raise(*args, **kwargs):
         raise RuntimeError("bucket unreachable")
 
-    monkeypatch.setattr(provisioning.cloud, "upload_bytes", _raise)
-    (static_root / "blob.jwt").write_bytes(b"blob")
+    monkeypatch.setattr(provisioning.cloud, "upload_bytes_if_generation", _raise)
+    for name, data in snapshot_version(9).items():
+        (static_root / name).write_bytes(data)
 
-    provisioning._upload_to_gcs(provisioning.SNAPSHOT_FILENAMES)
+    provisioning._publish_to_gcs()
+    assert gcs.objects == {}

@@ -12,12 +12,15 @@ demand, in three tiers:
    developer gets after running ``python tools/update_mds_snapshot.py`` once,
    and it is the only tier that needs no network access at all.
 2. **Cloud Storage.** When GCS is configured (``FIDO_SERVER_GCS_ENABLED``), the
-   missing files are downloaded from ``<bucket>/mds/``. This is how a Cloud Run
-   cold start gets the snapshot without shipping it in the image.
+   set ``<bucket>/mds/current.json`` points to is downloaded, each file checked
+   against the pointer (``mds_snapshot_sets``); without a usable one, the files
+   missing locally from the flat ``<bucket>/mds/<file>`` objects of earlier
+   releases. This is how a Cloud Run cold start gets the snapshot without
+   shipping it in the image.
 3. **Upstream refresh.** As a last resort the packaged updater is run, which
    downloads the BLOB from the FIDO Alliance and verifies it against the pinned
-   trust root before writing anything. The result is uploaded to Cloud Storage
-   so the next cold start stops at tier 2.
+   trust root before writing anything. The result is published to Cloud Storage
+   as a set so the next cold start stops at tier 2.
 
 Tier 3 is opt-in through ``FIDO_SERVER_MDS_FETCH_UPSTREAM`` and defaults to the
 GCS setting: on by default in a deployed service, off by default locally so a
@@ -33,7 +36,7 @@ import os
 import threading
 from pathlib import Path
 
-from . import mds_snapshot_dir
+from . import mds_snapshot_dir, mds_snapshot_sets
 from .env_flags import parse_env_flag
 from .storage import cloud
 
@@ -97,8 +100,33 @@ def write_snapshot_file(filename: str, data: bytes) -> Path:
     return path
 
 
+def _write_set(files: dict[str, bytes]) -> None:
+    """Write a complete set, payloads first and metas last (``WRITE_ORDER``)."""
+
+    for filename in mds_snapshot_dir.WRITE_ORDER:
+        write_snapshot_file(filename, files[filename])
+
+
+def _download_set_from_gcs() -> dict | None:
+    """Fetch the set the bucket's pointer names; return the pointer, or None
+    when there is no usable pointer or its set cannot be read whole."""
+
+    if not cloud.gcs_enabled():
+        return None
+    try:
+        pointer, _generation = mds_snapshot_sets.read_pointer()
+        if not mds_snapshot_sets.usable(pointer):
+            return None
+        files = mds_snapshot_sets.download_set(pointer)
+    except Exception as exc:
+        logger.warning("Could not download the MDS snapshot set from Cloud Storage: %s", exc)
+        return None
+    _write_set(files)
+    return pointer
+
+
 def _download_from_gcs(missing: tuple[str, ...]) -> tuple[str, ...]:
-    """Fetch ``missing`` from Cloud Storage; return the names still missing."""
+    """Fetch ``missing`` from the flat objects of earlier releases; return the names still missing."""
 
     if not cloud.gcs_enabled():
         return missing
@@ -144,26 +172,18 @@ def _refresh_from_upstream() -> bool:
         return False
 
 
-def _upload_to_gcs(filenames: tuple[str, ...]) -> None:
+def _publish_to_gcs() -> None:
+    """Publish the snapshot the updater just verified and wrote as the bucket's set."""
+
     if not cloud.gcs_enabled():
         return
-
-    for filename in filenames:
-        path = snapshot_path(filename)
-        if not path.is_file():
-            continue
-        try:
-            cloud.upload_bytes(
-                snapshot_blob_name(filename),
-                path.read_bytes(),
-                content_type="application/json" if filename.endswith(".json") else None,
-            )
-        except Exception as exc:  # pragma: no cover - network/credential failure
-            logger.warning(
-                "Could not publish MDS snapshot file %s to Cloud Storage: %s",
-                filename,
-                exc,
-            )
+    try:
+        files = {name: snapshot_path(name).read_bytes() for name in SNAPSHOT_FILENAMES}
+        result = mds_snapshot_sets.publish(files)
+    except Exception as exc:
+        logger.warning("Could not publish the MDS snapshot to Cloud Storage: %s", exc)
+        return
+    logger.info("Publishing the MDS snapshot to Cloud Storage: %s.", result.outcome)
 
 
 def ensure_snapshot_available(*, force: bool = False) -> str:
@@ -186,12 +206,11 @@ def ensure_snapshot_available(*, force: bool = False) -> str:
                 "MDS snapshot files missing locally (%s); provisioning.",
                 ", ".join(missing),
             )
-            still_missing = _download_from_gcs(missing)
-            if not still_missing:
+            if _download_set_from_gcs() is not None or not _download_from_gcs(missing):
                 source = "gcs"
             elif upstream_refresh_enabled() and _refresh_from_upstream():
                 source = "upstream"
-                _upload_to_gcs(SNAPSHOT_FILENAMES)
+                _publish_to_gcs()
             else:
                 source = "unavailable"
 
