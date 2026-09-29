@@ -424,7 +424,7 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
     assert parsed is not None and parsed.tzinfo is not None
 
     assert metadata_module._format_last_modified(None) is None
-    assert metadata_module.format_last_modified_header("Thu, 01 Jan 1970 00:00:00 GMT") == "2026-01-01T00:00:00+00:00"
+    assert metadata_module._format_last_modified("Thu, 01 Jan 1970 00:00:00 GMT") == "2026-01-01T00:00:00+00:00"
 
 
 def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_path, metadata_state, blob, effective):
@@ -450,36 +450,6 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     loaded_cache = metadata_module.load_metadata_cache_entry()
     assert loaded_cache["last_modified_iso"] == "2015-10-21T07:28:00+00:00"
     assert loaded_cache["etag"] == "etag-value"
-
-    monkeypatch.setattr(
-        os,
-        "makedirs",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("mkdir failed")),
-    )
-    metadata_module._store_metadata_cache_entry(
-        last_modified_header="x",
-        last_modified_iso="y",
-        etag="z",
-    )
-
-    wrapper_calls = []
-    monkeypatch.setattr(
-        blob,
-        "_store_metadata_cache_entry",
-        lambda **kwargs: wrapper_calls.append(kwargs),
-    )
-    metadata_module.store_metadata_cache_entry(
-        last_modified_header="a",
-        last_modified_iso="b",
-        etag="c",
-    )
-    assert wrapper_calls == [
-        {
-            "last_modified_header": "a",
-            "last_modified_iso": "b",
-            "etag": "c",
-        }
-    ]
 
     real_load_base_metadata = metadata_module._load_base_metadata
 

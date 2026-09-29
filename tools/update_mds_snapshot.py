@@ -68,37 +68,6 @@ def format_last_modified_header(header: str | None) -> str | None:
     return parsed.isoformat()
 
 
-def store_metadata_cache_entry(
-    *,
-    last_modified_header: str | None,
-    last_modified_iso: str | None,
-    etag: str | None,
-    fetched_at: str | None = None,
-    generated_at: str | None = None,
-    snapshot_no: int | None = None,
-    next_update: str | None = None,
-    entry_count: int | None = None,
-) -> None:
-    payload = {
-        "last_modified": last_modified_header,
-        "last_modified_iso": last_modified_iso,
-        "etag": etag,
-        "fetched_at": fetched_at or datetime.now(timezone.utc).isoformat(),
-        "generated_at": generated_at or fetched_at or datetime.now(timezone.utc).isoformat(),
-        "no": snapshot_no,
-        "nextUpdate": next_update,
-        "entryCount": entry_count,
-    }
-    try:
-        _path(mds_snapshot_dir.VERIFIED_META).parent.mkdir(parents=True, exist_ok=True)
-        _path(mds_snapshot_dir.VERIFIED_META).write_text(
-            json.dumps(payload, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-    except OSError:
-        pass
-
-
 def _fetch_remote_blob() -> tuple[bytes, str | None, str | None]:
     request = urllib.request.Request(
         MDS_METADATA_URL,

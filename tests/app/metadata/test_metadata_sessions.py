@@ -53,12 +53,6 @@ def test_session_metadata_is_isolated(session_metadata_env):
         assert items[0].payload["metadataStatement"]["description"] == "Session entry"
 
 
-def test_runtime_metadata_download_disabled():
-    metadata = pytest.importorskip("server.app.webauthn.metadata")
-    with pytest.raises(RuntimeError):
-        metadata.download_metadata_blob()
-
-
 def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypatch, sessions):
     _, metadata = session_metadata_env
 

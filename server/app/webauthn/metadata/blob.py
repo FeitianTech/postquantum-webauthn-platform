@@ -56,12 +56,6 @@ def _format_last_modified(header: str | None) -> str | None:
     return parsed.isoformat()
 
 
-def format_last_modified_header(header: str | None) -> str | None:
-    """Public helper for converting HTTP Last-Modified headers to ISO format."""
-
-    return _format_last_modified(header)
-
-
 def _clean_metadata_cache_value(value: Any) -> str | None:
     """Return a trimmed string value from cached metadata state if present."""
 
@@ -97,63 +91,6 @@ def load_metadata_cache_entry() -> dict[str, str | None]:
         "etag": etag,
         "fetched_at": fetched_at,
     }
-
-
-def _store_metadata_cache_entry(
-    *,
-    last_modified_header: str | None,
-    last_modified_iso: str | None,
-    etag: str | None,
-) -> None:
-    """Persist cached metadata download headers for future requests."""
-
-    payload = {
-        "last_modified": last_modified_header,
-        "last_modified_iso": last_modified_iso,
-        "etag": etag,
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
-    }
-
-    try:
-        os.makedirs(os.path.dirname(_path(mds_snapshot_dir.VERIFIED_META)), exist_ok=True)
-        with open(_path(mds_snapshot_dir.VERIFIED_META), "w", encoding="utf-8") as cache_file:
-            json.dump(payload, cache_file, indent=2, sort_keys=True)
-            cache_file.write("\n")
-    except OSError:
-        pass
-
-
-def store_metadata_cache_entry(
-    *,
-    last_modified_header: str | None,
-    last_modified_iso: str | None,
-    etag: str | None,
-) -> None:
-    """Persist cached metadata headers for the packaged snapshot."""
-
-    _store_metadata_cache_entry(
-        last_modified_header=last_modified_header,
-        last_modified_iso=last_modified_iso,
-        etag=etag,
-    )
-
-
-def download_metadata_blob(
-    source_url: str | None = None,
-    destination: str | None = None,
-) -> tuple[bool, int, str | None]:
-    """Fetch the FIDO MDS metadata BLOB and store it locally.
-
-    Runtime downloads are no longer supported. The packaged snapshot is
-    refreshed exclusively by the CI workflow that invokes
-    ``tools/update_mds_snapshot.py``.
-    """
-
-    _ = (source_url, destination)
-
-    raise RuntimeError(
-        "Runtime metadata downloads are disabled; use the CI snapshot updater instead."
-    )
 
 
 def load_cached_metadata_snapshot() -> bool:

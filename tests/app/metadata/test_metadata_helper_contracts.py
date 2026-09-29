@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 
 import itsdangerous
@@ -140,7 +139,7 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
     assert "modifiedAt" in source_info
 
 
-def test_cache_cleaning_formatting_and_store_helper(tmp_path, monkeypatch, blob):
+def test_cache_cleaning_and_formatting_helpers():
     metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     assert metadata_module._clean_metadata_cache_value("  etag-value  ") == "etag-value"
@@ -149,22 +148,6 @@ def test_cache_cleaning_formatting_and_store_helper(tmp_path, monkeypatch, blob)
     iso_value = metadata_module._format_last_modified("Wed, 21 Oct 2015 07:28:00 GMT")
     assert iso_value == "2015-10-21T07:28:00+00:00"
     assert metadata_module._format_last_modified("not-a-date") == "not-a-date"
-
-    # The directory does not exist yet: the store makes it.
-    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path / "cache"))
-    cache_path = tmp_path / "cache" / "fido-mds3.verified.json.meta.json"
-
-    metadata_module._store_metadata_cache_entry(
-        last_modified_header="Wed, 21 Oct 2015 07:28:00 GMT",
-        last_modified_iso="2015-10-21T07:28:00+00:00",
-        etag="abc123",
-    )
-
-    stored = json.loads(cache_path.read_text(encoding="utf-8"))
-    assert stored["last_modified"] == "Wed, 21 Oct 2015 07:28:00 GMT"
-    assert stored["last_modified_iso"] == "2015-10-21T07:28:00+00:00"
-    assert stored["etag"] == "abc123"
-    assert stored["fetched_at"]
 
 
 def test_prune_helper_and_request_session_identifier_paths(monkeypatch, tmp_path, session_store, app_config):

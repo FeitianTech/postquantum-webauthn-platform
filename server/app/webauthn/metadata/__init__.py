@@ -18,8 +18,8 @@ from . import (
     verifier,
 )
 
-__all__ = ["download_metadata_blob", "get_mds_verifier",
-           "load_metadata_cache_entry", "format_last_modified_header", "store_metadata_cache_entry",
+__all__ = ["get_mds_verifier",
+           "load_metadata_cache_entry",
            "load_cached_metadata_snapshot", "load_packaged_explorer_summary", "load_packaged_snapshot_meta",
            "load_effective_explorer_snapshot",
            "load_effective_full_snapshot", "resolve_effective_metadata_entry", "ensure_metadata_session_id",
@@ -48,12 +48,8 @@ _SESSION_METADATA_TOUCH_THROTTLE_ENV = state._SESSION_METADATA_TOUCH_THROTTLE_EN
 # Cache and HTTP header helpers.
 _parse_http_datetime = blob._parse_http_datetime
 _format_last_modified = blob._format_last_modified
-format_last_modified_header = blob.format_last_modified_header
 _clean_metadata_cache_value = blob._clean_metadata_cache_value
 load_metadata_cache_entry = blob.load_metadata_cache_entry
-_store_metadata_cache_entry = blob._store_metadata_cache_entry
-store_metadata_cache_entry = blob.store_metadata_cache_entry
-download_metadata_blob = blob.download_metadata_blob
 
 # Environment and cleanup interval helpers.
 _env_flag = sessions._env_flag

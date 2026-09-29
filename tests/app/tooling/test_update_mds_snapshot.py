@@ -131,44 +131,6 @@ def test_format_last_modified_header_returns_iso_or_original(monkeypatch):
     assert updater.format_last_modified_header("raw-header") == "raw-header"
 
 
-def test_store_metadata_cache_entry_writes_expected_payload(isolated_mds_paths):
-    updater.store_metadata_cache_entry(
-        last_modified_header="Wed, 01 Apr 2026 12:00:00 GMT",
-        last_modified_iso="2026-04-01T12:00:00+00:00",
-        etag="\"abc\"",
-        fetched_at="2026-04-03T12:00:00+00:00",
-        generated_at="2026-04-03T12:00:01+00:00",
-        snapshot_no=321,
-        next_update="2026-05-01",
-        entry_count=7,
-    )
-
-    cache_payload = json.loads(_file(mds_snapshot_dir.VERIFIED_META).read_text(encoding="utf-8"))
-    assert cache_payload == {
-        "entryCount": 7,
-        "etag": '"abc"',
-        "fetched_at": "2026-04-03T12:00:00+00:00",
-        "generated_at": "2026-04-03T12:00:01+00:00",
-        "last_modified": "Wed, 01 Apr 2026 12:00:00 GMT",
-        "last_modified_iso": "2026-04-01T12:00:00+00:00",
-        "nextUpdate": "2026-05-01",
-        "no": 321,
-    }
-
-
-def test_store_metadata_cache_entry_swallows_oserror(monkeypatch, isolated_mds_paths):
-    def _raise_oserror(self, _text, encoding="utf-8"):
-        raise OSError("disk full")
-
-    monkeypatch.setattr(updater.Path, "write_text", _raise_oserror)
-
-    updater.store_metadata_cache_entry(
-        last_modified_header=None,
-        last_modified_iso=None,
-        etag=None,
-    )
-
-
 def test_fetch_remote_blob_uses_expected_request_contract(monkeypatch):
     class _FakeResponse:
         def __init__(self):
