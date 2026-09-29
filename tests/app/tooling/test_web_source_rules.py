@@ -41,13 +41,14 @@ _RULES: dict[str, re.Pattern[str]] = {
     "srcdoc": re.compile(r"\bsrcDoc\b|\bsrcdoc\b"),
     "style prop": re.compile(r"(?<=\s)style=\{"),
     "<style> or <script> element": re.compile(r"<(?:style|script)\b"),
-    "next/script": re.compile(r"""['"]next/script['"]"""),
-    # Next's router adds page scripts after following a next/link, which the
-    # Trusted Types policy reports, and it keeps the browser's Back on the app: links are <a>.
-    "next/link": re.compile(r"""['"]next/link['"]"""),
     "eval": re.compile(r"(?<![\w$.])eval\s*\(|\bnew\s+Function\s*\("),
     "atob": re.compile(r"(?<![\w$.])atob\s*\("),
 }
+
+# Modules no source may import, by the rule each breaks. Next's router adds page
+# scripts after following a next/link, which the Trusted Types policy reports, and
+# it keeps the browser's Back on the app: links are <a>.
+_IMPORT_RULES = {"next/script": "next/script", "next/link": "next/link"}
 
 # (path under web/src, rule) -> reason.
 ALLOWED: dict[tuple[str, str], str] = {}
@@ -63,26 +64,139 @@ def _shipped_sources() -> list[Path]:
     )
 
 
-_LINE_COMMENT = re.compile(r"(?:^|\s)//.*$")
+_IDENTIFIER = re.compile(r"[\w$]")
+# After one of these, a `/` starts a regular expression rather than a division.
+_BEFORE_REGEX = set("(,=:[!&|?{};+-*%<>~^")
+_REGEX_KEYWORDS = ("return", "typeof", "case", "do", "else", "in", "of", "new", "delete", "void", "throw", "yield", "await")
+
+
+def _mask(text: str, keep_strings: bool = False) -> str:
+    """``text`` with its comments blanked, and the insides of its strings, template
+    literals and regular expressions too unless ``keep_strings``: what is left is
+    the code. Newlines and every other offset stay where they were, and a template
+    literal's ``${…}`` stays code.
+
+    A quote right after a letter or digit is JSX text (``Don't``), not a string."""
+
+    out = list(text)
+    length = len(text)
+
+    def blank(start: int, end: int, always: bool = False) -> None:
+        if always or not keep_strings:
+            for index in range(start, end):
+                if out[index] != "\n":
+                    out[index] = " "
+
+    def previous_code(index: int) -> str:
+        back = index - 1
+        while back >= 0 and out[back] in " \t\n":
+            back -= 1
+        if back < 0:
+            return ""
+        if _IDENTIFIER.match(out[back]):
+            word_end = back + 1
+            while back >= 0 and _IDENTIFIER.match(out[back]):
+                back -= 1
+            return "".join(out[back + 1 : word_end])
+        return out[back]
+
+    def scan(index: int, closing: str | None) -> int:
+        """Mask from ``index`` to the ``closing`` brace of a template's ``${``
+        (or the end); return the index just past it."""
+
+        depth = 0
+        while index < length:
+            char = text[index]
+            if closing and char == "}" and depth == 0:
+                return index + 1
+            if char in "{([":
+                depth += 1
+            elif char in "})]":
+                depth -= 1
+            if text.startswith("//", index):
+                end = text.find("\n", index)
+                end = length if end == -1 else end
+                blank(index, end, always=True)
+                index = end
+                continue
+            if text.startswith("/*", index):
+                end = text.find("*/", index + 2)
+                end = length if end == -1 else end + 2
+                blank(index, end, always=True)
+                index = end
+                continue
+            if char in "'\"" and not (index > 0 and _IDENTIFIER.match(text[index - 1])):
+                end = index + 1
+                while end < length and text[end] not in (char, "\n"):
+                    end += 2 if text[end] == "\\" else 1
+                blank(index + 1, min(end, length))
+                index = end + 1
+                continue
+            if char == "`":
+                index = template(index + 1)
+                continue
+            if char == "/" and text[index + 1 : index + 2] not in ("/", "*", ">") and text[index - 1 : index] != "<":
+                before = previous_code(index)
+                if before == "" or before in _BEFORE_REGEX or before in _REGEX_KEYWORDS:
+                    end = index + 1
+                    in_class = False
+                    while end < length and text[end] != "\n":
+                        if text[end] == "\\":
+                            end += 2
+                            continue
+                        if text[end] == "[":
+                            in_class = True
+                        elif text[end] == "]":
+                            in_class = False
+                        elif text[end] == "/" and not in_class:
+                            break
+                        end += 1
+                    blank(index + 1, min(end, length))
+                    index = end + 1
+                    continue
+            index += 1
+        return index
+
+    def template(index: int) -> int:
+        start = index
+        while index < length:
+            if text[index] == "\\":
+                index += 2
+                continue
+            if text[index] == "`":
+                blank(start, index)
+                return index + 1
+            if text.startswith("${", index):
+                blank(start, index)
+                index = scan(index + 2, "}")
+                start = index
+                continue
+            index += 1
+        blank(start, length)
+        return length
+
+    scan(0, None)
+    return "".join(out)
 
 
 def _code_lines(text: str) -> list[tuple[int, str]]:
-    """Each line without its ``//`` comment (not a URL's ``://``); comment lines are skipped."""
+    """Each line's code: comments, strings, template literals and regular
+    expressions blanked."""
 
-    return [
-        (number, _LINE_COMMENT.sub("", line))
-        for number, line in enumerate(text.splitlines(), 1)
-        if not line.lstrip().startswith(("*", "/*", "{/*"))
-    ]
+    return list(enumerate(_mask(text).splitlines(), 1))
 
 
 def find_rule_breaks(text: str) -> list[tuple[int, str]]:
     """(line, rule) for each rule ``text`` breaks, with the logic modules' guards' readers too."""
 
     found = [(number, rule) for number, code in _code_lines(text) for rule, pattern in _RULES.items() if pattern.search(code)]
-    found += [(number, "markup sink") for number, _line in find_sinks(text)]
-    found += [(number, "setAttribute('style')") for number in find_style_attributes(text)]
-    found += [(number, "write to window") for number in find_global_writes(text)]
+    found += [(number, _IMPORT_RULES[spec]) for number, spec in _import_lines(text) if spec in _IMPORT_RULES]
+    # The guards' readers look for a call with its arguments ("setAttribute('style'"),
+    # so they read the code with its strings.
+    without_comments = _mask(text, keep_strings=True)
+    found += [(number, "markup sink") for number, _line in find_sinks(without_comments)]
+    found += [(number, "setAttribute('style')") for number in find_style_attributes(without_comments)]
+    found += [(number, "write to window") for number in find_global_writes(without_comments)]
     return sorted(found)
 
 
@@ -141,18 +255,29 @@ def test_the_reader_finds_each_rule_break():
     ]
 
 
-_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.S)
-# `import ... from '...'`, `export ... from '...'` (across lines) and `import '...'`.
-_IMPORT = re.compile(r"""^\s*(?:import|export)\b[^;'"`]*?\bfrom\s*['"]([^'"]+)['"]|^\s*import\s*['"]([^'"]+)['"]""", re.M)
+# `import ... from '...'`, `export ... from '...'` (across lines), `import '...'`
+# and `import('...')`.
+_IMPORT = re.compile(
+    r"""^\s*(?:import|export)\b[^;'"`]*?\bfrom\s*['"]([^'"]+)['"]|^\s*import\s*['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)""",
+    re.M,
+)
 _DOM = re.compile(r"\bdocument\b|\brequestAnimationFrame\b|\bcreateElement\b|\bHTMLElement\b")
 
 
 def _without_comments(text: str) -> str:
-    return "\n".join(code for _number, code in _code_lines(_BLOCK_COMMENT.sub("", text)))
+    return _mask(text, keep_strings=True)
+
+
+def _import_lines(text: str) -> list[tuple[int, str]]:
+    code = _without_comments(text)
+    return [
+        (code.count("\n", 0, match.start()) + 1, match.group(1) or match.group(2) or match.group(3))
+        for match in _IMPORT.finditer(code)
+    ]
 
 
 def _imports(text: str) -> list[str]:
-    return [match.group(1) or match.group(2) for match in _IMPORT.finditer(_without_comments(text))]
+    return [spec for _number, spec in _import_lines(text)]
 
 
 def _web_logic_imports() -> set[str]:
@@ -202,11 +327,24 @@ def _logic_sentences() -> set[str]:
     return sentences
 
 
+def _copies(text: str, names: set[str], sentences: set[str]) -> list[str]:
+    """The logic exports ``text`` defines and the logic sentences it carries."""
+
+    found = []
+    if names:
+        definition = re.compile(r"\b(?:function|const|let|var|class)\s+(" + "|".join(sorted(names)) + r")\b")
+        found += sorted({match.group(1) for match in definition.finditer(_mask(text))})
+    # A sentence counts in the code's strings and JSX text, not in a comment.
+    code = _without_comments(text)
+    found += sorted(sentence for sentence in sentences if sentence in code)
+    return found
+
+
 def test_the_logic_modules_touch_no_dom():
     touching = {}
     for path in logic_modules():
-        text = _without_comments(path.read_text(encoding="utf-8"))
-        found = sorted({match.group(0) for match in _DOM.finditer(text)})
+        text = path.read_text(encoding="utf-8")
+        found = sorted({match.group(0) for match in _DOM.finditer(_mask(text))})
         found += sorted(spec for spec in _imports(text) if "/ui/" in spec or spec.startswith("../ui/"))
         if found:
             touching[path.relative_to(LOGIC_ROOT.resolve()).as_posix()] = found
@@ -227,7 +365,50 @@ def test_the_reader_follows_imports_and_reads_every_export():
         ]
     )
     assert _imports(text) == ["./one.js", "./two.js", "./three.js"]
-    assert _without_comments("const a = 1; // note\n/* gone */const b = 'https://x';") == "const a = 1;\nconst b = 'https://x';"
+    assert _imports("const lazy = import('./four.js');") == ["./four.js"]
+    kept = _without_comments("const a = 1; // note\n/* gone */const b = 'https://x';")
+    assert kept.split() == ["const", "a", "=", "1;", "const", "b", "=", "'https://x';"]
+    assert kept.count("\n") == 1
+
+
+def test_the_reader_reads_code_not_comments_or_strings():
+    source = "\n".join(
+        [
+            "const text = 'eval(x), atob(y) and <script>';",
+            "// window.helper = helper; eval(code);",
+            "/* <style>{css}</style>",
+            "   style={{ color: 'red' }} */",
+            "const url = 'https://example.com'; eval(code);",
+            "const pattern = /['\"]<script/g;",
+            "const tpl = `atob(${atob(x)})`;",
+            "const named = 'next/script';",
+            "import Script from 'next/script';",
+            "const nested = `a ${`b ${eval(c)}`}`;",
+            "<p>Don't worry</p>; <br />; <Foo bar={x} />; const ratio = a / b / 2;",
+        ]
+    )
+
+    assert find_rule_breaks(source) == [(5, "eval"), (7, "atob"), (9, "next/script"), (10, "eval")]
+
+
+def test_a_block_comment_opened_inside_a_line_comment_hides_nothing():
+    text = "// the leaves under explorer/*.js\nimport { a } from './a.js';\n"
+
+    assert _imports(text) == ["./a.js"]
+    assert _code_lines(text)[1] == (2, "import { a } from '      ';")
+
+
+def test_a_logic_sentence_counts_as_a_copy_in_code_not_in_a_comment():
+    sentences = {"No authenticators match the selected filters."}
+
+    assert _copies("// No authenticators match the selected filters.\n", set(), sentences) == []
+    assert _copies("/* No authenticators match the selected filters. */", set(), sentences) == []
+    assert _copies("const empty = 'No authenticators match the selected filters.';", set(), sentences) == [
+        "No authenticators match the selected filters."
+    ]
+    assert _copies("<p>No authenticators match the selected filters.</p>", set(), sentences) == [
+        "No authenticators match the selected filters."
+    ]
 
 
 def test_every_logic_module_web_imports_is_found():
@@ -249,12 +430,9 @@ def test_the_logic_modules_are_imported_not_copied():
     assert "No authenticators match the selected filters." in sentences
     assert "Packaged FIDO metadata is available. Explorer data is loading in the background." in sentences
 
-    definition = re.compile(r"\b(?:function|const|let|var|class)\s+(" + "|".join(sorted(names)) + r")\b")
     copied = {}
     for path in _shipped_sources():
-        text = path.read_text(encoding="utf-8")
-        found = sorted({match.group(1) for match in definition.finditer(text)})
-        found += sorted(sentence for sentence in sentences if sentence in text)
+        found = _copies(path.read_text(encoding="utf-8"), names, sentences)
         if found:
             copied[path.relative_to(_WEB_SRC).as_posix()] = found
     assert copied == {}
