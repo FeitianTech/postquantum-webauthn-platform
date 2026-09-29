@@ -5,7 +5,7 @@
 // holds that the change left alone, however they are spelled, and the members
 // of a list it neither added nor dropped, in their place and with whatever else
 // they carry (transports, another user's credential, the order typed).
-// DOM-free: the current editor (./editor-flow.js) and the new UI both use it.
+// DOM-free.
 import { extractHexFromJsonFormat } from '../credentials/utils.js';
 import { requestText } from './editor-model.js';
 import { isPlainObject } from './schema.js';

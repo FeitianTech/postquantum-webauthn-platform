@@ -42,7 +42,7 @@ describe('the detail page: title and subtitle (MDS-D1)', () => {
 });
 
 describe('the detail page: sections (MDS-D3..D9)', () => {
-  it('orders the sections as the current page does', () => {
+  it('orders the sections as the page shows them', () => {
     expect(detailSections(named('Fixture Security Key L1')).map(({ key, title }) => [key, title])).toEqual([
       ['overview', 'Overview'],
       ['metadataStatement', 'Metadata Statement'],

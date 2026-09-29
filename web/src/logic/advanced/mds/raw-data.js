@@ -1,5 +1,5 @@
-// The raw view of an explorer entry, for both UIs: the entry rebuilt as MDS
-// publishes it, and the words around it. No DOM.
+// The raw view of an explorer entry: the entry rebuilt as MDS publishes it, and
+// the words around it. No DOM.
 export const RAW_DATA_TITLE = 'Authenticator Raw Data';
 export const RAW_DATA_LABEL = 'Raw authenticator metadata';
 export const RAW_DATA_BUTTON_TITLE = 'View raw authenticator data';

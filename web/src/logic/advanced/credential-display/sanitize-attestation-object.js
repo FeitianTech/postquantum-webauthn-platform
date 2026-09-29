@@ -13,8 +13,8 @@ import {
 import {cloneJson} from './data-utils.js';
 
 // The attestation object as the registration view shows it: `fmt` first, each
-// x5c certificate replaced by what the view knows of it (`certificates`, the
-// current UI's one state's by default), the raw and formatting keys left out.
+// x5c certificate replaced by what the view knows of it (`certificates`, those of
+// ./state.js by default), the raw and formatting keys left out.
 export function sanitiseAttestationObjectForDisplay(
     attestationObject,
     attestationFormatRaw = '',

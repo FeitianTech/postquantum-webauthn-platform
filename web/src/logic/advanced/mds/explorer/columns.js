@@ -1,5 +1,4 @@
-// The explorer's column widths, for both UIs: the legacy tab's resizers
-// (column-resizers.js) and web's MDS table. No DOM.
+// The explorer table's column widths. No DOM.
 
 export const MDS_MIN_COLUMN_WIDTH = 64;
 

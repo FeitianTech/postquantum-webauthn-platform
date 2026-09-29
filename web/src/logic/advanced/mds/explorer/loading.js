@@ -1,6 +1,4 @@
-// Where the explorer's entries come from and what an answer means, for both UIs:
-// the legacy tab (metadata/explorer-load.js, explorer-state-loader.js) and web's
-// MDS section. No DOM.
+// Where the explorer's entries come from and what an answer means. No DOM.
 import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MISSING_METADATA_MESSAGE } from '../constants.js';
 
 import { cloneMetadataEntry, hasInlineDetail } from '../metadata/metadata-helpers.js';
@@ -118,8 +116,8 @@ export function indexEntriesByAaguid(entries, resolvedEntryCache = new Map()) {
 }
 
 // What the page starts from (GET /api/mds/metadata/info: the packaged summary,
-// `snapshotUrl` and `customEntriesState`), which the legacy page reads from the
-// index instead. Null when it cannot be had: the explorer then asks the API.
+// `snapshotUrl` and `customEntriesState`). Null when it cannot be had: the
+// explorer then asks the API.
 export async function fetchExplorerInfo({ signal } = {}) {
     try {
         const response = await fetch(MDS_INFO_PATH, { cache: 'no-store', signal });

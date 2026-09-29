@@ -1,7 +1,6 @@
 // The Simple tab's two ceremonies, with no DOM: what is asked of the server and
 // of the authenticator, in what order, and what each step and each outcome says.
-// The current tab (simple/auth-simple.js) and the new UI both run them; each
-// keeps the browser's saved credentials through the storage it imports and says
+// The saved credentials are kept through the storage it imports; the tab says
 // what happened its own way.
 
 import {

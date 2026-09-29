@@ -1,7 +1,6 @@
 // What the server made of the last ceremony, as the panel under each tab's
 // buttons says it: the signature counter and its check, and in the advanced tab
-// where the challenge came from. DOM-free: the current UI's panel
-// (shared/ui/ceremony-result.js) and the new UI both show this model.
+// where the challenge came from. DOM-free: the result panel shows this model.
 
 // server/app/webauthn/sign_count.py
 export const SIGN_COUNT_SENTENCES = {

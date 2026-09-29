@@ -1,6 +1,4 @@
-// Manage Trusted Metadata's requests and everything it says, for both UIs: the
-// legacy tab's panel (custom/*.js, runtime/runtime-custom-metadata-adapters.js)
-// and web's dialog. No DOM.
+// Manage Trusted Metadata's requests and everything it says. No DOM.
 import { CUSTOM_METADATA_DELETE_PATH, CUSTOM_METADATA_LIST_PATH, CUSTOM_METADATA_UPLOAD_PATH } from '../constants.js';
 
 import { splitAcceptedFiles } from '../metadata/metadata-helpers.js';

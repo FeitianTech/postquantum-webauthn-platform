@@ -2,8 +2,7 @@
 // authentication, with no page: what a credential's record says it supports,
 // and whether the Advanced tab's authentication form may ask for each (a
 // chosen credential judged alone, else any saved one), with the note it shows
-// when it may not. DOM-free: the current form (./forms.js) and the new UI both
-// use it.
+// when it may not. DOM-free.
 import { getCredentialIdHex } from '../credentials/utils.js';
 
 export const CAPABILITY_TEXT = {

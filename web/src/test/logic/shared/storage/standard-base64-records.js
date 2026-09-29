@@ -1,5 +1,5 @@
-// Credential records as this browser saved them before Phase 23: the server's
-// storedCredential from register-complete (characterization goldens of
+// Credential records as browsers saved them while register-complete answered
+// standard base64: the server's storedCredential (characterization goldens of
 // 2026-09-25, simple-register-packed-x5c-extensions and
 // advanced-register-packed-x5c-everything), with standard base64 in the
 // fields it did not label. Copied here, not read from the goldens, which now

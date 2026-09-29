@@ -1,9 +1,8 @@
 // What the registration view shows, as data: the browser's response and its
 // client data, the relying party's view of the registration, the attestation
 // object with its certificates and authenticator data, and each certificate's
-// and the authenticator data's own view. DOM-free: the current UI's view
-// (./registration-compose-runtime.js) and the new UI's build from it. The state
-// the view is built from is passed in (./registration-state.js).
+// and the authenticator data's own view. DOM-free. The state the view is built
+// from is passed in (./registration-state.js).
 import {
     base64UrlToJson,
     base64UrlToUtf8String,

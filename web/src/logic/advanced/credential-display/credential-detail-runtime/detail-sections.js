@@ -1,11 +1,9 @@
 // What a saved credential's details show above its registration, as data: the
 // properties and the attestation checks, the user at creation with each
 // identifier in every spelling, the AAGUID, the attestation format, the
-// authenticator data's flags, the extension outputs and the public key. DOM-free:
-// the current UI's sections (./sections-*.js) and the new UI's build from it.
-// How a COSE algorithm and key type are named is passed in (`describers`): the
-// current UI's views give display-utils' (which their tests replace), the new UI
-// ../../cose-labels.js's.
+// authenticator data's flags, the extension outputs and the public key. DOM-free.
+// How a COSE algorithm and key type are named is passed in (`describers`: the
+// callers give ../../cose-labels.js's).
 import {
     base64UrlToBytes,
     bytesToBase64,

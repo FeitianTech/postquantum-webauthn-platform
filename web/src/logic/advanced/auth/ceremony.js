@@ -1,9 +1,8 @@
 // The Advanced tab's registration, with no DOM: the request the editor holds,
 // checked; what is asked of the server and of the authenticator, in what order;
-// what each step and each outcome says; the record the browser keeps. The
-// current tab (./advanced.js) and the new UI both run it. What the form's views
-// decide is given: the hints' rules (./hints.js, which the current tab's tests
-// replace), and the two values it reads from the form as the ceremony runs.
+// what each step and each outcome says; the record the browser keeps. What the
+// form decides is given: the hints' rules, and the two values it reads from the
+// form as the ceremony runs.
 
 import {
     create,

@@ -1,7 +1,6 @@
 // The Analyze Browser's findings as data: what is gathered, how the client
 // capabilities are grouped, and the report a person copies. Nothing here touches
-// the DOM, so the panel (analyze.js) and the new UI (web/) build their views from
-// the same answers and say the same words.
+// the DOM: the panel builds its view from these answers and says these words.
 
 import { determineIdentity, readIdentityInputs } from './identity.js';
 import { attempt, describeError } from './probe.js';

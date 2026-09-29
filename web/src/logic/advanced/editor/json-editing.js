@@ -1,8 +1,8 @@
 // The JSON editor's own edits, on anything holding a value and a selection
 // (a textarea, or a copy of one's state): `{` and `[` wrap the selection or
 // insert their pair, Enter keeps the line's indent (one more after an opener),
-// Tab and Shift+Tab indent and dedent. DOM-free: the current editor's key handler
-// (./utils.js) and the new UI's editor both use them.
+// Tab and Shift+Tab indent and dedent. DOM-free: the JSON editor applies them to
+// a copy of its state.
 import { JSON_EDITOR_INDENT_UNIT } from '../constants.js';
 
 export function wrapSelectionWithPair(editor, opening, closing) {

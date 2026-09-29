@@ -1,10 +1,8 @@
 // The Advanced tab's authentication, with no DOM: the request the editor holds,
 // checked; what is asked of the server and of the authenticator, in what order;
-// what each step and each outcome says; what the result panel shows. The
-// current tab (./advanced.js) and the new UI both run it. What the form's views
-// decide is given: the hints' check (./hints.js, which the current tab's tests
-// replace), the records sent to the server, and the two values it reads from
-// the form as the ceremony runs.
+// what each step and each outcome says; what the result panel shows. What the
+// form decides is given: the hints' check, the records sent to the server, and
+// the two values it reads from the form as the ceremony runs.
 
 import { get, parseRequestOptionsFromJSON } from '../../shared/webauthn/json-ponyfill.js';
 import { convertExtensionsForClient, normalizeClientExtensionResults } from '../../shared/utils/binary.js';

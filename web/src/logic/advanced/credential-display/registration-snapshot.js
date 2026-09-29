@@ -1,7 +1,6 @@
 // What a registration's result keeps once it is composed: the registration as
 // data, saved as the record's snapshot (schemaVersion 2) in the browser and on
-// the server, so its details build from it without asking again. DOM-free: the
-// current result modal (./registration-result.js) and the new UI both keep it.
+// the server, so its details build from it without asking again. DOM-free.
 import { registrationResultInput, registrationSnapshotPayload } from './registration-view.js';
 
 /**

@@ -1,8 +1,6 @@
-// The saved credentials, as both interfaces read and write them: one
-// localStorage array of simple and advanced records (local/constants.js), read
-// once and then kept in step with every save (local/storage-core.js). It reads
-// no page: the current UI's barrel, ../local.js, seeds it from the page data its
-// tests give, and re-exports it.
+// The saved credentials, as both tabs read and write them: one localStorage
+// array of simple and advanced records (local/constants.js), read once and then
+// kept in step with every save (local/storage-core.js). It reads no page.
 import {
     cloneAdvancedStoredRecord,
 } from './local/advanced-storage-shaping.js';

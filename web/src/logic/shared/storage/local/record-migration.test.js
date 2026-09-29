@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { migrateStoredRecord } from './record-migration.js';
-import { SIMPLE_RECORD } from '@/test/logic/shared/storage/pre-phase-23-records.js';
+import { SIMPLE_RECORD } from '@/test/logic/shared/storage/standard-base64-records.js';
 
 const CREDENTIAL_ID = SIMPLE_RECORD.credentialIdBase64Url;
 

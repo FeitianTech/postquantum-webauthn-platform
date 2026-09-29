@@ -1,8 +1,7 @@
 // The saved-credential list both interfaces show: which records, in what shape,
 // and for each its name, its four checks, its tags, its identifiers and whether
 // it links to FIDO MDS; the warm-up after the list is drawn. DOM-free. What it
-// needs from the credential helpers and from storage is passed in, so the
-// current UI's tests keep reaching the modules they replace.
+// needs from the credential helpers and from storage is passed in.
 
 import { normalizeToHex } from '../../shared/utils/binary.js';
 import {

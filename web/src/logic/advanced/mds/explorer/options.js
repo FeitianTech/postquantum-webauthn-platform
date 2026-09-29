@@ -1,6 +1,4 @@
-// The options a filter offers, for both UIs: the legacy tab's dropdowns
-// (dropdown.js, status-controls.js, state/state-initializer.js) and web's
-// comboboxes. No DOM.
+// The options a filter's combobox offers. No DOM.
 import { CERTIFICATION_OPTIONS, FILTER_CONFIG } from '../constants.js';
 import { formatEnum } from '../utils/formatters.js';
 

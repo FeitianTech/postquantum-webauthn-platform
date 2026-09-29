@@ -1,6 +1,5 @@
 // How a COSE algorithm and key type are named: "ES256 (-7)", "EC2 (2)", and an
-// ML-DSA algorithm's parameter set. DOM-free; advanced/ui/display-utils.js
-// re-exports these for the current UI.
+// ML-DSA algorithm's parameter set. DOM-free.
 import { COSE_ALGORITHM_LABELS, COSE_KEY_TYPE_LABELS } from './constants.js';
 
 export function describeCoseAlgorithm(alg) {

@@ -1,8 +1,7 @@
 // What the hints and the authenticator attachment mean for a request, with no
 // form: the hints' values in the form's order, the attachments they imply, the
 // attachment given to the browser, and the allowCredentials the stored
-// credentials' attachments allow. DOM-free: the current form (./hints.js reads
-// and writes its checkboxes) and the new UI both use it.
+// credentials' attachments allow. DOM-free.
 import { HINT_ATTACHMENT_MAP } from '../constants.js';
 import { state } from '../../shared/state.js';
 import {

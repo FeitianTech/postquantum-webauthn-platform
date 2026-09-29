@@ -1,5 +1,4 @@
-// What the explorer's table cells show beyond an entry's own text, for both UIs:
-// the legacy tab (table-render.js, table-cells.js) and web's MDS table. No DOM.
+// What the explorer's table cells show beyond an entry's own text. No DOM.
 import { normaliseEnumKey } from '../utils/formatters.js';
 
 export const MISSING_CELL_TEXT = '—';

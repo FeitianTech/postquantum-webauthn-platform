@@ -1,11 +1,10 @@
-// What the explorer's authenticator page shows of an entry, and in what order,
-// for both UIs: the legacy page (detail-content.js and the detail-* views build
-// their DOM from it) and web's entry page. No DOM.
+// What the explorer's authenticator page shows of an entry, and in what order.
+// No DOM.
 //
 // detailSections(entry) gives the page's sections in order. Each has a `key`, a
 // `title`, and what it holds: `fields` (label and value, or label and `codes`)
 // and `chipLists` (label and values), `combinations`, `certificates` or
-// `statusReports`. A section the current page leaves out is not in the list; the
+// `statusReports`. A section the page leaves out is not in the list; the
 // Overview and the Metadata Statement always are, even with nothing under them.
 import { MISSING_CELL_TEXT } from './rows.js';
 import { extractList } from '../utils/extractors.js';
@@ -177,9 +176,8 @@ const PATTERN_ACCURACY = [
     ['blockSlowdown', 'Block slowdown'],
 ];
 
-// One method of a combination: its name as published and its descriptors. The
-// current page shows the name and the code accuracy (`caDesc`); the biometric
-// (`baDesc`) and pattern (`paDesc`) accuracy are there for web's page.
+// One method of a combination: its name as published and its descriptors: the
+// code, biometric and pattern accuracy (`caDesc`, `baDesc`, `paDesc`).
 function verificationMethod(item) {
     const method = item.userVerificationMethod;
     return {

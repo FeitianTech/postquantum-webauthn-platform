@@ -1,9 +1,7 @@
 // The fake credential IDs a registration's excludeCredentials or an
 // authentication's allowCredentials carries after the saved ones, with no page:
 // how a typed ID is kept (hex), how long a new one is and what to say about the
-// length asked for, removing one, and the list's sentences. DOM-free: the
-// current form (./exclude-credentials.js keeps and draws the lists) and the new
-// UI both use it.
+// length asked for, removing one, and the list's sentences. DOM-free.
 
 export const FAKE_CREDENTIAL_TEXT = {
     noExclude: 'No fake credential IDs added.',

@@ -1,8 +1,7 @@
 // The JSON editor with no page: its titles and sentences, the text a request is
 // written as, reading an edit (and where text that does not parse stops being
 // JSON, the same in every browser), and the keys an edit adds beside
-// `publicKey`. DOM-free: the current editor (./editor-flow.js) and the new UI
-// both use it.
+// `publicKey`. DOM-free.
 import { sortObjectKeys } from '../../shared/utils/binary.js';
 
 import { isPlainObject } from './schema.js';

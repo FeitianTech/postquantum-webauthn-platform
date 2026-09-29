@@ -94,7 +94,7 @@ export const IDENTITY_MATRIX = [
     expected: { ...CHROME_EXPECTED, system: 'ChromeOS', sources: ALL_CH },
   },
   {
-    // The tech lead's browser: a Chromium build whose brand list is only "Chromium".
+    // A Chromium build whose brand list is only "Chromium".
     label: 'Chromium-only brand list',
     navigator: {
       userAgent:

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadStorage, seedRecords } from '@/test/logic/shared/storage/seed.js';
 
-import { ADVANCED_RECORD, SIMPLE_RECORD } from '@/test/logic/shared/storage/pre-phase-23-records.js';
+import { ADVANCED_RECORD, SIMPLE_RECORD } from '@/test/logic/shared/storage/standard-base64-records.js';
 import { base64ToBytes, base64UrlToBytes } from '../utils/base64.js';
 import {
   getCredentialIdHex,

@@ -1,8 +1,8 @@
 // A saved credential's details, as data: the sections above its registration
 // (./detail-sections.js) and the registration's own view (../registration-view.js),
 // composed into `state` (../registration-state.js) from the record, its saved
-// snapshot, or the decoder (`decode`). DOM-free: the current UI's modal
-// (./entry.js) and the new UI's dialog build from it.
+// snapshot, or the decoder (`decode`). DOM-free: the credential's details dialog
+// builds from it.
 import {extractCredentialAttestationContext} from '../attestation-context.js';
 import {resetRegistrationState} from '../registration-state.js';
 import {composeRegistration} from '../registration-view.js';

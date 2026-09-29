@@ -1,6 +1,4 @@
-// What the explorer's certificate page shows of an attestation root, for both
-// UIs: the legacy page (certificate-page.js and the certificate-* views build
-// their DOM from it) and web's certificate page. No DOM.
+// What the explorer's certificate page shows of an attestation root. No DOM.
 import { readFailedResponse } from '../../../shared/api/failed-response.js';
 import { formatCertificateDateDisplay, formatSignatureHashName } from '../utils/formatters.js';
 

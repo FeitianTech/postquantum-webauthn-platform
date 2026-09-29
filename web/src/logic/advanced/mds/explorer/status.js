@@ -1,6 +1,4 @@
-// What the explorer's status line and count say, for both UIs: the legacy tab
-// (metadata/explorer-load.js, runtime/runtime-refresh-metadata.js,
-// status-controls.js) and web's MDS section. No DOM.
+// What the explorer's status line and count say. No DOM.
 import { formatSnapshotTimestamp } from '../metadata/metadata-helpers.js';
 
 

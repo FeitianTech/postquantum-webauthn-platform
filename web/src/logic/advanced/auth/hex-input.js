@@ -1,8 +1,7 @@
 // Whether a byte field's text holds enough bytes, read in the page's binary
 // format (hex unless the page says otherwise): empty text is not an error; hex
 // is only hex digits; base64, base64url and a Uint8Array literal are decoded.
-// DOM-free: the current form (./forms.js marks its fields) and the new UI both
-// use it.
+// DOM-free.
 import {
     base64ToHex,
     base64UrlToHexFixed,

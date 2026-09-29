@@ -1,7 +1,6 @@
 // A credential's algorithm: its COSE identifier, and how a card names it
-// ("ES256", "MLDSA65"). DOM-free. How an algorithm is described is passed in:
-// the current UI's views (../credential-display/algorithm.js) give the describer
-// their tests replace, the new UI the one in ../cose-labels.js.
+// ("ES256", "MLDSA65"). DOM-free. How an algorithm is described is passed in
+// (the callers give the one in ../cose-labels.js).
 
 const COSE_ALGORITHM_TAG_LABELS = {
     '-53': 'ED448',

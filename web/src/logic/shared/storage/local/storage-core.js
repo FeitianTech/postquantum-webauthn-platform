@@ -14,9 +14,8 @@ function recordsOrNull(records) {
 }
 
 // The records read so far; until the first read, none, and the first read is
-// the browser's storage. The current UI's barrel (../local.js) seeds them from
-// the page's "initial-credential-records" block, which the server never renders
-// and tests give; this module reads no page, so the new UI can import it.
+// the browser's storage. Tests seed them (seedUnifiedCredentialRecords); this
+// module reads no page.
 let bootUnifiedCredentialRecords = null;
 
 /** Sets the records read so far (null: the next read is the browser's storage). */

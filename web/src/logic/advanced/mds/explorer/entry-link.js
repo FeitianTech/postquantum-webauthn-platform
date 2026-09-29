@@ -1,7 +1,5 @@
 // How an explorer entry is found when the list does not hold it, and how another
-// surface (a saved credential) opens one by its AAGUID, for both UIs: the legacy
-// tab (authenticator-modal.js, explorer-state-loader.js and the credential
-// cards' jump, credential-display/navigation.js) and web's entry page. No DOM.
+// surface (a saved credential) opens one by its AAGUID. No DOM.
 import { readFailedResponse } from '../../../shared/api/failed-response.js';
 import { MDS_RESOLVE_PATH } from '../constants.js';
 import { normaliseAaguid } from '../utils/resolvers.js';

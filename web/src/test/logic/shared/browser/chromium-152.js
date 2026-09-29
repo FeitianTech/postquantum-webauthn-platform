@@ -1,4 +1,4 @@
-// What the tech lead's Chromium build returned from getClientCapabilities().
+// What a Chromium 152 build returned from getClientCapabilities().
 export const CHROMIUM_152_CAPABILITIES = {
   conditionalCreate: true,
   conditionalGet: true,

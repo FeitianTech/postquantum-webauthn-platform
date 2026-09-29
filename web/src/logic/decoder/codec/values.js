@@ -1,6 +1,5 @@
 // How the Codec shows one decoded value, without the page: which kind of view
 // it gets, the label of each key, and the badges an interpreted value carries.
-// The current panel (render-values.js) and the new UI in web/ both use it.
 import { formatKey } from './labels.js';
 
 // A string longer than this, or holding a newline, is shown as a block.

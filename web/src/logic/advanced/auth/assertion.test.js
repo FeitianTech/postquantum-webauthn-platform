@@ -1,9 +1,9 @@
 // The Advanced tab's authentication with no DOM (advanced/auth/assertion.js), over the server's recorded answers.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// The browser's get() through the real ponyfill, which a test may replace with
-// what the current tab's own tests give (an assertion without its extension
-// results, or whose JSON holds none).
+// The browser's get() through the real ponyfill, which a test may replace with a
+// stand-in that gives less (an assertion without its extension results, or whose
+// JSON holds none).
 vi.mock('../../shared/webauthn/json-ponyfill.js', async (importOriginal) => {
   const actual = await importOriginal();
   return { ...actual, get: vi.fn(actual.get), parseRequestOptionsFromJSON: vi.fn(actual.parseRequestOptionsFromJSON) };
@@ -164,7 +164,7 @@ describe('an authentication', () => {
     expect(outcome.result).toMatchObject({ signCount: 2, signCountStatus: 'regressed', challengeStatus: 'replayed' });
   });
 
-  it('gives the browser the converted extensions when the parsed options hold none, as the current tab\'s own tests parse them', async () => {
+  it('gives the browser the converted extensions when the parsed options hold none, as a stand-in ponyfill parses them', async () => {
     serving({
       begin: { ...first.begin, body: { ...first.begin.body, publicKey: { ...first.begin.body.publicKey, extensions: { prf: { eval: { first: 'AQ' } } } } } },
       complete: first.complete,
@@ -296,7 +296,7 @@ describe('the assertion the server is sent', () => {
     expect(sent(1).body.__assertion_response.clientExtensionResults).toBeNull();
   });
 
-  it('reads the results an assertion holds without their getter, as the current tab\'s own tests give it', async () => {
+  it('reads the results an assertion holds without their getter, as a stand-in ponyfill gives it', async () => {
     serving(first);
     get.mockResolvedValueOnce({ toJSON: () => ({ id: 'AQ', clientExtensionResults: { appid: true } }), clientExtensionResults: { prf: { enabled: true } } });
     await authenticateAdvancedCredential(request(), formOptions());

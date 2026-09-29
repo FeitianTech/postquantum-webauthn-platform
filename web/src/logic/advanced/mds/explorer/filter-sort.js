@@ -1,6 +1,4 @@
-// How the explorer's filters match and its columns sort, for both UIs: the
-// legacy tab (sort-filter-controller.js, sort-filter-reset.js) and web's MDS
-// section. No DOM.
+// How the explorer's filters match and its columns sort. No DOM.
 import { normaliseSortValueInput } from '../sort-filter-normalise.js';
 
 import { normaliseEnumKey } from '../utils/formatters.js';

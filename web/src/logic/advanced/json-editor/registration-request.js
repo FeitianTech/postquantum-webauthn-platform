@@ -1,9 +1,7 @@
 // A registration's request (CredentialCreationOptions) and the form's settings
 // it is built from, with no page: the settings' defaults, the request they
 // build, what a request says the settings are, and the rules one setting's
-// change applies to others. DOM-free: the current form reads and writes its
-// fields around these (./creation-options.js, ./form-sync.js, ../ui/resets.js)
-// and the new UI keeps the settings as data.
+// change applies to others. DOM-free: the form keeps the settings as data.
 import {
     base64UrlToHex,
     convertFormat,

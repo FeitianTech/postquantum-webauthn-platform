@@ -1,8 +1,7 @@
 // Deleting a saved credential, and all of them: what is asked, in what order,
 // and what each outcome says. DOM-free. The storage and server functions, the
-// question to the person, and where messages and progress go are passed in: the
-// current UI asks with the browser's confirm and shows toasts in both tabs; the
-// new UI asks in a dialog first and shows its own.
+// question to the person, and where messages and progress go are passed in (the
+// UI asks in a dialog first and shows its own messages).
 
 export const DELETE_TEXT = {
     inProgress: 'A credential deletion is already in progress.',

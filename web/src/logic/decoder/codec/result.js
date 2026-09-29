@@ -1,6 +1,5 @@
 // What the Codec shows for an answer, without the page: the header, the notes,
-// the findings and the sections in their order. The current panel
-// (render-sections.js) and the new UI in web/ both use this one copy.
+// the findings and the sections in their order.
 import { describeEncodedOutput } from './encoding/summary.js';
 import { formatKey } from './labels.js';
 

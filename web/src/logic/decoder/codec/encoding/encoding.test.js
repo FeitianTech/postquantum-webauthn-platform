@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-// The Codec's encoding leaves, which the current UI's tests reached through its
-// decoder/codec/encoding.js barrel until Phase 30 removed it with its views.
+// The Codec's encoding leaves: whether a value can be encoded to a format, and the
+// summary of what was encoded.
 import { canEncodeToFormat } from './can-encode.js';
 import { findEncodedSummary } from './summary.js';
 

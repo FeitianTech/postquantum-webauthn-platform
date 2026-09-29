@@ -1,6 +1,6 @@
 // The saved credentials in the component tests: records as the server gave
 // them (the goldens' register-complete answers), put in the browser's storage
-// both UIs read; and the server routes the list's warm-up asks.
+// both tabs read; and the server routes the list's warm-up asks.
 import { goldenAnswers, goldenArtifact } from '@/test/logic/simple/ceremony-answers.js';
 import { seedUnifiedCredentialRecords } from '@/logic/shared/storage/local/storage-core.js';
 

@@ -1,9 +1,7 @@
 // What the registration view is built from: the decoded attestation object, its
 // certificates (and which of them the view lists), the authenticator data, its
 // hex and SHA-256. DOM-free, and every function takes the state it reads and
-// writes: the current UI keeps one (./state.js, which its certificate and
-// authenticator-data views read when their buttons are pressed), the new UI one
-// per credential it shows.
+// writes: one per credential shown.
 import {
     base64UrlToHex,
     bytesToHex,

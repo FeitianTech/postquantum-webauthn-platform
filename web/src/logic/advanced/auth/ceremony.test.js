@@ -145,7 +145,7 @@ afterEach(() => {
 });
 
 describe('ADVANCED_CEREMONY_TEXT', () => {
-  it('holds the sentence the current tab shows for a hint configuration it cannot read', () => {
+  it('holds the sentence shown for a hint configuration it cannot read', () => {
     expect(ADVANCED_CEREMONY_TEXT.invalidHints).toBe('Invalid hint configuration.');
   });
 });
