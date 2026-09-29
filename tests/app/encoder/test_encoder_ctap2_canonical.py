@@ -4,7 +4,7 @@ CTAP2 sorts map keys by major type first, then by encoded length, then
 bytewise (CTAP 2.2 section 8, "CTAP2 canonical CBOR encoding form"). The
 encoder used ``cbor2.dumps(canonical=True)``, which sorts RFC 7049 style,
 length first, so ``{24: 0, "": 0}`` came out ``a2 6000 181800`` instead of
-``a2 181800 6000``. The vendored ``fido2.cbor.encode``, which python-fido2 uses
+``a2 181800 6000``. ``fido2.cbor.encode``, which python-fido2 uses
 to talk to real authenticators, is the reference these maps are compared with.
 """
 from __future__ import annotations
@@ -15,8 +15,8 @@ from decimal import Decimal
 
 import cbor2
 import pytest
-
 from fido2 import cbor
+
 from server.app.decoder import cbor_canonical, encode_payload_text
 
 

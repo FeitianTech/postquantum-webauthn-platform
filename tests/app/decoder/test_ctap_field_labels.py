@@ -12,9 +12,9 @@ import hashlib
 import json
 
 import pytest
-
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
+
 from server.app.decoder import decode_payload_text, encode_payload_text
 
 _AUTH_DATA = bytes(AuthenticatorData.create(hashlib.sha256(b"example.com").digest(), 0x05, 7))

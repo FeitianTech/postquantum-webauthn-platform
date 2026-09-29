@@ -18,7 +18,6 @@ from collections.abc import Sequence
 from typing import Any
 
 from cryptography import x509
-
 from fido2.attestation import InvalidSignature, verify_x509_chain
 from fido2.cose import CoseKey
 from fido2.mds3 import MetadataBlobPayload

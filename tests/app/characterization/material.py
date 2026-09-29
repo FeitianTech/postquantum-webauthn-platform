@@ -30,7 +30,6 @@ from cryptography.hazmat.primitives.asymmetric import (
     rsa,
 )
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
-
 from fido2 import cbor, cose
 
 from ..security import ceremony_helpers

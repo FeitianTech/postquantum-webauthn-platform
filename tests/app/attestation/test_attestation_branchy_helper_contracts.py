@@ -9,7 +9,6 @@ from types import SimpleNamespace
 import pytest
 from cryptography import x509
 from cryptography.x509.oid import NameOID, ObjectIdentifier
-
 from fido2.attestation import InvalidSignature
 from fido2.cose import CoseKey
 from fido2.webauthn import AuthenticatorData, RegistrationResponse

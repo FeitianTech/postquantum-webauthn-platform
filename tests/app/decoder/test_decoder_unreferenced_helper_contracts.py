@@ -4,7 +4,6 @@ import base64
 import hashlib
 
 import pytest
-
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData
 

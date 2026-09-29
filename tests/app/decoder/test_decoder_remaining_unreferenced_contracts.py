@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import cbor2
 import pytest
-
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData
 

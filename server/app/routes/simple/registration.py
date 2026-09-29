@@ -4,14 +4,13 @@ import logging
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
-from flask import jsonify, request, session
-
 from fido2.cose import CoseKey
 from fido2.webauthn import (
     PublicKeyCredentialParameters,
     PublicKeyCredentialType,
     PublicKeyCredentialUserEntity,
 )
+from flask import jsonify, request, session
 
 from ... import (
     config,

@@ -11,6 +11,7 @@ import logging
 
 from fido2.server import Fido2Server
 from fido2.webauthn import AttestedCredentialData, PublicKeyCredentialRpEntity
+
 from tests.app.security.ceremony_helpers import (
     ORIGIN,
     RP_ID,

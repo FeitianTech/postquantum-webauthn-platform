@@ -13,7 +13,6 @@ import hashlib
 
 import pytest
 from cryptography.exceptions import InvalidSignature
-
 from fido2.attestation import Attestation, UntrustedAttestation
 from fido2.attestation.base import InvalidData
 from fido2.attestation.base import InvalidSignature as AttestationInvalidSignature
@@ -27,6 +26,7 @@ from fido2.webauthn import (
     CollectedClientData,
     PublicKeyCredentialRpEntity,
 )
+
 from server.app.webauthn.attestation.chain import verify_certificate_chain
 from tests.pqc import mldsa_helpers as mldsa
 

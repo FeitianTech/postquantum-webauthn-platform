@@ -1,7 +1,7 @@
 """The CTAP2 tables the decoder and the encoder share.
 
-The numbers are read off the vendored ``fido2`` library, the code this server
-would use to talk to an authenticator, so the codec cannot number a field
+The numbers are read off the ``fido2`` library, the code this server would use
+to talk to an authenticator, so the codec cannot number a field
 differently from it:
 
 * a command's parameters are numbered in the order ``Ctap2`` passes them to
@@ -11,8 +11,8 @@ differently from it:
 * command bytes are ``Ctap2.CMD`` and status bytes ``CtapError.ERR``.
 
 ``fido2`` spells the names in snake_case; the codec shows the CTAP names, which
-``_CTAP_NAMES`` gives. Where CTAP 2.2 defines a member the vendored ``fido2``
-does not know yet, it is added below with the section that defines it. Tables
+``_CTAP_NAMES`` gives. Where CTAP 2.2 defines a member ``fido2`` does not know
+yet, it is added below with the section that defines it. Tables
 fido2 has no counterpart for -- getInfo option and certification IDs, the
 uvModality bits -- are transcribed from the section cited next to each.
 """
@@ -85,6 +85,8 @@ _CTAP_NAMES: dict[str, str] = {
     "pin_complexity_policy": "pinComplexityPolicy",
     "pin_complexity_policy_url": "pinComplexityPolicyURL",
     "max_pin_length": "maxPINLength",
+    "enc_cred_store_state": "encCredStoreState",
+    "authenticator_config_commands": "authenticatorConfigCommands",
 }
 
 
@@ -117,7 +119,8 @@ GET_ASSERTION_RESPONSE: dict[int, str] = _response_members(AssertionResponse)
 GET_ASSERTION_RESPONSE[0x08] = "unsignedExtensionOutputs"
 
 # CTAP 2.2 section 6.4, authenticatorGetInfo (0x04): members 0x01 (versions) to
-# 0x1D (maxPINLength), in the field order of fido2's ``Info``.
+# 0x1D (maxPINLength), in the field order of fido2's ``Info``, which goes on to
+# 0x1E (encCredStoreState) and 0x1F (authenticatorConfigCommands).
 GET_INFO_RESPONSE: dict[int, str] = _response_members(Info)
 
 # CTAP 2.2 section 6.4, the option IDs "as of CTAP version FIDO_2_2": what each

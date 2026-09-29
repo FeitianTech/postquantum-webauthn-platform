@@ -15,6 +15,7 @@ from a device.
 from __future__ import annotations
 
 from fido2 import cbor
+
 from tests.app.python_fido2_vectors import GA_RESP, INFO, INFO_EXTRA_KEY, MC_RESP
 
 # authenticatorGetInfo responses without the status byte.

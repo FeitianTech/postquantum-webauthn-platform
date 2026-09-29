@@ -14,7 +14,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from cryptography import x509
-
 from fido2.attestation import Attestation, AttestationResult, UnsupportedType
 from fido2.mds3 import MdsAttestationVerifier, filter_attestation_key_compromised
 

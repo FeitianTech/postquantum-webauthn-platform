@@ -10,8 +10,8 @@ import pytest
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
-
 from fido2.cose import CoseKey
+
 from server.app.storage import record_format
 from server.app.webauthn import cose_keys
 

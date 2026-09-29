@@ -10,7 +10,6 @@ import hashlib
 from typing import Any
 
 import pytest
-
 from fido2 import cbor
 
 

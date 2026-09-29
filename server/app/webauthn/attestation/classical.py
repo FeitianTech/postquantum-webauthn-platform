@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import Any
 
 from cryptography import x509
-
 from fido2.attestation import InvalidSignature
 
 from .. import metadata

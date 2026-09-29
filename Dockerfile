@@ -35,21 +35,15 @@ COPY --from=ghcr.io/astral-sh/uv:0.12.15 /uv /usr/local/bin/uv
 
 # Copy app source
 WORKDIR /src
-COPY pyproject.toml uv.lock README.md ./
-COPY server/pyproject.toml ./server/pyproject.toml
-COPY COPYING COPYING.APLv2 COPYING.MPLv2 ./
-COPY fido2 ./fido2
+COPY pyproject.toml uv.lock ./
 
 # Install Python dependencies into /install from uv.lock, the same lock CI and
 # local venvs install from. --locked fails the build if the lock is stale, and
-# --require-hashes rejects anything not pinned by it. The vendored fido2 library
-# is installed from source without dependencies (its own deps are in the lock).
+# --require-hashes rejects anything not pinned by it.
 RUN pip install --upgrade pip setuptools wheel && \
-    uv export --locked --no-dev --no-emit-local --package fido2-example-server \
-        -o /tmp/requirements.txt && \
+    uv export --locked --no-dev --no-emit-local -o /tmp/requirements.txt && \
     pip install --prefix=/install --no-cache-dir --no-deps --require-hashes \
         -r /tmp/requirements.txt && \
-    pip install --prefix=/install --no-cache-dir --no-deps . && \
     # Remove build tools
     apt-get purge -y build-essential git pkg-config libssl-dev && \
     apt-get autoremove -y && \

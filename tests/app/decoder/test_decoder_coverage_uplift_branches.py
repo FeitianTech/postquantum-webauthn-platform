@@ -6,7 +6,6 @@ from types import SimpleNamespace
 import pytest
 from cryptography import x509
 from cryptography.x509.oid import ExtensionOID
-
 from fido2.utils import ByteBuffer
 
 

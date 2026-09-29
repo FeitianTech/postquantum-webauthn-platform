@@ -12,7 +12,6 @@ import types
 import uuid
 
 import pytest
-
 from fido2.webauthn import AuthenticatorData
 
 from ..security.ceremony_helpers import ORIGIN, RP_ID, b64u, client_data

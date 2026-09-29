@@ -4,9 +4,8 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-from flask import jsonify, request, session
-
 from fido2.webauthn import PublicKeyCredentialUserEntity
+from flask import jsonify, request, session
 
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
 from ...webauthn import attestation

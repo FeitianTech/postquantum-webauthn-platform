@@ -4,7 +4,7 @@ WebAuthn L3 section 8.8: credCert, the first certificate in x5c, carries a
 nonce in the extension with OID 1.2.840.113635.100.8.2, which a verifier
 compares with SHA-256(authenticatorData || clientDataHash). The extension's
 value is a SEQUENCE holding the nonce as an OCTET STRING under explicit tag
-[1] -- the bytes the vendored fido2's apple.py slices at offset 6 -- and
+[1] -- the bytes fido2's apple.py slices at offset 6 -- and
 ``cryptography`` decodes it. The comparison is a verifier's; it is not made here.
 """
 from __future__ import annotations

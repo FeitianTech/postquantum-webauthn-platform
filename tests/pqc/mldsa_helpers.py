@@ -15,7 +15,6 @@ from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import mldsa
 from cryptography.x509.oid import NameOID
-
 from fido2 import cose
 
 PARAMETER_SETS: tuple[str, str, str] = ("ML-DSA-44", "ML-DSA-65", "ML-DSA-87")

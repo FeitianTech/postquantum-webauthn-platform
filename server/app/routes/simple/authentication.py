@@ -18,9 +18,8 @@ import logging
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from flask import abort, jsonify, request, session
-
 from fido2.webauthn import AuthenticatorData
+from flask import abort, jsonify, request, session
 
 from ... import config
 from ...challenge_registry import (

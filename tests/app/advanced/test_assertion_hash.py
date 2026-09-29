@@ -8,9 +8,9 @@ from __future__ import annotations
 import hashlib
 
 import pytest
-
 from fido2.server import Fido2Server
 from fido2.webauthn import AttestedCredentialData, PublicKeyCredentialRpEntity
+
 from server.app.webauthn import assertion_hash
 from tests.app.security.ceremony_helpers import (
     ORIGIN,

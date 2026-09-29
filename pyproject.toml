@@ -1,50 +1,34 @@
-[tool.poetry]
-name = "fido2"
-version = "1.2.1-dev.0"
-description = "FIDO2/WebAuthn library for implementing clients and servers."
-authors = ["Dain Nilsson <dain@yubico.com>"]
-homepage = "https://github.com/Yubico/python-fido2"
-repository = "https://github.com/Yubico/python-fido2"
-keywords = ["fido2", "webauthn", "ctap", "u2f"]
-classifiers = [
-    "License :: OSI Approved :: BSD License",
-    "License :: OSI Approved :: Apache Software License",
-    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
-    "Operating System :: MacOS",
-    "Operating System :: Microsoft :: Windows",
-    "Operating System :: POSIX :: Linux",
-    "Development Status :: 5 - Production/Stable",
-    "Intended Audience :: Developers",
-    "Intended Audience :: System Administrators",
-    "Topic :: Internet",
-    "Topic :: Security :: Cryptography",
-    "Topic :: Software Development :: Libraries :: Python Modules"
-]
-include = [
-  { path = "COPYING", format = "sdist"},
-  { path = "COPYING.MPLv2", format = "sdist"},
-  { path = "COPYING.APLv2", format = "sdist"},
-  { path = "README.md", format = "sdist"},
-  { path= "server/", format = "sdist"},
+# The application's dependency manifest and the single place its dependencies
+# are declared. Resolved versions are locked in uv.lock, which the Docker
+# image, CI and local venvs all install from. After editing, run `uv lock`.
+
+[project]
+name = "fido2-example-server"
+version = "0.1.0"
+description = "Example server for python-fido2"
+authors = [{ name = "Rain Zhang", email = "rainzhang.zty@gmail.com" }]
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fido2==2.2.1",                       # exact: the app reads fido2's data classes and CTAP tables
+    "Flask>=3.1.3,<4",
+    "cryptography>=49",                   # first release with working ML-DSA + ML-DSA x509
+    "cbor2>=5.6.4",
+    "gunicorn>=26.2.0,<27",
+    "google-api-core>=2.38.0",
+    "google-auth>=2.58.0",
+    "google-cloud-core>=2.7.0",
+    "google-cloud-storage>=3.14.1",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.12"
-cryptography = ">=49"      # native ML-DSA-44/65/87 sign/verify and ML-DSA x509
-pyscard = {version = ">=1.9,<3", optional = true}  # was "^1.9 || ^2"; poetry-core 2.5 renders that union as invalid PEP 508
+[dependency-groups]
+dev = [
+    "pytest",
+    "coverage",
+    "hypothesis",                         # the codec's round-trip property tests
+]
 
-[tool.poetry.extras]
-pcsc = ["pyscard"]
-
-[build-system]
-# Pinned exactly: uv.lock does not lock build requirements, so a floating range
-# lets a new poetry-core release break an unchanged commit (2.5.0 did, 09-23).
-# uv and the Dockerfile's `pip install .` both build under isolation from this
-# line. Dependabot cannot see it (it skips [build-system] in Poetry projects).
-requires = ["poetry-core==2.5.0"]
-build-backend = "poetry.core.masonry.api"
-
-
-# The application (server/) is the only workspace member; the lock lives at /uv.lock.
-[tool.uv.workspace]
-members = ["server"]
+[tool.uv]
+# Not a distributable package: the app runs from source (gunicorn server.app.app:app),
+# so uv installs only its dependencies.
+package = false

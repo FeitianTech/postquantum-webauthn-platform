@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 
 import pytest
-
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 

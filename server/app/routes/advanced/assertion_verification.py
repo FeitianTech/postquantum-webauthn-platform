@@ -12,10 +12,9 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-from flask import jsonify, session
-
 from fido2.cose import CoseKey, UnsupportedKey
 from fido2.webauthn import AuthenticatorData
+from flask import jsonify, session
 
 from ... import config
 from ...encoding import encode_base64url

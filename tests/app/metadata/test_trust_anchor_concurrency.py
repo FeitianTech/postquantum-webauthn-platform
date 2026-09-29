@@ -8,9 +8,8 @@ import time
 from types import SimpleNamespace
 
 import pytest
-from flask import g
-
 from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
+from flask import g
 
 
 @pytest.fixture

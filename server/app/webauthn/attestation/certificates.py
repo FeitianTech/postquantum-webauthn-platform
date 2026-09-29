@@ -9,7 +9,6 @@ from typing import Any
 from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives import hashes, serialization
-
 from fido2.utils import ByteBuffer
 from fido2.webauthn import RegistrationResponse
 

@@ -17,9 +17,9 @@ from cryptography.exceptions import InvalidSignature as CryptographyInvalidSigna
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.x509.oid import NameOID
-
 from fido2.attestation import InvalidSignature, verify_x509_chain
 from fido2.utils import websafe_encode
+
 from server.app import mds_blob
 
 _NOW = datetime.now(timezone.utc)

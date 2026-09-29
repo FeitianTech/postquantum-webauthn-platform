@@ -59,6 +59,7 @@ def test_certificate_helpers_match_their_golden_record():
     import base64
 
     from fido2.utils import ByteBuffer
+
     from server.app.webauthn import attestation
 
     der = material.generated_certificates()["generated-ec-p256"]

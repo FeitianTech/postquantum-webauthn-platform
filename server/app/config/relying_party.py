@@ -1,7 +1,6 @@
 """The relying party: its ID and name, and the ``Fido2Server`` bound to them.
 
-Importing this switches fido2's WebAuthn data classes to their JSON mapping -- a
-process-wide switch that can only be set once. ``create_app()`` puts the RP
+``create_app()`` puts the RP
 name/ID defaults into ``app.config`` and, through ``init_app``, warns once when
 neither an RP ID nor an origin allowlist is configured. ``create_fido_server``
 builds a ``Fido2Server`` per request.
@@ -15,25 +14,13 @@ from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlsplit
 
-from flask import Flask, current_app, has_request_context, request
-
-import fido2.features
 from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
+from flask import Flask, current_app, has_request_context, request
 
 from . import origins
 
 logger = logging.getLogger(__name__)
-
-# Enable webauthn-json mapping if available (compatible across fido2 versions)
-try:  # pragma: no cover - compatibility shim
-    fido2.features.webauthn_json_mapping.enabled = True
-except Exception:  # pragma: no cover - compatibility shim
-    try:
-        fido2.features.webauthn_json.enabled = True
-    except Exception:  # pragma: no cover - compatibility shim
-        pass
-
 
 
 def config_from_env() -> dict[str, Any]:

@@ -1,6 +1,6 @@
 """Every CBOR byte the decoder reads goes through ``cbor_parser``.
 
-The vendored ``fido2.cbor`` reads all of major type 7 as a boolean without
+``fido2.cbor`` reads all of major type 7 as a boolean without
 consuming a float's payload, and cuts a short byte string off without saying
 so; cbor2 accepts what CTAP forbids. Neither is used on decoder input, directly
 or through fido2's ``AttestationObject`` / ``AuthenticatorData`` /

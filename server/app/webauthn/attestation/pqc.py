@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import Any
 
 from cryptography import x509
-
 from fido2.attestation import AttestationResult, AttestationType, InvalidSignature
 from fido2.cose import CoseKey
 

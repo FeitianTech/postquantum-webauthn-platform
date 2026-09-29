@@ -8,9 +8,8 @@ from types import SimpleNamespace
 
 import itsdangerous
 import pytest
-from flask import ctx, g, session
-
 from fido2.mds3 import MetadataBlobPayloadEntry
+from flask import ctx, g, session
 
 
 @pytest.fixture

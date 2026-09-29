@@ -9,8 +9,6 @@ from __future__ import annotations
 from collections.abc import Mapping, MutableMapping
 from typing import Any, NamedTuple
 
-from flask import jsonify
-
 from fido2.webauthn import (
     AttestationConveyancePreference,
     AuthenticatorAttachment,
@@ -19,6 +17,7 @@ from fido2.webauthn import (
     ResidentKeyRequirement,
     UserVerificationRequirement,
 )
+from flask import jsonify
 
 from ... import config
 from ...attachments import normalize_attachment, resolve_effective_attachments

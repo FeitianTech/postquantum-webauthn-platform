@@ -8,9 +8,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from flask import session
-
 from fido2.webauthn import UserVerificationRequirement
+from flask import session
 
 from ... import config
 from . import binary

@@ -4,7 +4,6 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from cryptography import x509
-
 from fido2.attestation import InvalidSignature
 from fido2.webauthn import RegistrationResponse
 

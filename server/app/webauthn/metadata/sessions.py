@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from fido2.mds3 import MetadataBlobPayloadEntry
 from flask import (
     after_this_request,
     current_app,
@@ -23,8 +24,6 @@ from flask import (
     session,
 )
 from itsdangerous import BadSignature, URLSafeTimedSerializer
-
-from fido2.mds3 import MetadataBlobPayloadEntry
 
 from ...env_flags import parse_env_flag
 from ...storage import session_metadata

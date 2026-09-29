@@ -12,9 +12,9 @@ from pathlib import Path
 
 import pytest
 from cryptography import x509
+from fido2.attestation.base import InvalidSignature
 
 import tools.update_mds_snapshot as updater
-from fido2.attestation.base import InvalidSignature
 from server.app import mds_snapshot_dir
 from tests.app.metadata import mds_fixture
 

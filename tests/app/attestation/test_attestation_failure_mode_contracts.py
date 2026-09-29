@@ -2,7 +2,6 @@ import base64
 import hashlib
 
 import pytest
-
 from fido2.attestation import (
     Attestation,
     AttestationResult,
@@ -10,6 +9,7 @@ from fido2.attestation import (
     InvalidSignature,
 )
 from fido2.webauthn import Aaguid, RegistrationResponse
+
 from server.app.webauthn.attestation import evaluation
 
 

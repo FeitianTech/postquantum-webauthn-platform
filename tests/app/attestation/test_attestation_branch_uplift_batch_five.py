@@ -6,7 +6,6 @@ from types import MappingProxyType, SimpleNamespace
 import pytest
 from cryptography import x509
 from cryptography.x509.oid import ObjectIdentifier
-
 from fido2.attestation import Attestation
 from fido2.cose import CoseKey
 from fido2.webauthn import Aaguid, AuthenticatorData, RegistrationResponse

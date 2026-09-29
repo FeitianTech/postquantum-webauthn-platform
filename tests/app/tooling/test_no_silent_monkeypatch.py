@@ -18,18 +18,11 @@ TESTS_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = TESTS_ROOT.parent
 
 _BUILTIN = "shadows the builtin {} in this module's globals only; a module never has one of its own"
-_WINDOWS = "exists only on Windows; supplied so fido2's Windows backend imports on macOS and Linux"
 
 ALLOWED: dict[tuple[str, str], str] = {
     ("tests/app/core/test_config_residual_branches_batch_three.py", "open"): _BUILTIN.format("open"),
     ("tests/app/metadata/test_metadata_residual_branches.py", "open"): _BUILTIN.format("open"),
     ("tests/app/storage/test_github_client.py", "range"): _BUILTIN.format("range"),
-    ("tests/fido2/hid/test_hid_windows_branch_contracts.py", "WinDLL"): _WINDOWS,
-    ("tests/fido2/hid/test_hid_windows_branch_contracts.py", "WinError"): _WINDOWS,
-    ("tests/fido2/hid/test_hid_windows_contracts.py", "WinDLL"): _WINDOWS,
-    ("tests/fido2/hid/test_hid_windows_contracts.py", "WinError"): _WINDOWS,
-    ("tests/fido2/windows/test_win_api_struct_contracts.py", "WinDLL"): _WINDOWS,
-    ("tests/fido2/windows/test_win_api_struct_contracts.py", "HRESULT"): _WINDOWS,
 }
 
 _PATCHERS = {"patch", "object", "multiple", "dict"}

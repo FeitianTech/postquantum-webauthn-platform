@@ -8,7 +8,6 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from cryptography import x509
-
 from fido2.utils import ByteBuffer
 from fido2.webauthn import CollectedClientData
 

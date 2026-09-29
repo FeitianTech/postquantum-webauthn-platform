@@ -11,6 +11,7 @@ import inspect
 from dataclasses import fields
 
 from fido2.ctap2.base import AssertionResponse, AttestationResponse, Ctap2
+
 from server.app.decoder import ctap_tables
 from server.app.decoder.encode import constants
 
@@ -128,8 +129,10 @@ def test_get_info_members_are_ctap_2_2_section_6_4():
         0x1B: "pinComplexityPolicy",
         0x1C: "pinComplexityPolicyURL",
         0x1D: "maxPINLength",
+        0x1E: "encCredStoreState",
+        0x1F: "authenticatorConfigCommands",
     }
-    assert len(fields(Info)) == 29
+    assert len(fields(Info)) == 31
 
 
 def test_get_info_option_ids_are_the_ctap_2_2_table_with_its_defaults():

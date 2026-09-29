@@ -5,7 +5,6 @@ from types import SimpleNamespace
 
 import pytest
 from cryptography import x509
-
 from fido2.webauthn import Aaguid
 
 

@@ -5,7 +5,6 @@ import time
 from types import SimpleNamespace
 
 import pytest
-
 from fido2 import cbor
 
 

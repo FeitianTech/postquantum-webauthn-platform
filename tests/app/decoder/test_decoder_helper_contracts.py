@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pytest
-
 from fido2.utils import ByteBuffer
+
 from server.app.decoder.decode import json_input
 
 

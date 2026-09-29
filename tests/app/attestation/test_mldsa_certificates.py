@@ -13,8 +13,8 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, ec, ed25519, mldsa, rsa
 from cryptography.x509.oid import NameOID
-
 from fido2.attestation import InvalidSignature
+
 from server.app.webauthn import mldsa as mldsa_info
 from server.app.webauthn.attestation import chain
 from tests.pqc import mldsa_helpers

@@ -12,7 +12,6 @@ from collections.abc import Sequence
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature as _InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
-
 from fido2.attestation import InvalidSignature
 
 from ..mldsa import PUBLIC_KEY_TYPES, describe_mldsa_oid

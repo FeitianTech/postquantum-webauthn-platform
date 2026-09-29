@@ -5,13 +5,12 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from flask import g, has_request_context
-
 from fido2.mds3 import (
     MdsAttestationVerifier,
     MetadataBlobPayload,
     MetadataBlobPayloadEntry,
 )
+from flask import g, has_request_context
 
 from . import blob, entries, sessions
 from . import state as _state

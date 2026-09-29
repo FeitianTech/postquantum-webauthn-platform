@@ -14,7 +14,6 @@ import json
 from typing import Any
 
 import pytest
-
 from fido2 import cbor
 
 # The "Credential Creation ES256 Output" dump from CBOR_hexcode.txt (ce03e270).

@@ -5,9 +5,8 @@ from datetime import datetime, timezone
 
 import itsdangerous
 import pytest
-from flask import g, session
-
 from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
+from flask import g, session
 
 
 def _entry_payload(*, aaguid: str, description: str):

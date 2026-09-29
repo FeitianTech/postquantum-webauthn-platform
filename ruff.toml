@@ -1,13 +1,10 @@
 # Ruff configuration for the whole repository.
 #
-# This lives in a standalone ruff.toml rather than in the root pyproject.toml
-# because that file is the vendored `fido2/` library's upstream Poetry manifest.
-# Repo-wide tooling policy does not belong in a vendored manifest, and keeping
-# it out means the manifest stays diffable against upstream python-fido2.
+# It lives in a standalone ruff.toml rather than in pyproject.toml, which holds
+# only the app's dependencies (ruff itself is kept out of uv.lock).
 
-# The app and the vendored library both declare requires-python >= 3.12
-# (server/pyproject.toml and pyproject.toml), so PEP 585/604 syntax is valid
-# everywhere and the UP modernisation rules are safe to apply.
+# The app declares requires-python >= 3.12 (pyproject.toml), so PEP 585/604
+# syntax is valid everywhere and the UP modernisation rules are safe to apply.
 target-version = "py312"
 
 [lint]
@@ -25,13 +22,12 @@ target-version = "py312"
 #     "load-bearing defensive handler" bucket and the rest in "silently swallows
 #     a failure". Splitting them needs a human decision per site, so they stay
 #     out of the gate rather than being mass-rewritten or mass-suppressed.
-#   RUF100 (86)  its answer depends on which rules are selected, and with a gate
-#     this narrow it calls 79 live markers dead: the blanket `# noqa` on long
+#   RUF100 (63)  its answer depends on which rules are selected, and with a gate
+#     this narrow it calls live markers dead: the blanket `# noqa` on long
 #     fixture lines (E501 is not gated), `# noqa: S101` in tests, and the
-#     `# noqa: F401` re-export markers in vendored `fido2/**/__init__.py`, which
-#     ruff only skips because `ignore-init-module-imports` still defaults to
-#     true and which come back the moment that deprecated default is dropped.
-#     Deleting them would be churn against upstream that we would have to undo.
+#     `# noqa: F401` re-export markers in `server/app/decoder/encode/__init__.py`,
+#     which ruff only skips because `ignore-init-module-imports` still defaults
+#     to true and which come back the moment that deprecated default is dropped.
 #     The 7 that were genuinely stale have been removed by hand.
 #   The rest of UP, plus B/C4/SIM/RUF012/TRY/DTZ/...  all still have findings.
 #     They are worth adopting, but one rule group at a time with the suite green.

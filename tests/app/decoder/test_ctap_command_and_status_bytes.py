@@ -15,10 +15,10 @@ from __future__ import annotations
 import base64
 
 import pytest
-
 from fido2 import cbor
 from fido2.ctap import CtapError
 from fido2.ctap2.base import Ctap2
+
 from server.app.decoder import decode_payload_text
 from server.app.decoder.decode import ctap
 

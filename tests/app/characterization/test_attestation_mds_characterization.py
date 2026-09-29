@@ -16,7 +16,6 @@ import json
 import pytest
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
-
 from fido2 import cbor
 from fido2.mds3 import MdsAttestationVerifier, MetadataBlobPayload
 

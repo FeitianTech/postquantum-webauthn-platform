@@ -6,10 +6,9 @@ from datetime import datetime, timezone
 from typing import Any
 
 from cryptography import x509
-from flask import current_app
-
 from fido2.utils import ByteBuffer
 from fido2.webauthn import Aaguid
+from flask import current_app
 
 from ... import encoding
 from . import formatting

@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
-
 from fido2.mds3 import MetadataBlobPayloadEntry
 
 

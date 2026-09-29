@@ -13,10 +13,10 @@ import json
 
 import pytest
 from cryptography import x509
-
 from fido2.attestation import UnsupportedType
 from fido2.mds3 import MdsAttestationVerifier, MetadataBlobPayload
 from fido2.webauthn import RegistrationResponse
+
 from server.app.webauthn.attestation import evaluation
 from tests.app.characterization import material
 from tests.app.characterization import (

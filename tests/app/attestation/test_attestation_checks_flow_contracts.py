@@ -2,7 +2,6 @@ import hashlib
 from types import SimpleNamespace
 
 import pytest
-
 from fido2.attestation import Attestation, InvalidSignature
 from fido2.webauthn import AuthenticatorData, CollectedClientData, RegistrationResponse
 

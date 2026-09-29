@@ -1,4 +1,4 @@
-"""The server needs Python 3.12 (server/pyproject.toml): no backport of a stdlib module."""
+"""The server needs Python 3.12 (pyproject.toml): no backport of a stdlib module."""
 from __future__ import annotations
 
 import ast

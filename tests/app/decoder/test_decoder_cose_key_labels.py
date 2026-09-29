@@ -10,10 +10,10 @@ import hashlib
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric import ec, mldsa, rsa
-
 from fido2 import cbor
 from fido2.cose import ES256, ES384, ES512, MLDSA44, MLDSA65, MLDSA87, PS256
 from fido2.webauthn import Aaguid, AttestedCredentialData, AuthenticatorData
+
 from server.app.decoder.decode import binary
 from server.app.webauthn import pqc
 

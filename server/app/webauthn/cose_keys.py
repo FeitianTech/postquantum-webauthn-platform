@@ -8,7 +8,6 @@ PS256 with another hash (RFC 8812).
 from __future__ import annotations
 
 from cryptography.hazmat.primitives import hashes
-
 from fido2.cose import PS256, RS256
 
 __all__ = ["BY_NAME", "PS384", "PS512", "RS384", "RS512"]

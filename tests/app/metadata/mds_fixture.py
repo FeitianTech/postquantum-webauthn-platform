@@ -26,8 +26,8 @@ from typing import Any
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
-
 from fido2.utils import websafe_encode
+
 from tests.app.characterization import material
 from tools import update_mds_snapshot as updater
 
