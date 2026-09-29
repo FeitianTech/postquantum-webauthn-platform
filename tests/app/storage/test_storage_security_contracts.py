@@ -665,10 +665,8 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
 
     assert not any("unsupported type" in message for message in warnings), warnings
 
-    # The app reads it back through the same session cookie the client holds.
-    download = client.get("/api/downloadcred?email=alice@example.com")
-    assert download.status_code == 200
-    records = record_format.decode_payload(download.data)
+    # The store reads it back from the session folder it wrote it into.
+    records = credentials.readkey("alice@example.com", session_id=written[0].parent.name)
     assert len(records) == 1
     credential_data = records[0]["credential_data"]
     assert credential_data.credential_id == authenticator.credential_id

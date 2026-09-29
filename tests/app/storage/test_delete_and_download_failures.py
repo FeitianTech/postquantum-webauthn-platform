@@ -1,7 +1,7 @@
 """The credential store says when it failed, instead of answering as if nothing were stored.
 
-delkey raises when a file it should delete stays, and a download the store cannot
-read is 503, not the 404 of "nothing stored for this name".
+delkey raises when a file it should delete stays, and readkey raises when it cannot
+read a copy, rather than answering "nothing stored for this name".
 """
 from __future__ import annotations
 
@@ -10,12 +10,6 @@ import os
 import pytest
 
 _SESSION = "session-failures"
-
-
-@pytest.fixture
-def session_id(monkeypatch, metadata_module):
-    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: _SESSION)
-    return _SESSION
 
 
 @pytest.fixture
@@ -60,14 +54,11 @@ def _unreadable(store, name):
     os.makedirs(store._local_filename(name, _SESSION, create=True))
 
 
-def test_a_download_the_store_cannot_read_is_503_not_404(client, monkeypatch, session_id, local_store):
-    from server.app.routes import general
+def test_a_copy_the_store_cannot_read_raises_instead_of_reading_as_empty(local_store):
+    from server.app.storage.common import StorageReadError
 
-    monkeypatch.setattr(general, "ensure_metadata_session_id", lambda: _SESSION)
     _unreadable(local_store, "alice@example.com")
 
-    response = client.get("/api/downloadcred?email=alice@example.com")
-
-    # 404 would say "nothing stored for alice".
-    assert response.status_code == 503
-    assert response.get_json() == {"error": "The stored credentials could not be read. Please try again."}
+    # An empty list would say "nothing stored for alice".
+    with pytest.raises(StorageReadError):
+        local_store.readkey("alice@example.com", session_id=_SESSION)

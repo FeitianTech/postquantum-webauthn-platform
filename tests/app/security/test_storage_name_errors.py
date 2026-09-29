@@ -39,18 +39,15 @@ def _assert_refused_without_traceback(response, caplog):
     assert any("Refused a storage name" in record.getMessage() for record in caplog.records)
 
 
-def test_download_refuses_a_traversal_name(client, caplog, store):
-    with caplog.at_level(logging.WARNING):
-        response = client.get(f"/api/downloadcred?email={TRAVERSAL}")
+def test_the_store_refuses_a_traversal_name_before_touching_a_path(store, storage_module):
+    from server.app.storage.common import InvalidStorageIdentifier
 
-    _assert_refused_without_traceback(response, caplog)
+    with pytest.raises(InvalidStorageIdentifier):
+        storage_module.readkey(TRAVERSAL, session_id="session-name-errors")
+    with pytest.raises(InvalidStorageIdentifier):
+        storage_module.delkey(TRAVERSAL, session_id="session-name-errors")
 
-
-def test_delete_refuses_a_traversal_name(client, caplog, store):
-    with caplog.at_level(logging.WARNING):
-        response = client.post("/api/deletepub", json={"email": TRAVERSAL})
-
-    _assert_refused_without_traceback(response, caplog)
+    assert sorted(path.name for path in store.iterdir()) == []
 
 
 def test_simple_registration_refuses_a_traversal_name(client, caplog, store):

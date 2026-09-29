@@ -11,8 +11,8 @@ anything; that version cannot match it, so the save loses, reads again, and
 stores its own record alone.
 
 Everything is real: genuine registrations, the real store (a temporary
-directory, or a fake GCS bucket with object generations) and a real delete
-request. The registration is held just after its read until the delete has
+directory, or a fake GCS bucket with object generations) and the store's own
+delete. The registration is held just after its read until the delete has
 answered, so the race is forced rather than hoped for.
 """
 from __future__ import annotations
@@ -124,13 +124,10 @@ def test_a_registration_racing_a_delete_does_not_bring_back_the_legacy_credentia
     registration.start()
     assert has_read.wait(10)
 
-    deleting = app.test_client()
-    deleting.set_cookie("session", registering.get_cookie("session").value)
-    deleted = deleting.post("/api/deletepub", json={"email": EMAIL})
+    store.delkey(EMAIL, session_id=session_id)
     delete_answered.set()
     registration.join(20)
 
-    assert deleted.status_code == 200, deleted.get_json()
     assert [response.status_code for response in responses] == [200], [r.get_json() for r in responses]
     # The deleted credential stays deleted; the one registered after it is kept.
     assert _stored_ids(store, session_id) == [new.credential_id]
@@ -164,16 +161,16 @@ def test_a_save_from_a_legacy_read_loses_to_a_delete_after_another_save(backend)
     assert store.readkey(EMAIL, session_id=SESSION) == [{"credential_data": "first"}]
 
 
-def test_a_deleted_user_has_nothing_stored_or_to_download(app, backend, simple_module):
+def test_a_deleted_user_has_nothing_stored(app, backend, simple_module):
     _kind, store, _bucket = backend
     client = app.test_client()
     assert _complete(client, Authenticator(), _begin(client)).status_code == 200
     session_id = _session_id(client)
+    assert store.readkey(EMAIL, session_id=session_id) != []
 
-    assert client.post("/api/deletepub", json={"email": EMAIL}).status_code == 200
+    store.delkey(EMAIL, session_id=session_id)
 
     assert store.readkey(EMAIL, session_id=session_id) == []
-    assert client.get(f"/api/downloadcred?email={EMAIL}").status_code == 404
 
 
 def test_deleting_a_name_with_nothing_stored_writes_nothing(backend):
