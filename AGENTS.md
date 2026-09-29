@@ -21,16 +21,17 @@ A FIDO2/WebAuthn test platform and developer tool: simple and advanced registrat
 authentication, post-quantum (ML-DSA) credentials, credential inspection and attestation
 decoding, a FIDO MDS explorer, and a CBOR/CTAP codec. Flask serves the API and the UI; the
 UI is `web/`, a Next.js static export Flask serves at `/`. No Node runs in production.
-`fido2/` is a local copy of python-fido2 the server uses: treat changes there as library
-changes.
+The server uses python-fido2 from PyPI (`fido2`, pinned exactly); what it adds to fido2 lives
+in `server/app` (see "Backend").
 
 ## Layout
 
 - `server/app/`: the Flask app (factory, config, routes, WebAuthn, storage, decoder, MDS).
 - `web/`: the UI (Next.js 15 Pages Router, TypeScript, Tailwind CSS v4). `web/src/logic` is
   its DOM-free logic in plain JavaScript; `web/e2e` its Playwright tests.
-- `tests/`: `app/` (the Flask app, tooling guards, characterization), `fido2/`, `pqc/`,
-  `device/` (hardware, skipped unless enabled), `fixtures/` (the MDS fixture snapshot).
+- `tests/`: `app/` (the Flask app, tooling guards, characterization; `python_fido2_vectors.py`
+  holds the vectors taken from python-fido2's own tests), `pqc/`, `fixtures/` (the MDS fixture
+  snapshot).
 - `tools/`: `update_mds_snapshot.py`, `build_static_assets.py` (precompresses the export at
   image build), `commit_messages.py` (the commit message check), `update_footer_year.py`.
 - `docs/`: `DESIGN.md` (the UI's design, security and serving rules), `DECODER.md`,
@@ -183,9 +184,11 @@ their exports or sentences. A new surface splits its logic out here first.
   with `logging.getLogger(__name__)`. On Cloud Run (`K_SERVICE`) the app refuses to start
   without `FIDO_SERVER_SECRET_KEY` or `FIDO_SERVER_SECRET_KEY_FILE`; only local development
   generates `instance/session-secret.key`, and tests never do.
-- `mds_trust.py` (the MDS trust anchor), `mds_snapshot_dir.py` (the snapshot's file names,
-  its directory, the whole-file and `.gz` sibling writers) and `mds_snapshot_sets.py` (the
-  snapshot in Cloud Storage) are Flask-free leaves the updater imports.
+- `mds_trust.py` (the MDS trust anchor), `mds_blob.py` (the BLOB's chain to that root, which
+  may end in a cross-certificate fido2's `parse_blob` refuses, its signature and payload),
+  `mds_snapshot_dir.py` (the snapshot's file names, its directory, the whole-file and `.gz`
+  sibling writers) and `mds_snapshot_sets.py` (the snapshot in Cloud Storage) are Flask-free
+  leaves the updater imports.
 - Routes: `routes/simple/` and `routes/advanced/` (begin/complete; the bodies are short
   orchestrators over modules named for their stage; the try blocks and the order of session
   reads are behaviour); `routes/general.py` (MDS bootstrap and info, decoder endpoints, misc;
@@ -198,10 +201,16 @@ their exports or sentences. A new surface splits its logic out here first.
   immutable when the version is current, and no other snapshot file at any path;
   `send_precompressed`); `routes/csp_report.py` (one WARNING line per violation, bounded);
   `routes/errors.py`.
-- `webauthn/attestation/` (checks, trust, PQC and classical, certificate serialisation),
+- `webauthn/attestation/` (checks, trust, PQC and classical, certificate serialisation;
+  `chain.py` verifies certificate chains, ML-DSA included, which fido2's `verify_x509_chain`
+  does not; `evaluation.py` checks an attestation against the MDS metadata step by step),
   `webauthn/signature_algorithms.py` (the one spelling of a signature algorithm),
   `webauthn/metadata/` (MDS resolution), `webauthn/pqc.py` (the ML-DSA adapter),
-  `webauthn/sign_count.py`.
+  `webauthn/mldsa.py` (ML-DSA parameter sets, sizes and certificate keys),
+  `webauthn/cose_keys.py` (RS384, RS512, PS384, PS512: the package imports it so fido2's
+  `CoseKey` lookups find them), `webauthn/assertion_hash.py` (the Advanced tab's hash choice
+  for an assertion), `webauthn/sign_count.py`. `config/logs.py` holds `fido2.server`'s
+  logger at WARNING: fido2 logs credential IDs at INFO.
 - `storage/` and `credential_artifacts.py`: every read-modify-write is compare-and-swap; a
   failed read raises `StorageReadError` (503), never a shorter list. **Read `docs/STORAGE.md`
   first.** `decoder/`: the Codec's server side; it shows what was sent and never repairs it.
@@ -257,9 +266,11 @@ at zero; `F821` has nothing ignored and there is no per-file ignore. Do not run 
 
 ## Python dependencies
 
-Declared in `server/pyproject.toml`, locked in `uv.lock`; the image, CI and local venvs install
-from the lock (`uv sync --locked`). To change one: edit `server/pyproject.toml`, `uv lock`,
-commit both. The root `pyproject.toml` is the vendored `fido2/` library's manifest.
+Declared in the root `pyproject.toml` (the app's manifest; the app is not a package), locked in
+`uv.lock`; the image, CI and local venvs install from the lock (`uv sync --locked`). To change
+one: edit `pyproject.toml`, `uv lock`, commit both. `fido2` is pinned exactly; Dependabot
+proposes its minor releases, and a major one is a deliberate move (the characterization
+goldens show what it changes).
 
 ## CI, deploys and bots
 
@@ -282,7 +293,7 @@ commit both. The root `pyproject.toml` is the vendored `fido2/` library's manife
   one-line message);
   `update-fido-mds.yml` only verifies the upstream BLOB.
 - Coverage is a gate: `.coveragerc`'s floor and `web/vitest.config.mts`'s (every logic file at
-  100 %). `fido2/hid/macos.py` is omitted on purpose (its tests skip off Darwin).
+  100 %).
 - `npm ci` everywhere. If a lock regeneration drops foreign-platform native builds, delete
   `node_modules` and the lock and `npm install` from clean (npm/cli#4828). `web/package.json`
   overrides Next 15's pinned `postcss`; Dependabot skips majors of `next`, `typescript` and
@@ -314,9 +325,8 @@ commit both. The root `pyproject.toml` is the vendored `fido2/` library's manife
 - The Simple and Advanced tabs share the saved credential list and its storage: verify both
   flows when you touch either.
 - Begin/complete flows depend on Flask session state.
-- `fido2/` is part of the repo; do not assume it matches upstream python-fido2.
-- In a git worktree, the venv's editable `fido2` puts the main checkout on `sys.path`: set
-  `PYTHONPATH` to the worktree for scripts (pytest run from the worktree root is fine).
+- fido2 finds a COSE key class by walking `CoseKey`'s subclasses, and the first class with an
+  algorithm ID wins: an app subclass can add an algorithm, never replace fido2's.
 - Exported HTML carries attributes: state that feeds an attribute starts at its build-time
   value and changes after hydration, or hydration differs.
 - A hash navigation does not reload the page: in a Playwright test, reload after writing to

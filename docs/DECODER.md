@@ -28,7 +28,7 @@ finding at the attestation statement's `response` member, its path ending
 ## Tables and registries
 
 `ctap_tables.py` is the one CTAP table both sides read (command and status bytes,
-request parameters, response members), derived from the vendored `fido2`; COSE
+request parameters, response members), derived from `fido2`; COSE
 algorithm names come from `webauthn/pqc.py`'s `describe_algorithm`. Do not add
 another copy of either. CTAP numbers and names (getInfo members and options,
 extension identifiers) go in `ctap_tables.py`, COSE registries in
