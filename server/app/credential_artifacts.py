@@ -59,14 +59,8 @@ _ARTIFACT_DIR = os.environ.get(
     "FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR",
     os.path.join(str(_SERVER_RUNTIME_ROOT), "credential-artifacts"),
 )
-_USER_FOLDER_PREFIX = os.environ.get(
-    "FIDO_SERVER_GCS_USER_FOLDER_PREFIX",
-    os.environ.get("FIDO_SERVER_GCS_CREDENTIAL_ARTIFACT_PREFIX", "user-data"),
-)
-_ARTIFACT_SUBDIR = os.environ.get(
-    "FIDO_SERVER_GCS_USER_ARTIFACT_SUBDIR",
-    os.environ.get("FIDO_SERVER_GCS_CREDENTIAL_ARTIFACT_PREFIX", "credential-artifacts"),
-)
+_USER_FOLDER_PREFIX = "user-data"
+_ARTIFACT_SUBDIR = "credential-artifacts"
 # Striped per-key locks: serialise read-merge-write for one artifact without
 # making every artifact operation in the process wait on network I/O. They keep
 # threads apart; across processes a local record's writers hold an flock on its

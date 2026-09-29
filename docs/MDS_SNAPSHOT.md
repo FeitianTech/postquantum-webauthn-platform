@@ -170,8 +170,7 @@ fallback when there is no pointer; nothing writes them any more.
 ## Publishing a snapshot to Cloud Storage
 
 With credentials for the bucket configured (`FIDO_SERVER_GCS_ENABLED=1`,
-`FIDO_SERVER_GCS_BUCKET`, and either application-default credentials or
-`FIDO_SERVER_GCS_CREDENTIALS_FILE`/`_JSON`):
+`FIDO_SERVER_GCS_BUCKET`, and application-default credentials):
 
 ```bash
 FIDO_SERVER_GCS_ENABLED=1 FIDO_SERVER_GCS_BUCKET=pqcwebauthn python tools/update_mds_snapshot.py --publish

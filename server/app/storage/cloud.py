@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import importlib
-import json
 import os
 import threading
 import time
@@ -31,7 +30,6 @@ _LAZY_MODULES = {
     "gcs_exceptions": "google.api_core.exceptions",
     "auth_exceptions": "google.auth.exceptions",
     "storage": "google.cloud.storage",
-    "service_account": "google.oauth2.service_account",
 }
 _LAZY_IMPORT_LOCK = threading.Lock()
 
@@ -92,28 +90,9 @@ def gcs_enabled() -> bool:
 
 
 def _build_client() -> Any:
-    storage = _lazy("storage")
-    credentials_path = os.environ.get("FIDO_SERVER_GCS_CREDENTIALS_FILE")
-    credentials_json = os.environ.get("FIDO_SERVER_GCS_CREDENTIALS_JSON")
-    project_override = os.environ.get("FIDO_SERVER_GCS_PROJECT")
-
-    if credentials_path:
-        credentials = _lazy("service_account").Credentials.from_service_account_file(
-            credentials_path
-        )
-        project_id = project_override or credentials.project_id
-        return storage.Client(project=project_id, credentials=credentials)
-
-    if credentials_json:
-        info = json.loads(credentials_json)
-        credentials = _lazy("service_account").Credentials.from_service_account_info(info)
-        project_id = project_override or info.get("project_id")
-        return storage.Client(project=project_id, credentials=credentials)
-
-    if project_override:
-        return storage.Client(project=project_override)
-
-    return storage.Client()
+    # Application-default credentials: the service identity on Cloud Run.
+    project = os.environ.get("FIDO_SERVER_GCS_PROJECT") or None
+    return _lazy("storage").Client(project=project)
 
 
 def _ensure_bucket() -> Any:

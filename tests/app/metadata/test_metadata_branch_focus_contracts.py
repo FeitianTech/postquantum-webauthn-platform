@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime
 from types import SimpleNamespace
 
 import itsdangerous
@@ -199,22 +199,7 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
     assert schedule_calls == [True]
 
 
-def test_env_interval_upload_and_normalisation_error_edges(metadata_module, monkeypatch, uploads, sessions):
-    monkeypatch.setenv("TEST_ENV_BOOL", " YES ")
-    assert metadata_sessions._env_flag("TEST_ENV_BOOL") is True
-
-    warnings = []
-    monkeypatch.setattr(
-        sessions.logger,
-        "warning",
-        lambda *args, **kwargs: warnings.append((args, kwargs)),
-    )
-    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "bad-seconds")
-    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "bad-hours")
-
-    assert metadata_sessions._resolve_cleanup_interval() == timedelta(hours=6)
-    assert len(warnings) >= 2
-
+def test_upload_and_normalisation_error_edges(metadata_module, monkeypatch, uploads, sessions):
     recorded = []
     monkeypatch.setattr(uploads, "is_logging_enabled", lambda: True)
     monkeypatch.setattr(uploads, "git_blob_sha", lambda _content: "new-sha")

@@ -1,38 +1,9 @@
 import os
-from datetime import timedelta
 
 import pytest
 
 from server.app.webauthn.metadata import sessions as metadata_sessions
-from server.app.webauthn.metadata import state as metadata_state
 from server.app.webauthn.metadata import uploads as metadata_uploads
-
-
-def test_resolve_cleanup_interval_prefers_seconds_over_hours(monkeypatch):
-    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "15")
-    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "2")
-
-    interval = metadata_sessions._resolve_cleanup_interval()
-
-    assert interval == timedelta(seconds=15)
-
-
-def test_resolve_cleanup_interval_uses_hours_when_seconds_invalid(monkeypatch):
-    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "not-a-number")
-    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "1.5")
-
-    interval = metadata_sessions._resolve_cleanup_interval()
-
-    assert interval == timedelta(hours=1.5)
-
-
-def test_resolve_cleanup_interval_defaults_when_all_config_values_negative(monkeypatch, app_config):
-    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "-3")
-    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "-1")
-
-    interval = metadata_sessions._resolve_cleanup_interval()
-
-    assert interval == timedelta(hours=6)
 
 
 def test_normalise_session_identifier_rejects_path_separators(monkeypatch):

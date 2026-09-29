@@ -10,7 +10,6 @@ from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import sessions as metadata_sessions
-from server.app.webauthn.metadata import state as metadata_state
 
 
 @pytest.fixture
@@ -19,21 +18,6 @@ def metadata_module(monkeypatch, metadata_state):
 
 
     return module
-
-
-def test_env_flag_cleanup_async_and_interval_resolution(metadata_module, monkeypatch):
-    monkeypatch.delenv(metadata_state._SESSION_METADATA_CLEANUP_ASYNC_ENV, raising=False)
-    assert metadata_sessions._cleanup_async_enabled() is True
-
-    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_ASYNC_ENV, "off")
-    assert metadata_sessions._cleanup_async_enabled() is False
-
-    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "30")
-    assert metadata_sessions._resolve_cleanup_interval().total_seconds() == 30
-
-    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "invalid")
-    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "2")
-    assert metadata_sessions._resolve_cleanup_interval().total_seconds() == 2 * 3600
 
 
 def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(metadata_module, monkeypatch, uploads):

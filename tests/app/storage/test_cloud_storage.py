@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib
-import json
 import sys
 import types
 from datetime import datetime, timezone
@@ -229,114 +228,9 @@ def test_gcs_enabled_honors_explicit_true_false(monkeypatch):
     assert cloud.gcs_enabled() is False
 
 
-def test_build_client_prefers_service_account_file(monkeypatch):
-    class _Creds:
-        project_id = "file-project"
-
+def test_build_client_uses_the_project_setting(monkeypatch):
     observed = {}
 
-    def _from_file(path):
-        observed["credentials_file"] = path
-        return _Creds()
-
-    def _client_factory(*args, **kwargs):
-        observed["client_args"] = args
-        observed["client_kwargs"] = kwargs
-        return {"args": args, "kwargs": kwargs}
-
-    monkeypatch.setenv("FIDO_SERVER_GCS_CREDENTIALS_FILE", "/tmp/service-account.json")
-    monkeypatch.delenv("FIDO_SERVER_GCS_CREDENTIALS_JSON", raising=False)
-    monkeypatch.delenv("FIDO_SERVER_GCS_PROJECT", raising=False)
-    monkeypatch.setattr(
-        cloud._lazy("service_account").Credentials,
-        "from_service_account_file",
-        _from_file,
-    )
-    monkeypatch.setattr(cloud._lazy("storage"), "Client", _client_factory)
-
-    client = cloud._build_client()
-
-    assert observed["credentials_file"] == "/tmp/service-account.json"
-    assert observed["client_args"] == ()
-    assert observed["client_kwargs"] == {
-        "project": "file-project",
-        "credentials": client["kwargs"]["credentials"],
-    }
-    assert isinstance(client["kwargs"]["credentials"], _Creds)
-
-
-def test_build_client_file_credentials_respects_project_override(monkeypatch):
-    class _Creds:
-        project_id = "file-project"
-
-    observed = {}
-
-    monkeypatch.setenv("FIDO_SERVER_GCS_CREDENTIALS_FILE", "/tmp/service-account.json")
-    monkeypatch.setenv("FIDO_SERVER_GCS_PROJECT", "override-project")
-    monkeypatch.delenv("FIDO_SERVER_GCS_CREDENTIALS_JSON", raising=False)
-    monkeypatch.setattr(
-        cloud._lazy("service_account").Credentials,
-        "from_service_account_file",
-        lambda _path: _Creds(),
-    )
-
-    def _client_factory(*args, **kwargs):
-        observed["project"] = kwargs.get("project")
-        observed["credentials"] = kwargs.get("credentials")
-        return "client"
-
-    monkeypatch.setattr(cloud._lazy("storage"), "Client", _client_factory)
-
-    assert cloud._build_client() == "client"
-    assert observed["project"] == "override-project"
-    assert isinstance(observed["credentials"], _Creds)
-
-
-def test_build_client_uses_service_account_info_json(monkeypatch):
-    observed = {}
-    payload = {
-        "type": "service_account",
-        "project_id": "json-project",
-        "private_key_id": "abc",
-        "private_key": "-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n",
-        "client_email": "test@example.com",
-        "client_id": "123",
-        "token_uri": "https://oauth2.googleapis.com/token",
-    }
-
-    class _Creds:
-        pass
-
-    monkeypatch.delenv("FIDO_SERVER_GCS_CREDENTIALS_FILE", raising=False)
-    monkeypatch.setenv("FIDO_SERVER_GCS_CREDENTIALS_JSON", json.dumps(payload))
-    monkeypatch.delenv("FIDO_SERVER_GCS_PROJECT", raising=False)
-
-    def _from_info(info):
-        observed["info"] = info
-        return _Creds()
-
-    def _client_factory(*args, **kwargs):
-        observed["kwargs"] = kwargs
-        return "json-client"
-
-    monkeypatch.setattr(
-        cloud._lazy("service_account").Credentials,
-        "from_service_account_info",
-        _from_info,
-    )
-    monkeypatch.setattr(cloud._lazy("storage"), "Client", _client_factory)
-
-    assert cloud._build_client() == "json-client"
-    assert observed["info"]["project_id"] == "json-project"
-    assert observed["kwargs"]["project"] == "json-project"
-    assert isinstance(observed["kwargs"]["credentials"], _Creds)
-
-
-def test_build_client_with_project_override_only(monkeypatch):
-    observed = {}
-
-    monkeypatch.delenv("FIDO_SERVER_GCS_CREDENTIALS_FILE", raising=False)
-    monkeypatch.delenv("FIDO_SERVER_GCS_CREDENTIALS_JSON", raising=False)
     monkeypatch.setenv("FIDO_SERVER_GCS_PROJECT", "override-only")
 
     def _client_factory(*args, **kwargs):
@@ -354,8 +248,6 @@ def test_build_client_with_project_override_only(monkeypatch):
 def test_build_client_defaults_to_storage_client_without_overrides(monkeypatch):
     observed = {}
 
-    monkeypatch.delenv("FIDO_SERVER_GCS_CREDENTIALS_FILE", raising=False)
-    monkeypatch.delenv("FIDO_SERVER_GCS_CREDENTIALS_JSON", raising=False)
     monkeypatch.delenv("FIDO_SERVER_GCS_PROJECT", raising=False)
 
     def _client_factory(*args, **kwargs):
@@ -367,7 +259,7 @@ def test_build_client_defaults_to_storage_client_without_overrides(monkeypatch):
 
     assert cloud._build_client() == "default-client"
     assert observed["args"] == ()
-    assert observed["kwargs"] == {}
+    assert observed["kwargs"] == {"project": None}
 
 
 def test_ensure_bucket_raises_when_gcs_disabled(monkeypatch):

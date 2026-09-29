@@ -20,7 +20,6 @@ def touch_env(monkeypatch, app_config, sessions):
     calls = []
     monkeypatch.setattr(cleanup, "_touch_session_last_access", lambda sid: calls.append(sid))
     monkeypatch.setattr(cleanup, "_schedule_inactive_session_cleanup", lambda: None)
-    monkeypatch.delenv(metadata_state._SESSION_METADATA_TOUCH_THROTTLE_ENV, raising=False)
     return metadata, entry_app(), calls
 
 
@@ -52,7 +51,7 @@ def test_touch_is_throttled_across_requests(touch_env):
 
 def test_throttle_window_is_configurable(touch_env, monkeypatch, app_config):
     metadata, app, calls = touch_env
-    monkeypatch.setenv(metadata_state._SESSION_METADATA_TOUCH_THROTTLE_ENV, "30")
+    monkeypatch.setattr(metadata_state, "_SESSION_METADATA_TOUCH_THROTTLE_SECONDS", 30.0)
 
     with app.test_request_context("/"):
         session[metadata_state._SESSION_METADATA_TOUCH_KEY] = time.time() - 60

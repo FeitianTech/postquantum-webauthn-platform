@@ -1,7 +1,6 @@
 """Environment and cleanup interval helpers for metadata runtime."""
 from __future__ import annotations
 
-import functools
 import json
 import logging
 import os
@@ -25,14 +24,10 @@ from flask import (
 )
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 
-from ...env_flags import parse_env_flag
 from ...storage import session_metadata
 from . import entries
 from . import state as _state
 from .state import (
-    _SESSION_METADATA_CLEANUP_ASYNC_ENV,
-    _SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV,
-    _SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV,
     _SESSION_METADATA_COOKIE_MAX_AGE,
     _SESSION_METADATA_COOKIE_NAME,
     _SESSION_METADATA_INACTIVE_AGE,
@@ -40,69 +35,15 @@ from .state import (
     _SESSION_METADATA_SESSION_KEY,
     _SESSION_METADATA_SUFFIX,
     _SESSION_METADATA_TOUCH_KEY,
-    _SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS,
-    _SESSION_METADATA_TOUCH_THROTTLE_ENV,
 )
 
 logger = logging.getLogger(__name__)
 
 
-def _env_flag(name: str) -> bool | None:
-    return parse_env_flag(name)
-
-
-def _resolve_cleanup_interval() -> timedelta:
-    raw_seconds = os.environ.get(_SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV)
-    if raw_seconds is not None:
-        try:
-            seconds = float(raw_seconds)
-            if seconds >= 0:
-                return timedelta(seconds=seconds)
-        except ValueError:
-            logger.warning(
-                "Invalid value for %s: %r",
-                _SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV,
-                raw_seconds,
-            )
-
-    raw_hours = os.environ.get(_SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV)
-    if raw_hours is not None:
-        try:
-            hours = float(raw_hours)
-            if hours >= 0:
-                return timedelta(hours=hours)
-        except ValueError:
-            logger.warning(
-                "Invalid value for %s: %r",
-                _SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV,
-                raw_hours,
-            )
-
-    return timedelta(hours=6)
-
-
-def _cleanup_async_enabled() -> bool:
-    explicit = _env_flag(_SESSION_METADATA_CLEANUP_ASYNC_ENV)
-    if explicit is None:
-        return True
-    return explicit
-
-
-# Resolved on first use rather than at import: an invalid value is logged, and at
-# import time the app -- and so the log handler -- may not exist yet. Tests set
-# this to a timedelta to override it.
-_SESSION_METADATA_CLEANUP_INTERVAL: timedelta | None = None
-
-
-@functools.cache
-def _configured_cleanup_interval() -> timedelta:
-    return _resolve_cleanup_interval()
-
-
-def _cleanup_interval() -> timedelta:
-    if _SESSION_METADATA_CLEANUP_INTERVAL is not None:
-        return _SESSION_METADATA_CLEANUP_INTERVAL
-    return _configured_cleanup_interval()
+# How often inactive sessions are swept, and whether the sweep runs on a worker
+# thread. Tests set these to override them.
+_SESSION_METADATA_CLEANUP_INTERVAL = timedelta(hours=6)
+_SESSION_METADATA_CLEANUP_ASYNC = True
 
 
 def _touch_session_last_access(session_id: str) -> None:
@@ -122,7 +63,7 @@ def _resolve_session_last_access(session_id: str) -> float | None:
 def _maybe_cleanup_inactive_sessions(now: float | None = None) -> None:
     current_time = now or time.time()
     with _state._session_cleanup_lock:
-        if current_time - _state._session_metadata_last_cleanup < _cleanup_interval().total_seconds():
+        if current_time - _state._session_metadata_last_cleanup < _SESSION_METADATA_CLEANUP_INTERVAL.total_seconds():
             return
         _state._session_metadata_last_cleanup = current_time
 
@@ -170,11 +111,11 @@ def _schedule_inactive_session_cleanup() -> None:
     current_time = time.time()
     if (
         current_time - _state._session_metadata_last_cleanup
-        < _cleanup_interval().total_seconds()
+        < _SESSION_METADATA_CLEANUP_INTERVAL.total_seconds()
     ):
         return
 
-    if not _cleanup_async_enabled():
+    if not _SESSION_METADATA_CLEANUP_ASYNC:
         _maybe_cleanup_inactive_sessions(now=current_time)
         return
 
@@ -371,16 +312,7 @@ def _note_session_activity(session_id: str, *, directory: str | None = None) -> 
             _schedule_inactive_session_cleanup()
             return
 
-        raw_throttle = os.environ.get(_SESSION_METADATA_TOUCH_THROTTLE_ENV)
-        try:
-            throttle = (
-                float(raw_throttle)
-                if raw_throttle
-                else _SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS
-            )
-        except ValueError:
-            throttle = _SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS
-
+        throttle = _state._SESSION_METADATA_TOUCH_THROTTLE_SECONDS
         last_touch = session.get(_SESSION_METADATA_TOUCH_KEY)
         if isinstance(last_touch, (int, float)) and 0 <= now - last_touch < throttle:
             _schedule_inactive_session_cleanup()

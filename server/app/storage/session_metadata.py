@@ -45,14 +45,8 @@ __all__ = [
     "write_file",
 ]
 
-_USER_FOLDER_PREFIX = os.environ.get(
-    "FIDO_SERVER_GCS_USER_FOLDER_PREFIX",
-    os.environ.get("FIDO_SERVER_GCS_SESSION_METADATA_PREFIX", "user-data"),
-)
-_METADATA_SUBDIR = os.environ.get(
-    "FIDO_SERVER_GCS_USER_METADATA_SUBDIR",
-    "metadata",
-)
+_USER_FOLDER_PREFIX = "user-data"
+_METADATA_SUBDIR = "metadata"
 _LAST_ACCESS_BLOB = ".last-access"
 
 _LOCAL_INACTIVE_AGE = timedelta(days=14)

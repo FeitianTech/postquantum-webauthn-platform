@@ -55,14 +55,8 @@ __all__ = [
 ]
 
 
-_USER_FOLDER_PREFIX = os.environ.get(
-    "FIDO_SERVER_GCS_USER_FOLDER_PREFIX",
-    os.environ.get("FIDO_SERVER_GCS_CREDENTIAL_PREFIX", "user-data"),
-)
-_USER_CREDENTIAL_SUBDIR = os.environ.get(
-    "FIDO_SERVER_GCS_USER_CREDENTIAL_SUBDIR",
-    os.environ.get("FIDO_SERVER_GCS_CREDENTIAL_PREFIX", "credentials"),
-)
+_USER_FOLDER_PREFIX = "user-data"
+_USER_CREDENTIAL_SUBDIR = "credentials"
 
 # The credential store lives under the Flask instance path (gitignored), not
 # next to the source. ``FIDO_SERVER_CREDENTIAL_DIR`` overrides it for
