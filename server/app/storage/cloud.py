@@ -18,7 +18,6 @@ __all__ = [
     "delete_blob",
     "download_bytes",
     "download_bytes_with_generation",
-    "ensure_ready",
     "gcs_enabled",
     "list_blob_names",
     "normalise_blob_prefix",
@@ -146,28 +145,6 @@ def _ensure_bucket() -> Any:
 
         _BUCKET = _CLIENT.bucket(bucket_name)
         return _BUCKET
-
-
-def ensure_ready(*, max_attempts: int = 3, retry_delay: float = 1.0) -> None:
-    """Validate that the configured storage bucket is reachable."""
-
-    last_error: Exception | None = None
-
-    for attempt in range(1, max_attempts + 1):
-        try:
-            bucket = _ensure_bucket()
-            iterator = bucket.list_blobs(max_results=1)
-            for _ in iterator:
-                break
-            return
-        except Exception as exc:  # pragma: no cover - exercised in integration.
-            last_error = exc
-            if attempt >= max_attempts:
-                break
-            time.sleep(retry_delay)
-
-    if last_error:
-        raise last_error
 
 
 def _with_retry(

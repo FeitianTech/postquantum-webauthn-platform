@@ -419,43 +419,6 @@ def test_ensure_bucket_builds_and_caches_bucket(monkeypatch):
     assert bucket_calls["count"] == 1
 
 
-def test_ensure_ready_retries_until_bucket_list_succeeds(monkeypatch):
-    calls = {"count": 0}
-    sleeps = []
-
-    class _Bucket:
-        def list_blobs(self, max_results=1):
-            calls["count"] += 1
-            if calls["count"] == 1:
-                raise RuntimeError("temporary failure")
-            assert max_results == 1
-            return []
-
-    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
-    monkeypatch.setattr(cloud.time, "sleep", lambda delay: sleeps.append(delay))
-
-    cloud.ensure_ready(max_attempts=3, retry_delay=0.25)
-
-    assert calls["count"] == 2
-    assert sleeps == [0.25]
-
-
-def test_ensure_ready_raises_last_error_after_max_attempts(monkeypatch):
-    sleeps = []
-
-    class _Bucket:
-        def list_blobs(self, max_results=1):
-            raise RuntimeError("still failing")
-
-    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
-    monkeypatch.setattr(cloud.time, "sleep", lambda delay: sleeps.append(delay))
-
-    with pytest.raises(RuntimeError, match="still failing"):
-        cloud.ensure_ready(max_attempts=3, retry_delay=0.1)
-
-    assert sleeps == [0.1, 0.1]
-
-
 def test_with_retry_does_not_retry_not_found(monkeypatch):
     calls = {"count": 0}
     sleeps = []
@@ -587,17 +550,6 @@ def test_blob_updated_timestamp_returns_epoch_seconds(monkeypatch):
     assert cloud.blob_updated_timestamp("existing") == updated.timestamp()
 
 
-def test_ensure_ready_handles_non_empty_iterator(monkeypatch):
-    class _Bucket:
-        def list_blobs(self, max_results=1):
-            assert max_results == 1
-            return iter([object()])
-
-    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
-
-    cloud.ensure_ready(max_attempts=1)
-
-
 def test_with_retry_raises_runtime_when_no_attempts_configured():
     with pytest.raises(RuntimeError, match="failed without raising"):
         cloud._with_retry(lambda: "ok", max_attempts=0)
@@ -646,16 +598,6 @@ def test_delete_blob_ignores_not_found_when_missing_ok_true(monkeypatch):
     monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
 
     cloud.delete_blob("missing", missing_ok=True)
-
-
-def test_ensure_ready_with_zero_attempts_returns_without_error(monkeypatch):
-    monkeypatch.setattr(
-        cloud,
-        "_ensure_bucket",
-        lambda: (_ for _ in ()).throw(AssertionError("_ensure_bucket should not be called")),
-    )
-
-    cloud.ensure_ready(max_attempts=0)
 
 
 def test_a_download_can_be_bounded_to_one_short_attempt(monkeypatch):
