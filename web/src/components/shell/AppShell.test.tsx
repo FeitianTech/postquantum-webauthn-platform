@@ -174,7 +174,7 @@ describe('the app shell', () => {
     await userEvent.click(within(await screen.findByRole('dialog', { name: 'Menu' })).getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(menu).toHaveAttribute('aria-expanded', 'false'));
   });
-  it('CRED-J1: opens a saved credential\'s FIDO MDS entry, and Back returns to the Simple tab', async () => {
+  it('opens a saved credential\'s FIDO MDS entry, and Back returns to the Simple tab', async () => {
     Element.prototype.scrollIntoView = vi.fn();
     keepRecords([
       { type: 'simple', credentialId: 'AQID', email: 'alice', aaguidHex: 'f1d0f1d0000040008000000000000001', attestationSummary: { rootValid: true } },

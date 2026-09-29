@@ -1,5 +1,5 @@
-// The saved credentials both sections share (CRED-L, CRED-C, CRED-D, CRED-W in
-// docs/ui-parity/credentials.md), over records as the server saved them.
+// The saved credentials both sections share, over records as the server saved
+// them.
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -54,14 +54,14 @@ afterEach(() => {
 });
 
 describe('the saved credentials', () => {
-  it('CRED-L3: says there is none, and Clear All cannot be used', async () => {
+  it('says there is none, and Clear All cannot be used', async () => {
     renderList([]);
     expect(await screen.findByText('No credentials registered yet.')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Clear All' })).toBeDisabled();
     expect(document.querySelector('[data-count]')).toHaveTextContent('0');
   });
 
-  it('CRED-L1/L2: lists every credential, simple and advanced, in the order stored, and how many', async () => {
+  it('lists every credential, simple and advanced, in the order stored, and how many', async () => {
     renderList([ES256, ADVANCED, MLDSA]);
     await waitFor(() => expect(rows()).toHaveLength(3));
     expect(rows().map((row) => within(row).getAllByRole('button')[0].textContent)).toEqual([
@@ -74,7 +74,7 @@ describe('the saved credentials', () => {
     expect(screen.getByRole('button', { name: 'Clear All' })).toBeEnabled();
   });
 
-  it('CRED-C2: gives each check with its mark and a word for screen readers', async () => {
+  it('gives each check with its mark and a word for screen readers', async () => {
     renderList([X5C]);
     const row = await waitFor(() => rowNamed('x5c@example.com'));
     const check = (label: string) => row.querySelector<HTMLElement>(`[data-check="${label}"]`)!;
@@ -85,7 +85,7 @@ describe('the saved credentials', () => {
     expect(check('AAGUID')).toHaveTextContent('AAGUID passed');
   });
 
-  it('CRED-C3: tags the algorithm, in the accent, and large blob support', async () => {
+  it('tags the algorithm, in the accent, and large blob support', async () => {
     renderList([ADVANCED, MLDSA]);
     await waitFor(() => expect(rows()).toHaveLength(2));
     const tags = (row: HTMLElement) => within(row).getByRole('list', { name: 'Features' });
@@ -121,7 +121,7 @@ describe('the saved credentials', () => {
     expect(within(row).queryByRole('button', { name: 'FIDO MDS' })).toBeNull();
   });
 
-  it('CRED-C7: opens a credential\'s details from its name or its row, and not from its controls', async () => {
+  it('opens a credential\'s details from its name or its row, and not from its controls', async () => {
     const { onOpen } = renderList([ES256]);
     const row = await waitFor(() => rowNamed('user@example.com'));
     const key = `id:${ES256.credentialIdBase64Url}`;
@@ -135,13 +135,13 @@ describe('the saved credentials', () => {
     expect(onOpen).toHaveBeenCalledTimes(2);
   });
 
-  it('CRED-C5: has no FIDO MDS button without a valid root or known metadata', async () => {
+  it('has no FIDO MDS button without a valid root or known metadata', async () => {
     renderList([ES256]);
     const row = await waitFor(() => rowNamed('user@example.com'));
     expect(within(row).queryByRole('button', { name: 'FIDO MDS' })).toBeNull();
   });
 
-  it('CRED-C9: tints the row of the credential a ceremony used, for a moment', async () => {
+  it('tints the row of the credential a ceremony used, for a moment', async () => {
     renderList([ES256, MLDSA]);
     await waitFor(() => expect(rows()).toHaveLength(2));
     vi.useFakeTimers();
@@ -154,7 +154,7 @@ describe('the saved credentials', () => {
 });
 
 describe('deleting a saved credential', () => {
-  it('CRED-D1/D2: asks first, then removes a simple one from this browser and says so', async () => {
+  it('asks first, then removes a simple one from this browser and says so', async () => {
     renderList([ES256, MLDSA]);
     const row = await waitFor(() => rowNamed('user@example.com'));
     await userEvent.click(within(row).getByRole('button', { name: 'Delete' }));
@@ -174,7 +174,7 @@ describe('deleting a saved credential', () => {
     expect(storedRecords()).toHaveLength(1);
   });
 
-  it('CRED-D3: deletes an advanced one on the server first, then here', async () => {
+  it('deletes an advanced one on the server first, then here', async () => {
     const { fetch } = renderList([ADVANCED], { [ADVANCED_PATH]: () => json({ status: 'deleted' }) });
     await userEvent.click(within(await waitFor(() => rowNamed('advanced@example.com'))).getByRole('button', { name: 'Delete' }));
     await confirmIn('Delete');
@@ -183,7 +183,7 @@ describe('deleting a saved credential', () => {
     expect(storedRecords()).toEqual([]);
   });
 
-  it('CRED-D3: warns under the header when the server no longer had it', async () => {
+  it('warns under the header when the server no longer had it', async () => {
     renderList([ADVANCED], { [ADVANCED_PATH]: () => json({ status: 'absent' }, 404) });
     await userEvent.click(within(await waitFor(() => rowNamed('advanced@example.com'))).getByRole('button', { name: 'Delete' }));
     await confirmIn('Delete');
@@ -191,7 +191,7 @@ describe('deleting a saved credential', () => {
     expect(notice).toHaveAttribute('data-notice', 'warning');
   });
 
-  it('CRED-D3/D4: keeps one the server refused to delete, with the server\'s reason, as an alert', async () => {
+  it('keeps one the server refused to delete, with the server\'s reason, as an alert', async () => {
     renderList([ADVANCED], { [ADVANCED_PATH]: () => json({ error: 'The stored credentials could not be read.' }, 503) });
     await userEvent.click(within(await waitFor(() => rowNamed('advanced@example.com'))).getByRole('button', { name: 'Delete' }));
     await confirmIn('Delete');
@@ -254,7 +254,7 @@ describe('the focus once a deletion has ended', () => {
 });
 
 describe('clearing every saved credential', () => {
-  it('CRED-D6/D7: asks first, then clears the simple and the advanced ones and says so', async () => {
+  it('asks first, then clears the simple and the advanced ones and says so', async () => {
     renderList([ES256, ADVANCED], { [ADVANCED_PATH]: () => json({ status: 'deleted' }) });
     await waitFor(() => expect(rows()).toHaveLength(2));
     await userEvent.click(screen.getByRole('button', { name: 'Clear All' }));
@@ -267,7 +267,7 @@ describe('clearing every saved credential', () => {
     expect(storedRecords()).toEqual([]);
   });
 
-  it('CRED-D7: says under the header which ones it kept', async () => {
+  it('says under the header which ones it kept', async () => {
     renderList([ES256, ADVANCED], { [ADVANCED_PATH]: () => json({ error: 'Nope.' }, 500) });
     await waitFor(() => expect(rows()).toHaveLength(2));
     await userEvent.click(screen.getByRole('button', { name: 'Clear All' }));
@@ -279,7 +279,7 @@ describe('clearing every saved credential', () => {
 });
 
 describe('the warm-up after the list is read', () => {
-  it('CRED-W1: brings a registration snapshot the server holds into this browser', async () => {
+  it('brings a registration snapshot the server holds into this browser', async () => {
     const snapshot = { schemaVersion: 2, capturedAt: '2026-09-21T14:13:20Z', state: { authenticatorDataHex: 'ab' } };
     const record = { ...ADVANCED, registrationDetailSnapshot: undefined };
     const { fetch } = renderList([record], {

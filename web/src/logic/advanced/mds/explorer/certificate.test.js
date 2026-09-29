@@ -43,7 +43,7 @@ afterEach(() => {
   delete globalThis.fetch;
 });
 
-describe('the certificate page: its input and output (MDS-X1)', () => {
+describe('the certificate page: its input and output', () => {
   it('sends the base64 without its whitespace', () => {
     expect(normaliseCertificateBase64(' MIIB\n  CAFE= ')).toBe('MIIBCAFE=');
     expect(normaliseCertificateBase64(null)).toBe('');
@@ -57,7 +57,7 @@ describe('the certificate page: its input and output (MDS-X1)', () => {
   });
 });
 
-describe('the certificate page: the decode (MDS-X2)', () => {
+describe('the certificate page: the decode', () => {
   it('posts the certificate and gives the details', async () => {
     globalThis.fetch = vi.fn(async () => answer({ details: EC_DETAILS }));
     await expect(requestCertificateDecode('MIIB')).resolves.toBe(EC_DETAILS);
@@ -91,7 +91,7 @@ describe('the certificate page: the decode (MDS-X2)', () => {
   });
 });
 
-describe('the certificate page: the summary (MDS-X3)', () => {
+describe('the certificate page: the summary', () => {
   it('names the public key algorithm, else the key type', () => {
     expect(determinePublicKeyAlgorithm({ algorithm: ' RSA ' })).toBe('RSA');
     expect(determinePublicKeyAlgorithm({ algorithm: { name: ' ECDSA ' } })).toBe('ECDSA');

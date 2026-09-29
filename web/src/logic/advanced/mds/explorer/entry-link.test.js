@@ -15,7 +15,7 @@ afterEach(() => {
   delete globalThis.fetch;
 });
 
-describe('opening an entry from elsewhere (MDS-J1, J2)', () => {
+describe('opening an entry from elsewhere', () => {
   it('keeps the credential jump\'s sentences', () => {
     expect(ENTRY_LINK_MESSAGES).toEqual({
       locating: 'Locating metadata entry...',
@@ -36,7 +36,7 @@ describe('opening an entry from elsewhere (MDS-J1, J2)', () => {
   });
 });
 
-describe('resolving an entry the list does not hold (MDS-D2)', () => {
+describe('resolving an entry the list does not hold', () => {
   it('asks by entry id, else AAGUID, else AAID', () => {
     expect(resolveQueryForEntry({ entryId: 'aaid:F1D0#0012', aaguid: 'x', id: 'y' })).toEqual({ entryId: 'aaid:F1D0#0012' });
     expect(resolveQueryForEntry({ entryId: 5, aaguid: 'F1D0F1D0000040008000000000000001' })).toEqual({

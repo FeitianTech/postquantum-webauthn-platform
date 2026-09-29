@@ -1,4 +1,4 @@
-// The link other surfaces use to open an AAGUID's MDS entry (MDS-J1..J3).
+// The link other surfaces use to open an AAGUID's MDS entry.
 import { act, renderHook, screen } from '@testing-library/react';
 
 import { AppShell } from '@/components/shell/AppShell';

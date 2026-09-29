@@ -18,7 +18,7 @@ const named = name => FIXTURE.entries.find(entry => entry.name === name);
 
 const section = (entry, key) => detailSections(entry).find(candidate => candidate.key === key);
 
-describe('the detail page: title and subtitle (MDS-D1)', () => {
+describe('the detail page: title and subtitle', () => {
   it('titles the page with the name as written, else "Authenticator"', () => {
     expect(DEFAULT_DETAIL_TITLE).toBe('Authenticator');
     expect(detailTitle({ name: ' Key ' })).toBe(' Key ');
@@ -41,7 +41,7 @@ describe('the detail page: title and subtitle (MDS-D1)', () => {
   });
 });
 
-describe('the detail page: sections (MDS-D3..D9)', () => {
+describe('the detail page: sections', () => {
   it('orders the sections as the page shows them', () => {
     expect(detailSections(named('Fixture Security Key L1')).map(({ key, title }) => [key, title])).toEqual([
       ['overview', 'Overview'],
@@ -61,7 +61,7 @@ describe('the detail page: sections (MDS-D3..D9)', () => {
     expect(detailSections({ metadataStatement: 'not an object', statusReports: 'none' })).toHaveLength(2);
   });
 
-  it('MDS-D3: shows the overview fields that have a value, identifiers marked', () => {
+  it('shows the overview fields that have a value, identifiers marked', () => {
     const entry = named('Fixture Security Key L1');
     expect(section(entry, 'overview').fields).toEqual([
       { label: 'Identifier', value: entry.id, identifier: true },
@@ -77,7 +77,7 @@ describe('the detail page: sections (MDS-D3..D9)', () => {
     ]);
   });
 
-  it('MDS-D4: shows the statement fields, key identifiers as codes, UPV, and the chip lists of raw values', () => {
+  it('shows the statement fields, key identifiers as codes, UPV, and the chip lists of raw values', () => {
     const u2f = named('Fixture U2F Key');
     const statement = section(u2f, 'metadataStatement');
     expect(statement.fields.map(field => field.label)).toEqual([
@@ -130,7 +130,7 @@ describe('the detail page: sections (MDS-D3..D9)', () => {
     expect(rawListValues(undefined)).toEqual([]);
   });
 
-  it('MDS-D5: lists each combination with a method or a code accuracy, counting those left out', () => {
+  it('lists each combination with a method or a code accuracy, counting those left out', () => {
     const details = [
       [
         { userVerificationMethod: 'passcode_internal', caDesc: { base: 10, minLength: 4, maxRetries: 5, blockSlowdown: 30 } },
@@ -175,7 +175,7 @@ describe('the detail page: sections (MDS-D3..D9)', () => {
     expect(section({ metadataStatement: { userVerificationDetails: 'none' } }, 'userVerification')).toBeUndefined();
   });
 
-  it('MDS-D6: numbers the certificates that are not empty', () => {
+  it('numbers the certificates that are not empty', () => {
     expect(section({ attestationCertificates: ['', 'MIIB', null, 'MIIC'] }, 'certificates').certificates).toEqual([
       { number: 1, label: 'Certificate 1', certificate: 'MIIB' },
       { number: 2, label: 'Certificate 2', certificate: 'MIIC' },
@@ -184,7 +184,7 @@ describe('the detail page: sections (MDS-D3..D9)', () => {
     expect(section({ attestationCertificates: 'MIIB' }, 'certificates')).toBeUndefined();
   });
 
-  it('MDS-D7: shows getInfo, its AAGUID dashed, its numbers, chips and options', () => {
+  it('shows getInfo, its AAGUID dashed, its numbers, chips and options', () => {
     const info = section(
       {
         metadataStatement: {
@@ -243,7 +243,7 @@ describe('the detail page: sections (MDS-D3..D9)', () => {
     expect(section({ metadataStatement: { authenticatorGetInfo: { options: {} } } }, 'authenticatorGetInfo').chipLists).toEqual([]);
   });
 
-  it('MDS-D8: gives each status report its cells and the descriptor column\'s two lines', () => {
+  it('gives each status report its cells and the descriptor column\'s two lines', () => {
     expect(STATUS_REPORT_COLUMNS).toEqual(['Status', 'Effective Date', 'Authenticator Version', 'Certificate Number', 'Descriptor']);
     const reports = section(
       {

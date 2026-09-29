@@ -1,6 +1,5 @@
-// The Advanced tab's registration form (ADV-R, ADV-RB, ADV-I in
-// docs/ui-parity/advanced.md): every field changes the request the JSON editor
-// holds, with the current form's rules and words.
+// The Advanced tab's registration form: every field changes the request the JSON
+// editor holds, by the logic's rules and in its words.
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -20,7 +19,7 @@ afterEach(() => {
 });
 
 describe('the registration form, when the page has loaded', () => {
-  it('ADV-T9: draws a User ID and a challenge of 32 bytes and a ten-character name, the display name the same', async () => {
+  it('draws a User ID and a challenge of 32 bytes and a ten-character name, the display name the same', async () => {
     renderForm();
     await ready();
 
@@ -31,7 +30,7 @@ describe('the registration form, when the page has loaded', () => {
     expect(field('Display Name')).toHaveAttribute('readonly');
   });
 
-  it('ADV-J3: gives the editor the request the defaults build, the algorithms most preferred first', async () => {
+  it('gives the editor the request the defaults build, the algorithms most preferred first', async () => {
     renderForm();
     await ready();
 
@@ -73,7 +72,7 @@ describe('the registration form, when the page has loaded', () => {
 });
 
 describe('each field changes the request', () => {
-  it('ADV-R4..R7: the selection and the attestation', async () => {
+  it('the selection and the attestation', async () => {
     renderForm();
     await ready();
 
@@ -86,7 +85,7 @@ describe('each field changes the request', () => {
     expect(publicKey().attestation).toBe('none');
   });
 
-  it('ADV-R12: the algorithms, a chip for each, ML-DSA under PQC', async () => {
+  it('the algorithms, a chip for each, ML-DSA under PQC', async () => {
     renderForm();
     await ready();
 
@@ -99,7 +98,7 @@ describe('each field changes the request', () => {
     expect(screen.getByText('PQC')).toBeInTheDocument();
   });
 
-  it('ADV-R13: the hints, in the form\'s order', async () => {
+  it('the hints, in the form\'s order', async () => {
     renderForm();
     await ready();
 
@@ -111,7 +110,7 @@ describe('each field changes the request', () => {
     expect(publicKey()).not.toHaveProperty('hints');
   });
 
-  it('ADV-R11, ADV-R14..R19: the timeout and the extensions', async () => {
+  it('the timeout and the extensions', async () => {
     renderForm();
     await ready();
 
@@ -130,7 +129,7 @@ describe('each field changes the request', () => {
     });
   });
 
-  it('ADV-R19..R21: prf evaluations only with prf on and a first one, drawn at random by the buttons', async () => {
+  it('prf evaluations only with prf on and a first one, drawn at random by the buttons', async () => {
     renderForm();
     await ready();
 
@@ -149,7 +148,7 @@ describe('each field changes the request', () => {
 });
 
 describe('the form\'s rules', () => {
-  it('ADV-RB1: a user name is also the display name', async () => {
+  it('a user name is also the display name', async () => {
     renderForm();
     await ready();
 
@@ -159,7 +158,7 @@ describe('the form\'s rules', () => {
     expect(publicKey().user).toMatchObject({ name: 'carol', displayName: 'carol' });
   });
 
-  it('ADV-RB5: Enforce credProtect is on and cannot change while credProtect is Unspecified', async () => {
+  it('Enforce credProtect is on and cannot change while credProtect is Unspecified', async () => {
     renderForm();
     await ready();
     const enforce = screen.getByRole('switch', { name: 'Enforce credProtect' });
@@ -173,7 +172,7 @@ describe('the form\'s rules', () => {
     expect(enforce).toHaveAttribute('aria-checked', 'true');
   });
 
-  it('ADV-RB6: a resident key no longer required asks for no largeBlob', async () => {
+  it('a resident key no longer required asks for no largeBlob', async () => {
     renderForm();
     await ready();
 
@@ -183,7 +182,7 @@ describe('the form\'s rules', () => {
     expect(field('largeBlob')).toHaveValue('');
   });
 
-  it('ADV-RB4: emptying the first prf evaluation empties and locks the second', async () => {
+  it('emptying the first prf evaluation empties and locks the second', async () => {
     renderForm();
     await ready();
 
@@ -194,7 +193,7 @@ describe('the form\'s rules', () => {
     expect(field('prf eval second (hex)')).toBeDisabled();
   });
 
-  it('ADV-RB7: a byte field too short, or not hex, says so under it', async () => {
+  it('a byte field too short, or not hex, says so under it', async () => {
     renderForm();
     await ready();
 
@@ -207,7 +206,7 @@ describe('the form\'s rules', () => {
     expect(field('prf eval first (hex)')).toHaveAccessibleDescription('Invalid hex value (exactly 32 bytes required)');
   });
 
-  it('ADV-RB2, ADV-RB3: the buttons draw a new User ID and name, and a new challenge', async () => {
+  it('the buttons draw a new User ID and name, and a new challenge', async () => {
     renderForm();
     await ready();
     const before = [field('User ID (hex)').value, field('User Name').value, field('Challenge (hex)').value];
@@ -224,7 +223,7 @@ describe('the form\'s rules', () => {
 describe('the credentials a registration excludes', () => {
   const OWN = savedRecord('advanced-register-packed-x5c-everything', { userName: 'own@example.com' });
 
-  it('ADV-R8: are this user\'s saved credentials while Exclude Credentials is on', async () => {
+  it('are this user\'s saved credentials while Exclude Credentials is on', async () => {
     renderForm([OWN]);
     await ready();
 
@@ -234,7 +233,7 @@ describe('the credentials a registration excludes', () => {
     expect(publicKey().excludeCredentials).toEqual([]);
   });
 
-  it('ADV-RB8: add a fake ID of the length asked for, listed with its size and Delete', async () => {
+  it('add a fake ID of the length asked for, listed with its size and Delete', async () => {
     renderForm();
     await ready();
     const fakes = within(section('Authenticator Selection'));
@@ -250,7 +249,7 @@ describe('the credentials a registration excludes', () => {
     expect(publicKey().excludeCredentials).toEqual([]);
   });
 
-  it('ADV-RB8: say in place why a length makes no ID, and that one over 4096 bytes is cut to it', async () => {
+  it('say in place why a length makes no ID, and that one over 4096 bytes is cut to it', async () => {
     renderForm();
     await ready();
 
@@ -281,7 +280,7 @@ describe('the info popups', () => {
 });
 
 describe('the form\'s reset', () => {
-  it('ADV-X1: returns every field to its default, with new random values, and drops the fake IDs', async () => {
+  it('returns every field to its default, with new random values, and drops the fake IDs', async () => {
     renderForm();
     await ready();
     const userId = field('User ID (hex)').value;

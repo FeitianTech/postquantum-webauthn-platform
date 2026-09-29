@@ -1,5 +1,4 @@
-// A saved credential's details at their own URL (CRED-C7, CRED-M1..M9, CRED-G1..G5
-// in docs/ui-parity/credentials.md), through the whole shell, over the server's
+// A saved credential's details at their own URL, through the whole shell, over the server's
 // recorded answers: the registrations, the decoder's answers the details ask for,
 // and an advanced registration's stored artifact.
 import { act, screen, waitFor, within } from '@testing-library/react';
@@ -71,7 +70,7 @@ describe('a saved credential\'s details, the detail', () => {
     expect(within(dialog()).getByRole('heading', { level: 3, name: 'user@example.com' })).toBeVisible();
   });
 
-  it('CRED-M2: give the properties, the checks with their note, and which roots were tried', async () => {
+  it('give the properties, the checks with their note, and which roots were tried', async () => {
     renderShell([X5C]);
     await openDetail('x5c@example.com');
 
@@ -97,7 +96,7 @@ describe('a saved credential\'s details, the detail', () => {
     expect(properties.querySelector('[data-root-checks]')).toHaveTextContent('Chain');
   });
 
-  it('CRED-M3: give the user at creation, each identifier in every spelling and the AAGUID, in Geist Mono with copy', async () => {
+  it('give the user at creation, each identifier in every spelling and the AAGUID, in Geist Mono with copy', async () => {
     renderShell([ES256]);
     await openDetail();
 
@@ -117,7 +116,7 @@ describe('a saved credential\'s details, the detail', () => {
     ]);
   });
 
-  it('CRED-M3: give an identifier that is not base64url as it is stored, and say so', async () => {
+  it('give an identifier that is not base64url as it is stored, and say so', async () => {
     const odd = { ...EDDSA, userHandle: 'not base64url!' };
     renderShell([odd]);
     await openDetail('eddsa@example.com');
@@ -127,7 +126,7 @@ describe('a saved credential\'s details, the detail', () => {
     expect(handle).toHaveTextContent('Not valid base64url: shown as stored.');
   });
 
-  it('CRED-M4..M7: give the format, the flags and counter, the extension outputs and the public key', async () => {
+  it('give the format, the flags and counter, the extension outputs and the public key', async () => {
     renderShell([X5C]);
     await openDetail('x5c@example.com');
 
@@ -138,7 +137,7 @@ describe('a saved credential\'s details, the detail', () => {
     expect(key.querySelector('[data-item="COSE key type:"]')).toHaveTextContent('EC2 (2)');
   });
 
-  it('CRED-M7: name an EdDSA key and an ML-DSA key with its parameter set', async () => {
+  it('name an EdDSA key and an ML-DSA key with its parameter set', async () => {
     renderShell([EDDSA, MLDSA]);
     await openDetail('eddsa@example.com');
     expect(section('Public Key')).toHaveTextContent('EdDSA (-8)');
@@ -152,7 +151,7 @@ describe('a saved credential\'s details, the detail', () => {
     expect(key.querySelector('[data-item="ML-DSA parameter set:"]')).toHaveTextContent('ML-DSA-65');
   });
 
-  it('CRED-M1: complete an advanced record from its server artifact first, and save the snapshot it brings', async () => {
+  it('complete an advanced record from its server artifact first, and save the snapshot it brings', async () => {
     const fetch = renderShell([ADVANCED], '', {
       [`/api/advanced/credential-artifacts/${encodeURIComponent(ARTIFACT.storageId)}`]: () => json(ARTIFACT),
     });
@@ -163,7 +162,7 @@ describe('a saved credential\'s details, the detail', () => {
     expect(dialog().querySelector('[data-hydration]')).toBeNull();
   });
 
-  it('CRED-M1: say the artifact could not be fetched, and show what this browser keeps', async () => {
+  it('say the artifact could not be fetched, and show what this browser keeps', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     renderShell([ADVANCED], '', {
       [`/api/advanced/credential-artifacts/${encodeURIComponent(ARTIFACT.storageId)}`]: () => json({ error: 'Store unavailable.' }, 503),
@@ -176,7 +175,7 @@ describe('a saved credential\'s details, the detail', () => {
 });
 
 describe('a saved credential\'s details, what some records hold', () => {
-  it('CRED-M1: keep the registration snapshot the artifact brings, so the list reads it again', async () => {
+  it('keep the registration snapshot the artifact brings, so the list reads it again', async () => {
     const snapshot = {
       schemaVersion: 2,
       capturedAt: '2026-09-27T10:00:00Z',
@@ -195,7 +194,7 @@ describe('a saved credential\'s details, what some records hold', () => {
     expect(section('Authenticator Response').querySelector('pre')).toHaveTextContent(ADVANCED.credentialIdBase64Url as string);
   });
 
-  it('CRED-M2, CRED-M10: give the metadata\'s warning in amber, and FIDO MDS beside the AAGUID when it has an entry', async () => {
+  it('give the metadata\'s warning in amber, and FIDO MDS beside the AAGUID when it has an entry', async () => {
     const known = {
       ...ES256,
       aaguidHex: 'f1d0f1d0000040008000000000000001',
@@ -209,7 +208,7 @@ describe('a saved credential\'s details, what some records hold', () => {
     await waitFor(() => expect(window.location.hash).toBe('#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000001'));
   });
 
-  it('CRED-C4: give a stored AAGUID no spelling reads as stored, marked, under the four N/A spellings', async () => {
+  it('give a stored AAGUID no spelling reads as stored, marked, under the four N/A spellings', async () => {
     renderShell([{ ...EDDSA, aaguid: 'abcde', aaguidHex: undefined }]);
     await openDetail('eddsa@example.com');
 
@@ -218,7 +217,7 @@ describe('a saved credential\'s details, what some records hold', () => {
     expect(aaguid.querySelector('[data-unreadable="aaguid"] code')).toHaveTextContent('abcde');
   });
 
-  it('CRED-C3, CRED-M3: read the all-zero AAGUID a record keeps in base64url as sixteen zero bytes, in the row and the details', async () => {
+  it('read the all-zero AAGUID a record keeps in base64url as sixteen zero bytes, in the row and the details', async () => {
     const zero = '0'.repeat(32);
     const zeroGuid = '00000000-0000-0000-0000-000000000000';
     const properties = { ...(EDDSA.properties as object), aaguid: zero, aaguidHex: zero, aaguidGuid: zeroGuid };
@@ -234,7 +233,7 @@ describe('a saved credential\'s details, what some records hold', () => {
     expect(aaguid).not.toHaveTextContent('aaaaaaaaaaaaaaaaaaaaaa');
   });
 
-  it('CRED-G4: say a certificate could not be parsed, and give no summary for it', async () => {
+  it('say a certificate could not be parsed, and give no summary for it', async () => {
     const broken = { ...ES256, attestationCertificates: [{ parsedX5c: { error: 'The certificate is not DER.' } }], attestationObject: '' };
     renderShell([broken], urlOf(ES256, 'registration', 'certificate', '1'));
     // The title shows while the details are still being composed: wait for the level.
@@ -246,7 +245,7 @@ describe('a saved credential\'s details, what some records hold', () => {
 });
 
 describe('a saved credential\'s details, the registration', () => {
-  it('CRED-G1: give the browser\'s response, its client data and what the server kept, each as a block with copy', async () => {
+  it('give the browser\'s response, its client data and what the server kept, each as a block with copy', async () => {
     renderShell([ES256]);
     await openDetail();
     await toRegistration();
@@ -260,7 +259,7 @@ describe('a saved credential\'s details, the registration', () => {
     expect(within(response).getByRole('button', { name: 'Copy registration response' })).toBeInTheDocument();
   });
 
-  it('CRED-G2: give the attestation object, and no certificate for a none attestation', async () => {
+  it('give the attestation object, and no certificate for a none attestation', async () => {
     renderShell([ES256]);
     await openDetail();
     await toRegistration();
@@ -271,7 +270,7 @@ describe('a saved credential\'s details, the registration', () => {
     expect(within(attestation).getByRole('button', { name: 'Authenticator Data' })).toBeInTheDocument();
   });
 
-  it('CRED-G3: say why the attestation object could not be decoded', async () => {
+  it('say why the attestation object could not be decoded', async () => {
     renderShell([{ ...EDDSA, attestationObject: 'bm90LWNib3I' }]);
     await openDetail('eddsa@example.com');
     await toRegistration();
@@ -279,7 +278,7 @@ describe('a saved credential\'s details, the registration', () => {
     expect(within(section('Attestation Information')).getByRole('alert')).toHaveTextContent('The payload is not valid CBOR.');
   });
 
-  it('CRED-G4: open a certificate at its own URL, with its summary above the current text', async () => {
+  it('open a certificate at its own URL, with its summary above the current text', async () => {
     renderShell([X5C]);
     await openDetail('x5c@example.com');
     await toRegistration();
@@ -292,7 +291,7 @@ describe('a saved credential\'s details, the registration', () => {
     expect(section('Decoded Output').querySelector('pre')).toHaveTextContent('Signature Algorithm:');
   });
 
-  it('CRED-G5: open the authenticator data at its own URL, as JSON', async () => {
+  it('open the authenticator data at its own URL, as JSON', async () => {
     renderShell([ES256]);
     await openDetail();
     await toRegistration();

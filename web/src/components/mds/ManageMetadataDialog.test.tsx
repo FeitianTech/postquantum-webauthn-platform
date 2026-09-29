@@ -1,5 +1,4 @@
-// Manage Trusted Metadata over the fixture snapshot. The IDs name the items of
-// docs/ui-parity/mds.md.
+// Manage Trusted Metadata over the fixture snapshot.
 import { act, createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -72,7 +71,7 @@ afterEach(() => {
 });
 
 describe('Manage Trusted Metadata', () => {
-  it('MDS-H4/M1: opens from Manage Metadata, takes focus, and Escape gives it back', async () => {
+  it('opens from Manage Metadata, takes focus, and Escape gives it back', async () => {
     await renderSection();
     expect(manage()).toHaveAttribute('aria-haspopup', 'dialog');
     expect(manage()).toHaveAttribute('aria-expanded', 'false');
@@ -85,14 +84,14 @@ describe('Manage Trusted Metadata', () => {
     expect(manage()).toHaveFocus();
   });
 
-  it('MDS-M1: closes from its Close button', async () => {
+  it('closes from its Close button', async () => {
     await renderSection();
     const panel = await openDialog();
     await userEvent.click(within(panel).getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
-  it('MDS-M2/M3: says what it does and how files are chosen', async () => {
+  it('says what it does and how files are chosen', async () => {
     await renderSection();
     const panel = await openDialog();
     expect(panel).toHaveTextContent(
@@ -109,7 +108,7 @@ describe('Manage Trusted Metadata', () => {
     expect(click).toHaveBeenCalled();
   });
 
-  it('MDS-M10: lists the files this session uploaded, or says there are none', async () => {
+  it('lists the files this session uploaded, or says there are none', async () => {
     let items: unknown[] = [];
     await renderSection({ '/api/mds/metadata/custom': () => json({ items }) });
     let panel = await openDialog();
@@ -132,7 +131,7 @@ describe('Manage Trusted Metadata', () => {
     expect(await within(panel).findByText('No custom metadata has been added yet.')).toBeInTheDocument();
   });
 
-  it('MDS-M5/M7: uploads the chosen files and shows their entries at once', async () => {
+  it('uploads the chosen files and shows their entries at once', async () => {
     let listed: unknown[] = [];
     const fetch = await renderSection({
       '/api/mds/metadata/upload': () => {
@@ -155,7 +154,7 @@ describe('Manage Trusted Metadata', () => {
     expect(await within(panel).findByText('custom-metadata.json')).toBeInTheDocument();
   });
 
-  it('MDS-M8: says where an upload is while it runs', async () => {
+  it('says where an upload is while it runs', async () => {
     const answer = deferred<Response>();
     await renderSection({ '/api/mds/metadata/upload': () => answer.promise });
     await openDialog();
@@ -169,7 +168,7 @@ describe('Manage Trusted Metadata', () => {
     await waitFor(() => expect(document.querySelector('[data-mds-progress]')).toBeNull());
   });
 
-  it('MDS-M5: passes on the warnings of an upload that partly worked', async () => {
+  it('passes on the warnings of an upload that partly worked', async () => {
     await renderSection({ '/api/mds/metadata/upload': () => json({ items: [ITEM], errors: ['b.json is not a JSON file.'], snapshot: WITH_UPLOAD }) });
     await openDialog();
     await userEvent.upload(fileInput(), [file('a.json'), file('b.json')]);
@@ -177,7 +176,7 @@ describe('Manage Trusted Metadata', () => {
     expect(message()).toHaveAttribute('data-variant', 'warning');
   });
 
-  it('MDS-M5: keeps the server reason for a refused upload', async () => {
+  it('keeps the server reason for a refused upload', async () => {
     await renderSection({ '/api/mds/metadata/upload': () => json({ items: [], errors: ['a.json must contain a JSON object.'] }, 400) });
     await openDialog();
     await userEvent.upload(fileInput(), file('a.json'));
@@ -186,14 +185,14 @@ describe('Manage Trusted Metadata', () => {
     expect(document.querySelector('[data-mds-progress]')).toHaveTextContent('Metadata update failed.');
   });
 
-  it('MDS-M5: says an upload failed when the request did', async () => {
+  it('says an upload failed when the request did', async () => {
     await renderSection({ '/api/mds/metadata/upload': () => Promise.reject(new TypeError('offline')) });
     await openDialog();
     await userEvent.upload(fileInput(), file('a.json'));
     await waitFor(() => expect(message()).toHaveTextContent('Failed to upload metadata files.'));
   });
 
-  it('MDS-M7: loads the session list again when an upload answers without it', async () => {
+  it('loads the session list again when an upload answers without it', async () => {
     let uploaded = false;
     const fetch = await renderSection({
       '/api/mds/metadata/upload': () => {
@@ -209,7 +208,7 @@ describe('Manage Trusted Metadata', () => {
     expect(status()).toHaveTextContent(/ Custom metadata updated\.$/);
   });
 
-  it('MDS-M4: refuses files that are not JSON, and sends the others', async () => {
+  it('refuses files that are not JSON, and sends the others', async () => {
     const fetch = await renderSection({ '/api/mds/metadata/upload': () => json({ items: [ITEM], snapshot: WITH_UPLOAD }) });
     await openDialog();
 
@@ -224,7 +223,7 @@ describe('Manage Trusted Metadata', () => {
     await waitFor(() => expect(message()).toHaveTextContent('Metadata uploaded successfully.'));
   });
 
-  it('MDS-M3: takes files dropped on the zone, lighting it up while they are over it', async () => {
+  it('takes files dropped on the zone, lighting it up while they are over it', async () => {
     await renderSection({ '/api/mds/metadata/upload': () => json({ items: [ITEM], snapshot: WITH_UPLOAD }) });
     const panel = await openDialog();
     const zone = panel.querySelector<HTMLElement>('[data-mds-dropzone]')!;
@@ -250,7 +249,7 @@ describe('Manage Trusted Metadata', () => {
     await waitFor(() => expect(message()).toHaveTextContent('Metadata uploaded successfully.'));
   });
 
-  it('MDS-M6: deletes an uploaded file, and the list and the table follow', async () => {
+  it('deletes an uploaded file, and the list and the table follow', async () => {
     let listed: unknown[] = [ITEM];
     const fetch = await renderSection({
       '/api/mds/metadata/custom': () => json({ items: listed }),
@@ -268,7 +267,7 @@ describe('Manage Trusted Metadata', () => {
     expect(status()).toHaveTextContent(/ Custom metadata updated\.$/);
   });
 
-  it('MDS-M6: says a file was already gone, as a warning', async () => {
+  it('says a file was already gone, as a warning', async () => {
     await renderSection({
       '/api/mds/metadata/custom': () => json({ items: [ITEM] }),
       '/api/mds/metadata/custom/0f1e.json': () => json({ deleted: false, message: 'Metadata entry not found.' }, 404),
@@ -280,7 +279,7 @@ describe('Manage Trusted Metadata', () => {
     expect(document.querySelector('[data-mds-progress]')).toHaveTextContent('No metadata changes detected.');
   });
 
-  it('MDS-M6: keeps the server reason for a refused delete, and says when the request failed', async () => {
+  it('keeps the server reason for a refused delete, and says when the request failed', async () => {
     let fail: 'refuse' | 'throw' = 'refuse';
     await renderSection({
       '/api/mds/metadata/custom': () => json({ items: [ITEM] }),
@@ -298,7 +297,7 @@ describe('Manage Trusted Metadata', () => {
     await waitFor(() => expect(message()).toHaveTextContent('Failed to delete metadata file.'));
   });
 
-  it('MDS-M7: loads the session list again when a delete answers without it', async () => {
+  it('loads the session list again when a delete answers without it', async () => {
     const fetch = await renderSection({
       '/api/mds/metadata/custom': () => json({ items: [ITEM] }),
       '/api/mds/metadata/custom/0f1e.json': () => json({ deleted: true }),

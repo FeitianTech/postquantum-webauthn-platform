@@ -13,7 +13,7 @@ vi.mock('@/logic/shared/browser/report.js', async (importOriginal) => {
 });
 
 describe('when the analysis fails', () => {
-  it('does not open, enables the trigger again, and asks again on the next click (AB-T5)', async () => {
+  it('does not open, enables the trigger again, and asks again on the next click', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     gather.mockRejectedValueOnce(new Error('the browser threw'));
     renderPage(<AppShell />);

@@ -1,6 +1,5 @@
-// The Advanced tab's authentication form (ADV-A, ADV-AB, ADV-I19..I29, ADV-X2
-// in docs/ui-parity/advanced.md): every field changes the request the JSON
-// editor holds, with the current form's rules and words, over the credentials
+// The Advanced tab's authentication form: every field changes the request the
+// JSON editor holds, by the logic's rules and in its words, over the credentials
 // the recorded authentications registered.
 import { advancedAuthentications } from '@/test/logic/advanced/auth/advanced-answers.js';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
@@ -30,7 +29,7 @@ afterEach(() => {
 });
 
 describe('the authentication form, when the page has loaded', () => {
-  it('ADV-A, ADV-T10: shows the three sections, each field with its label, the byte fields\' in hex', async () => {
+  it('shows the three sections, each field with its label, the byte fields\' in hex', async () => {
     renderAuthenticationForm([CAPABLE, PLAIN]);
     await ready();
 
@@ -51,7 +50,7 @@ describe('the authentication form, when the page has loaded', () => {
     expect(screen.getAllByRole('button', { name: /^About / })).toHaveLength(11);
   });
 
-  it('ADV-T9, ADV-J2: draws a challenge and a largeBlob value of 32 bytes, and gives the editor the request the defaults build', async () => {
+  it('draws a challenge and a largeBlob value of 32 bytes, and gives the editor the request the defaults build', async () => {
     renderAuthenticationForm([CAPABLE, PLAIN]);
     await ready();
 
@@ -73,7 +72,7 @@ describe('the authentication form, when the page has loaded', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'JSON Editor (CredentialRequestOptions)' })).toBeInTheDocument();
   });
 
-  it('ADV-A2, ADV-AB1: offers All, Empty and each saved credential with its algorithm and attachment', async () => {
+  it('offers All, Empty and each saved credential with its algorithm and attachment', async () => {
     renderAuthenticationForm([CAPABLE, PLAIN]);
     await ready();
 
@@ -89,7 +88,7 @@ describe('the authentication form, when the page has loaded', () => {
     expect(authPublicKey()).not.toHaveProperty('allowCredentials');
   });
 
-  it('ADV-AB1: offers only the credentials the authentication\'s hints allow, a choice that goes falling back to All', async () => {
+  it('offers only the credentials the authentication\'s hints allow, a choice that goes falling back to All', async () => {
     renderAuthenticationForm([CAPABLE, PLAIN]);
     await ready();
     await userEvent.selectOptions(field('Allow Credentials'), PLAIN_ID);
@@ -105,7 +104,7 @@ describe('the authentication form, when the page has loaded', () => {
     expect(ids()).toEqual([CAPABLE_ID, PLAIN_ID]);
   });
 
-  it('ADV-AB1: leaves the offer to the authentication, whatever the registration form\'s hints', async () => {
+  it('leaves the offer to the authentication, whatever the registration form\'s hints', async () => {
     renderAuthenticationForm([CAPABLE, PLAIN]);
     await ready();
     await userEvent.selectOptions(field('Allow Credentials'), PLAIN_ID);
@@ -116,7 +115,7 @@ describe('the authentication form, when the page has loaded', () => {
     expect(field('Allow Credentials')).toHaveValue(PLAIN_ID);
   });
 
-  it('ADV-AB1: offers and sends the advanced credentials only: a Simple one is the Simple tab\'s, which the server refuses here', async () => {
+  it('offers and sends the advanced credentials only: a Simple one is the Simple tab\'s, which the server refuses here', async () => {
     const simple = savedRecord('simple-register-es256', { email: 'simple@example.com', userName: 'simple@example.com' });
     renderAuthenticationForm([CAPABLE, simple, PLAIN]);
     await ready();
@@ -125,7 +124,7 @@ describe('the authentication form, when the page has loaded', () => {
     expect(ids()).toEqual([CAPABLE_ID, PLAIN_ID]);
   });
 
-  it('ADV-AB1: reads an edit whose hints refuse the credential it names as All, and sends the edit as typed', async () => {
+  it('reads an edit whose hints refuse the credential it names as All, and sends the edit as typed', async () => {
     renderAuthenticationForm([CAPABLE, PLAIN]);
     await ready();
     await userEvent.selectOptions(field('Allow Credentials'), PLAIN_ID);
@@ -138,7 +137,7 @@ describe('the authentication form, when the page has loaded', () => {
     expect(authPublicKey()).toEqual(edited);
   });
 
-  it('ADV-A6: sends the hints chosen, and All the credentials their attachment allows', async () => {
+  it('sends the hints chosen, and All the credentials their attachment allows', async () => {
     renderAuthenticationForm([CAPABLE, PLAIN]);
     await ready();
     const other = within(section('Other Options'));
@@ -151,7 +150,7 @@ describe('the authentication form, when the page has loaded', () => {
     expect(ids()).toEqual([CAPABLE_ID, PLAIN_ID]);
   });
 
-  it('ADV-A1, ADV-A5, ADV-A7: sends the user verification and the timeout; the hash algorithm is not in the request', async () => {
+  it('sends the user verification and the timeout; the hash algorithm is not in the request', async () => {
     renderAuthenticationForm([CAPABLE]);
     await ready();
 
@@ -165,7 +164,7 @@ describe('the authentication form, when the page has loaded', () => {
 });
 
 describe('the extensions', () => {
-  it('ADV-AB2, ADV-AB3: lock largeBlob and prf with the current notes when no saved credential can use them', async () => {
+  it('lock largeBlob and prf with the current notes when no saved credential can use them', async () => {
     renderAuthenticationForm();
     await ready();
 
@@ -178,7 +177,7 @@ describe('the extensions', () => {
     expect(field('prf eval first (hex)')).toHaveAccessibleDescription('No credentials with prf support available.');
   });
 
-  it('ADV-AB3: counts no prf for a credential whose registration said prf is not enabled', async () => {
+  it('counts no prf for a credential whose registration said prf is not enabled', async () => {
     const disabled = { ...PLAIN, clientExtensionOutputs: { prf: { enabled: false } } };
     renderAuthenticationForm([disabled]);
     await ready();
@@ -187,7 +186,7 @@ describe('the extensions', () => {
     expect(field('prf eval first (hex)')).toHaveAccessibleDescription('No credentials with prf support available.');
   });
 
-  it('ADV-AB2, ADV-AB3: judge a chosen credential alone, clearing what it cannot ask for', async () => {
+  it('judge a chosen credential alone, clearing what it cannot ask for', async () => {
     renderAuthenticationForm([CAPABLE, PLAIN]);
     await ready();
     await userEvent.selectOptions(field('largeBlob'), 'write');
@@ -209,7 +208,7 @@ describe('the extensions', () => {
     expect(field('largeBlob')).not.toHaveAccessibleDescription();
   });
 
-  it('ADV-A8, ADV-A9: asks for largeBlob to be read, or written with its value, which the button draws again', async () => {
+  it('asks for largeBlob to be read, or written with its value, which the button draws again', async () => {
     renderAuthenticationForm([CAPABLE]);
     await ready();
 
@@ -223,7 +222,7 @@ describe('the extensions', () => {
     expect(authPublicKey().extensions.largeBlob.write.$hex).toBe(field('largeBlob write (hex)').value);
   });
 
-  it('ADV-A10, ADV-A11: open the second prf evaluation with a first, and empty it with the first', async () => {
+  it('open the second prf evaluation with a first, and empty it with the first', async () => {
     renderAuthenticationForm([CAPABLE]);
     await ready();
     const [first, second] = within(section('Extensions')).getAllByRole('button', { name: 'Generate random PRF evaluation data' });
@@ -240,7 +239,7 @@ describe('the extensions', () => {
 });
 
 describe('the byte fields and the fake IDs', () => {
-  it('ADV-AB5: say when a byte field holds too few bytes, as they are typed', async () => {
+  it('say when a byte field holds too few bytes, as they are typed', async () => {
     renderAuthenticationForm([CAPABLE]);
     await ready();
 
@@ -253,7 +252,7 @@ describe('the byte fields and the fake IDs', () => {
     expect(field('prf eval first (hex)')).toHaveAccessibleDescription('Invalid hex value (exactly 32 bytes required)');
   });
 
-  it('ADV-A3, ADV-AB4: add fake allow IDs after the saved ones, each deleted on its own', async () => {
+  it('add fake allow IDs after the saved ones, each deleted on its own', async () => {
     renderAuthenticationForm([CAPABLE]);
     await ready();
     const selection = within(section('Credential Selection'));
@@ -273,7 +272,7 @@ describe('the byte fields and the fake IDs', () => {
 });
 
 describe('the Reset', () => {
-  it('ADV-X2: returns to the defaults with a new challenge, keeping the hash algorithm and leaving the registration form alone', async () => {
+  it('returns to the defaults with a new challenge, keeping the hash algorithm and leaving the registration form alone', async () => {
     renderAuthenticationForm([CAPABLE]);
     await ready();
     await userEvent.click(screen.getByRole('button', { name: 'Registration without algorithms' }));

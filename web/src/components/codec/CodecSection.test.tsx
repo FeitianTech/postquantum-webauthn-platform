@@ -73,7 +73,7 @@ afterEach(() => {
 });
 
 describe('the Codec section', () => {
-  it('has its title, description and the Decode / Encode switch, Decode first (CX-T1, CX-M1, CX-M4)', async () => {
+  it('has its title, description and the Decode / Encode switch, Decode first', async () => {
     const section = renderCodec();
     expect(within(section).getByRole('heading', { level: 2, name: 'Codec' })).toBeInTheDocument();
     expect(section).toHaveTextContent('Decode or encode WebAuthn payloads to inspect their underlying data formats.');
@@ -84,14 +84,14 @@ describe('the Codec section', () => {
     expect(encodePanel()).toHaveAttribute('role', 'tabpanel');
     expect(encodePanel()).not.toBeVisible();
     // The panel the page opens with is simply there; one the person brings up
-    // comes in, and holds still under reduced motion (CX-M4).
+    // comes in, and holds still under reduced motion.
     expect(decodePanel().className).not.toContain('animate-[section-in');
     await userEvent.click(within(modes).getByRole('tab', { name: 'Encode' }));
     expect(encodePanel().className).toContain('animate-[section-in');
     expect(encodePanel().className).toContain('motion-reduce:animate-none');
   });
 
-  it('keeps each mode\'s input and answer across switches (CX-M2, CX-M5)', async () => {
+  it('keeps each mode\'s input and answer across switches', async () => {
     fetchMock.mockResolvedValueOnce(reply('decode-duplicate-and-colliding-keys'));
     renderCodec();
     await typeInto(decodePanel(), 'a301616161316162016163');
@@ -110,7 +110,7 @@ describe('the Codec section', () => {
     expect(within(encodePanel()).getByRole('textbox')).toHaveValue('{"a": 1}');
   });
 
-  it('shows Supported Inputs where the output goes until there is an answer (CX-I1, CX-I2)', () => {
+  it('shows Supported Inputs where the output goes until there is an answer', () => {
     renderCodec();
     const supported = within(decodePanel()).getByRole('region', { name: 'Supported Inputs' });
     const rows = within(supported).getAllByRole('term').map((term) => term.textContent);
@@ -122,7 +122,7 @@ describe('the Codec section', () => {
 });
 
 describe('decoding', () => {
-  it('sends the input as typed, shows progress while it runs, then the answer and a toast (CX-D4, CX-D5, CX-S7)', async () => {
+  it('sends the input as typed, shows progress while it runs, then the answer and a toast', async () => {
     const pending = deferred<Response>();
     fetchMock.mockReturnValueOnce(pending.promise);
     renderCodec();
@@ -143,7 +143,7 @@ describe('decoding', () => {
     expect(within(decodePanel()).getByRole('button', { name: 'Decode' })).toBeEnabled();
   });
 
-  it('sends lenient only when the switch is on (CX-D2, CX-D4)', async () => {
+  it('sends lenient only when the switch is on', async () => {
     fetchMock.mockImplementation(async () => reply('decode-nan-lenient'));
     renderCodec();
     const lenient = within(decodePanel()).getByRole('switch', { name: 'Best effort (lenient)' });
@@ -161,7 +161,7 @@ describe('decoding', () => {
     ]);
   });
 
-  it('says a refusal in the current words, with the offset and path in their own place, and shows no answer (CX-O1, CX-S8, CX-S11)', async () => {
+  it('says a refusal in the current words, with the offset and path in their own place, and shows no answer', async () => {
     const refusal = deferred<Response>();
     fetchMock.mockResolvedValueOnce(reply('decode-duplicate-and-colliding-keys')).mockReturnValueOnce(refusal.promise);
     renderCodec();
@@ -184,7 +184,7 @@ describe('decoding', () => {
     expect(within(decodePanel()).queryByRole('region', { name: 'Supported Inputs' })).toBeNull();
   });
 
-  it('adds what to do for a status the server did not explain, and never shows a page of markup (CX-S9)', async () => {
+  it('adds what to do for a status the server did not explain, and never shows a page of markup', async () => {
     fetchMock.mockResolvedValueOnce(new Response('<!doctype html><h1>Unavailable</h1>', { status: 503, headers: { 'Content-Type': 'text/html' } }));
     renderCodec();
     await typeInto(decodePanel(), 'a0');
@@ -213,7 +213,7 @@ describe('decoding', () => {
     expect(alert.querySelector('[data-role="path"]')).toHaveTextContent('$');
   });
 
-  it('says so when a success is not JSON (CX-S10)', async () => {
+  it('says so when a success is not JSON', async () => {
     fetchMock.mockResolvedValueOnce(new Response('not json', { status: 200 }));
     renderCodec();
     await typeInto(decodePanel(), 'a0');
@@ -221,7 +221,7 @@ describe('decoding', () => {
     expect(await within(decodePanel()).findByRole('alert')).toHaveTextContent('Decoding failed: Failed to parse decoder response.');
   });
 
-  it('refuses an empty input before asking, and keeps the last answer shown (CX-S1, CX-S6)', async () => {
+  it('refuses an empty input before asking, and keeps the last answer shown', async () => {
     fetchMock.mockResolvedValueOnce(reply('decode-duplicate-and-colliding-keys'));
     renderCodec();
     await userEvent.click(within(decodePanel()).getByRole('button', { name: 'Decode' }));
@@ -238,7 +238,7 @@ describe('decoding', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('Clear empties the input and the answer, keeps the lenient switch, and drops an answer still coming (CX-L1)', async () => {
+  it('Clear empties the input and the answer, keeps the lenient switch, and drops an answer still coming', async () => {
     const pending = deferred<Response>();
     fetchMock.mockResolvedValueOnce(reply('decode-duplicate-and-colliding-keys')).mockReturnValueOnce(pending.promise);
     renderCodec();
@@ -284,7 +284,7 @@ describe('encoding', () => {
     ['encode-cose', 'COSE'],
   ] as const;
 
-  it('offers the seven formats, CBOR (canonical) first (CX-E1)', async () => {
+  it('offers the seven formats, CBOR (canonical) first', async () => {
     renderCodec();
     await userEvent.click(screen.getByRole('tab', { name: 'Encode' }));
     const select = within(encodePanel()).getByRole('combobox', { name: 'Encoding format' });
@@ -300,7 +300,7 @@ describe('encoding', () => {
     ]);
   });
 
-  it.each(FORMAT_CASES)('encodes %s and shows every view of the bytes and their length (CX-E5, CX-C1–C3)', async (name, format) => {
+  it.each(FORMAT_CASES)('encodes %s and shows every view of the bytes and their length', async (name, format) => {
     fetchMock.mockResolvedValueOnce(reply(name));
     const { request, answer } = RECORDED[name];
     renderCodec();
@@ -329,7 +329,7 @@ describe('encoding', () => {
     ['', 'CBOR (canonical)', 'Encoder input is empty. Provide JSON to encode.'],
     ['{"a": ', 'CBOR (canonical)', 'Encoder expects valid JSON input.'],
     ['{"a": true}', 'PEM', 'Input cannot be converted into PEM.'],
-  ])('refuses %j for %s before asking (CX-S2, CX-S4, CX-S5)', async (input, format, message) => {
+  ])('refuses %j for %s before asking', async (input, format, message) => {
     renderCodec();
     await userEvent.click(screen.getByRole('tab', { name: 'Encode' }));
     await userEvent.selectOptions(within(encodePanel()).getByRole('combobox'), format);
@@ -339,7 +339,7 @@ describe('encoding', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('says an encoding refusal as the current panel does, and Clear keeps the format (CX-S8, CX-L1)', async () => {
+  it('says why an encoding was refused, and Clear keeps the format', async () => {
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: 'EDN is not valid at offset 4: 256 does not fit.', offset: 4 }), { status: 422 }));
     renderCodec();
     await userEvent.click(screen.getByRole('tab', { name: 'Encode' }));
@@ -355,7 +355,7 @@ describe('encoding', () => {
 });
 
 describe('the raw views', () => {
-  it('open the whole answer, indented, in a dialog; ×, Escape and Raw close it, focus back on Raw (CX-R1–R3)', async () => {
+  it('open the whole answer, indented, in a dialog; ×, Escape and Raw close it, focus back on Raw', async () => {
     fetchMock.mockResolvedValueOnce(reply('decode-duplicate-and-colliding-keys'));
     renderCodec();
     await typeInto(decodePanel(), 'a301616161316162016163');

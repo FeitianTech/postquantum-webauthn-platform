@@ -1,4 +1,4 @@
-// The raw view's logic (MDS-W1), which web/ imports: raw-data.js and
+// The raw view's logic, which web/ imports: raw-data.js and
 // raw-stringify.js.
 import { readFileSync } from 'node:fs';
 

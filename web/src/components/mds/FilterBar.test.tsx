@@ -1,5 +1,4 @@
-// The MDS filters over the fixture snapshot. The IDs name the items of
-// docs/ui-parity/mds.md.
+// The MDS filters over the fixture snapshot.
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -39,7 +38,7 @@ afterEach(() => {
 });
 
 describe('the MDS filters', () => {
-  it('MDS-F1..F11: has the 11 filters, labelled by their column, with the current placeholders', async () => {
+  it('has the 11 filters, labelled by their column, with the current placeholders', async () => {
     await renderLoaded();
     const fields = within(filters()).getAllByRole('combobox').concat(within(filters()).getAllByRole('searchbox'));
     expect(fields).toHaveLength(11);
@@ -65,7 +64,7 @@ describe('the MDS filters', () => {
     expect(combobox('User Verification')).toBeInTheDocument();
   });
 
-  it('MDS-F1/F12/H3: filters as it is typed, counts what is shown, marks the column and says how many filters are in use', async () => {
+  it('filters as it is typed, counts what is shown, marks the column and says how many filters are in use', async () => {
     await renderLoaded();
     await userEvent.type(search('Name'), '  u2f ');
     await waitFor(() => expect(shownNames()).toEqual(['Fixture U2F Key']));
@@ -79,7 +78,7 @@ describe('the MDS filters', () => {
     expect(within(filters()).queryByText(/active$/)).toBeNull();
   });
 
-  it('MDS-F12: combines filters, all of which must match', async () => {
+  it('combines filters, all of which must match', async () => {
     await renderLoaded();
     await userEvent.type(combobox('Protocol'), 'FIDO2');
     await userEvent.type(search('Name'), 'Security Key');
@@ -87,7 +86,7 @@ describe('the MDS filters', () => {
     expect(within(filters()).getByText('2 active')).toBeInTheDocument();
   });
 
-  it('MDS-F12: matches a named certification level exactly, and FIDO Certified to every level', async () => {
+  it('matches a named certification level exactly, and FIDO Certified to every level', async () => {
     await renderLoaded();
     await userEvent.click(combobox('Certification'));
     await userEvent.click(screen.getByRole('option', { name: 'Revoked' }));
@@ -102,7 +101,7 @@ describe('the MDS filters', () => {
     await waitFor(() => expect(shownNames()).toHaveLength(28));
   });
 
-  it('MDS-F2/E2: shows the protocol as the server spells it, and says when nothing matches', async () => {
+  it('shows the protocol as the server spells it, and says when nothing matches', async () => {
     await renderLoaded();
     await userEvent.type(combobox('Protocol'), 'Uaf');
     await waitFor(() => expect(shownNames()).toEqual(['Fixture UAF Authenticator']));
@@ -115,7 +114,7 @@ describe('the MDS filters', () => {
     await waitFor(() => expect(shownNames()).toHaveLength(32));
   });
 
-  it('MDS-F14: clears a text filter with Escape', async () => {
+  it('clears a text filter with Escape', async () => {
     await renderLoaded();
     await userEvent.type(search('ID'), 'f1d0f1d0-0000-4000-8000-000000000002');
     await waitFor(() => expect(shownNames()).toEqual(['Fixture Security Key L2']));
@@ -139,7 +138,7 @@ describe('the MDS filters', () => {
 });
 
 describe('an MDS filter that offers a list', () => {
-  it('MDS-F13: opens on focus with the values present, sorted, and narrows as it is typed', async () => {
+  it('opens on focus with the values present, sorted, and narrows as it is typed', async () => {
     await renderLoaded();
     await userEvent.click(combobox('Transports'));
     expect(combobox('Transports')).toHaveAttribute('aria-expanded', 'true');
@@ -152,13 +151,13 @@ describe('an MDS filter that offers a list', () => {
     expect(within(screen.getByRole('listbox')).queryAllByRole('option')).toHaveLength(0);
   });
 
-  it('MDS-F13: offers the static certification statuses and the others present', async () => {
+  it('offers the static certification statuses and the others present', async () => {
     await renderLoaded();
     await userEvent.click(combobox('Certification'));
     expect(options()).toEqual(['FIDO Certified', 'FIDO Certified L1', 'FIDO Certified L2', 'NOT FIDO Certified', 'Revoked']);
   });
 
-  it('MDS-F5/F9: shows the user verification and algorithm lists whole, the others scrolling', async () => {
+  it('shows the user verification and algorithm lists whole, the others scrolling', async () => {
     await renderLoaded();
     await userEvent.click(combobox('User Verification'));
     expect(screen.getByRole('listbox')).not.toHaveClass('max-h-64');
@@ -169,7 +168,7 @@ describe('an MDS filter that offers a list', () => {
     expect(screen.getByRole('listbox')).toHaveClass('max-h-64');
   });
 
-  it('MDS-F13: moves through the list with the arrow keys, wrapping, and Enter picks', async () => {
+  it('moves through the list with the arrow keys, wrapping, and Enter picks', async () => {
     await renderLoaded();
     const field = combobox('Key Protection');
     field.focus();
@@ -188,7 +187,7 @@ describe('an MDS filter that offers a list', () => {
     await waitFor(() => expect(shownNames()).toHaveLength(30));
   });
 
-  it('MDS-F13: opens from ArrowDown, and leaves Enter alone with nothing chosen', async () => {
+  it('opens from ArrowDown, and leaves Enter alone with nothing chosen', async () => {
     await renderLoaded();
     const field = combobox('Attachment');
     await userEvent.click(field);
@@ -203,7 +202,7 @@ describe('an MDS filter that offers a list', () => {
     expect(field).toHaveValue('');
   });
 
-  it('MDS-F13: finds nothing to move to in a list with no match', async () => {
+  it('finds nothing to move to in a list with no match', async () => {
     await renderLoaded();
     const field = combobox('Attachment');
     await userEvent.type(field, 'zz');
@@ -211,7 +210,7 @@ describe('an MDS filter that offers a list', () => {
     expect(field).not.toHaveAttribute('aria-activedescendant');
   });
 
-  it('MDS-F13: Escape closes the list, then clears the field', async () => {
+  it('Escape closes the list, then clears the field', async () => {
     await renderLoaded();
     const field = combobox('Protocol');
     await userEvent.type(field, 'U2F');
@@ -225,7 +224,7 @@ describe('an MDS filter that offers a list', () => {
     expect(field).toHaveValue('');
   });
 
-  it('MDS-F13: picks an option with a click, keeping the field focused, and closes when the field is left', async () => {
+  it('picks an option with a click, keeping the field focused, and closes when the field is left', async () => {
     await renderLoaded();
     const field = combobox('Attachment');
     await userEvent.click(field);

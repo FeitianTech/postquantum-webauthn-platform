@@ -1,5 +1,4 @@
-// The MDS table over the fixture's real entries (tests/fixtures/mds). The IDs name
-// the items of docs/ui-parity/mds.md.
+// The MDS table over the fixture's real entries (tests/fixtures/mds).
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useRef } from 'react';
@@ -65,7 +64,7 @@ afterEach(() => {
 });
 
 describe('the MDS table: its columns', () => {
-  it('MDS-C1..13: has the 13 columns, in order, with their headers', () => {
+  it('has the 13 columns, in order, with their headers', () => {
     renderTable();
     expect(screen.getAllByRole('columnheader').map((cell) => cell.querySelector('button span')?.textContent)).toEqual(HEADERS);
     expect(screen.getByRole('table', { name: 'FIDO MDS authenticators' })).toBeInTheDocument();
@@ -73,7 +72,7 @@ describe('the MDS table: its columns', () => {
     expect(rowOf(FIXTURE_ENTRIES[0])).toHaveClass('grid', '[content-visibility:auto]');
   });
 
-  it('MDS-C1..13: shows each column of an entry', () => {
+  it('shows each column of an entry', () => {
     renderTable();
     const entry = entryNamed('Fixture Security Key L2');
     const cells = cellsOf(entry);
@@ -97,7 +96,7 @@ describe('the MDS table: its columns', () => {
     expect(cells[12]).toHaveAttribute('title', '2026-08-15');
   });
 
-  it('MDS-C3/C5: shows the U2F and UAF entries as the server spells them', () => {
+  it('shows the U2F and UAF entries as the server spells them', () => {
     renderTable();
     const u2f = cellsOf(entryNamed('Fixture U2F Key'));
     expect(u2f[2]).toHaveTextContent('U2F');
@@ -110,13 +109,13 @@ describe('the MDS table: its columns', () => {
     expect(within(uaf[1]).getByRole('link')).toHaveAttribute('href', '#mds/aaid:F1D0%230012');
   });
 
-  it('MDS-C1/C4: shows N/A without an icon and a dash without a certification', () => {
+  it('shows N/A without an icon and a dash without a certification', () => {
     renderTable();
     expect(cellsOf(entryNamed('Fixture Key Without An Icon'))[0]).toHaveTextContent('N/A');
     expect(cellsOf(entryNamed('Fixture Key Without Status Reports'))[3]).toHaveTextContent('—');
   });
 
-  it('MDS-C4: puts the certification in one badge, coloured by its status', () => {
+  it('puts the certification in one badge, coloured by its status', () => {
     renderTable();
     const badge = (name: string) => cellsOf(entryNamed(name))[3].querySelector('span > span')!;
     expect(badge('Fixture Security Key L1')).toHaveClass('text-success');
@@ -154,7 +153,7 @@ describe('the MDS table: its columns', () => {
 });
 
 describe('the MDS table: rows that expand', () => {
-  it('MDS-C12: shows a long value on one line, whole in its tooltip, and every word when expanded', async () => {
+  it('shows a long value on one line, whole in its tooltip, and every word when expanded', async () => {
     renderTable();
     const entry = entryNamed('Fixture Key With Many Attestation Roots');
     const cn = () => cellsOf(entry)[11];
@@ -172,7 +171,7 @@ describe('the MDS table: rows that expand', () => {
     expect(rowOf(entry)).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('MDS-C4: wraps the certification detail when expanded', async () => {
+  it('wraps the certification detail when expanded', async () => {
     renderTable();
     const entry = entryNamed('Fixture Security Key L1');
     await userEvent.click(within(cellsOf(entry)[1]).getByRole('button', { name: /^Show all of/ }));
@@ -181,14 +180,14 @@ describe('the MDS table: rows that expand', () => {
 });
 
 describe('the MDS table: sorting', () => {
-  it('MDS-O1: starts newest first, by Date Updated', () => {
+  it('starts newest first, by Date Updated', () => {
     renderTable();
     expect(header('Date Updated')).toHaveAttribute('aria-sort', 'descending');
     expect(header('Name')).toHaveAttribute('aria-sort', 'none');
     expect(names()[0]).toBe('Fixture Security Key L1');
   });
 
-  it('MDS-O3: cycles a column ascending, descending, then back to the default', async () => {
+  it('cycles a column ascending, descending, then back to the default', async () => {
     renderTable();
     const name = within(header('Name')).getByRole('button');
     await userEvent.click(name);
@@ -205,7 +204,7 @@ describe('the MDS table: sorting', () => {
     expect(header('Date Updated')).toHaveAttribute('aria-sort', 'descending');
   });
 
-  it('MDS-O3: turns Date Updated between newest and oldest first', async () => {
+  it('turns Date Updated between newest and oldest first', async () => {
     renderTable();
     await userEvent.click(within(header('Date Updated')).getByRole('button'));
     expect(header('Date Updated')).toHaveAttribute('aria-sort', 'ascending');
@@ -245,7 +244,7 @@ describe('the MDS table: column widths', () => {
   const separator = (name: string) => screen.getByRole('separator', { name: `Resize ${name} column` });
   const width = (index: number) => document.querySelector('table')!.style.getPropertyValue('--mds-columns').split(' ')[index];
 
-  it('MDS-R1: sets the column widths on the table, which every row lines up on, and every header but the last can be resized', () => {
+  it('sets the column widths on the table, which every row lines up on, and every header but the last can be resized', () => {
     renderTable();
     expect(width(1)).toBe('280px');
     expect(document.querySelector('table')!.style.width).toBe('2740px');
@@ -305,7 +304,7 @@ describe('the MDS table: column widths', () => {
     query.mockRestore();
   });
 
-  it('MDS-R1: resizes from the keyboard, never under the minimum', () => {
+  it('resizes from the keyboard, never under the minimum', () => {
     renderTable();
     fireEvent.keyDown(separator('Name'), { key: 'ArrowRight' });
     expect(width(1)).toBe('296px');
@@ -318,7 +317,7 @@ describe('the MDS table: column widths', () => {
     expect(width(4)).toBe('320px');
   });
 
-  it('MDS-R1: resizes by dragging with the main button', () => {
+  it('resizes by dragging with the main button', () => {
     renderTable();
     const handle = separator('Protocol');
     fireEvent.pointerDown(handle, { button: 2, clientX: 100, pointerId: 1 });
@@ -397,7 +396,7 @@ describe('the MDS table: opening an entry', () => {
 });
 
 describe('the MDS table: Back to top', () => {
-  it('MDS-B1: appears once five rows have scrolled by and takes the list back to its top', async () => {
+  it('appears once five rows have scrolled by and takes the list back to its top', async () => {
     renderTable();
     const frame = document.querySelector<HTMLDivElement>('[data-mds-frame]')!;
     const scrollTo = vi.fn();

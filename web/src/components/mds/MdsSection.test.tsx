@@ -1,5 +1,5 @@
 // The FIDO MDS section's loading and status line, over the fixture snapshot
-// (tests/fixtures/mds). The IDs name the items of docs/ui-parity/mds.md.
+// (tests/fixtures/mds).
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -38,7 +38,7 @@ afterEach(() => {
 });
 
 describe('the MDS section', () => {
-  it('MDS-H2: shows the title and description the current UI shows', () => {
+  it('shows the section\'s title and description', () => {
     stubFetch(fixtureRoutes());
     renderSection();
     const panel = screen.getByRole('tabpanel', { name: 'FIDO MDS Authenticators' });
@@ -46,7 +46,7 @@ describe('the MDS section', () => {
     expect(panel).toHaveTextContent('Explore the authenticators published by the FIDO Metadata Service (MDS).');
   });
 
-  it('MDS-L1/L3: asks what to start from, then loads the packaged snapshot for a session without uploads', async () => {
+  it('asks what to start from, then loads the packaged snapshot for a session without uploads', async () => {
     const fetch = stubFetch(fixtureRoutes());
     renderSection();
 
@@ -57,7 +57,7 @@ describe('the MDS section', () => {
     ]);
   });
 
-  it('MDS-L3: asks the API alone when the server names no packaged snapshot', async () => {
+  it('asks the API alone when the server names no packaged snapshot', async () => {
     const { snapshotUrl: _url, ...info } = FIXTURE_INFO;
     const fetch = stubFetch(fixtureRoutes({ '/api/mds/metadata/info': () => json(info) }));
     renderSection();
@@ -69,7 +69,7 @@ describe('the MDS section', () => {
     ]);
   });
 
-  it('MDS-H3/S4: counts the entries and says what it loaded, with the legal header as a tooltip', async () => {
+  it('counts the entries and says what it loaded, with the legal header as a tooltip', async () => {
     stubFetch(fixtureRoutes());
     renderSection();
 
@@ -79,7 +79,7 @@ describe('the MDS section', () => {
     expect(screen.getByText(/^Entries:/)).toHaveTextContent('Entries: 32 of 32 total');
   });
 
-  it('MDS-S1/S2/S3/E1: says the snapshot it is about to load, then that it is loading, with a loading row', async () => {
+  it('says the snapshot it is about to load, then that it is loading, with a loading row', async () => {
     const snapshot = deferred<Response>();
     const info = deferred<Response>();
     stubFetch(fixtureRoutes({ '/api/mds/metadata/info': () => info.promise, [SNAPSHOT_URL]: () => snapshot.promise }));
@@ -97,7 +97,7 @@ describe('the MDS section', () => {
     expect(bodyRows()).toHaveLength(32);
   });
 
-  it('MDS-L2: waits until the section is first shown, and loads once', async () => {
+  it('waits until the section is first shown, and loads once', async () => {
     const fetch = stubFetch(fixtureRoutes());
     const { rerender } = renderSection(false);
     expect(fetch).not.toHaveBeenCalled();
@@ -125,7 +125,7 @@ describe('the MDS section', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it('MDS-L3: asks the session its own list when it has uploads', async () => {
+  it('asks the session its own list when it has uploads', async () => {
     const fetch = stubFetch(fixtureRoutes({ '/api/mds/metadata/info': () => json({ ...FIXTURE_INFO, customEntriesState: 'present' }) }));
     renderSection();
     await waitFor(() => expect(bodyRows()).toHaveLength(32));
@@ -135,21 +135,21 @@ describe('the MDS section', () => {
     ]);
   });
 
-  it('MDS-L4: falls back to the session list when the packaged file cannot be had', async () => {
+  it('falls back to the session list when the packaged file cannot be had', async () => {
     const fetch = stubFetch(fixtureRoutes({ [SNAPSHOT_URL]: () => json({ error: 'gone' }, 404) }));
     renderSection();
     await waitFor(() => expect(bodyRows()).toHaveLength(32));
     expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/api/mds/metadata/info', SNAPSHOT_URL, '/api/mds/metadata/explorer/full']);
   });
 
-  it('MDS-L1: without what to start from, asks the session list and keeps the first sentence', async () => {
+  it('without what to start from, asks the session list and keeps the first sentence', async () => {
     const fetch = stubFetch(fixtureRoutes({ '/api/mds/metadata/info': () => Promise.reject(new TypeError('offline')) }));
     renderSection();
     await waitFor(() => expect(bodyRows()).toHaveLength(32));
     expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/api/mds/metadata/info', '/api/mds/metadata/explorer/full']);
   });
 
-  it('MDS-S6/S7: shows a failure, in the line and in the list, and Retry asks again, forced', async () => {
+  it('shows a failure, in the line and in the list, and Retry asks again, forced', async () => {
     let failing = true;
     const fetch = stubFetch(
       fixtureRoutes({
@@ -172,13 +172,13 @@ describe('the MDS section', () => {
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
   });
 
-  it('MDS-S6: words a status without an error of its own', async () => {
+  it('words a status without an error of its own', async () => {
     stubFetch(fixtureRoutes({ '/api/mds/metadata/info': () => json({}), '/api/mds/metadata/explorer/full': () => json(null, 502) }));
     renderSection();
     await waitFor(() => expect(status()).toHaveTextContent('Explorer request failed with status 502.'));
   });
 
-  it('MDS-S5/E3: shows the missing-snapshot sentence when there is nothing to list', async () => {
+  it('shows the missing-snapshot sentence when there is nothing to list', async () => {
     stubFetch(
       fixtureRoutes({
         '/api/mds/metadata/info': () => json({ snapshotUrl: SNAPSHOT_URL, customEntriesState: 'none' }),
@@ -195,7 +195,7 @@ describe('the MDS section', () => {
     expect(screen.getByText(/^Entries:/)).toHaveTextContent('Entries: 0');
   });
 
-  it('MDS-S5: shows the server words for a 404 of the session list', async () => {
+  it('shows the server words for a 404 of the session list', async () => {
     stubFetch(
       fixtureRoutes({
         '/api/mds/metadata/info': () => json({}),

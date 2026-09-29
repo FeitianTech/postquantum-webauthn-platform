@@ -1,4 +1,4 @@
-// The Simple tab (docs/ui-parity/simple.md, SIM-*) over the server's recorded
+// The Simple tab over the server's recorded
 // answers (the characterization goldens) and a stand-in authenticator.
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -60,20 +60,20 @@ afterEach(() => {
 });
 
 describe('the Simple tab\'s form', () => {
-  it('SIM-F1/F3: has a labelled username field, filled with a random username', async () => {
+  it('has a labelled username field, filled with a random username', async () => {
     renderTab();
     expect(field()).toHaveAttribute('placeholder', 'Enter username');
     await waitFor(() => expect((field() as HTMLInputElement).value).toMatch(/^[A-Za-z0-9]{10}$/));
   });
 
-  it('SIM-F2: fills another random username on request', async () => {
+  it('fills another random username on request', async () => {
     renderTab();
     await useUsername('alice');
     await userEvent.click(button('Generate random username'));
     expect((field() as HTMLInputElement).value).toMatch(/^[A-Za-z0-9]{10}$/);
   });
 
-  it('SIM-R1/A1: says under the field that it needs a username, and asks nothing', async () => {
+  it('says under the field that it needs a username, and asks nothing', async () => {
     const fetch = renderTab();
     await userEvent.clear(field());
     await userEvent.click(button('Register Passkey'));
@@ -87,7 +87,7 @@ describe('the Simple tab\'s form', () => {
 });
 
 describe('registering in the Simple tab', () => {
-  it('SIM-R2..R7: says each step, keeps the button busy, and says the algorithm when it succeeds', async () => {
+  it('says each step, keeps the button busy, and says the algorithm when it succeeds', async () => {
     let finish!: () => void;
     const complete = new Promise<Response>((resolve) => (finish = () => resolve(answerResponse(REGISTER[1]))));
     renderTab({ '/api/register/begin': answer(REGISTER[0]), '/api/register/complete': () => complete });
@@ -104,7 +104,7 @@ describe('registering in the Simple tab', () => {
     expect(button('Register Passkey')).toBeEnabled();
   });
 
-  it('SIM-R8: keeps the server\'s record in this browser, for the username, and lists it', async () => {
+  it('keeps the server\'s record in this browser, for the username, and lists it', async () => {
     renderTab({ '/api/register/begin': answer(MLDSA[0]), '/api/register/complete': answer(MLDSA[1]) });
     await useUsername('alice');
     await userEvent.click(button('Register Passkey'));
@@ -115,7 +115,7 @@ describe('registering in the Simple tab', () => {
     expect(await screen.findByRole('list', { name: 'Saved Credentials' })).toHaveTextContent('MLDSA65');
   });
 
-  it('SIM-E1: keeps a refused registration in place, as the server said it', async () => {
+  it('keeps a refused registration in place, as the server said it', async () => {
     renderTab({
       '/api/register/begin': answer(REGISTER[0]),
       '/api/register/complete': () => json({ error: 'Registration verification failed.', verified: false }, 400),
@@ -126,7 +126,7 @@ describe('registering in the Simple tab', () => {
     expect(storedRecords()).toEqual([]);
   });
 
-  it('SIM-E2: says the authenticator\'s refusal by its name', async () => {
+  it('says the authenticator\'s refusal by its name', async () => {
     authenticator.create.mockRejectedValueOnce(new DOMException('The operation either timed out or was not allowed.', 'NotAllowedError'));
     renderTab({ '/api/register/begin': answer(REGISTER[0]) });
     await useUsername('alice');
@@ -141,7 +141,7 @@ describe('authenticating in the Simple tab', () => {
     '/api/authenticate/complete': answer(complete),
   });
 
-  it('SIM-A7: says so, shows the counter and its verdict, keeps the counter, and tints the credential', async () => {
+  it('says so, shows the counter and its verdict, keeps the counter, and tints the credential', async () => {
     renderTab(routes(AUTHENTICATE[3]), [KEPT]);
     await useUsername('user@example.com');
     await userEvent.click(button('Authenticate'));
@@ -155,7 +155,7 @@ describe('authenticating in the Simple tab', () => {
     await waitFor(() => expect(document.querySelector('li[data-credential-key]')).toHaveAttribute('data-flash', 'success'));
   });
 
-  it('SIM-A8/C4: warns of a counter that went backwards, keeps the refusal in place, and tints the credential red', async () => {
+  it('warns of a counter that went backwards, keeps the refusal in place, and tints the credential red', async () => {
     renderTab(routes(AUTHENTICATE[5]), [KEPT]);
     await useUsername('user@example.com');
     await userEvent.click(button('Authenticate'));
@@ -167,7 +167,7 @@ describe('authenticating in the Simple tab', () => {
     expect(document.querySelector('li[data-credential-key]')).toHaveAttribute('data-flash', 'failure');
   });
 
-  it('SIM-E3: keeps a refused signature in place, with no result to show', async () => {
+  it('keeps a refused signature in place, with no result to show', async () => {
     renderTab(routes(AUTHENTICATE[7]), [KEPT]);
     await useUsername('user@example.com');
     await userEvent.click(button('Authenticate'));
@@ -175,7 +175,7 @@ describe('authenticating in the Simple tab', () => {
     expect(document.querySelector('[data-ceremony-result]')).not.toBeVisible();
   });
 
-  it('SIM-A3: says this browser keeps no passkey for the username, and asks nothing', async () => {
+  it('says this browser keeps no passkey for the username, and asks nothing', async () => {
     const fetch = renderTab(routes(AUTHENTICATE[3]), [KEPT]);
     await useUsername('bob');
     await userEvent.click(button('Authenticate'));
@@ -185,14 +185,14 @@ describe('authenticating in the Simple tab', () => {
     expect(ceremonyCalls(fetch)).toEqual([]);
   });
 
-  it('SIM-A4: says the server found no credential it could use', async () => {
+  it('says the server found no credential it could use', async () => {
     renderTab({ '/api/authenticate/begin': answer(AUTHENTICATE[8]) }, [KEPT]);
     await useUsername('user@example.com');
     await userEvent.click(button('Authenticate'));
     expect(await screen.findByRole('alert')).toHaveTextContent('No credentials found for this username. Please register first.');
   });
 
-  it('SIM-E2: says an InvalidStateError its own way when authenticating', async () => {
+  it('says an InvalidStateError its own way when authenticating', async () => {
     authenticator.get.mockRejectedValueOnce(new DOMException('invalid', 'InvalidStateError'));
     renderTab(routes(AUTHENTICATE[3]), [KEPT]);
     await useUsername('user@example.com');
@@ -200,7 +200,7 @@ describe('authenticating in the Simple tab', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Authenticator error or invalid credential');
   });
 
-  it('SIM-C5: clears the last failure and result when the next ceremony starts', async () => {
+  it('clears the last failure and result when the next ceremony starts', async () => {
     renderTab(routes(AUTHENTICATE[5]), [KEPT]);
     await useUsername('user@example.com');
     await userEvent.click(button('Authenticate'));

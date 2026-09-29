@@ -1,5 +1,4 @@
-// The Advanced tab (ADV-T, ADV-D, ADV-C, ADV-P, ADV-G in docs/ui-parity/advanced.md)
-// through the whole shell, over the server's recorded answers (the
+// The Advanced tab through the whole shell, over the server's recorded answers (the
 // characterization goldens) and a stand-in authenticator.
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -74,7 +73,7 @@ afterEach(() => {
 });
 
 describe('the Advanced tab', () => {
-  it('ADV-T1, ADV-T2: is the section the top bar names, with its heading and description', async () => {
+  it('is the section the top bar names, with its heading and description', async () => {
     renderSection();
     await ready();
 
@@ -82,7 +81,7 @@ describe('the Advanced tab', () => {
     expect(screen.getByText('Configure WebAuthn registration and authentication requests with detailed settings.')).toBeVisible();
   });
 
-  it('ADV-T4, ADV-T5, ADV-T6: switches between Registration and Authentication, each with its form, its editor and its buttons', async () => {
+  it('switches between Registration and Authentication, each with its form, its editor and its buttons', async () => {
     renderSection();
     await ready();
 
@@ -100,7 +99,7 @@ describe('the Advanced tab', () => {
 });
 
 describe('the saved credentials\' drawer', () => {
-  it('ADV-D1: opens from Saved Credentials, with how many there are, over the list both tabs share', async () => {
+  it('opens from Saved Credentials, with how many there are, over the list both tabs share', async () => {
     renderSection([KEPT]);
     await ready();
     const opener = await screen.findByRole('button', { name: 'Saved Credentials 1' });
@@ -113,7 +112,7 @@ describe('the saved credentials\' drawer', () => {
     await waitFor(() => expect(opener).toHaveFocus());
   });
 
-  it('ADV-D1: opens a credential\'s details over it, and comes back to it when they close', async () => {
+  it('opens a credential\'s details over it, and comes back to it when they close', async () => {
     renderSection([KEPT], { [`/api/advanced/credential-artifacts/${encodeURIComponent(KEPT.storageId as string)}`]: () => json({}, 404) });
     await ready();
     await userEvent.click(await screen.findByRole('button', { name: 'Saved Credentials 1' }));
@@ -128,7 +127,7 @@ describe('the saved credentials\' drawer', () => {
     await waitFor(() => expect(name).toHaveFocus());
   });
 
-  it('ADV-D1: asks before deleting in a dialog over it, which Escape closes alone', async () => {
+  it('asks before deleting in a dialog over it, which Escape closes alone', async () => {
     renderSection([KEPT]);
     await ready();
     await userEvent.click(await screen.findByRole('button', { name: 'Saved Credentials 1' }));
@@ -155,7 +154,7 @@ describe('the saved credentials\' drawer', () => {
 });
 
 describe('a registration', () => {
-  it('ADV-C2, ADV-C5: sends the editor\'s request, then the credential with the session state', async () => {
+  it('sends the editor\'s request, then the credential with the session state', async () => {
     authenticator = installAuthenticator(vi, { create: recordedCredential(X5C) });
     const fetch = renderSection([], registrationRoutes(X5C));
     await ready();
@@ -171,7 +170,7 @@ describe('a registration', () => {
     expect(complete.__credential_response.id).toBe(recordedCredential(X5C).id);
   });
 
-  it('ADV-C6, ADV-G1: keeps the record and its snapshot, then opens the registration, the detail under it', async () => {
+  it('keeps the record and its snapshot, then opens the registration, the detail under it', async () => {
     authenticator = installAuthenticator(vi, { create: recordedCredential(X5C) });
     const fetch = renderSection([], registrationRoutes(X5C));
     await ready();
@@ -189,7 +188,7 @@ describe('a registration', () => {
     await screen.findByRole('heading', { level: 2, name: 'Credential Details' });
   });
 
-  it('ADV-C6, ADV-P1: says it succeeded with the server\'s warnings, shows where the challenge came from (a replay warns), and draws new values', async () => {
+  it('says it succeeded with the server\'s warnings, shows where the challenge came from (a replay warns), and draws new values', async () => {
     authenticator = installAuthenticator(vi, { create: recordedCredential(X5C) });
     renderSection([], registrationRoutes(X5C));
     await ready();
@@ -206,7 +205,7 @@ describe('a registration', () => {
     expect((screen.getByLabelText('User ID (hex)') as HTMLInputElement).value).not.toBe(userId);
   });
 
-  it('ADV-C3: gives the begin answer\'s warnings as a toast', async () => {
+  it('gives the begin answer\'s warnings as a toast', async () => {
     authenticator = installAuthenticator(vi, { create: recordedCredential(NONE) });
     const [warned] = goldenAnswers('advanced-register-begin-pqc-unavailable');
     renderSection([], { ...registrationRoutes(NONE), '/api/advanced/register/begin': answer(warned) });
@@ -217,7 +216,7 @@ describe('a registration', () => {
     expect(await screen.findByText(/^Unsupported PQC algorithms were skipped/)).toBeInTheDocument();
   });
 
-  it('ADV-C7, ADV-C8: says in place why the server refused it, with where the challenge came from', async () => {
+  it('says in place why the server refused it, with where the challenge came from', async () => {
     authenticator = installAuthenticator(vi, { create: recordedCredential(NONE) });
     const [refused] = goldenAnswers('advanced-register-complete-failures');
     const fetch = renderSection([], { ...registrationRoutes(NONE), '/api/advanced/register/complete': answer(refused) });
@@ -232,7 +231,7 @@ describe('a registration', () => {
     expect(window.location.hash).toBe('#advanced');
   });
 
-  it('ADV-C8: names what the authenticator may not support when it refuses', async () => {
+  it('names what the authenticator may not support when it refuses', async () => {
     const refuse = () => Promise.reject(Object.assign(new Error('refused'), { name: 'NotAllowedError' }));
     authenticator = installAuthenticator(vi, { create: refuse as unknown as ReturnType<typeof recordedCredential> });
     renderSection([], registrationRoutes(NONE));
@@ -245,7 +244,7 @@ describe('a registration', () => {
     );
   });
 
-  it('ADV-C1: refuses an editor text that does not parse, asking nothing of the server', async () => {
+  it('refuses an editor text that does not parse, asking nothing of the server', async () => {
     authenticator = installAuthenticator(vi);
     const fetch = renderSection([], registrationRoutes(NONE));
     await ready();
@@ -282,7 +281,7 @@ describe('an authentication', () => {
     return fetch;
   }
 
-  it('ADV-U2, ADV-U3: sends the editor\'s request with the saved credentials, then the assertion, the session state and the hash algorithm', async () => {
+  it('sends the editor\'s request with the saved credentials, then the assertion, the session state and the hash algorithm', async () => {
     const fetch = await onAuthentication(authenticationRoutes(recorded.first));
     await userEvent.selectOptions(screen.getByLabelText('Hash Algorithm'), 'SHA-384');
     const request = JSON.parse(authText());
@@ -299,7 +298,7 @@ describe('an authentication', () => {
     expect(complete.__assertion_response.id).toBe(CAPABLE_ID);
   });
 
-  it('ADV-U4, ADV-P2, ADV-G2: says it succeeded, shows the counter and the challenge, keeps the counter, tints the row and draws a new challenge, with no dialog', async () => {
+  it('says it succeeded, shows the counter and the challenge, keeps the counter, tints the row and draws a new challenge, with no dialog', async () => {
     await onAuthentication(authenticationRoutes(recorded.first));
     const challenge = (screen.getByLabelText('Challenge (hex)', { selector: '#nav-panel-advanced [data-authentication-form] input' }) as HTMLInputElement).value;
 
@@ -320,7 +319,7 @@ describe('an authentication', () => {
     expect(window.location.hash).toBe('#advanced');
   });
 
-  it('ADV-P2: reports a counter that went backwards, and that this tab does not reject the assertion', async () => {
+  it('reports a counter that went backwards, and that this tab does not reject the assertion', async () => {
     await onAuthentication(authenticationRoutes(recorded.regressed), recordedAssertion(recorded.regressed));
 
     await userEvent.click(button('Assert Credential'));
@@ -332,7 +331,7 @@ describe('an authentication', () => {
     expect(result()).toHaveAttribute('data-verdict', 'warning');
   });
 
-  it('ADV-U5: says in place why the server refused it, tints the credential it names, and shows where the challenge came from', async () => {
+  it('says in place why the server refused it, tints the credential it names, and shows where the challenge came from', async () => {
     const fetch = await onAuthentication(authenticationRoutes(recorded.refused), recordedAssertion(recorded.refused));
 
     await userEvent.click(button('Assert Credential'));
@@ -344,7 +343,7 @@ describe('an authentication', () => {
     expect(storedRecords()[0]).not.toHaveProperty('signCount', 3);
   });
 
-  it('ADV-U2: says there are no credentials when the server finds none', async () => {
+  it('says there are no credentials when the server finds none', async () => {
     await onAuthentication(authenticationRoutes({ begin: recorded.none }));
 
     await userEvent.click(button('Assert Credential'));
@@ -353,7 +352,7 @@ describe('an authentication', () => {
     expect(authenticator.get).not.toHaveBeenCalled();
   });
 
-  it('ADV-U5: says the browser\'s refusal by its name', async () => {
+  it('says the browser\'s refusal by its name', async () => {
     const refuse = () => Promise.reject(Object.assign(new Error('refused'), { name: 'NotAllowedError' }));
     await onAuthentication(authenticationRoutes(recorded.first), refuse);
 
@@ -362,7 +361,7 @@ describe('an authentication', () => {
     expect(await screen.findByText('Advanced authentication failed: User cancelled or no compatible authenticator detected')).toBeInTheDocument();
   });
 
-  it('ADV-U1: refuses an editor text that does not parse, asking nothing of the server', async () => {
+  it('refuses an editor text that does not parse, asking nothing of the server', async () => {
     const fetch = await onAuthentication(authenticationRoutes(recorded.first));
     fireEvent.change(screen.getByRole('textbox', { name: 'JSON Editor (CredentialRequestOptions)' }), { target: { value: '{"publicKey": {}}' } });
 

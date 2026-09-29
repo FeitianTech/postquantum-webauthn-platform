@@ -1,7 +1,6 @@
-// The Advanced tab's JSON editor (ADV-J in docs/ui-parity/advanced.md): the
-// request the ceremony sends, as text, which the form and the editor both change.
-// An edit applies as it parses (the owner's choice); one that does not says why
-// and where, and the form keeps the last request it could read.
+// The Advanced tab's JSON editor: the request the ceremony sends, as text, which
+// the form and the editor both change. An edit applies as it parses; one that
+// does not says why and where, and the form keeps the last request it could read.
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -25,7 +24,7 @@ function edited(change: (root: { publicKey: Record<string, unknown> } & Record<s
 }
 
 describe('the editor', () => {
-  it('ADV-J1, ADV-J2: is headed with the request it holds, keys sorted and indented by two, byte values as hex', async () => {
+  it('is headed with the request it holds, keys sorted and indented by two, byte values as hex', async () => {
     renderForm();
     await ready();
 
@@ -35,7 +34,7 @@ describe('the editor', () => {
     expect(editor().value.split('\n').slice(0, 3)).toEqual(['{', '  "publicKey": {', '    "attestation": "direct",']);
   });
 
-  it('ADV-J4: gives the form what an edit asks for, as it parses, and keeps the text as typed', async () => {
+  it('gives the form what an edit asks for, as it parses, and keeps the text as typed', async () => {
     renderForm();
     await ready();
     const text = edited((root) => {
@@ -54,7 +53,7 @@ describe('the editor', () => {
     expect(note()).toBeNull();
   });
 
-  it('ADV-J4: says why and where an edit does not parse, and the form keeps the last request', async () => {
+  it('says why and where an edit does not parse, and the form keeps the last request', async () => {
     renderForm();
     await ready();
     const before = field('Attestation').value;
@@ -71,7 +70,7 @@ describe('the editor', () => {
     expect(editor().selectionStart).toBe(48);
   });
 
-  it('ADV-J6: says which check an edit the form cannot follow fails, keeps it as what is sent, and the form as it was', async () => {
+  it('says which check an edit the form cannot follow fails, keeps it as what is sent, and the form as it was', async () => {
     renderForm();
     await ready();
     const text = edited((root) => {
@@ -102,7 +101,7 @@ describe('the editor', () => {
     expect(JSON.parse(editor().value)).toMatchObject({ note: 'mine', publicKey: { attestation: 'direct' } });
   });
 
-  it('ADV-J5: Reset rebuilds the text from the form, keeping the keys beside publicKey, and says so', async () => {
+  it('Reset rebuilds the text from the form, keeping the keys beside publicKey, and says so', async () => {
     renderForm();
     await ready();
     fireEvent.change(editor(), { target: { value: edited((root) => {
@@ -184,7 +183,7 @@ describe('a form change over an edit', () => {
 });
 
 describe('the editor\'s keys', () => {
-  it('ADV-J8: Tab and Shift+Tab indent and dedent, Enter keeps the indent, { wraps the selection', async () => {
+  it('Tab and Shift+Tab indent and dedent, Enter keeps the indent, { wraps the selection', async () => {
     renderForm();
     await ready();
     fireEvent.change(editor(), { target: { value: '' } });
@@ -227,7 +226,7 @@ describe('the authentication\'s editor', () => {
     return JSON.stringify(root, null, 2);
   }
 
-  it('ADV-J2, ADV-J4: gives the form what an edit asks for, as it parses', async () => {
+  it('gives the form what an edit asks for, as it parses', async () => {
     renderAuthenticationForm([CAPABLE, PLAIN]);
     await authReady();
     const text = authEdited((root) => {
@@ -249,7 +248,7 @@ describe('the authentication\'s editor', () => {
     expect(note()).toBeNull();
   });
 
-  it('ADV-J4, ADV-J7: says where an edit does not parse, and which check refuses one, the form keeping the last request', async () => {
+  it('says where an edit does not parse, and which check refuses one, the form keeping the last request', async () => {
     renderAuthenticationForm([CAPABLE]);
     await authReady();
     const refused = authEdited((root) => {

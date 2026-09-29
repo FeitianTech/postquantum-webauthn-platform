@@ -1,5 +1,4 @@
-// The MDS entry page over the fixture's real entries (tests/fixtures/mds). The
-// IDs name the items of docs/ui-parity/mds.md.
+// The MDS entry page over the fixture's real entries (tests/fixtures/mds).
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -36,7 +35,7 @@ afterEach(() => {
 });
 
 describe('the MDS entry page', () => {
-  it('MDS-D1: shows Back, the name, the subtitle with copyable identifiers, and Raw', async () => {
+  it('shows Back, the name, the subtitle with copyable identifiers, and Raw', async () => {
     const entry = L1();
     const { onBack } = renderEntry(entry);
 
@@ -54,7 +53,7 @@ describe('the MDS entry page', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it('MDS-D1: names an AAID and a key identifier by their kind, and the blank name "Authenticator"', () => {
+  it('names an AAID and a key identifier by their kind, and the blank name "Authenticator"', () => {
     const uaf = entryNamed('Fixture UAF Authenticator');
     renderEntry({ ...uaf, name: '  ' });
     expect(screen.getByRole('heading', { level: 3, name: 'Authenticator' })).toBeInTheDocument();
@@ -64,7 +63,7 @@ describe('the MDS entry page', () => {
     expect(within(subtitle).getByRole('button', { name: 'Copy AAID' })).toBeInTheDocument();
   });
 
-  it('MDS-D3..D8: shows every section in the current page order', () => {
+  it('shows every section, in order', () => {
     renderEntry(L1());
     expect(screen.getAllByRole('heading', { level: 4 }).map((heading) => heading.textContent)).toEqual([
       'Overview',
@@ -76,7 +75,7 @@ describe('the MDS entry page', () => {
     ]);
   });
 
-  it('MDS-D3: shows the overview, identifiers in Geist Mono with copy, certification as the list does', () => {
+  it('shows the overview, identifiers in Geist Mono with copy, certification as the list does', () => {
     const entry = L1();
     renderEntry(entry);
     const overview = section('overview');
@@ -89,7 +88,7 @@ describe('the MDS entry page', () => {
     expect(field(overview, 'Date Updated')).toHaveTextContent(entry.dateUpdated);
   });
 
-  it('MDS-D4: shows the statement, its long text across the row, key identifiers with copy, and the chip lists', () => {
+  it('shows the statement, its long text across the row, key identifiers with copy, and the chip lists', () => {
     const u2f = entryNamed('Fixture U2F Key');
     renderEntry(u2f);
     const statement = section('metadataStatement');
@@ -104,7 +103,7 @@ describe('the MDS entry page', () => {
     expect(chips('Matcher Protection')).toEqual(['on_chip']);
   });
 
-  it('MDS-D5: lists the combinations, each method and what it says of its accuracy', () => {
+  it('lists the combinations, each method and what it says of its accuracy', () => {
     renderEntry(entryNamed('Fixture Key With Every User Verification Method'));
     const combinations = [...section('userVerification').querySelectorAll<HTMLElement>('[data-combination]')];
     expect(combinations).toHaveLength(10);
@@ -119,7 +118,7 @@ describe('the MDS entry page', () => {
     expect(combinations[9]).toHaveTextContent('Combination 10none');
   });
 
-  it('MDS-D6: numbers the certificates; without a page to open them they wait', () => {
+  it('numbers the certificates; without a page to open them they wait', () => {
     const entry = entryNamed('Fixture Key With Many Attestation Roots');
     renderEntry(entry);
     const buttons = within(section('certificates')).getAllByRole('button');
@@ -127,7 +126,7 @@ describe('the MDS entry page', () => {
     expect(buttons[0]).toBeDisabled();
   });
 
-  it('MDS-D6/X1: a certificate button opens its page and is busy while it decodes', async () => {
+  it('a certificate button opens its page and is busy while it decodes', async () => {
     const onOpen = vi.fn();
     const entry = L1();
     const { rerender } = render(
@@ -149,7 +148,7 @@ describe('the MDS entry page', () => {
     expect(screen.getByRole('button', { name: 'Certificate 1' })).toHaveAttribute('aria-busy', 'true');
   });
 
-  it('MDS-D7: shows getInfo: its AAGUID with copy, every number, the chips and the options', () => {
+  it('shows getInfo: its AAGUID with copy, every number, the chips and the options', () => {
     const entry = L1();
     renderEntry(entry);
     const info = section('authenticatorGetInfo');
@@ -175,7 +174,7 @@ describe('the MDS entry page', () => {
     expect(chips('Options')).toContain('rk: true');
   });
 
-  it('MDS-D8: shows every status report, with its descriptor, URL and versions', () => {
+  it('shows every status report, with its descriptor, URL and versions', () => {
     renderEntry(L1());
     const table = within(section('statusReports')).getByRole('table');
     expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
@@ -197,7 +196,7 @@ describe('the MDS entry page', () => {
     expect(latest[4]).toHaveAttribute('data-label', 'Descriptor');
   });
 
-  it('MDS-D9: reads "—" for a missing identifier and leaves out what an entry does not have', () => {
+  it('reads "—" for a missing identifier and leaves out what an entry does not have', () => {
     renderEntry({ entryId: 'entry:bare', name: 'Bare' } as unknown as MdsEntry);
     expect(field(section('overview'), 'Identifier')).toHaveTextContent('—');
     expect(screen.getAllByRole('heading', { level: 4 }).map((heading) => heading.textContent)).toEqual(['Overview', 'Metadata Statement']);
@@ -205,7 +204,7 @@ describe('the MDS entry page', () => {
     expect(screen.getByRole('button', { name: 'Raw' })).toHaveAttribute('title', 'Raw authenticator data unavailable');
   });
 
-  it('MDS-W1: shows the entry as MDS publishes it, titled as the window was, and gives focus back to Raw', async () => {
+  it('shows the entry as MDS publishes it, titled as the window was, and gives focus back to Raw', async () => {
     const entry = L1();
     renderEntry(entry);
     const raw = screen.getByRole('button', { name: 'Raw' });
@@ -233,7 +232,7 @@ describe('the MDS entry page', () => {
     expect(raw).toHaveFocus();
   });
 
-  it('MDS-D1: keeps a condensed header in view once the title has scrolled under the top bar', async () => {
+  it('keeps a condensed header in view once the title has scrolled under the top bar', async () => {
     const observers: { callback: IntersectionObserverCallback; options?: IntersectionObserverInit; disconnect: ReturnType<typeof vi.fn> }[] = [];
     vi.stubGlobal(
       'IntersectionObserver',
@@ -282,7 +281,7 @@ describe('the MDS entry page', () => {
     header.remove();
   });
 
-  it('MDS-D1: keeps the condensed header away while a certificate covers the entry', () => {
+  it('keeps the condensed header away while a certificate covers the entry', () => {
     let report: IntersectionObserverCallback = () => {};
     vi.stubGlobal(
       'IntersectionObserver',
@@ -311,14 +310,14 @@ describe('the MDS entry page', () => {
     expect(document.querySelector<HTMLElement>('[data-condensed-header]')).not.toBeVisible();
   });
 
-  it('MDS-J2: says it is opening while the list loads and locating while the server is asked', () => {
+  it('says it is opening while the list loads and locating while the server is asked', () => {
     const { rerender } = render(<EntryPage entryId="aaguid:x" detail={{ phase: 'waiting' }} onBack={vi.fn()} onRetry={vi.fn()} />);
     expect(screen.getByRole('status')).toHaveTextContent('Opening authenticator metadata...');
     rerender(<EntryPage entryId="aaguid:x" detail={{ phase: 'resolving' }} onBack={vi.fn()} onRetry={vi.fn()} />);
     expect(screen.getByRole('status')).toHaveTextContent('Locating metadata entry...');
   });
 
-  it('MDS-D2/J2: says the server has no such entry, or could not answer, with Retry', async () => {
+  it('says the server has no such entry, or could not answer, with Retry', async () => {
     const missing: EntryDetail = { phase: 'missing', message: 'Metadata entry not found.' };
     const onRetry = vi.fn();
     const { rerender } = render(<EntryPage entryId="aaguid:x" detail={missing} onBack={vi.fn()} onRetry={onRetry} />);
@@ -338,12 +337,12 @@ describe('the MDS entry page', () => {
 });
 
 describe('the MDS entry page: what an entry may lack', () => {
-  it('MDS-D3: shows a level with nothing after it', () => {
+  it('shows a level with nothing after it', () => {
     renderEntry(entryNamed('Fixture Uncertified Key'));
     expect(field(section('overview'), 'Certification')).toHaveTextContent(/^NOT FIDO Certified$/);
   });
 
-  it('MDS-D5/D8: shows a method known only by its accuracy, and a descriptor or a version line alone', () => {
+  it('shows a method known only by its accuracy, and a descriptor or a version line alone', () => {
     renderEntry({
       ...L1(),
       metadataStatement: { userVerificationDetails: [[{ caDesc: { base: 36, minLength: 4 } }]] },
@@ -361,7 +360,7 @@ describe('the MDS entry page: what an entry may lack', () => {
   });
 });
 
-describe('an entry the list does not hold (MDS-D2)', () => {
+describe('an entry the list does not hold', () => {
   const uploaded = { ...entryNamed('Fixture Certified Key'), entryId: 'aaguid:f1d0f1d0-0000-4000-8000-000000000099', name: 'Fixture Uploaded Key' };
 
   function renderSection(entryId: string) {

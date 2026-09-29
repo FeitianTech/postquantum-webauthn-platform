@@ -1,7 +1,5 @@
-// The Analyze Browser panel in the new UI, held to what the current panel shows
-// and does: every case of tests/frontend/shared/ui/analyze-browser.test.js, over
-// the same fixtures (imported, not copied). The AB-… ids are the items of
-// docs/ui-parity/analyze-browser.md.
+// The Analyze Browser panel: what it shows and does for each browser, over the
+// logic's own fixtures (imported, not copied).
 import { CHROMIUM_152_CAPABILITIES } from '@/test/logic/shared/browser/chromium-152.js';
 import { IDENTITY_MATRIX } from '@/test/logic/shared/browser/identity-matrix.js';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
@@ -100,8 +98,8 @@ function factShown(container: HTMLElement, id: string) {
   };
 }
 
-describe('Analyze Browser, as the current panel reports it', () => {
-  it("reports the tech lead's Chromium-only browser as what it says it is (AB-I1, AB-I3, AB-W1–6, AB-A1–3, AB-C4–6, AB-P1)", async () => {
+describe('Analyze Browser', () => {
+  it('reports a browser whose brand list is only Chromium as what it says it is', async () => {
     installBrowser();
     const dialog = await openPanel();
 
@@ -170,7 +168,7 @@ describe('Analyze Browser, as the current panel reports it', () => {
     );
   });
 
-  it("says that every browser on iOS is WebKit with Safari's WebAuthn (AB-I5)", async () => {
+  it("says that every browser on iOS is WebKit with Safari's WebAuthn", async () => {
     installBrowser({ identity: IPHONE_SAFARI, publicKeyCredential: makePublicKeyCredential({ getClientCapabilities: undefined }) });
     const dialog = await openPanel();
 
@@ -184,7 +182,7 @@ describe('Analyze Browser, as the current panel reports it', () => {
     );
   });
 
-  it('says what the browser does not report instead of guessing (AB-I2)', async () => {
+  it('says what the browser does not report instead of guessing', async () => {
     installBrowser({ identity: { userAgent: 'CustomAgent', platform: '', maxTouchPoints: 0 } });
     const dialog = await openPanel();
 
@@ -193,7 +191,7 @@ describe('Analyze Browser, as the current panel reports it', () => {
     }
   });
 
-  it('shows each of the four states with its words, and why when it could not be determined (AB-S1–5)', async () => {
+  it('shows each of the four states with its words, and why when it could not be determined', async () => {
     installBrowser({
       publicKeyCredential: makePublicKeyCredential({
         isConditionalMediationAvailable: async () => false,
@@ -227,7 +225,7 @@ describe('Analyze Browser, as the current panel reports it', () => {
     );
   });
 
-  it('explains a page that is not a secure context (AB-W1, AB-W2, AB-A2)', async () => {
+  it('explains a page that is not a secure context', async () => {
     installBrowser({ secure: false, publicKeyCredential: undefined });
     const dialog = await openPanel();
 
@@ -246,7 +244,7 @@ describe('Analyze Browser, as the current panel reports it', () => {
     });
   });
 
-  it('says getClientCapabilities is a Level 3 feature this browser does not offer (AB-C2)', async () => {
+  it('says getClientCapabilities is a Level 3 feature this browser does not offer', async () => {
     installBrowser({ publicKeyCredential: makePublicKeyCredential({ getClientCapabilities: undefined }) });
     const dialog = await openPanel();
     const capabilities = section(dialog, 'Client capabilities');
@@ -261,7 +259,7 @@ describe('Analyze Browser, as the current panel reports it', () => {
     });
   });
 
-  it('shows why getClientCapabilities could not be read when it throws (AB-C2)', async () => {
+  it('shows why getClientCapabilities could not be read when it throws', async () => {
     installBrowser({
       publicKeyCredential: makePublicKeyCredential({
         getClientCapabilities: async () => {
@@ -277,7 +275,7 @@ describe('Analyze Browser, as the current panel reports it', () => {
     expect(capabilities).toHaveTextContent('NotAllowedError: Document is not focused.');
   });
 
-  it('shows capability keys it does not recognise verbatim, and names the defined ones left out (AB-C6, AB-C8, AB-C9, AB-A2)', async () => {
+  it('shows capability keys it does not recognise verbatim, and names the defined ones left out', async () => {
     installBrowser({
       publicKeyCredential: makePublicKeyCredential({
         getClientCapabilities: async () => ({ 'future:thing': true, 'extension:prf': true, conditionalGet: 'soon' }),
@@ -300,7 +298,7 @@ describe('Analyze Browser, as the current panel reports it', () => {
     });
   });
 
-  it('says so when the browser returns no capabilities, and shows no empty group (AB-C3, AB-C7)', async () => {
+  it('says so when the browser returns no capabilities, and shows no empty group', async () => {
     installBrowser({ publicKeyCredential: makePublicKeyCredential({ getClientCapabilities: async () => ({}) }) });
     const dialog = await openPanel();
     const capabilities = section(dialog, 'Client capabilities');
@@ -311,7 +309,7 @@ describe('Analyze Browser, as the current panel reports it', () => {
 });
 
 describe('the trigger', () => {
-  it('asks once per page and reuses the answers (AB-T2, AB-T4)', async () => {
+  it('asks once per page and reuses the answers', async () => {
     const publicKeyCredential = installBrowser();
     await openPanel();
     expect(publicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable).toHaveBeenCalledTimes(1);
@@ -323,7 +321,7 @@ describe('the trigger', () => {
     expect(publicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable).toHaveBeenCalledTimes(1);
   });
 
-  it('is disabled while the analysis runs and ignores a second click (AB-T3)', async () => {
+  it('is disabled while the analysis runs and ignores a second click', async () => {
     let answer!: (value: unknown) => void;
     const publicKeyCredential = installBrowser({
       publicKeyCredential: makePublicKeyCredential({
@@ -355,7 +353,7 @@ describe('Copy report', () => {
     return { dialog, status, fallback };
   }
 
-  it('copies the raw findings as JSON and says so in a live region (AB-R1–R4)', async () => {
+  it('copies the raw findings as JSON and says so in a live region', async () => {
     const writeText = vi.fn(async (_text: string) => {});
     const { status, fallback } = await copyWith({ writeText });
 
@@ -389,7 +387,7 @@ describe('Copy report', () => {
     expect(Object.keys(report.webauthn.facts)).toHaveLength(8);
   });
 
-  it('says why copying failed, in red, and shows the report selected, to copy by hand (AB-R5, AB-R6)', async () => {
+  it('says why copying failed, in red, and shows the report selected, to copy by hand', async () => {
     const writeText = vi.fn(async () => {
       throw new DOMException('Write permission denied.', 'NotAllowedError');
     });
@@ -410,7 +408,7 @@ describe('Copy report', () => {
     expect(JSON.parse(fallback.value).identity.name).toBe('Chromium-based browser');
   });
 
-  it('says the clipboard is not available, hides the report after a later success, and keeps the status across reopening (AB-R5, AB-R7)', async () => {
+  it('says the clipboard is not available, hides the report after a later success, and keeps the status across reopening', async () => {
     const { dialog, status, fallback } = await copyWith(undefined);
 
     await waitFor(() =>
@@ -432,7 +430,7 @@ describe('Copy report', () => {
     expect(reopened.querySelector('[data-role="copy-status"]')).toHaveTextContent('Report copied to the clipboard.');
   });
 
-  it('keeps the empty status line out of the layout until the first copy (AB-R7)', async () => {
+  it('keeps the empty status line out of the layout until the first copy', async () => {
     installBrowser();
     const dialog = await openPanel();
     const status = dialog.querySelector('[data-role="copy-status"]')!;
@@ -442,7 +440,7 @@ describe('Copy report', () => {
 });
 
 describe('as a dialog', () => {
-  it('is a labelled modal dialog that takes focus when it opens, named by the trigger (AB-D1, AB-D2)', async () => {
+  it('is a labelled modal dialog that takes focus when it opens, named by the trigger', async () => {
     installBrowser();
     const dialog = await openPanel();
 
@@ -453,7 +451,7 @@ describe('as a dialog', () => {
     expect(document.getElementById('app-root')).toHaveAttribute('inert');
   });
 
-  it('gives focus back to the Analyze Browser button when it closes, by Escape or by the close button (AB-D6, AB-D7, AB-D9)', async () => {
+  it('gives focus back to the Analyze Browser button when it closes, by Escape or by the close button', async () => {
     installBrowser();
     await openPanel();
 
@@ -466,7 +464,7 @@ describe('as a dialog', () => {
     await waitFor(() => expect(trigger()).toHaveFocus());
   });
 
-  it('keeps Tab and Shift+Tab inside the dialog, counting the report text once it is shown (AB-D3, AB-D4)', async () => {
+  it('keeps Tab and Shift+Tab inside the dialog, counting the report text once it is shown', async () => {
     installBrowser();
     install(navigator, 'clipboard', undefined);
     const dialog = await openPanel();
@@ -489,7 +487,7 @@ describe('as a dialog', () => {
     expect(fallback).toHaveFocus();
   });
 
-  it('leaves Tab alone while it is closed (AB-D5)', async () => {
+  it('leaves Tab alone while it is closed', async () => {
     installBrowser();
     renderPage(<AppShell />);
     trigger().focus();
@@ -498,7 +496,7 @@ describe('as a dialog', () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
-  it('closes from the close button, the backdrop and Escape, ignores other clicks, and opens scrolled to the top (AB-D2, AB-D8, AB-D10)', async () => {
+  it('closes from the close button, the backdrop and Escape, ignores other clicks, and opens scrolled to the top', async () => {
     installBrowser();
     const dialog = await openPanel();
     const body = dialog.querySelector<HTMLElement>('[data-overlay-scroll]')!;

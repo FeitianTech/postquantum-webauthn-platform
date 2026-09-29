@@ -1,4 +1,4 @@
-// An MDS entry's attestation root certificate (MDS-X1..X4) through the whole
+// An MDS entry's attestation root certificate through the whole
 // page: the button, the decode, the URL (#mds/<entryId>/certificate/<n>), the
 // page, and Back to the entry.
 import { act, screen, waitFor, within } from '@testing-library/react';
@@ -54,7 +54,7 @@ afterEach(() => {
 });
 
 describe('an attestation certificate of an MDS entry', () => {
-  it('MDS-X1: keeps its button busy while the certificate is decoded', async () => {
+  it('keeps its button busy while the certificate is decoded', async () => {
     const pending = deferred<Response>();
     const fetch = renderApp(`#mds/${L1().entryId}`, () => pending.promise);
     const button = await screen.findByRole('button', { name: 'Certificate 1' });
@@ -66,7 +66,7 @@ describe('an attestation certificate of an MDS entry', () => {
     await screen.findByRole('heading', { level: 3, name: DETAILS.subject });
   });
 
-  it('MDS-X1..X3: opens at its own URL over the entry, with the summary, Raw and Decoded Output', async () => {
+  it('opens at its own URL over the entry, with the summary, Raw and Decoded Output', async () => {
     renderApp(`#mds/${L1().entryId}`);
     await userEvent.click(await screen.findByRole('button', { name: 'Certificate 1' }));
 
@@ -91,7 +91,7 @@ describe('an attestation certificate of an MDS entry', () => {
     expect(document.querySelector('[data-mds-entry]')!.parentElement).not.toBeVisible();
   });
 
-  it('MDS-X4: its Back returns to the entry, with the focus on the certificate\'s button', async () => {
+  it('its Back returns to the entry, with the focus on the certificate\'s button', async () => {
     renderApp(`#mds/${L1().entryId}`);
     await userEvent.click(await screen.findByRole('button', { name: 'Certificate 1' }));
     await screen.findByRole('heading', { level: 3, name: DETAILS.subject });
@@ -103,7 +103,7 @@ describe('an attestation certificate of an MDS entry', () => {
     expect(window.location.hash).toBe(`#mds/${L1().entryId}`);
   });
 
-  it('MDS-X2, X4: decodes a certificate once, and the browser\'s Back returns to the entry', async () => {
+  it('decodes a certificate once, and the browser\'s Back returns to the entry', async () => {
     const fetch = renderApp(`#mds/${L1().entryId}`);
     await userEvent.click(await screen.findByRole('button', { name: 'Certificate 1' }));
     await screen.findByRole('heading', { level: 3, name: DETAILS.subject });
@@ -129,7 +129,7 @@ describe('an attestation certificate of an MDS entry', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeVisible();
   });
 
-  it('MDS-X2: opens on a failure too, with the sentence, the server reason, and a new try from the entry', async () => {
+  it('opens on a failure too, with the sentence, the server reason, and a new try from the entry', async () => {
     let answer = () => json({ error: 'Invalid certificate encoding.' }, 400);
     const fetch = renderApp(`#mds/${L1().entryId}`, () => answer());
     await userEvent.click(await screen.findByRole('button', { name: 'Certificate 1' }));
@@ -147,21 +147,21 @@ describe('an attestation certificate of an MDS entry', () => {
     expect(decodeCalls(fetch)).toHaveLength(2);
   });
 
-  it('MDS-X2: says a decode that could not be sent', async () => {
+  it('says a decode that could not be sent', async () => {
     renderApp(`#mds/${L1().entryId}/certificate/1`, () => {
       throw new TypeError('Failed to fetch');
     });
     expect(await screen.findByRole('alert')).toHaveTextContent('Failed to fetch');
   });
 
-  it('MDS-X1: says there is nothing to summarise, and keeps Decoded Output', async () => {
+  it('says there is nothing to summarise, and keeps Decoded Output', async () => {
     renderApp(`#mds/${L1().entryId}/certificate/1`, () => json({ details: { summary: 'Unable to parse attestation certificate' } }));
     expect(await screen.findByText('No decoded certificate details available.')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(document.querySelectorAll('[data-mds-certificate] pre')[1].textContent).toBe('Unable to parse attestation certificate');
   });
 
-  it('MDS-X3: gives a value that is a list a line for each', async () => {
+  it('gives a value that is a list a line for each', async () => {
     renderApp(`#mds/${L1().entryId}/certificate/1`, () =>
       json({ details: { subject: ['CN=First', '', 'CN=Second'], serialNumber: { hex: '0A' } } }),
     );
@@ -173,7 +173,7 @@ describe('an attestation certificate of an MDS entry', () => {
     expect([...subject.querySelectorAll('.flex-col > span')].map((line) => line.textContent)).toEqual(['CN=First', 'CN=Second']);
   });
 
-  it('MDS-X3: shows a summary that has only a section', async () => {
+  it('shows a summary that has only a section', async () => {
     renderApp(`#mds/${L1().entryId}/certificate/1`, () => json({ details: { signature: { algorithm: 'ECDSA_SHA256' } } }));
     await waitFor(() => expect(document.querySelector('[data-mds-certificate] [data-section="Signature"]')).not.toBeNull());
     const page = document.querySelector<HTMLElement>('[data-mds-certificate]')!;

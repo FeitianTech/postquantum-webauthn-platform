@@ -25,7 +25,7 @@ function sectionHeadings(output: HTMLElement) {
 
 describe('the Codec output over real answers', () => {
   it.each(ATTESTATIONS.map((answer, index) => [index, answer] as const))(
-    'shows attestation object %i with every section in the current order and its EDN (CX-X1, CX-X2, CX-N1, CX-P1, CX-P6)',
+    'shows attestation object %i with every section in the current order and its EDN',
     (_index, answer) => {
       const output = show(answer);
       const data = answer.data as Record<string, unknown>;
@@ -39,7 +39,7 @@ describe('the Codec output over real answers', () => {
     },
   );
 
-  it('shows a duplicate key and two keys that collide as JSON: both findings, with category, offset and path (CX-F1, CX-F2)', () => {
+  it('shows a duplicate key and two keys that collide as JSON: both findings, with category, offset and path', () => {
     const output = show(RECORDED['decode-duplicate-and-colliding-keys'].answer);
     const findings = within(output).getByRole('region', { name: '2 findings' });
     const rows = within(findings).getAllByRole('listitem');
@@ -62,7 +62,7 @@ describe('the Codec output over real answers', () => {
     expect(within(output.querySelector('[data-codec-section="decodedValue"]') as HTMLElement).getByText('"1" (text)')).toBeInTheDocument();
   });
 
-  it('shows a lenient answer\'s note and its finding by offset and path (CX-O6)', () => {
+  it('shows a lenient answer\'s note and its finding by offset and path', () => {
     const output = show(RECORDED['decode-nan-lenient'].answer);
     expect(output.querySelector('[data-role="lenient-note"]')).toHaveTextContent(
       'Decoded in lenient mode (best effort); skipped items are listed below.',
@@ -74,7 +74,7 @@ describe('the Codec output over real answers', () => {
     expect(sectionHeadings(output)).toEqual(['Json']);
   });
 
-  it('shows a framed getInfo: the CTAP view, its interpretation, the metadata and EDN (CX-P3, CX-P4)', () => {
+  it('shows a framed getInfo: the CTAP view, its interpretation, the metadata and EDN', () => {
     const output = show(RECORDED['decode-get-info-framed'].answer);
     expect(output.querySelector('[data-role="type"]')).toHaveTextContent('CBOR (SUCCESS status; GetInfo response)');
     expect(sectionHeadings(output)).toEqual(['CTAP decoded', 'GetInfo (interpreted)', 'CTAP metadata', 'EDN (exact bytes)']);
@@ -86,7 +86,7 @@ describe('the Codec output over real answers', () => {
     expect(within(metadata).getByText('0x00')).toBeInTheDocument();
   });
 
-  it('shows the padding and trailing bytes after a CTAP response (CX-P4)', () => {
+  it('shows the padding and trailing bytes after a CTAP response', () => {
     const output = show(RECORDED['decode-make-credential-padded'].answer);
     const metadata = output.querySelector('[data-codec-section="ctap"]') as HTMLElement;
     expect(within(metadata).getByText('Trailing bytes (hex)')).toBeInTheDocument();
@@ -96,7 +96,7 @@ describe('the Codec output over real answers', () => {
     expect(trailing).toHaveTextContent('Trailing 5 byte(s) after CBOR payload');
   });
 
-  it('shows a certificate: Raw, PEM and its details (CX-P6)', () => {
+  it('shows a certificate: Raw, PEM and its details', () => {
     const answer = RECORDED['decode-certificate'].answer;
     const output = show(answer);
     expect(sectionHeadings(output)).toEqual(['Raw', 'PEM', 'Certificate details']);
@@ -109,13 +109,13 @@ describe('the Codec output over real answers', () => {
 });
 
 describe('the Codec output in its other states', () => {
-  it('says there is nothing to show for an answer that is not an object (CX-O5)', () => {
+  it('says there is nothing to show for an answer that is not an object', () => {
     const output = show('not an object');
     expect(output).toHaveTextContent('No decoded data available.');
     expect(output.querySelector('[data-role="outcome"]')).toBeNull();
   });
 
-  it('says Error and "Decoded data" when the answer does, and that there is no section (CX-O3, CX-O4, CX-O7)', () => {
+  it('says Error and "Decoded data" when the answer does, and that there is no section', () => {
     const output = show({ success: false });
     expect(output.querySelector('[data-role="outcome"]')).toHaveTextContent('Error');
     expect(output.querySelector('[data-role="outcome"]')!.className).toContain('bg-danger-tint');
@@ -123,13 +123,13 @@ describe('the Codec output in its other states', () => {
     expect(output).toHaveTextContent('No structured data available.');
   });
 
-  it('lists malformed segments when there are no findings, in encode mode too (CX-F4)', () => {
+  it('lists malformed segments when there are no findings, in encode mode too', () => {
     const output = show({ success: true, type: 'JSON (encoded)', data: { json: { a: 1 } }, malformed: ['one', 'two'] }, 'encode');
     expect(output.querySelector('[data-role="malformed"]')).toHaveTextContent('Malformed segments: one, two');
     expect(sectionHeadings(output)).toEqual(['Json']);
   });
 
-  it('names the field a finding was found in (CX-F2)', () => {
+  it('names the field a finding was found in', () => {
     const output = show({
       success: true,
       type: 'PublicKeyCredential',
@@ -143,7 +143,7 @@ describe('the Codec output in its other states', () => {
     expect(row.querySelector('[data-role="path"]')).toHaveTextContent('${"type"}');
   });
 
-  it('shows a message that quotes markup as text (CX-F5)', () => {
+  it('shows a message that quotes markup as text', () => {
     const output = show({
       success: true,
       type: 'JSON',
@@ -155,12 +155,12 @@ describe('the Codec output in its other states', () => {
     expect(output).toHaveTextContent('<img src=x onerror=alert(1)>');
   });
 
-  it('shows a top-level Expanded JSON as a block of JSON (CX-N2)', () => {
+  it('shows a top-level Expanded JSON as a block of JSON', () => {
     const output = show({ success: true, type: 'CBOR', data: { expandedJson: { a: 1 } } });
     expect(output.querySelector('[data-codec-section="expandedJson"] pre')!.textContent).toBe('{\n  "decoded json": {\n    "a": 1\n  }\n}');
   });
 
-  it('shows the encoded bytes without a byte length when the answer gives none (CX-C3)', () => {
+  it('shows the encoded bytes without a byte length when the answer gives none', () => {
     const output = show({ success: true, type: 'X', data: { binary: { hex: '00' } } }, 'encode');
     expect(output.querySelector('[data-encoded="hex"]')).toHaveTextContent('00');
     expect(output.querySelector('[data-role="byte-length"]')).toBeNull();

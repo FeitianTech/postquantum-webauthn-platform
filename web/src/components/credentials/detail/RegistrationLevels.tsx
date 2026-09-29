@@ -140,7 +140,7 @@ export function RegistrationLevel({
 
 /**
  * An attestation certificate's level, in the MDS certificate page's
- * language: its subject and issuer, its summary, then the current view's text,
+ * language: its subject and issuer, its summary, then the certificate's text,
  * or why there is none.
  */
 export function CertificateLevel({ view, idBase }: { view: CertificateView; idBase: string }) {
