@@ -1,0 +1,34 @@
+name: CI / Repository
+
+on:
+  # push is filtered to main so a same-repo PR is checked once (by
+  # pull_request) instead of twice; main still gets a post-merge run.
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-repository-${{ github.ref }}
+  # A pull request's newer run replaces its older one. A push to main never
+  # cancels a run in progress, so every pushed commit is checked.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # The workflows themselves, with shellcheck over every run: script. The image is
+  # actionlint's own, pinned by digest (1.7.12, with shellcheck 0.11.0); Dependabot
+  # does not bump a docker:// action, so move the digest by hand.
+  workflows:
+    name: Workflows (actionlint, shellcheck)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Lint the workflows
+        uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
+        with:
+          args: -color
