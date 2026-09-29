@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 
 from server.app import mds_snapshot_dir
 from server.app.config import paths
@@ -26,11 +27,12 @@ def test_the_snapshot_is_seven_files_named_once():
     }
 
 
-def test_the_default_directory_is_the_frontend_static_one(monkeypatch):
+def test_the_default_directory_is_in_the_instance_folder(monkeypatch):
     monkeypatch.delenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", raising=False)
-    assert mds_snapshot_dir.DEFAULT_SNAPSHOT_DIR == paths._FRONTEND_STATIC_ROOT
-    assert mds_snapshot_dir.snapshot_dir() == paths._FRONTEND_STATIC_ROOT
-    assert mds_snapshot_dir.snapshot_file("blob.jwt") == paths._FRONTEND_STATIC_ROOT / "blob.jwt"
+    default = Path(paths.INSTANCE_ROOT) / "mds-snapshot"
+    assert mds_snapshot_dir.DEFAULT_SNAPSHOT_DIR == default
+    assert mds_snapshot_dir.snapshot_dir() == default
+    assert mds_snapshot_dir.snapshot_file("blob.jwt") == default / "blob.jwt"
 
 
 def test_the_setting_is_read_whenever_a_path_is_needed(monkeypatch, tmp_path):

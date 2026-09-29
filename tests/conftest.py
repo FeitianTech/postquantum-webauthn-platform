@@ -16,7 +16,7 @@ if "HYPOTHESIS_STORAGE_DIRECTORY" not in os.environ:
     atexit.register(shutil.rmtree, _HYPOTHESIS_STORAGE, ignore_errors=True)
 
 # The MDS snapshot is read from (and, by the provisioning and the updater, written
-# to) FIDO_SERVER_MDS_SNAPSHOT_DIR, else frontend/static, where a developer's real
+# to) FIDO_SERVER_MDS_SNAPSHOT_DIR, else instance/mds-snapshot, where a developer's real
 # snapshot lives. Every test starts from an empty directory of this run's instead,
 # whatever the shell exports: no test reads or writes the real snapshot, and a
 # test that needs one points the setting at a fixture of its own

@@ -12,7 +12,7 @@ metadata service: seven files totalling about 30 MB, produced together by
 | `fido-mds3.explorer.full.json` | 7.1 MB | the browser, as a cacheable static asset |
 | `*.meta.json` (three files) | ~1 KB | the freshness check and the explorer banner |
 
-All seven live in one directory: `frontend/static/`, unless
+All seven live in one directory: `instance/mds-snapshot/`, unless
 `FIDO_SERVER_MDS_SNAPSHOT_DIR` names another (see "Where the files are").
 **None of them is tracked in git** and none is baked into the container image.
 
@@ -33,7 +33,8 @@ decision because it changes every commit id.
 
 `server/app/mds_snapshot_dir.py` names the seven files once and says where they are:
 `snapshot_dir()` reads `FIDO_SERVER_MDS_SNAPSHOT_DIR` whenever a path is needed, and
-without it answers `frontend/static`. It is a leaf with no Flask import, so every
+without it answers `instance/mds-snapshot` (in the image, `/app/instance/mds-snapshot`;
+`docker compose` mounts `./instance`, so a local container keeps its copy there). It is a leaf with no Flask import, so every
 reader and writer follows the one setting: the server's metadata loaders
 (`webauthn/metadata/blob.py`), `/api/mds/metadata/base`, the provisioning below,
 `tools/update_mds_snapshot.py`, and the packaged snapshot browsers load
@@ -46,8 +47,7 @@ file is cached as immutable for a year and changes at runtime without a deploy, 
 new snapshot has to be a new URL.
 
 No route serves a snapshot file at the site's root: the seven names and the `.gz`
-sibling are refused there (the site's root is the UI's export since Phase 30A, and a
-copy in `frontend/static` may be another snapshot than the directory's), and the
+sibling are refused there (the site's root is the UI's export), and the
 versioned route serves only the browsers' copy, from the snapshot directory. Nothing the pages
 use asks for any other snapshot file (the current UI's fallback request for
 `fido-mds3.verified.json.meta.json` is gone: the page's info carries the timestamp
@@ -57,8 +57,7 @@ The tests use it to keep off a developer's real snapshot: `tests/conftest.py` po
 every test at an empty directory of the run's, and a test that needs a snapshot
 points it at a copy of `tests/fixtures/mds/snapshot` (a small synthetic snapshot
 built by `tests/app/metadata/mds_fixture.py` with the updater's own code). The browser
-tests' Flask (`web/e2e/serve-flask.mjs`) serves such a copy too. Phase 30 moves the
-snapshot out of `frontend/static` by changing the default here.
+tests' Flask (`web/e2e/serve-flask.mjs`) serves such a copy too.
 
 ## How the snapshot reaches the application
 
@@ -112,7 +111,7 @@ the relocation did not introduce a new failure mode.
 ## Working locally without Cloud Storage
 
 Run the updater once. It fetches and verifies the BLOB and writes all seven
-files into the snapshot directory (`frontend/static/`, where they are gitignored):
+files into the snapshot directory (`instance/mds-snapshot/`, which git and Docker ignore):
 
 ```bash
 python tools/update_mds_snapshot.py

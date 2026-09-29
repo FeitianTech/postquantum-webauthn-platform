@@ -13,8 +13,8 @@ same record on every run:
   would break ``isinstance`` checks in the code under test;
 - the credential store, the artifact store and the session-metadata directory
   live in a temporary directory; the MDS verifier is stubbed out, and an audit
-  hook fails the scenario if anything opens a file under ``frontend/static``
-  (where the real MDS snapshot lives).
+  hook fails the scenario if anything opens a file in the MDS snapshot's default
+  directory (where the real snapshot lives).
 
 A record holds the status, every header but ``Set-Cookie``, each cookie's
 attributes without its value and expiry but with its decoded contents, the body
@@ -172,8 +172,7 @@ class Environment:
         )
         mp.setattr(uuid, "uuid4", lambda: uuid.UUID(bytes=stream.take(16), version=4))
 
-        from server.app import credential_artifacts, device_logs
-        from server.app.config import paths
+        from server.app import credential_artifacts, device_logs, mds_snapshot_dir
         from server.app.storage import credentials, session_metadata
         from server.app.webauthn import metadata
         from server.app.webauthn.metadata import sessions
@@ -189,7 +188,7 @@ class Environment:
         if not _SNAPSHOT_GUARD["installed"]:
             sys.addaudithook(_audit)
             _SNAPSHOT_GUARD["installed"] = True
-        _SNAPSHOT_GUARD["root"] = str(paths._FRONTEND_STATIC_ROOT)
+        _SNAPSHOT_GUARD["root"] = str(mds_snapshot_dir.DEFAULT_SNAPSHOT_DIR)
         _SNAPSHOT_GUARD["hits"] = []
 
     def close(self) -> None:
@@ -274,7 +273,7 @@ class Recorder:
 
     def result(self) -> dict[str, Any]:
         hits = list(_SNAPSHOT_GUARD["hits"])
-        assert not hits, f"{self.name} opened files under frontend/static: {hits}"
+        assert not hits, f"{self.name} opened files in the snapshot's default directory: {hits}"
         return {"scenario": self.name, "requests": self.records}
 
 

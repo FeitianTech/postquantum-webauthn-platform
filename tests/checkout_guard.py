@@ -21,15 +21,12 @@ from pathlib import Path
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-# Where the app keeps state on a developer's machine -- including the legacy
-# credential stores in the source tree, which are still read -- and the MDS
-# snapshot files (docs/MDS_SNAPSHOT.md).
+# Where the app keeps state on a developer's machine -- the instance folder holds
+# the session secret, the local credentials and the MDS snapshot
+# (docs/MDS_SNAPSHOT.md) -- including the legacy credential stores in the source
+# tree, which are still read.
 GUARDED_TREES = ("server/runtime", "instance", "server/app/session-credentials", ".hypothesis")
-GUARDED_STATIC = (
-    "frontend/static/fido-mds3.*",
-    "frontend/static/blob.jwt*",
-    "server/app/*_credential_data.pkl",
-)
+GUARDED_STATIC = ("server/app/*_credential_data.pkl",)
 
 
 def pytest_addoption(parser):
@@ -80,8 +77,8 @@ def problems(before: dict[str, object], after: dict[str, object]) -> str | None:
     if not described:
         return None
     return (
-        "Tests wrote into the checkout (server/runtime/, instance/, the legacy credential "
-        "stores in server/app/, .hypothesis/ or the MDS snapshot):\n" + "\n".join(described)
+        "Tests wrote into the checkout (server/runtime/, instance/ with the MDS snapshot, the legacy "
+        "credential stores in server/app/ or .hypothesis/):\n" + "\n".join(described)
     )
 
 

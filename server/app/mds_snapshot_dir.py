@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-# Where the snapshot is, when not frontend/static. Read whenever a path is needed
+# Where the snapshot is, when not the default below. Read whenever a path is needed
 # (not at import), so the updater, the provisioning at a cold start and every
 # request agree, and a test or a browser run can serve a fixture of its own.
 SNAPSHOT_DIR_ENV = "FIDO_SERVER_MDS_SNAPSHOT_DIR"
@@ -40,8 +40,10 @@ BROWSER_FILENAMES = frozenset({EXPLORER_FULL})
 # Large source files the server reads and browsers never request.
 PRIVATE_FILENAMES = frozenset({BLOB, VERIFIED, EXPLORER})
 
-# server/app/mds_snapshot_dir.py -> the checkout (or /app in the image).
-DEFAULT_SNAPSHOT_DIR = Path(__file__).resolve().parents[2] / "frontend" / "static"
+# server/app/mds_snapshot_dir.py -> the checkout (or /app in the image). The
+# instance folder holds what a deployment keeps beside its source, served by no
+# route and ignored by git and Docker.
+DEFAULT_SNAPSHOT_DIR = Path(__file__).resolve().parents[2] / "instance" / "mds-snapshot"
 
 
 def snapshot_dir() -> Path:

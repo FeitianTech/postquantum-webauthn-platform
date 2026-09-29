@@ -526,7 +526,7 @@ Flask app setup starts in:
 - `server/app/mds_snapshot_dir.py`
   Where the MDS snapshot is: its seven file names and `snapshot_dir()`, which reads
   `FIDO_SERVER_MDS_SNAPSHOT_DIR` whenever a path is needed (default
-  `frontend/static`). A Flask-free leaf too: the server (`webauthn/metadata/blob.py`,
+  `instance/mds-snapshot`). A Flask-free leaf too: the server (`webauthn/metadata/blob.py`,
   `routes/general.py`), the provisioning, the served snapshot
   (`/assets/<id>/fido-mds3.explorer.full.json`) and the updater all follow it.
 
@@ -757,8 +757,8 @@ Ten checks guard the code and the checkout rather than behaviour:
 - `tests/checkout_guard.py`, a pytest plugin `tests/conftest.py` loads, fails the run
   when a test created, changed or removed anything under `server/runtime/`,
   `instance/`, the legacy credential stores (`server/app/session-credentials/`,
-  `server/app/*_credential_data.pkl`), `.hypothesis/` or the MDS snapshot files in
-  `frontend/static/`. What is there mixes the owner's local data with old test
+  `server/app/*_credential_data.pkl`) or `.hypothesis/` (`instance/` holds the MDS
+  snapshot too). What is there mixes the owner's local data with old test
   leftovers: the guard compares a listing taken in `pytest_configure`, before any
   test module is collected (so a write made while importing one is seen), with one
   taken when the session finishes, and never deletes.
@@ -875,7 +875,7 @@ it configures that app and no other. Do not `importlib.reload` config modules.
 
 ## The FIDO MDS Snapshot
 
-- The ~30MB generated snapshot under `frontend/static/` is **not tracked in git**
+- The ~30MB generated snapshot in `instance/mds-snapshot/` is **not tracked in git**
   and **not baked into the image**. `server/app/mds_provisioning.py` fetches it at
   runtime: local files, then Cloud Storage, then a verified upstream refresh.
 - Working locally: run `python tools/update_mds_snapshot.py` once. Without it the
@@ -886,8 +886,7 @@ it configures that app and no other. Do not `importlib.reload` config modules.
 - Browsers get one snapshot file, the explorer's, at its versioned URL from the snapshot
   directory; the site's root (the export's page rule, behind `static_assets`' hook) and the
   versioned route refuse every other snapshot name and the `.gz` sibling
-  (`static_assets._SNAPSHOT_FILES`), since what sits in `frontend/static` may be another
-  snapshot.
+  (`static_assets._SNAPSHOT_FILES`).
 - Never commit those files and never write a test that reads the real snapshot
   path. `docs/MDS_SNAPSHOT.md` has the full picture.
 

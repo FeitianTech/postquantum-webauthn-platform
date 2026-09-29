@@ -36,7 +36,7 @@ MDS_RETRY_AFTER_CAP_SECONDS = 120
 
 def _path(name: str) -> Path:
     """A snapshot file, in the directory the server reads it from
-    (``FIDO_SERVER_MDS_SNAPSHOT_DIR``, else ``frontend/static``)."""
+    (``FIDO_SERVER_MDS_SNAPSHOT_DIR``, else ``instance/mds-snapshot``)."""
 
     return mds_snapshot_dir.snapshot_file(name)
 

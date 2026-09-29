@@ -4,7 +4,7 @@ The snapshot is a ~30 MB set of generated files (the signed BLOB, the verified
 payload and the explorer views). It is not tracked in git and is not baked into
 the container image, so a daily refresh no longer rewrites repository history or
 invalidates a Docker layer. Instead the files are materialised into
-the snapshot directory (``frontend/static`` unless
+the snapshot directory (``instance/mds-snapshot`` unless
 ``FIDO_SERVER_MDS_SNAPSHOT_DIR`` names another, ``server.app.mds_snapshot_dir``) on
 demand, in three tiers:
 
