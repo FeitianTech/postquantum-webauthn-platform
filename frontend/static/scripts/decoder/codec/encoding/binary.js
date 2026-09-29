@@ -16,22 +16,14 @@ function isLikelyHex(value) {
     return candidate.length > 0 && candidate.length % 2 === 0 && /^[0-9a-fA-F]+$/.test(candidate);
 }
 
+// The matchers are given trimmed, non-empty text, so what is left without its
+// whitespace is never empty.
 function isLikelyBase64(value) {
-    const candidate = value.replace(/\s+/g, '');
-    if (!candidate) {
-        return false;
-    }
-
-    return /^[A-Za-z0-9+/=]+$/.test(candidate);
+    return /^[A-Za-z0-9+/=]+$/.test(value.replace(/\s+/g, ''));
 }
 
 function isLikelyBase64Url(value) {
-    const candidate = value.replace(/\s+/g, '');
-    if (!candidate) {
-        return false;
-    }
-
-    return /^[A-Za-z0-9_\-]+=*$/.test(candidate);
+    return /^[A-Za-z0-9_\-]+=*$/.test(value.replace(/\s+/g, ''));
 }
 
 function isPemString(value) {

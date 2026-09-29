@@ -41,7 +41,7 @@ export default defineConfig({
         lines: 99.5,
         // The Codec's logic, which the new UI in web/ imports: every line and branch.
         'frontend/static/scripts/decoder/codec/{constants,labels,request,result,values}.js': FULL,
-        'frontend/static/scripts/decoder/codec/encoding/{can-encode,format,summary}.js': FULL,
+        'frontend/static/scripts/decoder/codec/encoding/{binary,can-encode,format,summary}.js': FULL,
         // The MDS explorer's logic, which web/ imports: every line and branch.
         'frontend/static/scripts/advanced/mds/explorer/*.js': FULL,
         'frontend/static/scripts/advanced/mds/{constants,raw-data,raw-stringify,sort-filter-normalise}.js': FULL,
