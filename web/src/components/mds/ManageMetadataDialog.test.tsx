@@ -163,9 +163,17 @@ describe('Manage Trusted Metadata', () => {
     expect(message()).toHaveTextContent('Uploading metadata…');
     expect(screen.getByRole('button', { name: 'Drop JSON files here or click to browse' })).toBeDisabled();
 
-    await act(async () => answer.resolve(json({ items: [ITEM], snapshot: WITH_UPLOAD })));
-    expect(document.querySelector('[data-mds-progress]')).toHaveTextContent('Completing metadata update...');
-    await waitFor(() => expect(document.querySelector('[data-mds-progress]')).toBeNull());
+    // The last sentence stays on a timer; hold it, or a loaded machine can take the
+    // sentence away before it is read.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      await act(async () => answer.resolve(json({ items: [ITEM], snapshot: WITH_UPLOAD })));
+      expect(document.querySelector('[data-mds-progress]')).toHaveTextContent('Completing metadata update...');
+      await act(async () => vi.runOnlyPendingTimers());
+      expect(document.querySelector('[data-mds-progress]')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('passes on the warnings of an upload that partly worked', async () => {
