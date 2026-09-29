@@ -68,37 +68,6 @@ def test_describe_authenticator_data_bytes_includes_flags_and_attested_credentia
     assert details["attestedCredentialData"]["credentialId"]["hex"]
 
 
-def test_parse_attestation_object_reads_null_and_float_statement_values_as_what_they_are(monkeypatch, pipeline):
-    # fido2.cbor read all of major type 7 as a boolean: null became False and
-    # 1.5 became False, with its four payload bytes left to be misread.
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-    real_extract_attestation_certificate = decode_module._extract_attestation_certificate
-    monkeypatch.setattr(pipeline, "_extract_attestation_certificate", lambda _stmt: {"parsed": True})
-
-    auth_data = _build_auth_data_bytes()
-    statement = b"\xa3" + b"\x61n\xf6" + b"\x61f\xfa\x3f\xc0\x00\x00" + b"\x63x5c\x81\x4acert-bytes"
-    attestation = (
-        b"\xa3"
-        + b"\x63fmt\x66packed"
-        + b"\x67attStmt" + statement
-        + b"\x68authData\x58" + bytes([len(auth_data)]) + auth_data
-    )
-
-    parsed = decode_module._parse_attestation_object(attestation)
-
-    assert parsed["attestationFormat"] == "packed"
-    assert parsed["attestationStatement"]["n"] is None
-    assert parsed["attestationStatement"]["f"] == 1.5
-    assert parsed["attestationCertificate"] == {"parsed": True}
-    assert parsed["cbor"]["fmt"] == "packed"
-    assert parsed["authenticatorData"]["signCount"] == 9
-
-    with pytest.raises(ValueError, match="Extraneous data"):
-        decode_module._parse_attestation_object(attestation + b"\x00")
-
-    assert real_extract_attestation_certificate({"x5c": ["%%%"]}) is None
-
-
 def test_convert_attestation_statement_and_certificate_chain_paths(monkeypatch, response):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 

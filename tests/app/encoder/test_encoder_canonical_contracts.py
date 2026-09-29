@@ -7,8 +7,7 @@ def test_normalize_encoding_format_aliases_and_validation_errors():
     encode_module = pytest.importorskip("server.app.decoder.encode")
 
     assert encode_module._normalize_encoding_format("JSON") == "json"
-    assert encode_module._normalize_encoding_format("WebAuthn client data") == "client-data"
-    assert encode_module._normalize_encoding_format("attestation object") == "attestation-object"
+    assert encode_module._normalize_encoding_format("EDN (exact bytes)") == "edn"
     assert encode_module._normalize_encoding_format("CBOR (CTAP/WebAuthn Data)") == "ctap-webauthn"
 
     with pytest.raises(ValueError, match="must be a string"):

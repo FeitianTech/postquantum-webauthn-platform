@@ -1,25 +1,6 @@
 import pytest
 
 
-def test_encoder_high_level_handlers_validate_input_types():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
-    with pytest.raises(ValueError, match="expects a JSON object"):
-        encode_module._encode_public_key_credential([])
-
-    with pytest.raises(ValueError, match="must be provided as a JSON object"):
-        encode_module._encode_client_data([])
-
-    with pytest.raises(ValueError, match="Unable to interpret authenticatorData"):
-        encode_module._encode_authenticator_data({"authenticatorData": {"bad": True}})
-
-    with pytest.raises(ValueError, match="Unable to interpret attestationObject"):
-        encode_module._encode_attestation_object({"attestationObject": {"bad": True}})
-
-    with pytest.raises(ValueError, match="Unable to interpret certificate"):
-        encode_module._encode_x509_certificate({"certificate": {"bad": True}})
-
-
 def test_ctap_request_and_response_encoders_raise_for_missing_required_fields():
     encode_module = pytest.importorskip("server.app.decoder.encode")
 

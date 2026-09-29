@@ -121,7 +121,6 @@ _describe_client_data_from_bytes = pipeline._describe_client_data_from_bytes
 _extract_attestation_certificate = pipeline._extract_attestation_certificate
 _is_client_data_dict = pipeline._is_client_data_dict
 _is_public_key_credential = pipeline._is_public_key_credential
-_parse_attestation_object = pipeline._parse_attestation_object
 _try_decode_utf8 = pipeline._try_decode_utf8
 
 # Decoder payload and result conversion.

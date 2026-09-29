@@ -33,7 +33,6 @@ from .binary_decode import (
 )
 from .binary_extract import (
     _determine_pem_label,  # noqa: F401  # re-exported for callers and tests
-    _extract_binary_input,  # noqa: F401  # re-exported for callers and tests
     _extract_generic_binary_payload,  # noqa: F401  # re-exported for callers and tests
     _normalize_pem_label,  # noqa: F401  # re-exported for callers and tests
 )
@@ -64,14 +63,9 @@ from .ctap_numeric import (
     _sanitize_nested_extra_key,  # noqa: F401  # re-exported for callers and tests
 )
 from .handlers_basic import (
-    _encode_attestation_object,
-    _encode_authenticator_data,
-    _encode_client_data,
     _encode_der_value,
     _encode_json_value,
     _encode_pem_value,
-    _encode_public_key_credential,
-    _encode_x509_certificate,
     _normalize_encoding_format,
     _prepare_encoder_response,  # noqa: F401  # re-exported for callers and tests
 )
@@ -123,11 +117,6 @@ def encode_payload_text(value: str, target_format: str) -> dict[str, Any]:
 
 _ENCODING_HANDLERS: dict[str, Callable[[Any], dict[str, Any]]] = {
     "json": _encode_json_value,
-    "public-key-credential": _encode_public_key_credential,
-    "client-data": _encode_client_data,
-    "auth-data": _encode_authenticator_data,
-    "attestation-object": _encode_attestation_object,
-    "x509": _encode_x509_certificate,
     "cbor": _encode_cbor_value,
     "ctap-webauthn": _encode_ctap_webauthn_value,
     "der": _encode_der_value,

@@ -182,14 +182,6 @@ def test_a_json_document_is_shown_back_with_its_keys_as_written():
     assert data["json"] == json.loads(text)
 
 
-def test_client_data_is_shown_back_with_its_keys_as_written():
-    text = '{"type": "webauthn.create", "challenge": "AAAA", "origin": "https://example.com", "1 (fmt)": 1}'
-
-    shown = encode_payload_text(text, "client data")["data"]["clientDataJSON"]["json"]
-
-    assert shown == json.loads(text)
-
-
 def test_the_cbor_view_still_spells_a_text_key_that_looks_typed_with_its_type():
     # The echo shows keys as written; decodedValue shows the CBOR keys encoded, and
     # the text key "1 (fmt)" is spelled so that it reads back as text.

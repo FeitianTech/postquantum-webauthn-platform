@@ -5,17 +5,13 @@ import json
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
-from ...webauthn.attestation import make_json_safe, serialize_attestation_certificate
+from ...webauthn.attestation import make_json_safe
 from ..decode import (
     _binary_summary,
-    _describe_authenticator_data_bytes,
-    _hex_json_safe,
-    _parse_attestation_object,
     _stringify_mapping_keys,
 )
 from .binary_extract import (
     _determine_pem_label,
-    _extract_binary_input,
     _extract_generic_binary_payload,
     _format_pem_block,
 )
@@ -55,17 +51,6 @@ def _normalize_encoding_format(value: str) -> str:
         "cbor (canonical)": "cbor",
         "cbor (ctap/webauthn data)": "ctap-webauthn",
         "json (binary)": "json",
-        "webauthn client data": "client-data",
-        "clientdata": "client-data",
-        "client data": "client-data",
-        "authenticator data": "auth-data",
-        "authdata": "auth-data",
-        "attestation object": "attestation-object",
-        "attestation": "attestation-object",
-        "x.509 certificate": "x509",
-        "x509": "x509",
-        "publickeycredential": "public-key-credential",
-        "public key credential": "public-key-credential",
         "der": "der",
         "pem": "pem",
         "cose": "cose",
@@ -89,78 +74,6 @@ def _encode_json_value(parsed: Any) -> dict[str, Any]:
         "binary": _binary_summary(data_bytes, "json"),
     }
     return _prepare_encoder_response("JSON", payload, qualifier="encoded")
-
-
-def _encode_public_key_credential(parsed: Any) -> dict[str, Any]:
-    if not isinstance(parsed, Mapping):
-        raise ValueError("PublicKeyCredential encoding expects a JSON object.")
-
-    text = json.dumps(parsed, indent=2, ensure_ascii=False)
-    payload = {
-        "credential": make_json_safe(parsed),
-        "text": text,
-        "binary": _binary_summary(text.encode("utf-8"), "json"),
-    }
-    return _prepare_encoder_response(
-        "PublicKeyCredential", payload, qualifier="encoded"
-    )
-
-
-def _encode_client_data(parsed: Any) -> dict[str, Any]:
-    if not isinstance(parsed, Mapping):
-        raise ValueError("WebAuthn client data must be provided as a JSON object.")
-
-    compact = json.dumps(parsed, separators=(",", ":"), ensure_ascii=False)
-    data_bytes = compact.encode("utf-8")
-    summary = _binary_summary(data_bytes, "json")
-    summary["text"] = compact
-    summary["json"] = make_json_safe(parsed)
-
-    payload = {"clientDataJSON": summary}
-    return _prepare_encoder_response(
-        "WebAuthn client data", payload, qualifier="encoded"
-    )
-
-
-def _encode_authenticator_data(parsed: Any) -> dict[str, Any]:
-    data_bytes = _extract_binary_input(parsed, "authenticatorData")
-    details = _describe_authenticator_data_bytes(data_bytes)
-
-    payload = {
-        "authenticatorData": {
-            "binary": _binary_summary(data_bytes, "binary"),
-            "details": _stringify_mapping_keys(_hex_json_safe(details)),
-        }
-    }
-    return _prepare_encoder_response(
-        "Authenticator data", payload, qualifier="encoded"
-    )
-
-
-def _encode_attestation_object(parsed: Any) -> dict[str, Any]:
-    data_bytes = _extract_binary_input(parsed, "attestationObject")
-    decoded = _parse_attestation_object(data_bytes)
-    payload = {
-        "attestationObject": {
-            "binary": _binary_summary(data_bytes, "cbor"),
-            "details": _stringify_mapping_keys(_hex_json_safe(decoded)),
-        }
-    }
-    return _prepare_encoder_response(
-        "Attestation object", payload, qualifier="encoded"
-    )
-
-
-def _encode_x509_certificate(parsed: Any) -> dict[str, Any]:
-    data_bytes = _extract_binary_input(parsed, "certificate")
-    details = serialize_attestation_certificate(data_bytes)
-    payload = {
-        "certificate": {
-            "binary": _binary_summary(data_bytes, "der"),
-            "details": _stringify_mapping_keys(make_json_safe(details)),
-        }
-    }
-    return _prepare_encoder_response("X.509 certificate", payload, qualifier="encoded")
 
 
 def _encode_binary_variant(

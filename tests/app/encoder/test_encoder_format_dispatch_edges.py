@@ -1,102 +1,19 @@
 import base64
-import hashlib
-import json
-from datetime import datetime, timedelta, timezone
 
 import pytest
-from cryptography import x509
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.x509.oid import NameOID
 
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
-def _build_auth_and_attestation_bytes() -> tuple[bytes, bytes]:
-    from fido2.cose import CoseKey
-    from fido2.webauthn import (
-        AttestationObject,
-        AttestedCredentialData,
-        AuthenticatorData,
-    )
-
-    credential_id = b"encode-format-cred"
-    public_key = CoseKey.parse({1: 2, 3: -7, -1: 1, -2: b"\x01" * 32, -3: b"\x02" * 32})
-    credential_data = AttestedCredentialData.create(bytes(16), credential_id, public_key)
-    auth_data = AuthenticatorData.create(
-        hashlib.sha256(b"example.com").digest(),
-        AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT,
-        1,
-        credential_data,
-    )
-    attestation_object = AttestationObject.create("none", auth_data, {})
-    return bytes(auth_data), bytes(attestation_object)
-
-
-def _build_der_certificate() -> bytes:
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "encoder-test")])
-    cert = (
-        x509.CertificateBuilder()
-        .subject_name(subject)
-        .issuer_name(issuer)
-        .public_key(private_key.public_key())
-        .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.now(timezone.utc) - timedelta(days=1))
-        .not_valid_after(datetime.now(timezone.utc) + timedelta(days=7))
-        .sign(private_key, hashes.SHA256())
-    )
-    return cert.public_bytes(serialization.Encoding.DER)
-
-
-def test_encode_payload_text_dispatches_core_formats_with_real_payloads():
+def test_encode_payload_text_dispatches_json():
     encode_module = pytest.importorskip("server.app.decoder.encode")
-
-    auth_data_bytes, attestation_bytes = _build_auth_and_attestation_bytes()
-    cert_bytes = _build_der_certificate()
 
     json_result = encode_module.encode_payload_text('{"a":1}', "json")
     assert json_result["success"] is True
     assert json_result["type"].startswith("JSON")
 
-    credential_result = encode_module.encode_payload_text(
-        json.dumps({"id": "cred", "type": "public-key", "response": {}}),
-        "public key credential",
-    )
-    assert credential_result["success"] is True
-    assert credential_result["type"].startswith("PublicKeyCredential")
-
-    client_result = encode_module.encode_payload_text(
-        json.dumps(
-            {
-                "type": "webauthn.create",
-                "challenge": "AQID",
-                "origin": "https://example.com",
-            }
-        ),
-        "webauthn client data",
-    )
-    assert client_result["success"] is True
-
-    auth_result = encode_module.encode_payload_text(
-        json.dumps({"authenticatorData": _b64url(auth_data_bytes)}),
-        "authenticator data",
-    )
-    assert auth_result["success"] is True
-
-    attestation_result = encode_module.encode_payload_text(
-        json.dumps({"attestationObject": _b64url(attestation_bytes)}),
-        "attestation object",
-    )
-    assert attestation_result["success"] is True
-
-    x509_result = encode_module.encode_payload_text(
-        json.dumps({"certificate": base64.b64encode(cert_bytes).decode("ascii")}),
-        "x.509 certificate",
-    )
-    assert x509_result["success"] is True
 
 
 def test_encode_payload_text_reports_empty_invalid_json_and_unsupported_format():
@@ -122,11 +39,8 @@ def test_der_and_pem_helpers():
     assert "BEGIN DEMO_LABEL" in pem_result["data"]["pem"]
 
 
-def test_extract_binary_input_and_ctap_numeric_mapping_error_paths():
+def test_require_bytes_and_ctap_numeric_mapping_error_paths():
     encode_module = pytest.importorskip("server.app.decoder.encode")
-
-    assert encode_module._extract_binary_input({"authenticatorData": "aabb"}, "authenticatorData") == b"\xaa\xbb"
-    assert encode_module._extract_binary_input(b"\x01\x02", "field") == b"\x01\x02"
 
     with pytest.raises(ValueError, match="Unable to interpret"):
         encode_module._require_bytes({"oops": True}, "field")

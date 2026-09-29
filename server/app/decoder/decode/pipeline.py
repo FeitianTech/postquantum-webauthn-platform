@@ -543,13 +543,6 @@ def _read_attestation_object(data: bytes) -> tuple[dict[str, Any], dict[str, Any
     return details, node, end
 
 
-def _parse_attestation_object(data: bytes) -> dict[str, Any]:
-    details, _node, end = _read_attestation_object(data)
-    if end != len(data):
-        raise ValueError("Extraneous data after the attestation object.")
-    return details
-
-
 def _extract_attestation_certificate(att_stmt: Mapping[str, Any]) -> dict[str, Any] | None:
     if not isinstance(att_stmt, Mapping):
         return None

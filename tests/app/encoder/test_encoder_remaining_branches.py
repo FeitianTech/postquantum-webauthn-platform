@@ -36,27 +36,6 @@ def test_extract_generic_binary_payload_cycle_and_pem_label_fallbacks():
     assert encode_module._determine_pem_label({"other": True}) == "DATA"
 
 
-def test_extract_binary_input_candidate_priority_string_and_sequence_paths():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
-    assert (
-        encode_module._extract_binary_input({"hex": "aabb"}, "field")
-        == b"\xaa\xbb"
-    )
-    assert (
-        encode_module._extract_binary_input(
-            {"base64": base64.b64encode(b"xyz").decode("ascii")},
-            "field",
-        )
-        == b"xyz"
-    )
-    assert encode_module._extract_binary_input("aabb", "field") == b"\xaa\xbb"
-    assert encode_module._extract_binary_input([7, 8, 9], "field") == b"\x07\x08\x09"
-
-    with pytest.raises(ValueError, match="Unable to interpret field"):
-        encode_module._extract_binary_input({"value": {"bad": True}}, "field")
-
-
 def test_a_ctap_view_names_one_message_the_encoder_builds():
     from server.app.decoder.encode import ctap_views
 

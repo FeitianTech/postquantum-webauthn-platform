@@ -7,7 +7,7 @@ from collections import deque
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from .binary_decode import _maybe_decode_bytes, _require_bytes
+from .binary_decode import _maybe_decode_bytes
 from .typed_keys import with_cbor_keys
 
 
@@ -86,38 +86,6 @@ def _normalize_pem_label(label: str) -> str:
         return "DATA"
     compact = re.sub(r"\s+", " ", sanitized)
     return compact.replace(" ", "_").upper()
-
-
-def _extract_binary_input(value: Any, field_name: str) -> bytes:
-    if isinstance(value, (bytes, bytearray, memoryview)):
-        return bytes(value)
-
-    if isinstance(value, Mapping):
-        if field_name in value:
-            return _require_bytes(value[field_name], field_name)
-
-        for candidate in ("raw", "hex", "value", "data", "bytes"):
-            if candidate in value:
-                decoded = _maybe_decode_bytes(value[candidate])
-                if decoded is not None:
-                    return decoded
-
-        for candidate in ("base64", "base64url", "derBase64", "pem"):
-            if candidate in value:
-                decoded = _maybe_decode_bytes(value[candidate])
-                if decoded is not None:
-                    return decoded
-
-    if isinstance(value, str):
-        decoded = _maybe_decode_bytes(value)
-        if decoded is not None:
-            return decoded
-
-    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
-        if all(isinstance(item, int) and 0 <= item < 256 for item in value):
-            return bytes(value)
-
-    raise ValueError(f"Unable to interpret {field_name} as binary data for encoding.")
 
 
 def _restore_generic_structure(value: Any) -> Any:

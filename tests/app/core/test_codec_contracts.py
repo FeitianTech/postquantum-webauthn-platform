@@ -155,32 +155,11 @@ def test_encode_payload_text_cbor_is_deterministic_for_same_input():
     assert first["data"]["binary"]["base64url"] == second["data"]["binary"]["base64url"]
 
 
-def test_client_data_encode_decode_contract():
-    decoder_module = pytest.importorskip("server.app.decoder")
-
-    client_data = {
-        "type": "webauthn.create",
-        "challenge": "AQID",
-        "origin": "https://example.com",
-        "crossOrigin": False,
-    }
-
-    encoded = decoder_module.encode_payload_text(json.dumps(client_data), "webauthn client data")
-    encoded_b64url = encoded["data"]["clientDataJSON"]["base64url"]
-
-    decoded = decoder_module.decode_payload_text(encoded_b64url)
-
-    assert decoded["success"] is True
-    assert decoded["type"].startswith("WebAuthn client data")
-    assert decoded["data"]["type"] == "webauthn.create"
-    assert decoded["data"]["origin"] == "https://example.com"
-
-
 def test_normalize_encoding_format_aliases_and_case_insensitive():
     encode_module = pytest.importorskip("server.app.decoder.encode")
 
-    assert encode_module._normalize_encoding_format("  WebAuthn client data  ") == "client-data"
-    assert encode_module._normalize_encoding_format("PUBLIC KEY CREDENTIAL") == "public-key-credential"
+    assert encode_module._normalize_encoding_format("  JSON (binary)  ") == "json"
+    assert encode_module._normalize_encoding_format("CBOR (CANONICAL)") == "cbor"
     assert encode_module._normalize_encoding_format("cbor (ctap/webauthn data)") == "ctap-webauthn"
 
 
@@ -203,30 +182,6 @@ def test_encode_ctap_webauthn_requires_mandatory_fields_for_make_credential_requ
                 "2": {"id": "example.com", "name": "Example RP"},
             }
         )
-
-
-def test_attestation_object_encode_decode_round_trip_contract():
-    decoder_module = pytest.importorskip("server.app.decoder")
-
-    attestation_object = _build_attestation_object(counter=7, credential_id=b"codec-attestation-1")
-    attestation_object_b64url = _b64url(bytes(attestation_object))
-
-    encoded = decoder_module.encode_payload_text(
-        json.dumps({"attestationObject": attestation_object_b64url}),
-        "attestation object",
-    )
-
-    assert encoded["success"] is True
-    assert encoded["type"].startswith("Attestation object")
-    assert encoded["data"]["attestationObject"]["binary"]["base64url"] == attestation_object_b64url
-
-    decoded = decoder_module.decode_payload_text(attestation_object_b64url)
-
-    assert decoded["success"] is True
-    assert decoded["type"] == "Attestation object"
-    assert decoded["data"]["attestationObject"]["fmt"] == "none"
-    assert decoded["data"]["authenticatorData"]["counter"] == 7
-    assert decoded["data"]["authenticatorData"]["flags"]["AT"] is True
 
 
 def test_decode_public_key_credential_preserves_key_fields_and_extensions():
@@ -495,34 +450,6 @@ def test_codec_api_encode_der_from_nested_binary_payload():
     assert data["type"] == "DER (encoded)"
     assert data["data"]["binary"]["hex"] == payload_bytes.hex()
     assert data["data"]["derBase64"] == base64.b64encode(payload_bytes).decode("ascii")
-
-
-def test_codec_api_encode_client_data_contract():
-    pytest.importorskip("server.app.app")
-
-    client_data = {
-        "type": "webauthn.get",
-        "challenge": "AQID",
-        "origin": "https://example.com",
-        "crossOrigin": False,
-    }
-
-    with entry_app().test_client() as client:
-        response = client.post(
-            "/api/codec",
-            json={
-                "mode": "encode",
-                "format": "webauthn client data",
-                "payload": json.dumps(client_data),
-            },
-        )
-
-    assert response.status_code == 200
-    data = response.get_json()
-    assert data["success"] is True
-    assert data["type"] == "WebAuthn client data (encoded)"
-    assert data["data"]["clientDataJSON"]["json"]["type"] == "webauthn.get"
-    assert data["data"]["clientDataJSON"]["json"]["origin"] == "https://example.com"
 
 
 def test_codec_api_encode_maps_value_error_to_422(monkeypatch):
