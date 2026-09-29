@@ -187,9 +187,11 @@ describe('MonoValue', () => {
 
     const code = screen.getByText(VALUE);
     expect(code).toHaveAttribute('title', VALUE);
+    expect(screen.getByRole('button', { name: 'Show all' })).toHaveAttribute('aria-expanded', 'false');
     await userEvent.click(screen.getByRole('button', { name: 'Show all' }));
     expect(code.className).toContain('break-all');
     expect(code).not.toHaveAttribute('title');
+    expect(screen.getByRole('button', { name: 'Show less' })).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('takes Show all away once the fonts arrive and the value fits the room without it', async () => {
