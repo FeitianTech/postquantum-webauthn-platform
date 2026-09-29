@@ -1,0 +1,539 @@
+{
+ "none-listed": {
+  "attestation_format": "none",
+  "signature_valid": null,
+  "pqc_signature_valid": null,
+  "root_valid": null,
+  "rp_id_hash_valid": true,
+  "aaguid_match": null,
+  "client_data": {
+   "type": "webauthn.create",
+   "expected_type": "webauthn.create",
+   "type_valid": true,
+   "challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "expected_challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "challenge_matches": true,
+   "origin": "http://localhost",
+   "expected_origin": "http://localhost",
+   "origin_valid": true,
+   "cross_origin": false,
+   "cross_origin_ok": true
+  },
+  "authenticator_data": {
+   "user_present": true,
+   "user_verified": true,
+   "user_verification_required": false,
+   "user_verification_satisfied": true,
+   "attested_credential_data": true,
+   "counter": 0,
+   "credential_id_length": 32,
+   "credential_aaguid": "c0ffee00c0ffee00c0ffee00c0ffee00",
+   "algorithm": -7,
+   "algorithm_allowed": true,
+   "cose_key_valid": true
+  },
+  "metadata": {
+   "available": true,
+   "description": "Characterization c0ffee00c0ffee00c0ffee00c0ffee00",
+   "aaguid": "c0ffee00-c0ff-ee00-c0ff-ee00c0ffee00",
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "aaguid"
+  },
+  "hash_binding": {
+   "client_data_hash": "PjbBlsDcXlSAj-f2E-_AWIB85EjXbryECqbdF0KjJ3o",
+   "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAMD_7gDA_-4AwP_uAMD_7gAAIFe7B3S249tt86MTnSoI7n_hOaR60rVNauxUAtnOTbOspQECAyYgASFYIHFImSUu18Zf05W4dHSKxKdRFqiEruiu3SxkrTcE79E3IlggeH3t6Sv-JJH14a0gvermjvbV4Oamh95pY2wf4Jm7cUg-NsGWwNxeVICP5_YT78BYgHzkSNduvIQKpt0XQqMneg"
+  },
+  "errors": [],
+  "warnings": []
+ },
+ "self-listed": {
+  "attestation_format": "packed",
+  "signature_valid": true,
+  "pqc_signature_valid": null,
+  "root_valid": true,
+  "rp_id_hash_valid": true,
+  "aaguid_match": null,
+  "client_data": {
+   "type": "webauthn.create",
+   "expected_type": "webauthn.create",
+   "type_valid": true,
+   "challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "expected_challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "challenge_matches": true,
+   "origin": "http://localhost",
+   "expected_origin": "http://localhost",
+   "origin_valid": true,
+   "cross_origin": false,
+   "cross_origin_ok": true
+  },
+  "authenticator_data": {
+   "user_present": true,
+   "user_verified": true,
+   "user_verification_required": false,
+   "user_verification_satisfied": true,
+   "attested_credential_data": true,
+   "counter": 0,
+   "credential_id_length": 32,
+   "credential_aaguid": "c0ffee00c0ffee00c0ffee00c0ffee00",
+   "algorithm": -7,
+   "algorithm_allowed": true,
+   "cose_key_valid": true
+  },
+  "metadata": {
+   "available": true,
+   "description": "Characterization c0ffee00c0ffee00c0ffee00c0ffee00",
+   "aaguid": "c0ffee00-c0ff-ee00-c0ff-ee00c0ffee00",
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "aaguid"
+  },
+  "hash_binding": {
+   "client_data_hash": "PjbBlsDcXlSAj-f2E-_AWIB85EjXbryECqbdF0KjJ3o",
+   "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAMD_7gDA_-4AwP_uAMD_7gAAIFe7B3S249tt86MTnSoI7n_hOaR60rVNauxUAtnOTbOspQECAyYgASFYIHFImSUu18Zf05W4dHSKxKdRFqiEruiu3SxkrTcE79E3IlggeH3t6Sv-JJH14a0gvermjvbV4Oamh95pY2wf4Jm7cUg-NsGWwNxeVICP5_YT78BYgHzkSNduvIQKpt0XQqMneg"
+  },
+  "errors": [
+   "trust_path_missing"
+  ],
+  "warnings": [],
+  "root_checks": {
+   "trusted_ca": true,
+   "chain": true,
+   "fido_mds": null
+  }
+ },
+ "x5c-listed": {
+  "attestation_format": "packed",
+  "signature_valid": true,
+  "pqc_signature_valid": null,
+  "root_valid": true,
+  "rp_id_hash_valid": true,
+  "aaguid_match": true,
+  "client_data": {
+   "type": "webauthn.create",
+   "expected_type": "webauthn.create",
+   "type_valid": true,
+   "challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "expected_challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "challenge_matches": true,
+   "origin": "http://localhost",
+   "expected_origin": "http://localhost",
+   "origin_valid": true,
+   "cross_origin": false,
+   "cross_origin_ok": true
+  },
+  "authenticator_data": {
+   "user_present": true,
+   "user_verified": true,
+   "user_verification_required": false,
+   "user_verification_satisfied": true,
+   "attested_credential_data": true,
+   "counter": 0,
+   "credential_id_length": 32,
+   "credential_aaguid": "c0ffee00c0ffee00c0ffee00c0ffee00",
+   "algorithm": -7,
+   "algorithm_allowed": true,
+   "cose_key_valid": true
+  },
+  "metadata": {
+   "available": true,
+   "description": "Characterization c0ffee00c0ffee00c0ffee00c0ffee00",
+   "aaguid": "c0ffee00-c0ff-ee00-c0ff-ee00c0ffee00",
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "aaguid"
+  },
+  "hash_binding": {
+   "client_data_hash": "PjbBlsDcXlSAj-f2E-_AWIB85EjXbryECqbdF0KjJ3o",
+   "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAMD_7gDA_-4AwP_uAMD_7gAAIFe7B3S249tt86MTnSoI7n_hOaR60rVNauxUAtnOTbOspQECAyYgASFYIHFImSUu18Zf05W4dHSKxKdRFqiEruiu3SxkrTcE79E3IlggeH3t6Sv-JJH14a0gvermjvbV4Oamh95pY2wf4Jm7cUg-NsGWwNxeVICP5_YT78BYgHzkSNduvIQKpt0XQqMneg"
+  },
+  "errors": [],
+  "warnings": [],
+  "root_checks": {
+   "trusted_ca": true,
+   "chain": true,
+   "fido_mds": null
+  }
+ },
+ "x5c-listed-tampered": {
+  "attestation_format": "packed",
+  "signature_valid": false,
+  "pqc_signature_valid": null,
+  "root_valid": false,
+  "rp_id_hash_valid": true,
+  "aaguid_match": true,
+  "client_data": {
+   "type": "webauthn.create",
+   "expected_type": "webauthn.create",
+   "type_valid": true,
+   "challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "expected_challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "challenge_matches": true,
+   "origin": "http://localhost",
+   "expected_origin": "http://localhost",
+   "origin_valid": true,
+   "cross_origin": false,
+   "cross_origin_ok": true
+  },
+  "authenticator_data": {
+   "user_present": true,
+   "user_verified": true,
+   "user_verification_required": false,
+   "user_verification_satisfied": true,
+   "attested_credential_data": true,
+   "counter": 0,
+   "credential_id_length": 32,
+   "credential_aaguid": "c0ffee00c0ffee00c0ffee00c0ffee00",
+   "algorithm": -7,
+   "algorithm_allowed": true,
+   "cose_key_valid": true
+  },
+  "metadata": {
+   "available": true,
+   "description": "Characterization c0ffee00c0ffee00c0ffee00c0ffee00",
+   "aaguid": "c0ffee00-c0ff-ee00-c0ff-ee00c0ffee00",
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "aaguid"
+  },
+  "hash_binding": {
+   "client_data_hash": "PjbBlsDcXlSAj-f2E-_AWIB85EjXbryECqbdF0KjJ3o",
+   "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAMD_7gDA_-4AwP_uAMD_7gAAIFe7B3S249tt86MTnSoI7n_hOaR60rVNauxUAtnOTbOspQECAyYgASFYIHFImSUu18Zf05W4dHSKxKdRFqiEruiu3SxkrTcE79E3IlggeH3t6Sv-JJH14a0gvermjvbV4Oamh95pY2wf4Jm7cUg-NsGWwNxeVICP5_YT78BYgHzkSNduvIQKpt0XQqMneg"
+  },
+  "errors": [
+   "attestation_invalid: ",
+   "attestation_signature_invalid"
+  ],
+  "warnings": []
+ },
+ "x5c-listed-ed25519-ca": {
+  "attestation_format": "packed",
+  "signature_valid": true,
+  "pqc_signature_valid": null,
+  "root_valid": null,
+  "rp_id_hash_valid": true,
+  "aaguid_match": true,
+  "client_data": {
+   "type": "webauthn.create",
+   "expected_type": "webauthn.create",
+   "type_valid": true,
+   "challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "expected_challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "challenge_matches": true,
+   "origin": "http://localhost",
+   "expected_origin": "http://localhost",
+   "origin_valid": true,
+   "cross_origin": false,
+   "cross_origin_ok": true
+  },
+  "authenticator_data": {
+   "user_present": true,
+   "user_verified": true,
+   "user_verification_required": false,
+   "user_verification_satisfied": true,
+   "attested_credential_data": true,
+   "counter": 0,
+   "credential_id_length": 32,
+   "credential_aaguid": "c0ffee00c0ffee00c0ffee00c0ffee00",
+   "algorithm": -7,
+   "algorithm_allowed": true,
+   "cose_key_valid": true
+  },
+  "metadata": {
+   "available": true,
+   "description": "Characterization c0ffee00c0ffee00c0ffee00c0ffee00",
+   "aaguid": "c0ffee00-c0ff-ee00-c0ff-ee00c0ffee00",
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "aaguid"
+  },
+  "hash_binding": {
+   "client_data_hash": "PjbBlsDcXlSAj-f2E-_AWIB85EjXbryECqbdF0KjJ3o",
+   "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAMD_7gDA_-4AwP_uAMD_7gAAIFe7B3S249tt86MTnSoI7n_hOaR60rVNauxUAtnOTbOspQECAyYgASFYIHFImSUu18Zf05W4dHSKxKdRFqiEruiu3SxkrTcE79E3IlggeH3t6Sv-JJH14a0gvermjvbV4Oamh95pY2wf4Jm7cUg-NsGWwNxeVICP5_YT78BYgHzkSNduvIQKpt0XQqMneg"
+  },
+  "errors": [
+   "No root found for Authenticator",
+   "metadata_entry_missing"
+  ],
+  "warnings": [],
+  "root_checks": {
+   "trusted_ca": false,
+   "chain": null,
+   "fido_mds": null
+  }
+ },
+ "x5c-wrong-root": {
+  "attestation_format": "packed",
+  "signature_valid": true,
+  "pqc_signature_valid": null,
+  "root_valid": null,
+  "rp_id_hash_valid": true,
+  "aaguid_match": true,
+  "client_data": {
+   "type": "webauthn.create",
+   "expected_type": "webauthn.create",
+   "type_valid": true,
+   "challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "expected_challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "challenge_matches": true,
+   "origin": "http://localhost",
+   "expected_origin": "http://localhost",
+   "origin_valid": true,
+   "cross_origin": false,
+   "cross_origin_ok": true
+  },
+  "authenticator_data": {
+   "user_present": true,
+   "user_verified": true,
+   "user_verification_required": false,
+   "user_verification_satisfied": true,
+   "attested_credential_data": true,
+   "counter": 0,
+   "credential_id_length": 32,
+   "credential_aaguid": "c0ffee99c0ffee99c0ffee99c0ffee99",
+   "algorithm": -7,
+   "algorithm_allowed": true,
+   "cose_key_valid": true
+  },
+  "metadata": {
+   "available": true,
+   "description": "Characterization c0ffee99c0ffee99c0ffee99c0ffee99",
+   "aaguid": "c0ffee99-c0ff-ee99-c0ff-ee99c0ffee99",
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "aaguid"
+  },
+  "hash_binding": {
+   "client_data_hash": "PjbBlsDcXlSAj-f2E-_AWIB85EjXbryECqbdF0KjJ3o",
+   "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAMD_7pnA_-6ZwP_umcD_7pkAIJQr5CAqCjD-hlz7JwTlSIG1Yx9x2H4GgifSOahkT2nSpQECAyYgASFYIH4IsBob_jmUhmePSBD6zy5JXKrpRfZ-Gm01RamRqMOwIlggFXWJMWxK6dV_aF5w-oPuYgIOx2jtgvVXsQ73UgaBrs4-NsGWwNxeVICP5_YT78BYgHzkSNduvIQKpt0XQqMneg"
+  },
+  "errors": [
+   ""
+  ],
+  "warnings": [],
+  "root_checks": {
+   "trusted_ca": true,
+   "chain": false,
+   "fido_mds": null
+  }
+ },
+ "x5c-unlisted": {
+  "attestation_format": "packed",
+  "signature_valid": true,
+  "pqc_signature_valid": null,
+  "root_valid": null,
+  "rp_id_hash_valid": true,
+  "aaguid_match": true,
+  "client_data": {
+   "type": "webauthn.create",
+   "expected_type": "webauthn.create",
+   "type_valid": true,
+   "challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "expected_challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "challenge_matches": true,
+   "origin": "http://localhost",
+   "expected_origin": "http://localhost",
+   "origin_valid": true,
+   "cross_origin": false,
+   "cross_origin_ok": true
+  },
+  "authenticator_data": {
+   "user_present": true,
+   "user_verified": true,
+   "user_verification_required": false,
+   "user_verification_satisfied": true,
+   "attested_credential_data": true,
+   "counter": 0,
+   "credential_id_length": 32,
+   "credential_aaguid": "13131313131313131313131313131313",
+   "algorithm": -7,
+   "algorithm_allowed": true,
+   "cose_key_valid": true
+  },
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false
+  },
+  "hash_binding": {
+   "client_data_hash": "PjbBlsDcXlSAj-f2E-_AWIB85EjXbryECqbdF0KjJ3o",
+   "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAABMTExMTExMTExMTExMTExMAIPhhzMfWnCQ107lg-8rXwtkkb-S3OJydTn2mYAXAjRv_pQECAyYgASFYIF8Z0-W1U8ED1NQB6CUbZGeC_kDTYO_64dmnKDZgeMOAIlgg2qrHNoSkqFOIfZ4RN-YmVK1IZJyfhgLFNSfEKEmouAo-NsGWwNxeVICP5_YT78BYgHzkSNduvIQKpt0XQqMneg"
+  },
+  "errors": [
+   "No root found for Authenticator",
+   "metadata_entry_missing"
+  ],
+  "warnings": [],
+  "root_checks": {
+   "trusted_ca": false,
+   "chain": null,
+   "fido_mds": null
+  }
+ },
+ "x5c-by-key-identifier": {
+  "attestation_format": "packed",
+  "signature_valid": true,
+  "pqc_signature_valid": null,
+  "root_valid": true,
+  "rp_id_hash_valid": true,
+  "aaguid_match": true,
+  "client_data": {
+   "type": "webauthn.create",
+   "expected_type": "webauthn.create",
+   "type_valid": true,
+   "challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "expected_challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "challenge_matches": true,
+   "origin": "http://localhost",
+   "expected_origin": "http://localhost",
+   "origin_valid": true,
+   "cross_origin": false,
+   "cross_origin_ok": true
+  },
+  "authenticator_data": {
+   "user_present": true,
+   "user_verified": true,
+   "user_verification_required": false,
+   "user_verification_satisfied": true,
+   "attested_credential_data": true,
+   "counter": 0,
+   "credential_id_length": 32,
+   "credential_aaguid": "00000000000000000000000000000000",
+   "algorithm": -7,
+   "algorithm_allowed": true,
+   "cose_key_valid": true
+  },
+  "metadata": {
+   "available": true,
+   "description": "Characterization key identifier",
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "chain"
+  },
+  "hash_binding": {
+   "client_data_hash": "PjbBlsDcXlSAj-f2E-_AWIB85EjXbryECqbdF0KjJ3o",
+   "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIGMe-R8ZGScK5wmfaDtxUvPKefskpFtl99ps_n1npgmDpQECAyYgASFYIEU5bijj96uLZLeSfvq9sTFURJxN4OkMOL4nDyaI5OtMIlgge1mH-nO9CGwVGy8SCXxTI4wmafbcLLD-Mxj8LT9kShM-NsGWwNxeVICP5_YT78BYgHzkSNduvIQKpt0XQqMneg"
+  },
+  "errors": [],
+  "warnings": [],
+  "root_checks": {
+   "trusted_ca": true,
+   "chain": true,
+   "fido_mds": null
+  }
+ },
+ "self-by-key-identifier": {
+  "attestation_format": "packed",
+  "signature_valid": true,
+  "pqc_signature_valid": null,
+  "root_valid": null,
+  "rp_id_hash_valid": true,
+  "aaguid_match": null,
+  "client_data": {
+   "type": "webauthn.create",
+   "expected_type": "webauthn.create",
+   "type_valid": true,
+   "challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "expected_challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "challenge_matches": true,
+   "origin": "http://localhost",
+   "expected_origin": "http://localhost",
+   "origin_valid": true,
+   "cross_origin": false,
+   "cross_origin_ok": true
+  },
+  "authenticator_data": {
+   "user_present": true,
+   "user_verified": true,
+   "user_verification_required": false,
+   "user_verification_satisfied": true,
+   "attested_credential_data": true,
+   "counter": 0,
+   "credential_id_length": 32,
+   "credential_aaguid": "00000000000000000000000000000000",
+   "algorithm": -7,
+   "algorithm_allowed": true,
+   "cose_key_valid": true
+  },
+  "metadata": {
+   "available": false,
+   "description": null,
+   "aaguid": null,
+   "algorithm_supported": null,
+   "root_certificates_present": false
+  },
+  "hash_binding": {
+   "client_data_hash": "PjbBlsDcXlSAj-f2E-_AWIB85EjXbryECqbdF0KjJ3o",
+   "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIGMe-R8ZGScK5wmfaDtxUvPKefskpFtl99ps_n1npgmDpQECAyYgASFYIEU5bijj96uLZLeSfvq9sTFURJxN4OkMOL4nDyaI5OtMIlgge1mH-nO9CGwVGy8SCXxTI4wmafbcLLD-Mxj8LT9kShM-NsGWwNxeVICP5_YT78BYgHzkSNduvIQKpt0XQqMneg"
+  },
+  "errors": [
+   "trust_path_missing",
+   "No root found for Authenticator",
+   "metadata_entry_missing"
+  ],
+  "warnings": [],
+  "root_checks": {
+   "trusted_ca": false,
+   "chain": null,
+   "fido_mds": null
+  }
+ },
+ "mldsa-self-listed": {
+  "attestation_format": "packed",
+  "signature_valid": true,
+  "pqc_signature_valid": null,
+  "root_valid": null,
+  "rp_id_hash_valid": true,
+  "aaguid_match": null,
+  "client_data": {
+   "type": "webauthn.create",
+   "expected_type": "webauthn.create",
+   "type_valid": true,
+   "challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "expected_challenge": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1s",
+   "challenge_matches": true,
+   "origin": "http://localhost",
+   "expected_origin": "http://localhost",
+   "origin_valid": true,
+   "cross_origin": false,
+   "cross_origin_ok": true
+  },
+  "authenticator_data": {
+   "user_present": true,
+   "user_verified": true,
+   "user_verification_required": false,
+   "user_verification_satisfied": true,
+   "attested_credential_data": true,
+   "counter": 0,
+   "credential_id_length": 32,
+   "credential_aaguid": "c0ffee44c0ffee44c0ffee44c0ffee44",
+   "algorithm": -48,
+   "algorithm_allowed": true,
+   "cose_key_valid": true
+  },
+  "metadata": {
+   "available": true,
+   "description": "Characterization c0ffee44c0ffee44c0ffee44c0ffee44",
+   "aaguid": "c0ffee44-c0ff-ee44-c0ff-ee44c0ffee44",
+   "algorithm_supported": null,
+   "root_certificates_present": true,
+   "source": "aaguid"
+  },
+  "hash_binding": {
+   "client_data_hash": "PjbBlsDcXlSAj-f2E-_AWIB85EjXbryECqbdF0KjJ3o",
+   "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAMD_7kTA_-5EwP_uRMD_7kQAIMXJHpfzx5kUHGVARs-NwGKwuTK7UdaMnpSC2h_1Z7J1owEHAzgvIFkFIEoVIqkTk3B2_GN2UpiWgEc7MKTxjQXFTySXOxVa0aWd61DGdSSW6hyL3LlpX9HtipRZYzVTRKBIrp9dqhEQIopMjcMPrmPze2nwK9eh_bzd8NYorp6yoJfsil5Y3OhEdw6CRLEVB55wU1AL4xCNyZ9YzGoqNy_FHHjuxDjIi4SwJ1PyBIhdjEnS9hlWpZS_4hgbTN-38L62t0C2NzDR4ZCD-HGVttf7Bt_iYrfg0SSeJ35nK3RHP0z9eMgUG8iwIDRBCL3fT0R_Od6kQHTHJfDLcPKlmxGQAQQ2NKALox6FaJWu5iezqKINFQVgap_HKxYC8lBl7G7v_vPqnBFQXBhBY81T-EWxAwMpuc8pwg19ivNWMqdea9KOt3YanIKozNltON2UaSH5PTkJDhJhgVYWZBCLlvxsIvj_gPe-6hJ_bKF-BkOn8kTVf-ULvHC6dSEhseZxIRUYGTjUxFuyYqW1D-g_W_eC8LjuTVZo3YBvJRWLTZpc3xQfVjbzK8ICmIgYEOd2_ihJ_36hkeZdRjpYnOo-AT380yxLjRqToE4afrTsLsnIfTKBaNVz_lGRvzRTHJlDaKs-lPhfvRkgeHYRo9NKeyDtDEJ818f-E-f_XIkYAdn192a_Es2Ili8R7rXOgVv8T9sK9_jLNNdn3XejtFZqNCyfHscp_ZCwludZO8HqiPlhUV1kj01vTQLjb_qUFBgNpzSXQE-hOSUJLuQmGm2K__6x33yxCohEW6exq2BqaYkog-ZdRFo51dycxYjvPerIisVxW6WBzS2C5I_xnV43LmBP6VKNeXPGQmh5noHyxfLKCpNj3FXhKDAUWlFeCdGqkD8BJwNdCiOYjcd4mI0q2H6OUFF5pR7C-Mtim9iXSFX3ri7ZHnf2YXlEBHR6nAKaY_aO0sIzQRTz4oSsw-2Pv237E52qi6eAq4WUi5kQXN-uEuKe2597rQhk6bUtZj8V_yE5liwjj9J1MzLRtDyjTxWF4hiOpbVpVmkfYSejVQ9K1qCpWIOo-ijBToX5p8FovRCRGMGKb7O2gTQYhjFODU0lW9URXHGsTq_-VPG5orad-JQKOz8Ztnk426NG2LeFolqkQ9nQLJVyiUzuPeNf7H_DVkZTU0Uo9ITPbY6iRPKXt4xatiNJ8b8sgmf0EWbGRKmZ_DOQSs2Utrkf_nqw2sYga6GnXYnq9gYXRRqBSK-uc7wGgJD0WJ-VdgDQmq9uu7ZpVjEP4J1BHMjlEzrREaGI5c57Fjam1U9WO_CfFf6Flg6ZuTFUmN7w9XA_luADlGa7RWNn15DTN3Q8OIJ8gelfbSQRxl_WWSSaHg1tXzeqcjg9J08JVL7qrSsPLx3vwL0WICL8y7ea31yAOhrNDCM8fV5GXoFWNZhyceqOY7VhZEHcWyZ59UpII5Tt4KCz5hNQW-oBF_ERkcm31wTTbjOXMpHM_UvWXpcxxlANJ7G2yr6BA0aB3bHvxysuGMi_onAXnIKC1H7GKSUb3IOFYsp9wdNeqqrXBLIIiY3iP5cjee1H9o4mbVJRbg6f1ugtHI6fYJYD7OQfUq6W91OlXDf_g91wfiMJfKBz-P9KBYJWXuV_Lo_irzIAx43izJBFC2YJaIHQE0cS9U8937tNfjAPJZ_RZdSRciBTphNgIbCxQ1clT4dUkmZsp9OL4i87dDBFptviXdsv2_JbLEwG9MEvLS5DtV11mz0fN3RV_XDmc-Cz1fZ6abJbVg9_dfjBHtve0XG-7Dr_Sb8-NsGWwNxeVICP5_YT78BYgHzkSNduvIQKpt0XQqMneg"
+  },
+  "errors": [
+   "pqc_attestation_chain_missing"
+  ],
+  "warnings": [],
+  "root_checks": {
+   "trusted_ca": true,
+   "chain": false,
+   "fido_mds": null
+  }
+ }
+}
