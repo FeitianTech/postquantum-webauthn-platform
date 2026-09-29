@@ -27,19 +27,10 @@ ENV
 .venv
 .DS_Store
 
-# The MDS snapshot is provisioned at runtime, not baked into the image: keeping
-# it out of the build context stops a daily refresh invalidating a 30MB layer.
-frontend/static/blob.jwt
-frontend/static/fido-mds3.verified.json
-frontend/static/fido-mds3.verified.json.meta.json
-frontend/static/fido-mds3.explorer.json
-frontend/static/fido-mds3.explorer.json.meta.json
-frontend/static/fido-mds3.explorer.full.json
-frontend/static/fido-mds3.explorer.full.json.meta.json
-
-# Local runtime state: stored credential artifacts, session metadata and the
-# persisted session secret. None of it is copied into the image, but without
-# these lines a local `docker build` still sends it to the daemon as context.
+# Local runtime state: stored credential artifacts, session metadata, the
+# persisted session secret and the MDS snapshot (instance/mds-snapshot, which is
+# provisioned at runtime, never baked in). None of it is copied into the image,
+# but without these lines a local `docker build` still sends it as context.
 server/runtime
 instance
 node_modules

@@ -25,9 +25,9 @@ def test_metadata_trust_root_is_globalsign_r46():
 
 @pytest.fixture
 def isolated_mds_paths(monkeypatch, tmp_path):
-    static_dir = tmp_path / "frontend" / "static"
-    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(static_dir))
-    return static_dir
+    snapshot = tmp_path / "mds-snapshot"
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(snapshot))
+    return snapshot
 
 
 def _file(name):
