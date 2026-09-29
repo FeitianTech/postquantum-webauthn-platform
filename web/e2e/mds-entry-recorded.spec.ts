@@ -48,7 +48,7 @@ async function betaEntry(page: Page, entryId: string, name: string) {
   return entry;
 }
 
-test.describe('the MDS entry page reads the same in both UIs', () => {
+test.describe('the MDS entry page reads as recorded', () => {
   const report: string[] = [];
 
   test.afterAll(async ({}, testInfo) => {

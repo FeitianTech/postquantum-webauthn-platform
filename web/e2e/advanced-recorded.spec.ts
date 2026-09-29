@@ -119,7 +119,7 @@ test.describe('the Advanced tab\'s registration, as recorded', () => {
   });
 });
 
-// The authentication in both UIs, over the two credentials the recorded
+// The authentication, over the two credentials the recorded
 // authentications registered (the first reports largeBlob and prf support):
 // the form's words section by section, the 11 info popups, the choices, the
 // editor's text for the same settings byte for byte; and the result of an

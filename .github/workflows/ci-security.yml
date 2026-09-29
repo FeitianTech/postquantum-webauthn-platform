@@ -71,7 +71,8 @@ jobs:
       # fix the dependency rather than raising it. Next 15 pins a postcss with
       # known advisories; web/package.json overrides it with a fixed release
       # rather than lowering this threshold. A finding fixed only in a newer Next
-      # major goes to the owner, since the site stays on Next 15.
+      # major is a choice between that upgrade and staying on Next 15, not a
+      # reason to lower the bar.
       - name: Install web dependencies
         working-directory: web
         run: npm ci --no-audit --no-fund

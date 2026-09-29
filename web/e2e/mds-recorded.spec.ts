@@ -38,7 +38,7 @@ async function betaRows(page: Page, filters: Record<string, readonly string[]>) 
 
 const keys = (rows: ShownSection[]) => rows.map((row) => row.heading);
 
-test.describe('the MDS table reads the same in both UIs', () => {
+test.describe('the MDS table reads as recorded', () => {
   const report: string[] = [];
 
   test.afterAll(async ({}, testInfo) => {

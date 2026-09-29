@@ -48,7 +48,7 @@ async function betaText(page: Page, input: string, lenient: boolean) {
   return readShownText(output, '[data-codec-section] > h4');
 }
 
-test.describe('the Codec reads the same in both UIs', () => {
+test.describe('the Codec reads as recorded', () => {
   const found: Record<string, Difference[]> = {};
 
   test.afterAll(async ({}, testInfo) => {

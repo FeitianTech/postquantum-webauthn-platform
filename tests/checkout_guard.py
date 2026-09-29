@@ -4,7 +4,7 @@ Tests keep their stores in temporary directories. A test that does not left a
 session directory under server/runtime/ on every run, and a stray session
 cleanup there removed a hundred earlier ones.
 
-What the guarded paths hold already mixes the owner's local data with earlier
+What the guarded paths hold already mixes a developer's local data with earlier
 test runs' leftovers, so the guard compares a listing taken before the tests are
 collected -- a module that writes while it is imported is seen -- with one taken
 when the session finishes, and never cleans. A difference fails the run.
