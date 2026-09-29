@@ -57,6 +57,8 @@ export default defineConfig({
         'frontend/static/scripts/shared/api/failed-response.js': FULL,
         'frontend/static/scripts/shared/debug/auth.js': FULL,
         'frontend/static/scripts/shared/utils/{base64,binary}.js': FULL,
+        // What the browser says of itself and of WebAuthn, which the Analyze Browser panel shows: every line and branch.
+        'frontend/static/scripts/shared/browser/*.js': FULL,
         'frontend/static/scripts/shared/state.js': FULL,
         // What a saved credential's card shows, deleting and clearing, which web/ imports: every line and branch.
         'frontend/static/scripts/advanced/credentials/{algorithm-tag,delete-flow,saved-list,utils}.js': FULL,

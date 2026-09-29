@@ -266,4 +266,95 @@ describe('browser identity edge cases', () => {
       brave: null,
     });
   });
+
+  it('names nothing from a missing navigator', async () => {
+    expect(await identify(null)).toEqual({
+      name: null,
+      version: null,
+      engine: null,
+      system: null,
+      sources: { name: 'not-reported', version: 'not-reported', engine: 'not-reported', system: 'not-reported' },
+      onAppleWebKit: false,
+    });
+  });
+
+  it('copies brands and a platform that are not text as text, or as nothing', async () => {
+    const inputs = await readIdentityInputs({
+      userAgent: '',
+      platform: '',
+      maxTouchPoints: 0,
+      userAgentData: { brands: [null, { brand: 7, version: 152 }, {}], mobile: 'yes', platform: 42 },
+    });
+
+    expect(inputs.userAgentData).toEqual({
+      brands: [
+        { brand: '', version: '' },
+        { brand: '7', version: '152' },
+        { brand: '', version: '' },
+      ],
+      mobile: null,
+      platform: null,
+    });
+  });
+
+  it('records a navigator.brave whose isBrave throws when read', async () => {
+    const brave = {};
+    Object.defineProperty(brave, 'isBrave', {
+      get() {
+        throw new Error('gone');
+      },
+    });
+
+    const inputs = await readIdentityInputs({ userAgent: '', platform: '', maxTouchPoints: 0, brave });
+
+    expect(inputs.brave).toEqual({ error: 'Error: gone' });
+  });
+
+  it('keeps a brand\'s own version when fullVersionList gives it none', async () => {
+    const identity = await identify({
+      userAgent: '',
+      platform: '',
+      maxTouchPoints: 0,
+      userAgentData: {
+        brands: [{ brand: 'Google Chrome', version: '152' }],
+        mobile: false,
+        platform: 'macOS',
+        getHighEntropyValues: async () => ({
+          fullVersionList: [
+            { brand: 'Google Chrome', version: '' },
+            { brand: 'Chromium', version: '152.0.1.2' },
+          ],
+        }),
+      },
+    });
+
+    expect(identity).toMatchObject({ name: 'Google Chrome', version: '152', system: 'macOS' });
+  });
+
+  it('reports no version for a brand that gives none', async () => {
+    const identity = await identify({
+      userAgent: '',
+      platform: '',
+      maxTouchPoints: 0,
+      userAgentData: { brands: [{ brand: 'Google Chrome', version: '' }], mobile: false, platform: 'Windows' },
+    });
+
+    expect(identity).toMatchObject({ name: 'Google Chrome', version: null, system: 'Windows' });
+    expect(identity.sources.version).toBe('not-reported');
+  });
+
+  it('reads a MacIntel platform with no touch points reported as a Mac', () => {
+    const identity = determineIdentity({
+      userAgent:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
+      platform: 'MacIntel',
+      maxTouchPoints: null,
+      userAgentData: null,
+      highEntropyValues: null,
+      brave: null,
+    });
+
+    expect(identity).toMatchObject({ name: 'Safari', version: '18.0', system: 'macOS' });
+    expect(identity.sources.system).toBe('user-agent');
+  });
 });
