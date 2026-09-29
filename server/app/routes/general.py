@@ -1,7 +1,6 @@
 """General application routes."""
 from __future__ import annotations
 
-import io
 import json
 import logging
 import os
@@ -12,13 +11,11 @@ from typing import Any
 
 from flask import (
     Blueprint,
-    abort,
     current_app,
     g,
     has_app_context,
     jsonify,
     request,
-    send_file,
     session,
 )
 
@@ -33,8 +30,6 @@ from ..mds_provisioning import (
 )
 from ..startup import startup_fail_fast_enabled
 from ..static_assets import asset_url, snapshot_version
-from ..storage.credentials import delkey, readkey
-from ..storage.record_format import encode_records
 from ..webauthn.attestation import serialize_attestation_certificate
 from ..webauthn.metadata import (
     _load_base_metadata,
@@ -563,36 +558,3 @@ def api_decode_mds_certificate():
         return jsonify({"error": f"Unable to decode certificate: {exc}"}), 422
 
     return jsonify({"details": details})
-
-
-@bp.route("/api/deletepub", methods=["POST"])
-def deletepub():
-    response = request.get_json(silent=True) or {}
-    email = response.get("email")
-    if not email:
-        abort(400)
-    metadata_session_id = ensure_metadata_session_id()
-    delkey(email, session_id=metadata_session_id)
-    return jsonify({"status": "OK"})
-
-
-@bp.route("/api/downloadcred", methods=["GET"])
-def downloadcred():
-    name = request.args.get("email")
-    if not name:
-        abort(400)
-    metadata_session_id = ensure_metadata_session_id()
-    credentials = readkey(name, session_id=metadata_session_id)
-    if not credentials:
-        abort(404)
-
-    filename = f"{name}_credential_data.json"
-    payload = encode_records(credentials)
-    buffer = io.BytesIO(payload)
-    buffer.seek(0)
-    return send_file(
-        buffer,
-        as_attachment=True,
-        download_name=filename,
-        mimetype="application/json",
-    )
