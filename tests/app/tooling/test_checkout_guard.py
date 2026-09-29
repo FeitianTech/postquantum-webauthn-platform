@@ -13,9 +13,9 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-def _run(root: Path, module: str) -> subprocess.CompletedProcess[str]:
+def _run(root: Path, module: str, **settings: str) -> subprocess.CompletedProcess[str]:
     (root / "test_writes.py").write_text(module, encoding="utf-8")
-    env = {**os.environ, "PYTHONPATH": str(_REPO_ROOT)}
+    env = {**os.environ, "PYTHONPATH": str(_REPO_ROOT), **settings}
     return subprocess.run(
         [
             sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
@@ -59,3 +59,32 @@ def test_a_write_made_while_the_tests_are_collected_fails_the_run(tmp_path):
     # The guard lists the checkout before collection, when pytest is configured.
     assert run.returncode != 0, run.stdout
     assert "instance/session-secret.key" in run.stdout
+
+
+_WRITES_INTO_THE_CONFIGURED_STORE = '''
+import os
+from pathlib import Path
+
+
+def test_writes():
+    store = Path(os.environ["FIDO_SERVER_CREDENTIAL_DIR"])
+    store.mkdir(parents=True, exist_ok=True)
+    (store / "alice_credential_data.json").write_text("[]")
+'''
+
+
+def test_a_write_into_a_credential_dir_inside_the_checkout_fails_the_run(tmp_path):
+    root = tmp_path / "checkout"
+    root.mkdir()
+    run = _run(root, _WRITES_INTO_THE_CONFIGURED_STORE, FIDO_SERVER_CREDENTIAL_DIR=str(root / "my-credentials"))
+
+    assert run.returncode != 0, run.stdout
+    assert "my-credentials/alice_credential_data.json" in run.stdout
+
+
+def test_a_credential_dir_outside_the_checkout_is_not_the_guards(tmp_path):
+    root = tmp_path / "checkout"
+    root.mkdir()
+    run = _run(root, _WRITES_INTO_THE_CONFIGURED_STORE, FIDO_SERVER_CREDENTIAL_DIR=str(tmp_path / "elsewhere"))
+
+    assert run.returncode == 0, run.stdout

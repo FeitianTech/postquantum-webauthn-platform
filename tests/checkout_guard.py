@@ -15,6 +15,7 @@ its own.
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -27,6 +28,9 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 # tree, which are still read.
 GUARDED_TREES = ("server/runtime", "instance", "server/app/session-credentials", ".hypothesis")
 GUARDED_STATIC = ("server/app/*_credential_data.pkl",)
+# A store the environment may move into the checkout, where the repository's
+# .gitignore does not reach: guarded too when it is inside, read as the app reads it.
+GUARDED_SETTINGS = ("FIDO_SERVER_CREDENTIAL_DIR",)
 
 
 def pytest_addoption(parser):
@@ -43,10 +47,26 @@ def root(config: pytest.Config) -> Path:
     return Path(given).resolve() if given else _REPO_ROOT
 
 
+def configured_trees(base: Path) -> list[Path]:
+    """The directories ``GUARDED_SETTINGS`` name that lie inside ``base``."""
+
+    trees = []
+    for setting in GUARDED_SETTINGS:
+        value = os.environ.get(setting, "").strip()
+        if not value:
+            continue
+        tree = Path(value).expanduser().resolve()
+        if tree.is_relative_to(base.resolve()):
+            trees.append(tree)
+    return trees
+
+
 def listing(base: Path) -> dict[str, object]:
     found: dict[str, object] = {}
+    base = base.resolve()
     paths = [path for tree in GUARDED_TREES for path in (base / tree).rglob("*")]
     paths += [path for pattern in GUARDED_STATIC for path in base.glob(pattern)]
+    paths += [path for tree in configured_trees(base) for path in tree.rglob("*")]
     for path in paths:
         try:
             status = path.lstat()
@@ -78,7 +98,8 @@ def problems(before: dict[str, object], after: dict[str, object]) -> str | None:
         return None
     return (
         "Tests wrote into the checkout (server/runtime/, instance/ with the MDS snapshot, the legacy "
-        "credential stores in server/app/ or .hypothesis/):\n" + "\n".join(described)
+        "credential stores in server/app/, a FIDO_SERVER_CREDENTIAL_DIR inside it or .hypothesis/):\n"
+        + "\n".join(described)
     )
 
 
