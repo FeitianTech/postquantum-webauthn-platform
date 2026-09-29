@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 @pytest.fixture
 def packaged_metadata_env(monkeypatch, tmp_path, metadata_state, blob):
@@ -115,8 +117,6 @@ def test_metadata_not_available_is_warning_pqc():
 
 def test_the_mds_info_skips_eager_bootstrap_by_default(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
-
     bootstrap_calls = []
 
     monkeypatch.delenv("FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP", raising=False)
@@ -135,7 +135,7 @@ def test_the_mds_info_skips_eager_bootstrap_by_default(monkeypatch, app_config):
     monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {})
     monkeypatch.setattr(general_module, "load_packaged_snapshot_meta", lambda: None)
 
-    with config_module.app.test_request_context("/api/mds/metadata/info"):
+    with entry_app().test_request_context("/api/mds/metadata/info"):
         result = general_module._initial_mds_info()
 
     assert result == {"customEntriesState": "unknown"}
@@ -169,8 +169,6 @@ def test_the_mds_info_bootstrap_setting_and_its_earlier_name(monkeypatch, settin
 
 def test_the_mds_info_bootstraps_when_strict(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
-
     bootstrap_calls = []
 
     monkeypatch.delenv("FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP", raising=False)
@@ -189,7 +187,7 @@ def test_the_mds_info_bootstraps_when_strict(monkeypatch, app_config):
     monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {})
     monkeypatch.setattr(general_module, "load_packaged_snapshot_meta", lambda: None)
 
-    with config_module.app.test_request_context("/api/mds/metadata/info"):
+    with entry_app().test_request_context("/api/mds/metadata/info"):
         result = general_module._initial_mds_info()
 
     assert result == {"customEntriesState": "unknown"}
@@ -198,8 +196,6 @@ def test_the_mds_info_bootstraps_when_strict(monkeypatch, app_config):
 
 def test_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         general_module,
@@ -207,7 +203,7 @@ def test_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_config):
         lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test"}]},
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.get("/api/mds/metadata/explorer")
 
     assert response.status_code == 200
@@ -218,8 +214,6 @@ def test_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_config):
 
 def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         general_module,
@@ -227,7 +221,7 @@ def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_con
         lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test", "metadataStatement": {}}]},
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.get("/api/mds/metadata/explorer/full")
 
     assert response.status_code == 200
@@ -238,11 +232,9 @@ def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_con
 
 def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.get("/api/mds/metadata/resolve")
 
     assert response.status_code == 400
@@ -251,8 +243,6 @@ def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch, app_con
 
 def test_resolve_metadata_entry_returns_not_found(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         general_module,
@@ -260,7 +250,7 @@ def test_resolve_metadata_entry_returns_not_found(monkeypatch, app_config):
         lambda **_kwargs: None,
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.get("/api/mds/metadata/resolve?aaguid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 
     assert response.status_code == 404
@@ -269,8 +259,6 @@ def test_resolve_metadata_entry_returns_not_found(monkeypatch, app_config):
 
 def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         general_module,
@@ -278,7 +266,7 @@ def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
         lambda **_kwargs: {"entryId": "aaguid:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "name": "Demo"},
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.get("/api/mds/metadata/resolve?aaguid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 
     assert response.status_code == 200
@@ -292,8 +280,6 @@ def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
 
 def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         general_module,
@@ -317,7 +303,7 @@ def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
         lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test"}]},
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/mds/metadata/upload",
             data={"files": (io.BytesIO(b'{"metadataStatement":{"description":"Demo"}}'), "custom.json")},
@@ -330,8 +316,6 @@ def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
 
 def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(general_module, "delete_session_metadata_item", lambda _name: True)
     monkeypatch.setattr(
@@ -340,7 +324,7 @@ def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
         lambda: {"meta": {"entryCount": 3}, "entries": [{"entryId": "aaguid:test"}]},
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.delete("/api/mds/metadata/custom/custom.json")
 
     assert response.status_code == 200

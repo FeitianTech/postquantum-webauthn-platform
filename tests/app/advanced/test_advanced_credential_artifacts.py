@@ -1,9 +1,9 @@
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 def test_bulk_credential_artifact_route_returns_requested_items(monkeypatch, metadata_module, credential_artifacts_module):
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
 
     def _load(storage_id, *, session_id=None):
@@ -14,7 +14,7 @@ def test_bulk_credential_artifact_route_returns_requested_items(monkeypatch, met
 
     monkeypatch.setattr(credential_artifacts_module, "load_credential_artifact", _load)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/credential-artifacts/bulk",
             json={"storageIds": ["cred-1", "missing", "cred-1"]},
@@ -29,11 +29,9 @@ def test_bulk_credential_artifact_route_returns_requested_items(monkeypatch, met
 
 
 def test_bulk_credential_artifact_route_requires_array(monkeypatch, metadata_module):
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/credential-artifacts/bulk",
             json={"storageIds": "cred-1"},
@@ -44,8 +42,6 @@ def test_bulk_credential_artifact_route_requires_array(monkeypatch, metadata_mod
 
 
 def test_bulk_credential_artifact_route_trims_dedupes_and_ignores_invalid_ids(monkeypatch, metadata_module, credential_artifacts_module):
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
 
     observed_storage_ids = []
@@ -61,7 +57,7 @@ def test_bulk_credential_artifact_route_trims_dedupes_and_ignores_invalid_ids(mo
 
     monkeypatch.setattr(credential_artifacts_module, "load_credential_artifact", _load)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/credential-artifacts/bulk",
             json={
@@ -80,8 +76,6 @@ def test_bulk_credential_artifact_route_trims_dedupes_and_ignores_invalid_ids(mo
 
 
 def test_get_credential_artifact_route_returns_payload(monkeypatch, metadata_module, credential_artifacts_module):
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         credential_artifacts_module,
@@ -91,7 +85,7 @@ def test_get_credential_artifact_route_returns_payload(monkeypatch, metadata_mod
         )
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.get("/api/advanced/credential-artifacts/cred-1")
 
     assert response.status_code == 200
@@ -102,12 +96,10 @@ def test_get_credential_artifact_route_returns_payload(monkeypatch, metadata_mod
 
 
 def test_get_credential_artifact_route_returns_404_when_missing(monkeypatch, metadata_module, credential_artifacts_module):
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(credential_artifacts_module, "load_credential_artifact", lambda *_args, **_kwargs: None)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.get("/api/advanced/credential-artifacts/missing")
 
     assert response.status_code == 404
@@ -116,9 +108,7 @@ def test_get_credential_artifact_route_returns_404_when_missing(monkeypatch, met
 
 def test_put_credential_artifact_route_requires_object_payload(monkeypatch):
     pytest.importorskip("server.app.routes.advanced")
-    config_module = pytest.importorskip("server.app.config")
-
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.put(
             "/api/advanced/credential-artifacts/cred-1",
             json={"artifact": "not-an-object"},
@@ -129,8 +119,6 @@ def test_put_credential_artifact_route_requires_object_payload(monkeypatch):
 
 
 def test_put_credential_artifact_route_defaults_merge_true(monkeypatch, metadata_module, credential_artifacts_module):
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
 
     captured = {}
@@ -144,7 +132,7 @@ def test_put_credential_artifact_route_defaults_merge_true(monkeypatch, metadata
 
     monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", _store)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.put(
             "/api/advanced/credential-artifacts/cred-1",
             json={"artifact": {"registrationDetailSnapshot": {"html": "<p>x</p>"}}},
@@ -161,8 +149,6 @@ def test_put_credential_artifact_route_defaults_merge_true(monkeypatch, metadata
 
 
 def test_put_credential_artifact_route_supports_payload_alias_and_merge_override(monkeypatch, metadata_module, credential_artifacts_module):
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
 
     captured = {}
@@ -176,7 +162,7 @@ def test_put_credential_artifact_route_supports_payload_alias_and_merge_override
 
     monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", _store)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.put(
             "/api/advanced/credential-artifacts/cred-2",
             json={"payload": {"storedCredential": {"id": "cred-2"}}, "merge": False},
@@ -193,8 +179,6 @@ def test_put_credential_artifact_route_supports_payload_alias_and_merge_override
 
 
 def test_put_credential_artifact_route_returns_400_when_store_fails(monkeypatch, metadata_module, credential_artifacts_module):
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         credential_artifacts_module,
@@ -202,7 +186,7 @@ def test_put_credential_artifact_route_returns_400_when_store_fails(monkeypatch,
         lambda *_args, **_kwargs: False
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.put(
             "/api/advanced/credential-artifacts/cred-3",
             json={"artifact": {"x": 1}},
@@ -214,9 +198,7 @@ def test_put_credential_artifact_route_returns_400_when_store_fails(monkeypatch,
 
 def test_put_snapshot_route_rejects_non_object_snapshot(monkeypatch):
     pytest.importorskip("server.app.routes.advanced")
-    config_module = pytest.importorskip("server.app.config")
-
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.put(
             "/api/advanced/credential-artifacts/cred-4/snapshot",
             json={"snapshot": "not-an-object"},
@@ -227,8 +209,6 @@ def test_put_snapshot_route_rejects_non_object_snapshot(monkeypatch):
 
 
 def test_put_snapshot_route_stores_snapshot_using_merge(monkeypatch, metadata_module, credential_artifacts_module):
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
 
     captured = {}
@@ -244,7 +224,7 @@ def test_put_snapshot_route_stores_snapshot_using_merge(monkeypatch, metadata_mo
 
     snapshot = {"html": "<section>snapshot</section>"}
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.put(
             "/api/advanced/credential-artifacts/cred-5/snapshot",
             json={"snapshot": snapshot},
@@ -276,8 +256,6 @@ def test_put_snapshot_route_stores_snapshot_using_merge(monkeypatch, metadata_mo
     ],
 )
 def test_delete_credential_artifact_route_reports_status(monkeypatch, delete_status, expected_http_status, expected_payload, metadata_module, credential_artifacts_module):
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         credential_artifacts_module,
@@ -285,7 +263,7 @@ def test_delete_credential_artifact_route_reports_status(monkeypatch, delete_sta
         lambda storage_id, *, session_id=None: delete_status
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.delete("/api/advanced/credential-artifacts/cred-6")
 
     assert response.status_code == expected_http_status

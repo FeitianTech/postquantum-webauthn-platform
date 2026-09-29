@@ -17,6 +17,8 @@ import base64
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 PLAIN_TEXT = "Hello, this is plain text!"
 
 
@@ -121,7 +123,6 @@ def test_mds_certificate_route_decodes_base64url_without_truncation(monkeypatch)
     """A base64url certificate must decode whole, or be refused -- not truncated."""
 
     general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     certificate = bytes(range(24, 63))
@@ -134,7 +135,7 @@ def test_mds_certificate_route_decodes_base64url_without_truncation(monkeypatch)
     urlsafe = base64.urlsafe_b64encode(certificate).decode("ascii").rstrip("=")
     assert "-" in urlsafe or "_" in urlsafe
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/mds/decode-certificate", json={"certificate": urlsafe}
         )
@@ -148,7 +149,6 @@ def test_mds_certificate_route_decodes_base64url_without_truncation(monkeypatch)
 
 def test_mds_certificate_route_refuses_plain_text_with_400(monkeypatch):
     general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(
@@ -157,7 +157,7 @@ def test_mds_certificate_route_refuses_plain_text_with_400(monkeypatch):
         lambda data: {"length": len(data), "hex": data.hex()},
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/mds/decode-certificate", json={"certificate": PLAIN_TEXT}
         )

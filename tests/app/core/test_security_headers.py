@@ -6,6 +6,8 @@ from datetime import timedelta
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 config_module = pytest.importorskip("server.app.config")
 config_proxy = pytest.importorskip("server.app.config.proxy")
 config_session_cookie = pytest.importorskip("server.app.config.session_cookie")
@@ -13,7 +15,7 @@ config_security_headers = pytest.importorskip("server.app.config.security_header
 config_relying_party = pytest.importorskip("server.app.config.relying_party")
 app_module = pytest.importorskip("server.app.app")
 
-app = config_module.app
+app = entry_app()
 
 
 @pytest.fixture

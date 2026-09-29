@@ -3,6 +3,8 @@ import time
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -14,7 +16,6 @@ class _MatchedCredential:
 
 
 def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatch, attestation_module):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(
@@ -23,7 +24,7 @@ def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatc
         lambda _response: ("none", {}, None, None, {}, None, [])
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["register_rp_id"] = "example.com"
 
@@ -43,7 +44,6 @@ def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatc
 
 
 def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkeypatch, simple_parsing):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(
@@ -52,7 +52,7 @@ def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkey
         lambda _raw: ([object()], [{"credentialId": "cred-1"}])
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["simple_credentials"] = [{"credentialId": "cred-1"}]
             session_state["authenticate_rp_id"] = "example.com"
@@ -91,7 +91,7 @@ def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypa
         lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}])
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["simple_credentials"] = [{"credentialId": _b64url(credential_id)}]
             session_state["state"] = {"challenge": "auth-state", "issued_at": time.time()}

@@ -8,6 +8,7 @@ from server.app.routes import binary_helpers as shared_binary_helpers
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import binary as advanced_binary
 from server.app.routes.advanced import summary as advanced_summary
+from tests.app.entry_app import entry_app
 
 
 def _base_register_begin_payload() -> dict:
@@ -175,7 +176,7 @@ def test_register_begin_accepts_non_mapping_authenticator_selection_and_derives_
         "largeBlob": {"support": "preferred"},
     }
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json=payload)
         assert response.status_code == 200
 
@@ -217,7 +218,7 @@ def test_register_begin_maps_discouraged_uv_require_resident_key_and_extension_a
         "customExtension": {"enabled": True},
     }
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json=payload)
 
     assert response.status_code == 200

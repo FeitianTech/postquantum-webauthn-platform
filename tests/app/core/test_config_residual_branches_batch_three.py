@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import server.app.config as config_module
 from server.app.config import compression, relying_party, session_secret
+from tests.app.entry_app import entry_app
 
 
 def test_resolve_secret_key_reads_empty_stored_key_and_generates(monkeypatch):
@@ -31,7 +32,7 @@ def test_resolve_secret_key_reads_empty_stored_key_and_generates(monkeypatch):
 
 
 def test_maybe_compress_response_returns_early_for_small_payload():
-    app = config_module.app
+    app = entry_app()
 
     with app.test_request_context("/", headers={"Accept-Encoding": "gzip"}):
         app.config["RESPONSE_COMPRESSION_MIN_SIZE"] = 64
@@ -50,7 +51,7 @@ def test_the_unread_session_metadata_recover_setting_is_gone(monkeypatch, make_a
 
 
 def test_determine_rp_id_handles_missing_host_and_loopback_fallback(monkeypatch):
-    with config_module.app.test_request_context(
+    with entry_app().test_request_context(
         "/",
         headers={"Host": ""},
         environ_overrides={"HTTP_HOST": "", "SERVER_NAME": ""},
@@ -58,7 +59,7 @@ def test_determine_rp_id_handles_missing_host_and_loopback_fallback(monkeypatch)
         assert config_module.determine_rp_id() == "localhost"
 
     monkeypatch.setattr(relying_party.ipaddress, "ip_address", lambda _value: (_ for _ in ()).throw(ValueError("bad")))
-    with config_module.app.test_request_context("/", headers={"Host": "::1"}):
+    with entry_app().test_request_context("/", headers={"Host": "::1"}):
         assert config_module.determine_rp_id() == "localhost"
 
 

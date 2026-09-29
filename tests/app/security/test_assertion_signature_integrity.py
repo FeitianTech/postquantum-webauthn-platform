@@ -9,6 +9,8 @@ key label 3, so a real key plus ``"algorithm": -12345`` reached that bypass.
 """
 from __future__ import annotations
 
+from tests.app.entry_app import entry_app
+
 from .ceremony_helpers import (
     ORIGIN,
     Authenticator,
@@ -55,7 +57,7 @@ def test_wrong_signature_with_custom_declared_algorithm_is_not_ok(config_module,
         declared_algorithm=CUSTOM_ALGORITHM
     )
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     _, server_challenge = _authenticate(
         client, stored_entry=stored_entry, assertion=None, challenge=b"\x21" * 32
     )
@@ -96,7 +98,7 @@ def test_wrong_signature_with_ordinary_algorithm_is_not_ok(config_module, advanc
     authenticator = Authenticator()
     stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     _, server_challenge = _authenticate(
         client, stored_entry=stored_entry, assertion=None, challenge=b"\x22" * 32
     )
@@ -133,7 +135,7 @@ def test_genuinely_unsupported_algorithm_reports_explicit_non_ok_status(config_m
         declared_algorithm=CUSTOM_ALGORITHM, cose_key_bytes=exotic_key
     )
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     _, server_challenge = _authenticate(
         client, stored_entry=stored_entry, assertion=None, challenge=b"\x23" * 32
     )
@@ -170,7 +172,7 @@ def test_valid_assertion_still_authenticates(config_module, advanced_module):
     authenticator = Authenticator()
     stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     _, server_challenge = _authenticate(
         client, stored_entry=stored_entry, assertion=None, challenge=b"\x24" * 32
     )
@@ -201,7 +203,7 @@ def test_valid_ed25519_assertion_still_authenticates(config_module, advanced_mod
     authenticator = Authenticator(key_type="ed25519")
     stored_entry = authenticator.stored_credential_entry(declared_algorithm=-8)
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     _, server_challenge = _authenticate(
         client, stored_entry=stored_entry, assertion=None, challenge=b"\x25" * 32
     )

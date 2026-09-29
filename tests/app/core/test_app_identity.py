@@ -24,7 +24,8 @@ def test_instance_path_is_where_flask_derived_it_for_the_old_app_name(tmp_path):
 
     code = (
         "from flask import Flask\n"
-        "from server.app.config import app, paths\n"
+        "from server.app.app import app\n"
+        "from server.app.config import paths\n"
         "legacy = Flask('server.app.config', root_path=paths.basepath)\n"
         "print(legacy.instance_path)\n"
         "print(paths.INSTANCE_ROOT)\n"

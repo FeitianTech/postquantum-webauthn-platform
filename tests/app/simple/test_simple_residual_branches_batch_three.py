@@ -7,6 +7,8 @@ from types import SimpleNamespace
 import pytest
 from fido2 import cbor
 
+from tests.app.entry_app import entry_app
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -173,7 +175,7 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monke
     monkeypatch.setattr(storage_module, "save_if_unchanged", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["state"] = {"challenge": "register-state", "issued_at": time.time()}
             session_state["register_rp_id"] = "example.com"
@@ -212,7 +214,7 @@ def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_cre
         lambda **_kwargs: _AuthenticationServer(captured)
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["simple_credentials"] = [{"credentialId": "AQ"}]
             session_state["authenticate_rp_id"] = "example.com"

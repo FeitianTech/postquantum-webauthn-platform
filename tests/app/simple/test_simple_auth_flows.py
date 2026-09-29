@@ -4,6 +4,8 @@ import time
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -71,7 +73,7 @@ def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch
         lambda _raw: ([], [{"credentialId": "cred-1", "publicKey": "pk-1", "aaguid": "ag-1"}])
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/register/begin?email=user@example.com",
             json={"credentials": [{"credentialId": "cred-1"}]},
@@ -98,12 +100,11 @@ def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch
 
 
 def test_simple_authenticate_begin_requires_valid_credentials(monkeypatch, simple_parsing):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(simple_parsing, "_parse_client_credentials", lambda _raw: ([], []))
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/authenticate/begin?email=user@example.com",
             json={"credentials": []},
@@ -130,7 +131,7 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch, co
         lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}])
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["simple_credentials"] = [{"credentialId": _b64url(credential_id)}]
             session_state["state"] = {"challenge": "auth-state", "issued_at": time.time()}
@@ -181,7 +182,7 @@ def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch
         lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}])
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["simple_credentials"] = [{"credentialId": _b64url(credential_id)}]
             session_state["authenticate_rp_id"] = "example.com"
@@ -203,7 +204,6 @@ def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch
 
 
 def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch, simple_parsing):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(
@@ -212,7 +212,7 @@ def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch, sim
         lambda _raw: ([object()], [{"credentialId": "cred-1"}])
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["simple_credentials"] = [{"credentialId": "cred-1"}]
             session_state["authenticate_rp_id"] = "example.com"
@@ -291,7 +291,7 @@ def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, me
 
     request_state = {"challenge": "fallback-register-state"}
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["register_rp_id"] = rp_id
             session_state["simple_register_public_key"] = {"challenge": "ignored"}

@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import time
 
+from tests.app.entry_app import entry_app
+
 from .ceremony_helpers import (
     ORIGIN,
     Authenticator,
@@ -57,7 +59,7 @@ def _complete_simple_authentication(client, payload):
 
 def test_simple_assertion_replayed_with_earlier_cookie_is_rejected(config_module, simple_module, simple_storage):
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     challenge = _begin_simple_authentication(client, authenticator)
     cookie_with_state = _snapshot_cookie(client)
@@ -82,7 +84,7 @@ def test_simple_challenge_is_consumed_even_when_the_first_attempt_fails(config_m
     """A failed completion burns the challenge too; it cannot be retried."""
 
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     challenge = _begin_simple_authentication(client, authenticator)
     cookie_with_state = _snapshot_cookie(client)
@@ -104,7 +106,7 @@ def test_simple_challenge_is_consumed_even_when_the_first_attempt_fails(config_m
 
 def test_simple_registration_replayed_with_earlier_cookie_is_rejected(config_module, simple_module, simple_storage):
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     begin = client.post("/api/register/begin?email=user@example.com", json={"credentials": []})
     assert begin.status_code == 200
@@ -139,7 +141,7 @@ def test_simple_state_older_than_the_ttl_is_rejected(config_module, simple_modul
     monkeypatch.setenv("FIDO_SERVER_CHALLENGE_TTL_SECONDS", "60")
     authenticator = Authenticator()
     challenge = b"\x5A" * 32
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     with client.session_transaction() as session:
         session["simple_credentials"] = [authenticator.stored_credential_entry()]
@@ -164,7 +166,7 @@ def test_simple_state_without_issued_at_stamp_is_rejected(config_module, simple_
 
     authenticator = Authenticator()
     challenge = b"\x5B" * 32
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     with client.session_transaction() as session:
         session["simple_credentials"] = [authenticator.stored_credential_entry()]
@@ -186,7 +188,7 @@ def test_simple_state_without_issued_at_stamp_is_rejected(config_module, simple_
 
 def test_simple_ceremonies_succeed_back_to_back_and_clear_session_state(config_module, simple_module, simple_storage):
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     for counter in (1, 2):
         challenge = _begin_simple_authentication(client, authenticator)
@@ -235,7 +237,7 @@ def _advanced_complete(client, stored_entry, assertion, challenge, **extra):
 def test_advanced_replayed_server_challenge_is_reported_as_replayed(config_module, advanced_module):
     authenticator = Authenticator()
     stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     body = _advanced_begin(client, stored_entry)
     challenge = unb64u(body["publicKey"]["challenge"])
@@ -260,7 +262,7 @@ def test_advanced_replayed_server_challenge_is_reported_as_replayed(config_modul
 def test_advanced_replay_is_reported_on_failure_responses_too(config_module, advanced_module):
     authenticator = Authenticator()
     stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     challenge = unb64u(_advanced_begin(client, stored_entry)["publicKey"]["challenge"])
     cookie_with_state = _snapshot_cookie(client)
@@ -280,7 +282,7 @@ def test_advanced_client_supplied_challenge_is_reported_as_not_tracked(config_mo
     authenticator = Authenticator()
     stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
     challenge = b"\x72" * 32
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     # No /begin: the request editor supplies its own state.
     response = _advanced_complete(
@@ -322,7 +324,7 @@ def _advanced_register_complete(client, body, authenticator, **overrides):
 
 def test_advanced_registration_reports_a_replayed_challenge(config_module, advanced_module, advanced_storage):
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     body = _advanced_register_begin(client)
     cookie_with_state = _snapshot_cookie(client)
 
@@ -340,7 +342,7 @@ def test_advanced_registration_reports_a_replayed_challenge(config_module, advan
 
 def test_an_advanced_registration_that_fails_early_still_burns_its_challenge(config_module, advanced_module, advanced_storage):
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     body = _advanced_register_begin(client)
     cookie_with_state = _snapshot_cookie(client)
 
@@ -358,7 +360,7 @@ def test_an_advanced_registration_that_fails_early_still_burns_its_challenge(con
 def test_an_advanced_authentication_that_fails_early_still_burns_its_challenge(config_module, advanced_module):
     authenticator = Authenticator()
     stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     challenge = unb64u(_advanced_begin(client, stored_entry)["publicKey"]["challenge"])
     cookie_with_state = _snapshot_cookie(client)
 

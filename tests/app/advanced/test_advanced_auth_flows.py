@@ -2,6 +2,8 @@ import base64
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -42,7 +44,7 @@ def test_advanced_register_begin_falls_back_from_unavailable_pqc(monkeypatch, pq
         }
     }
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json=request_payload)
 
     assert response.status_code == 200
@@ -53,7 +55,6 @@ def test_advanced_register_begin_falls_back_from_unavailable_pqc(monkeypatch, pq
 
 
 def test_advanced_register_complete_rejects_attachment_mismatch():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
@@ -69,7 +70,7 @@ def test_advanced_register_complete_rejects_attachment_mismatch():
         },
     }
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/complete", json=payload)
 
     assert response.status_code == 400
@@ -77,7 +78,6 @@ def test_advanced_register_complete_rejects_attachment_mismatch():
 
 
 def test_advanced_authenticate_complete_rejects_non_resident_in_resident_mode(monkeypatch, advanced_parsing):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-resident-required"
@@ -100,7 +100,7 @@ def test_advanced_authenticate_complete_rejects_non_resident_in_resident_mode(mo
         )
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/complete",
             json={
@@ -117,7 +117,6 @@ def test_advanced_authenticate_complete_rejects_non_resident_in_resident_mode(mo
 
 
 def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch, advanced_parsing):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-missing-state"
@@ -140,7 +139,7 @@ def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch, a
         )
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
 
@@ -198,7 +197,7 @@ def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verific
         )
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_state"] = {"challenge": "state"}
             session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
@@ -261,7 +260,7 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_request
         )
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_state"] = {"challenge": "state"}
             session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
@@ -319,7 +318,7 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_sign
         )
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_state"] = {"challenge": "state"}
             session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}

@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import itsdangerous
-import pytest
 from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
 from flask import g, session
 
@@ -13,6 +12,7 @@ from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import state as metadata_state
 from server.app.webauthn.metadata import verifier as metadata_verifier
+from tests.app.entry_app import entry_app
 
 
 def _entry_payload(*, aaguid: str, description: str):
@@ -152,7 +152,6 @@ def test_cache_cleaning_and_formatting_helpers():
 
 
 def test_prune_helper_and_request_session_identifier_paths(monkeypatch, tmp_path, session_store, app_config):
-    config_module = pytest.importorskip("server.app.config")
     # Resolving the cookie's namespace refreshes its directory's last-access marker.
     monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
 
@@ -166,15 +165,15 @@ def test_prune_helper_and_request_session_identifier_paths(monkeypatch, tmp_path
     # Only a cookie signed with the application secret names a namespace; an
     # unsigned one is ignored (it would otherwise be an IDOR).
     sealed = itsdangerous.URLSafeTimedSerializer(
-        config_module.app.secret_key, salt="fido.mds.session-cookie.v1"
+        entry_app().secret_key, salt="fido.mds.session-cookie.v1"
     ).dumps("cookie-session")
-    with config_module.app.test_request_context(
+    with entry_app().test_request_context(
         "/",
         headers={"Cookie": f"{metadata_state._SESSION_METADATA_COOKIE_NAME}=cookie-session"},
     ):
         assert metadata_sessions._get_metadata_session_id(create=False) is None
 
-    with config_module.app.test_request_context(
+    with entry_app().test_request_context(
         "/",
         headers={"Cookie": f"{metadata_state._SESSION_METADATA_COOKIE_NAME}={sealed}"},
     ):
@@ -183,11 +182,11 @@ def test_prune_helper_and_request_session_identifier_paths(monkeypatch, tmp_path
         assert session[metadata_state._SESSION_METADATA_SESSION_KEY] == "cookie-session"
         assert g._session_metadata_cookie == "cookie-session"
 
-    with config_module.app.test_request_context("/"):
+    with entry_app().test_request_context("/"):
         generated = metadata_sessions._get_metadata_session_id(create=True)
         assert isinstance(generated, str)
         assert session[metadata_state._SESSION_METADATA_SESSION_KEY] == generated
         assert g._session_metadata_cookie == generated
 
-    with config_module.app.test_request_context("/"):
+    with entry_app().test_request_context("/"):
         assert metadata_sessions._get_metadata_session_id(create=False) is None

@@ -2,6 +2,7 @@ import base64
 
 import pytest
 
+from tests.app.entry_app import entry_app
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
 
@@ -52,12 +53,11 @@ def test_try_decode_certificate_bytes_returns_none_for_malformed_der_payload():
 
 
 def test_codec_api_decodes_der_certificate_payload_successfully():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     payload = _b64url(_GSR2_DER)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/codec",
             json={"mode": "decode", "payload": payload},

@@ -4,6 +4,7 @@ import pytest
 
 from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import sessions as metadata_sessions
+from tests.app.entry_app import entry_app
 
 
 @pytest.fixture
@@ -19,7 +20,7 @@ def metadata_local_env(monkeypatch, tmp_path, metadata_state, session_store, app
     monkeypatch.setattr(session_store, "_using_gcs", lambda: False)
 
 
-    return metadata, session_store, app_config.app
+    return metadata, session_store, entry_app()
 
 
 def _sample_payload(description: str = "Session entry") -> dict:

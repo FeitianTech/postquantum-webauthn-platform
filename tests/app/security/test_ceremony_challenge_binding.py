@@ -11,6 +11,8 @@ must always say so via ``challengeSource``.
 """
 from __future__ import annotations
 
+from tests.app.entry_app import entry_app
+
 from .ceremony_helpers import (
     ORIGIN,
     RP_ID,
@@ -43,7 +45,7 @@ def test_cold_simple_register_complete_with_self_chosen_challenge_is_rejected(co
         "user_verification": None,
     }
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     # No /begin call, so no session cookie: a cold, unauthenticated request.
     response = client.post(
         "/api/register/complete?email=attacker@example.com",
@@ -68,7 +70,7 @@ def test_cold_simple_authenticate_complete_with_self_chosen_challenge_is_rejecte
     payload = assertion_payload(authenticator, challenge=attacker_challenge)
     payload["__session_state"] = {"challenge": b64u(attacker_challenge)}
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     with client.session_transaction() as session:
         # Credentials are known, but there is no server-issued ceremony state.
         session["simple_credentials"] = [authenticator.stored_credential_entry()]
@@ -89,7 +91,7 @@ def test_simple_register_complete_ignores_request_supplied_state(config_module, 
     """Even with a valid session, the request-supplied state must be ignored."""
 
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     begin = client.post("/api/register/begin?email=user@example.com", json={"credentials": []})
     server_challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
@@ -118,7 +120,7 @@ def test_simple_register_complete_ignores_request_supplied_state(config_module, 
 
 
 def test_simple_register_begin_does_not_disclose_ceremony_state(config_module):
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     response = client.post("/api/register/begin?email=user@example.com", json={"credentials": []})
 
     assert response.status_code == 200
@@ -127,7 +129,7 @@ def test_simple_register_begin_does_not_disclose_ceremony_state(config_module):
 
 def test_simple_authenticate_begin_does_not_disclose_ceremony_state(config_module):
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     response = client.post(
         "/api/authenticate/begin?email=user@example.com",
         json={"credentials": [authenticator.stored_credential_entry()]},
@@ -144,7 +146,7 @@ def test_simple_authenticate_begin_does_not_disclose_ceremony_state(config_modul
 
 def test_simple_registration_and_authentication_happy_path(config_module, simple_module, simple_storage):
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     begin = client.post("/api/register/begin?email=user@example.com", json={"credentials": []})
     assert begin.status_code == 200
@@ -182,7 +184,7 @@ def test_simple_registration_and_authentication_happy_path(config_module, simple
 
 def test_advanced_register_complete_reports_server_session_challenge_source(config_module, advanced_module, advanced_storage):
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     challenge = b"\x31" * 32
 
     begin = client.post(
@@ -216,7 +218,7 @@ def test_advanced_register_complete_reports_client_supplied_challenge_source(con
     """The request editor may supply its own state -- but it is labelled."""
 
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     client_challenge = b"\x77" * 32
 
     # No /begin call: a cold request carrying its own state, as the editor does.
@@ -243,7 +245,7 @@ def test_advanced_register_complete_reports_client_supplied_challenge_source(con
 
 
 def test_advanced_complete_always_reports_challenge_source_even_on_error(config_module, advanced_module):
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     response = client.post(
         "/api/advanced/register/complete",
@@ -266,7 +268,7 @@ def test_advanced_complete_always_reports_challenge_source_even_on_error(config_
 def test_advanced_authenticate_complete_always_reports_challenge_source(config_module, advanced_module):
     """Including on the early input-validation errors."""
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     # Missing assertion response -- rejected before any state is resolved.
     missing = client.post("/api/advanced/authenticate/complete", json={})

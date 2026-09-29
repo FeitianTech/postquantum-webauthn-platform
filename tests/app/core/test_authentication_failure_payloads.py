@@ -3,6 +3,8 @@ import time
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 def _encode_base64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -21,7 +23,7 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch,
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(simple_parsing, "_parse_client_credentials", lambda _raw: ([object()], []))
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session:
             session["simple_credentials"] = [{"credentialIdBase64Url": encoded_id}]
             session["state"] = {"challenge": "test", "issued_at": time.time()}
@@ -66,7 +68,7 @@ def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatc
         )
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session:
             session["advanced_auth_state"] = {"challenge": "test", "issued_at": time.time()}
             session["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}

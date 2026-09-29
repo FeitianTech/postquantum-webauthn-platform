@@ -5,6 +5,7 @@ from flask import session as flask_session
 
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import state as metadata_state
+from tests.app.entry_app import entry_app
 
 
 @pytest.fixture
@@ -22,7 +23,7 @@ def session_metadata_env(monkeypatch, tmp_path, metadata_state, session_store, a
     monkeypatch.setattr(session_store, "_local_last_cleanup", 0.0)
 
 
-    return app_config.app, metadata
+    return entry_app(), metadata
 
 
 def _sample_entry(description: str) -> dict:

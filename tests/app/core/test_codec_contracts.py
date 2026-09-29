@@ -5,6 +5,8 @@ import json
 import cbor2
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 def _pad_base64(value: str) -> str:
     return value + "=" * (-len(value) % 4)
@@ -42,10 +44,9 @@ def _build_attestation_object(*, rp_id: str = "example.com", counter: int = 1, c
 
 
 def test_codec_api_rejects_non_json_payload():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/codec",
             data="payload",
@@ -57,10 +58,9 @@ def test_codec_api_rejects_non_json_payload():
 
 
 def test_codec_api_requires_non_empty_payload():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/codec",
             json={"payload": "   "},
@@ -71,10 +71,9 @@ def test_codec_api_requires_non_empty_payload():
 
 
 def test_codec_api_encode_requires_format():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/codec",
             json={"mode": "encode", "payload": "{\"a\":1}"},
@@ -85,10 +84,9 @@ def test_codec_api_encode_requires_format():
 
 
 def test_codec_api_encode_returns_422_for_unsupported_format():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/codec",
             json={"mode": "encode", "format": "unknown_format", "payload": "{\"a\":1}"},
@@ -99,10 +97,9 @@ def test_codec_api_encode_returns_422_for_unsupported_format():
 
 
 def test_codec_api_returns_422_for_invalid_decode_payload():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/codec",
             json={"mode": "decode", "payload": "g$"},
@@ -113,12 +110,11 @@ def test_codec_api_returns_422_for_invalid_decode_payload():
 
 
 def test_codec_api_round_trip_cbor_encode_then_decode():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     original = {"beta": "value", "alpha": [1, 2, 3], "flag": True}
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         encoded_response = client.post(
             "/api/codec",
             json={
@@ -289,13 +285,12 @@ def test_encode_payload_text_cbor_is_canonical_for_equivalent_key_orderings():
 
 
 def test_codec_api_decodes_attestation_object_contract():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     attestation_object = _build_attestation_object(counter=9, credential_id=b"codec-api-attestation")
     payload = _b64url(bytes(attestation_object))
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/codec",
             json={"mode": "decode", "payload": payload},
@@ -452,7 +447,6 @@ def test_encode_payload_text_cbor_is_deterministic_across_equivalent_permutation
 
 
 def test_codec_api_encode_pem_binary_contract():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     payload_bytes = bytes(range(48))
@@ -467,7 +461,7 @@ def test_codec_api_encode_pem_binary_contract():
         ),
     }
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/codec", json=request_payload)
 
     assert response.status_code == 200
@@ -483,7 +477,6 @@ def test_codec_api_encode_pem_binary_contract():
 
 
 def test_codec_api_encode_der_from_nested_binary_payload():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     payload_bytes = b"\x10\x11\x12\x13\x14"
@@ -493,7 +486,7 @@ def test_codec_api_encode_der_from_nested_binary_payload():
         "payload": json.dumps({"binary": {"base64url": _b64url(payload_bytes)}}),
     }
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/codec", json=request_payload)
 
     assert response.status_code == 200
@@ -505,7 +498,6 @@ def test_codec_api_encode_der_from_nested_binary_payload():
 
 
 def test_codec_api_encode_client_data_contract():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     client_data = {
@@ -515,7 +507,7 @@ def test_codec_api_encode_client_data_contract():
         "crossOrigin": False,
     }
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/codec",
             json={
@@ -534,7 +526,6 @@ def test_codec_api_encode_client_data_contract():
 
 
 def test_codec_api_encode_maps_value_error_to_422(monkeypatch):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
     general_module = pytest.importorskip("server.app.routes.general")
 
@@ -544,7 +535,7 @@ def test_codec_api_encode_maps_value_error_to_422(monkeypatch):
         lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("bad encode request")),
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/codec",
             json={"mode": "encode", "format": "cbor", "payload": "{}"},
@@ -555,7 +546,6 @@ def test_codec_api_encode_maps_value_error_to_422(monkeypatch):
 
 
 def test_codec_api_encode_maps_unexpected_error_to_500(monkeypatch):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
     general_module = pytest.importorskip("server.app.routes.general")
 
@@ -565,7 +555,7 @@ def test_codec_api_encode_maps_unexpected_error_to_500(monkeypatch):
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("encoder crashed")),
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/codec",
             json={"mode": "encode", "format": "cbor", "payload": "{}"},

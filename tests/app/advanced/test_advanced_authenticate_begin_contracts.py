@@ -2,6 +2,8 @@ import types
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 def _credential_record(credential_id: bytes, *, data=None, attachment=None, resident=False, algorithm=-7):
     return {
@@ -50,11 +52,10 @@ def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, conf
 
 
 def test_advanced_authenticate_begin_requires_public_key_payload():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/authenticate/begin", json={})
 
     assert response.status_code == 400
@@ -64,11 +65,10 @@ def test_advanced_authenticate_begin_requires_public_key_payload():
 
 
 def test_advanced_authenticate_begin_requires_challenge():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={"publicKey": {"timeout": 90000}},
@@ -79,11 +79,10 @@ def test_advanced_authenticate_begin_requires_challenge():
 
 
 def test_advanced_authenticate_begin_rejects_invalid_challenge_format():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={"publicKey": {"challenge": "g$"}},
@@ -94,11 +93,10 @@ def test_advanced_authenticate_begin_rejects_invalid_challenge_format():
 
 
 def test_advanced_authenticate_begin_returns_404_when_no_credentials_detected():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={"publicKey": {"challenge": "0102"}},
@@ -149,7 +147,7 @@ def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(m
         "__storedCredentials": [{"record": 1}],
     }
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/authenticate/begin", json=request_payload)
 
         assert response.status_code == 200
@@ -193,7 +191,7 @@ def test_advanced_authenticate_begin_falls_back_to_all_records_when_allow_creden
     captured = {}
     _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={
@@ -210,7 +208,6 @@ def test_advanced_authenticate_begin_falls_back_to_all_records_when_allow_creden
 
 
 def test_advanced_authenticate_begin_returns_hints_error_when_filtered_allow_credentials_empty(monkeypatch, advanced_parsing):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     cred_id = b"platform-only-credential"
@@ -224,7 +221,7 @@ def test_advanced_authenticate_begin_returns_hints_error_when_filtered_allow_cre
         )
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={
@@ -269,7 +266,7 @@ def test_advanced_authenticate_begin_resident_mode_prefers_resident_records_and_
     captured = {}
     _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module, include_allow_credentials=True)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={
@@ -288,7 +285,6 @@ def test_advanced_authenticate_begin_resident_mode_prefers_resident_records_and_
 
 
 def test_advanced_authenticate_begin_resident_mode_returns_hints_error_when_resident_candidates_filtered(monkeypatch, advanced_parsing):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(
@@ -311,7 +307,7 @@ def test_advanced_authenticate_begin_resident_mode_returns_hints_error_when_resi
         )
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={
@@ -351,7 +347,7 @@ def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_pre
     captured = {}
     _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={

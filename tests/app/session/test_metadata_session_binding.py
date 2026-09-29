@@ -14,13 +14,13 @@ from flask import session as flask_session
 
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import state as metadata_state
+from tests.app.entry_app import entry_app
 
 COOKIE_SALT = "fido.mds.session-cookie.v1"
 
 
 @pytest.fixture
 def session_env(monkeypatch, tmp_path):
-    config = pytest.importorskip("server.app.config")
     metadata = pytest.importorskip("server.app.webauthn.metadata")
     session_store = pytest.importorskip("server.app.storage.session_metadata")
     state = pytest.importorskip("server.app.webauthn.metadata.state")
@@ -38,7 +38,7 @@ def session_env(monkeypatch, tmp_path):
     monkeypatch.setattr(state, "_session_metadata_entry_ids", set())
     monkeypatch.setattr(state, "_session_metadata_last_cleanup", 0.0)
 
-    return config.app, metadata
+    return entry_app(), metadata
 
 
 def _entry(description: str) -> dict:

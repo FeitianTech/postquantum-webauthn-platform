@@ -2,6 +2,8 @@ import base64
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -40,7 +42,7 @@ def test_advanced_authenticate_complete_uses_request_state_fallback(monkeypatch,
 
     fallback_state = {"challenge": "fallback-state"}
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
 
@@ -103,7 +105,7 @@ def test_advanced_authenticate_complete_uses_advanced_rp_when_auth_rp_missing(mo
         )
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_state"] = {"challenge": "state"}
             session_state["advanced_rp"] = {"id": "fallback.example", "name": "Fallback"}
@@ -129,7 +131,6 @@ def test_advanced_authenticate_complete_uses_advanced_rp_when_auth_rp_missing(mo
 
 
 def test_advanced_authenticate_complete_invalid_request_state_fallback_returns_400(monkeypatch, advanced_parsing):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     credential_id = b"advanced-invalid-fallback"
@@ -144,7 +145,7 @@ def test_advanced_authenticate_complete_invalid_request_state_fallback_returns_4
         )
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
 
@@ -172,7 +173,6 @@ def test_advanced_authenticate_complete_invalid_request_state_fallback_returns_4
 
 
 def test_advanced_authenticate_complete_reports_cookie_restore_failure(monkeypatch, advanced_parsing):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(
@@ -181,7 +181,7 @@ def test_advanced_authenticate_complete_reports_cookie_restore_failure(monkeypat
         lambda _raw: ([], [])
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_credentials_meta"] = {
                 "count": 50,
@@ -206,11 +206,10 @@ def test_advanced_authenticate_complete_reports_cookie_restore_failure(monkeypat
 
 
 def test_advanced_authenticate_complete_requires_attachment_when_session_scopes_allowed_attachments():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_authenticate_allowed_attachments"] = ["platform"]
 
@@ -230,11 +229,10 @@ def test_advanced_authenticate_complete_requires_attachment_when_session_scopes_
 
 
 def test_advanced_authenticate_complete_rejects_attachment_not_allowed_by_session_scope():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_authenticate_allowed_attachments"] = ["platform"]
 
@@ -290,7 +288,7 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
         )
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_state"] = {"challenge": "state"}
             session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
@@ -346,7 +344,7 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
         )
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_state"] = {"challenge": "state"}
             session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
@@ -392,7 +390,7 @@ def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authentic
         )
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_state"] = {"challenge": "state"}
             session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}

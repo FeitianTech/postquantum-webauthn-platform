@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 from .ceremony_helpers import (
     ORIGIN,
     RP_ID,
@@ -58,7 +60,7 @@ def test_allowlist_rejects_host_header_derived_rp_id_attack(config_module, simpl
 
     allowed_origins("https://app.example")
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     response = _register(
         client, host="evil.example", origin="https://evil.example"
     )
@@ -79,7 +81,7 @@ def test_allowlist_rejects_an_unlisted_ceremony_origin(config_module, simple_mod
 
     allowed_origins("https://app.example, https://other.example")
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     response = _register(
         client, host="not-listed.example", origin="https://not-listed.example"
     )
@@ -97,7 +99,7 @@ def test_expected_origin_is_not_taken_from_the_request_origin_header(config_modu
     must now come from the server's own configuration instead.
     """
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     response = _register(
         client, host="evil.example", origin="https://evil.example"
     )
@@ -112,7 +114,7 @@ def test_expected_origin_is_not_taken_from_the_request_origin_header(config_modu
 def test_simple_flow_never_takes_rp_id_from_the_request_body(config_module, simple_module, simple_storage):
     """A body-supplied ``rp.id``/``rpId`` must have no effect in the simple flow."""
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     begin = client.post(
         "/api/register/begin?email=user@example.com",
         json={
@@ -137,7 +139,7 @@ def test_simple_flow_never_takes_rp_id_from_the_request_body(config_module, simp
 def test_allowlist_permits_a_listed_origin(config_module, simple_module, simple_storage, allowed_origins):
     allowed_origins("http://localhost, https://app.example")
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     response = _register(client)
 
     assert response.status_code == 200, response.get_json()
@@ -148,10 +150,10 @@ def test_allowlist_permits_a_listed_origin(config_module, simple_module, simple_
 def test_unconfigured_server_still_works_for_local_development(config_module, simple_module, simple_storage):
     """With nothing configured the dev fallback keeps the demo usable."""
 
-    with config_module.app.app_context():
+    with entry_app().app_context():
         assert config_module.get_allowed_origins() is None
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     response = _register(client)
 
     assert response.status_code == 200, response.get_json()
@@ -179,20 +181,20 @@ def test_unconfigured_server_still_works_for_local_development(config_module, si
 )
 def test_is_origin_allowed_is_an_exact_match(config_module, allowed_origins, candidate, expected):
     allowed_origins("https://app.example")
-    with config_module.app.app_context():
+    with entry_app().app_context():
         assert config_module.is_origin_allowed(candidate) is expected
 
 
 def test_is_origin_allowed_permits_everything_when_unconfigured(config_module, allowed_origins):
     allowed_origins(None)
-    with config_module.app.app_context():
+    with entry_app().app_context():
         assert config_module.is_origin_allowed("https://anything.example") is True
 
 
 def test_determine_expected_origin_never_echoes_an_unlisted_candidate(config_module, allowed_origins):
     allowed_origins("https://app.example, https://second.example")
 
-    with config_module.app.app_context():
+    with entry_app().app_context():
         # A listed candidate is honoured...
         assert config_module.determine_expected_origin("https://second.example") == (
             "https://second.example"
@@ -213,14 +215,14 @@ def test_development_fallback_warning_is_emitted_once(config_module, monkeypatch
         lambda msg, *args: warnings.append(msg % args if args else msg),
     )
     monkeypatch.setattr(relying_party, "_RP_CONFIGURATION_WARNING_EMITTED", False)
-    monkeypatch.setitem(config_module.app.config, "FIDO_SERVER_RP_ID", None)
-    monkeypatch.setitem(config_module.app.config, "FIDO_SERVER_ALLOWED_ORIGINS", None)
+    monkeypatch.setitem(entry_app().config, "FIDO_SERVER_RP_ID", None)
+    monkeypatch.setitem(entry_app().config, "FIDO_SERVER_ALLOWED_ORIGINS", None)
 
-    assert config_module.warn_if_development_rp_configuration(config_module.app) is True
+    assert config_module.warn_if_development_rp_configuration(entry_app()) is True
     assert len(warnings) == 1
     assert "DEVELOPMENT-ONLY" in warnings[0]
     assert "FIDO_SERVER_ALLOWED_ORIGINS" in warnings[0]
 
     # Emitted once, not on every call.
-    assert config_module.warn_if_development_rp_configuration(config_module.app) is False
+    assert config_module.warn_if_development_rp_configuration(entry_app()) is False
     assert len(warnings) == 1

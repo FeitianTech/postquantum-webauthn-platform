@@ -7,6 +7,7 @@ import pytest
 
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import binary as advanced_binary
+from tests.app.entry_app import entry_app
 
 
 def _b64url(data: bytes) -> str:
@@ -64,12 +65,10 @@ def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, conf
 
 
 def test_advanced_put_snapshot_route_returns_400_when_store_fails(monkeypatch, metadata_module, credential_artifacts_module):
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", lambda *_args, **_kwargs: False)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.put(
             "/api/advanced/credential-artifacts/snapshot-fail/snapshot",
             json={"snapshot": {"html": "<p>snapshot</p>"}},
@@ -95,7 +94,7 @@ def test_advanced_authenticate_begin_returns_no_matching_credentials_for_invalid
     captured = {}
     _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={
@@ -129,7 +128,7 @@ def test_advanced_authenticate_begin_resident_mode_reports_no_resident_keys_when
     captured = {}
     _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={
@@ -171,7 +170,7 @@ def test_advanced_authenticate_begin_uses_algorithm_source_fallback_and_extensio
 
     _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={
@@ -218,7 +217,7 @@ def test_advanced_authenticate_begin_largeblob_dict_passthrough_when_no_read_or_
     captured = {}
     _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={
@@ -251,7 +250,7 @@ def test_advanced_authenticate_begin_largeblob_non_dict_and_prf_passthrough(monk
     captured = {}
     _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={
@@ -274,10 +273,9 @@ def test_advanced_authenticate_begin_largeblob_non_dict_and_prf_passthrough(monk
 
 
 def test_advanced_authenticate_complete_requires_assertion_response():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/complete",
             json={"publicKey": {"challenge": "AQID"}},
@@ -292,10 +290,9 @@ def test_advanced_authenticate_complete_requires_assertion_response():
 
 
 def test_advanced_authenticate_complete_requires_public_key_payload():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/complete",
             json={"__assertion_response": {"response": {}}},
@@ -338,7 +335,7 @@ def test_advanced_authenticate_complete_uses_legacy_session_credentials_fallback
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _source: [])
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_state"] = {"challenge": "state-token"}
             session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
@@ -363,10 +360,9 @@ def test_advanced_authenticate_complete_uses_legacy_session_credentials_fallback
 
 
 def test_advanced_authenticate_complete_returns_404_when_no_credentials_found_anywhere():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_credentials_meta"] = {"count": 2, "resident_count": 1}
 
@@ -439,7 +435,7 @@ def test_advanced_authenticate_complete_uses_request_rpid_sets_algorithms_and_si
     monkeypatch.setattr(config_module, "determine_rp_id", _determine_rp_id)
     monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", _derive_algorithms)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_state"] = {"challenge": "state-token"}
 
@@ -493,7 +489,7 @@ def test_advanced_authenticate_complete_error_path_uses_failed_id_fallback_extra
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _source: [])
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_state"] = {"challenge": "state-token"}
             session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}

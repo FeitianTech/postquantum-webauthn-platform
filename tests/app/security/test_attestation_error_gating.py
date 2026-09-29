@@ -12,6 +12,8 @@ flow may still complete, but must surface them.
 """
 from __future__ import annotations
 
+from tests.app.entry_app import entry_app
+
 from .ceremony_helpers import (
     ORIGIN,
     Authenticator,
@@ -29,7 +31,7 @@ def test_simple_register_complete_rejects_cross_origin_registration(config_modul
     """``crossOrigin: true`` produces a real error that must now gate."""
 
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     begin = client.post("/api/register/begin?email=user@example.com", json={"credentials": []})
     challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
@@ -55,7 +57,7 @@ def test_simple_register_complete_rejects_origin_mismatch(config_module, simple_
     """An origin the server did not expect must gate, not just be noted."""
 
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     begin = client.post(
         "/api/register/begin?email=user@example.com",
@@ -89,7 +91,7 @@ def test_simple_register_complete_rejects_origin_mismatch(config_module, simple_
 
 def test_clean_simple_registration_reports_no_attestation_errors(config_module, simple_module, simple_storage):
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
 
     begin = client.post("/api/register/begin?email=user@example.com", json={"credentials": []})
     challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
@@ -117,7 +119,7 @@ def test_advanced_register_complete_surfaces_attestation_errors(config_module, a
     """The advanced tab may still complete, but must report what failed."""
 
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     challenge = b"\x51" * 32
 
     begin = client.post(
@@ -150,7 +152,7 @@ def test_advanced_register_complete_surfaces_attestation_errors(config_module, a
 
 def test_advanced_register_complete_reports_verified_when_clean(config_module, advanced_module, advanced_storage):
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     challenge = b"\x52" * 32
 
     begin = client.post(

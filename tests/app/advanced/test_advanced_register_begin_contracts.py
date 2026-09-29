@@ -2,6 +2,8 @@ import types
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 def _base_payload():
     return {
@@ -55,11 +57,10 @@ def _install_fake_register_server(monkeypatch, advanced_module, captured, config
 
 
 def test_advanced_register_begin_requires_public_key_payload():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json={})
 
     assert response.status_code == 400
@@ -77,14 +78,13 @@ def test_advanced_register_begin_requires_public_key_payload():
     ],
 )
 def test_advanced_register_begin_requires_mandatory_fields(missing_key, expected_error):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     payload = _base_payload()
     payload["publicKey"].pop(missing_key)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json=payload)
 
     assert response.status_code == 400
@@ -92,14 +92,13 @@ def test_advanced_register_begin_requires_mandatory_fields(missing_key, expected
 
 
 def test_advanced_register_begin_requires_user_name():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     payload = _base_payload()
     payload["publicKey"]["user"]["name"] = ""
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json=payload)
 
     assert response.status_code == 400
@@ -107,14 +106,13 @@ def test_advanced_register_begin_requires_user_name():
 
 
 def test_advanced_register_begin_rejects_invalid_user_id_format():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     payload = _base_payload()
     payload["publicKey"]["user"]["id"] = "g$"
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json=payload)
 
     assert response.status_code == 400
@@ -122,14 +120,13 @@ def test_advanced_register_begin_rejects_invalid_user_id_format():
 
 
 def test_advanced_register_begin_rejects_invalid_challenge_format():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     payload = _base_payload()
     payload["publicKey"]["challenge"] = "not-hex"
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json=payload)
 
     assert response.status_code == 400
@@ -161,7 +158,7 @@ def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkey
         "icon": "https://example.com/icon.png",
     }
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json=payload)
 
         assert response.status_code == 200
@@ -215,7 +212,7 @@ def test_advanced_register_begin_normalizes_pubkeycredparams_and_filters_invalid
         -8,
     ]
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json=payload)
 
     assert response.status_code == 200
@@ -245,7 +242,7 @@ def test_advanced_register_begin_uses_default_algorithms_without_pubkeycredparam
     payload = _base_payload()
     payload["publicKey"].pop("pubKeyCredParams")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json=payload)
 
     assert response.status_code == 200
@@ -279,7 +276,7 @@ def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorith
         {"type": "public-key", "alg": -7},
     ]
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json=payload)
 
     assert response.status_code == 200
@@ -304,7 +301,7 @@ def test_advanced_register_begin_falls_back_to_classical_when_no_requested_pqc_a
     payload = _base_payload()
     payload["publicKey"]["pubKeyCredParams"] = [{"type": "public-key", "alg": -50}]
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json=payload)
 
     assert response.status_code == 200
@@ -356,7 +353,7 @@ def test_advanced_register_begin_maps_auth_selection_exclusions_extensions_and_t
         }
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json=payload)
 
         assert response.status_code == 200

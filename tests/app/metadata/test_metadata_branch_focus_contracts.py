@@ -17,6 +17,7 @@ from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import state as metadata_state
 from server.app.webauthn.metadata import verifier as metadata_verifier
+from tests.app.entry_app import entry_app
 
 
 @pytest.fixture
@@ -58,7 +59,7 @@ def test_session_cookie_scheduler_branches_and_after_request_cookie(metadata_mod
 
     metadata_sessions._schedule_session_cookie("outside-context")
 
-    with app_config.app.test_request_context("/", base_url="https://localhost"):
+    with entry_app().test_request_context("/", base_url="https://localhost"):
         metadata_sessions._schedule_session_cookie("   ")
         request_ctx = ctx._cv_request.get()
         assert request_ctx._after_request_functions == []
@@ -70,7 +71,7 @@ def test_session_cookie_scheduler_branches_and_after_request_cookie(metadata_mod
         metadata_sessions._schedule_session_cookie("session-cookie")
         assert len(request_ctx._after_request_functions) == 1
 
-        response = request_ctx._after_request_functions[0](app_config.app.response_class("ok"))
+        response = request_ctx._after_request_functions[0](entry_app().response_class("ok"))
         set_cookie = response.headers["Set-Cookie"]
         assert set_cookie.startswith(f"{metadata_state._SESSION_METADATA_COOKIE_NAME}=")
         assert "Secure" in set_cookie
@@ -82,7 +83,7 @@ def test_session_cookie_scheduler_branches_and_after_request_cookie(metadata_mod
         cookie_value = set_cookie.split(";", 1)[0].split("=", 1)[1]
         assert cookie_value != "session-cookie"
         assert itsdangerous.URLSafeTimedSerializer(
-            app_config.app.secret_key, salt="fido.mds.session-cookie.v1"
+            entry_app().secret_key, salt="fido.mds.session-cookie.v1"
         ).loads(cookie_value) == "session-cookie"
 
     assert touched == ["session-cookie", "session-cookie"]
@@ -101,7 +102,7 @@ def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch
 
     # An unsigned cookie naming a namespace is ignored: trusting it verbatim was
     # an IDOR, since any caller could name another visitor's namespace.
-    with app_config.app.test_request_context(
+    with entry_app().test_request_context(
         "/",
         headers={"Cookie": f"{metadata_state._SESSION_METADATA_COOKIE_NAME}=cookie-session"},
     ):
@@ -110,9 +111,9 @@ def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch
 
     # A cookie this server signed still restores the namespace it names.
     sealed = itsdangerous.URLSafeTimedSerializer(
-        app_config.app.secret_key, salt="fido.mds.session-cookie.v1"
+        entry_app().secret_key, salt="fido.mds.session-cookie.v1"
     ).dumps("cookie-session")
-    with app_config.app.test_request_context(
+    with entry_app().test_request_context(
         "/",
         headers={"Cookie": f"{metadata_state._SESSION_METADATA_COOKIE_NAME}={sealed}"},
     ):
@@ -120,17 +121,17 @@ def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch
         assert metadata_sessions._get_metadata_session_id(create=False) == "cookie-session"
         assert session[metadata_state._SESSION_METADATA_SESSION_KEY] == "cookie-session"
 
-    with app_config.app.test_request_context("/"):
+    with entry_app().test_request_context("/"):
         session[metadata_state._SESSION_METADATA_SESSION_KEY] = ".invalid"
         assert metadata_sessions._get_metadata_session_id(create=False) is None
         assert metadata_sessions._get_metadata_session_id(create=True) == "generated-session"
 
-    with app_config.app.test_request_context("/"):
+    with entry_app().test_request_context("/"):
         monkeypatch.setattr(sessions, "_get_metadata_session_id", lambda **_kwargs: None)
         with pytest.raises(RuntimeError, match="Unable to establish"):
             metadata_module.ensure_metadata_session_id()
 
-    with app_config.app.test_request_context("/"):
+    with entry_app().test_request_context("/"):
         monkeypatch.setattr(
             sessions,
             "_get_metadata_session_id",

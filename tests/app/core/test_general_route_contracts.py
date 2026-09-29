@@ -3,10 +3,11 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 def test_decode_and_certificate_routes_cover_error_and_success_paths(monkeypatch):
     general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     def _fake_decode(payload_text, **_options):
@@ -27,7 +28,7 @@ def test_decode_and_certificate_routes_cover_error_and_success_paths(monkeypatch
     bad_cert_b64 = base64.b64encode(b"bad-cert").decode("ascii")
     good_cert_unpadded = base64.b64encode(b"good-cert").decode("ascii").rstrip("=")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         decode_non_json = client.post("/api/decode", data="payload", content_type="text/plain")
         assert decode_non_json.status_code == 400
         assert decode_non_json.get_json() == {"error": "Expected JSON payload."}
@@ -93,10 +94,9 @@ def test_decode_and_certificate_routes_cover_error_and_success_paths(monkeypatch
 
 def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monkeypatch, tmp_path):
     general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         # One snapshot directory per case, each holding the verified file as named.
         monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path / "missing"))
 
@@ -180,7 +180,7 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
 
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-abc")
 
-    with config_module.app.app_context():
+    with entry_app().app_context():
         monkeypatch.setattr(general_module, "request", SimpleNamespace(files=None))
         response, status = _unpack(general_module.api_upload_custom_metadata())
         assert status == 400
@@ -322,7 +322,7 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
         assert status == 500
         assert response.get_json() == {"error": "persistence down"}
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-abc")
 
         monkeypatch.setattr(
@@ -358,7 +358,6 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
 
 def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
     general_module = pytest.importorskip("server.app.routes.general")
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     flag_name = "TEST_GENERAL_ENV_FLAG"
@@ -397,9 +396,9 @@ def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
 
     load_calls = []
     monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: load_calls.append("load"))
-    monkeypatch.setattr(config_module.app, "debug", True)
+    monkeypatch.setattr(entry_app(), "debug", True)
     monkeypatch.delenv("WERKZEUG_RUN_MAIN", raising=False)
-    with config_module.app.app_context():
+    with entry_app().app_context():
         general_module.ensure_metadata_bootstrapped(skip_if_reloader_parent=True)
     assert load_calls == []
 
@@ -414,7 +413,7 @@ def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
             "cache_loaded": False,
         },
     )
-    monkeypatch.setattr(config_module.app, "debug", False)
+    monkeypatch.setattr(entry_app(), "debug", False)
     load_calls.clear()
     monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: load_calls.append("load"))
     monkeypatch.setattr(
@@ -442,7 +441,7 @@ def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
     general_module.ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
     assert marked == [True]
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         monkeypatch.setattr(general_module, "_should_bootstrap_metadata_for_info", lambda: False)
         monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
         monkeypatch.setattr(general_module, "load_effective_explorer_snapshot", lambda: {})
@@ -493,7 +492,7 @@ def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
     monkeypatch.setattr(general_module, "serialize_session_metadata_item", lambda item: item)
     monkeypatch.setattr(general_module, "load_effective_full_snapshot", lambda: {"meta": {"entryCount": 1}})
 
-    with config_module.app.app_context():
+    with entry_app().app_context():
         monkeypatch.setattr(
             general_module,
             "request",

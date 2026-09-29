@@ -12,6 +12,7 @@ from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
 from flask import g
 
 from server.app.webauthn.metadata import sessions as metadata_sessions
+from tests.app.entry_app import entry_app
 
 
 @pytest.fixture
@@ -83,7 +84,7 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module
         ),
     )
 
-    app = app_config.app
+    app = entry_app()
     iterations = 200
     barrier = threading.Barrier(2)
     observed = []

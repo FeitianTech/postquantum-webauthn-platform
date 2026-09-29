@@ -4,6 +4,8 @@ import time
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -87,7 +89,7 @@ def test_simple_register_complete_returns_500_when_saving_fails(monkeypatch, met
     monkeypatch.setattr(storage_module, "readkey", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda *_args, **_kwargs: None)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["state"] = {"challenge": "state", "issued_at": time.time()}
             session_state["register_rp_id"] = rp_id
@@ -181,7 +183,7 @@ def test_advanced_register_complete_returns_500_when_artifact_store_returns_fals
 
     payload = _advanced_register_payload(rp_id, credential_id)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_state"] = {"challenge": "state"}
             session_state["advanced_rp"] = {"id": rp_id, "name": "Example"}
@@ -230,7 +232,7 @@ def test_advanced_register_complete_returns_500_when_artifact_store_raises(monke
 
     payload = _advanced_register_payload(rp_id, credential_id)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_state"] = {"challenge": "state"}
             session_state["advanced_rp"] = {"id": rp_id, "name": "Example"}
@@ -285,7 +287,7 @@ def test_advanced_register_complete_returns_400_when_add_public_key_material_rai
 
     payload = _advanced_register_payload(rp_id, credential_id)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_state"] = {"challenge": "state"}
             session_state["advanced_rp"] = {"id": rp_id, "name": "Example"}

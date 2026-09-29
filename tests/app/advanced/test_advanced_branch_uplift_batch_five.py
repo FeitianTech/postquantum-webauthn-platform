@@ -6,6 +6,7 @@ import pytest
 
 from server.app.routes import binary_helpers as shared_binary_helpers
 from server.app.routes.advanced import parsing as advanced_parsing
+from tests.app.entry_app import entry_app
 
 
 def _register_begin_payload() -> dict:
@@ -102,7 +103,7 @@ def test_register_begin_maps_attestation_modes_and_exercises_pqc_warning_branch(
         }
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json=payload)
 
     assert response.status_code == 200
@@ -113,11 +114,10 @@ def test_register_begin_maps_attestation_modes_and_exercises_pqc_warning_branch(
 
 
 def test_register_complete_validates_required_payload_and_username_fields():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         missing_response = client.post(
             "/api/advanced/register/complete",
             json={"publicKey": {"user": {"name": "user@example.com"}}},
@@ -229,7 +229,7 @@ def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_co
         lambda _extensions: {"ext": True}
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_state"] = {"challenge": "state-token"}
             session_state["advanced_rp"] = {"id": "example.com", "name": "Example"}
@@ -323,7 +323,7 @@ def test_register_complete_returns_400_for_non_mapping_extensions_payload(monkey
         }
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_state"] = {"challenge": "state-token"}
             session_state["advanced_rp"] = {"id": "example.com", "name": "Example"}
@@ -413,7 +413,7 @@ def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_
         lambda **_kwargs: (_ for _ in ()).throw(ValueError("invalid uuid"))
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_state"] = {"challenge": "state-token"}
             session_state["advanced_rp"] = {"id": "example.com", "name": "Example"}
@@ -481,7 +481,7 @@ def test_authenticate_begin_uses_stored_rp_required_uv_and_skips_invalid_allow_c
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _Server())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_rp"] = {"id": "example.com", "name": "Example"}
 

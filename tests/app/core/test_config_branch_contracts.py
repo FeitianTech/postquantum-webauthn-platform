@@ -14,6 +14,7 @@ from server.app.config import (
     relying_party,
     session_secret,
 )
+from tests.app.entry_app import entry_app
 
 
 def test_the_project_root_is_two_levels_above_the_package():
@@ -94,7 +95,7 @@ def test_resolve_secret_key_replace_failure_cleanup_paths(monkeypatch):
 
 
 def test_response_compression_paths_and_accepts_gzip_guard(monkeypatch):
-    app = config_module.app
+    app = entry_app()
 
     assert compression._accepts_gzip() is False
 
@@ -171,8 +172,8 @@ def test_parse_fingerprints_and_host_normalization_branches(monkeypatch):
     parsed = attestation_trust._parse_trusted_ca_fingerprints(f"{long_fp}, short")
     assert parsed == {"AA" * 20}
 
-    monkeypatch.setitem(config_module.app.config, "FIDO_SERVER_RP_ID", "  configured.example  ")
-    with config_module.app.app_context():
+    monkeypatch.setitem(entry_app().config, "FIDO_SERVER_RP_ID", "  configured.example  ")
+    with entry_app().app_context():
         assert config_module.determine_rp_id() == "configured.example"
 
     assert relying_party._normalise_request_host(None) is None
@@ -184,14 +185,14 @@ def test_parse_fingerprints_and_host_normalization_branches(monkeypatch):
 
     assert relying_party._resolve_request_host() is None
 
-    with config_module.app.test_request_context(
+    with entry_app().test_request_context(
         "/",
         headers={"Host": ""},
         environ_overrides={"HTTP_HOST": "api.example", "SERVER_NAME": "fallback.example"},
     ):
         assert relying_party._resolve_request_host() == "api.example"
 
-    with config_module.app.test_request_context(
+    with entry_app().test_request_context(
         "/",
         headers={"Host": ""},
         environ_overrides={"HTTP_HOST": "", "SERVER_NAME": ""},

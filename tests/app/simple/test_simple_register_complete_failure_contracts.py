@@ -3,6 +3,8 @@ import time
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -36,7 +38,7 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
         lambda _response: ("none", {}, None, None, {}, None, [])
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["state"] = {"challenge": "session-state", "issued_at": time.time()}
             session_state["register_rp_id"] = "example.com"
@@ -78,7 +80,7 @@ def test_simple_register_complete_rejects_request_state_fallback_before_verifica
 
     fallback_state = {"challenge": "request-fallback-state"}
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["register_rp_id"] = "example.com"
 

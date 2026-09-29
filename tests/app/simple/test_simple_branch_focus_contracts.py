@@ -4,6 +4,8 @@ import time
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -98,7 +100,7 @@ def test_simple_register_begin_clears_cached_session_fields_when_client_credenti
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(simple_parsing, "_parse_client_credentials", lambda _raw: ([], []))
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["simple_credentials"] = [{"credentialId": "stale"}]
             session_state["simple_register_public_key"] = {"challenge": "stale"}
@@ -122,7 +124,6 @@ def test_simple_register_begin_clears_cached_session_fields_when_client_credenti
 
 
 def test_simple_register_complete_non_mapping_payload_returns_state_expired_error(monkeypatch, attestation_module):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(
@@ -131,7 +132,7 @@ def test_simple_register_complete_non_mapping_payload_returns_state_expired_erro
         lambda _response: ("none", {}, None, None, {}, None, [])
     )
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/register/complete?email=user@example.com",
             json=["not", "a", "mapping"],
@@ -142,12 +143,11 @@ def test_simple_register_complete_non_mapping_payload_returns_state_expired_erro
 
 
 def test_simple_authenticate_complete_aborts_when_session_credentials_cannot_be_rebuilt(monkeypatch, simple_parsing):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.app")
 
     monkeypatch.setattr(simple_parsing, "_parse_client_credentials", lambda _raw: ([], []))
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["simple_credentials"] = [{"credentialId": "stale"}]
             session_state["state"] = {"challenge": "auth-state", "issued_at": time.time()}
@@ -216,7 +216,7 @@ def test_simple_register_complete_covers_warning_metadata_and_session_fallback_p
     monkeypatch.setattr(storage_module, "save_if_unchanged", _save_if_unchanged)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda event: events.append(event))
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["state"] = {"challenge": "register-state", "issued_at": time.time()}
             session_state["register_rp_id"] = rp_id

@@ -10,6 +10,8 @@ from typing import Any
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 @pytest.fixture
 def config_module():
@@ -75,6 +77,6 @@ def allowed_origins(config_module, monkeypatch):
     """Set (and automatically restore) the exact-origin allowlist."""
 
     def _apply(value):
-        monkeypatch.setitem(config_module.app.config, "FIDO_SERVER_ALLOWED_ORIGINS", value)
+        monkeypatch.setitem(entry_app().config, "FIDO_SERVER_ALLOWED_ORIGINS", value)
 
     return _apply

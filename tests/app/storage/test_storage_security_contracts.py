@@ -27,6 +27,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.app.entry_app import entry_app
 from tests.app.storage.credential_seed import seed_records
 
 
@@ -291,7 +292,7 @@ def test_credential_root_is_not_inside_the_source_tree():
 
     if not os.environ.get("FIDO_SERVER_CREDENTIAL_DIR"):
         assert root == os.path.realpath(
-            os.path.join(config.app.instance_path, "session-credentials")
+            os.path.join(entry_app().instance_path, "session-credentials")
         )
 
 
@@ -617,7 +618,6 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
     """
 
     pytest.importorskip("server.app.app")
-    config_module = pytest.importorskip("server.app.config")
     ceremony = pytest.importorskip("tests.app.security.ceremony_helpers")
 
     root = tmp_path / "instance" / "session-credentials"
@@ -637,7 +637,7 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
         lambda msg, *args, **kwargs: warnings.append(str(msg) % args if args else str(msg)),
     )
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     begin = client.post(
         "/api/register/begin?email=alice@example.com",
         json={"credentials": []},

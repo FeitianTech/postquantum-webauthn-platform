@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -22,8 +24,6 @@ _BODY = b'{"entries": [], "meta": {"no": 7}}' * 64
 def assets_env(monkeypatch, tmp_path):
     pytest.importorskip("server.app.app")
     static_assets = pytest.importorskip("server.app.static_assets")
-    config = pytest.importorskip("server.app.config")
-
     snapshot = tmp_path / "snapshot"
     snapshot.mkdir()
     (snapshot / _EXPLORER_FULL).write_bytes(_BODY)
@@ -31,7 +31,7 @@ def assets_env(monkeypatch, tmp_path):
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(snapshot))
     monkeypatch.setattr(static_assets, "load_packaged_snapshot_meta", lambda: dict(_META))
     version = static_assets.snapshot_version(_META)
-    return static_assets, config.app.test_client(), version
+    return static_assets, entry_app().test_client(), version
 
 
 def test_the_current_snapshot_is_immutable_and_precompressed(assets_env):

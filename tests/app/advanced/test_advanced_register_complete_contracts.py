@@ -3,6 +3,8 @@ import hashlib
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 def _minimal_register_complete_payload(*, include_public_key: bool = True):
     payload = {
@@ -66,7 +68,7 @@ def test_advanced_register_complete_prefers_session_state_over_request_state(mon
     session_state = {"challenge": "session-state"}
     request_state = {"challenge": "request-state"}
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_store:
             session_store["advanced_state"] = session_state
             session_store["advanced_rp"] = {"id": "example.com", "name": "Example RP"}
@@ -105,7 +107,7 @@ def test_advanced_register_complete_uses_request_state_fallback_when_session_mis
 
     fallback_state = {"challenge": "request-fallback-state"}
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         payload = _minimal_register_complete_payload()
         payload["__session_state"] = fallback_state
 
@@ -121,11 +123,10 @@ def test_advanced_register_complete_uses_request_state_fallback_when_session_mis
 
 
 def test_advanced_register_complete_invalid_request_state_fallback_returns_400(monkeypatch):
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_store:
             session_store["advanced_rp"] = {"id": "example.com", "name": "Example RP"}
 
@@ -143,11 +144,10 @@ def test_advanced_register_complete_invalid_request_state_fallback_returns_400(m
 
 
 def test_advanced_register_complete_requires_attachment_when_hints_resolve_to_attachment():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         payload = _minimal_register_complete_payload()
         payload["publicKey"]["hints"] = ["security-key"]
 
@@ -174,7 +174,7 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_store:
             session_store["advanced_state"] = {"challenge": "session-state"}
             session_store["advanced_rp"] = {"id": "example.com", "name": "Example RP"}
@@ -260,7 +260,7 @@ def test_advanced_register_complete_success_contract_propagates_warnings_and_rec
     monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", _store_credential_artifact)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_store:
             session_store["advanced_state"] = {"challenge": "session-state"}
             session_store["advanced_rp"] = {"id": rp_id, "name": "Example RP"}

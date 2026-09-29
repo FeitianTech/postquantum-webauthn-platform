@@ -2,6 +2,8 @@ import base64
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -56,7 +58,7 @@ def test_simple_register_begin_accepts_existing_credentials_alias(monkeypatch, c
     monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/register/begin?email=user@example.com",
             json={"existingCredentials": [_stored_credential_entry(b"simple-register-alias")]},
@@ -89,7 +91,7 @@ def test_simple_authenticate_begin_accepts_stored_credentials_alias(monkeypatch,
     monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/authenticate/begin?email=user@example.com",
             json={"storedCredentials": [_stored_credential_entry(b"simple-auth-alias")]},
@@ -130,7 +132,7 @@ def test_advanced_register_begin_accepts_base64url_wrapped_user_id_and_challenge
     user_id = b"frontend-user-id"
     challenge = b"frontend-register-challenge"
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/register/begin",
             json={
@@ -153,11 +155,10 @@ def test_advanced_register_begin_accepts_base64url_wrapped_user_id_and_challenge
 
 
 def test_advanced_register_begin_rejects_invalid_binary_wrapper_in_user_id():
-    config_module = pytest.importorskip("server.app.config")
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/register/begin",
             json={
@@ -213,7 +214,7 @@ def test_advanced_authenticate_begin_accepts_storedcredentials_without_dunder(mo
         "algorithm": -7,
     }
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={
@@ -247,7 +248,7 @@ def test_advanced_authenticate_begin_accepts_credentials_fallback_field(monkeypa
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={
@@ -276,7 +277,7 @@ def test_advanced_authenticate_complete_accepts_storedcredentials_without_dunder
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_state"] = {"challenge": "state"}
             session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}
@@ -313,7 +314,7 @@ def test_advanced_authenticate_complete_accepts_credentials_fallback_field(monke
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
 
-    with config_module.app.test_client() as client:
+    with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_state"] = {"challenge": "state"}
             session_state["advanced_auth_rp"] = {"id": "example.com", "name": "Example"}

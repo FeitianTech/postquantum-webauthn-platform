@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import pytest
 
+from tests.app.entry_app import entry_app
+
 from .ceremony_helpers import (
     ORIGIN,
     Authenticator,
@@ -91,7 +93,7 @@ def _assert_cloned_rejection(response, authenticator):
 
 def test_simple_sign_count_going_backwards_is_rejected(config_module, credential_store):
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     _register(client, authenticator, counter=5)
 
     response = _authenticate(client, authenticator, counter=4)
@@ -103,7 +105,7 @@ def test_simple_sign_count_going_backwards_is_rejected(config_module, credential
 
 def test_simple_sign_count_equal_to_stored_is_rejected(config_module, credential_store):
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     _register(client, authenticator, counter=5)
 
     response = _authenticate(client, authenticator, counter=5)
@@ -115,7 +117,7 @@ def test_simple_sign_count_dropping_to_zero_is_rejected(config_module, credentia
     """Only 0/0 is exempt; a counter that was non-zero may not fall back to 0."""
 
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     _register(client, authenticator, counter=0)
     assert _authenticate(client, authenticator, counter=1).status_code == 200
 
@@ -132,7 +134,7 @@ def test_simple_persisted_counter_is_what_the_next_assertion_is_compared_to(conf
     """
 
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     _register(client, authenticator, counter=1)
 
     assert _authenticate(client, authenticator, counter=10).status_code == 200
@@ -147,7 +149,7 @@ def test_simple_client_supplied_sign_count_cannot_lower_the_stored_value(config_
     """The browser's copy of signCount is attacker-controlled; the server's wins."""
 
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     _register(client, authenticator, counter=5)
 
     response = _authenticate(client, authenticator, counter=3, client_sign_count=0)
@@ -157,7 +159,7 @@ def test_simple_client_supplied_sign_count_cannot_lower_the_stored_value(config_
 
 def test_simple_synced_passkey_reporting_zero_is_accepted(config_module, credential_store):
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     _register(client, authenticator, counter=0)
 
     for _ in range(3):
@@ -171,7 +173,7 @@ def test_simple_synced_passkey_reporting_zero_is_accepted(config_module, credent
 
 def test_simple_increasing_sign_count_succeeds_and_is_persisted(config_module, credential_store):
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     _register(client, authenticator, counter=5)
     assert credential_store(authenticator.credential_id) == 5
 
@@ -187,7 +189,7 @@ def test_simple_increasing_sign_count_succeeds_and_is_persisted(config_module, c
 
 def test_simple_success_reports_the_counter_state(config_module, credential_store):
     zero = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     _register(client, zero, counter=0)
     no_counter = _authenticate(client, zero, counter=0)
 
@@ -210,7 +212,7 @@ def test_simple_counter_with_base64url_only_characters_is_read_correctly(config_
     """
 
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     _register(client, authenticator, counter=0)
 
     counter = 0xFBEFBE01
@@ -231,7 +233,7 @@ def _advanced_authenticate(config_module, authenticator, *, stored_sign_count, c
     if stored_sign_count is not None:
         stored_entry["signCount"] = stored_sign_count
 
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     begin = client.post(
         "/api/advanced/authenticate/begin",
         json={
@@ -304,7 +306,7 @@ def test_advanced_reports_not_supported_for_zero_counters(config_module, advance
 
 def test_the_stored_counter_is_the_last_authentications(config_module, credential_store):
     authenticator = Authenticator()
-    client = config_module.app.test_client()
+    client = entry_app().test_client()
     _register(client, authenticator, counter=5)
     assert _authenticate(client, authenticator, counter=9).status_code == 200
 
