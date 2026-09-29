@@ -7,7 +7,11 @@ from typing import Any
 from flask import jsonify, request, session
 
 from fido2.cose import CoseKey
-from fido2.webauthn import PublicKeyCredentialUserEntity
+from fido2.webauthn import (
+    PublicKeyCredentialParameters,
+    PublicKeyCredentialType,
+    PublicKeyCredentialUserEntity,
+)
 
 from ... import (
     config,
@@ -238,6 +242,13 @@ _SIMPLE_ALLOWED_ALGORITHMS: tuple[int, ...] = tuple(
     if alg in set(CoseKey.supported_algorithms())
 )
 
+# The request's algorithms as begin keeps them in the session, which complete
+# checks the new credential's algorithm against: every one this server verifies,
+# ML-DSA first. The browser is offered _SIMPLE_ALLOWED_ALGORITHMS instead.
+_SIMPLE_REQUEST_ALGORITHMS: tuple[int, ...] = (
+    -48, -49, -50, -7, -9, -8, -19, -53, -35, -36, -51, -52, -47, -37, -38, -39, -257, -258, -259, -65535,
+)
+
 def register_begin():
     payload = request.get_json(silent=True) or {}
 
@@ -255,6 +266,10 @@ def register_begin():
 
     rp_id = config.determine_rp_id()
     server = config.create_fido_server(rp_id=rp_id)
+    server.allowed_algorithms = [
+        PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=alg)
+        for alg in _SIMPLE_REQUEST_ALGORITHMS
+    ]
 
     options, state = server.register_begin(
         PublicKeyCredentialUserEntity(
