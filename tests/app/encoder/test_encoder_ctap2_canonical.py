@@ -70,6 +70,17 @@ def _random_map(rng: random.Random, depth: int = 0) -> dict:
     return {_random_key(rng): _random_value(rng, depth) for _ in range(rng.randrange(1, 8))}
 
 
+def _head(major_type: int, argument: int) -> bytes:
+    """A CBOR item's head (RFC 8949 section 3): its major type and argument, in the shortest form."""
+
+    if argument < 24:
+        return bytes([major_type << 5 | argument])
+    for additional, size in ((24, 1), (25, 2), (26, 4), (27, 8)):
+        if argument < 1 << (8 * size):
+            return bytes([major_type << 5 | additional]) + argument.to_bytes(size, "big")
+    raise ValueError(argument)
+
+
 def _ctap2_reference(value) -> bytes:
     """An independent CTAP2 encoder: fido2 encodes the items, this orders the keys."""
 
@@ -78,9 +89,9 @@ def _ctap2_reference(value) -> bytes:
             ((_ctap2_reference(key), _ctap2_reference(item)) for key, item in value.items()),
             key=lambda pair: (pair[0][0] >> 5, len(pair[0]), pair[0]),
         )
-        return cbor.dump_int(len(items), mt=5) + b"".join(key + item for key, item in items)
+        return _head(5, len(items)) + b"".join(key + item for key, item in items)
     if isinstance(value, list):
-        return cbor.dump_int(len(value), mt=4) + b"".join(_ctap2_reference(item) for item in value)
+        return _head(4, len(value)) + b"".join(_ctap2_reference(item) for item in value)
     return cbor.encode(value)
 
 
