@@ -174,8 +174,9 @@ describe('the MDS entry page', () => {
     expect(chips('Options')).toContain('rk: true');
   });
 
-  it('shows every status report, with its descriptor, URL and versions', () => {
+  it('shows every status report, with its descriptor, URL, every other field and its certificate', () => {
     renderEntry(L1());
+    expect(field(section('statusReports'), 'Last Status Change')).toHaveTextContent(/^2026-09-01$/);
     const table = within(section('statusReports')).getByRole('table');
     expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
       'Status',
@@ -192,8 +193,17 @@ describe('the MDS entry page', () => {
     expect(latest[3].querySelector('code')).toHaveTextContent('FIDO20020260901001');
     expect(within(latest[3]).getByRole('button', { name: 'Copy certificate number' })).toBeInTheDocument();
     expect(latest[4]).toHaveTextContent('Fixture Security Key • https://fixture.example/certificates/FIDO20020260901001');
-    expect(latest[4]).toHaveTextContent('Policy: 1.4.0 • Requirements: 1.3');
+    expect(latest[4]).toHaveTextContent(
+      'Policy: 1.4.0 • Requirements: 1.3 • Profiles: consumer, enterprise • Sunset Date: 2029-09-01 • ' +
+        'FIPS Revision: 3 • FIPS Physical Security Level: 2 • Fixture Future Field: A field no MDS3 version defines',
+    );
     expect(latest[4]).toHaveAttribute('data-label', 'Descriptor');
+    const certificate = latest[4].querySelector<HTMLElement>('[data-report-certificate]')!;
+    expect(certificate).toHaveTextContent(/^Certificate/);
+    expect(certificate.querySelector('code')?.textContent).toMatch(/^MII/);
+    expect(within(certificate).getByRole('button', { name: 'Copy status report certificate' })).toBeInTheDocument();
+    // The earlier reports have none.
+    expect(rows[1].querySelector('[data-report-certificate]')).toBeNull();
   });
 
   it('reads "—" for a missing identifier and leaves out what an entry does not have', () => {

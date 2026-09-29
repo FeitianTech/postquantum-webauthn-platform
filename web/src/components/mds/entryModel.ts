@@ -33,6 +33,8 @@ export type StatusReportRow = {
   certificateNumber: string;
   descriptor: string;
   details: string;
+  /** The report's certificate, base64 ('' without one). */
+  certificate: string;
 };
 
 /** One of the page's sections, in detail.js's order; what it holds depends on its kind. */

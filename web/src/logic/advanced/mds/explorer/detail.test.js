@@ -243,7 +243,7 @@ describe('the detail page: sections', () => {
     expect(section({ metadataStatement: { authenticatorGetInfo: { options: {} } } }, 'authenticatorGetInfo').chipLists).toEqual([]);
   });
 
-  it('gives each status report its cells and the descriptor column\'s two lines', () => {
+  it('gives each status report its cells, the descriptor column\'s two lines and its certificate', () => {
     expect(STATUS_REPORT_COLUMNS).toEqual(['Status', 'Effective Date', 'Authenticator Version', 'Certificate Number', 'Descriptor']);
     const reports = section(
       {
@@ -259,7 +259,6 @@ describe('the detail page: sections', () => {
             url: 'https://example.com/certificate',
             certificationPolicyVersion: '1.4.0',
             certificationRequirementsVersion: '1.3',
-            timeOfLastStatusChange: '2026-09-01T12:00:00Z',
           },
           { url: 'https://example.com/only-url' },
         ],
@@ -267,18 +266,17 @@ describe('the detail page: sections', () => {
       'statusReports',
     );
     expect(reports.columns).toBe(STATUS_REPORT_COLUMNS);
-    const changed = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(
-      new Date('2026-09-01T12:00:00Z'),
-    );
+    expect(reports.fields).toBeUndefined();
     expect(reports.statusReports).toEqual([
-      { status: '', effectiveDate: '—', authenticatorVersion: '—', certificateNumber: '—', descriptor: '', details: '' },
+      { status: '', effectiveDate: '—', authenticatorVersion: '—', certificateNumber: '—', descriptor: '', details: '', certificate: '' },
       {
         status: 'FIDO_CERTIFIED_L1',
         effectiveDate: '2026-09-01',
         authenticatorVersion: '0',
         certificateNumber: 'FIDO20020260901001',
         descriptor: 'Fixture Security Key • https://example.com/certificate',
-        details: `Policy: 1.4.0 • Requirements: 1.3 • Changed: ${changed}`,
+        details: 'Policy: 1.4.0 • Requirements: 1.3',
+        certificate: '',
       },
       {
         status: '—',
@@ -287,8 +285,50 @@ describe('the detail page: sections', () => {
         certificateNumber: '—',
         descriptor: 'https://example.com/only-url',
         details: '',
+        certificate: '',
       },
     ]);
     expect(section({ statusReports: [] }, 'statusReports')).toBeUndefined();
+  });
+
+  it('shows every other field a status report has, and the entry\'s last status change', () => {
+    const reports = section(
+      {
+        timeOfLastStatusChange: '2026-09-01',
+        statusReports: [
+          {
+            status: 'FIDO_CERTIFIED_L1',
+            effectiveDate: '2026-09-01',
+            certificate: 'MIIB',
+            notYetDefined: { kept: true },
+            fipsPhysicalSecurityLevel: 2,
+            sunsetDate: '2029-09-01',
+            certificationProfiles: ['consumer', 'enterprise'],
+            fipsRevision: 3,
+            certificationRequirementsVersion: '1.3',
+            certificationPolicyVersion: '1.4.0',
+            listOfThings: [{ a: 1 }, 'b'],
+            empty: '',
+            nothing: null,
+          },
+        ],
+      },
+      'statusReports',
+    );
+    expect(reports.fields).toEqual([{ label: 'Last Status Change', value: '2026-09-01' }]);
+    expect(reports.statusReports[0].certificate).toBe('MIIB');
+    expect(reports.statusReports[0].details).toBe(
+      [
+        'Policy: 1.4.0',
+        'Requirements: 1.3',
+        'Profiles: consumer, enterprise',
+        'Sunset Date: 2029-09-01',
+        'FIPS Revision: 3',
+        'FIPS Physical Security Level: 2',
+        'Not Yet Defined: {"kept":true}',
+        'List Of Things: {"a":1}, b',
+      ].join(' • '),
+    );
+    expect(section({ statusReports: [{ certificate: 7 }] }, 'statusReports').statusReports[0].certificate).toBe('');
   });
 });

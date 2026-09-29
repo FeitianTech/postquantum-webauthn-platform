@@ -32,6 +32,19 @@ const EXPECTED: ExpectedDifference[] = [
     token: /^(Self-attested|FRR|FAR|Max|templates|retries|Block|slowdown|Min|complexity|\d+(\.\d+)?)$/,
     reason: 'the biometric (baDesc) and pattern (paDesc) accuracy, which the current page left out (new in the new UI)',
   },
+  {
+    only: 'shown',
+    section: 'Status Reports',
+    token: /^(Last|Status|Change|\d{4}-\d{2}-\d{2})$/,
+    reason: "the entry's last status change (timeOfLastStatusChange), which the current page left out (new in the new UI)",
+  },
+  {
+    only: 'shown',
+    section: 'Status Reports',
+    token: /^(Profiles|consumer|enterprise|Sunset|Date|FIPS|Revision|Physical|Security|Level|[23]|Fixture|Future|Field|A|field|no|MDS3|version|defines|Certificate|MII[A-Za-z0-9+/=]{100,})$/,
+    reason:
+      "a status report's other fields (its profiles, sunset date and FIPS levels, and any a later MDS version adds) and its certificate, which the current page left out (new in the new UI)",
+  },
 ];
 
 async function upload(page: Page) {
@@ -68,6 +81,10 @@ test.describe('the MDS entry page reads as recorded', () => {
       expect(describeDifferences(differences.filter((difference) => !difference.reason))).toEqual([]);
       if (entry.name === 'Fixture Key With Every User Verification Method') {
         expect(differences.some((difference) => difference.reason)).toBe(true);
+      }
+      if (entry.name === 'Fixture Security Key L1') {
+        const statusReports = differences.filter((difference) => difference.section === 'Status Reports');
+        expect(statusReports.map((difference) => difference.token)).toEqual(expect.arrayContaining(['Sunset', 'Certificate', 'Future', 'Change']));
       }
     });
   }
