@@ -61,7 +61,7 @@ def _cases():
         "no-challenge": (build(), None, None),
         "state-uv-enum": (build(user_verified=False), {"challenge": b64u(CHALLENGE), "user_verification": __import__("fido2.webauthn", fromlist=["x"]).UserVerificationRequirement.REQUIRED}, None),
         "not-a-mapping": (["not", "a", "mapping"], state, None),
-        "unparsable": ({"id": "x", "type": "public-key", "response": {}}, state, None),
+        "unparsable": ({"id": "x", "rawId": "x", "type": "public-key", "response": {}}, state, None),
     }
     for name, attestation_object in material.captured_attestation_objects().items():
         response = {
