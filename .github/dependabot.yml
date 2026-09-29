@@ -28,14 +28,11 @@ updates:
       - dependency-name: "python"
         versions:
           - ">=3.13"
-      # fido2 is the vendored copy in this repo, not the PyPI package of the
-      # same name. Dependabot fails the whole uv run trying to resolve it
-      # ("fido2 | unknown_error"), and a bump would replace local source.
+      # fido2 is pinned exactly: the app reads its data classes and CTAP
+      # tables, and a major release has changed both (2.0). Minor and patch
+      # releases come as pull requests; a major waits for a deliberate move.
       - dependency-name: "fido2"
-      # The root pyproject.toml is fido2's Poetry manifest; its optional
-      # pyscard table fails every uv run ("Declaration not found for pyscard!").
-      # Until fido2 leaves the repository.
-      - dependency-name: "pyscard"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
