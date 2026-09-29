@@ -11,7 +11,6 @@ from cryptography import x509
 from cryptography.x509.oid import NameOID, ObjectIdentifier
 
 from fido2.attestation import InvalidSignature
-from fido2.attestation.base import TrustPathEvaluation
 from fido2.cose import CoseKey
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
@@ -297,10 +296,10 @@ def test_evaluate_classical_attestation_root_handles_missing_trust_path_and_meta
 def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures(monkeypatch, classical, attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
-    class _FailingVerifier:
-        def evaluate_attestation(self, _att_obj, _client_hash):
-            raise RuntimeError("verifier exploded")
+    def _exploding(_verifier, _att_obj, _client_hash):
+        raise RuntimeError("verifier exploded")
 
+    monkeypatch.setattr(classical.evaluation, "evaluate_attestation", _exploding)
     monkeypatch.setattr(
         classical,
         "verify_certificate_chain",
@@ -316,7 +315,7 @@ def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures
         SimpleNamespace(att_stmt={}),
         SimpleNamespace(trust_path=[b"broken-cert"]),
         b"client-hash",
-        verifier=_FailingVerifier(),
+        verifier=object(),
         now=datetime.now(timezone.utc),
     )
 
@@ -335,7 +334,7 @@ def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_erro
         not_valid_before_utc=now - timedelta(days=1),
         not_valid_after_utc=now + timedelta(days=1),
     )
-    trust_details = TrustPathEvaluation(
+    trust_details = classical.evaluation.TrustPathEvaluation(
         attestation_result=None,
         ca_certificate=b"root-ca",
         chain_valid=True,
@@ -352,12 +351,12 @@ def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_erro
     monkeypatch.setattr(trust, "_collect_metadata_root_certificates", lambda _entry: [b"meta-root"])
     monkeypatch.setattr(trust, "_is_trusted_ca_certificate", lambda _root: False)
 
-    verifier = SimpleNamespace(evaluate_attestation=lambda _obj, _hash: evaluation)
+    monkeypatch.setattr(classical.evaluation, "evaluate_attestation", lambda _verifier, _obj, _hash: evaluation)
     outcome = attestation_module._evaluate_classical_attestation_root(
         SimpleNamespace(att_stmt={}),
         SimpleNamespace(trust_path=[b"leaf"]),
         b"client-hash",
-        verifier=verifier,
+        verifier=object(),
         now=now,
     )
 
@@ -376,7 +375,7 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
         not_valid_before_utc=now - timedelta(days=10),
         not_valid_after_utc=now - timedelta(seconds=1),
     )
-    trust_details = TrustPathEvaluation(
+    trust_details = classical.evaluation.TrustPathEvaluation(
         attestation_result=None,
         ca_certificate=b"trusted-root",
         chain_valid=True,
@@ -395,12 +394,12 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
     monkeypatch.setattr(trust, "_is_trusted_ca_certificate", lambda _root: True)
     monkeypatch.setattr(metadata_module, "metadata_entry_trust_anchor_status", lambda _entry: False)
 
-    verifier = SimpleNamespace(evaluate_attestation=lambda _obj, _hash: evaluation)
+    monkeypatch.setattr(classical.evaluation, "evaluate_attestation", lambda _verifier, _obj, _hash: evaluation)
     outcome = attestation_module._evaluate_classical_attestation_root(
         SimpleNamespace(att_stmt={}),
         SimpleNamespace(trust_path=[b"expired-leaf"]),
         b"client-hash",
-        verifier=verifier,
+        verifier=object(),
         now=now,
     )
 

@@ -9,8 +9,8 @@ from fido2.attestation import (
     AttestationType,
     InvalidSignature,
 )
-from fido2.attestation.base import TrustPathEvaluation
 from fido2.webauthn import Aaguid, RegistrationResponse
+from server.app.webauthn.attestation import evaluation
 
 
 def _b64url(data: bytes) -> str:
@@ -183,12 +183,12 @@ def test_perform_attestation_checks_captures_verifier_evaluation_exception(monke
         def verify(self, *_args, **_kwargs):
             return AttestationResult(AttestationType.BASIC, [])
 
-    class _FailingVerifier:
-        def evaluate_attestation(self, *_args, **_kwargs):
-            raise RuntimeError("verifier exploded")
+    def _exploding(*_args, **_kwargs):
+        raise RuntimeError("verifier exploded")
 
     monkeypatch.setattr(Attestation, "for_type", lambda _fmt: _PassingAttestation)
-    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: _FailingVerifier())
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: object())
+    monkeypatch.setattr(evaluation, "evaluate_attestation", _exploding)
 
     result = _perform_checks(
         attestation_module,
@@ -232,7 +232,7 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
         def verify(self, *_args, **_kwargs):
             return AttestationResult(AttestationType.BASIC, [])
 
-    trust_path = TrustPathEvaluation(
+    trust_path = evaluation.TrustPathEvaluation(
         attestation_result=None,
         ca_certificate=b"trusted-ca",
         chain_valid=True,
@@ -257,22 +257,11 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
         },
     )()
 
-    evaluation = type(
-        "_Evaluation",
-        (),
-        {
-            "trust_path": trust_path,
-            "metadata_entry": metadata_entry,
-            "metadata_lookup_source": "aaguid",
-        },
-    )()
-
-    class _Verifier:
-        def evaluate_attestation(self, *_args, **_kwargs):
-            return evaluation
+    outcome = evaluation.MdsEvaluation(trust_path, metadata_entry, "aaguid")
 
     monkeypatch.setattr(Attestation, "for_type", lambda _fmt: _PassingAttestation)
-    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: _Verifier())
+    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: object())
+    monkeypatch.setattr(evaluation, "evaluate_attestation", lambda *_args, **_kwargs: outcome)
 
     # The trusted-CA allowlist is read from the current app.
     with pytest.importorskip("server.app.config").app.app_context():

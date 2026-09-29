@@ -6,10 +6,9 @@ from typing import Any
 from cryptography import x509
 
 from fido2.attestation import InvalidSignature
-from fido2.attestation.base import TrustPathEvaluation
 
 from .. import metadata
-from . import trust
+from . import evaluation, trust
 from .chain import verify_certificate_chain
 
 
@@ -64,7 +63,7 @@ def _evaluate_classical_attestation_root(
                 f"certificate_out_of_validity: {cert.subject.rfc4514_string()}"
             )
 
-    trust_details: TrustPathEvaluation | None = None
+    trust_details: evaluation.TrustPathEvaluation | None = None
 
     metadata_unavailable = False
     if verifier is None:
@@ -72,15 +71,15 @@ def _evaluate_classical_attestation_root(
         warnings.append("metadata_not_available")
     else:
         try:
-            evaluation = verifier.evaluate_attestation(
-                attestation_object, client_data_hash
+            outcome = evaluation.evaluate_attestation(
+                verifier, attestation_object, client_data_hash
             )
         except Exception as exc:  # pragma: no cover - defensive
             errors.append(f"untrusted_attestation: {exc}")
         else:
-            trust_details = evaluation.trust_path
-            metadata_entry = evaluation.metadata_entry
-            metadata_lookup_source = evaluation.metadata_lookup_source
+            trust_details = outcome.trust_path
+            metadata_entry = outcome.metadata_entry
+            metadata_lookup_source = outcome.metadata_lookup_source
             if trust_details.errors:
                 errors.extend(trust_details.errors)
 
