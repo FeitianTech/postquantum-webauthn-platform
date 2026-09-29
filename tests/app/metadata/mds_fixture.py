@@ -5,7 +5,7 @@ It is built the way the updater builds a real one (``snapshot_files`` in
 itself: every entry, name, key and certificate is made up here, nothing is copied
 from the FIDO Alliance's service. It holds what the explorer must show well: each
 protocol (FIDO2, U2F, UAF: the three kinds of entry id), each certification level,
-a revocation, the longest values (a CN list of about 970 characters, 11 user
+a revocation, a status report with every MDS3 field (and one unknown), the longest values (a CN list of about 970 characters, 11 user
 verification methods, a 135-character name), an entry without an icon, one without
 status reports, and enough short entries for the list to scroll.
 
@@ -175,6 +175,7 @@ def _status(
     *,
     url: str | None = None,
     version: int | None = None,
+    **fields: Any,
 ) -> dict[str, Any]:
     report: dict[str, Any] = {"status": status, "effectiveDate": date}
     if version is not None:
@@ -187,6 +188,7 @@ def _status(
         report["certificationRequirementsVersion"] = "1.3"
     if url:
         report["url"] = url
+    report.update(fields)
     return report
 
 
@@ -282,6 +284,14 @@ def _entries() -> list[dict[str, Any]]:
                     "FIDO20020260901001",
                     url="https://fixture.example/certificates/FIDO20020260901001",
                     version=2,
+                    # Every other field an MDS3 status report has, and one no
+                    # version defines yet: the entry page shows them all.
+                    certificate=_ec_root("certification", "Fixture Certification Certificate", 1004),
+                    certificationProfiles=["consumer", "enterprise"],
+                    sunsetDate="2029-09-01",
+                    fipsRevision=3,
+                    fipsPhysicalSecurityLevel=2,
+                    fixtureFutureField="A field no MDS3 version defines",
                 ),
             ],
             roots=[ec_root],

@@ -120,12 +120,21 @@
         },
         {
           "authenticatorVersion": 2,
+          "certificate": "MIIB6jCCAZCgAwIBAgICA+wwCgYIKoZIzj0EAwIwfTELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEqMCgGA1UEAwwhRml4dHVyZSBDZXJ0aWZpY2F0aW9uIENlcnRpZmljYXRlMCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB9MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMSowKAYDVQQDDCFGaXh0dXJlIENlcnRpZmljYXRpb24gQ2VydGlmaWNhdGUwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAATbu4R6sTrGNLTAiF99wAxirSmUT6h6fNSVgnSGyQ86t+2tUjGEbUiAbyywqKZmKqUo/r8kmtJByLzU6CSJTwOBMAoGCCqGSM49BAMCA0gAMEUCIQCqDcOvOto2lIg9sOIyhFNpInZiqvYyCN093/UQcFCuDAIgf8AI+VI52+JegIGZHoen+5lNs0dKSdAfUxknwgh2rlo=",
           "certificateNumber": "FIDO20020260901001",
           "certificationDescriptor": "Fixture Security Key",
           "certificationPolicyVersion": "1.4.0",
+          "certificationProfiles": [
+            "consumer",
+            "enterprise"
+          ],
           "certificationRequirementsVersion": "1.3",
           "effectiveDate": "2026-09-01",
+          "fipsPhysicalSecurityLevel": 2,
+          "fipsRevision": 3,
+          "fixtureFutureField": "A field no MDS3 version defines",
           "status": "FIDO_CERTIFIED_L1",
+          "sunsetDate": "2029-09-01",
           "url": "https://fixture.example/certificates/FIDO20020260901001"
         }
       ],
