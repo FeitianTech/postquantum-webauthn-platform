@@ -1,6 +1,7 @@
 """The MDS snapshot's file names and directory, in one Flask-free leaf."""
 from __future__ import annotations
 
+import gzip
 import json
 import os
 from pathlib import Path
@@ -68,3 +69,29 @@ def test_the_test_run_never_reads_the_checkout_snapshot():
     assert mds_snapshot_dir.snapshot_dir() != mds_snapshot_dir.DEFAULT_SNAPSHOT_DIR
     assert not any(mds_snapshot_dir.snapshot_file(name).exists() for name in mds_snapshot_dir.SNAPSHOT_FILENAMES)
     assert os.environ["FIDO_SERVER_MDS_FETCH_UPSTREAM"] == "0"
+
+
+def test_a_browser_file_gets_a_smaller_gzip_sibling(tmp_path):
+    path = tmp_path / "fido-mds3.explorer.full.json"
+    data = b'{"entries": []}' + b" " * 4096
+
+    mds_snapshot_dir.write_gzip_sibling(path, data)
+
+    assert gzip.decompress((tmp_path / "fido-mds3.explorer.full.json.gz").read_bytes()) == data
+    assert [child.name for child in tmp_path.iterdir()] == ["fido-mds3.explorer.full.json.gz"]
+
+
+def test_a_small_or_incompressible_file_leaves_no_sibling_behind(tmp_path):
+    path = tmp_path / "fido-mds3.explorer.full.json"
+    sibling = tmp_path / "fido-mds3.explorer.full.json.gz"
+
+    sibling.write_bytes(gzip.compress(b"an earlier snapshot"))
+    mds_snapshot_dir.write_gzip_sibling(path, b"{}")
+    assert not sibling.exists()
+
+    sibling.write_bytes(gzip.compress(b"an earlier snapshot"))
+    mds_snapshot_dir.write_gzip_sibling(path, os.urandom(4096))
+    assert not sibling.exists()
+
+    mds_snapshot_dir.write_gzip_sibling(path, b"{}")
+    assert not sibling.exists()

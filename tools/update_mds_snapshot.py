@@ -349,6 +349,9 @@ def main(argv: list[str] | None = None) -> int:
     changed = False
     for name, data in files.items():
         changed |= _write_if_changed(_path(name), data)
+        if name in mds_snapshot_dir.BROWSER_FILENAMES:
+            # Rewritten every run, so a sibling from an earlier file never outlives it.
+            mds_snapshot_dir.write_gzip_sibling(_path(name), data)
 
     if changed:
         print("Packaged metadata snapshot refreshed.")

@@ -7,6 +7,8 @@ import sys
 
 import pytest
 
+from server.app import mds_snapshot_dir
+
 provisioning = pytest.importorskip("server.app.mds_provisioning")
 
 
@@ -156,7 +158,7 @@ def test_the_blob_prefix_is_configurable(monkeypatch, app_config):
 
 
 def test_an_incompressible_payload_gets_no_gzip_sibling(static_root, monkeypatch):
-    monkeypatch.setattr(provisioning.gzip, "compress", lambda data, **kwargs: data + b"pad")
+    monkeypatch.setattr(mds_snapshot_dir.gzip, "compress", lambda data, **kwargs: data + b"pad")
 
     provisioning.write_snapshot_file("fido-mds3.explorer.full.json", b"z" * 4096)
 

@@ -28,7 +28,6 @@ is available, exactly as they already did for a missing snapshot.
 from __future__ import annotations
 
 import functools
-import gzip
 import logging
 import os
 import threading
@@ -55,11 +54,6 @@ __all__ = [
 # check in metadata/blob.py compare mismatched snapshots.
 SNAPSHOT_FILENAMES = mds_snapshot_dir.SNAPSHOT_FILENAMES
 
-# Browsers fetch the full explorer snapshot as a versioned static asset, so it
-# needs the precompressed sibling that tools/build_static_assets.py would have
-# written at image build time had the file been present then.
-PRECOMPRESSED_FILENAMES = mds_snapshot_dir.BROWSER_FILENAMES
-_MIN_COMPRESS_BYTES = 1024
 
 _DEFAULT_BLOB_PREFIX = "mds"
 _BLOB_PREFIX_ENV = "FIDO_SERVER_MDS_GCS_PREFIX"
@@ -105,12 +99,8 @@ def write_snapshot_file(filename: str, data: bytes) -> Path:
     temporary.write_bytes(data)
     temporary.replace(path)
 
-    if filename in PRECOMPRESSED_FILENAMES and len(data) >= _MIN_COMPRESS_BYTES:
-        compressed = gzip.compress(data, compresslevel=9, mtime=0)
-        if len(compressed) < len(data):
-            gzip_temporary = path.with_name(f"{path.name}.gz.partial")
-            gzip_temporary.write_bytes(compressed)
-            gzip_temporary.replace(path.with_name(f"{path.name}.gz"))
+    if filename in mds_snapshot_dir.BROWSER_FILENAMES:
+        mds_snapshot_dir.write_gzip_sibling(path, data)
 
     return path
 

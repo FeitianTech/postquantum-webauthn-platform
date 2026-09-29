@@ -6,6 +6,7 @@ it without building the Flask app. docs/MDS_SNAPSHOT.md has the whole picture.
 """
 from __future__ import annotations
 
+import gzip
 import os
 from pathlib import Path
 
@@ -36,6 +37,8 @@ SNAPSHOT_FILENAMES = (
 
 # Browsers fetch this one as a versioned static asset, with its .gz sibling.
 BROWSER_FILENAMES = frozenset({EXPLORER_FULL})
+# Smaller than this, a browser file gets no .gz sibling.
+MIN_GZIP_BYTES = 1024
 
 # Large source files the server reads and browsers never request.
 PRIVATE_FILENAMES = frozenset({BLOB, VERIFIED, EXPLORER})
@@ -56,3 +59,21 @@ def snapshot_dir() -> Path:
 
 def snapshot_file(name: str) -> Path:
     return snapshot_dir() / name
+
+
+def write_gzip_sibling(path: Path, data: bytes) -> None:
+    """Write the ``.gz`` sibling browsers are sent for ``path``, which holds ``data``.
+
+    Kept only when it is smaller than the file, and written through a temporary
+    file; otherwise a sibling left from an earlier file is removed, so gzip clients
+    are never sent an older snapshot than the file.
+    """
+
+    sibling = path.with_name(f"{path.name}.gz")
+    compressed = gzip.compress(data, compresslevel=9, mtime=0) if len(data) >= MIN_GZIP_BYTES else data
+    if len(compressed) >= len(data):
+        sibling.unlink(missing_ok=True)
+        return
+    temporary = path.with_name(f"{path.name}.gz.partial")
+    temporary.write_bytes(compressed)
+    temporary.replace(sibling)

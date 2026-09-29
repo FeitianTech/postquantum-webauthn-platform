@@ -94,9 +94,11 @@ Cloud Storage setting: **on** in a deployed service, which can repopulate its
 own bucket, and **off** locally, so a first request never silently blocks on a
 10 MB download.
 
-The browser-facing `fido-mds3.explorer.full.json` is written with its
-precompressed `.gz` sibling, which is what `tools/build_static_assets.py` would
-have produced had the file been present at image build time.
+Whatever writes the browser-facing `fido-mds3.explorer.full.json` (the Cloud Storage
+tier and the updater) writes its precompressed `.gz` sibling beside it, or removes a
+sibling left from an earlier file when the new one does not compress smaller
+(`mds_snapshot_dir.write_gzip_sibling`), so a gzip client is never sent an older
+snapshot.
 
 ### When no tier succeeds
 

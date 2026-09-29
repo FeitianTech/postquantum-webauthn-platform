@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import builtins
+import gzip
 import importlib.util
 import json
 import os
@@ -395,6 +396,38 @@ def test_main_reports_refresh_then_up_to_date(monkeypatch, isolated_mds_paths, c
     second_output = capsys.readouterr().out
     assert second == 0
     assert "already up to date" in second_output
+
+
+def test_main_replaces_the_explorer_snapshot_gzip_sibling(monkeypatch, isolated_mds_paths, capsys):
+    entries = [{"name": f"authenticator {index}"} for index in range(200)]
+    monkeypatch.setattr(
+        updater,
+        "_fetch_remote_blob",
+        lambda: (b"a-blob", "Wed, 03 Apr 2026 00:00:00 GMT", '"etag"'),
+    )
+    monkeypatch.setattr(
+        updater,
+        "_build_verified_snapshot",
+        lambda _blob: {"entries": [{"aaguid": "x"}], "no": 42, "nextUpdate": "2026-12-01"},
+    )
+    monkeypatch.setattr(
+        updater,
+        "build_explorer_snapshot",
+        lambda _verified, _cache: {"entries": [], "meta": {"kind": "explorer"}},
+    )
+    monkeypatch.setattr(
+        updater,
+        "build_bootstrap_snapshot",
+        lambda _verified, _cache: {"entries": entries, "meta": {"kind": "full"}},
+    )
+    sibling = _file(mds_snapshot_dir.EXPLORER_FULL + ".gz")
+    sibling.parent.mkdir(parents=True, exist_ok=True)
+    sibling.write_bytes(gzip.compress(b"an earlier snapshot"))
+
+    assert updater.main() == 0
+
+    assert gzip.decompress(sibling.read_bytes()) == _file(mds_snapshot_dir.EXPLORER_FULL).read_bytes()
+    assert not _file(mds_snapshot_dir.BLOB + ".gz").exists()
 
 
 @pytest.fixture
