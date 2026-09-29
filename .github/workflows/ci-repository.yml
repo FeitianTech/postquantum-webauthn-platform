@@ -32,3 +32,23 @@ jobs:
         uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
         with:
           args: -color
+
+  # Every commit a push to main adds has a one-line message of at most 72
+  # characters with no trailers (AGENTS.md, "Commits"; tools/commit_messages.py).
+  commit-messages:
+    name: Commit messages
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The whole history, so the push's range can be listed.
+          fetch-depth: 0
+
+      - name: Check the pushed commits' messages
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: python3 tools/commit_messages.py "$BEFORE" "$AFTER"
