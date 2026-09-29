@@ -68,7 +68,8 @@ def test_session_cookie_scheduler_branches_and_after_request_cookie(metadata_mod
         set_cookie = response.headers["Set-Cookie"]
         assert set_cookie.startswith(f"{metadata_module._SESSION_METADATA_COOKIE_NAME}=")
         assert "Secure" in set_cookie
-        assert "SameSite=None" in set_cookie
+        assert "SameSite=Lax" in set_cookie
+        assert "SameSite=None" not in set_cookie
 
         # The namespace name is signed with the application secret rather than
         # emitted verbatim, so a caller cannot rewrite it to somebody else's.

@@ -233,7 +233,10 @@ def _schedule_session_cookie(identifier: str) -> None:
 
     secure = bool(request.is_secure)
     cookie_path = "/"
-    samesite = "None" if secure else "Lax"
+    # Lax, like the session cookie: the metadata upload is a multipart form,
+    # which another site could post in the visitor's namespace were the cookie
+    # sent cross-site.
+    samesite = "Lax"
 
     if getattr(g, "_session_metadata_cookie", None) == normalised:
         return

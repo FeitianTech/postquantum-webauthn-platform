@@ -214,3 +214,22 @@ def test_fresh_visitor_gets_an_unguessable_namespace(session_env):
 
     assert first != second
     assert len(first) >= 32
+
+
+def test_issued_cookie_is_same_site_lax_over_https(session_env):
+    # The metadata upload is a multipart form another site can post. Neither the
+    # session cookie nor the recovery cookie may ride along on that request, or
+    # the upload lands in the visitor's namespace.
+    app, _metadata = session_env
+
+    client = app.test_client()
+    response = client.get("/api/mds/metadata/custom", base_url="https://localhost")
+    assert response.status_code == 200
+
+    cookie = next(
+        value
+        for value in response.headers.getlist("Set-Cookie")
+        if value.startswith("fido.mds.session=")
+    )
+    assert "Secure" in cookie
+    assert "SameSite=Lax" in cookie
