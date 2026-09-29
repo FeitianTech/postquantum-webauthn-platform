@@ -333,11 +333,29 @@ def _copies(text: str, names: set[str], sentences: set[str]) -> list[str]:
     found = []
     if names:
         definition = re.compile(r"\b(?:function|const|let|var|class)\s+(" + "|".join(sorted(names)) + r")\b")
-        found += sorted({match.group(1) for match in definition.finditer(_mask(text))})
+        code = _mask(text)
+        # Only a module-level definition is a copy: a local that happens to share an
+        # export's name (``const state`` inside a function) is not.
+        found += sorted(
+            {
+                match.group(1)
+                for match in definition.finditer(code)
+                if code.count("{", 0, match.start()) == code.count("}", 0, match.start())
+            }
+        )
     # A sentence counts in the code's strings and JSX text, not in a comment.
     code = _without_comments(text)
     found += sorted(sentence for sentence in sentences if sentence in code)
     return found
+
+
+def test_only_a_module_level_definition_is_a_copy():
+    names = {"state", "formatKey"}
+
+    assert _copies("const state = {};\nexport function formatKey(key) {}\n", names, set()) == ["formatKey", "state"]
+    assert _copies("function view() {\n  const state = useState();\n}\n", names, set()) == []
+    assert _copies("const View = () => {\n  let formatKey = (k) => k;\n  return <p>{formatKey('a')}</p>;\n};\n", names, set()) == []
+    assert _copies("const note = '{';\nconst state = 1;\n", names, set()) == ["state"]
 
 
 def test_the_logic_modules_touch_no_dom():
