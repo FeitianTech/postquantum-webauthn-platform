@@ -18,16 +18,10 @@ All seven live in one directory: `instance/mds-snapshot/`, unless
 
 ## Why they are not in git
 
-They were rewritten daily by a bot that pushed straight to `main`. That added
-about 30 MB of new blobs to history every day (`.git` reached 198 MB over ~79
-such commits), invalidated the image layer that `COPY frontend` produces, and
-changed `BUILD_ID` — which is a content hash over every static file — so each
-refresh also expired every cached asset URL for every client.
-
-Removing them from `HEAD` stops the growth. It does not shrink the existing
-history: the old blobs stay reachable from the ~79 commits that introduced them.
-Reclaiming that space needs a history rewrite, which is a separate, deliberate
-decision because it changes every commit id.
+The files change whenever the FIDO Alliance publishes a new BLOB. Tracked, each
+refresh would add about 30 MB to the repository's history and invalidate an image
+layer; so they are provisioned at runtime instead (below), and each snapshot is
+served under a URL of its own.
 
 ## Where the files are
 

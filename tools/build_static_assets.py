@@ -1,51 +1,36 @@
 #!/usr/bin/env python3
-"""Prepare frontend static assets for long-lived caching.
+"""Precompress the UI's export for serving.
 
-Writes ``frontend/BUILD_ID`` (a content hash used in versioned asset URLs) and a
-precompressed ``.gz`` copy of each compressible file, so the server neither
-gzips assets per request nor serves a stale file under a new URL.
-Run at image build time; outputs are not committed.
+Writes a ``.gz`` copy of each compressible file under DIR (``web/out``) when the
+copy is smaller, so the server sends it to gzip clients instead of compressing per
+request (``server/app/static_assets.py``, ``send_precompressed``). The export's
+file names carry their own content hashes. Run at image build time; the copies
+are not committed.
 
-``--precompress-only DIR`` writes the ``.gz`` copies and nothing else: the new
-UI's export (``web/out``) carries content hashes in its own file names.
+usage: build_static_assets.py DIR
 """
 
 from __future__ import annotations
 
 import gzip
-import hashlib
 import sys
 from collections.abc import Iterator
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_STATIC_ROOT = REPO_ROOT / "frontend" / "static"
-
 COMPRESSIBLE_SUFFIXES = frozenset({".css", ".html", ".js", ".json", ".map", ".svg", ".txt"})
 MIN_COMPRESS_BYTES = 1024
-# Read by the server from disk only; never requested by browsers.
-SKIPPED_FILES = frozenset({"blob.jwt", "fido-mds3.verified.json", "fido-mds3.explorer.json"})
 
 
-def iter_static_files(static_root: Path) -> Iterator[Path]:
-    for path in sorted(static_root.rglob("*")):
+def iter_static_files(root: Path) -> Iterator[Path]:
+    for path in sorted(root.rglob("*")):
         if path.is_file() and path.suffix != ".gz":
             yield path
 
 
-def compute_build_id(static_root: Path) -> str:
-    digest = hashlib.sha256()
-    for path in iter_static_files(static_root):
-        digest.update(path.relative_to(static_root).as_posix().encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(hashlib.sha256(path.read_bytes()).digest())
-    return digest.hexdigest()[:12]
-
-
-def precompress(static_root: Path) -> int:
+def precompress(root: Path) -> int:
     written = 0
-    for path in iter_static_files(static_root):
-        if path.suffix not in COMPRESSIBLE_SUFFIXES or path.name in SKIPPED_FILES:
+    for path in iter_static_files(root):
+        if path.suffix not in COMPRESSIBLE_SUFFIXES:
             continue
         data = path.read_bytes()
         if len(data) < MIN_COMPRESS_BYTES:
@@ -59,16 +44,12 @@ def precompress(static_root: Path) -> int:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) > 2 and argv[1] == "--precompress-only":
-        root = Path(argv[2]).resolve()
-        written = precompress(root)
-        print(f"Precompressed {written} files under {root}.")
-        return 0
-    static_root = Path(argv[1]).resolve() if len(argv) > 1 else DEFAULT_STATIC_ROOT
-    build_id = compute_build_id(static_root)
-    written = precompress(static_root)
-    (static_root.parent / "BUILD_ID").write_text(f"{build_id}\n", encoding="utf-8")
-    print(f"Static assets ready: build id {build_id}, {written} gzip files written.")
+    if len(argv) != 2:
+        print("usage: build_static_assets.py DIR", file=sys.stderr)
+        return 2
+    root = Path(argv[1]).resolve()
+    written = precompress(root)
+    print(f"Precompressed {written} files under {root}.")
     return 0
 
 

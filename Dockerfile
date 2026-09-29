@@ -78,9 +78,6 @@ COPY --from=builder /install /usr/local
 # every module has one import path. Only server/app, not server/: server/runtime
 # holds local credential artifacts and .dockerignore does not exclude it.
 COPY server/app /app/server/app
-# What is left of frontend/ (the logic web/ imports) until Phase 30B: the static
-# asset build gives it the build id the MDS snapshot's URL carries.
-COPY frontend /app/frontend
 COPY --from=web /src/web/out /app/web/out
 COPY gunicorn.conf.py /app/gunicorn.conf.py
 COPY tools/build_static_assets.py /tmp/build_static_assets.py
@@ -91,12 +88,11 @@ COPY tools/__init__.py tools/update_mds_snapshot.py /app/tools/
 
 # Precompile the server's bytecode at build time; PYTHONDONTWRITEBYTECODE only
 # stops writes at runtime, so every cold start would otherwise recompile it.
-# Static assets get a content-hash build id and precompressed .gz variants; the
-# web export, whose file names carry their own hashes, gets the .gz variants.
+# The web export, whose file names carry their own hashes, gets precompressed
+# .gz variants.
 RUN rm -rf /usr/local/lib/python3.12/ensurepip \
     && python -m compileall -q -j 0 /app/server \
-    && python /tmp/build_static_assets.py /app/frontend/static \
-    && python /tmp/build_static_assets.py --precompress-only /app/web/out \
+    && python /tmp/build_static_assets.py /app/web/out \
     && rm /tmp/build_static_assets.py
 
 WORKDIR /app

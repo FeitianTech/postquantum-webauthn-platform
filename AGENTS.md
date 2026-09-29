@@ -865,7 +865,7 @@ it configures that app and no other. Do not `importlib.reload` config modules.
   the Cloud Build gate at the cutover (docs/UI_MIGRATION.md).
 - The `Dockerfile`'s first stage (`node:22-slim`) builds `web/` and scans the export;
   only `web/out` reaches the runtime image, at `/app/web/out`, precompressed by
-  `tools/build_static_assets.py --precompress-only`. No Node runs in production.
+  `tools/build_static_assets.py`. No Node runs in production.
 - `ci-security.yml` fails the build on a `pip-audit` finding against `uv.lock`,
   on `npm audit --audit-level=moderate` at the root and in `web/`, and on a fixable
   HIGH/CRITICAL Trivy finding in the image. Each threshold is justified in a comment next to it. If

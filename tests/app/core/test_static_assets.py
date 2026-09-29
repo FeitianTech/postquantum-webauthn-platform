@@ -151,40 +151,32 @@ def _load_build_tool():
     return module
 
 
-def test_build_tool_writes_build_id_and_gzip_variants(tmp_path):
-    tool = _load_build_tool()
-    static_root = tmp_path / "frontend" / "static"
-    static_root.mkdir(parents=True)
-    (static_root / "app.js").write_text("console.log('x');\n" * 200, encoding="utf-8")
-    (static_root / "tiny.css").write_text("a{}", encoding="utf-8")
-    (static_root / "blob.jwt").write_text("x" * 5000, encoding="utf-8")
-
-    first_id = tool.compute_build_id(static_root)
-    assert tool.main(["build_static_assets.py", str(static_root)]) == 0
-
-    assert (tmp_path / "frontend" / "BUILD_ID").read_text(encoding="utf-8").strip() == first_id
-    assert (static_root / "app.js.gz").exists()
-    assert not (static_root / "tiny.css.gz").exists()
-    assert not (static_root / "blob.jwt.gz").exists()
-    # Generated .gz files do not change the build id.
-    assert tool.compute_build_id(static_root) == first_id
-
-    (static_root / "app.js").write_text("console.log('changed');\n", encoding="utf-8")
-    assert tool.compute_build_id(static_root) != first_id
-
-
-def test_build_tool_precompresses_the_web_export_without_a_build_id(tmp_path, capsys):
+def test_build_tool_precompresses_the_web_export(tmp_path, capsys):
     tool = _load_build_tool()
     export = tmp_path / "web" / "out"
     (export / "_next" / "static" / "chunks").mkdir(parents=True)
     (export / "_next" / "static" / "chunks" / "main-abc.js").write_text("console.log('x');\n" * 200, encoding="utf-8")
     (export / "index.html").write_text("<p>page</p>" * 200, encoding="utf-8")
+    (export / "tiny.css").write_text("a{}", encoding="utf-8")
+    (export / "noise.json").write_bytes(os.urandom(4096))
     (export / "font.woff2").write_bytes(b"wOF2" * 500)
 
-    assert tool.main(["build_static_assets.py", "--precompress-only", str(export)]) == 0
+    assert tool.main(["build_static_assets.py", str(export)]) == 0
 
+    assert gzip.decompress((export / "index.html.gz").read_bytes()) == (export / "index.html").read_bytes()
     assert (export / "_next" / "static" / "chunks" / "main-abc.js.gz").exists()
-    assert (export / "index.html.gz").exists()
+    assert not (export / "tiny.css.gz").exists()
+    assert not (export / "noise.json.gz").exists()
     assert not (export / "font.woff2.gz").exists()
-    assert not (tmp_path / "web" / "BUILD_ID").exists()
     assert "Precompressed 2 files under" in capsys.readouterr().out
+
+    # A second run reads the .gz copies as nothing new.
+    assert tool.main(["build_static_assets.py", str(export)]) == 0
+    assert not (export / "index.html.gz.gz").exists()
+
+
+def test_build_tool_names_its_one_argument(capsys):
+    tool = _load_build_tool()
+
+    assert tool.main(["build_static_assets.py"]) == 2
+    assert "usage: build_static_assets.py DIR" in capsys.readouterr().err
