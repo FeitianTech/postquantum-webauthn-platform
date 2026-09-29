@@ -259,9 +259,7 @@ at zero; `F821` has nothing ignored and there is no per-file ignore. Do not run 
 
 Declared in `server/pyproject.toml`, locked in `uv.lock`; the image, CI and local venvs install
 from the lock (`uv sync --locked`). To change one: edit `server/pyproject.toml`, `uv lock`,
-commit both. The root `pyproject.toml` is the vendored `fido2/` library's manifest; its build
-backend is pinned exactly (`test_build_backend_pin.py`), and
-`.github/workflows/update-build-backend.yml` tests and proposes new releases weekly.
+commit both. The root `pyproject.toml` is the vendored `fido2/` library's manifest.
 
 ## CI, deploys and bots
 
@@ -279,9 +277,9 @@ backend is pinned exactly (`test_build_backend_pin.py`), and
   (warns while a scheduled workflow's latest run on `main` has failed: add any new scheduled
   workflow to its list).
 - Every action is pinned to a commit SHA (or an image digest) with its version in a trailing
-  comment. No workflow pushes to `main`: `update-footer-year.yml` and
-  `update-build-backend.yml` open pull requests through `.github/actions/open-bot-pr` (merge
-  them by rebase or cherry-pick, so each commit keeps a one-line message);
+  comment. No workflow pushes to `main`: `update-footer-year.yml` opens pull requests through
+  `.github/actions/open-bot-pr` (merge them by rebase or cherry-pick, so each commit keeps a
+  one-line message);
   `update-fido-mds.yml` only verifies the upstream BLOB.
 - Coverage is a gate: `.coveragerc`'s floor and `web/vitest.config.mts`'s (every logic file at
   100 %). `fido2/hid/macos.py` is omitted on purpose (its tests skip off Darwin).

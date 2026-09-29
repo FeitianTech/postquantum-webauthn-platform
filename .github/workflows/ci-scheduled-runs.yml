@@ -42,7 +42,6 @@ jobs:
           checks=(
             "update-fido-mds.yml schedule,workflow_dispatch"
             "update-footer-year.yml schedule,workflow_dispatch"
-            "update-build-backend.yml schedule,workflow_dispatch"
             "ci-security.yml schedule,workflow_dispatch,push"
           )
 
