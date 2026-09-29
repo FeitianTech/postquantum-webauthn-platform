@@ -183,8 +183,9 @@ their exports or sentences. A new surface splits its logic out here first.
   with `logging.getLogger(__name__)`. On Cloud Run (`K_SERVICE`) the app refuses to start
   without `FIDO_SERVER_SECRET_KEY` or `FIDO_SERVER_SECRET_KEY_FILE`; only local development
   generates `instance/session-secret.key`, and tests never do.
-- `mds_trust.py` (the MDS trust anchor) and `mds_snapshot_dir.py` (the snapshot's file names,
-  its directory, the `.gz` sibling writer) are Flask-free leaves the updater imports.
+- `mds_trust.py` (the MDS trust anchor), `mds_snapshot_dir.py` (the snapshot's file names,
+  its directory, the whole-file and `.gz` sibling writers) and `mds_snapshot_sets.py` (the
+  snapshot in Cloud Storage) are Flask-free leaves the updater imports.
 - Routes: `routes/simple/` and `routes/advanced/` (begin/complete; the bodies are short
   orchestrators over modules named for their stage; the try blocks and the order of session
   reads are behaviour); `routes/general.py` (MDS bootstrap and info, decoder endpoints, misc;
@@ -298,7 +299,11 @@ backend is pinned exactly (`test_build_backend_pin.py`), and
   `/app/instance/mds-snapshot`); `FIDO_SERVER_MDS_SNAPSHOT_DIR` puts it elsewhere. Not tracked in
   git and not baked into the image: `server/app/mds_provisioning.py` provides it at runtime
   (local files, then Cloud Storage, then a verified upstream refresh). Whatever writes the
-  explorer file writes its `.gz` sibling too.
+  snapshot writes each file whole, metas last, and the explorer file's `.gz` sibling too.
+- Cloud Storage holds immutable sets and `mds/current.json`, the pointer to one
+  (`server/app/mds_snapshot_sets.py`: create-only sets, a generation-checked pointer that only
+  moves forward); `tools/update_mds_snapshot.py --publish` publishes a verified snapshot, and a
+  running instance takes a newer set from `/api/mds/metadata/info` (`follow_newer_snapshot`).
 - Locally, run `python tools/update_mds_snapshot.py` once. Without a snapshot the explorer APIs
   answer 200 with no entry and the explorer is empty: the documented fallback, not a bug.
 - Never commit those files, and never write a test that reads the real snapshot directory.
