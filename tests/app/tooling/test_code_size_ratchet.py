@@ -29,8 +29,6 @@ LONG_FUNCTIONS: dict[str, int] = {
     "server/app/routes/advanced/parsing.py::_parse_client_supplied_credentials": 100,
     "server/app/routes/advanced/tracing.py::_log_authenticator_attestation_response": 94,
     "server/app/routes/simple/authentication.py::authenticate_complete": 126,
-    "server/app/routes/simple/credential_list.py::build_credential_info_from_dict_credential_data": 114,
-    "server/app/routes/simple/credential_list.py::build_credential_info_from_object_credential_data": 85,
     "server/app/webauthn/attestation/classical.py::_evaluate_classical_attestation_root": 122,
     "server/app/webauthn/attestation/pqc.py::_attempt_pqc_attestation_signature_validation": 89,
     "server/app/webauthn/attestation/pqc.py::_evaluate_mldsa_attestation_root": 120,

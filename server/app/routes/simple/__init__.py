@@ -15,7 +15,6 @@ from .. import binary_helpers
 from . import (
     authentication,
     binary,
-    credential_list,
     parsing,
     registration,
 )
@@ -33,7 +32,6 @@ __all__ = [
     "register_complete",
     "authenticate_begin",
     "authenticate_complete",
-    "list_credentials",
 ]
 
 # The COSE algorithms the simple flow offers, filtered by what fido2 supports.
@@ -74,8 +72,3 @@ def authenticate_begin():
 @bp.route("/api/authenticate/complete", methods=["POST"])
 def authenticate_complete():
     return authentication.authenticate_complete()
-
-
-@bp.route("/api/credentials", methods=["GET", "DELETE"])
-def list_credentials():
-    return credential_list.list_credentials()

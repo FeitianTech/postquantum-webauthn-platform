@@ -313,17 +313,3 @@ def test_the_stored_counter_is_the_last_authentications(config_module, credentia
     # Not 5, the counter the authenticator reported at registration.
     assert credential_store(authenticator.credential_id) == 9
 
-
-def test_a_dict_backed_record_lists_its_stored_counter(simple_module):
-    from server.app.routes.simple import credential_list
-
-    record = {
-        "credential_data": {"credential_id": b"id", "public_key": {3: -7}},
-        "auth_data": {"counter": 1, "flags": {}},
-        "user_info": {},
-        "sign_count": 7,
-    }
-
-    assert credential_list.build_credential_info_from_dict_credential_data(EMAIL, record)["signCount"] == 7
-    record.pop("sign_count")
-    assert credential_list.build_credential_info_from_dict_credential_data(EMAIL, record)["signCount"] == 1

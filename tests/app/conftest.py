@@ -229,13 +229,6 @@ def simple_parsing():
 
 
 @pytest.fixture
-def simple_credential_list():
-    """The submodule that serves the credential list route and its builders."""
-
-    return _simple_fragment("credential_list")
-
-
-@pytest.fixture
 def simple_registration():
     """The submodule that serves the simple register begin and complete bodies."""
 
