@@ -93,15 +93,7 @@ def write_snapshot_file(filename: str, data: bytes) -> Path:
     """Write one snapshot file, plus its .gz sibling where browsers need one."""
 
     path = snapshot_path(filename)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    # Written via a temporary file so a reader never observes a partial snapshot.
-    temporary = path.with_name(f"{path.name}.partial")
-    temporary.write_bytes(data)
-    temporary.replace(path)
-
-    if filename in mds_snapshot_dir.BROWSER_FILENAMES:
-        mds_snapshot_dir.write_gzip_sibling(path, data)
-
+    mds_snapshot_dir.write_file(path, data)
     return path
 
 
@@ -145,7 +137,8 @@ def _refresh_from_upstream() -> bool:
         return False
 
     try:
-        return update_mds_snapshot.main() == 0
+        # Its own arguments, not the server's (gunicorn's argv).
+        return update_mds_snapshot.main([]) == 0
     except Exception as exc:  # pragma: no cover - network/parse failure
         logger.warning("Refreshing the MDS snapshot from upstream failed: %s", exc)
         return False

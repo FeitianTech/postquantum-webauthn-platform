@@ -501,6 +501,25 @@ def stubbed_refresh(monkeypatch, isolated_mds_paths):
     return isolated_mds_paths
 
 
+def test_a_refresh_writes_each_file_whole_and_the_metas_last(stubbed_refresh, monkeypatch):
+    written = []
+    write_file = mds_snapshot_dir.write_file
+
+    def _record(path, data):
+        written.append(path.name)
+        # Never the file itself: a temporary file, renamed over it.
+        assert not path.with_name(path.name + ".partial").exists()
+        write_file(path, data)
+
+    monkeypatch.setattr(mds_snapshot_dir, "write_file", _record)
+
+    assert updater.main([]) == 0
+    assert written == list(mds_snapshot_dir.WRITE_ORDER)
+    assert written[-3:] == list(mds_snapshot_dir.META_FILENAMES)
+    assert sorted(written) == sorted(mds_snapshot_dir.SNAPSHOT_FILENAMES)
+    assert not list(stubbed_refresh.glob("*.partial"))
+
+
 def test_verify_only_checks_the_blob_without_writing_files(stubbed_refresh, capsys):
     assert updater.main(["--verify-only"]) == 0
 

@@ -168,17 +168,17 @@ def test_an_incompressible_payload_gets_no_gzip_sibling(static_root, monkeypatch
 def test_upstream_refresh_runs_the_packaged_updater(static_root, monkeypatch):
     from tools import update_mds_snapshot
 
-    monkeypatch.setattr(update_mds_snapshot, "main", lambda: 0)
+    monkeypatch.setattr(update_mds_snapshot, "main", lambda argv: 0 if argv == [] else 2)
     assert provisioning._refresh_from_upstream() is True
 
-    monkeypatch.setattr(update_mds_snapshot, "main", lambda: 1)
+    monkeypatch.setattr(update_mds_snapshot, "main", lambda argv: 1)
     assert provisioning._refresh_from_upstream() is False
 
 
 def test_a_failing_updater_is_reported_rather_than_raised(static_root, monkeypatch):
     from tools import update_mds_snapshot
 
-    def _raise():
+    def _raise(argv):
         raise RuntimeError("upstream is down")
 
     monkeypatch.setattr(update_mds_snapshot, "main", _raise)

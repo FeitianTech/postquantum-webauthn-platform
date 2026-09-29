@@ -183,7 +183,7 @@ def _write_if_changed(path: Path, payload: str | bytes) -> bool:
     if path.exists() and path.read_bytes() == new_bytes:
         return False
 
-    path.write_bytes(new_bytes)
+    mds_snapshot_dir.write_file(path, new_bytes)
     return True
 
 
@@ -356,12 +356,15 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
+    # Each file whole, the payloads before the metas that describe them, so the
+    # server reading the directory meanwhile never takes a new meta for an old file.
     changed = False
-    for name, data in files.items():
-        changed |= _write_if_changed(_path(name), data)
-        if name in mds_snapshot_dir.BROWSER_FILENAMES:
+    for name in mds_snapshot_dir.WRITE_ORDER:
+        written = _write_if_changed(_path(name), files[name])
+        changed |= written
+        if name in mds_snapshot_dir.BROWSER_FILENAMES and not written:
             # Rewritten every run, so a sibling from an earlier file never outlives it.
-            mds_snapshot_dir.write_gzip_sibling(_path(name), data)
+            mds_snapshot_dir.write_gzip_sibling(_path(name), files[name])
 
     if changed:
         print("Packaged metadata snapshot refreshed.")

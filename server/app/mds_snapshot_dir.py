@@ -35,6 +35,12 @@ SNAPSHOT_FILENAMES = (
     EXPLORER_FULL_META,
 )
 
+# The .meta.json files, each describing the payload beside it and the verified
+# snapshot. A set is written payloads first and metas last (``WRITE_ORDER``): a
+# reader that finds the new metas finds the new payloads too.
+META_FILENAMES = (VERIFIED_META, EXPLORER_META, EXPLORER_FULL_META)
+WRITE_ORDER = tuple(name for name in SNAPSHOT_FILENAMES if name not in META_FILENAMES) + META_FILENAMES
+
 # Browsers fetch this one as a versioned static asset, with its .gz sibling.
 BROWSER_FILENAMES = frozenset({EXPLORER_FULL})
 # Smaller than this, a browser file gets no .gz sibling.
@@ -77,3 +83,16 @@ def write_gzip_sibling(path: Path, data: bytes) -> None:
     temporary = path.with_name(f"{path.name}.gz.partial")
     temporary.write_bytes(compressed)
     temporary.replace(sibling)
+
+
+def write_file(path: Path, data: bytes) -> None:
+    """Write one snapshot file whole: through a temporary file renamed over it, so
+    a reader sees the old file or the new one, never part of one. A browser file's
+    ``.gz`` sibling follows it."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f"{path.name}.partial")
+    temporary.write_bytes(data)
+    temporary.replace(path)
+    if path.name in BROWSER_FILENAMES:
+        write_gzip_sibling(path, data)
