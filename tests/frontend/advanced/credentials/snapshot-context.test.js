@@ -9,12 +9,10 @@ import {
   captureRegistrationState,
   createRegistrationState,
   prepareRegistrationState,
+  resetRegistrationState,
 } from '../../../../frontend/static/scripts/advanced/credential-display/registration-state.js';
 import { sanitizeRelyingPartyInfo } from '../../../../frontend/static/scripts/advanced/credential-display/sanitize-common.js';
-import {
-  registrationDetailState,
-  resetRegistrationDetailState,
-} from '../../../../frontend/static/scripts/advanced/credential-display/state.js';
+import { registrationDetailState } from '../../../../frontend/static/scripts/advanced/credential-display/state.js';
 import { goldenDecode, registration } from './registration-detail-answers.js';
 
 // A saved registration snapshot read back (credential-detail-runtime/snapshot-context.js).
@@ -50,7 +48,7 @@ async function savedSnapshot(name = 'packedX5c') {
 }
 
 afterEach(() => {
-  resetRegistrationDetailState();
+  resetRegistrationState(registrationDetailState);
 });
 
 describe('readSnapshotResponse', () => {

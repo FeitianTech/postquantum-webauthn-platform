@@ -3,13 +3,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   createRegistrationState,
   prepareRegistrationState,
+  resetRegistrationState,
 } from '../../../../frontend/static/scripts/advanced/credential-display/registration-state.js';
 import { sanitiseAttestationObjectForDisplay } from '../../../../frontend/static/scripts/advanced/credential-display/sanitize-attestation-object.js';
 import { sanitizeParsedCertificateDetails } from '../../../../frontend/static/scripts/advanced/credential-display/sanitize-common.js';
-import {
-  registrationDetailState,
-  resetRegistrationDetailState,
-} from '../../../../frontend/static/scripts/advanced/credential-display/state.js';
+import { registrationDetailState } from '../../../../frontend/static/scripts/advanced/credential-display/state.js';
 import { advancedComplete, goldenDecode, registration } from './registration-detail-answers.js';
 
 // The attestation object as the registration view shows it
@@ -35,7 +33,7 @@ function shownDetails(parsed) {
 const decodedEntry = () => registration('packedX5c').attestationDecode.data.attestationObject.attStmt.x5c[0];
 
 afterEach(() => {
-  resetRegistrationDetailState();
+  resetRegistrationState(registrationDetailState);
 });
 
 describe('sanitiseAttestationObjectForDisplay', () => {
