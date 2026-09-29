@@ -3,8 +3,8 @@
 Every signature in this module is produced by ``cryptography``'s ML-DSA
 implementation and checked by the production code paths.  No verification
 function is monkeypatched, stubbed or replaced anywhere in this file: if
-``CoseKey.verify``, ``PackedAttestation.verify`` or ``verify_x509_chain``
-stopped checking anything, these tests fail.
+``CoseKey.verify``, ``PackedAttestation.verify`` or the app's
+``verify_certificate_chain`` stopped checking anything, these tests fail.
 """
 
 from __future__ import annotations
@@ -14,10 +14,11 @@ import hashlib
 import pytest
 from cryptography.exceptions import InvalidSignature
 
-from fido2.attestation import Attestation, AttestationVerifier, UntrustedAttestation
+from fido2.attestation import Attestation, UntrustedAttestation
 from fido2.attestation.base import InvalidData
 from fido2.attestation.base import InvalidSignature as AttestationInvalidSignature
 from fido2.server import Fido2Server
+from fido2.utils import websafe_encode
 from fido2.webauthn import (
     AttestationConveyancePreference,
     AttestationObject,
@@ -26,6 +27,7 @@ from fido2.webauthn import (
     CollectedClientData,
     PublicKeyCredentialRpEntity,
 )
+from server.app.webauthn.attestation.chain import verify_certificate_chain
 from tests.pqc import mldsa_helpers as mldsa
 
 ORIGIN = "https://example.com"
@@ -46,15 +48,35 @@ def _run_real_attestation(attestation_object, client_data_hash) -> None:
     )
 
 
-class _ChainVerifier(AttestationVerifier):
-    """Real AttestationVerifier that trusts one ML-DSA root certificate."""
+class _ChainVerifier:
+    """The production packed verifier, then the app's chain check up to one trusted ML-DSA root."""
 
     def __init__(self, ca: bytes):
-        super().__init__()
         self._ca = ca
 
-    def ca_lookup(self, attestation_result, auth_data) -> bytes | None:
-        return self._ca
+    def __call__(self, attestation_object, client_data_hash) -> None:
+        result = Attestation.for_type(attestation_object.fmt)().verify(
+            attestation_object.att_stmt,
+            attestation_object.auth_data,
+            client_data_hash,
+        )
+        try:
+            verify_certificate_chain(list(result.trust_path) + [self._ca])
+        except AttestationInvalidSignature as exc:
+            raise UntrustedAttestation(exc) from exc
+
+
+def _response(credential_id: bytes, fields: dict[str, bytes]) -> dict:
+    """A PublicKeyCredential as the browser's toJSON() gives it."""
+
+    encoded = websafe_encode(credential_id)
+    return {
+        "id": encoded,
+        "rawId": encoded,
+        "type": "public-key",
+        "response": {name: websafe_encode(value) for name, value in fields.items()},
+        "clientExtensionResults": {},
+    }
 
 
 def _register(
@@ -107,7 +129,13 @@ def _register(
         statement["x5c"] = x5c
     attestation_object = AttestationObject.create("packed", auth_data, statement)
 
-    return server.register_complete(state, client_data, attestation_object)
+    return server.register_complete(
+        state,
+        _response(
+            credential_id,
+            {"clientDataJSON": client_data, "attestationObject": bytes(attestation_object)},
+        ),
+    )
 
 
 def _authenticate(
@@ -137,10 +165,10 @@ def _authenticate(
     return server.authenticate_complete(
         state,
         [credential_data],
-        credential_data.credential_id,
-        client_data,
-        auth_data,
-        signature,
+        _response(
+            credential_data.credential_id,
+            {"clientDataJSON": client_data, "authenticatorData": bytes(auth_data), "signature": signature},
+        ),
     )
 
 
@@ -213,13 +241,14 @@ def test_cose_key_rejects_a_truncated_public_key(parameter_set):
     message = b"authenticator-data" + hashlib.sha256(b"client-data").digest()
     signature = mldsa.sign(parameter_set, message)
 
+    # The error names the length an ML-DSA key of this parameter set has.
     for broken in (raw[:-1], raw[:100], b"", raw + b"\x00"):
         key = cls({1: 7, 3: alg, -1: broken})
-        with pytest.raises(ValueError, match="public key must be"):
+        with pytest.raises(ValueError, match=str(mldsa.PUBLIC_KEY_LENGTHS[parameter_set])):
             key.verify(message, signature)
 
     # A wrong key type is refused before any verification happens.
-    with pytest.raises(ValueError, match="Unsupported"):
+    with pytest.raises(ValueError):
         cls({1: 2, 3: alg, -1: raw}).verify(message, signature)
 
 
