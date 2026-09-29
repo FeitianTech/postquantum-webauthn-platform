@@ -57,14 +57,6 @@ def _lazy(name: str) -> Any:
     return module
 
 
-def __getattr__(name: str) -> Any:
-    if name in _LAZY_MODULES:
-        return _lazy(name)
-    if name == "_RETRYABLE_EXCEPTIONS":
-        return _retryable_exceptions()
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
 def _retryable_exceptions() -> tuple[type, ...]:
     global _RETRYABLE_EXCEPTIONS_CACHE
 

@@ -4,6 +4,11 @@ import base64
 
 import pytest
 
+from server.app.routes import binary_helpers as shared_binary_helpers
+from server.app.routes.advanced import algorithms as advanced_algorithms
+from server.app.routes.advanced import binary as advanced_binary
+from server.app.routes.advanced import summary as advanced_summary
+
 
 def _base_register_begin_payload() -> dict:
     return {
@@ -35,12 +40,10 @@ def _install_fake_register_server(monkeypatch, advanced_module, captured: dict, 
 
 
 def test_summary_helpers_drop_non_mapping_inputs_and_nested_non_mapping_sections():
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
+    assert advanced_summary._summarize_properties("not-a-mapping") is None
+    assert advanced_summary._summarize_relying_party(["not-a-mapping"]) is None
 
-    assert advanced_module._summarize_properties("not-a-mapping") is None
-    assert advanced_module._summarize_relying_party(["not-a-mapping"]) is None
-
-    summary = advanced_module._summarize_stored_credential(
+    summary = advanced_summary._summarize_stored_credential(
         {
             "credentialId": "cred",
             "registrationResponse": {"heavy": True},
@@ -58,35 +61,31 @@ def test_summary_helpers_drop_non_mapping_inputs_and_nested_non_mapping_sections
 
 
 def test_decode_client_binary_handles_recursive_wrappers_and_validation_failures():
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-
-    assert advanced_module._decode_client_binary({"hex": {"$hex": "6162"}}) == b"ab"
-    assert advanced_module._decode_client_binary({"base64url": "YWI"}) == b"ab"
-    assert advanced_module._decode_client_binary({"base64url": {"$hex": "6162"}}) == b"ab"
-    assert advanced_module._decode_client_binary({"base64": {"$hex": "6162"}}) == b"ab"
+    assert advanced_binary._decode_client_binary({"hex": {"$hex": "6162"}}) == b"ab"
+    assert advanced_binary._decode_client_binary({"base64url": "YWI"}) == b"ab"
+    assert advanced_binary._decode_client_binary({"base64url": {"$hex": "6162"}}) == b"ab"
+    assert advanced_binary._decode_client_binary({"base64": {"$hex": "6162"}}) == b"ab"
 
     with pytest.raises(ValueError, match="empty binary value"):
-        advanced_module._decode_client_binary({"base64url": "   "})
+        advanced_binary._decode_client_binary({"base64url": "   "})
 
     # Each wrapper decodes only its own alphabet. A standard-base64 body under
     # ``$base64url`` is rejected rather than read with ``+``/``/`` translated
     # away, and vice versa -- that mismatch used to yield different bytes.
     standard = base64.b64encode(b"\xfb\xef\xbe").decode("ascii")
     urlsafe = base64.urlsafe_b64encode(b"\xfb\xef\xbe").decode("ascii")
-    assert advanced_module._decode_client_binary({"base64": standard}) == b"\xfb\xef\xbe"
-    assert advanced_module._decode_client_binary({"base64url": urlsafe}) == b"\xfb\xef\xbe"
+    assert advanced_binary._decode_client_binary({"base64": standard}) == b"\xfb\xef\xbe"
+    assert advanced_binary._decode_client_binary({"base64url": urlsafe}) == b"\xfb\xef\xbe"
 
     with pytest.raises(ValueError, match="invalid binary value"):
-        advanced_module._decode_client_binary({"base64url": standard})
+        advanced_binary._decode_client_binary({"base64url": standard})
     with pytest.raises(ValueError, match="invalid binary value"):
-        advanced_module._decode_client_binary({"base64": urlsafe})
+        advanced_binary._decode_client_binary({"base64": urlsafe})
 
 
 def test_algorithm_coercion_handles_blank_values_failed_numeric_extraction_and_pqc_allowlist(monkeypatch, advanced_constants, pqc_module):
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-
-    assert advanced_module._lookup_named_cose_algorithm("   ") is None
-    assert advanced_module._coerce_cose_algorithm("   ") is None
+    assert advanced_algorithms._lookup_named_cose_algorithm("   ") is None
+    assert advanced_algorithms._coerce_cose_algorithm("   ") is None
 
     class _BadMatch:
         def group(self, _index=0):
@@ -97,21 +96,17 @@ def test_algorithm_coercion_handles_blank_values_failed_numeric_extraction_and_p
             return [_BadMatch()]
 
     monkeypatch.setattr(advanced_constants, "COSE_ALGORITHM_NUMERIC_PATTERN", _BadPattern())
-    assert advanced_module._coerce_cose_algorithm("custom algorithm -- broken") is None
+    assert advanced_algorithms._coerce_cose_algorithm("custom algorithm -- broken") is None
 
 
 def test_base64url_helpers_degrade_gracefully_on_decode_errors():
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-
     # "br*ken" is outside the base64url alphabet, so it is absent rather than
     # decoded down to whatever characters happen to survive.
-    assert advanced_module._decode_base64url_bytes("br*ken") == b""
-    assert advanced_module._extract_assertion_credential_id({"rawId": "br*ken"}) is None
+    assert shared_binary_helpers.decode_base64url_bytes("br*ken") == b""
+    assert shared_binary_helpers.extract_assertion_credential_id({"rawId": "br*ken"}) is None
 
 
 def test_attestation_log_falls_back_to_plain_string_payload_when_json_encoding_fails(monkeypatch, advanced_tracing, config_module):
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-
     class _Flag:
         UP = 0x01
         UV = 0x04
@@ -148,7 +143,7 @@ def test_attestation_log_falls_back_to_plain_string_payload_when_json_encoding_f
         lambda *_args, **_kwargs: (_ for _ in ()).throw(TypeError("serialization blocked"))
     )
 
-    advanced_module._log_authenticator_attestation_response(
+    advanced_tracing._log_authenticator_attestation_response(
         "packed",
         _AuthData(),
         {"alg": -257},

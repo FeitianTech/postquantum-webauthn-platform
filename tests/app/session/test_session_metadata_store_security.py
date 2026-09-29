@@ -1,5 +1,7 @@
 import pytest
 
+from server.app.webauthn.metadata import sessions as metadata_sessions
+
 
 def test_normalise_local_session_id_accepts_clean_identifier():
     session_store = pytest.importorskip("server.app.storage.session_metadata")
@@ -41,9 +43,7 @@ def test_session_blob_builds_session_scoped_path():
 
 
 def test_validate_session_metadata_filename_accepts_safe_json_name():
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
-
-    assert metadata_module._validate_session_metadata_filename("entry.json") == "entry.json"
+    assert metadata_sessions._validate_session_metadata_filename("entry.json") == "entry.json"
 
 
 @pytest.mark.parametrize(
@@ -58,10 +58,8 @@ def test_validate_session_metadata_filename_accepts_safe_json_name():
     ],
 )
 def test_validate_session_metadata_filename_rejects_unsafe_values(filename):
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
-
     with pytest.raises(ValueError):
-        metadata_module._validate_session_metadata_filename(filename)
+        metadata_sessions._validate_session_metadata_filename(filename)
 
 
 def test_prune_session_removes_empty_session(monkeypatch):

@@ -3,70 +3,62 @@ from datetime import timedelta
 
 import pytest
 
+from server.app.webauthn.metadata import sessions as metadata_sessions
+from server.app.webauthn.metadata import state as metadata_state
+from server.app.webauthn.metadata import uploads as metadata_uploads
+
 
 def test_resolve_cleanup_interval_prefers_seconds_over_hours(monkeypatch):
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
+    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "15")
+    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "2")
 
-    monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "15")
-    monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "2")
-
-    interval = metadata_module._resolve_cleanup_interval()
+    interval = metadata_sessions._resolve_cleanup_interval()
 
     assert interval == timedelta(seconds=15)
 
 
 def test_resolve_cleanup_interval_uses_hours_when_seconds_invalid(monkeypatch):
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
+    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "not-a-number")
+    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "1.5")
 
-    monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "not-a-number")
-    monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "1.5")
-
-    interval = metadata_module._resolve_cleanup_interval()
+    interval = metadata_sessions._resolve_cleanup_interval()
 
     assert interval == timedelta(hours=1.5)
 
 
 def test_resolve_cleanup_interval_defaults_when_all_config_values_negative(monkeypatch, app_config):
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
+    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "-3")
+    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "-1")
 
-    monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "-3")
-    monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "-1")
-
-    interval = metadata_module._resolve_cleanup_interval()
+    interval = metadata_sessions._resolve_cleanup_interval()
 
     assert interval == timedelta(hours=6)
 
 
 def test_normalise_session_identifier_rejects_path_separators(monkeypatch):
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
-
-    assert metadata_module._normalise_session_identifier("session/abc") is None
+    assert metadata_sessions._normalise_session_identifier("session/abc") is None
 
     monkeypatch.setattr(os, "altsep", "\\")
-    assert metadata_module._normalise_session_identifier("session\\abc") is None
+    assert metadata_sessions._normalise_session_identifier("session\\abc") is None
 
 
 def test_normalise_session_identifier_accepts_clean_value_and_rejects_invalid_shapes():
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
-
     assert (
-        metadata_module._normalise_session_identifier(
+        metadata_sessions._normalise_session_identifier(
             "550e8400-e29b-41d4-a716-446655440000"
         )
         == "550e8400-e29b-41d4-a716-446655440000"
     )
-    assert metadata_module._normalise_session_identifier("   ") is None
-    assert metadata_module._normalise_session_identifier(".hidden") is None
-    assert metadata_module._normalise_session_identifier(123) is None
+    assert metadata_sessions._normalise_session_identifier("   ") is None
+    assert metadata_sessions._normalise_session_identifier(".hidden") is None
+    assert metadata_sessions._normalise_session_identifier(123) is None
 
 
 def test_safe_metadata_repo_filename_sanitizes_traversal_and_invalid_input():
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
-
-    assert metadata_module._safe_metadata_repo_filename("../../../etc/passwd") == "passwd"
-    assert metadata_module._safe_metadata_repo_filename(" /tmp/demo.json ") == "demo.json"
-    assert metadata_module._safe_metadata_repo_filename("///") == "metadata.json"
-    assert metadata_module._safe_metadata_repo_filename(None) == "metadata.json"
+    assert metadata_uploads._safe_metadata_repo_filename("../../../etc/passwd") == "passwd"
+    assert metadata_uploads._safe_metadata_repo_filename(" /tmp/demo.json ") == "demo.json"
+    assert metadata_uploads._safe_metadata_repo_filename("///") == "metadata.json"
+    assert metadata_uploads._safe_metadata_repo_filename(None) == "metadata.json"
 
 
 def test_maybe_store_uploaded_metadata_file_returns_false_when_logging_disabled(monkeypatch, uploads):

@@ -5,6 +5,9 @@ import types
 
 import pytest
 
+from server.app.routes.advanced import algorithms as advanced_algorithms
+from server.app.routes.advanced import binary as advanced_binary
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -514,17 +517,15 @@ def test_advanced_authenticate_complete_error_path_uses_failed_id_fallback_extra
 
 
 def test_advanced_helper_binary_and_algorithm_edge_fallbacks():
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-
-    assert advanced_module._decode_client_binary({"base64": base64.b64encode(b"abc").decode("ascii")}) == b"abc"
+    assert advanced_binary._decode_client_binary({"base64": base64.b64encode(b"abc").decode("ascii")}) == b"abc"
 
     with pytest.raises(ValueError, match="empty binary value"):
-        advanced_module._decode_client_binary({"hex": "  "})
+        advanced_binary._decode_client_binary({"hex": "  "})
 
     with pytest.raises(ValueError, match="empty binary value"):
-        advanced_module._decode_client_binary({"base64": "   "})
+        advanced_binary._decode_client_binary({"base64": "   "})
 
-    assert advanced_module._coerce_cose_algorithm(float("inf")) is None
-    assert advanced_module._coerce_cose_algorithm(float("-inf")) is None
-    assert advanced_module._coerce_cose_algorithm(float("nan")) is None
-    assert advanced_module._coerce_cose_algorithm("fido custom alg (-12345)") == -12345
+    assert advanced_algorithms._coerce_cose_algorithm(float("inf")) is None
+    assert advanced_algorithms._coerce_cose_algorithm(float("-inf")) is None
+    assert advanced_algorithms._coerce_cose_algorithm(float("nan")) is None
+    assert advanced_algorithms._coerce_cose_algorithm("fido custom alg (-12345)") == -12345

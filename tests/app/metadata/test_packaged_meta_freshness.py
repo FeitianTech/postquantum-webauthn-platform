@@ -7,6 +7,8 @@ import os
 
 import pytest
 
+from server.app.webauthn.metadata import blob as metadata_blob
+
 
 @pytest.fixture
 def metadata_module(monkeypatch, tmp_path, metadata_state, blob):
@@ -61,7 +63,7 @@ def test_matching_meta_uses_packaged_snapshot_despite_older_mtime(metadata_modul
     verified_path, explorer_path = metadata_module._test_paths
     _write_meta(verified_path, explorer_path)
 
-    snapshot, _ = metadata_module._load_base_explorer_snapshot()
+    snapshot, _ = metadata_blob._load_base_explorer_snapshot()
 
     assert snapshot["meta"]["source"] == "packaged-snapshot"
     assert metadata_module._test_builds == []
@@ -71,7 +73,7 @@ def test_mismatched_meta_rebuilds_from_verified_snapshot(metadata_module):
     verified_path, explorer_path = metadata_module._test_paths
     _write_meta(verified_path, explorer_path, explorer_no=6)
 
-    snapshot, _ = metadata_module._load_base_explorer_snapshot()
+    snapshot, _ = metadata_blob._load_base_explorer_snapshot()
 
     assert snapshot["meta"]["source"] == "rebuilt"
     assert metadata_module._test_builds == [1]

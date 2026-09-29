@@ -101,7 +101,7 @@ def test_with_retry_succeeds_after_transient_error(monkeypatch):
         def upload_from_string(self, *_args, **_kwargs):
             attempts["count"] += 1
             if attempts["count"] < 2:
-                raise cloud.gcs_exceptions.GoogleAPICallError("retry")
+                raise cloud._lazy("gcs_exceptions").GoogleAPICallError("retry")
 
     class _Bucket:
         def blob(self, _name):
@@ -121,7 +121,7 @@ def test_with_retry_succeeds_after_transient_error(monkeypatch):
 def test_with_retry_raises_after_exhausting_attempts(monkeypatch):
     class _Blob:
         def upload_from_string(self, *_args, **_kwargs):
-            raise cloud.gcs_exceptions.GoogleAPICallError("fail")
+            raise cloud._lazy("gcs_exceptions").GoogleAPICallError("fail")
 
     class _Bucket:
         def blob(self, _name):
@@ -130,7 +130,7 @@ def test_with_retry_raises_after_exhausting_attempts(monkeypatch):
     monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
     monkeypatch.setattr(cloud.time, "sleep", lambda _delay: None)
 
-    with pytest.raises(cloud.gcs_exceptions.GoogleAPICallError):
+    with pytest.raises(cloud._lazy("gcs_exceptions").GoogleAPICallError):
         cloud.upload_bytes("test", b"data")
 
 
@@ -146,7 +146,7 @@ def test_list_blob_names_retries_and_returns_results(monkeypatch):
                         return self
 
                     def __next__(self):
-                        raise cloud.gcs_exceptions.RetryError("transient")
+                        raise cloud._lazy("gcs_exceptions").RetryError("transient")
 
                 return _Iterator()
             return [types.SimpleNamespace(name="one"), types.SimpleNamespace(name="two")]
@@ -178,7 +178,7 @@ def test_list_blob_names_passes_a_delimiter_only_when_asked(monkeypatch):
 def test_download_bytes_handles_not_found(monkeypatch):
     class _Blob:
         def download_as_bytes(self):
-            raise cloud.gcs_exceptions.NotFound("missing")
+            raise cloud._lazy("gcs_exceptions").NotFound("missing")
 
     class _Bucket:
         def blob(self, _name):
@@ -248,11 +248,11 @@ def test_build_client_prefers_service_account_file(monkeypatch):
     monkeypatch.delenv("FIDO_SERVER_GCS_CREDENTIALS_JSON", raising=False)
     monkeypatch.delenv("FIDO_SERVER_GCS_PROJECT", raising=False)
     monkeypatch.setattr(
-        cloud.service_account.Credentials,
+        cloud._lazy("service_account").Credentials,
         "from_service_account_file",
         _from_file,
     )
-    monkeypatch.setattr(cloud.storage, "Client", _client_factory)
+    monkeypatch.setattr(cloud._lazy("storage"), "Client", _client_factory)
 
     client = cloud._build_client()
 
@@ -275,7 +275,7 @@ def test_build_client_file_credentials_respects_project_override(monkeypatch):
     monkeypatch.setenv("FIDO_SERVER_GCS_PROJECT", "override-project")
     monkeypatch.delenv("FIDO_SERVER_GCS_CREDENTIALS_JSON", raising=False)
     monkeypatch.setattr(
-        cloud.service_account.Credentials,
+        cloud._lazy("service_account").Credentials,
         "from_service_account_file",
         lambda _path: _Creds(),
     )
@@ -285,7 +285,7 @@ def test_build_client_file_credentials_respects_project_override(monkeypatch):
         observed["credentials"] = kwargs.get("credentials")
         return "client"
 
-    monkeypatch.setattr(cloud.storage, "Client", _client_factory)
+    monkeypatch.setattr(cloud._lazy("storage"), "Client", _client_factory)
 
     assert cloud._build_client() == "client"
     assert observed["project"] == "override-project"
@@ -320,11 +320,11 @@ def test_build_client_uses_service_account_info_json(monkeypatch):
         return "json-client"
 
     monkeypatch.setattr(
-        cloud.service_account.Credentials,
+        cloud._lazy("service_account").Credentials,
         "from_service_account_info",
         _from_info,
     )
-    monkeypatch.setattr(cloud.storage, "Client", _client_factory)
+    monkeypatch.setattr(cloud._lazy("storage"), "Client", _client_factory)
 
     assert cloud._build_client() == "json-client"
     assert observed["info"]["project_id"] == "json-project"
@@ -344,7 +344,7 @@ def test_build_client_with_project_override_only(monkeypatch):
         observed["kwargs"] = kwargs
         return "project-client"
 
-    monkeypatch.setattr(cloud.storage, "Client", _client_factory)
+    monkeypatch.setattr(cloud._lazy("storage"), "Client", _client_factory)
 
     assert cloud._build_client() == "project-client"
     assert observed["args"] == ()
@@ -363,7 +363,7 @@ def test_build_client_defaults_to_storage_client_without_overrides(monkeypatch):
         observed["kwargs"] = kwargs
         return "default-client"
 
-    monkeypatch.setattr(cloud.storage, "Client", _client_factory)
+    monkeypatch.setattr(cloud._lazy("storage"), "Client", _client_factory)
 
     assert cloud._build_client() == "default-client"
     assert observed["args"] == ()
@@ -425,11 +425,11 @@ def test_with_retry_does_not_retry_not_found(monkeypatch):
 
     def _operation():
         calls["count"] += 1
-        raise cloud.gcs_exceptions.NotFound("missing")
+        raise cloud._lazy("gcs_exceptions").NotFound("missing")
 
     monkeypatch.setattr(cloud.time, "sleep", lambda delay: sleeps.append(delay))
 
-    with pytest.raises(cloud.gcs_exceptions.NotFound):
+    with pytest.raises(cloud._lazy("gcs_exceptions").NotFound):
         cloud._with_retry(_operation)
 
     assert calls["count"] == 1
@@ -443,7 +443,7 @@ def test_with_retry_uses_exponential_backoff(monkeypatch):
     def _operation():
         calls["count"] += 1
         if calls["count"] < 3:
-            raise cloud.gcs_exceptions.GoogleAPICallError("transient")
+            raise cloud._lazy("gcs_exceptions").GoogleAPICallError("transient")
         return "ok"
 
     monkeypatch.setattr(cloud.time, "sleep", lambda delay: sleeps.append(delay))
@@ -473,7 +473,7 @@ def test_build_blob_name_raises_for_empty_path_components():
 def test_delete_blob_honors_missing_ok_false(monkeypatch):
     class _Blob:
         def delete(self):
-            raise cloud.gcs_exceptions.NotFound("missing")
+            raise cloud._lazy("gcs_exceptions").NotFound("missing")
 
     class _Bucket:
         def blob(self, _name):
@@ -481,7 +481,7 @@ def test_delete_blob_honors_missing_ok_false(monkeypatch):
 
     monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
 
-    with pytest.raises(cloud.gcs_exceptions.NotFound):
+    with pytest.raises(cloud._lazy("gcs_exceptions").NotFound):
         cloud.delete_blob("missing", missing_ok=False)
 
 
@@ -504,7 +504,7 @@ def test_blob_updated_timestamp_returns_none_when_blob_missing(monkeypatch):
         updated = None
 
         def reload(self):
-            raise cloud.gcs_exceptions.NotFound("missing")
+            raise cloud._lazy("gcs_exceptions").NotFound("missing")
 
     class _Bucket:
         def blob(self, _name):
@@ -589,7 +589,7 @@ def test_ensure_bucket_reuses_existing_client(monkeypatch):
 def test_delete_blob_ignores_not_found_when_missing_ok_true(monkeypatch):
     class _Blob:
         def delete(self):
-            raise cloud.gcs_exceptions.NotFound("missing")
+            raise cloud._lazy("gcs_exceptions").NotFound("missing")
 
     class _Bucket:
         def blob(self, _name):

@@ -4,6 +4,8 @@ from datetime import timedelta
 
 import pytest
 
+from server.app.webauthn.metadata import sessions as metadata_sessions
+
 
 @pytest.fixture
 def sessions(monkeypatch):
@@ -28,7 +30,7 @@ def test_schedule_inactive_session_cleanup_runs_inline_when_async_disabled(metad
         lambda now=None: observed_now.append(now),
     )
 
-    metadata_module._schedule_inactive_session_cleanup()
+    metadata_sessions._schedule_inactive_session_cleanup()
 
     assert observed_now == [100.0]
     assert metadata_state._session_cleanup_worker is None
@@ -53,7 +55,7 @@ def test_schedule_inactive_session_cleanup_marks_pending_when_worker_alive(metad
         ),
     )
 
-    metadata_module._schedule_inactive_session_cleanup()
+    metadata_sessions._schedule_inactive_session_cleanup()
 
     assert metadata_state._session_cleanup_worker is alive_worker
     assert metadata_state._session_cleanup_pending is True
@@ -81,7 +83,7 @@ def test_schedule_inactive_session_cleanup_falls_back_inline_when_thread_start_f
         lambda now=None: observed_now.append(now),
     )
 
-    metadata_module._schedule_inactive_session_cleanup()
+    metadata_sessions._schedule_inactive_session_cleanup()
 
     assert observed_now == [250.0]
     assert metadata_state._session_cleanup_worker is None
@@ -99,7 +101,7 @@ def test_run_inactive_session_cleanup_worker_drains_pending_before_teardown(meta
         lambda: runs.append("cleanup"),
     )
 
-    metadata_module._run_inactive_session_cleanup_worker()
+    metadata_sessions._run_inactive_session_cleanup_worker()
 
     assert runs == ["cleanup", "cleanup"]
     assert metadata_state._session_cleanup_pending is False
@@ -154,7 +156,7 @@ def test_maybe_cleanup_inactive_sessions_deletes_only_stale_and_continues_on_del
         lambda *args, **kwargs: warnings.append((args, kwargs)),
     )
 
-    metadata_module._maybe_cleanup_inactive_sessions(now=now)
+    metadata_sessions._maybe_cleanup_inactive_sessions(now=now)
 
     assert delete_attempts == ["stale-error", "stale-ok"]
     assert metadata_state._session_metadata_last_cleanup == now

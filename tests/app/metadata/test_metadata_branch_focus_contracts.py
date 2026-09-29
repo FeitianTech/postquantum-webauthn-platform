@@ -11,6 +11,13 @@ import pytest
 from fido2.mds3 import MetadataBlobPayloadEntry
 from flask import ctx, g, session
 
+from server.app.webauthn.metadata import blob as metadata_blob
+from server.app.webauthn.metadata import effective as metadata_effective
+from server.app.webauthn.metadata import entries as metadata_entries
+from server.app.webauthn.metadata import sessions as metadata_sessions
+from server.app.webauthn.metadata import state as metadata_state
+from server.app.webauthn.metadata import verifier as metadata_verifier
+
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
@@ -49,23 +56,23 @@ def test_session_cookie_scheduler_branches_and_after_request_cookie(metadata_mod
         lambda session_id, **_kwargs: touched.append(session_id),
     )
 
-    metadata_module._schedule_session_cookie("outside-context")
+    metadata_sessions._schedule_session_cookie("outside-context")
 
     with app_config.app.test_request_context("/", base_url="https://localhost"):
-        metadata_module._schedule_session_cookie("   ")
+        metadata_sessions._schedule_session_cookie("   ")
         request_ctx = ctx._cv_request.get()
         assert request_ctx._after_request_functions == []
 
-        metadata_module._schedule_session_cookie("session-cookie")
+        metadata_sessions._schedule_session_cookie("session-cookie")
         assert g._session_metadata_cookie == "session-cookie"
         assert len(request_ctx._after_request_functions) == 1
 
-        metadata_module._schedule_session_cookie("session-cookie")
+        metadata_sessions._schedule_session_cookie("session-cookie")
         assert len(request_ctx._after_request_functions) == 1
 
         response = request_ctx._after_request_functions[0](app_config.app.response_class("ok"))
         set_cookie = response.headers["Set-Cookie"]
-        assert set_cookie.startswith(f"{metadata_module._SESSION_METADATA_COOKIE_NAME}=")
+        assert set_cookie.startswith(f"{metadata_state._SESSION_METADATA_COOKIE_NAME}=")
         assert "Secure" in set_cookie
         assert "SameSite=Lax" in set_cookie
         assert "SameSite=None" not in set_cookie
@@ -82,7 +89,7 @@ def test_session_cookie_scheduler_branches_and_after_request_cookie(metadata_mod
 
 
 def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch(metadata_module, monkeypatch, sessions, app_config):
-    assert metadata_module._get_metadata_session_id(create=True) is None
+    assert metadata_sessions._get_metadata_session_id(create=True) is None
 
     scheduled = []
     monkeypatch.setattr(
@@ -96,10 +103,10 @@ def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch
     # an IDOR, since any caller could name another visitor's namespace.
     with app_config.app.test_request_context(
         "/",
-        headers={"Cookie": f"{metadata_module._SESSION_METADATA_COOKIE_NAME}=cookie-session"},
+        headers={"Cookie": f"{metadata_state._SESSION_METADATA_COOKIE_NAME}=cookie-session"},
     ):
-        session[metadata_module._SESSION_METADATA_SESSION_KEY] = ".invalid"
-        assert metadata_module._get_metadata_session_id(create=False) is None
+        session[metadata_state._SESSION_METADATA_SESSION_KEY] = ".invalid"
+        assert metadata_sessions._get_metadata_session_id(create=False) is None
 
     # A cookie this server signed still restores the namespace it names.
     sealed = itsdangerous.URLSafeTimedSerializer(
@@ -107,16 +114,16 @@ def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch
     ).dumps("cookie-session")
     with app_config.app.test_request_context(
         "/",
-        headers={"Cookie": f"{metadata_module._SESSION_METADATA_COOKIE_NAME}={sealed}"},
+        headers={"Cookie": f"{metadata_state._SESSION_METADATA_COOKIE_NAME}={sealed}"},
     ):
-        session[metadata_module._SESSION_METADATA_SESSION_KEY] = ".invalid"
-        assert metadata_module._get_metadata_session_id(create=False) == "cookie-session"
-        assert session[metadata_module._SESSION_METADATA_SESSION_KEY] == "cookie-session"
+        session[metadata_state._SESSION_METADATA_SESSION_KEY] = ".invalid"
+        assert metadata_sessions._get_metadata_session_id(create=False) == "cookie-session"
+        assert session[metadata_state._SESSION_METADATA_SESSION_KEY] == "cookie-session"
 
     with app_config.app.test_request_context("/"):
-        session[metadata_module._SESSION_METADATA_SESSION_KEY] = ".invalid"
-        assert metadata_module._get_metadata_session_id(create=False) is None
-        assert metadata_module._get_metadata_session_id(create=True) == "generated-session"
+        session[metadata_state._SESSION_METADATA_SESSION_KEY] = ".invalid"
+        assert metadata_sessions._get_metadata_session_id(create=False) is None
+        assert metadata_sessions._get_metadata_session_id(create=True) == "generated-session"
 
     with app_config.app.test_request_context("/"):
         monkeypatch.setattr(sessions, "_get_metadata_session_id", lambda **_kwargs: None)
@@ -144,8 +151,8 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
         lambda: schedule_calls.append(True),
     )
 
-    assert metadata_module._session_metadata_directory("", create=False) is None
-    assert metadata_module._session_metadata_directory("../escape", create=False) is None
+    assert metadata_sessions._session_metadata_directory("", create=False) is None
+    assert metadata_sessions._session_metadata_directory("../escape", create=False) is None
 
     errors = []
     monkeypatch.setattr(
@@ -160,7 +167,7 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
     )
 
     with pytest.raises(RuntimeError, match="ensure failed"):
-        metadata_module._session_metadata_directory("session-a", create=True)
+        metadata_sessions._session_metadata_directory("session-a", create=True)
 
     monkeypatch.setattr(
         session_store,
@@ -168,24 +175,24 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
         lambda _sid: None,
     )
     assert (
-        metadata_module._session_metadata_directory("session-a", create=True, cleanup=False)
+        metadata_sessions._session_metadata_directory("session-a", create=True, cleanup=False)
         == "session-a"
     )
-    assert metadata_module._session_metadata_directory("session-a", create=False, cleanup=True) == "session-a"
+    assert metadata_sessions._session_metadata_directory("session-a", create=False, cleanup=True) == "session-a"
 
     monkeypatch.setattr(
         session_store,
         "touch_last_access",
         lambda _sid: (_ for _ in ()).throw(RuntimeError("touch failed")),
     )
-    metadata_module._touch_session_last_access("session-a")
+    metadata_sessions._touch_session_last_access("session-a")
 
     monkeypatch.setattr(
         session_store,
         "resolve_last_access",
         lambda _sid: (_ for _ in ()).throw(RuntimeError("resolve failed")),
     )
-    assert metadata_module._resolve_session_last_access("session-a") is None
+    assert metadata_sessions._resolve_session_last_access("session-a") is None
 
     assert errors
     assert schedule_calls == [True]
@@ -193,7 +200,7 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
 
 def test_env_interval_upload_and_normalisation_error_edges(metadata_module, monkeypatch, uploads, sessions):
     monkeypatch.setenv("TEST_ENV_BOOL", " YES ")
-    assert metadata_module._env_flag("TEST_ENV_BOOL") is True
+    assert metadata_sessions._env_flag("TEST_ENV_BOOL") is True
 
     warnings = []
     monkeypatch.setattr(
@@ -201,10 +208,10 @@ def test_env_interval_upload_and_normalisation_error_edges(metadata_module, monk
         "warning",
         lambda *args, **kwargs: warnings.append((args, kwargs)),
     )
-    monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "bad-seconds")
-    monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "bad-hours")
+    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "bad-seconds")
+    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "bad-hours")
 
-    assert metadata_module._resolve_cleanup_interval() == timedelta(hours=6)
+    assert metadata_sessions._resolve_cleanup_interval() == timedelta(hours=6)
     assert len(warnings) >= 2
 
     recorded = []
@@ -231,7 +238,7 @@ def test_env_interval_upload_and_normalisation_error_edges(metadata_module, monk
 
 
 def test_build_expand_extract_and_merge_error_branches(metadata_module, monkeypatch, entries):
-    entry, _, payload = metadata_module.build_metadata_entry_components(
+    entry, _, payload = metadata_entries.build_metadata_entry_components(
         {
             "timeOfLastStatusChange": "   ",
             "attestationCertificateKeyIdentifiers": ["   ", 42],
@@ -265,19 +272,19 @@ def test_build_expand_extract_and_merge_error_branches(metadata_module, monkeypa
     with pytest.raises(ValueError, match="could not be cloned"):
         metadata_module.expand_metadata_entry_payloads({"entries": [{"metadataStatement": {"description": "x"}}]})
 
-    assert metadata_module._normalise_aaguid(123) is None
+    assert metadata_entries._normalise_aaguid(123) is None
 
     class _NoMappingEntry:
         aaguid = None
         metadata_statement = None
         metadataStatement = "not-a-mapping"
 
-    assert metadata_module._extract_entry_aaguid(_NoMappingEntry()) is None
+    assert metadata_entries._extract_entry_aaguid(_NoMappingEntry()) is None
 
     session_entry_one = MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
     session_entry_two = MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
 
-    item_one = metadata_module.SessionMetadataItem(
+    item_one = metadata_sessions.SessionMetadataItem(
         filename="one.json",
         payload=_minimal_entry_payload(),
         legal_header=None,
@@ -286,7 +293,7 @@ def test_build_expand_extract_and_merge_error_branches(metadata_module, monkeypa
         original_filename="one.json",
         mtime=1.0,
     )
-    item_two = metadata_module.SessionMetadataItem(
+    item_two = metadata_sessions.SessionMetadataItem(
         filename="two.json",
         payload=_minimal_entry_payload(),
         legal_header="Session Legal",
@@ -299,10 +306,10 @@ def test_build_expand_extract_and_merge_error_branches(metadata_module, monkeypa
     monkeypatch.setattr(
         entries,
         "_extract_entry_aaguid",
-        lambda value: metadata_module._normalise_aaguid(str(getattr(value, "aaguid", ""))),
+        lambda value: metadata_entries._normalise_aaguid(str(getattr(value, "aaguid", ""))),
     )
 
-    merged = metadata_module._merge_metadata(None, [item_one, item_two])
+    merged = metadata_verifier._merge_metadata(None, [item_one, item_two])
     assert merged.legal_header == "Session Legal"
     assert len(merged.entries) == 1
 
@@ -385,7 +392,7 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
 
     def _delete_file(_sid, name, *, missing_ok=True):
         delete_calls.append((name, missing_ok))
-        if name.endswith(metadata_module._SESSION_METADATA_INFO_SUFFIX):
+        if name.endswith(metadata_state._SESSION_METADATA_INFO_SUFFIX):
             raise OSError("info delete ignored")
 
     monkeypatch.setattr(
@@ -405,7 +412,7 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
     assert delete_calls[1] == ("entry.json.meta.json", True)
 
     serialized = metadata_module.serialize_session_metadata_item(
-        metadata_module.SessionMetadataItem(
+        metadata_sessions.SessionMetadataItem(
             filename="stored.json",
             payload={"metadataStatement": {"description": "Demo"}},
             legal_header="Legal Header",
@@ -418,13 +425,13 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
     assert serialized["source"] == {"storedFilename": "stored.json"}
     assert serialized["legalHeader"] == "Legal Header"
 
-    assert metadata_module._parse_http_datetime(None) is None
+    assert metadata_blob._parse_http_datetime(None) is None
     monkeypatch.setattr(blob, "parsedate_to_datetime", lambda _value: datetime(2026, 1, 1, 0, 0, 0))
-    parsed = metadata_module._parse_http_datetime("Wed, 01 Jan 2026 00:00:00 GMT")
+    parsed = metadata_blob._parse_http_datetime("Wed, 01 Jan 2026 00:00:00 GMT")
     assert parsed is not None and parsed.tzinfo is not None
 
-    assert metadata_module._format_last_modified(None) is None
-    assert metadata_module._format_last_modified("Thu, 01 Jan 1970 00:00:00 GMT") == "2026-01-01T00:00:00+00:00"
+    assert metadata_blob._format_last_modified(None) is None
+    assert metadata_blob._format_last_modified("Thu, 01 Jan 1970 00:00:00 GMT") == "2026-01-01T00:00:00+00:00"
 
 
 def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_path, metadata_state, blob, effective):
@@ -434,7 +441,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
 
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     cache_path.write_text("[]", encoding="utf-8")
-    assert metadata_module.load_metadata_cache_entry() == {}
+    assert metadata_blob.load_metadata_cache_entry() == {}
 
     cache_path.write_text(
         json.dumps(
@@ -447,7 +454,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
         ),
         encoding="utf-8",
     )
-    loaded_cache = metadata_module.load_metadata_cache_entry()
+    loaded_cache = metadata_blob.load_metadata_cache_entry()
     assert loaded_cache["last_modified_iso"] == "2015-10-21T07:28:00+00:00"
     assert loaded_cache["etag"] == "etag-value"
 
@@ -476,15 +483,15 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(snapshot_dir))
     verified_path = snapshot_dir / "fido-mds3.verified.json"
 
-    missing_loaded, _ = metadata_module._load_verified_metadata_fallback()
+    missing_loaded, _ = metadata_blob._load_verified_metadata_fallback()
     assert missing_loaded is None
 
     verified_path.write_text("{not-json", encoding="utf-8")
-    invalid_loaded, _ = metadata_module._load_verified_metadata_fallback()
+    invalid_loaded, _ = metadata_blob._load_verified_metadata_fallback()
     assert invalid_loaded is None
 
     verified_path.write_text("[]", encoding="utf-8")
-    assert metadata_module._load_verified_metadata_payload() is None
+    assert metadata_blob._load_verified_metadata_payload() is None
 
     verified_payload = {
         "legalHeader": "L",
@@ -499,7 +506,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     explorer_cache_marker = (10.0, 20.0, 10.0, 10.0)
     monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_cache", {"meta": {"entryCount": 9}})
     monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_mtime", explorer_cache_marker)
-    cached_snapshot, cached_marker = metadata_module._load_base_explorer_snapshot()
+    cached_snapshot, cached_marker = metadata_blob._load_base_explorer_snapshot()
     assert cached_snapshot == {"meta": {"entryCount": 9}}
     assert cached_marker == explorer_cache_marker
 
@@ -517,7 +524,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
         },
     )
 
-    snapshot, _ = metadata_module._load_base_explorer_snapshot()
+    snapshot, _ = metadata_blob._load_base_explorer_snapshot()
     assert snapshot["meta"] == {"entryCount": 0, "etag": "x"}
 
     monkeypatch.setattr(
@@ -529,12 +536,12 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     monkeypatch.setattr(metadata_state, "_base_full_snapshot_mtime", None)
     monkeypatch.setattr(blob, "_load_verified_metadata_payload", lambda: None)
 
-    full_snapshot, full_marker = metadata_module._load_base_full_snapshot()
+    full_snapshot, full_marker = metadata_blob._load_base_full_snapshot()
     assert full_snapshot is None and full_marker == (None, None, None, None)
 
     monkeypatch.setattr(metadata_state, "_base_full_snapshot_cache", {"meta": {"entryCount": 1}})
     monkeypatch.setattr(metadata_state, "_base_full_snapshot_mtime", (None, None, None, None))
-    cached_full, cached_full_marker = metadata_module._load_base_full_snapshot()
+    cached_full, cached_full_marker = metadata_blob._load_base_full_snapshot()
     assert cached_full == {"meta": {"entryCount": 1}}
     assert cached_full_marker == (None, None, None, None)
 
@@ -572,13 +579,13 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
 
 def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, metadata_state, monkeypatch, blob, sessions, effective, verifier):
     assert (
-        metadata_module._entry_matches_lookup(
+        metadata_effective._entry_matches_lookup(
             {"metadataStatement": 123},
             aaguid="   ",
         )
         is False
     )
-    assert metadata_module._entry_matches_lookup({"metadataStatement": 123}) is False
+    assert metadata_effective._entry_matches_lookup({"metadataStatement": 123}) is False
 
     session_items = [SimpleNamespace(name="a"), SimpleNamespace(name="b"), SimpleNamespace(name="c")]
     build_calls = []
@@ -595,7 +602,7 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, m
     monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: session_items)
     monkeypatch.setattr(effective, "_build_session_snapshot_entry", _build_session_snapshot_entry)
 
-    composed = metadata_module._compose_effective_snapshot(
+    composed = metadata_effective._compose_effective_snapshot(
         {
             "meta": "not-a-mapping",
             "entries": [

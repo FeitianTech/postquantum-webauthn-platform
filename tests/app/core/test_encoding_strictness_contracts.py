@@ -99,10 +99,9 @@ def test_base64url_helpers_do_not_return_garbage_for_plain_text(shared_binary_he
     assert shared_binary_helpers.decode_base64url_bytes(PLAIN_TEXT) == b""
     assert shared_binary_helpers.extract_assertion_credential_id({"rawId": PLAIN_TEXT}) is None
 
-    for module_name in ("server.app.routes.advanced", "server.app.routes.simple"):
-        route_module = pytest.importorskip(module_name)
-        assert route_module._decode_base64url_bytes(PLAIN_TEXT) == b""
-        assert route_module._extract_assertion_credential_id({"rawId": PLAIN_TEXT}) is None
+    simple_module = pytest.importorskip("server.app.routes.simple")
+    assert simple_module._decode_base64url_bytes(PLAIN_TEXT) == b""
+    assert simple_module._extract_assertion_credential_id({"rawId": PLAIN_TEXT}) is None
 
 
 def test_credential_intake_reads_both_base64_alphabets_exactly(advanced_binary, simple_binary):

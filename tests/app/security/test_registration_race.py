@@ -19,6 +19,8 @@ import threading
 
 import pytest
 
+from server.app.webauthn.metadata import state as metadata_state
+
 from ..storage import fake_gcs
 from .ceremony_helpers import ORIGIN, Authenticator, registration_payload, unb64u
 
@@ -64,10 +66,9 @@ def _register(client, authenticator):
 
 
 def _stored_ids(store, client) -> list[bytes]:
-    from server.app.webauthn import metadata
 
     with client.session_transaction() as session:
-        namespace = session[metadata._SESSION_METADATA_SESSION_KEY]
+        namespace = session[metadata_state._SESSION_METADATA_SESSION_KEY]
     return sorted(bytes(record["credential_data"].credential_id) for record in store.readkey(EMAIL, session_id=namespace))
 
 
@@ -199,10 +200,9 @@ def _break_the_current_copy(store, client, how: str):
     import os
 
     from server.app.storage import cloud
-    from server.app.webauthn import metadata
 
     with client.session_transaction() as session:
-        namespace = session[metadata._SESSION_METADATA_SESSION_KEY]
+        namespace = session[metadata_state._SESSION_METADATA_SESSION_KEY]
     if store._using_gcs():
         bucket = cloud._ensure_bucket()
         blob = store._credential_blob(EMAIL, namespace)
@@ -273,12 +273,11 @@ def test_a_store_that_cannot_be_read_answers_503_and_saves_nothing(app, caplog, 
 
 
 def test_a_user_whose_only_copy_is_an_undecodable_pickle_is_answered_503_and_keeps_it(app, store, simple_module):
-    from server.app.webauthn import metadata
 
     client = app.test_client()
     namespace = "namespace-with-an-old-pickle"
     with client.session_transaction() as session:
-        session[metadata._SESSION_METADATA_SESSION_KEY] = namespace
+        session[metadata_state._SESSION_METADATA_SESSION_KEY] = namespace
     challenge = _begin(client)
     # No current copy: the user's only one is a session .pkl nobody can read.
     if store._using_gcs():

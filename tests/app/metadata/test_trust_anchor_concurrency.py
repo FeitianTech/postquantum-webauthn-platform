@@ -11,6 +11,8 @@ import pytest
 from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
 from flask import g
 
+from server.app.webauthn.metadata import sessions as metadata_sessions
+
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
@@ -170,7 +172,7 @@ def test_concurrent_cleanup_checks_run_cleanup_once(metadata_module, monkeypatch
     now = time.time()
     threads = [
         threading.Thread(
-            target=metadata_module._maybe_cleanup_inactive_sessions, kwargs={"now": now}
+            target=metadata_sessions._maybe_cleanup_inactive_sessions, kwargs={"now": now}
         )
         for _ in range(10)
     ]

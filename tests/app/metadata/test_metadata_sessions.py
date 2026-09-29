@@ -3,6 +3,9 @@ from types import SimpleNamespace
 import pytest
 from flask import session as flask_session
 
+from server.app.webauthn.metadata import sessions as metadata_sessions
+from server.app.webauthn.metadata import state as metadata_state
+
 
 @pytest.fixture
 def session_metadata_env(monkeypatch, tmp_path, metadata_state, session_store, app_config):
@@ -47,7 +50,7 @@ def test_session_metadata_is_isolated(session_metadata_env):
         assert metadata.list_session_metadata_items() == []
 
     with app.test_request_context("/"):
-        flask_session[metadata._SESSION_METADATA_SESSION_KEY] = first_session_id
+        flask_session[metadata_state._SESSION_METADATA_SESSION_KEY] = first_session_id
         items = metadata.list_session_metadata_items()
         assert len(items) == 1
         assert items[0].payload["metadataStatement"]["description"] == "Session entry"
@@ -66,7 +69,7 @@ def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypat
         lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("inline cleanup should not run")),
     )
 
-    metadata._note_session_activity("session-123")
+    metadata_sessions._note_session_activity("session-123")
 
     assert calls == [("touch", "session-123"), ("schedule", None)]
 
@@ -121,7 +124,7 @@ def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch, blob, s
         ],
     }
 
-    session_item = metadata.SessionMetadataItem(
+    session_item = metadata_sessions.SessionMetadataItem(
         filename="custom.json",
         payload={
             "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",

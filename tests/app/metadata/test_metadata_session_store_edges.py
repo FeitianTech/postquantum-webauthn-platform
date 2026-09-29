@@ -2,6 +2,9 @@ import json
 
 import pytest
 
+from server.app.webauthn.metadata import blob as metadata_blob
+from server.app.webauthn.metadata import sessions as metadata_sessions
+
 
 @pytest.fixture
 def metadata_local_env(monkeypatch, tmp_path, metadata_state, session_store, app_config):
@@ -76,7 +79,7 @@ def test_list_session_metadata_items_skips_invalid_payloads_and_returns_valid_en
 
     with app.test_request_context("/"):
         session_id = metadata.ensure_metadata_session_id()
-        directory = metadata._session_metadata_directory(session_id, create=True)
+        directory = metadata_sessions._session_metadata_directory(session_id, create=True)
 
         session_store.write_file(
             directory,
@@ -117,7 +120,7 @@ def test_delete_session_metadata_item_validates_session_filename_and_storage_err
 
         assert metadata.delete_session_metadata_item("missing.json", session_id=session_id) is False
 
-        directory = metadata._session_metadata_directory(session_id, create=True)
+        directory = metadata_sessions._session_metadata_directory(session_id, create=True)
         session_store.write_file(directory, "present.json", b"{}", content_type="application/json")
 
         monkeypatch.setattr(
@@ -136,12 +139,12 @@ def test_load_verified_metadata_helpers_handle_invalid_and_missing_payloads(meta
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
     verified_path = tmp_path / "fido-mds3.verified.json"
 
-    assert metadata._load_verified_metadata_payload() is None
+    assert metadata_blob._load_verified_metadata_payload() is None
 
     verified_path.write_text("[]", encoding="utf-8")
-    assert metadata._load_verified_metadata_payload() is None
+    assert metadata_blob._load_verified_metadata_payload() is None
 
     verified_path.write_text("{\"broken\": true}", encoding="utf-8")
-    loaded, mtime = metadata._load_verified_metadata_fallback()
+    loaded, mtime = metadata_blob._load_verified_metadata_fallback()
     assert loaded is None
     assert mtime is not None

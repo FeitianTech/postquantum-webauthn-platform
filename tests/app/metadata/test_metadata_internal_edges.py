@@ -6,6 +6,12 @@ from types import SimpleNamespace
 import pytest
 from fido2.mds3 import MetadataBlobPayloadEntry
 
+from server.app.webauthn.metadata import blob as metadata_blob
+from server.app.webauthn.metadata import effective as metadata_effective
+from server.app.webauthn.metadata import entries as metadata_entries
+from server.app.webauthn.metadata import sessions as metadata_sessions
+from server.app.webauthn.metadata import state as metadata_state
+
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
@@ -16,18 +22,18 @@ def metadata_module(monkeypatch, metadata_state):
 
 
 def test_env_flag_cleanup_async_and_interval_resolution(metadata_module, monkeypatch):
-    monkeypatch.delenv(metadata_module._SESSION_METADATA_CLEANUP_ASYNC_ENV, raising=False)
-    assert metadata_module._cleanup_async_enabled() is True
+    monkeypatch.delenv(metadata_state._SESSION_METADATA_CLEANUP_ASYNC_ENV, raising=False)
+    assert metadata_sessions._cleanup_async_enabled() is True
 
-    monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_ASYNC_ENV, "off")
-    assert metadata_module._cleanup_async_enabled() is False
+    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_ASYNC_ENV, "off")
+    assert metadata_sessions._cleanup_async_enabled() is False
 
-    monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "30")
-    assert metadata_module._resolve_cleanup_interval().total_seconds() == 30
+    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "30")
+    assert metadata_sessions._resolve_cleanup_interval().total_seconds() == 30
 
-    monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "invalid")
-    monkeypatch.setenv(metadata_module._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "2")
-    assert metadata_module._resolve_cleanup_interval().total_seconds() == 2 * 3600
+    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV, "invalid")
+    monkeypatch.setenv(metadata_state._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV, "2")
+    assert metadata_sessions._resolve_cleanup_interval().total_seconds() == 2 * 3600
 
 
 def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(metadata_module, monkeypatch, uploads):
@@ -74,19 +80,19 @@ def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(
 
 
 def test_session_identifier_and_filename_validation_helpers(metadata_module):
-    assert metadata_module._normalise_session_identifier("  session-1  ") == "session-1"
-    assert metadata_module._normalise_session_identifier(123) is None
-    assert metadata_module._normalise_session_identifier(".hidden") is None
-    assert metadata_module._normalise_session_identifier("a/b") is None
+    assert metadata_sessions._normalise_session_identifier("  session-1  ") == "session-1"
+    assert metadata_sessions._normalise_session_identifier(123) is None
+    assert metadata_sessions._normalise_session_identifier(".hidden") is None
+    assert metadata_sessions._normalise_session_identifier("a/b") is None
 
-    assert metadata_module._validate_session_metadata_filename("entry.json") == "entry.json"
+    assert metadata_sessions._validate_session_metadata_filename("entry.json") == "entry.json"
 
     with pytest.raises(ValueError):
-        metadata_module._validate_session_metadata_filename("../entry.json")
+        metadata_sessions._validate_session_metadata_filename("../entry.json")
     with pytest.raises(ValueError):
-        metadata_module._validate_session_metadata_filename(".entry.json")
+        metadata_sessions._validate_session_metadata_filename(".entry.json")
     with pytest.raises(ValueError):
-        metadata_module._validate_session_metadata_filename("entry.txt")
+        metadata_sessions._validate_session_metadata_filename("entry.txt")
 
 
 def test_load_session_metadata_info_and_clone_helpers(metadata_module, monkeypatch, session_store):
@@ -95,7 +101,7 @@ def test_load_session_metadata_info_and_clone_helpers(metadata_module, monkeypat
         "read_file",
         lambda _sid, _name: b'{"uploaded_at":"now"}',
     )
-    assert metadata_module._load_session_metadata_info("session", "entry.meta.json") == {
+    assert metadata_sessions._load_session_metadata_info("session", "entry.meta.json") == {
         "uploaded_at": "now"
     }
 
@@ -104,10 +110,10 @@ def test_load_session_metadata_info_and_clone_helpers(metadata_module, monkeypat
         "read_file",
         lambda _sid, _name: b"not-json",
     )
-    assert metadata_module._load_session_metadata_info("session", "entry.meta.json") == {}
+    assert metadata_sessions._load_session_metadata_info("session", "entry.meta.json") == {}
 
-    assert metadata_module._clone_json_value({"a": [1, 2]}) == {"a": [1, 2]}
-    assert metadata_module._clone_json_value(object()) is None
+    assert metadata_entries._clone_json_value({"a": [1, 2]}) == {"a": [1, 2]}
+    assert metadata_entries._clone_json_value(object()) is None
 
 
 def test_build_metadata_entry_components_and_expand_payloads(metadata_module):
@@ -120,7 +126,7 @@ def test_build_metadata_entry_components_and_expand_payloads(metadata_module):
         "statusReports": [{"status": "NOT_FIDO_CERTIFIED"}],
     }
 
-    entry, legal_header, payload = metadata_module.build_metadata_entry_components(raw)
+    entry, legal_header, payload = metadata_entries.build_metadata_entry_components(raw)
 
     assert legal_header == "Demo legal"
     assert payload["metadataStatement"]["description"] == "Demo authenticator"
@@ -155,14 +161,14 @@ def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_mo
     }
     entry_id = effective.build_entry_id(payload)
 
-    assert metadata_module._entry_matches_lookup(payload, entry_id=entry_id) is True
+    assert metadata_effective._entry_matches_lookup(payload, entry_id=entry_id) is True
     assert (
-        metadata_module._entry_matches_lookup(
+        metadata_effective._entry_matches_lookup(
             payload, aaguid="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
         )
         is True
     )
-    assert metadata_module._entry_matches_lookup(payload, aaid="A1B2#0001") is True
+    assert metadata_effective._entry_matches_lookup(payload, aaid="A1B2#0001") is True
 
     base_snapshot = {
         "meta": {"entryCount": 2},
@@ -183,7 +189,7 @@ def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_mo
         },
     )
 
-    snapshot = metadata_module._compose_effective_snapshot(base_snapshot, include_detail=False)
+    snapshot = metadata_effective._compose_effective_snapshot(base_snapshot, include_detail=False)
 
     assert snapshot["meta"]["entryCount"] == 2
     assert snapshot["meta"]["customEntryCount"] == 1
@@ -212,7 +218,7 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metada
     monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_cache", None)
     monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_mtime", None)
 
-    snapshot, marker = metadata_module._load_base_explorer_snapshot()
+    snapshot, marker = metadata_blob._load_base_explorer_snapshot()
 
     assert snapshot["meta"]["entryCount"] == 1
     assert marker is not None

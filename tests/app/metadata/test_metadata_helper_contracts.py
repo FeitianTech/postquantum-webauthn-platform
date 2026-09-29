@@ -7,6 +7,13 @@ import pytest
 from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
 from flask import g, session
 
+from server.app.webauthn.metadata import blob as metadata_blob
+from server.app.webauthn.metadata import effective as metadata_effective
+from server.app.webauthn.metadata import entries as metadata_entries
+from server.app.webauthn.metadata import sessions as metadata_sessions
+from server.app.webauthn.metadata import state as metadata_state
+from server.app.webauthn.metadata import verifier as metadata_verifier
+
 
 def _entry_payload(*, aaguid: str, description: str):
     return {
@@ -30,9 +37,7 @@ def _entry_payload(*, aaguid: str, description: str):
 
 
 def test_metadata_normalisation_helpers_cover_status_identifiers_and_defaults():
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
-
-    reports = metadata_module._normalise_status_reports(
+    reports = metadata_entries._normalise_status_reports(
         {
             "statusReports": [
                 {"status": "NOT_FIDO_CERTIFIED"},
@@ -46,12 +51,12 @@ def test_metadata_normalisation_helpers_cover_status_identifiers_and_defaults():
         {"status": "FIDO_CERTIFIED"},
     ]
 
-    identifiers = metadata_module._normalise_attestation_identifiers(
+    identifiers = metadata_entries._normalise_attestation_identifiers(
         {"attestationCertificateKeyIdentifiers": [" id-1 ", "", 1, "id-2"]}
     )
     assert identifiers == ["id-1", "id-2"]
 
-    statement, legal = metadata_module._normalise_metadata_statement(
+    statement, legal = metadata_entries._normalise_metadata_statement(
         {
             "legalHeader": " Demo legal ",
             "metadataStatement": {
@@ -70,8 +75,6 @@ def test_metadata_normalisation_helpers_cover_status_identifiers_and_defaults():
 
 
 def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
-
     session_payload = _entry_payload(
         aaguid="AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA",
         description="Session metadata",
@@ -90,21 +93,21 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
     base_entry_other = MetadataBlobPayloadEntry.from_dict(base_payload_other)
 
     assert (
-        metadata_module._normalise_aaguid(" AAAA-BBBB-CCCC-DDDD-EEEEFFFF0000 ")
+        metadata_entries._normalise_aaguid(" AAAA-BBBB-CCCC-DDDD-EEEEFFFF0000 ")
         == "aaaabbbbccccddddeeeeffff0000"
     )
-    assert metadata_module._extract_entry_aaguid(session_entry) is None
+    assert metadata_entries._extract_entry_aaguid(session_entry) is None
 
     class _MappingBackedEntry:
         aaguid = None
         metadata_statement = {"aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}
 
     assert (
-        metadata_module._extract_entry_aaguid(_MappingBackedEntry())
+        metadata_entries._extract_entry_aaguid(_MappingBackedEntry())
         == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     )
 
-    session_item = metadata_module.SessionMetadataItem(
+    session_item = metadata_sessions.SessionMetadataItem(
         filename="session.json",
         payload=session_payload,
         legal_header="Session Legal",
@@ -124,15 +127,15 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
     monkeypatch.setattr(
         entries,
         "_extract_entry_aaguid",
-        lambda entry: metadata_module._normalise_aaguid(str(getattr(entry, "aaguid", ""))),
+        lambda entry: metadata_entries._normalise_aaguid(str(getattr(entry, "aaguid", ""))),
     )
 
-    merged = metadata_module._merge_metadata(base_metadata, [session_item])
+    merged = metadata_verifier._merge_metadata(base_metadata, [session_item])
     merged_descriptions = [entry["metadataStatement"]["description"] for entry in merged.entries]
     assert merged_descriptions == ["Session metadata", "Base unique"]
     assert merged.legal_header == "Session Legal"
 
-    source_info = metadata_module._session_item_source_info(session_item)
+    source_info = metadata_effective._session_item_source_info(session_item)
     assert source_info["storedFilename"] == "session.json"
     assert source_info["originalFilename"] == "upload.json"
     assert source_info["uploadedAt"] == "2026-04-03T00:00:00+00:00"
@@ -140,18 +143,15 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
 
 
 def test_cache_cleaning_and_formatting_helpers():
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
+    assert metadata_blob._clean_metadata_cache_value("  etag-value  ") == "etag-value"
+    assert metadata_blob._clean_metadata_cache_value("   ") is None
 
-    assert metadata_module._clean_metadata_cache_value("  etag-value  ") == "etag-value"
-    assert metadata_module._clean_metadata_cache_value("   ") is None
-
-    iso_value = metadata_module._format_last_modified("Wed, 21 Oct 2015 07:28:00 GMT")
+    iso_value = metadata_blob._format_last_modified("Wed, 21 Oct 2015 07:28:00 GMT")
     assert iso_value == "2015-10-21T07:28:00+00:00"
-    assert metadata_module._format_last_modified("not-a-date") == "not-a-date"
+    assert metadata_blob._format_last_modified("not-a-date") == "not-a-date"
 
 
 def test_prune_helper_and_request_session_identifier_paths(monkeypatch, tmp_path, session_store, app_config):
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
     config_module = pytest.importorskip("server.app.config")
     # Resolving the cookie's namespace refreshes its directory's last-access marker.
     monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
@@ -161,7 +161,7 @@ def test_prune_helper_and_request_session_identifier_paths(monkeypatch, tmp_path
         "prune_session",
         lambda _sid: (_ for _ in ()).throw(RuntimeError("ignore prune errors")),
     )
-    metadata_module._prune_session_metadata_directory("session-1")
+    metadata_sessions._prune_session_metadata_directory("session-1")
 
     # Only a cookie signed with the application secret names a namespace; an
     # unsigned one is ignored (it would otherwise be an IDOR).
@@ -170,24 +170,24 @@ def test_prune_helper_and_request_session_identifier_paths(monkeypatch, tmp_path
     ).dumps("cookie-session")
     with config_module.app.test_request_context(
         "/",
-        headers={"Cookie": f"{metadata_module._SESSION_METADATA_COOKIE_NAME}=cookie-session"},
+        headers={"Cookie": f"{metadata_state._SESSION_METADATA_COOKIE_NAME}=cookie-session"},
     ):
-        assert metadata_module._get_metadata_session_id(create=False) is None
+        assert metadata_sessions._get_metadata_session_id(create=False) is None
 
     with config_module.app.test_request_context(
         "/",
-        headers={"Cookie": f"{metadata_module._SESSION_METADATA_COOKIE_NAME}={sealed}"},
+        headers={"Cookie": f"{metadata_state._SESSION_METADATA_COOKIE_NAME}={sealed}"},
     ):
-        identifier = metadata_module._get_metadata_session_id(create=False)
+        identifier = metadata_sessions._get_metadata_session_id(create=False)
         assert identifier == "cookie-session"
-        assert session[metadata_module._SESSION_METADATA_SESSION_KEY] == "cookie-session"
+        assert session[metadata_state._SESSION_METADATA_SESSION_KEY] == "cookie-session"
         assert g._session_metadata_cookie == "cookie-session"
 
     with config_module.app.test_request_context("/"):
-        generated = metadata_module._get_metadata_session_id(create=True)
+        generated = metadata_sessions._get_metadata_session_id(create=True)
         assert isinstance(generated, str)
-        assert session[metadata_module._SESSION_METADATA_SESSION_KEY] == generated
+        assert session[metadata_state._SESSION_METADATA_SESSION_KEY] == generated
         assert g._session_metadata_cookie == generated
 
     with config_module.app.test_request_context("/"):
-        assert metadata_module._get_metadata_session_id(create=False) is None
+        assert metadata_sessions._get_metadata_session_id(create=False) is None

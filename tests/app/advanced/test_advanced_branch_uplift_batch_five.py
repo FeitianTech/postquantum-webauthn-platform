@@ -4,6 +4,9 @@ import hashlib
 
 import pytest
 
+from server.app.routes import binary_helpers as shared_binary_helpers
+from server.app.routes.advanced import parsing as advanced_parsing
+
 
 def _register_begin_payload() -> dict:
     return {
@@ -54,10 +57,8 @@ def _install_register_complete_defaults(monkeypatch, advanced_module, attestatio
 
 
 def test_helper_none_and_non_string_decode_paths():
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-
-    assert advanced_module._coerce_optional_bool(None) is None
-    assert advanced_module._decode_base64url_bytes(object()) == b""
+    assert advanced_parsing._coerce_optional_bool(None) is None
+    assert shared_binary_helpers.decode_base64url_bytes(object()) == b""
 
 
 @pytest.mark.parametrize(

@@ -7,6 +7,10 @@ from types import MappingProxyType, SimpleNamespace
 import pytest
 
 from server.app import mds_snapshot_dir
+from server.app.webauthn.metadata import blob as metadata_blob
+from server.app.webauthn.metadata import entries as metadata_entries
+from server.app.webauthn.metadata import sessions as metadata_sessions
+from server.app.webauthn.metadata import state as metadata_state
 
 
 @pytest.fixture
@@ -17,27 +21,27 @@ def metadata_module(monkeypatch, metadata_state):
 
 def test_metadata_validation_and_info_loader_residual_guards(metadata_module, monkeypatch, session_store):
     with pytest.raises(ValueError):
-        metadata_module._validate_session_metadata_filename(123)
+        metadata_sessions._validate_session_metadata_filename(123)
     with pytest.raises(ValueError):
-        metadata_module._validate_session_metadata_filename("entry.txt")
+        metadata_sessions._validate_session_metadata_filename("entry.txt")
 
     monkeypatch.setattr(
         session_store,
         "read_file",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("missing")),
     )
-    assert metadata_module._load_session_metadata_info("session", "entry.meta.json") == {}
+    assert metadata_sessions._load_session_metadata_info("session", "entry.meta.json") == {}
 
     monkeypatch.setattr(
         session_store,
         "read_file",
         lambda *_args, **_kwargs: b"[]",
     )
-    assert metadata_module._load_session_metadata_info("session", "entry.meta.json") == {}
+    assert metadata_sessions._load_session_metadata_info("session", "entry.meta.json") == {}
 
 
 def test_metadata_build_and_expand_residual_paths(metadata_module):
-    entry, legal_header, payload = metadata_module.build_metadata_entry_components(
+    entry, legal_header, payload = metadata_entries.build_metadata_entry_components(
         {
             "timeOfLastStatusChange": " 2026-01-01 ",
             "attestationCertificateKeyIdentifiers": ["ab"],
@@ -76,7 +80,7 @@ def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_
     )
 
     def _write_file(_directory, filename, *_args, **_kwargs):
-        if filename.endswith(metadata_module._SESSION_METADATA_INFO_SUFFIX):
+        if filename.endswith(metadata_state._SESSION_METADATA_INFO_SUFFIX):
             raise RuntimeError("info-write-failure")
 
     monkeypatch.setattr(
@@ -102,7 +106,7 @@ def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_modu
         lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("open-failure")),
         raising=False,
     )
-    assert metadata_module.load_metadata_cache_entry() == {}
+    assert metadata_blob.load_metadata_cache_entry() == {}
 
     monkeypatch.setattr(os.path, "getmtime", lambda _path: (_ for _ in ()).throw(OSError("no-mtime")))
     monkeypatch.setattr(
@@ -111,7 +115,7 @@ def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_modu
         lambda *_args, **_kwargs: (_ for _ in ()).throw(FileNotFoundError("missing")),
         raising=False,
     )
-    loaded, mtime = metadata_module._load_verified_metadata_fallback()
+    loaded, mtime = metadata_blob._load_verified_metadata_fallback()
     assert loaded is None
     assert mtime is None
 
@@ -122,7 +126,7 @@ def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_modu
         lambda *_args, **_kwargs: io.StringIO("{invalid-json"),
         raising=False,
     )
-    loaded, mtime = metadata_module._load_verified_metadata_fallback()
+    loaded, mtime = metadata_blob._load_verified_metadata_fallback()
     assert loaded is None
     assert mtime == 123.0
 
@@ -133,7 +137,7 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
 
     monkeypatch.setattr(os.path, "getmtime", _getmtime)
     monkeypatch.setattr(blob, "_load_verified_metadata_payload", lambda: None)
-    snapshot, marker = metadata_module._load_base_explorer_snapshot()
+    snapshot, marker = metadata_blob._load_base_explorer_snapshot()
     assert snapshot is None
     assert marker == (None, None, None, None)
 
@@ -159,7 +163,7 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
         "build_explorer_snapshot",
         lambda _payload, _cache: {"meta": {"entryCount": 0}},
     )
-    snapshot, marker = metadata_module._load_base_explorer_snapshot()
+    snapshot, marker = metadata_blob._load_base_explorer_snapshot()
     assert snapshot == {"meta": {"entryCount": 0}}
     assert marker == (10.0, 5.0, 5.0, 5.0)
 

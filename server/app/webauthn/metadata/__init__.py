@@ -1,10 +1,8 @@
 """Metadata handling utilities for the WebAuthn demo server.
 
-The implementation lives in this package's submodules; this module is the public
-face of it and re-exports the pieces callers use. Each fragment resolves
-its own names through its own imports, so a name here is the same object the
-fragment defines -- patching one of these re-exports changes what callers of
-*this module* see, not what the fragments call.
+The implementation lives in this package's submodules; this module re-exports
+the pieces the rest of the server uses. A name here is the same object the
+submodule defines: patch the submodule, not this module.
 """
 from __future__ import annotations
 
@@ -13,13 +11,11 @@ from . import (
     effective,
     entries,
     sessions,
-    state,
     uploads,
     verifier,
 )
 
 __all__ = ["get_mds_verifier",
-           "load_metadata_cache_entry",
            "load_cached_metadata_snapshot", "load_packaged_explorer_summary", "load_packaged_snapshot_meta",
            "load_effective_explorer_snapshot",
            "load_effective_full_snapshot", "resolve_effective_metadata_entry", "ensure_metadata_session_id",
@@ -27,94 +23,32 @@ __all__ = ["get_mds_verifier",
            "delete_session_metadata_item", "expand_metadata_entry_payloads",
            "metadata_entry_trust_anchor_status", "maybe_store_uploaded_metadata_file"]
 
-SessionMetadataItem = sessions.SessionMetadataItem
-
-# Constants shared with the fragments.
-_METADATA_REPO_FOLDER = state._METADATA_REPO_FOLDER
-_METADATA_STATEMENT_REQUIRED_DEFAULTS = state._METADATA_STATEMENT_REQUIRED_DEFAULTS
-_SESSION_METADATA_CLEANUP_ASYNC_ENV = state._SESSION_METADATA_CLEANUP_ASYNC_ENV
-_SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV = state._SESSION_METADATA_CLEANUP_INTERVAL_HOURS_ENV
-_SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV = state._SESSION_METADATA_CLEANUP_INTERVAL_SECONDS_ENV
-_SESSION_METADATA_COOKIE_MAX_AGE = state._SESSION_METADATA_COOKIE_MAX_AGE
-_SESSION_METADATA_COOKIE_NAME = state._SESSION_METADATA_COOKIE_NAME
-_SESSION_METADATA_INACTIVE_AGE = state._SESSION_METADATA_INACTIVE_AGE
-_SESSION_METADATA_INFO_SUFFIX = state._SESSION_METADATA_INFO_SUFFIX
-_SESSION_METADATA_SESSION_KEY = state._SESSION_METADATA_SESSION_KEY
-_SESSION_METADATA_SUFFIX = state._SESSION_METADATA_SUFFIX
-_SESSION_METADATA_TOUCH_KEY = state._SESSION_METADATA_TOUCH_KEY
-_SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS = state._SESSION_METADATA_TOUCH_THROTTLE_DEFAULT_SECONDS
-_SESSION_METADATA_TOUCH_THROTTLE_ENV = state._SESSION_METADATA_TOUCH_THROTTLE_ENV
-
-# Cache and HTTP header helpers.
-_parse_http_datetime = blob._parse_http_datetime
-_format_last_modified = blob._format_last_modified
-_clean_metadata_cache_value = blob._clean_metadata_cache_value
-load_metadata_cache_entry = blob.load_metadata_cache_entry
-
-# Environment and cleanup interval helpers.
-_env_flag = sessions._env_flag
-_resolve_cleanup_interval = sessions._resolve_cleanup_interval
-_cleanup_async_enabled = sessions._cleanup_async_enabled
-
 # Repository upload helpers.
-_safe_metadata_repo_filename = uploads._safe_metadata_repo_filename
 maybe_store_uploaded_metadata_file = uploads.maybe_store_uploaded_metadata_file
 
-# Entry payload normalisation and expansion.
-_clone_json_value = entries._clone_json_value
-_normalise_status_reports = entries._normalise_status_reports
-_normalise_attestation_identifiers = entries._normalise_attestation_identifiers
-_normalise_metadata_statement = entries._normalise_metadata_statement
-build_metadata_entry_components = entries.build_metadata_entry_components
+# Entry payload expansion.
 expand_metadata_entry_payloads = entries.expand_metadata_entry_payloads
-_normalise_aaguid = entries._normalise_aaguid
-_extract_entry_aaguid = entries._extract_entry_aaguid
 
 # Packaged snapshot loaders.
 load_cached_metadata_snapshot = blob.load_cached_metadata_snapshot
 _load_base_metadata = blob._load_base_metadata
-_load_verified_metadata_fallback = blob._load_verified_metadata_fallback
-_load_verified_metadata_payload = blob._load_verified_metadata_payload
-_load_packaged_explorer_meta = blob._load_packaged_explorer_meta
-_load_base_explorer_snapshot = blob._load_base_explorer_snapshot
-_load_base_full_snapshot = blob._load_base_full_snapshot
 load_packaged_explorer_summary = blob.load_packaged_explorer_summary
 load_packaged_snapshot_meta = blob.load_packaged_snapshot_meta
 
-# Session cleanup worker and scheduling.
-_touch_session_last_access = sessions._touch_session_last_access
-_resolve_session_last_access = sessions._resolve_session_last_access
-_maybe_cleanup_inactive_sessions = sessions._maybe_cleanup_inactive_sessions
-_run_inactive_session_cleanup_worker = sessions._run_inactive_session_cleanup_worker
-_schedule_inactive_session_cleanup = sessions._schedule_inactive_session_cleanup
-
-# Session identifier, cookie, and directory helpers.
-_normalise_session_identifier = sessions._normalise_session_identifier
-_schedule_session_cookie = sessions._schedule_session_cookie
-_get_metadata_session_id = sessions._get_metadata_session_id
+# The metadata session identifier.
 ensure_metadata_session_id = sessions.ensure_metadata_session_id
-_session_metadata_directory = sessions._session_metadata_directory
-_note_session_activity = sessions._note_session_activity
-_validate_session_metadata_filename = sessions._validate_session_metadata_filename
 
 # Session metadata item CRUD.
-_prune_session_metadata_directory = sessions._prune_session_metadata_directory
-_load_session_metadata_info = sessions._load_session_metadata_info
 save_session_metadata_item = sessions.save_session_metadata_item
 list_session_metadata_items = sessions.list_session_metadata_items
 delete_session_metadata_item = sessions.delete_session_metadata_item
 serialize_session_metadata_item = sessions.serialize_session_metadata_item
 
 # Effective (base + session) snapshot composition.
-_build_session_snapshot_entry = effective._build_session_snapshot_entry
-_session_item_source_info = effective._session_item_source_info
-_entry_matches_lookup = effective._entry_matches_lookup
-_compose_effective_snapshot = effective._compose_effective_snapshot
 load_effective_explorer_snapshot = effective.load_effective_explorer_snapshot
 load_effective_full_snapshot = effective.load_effective_full_snapshot
 resolve_effective_metadata_entry = effective.resolve_effective_metadata_entry
 
-# Metadata merge, trust anchor, and verifier.
-_merge_metadata = verifier._merge_metadata
+# Trust anchor status and the verifier.
 metadata_entry_trust_anchor_status = verifier.metadata_entry_trust_anchor_status
 get_mds_verifier = verifier.get_mds_verifier
