@@ -8,6 +8,7 @@ from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData
 
 from ...encoding import encode_base64url
+from ...webauthn import mldsa
 from . import binary
 
 _AAGUID_SESSION_FIELD_PRECEDENCE = (
@@ -126,7 +127,7 @@ def _parse_client_credentials(
             credential_id_bytes = binary._decode_binary_value(credential_id_raw)
             public_key_bytes = binary._decode_binary_value(public_key_raw)
 
-            cose_key = CoseKey.parse(cbor.decode(public_key_bytes))
+            cose_key = CoseKey.parse(mldsa.with_raw_public_key(cbor.decode(public_key_bytes)))
 
             attested = AttestedCredentialData.create(
                 aaguid_bytes,

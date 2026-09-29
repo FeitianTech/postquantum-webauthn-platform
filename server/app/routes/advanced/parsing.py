@@ -9,6 +9,7 @@ from fido2.webauthn import AttestedCredentialData
 
 from ...attachments import normalize_attachment
 from ...encoding import encode_base64url
+from ...webauthn import mldsa
 from . import algorithms, binary
 
 
@@ -86,7 +87,7 @@ def _parse_client_supplied_credentials(
             credential_id_bytes = binary._decode_client_binary(credential_id_raw)
             public_key_bytes = binary._decode_client_binary(public_key_raw)
 
-            cose_key = CoseKey.parse(cbor.decode(public_key_bytes))
+            cose_key = CoseKey.parse(mldsa.with_raw_public_key(cbor.decode(public_key_bytes)))
             attested = AttestedCredentialData.create(aaguid_bytes, credential_id_bytes, cose_key)
 
             attachment_value = normalize_attachment(

@@ -7,6 +7,7 @@ as the raw bytes a COSE key carries.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from cryptography import x509
@@ -20,6 +21,7 @@ __all__ = [
     "describe_mldsa_oid_name",
     "extract_certificate_public_key_info",
     "parameter_details",
+    "with_raw_public_key",
 ]
 
 _OID_TO_PARAMETER_SET: dict[str, str] = {
@@ -36,6 +38,8 @@ _PARAMETER_SET_DETAILS: dict[str, dict[str, int]] = {
     "ML-DSA-65": {"public_key_length": 1952, "signature_length": 3309, "claimed_nist_level": 3},
     "ML-DSA-87": {"public_key_length": 2592, "signature_length": 4627, "claimed_nist_level": 5},
 }
+
+_COSE_ALGORITHM_PARAMETER_SETS: dict[int, str] = {-48: "ML-DSA-44", -49: "ML-DSA-65", -50: "ML-DSA-87"}
 
 # Usable with isinstance() to recognise any ML-DSA public key.
 PUBLIC_KEY_TYPES: tuple[type, ...] = (
@@ -116,3 +120,25 @@ def extract_certificate_public_key_info(cert_der: bytes) -> dict[str, Any]:
         info["algorithm_name"] = details["name"]
         info["algorithm_display_name"] = details["display"]
     return info
+
+
+def with_raw_public_key(cose_key: Any) -> Any:
+    """``cose_key`` with an ML-DSA public key given as SubjectPublicKeyInfo turned into its raw bytes.
+
+    A COSE ML-DSA key holds the raw public key in ``-1``, and fido2 reads nothing
+    else; a credential saved in the SubjectPublicKeyInfo form still verifies once
+    rebuilt through here. Anything else is returned as it is.
+    """
+
+    if not isinstance(cose_key, Mapping):
+        return cose_key
+    public_key = cose_key.get(-1)
+    if cose_key.get(3) not in _COSE_ALGORITHM_PARAMETER_SETS or not isinstance(public_key, bytes):
+        return cose_key
+    try:
+        loaded = serialization.load_der_public_key(public_key)
+    except (ValueError, UnsupportedAlgorithm):
+        return cose_key
+    if not isinstance(loaded, PUBLIC_KEY_TYPES):
+        return cose_key
+    return {**cose_key, -1: loaded.public_bytes_raw()}
