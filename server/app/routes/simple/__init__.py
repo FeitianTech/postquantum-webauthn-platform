@@ -21,7 +21,6 @@ from . import (
 
 __all__ = [
     "_SIMPLE_ALLOWED_ALGORITHMS",
-    "_add_base64_padding",
     "_decode_base64url_bytes",
     "_extract_assertion_credential_id",
     "_decode_binary_value",
@@ -38,7 +37,6 @@ __all__ = [
 _SIMPLE_ALLOWED_ALGORITHMS = registration._SIMPLE_ALLOWED_ALGORITHMS
 
 # base64 padding and binary decode primitives.
-_add_base64_padding = binary._add_base64_padding
 _decode_base64url_bytes = binary_helpers.decode_base64url_bytes
 _decode_binary_value = binary._decode_binary_value
 _extract_assertion_credential_id = binary_helpers.extract_assertion_credential_id

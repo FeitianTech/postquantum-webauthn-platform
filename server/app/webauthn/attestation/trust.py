@@ -163,20 +163,6 @@ def _coerce_certificate_bytes(value: Any) -> bytes | None:
     return None
 
 
-def _extract_attestation_leaf_certificate(
-    attestation_object: Any,
-) -> bytes | None:
-    """Return the first certificate from an attestation statement."""
-
-    att_stmt = getattr(attestation_object, "att_stmt", None)
-    if not isinstance(att_stmt, Mapping):
-        return None
-    chain = att_stmt.get("x5c")
-    if not isinstance(chain, Sequence) or not chain:
-        return None
-    return _coerce_certificate_bytes(chain[0])
-
-
 def _collect_metadata_root_certificates(metadata_entry: Any) -> list[bytes]:
     """Extract attestation root certificates from a metadata entry."""
 

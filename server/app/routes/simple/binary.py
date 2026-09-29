@@ -15,16 +15,6 @@ from ... import encoding
 from ..binary_helpers import decode_binary_text
 
 
-def _add_base64_padding(value: str) -> str:
-    """Pad *value* to a multiple of four characters.
-
-    Retained because ``simple.__all__`` exports it; the decoders no longer need
-    it, since :mod:`server.app.encoding` normalises padding itself.
-    """
-
-    return value + "=" * (-len(value) % 4)
-
-
 def _decode_binary_value(value: Any) -> bytes:
     if value is None:
         raise ValueError("missing binary value")

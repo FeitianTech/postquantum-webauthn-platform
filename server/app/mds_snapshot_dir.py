@@ -46,9 +46,6 @@ BROWSER_FILENAMES = frozenset({EXPLORER_FULL})
 # Smaller than this, a browser file gets no .gz sibling.
 MIN_GZIP_BYTES = 1024
 
-# Large source files the server reads and browsers never request.
-PRIVATE_FILENAMES = frozenset({BLOB, VERIFIED, EXPLORER})
-
 # server/app/mds_snapshot_dir.py -> the checkout (or /app in the image). The
 # instance folder holds what a deployment keeps beside its source, served by no
 # route and ignored by git and Docker.

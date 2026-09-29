@@ -78,13 +78,10 @@ def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_sh
     assert attestation_module._extract_certificate_aaguid(b"cert") == b""
 
 
-def test_coerce_certificate_bytes_and_leaf_extraction_non_mapping_paths(attestation_module):
+def test_coerce_certificate_bytes_non_bytes_path(attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     assert attestation_module._coerce_certificate_bytes(12345) is None
-
-    attestation_object = SimpleNamespace(att_stmt="not-a-mapping")
-    assert attestation_module._extract_attestation_leaf_certificate(attestation_object) is None
 
 
 def test_collect_metadata_roots_handles_singleton_and_missing_candidates(attestation_module):

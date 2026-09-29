@@ -21,11 +21,6 @@ def test_the_snapshot_is_seven_files_named_once():
         "fido-mds3.explorer.full.json.meta.json",
     )
     assert mds_snapshot_dir.BROWSER_FILENAMES == {"fido-mds3.explorer.full.json"}
-    assert mds_snapshot_dir.PRIVATE_FILENAMES == {
-        "blob.jwt",
-        "fido-mds3.verified.json",
-        "fido-mds3.explorer.json",
-    }
 
 
 def test_the_default_directory_is_in_the_instance_folder(monkeypatch):

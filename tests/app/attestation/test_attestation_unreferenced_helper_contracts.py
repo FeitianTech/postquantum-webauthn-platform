@@ -28,7 +28,7 @@ def _self_signed_cert_der() -> bytes:
     return cert.public_bytes(serialization.Encoding.DER)
 
 
-def test_datetime_coercion_bytes_and_leaf_certificate_helpers(attestation_module):
+def test_datetime_coercion_and_bytes_helpers(attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     naive = datetime(2026, 1, 1, 12, 0, 0)
@@ -46,12 +46,6 @@ def test_datetime_coercion_bytes_and_leaf_certificate_helpers(attestation_module
     assert attestation_module._coerce_bytes(ByteBuffer(b"abc")) == b"abc"
     assert attestation_module._coerce_bytes(memoryview(b"xyz")) == b"xyz"
     assert attestation_module._coerce_bytes("abc") is None
-
-    cert_der = _self_signed_cert_der()
-    cert_b64 = base64.b64encode(cert_der).decode("ascii")
-    attestation_object = SimpleNamespace(att_stmt={"x5c": [cert_b64]})
-    assert attestation_module._extract_attestation_leaf_certificate(attestation_object) == cert_der
-    assert attestation_module._extract_attestation_leaf_certificate(SimpleNamespace(att_stmt={"x5c": []})) is None
 
 
 def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch, attestation_module):

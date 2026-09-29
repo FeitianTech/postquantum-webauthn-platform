@@ -28,7 +28,6 @@ __all__ = [
     "CRED_PROTECT_LABELS",
     "EXTENSION_DISPLAY_METADATA",
     "augment_aaguid_fields",
-    "coerce_aaguid_hex",
     "describe_cred_protect",
     "encode_base64url",
     "extract_attestation_details",
@@ -48,7 +47,6 @@ CRED_PROTECT_LABELS = aaguid.CRED_PROTECT_LABELS
 
 # AAGUID, CredProtect, and authenticator extension helpers.
 augment_aaguid_fields = aaguid.augment_aaguid_fields
-coerce_aaguid_hex = aaguid.coerce_aaguid_hex
 coerce_non_negative_int = aaguid.coerce_non_negative_int
 describe_cred_protect = aaguid.describe_cred_protect
 extract_min_pin_length = aaguid.extract_min_pin_length
@@ -98,7 +96,6 @@ _collect_metadata_root_certificates = trust._collect_metadata_root_certificates
 _collect_trust_path_entries = trust._collect_trust_path_entries
 _describe_certificate_subject = trust._describe_certificate_subject
 _ensure_utc_datetime = trust._ensure_utc_datetime
-_extract_attestation_leaf_certificate = trust._extract_attestation_leaf_certificate
 _extract_certificate_aaguid = trust._extract_certificate_aaguid
 _find_metadata_entry_for_aaguid = trust._find_metadata_entry_for_aaguid
 _resolve_root_validity = trust._resolve_root_validity

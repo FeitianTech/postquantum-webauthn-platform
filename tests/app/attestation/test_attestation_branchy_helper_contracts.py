@@ -535,21 +535,6 @@ def test_numeric_aaguid_and_extension_helpers_cover_fallback_paths(attestation_m
     assert attestation_module.normalize_aaguid_string("00112233-4455-6677-8899-aabbccddeeff") == "00112233445566778899aabbccddeeff"
     assert attestation_module.normalize_aaguid_string(123) is None
 
-    class _AaguidBytes:
-        def __bytes__(self):
-            return bytes.fromhex("00112233445566778899aabbccddeeff")
-
-    class _BadBytes:
-        def __bytes__(self):
-            raise TypeError("boom")
-
-    assert (
-        attestation_module.coerce_aaguid_hex({"value": "00112233-4455-6677-8899-aabbccddeeff"})
-        == "00112233445566778899aabbccddeeff"
-    )
-    assert attestation_module.coerce_aaguid_hex(_AaguidBytes()) == "00112233445566778899aabbccddeeff"
-    assert attestation_module.coerce_aaguid_hex(_BadBytes()) is None
-
     enriched = {"aaguid": {"raw": "00112233-4455-6677-8899-aabbccddeeff"}}
     attestation_module.augment_aaguid_fields(enriched)
     assert enriched["aaguidHex"] == "00112233445566778899aabbccddeeff"

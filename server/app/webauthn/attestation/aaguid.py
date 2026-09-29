@@ -51,38 +51,6 @@ def normalize_aaguid_string(value: Any) -> str | None:
     return None
 
 
-def coerce_aaguid_hex(value: Any) -> str | None:
-    if value is None:
-        return None
-
-    if isinstance(value, (bytes, bytearray, memoryview)):
-        hex_value = bytes(value).hex()
-        return hex_value if len(hex_value) == 32 else None
-
-    if isinstance(value, str):
-        normalized = normalize_aaguid_string(value)
-        if normalized and len(normalized) == 32:
-            return normalized
-        return None
-
-    if isinstance(value, Mapping):
-        for key in ("aaguid", "hex", "raw", "value", "guid"):
-            candidate = coerce_aaguid_hex(value.get(key))
-            if candidate:
-                return candidate
-        return None
-
-    try:
-        raw_bytes = bytes(value)
-    except Exception:
-        return None
-
-    hex_value = raw_bytes.hex()
-    if len(hex_value) != 32:
-        return None
-    return hex_value
-
-
 def augment_aaguid_fields(container: MutableMapping[str, Any]) -> None:
     if not isinstance(container, MutableMapping):
         return

@@ -33,9 +33,7 @@ def test_base64_round_trips_and_stays_padded(payload):
 
 @pytest.mark.parametrize("payload", _PAYLOADS)
 def test_hex_round_trips(payload):
-    text = encoding.encode_hex(payload)
-    assert len(text) % 2 == 0
-    assert encoding.decode_hex(text) == payload
+    assert encoding.decode_hex(payload.hex()) == payload
 
 
 def _is_hex_looking(text: str) -> bool:
@@ -169,7 +167,6 @@ def test_try_helpers_return_none_rather_than_raising():
     assert encoding.try_decode_base64url("Hello, this is plain text!") is None
     assert encoding.try_decode_base64("Hello, this is plain text!") is None
     assert encoding.try_decode_hex("zz") is None
-    assert encoding.try_sniff("Hello, this is plain text!") is None
     assert encoding.try_decode_base64url("QUJD") == b"ABC"
 
 

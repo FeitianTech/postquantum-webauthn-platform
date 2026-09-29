@@ -556,8 +556,8 @@ def test_with_retry_raises_runtime_when_no_attempts_configured():
 
 
 def test_normalise_prefix_handles_empty_inputs():
-    assert cloud._normalise_prefix(None) == ""
-    assert cloud._normalise_prefix("///") == ""
+    assert cloud.normalise_blob_prefix(None) == ""
+    assert cloud.normalise_blob_prefix("///") == ""
 
 
 def test_ensure_bucket_reuses_existing_client(monkeypatch):

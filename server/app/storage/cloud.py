@@ -186,9 +186,6 @@ def normalise_blob_prefix(prefix: str | None) -> str:
     return cleaned + "/"
 
 
-# Historic private alias; kept so existing callers/tests keep working.
-_normalise_prefix = normalise_blob_prefix
-
 
 def build_blob_name(*components: str, prefix: str | None = None) -> str:
     base = normalise_blob_prefix(prefix)

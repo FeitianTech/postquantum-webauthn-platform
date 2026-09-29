@@ -53,12 +53,10 @@ __all__ = [
     "decode_pem_body",
     "encode_base64",
     "encode_base64url",
-    "encode_hex",
     "sniff",
     "try_decode_base64",
     "try_decode_base64url",
     "try_decode_hex",
-    "try_sniff",
 ]
 
 _BASE64URL_ALPHABET = re.compile(r"\A[A-Za-z0-9_-]*={0,2}\Z")
@@ -176,12 +174,6 @@ def decode_base64(
     elif not _BASE64_ALPHABET.fullmatch(cleaned):
         raise EncodingError("input is not standard base64")
     return _b64_decode_strict(cleaned, urlsafe=False)
-
-
-def encode_hex(data: bytes) -> str:
-    """Encode ``data`` as lowercase hexadecimal."""
-
-    return bytes(data).hex()
 
 
 def decode_hex(
@@ -308,12 +300,3 @@ def sniff(
         ambiguous=True,
         lenient=lenient,
     )
-
-
-def try_sniff(text: str, **kwargs: object) -> SniffResult | None:
-    """:func:`sniff`, returning ``None`` instead of raising."""
-
-    try:
-        return sniff(text, **kwargs)  # type: ignore[arg-type]
-    except EncodingError:
-        return None
