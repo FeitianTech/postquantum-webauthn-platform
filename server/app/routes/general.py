@@ -366,24 +366,6 @@ def api_codec_payload():
     return jsonify(result), status
 
 
-@bp.route("/api/decode", methods=["POST"])
-def api_decode_payload():
-    if not request.is_json:
-        return jsonify({"error": "Expected JSON payload."}), 400
-
-    payload = request.get_json(silent=True) or {}
-    decoder_input = payload.get("payload")
-    if not isinstance(decoder_input, str) or not decoder_input.strip():
-        return jsonify({"error": "Decoder payload must be a non-empty string."}), 400
-
-    lenient = payload.get("lenient", False)
-    if not isinstance(lenient, bool):
-        return jsonify({"error": "lenient must be true or false."}), 400
-
-    result, status = _perform_decode(decoder_input, lenient=lenient)
-    return jsonify(result), status
-
-
 @bp.route("/api/mds/decode-certificate", methods=["POST"])
 def api_decode_mds_certificate():
     if not request.is_json:

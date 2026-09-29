@@ -13,7 +13,7 @@ export function advancedRegistrations() {
   const answers = goldenAnswers(ADVANCED_SCENARIO);
   const begins = answers.filter(({ request }) => request.includes('/register/begin'));
   const completes = answers.filter(({ request }) => request.includes('/register/complete'));
-  const decodes = answers.filter(({ request }) => request === 'POST /api/decode');
+  const decodes = answers.filter(({ request }) => request === 'POST /api/codec');
   return completes.map((complete, index) => ({ begin: begins[index], complete, decode: decodes[index] }));
 }
 

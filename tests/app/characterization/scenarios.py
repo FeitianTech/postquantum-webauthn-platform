@@ -632,7 +632,7 @@ def _(r: Recorder) -> None:
 def _(r: Recorder) -> None:
     client = r.client()
     for payload in m.captured_attestation_objects().values():
-        r.post(client, "/api/decode", json={"payload": payload.hex()})
+        r.post(client, "/api/codec", json={"payload": payload.hex()})
 
 
 @scenario("registration-detail-decodes")
@@ -660,8 +660,8 @@ def _(r: Recorder) -> None:
     ]
     stored = [response.get_json()["storedCredential"] for response in registrations]
     for record in stored:
-        r.post(client, "/api/decode", json={"payload": record["attestationObject"]})
-    r.post(client, "/api/decode", json={"payload": stored[0]["authenticatorData"]})
+        r.post(client, "/api/codec", json={"payload": record["attestationObject"]})
+    r.post(client, "/api/codec", json={"payload": stored[0]["authenticatorData"]})
 
 
 @scenario("advanced-registration-detail-decodes")
@@ -695,7 +695,7 @@ def _(r: Recorder) -> None:
         ),
     ]
     for response in registrations:
-        r.post(client, "/api/decode", json={"payload": response.get_json()["relyingParty"]["attestationObject"]})
+        r.post(client, "/api/codec", json={"payload": response.get_json()["relyingParty"]["attestationObject"]})
 
 
 @scenario("advanced-authentication-answers")

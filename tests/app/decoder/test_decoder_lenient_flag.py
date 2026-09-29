@@ -1,6 +1,6 @@
 """Best-effort decoding happens only when a request asks for it.
 
-``"lenient": true`` on ``/api/codec`` (decode mode) or ``/api/decode`` reads CBOR
+``"lenient": true`` on ``/api/codec`` (decode mode) reads CBOR
 that is not well-formed as far as it goes. The response says it was lenient and
 lists, with offset and path, each item it kept partially or stepped over.
 """
@@ -11,17 +11,15 @@ import pytest
 from tests.app.decoder.test_decoder_no_repair import ES256_GET_ASSERTION_DUMP
 
 
-@pytest.mark.parametrize("endpoint", ["/api/codec", "/api/decode"])
-def test_without_the_flag_input_that_is_not_well_formed_fails(client, endpoint):
-    response = client.post(endpoint, json={"payload": "48aabb", "mode": "decode"})
+def test_without_the_flag_input_that_is_not_well_formed_fails(client):
+    response = client.post("/api/codec", json={"payload": "48aabb", "mode": "decode"})
 
     assert response.status_code == 422
     assert response.get_json()["offset"] == 0
 
 
-@pytest.mark.parametrize("endpoint", ["/api/codec", "/api/decode"])
-def test_with_the_flag_the_response_says_it_was_lenient_and_what_it_skipped(client, endpoint):
-    response = client.post(endpoint, json={"payload": "48aabb", "mode": "decode", "lenient": True})
+def test_with_the_flag_the_response_says_it_was_lenient_and_what_it_skipped(client):
+    response = client.post("/api/codec", json={"payload": "48aabb", "mode": "decode", "lenient": True})
 
     assert response.status_code == 200
     body = response.get_json()
@@ -41,11 +39,10 @@ def test_with_the_flag_the_response_says_it_was_lenient_and_what_it_skipped(clie
 
 @pytest.mark.parametrize("value", ["true", 1, None, "yes"])
 def test_the_flag_must_be_a_boolean(client, value):
-    for endpoint in ("/api/codec", "/api/decode"):
-        response = client.post(endpoint, json={"payload": "a10102", "lenient": value})
+    response = client.post("/api/codec", json={"payload": "a10102", "lenient": value})
 
-        assert response.status_code == 400
-        assert response.get_json() == {"error": "lenient must be true or false."}
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "lenient must be true or false."}
 
 
 def test_strict_is_the_default_and_well_formed_input_skips_nothing_either_way(client):

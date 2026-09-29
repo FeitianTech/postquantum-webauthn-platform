@@ -7,7 +7,7 @@ import { goldenAnswers, goldenArtifact } from '../../simple/ceremony-answers.js'
 
 // registration-detail-decodes: four Simple registrations (ES256 with AAGUID
 // 00112233..., EdDSA, ML-DSA-65, packed with an x5c certificate), then POST
-// /api/decode for each stored attestation object, in that order, and for the
+// /api/codec for each stored attestation object, in that order, and for the
 // first one's authenticator data.
 const DETAIL = 'registration-detail-decodes';
 const NAMES = ['es256', 'eddsa', 'mldsa65', 'packedX5c'];
@@ -17,7 +17,7 @@ export function registration(name) {
   const answers = goldenAnswers(DETAIL);
   const index = NAMES.indexOf(name);
   const completes = answers.filter(({ request }) => request.startsWith('POST /api/register/complete'));
-  const decodes = answers.filter(({ request }) => request === 'POST /api/decode');
+  const decodes = answers.filter(({ request }) => request === 'POST /api/codec');
   const complete = structuredClone(completes[index].body);
   return {
     complete,
@@ -31,7 +31,7 @@ export function registration(name) {
 }
 
 /**
- * A `decode` as the registration view is given one (POST /api/decode): the
+ * A `decode` as the registration view is given one (POST /api/codec): the
  * decoder's recorded answer for a payload the goldens hold, else the refusal a
  * failed request throws.
  */
@@ -74,7 +74,7 @@ export function simpleRecord(name) {
   return registration(name).storedCredential;
 }
 
-/** What POST /api/decode answered for a Simple registration's attestation object, a fresh copy. */
+/** What POST /api/codec answered for a Simple registration's attestation object, a fresh copy. */
 export function attestationDecodeAnswer(name) {
   return registration(name).attestationDecode;
 }

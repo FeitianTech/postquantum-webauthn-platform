@@ -31,7 +31,7 @@ function renderSection(records: object[] = [], routes = {}) {
   keepRecords(records);
   const fetch = stubFetch({
     ...warmUpRoutes(),
-    '/api/decode': (init) => answerResponse(advancedDecodeAnswer(JSON.parse(String(init?.body)).payload)) as Response,
+    '/api/codec': (init) => answerResponse(advancedDecodeAnswer(JSON.parse(String(init?.body)).payload)) as Response,
     ...routes,
   });
   renderPage(

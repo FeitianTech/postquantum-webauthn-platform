@@ -1,7 +1,7 @@
 # The decoder and encoder
 
-`server/app/decoder/` is the codec behind the Codec section and `/api/decode`,
-`/api/codec`: `decode/` reads what it is given and shows what it holds, `encode/`
+`server/app/decoder/` is the codec behind the Codec section, the credential
+details and `/api/codec`: `decode/` reads what it is given and shows what it holds, `encode/`
 writes a value back. These are its rules. Read them before changing anything
 under `server/app/decoder`; `AGENTS.md` keeps only a summary.
 

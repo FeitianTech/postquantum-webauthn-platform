@@ -30,7 +30,7 @@ def _attestation_object_hex(cose_key) -> str:
 
 
 def _decoded_public_key(client, cose_key) -> dict:
-    response = client.post("/api/decode", json={"payload": _attestation_object_hex(cose_key)})
+    response = client.post("/api/codec", json={"payload": _attestation_object_hex(cose_key)})
     assert response.status_code == 200
     return response.get_json()["data"]["authenticatorData"]["credential"]["publicKey"]
 

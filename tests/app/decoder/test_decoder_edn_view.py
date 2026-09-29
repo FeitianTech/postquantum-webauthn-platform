@@ -62,7 +62,7 @@ def test_no_edn_is_given_that_does_not_encode_back_to_the_item():
 
 
 def test_the_endpoint_answers_with_the_edn(client):
-    response = client.post("/api/decode", json={"payload": "a1016161"})
+    response = client.post("/api/codec", json={"payload": "a1016161"})
 
     assert response.status_code == 200
     assert response.get_json()["data"]["edn"] == '{1: "a"}'

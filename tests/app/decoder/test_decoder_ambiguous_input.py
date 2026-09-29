@@ -102,7 +102,7 @@ def test_lenient_decoding_does_not_change_which_reading_wins():
 
 
 def test_the_endpoint_reads_digit_hex_as_cbor(client):
-    response = client.post("/api/decode", json={"payload": "81818101"})
+    response = client.post("/api/codec", json={"payload": "81818101"})
 
     assert response.status_code == 200
     assert response.get_json()["data"]["decodedValue"] == [[[1]]]

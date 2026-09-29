@@ -2894,7 +2894,7 @@
    ]
   },
   {
-   "request": "POST /api/decode",
+   "request": "POST /api/codec",
    "status": 200,
    "headers": [
     [
@@ -3014,7 +3014,7 @@
    }
   },
   {
-   "request": "POST /api/decode",
+   "request": "POST /api/codec",
    "status": 200,
    "headers": [
     [
@@ -3251,7 +3251,7 @@
    }
   },
   {
-   "request": "POST /api/decode",
+   "request": "POST /api/codec",
    "status": 200,
    "headers": [
     [

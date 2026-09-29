@@ -59,7 +59,7 @@ def test_the_limits_are_the_defaults_unless_the_environment_sets_them(make_app, 
         assert make_app().config["MAX_CONTENT_LENGTH"] == _LIMIT
 
 
-@pytest.mark.parametrize("path", ["/api/decode", "/api/codec", "/api/advanced/register/complete"])
+@pytest.mark.parametrize("path", ["/api/codec", "/api/advanced/register/complete"])
 def test_a_body_at_the_limit_is_read(client, path):
     response = client.post(path, data=_json_body(_LIMIT), content_type="application/json")
 
@@ -69,7 +69,7 @@ def test_a_body_at_the_limit_is_read(client, path):
     assert "error" in response.get_json()
 
 
-@pytest.mark.parametrize("path", ["/api/decode", "/api/codec", "/api/advanced/register/complete"])
+@pytest.mark.parametrize("path", ["/api/codec", "/api/advanced/register/complete"])
 def test_a_body_over_the_limit_is_refused_as_json(client, path):
     response = client.post(path, data=_json_body(_LIMIT + 1), content_type="application/json")
 

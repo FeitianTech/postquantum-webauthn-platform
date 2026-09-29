@@ -41,7 +41,7 @@ def test_a_lone_pin_invalid_byte_is_the_pin_invalid_status():
 
 @pytest.mark.parametrize("payload", ["31", "0x31", base64.b64encode(b"\x31").decode("ascii")])
 def test_api_decode_shows_a_pin_invalid_response_as_that_status(client, payload):
-    response = client.post("/api/decode", json={"payload": payload})
+    response = client.post("/api/codec", json={"payload": payload})
 
     assert response.status_code == 200
     body = response.get_json()

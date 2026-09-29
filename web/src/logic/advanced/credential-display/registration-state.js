@@ -201,7 +201,7 @@ export async function hashAuthenticatorData(state) {
 
 /**
  * Fills `state` for a registration not yet decoded: the attestation object and
- * the authenticator data through `decode` (POST /api/decode), else what the
+ * the authenticator data through `decode` (POST /api/codec), else what the
  * record holds already decoded; its certificates, else the relying party's.
  * Gives what the view says about the two decodes.
  */

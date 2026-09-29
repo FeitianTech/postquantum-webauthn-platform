@@ -32,7 +32,7 @@ export const DETAIL_SCENARIO = 'registration-detail-decodes';
 export function decodeRoute(): Route {
   const answers = answersOf(DETAIL_SCENARIO);
   const registered = answers.filter((entry) => entry.request.includes('/register/complete')).map((entry) => entry.body.storedCredential as Record<string, string>);
-  const decodes = answers.filter((entry) => entry.request === 'POST /api/decode');
+  const decodes = answers.filter((entry) => entry.request === 'POST /api/codec');
   const byPayload = new Map<string, Answer>();
   registered.forEach((record, index) => byPayload.set(record.attestationObject, decodes[index]));
   byPayload.set(registered[0].authenticatorData, decodes[registered.length]);

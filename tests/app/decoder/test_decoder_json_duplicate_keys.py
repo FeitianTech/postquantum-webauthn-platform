@@ -103,7 +103,7 @@ def test_a_credential_whose_client_data_repeats_a_key_reports_it_in_that_field()
 
 
 def test_the_endpoint_answers_a_finding_without_an_offset(client):
-    response = client.post("/api/decode", json={"payload": '{"a":1,"a":2}'})
+    response = client.post("/api/codec", json={"payload": '{"a":1,"a":2}'})
 
     assert response.status_code == 200
     assert response.get_json()["findings"][0]["offset"] is None

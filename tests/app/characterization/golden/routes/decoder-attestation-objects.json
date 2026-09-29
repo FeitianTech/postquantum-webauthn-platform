@@ -2,7 +2,7 @@
  "scenario": "decoder-attestation-objects",
  "requests": [
   {
-   "request": "POST /api/decode",
+   "request": "POST /api/codec",
    "status": 200,
    "headers": [
     [
@@ -416,7 +416,7 @@
    }
   },
   {
-   "request": "POST /api/decode",
+   "request": "POST /api/codec",
    "status": 200,
    "headers": [
     [
@@ -644,7 +644,7 @@
    }
   },
   {
-   "request": "POST /api/decode",
+   "request": "POST /api/codec",
    "status": 200,
    "headers": [
     [
@@ -901,7 +901,7 @@
    }
   },
   {
-   "request": "POST /api/decode",
+   "request": "POST /api/codec",
    "status": 200,
    "headers": [
     [
@@ -1142,7 +1142,7 @@
    }
   },
   {
-   "request": "POST /api/decode",
+   "request": "POST /api/codec",
    "status": 200,
    "headers": [
     [
@@ -1306,7 +1306,7 @@
    }
   },
   {
-   "request": "POST /api/decode",
+   "request": "POST /api/codec",
    "status": 200,
    "headers": [
     [
@@ -1608,7 +1608,7 @@
    }
   },
   {
-   "request": "POST /api/decode",
+   "request": "POST /api/codec",
    "status": 200,
    "headers": [
     [
@@ -1734,7 +1734,7 @@
    }
   },
   {
-   "request": "POST /api/decode",
+   "request": "POST /api/codec",
    "status": 200,
    "headers": [
     [

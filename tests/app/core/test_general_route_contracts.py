@@ -29,25 +29,25 @@ def test_decode_and_certificate_routes_cover_error_and_success_paths(monkeypatch
     good_cert_unpadded = base64.b64encode(b"good-cert").decode("ascii").rstrip("=")
 
     with entry_app().test_client() as client:
-        decode_non_json = client.post("/api/decode", data="payload", content_type="text/plain")
+        decode_non_json = client.post("/api/codec", data="payload", content_type="text/plain")
         assert decode_non_json.status_code == 400
         assert decode_non_json.get_json() == {"error": "Expected JSON payload."}
 
-        decode_missing_payload = client.post("/api/decode", json={"payload": "   "})
+        decode_missing_payload = client.post("/api/codec", json={"payload": "   "})
         assert decode_missing_payload.status_code == 400
         assert decode_missing_payload.get_json() == {
-            "error": "Decoder payload must be a non-empty string."
+            "error": "Codec payload must be a non-empty string."
         }
 
-        decode_value_error = client.post("/api/decode", json={"payload": "bad"})
+        decode_value_error = client.post("/api/codec", json={"payload": "bad"})
         assert decode_value_error.status_code == 422
         assert decode_value_error.get_json() == {"error": "bad payload"}
 
-        decode_runtime_error = client.post("/api/decode", json={"payload": "boom"})
+        decode_runtime_error = client.post("/api/codec", json={"payload": "boom"})
         assert decode_runtime_error.status_code == 500
         assert decode_runtime_error.get_json() == {"error": "Unable to decode payload."}
 
-        decode_success = client.post("/api/decode", json={"payload": "AQID"})
+        decode_success = client.post("/api/codec", json={"payload": "AQID"})
         assert decode_success.status_code == 200
         assert decode_success.get_json() == {"success": True, "decoded": "AQID"}
 

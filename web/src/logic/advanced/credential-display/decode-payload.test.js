@@ -47,10 +47,10 @@ describe('decodePayloadThroughApi', () => {
     const entry = registration('es256');
     const fetch = decoderAnswering({ status: 200, body: entry.authenticatorDataDecode });
     await expect(decodePayloadThroughApi(`  ${entry.authenticatorData}\n`)).resolves.toEqual(entry.authenticatorDataDecode);
-    expect(fetch).toHaveBeenCalledWith('/api/decode', {
+    expect(fetch).toHaveBeenCalledWith('/api/codec', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ payload: entry.authenticatorData }),
+      body: JSON.stringify({ payload: entry.authenticatorData, mode: 'decode' }),
     });
   });
 

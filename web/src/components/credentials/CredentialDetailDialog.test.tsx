@@ -24,7 +24,7 @@ const urlOf = (record: Record<string, unknown>, ...levels: string[]) => ['#simpl
 function renderShell(records: Record<string, unknown>[], hash = '', routes = {}) {
   window.history.replaceState({ fromNext: true }, '', `/${hash}`);
   keepRecords(records);
-  const fetch = stubFetch({ ...warmUpRoutes(), '/api/decode': decodeRoute(), ...routes });
+  const fetch = stubFetch({ ...warmUpRoutes(), '/api/codec': decodeRoute(), ...routes });
   renderPage(<AppShell />);
   return fetch;
 }

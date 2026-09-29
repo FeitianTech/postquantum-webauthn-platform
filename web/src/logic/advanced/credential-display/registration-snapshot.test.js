@@ -19,7 +19,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** The decoder as the view calls it (POST /api/decode): its recorded answer, else its refusal thrown. */
+/** The decoder as the view calls it (POST /api/codec): its recorded answer, else its refusal thrown. */
 function recordedDecoder() {
   return vi.fn(async (payload) => {
     const { status, body } = advancedDecodeAnswer(payload);

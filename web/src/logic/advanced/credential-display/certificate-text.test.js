@@ -6,7 +6,7 @@ import { advancedComplete, registration } from '@/test/logic/advanced/credential
 // A certificate as text (advanced/credential-display/certificate-text.js), as the
 // registration view's certificate shows it.
 
-/** The attestation certificate as the decoder parsed it (POST /api/decode): no summary. */
+/** The attestation certificate as the decoder parsed it (POST /api/codec): no summary. */
 const decodedCertificate = () => registration('packedX5c').attestationDecode.data.attestationObject.attStmt.x5c[0].parsedX5c;
 
 /** The same certificate as register-complete describes it, with the server's summary. */

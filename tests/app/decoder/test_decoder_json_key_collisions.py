@@ -138,7 +138,7 @@ def test_an_attestation_statement_with_colliding_keys_decodes_instead_of_failing
 def test_the_endpoint_serializes_an_attestation_statement_with_mixed_key_types(client):
     attestation = cbor2.dumps({"fmt": "none", "attStmt": {1: "a", "1": "b", 2.5: "c"}, "authData": rv.NONE_AUTH_DATA})
 
-    response = client.post("/api/decode", json={"payload": attestation.hex()})
+    response = client.post("/api/codec", json={"payload": attestation.hex()})
 
     assert response.status_code == 200
     assert response.get_json()["data"]["attestationObject"]["attStmt"] == {"1": "a", '"1" (text)': "b", "2.5": "c"}
