@@ -474,7 +474,7 @@ def captured_certificates() -> dict[str, bytes]:
     import base64
 
     from tests.app.decoder import real_vectors
-    from tests.fido2.attestation.test_attestation import _GSR2_DER
+    from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
     found = {"gsr2-root": _GSR2_DER}
     for name, statement in (

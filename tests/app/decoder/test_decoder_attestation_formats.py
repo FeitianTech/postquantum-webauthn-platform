@@ -1,8 +1,8 @@
 """Attestation statements are interpreted per format (WebAuthn L3 section 8), not verified.
 
 Real device vectors: packed, tpm, android-safetynet, fido-u2f, apple and none
-(tests/fido2/attestation/test_attestation.py), and the CTAP makeCredential
-response in tests/fido2/ctap2/test_ctap2.py. android-key and packed
+(python-fido2's tests/attestation/test_attestation.py), and the CTAP
+makeCredential response from its tests/ctap2/test_ctap2.py. android-key and packed
 self-attestation are WebAuthn L3 section 16's published vectors. compound is
 assembled here from the real packed and tpm statements; the spec publishes no
 compound vector.

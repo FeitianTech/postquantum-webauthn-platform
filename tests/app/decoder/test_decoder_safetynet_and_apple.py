@@ -1,7 +1,7 @@
 """SafetyNet's JWS and Apple's nonce extension are decoded, marked as not verified.
 
 Real vectors: the android-safetynet and apple attestations in
-tests/fido2/attestation/test_attestation.py (:292, :314). The tests below do
+python-fido2's tests/attestation/test_attestation.py. The tests below do
 the comparisons the decoder deliberately does not make, to show that what it
 decoded is the value WebAuthn L3 sections 8.5 and 8.8 talk about.
 """

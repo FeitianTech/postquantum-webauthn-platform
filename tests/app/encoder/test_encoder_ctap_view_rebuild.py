@@ -13,7 +13,7 @@ import json
 import pytest
 
 from server.app.decoder import decode_payload_text, edn, encode_payload_text
-from tests.fido2.client.test_client import _MC_RESP
+from tests.app.python_fido2_vectors import CLIENT_MC_RESP as _MC_RESP
 
 _AUTH_DATA = "00" * 32 + "01" + "00000001"
 NOT_CANONICAL = {

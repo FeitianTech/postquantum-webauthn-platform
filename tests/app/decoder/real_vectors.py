@@ -1,9 +1,9 @@
 """Real WebAuthn and CTAP vectors for the decoder tests, each with its source.
 
-Device captures come from the vendored fido2 tests. The CTAP ones are module
-constants there and are imported; the attestation ones are literals inside test
-functions (tests/fido2/attestation/test_attestation.py), so they are copied here
-byte for byte, with the line they come from. Certificates in them have expired;
+Device captures come from python-fido2's own tests. The CTAP ones are in
+tests/app/python_fido2_vectors.py; the attestation ones are literals inside test
+functions of its tests/attestation/test_attestation.py, so they are copied here
+byte for byte, with the test they come from. Certificates in them have expired;
 the decoder shows, it does not verify, so that does not matter here.
 
 No device capture in this repository is an android-key or a packed
@@ -15,15 +15,15 @@ from a device.
 from __future__ import annotations
 
 from fido2 import cbor
-from tests.fido2.ctap2.test_ctap2 import _GA_RESP, _INFO, _INFO_EXTRA_KEY, _MC_RESP
+from tests.app.python_fido2_vectors import GA_RESP, INFO, INFO_EXTRA_KEY, MC_RESP
 
-# authenticatorGetInfo responses without the status byte: tests/fido2/ctap2/test_ctap2.py:48 and :51.
-GET_INFO = _INFO
-GET_INFO_EXTRA_KEY = _INFO_EXTRA_KEY
+# authenticatorGetInfo responses without the status byte.
+GET_INFO = INFO
+GET_INFO_EXTRA_KEY = INFO_EXTRA_KEY
 # authenticatorMakeCredential and authenticatorGetAssertion responses without the
-# status byte: tests/fido2/ctap2/test_ctap2.py:145 and :148.
-MAKE_CREDENTIAL_RESPONSE = _MC_RESP
-GET_ASSERTION_RESPONSE = _GA_RESP
+# status byte.
+MAKE_CREDENTIAL_RESPONSE = MC_RESP
+GET_ASSERTION_RESPONSE = GA_RESP
 
 
 def attestation_object(fmt: str, att_stmt: object, auth_data: bytes) -> bytes:
@@ -32,7 +32,7 @@ def attestation_object(fmt: str, att_stmt: object, auth_data: bytes) -> bytes:
     return cbor.encode({"fmt": fmt, "attStmt": att_stmt, "authData": auth_data})
 
 
-# NONE: tests/fido2/attestation/test_attestation.py:63 (test_none_attestation)
+# NONE: python-fido2 tests/attestation/test_attestation.py (test_none_attestation)
 NONE_ATT_STMT = {}
 NONE_AUTH_DATA = bytes.fromhex(
     "0021f5fc0b85cd22e60623bcd7d1ca48948909249b4776eb515154e57b66ae12410000002bf8a011f38c0a4d15800617"
@@ -42,7 +42,7 @@ NONE_AUTH_DATA = bytes.fromhex(
     "278ea61c"
 )
 
-# NONE_WINDOWS_HELLO: tests/fido2/attestation/test_attestation.py:79 (test_none_windows_hello_attestation)
+# NONE_WINDOWS_HELLO: python-fido2 tests/attestation/test_attestation.py (test_none_windows_hello_attestation)
 NONE_WINDOWS_HELLO_ATT_STMT = {}
 NONE_WINDOWS_HELLO_AUTH_DATA = bytes.fromhex(
     "54ce651ed715b4aaa755eecebd4ea0950815b334bd07d109893e963018cddbd945000000006028b017b1d44c02b4b3af"
@@ -55,7 +55,7 @@ NONE_WINDOWS_HELLO_AUTH_DATA = bytes.fromhex(
     "4efc0cbbd3c93231b06f19580d0a980264d12143010001"
 )
 
-# TPM_WINDOWS_HELLO: tests/fido2/attestation/test_attestation.py:95 (test_tpm_windows_hello_attestation)
+# TPM_WINDOWS_HELLO: python-fido2 tests/attestation/test_attestation.py (test_tpm_windows_hello_attestation)
 TPM_WINDOWS_HELLO_ATT_STMT = {
     "alg": -65535,
     "sig": bytes.fromhex(
@@ -158,7 +158,7 @@ TPM_WINDOWS_HELLO_AUTH_DATA = bytes.fromhex(
 )
 TPM_WINDOWS_HELLO_CLIENT_DATA_HASH = bytes.fromhex("057a0ecbe7e3e99e8926941614f6af078c802b110be89eb221d69be2e17a1ba4")
 
-# FIDO_U2F: tests/fido2/attestation/test_attestation.py:229 (test_fido_u2f_attestation)
+# FIDO_U2F: python-fido2 tests/attestation/test_attestation.py (test_fido_u2f_attestation)
 FIDO_U2F_ATT_STMT = {
     "sig": bytes.fromhex(
         "30450220324779c68f3380288a1197b6095f7a6eb9b1b1c127f66ae12a99fe8532ec23b9022100e39516ac4d61ee6404"
@@ -191,7 +191,7 @@ FIDO_U2F_AUTH_DATA = bytes.fromhex(
 )
 FIDO_U2F_CLIENT_DATA_HASH = bytes.fromhex("687134968222ec17202e42505f8ed2b16ae22f16bb05b88c25db9e602645f141")
 
-# PACKED: tests/fido2/attestation/test_attestation.py:260 (test_packed_attestation)
+# PACKED: python-fido2 tests/attestation/test_attestation.py (test_packed_attestation)
 PACKED_ATT_STMT = {
     "alg": -7,
     "sig": bytes.fromhex(
@@ -227,7 +227,7 @@ PACKED_AUTH_DATA = bytes.fromhex(
 )
 PACKED_CLIENT_DATA_HASH = bytes.fromhex("985b6187d042fb1258892ed637cec88617ddf5f6632351a545617aa2b75261bf")
 
-# ANDROID_SAFETYNET: tests/fido2/attestation/test_attestation.py:292 (test_android_safetynet_attestation)
+# ANDROID_SAFETYNET: python-fido2 tests/attestation/test_attestation.py (test_android_safetynet_attestation)
 ANDROID_SAFETYNET_ATT_STMT = {
     "ver": '14574037',
     "response": bytes.fromhex(
@@ -353,7 +353,7 @@ ANDROID_SAFETYNET_AUTH_DATA = bytes.fromhex(
 )
 ANDROID_SAFETYNET_CLIENT_DATA_HASH = bytes.fromhex("8422c80f3428e4e6465f76ebc8a4a93759a0a2e1fb845ee5eea7a02027408520")
 
-# APPLE: tests/fido2/attestation/test_attestation.py:314 (test_apple_attestation)
+# APPLE: python-fido2 tests/attestation/test_attestation.py (test_apple_attestation)
 APPLE_ATT_STMT = {
     "alg": -7,
     "x5c": [

@@ -4,7 +4,7 @@ Each entry is one whole, strictly well-formed item, named by where it came
 from. Sources: the real device and specification vectors
 (``tests/app/decoder/real_vectors.py``); the attestation objects the
 characterization goldens are built from; registration responses built as the
-golden scenarios build them; the vendored fido2 tests' CBOR vectors and CTAP
+golden scenarios build them; python-fido2's own test CBOR vectors and CTAP
 responses (one of them not canonical); every hex literal under ``tests/`` that
 holds an item, with a leading CTAP command or status byte dropped where there
 is one; every array, map or tag the characterization golden records and inputs
@@ -154,8 +154,8 @@ def corpus() -> dict[str, bytes]:
 
     from tests.app.characterization import material
     from tests.app.decoder import real_vectors
-    from tests.fido2.cbor.test_cbor import _TEST_VECTORS
-    from tests.fido2.client.test_client import _MC_RESP as _CLIENT_MC_RESP
+    from tests.app.python_fido2_vectors import CBOR_TEST_VECTORS as _TEST_VECTORS
+    from tests.app.python_fido2_vectors import CLIENT_MC_RESP as _CLIENT_MC_RESP
 
     items: dict[str, bytes] = {}
     for name, value in sorted(vars(real_vectors).items()):

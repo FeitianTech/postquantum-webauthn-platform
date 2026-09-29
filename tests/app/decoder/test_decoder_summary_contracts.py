@@ -4,7 +4,7 @@ import hashlib
 import cbor2
 import pytest
 
-from tests.fido2.attestation.test_attestation import _GSR2_DER
+from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
 
 def _build_authenticator_data_bytes() -> bytes:

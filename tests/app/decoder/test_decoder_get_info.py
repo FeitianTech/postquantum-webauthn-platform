@@ -3,7 +3,7 @@
 ``ctapDecoded.getInfoResponse`` shows each member as sent, labelled as every CTAP
 view labels a member; ``getInfoDecoded``, beside it, says what each means.
 
-Built on the real getInfo response in tests/fido2/ctap2/test_ctap2.py (a
+Built on the real getInfo response from python-fido2's tests (a
 FIDO_2_0 security key), with and without its status byte, and on a map that
 carries every member CTAP 2.2 defines, since no device captured here returns
 the 2.1 and 2.2 members.

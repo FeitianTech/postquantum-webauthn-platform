@@ -5,7 +5,7 @@ import hashlib
 
 import pytest
 
-from tests.fido2.attestation.test_attestation import _GSR2_DER
+from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
 
 def _build_attested_auth_data(sign_count: int = 1) -> bytes:

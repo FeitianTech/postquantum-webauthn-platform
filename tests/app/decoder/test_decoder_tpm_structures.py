@@ -1,8 +1,7 @@
 """certInfo and pubArea are read field by field, with bounds checks and located errors.
 
-The real vector is the Windows Hello TPM attestation from
-tests/fido2/attestation/test_attestation.py:95 (certInfo 161 bytes, pubArea
-310 bytes). WebAuthn L3 section 8.3 says what they are: a TPMS_ATTEST and a
+The real vector is python-fido2's Windows Hello TPM attestation
+(real_vectors.TPM_WINDOWS_HELLO: certInfo 161 bytes, pubArea 310 bytes). WebAuthn L3 section 8.3 says what they are: a TPMS_ATTEST and a
 TPMT_PUBLIC, from TPM 2.0 Part 2.
 """
 from __future__ import annotations

@@ -10,7 +10,8 @@ from __future__ import annotations
 import cbor2
 
 from server.app.decoder import decode_payload_text
-from tests.fido2.ctap2.test_ctap2 import _GA_RESP, _MC_RESP
+from tests.app.python_fido2_vectors import GA_RESP as _GA_RESP
+from tests.app.python_fido2_vectors import MC_RESP as _MC_RESP
 
 _UP, _AT, _ED = 0x01, 0x40, 0x80
 _SIGNATURE = bytes.fromhex("3006020101020101")
