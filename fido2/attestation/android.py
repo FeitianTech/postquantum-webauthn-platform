@@ -53,7 +53,7 @@ class AndroidSafetynetAttestation(Attestation):
     @catch_builtins
     def verify(self, statement, auth_data, client_data_hash):
         jwt = statement["response"]
-        header, payload, sig = (websafe_decode(x) for x in jwt.split(b"."))
+        header, payload, sig = (websafe_decode(x.decode("ascii")) for x in jwt.split(b"."))
         data = json.loads(payload.decode("utf8"))
         if not self.allow_rooted and data["ctsProfileMatch"] is not True:
             raise InvalidData("ctsProfileMatch must be true!")

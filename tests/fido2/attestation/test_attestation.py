@@ -26,6 +26,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
+import warnings
 
 from cryptography.exceptions import UnsupportedAlgorithm, _Reasons
 
@@ -307,7 +308,11 @@ ee18128ed50dd7a855e54d2459db005""".replace("\n", "")
             "8422c80f3428e4e6465f76ebc8a4a93759a0a2e1fb845ee5eea7a02027408520"
         )
 
-        res = attestation.verify(statement, auth_data, client_param)
+        # The JWS segments are text: no bytes through websafe_decode's
+        # deprecated path.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            res = attestation.verify(statement, auth_data, client_param)
         self.assertEqual(res.attestation_type, AttestationType.BASIC)
         verify_x509_chain(res.trust_path + [_GSR2_DER])
 

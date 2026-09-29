@@ -12,9 +12,9 @@ def test_android_and_apple_attestation_reject_invalid_mobile_attestation_inputs(
 
     def _decode_cts_false(value):
         mapping = {
-            b"header": b'{"x5c":["cert-der"],"alg":"ES256"}',
-            b"payload": b'{"ctsProfileMatch":false,"nonce":"nonce-token"}',
-            b"signature": b"signature-bytes",
+            "header": b'{"x5c":["cert-der"],"alg":"ES256"}',
+            "payload": b'{"ctsProfileMatch":false,"nonce":"nonce-token"}',
+            "signature": b"signature-bytes",
         }
         return mapping[value]
 
@@ -24,9 +24,9 @@ def test_android_and_apple_attestation_reject_invalid_mobile_attestation_inputs(
 
     def _decode_nonce_mismatch(value):
         mapping = {
-            b"header": b'{"x5c":["cert-der"],"alg":"ES256"}',
-            b"payload": b'{"ctsProfileMatch":true,"nonce":"nonce-token"}',
-            b"signature": b"signature-bytes",
+            "header": b'{"x5c":["cert-der"],"alg":"ES256"}',
+            "payload": b'{"ctsProfileMatch":true,"nonce":"nonce-token"}',
+            "signature": b"signature-bytes",
             "nonce-token": b"unexpected-nonce",
         }
         return mapping[value]
@@ -38,9 +38,9 @@ def test_android_and_apple_attestation_reject_invalid_mobile_attestation_inputs(
 
     def _decode_bad_cn(value):
         mapping = {
-            b"header": b'{"x5c":["cert-der"],"alg":"ES256"}',
-            b"payload": b'{"ctsProfileMatch":true,"nonce":"nonce-token"}',
-            b"signature": b"signature-bytes",
+            "header": b'{"x5c":["cert-der"],"alg":"ES256"}',
+            "payload": b'{"ctsProfileMatch":true,"nonce":"nonce-token"}',
+            "signature": b"signature-bytes",
             "nonce-token": b"expected-nonce",
             "cert-der": b"fake-der",
         }
