@@ -88,8 +88,6 @@ def metadata_entry_trust_anchor_status(entry: Any) -> bool | None:
     )
     if request_session_ids and entry_id in request_session_ids:
         return False
-    if entry_id in _state._session_metadata_entry_ids:
-        return False
     if entry_id in _state._base_metadata_entry_ids:
         return _state._base_metadata_trust_verified
 
@@ -138,9 +136,6 @@ def get_mds_verifier() -> MdsAttestationVerifier | None:
             _state._base_verifier_cache = verifier
             _state._base_verifier_mtime = base_mtime
             return verifier
-
-    if base_metadata is None and not session_items:
-        return None
 
     metadata = _merge_metadata(base_metadata, session_items)
     return MdsAttestationVerifier(metadata)

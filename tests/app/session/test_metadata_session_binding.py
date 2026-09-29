@@ -35,7 +35,6 @@ def session_env(monkeypatch, tmp_path):
     monkeypatch.setattr(session_store, "gcs_enabled", lambda: False)
     monkeypatch.setattr(session_store, "_using_gcs", lambda: False)
     monkeypatch.setattr(session_store, "_local_last_cleanup", 0.0)
-    monkeypatch.setattr(state, "_session_metadata_entry_ids", set())
     monkeypatch.setattr(state, "_session_metadata_last_cleanup", 0.0)
 
     return entry_app(), metadata

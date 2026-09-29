@@ -33,7 +33,6 @@ _base_full_snapshot_cache: dict[str, Any] | None = None
 _base_full_snapshot_mtime: tuple[float | None, ...] | None = None
 _base_raw_entries_cache: list[Any] | None = None
 _base_raw_entries_mtime: float | None = None
-_session_metadata_entry_ids: set[int] = set()
 
 _base_metadata_lock = threading.RLock()
 _base_explorer_snapshot_lock = threading.RLock()
