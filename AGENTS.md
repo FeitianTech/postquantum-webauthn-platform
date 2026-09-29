@@ -191,9 +191,7 @@ their exports or sentences. A new surface splits its logic out here first.
   leaves the updater imports.
 - Routes: `routes/simple/` and `routes/advanced/` (begin/complete; the bodies are short
   orchestrators over modules named for their stage; the try blocks and the order of session
-  reads are behaviour); `routes/general.py` (MDS bootstrap and info, decoder endpoints, misc;
-  `/api/mds/metadata/info` bootstraps first with `FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP`,
-  whose earlier name `FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP` is still read);
+  reads are behaviour); `routes/general.py` (MDS info, decoder endpoints, misc);
   `routes/web_export.py` (the export at `/`: the site's catch-all, since Flask has no static
   rule; HTML `no-cache`, `/_next/static/` immutable with the build's `.gz`, the export's 404
   page, a plain 404 under `/api/`; `/beta…` 308 to `/…`, built with `url_for`);

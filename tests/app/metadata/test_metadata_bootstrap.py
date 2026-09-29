@@ -9,8 +9,6 @@ from tests.app.entry_app import entry_app
 
 @pytest.fixture
 def packaged_metadata_env(monkeypatch, tmp_path, metadata_state, blob):
-    general_module = pytest.importorskip("server.app.routes.general")
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
 
     verified_path = tmp_path / "fido-mds3.verified.json"
     cache_path = tmp_path / "fido-mds3.verified.json.meta.json"
@@ -53,27 +51,11 @@ def packaged_metadata_env(monkeypatch, tmp_path, metadata_state, blob):
 
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
 
-    # Reset cached state.
-
-    monkeypatch.setattr(
-        general_module,
-        "_metadata_bootstrap_state",
-        {"started": False, "completed": False, "marker": None, "cache_loaded": False},
-    )
-
-    return general_module, metadata_module
+    return blob
 
 
-def test_packaged_metadata_bootstraps_without_download(packaged_metadata_env):
-    general_module, metadata_module = packaged_metadata_env
-
-    general_module.ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
-
-    with general_module._metadata_bootstrap_lock:
-        assert general_module._metadata_bootstrap_state["completed"] is True
-        assert general_module._metadata_bootstrap_state["started"] is False
-
-    metadata, _ = metadata_module._load_base_metadata()
+def test_packaged_metadata_loads_without_download(packaged_metadata_env):
+    metadata, _ = packaged_metadata_env._load_base_metadata()
     assert metadata is not None
     assert metadata.entries == []
 
@@ -115,22 +97,9 @@ def test_metadata_not_available_is_warning_pqc():
     assert "metadata_not_available" not in outcome["errors"]
 
 
-def test_the_mds_info_skips_eager_bootstrap_by_default(monkeypatch, app_config):
+def test_the_mds_info_answers_the_summary_and_the_custom_entries_state(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
-    bootstrap_calls = []
 
-    monkeypatch.delenv("FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP", raising=False)
-    monkeypatch.delenv("FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP", raising=False)
-    monkeypatch.setattr(
-        general_module,
-        "startup_fail_fast_enabled",
-        lambda: False,
-    )
-    monkeypatch.setattr(
-        general_module,
-        "ensure_metadata_bootstrapped",
-        lambda **kwargs: bootstrap_calls.append(kwargs),
-    )
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {})
     monkeypatch.setattr(general_module, "load_packaged_snapshot_meta", lambda: None)
@@ -139,59 +108,6 @@ def test_the_mds_info_skips_eager_bootstrap_by_default(monkeypatch, app_config):
         result = general_module._initial_mds_info()
 
     assert result == {"customEntriesState": "unknown"}
-    assert bootstrap_calls == []
-
-
-@pytest.mark.parametrize(
-    ("settings", "fail_fast", "expected"),
-    [
-        ({"FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP": "1"}, False, True),
-        ({"FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP": "0"}, True, False),
-        ({"FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP": "1"}, False, True),
-        ({"FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP": "off"}, True, False),
-        ({"FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP": "0", "FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP": "1"}, False, False),
-        ({"FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP": "yes", "FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP": "0"}, False, True),
-        ({}, True, True),
-        ({}, False, False),
-    ],
-)
-def test_the_mds_info_bootstrap_setting_and_its_earlier_name(monkeypatch, settings, fail_fast, expected):
-    general_module = pytest.importorskip("server.app.routes.general")
-
-    for name in ("FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP", "FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP"):
-        monkeypatch.delenv(name, raising=False)
-    for name, value in settings.items():
-        monkeypatch.setenv(name, value)
-    monkeypatch.setattr(general_module, "startup_fail_fast_enabled", lambda: fail_fast)
-
-    assert general_module._should_bootstrap_metadata_for_info() is expected
-
-
-def test_the_mds_info_bootstraps_when_strict(monkeypatch, app_config):
-    general_module = pytest.importorskip("server.app.routes.general")
-    bootstrap_calls = []
-
-    monkeypatch.delenv("FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP", raising=False)
-    monkeypatch.delenv("FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP", raising=False)
-    monkeypatch.setattr(
-        general_module,
-        "startup_fail_fast_enabled",
-        lambda: True,
-    )
-    monkeypatch.setattr(
-        general_module,
-        "ensure_metadata_bootstrapped",
-        lambda **kwargs: bootstrap_calls.append(kwargs),
-    )
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {})
-    monkeypatch.setattr(general_module, "load_packaged_snapshot_meta", lambda: None)
-
-    with entry_app().test_request_context("/api/mds/metadata/info"):
-        result = general_module._initial_mds_info()
-
-    assert result == {"customEntriesState": "unknown"}
-    assert bootstrap_calls == [{"skip_if_reloader_parent": False}]
 
 
 def test_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_config):
@@ -329,5 +245,3 @@ def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
 
     assert response.status_code == 200
     assert response.get_json()["snapshot"]["meta"]["entryCount"] == 3
-
-

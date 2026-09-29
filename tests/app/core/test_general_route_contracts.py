@@ -356,93 +356,11 @@ def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monke
         }
 
 
-def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
+def test_general_empty_snapshot_and_upload_branches(monkeypatch):
     general_module = pytest.importorskip("server.app.routes.general")
     pytest.importorskip("server.app.app")
 
-    flag_name = "TEST_GENERAL_ENV_FLAG"
-    monkeypatch.delenv(flag_name, raising=False)
-    assert general_module._env_flag(flag_name) is None
-
-    monkeypatch.setenv(flag_name, " off ")
-    assert general_module._env_flag(flag_name) is False
-
-    monkeypatch.setenv(flag_name, "yes")
-    assert general_module._env_flag(flag_name) is True
-
-    monkeypatch.setattr(general_module, "startup_fail_fast_enabled", lambda: True)
-    monkeypatch.setenv(general_module._MDS_INFO_EAGER_BOOTSTRAP_ENV_FLAG, "0")
-    assert general_module._should_bootstrap_metadata_for_info() is False
-    monkeypatch.setenv(general_module._MDS_INFO_EAGER_BOOTSTRAP_ENV_FLAG, "1")
-    assert general_module._should_bootstrap_metadata_for_info() is True
-
-    state = {
-        "started": False,
-        "completed": False,
-        "marker": None,
-        "cache_loaded": False,
-    }
-    monkeypatch.setattr(general_module, "_metadata_bootstrap_state", state)
-
-    monkeypatch.setattr(general_module, "load_cached_metadata_snapshot", lambda: {})
-    general_module._load_cached_metadata_snapshot_if_available()
-    assert state["cache_loaded"] is False
-
-    monkeypatch.setattr(general_module, "load_cached_metadata_snapshot", lambda: {"meta": {}})
-    general_module._load_cached_metadata_snapshot_if_available()
-    assert state["cache_loaded"] is True
-    general_module._load_cached_metadata_snapshot_if_available()
-    assert state["cache_loaded"] is True
-
-    load_calls = []
-    monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: load_calls.append("load"))
-    monkeypatch.setattr(entry_app(), "debug", True)
-    monkeypatch.delenv("WERKZEUG_RUN_MAIN", raising=False)
-    with entry_app().app_context():
-        general_module.ensure_metadata_bootstrapped(skip_if_reloader_parent=True)
-    assert load_calls == []
-
-    today = general_module._bootstrap_marker_for_today()
-    monkeypatch.setattr(
-        general_module,
-        "_metadata_bootstrap_state",
-        {
-            "started": False,
-            "completed": True,
-            "marker": today,
-            "cache_loaded": False,
-        },
-    )
-    monkeypatch.setattr(entry_app(), "debug", False)
-    load_calls.clear()
-    monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: load_calls.append("load"))
-    monkeypatch.setattr(
-        general_module,
-        "_load_base_metadata",
-        lambda: (_ for _ in ()).throw(AssertionError("_load_base_metadata should not be called")),
-    )
-    general_module.ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
-    assert load_calls == ["load"]
-
-    marked = []
-    monkeypatch.setattr(
-        general_module,
-        "_metadata_bootstrap_state",
-        {
-            "started": False,
-            "completed": False,
-            "marker": None,
-            "cache_loaded": False,
-        },
-    )
-    monkeypatch.setattr(general_module, "_load_cached_metadata_snapshot_if_available", lambda: None)
-    monkeypatch.setattr(general_module, "_load_base_metadata", lambda: (None, None))
-    monkeypatch.setattr(general_module, "_mark_bootstrap_completed_for_today", lambda: marked.append(True))
-    general_module.ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
-    assert marked == [True]
-
     with entry_app().test_client() as client:
-        monkeypatch.setattr(general_module, "_should_bootstrap_metadata_for_info", lambda: False)
         monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
         monkeypatch.setattr(general_module, "load_effective_explorer_snapshot", lambda: {})
         monkeypatch.setattr(general_module, "load_effective_full_snapshot", lambda: {})

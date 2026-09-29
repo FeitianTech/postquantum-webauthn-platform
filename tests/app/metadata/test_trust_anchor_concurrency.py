@@ -147,7 +147,7 @@ def test_concurrent_cold_loads_parse_base_metadata_once(metadata_module, monkeyp
     )
 
     threads = [
-        threading.Thread(target=metadata_module._load_base_metadata) for _ in range(8)
+        threading.Thread(target=blob._load_base_metadata) for _ in range(8)
     ]
     for thread in threads:
         thread.start()

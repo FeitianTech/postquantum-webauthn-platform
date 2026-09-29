@@ -459,7 +459,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     assert loaded_cache["last_modified_iso"] == "2015-10-21T07:28:00+00:00"
     assert loaded_cache["etag"] == "etag-value"
 
-    real_load_base_metadata = metadata_module._load_base_metadata
+    real_load_base_metadata = blob._load_base_metadata
 
     monkeypatch.setattr(blob, "_load_base_metadata", lambda: (None, None))
     assert metadata_module.load_cached_metadata_snapshot() is False
@@ -474,7 +474,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
         lambda _path: (_ for _ in ()).throw(OSError("mtime missing")),
     )
     monkeypatch.setattr(blob, "_load_verified_metadata_fallback", lambda: (None, None))
-    metadata_value, marker = metadata_module._load_base_metadata()
+    metadata_value, marker = blob._load_base_metadata()
     assert metadata_value is None and marker is None
     assert metadata_state._base_metadata_source is None
     assert metadata_state._base_metadata_trust_verified is None

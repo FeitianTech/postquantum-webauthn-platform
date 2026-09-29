@@ -13,8 +13,6 @@ logger = logging.getLogger(__name__)
 
 __all__ = ["start_background_warmup"]
 
-_STARTUP_MODE_ENV = "FIDO_SERVER_STARTUP_MODE"
-_STARTUP_FAIL_FAST_ENV = "FIDO_SERVER_STARTUP_FAIL_FAST"
 _BACKGROUND_WARMUP_ENV = "FIDO_SERVER_BACKGROUND_WARMUP"
 
 
@@ -71,23 +69,6 @@ def start_background_warmup() -> threading.Thread | None:
     )
     thread.start()
     return thread
-
-
-def startup_fail_fast_enabled() -> bool:
-    """Return ``True`` when startup warmup failures should block serving traffic."""
-
-    explicit = _env_flag(_STARTUP_FAIL_FAST_ENV)
-    if explicit is not None:
-        return explicit
-
-    mode = (os.environ.get(_STARTUP_MODE_ENV) or "").strip().lower()
-    if mode in {"strict", "fail-fast", "fail_fast", "blocking"}:
-        return True
-    if mode in {"fast", "lazy", "non-blocking", "non_blocking"}:
-        return False
-
-    # Fast startup is the default on Cloud Run to reduce cold-start latency.
-    return False
 
 
 def _should_warm_cloud_storage_configured() -> bool:

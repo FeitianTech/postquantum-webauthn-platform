@@ -129,44 +129,8 @@ def test_should_warm_cloud_storage_enabled(monkeypatch):
     assert startup._should_warm_cloud_storage_configured() is True
 
 
-def test_startup_fail_fast_defaults_to_fast(monkeypatch):
-    monkeypatch.delenv("FIDO_SERVER_STARTUP_MODE", raising=False)
-    monkeypatch.delenv("FIDO_SERVER_STARTUP_FAIL_FAST", raising=False)
-
-    from server.app import startup
-
-    assert startup.startup_fail_fast_enabled() is False
-
-
-def test_startup_fail_fast_honors_strict_mode(monkeypatch):
-    monkeypatch.setenv("FIDO_SERVER_STARTUP_MODE", "strict")
-    monkeypatch.delenv("FIDO_SERVER_STARTUP_FAIL_FAST", raising=False)
-
-    from server.app import startup
-
-    assert startup.startup_fail_fast_enabled() is True
-
-
 def test_env_flag_parses_false_values(monkeypatch):
     from server.app import startup
 
     monkeypatch.setenv("FIDO_SERVER_TEST_FLAG", "0")
     assert startup._env_flag("FIDO_SERVER_TEST_FLAG") is False
-
-
-def test_startup_fail_fast_honors_explicit_env_override(monkeypatch):
-    from server.app import startup
-
-    monkeypatch.setenv("FIDO_SERVER_STARTUP_FAIL_FAST", "false")
-    monkeypatch.setenv("FIDO_SERVER_STARTUP_MODE", "strict")
-
-    assert startup.startup_fail_fast_enabled() is False
-
-
-def test_startup_fail_fast_honors_non_blocking_mode(monkeypatch):
-    from server.app import startup
-
-    monkeypatch.delenv("FIDO_SERVER_STARTUP_FAIL_FAST", raising=False)
-    monkeypatch.setenv("FIDO_SERVER_STARTUP_MODE", "non-blocking")
-
-    assert startup.startup_fail_fast_enabled() is False

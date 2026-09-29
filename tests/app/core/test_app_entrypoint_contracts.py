@@ -7,22 +7,14 @@ import types
 import pytest
 
 
-def test_main_bootstraps_metadata_and_starts_tls_server(monkeypatch):
+def test_main_starts_the_development_server(monkeypatch):
     app_module = pytest.importorskip("server.app.app")
 
     calls = {}
 
-    def _bootstrap(**kwargs):
-        calls["bootstrap"] = kwargs
-
     def _run(**kwargs):
         calls["run"] = kwargs
 
-    monkeypatch.setattr(
-        app_module,
-        "general",
-        types.SimpleNamespace(ensure_metadata_bootstrapped=_bootstrap),
-    )
     monkeypatch.setattr(
         app_module,
         "app",
@@ -31,31 +23,8 @@ def test_main_bootstraps_metadata_and_starts_tls_server(monkeypatch):
 
     app_module.main()
 
-    assert calls["bootstrap"] == {"skip_if_reloader_parent": False}
     assert calls["run"] == {
         "host": "localhost",
         "port": 8000,
         "debug": True,
     }
-
-
-def test_main_skips_bootstrap_when_hook_is_not_callable(monkeypatch):
-    app_module = pytest.importorskip("server.app.app")
-
-    runs = []
-
-    monkeypatch.setattr(
-        app_module,
-        "general",
-        types.SimpleNamespace(ensure_metadata_bootstrapped="not-callable"),
-    )
-    monkeypatch.setattr(
-        app_module,
-        "app",
-        types.SimpleNamespace(run=lambda **kwargs: runs.append(kwargs)),
-    )
-
-    app_module.main()
-
-    assert len(runs) == 1
-    assert runs[0]["host"] == "localhost"

@@ -31,7 +31,6 @@ expand_metadata_entry_payloads = entries.expand_metadata_entry_payloads
 
 # Packaged snapshot loaders.
 load_cached_metadata_snapshot = blob.load_cached_metadata_snapshot
-_load_base_metadata = blob._load_base_metadata
 load_packaged_explorer_summary = blob.load_packaged_explorer_summary
 load_packaged_snapshot_meta = blob.load_packaged_snapshot_meta
 

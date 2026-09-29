@@ -3,17 +3,13 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from collections.abc import Mapping
-from datetime import datetime, timezone
-from threading import Lock
 from typing import Any
 
 from flask import (
     Blueprint,
     current_app,
     g,
-    has_app_context,
     jsonify,
     request,
     session,
@@ -22,22 +18,18 @@ from flask import (
 from .. import encoding, mds_snapshot_dir
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
 from ..decoder import decode_payload_text, encode_payload_text
-from ..env_flags import parse_env_flag
 from ..mds_provisioning import (
     ensure_snapshot_available,
     follow_newer_snapshot,
     waits_for_the_snapshot,
 )
-from ..startup import startup_fail_fast_enabled
 from ..static_assets import asset_url, snapshot_version
 from ..webauthn.attestation import serialize_attestation_certificate
 from ..webauthn.metadata import (
-    _load_base_metadata,
     delete_session_metadata_item,
     ensure_metadata_session_id,
     expand_metadata_entry_payloads,
     list_session_metadata_items,
-    load_cached_metadata_snapshot,
     load_effective_explorer_snapshot,
     load_effective_full_snapshot,
     load_packaged_explorer_summary,
@@ -52,113 +44,6 @@ logger = logging.getLogger(__name__)
 
 # The HTTP rules, registered on the app by server.app.app.
 bp = Blueprint("general", __name__)
-
-_metadata_bootstrap_lock = Lock()
-_metadata_bootstrap_state = {
-    "started": False,
-    "completed": False,
-    "marker": None,
-    "cache_loaded": False,
-}
-_METADATA_BOOTSTRAP_ENV_FLAG = "FIDO_SERVER_MDS_BOOTSTRAPPED"
-# Whether GET /api/mds/metadata/info bootstraps the metadata before it answers;
-# unset, it follows the startup's fail-fast mode. The setting's earlier name is
-# read when the new one is not set.
-_MDS_INFO_EAGER_BOOTSTRAP_ENV_FLAG = "FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP"
-_MDS_INFO_EAGER_BOOTSTRAP_EARLIER_ENV_FLAG = "FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP"
-
-
-def _env_flag(name: str) -> bool | None:
-    return parse_env_flag(name)
-
-
-def _should_bootstrap_metadata_for_info() -> bool:
-    for name in (_MDS_INFO_EAGER_BOOTSTRAP_ENV_FLAG, _MDS_INFO_EAGER_BOOTSTRAP_EARLIER_ENV_FLAG):
-        explicit = _env_flag(name)
-        if explicit is not None:
-            return explicit
-    return startup_fail_fast_enabled()
-
-
-def _bootstrap_marker_for_today() -> str:
-    """Return the marker string used to identify today's bootstrap."""
-
-    return datetime.now(timezone.utc).date().isoformat()
-
-
-def _mark_bootstrap_completed_for_today() -> None:
-    """Record that the metadata bootstrap completed for the current day."""
-
-    today_marker = _bootstrap_marker_for_today()
-    with _metadata_bootstrap_lock:
-        _metadata_bootstrap_state["completed"] = True
-        _metadata_bootstrap_state["started"] = False
-        _metadata_bootstrap_state["marker"] = today_marker
-    os.environ[_METADATA_BOOTSTRAP_ENV_FLAG] = today_marker
-
-
-def _load_cached_metadata_snapshot_if_available() -> None:
-    """Load any stored metadata snapshot into process memory before serving requests."""
-
-    try:
-        cached = load_cached_metadata_snapshot()
-    except Exception as exc:  # pragma: no cover - defensive
-        logger.warning("Failed to load cached FIDO MDS metadata snapshot: %s", exc)
-        return
-
-    if not cached:
-        return
-
-    with _metadata_bootstrap_lock:
-        if not _metadata_bootstrap_state.get("cache_loaded"):
-            _metadata_bootstrap_state["cache_loaded"] = True
-            logger.info("Loaded cached FIDO MDS metadata snapshot from disk.")
-
-
-_existing_marker = os.environ.get(_METADATA_BOOTSTRAP_ENV_FLAG)
-if _existing_marker:
-    _metadata_bootstrap_state["marker"] = _existing_marker
-    if _existing_marker == _bootstrap_marker_for_today():
-        _metadata_bootstrap_state["completed"] = True
-
-
-def ensure_metadata_bootstrapped(skip_if_reloader_parent: bool = True) -> None:
-    """Ensure the MDS metadata cache is refreshed once per server process."""
-
-    # Outside an app context (main() before app.run, the warm-up) there is no
-    # reloader parent to skip.
-    debug = has_app_context() and current_app.debug
-    if skip_if_reloader_parent and debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
-        return
-
-    # The snapshot is not tracked in git nor baked into the image, so make sure
-    # it is on disk before anything tries to read it.
-    ensure_snapshot_available()
-
-    _load_cached_metadata_snapshot_if_available()
-
-    with _metadata_bootstrap_lock:
-        today_marker = _bootstrap_marker_for_today()
-        existing_marker = _metadata_bootstrap_state.get("marker")
-        if _metadata_bootstrap_state.get("completed") and existing_marker == today_marker:
-            return
-        _metadata_bootstrap_state["started"] = True
-        _metadata_bootstrap_state["marker"] = today_marker
-
-    metadata, _ = _load_base_metadata()
-    if metadata is not None:
-        logger.info(
-            "Loaded packaged FIDO MDS metadata snapshot (%d entries).",
-            len(metadata.entries),
-        )
-    else:
-        logger.warning(
-            "Packaged FIDO MDS metadata snapshot not found at %s.",
-            mds_snapshot_dir.snapshot_file(mds_snapshot_dir.VERIFIED),
-        )
-
-    _mark_bootstrap_completed_for_today()
-
 
 @bp.route("/health")
 def health():
@@ -216,15 +101,12 @@ def _initial_mds_info() -> dict[str, Any]:
     without a snapshot), the URL of the packaged snapshot (absent without one),
     and whether this session has uploaded metadata. The page asks
     ``/api/mds/metadata/info`` for it, which waits for a provisioning under way;
-    the page itself is static and never waits. With
-    ``FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP`` (or the startup's fail-fast mode) it
-    bootstraps the metadata first. A running instance takes a newer snapshot from
-    Cloud Storage here (``follow_newer_snapshot``): this is where the page starts."""
+    the page itself is static and never waits. A running instance takes a newer
+    snapshot from Cloud Storage here (``follow_newer_snapshot``): this is where
+    the page starts."""
 
     ensure_snapshot_available()
     follow_newer_snapshot()
-    if _should_bootstrap_metadata_for_info():
-        ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
     metadata_session_id = ensure_metadata_session_id()
 
     initial_mds_info = dict(load_packaged_explorer_summary() or {})
