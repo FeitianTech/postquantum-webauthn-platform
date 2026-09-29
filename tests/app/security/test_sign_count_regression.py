@@ -11,8 +11,6 @@ means read back from disk.
 """
 from __future__ import annotations
 
-import os
-
 import pytest
 
 from .ceremony_helpers import (
@@ -39,7 +37,7 @@ def credential_store(simple_module, tmp_path, monkeypatch, device_logs_module):
 
     def _stored_counter(credential_id: bytes):
         base = tmp_path / "credentials"
-        session_dirs = [entry for entry in os.listdir(base)] if base.exists() else []
+        session_dirs = [entry.name for entry in base.iterdir() if entry.is_dir()] if base.exists() else []
         assert len(session_dirs) == 1, session_dirs
         records = storage.readkey(EMAIL, session_id=session_dirs[0])
         for record in records:

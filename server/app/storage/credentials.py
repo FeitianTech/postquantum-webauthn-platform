@@ -151,6 +151,19 @@ def _candidate_gcs_blob_names(name: str, session_id: str) -> Iterable[str]:
         yield blob_name
 
 
+def _make_session_directory(root: str, directory: str) -> None:
+    """Create a session's directory, and give the store's root a ``.gitignore``
+    that ignores everything in it (``*``) when it has none.
+
+    ``FIDO_SERVER_CREDENTIAL_DIR`` may name a folder inside a checkout, where
+    nothing else keeps git from offering the credentials for a commit."""
+
+    os.makedirs(directory, exist_ok=True)
+    ignore = os.path.join(root, ".gitignore")
+    if not os.path.exists(ignore):
+        replace_file(ignore, b"# Written by the credential store: nothing here belongs in git.\n*\n")
+
+
 def _local_directory(
     session_id: str,
     *,
@@ -161,7 +174,7 @@ def _local_directory(
     root = _LOCAL_CREDENTIAL_BASE if base is None else base
     directory = resolve_contained_path(root, cleaned)
     if create:
-        os.makedirs(directory, exist_ok=True)
+        _make_session_directory(root, directory)
     return directory
 
 
@@ -184,7 +197,7 @@ def _local_filename(
     cleaned_session = _validate_session_id(session_id)
     cleaned_name = _validate_name(name)
     if create:
-        os.makedirs(resolve_contained_path(root, cleaned_session), exist_ok=True)
+        _make_session_directory(root, resolve_contained_path(root, cleaned_session))
     # Contained against the store root rather than the session directory, so a
     # session id and a name cannot combine to climb out.
     return resolve_contained_path(root, cleaned_session, f"{cleaned_name}{suffix}")

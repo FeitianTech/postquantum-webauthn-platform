@@ -57,7 +57,7 @@ def _begin(client, authenticator):
 
 
 def _stored_counter(store, root, authenticator):
-    (session_id,) = [entry.name for entry in (root / "credentials").iterdir()]
+    (session_id,) = [entry.name for entry in (root / "credentials").iterdir() if entry.is_dir()]
     records = store.readkey(EMAIL, session_id=session_id)
     (record,) = [r for r in records if bytes(r["credential_data"].credential_id) == authenticator.credential_id]
     return record["sign_count"]
