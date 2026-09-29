@@ -138,18 +138,15 @@ def test_a_compromised_attestation_key_gets_no_root():
     assert outcome.metadata_lookup_source == "aaguid"
 
 
-def test_a_self_attestation_is_given_the_entrys_first_root():
+def test_a_self_attestation_gets_no_root_even_when_its_aaguid_is_listed():
+    """Nothing but the credential's own key signed it; a root of the entry vouches for nothing here."""
+
     outcome = _evaluate("self-listed")
 
-    assert outcome.trust_path.ca_certificate == mds_record._root("mds-root")
-    assert outcome.trust_path.chain_valid is True
-    assert outcome.metadata_lookup_source == "aaguid"
-
-
-def test_a_self_attestation_against_an_entry_without_roots_has_none():
-    outcome = _evaluate("self-listed", _verifier_with(roots=[]))
-
     assert outcome.trust_path.errors == ["No root found for Authenticator"]
+    assert outcome.trust_path.ca_certificate is None
+    assert outcome.trust_path.chain_valid is False
+    assert outcome.metadata_entry is None
     assert outcome.metadata_lookup_source == "aaguid"
 
 

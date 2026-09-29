@@ -51,7 +51,7 @@
   "attestation_format": "packed",
   "signature_valid": true,
   "pqc_signature_valid": null,
-  "root_valid": true,
+  "root_valid": null,
   "rp_id_hash_valid": true,
   "aaguid_match": null,
   "client_data": {
@@ -93,12 +93,14 @@
    "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAMD_7gDA_-4AwP_uAMD_7gAAIFe7B3S249tt86MTnSoI7n_hOaR60rVNauxUAtnOTbOspQECAyYgASFYIHFImSUu18Zf05W4dHSKxKdRFqiEruiu3SxkrTcE79E3IlggeH3t6Sv-JJH14a0gvermjvbV4Oamh95pY2wf4Jm7cUg-NsGWwNxeVICP5_YT78BYgHzkSNduvIQKpt0XQqMneg"
   },
   "errors": [
-   "trust_path_missing"
+   "trust_path_missing",
+   "No root found for Authenticator",
+   "metadata_entry_missing"
   ],
   "warnings": [],
   "root_checks": {
-   "trusted_ca": true,
-   "chain": true,
+   "trusted_ca": false,
+   "chain": null,
    "fido_mds": null
   }
  },

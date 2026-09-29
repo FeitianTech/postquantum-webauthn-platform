@@ -86,12 +86,11 @@ def _find_root(verifier: MdsAttestationVerifier, result: AttestationResult, auth
 
     if not entry or not filter_attestation_key_compromised(entry, trust_path) or not entry.metadata_statement:
         return
-    roots = entry.metadata_statement.attestation_root_certificates
+    # Only a certificate names its issuer. Without one (a self attestation, or a
+    # trust path that does not parse) no root can vouch for the key, so there is none.
     issuer = _issuer_name(trust_path)
     if issuer is not None:
-        lookup.root = _matching_root(roots, issuer)
-    elif roots:
-        lookup.root = roots[0]
+        lookup.root = _matching_root(entry.metadata_statement.attestation_root_certificates, issuer)
     if lookup.root is not None:
         lookup.entry = entry
 
