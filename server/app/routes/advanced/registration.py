@@ -50,9 +50,6 @@ def _register_complete(data: Mapping[str, Any], session_state: Any, state_trace:
             original_request=prepared["originalRequest"],
             public_key=prepared["publicKey"],
             response=response if isinstance(response, Mapping) else {},
-            attestation_format=prepared["attestationFormat"],
-            attestation_statement=prepared["attestationStatement"],
-            raw_attestation_object=prepared["rawAttestationObject"],
             trace=state_trace,
             session_state=session_state,
         )

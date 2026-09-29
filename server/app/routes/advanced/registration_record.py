@@ -12,6 +12,7 @@ import hashlib
 import time
 import uuid
 from collections.abc import Mapping
+from datetime import datetime, timezone
 from typing import Any, NamedTuple
 
 from fido2 import cbor
@@ -19,7 +20,7 @@ from fido2 import cbor
 from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials
 from ...webauthn import attestation, pqc
-from . import algorithms, binary, tracing
+from . import algorithms, binary
 
 _CRED_PROTECT_NAMES = {
     1: "userVerificationOptional",
@@ -325,7 +326,7 @@ def _registration_facts(
     auth_data_bytes = bytes(auth_data)
     authenticator_data_hex = auth_data_bytes.hex()
     authenticator_data_hash = hashlib.sha256(auth_data_bytes).hexdigest()
-    registration_timestamp = tracing.datetime_from_timestamp(credential_info["registration_time"])
+    registration_timestamp = datetime.fromtimestamp(credential_info["registration_time"], timezone.utc).isoformat()
 
     rp_hash = _rp_id_hash_report(auth_data, resolved_rp_id)
     if attestation_rp_id_hash_valid is None:

@@ -9,7 +9,6 @@ from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import binary as advanced_binary
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.routes.advanced import summary as advanced_summary
-from server.app.routes.advanced import tracing as advanced_tracing
 
 
 def test_algorithm_name_normalization_lookup_and_coercion_matrix():
@@ -116,56 +115,6 @@ def test_base64_assertion_and_binary_extraction_helpers():
     assert advanced_binary._extract_binary_value({"$base64": "YWJj"}) == b"abc"
     assert advanced_binary._extract_binary_value({"$base64url": "YWJj"}) == b"abc"
     assert advanced_binary._extract_binary_value("plain") == "plain"
-
-
-def test_attestation_logging(monkeypatch, config_module):
-    tracing_module = pytest.importorskip("server.app.routes.advanced.tracing")
-    log_calls = []
-    monkeypatch.setattr(
-        tracing_module.logger,
-        "info",
-        lambda message, payload: log_calls.append((message, payload))
-    )
-
-    class _Flag:
-        UP = 0x01
-        UV = 0x04
-        BE = 0x08
-        BS = 0x10
-        AT = 0x40
-        ED = 0x80
-
-    class _CredentialData:
-        aaguid = b"\x00" * 16
-        credential_id = b"credential"
-        public_key = {3: -7, -2: b"x" * 32, -3: b"y" * 32}
-
-    class _AuthData:
-        FLAG = _Flag
-        rp_id_hash = b"\x11" * 32
-        flags = _Flag.UP | _Flag.AT
-        counter = 7
-        credential_data = _CredentialData()
-        extensions = {"credProps": {"rk": True}}
-
-        def __bytes__(self):
-            return b"\x00" * 37
-
-    advanced_tracing._log_authenticator_attestation_response(
-        "packed",
-        _AuthData(),
-        {"alg": -7},
-        b"\x01\x02\x03",
-    )
-
-    assert len(log_calls) == 1
-    assert "Authenticator attestation response" in log_calls[0][0]
-    assert '"fmt": "packed"' in log_calls[0][1]
-    assert "rawAttestationObject" in log_calls[0][1]
-
-    log_calls.clear()
-    advanced_tracing._log_authenticator_attestation_response("packed", None, {}, b"\x01")
-    assert log_calls == []
 
 
 @pytest.mark.parametrize(

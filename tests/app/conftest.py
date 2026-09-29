@@ -170,13 +170,6 @@ def advanced_constants():
 
 
 @pytest.fixture
-def advanced_tracing():
-    """The submodule that records the advanced-flow debug traces."""
-
-    return _advanced_fragment("tracing")
-
-
-@pytest.fixture
 def advanced_parsing():
     """The submodule that parses client-supplied credentials."""
 

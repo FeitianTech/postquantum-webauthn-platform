@@ -107,55 +107,6 @@ def test_base64url_helpers_degrade_gracefully_on_decode_errors():
     assert shared_binary_helpers.extract_assertion_credential_id({"rawId": "br*ken"}) is None
 
 
-def test_attestation_log_falls_back_to_plain_string_payload_when_json_encoding_fails(monkeypatch, advanced_tracing, config_module):
-    class _Flag:
-        UP = 0x01
-        UV = 0x04
-        BE = 0x08
-        BS = 0x10
-        AT = 0x40
-        ED = 0x80
-
-    class _CredentialData:
-        aaguid = b"\x00" * 16
-        credential_id = b"credential-id"
-        public_key = {"alg": "-257", -2: b"x" * 32, -3: b"y" * 32}
-
-    class _AuthData:
-        FLAG = _Flag
-        rp_id_hash = b"\x11" * 32
-        flags = _Flag.UP | _Flag.AT
-        counter = 3
-        credential_data = _CredentialData()
-        extensions = {}
-
-        def __bytes__(self):
-            return b"\x00" * 37
-
-    log_messages = []
-    monkeypatch.setattr(
-        advanced_tracing.logger,
-        "info",
-        lambda _template, payload: log_messages.append(payload)
-    )
-    monkeypatch.setattr(
-        advanced_tracing.json,
-        "dumps",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(TypeError("serialization blocked"))
-    )
-
-    advanced_tracing._log_authenticator_attestation_response(
-        "packed",
-        _AuthData(),
-        {"alg": -257},
-        "raw-attestation-object",
-    )
-
-    assert log_messages
-    assert "credentialPublicKeyAlgorithm" in log_messages[0]
-    assert "raw-attestation-object" in log_messages[0]
-
-
 def test_register_begin_accepts_non_mapping_authenticator_selection_and_derives_cross_platform_from_hints(monkeypatch, pqc_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")

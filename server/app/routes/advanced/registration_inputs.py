@@ -21,7 +21,7 @@ from ...attachments import (
     resolve_effective_attachments,
 )
 from ...webauthn import attestation, metadata
-from . import constants, tracing
+from . import constants
 
 
 def _request_allowed_attachments(original_public_key: Any) -> list[str]:
@@ -194,9 +194,6 @@ def resolve_state_and_registration_server(
     original_request: Mapping[str, Any],
     public_key: Mapping[str, Any],
     response: Mapping[str, Any],
-    attestation_format: Any,
-    attestation_statement: Any,
-    raw_attestation_object: Any,
     trace: dict[str, Any] | None = None,
     session_state: Any = None,
 ) -> tuple[dict[str, Any] | None, Any | None]:
@@ -230,13 +227,6 @@ def resolve_state_and_registration_server(
     resolved_rp_id = config.determine_rp_id(stored_rp_id)
     register_server = config.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
     auth_data = register_server.register_complete(state, response)
-
-    tracing._log_authenticator_attestation_response(
-        attestation_format,
-        auth_data,
-        attestation_statement,
-        raw_attestation_object,
-    )
 
     return {
         "state": state,
