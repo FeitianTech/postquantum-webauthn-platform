@@ -4,11 +4,18 @@ from __future__ import annotations
 
 import gzip
 import importlib.util
+import os
 from pathlib import Path
 
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+_EXPLORER_FULL = "fido-mds3.explorer.full.json"
+# What the explorer's meta names (the version) and what the file holds.
+_META = {"no": 7, "etag": '"fixture-7"', "generatedAt": "2026-09-27T07:00:00+00:00"}
+_BODY = b'{"entries": [], "meta": {"no": 7}}' * 64
 
 
 @pytest.fixture
@@ -17,88 +24,104 @@ def assets_env(monkeypatch, tmp_path):
     static_assets = pytest.importorskip("server.app.static_assets")
     config = pytest.importorskip("server.app.config")
 
-    static_root = tmp_path / "static"
-    (static_root / "scripts").mkdir(parents=True)
-    source = b"export const answer = 42;\n" * 200
-    (static_root / "scripts" / "main.js").write_bytes(source)
-    (static_root / "scripts" / "main.js.gz").write_bytes(gzip.compress(source))
-    (static_root / "favicon.ico").write_bytes(b"\x00\x01ico")
-
-    monkeypatch.setattr(static_assets, "_STATIC_ROOT", str(static_root))
-    monkeypatch.setattr(static_assets, "BUILD_ID", "abc123def456")
-    return static_assets, config.app.test_client(), source
+    snapshot = tmp_path / "snapshot"
+    snapshot.mkdir()
+    (snapshot / _EXPLORER_FULL).write_bytes(_BODY)
+    (snapshot / f"{_EXPLORER_FULL}.gz").write_bytes(gzip.compress(_BODY))
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(snapshot))
+    monkeypatch.setattr(static_assets, "load_packaged_snapshot_meta", lambda: dict(_META))
+    version = static_assets.snapshot_version(_META)
+    return static_assets, config.app.test_client(), version
 
 
-def test_current_build_assets_are_immutable_and_precompressed(assets_env):
-    _static_assets, client, source = assets_env
+def test_the_current_snapshot_is_immutable_and_precompressed(assets_env):
+    _static_assets, client, version = assets_env
 
-    with client.get(
-        "/assets/abc123def456/scripts/main.js", headers={"Accept-Encoding": "gzip, br"}
-    ) as response:
+    with client.get(f"/assets/mds/{_EXPLORER_FULL}?v={version}", headers={"Accept-Encoding": "gzip, br"}) as response:
         assert response.status_code == 200
         assert response.headers["Content-Encoding"] == "gzip"
         assert response.headers["Cache-Control"] == "public, max-age=31536000, immutable"
         assert "Accept-Encoding" in response.headers["Vary"]
-        assert response.mimetype in {"text/javascript", "application/javascript"}
+        assert response.mimetype == "application/json"
         assert response.headers.get("ETag")
-        assert gzip.decompress(response.data) == source
+        assert gzip.decompress(response.data) == _BODY
 
     with client.get(
-        "/assets/abc123def456/scripts/main.js",
+        f"/assets/mds/{_EXPLORER_FULL}?v={version}",
         headers={"Accept-Encoding": "gzip", "If-None-Match": response.headers["ETag"]},
     ) as revalidated:
         assert revalidated.status_code == 304
 
 
 def test_identity_encoding_when_gzip_not_accepted(assets_env):
-    _static_assets, client, source = assets_env
+    _static_assets, client, version = assets_env
 
-    with client.get("/assets/abc123def456/scripts/main.js", headers={"Accept-Encoding": "identity"}) as response:
+    with client.get(f"/assets/mds/{_EXPLORER_FULL}?v={version}", headers={"Accept-Encoding": "identity"}) as response:
         assert response.status_code == 200
         assert response.headers.get("Content-Encoding") is None
-        assert response.data == source
+        assert response.data == _BODY
 
 
-def test_other_build_ids_must_revalidate(assets_env):
-    _static_assets, client, _source = assets_env
+@pytest.mark.parametrize("query", ["", "?v=6.000000000000", "?v="])
+def test_another_version_or_none_must_revalidate(assets_env, query):
+    _static_assets, client, _version = assets_env
 
-    with client.get("/assets/0ldbu1ld/favicon.ico") as response:
+    with client.get(f"/assets/0ldbu1ld/{_EXPLORER_FULL}{query}") as response:
         assert response.status_code == 200
         assert response.headers["Cache-Control"] == "no-cache"
 
 
-def test_asset_route_rejects_traversal_and_missing_files(assets_env):
-    _static_assets, client, _source = assets_env
+def test_without_a_snapshot_meta_nothing_is_immutable(assets_env, monkeypatch):
+    static_assets, client, version = assets_env
+    monkeypatch.setattr(static_assets, "load_packaged_snapshot_meta", lambda: None)
 
-    assert client.get("/assets/abc123def456/../config.py").status_code == 404
-    assert client.get("/assets/abc123def456/scripts/missing.js").status_code == 404
-
-
-def test_private_mds_source_files_are_not_served(assets_env):
-    _static_assets, client, _source = assets_env
-
-    for name in ("blob.jwt", "fido-mds3.verified.json", "fido-mds3.explorer.json"):
-        assert client.get(f"/{name}").status_code == 404
-        assert client.get(f"/assets/abc123def456/{name}").status_code == 404
+    with client.get(f"/assets/mds/{_EXPLORER_FULL}?v={version}") as response:
+        assert response.status_code == 200
+        assert response.headers["Cache-Control"] == "no-cache"
 
 
-def test_no_snapshot_file_is_served_but_the_browsers_copy_at_its_versioned_url(
-    assets_env, monkeypatch, tmp_path, make_app, export_root
-):
-    static_assets, _client, _source = assets_env
+@pytest.mark.parametrize(
+    "name",
+    [
+        "blob.jwt",
+        "fido-mds3.verified.json",
+        "fido-mds3.verified.json.meta.json",
+        "fido-mds3.explorer.json",
+        "fido-mds3.explorer.json.meta.json",
+        "fido-mds3.explorer.full.json.meta.json",
+        "fido-mds3.explorer.full.json.gz",
+        "scripts/main.js",
+        "favicon.ico",
+        "../config.py",
+        "sub/fido-mds3.explorer.full.json",
+        "fido-mds3.explorer.full.json/",
+    ],
+)
+def test_the_route_refuses_every_other_name(assets_env, name):
+    _static_assets, client, _version = assets_env
+    snapshot = Path(os.environ["FIDO_SERVER_MDS_SNAPSHOT_DIR"])
+    for other in ("blob.jwt", "fido-mds3.verified.json", "scripts/main.js", "favicon.ico"):
+        (snapshot / other).parent.mkdir(parents=True, exist_ok=True)
+        (snapshot / other).write_text("{}", encoding="utf-8")
+
+    assert client.get(f"/assets/mds/{name}").status_code == 404
+
+
+def test_a_missing_snapshot_is_not_found(assets_env, monkeypatch, tmp_path):
+    _static_assets, client, version = assets_env
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path / "empty"))
+
+    assert client.get(f"/assets/mds/{_EXPLORER_FULL}?v={version}").status_code == 404
+
+
+def test_no_snapshot_file_is_served_at_the_site_root(assets_env, monkeypatch, tmp_path, make_app, export_root):
     from server.app import mds_snapshot_dir
     from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
 
-    snapshot = tmp_path / "snapshot"
-    snapshot.mkdir()
-    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(snapshot))
-    # frontend/static is the default snapshot directory, and the site's root is the
-    # new UI's export: a copy in either is never served, whatever it holds.
-    static_root = Path(static_assets._STATIC_ROOT)
-    names = [*mds_snapshot_dir.SNAPSHOT_FILENAMES, "fido-mds3.explorer.full.json.gz"]
+    # The site's root is the UI's export: a snapshot file there is never served.
+    names = [*mds_snapshot_dir.SNAPSHOT_FILENAMES, f"{_EXPLORER_FULL}.gz"]
     for name in names:
-        for directory in (static_root, export_root, snapshot):
-            (directory / name).write_text("{}", encoding="utf-8")
+        (export_root / name).write_text("{}", encoding="utf-8")
     (export_root / "favicon.ico").write_bytes(b"\x00\x01ico")
     client = make_app({WEB_EXPORT_ROOT_KEY: str(export_root)}).test_client()
 
@@ -107,14 +130,16 @@ def test_no_snapshot_file_is_served_but_the_browsers_copy_at_its_versioned_url(
     for name in names:
         with client.get(f"/{name}") as root:
             assert root.status_code == 404, name
-        with client.get(f"/assets/abc123def456/{name}") as versioned:
-            assert versioned.status_code == (200 if name == mds_snapshot_dir.EXPLORER_FULL else 404), name
 
 
-def test_asset_url_uses_build_id(assets_env):
-    static_assets, _client, _source = assets_env
+def test_asset_url_has_a_fixed_segment_and_the_version_names_the_snapshot(assets_env):
+    static_assets, _client, version = assets_env
 
-    assert static_assets.asset_url("/scripts/main.js") == "/assets/abc123def456/scripts/main.js"
+    assert static_assets.asset_url("/fido-mds3.explorer.full.json") == "/assets/mds/fido-mds3.explorer.full.json"
+    assert static_assets.snapshot_version(None) is None
+    assert version.startswith("7.")
+    assert len(version.split(".")[1]) == 12
+    assert static_assets.snapshot_version({**_META, "etag": '"fixture-8"'}) != version
 
 
 def _load_build_tool():
@@ -163,33 +188,3 @@ def test_build_tool_precompresses_the_web_export_without_a_build_id(tmp_path, ca
     assert not (export / "font.woff2.gz").exists()
     assert not (tmp_path / "web" / "BUILD_ID").exists()
     assert "Precompressed 2 files under" in capsys.readouterr().out
-
-
-def test_the_snapshot_the_page_loads_is_served_from_the_snapshot_directory(assets_env, monkeypatch, tmp_path):
-    _static_assets, client, _source = assets_env
-    snapshot_dir = tmp_path / "snapshot"
-    snapshot_dir.mkdir()
-    body = b'{"entries": [], "meta": {"no": 7}}' * 64
-    (snapshot_dir / "fido-mds3.explorer.full.json").write_bytes(body)
-    (snapshot_dir / "fido-mds3.explorer.full.json.gz").write_bytes(gzip.compress(body))
-    (snapshot_dir / "fido-mds3.verified.json").write_bytes(b"{}")
-    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(snapshot_dir))
-
-    with client.get("/assets/abc123def456/fido-mds3.explorer.full.json") as plain:
-        assert plain.status_code == 200
-        assert plain.data == body
-        assert plain.headers["Cache-Control"] == "public, max-age=31536000, immutable"
-
-    with client.get(
-        "/assets/abc123def456/fido-mds3.explorer.full.json", headers={"Accept-Encoding": "gzip"}
-    ) as compressed:
-        assert compressed.headers["Content-Encoding"] == "gzip"
-        assert gzip.decompress(compressed.data) == body
-
-    # Only that file: the private sources stay hidden, other assets stay in frontend/static.
-    assert client.get("/assets/abc123def456/fido-mds3.verified.json").status_code == 404
-    with client.get("/assets/abc123def456/favicon.ico") as other:
-        assert other.status_code == 200
-
-    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path / "empty"))
-    assert client.get("/assets/abc123def456/fido-mds3.explorer.full.json").status_code == 404

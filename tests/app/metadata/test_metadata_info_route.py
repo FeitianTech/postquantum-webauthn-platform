@@ -63,13 +63,14 @@ def test_a_known_session_says_what_its_last_explorer_answer_held(mds_fixture_sna
     assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "present"
 
 
-def test_the_snapshot_url_names_the_snapshots_version_which_the_static_route_ignores(mds_fixture_snapshot, client):
+def test_the_snapshot_url_names_the_snapshots_version_and_is_cached_for_good(mds_fixture_snapshot, client):
     url = client.get("/api/mds/metadata/info").get_json()["snapshotUrl"]
 
     assert url.endswith("?v=7." + url.rsplit(".", 1)[1])
     assert len(url.rsplit(".", 1)[1]) == 12
     with client.get(url) as static:
         assert static.status_code == 200
+        assert static.headers["Cache-Control"] == "public, max-age=31536000, immutable"
         assert static.data == (mds_fixture_snapshot / mds_snapshot_dir.EXPLORER_FULL).read_bytes()
 
 

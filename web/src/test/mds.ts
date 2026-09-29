@@ -10,7 +10,7 @@ import { type Route, json } from './fetch';
 
 export const FIXTURE_SNAPSHOT = full as unknown as MdsSnapshot;
 export const FIXTURE_ENTRIES = FIXTURE_SNAPSHOT.entries as MdsEntry[];
-export const SNAPSHOT_URL = '/assets/dev/fido-mds3.explorer.full.json';
+export const SNAPSHOT_URL = '/assets/mds/fido-mds3.explorer.full.json';
 export const FIXTURE_INFO = { ...summary, snapshotUrl: SNAPSHOT_URL, customEntriesState: 'none' };
 
 export function entryNamed(name: string) {

@@ -528,7 +528,7 @@ Flask app setup starts in:
   `FIDO_SERVER_MDS_SNAPSHOT_DIR` whenever a path is needed (default
   `instance/mds-snapshot`). A Flask-free leaf too: the server (`webauthn/metadata/blob.py`,
   `routes/general.py`), the provisioning, the served snapshot
-  (`/assets/<id>/fido-mds3.explorer.full.json`) and the updater all follow it.
+  (`/assets/mds/fido-mds3.explorer.full.json?v=<version>`) and the updater all follow it.
 
 Main route modules:
 

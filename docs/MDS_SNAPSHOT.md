@@ -38,13 +38,14 @@ without it answers `instance/mds-snapshot` (in the image, `/app/instance/mds-sna
 reader and writer follows the one setting: the server's metadata loaders
 (`webauthn/metadata/blob.py`), `/api/mds/metadata/base`, the provisioning below,
 `tools/update_mds_snapshot.py`, and the packaged snapshot browsers load
-(`/assets/<build id>/fido-mds3.explorer.full.json`, served from that directory with its
-`.gz` sibling). The page is given that URL as `snapshotUrl` only while the file is there
-and its meta matches the verified snapshot; otherwise it asks the explorer API, which
-answers from the verified snapshot either way. The URL ends in `?v=<serial>.<digest>`
-(the digest of the snapshot's ETag and generation time), which the route ignores: the
-file is cached as immutable for a year and changes at runtime without a deploy, so a
-new snapshot has to be a new URL.
+(`/assets/mds/fido-mds3.explorer.full.json`, served from that directory with its `.gz`
+sibling, `server/app/static_assets.py`). The page is given that URL as `snapshotUrl`
+only while the file is there and its meta matches the verified snapshot; otherwise it
+asks the explorer API, which answers from the verified snapshot either way. The URL ends
+in `?v=<serial>.<digest>` (the digest of the snapshot's ETag and generation time,
+`static_assets.snapshot_version`): the file changes at runtime without a deploy, so each
+snapshot has a URL of its own. A request naming the current version is cached as
+immutable for a year; any other revalidates.
 
 No route serves a snapshot file at the site's root: the seven names and the `.gz`
 sibling are refused there (the site's root is the UI's export), and the
