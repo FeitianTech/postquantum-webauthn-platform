@@ -112,20 +112,8 @@ def test_encode_payload_text_reports_empty_invalid_json_and_unsupported_format()
         encode_module.encode_payload_text("{}", "unknown-target")
 
 
-def test_hex_base64_base64url_binary_and_der_pem_helpers():
+def test_der_and_pem_helpers():
     encode_module = pytest.importorskip("server.app.decoder.encode")
-
-    hex_result = encode_module._encode_hex_value({"value": {"hex": "aabb"}})
-    assert hex_result["data"]["hex"] == "aabb"
-
-    b64_result = encode_module._encode_base64_value({"value": {"hex": "aabb"}})
-    assert b64_result["data"]["base64"] == "qrs="
-
-    b64url_result = encode_module._encode_base64url_value({"value": {"hex": "aabb"}})
-    assert b64url_result["data"]["base64url"] == "qrs"
-
-    binary_result = encode_module._encode_binary_value({"value": {"hex": "aabb"}})
-    assert binary_result["data"]["bytes"] == [170, 187]
 
     der_result = encode_module._encode_der_value({"value": {"hex": "aabb"}})
     assert der_result["data"]["derBase64"] == "qrs="

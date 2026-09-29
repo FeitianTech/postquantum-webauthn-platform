@@ -16,7 +16,6 @@ from . import (
     ctap,
     ctap_auth_data,
     ctap_classify,
-    json_input,
     keys,
     pipeline,
     response,
@@ -59,7 +58,6 @@ _resolve_cose_algorithm = binary._resolve_cose_algorithm
 # The one CBOR parser: strict, lenient only when asked.
 CborDiagnostic = cbor_parser.CborDiagnostic
 _CborDecodingError = cbor_parser._CborDecodingError
-_decode_cbor_structure = cbor_parser._decode_cbor_structure
 _float_summary = cbor_parser._float_summary
 _parse_cbor_item = cbor_parser._parse_cbor_item
 _read_cbor_length = cbor_parser._read_cbor_length
@@ -105,7 +103,6 @@ _looks_like_pem = pipeline._looks_like_pem
 _try_decode_attestation_object = pipeline._try_decode_attestation_object
 _try_decode_authenticator_data = pipeline._try_decode_authenticator_data
 _try_decode_certificate_bytes = pipeline._try_decode_certificate_bytes
-_try_parse_json = json_input._try_parse_json
 
 # CTAP prefix byte and CBOR payload decoding.
 _extract_ctap_prefix = ctap._extract_ctap_prefix

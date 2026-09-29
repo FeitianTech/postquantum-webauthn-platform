@@ -181,50 +181,6 @@ def _encode_binary_variant(
     return _prepare_encoder_response(base_type, payload, qualifier=qualifier)
 
 
-def _encode_hex_value(parsed: Any) -> dict[str, Any]:
-    return _encode_binary_variant(
-        parsed,
-        base_type="Hex",
-        encoding="hex",
-        output_key="hex",
-        output_value=lambda summary, _data: summary["hex"],
-        qualifier="encoded",
-    )
-
-
-def _encode_base64_value(parsed: Any) -> dict[str, Any]:
-    return _encode_binary_variant(
-        parsed,
-        base_type="Base64",
-        encoding="base64",
-        output_key="base64",
-        output_value=lambda summary, _data: summary["base64"],
-        qualifier="encoded",
-    )
-
-
-def _encode_base64url_value(parsed: Any) -> dict[str, Any]:
-    return _encode_binary_variant(
-        parsed,
-        base_type="Base64URL",
-        encoding="base64url",
-        output_key="base64url",
-        output_value=lambda summary, _data: summary["base64url"],
-        qualifier="encoded",
-    )
-
-
-def _encode_binary_value(parsed: Any) -> dict[str, Any]:
-    return _encode_binary_variant(
-        parsed,
-        base_type="Binary data",
-        encoding="binary",
-        output_key="bytes",
-        output_value=lambda _summary, data: list(data),
-        qualifier="raw bytes",
-    )
-
-
 def _encode_der_value(parsed: Any) -> dict[str, Any]:
     return _encode_binary_variant(
         parsed,

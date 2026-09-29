@@ -433,12 +433,6 @@ def decode_item(
     return node, end, state.skipped
 
 
-def _decode_cbor_structure(data: bytes) -> tuple[dict[str, Any], int]:
-    node, offset, _ = decode_item(data)
-    node.setdefault("byteLength", offset)
-    return node, offset
-
-
 # The type a map key held as a CborDiagnostic is, named for a reader.
 _KEY_KINDS = {"simple": "simple value", "text string": "text, not UTF-8"}
 

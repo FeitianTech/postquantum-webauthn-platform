@@ -191,7 +191,7 @@ def test_decode_public_key_credential_uses_rawid_and_extension_fallbacks(monkeyp
     assert decoded["response"] == {"other": "value"}
 
 
-def test_decode_binary_field_and_try_parse_json_handle_invalid_inputs(monkeypatch, pipeline):
+def test_decode_binary_field_handles_invalid_inputs(monkeypatch, pipeline):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
@@ -202,10 +202,6 @@ def test_decode_binary_field_and_try_parse_json_handle_invalid_inputs(monkeypatc
     assert decode_module._decode_binary_field("bad") is None
     assert decode_module._decode_binary_field(memoryview(b"abc")) == (b"abc", "binary")
     assert decode_module._decode_binary_field(123) is None
-
-    assert decode_module._try_parse_json("{\"a\": 1}") == {"a": 1}
-    assert decode_module._try_parse_json("not-json") is None
-    assert decode_module._try_parse_json(None) is None
 
 
 def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(monkeypatch, pipeline):

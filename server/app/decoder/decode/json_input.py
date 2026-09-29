@@ -124,11 +124,6 @@ def _constant_finding(name: str, path: str, offset: int) -> dict[str, Any]:
     }
 
 
-def _try_parse_json(value: str) -> Any | None:
-    parsed = read_or_none(value)[0]
-    return None if parsed is NOT_JSON else parsed
-
-
 def _resolve(
     value: Any,
     path: str,

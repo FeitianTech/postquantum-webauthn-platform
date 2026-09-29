@@ -71,17 +71,6 @@ def test_encode_der_extracts_nested_binary_payload():
     assert encoded["data"]["derBase64"] == base64.b64encode(payload_bytes).decode("ascii")
 
 
-def test_encode_base64url_accepts_bytes_array_payload():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
-    source = bytes([0, 1, 2, 253, 254, 255])
-    result = encode_module._encode_base64url_value({"bytes": list(source)})
-
-    assert result["success"] is True
-    assert result["type"] == "Base64URL (encoded)"
-    assert result["data"]["base64url"] == _b64url(source)
-
-
 def test_encode_attestation_statement_converts_sig_and_x5c_entries():
     encode_module = pytest.importorskip("server.app.decoder.encode")
 

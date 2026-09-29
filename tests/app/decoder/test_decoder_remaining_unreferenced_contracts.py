@@ -19,7 +19,7 @@ def _auth_data_bytes() -> bytes:
     return bytes(auth_data)
 
 
-def test_remaining_cbor_key_float_and_structure_helpers():
+def test_remaining_cbor_key_and_float_helpers():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     assert decode_module._key_identity(b"x") == ("bytes", b"x")
@@ -29,10 +29,6 @@ def test_remaining_cbor_key_float_and_structure_helpers():
     assert decode_module._float_summary(float("-inf")) == "float(-Infinity)"
     assert decode_module._float_summary(float("nan")) == "float(NaN)"
     assert decode_module._float_summary(1.5) == "float(1.5)"
-
-    structure, offset = decode_module._decode_cbor_structure(cbor2.dumps({1: 2}))
-    assert structure["type"] == "map"
-    assert offset > 0
 
 
 def test_remaining_mapping_and_auth_data_format_helpers():

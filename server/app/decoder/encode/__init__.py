@@ -66,12 +66,8 @@ from .ctap_numeric import (
 from .handlers_basic import (
     _encode_attestation_object,
     _encode_authenticator_data,
-    _encode_base64_value,  # noqa: F401  # re-exported for callers and tests
-    _encode_base64url_value,  # noqa: F401  # re-exported for callers and tests
-    _encode_binary_value,  # noqa: F401  # re-exported for callers and tests
     _encode_client_data,
     _encode_der_value,
-    _encode_hex_value,  # noqa: F401  # re-exported for callers and tests
     _encode_json_value,
     _encode_pem_value,
     _encode_public_key_credential,
