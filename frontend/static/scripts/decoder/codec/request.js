@@ -3,10 +3,11 @@
 // progress, success and failure. The current panel (process.js) and the new UI
 // in web/ both use this one copy.
 import { FailedResponseError, readFailedResponse } from '../../shared/api/failed-response.js';
+
 import { canEncodeToFormat } from './encoding/can-encode.js';
+
 import { getCanonicalEncoderFormat } from './encoding/format.js';
 
-export const CODEC_MODES = ['decode', 'encode'];
 
 // Why `input` cannot be sent in `mode` (with `format` when encoding), or null
 // when it can.

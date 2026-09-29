@@ -103,13 +103,6 @@ export function cloneMetadataEntry(entry) {
     }
 }
 
-export function normaliseFileList(list) {
-    if (!list) {
-        return [];
-    }
-    return Array.from(list).filter(file => file instanceof File);
-}
-
 export function splitAcceptedFiles(files) {
     const accepted = [];
     const rejected = [];

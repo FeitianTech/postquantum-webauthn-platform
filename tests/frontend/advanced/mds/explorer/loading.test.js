@@ -7,7 +7,6 @@ import {
   fetchExplorerInfo,
   indexEntriesByAaguid,
   isMissingSnapshot,
-  needsLegacyEntryParser,
   prepareSnapshotEntries,
   requestExplorerSnapshot,
 } from '../../../../../frontend/static/scripts/advanced/mds/explorer/loading.js';
@@ -167,14 +166,6 @@ describe('explorer loading: what an answer means', () => {
       kind: 'snapshot',
       payload: SNAPSHOT,
     });
-  });
-
-  it('says whether the entries need the legacy parser', () => {
-    expect(needsLegacyEntryParser(null)).toBe(false);
-    expect(needsLegacyEntryParser({ entries: [] })).toBe(false);
-    expect(needsLegacyEntryParser({ entries: [{ entryId: 'a' }, { entryId: 'b' }] })).toBe(false);
-    expect(needsLegacyEntryParser({ entries: [{ entryId: 'a' }, { name: 'no id' }] })).toBe(true);
-    expect(needsLegacyEntryParser({ entries: [null] })).toBe(true);
   });
 
   it('words a load failure', () => {

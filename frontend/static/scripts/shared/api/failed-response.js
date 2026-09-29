@@ -144,8 +144,3 @@ export async function readFailedResponse(response) {
         path: pathField(body),
     };
 }
-
-/** Read `response` and throw it as a FailedResponseError. */
-export async function throwFailedResponse(response, context = '') {
-    throw new FailedResponseError(await readFailedResponse(response), context);
-}

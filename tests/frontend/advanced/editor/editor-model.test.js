@@ -4,10 +4,8 @@ import {
   EDITOR_TEXT,
   editorTitle,
   locateJsonSyntaxError,
-  parseEditorRequest,
   readEditedRequest,
   requestText,
-  resetFailedText,
   topLevelExtras,
   validationFailedText,
 } from '../../../../frontend/static/scripts/advanced/json-editor/editor-model.js';
@@ -27,11 +25,10 @@ describe('the editor\'s words', () => {
     expect(editorTitle(undefined)).toBe(EDITOR_TEXT.title);
   });
 
-  it('say why an edit or a reset failed', () => {
+  it('say why an edit failed', () => {
     expect(validationFailedText('publicKey.timeout must be zero or greater.')).toBe(
       'JSON validation failed: publicKey.timeout must be zero or greater.',
     );
-    expect(resetFailedText('no form')).toBe('Unable to reset JSON editor: no form');
     expect([EDITOR_TEXT.saved, EDITOR_TEXT.reset]).toEqual(['JSON changes saved successfully!', 'JSON editor reset to current settings.']);
   });
 });
@@ -41,25 +38,6 @@ describe('a request as the editor writes it', () => {
     expect(requestText({ publicKey: { timeout: 5, challenge: { $hex: '00' } }, extra: [2, 1] })).toBe(
       '{\n  "extra": [\n    2,\n    1\n  ],\n  "publicKey": {\n    "challenge": {\n      "$hex": "00"\n    },\n    "timeout": 5\n  }\n}',
     );
-  });
-});
-
-describe('an edit as the current editor saves it', () => {
-  it('is the object it parses to, holding a publicKey object', () => {
-    expect(parseEditorRequest('{"publicKey": {}, "extra": 1}')).toEqual({ publicKey: {}, extra: 1 });
-  });
-
-  it('is refused when it is not an object, or holds no publicKey object', () => {
-    for (const text of ['[]', 'null', '5']) {
-      expect(() => parseEditorRequest(text)).toThrow('Invalid JSON structure.');
-    }
-    for (const text of ['', '{}', '{"publicKey": "x"}']) {
-      expect(() => parseEditorRequest(text)).toThrow('Invalid JSON structure: Missing "publicKey" object.');
-    }
-  });
-
-  it('is refused with the parser\'s error when it is not JSON', () => {
-    expect(() => parseEditorRequest('{')).toThrow(SyntaxError);
   });
 });
 
@@ -154,6 +132,17 @@ describe('an edit of the editor', () => {
     const refused = readEditedRequest(requestText({ ...REQUEST, publicKey: { ...REQUEST.publicKey, timeout: -1 } }), 'registration');
     expect(refused).toMatchObject({ status: 'refused', message: 'JSON validation failed: publicKey.timeout must be zero or greater.' });
     expect(refused.root.publicKey.timeout).toBe(-1);
+  });
+
+  it('that is not an object, or holds no publicKey object, is refused with the structure\'s sentence', () => {
+    ['[]', '1', 'null', '"text"'].forEach((text) => {
+      expect(readEditedRequest(text, 'registration').message).toBe('JSON validation failed: Invalid JSON structure.');
+    });
+    ['{"publicKey": 1}', '{"publicKey": null}', '{"extra": 1}'].forEach((text) => {
+      expect(readEditedRequest(text, 'registration').message).toBe(
+        'JSON validation failed: Invalid JSON structure: Missing "publicKey" object.',
+      );
+    });
   });
 
   it('that the form can follow is the request as parsed', () => {

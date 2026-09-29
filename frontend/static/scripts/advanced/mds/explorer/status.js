@@ -3,19 +3,12 @@
 // status-controls.js) and web's MDS section. No DOM.
 import { formatSnapshotTimestamp } from '../metadata/metadata-helpers.js';
 
-export const EXPLORER_BUSY_STATUS =
-    'Metadata is currently loading. Please wait for the current operation to finish.';
+
 export const EXPLORER_REFRESHED_NOTE = 'Explorer refreshed.';
 export const EXPLORER_NO_MATCHES = 'No authenticators match the selected filters.';
 
 export function explorerLoadingStatus(forceReload) {
     return forceReload ? 'Refreshing authenticator explorer…' : 'Loading authenticator explorer…';
-}
-
-export function explorerRefreshFailure(error) {
-    return error instanceof Error && error.message
-        ? error.message
-        : 'Unable to refresh the packaged authenticator explorer.';
 }
 
 export function buildLoadedStatus(snapshot, note, formatTimestamp = formatSnapshotTimestamp) {

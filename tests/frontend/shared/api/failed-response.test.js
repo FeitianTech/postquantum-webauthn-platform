@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   FailedResponseError,
   readFailedResponse,
-  throwFailedResponse,
 } from '../../../../frontend/static/scripts/shared/api/failed-response.js';
 
 const WERKZEUG_400 = '<!doctype html>\n<html lang=en>\n<title>400 Bad Request</title>\n<h1>Bad Request</h1>\n';
@@ -165,9 +164,9 @@ describe('readFailedResponse', () => {
   });
 });
 
-describe('throwFailedResponse', () => {
-  it('throws the reading as a FailedResponseError', async () => {
-    const error = await throwFailedResponse(response(413, { error: 'Too large.' })).catch((thrown) => thrown);
+describe('FailedResponseError', () => {
+  it('carries the reading as its message and failure', async () => {
+    const error = new FailedResponseError(await readFailedResponse(response(413, { error: 'Too large.' })));
 
     expect(error).toBeInstanceOf(FailedResponseError);
     expect(error.name).toBe('FailedResponseError');
@@ -176,7 +175,7 @@ describe('throwFailedResponse', () => {
   });
 
   it('names the step that failed when told it', async () => {
-    const error = await throwFailedResponse(response(409, ''), 'Registration failed').catch((thrown) => thrown);
+    const error = new FailedResponseError(await readFailedResponse(response(409, '')), 'Registration failed');
 
     expect(error.message).toBe('Registration failed: The stored credentials changed while the request was handled. Try again.');
   });

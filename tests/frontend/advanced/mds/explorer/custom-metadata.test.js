@@ -6,13 +6,11 @@ import {
   CUSTOM_METADATA_UPLOAD_PATH,
 } from '../../../../../frontend/static/scripts/advanced/mds/constants.js';
 import {
-  CANNOT_DELETE_METADATA,
   CHOOSE_METADATA_FILES,
   CUSTOM_METADATA_UPDATED_NOTE,
   DELETE_METADATA_FAILED,
   DELETE_PROGRESS,
   METADATA_UPDATE_CANCELLED,
-  METADATA_UPDATE_DEFAULT_MESSAGE,
   NO_CUSTOM_METADATA,
   UPLOADING_METADATA,
   UPLOAD_METADATA_FAILED,
@@ -53,24 +51,20 @@ describe('Manage Trusted Metadata: its words', () => {
   it('keeps every sentence', () => {
     expect([
       CUSTOM_METADATA_UPDATED_NOTE,
-      METADATA_UPDATE_DEFAULT_MESSAGE,
       METADATA_UPDATE_CANCELLED,
       NO_CUSTOM_METADATA,
       CHOOSE_METADATA_FILES,
       UPLOADING_METADATA,
       UPLOAD_METADATA_FAILED,
       DELETE_METADATA_FAILED,
-      CANNOT_DELETE_METADATA,
     ]).toEqual([
       'Custom metadata updated.',
-      'MDS is updating…',
       'Metadata update cancelled.',
       'No custom metadata has been added yet.',
       'Please choose one or more JSON files.',
       'Uploading metadata…',
       'Failed to upload metadata files.',
       'Failed to delete metadata file.',
-      'Unable to delete the metadata file.',
     ]);
     expect(UPLOAD_PROGRESS).toEqual({
       start: 'Updating Metadata...',

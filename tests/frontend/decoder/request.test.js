@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { FailedResponseError } from '../../../frontend/static/scripts/shared/api/failed-response.js';
 import {
-  CODEC_MODES,
   buildCodecRequest,
   codecFailureText,
   codecProgressText,
@@ -23,9 +22,6 @@ function jsonResponse(status, body) {
 }
 
 describe('codec request: the checks before sending', () => {
-  it('names the two modes', () => {
-    expect(CODEC_MODES).toEqual(['decode', 'encode']);
-  });
 
   it('refuses an empty or blank input, in the words of each mode', () => {
     expect(validateCodecInput('decode', '  \n ', null)).toBe('Codec input is empty. Please paste something to process.');

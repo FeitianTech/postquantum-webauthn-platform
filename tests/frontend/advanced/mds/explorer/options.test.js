@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { FILTER_LOOKUP } from '../../../../../frontend/static/scripts/advanced/mds/constants.js';
+import { FILTER_CONFIG } from '../../../../../frontend/static/scripts/advanced/mds/constants.js';
 import {
   NO_MATCHING_OPTIONS,
   collectOptionSets,
@@ -10,6 +10,8 @@ import {
   sortFilterOptions,
   staticFilterOptions,
 } from '../../../../../frontend/static/scripts/advanced/mds/explorer/options.js';
+
+const filterConfig = (key) => FILTER_CONFIG.find((config) => config.key === key);
 
 const ENTRY = {
   protocol: 'FIDO2',
@@ -37,14 +39,14 @@ describe('filter options', () => {
   });
 
   it('formats a filter static options', () => {
-    expect(staticFilterOptions(FILTER_LOOKUP.certification)).toEqual(STATIC_CERTIFICATION);
-    expect(staticFilterOptions(FILTER_LOOKUP.protocol)).toEqual([]);
+    expect(staticFilterOptions(filterConfig('certification'))).toEqual(STATIC_CERTIFICATION);
+    expect(staticFilterOptions(filterConfig('protocol'))).toEqual([]);
     expect(staticFilterOptions(undefined)).toEqual([]);
     expect(staticFilterOptions({ staticOptions: ['', 'REVOKED'] })).toEqual(['Revoked']);
   });
 
   it('merges the values with the static options, once each', () => {
-    expect(mergeFilterOptions(new Set(['Revoked', '', 'X']), FILTER_LOOKUP.certification)).toEqual([
+    expect(mergeFilterOptions(new Set(['Revoked', '', 'X']), filterConfig('certification'))).toEqual([
       'Revoked',
       'X',
       'FIDO Certified',

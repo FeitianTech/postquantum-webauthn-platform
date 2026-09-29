@@ -46,7 +46,7 @@ export default defineConfig({
         'frontend/static/scripts/advanced/mds/explorer/*.js': FULL,
         'frontend/static/scripts/advanced/mds/{constants,raw-data,raw-stringify,sort-filter-normalise}.js': FULL,
         'frontend/static/scripts/advanced/mds/metadata/{explorer-source,metadata-helpers}.js': FULL,
-        'frontend/static/scripts/advanced/mds/utils/{extractors,formatters,resolvers,status-reports}.js': FULL,
+        'frontend/static/scripts/advanced/mds/utils/{extractors,formatters,resolvers}.js': FULL,
         // The saved credentials' storage, which both UIs read and write: every line and branch.
         'frontend/static/scripts/shared/storage/{artifacts-client,records}.js': FULL,
         'frontend/static/scripts/shared/storage/local/*.js': FULL,

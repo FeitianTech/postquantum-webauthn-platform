@@ -7,11 +7,9 @@ import {
   SORT_ASCENDING,
   SORT_DESCENDING,
   SORT_NONE,
-  clearExplorerFilters,
   compareExplorerSortValues,
   countActiveExplorerFilters,
   defaultExplorerSort,
-  explorerSortLabel,
   filterAndSortExplorerEntries,
   isExplorerSortKey,
   matchesExplorerFilters,
@@ -131,11 +129,6 @@ describe('sort clicks', () => {
     expect(nextExplorerSort(defaultExplorerSort(), 'nope')).toBeNull();
   });
 
-  it('labels the sort control', () => {
-    expect(explorerSortLabel('Name', 'asc')).toBe('Sort Name (ascending)');
-    expect(explorerSortLabel('Name', 'desc')).toBe('Sort Name (descending)');
-    expect(explorerSortLabel('Name', 'none')).toBe('Sort Name (no sorting)');
-  });
 });
 
 describe('filters', () => {
@@ -177,12 +170,6 @@ describe('filters', () => {
       { name: 'a key' },
       { name: 'b key' },
     ]);
-  });
-
-  it('clears every filter and says whether any was set', () => {
-    expect(clearExplorerFilters({ name: 'x', id: '' })).toEqual({ filters: { name: '', id: '' }, changed: true });
-    expect(clearExplorerFilters({ name: '' })).toEqual({ filters: { name: '' }, changed: false });
-    expect(clearExplorerFilters(undefined)).toEqual({ filters: {}, changed: false });
   });
 
   it('counts the filters in use', () => {

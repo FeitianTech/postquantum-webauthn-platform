@@ -2,7 +2,9 @@
 // legacy tab (sort-filter-controller.js, sort-filter-reset.js) and web's MDS
 // section. No DOM.
 import { normaliseSortValueInput } from '../sort-filter-normalise.js';
+
 import { normaliseEnumKey } from '../utils/formatters.js';
+
 
 export const SORT_NONE = 'none';
 export const SORT_ASCENDING = 'asc';
@@ -190,32 +192,9 @@ export function nextExplorerSort(sort, key) {
     return nextDirection === SORT_NONE ? defaultExplorerSort() : { key, direction: nextDirection };
 }
 
-export function explorerSortLabel(label, direction) {
-    let suffix = ' (no sorting)';
-    if (direction === SORT_ASCENDING) {
-        suffix = ' (ascending)';
-    } else if (direction === SORT_DESCENDING) {
-        suffix = ' (descending)';
-    }
-    return `Sort ${label}${suffix}`;
-}
-
 export function filterAndSortExplorerEntries(entries, filters, sort, certificationOptions = []) {
     const matched = entries.filter(entry => matchesExplorerFilters(entry, filters, certificationOptions));
     return sortExplorerEntries(matched, sort);
-}
-
-// Every filter emptied, and whether any had a value.
-export function clearExplorerFilters(filters) {
-    const cleared = {};
-    let changed = false;
-    Object.entries(filters || {}).forEach(([key, value]) => {
-        cleared[key] = '';
-        if (value) {
-            changed = true;
-        }
-    });
-    return { filters: cleared, changed };
 }
 
 export function countActiveExplorerFilters(filters) {

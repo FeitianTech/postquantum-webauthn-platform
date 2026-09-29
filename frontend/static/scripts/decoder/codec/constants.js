@@ -89,34 +89,6 @@ export const SPECIAL_LABELS = {
     spec: 'Spec',
 };
 
-export const MODE_CONFIG = {
-    decode: {
-        panelId: 'codec-decode-panel',
-        inputId: 'decoder-input',
-        outputId: 'decoder-output',
-        summaryId: 'decoded-content',
-        toggleRawId: 'decoder-toggle-raw',
-        rawContentId: 'decoder-raw-content',
-        rawModalId: 'decoder-raw-modal',
-        statusKey: 'decoder',
-        progressId: 'decoder-progress',
-        progressTextId: 'decoder-progress-text',
-    },
-    encode: {
-        panelId: 'codec-encode-panel',
-        inputId: 'encoder-input',
-        outputId: 'encoder-output',
-        summaryId: 'encoded-content',
-        toggleRawId: 'encoder-toggle-raw',
-        rawContentId: 'encoder-raw-content',
-        rawModalId: 'encoder-raw-modal',
-        statusKey: 'encoder',
-        progressId: 'encoder-progress',
-        progressTextId: 'encoder-progress-text',
-        formatSelectId: 'encoder-format',
-    },
-};
-
 export const ENCODER_FORMAT_ALIASES = new Map([
     ['cbor', 'cbor'],
     ['cbor (canonical)', 'cbor'],

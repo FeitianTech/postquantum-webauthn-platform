@@ -2,17 +2,17 @@
 // legacy tab's panel (custom/*.js, runtime/runtime-custom-metadata-adapters.js)
 // and web's dialog. No DOM.
 import { CUSTOM_METADATA_DELETE_PATH, CUSTOM_METADATA_LIST_PATH, CUSTOM_METADATA_UPLOAD_PATH } from '../constants.js';
+
 import { splitAcceptedFiles } from '../metadata/metadata-helpers.js';
 
+
 export const CUSTOM_METADATA_UPDATED_NOTE = 'Custom metadata updated.';
-export const METADATA_UPDATE_DEFAULT_MESSAGE = 'MDS is updating…';
 export const METADATA_UPDATE_CANCELLED = 'Metadata update cancelled.';
 export const NO_CUSTOM_METADATA = 'No custom metadata has been added yet.';
 export const CHOOSE_METADATA_FILES = 'Please choose one or more JSON files.';
 export const UPLOADING_METADATA = 'Uploading metadata…';
 export const UPLOAD_METADATA_FAILED = 'Failed to upload metadata files.';
 export const DELETE_METADATA_FAILED = 'Failed to delete metadata file.';
-export const CANNOT_DELETE_METADATA = 'Unable to delete the metadata file.';
 
 // What the page says while an upload runs, in order, and how it ends.
 export const UPLOAD_PROGRESS = {

@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  EXPLORER_BUSY_STATUS,
   EXPLORER_NO_MATCHES,
   EXPLORER_REFRESHED_NOTE,
   buildLoadedStatus,
   explorerLoadedStatus,
   explorerLoadingStatus,
-  explorerRefreshFailure,
   formatEntryCount,
 } from '../../../../../frontend/static/scripts/advanced/mds/explorer/status.js';
 
@@ -20,16 +18,10 @@ describe('explorer status sentences', () => {
   });
 
   it('keeps the fixed sentences', () => {
-    expect(EXPLORER_BUSY_STATUS).toBe('Metadata is currently loading. Please wait for the current operation to finish.');
     expect(EXPLORER_REFRESHED_NOTE).toBe('Explorer refreshed.');
     expect(EXPLORER_NO_MATCHES).toBe('No authenticators match the selected filters.');
   });
 
-  it('words a refresh failure', () => {
-    expect(explorerRefreshFailure(new Error('Down.'))).toBe('Down.');
-    expect(explorerRefreshFailure(new Error(''))).toBe('Unable to refresh the packaged authenticator explorer.');
-    expect(explorerRefreshFailure(undefined)).toBe('Unable to refresh the packaged authenticator explorer.');
-  });
 });
 
 describe('the loaded sentence', () => {

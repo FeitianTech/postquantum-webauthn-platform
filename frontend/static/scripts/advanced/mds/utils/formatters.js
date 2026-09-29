@@ -1,5 +1,3 @@
-import { sortStatusReportsByEffectiveDateDesc } from './status-reports.js';
-
 export function formatUpv(upv) {
     const list = Array.isArray(upv) ? upv : upv ? [upv] : [];
     const formatted = [];
@@ -26,18 +24,6 @@ export function formatDetailValue(value) {
         return value.map(item => formatDetailValue(item)).join(', ');
     }
     return String(value);
-}
-
-export function formatProtocol(protocol) {
-    if (!protocol) {
-        return '';
-    }
-    const normalised = formatEnum(protocol);
-    const compact = normalised.replace(/\s+/g, '');
-    if (/^fido\d$/i.test(compact)) {
-        return compact.toUpperCase();
-    }
-    return normalised;
 }
 
 export function normaliseEnumKey(value) {
@@ -74,48 +60,6 @@ export function formatEnum(value) {
             return lower.charAt(0).toUpperCase() + lower.slice(1);
         })
         .join(' ');
-}
-
-export function formatCertification(statusReports) {
-    const sorted = sortStatusReportsByEffectiveDateDesc(statusReports);
-    const latest = sorted[0];
-
-    if (!latest) {
-        return { display: '', status: '' };
-    }
-
-    const statusRaw = typeof latest.status === 'string' ? latest.status.trim() : '';
-    const statusValue = statusRaw ? statusRaw.toUpperCase() : '';
-    const descriptor = typeof latest.certificationDescriptor === 'string' ? latest.certificationDescriptor.trim() : '';
-    const certificateNumber = typeof latest.certificateNumber === 'string' ? latest.certificateNumber.trim() : '';
-
-    const parts = [];
-    const statusDisplay = statusValue ? formatEnum(statusValue) : '';
-    if (statusDisplay) {
-        parts.push(statusDisplay);
-    }
-    if (descriptor) {
-        parts.push(descriptor);
-    }
-    if (certificateNumber) {
-        parts.push(`(${certificateNumber})`);
-    }
-
-    return {
-        display: parts.filter(Boolean).join(' • '),
-        status: statusValue,
-    };
-}
-
-export function parseIsoDate(value) {
-    if (typeof value !== 'string' || !value.trim()) {
-        return null;
-    }
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-        return null;
-    }
-    return parsed;
 }
 
 export function formatDate(value) {

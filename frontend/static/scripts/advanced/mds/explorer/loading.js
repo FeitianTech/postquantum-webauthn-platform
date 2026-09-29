@@ -2,8 +2,11 @@
 // the legacy tab (metadata/explorer-load.js, explorer-state-loader.js) and web's
 // MDS section. No DOM.
 import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MISSING_METADATA_MESSAGE } from '../constants.js';
+
 import { cloneMetadataEntry, hasInlineDetail } from '../metadata/metadata-helpers.js';
+
 import { normaliseAaguid } from '../utils/resolvers.js';
+
 
 async function fetchExplorerAnswer(source, signal) {
     const fetchOptions = {
@@ -74,21 +77,6 @@ export function classifyExplorerAnswer({ response, payload }, missingMessage = M
         return { kind: 'failed', message: 'Explorer response was not valid JSON.' };
     }
     return { kind: 'snapshot', payload };
-}
-
-// Entries without an `entryId` are the client's own row format, which the
-// server no longer sends; only the legacy tab can still parse them.
-export function needsLegacyEntryParser(payload) {
-    const payloadEntries = Array.isArray(payload?.entries) ? payload.entries : [];
-    return (
-        payloadEntries.length > 0
-        && payloadEntries.some(entry => {
-            if (!entry || typeof entry !== 'object') {
-                return true;
-            }
-            return !Object.prototype.hasOwnProperty.call(entry, 'entryId');
-        })
-    );
 }
 
 export function explorerLoadFailure(error) {

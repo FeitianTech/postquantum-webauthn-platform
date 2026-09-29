@@ -4,9 +4,13 @@
 // `publicKey`. DOM-free: the current editor (./editor-flow.js) and the new UI
 // both use it.
 import { sortObjectKeys } from '../../shared/utils/binary.js';
+
 import { isPlainObject } from './schema.js';
+
 import { validateAuthenticationPublicKey } from './validation-authentication.js';
+
 import { validateRegistrationPublicKey } from './validation-registration.js';
+
 
 export const EDITOR_TEXT = {
     title: 'JSON Editor',
@@ -34,22 +38,9 @@ export function validationFailedText(message) {
     return `JSON validation failed: ${message}`;
 }
 
-export function resetFailedText(message) {
-    return `Unable to reset JSON editor: ${message}`;
-}
-
 /** A request as the editor writes it: every object's keys sorted, two spaces of indent. */
 export function requestText(options) {
     return JSON.stringify(sortObjectKeys(options), null, 2);
-}
-
-/**
- * The edit's root, parsed and checked to be an object holding a `publicKey`
- * object: it throws the parser's error or the structure's sentence. Empty text
- * is an empty object.
- */
-export function parseEditorRequest(text) {
-    return checkEditorStructure(JSON.parse(text || '{}'));
 }
 
 function checkEditorStructure(parsed) {
