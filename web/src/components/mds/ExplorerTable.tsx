@@ -78,7 +78,7 @@ function minimumWidth(column: ExplorerColumn) {
 }
 
 // The handle on a header's right edge: drag it, or focus it and use the arrow
-// keys. Widths last while the page is open, as in the current UI.
+// keys. Widths last while the page is open.
 function ColumnResizer({
   column,
   width,

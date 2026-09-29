@@ -1,8 +1,7 @@
-// The MDS explorer's logic comes from the modules both UIs share
-// (docs/UI_MIGRATION.md): frontend/static/scripts/advanced/mds/explorer/*.js and
-// the leaves they stand on. These are the types web/ reads them through, and the
-// template's own words the logic does not hold: the columns' headers and the
-// filters' labels and placeholders.
+// The MDS explorer's logic comes from src/logic/advanced/mds (explorer/ and the
+// leaves it stands on). These are the types the components read it through, and
+// the words the logic does not hold: the columns' headers and the filters'
+// labels and placeholders.
 import { FILTER_CONFIG } from '@/logic/advanced/mds/constants.js';
 import {
   classifyExplorerAnswer,
@@ -113,7 +112,7 @@ export const certificationBadge = certificationParts as (entry: MdsEntry) => {
 };
 export const identifierName = identifierLabel as (entry: MdsEntry) => string;
 
-// The 13 columns, in the current UI's order, with its headers; `list` names the
+// The 13 columns, in order, with their headers; `list` names the
 // entry's list a tag column shows. The widths are where each column starts (the
 // ID column fits a whole AAGUID and its copy button; on a phone the Icon column
 // starts narrower, only as wide as its icon); a person can resize them.

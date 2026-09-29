@@ -129,7 +129,7 @@ function Section({
   );
 }
 
-// The page's sections, in the current page's order (explorer/detail.js), as
+// The page's sections, in explorer/detail.js's order, as
 // sections: a heading and a hairline, never cards in cards.
 export function EntrySections({
   sections,

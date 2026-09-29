@@ -43,17 +43,16 @@ const upload = requestCustomMetadataUpload as (files: File[]) => Promise<Answer>
 const remove = requestCustomMetadataDelete as (storedFilename: string) => Promise<Answer>;
 const list = requestCustomMetadataList as () => Promise<unknown[]>;
 
-// How long the last progress sentence stays, as the current UI's overlay did.
+// How long the last progress sentence stays.
 const SUCCESS_MS = 520;
 const FAILURE_MS = 720;
 
-// Manage Trusted Metadata's work, in the current panel's steps and words
-// (custom/custom-metadata-actions.js): choosing files (only .json ones are sent),
-// uploading, deleting, and the files uploaded in this session, which the current
-// panel never lists. An answer with the session's snapshot is shown at once; one
-// without makes the explorer load the session's list again. Unlike the current
-// panel, a refusal keeps the server's reason, and the progress is a line in the
-// dialog rather than an overlay over the page.
+// Manage Trusted Metadata's work, in the steps and words of
+// explorer/custom-metadata.js: choosing files (only .json ones are sent),
+// uploading, deleting, and the files uploaded in this session. An answer with the
+// session's snapshot is shown at once; one without makes the explorer load the
+// session's list again. A refusal keeps the server's reason, and the progress is a
+// line in the dialog.
 export function useCustomMetadata({
   onSnapshot,
   onReload,

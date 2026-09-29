@@ -12,7 +12,7 @@ import { Drawer, OverlayHeader } from '@/components/ui/Overlay';
 export const DRAWER_ID = 'advanced-saved-credentials';
 
 // The saved credentials, in a drawer over the Advanced tab: the list both tabs
-// share (Phase 28), with how many there are and Clear All in its header. A name
+// share, with how many there are and Clear All in its header. A name
 // opens the credential's details over the drawer; a question asked from it
 // comes over it too, and closing either comes back to it.
 export function CredentialsDrawer({

@@ -8,8 +8,8 @@ export type DetailPhase =
   | { phase: 'ready'; detail: CredentialDetail; state: RegistrationState; hydrationFailed: boolean };
 
 // Advanced records completed from their artifact, for the page's life, by
-// storage id: the current UI marks the record itself; a copy would ask again at
-// each opening. A failure is not kept, so the next opening asks again.
+// storage id: the stored record is not changed here, and a copy would ask again
+// at each opening. A failure is not kept, so the next opening asks again.
 const hydrated = new Map<string, SavedCredential>();
 
 function copyOf(record: SavedCredential): SavedCredential {
@@ -31,7 +31,7 @@ async function completed(record: SavedCredential, onSaved: () => void) {
  * A saved credential's details, composed once per opening: an advanced record
  * without its registration is first completed from its server artifact (the
  * snapshot it brings is saved, and `onSaved` called), then everything the
- * details show is composed, the decoder asked as the current UI asks it.
+ * details show is composed, the decoder asked through decode-payload.js.
  */
 export function useCredentialDetail(record: SavedCredential | null, key: string, onSaved: () => void): DetailPhase {
   const [result, setResult] = useState<{ key: string; phase: DetailPhase } | null>(null);

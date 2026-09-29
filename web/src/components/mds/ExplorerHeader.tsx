@@ -14,7 +14,7 @@ const DOTS = {
   error: 'bg-danger',
 } as const;
 
-// The count, as the current UI words it: "Entries: 12 of 517 total".
+// The count, as status.js words it: "Entries: 12 of 517 total".
 export function EntryCount({ shown, total }: { shown: number; total: number }) {
   const text = countText(shown, total);
   return (

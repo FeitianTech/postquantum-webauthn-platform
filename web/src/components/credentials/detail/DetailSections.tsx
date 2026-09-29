@@ -17,8 +17,8 @@ const TONES: Record<ValueKind, 'success' | 'danger' | 'neutral'> = {
   other: 'neutral',
 };
 
-// The logic's labels end in a colon, as the current modal's lines read; here
-// each labels a field.
+// The logic's labels end in a colon, as a line of text reads; here each labels a
+// field.
 function bare(label: string) {
   return label.replace(/:\s*$/, '');
 }
@@ -193,8 +193,8 @@ function UserInfo({ detail, row, idBase }: { detail: CredentialDetail; row: Cred
 }
 
 /**
- * The detail's level: everything the current modal shows above the registration,
- * in its order (CRED-M2..M7), then the way to the registration's own level.
+ * The detail's level: everything detail-sections.js shows above the registration,
+ * in its order, then the way to the registration's own level.
  */
 export function DetailSections({
   detail,

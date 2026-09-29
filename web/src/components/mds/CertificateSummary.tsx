@@ -43,7 +43,7 @@ function sectionId(idBase: string, title: string) {
 }
 
 // A certificate's summary: its subject, issuer, validity and serial numbers
-// first (emphasised, as the current page does), then its public key and its
+// first (emphasised), then its public key and its
 // signature, each under its heading; long values in blocks with copy.
 export function CertificateSummary({ summary, idBase }: { summary: Summary; idBase: string }) {
   return (

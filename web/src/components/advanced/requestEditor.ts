@@ -49,7 +49,7 @@ export function followedText<T extends RequestText>(current: T, request: FormReq
   return { ...current, text, edit: reading.status === 'accepted' ? null : reading, formRequest: request };
 }
 
-/** The editor's Reset, as the current editor's: the form's request, with the keys beside publicKey the text holds, if it parses. */
+/** The editor's Reset: the form's request, with the keys beside publicKey the text holds, if it parses. */
 export function resetText<T extends RequestText>(current: T, request: FormRequest, scope: RequestScope): T {
   const reading = readEdit(current.text, scope);
   return rebuiltText({ ...current, extras: reading.status === 'unparsed' ? current.extras : extrasOf(reading.root) }, request);

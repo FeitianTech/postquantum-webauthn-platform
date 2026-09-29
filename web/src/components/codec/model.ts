@@ -1,7 +1,6 @@
-// The Codec's logic comes from the modules both UIs share (docs/UI_MIGRATION.md):
-// frontend/static/scripts/decoder/codec/{request,result,values}.js. These are
-// the types web/ reads them through, and the one piece of the current template
-// the logic needs: the encoder's formats.
+// The Codec's logic comes from src/logic/decoder/codec/{request,result,values}.js.
+// These are the types the components read them through, and the one piece the
+// logic does not hold: the encoder's formats.
 import { buildCodecRequest } from '@/logic/decoder/codec/request.js';
 import { describeCodecResult } from '@/logic/decoder/codec/result.js';
 import { classifyCodecValue } from '@/logic/decoder/codec/values.js';
@@ -63,8 +62,8 @@ export const buildRequest = buildCodecRequest as (
 export const describeResult = describeCodecResult as (payload: unknown, mode: CodecMode) => CodecView;
 export const classifyValue = classifyCodecValue as (value: unknown) => ValueView;
 
-// The encoder's formats as the current UI's select lists them: the value sent,
-// and the text shown.
+// The encoder's formats, as the format select lists them: the value sent, and
+// the text shown.
 export const ENCODER_FORMATS = [
   { value: 'CBOR (canonical)', text: 'CBOR (canonical)' },
   { value: 'EDN', text: 'EDN (exact bytes)' },

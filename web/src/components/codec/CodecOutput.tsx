@@ -32,8 +32,8 @@ function DecodedSection({ section }: { section: SectionView }) {
 type CodecOutputProps = { mode: CodecMode; answer: CodecAnswer; onRaw: () => void; rawOpen: boolean };
 
 // What the server made of the input: the header (Success or Error, the type and
-// Raw), the lenient note, the findings, then the sections in the current panel's
-// order (result.js), or the encoded bytes.
+// Raw), the lenient note, the findings, then the sections in result.js's order,
+// or the encoded bytes.
 export const CodecOutput = forwardRef<HTMLButtonElement, CodecOutputProps>(function CodecOutput(
   { mode, answer, onRaw, rawOpen },
   rawButtonRef,

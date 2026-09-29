@@ -28,7 +28,7 @@ function EntryLabel({ entry }: { entry: MapEntryView }) {
   );
 }
 
-// One decoded value, shown by the rules the current panel follows (values.js):
+// One decoded value, shown by the rules of values.js:
 // muted text for null and empty containers, a string on its line or as a block,
 // a list, or a map of labelled entries with its badges before them. Data is in
 // Geist Mono; labels are not. A map or list inside a map goes under its label,

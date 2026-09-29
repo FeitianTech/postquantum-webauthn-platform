@@ -55,7 +55,7 @@ function listState(explorer: Explorer, view: ReturnType<typeof useExplorerView>)
 type ListPlace = { entryId: string; windowY: number; top: number; left: number };
 
 // The FIDO MDS section: every authenticator the FIDO Metadata Service
-// publishes, with what the current UI's explorer shows of each, in a table that
+// publishes, with what the explorer's logic shows of each, in a table that
 // sorts, filters, resizes and expands. A row opens its entry (#mds/<entryId>);
 // the list stays in the page meanwhile, so going back finds it as it was: its
 // filters, sort, widths and scroll, with the focus on the row.

@@ -124,7 +124,7 @@ function ModePanel({ mode, active, codec }: { mode: CodecMode; active: boolean; 
   );
 
   return (
-    // Shown again, a panel comes in as a section does (the current panel fades in too).
+    // Shown again, a panel comes in as a section does.
     <div
       role="tabpanel"
       id={ids.panel}

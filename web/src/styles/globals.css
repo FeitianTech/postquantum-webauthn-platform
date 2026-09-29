@@ -88,7 +88,7 @@
 
   /* Shadows are for floating layers: popovers, menus, dialogs, drawers, toasts.
      The one exception is the segmented control's white highlight on its white
-     track (the owner's choice, 2026-09-25). */
+     track (docs/DESIGN.md). */
   --shadow-*: initial;
   --shadow-float-sm: 0 4px 14px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.05);
   --shadow-float: 0 12px 32px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.05);
@@ -184,7 +184,7 @@
     outline-offset: 2px;
   }
 
-  /* Text fields show no focus effect of any kind (the owner's direction): no
+  /* Text fields show no focus effect of any kind (docs/DESIGN.md): no
      outline, ring, glow, shadow or border change. The caret shows focus. */
   [data-text-field],
   [data-text-field]:focus,

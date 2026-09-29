@@ -1,4 +1,4 @@
-// The footer the site has always had (before Phase 30, in the current UI's index.html).
+// The site's footer.
 // Its year is kept current by tools/update_footer_year.py, which edits this file.
 export function Footer() {
   return (

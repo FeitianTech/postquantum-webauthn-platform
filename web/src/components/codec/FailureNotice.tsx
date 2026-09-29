@@ -1,7 +1,7 @@
 import type { CodecFailure } from './model';
 
 // Why the last run showed no answer, where it stays until the next run or Clear:
-// the sentence as the current panel says it, and, when the server named them,
+// the sentence request.js gives, and, when the server named them,
 // the offset and path where the input stops being well-formed, in mono.
 export function FailureNotice({ failure }: { failure: CodecFailure }) {
   return (

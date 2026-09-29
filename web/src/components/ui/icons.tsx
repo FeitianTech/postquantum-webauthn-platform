@@ -100,7 +100,7 @@ export function AlertIcon(props: IconProps) {
   );
 }
 
-// Two arrows turning round: generate again (the current UI's refresh icon, on a 16 grid).
+// Two arrows turning round: generate again (on a 16 grid).
 export function RefreshIcon(props: IconProps) {
   return (
     <Icon {...props}>

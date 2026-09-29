@@ -1,6 +1,6 @@
-// The Simple tab's ceremonies come from the module both UIs share
-// (frontend/static/scripts/simple/ceremony.js), and the credentials they use and
-// keep from the storage both UIs read and write (shared/storage/records.js).
+// The Simple tab's ceremonies come from src/logic/simple/ceremony.js, and the
+// credentials they use and keep from the storage both tabs read and write
+// (shared/storage/records.js).
 import { generateRandom10DigitUsername } from '@/logic/shared/auth/random-username.js';
 import {
   getSimpleCredentialsForEmail,
@@ -63,7 +63,7 @@ export function authenticateWithPasskey(username: string, progress: Progress): P
   });
 }
 
-/** Keeps what a registration saved, as the current tab does: the server's record, for this username. */
+/** Keeps what a registration saved: the server's record, for this username. */
 export function keepRegistered(storedCredential: Record<string, unknown>, username: string) {
   saveSimpleCredential({ ...storedCredential, email: username });
 }

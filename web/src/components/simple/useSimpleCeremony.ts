@@ -16,11 +16,10 @@ import {
   successText,
 } from './model';
 
-// The Simple tab's two ceremonies, in the current tab's steps and words
-// (simple/ceremony.js): the username, what each step is doing, a success as a
-// toast, a failure in place until the next ceremony, and the result panel. Unlike
-// the current tab, the pressed button is busy and neither can be pressed again
-// meanwhile. A registration keeps the server's record in this browser; an
+// The Simple tab's two ceremonies, in the steps and words of simple/ceremony.js:
+// the username, what each step is doing, a success as a toast, a failure in place
+// until the next ceremony, and the result panel. The pressed button is busy and
+// neither can be pressed again meanwhile. A registration keeps the server's record in this browser; an
 // authentication keeps the server's counter and tints the credential it used.
 export function useSimpleCeremony() {
   const toast = useToast();
@@ -33,8 +32,7 @@ export function useSimpleCeremony() {
   const [result, setResult] = useState<CeremonyResultInput | null>(null);
   const busy = useRef(false);
 
-  // Once, after hydration (the exported page has the field empty), as the
-  // current tab fills it when the page has loaded.
+  // Once, after hydration (the exported page has the field empty).
   useEffect(() => setUsername(randomUsername()), []);
 
   const randomize = useCallback(() => {

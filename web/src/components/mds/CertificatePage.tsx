@@ -13,8 +13,8 @@ import type { MdsEntry } from './model';
 // An attestation root certificate of an entry (#mds/<entryId>/certificate/<n>):
 // its subject as the title and its issuer under it, its summary, then the
 // certificate as given and the server's decoded output, each with copy. A
-// failure is said where the summary would be, and in the decoded output, as the
-// current page does. Reached from the entry's button, the decode is already
+// failure is said where the summary would be, and in the decoded output.
+// Reached from the entry's button, the decode is already
 // there; by a link or a reload, the page asks for it.
 export function CertificatePage({
   entry,

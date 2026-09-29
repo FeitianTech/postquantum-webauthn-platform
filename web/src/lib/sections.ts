@@ -1,6 +1,5 @@
-// The four sections of the top bar, with each one's title and description as the
-// current UI showed them (its tab templates, until Phase 30). The ids are the
-// current UI's tab names, and the URL hashes (#simple, #advanced, #codec, #mds).
+// The four sections of the top bar, with each one's title and description. The
+// ids are the URL hashes (#simple, #advanced, #codec, #mds).
 export const SECTIONS = [
   {
     id: 'simple',

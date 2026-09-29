@@ -1,5 +1,5 @@
-// The Advanced tab's logic comes from the modules both UIs share
-// (docs/UI_MIGRATION.md): the registration's and the authentication's requests
+// The Advanced tab's logic comes from the modules in src/logic: the
+// registration's and the authentication's requests
 // and the forms' settings (advanced/json-editor/registration-request.js,
 // authentication-request.js, algorithm-options.js), a form change over the
 // editor's text (json-editor/request-patch.js), the JSON editor
@@ -9,7 +9,7 @@
 // fake-credentials.js, hex-input.js, allow-credentials.js, capabilities.js),
 // the two ceremonies (advanced/auth/ceremony.js, assertion.js) and the snapshot
 // a registration's result keeps (credential-display/registration-snapshot.js).
-// These are the types web/ reads them through.
+// These are the types the components read them through.
 import { ADVANCED_CEREMONY_TEXT, advancedRegisteredMessage, advancedRegistrationFailureText, registerAdvancedCredential } from '@/logic/advanced/auth/ceremony.js';
 import {
   FAKE_CREDENTIAL_TEXT,

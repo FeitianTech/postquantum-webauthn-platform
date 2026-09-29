@@ -6,7 +6,7 @@ import { type GoToSection, useSectionNavigation } from '@/lib/useSection';
 
 import { aaguidEntryId } from './entryModel';
 
-// How another surface (a saved credential's "FIDO MDS" button, Phase 28) opens
+// How another surface (a saved credential's "FIDO MDS" button) opens
 // the MDS entry of an AAGUID. The entry's URL is #mds/aaguid:<the AAGUID dashed,
 // in lower case>, the id the server gives that entry; the entry's page finds it
 // in the list, or asks the server when the list does not hold it, and says so

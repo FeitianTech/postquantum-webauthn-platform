@@ -45,9 +45,8 @@ export type SavedCredentialsState = {
 const SavedCredentialsContext = createContext<SavedCredentialsState | null>(null);
 
 // The saved credentials every section shows: one list, read from the browser's
-// storage both UIs share (so a credential saved at / shows here), read again
-// after each change, and warmed up after each read as the current list is
-// (heavy advanced records go to the server, missing snapshots come from it; the
+// storage both tabs share, read again after each change, and warmed up after
+// each read (heavy advanced records go to the server, missing snapshots come from it; the
 // warm-up's own re-read does not warm up again). Deleting and clearing report
 // here: a success as a toast, anything else under the list's header.
 export function SavedCredentialsProvider({ children }: { children: ReactNode }) {

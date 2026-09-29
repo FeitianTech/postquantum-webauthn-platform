@@ -12,9 +12,8 @@ import { useToast } from '@/components/ui/Toast';
 import { type CodecAnswer, type CodecFailure, type CodecMode, ENCODER_FORMATS, buildRequest } from './model';
 
 // One panel of the Codec (Decode or Encode): its input and options, and what the
-// last run gave. The steps are the current panel's (process.js), in its order:
-// a check that fails leaves the last answer where it was; a run clears the last
-// answer before asking; a failure leaves none. Unlike the current panel, the
+// last run gave, in this order: a check that fails leaves the last answer where
+// it was; a run clears the last answer before asking; a failure leaves none. The
 // button is busy while a run is out (so a second click does nothing), and Clear
 // drops the answer of a run still out.
 export function useCodec(mode: CodecMode) {

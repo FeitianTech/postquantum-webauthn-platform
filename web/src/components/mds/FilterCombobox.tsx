@@ -6,7 +6,7 @@ import { cx } from '@/lib/cx';
 
 import { type ExplorerFilter, optionsMatching } from './model';
 
-// A filter that offers the values present (the current UI's dropdown), as an
+// A filter that offers the values present, as an
 // ARIA combobox: typing narrows the list and filters at once; the arrow keys
 // move through the list (wrapping), Enter picks, Escape closes the list and then
 // clears the field. User Verification and Algorithms show their whole list.

@@ -13,9 +13,9 @@ import {
 } from './model';
 
 // How the list is looked at: the filters as typed, their options, the sort (reset
-// to the default, newest first, whenever a snapshot is shown, as the current UI
-// does; the filters stay), and the rows expanded to show every word. Filtering
-// reads the typed text trimmed, as the current UI does, and follows the typing
+// to the default, newest first, whenever a snapshot is shown; the filters stay),
+// and the rows expanded to show every word. Filtering reads the typed text
+// trimmed, and follows the typing
 // through React's deferred value, so a keystroke is never kept waiting for the
 // rows.
 export function useExplorerView(entries: MdsEntry[], version: number) {

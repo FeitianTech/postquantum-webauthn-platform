@@ -21,8 +21,7 @@ type Resolved = { entryId: string; attempt: number; detail: EntryDetail };
 // The entry #mds/<entryId> names, with all it shows. The list holds every
 // entry with its detail inline, so it is shown from there once the list has
 // loaded; an entry the list does not hold (a link to another session's upload,
-// an entry gone since) is asked of GET /api/mds/metadata/resolve, as the
-// current page asks for an entry without its detail.
+// an entry gone since) is asked of GET /api/mds/metadata/resolve.
 export function useEntryDetail(entryId: string, entries: MdsEntry[], phase: ExplorerPhase) {
   const [resolved, setResolved] = useState<Resolved | null>(null);
   const [attempt, setAttempt] = useState(0);

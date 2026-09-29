@@ -22,11 +22,10 @@ import {
 import { NO_TEXT, type RequestText, followedText, rebuiltText, resetText } from './requestEditor';
 
 // A registration's request as the Advanced tab holds it: the JSON editor's text
-// is the request (what the ceremony sends, as in the current tab), and the form
+// is the request (what the ceremony sends), and the form
 // is a view of it. A form change rewrites in the text only what it changed in
 // the form's request, everything else staying as typed (followForm); an edit
-// the form can follow updates the form at once (the owner's choice: an edit
-// applies as it parses). The toolbar's Reset rebuilds the text from nothing;
+// the form can follow updates the form at once: an edit applies as it parses. The toolbar's Reset rebuilds the text from nothing;
 // the editor's Reset from the form, keeping the keys beside publicKey.
 
 type RequestState = RequestText & {
@@ -130,8 +129,7 @@ export function useAdvancedRequest() {
   contextRef.current = { ...contextRef.current, storedCredentials };
   const context = () => contextRef.current;
 
-  // After hydration (the exported page has no host and no random values), as
-  // the current tab fills its form once the page has loaded.
+  // After hydration: the exported page has no host and no random values.
   useEffect(() => {
     contextRef.current = { ...contextRef.current, hostname: window.location.hostname };
     dispatch({ type: 'start', settings: freshSettings(), context: contextRef.current });
@@ -157,7 +155,7 @@ export function useAdvancedRequest() {
   const randomizeChallenge = useCallback(() => update({ challenge: randomHex(32) }), [update]);
   const randomizePrf = useCallback((which: 'prfFirst' | 'prfSecond') => update({ [which]: randomHex(32) }), [update]);
 
-  /** After a registration, the values the current tab draws again: those that are not empty. */
+  /** After a registration, the random values drawn again: those that are not empty. */
   const redraw = useCallback(() => {
     const current = settingsRef.current;
     update({

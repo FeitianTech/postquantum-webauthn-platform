@@ -25,7 +25,7 @@ type EntryPageProps = {
 };
 
 // An authenticator opened from the list or a link (#mds/<entryId>): everything
-// the current page shows of it, in its order, as sections; and while it is not
+// explorer/detail.js shows of it, in its order, as sections; and while it is not
 // there yet, or cannot be, what the jump from a saved credential says.
 export function EntryPage({
   entryId,

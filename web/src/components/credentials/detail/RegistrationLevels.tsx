@@ -76,7 +76,7 @@ function Attestation({
 }
 
 /**
- * The registration's level (CRED-G1, CRED-G2): the browser's response and its
+ * The registration's level: the browser's response and its
  * client data, what the server made of it, and the attestation, whose
  * certificates and authenticator data open levels of their own.
  */
@@ -139,7 +139,7 @@ export function RegistrationLevel({
 }
 
 /**
- * An attestation certificate's level (CRED-G4), in the MDS certificate page's
+ * An attestation certificate's level, in the MDS certificate page's
  * language: its subject and issuer, its summary, then the current view's text,
  * or why there is none.
  */
@@ -173,7 +173,7 @@ export function CertificateLevel({ view, idBase }: { view: CertificateView; idBa
   );
 }
 
-/** The authenticator data's level (CRED-G5): the decoded data as JSON. */
+/** The authenticator data's level: the decoded data as JSON. */
 export function AuthenticatorDataLevel({ text }: { text: string }) {
   return <CodeBlock value={text} label="authenticator data" />;
 }

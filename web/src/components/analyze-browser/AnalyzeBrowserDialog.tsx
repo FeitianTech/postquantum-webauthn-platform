@@ -38,9 +38,7 @@ function PanelSection({ id, title, children }: { id: string; title: string; chil
 
 // The Analyze Browser panel: what the browser says about itself and about
 // WebAuthn, each answer with where it came from, or why there is none. The
-// answers and their words come from the logic modules in
-// frontend/static/scripts/shared/browser; docs/ui-parity/analyze-browser.md maps
-// every item of the current panel to this one.
+// answers and their words come from the logic modules in src/logic/shared/browser.
 export function AnalyzeBrowserDialog({ open, onClose, analysis, returnFocusTo, copy, onCopied }: AnalyzeBrowserDialogProps) {
   const reportRef = useRef<HTMLTextAreaElement>(null);
 

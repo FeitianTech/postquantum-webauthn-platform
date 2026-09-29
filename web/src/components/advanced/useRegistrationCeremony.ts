@@ -8,14 +8,13 @@ import { useToast } from '@/components/ui/Toast';
 import { attachmentPreference, enforceHints, failureText, keepSnapshot, registerCredential, registeredMessage, saveRecord } from './model';
 import type { AdvancedRequest } from './useAdvancedRequest';
 
-// The Advanced tab's registration, in the current tab's steps and words
-// (advanced/auth/ceremony.js): the editor's text is the request; progress in a
+// The Advanced tab's registration, in the steps and words of
+// advanced/auth/ceremony.js: the editor's text is the request; progress in a
 // line, the server's warnings and the success as toasts, a failure in place until
 // the next ceremony, the result panel with where the challenge came from. The
 // record the server stored is kept in this browser with the registration as its
-// snapshot (as the current result modal keeps it), then `openRegistration(key)`
-// opens the credential's details at its registration. Unlike the current tab,
-// Create Credential is busy meanwhile.
+// snapshot, then `openRegistration(key)` opens the credential's details at its
+// registration. Create Credential is busy meanwhile.
 export function useRegistrationCeremony(request: AdvancedRequest, openRegistration: (key: string) => void) {
   const toast = useToast();
   const saved = useSavedCredentials();

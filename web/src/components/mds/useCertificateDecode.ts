@@ -2,8 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 
 import { type CertificateView, certificateView, cleanCertificate, decodeCertificate } from './entryModel';
 
-// The certificates decoded while the explorer is open, by their base64 (as the
-// current page caches them): POST /api/mds/decode-certificate once for each,
+// The certificates decoded while the explorer is open, by their base64: POST /api/mds/decode-certificate once for each,
 // and again only after a failure. A decode already running is shared.
 export function useCertificateDecode() {
   const [views, setViews] = useState<ReadonlyMap<string, CertificateView>>(() => new Map());

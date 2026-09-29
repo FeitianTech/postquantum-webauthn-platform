@@ -10,7 +10,7 @@ const WIDE = '@lg:col-span-full';
 
 // The authentication's form: Credential Selection, Other Options and
 // Extensions, each field changing the request (the JSON editor's text). What
-// the saved credentials cannot ask for is locked, with the current form's note.
+// the saved credentials cannot ask for is locked, with a note saying why.
 export function AuthenticationForm({ request }: { request: AuthenticationRequest }) {
   const { settings, change, availability } = request;
   const locked = lockedAuthFields(settings, availability);

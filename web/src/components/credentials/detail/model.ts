@@ -1,11 +1,11 @@
-// A saved credential's details come from the modules both UIs share
-// (docs/UI_MIGRATION.md): what the sections above the registration show
+// A saved credential's details come from the modules in src/logic: what the
+// sections above the registration show
 // (advanced/credential-display/credential-detail-runtime/detail-sections.js),
 // the registration's own view (credential-display/registration-view.js), both
 // composed by credential-detail-runtime/compose.js over a registration state
 // (credential-display/registration-state.js), the decode (decode-payload.js), the
 // artifact's hydration (advanced/credentials/hydrate.js) and a certificate's
-// text (credential-display/certificate-text.js). These are the types web/ reads
+// text (credential-display/certificate-text.js). These are the types the components read
 // them through.
 import { describeCoseAlgorithm, describeCoseKeyType, describeMldsaParameterSet } from '@/logic/advanced/cose-labels.js';
 import { composeCredentialDetail, needsArtifact } from '@/logic/advanced/credential-display/credential-detail-runtime/compose.js';

@@ -34,7 +34,7 @@ import { NO_TEXT, type RequestText, followedText, rebuiltText, resetText } from 
 // authentication's own hints allow (what the request sends, and what the server
 // filters by), and falls back to All when its choice goes; whether largeBlob and
 // prf can be asked for follows those credentials and the choice, clearing what
-// they cannot ask for, as the current form did.
+// they cannot ask for.
 
 type RequestState = RequestText & {
   settings: AuthenticationSettings;
@@ -187,7 +187,7 @@ export function useAuthenticationRequest() {
   const randomizePrf = useCallback((which: 'prfFirst' | 'prfSecond') => update({ [which]: randomHex(32) }), [update]);
   const randomizeLargeBlobWrite = useCallback(() => update({ largeBlobWrite: randomHex(32) }), [update]);
 
-  /** After an authentication, the values the current tab draws again: those that are not empty. */
+  /** After an authentication, the random values drawn again: those that are not empty. */
   const redraw = useCallback(() => {
     const now = settingsRef.current;
     update({
@@ -208,7 +208,7 @@ export function useAuthenticationRequest() {
   const editText = useCallback((text: string) => dispatch({ type: 'edit', text, context: context() }), []);
   const resetEditor = useCallback(() => dispatch({ type: 'reset-editor', context: context() }), []);
   // The toolbar's Reset: the defaults with a new challenge, the fake IDs and the
-  // edit's keys gone; the Hash Algorithm stays, as in the current tab.
+  // edit's keys gone; the Hash Algorithm stays.
   const resetForm = useCallback(() => {
     dispatch({
       type: 'start',

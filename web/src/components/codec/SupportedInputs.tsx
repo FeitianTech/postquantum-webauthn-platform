@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/Badge';
 
-// The formats the decoder reads, as the current panel lists them.
+// The formats the decoder reads.
 const SUPPORTED_INPUTS: { name: string; kinds: string[] }[] = [
   {
     name: 'JSON',

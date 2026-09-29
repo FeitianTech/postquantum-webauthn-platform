@@ -1,7 +1,7 @@
-// The entry page's, certificate page's and raw view's logic comes from the
-// modules both UIs share: frontend/static/scripts/advanced/mds/explorer/detail.js,
-// certificate.js, entry-link.js, raw-data.js and raw-stringify.js. These are the
-// types web/ reads them through.
+// The entry page's, certificate page's and raw view's logic comes from
+// src/logic/advanced/mds: explorer/detail.js, certificate.js, entry-link.js,
+// raw-data.js and raw-stringify.js. These are the types the components read them
+// through.
 import { detailSections, detailSubtitleParts, detailTitle, formatDetailSubtitle } from '@/logic/advanced/mds/explorer/detail.js';
 import {
   describeCertificate as describeCertificateJs,
@@ -35,7 +35,7 @@ export type StatusReportRow = {
   details: string;
 };
 
-/** One of the page's sections, in the current page's order; what it holds depends on its kind. */
+/** One of the page's sections, in detail.js's order; what it holds depends on its kind. */
 export type DetailSection = {
   key: string;
   title: string;

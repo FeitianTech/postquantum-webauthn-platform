@@ -7,14 +7,14 @@ import { useToast } from '@/components/ui/Toast';
 import { ASSERTION_WORDS, assertionFailureText, authenticate, checkHints, keepAdvancedSignCount, recordsForServer } from './model';
 import type { AuthenticationRequest } from './useAuthenticationRequest';
 
-// The Advanced tab's authentication, in the current tab's steps and words
-// (advanced/auth/assertion.js): the editor's text is the request; progress in a
+// The Advanced tab's authentication, in the steps and words of
+// advanced/auth/assertion.js: the editor's text is the request; progress in a
 // line, the success as a toast, a failure in place until the next ceremony, the
 // result panel with the signature counter and where the challenge came from.
 // The counter the server saw is kept in this browser and the credential's row
 // tinted, green for a success and red for the credential a refusal names; the
-// values the current tab draws again are drawn. There is no dialog after it.
-// Unlike the current tab, Assert Credential is busy meanwhile.
+// random values are drawn again. There is no dialog after it. Assert Credential
+// is busy meanwhile.
 export function useAuthenticationCeremony(request: AuthenticationRequest) {
   const toast = useToast();
   const saved = useSavedCredentials();
@@ -32,7 +32,7 @@ export function useAuthenticationCeremony(request: AuthenticationRequest) {
     setRunning(true);
     try {
       const { text, storedCredentials } = latest.current;
-      // The two form values are read when the ceremony gets to them, as the current tab reads its fields.
+      // The two form values are read when the ceremony gets to them.
       const outcome = await authenticate(text, {
         ensureHints: (publicKey) => checkHints(publicKey, { storedCredentials }),
         prepareForServer: recordsForServer,

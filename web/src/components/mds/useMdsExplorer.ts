@@ -25,7 +25,7 @@ export type Explorer = {
   status: ExplorerStatus;
   /** No snapshot on the server and nothing uploaded: the list has nothing to show. */
   missing: boolean;
-  /** Counts the snapshots shown, so the view resets its sort for each, as the current UI does. */
+  /** Counts the snapshots shown, so the view resets its sort for each. */
   version: number;
   retry: () => void;
   /** An upload or delete answered with the session's snapshot: show it. */
@@ -40,12 +40,11 @@ const loadFailure = explorerLoadFailure as (error: unknown) => string;
 const loadingSentence = explorerLoadingStatus as (forceReload: boolean) => string;
 const missing = isMissingSnapshot as (snapshot: MdsSnapshot) => boolean;
 
-// The explorer's data, in the current tab's order (metadata/explorer-load.js):
-// what the page starts from (GET /api/mds/metadata/info, which the current UI
-// reads from its index), then the snapshot, from the packaged file while the
+// The explorer's data, in explorer/loading.js's order: what the page starts
+// from (GET /api/mds/metadata/info), then the snapshot, from the packaged file while the
 // session has uploaded nothing and from the session's own list otherwise, and
 // the status line's sentences along the way. It starts the first time the
-// section is shown. Retry asks the session's list again, as the current Retry.
+// section is shown. Retry asks the session's list again.
 export function useMdsExplorer(active: boolean): Explorer {
   const [phase, setPhase] = useState<ExplorerPhase>('idle');
   const [entries, setEntries] = useState<MdsEntry[]>([]);

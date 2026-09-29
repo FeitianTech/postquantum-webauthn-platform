@@ -1,10 +1,8 @@
-// The Advanced forms' own words, as the current UI's templates gave them until
-// Phase 30 (advanced/tab/registration/*.html and authentication/*.html):
-// each field's label, placeholder, options, the title of the button in it, its
-// error, and its info popup in English and 中文 (a paragraph each). The labels
-// of the byte fields carry " (hex)", as the current form writes them once the
-// page has loaded. The logic's words come from the modules web/ imports: Allow
-// Credentials' first two choices and the largeBlob and prf notes among them.
+// The Advanced forms' own words: each field's label, placeholder, options, the
+// title of the button in it, its error, and its info popup in English and 中文
+// (a paragraph each). The labels of the byte fields carry " (hex)". The logic's
+// words come from the modules in src/logic: Allow Credentials' first two choices
+// and the largeBlob and prf notes among them.
 
 export type FieldAbout = { en: string[]; zh: string[] };
 export type FieldText = {

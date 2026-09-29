@@ -1,9 +1,9 @@
-// The saved credentials' logic comes from the modules both UIs share
-// (docs/UI_MIGRATION.md): the storage (frontend/static/scripts/shared/storage/
-// records.js, the one localStorage array both UIs read and write), what a card
+// The saved credentials' logic comes from the modules in src/logic: the storage
+// (shared/storage/records.js, the one localStorage array both tabs read and
+// write), what a card
 // shows (advanced/credentials/saved-list.js and the helpers it is given),
 // deleting and clearing (advanced/credentials/delete-flow.js). These are the
-// types web/ reads them through.
+// types the components read them through.
 import { describeCoseAlgorithm } from '@/logic/advanced/cose-labels.js';
 import { describeCredentialAlgorithmTagWith } from '@/logic/advanced/credentials/algorithm-tag.js';
 import {

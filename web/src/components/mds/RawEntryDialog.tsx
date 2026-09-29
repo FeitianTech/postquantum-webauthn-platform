@@ -11,8 +11,8 @@ import type { MdsEntry } from './model';
 
 export const RAW_DIALOG_ID = 'mds-entry-raw';
 
-// The entry as MDS publishes it (the current UI's popup window, as a dialog: a
-// popup is blocked in some browsers): its title and subtitle, and the JSON,
+// The entry as MDS publishes it, in a dialog (a popup window is blocked in some
+// browsers): its title and subtitle, and the JSON,
 // indented by four spaces, with copy, and as a .json file to save.
 export function RawEntryDialog({
   entry,

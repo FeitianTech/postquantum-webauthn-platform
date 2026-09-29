@@ -92,7 +92,7 @@ const DIALOG_WIDTHS = {
 // What every floating layer shares: rendered into #overlay-root (a sibling of
 // the app, which is made inert while it is open), a scrim that closes it, the
 // panel taking focus, Tab kept inside, Escape closing it, and focus given back.
-// The page behind is not scroll-locked, as in the current UI.
+// The page behind is not scroll-locked.
 export function Overlay({
   open,
   onClose,

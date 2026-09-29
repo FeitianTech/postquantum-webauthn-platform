@@ -1,8 +1,8 @@
 import type { Combination } from './entryModel';
 
 // The user-verification section: each combination under its title, its methods as
-// published, and under a method what it says of its accuracy (the code accuracy
-// the current page shows, and the biometric and pattern accuracy it leaves out).
+// published, and under a method what it says of its accuracy (code, biometric
+// and pattern).
 // A list with hairlines, not cards.
 export function UserVerification({ combinations }: { combinations: Combination[] }) {
   return (

@@ -1,5 +1,5 @@
 // What the result panel under a tab's buttons says about the last ceremony comes
-// from the module both UIs share: frontend/static/scripts/shared/ceremony/result.js.
+// from src/logic/shared/ceremony/result.js.
 import { describeCeremonyResult } from '@/logic/shared/ceremony/result.js';
 
 /** What a tab hands the panel: the server's verdicts and the tab's consequence. */
