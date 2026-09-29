@@ -150,7 +150,7 @@ class Fido2Server:
             for alg in CoseKey.supported_algorithms()
         ]
         self._verify_attestation = verify_attestation or _ignore_attestation
-        logger.debug(f"Fido2Server initialized for RP: {self.rp}")
+        logger.debug("Fido2Server initialized for RP: %s", self.rp)
 
     def register_begin(
         self,
@@ -182,10 +182,11 @@ class Fido2Server:
         challenge = _validata_challenge(challenge)
         descriptors = _wrap_credentials(credentials)
         state = self._make_internal_state(challenge, user_verification)
-        logger.debug(
-            "Starting new registration, existing credentials: "
-            + ", ".join(d.id.hex() for d in descriptors or [])
-        )
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                "Starting new registration, existing credentials: %s",
+                ", ".join(d.id.hex() for d in descriptors or []),
+            )
 
         return (
             CredentialCreationOptions(
@@ -287,16 +288,16 @@ class Fido2Server:
             )
 
         if self.attestation not in (None, AttestationConveyancePreference.NONE):
-            logger.debug(f"Verifying attestation of type {attestation_object.fmt}")
+            logger.debug("Verifying attestation of type %s", attestation_object.fmt)
             self._verify_attestation(attestation_object, client_data.hash)
         # We simply ignore attestation if self.attestation == 'none', as not all
         # clients strip the attestation.
 
         auth_data = attestation_object.auth_data
         assert auth_data.credential_data is not None  # nosec
-        logger.info(
-            "New credential registered: "
-            + auth_data.credential_data.credential_id.hex()
+        logger.debug(
+            "New credential registered: %s",
+            auth_data.credential_data.credential_id.hex(),
         )
         return auth_data
 
@@ -322,10 +323,10 @@ class Fido2Server:
         state = self._make_internal_state(challenge, user_verification)
         if descriptors is None:
             logger.debug("Starting new authentication without credentials")
-        else:
+        elif logger.isEnabledFor(logging.DEBUG):
             logger.debug(
-                "Starting new authentication, for credentials: "
-                + ", ".join(d.id.hex() for d in descriptors)
+                "Starting new authentication, for credentials: %s",
+                ", ".join(d.id.hex() for d in descriptors),
             )
 
         return (
@@ -431,7 +432,7 @@ class Fido2Server:
                     cred.public_key.verify(auth_data + client_data_hash, signature)
                 except _InvalidSignature:
                     raise ValueError("Invalid signature.")
-                logger.info(f"Credential authenticated: {credential_id.hex()}")
+                logger.debug("Credential authenticated: %s", credential_id.hex())
                 return cred
         raise ValueError("Unknown credential ID.")
 

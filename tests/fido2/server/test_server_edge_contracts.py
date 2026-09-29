@@ -497,3 +497,63 @@ def test_verify_app_id_and_u2f_server_wrappers_and_fallback(monkeypatch):
         server_module.U2FFido2Server.authenticate_complete(wrapper, "state", [])
         == "fallback-auth"
     )
+
+def test_credential_ids_are_logged_only_at_debug_and_lazily(monkeypatch, caplog):
+    # A credential ID identifies a visitor's authenticator: it used to be logged
+    # at INFO on every registration and authentication.
+    challenge = b"D" * 16
+    server = _make_server(verify_origin=lambda origin: origin == "https://ok.example")
+    auth_data = _FakeAuthData(rp_id_hash=server.rp.id_hash, credential_id=b"new-cred")
+    registration = SimpleNamespace(
+        response=SimpleNamespace(
+            client_data=_FakeClientData(
+                type_value=CollectedClientData.TYPE.CREATE,
+                origin="https://ok.example",
+                challenge=challenge,
+            ),
+            attestation_object=SimpleNamespace(auth_data=auth_data, fmt="none"),
+        )
+    )
+    monkeypatch.setattr(
+        server_module.RegistrationResponse,
+        "from_dict",
+        classmethod(lambda _cls, _response: registration),
+    )
+    cred = SimpleNamespace(credential_id=b"old-cred", public_key=_PublicKey())
+    get_client_data = _FakeClientData(
+        type_value=CollectedClientData.TYPE.GET,
+        origin="https://ok.example",
+        challenge=challenge,
+    )
+
+    def ceremonies():
+        server.register_complete(
+            server._make_internal_state(challenge, None), {"dummy": True}
+        )
+        server.authenticate_complete(
+            {"challenge": websafe_encode(challenge), "user_verification": None},
+            [cred],
+            credential_id=b"old-cred",
+            client_data=get_client_data,
+            auth_data=_FakeAuthData(rp_id_hash=server.rp.id_hash),
+            signature=b"sig",
+        )
+
+    with caplog.at_level(logging.INFO, logger=server_module.logger.name):
+        ceremonies()
+    assert b"new-cred".hex() not in caplog.text
+    assert b"old-cred".hex() not in caplog.text
+
+    caplog.clear()
+    with caplog.at_level(logging.DEBUG, logger=server_module.logger.name):
+        ceremonies()
+    records = [r for r in caplog.records if r.name == server_module.logger.name]
+    by_id = {
+        cid: [r for r in records if cid in r.getMessage()]
+        for cid in (b"new-cred".hex(), b"old-cred".hex())
+    }
+    assert all(by_id.values())
+    # Formatted by logging, not by the caller: the message is a template.
+    assert all(
+        r.levelno == logging.DEBUG and r.args for group in by_id.values() for r in group
+    )
