@@ -12,7 +12,7 @@ Importing the package configures nothing and writes nothing.
 ``config_from_env()`` ones supply settings, the ``init_app()`` ones configure the
 app, in the order ``factory.INIT_STEPS`` fixes.
 
-- ``paths``: the project, frontend, runtime and instance locations, and ``basepath``.
+- ``paths``: the project, runtime and instance locations, and ``basepath``.
 - ``application``: ``build_app()``, the bare Flask object.
 - ``logs``: attaches the handler every module logger reaches stderr through.
 - ``session_secret``: the session secret. May write
@@ -71,10 +71,7 @@ __all__ = [
     "FIDO_METADATA_TRUST_ROOT_CERT",
 ]
 
-# Filesystem locations. The three private roots are imported by static_assets,
-# mds_provisioning and credential_artifacts.
-_FRONTEND_ROOT = paths._FRONTEND_ROOT
-_FRONTEND_STATIC_ROOT = paths._FRONTEND_STATIC_ROOT
+# Filesystem locations. The private runtime root is imported by credential_artifacts.
 _SERVER_RUNTIME_ROOT = paths._SERVER_RUNTIME_ROOT
 basepath = paths.basepath
 MDS_METADATA_FILENAME = mds.MDS_METADATA_FILENAME

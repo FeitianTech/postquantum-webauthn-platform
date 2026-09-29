@@ -3,7 +3,6 @@ from __future__ import annotations
 import builtins
 import gzip
 import types
-from pathlib import Path
 
 from flask import Flask
 
@@ -17,11 +16,10 @@ from server.app.config import (
 )
 
 
-def test_discover_project_root_fallback_when_frontend_not_found(monkeypatch):
-    monkeypatch.setattr(Path, "is_dir", lambda self: False)
-
-    package_root = Path("/tmp/postquantum/server/app")
-    assert paths._discover_project_root(package_root) == package_root.parents[1]
+def test_the_project_root_is_two_levels_above_the_package():
+    assert paths._PACKAGE_ROOT.parts[-2:] == ("server", "app")
+    assert paths._PROJECT_ROOT == paths._PACKAGE_ROOT.parents[1]
+    assert (paths._PROJECT_ROOT / "server" / "app" / "config" / "paths.py").is_file()
 
 
 def test_resolve_secret_key_handles_read_oserror_and_makedirs_failure(monkeypatch):

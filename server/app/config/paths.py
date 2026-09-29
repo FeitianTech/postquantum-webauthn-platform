@@ -1,4 +1,4 @@
-"""Where the server's files are: the project root, the frontend and runtime data.
+"""Where the server's files are: the project root, runtime data and the instance folder.
 
 ``basepath`` is the ``server.app`` package directory, which is also where local
 credential pickles are kept.
@@ -12,20 +12,9 @@ from pathlib import Path
 _PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 
 
-def _discover_project_root(package_root: Path) -> Path:
-    """Locate the repository/application root across supported layouts."""
-
-    for candidate in package_root.parents:
-        if (candidate / "frontend").is_dir():
-            return candidate
-
-    # Fallback keeps previous behavior for environments without frontend files.
-    return package_root.parents[1]
-
-
-_PROJECT_ROOT = _discover_project_root(_PACKAGE_ROOT)
-_FRONTEND_ROOT = _PROJECT_ROOT / "frontend"
-_FRONTEND_STATIC_ROOT = _FRONTEND_ROOT / "static"
+# server/app -> the checkout, or /app in the image (which copies server/app to
+# /app/server/app).
+_PROJECT_ROOT = _PACKAGE_ROOT.parents[1]
 _SERVER_RUNTIME_ROOT = Path(
     os.environ.get(
         "FIDO_SERVER_RUNTIME_ROOT",
