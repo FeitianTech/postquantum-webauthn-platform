@@ -7,22 +7,17 @@ import pickle
 
 import pytest
 
-from server.app.storage import record_format
 from tests.app.storage.credential_seed import seed_records
 
 
 @pytest.fixture
 def storage_local(monkeypatch, tmp_path):
     storage = pytest.importorskip("server.app.storage.credentials")
-
-    monkeypatch.setattr(storage, "basepath", str(tmp_path))
     monkeypatch.setattr(
         storage,
         "_LOCAL_CREDENTIAL_BASE",
         str(tmp_path / "session-credentials"),
     )
-    # Computed at import from the real source tree; patching basepath does not move it.
-    monkeypatch.setattr(storage, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(tmp_path / "legacy"))
     monkeypatch.setattr(storage, "_using_gcs", lambda: False)
 
     os.makedirs(storage._LOCAL_CREDENTIAL_BASE, exist_ok=True)
@@ -43,15 +38,7 @@ def test_storage_identifier_validators_reject_invalid_inputs(storage_local):
     with pytest.raises(ValueError):
         storage._credential_blob("", "session-a")
 
-    with pytest.raises(ValueError):
-        storage._legacy_credential_blob(None)
-    with pytest.raises(ValueError):
-        storage._legacy_credential_blob("   ")
 
-    with pytest.raises(ValueError):
-        storage._legacy_local_filename("   ")
-    with pytest.raises(ValueError):
-        storage._legacy_local_filename(123)
     with pytest.raises(ValueError):
         storage._local_filename("", "session-a")
     with pytest.raises(ValueError):
@@ -74,15 +61,6 @@ def test_resolve_session_id_uses_explicit_value_or_metadata_fallback(storage_loc
     assert storage._resolve_session_id(None) == "fallback-session"
 
 
-def test_candidate_gcs_blob_names_deduplicates_duplicates(storage_local, monkeypatch):
-    storage, _ = storage_local
-
-    monkeypatch.setattr(storage, "_credential_blob", lambda *_args, **_kwargs: "same")
-    monkeypatch.setattr(storage, "_legacy_credential_blob", lambda *_args, **_kwargs: "same")
-
-    assert list(storage._candidate_gcs_blob_names("alice", "session-a")) == ["same"]
-
-
 def test_local_save_and_read_roundtrip(storage_local):
     storage, _ = storage_local
 
@@ -92,33 +70,7 @@ def test_local_save_and_read_roundtrip(storage_local):
     assert storage.readkey("alice", session_id="session-a") == payload
 
 
-def test_local_readkey_falls_back_to_legacy_file(storage_local):
-    storage, _ = storage_local
-
-    legacy_payload = [{"legacy": True}]
-    legacy_path = storage._legacy_local_filename("alice")
-    os.makedirs(os.path.dirname(legacy_path), exist_ok=True)
-    with open(legacy_path, "wb") as handle:
-        handle.write(pickle.dumps(legacy_payload))
-
-    assert storage.readkey("alice", session_id="session-a") == legacy_payload
-
-
-def test_the_session_scoped_legacy_store_is_read_from_the_test_directory(storage_local):
-    # The legacy store once lived in server/app/session-credentials/. Reading it
-    # from there would read the checkout's own files.
-    storage, tmp_path = storage_local
-    legacy_base = str(tmp_path / "legacy")
-    assert storage._LEGACY_LOCAL_CREDENTIAL_BASE == legacy_base
-
-    path = storage._local_filename("alice", "session-a", create=True, base=legacy_base)
-    with open(path, "wb") as handle:
-        handle.write(record_format.encode_records([{"where": "legacy session store"}]))
-
-    assert storage.readkey("alice", session_id="session-a") == [{"where": "legacy session store"}]
-
-
-def test_local_readkey_returns_empty_for_non_list_or_corrupt_pickle(storage_local):
+def test_local_readkey_returns_empty_for_content_that_is_not_json(storage_local):
     storage, _ = storage_local
 
     path = storage._local_filename("alice", "session-a", create=True)

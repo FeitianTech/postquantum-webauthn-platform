@@ -1,25 +1,17 @@
 """The on-disk format of stored credential records.
 
-Records are stored as JSON (see ``_encode_value`` for the exact encoding),
-never pickle. ``pickle.loads`` on bytes that crossed a trust boundary is
-arbitrary code execution, so the only remaining pickle reader is
-:class:`_RestrictedUnpickler`, which exists purely to keep pre-existing ``.pkl``
-deployments readable and refuses to import anything but a small allowlist of
-FIDO2 value classes. Where the bytes live is ``credentials``' business.
+Records are stored as JSON (see ``_encode_value`` for the exact encoding). Where
+the bytes live is ``credentials``' business.
 """
 from __future__ import annotations
 
-import io
 import json
 import logging
-import pickle
 from typing import Any
 
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData
 
 from .. import encoding
-from ..env_flags import parse_env_flag
-from ..webauthn import cose_keys
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +19,6 @@ __all__ = [
     "UndecodableRecords",
     "decode_payload",
     "encode_records",
-    "legacy_pickle_reads_enabled",
-    "restricted_pickle_loads",
 ]
 
 _JSON_FORMAT_VERSION = 1
@@ -43,58 +33,6 @@ _T_MAP = "map"
 _T_TUPLE = "tuple"
 _T_SET = "set"
 _T_UNSUPPORTED = "unsupported"
-
-# Legacy pickles may only name classes from these modules, and only classes --
-# never functions. That rules out ``os.system``, ``builtins.eval``,
-# ``subprocess.Popen`` and every other code-execution gadget a crafted pickle
-# reaches for, while still reconstructing the FIDO2 values we actually stored.
-# The COSE key classes fido2 no longer defines (RS384 and the like) were stored
-# as ``fido2.cose.<name>``; they are read as the app's own (``cose_keys``).
-_PICKLE_ALLOWED_MODULES = frozenset(
-    {
-        "collections",
-        "fido2.attestation",
-        "fido2.attestation.base",
-        "fido2.cose",
-        "fido2.utils",
-        "fido2.webauthn",
-    }
-)
-
-
-def legacy_pickle_reads_enabled() -> bool:
-    """Whether pre-existing ``.pkl`` files may still be read at all.
-
-    Defaults to on so an upgrade does not drop stored credentials. Set
-    ``FIDO_SERVER_LEGACY_PICKLE_READS=0`` to refuse them outright once a
-    deployment has been migrated.
-    """
-
-    flag = parse_env_flag("FIDO_SERVER_LEGACY_PICKLE_READS")
-    return True if flag is None else flag
-
-
-class _RestrictedUnpickler(pickle.Unpickler):
-    """Unpickler that refuses every global outside the FIDO2 value allowlist."""
-
-    def find_class(self, module: str, name: str) -> Any:  # noqa: D102
-        if module not in _PICKLE_ALLOWED_MODULES:
-            raise pickle.UnpicklingError(
-                f"Refusing to load {module}.{name} from a legacy credential pickle"
-            )
-        if module == "fido2.cose" and name in cose_keys.BY_NAME:
-            return cose_keys.BY_NAME[name]
-        resolved = super().find_class(module, name)
-        if not isinstance(resolved, type):
-            raise pickle.UnpicklingError(
-                f"Refusing to load non-class {module}.{name} from a legacy credential pickle"
-            )
-        return resolved
-
-
-def restricted_pickle_loads(payload: bytes) -> Any:
-    return _RestrictedUnpickler(io.BytesIO(payload)).load()
-
 
 def _b64u_encode(data: bytes) -> str:
     return encoding.encode_base64url(data)
@@ -231,29 +169,16 @@ def _decode_records(payload: bytes) -> list[Any] | None:
 
 
 def decode_payload(payload: bytes) -> list[Any]:
-    """Turn stored bytes into a credential list, JSON first, legacy pickle second.
+    """Turn stored bytes into a credential list.
 
-    The format is sniffed from the content rather than the file extension so a
-    half-migrated store (or a ``.json`` object holding older bytes) still reads.
-    Bytes that are neither raise :class:`UndecodableRecords`, naming the reason
-    and never the content: an unpickling error's own message quotes the bytes.
+    Bytes that are not a JSON credential list raise :class:`UndecodableRecords`,
+    naming the reason and never the content.
     """
 
     if not payload:
         raise UndecodableRecords("it is empty")
 
     decoded = _decode_records(payload)
-    if decoded is not None:
-        return decoded
-
-    if not legacy_pickle_reads_enabled():
-        raise UndecodableRecords("it is not JSON, and legacy pickle reads are disabled")
-
-    try:
-        legacy = restricted_pickle_loads(payload)
-    except Exception as exc:
-        raise UndecodableRecords(f"it is neither JSON nor a legacy pickle this server loads ({type(exc).__name__})") from None
-
-    if not isinstance(legacy, list):
-        raise UndecodableRecords("it is a legacy pickle that does not hold a list")
-    return legacy
+    if decoded is None:
+        raise UndecodableRecords("it is not JSON")
+    return decoded

@@ -45,7 +45,6 @@ from . import (
 )
 
 __all__ = [
-    "basepath",
     "build_rp_entity",
     "create_fido_server",
     "determine_expected_origin",
@@ -57,7 +56,6 @@ __all__ = [
 
 # Filesystem locations. The private runtime root is imported by credential_artifacts.
 _SERVER_RUNTIME_ROOT = paths._SERVER_RUNTIME_ROOT
-basepath = paths.basepath
 SESSION_METADATA_DIR = mds.SESSION_METADATA_DIR
 
 # The relying party.

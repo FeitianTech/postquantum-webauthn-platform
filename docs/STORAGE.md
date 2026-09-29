@@ -1,8 +1,7 @@
 # Storage
 
 `server/app/storage/` keeps what the app persists: `credentials.py` (credential
-records), `record_format.py` (the JSON envelope and the restricted reader for
-legacy `.pkl` copies), `session_metadata.py`, `cloud.py` (Cloud Storage) and
+records), `record_format.py` (the JSON envelope), `session_metadata.py`, `cloud.py` (Cloud Storage) and
 `common.py`. Credential artifacts live in `server/app/credential_artifacts.py`.
 These are its rules. Read them before changing `server/app/storage` or
 `credential_artifacts.py`; `AGENTS.md` keeps only a summary.
@@ -22,13 +21,10 @@ that cannot be read (an I/O or Cloud Storage error) raises `common.StorageReadEr
 never a shorter list; `routes/errors.py` answers 503. Content that does not decode
 is logged by file or object name (never its content) and skipped.
 
-## Legacy copies
+## A copy that does not decode
 
-The first copy that exists is the user's: an older one never stands in for it.
-`read_for_update` refuses a current copy it cannot decode
-(`credentials.CredentialsUndecodable`) rather than let the save replace it unread,
-and with no current copy it refuses a first legacy copy that does not decode: the
-save would shadow it, and delete a session `.pkl`, unread.
+`read_for_update` refuses a copy it cannot decode
+(`credentials.CredentialsUndecodable`) rather than let the save replace it unread.
 
 ## Credential artifacts
 
@@ -44,7 +40,7 @@ as stored if the record holds every merged value.
 ## Listings
 
 Listings stay inside what they need: `session_metadata.list_sessions` reads session
-names as prefixes (`cloud.list_prefixes`), so a flat legacy object is not a session.
+names as prefixes (`cloud.list_prefixes`), so a flat object is not a session.
 `tests/app/storage/fake_gcs.py` records each listing's prefix and delimiter.
 
 ## Names

@@ -221,7 +221,7 @@ def list_sessions() -> list[str]:
         seen = set()
         try:
             # One entry per session folder, not every object in every session.
-            # A flat object beside the folders (a legacy credential copy) is no session.
+            # A flat object beside the folders is no session.
             for folder in list_prefixes(prefix):
                 session_component = folder[len(prefix) :].strip("/").strip()
                 if session_component:

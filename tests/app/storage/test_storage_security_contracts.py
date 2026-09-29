@@ -7,9 +7,8 @@ Two classes of bug are pinned down here:
   reject separators, ``..``, NULs, leading dots and absolute paths, and the
   resolved location must provably stay under the credential root.
 * **Pickle deserialisation.** The store used to be pickle, so reading a file an
-  attacker could influence was arbitrary code execution. New writes are JSON,
-  and the one remaining reader for pre-existing ``.pkl`` files refuses to
-  import anything outside a small allowlist of FIDO2 value classes.
+  attacker could influence was arbitrary code execution. Records are JSON, and
+  bytes that are not -- a crafted pickle among them -- are refused unread.
 """
 
 from __future__ import annotations
@@ -93,21 +92,14 @@ def local_store(monkeypatch, tmp_path):
     """Point the store at a temporary root with the local (non-GCS) backend."""
 
     root = tmp_path / "instance" / "session-credentials"
-    legacy_root = tmp_path / "source-tree" / "session-credentials"
-    flat_legacy = tmp_path / "source-tree"
     root.mkdir(parents=True)
-    legacy_root.mkdir(parents=True)
 
     monkeypatch.setattr(credentials, "_LOCAL_CREDENTIAL_BASE", str(root))
-    monkeypatch.setattr(credentials, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(legacy_root))
-    monkeypatch.setattr(credentials, "basepath", str(flat_legacy))
     monkeypatch.setattr(credentials, "_using_gcs", lambda: False)
 
     return types.SimpleNamespace(
         storage=credentials,
         root=root,
-        legacy_root=legacy_root,
-        flat_legacy=flat_legacy,
         tmp_path=tmp_path,
     )
 
@@ -144,8 +136,6 @@ def test_local_path_helpers_reject_traversal_names(local_store, name):
 
     with pytest.raises(ValueError):
         store._local_filename(name, "session-a")
-    with pytest.raises(ValueError):
-        store._legacy_local_filename(name)
 
 
 @pytest.mark.parametrize("name", TRAVERSAL_NAMES)
@@ -241,8 +231,6 @@ def test_resolve_contained_path_rejects_a_symlink_escape(local_store):
 def test_gcs_blob_helpers_reject_traversal_names(gcs_store, name):
     with pytest.raises(ValueError):
         gcs_store._credential_blob(name, "session-a")
-    with pytest.raises(ValueError):
-        gcs_store._legacy_credential_blob(name)
 
 
 @pytest.mark.parametrize("session_id", TRAVERSAL_NAMES)
@@ -283,8 +271,8 @@ def test_assert_contained_blob_name_rejects_escapes():
 
 
 def test_credential_root_is_not_inside_the_source_tree():
-    config = importlib.import_module("server.app.config")
-    package_dir = os.path.realpath(config.basepath)
+    paths = importlib.import_module("server.app.config.paths")
+    package_dir = os.path.realpath(paths.basepath)
     root = os.path.realpath(credentials._LOCAL_CREDENTIAL_BASE)
 
     assert not root.startswith(package_dir + os.sep)
@@ -294,21 +282,6 @@ def test_credential_root_is_not_inside_the_source_tree():
         assert root == os.path.realpath(
             os.path.join(entry_app().instance_path, "session-credentials")
         )
-
-
-def test_previous_source_tree_location_is_still_readable(local_store):
-    """Relocating the store must not orphan an existing deployment's data."""
-
-    store = local_store.storage
-    session_dir = local_store.legacy_root / "session-a"
-    session_dir.mkdir(parents=True)
-    (session_dir / "alice@example.com_credential_data.pkl").write_bytes(
-        pickle.dumps([{"where": "old-source-tree-location"}])
-    )
-
-    assert store.readkey("alice@example.com", session_id="session-a") == [
-        {"where": "old-source-tree-location"}
-    ]
 
 
 # --------------------------------------------------------------------------
@@ -409,78 +382,6 @@ def test_readkey_ignores_corrupt_json(local_store):
 # --------------------------------------------------------------------------
 
 
-def test_legacy_pickle_file_is_readable(local_store):
-    store = local_store.storage
-    credential_data = _build_attested_credential_data()
-    legacy_records = [{"credential_data": credential_data, "user_info": {"name": "alice"}}]
-
-    path = store._local_filename(
-        "alice@example.com", "session-a", create=True, suffix="_credential_data.pkl"
-    )
-    Path(path).write_bytes(pickle.dumps(legacy_records))
-
-    restored = store.readkey("alice@example.com", session_id="session-a")
-
-    assert len(restored) == 1
-    assert restored[0]["user_info"] == {"name": "alice"}
-    assert bytes(restored[0]["credential_data"]) == bytes(credential_data)
-
-
-def test_legacy_pickle_is_converted_to_json_on_the_next_write(local_store):
-    store = local_store.storage
-    pickle_path = Path(
-        store._local_filename(
-            "alice@example.com", "session-a", create=True, suffix="_credential_data.pkl"
-        )
-    )
-    pickle_path.write_bytes(pickle.dumps([{"seq": 1}]))
-
-    existing = store.readkey("alice@example.com", session_id="session-a")
-    assert existing == [{"seq": 1}]
-
-    existing.append({"seq": 2})
-    seed_records(store, "alice@example.com", existing, session_id="session-a")
-
-    json_path = Path(store._local_filename("alice@example.com", "session-a"))
-    assert json_path.is_file()
-    assert json.loads(json_path.read_text(encoding="utf-8"))["credentials"] == [
-        {"seq": 1},
-        {"seq": 2},
-    ]
-    # The superseded pickle is removed so it can never be read again.
-    assert not pickle_path.exists()
-    assert store.readkey("alice@example.com", session_id="session-a") == [
-        {"seq": 1},
-        {"seq": 2},
-    ]
-
-
-def test_readkey_reads_both_json_and_legacy_pickle(local_store):
-    store = local_store.storage
-    session_dir = Path(store._local_filename("alice@example.com", "session-a", create=True)).parent
-
-    seed_records(store, "alice@example.com", [{"where": "json"}], session_id="session-a")
-    (session_dir / "bob@example.com_credential_data.pkl").write_bytes(
-        pickle.dumps([{"where": "pickle"}])
-    )
-
-    assert store.readkey("alice@example.com", session_id="session-a") == [{"where": "json"}]
-    assert store.readkey("bob@example.com", session_id="session-a") == [{"where": "pickle"}]
-
-
-def test_legacy_pickle_reads_can_be_switched_off(local_store, monkeypatch):
-    store = local_store.storage
-    path = store._local_filename(
-        "alice@example.com", "session-a", create=True, suffix="_credential_data.pkl"
-    )
-    Path(path).write_bytes(pickle.dumps([{"seq": 1}]))
-
-    assert store.readkey("alice@example.com", session_id="session-a") == [{"seq": 1}]
-
-    monkeypatch.setenv("FIDO_SERVER_LEGACY_PICKLE_READS", "0")
-    assert store.readkey("alice@example.com", session_id="session-a") == []
-
-
 # --------------------------------------------------------------------------
 # 6. A crafted pickle is never executed
 # --------------------------------------------------------------------------
@@ -500,9 +401,8 @@ def test_crafted_pickle_payload_is_never_executed(local_store):
     """The proof that the deserialisation bug class is gone.
 
     The payload is first shown to be live -- plain ``pickle.loads`` runs it --
-    and then fed to the store through a path that passes every containment
-    check, which is the worst case: an attacker who planted a ``.pkl`` while
-    the old code was still deployed. ``readkey`` must not run it.
+    and then fed to the store where the records live, which is the worst case:
+    an attacker who planted it there. ``readkey`` must not run it.
     """
 
     store = local_store.storage
@@ -515,9 +415,7 @@ def test_crafted_pickle_payload_is_never_executed(local_store):
     assert control_marker.is_dir()
 
     payload = pickle.dumps(_CraftedPickle(str(attack_marker)))
-    path = store._local_filename(
-        "alice@example.com", "session-a", create=True, suffix="_credential_data.pkl"
-    )
+    path = store._local_filename("alice@example.com", "session-a", create=True)
     Path(path).write_bytes(payload)
 
     assert store.readkey("alice@example.com", session_id="session-a") == []
@@ -542,67 +440,6 @@ def test_crafted_pickle_payload_is_never_executed_from_gcs(monkeypatch, tmp_path
     assert not marker.exists()
 
 
-def test_restricted_unpickler_refuses_disallowed_modules():
-    for module, name in (
-        ("os", "system"),
-        ("posix", "system"),
-        ("builtins", "eval"),
-        ("builtins", "exec"),
-        ("subprocess", "Popen"),
-        ("shutil", "rmtree"),
-    ):
-        payload = pickle.dumps(_ReduceTo(module, name))
-        with pytest.raises(pickle.UnpicklingError):
-            record_format.restricted_pickle_loads(payload)
-
-
-def test_restricted_unpickler_refuses_non_class_globals():
-    """An allowlisted module still may not hand back a callable that is not a class."""
-
-    payload = _global_pickle("fido2.webauthn", "struct")
-    with pytest.raises(pickle.UnpicklingError):
-        record_format.restricted_pickle_loads(payload)
-
-
-def test_restricted_unpickler_still_loads_fido2_value_classes():
-    credential_data = _build_attested_credential_data()
-    payload = pickle.dumps([{"credential_data": credential_data}])
-
-    restored = record_format.restricted_pickle_loads(payload)
-
-    assert isinstance(restored[0]["credential_data"], AttestedCredentialData)
-    assert bytes(restored[0]["credential_data"]) == bytes(credential_data)
-
-
-def _global_pickle(module: str, name: str) -> bytes:
-    """Build a pickle whose only opcode resolves ``module.name``."""
-
-    return (
-        b"\x80\x04"
-        + b"c"
-        + module.encode("ascii")
-        + b"\n"
-        + name.encode("ascii")
-        + b"\n."
-    )
-
-
-class _ReduceTo:
-    """Pickles to a call of ``module.name`` so ``find_class`` has to resolve it."""
-
-    def __init__(self, module: str, name: str):
-        self._module = module
-        self._name = name
-
-    def __reduce__(self):
-        return (_resolve_for_pickle(self._module, self._name), ())
-
-
-def _resolve_for_pickle(module: str, name: str):
-    mod = importlib.import_module(module)
-    return getattr(mod, name)
-
-
 # --------------------------------------------------------------------------
 # 7. End-to-end: a real registration survives the JSON format
 # --------------------------------------------------------------------------
@@ -623,8 +460,6 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
     root = tmp_path / "instance" / "session-credentials"
     root.mkdir(parents=True)
     monkeypatch.setattr(credentials, "_LOCAL_CREDENTIAL_BASE", str(root))
-    monkeypatch.setattr(credentials, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(tmp_path / "old"))
-    monkeypatch.setattr(credentials, "basepath", str(tmp_path / "flat"))
     (tmp_path / "flat").mkdir()
     monkeypatch.setattr(credentials, "_using_gcs", lambda: False)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)

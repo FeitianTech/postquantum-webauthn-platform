@@ -7,24 +7,21 @@ and it is interpolated into a filesystem path and a GCS object key. Every such
 identifier goes through :func:`validate_storage_component` and every resolved
 path goes through :func:`resolve_contained_path` / :func:`assert_contained_blob_name`.
 
-**A safe on-disk format.** Records are stored as JSON, never pickle; the format
-and the restricted reader for legacy ``.pkl`` copies are ``record_format``'s.
+**A safe on-disk format.** Records are stored as JSON; the format is
+``record_format``'s.
 """
 from __future__ import annotations
 
 import hashlib
 import logging
 import os
-from collections.abc import Iterable, Iterator
 from typing import Any
 
 from .. import encoding
-from ..config import basepath
 from ..config.paths import INSTANCE_ROOT
 from . import record_format
 from .cloud import (
     build_blob_name,
-    delete_blob,
     download_bytes,
     download_bytes_with_generation,
     gcs_enabled,
@@ -65,22 +62,15 @@ _LOCAL_CREDENTIAL_BASE = os.environ.get(
     "FIDO_SERVER_CREDENTIAL_DIR",
     os.path.join(INSTANCE_ROOT, "session-credentials"),
 )
-# Where the store used to live, inside the source tree. Still read so an
-# existing deployment does not lose its credentials on upgrade; never written.
-_LEGACY_LOCAL_CREDENTIAL_BASE = os.path.join(basepath, "session-credentials")
 
 _JSON_SUFFIX = "_credential_data.json"
-_PICKLE_SUFFIX = "_credential_data.pkl"
-_CREDENTIAL_SUFFIXES = (_JSON_SUFFIX, _PICKLE_SUFFIX)
 
 
 class CredentialsUndecodable(Exception):
     """The user's copy of their credentials exists, but its content does not decode.
 
     Raised by :func:`read_for_update` alone: the save that follows would replace
-    a copy nobody could read -- the current copy, or with no current copy the
-    first legacy one, which the new current copy shadows and a session ``.pkl``
-    is removed with. Reads that only show records skip it with a warning.
+    a copy nobody could read. Reads that only show records skip it with a warning.
     """
 
 
@@ -112,33 +102,11 @@ def _credential_prefix(session_id: str) -> str:
     )
 
 
-def _credential_blob(name: str, session_id: str, *, suffix: str = _JSON_SUFFIX) -> str:
+def _credential_blob(name: str, session_id: str) -> str:
     cleaned = _validate_name(name)
     prefix = _credential_prefix(session_id)
-    blob_name = build_blob_name(f"{cleaned}{suffix}", prefix=prefix)
+    blob_name = build_blob_name(f"{cleaned}{_JSON_SUFFIX}", prefix=prefix)
     return assert_contained_blob_name(blob_name, prefix=prefix)
-
-
-def _legacy_credential_blob(name: str, *, suffix: str = _JSON_SUFFIX) -> str:
-    cleaned = _validate_name(name)
-    blob_name = build_blob_name(f"{cleaned}{suffix}", prefix=_USER_FOLDER_PREFIX)
-    return assert_contained_blob_name(blob_name, prefix=_USER_FOLDER_PREFIX)
-
-
-def _candidate_gcs_blob_names(name: str, session_id: str) -> Iterable[str]:
-    """Object keys to try in order: JSON before pickle, scoped before legacy."""
-
-    seen = set()
-    for blob_name in (
-        _credential_blob(name, session_id, suffix=_JSON_SUFFIX),
-        _credential_blob(name, session_id, suffix=_PICKLE_SUFFIX),
-        _legacy_credential_blob(name, suffix=_JSON_SUFFIX),
-        _legacy_credential_blob(name, suffix=_PICKLE_SUFFIX),
-    ):
-        if blob_name in seen:
-            continue
-        seen.add(blob_name)
-        yield blob_name
 
 
 def _make_session_directory(root: str, directory: str) -> None:
@@ -154,75 +122,19 @@ def _make_session_directory(root: str, directory: str) -> None:
         replace_file(ignore, b"# Written by the credential store: nothing here belongs in git.\n*\n")
 
 
-def _legacy_local_filename(name: str) -> str:
-    """Path of the pre-session, flat ``server/app/<name>_credential_data.pkl`` file."""
-
-    cleaned = _validate_name(name)
-    return resolve_contained_path(basepath, f"{cleaned}{_PICKLE_SUFFIX}")
-
-
-def _local_filename(
-    name: str,
-    session_id: str,
-    *,
-    create: bool = False,
-    suffix: str = _JSON_SUFFIX,
-    base: str | None = None,
-) -> str:
-    root = _LOCAL_CREDENTIAL_BASE if base is None else base
+def _local_filename(name: str, session_id: str, *, create: bool = False) -> str:
+    root = _LOCAL_CREDENTIAL_BASE
     cleaned_session = _validate_session_id(session_id)
     cleaned_name = _validate_name(name)
     if create:
         _make_session_directory(root, resolve_contained_path(root, cleaned_session))
     # Contained against the store root rather than the session directory, so a
     # session id and a name cannot combine to climb out.
-    return resolve_contained_path(root, cleaned_session, f"{cleaned_name}{suffix}")
-
-
-def _candidate_local_paths(name: str, session_id: str) -> Iterator[str]:
-    """Every location a credential file for ``name`` may legitimately live in."""
-
-    bases = [_LOCAL_CREDENTIAL_BASE]
-    if _LEGACY_LOCAL_CREDENTIAL_BASE != _LOCAL_CREDENTIAL_BASE:
-        bases.append(_LEGACY_LOCAL_CREDENTIAL_BASE)
-
-    seen = set()
-    for base in bases:
-        for suffix in _CREDENTIAL_SUFFIXES:
-            path = _local_filename(name, session_id, suffix=suffix, base=base)
-            if path not in seen:
-                seen.add(path)
-                yield path
-
-    legacy_flat = _legacy_local_filename(name)
-    if legacy_flat not in seen:
-        yield legacy_flat
+    return resolve_contained_path(root, cleaned_session, f"{cleaned_name}{_JSON_SUFFIX}")
 
 
 def _resolve_session_id(session_id: str | None = None) -> str:
     return resolve_metadata_session_id(session_id)
-
-
-def _discard_superseded_pickle(name: str, session_id: str) -> None:
-    """Drop the ``.pkl`` the JSON write just replaced, so it is never read again.
-
-    Only the session-scoped copy is removed. The flat
-    ``server/app/<name>_credential_data.pkl`` file is shared by every session,
-    so removing it here would delete another session's fallback.
-    """
-
-    if _using_gcs():
-        try:
-            delete_blob(_credential_blob(name, session_id, suffix=_PICKLE_SUFFIX), missing_ok=True)
-        except Exception:
-            pass
-        return
-
-    for base in (_LOCAL_CREDENTIAL_BASE, _LEGACY_LOCAL_CREDENTIAL_BASE):
-        try:
-            os.remove(_local_filename(name, session_id, suffix=_PICKLE_SUFFIX, base=base))
-        except Exception:
-            pass
 
 
 def read_for_update(name: str, *, session_id: str | None = None) -> tuple[list[Any], Any]:
@@ -230,9 +142,8 @@ def read_for_update(name: str, *, session_id: str | None = None) -> tuple[list[A
 
     The version is opaque: the object's generation on GCS (0 when there is no
     object), the SHA-256 of the file locally (``None`` when there is no file).
-    Hand it to :func:`save_if_unchanged`. The copy the records come from -- the
-    current one, or with none the first legacy one -- raises
-    :class:`CredentialsUndecodable` rather than reading as ``[]`` when it does not decode.
+    Hand it to :func:`save_if_unchanged`. A copy that does not decode raises
+    :class:`CredentialsUndecodable` rather than reading as ``[]``.
     """
 
     resolved_session = _resolve_session_id(session_id)
@@ -248,13 +159,7 @@ def read_for_update(name: str, *, session_id: str | None = None) -> tuple[list[A
         version = hashlib.sha256(payload).hexdigest() if payload is not None else None
 
     if payload is None:
-        # No current copy: the records, if any, are the first legacy copy's. The
-        # save writes a current copy over them and drops a session .pkl, so one
-        # that does not decode is refused here as the current copy is.
-        first = _first_copy(name, resolved_session)
-        if first is None:
-            return [], version
-        source, payload = first
+        return [], version
     try:
         return record_format.decode_payload(payload), version
     except record_format.UndecodableRecords as exc:
@@ -285,8 +190,6 @@ def save_if_unchanged(name: str, key: Any, version: Any, *, session_id: str | No
             if written:
                 replace_file(path, payload)
 
-    if written:
-        _discard_superseded_pickle(name, resolved_session)
     return written
 
 
@@ -323,32 +226,23 @@ def _decode_copy(payload: bytes, source: str) -> list[Any] | None:
 
 
 def readkey(name: str, *, session_id: str | None = None) -> list[Any]:
-    """``name``'s credentials: the first copy that exists, ``[]`` when none does.
+    """``name``'s credentials, ``[]`` when there are none.
 
-    Older copies are read only when no newer one exists. A copy that cannot be
-    read raises :class:`StorageReadError`: going on to an older copy, or to
-    ``[]``, would answer with stale records or none. A copy whose content does
-    not decode is skipped with a warning naming it, and reads as ``[]``.
+    A copy that cannot be read raises :class:`StorageReadError`: answering ``[]``
+    would answer with no records. A copy whose content does not decode is skipped
+    with a warning naming it, and reads as ``[]``.
     """
 
-    first = _first_copy(name, _resolve_session_id(session_id))
-    if first is None:
-        return []
-    return _decode_copy(first[1], first[0]) or []
-
-
-def _first_copy(name: str, session_id: str) -> tuple[str, bytes] | None:
-    """The first of ``name``'s copies that exists, newest first, and its bytes; ``None`` for none."""
-
+    resolved_session = _resolve_session_id(session_id)
     if _using_gcs():
-        candidates, read = _candidate_gcs_blob_names(name, session_id), _read_gcs_copy
+        source = _credential_blob(name, resolved_session)
+        payload = _read_gcs_copy(source)
     else:
-        candidates, read = _candidate_local_paths(name, session_id), _read_local_copy
-    for source in candidates:
-        payload = read(source)
-        if payload is not None:
-            return source, payload
-    return None
+        source = _local_filename(name, resolved_session)
+        payload = _read_local_copy(source)
+    if payload is None:
+        return []
+    return _decode_copy(payload, source) or []
 
 
 def convert_bytes_for_json(obj: Any) -> Any:

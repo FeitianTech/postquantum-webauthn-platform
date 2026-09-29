@@ -205,7 +205,7 @@ def test_parse_trusted_ca_subjects():
 
 def test_basepath():
     """Test basepath configuration."""
-    from server.app.config import basepath
+    from server.app.config.paths import basepath
     
     # basepath should be a valid path (could be str or Path)
     assert basepath is not None

@@ -27,8 +27,6 @@ NAME = "alice@example.com"
 def local_store(monkeypatch, tmp_path):
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
     monkeypatch.setattr(store, "_LOCAL_CREDENTIAL_BASE", str(tmp_path / "credentials"))
-    monkeypatch.setattr(store, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(tmp_path / "legacy"))
-    monkeypatch.setattr(store, "basepath", str(tmp_path / "flat"))
     seed_records(store, NAME, [{"sign_count": 5}], session_id=SESSION)
     return tmp_path
 
@@ -84,8 +82,6 @@ def _race_in_a_process(root, value, barrier, results):
     from server.app.storage import credentials as child_store
 
     child_store._LOCAL_CREDENTIAL_BASE = os.path.join(root, "credentials")
-    child_store._LEGACY_LOCAL_CREDENTIAL_BASE = os.path.join(root, "legacy")
-    child_store.basepath = os.path.join(root, "flat")
     records, version = child_store.read_for_update(NAME, session_id=SESSION)
     barrier.wait()
     records[0]["sign_count"] = value

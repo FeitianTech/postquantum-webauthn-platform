@@ -105,29 +105,6 @@ def _force_gcs(monkeypatch):
     monkeypatch.setattr(credentials, "gcs_enabled", lambda: True)
 
 
-def test_readkey_falls_back_to_legacy_gcs(monkeypatch):
-    name = "alice@example.com"
-    session_id = "session-one"
-    legacy_blob = credentials._legacy_credential_blob(name)
-    new_blob = credentials._credential_blob(name, session_id)
-
-    observed = []
-
-    def fake_download(blob_name: str):
-        observed.append(blob_name)
-        if blob_name == legacy_blob:
-            return pickle.dumps([["legacy"]])
-        return None
-
-    monkeypatch.setattr(credentials, "download_bytes", fake_download)
-
-    result = credentials.readkey(name, session_id=session_id)
-
-    assert result == [["legacy"]]
-    assert observed[0] == new_blob
-    assert legacy_blob in observed
-
-
 def test_readkey_returns_empty_list_for_corrupted_payload(monkeypatch):
     monkeypatch.setattr(credentials, "download_bytes", lambda _blob_name: b"not-a-valid-pickle")
 
@@ -183,15 +160,15 @@ def test_readkey_raises_when_a_gcs_download_fails(monkeypatch):
 
     monkeypatch.setattr(credentials, "download_bytes", fake_download)
 
-    # Not on to the legacy copies, and not []: either would answer with stale records or none.
+    # Not []: that would answer with no records.
     with pytest.raises(StorageReadError):
         credentials.readkey("alice@example.com", session_id="session-read")
     assert len(calls) == 1
 
 
-def test_readkey_reads_past_copies_that_are_not_there(monkeypatch):
+def test_readkey_of_a_copy_that_is_not_there_is_empty(monkeypatch):
     calls = []
     monkeypatch.setattr(credentials, "download_bytes", lambda blob_name: calls.append(blob_name))
 
     assert credentials.readkey("alice@example.com", session_id="session-read") == []
-    assert len(calls) == 4
+    assert calls == [credentials._credential_blob("alice@example.com", "session-read")]

@@ -237,8 +237,7 @@ page updates the saved credentials, which both tabs show.
   `CHARACTERIZATION_WRITE=1 pytest tests/app/characterization` rewrites them after an intended
   change; review the diff (`encoding_diff.py` tells byte-spelling-only diffs).
 - `tests/checkout_guard.py` fails the run when a test changed anything under `server/runtime/`,
-  `instance/` (which holds the MDS snapshot too), the legacy credential stores or
-  `.hypothesis/`. Give a test its own stores in `tmp_path`.
+  `instance/` (which holds the MDS snapshot too) or `.hypothesis/`. Give a test its own stores in `tmp_path`.
 
 Guards on the code and the checkout (`tests/app/tooling/`; each `ALLOWED` list may only shrink):
 

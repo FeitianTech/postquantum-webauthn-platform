@@ -24,10 +24,8 @@ import pytest
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 # Where the app keeps state on a developer's machine -- the instance folder holds
 # the session secret, the local credentials and the MDS snapshot
-# (docs/MDS_SNAPSHOT.md) -- including the legacy credential stores in the source
-# tree, which are still read.
-GUARDED_TREES = ("server/runtime", "instance", "server/app/session-credentials", ".hypothesis")
-GUARDED_STATIC = ("server/app/*_credential_data.pkl",)
+# (docs/MDS_SNAPSHOT.md).
+GUARDED_TREES = ("server/runtime", "instance", ".hypothesis")
 # A store the environment may move into the checkout, where the repository's
 # .gitignore does not reach: guarded too when it is inside, read as the app reads it.
 GUARDED_SETTINGS = ("FIDO_SERVER_CREDENTIAL_DIR",)
@@ -65,7 +63,6 @@ def listing(base: Path) -> dict[str, object]:
     found: dict[str, object] = {}
     base = base.resolve()
     paths = [path for tree in GUARDED_TREES for path in (base / tree).rglob("*")]
-    paths += [path for pattern in GUARDED_STATIC for path in base.glob(pattern)]
     paths += [path for tree in configured_trees(base) for path in tree.rglob("*")]
     for path in paths:
         try:
@@ -97,8 +94,8 @@ def problems(before: dict[str, object], after: dict[str, object]) -> str | None:
     if not described:
         return None
     return (
-        "Tests wrote into the checkout (server/runtime/, instance/ with the MDS snapshot, the legacy "
-        "credential stores in server/app/, a FIDO_SERVER_CREDENTIAL_DIR inside it or .hypothesis/):\n"
+        "Tests wrote into the checkout (server/runtime/, instance/ with the MDS snapshot, "
+        "a FIDO_SERVER_CREDENTIAL_DIR inside it or .hypothesis/):\n"
         + "\n".join(described)
     )
 

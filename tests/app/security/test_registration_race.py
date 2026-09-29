@@ -36,8 +36,6 @@ def store(request, monkeypatch, tmp_path, storage_module, device_logs_module):
 
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
     monkeypatch.setattr(storage_module, "_LOCAL_CREDENTIAL_BASE", str(tmp_path / "credentials"))
-    monkeypatch.setattr(storage_module, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(tmp_path / "legacy"))
-    monkeypatch.setattr(storage_module, "basepath", str(tmp_path / "flat"))
     monkeypatch.setattr(session_metadata, "SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
     if request.param == "gcs":
@@ -270,37 +268,3 @@ def test_a_store_that_cannot_be_read_answers_503_and_saves_nothing(app, caplog, 
         # The copy nobody could read was not replaced.
         assert left == b"not a credential record"
     assert _stored_ids(store, client) == [first.credential_id]
-
-
-def test_a_user_whose_only_copy_is_an_undecodable_pickle_is_answered_503_and_keeps_it(app, store, simple_module):
-
-    client = app.test_client()
-    namespace = "namespace-with-an-old-pickle"
-    with client.session_transaction() as session:
-        session[metadata_state._SESSION_METADATA_SESSION_KEY] = namespace
-    challenge = _begin(client)
-    # No current copy: the user's only one is a session .pkl nobody can read.
-    if store._using_gcs():
-        from server.app.storage import cloud
-
-        bucket = cloud._ensure_bucket()
-        blob = store._credential_blob(EMAIL, namespace, suffix=store._PICKLE_SUFFIX)
-        bucket.put(blob, b"not a credential record")
-
-        def _left():
-            return bucket.objects[blob][0]
-    else:
-        path = store._local_filename(EMAIL, namespace, create=True, suffix=store._PICKLE_SUFFIX)
-        with open(path, "wb") as handle:
-            handle.write(b"not a credential record")
-
-        def _left():
-            with open(path, "rb") as handle:
-                return handle.read()
-
-    response = _complete(client, Authenticator(credential_id=b"\x02" * 32), challenge)
-
-    # Before: 200, a new current copy holding only the new credential, and the .pkl deleted.
-    assert response.status_code == 503, response.get_json()
-    assert _left() == b"not a credential record"
-    assert _stored_ids(store, client) == []

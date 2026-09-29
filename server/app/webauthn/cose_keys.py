@@ -10,7 +10,7 @@ from __future__ import annotations
 from cryptography.hazmat.primitives import hashes
 from fido2.cose import PS256, RS256
 
-__all__ = ["BY_NAME", "PS384", "PS512", "RS384", "RS512"]
+__all__ = ["PS384", "PS512", "RS384", "RS512"]
 
 
 class RS384(RS256):
@@ -31,7 +31,3 @@ class PS384(PS256):
 class PS512(PS256):
     ALGORITHM = -39
     _HASH_ALG = hashes.SHA512()
-
-
-# By class name: how a legacy credential pickle names them (as ``fido2.cose.<name>``).
-BY_NAME: dict[str, type] = {cls.__name__: cls for cls in (RS384, RS512, PS384, PS512)}

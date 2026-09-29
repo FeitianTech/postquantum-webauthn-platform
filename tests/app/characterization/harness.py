@@ -178,7 +178,6 @@ class Environment:
         from server.app.webauthn.metadata import sessions
 
         mp.setattr(credentials, "_LOCAL_CREDENTIAL_BASE", str(self.tmp_path / "credentials"))
-        mp.setattr(credentials, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(self.tmp_path / "legacy-credentials"))
         mp.setattr(credential_artifacts, "_ARTIFACT_DIR", str(self.tmp_path / "artifacts"))
         mp.setattr(session_metadata, "SESSION_METADATA_DIR", str(self.tmp_path / "session-metadata"))
         mp.setattr(sessions, "_schedule_inactive_session_cleanup", lambda: None)

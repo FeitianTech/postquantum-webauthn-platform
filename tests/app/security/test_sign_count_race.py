@@ -32,7 +32,6 @@ EMAIL = "user@example.com"
 def store(monkeypatch, tmp_path, storage_module, device_logs_module):
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
     monkeypatch.setattr(storage_module, "_LOCAL_CREDENTIAL_BASE", str(tmp_path / "credentials"))
-    monkeypatch.setattr(storage_module, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(tmp_path / "legacy"))
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
     return storage_module
 
