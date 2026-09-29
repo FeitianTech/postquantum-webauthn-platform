@@ -32,6 +32,10 @@ updates:
       # same name. Dependabot fails the whole uv run trying to resolve it
       # ("fido2 | unknown_error"), and a bump would replace local source.
       - dependency-name: "fido2"
+      # The root pyproject.toml is fido2's Poetry manifest; its optional
+      # pyscard table fails every uv run ("Declaration not found for pyscard!").
+      # Until fido2 leaves the repository.
+      - dependency-name: "pyscard"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
