@@ -128,98 +128,6 @@ def test_readkey_falls_back_to_legacy_gcs(monkeypatch):
     assert legacy_blob in observed
 
 
-def test_iter_credentials_includes_legacy_entries(monkeypatch):
-    name = "bob@example.com"
-    session_id = "session-two"
-    legacy_blob = credentials._legacy_credential_blob(name)
-    legacy_prefix = credentials._build_search_prefix(credentials._USER_FOLDER_PREFIX)
-    new_prefix = credentials._build_search_prefix(credentials._credential_prefix(session_id))
-
-    prefixes = []
-
-    def fake_list_blob_names(prefix: str, *, delimiter=None):
-        prefixes.append((prefix, delimiter))
-        if prefix == legacy_prefix:
-            yield legacy_blob
-
-    def fake_download(blob_name: str):
-        if blob_name == legacy_blob:
-            return pickle.dumps([["from-legacy"]])
-        return None
-
-    monkeypatch.setattr(credentials, "list_blob_names", fake_list_blob_names)
-    monkeypatch.setattr(credentials, "download_bytes", fake_download)
-
-    entries = list(credentials.iter_credentials(session_id=session_id))
-
-    assert entries == [(name, [["from-legacy"]])]
-    # The session's own folder, then only the objects directly under the user folder.
-    assert prefixes == [(new_prefix, None), (legacy_prefix, "/")]
-
-
-def test_iter_credentials_skips_nested_legacy_duplicates(monkeypatch):
-    session_id = "session-three"
-    primary_name = "dave@example.com"
-    legacy_name = "ellen@example.com"
-
-    primary_blob = credentials._credential_blob(primary_name, session_id)
-    legacy_blob = credentials._legacy_credential_blob(legacy_name)
-
-    new_prefix = credentials._build_search_prefix(credentials._credential_prefix(session_id))
-    legacy_prefix = credentials._build_search_prefix(credentials._USER_FOLDER_PREFIX)
-
-    def fake_list_blob_names(prefix: str, *, delimiter=None):
-        # A listing that ignored the delimiter: the nested copy is still filtered out.
-        if prefix == new_prefix:
-            yield primary_blob
-        elif prefix == legacy_prefix:
-            yield primary_blob
-            yield legacy_blob
-
-    payloads = {
-        primary_blob: pickle.dumps([["primary"]]),
-        legacy_blob: pickle.dumps([["legacy"]]),
-    }
-
-    monkeypatch.setattr(credentials, "list_blob_names", fake_list_blob_names)
-    monkeypatch.setattr(credentials, "download_bytes", payloads.get)
-
-    results = dict(credentials.iter_credentials(session_id=session_id))
-
-    assert results == {
-        primary_name: [["primary"]],
-        legacy_name: [["legacy"]],
-    }
-
-
-def test_a_failed_listing_raises_instead_of_listing_the_rest(monkeypatch):
-    session_id = "session-log"
-    primary_prefix = credentials._build_search_prefix(credentials._credential_prefix(session_id))
-    legacy_prefix = credentials._build_search_prefix(credentials._USER_FOLDER_PREFIX)
-
-    def fake_list_blob_names(prefix: str, *, delimiter=None):
-        if prefix == primary_prefix:
-
-            class _Generator:
-                def __iter__(self):
-                    return self
-
-                def __next__(self):
-                    raise RuntimeError("temporary failure")
-
-            return _Generator()
-        if prefix == legacy_prefix:
-            return iter([credentials._legacy_credential_blob("user@example.com")])
-        return iter([])
-
-    monkeypatch.setattr(credentials, "list_blob_names", fake_list_blob_names)
-
-    # Listing only the legacy prefix would pass for a store with fewer users.
-    with pytest.raises(StorageReadError, match="Could not list") as raised:
-        list(credentials._list_credential_blob_names(session_id))
-    assert isinstance(raised.value.__cause__, RuntimeError)
-
-
 def test_delkey_removes_the_legacy_copies_and_empties_the_current_one(monkeypatch):
     name = "carol@example.com"
     session_id = "session-three"
@@ -251,22 +159,6 @@ def test_readkey_returns_empty_list_for_corrupted_payload(monkeypatch):
     result = credentials.readkey("broken@example.com", session_id="session-corrupt")
 
     assert result == []
-
-
-def test_iter_credentials_skips_corrupted_payload(monkeypatch):
-    session_id = "session-corrupt-iter"
-    username = "broken@example.com"
-    blob_name = credentials._credential_blob(username, session_id)
-    primary_prefix = credentials._build_search_prefix(credentials._credential_prefix(session_id))
-
-    def fake_list_blob_names(prefix: str, *, delimiter=None):
-        if prefix == primary_prefix:
-            yield blob_name
-
-    monkeypatch.setattr(credentials, "list_blob_names", fake_list_blob_names)
-    monkeypatch.setattr(credentials, "download_bytes", lambda _blob_name: b"not-a-valid-pickle")
-
-    assert list(credentials.iter_credentials(session_id=session_id)) == []
 
 
 def test_resolve_session_id_falls_back_to_metadata_session(monkeypatch):
@@ -343,41 +235,3 @@ def test_delkey_raises_when_a_gcs_delete_fails(monkeypatch):
     # a failed delete is, or the caller would report a deletion that did not happen.
     with pytest.raises(RuntimeError, match="delete failed"):
         credentials.delkey("alice@example.com", session_id="session-delete")
-
-
-def test_iter_credentials_gcs_raises_on_a_failed_download_and_counts_undecodable_payloads(monkeypatch):
-    session_id = "session-iter"
-
-    blobs = [
-        ("alice", "blob-a"),
-        ("bob", "blob-b"),
-        ("carol", "blob-c"),
-        ("dave", "blob-d"),
-    ]
-
-    monkeypatch.setattr(credentials, "_list_credential_blob_names", lambda _sid: blobs)
-
-    payloads = {
-        "blob-a": RuntimeError("download failed"),
-        "blob-b": b"",
-        "blob-c": pickle.dumps({"not": "a-list"}),
-        "blob-d": pickle.dumps([{"ok": True}]),
-    }
-
-    def fake_download(blob_name: str):
-        payload = payloads[blob_name]
-        if isinstance(payload, Exception):
-            raise payload
-        return payload
-
-    monkeypatch.setattr(credentials, "download_bytes", fake_download)
-
-    with pytest.raises(StorageReadError, match="blob-a"):
-        list(credentials.iter_credentials(session_id=session_id))
-
-    payloads["blob-a"] = None
-    undecodable: list[str] = []
-    assert list(credentials.iter_credentials(session_id=session_id, undecodable=undecodable)) == [
-        ("dave", [{"ok": True}])
-    ]
-    assert undecodable == ["bob", "carol"]

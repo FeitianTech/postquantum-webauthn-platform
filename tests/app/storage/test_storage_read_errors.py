@@ -5,12 +5,11 @@ Three cases, told apart everywhere the store reads:
 - not found: nothing is stored there, which is fine;
 - unreadable, because of an I/O or Cloud Storage error: ``StorageReadError``;
 - undecodable content: a warning naming the file or object (never its content),
-  the copy skipped, and counted where a caller asks for the count.
+  and the copy skipped.
 
 ``readkey`` used to swallow a failed read of the current copy and fall through to
-the legacy copy (stale) or to ``[]``; ``iter_credentials`` skipped an entry it
-could not read, and a GCS listing that failed was a warning. Each looked like a
-user with fewer credentials, or none.
+the legacy copy (stale) or to ``[]``, which looked like a user with fewer
+credentials, or none.
 
 Both backends, the real store: a temporary directory, or a fake bucket. A local
 read is made to fail by putting a directory where the file belongs, so open()
@@ -20,7 +19,6 @@ from __future__ import annotations
 
 import logging
 import os
-import shutil
 
 import pytest
 
@@ -31,7 +29,6 @@ from . import fake_gcs
 
 SESSION = "session-read-errors"
 NAME = "alice@example.com"
-OTHER = "bob@example.com"
 
 
 def _records(tag):
@@ -75,14 +72,6 @@ class _Local:
     def break_legacy(self, name):
         os.makedirs(self._legacy(name))
 
-    def break_listing(self):
-        session_dir = os.path.dirname(self._current(NAME))
-        shutil.rmtree(session_dir)
-        # A file where the session directory belongs: listing it fails, and
-        # that is not the same as there being no directory.
-        with open(session_dir, "wb") as handle:
-            handle.write(b"")
-
 
 class _Gcs:
     def __init__(self, store, bucket):
@@ -112,13 +101,6 @@ class _Gcs:
 
     def break_legacy(self, name):
         self.bucket.failing[self.put_legacy(name, _records("unreachable"))] = fake_gcs.ServiceUnavailable("503")
-
-    def break_listing(self):
-        def _unavailable(prefix="", max_results=None, delimiter=None):
-            raise fake_gcs.ServiceUnavailable("503")
-
-        self.bucket.list_blobs = _unavailable
-
 
 @pytest.fixture(params=["local", "gcs"])
 def backend(request, monkeypatch, tmp_path, storage_module):
@@ -160,25 +142,6 @@ def test_read_for_update_does_not_answer_empty_when_a_legacy_copy_cannot_be_read
         backend.store.read_for_update(NAME, session_id=SESSION)
 
 
-def test_iter_credentials_does_not_skip_an_entry_it_cannot_read(backend):
-    backend.put_current(OTHER, _records("bob"))
-    backend.break_current(NAME)
-
-    with pytest.raises(StorageReadError):
-        list(backend.store.iter_credentials(session_id=SESSION))
-
-
-def test_a_listing_that_fails_is_an_error_not_an_empty_store(backend):
-    backend.put_current(NAME, _records("alice"))
-    backend.break_listing()
-
-    with pytest.raises(StorageReadError) as raised:
-        list(backend.store.iter_credentials(session_id=SESSION))
-    if backend.store._using_gcs():
-        # The bucket's own error, not a stand-in that could not take the call.
-        assert isinstance(raised.value.__cause__, fake_gcs.ServiceUnavailable)
-
-
 def test_the_error_names_the_copy_and_keeps_its_cause(backend):
     backend.break_current(NAME)
 
@@ -197,7 +160,6 @@ def test_the_error_names_the_copy_and_keeps_its_cause(backend):
 def test_nothing_stored_is_not_an_error(backend):
     assert backend.store.readkey(NAME, session_id=SESSION) == []
     assert backend.store.read_for_update(NAME, session_id=SESSION)[0] == []
-    assert list(backend.store.iter_credentials(session_id=SESSION)) == []
 
 
 def test_readkey_still_reads_the_legacy_copy_when_there_is_no_current_one(backend):
@@ -207,7 +169,7 @@ def test_readkey_still_reads_the_legacy_copy_when_there_is_no_current_one(backen
 
 
 # --------------------------------------------------------------------------
-# undecodable: log by name, skip, count
+# undecodable: log by name, skip
 # --------------------------------------------------------------------------
 
 _SECRET = b"SECRET-CONTENT-7f3a"
@@ -223,29 +185,17 @@ _UNDECODABLE = [
 
 
 @pytest.mark.parametrize("content", _UNDECODABLE)
-def test_an_undecodable_entry_is_named_skipped_and_counted(backend, caplog, content):
-    backend.put_current(OTHER, _records("bob"))
+def test_an_undecodable_copy_is_named_and_skipped(backend, caplog, content):
     source = backend.put_current(NAME, content)
-    undecodable = []
 
     with caplog.at_level(logging.WARNING, logger="server.app.storage"):
-        listed = list(backend.store.iter_credentials(session_id=SESSION, undecodable=undecodable))
+        assert backend.store.readkey(NAME, session_id=SESSION) == []
 
-    assert listed == [(OTHER, [{"credential_data": "bob"}])]
-    assert undecodable == [NAME]
     warnings = [record.getMessage() for record in caplog.records if record.name.startswith("server.app.storage")]
     assert len(warnings) == 1, warnings
     assert os.path.basename(source) in warnings[0]
     assert "SECRET" not in warnings[0]
     assert "secretmodule" not in warnings[0]
-
-
-def test_list_credentials_passes_the_count_on(backend):
-    backend.put_current(NAME, b"not json")
-    undecodable = []
-
-    assert backend.store.list_credentials(session_id=SESSION, undecodable=undecodable) == {}
-    assert undecodable == [NAME]
 
 
 def test_readkey_skips_an_undecodable_copy_with_a_warning(backend, caplog):

@@ -29,7 +29,6 @@ from .cloud import (
     download_bytes,
     download_bytes_with_generation,
     gcs_enabled,
-    list_blob_names,
     upload_bytes,
     upload_bytes_if_generation,
 )
@@ -53,8 +52,6 @@ __all__ = [
     "add_public_key_material",
     "convert_bytes_for_json",
     "delkey",
-    "iter_credentials",
-    "list_credentials",
     "read_for_update",
     "readkey",
     "save_if_unchanged",
@@ -138,11 +135,6 @@ def _legacy_credential_blob(name: str, *, suffix: str = _JSON_SUFFIX) -> str:
     return assert_contained_blob_name(blob_name, prefix=_USER_FOLDER_PREFIX)
 
 
-def _build_search_prefix(path: str) -> str:
-    base_prefix = path.strip().strip("/")
-    return f"{base_prefix}/" if base_prefix else ""
-
-
 def _candidate_gcs_blob_names(name: str, session_id: str) -> Iterable[str]:
     """Object keys to try in order: JSON before pickle, scoped before legacy."""
 
@@ -157,45 +149,6 @@ def _candidate_gcs_blob_names(name: str, session_id: str) -> Iterable[str]:
             continue
         seen.add(blob_name)
         yield blob_name
-
-
-def _strip_credential_suffix(remainder: str) -> str | None:
-    for suffix in _CREDENTIAL_SUFFIXES:
-        if remainder.endswith(suffix):
-            username = remainder[: -len(suffix)]
-            return username or None
-    return None
-
-
-def _list_credential_blob_names(session_id: str) -> Iterable[tuple[str, str]]:
-    search_prefixes = []
-
-    primary_prefix = _build_search_prefix(_credential_prefix(session_id))
-    search_prefixes.append(primary_prefix)
-
-    legacy_prefix = _build_search_prefix(_USER_FOLDER_PREFIX)
-    if legacy_prefix not in search_prefixes:
-        search_prefixes.append(legacy_prefix)
-
-    seen_users = set()
-    for search_prefix in search_prefixes:
-        try:
-            # The flat legacy copies sit directly under the user folder, beside
-            # every session's folder: list only that level, not every session's objects.
-            delimiter = "/" if search_prefix == legacy_prefix else None
-            blob_names = list(list_blob_names(search_prefix, delimiter=delimiter))
-        except Exception as exc:
-            # A listing that stopped part-way must not pass for a shorter one.
-            raise StorageReadError(f"Could not list the credentials under {search_prefix}") from exc
-        for blob_name in blob_names:
-            remainder = blob_name[len(search_prefix) :] if search_prefix else blob_name
-            if search_prefix == legacy_prefix and "/" in remainder.strip("/"):
-                continue
-            username = _strip_credential_suffix(remainder)
-            if not username or username in seen_users:
-                continue
-            seen_users.add(username)
-            yield username, blob_name
 
 
 def _local_directory(
@@ -485,91 +438,6 @@ def delkey(name: str, *, session_id: str | None = None) -> None:
                     errors.append(exc)
     if errors:
         raise errors[0]
-
-
-def _iter_local_directory(directory: str) -> Iterable[tuple[str, bytes, str]]:
-    try:
-        entries = os.listdir(directory)
-    except FileNotFoundError:
-        return
-    except OSError as exc:
-        raise StorageReadError(f"Could not list {directory}") from exc
-
-    # Sorted so a directory holding both formats for one user resolves
-    # deterministically: "..._credential_data.json" sorts before "....pkl".
-    for entry in sorted(entries):
-        username = _strip_credential_suffix(entry)
-        if not username:
-            continue
-        path = os.path.join(directory, entry)
-        payload = _read_local_copy(path)
-        if payload is not None:
-            yield username, payload, path
-
-
-def _local_copies(session_id: str) -> Iterable[tuple[str, bytes, str]]:
-    directories = [_LOCAL_CREDENTIAL_BASE]
-    if _LEGACY_LOCAL_CREDENTIAL_BASE != _LOCAL_CREDENTIAL_BASE:
-        directories.append(_LEGACY_LOCAL_CREDENTIAL_BASE)
-
-    for base in directories:
-        try:
-            directory = _local_directory(session_id, base=base)
-        except ValueError as exc:
-            logger.warning(
-                "Refusing to list credentials for session %r under %s: %s",
-                session_id,
-                base,
-                exc,
-            )
-            continue
-        yield from _iter_local_directory(directory)
-
-    yield from _iter_local_directory(basepath)
-
-
-def _gcs_copies(session_id: str) -> Iterable[tuple[str, bytes, str]]:
-    for username, blob_name in _list_credential_blob_names(session_id):
-        payload = _read_gcs_copy(blob_name)
-        if payload is not None:
-            yield username, payload, blob_name
-
-
-def iter_credentials(
-    *, session_id: str | None = None, undecodable: list[str] | None = None
-) -> Iterator[tuple[str, list[Any]]]:
-    """Each user's credentials in the session, ``(username, records)``, from the first copy that exists.
-
-    A listing or a copy that cannot be read raises :class:`StorageReadError`: a
-    listing that stopped part-way must not pass for a shorter one. A copy whose
-    content does not decode is skipped with a warning naming it, and its
-    username appended to ``undecodable`` when that list is given.
-    """
-
-    resolved_session = _resolve_session_id(session_id)
-    sources = _gcs_copies(resolved_session) if _using_gcs() else _local_copies(resolved_session)
-
-    seen_users = set()
-    for username, payload, source in sources:
-        if username in seen_users:
-            continue
-        # The first copy that exists is the user's, decodable or not: an older
-        # one standing in for it would show stale records as current.
-        seen_users.add(username)
-        creds = _decode_copy(payload, source)
-        if creds is None:
-            if undecodable is not None:
-                undecodable.append(username)
-            continue
-        if creds:
-            # An emptied copy is what delkey leaves: the user has no credentials to list.
-            yield username, creds
-
-
-def list_credentials(
-    *, session_id: str | None = None, undecodable: list[str] | None = None
-) -> dict[str, list[Any]]:
-    return dict(iter_credentials(session_id=session_id, undecodable=undecodable))
 
 
 def convert_bytes_for_json(obj: Any) -> Any:

@@ -8,7 +8,6 @@ import pickle
 import pytest
 
 from server.app.storage import record_format
-from server.app.storage.common import StorageReadError
 
 
 @pytest.fixture
@@ -88,55 +87,6 @@ def test_candidate_gcs_blob_names_deduplicates_duplicates(storage_local, monkeyp
     assert list(storage._candidate_gcs_blob_names("alice", "session-a")) == ["same"]
 
 
-def test_list_credential_blob_names_filters_duplicates_nested_and_invalid_entries(storage_local, monkeypatch):
-    storage, _ = storage_local
-
-    session_id = "session-a"
-    primary_prefix = storage._build_search_prefix(storage._credential_prefix(session_id))
-    legacy_prefix = storage._build_search_prefix(storage._USER_FOLDER_PREFIX)
-
-    primary_blob = f"{primary_prefix}alice_credential_data.pkl"
-    legacy_blob = f"{legacy_prefix}bob_credential_data.pkl"
-
-    def _list(prefix: str, *, delimiter=None):
-        if prefix == primary_prefix:
-            return iter(
-                [
-                    primary_blob,
-                    f"{primary_prefix}invalid.txt",
-                    f"{primary_prefix}_credential_data.pkl",
-                ]
-            )
-        if prefix == legacy_prefix:
-            return iter(
-                [
-                    primary_blob,  # duplicate user (already seen)
-                    f"{legacy_prefix}nested/bob_credential_data.pkl",  # nested legacy path
-                    legacy_blob,
-                ]
-            )
-        return iter([])
-
-    monkeypatch.setattr(storage, "list_blob_names", _list)
-
-    assert list(storage._list_credential_blob_names(session_id)) == [
-        ("alice", primary_blob),
-        ("bob", legacy_blob),
-    ]
-
-
-def test_list_credential_blob_names_avoids_duplicate_search_prefixes(storage_local, monkeypatch):
-    storage, _ = storage_local
-
-    calls = []
-
-    monkeypatch.setattr(storage, "_credential_prefix", lambda _sid: storage._USER_FOLDER_PREFIX)
-    monkeypatch.setattr(storage, "list_blob_names", lambda prefix, *, delimiter=None: calls.append(prefix) or iter([]))
-
-    assert list(storage._list_credential_blob_names("session-a")) == []
-    assert len(calls) == 1
-
-
 def test_local_save_read_and_delete_roundtrip(storage_local):
     storage, _ = storage_local
 
@@ -197,103 +147,6 @@ def test_local_delkey_swallows_missing_files(storage_local):
     storage.delkey("missing", session_id="session-a")
 
 
-def test_iter_credentials_reads_local_session_and_legacy_files(storage_local):
-    storage, _ = storage_local
-
-    session_dir = storage._local_directory("session-a", create=True)
-
-    with open(os.path.join(session_dir, "alice_credential_data.pkl"), "wb") as handle:
-        handle.write(pickle.dumps([{"where": "session"}]))
-    with open(os.path.join(session_dir, "broken_credential_data.pkl"), "wb") as handle:
-        handle.write(b"broken")
-    with open(os.path.join(session_dir, "_credential_data.pkl"), "wb") as handle:
-        handle.write(pickle.dumps([{"ignore": True}]))
-    with open(os.path.join(session_dir, "note.txt"), "wb") as handle:
-        handle.write(b"ignored")
-
-    legacy_path = storage._legacy_local_filename("bob")
-    with open(legacy_path, "wb") as handle:
-        handle.write(pickle.dumps([{"where": "legacy"}]))
-
-    results = dict(storage.iter_credentials(session_id="session-a"))
-
-    assert results == {
-        "alice": [{"where": "session"}],
-        "bob": [{"where": "legacy"}],
-    }
-
-
-def test_iter_credentials_handles_missing_session_directory(storage_local):
-    storage, _ = storage_local
-
-    assert list(storage.iter_credentials(session_id="missing-session")) == []
-
-
-def test_iter_credentials_skips_and_counts_empty_and_non_list_payloads(storage_local):
-    storage, _ = storage_local
-
-    session_dir = storage._local_directory("session-a", create=True)
-
-    with open(os.path.join(session_dir, "empty_credential_data.pkl"), "wb") as handle:
-        handle.write(b"")
-    with open(os.path.join(session_dir, "badtype_credential_data.pkl"), "wb") as handle:
-        handle.write(pickle.dumps({"not": "a-list"}))
-
-    # No username: not a credential file at all, so neither read nor counted.
-    with open(os.path.join(storage.basepath, "_credential_data.pkl"), "wb") as handle:
-        handle.write(b"")
-
-    with open(storage._legacy_local_filename("legacyempty"), "wb") as handle:
-        handle.write(b"")
-
-    undecodable = []
-    assert list(storage.iter_credentials(session_id="session-a", undecodable=undecodable)) == []
-    assert sorted(undecodable) == ["badtype", "empty", "legacyempty"]
-
-
-@pytest.mark.parametrize("where", ["session", "legacy-flat"])
-def test_iter_credentials_raises_on_a_file_it_cannot_open(storage_local, monkeypatch, where):
-    storage, _ = storage_local
-
-    session_dir = storage._local_directory("session-a", create=True)
-    with open(os.path.join(session_dir, "alice_credential_data.pkl"), "wb") as handle:
-        handle.write(pickle.dumps([{"ok": True}]))
-    if where == "session":
-        blocked = os.path.join(session_dir, "unreadable_credential_data.pkl")
-    else:
-        blocked = storage._legacy_local_filename("legacybad")
-    with open(blocked, "wb") as handle:
-        handle.write(pickle.dumps(["unused"]))
-
-    real_open = open
-
-    def _open(path, mode="r", *args, **kwargs):
-        if str(path) == blocked:
-            raise OSError("blocked")
-        return real_open(path, mode, *args, **kwargs)
-
-    monkeypatch.setattr("builtins.open", _open)
-
-    # Skipping it would list alice alone, as if the other user had no credentials.
-    with pytest.raises(StorageReadError, match="Could not read"):
-        list(storage.iter_credentials(session_id="session-a"))
-
-
-def test_list_credentials_returns_mapping_from_iterator(storage_local, monkeypatch):
-    storage, _ = storage_local
-
-    monkeypatch.setattr(
-        storage,
-        "iter_credentials",
-        lambda **_kwargs: iter([("alice", [1]), ("bob", [2])]),
-    )
-
-    assert storage.list_credentials(session_id="session-a") == {
-        "alice": [1],
-        "bob": [2],
-    }
-
-
 def test_convert_bytes_and_public_key_material_helpers(storage_local):
     storage, _ = storage_local
 
@@ -314,7 +167,6 @@ def test_convert_bytes_and_public_key_material_helpers(storage_local):
     assert target["publicKeyBytes"] == "qrs"
     assert target["publicKeyType"] == "type-a"
     assert target["publicKeyAlgorithm"] == -7
-
 
 
 def test_add_public_key_material_respects_existing_type_and_algorithm(storage_local):

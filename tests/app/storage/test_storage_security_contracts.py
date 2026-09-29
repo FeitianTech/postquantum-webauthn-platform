@@ -455,7 +455,7 @@ def test_legacy_pickle_is_converted_to_json_on_the_next_write(local_store):
     ]
 
 
-def test_iter_credentials_reads_both_json_and_legacy_pickle(local_store):
+def test_readkey_reads_both_json_and_legacy_pickle(local_store):
     store = local_store.storage
     session_dir = Path(store._local_directory("session-a", create=True))
 
@@ -464,10 +464,8 @@ def test_iter_credentials_reads_both_json_and_legacy_pickle(local_store):
         pickle.dumps([{"where": "pickle"}])
     )
 
-    assert dict(store.iter_credentials(session_id="session-a")) == {
-        "alice@example.com": [{"where": "json"}],
-        "bob@example.com": [{"where": "pickle"}],
-    }
+    assert store.readkey("alice@example.com", session_id="session-a") == [{"where": "json"}]
+    assert store.readkey("bob@example.com", session_id="session-a") == [{"where": "pickle"}]
 
 
 def test_legacy_pickle_reads_can_be_switched_off(local_store, monkeypatch):
@@ -525,7 +523,9 @@ def test_crafted_pickle_payload_is_never_executed(local_store):
     assert store.readkey("alice@example.com", session_id="session-a") == []
     assert not attack_marker.exists()
 
-    assert list(store.iter_credentials(session_id="session-a")) == []
+    # Nor the save's read, which refuses the copy rather than replace it unread.
+    with pytest.raises(store.CredentialsUndecodable):
+        store.read_for_update("alice@example.com", session_id="session-a")
     assert not attack_marker.exists()
 
 

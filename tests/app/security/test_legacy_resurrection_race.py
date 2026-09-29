@@ -173,7 +173,6 @@ def test_a_deleted_user_has_nothing_stored_or_to_download(app, backend, simple_m
     assert client.post("/api/deletepub", json={"email": EMAIL}).status_code == 200
 
     assert store.readkey(EMAIL, session_id=session_id) == []
-    assert list(store.iter_credentials(session_id=session_id)) == []
     assert client.get(f"/api/downloadcred?email={EMAIL}").status_code == 404
 
 

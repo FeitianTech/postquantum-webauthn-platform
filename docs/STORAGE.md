@@ -26,8 +26,7 @@ the save write deleted records back.
 A store read tells three cases apart. Nothing stored is fine. A copy or a listing
 that cannot be read (an I/O or Cloud Storage error) raises `common.StorageReadError`,
 never a shorter list; `routes/errors.py` answers 503. Content that does not decode
-is logged by file or object name (never its content) and skipped, and
-`iter_credentials` / `list_credentials` count it in their `undecodable` list.
+is logged by file or object name (never its content) and skipped.
 
 ## Legacy copies
 
@@ -50,10 +49,8 @@ as stored if the record holds every merged value.
 
 ## Listings
 
-Listings stay inside what they need: the legacy pass lists `user-data/` with the
-`/` delimiter, so it never walks every session's objects, and
-`session_metadata.list_sessions` reads session names as prefixes
-(`cloud.list_prefixes`), so a flat legacy object is not a session.
+Listings stay inside what they need: `session_metadata.list_sessions` reads session
+names as prefixes (`cloud.list_prefixes`), so a flat legacy object is not a session.
 `tests/app/storage/fake_gcs.py` records each listing's prefix and delimiter.
 
 ## Names
