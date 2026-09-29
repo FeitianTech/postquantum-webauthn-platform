@@ -4,10 +4,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from fido2.cose import _get_mldsa_parameter_details
-
 from ... import encoding
-from ...webauthn import pqc
+from ...webauthn import mldsa, pqc
 from .. import cose_tables
 from . import cbor_parser
 
@@ -71,7 +69,7 @@ def _describe_cose_key(public_key: Any) -> dict[str, Any]:
         key_bytes = _cose_bytes_parameter(public_key, -1)
         if key_bytes is not None:
             details["publicKeyBytes"] = len(key_bytes)
-            expected = _get_mldsa_parameter_details(parameter_set).get("public_key_length")
+            expected = mldsa.parameter_details(parameter_set).get("public_key_length")
             if expected is not None and expected != len(key_bytes):
                 details["publicKeyBytesExpected"] = expected
     return details

@@ -5,11 +5,12 @@ from typing import Any
 
 from cryptography import x509
 
-from fido2.attestation import InvalidSignature, verify_x509_chain
+from fido2.attestation import InvalidSignature
 from fido2.attestation.base import TrustPathEvaluation
 
 from .. import metadata
 from . import trust
+from .chain import verify_certificate_chain
 
 
 def _evaluate_classical_attestation_root(
@@ -37,7 +38,7 @@ def _evaluate_classical_attestation_root(
     if trust_path:
         manual_chain_valid = True
         try:
-            verify_x509_chain(list(trust_path))
+            verify_certificate_chain(trust_path)
         except InvalidSignature:
             manual_chain_valid = False
         except Exception as exc:  # pragma: no cover - defensive

@@ -8,12 +8,13 @@ from typing import Any
 from cryptography import x509
 
 from fido2.attestation import AttestationResult, AttestationType, InvalidSignature
-from fido2.attestation.base import _verify_mldsa_certificate_signature
-from fido2.cose import CoseKey, extract_certificate_public_key_info
+from fido2.cose import CoseKey
 
 from .. import metadata
+from ..mldsa import extract_certificate_public_key_info
 from ..pqc import PQC_ALGORITHM_ID_TO_NAME, is_pqc_algorithm
 from . import trust
+from .chain import verify_mldsa_certificate_signature
 
 _PQC_ALGORITHM_NAME_TO_ID = {
     name.lower(): alg_id for alg_id, name in PQC_ALGORITHM_ID_TO_NAME.items()
@@ -169,7 +170,7 @@ def _verify_pqc_attestation_chain(
 
         issuer_der = candidate_chain[idx + 1]
         try:
-            _verify_mldsa_certificate_signature(cert_der, issuer_der)
+            verify_mldsa_certificate_signature(cert_der, issuer_der)
         except InvalidSignature as exc:
             errors.append(f"pqc_certificate_signature_invalid: {exc}")
             return False, errors

@@ -10,15 +10,12 @@ from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives import hashes, serialization
 
-from fido2.cose import (
-    describe_mldsa_oid,
-    describe_mldsa_oid_name,
-)
 from fido2.utils import ByteBuffer
 from fido2.webauthn import RegistrationResponse
 
 from ... import encoding
 from ...encoding import encode_base64
+from ..mldsa import describe_mldsa_oid, describe_mldsa_oid_name
 from . import (
     certificate_extensions,
     certificate_names,

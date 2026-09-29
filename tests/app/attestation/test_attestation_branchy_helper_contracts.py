@@ -303,7 +303,7 @@ def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures
 
     monkeypatch.setattr(
         classical,
-        "verify_x509_chain",
+        "verify_certificate_chain",
         lambda _chain: (_ for _ in ()).throw(InvalidSignature("bad chain")),
     )
     monkeypatch.setattr(
@@ -347,7 +347,7 @@ def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_erro
         metadata_lookup_source="aaguid",
     )
 
-    monkeypatch.setattr(classical, "verify_x509_chain", lambda _chain: None)
+    monkeypatch.setattr(classical, "verify_certificate_chain", lambda _chain: None)
     monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _der: valid_cert)
     monkeypatch.setattr(trust, "_collect_metadata_root_certificates", lambda _entry: [b"meta-root"])
     monkeypatch.setattr(trust, "_is_trusted_ca_certificate", lambda _root: False)
@@ -389,7 +389,7 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
         metadata_lookup_source="aaguid",
     )
 
-    monkeypatch.setattr(classical, "verify_x509_chain", lambda _chain: None)
+    monkeypatch.setattr(classical, "verify_certificate_chain", lambda _chain: None)
     monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _der: expired_cert)
     monkeypatch.setattr(trust, "_collect_metadata_root_certificates", lambda _entry: [])
     monkeypatch.setattr(trust, "_is_trusted_ca_certificate", lambda _root: True)

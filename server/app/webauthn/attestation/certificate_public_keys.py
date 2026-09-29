@@ -3,7 +3,7 @@
 ``_serialize_public_key_info`` covers the key types cryptography loads (EC, RSA,
 Ed25519, Ed448; anything else by class name). ``_build_unknown_public_key_info``
 is the best effort for a key it will not load, read from the SubjectPublicKeyInfo
-by fido2, with ML-DSA's parameter set, NIST level and sizes.
+by ``mldsa``, with ML-DSA's parameter set, NIST level and sizes.
 """
 from __future__ import annotations
 
@@ -13,9 +13,8 @@ from typing import Any
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, rsa
 
-from fido2.cose import extract_certificate_public_key_info
-
 from ...encoding import encode_base64
+from ..mldsa import extract_certificate_public_key_info
 from . import formatting
 
 

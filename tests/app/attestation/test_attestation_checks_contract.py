@@ -278,7 +278,7 @@ def test_verify_pqc_attestation_chain_reports_untrusted_root(monkeypatch, trust,
     )
     monkeypatch.setattr(
         pqc,
-        "_verify_mldsa_certificate_signature",
+        "verify_mldsa_certificate_signature",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
@@ -318,7 +318,7 @@ def test_verify_pqc_attestation_chain_invokes_signature_verification_for_each_no
 
     monkeypatch.setattr(
         pqc,
-        "_verify_mldsa_certificate_signature",
+        "verify_mldsa_certificate_signature",
         _capture_signature_pair,
     )
 
@@ -350,7 +350,7 @@ def test_verify_pqc_attestation_chain_reports_invalid_signature_error(monkeypatc
 
     monkeypatch.setattr(
         pqc,
-        "_verify_mldsa_certificate_signature",
+        "verify_mldsa_certificate_signature",
         _raise_invalid_signature,
     )
 
@@ -379,7 +379,7 @@ def test_verify_pqc_attestation_chain_reports_unexpected_signature_error(monkeyp
 
     monkeypatch.setattr(
         pqc,
-        "_verify_mldsa_certificate_signature",
+        "verify_mldsa_certificate_signature",
         _raise_unexpected_error,
     )
 
