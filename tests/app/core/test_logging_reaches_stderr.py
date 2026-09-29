@@ -22,7 +22,6 @@ import time
 from pathlib import Path
 
 import pytest
-from itsdangerous import URLSafeTimedSerializer
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SECRET = "logging-test-secret-0123456789abcdef"
@@ -90,21 +89,18 @@ class _UnixHTTPConnection(http.client.HTTPConnection):
         self.sock = sock
 
 
-def _get(sock_path: str, path: str, cookie: str | None = None):
+def _post_csp_report(sock_path: str, body: bytes) -> int:
     connection = _UnixHTTPConnection(sock_path)
-    headers = {"Host": "localhost"}
-    if cookie:
-        headers["Cookie"] = cookie
-    connection.request("GET", path, headers=headers)
+    headers = {"Host": "localhost", "Content-Type": "application/csp-report"}
+    connection.request("POST", "/api/csp-report", body=body, headers=headers)
     response = connection.getresponse()
     response.read()
-    cookies = response.headers.get_all("Set-Cookie") or []
     connection.close()
-    return response.status, cookies
+    return response.status
 
 
 @pytest.mark.skipif(not hasattr(socket, "AF_UNIX"), reason="needs unix sockets")
-def test_storage_warning_reaches_gunicorn_stderr(tmp_path):
+def test_module_logger_warning_reaches_gunicorn_stderr(tmp_path):
     """Real gunicorn, the repo's gunicorn.conf.py, a real request, a real warning."""
 
     pytest.importorskip("gunicorn")
@@ -126,41 +122,26 @@ def test_storage_warning_reaches_gunicorn_stderr(tmp_path):
         stderr=subprocess.PIPE,
         text=True,
     )
+    # One violation, which csp_reports logs as one WARNING line.
+    report = (
+        b'{"csp-report": {"effective-directive": "script-src-elem",'
+        b' "blocked-uri": "inline", "document-uri": "http://localhost/probe"}}'
+    )
     try:
         deadline = time.monotonic() + 30
-        status = cookies = None
+        status = None
         while status is None:
             assert process.poll() is None, process.communicate()
             assert time.monotonic() < deadline, "gunicorn did not start serving"
             try:
-                status, cookies = _get(sock_path, "/api/downloadcred?email=probe")
+                status = _post_csp_report(sock_path, report)
             except OSError:
                 time.sleep(0.1)
-        assert status == 404
-
-        # The first request minted a metadata session; plant a credential file the
-        # store cannot parse in it, and ask for it again.
-        jar = dict(raw.split(";", 1)[0].split("=", 1) for raw in cookies)
-        session_id = URLSafeTimedSerializer(_SECRET, salt="fido.mds.session-cookie.v1").loads(
-            jar["fido.mds.session"]
-        )
-        target = tmp_path / "credentials" / session_id / "probe_credential_data.json"
-        target.parent.mkdir(parents=True)
-        target.write_bytes(b"this is not json")
-
-        status, _ = _get(
-            sock_path,
-            "/api/downloadcred?email=probe",
-            cookie="; ".join(f"{name}={value}" for name, value in jar.items()),
-        )
-        assert status == 404
+        assert status == 204
     finally:
         process.terminate()
         _, stderr = process.communicate(timeout=30)
         shutil.rmtree(sock_dir, ignore_errors=True)
 
-    warning = _flask_warning(
-        "credentials",
-        r"Skipped undecodable credential data at .*probe_credential_data\.json: ",
-    )
+    warning = _flask_warning("csp_reports", r"CSP violation: directive=script-src-elem blocked=")
     assert re.search(warning, stderr, re.M), stderr
