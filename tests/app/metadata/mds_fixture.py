@@ -27,7 +27,6 @@ from typing import Any
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
-from fido2.mds3 import parse_blob
 from fido2.utils import websafe_encode
 from tests.app.characterization import material
 from tools import update_mds_snapshot as updater
@@ -448,7 +447,7 @@ def build_fixture_files() -> dict[str, bytes]:
 
     payload = {"legalHeader": LEGAL_HEADER, "no": SNAPSHOT_NO, "nextUpdate": NEXT_UPDATE, "entries": _entries()}
     blob, root = _signed_blob(payload)
-    verified = dict(parse_blob(blob, root))
+    verified = updater._build_verified_snapshot(blob, root)
     cache_state = updater._build_cache_state(
         last_modified=LAST_MODIFIED,
         etag=ETAG,

@@ -18,6 +18,7 @@ if str(REPO_ROOT) not in sys.path:
 
 # Imported after the sys.path bootstrap above.
 from fido2.mds3 import parse_blob  # noqa: E402
+from fido2.utils import websafe_decode  # noqa: E402
 from server.app import mds_snapshot_dir  # noqa: E402
 from server.app.mds_snapshot import (  # noqa: E402
     build_bootstrap_snapshot,
@@ -279,9 +280,18 @@ def snapshot_files(
     }
 
 
-def _build_verified_snapshot(blob: bytes) -> dict[str, object]:
-    payload = parse_blob(blob, FIDO_METADATA_TRUST_ROOT_CERT)
-    return dict(payload)
+def _build_verified_snapshot(
+    blob: bytes, trust_root: bytes = FIDO_METADATA_TRUST_ROOT_CERT
+) -> dict[str, object]:
+    """The BLOB's payload as the BLOB has it, once ``parse_blob`` has checked its
+    signature against the trust root and read it (a BLOB it cannot read fails
+    here). Its own JSON rather than ``parse_blob``'s dataclasses, which drop every
+    field they do not model: a status report's ``sunsetDate`` or
+    ``certificationProfiles``, a statement's ``friendlyNames``."""
+
+    parse_blob(blob, trust_root)
+    payload_segment = blob.rsplit(b".", 1)[0].split(b".")[1]
+    return json.loads(websafe_decode(payload_segment.decode("ascii")))
 
 
 def _publish_to_cloud_storage() -> int:

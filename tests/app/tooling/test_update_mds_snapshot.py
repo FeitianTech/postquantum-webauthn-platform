@@ -14,7 +14,9 @@ import pytest
 from cryptography import x509
 
 import tools.update_mds_snapshot as updater
+from fido2.attestation.base import InvalidSignature
 from server.app import mds_snapshot_dir
+from tests.app.metadata import mds_fixture
 
 
 def test_metadata_trust_root_is_globalsign_r46():
@@ -311,19 +313,61 @@ def test_build_cache_state_sets_fresh_values_when_blob_changed(monkeypatch):
     }
 
 
-def test_build_verified_snapshot_and_snapshot_files(monkeypatch, isolated_mds_paths):
+def _payload_with_unmodelled_fields() -> dict:
+    return {
+        "legalHeader": "test",
+        "no": 3,
+        "nextUpdate": "2026-10-20",
+        "entries": [
+            {
+                "aaguid": "0132d110-bf4e-4208-a403-ab4f5f12efe5",
+                "timeOfLastStatusChange": "2026-09-01",
+                "statusReports": [
+                    {
+                        "status": "FIDO_CERTIFIED_L1",
+                        "effectiveDate": "2026-09-01",
+                        "certificationProfiles": ["consumer"],
+                        "sunsetDate": "2029-09-01",
+                        "fipsRevision": 3,
+                        "fipsPhysicalSecurityLevel": 2,
+                        "notYetDefined": {"kept": True},
+                    }
+                ],
+            }
+        ],
+    }
+
+
+def test_the_verified_snapshot_is_the_payload_as_the_blob_has_it():
+    payload = _payload_with_unmodelled_fields()
+    blob, root = mds_fixture._signed_blob(payload)
+
+    assert updater._build_verified_snapshot(blob, root) == payload
+
+
+def test_the_verified_snapshot_is_checked_against_the_trust_root(monkeypatch):
+    blob, _root = mds_fixture._signed_blob(_payload_with_unmodelled_fields())
     seen = {}
 
-    def _fake_parse_blob(blob, cert):
-        seen["blob"] = blob
-        seen["cert"] = cert
-        return {"entries": [], "no": 1}
+    def _parse_blob(blob, cert):
+        seen["args"] = (blob, cert)
+        raise ValueError("bad signature")
 
-    monkeypatch.setattr(updater, "parse_blob", _fake_parse_blob)
-    verified = updater._build_verified_snapshot(b"blob-data")
-    assert verified == {"entries": [], "no": 1}
-    assert seen["blob"] == b"blob-data"
-    assert seen["cert"] == updater.FIDO_METADATA_TRUST_ROOT_CERT
+    monkeypatch.setattr(updater, "parse_blob", _parse_blob)
+    with pytest.raises(ValueError, match="bad signature"):
+        updater._build_verified_snapshot(blob)
+    assert seen["args"] == (blob, updater.FIDO_METADATA_TRUST_ROOT_CERT)
+
+
+def test_a_blob_signed_by_another_root_is_refused():
+    blob, _root = mds_fixture._signed_blob(_payload_with_unmodelled_fields())
+
+    with pytest.raises(InvalidSignature):
+        updater._build_verified_snapshot(blob)
+
+
+def test_build_verified_snapshot_and_snapshot_files(monkeypatch, isolated_mds_paths):
+    verified = {"entries": [], "no": 1}
 
     monkeypatch.setattr(
         updater, "build_explorer_snapshot", lambda _verified, _cache: {"entries": [], "meta": {"kind": "e"}}
