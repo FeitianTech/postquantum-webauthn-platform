@@ -553,12 +553,9 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
         lambda base_snapshot, **kwargs: compose_calls.append(kwargs) or {"meta": {}, "entries": [base_snapshot]},
     )
 
-    explorer_effective = metadata_module.load_effective_explorer_snapshot()
     full_effective = metadata_module.load_effective_full_snapshot()
-    assert explorer_effective["entries"]
     assert full_effective["entries"]
     assert compose_calls == [
-        {"include_detail": False},
         {"include_detail": True, "include_raw_entry": False, "compact_detail": True},
     ]
 

@@ -17,7 +17,6 @@ from . import (
 
 __all__ = ["get_mds_verifier",
            "load_cached_metadata_snapshot", "load_packaged_explorer_summary", "load_packaged_snapshot_meta",
-           "load_effective_explorer_snapshot",
            "load_effective_full_snapshot", "resolve_effective_metadata_entry", "ensure_metadata_session_id",
            "list_session_metadata_items", "save_session_metadata_item", "serialize_session_metadata_item",
            "delete_session_metadata_item", "expand_metadata_entry_payloads",
@@ -44,7 +43,6 @@ delete_session_metadata_item = sessions.delete_session_metadata_item
 serialize_session_metadata_item = sessions.serialize_session_metadata_item
 
 # Effective (base + session) snapshot composition.
-load_effective_explorer_snapshot = effective.load_effective_explorer_snapshot
 load_effective_full_snapshot = effective.load_effective_full_snapshot
 resolve_effective_metadata_entry = effective.resolve_effective_metadata_entry
 

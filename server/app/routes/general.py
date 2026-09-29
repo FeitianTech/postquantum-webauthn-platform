@@ -30,7 +30,6 @@ from ..webauthn.metadata import (
     ensure_metadata_session_id,
     expand_metadata_entry_payloads,
     list_session_metadata_items,
-    load_effective_explorer_snapshot,
     load_effective_full_snapshot,
     load_packaged_explorer_summary,
     load_packaged_snapshot_meta,
@@ -133,20 +132,6 @@ def api_get_metadata_info():
     return _no_store_json_response(_initial_mds_info())
 
 
-@bp.route("/api/mds/metadata/explorer", methods=["GET"])
-@waits_for_the_snapshot
-def api_get_explorer_metadata():
-    ensure_metadata_session_id()
-    snapshot = load_effective_explorer_snapshot()
-    if not snapshot.get("entries") and not snapshot.get("meta"):
-        return _no_store_json_response(
-            {"error": "Verified metadata snapshot is not available."},
-            status=404,
-        )
-    _remember_custom_entries_state(snapshot)
-    return _no_store_json_response(snapshot)
-
-
 @bp.route("/api/mds/metadata/explorer/full", methods=["GET"])
 @waits_for_the_snapshot
 def api_get_full_explorer_metadata():
@@ -192,22 +177,6 @@ def api_resolve_metadata_entry():
         return _no_store_json_response({"error": "Metadata entry not found."}, status=404)
 
     return _no_store_json_response({"entry": resolved})
-
-
-@bp.route("/api/mds/metadata/base", methods=["GET"])
-@waits_for_the_snapshot
-def api_get_verified_metadata():
-    metadata_path = mds_snapshot_dir.snapshot_file(mds_snapshot_dir.VERIFIED)
-    try:
-        with open(metadata_path, "r", encoding="utf-8") as metadata_file:
-            payload = json.load(metadata_file)
-    except FileNotFoundError:
-        return jsonify({"error": "Verified metadata snapshot is not available."}), 404
-    except json.JSONDecodeError as exc:
-        logger.error("Invalid verified metadata snapshot: %s", exc)
-        return jsonify({"error": "Verified metadata snapshot is corrupted."}), 500
-
-    return jsonify(payload)
 
 
 @bp.route("/api/mds/metadata/custom", methods=["GET"])

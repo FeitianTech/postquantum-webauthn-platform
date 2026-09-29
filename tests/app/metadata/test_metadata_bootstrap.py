@@ -110,24 +110,6 @@ def test_the_mds_info_answers_the_summary_and_the_custom_entries_state(monkeypat
     assert result == {"customEntriesState": "unknown"}
 
 
-def test_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_config):
-    general_module = pytest.importorskip("server.app.routes.general")
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(
-        general_module,
-        "load_effective_explorer_snapshot",
-        lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test"}]},
-    )
-
-    with entry_app().test_client() as client:
-        response = client.get("/api/mds/metadata/explorer")
-
-    assert response.status_code == 200
-    assert response.get_json() == {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test"}]}
-    assert response.headers["Cache-Control"] == "no-store"
-    assert response.headers["Vary"] == "Cookie"
-
-
 def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")

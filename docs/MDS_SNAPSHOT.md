@@ -30,7 +30,7 @@ served under a URL of its own.
 without it answers `instance/mds-snapshot` (in the image, `/app/instance/mds-snapshot`;
 `docker compose` mounts `./instance`, so a local container keeps its copy there). It is a leaf with no Flask import, so every
 reader and writer follows the one setting: the server's metadata loaders
-(`webauthn/metadata/blob.py`), `/api/mds/metadata/base`, the provisioning below,
+(`webauthn/metadata/blob.py`), the provisioning below,
 `tools/update_mds_snapshot.py`, and the packaged snapshot browsers load
 (`/assets/mds/fido-mds3.explorer.full.json`, served from that directory with its `.gz`
 sibling, `server/app/static_assets.py`). The page is given that URL as `snapshotUrl`
@@ -60,8 +60,8 @@ on demand, trying three tiers in order. It runs once per process, from the
 background warm-up on a Cloud Run cold start and from the first request that
 needs the snapshot otherwise.
 
-The routes that read the snapshot (`/api/mds/metadata/info`, `explorer`,
-`explorer/full`, `resolve`, `base`, the upload and the delete, the browsers'
+The routes that read the snapshot (`/api/mds/metadata/info`,
+`explorer/full`, `resolve`, the upload and the delete, the browsers'
 copy at its versioned URL, and both registrations' complete, which look the new
 credential's AAGUID up and record what they found for good) call
 `ensure_snapshot_available()` first (`mds_provisioning.waits_for_the_snapshot`): on a cold
@@ -116,8 +116,7 @@ and the next check tries again.
 
 The application still starts and serves. `/health` and `/` work; the explorer APIs
 answer `200` with no entries (their `404` branch is not reached: the snapshot they
-compose always has its counts), `/api/mds/metadata/base` answers `404` with
-"Verified metadata snapshot is not available", the page is given no `snapshotUrl` (so
+compose always has its counts), the page is given no `snapshotUrl` (so
 it requests no missing file), and the explorer shows no entries (it says the
 packaged metadata is unavailable). This is the behaviour that already existed for a missing snapshot —
 the relocation did not introduce a new failure mode.

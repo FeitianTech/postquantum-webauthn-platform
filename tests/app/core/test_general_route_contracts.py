@@ -92,43 +92,11 @@ def test_decode_and_certificate_routes_cover_error_and_success_paths(monkeypatch
         }
 
 
-def test_metadata_routes_cover_verified_snapshot_and_custom_error_branches(monkeypatch, tmp_path):
+def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
     general_module = pytest.importorskip("server.app.routes.general")
     pytest.importorskip("server.app.app")
 
     with entry_app().test_client() as client:
-        # One snapshot directory per case, each holding the verified file as named.
-        monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path / "missing"))
-
-        missing_response = client.get("/api/mds/metadata/base")
-        assert missing_response.status_code == 404
-        assert missing_response.get_json() == {
-            "error": "Verified metadata snapshot is not available."
-        }
-
-        corrupted_dir = tmp_path / "corrupted"
-        corrupted_dir.mkdir()
-        (corrupted_dir / "fido-mds3.verified.json").write_text("{bad", encoding="utf-8")
-        monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(corrupted_dir))
-
-        corrupted_response = client.get("/api/mds/metadata/base")
-        assert corrupted_response.status_code == 500
-        assert corrupted_response.get_json() == {
-            "error": "Verified metadata snapshot is corrupted."
-        }
-
-        valid_dir = tmp_path / "valid"
-        valid_dir.mkdir()
-        valid_payload = {"entries": [{"entryId": "test-entry"}]}
-        (valid_dir / "fido-mds3.verified.json").write_text(
-            '{"entries":[{"entryId":"test-entry"}]}', encoding="utf-8"
-        )
-        monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(valid_dir))
-
-        valid_response = client.get("/api/mds/metadata/base")
-        assert valid_response.status_code == 200
-        assert valid_response.get_json() == valid_payload
-
         session_calls = []
         monkeypatch.setattr(
             general_module,
@@ -362,14 +330,7 @@ def test_general_empty_snapshot_and_upload_branches(monkeypatch):
 
     with entry_app().test_client() as client:
         monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
-        monkeypatch.setattr(general_module, "load_effective_explorer_snapshot", lambda: {})
         monkeypatch.setattr(general_module, "load_effective_full_snapshot", lambda: {})
-
-        explorer_missing = client.get("/api/mds/metadata/explorer")
-        assert explorer_missing.status_code == 404
-        assert explorer_missing.get_json() == {
-            "error": "Verified metadata snapshot is not available."
-        }
 
         full_explorer_missing = client.get("/api/mds/metadata/explorer/full")
         assert full_explorer_missing.status_code == 404

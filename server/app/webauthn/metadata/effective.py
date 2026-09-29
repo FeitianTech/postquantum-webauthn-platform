@@ -149,11 +149,6 @@ def _compose_effective_snapshot(
     return {"meta": meta, "entries": effective_entries}
 
 
-def load_effective_explorer_snapshot() -> dict[str, Any]:
-    base_snapshot, _ = blob._load_base_explorer_snapshot()
-    return _compose_effective_snapshot(base_snapshot, include_detail=False)
-
-
 def load_effective_full_snapshot() -> dict[str, Any]:
     base_snapshot, _ = blob._load_base_full_snapshot()
     return _compose_effective_snapshot(
