@@ -128,31 +128,6 @@ def test_readkey_falls_back_to_legacy_gcs(monkeypatch):
     assert legacy_blob in observed
 
 
-def test_delkey_removes_the_legacy_copies_and_empties_the_current_one(monkeypatch):
-    name = "carol@example.com"
-    session_id = "session-three"
-    legacy_blob = credentials._legacy_credential_blob(name)
-    new_blob = credentials._credential_blob(name, session_id)
-
-    deleted = []
-    uploaded = []
-
-    def fake_delete(blob_name: str, *, missing_ok: bool = True):
-        deleted.append((blob_name, missing_ok))
-
-    monkeypatch.setattr(credentials, "delete_blob", fake_delete)
-    monkeypatch.setattr(credentials, "blob_exists", lambda blob_name: blob_name == legacy_blob)
-    monkeypatch.setattr(
-        credentials, "upload_bytes", lambda blob_name, data, content_type=None: uploaded.append((blob_name, data))
-    )
-
-    credentials.delkey(name, session_id=session_id)
-
-    assert deleted == [(legacy_blob, True)]
-    assert [blob for blob, _data in uploaded] == [new_blob]
-    assert json.loads(uploaded[0][1])["credentials"] == []
-
-
 def test_readkey_returns_empty_list_for_corrupted_payload(monkeypatch):
     monkeypatch.setattr(credentials, "download_bytes", lambda _blob_name: b"not-a-valid-pickle")
 
@@ -172,17 +147,17 @@ def test_resolve_session_id_falls_back_to_metadata_session(monkeypatch):
     assert credentials._resolve_session_id("   ") == "fallback-session-id"
 
 
-def test_savekey_uploads_payload_to_session_scoped_gcs_blob(monkeypatch):
+def test_save_uploads_payload_to_session_scoped_gcs_blob(monkeypatch):
     uploads = []
 
-    monkeypatch.setattr(
-        credentials,
-        "upload_bytes",
-        lambda blob_name, payload, *, content_type=None: uploads.append((blob_name, payload, content_type)),
-    )
+    def _upload(blob_name, payload, *, generation, content_type=None):
+        uploads.append((blob_name, payload, content_type))
+        return True
+
+    monkeypatch.setattr(credentials, "upload_bytes_if_generation", _upload)
 
     value = [{"credential_data": "saved"}]
-    credentials.savekey("alice@example.com", value, session_id="session-save")
+    assert credentials.save_if_unchanged("alice@example.com", value, 0, session_id="session-save")
 
     assert len(uploads) == 1
     blob_name, payload, content_type = uploads[0]
@@ -220,18 +195,3 @@ def test_readkey_reads_past_copies_that_are_not_there(monkeypatch):
 
     assert credentials.readkey("alice@example.com", session_id="session-read") == []
     assert len(calls) == 4
-
-
-def test_delkey_raises_when_a_gcs_delete_fails(monkeypatch):
-    monkeypatch.setattr(
-        credentials,
-        "delete_blob",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("delete failed")),
-    )
-    monkeypatch.setattr(credentials, "blob_exists", lambda _blob_name: True)
-    monkeypatch.setattr(credentials, "upload_bytes", lambda *_args, **_kwargs: None)
-
-    # A missing blob is not an error (delete_blob is called with missing_ok);
-    # a failed delete is, or the caller would report a deletion that did not happen.
-    with pytest.raises(RuntimeError, match="delete failed"):
-        credentials.delkey("alice@example.com", session_id="session-delete")

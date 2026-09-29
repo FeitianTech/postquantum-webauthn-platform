@@ -10,6 +10,8 @@ import subprocess
 
 import pytest
 
+from tests.app.storage.credential_seed import seed_records
+
 
 @pytest.fixture
 def store_in(monkeypatch, storage_module):
@@ -24,7 +26,7 @@ def store_in(monkeypatch, storage_module):
 def test_the_store_root_gets_a_gitignore_that_ignores_everything(tmp_path, store_in):
     store = store_in(tmp_path / "credentials")
 
-    store.savekey("alice@example.com", [{"credential_data": "x"}], session_id="session-a")
+    seed_records(store, "alice@example.com", [{"credential_data": "x"}], session_id="session-a")
 
     lines = (tmp_path / "credentials" / ".gitignore").read_text().splitlines()
     assert "*" in lines
@@ -37,7 +39,7 @@ def test_a_gitignore_already_there_is_kept(tmp_path, store_in):
     (root / ".gitignore").write_text("mine\n")
     store = store_in(root)
 
-    store.savekey("alice@example.com", [{"credential_data": "x"}], session_id="session-a")
+    seed_records(store, "alice@example.com", [{"credential_data": "x"}], session_id="session-a")
 
     assert (root / ".gitignore").read_text() == "mine\n"
 
@@ -49,7 +51,7 @@ def test_git_offers_nothing_of_a_store_inside_a_checkout(tmp_path, store_in):
     subprocess.run(["git", "init", "-q", str(checkout)], check=True)
     store = store_in(checkout / "my-credentials")
 
-    store.savekey("alice@example.com", [{"credential_data": "x"}], session_id="session-a")
+    seed_records(store, "alice@example.com", [{"credential_data": "x"}], session_id="session-a")
 
     status = subprocess.run(
         ["git", "-C", str(checkout), "status", "--porcelain", "--untracked-files=all"],

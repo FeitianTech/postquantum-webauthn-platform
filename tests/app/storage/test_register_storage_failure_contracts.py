@@ -44,10 +44,10 @@ class _SimpleFakeServer:
         return self._auth_data
 
 
-def test_simple_register_complete_returns_500_when_savekey_fails(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
+def test_simple_register_complete_returns_500_when_saving_fails(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
     pytest.importorskip("server.app.app")
 
-    credential_id = b"simple-savekey-fail"
+    credential_id = b"simple-save-fail"
     rp_id = "example.com"
 
     auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)

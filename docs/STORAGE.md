@@ -15,12 +15,6 @@ compare-and-swap: a GCS generation precondition, or locally an `flock` on the
 file's `.lock` beside it (`common.file_lock`, with `common.replace_file` and
 `common.file_digest`).
 
-`delkey` empties the current copy -- it leaves it in place, holding no records,
-whenever any copy existed -- and removes every legacy copy, locally under that
-lock. A save whose records came from a legacy copy holds "there is no current
-copy" as its version; a removed current copy would make that true again and let
-the save write deleted records back.
-
 ## What a read tells apart
 
 A store read tells three cases apart. Nothing stored is fine. A copy or a listing

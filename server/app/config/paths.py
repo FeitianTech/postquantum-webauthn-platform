@@ -1,7 +1,6 @@
 """Where the server's files are: the project root, runtime data and the instance folder.
 
-``basepath`` is the ``server.app`` package directory, which is also where local
-credential pickles are kept.
+``basepath`` is the ``server.app`` package directory.
 """
 from __future__ import annotations
 

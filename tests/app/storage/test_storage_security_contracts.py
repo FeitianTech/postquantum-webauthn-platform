@@ -27,6 +27,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.app.storage.credential_seed import seed_records
+
 
 def _discover_repo_root(start: Path) -> Path:
     for candidate in start.parents:
@@ -147,16 +149,16 @@ def test_local_path_helpers_reject_traversal_names(local_store, name):
 
 @pytest.mark.parametrize("name", TRAVERSAL_NAMES)
 def test_public_api_rejects_traversal_names(local_store, name):
-    """``savekey``/``readkey``/``delkey`` refuse rather than touching the path."""
+    """Saving and reading refuse rather than touching the path."""
 
     store = local_store.storage
 
     with pytest.raises(ValueError):
-        store.savekey(name, [{"credential_data": "x"}], session_id="session-a")
+        store.save_if_unchanged(name, [{"credential_data": "x"}], None, session_id="session-a")
     with pytest.raises(ValueError):
         store.readkey(name, session_id="session-a")
     with pytest.raises(ValueError):
-        store.delkey(name, session_id="session-a")
+        store.read_for_update(name, session_id="session-a")
 
 
 @pytest.mark.parametrize("session_id", TRAVERSAL_NAMES)
@@ -165,8 +167,6 @@ def test_session_identifier_rejects_traversal(local_store, session_id):
 
     store = local_store.storage
 
-    with pytest.raises(ValueError):
-        store._local_directory(session_id)
     with pytest.raises(ValueError):
         store._local_filename("alice@example.com", session_id)
 
@@ -180,7 +180,7 @@ def test_traversal_never_creates_anything_outside_the_root(local_store):
     escape = "../../outside/pwned"
 
     with pytest.raises(ValueError):
-        store.savekey(escape, [{"credential_data": "x"}], session_id="session-a")
+        store.save_if_unchanged(escape, [{"credential_data": "x"}], None, session_id="session-a")
 
     assert list(outside.iterdir()) == []
 
@@ -202,11 +202,8 @@ def test_legitimate_names_round_trip_through_the_store(local_store, name):
     store = local_store.storage
     payload = [{"credential_data": "demo", "user_info": {"name": name}}]
 
-    store.savekey(name, payload, session_id="session-a")
+    seed_records(store, name, payload, session_id="session-a")
     assert store.readkey(name, session_id="session-a") == payload
-
-    store.delkey(name, session_id="session-a")
-    assert store.readkey(name, session_id="session-a") == []
 
 
 def test_dotted_name_is_not_confused_with_a_parent_reference(local_store):
@@ -214,7 +211,7 @@ def test_dotted_name_is_not_confused_with_a_parent_reference(local_store):
 
     store = local_store.storage
 
-    store.savekey("first.last@example.com", [{"a": 1}], session_id="session-a")
+    seed_records(store, "first.last@example.com", [{"a": 1}], session_id="session-a")
 
     assert store.readkey("first.last@example.com", session_id="session-a") == [{"a": 1}]
     with pytest.raises(ValueError):
@@ -341,7 +338,7 @@ def test_json_round_trip_preserves_bytes_fields_exactly(local_store):
         "properties": {"nested": {"deeper": [b"\x01", {"k": b"\x02"}]}},
     }
 
-    store.savekey("alice@example.com", [record], session_id="session-a")
+    seed_records(store, "alice@example.com", [record], session_id="session-a")
     (restored,) = store.readkey("alice@example.com", session_id="session-a")
 
     assert restored["user_info"]["user_handle"] == bytes(range(256))
@@ -368,7 +365,7 @@ def test_stored_file_is_json_with_base64url_bytes(local_store):
     store = local_store.storage
     raw = bytes([0xFB, 0xFF, 0x3E, 0x3F])  # encodes with - and _ in base64url
 
-    store.savekey("alice@example.com", [{"blob": raw}], session_id="session-a")
+    seed_records(store, "alice@example.com", [{"blob": raw}], session_id="session-a")
 
     path = store._local_filename("alice@example.com", "session-a")
     envelope = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -382,10 +379,10 @@ def test_stored_file_is_json_with_base64url_bytes(local_store):
     assert base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)) == raw
 
 
-def test_savekey_never_writes_a_pickle_file(local_store):
+def test_saving_never_writes_a_pickle_file(local_store):
     store = local_store.storage
 
-    store.savekey("alice@example.com", [{"a": 1}], session_id="session-a")
+    seed_records(store, "alice@example.com", [{"a": 1}], session_id="session-a")
 
     # Beside each credential file, the empty lock file its writers take.
     locks = [p for p in local_store.root.rglob("*.lock") if p.is_file()]
@@ -441,7 +438,7 @@ def test_legacy_pickle_is_converted_to_json_on_the_next_write(local_store):
     assert existing == [{"seq": 1}]
 
     existing.append({"seq": 2})
-    store.savekey("alice@example.com", existing, session_id="session-a")
+    seed_records(store, "alice@example.com", existing, session_id="session-a")
 
     json_path = Path(store._local_filename("alice@example.com", "session-a"))
     assert json_path.is_file()
@@ -459,9 +456,9 @@ def test_legacy_pickle_is_converted_to_json_on_the_next_write(local_store):
 
 def test_readkey_reads_both_json_and_legacy_pickle(local_store):
     store = local_store.storage
-    session_dir = Path(store._local_directory("session-a", create=True))
+    session_dir = Path(store._local_filename("alice@example.com", "session-a", create=True)).parent
 
-    store.savekey("alice@example.com", [{"where": "json"}], session_id="session-a")
+    seed_records(store, "alice@example.com", [{"where": "json"}], session_id="session-a")
     (session_dir / "bob@example.com_credential_data.pkl").write_bytes(
         pickle.dumps([{"where": "pickle"}])
     )

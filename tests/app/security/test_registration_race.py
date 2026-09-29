@@ -97,8 +97,6 @@ def test_eight_registrations_for_one_user_at_once_all_keep_their_credential(app,
 
         return _write
 
-    # Both writes are wrapped: the plain save the old code made and the conditional one.
-    monkeypatch.setattr(store, "savekey", _after_everyone_has_read(store.savekey))
     monkeypatch.setattr(store, "save_if_unchanged", _after_everyone_has_read(store.save_if_unchanged))
 
     responses = [None] * WRITERS

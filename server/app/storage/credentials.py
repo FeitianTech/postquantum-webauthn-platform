@@ -23,13 +23,11 @@ from ..config import basepath
 from ..config.paths import INSTANCE_ROOT
 from . import record_format
 from .cloud import (
-    blob_exists,
     build_blob_name,
     delete_blob,
     download_bytes,
     download_bytes_with_generation,
     gcs_enabled,
-    upload_bytes,
     upload_bytes_if_generation,
 )
 from .common import (
@@ -51,11 +49,9 @@ __all__ = [
     "CredentialsUndecodable",
     "add_public_key_material",
     "convert_bytes_for_json",
-    "delkey",
     "read_for_update",
     "readkey",
     "save_if_unchanged",
-    "savekey",
 ]
 
 
@@ -164,20 +160,6 @@ def _make_session_directory(root: str, directory: str) -> None:
         replace_file(ignore, b"# Written by the credential store: nothing here belongs in git.\n*\n")
 
 
-def _local_directory(
-    session_id: str,
-    *,
-    create: bool = False,
-    base: str | None = None,
-) -> str:
-    cleaned = _validate_session_id(session_id)
-    root = _LOCAL_CREDENTIAL_BASE if base is None else base
-    directory = resolve_contained_path(root, cleaned)
-    if create:
-        _make_session_directory(root, directory)
-    return directory
-
-
 def _legacy_local_filename(name: str) -> str:
     """Path of the pre-session, flat ``server/app/<name>_credential_data.pkl`` file."""
 
@@ -249,20 +231,6 @@ def _discard_superseded_pickle(name: str, session_id: str) -> None:
             pass
 
 
-def savekey(name: str, key: Any, *, session_id: str | None = None) -> None:
-    payload = record_format.encode_records(key)
-    resolved_session = _resolve_session_id(session_id)
-    if _using_gcs():
-        blob_name = _credential_blob(name, resolved_session)
-        upload_bytes(blob_name, payload, content_type="application/json")
-    else:
-        path = _local_filename(name, resolved_session, create=True)
-        with file_lock(path):
-            replace_file(path, payload)
-
-    _discard_superseded_pickle(name, resolved_session)
-
-
 def read_for_update(name: str, *, session_id: str | None = None) -> tuple[list[Any], Any]:
     """``readkey``, and the version of the copy a later save would replace.
 
@@ -300,7 +268,7 @@ def read_for_update(name: str, *, session_id: str | None = None) -> tuple[list[A
 
 
 def save_if_unchanged(name: str, key: Any, version: Any, *, session_id: str | None = None) -> bool:
-    """``savekey``, only if the copy it replaces is still at ``version``.
+    """Save ``key`` as ``name``'s records, only if the copy it replaces is still at ``version``.
 
     Compare-and-swap for a read-modify-write such as advancing a signature
     counter: returns ``False``, having written nothing, when another writer
@@ -387,70 +355,6 @@ def _first_copy(name: str, session_id: str) -> tuple[str, bytes] | None:
         if payload is not None:
             return source, payload
     return None
-
-
-def delkey(name: str, *, session_id: str | None = None) -> None:
-    """Delete ``name``'s credentials: empty the current copy, remove every legacy copy.
-
-    When any copy existed, the current copy is left in place holding no records
-    instead of being removed. A save that read while there was no current copy
-    -- its records a legacy copy's -- holds "there is none" as its version;
-    removing the current copy would make that true again, and the save would
-    write the deleted records back. An emptied copy never matches it. Locally
-    all of this happens under the current copy's lock.
-
-    A copy that is not there is already deleted. Anything else -- a refused
-    permission, an unreachable bucket -- is raised once every other copy has
-    been tried, so a caller never reports a deletion that did not happen.
-    """
-
-    resolved_session = _resolve_session_id(session_id)
-    emptied = record_format.encode_records([])
-    errors: list[Exception] = []
-    if _using_gcs():
-        current = _credential_blob(name, resolved_session)
-        existed = False
-        for blob_name in _candidate_gcs_blob_names(name, resolved_session):
-            if blob_name == current:
-                continue
-            try:
-                if blob_exists(blob_name):
-                    existed = True
-                    delete_blob(blob_name, missing_ok=True)
-            except Exception as exc:
-                errors.append(exc)
-        try:
-            # A legacy copy it could not check may exist: empty the current copy then too.
-            if existed or errors or blob_exists(current):
-                upload_bytes(current, emptied, content_type="application/json")
-        except Exception as exc:
-            errors.append(exc)
-    else:
-        current = _local_filename(name, resolved_session)
-        legacy = [path for path in _candidate_local_paths(name, resolved_session) if path != current]
-        if not any(os.path.exists(path) for path in (current, *legacy)):
-            # Nothing stored: no lock file and no session directory either.
-            return
-        current = _local_filename(name, resolved_session, create=True)
-        with file_lock(current):
-            existed = False
-            for path in (current, *legacy):
-                existed = existed or os.path.exists(path)
-                if path == current:
-                    continue
-                try:
-                    os.remove(path)
-                except FileNotFoundError:
-                    continue
-                except OSError as exc:
-                    errors.append(exc)
-            if existed:
-                try:
-                    replace_file(current, emptied)
-                except OSError as exc:
-                    errors.append(exc)
-    if errors:
-        raise errors[0]
 
 
 def convert_bytes_for_json(obj: Any) -> Any:

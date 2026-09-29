@@ -8,6 +8,7 @@ import pickle
 import pytest
 
 from server.app.storage import record_format
+from tests.app.storage.credential_seed import seed_records
 
 
 @pytest.fixture
@@ -48,11 +49,6 @@ def test_storage_identifier_validators_reject_invalid_inputs(storage_local):
         storage._legacy_credential_blob("   ")
 
     with pytest.raises(ValueError):
-        storage._local_directory(None)
-    with pytest.raises(ValueError):
-        storage._local_directory("   ")
-
-    with pytest.raises(ValueError):
         storage._legacy_local_filename("   ")
     with pytest.raises(ValueError):
         storage._legacy_local_filename(123)
@@ -87,16 +83,13 @@ def test_candidate_gcs_blob_names_deduplicates_duplicates(storage_local, monkeyp
     assert list(storage._candidate_gcs_blob_names("alice", "session-a")) == ["same"]
 
 
-def test_local_save_read_and_delete_roundtrip(storage_local):
+def test_local_save_and_read_roundtrip(storage_local):
     storage, _ = storage_local
 
     payload = [{"credential_data": "demo"}]
 
-    storage.savekey("alice", payload, session_id="session-a")
+    seed_records(storage, "alice", payload, session_id="session-a")
     assert storage.readkey("alice", session_id="session-a") == payload
-
-    storage.delkey("alice", session_id="session-a")
-    assert storage.readkey("alice", session_id="session-a") == []
 
 
 def test_local_readkey_falls_back_to_legacy_file(storage_local):
@@ -113,7 +106,7 @@ def test_local_readkey_falls_back_to_legacy_file(storage_local):
 
 def test_the_session_scoped_legacy_store_is_read_from_the_test_directory(storage_local):
     # The legacy store once lived in server/app/session-credentials/. Reading it
-    # from there would read, and delkey would remove, the checkout's own files.
+    # from there would read the checkout's own files.
     storage, tmp_path = storage_local
     legacy_base = str(tmp_path / "legacy")
     assert storage._LEGACY_LOCAL_CREDENTIAL_BASE == legacy_base
@@ -123,8 +116,6 @@ def test_the_session_scoped_legacy_store_is_read_from_the_test_directory(storage
         handle.write(record_format.encode_records([{"where": "legacy session store"}]))
 
     assert storage.readkey("alice", session_id="session-a") == [{"where": "legacy session store"}]
-    storage.delkey("alice", session_id="session-a")
-    assert not os.path.exists(path)
 
 
 def test_local_readkey_returns_empty_for_non_list_or_corrupt_pickle(storage_local):
@@ -139,12 +130,6 @@ def test_local_readkey_returns_empty_for_non_list_or_corrupt_pickle(storage_loca
     with open(path, "wb") as handle:
         handle.write(b"not-a-pickle")
     assert storage.readkey("alice", session_id="session-a") == []
-
-
-def test_local_delkey_swallows_missing_files(storage_local):
-    storage, _ = storage_local
-
-    storage.delkey("missing", session_id="session-a")
 
 
 def test_convert_bytes_and_public_key_material_helpers(storage_local):
@@ -181,4 +166,3 @@ def test_add_public_key_material_respects_existing_type_and_algorithm(storage_lo
     untouched = {"x": 1}
     storage.add_public_key_material(untouched, "not-a-dict")
     assert untouched == {"x": 1}
-

@@ -44,8 +44,6 @@ def test_the_store_refuses_a_traversal_name_before_touching_a_path(store, storag
 
     with pytest.raises(InvalidStorageIdentifier):
         storage_module.readkey(TRAVERSAL, session_id="session-name-errors")
-    with pytest.raises(InvalidStorageIdentifier):
-        storage_module.delkey(TRAVERSAL, session_id="session-name-errors")
 
     assert sorted(path.name for path in store.iterdir()) == []
 

@@ -15,6 +15,7 @@ import threading
 import pytest
 
 from server.app.storage import credentials as store
+from tests.app.storage.credential_seed import seed_records
 
 from . import fake_gcs
 
@@ -28,7 +29,7 @@ def local_store(monkeypatch, tmp_path):
     monkeypatch.setattr(store, "_LOCAL_CREDENTIAL_BASE", str(tmp_path / "credentials"))
     monkeypatch.setattr(store, "_LEGACY_LOCAL_CREDENTIAL_BASE", str(tmp_path / "legacy"))
     monkeypatch.setattr(store, "basepath", str(tmp_path / "flat"))
-    store.savekey(NAME, [{"sign_count": 5}], session_id=SESSION)
+    seed_records(store, NAME, [{"sign_count": 5}], session_id=SESSION)
     return tmp_path
 
 
@@ -42,7 +43,7 @@ def test_a_save_after_an_unchanged_read_is_written(local_store):
 
 def test_a_save_after_someone_else_wrote_is_refused_and_writes_nothing(local_store):
     records, version = store.read_for_update(NAME, session_id=SESSION)
-    store.savekey(NAME, [{"sign_count": 9}], session_id=SESSION)
+    seed_records(store, NAME, [{"sign_count": 9}], session_id=SESSION)
     records[0]["sign_count"] = 6
 
     assert store.save_if_unchanged(NAME, records, version, session_id=SESSION) is False
@@ -116,7 +117,7 @@ def test_of_three_processes_that_read_the_same_version_one_writes(local_store):
 @pytest.fixture
 def gcs_store(monkeypatch):
     bucket = fake_gcs.install(monkeypatch, store)
-    store.savekey(NAME, [{"sign_count": 5}], session_id=SESSION)
+    seed_records(store, NAME, [{"sign_count": 5}], session_id=SESSION)
     return bucket
 
 
@@ -146,46 +147,3 @@ def test_a_conditional_gcs_upload_is_not_retried_by_the_client_library(gcs_store
     store.save_if_unchanged(NAME, records, version, session_id=SESSION)
 
     assert gcs_store.upload_retries[-1] is None
-
-
-def test_a_delete_during_a_save_waits_for_it_and_leaves_no_records(local_store, monkeypatch):
-    # The save is paused inside the store's lock, between its check and its
-    # rename. A delete that did not take the lock would remove the file there,
-    # and the rename would then write the deleted records back.
-    records, version = store.read_for_update(NAME, session_id=SESSION)
-    path = store._local_filename(NAME, SESSION)
-    renaming, release = threading.Event(), threading.Event()
-    real_replace = os.replace
-
-    def _paused_replace(source, destination, *args, **kwargs):
-        if destination == path and threading.current_thread().name == "saver":
-            renaming.set()
-            release.wait(10)
-        return real_replace(source, destination, *args, **kwargs)
-
-    monkeypatch.setattr(os, "replace", _paused_replace)
-    saved = []
-    saver = threading.Thread(
-        name="saver",
-        target=lambda: saved.append(store.save_if_unchanged(NAME, records + [{"sign_count": 6}], version, session_id=SESSION)),
-    )
-    saver.start()
-    assert renaming.wait(10)
-    deleter = threading.Thread(target=lambda: store.delkey(NAME, session_id=SESSION))
-    deleter.start()
-    deleter.join(0.5)
-    release.set()
-    saver.join(10)
-    deleter.join(10)
-
-    assert saved == [True]
-    # Emptied, not removed: see delkey.
-    with open(path, "rb") as handle:
-        assert store.record_format.decode_payload(handle.read()) == []
-    assert store.readkey(NAME, session_id=SESSION) == []
-
-
-def test_deleting_a_name_with_nothing_stored_leaves_no_lock_file(local_store):
-    store.delkey("nobody@example.com", session_id=SESSION)
-
-    assert not os.path.exists(store._local_filename("nobody@example.com", SESSION) + ".lock")

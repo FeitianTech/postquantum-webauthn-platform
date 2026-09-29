@@ -3,7 +3,7 @@
 Where the "stored" counter comes from
 -------------------------------------
 The simple flow keeps two copies of each credential: the server-side record
-written by ``savekey`` at registration, and the browser's own copy, which it
+written at registration, and the browser's own copy, which it
 sends back as the credential list on ``/authenticate/begin``. The server record
 is authoritative; the browser copy is attacker-controllable, so it may only
 ever make the check *stricter*. The stored value is therefore the larger of the
