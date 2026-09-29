@@ -564,8 +564,10 @@ def parse_blob(blob: bytes, trust_root: bytes | None) -> MetadataBlobPayload:
     NOTE: If trust_root is None, the signature of the blob will NOT be verified!
     """
     message, signature_b64 = blob.rsplit(b".", 1)
-    signature = websafe_decode(signature_b64)
-    header, payload = (json.loads(websafe_decode(x)) for x in message.split(b"."))
+    signature = websafe_decode(signature_b64.decode("ascii"))
+    header, payload = (
+        json.loads(websafe_decode(x.decode("ascii"))) for x in message.split(b".")
+    )
 
     leaf_der: bytes | None = None
     if trust_root is not None:
@@ -593,6 +595,6 @@ def parse_blob(blob: bytes, trust_root: bytes | None) -> MetadataBlobPayload:
 
         cose_key.verify(message, signature)
     else:
-        logger.warn("Parsing MDS blob without trust anchor, CONTENT IS NOT VERIFIED!")
+        logger.warning("Parsing MDS blob without trust anchor, CONTENT IS NOT VERIFIED!")
 
     return MetadataBlobPayload.from_dict(payload)

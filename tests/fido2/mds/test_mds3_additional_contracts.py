@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import warnings as warnings_module
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -257,7 +258,7 @@ def test_parse_blob_without_trust_anchor_logs_warning(monkeypatch):
     import fido2.mds3 as mds3_module
 
     warnings = []
-    monkeypatch.setattr(mds3_module.logger, "warn", lambda message: warnings.append(message))
+    monkeypatch.setattr(mds3_module.logger, "warning", lambda message: warnings.append(message))
 
     blob = _build_blob({"alg": "ES256", "typ": "JWT"}, _minimal_payload())
     parsed = parse_blob(blob, None)
@@ -265,6 +266,16 @@ def test_parse_blob_without_trust_anchor_logs_warning(monkeypatch):
     assert parsed.no == 1
     assert warnings
     assert "without trust anchor" in warnings[0]
+
+
+def test_parse_blob_decodes_its_segments_without_the_deprecated_bytes_path():
+    # websafe_decode warns on bytes (python-fido2 2.0 refuses them); the BLOB's
+    # segments are ASCII text, so parse_blob decodes them as such.
+    blob = _build_blob({"alg": "ES256", "typ": "JWT"}, _minimal_payload())
+    with warnings_module.catch_warnings():
+        warnings_module.simplefilter("error", DeprecationWarning)
+        parsed = parse_blob(blob, None)
+    assert parsed.no == 1
 
 
 def test_parse_blob_trust_anchor_paths_cover_leaf_fallback_and_public_key_errors(monkeypatch):
