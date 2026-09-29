@@ -1,8 +1,8 @@
-"""The new UI in ``web/src`` keeps the same rules as the legacy scripts, and keeps one copy of the logic.
+"""The UI's sources in ``web/src`` keep the CSP's rules, and keep one copy of the logic.
 
 What ships from ``web/src`` (everything but its tests) is held to what the strict
-CSP and the Trusted Types report-only policy need, with the legacy guards' own
-readers (``test_html_sinks.py``, ``test_inline_code.py``):
+CSP and the Trusted Types report-only policy need, with the logic modules' guards'
+own readers (``test_html_sinks.py``, ``test_inline_code.py``):
 
 - no markup sink (``innerHTML``, ``document.write``, ...) and no
   ``dangerouslySetInnerHTML``, ``DOMParser`` or ``srcdoc``: React builds the DOM;
@@ -14,13 +14,11 @@ readers (``test_html_sinks.py``, ``test_inline_code.py``):
 - nothing written to ``window`` / ``globalThis`` / ``self``, and no ``atob``
   (``shared/utils/base64.js`` decodes strictly).
 
-And the logic both UIs share is imported, never copied (docs/UI_MIGRATION.md):
-no module in ``web/src`` defines a name the logic modules export, or carries one
-of their sentences. The logic modules are ``LOGIC_ROOTS`` (the Analyze Browser's,
-the Codec's, the failed-response reader), every module ``web/src`` imports through
-``@legacy/``, and everything those import in turn. None of them touches the DOM:
-the legacy UI's views stay in their own modules, and the export pre-renders these
-in Node.
+And the logic is imported, never copied: no module in ``web/src`` defines a name
+the logic modules export, or carries one of their sentences. The logic modules
+are the ``.js`` files under ``web/src/logic`` (their tests aside), which import
+only each other; web/'s components reach them as ``@/logic/…``. None of them
+touches the DOM: the export pre-renders them in Node.
 
 Each ``ALLOWED`` dict may only shrink; an entry that no longer matches fails.
 """
@@ -29,122 +27,13 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from tests.app.tooling.test_html_sinks import find_sinks
+from tests.app.tooling.test_html_sinks import LOGIC_ROOT, find_sinks
+from tests.app.tooling.test_html_sinks import logic_modules as _logic_files
 from tests.app.tooling.test_inline_code import find_global_writes, find_style_attributes
 
 _ROOT = Path(__file__).resolve().parents[3]
 _WEB_SRC = _ROOT / "web" / "src"
-_SCRIPTS = _ROOT / "frontend" / "static" / "scripts"
-
-# Paths under frontend/static/scripts. A later surface adds its logic here when it
-# splits it out of a view, before web/ imports it.
-LOGIC_ROOTS = (
-    "shared/browser/identity.js",
-    "shared/browser/probe.js",
-    "shared/browser/report.js",
-    "shared/browser/webauthn-facts.js",
-    "shared/api/failed-response.js",
-    "decoder/codec/constants.js",
-    "decoder/codec/labels.js",
-    "decoder/codec/request.js",
-    "decoder/codec/result.js",
-    "decoder/codec/values.js",
-    "decoder/codec/encoding/binary.js",
-    "decoder/codec/encoding/can-encode.js",
-    "decoder/codec/encoding/format.js",
-    "decoder/codec/encoding/summary.js",
-    "advanced/mds/constants.js",
-    "advanced/mds/metadata/explorer-source.js",
-    "advanced/mds/explorer/certificate.js",
-    "advanced/mds/explorer/columns.js",
-    "advanced/mds/explorer/custom-metadata.js",
-    "advanced/mds/explorer/detail.js",
-    "advanced/mds/explorer/entry-link.js",
-    "advanced/mds/explorer/filter-sort.js",
-    "advanced/mds/explorer/loading.js",
-    "advanced/mds/explorer/options.js",
-    "advanced/mds/explorer/rows.js",
-    "advanced/mds/explorer/status.js",
-    "advanced/mds/raw-data.js",
-    "advanced/mds/raw-stringify.js",
-    # The saved credentials' storage.
-    "shared/storage/records.js",
-    "shared/storage/artifacts-client.js",
-    "shared/storage/local/advanced-credentials.js",
-    "shared/storage/local/advanced-server-payload.js",
-    "shared/storage/local/advanced-snapshot-update.js",
-    "shared/storage/local/advanced-storage-shaping.js",
-    "shared/storage/local/advanced-sync.js",
-    "shared/storage/local/common.js",
-    "shared/storage/local/constants.js",
-    "shared/storage/local/id-utils.js",
-    "shared/storage/local/partition-core.js",
-    "shared/storage/local/record-migration.js",
-    "shared/storage/local/simple-credentials.js",
-    "shared/storage/local/snapshot-sanitize.js",
-    "shared/storage/local/storage-core.js",
-    # The Simple tab's ceremonies and the result panel's sentences (the WebAuthn
-    # ponyfill, the debug printer and the byte helpers are followed from there).
-    "simple/ceremony.js",
-    "shared/ceremony/result.js",
-    "shared/auth/random-username.js",
-    # What a saved credential's card shows, deleting and clearing, and the
-    # algorithm's names (the credential helpers they use are followed from there).
-    "advanced/credentials/saved-list.js",
-    "advanced/credentials/delete-flow.js",
-    "advanced/credentials/algorithm-tag.js",
-    "advanced/credentials/utils.js",
-    "advanced/credential-display/attestation-context.js",
-    "advanced/cose-labels.js",
-    # A saved credential's details and registration view: the registration's
-    # state, the decode, the certificate's text, the sanitisers and the saved
-    # snapshot's context.
-    "advanced/credential-display/decode-payload.js",
-    "advanced/credential-display/certificate-text.js",
-    "advanced/credential-display/registration-state.js",
-    "advanced/credential-display/state.js",
-    "advanced/credential-display/sanitize-attestation-object.js",
-    "advanced/credential-display/sanitize-common.js",
-    "advanced/credential-display/data-utils.js",
-    "advanced/credential-display/credential-detail-runtime/snapshot-context.js",
-    # What the details and the registration view show, composed, and the
-    # artifact's hydration.
-    "advanced/credential-display/registration-view.js",
-    "advanced/credential-display/credential-detail-runtime/compose.js",
-    "advanced/credential-display/credential-detail-runtime/detail-sections.js",
-    "advanced/credential-display/credential-detail-runtime/registration-context.js",
-    "advanced/credential-display/credential-detail-runtime/registration-candidates.js",
-    "advanced/credential-display/credential-detail-runtime/helpers.js",
-    "advanced/credentials/hydrate.js",
-    # The Advanced tab's form with no page: the hints' rules, the fake credential
-    # IDs, the byte fields' check, the JSON editor's key edits, the algorithms.
-    "advanced/auth/hint-rules.js",
-    "advanced/auth/fake-credentials.js",
-    "advanced/auth/hex-input.js",
-    "advanced/editor/json-editing.js",
-    "advanced/json-editor/algorithm-options.js",
-    # The registration's request and the JSON editor with no page: the settings,
-    # the request they build and the settings a request says, the editor's
-    # sentences and parsing, and the checks an edit passes.
-    "advanced/json-editor/registration-request.js",
-    "advanced/json-editor/editor-model.js",
-    "advanced/json-editor/schema.js",
-    "advanced/json-editor/validation-common.js",
-    "advanced/json-editor/validation-registration.js",
-    "advanced/json-editor/validation-authentication.js",
-    # The Advanced tab's registration and authentication ceremonies, and the
-    # snapshot a registration's result keeps.
-    "advanced/auth/ceremony.js",
-    "advanced/auth/assertion.js",
-    "advanced/credential-display/registration-snapshot.js",
-    # The authentication's request and the form's settings, the Allow Credentials
-    # choices, and whether the saved credentials can use largeBlob and prf.
-    "advanced/json-editor/authentication-request.js",
-    "advanced/auth/allow-credentials.js",
-    "advanced/auth/capabilities.js",
-    # A form change applied to the request the editor holds.
-    "advanced/json-editor/request-patch.js",
-)
+_LOGIC_ALIAS = "@/logic/"
 
 _RULES: dict[str, re.Pattern[str]] = {
     "dangerouslySetInnerHTML": re.compile(r"\bdangerouslySetInnerHTML\b"),
@@ -188,7 +77,7 @@ def _code_lines(text: str) -> list[tuple[int, str]]:
 
 
 def find_rule_breaks(text: str) -> list[tuple[int, str]]:
-    """(line, rule) for each rule ``text`` breaks, with the legacy guards' readers too."""
+    """(line, rule) for each rule ``text`` breaks, with the logic modules' guards' readers too."""
 
     found = [(number, rule) for number, code in _code_lines(text) for rule, pattern in _RULES.items() if pattern.search(code)]
     found += [(number, "markup sink") for number, _line in find_sinks(text)]
@@ -266,30 +155,27 @@ def _imports(text: str) -> list[str]:
     return [match.group(1) or match.group(2) for match in _IMPORT.finditer(_without_comments(text))]
 
 
-def _web_legacy_imports() -> set[str]:
+def _web_logic_imports() -> set[str]:
     return {
-        specifier.removeprefix("@legacy/")
+        specifier.removeprefix(_LOGIC_ALIAS)
         for path in _shipped_sources()
         for specifier in _imports(path.read_text(encoding="utf-8"))
-        if specifier.startswith("@legacy/")
+        if specifier.startswith(_LOGIC_ALIAS)
     }
 
 
 def logic_modules() -> list[Path]:
-    """LOGIC_ROOTS, what web/src imports through @legacy/, and all they import, as paths."""
+    """The logic modules, each checked to import only modules of the tree that exist."""
 
-    scripts = _SCRIPTS.resolve()
-    queue = [scripts / name for name in (*LOGIC_ROOTS, *_web_legacy_imports())]
-    seen: set[Path] = set()
-    while queue:
-        path = queue.pop().resolve()
-        if path in seen:
-            continue
-        assert path.is_relative_to(scripts), f"{path} is outside frontend/static/scripts"
-        assert path.is_file(), f"{path.relative_to(scripts)} does not exist"
-        seen.add(path)
-        queue += [path.parent / spec for spec in _imports(path.read_text(encoding="utf-8")) if spec.startswith(".")]
-    return sorted(seen)
+    modules = [path.resolve() for path in _logic_files()]
+    root = LOGIC_ROOT.resolve()
+    for path in modules:
+        for spec in _imports(path.read_text(encoding="utf-8")):
+            assert spec.startswith("."), f"{path.relative_to(root)} imports {spec}, outside the logic"
+            target = (path.parent / spec).resolve()
+            assert target.is_relative_to(root), f"{path.relative_to(root)} imports {spec}, outside the logic"
+            assert target.is_file(), f"{path.relative_to(root)} imports {spec}, which does not exist"
+    return modules
 
 
 def _logic_exports() -> set[str]:
@@ -323,7 +209,7 @@ def test_the_logic_modules_touch_no_dom():
         found = sorted({match.group(0) for match in _DOM.finditer(text)})
         found += sorted(spec for spec in _imports(text) if "/ui/" in spec or spec.startswith("../ui/"))
         if found:
-            touching[path.relative_to(_SCRIPTS.resolve()).as_posix()] = found
+            touching[path.relative_to(LOGIC_ROOT.resolve()).as_posix()] = found
     assert touching == {}
 
 
@@ -344,10 +230,11 @@ def test_the_reader_follows_imports_and_reads_every_export():
     assert _without_comments("const a = 1; // note\n/* gone */const b = 'https://x';") == "const a = 1;\nconst b = 'https://x';"
 
 
-def test_every_logic_module_is_found():
-    found = {path.relative_to(_SCRIPTS.resolve()).as_posix() for path in logic_modules()}
-    assert set(LOGIC_ROOTS) <= found
-    assert _web_legacy_imports() <= found
+def test_every_logic_module_web_imports_is_found():
+    found = {path.relative_to(LOGIC_ROOT.resolve()).as_posix() for path in logic_modules()}
+    assert len(found) > 90
+    assert _web_logic_imports()
+    assert _web_logic_imports() <= found
 
 
 def test_the_logic_modules_are_imported_not_copied():

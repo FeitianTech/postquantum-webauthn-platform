@@ -1,10 +1,10 @@
-"""Frontend scripts never hand the browser a string to parse as markup.
+"""The logic modules never hand the browser a string to parse as markup.
 
 There is no ``.innerHTML`` / ``.outerHTML`` assignment, no ``insertAdjacentHTML``,
 ``document.write`` / ``writeln``, ``parseFromString``, ``createContextualFragment``
-or ``setHTMLUnsafe`` / ``parseHTMLUnsafe`` call in ``frontend/static/scripts``.
-Views build DOM with ``shared/ui/dom.js`` (createElement and textContent) and
-empty a container with ``replaceChildren()``.
+or ``setHTMLUnsafe`` / ``parseHTMLUnsafe`` call in ``web/src/logic`` (its tests
+aside); web/'s components render with React (``test_web_source_rules.py`` holds
+them to the same rule).
 
 A string built at run time sooner or later carries data; a fixed one does not,
 but each of these calls is a Trusted Types sink all the same. The report-only
@@ -22,7 +22,7 @@ import re
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[3]
-_SCRIPTS = _ROOT / "frontend" / "static" / "scripts"
+LOGIC_ROOT = _ROOT / "web" / "src" / "logic"
 
 _SINK = re.compile(
     r"\.(?:inner|outer)HTML\s*\+?=(?!=)"
@@ -33,7 +33,7 @@ _SINK = re.compile(
     r"|\b(?:set|parse)HTMLUnsafe\s*\("
 )
 
-# (path under frontend/static/scripts, the line as written, stripped) -> reason.
+# (path under web/src/logic, the line as written, stripped) -> reason.
 ALLOWED: dict[tuple[str, str], str] = {}
 
 
@@ -54,10 +54,16 @@ def find_sinks(text: str) -> list[tuple[int, str]]:
     ]
 
 
+def logic_modules() -> list[Path]:
+    """Every logic module: the ``.js`` files under web/src/logic but their tests."""
+
+    return sorted(path for path in LOGIC_ROOT.rglob("*.js") if not path.name.endswith(".test.js"))
+
+
 def _script_sinks() -> list[tuple[str, int, str]]:
     return [
-        (path.relative_to(_SCRIPTS).as_posix(), line, source)
-        for path in sorted(_SCRIPTS.rglob("*.js"))
+        (path.relative_to(LOGIC_ROOT).as_posix(), line, source)
+        for path in logic_modules()
         for line, source in find_sinks(path.read_text(encoding="utf-8"))
     ]
 
@@ -70,8 +76,7 @@ def test_scripts_parse_no_markup():
     ]
 
     assert found == [], (
-        "these hand the browser markup to parse; build the view with shared/ui/dom.js "
-        "and empty a container with replaceChildren()"
+        "these hand the browser markup to parse; give the text to a React component instead"
     )
 
 

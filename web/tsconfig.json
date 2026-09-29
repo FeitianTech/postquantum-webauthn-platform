@@ -17,8 +17,6 @@
     "types": ["vitest/globals", "@testing-library/jest-dom"],
     "paths": {
       "@/*": ["./src/*"],
-      "@legacy/*": ["../frontend/static/scripts/*"],
-      "@legacy-tests/*": ["../tests/frontend/*"],
       "@test-fixtures/*": ["../tests/fixtures/*"]
     }
   },

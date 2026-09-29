@@ -1,7 +1,7 @@
-import { explorerLoadFailure, isMissingSnapshot } from '@legacy/advanced/mds/explorer/loading.js';
-import { EXPLORER_REFRESHED_NOTE, explorerLoadingStatus } from '@legacy/advanced/mds/explorer/status.js';
-import { CUSTOM_METADATA_UPDATED_NOTE } from '@legacy/advanced/mds/explorer/custom-metadata.js';
-import { formatInitialExplorerStatus, normaliseSnapshotInfo } from '@legacy/advanced/mds/metadata/metadata-helpers.js';
+import { explorerLoadFailure, isMissingSnapshot } from '@/logic/advanced/mds/explorer/loading.js';
+import { EXPLORER_REFRESHED_NOTE, explorerLoadingStatus } from '@/logic/advanced/mds/explorer/status.js';
+import { CUSTOM_METADATA_UPDATED_NOTE } from '@/logic/advanced/mds/explorer/custom-metadata.js';
+import { formatInitialExplorerStatus, normaliseSnapshotInfo } from '@/logic/advanced/mds/metadata/metadata-helpers.js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {

@@ -1,4 +1,4 @@
-import { RAW_DATA_BUTTON_TITLE, RAW_DATA_UNAVAILABLE_TITLE } from '@legacy/advanced/mds/raw-data.js';
+import { RAW_DATA_BUTTON_TITLE, RAW_DATA_UNAVAILABLE_TITLE } from '@/logic/advanced/mds/raw-data.js';
 import { type MouseEvent, forwardRef } from 'react';
 
 import { BackButton } from '@/components/ui/BackButton';

@@ -8,7 +8,7 @@
 # GitHub Actions and Cloud Build are independent pipelines: a red CI run does
 # not stop a trigger from firing. The test steps below are therefore the gate
 # that actually stands between a commit on main and production. They run first
-# and in parallel; Build waits for all three, so a failing suite fails the build
+# and in parallel; Build waits for both, so a failing suite fails the build
 # before an image is ever pushed. The Playwright browser tests run in GitHub CI
 # only (ci-web.yml) until they join this gate in Phase 30B; see docs/UI_MIGRATION.md.
 
@@ -25,19 +25,6 @@ steps:
         pip install --no-cache-dir --quiet "uv==0.12.15"
         uv sync --locked --python 3.12
         .venv/bin/python -m pytest -q
-
-  # The logic web/ imports from frontend/static/scripts, until Phase 30B moves it
-  # into web/. node:22-slim: jsdom 30 pulls undici 8, which needs Node 22 or newer.
-  - name: node:22-slim
-    id: Frontend tests
-    waitFor: ['-']
-    entrypoint: bash
-    args:
-      - -c
-      - |
-        set -euo pipefail
-        npm ci
-        npm run test:frontend
 
   # The new UI (web/, docs/UI_MIGRATION.md): typecheck, its unit tests with
   # their coverage floors, the static export, and the export's CSP scan. The
@@ -62,7 +49,6 @@ steps:
     id: Build
     waitFor:
       - Python tests
-      - Frontend tests
       - Web tests
     args:
       - build

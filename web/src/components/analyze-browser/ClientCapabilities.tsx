@@ -1,4 +1,4 @@
-import { NO_CAPABILITIES, groupCapabilities, omittedNote } from '@legacy/shared/browser/report.js';
+import { NO_CAPABILITIES, groupCapabilities, omittedNote } from '@/logic/shared/browser/report.js';
 
 import { cx } from '@/lib/cx';
 

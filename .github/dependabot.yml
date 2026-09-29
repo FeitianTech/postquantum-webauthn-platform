@@ -4,14 +4,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-  # package-lock.json is what npm audit in ci-security.yml gates on.
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-  # The new UI's own lock (web/package-lock.json), audited the same way. The
-  # charter (docs/UI_MIGRATION.md) names Next.js 15; TypeScript stays on 5,
-  # which Next 15's build checks with.
+  # web/package-lock.json is what npm audit in ci-security.yml gates on. The
+  # site stays on Next.js 15, and TypeScript on 5, which Next 15's build checks
+  # with.
   - package-ecosystem: "npm"
     directory: "/web"
     schedule:

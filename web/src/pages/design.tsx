@@ -1,6 +1,6 @@
-import { SOURCE_TEXT } from '@legacy/shared/browser/identity.js';
-import { STATE_TEXT } from '@legacy/shared/browser/webauthn-facts.js';
-import { SIMPLE_CEREMONY_TEXT } from '@legacy/simple/ceremony.js';
+import { SOURCE_TEXT } from '@/logic/shared/browser/identity.js';
+import { STATE_TEXT } from '@/logic/shared/browser/webauthn-facts.js';
+import { SIMPLE_CEREMONY_TEXT } from '@/logic/simple/ceremony.js';
 import Head from 'next/head';
 import { type ReactNode, useState } from 'react';
 

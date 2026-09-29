@@ -3,7 +3,7 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { answerResponse, installAuthenticator } from '@legacy-tests/simple/ceremony-answers.js';
+import { answerResponse, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
 
 import { SavedCredentialsProvider } from '@/components/credentials/useSavedCredentials';
 import { ToastProvider } from '@/components/ui/Toast';

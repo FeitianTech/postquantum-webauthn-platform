@@ -3,14 +3,14 @@
 // the leaves they stand on. These are the types web/ reads them through, and the
 // template's own words the logic does not hold: the columns' headers and the
 // filters' labels and placeholders.
-import { FILTER_CONFIG } from '@legacy/advanced/mds/constants.js';
+import { FILTER_CONFIG } from '@/logic/advanced/mds/constants.js';
 import {
   classifyExplorerAnswer,
   fetchExplorerInfo,
   indexEntriesByAaguid,
   prepareSnapshotEntries,
   requestExplorerSnapshot,
-} from '@legacy/advanced/mds/explorer/loading.js';
+} from '@/logic/advanced/mds/explorer/loading.js';
 import {
   countActiveExplorerFilters,
   defaultExplorerSort,
@@ -18,11 +18,11 @@ import {
   matchesExplorerFilters,
   nextExplorerSort,
   sortExplorerEntries,
-} from '@legacy/advanced/mds/explorer/filter-sort.js';
-import { explorerFilterOptionLists, matchingFilterOptions } from '@legacy/advanced/mds/explorer/options.js';
-import { certificationParts, identifierLabel } from '@legacy/advanced/mds/explorer/rows.js';
-import { explorerLoadedStatus } from '@legacy/advanced/mds/explorer/status.js';
-import { createExplorerSource } from '@legacy/advanced/mds/metadata/explorer-source.js';
+} from '@/logic/advanced/mds/explorer/filter-sort.js';
+import { explorerFilterOptionLists, matchingFilterOptions } from '@/logic/advanced/mds/explorer/options.js';
+import { certificationParts, identifierLabel } from '@/logic/advanced/mds/explorer/rows.js';
+import { explorerLoadedStatus } from '@/logic/advanced/mds/explorer/status.js';
+import { createExplorerSource } from '@/logic/advanced/mds/metadata/explorer-source.js';
 
 /** One authenticator as the server lists it: every column's text is already there. */
 export type MdsEntry = {

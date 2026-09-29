@@ -10,34 +10,34 @@
 // the two ceremonies (advanced/auth/ceremony.js, assertion.js) and the snapshot
 // a registration's result keeps (credential-display/registration-snapshot.js).
 // These are the types web/ reads them through.
-import { ADVANCED_CEREMONY_TEXT, advancedRegisteredMessage, advancedRegistrationFailureText, registerAdvancedCredential } from '@legacy/advanced/auth/ceremony.js';
+import { ADVANCED_CEREMONY_TEXT, advancedRegisteredMessage, advancedRegistrationFailureText, registerAdvancedCredential } from '@/logic/advanced/auth/ceremony.js';
 import {
   FAKE_CREDENTIAL_TEXT,
   fakeCredentialLength,
   fakeCredentialSize,
   normaliseFakeCredentialList,
   withoutFakeCredential,
-} from '@legacy/advanced/auth/fake-credentials.js';
-import { ALLOW_CREDENTIALS_TEXT, allowCredentialChoices, authenticationCredentials, keptChoice } from '@legacy/advanced/auth/allow-credentials.js';
-import { ADVANCED_ASSERTION_TEXT, advancedAuthenticationFailureText, authenticateAdvancedCredential } from '@legacy/advanced/auth/assertion.js';
-import { authenticationAvailability } from '@legacy/advanced/auth/capabilities.js';
-import { hexInputIsValid } from '@legacy/advanced/auth/hex-input.js';
+} from '@/logic/advanced/auth/fake-credentials.js';
+import { ALLOW_CREDENTIALS_TEXT, allowCredentialChoices, authenticationCredentials, keptChoice } from '@/logic/advanced/auth/allow-credentials.js';
+import { ADVANCED_ASSERTION_TEXT, advancedAuthenticationFailureText, authenticateAdvancedCredential } from '@/logic/advanced/auth/assertion.js';
+import { authenticationAvailability } from '@/logic/advanced/auth/capabilities.js';
+import { hexInputIsValid } from '@/logic/advanced/auth/hex-input.js';
 import {
   HINT_VALUES,
   applyAuthenticatorAttachmentPreference,
   deriveAllowedAttachmentsFromHints,
   enforceAuthenticatorAttachmentWithHints,
   ensureAuthenticationHintsAllowed,
-} from '@legacy/advanced/auth/hint-rules.js';
-import { describeCoseAlgorithm } from '@legacy/advanced/cose-labels.js';
-import { describeCredentialAlgorithmWith } from '@legacy/advanced/credentials/algorithm-tag.js';
-import { getCredentialIdHex, getStoredCredentialAttachment } from '@legacy/advanced/credentials/utils.js';
-import { decodePayloadThroughApi } from '@legacy/advanced/credential-display/decode-payload.js';
-import { keepRegistrationSnapshot } from '@legacy/advanced/credential-display/registration-snapshot.js';
-import { createRegistrationState } from '@legacy/advanced/credential-display/registration-state.js';
-import { composeRegistration } from '@legacy/advanced/credential-display/registration-view.js';
-import { applyJsonEditorAutoIndent, applyTabIndentation, wrapSelectionWithPair } from '@legacy/advanced/editor/json-editing.js';
-import { ALGORITHM_OPTIONS } from '@legacy/advanced/json-editor/algorithm-options.js';
+} from '@/logic/advanced/auth/hint-rules.js';
+import { describeCoseAlgorithm } from '@/logic/advanced/cose-labels.js';
+import { describeCredentialAlgorithmWith } from '@/logic/advanced/credentials/algorithm-tag.js';
+import { getCredentialIdHex, getStoredCredentialAttachment } from '@/logic/advanced/credentials/utils.js';
+import { decodePayloadThroughApi } from '@/logic/advanced/credential-display/decode-payload.js';
+import { keepRegistrationSnapshot } from '@/logic/advanced/credential-display/registration-snapshot.js';
+import { createRegistrationState } from '@/logic/advanced/credential-display/registration-state.js';
+import { composeRegistration } from '@/logic/advanced/credential-display/registration-view.js';
+import { applyJsonEditorAutoIndent, applyTabIndentation, wrapSelectionWithPair } from '@/logic/advanced/editor/json-editing.js';
+import { ALGORITHM_OPTIONS } from '@/logic/advanced/json-editor/algorithm-options.js';
 import {
   authenticationControls,
   authenticationDefaults,
@@ -45,24 +45,24 @@ import {
   changeAuthentication,
   readRequestOptions,
   withAvailability,
-} from '@legacy/advanced/json-editor/authentication-request.js';
-import { EDITOR_TEXT, editorTitle, readEditedRequest, requestText, topLevelExtras } from '@legacy/advanced/json-editor/editor-model.js';
-import { followForm } from '@legacy/advanced/json-editor/request-patch.js';
+} from '@/logic/advanced/json-editor/authentication-request.js';
+import { EDITOR_TEXT, editorTitle, readEditedRequest, requestText, topLevelExtras } from '@/logic/advanced/json-editor/editor-model.js';
+import { followForm } from '@/logic/advanced/json-editor/request-patch.js';
 import {
   buildCreationOptions,
   changeRegistration,
   readCreationOptions,
   registrationControls,
   registrationDefaults,
-} from '@legacy/advanced/json-editor/registration-request.js';
-import { generateRandom10DigitUsername } from '@legacy/shared/auth/random-username.js';
+} from '@/logic/advanced/json-editor/registration-request.js';
+import { generateRandom10DigitUsername } from '@/logic/shared/auth/random-username.js';
 import {
   prepareAdvancedCredentialsForServer,
   saveAdvancedCredential,
   updateAdvancedCredentialRegistrationSnapshot,
   updateAdvancedCredentialSignCount,
-} from '@legacy/shared/storage/records.js';
-import { generateRandomHex } from '@legacy/shared/utils/binary.js';
+} from '@/logic/shared/storage/records.js';
+import { generateRandomHex } from '@/logic/shared/utils/binary.js';
 
 import type { CeremonyResultInput } from '@/components/ceremony/model';
 import type { SavedCredential } from '@/components/credentials/model';

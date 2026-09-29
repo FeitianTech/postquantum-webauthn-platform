@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* Class names come from the components; the logic and its test helpers hold none. */
+@source not "../logic";
+@source not "../test/logic";
 
 /*
  * Design tokens (docs/UI_MIGRATION.md). Light only, white everywhere: grey is

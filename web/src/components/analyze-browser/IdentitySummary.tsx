@@ -1,5 +1,5 @@
-import { SOURCE_TEXT } from '@legacy/shared/browser/identity.js';
-import { IDENTITY_FIELDS, NOT_REPORTED } from '@legacy/shared/browser/report.js';
+import { SOURCE_TEXT } from '@/logic/shared/browser/identity.js';
+import { IDENTITY_FIELDS, NOT_REPORTED } from '@/logic/shared/browser/report.js';
 
 import { KeyValueGrid } from '@/components/ui/KeyValueGrid';
 

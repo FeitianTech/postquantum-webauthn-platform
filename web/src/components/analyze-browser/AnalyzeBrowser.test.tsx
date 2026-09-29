@@ -2,8 +2,8 @@
 // and does: every case of tests/frontend/shared/ui/analyze-browser.test.js, over
 // the same fixtures (imported, not copied). The AB-… ids are the items of
 // docs/ui-parity/analyze-browser.md.
-import { CHROMIUM_152_CAPABILITIES } from '@legacy-tests/shared/browser/chromium-152.js';
-import { IDENTITY_MATRIX } from '@legacy-tests/shared/browser/identity-matrix.js';
+import { CHROMIUM_152_CAPABILITIES } from '@/test/logic/shared/browser/chromium-152.js';
+import { IDENTITY_MATRIX } from '@/test/logic/shared/browser/identity-matrix.js';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 

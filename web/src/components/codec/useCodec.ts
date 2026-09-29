@@ -3,8 +3,8 @@ import {
   codecSuccessText,
   requestCodec,
   validateCodecInput,
-} from '@legacy/decoder/codec/request.js';
-import { FailedResponseError } from '@legacy/shared/api/failed-response.js';
+} from '@/logic/decoder/codec/request.js';
+import { FailedResponseError } from '@/logic/shared/api/failed-response.js';
 import { useCallback, useRef, useState } from 'react';
 
 import { useToast } from '@/components/ui/Toast';

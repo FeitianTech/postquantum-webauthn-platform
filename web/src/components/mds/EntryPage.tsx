@@ -1,4 +1,4 @@
-import { ENTRY_LINK_MESSAGES } from '@legacy/advanced/mds/explorer/entry-link.js';
+import { ENTRY_LINK_MESSAGES } from '@/logic/advanced/mds/explorer/entry-link.js';
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';

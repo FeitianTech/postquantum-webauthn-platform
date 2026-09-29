@@ -1,20 +1,20 @@
 // The Simple tab's ceremonies come from the module both UIs share
 // (frontend/static/scripts/simple/ceremony.js), and the credentials they use and
 // keep from the storage both UIs read and write (shared/storage/records.js).
-import { generateRandom10DigitUsername } from '@legacy/shared/auth/random-username.js';
+import { generateRandom10DigitUsername } from '@/logic/shared/auth/random-username.js';
 import {
   getSimpleCredentialsForEmail,
   prepareCredentialsForServer,
   saveSimpleCredential,
   updateSimpleCredentialSignCount,
-} from '@legacy/shared/storage/records.js';
+} from '@/logic/shared/storage/records.js';
 import {
   SIMPLE_CEREMONY_TEXT,
   authenticateSimplePasskey,
   ceremonyErrorText,
   registerSimplePasskey,
   registeredText,
-} from '@legacy/simple/ceremony.js';
+} from '@/logic/simple/ceremony.js';
 
 import type { CeremonyResultInput } from '@/components/ceremony/model';
 

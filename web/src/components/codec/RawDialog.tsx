@@ -1,4 +1,4 @@
-import { codecRawJson } from '@legacy/decoder/codec/request.js';
+import { codecRawJson } from '@/logic/decoder/codec/request.js';
 
 import { CodeBlock } from '@/components/ui/CodeBlock';
 import { Dialog, OverlayBody, OverlayHeader } from '@/components/ui/Overlay';

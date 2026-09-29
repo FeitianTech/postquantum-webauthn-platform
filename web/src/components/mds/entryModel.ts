@@ -2,16 +2,16 @@
 // modules both UIs share: frontend/static/scripts/advanced/mds/explorer/detail.js,
 // certificate.js, entry-link.js, raw-data.js and raw-stringify.js. These are the
 // types web/ reads them through.
-import { detailSections, detailSubtitleParts, detailTitle, formatDetailSubtitle } from '@legacy/advanced/mds/explorer/detail.js';
+import { detailSections, detailSubtitleParts, detailTitle, formatDetailSubtitle } from '@/logic/advanced/mds/explorer/detail.js';
 import {
   describeCertificate as describeCertificateJs,
   normaliseCertificateBase64,
   requestCertificateDecode,
-} from '@legacy/advanced/mds/explorer/certificate.js';
-import { entryIdForAaguid, requestResolvedEntry, resolveQueryForEntry } from '@legacy/advanced/mds/explorer/entry-link.js';
-import { hasInlineDetail } from '@legacy/advanced/mds/metadata/metadata-helpers.js';
-import { authenticatorRawTitle, getAuthenticatorRawData } from '@legacy/advanced/mds/raw-data.js';
-import { stringifyAuthenticatorRawData } from '@legacy/advanced/mds/raw-stringify.js';
+} from '@/logic/advanced/mds/explorer/certificate.js';
+import { entryIdForAaguid, requestResolvedEntry, resolveQueryForEntry } from '@/logic/advanced/mds/explorer/entry-link.js';
+import { hasInlineDetail } from '@/logic/advanced/mds/metadata/metadata-helpers.js';
+import { authenticatorRawTitle, getAuthenticatorRawData } from '@/logic/advanced/mds/raw-data.js';
+import { stringifyAuthenticatorRawData } from '@/logic/advanced/mds/raw-stringify.js';
 
 import type { MdsEntry } from './model';
 

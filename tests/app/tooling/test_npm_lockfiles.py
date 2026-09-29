@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[3]
-LOCKFILES = ("package-lock.json", "web/package-lock.json")
+LOCKFILES = ("web/package-lock.json",)
 
 
 def _resolves(packages: dict, owner: str, name: str) -> bool:

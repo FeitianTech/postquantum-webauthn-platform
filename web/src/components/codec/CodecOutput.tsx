@@ -1,4 +1,4 @@
-import { codecEdnText, codecExpandedJson } from '@legacy/decoder/codec/values.js';
+import { codecEdnText, codecExpandedJson } from '@/logic/decoder/codec/values.js';
 import { forwardRef } from 'react';
 
 import { StatusChip } from '@/components/ui/Badge';

@@ -11,8 +11,6 @@ WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY web/ ./
-# The logic modules web/ imports in place until Phase 30B moves them into web/.
-COPY frontend/static/scripts /src/frontend/static/scripts
 RUN npm run build && npm run check:csp
 
 # Stage 1: Builder

@@ -6,8 +6,8 @@ import { renderPage } from '@/test/page';
 
 const { gather } = vi.hoisted(() => ({ gather: vi.fn() }));
 
-vi.mock('@legacy/shared/browser/report.js', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@legacy/shared/browser/report.js')>();
+vi.mock('@/logic/shared/browser/report.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/logic/shared/browser/report.js')>();
   gather.mockImplementation(original.gatherAnalysis);
   return { ...original, gatherAnalysis: gather };
 });

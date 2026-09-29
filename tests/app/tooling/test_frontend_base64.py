@@ -1,4 +1,4 @@
-"""Frontend scripts decode base64 with ``shared/utils/base64.js``, never ``atob``.
+"""The logic modules decode base64 with ``shared/utils/base64.js``, never ``atob``.
 
 ``atob`` takes either spelling of a byte string -- padded or not, with or
 without whitespace, with stray bits in its last character -- so the bytes a
@@ -13,10 +13,9 @@ may only shrink: a file that no longer calls it must leave the list.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parents[3]
-_SCRIPTS = _ROOT / "frontend" / "static" / "scripts"
+from tests.app.tooling.test_html_sinks import LOGIC_ROOT, logic_modules
+
 _ATOB = re.compile(r"(?<![\w.$])atob\s*\(")
 
 ALLOWED: dict[str, str] = {
@@ -29,13 +28,13 @@ ALLOWED: dict[str, str] = {
 
 def _calls() -> dict[str, list[int]]:
     found: dict[str, list[int]] = {}
-    for path in sorted(_SCRIPTS.rglob("*.js")):
+    for path in logic_modules():
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             code = line.split("//", 1)[0]
             if code.lstrip().startswith(("*", "/*")):
                 continue
             if _ATOB.search(code):
-                found.setdefault(path.relative_to(_SCRIPTS).as_posix(), []).append(number)
+                found.setdefault(path.relative_to(LOGIC_ROOT).as_posix(), []).append(number)
     return found
 
 

@@ -1,5 +1,5 @@
-import { copyReport } from '@legacy/shared/browser/report.js';
-import { AUTHENTICATOR_FACTS, WEBAUTHN_FACTS } from '@legacy/shared/browser/webauthn-facts.js';
+import { copyReport } from '@/logic/shared/browser/report.js';
+import { AUTHENTICATOR_FACTS, WEBAUTHN_FACTS } from '@/logic/shared/browser/webauthn-facts.js';
 import { type ReactNode, useRef } from 'react';
 import { flushSync } from 'react-dom';
 

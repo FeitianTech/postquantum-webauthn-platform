@@ -10,8 +10,8 @@ import {
   advancedRegistrations,
   recordedAssertion,
   recordedCredential,
-} from '@legacy-tests/advanced/auth/advanced-answers.js';
-import { answerResponse, goldenAnswers, installAuthenticator } from '@legacy-tests/simple/ceremony-answers.js';
+} from '@/test/logic/advanced/auth/advanced-answers.js';
+import { answerResponse, goldenAnswers, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
 
 import { forgetCompletedRecords } from '@/components/credentials/detail/useCredentialDetail';
 import { AppShell } from '@/components/shell/AppShell';

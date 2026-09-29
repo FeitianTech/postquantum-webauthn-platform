@@ -1,5 +1,5 @@
-import { codecSections } from '@legacy/decoder/codec/result.js';
-import { formatKey } from '@legacy/decoder/codec/labels.js';
+import { codecSections } from '@/logic/decoder/codec/result.js';
+import { formatKey } from '@/logic/decoder/codec/labels.js';
 import { render, screen, within } from '@testing-library/react';
 
 import attestationGoldens from '../../../../tests/app/characterization/golden/routes/decoder-attestation-objects.json';

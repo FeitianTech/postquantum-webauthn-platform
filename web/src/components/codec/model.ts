@@ -2,9 +2,9 @@
 // frontend/static/scripts/decoder/codec/{request,result,values}.js. These are
 // the types web/ reads them through, and the one piece of the current template
 // the logic needs: the encoder's formats.
-import { buildCodecRequest } from '@legacy/decoder/codec/request.js';
-import { describeCodecResult } from '@legacy/decoder/codec/result.js';
-import { classifyCodecValue } from '@legacy/decoder/codec/values.js';
+import { buildCodecRequest } from '@/logic/decoder/codec/request.js';
+import { describeCodecResult } from '@/logic/decoder/codec/result.js';
+import { classifyCodecValue } from '@/logic/decoder/codec/values.js';
 
 export type CodecMode = 'decode' | 'encode';
 

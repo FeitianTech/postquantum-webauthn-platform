@@ -1,4 +1,4 @@
-import { gatherAnalysis } from '@legacy/shared/browser/report.js';
+import { gatherAnalysis } from '@/logic/shared/browser/report.js';
 import { useCallback, useRef, useState } from 'react';
 
 import type { Analysis } from './types';

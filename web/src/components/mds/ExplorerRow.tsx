@@ -1,4 +1,4 @@
-import { MISSING_CELL_TEXT, NO_ICON_TEXT, iconAltText } from '@legacy/advanced/mds/explorer/rows.js';
+import { MISSING_CELL_TEXT, NO_ICON_TEXT, iconAltText } from '@/logic/advanced/mds/explorer/rows.js';
 import { type MouseEvent, type ReactNode, memo, useEffect, useRef } from 'react';
 
 import { Badge } from '@/components/ui/Badge';

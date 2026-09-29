@@ -4,14 +4,14 @@
 // shows (advanced/credentials/saved-list.js and the helpers it is given),
 // deleting and clearing (advanced/credentials/delete-flow.js). These are the
 // types web/ reads them through.
-import { describeCoseAlgorithm } from '@legacy/advanced/cose-labels.js';
-import { describeCredentialAlgorithmTagWith } from '@legacy/advanced/credentials/algorithm-tag.js';
+import { describeCoseAlgorithm } from '@/logic/advanced/cose-labels.js';
+import { describeCredentialAlgorithmTagWith } from '@/logic/advanced/credentials/algorithm-tag.js';
 import {
   CLEAR_ALL_CONFIRMATION,
   clearSavedCredentials,
   deleteConfirmation,
   deleteSavedCredential,
-} from '@legacy/advanced/credentials/delete-flow.js';
+} from '@/logic/advanced/credentials/delete-flow.js';
 import {
   SAVED_LIST_TEXT,
   credentialFlashKey,
@@ -19,14 +19,14 @@ import {
   describeCredentialCard,
   listSavedCredentials,
   warmSavedCredentials,
-} from '@legacy/advanced/credentials/saved-list.js';
+} from '@/logic/advanced/credentials/saved-list.js';
 import {
   getCredentialIdHex,
   getCredentialUserHandleHex,
   normaliseAaguidValue,
-} from '@legacy/advanced/credentials/utils.js';
-import { deriveCredentialStatusIndicators } from '@legacy/advanced/credential-display/attestation-context.js';
-import { deleteCredentialArtifact } from '@legacy/shared/storage/artifacts-client.js';
+} from '@/logic/advanced/credentials/utils.js';
+import { deriveCredentialStatusIndicators } from '@/logic/advanced/credential-display/attestation-context.js';
+import { deleteCredentialArtifact } from '@/logic/shared/storage/artifacts-client.js';
 import {
   clearSimpleCredentials,
   ensureAdvancedCredentialArtifactsSynced,
@@ -37,7 +37,7 @@ import {
   getAllStoredCredentialsInOrder,
   removeAdvancedCredential,
   removeSimpleCredential,
-} from '@legacy/shared/storage/records.js';
+} from '@/logic/shared/storage/records.js';
 
 /** A saved credential as the list holds it (the stored record, typed, with its ids in hex). */
 export type SavedCredential = { type: 'simple' | 'advanced'; [field: string]: unknown };

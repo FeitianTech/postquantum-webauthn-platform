@@ -1,4 +1,4 @@
-import { STATE_TEXT } from '@legacy/shared/browser/webauthn-facts.js';
+import { STATE_TEXT } from '@/logic/shared/browser/webauthn-facts.js';
 
 import { StatusChip, type Tone } from '@/components/ui/Badge';
 import { cx } from '@/lib/cx';

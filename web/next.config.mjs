@@ -1,7 +1,5 @@
 // The site's UI, exported as static files that Flask serves at / (see
 // docs/UI_MIGRATION.md). Production never runs Node: `next build` writes out/.
-import { fileURLToPath } from 'node:url';
-
 import { PHASE_DEVELOPMENT_SERVER } from 'next/constants.js';
 
 import { developmentHeaders } from './scripts/dev-csp.mjs';
@@ -13,11 +11,6 @@ export default function nextConfig(phase) {
     ...(developing ? {} : { output: 'export' }),
     reactStrictMode: true,
     poweredByHeader: false,
-    // The logic modules still live in frontend/static/scripts until the cutover;
-    // they are imported from there, never copied.
-    experimental: { externalDir: true },
-    // The repository is the workspace: web/ imports from ../frontend.
-    outputFileTracingRoot: fileURLToPath(new URL('..', import.meta.url)),
     // Tests and fixtures are type-checked by `npm run typecheck`; the build only
     // checks what it ships, so the image does not need the test fixtures.
     typescript: { tsconfigPath: 'tsconfig.build.json' },

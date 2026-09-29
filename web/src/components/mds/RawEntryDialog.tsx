@@ -1,4 +1,4 @@
-import { RAW_DATA_LABEL } from '@legacy/advanced/mds/raw-data.js';
+import { RAW_DATA_LABEL } from '@/logic/advanced/mds/raw-data.js';
 import { useMemo } from 'react';
 
 import { Button } from '@/components/ui/Button';

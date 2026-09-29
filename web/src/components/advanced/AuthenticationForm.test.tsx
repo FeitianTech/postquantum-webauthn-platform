@@ -2,7 +2,7 @@
 // in docs/ui-parity/advanced.md): every field changes the request the JSON
 // editor holds, with the current form's rules and words, over the credentials
 // the recorded authentications registered.
-import { advancedAuthentications } from '@legacy-tests/advanced/auth/advanced-answers.js';
+import { advancedAuthentications } from '@/test/logic/advanced/auth/advanced-answers.js';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 

@@ -577,7 +577,7 @@ def convert_bytes_for_json(obj: Any) -> Any:
 
     This is the *API response* encoding: unpadded base64url, like every byte field
     the server sends. The frontend decodes these with the strict
-    ``base64UrlToBytes`` in ``frontend/static/scripts/shared/utils/base64.js``;
+    ``base64UrlToBytes`` in ``web/src/logic/shared/utils/base64.js``;
     records a browser saved when this answered standard base64 are re-spelled
     when they are read (``shared/storage/local/record-migration.js``), and the
     server reads either spelling back (``routes/binary_helpers.py``).

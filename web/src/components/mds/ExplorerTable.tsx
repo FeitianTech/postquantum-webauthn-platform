@@ -1,4 +1,4 @@
-import { MDS_MIN_COLUMN_WIDTH, normaliseExplorerColumnWidths } from '@legacy/advanced/mds/explorer/columns.js';
+import { MDS_MIN_COLUMN_WIDTH, normaliseExplorerColumnWidths } from '@/logic/advanced/mds/explorer/columns.js';
 import {
   type KeyboardEvent,
   type PointerEvent,

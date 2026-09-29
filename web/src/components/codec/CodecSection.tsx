@@ -1,4 +1,4 @@
-import { codecProgressText } from '@legacy/decoder/codec/request.js';
+import { codecProgressText } from '@/logic/decoder/codec/request.js';
 import { type ReactNode, useCallback, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';

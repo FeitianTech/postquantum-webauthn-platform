@@ -1,4 +1,4 @@
-"""Nothing in the scripts needs a policy that allows inline code or inline style.
+"""Nothing in the logic modules needs a policy that allows inline code or inline style.
 
 A Content-Security-Policy whose ``script-src`` and ``style-src`` carry no
 ``'unsafe-inline'`` refuses what these checks keep out of the source:
@@ -8,12 +8,12 @@ A Content-Security-Policy whose ``script-src`` and ``style-src`` carry no
 - markup in a script that carries an ``on...=`` handler or a ``style=``
   attribute (a tag written in a string, as the MDS raw-data popup once was).
 
-And scripts put nothing on ``window`` (or ``globalThis`` / ``self``): no
+And the modules put nothing on ``window`` (or ``globalThis`` / ``self``): no
 assignment, no ``delete``, no ``Object.assign`` / ``defineProperty`` onto it; a
-module imports what it uses. The pages themselves are the new UI's static export,
-which ``web/scripts/check-export-csp.mjs`` scans for inline scripts, style
-elements and attributes and ``on*`` handlers (the current UI's templates, which
-these tests also read, went in Phase 30).
+module imports what it uses. These read ``web/src/logic`` (its tests aside);
+``test_web_source_rules.py`` holds web/'s components to the same rules, and the
+pages are the UI's static export, which ``web/scripts/check-export-csp.mjs`` scans
+for inline scripts, style elements and attributes and ``on*`` handlers.
 
 Each ``ALLOWED_*`` dict names what still does, each with the reason. It may only
 shrink: an entry that no longer matches fails the test, so a converted file must
@@ -22,10 +22,8 @@ also leave the list.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parents[3]
-_SCRIPTS = _ROOT / "frontend" / "static" / "scripts"
+from tests.app.tooling.test_html_sinks import LOGIC_ROOT, logic_modules
 
 _STYLE_ATTRIBUTE = re.compile(r"""\bsetAttribute\s*\(\s*(['"`])style\1""")
 # A tag written out in a string: ``<name``, attributes, then an inline handler or style.
@@ -33,13 +31,13 @@ _MARKUP_ATTRIBUTE = re.compile(
     r"""<[a-zA-Z][\w-]*(?:\s+[\w:-]+(?:\s*=\s*(?:\\?"[^"<>]*\\?"|'[^'<>]*'))?)*\s+(on[a-zA-Z]+|style)\s*="""
 )
 
-# path under frontend/static/scripts -> reason.
+# path under web/src/logic -> reason.
 ALLOWED_STYLE_ATTRIBUTES: dict[str, str] = {}
 
-# (path under frontend/static/scripts, attribute) -> reason.
+# (path under web/src/logic, attribute) -> reason.
 ALLOWED_MARKUP_ATTRIBUTES: dict[tuple[str, str], str] = {}
 
-# path under frontend/static/scripts -> reason.
+# path under web/src/logic -> reason.
 ALLOWED_GLOBAL_WRITES: dict[str, str] = {}
 
 _GLOBAL = r"(?:window|globalThis|self)"
@@ -70,10 +68,10 @@ def find_style_attributes(text: str) -> list[int]:
 
 def _scripts_setting_style() -> dict[str, list[int]]:
     found: dict[str, list[int]] = {}
-    for path in sorted(_SCRIPTS.rglob("*.js")):
+    for path in logic_modules():
         lines = find_style_attributes(path.read_text(encoding="utf-8"))
         if lines:
-            found[path.relative_to(_SCRIPTS).as_posix()] = lines
+            found[path.relative_to(LOGIC_ROOT).as_posix()] = lines
     return found
 
 
@@ -114,8 +112,8 @@ def find_markup_attributes(text: str) -> list[tuple[int, str]]:
 
 def _script_markup_attributes() -> list[tuple[str, int, str]]:
     return [
-        (path.relative_to(_SCRIPTS).as_posix(), line, name)
-        for path in sorted(_SCRIPTS.rglob("*.js"))
+        (path.relative_to(LOGIC_ROOT).as_posix(), line, name)
+        for path in logic_modules()
         for line, name in find_markup_attributes(path.read_text(encoding="utf-8"))
     ]
 
@@ -160,10 +158,10 @@ def find_global_writes(text: str) -> list[int]:
 
 def _scripts_writing_globals() -> dict[str, list[int]]:
     found: dict[str, list[int]] = {}
-    for path in sorted(_SCRIPTS.rglob("*.js")):
+    for path in logic_modules():
         lines = find_global_writes(path.read_text(encoding="utf-8"))
         if lines:
-            found[path.relative_to(_SCRIPTS).as_posix()] = lines
+            found[path.relative_to(LOGIC_ROOT).as_posix()] = lines
     return found
 
 

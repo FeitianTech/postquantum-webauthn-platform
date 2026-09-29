@@ -7,20 +7,20 @@
 // artifact's hydration (advanced/credentials/hydrate.js) and a certificate's
 // text (credential-display/certificate-text.js). These are the types web/ reads
 // them through.
-import { describeCoseAlgorithm, describeCoseKeyType, describeMldsaParameterSet } from '@legacy/advanced/cose-labels.js';
-import { composeCredentialDetail, needsArtifact } from '@legacy/advanced/credential-display/credential-detail-runtime/compose.js';
-import { DETAIL_TEXT, describeValue } from '@legacy/advanced/credential-display/credential-detail-runtime/detail-sections.js';
-import { decodePayloadThroughApi } from '@legacy/advanced/credential-display/decode-payload.js';
-import { createRegistrationState } from '@legacy/advanced/credential-display/registration-state.js';
+import { describeCoseAlgorithm, describeCoseKeyType, describeMldsaParameterSet } from '@/logic/advanced/cose-labels.js';
+import { composeCredentialDetail, needsArtifact } from '@/logic/advanced/credential-display/credential-detail-runtime/compose.js';
+import { DETAIL_TEXT, describeValue } from '@/logic/advanced/credential-display/credential-detail-runtime/detail-sections.js';
+import { decodePayloadThroughApi } from '@/logic/advanced/credential-display/decode-payload.js';
+import { createRegistrationState } from '@/logic/advanced/credential-display/registration-state.js';
 import {
   REGISTRATION_TEXT,
   describeAttestationCertificate,
   describeAuthenticatorData,
-} from '@legacy/advanced/credential-display/registration-view.js';
-import { HYDRATE_TEXT, hydrateCredentialFromServer } from '@legacy/advanced/credentials/hydrate.js';
-import { certificateSummary } from '@legacy/advanced/mds/explorer/certificate.js';
-import { fetchCredentialArtifact } from '@legacy/shared/storage/artifacts-client.js';
-import { updateAdvancedCredentialRegistrationSnapshot } from '@legacy/shared/storage/records.js';
+} from '@/logic/advanced/credential-display/registration-view.js';
+import { HYDRATE_TEXT, hydrateCredentialFromServer } from '@/logic/advanced/credentials/hydrate.js';
+import { certificateSummary } from '@/logic/advanced/mds/explorer/certificate.js';
+import { fetchCredentialArtifact } from '@/logic/shared/storage/artifacts-client.js';
+import { updateAdvancedCredentialRegistrationSnapshot } from '@/logic/shared/storage/records.js';
 
 import type { CertificateSummary } from '@/components/mds/entryModel';
 
