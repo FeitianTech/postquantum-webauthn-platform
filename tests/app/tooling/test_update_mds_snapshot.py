@@ -528,43 +528,121 @@ def test_verify_only_checks_the_blob_without_writing_files(stubbed_refresh, caps
     assert not _file(mds_snapshot_dir.VERIFIED).exists()
 
 
-def test_gcs_upload_publishes_every_snapshot_file(stubbed_refresh, monkeypatch, capsys):
-    from server.app import mds_provisioning
+@pytest.fixture
+def bucket(monkeypatch):
     from server.app.storage import cloud
+    from tests.app.storage import fake_gcs
 
-    uploaded = {}
+    monkeypatch.delenv("FIDO_SERVER_MDS_GCS_PREFIX", raising=False)
     monkeypatch.setattr(cloud, "gcs_enabled", lambda: True)
-    monkeypatch.setattr(
-        cloud,
-        "upload_bytes",
-        lambda name, data, content_type=None: uploaded.__setitem__(name, data),
-    )
-
-    assert updater.main(["--gcs-upload"]) == 0
-    assert sorted(uploaded) == sorted(
-        f"mds/{name}" for name in mds_provisioning.SNAPSHOT_FILENAMES
-    )
-    assert uploaded["mds/blob.jwt"] == b"a-blob"
+    return fake_gcs.install(monkeypatch)
 
 
-def test_gcs_upload_fails_loudly_when_cloud_storage_is_disabled(stubbed_refresh, monkeypatch, capsys):
+@pytest.mark.parametrize("flag", ["--publish", "--gcs-upload"])
+def test_publish_points_the_bucket_at_the_verified_snapshot(stubbed_refresh, bucket, flag, capsys):
+    from server.app import mds_snapshot_sets
+
+    assert updater.main([flag]) == 0
+
+    pointer, _generation = mds_snapshot_sets.read_pointer()
+    assert pointer["no"] == 42
+    files = mds_snapshot_sets.download_set(pointer)
+    assert files[mds_snapshot_dir.BLOB] == b"a-blob"
+    assert files == {name: _file(name).read_bytes() for name in mds_snapshot_dir.SNAPSHOT_FILENAMES}
+    assert f"Published snapshot no. 42 as {pointer['set']}." in capsys.readouterr().out
+
+    # The next run finds it there and publishes nothing.
+    before = dict(bucket.objects)
+    assert updater.main(["--publish"]) == 0
+    assert bucket.objects == before
+    assert "already has snapshot no. 42" in capsys.readouterr().out
+
+
+def test_publish_fails_loudly_when_cloud_storage_is_disabled(stubbed_refresh, monkeypatch, capsys):
     from server.app.storage import cloud
 
     monkeypatch.setattr(cloud, "gcs_enabled", lambda: False)
 
-    assert updater.main(["--gcs-upload"]) == 1
+    assert updater.main(["--publish"]) == 1
     assert "Cloud Storage is disabled" in capsys.readouterr().out
 
 
-def test_gcs_upload_refuses_to_publish_an_incomplete_snapshot(isolated_mds_paths, monkeypatch, capsys):
+def test_publish_reports_a_bucket_failure(stubbed_refresh, bucket, monkeypatch, capsys):
     from server.app.storage import cloud
 
-    monkeypatch.setattr(cloud, "gcs_enabled", lambda: True)
+    def _unavailable(*_args, **_kwargs):
+        raise OSError("bucket unavailable")
 
-    def _fail(*args, **kwargs):  # pragma: no cover - must not be reached
-        raise AssertionError("An incomplete snapshot must not be published.")
+    monkeypatch.setattr(cloud, "upload_bytes_if_generation", _unavailable)
 
-    monkeypatch.setattr(cloud, "upload_bytes", _fail)
+    assert updater.main(["--publish"]) == 1
+    assert "Could not publish the snapshot to Cloud Storage: bucket unavailable" in capsys.readouterr().out
+    assert bucket.objects == {}
 
-    assert updater._publish_to_cloud_storage() == 1
-    assert "is missing; nothing published" in capsys.readouterr().out
+
+def test_publish_takes_the_pointer_back_from_an_older_publisher(stubbed_refresh, bucket, capsys):
+    from server.app import mds_snapshot_sets
+    from tests.app.metadata.snapshot_versions import snapshot_version
+
+    mds_snapshot_sets.publish(snapshot_version(6))
+    fired = []
+
+    # An older publisher's pointer lands between this run's read and its write.
+    def _older_publisher(name):
+        if name.endswith("current.json") and not fired:
+            fired.append(name)
+            mds_snapshot_sets.publish(snapshot_version(7))
+
+    bucket.on_download.append(_older_publisher)
+
+    assert updater.main(["--publish"]) == 0
+    assert fired
+    pointer = mds_snapshot_sets.read_pointer()[0]
+    assert pointer["no"] == 42
+    assert pointer["previous"].startswith("mds/sets/1/7-")
+
+
+def _rate_limited(monkeypatch):
+    import io
+    import urllib.error
+
+    attempts = []
+
+    def _urlopen(request, timeout):
+        attempts.append(request.full_url)
+        raise urllib.error.HTTPError(request.full_url, 429, "Too Many Requests", {"Retry-After": "0"}, io.BytesIO())
+
+    monkeypatch.setattr(updater.urllib.request, "urlopen", _urlopen)
+    monkeypatch.setattr(updater.time, "sleep", lambda _seconds: None)
+    return attempts
+
+
+def test_a_rate_limited_refresh_keeps_the_snapshot_and_the_bucket(isolated_mds_paths, bucket, monkeypatch, capsys):
+    from server.app import mds_snapshot_sets
+    from tests.app.metadata.snapshot_versions import snapshot_version
+
+    current = snapshot_version(7)
+    for name, data in current.items():
+        mds_snapshot_dir.write_file(_file(name), data)
+    mds_snapshot_sets.publish(current)
+    before = dict(bucket.objects)
+    attempts = _rate_limited(monkeypatch)
+
+    assert updater.main(["--publish"]) == 1
+
+    assert len(attempts) == updater.MDS_DOWNLOAD_MAX_ATTEMPTS
+    assert "Failed to download metadata BLOB" in capsys.readouterr().out
+    assert bucket.objects == before
+    assert {name: _file(name).read_bytes() for name in current} == current
+
+
+def test_a_blob_that_fails_verification_writes_and_publishes_nothing(isolated_mds_paths, bucket, monkeypatch, capsys):
+    # Signed by the fixture's own root, not the pinned FIDO Alliance one.
+    blob, _root = mds_fixture._signed_blob(_payload_with_unmodelled_fields())
+    monkeypatch.setattr(updater, "_fetch_remote_blob", lambda: (blob, None, '"etag"'))
+
+    assert updater.main(["--publish"]) == 1
+
+    assert "failed verification; nothing written" in capsys.readouterr().out
+    assert bucket.objects == {}
+    assert not isolated_mds_paths.exists() or not any(isolated_mds_paths.iterdir())

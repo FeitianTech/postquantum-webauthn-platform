@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Refresh the packaged FIDO MDS snapshot if the remote BLOB has changed."""
+"""Refresh the packaged FIDO MDS snapshot if the remote BLOB has changed.
+
+Downloads the BLOB, verifies it against the pinned trust root, and writes the
+snapshot's seven files. ``--verify-only`` writes nothing; ``--publish`` (earlier
+``--gcs-upload``) also publishes them to Cloud Storage as a snapshot set
+(``server/app/mds_snapshot_sets.py``), which every server instance follows.
+"""
 
 from __future__ import annotations
 
@@ -294,10 +300,11 @@ def _build_verified_snapshot(
     return json.loads(websafe_decode(payload_segment.decode("ascii")))
 
 
-def _publish_to_cloud_storage() -> int:
-    """Upload the snapshot files to the bucket the server provisions from."""
+def _publish_to_cloud_storage(files: dict[str, bytes]) -> int:
+    """Publish the verified snapshot's files as a set in the bucket the server
+    provisions from, and point to it (``server/app/mds_snapshot_sets.py``)."""
 
-    from server.app import mds_provisioning
+    from server.app import mds_snapshot_sets
     from server.app.storage import cloud
 
     if not cloud.gcs_enabled():
@@ -307,38 +314,47 @@ def _publish_to_cloud_storage() -> int:
         )
         return 1
 
-    for filename in mds_provisioning.SNAPSHOT_FILENAMES:
-        path = _path(filename)
-        if not path.is_file():
-            print(f"::error::Snapshot file {filename} is missing; nothing published.")
-            return 1
+    try:
+        # Losing the pointer to another publisher leaves the bucket at theirs, which
+        # may be older than this one: read it again and publish over it if so.
+        for _attempt in range(3):
+            result = mds_snapshot_sets.publish(files)
+            if result.outcome != "lost":
+                break
+    except Exception as exc:
+        print(f"::error::Could not publish the snapshot to Cloud Storage: {exc}")
+        return 1
 
-    for filename in mds_provisioning.SNAPSHOT_FILENAMES:
-        blob_name = mds_provisioning.snapshot_blob_name(filename)
-        cloud.upload_bytes(
-            blob_name,
-            _path(filename).read_bytes(),
-            content_type="application/json" if filename.endswith(".json") else None,
-        )
-        print(f"Published {filename} to {blob_name}.")
+    pointer = result.pointer or {}
+    if result.outcome == "published":
+        print(f"Published snapshot no. {pointer.get('no')} as {pointer.get('set')}.")
+    elif result.outcome == "current":
+        print(f"The bucket already has snapshot no. {pointer.get('no')}; nothing published.")
+    else:
+        print(f"::warning::Other publishers kept landing first (no. {pointer.get('no')}); nothing published.")
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     arguments = sys.argv[1:] if argv is None else argv
-    publish = "--gcs-upload" in arguments
+    # --gcs-upload is the flag's earlier name.
+    publish = "--publish" in arguments or "--gcs-upload" in arguments
     verify_only = "--verify-only" in arguments
 
     try:
         new_blob, last_modified, etag = _fetch_remote_blob_with_retry()
-    except Exception as exc:  # pragma: no cover - network failure propagates
+    except Exception as exc:
         print(f"::error::Failed to download metadata BLOB: {exc}")
         return 1
 
     current_path = _path(mds_snapshot_dir.BLOB)
     blob_unchanged = current_path.exists() and current_path.read_bytes() == new_blob
 
-    verified_snapshot = _build_verified_snapshot(new_blob)
+    try:
+        verified_snapshot = _build_verified_snapshot(new_blob)
+    except Exception as exc:
+        print(f"::error::The metadata BLOB failed verification; nothing written: {exc}")
+        return 1
     existing_cache = _load_existing_cache()
     cache_state = _build_cache_state(
         last_modified=last_modified,
@@ -372,7 +388,7 @@ def main(argv: list[str] | None = None) -> int:
         print("Packaged metadata is already up to date; no changes made.")
 
     if publish:
-        return _publish_to_cloud_storage()
+        return _publish_to_cloud_storage(files)
     return 0
 
 
