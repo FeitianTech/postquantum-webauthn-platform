@@ -4,17 +4,15 @@ import { join, resolve } from 'node:path';
 import type { Locator, Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
-import { type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownText } from './parity';
+import { type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownText } from './recorded-words';
 import { recorded } from './recorded';
 import { addVirtualAuthenticator } from './virtual-authenticator';
 
-// What the Simple tab and the saved credentials showed in the current UI at / and
-// show in the new UI: the tab's own words, each saved credential's row for the same
-// stored records (both UIs read the one localStorage array), the result panel
-// after an authentication in each, and the success sentences; word for word
-// (layout, separators and controls' own labels set aside: parity.ts). Every
-// difference must be one listed below, with its reason. The current UI's side is
-// its recording (recorded.ts).
+// What the Simple tab and the saved credentials show, against their recording
+// (recorded.ts): the tab's own words, each saved credential's row for the same
+// stored records, the result panel after an authentication, and the success
+// sentences; word for word (layout, separators and controls' own labels set aside:
+// recorded-words.ts). Every difference must be one listed below, with its reason.
 
 const repo = resolve(import.meta.dirname, '..', '..');
 const STORAGE_KEY = 'postquantum-webauthn.credentials';
@@ -33,8 +31,8 @@ const RECORDS = [
 ];
 
 const TAB_EXPECTED: ExpectedDifference[] = [
-  { only: 'legacy', token: /^Processing\.\.\.$/, reason: 'the progress bar\'s default text, which every step replaces before it shows (SIM-M2)' },
-  { only: 'beta', token: /^0$/, section: 'Saved Credentials', reason: 'how many credentials the list holds (new)' },
+  { only: 'recorded', token: /^Processing\.\.\.$/, reason: 'the progress bar\'s default text, which every step replaces before it shows' },
+  { only: 'shown', token: /^0$/, section: 'Saved Credentials', reason: 'how many credentials the list holds (new)' },
 ];
 
 function rowExpected(name: string, row: Locator): Promise<ExpectedDifference[]> {
@@ -42,14 +40,14 @@ function rowExpected(name: string, row: Locator): Promise<ExpectedDifference[]> 
     const values = Array.from(element.querySelectorAll('[data-row-values] code')).map((code) => code.textContent ?? '');
     return [
       {
-        only: 'legacy' as const,
+        only: 'recorded' as const,
         token: account,
         reason: 'the account\'s name, which the new UI shows as the button that opens the details (controls\' labels are set aside; the names are checked equal)',
       },
       {
-        only: 'beta' as const,
+        only: 'shown' as const,
         token: ['Credential', 'ID', 'AAGUID', ...values],
-        reason: 'the credential ID and AAGUID each row now shows, in Geist Mono with copy (the brief asks for identifiers on the list)',
+        reason: 'the credential ID and AAGUID each row now shows, in Geist Mono with copy',
       },
     ];
   }, name).then((entries) =>
@@ -86,9 +84,9 @@ async function openBeta(page: Page) {
 
 type RowRecording = { name: string; sections: ShownSection[]; buttons: string[]; checks: string[] };
 
-test.describe('the Simple tab, as the current UI showed it', () => {
+test.describe('the Simple tab, as recorded', () => {
   test('shows the same words', async ({ page }) => {
-    const legacy = recorded<ShownSection[]>('simple-parity', 'the tab');
+    const legacy = recorded<ShownSection[]>('simple', 'the tab');
     await openBeta(page);
     const beta = await readShownText(page.locator('#nav-panel-simple'), 'h2, h3');
 
@@ -98,7 +96,7 @@ test.describe('the Simple tab, as the current UI showed it', () => {
   });
 
   test('shows each saved credential with the same words, in the same order', async ({ page }) => {
-    const legacyRows = recorded<RowRecording[]>('simple-parity', 'the rows');
+    const legacyRows = recorded<RowRecording[]>('simple', 'the rows');
     expect(legacyRows).toHaveLength(RECORDS.length);
 
     await openBeta(page);
@@ -124,7 +122,7 @@ test.describe('the Simple tab, as the current UI showed it', () => {
 
   test('says the same after a registration and an authentication', async ({ page }) => {
     await addVirtualAuthenticator(page);
-    const name = `parity-${Date.now()}`;
+    const name = `recorded-${Date.now()}`;
 
     await openBeta(page);
     await page.getByRole('textbox', { name: 'Username' }).fill(name);
@@ -134,12 +132,12 @@ test.describe('the Simple tab, as the current UI showed it', () => {
     await expect(page.getByText('Authentication successful! You have been verified.')).toBeVisible();
     const betaPanel = await readShownText(page.getByRole('tabpanel', { name: 'Simple Authentication' }).locator('[data-ceremony-result]'), 'h6');
 
-    const current = recorded<{ panel: ShownSection[]; registered: string }>('simple-parity', 'after a registration and an authentication');
+    const current = recorded<{ panel: ShownSection[]; registered: string }>('simple', 'after a registration and an authentication');
     const legacyPanel = current.panel;
 
     const counter: ExpectedDifference[] = [
-      { only: 'legacy', token: /^\d+$/, reason: 'the counter, which each authentication raises (the same credential was used in the new UI first)' },
-      { only: 'beta', token: /^\d+$/, reason: 'the counter, which each authentication raises' },
+      { only: 'recorded', token: /^\d+$/, reason: 'the counter, which each authentication raises (the same credential was used on the page first)' },
+      { only: 'shown', token: /^\d+$/, reason: 'the counter, which each authentication raises' },
     ];
     const differences = compareShownText(legacyPanel, betaPanel, counter);
     expect(describeDifferences(differences.filter((difference) => !difference.reason))).toEqual([]);

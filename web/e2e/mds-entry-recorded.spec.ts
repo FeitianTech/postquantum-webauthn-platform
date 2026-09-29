@@ -4,15 +4,15 @@ import { join, resolve } from 'node:path';
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
-import { type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownText } from './parity';
+import { type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownText } from './recorded-words';
 import { recorded } from './recorded';
 
-// What an MDS entry's page, one of its certificates and its raw view showed in the
-// current UI at / and show in the new UI, over the fixture snapshot serve-flask.mjs
-// serves (tests/fixtures/mds): each page's text word for word, section by section
-// (layout, separators and controls' own labels set aside: parity.ts), and the raw
-// view's text exactly. Every difference must be one listed below, with its reason.
-// The current UI's side is its recording (recorded.ts).
+// What an MDS entry's page, one of its certificates and its raw view show, over the
+// fixture snapshot serve-flask.mjs serves (tests/fixtures/mds), against their
+// recording (recorded.ts): each page's text word for word, section by section
+// (layout, separators and controls' own labels set aside: recorded-words.ts), and
+// the raw view's text exactly. Every difference must be one listed below, with its
+// reason.
 
 const repo = resolve(import.meta.dirname, '..', '..');
 const UPLOAD = join(repo, 'tests', 'fixtures', 'mds', 'custom-metadata.json');
@@ -27,7 +27,7 @@ const ENTRIES = [
 
 const EXPECTED: ExpectedDifference[] = [
   {
-    only: 'beta',
+    only: 'shown',
     section: 'User Verification Details',
     token: /^(Self-attested|FRR|FAR|Max|templates|retries|Block|slowdown|Min|complexity|\d+(\.\d+)?)$/,
     reason: 'the biometric (baDesc) and pattern (paDesc) accuracy, which the current page left out (new in the new UI)',
@@ -52,14 +52,14 @@ test.describe('the MDS entry page reads the same in both UIs', () => {
   const report: string[] = [];
 
   test.afterAll(async ({}, testInfo) => {
-    await testInfo.attach('mds-entry-parity.txt', { body: report.join('\n') || 'no differences', contentType: 'text/plain' });
+    await testInfo.attach('mds-entry-recorded.txt', { body: report.join('\n') || 'no differences', contentType: 'text/plain' });
     console.log(report.join('\n') || 'no differences');
   });
 
   for (const entry of ENTRIES) {
     test(entry.label, async ({ page }) => {
       if ('upload' in entry) await upload(page);
-      const legacy = recorded<ShownSection[]>('mds-entry-parity', entry.label);
+      const legacy = recorded<ShownSection[]>('mds-entry', entry.label);
       const beta = await readShownText(await betaEntry(page, entry.entryId, entry.name), 'h4');
 
       expect(beta.map((section) => section.heading)).toEqual(legacy.map((section) => section.heading));
@@ -73,7 +73,7 @@ test.describe('the MDS entry page reads the same in both UIs', () => {
   }
 
   test('a certificate: its summary and decoded output', async ({ page }) => {
-    const legacy = recorded<ShownSection[]>('mds-entry-parity', 'a certificate');
+    const legacy = recorded<ShownSection[]>('mds-entry', 'a certificate');
 
     await page.goto('/#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000002/certificate/1');
     const betaPage = page.locator('[data-mds-certificate]');
@@ -88,7 +88,7 @@ test.describe('the MDS entry page reads the same in both UIs', () => {
 
   test('the raw view: the same text', async ({ page }) => {
     const { legacyText, legacyTitle, legacySubtitle } = recorded<{ legacyText: string; legacyTitle: string; legacySubtitle: string }>(
-      'mds-entry-parity',
+      'mds-entry',
       'the raw view',
     );
 

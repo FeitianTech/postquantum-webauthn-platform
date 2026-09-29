@@ -5,16 +5,16 @@ import { expect, test } from './fixtures';
 import { recorded } from './recorded';
 import { type VirtualCredential, addVirtualAuthenticator } from './virtual-authenticator';
 
-// What a visitor's browser holds from the current UI at /, which Phase 30 removed:
-// a Simple and an Advanced credential it registered, as it stored them, and the
-// virtual authenticator's credentials (their private keys and counters), recorded
-// before it went (recorded.ts). The new UI lists them, opens their details,
-// deletes them, and authenticates with the Advanced one once its key is back on
-// an authenticator; the server holds nothing of either (a fresh run's stores).
+// What visitors' browsers hold from an earlier release of the site: a Simple and
+// an Advanced credential it registered, as it stored them, and the virtual
+// authenticator's credentials (their private keys and counters), recorded
+// (recorded.ts). The site lists them, opens their details, deletes them, and
+// authenticates with the Advanced one once its key is back on an authenticator;
+// the server holds nothing of either (a fresh run's stores).
 
 type StoredRecord = Record<string, unknown> & { type: string; credentialIdBase64Url: string };
 
-const { records, credentials } = recorded<{ records: StoredRecord[]; credentials: VirtualCredential[] }>('current-ui-records', 'records');
+const { records, credentials } = recorded<{ records: StoredRecord[]; credentials: VirtualCredential[] }>('stored-records', 'records');
 const SIMPLE = 'current-ui-simple@example.com';
 const ADVANCED = 'current-ui-advanced';
 const advancedRecord = records.find((record) => record.type === 'advanced')!;
@@ -32,7 +32,7 @@ async function openWithRecords(page: Page, hash: string) {
 
 const base64url = (base64: string) => base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-test.describe('what the current UI stored, in the new UI', () => {
+test.describe('credentials an earlier release stored', () => {
   test('lists both credentials, and opens each one\'s details (the Advanced one\'s registration from its saved snapshot)', async ({ page }) => {
     await openWithRecords(page, '#simple');
     await expect(rows(page)).toHaveCount(2);

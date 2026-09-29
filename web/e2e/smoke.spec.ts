@@ -28,7 +28,7 @@ async function highlightSitsOn(page: Page, tab: Locator) {
 }
 
 test.describe('the app shell', () => {
-  test('switches sections on the page and by the hash, and no section leads to the current UI', async ({ page }) => {
+  test('switches sections on the page and by the hash, and links to no other interface', async ({ page }) => {
     await page.goto('/');
     const tabs = page.getByRole('tablist', { name: 'Sections' });
     await expect(tabs.getByRole('tab')).toHaveText(SECTIONS.map((name) => `${name}${name}`));
@@ -47,7 +47,7 @@ test.describe('the app shell', () => {
       await highlightSitsOn(page, tab);
     }
 
-    // Every section is ported (Phase 29B), and none links to the current UI.
+    // The Advanced tab's segments switch, and nothing links to another interface.
     const advanced = page.getByRole('tabpanel', { name: 'Advanced Authentication' });
     await advanced.getByRole('tab', { name: 'Authentication' }).click();
     await expect(advanced.getByRole('button', { name: 'Assert Credential' })).toBeVisible();
@@ -162,7 +162,7 @@ test.describe('the app shell', () => {
     await expect(dialog.getByRole('region', { name: 'Post-quantum' })).toContainText('-48 ML-DSA-44, -49 ML-DSA-65, -50 ML-DSA-87');
 
     // Copy report, with the page allowed to use the clipboard: the raw findings
-    // as JSON, and the words of the current panel.
+    // as JSON, and the panel's own words.
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     await dialog.getByRole('button', { name: 'Copy report' }).click();
     await expect(dialog.getByRole('status')).toHaveText('Report copied to the clipboard.');
@@ -263,8 +263,8 @@ test.describe('the app shell', () => {
   });
 });
 
-// Where the new UI was reviewed before the cutover: every /beta link lands where it
-// pointed, the hash kept across the redirect.
+// Old /beta links: every one lands where it pointed, the hash kept across the
+// redirect.
 test.describe('an old /beta link', () => {
   test('is answered by a permanent redirect to the same path at /, not cached', async ({ page }) => {
     for (const [from, to] of [

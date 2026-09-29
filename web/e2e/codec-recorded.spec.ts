@@ -1,14 +1,13 @@
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
-import { type Difference, type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownText } from './parity';
+import { type Difference, type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownText } from './recorded-words';
 import { recorded } from './recorded';
 
-// The text the current Codec showed and the text the new UI shows, for the same inputs
-// from tests/app/codec_corpus.py, compared word for word per section once
-// layout and separators are set aside (parity.ts). Every difference must be one
-// listed below, with its reason. The current Codec's side is its recording, which
-// keeps the input it was given (recorded.ts).
+// The text the Codec shows for inputs from tests/app/codec_corpus.py, against its
+// recording (recorded.ts, which keeps each input), compared word for word per
+// section once layout and separators are set aside (recorded-words.ts). Every
+// difference must be one listed below, with its reason.
 
 // Items of the corpus, and how each is sent: some with a CTAP status byte in
 // front, one with five bytes of HID padding after it.
@@ -29,12 +28,12 @@ const INPUTS = [
 // The corpus holds only strictly well-formed items; this one is read leniently.
 const LENIENT = { hex: 'a2010203', note: 'CBOR that is not well-formed, read leniently' };
 
-// What the new UI shows that the current UI did not, and why.
+// What the page shows that the recording does not, and why.
 const EXPECTED: ExpectedDifference[] = [
   {
-    only: 'beta',
+    only: 'shown',
     token: /^(rendering|canonical|malformed|skipped|trailing|json|limit|input|ambiguous|ctap)$/,
-    reason: "the finding's category, shown as a chip (new: the current UI leaves it out)",
+    reason: "the finding's category, shown as a chip (not in the recording)",
   },
 ];
 
@@ -54,7 +53,7 @@ test.describe('the Codec reads the same in both UIs', () => {
 
   test.afterAll(async ({}, testInfo) => {
     const report = Object.entries(found).flatMap(([label, differences]) => [`${label}:`, ...describeDifferences(differences).map((line) => `  ${line}`)]);
-    await testInfo.attach('codec-parity.txt', { body: report.join('\n') || 'no differences', contentType: 'text/plain' });
+    await testInfo.attach('codec-recorded.txt', { body: report.join('\n') || 'no differences', contentType: 'text/plain' });
     console.log(report.join('\n') || 'no differences');
   });
 
@@ -65,9 +64,9 @@ test.describe('the Codec reads the same in both UIs', () => {
 
   for (const label of cases) {
     test(label, async ({ page }) => {
-      const current = recorded<{ input: string; lenient: boolean; sections: ShownSection[] }>('codec-parity', label);
+      const current = recorded<{ input: string; lenient: boolean; sections: ShownSection[] }>('codec', label);
       const beta = await betaText(page, current.input, current.lenient);
-      expect(current.sections.length, 'the current UI showed sections').toBeGreaterThan(1);
+      expect(current.sections.length, 'the recording holds sections').toBeGreaterThan(1);
 
       const differences = compareShownText(current.sections, beta, EXPECTED);
       found[label] = differences;

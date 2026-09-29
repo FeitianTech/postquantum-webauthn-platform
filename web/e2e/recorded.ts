@@ -1,15 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-// What the current UI at / showed for each parity case, recorded before Phase 30
-// removed it, so the new UI stays checked against it. The readers that recorded
-// it (with PARITY_RECORD=1) went with the current UI; they are in the commit that
-// added e2e/recorded/. A case whose ceremony was live keeps the stored records the
-// ceremony wrote beside the words, so the new UI is read for that very credential.
+// What a page showed, recorded for each case of the *-recorded specs, so the pages
+// stay checked against it. A case whose ceremony was live keeps the stored records
+// the ceremony wrote beside the words, so the page is read for that very
+// credential.
 //
-// A recording is what the current UI showed at the cutover: it is never edited. A
-// later, intended change of what the new UI shows is an expected difference, with
-// its reason, in the spec that compares it.
+// A recording is never edited. A later, intended change of what a page shows is
+// an expected difference, with its reason, in the spec that compares it.
 
 const ROOT = join(import.meta.dirname, 'recorded');
 

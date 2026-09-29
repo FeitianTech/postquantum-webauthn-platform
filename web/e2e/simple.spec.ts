@@ -10,7 +10,7 @@ import { addVirtualAuthenticator } from './virtual-authenticator';
 // The Simple tab at /#simple in Chromium, against Flask serving the export
 // under the strict CSP: real registrations and authentications answered by
 // Chromium's virtual authenticator, and the saved credentials in the one
-// localStorage array (what the current UI wrote there: current-ui-records.spec.ts).
+// localStorage array (what an earlier release wrote there: stored-records.spec.ts).
 
 const repo = resolve(import.meta.dirname, '..', '..');
 const STORAGE_KEY = 'postquantum-webauthn.credentials';

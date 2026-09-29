@@ -1,44 +1,44 @@
 import { expect, test } from '@playwright/test';
 
-import { compareShownText, describeDifferences, readShownRows, readShownText } from './parity';
+import { compareShownText, describeDifferences, readShownRows, readShownText } from './recorded-words';
 
-// The parity check itself: it must see a missing, an extra and a doubled word,
+// The comparison itself: it must see a missing, an extra and a doubled word,
 // and read a region as the comparison expects.
 
 test('finds a missing, an extra and a doubled word, section by section', () => {
-  const legacy = [
+  const recorded = [
     { heading: '', lines: ['Codec Output', 'offset 8 · ${1} — map key 1 appears twice'] },
     { heading: 'EDN (exact bytes)', lines: ['{1: "a", 1: "c"}'] },
   ];
-  expect(compareShownText(legacy, [{ heading: '', lines: ['Codec Output', 'offset 8', '${1}', 'map key 1 appears twice'] }, { heading: 'EDN (exact bytes)', lines: ['{1: "a",', '1: "c"}'] }])).toEqual([]);
+  expect(compareShownText(recorded, [{ heading: '', lines: ['Codec Output', 'offset 8', '${1}', 'map key 1 appears twice'] }, { heading: 'EDN (exact bytes)', lines: ['{1: "a",', '1: "c"}'] }])).toEqual([]);
 
-  const differences = compareShownText(legacy, [
+  const differences = compareShownText(recorded, [
     { heading: '', lines: ['Codec Output', 'Codec', 'offset ${1} map key 1 appears twice', 'canonical'] },
-  ], [{ only: 'beta', token: /^canonical$/, reason: 'a new chip' }]);
+  ], [{ only: 'shown', token: /^canonical$/, reason: 'a new chip' }]);
   // "8" is missing, "Codec" doubled, the chip explained, and the EDN section gone.
   expect(differences.map(({ section, only, token, count, reason }) => [section, only, token, count, reason ?? null])).toEqual([
-    ['', 'legacy', '8', 1, null],
-    ['', 'beta', 'Codec', 1, null],
-    ['', 'beta', 'canonical', 1, 'a new chip'],
-    ['EDN (exact bytes)', 'legacy', 'EDN', 1, null],
-    ['EDN (exact bytes)', 'legacy', '(exact', 1, null],
-    ['EDN (exact bytes)', 'legacy', 'bytes)', 1, null],
-    ['EDN (exact bytes)', 'legacy', '{1', 1, null],
-    ['EDN (exact bytes)', 'legacy', '"a"', 1, null],
-    ['EDN (exact bytes)', 'legacy', '1', 1, null],
-    ['EDN (exact bytes)', 'legacy', '"c"}', 1, null],
+    ['', 'recorded', '8', 1, null],
+    ['', 'shown', 'Codec', 1, null],
+    ['', 'shown', 'canonical', 1, 'a new chip'],
+    ['EDN (exact bytes)', 'recorded', 'EDN', 1, null],
+    ['EDN (exact bytes)', 'recorded', '(exact', 1, null],
+    ['EDN (exact bytes)', 'recorded', 'bytes)', 1, null],
+    ['EDN (exact bytes)', 'recorded', '{1', 1, null],
+    ['EDN (exact bytes)', 'recorded', '"a"', 1, null],
+    ['EDN (exact bytes)', 'recorded', '1', 1, null],
+    ['EDN (exact bytes)', 'recorded', '"c"}', 1, null],
   ]);
   expect(describeDifferences(differences).slice(0, 3)).toEqual([
     '[header] only in the recording: "8" (in "offset 8 · ${1} — map key 1 appears twice") — UNEXPLAINED',
-    '[header] only in the new UI: "Codec" (in "Codec") — UNEXPLAINED',
-    '[header] only in the new UI: "canonical" (in "canonical") — a new chip',
+    '[header] only in the page: "Codec" (in "Codec") — UNEXPLAINED',
+    '[header] only in the page: "canonical" (in "canonical") — a new chip',
   ]);
 });
 
 test('explains a difference only in the section an expected difference names', () => {
-  const legacy = [{ heading: 'Details', lines: ['Base: 10'] }, { heading: 'Other', lines: ['Base: 10'] }];
-  const beta = [{ heading: 'Details', lines: ['Base: 10', 'FAR: 0.1'] }, { heading: 'Other', lines: ['Base: 10', 'FAR: 0.1'] }];
-  const differences = compareShownText(legacy, beta, [{ only: 'beta', token: /^(FAR|0\.1)$/, section: 'Details', reason: 'new' }]);
+  const recorded = [{ heading: 'Details', lines: ['Base: 10'] }, { heading: 'Other', lines: ['Base: 10'] }];
+  const shown = [{ heading: 'Details', lines: ['Base: 10', 'FAR: 0.1'] }, { heading: 'Other', lines: ['Base: 10', 'FAR: 0.1'] }];
+  const differences = compareShownText(recorded, shown, [{ only: 'shown', token: /^(FAR|0\.1)$/, section: 'Details', reason: 'new' }]);
   expect(differences.map(({ section, token, reason }) => [section, token, reason ?? null])).toEqual([
     ['Details', 'FAR', 'new'],
     ['Details', '0.1', 'new'],

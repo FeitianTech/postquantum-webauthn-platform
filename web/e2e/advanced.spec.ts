@@ -9,7 +9,7 @@ import { addVirtualAuthenticator } from './virtual-authenticator';
 // export under the strict CSP: registrations answered by Chromium's virtual
 // authenticator (a CTAP2 key on USB: the default request asks for a
 // cross-platform one), from the form and from an edited JSON; and the saved
-// credentials' drawer. What the current UI registered is current-ui-records.spec.ts's.
+// credentials' drawer. What an earlier release stored is stored-records.spec.ts's.
 
 const section = (page: Page) => page.getByRole('tabpanel', { name: 'Advanced Authentication' });
 const editor = (page: Page) => section(page).getByRole('textbox', { name: 'JSON Editor (CredentialCreationOptions)' });

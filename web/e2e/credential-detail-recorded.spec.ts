@@ -3,18 +3,15 @@ import { join, resolve } from 'node:path';
 
 import { betaLevel, betaSubViews, expectedFor, keep, report } from './credential-views';
 import { expect, test } from './fixtures';
-import type { ShownSection } from './parity';
+import type { ShownSection } from './recorded-words';
 import { recorded } from './recorded';
 
-// What a saved credential's details and its registration showed in the current UI
-// at / (the modal, its registration view, the second modal for a certificate or
-// the authenticator data) and show in the new UI (the dialog's levels), for the same
-// stored records and for an advanced credential registered at /: word for word
-// per section (layout, separators and controls' own labels set aside:
-// parity.ts), and each certificate's and the authenticator data's text equal.
-// Every difference must be one listed below, with its reason. The current UI's
-// side is its recording; the advanced registration's keeps the records it wrote,
-// which the new UI is given (recorded.ts).
+// What a saved credential's details and its registration show (the dialog's
+// levels), against their recording (recorded.ts), for the same stored records and
+// for an advanced credential whose records the recording keeps: word for word per
+// section (layout, separators and controls' own labels set aside:
+// recorded-words.ts), and each certificate's and the authenticator data's text
+// equal. Every difference must be one listed below, with its reason.
 
 type DetailRecording = { sections: ShownSection[]; subViews: Record<string, string> };
 
@@ -35,11 +32,11 @@ const RECORDS = ['es256', 'eddsa', 'mldsa65', 'x5c'].map((name, index) => ({
   email: `${name}@example.com`,
 })) as Record<string, unknown>[];
 
-test.describe('a saved credential\'s details, as the current UI showed them', () => {
+test.describe('a saved credential\'s details, as recorded', () => {
   for (const record of RECORDS) {
     const name = record.userName as string;
     test(`show the same words, section by section, and the same certificates and authenticator data: ${name}`, async ({ page }) => {
-      const current = recorded<DetailRecording>('credential-detail-parity', name);
+      const current = recorded<DetailRecording>('credential-detail', name);
       const { sections: legacy, subViews: legacySubs } = current;
 
       await page.goto('/#simple');
@@ -48,7 +45,7 @@ test.describe('a saved credential\'s details, as the current UI showed them', ()
       await page.goto(`/#simple/credential/id:${record.credentialIdBase64Url}`);
       const detail = await betaLevel(page, 'detail', 'h4');
       await page.getByRole('dialog').getByRole('button', { name: 'Show registration details' }).click();
-      const registration = await betaLevel(page, 'registration', 'h4, [data-parity-heading]');
+      const registration = await betaLevel(page, 'registration', 'h4, [data-recorded-heading]');
       const betaSubs = await betaSubViews(page);
 
       expect(report(legacy, [...detail, ...registration], expectedFor(name))).toEqual([]);
@@ -59,8 +56,8 @@ test.describe('a saved credential\'s details, as the current UI showed them', ()
     });
   }
 
-  test('an advanced registration\'s result at / shows the words its registration level shows in the new UI', async ({ page }) => {
-    const current = recorded<DetailRecording & { records: object[] }>('credential-detail-parity', 'an advanced registration at the current UI');
+  test('an advanced registration\'s level shows the recorded words', async ({ page }) => {
+    const current = recorded<DetailRecording & { records: object[] }>('credential-detail', 'the result of an advanced registration');
     const { sections: legacy, subViews: legacySubs } = current;
 
     await page.goto('/#simple');
@@ -68,7 +65,7 @@ test.describe('a saved credential\'s details, as the current UI showed them', ()
     await page.reload();
     const key = await page.locator('li[data-credential-key]').first().getAttribute('data-credential-key');
     await page.goto(`/#simple/credential/${encodeURIComponent(key!).replace(/%3A/gi, ':')}/registration`);
-    const beta = await betaLevel(page, 'registration', 'h4, [data-parity-heading]');
+    const beta = await betaLevel(page, 'registration', 'h4, [data-recorded-heading]');
     const betaSubs = await betaSubViews(page);
 
     expect(report(legacy, beta, [])).toEqual([]);

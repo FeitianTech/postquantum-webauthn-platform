@@ -5,18 +5,17 @@ import type { Page } from '@playwright/test';
 
 import { betaLevel, betaSubViews, expectedFor, keep, report } from './credential-views';
 import { expect, test } from './fixtures';
-import { type ShownSection, compareShownText, describeDifferences, readShownText } from './parity';
+import { type ShownSection, compareShownText, describeDifferences, readShownText } from './recorded-words';
 import { recorded } from './recorded';
 import { addVirtualAuthenticator } from './virtual-authenticator';
 
-// What the Advanced tab's registration showed in the current UI at / and shows in
-// the new UI's #advanced: the form's words section by section (layout, separators and
-// controls' own labels set aside: parity.ts), each field's info popup in English
-// and 中文, the algorithm and hint choices, the JSON editor's text for the same
-// settings byte for byte, and a registration made in the new UI shown by the current
-// modal. Every difference must be one listed, with its reason. The current UI's
-// side is its recording; the registration's keeps the records the new UI wrote,
-// which the new UI is given again (recorded.ts).
+// What the Advanced tab shows at #advanced, against its recording (recorded.ts):
+// the form's words section by section (layout, separators and controls' own labels
+// set aside: recorded-words.ts), each field's info popup in English and 中文, the
+// algorithm and hint choices, the JSON editor's text for the same settings byte for
+// byte, and a registration's details, for the records the recording keeps. Every
+// difference must be one listed, with its reason. The recorded user name is the
+// one the recordings hold.
 
 type Popup = { label: string; en: string; zh: string };
 
@@ -34,9 +33,9 @@ async function openBeta(page: Page) {
 
 const squeeze = (text: string | null) => (text ?? '').replace(/\s+/g, '');
 
-test.describe('the Advanced tab\'s registration, as the current UI showed it', () => {
+test.describe('the Advanced tab\'s registration, as recorded', () => {
   test('shows the same words, section by section', async ({ page }) => {
-    const legacy = recorded<ShownSection[]>('advanced-parity', 'the registration form');
+    const legacy = recorded<ShownSection[]>('advanced', 'the registration form');
 
     await openBeta(page);
     const shown = await readShownText(beta(page).locator('[data-registration-form]'), 'h3');
@@ -47,7 +46,7 @@ test.describe('the Advanced tab\'s registration, as the current UI showed it', (
   });
 
   test('gives each field the same info popup, in English and 中文', async ({ page }) => {
-    const legacy = recorded<Popup[]>('advanced-parity', 'the registration popups');
+    const legacy = recorded<Popup[]>('advanced', 'the registration popups');
 
     await openBeta(page);
     const shown = await beta(page)
@@ -70,7 +69,7 @@ test.describe('the Advanced tab\'s registration, as the current UI showed it', (
   });
 
   test('offers the same algorithms and hints, in the same order', async ({ page }) => {
-    const legacy = recorded<string[][]>('advanced-parity', 'the registration choices');
+    const legacy = recorded<string[][]>('advanced', 'the registration choices');
 
     await openBeta(page);
     const chipsOf = (name: string) => beta(page).getByRole('group', { name }).getByRole('button').allTextContents();
@@ -78,7 +77,7 @@ test.describe('the Advanced tab\'s registration, as the current UI showed it', (
   });
 
   test('writes the same request for the same settings, byte for byte', async ({ page }) => {
-    const { legacyDefault, legacyChanged } = recorded<{ legacyDefault: string; legacyChanged: string }>('advanced-parity', 'the registration request');
+    const { legacyDefault, legacyChanged } = recorded<{ legacyDefault: string; legacyChanged: string }>('advanced', 'the registration request');
 
     await openBeta(page);
     const form = beta(page).locator('#advanced-ceremony-panel-registration');
@@ -102,8 +101,8 @@ test.describe('the Advanced tab\'s registration, as the current UI showed it', (
     expect(await betaEditor(page).inputValue()).toBe(legacyChanged);
   });
 
-  test('a registration made in the new UI shows the same words in the current modal as in the new UI\'s levels', async ({ page }) => {
-    const current = recorded<{ name: string; sections: ShownSection[]; subViews: Record<string, string>; records: object[] }>('advanced-parity', 'a registration made in the new UI');
+  test('a registration\'s details show the recorded words at each level', async ({ page }) => {
+    const current = recorded<{ name: string; sections: ShownSection[]; subViews: Record<string, string>; records: object[] }>('advanced', 'a registration and its details');
 
     await page.goto('/#simple');
     await keep(page, current.records);
@@ -112,7 +111,7 @@ test.describe('the Advanced tab\'s registration, as the current UI showed it', (
     await page.goto(`/#simple/credential/${encodeURIComponent(key!).replace(/%3A/gi, ':')}`);
     const detail = await betaLevel(page, 'detail', 'h4');
     await page.getByRole('dialog').getByRole('button', { name: 'Show registration details' }).click();
-    const registration = await betaLevel(page, 'registration', 'h4, [data-parity-heading]');
+    const registration = await betaLevel(page, 'registration', 'h4, [data-recorded-heading]');
     const betaSubs = await betaSubViews(page);
 
     expect(report(current.sections, [...detail, ...registration], expectedFor(current.name))).toEqual([]);
@@ -149,9 +148,9 @@ async function openBetaAuthentication(page: Page, records: object[] = RECORDS) {
   await expect(betaAuthEditor(page)).toHaveValue(/"rpId"/);
 }
 
-test.describe('the Advanced tab\'s authentication, as the current UI showed it', () => {
+test.describe('the Advanced tab\'s authentication, as recorded', () => {
   test('shows the same words, section by section, and the same notes', async ({ page }) => {
-    const { legacy, legacyNotes } = recorded<{ legacy: ShownSection[]; legacyNotes: string[] }>('advanced-parity', 'the authentication form');
+    const { legacy, legacyNotes } = recorded<{ legacy: ShownSection[]; legacyNotes: string[] }>('advanced', 'the authentication form');
 
     await openBetaAuthentication(page, []);
     const form = betaAuth(page).locator('[data-authentication-form]');
@@ -162,7 +161,7 @@ test.describe('the Advanced tab\'s authentication, as the current UI showed it',
     const notes = await Promise.all(betaNotes.map((id) => page.locator(`[id="${id}"]`).textContent()));
     // The notes are compared on their own: the current form keeps them among its errors.
     await page.evaluate(() => {
-      for (const element of document.querySelectorAll('[data-authentication-form] [id$="-hint"]')) element.setAttribute('data-parity-skip', '');
+      for (const element of document.querySelectorAll('[data-authentication-form] [id$="-hint"]')) element.setAttribute('data-recorded-skip', '');
     });
     const shown = await readShownText(form, 'h3');
 
@@ -172,7 +171,7 @@ test.describe('the Advanced tab\'s authentication, as the current UI showed it',
   });
 
   test('gives each field the same info popup, in English and 中文', async ({ page }) => {
-    const legacy = recorded<Popup[]>('advanced-parity', 'the authentication popups');
+    const legacy = recorded<Popup[]>('advanced', 'the authentication popups');
 
     await openBetaAuthentication(page);
     const shown = await betaAuth(page)
@@ -194,7 +193,7 @@ test.describe('the Advanced tab\'s authentication, as the current UI showed it',
   });
 
   test('offers the same choices, in the same order', async ({ page }) => {
-    const legacy = recorded<Record<'allow' | 'verification' | 'hash' | 'largeBlob' | 'hints', string[]>>('advanced-parity', 'the authentication choices');
+    const legacy = recorded<Record<'allow' | 'verification' | 'hash' | 'largeBlob' | 'hints', string[]>>('advanced', 'the authentication choices');
 
     await openBetaAuthentication(page);
     const form = betaAuth(page);
@@ -210,7 +209,7 @@ test.describe('the Advanced tab\'s authentication, as the current UI showed it',
   });
 
   test('writes the same request for the same settings, byte for byte', async ({ page }) => {
-    const legacyTexts = recorded<string[]>('advanced-parity', 'the authentication requests');
+    const legacyTexts = recorded<string[]>('advanced', 'the authentication requests');
 
     await openBetaAuthentication(page);
     const form = betaAuth(page);
@@ -241,7 +240,7 @@ test.describe('the Advanced tab\'s authentication, as the current UI showed it',
     await beta(page).getByRole('button', { name: 'Create Credential' }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Registration Details' })).toBeVisible();
 
-    const legacy = recorded<string>('advanced-parity', 'the result of an authentication');
+    const legacy = recorded<string>('advanced', 'the result of an authentication');
 
     await page.goto('/#advanced');
     await beta(page).getByRole('tab', { name: 'Authentication' }).click();

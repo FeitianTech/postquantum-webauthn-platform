@@ -32,8 +32,8 @@ function Attestation({
   return (
     <DetailSection id={`${idBase}-attestation`} title={REGISTRATION_WORDS.attestationTitle}>
       <div>
-        {/* A heading of its own in the current view too (the parity check splits there). */}
-        <h5 className="text-title-sm font-semibold text-ink" data-parity-heading="">
+        {/* A heading of its own (the recorded specs split the words there). */}
+        <h5 className="text-title-sm font-semibold text-ink" data-recorded-heading="">
           {REGISTRATION_WORDS.attestationObject}
         </h5>
         <div className="mt-2">

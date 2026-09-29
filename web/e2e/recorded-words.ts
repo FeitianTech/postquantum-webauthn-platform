@@ -1,8 +1,8 @@
 import type { Locator } from '@playwright/test';
 
-// Does the new UI show what the current one showed? For one surface: read the
+// Does a page still show what its recording holds? For one surface: read the
 // text a region shows, grouped by the section it sits in, and compare it with
-// what the current UI showed there (its recording, recorded.ts) as multisets of
+// what was recorded there (recorded.ts) as multisets of
 // words, so layout, element boundaries, separators ("·", "—", ":") and CSS
 // text-transform do not count, but a missing, extra or doubled word does. Each
 // difference a surface expects is listed with its reason.
@@ -10,8 +10,8 @@ import type { Locator } from '@playwright/test';
 export type ShownSection = { heading: string; lines: string[] };
 
 export type ExpectedDifference = {
-  /** Which UI shows the words the other does not. */
-  only: 'legacy' | 'beta';
+  /** Which side holds the words the other does not: the recording, or the page. */
+  only: 'recorded' | 'shown';
   /** The words, as one token each. */
   token: RegExp;
   /** Only in this section (its heading); anywhere without one. */
@@ -19,11 +19,11 @@ export type ExpectedDifference = {
   reason: string;
 };
 
-export type Difference = { section: string; only: 'legacy' | 'beta'; token: string; count: number; line: string; reason?: string };
+export type Difference = { section: string; only: 'recorded' | 'shown'; token: string; count: number; line: string; reason?: string };
 
 // What is not content: controls (their labels are the UI's, not the data's),
 // what assistive technology does not read, and what a page marks as chrome.
-const SKIP = 'button, [aria-hidden="true"], .sr-only, [hidden], script, style, [data-parity-skip]';
+const SKIP = 'button, [aria-hidden="true"], .sr-only, [hidden], script, style, [data-recorded-skip]';
 
 /**
  * The text `region` shows, in document order, split into sections at each
@@ -98,21 +98,21 @@ function unmatched(mine: string[], theirs: string[]) {
  * Every word one UI shows in a section more often than the other, with the line
  * it came from. A difference an `expected` entry explains carries its reason.
  */
-export function compareShownText(legacy: ShownSection[], beta: ShownSection[], expected: ExpectedDifference[] = []): Difference[] {
+export function compareShownText(recorded: ShownSection[], shown: ShownSection[], expected: ExpectedDifference[] = []): Difference[] {
   const bySection = (sections: ShownSection[]) => {
     const map = new Map<string, string[]>();
     for (const section of sections) map.set(section.heading, [...(map.get(section.heading) ?? []), ...section.lines]);
     return map;
   };
-  const left = bySection(legacy);
-  const right = bySection(beta);
+  const left = bySection(recorded);
+  const right = bySection(shown);
   const differences: Difference[] = [];
   for (const heading of new Set([...left.keys(), ...right.keys()])) {
-    const legacyWords = occurrences(left.has(heading) ? [heading, ...left.get(heading)!] : []);
-    const betaWords = occurrences(right.has(heading) ? [heading, ...right.get(heading)!] : []);
+    const recordedWords = occurrences(left.has(heading) ? [heading, ...left.get(heading)!] : []);
+    const shownWords = occurrences(right.has(heading) ? [heading, ...right.get(heading)!] : []);
     for (const [only, mine, theirs] of [
-      ['legacy', legacyWords, betaWords],
-      ['beta', betaWords, legacyWords],
+      ['recorded', recordedWords, shownWords],
+      ['shown', shownWords, recordedWords],
     ] as const) {
       for (const [token, lines] of mine) {
         const extra = lines.length - (theirs.get(token)?.length ?? 0);
@@ -132,15 +132,15 @@ export function compareShownText(legacy: ShownSection[], beta: ShownSection[], e
 export function describeDifferences(differences: Difference[]) {
   return differences.map(
     ({ section, only, token, count: extra, line, reason }) =>
-      `[${section || 'header'}] only in ${only === 'beta' ? 'the new UI' : 'the recording'}: "${token}"${extra > 1 ? ` ×${extra}` : ''}` +
+      `[${section || 'header'}] only in ${only === 'shown' ? 'the page' : 'the recording'}: "${token}"${extra > 1 ? ` ×${extra}` : ''}` +
       ` (in "${line}")${reason ? ` — ${reason}` : ' — UNEXPLAINED'}`,
   );
 }
 
 // Chrome only: what assistive technology does not read, and what a page marks as
 // not content. Unlike SKIP, controls count, since a table's cells may hold their
-// data in a control (the current MDS table's names are buttons).
-const ROW_SKIP = '[aria-hidden="true"], .sr-only, [hidden], script, style, img, [data-parity-skip]';
+// data in a control (an MDS table's names are buttons).
+const ROW_SKIP = '[aria-hidden="true"], .sr-only, [hidden], script, style, img, [data-recorded-skip]';
 
 /**
  * The text of each row `rowSelector` finds in `region`, a section per row headed

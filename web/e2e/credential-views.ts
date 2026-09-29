@@ -1,12 +1,10 @@
 import type { Page } from '@playwright/test';
 
 import { expect } from './fixtures';
-import { type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownText } from './parity';
+import { type ExpectedDifference, type ShownSection, compareShownText, describeDifferences, readShownText } from './recorded-words';
 
-// A saved credential's details and registration in the new UI's dialog levels, for the
-// parity specs, which compare them with what the current modal at / showed (its
-// registration view, the second modal for a certificate or the authenticator
-// data), as recorded.
+// A saved credential's details and registration in the dialog's levels, for the
+// *-recorded specs, which compare them with their recordings.
 
 export const STORAGE_KEY = 'postquantum-webauthn.credentials';
 
@@ -14,15 +12,15 @@ const escape = (word: string) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export function expectedFor(name: string): ExpectedDifference[] {
   return [
-    { only: 'beta', token: new RegExp(`^${escape(name)}$`), section: '', reason: 'the credential\'s name, the details\' title (new)' },
+    { only: 'shown', token: new RegExp(`^${escape(name)}$`), section: '', reason: 'the credential\'s name, the details\' title (new)' },
     {
-      only: 'beta',
+      only: 'shown',
       token: /^(Registration|Details)$/,
       section: 'Registration Details',
       reason: 'the way to the registration\'s own level: its heading (the button\'s label is set aside)',
     },
     {
-      only: 'legacy',
+      only: 'recorded',
       token: /^[()]$/,
       section: 'Properties',
       reason: 'the roots Root Valid tried (FIDO MDS, Chain) are chips, each in its verdict\'s tone, not a list in parentheses',
