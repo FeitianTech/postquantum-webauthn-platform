@@ -656,3 +656,27 @@ def test_ensure_ready_with_zero_attempts_returns_without_error(monkeypatch):
     )
 
     cloud.ensure_ready(max_attempts=0)
+
+
+def test_a_download_can_be_bounded_to_one_short_attempt(monkeypatch):
+    from tests.app.storage import fake_gcs
+
+    bucket = fake_gcs.install(monkeypatch)
+    bucket.put("mds/current.json", b"{}")
+    slept = []
+    monkeypatch.setattr(cloud.time, "sleep", slept.append)
+
+    assert cloud.download_bytes_with_generation("mds/current.json", timeout=5, attempts=1) == (b"{}", 1)
+    assert bucket.download_options[-1] == ("mds/current.json", {"timeout": 5, "retry": None})
+
+    # A transient failure is not retried: the caller hears of it at once.
+    bucket.failing["mds/current.json"] = OSError("unavailable")
+    with pytest.raises(OSError):
+        cloud.download_bytes_with_generation("mds/current.json", timeout=5, attempts=1)
+    assert slept == []
+
+    # The default keeps the client's own retry and the three attempts.
+    with pytest.raises(OSError):
+        cloud.download_bytes_with_generation("mds/current.json")
+    assert bucket.download_options[-1] == ("mds/current.json", {})
+    assert len(slept) == 2

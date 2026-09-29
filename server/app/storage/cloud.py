@@ -249,21 +249,33 @@ def download_bytes(blob_name: str) -> bytes | None:
     return _with_retry(_download)
 
 
-def download_bytes_with_generation(blob_name: str) -> tuple[bytes | None, int]:
-    """The object's bytes and generation; ``(None, 0)`` when there is no object."""
+def download_bytes_with_generation(
+    blob_name: str, *, timeout: float | None = None, attempts: int = _DEFAULT_RETRY_ATTEMPTS
+) -> tuple[bytes | None, int]:
+    """The object's bytes and generation; ``(None, 0)`` when there is no object.
+
+    ``timeout`` bounds each attempt (the client's own default is 60 s). With
+    ``attempts=1`` the download is tried once, the client's retry off too: for a
+    caller that would rather go without the object than keep a request waiting.
+    """
 
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
+    options: dict[str, Any] = {}
+    if timeout is not None:
+        options["timeout"] = timeout
+    if attempts == 1:
+        options["retry"] = None
 
     def _download() -> tuple[bytes | None, int]:
         try:
-            data = blob.download_as_bytes()
+            data = blob.download_as_bytes(**options)
         except _not_found_error():
             return None, 0
         # The download sets the generation from the response it read.
         return data, int(blob.generation or 0)
 
-    return _with_retry(_download)
+    return _with_retry(_download, max_attempts=attempts)
 
 
 def upload_bytes_if_generation(

@@ -38,6 +38,7 @@ class Bucket:
         self.on_download: list[Callable[[str], None]] = []
         self.failing: dict[str, Exception] = {}
         self.list_calls: list[tuple[str, str | None]] = []
+        self.download_options: list[tuple[str, dict]] = []
         self.lock = threading.Lock()
 
     def blob(self, name: str) -> Blob:
@@ -90,7 +91,8 @@ class Blob:
         self.name = name
         self.generation = None
 
-    def download_as_bytes(self) -> bytes:
+    def download_as_bytes(self, **options) -> bytes:
+        self.bucket.download_options.append((self.name, options))
         if self.name in self.bucket.failing:
             raise self.bucket.failing[self.name]
         with self.bucket.lock:
