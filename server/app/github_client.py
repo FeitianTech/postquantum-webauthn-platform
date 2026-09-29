@@ -9,13 +9,10 @@ from typing import Any
 from urllib import error as urllib_error
 from urllib import request as urllib_request
 
-# ``encoding`` is a local here (the GitHub response field), so the decoder is
-# imported by name rather than shadowing :mod:`server.app.encoding`.
-from .encoding import decode_base64, encode_base64
+from .encoding import encode_base64
 
 __all__ = [
     "credential_log_repository",
-    "github_get_json",
     "github_upload_json",
     "github_upload_file",
     "github_list_directory",
@@ -133,34 +130,8 @@ def git_blob_sha(data: bytes) -> str:
     return hashlib.sha1(header + data).hexdigest()
 
 
-def github_get_json(path: str) -> tuple[dict[str, Any], str]:
-    """Return the JSON payload and SHA for ``path`` in the log repository."""
-
-    url = _api_url(f"contents/{path}")
-    try:
-        _, body = _request("GET", url)
-    except urllib_error.HTTPError as exc:
-        if exc.code == 404:
-            raise FileNotFoundError(path) from exc
-        raise
-
-    response: dict[str, Any] = json.loads(body.decode("utf-8"))
-    encoding = response.get("encoding")
-    content_encoded = response.get("content")
-    if encoding != "base64" or not isinstance(content_encoded, str):
-        raise RuntimeError(f"Unexpected response fetching {path}")
-
-    decoded_bytes = decode_base64(content_encoded)
-    payload = json.loads(decoded_bytes.decode("utf-8"))
-    sha = response.get("sha")
-    if not isinstance(sha, str):
-        raise RuntimeError(f"Missing SHA when fetching {path}")
-
-    return payload, sha
-
-
-def github_upload_json(path: str, obj: dict[str, Any], sha: str | None = None) -> None:
-    """Create or replace a JSON file at ``path`` in the credential log repository."""
+def github_upload_json(path: str, obj: dict[str, Any]) -> None:
+    """Create a JSON file at ``path`` in the credential log repository."""
 
     serialised = json.dumps(obj, ensure_ascii=False, indent=2)
     content = _encode_content(serialised.encode("utf-8"))
@@ -168,13 +139,10 @@ def github_upload_json(path: str, obj: dict[str, Any], sha: str | None = None) -
     filename = os.path.basename(path)
     folder = os.path.basename(os.path.dirname(path)) or "unknown"
 
-    action = "update" if sha else "add"
     body: dict[str, Any] = {
-        "message": f"{action}: {filename} (AAGUID={folder})",
+        "message": f"add: {filename} (AAGUID={folder})",
         "content": content,
     }
-    if sha:
-        body["sha"] = sha
 
     url = _api_url(f"contents/{path}")
     _request("PUT", url, body)

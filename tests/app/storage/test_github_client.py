@@ -320,91 +320,6 @@ def test_request_raises_runtime_when_retry_loop_is_bypassed(monkeypatch):
         github_client._request("GET", "https://api.github.com/example")
 
 
-def test_github_get_json_decodes_base64_payload_and_returns_sha(monkeypatch):
-    payload = {"hello": "world"}
-    encoded_payload = base64.b64encode(json.dumps(payload).encode("utf-8")).decode("ascii")
-    response_body = {
-        "encoding": "base64",
-        "content": encoded_payload,
-        "sha": "abc123",
-    }
-
-    monkeypatch.setattr(
-        github_client,
-        "_request",
-        lambda _method, _url: (200, json.dumps(response_body).encode("utf-8")),
-    )
-
-    parsed, sha = github_client.github_get_json("logs/example.json")
-
-    assert parsed == payload
-    assert sha == "abc123"
-
-
-def test_github_get_json_translates_404_to_file_not_found(monkeypatch):
-    monkeypatch.setattr(
-        github_client,
-        "_request",
-        lambda _method, _url: (_ for _ in ()).throw(
-            HTTPError(
-                url="https://api.github.com/example",
-                code=404,
-                msg="Not Found",
-                hdrs=None,
-                fp=io.BytesIO(b""),
-            )
-        ),
-    )
-
-    with pytest.raises(FileNotFoundError, match="logs/missing.json"):
-        github_client.github_get_json("logs/missing.json")
-
-
-def test_github_get_json_reraises_non_404_http_error(monkeypatch):
-    monkeypatch.setattr(
-        github_client,
-        "_request",
-        lambda _method, _url: (_ for _ in ()).throw(
-            HTTPError(
-                url="https://api.github.com/example",
-                code=500,
-                msg="Server Error",
-                hdrs=None,
-                fp=io.BytesIO(b""),
-            )
-        ),
-    )
-
-    with pytest.raises(HTTPError):
-        github_client.github_get_json("logs/example.json")
-
-
-def test_github_get_json_raises_on_unexpected_encoding(monkeypatch):
-    response_body = {"encoding": "utf-8", "content": "{}", "sha": "abc123"}
-
-    monkeypatch.setattr(
-        github_client,
-        "_request",
-        lambda _method, _url: (200, json.dumps(response_body).encode("utf-8")),
-    )
-
-    with pytest.raises(RuntimeError, match="Unexpected response"):
-        github_client.github_get_json("logs/example.json")
-
-
-def test_github_get_json_raises_when_sha_missing(monkeypatch):
-    payload = {"encoding": "base64", "content": base64.b64encode(b"{}").decode("ascii")}
-
-    monkeypatch.setattr(
-        github_client,
-        "_request",
-        lambda _method, _url: (200, json.dumps(payload).encode("utf-8")),
-    )
-
-    with pytest.raises(RuntimeError, match="Missing SHA"):
-        github_client.github_get_json("logs/example.json")
-
-
 def test_github_upload_json_builds_add_message_and_base64_content(monkeypatch):
     captured = {}
 
@@ -424,23 +339,6 @@ def test_github_upload_json_builds_add_message_and_base64_content(monkeypatch):
     decoded = base64.b64decode(captured["body"]["content"]).decode("utf-8")
     assert json.loads(decoded) == {"k": 1}
     assert "sha" not in captured["body"]
-
-
-def test_github_upload_json_builds_update_message_when_sha_provided(monkeypatch):
-    captured = {}
-
-    def _fake_request(method, url, body=None):
-        captured["method"] = method
-        captured["url"] = url
-        captured["body"] = body
-        return 200, b"{}"
-
-    monkeypatch.setattr(github_client, "_request", _fake_request)
-
-    github_client.github_upload_json("logs/aaguid-2/file.json", {"k": 2}, sha="old-sha")
-
-    assert captured["body"]["message"] == "update: file.json (AAGUID=aaguid-2)"
-    assert captured["body"]["sha"] == "old-sha"
 
 
 def test_github_upload_file_passes_message_content_and_optional_sha(monkeypatch):
