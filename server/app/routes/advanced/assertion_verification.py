@@ -19,7 +19,7 @@ from fido2.webauthn import AuthenticatorData
 
 from ... import config
 from ...encoding import encode_base64url
-from ...webauthn import pqc
+from ...webauthn import assertion_hash, pqc
 from ...webauthn.sign_count import sign_count_status
 from .. import binary_helpers
 from . import algorithms, binary
@@ -240,8 +240,7 @@ def verify_assertion(
         auth_result = auth_server.authenticate_complete(
             state,
             all_credentials,
-            response,
-            hash_algorithm=hash_algorithm,
+            assertion_hash.response_hashed_with(response, hash_algorithm),
         )
     except Exception as exc:
         return _verification_failure(exc, response, lookup, trace)

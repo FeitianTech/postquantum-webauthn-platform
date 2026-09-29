@@ -266,9 +266,17 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
     class _FakeServer:
         allowed_algorithms = []
 
-        def authenticate_complete(self, *_args, **kwargs):
-            captured["hash_algorithm"] = kwargs.get("hash_algorithm")
+        def authenticate_complete(self, _state, _credentials, response):
+            captured["response"] = response
             return _AuthResult({3: -7})
+
+    def _hashed_with(response, algorithm):
+        captured["hash_algorithm"] = algorithm
+        return response
+
+    from server.app.webauthn import assertion_hash
+
+    monkeypatch.setattr(assertion_hash, "response_hashed_with", _hashed_with)
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
@@ -314,9 +322,17 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
     class _FakeServer:
         allowed_algorithms = []
 
-        def authenticate_complete(self, *_args, **kwargs):
-            captured["hash_algorithm"] = kwargs.get("hash_algorithm")
+        def authenticate_complete(self, _state, _credentials, response):
+            captured["response"] = response
             return _AuthResult({3: -7})
+
+    def _hashed_with(response, algorithm):
+        captured["hash_algorithm"] = algorithm
+        return response
+
+    from server.app.webauthn import assertion_hash
+
+    monkeypatch.setattr(assertion_hash, "response_hashed_with", _hashed_with)
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
