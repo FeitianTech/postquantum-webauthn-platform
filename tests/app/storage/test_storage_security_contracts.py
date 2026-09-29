@@ -614,7 +614,7 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
     The unit tests above pin the codec; this one proves the codec covers what
     the register flow actually stores -- ``AttestedCredentialData``,
     ``AuthenticatorData``, COSE maps keyed by integers and raw attestation
-    bytes -- and that ``/api/credentials`` still renders the result.
+    bytes -- and that the app still reads the result back.
     """
 
     pytest.importorskip("server.app.app")
@@ -663,13 +663,11 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
 
     assert not any("unsupported type" in message for message in warnings), warnings
 
-    # The route reads it back through the same session cookie the client holds.
-    listed = client.get("/api/credentials")
-    assert listed.status_code == 200
-    records = listed.get_json()["credentials"]
+    # The app reads it back through the same session cookie the client holds.
+    download = client.get("/api/downloadcred?email=alice@example.com")
+    assert download.status_code == 200
+    records = record_format.decode_payload(download.data)
     assert len(records) == 1
-    rendered = records[0]
-    assert rendered["email"] == "alice@example.com"
-    assert rendered["publicKeyAlgorithm"] == -7
-    credential_id = rendered["credentialId"]
-    assert base64.urlsafe_b64decode(credential_id + "=" * (-len(credential_id) % 4)) == authenticator.credential_id
+    credential_data = records[0]["credential_data"]
+    assert credential_data.credential_id == authenticator.credential_id
+    assert credential_data.public_key[3] == -7

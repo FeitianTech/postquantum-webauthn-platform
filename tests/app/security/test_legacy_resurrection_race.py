@@ -164,7 +164,7 @@ def test_a_save_from_a_legacy_read_loses_to_a_delete_after_another_save(backend)
     assert store.readkey(EMAIL, session_id=SESSION) == [{"credential_data": "first"}]
 
 
-def test_a_deleted_user_is_not_listed_and_has_nothing_to_download(app, backend, simple_module):
+def test_a_deleted_user_has_nothing_stored_or_to_download(app, backend, simple_module):
     _kind, store, _bucket = backend
     client = app.test_client()
     assert _complete(client, Authenticator(), _begin(client)).status_code == 200
@@ -174,7 +174,6 @@ def test_a_deleted_user_is_not_listed_and_has_nothing_to_download(app, backend, 
 
     assert store.readkey(EMAIL, session_id=session_id) == []
     assert list(store.iter_credentials(session_id=session_id)) == []
-    assert client.get("/api/credentials").get_json() == {"credentials": []}
     assert client.get(f"/api/downloadcred?email={EMAIL}").status_code == 404
 
 

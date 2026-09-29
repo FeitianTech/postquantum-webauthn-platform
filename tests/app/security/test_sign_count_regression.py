@@ -304,17 +304,13 @@ def test_advanced_reports_not_supported_for_zero_counters(config_module, advance
     assert response.get_json()["signCountStatus"] == "not-supported"
 
 
-def test_the_credential_list_shows_the_counter_of_the_last_authentication(config_module, credential_store):
+def test_the_stored_counter_is_the_last_authentications(config_module, credential_store):
     authenticator = Authenticator()
     client = config_module.app.test_client()
     _register(client, authenticator, counter=5)
     assert _authenticate(client, authenticator, counter=9).status_code == 200
 
-    listed = client.get("/api/credentials")
-
-    assert listed.status_code == 200
     # Not 5, the counter the authenticator reported at registration.
-    assert [entry["signCount"] for entry in listed.get_json()["credentials"]] == [9]
     assert credential_store(authenticator.credential_id) == 9
 
 
