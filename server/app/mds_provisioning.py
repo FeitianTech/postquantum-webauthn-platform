@@ -31,9 +31,11 @@ is available, exactly as they already did for a missing snapshot.
 from __future__ import annotations
 
 import functools
+import json
 import logging
 import os
 import threading
+import time
 from pathlib import Path
 
 from . import mds_snapshot_dir, mds_snapshot_sets
@@ -45,6 +47,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "SNAPSHOT_FILENAMES",
     "ensure_snapshot_available",
+    "follow_newer_snapshot",
     "missing_snapshot_files",
     "snapshot_blob_name",
     "upstream_refresh_enabled",
@@ -64,6 +67,15 @@ _UPSTREAM_ENV_FLAG = "FIDO_SERVER_MDS_FETCH_UPSTREAM"
 
 _provision_lock = threading.Lock()
 _provision_state: dict[str, object] = {"attempted": False, "source": None}
+
+# How often a running instance asks the bucket whether it points to a newer set.
+_POINTER_CHECK_ENV = "FIDO_SERVER_MDS_POINTER_CHECK_SECONDS"
+_DEFAULT_POINTER_CHECK_SECONDS = 900.0
+# The pointer is read inside a visitor's request: briefly, once.
+_POINTER_TIMEOUT_SECONDS = 5.0
+_SET_TIMEOUT_SECONDS = 60.0
+_follow_lock = threading.Lock()
+_follow_state: dict[str, float | None] = {"checked_at": None}
 
 
 def snapshot_path(filename: str) -> Path:
@@ -227,6 +239,61 @@ def ensure_snapshot_available(*, force: bool = False) -> str:
         logger.info("Provisioned the FIDO MDS snapshot from %s.", source)
 
     return source
+
+
+def _pointer_check_seconds() -> float:
+    try:
+        return max(0.0, float(os.environ.get(_POINTER_CHECK_ENV, _DEFAULT_POINTER_CHECK_SECONDS)))
+    except ValueError:
+        return _DEFAULT_POINTER_CHECK_SECONDS
+
+
+def _local_snapshot_no() -> int | None:
+    try:
+        meta = json.loads(snapshot_path(mds_snapshot_dir.VERIFIED_META).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    no = meta.get("no") if isinstance(meta, dict) else None
+    return no if isinstance(no, int) else None
+
+
+def follow_newer_snapshot() -> bool:
+    """Take the set the bucket's pointer names when it is newer than the local
+    snapshot; return whether it did.
+
+    A running instance otherwise keeps the snapshot it started with for as long
+    as it lives. Called in a request (Cloud Run gives CPU only to requests), at most
+    once per ``FIDO_SERVER_MDS_POINTER_CHECK_SECONDS`` (15 minutes): one short read
+    of the pointer. The one request that finds a newer set downloads it and writes
+    it, payloads first and metas last; every other request meanwhile goes on with
+    the snapshot it has, and never waits. Any failure keeps the local snapshot.
+    """
+
+    if not cloud.gcs_enabled() or not _follow_lock.acquire(blocking=False):
+        return False
+    try:
+        now = time.monotonic()
+        checked_at = _follow_state["checked_at"]
+        if checked_at is not None and now - checked_at < _pointer_check_seconds():
+            return False
+        _follow_state["checked_at"] = now
+
+        pointer, _generation = mds_snapshot_sets.read_pointer(timeout=_POINTER_TIMEOUT_SECONDS, attempts=1)
+        if not mds_snapshot_sets.usable(pointer):
+            return False
+        local_no = _local_snapshot_no()
+        if local_no is not None and pointer["no"] <= local_no:
+            return False
+        files = mds_snapshot_sets.download_set(pointer, timeout=_SET_TIMEOUT_SECONDS)
+        _write_set(files)
+        _provision_state["source"] = "gcs"
+        logger.info("Took MDS snapshot no. %s from Cloud Storage (was %s).", pointer["no"], local_no)
+        return True
+    except Exception as exc:
+        logger.warning("Could not follow the MDS snapshot pointer in Cloud Storage: %s", exc)
+        return False
+    finally:
+        _follow_lock.release()
 
 
 def waits_for_the_snapshot(view):

@@ -26,7 +26,11 @@ from .. import encoding, mds_snapshot_dir
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
 from ..decoder import decode_payload_text, encode_payload_text
 from ..env_flags import parse_env_flag
-from ..mds_provisioning import ensure_snapshot_available, waits_for_the_snapshot
+from ..mds_provisioning import (
+    ensure_snapshot_available,
+    follow_newer_snapshot,
+    waits_for_the_snapshot,
+)
 from ..startup import startup_fail_fast_enabled
 from ..static_assets import asset_url, snapshot_version
 from ..storage.credentials import delkey, readkey
@@ -219,9 +223,11 @@ def _initial_mds_info() -> dict[str, Any]:
     ``/api/mds/metadata/info`` for it, which waits for a provisioning under way;
     the page itself is static and never waits. With
     ``FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP`` (or the startup's fail-fast mode) it
-    bootstraps the metadata first."""
+    bootstraps the metadata first. A running instance takes a newer snapshot from
+    Cloud Storage here (``follow_newer_snapshot``): this is where the page starts."""
 
     ensure_snapshot_available()
+    follow_newer_snapshot()
     if _should_bootstrap_metadata_for_info():
         ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
     metadata_session_id = ensure_metadata_session_id()
