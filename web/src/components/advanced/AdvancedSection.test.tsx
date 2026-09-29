@@ -166,7 +166,7 @@ describe('a registration', () => {
     expect(JSON.parse(String(requestsTo(fetch, '/api/advanced/register/begin')[0].body))).toEqual(request);
     const complete = JSON.parse(String(requestsTo(fetch, '/api/advanced/register/complete')[0].body));
     expect(complete.publicKey).toEqual(request.publicKey);
-    expect(complete.__session_state).toEqual((X5C.begin.body as { __session_state: unknown }).__session_state);
+    expect(complete).not.toHaveProperty('__session_state');
     expect(complete.__credential_response.id).toBe(recordedCredential(X5C).id);
   });
 
@@ -216,7 +216,7 @@ describe('a registration', () => {
     expect(await screen.findByText(/^Unsupported PQC algorithms were skipped/)).toBeInTheDocument();
   });
 
-  it('says in place why the server refused it, with where the challenge came from', async () => {
+  it('says in place why the server refused it, and that it reported no challenge', async () => {
     authenticator = installAuthenticator(vi, { create: recordedCredential(NONE) });
     const [refused] = goldenAnswers('advanced-register-complete-failures');
     const fetch = renderSection([], { ...registrationRoutes(NONE), '/api/advanced/register/complete': answer(refused) });
@@ -226,7 +226,7 @@ describe('a registration', () => {
 
     await waitFor(() => expect(requestsTo(fetch, '/api/advanced/register/complete')).toHaveLength(1));
     expect(await screen.findByRole('alert')).toHaveTextContent('Credential registration failed: Credential response is required');
-    expect(document.querySelector('#nav-panel-advanced [data-row="Challenge"]')).toHaveTextContent('client-supplied');
+    expect(document.querySelector('#nav-panel-advanced [data-row="Challenge"]')).toHaveTextContent('Not reported by the server.');
     expect(storedRecords()).toEqual([]);
     expect(window.location.hash).toBe('#advanced');
   });
@@ -294,7 +294,7 @@ describe('an authentication', () => {
     expect(begin.__storedCredentials.map((entry: { credentialId: string }) => entry.credentialId)).toEqual([CAPABLE_ID, PLAIN.credentialIdBase64Url]);
     const complete = JSON.parse(String(requestsTo(fetch, '/api/advanced/authenticate/complete')[0].body));
     expect(complete.__hash_algorithm).toBe('SHA-384');
-    expect(complete.__session_state).toEqual((recorded.first.begin.body as { __session_state: unknown }).__session_state);
+    expect(complete).not.toHaveProperty('__session_state');
     expect(complete.__assertion_response.id).toBe(CAPABLE_ID);
   });
 

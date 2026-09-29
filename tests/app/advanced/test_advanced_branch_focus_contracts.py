@@ -188,7 +188,7 @@ def test_advanced_authenticate_begin_uses_algorithm_source_fallback_and_extensio
 
     assert response.status_code == 200
     payload = response.get_json()
-    assert payload["__session_state"] == {"challenge": "state-token"}
+    assert "__session_state" not in payload
     assert "allowCredentials" not in payload["publicKey"]
     assert captured["credentials"] is None
     assert captured["algorithm_source"] == [marker]
@@ -284,8 +284,6 @@ def test_advanced_authenticate_complete_requires_assertion_response():
     assert response.status_code == 400
     assert response.get_json() == {
         "error": "Assertion response is required",
-        "challengeSource": "client-supplied",
-        "challengeStatus": "not-tracked",
     }
 
 
@@ -301,8 +299,6 @@ def test_advanced_authenticate_complete_requires_public_key_payload():
     assert response.status_code == 400
     assert response.get_json() == {
         "error": "Invalid request: Missing publicKey in JSON editor content",
-        "challengeSource": "client-supplied",
-        "challengeStatus": "not-tracked",
     }
 
 
@@ -377,15 +373,13 @@ def test_advanced_authenticate_complete_returns_404_when_no_credentials_found_an
         assert response.status_code == 404
         assert response.get_json() == {
             "error": "No credentials found",
-            "challengeSource": "client-supplied",
-            "challengeStatus": "not-tracked",
         }
 
         with client.session_transaction() as session_state:
             assert "advanced_auth_credentials_meta" not in session_state
 
 
-def test_advanced_authenticate_complete_uses_request_rpid_sets_algorithms_and_sign_count(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
+def test_advanced_authenticate_complete_uses_begins_rp_id_sets_algorithms_and_sign_count(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
 
     credential_id = b"request-rpid-credential"
     encoded_id = _b64url(credential_id)
@@ -438,6 +432,7 @@ def test_advanced_authenticate_complete_uses_request_rpid_sets_algorithms_and_si
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_state"] = {"challenge": "state-token"}
+            session_state["advanced_auth_rp"] = {"id": "begin-rp.example", "name": "Begin RP"}
 
         response = client.post(
             "/api/advanced/authenticate/complete",
@@ -461,8 +456,8 @@ def test_advanced_authenticate_complete_uses_request_rpid_sets_algorithms_and_si
     assert payload["algorithm"] == -7
     assert payload["signCount"] == 7
 
-    assert captured["determine_rp_id_arg"] == "request-rp.example"
-    assert captured["create_server_kwargs"]["rp_id"] == "request-rp.example"
+    assert captured["determine_rp_id_arg"] == "begin-rp.example"
+    assert captured["create_server_kwargs"]["rp_id"] == "begin-rp.example"
     assert captured["server_allowed_algorithms"] == [-7]
 
 

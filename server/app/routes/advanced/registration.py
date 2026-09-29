@@ -29,12 +29,12 @@ def advanced_register_complete():
     # request editor is permissive: it reports ``challengeStatus``, it does not
     # reject on it. Every response carries the trace.
     session_state = session.pop("advanced_state", None)
-    state_trace: dict[str, Any] = {
-        "challengeSource": constants.CHALLENGE_SOURCE_SERVER if session_state is not None else constants.CHALLENGE_SOURCE_CLIENT,
-        "challengeStatus": (
-            consume_ceremony_state(session_state) if session_state is not None else constants.CHALLENGE_STATUS_NOT_TRACKED
-        ),
-    }
+    state_trace: dict[str, Any] = {}
+    if session_state is not None:
+        state_trace = {
+            "challengeSource": constants.CHALLENGE_SOURCE_SERVER,
+            "challengeStatus": consume_ceremony_state(session_state),
+        }
     return _with_challenge_source(_register_complete(data, session_state, state_trace), state_trace)
 
 
@@ -46,23 +46,14 @@ def _register_complete(data: Mapping[str, Any], session_state: Any, state_trace:
     response = prepared["response"]
     try:
         state_ctx, state_error = registration_inputs.resolve_state_and_registration_server(
-            data=data,
-            original_request=prepared["originalRequest"],
-            public_key=prepared["publicKey"],
             response=response if isinstance(response, Mapping) else {},
-            trace=state_trace,
             session_state=session_state,
         )
         if state_error is not None:
             return _with_challenge_source(state_error, state_trace)
         return _record_verified_registration(prepared, state_ctx, state_trace)
     except Exception as exc:
-        return jsonify(
-            {
-                "error": str(exc),
-                "challengeSource": state_trace["challengeSource"],
-            }
-        ), 400
+        return jsonify({"error": str(exc), **state_trace}), 400
 
 
 def _record_verified_registration(
@@ -205,7 +196,6 @@ def advanced_register_begin():
     session["advanced_original_request"] = data
 
     response_payload = dict(options)
-    response_payload["__session_state"] = attestation.make_json_safe(state)
     if warnings:
         response_payload["warnings"] = warnings
 

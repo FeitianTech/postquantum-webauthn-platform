@@ -95,7 +95,7 @@ def advanced_authenticate_begin():
     )
 
     # Stamped so /complete can tell a fresh state from one replayed out of an
-    # old cookie. The copy echoed to the request editor is left unstamped.
+    # old cookie.
     session["advanced_auth_state"] = stamp_ceremony_state(dict(state))
     session["advanced_auth_rp"] = {"id": resolved_rp_id, "name": stored_rp_name}
     session["advanced_auth_credentials_meta"] = {
@@ -103,7 +103,7 @@ def advanced_authenticate_begin():
         "resident_count": sum(1 for entry in serialized_credentials if entry.get("resident")),
     }
 
-    return jsonify(attestation.make_json_safe(_begin_payload(options, state, resident_key_only)))
+    return jsonify(attestation.make_json_safe(_begin_payload(options, resident_key_only)))
 
 
 def _offer_credential_algorithms(temp_server: Any, credentials: Iterable[Any]) -> None:
@@ -112,11 +112,10 @@ def _offer_credential_algorithms(temp_server: Any, credentials: Iterable[Any]) -
         temp_server.allowed_algorithms = derived_algorithms
 
 
-def _begin_payload(options: Any, state: Any, resident_key_only: bool) -> dict[str, Any]:
-    """The options, the unstamped state for the request editor, and no allow list when discoverable-only."""
+def _begin_payload(options: Any, resident_key_only: bool) -> dict[str, Any]:
+    """The options, with no allow list when discoverable-only."""
 
     options_payload = dict(options)
-    options_payload["__session_state"] = attestation.make_json_safe(state)
     public_key_dict = options_payload.get("publicKey")
     if isinstance(public_key_dict, Mapping):
         allow_list = public_key_dict.get("allowCredentials")
@@ -133,20 +132,16 @@ def advanced_authenticate_complete():
     # request editor is permissive, so a replayed or stale server challenge is
     # reported via ``challengeStatus`` rather than rejected -- on every response.
     state = session.pop("advanced_auth_state", None)
+    trace: dict[str, Any] = {}
     if state is not None:
         trace = {
             "challengeSource": constants.CHALLENGE_SOURCE_SERVER,
             "challengeStatus": consume_ceremony_state(state),
         }
-    else:
-        trace = {
-            "challengeSource": constants.CHALLENGE_SOURCE_CLIENT,
-            "challengeStatus": constants.CHALLENGE_STATUS_NOT_TRACKED,
-        }
 
     def _fail(payload: dict[str, Any], status: int = 400):
-        payload.setdefault("challengeSource", trace["challengeSource"])
-        payload.setdefault("challengeStatus", trace["challengeStatus"])
+        for key, value in trace.items():
+            payload.setdefault(key, value)
         return jsonify(payload), status
 
     response = data.get("__assertion_response")
@@ -183,7 +178,7 @@ def advanced_authenticate_complete():
     if non_discoverable is not None:
         return _fail(non_discoverable)
 
-    state, refusal = _state_and_origin(data, state, response, trace)
+    state, refusal = _state_and_origin(state, response, trace)
     if refusal is not None:
         return refusal
 
@@ -228,13 +223,9 @@ def _unexpected_failure(exc: Exception, response: Any, credential_id_bytes: byte
     return jsonify(response_payload), 400
 
 
-def _state_and_origin(data: Mapping[str, Any], state: Any, response: Any, trace: Mapping[str, Any]) -> tuple[Any, Any]:
-    """The ceremony state (the session's, else the request's), or the 400 for none or a bad origin."""
+def _state_and_origin(state: Any, response: Any, trace: Mapping[str, Any]) -> tuple[Any, Any]:
+    """The session's ceremony state, or the 400 for none or a bad origin."""
 
-    if state is None:
-        fallback_state = data.get("__session_state")
-        if isinstance(fallback_state, Mapping):
-            state = fallback_state
     if state is None:
         session.pop("advanced_auth_rp", None)
         return None, (

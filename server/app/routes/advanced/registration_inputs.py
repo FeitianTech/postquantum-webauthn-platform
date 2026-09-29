@@ -21,7 +21,6 @@ from ...attachments import (
     resolve_effective_attachments,
 )
 from ...webauthn import attestation, metadata
-from . import constants
 
 
 def _request_allowed_attachments(original_public_key: Any) -> list[str]:
@@ -155,60 +154,23 @@ def prepare_register_complete_inputs(
     }, None
 
 
-def _select_state(data: Mapping[str, Any], session_state: Any) -> tuple[Any, str | None]:
-    """The ceremony state: the session's (already consumed), else the one the request brings."""
-
-    state = session_state
-    challenge_source = constants.CHALLENGE_SOURCE_SERVER if state is not None else None
-    if state is None:
-        fallback_state = data.get("__session_state")
-        if isinstance(fallback_state, Mapping):
-            state = fallback_state
-            challenge_source = constants.CHALLENGE_SOURCE_CLIENT
-    return state, challenge_source
-
-
-def _registration_rp(public_key: Mapping[str, Any]) -> tuple[Any, Any]:
-    """The RP id and name: begin's (from the session), else the request's ``rp``/``rpId``."""
+def _registration_rp() -> tuple[Any, Any]:
+    """The RP id and name begin kept in the session."""
 
     stored_rp = session.pop("advanced_rp", None)
-    stored_rp_id = None
-    stored_rp_name = None
     if isinstance(stored_rp, Mapping):
-        stored_rp_id = stored_rp.get("id")
-        stored_rp_name = stored_rp.get("name")
-    elif isinstance(public_key, Mapping):
-        rp_candidate = public_key.get("rp")
-        if isinstance(rp_candidate, Mapping):
-            stored_rp_id = rp_candidate.get("id")
-            stored_rp_name = rp_candidate.get("name")
-        rp_id_candidate = public_key.get("rpId")
-        if stored_rp_id is None and isinstance(rp_id_candidate, str):
-            stored_rp_id = rp_id_candidate
-    return stored_rp_id, stored_rp_name
+        return stored_rp.get("id"), stored_rp.get("name")
+    return None, None
 
 
 def resolve_state_and_registration_server(
     *,
-    data: Mapping[str, Any],
-    original_request: Mapping[str, Any],
-    public_key: Mapping[str, Any],
     response: Mapping[str, Any],
-    trace: dict[str, Any] | None = None,
     session_state: Any = None,
 ) -> tuple[dict[str, Any] | None, Any | None]:
     # The caller has already taken the session's state, and consumed its challenge.
-    state, challenge_source = _select_state(data, session_state)
-
-    # Record where the challenge came from before anything below can raise, so
-    # that the caller can always report it -- the advanced flow may be
-    # permissive, but it must never be silent about it.
-    if trace is not None and challenge_source is not None:
-        trace["challengeSource"] = challenge_source
-
+    state = session_state
     stored_original_request = session.pop("advanced_original_request", None)
-    if stored_original_request is None and isinstance(original_request, Mapping):
-        stored_original_request = original_request
 
     if state is None:
         return None, (
@@ -223,7 +185,7 @@ def resolve_state_and_registration_server(
             400,
         )
 
-    stored_rp_id, stored_rp_name = _registration_rp(public_key)
+    stored_rp_id, stored_rp_name = _registration_rp()
     resolved_rp_id = config.determine_rp_id(stored_rp_id)
     register_server = config.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
     auth_data = register_server.register_complete(state, response)
@@ -233,5 +195,4 @@ def resolve_state_and_registration_server(
         "storedOriginalRequest": stored_original_request,
         "resolvedRpId": resolved_rp_id,
         "authData": auth_data,
-        "challengeSource": challenge_source,
     }, None

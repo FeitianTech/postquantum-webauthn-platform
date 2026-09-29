@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "646"
+     "536"
     ],
     [
      "X-Content-Type-Options",
@@ -94,12 +94,8 @@
      }
     }
    ],
-   "bodySha256": "cccf4e3600f6d95cd4efa0ffb174919ce19d5d0ca0c3f0d1c02f1360e6cd400e",
+   "bodySha256": "fc88adf188a8272c9acfcac7304f6fe94ed45a1d2e30505dec9d2d6daa8a5f17",
    "body": {
-    "__session_state": {
-     "challenge": "UFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFA",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "attestation": "none",
      "authenticatorSelection": {
@@ -799,7 +795,7 @@
     ],
     [
      "Content-Length",
-     "580"
+     "470"
     ],
     [
      "X-Content-Type-Options",
@@ -884,12 +880,8 @@
      }
     }
    ],
-   "bodySha256": "0264d9d8fcaa95193212ed2344a5324834cb59b79905e7a55718566c4b4f9e58",
+   "bodySha256": "0830572c7b2dffc3b8dd6f16cb89fb94056e59e1666d984a17a8adbbeef0b126",
    "body": {
-    "__session_state": {
-     "challenge": "UVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "attestation": "none",
      "authenticatorSelection": {
@@ -1588,7 +1580,7 @@
     ],
     [
      "Content-Length",
-     "605"
+     "495"
     ],
     [
      "X-Content-Type-Options",
@@ -1673,12 +1665,8 @@
      }
     }
    ],
-   "bodySha256": "ea98736bc8227fcf1a4d8ee3d715ad2b7323da1a347faf60759c1140abf6a2a0",
+   "bodySha256": "e4fa01b4febd89321570a935d56512134ea327da941e797a9b86e32c26e134db",
    "body": {
-    "__session_state": {
-     "challenge": "UlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlI",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "attestation": "none",
      "authenticatorSelection": {
@@ -2377,7 +2365,7 @@
     ],
     [
      "Content-Length",
-     "584"
+     "474"
     ],
     [
      "X-Content-Type-Options",
@@ -2464,12 +2452,8 @@
      }
     }
    ],
-   "bodySha256": "6d1667240f21a4c1ca754d1333727a5aa547ee586ea467589933e3785e5fcbb2",
+   "bodySha256": "f75966dad8d01d087376c8aa6afc32e3c3d41f7c03c2690636d111c1e339e128",
    "body": {
-    "__session_state": {
-     "challenge": "U1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1M",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "attestation": "none",
      "authenticatorSelection": {

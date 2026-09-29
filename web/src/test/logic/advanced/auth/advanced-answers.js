@@ -58,10 +58,8 @@ export const AUTHENTICATION_SCENARIO = 'advanced-authentication-answers';
  * The records the tab keeps for the two registrations (the server's stored
  * credentials: the capable one first), and each authentication's answers:
  * `first` (a first use), `regressed` (a counter lower than the stored one),
- * `refused` (a bad signature, naming the credential), `clientSupplied` (a
- * complete with no server state), each `{begin, complete}` (clientSupplied has
- * the begin of the refused one's request, none of its own); and `none`, the
- * begin answered for no stored credential.
+ * `refused` (a bad signature, naming the credential), each `{begin, complete}`;
+ * and `none`, the begin answered for no stored credential.
  */
 export function advancedAuthentications() {
   const answers = goldenAnswers(AUTHENTICATION_SCENARIO);
@@ -75,7 +73,6 @@ export function advancedAuthentications() {
     first: { begin: begins[0], complete: completes[0] },
     regressed: { begin: begins[1], complete: completes[1] },
     refused: { begin: begins[2], complete: completes[2] },
-    clientSupplied: { begin: begins[2], complete: completes[3] },
     none: begins[3],
   };
 }

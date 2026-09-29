@@ -154,7 +154,7 @@ def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(m
         assert captured["credentials"] == [marker_one, marker_two]
 
         payload = response.get_json()
-        assert payload["__session_state"] == {"challenge": "state-token"}
+        assert "__session_state" not in payload
         assert payload["publicKey"]["allowCredentials"] == [{"type": "public-key", "id": "placeholder"}]
 
         with client.session_transaction() as session_state:

@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "339"
+     "230"
     ],
     [
      "X-Content-Type-Options",
@@ -72,12 +72,8 @@
      }
     }
    ],
-   "bodySha256": "386ae189ba9bade4194c8c8136de662571a911f8e791e0a4bb68a2254ff80d08",
+   "bodySha256": "7ed3d54c38ccdbe0380e0a17cc0c4b40c0ac70ca9ab44d0c73fcdc61e6e07023",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "required"
-    },
     "publicKey": {
      "allowCredentials": [
       {
@@ -102,7 +98,7 @@
     ],
     [
      "Content-Length",
-     "418"
+     "306"
     ],
     [
      "X-Content-Type-Options",
@@ -163,12 +159,8 @@
      }
     }
    ],
-   "bodySha256": "105b0ba180ba2dd4d7d285d7d389f2f74654fcff9017c1256fb9b591969a8dfc",
+   "bodySha256": "06d61d4550d492855be2594dce51692e863ac07d2f97389bc474e6d237d9fdc3",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "discouraged"
-    },
     "publicKey": {
      "allowCredentials": [
       {
@@ -197,7 +189,7 @@
     ],
     [
      "Content-Length",
-     "341"
+     "231"
     ],
     [
      "X-Content-Type-Options",
@@ -260,12 +252,8 @@
      }
     }
    ],
-   "bodySha256": "a4832d698dcee0d9401d45f3fce66cf9f28d2708958328f8acc66be5a4fc6c11",
+   "bodySha256": "01b0526f40e90266ffaf5225233119f90912dfb390a665b69ebdd073788b0241",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "allowCredentials": [
       {
@@ -368,7 +356,7 @@
     ],
     [
      "Content-Length",
-     "234"
+     "124"
     ],
     [
      "X-Content-Type-Options",
@@ -431,12 +419,8 @@
      }
     }
    ],
-   "bodySha256": "51f4577cbe1139fb1fa4f4507fe548db4e00cf14b0cdfbdd5debf7279a2c6c59",
+   "bodySha256": "9012ccbceda1285555171fa2fd5885d63e95cd78a2c2b03098d8404b0469ed3b",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -454,7 +438,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -515,12 +499,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -539,7 +519,7 @@
     ],
     [
      "Content-Length",
-     "402"
+     "292"
     ],
     [
      "X-Content-Type-Options",
@@ -600,12 +580,8 @@
      }
     }
    ],
-   "bodySha256": "865d0d1fa562c9b10d07a2eaf19158ac46038a85fd7503323fb919d0c374928e",
+   "bodySha256": "da63d1f35a62ce965d3bb2d75c269abb2d4c2a9b02119f2ebbcbe885993f5853",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "extensions": {
@@ -636,7 +612,7 @@
     ],
     [
      "Content-Length",
-     "306"
+     "196"
     ],
     [
      "X-Content-Type-Options",
@@ -697,12 +673,8 @@
      }
     }
    ],
-   "bodySha256": "c316cb68c134a16996ca0c4a36546c4713380a012d670f08c4085c98eb2e1b5d",
+   "bodySha256": "abdcb08b18a77a7b8e16d427d3a364710fdc8d7d3bff2ab2d85827d0b4053707",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "extensions": {
@@ -727,7 +699,7 @@
     ],
     [
      "Content-Length",
-     "308"
+     "198"
     ],
     [
      "X-Content-Type-Options",
@@ -788,12 +760,8 @@
      }
     }
    ],
-   "bodySha256": "03a704c6a9d75c22c53bcc651536762da91e6cfd14b7f54de5da944e8266e391",
+   "bodySha256": "5e3ffcb8da73faaaaa2bafb6d4f07a94154e2655921598b3334325203a115bc8",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "extensions": {
@@ -818,7 +786,7 @@
     ],
     [
      "Content-Length",
-     "282"
+     "172"
     ],
     [
      "X-Content-Type-Options",
@@ -879,12 +847,8 @@
      }
     }
    ],
-   "bodySha256": "961b18588ad728b92cc19fba7bb43a799851c7cedbad90dc676168a4f6af6e55",
+   "bodySha256": "44c179f047276d856e607b76008418faec25e2cc11a454e546843e6f5902da54",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "extensions": {

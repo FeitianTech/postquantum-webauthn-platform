@@ -163,7 +163,7 @@ def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkey
 
         assert response.status_code == 200
         body = response.get_json()
-        assert body["__session_state"] == {"challenge": "state-token"}
+        assert "__session_state" not in body
 
         create_kwargs = captured["create_fido_server_kwargs"]
         assert create_kwargs["rp_data"] == {

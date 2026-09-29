@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "532"
+     "422"
     ],
     [
      "X-Content-Type-Options",
@@ -90,12 +90,8 @@
      }
     }
    ],
-   "bodySha256": "6cf44d913cf867ddddd4a3fccc1745e73e81003e580b4e43a460a05c7ed12970",
+   "bodySha256": "5f5f69612f842c7ba6d9f5a00fe03c16644892bf0872952c15288eea7202fc3e",
    "body": {
-    "__session_state": {
-     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "attestation": "none",
      "authenticatorSelection": {
@@ -776,7 +772,7 @@
     ],
     [
      "Content-Length",
-     "926"
+     "816"
     ],
     [
      "X-Content-Type-Options",
@@ -885,12 +881,8 @@
      }
     }
    ],
-   "bodySha256": "9dc60a154df33db8e038b39afa40eb37b98520ca5712ea6b2a24fefcb47811ae",
+   "bodySha256": "fd87b9f762158d06b626e32613c12a08eaf279e0f9b9241bf7394bb08e06c09e",
    "body": {
-    "__session_state": {
-     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "attestation": "none",
      "authenticatorSelection": {
@@ -2100,7 +2092,7 @@
     ],
     [
      "Content-Length",
-     "533"
+     "423"
     ],
     [
      "X-Content-Type-Options",
@@ -2182,12 +2174,8 @@
      }
     }
    ],
-   "bodySha256": "24c7a7fd75c4fec6fa008f692caeb1a450166c340fddc89bc3f3b2ce25bf7093",
+   "bodySha256": "f1a27b114378eea5f520730ed137b54b51790d7ef8170a1fb98a1d5d1a821aec",
    "body": {
-    "__session_state": {
-     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "attestation": "none",
      "authenticatorSelection": {

@@ -136,7 +136,6 @@ def test_advanced_register_complete_surfaces_attestation_errors(config_module, a
             "__credential_response": registration_payload(
                 authenticator, challenge=server_challenge, cross_origin=True
             ),
-            "__session_state": body["__session_state"],
         },
         headers={"Origin": ORIGIN},
     )
@@ -169,7 +168,6 @@ def test_advanced_register_complete_reports_verified_when_clean(config_module, a
             "__credential_response": registration_payload(
                 authenticator, challenge=server_challenge
             ),
-            "__session_state": body["__session_state"],
         },
         headers={"Origin": ORIGIN},
     )

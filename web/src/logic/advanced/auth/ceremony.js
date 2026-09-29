@@ -282,7 +282,6 @@ export async function registerAdvancedCredential(text, {
         }
 
         const json = await response.json();
-        const sessionState = json?.__session_state ?? null;
 
         const warnings = textWarnings(json);
         if (warnings.length > 0) {
@@ -291,7 +290,6 @@ export async function registerAdvancedCredential(text, {
 
         const optionsJson = { ...(json || {}) };
         delete optionsJson.warnings;
-        delete optionsJson.__session_state;
 
         const originalExtensions = optionsJson.publicKey?.extensions;
         const createOptions = parseCreationOptionsFromJSON(optionsJson);
@@ -326,7 +324,6 @@ export async function registerAdvancedCredential(text, {
         const result = await postJson('/api/advanced/register/complete', {
             ...parsed,
             __credential_response: credentialJson,
-            __session_state: sessionState,
         });
 
         if (!result.ok) {

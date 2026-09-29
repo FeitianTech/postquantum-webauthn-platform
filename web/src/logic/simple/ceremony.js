@@ -69,21 +69,6 @@ function postJson(path, email, body) {
     });
 }
 
-// The options without the server's session state, which goes back with the answer.
-function splitSessionState(json) {
-    const { __session_state: sessionState = null, ...options } = json || {};
-    return [sessionState, options];
-}
-
-// The ponyfill's create() and get() give every credential its toJSON().
-function credentialToJson(credential, sessionState) {
-    const json = credential.toJSON();
-    if (sessionState) {
-        json.__session_state = sessionState;
-    }
-    return json;
-}
-
 /**
  * Registers a passkey for `email`: the server's options, the authenticator's
  * credential, the server's verdict. Says each step through onProgress. Gives the
@@ -97,7 +82,7 @@ export async function registerSimplePasskey(email, { onProgress = () => {} } = {
         throw new FailedResponseError(await readFailedResponse(response), 'Registration could not start');
     }
 
-    const [sessionState, options] = splitSessionState(await response.json());
+    const options = await response.json();
     const originalExtensions = options?.publicKey?.extensions;
     const createOptions = parseCreationOptionsFromJSON(options);
     const convertedExtensions = convertExtensionsForClient(originalExtensions);
@@ -112,7 +97,8 @@ export async function registerSimplePasskey(email, { onProgress = () => {} } = {
 
     onProgress(SIMPLE_CEREMONY_TEXT.connecting);
     const credential = await create(createOptions);
-    const credentialJson = credentialToJson(credential, sessionState);
+    // The ponyfill's create() and get() give every credential its toJSON().
+    const credentialJson = credential.toJSON();
 
     onProgress(SIMPLE_CEREMONY_TEXT.registrationCompleting);
     const result = await postJson('/api/register/complete', email, credentialJson);
@@ -149,13 +135,12 @@ export async function authenticateSimplePasskey(email, { credentialsFor, prepare
         throw new FailedResponseError(await readFailedResponse(response), 'Authentication could not start');
     }
 
-    const [sessionState, options] = splitSessionState(await response.json());
-    const getOptions = parseRequestOptionsFromJSON(options);
+    const getOptions = parseRequestOptionsFromJSON(await response.json());
     state.lastFakeCredLength = 0;
 
     onProgress(SIMPLE_CEREMONY_TEXT.connecting);
     const assertion = await get(getOptions);
-    const assertionJson = credentialToJson(assertion, sessionState);
+    const assertionJson = assertion.toJSON();
 
     onProgress(SIMPLE_CEREMONY_TEXT.authenticationCompleting);
     const result = await postJson('/api/authenticate/complete', email, assertionJson);

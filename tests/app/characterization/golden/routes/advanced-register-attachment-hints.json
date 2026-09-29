@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "569"
+     "459"
     ],
     [
      "X-Content-Type-Options",
@@ -95,12 +95,8 @@
      }
     }
    ],
-   "bodySha256": "729885dffab3c91ade285d0f53154819a1b92df3c804c02399babaac5c5d71f5",
+   "bodySha256": "04ac6393ca45627e1840cf0cdb5e392a9a64b0d827c5548c8710abaf77759ccb",
    "body": {
-    "__session_state": {
-     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "attestation": "none",
      "authenticatorSelection": {
@@ -233,7 +229,7 @@
     ],
     [
      "Content-Length",
-     "569"
+     "459"
     ],
     [
      "X-Content-Type-Options",
@@ -317,12 +313,8 @@
      }
     }
    ],
-   "bodySha256": "729885dffab3c91ade285d0f53154819a1b92df3c804c02399babaac5c5d71f5",
+   "bodySha256": "04ac6393ca45627e1840cf0cdb5e392a9a64b0d827c5548c8710abaf77759ccb",
    "body": {
-    "__session_state": {
-     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "attestation": "none",
      "authenticatorSelection": {
@@ -455,7 +447,7 @@
     ],
     [
      "Content-Length",
-     "569"
+     "459"
     ],
     [
      "X-Content-Type-Options",
@@ -539,12 +531,8 @@
      }
     }
    ],
-   "bodySha256": "729885dffab3c91ade285d0f53154819a1b92df3c804c02399babaac5c5d71f5",
+   "bodySha256": "04ac6393ca45627e1840cf0cdb5e392a9a64b0d827c5548c8710abaf77759ccb",
    "body": {
-    "__session_state": {
-     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "attestation": "none",
      "authenticatorSelection": {
@@ -1230,8 +1218,8 @@
    ]
   },
   {
-   "request": "POST /api/advanced/register/complete",
-   "status": 400,
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
    "headers": [
     [
      "Content-Type",
@@ -1239,7 +1227,7 @@
     ],
     [
      "Content-Length",
-     "145"
+     "459"
     ],
     [
      "X-Content-Type-Options",
@@ -1284,15 +1272,172 @@
      ],
      "contents": {
       "_permanent": true,
+      "advanced_original_request": {
+       "publicKey": {
+        "authenticatorSelection": {
+         "authenticatorAttachment": "platform"
+        },
+        "challenge": {
+         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
+        },
+        "pubKeyCredParams": [
+         {
+          "alg": -7,
+          "type": "public-key"
+         }
+        ],
+        "rp": {
+         "id": "localhost",
+         "name": "Demo server"
+        },
+        "user": {
+         "displayName": "A. User",
+         "id": "757365722d68616e646c65",
+         "name": "user@example.com"
+        }
+       }
+      },
+      "advanced_register_allowed_attachments": [
+       "platform"
+      ],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "Demo server"
+      },
+      "advanced_state": {
+       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      },
       "fido.mds.session": "kpRg_O2-4WdYcMXuIeaPyooYbOoV_G8vL7e8g5UpjfY",
       "fido.mds.touched_at": 1790000000.0
      }
     }
    ],
-   "bodySha256": "da71ff6887c29825080b85c294453f1d860445b1194833f18f38b49e730915de",
+   "bodySha256": "04ac6393ca45627e1840cf0cdb5e392a9a64b0d827c5548c8710abaf77759ccb",
    "body": {
-    "challengeSource": "client-supplied",
-    "challengeStatus": "not-tracked",
+    "publicKey": {
+     "attestation": "none",
+     "authenticatorSelection": {
+      "authenticatorAttachment": "platform",
+      "requireResidentKey": false,
+      "residentKey": "preferred",
+      "userVerification": "preferred"
+     },
+     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -7,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "Demo server"
+     },
+     "timeout": 90,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
+   "request": "POST /api/advanced/register/complete",
+   "status": 400,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "141"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Content-Security-Policy-Report-Only",
+     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "_permanent": true,
+      "advanced_original_request": {
+       "publicKey": {
+        "authenticatorSelection": {
+         "authenticatorAttachment": "platform"
+        },
+        "challenge": {
+         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
+        },
+        "pubKeyCredParams": [
+         {
+          "alg": -7,
+          "type": "public-key"
+         }
+        ],
+        "rp": {
+         "id": "localhost",
+         "name": "Demo server"
+        },
+        "user": {
+         "displayName": "A. User",
+         "id": "757365722d68616e646c65",
+         "name": "user@example.com"
+        }
+       }
+      },
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "Demo server"
+      },
+      "fido.mds.session": "kpRg_O2-4WdYcMXuIeaPyooYbOoV_G8vL7e8g5UpjfY",
+      "fido.mds.touched_at": 1790000000.0
+     }
+    }
+   ],
+   "bodySha256": "4765d7b47e00db94a9b30d878e10f8689cdd147bff93e3e53615cb863f6837c3",
+   "body": {
+    "challengeSource": "server-session",
+    "challengeStatus": "replayed",
     "error": "Authenticator attachment is not permitted by the selected hints."
    }
   }

@@ -120,8 +120,6 @@ def test_register_complete_validates_required_payload_and_username_fields():
         assert missing_response.status_code == 400
         assert missing_response.get_json() == {
             "error": "Credential response is required",
-            "challengeSource": "client-supplied",
-            "challengeStatus": "not-tracked",
         }
 
         missing_public_key = client.post(
@@ -253,7 +251,6 @@ def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_co
                         "clientDataJSON": "AQID",
                     },
                 },
-                "__session_state": {"challenge": "fallback"},
             },
         )
 

@@ -217,7 +217,7 @@ their exports or sentences. A new surface splits its logic out here first.
   named for what they do; import the submodule you need and patch there.
 
 Data flow of a ceremony: the page collects the stored credentials; begin issues options and
-keeps state in the Flask session (keep the `__session_state` fallback working); the browser
+keeps state in the Flask session, and only there; the browser
 runs `navigator.credentials.create/get`; complete verifies with `create_fido_server(...)`; the
 page updates the saved credentials, which both tabs show.
 

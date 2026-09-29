@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "111"
+     "43"
     ],
     [
      "X-Content-Type-Options",
@@ -47,10 +47,8 @@
     ]
    ],
    "cookies": [],
-   "bodySha256": "1251c5f275c48251a88c06750d5756681f565b3f39278b8c842aae372b98ee94",
+   "bodySha256": "e4f2e2919a60a89314f00b06f4632197c97c06d1f2fd761be6e639d682e659ff",
    "body": {
-    "challengeSource": "client-supplied",
-    "challengeStatus": "not-tracked",
     "error": "Assertion response is required"
    }
   },
@@ -64,7 +62,7 @@
     ],
     [
      "Content-Length",
-     "138"
+     "70"
     ],
     [
      "X-Content-Type-Options",
@@ -100,10 +98,8 @@
     ]
    ],
    "cookies": [],
-   "bodySha256": "961d5ed8391457af2ca65a4424f13ab6e8e89c46d9c4fdd11ad29b2d1ee24435",
+   "bodySha256": "43c6c803d677940f8795d09e90dc9abb3e81ee29de62e457feb8c713ecaefda1",
    "body": {
-    "challengeSource": "client-supplied",
-    "challengeStatus": "not-tracked",
     "error": "Invalid request: Missing publicKey in JSON editor content"
    }
   },
@@ -117,7 +113,7 @@
     ],
     [
      "Content-Length",
-     "302"
+     "234"
     ],
     [
      "X-Content-Type-Options",
@@ -153,10 +149,8 @@
     ]
    ],
    "cookies": [],
-   "bodySha256": "87ad6554b6978a8b17cabafba34c19f99c352c0916ce71f635b8927afd08805c",
+   "bodySha256": "342f3eb23794e3700ac4c6d3d5e00e61bfbaee1908719bc4945857d2f0437452",
    "body": {
-    "challengeSource": "client-supplied",
-    "challengeStatus": "not-tracked",
     "error": "Stored credentials could not be restored from the browser session. This often means the session cookie exceeded the browser size limit. Please clear some saved credentials or restart the authentication flow and try again."
    }
   },
@@ -170,7 +164,7 @@
     ],
     [
      "Content-Length",
-     "101"
+     "33"
     ],
     [
      "X-Content-Type-Options",
@@ -206,10 +200,8 @@
     ]
    ],
    "cookies": [],
-   "bodySha256": "2bb51b16c8495a7c62810ce8675b890d48ed077a065822d52331ced14742124e",
+   "bodySha256": "c772a74f0b19469394741b8f90473bc6628933688fa7ab5696cd0d1e1e968e4b",
    "body": {
-    "challengeSource": "client-supplied",
-    "challengeStatus": "not-tracked",
     "error": "No credentials found"
    }
   },
@@ -223,7 +215,7 @@
     ],
     [
      "Content-Length",
-     "272"
+     "204"
     ],
     [
      "X-Content-Type-Options",
@@ -259,10 +251,8 @@
     ]
    ],
    "cookies": [],
-   "bodySha256": "90598060590d29c541c4a8d6c9bc8f7a66555c5fc29432970df89938d44be587",
+   "bodySha256": "d6343bbfef7904010e43107d73a6c8c7e6940497f77fc8780455a3eb6bc82d30",
    "body": {
-    "challengeSource": "client-supplied",
-    "challengeStatus": "not-tracked",
     "error": "The credential used is not discoverable. Please register a resident key credential to authenticate without allowCredentials.",
     "failedCredentialId": "jijP2bGPoUQOn8cM7-x2sOaIgvQ8vWCTzUPNVmNnniY"
    }
@@ -277,7 +267,7 @@
     ],
     [
      "Content-Length",
-     "167"
+     "99"
     ],
     [
      "X-Content-Type-Options",
@@ -313,125 +303,9 @@
     ]
    ],
    "cookies": [],
-   "bodySha256": "172004712fbe4a2b8f6909c918ebd026aa511129cf7e2c0b7b16582b7e4c0900",
+   "bodySha256": "009c69ceef5f2c1ffc074521832c0070cb991bc4ef9b5221105cffd564c2020c",
    "body": {
-    "challengeSource": "client-supplied",
-    "challengeStatus": "not-tracked",
     "error": "Authentication state not found or has expired. Please restart the authentication flow."
-   }
-  },
-  {
-   "request": "POST /api/advanced/authenticate/complete",
-   "status": 200,
-   "headers": [
-    [
-     "Content-Type",
-     "application/json"
-    ],
-    [
-     "Content-Length",
-     "305"
-    ],
-    [
-     "X-Content-Type-Options",
-     "nosniff"
-    ],
-    [
-     "X-Frame-Options",
-     "DENY"
-    ],
-    [
-     "Referrer-Policy",
-     "no-referrer"
-    ],
-    [
-     "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Content-Security-Policy-Report-Only",
-     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Reporting-Endpoints",
-     "csp=\"/api/csp-report\""
-    ],
-    [
-     "Permissions-Policy",
-     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
-    ],
-    [
-     "Vary",
-     "Cookie"
-    ]
-   ],
-   "cookies": [],
-   "bodySha256": "b1e83ab952eb458df0c8188b4b295a2f3f97fa8c7d70ac3a82be887e5e7e89bb",
-   "body": {
-    "algorithm": -7,
-    "algorithmDescription": "ES256 (ECDSA)",
-    "authenticatedCredentialId": "jijP2bGPoUQOn8cM7-x2sOaIgvQ8vWCTzUPNVmNnniY",
-    "challengeSource": "client-supplied",
-    "challengeStatus": "not-tracked",
-    "hintsUsed": [],
-    "signCount": 1,
-    "signCountStatus": "ok",
-    "signatureVerified": true,
-    "status": "OK",
-    "verified": true
-   }
-  },
-  {
-   "request": "POST /api/advanced/authenticate/complete",
-   "status": 400,
-   "headers": [
-    [
-     "Content-Type",
-     "application/json"
-    ],
-    [
-     "Content-Length",
-     "170"
-    ],
-    [
-     "X-Content-Type-Options",
-     "nosniff"
-    ],
-    [
-     "X-Frame-Options",
-     "DENY"
-    ],
-    [
-     "Referrer-Policy",
-     "no-referrer"
-    ],
-    [
-     "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Content-Security-Policy-Report-Only",
-     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Reporting-Endpoints",
-     "csp=\"/api/csp-report\""
-    ],
-    [
-     "Permissions-Policy",
-     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
-    ],
-    [
-     "Vary",
-     "Cookie"
-    ]
-   ],
-   "cookies": [],
-   "bodySha256": "36f158c6dfddb6edb8fa18508300aa20db8879823af79278b945fd1d9999aea1",
-   "body": {
-    "challengeSource": "client-supplied",
-    "challengeStatus": "not-tracked",
-    "error": "Ceremony origin is not permitted by the configured FIDO_SERVER_ALLOWED_ORIGINS allowlist."
    }
   },
   {
@@ -444,7 +318,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -505,12 +379,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -521,7 +391,7 @@
   },
   {
    "request": "POST /api/advanced/authenticate/complete",
-   "status": 200,
+   "status": 400,
    "headers": [
     [
      "Content-Type",
@@ -529,7 +399,7 @@
     ],
     [
      "Content-Length",
-     "298"
+     "163"
     ],
     [
      "X-Content-Type-Options",
@@ -576,13 +446,158 @@
      "contents": null
     }
    ],
-   "bodySha256": "877a8dbb1d0a60afb2492036efa40ce445439baf494772747298169704dd4adb",
+   "bodySha256": "5ebf4cc32ed8ab8e2c5631a1b1585e06a5a84f5cb98e76f37fa1b59d8cf94487",
+   "body": {
+    "challengeSource": "server-session",
+    "challengeStatus": "fresh",
+    "error": "Ceremony origin is not permitted by the configured FIDO_SERVER_ALLOWED_ORIGINS allowlist."
+   }
+  },
+  {
+   "request": "POST /api/advanced/authenticate/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "137"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Content-Security-Policy-Report-Only",
+     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "advanced_auth_credentials_meta": {
+       "count": 1,
+       "resident_count": 1
+      },
+      "advanced_auth_rp": {
+       "id": "localhost",
+       "name": null
+      },
+      "advanced_auth_state": {
+       "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      },
+      "advanced_authenticate_allowed_attachments": []
+     }
+    }
+   ],
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
+   "body": {
+    "publicKey": {
+     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
+     "rpId": "localhost",
+     "timeout": 90,
+     "userVerification": "preferred"
+    }
+   }
+  },
+  {
+   "request": "POST /api/advanced/authenticate/complete",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "301"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Content-Security-Policy-Report-Only",
+     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "Max-Age=0",
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": null
+    }
+   ],
+   "bodySha256": "c2699a4229b37779d221c79684ed992364c570adfe84d975177a332cf359b6e6",
    "body": {
     "algorithm": -7,
     "algorithmDescription": "ES256 (ECDSA)",
     "authenticatedCredentialId": "jijP2bGPoUQOn8cM7-x2sOaIgvQ8vWCTzUPNVmNnniY",
     "challengeSource": "server-session",
-    "challengeStatus": "fresh",
+    "challengeStatus": "replayed",
     "hintsUsed": [],
     "signCount": 2,
     "signCountStatus": "ok",
@@ -673,7 +688,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -736,12 +751,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -832,7 +843,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -895,12 +906,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -991,7 +998,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -1054,12 +1061,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -1152,7 +1155,7 @@
     ],
     [
      "Content-Length",
-     "101"
+     "33"
     ],
     [
      "X-Content-Type-Options",
@@ -1199,10 +1202,8 @@
      "contents": null
     }
    ],
-   "bodySha256": "2bb51b16c8495a7c62810ce8675b890d48ed077a065822d52331ced14742124e",
+   "bodySha256": "c772a74f0b19469394741b8f90473bc6628933688fa7ab5696cd0d1e1e968e4b",
    "body": {
-    "challengeSource": "client-supplied",
-    "challengeStatus": "not-tracked",
     "error": "No credentials found"
    }
   }

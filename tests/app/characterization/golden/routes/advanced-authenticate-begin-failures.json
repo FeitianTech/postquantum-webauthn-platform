@@ -424,7 +424,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -485,12 +485,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",

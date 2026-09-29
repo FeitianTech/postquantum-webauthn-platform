@@ -25,7 +25,7 @@ import { advancedAuthentications, recordedAssertion } from '@/test/logic/advance
 const BEGIN = '/api/advanced/authenticate/begin';
 const COMPLETE = '/api/advanced/authenticate/complete';
 
-const { records, first, regressed, refused, clientSupplied, none } = advancedAuthentications();
+const { records, first, regressed, refused, none } = advancedAuthentications();
 const [CAPABLE, PLAIN] = records;
 const STORED = records.map((record) => ({ credentialId: record.credentialIdBase64Url, publicKey: record.publicKey }));
 const CHALLENGE = { $hex: '71'.repeat(32) };
@@ -119,13 +119,12 @@ describe('an authentication', () => {
       'Connecting your authenticator device...',
       'Completing authentication...',
     ]);
-    // The begin is the edit with the records; the complete adds the assertion, the begin's state and the hash.
+    // The begin is the edit with the records; the complete adds the assertion and the hash.
     expect(sent(0).body).toEqual({ ...JSON.parse(request()), __storedCredentials: STORED });
     const complete = sent(1).body;
     expect(Object.keys(complete).sort()).toEqual(
-      ['__assertion_response', '__hash_algorithm', '__session_state', '__storedCredentials', 'note', 'publicKey'].sort(),
+      ['__assertion_response', '__hash_algorithm', '__storedCredentials', 'note', 'publicKey'].sort(),
     );
-    expect(complete.__session_state).toEqual(first.begin.body.__session_state);
     expect(complete.__hash_algorithm).toBe('SHA-384');
     expect(complete.__assertion_response).toMatchObject({
       id: CAPABLE.credentialIdBase64Url,
@@ -175,19 +174,10 @@ describe('an authentication', () => {
     expect(Array.from(new Uint8Array(evaluation))).toEqual([1]);
   });
 
-  it('says where a challenge taken from the request came from', async () => {
-    serving(clientSupplied);
-    authenticatorGiving(recordedAssertion(clientSupplied));
-    const outcome = await authenticateAdvancedCredential(request(), formOptions());
-    expect(outcome.result).toMatchObject({ challengeSource: 'client-supplied', challengeStatus: 'not-tracked' });
-  });
-
-  it('completes with no state when the begin answer holds none, and with an assertion that has no attachment', async () => {
-    const { __session_state: _state, ...begin } = first.begin.body;
-    serving({ begin: { status: 200, body: begin }, complete: first.complete });
+  it('completes with an assertion that has no attachment', async () => {
+    serving(first);
     authenticatorGiving({ ...recordedAssertion(first), authenticatorAttachment: undefined });
     await authenticateAdvancedCredential(request(), formOptions());
-    expect(sent(1).body.__session_state).toBeNull();
     expect(sent(1).body.__assertion_response.authenticatorAttachment).toBeNull();
   });
 

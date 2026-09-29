@@ -52,7 +52,7 @@ class _FakeAuthData:
         return self.rp_id_hash + bytes([self.flags]) + int(self.counter).to_bytes(4, "big")
 
 
-def test_advanced_register_complete_prefers_session_state_over_request_state(monkeypatch, config_module):
+def test_advanced_register_complete_reads_the_session_state_not_the_requests(monkeypatch, config_module):
     pytest.importorskip("server.app.app")
 
     captured = {}
@@ -66,7 +66,6 @@ def test_advanced_register_complete_prefers_session_state_over_request_state(mon
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
 
     session_state = {"challenge": "session-state"}
-    request_state = {"challenge": "request-state"}
 
     with entry_app().test_client() as client:
         with client.session_transaction() as session_store:
@@ -74,7 +73,7 @@ def test_advanced_register_complete_prefers_session_state_over_request_state(mon
             session_store["advanced_rp"] = {"id": "example.com", "name": "Example RP"}
 
         payload = _minimal_register_complete_payload()
-        payload["__session_state"] = request_state
+        payload["__session_state"] = {"challenge": "request-state"}
 
         response = client.post("/api/advanced/register/complete", json=payload)
 
@@ -92,37 +91,7 @@ def test_advanced_register_complete_prefers_session_state_over_request_state(mon
             assert "advanced_rp" not in session_store
 
 
-def test_advanced_register_complete_uses_request_state_fallback_when_session_missing(monkeypatch, config_module):
-    pytest.importorskip("server.app.app")
-
-    captured = {}
-
-    class _FailingServer:
-        def register_complete(self, state, _response):
-            captured["state"] = state
-            raise ValueError("register fallback failure")
-
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-
-    fallback_state = {"challenge": "request-fallback-state"}
-
-    with entry_app().test_client() as client:
-        payload = _minimal_register_complete_payload()
-        payload["__session_state"] = fallback_state
-
-        response = client.post("/api/advanced/register/complete", json=payload)
-
-    assert response.status_code == 400
-    assert response.get_json() == {
-        "error": "register fallback failure",
-        "challengeSource": "client-supplied",
-        "challengeStatus": "not-tracked",
-    }
-    assert captured["state"] == fallback_state
-
-
-def test_advanced_register_complete_invalid_request_state_fallback_returns_400(monkeypatch):
+def test_advanced_register_complete_without_session_state_returns_400(monkeypatch):
     pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 

@@ -394,7 +394,7 @@ describe('registerAdvancedCredential', () => {
     expect(sent(1).body.__credential_response.clientExtensionResults).toBeNull();
   });
 
-  it('completes with the request, the credential as JSON and the session state begin answered', async () => {
+  it('completes with the request and the credential as JSON', async () => {
     serving({ [BEGIN]: NONE.begin, [COMPLETE]: NONE.complete });
     await registerAdvancedCredential(text(request()), formOptions());
 
@@ -402,7 +402,6 @@ describe('registerAdvancedCredential', () => {
     expect(sent(1).body).toEqual({
       ...request(),
       __credential_response: sentCredential(NONE),
-      __session_state: NONE.begin.body.__session_state,
     });
   });
 
@@ -546,7 +545,6 @@ describe('registerAdvancedCredential', () => {
       'Unsupported PQC algorithms were skipped (ML-DSA-65, ML-DSA-44); falling back to classical algorithms. Unsupported PQC algorithms were skipped (ML-DSA-87).',
     );
     expect(authenticator.create.mock.calls[0][0]).not.toHaveProperty('warnings');
-    expect(authenticator.create.mock.calls[0][0]).not.toHaveProperty('__session_state');
   });
 
   it('adds minPinLength to the request\'s extensions when the switch is on', async () => {
@@ -566,15 +564,6 @@ describe('registerAdvancedCredential', () => {
 
     expect(asked()).toEqual([BEGIN, COMPLETE, BEGIN, COMPLETE]);
     expect([sent(0).body.publicKey.extensions, sent(2).body.publicKey.extensions]).toEqual([{ minPinLength: true }, { minPinLength: true }]);
-  });
-
-  it('completes with no session state when begin answered none', async () => {
-    const { __session_state: sessionState, ...stateless } = NONE.begin.body;
-    serving({ [BEGIN]: { status: 200, body: stateless }, [COMPLETE]: NONE.complete });
-    await registerAdvancedCredential(text(request()), formOptions());
-
-    expect(asked()).toEqual([BEGIN, COMPLETE]);
-    expect(sent(1).body).toHaveProperty('__session_state', null);
   });
 
   it('sends a null attachment when the browser names none, which the server refuses for a hinted request', async () => {
@@ -626,7 +615,6 @@ describe('registerAdvancedCredential', () => {
 
     expect(outcome.registered).toBe(true);
     expect(asked()).toEqual([BEGIN, COMPLETE]);
-    expect(sent(1).body.__session_state).toEqual(PQC_UNAVAILABLE[0].body.__session_state);
   });
 
   it('says text that is not JSON as the parser does, and asks nothing', async () => {
@@ -737,7 +725,6 @@ describe('registerAdvancedCredential', () => {
     const outcome = await registerAdvancedCredential(text(request()), options);
 
     expect(asked()).toEqual([BEGIN, COMPLETE]);
-    expect(sent(1).body.__session_state).toEqual(COMPLETE_FAILURES[11].body.__session_state);
     expect(outcome.text).toBe('Credential registration failed: Wrong challenge in response. Start the ceremony again.');
     expect(options.onResult).toHaveBeenCalledWith({
       title: 'Last registration',

@@ -73,9 +73,9 @@ describe('the challenge', () => {
   });
 
   it('warns of a replayed challenge', () => {
-    const described = describeCeremonyResult({ showChallenge: true, challengeSource: 'client-supplied', challengeStatus: 'replayed' });
+    const described = describeCeremonyResult({ showChallenge: true, challengeSource: 'server-session', challengeStatus: 'replayed' });
     expect(described.warning).toBe(true);
-    expect(described.rows[0].text).toBe('Taken from the request, not issued by this server.');
+    expect(described.rows[0].text).toBe('Issued by this server for this ceremony.');
     expect(described.rows[0].after).toBe('Used before: this is a replay.');
   });
 
@@ -94,7 +94,6 @@ describe('the challenge', () => {
     const [row] = describeCeremonyResult({ showChallenge: true, challengeSource: 'elsewhere', challengeStatus: 'odd' }).rows;
     expect([row.text, row.after]).toEqual(['The server reported "elsewhere".', 'The server reported "odd".']);
     expect(describeCeremonyResult({ showChallenge: true, challengeSource: 'server-session' }).rows[0].after).toBeNull();
-    expect(describeCeremonyResult({ showChallenge: true, challengeStatus: 'not-tracked' }).rows[0].after).toBe('Not tracked for reuse.');
   });
 
   it('follows the counter when both are shown', () => {

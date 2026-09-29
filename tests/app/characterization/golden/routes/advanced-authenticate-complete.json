@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -72,12 +72,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -168,7 +164,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -229,12 +225,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -325,7 +317,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -386,12 +378,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -480,7 +468,7 @@
     ],
     [
      "Content-Length",
-     "341"
+     "231"
     ],
     [
      "X-Content-Type-Options",
@@ -541,12 +529,8 @@
      }
     }
    ],
-   "bodySha256": "4e10228ae215a4ade0d018e41b2ae738532778826e8dde1d3429b783936014d9",
+   "bodySha256": "bf0673bcbfe9afe852a4b5ca8c2d515676aa410c77f56cad2cd3a67be656e8c3",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "allowCredentials": [
       {
@@ -641,7 +625,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -702,12 +686,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -798,7 +778,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -859,12 +839,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -955,7 +931,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -1016,12 +992,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -1112,7 +1084,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -1173,12 +1145,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -1268,7 +1236,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -1329,12 +1297,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",

@@ -340,7 +340,7 @@
     ],
     [
      "Content-Length",
-     "537"
+     "427"
     ],
     [
      "X-Content-Type-Options",
@@ -418,12 +418,8 @@
      }
     }
    ],
-   "bodySha256": "c57a64e26c926c6d5abf7273f9d759c477d0a44fcaa91f88b37a04afbb8ce8ea",
+   "bodySha256": "409757675b439319d6e55a14e580ac7a73c1d9e86f8fed5cf7d486b272153ed3",
    "body": {
-    "__session_state": {
-     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "attestation": "none",
      "authenticatorSelection": {

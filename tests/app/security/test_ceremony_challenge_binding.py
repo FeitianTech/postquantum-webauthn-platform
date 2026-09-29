@@ -5,9 +5,8 @@ back to the client as ``__session_state``, and every ``/complete`` accepted it
 back whenever the Flask session was empty -- so the server ended up comparing
 the client's challenge against the client's own value.
 
-The simple flow must now bind the challenge to the server session only. The
-advanced flow (a request editor) may still accept a client-supplied state, but
-must always say so via ``challengeSource``.
+Both flows now bind the challenge to the server session only; the advanced
+flow says so via ``challengeSource``.
 """
 from __future__ import annotations
 
@@ -202,7 +201,6 @@ def test_advanced_register_complete_reports_server_session_challenge_source(conf
             "__credential_response": registration_payload(
                 authenticator, challenge=server_challenge
             ),
-            "__session_state": body["__session_state"],
         },
         headers={"Origin": ORIGIN},
     )
@@ -214,14 +212,12 @@ def test_advanced_register_complete_reports_server_session_challenge_source(conf
     assert payload["challengeSource"] == "server-session"
 
 
-def test_advanced_register_complete_reports_client_supplied_challenge_source(config_module, advanced_module, advanced_storage):
-    """The request editor may supply its own state -- but it is labelled."""
-
+def test_advanced_register_complete_refuses_a_request_supplied_state(config_module, advanced_module, advanced_storage):
     authenticator = Authenticator()
     client = entry_app().test_client()
     client_challenge = b"\x77" * 32
 
-    # No /begin call: a cold request carrying its own state, as the editor does.
+    # No /begin call: a cold request carrying its own state.
     complete = client.post(
         "/api/advanced/register/complete",
         json={
@@ -237,15 +233,19 @@ def test_advanced_register_complete_reports_client_supplied_challenge_source(con
         headers={"Origin": ORIGIN},
     )
 
-    assert complete.status_code == 200, complete.get_json()
-    payload = complete.get_json()
-    assert payload["status"] == "OK"
-    # It worked -- and the response is explicit about why it was trusted.
-    assert payload["challengeSource"] == "client-supplied"
+    assert complete.status_code == 400
+    assert "state not found" in complete.get_json()["error"]
+    assert "challengeSource" not in complete.get_json()
+    assert advanced_storage == []
 
 
-def test_advanced_complete_always_reports_challenge_source_even_on_error(config_module, advanced_module):
+def test_advanced_register_complete_reports_the_challenge_source_on_error(config_module, advanced_module):
     client = entry_app().test_client()
+    begin = client.post(
+        "/api/advanced/register/begin",
+        json={"publicKey": advanced_public_key_options(challenge=b"\x01" * 32)},
+    )
+    assert begin.status_code == 200, begin.get_json()
 
     response = client.post(
         "/api/advanced/register/complete",
@@ -262,20 +262,34 @@ def test_advanced_complete_always_reports_challenge_source_even_on_error(config_
     )
 
     assert response.status_code == 400
-    assert "challengeSource" in response.get_json()
+    assert response.get_json()["challengeSource"] == "server-session"
 
 
-def test_advanced_authenticate_complete_always_reports_challenge_source(config_module, advanced_module):
+def test_advanced_authenticate_complete_reports_the_challenge_source_on_early_errors(config_module, advanced_module):
     """Including on the early input-validation errors."""
 
+    authenticator = Authenticator()
+    stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
     client = entry_app().test_client()
 
+    def _begin():
+        begin = client.post(
+            "/api/advanced/authenticate/begin",
+            json={
+                "publicKey": {"challenge": {"$base64url": b64u(b"\x73" * 32)}},
+                "__storedCredentials": [stored_entry],
+            },
+        )
+        assert begin.status_code == 200, begin.get_json()
+
     # Missing assertion response -- rejected before any state is resolved.
+    _begin()
     missing = client.post("/api/advanced/authenticate/complete", json={})
     assert missing.status_code == 400
-    assert missing.get_json()["challengeSource"] == "client-supplied"
+    assert missing.get_json()["challengeSource"] == "server-session"
 
     # Present but unusable credentials.
+    _begin()
     no_creds = client.post(
         "/api/advanced/authenticate/complete",
         json={
@@ -284,4 +298,9 @@ def test_advanced_authenticate_complete_always_reports_challenge_source(config_m
         },
     )
     assert no_creds.status_code == 404
-    assert no_creds.get_json()["challengeSource"] == "client-supplied"
+    assert no_creds.get_json()["challengeSource"] == "server-session"
+
+    # Without a begin there is no challenge to report.
+    cold = entry_app().test_client().post("/api/advanced/authenticate/complete", json={})
+    assert cold.status_code == 400
+    assert "challengeSource" not in cold.get_json()

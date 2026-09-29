@@ -12,14 +12,12 @@ export const SIGN_COUNT_SENTENCES = {
 // server/app/routes/advanced/constants.py and server/app/challenge_registry.py
 export const CHALLENGE_SOURCES = {
     'server-session': 'Issued by this server for this ceremony.',
-    'client-supplied': 'Taken from the request, not issued by this server.',
 };
 
 export const CHALLENGE_STATUSES = {
     fresh: 'First use.',
     replayed: 'Used before: this is a replay.',
     expired: 'Expired before it was used.',
-    'not-tracked': 'Not tracked for reuse.',
 };
 
 function reported(value) {

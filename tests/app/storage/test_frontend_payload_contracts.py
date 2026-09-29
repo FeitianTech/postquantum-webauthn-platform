@@ -225,7 +225,7 @@ def test_advanced_authenticate_begin_accepts_storedcredentials_without_dunder(mo
 
         assert response.status_code == 200
         payload = response.get_json()
-        assert payload["__session_state"] == {"challenge": "advanced-auth-state"}
+        assert "__session_state" not in payload
         assert "allowCredentials" not in payload["publicKey"]
         assert captured["credential_count"] == 1
         assert captured["challenge"] == challenge

@@ -61,28 +61,13 @@ def _server_supports_algorithm(algorithm: int | None) -> bool:
         return False
 
 
-def _assertion_rp(public_key: Mapping[str, Any]) -> tuple[Any, Any]:
-    """The RP id and name: begin's, else the last registration's, else the request's."""
+def _assertion_rp() -> tuple[Any, Any]:
+    """The RP id and name begin kept in the session."""
 
     stored_rp = session.pop("advanced_auth_rp", None)
-    stored_rp_id = None
-    stored_rp_name = None
     if isinstance(stored_rp, Mapping):
-        stored_rp_id = stored_rp.get("id")
-        stored_rp_name = stored_rp.get("name")
-    elif isinstance(session.get("advanced_rp"), Mapping):
-        fallback_rp = session.get("advanced_rp")
-        stored_rp_id = fallback_rp.get("id")
-        stored_rp_name = fallback_rp.get("name")
-    elif isinstance(public_key, Mapping):
-        rp_candidate = public_key.get("rp")
-        if isinstance(rp_candidate, Mapping):
-            stored_rp_id = rp_candidate.get("id")
-            stored_rp_name = rp_candidate.get("name")
-        rp_id_candidate = public_key.get("rpId")
-        if stored_rp_id is None and isinstance(rp_id_candidate, str):
-            stored_rp_id = rp_id_candidate
-    return stored_rp_id, stored_rp_name
+        return stored_rp.get("id"), stored_rp.get("name")
+    return None, None
 
 
 def _verification_failure(exc: Exception, response: Any, lookup: Mapping[bytes, Any], trace: Mapping[str, Any]) -> Any:
@@ -223,7 +208,7 @@ def verify_assertion(
 ) -> Any:
     """Have fido2 verify the assertion, and answer with what it concluded."""
 
-    stored_rp_id, stored_rp_name = _assertion_rp(public_key)
+    stored_rp_id, stored_rp_name = _assertion_rp()
     resolved_rp_id = config.determine_rp_id(stored_rp_id)
     auth_server = config.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
 

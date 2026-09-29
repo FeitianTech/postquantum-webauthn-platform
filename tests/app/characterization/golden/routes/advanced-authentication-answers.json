@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "532"
+     "422"
     ],
     [
      "X-Content-Type-Options",
@@ -90,12 +90,8 @@
      }
     }
    ],
-   "bodySha256": "6cf44d913cf867ddddd4a3fccc1745e73e81003e580b4e43a460a05c7ed12970",
+   "bodySha256": "5f5f69612f842c7ba6d9f5a00fe03c16644892bf0872952c15288eea7202fc3e",
    "body": {
-    "__session_state": {
-     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "attestation": "none",
      "authenticatorSelection": {
@@ -839,7 +835,7 @@
     ],
     [
      "Content-Length",
-     "532"
+     "422"
     ],
     [
      "X-Content-Type-Options",
@@ -921,12 +917,8 @@
      }
     }
    ],
-   "bodySha256": "6cf44d913cf867ddddd4a3fccc1745e73e81003e580b4e43a460a05c7ed12970",
+   "bodySha256": "5f5f69612f842c7ba6d9f5a00fe03c16644892bf0872952c15288eea7202fc3e",
    "body": {
-    "__session_state": {
-     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "attestation": "none",
      "authenticatorSelection": {
@@ -1616,7 +1608,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -1680,12 +1672,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -1779,7 +1767,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -1843,12 +1831,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -1942,7 +1926,7 @@
     ],
     [
      "Content-Length",
-     "247"
+     "137"
     ],
     [
      "X-Content-Type-Options",
@@ -2006,12 +1990,8 @@
      }
     }
    ],
-   "bodySha256": "7e08369c2ea799a992fa19d0108f9c8ebd68a2d98fc76902ac64a666a1abf3b8",
+   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
    "body": {
-    "__session_state": {
-     "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
-     "user_verification": "preferred"
-    },
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
@@ -2091,81 +2071,6 @@
     "signatureVerified": false,
     "status": "VERIFICATION_FAILED",
     "verified": false
-   }
-  },
-  {
-   "request": "POST /api/advanced/authenticate/complete",
-   "status": 200,
-   "headers": [
-    [
-     "Content-Type",
-     "application/json"
-    ],
-    [
-     "Content-Length",
-     "305"
-    ],
-    [
-     "X-Content-Type-Options",
-     "nosniff"
-    ],
-    [
-     "X-Frame-Options",
-     "DENY"
-    ],
-    [
-     "Referrer-Policy",
-     "no-referrer"
-    ],
-    [
-     "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Content-Security-Policy-Report-Only",
-     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Reporting-Endpoints",
-     "csp=\"/api/csp-report\""
-    ],
-    [
-     "Permissions-Policy",
-     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
-    ],
-    [
-     "Vary",
-     "Cookie"
-    ]
-   ],
-   "cookies": [
-    {
-     "name": "session",
-     "attributes": [
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": {
-      "_permanent": true,
-      "fido.mds.session": "D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0",
-      "fido.mds.touched_at": 1790000000.0
-     }
-    }
-   ],
-   "bodySha256": "643fcd11e4f1b746338e02f43ee804df93f55bd1cc4c1a546ac57008309a082a",
-   "body": {
-    "algorithm": -7,
-    "algorithmDescription": "ES256 (ECDSA)",
-    "authenticatedCredentialId": "FUDL9FtaCCi0t5cmftvdu_uF6Gs8AGXD_CkF8PpX76U",
-    "challengeSource": "client-supplied",
-    "challengeStatus": "not-tracked",
-    "hintsUsed": [],
-    "signCount": 4,
-    "signCountStatus": "ok",
-    "signatureVerified": true,
-    "status": "OK",
-    "verified": true
    }
   },
   {

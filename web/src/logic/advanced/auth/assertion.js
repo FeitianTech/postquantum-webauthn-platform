@@ -131,11 +131,8 @@ export async function authenticateAdvancedCredential(text, {
         }
 
         const json = await response.json();
-        const sessionState = json?.__session_state ?? null;
-        const optionsJson = { ...json };
-        delete optionsJson.__session_state;
-        const originalExtensions = optionsJson.publicKey?.extensions;
-        const assertOptions = parseRequestOptionsFromJSON(optionsJson);
+        const originalExtensions = json?.publicKey?.extensions;
+        const assertOptions = parseRequestOptionsFromJSON(json);
 
         const convertedExtensions = convertExtensionsForClient(originalExtensions);
         if (convertedExtensions) {
@@ -159,7 +156,6 @@ export async function authenticateAdvancedCredential(text, {
             ...parsed,
             __assertion_response: assertionResponse,
             __storedCredentials: storedCredentials,
-            __session_state: sessionState,
             __hash_algorithm: hashAlgorithm(),
         });
 

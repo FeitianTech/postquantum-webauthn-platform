@@ -93,13 +93,12 @@ describe('registering a passkey', () => {
     expect(console.log).toHaveBeenCalledWith('pubkeycredparam used:', expect.anything());
   });
 
-  it('sends the server\'s session state back, and passes the extensions it asked for', async () => {
-    const begin = { status: 200, body: { __session_state: 'state-1', publicKey: { ...REGISTER[0].body.publicKey, extensions: { credProps: true } } } };
+  it('passes the extensions the server asked for', async () => {
+    const begin = { status: 200, body: { publicKey: { ...REGISTER[0].body.publicKey, extensions: { credProps: true } } } };
     answering(begin, REGISTER[1]);
     await registerSimplePasskey('alice');
 
     expect(authenticator.create.mock.calls[0][0].publicKey.extensions).toEqual({ credProps: true });
-    expect(sent(1).body.__session_state).toBe('state-1');
   });
 
   it('fails as the options do when the server answers something that is not options', async () => {
@@ -188,11 +187,6 @@ describe('authenticating with a passkey', () => {
     });
   });
 
-  it('sends the server\'s session state back with the assertion', async () => {
-    answering({ status: 200, body: { ...AUTHENTICATE[2].body, __session_state: 'state-2' } }, AUTHENTICATE[3]);
-    await authenticateSimplePasskey('alice', { credentialsFor, prepareForServer });
-    expect(sent(1).body.__session_state).toBe('state-2');
-  });
 });
 
 describe('what a failed ceremony says', () => {

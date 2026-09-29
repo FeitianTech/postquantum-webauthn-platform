@@ -2,6 +2,125 @@
  "scenario": "advanced-register-user-handles",
  "requests": [
   {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "422"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Content-Security-Policy-Report-Only",
+     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "advanced_original_request": {
+       "publicKey": {
+        "challenge": {
+         "$base64url": "YGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGA"
+        },
+        "pubKeyCredParams": [
+         {
+          "alg": -7,
+          "type": "public-key"
+         }
+        ],
+        "rp": {
+         "id": "localhost",
+         "name": "Demo server"
+        },
+        "user": {
+         "displayName": "A. User",
+         "id": "757365722d68616e646c65",
+         "name": "user@example.com"
+        }
+       }
+      },
+      "advanced_register_allowed_attachments": [],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "Demo server"
+      },
+      "advanced_state": {
+       "challenge": "YGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGA",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      }
+     }
+    }
+   ],
+   "bodySha256": "7beb7c5eb2ee7d00e04b7dca301daf4af7305d3e9781f4b35a2e1471eacbc1aa",
+   "body": {
+    "publicKey": {
+     "attestation": "none",
+     "authenticatorSelection": {
+      "requireResidentKey": false,
+      "residentKey": "preferred",
+      "userVerification": "preferred"
+     },
+     "challenge": "YGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGA",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -7,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "Demo server"
+     },
+     "timeout": 90,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
    "request": "POST /api/advanced/register/complete",
    "status": 200,
    "headers": [
@@ -11,7 +130,7 @@
     ],
     [
      "Content-Length",
-     "9584"
+     "9577"
     ],
     [
      "X-Content-Type-Options",
@@ -55,7 +174,7 @@
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": "QDa_GaejV9pcCix7HoyDLuaUtR92ZJlsxq7o1MezC-E"
+     "contents": "WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M"
     },
     {
      "name": "session",
@@ -66,12 +185,12 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "QDa_GaejV9pcCix7HoyDLuaUtR92ZJlsxq7o1MezC-E",
+      "fido.mds.session": "WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M",
       "fido.mds.touched_at": 1790000000.0
      }
     }
    ],
-   "bodySha256": "3fb6908cbc868b918c30bc3a8ae504d92102fd5b56a36d450209d9d394cb33e2",
+   "bodySha256": "f275f58858d0dcc3cf49c7706528010f412797baf268dba7654cf22b7439bed8",
    "body": {
     "actualResidentKey": true,
     "algo": "ES256 (ECDSA)",
@@ -147,8 +266,8 @@
      "verified": true
     },
     "attestationVerified": true,
-    "challengeSource": "client-supplied",
-    "challengeStatus": "not-tracked",
+    "challengeSource": "server-session",
+    "challengeStatus": "fresh",
     "credProtectUsed": "none",
     "enforceCredProtectUsed": false,
     "excludeCredentialsUsed": false,
@@ -274,7 +393,7 @@
      "displayName": "A",
      "hasServerArtifact": true,
      "largeBlob": false,
-     "localStorageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::3741d99f147d46d2ace8f0e42d6c133b",
+     "localStorageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::a33d6f4bbc794262bc78d0c0c5bab40d",
      "properties": {
       "aaguid": "00000000000000000000000000000000",
       "aaguidGuid": "00000000-0000-0000-0000-000000000000",
@@ -360,7 +479,7 @@
      },
      "residentKey": false,
      "signCount": 0,
-     "storageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::3741d99f147d46d2ace8f0e42d6c133b",
+     "storageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::a33d6f4bbc794262bc78d0c0c5bab40d",
      "type": "advanced",
      "userHandle": "aGFuZGxl",
      "userHandleBase64": "aGFuZGxl",
@@ -371,10 +490,10 @@
    },
    "stored": [
     {
-     "file": "artifacts/QDa_GaejV9pcCix7HoyDLuaUtR92ZJlsxq7o1MezC-E/1b97ffe78154bbeaa4d97eaa4526d2ba31040a131eccdd072467f8f5b4bd06a1.json",
-     "sha256": "c675096e1bdcaffaa4cad2bdae77d70d4a6ae85785912203ba3b50196ddd4277",
+     "file": "artifacts/WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M/04e821f56a2afc8af4c982b451a697f121821666d54717202a8379b5e014025a.json",
+     "sha256": "a8eee3ffc9f7e6a89a5762e8e9962d09226e2e69d10c0d36363cf90540ddb379",
      "content": {
-      "storageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::3741d99f147d46d2ace8f0e42d6c133b",
+      "storageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::a33d6f4bbc794262bc78d0c0c5bab40d",
       "createdAt": 1790000000.0,
       "updatedAt": 1790000000.0,
       "payload": {
@@ -644,6 +763,128 @@
    ]
   },
   {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "422"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Content-Security-Policy-Report-Only",
+     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "_permanent": true,
+      "advanced_original_request": {
+       "publicKey": {
+        "challenge": {
+         "$base64url": "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE"
+        },
+        "pubKeyCredParams": [
+         {
+          "alg": -7,
+          "type": "public-key"
+         }
+        ],
+        "rp": {
+         "id": "localhost",
+         "name": "Demo server"
+        },
+        "user": {
+         "displayName": "A. User",
+         "id": "757365722d68616e646c65",
+         "name": "user@example.com"
+        }
+       }
+      },
+      "advanced_register_allowed_attachments": [],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "Demo server"
+      },
+      "advanced_state": {
+       "challenge": "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      },
+      "fido.mds.session": "WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M",
+      "fido.mds.touched_at": 1790000000.0
+     }
+    }
+   ],
+   "bodySha256": "fba9df5becb8e73c3d4069d60b6f47359e0d65aac13a66c03a0003c6ac61a17c",
+   "body": {
+    "publicKey": {
+     "attestation": "none",
+     "authenticatorSelection": {
+      "requireResidentKey": false,
+      "residentKey": "preferred",
+      "userVerification": "preferred"
+     },
+     "challenge": "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -7,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "Demo server"
+     },
+     "timeout": 90,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
    "request": "POST /api/advanced/register/complete",
    "status": 200,
    "headers": [
@@ -653,7 +894,7 @@
     ],
     [
      "Content-Length",
-     "9714"
+     "9707"
     ],
     [
      "X-Content-Type-Options",
@@ -697,7 +938,7 @@
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": "QDa_GaejV9pcCix7HoyDLuaUtR92ZJlsxq7o1MezC-E"
+     "contents": "WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M"
     },
     {
      "name": "session",
@@ -708,12 +949,12 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "QDa_GaejV9pcCix7HoyDLuaUtR92ZJlsxq7o1MezC-E",
+      "fido.mds.session": "WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M",
       "fido.mds.touched_at": 1790000000.0
      }
     }
    ],
-   "bodySha256": "9bfa5e74743f6dd7e52e674dedea4c7b101e999dd7f4e6b8c729d06aa76639b6",
+   "bodySha256": "d2dfffa74e92a18f3dc52c7c361bdd629bbef3bc1fee571816475b18f28b17c4",
    "body": {
     "actualResidentKey": true,
     "algo": "ES256 (ECDSA)",
@@ -789,8 +1030,8 @@
      "verified": true
     },
     "attestationVerified": true,
-    "challengeSource": "client-supplied",
-    "challengeStatus": "not-tracked",
+    "challengeSource": "server-session",
+    "challengeStatus": "fresh",
     "credProtectUsed": "none",
     "enforceCredProtectUsed": false,
     "excludeCredentialsUsed": false,
@@ -916,7 +1157,7 @@
      "displayName": "b@example.com",
      "hasServerArtifact": true,
      "largeBlob": false,
-     "localStorageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::59aab3a8bb5e4e68921839fef17e42f8",
+     "localStorageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::62a4d6f152cc4b7ca41f9f05493ea8f9",
      "properties": {
       "aaguid": "00000000000000000000000000000000",
       "aaguidGuid": "00000000-0000-0000-0000-000000000000",
@@ -1002,7 +1243,7 @@
      },
      "residentKey": false,
      "signCount": 0,
-     "storageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::59aab3a8bb5e4e68921839fef17e42f8",
+     "storageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::62a4d6f152cc4b7ca41f9f05493ea8f9",
      "type": "advanced",
      "userHandle": "YkBleGFtcGxlLmNvbQ",
      "userHandleBase64": "YkBleGFtcGxlLmNvbQ==",
@@ -1013,10 +1254,10 @@
    },
    "stored": [
     {
-     "file": "artifacts/QDa_GaejV9pcCix7HoyDLuaUtR92ZJlsxq7o1MezC-E/f8b8f2175c92bd5409a60b07152b29b0ef96053ae6d2f39c737da328922a8839.json",
-     "sha256": "1e1873ef25ceb4d4a64ba47302f006d763508a70a7e63dfaad89a11726848b9e",
+     "file": "artifacts/WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M/209c417d6c0c25aa499f76afa49ddc1e38b85a1a792b13da810e7a5cc2f1f1af.json",
+     "sha256": "96aafab0ef11c773e1c0845adc5f2210ba5b3f11335131807332f84ba746d8c9",
      "content": {
-      "storageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::59aab3a8bb5e4e68921839fef17e42f8",
+      "storageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::62a4d6f152cc4b7ca41f9f05493ea8f9",
       "createdAt": 1790000000.0,
       "updatedAt": 1790000000.0,
       "payload": {
@@ -1286,6 +1527,128 @@
    ]
   },
   {
+   "request": "POST /api/advanced/register/begin",
+   "status": 200,
+   "headers": [
+    [
+     "Content-Type",
+     "application/json"
+    ],
+    [
+     "Content-Length",
+     "422"
+    ],
+    [
+     "X-Content-Type-Options",
+     "nosniff"
+    ],
+    [
+     "X-Frame-Options",
+     "DENY"
+    ],
+    [
+     "Referrer-Policy",
+     "no-referrer"
+    ],
+    [
+     "Content-Security-Policy",
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Content-Security-Policy-Report-Only",
+     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+    ],
+    [
+     "Reporting-Endpoints",
+     "csp=\"/api/csp-report\""
+    ],
+    [
+     "Permissions-Policy",
+     "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
+    ],
+    [
+     "Vary",
+     "Cookie"
+    ]
+   ],
+   "cookies": [
+    {
+     "name": "session",
+     "attributes": [
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax"
+     ],
+     "contents": {
+      "_permanent": true,
+      "advanced_original_request": {
+       "publicKey": {
+        "challenge": {
+         "$base64url": "YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI"
+        },
+        "pubKeyCredParams": [
+         {
+          "alg": -7,
+          "type": "public-key"
+         }
+        ],
+        "rp": {
+         "id": "localhost",
+         "name": "Demo server"
+        },
+        "user": {
+         "displayName": "A. User",
+         "id": "757365722d68616e646c65",
+         "name": "user@example.com"
+        }
+       }
+      },
+      "advanced_register_allowed_attachments": [],
+      "advanced_rp": {
+       "id": "localhost",
+       "name": "Demo server"
+      },
+      "advanced_state": {
+       "challenge": "YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI",
+       "issued_at": 1790000000.0,
+       "user_verification": "preferred"
+      },
+      "fido.mds.session": "WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M",
+      "fido.mds.touched_at": 1790000000.0
+     }
+    }
+   ],
+   "bodySha256": "80d94cd27d3cf34c10b6bebeb3d0f5f330847f037df78b84f3a8a9c0260b515f",
+   "body": {
+    "publicKey": {
+     "attestation": "none",
+     "authenticatorSelection": {
+      "requireResidentKey": false,
+      "residentKey": "preferred",
+      "userVerification": "preferred"
+     },
+     "challenge": "YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI",
+     "excludeCredentials": [],
+     "pubKeyCredParams": [
+      {
+       "alg": -7,
+       "type": "public-key"
+      }
+     ],
+     "rp": {
+      "id": "localhost",
+      "name": "Demo server"
+     },
+     "timeout": 90,
+     "user": {
+      "displayName": "A. User",
+      "id": "dXNlci1oYW5kbGU",
+      "name": "user@example.com"
+     }
+    }
+   }
+  },
+  {
    "request": "POST /api/advanced/register/complete",
    "status": 200,
    "headers": [
@@ -1295,7 +1658,7 @@
     ],
     [
      "Content-Length",
-     "9714"
+     "9707"
     ],
     [
      "X-Content-Type-Options",
@@ -1339,7 +1702,7 @@
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": "QDa_GaejV9pcCix7HoyDLuaUtR92ZJlsxq7o1MezC-E"
+     "contents": "WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M"
     },
     {
      "name": "session",
@@ -1350,12 +1713,12 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "QDa_GaejV9pcCix7HoyDLuaUtR92ZJlsxq7o1MezC-E",
+      "fido.mds.session": "WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M",
       "fido.mds.touched_at": 1790000000.0
      }
     }
    ],
-   "bodySha256": "6c01b463fd7ee60b608b02c038dc064f0c609ac4a090a09293d613fc8bc86ee9",
+   "bodySha256": "872658da4fc9c13de4c142bf48e2a78c74f1ee60a83c9b5f24c467fefc6be408",
    "body": {
     "actualResidentKey": true,
     "algo": "ES256 (ECDSA)",
@@ -1431,8 +1794,8 @@
      "verified": true
     },
     "attestationVerified": true,
-    "challengeSource": "client-supplied",
-    "challengeStatus": "not-tracked",
+    "challengeSource": "server-session",
+    "challengeStatus": "fresh",
     "credProtectUsed": "none",
     "enforceCredProtectUsed": false,
     "excludeCredentialsUsed": false,
@@ -1558,7 +1921,7 @@
      "displayName": "c@example.com",
      "hasServerArtifact": true,
      "largeBlob": false,
-     "localStorageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::db20e4a4340c471d8bed685a55c8d521",
+     "localStorageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::add895af8e0f4b29a67df6571c4a7ed2",
      "properties": {
       "aaguid": "00000000000000000000000000000000",
       "aaguidGuid": "00000000-0000-0000-0000-000000000000",
@@ -1644,7 +2007,7 @@
      },
      "residentKey": false,
      "signCount": 0,
-     "storageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::db20e4a4340c471d8bed685a55c8d521",
+     "storageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::add895af8e0f4b29a67df6571c4a7ed2",
      "type": "advanced",
      "userHandle": "Y0BleGFtcGxlLmNvbQ",
      "userHandleBase64": "Y0BleGFtcGxlLmNvbQ==",
@@ -1655,10 +2018,10 @@
    },
    "stored": [
     {
-     "file": "artifacts/QDa_GaejV9pcCix7HoyDLuaUtR92ZJlsxq7o1MezC-E/a246704a1131e9f54313beafdf593c9e26da4d89d86fe4ea02635a9b187f4490.json",
-     "sha256": "141585581cfbba9f7076dcb684130ee4fcdf1ea1490c589e4d09c31e5e65537a",
+     "file": "artifacts/WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M/3140c227bdef6ee82dbca4ad7285e905a6901b20e3b9f98e29faad4faaccb6bd.json",
+     "sha256": "802e0b9bbe9e0ee4ae51e2d81a6db93920d1e12547280c699b1092082d73cedb",
      "content": {
-      "storageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::db20e4a4340c471d8bed685a55c8d521",
+      "storageId": "qu4pJozNccR1qZNHJrbIlDu9::1a0c4506c00::add895af8e0f4b29a67df6571c4a7ed2",
       "createdAt": 1790000000.0,
       "updatedAt": 1790000000.0,
       "payload": {

@@ -278,13 +278,13 @@ def test_advanced_replay_is_reported_on_failure_responses_too(config_module, adv
     assert replay.get_json()["challengeStatus"] == "replayed"
 
 
-def test_advanced_client_supplied_challenge_is_reported_as_not_tracked(config_module, advanced_module):
+def test_advanced_request_supplied_state_is_refused(config_module, advanced_module):
     authenticator = Authenticator()
     stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
     challenge = b"\x72" * 32
     client = entry_app().test_client()
 
-    # No /begin: the request editor supplies its own state.
+    # No /begin: a state the request brings is not the server's, and is not read.
     response = _advanced_complete(
         client,
         stored_entry,
@@ -293,9 +293,9 @@ def test_advanced_client_supplied_challenge_is_reported_as_not_tracked(config_mo
         __session_state={"challenge": b64u(challenge), "user_verification": "discouraged"},
     )
 
-    assert response.status_code == 200, response.get_json()
-    assert response.get_json()["challengeSource"] == "client-supplied"
-    assert response.get_json()["challengeStatus"] == "not-tracked"
+    assert response.status_code == 400
+    assert "state not found" in response.get_json()["error"]
+    assert "challengeSource" not in response.get_json()
 
 
 # The advanced flow burns its challenge before anything can fail, like the simple

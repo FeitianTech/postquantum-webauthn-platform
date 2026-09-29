@@ -104,7 +104,6 @@ def test_the_advanced_flow_does_not_hand_its_user_name_to_the_store(client, capl
             json={
                 "publicKey": advanced_public_key_options(challenge=challenge, username=username),
                 "__credential_response": registration_payload(authenticator, challenge=challenge),
-                "__session_state": body["__session_state"],
             },
             headers={"Origin": ORIGIN},
         )

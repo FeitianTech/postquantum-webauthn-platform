@@ -209,23 +209,21 @@ def _advanced_register(
     authenticator,
     *,
     options: dict[str, Any] | None = None,
-    begin: bool = True,
-    extra: dict[str, Any] | None = None,
+    begin_options: dict[str, Any] | None = None,
     **payload: Any,
 ):
     options = options or _options()
     challenge = unb64u(options["challenge"]["$base64url"])
-    if begin:
-        response = r.post(client, "/api/advanced/register/begin", json={"publicKey": copy.deepcopy(options)})
-        if response is not None and response.status_code == 200:
-            challenge = unb64u(response.get_json()["publicKey"]["challenge"])
+    begin = copy.deepcopy(begin_options or options)
+    response = r.post(client, "/api/advanced/register/begin", json={"publicKey": begin})
+    if response is not None and response.status_code == 200:
+        challenge = unb64u(response.get_json()["publicKey"]["challenge"])
     return r.post(
         client,
         "/api/advanced/register/complete",
         json={
             "publicKey": copy.deepcopy(options),
             "__credential_response": m.registration_payload(authenticator, challenge=challenge, **payload),
-            **(extra or {}),
         },
         headers=HEADERS,
     )
@@ -399,11 +397,11 @@ def _(r: Recorder) -> None:
             {"name": "c@example.com"},
         )
     ):
-        options = _options(challenge=bytes([0x60 + index]) * 32, user=user)
-        # No begin: the request editor supplies its own state, so the user handle is not validated there.
+        challenge = bytes([0x60 + index]) * 32
+        # Begin with a valid user; the request editor then completes with another.
         _advanced_register(
-            r, client, authenticator, options=options, begin=False,
-            extra={"__session_state": {"challenge": b64u(bytes([0x60 + index]) * 32), "user_verification": "discouraged"}},
+            r, client, authenticator, options=_options(challenge=challenge, user=user),
+            begin_options=_options(challenge=challenge),
         )
 
 
@@ -445,22 +443,9 @@ def _(r: Recorder) -> None:
     _advanced_register(r, client, authenticator, options=platform_only, attachment="cross-platform")
     _advanced_register(r, client, authenticator, options=platform_only, attachment="platform")
     _advanced_register(
-        r, client, authenticator, begin=False, attachment="cross-platform",
+        r, client, authenticator, attachment="cross-platform",
         options=_options(authenticatorSelection={"authenticatorAttachment": "platform"}),
-        extra={"__session_state": {"challenge": b64u(b"\x31" * 32), "user_verification": "preferred"}},
     )
-
-
-@scenario("advanced-register-client-state-rp")
-def _(r: Recorder) -> None:
-    client = r.client()
-    authenticator = m.Authenticator("adv-client-state")
-    state = {"__session_state": {"challenge": b64u(b"\x31" * 32), "user_verification": "discouraged"}}
-    _advanced_register(r, client, authenticator, begin=False, extra=state)
-    options = _options()
-    options.pop("rp")
-    options["rpId"] = "localhost"
-    _advanced_register(r, client, authenticator, begin=False, extra=state, options=options)
 
 
 # -- advanced authentication ---------------------------------------------------------
@@ -477,22 +462,22 @@ def _advanced_authenticate(
     *,
     entries: list[Any] | None = None,
     options: dict[str, Any] | None = None,
-    begin: bool = True,
     counter: int = 1,
     valid: bool = True,
     attachment: str | None = None,
+    origin: str | None = None,
     extra: dict[str, Any] | None = None,
 ):
     options = options or _auth_options()
     entries = entries if entries is not None else [authenticator.stored_credential_entry(declared_algorithm=-7)]
     challenge = unb64u(options["challenge"]["$base64url"])
-    if begin:
-        response = r.post(
-            client, "/api/advanced/authenticate/begin",
-            json={"publicKey": copy.deepcopy(options), "__storedCredentials": entries},
-        )
-        if response is not None and response.status_code == 200:
-            challenge = unb64u(response.get_json()["publicKey"]["challenge"])
+    response = r.post(
+        client, "/api/advanced/authenticate/begin",
+        json={"publicKey": copy.deepcopy(options), "__storedCredentials": entries},
+    )
+    if response is not None and response.status_code == 200:
+        challenge = unb64u(response.get_json()["publicKey"]["challenge"])
+    signed_by = {"origin": origin} if origin else {}
     return r.post(
         client,
         "/api/advanced/authenticate/complete",
@@ -500,7 +485,8 @@ def _advanced_authenticate(
             "publicKey": copy.deepcopy(options),
             "__storedCredentials": entries,
             "__assertion_response": m.assertion_payload(
-                authenticator, challenge=challenge, counter=counter, valid_signature=valid, attachment=attachment
+                authenticator, challenge=challenge, counter=counter, valid_signature=valid, attachment=attachment,
+                **signed_by,
             ),
             **(extra or {}),
         },
@@ -611,21 +597,10 @@ def _(r: Recorder) -> None:
         "__assertion_response": assertion,
         "__storedCredentials": [es256.stored_credential_entry(declared_algorithm=-7, resident=False)],
     })
-    # No state, then the client-supplied fallback state.
+    # No state.
     post({"publicKey": _auth_options(), "__assertion_response": assertion, "__storedCredentials": [entry]})
-    post({
-        "publicKey": _auth_options(),
-        "__assertion_response": assertion,
-        "__storedCredentials": [entry],
-        "__session_state": {"challenge": b64u(b"\x71" * 32), "user_verification": "preferred"},
-    })
     # Origin outside the allowlist.
-    post({
-        "publicKey": _auth_options(),
-        "__assertion_response": m.assertion_payload(es256, challenge=b"\x71" * 32, origin="https://elsewhere.example"),
-        "__storedCredentials": [entry],
-        "__session_state": {"challenge": b64u(b"\x71" * 32), "user_verification": "preferred"},
-    })
+    _advanced_authenticate(r, client, es256, entries=[entry], origin="https://elsewhere.example")
     # A replayed server challenge is reported, not rejected.
     begin = r.post(client, "/api/advanced/authenticate/begin", json={"publicKey": _auth_options(), "__storedCredentials": [entry]})
     cookie = client.get_cookie("session").value
@@ -730,9 +705,8 @@ def _(r: Recorder) -> None:
     reported neither (no prf key at all); then authentications of the first,
     whose id the answers name: a first use, a counter lower than the stored one
     (reported, not rejected), a bad signature (refused, naming the credential),
-    the client-supplied state once the server's is gone, and a begin with no
-    stored credential. The challenge is fixed, so every server challenge after
-    the first is a replay."""
+    and a begin with no stored credential. The challenge is fixed, so every
+    server challenge after the first is a replay."""
 
     client = r.client()
     capable = m.Authenticator("adv-answers-capable", aaguid=AAGUID)
@@ -749,10 +723,6 @@ def _(r: Recorder) -> None:
     _advanced_authenticate(r, client, capable, entries=entries, counter=1)
     _advanced_authenticate(r, client, capable, entries=[{**entries[0], "signCount": 10}, entries[1]], counter=2)
     _advanced_authenticate(r, client, capable, entries=entries, counter=3, valid=False)
-    _advanced_authenticate(
-        r, client, capable, entries=entries, counter=4, begin=False,
-        extra={"__session_state": {"challenge": b64u(b"\x71" * 32), "user_verification": "preferred"}},
-    )
     r.post(client, "/api/advanced/authenticate/begin", json={"publicKey": _auth_options(), "__storedCredentials": []})
 
 
@@ -811,19 +781,10 @@ def _(r: Recorder) -> None:
     _advanced_register(r, client, authenticator, options=_options(challenge=b"\x32" * 32))
 
 
-@scenario("advanced-authenticate-rp-fallbacks")
+@scenario("advanced-authenticate-unlisted-credential")
 def _(r: Recorder) -> None:
     client = r.client()
-    es256 = m.Authenticator("adv-auth-rp")
-    entry = es256.stored_credential_entry(declared_algorithm=-7)
-    state = {"__session_state": {"challenge": b64u(b"\x71" * 32), "user_verification": "preferred"}}
-    # The request's own rp, then its rpId, when the session has no RP.
-    _advanced_authenticate(r, client, es256, begin=False, entries=[entry], extra=state,
-                           options=_auth_options(rp={"id": "localhost", "name": "Named RP"}))
-    _advanced_authenticate(r, client, es256, begin=False, entries=[entry], extra=state, options=_auth_options(rpId="localhost"))
-    # The registration RP left in the session by an advanced register begin.
-    r.post(client, "/api/advanced/register/begin", json={"publicKey": _options()})
-    _advanced_authenticate(r, client, es256, begin=False, entries=[entry], extra=state)
+    entry = m.Authenticator("adv-auth-rp").stored_credential_entry(declared_algorithm=-7)
     # An assertion for a credential the request did not list.
     stranger = m.Authenticator("adv-auth-stranger")
     _advanced_authenticate(r, client, stranger, entries=[entry], valid=False)
