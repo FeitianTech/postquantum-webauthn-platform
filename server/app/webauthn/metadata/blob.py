@@ -321,18 +321,31 @@ def load_packaged_snapshot_meta() -> dict[str, Any] | None:
     return _load_packaged_explorer_meta(path)
 
 
-def _load_base_explorer_snapshot() -> tuple[dict[str, Any] | None, tuple[float | None, float | None] | None]:
-    try:
-        explorer_mtime = os.path.getmtime(_path(mds_snapshot_dir.EXPLORER))
-    except OSError:
-        explorer_mtime = None
+def _mtimes(*names: str) -> tuple[float | None, ...]:
+    """The snapshot files' modification times, None for a missing one.
 
-    try:
-        verified_mtime = os.path.getmtime(_path(mds_snapshot_dir.VERIFIED))
-    except OSError:
-        verified_mtime = None
+    A cache built from several files is keyed on all of them, read before they
+    are: a snapshot replaced file by file under a running instance can then be
+    read half old, half new, but never kept that way, since the key it was
+    cached under no longer matches once the last file lands."""
 
-    cache_marker = (explorer_mtime, verified_mtime)
+    mtimes: list[float | None] = []
+    for name in names:
+        try:
+            mtimes.append(os.path.getmtime(_path(name)))
+        except OSError:
+            mtimes.append(None)
+    return tuple(mtimes)
+
+
+def _load_base_explorer_snapshot() -> tuple[dict[str, Any] | None, tuple[float | None, ...] | None]:
+    cache_marker = _mtimes(
+        mds_snapshot_dir.EXPLORER,
+        mds_snapshot_dir.VERIFIED,
+        mds_snapshot_dir.EXPLORER_META,
+        mds_snapshot_dir.VERIFIED_META,
+    )
+    explorer_mtime, verified_mtime = cache_marker[:2]
     if (
         _state._base_explorer_snapshot_cache is not None
         and _state._base_explorer_snapshot_mtime == cache_marker
@@ -372,24 +385,26 @@ def _load_base_explorer_snapshot() -> tuple[dict[str, Any] | None, tuple[float |
         return snapshot, cache_marker
 
 
-def _load_base_full_snapshot() -> tuple[dict[str, Any] | None, float | None]:
-    try:
-        verified_mtime = os.path.getmtime(_path(mds_snapshot_dir.VERIFIED))
-    except OSError:
-        verified_mtime = None
+def _load_base_full_snapshot() -> tuple[dict[str, Any] | None, tuple[float | None, ...]]:
+    cache_marker = _mtimes(
+        mds_snapshot_dir.EXPLORER_FULL,
+        mds_snapshot_dir.VERIFIED,
+        mds_snapshot_dir.EXPLORER_FULL_META,
+        mds_snapshot_dir.VERIFIED_META,
+    )
 
     if (
         _state._base_full_snapshot_cache is not None
-        and _state._base_full_snapshot_mtime == verified_mtime
+        and _state._base_full_snapshot_mtime == cache_marker
     ):
-        return _state._base_full_snapshot_cache, verified_mtime
+        return _state._base_full_snapshot_cache, cache_marker
 
     with _state._base_full_snapshot_lock:
         if (
             _state._base_full_snapshot_cache is not None
-            and _state._base_full_snapshot_mtime == verified_mtime
+            and _state._base_full_snapshot_mtime == cache_marker
         ):
-            return _state._base_full_snapshot_cache, verified_mtime
+            return _state._base_full_snapshot_cache, cache_marker
 
         snapshot: dict[str, Any] | None = None
 
@@ -410,8 +425,8 @@ def _load_base_full_snapshot() -> tuple[dict[str, Any] | None, float | None]:
                 snapshot = build_bootstrap_snapshot(payload, load_metadata_cache_entry())
 
         _state._base_full_snapshot_cache = snapshot
-        _state._base_full_snapshot_mtime = verified_mtime
-        return snapshot, verified_mtime
+        _state._base_full_snapshot_mtime = cache_marker
+        return snapshot, cache_marker
 
 
 def load_packaged_explorer_summary() -> dict[str, Any]:

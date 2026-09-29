@@ -526,7 +526,8 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     verified_path.write_text(json.dumps(verified_payload), encoding="utf-8")
 
     monkeypatch.setattr(os.path, "getmtime", lambda path: 20.0 if path == str(verified_path) else 10.0)
-    explorer_cache_marker = (10.0, 20.0)
+    # The explorer, the verified snapshot, and their metas.
+    explorer_cache_marker = (10.0, 20.0, 10.0, 10.0)
     monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_cache", {"meta": {"entryCount": 9}})
     monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_mtime", explorer_cache_marker)
     cached_snapshot, cached_marker = metadata_module._load_base_explorer_snapshot()
@@ -560,13 +561,13 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     monkeypatch.setattr(blob, "_load_verified_metadata_payload", lambda: None)
 
     full_snapshot, full_marker = metadata_module._load_base_full_snapshot()
-    assert full_snapshot is None and full_marker is None
+    assert full_snapshot is None and full_marker == (None, None, None, None)
 
     monkeypatch.setattr(metadata_state, "_base_full_snapshot_cache", {"meta": {"entryCount": 1}})
-    monkeypatch.setattr(metadata_state, "_base_full_snapshot_mtime", None)
+    monkeypatch.setattr(metadata_state, "_base_full_snapshot_mtime", (None, None, None, None))
     cached_full, cached_full_marker = metadata_module._load_base_full_snapshot()
     assert cached_full == {"meta": {"entryCount": 1}}
-    assert cached_full_marker is None
+    assert cached_full_marker == (None, None, None, None)
 
     monkeypatch.setattr(blob, "_load_base_explorer_snapshot", lambda: ({}, None))
     monkeypatch.setattr(blob, "_load_verified_metadata_payload", lambda: None)

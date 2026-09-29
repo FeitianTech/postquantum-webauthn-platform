@@ -135,7 +135,7 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
     monkeypatch.setattr(blob, "_load_verified_metadata_payload", lambda: None)
     snapshot, marker = metadata_module._load_base_explorer_snapshot()
     assert snapshot is None
-    assert marker == (None, None)
+    assert marker == (None, None, None, None)
 
     def _getmtime_ordered(path):
         if path == blob._path(mds_snapshot_dir.EXPLORER):
@@ -161,7 +161,7 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
     )
     snapshot, marker = metadata_module._load_base_explorer_snapshot()
     assert snapshot == {"meta": {"entryCount": 0}}
-    assert marker == (10.0, 5.0)
+    assert marker == (10.0, 5.0, 5.0, 5.0)
 
     monkeypatch.setattr(
         blob,
