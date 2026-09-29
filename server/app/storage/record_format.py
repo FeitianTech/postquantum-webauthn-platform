@@ -19,6 +19,7 @@ from fido2.webauthn import AttestedCredentialData, AuthenticatorData
 
 from .. import encoding
 from ..env_flags import parse_env_flag
+from ..webauthn import cose_keys
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,8 @@ _T_UNSUPPORTED = "unsupported"
 # never functions. That rules out ``os.system``, ``builtins.eval``,
 # ``subprocess.Popen`` and every other code-execution gadget a crafted pickle
 # reaches for, while still reconstructing the FIDO2 values we actually stored.
+# The COSE key classes fido2 no longer defines (RS384 and the like) were stored
+# as ``fido2.cose.<name>``; they are read as the app's own (``cose_keys``).
 _PICKLE_ALLOWED_MODULES = frozenset(
     {
         "collections",
@@ -79,6 +82,8 @@ class _RestrictedUnpickler(pickle.Unpickler):
             raise pickle.UnpicklingError(
                 f"Refusing to load {module}.{name} from a legacy credential pickle"
             )
+        if module == "fido2.cose" and name in cose_keys.BY_NAME:
+            return cose_keys.BY_NAME[name]
         resolved = super().find_class(module, name)
         if not isinstance(resolved, type):
             raise pickle.UnpicklingError(
