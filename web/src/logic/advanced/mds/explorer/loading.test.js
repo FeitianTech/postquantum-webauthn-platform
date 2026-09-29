@@ -230,7 +230,7 @@ describe('explorer loading: the entries shown', () => {
 
 describe('explorer loading: what the page starts from', () => {
   it('asks the info endpoint, never from the cache', async () => {
-    const info = { snapshotUrl: '/assets/dev/fido-mds3.explorer.full.json', customEntriesState: 'none' };
+    const info = { snapshotUrl: '/assets/mds/fido-mds3.explorer.full.json', customEntriesState: 'none' };
     globalThis.fetch = vi.fn(async () => answer(info));
     const signal = new AbortController().signal;
     await expect(fetchExplorerInfo({ signal })).resolves.toEqual(info);

@@ -1,7 +1,7 @@
 """The MDS explorer's snapshot as a versioned static asset, and precompressed files.
 
 Browsers load one file of the MDS snapshot, the explorer's, from
-``/assets/<segment>/fido-mds3.explorer.full.json?v=<version>``, where the version
+``/assets/mds/fido-mds3.explorer.full.json?v=<version>``, where the version
 names the snapshot (``snapshot_version``): a URL with the current version is cached
 as immutable, any other revalidates. ``send_precompressed`` also serves the web
 export (``routes/web_export.py``).
@@ -26,8 +26,7 @@ __all__ = ["asset_url", "bp", "init_app", "send_precompressed", "snapshot_versio
 IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
 REVALIDATE_CACHE_CONTROL = "no-cache"
 
-# The path segment of the snapshot's URL. The route accepts any, so a page loaded
-# before a change of this segment still gets the file.
+# The path segment of the snapshot's URL; no other segment is served.
 _ASSET_SEGMENT = "mds"
 
 # Of the MDS snapshot's files (and the .gz sibling written next to the browsers'
@@ -83,8 +82,8 @@ def init_app(app: Flask) -> None:
     app.register_blueprint(bp)
 
 
-@bp.route("/assets/<segment>/<path:filename>")
-def versioned_static_asset(segment: str, filename: str):
+@bp.route(f"/assets/{_ASSET_SEGMENT}/<path:filename>")
+def versioned_static_asset(filename: str):
     if filename not in mds_snapshot_dir.BROWSER_FILENAMES:
         abort(404)
 

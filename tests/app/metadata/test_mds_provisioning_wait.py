@@ -107,7 +107,7 @@ def test_resolve_waits_and_then_finds_the_entry(slow_provisioning, client):
 
 
 def test_the_browsers_snapshot_file_waits_and_then_is_served(slow_provisioning, client):
-    thread, answer = _get_in_a_thread(client, "/assets/dev/fido-mds3.explorer.full.json")
+    thread, answer = _get_in_a_thread(client, "/assets/mds/fido-mds3.explorer.full.json")
     try:
         thread.join(0.2)
         assert thread.is_alive()

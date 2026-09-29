@@ -110,6 +110,6 @@ shows every component in every state.
   HTML `no-cache`; `/_next/static/` immutable for a year, gzipped from the build's
   `.gz` copies; the export's 404 page for an unknown path. No Node runs in production.
 - **Flask** answers everything with a static segment first: `/health`, `/api/…` (a
-  plain 404 when unknown), `/assets/<segment>/fido-mds3.explorer.full.json?v=<version>`
+  plain 404 when unknown), `/assets/mds/fido-mds3.explorer.full.json?v=<version>`
   (the MDS snapshot browsers load, and nothing else), and `/beta` and `/beta/…`, a
   permanent redirect (308) to the same path at `/`.

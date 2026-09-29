@@ -195,7 +195,7 @@ their exports or sentences. A new surface splits its logic out here first.
   `routes/web_export.py` (the export at `/`: the site's catch-all, since Flask has no static
   rule; HTML `no-cache`, `/_next/static/` immutable with the build's `.gz`, the export's 404
   page, a plain 404 under `/api/`; `/beta…` 308 to `/…`, built with `url_for`);
-  `static_assets.py` (the snapshot browsers load, `/assets/<segment>/<file>?v=<version>`,
+  `static_assets.py` (the snapshot browsers load, `/assets/mds/<file>?v=<version>`,
   immutable when the version is current, and no other snapshot file at any path;
   `send_precompressed`); `routes/csp_report.py` (one WARNING line per violation, bounded);
   `routes/errors.py`.

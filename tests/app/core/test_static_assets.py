@@ -66,9 +66,16 @@ def test_identity_encoding_when_gzip_not_accepted(assets_env):
 def test_another_version_or_none_must_revalidate(assets_env, query):
     _static_assets, client, _version = assets_env
 
-    with client.get(f"/assets/0ldbu1ld/{_EXPLORER_FULL}{query}") as response:
+    with client.get(f"/assets/mds/{_EXPLORER_FULL}{query}") as response:
         assert response.status_code == 200
         assert response.headers["Cache-Control"] == "no-cache"
+
+
+@pytest.mark.parametrize("segment", ["0ldbu1ld", "dev"])
+def test_no_other_segment_serves_the_snapshot(assets_env, segment):
+    _static_assets, client, version = assets_env
+
+    assert client.get(f"/assets/{segment}/{_EXPLORER_FULL}?v={version}").status_code == 404
 
 
 def test_without_a_snapshot_meta_nothing_is_immutable(assets_env, monkeypatch):
