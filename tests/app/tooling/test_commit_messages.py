@@ -1,6 +1,7 @@
 """The commit message check CI runs on every push (tools/commit_messages.py)."""
 from __future__ import annotations
 
+import shutil
 import subprocess
 
 import pytest
@@ -62,6 +63,10 @@ def _commit(repo, message):
 
 @pytest.fixture
 def repo(tmp_path):
+    # Cloud Build's gate runs pytest in python:3.12-slim, which has no git; GitHub's
+    # runners, where the check itself runs, have it.
+    if shutil.which("git") is None:
+        pytest.skip("git is not installed")
     _git(tmp_path, "init", "-q", "-b", "main")
     _git(tmp_path, "config", "user.name", "Test")
     _git(tmp_path, "config", "user.email", "test@example.com")
