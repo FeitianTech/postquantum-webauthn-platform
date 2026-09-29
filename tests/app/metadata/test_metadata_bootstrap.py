@@ -119,6 +119,7 @@ def test_the_mds_info_skips_eager_bootstrap_by_default(monkeypatch, app_config):
 
     bootstrap_calls = []
 
+    monkeypatch.delenv("FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP", raising=False)
     monkeypatch.delenv("FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP", raising=False)
     monkeypatch.setattr(
         general_module,
@@ -141,12 +142,38 @@ def test_the_mds_info_skips_eager_bootstrap_by_default(monkeypatch, app_config):
     assert bootstrap_calls == []
 
 
+@pytest.mark.parametrize(
+    ("settings", "fail_fast", "expected"),
+    [
+        ({"FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP": "1"}, False, True),
+        ({"FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP": "0"}, True, False),
+        ({"FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP": "1"}, False, True),
+        ({"FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP": "off"}, True, False),
+        ({"FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP": "0", "FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP": "1"}, False, False),
+        ({"FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP": "yes", "FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP": "0"}, False, True),
+        ({}, True, True),
+        ({}, False, False),
+    ],
+)
+def test_the_mds_info_bootstrap_setting_and_its_earlier_name(monkeypatch, settings, fail_fast, expected):
+    general_module = pytest.importorskip("server.app.routes.general")
+
+    for name in ("FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP", "FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in settings.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setattr(general_module, "startup_fail_fast_enabled", lambda: fail_fast)
+
+    assert general_module._should_bootstrap_metadata_for_info() is expected
+
+
 def test_the_mds_info_bootstraps_when_strict(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
     config_module = pytest.importorskip("server.app.config")
 
     bootstrap_calls = []
 
+    monkeypatch.delenv("FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP", raising=False)
     monkeypatch.delenv("FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP", raising=False)
     monkeypatch.setattr(
         general_module,

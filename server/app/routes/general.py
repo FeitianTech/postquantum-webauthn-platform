@@ -62,17 +62,22 @@ _metadata_bootstrap_state = {
     "cache_loaded": False,
 }
 _METADATA_BOOTSTRAP_ENV_FLAG = "FIDO_SERVER_MDS_BOOTSTRAPPED"
-_INDEX_EAGER_METADATA_ENV_FLAG = "FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP"
+# Whether GET /api/mds/metadata/info bootstraps the metadata before it answers;
+# unset, it follows the startup's fail-fast mode. The setting's earlier name is
+# read when the new one is not set.
+_MDS_INFO_EAGER_BOOTSTRAP_ENV_FLAG = "FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP"
+_MDS_INFO_EAGER_BOOTSTRAP_EARLIER_ENV_FLAG = "FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP"
 
 
 def _env_flag(name: str) -> bool | None:
     return parse_env_flag(name)
 
 
-def _should_bootstrap_metadata_on_index() -> bool:
-    explicit = _env_flag(_INDEX_EAGER_METADATA_ENV_FLAG)
-    if explicit is not None:
-        return explicit
+def _should_bootstrap_metadata_for_info() -> bool:
+    for name in (_MDS_INFO_EAGER_BOOTSTRAP_ENV_FLAG, _MDS_INFO_EAGER_BOOTSTRAP_EARLIER_ENV_FLAG):
+        explicit = _env_flag(name)
+        if explicit is not None:
+            return explicit
     return startup_fail_fast_enabled()
 
 
@@ -212,11 +217,12 @@ def _initial_mds_info() -> dict[str, Any]:
     without a snapshot), the URL of the packaged snapshot (absent without one),
     and whether this session has uploaded metadata. The page asks
     ``/api/mds/metadata/info`` for it, which waits for a provisioning under way;
-    the page itself is static and never waits. (The flag that bootstraps the
-    metadata here is named for the index that inlined this before Phase 30.)"""
+    the page itself is static and never waits. With
+    ``FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP`` (or the startup's fail-fast mode) it
+    bootstraps the metadata first."""
 
     ensure_snapshot_available()
-    if _should_bootstrap_metadata_on_index():
+    if _should_bootstrap_metadata_for_info():
         ensure_metadata_bootstrapped(skip_if_reloader_parent=False)
     metadata_session_id = ensure_metadata_session_id()
 

@@ -571,8 +571,9 @@ Main route modules:
 - `server/app/routes/general.py`
   Metadata bootstrap helpers, decoder endpoints, misc app routes, on the `general`
   blueprint (no page: Flask renders no template since Phase 30A). `_initial_mds_info()`
-  builds what `GET /api/mds/metadata/info` answers (no-store, `Vary: Cookie`; the eager
-  bootstrap flag it reads is still named for the index that inlined it); its `snapshotUrl` is there only while the packaged file is there with
+  builds what `GET /api/mds/metadata/info` answers (no-store, `Vary: Cookie`; it bootstraps
+  the metadata first with `FIDO_SERVER_EAGER_MDS_INFO_BOOTSTRAP`, whose earlier name
+  `FIDO_SERVER_EAGER_INDEX_METADATA_BOOTSTRAP` is still read); its `snapshotUrl` is there only while the packaged file is there with
   a meta that matches the verified snapshot, and carries `?v=<serial>.<digest>` (the
   file changes at runtime; its URL is cached for a year). The routes that read the
   snapshot, the browsers' snapshot file at its versioned URL, and both registrations'

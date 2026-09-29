@@ -427,10 +427,10 @@ def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
     assert general_module._env_flag(flag_name) is True
 
     monkeypatch.setattr(general_module, "startup_fail_fast_enabled", lambda: True)
-    monkeypatch.setenv(general_module._INDEX_EAGER_METADATA_ENV_FLAG, "0")
-    assert general_module._should_bootstrap_metadata_on_index() is False
-    monkeypatch.setenv(general_module._INDEX_EAGER_METADATA_ENV_FLAG, "1")
-    assert general_module._should_bootstrap_metadata_on_index() is True
+    monkeypatch.setenv(general_module._MDS_INFO_EAGER_BOOTSTRAP_ENV_FLAG, "0")
+    assert general_module._should_bootstrap_metadata_for_info() is False
+    monkeypatch.setenv(general_module._MDS_INFO_EAGER_BOOTSTRAP_ENV_FLAG, "1")
+    assert general_module._should_bootstrap_metadata_for_info() is True
 
     state = {
         "started": False,
@@ -498,7 +498,7 @@ def test_general_helper_bootstrap_and_empty_snapshot_branches(monkeypatch):
     assert marked == [True]
 
     with config_module.app.test_client() as client:
-        monkeypatch.setattr(general_module, "_should_bootstrap_metadata_on_index", lambda: False)
+        monkeypatch.setattr(general_module, "_should_bootstrap_metadata_for_info", lambda: False)
         monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
         monkeypatch.setattr(general_module, "load_effective_explorer_snapshot", lambda: {})
         monkeypatch.setattr(general_module, "load_effective_full_snapshot", lambda: {})
