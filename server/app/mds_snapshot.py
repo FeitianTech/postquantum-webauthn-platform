@@ -419,6 +419,10 @@ def _compact_metadata_statement(metadata_mapping: Mapping[str, Any]) -> dict[str
         "icon",
         "iconType",
         "icon_type",
+        # Images the explorer never shows, as large as the icon.
+        "iconDark",
+        "providerLogoLight",
+        "providerLogoDark",
     ):
         compact.pop(key, None)
     return compact

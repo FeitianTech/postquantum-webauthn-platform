@@ -177,6 +177,9 @@ def test_json_compaction_entry_id_meta_and_snapshot_builders(monkeypatch):
             'attestationCertificateKeyIdentifiers': ['b'],
             'icon': 'c',
             'iconType': 'd',
+            'iconDark': 'e',
+            'providerLogoLight': 'f',
+            'providerLogoDark': 'g',
             'keep': 1,
         }
     )
