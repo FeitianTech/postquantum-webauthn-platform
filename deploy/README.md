@@ -45,19 +45,10 @@ gcloud iam service-accounts add-iam-policy-binding $RUN_SA --project $PROJECT \
   --member serviceAccount:$BUILD_SA --role roles/iam.serviceAccountUser
 ```
 
-Then apply the service settings. This replaces the plaintext `GITHUB_TOKEN` and `FIDO_SERVER_GCS_CREDENTIALS_JSON` environment variables with the secret references above.
+Then apply the service settings:
 
 ```bash
 ./deploy/apply-service-config.sh
-```
-
-Once the new revision is serving:
-1. Revoke the old GitHub token in GitHub settings.
-2. Delete the old service-account key:
-
-```bash
-gcloud iam service-accounts keys list --iam-account 277359456097-compute@developer.gserviceaccount.com
-gcloud iam service-accounts keys delete KEY_ID --iam-account 277359456097-compute@developer.gserviceaccount.com
 ```
 
 ## Measuring cold starts

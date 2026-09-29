@@ -42,10 +42,8 @@ def is_logging_enabled() -> bool:
     if explicit is not None:
         return _is_truthy(explicit)
 
-    # Enable logging by default for all deployments.
-    # This covers hosted environments (Render, Google Cloud) as well as local deployments
-    # (e.g., webauthndev.ftsafe.com). Users can explicitly disable logging by setting
-    # ENABLE_GITHUB_LOGGING=false if needed.
+    # On by default, on Cloud Run and locally alike; ENABLE_GITHUB_LOGGING=false
+    # turns it off.
     return True
 
 
