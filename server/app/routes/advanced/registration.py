@@ -132,21 +132,14 @@ def _record_verified_registration(
         stored_credential=material["storedCredential"],
         rp_info=material["rpInfo"],
         metadata_summary=analysis["metadataSummary"],
-        response=response,
         metadata_session_id=prepared["metadataSessionId"],
         username=prepared["username"],
         warnings=analysis["warnings"],
         debug_info=debug_info,
         algoname=algoname,
         resolved_rp_id=state_ctx["resolvedRpId"],
-        credential_id_bytes=material["credentialIdBytes"],
         aaguid_bytes=material.get("aaguidBytes"),
-        auth_data=auth_data,
-        attestation_format=prepared["attestationFormat"],
         attestation_object_b64=prepared["attestationObjectB64"],
-        client_data_json_b64=prepared["clientDataJsonB64"],
-        user_handle=user_handle,
-        display_name=prepared["displayName"],
     )
 
 

@@ -890,54 +890,12 @@
     {
      "timestamp": "<datetime scrubbed>",
      "rp_id": "localhost",
-     "user_id": {
-      "$bytes": "75736572406578616d706c652e636f6d"
-     },
-     "user_name": "user@example.com",
-     "user_display_name": "user@example.com",
-     "credential_id": {
-      "$bytes": "b7441989ebf04ea990adc889c09f922fd46d061462400946270ace994b780bc2"
-     },
-     "public_key_cose": {
-      "$map": [
-       [
-        1,
-        2
-       ],
-       [
-        3,
-        -7
-       ],
-       [
-        -1,
-        1
-       ],
-       [
-        -2,
-        {
-         "$bytes": "f0ed7be3dac95c5146245633631b2469bc5e873d99621c44ff754b1237364cb7"
-        }
-       ],
-       [
-        -3,
-        {
-         "$bytes": "9c30808d37ea7ad37e58bef1cde37568e58408a76cabb697e30bc7cd04c9ab9c"
-        }
-       ]
-      ]
-     },
-     "sign_count": 3,
-     "transports": null,
      "aaguid": {
       "$bytes": "00112233445566778899aabbccddeeff"
      },
      "device_name_mds": null,
-     "attestation_format": "none",
      "attestation_object": {
       "$bytes": "a363666d74646e6f6e656761747453746d74a068617574684461746158a449960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763450000000300112233445566778899aabbccddeeff0020b7441989ebf04ea990adc889c09f922fd46d061462400946270ace994b780bc2a5010203262001215820f0ed7be3dac95c5146245633631b2469bc5e873d99621c44ff754b1237364cb72258209c30808d37ea7ad37e58bef1cde37568e58408a76cabb697e30bc7cd04c9ab9c"
-     },
-     "client_data_json": {
-      "$bytes": "7b2274797065223a22776562617574686e2e637265617465222c226368616c6c656e6765223a226b33352d44367745746f7571512d5a78786f4a303536716a59737a6a7478684977464f7436494959686877222c226f726967696e223a22687474703a2f2f6c6f63616c686f7374222c2263726f73734f726967696e223a66616c73657d"
      },
      "signature_valid": null,
      "root_valid": null,

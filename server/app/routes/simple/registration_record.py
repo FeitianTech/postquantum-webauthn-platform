@@ -354,12 +354,10 @@ def populate_rp_debug_context(ctx: dict[str, Any]) -> None:
     ctx["credential_info"]["relying_party"] = attestation.make_json_safe(rp_info)
     debug_info = _debug_info(ctx)
 
-    ctx["credential_id_bytes"] = credential_id_bytes
     ctx["credential_id_hex"], ctx["credential_id_b64"], ctx["credential_id_b64u"] = credential_ids
     ctx["aaguid_bytes"] = aaguid_bytes
     ctx["cose_public_key"] = cose_public_key
     ctx["public_key_bytes"] = public_key_bytes
-    ctx["user_handle_bytes"] = user_handle_bytes
     ctx["user_handle_b64u"] = encode_base64url(user_handle_bytes)
     ctx["rp_info"] = rp_info
     ctx["debug_info"] = debug_info

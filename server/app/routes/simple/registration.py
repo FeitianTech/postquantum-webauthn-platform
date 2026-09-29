@@ -58,7 +58,6 @@ def _complete_inputs(response: Any, credential_response: Mapping[str, Any]) -> d
         "parsed_attestation_object": parsed_attestation_object,
         "attestation_certificate_details": attestation_certificate_details,
         "attestation_certificates_details": attestation_certificates_details,
-        "client_data_json_b64": client_data_json_b64,
         "client_data_json": client_data_json,
         "client_extension_results": client_extension_results,
         "min_pin_length_value": attestation.extract_min_pin_length(client_extension_results),

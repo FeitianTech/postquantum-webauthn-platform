@@ -54,22 +54,12 @@ def test_record_registration_event_uploads_json(monkeypatch, caplog):
     monkeypatch.setattr(device_logs, "random_shortid", lambda length=8: "abcdef12")
 
     attestation_object = cbor2.dumps({"test": b"value"})
-    client_data_json = b'{"type":"webauthn.create"}'
     event = device_logs.RegistrationEvent(
         timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
         rp_id="example.com",
-        user_id=b"user-id",
-        user_name="alice",
-        user_display_name="Alice",
-        credential_id=b"credential-id",
-        public_key_cose={1: -7, -2: b"\x01\x02"},
-        sign_count=5,
-        transports=["usb", "ble"],
         aaguid=uuid.UUID("7701a390-8b53-4ce0-bf7c-b331569b8d1a").bytes,
         device_name_mds="Example Authenticator",
-        attestation_format="packed",
         attestation_object=attestation_object,
-        client_data_json=client_data_json,
         signature_valid=True,
         root_valid=True,
         rp_id_hash_valid=True,
@@ -122,18 +112,9 @@ def test_record_registration_event_creates_unique_files(monkeypatch, caplog):
 
     base_event_kwargs = dict(
         rp_id="example.com",
-        user_id=b"user-id",
-        user_name="alice",
-        user_display_name="Alice",
-        credential_id=b"credential-id",
-        public_key_cose={1: -7},
-        sign_count=0,
-        transports=None,
         aaguid=uuid.UUID("7701a390-8b53-4ce0-bf7c-b331569b8d1a").bytes,
         device_name_mds="Example Authenticator",
-        attestation_format="packed",
         attestation_object=attestation_object,
-        client_data_json=b"{}",
     )
 
     event1 = device_logs.RegistrationEvent(
@@ -179,18 +160,9 @@ def test_record_registration_event_disabled(monkeypatch):
     event = device_logs.RegistrationEvent(
         timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
         rp_id="example.com",
-        user_id=b"user-id",
-        user_name="alice",
-        user_display_name="Alice",
-        credential_id=b"credential-id",
-        public_key_cose={1: -7},
-        sign_count=0,
-        transports=None,
         aaguid=None,
         device_name_mds=None,
-        attestation_format="packed",
         attestation_object=cbor2.dumps({}),
-        client_data_json=b"{}",
     )
 
     device_logs.record_registration_event(event)
@@ -216,18 +188,9 @@ def test_record_registration_event_uploads_inline_on_cloud_run(monkeypatch, capl
     event = device_logs.RegistrationEvent(
         timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
         rp_id="example.com",
-        user_id=b"user-id",
-        user_name="alice",
-        user_display_name="Alice",
-        credential_id=b"credential-id",
-        public_key_cose={1: -7},
-        sign_count=0,
-        transports=None,
         aaguid=uuid.UUID("7701a390-8b53-4ce0-bf7c-b331569b8d1a").bytes,
         device_name_mds="Example Authenticator",
-        attestation_format="packed",
         attestation_object=cbor2.dumps({}),
-        client_data_json=b"{}",
     )
 
     device_logs.record_registration_event(event)
@@ -431,18 +394,9 @@ def test_record_registration_event_honors_async_false_override(monkeypatch):
     event = device_logs.RegistrationEvent(
         timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
         rp_id="example.com",
-        user_id=b"user-id",
-        user_name="alice",
-        user_display_name="Alice",
-        credential_id=b"credential-id",
-        public_key_cose={1: -7},
-        sign_count=0,
-        transports=None,
         aaguid=None,
         device_name_mds="Demo",
-        attestation_format="packed",
         attestation_object=cbor2.dumps({}),
-        client_data_json=b"{}",
     )
 
     device_logs.record_registration_event(event)
@@ -478,18 +432,9 @@ def test_record_registration_event_honors_async_true_override_on_cloud_run(monke
     event = device_logs.RegistrationEvent(
         timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
         rp_id="example.com",
-        user_id=b"user-id",
-        user_name="alice",
-        user_display_name="Alice",
-        credential_id=b"credential-id",
-        public_key_cose={1: -7},
-        sign_count=0,
-        transports=None,
         aaguid=None,
         device_name_mds="Demo",
-        attestation_format="packed",
         attestation_object=cbor2.dumps({}),
-        client_data_json=b"{}",
     )
 
     device_logs.record_registration_event(event)
@@ -504,18 +449,9 @@ def test_build_log_payload_handles_unknown_aaguid_and_decode_failures(monkeypatc
     event = device_logs.RegistrationEvent(
         timestamp=datetime(2026, 4, 3, 1, 2, 3, tzinfo=timezone.utc),
         rp_id="example.com",
-        user_id=b"user-id",
-        user_name="alice",
-        user_display_name="Alice",
-        credential_id=b"credential-id",
-        public_key_cose={1: -7},
-        sign_count=0,
-        transports=None,
         aaguid=None,
         device_name_mds=None,
-        attestation_format="packed",
         attestation_object=b"not-cbor",
-        client_data_json=b"{}",
     )
 
     path, payload, summary = device_logs._build_log_payload(event)

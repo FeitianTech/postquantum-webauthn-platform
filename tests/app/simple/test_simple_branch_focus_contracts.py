@@ -161,7 +161,7 @@ def test_simple_authenticate_complete_aborts_when_session_credentials_cannot_be_
     assert response.status_code == 400
 
 
-def test_simple_register_complete_covers_warning_metadata_transport_and_session_fallback_paths(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
+def test_simple_register_complete_covers_warning_metadata_and_session_fallback_paths(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
     pytest.importorskip("server.app.app")
 
     rp_id = "example.com"
@@ -264,6 +264,4 @@ def test_simple_register_complete_covers_warning_metadata_transport_and_session_
     assert len(saved["credentials"]) == 1
 
     assert len(events) == 1
-    event = events[0]
-    assert list(event.transports) == ["usb", "nfc"]
-    assert event.device_name_mds == "FocusKey Device"
+    assert events[0].device_name_mds == "FocusKey Device"

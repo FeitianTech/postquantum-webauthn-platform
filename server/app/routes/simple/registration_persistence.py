@@ -145,28 +145,12 @@ def _record_registration_event(ctx: dict[str, Any]) -> None:
         if isinstance(raw_description, str):
             metadata_description = raw_description
 
-    transports_field = ctx["response"].get("transports") if isinstance(ctx["response"], Mapping) else None
-    transports: list[str] | None = None
-    if isinstance(transports_field, list):
-        transports = [str(item) for item in transports_field if isinstance(item, str)]
-
     event = device_logs.RegistrationEvent(
         timestamp=datetime.now(timezone.utc),
         rp_id=ctx["resolved_rp_id"],
-        user_id=ctx["user_handle_bytes"],
-        user_name=str(ctx["uname"] or ""),
-        user_display_name=str(
-            ctx["credential_info"]["user_info"].get("display_name") or ctx["uname"] or ""
-        ),
-        credential_id=ctx["credential_id_bytes"],
-        public_key_cose=ctx["cose_public_key"],
-        sign_count=int(getattr(ctx["auth_data"], "counter", 0)),
-        transports=transports,
         aaguid=ctx["aaguid_bytes"] or None,
         device_name_mds=metadata_description,
-        attestation_format=str(ctx["attestation_format"] or ""),
         attestation_object=binary_helpers.decode_base64url_bytes(ctx["raw_attestation_object_b64"]),
-        client_data_json=binary_helpers.decode_base64url_bytes(ctx["client_data_json_b64"]),
         signature_valid=ctx["attestation_signature_valid"],
         root_valid=ctx["attestation_root_valid"],
         rp_id_hash_valid=ctx["attestation_rp_id_hash_valid"],

@@ -46,18 +46,9 @@ class RegistrationEvent:
 
     timestamp: datetime
     rp_id: str
-    user_id: bytes
-    user_name: str
-    user_display_name: str
-    credential_id: bytes
-    public_key_cose: Mapping[Any, Any]
-    sign_count: int
-    transports: Sequence[str] | None
     aaguid: bytes | None
     device_name_mds: str | None
-    attestation_format: str
     attestation_object: bytes
-    client_data_json: bytes
     signature_valid: bool | None = None
     root_valid: bool | None = None
     rp_id_hash_valid: bool | None = None
