@@ -43,7 +43,7 @@ jobs:
           done
           echo "Ready after $(( $(date +%s) - start ))s"
           curl -fsS -o /dev/null -w 'GET / status=%{http_code} ttfb=%{time_starttransfer}s\n' http://localhost:8080/
-          # The site is the new UI's export (docs/UI_MIGRATION.md): it is in the
+          # The site is the UI's static export (docs/DESIGN.md): it is in the
           # image, its HTML revalidates, and its hashed assets are immutable and gzipped.
           curl -fsS -D /tmp/index.headers -o /tmp/index.html http://localhost:8080/
           grep -qi '^cache-control: no-cache' /tmp/index.headers
@@ -55,7 +55,7 @@ jobs:
           grep -qi '^cache-control: public, max-age=31536000, immutable' /tmp/chunk.headers
           grep -qi '^content-encoding: gzip' /tmp/chunk.headers
           echo "/ serves the export: ${chunk} is immutable and gzipped"
-          # Where the new UI was reviewed before the cutover: a permanent redirect.
+          # /beta and /beta/... are a permanent redirect to the same path at /.
           curl -sS -D /tmp/beta.headers -o /dev/null http://localhost:8080/beta/design
           grep -qE '^HTTP/[0-9.]+ 308' /tmp/beta.headers
           grep -qi '^location: /design' /tmp/beta.headers

@@ -5,7 +5,7 @@ module's ``logging.getLogger(__name__)``: their records propagate to the handler
 Flask gives ``app.logger`` (see ``logs``). The instance folder is fixed rather
 than derived from the name, so the session secret and the local credential
 store stay where they are. It has no static rule and no templates of its own:
-the site's pages and their files are the new UI's export, which
+the site's pages and their files are the UI's static export, which
 ``routes/web_export.py`` serves from ``/`` (its catch-all takes the place Flask's
 static rule had).
 """

@@ -1,5 +1,5 @@
-"""The site's pages are the new UI's static export, served at ``/``
-(``routes/web_export.py``); ``/beta``, where it was reviewed before the cutover,
+"""The site's pages are the UI's static export, served at ``/``
+(``routes/web_export.py``); ``/beta``, which old links still name,
 redirects there.
 
 Every test builds its own export in ``tmp_path`` (the ``export_root`` fixture):
@@ -217,7 +217,7 @@ def test_every_other_rule_still_answers_for_itself(site):
         assert endpoint == rule.endpoint, rule.rule
 
 
-# -- /beta, where the new UI was reviewed before the cutover ------------------------------
+# -- /beta, which old links still name ------------------------------------------------------
 
 
 @pytest.mark.parametrize(

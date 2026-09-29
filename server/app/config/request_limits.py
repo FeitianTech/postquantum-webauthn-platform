@@ -4,7 +4,7 @@ A body over the limit is answered 413 before any route reads it
 (``routes/errors.py`` answers it as JSON). Without one, only Cloud Run's 32 MiB
 cap bounded a body, and the decoder read whatever it was sent.
 
-The sizes the limits are chosen from (Phase 21, measured):
+The sizes the limits are chosen from (measured):
 
 - an advanced registration with an ML-DSA-87 attestation and its full chain
   (leaf, intermediate and root, about 7.5 KB each): about 41 KB, and the

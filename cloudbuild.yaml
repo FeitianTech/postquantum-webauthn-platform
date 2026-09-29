@@ -10,7 +10,7 @@
 # that actually stands between a commit on main and production. They run first
 # and in parallel; Build waits for both, so a failing suite fails the build
 # before an image is ever pushed. The Playwright browser tests run in GitHub CI
-# only (ci-web.yml) until they join this gate in Phase 30B; see docs/UI_MIGRATION.md.
+# only (ci-web.yml).
 
 steps:
   - name: python:3.12-slim
@@ -26,8 +26,8 @@ steps:
         uv sync --locked --python 3.12
         .venv/bin/python -m pytest -q
 
-  # The new UI (web/, docs/UI_MIGRATION.md): typecheck, its unit tests with
-  # their coverage floors, the static export, and the export's CSP scan. The
+  # The UI (web/): typecheck, its unit tests and its logic's with their
+  # coverage floors, the static export, and the export's CSP scan. The
   # image builds web/ again in its own stage (and scans it again); this step is
   # the gate, and fails before any image exists.
   - name: node:22-slim

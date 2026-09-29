@@ -1,7 +1,7 @@
-"""Where the new UI's static export is: the ``web/out`` that ``next build`` writes.
+"""Where the UI's static export is: the ``web/out`` that ``next build`` writes.
 
 ``create_app()`` puts it in ``app.config["WEB_EXPORT_ROOT"]``, and
-``routes/web_export.py`` serves it at ``/`` (docs/UI_MIGRATION.md).
+``routes/web_export.py`` serves it at ``/`` (docs/DESIGN.md).
 ``FIDO_SERVER_WEB_EXPORT_ROOT`` points elsewhere. Nothing has to exist there:
 without a build, every page answers 404 and the API is unchanged.
 In the image the export is at ``/app/web/out`` (the Dockerfile's web stage).

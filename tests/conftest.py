@@ -26,7 +26,7 @@ os.environ["FIDO_SERVER_MDS_SNAPSHOT_DIR"] = _MDS_SNAPSHOT_DIR
 os.environ["FIDO_SERVER_MDS_FETCH_UPSTREAM"] = "0"
 atexit.register(shutil.rmtree, _MDS_SNAPSHOT_DIR, ignore_errors=True)
 
-# The new UI's static export is served from FIDO_SERVER_WEB_EXPORT_ROOT, else
+# The UI's static export is served from FIDO_SERVER_WEB_EXPORT_ROOT, else
 # web/out, which a local build -- or Cloud Build's web step, running beside the
 # Python tests -- may be writing, and which the Python CI job never builds. Every
 # test starts from an empty directory of this run's instead, so what a page answers

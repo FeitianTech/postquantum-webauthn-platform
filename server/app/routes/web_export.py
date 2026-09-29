@@ -1,4 +1,4 @@
-"""The site's pages: the new UI's Next.js static export in ``web/out`` (docs/UI_MIGRATION.md).
+"""The site's pages: the UI's Next.js static export in ``web/out`` (docs/DESIGN.md).
 
 - ``/`` answers ``index.html``; ``/design`` answers ``design.html`` (the export
   writes one HTML file per page).
@@ -9,9 +9,9 @@
 - An unknown path answers 404 with the export's own ``404.html``; with no
   export at all, Werkzeug's plain 404. A path under ``/api/`` that no route
   holds answers the plain 404, as an API should.
-- ``/beta`` and every ``/beta/...`` path, where the new UI was reviewed before
-  the cutover (Phase 30), answer a permanent redirect (308) to the same path at
-  ``/`` with its query; the browser keeps the ``#hash``. The redirect is
+- ``/beta`` and every ``/beta/...`` path answer a permanent redirect (308) to the
+  same path at ``/`` with its query, so old links keep working; the browser keeps
+  the ``#hash``. The redirect is
   revalidated like the pages, so a browser does not hold it past a rollback.
 
 The page rule is the site's catch-all, as Flask's own static rule was before it

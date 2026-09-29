@@ -44,9 +44,8 @@ immutable for a year; any other revalidates.
 No route serves a snapshot file at the site's root: the seven names and the `.gz`
 sibling are refused there (the site's root is the UI's export), and the
 versioned route serves only the browsers' copy, from the snapshot directory. Nothing the pages
-use asks for any other snapshot file (the current UI's fallback request for
-`fido-mds3.verified.json.meta.json` is gone: the page's info carries the timestamp
-whenever there is a snapshot).
+use asks for any other snapshot file: the page's info carries the snapshot's timestamp
+whenever there is a snapshot.
 
 The tests use it to keep off a developer's real snapshot: `tests/conftest.py` points
 every test at an empty directory of the run's, and a test that needs a snapshot

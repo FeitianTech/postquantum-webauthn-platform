@@ -4,7 +4,7 @@
 @source not "../test/logic";
 
 /*
- * Design tokens (docs/UI_MIGRATION.md). Light only, white everywhere: grey is
+ * Design tokens (docs/DESIGN.md). Light only, white everywhere: grey is
  * only ever a text colour or a hairline. Tailwind's default palette, type scale,
  * radii and shadows are cleared first, so a grey fill cannot be written by
  * accident; everything a component may use is named here.

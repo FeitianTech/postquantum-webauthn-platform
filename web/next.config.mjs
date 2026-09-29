@@ -1,5 +1,5 @@
 // The site's UI, exported as static files that Flask serves at / (see
-// docs/UI_MIGRATION.md). Production never runs Node: `next build` writes out/.
+// docs/DESIGN.md). Production never runs Node: `next build` writes out/.
 import { PHASE_DEVELOPMENT_SERVER } from 'next/constants.js';
 
 import { developmentHeaders } from './scripts/dev-csp.mjs';

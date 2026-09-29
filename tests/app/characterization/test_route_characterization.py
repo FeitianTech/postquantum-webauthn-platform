@@ -2,8 +2,8 @@
 
 Each scenario in ``scenarios.py`` runs against a fresh app in the pinned
 environment of ``harness.py``, and its record must equal ``golden/routes/<name>.json``
-byte for byte. The goldens were recorded on the tree before Phase 18 changed
-anything; ``CHARACTERIZATION_WRITE=1`` rewrites them after an intended change.
+byte for byte. ``CHARACTERIZATION_WRITE=1`` rewrites the goldens after an
+intended change, whose diff is then reviewed.
 """
 from __future__ import annotations
 

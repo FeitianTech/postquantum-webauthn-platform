@@ -21,7 +21,7 @@ _REPORT_GROUP = "csp"
 _REPORTING = (f"report-uri {_REPORT_ENDPOINT}", f"report-to {_REPORT_GROUP}")
 
 # Strict: no 'unsafe-inline' for scripts or styles, and no origin but the site's
-# own. The pages are the new UI's static export, which holds no inline script,
+# own. The pages are the UI's static export, which holds no inline script,
 # style element or style attribute (web/scripts/check-export-csp.mjs scans every
 # page); components style through CSSOM (element.style), which style-src does not
 # govern, and the fonts (Geist) are self-hosted.

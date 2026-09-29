@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.7
 
-# Stage 0: the new UI (web/, docs/UI_MIGRATION.md), built into static files.
-# Production never runs Node: only web/out reaches the runtime image, where
-# Flask serves it at /beta. The CSP scan runs on the very export that ships.
+# Stage 0: the UI (web/, docs/DESIGN.md), built into static files. Production
+# never runs Node: only web/out reaches the runtime image, where Flask serves it
+# at /. The CSP scan runs on the very export that ships.
 FROM node:22-slim AS web
 
 ENV NEXT_TELEMETRY_DISABLED=1

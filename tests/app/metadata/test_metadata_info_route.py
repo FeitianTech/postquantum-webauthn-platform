@@ -1,7 +1,6 @@
 """GET /api/mds/metadata/info: what the MDS explorer starts from, as JSON.
 
-The page asks for it when the MDS section is first shown (before Phase 30 the
-current UI's index inlined the same as ``initial-mds-info``).
+The page asks for it when the MDS section is first shown.
 """
 from __future__ import annotations
 

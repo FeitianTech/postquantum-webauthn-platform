@@ -2,7 +2,7 @@
 
 Each scenario is a function of a :class:`harness.Recorder`; the harness records
 every request it makes. Between them they walk every exit of the route and
-attestation functions Phase 18 moved, success and error alike.
+attestation functions, success and error alike.
 """
 from __future__ import annotations
 

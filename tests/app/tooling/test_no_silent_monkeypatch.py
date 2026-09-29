@@ -4,7 +4,7 @@
 ``target`` has no ``name``: it just adds one. When the code under test moves or
 renames ``name``, such a patch attaches to nothing the code reads, and the test
 goes on passing while it tests nothing. ``mock.patch(..., create=True)`` does the
-same. Phase 18 removed 403 of them; this keeps them out.
+same; this keeps them out.
 
 The few patches that must create an attribute are listed below with the reason
 the attribute cannot exist. An entry no call uses any more fails too.

@@ -23,7 +23,7 @@ from .ceremony_helpers import (
 )
 
 # --------------------------------------------------------------------------
-# NEGATIVE -- the tech lead's PoC, adapted.
+# NEGATIVE -- a proof of concept of the attack, adapted.
 # --------------------------------------------------------------------------
 
 

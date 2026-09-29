@@ -23,7 +23,7 @@ import { TBody, THead, Table, Td, Th, Tr } from '@/components/ui/Table';
 import { ToastProvider, useToast } from '@/components/ui/Toast';
 import { APP_TITLE, SECTION_OPTIONS } from '@/lib/sections';
 
-// Unlisted: every component in every state, for review (docs/UI_MIGRATION.md).
+// Unlisted: every component in every state, for review (docs/DESIGN.md).
 // Hover, keyboard focus and pressed are shown still through data-demo, which
 // the components style exactly as the real state.
 

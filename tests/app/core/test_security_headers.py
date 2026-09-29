@@ -18,7 +18,7 @@ app = config_module.app
 
 @pytest.fixture
 def client(make_app, export_root):
-    """The app with a small export of the new UI, so / answers its page."""
+    """The app with a small export of the UI, so / answers its page."""
 
     from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
 
@@ -99,7 +99,7 @@ def test_csp_locks_down_the_non_script_directives(client):
     assert csp["form-action"] == ["'self'"]
     assert csp["connect-src"] == ["'self'"]
     assert csp["frame-src"] == ["'none'"]
-    # No third-party origin: the fonts are self-hosted (Phase 30 removed Google Fonts).
+    # No third-party origin: the fonts are self-hosted.
     assert csp["font-src"] == ["'self'"]
     assert csp["style-src"] == ["'self'"]
     assert "'unsafe-inline'" not in csp["default-src"]

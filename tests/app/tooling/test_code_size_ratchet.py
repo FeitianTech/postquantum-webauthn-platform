@@ -1,7 +1,7 @@
 """No function in server/app over 80 lines, no module over 700, except the listed ones.
 
-The big route and attestation functions of Phase 18 were split along the stages
-of the work they did; this keeps new ones from growing. A function or module
+The big route and attestation functions were split along the stages of the work
+they do; this keeps new ones from growing. A function or module
 already over its limit is listed below at its current length. The lists only
 tighten: an entry must equal the current length (edit it down when the code
 shrinks, never up), and an entry that is now within the limit must be removed.
