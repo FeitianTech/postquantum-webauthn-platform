@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import gzip
-import re
 from pathlib import Path
 
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -124,19 +123,3 @@ def test_a_configured_secret_key_is_used_as_is(make_app):
     app = make_app({"SECRET_KEY": "configured-secret"})
 
     assert app.secret_key == "configured-secret"
-
-
-def test_no_server_module_reads_the_config_app_alias():
-    """``config.app`` exists for old callers; the app itself must not depend on it."""
-
-    alias = _SERVER_APP / "config" / "__init__.py"
-    pattern = re.compile(r"\bconfig\.app\b|from \.+config(\.application)? import [^\n]*\bapp\b")
-    offenders = []
-    for path in _SERVER_APP.rglob("*.py"):
-        if path == alias:
-            continue
-        text = path.read_text(encoding="utf-8")
-        if pattern.search(text):
-            offenders.append(str(path.relative_to(_SERVER_APP)))
-
-    assert offenders == []

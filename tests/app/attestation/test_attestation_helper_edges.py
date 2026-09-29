@@ -10,6 +10,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID, ObjectIdentifier
 from fido2.utils import ByteBuffer
 
+from tests.app.entry_app import entry_app
+
 
 def _self_signed_cert_der() -> bytes:
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -79,7 +81,7 @@ def test_collect_metadata_root_certificates_supports_object_and_mapping_shapes(a
 
 def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-    app = pytest.importorskip("server.app.config").app
+    app = entry_app()
 
     cert_der = _self_signed_cert_der()
     certificate = x509.load_der_x509_certificate(cert_der)

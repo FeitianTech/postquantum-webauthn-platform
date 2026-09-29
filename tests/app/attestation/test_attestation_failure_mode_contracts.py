@@ -11,6 +11,7 @@ from fido2.attestation import (
 from fido2.webauthn import Aaguid, RegistrationResponse
 
 from server.app.webauthn.attestation import evaluation
+from tests.app.entry_app import entry_app
 
 
 def _b64url(data: bytes) -> str:
@@ -264,7 +265,7 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
     monkeypatch.setattr(evaluation, "evaluate_attestation", lambda *_args, **_kwargs: outcome)
 
     # The trusted-CA allowlist is read from the current app.
-    with pytest.importorskip("server.app.config").app.app_context():
+    with entry_app().app_context():
         result = _perform_checks(
             attestation_module,
             response={"raw": "value"},

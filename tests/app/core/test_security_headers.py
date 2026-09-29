@@ -1,11 +1,11 @@
 """Transport hardening: response security headers, session cookie, ProxyFix."""
 from __future__ import annotations
 
-import importlib
 from datetime import timedelta
 
 import pytest
 
+from server.app.config import security_headers as security_headers_module
 from tests.app.entry_app import entry_app
 
 config_module = pytest.importorskip("server.app.config")
@@ -144,7 +144,7 @@ def test_security_headers_do_not_clobber_an_explicit_value():
     response = app.response_class("ok")
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     with app.test_request_context("/"):
-        config_module.set_security_headers(response)
+        security_headers_module.set_security_headers(response)
     assert response.headers["X-Frame-Options"] == "SAMEORIGIN"
 
 
@@ -158,7 +158,7 @@ def test_headers_handler_is_registered_exactly_once():
     assert len(marked) == 1
 
     config_security_headers._register_security_headers_once(
-        app, config_module.set_security_headers
+        app, security_headers_module.set_security_headers
     )
     assert len(app.after_request_funcs.get(None, [])) == len(handlers)
 
@@ -380,5 +380,3 @@ def test_spoofed_forwarded_host_cannot_steer_the_rp_id_end_to_end(monkeypatch, m
 
 def test_app_module_exposes_the_hardened_app():
     assert app_module.app is app
-    assert "set_security_headers" in config_module.__all__
-    assert importlib.import_module("server.app.config").app is app

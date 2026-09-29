@@ -32,82 +32,40 @@ app, in the order ``factory.INIT_STEPS`` fixes.
 - ``web_export``: where the UI's static export is (``web/out``), served at ``/``.
 - ``relying_party``: the RP ID and name, and ``create_fido_server``.
 
-``app`` is still an attribute of this package, for callers written against the
-old import-time singleton: reading it returns the application ``server.app.app``
-builds (see ``__getattr__``). Nothing in ``server/`` reads it.
-
 The MDS trust anchors live in ``server.app.mds_trust``, outside this package, so
 the snapshot updater can import them without anything from Flask.
 """
 from __future__ import annotations
 
-from ..env_flags import parse_env_flag
-from ..mds_trust import (
-    FIDO_METADATA_TRUST_ROOT_CERT,
-)
 from . import (
     mds,
     origins,
     paths,
     relying_party,
-    security_headers,
 )
 
 __all__ = [
     "basepath",
     "build_rp_entity",
-    "set_security_headers",
     "create_fido_server",
     "determine_expected_origin",
     "determine_rp_id",
     "extract_client_data_origin",
-    "get_allowed_origins",
     "is_origin_allowed",
-    "normalise_origin",
-    "warn_if_development_rp_configuration",
-    "MDS_METADATA_FILENAME",
-    "MDS_METADATA_URL",
     "SESSION_METADATA_DIR",
-    "FIDO_METADATA_TRUST_ROOT_CERT",
 ]
 
 # Filesystem locations. The private runtime root is imported by credential_artifacts.
 _SERVER_RUNTIME_ROOT = paths._SERVER_RUNTIME_ROOT
 basepath = paths.basepath
-MDS_METADATA_FILENAME = mds.MDS_METADATA_FILENAME
-MDS_METADATA_URL = mds.MDS_METADATA_URL
 SESSION_METADATA_DIR = mds.SESSION_METADATA_DIR
 
 # The relying party.
 build_rp_entity = relying_party.build_rp_entity
 create_fido_server = relying_party.create_fido_server
 determine_rp_id = relying_party.determine_rp_id
-warn_if_development_rp_configuration = relying_party.warn_if_development_rp_configuration
 
 # The origin policy.
 determine_expected_origin = origins.determine_expected_origin
 extract_client_data_origin = origins.extract_client_data_origin
-get_allowed_origins = origins.get_allowed_origins
 is_origin_allowed = origins.is_origin_allowed
-normalise_origin = origins.normalise_origin
-
-# Response security headers.
-set_security_headers = security_headers.set_security_headers
-
-# Kept for its importers; the submodules call ``parse_env_flag`` directly.
-_env_flag = parse_env_flag
-
-
-def __getattr__(name: str):
-    """Resolve ``config.app`` to the application ``server.app.app`` builds.
-
-    Looked up on each read, not cached here, so the entry point stays the one
-    owner of that app. Reading it the first time imports ``server.app.app``,
-    which runs ``create_app()``.
-    """
-
-    if name == "app":
-        from ..app import app
-
-        return app
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

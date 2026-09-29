@@ -7,6 +7,8 @@ import pytest
 from cryptography import x509
 from fido2.webauthn import Aaguid
 
+from tests.app.entry_app import entry_app
+
 
 def test_hex_format_helpers_cover_empty_odd_and_invalid_inputs(attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
@@ -98,7 +100,7 @@ def test_collect_metadata_roots_handles_singleton_and_missing_candidates(attesta
 
 def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeypatch, trust, attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-    app = pytest.importorskip("server.app.config").app
+    app = entry_app()
 
     monkeypatch.setitem(
         app.config,

@@ -90,33 +90,33 @@ google_auth_pkg.exceptions = google_auth_exceptions_pkg
 
 
 def test_env_flag_with_none():
-    """Test _env_flag when env var is not set."""
-    from server.app.config import _env_flag
+    """Test parse_env_flag when env var is not set."""
+    from server.app.env_flags import parse_env_flag
     
     with mock.patch.dict(os.environ, {}, clear=False):
         if "TEST_FLAG" in os.environ:
             del os.environ["TEST_FLAG"]
-        assert _env_flag("TEST_FLAG") is None
+        assert parse_env_flag("TEST_FLAG") is None
 
 
 def test_env_flag_with_false_values():
-    """Test _env_flag with various false values."""
-    from server.app.config import _env_flag
+    """Test parse_env_flag with various false values."""
+    from server.app.env_flags import parse_env_flag
     
     false_values = ["", "0", "false", "off", "no", "  false  ", "  0  "]
     for value in false_values:
         with mock.patch.dict(os.environ, {"TEST_FLAG": value}, clear=False):
-            assert _env_flag("TEST_FLAG") is False, f"Failed for value: {value}"
+            assert parse_env_flag("TEST_FLAG") is False, f"Failed for value: {value}"
 
 
 def test_env_flag_with_true_values():
-    """Test _env_flag with various true values."""
-    from server.app.config import _env_flag
+    """Test parse_env_flag with various true values."""
+    from server.app.env_flags import parse_env_flag
     
     true_values = ["1", "true", "yes", "on", "True", "YES", "  1  ", "anything"]
     for value in true_values:
         with mock.patch.dict(os.environ, {"TEST_FLAG": value}, clear=False):
-            assert _env_flag("TEST_FLAG") is True, f"Failed for value: {value}"
+            assert parse_env_flag("TEST_FLAG") is True, f"Failed for value: {value}"
 
 
 def test_resolve_secret_key_from_env(monkeypatch):
@@ -224,15 +224,6 @@ def test_mds_metadata_paths(monkeypatch):
         path = mds_snapshot_dir.snapshot_file(name)
         assert path.is_absolute()
         assert path.parent == mds_snapshot_dir.DEFAULT_SNAPSHOT_DIR
-
-
-def test_mds_metadata_url():
-    """Test MDS metadata URL constant."""
-    from server.app.config import MDS_METADATA_URL
-    
-    # Should be a string URL
-    assert isinstance(MDS_METADATA_URL, str)
-    assert MDS_METADATA_URL.startswith("http")
 
 
 def test_create_fido_server():

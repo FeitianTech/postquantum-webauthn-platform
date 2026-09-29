@@ -11,6 +11,8 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed25519, rsa
 from cryptography.x509.oid import NameOID
 from fido2.utils import ByteBuffer
 
+from tests.app.entry_app import entry_app
+
 
 def _self_signed_cert_der() -> bytes:
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -51,7 +53,7 @@ def test_datetime_coercion_and_bytes_helpers(attestation_module):
 def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
-    app = pytest.importorskip("server.app.config").app
+    app = entry_app()
     monkeypatch.setitem(app.config, "TRUSTED_ATTESTATION_CA_SUBJECTS", ["CN=Root"])
     monkeypatch.setitem(app.config, "TRUSTED_ATTESTATION_CA_FINGERPRINTS", ("abc", "def"))
 

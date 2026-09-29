@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import pytest
 
+from server.app.config import origins as config_origins
+from server.app.config import relying_party as config_relying_party
 from tests.app.entry_app import entry_app
 
 from .ceremony_helpers import (
@@ -151,7 +153,7 @@ def test_unconfigured_server_still_works_for_local_development(config_module, si
     """With nothing configured the dev fallback keeps the demo usable."""
 
     with entry_app().app_context():
-        assert config_module.get_allowed_origins() is None
+        assert config_origins.get_allowed_origins() is None
 
     client = entry_app().test_client()
     response = _register(client)
@@ -218,11 +220,11 @@ def test_development_fallback_warning_is_emitted_once(config_module, monkeypatch
     monkeypatch.setitem(entry_app().config, "FIDO_SERVER_RP_ID", None)
     monkeypatch.setitem(entry_app().config, "FIDO_SERVER_ALLOWED_ORIGINS", None)
 
-    assert config_module.warn_if_development_rp_configuration(entry_app()) is True
+    assert config_relying_party.warn_if_development_rp_configuration(entry_app()) is True
     assert len(warnings) == 1
     assert "DEVELOPMENT-ONLY" in warnings[0]
     assert "FIDO_SERVER_ALLOWED_ORIGINS" in warnings[0]
 
     # Emitted once, not on every call.
-    assert config_module.warn_if_development_rp_configuration(entry_app()) is False
+    assert config_relying_party.warn_if_development_rp_configuration(entry_app()) is False
     assert len(warnings) == 1

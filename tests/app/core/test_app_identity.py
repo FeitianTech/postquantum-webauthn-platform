@@ -7,7 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
+from tests.app.entry_app import entry_app
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -55,7 +55,7 @@ def test_instance_path_is_where_flask_derived_it_for_the_old_app_name(tmp_path):
 
 
 def test_app_logger_is_an_ancestor_of_every_module_logger():
-    app = pytest.importorskip("server.app.config").app
+    app = entry_app()
 
     assert app.logger.name == "server.app"
     for name in ("server.app.storage.credentials", "server.app.webauthn.pqc", "server.app.routes.general"):
