@@ -1,4 +1,4 @@
-// The members the JSON editor knows in each part of a request, and how it compares and checks keys (advanced/json-editor/schema.js).
+// The members the JSON editor knows in each part of a request, and how it checks keys (advanced/json-editor/schema.js).
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -17,10 +17,7 @@ import {
   KNOWN_USER_KEYS,
   assertAllowedKeys,
   assertPlainObject,
-  createNormalizedKeySet,
   isPlainObject,
-  normalizeKeyName,
-  shouldPreserveUnknownKey,
 } from '../../../../frontend/static/scripts/advanced/json-editor/schema.js';
 
 describe('the known members', () => {
@@ -94,74 +91,6 @@ describe('the known algorithms', () => {
     expect([...KNOWN_ALGORITHMS].sort((a, b) => a - b)).toEqual([
       -65535, -259, -258, -257, -53, -52, -51, -50, -49, -48, -47, -39, -38, -37, -36, -35, -19, -9, -8, -7,
     ]);
-  });
-});
-
-describe('normalizeKeyName', () => {
-  it('trims, lowers the case and keeps only letters and digits', () => {
-    expect(normalizeKeyName('  Pub_Key-Cred.Params 2 ')).toBe('pubkeycredparams2');
-  });
-
-  it('gives no name for a key that is not text', () => {
-    expect(normalizeKeyName(42)).toBe('');
-    expect(normalizeKeyName(null)).toBe('');
-  });
-});
-
-describe('createNormalizedKeySet', () => {
-  it('normalizes each key of a set', () => {
-    expect([...createNormalizedKeySet(new Set(['pubKeyCredParams', 'rpId']))]).toEqual(['pubkeycredparams', 'rpid']);
-  });
-
-  it('normalizes each key of an array', () => {
-    expect([...createNormalizedKeySet(['Display Name', 'id'])]).toEqual(['displayname', 'id']);
-  });
-
-  it('leaves out a key that normalizes to nothing', () => {
-    expect([...createNormalizedKeySet(['---', 7, 'rp'])]).toEqual(['rp']);
-  });
-
-  it('is empty when no keys are given', () => {
-    expect(createNormalizedKeySet(undefined).size).toBe(0);
-    expect(createNormalizedKeySet(null).size).toBe(0);
-  });
-});
-
-describe('shouldPreserveUnknownKey', () => {
-  const known = createNormalizedKeySet(['challenge', 'timeout']);
-
-  it('keeps a key unlike every known one', () => {
-    expect(shouldPreserveUnknownKey('customFlag', known)).toBe(true);
-  });
-
-  it('keeps any key when no key is known', () => {
-    expect(shouldPreserveUnknownKey('timeout', new Set())).toBe(true);
-  });
-
-  it('drops a key that normalizes to nothing', () => {
-    expect(shouldPreserveUnknownKey('--', known)).toBe(false);
-    expect(shouldPreserveUnknownKey(3, known)).toBe(false);
-  });
-
-  it('drops a known key however it is spelled', () => {
-    expect(shouldPreserveUnknownKey('Time_Out', known)).toBe(false);
-  });
-
-  it('drops a known key followed by up to eight more characters, as a variant of it', () => {
-    expect(shouldPreserveUnknownKey('challengeValue', known)).toBe(false);
-    expect(shouldPreserveUnknownKey('challenge12345678', known)).toBe(false);
-  });
-
-  it('keeps a key that starts with a known one but runs more than eight characters longer', () => {
-    expect(shouldPreserveUnknownKey('challengeDescription', known)).toBe(true);
-  });
-
-  it('drops a known key preceded by up to eight more characters, as a variant of it', () => {
-    expect(shouldPreserveUnknownKey('myTimeout', known)).toBe(false);
-  });
-
-  it('keeps a key that ends with a known one but runs more than eight characters longer', () => {
-    expect(shouldPreserveUnknownKey('requestedByServerTimeout', known)).toBe(true);
   });
 });
 

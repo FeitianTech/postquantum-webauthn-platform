@@ -125,14 +125,13 @@ LOGIC_ROOTS = (
     "advanced/json-editor/algorithm-options.js",
     # The registration's request and the JSON editor with no page: the settings,
     # the request they build and the settings a request says, the editor's
-    # sentences and parsing, the checks an edit passes and the merge a save does.
+    # sentences and parsing, and the checks an edit passes.
     "advanced/json-editor/registration-request.js",
     "advanced/json-editor/editor-model.js",
     "advanced/json-editor/schema.js",
     "advanced/json-editor/validation-common.js",
     "advanced/json-editor/validation-registration.js",
     "advanced/json-editor/validation-authentication.js",
-    "advanced/json-editor/merge-prune.js",
     # The Advanced tab's registration and authentication ceremonies, and the
     # snapshot a registration's result keeps.
     "advanced/auth/ceremony.js",

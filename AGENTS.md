@@ -396,7 +396,7 @@ data reader) and styles went in Phase 30A; Phase 30B moves this logic into `web/
   …)`: the hints' check, the records sent, the Hash Algorithm and the fake length passed
   in; it returns the result panel's input and a refused credential's ID).
   `json-editor/request-patch.js` (`patchRequest`, `followForm`) applies a form change to
-  the editor's text. With the editor's `schema.js`, `validation-*.js` and `merge-prune.js`.
+  the editor's text. With the editor's `schema.js` and `validation-*.js`.
 - `shared/browser/`
   The Analyze Browser panel's facts. It reports what the browser says and says where each
   answer came from, or that it cannot know; it never guesses. `identity.js` copies what

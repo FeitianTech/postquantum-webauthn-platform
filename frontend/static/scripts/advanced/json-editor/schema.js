@@ -50,50 +50,6 @@ export const KNOWN_ALGORITHMS = new Set(
     Object.keys(COSE_ALGORITHM_LABELS).map(key => Number.parseInt(key, 10)),
 );
 
-export function normalizeKeyName(key) {
-    if (typeof key !== 'string') {
-        return '';
-    }
-    return key.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
-}
-
-export function createNormalizedKeySet(keys) {
-    const normalized = new Set();
-    if (!keys) {
-        return normalized;
-    }
-
-    (keys instanceof Set ? Array.from(keys) : keys).forEach(key => {
-        const normalizedKey = normalizeKeyName(key);
-        if (normalizedKey) {
-            normalized.add(normalizedKey);
-        }
-    });
-
-    return normalized;
-}
-
-export function shouldPreserveUnknownKey(key, normalizedKnownKeys) {
-    const normalizedKey = normalizeKeyName(key);
-    if (!normalizedKey) {
-        return false;
-    }
-    if (normalizedKnownKeys.has(normalizedKey)) {
-        return false;
-    }
-
-    for (const known of normalizedKnownKeys) {
-        if (normalizedKey.startsWith(known) && normalizedKey.length - known.length <= 8) {
-            return false;
-        }
-        if (normalizedKey.endsWith(known) && normalizedKey.length - known.length <= 8) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
 export function isPlainObject(value) {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
