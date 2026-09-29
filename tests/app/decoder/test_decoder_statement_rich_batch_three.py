@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import base64
 import hashlib
 
 import pytest
-
-from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
 
 def _build_attested_auth_data(sign_count: int = 1) -> bytes:
@@ -66,95 +63,3 @@ def test_try_decode_cbor_does_not_call_a_status_prefixed_auth_data_map_a_get_ass
     assert "ctapDecoded" not in decoded
     assert "decodedValue" in decoded
     assert result["malformed"]
-
-
-def test_format_public_key_credential_summary_uses_response_fallback_algorithm_and_renders_sections():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    auth_data = _build_attested_auth_data(sign_count=5)
-    rp_hash = hashlib.sha256(b"example.com").hexdigest()
-
-    summary_lines = decode_module._format_public_key_credential_summary(
-        {
-            "format": "PublicKeyCredential (authentication)",
-            "decoded": {
-                "response": {
-                    "authenticatorData": {
-                        "binary": {"hex": auth_data.hex()},
-                        "details": {
-                            "rpIdHash": {"hex": rp_hash},
-                            "flags": {
-                                "value": 0x41,
-                                "bitfield": "0b01000001",
-                                "userPresent": True,
-                                "userVerified": False,
-                                "backupEligibility": False,
-                                "backupState": False,
-                                "attestedCredentialDataIncluded": True,
-                                "extensionDataIncluded": False,
-                            },
-                            "signCount": 5,
-                            "attestedCredentialData": {
-                                "aaguid": "00112233-4455-6677-8899-aabbccddeeff",
-                                "aaguidHex": "00112233445566778899aabbccddeeff",
-                                "credentialId": {
-                                    "hex": "62617463682d74687265652d63726564",
-                                    "length": 16,
-                                },
-                                "publicKey": {},
-                            },
-                        },
-                    },
-                    "publicKeyAlgorithm": -257,
-                    "clientDataJSON": {
-                        "details": {
-                            "type": "webauthn.get",
-                            "challenge": {"hex": "a1b2"},
-                            "origin": "https://example.com",
-                            "crossOrigin": False,
-                        }
-                    },
-                },
-                "clientExtensionResults": {"credProps": {"rk": True}},
-            },
-        }
-    )
-
-    assert "Detected type:\tPublicKeyCredential" in summary_lines
-    assert f"RP ID hash:\t{rp_hash}" in summary_lines
-    assert "Counter:\t0x00000005=5" in summary_lines
-    assert "Key algorithm:\tRS256 (RSA)" in summary_lines
-    assert any(line.startswith("Client extensions:\t") for line in summary_lines)
-    assert "Att. certificates:\t" in summary_lines
-
-
-def test_build_subject_key_identifier_lines_covers_extension_der_and_spki_fallback_paths():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    from_extensions = decode_module._build_subject_key_identifier_lines(
-        {
-            "extensions": [
-                "skip-non-mapping",
-                {"oid": "2.5.29.14", "bytes": b"\x01\x02\x03"},
-            ]
-        }
-    )
-    assert from_extensions == decode_module.format_hex_bytes_lines(b"\x01\x02\x03")
-
-    from_der = decode_module._build_subject_key_identifier_lines(
-        {"derBase64": base64.b64encode(_GSR2_DER).decode("ascii")}
-    )
-    assert from_der
-
-    spki_bytes = b"statement-rich-spki"
-    from_spki_fallback = decode_module._build_subject_key_identifier_lines(
-        {
-            "derBase64": "%%%invalid%%%",
-            "publicKeyInfo": {
-                "subjectPublicKeyInfoBase64": base64.b64encode(spki_bytes).decode("ascii")
-            },
-        }
-    )
-    assert from_spki_fallback == decode_module.format_hex_bytes_lines(
-        hashlib.sha1(spki_bytes).digest()
-    )

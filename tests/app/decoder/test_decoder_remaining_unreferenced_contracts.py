@@ -47,7 +47,7 @@ def test_remaining_mapping_and_auth_data_format_helpers():
     assert isinstance(trailing, bytes)
 
 
-def test_remaining_certificate_conversion_and_summary_helpers(monkeypatch, response):
+def test_remaining_certificate_conversion_helpers(monkeypatch, response):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     monkeypatch.setattr(
@@ -69,57 +69,3 @@ def test_remaining_certificate_conversion_and_summary_helpers(monkeypatch, respo
     converted_payload = decode_module._convert_certificate_payload({"derBase64": "AQI=", "pem": "PEM"})
     assert converted_payload["raw"] == "0102"
     assert converted_payload["pem"] == "PEM"
-
-    att_obj_summary = decode_module._format_attestation_object_summary(
-        {
-            "format": "Attestation object",
-            "decoded": {"attestationFormat": "none", "authenticatorData": {"flags": {"value": 1}}},
-            "binary": {"hex": "00" * 40},
-        }
-    )
-    assert any("Detected type:\tAttestation object" == line for line in att_obj_summary)
-
-    auth_summary = decode_module._format_authenticator_data_summary(
-        {"format": "Authenticator data", "decoded": {"flags": {"value": 1}}, "binary": {"hex": "00" * 40}}
-    )
-    assert any("Detected type:\tAuthenticator data" == line for line in auth_summary)
-
-    client_summary = decode_module._format_client_data_summary(
-        {
-            "format": "WebAuthn client data",
-            "decoded": {
-                "type": "webauthn.get",
-                "challenge": {"raw": "AQID"},
-                "origin": "https://example.com",
-                "crossOrigin": False,
-            },
-        }
-    )
-    assert any("Detected type:\tWebAuthn client data" == line for line in client_summary)
-
-    spki_lines = decode_module._build_subject_public_key_info_lines(
-        {
-            "type": "ECC",
-            "keySize": 256,
-            "curve": "secp256r1",
-            "uncompressedPoint": "04aabb",
-        }
-    )
-    assert any("Subject Public Key Info:" == line for line in spki_lines)
-
-    assert decode_module._format_public_key_point_lines("04aabb")
-
-    ext_header = decode_module._format_certificate_extension_header(
-        {"oid": "1.2.3", "friendlyName": "Friendly", "includeOidInHeader": True}
-    )
-    assert ext_header == "1.2.3 (Friendly)"
-
-    ext_lines = decode_module._build_certificate_extensions_lines(
-        [{"oid": "1.2.3", "friendlyName": "Friendly", "value": {"Hex value": "aa"}}]
-    )
-    assert any("X509v3 extensions:" == line for line in ext_lines)
-
-    assert decode_module._format_device_identifier_line("1.3.6.1.4.1.41482.1.1").endswith("Series)")
-
-    json_lines = decode_module._format_json_block({"a": 1})
-    assert json_lines and json_lines[0] == "{"

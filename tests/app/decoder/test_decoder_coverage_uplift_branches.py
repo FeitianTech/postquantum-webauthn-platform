@@ -1,11 +1,8 @@
 from __future__ import annotations
 
 import base64
-from types import SimpleNamespace
 
 import pytest
-from cryptography import x509
-from cryptography.x509.oid import ExtensionOID
 from fido2.utils import ByteBuffer
 
 
@@ -55,68 +52,6 @@ def test_parse_cbor_item_covers_simple_and_single_double_precision_float_paths()
     assert single_node["value"] == 1.0
     assert double_node["precision"] == "double"
     assert double_node["value"] == 1.0
-
-
-def test_att_stmt_extension_header_and_authenticator_data_fallback_helpers():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    assert (
-        decode_module._format_certificate_extension_header(
-            {
-                "includeOidInHeader": False,
-                "oid": "1.2.3",
-                "friendlyName": "1.2.3",
-            }
-        )
-        == "1.2.3"
-    )
-    assert (
-        decode_module._format_certificate_extension_header(
-            {
-                "includeOidInHeader": False,
-                "friendlyName": "Friendly name only",
-            }
-        )
-        == "Friendly name only"
-    )
-
-    assert decode_module._build_authenticator_data_lines(
-        None,
-        {"rpIdHash": {"hex": "aabb"}},
-    ) == ["aabb"]
-
-
-def test_build_subject_key_identifier_lines_derives_digest_when_ski_extension_missing(monkeypatch):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    class _Extensions:
-        def get_extension_for_oid(self, _oid):
-            raise x509.ExtensionNotFound(
-                "missing",
-                ExtensionOID.SUBJECT_KEY_IDENTIFIER,
-            )
-
-    class _Certificate:
-        extensions = _Extensions()
-
-        def public_key(self):
-            return object()
-
-    monkeypatch.setattr(
-        x509,
-        "load_der_x509_certificate",
-        lambda _der: _Certificate(),
-    )
-    monkeypatch.setattr(
-        x509.SubjectKeyIdentifier,
-        "from_public_key",
-        lambda _public_key: SimpleNamespace(digest=b"\x01\x23"),
-    )
-
-    result = decode_module._build_subject_key_identifier_lines(
-        {"derBase64": base64.b64encode(b"\x30\x01").decode("ascii")}
-    )
-    assert result == decode_module.format_hex_bytes_lines(b"\x01\x23")
 
 
 def test_extract_authenticator_bytes_from_attestation_uses_raw_base64_and_handles_decode_failure(monkeypatch, binary):

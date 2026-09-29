@@ -18,21 +18,13 @@ def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(mo
     assert decode_module._convert_certificate_payload("not-a-map") == {}
     assert decode_module._convert_certificate_payload({"derBase64": "A"})["parsedX5c"]["derBase64"] == "A"
 
-    # _convert_client_data_entry and _format_certificate_extension_header edge paths.
+    # _convert_client_data_entry edge paths.
     assert decode_module._convert_client_data_entry("not-a-map") == {}
     assert decode_module._convert_client_data_entry({"details": "not-a-map"}) == {}
     challenge_payload = decode_module._convert_client_data_entry(
         {"details": {"type": "webauthn.create", "challenge": {"nested": "value"}}}
     )
     assert challenge_payload["challenge"] == {"nested": "value"}
-
-    assert decode_module._format_certificate_extension_header({}) is None
-    assert (
-        decode_module._format_certificate_extension_header(
-            {"includeOidInHeader": False, "friendlyName": "Friendly"}
-        )
-        == "Friendly"
-    )
 
     # _parse_authenticator_data_bytes branch for non-mapping COSE value and extension decode exceptions.
     auth_with_cose_int = (
@@ -61,12 +53,3 @@ def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(mo
         'extensions is not well-formed CBOR at authData offset 38: map key "ext" has no value'
     )
     assert trailing == b""
-
-    # _format_json_block exception branch.
-    assert decode_module._format_json_block(None) == []
-
-    class _Unserializable:
-        def __str__(self):
-            return "fallback-string"
-
-    assert decode_module._format_json_block(_Unserializable()) == ["fallback-string"]

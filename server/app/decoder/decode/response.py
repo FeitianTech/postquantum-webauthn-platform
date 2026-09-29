@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from ...webauthn.attestation import make_json_safe, serialize_attestation_certificate
-from . import binary, summary
+from . import binary
 from .binary import (
     _convert_cose_key_for_display,
     _describe_cose_key,
@@ -24,12 +24,21 @@ from .keys import json_ready
 from .keys import stringify_mapping_keys as _stringify_mapping_keys
 
 
+def _base_type(format_label: str | None) -> str:
+    if not format_label:
+        return "Decoded data"
+    separator = format_label.find(" (")
+    if separator != -1:
+        return format_label[:separator]
+    return format_label
+
+
 def _prepare_decoder_response(result: dict[str, Any]) -> dict[str, Any]:
     return _build_decoder_payload(result)
 
 
 def _build_decoder_payload(result: dict[str, Any]) -> dict[str, Any]:
-    base_type = summary._base_type(result.get("format"))
+    base_type = _base_type(result.get("format"))
     data = _convert_result_to_data(base_type, result)
     malformed = result.get("malformed")
     if not isinstance(malformed, list):

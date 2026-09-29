@@ -3,14 +3,6 @@ from __future__ import annotations
 import pytest
 
 
-def test_format_cbor_summary_falls_back_to_raw_decoded_block():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    lines = decode_module._format_cbor_summary({"decoded": {"foo": "bar"}})
-    assert "CBOR:\t" in lines
-    assert any('"foo": "bar"' in line for line in lines)
-
-
 def test_build_decoder_payload_names_the_kind_ctap_decoded_names_only():
     decode_module = pytest.importorskip("server.app.decoder.decode")
 

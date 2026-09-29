@@ -109,20 +109,3 @@ def test_attestation_entry_and_payload_helpers_cover_remaining_edges():
         None,
     )
     assert credential_payload["credentialIdLength"] == "len-as-text"
-
-
-def test_build_subject_key_identifier_lines_handles_der_parse_and_spki_decode_failures():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    assert (
-        decode_module._build_subject_key_identifier_lines(
-            {"derBase64": base64.b64encode(b"not-der").decode("ascii")}
-        )
-        == []
-    )
-    assert (
-        decode_module._build_subject_key_identifier_lines(
-            {"publicKeyInfo": {"subjectPublicKeyInfoBase64": "%%%"}}
-        )
-        == []
-    )

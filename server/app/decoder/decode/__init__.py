@@ -20,7 +20,6 @@ from . import (
     keys,
     pipeline,
     response,
-    summary,
 )
 
 __all__ = ["decode_payload_text"]
@@ -67,21 +66,6 @@ _read_cbor_length = cbor_parser._read_cbor_length
 _structure_to_value = cbor_parser._structure_to_value
 decode_item = cbor_parser.decode_item
 
-# Certificate extension serialisation.
-_DEVICE_IDENTIFIER_NAMES = certificates._DEVICE_IDENTIFIER_NAMES
-_build_certificate_extensions_lines = certificates._build_certificate_extensions_lines
-_format_certificate_extension_header = certificates._format_certificate_extension_header
-_format_certificate_extension_value = certificates._format_certificate_extension_value
-_format_device_identifier_line = certificates._format_device_identifier_line
-
-# Certificate summary line builders.
-_build_fingerprint_lines = certificates._build_fingerprint_lines
-_build_signature_lines = certificates._build_signature_lines
-_build_subject_key_identifier_lines = certificates._build_subject_key_identifier_lines
-_build_subject_public_key_info_lines = certificates._build_subject_public_key_info_lines
-_format_certificate_time = certificates._format_certificate_time
-_format_public_key_point_lines = certificates._format_public_key_point_lines
-
 # Credential payload conversion leaves.
 _build_authenticator_data_payload = response._build_authenticator_data_payload
 _build_credential_overview = response._build_credential_overview
@@ -96,17 +80,6 @@ _convert_attestation_statement_impl = certificates._convert_attestation_statemen
 _convert_certificate_bytes_impl = certificates._convert_certificate_bytes_impl
 _convert_certificate_chain_impl = certificates._convert_certificate_chain_impl
 _convert_certificate_payload_impl = certificates._convert_certificate_payload_impl
-
-# Summary field formatting leaves.
-_append_multiline_field = summary._append_multiline_field
-_append_simple_field = summary._append_simple_field
-_build_authenticator_data_lines = summary._build_authenticator_data_lines
-_collect_attested_info = summary._collect_attested_info
-_format_boolean = summary._format_boolean
-_format_counter_value = summary._format_counter_value
-_format_flag_line = summary._format_flag_line
-_format_json_block = summary._format_json_block
-_parse_attested_data = summary._parse_attested_data
 
 # CTAP map classification and labels.
 _classify_ctap_map = ctap_classify._classify_ctap_map
@@ -155,6 +128,7 @@ _parse_attestation_object = pipeline._parse_attestation_object
 _try_decode_utf8 = pipeline._try_decode_utf8
 
 # Decoder payload and result conversion.
+_base_type = response._base_type
 _build_authenticator_section = response._build_authenticator_section
 _build_decoder_payload = response._build_decoder_payload
 _convert_attestation_entry = response._convert_attestation_entry
@@ -169,22 +143,3 @@ _convert_client_data_result = response._convert_client_data_result
 _convert_public_key_credential_data = response._convert_public_key_credential_data
 _convert_result_to_data = response._convert_result_to_data
 _prepare_decoder_response = response._prepare_decoder_response
-
-# Summary rendering.
-_base_type = summary._base_type
-_build_certificate_summary_lines = summary._build_certificate_summary_lines
-_extend_with_attestation_section = summary._extend_with_attestation_section
-_extend_with_authenticator_details = summary._extend_with_authenticator_details
-_extend_with_authenticator_extensions = summary._extend_with_authenticator_extensions
-_extend_with_client_data_details = summary._extend_with_client_data_details
-_extend_with_client_data_entry = summary._extend_with_client_data_entry
-_extend_with_client_extensions = summary._extend_with_client_extensions
-_format_attestation_object_summary = summary._format_attestation_object_summary
-_format_authenticator_data_summary = summary._format_authenticator_data_summary
-_format_cbor_summary = summary._format_cbor_summary
-_format_certificate_summary = summary._format_certificate_summary
-_format_client_data_summary = summary._format_client_data_summary
-_format_generic_summary = summary._format_generic_summary
-_format_json_summary = summary._format_json_summary
-_format_public_key_credential_summary = summary._format_public_key_credential_summary
-_format_result_summary = summary._format_result_summary

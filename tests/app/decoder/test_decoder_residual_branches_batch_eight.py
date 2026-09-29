@@ -4,7 +4,6 @@ import base64
 
 import cbor2
 import pytest
-from cryptography import x509
 
 
 def test_build_credential_payload_covers_length_string_and_empty_public_key_payload():
@@ -25,106 +24,6 @@ def test_build_credential_payload_covers_length_string_and_empty_public_key_payl
     assert payload["credentialId"] == "aabb"
     assert payload["credentialIdLength"] == "len-as-text"
     assert "publicKey" not in payload
-
-
-def test_build_certificate_summary_lines_handles_partial_fields_and_validity_shapes():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    lines = decode_module._build_certificate_summary_lines(
-        {
-            "version": {"display": ""},
-            "serialNumber": {"decimal": "12345"},
-            "signatureAlgorithm": "sha256WithRSAEncryption",
-            "issuer": "CN=Issuer",
-            "validity": {
-                "notBefore": "2025-01-01T00:00:00+00:00",
-                "notAfter": "",
-            },
-            "subject": "CN=Leaf",
-            "publicKeyInfo": {},
-            "extensions": [],
-            "signature": None,
-            "fingerprints": None,
-        }
-    )
-
-    assert "Certificate Serial Number: 12345" in lines
-    assert "Signature Algorithm: sha256WithRSAEncryption" in lines
-    assert "Validity" in lines
-    assert any(line.startswith("Not Before:") for line in lines)
-
-
-def test_build_subject_key_identifier_lines_handles_extension_bytes_der_failures_and_spki_fallback(monkeypatch):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    ext_lines = decode_module._build_subject_key_identifier_lines(
-        {
-            "extensions": [
-                "skip",
-                {
-                    "oid": "2.5.29.14",
-                    "value": {"Subject Key Identifier": "  "},
-                    "bytes": bytearray(b"\xAA\xBB"),
-                },
-            ]
-        }
-    )
-    assert ext_lines
-
-    der_b64 = base64.b64encode(b"fake-der").decode("ascii")
-
-    class _Extensions:
-        def get_extension_for_oid(self, _oid):
-            raise x509.ExtensionNotFound("missing", _oid)
-
-    class _Certificate:
-        extensions = _Extensions()
-
-        def public_key(self):
-            raise RuntimeError("no public key")
-
-    monkeypatch.setattr(
-        x509,
-        "load_der_x509_certificate",
-        lambda _value: _Certificate(),
-    )
-
-    assert (
-        decode_module._build_subject_key_identifier_lines(
-            {
-                "derBase64": der_b64,
-                "publicKeyInfo": {
-                    "subjectPublicKeyInfoBase64": base64.b64encode(b"spki").decode("ascii")
-                },
-            }
-        )
-        == decode_module.format_hex_bytes_lines(__import__("hashlib").sha1(b"spki").digest())
-    )
-
-
-def test_collect_attested_info_fallback_paths_without_auth_bytes():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    info = decode_module._collect_attested_info(
-        {
-            "aaguidHex": "00112233445566778899aabbccddeeff",
-            "aaguid": "00112233-4455-6677-8899-aabbccddeeff",
-            "credentialId": {
-                "length": 2,
-                "hex": "cafe",
-            },
-            "publicKey": {
-                "alg": "-7",
-            },
-        },
-        None,
-    )
-
-    assert info["credential_id"] == "cafe"
-    assert info["algorithm"] == "ES256 (ECDSA)"
-    assert "00112233445566778899aabbccddeeff" in info["credential_lines"]
-
-    assert decode_module._collect_attested_info({}, None) == {}
 
 
 def test_binary_extractors_and_authenticator_fallback_paths(monkeypatch, binary):
@@ -182,31 +81,3 @@ def test_append_authenticator_section_uses_response_context_public_key_algorithm
 
     assert captured["fallback_alg"] == -7
     assert any("Credential data" in line for line in lines)
-
-
-def test_append_attestation_and_client_data_sections_cover_none_and_mapping_paths():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    lines = []
-    decode_module._extend_with_attestation_section(
-        lines,
-        {"binary": {"hex": "deadbeef"}},
-        {
-            "attestationFormat": "packed",
-            "attestationCertificate": "not-a-mapping",
-        },
-        include_certificates=True,
-    )
-    assert any(line.startswith("Att. certificates:") for line in lines)
-
-    decode_module._extend_with_client_data_entry(
-        lines,
-        {
-            "details": {
-                "type": "webauthn.create",
-                "challenge": "abc",
-                "origin": "https://example.com",
-            }
-        },
-    )
-    assert any(line.startswith("Client data") for line in lines)

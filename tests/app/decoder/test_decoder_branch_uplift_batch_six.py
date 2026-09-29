@@ -84,21 +84,13 @@ def test_convert_result_to_data_covers_empty_cbor_and_generic_fallback_paths():
     assert decode_module._convert_result_to_data("SomethingElse", {}) == {}
 
 
-def test_convert_certificate_bytes_and_json_block_formatting_guard_paths(monkeypatch, response):
+def test_convert_certificate_bytes_guard_paths(monkeypatch, response):
     decode_module = pytest.importorskip("server.app.decoder.decode")
 
     assert decode_module._convert_certificate_bytes("%%") == {}
 
     monkeypatch.setattr(response, "serialize_attestation_certificate", lambda _bytes: None)
     assert decode_module._convert_certificate_bytes(b"\x30\x82\x01\x00") == {}
-
-    assert decode_module._format_json_block(None) == []
-
-    class _Unserializable:
-        def __str__(self):
-            return "unserializable-value"
-
-    assert decode_module._format_json_block(_Unserializable()) == ["unserializable-value"]
 
 
 def test_build_authenticator_data_payload_covers_non_mapping_and_partial_details():
