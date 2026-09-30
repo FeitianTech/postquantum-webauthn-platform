@@ -59,11 +59,15 @@ jobs:
               "server.app.decoder.decode.pipeline",
               "server.app.decoder.encode.text",
               "server.app.storage.credentials",
-              "server.app.routes.advanced",
+              "server.app.routes.advanced.artifacts",
+              "server.app.routes.advanced.authentication",
+              "server.app.routes.advanced.registration",
+              "server.app.routes.assets",
               "server.app.routes.csp_report",
               "server.app.routes.codec",
               "server.app.routes.mds",
-              "server.app.routes.simple",
+              "server.app.routes.simple.authentication",
+              "server.app.routes.simple.registration",
               "server.app.routes.web_export",
           ]
 
