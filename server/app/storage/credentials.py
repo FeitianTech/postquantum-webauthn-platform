@@ -20,12 +20,11 @@ from typing import Any
 from .. import visitor_session
 from ..config.paths import store_dir
 from ..json_values import make_json_safe
-from . import record_format
+from . import common, record_format
 from .cloud import (
     build_blob_name,
     download_bytes,
     download_bytes_with_generation,
-    gcs_enabled,
     upload_bytes_if_generation,
 )
 from .common import (
@@ -37,7 +36,6 @@ from .common import (
     replace_file,
     resolve_contained_path,
     resolve_session_id,
-    using_gcs_backend,
     validate_storage_component,
 )
 
@@ -74,9 +72,6 @@ class CredentialsUndecodable(Exception):
     a copy nobody could read. Reads that only show records skip it with a warning.
     """
 
-
-def _using_gcs() -> bool:
-    return using_gcs_backend(gcs_enabled)
 
 
 def _validate_name(name: Any) -> str:
@@ -148,7 +143,7 @@ def read_for_update(name: str, *, session_id: str | None = None) -> tuple[list[A
     """
 
     resolved_session = _resolve_session_id(session_id)
-    if _using_gcs():
+    if common.using_gcs():
         source = _credential_blob(name, resolved_session)
         try:
             payload, version = download_bytes_with_generation(source)
@@ -179,7 +174,7 @@ def save_if_unchanged(name: str, key: Any, version: Any, *, session_id: str | No
 
     payload = record_format.encode_records(key)
     resolved_session = _resolve_session_id(session_id)
-    if _using_gcs():
+    if common.using_gcs():
         blob_name = _credential_blob(name, resolved_session)
         written = upload_bytes_if_generation(
             blob_name, payload, generation=version, content_type="application/json"
@@ -235,7 +230,7 @@ def readkey(name: str, *, session_id: str | None = None) -> list[Any]:
     """
 
     resolved_session = _resolve_session_id(session_id)
-    if _using_gcs():
+    if common.using_gcs():
         source = _credential_blob(name, resolved_session)
         payload = _read_gcs_copy(source)
     else:

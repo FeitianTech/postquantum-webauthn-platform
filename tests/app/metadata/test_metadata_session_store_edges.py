@@ -5,6 +5,8 @@ import pytest
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import uploads as mds_uploads
+from server.app.storage import cloud as storage_cloud
+from server.app.storage import common as storage_common
 from tests.app.entry_app import entry_app
 
 
@@ -15,8 +17,8 @@ def metadata_local_env(monkeypatch, tmp_path, metadata_state, session_store, app
 
     monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(session_dir))
 
-    monkeypatch.setattr(session_store, "gcs_enabled", lambda: False)
-    monkeypatch.setattr(session_store, "_using_gcs", lambda: False)
+    monkeypatch.setattr(storage_cloud, "gcs_enabled", lambda: False)
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
 
 
     return mds_uploads, session_store, entry_app()

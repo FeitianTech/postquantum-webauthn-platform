@@ -72,7 +72,7 @@ def local_store(monkeypatch, tmp_path):
     root.mkdir(parents=True)
 
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(root))
-    monkeypatch.setattr(credentials, "_using_gcs", lambda: False)
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
 
     return types.SimpleNamespace(
         storage=credentials,
@@ -83,7 +83,7 @@ def local_store(monkeypatch, tmp_path):
 
 @pytest.fixture
 def gcs_store(monkeypatch):
-    monkeypatch.setattr(credentials, "_using_gcs", lambda: True)
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     return credentials
 
 
@@ -407,7 +407,7 @@ def test_crafted_pickle_payload_is_never_executed_from_gcs(monkeypatch, tmp_path
     marker = tmp_path / "pwned-from-gcs"
     payload = pickle.dumps(_CraftedPickle(str(marker)))
 
-    monkeypatch.setattr(credentials, "_using_gcs", lambda: True)
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(credentials, "download_bytes", lambda _blob: payload)
 
     assert credentials.readkey("alice@example.com", session_id="session-a") == []
@@ -432,7 +432,7 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
     root.mkdir(parents=True)
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(root))
     (tmp_path / "flat").mkdir()
-    monkeypatch.setattr(credentials, "_using_gcs", lambda: False)
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
 
     # Any value the encoder cannot represent is logged; the flow must not need it.

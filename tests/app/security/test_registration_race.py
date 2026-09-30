@@ -20,6 +20,7 @@ import threading
 import pytest
 
 from server.app import visitor_session
+from server.app.storage import common as storage_common
 
 from ..storage import fake_gcs
 from .ceremony_helpers import ORIGIN, Authenticator, registration_payload, unb64u
@@ -200,7 +201,7 @@ def _break_the_current_copy(store, client, how: str):
 
     with client.session_transaction() as session:
         namespace = session[visitor_session.SESSION_KEY]
-    if store._using_gcs():
+    if storage_common.using_gcs():
         bucket = cloud._ensure_bucket()
         blob = store._credential_blob(EMAIL, namespace)
         original = bucket.objects[blob][0]

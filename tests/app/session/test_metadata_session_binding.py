@@ -14,7 +14,8 @@ from flask import session as flask_session
 
 from server.app import visitor_session
 from server.app.mds import uploads as mds_uploads
-from server.app.storage import session_metadata as session_store
+from server.app.storage import cloud as storage_cloud
+from server.app.storage import common as storage_common
 from tests.app.entry_app import entry_app
 
 COOKIE_SALT = "fido.mds.session-cookie.v1"
@@ -28,8 +29,8 @@ def session_env(monkeypatch, tmp_path):
     # The store copied the directory from config at import: patch the copy it reads.
     monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(session_dir))
 
-    monkeypatch.setattr(session_store, "gcs_enabled", lambda: False)
-    monkeypatch.setattr(session_store, "_using_gcs", lambda: False)
+    monkeypatch.setattr(storage_cloud, "gcs_enabled", lambda: False)
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
     monkeypatch.setattr(visitor_session.CLEANUP, "last_run", 0.0)
 
     return entry_app(), mds_uploads

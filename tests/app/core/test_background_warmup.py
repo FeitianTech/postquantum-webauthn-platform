@@ -9,6 +9,7 @@ import time
 import pytest
 
 from server.app.mds import cache as mds_cache
+from server.app.storage import common as storage_common
 
 
 @pytest.fixture
@@ -55,7 +56,7 @@ def test_start_background_warmup_disabled_does_nothing(startup_module, monkeypat
 
 
 def test_run_background_warmup_survives_failures(startup_module, monkeypatch):
-    monkeypatch.setattr(startup_module, "_should_warm_cloud_storage_configured", lambda: True)
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(
         startup_module.cloud,
         "_ensure_bucket",

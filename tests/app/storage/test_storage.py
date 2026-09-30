@@ -9,6 +9,7 @@ import pickle
 import pytest
 
 from server.app import visitor_session
+from server.app.storage import cloud as storage_cloud
 
 credentials = importlib.import_module("server.app.storage.credentials")
 StorageReadError = importlib.import_module("server.app.storage.common").StorageReadError
@@ -19,7 +20,7 @@ def _force_gcs(monkeypatch):
     """Ensure the storage helpers believe GCS is enabled during the tests."""
 
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "test-bucket")
-    monkeypatch.setattr(credentials, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(storage_cloud, "gcs_enabled", lambda: True)
 
 
 def test_readkey_returns_empty_list_for_corrupted_payload(monkeypatch):

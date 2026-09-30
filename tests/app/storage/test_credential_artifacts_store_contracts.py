@@ -3,13 +3,15 @@ import os
 import pytest
 
 from server.app import visitor_session
+from server.app.storage import cloud as storage_cloud
+from server.app.storage import common as storage_common
 from server.app.storage import credential_artifacts
 
 
 @pytest.fixture
 def artifact_module(monkeypatch, tmp_path):
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", str(tmp_path))
-    monkeypatch.setattr(credential_artifacts, "_using_gcs", lambda: False)
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
     return credential_artifacts
 
 
@@ -174,7 +176,7 @@ def test_artifact_prefix_rejects_invalid_session_identifiers(artifact_module):
 def test_read_record_gcs_raises_on_a_download_error_and_skips_what_does_not_decode(artifact_module, monkeypatch, caplog):
     from server.app.storage.common import StorageReadError
 
-    monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True)
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     blob_name = artifact_module._artifact_blob("cred-1", "session-a")
 
     # A download that fails is not "no artifact": the store could not be read.
@@ -242,7 +244,7 @@ def test_a_local_merge_refuses_a_record_that_does_not_decode(artifact_module, st
 
 
 def test_write_record_gcs_uploads_json_payload(artifact_module, monkeypatch):
-    monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True)
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     uploads = []
     monkeypatch.setattr(
@@ -261,7 +263,7 @@ def test_write_record_gcs_uploads_json_payload(artifact_module, monkeypatch):
 
 
 def test_delete_on_gcs_fails_when_the_existence_check_fails(artifact_module, monkeypatch):
-    monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True)
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(
         artifact_module,
         "blob_exists",
@@ -273,7 +275,7 @@ def test_delete_on_gcs_fails_when_the_existence_check_fails(artifact_module, mon
 
 
 def test_delete_on_gcs_fails_when_the_delete_fails(artifact_module, monkeypatch):
-    monkeypatch.setattr(artifact_module, "_using_gcs", lambda: True)
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(artifact_module, "blob_exists", lambda _blob: True)
     monkeypatch.setattr(
         artifact_module,
@@ -347,12 +349,12 @@ def test_delete_credential_artifact_rejects_invalid_storage_id(artifact_module):
 
 
 def test_using_gcs_depends_on_flag_and_bucket(monkeypatch):
-    monkeypatch.setattr(credential_artifacts, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(storage_cloud, "gcs_enabled", lambda: True)
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "bucket-a")
-    assert credential_artifacts._using_gcs() is True
+    assert storage_common.using_gcs() is True
 
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
-    assert credential_artifacts._using_gcs() is False
+    assert storage_common.using_gcs() is False
 
 
 def test_resolve_session_id_falls_back_for_non_string(monkeypatch, artifact_module):

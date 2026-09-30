@@ -13,6 +13,7 @@ import types
 from collections.abc import Callable
 
 from server.app.storage import cloud
+from server.app.storage import common as storage_common
 
 
 # Stand-ins for google.api_core.exceptions. Other test modules replace that
@@ -126,7 +127,7 @@ class Blob:
 
 
 def install(monkeypatch, *stores) -> Bucket:
-    """Point the cloud module at a fresh fake bucket and switch ``stores`` to GCS."""
+    """Point the cloud module at a fresh fake bucket; with ``stores``, put the stores on it."""
 
     bucket = Bucket()
     exceptions = types.SimpleNamespace(
@@ -137,6 +138,7 @@ def install(monkeypatch, *stores) -> Bucket:
     # bucket records it and never needs the library.
     monkeypatch.setattr(cloud, "_retry", lambda: "the client's retry")
     monkeypatch.setattr(cloud, "_ensure_bucket", lambda: bucket)
-    for store in stores:
-        monkeypatch.setattr(store, "_using_gcs", lambda: True)
+    if stores:
+        # One switch moves every store, as production's one environment switch does.
+        monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     return bucket

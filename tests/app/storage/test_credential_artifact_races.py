@@ -20,6 +20,7 @@ import time
 
 import pytest
 
+from server.app.storage import common as storage_common
 from server.app.storage import credential_artifacts as artifacts
 from server.app.storage.common import StorageReadError
 
@@ -206,7 +207,7 @@ def _merge_in_a_process(root, key, start):
 def test_two_processes_merging_one_artifact_keep_both_updates(monkeypatch, tmp_path):
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", str(tmp_path))
-    monkeypatch.setattr(artifacts, "_using_gcs", lambda: False)
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
     assert artifacts.store_credential_artifact(STORAGE_ID, ORIGINAL, session_id=SESSION)
 
     context = multiprocessing.get_context("spawn")
@@ -226,7 +227,7 @@ def test_two_processes_merging_one_artifact_keep_both_updates(monkeypatch, tmp_p
 
 def test_a_local_delete_takes_the_record_lock_only_when_there_is_a_record(monkeypatch, tmp_path):
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", str(tmp_path))
-    monkeypatch.setattr(artifacts, "_using_gcs", lambda: False)
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
 
     assert artifacts.delete_credential_artifact_with_status("absent-id", session_id=SESSION) == "absent"
     assert not any(name.endswith(".lock") for name in os.listdir(tmp_path)) if tmp_path.exists() else True

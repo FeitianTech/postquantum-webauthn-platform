@@ -8,13 +8,13 @@ import shutil
 import time
 
 from ..config.paths import store_dir
+from . import common
 from .cloud import (
     blob_exists,
     blob_updated_timestamp,
     build_blob_name,
     delete_blob,
     download_bytes,
-    gcs_enabled,
     list_blob_names,
     list_prefixes,
     upload_bytes,
@@ -22,7 +22,6 @@ from .cloud import (
 from .common import (
     build_session_root_prefix,
     build_session_scoped_prefix,
-    using_gcs_backend,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,9 +54,6 @@ def session_metadata_dir() -> str:
 
     return store_dir("FIDO_SERVER_SESSION_METADATA_DIR", "session-metadata")
 
-
-def _using_gcs() -> bool:
-    return using_gcs_backend(gcs_enabled)
 
 
 def _user_root_prefix(session_id: str) -> str:
@@ -175,14 +171,14 @@ def _local_note_activity(session_id: str) -> None:
 
 
 def ensure_session(session_id: str) -> None:
-    if _using_gcs():
+    if common.using_gcs():
         touch_last_access(session_id)
     else:
         _local_session_directory(session_id, create=True)
 
 
 def list_sessions() -> list[str]:
-    if _using_gcs():
+    if common.using_gcs():
         prefix = _base_prefix()
         seen = set()
         try:
@@ -210,7 +206,7 @@ def list_sessions() -> list[str]:
 
 
 def touch_last_access(session_id: str, *, timestamp: float | None = None) -> None:
-    if _using_gcs():
+    if common.using_gcs():
         marker_name = _last_access_blob(session_id)
         marker_value = json.dumps({"timestamp": timestamp or time.time()}).encode("utf-8")
         upload_bytes(marker_name, marker_value, content_type="application/json")
@@ -232,7 +228,7 @@ def touch_last_access(session_id: str, *, timestamp: float | None = None) -> Non
 
 
 def resolve_last_access(session_id: str) -> float | None:
-    if _using_gcs():
+    if common.using_gcs():
         marker_name = _last_access_blob(session_id)
         payload = download_bytes(marker_name)
         if payload:
@@ -251,7 +247,7 @@ def resolve_last_access(session_id: str) -> float | None:
 
 
 def list_files(session_id: str) -> list[str]:
-    if _using_gcs():
+    if common.using_gcs():
         prefix = _metadata_prefix(session_id)
         if prefix:
             prefix = prefix + "/"
@@ -290,7 +286,7 @@ def list_files(session_id: str) -> list[str]:
 
 
 def read_file(session_id: str, name: str) -> bytes | None:
-    if _using_gcs():
+    if common.using_gcs():
         blob_name = _session_blob(session_id, name)
         return download_bytes(blob_name)
 
@@ -307,7 +303,7 @@ def read_file(session_id: str, name: str) -> bytes | None:
 
 
 def write_file(session_id: str, name: str, data: bytes, *, content_type: str | None = None) -> None:
-    if _using_gcs():
+    if common.using_gcs():
         blob_name = _session_blob(session_id, name)
         upload_bytes(blob_name, data, content_type=content_type)
         touch_last_access(session_id)
@@ -325,7 +321,7 @@ def write_file(session_id: str, name: str, data: bytes, *, content_type: str | N
 
 
 def delete_file(session_id: str, name: str, *, missing_ok: bool = True) -> None:
-    if _using_gcs():
+    if common.using_gcs():
         blob_name = _session_blob(session_id, name)
         delete_blob(blob_name, missing_ok=missing_ok)
         touch_last_access(session_id)
@@ -348,7 +344,7 @@ def delete_file(session_id: str, name: str, *, missing_ok: bool = True) -> None:
 
 
 def file_mtime(session_id: str, name: str) -> float | None:
-    if _using_gcs():
+    if common.using_gcs():
         blob_name = _session_blob(session_id, name)
         return blob_updated_timestamp(blob_name)
 
@@ -368,7 +364,7 @@ def session_is_empty(session_id: str) -> bool:
 
 
 def delete_session(session_id: str) -> None:
-    if _using_gcs():
+    if common.using_gcs():
         prefix = _user_root_prefix(session_id)
         if prefix:
             prefix = prefix + "/"
@@ -402,7 +398,7 @@ def prune_session(session_id: str) -> None:
 
 
 def file_exists(session_id: str, name: str) -> bool:
-    if _using_gcs():
+    if common.using_gcs():
         blob_name = _session_blob(session_id, name)
         return blob_exists(blob_name)
 

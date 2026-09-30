@@ -8,6 +8,7 @@ import pickle
 import pytest
 
 from server.app import visitor_session
+from server.app.storage import common as storage_common
 from server.app.storage import credentials as storage
 from tests.app.storage.credential_seed import seed_records
 
@@ -15,7 +16,7 @@ from tests.app.storage.credential_seed import seed_records
 @pytest.fixture
 def storage_local(monkeypatch, tmp_path):
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "session-credentials"))
-    monkeypatch.setattr(storage, "_using_gcs", lambda: False)
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
 
     os.makedirs(storage._local_credential_base(), exist_ok=True)
 

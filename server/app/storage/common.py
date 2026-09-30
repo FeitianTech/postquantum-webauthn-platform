@@ -12,6 +12,7 @@ from typing import Any
 
 from werkzeug.security import safe_join
 
+from . import cloud
 from .cloud import build_blob_name, normalise_blob_prefix
 
 __all__ = [
@@ -26,7 +27,7 @@ __all__ = [
     "resolve_contained_path",
     "replace_file",
     "resolve_session_id",
-    "using_gcs_backend",
+    "using_gcs",
     "validate_storage_component",
 ]
 
@@ -54,10 +55,13 @@ class StorageReadError(OSError):
     """
 
 
-def using_gcs_backend(is_enabled: Callable[[], bool]) -> bool:
-    """Return ``True`` when cloud storage is enabled and bucket-configured."""
+def using_gcs() -> bool:
+    """Whether the stores are on Cloud Storage: it is enabled and a bucket is named.
 
-    return bool(is_enabled()) and bool(os.environ.get("FIDO_SERVER_GCS_BUCKET"))
+    One switch for every store, as the environment has one.
+    """
+
+    return bool(cloud.gcs_enabled()) and bool(os.environ.get("FIDO_SERVER_GCS_BUCKET"))
 
 
 def normalize_nonempty_str(value: Any, *, type_error: str, empty_error: str) -> str:

@@ -7,7 +7,7 @@ import os
 import threading
 
 from .env_flags import parse_env_flag
-from .storage import cloud
+from .storage import cloud, common
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def background_warmup_enabled() -> bool:
 
 
 def _run_background_warmup() -> None:
-    if _should_warm_cloud_storage_configured():
+    if common.using_gcs():
         try:
             cloud._ensure_bucket()
         except Exception:
@@ -69,7 +69,3 @@ def start_background_warmup() -> threading.Thread | None:
     )
     thread.start()
     return thread
-
-
-def _should_warm_cloud_storage_configured() -> bool:
-    return cloud.gcs_enabled() and bool(os.environ.get("FIDO_SERVER_GCS_BUCKET"))

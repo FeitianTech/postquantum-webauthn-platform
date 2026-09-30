@@ -18,13 +18,13 @@ from typing import Any
 
 from .. import visitor_session
 from ..config.paths import store_dir
+from . import common
 from .cloud import (
     blob_exists,
     build_blob_name,
     delete_blob,
     download_bytes,
     download_bytes_with_generation,
-    gcs_enabled,
     upload_bytes,
     upload_bytes_if_generation,
 )
@@ -35,7 +35,6 @@ from .common import (
     file_lock,
     resolve_contained_path,
     resolve_session_id,
-    using_gcs_backend,
     validate_storage_component,
 )
 
@@ -122,9 +121,6 @@ def _artifact_blob(storage_id: str, session_id: str) -> str:
     return assert_contained_blob_name(build_blob_name(filename, prefix=prefix), prefix=prefix)
 
 
-def _using_gcs() -> bool:
-    return using_gcs_backend(gcs_enabled)
-
 
 def _ensure_directory(session_id: str) -> None:
     os.makedirs(_session_directory(session_id), exist_ok=True)
@@ -148,7 +144,7 @@ def _read_stored(storage_id: str, session_id: str) -> tuple[bytes | None, str]:
     ``StorageReadError``, which the app answers with 503.
     """
 
-    if _using_gcs():
+    if common.using_gcs():
         blob_name = _artifact_blob(storage_id, session_id)
         try:
             return download_bytes(blob_name), blob_name
@@ -206,7 +202,7 @@ def _encode_record(record: dict[str, Any]) -> bytes:
 
 
 def _write_record(storage_id: str, session_id: str, record: dict[str, Any]) -> None:
-    if _using_gcs():
+    if common.using_gcs():
         blob_name = _artifact_blob(storage_id, session_id)
         upload_bytes(blob_name, _encode_record(record), content_type="application/json")
         return
@@ -284,10 +280,10 @@ def store_credential_artifact(
     resolved_session = _resolve_session_id(session_id)
 
     with _lock_for(normalised, resolved_session):
-        if _using_gcs() and merge:
+        if common.using_gcs() and merge:
             return _merge_on_gcs(normalised, resolved_session, payload, timestamp)
         with contextlib.ExitStack() as held:
-            if not _using_gcs():
+            if not common.using_gcs():
                 try:
                     _ensure_directory(resolved_session)
                     held.enter_context(file_lock(_artifact_path(normalised, resolved_session)))
@@ -398,7 +394,7 @@ def delete_credential_artifact_with_status(
     resolved_session = _resolve_session_id(session_id)
 
     with _lock_for(normalised, resolved_session):
-        if _using_gcs():
+        if common.using_gcs():
             blob_name = _artifact_blob(normalised, resolved_session)
             try:
                 existed = blob_exists(blob_name)
