@@ -1,14 +1,10 @@
 """The constant lookup tables the attestation submodules share.
 
-This module is the single home for the constants the attestation runtime
-shares between fragments and re-exports through :mod:`server.app.attestation`.
 It is deliberately a leaf: it imports nothing from ``server.app`` and nothing
-from its sibling fragments, so any fragment can depend on it without creating
-a cycle.
-
-Unlike the metadata runtime, the attestation fragments keep no mutable state --
-there are no caches, locks or ``global`` statements to park here, only these
-two lookup tables, which are read and never rebound.
+from its sibling submodules, so any of them can depend on it without creating
+a cycle. The attestation submodules keep no mutable state -- no caches, locks or
+``global`` statements -- only these lookup tables, which are read and never
+rebound.
 """
 from __future__ import annotations
 

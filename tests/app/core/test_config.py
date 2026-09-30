@@ -1,4 +1,4 @@
-"""Tests for server/app/config.py module."""
+"""Tests for the server/app/config package: the settings create_app() reads from the environment."""
 
 from __future__ import annotations
 
