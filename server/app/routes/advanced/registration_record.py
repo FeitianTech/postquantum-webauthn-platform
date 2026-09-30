@@ -401,7 +401,7 @@ def _stored_credential(
     stored_extensions = json_values.make_json_safe(client_extension_results)
     public_key_b64, public_key_b64url = _public_key_encodings(auth_data)
 
-    stored_credential: dict[str, Any] = {
+    stored_credential = registration_facts.stored_credential({
         "type": "advanced",
         "userName": credential_info["user_info"]["name"],
         "displayName": credential_info["user_info"]["display_name"],
@@ -437,8 +437,6 @@ def _stored_credential(
         "userHandleBase64": user_handle_forms["base64"],
         "userHandleBase64Url": user_handle_forms["base64url"],
         "userHandleHex": user_handle_forms["hex"],
-    }
+    }, drop_none=True)
 
-    return json_values.make_json_safe(
-        {k: v for k, v in stored_credential.items() if v is not None}
-    )
+    return json_values.make_json_safe(stored_credential)

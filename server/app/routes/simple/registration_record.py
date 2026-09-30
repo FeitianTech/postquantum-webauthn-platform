@@ -283,7 +283,7 @@ def populate_rp_debug_context(ctx: dict[str, Any]) -> None:
 
 
 def build_stored_credential_context(ctx: dict[str, Any]) -> None:
-    stored_credential: dict[str, Any] = {
+    stored_credential = registration_facts.stored_credential({
         "type": "simple",
         "email": ctx["uname"],
         "userName": ctx["credential_info"]["user_info"].get("name", ctx["uname"]),
@@ -314,9 +314,8 @@ def build_stored_credential_context(ctx: dict[str, Any]) -> None:
         "authenticatorDataHash": ctx["authenticator_data_hash"] or None,
         "relyingParty": json_values.make_json_safe(ctx["rp_info"]),
         "registrationResponse": ctx["credential_info"].get("registration_response"),
-    }
-
-    stored_credential["userHandle"] = ctx["user_handle_b64u"]
+        "userHandle": ctx["user_handle_b64u"],
+    })
     ctx["stored_credential"] = stored_credential
 
 

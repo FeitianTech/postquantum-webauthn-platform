@@ -4,8 +4,9 @@ The flags in the order of their bits (``flags``), whether largeBlob did anything
 (``large_blob_result``), a byte string's three spellings (``byte_forms``), the
 AAGUID (``aaguid_values``, ``record_aaguid``, ``aaguid_block``), authData's
 rpIdHash beside the hash of the RP ID it should be (``rp_id_hash_report``,
-``record_rp_id_hash``), and the relying party's view of the registration
-(``relying_party_info``, ``registration_data``), in one key order for both tabs.
+``record_rp_id_hash``), the relying party's view of the registration
+(``relying_party_info``, ``registration_data``), and the credential record the
+browser keeps (``stored_credential``): each in one key order for both tabs.
 """
 from __future__ import annotations
 
@@ -19,6 +20,47 @@ from ..encoding import encode_base64, encode_base64url
 
 # authData's flags, in the order of their bits (WebAuthn L3 section 6.1).
 FLAG_NAMES = ("UP", "UV", "BE", "BS", "AT", "ED")
+
+# The fields of the credential record the browser keeps, in their order; each tab gives the ones it has.
+STORED_CREDENTIAL_KEYS = (
+    "type",
+    "email",
+    "userName",
+    "displayName",
+    "residentKey",
+    "largeBlob",
+    "authenticatorAttachment",
+    "credentialId",
+    "credentialIdBase64Url",
+    "credentialIdHex",
+    "aaguid",
+    "aaguidHex",
+    "aaguidGuid",
+    "publicKeyAlgorithm",
+    "publicKey",
+    "publicKeyBase64",
+    "publicKeyBase64Url",
+    "publicKeyBytes",
+    "publicKeyCose",
+    "publicKeyType",
+    "signCount",
+    "createdAt",
+    "clientExtensionOutputs",
+    "attestationFormat",
+    "attestationStatement",
+    "attestationObject",
+    "authenticatorData",
+    "authenticatorDataHex",
+    "authenticatorDataHash",
+    "clientDataJSON",
+    "relyingParty",
+    "properties",
+    "registrationResponse",
+    "userHandle",
+    "userHandleBase64",
+    "userHandleBase64Url",
+    "userHandleHex",
+)
 
 
 def flags(auth_data: Any) -> dict[str, bool]:
@@ -211,3 +253,19 @@ def relying_party_info(
     if attestation_certificates:
         rp_info["attestationCertificates"] = attestation_certificates
     return rp_info
+
+
+def stored_credential(fields: Mapping[str, Any], *, drop_none: bool = False) -> dict[str, Any]:
+    """The credential record the browser keeps: ``fields`` in ``STORED_CREDENTIAL_KEYS``' order.
+
+    The Simple tab keeps a field that is null; the Advanced tab leaves it out (``drop_none``).
+    """
+
+    unknown = set(fields) - set(STORED_CREDENTIAL_KEYS)
+    if unknown:
+        raise ValueError(f"not a stored credential field: {sorted(unknown)}")
+    return {
+        key: fields[key]
+        for key in STORED_CREDENTIAL_KEYS
+        if key in fields and not (drop_none and fields[key] is None)
+    }
