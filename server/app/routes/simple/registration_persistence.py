@@ -16,7 +16,7 @@ from flask import jsonify, session
 from ... import json_values, visitor_session
 from ...storage import credentials, github_mirror
 from ...storage.common import InvalidStorageIdentifier, StorageReadError
-from .. import binary_helpers
+from ...webauthn import client_binary
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +149,7 @@ def _record_registration_event(ctx: dict[str, Any]) -> None:
         rp_id=ctx["resolved_rp_id"],
         aaguid=ctx["aaguid_bytes"] or None,
         device_name_mds=metadata_description,
-        attestation_object=binary_helpers.decode_base64url_bytes(ctx["raw_attestation_object_b64"]),
+        attestation_object=client_binary.decode_base64url_bytes(ctx["raw_attestation_object_b64"]),
         signature_valid=ctx["attestation_signature_valid"],
         root_valid=ctx["attestation_root_valid"],
         rp_id_hash_valid=ctx["attestation_rp_id_hash_valid"],

@@ -14,7 +14,8 @@ from typing import Any
 from flask import jsonify, session
 
 from ...encoding import decode_hex, encode_base64url
-from . import binary, parsing
+from ...webauthn import client_binary
+from . import parsing
 
 _CREDENTIAL_FIELDS = ("__storedCredentials", "storedCredentials", "credentials")
 
@@ -68,7 +69,7 @@ def _pick_allowed(
         if not isinstance(allow_cred, dict) or allow_cred.get("type") != "public-key":
             continue
 
-        cred_id = binary._extract_binary_value(allow_cred.get("id", ""))
+        cred_id = client_binary.unwrap_request_value(allow_cred.get("id", ""))
         if isinstance(cred_id, str):
             try:
                 cred_id = decode_hex(cred_id)

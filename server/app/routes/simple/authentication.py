@@ -32,9 +32,9 @@ from ...config import relying_party
 from ...encoding import encode_base64url
 from ...storage import credentials
 from ...storage.common import InvalidStorageIdentifier
+from ...webauthn import client_binary
 from ...webauthn.sign_count import SIGN_COUNT_REGRESSED, sign_count_status
-from .. import binary_helpers
-from . import binary, parsing
+from . import parsing
 
 bp = Blueprint("simple_authentication", __name__)
 
@@ -148,7 +148,7 @@ def authenticate_complete():
         )
     except Exception as exc:
         failed_credential_id = None
-        credential_id_bytes = binary_helpers.extract_assertion_credential_id(response_mapping)
+        credential_id_bytes = client_binary.extract_assertion_credential_id(response_mapping)
         if credential_id_bytes:
             failed_credential_id = (
                 encode_base64url(credential_id_bytes)
@@ -182,7 +182,7 @@ def authenticate_complete():
     )
     try:
         sign_count = AuthenticatorData(
-            binary_helpers.decode_base64url_bytes(auth_data_value)
+            client_binary.decode_base64url_bytes(auth_data_value)
         ).counter
     except Exception:
         sign_count = None
@@ -400,7 +400,7 @@ def client_supplied_sign_count(
         if raw_id is None:
             continue
         try:
-            entry_id = binary._decode_binary_value(raw_id)
+            entry_id = client_binary.read(raw_id, iterables=True)
         except Exception:
             continue
         if entry_id == credential_id:

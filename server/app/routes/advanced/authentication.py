@@ -9,19 +9,18 @@ from flask import Blueprint, jsonify, request, session
 from ... import json_values
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
 from ...encoding import encode_base64url
+from ...webauthn import client_binary
 from ...webauthn.attachments import (
     attachment_hint_violation,
     normalize_attachment,
     resolve_allowed_attachments,
     resolve_effective_attachments,
 )
-from .. import binary_helpers
 from . import (
     algorithms,
     assertion_credentials,
     assertion_options,
     assertion_verification,
-    binary,
     constants,
     parsing,
 )
@@ -59,7 +58,7 @@ def advanced_authenticate_begin():
     challenge_bytes = None
     if challenge_value:
         try:
-            challenge_bytes = binary._decode_request_binary(challenge_value)
+            challenge_bytes = client_binary.read_request_field(challenge_value)
         except (ValueError, TypeError) as exc:
             return jsonify({"error": f"Invalid challenge format: {exc}"}), 400
 
@@ -173,7 +172,7 @@ def advanced_authenticate_complete():
     all_credentials = [record["data"] for record in stored_records if record.get("data") is not None]
 
     response_mapping: Mapping[str, Any] = response if isinstance(response, Mapping) else {}
-    credential_id_bytes = binary_helpers.extract_assertion_credential_id(response_mapping)
+    credential_id_bytes = client_binary.extract_assertion_credential_id(response_mapping)
     selected_record = lookup.get(credential_id_bytes) if credential_id_bytes else None
 
     non_discoverable = assertion_credentials.non_discoverable_error(
@@ -219,7 +218,7 @@ def _unexpected_failure(exc: Exception, response: Any, credential_id_bytes: byte
     response_payload: dict[str, Any] = {"error": str(exc), **trace}
     failed_credential_id = credential_id_bytes
     if not failed_credential_id and isinstance(response, Mapping):
-        failed_credential_id = binary_helpers.extract_assertion_credential_id(response)
+        failed_credential_id = client_binary.extract_assertion_credential_id(response)
     if failed_credential_id:
         response_payload["failedCredentialId"] = (
             encode_base64url(failed_credential_id)

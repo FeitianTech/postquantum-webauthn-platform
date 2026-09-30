@@ -12,7 +12,7 @@ from fido2.webauthn import UserVerificationRequirement
 from flask import session
 
 from ...config import relying_party
-from . import binary
+from ...webauthn import client_binary
 
 
 def assertion_server(public_key: Mapping[str, Any]) -> tuple[Any, Any, Any]:
@@ -48,7 +48,7 @@ def _large_blob_extension(ext_value: Any) -> Any:
     if ext_value.get("read"):
         return {"read": True}
     if ext_value.get("write"):
-        return {"write": binary._decode_request_binary(ext_value["write"])}
+        return {"write": client_binary.read_request_field(ext_value["write"])}
     return ext_value
 
 
@@ -62,9 +62,9 @@ def process_assertion_extensions(extensions: Any) -> dict[str, Any]:
                 prf_eval = ext_value["eval"]
                 processed_eval = {}
                 if "first" in prf_eval:
-                    processed_eval["first"] = binary._decode_request_binary(prf_eval["first"])
+                    processed_eval["first"] = client_binary.read_request_field(prf_eval["first"])
                 if "second" in prf_eval:
-                    processed_eval["second"] = binary._decode_request_binary(prf_eval["second"])
+                    processed_eval["second"] = client_binary.read_request_field(prf_eval["second"])
                 if processed_eval:
                     processed_extensions["prf"] = {"eval": processed_eval}
             else:

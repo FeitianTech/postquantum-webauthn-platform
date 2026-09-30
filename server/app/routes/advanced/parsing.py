@@ -8,9 +8,8 @@ from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData
 
 from ...encoding import encode_base64url
-from ...webauthn import cose_algorithms, mldsa
+from ...webauthn import client_binary, cose_algorithms, mldsa
 from ...webauthn.attachments import normalize_attachment
-from . import binary
 
 
 def _coerce_optional_bool(value: Any) -> bool | None:
@@ -83,9 +82,9 @@ def _parse_client_supplied_credentials(
             if credential_id_raw is None or public_key_raw is None:
                 continue
 
-            aaguid_bytes = b"\x00" * 16 if aaguid_raw is None else binary._decode_client_binary(aaguid_raw)
-            credential_id_bytes = binary._decode_client_binary(credential_id_raw)
-            public_key_bytes = binary._decode_client_binary(public_key_raw)
+            aaguid_bytes = b"\x00" * 16 if aaguid_raw is None else client_binary.read(aaguid_raw, wrappers=True)
+            credential_id_bytes = client_binary.read(credential_id_raw, wrappers=True)
+            public_key_bytes = client_binary.read(public_key_raw, wrappers=True)
 
             cose_key = CoseKey.parse(mldsa.with_raw_public_key(cbor.decode(public_key_bytes)))
             attested = AttestedCredentialData.create(aaguid_bytes, credential_id_bytes, cose_key)

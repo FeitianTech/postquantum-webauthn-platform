@@ -215,7 +215,8 @@ their exports or sentences. A new surface splits its logic out here first.
   `webauthn/mldsa.py` (ML-DSA parameter sets, sizes and certificate keys),
   `webauthn/cose_keys.py` (RS384, RS512, PS384, PS512: the package imports it so fido2's
   `CoseKey` lookups find them), `webauthn/assertion_hash.py` (the Advanced tab's hash choice
-  for an assertion), `webauthn/sign_count.py`. `config/logs.py` holds `fido2.server`'s
+  for an assertion), `webauthn/sign_count.py`, `webauthn/client_binary.py` (bytes a client
+  sends, read one way for both tabs). `config/logs.py` holds `fido2.server`'s
   logger at WARNING: fido2 logs credential IDs at INFO.
 - `storage/` (with `credential_artifacts.py`): every read-modify-write is compare-and-swap; a
   failed read raises `StorageReadError` (503), never a shorter list. **Read `docs/STORAGE.md`

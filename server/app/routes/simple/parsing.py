@@ -8,7 +8,7 @@ from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData
 
 from ...encoding import encode_base64url
-from ...webauthn import mldsa
+from ...webauthn import client_binary, mldsa
 from . import binary
 
 _AAGUID_SESSION_FIELD_PRECEDENCE = (
@@ -77,17 +77,17 @@ def _serialize_credential_for_session(entry: Mapping[str, Any]) -> dict[str, Any
     )
 
     if aaguid_value is not None:
-        aaguid_bytes = binary._decode_binary_value(aaguid_value)
+        aaguid_bytes = client_binary.read(aaguid_value, iterables=True)
         serialized["aaguid"] = encode_base64url(aaguid_bytes)
 
     if credential_id_value is not None:
-        credential_id_bytes = binary._decode_binary_value(credential_id_value)
+        credential_id_bytes = client_binary.read(credential_id_value, iterables=True)
         serialized["credentialId"] = (
             encode_base64url(credential_id_bytes)
         )
 
     if public_key_value is not None:
-        public_key_bytes = binary._decode_binary_value(public_key_value)
+        public_key_bytes = client_binary.read(public_key_value, iterables=True)
         serialized["publicKey"] = encode_base64url(public_key_bytes)
 
     return serialized
@@ -123,9 +123,9 @@ def _parse_client_credentials(
             if aaguid_raw is None or credential_id_raw is None or public_key_raw is None:
                 continue
 
-            aaguid_bytes = binary._decode_binary_value(aaguid_raw)
-            credential_id_bytes = binary._decode_binary_value(credential_id_raw)
-            public_key_bytes = binary._decode_binary_value(public_key_raw)
+            aaguid_bytes = client_binary.read(aaguid_raw, iterables=True)
+            credential_id_bytes = client_binary.read(credential_id_raw, iterables=True)
+            public_key_bytes = client_binary.read(public_key_raw, iterables=True)
 
             cose_key = CoseKey.parse(mldsa.with_raw_public_key(cbor.decode(public_key_bytes)))
 

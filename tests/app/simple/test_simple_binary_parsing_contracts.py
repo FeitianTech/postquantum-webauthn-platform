@@ -2,8 +2,8 @@ import base64
 
 import pytest
 
-from server.app.routes.simple import binary as simple_binary
 from server.app.routes.simple import parsing as simple_parsing
+from server.app.webauthn import client_binary
 
 
 def _b64url(data: bytes) -> str:
@@ -43,41 +43,41 @@ def _valid_credential_entry(**overrides):
 def test_decode_binary_value_decodes_base64url_string():
     raw = b"\x00\x01\xfe\xff"
 
-    assert simple_binary._decode_binary_value(_b64url(raw)) == raw
+    assert client_binary.read(_b64url(raw), iterables=True) == raw
 
 
 def test_decode_binary_value_decodes_standard_base64_string():
     raw = b"\xfb\xef\xff"
     encoded = base64.b64encode(raw).decode("ascii")
 
-    assert simple_binary._decode_binary_value(encoded) == raw
+    assert client_binary.read(encoded, iterables=True) == raw
 
 
 def test_decode_binary_value_falls_back_to_hex_when_base64_decoders_fail():
     # Separated or spaced hex cannot be base64, so it reaches the hex reading.
-    assert simple_binary._decode_binary_value("41 42 43") == b"ABC"
-    assert simple_binary._decode_binary_value("41:42:43") == b"ABC"
+    assert client_binary.read("41 42 43", iterables=True) == b"ABC"
+    assert client_binary.read("41:42:43", iterables=True) == b"ABC"
 
     # An unbroken run of hex digits can be valid base64 as well, and base64
     # still wins where it is: the precedence predates the strictness work and
     # is left alone so stored credential IDs keep decoding to the same bytes.
-    assert simple_binary._decode_binary_value("0000") == base64.b64decode("0000")
+    assert client_binary.read("0000", iterables=True) == base64.b64decode("0000")
 
     # "414243" is not canonical base64 -- its final quantum carries bits that
     # re-encode to something else -- so it is no longer accepted as base64 and
     # falls through to the hex reading it plainly is.
-    assert simple_binary._decode_binary_value("414243") == b"ABC"
+    assert client_binary.read("414243", iterables=True) == b"ABC"
 
 
 def test_decode_binary_value_decodes_iterable_of_ints():
-    assert simple_binary._decode_binary_value([65, 66, 67]) == b"ABC"
+    assert client_binary.read([65, 66, 67], iterables=True) == b"ABC"
 
 
 @pytest.mark.parametrize(
     "value,pattern",
     [
         (None, "missing binary value"),
-        ("   ", "empty string"),
+        ("   ", "empty binary value"),
         ("g$", "invalid binary value"),
         (1234, "unsupported binary value type"),
         (["A"], "invalid iterable value"),
@@ -85,7 +85,7 @@ def test_decode_binary_value_decodes_iterable_of_ints():
 )
 def test_decode_binary_value_rejects_invalid_inputs(value, pattern):
     with pytest.raises(ValueError, match=pattern):
-        simple_binary._decode_binary_value(value)
+        client_binary.read(value, iterables=True)
 
 
 def test_parse_client_credentials_returns_empty_for_non_list_input():

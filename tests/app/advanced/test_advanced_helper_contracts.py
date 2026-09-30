@@ -4,12 +4,11 @@ import base64
 
 import pytest
 
+from server.app import encoding
 from server.app.routes import advanced as advanced_module
-from server.app.routes import binary_helpers as shared_binary_helpers
-from server.app.routes.advanced import binary as advanced_binary
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.routes.advanced import summary as advanced_summary
-from server.app.webauthn import cose_algorithms
+from server.app.webauthn import client_binary, cose_algorithms
 
 
 def test_algorithm_name_normalization_lookup_and_coercion_matrix():
@@ -101,21 +100,21 @@ def test_optional_bool_flag_and_first_value_helpers():
 
 def test_base64_assertion_and_binary_extraction_helpers():
     encoded = base64.urlsafe_b64encode(b"abc").decode("ascii").rstrip("=")
-    assert advanced_binary._decode_base64url(encoded) == b"abc"
+    assert encoding.decode_base64url(encoded) == b"abc"
 
-    assert shared_binary_helpers.decode_base64url_bytes(encoded) == b"abc"
-    assert shared_binary_helpers.decode_base64url_bytes(b"xyz") == b"xyz"
-    assert shared_binary_helpers.decode_base64url_bytes("%%%") == b""
+    assert client_binary.decode_base64url_bytes(encoded) == b"abc"
+    assert client_binary.decode_base64url_bytes(b"xyz") == b"xyz"
+    assert client_binary.decode_base64url_bytes("%%%") == b""
 
-    assert shared_binary_helpers.extract_assertion_credential_id({"rawId": encoded}) == b"abc"
-    assert shared_binary_helpers.extract_assertion_credential_id({"id": b"id-bytes"}) == b"id-bytes"
+    assert client_binary.extract_assertion_credential_id({"rawId": encoded}) == b"abc"
+    assert client_binary.extract_assertion_credential_id({"id": b"id-bytes"}) == b"id-bytes"
     # Was b"" here and None on the simple side; the two share one helper now.
-    assert shared_binary_helpers.extract_assertion_credential_id({"rawId": "%%%"}) is None
+    assert client_binary.extract_assertion_credential_id({"rawId": "%%%"}) is None
 
-    assert advanced_binary._extract_binary_value({"$hex": "616263"}) == b"abc"
-    assert advanced_binary._extract_binary_value({"$base64": "YWJj"}) == b"abc"
-    assert advanced_binary._extract_binary_value({"$base64url": "YWJj"}) == b"abc"
-    assert advanced_binary._extract_binary_value("plain") == "plain"
+    assert client_binary.unwrap_request_value({"$hex": "616263"}) == b"abc"
+    assert client_binary.unwrap_request_value({"$base64": "YWJj"}) == b"abc"
+    assert client_binary.unwrap_request_value({"$base64url": "YWJj"}) == b"abc"
+    assert client_binary.unwrap_request_value("plain") == "plain"
 
 
 @pytest.mark.parametrize(

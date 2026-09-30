@@ -2,9 +2,8 @@ import base64
 
 import pytest
 
-from server.app.routes.advanced import binary as advanced_binary
 from server.app.routes.advanced import parsing as advanced_parsing
-from server.app.webauthn import cose_algorithms
+from server.app.webauthn import client_binary, cose_algorithms
 
 
 def _b64url(data: bytes) -> str:
@@ -43,35 +42,35 @@ def _valid_credential_entry(*, resident=None, properties=None, algorithm=None):
 
 def test_decode_client_binary_accepts_base64url_mapping_key():
     raw = b"\x00\x01\x02\xfa"
-    decoded = advanced_binary._decode_client_binary({"$base64url": _b64url(raw)})
+    decoded = client_binary.read({"$base64url": _b64url(raw)}, wrappers=True)
 
     assert decoded == raw
 
 
 def test_decode_client_binary_honors_explicit_hex_wrapper():
-    decoded = advanced_binary._decode_client_binary({"$hex": "0011223344556677"})
+    decoded = client_binary.read({"$hex": "0011223344556677"}, wrappers=True)
 
     assert decoded == bytes.fromhex("0011223344556677")
 
 
 def test_decode_client_binary_rejects_invalid_explicit_hex_wrapper():
     with pytest.raises(ValueError, match="invalid binary value"):
-        advanced_binary._decode_client_binary({"$hex": "zz"})
+        client_binary.read({"$hex": "zz"}, wrappers=True)
 
 
 def test_decode_client_binary_rejects_invalid_explicit_base64url_wrapper():
     with pytest.raises(ValueError, match="invalid binary value"):
-        advanced_binary._decode_client_binary({"$base64url": "%%%"})
+        client_binary.read({"$base64url": "%%%"}, wrappers=True)
 
 
 def test_decode_client_binary_rejects_invalid_string_value():
     with pytest.raises(ValueError, match="invalid binary value"):
-        advanced_binary._decode_client_binary("g$")
+        client_binary.read("g$", wrappers=True)
 
 
 def test_decode_client_binary_rejects_unsupported_input_type():
     with pytest.raises(ValueError, match="unsupported binary value type"):
-        advanced_binary._decode_client_binary(1234)
+        client_binary.read(1234, wrappers=True)
 
 
 def test_parse_client_supplied_credentials_skips_entries_missing_required_fields():
@@ -145,12 +144,12 @@ def test_parse_client_supplied_credentials_coerces_named_algorithm_identifier():
 
 def test_decode_client_binary_handles_none_bytes_and_empty_string_inputs():
     with pytest.raises(ValueError, match="missing binary value"):
-        advanced_binary._decode_client_binary(None)
+        client_binary.read(None, wrappers=True)
 
-    assert advanced_binary._decode_client_binary(b"\x00\x01\x02") == b"\x00\x01\x02"
+    assert client_binary.read(b"\x00\x01\x02", wrappers=True) == b"\x00\x01\x02"
 
     with pytest.raises(ValueError, match="empty binary value"):
-        advanced_binary._decode_client_binary("   ")
+        client_binary.read("   ", wrappers=True)
 
 
 def test_parse_client_supplied_credentials_ignores_non_list_and_non_mapping_entries():

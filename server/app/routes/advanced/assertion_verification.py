@@ -16,12 +16,12 @@ from fido2.cose import CoseKey, UnsupportedKey
 from fido2.webauthn import AuthenticatorData
 from flask import jsonify, session
 
+from ... import encoding
 from ...config import relying_party
 from ...encoding import encode_base64url
-from ...webauthn import assertion_hash, pqc
+from ...webauthn import assertion_hash, client_binary, pqc
 from ...webauthn.sign_count import sign_count_status
-from .. import binary_helpers
-from . import algorithms, binary
+from . import algorithms
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ def _verification_failure(exc: Exception, response: Any, lookup: Mapping[bytes, 
     """The 400 for an assertion fido2 refused: UNSUPPORTED_ALGORITHM or VERIFICATION_FAILED."""
 
     response_mapping = response if isinstance(response, Mapping) else {}
-    credential_id = binary_helpers.extract_assertion_credential_id(response_mapping)
+    credential_id = client_binary.extract_assertion_credential_id(response_mapping)
     record = lookup.get(credential_id) if credential_id else None
 
     # Read the algorithm from the credential's own COSE key, not from
@@ -145,7 +145,7 @@ def _asserted_sign_count(response: Any) -> int | None:
         auth_data_b64 = credential_response.get("authenticatorData")
         if isinstance(auth_data_b64, str):
             try:
-                auth_data_bytes = binary._decode_base64url(auth_data_b64)
+                auth_data_bytes = encoding.decode_base64url(auth_data_b64)
                 return AuthenticatorData(auth_data_bytes).counter
             except Exception:
                 return None

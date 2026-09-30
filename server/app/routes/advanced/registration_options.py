@@ -20,9 +20,9 @@ from fido2.webauthn import (
 from flask import jsonify
 
 from ...config import relying_party
+from ...webauthn import client_binary
 from ...webauthn.attachments import normalize_attachment, resolve_effective_attachments
 from ...webauthn.attestation.aaguid import describe_cred_protect
-from . import binary
 
 
 class BeginRequest(NamedTuple):
@@ -68,7 +68,7 @@ def parse_begin_request(data: Any) -> tuple[BeginRequest | None, Any]:
     user_id_value = user_info.get("id", "")
     if user_id_value:
         try:
-            user_id_bytes = binary._decode_request_binary(user_id_value)
+            user_id_bytes = client_binary.read_request_field(user_id_value)
         except (ValueError, TypeError) as exc:
             return None, (jsonify({"error": f"Invalid user ID format: {exc}"}), 400)
     else:
@@ -78,7 +78,7 @@ def parse_begin_request(data: Any) -> tuple[BeginRequest | None, Any]:
     challenge_bytes = None
     if challenge_value:
         try:
-            challenge_bytes = binary._decode_request_binary(challenge_value)
+            challenge_bytes = client_binary.read_request_field(challenge_value)
         except (ValueError, TypeError) as exc:
             return None, (jsonify({"error": f"Invalid challenge format: {exc}"}), 400)
 
@@ -158,7 +158,7 @@ def build_exclude_list(public_key: Mapping[str, Any]) -> list[Any]:
     if isinstance(exclude_credentials, list):
         for exclude_cred in exclude_credentials:
             if isinstance(exclude_cred, dict) and exclude_cred.get("type") == "public-key":
-                cred_id = binary._decode_request_binary(exclude_cred.get("id", ""))
+                cred_id = client_binary.read_request_field(exclude_cred.get("id", ""))
                 if cred_id:
                     exclude_list.append(
                         PublicKeyCredentialDescriptor(
@@ -176,9 +176,9 @@ def _prf_extension(value: Any) -> Any:
     processed_eval = {}
     if isinstance(prf_eval, dict):
         if "first" in prf_eval:
-            processed_eval["first"] = binary._decode_request_binary(prf_eval["first"])
+            processed_eval["first"] = client_binary.read_request_field(prf_eval["first"])
         if "second" in prf_eval:
-            processed_eval["second"] = binary._decode_request_binary(prf_eval["second"])
+            processed_eval["second"] = client_binary.read_request_field(prf_eval["second"])
     return {"eval": processed_eval} if processed_eval else value
 
 

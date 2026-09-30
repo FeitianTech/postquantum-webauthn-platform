@@ -140,13 +140,6 @@ def advanced_authentication():
 
 
 @pytest.fixture
-def advanced_binary():
-    """The submodule that decodes base64url and extracts binary values."""
-
-    return _advanced_fragment("binary")
-
-
-@pytest.fixture
 def advanced_constants():
     """The submodule that holds the COSE name tables and heavy-field key sets."""
 
@@ -189,13 +182,6 @@ def simple_authentication():
     """The submodule that serves the simple authenticate bodies and the sign-count check."""
 
     return _simple_fragment("authentication")
-
-
-@pytest.fixture
-def simple_binary():
-    """The submodule that decodes the simple flow's binary values."""
-
-    return _simple_fragment("binary")
 
 
 @pytest.fixture

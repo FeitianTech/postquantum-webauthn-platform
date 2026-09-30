@@ -8,10 +8,10 @@ from server.app import config as config_module
 from server.app import visitor_session
 from server.app.config import relying_party
 from server.app.routes import advanced as advanced_module
-from server.app.routes import binary_helpers as shared_binary_helpers
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import algorithms as algorithms_module
 from server.app.routes.advanced import parsing as advanced_parsing
+from server.app.webauthn import client_binary
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
@@ -63,7 +63,7 @@ def _install_register_complete_defaults(monkeypatch, advanced_module, attestatio
 
 def test_helper_none_and_non_string_decode_paths():
     assert advanced_parsing._coerce_optional_bool(None) is None
-    assert shared_binary_helpers.decode_base64url_bytes(object()) == b""
+    assert client_binary.decode_base64url_bytes(object()) == b""
 
 
 @pytest.mark.parametrize(

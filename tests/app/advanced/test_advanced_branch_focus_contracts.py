@@ -9,8 +9,7 @@ from server.app import config as config_module
 from server.app import visitor_session
 from server.app.config import relying_party
 from server.app.routes import advanced as advanced_module
-from server.app.routes.advanced import binary as advanced_binary
-from server.app.webauthn import cose_algorithms
+from server.app.webauthn import client_binary, cose_algorithms
 from tests.app.entry_app import entry_app
 
 
@@ -491,13 +490,13 @@ def test_advanced_authenticate_complete_error_path_uses_failed_id_fallback_extra
 
 
 def test_advanced_helper_binary_and_algorithm_edge_fallbacks():
-    assert advanced_binary._decode_client_binary({"base64": base64.b64encode(b"abc").decode("ascii")}) == b"abc"
+    assert client_binary.read({"base64": base64.b64encode(b"abc").decode("ascii")}, wrappers=True) == b"abc"
 
     with pytest.raises(ValueError, match="empty binary value"):
-        advanced_binary._decode_client_binary({"hex": "  "})
+        client_binary.read({"hex": "  "}, wrappers=True)
 
     with pytest.raises(ValueError, match="empty binary value"):
-        advanced_binary._decode_client_binary({"base64": "   "})
+        client_binary.read({"base64": "   "}, wrappers=True)
 
     assert cose_algorithms.coerce_cose_algorithm(float("inf")) is None
     assert cose_algorithms.coerce_cose_algorithm(float("-inf")) is None

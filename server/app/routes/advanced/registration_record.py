@@ -20,9 +20,8 @@ from fido2 import cbor
 from ... import json_values
 from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials
-from ...webauthn import cose_algorithms, pqc
+from ...webauthn import client_binary, cose_algorithms, pqc
 from ...webauthn.attestation import aaguid as attestation_aaguid
-from . import binary
 
 
 def resolve_user_handle(user_info: Mapping[str, Any], username: str) -> Any:
@@ -31,7 +30,7 @@ def resolve_user_handle(user_info: Mapping[str, Any], username: str) -> Any:
     user_id_value = user_info.get("id", "")
     if user_id_value:
         try:
-            return binary._decode_request_binary(user_id_value)
+            return client_binary.read_request_field(user_id_value)
         except (ValueError, TypeError):
             return username.encode("utf-8")
     return username.encode("utf-8")

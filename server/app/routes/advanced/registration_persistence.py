@@ -15,7 +15,7 @@ from typing import Any
 from flask import jsonify
 
 from ...storage import credential_artifacts, github_mirror
-from .. import binary_helpers
+from ...webauthn import client_binary
 from . import summary
 
 logger = logging.getLogger(__name__)
@@ -77,7 +77,7 @@ def _record_registration_event(
         rp_id=resolved_rp_id,
         aaguid=aaguid_bytes or None,
         device_name_mds=metadata_description,
-        attestation_object=binary_helpers.decode_base64url_bytes(attestation_object_b64),
+        attestation_object=client_binary.decode_base64url_bytes(attestation_object_b64),
     )
 
     github_mirror.record_registration_event(event)

@@ -14,32 +14,16 @@ cover the four ways an open-coded decoder used to accept malformed input:
 from __future__ import annotations
 
 import base64
-import importlib
 
 import pytest
 
 from server.app.decoder.decode import binary_text
 from server.app.decoder.decode import text as decode_text
-from server.app.routes import binary_helpers
+from server.app.webauthn import client_binary
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.entry_app import entry_app
 
 PLAIN_TEXT = "Hello, this is plain text!"
-
-
-@pytest.fixture()
-def shared_binary_helpers():
-    return importlib.import_module("server.app.routes.binary_helpers")
-
-
-@pytest.fixture()
-def advanced_binary():
-    return importlib.import_module("server.app.routes.advanced.binary")
-
-
-@pytest.fixture()
-def simple_binary():
-    return importlib.import_module("server.app.routes.simple.binary")
 
 
 def test_decoder_rejects_plain_english_text():
@@ -80,37 +64,34 @@ def test_decoder_reports_encoding_ambiguity_rather_than_guessing():
     assert urlsafe.ambiguous is False
 
 
-def test_advanced_client_binary_rejects_plain_text(advanced_binary):
+def test_advanced_client_binary_rejects_plain_text():
     with pytest.raises(ValueError):
-        advanced_binary._decode_client_binary(PLAIN_TEXT)
+        client_binary.read(PLAIN_TEXT, wrappers=True)
 
 
-def test_simple_binary_value_rejects_plain_text(simple_binary):
+def test_simple_binary_value_rejects_plain_text():
     with pytest.raises(ValueError):
-        simple_binary._decode_binary_value(PLAIN_TEXT)
+        client_binary.read(PLAIN_TEXT, iterables=True)
 
 
-def test_base64url_helpers_do_not_return_garbage_for_plain_text(shared_binary_helpers):
+def test_base64url_helpers_do_not_return_garbage_for_plain_text():
     """The credential-ID intake path must return nothing, not junk bytes."""
 
-    assert shared_binary_helpers.decode_base64url_bytes(PLAIN_TEXT) == b""
-    assert shared_binary_helpers.extract_assertion_credential_id({"rawId": PLAIN_TEXT}) is None
-
-    assert binary_helpers.decode_base64url_bytes(PLAIN_TEXT) == b""
-    assert binary_helpers.extract_assertion_credential_id({"rawId": PLAIN_TEXT}) is None
+    assert client_binary.decode_base64url_bytes(PLAIN_TEXT) == b""
+    assert client_binary.extract_assertion_credential_id({"rawId": PLAIN_TEXT}) is None
 
 
-def test_credential_intake_reads_both_base64_alphabets_exactly(advanced_binary, simple_binary):
+def test_credential_intake_reads_both_base64_alphabets_exactly():
     raw = b"\xfb\xef\xbe\xff\xee\xdd"
     standard = base64.b64encode(raw).decode("ascii").rstrip("=")
     urlsafe = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
     assert "+" in standard or "/" in standard
     assert "-" in urlsafe or "_" in urlsafe
 
-    assert advanced_binary._decode_client_binary(standard) == raw
-    assert advanced_binary._decode_client_binary(urlsafe) == raw
-    assert simple_binary._decode_binary_value(standard) == raw
-    assert simple_binary._decode_binary_value(urlsafe) == raw
+    assert client_binary.read(standard, wrappers=True) == raw
+    assert client_binary.read(urlsafe, wrappers=True) == raw
+    assert client_binary.read(standard, iterables=True) == raw
+    assert client_binary.read(urlsafe, iterables=True) == raw
 
 
 def test_mds_certificate_route_decodes_base64url_without_truncation(monkeypatch):
