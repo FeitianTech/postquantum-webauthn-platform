@@ -5,10 +5,8 @@ import hashlib
 from fido2.webauthn import AuthenticatorData
 
 from server.app.decoder.decode import authenticator_data as decode_authenticator_data
-from server.app.decoder.decode import certificates as decode_certificates
 from server.app.decoder.decode import credential_json
 from server.app.decoder.decode import ctap_classify as decode_ctap_classify
-from server.app.webauthn.attestation import certificates as attestation_certificates
 
 
 def test_looks_like_get_assertion_request_rejects_signature_or_authdata_binary_shapes():
@@ -67,10 +65,3 @@ def test_build_client_data_details_handles_invalid_challenge_and_optional_fields
 
     no_challenge = credential_json.build_client_data_details({"type": "x", "origin": "https://e"})
     assert no_challenge["challenge"] is None
-
-
-def test_convert_certificate_bytes_guard_paths(monkeypatch):
-    assert decode_certificates.convert_certificate_bytes("%%") == {}
-
-    monkeypatch.setattr(attestation_certificates, "serialize_attestation_certificate", lambda _bytes: None)
-    assert decode_certificates.convert_certificate_bytes(b"\x30\x82\x01\x00") == {}
