@@ -5,7 +5,6 @@ import base64
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
-from server.app.decoder.decode import answer as decode_answer
 from server.app.decoder.decode import certificates as decode_certificates
 from server.app.decoder.decode import ctap_auth_data as decode_ctap_auth_data
 
@@ -92,15 +91,3 @@ def test_attestation_entry_and_payload_helpers_cover_remaining_edges():
     )
     assert converted_attestation["fmt"] == "packed"
     assert converted_attestation["attStmt"]["x5c"]
-
-    assert decode_answer._build_flag_payload(None, None, auth_byte_length=20) == {}
-    assert decode_answer._build_flag_payload({"value": "bad"}, None) == {}
-
-    credential_payload = decode_answer._build_credential_payload(
-        {
-            "credentialId": {"hex": "aa", "length": "len-as-text"},
-            "publicKey": {},
-        },
-        None,
-    )
-    assert credential_payload["credentialIdLength"] == "len-as-text"

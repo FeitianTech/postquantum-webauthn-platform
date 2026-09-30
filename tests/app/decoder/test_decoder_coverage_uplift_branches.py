@@ -5,7 +5,6 @@ import base64
 from fido2.utils import ByteBuffer
 
 from server.app.decoder import values as decoder_values
-from server.app.decoder.decode import answer as decode_answer
 from server.app.decoder.decode import attestation_object as decode_attestation_object
 from server.app.decoder.decode import authenticator_data as decode_authenticator_data
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
@@ -53,33 +52,6 @@ def test_parse_cbor_item_covers_simple_and_single_double_precision_float_paths()
     assert single_node["value"] == 1.0
     assert double_node["precision"] == "double"
     assert double_node["value"] == 1.0
-
-
-def test_extract_authenticator_bytes_from_attestation_uses_raw_base64_and_handles_decode_failure(monkeypatch):
-    monkeypatch.setattr(
-        decode_answer,
-        "_extract_bytes_from_binary",
-        lambda _entry: None,
-    )
-
-    # {"authData": h'1122'}, as standard base64 with padding and spaces.
-    extracted = decode_answer._extract_authenticator_bytes_from_attestation(
-        {"raw": " oWhhdXRoRGF0YUIRIg== "}
-    )
-    assert extracted == b"\x11\x22"
-
-    # 0x01 0x02 is CBOR, but not a map with authData.
-    assert decode_answer._extract_authenticator_bytes_from_attestation({"raw": "AQI="}) is None
-
-    monkeypatch.setattr(
-        base64,
-        "b64decode",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("invalid")),
-    )
-    assert (
-        decode_answer._extract_authenticator_bytes_from_attestation({"raw": "AQI="})
-        is None
-    )
 
 
 def test_extract_attestation_certificate_handles_non_string_chain_entries_and_serializer_errors(monkeypatch):

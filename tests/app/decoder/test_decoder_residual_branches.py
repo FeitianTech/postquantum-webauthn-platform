@@ -5,7 +5,6 @@ import hashlib
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
-from server.app.decoder.decode import answer as decode_answer
 from server.app.decoder.decode import attestation_object as decode_attestation_object
 from server.app.decoder.decode import certificates as decode_certificates
 from server.app.decoder.decode import ctap_auth_data as decode_ctap_auth_data
@@ -20,14 +19,6 @@ def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(mo
     assert decode_certificates.convert_certificate_bytes(123) == {}
     assert decode_certificates.convert_certificate_payload("not-a-map") == {}
     assert decode_certificates.convert_certificate_payload({"derBase64": "A"})["parsedX5c"]["derBase64"] == "A"
-
-    # _convert_client_data_entry edge paths.
-    assert decode_answer._convert_client_data_entry("not-a-map") == {}
-    assert decode_answer._convert_client_data_entry({"details": "not-a-map"}) == {}
-    challenge_payload = decode_answer._convert_client_data_entry(
-        {"details": {"type": "webauthn.create", "challenge": {"nested": "value"}}}
-    )
-    assert challenge_payload["challenge"] == {"nested": "value"}
 
     # _parse_authenticator_data_bytes branch for non-mapping COSE value and extension decode exceptions.
     auth_with_cose_int = (

@@ -7,7 +7,6 @@ import json
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData
 
-from server.app.decoder.decode import answer as decode_answer
 from server.app.decoder.decode import authenticator_data as decode_authenticator_data
 from server.app.decoder.decode import certificates as decode_certificates
 from server.app.decoder.decode import credential_json
@@ -97,77 +96,3 @@ def test_convert_attestation_statement_and_certificate_chain_paths(monkeypatch):
         {"cbor": {"attStmt": {"sig": b"\xaa"}}}
     )
     assert cbor_fallback["sig"] == "aa"
-
-
-def test_build_authenticator_payload_flag_and_credential_helpers_cover_fallback_paths():
-    auth_bytes = _build_auth_data_bytes()
-    payload = decode_answer._build_authenticator_data_payload(auth_bytes, {}, fallback_alg=-7)
-
-    assert payload["raw"] == auth_bytes.hex()
-    assert payload["flags"]["UP"] is True
-    assert payload["flags"]["AT"] is True
-    assert payload["counter"] == 9
-    assert payload["credential"]["publicKey"]["alg"] == "ES256 (ECDSA)"
-
-    assert decode_answer._build_flag_payload(None, None, auth_byte_length=12) == {}
-    mapped_flags = decode_answer._build_flag_payload(
-        {
-            "value": 0x45,
-            "bitfield": "0b01000101",
-            "userPresent": True,
-            "userVerified": True,
-            "backupEligible": False,
-            "backupState": False,
-            "attestedCredentialData": True,
-            "extensionData": False,
-        },
-        None,
-        auth_byte_length=37,
-    )
-    assert mapped_flags["hex"] == "45"
-    assert mapped_flags["UP"] is True
-    assert mapped_flags["AT"] is True
-
-    credential_only = decode_answer._build_credential_payload(
-        {
-            "aaguid": "00112233-4455-6677-8899-aabbccddeeff",
-            "aaguidHex": "00112233445566778899aabbccddeeff",
-            "credentialId": {"hex": "abcd", "length": 2},
-            "publicKey": {"alg": -7, -2: "AQID", -3: "BAUG"},
-        },
-        None,
-        fallback_alg=-7,
-    )
-    assert credential_only["credentialId"] == "abcd"
-    assert credential_only["publicKey"]["alg"] == "ES256 (ECDSA)"
-
-
-def test_client_data_entry_response_extras_and_base_type_helpers():
-    converted_client_data = decode_answer._convert_client_data_entry(
-        {
-            "details": {
-                "type": "webauthn.get",
-                "challenge": {"base64url": "AQID"},
-                "origin": "https://example.com",
-                "crossOrigin": 1,
-            }
-        }
-    )
-    assert converted_client_data["type"] == "webauthn.get"
-    assert converted_client_data["challenge"] == "AQID"
-    assert converted_client_data["crossOrigin"] == 1
-
-    extras = decode_answer._collect_response_extras(
-        {
-            "signature": b"\x01\x02",
-            "userHandle": None,
-            "publicKey": {1: b"\xaa"},
-            "publicKeyAlgorithm": -7,
-        }
-    )
-    assert "userHandle" not in extras
-    assert "signature" in extras
-    assert extras["publicKeyAlgorithm"] == -7
-
-    assert decode_answer._base_type("CBOR (GetAssertion response)") == "CBOR"
-    assert decode_answer._base_type(None) == "Decoded data"

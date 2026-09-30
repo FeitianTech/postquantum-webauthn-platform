@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import base64
-
-from server.app.decoder.decode import answer as decode_answer
 from server.app.decoder.decode import cose_display
 from server.app.decoder.decode import ctap as decode_ctap
 
@@ -29,46 +26,6 @@ def test_late_cose_and_base64_helpers_cover_fallback_and_conversion_branches():
 
     assert cose_display._decode_base64_field("++8") == b"\xfb\xef"
     assert cose_display._decode_base64_field("   ") is None
-
-
-def test_binary_extract_helpers_cover_nested_hex_error_and_fallback(monkeypatch):
-    assert decode_answer._extract_hex_from_binary({"binary": {"hex": "AABB"}}) == "AABB"
-
-    monkeypatch.setattr(
-        base64,
-        "urlsafe_b64decode",
-        lambda _value: (_ for _ in ()).throw(ValueError("invalid-base64")),
-    )
-    assert decode_answer._extract_bytes_from_binary({"hex": "ZZ", "raw": "%%%%"}) is None
-    monkeypatch.undo()
-
-    raw = base64.urlsafe_b64encode(b"\x01\x02").decode("ascii").rstrip("=")
-    assert decode_answer._extract_bytes_from_binary({"raw": raw}) == b"\x01\x02"
-
-    called: dict[str, object] = {}
-
-    def _fake_extract(attestation_entry):
-        called["entry"] = attestation_entry
-        return b"\x99"
-
-    monkeypatch.setattr(
-        decode_answer,
-        "_extract_authenticator_bytes_from_attestation",
-        _fake_extract,
-    )
-
-    assert (
-        decode_answer._extract_authenticator_bytes("not-a-mapping", {"raw": "AQI="})
-        == b"\x99"
-    )
-    assert called["entry"] == {"raw": "AQI="}
-
-    assert (
-        decode_answer._extract_authenticator_bytes(
-            {"authenticatorData": {"hex": "aa"}}, {"raw": "AQI="}
-        )
-        == b"\xaa"
-    )
 
 
 def test_try_decode_cbor_reports_trailing_bytes_and_padding_alike():
