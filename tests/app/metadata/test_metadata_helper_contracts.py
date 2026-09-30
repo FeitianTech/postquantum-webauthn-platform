@@ -8,10 +8,10 @@ from flask import g, session
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
+from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
 from server.app.webauthn.metadata import effective as metadata_effective
-from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import verifier as metadata_verifier
 from tests.app.entry_app import entry_app
 
@@ -38,7 +38,7 @@ def _entry_payload(*, aaguid: str, description: str):
 
 
 def test_metadata_normalisation_helpers_cover_status_identifiers_and_defaults():
-    reports = metadata_entries._normalise_status_reports(
+    reports = mds_entries._normalise_status_reports(
         {
             "statusReports": [
                 {"status": "NOT_FIDO_CERTIFIED"},
@@ -52,12 +52,12 @@ def test_metadata_normalisation_helpers_cover_status_identifiers_and_defaults():
         {"status": "FIDO_CERTIFIED"},
     ]
 
-    identifiers = metadata_entries._normalise_attestation_identifiers(
+    identifiers = mds_entries._normalise_attestation_identifiers(
         {"attestationCertificateKeyIdentifiers": [" id-1 ", "", 1, "id-2"]}
     )
     assert identifiers == ["id-1", "id-2"]
 
-    statement, legal = metadata_entries._normalise_metadata_statement(
+    statement, legal = mds_entries._normalise_metadata_statement(
         {
             "legalHeader": " Demo legal ",
             "metadataStatement": {
@@ -94,17 +94,17 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
     base_entry_other = MetadataBlobPayloadEntry.from_dict(base_payload_other)
 
     assert (
-        metadata_entries._normalise_aaguid(" AAAA-BBBB-CCCC-DDDD-EEEEFFFF0000 ")
+        mds_entries._normalise_aaguid(" AAAA-BBBB-CCCC-DDDD-EEEEFFFF0000 ")
         == "aaaabbbbccccddddeeeeffff0000"
     )
-    assert metadata_entries._extract_entry_aaguid(session_entry) is None
+    assert mds_entries._extract_entry_aaguid(session_entry) is None
 
     class _MappingBackedEntry:
         aaguid = None
         metadata_statement = {"aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}
 
     assert (
-        metadata_entries._extract_entry_aaguid(_MappingBackedEntry())
+        mds_entries._extract_entry_aaguid(_MappingBackedEntry())
         == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     )
 
@@ -128,7 +128,7 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
     monkeypatch.setattr(
         entries,
         "_extract_entry_aaguid",
-        lambda entry: metadata_entries._normalise_aaguid(str(getattr(entry, "aaguid", ""))),
+        lambda entry: mds_entries._normalise_aaguid(str(getattr(entry, "aaguid", ""))),
     )
 
     merged = metadata_verifier._merge_metadata(base_metadata, [session_item])

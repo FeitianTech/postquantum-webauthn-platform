@@ -22,12 +22,12 @@ from flask import (
 from .. import encoding, visitor_session
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
 from ..mds import cache as mds_cache
+from ..mds import entries as mds_entries
 from ..mds import files as mds_files
 from ..mds import provisioning as mds_provisioning
 from ..mds import uploads as mds_uploads
 from ..webauthn.attestation import certificates as attestation_certificates
 from ..webauthn.metadata import effective as metadata_effective
-from ..webauthn.metadata import entries as metadata_entries
 from ..webauthn.metadata import uploads as metadata_uploads
 from . import assets
 
@@ -221,7 +221,7 @@ def api_upload_custom_metadata():
             continue
 
         try:
-            entry_payloads = metadata_entries.expand_metadata_entry_payloads(payload)
+            entry_payloads = mds_entries.expand_metadata_entry_payloads(payload)
         except (TypeError, ValueError) as exc:
             errors.append(f"{trimmed}: {exc}")
             continue

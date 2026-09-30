@@ -6,10 +6,10 @@ import pytest
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
+from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
 from server.app.routes import mds as mds_routes
 from server.app.webauthn.metadata import effective as metadata_effective
-from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import uploads as metadata_uploads
 from tests.app.entry_app import entry_app
 
@@ -165,7 +165,7 @@ def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
 def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
-        metadata_entries,
+        mds_entries,
         "expand_metadata_entry_payloads",
         lambda payload: [payload],
     )

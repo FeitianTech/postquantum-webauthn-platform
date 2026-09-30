@@ -8,7 +8,20 @@ from typing import Any
 
 from fido2.mds3 import MetadataBlobPayloadEntry
 
-from .state import _METADATA_STATEMENT_REQUIRED_DEFAULTS
+# What an uploaded statement is given for a required member it lacks.
+_METADATA_STATEMENT_REQUIRED_DEFAULTS: Mapping[str, Any] = {
+    "description": "",
+    "authenticatorVersion": 0,
+    "schema": 3,
+    "upv": [],
+    "attestationTypes": [],
+    "userVerificationDetails": [],
+    "keyProtection": [],
+    "matcherProtection": [],
+    "attachmentHint": [],
+    "tcDisplay": [],
+    "attestationRootCertificates": [],
+}
 
 
 def _clone_json_value(value: Any) -> Any:

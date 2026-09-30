@@ -13,8 +13,8 @@ from fido2.mds3 import (
 from flask import g, has_request_context
 
 from ...mds import cache as mds_cache
+from ...mds import entries as mds_entries
 from ...mds import uploads as mds_uploads
-from . import entries
 
 if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed
     from .sessions import SessionMetadataItem
@@ -29,7 +29,7 @@ def _merge_metadata(
 
     for item in session_items:
         entry = item.entry
-        aaguid = entries._extract_entry_aaguid(entry)
+        aaguid = mds_entries._extract_entry_aaguid(entry)
         if aaguid and aaguid in seen_aaguids:
             continue
         if aaguid:
@@ -39,7 +39,7 @@ def _merge_metadata(
     base_entries: list[MetadataBlobPayloadEntry] = []
     if base_metadata is not None:
         for entry in base_metadata.entries:
-            aaguid = entries._extract_entry_aaguid(entry)
+            aaguid = mds_entries._extract_entry_aaguid(entry)
             if aaguid and aaguid in seen_aaguids:
                 continue
             base_entries.append(entry)

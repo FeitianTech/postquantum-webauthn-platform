@@ -8,11 +8,11 @@ import pytest
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
+from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
 from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import effective as metadata_effective
-from server.app.webauthn.metadata import entries as metadata_entries
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ def test_metadata_validation_and_info_loader_residual_guards(metadata_module, mo
 
 
 def test_metadata_build_and_expand_residual_paths(metadata_module):
-    entry, legal_header, payload = metadata_entries.build_metadata_entry_components(
+    entry, legal_header, payload = mds_entries.build_metadata_entry_components(
         {
             "timeOfLastStatusChange": " 2026-01-01 ",
             "attestationCertificateKeyIdentifiers": ["ab"],
@@ -56,7 +56,7 @@ def test_metadata_build_and_expand_residual_paths(metadata_module):
     assert entry["metadataStatement"]["description"] == "demo"
 
     raw_payload = {"metadataStatement": {"description": "single-entry"}}
-    assert metadata_entries.expand_metadata_entry_payloads(raw_payload) == [raw_payload]
+    assert mds_entries.expand_metadata_entry_payloads(raw_payload) == [raw_payload]
 
 
 def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_module, monkeypatch, sessions, entries, session_store):

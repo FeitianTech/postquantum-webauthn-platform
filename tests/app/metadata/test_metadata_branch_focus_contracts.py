@@ -13,11 +13,11 @@ from flask import ctx, g, session
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
+from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
 from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import effective as metadata_effective
-from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import uploads as metadata_uploads
 from server.app.webauthn.metadata import verifier as metadata_verifier
 from tests.app.entry_app import entry_app
@@ -224,7 +224,7 @@ def test_upload_and_normalisation_error_edges(metadata_module, monkeypatch, uplo
 
 
 def test_build_expand_extract_and_merge_error_branches(metadata_module, monkeypatch, entries):
-    entry, _, payload = metadata_entries.build_metadata_entry_components(
+    entry, _, payload = mds_entries.build_metadata_entry_components(
         {
             "timeOfLastStatusChange": "   ",
             "attestationCertificateKeyIdentifiers": ["   ", 42],
@@ -252,20 +252,20 @@ def test_build_expand_extract_and_merge_error_branches(metadata_module, monkeypa
     assert entry["metadataStatement"]["description"] == "Demo"
 
     with pytest.raises(TypeError, match="must be an object"):
-        metadata_entries.expand_metadata_entry_payloads("not-a-mapping")
+        mds_entries.expand_metadata_entry_payloads("not-a-mapping")
 
     monkeypatch.setattr(entries, "_clone_json_value", lambda _value: None)
     with pytest.raises(ValueError, match="could not be cloned"):
-        metadata_entries.expand_metadata_entry_payloads({"entries": [{"metadataStatement": {"description": "x"}}]})
+        mds_entries.expand_metadata_entry_payloads({"entries": [{"metadataStatement": {"description": "x"}}]})
 
-    assert metadata_entries._normalise_aaguid(123) is None
+    assert mds_entries._normalise_aaguid(123) is None
 
     class _NoMappingEntry:
         aaguid = None
         metadata_statement = None
         metadataStatement = "not-a-mapping"
 
-    assert metadata_entries._extract_entry_aaguid(_NoMappingEntry()) is None
+    assert mds_entries._extract_entry_aaguid(_NoMappingEntry()) is None
 
     session_entry_one = MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
     session_entry_two = MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
@@ -292,7 +292,7 @@ def test_build_expand_extract_and_merge_error_branches(metadata_module, monkeypa
     monkeypatch.setattr(
         entries,
         "_extract_entry_aaguid",
-        lambda value: metadata_entries._normalise_aaguid(str(getattr(value, "aaguid", ""))),
+        lambda value: mds_entries._normalise_aaguid(str(getattr(value, "aaguid", ""))),
     )
 
     merged = metadata_verifier._merge_metadata(None, [item_one, item_two])

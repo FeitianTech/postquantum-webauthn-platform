@@ -6,21 +6,4 @@ session's settings and cleanup are ``server.app.visitor_session``'s.
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any
-
 _METADATA_REPO_FOLDER = "metadata"
-
-_METADATA_STATEMENT_REQUIRED_DEFAULTS: Mapping[str, Any] = {
-    "description": "",
-    "authenticatorVersion": 0,
-    "schema": 3,
-    "upv": [],
-    "attestationTypes": [],
-    "userVerificationDetails": [],
-    "keyProtection": [],
-    "matcherProtection": [],
-    "attachmentHint": [],
-    "tcDisplay": [],
-    "attestationRootCertificates": [],
-}

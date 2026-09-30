@@ -8,10 +8,10 @@ from fido2.mds3 import MetadataBlobPayloadEntry
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
+from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
 from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import effective as metadata_effective
-from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import uploads as metadata_uploads
 from server.app.webauthn.metadata import verifier as metadata_verifier
 
@@ -98,8 +98,8 @@ def test_load_session_metadata_info_and_clone_helpers(metadata_module, monkeypat
     )
     assert mds_uploads._load_session_metadata_info("session", "entry.meta.json") == {}
 
-    assert metadata_entries._clone_json_value({"a": [1, 2]}) == {"a": [1, 2]}
-    assert metadata_entries._clone_json_value(object()) is None
+    assert mds_entries._clone_json_value({"a": [1, 2]}) == {"a": [1, 2]}
+    assert mds_entries._clone_json_value(object()) is None
 
 
 def test_build_metadata_entry_components_and_expand_payloads(metadata_module):
@@ -112,7 +112,7 @@ def test_build_metadata_entry_components_and_expand_payloads(metadata_module):
         "statusReports": [{"status": "NOT_FIDO_CERTIFIED"}],
     }
 
-    entry, legal_header, payload = metadata_entries.build_metadata_entry_components(raw)
+    entry, legal_header, payload = mds_entries.build_metadata_entry_components(raw)
 
     assert legal_header == "Demo legal"
     assert payload["metadataStatement"]["description"] == "Demo authenticator"
@@ -120,7 +120,7 @@ def test_build_metadata_entry_components_and_expand_payloads(metadata_module):
     assert payload["statusReports"][0]["status"] == "NOT_FIDO_CERTIFIED"
     assert entry["metadataStatement"]["description"] == "Demo authenticator"
 
-    expanded = metadata_entries.expand_metadata_entry_payloads(
+    expanded = mds_entries.expand_metadata_entry_payloads(
         {
             "legalHeader": "Bulk legal",
             "entries": [
@@ -133,10 +133,10 @@ def test_build_metadata_entry_components_and_expand_payloads(metadata_module):
     assert all(item.get("legalHeader") == "Bulk legal" for item in expanded)
 
     with pytest.raises(ValueError, match="does not contain any entries"):
-        metadata_entries.expand_metadata_entry_payloads({"entries": []})
+        mds_entries.expand_metadata_entry_payloads({"entries": []})
 
     with pytest.raises(ValueError, match="is not a JSON object"):
-        metadata_entries.expand_metadata_entry_payloads({"entries": ["bad-entry"]})
+        mds_entries.expand_metadata_entry_payloads({"entries": ["bad-entry"]})
 
 
 def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_module, monkeypatch, sessions, effective):

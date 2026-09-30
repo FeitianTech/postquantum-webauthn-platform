@@ -38,7 +38,7 @@ def sessions():
 def entries():
     """The fragment that defines the entry payload helpers."""
 
-    return importlib.import_module("server.app.webauthn.metadata.entries")
+    return importlib.import_module("server.app.mds.entries")
 
 
 @pytest.fixture

@@ -18,7 +18,7 @@ from fido2.mds3 import MetadataBlobPayloadEntry
 
 from .. import visitor_session
 from ..storage import session_metadata
-from ..webauthn.metadata import entries
+from . import entries
 
 logger = logging.getLogger(__name__)
 
