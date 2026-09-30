@@ -2,7 +2,8 @@ import base64
 
 import pytest
 
-from server.app.routes import simple as simple_module
+from server.app.routes.simple import binary as simple_binary
+from server.app.routes.simple import parsing as simple_parsing
 
 
 def _b64url(data: bytes) -> str:
@@ -42,34 +43,34 @@ def _valid_credential_entry(**overrides):
 def test_decode_binary_value_decodes_base64url_string():
     raw = b"\x00\x01\xfe\xff"
 
-    assert simple_module._decode_binary_value(_b64url(raw)) == raw
+    assert simple_binary._decode_binary_value(_b64url(raw)) == raw
 
 
 def test_decode_binary_value_decodes_standard_base64_string():
     raw = b"\xfb\xef\xff"
     encoded = base64.b64encode(raw).decode("ascii")
 
-    assert simple_module._decode_binary_value(encoded) == raw
+    assert simple_binary._decode_binary_value(encoded) == raw
 
 
 def test_decode_binary_value_falls_back_to_hex_when_base64_decoders_fail():
     # Separated or spaced hex cannot be base64, so it reaches the hex reading.
-    assert simple_module._decode_binary_value("41 42 43") == b"ABC"
-    assert simple_module._decode_binary_value("41:42:43") == b"ABC"
+    assert simple_binary._decode_binary_value("41 42 43") == b"ABC"
+    assert simple_binary._decode_binary_value("41:42:43") == b"ABC"
 
     # An unbroken run of hex digits can be valid base64 as well, and base64
     # still wins where it is: the precedence predates the strictness work and
     # is left alone so stored credential IDs keep decoding to the same bytes.
-    assert simple_module._decode_binary_value("0000") == base64.b64decode("0000")
+    assert simple_binary._decode_binary_value("0000") == base64.b64decode("0000")
 
     # "414243" is not canonical base64 -- its final quantum carries bits that
     # re-encode to something else -- so it is no longer accepted as base64 and
     # falls through to the hex reading it plainly is.
-    assert simple_module._decode_binary_value("414243") == b"ABC"
+    assert simple_binary._decode_binary_value("414243") == b"ABC"
 
 
 def test_decode_binary_value_decodes_iterable_of_ints():
-    assert simple_module._decode_binary_value([65, 66, 67]) == b"ABC"
+    assert simple_binary._decode_binary_value([65, 66, 67]) == b"ABC"
 
 
 @pytest.mark.parametrize(
@@ -84,18 +85,18 @@ def test_decode_binary_value_decodes_iterable_of_ints():
 )
 def test_decode_binary_value_rejects_invalid_inputs(value, pattern):
     with pytest.raises(ValueError, match=pattern):
-        simple_module._decode_binary_value(value)
+        simple_binary._decode_binary_value(value)
 
 
 def test_parse_client_credentials_returns_empty_for_non_list_input():
-    credentials, serialized = simple_module._parse_client_credentials({"not": "a-list"})
+    credentials, serialized = simple_parsing._parse_client_credentials({"not": "a-list"})
 
     assert credentials == []
     assert serialized == []
 
 
 def test_parse_client_credentials_skips_entries_missing_required_fields():
-    credentials, serialized = simple_module._parse_client_credentials(
+    credentials, serialized = simple_parsing._parse_client_credentials(
         [
             {"credentialId": _b64url(b"id-only"), "publicKey": _b64url(_sample_public_key_bytes())},
             {"aaguid": _b64url(bytes(16)), "publicKey": _b64url(_sample_public_key_bytes())},
@@ -124,7 +125,7 @@ def test_parse_client_credentials_parses_aliases_and_serializes_metadata_fields(
         "publicKeyAlgorithm": -8,
     }
 
-    credentials, serialized = simple_module._parse_client_credentials([entry])
+    credentials, serialized = simple_parsing._parse_client_credentials([entry])
 
     assert len(credentials) == 1
     assert len(serialized) == 1
@@ -146,7 +147,7 @@ def test_parse_client_credentials_skips_malformed_entries_and_keeps_valid_entrie
     malformed = _valid_credential_entry(credentialId="g$")
     valid = _valid_credential_entry(credentialId=_b64url(b"good-credential"), signCount=4)
 
-    credentials, serialized = simple_module._parse_client_credentials([malformed, valid])
+    credentials, serialized = simple_parsing._parse_client_credentials([malformed, valid])
 
     assert len(credentials) == 1
     assert len(serialized) == 1

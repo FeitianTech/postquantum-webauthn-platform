@@ -19,8 +19,8 @@ import importlib
 import pytest
 
 from server.app.decoder.decode import pipeline as decode_pipeline
+from server.app.routes import binary_helpers
 from server.app.routes import general as general_module
-from server.app.routes import simple as simple_module
 from tests.app.entry_app import entry_app
 
 PLAIN_TEXT = "Hello, this is plain text!"
@@ -100,8 +100,8 @@ def test_base64url_helpers_do_not_return_garbage_for_plain_text(shared_binary_he
     assert shared_binary_helpers.decode_base64url_bytes(PLAIN_TEXT) == b""
     assert shared_binary_helpers.extract_assertion_credential_id({"rawId": PLAIN_TEXT}) is None
 
-    assert simple_module._decode_base64url_bytes(PLAIN_TEXT) == b""
-    assert simple_module._extract_assertion_credential_id({"rawId": PLAIN_TEXT}) is None
+    assert binary_helpers.decode_base64url_bytes(PLAIN_TEXT) == b""
+    assert binary_helpers.extract_assertion_credential_id({"rawId": PLAIN_TEXT}) is None
 
 
 def test_credential_intake_reads_both_base64_alphabets_exactly(advanced_binary, simple_binary):

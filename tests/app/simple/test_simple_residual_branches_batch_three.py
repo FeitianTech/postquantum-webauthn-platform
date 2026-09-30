@@ -8,7 +8,7 @@ import pytest
 from fido2 import cbor
 
 from server.app.config import relying_party
-from server.app.routes import simple as simple_module
+from server.app.routes.simple import parsing as simple_parsing
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
@@ -96,7 +96,7 @@ def test_parse_client_credentials_ignores_non_mapping_entries_and_keeps_valid_re
         },
     ]
 
-    credential_data_list, serialized = simple_module._parse_client_credentials(raw_credentials)
+    credential_data_list, serialized = simple_parsing._parse_client_credentials(raw_credentials)
 
     assert len(credential_data_list) == 1
     assert len(serialized) == 1
@@ -104,7 +104,7 @@ def test_parse_client_credentials_ignores_non_mapping_entries_and_keeps_valid_re
 
 
 def test_serialize_credential_for_session_accepts_hex_aaguid_alias():
-    serialized = simple_module._serialize_credential_for_session(
+    serialized = simple_parsing._serialize_credential_for_session(
         {
             "aaguidHex": "00112233445566778899aabbccddeeff",
             "credentialId": b"\x01\x02",

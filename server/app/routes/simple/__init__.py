@@ -1,51 +1,14 @@
 """Routes for the basic registration and authentication flows.
 
-The implementation lives in this package's submodules; this module is the HTTP
-face of it -- the Flask rules, plus re-exports of the pieces callers use. Each
-submodule resolves its own names through its own imports, so a name here is the
-same object the submodule defines -- patching one of these re-exports changes what
-callers of *this package* see, not what the submodules call.
+The implementation lives in this package's submodules; this module holds the
+Flask rules. Import the submodule you need and patch there.
 """
 from __future__ import annotations
 
 from flask import Blueprint
 
 from ...mds_provisioning import waits_for_the_snapshot
-from .. import binary_helpers
-from . import (
-    authentication,
-    binary,
-    parsing,
-    registration,
-)
-
-__all__ = [
-    "_SIMPLE_ALLOWED_ALGORITHMS",
-    "_decode_base64url_bytes",
-    "_extract_assertion_credential_id",
-    "_decode_binary_value",
-    "_select_first",
-    "_serialize_credential_for_session",
-    "_parse_client_credentials",
-    "register_begin",
-    "register_complete",
-    "authenticate_begin",
-    "authenticate_complete",
-]
-
-# The COSE algorithms the simple flow offers, filtered by what fido2 supports.
-_SIMPLE_ALLOWED_ALGORITHMS = registration._SIMPLE_ALLOWED_ALGORITHMS
-
-# base64 padding and binary decode primitives.
-_decode_base64url_bytes = binary_helpers.decode_base64url_bytes
-_decode_binary_value = binary._decode_binary_value
-_extract_assertion_credential_id = binary_helpers.extract_assertion_credential_id
-_select_first = binary._select_first
-
-# Session-credential serialisation and parsing.
-_parse_client_credentials = parsing._parse_client_credentials
-_serialize_credential_for_session = parsing._serialize_credential_for_session
-
+from . import authentication, registration
 
 # The HTTP rules, registered on the app by server.app.app.
 bp = Blueprint("simple", __name__)
