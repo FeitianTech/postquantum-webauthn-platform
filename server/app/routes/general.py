@@ -49,17 +49,6 @@ logger = logging.getLogger(__name__)
 # The HTTP rules, registered on the app by server.app.app.
 bp = Blueprint("general", __name__)
 
-@bp.route("/health")
-def health():
-    """Cheap liveness endpoint that touches no session or storage state.
-
-    Not ``/healthz``: Cloud Run reserves URL paths ending in ``z``.
-    """
-
-    response = current_app.response_class("ok", mimetype="text/plain")
-    response.headers["Cache-Control"] = "no-store"
-    return response
-
 
 _MDS_EXPLORER_FULL_STATIC_FILENAME = mds_snapshot_dir.EXPLORER_FULL
 _MDS_CUSTOM_ENTRIES_SESSION_KEY = "fido.mds.custom"

@@ -9,6 +9,7 @@
 - An unknown path answers 404 with the export's own ``404.html``; with no
   export at all, Werkzeug's plain 404. A path under ``/api/`` that no route
   holds answers the plain 404, as an API should.
+- ``/health`` answers ``ok``, the liveness probe Cloud Run and the image check use.
 - ``/beta`` and every ``/beta/...`` path answer a permanent redirect (308) to the
   same path at ``/`` with its query, so old links keep working; the browser keeps
   the ``#hash``. The redirect is
@@ -59,6 +60,18 @@ def _not_found(root: str):
     response = send_file(page, mimetype="text/html", conditional=False, etag=False)
     response.status_code = 404
     response.headers["Cache-Control"] = REVALIDATE_CACHE_CONTROL
+    return response
+
+
+@bp.route("/health")
+def health():
+    """Cheap liveness endpoint that touches no session or storage state.
+
+    Not ``/healthz``: Cloud Run reserves URL paths ending in ``z``.
+    """
+
+    response = current_app.response_class("ok", mimetype="text/plain")
+    response.headers["Cache-Control"] = "no-store"
     return response
 
 
