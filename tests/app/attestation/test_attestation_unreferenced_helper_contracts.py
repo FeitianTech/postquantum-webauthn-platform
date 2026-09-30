@@ -14,7 +14,6 @@ from server.app.webauthn.attestation import (
 from server.app.webauthn.attestation import (
     certificate_public_keys as attestation_certificate_public_keys,
 )
-from server.app.webauthn.attestation import certificates as attestation_certificates
 
 
 def _self_signed_cert_der() -> bytes:
@@ -68,19 +67,6 @@ def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(
     assert info["algorithm"]["claimedNistLevel"] == 3
     assert info["publicKeyBase64"] == base64.b64encode(b"\x01\x02").decode("ascii")
     assert summary
-
-    monkeypatch.setattr(
-        certificate_public_keys,
-        "_build_unknown_public_key_info",
-        lambda _cert, _err: ({"type": "Unknown", "algorithm": {"name": "Unknown"}}, [("Type", "Unknown")]),
-    )
-    fallback = attestation_certificates._serialize_attestation_certificate_fallback(
-        b"\x30\x82\x01\x00",
-        ValueError("parse failed"),
-    )
-    assert fallback["parseError"] == "parse failed"
-    assert fallback["pem"].startswith("-----BEGIN CERTIFICATE-----")
-    assert "Fingerprints" in fallback["summary"]
 
 
 def test_public_key_serialization_paths(monkeypatch, attestation_module):

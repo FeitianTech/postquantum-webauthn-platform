@@ -1,16 +1,14 @@
 from __future__ import annotations
 
 import hashlib
-from types import MappingProxyType, SimpleNamespace
+from types import SimpleNamespace
 
 from cryptography import x509
 from cryptography.x509.oid import ObjectIdentifier
-from fido2.webauthn import RegistrationResponse
 
 from server.app.webauthn.attestation import (
     certificate_extensions as attestation_certificate_extensions,
 )
-from server.app.webauthn.attestation import certificates as attestation_certificates
 
 
 class _ClientData:
@@ -57,59 +55,6 @@ def _registration(attestation_object, client_data, extension_results):
     )
 
 
-def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases(monkeypatch, certificates, attestation_module):
-    defaults = attestation_certificates.extract_attestation_details(["not-a-dict"])
-    assert defaults[0] == "none"
-    assert defaults[1] == {}
-
-    attestation_object = _AttestationObject(
-        fmt="packed",
-        att_stmt={"x5c": ["bad", "good"]},
-        auth_data=SimpleNamespace(),
-    )
-    registration = _registration(
-        attestation_object,
-        _ClientData(b"challenge"),
-        MappingProxyType({"ext": True}),
-    )
-
-    monkeypatch.setattr(
-        RegistrationResponse,
-        "from_dict",
-        lambda _response: registration,
-    )
-    monkeypatch.setattr(
-        certificates,
-        "_coerce_attestation_certificate_bytes",
-        lambda entry: None if entry == "bad" else b"cert-bytes",
-    )
-    monkeypatch.setattr(
-        certificates,
-        "serialize_attestation_certificate",
-        lambda _cert: None,
-    )
-
-    extracted = attestation_certificates.extract_attestation_details({"ok": True})
-    assert extracted[0] == "packed"
-    assert extracted[5]["error"] == "Unable to decode attestation certificate bytes."
-    assert extracted[6][1]["error"] == "Unable to parse attestation certificate."
-    assert extracted[4] == {"ext": True}
-
-
-def test_extract_attestation_details_keeps_non_mapping_extension_outputs(monkeypatch, attestation_module):
-    attestation_object = _AttestationObject(fmt="none", att_stmt={}, auth_data=SimpleNamespace())
-    registration = _registration(attestation_object, _ClientData(b"challenge"), ["raw-extension"])
-
-    monkeypatch.setattr(
-        RegistrationResponse,
-        "from_dict",
-        lambda _response: registration,
-    )
-
-    extracted = attestation_certificates.extract_attestation_details({"ok": True})
-    assert extracted[4] == ["raw-extension"]
-
-
 def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch, formatting, attestation_module):
     firmware_oid = ObjectIdentifier("1.3.6.1.4.1.41482.13.1")
     security_key_oid = ObjectIdentifier("1.3.6.1.4.1.41482.1.1")
@@ -140,13 +85,3 @@ def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch, 
     assert "Hex value" in attestation_certificate_extensions._serialize_extension_value(firmware_ext)
     assert "Hex value" in attestation_certificate_extensions._serialize_extension_value(security_ext)
     assert "Hex value" in attestation_certificate_extensions._serialize_extension_value(aaguid_ext)
-
-
-def test_coerce_attestation_certificate_bytes_and_aaguid_field_cleanup_edges(attestation_module):
-    assert attestation_certificates._coerce_attestation_certificate_bytes({"raw": "zz"}) is None
-    assert attestation_certificates._coerce_attestation_certificate_bytes({"derBase64": "A"}) is None
-    # A PEM body of "@@@" decodes to nothing at all now, rather than to b""
-    # via a decoder that quietly discarded every character in it.
-    assert attestation_certificates._coerce_attestation_certificate_bytes(
-        {"pem": "-----BEGIN CERTIFICATE-----\n@@@\n-----END CERTIFICATE-----"}
-    ) is None

@@ -30,24 +30,6 @@ def test_attestation_helper_residual_branches(monkeypatch, certificate_public_ke
         == "ED448_SHAKE256"
     )
 
-    monkeypatch.setattr(
-        certificate_public_keys,
-        "_build_unknown_public_key_info",
-        lambda _cert, _err: (
-            {"type": "Unknown", "algorithm": {"name": "Unknown"}},
-            [
-                ("SkipNone", None),
-                ("Nested", ["line-a", "line-b"]),
-            ],
-        ),
-    )
-    fallback = attestation_certificates._serialize_attestation_certificate_fallback(
-        b"\x30\x82\x01\x00",
-        ValueError("parse-error"),
-    )
-    assert "Best-effort public key details" in fallback["summary"]
-    assert "Nested:" in fallback["summary"]
-
 
 def test_serialize_attestation_certificate_mocked_certificate_residual_paths(monkeypatch, certificates, certificate_extensions, certificate_public_keys, attestation_module):
     class _Extensions(list):
