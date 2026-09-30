@@ -19,32 +19,14 @@ from flask import (
     session,
 )
 
-from .. import encoding, mds_snapshot_dir
+from .. import encoding, mds_provisioning, mds_snapshot_dir, static_assets
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
-from ..mds_provisioning import (
-    ensure_snapshot_available,
-    follow_newer_snapshot,
-    waits_for_the_snapshot,
-)
-from ..static_assets import asset_url, snapshot_version
-from ..webauthn.attestation.certificates import serialize_attestation_certificate
-from ..webauthn.metadata.blob import (
-    load_packaged_explorer_summary,
-    load_packaged_snapshot_meta,
-)
-from ..webauthn.metadata.effective import (
-    load_effective_full_snapshot,
-    resolve_effective_metadata_entry,
-)
-from ..webauthn.metadata.entries import expand_metadata_entry_payloads
-from ..webauthn.metadata.sessions import (
-    delete_session_metadata_item,
-    ensure_metadata_session_id,
-    list_session_metadata_items,
-    save_session_metadata_item,
-    serialize_session_metadata_item,
-)
-from ..webauthn.metadata.uploads import maybe_store_uploaded_metadata_file
+from ..webauthn.attestation import certificates as attestation_certificates
+from ..webauthn.metadata import blob as metadata_blob
+from ..webauthn.metadata import effective as metadata_effective
+from ..webauthn.metadata import entries as metadata_entries
+from ..webauthn.metadata import sessions as metadata_sessions
+from ..webauthn.metadata import uploads as metadata_uploads
 
 # The HTTP rules, registered on the app by server.app.app.
 bp = Blueprint("mds", __name__)
@@ -83,10 +65,10 @@ def _packaged_snapshot_url() -> str | None:
     The URL carries the snapshot's own version (``static_assets.snapshot_version``),
     so a new snapshot is a new URL."""
 
-    version = snapshot_version(load_packaged_snapshot_meta())
+    version = static_assets.snapshot_version(metadata_blob.load_packaged_snapshot_meta())
     if version is None:
         return None
-    return f"{asset_url(_MDS_EXPLORER_FULL_STATIC_FILENAME)}?v={version}"
+    return f"{static_assets.asset_url(_MDS_EXPLORER_FULL_STATIC_FILENAME)}?v={version}"
 
 
 def _initial_mds_info() -> dict[str, Any]:
@@ -95,14 +77,14 @@ def _initial_mds_info() -> dict[str, Any]:
     and whether this session has uploaded metadata. The page asks
     ``/api/mds/metadata/info`` for it, which waits for a provisioning under way;
     the page itself is static and never waits. A running instance takes a newer
-    snapshot from Cloud Storage here (``follow_newer_snapshot``): this is where
+    snapshot from Cloud Storage here (``mds_provisioning.follow_newer_snapshot``): this is where
     the page starts."""
 
-    ensure_snapshot_available()
-    follow_newer_snapshot()
-    metadata_session_id = ensure_metadata_session_id()
+    mds_provisioning.ensure_snapshot_available()
+    mds_provisioning.follow_newer_snapshot()
+    metadata_session_id = metadata_sessions.ensure_metadata_session_id()
 
-    initial_mds_info = dict(load_packaged_explorer_summary() or {})
+    initial_mds_info = dict(metadata_blob.load_packaged_explorer_summary() or {})
     snapshot_url = _packaged_snapshot_url()
     if snapshot_url:
         initial_mds_info["snapshotUrl"] = snapshot_url
@@ -127,10 +109,10 @@ def api_get_metadata_info():
 
 
 @bp.route("/api/mds/metadata/explorer/full", methods=["GET"])
-@waits_for_the_snapshot
+@mds_provisioning.waits_for_the_snapshot
 def api_get_full_explorer_metadata():
-    ensure_metadata_session_id()
-    snapshot = load_effective_full_snapshot()
+    metadata_sessions.ensure_metadata_session_id()
+    snapshot = metadata_effective.load_effective_full_snapshot()
     if not snapshot.get("entries") and not snapshot.get("meta"):
         return _no_store_json_response(
             {"error": "Verified metadata snapshot is not available."},
@@ -141,9 +123,9 @@ def api_get_full_explorer_metadata():
 
 
 @bp.route("/api/mds/metadata/resolve", methods=["GET"])
-@waits_for_the_snapshot
+@mds_provisioning.waits_for_the_snapshot
 def api_resolve_metadata_entry():
-    ensure_metadata_session_id()
+    metadata_sessions.ensure_metadata_session_id()
 
     requested = {
         "entry_id": request.args.get("entryId", type=str),
@@ -162,7 +144,7 @@ def api_resolve_metadata_entry():
             status=400,
         )
 
-    resolved = resolve_effective_metadata_entry(
+    resolved = metadata_effective.resolve_effective_metadata_entry(
         entry_id=provided.get("entry_id"),
         aaguid=provided.get("aaguid"),
         aaid=provided.get("aaid"),
@@ -175,8 +157,8 @@ def api_resolve_metadata_entry():
 
 @bp.route("/api/mds/metadata/custom", methods=["GET"])
 def api_list_custom_metadata():
-    ensure_metadata_session_id()
-    items = [serialize_session_metadata_item(item) for item in list_session_metadata_items()]
+    metadata_sessions.ensure_metadata_session_id()
+    items = [metadata_sessions.serialize_session_metadata_item(item) for item in metadata_sessions.list_session_metadata_items()]
     return jsonify({"items": items})
 
 
@@ -190,11 +172,11 @@ def _read_metadata_json(text: str) -> Any:
 
 
 @bp.route("/api/mds/metadata/upload", methods=["POST"])
-@waits_for_the_snapshot
+@mds_provisioning.waits_for_the_snapshot
 def api_upload_custom_metadata():
     # Its own limit, before the body is read: the whole MDS metadata (config/request_limits.py).
     request.max_content_length = current_app.config[METADATA_UPLOAD_LIMIT_KEY]
-    ensure_metadata_session_id()
+    metadata_sessions.ensure_metadata_session_id()
 
     file_entries = request.files.getlist("files") if request.files else []
     if not file_entries:
@@ -236,12 +218,12 @@ def api_upload_custom_metadata():
             continue
 
         try:
-            entry_payloads = expand_metadata_entry_payloads(payload)
+            entry_payloads = metadata_entries.expand_metadata_entry_payloads(payload)
         except (TypeError, ValueError) as exc:
             errors.append(f"{trimmed}: {exc}")
             continue
 
-        maybe_store_uploaded_metadata_file(trimmed, raw_bytes)
+        metadata_uploads.maybe_store_uploaded_metadata_file(trimmed, raw_bytes)
 
         for index, entry_payload in enumerate(entry_payloads, start=1):
             display_name = (
@@ -251,7 +233,7 @@ def api_upload_custom_metadata():
             )
 
             try:
-                item = save_session_metadata_item(
+                item = metadata_sessions.save_session_metadata_item(
                     entry_payload,
                     original_filename=display_name,
                 )
@@ -261,7 +243,7 @@ def api_upload_custom_metadata():
             except RuntimeError as exc:
                 return jsonify({"error": str(exc)}), 500
 
-            saved_items.append(serialize_session_metadata_item(item))
+            saved_items.append(metadata_sessions.serialize_session_metadata_item(item))
 
     return _upload_answer(saved_items, errors)
 
@@ -274,7 +256,7 @@ def _upload_answer(saved_items: list[Any], errors: list[str]):
     if errors:
         response["errors"] = errors
     if saved_items:
-        response["snapshot"] = load_effective_full_snapshot()
+        response["snapshot"] = metadata_effective.load_effective_full_snapshot()
         # A reload must now load this session's own list, not the packaged snapshot.
         _remember_custom_entries_state(response["snapshot"])
 
@@ -282,11 +264,11 @@ def _upload_answer(saved_items: list[Any], errors: list[str]):
 
 
 @bp.route("/api/mds/metadata/custom/<string:stored_filename>", methods=["DELETE"])
-@waits_for_the_snapshot
+@mds_provisioning.waits_for_the_snapshot
 def api_delete_custom_metadata(stored_filename: str):
-    ensure_metadata_session_id()
+    metadata_sessions.ensure_metadata_session_id()
     try:
-        deleted = delete_session_metadata_item(stored_filename)
+        deleted = metadata_sessions.delete_session_metadata_item(stored_filename)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     except RuntimeError as exc:
@@ -298,7 +280,7 @@ def api_delete_custom_metadata(stored_filename: str):
             status=404,
         )
 
-    snapshot = load_effective_full_snapshot()
+    snapshot = metadata_effective.load_effective_full_snapshot()
     _remember_custom_entries_state(snapshot)
     return _no_store_json_response({"deleted": True, "snapshot": snapshot})
 
@@ -323,7 +305,7 @@ def api_decode_mds_certificate():
         return jsonify({"error": "Invalid certificate encoding."}), 400
 
     try:
-        details = serialize_attestation_certificate(certificate_bytes)
+        details = attestation_certificates.serialize_attestation_certificate(certificate_bytes)
     except Exception as exc:  # pylint: disable=broad-except
         return jsonify({"error": f"Unable to decode certificate: {exc}"}), 422
 

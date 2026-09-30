@@ -3,6 +3,11 @@ from types import SimpleNamespace
 
 from server.app.decoder.decode import pipeline as decode_pipeline
 from server.app.routes import mds as mds_routes
+from server.app.webauthn.attestation import certificates as attestation_certificates
+from server.app.webauthn.metadata import effective as metadata_effective
+from server.app.webauthn.metadata import entries as metadata_entries
+from server.app.webauthn.metadata import sessions as metadata_sessions
+from server.app.webauthn.metadata import uploads as metadata_uploads
 from tests.app.entry_app import entry_app
 
 
@@ -20,7 +25,7 @@ def test_decode_and_certificate_routes_cover_error_and_success_paths(monkeypatch
         return {"length": len(certificate_bytes), "hex": certificate_bytes.hex()}
 
     monkeypatch.setattr(decode_pipeline, "decode_payload_text", _fake_decode)
-    monkeypatch.setattr(mds_routes, "serialize_attestation_certificate", _fake_serialize)
+    monkeypatch.setattr(attestation_certificates, "serialize_attestation_certificate", _fake_serialize)
 
     bad_cert_b64 = base64.b64encode(b"bad-cert").decode("ascii")
     good_cert_unpadded = base64.b64encode(b"good-cert").decode("ascii").rstrip("=")
@@ -93,17 +98,17 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
     with entry_app().test_client() as client:
         session_calls = []
         monkeypatch.setattr(
-            mds_routes,
+            metadata_sessions,
             "ensure_metadata_session_id",
             lambda: session_calls.append("called") or "session-abc",
         )
         monkeypatch.setattr(
-            mds_routes,
+            metadata_sessions,
             "list_session_metadata_items",
             lambda: [{"storedFilename": "one.json"}],
         )
         monkeypatch.setattr(
-            mds_routes,
+            metadata_sessions,
             "serialize_session_metadata_item",
             lambda item: {"storedFilename": item["storedFilename"], "label": "demo"},
         )
@@ -140,7 +145,7 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
                 raise self._exc
             return self._data
 
-    monkeypatch.setattr(mds_routes, "ensure_metadata_session_id", lambda: "session-abc")
+    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-abc")
 
     with entry_app().app_context():
         monkeypatch.setattr(mds_routes, "request", SimpleNamespace(files=None))
@@ -210,7 +215,7 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
         }
 
         monkeypatch.setattr(
-            mds_routes,
+            metadata_entries,
             "expand_metadata_entry_payloads",
             lambda _payload: (_ for _ in ()).throw(ValueError("bad metadata object")),
         )
@@ -227,12 +232,12 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
         }
 
         monkeypatch.setattr(
-            mds_routes,
+            metadata_entries,
             "expand_metadata_entry_payloads",
             lambda _payload: [{"entry": 1}, {"entry": 2}],
         )
         monkeypatch.setattr(
-            mds_routes,
+            metadata_uploads,
             "maybe_store_uploaded_metadata_file",
             lambda *_args, **_kwargs: None,
         )
@@ -242,14 +247,14 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
                 raise ValueError("duplicate entry")
             return {"storedFilename": "stored-2.json", "originalFilename": original_filename}
 
-        monkeypatch.setattr(mds_routes, "save_session_metadata_item", _save_item)
+        monkeypatch.setattr(metadata_sessions, "save_session_metadata_item", _save_item)
         monkeypatch.setattr(
-            mds_routes,
+            metadata_sessions,
             "serialize_session_metadata_item",
             lambda item: item,
         )
         monkeypatch.setattr(
-            mds_routes,
+            metadata_effective,
             "load_effective_full_snapshot",
             lambda: {"meta": {"entryCount": 1}},
         )
@@ -271,7 +276,7 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
         assert payload["snapshot"] == {"meta": {"entryCount": 1}}
 
         monkeypatch.setattr(
-            mds_routes,
+            metadata_sessions,
             "save_session_metadata_item",
             lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("persistence down")),
         )
@@ -285,10 +290,10 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
         assert response.get_json() == {"error": "persistence down"}
 
     with entry_app().test_client() as client:
-        monkeypatch.setattr(mds_routes, "ensure_metadata_session_id", lambda: "session-abc")
+        monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-abc")
 
         monkeypatch.setattr(
-            mds_routes,
+            metadata_sessions,
             "delete_session_metadata_item",
             lambda _name: (_ for _ in ()).throw(ValueError("invalid filename")),
         )
@@ -297,7 +302,7 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
         assert delete_value_error.get_json() == {"error": "invalid filename"}
 
         monkeypatch.setattr(
-            mds_routes,
+            metadata_sessions,
             "delete_session_metadata_item",
             lambda _name: (_ for _ in ()).throw(RuntimeError("storage unavailable")),
         )
@@ -306,7 +311,7 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
         assert delete_runtime_error.get_json() == {"error": "storage unavailable"}
 
         monkeypatch.setattr(
-            mds_routes,
+            metadata_sessions,
             "delete_session_metadata_item",
             lambda _name: False,
         )
@@ -320,8 +325,8 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
 
 def test_general_empty_snapshot_and_upload_branches(monkeypatch):
     with entry_app().test_client() as client:
-        monkeypatch.setattr(mds_routes, "ensure_metadata_session_id", lambda: "session-id")
-        monkeypatch.setattr(mds_routes, "load_effective_full_snapshot", lambda: {})
+        monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
+        monkeypatch.setattr(metadata_effective, "load_effective_full_snapshot", lambda: {})
 
         full_explorer_missing = client.get("/api/mds/metadata/explorer/full")
         assert full_explorer_missing.status_code == 404
@@ -351,16 +356,16 @@ def test_general_empty_snapshot_and_upload_branches(monkeypatch):
             return response, status
         return result, result.status_code
 
-    monkeypatch.setattr(mds_routes, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(mds_routes, "expand_metadata_entry_payloads", lambda payload: [payload])
-    monkeypatch.setattr(mds_routes, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(metadata_entries, "expand_metadata_entry_payloads", lambda payload: [payload])
+    monkeypatch.setattr(metadata_uploads, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(
-        mds_routes,
+        metadata_sessions,
         "save_session_metadata_item",
         lambda _payload, original_filename=None: {"originalFilename": original_filename},
     )
-    monkeypatch.setattr(mds_routes, "serialize_session_metadata_item", lambda item: item)
-    monkeypatch.setattr(mds_routes, "load_effective_full_snapshot", lambda: {"meta": {"entryCount": 1}})
+    monkeypatch.setattr(metadata_sessions, "serialize_session_metadata_item", lambda item: item)
+    monkeypatch.setattr(metadata_effective, "load_effective_full_snapshot", lambda: {"meta": {"entryCount": 1}})
 
     with entry_app().app_context():
         monkeypatch.setattr(
