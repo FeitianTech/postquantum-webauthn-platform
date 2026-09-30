@@ -9,6 +9,8 @@ import gzip
 
 from flask import Flask, current_app, has_request_context, request
 
+from . import application
+
 _COMPRESSIBLE_MIMETYPES = {
     "application/javascript",
     "application/json",
@@ -86,19 +88,7 @@ def maybe_compress_response(response):
 setattr(maybe_compress_response, _RESPONSE_COMPRESSION_MARKER, True)
 
 
-def _register_after_request_once(flask_app: Flask, handler) -> None:
-    existing_handlers = flask_app.after_request_funcs.setdefault(None, [])
-    for existing in existing_handlers:
-        if getattr(existing, _RESPONSE_COMPRESSION_MARKER, False):
-            return
-
-    if flask_app._got_first_request:
-        return
-
-    flask_app.after_request(handler)
-
-
 def init_app(app: Flask) -> None:
     """Register ``maybe_compress_response`` as an ``after_request`` handler."""
 
-    _register_after_request_once(app, maybe_compress_response)
+    application.add_after_request_once(app, maybe_compress_response, _RESPONSE_COMPRESSION_MARKER)

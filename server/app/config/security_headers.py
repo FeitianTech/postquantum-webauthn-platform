@@ -11,6 +11,8 @@ from typing import Any
 
 from flask import Flask, current_app, has_request_context, request
 
+from . import application
+
 _SECURITY_HEADERS_MARKER = "_postquantum_security_headers"
 
 # Violation reports go to routes/csp_report.py, which logs each in one line:
@@ -138,19 +140,7 @@ def set_security_headers(response):
 setattr(set_security_headers, _SECURITY_HEADERS_MARKER, True)
 
 
-def _register_security_headers_once(flask_app: Flask, handler) -> None:
-    existing_handlers = flask_app.after_request_funcs.setdefault(None, [])
-    for existing in existing_handlers:
-        if getattr(existing, _SECURITY_HEADERS_MARKER, False):
-            return
-
-    if flask_app._got_first_request:
-        return
-
-    flask_app.after_request(handler)
-
-
 def init_app(app: Flask) -> None:
     """Register ``set_security_headers`` as an ``after_request`` handler."""
 
-    _register_security_headers_once(app, set_security_headers)
+    application.add_after_request_once(app, set_security_headers, _SECURITY_HEADERS_MARKER)

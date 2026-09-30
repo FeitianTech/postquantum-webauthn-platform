@@ -7,6 +7,7 @@ import types
 from flask import Flask
 
 from server.app.config import (
+    application,
     attestation_trust,
     compression,
     paths,
@@ -134,7 +135,7 @@ def test_response_compression_paths_and_accepts_gzip_guard(monkeypatch):
         assert compression.maybe_compress_response(non_text) is non_text
 
 
-def test_register_after_request_once_guard_paths(monkeypatch):
+def test_add_after_request_once_guard_paths(monkeypatch):
     flask_app = Flask("config-branch-guards")
     marker = compression._RESPONSE_COMPRESSION_MARKER
 
@@ -147,19 +148,19 @@ def test_register_after_request_once_guard_paths(monkeypatch):
     setattr(existing, marker, True)
     flask_app.after_request_funcs.setdefault(None, []).append(existing)
 
-    compression._register_after_request_once(flask_app, lambda response: response)
+    application.add_after_request_once(flask_app, lambda response: response, marker)
     assert calls == []
 
     flask_app.after_request_funcs[None] = []
     monkeypatch.setattr(flask_app, "_got_first_request", True)
-    compression._register_after_request_once(flask_app, lambda response: response)
+    application.add_after_request_once(flask_app, lambda response: response, marker)
     assert calls == []
 
     monkeypatch.setattr(flask_app, "_got_first_request", False)
     def handler(response):
         return response
 
-    compression._register_after_request_once(flask_app, handler)
+    application.add_after_request_once(flask_app, handler, marker)
     assert calls == [handler]
 
 

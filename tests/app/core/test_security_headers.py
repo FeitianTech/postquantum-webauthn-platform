@@ -156,9 +156,7 @@ def test_headers_handler_is_registered_exactly_once():
     ]
     assert len(marked) == 1
 
-    config_security_headers._register_security_headers_once(
-        app, security_headers_module.set_security_headers
-    )
+    config_security_headers.init_app(app)
     assert len(app.after_request_funcs.get(None, [])) == len(handlers)
 
 
