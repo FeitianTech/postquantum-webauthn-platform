@@ -186,20 +186,6 @@ def test_parse_simple_major_type_values_and_structure_to_value_fallback_branches
     assert tagged == {"tag": 33, "value": 42}
 
 
-def test_expand_cbor_value_falls_back_to_make_json_safe_for_unknown_types(monkeypatch, pipeline):
-    class _Unknown:
-        pass
-
-    monkeypatch.setattr(
-        pipeline,
-        "make_json_safe",
-        lambda value: {"safeType": type(value).__name__},
-    )
-
-    expanded = decode_pipeline._expand_cbor_value(_Unknown())
-    assert expanded == {"safeType": "_Unknown"}
-
-
 def test_try_decode_authenticator_data_returns_structured_payload_on_success(monkeypatch, pipeline):
     monkeypatch.setattr(
         decode_authenticator_data,

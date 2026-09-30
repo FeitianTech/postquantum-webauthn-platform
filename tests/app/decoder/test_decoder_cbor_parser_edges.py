@@ -1,10 +1,8 @@
 import pytest
-from fido2.utils import ByteBuffer
 
 from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import binary_text
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
-from server.app.decoder.decode import pipeline as decode_pipeline
 
 
 def test_parse_cbor_item_reads_one_byte_integers_and_rejects_reserved_additional_information():
@@ -123,19 +121,7 @@ def test_read_length_and_availability_helpers_raise_expected_errors():
     assert offset == 0
 
 
-def test_expand_cbor_value_and_binary_input_decoder_helpers():
-    expanded = decode_pipeline._expand_cbor_value(
-        {
-            "bytes": b"\x01\x02",
-            "buffer": ByteBuffer(b"\x03\x04"),
-            "items": [b"\x05", {"nested": b"\x06"}],
-        }
-    )
-    assert expanded["bytes"]["hex"] == "0102"
-    assert expanded["buffer"]["hex"] == "0304"
-    assert expanded["items"][0]["hex"] == "05"
-    assert expanded["items"][1]["nested"]["hex"] == "06"
-
+def test_binary_input_reads_hex_and_base64_and_refuses_what_is_neither():
     hex_data, hex_encoding = binary_text.decode_binary_input("0abc")
     assert hex_data == bytes.fromhex("0abc")
     assert hex_encoding == "hex"

@@ -1,14 +1,9 @@
 """Top-level decode pipeline helpers."""
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
 from typing import Any
 
-from fido2.utils import ByteBuffer
-
 from ...encoding import try_decode_base64, try_decode_base64url
-from ...json_values import make_json_safe
-from .. import values
 from . import (
     ambiguous_input,
     binary_text,
@@ -34,21 +29,6 @@ class _ReadAsBase64Error(ValueError):
             if hasattr(exc, field):
                 setattr(self, field, getattr(exc, field))
         super().__init__(f"{exc} (the input was read as base64: as hexadecimal, its {digits} digits are an odd number)")
-
-
-def _expand_cbor_value(value: Any) -> Any:
-    if isinstance(value, ByteBuffer):
-        return values.binary_summary(value.getvalue())
-    if isinstance(value, (bytes, bytearray, memoryview)):
-        return values.binary_summary(bytes(value))
-    if isinstance(value, Mapping):
-        expanded: dict[str, Any] = {}
-        for key, entry in value.items():
-            expanded[str(key)] = _expand_cbor_value(entry)
-        return expanded
-    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
-        return [_expand_cbor_value(item) for item in value]
-    return make_json_safe(value)
 
 
 def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:

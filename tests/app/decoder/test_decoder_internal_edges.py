@@ -7,7 +7,6 @@ from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import binary_text
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
 from server.app.decoder.decode import ctap as decode_ctap
-from server.app.decoder.decode import pipeline as decode_pipeline
 
 
 def test_decode_binary_input_prefers_hex_when_candidate_is_valid_hex():
@@ -229,14 +228,3 @@ def test_structure_to_value_keeps_an_array_key_as_a_key_of_its_own_type():
     # Not the text "[1, 2]": a text key spelled that way stays a different key.
     assert value == {decoder_values.CborDiagnostic("[1, 2]", "array"): "value"}
     assert decoder_values.stringify_mapping_keys(value) == {"[1, 2]": "value"}
-
-
-def test_expand_cbor_value_stringifies_mapping_keys_and_summarizes_binary_values():
-    expanded = decode_pipeline._expand_cbor_value(
-        {1: b"\xaa\xbb", "nested": [b"\xcc", {2: b"\xdd"}]}
-    )
-
-    assert sorted(expanded.keys()) == ["1", "nested"]
-    assert expanded["1"]["hex"] == "aabb"
-    assert expanded["nested"][0]["hex"] == "cc"
-    assert expanded["nested"][1]["2"]["hex"] == "dd"
