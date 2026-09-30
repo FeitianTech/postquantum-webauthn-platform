@@ -3,7 +3,6 @@ from __future__ import annotations
 import io
 from types import SimpleNamespace
 
-import server.app.config as config_module
 from server.app.config import compression, relying_party, session_secret
 from tests.app.entry_app import entry_app
 
@@ -56,11 +55,11 @@ def test_determine_rp_id_handles_missing_host_and_loopback_fallback(monkeypatch)
         headers={"Host": ""},
         environ_overrides={"HTTP_HOST": "", "SERVER_NAME": ""},
     ):
-        assert config_module.determine_rp_id() == "localhost"
+        assert relying_party.determine_rp_id() == "localhost"
 
     monkeypatch.setattr(relying_party.ipaddress, "ip_address", lambda _value: (_ for _ in ()).throw(ValueError("bad")))
     with entry_app().test_request_context("/", headers={"Host": "::1"}):
-        assert config_module.determine_rp_id() == "localhost"
+        assert relying_party.determine_rp_id() == "localhost"
 
 
 def test_normalise_request_host_returns_raw_value_when_urlsplit_has_no_hostname(monkeypatch):

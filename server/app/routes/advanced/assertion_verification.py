@@ -16,7 +16,7 @@ from fido2.cose import CoseKey, UnsupportedKey
 from fido2.webauthn import AuthenticatorData
 from flask import jsonify, session
 
-from ... import config
+from ...config import relying_party
 from ...encoding import encode_base64url
 from ...webauthn import assertion_hash, pqc
 from ...webauthn.sign_count import sign_count_status
@@ -209,8 +209,8 @@ def verify_assertion(
     """Have fido2 verify the assertion, and answer with what it concluded."""
 
     stored_rp_id, stored_rp_name = _assertion_rp()
-    resolved_rp_id = config.determine_rp_id(stored_rp_id)
-    auth_server = config.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
+    resolved_rp_id = relying_party.determine_rp_id(stored_rp_id)
+    auth_server = relying_party.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
 
     derived_algorithms = algorithms._derive_algorithms_from_credentials(all_credentials)
     if derived_algorithms:

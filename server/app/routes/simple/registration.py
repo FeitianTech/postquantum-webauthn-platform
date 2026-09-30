@@ -13,9 +13,6 @@ from fido2.webauthn import (
 )
 from flask import jsonify, request, session
 
-from ... import (
-    config,
-)
 from ...attachments import normalize_attachment
 from ...challenge_registry import (
     CHALLENGE_FRESH,
@@ -23,6 +20,7 @@ from ...challenge_registry import (
     consume_ceremony_state,
     stamp_ceremony_state,
 )
+from ...config import origins, relying_party
 from ...webauthn import attestation
 from . import parsing, registration_persistence, registration_record
 
@@ -106,8 +104,8 @@ def _verify_registration(
     """fido2's verification, the origin allowlist and the attestation checks; or the 400."""
 
     public_key_options_for_checks = session.pop("simple_register_public_key", None)
-    resolved_rp_id = rp_id or config.determine_rp_id()
-    server = config.create_fido_server(rp_id=resolved_rp_id)
+    resolved_rp_id = rp_id or relying_party.determine_rp_id()
+    server = relying_party.create_fido_server(rp_id=resolved_rp_id)
 
     try:
         auth_data = server.register_complete(state, response)
@@ -118,11 +116,11 @@ def _verify_registration(
     # fido2 checked the origin against the RP ID and the allowlist. It is read from
     # clientDataJSON -- NOT from the request's own Origin header, which the caller
     # also controls.
-    ceremony_origin = config.extract_client_data_origin(credential_response)
+    ceremony_origin = origins.extract_client_data_origin(credential_response)
 
     # determine_expected_origin only echoes a candidate that is itself
     # allowlisted, so this can never become a self-referential comparison.
-    expected_origin = config.determine_expected_origin(ceremony_origin) or (
+    expected_origin = origins.determine_expected_origin(ceremony_origin) or (
         request.host_url.rstrip("/")
     )
 
@@ -251,8 +249,8 @@ def register_begin():
     else:
         session.pop("simple_credentials", None)
 
-    rp_id = config.determine_rp_id()
-    server = config.create_fido_server(rp_id=rp_id)
+    rp_id = relying_party.determine_rp_id()
+    server = relying_party.create_fido_server(rp_id=rp_id)
     server.allowed_algorithms = [
         PublicKeyCredentialParameters(type=PublicKeyCredentialType.PUBLIC_KEY, alg=alg)
         for alg in _SIMPLE_REQUEST_ALGORITHMS

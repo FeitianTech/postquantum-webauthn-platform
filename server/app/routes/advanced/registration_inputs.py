@@ -13,13 +13,13 @@ from typing import Any
 
 from flask import jsonify, session
 
-from ... import config
 from ...attachments import (
     attachment_hint_violation,
     normalize_attachment,
     resolve_allowed_attachments,
     resolve_effective_attachments,
 )
+from ...config import relying_party
 from ...webauthn import attestation
 from ...webauthn.metadata import sessions as metadata_sessions
 
@@ -187,8 +187,8 @@ def resolve_state_and_registration_server(
         )
 
     stored_rp_id, stored_rp_name = _registration_rp()
-    resolved_rp_id = config.determine_rp_id(stored_rp_id)
-    register_server = config.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
+    resolved_rp_id = relying_party.determine_rp_id(stored_rp_id)
+    register_server = relying_party.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
     auth_data = register_server.register_complete(state, response)
 
     return {

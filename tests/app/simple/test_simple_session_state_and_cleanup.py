@@ -1,6 +1,7 @@
 import base64
 import time
 
+from server.app.config import relying_party
 from tests.app.entry_app import entry_app
 
 
@@ -76,7 +77,7 @@ def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypa
         def authenticate_complete(self, *_args, **_kwargs):
             return _MatchedCredential(credential_id)
 
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_parsing,
         "_parse_client_credentials",

@@ -2,6 +2,7 @@ import base64
 import hashlib
 import time
 
+from server.app.config import relying_party
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
@@ -62,8 +63,8 @@ def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch
             )
 
     monkeypatch.setattr(simple_registration, "_SIMPLE_ALLOWED_ALGORITHMS", (-257, -7))
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_parsing,
         "_parse_client_credentials",
@@ -117,7 +118,7 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch, co
         def authenticate_complete(self, *_args, **_kwargs):
             return _MatchedCredential(credential_id)
 
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_parsing,
         "_parse_client_credentials",
@@ -166,7 +167,7 @@ def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch
             captured["state"] = state
             return _MatchedCredential(credential_id)
 
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         simple_parsing,
         "_parse_client_credentials",
@@ -248,8 +249,8 @@ def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, me
             captured["state"] = state
             return fake_auth_data
 
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda: rp_id)
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda: rp_id)
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
         attestation_module,
         "extract_attestation_details",

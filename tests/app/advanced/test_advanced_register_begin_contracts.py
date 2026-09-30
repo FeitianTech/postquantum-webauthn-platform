@@ -3,6 +3,7 @@ import types
 import pytest
 
 from server.app import config as config_module
+from server.app.config import relying_party
 from server.app.routes import advanced as advanced_module
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from tests.app.entry_app import entry_app
@@ -56,7 +57,7 @@ def _install_fake_register_server(monkeypatch, advanced_module, captured, config
         captured["create_fido_server_kwargs"] = kwargs
         return _FakeServer()
 
-    monkeypatch.setattr(config_module, "create_fido_server", _create_fido_server)
+    monkeypatch.setattr(relying_party, "create_fido_server", _create_fido_server)
 
 
 def test_advanced_register_begin_requires_public_key_payload():
@@ -125,7 +126,7 @@ def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkey
     captured = {}
 
     monkeypatch.setattr(
-        config_module,
+        relying_party,
         "build_rp_entity",
         lambda _rp: types.SimpleNamespace(id="normalized.example", name="Normalized RP")
     )

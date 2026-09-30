@@ -1,6 +1,7 @@
 import base64
 import hashlib
 
+from server.app.config import relying_party
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
@@ -59,8 +60,8 @@ def test_advanced_register_complete_reads_the_session_state_not_the_requests(mon
             captured["state"] = state
             raise ValueError("register failure")
 
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
 
     session_state = {"challenge": "session-state"}
 
@@ -129,8 +130,8 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
         def register_complete(self, *_args, **_kwargs):
             raise ValueError("register reached")
 
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
 
     with entry_app().test_client() as client:
         with client.session_transaction() as session_store:
@@ -194,8 +195,8 @@ def test_advanced_register_complete_success_contract_propagates_warnings_and_rec
         )
         return True
 
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or rp_id)
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or rp_id)
     monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(attestation_module, "perform_attestation_checks", _perform_attestation_checks)
     monkeypatch.setattr(

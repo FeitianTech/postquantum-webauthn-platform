@@ -12,7 +12,7 @@ from typing import Any
 
 from flask import request
 
-from ... import config
+from ...config import origins
 from ...webauthn import attestation
 
 
@@ -39,11 +39,11 @@ def check_attestation(
 
     # The origin the ceremony claims, read from clientDataJSON -- NOT from
     # the request's own Origin header, which the caller also controls.
-    ceremony_origin = config.extract_client_data_origin(
+    ceremony_origin = origins.extract_client_data_origin(
         response.get("response") if isinstance(response, Mapping) else None
     )
 
-    expected_origin = config.determine_expected_origin(ceremony_origin) or (
+    expected_origin = origins.determine_expected_origin(ceremony_origin) or (
         request.host_url.rstrip("/")
     )
     attestation_checks = attestation.perform_attestation_checks(

@@ -1,5 +1,6 @@
 import base64
 
+from server.app.config import relying_party
 from tests.app.entry_app import entry_app
 
 
@@ -51,8 +52,8 @@ def test_simple_register_begin_accepts_existing_credentials_alias(monkeypatch, c
                 }
             }, {"challenge": "simple-register-state"}
 
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
 
     with entry_app().test_client() as client:
         response = client.post(
@@ -82,8 +83,8 @@ def test_simple_authenticate_begin_accepts_stored_credentials_alias(monkeypatch,
             captured["credential_count"] = len(credentials)
             return {"publicKey": {"challenge": "AQID"}}, {"challenge": "simple-auth-state"}
 
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
 
     with entry_app().test_client() as client:
         response = client.post(
@@ -119,7 +120,7 @@ def test_advanced_register_begin_accepts_base64url_wrapped_user_id_and_challenge
             captured["challenge"] = kwargs.get("challenge")
             return {"publicKey": {"challenge": "AQID"}}, {"challenge": "advanced-register-state"}
 
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
 
     user_id = b"frontend-user-id"
     challenge = b"frontend-register-challenge"
@@ -186,8 +187,8 @@ def test_advanced_authenticate_begin_accepts_storedcredentials_without_dunder(mo
                 }
             }, {"challenge": "advanced-auth-state"}
 
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
 
     credential_id = b"frontend-adv-auth"
     challenge = b"frontend-auth-challenge"
@@ -230,8 +231,8 @@ def test_advanced_authenticate_begin_accepts_credentials_fallback_field(monkeypa
             captured["credential_count"] = 0 if credentials is None else len(credentials)
             return {"publicKey": {"challenge": "AQID"}}, {"challenge": "advanced-auth-state"}
 
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
 
     with entry_app().test_client() as client:
         response = client.post(
@@ -256,8 +257,8 @@ def test_advanced_authenticate_complete_accepts_storedcredentials_without_dunder
         def authenticate_complete(self, *_args, **_kwargs):
             return _AuthResult({3: -7})
 
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
 
     with entry_app().test_client() as client:
@@ -291,8 +292,8 @@ def test_advanced_authenticate_complete_accepts_credentials_fallback_field(monke
         def authenticate_complete(self, *_args, **_kwargs):
             return _AuthResult({3: -7})
 
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
 
     with entry_app().test_client() as client:

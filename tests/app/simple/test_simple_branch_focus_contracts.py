@@ -2,6 +2,7 @@ import base64
 import hashlib
 import time
 
+from server.app.config import relying_party
 from server.app.routes import simple as simple_module
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
@@ -92,8 +93,8 @@ def test_simple_register_begin_clears_cached_session_fields_when_client_credenti
         def register_begin(self, *_args, **_kwargs):
             return {"publicKey": "not-a-mapping"}, {"challenge": "simple-register-state"}
 
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(simple_parsing, "_parse_client_credentials", lambda _raw: ([], []))
 
     with entry_app().test_client() as client:
@@ -161,9 +162,9 @@ def test_simple_register_complete_covers_warning_metadata_and_session_fallback_p
     saved = {}
     events = []
 
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda: rp_id)
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda: rp_id)
     monkeypatch.setattr(
-        config_module,
+        relying_party,
         "create_fido_server",
         lambda **_kwargs: _RegisterServer(auth_data)
     )

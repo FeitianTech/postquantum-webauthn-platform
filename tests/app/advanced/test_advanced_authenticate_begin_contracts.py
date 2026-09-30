@@ -3,6 +3,7 @@ import types
 import pytest
 
 from server.app import config as config_module
+from server.app.config import relying_party
 from server.app.routes import advanced as advanced_module
 from tests.app.entry_app import entry_app
 
@@ -45,9 +46,9 @@ def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, conf
 
             return {"publicKey": public_key}, {"challenge": "state-token"}
 
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
-        config_module,
+        relying_party,
         "determine_rp_id",
         lambda value=None: value or "example.com"
     )

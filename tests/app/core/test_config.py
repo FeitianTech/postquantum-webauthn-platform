@@ -149,7 +149,7 @@ def test_create_fido_server():
     from fido2.server import Fido2Server
 
     from server.app.app import app
-    from server.app.config import create_fido_server
+    from server.app.config.relying_party import create_fido_server
     
     with app.app_context():
         # Should create a Fido2Server instance
@@ -174,7 +174,7 @@ def test_build_rp_entity():
     from fido2.webauthn import PublicKeyCredentialRpEntity
 
     from server.app.app import app
-    from server.app.config import build_rp_entity
+    from server.app.config.relying_party import build_rp_entity
     
     with app.app_context():
         # Test with explicit rp_id
@@ -196,7 +196,7 @@ def test_build_rp_entity():
 def test_determine_rp_id():
     """Test determine_rp_id function."""
     from server.app.app import app
-    from server.app.config import determine_rp_id
+    from server.app.config.relying_party import determine_rp_id
     
     with app.app_context():
         # Test with explicit ID
@@ -211,7 +211,7 @@ def test_determine_rp_id():
 def test_determine_rp_id_with_request_context():
     """Test determine_rp_id with Flask request context."""
     from server.app.app import app
-    from server.app.config import determine_rp_id
+    from server.app.config.relying_party import determine_rp_id
     
     with app.test_request_context(
         "https://example.com/path",

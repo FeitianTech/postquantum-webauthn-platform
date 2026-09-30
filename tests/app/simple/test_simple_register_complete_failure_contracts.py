@@ -1,6 +1,7 @@
 import base64
 import time
 
+from server.app.config import relying_party
 from tests.app.entry_app import entry_app
 
 
@@ -26,8 +27,8 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
         def register_complete(self, *_args, **_kwargs):
             raise ValueError("register verification failed")
 
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(
         attestation_module,
         "extract_attestation_details",
@@ -64,8 +65,8 @@ def test_simple_register_complete_rejects_request_state_fallback_before_verifica
             captured["state"] = state
             raise ValueError("fallback verification failed")
 
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(
         attestation_module,
         "extract_attestation_details",

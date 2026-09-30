@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import pytest
 
+from server.app.config import origins
 from server.app.config import origins as config_origins
 from server.app.config import relying_party as config_relying_party
 from tests.app.entry_app import entry_app
@@ -209,13 +210,13 @@ def test_unconfigured_server_still_works_for_local_development(config_module, si
 def test_is_origin_allowed_is_an_exact_match(config_module, allowed_origins, candidate, expected):
     allowed_origins("https://app.example")
     with entry_app().app_context():
-        assert config_module.is_origin_allowed(candidate) is expected
+        assert origins.is_origin_allowed(candidate) is expected
 
 
 def test_is_origin_allowed_permits_everything_when_unconfigured(config_module, allowed_origins):
     allowed_origins(None)
     with entry_app().app_context():
-        assert config_module.is_origin_allowed("https://anything.example") is True
+        assert origins.is_origin_allowed("https://anything.example") is True
 
 
 def test_determine_expected_origin_never_echoes_an_unlisted_candidate(config_module, allowed_origins):
@@ -223,11 +224,11 @@ def test_determine_expected_origin_never_echoes_an_unlisted_candidate(config_mod
 
     with entry_app().app_context():
         # A listed candidate is honoured...
-        assert config_module.determine_expected_origin("https://second.example") == (
+        assert origins.determine_expected_origin("https://second.example") == (
             "https://second.example"
         )
         # ...but an unlisted one falls back to the allowlist, never to itself.
-        assert config_module.determine_expected_origin("https://evil.example") == (
+        assert origins.determine_expected_origin("https://evil.example") == (
             "https://app.example"
         )
 

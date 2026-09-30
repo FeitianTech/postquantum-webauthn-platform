@@ -1,11 +1,7 @@
-"""Configuration and setup for the demo server's Flask application.
+"""Configuration and setup for the Flask application.
 
-The implementation lives in this package's submodules; this module is the public
-face of it and re-exports the pieces callers use. Each submodule resolves its own
-names through its own imports, so a name here is the same object the submodule
-defines -- patching one of these re-exports changes what callers of *this module*
-see (the routes reach ``create_fido_server`` and ``determine_rp_id`` through it),
-not what the submodules call.
+Importers name the submodule they need, and patch there; this package
+re-exports nothing.
 
 Importing the package configures nothing and writes nothing.
 ``server.app.factory.create_app()`` builds an app from these submodules: the
@@ -36,28 +32,3 @@ app, in the order ``factory.INIT_STEPS`` fixes.
 The MDS trust anchors live in ``server.app.mds_trust``, outside this package, so
 the snapshot updater can import them without anything from Flask.
 """
-from __future__ import annotations
-
-from . import (
-    origins,
-    relying_party,
-)
-
-__all__ = [
-    "build_rp_entity",
-    "create_fido_server",
-    "determine_expected_origin",
-    "determine_rp_id",
-    "extract_client_data_origin",
-    "is_origin_allowed",
-]
-
-# The relying party.
-build_rp_entity = relying_party.build_rp_entity
-create_fido_server = relying_party.create_fido_server
-determine_rp_id = relying_party.determine_rp_id
-
-# The origin policy.
-determine_expected_origin = origins.determine_expected_origin
-extract_client_data_origin = origins.extract_client_data_origin
-is_origin_allowed = origins.is_origin_allowed

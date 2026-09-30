@@ -6,8 +6,8 @@ from datetime import timedelta
 import pytest
 
 from server.app import app as app_module
-from server.app import config as config_module
 from server.app.config import proxy as config_proxy
+from server.app.config import relying_party
 from server.app.config import relying_party as config_relying_party
 from server.app.config import security_headers as config_security_headers
 from server.app.config import security_headers as security_headers_module
@@ -334,7 +334,7 @@ def test_rp_id_derivation_ignores_forwarded_host_header():
         base_url="http://real.example",
         headers={"X-Forwarded-Host": "attacker.example"},
     ):
-        assert config_module.determine_rp_id() == "real.example"
+        assert relying_party.determine_rp_id() == "real.example"
         assert config_relying_party._resolve_request_host() == "real.example"
 
 

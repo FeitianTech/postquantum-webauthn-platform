@@ -19,8 +19,8 @@ from fido2.webauthn import (
 )
 from flask import jsonify
 
-from ... import config
 from ...attachments import normalize_attachment, resolve_effective_attachments
+from ...config import relying_party
 from ...webauthn.attestation.aaguid import describe_cred_protect
 from . import binary
 
@@ -89,14 +89,14 @@ def registration_server(public_key: Any) -> tuple[Any, Any]:
     """A fido2 server for the request's RP, sanitised into ``public_key``, and that RP."""
 
     rp_input = public_key.get("rp") if isinstance(public_key, Mapping) else None
-    rp_entity = config.build_rp_entity(rp_input)
+    rp_entity = relying_party.build_rp_entity(rp_input)
     sanitized_rp = {"id": rp_entity.id, "name": rp_entity.name}
     if isinstance(rp_input, Mapping):
         sanitized_rp.update({k: v for k, v in rp_input.items() if k not in {"id", "name"}})
     if isinstance(public_key, MutableMapping):
         public_key["rp"] = sanitized_rp
 
-    temp_server = config.create_fido_server(rp_data=sanitized_rp)
+    temp_server = relying_party.create_fido_server(rp_data=sanitized_rp)
 
     timeout = public_key.get("timeout", 90000)
     temp_server.timeout = timeout / 1000.0 if timeout else None

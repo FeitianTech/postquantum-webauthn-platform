@@ -5,6 +5,7 @@ import base64
 import pytest
 
 from server.app import config as config_module
+from server.app.config import relying_party
 from server.app.routes import advanced as advanced_module
 from server.app.routes import binary_helpers as shared_binary_helpers
 from server.app.routes.advanced import algorithms as advanced_algorithms
@@ -39,7 +40,7 @@ def _install_fake_register_server(monkeypatch, advanced_module, captured: dict, 
             captured["kwargs"] = kwargs
             return {"publicKey": {"challenge": "AQID"}}, {"challenge": "state-token"}
 
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
 
 
 def test_summary_helpers_drop_non_mapping_inputs_and_nested_non_mapping_sections():

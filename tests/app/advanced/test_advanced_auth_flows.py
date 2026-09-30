@@ -1,5 +1,6 @@
 import base64
 
+from server.app.config import relying_party
 from tests.app.entry_app import entry_app
 
 
@@ -121,8 +122,8 @@ def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verific
         def authenticate_complete(self, *_args, **_kwargs):
             raise ValueError("Invalid signature.")
 
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_parsing,
@@ -182,8 +183,8 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_request
         def authenticate_complete(self, *_args, **_kwargs):
             raise ValueError("Invalid signature.")
 
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_parsing,
@@ -238,8 +239,8 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_sign
         def authenticate_complete(self, *_args, **_kwargs):
             raise ValueError("backend timeout")
 
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_parsing,

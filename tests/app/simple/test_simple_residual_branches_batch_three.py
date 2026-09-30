@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 from fido2 import cbor
 
+from server.app.config import relying_party
 from server.app.routes import simple as simple_module
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
@@ -129,9 +130,9 @@ def test_serialize_credential_for_session_accepts_hex_aaguid_alias():
 def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monkeypatch, algorithm: int, expected_name: str, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
     auth_data = _RegisterAuthData(algorithm)
 
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda: "example.com")
     monkeypatch.setattr(
-        config_module,
+        relying_party,
         "create_fido_server",
         lambda **_kwargs: _RegisterServer(auth_data)
     )
@@ -203,7 +204,7 @@ def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_cre
         lambda _raw: ([SimpleNamespace(credential_id=b"\x01")], [{"credentialId": "AQ"}])
     )
     monkeypatch.setattr(
-        config_module,
+        relying_party,
         "create_fido_server",
         lambda **_kwargs: _AuthenticationServer(captured)
     )

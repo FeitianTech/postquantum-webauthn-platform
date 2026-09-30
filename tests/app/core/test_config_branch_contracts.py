@@ -6,7 +6,6 @@ import types
 
 from flask import Flask
 
-import server.app.config as config_module
 from server.app.config import (
     attestation_trust,
     compression,
@@ -174,7 +173,7 @@ def test_parse_fingerprints_and_host_normalization_branches(monkeypatch):
 
     monkeypatch.setitem(entry_app().config, "FIDO_SERVER_RP_ID", "  configured.example  ")
     with entry_app().app_context():
-        assert config_module.determine_rp_id() == "configured.example"
+        assert relying_party.determine_rp_id() == "configured.example"
 
     assert relying_party._normalise_request_host(None) is None
     assert relying_party._normalise_request_host("   ") is None

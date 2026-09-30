@@ -1,6 +1,7 @@
 import base64
 import time
 
+from server.app.config import relying_party
 from tests.app.entry_app import entry_app
 
 
@@ -16,7 +17,7 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch,
         def authenticate_complete(self, *_args, **_kwargs):
             raise ValueError("Invalid signature.")
 
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(simple_parsing, "_parse_client_credentials", lambda _raw: ([object()], []))
 
     with entry_app().test_client() as client:
@@ -50,8 +51,8 @@ def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatc
         def authenticate_complete(self, *_args, **_kwargs):
             raise ValueError("Invalid signature.")
 
-    monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FailingServer())
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or "example.com")
+    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FailingServer())
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(advanced_algorithms, "_derive_algorithms_from_credentials", lambda _credentials: [])
     monkeypatch.setattr(
         advanced_parsing,

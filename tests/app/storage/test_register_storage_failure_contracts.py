@@ -3,6 +3,7 @@ import hashlib
 import time
 
 from server.app import config as config_module
+from server.app.config import relying_party
 from server.app.routes import advanced as advanced_module
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
@@ -53,9 +54,9 @@ def test_simple_register_complete_returns_500_when_saving_fails(monkeypatch, met
 
     auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)
 
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda: rp_id)
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda: rp_id)
     monkeypatch.setattr(
-        config_module,
+        relying_party,
         "create_fido_server",
         lambda **_kwargs: _SimpleFakeServer(auth_data)
     )
@@ -114,9 +115,9 @@ def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module
         def register_complete(self, *_args, **_kwargs):
             return auth_data
 
-    monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or rp_id)
+    monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or rp_id)
     monkeypatch.setattr(
-        config_module,
+        relying_party,
         "create_fido_server",
         lambda **_kwargs: _AdvancedFakeServer()
     )

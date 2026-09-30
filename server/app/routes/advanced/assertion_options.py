@@ -11,7 +11,7 @@ from typing import Any
 from fido2.webauthn import UserVerificationRequirement
 from flask import session
 
-from ... import config
+from ...config import relying_party
 from . import binary
 
 
@@ -25,8 +25,8 @@ def assertion_server(public_key: Mapping[str, Any]) -> tuple[Any, Any, Any]:
         stored_rp_id = stored_rp.get("id")
         stored_rp_name = stored_rp.get("name")
 
-    resolved_rp_id = config.determine_rp_id(stored_rp_id)
-    temp_server = config.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
+    resolved_rp_id = relying_party.determine_rp_id(stored_rp_id)
+    temp_server = relying_party.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
 
     timeout = public_key.get("timeout", 90000)
     temp_server.timeout = timeout / 1000.0 if timeout else None

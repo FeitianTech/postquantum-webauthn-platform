@@ -21,13 +21,13 @@ from typing import Any
 from fido2.webauthn import AuthenticatorData
 from flask import abort, jsonify, request, session
 
-from ... import config
 from ...challenge_registry import (
     CHALLENGE_FRESH,
     CHALLENGE_REPLAYED,
     consume_ceremony_state,
     stamp_ceremony_state,
 )
+from ...config import relying_party
 from ...encoding import encode_base64url
 from ...storage import credentials
 from ...storage.common import InvalidStorageIdentifier
@@ -57,8 +57,8 @@ def authenticate_begin():
     session["simple_credentials"] = serialized
     session["simple_credentials_email"] = uname
 
-    rp_id = config.determine_rp_id()
-    server = config.create_fido_server(rp_id=rp_id)
+    rp_id = relying_party.determine_rp_id()
+    server = relying_party.create_fido_server(rp_id=rp_id)
 
     options, state = server.authenticate_begin(
         credential_data_list,
@@ -131,7 +131,7 @@ def authenticate_complete():
             400,
         )
 
-    server = config.create_fido_server(rp_id=rp_id)
+    server = relying_party.create_fido_server(rp_id=rp_id)
 
     response_mapping: Mapping[str, Any]
     response_mapping = response if isinstance(response, Mapping) else {}
