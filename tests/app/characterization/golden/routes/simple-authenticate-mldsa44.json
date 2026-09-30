@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "612"
+     "635"
     ],
     [
      "X-Content-Type-Options",
@@ -149,7 +149,7 @@
        ],
        "rp": {
         "id": "localhost",
-        "name": "Demo server"
+        "name": "FIDO2/WebAuthn PQC Developer Tools"
        },
        "user": {
         "displayName": "A. User",
@@ -165,7 +165,7 @@
      }
     }
    ],
-   "bodySha256": "b704f3e7777f200e66f29ef7afa11a3199b1b9933c9c07aafd50e54f3e679327",
+   "bodySha256": "811c81731e1459cac6e61713f1ed4d080509b32d464fc43ae812a822c06ebbf2",
    "body": {
     "publicKey": {
      "authenticatorSelection": {
@@ -208,7 +208,7 @@
      ],
      "rp": {
       "id": "localhost",
-      "name": "Demo server"
+      "name": "FIDO2/WebAuthn PQC Developer Tools"
      },
      "user": {
       "displayName": "A. User",

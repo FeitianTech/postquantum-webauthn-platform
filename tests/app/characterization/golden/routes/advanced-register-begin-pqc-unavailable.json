@@ -58,7 +58,7 @@
     ],
     [
      "Content-Length",
-     "490"
+     "513"
     ],
     [
      "X-Content-Type-Options",
@@ -115,7 +115,7 @@
         ],
         "rp": {
          "id": "localhost",
-         "name": "Demo server"
+         "name": "FIDO2/WebAuthn PQC Developer Tools"
         },
         "user": {
          "displayName": "A. User",
@@ -127,7 +127,7 @@
       "advanced_register_allowed_attachments": [],
       "advanced_rp": {
        "id": "localhost",
-       "name": "Demo server"
+       "name": "FIDO2/WebAuthn PQC Developer Tools"
       },
       "advanced_state": {
        "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
@@ -137,7 +137,7 @@
      }
     }
    ],
-   "bodySha256": "f3410a53fe423d3863e6d6acb00bdc52239cd608197646497b95728d0e3f27c2",
+   "bodySha256": "5dc2faa12799799bf9b59103b09b3b8c8a7481e444ed99ac48c0e34a59d8adc5",
    "body": {
     "publicKey": {
      "attestation": "none",
@@ -156,7 +156,7 @@
      ],
      "rp": {
       "id": "localhost",
-      "name": "Demo server"
+      "name": "FIDO2/WebAuthn PQC Developer Tools"
      },
      "timeout": 90,
      "user": {
@@ -180,7 +180,7 @@
     ],
     [
      "Content-Length",
-     "545"
+     "568"
     ],
     [
      "X-Content-Type-Options",
@@ -241,7 +241,7 @@
         ],
         "rp": {
          "id": "localhost",
-         "name": "Demo server"
+         "name": "FIDO2/WebAuthn PQC Developer Tools"
         },
         "user": {
          "displayName": "A. User",
@@ -253,7 +253,7 @@
       "advanced_register_allowed_attachments": [],
       "advanced_rp": {
        "id": "localhost",
-       "name": "Demo server"
+       "name": "FIDO2/WebAuthn PQC Developer Tools"
       },
       "advanced_state": {
        "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
@@ -263,7 +263,7 @@
      }
     }
    ],
-   "bodySha256": "c1f6be8492355b2ad0c31867eab67732ce15fe807fe2e85f38066ffa4d08b022",
+   "bodySha256": "927ae227b1069fe534951b4ed99718db8ab9357e508fc8e552dc24a40204ceab",
    "body": {
     "publicKey": {
      "attestation": "none",
@@ -286,7 +286,7 @@
      ],
      "rp": {
       "id": "localhost",
-      "name": "Demo server"
+      "name": "FIDO2/WebAuthn PQC Developer Tools"
      },
      "timeout": 90,
      "user": {

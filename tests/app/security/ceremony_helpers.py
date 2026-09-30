@@ -246,7 +246,7 @@ def advanced_public_key_options(
     username: str = "user@example.com",
 ) -> dict[str, Any]:
     return {
-        "rp": {"id": rp_id, "name": "Demo server"},
+        "rp": {"id": rp_id, "name": "FIDO2/WebAuthn PQC Developer Tools"},
         "user": {
             "id": b"user-handle".hex(),
             "name": username,

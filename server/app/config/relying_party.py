@@ -23,12 +23,16 @@ from . import origins
 
 logger = logging.getLogger(__name__)
 
+# The relying party's name when FIDO_SERVER_RP_NAME is not set: the site's own
+# (``APP_TITLE`` in web/src/lib/sections.ts).
+DEFAULT_RP_NAME = "FIDO2/WebAuthn PQC Developer Tools"
+
 
 def config_from_env() -> dict[str, Any]:
     """The RP settings ``create_app()`` puts into ``app.config``."""
 
     return {
-        "FIDO_SERVER_RP_NAME": os.environ.get("FIDO_SERVER_RP_NAME", "Demo server"),
+        "FIDO_SERVER_RP_NAME": os.environ.get("FIDO_SERVER_RP_NAME", DEFAULT_RP_NAME),
         "FIDO_SERVER_RP_ID": os.environ.get("FIDO_SERVER_RP_ID"),
     }
 
@@ -168,7 +172,7 @@ def build_rp_entity(
         rp_name
         or (rp_data or {}).get("name")
         or current_app.config.get("FIDO_SERVER_RP_NAME")
-        or "Demo server"
+        or DEFAULT_RP_NAME
     )
 
     return PublicKeyCredentialRpEntity(name=rp_name_value, id=rp_id_value)
