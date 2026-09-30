@@ -2,8 +2,7 @@ import base64
 import hashlib
 import time
 
-import pytest
-
+from server.app.routes import simple as simple_module
 from tests.app.entry_app import entry_app
 
 
@@ -77,8 +76,6 @@ class _ObjectAuthData:
 
 
 def test_simple_validation_helpers_cover_decode_and_assertion_id_fallbacks():
-    simple_module = pytest.importorskip("server.app.routes.simple")
-
     assert simple_module._decode_base64url_bytes(b"\x00\x01") == b"\x00\x01"
     assert simple_module._decode_base64url_bytes("   ") == b""
     assert simple_module._decode_base64url_bytes("abc*") == b""
@@ -90,8 +87,6 @@ def test_simple_validation_helpers_cover_decode_and_assertion_id_fallbacks():
 
 
 def test_simple_register_begin_clears_cached_session_fields_when_client_credentials_are_empty(monkeypatch, config_module, simple_parsing):
-    pytest.importorskip("server.app.app")
-
     class _FakeServer:
         def register_begin(self, *_args, **_kwargs):
             return {"publicKey": "not-a-mapping"}, {"challenge": "simple-register-state"}
@@ -124,8 +119,6 @@ def test_simple_register_begin_clears_cached_session_fields_when_client_credenti
 
 
 def test_simple_register_complete_non_mapping_payload_returns_state_expired_error(monkeypatch, attestation_module):
-    pytest.importorskip("server.app.app")
-
     monkeypatch.setattr(
         attestation_module,
         "extract_attestation_details",
@@ -143,8 +136,6 @@ def test_simple_register_complete_non_mapping_payload_returns_state_expired_erro
 
 
 def test_simple_authenticate_complete_aborts_when_session_credentials_cannot_be_rebuilt(monkeypatch, simple_parsing):
-    pytest.importorskip("server.app.app")
-
     monkeypatch.setattr(simple_parsing, "_parse_client_credentials", lambda _raw: ([], []))
 
     with entry_app().test_client() as client:
@@ -162,8 +153,6 @@ def test_simple_authenticate_complete_aborts_when_session_credentials_cannot_be_
 
 
 def test_simple_register_complete_covers_warning_metadata_and_session_fallback_paths(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
-    pytest.importorskip("server.app.app")
-
     rp_id = "example.com"
     credential_id = b"branch-focus-register"
     auth_data = _RegisterAuthData(_RegisterCredentialData(credential_id), rp_id)

@@ -2,6 +2,8 @@ import base64
 
 import pytest
 
+from server.app.routes import simple as simple_module
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -38,16 +40,12 @@ def _valid_credential_entry(**overrides):
 
 
 def test_decode_binary_value_decodes_base64url_string():
-    simple_module = pytest.importorskip("server.app.routes.simple")
-
     raw = b"\x00\x01\xfe\xff"
 
     assert simple_module._decode_binary_value(_b64url(raw)) == raw
 
 
 def test_decode_binary_value_decodes_standard_base64_string():
-    simple_module = pytest.importorskip("server.app.routes.simple")
-
     raw = b"\xfb\xef\xff"
     encoded = base64.b64encode(raw).decode("ascii")
 
@@ -55,8 +53,6 @@ def test_decode_binary_value_decodes_standard_base64_string():
 
 
 def test_decode_binary_value_falls_back_to_hex_when_base64_decoders_fail():
-    simple_module = pytest.importorskip("server.app.routes.simple")
-
     # Separated or spaced hex cannot be base64, so it reaches the hex reading.
     assert simple_module._decode_binary_value("41 42 43") == b"ABC"
     assert simple_module._decode_binary_value("41:42:43") == b"ABC"
@@ -73,8 +69,6 @@ def test_decode_binary_value_falls_back_to_hex_when_base64_decoders_fail():
 
 
 def test_decode_binary_value_decodes_iterable_of_ints():
-    simple_module = pytest.importorskip("server.app.routes.simple")
-
     assert simple_module._decode_binary_value([65, 66, 67]) == b"ABC"
 
 
@@ -89,15 +83,11 @@ def test_decode_binary_value_decodes_iterable_of_ints():
     ],
 )
 def test_decode_binary_value_rejects_invalid_inputs(value, pattern):
-    simple_module = pytest.importorskip("server.app.routes.simple")
-
     with pytest.raises(ValueError, match=pattern):
         simple_module._decode_binary_value(value)
 
 
 def test_parse_client_credentials_returns_empty_for_non_list_input():
-    simple_module = pytest.importorskip("server.app.routes.simple")
-
     credentials, serialized = simple_module._parse_client_credentials({"not": "a-list"})
 
     assert credentials == []
@@ -105,8 +95,6 @@ def test_parse_client_credentials_returns_empty_for_non_list_input():
 
 
 def test_parse_client_credentials_skips_entries_missing_required_fields():
-    simple_module = pytest.importorskip("server.app.routes.simple")
-
     credentials, serialized = simple_module._parse_client_credentials(
         [
             {"credentialId": _b64url(b"id-only"), "publicKey": _b64url(_sample_public_key_bytes())},
@@ -120,8 +108,6 @@ def test_parse_client_credentials_skips_entries_missing_required_fields():
 
 
 def test_parse_client_credentials_parses_aliases_and_serializes_metadata_fields():
-    simple_module = pytest.importorskip("server.app.routes.simple")
-
     aaguid_bytes = bytes.fromhex("00112233445566778899aabbccddeeff")
     credential_id = b"alias-credential"
     public_key_bytes = _sample_public_key_bytes()
@@ -157,8 +143,6 @@ def test_parse_client_credentials_parses_aliases_and_serializes_metadata_fields(
 
 
 def test_parse_client_credentials_skips_malformed_entries_and_keeps_valid_entries():
-    simple_module = pytest.importorskip("server.app.routes.simple")
-
     malformed = _valid_credential_entry(credentialId="g$")
     valid = _valid_credential_entry(credentialId=_b64url(b"good-credential"), signCount=4)
 

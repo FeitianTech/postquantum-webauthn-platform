@@ -1,8 +1,6 @@
 import base64
 import time
 
-import pytest
-
 from tests.app.entry_app import entry_app
 
 
@@ -16,8 +14,6 @@ class _MatchedCredential:
 
 
 def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatch, attestation_module):
-    pytest.importorskip("server.app.app")
-
     monkeypatch.setattr(
         attestation_module,
         "extract_attestation_details",
@@ -44,8 +40,6 @@ def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatc
 
 
 def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkeypatch, simple_parsing):
-    pytest.importorskip("server.app.app")
-
     monkeypatch.setattr(
         simple_parsing,
         "_parse_client_credentials",
@@ -76,8 +70,6 @@ def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkey
 
 
 def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypatch, config_module, simple_parsing):
-    pytest.importorskip("server.app.app")
-
     credential_id = b"simple-auth-no-sign-count"
 
     class _FakeServer:

@@ -2,8 +2,6 @@ import base64
 import hashlib
 import time
 
-import pytest
-
 from tests.app.entry_app import entry_app
 
 
@@ -44,8 +42,6 @@ class _MatchedCredential:
 
 
 def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch, config_module, simple_registration, simple_parsing):
-    pytest.importorskip("server.app.app")
-
     state = {"challenge": "register-state"}
 
     class _FakeServer:
@@ -100,8 +96,6 @@ def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch
 
 
 def test_simple_authenticate_begin_requires_valid_credentials(monkeypatch, simple_parsing):
-    pytest.importorskip("server.app.app")
-
     monkeypatch.setattr(simple_parsing, "_parse_client_credentials", lambda _raw: ([], []))
 
     with entry_app().test_client() as client:
@@ -114,8 +108,6 @@ def test_simple_authenticate_begin_requires_valid_credentials(monkeypatch, simpl
 
 
 def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch, config_module, simple_parsing):
-    pytest.importorskip("server.app.app")
-
     credential_id = b"simple-auth-success"
     auth_data_bytes = b"\x00" * 32 + b"\x01" + (7).to_bytes(4, "big")
     auth_data_b64 = base64.b64encode(auth_data_bytes).decode("ascii").rstrip("=")
@@ -165,8 +157,6 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch, co
 def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch, config_module, simple_parsing):
     """A client-supplied ``__session_state`` must never become the challenge."""
 
-    pytest.importorskip("server.app.app")
-
     credential_id = b"simple-auth-fallback"
     captured = {}
 
@@ -204,8 +194,6 @@ def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch
 
 
 def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch, simple_parsing):
-    pytest.importorskip("server.app.app")
-
     monkeypatch.setattr(
         simple_parsing,
         "_parse_client_credentials",
@@ -233,8 +221,6 @@ def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch, sim
 
 def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
     """A cold /complete with a self-chosen challenge must be rejected."""
-
-    pytest.importorskip("server.app.app")
 
     rp_id = "example.com"
     credential_id = b"simple-register-cred"

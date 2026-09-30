@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 from fido2 import cbor
 
+from server.app.routes import simple as simple_module
 from tests.app.entry_app import entry_app
 
 
@@ -70,8 +71,6 @@ class _AuthenticationServer:
 
 
 def test_parse_client_credentials_ignores_non_mapping_entries_and_keeps_valid_records():
-    simple_module = pytest.importorskip("server.app.routes.simple")
-
     raw_credentials = [
         "not-a-mapping",
         {
@@ -100,8 +99,6 @@ def test_parse_client_credentials_ignores_non_mapping_entries_and_keeps_valid_re
 
 
 def test_serialize_credential_for_session_accepts_hex_aaguid_alias():
-    simple_module = pytest.importorskip("server.app.routes.simple")
-
     serialized = simple_module._serialize_credential_for_session(
         {
             "aaguidHex": "00112233445566778899aabbccddeeff",
@@ -129,8 +126,6 @@ def test_serialize_credential_for_session_accepts_hex_aaguid_alias():
     ],
 )
 def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monkeypatch, algorithm: int, expected_name: str, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
-    pytest.importorskip("server.app.app")
-
     auth_data = _RegisterAuthData(algorithm)
 
     monkeypatch.setattr(config_module, "determine_rp_id", lambda: "example.com")
@@ -199,8 +194,6 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monke
 
 
 def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_credential_id(monkeypatch, config_module, simple_parsing):
-    pytest.importorskip("server.app.app")
-
     captured = {}
 
     monkeypatch.setattr(

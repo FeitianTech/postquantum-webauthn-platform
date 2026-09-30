@@ -1,8 +1,6 @@
 import base64
 import time
 
-import pytest
-
 from tests.app.entry_app import entry_app
 
 
@@ -24,8 +22,6 @@ def _register_complete_payload(*, state=None):
 
 
 def test_simple_register_complete_returns_400_and_cleans_state_when_verification_fails(monkeypatch, attestation_module, config_module):
-    pytest.importorskip("server.app.app")
-
     class _FailingServer:
         def register_complete(self, *_args, **_kwargs):
             raise ValueError("register verification failed")
@@ -60,8 +56,6 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
 
 def test_simple_register_complete_rejects_request_state_fallback_before_verification(monkeypatch, attestation_module, config_module):
     """The request-supplied state must be discarded before any verification."""
-
-    pytest.importorskip("server.app.app")
 
     captured = {}
 
