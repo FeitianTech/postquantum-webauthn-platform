@@ -8,11 +8,11 @@ import pytest
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
+from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
 from server.app.webauthn import metadata as module
-from server.app.webauthn.metadata import effective as metadata_effective
 
 
 @pytest.fixture
@@ -184,5 +184,5 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
         "build_explorer_entry",
         lambda payload, **_kwargs: {"source": "session", "payload": payload},
     )
-    resolved = metadata_effective.resolve_effective_metadata_entry(entry_id="any")
+    resolved = mds_effective.resolve_effective_metadata_entry(entry_id="any")
     assert resolved["source"] == "session"

@@ -59,7 +59,7 @@ def uploads():
 def effective():
     """The fragment that composes base and session snapshots."""
 
-    return importlib.import_module("server.app.webauthn.metadata.effective")
+    return importlib.import_module("server.app.mds.effective")
 
 
 @pytest.fixture

@@ -8,10 +8,10 @@ from fido2.mds3 import MetadataBlobPayloadEntry
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
+from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
 from server.app.webauthn import metadata as module
-from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import uploads as metadata_uploads
 from server.app.webauthn.metadata import verifier as metadata_verifier
 
@@ -147,14 +147,14 @@ def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_mo
     }
     entry_id = effective.build_entry_id(payload)
 
-    assert metadata_effective._entry_matches_lookup(payload, entry_id=entry_id) is True
+    assert mds_effective._entry_matches_lookup(payload, entry_id=entry_id) is True
     assert (
-        metadata_effective._entry_matches_lookup(
+        mds_effective._entry_matches_lookup(
             payload, aaguid="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
         )
         is True
     )
-    assert metadata_effective._entry_matches_lookup(payload, aaid="A1B2#0001") is True
+    assert mds_effective._entry_matches_lookup(payload, aaid="A1B2#0001") is True
 
     base_snapshot = {
         "meta": {"entryCount": 2},
@@ -175,7 +175,7 @@ def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_mo
         },
     )
 
-    snapshot = metadata_effective._compose_effective_snapshot(base_snapshot, include_detail=False)
+    snapshot = mds_effective._compose_effective_snapshot(base_snapshot, include_detail=False)
 
     assert snapshot["meta"]["entryCount"] == 2
     assert snapshot["meta"]["customEntryCount"] == 1

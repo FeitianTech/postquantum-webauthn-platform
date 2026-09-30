@@ -8,10 +8,10 @@ from flask import g, session
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
+from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
-from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import verifier as metadata_verifier
 from tests.app.entry_app import entry_app
 
@@ -136,7 +136,7 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
     assert merged_descriptions == ["Session metadata", "Base unique"]
     assert merged.legal_header == "Session Legal"
 
-    source_info = metadata_effective._session_item_source_info(session_item)
+    source_info = mds_effective._session_item_source_info(session_item)
     assert source_info["storedFilename"] == "session.json"
     assert source_info["originalFilename"] == "upload.json"
     assert source_info["uploadedAt"] == "2026-04-03T00:00:00+00:00"

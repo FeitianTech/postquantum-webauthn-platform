@@ -1,7 +1,6 @@
-"""What the app makes of uploaded metadata and of the snapshot's entries.
+"""fido2's MDS verifier over the snapshot and a visitor's uploads, and the uploads' GitHub mirror.
 
-``effective`` merges the snapshot
-with a visitor's uploads, ``verifier`` builds fido2's MDS verifier from them, and
-``uploads`` mirrors uploads to GitHub. Importers name the module they need; this
-package re-exports nothing.
+``verifier`` builds the verifier and tells whether an entry's trust anchor is
+FIDO's; ``uploads`` mirrors uploads to GitHub. Importers name the module they
+need; this package re-exports nothing.
 """

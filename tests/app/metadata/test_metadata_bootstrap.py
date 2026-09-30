@@ -6,10 +6,10 @@ import pytest
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
+from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
 from server.app.routes import mds as mds_routes
-from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import uploads as metadata_uploads
 from tests.app.entry_app import entry_app
 
@@ -103,7 +103,7 @@ def test_the_mds_info_answers_the_summary_and_the_custom_entries_state(monkeypat
 def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_config):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
-        metadata_effective,
+        mds_effective,
         "load_effective_full_snapshot",
         lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test", "metadataStatement": {}}]},
     )
@@ -130,7 +130,7 @@ def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch, app_con
 def test_resolve_metadata_entry_returns_not_found(monkeypatch, app_config):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
-        metadata_effective,
+        mds_effective,
         "resolve_effective_metadata_entry",
         lambda **_kwargs: None,
     )
@@ -145,7 +145,7 @@ def test_resolve_metadata_entry_returns_not_found(monkeypatch, app_config):
 def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
-        metadata_effective,
+        mds_effective,
         "resolve_effective_metadata_entry",
         lambda **_kwargs: {"entryId": "aaguid:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "name": "Demo"},
     )
@@ -181,7 +181,7 @@ def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
         lambda item: {"storedFilename": "custom.json", "originalFilename": item["original_filename"]},
     )
     monkeypatch.setattr(
-        metadata_effective,
+        mds_effective,
         "load_effective_full_snapshot",
         lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test"}]},
     )
@@ -201,7 +201,7 @@ def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(mds_uploads, "delete_session_metadata_item", lambda _name: True)
     monkeypatch.setattr(
-        metadata_effective,
+        mds_effective,
         "load_effective_full_snapshot",
         lambda: {"meta": {"entryCount": 3}, "entries": [{"entryId": "aaguid:test"}]},
     )

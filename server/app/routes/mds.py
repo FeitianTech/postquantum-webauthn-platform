@@ -22,12 +22,12 @@ from flask import (
 from .. import encoding, visitor_session
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
 from ..mds import cache as mds_cache
+from ..mds import effective as mds_effective
 from ..mds import entries as mds_entries
 from ..mds import files as mds_files
 from ..mds import provisioning as mds_provisioning
 from ..mds import uploads as mds_uploads
 from ..webauthn.attestation import certificates as attestation_certificates
-from ..webauthn.metadata import effective as metadata_effective
 from ..webauthn.metadata import uploads as metadata_uploads
 from . import assets
 
@@ -115,7 +115,7 @@ def api_get_metadata_info():
 @mds_provisioning.waits_for_the_snapshot
 def api_get_full_explorer_metadata():
     visitor_session.ensure_id()
-    snapshot = metadata_effective.load_effective_full_snapshot()
+    snapshot = mds_effective.load_effective_full_snapshot()
     if not snapshot.get("entries") and not snapshot.get("meta"):
         return _no_store_json_response(
             {"error": "Verified metadata snapshot is not available."},
@@ -147,7 +147,7 @@ def api_resolve_metadata_entry():
             status=400,
         )
 
-    resolved = metadata_effective.resolve_effective_metadata_entry(
+    resolved = mds_effective.resolve_effective_metadata_entry(
         entry_id=provided.get("entry_id"),
         aaguid=provided.get("aaguid"),
         aaid=provided.get("aaid"),
@@ -259,7 +259,7 @@ def _upload_answer(saved_items: list[Any], errors: list[str]):
     if errors:
         response["errors"] = errors
     if saved_items:
-        response["snapshot"] = metadata_effective.load_effective_full_snapshot()
+        response["snapshot"] = mds_effective.load_effective_full_snapshot()
         # A reload must now load this session's own list, not the packaged snapshot.
         _remember_custom_entries_state(response["snapshot"])
 
@@ -283,7 +283,7 @@ def api_delete_custom_metadata(stored_filename: str):
             status=404,
         )
 
-    snapshot = metadata_effective.load_effective_full_snapshot()
+    snapshot = mds_effective.load_effective_full_snapshot()
     _remember_custom_entries_state(snapshot)
     return _no_store_json_response({"deleted": True, "snapshot": snapshot})
 

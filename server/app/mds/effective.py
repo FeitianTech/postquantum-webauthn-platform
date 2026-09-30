@@ -5,12 +5,12 @@ from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from ...mds import cache as mds_cache
-from ...mds import uploads as mds_uploads
-from ...mds.build import build_entry_id, build_explorer_entry, normalise_aaguid_key
+from . import cache as mds_cache
+from . import uploads as mds_uploads
+from .build import build_entry_id, build_explorer_entry, normalise_aaguid_key
 
 if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed
-    from ...mds.uploads import SessionMetadataItem
+    from .uploads import SessionMetadataItem
 
 
 def _build_session_snapshot_entry(

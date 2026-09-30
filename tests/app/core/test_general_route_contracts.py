@@ -3,11 +3,11 @@ from types import SimpleNamespace
 
 from server.app import visitor_session
 from server.app.decoder.decode import pipeline as decode_pipeline
+from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
 from server.app.routes import mds as mds_routes
 from server.app.webauthn.attestation import certificates as attestation_certificates
-from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import uploads as metadata_uploads
 from tests.app.entry_app import entry_app
 
@@ -255,7 +255,7 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
             lambda item: item,
         )
         monkeypatch.setattr(
-            metadata_effective,
+            mds_effective,
             "load_effective_full_snapshot",
             lambda: {"meta": {"entryCount": 1}},
         )
@@ -327,7 +327,7 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
 def test_general_empty_snapshot_and_upload_branches(monkeypatch):
     with entry_app().test_client() as client:
         monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-        monkeypatch.setattr(metadata_effective, "load_effective_full_snapshot", lambda: {})
+        monkeypatch.setattr(mds_effective, "load_effective_full_snapshot", lambda: {})
 
         full_explorer_missing = client.get("/api/mds/metadata/explorer/full")
         assert full_explorer_missing.status_code == 404
@@ -366,7 +366,7 @@ def test_general_empty_snapshot_and_upload_branches(monkeypatch):
         lambda _payload, original_filename=None: {"originalFilename": original_filename},
     )
     monkeypatch.setattr(mds_uploads, "serialize_session_metadata_item", lambda item: item)
-    monkeypatch.setattr(metadata_effective, "load_effective_full_snapshot", lambda: {"meta": {"entryCount": 1}})
+    monkeypatch.setattr(mds_effective, "load_effective_full_snapshot", lambda: {"meta": {"entryCount": 1}})
 
     with entry_app().app_context():
         monkeypatch.setattr(

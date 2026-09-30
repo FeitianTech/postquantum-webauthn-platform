@@ -13,11 +13,11 @@ from flask import ctx, g, session
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
+from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
 from server.app.webauthn import metadata as module
-from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import uploads as metadata_uploads
 from server.app.webauthn.metadata import verifier as metadata_verifier
 from tests.app.entry_app import entry_app
@@ -553,7 +553,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
         lambda base_snapshot, **kwargs: compose_calls.append(kwargs) or {"meta": {}, "entries": [base_snapshot]},
     )
 
-    full_effective = metadata_effective.load_effective_full_snapshot()
+    full_effective = mds_effective.load_effective_full_snapshot()
     assert full_effective["entries"]
     assert compose_calls == [
         {"include_detail": True, "include_raw_entry": False, "compact_detail": True},
@@ -562,13 +562,13 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
 
 def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, metadata_state, monkeypatch, blob, sessions, effective, verifier):
     assert (
-        metadata_effective._entry_matches_lookup(
+        mds_effective._entry_matches_lookup(
             {"metadataStatement": 123},
             aaguid="   ",
         )
         is False
     )
-    assert metadata_effective._entry_matches_lookup({"metadataStatement": 123}) is False
+    assert mds_effective._entry_matches_lookup({"metadataStatement": 123}) is False
 
     session_items = [SimpleNamespace(name="a"), SimpleNamespace(name="b"), SimpleNamespace(name="c")]
     build_calls = []
@@ -585,7 +585,7 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, m
     monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: session_items)
     monkeypatch.setattr(effective, "_build_session_snapshot_entry", _build_session_snapshot_entry)
 
-    composed = metadata_effective._compose_effective_snapshot(
+    composed = mds_effective._compose_effective_snapshot(
         {
             "meta": "not-a-mapping",
             "entries": [
@@ -639,10 +639,10 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, m
         ),
     )
 
-    assert metadata_effective.resolve_effective_metadata_entry(aaid="missing") is None
+    assert mds_effective.resolve_effective_metadata_entry(aaid="missing") is None
 
     monkeypatch.setattr(blob, "_load_base_metadata", lambda: (None, None))
-    assert metadata_effective.resolve_effective_metadata_entry(aaguid="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb") is None
+    assert mds_effective.resolve_effective_metadata_entry(aaguid="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb") is None
 
     assert metadata_verifier.metadata_entry_trust_anchor_status(object()) is None
 

@@ -4,9 +4,9 @@ import pytest
 from flask import session as flask_session
 
 from server.app import visitor_session
+from server.app.mds import effective as mds_effective
 from server.app.mds import uploads as mds_uploads
 from server.app.webauthn import metadata
-from server.app.webauthn.metadata import effective as metadata_effective
 from tests.app.entry_app import entry_app
 
 
@@ -94,7 +94,7 @@ def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch,
         lambda: (SimpleNamespace(entries=[base_entry]), "packaged"),
     )
 
-    resolved = metadata_effective.resolve_effective_metadata_entry(
+    resolved = mds_effective.resolve_effective_metadata_entry(
         aaguid="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
     )
 
@@ -138,7 +138,7 @@ def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch, blob, s
     monkeypatch.setattr(blob, "_load_base_full_snapshot", lambda: (base_snapshot, 1.0))
     monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [session_item])
 
-    snapshot = metadata_effective.load_effective_full_snapshot()
+    snapshot = mds_effective.load_effective_full_snapshot()
 
     assert snapshot["meta"]["entryCount"] == 1
     assert snapshot["meta"]["customEntryCount"] == 1
