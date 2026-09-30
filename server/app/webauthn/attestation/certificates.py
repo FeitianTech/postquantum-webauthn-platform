@@ -21,7 +21,6 @@ from . import (
     certificate_public_keys,
     certificate_summary,
     formatting,
-    trust,
 )
 from .constants import EXTENSION_DISPLAY_METADATA
 
@@ -190,8 +189,8 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
     version_number = certificate.version.value + 1
     version_hex = f"0x{certificate.version.value:x}"
 
-    not_valid_before = trust._certificate_datetime(certificate, "not_valid_before")
-    not_valid_after = trust._certificate_datetime(certificate, "not_valid_after")
+    not_valid_before = certificate.not_valid_before_utc
+    not_valid_after = certificate.not_valid_after_utc
 
     extensions = _extension_entries(certificate)
 
@@ -240,8 +239,8 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
         "signatureAlgorithmDetails": signature_algorithm_details,
         "issuer": certificate_names.format_x509_name(certificate.issuer),
         "validity": {
-            "notBefore": trust._ensure_utc_datetime(not_valid_before).isoformat(),
-            "notAfter": trust._ensure_utc_datetime(not_valid_after).isoformat(),
+            "notBefore": not_valid_before.isoformat(),
+            "notAfter": not_valid_after.isoformat(),
         },
         "subject": certificate_names.format_x509_name(certificate.subject),
         "subjectCommonNames": certificate_names._extract_common_names(certificate.subject),

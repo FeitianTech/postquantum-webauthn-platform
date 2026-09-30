@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Mapping, Sequence
-from datetime import datetime, timezone
 from typing import Any
 
 from cryptography import x509
@@ -59,24 +58,6 @@ def _is_trusted_ca_certificate(cert_bytes: bytes, *, allow_subject_parsing: bool
             return True
 
     return False
-
-
-def _ensure_utc_datetime(value: datetime) -> datetime:
-    """Return ``value`` normalised to a timezone-aware UTC datetime."""
-
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
-
-
-def _certificate_datetime(cert: Any, attribute: str) -> datetime:
-    """Retrieve *attribute* from *cert* preferring the UTC variant if present."""
-
-    utc_attribute = f"{attribute}_utc"
-    value = getattr(cert, utc_attribute, None)
-    if value is None:
-        value = getattr(cert, attribute)
-    return _ensure_utc_datetime(value)
 
 
 def _coerce_bytes(value: Any) -> bytes | None:

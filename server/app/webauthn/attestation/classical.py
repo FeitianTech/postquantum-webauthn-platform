@@ -54,8 +54,8 @@ def _evaluate_classical_attestation_root(
             chain_valid_dates = False
             continue
 
-        not_before = trust._certificate_datetime(cert, "not_valid_before")
-        not_after = trust._certificate_datetime(cert, "not_valid_after")
+        not_before = cert.not_valid_before_utc
+        not_after = cert.not_valid_after_utc
         if now < not_before or now > not_after:
             chain_valid_dates = False
             errors.append(

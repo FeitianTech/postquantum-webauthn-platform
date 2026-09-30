@@ -87,13 +87,11 @@ _coerce_attestation_certificate_bytes = certificates._coerce_attestation_certifi
 extract_attestation_details = certificates.extract_attestation_details
 
 # Trust-path, AAGUID, and certificate validity helpers.
-_certificate_datetime = trust._certificate_datetime
 _coerce_bytes = trust._coerce_bytes
 _coerce_certificate_bytes = trust._coerce_certificate_bytes
 _collect_metadata_root_certificates = trust._collect_metadata_root_certificates
 _collect_trust_path_entries = trust._collect_trust_path_entries
 _describe_certificate_subject = trust._describe_certificate_subject
-_ensure_utc_datetime = trust._ensure_utc_datetime
 _extract_certificate_aaguid = trust._extract_certificate_aaguid
 _find_metadata_entry_for_aaguid = trust._find_metadata_entry_for_aaguid
 _resolve_root_validity = trust._resolve_root_validity

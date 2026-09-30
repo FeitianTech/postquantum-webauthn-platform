@@ -30,20 +30,8 @@ def _self_signed_cert_der() -> bytes:
     return cert.public_bytes(serialization.Encoding.DER)
 
 
-def test_datetime_coercion_and_bytes_helpers(attestation_module):
+def test_bytes_helpers(attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
-    naive = datetime(2026, 1, 1, 12, 0, 0)
-    assert attestation_module._ensure_utc_datetime(naive).tzinfo == timezone.utc
-
-    class _FakeCert:
-        not_valid_before_utc = datetime(2026, 1, 1, tzinfo=timezone.utc)
-        not_valid_after = datetime(2026, 2, 1)
-
-    before = attestation_module._certificate_datetime(_FakeCert(), "not_valid_before")
-    after = attestation_module._certificate_datetime(_FakeCert(), "not_valid_after")
-    assert before.tzinfo == timezone.utc
-    assert after.tzinfo == timezone.utc
 
     assert attestation_module._coerce_bytes(ByteBuffer(b"abc")) == b"abc"
     assert attestation_module._coerce_bytes(memoryview(b"xyz")) == b"xyz"

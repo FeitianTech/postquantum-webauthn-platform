@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -103,8 +103,8 @@ def test_serialize_attestation_certificate_mocked_certificate_residual_paths(mon
         signature = b"\xAA\xBB"
         serial_number = 12345
 
-        not_valid_before = datetime(2020, 1, 1)
-        not_valid_after = datetime(2030, 1, 1)
+        not_valid_before_utc = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        not_valid_after_utc = datetime(2030, 1, 1, tzinfo=timezone.utc)
 
         @property
         def signature_hash_algorithm(self):

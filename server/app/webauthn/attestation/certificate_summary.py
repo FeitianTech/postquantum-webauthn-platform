@@ -16,11 +16,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, rsa
 from cryptography.x509.oid import ExtensionOID
 
 from ..mldsa import PUBLIC_KEY_TYPES
-from . import certificate_names, formatting, trust
-
-
-def _isoformat(value: datetime) -> str:
-    return trust._ensure_utc_datetime(value).isoformat()
+from . import certificate_names, formatting
 
 
 def _public_key_entries(public_key: Any, fallback_public_key_summary: Sequence[tuple[str, Any]]) -> list[tuple[str, Any]]:
@@ -213,8 +209,8 @@ def _build_certificate_summary(
         ],
         [
             "Validity:",
-            f"    Not Before: {_isoformat(not_valid_before)}",
-            f"    Not After: {_isoformat(not_valid_after)}",
+            f"    Not Before: {not_valid_before.isoformat()}",
+            f"    Not After: {not_valid_after.isoformat()}",
         ],
         [f"Subject: {certificate_names.format_x509_name(certificate.subject)}"],
         _public_key_section(_public_key_entries(public_key, fallback_public_key_summary)),
