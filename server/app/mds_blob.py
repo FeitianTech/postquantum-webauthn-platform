@@ -5,7 +5,7 @@ certificates above it. RFC 5280 path validation stops at the first trusted
 root, and the BLOB can carry certificates past it: the GlobalSign R3 to R46
 cross-certificate, for trust stores that only have R3. fido2's ``parse_blob``
 checks ``x5c`` and the root as one straight chain, so with R46 pinned it would
-refuse the real BLOB; this checks each shorter path first.
+refuse the real BLOB; this builds the path cryptography's verifier finds.
 
 A Flask-free leaf like ``mds_trust``: ``tools/update_mds_snapshot.py`` uses it
 without building the app, and it imports nothing from the app.
@@ -15,10 +15,18 @@ from __future__ import annotations
 import json
 from base64 import b64decode
 from collections.abc import Sequence
+from datetime import datetime, timezone
 from typing import Any
 
 from cryptography import x509
-from fido2.attestation import InvalidSignature, verify_x509_chain
+from cryptography.x509.verification import (
+    Criticality,
+    ExtensionPolicy,
+    PolicyBuilder,
+    Store,
+    VerificationError,
+)
+from fido2.attestation import InvalidSignature
 from fido2.cose import CoseKey
 from fido2.mds3 import MetadataBlobPayload
 from fido2.utils import websafe_decode
@@ -26,26 +34,31 @@ from fido2.utils import websafe_decode
 __all__ = ["verify_blob", "verify_chain_to_root"]
 
 
-def verify_chain_to_root(chain: Sequence[bytes], trust_root: bytes) -> None:
-    """Check that some leading part of ``chain`` leads to ``trust_root``.
+def verify_chain_to_root(chain: Sequence[bytes], trust_root: bytes, *, now: datetime | None = None) -> None:
+    """Check that ``chain``'s first certificate leads to ``trust_root``, valid at ``now``.
 
-    Tries the leaf alone, then the leaf and the next certificate, and so on, each
-    ending in ``trust_root``: the first path that verifies ends the check.
-    Raises fido2's ``InvalidSignature`` when none does.
+    RFC 5280 path building (cryptography's ``x509.verification``) with
+    ``trust_root`` the only anchor and the rest of ``chain`` the intermediates it
+    may use: a certificate past the root (the R3 cross-certificate) is simply not
+    on the path. Every CA on the path must carry Basic Constraints. Raises fido2's
+    ``InvalidSignature`` when there is no such path.
     """
 
     if not chain:
-        verify_x509_chain([trust_root])
         return
-    last_error: InvalidSignature | None = None
-    for end in range(1, len(chain) + 1):
-        try:
-            verify_x509_chain(list(chain[:end]) + [trust_root])
-            return
-        except InvalidSignature as exc:
-            last_error = exc
-    assert last_error is not None  # nosec - the loop ran at least once
-    raise last_error
+    certificates = [x509.load_der_x509_certificate(bytes(der)) for der in chain]
+    ca_policy = ExtensionPolicy.permit_all().require_present(x509.BasicConstraints, Criticality.AGNOSTIC, None)
+    verifier = (
+        PolicyBuilder()
+        .store(Store([x509.load_der_x509_certificate(bytes(trust_root))]))
+        .time(now or datetime.now(timezone.utc))
+        .extension_policies(ca_policy=ca_policy, ee_policy=ExtensionPolicy.permit_all())
+        .build_client_verifier()
+    )
+    try:
+        verifier.verify(certificates[0], certificates[1:])
+    except VerificationError as exc:
+        raise InvalidSignature(f"No path to the pinned root: {exc}") from None
 
 
 def verify_blob(blob: bytes, trust_root: bytes) -> dict[str, Any]:

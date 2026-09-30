@@ -25,7 +25,12 @@ from server.app import mds_blob
 _NOW = datetime.now(timezone.utc)
 
 
-def _certificate(*, subject: str, issuer: str, public_key, issuer_key) -> bytes:
+def _certificate(
+    *, subject: str, issuer: str, public_key, issuer_key, ca: bool = True, expired: bool = False
+) -> bytes:
+    """A certificate; a CA's carries Basic Constraints, as the real chain's do."""
+
+    not_after = _NOW - timedelta(hours=1) if expired else _NOW + timedelta(days=30)
     builder = (
         x509.CertificateBuilder()
         .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, subject)]))
@@ -33,8 +38,10 @@ def _certificate(*, subject: str, issuer: str, public_key, issuer_key) -> bytes:
         .public_key(public_key)
         .serial_number(x509.random_serial_number())
         .not_valid_before(_NOW - timedelta(days=1))
-        .not_valid_after(_NOW + timedelta(days=30))
+        .not_valid_after(not_after)
     )
+    if ca:
+        builder = builder.add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
     return builder.sign(issuer_key, hashes.SHA256()).public_bytes(serialization.Encoding.DER)
 
 
@@ -48,13 +55,17 @@ def _transition():
     legacy, current, intermediate, leaf = _rsa(), _rsa(), _rsa(), ec.generate_private_key(ec.SECP256R1())
     unrelated = _rsa()
     return SimpleNamespace(
-        leaf=_certificate(subject="mds.example.org", issuer="Intermediate CA", public_key=leaf.public_key(), issuer_key=intermediate),
+        leaf=_certificate(
+            subject="mds.example.org", issuer="Intermediate CA", public_key=leaf.public_key(), issuer_key=intermediate, ca=False
+        ),
         intermediate=_certificate(subject="Intermediate CA", issuer="Root R46", public_key=intermediate.public_key(), issuer_key=current),
         cross=_certificate(subject="Root R46", issuer="Root R3", public_key=current.public_key(), issuer_key=legacy),
         current_root=_certificate(subject="Root R46", issuer="Root R46", public_key=current.public_key(), issuer_key=current),
         legacy_root=_certificate(subject="Root R3", issuer="Root R3", public_key=legacy.public_key(), issuer_key=legacy),
         unrelated=_certificate(subject="Unrelated", issuer="Unrelated", public_key=unrelated.public_key(), issuer_key=unrelated),
         leaf_key=leaf,
+        intermediate_key=intermediate,
+        current_key=current,
     )
 
 
@@ -95,18 +106,22 @@ def test_a_chain_ending_in_a_cross_certificate_reaches_either_root():
         mds_blob.verify_chain_to_root(chain, certs.unrelated)
 
 
-def test_each_shorter_path_is_tried_before_a_longer_one(monkeypatch):
-    calls = []
+def test_a_path_through_an_expired_or_unconstrained_ca_is_refused():
+    certs = _transition()
+    expired = _certificate(
+        subject="Intermediate CA", issuer="Root R46", public_key=certs.intermediate_key.public_key(),
+        issuer_key=certs.current_key, expired=True,
+    )
+    unconstrained = _certificate(
+        subject="Intermediate CA", issuer="Root R46", public_key=certs.intermediate_key.public_key(),
+        issuer_key=certs.current_key, ca=False,
+    )
 
-    def _verify(chain):
-        calls.append(list(chain))
-        if len(chain) != 3:
-            raise InvalidSignature("incomplete path")
-
-    monkeypatch.setattr(mds_blob, "verify_x509_chain", _verify)
-    mds_blob.verify_chain_to_root([b"leaf", b"ca", b"cross"], b"root")
-
-    assert calls == [[b"leaf", b"root"], [b"leaf", b"ca", b"root"]]
+    for intermediate in (expired, unconstrained):
+        with pytest.raises(InvalidSignature, match="No path to the pinned root"):
+            mds_blob.verify_chain_to_root([certs.leaf, intermediate], certs.current_root)
+    # Checked at the time given: a day ago the expired one was still valid.
+    mds_blob.verify_chain_to_root([certs.leaf, expired], certs.current_root, now=_NOW - timedelta(hours=2))
 
 
 def test_no_x5c_means_the_root_signed_the_blob():
