@@ -4,11 +4,7 @@
 that moved, or an import cycle -- into a skipped test, so the run stays green while
 testing less. The app's modules (``server``), the tools and the test helpers are
 always importable in this repository; a test imports them like any other module.
-
-A call whose argument is not a literal cannot be checked, so it counts too. The
-files below still make such calls, each with its current count: an entry must
-equal the file's count (lower it as calls go, remove it at zero), and a file not
-listed may make none.
+A call whose argument is not a literal cannot be checked, so it is refused too.
 """
 from __future__ import annotations
 
@@ -18,10 +14,6 @@ from pathlib import Path
 TESTS_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = TESTS_ROOT.parent
 FIRST_PARTY = ("server", "tools", "tests")
-
-ALLOWED: dict[str, int] = {
-
-}
 
 
 def _first_party_skips(tree: ast.AST) -> int:
@@ -51,17 +43,8 @@ def _measure() -> dict[str, int]:
 
 
 def test_no_test_skips_on_importing_the_app():
-    measured = _measure()
-    problems = []
-    for path, count in sorted(measured.items()):
-        allowed = ALLOWED.get(path, 0)
-        if count > allowed:
-            problems.append(f"{path}: {count} importorskip of the app's own modules; import them plainly")
-        elif count < allowed:
-            problems.append(f"{path}: {count} left, listed at {allowed}: lower its entry")
-    for path in sorted(set(ALLOWED) - set(measured)):
-        problems.append(f"{path} makes no such call now: remove its entry")
-    assert not problems, "\n".join(problems)
+    found = [f"{path}: {count} importorskip of the app's own modules; import them plainly" for path, count in _measure().items()]
+    assert not found, "\n".join(found)
 
 
 def test_the_check_counts_first_party_and_unreadable_targets_only():
