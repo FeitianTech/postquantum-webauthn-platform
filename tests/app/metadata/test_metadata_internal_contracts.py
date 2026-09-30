@@ -1,26 +1,26 @@
 import os
 
-from server.app import visitor_session
+from server.app.storage import common as storage_common
 from server.app.storage import github_mirror
 
 
 def test_normalise_session_identifier_rejects_path_separators(monkeypatch):
-    assert visitor_session.normalise_id("session/abc") is None
+    assert storage_common.normalise_session_id("session/abc") is None
 
     monkeypatch.setattr(os, "altsep", "\\")
-    assert visitor_session.normalise_id("session\\abc") is None
+    assert storage_common.normalise_session_id("session\\abc") is None
 
 
 def test_normalise_session_identifier_accepts_clean_value_and_rejects_invalid_shapes():
     assert (
-        visitor_session.normalise_id(
+        storage_common.normalise_session_id(
             "550e8400-e29b-41d4-a716-446655440000"
         )
         == "550e8400-e29b-41d4-a716-446655440000"
     )
-    assert visitor_session.normalise_id("   ") is None
-    assert visitor_session.normalise_id(".hidden") is None
-    assert visitor_session.normalise_id(123) is None
+    assert storage_common.normalise_session_id("   ") is None
+    assert storage_common.normalise_session_id(".hidden") is None
+    assert storage_common.normalise_session_id(123) is None
 
 
 def test_safe_metadata_repo_filename_sanitizes_traversal_and_invalid_input():

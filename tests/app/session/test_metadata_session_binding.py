@@ -199,7 +199,7 @@ def test_issued_cookie_is_signed_httponly_and_round_trips(session_env):
     ).loads(value)
     # The wire value is not the namespace name itself.
     assert value != identifier
-    assert visitor_session.normalise_id(identifier) == identifier
+    assert storage_common.normalise_session_id(identifier) == identifier
 
 
 def test_fresh_visitor_gets_an_unguessable_namespace(session_env):

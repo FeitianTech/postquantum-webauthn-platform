@@ -17,6 +17,7 @@ from typing import Any
 from fido2.mds3 import MetadataBlobPayloadEntry
 
 from .. import visitor_session
+from ..storage import common as storage_common
 from ..storage import session_metadata
 from . import entries
 
@@ -33,7 +34,7 @@ def _session_metadata_directory(
     if not session_id:
         return None
 
-    normalised = visitor_session.normalise_id(session_id)
+    normalised = storage_common.normalise_session_id(session_id)
     if not normalised:
         return None
 

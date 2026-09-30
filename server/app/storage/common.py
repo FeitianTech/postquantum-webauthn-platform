@@ -22,6 +22,7 @@ __all__ = [
     "assert_contained_blob_name",
     "file_digest",
     "file_lock",
+    "normalise_session_id",
     "normalize_nonempty_str",
     "resolve_contained_path",
     "replace_file",
@@ -84,6 +85,24 @@ def resolve_session_id(session_id: str | None, fallback: Callable[[], str]) -> s
         if trimmed:
             return trimmed
     return fallback()
+
+
+def normalise_session_id(value: Any) -> str | None:
+    """``value`` as a session id: a trimmed string that names no path (no separator,
+    no leading dot); None otherwise."""
+
+    if not isinstance(value, str):
+        return None
+
+    trimmed = value.strip()
+    if not trimmed or trimmed.startswith("."):
+        return None
+
+    for separator in (os.sep, os.altsep):
+        if separator and separator in trimmed:
+            return None
+
+    return trimmed
 
 
 # On Cloud Storage every store keeps a visitor's objects under user-data/<session>/<store>/.

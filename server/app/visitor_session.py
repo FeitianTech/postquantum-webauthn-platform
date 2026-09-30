@@ -11,13 +11,11 @@ backends, at most every ``CLEANUP_INTERVAL`` (``schedule_cleanup``).
 from __future__ import annotations
 
 import logging
-import os
 import secrets
 import threading
 import time
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Any
 
 from flask import (
     after_this_request,
@@ -29,6 +27,7 @@ from flask import (
 )
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 
+from .storage import common as storage_common
 from .storage import session_metadata
 
 logger = logging.getLogger(__name__)
@@ -158,28 +157,11 @@ def schedule_cleanup() -> None:
         _maybe_cleanup(now=current_time)
 
 
-def normalise_id(value: Any) -> str | None:
-    """``value`` as a session id: a string that names no path; None otherwise."""
-
-    if not isinstance(value, str):
-        return None
-
-    trimmed = value.strip()
-    if not trimmed or trimmed.startswith("."):
-        return None
-
-    for separator in (os.sep, os.altsep):
-        if separator and separator in trimmed:
-            return None
-
-    return trimmed
-
-
 def _schedule_cookie(identifier: str) -> None:
     if not has_request_context():
         return
 
-    normalised = normalise_id(identifier)
+    normalised = storage_common.normalise_session_id(identifier)
     if not normalised:
         return
 
@@ -232,7 +214,7 @@ def current_id(*, create: bool = False) -> str | None:
     # namespace.
     existing = session.get(SESSION_KEY)
     if isinstance(existing, str):
-        identifier = normalise_id(existing)
+        identifier = storage_common.normalise_session_id(existing)
         if identifier:
             session[SESSION_KEY] = identifier
             _schedule_cookie(identifier)
@@ -255,7 +237,7 @@ def current_id(*, create: bool = False) -> str | None:
             unsealed = None
         except Exception:
             unsealed = None
-        cookie_identifier = normalise_id(unsealed)
+        cookie_identifier = storage_common.normalise_session_id(unsealed)
 
     if cookie_identifier:
         session[SESSION_KEY] = cookie_identifier
@@ -288,7 +270,7 @@ def ensure_id() -> str:
 def note_activity(session_id: str) -> None:
     """Refresh the session's last-access marker, throttled, and schedule the sweep."""
 
-    normalised = normalise_id(session_id)
+    normalised = storage_common.normalise_session_id(session_id)
     if not normalised:
         return
 

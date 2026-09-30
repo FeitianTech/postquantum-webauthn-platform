@@ -80,13 +80,10 @@ def _base_prefix() -> str:
 def _normalise_local_session_id(session_id: str) -> str:
     if not isinstance(session_id, str):
         raise ValueError("Session identifier is required")
-    trimmed = session_id.strip()
-    if not trimmed or trimmed.startswith("."):
+    normalised = common.normalise_session_id(session_id)
+    if normalised is None:
         raise ValueError("Session identifier is invalid")
-    for separator in (os.sep, os.altsep):
-        if separator and separator in trimmed:
-            raise ValueError("Session identifier is invalid")
-    return trimmed
+    return normalised
 
 
 def _local_session_directory(session_id: str, *, create: bool = False) -> str | None:
