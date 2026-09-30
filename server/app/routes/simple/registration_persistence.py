@@ -13,10 +13,9 @@ from typing import Any
 
 from flask import jsonify, session
 
-from ... import device_logs
+from ... import device_logs, json_values
 from ...storage import credentials
 from ...storage.common import InvalidStorageIdentifier, StorageReadError
-from ...webauthn import attestation
 from ...webauthn.metadata import sessions as metadata_sessions
 from .. import binary_helpers
 
@@ -54,7 +53,7 @@ def _build_credential_entry(ctx: dict[str, Any]) -> dict[str, Any]:
     }
 
     if ctx["parsed_attestation_object"]:
-        credential_entry["attestation_object_decoded"] = attestation.make_json_safe(
+        credential_entry["attestation_object_decoded"] = json_values.make_json_safe(
             ctx["parsed_attestation_object"]
         )
     return credential_entry

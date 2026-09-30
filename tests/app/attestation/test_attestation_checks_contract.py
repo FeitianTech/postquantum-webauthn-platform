@@ -5,6 +5,9 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fido2.webauthn import RegistrationResponse
 
+from server.app.webauthn.attestation import checks as attestation_checks
+from server.app.webauthn.attestation import trust as attestation_trust
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -112,7 +115,7 @@ def test_perform_attestation_checks_reports_core_validation_failures(monkeypatch
     registration = _FakeRegistrationResponse(client_data, attestation_object)
     monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response={"raw": "value"},
         state={"challenge": _b64url(expected_challenge), "user_verification": "required"},
         public_key_options={"pubKeyCredParams": [{"alg": -257}]},
@@ -158,7 +161,7 @@ def test_perform_attestation_checks_accepts_valid_none_attestation(monkeypatch, 
     registration = _FakeRegistrationResponse(client_data, attestation_object)
     monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response={"raw": "value"},
         state={"challenge": _b64url(expected_challenge), "user_verification": "required"},
         public_key_options={"pubKeyCredParams": [{"alg": -7}]},
@@ -182,7 +185,7 @@ def test_perform_attestation_checks_returns_registration_parse_error(monkeypatch
 
     monkeypatch.setattr(RegistrationResponse, "from_dict", _raise_parse_error)
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response={"broken": True},
         state=None,
         public_key_options=None,
@@ -207,7 +210,7 @@ def test_perform_attestation_checks_returns_registration_parse_error(monkeypatch
     ],
 )
 def test_resolve_root_validity_matrix(checks, expected, attestation_module):
-    assert attestation_module._resolve_root_validity(checks) is expected
+    assert attestation_trust._resolve_root_validity(checks) is expected
 
 
 @pytest.mark.parametrize(
@@ -220,12 +223,12 @@ def test_resolve_root_validity_matrix(checks, expected, attestation_module):
     ],
 )
 def test_resolve_root_validity_additional_matrix_cases(checks, expected, attestation_module):
-    assert attestation_module._resolve_root_validity(checks) is expected
+    assert attestation_trust._resolve_root_validity(checks) is expected
 
 
 def test_resolve_root_validity_returns_none_when_all_checks_unknown(attestation_module):
     assert (
-        attestation_module._resolve_root_validity(
+        attestation_trust._resolve_root_validity(
             {
                 "trusted_ca": None,
                 "chain": None,

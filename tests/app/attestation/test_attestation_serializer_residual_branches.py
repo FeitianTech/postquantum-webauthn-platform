@@ -7,9 +7,17 @@ from types import SimpleNamespace
 from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
 
+from server.app.webauthn import signature_algorithms
+from server.app.webauthn.attestation import aaguid as attestation_aaguid
+from server.app.webauthn.attestation import (
+    certificate_names as attestation_certificate_names,
+)
+from server.app.webauthn.attestation import certificates as attestation_certificates
+from server.app.webauthn.attestation import constants as attestation_constants
+
 
 def test_attestation_helper_residual_branches(monkeypatch, certificate_public_keys, attestation_module):
-    attestation_module.augment_aaguid_fields(("not", "mutable"))
+    attestation_aaguid.augment_aaguid_fields(("not", "mutable"))
 
     monkeypatch.setattr(
         uuid,
@@ -17,33 +25,33 @@ def test_attestation_helper_residual_branches(monkeypatch, certificate_public_ke
         lambda *args, **kwargs: (_ for _ in ()).throw(ValueError("bad-uuid")),
     )
     container = {"aaguid": b"\x01" * 16}
-    attestation_module.augment_aaguid_fields(container)
+    attestation_aaguid.augment_aaguid_fields(container)
     assert container["aaguidHex"] == (b"\x01" * 16).hex()
     assert "aaguidGuid" not in container
 
-    assert attestation_module._normalise_signature_algorithm_name("") == ""
+    assert signature_algorithms.normalise_signature_algorithm_name("") == ""
     assert (
-        attestation_module._normalise_signature_algorithm_name("RSASSA-PSS with SHA-256")
+        signature_algorithms.normalise_signature_algorithm_name("RSASSA-PSS with SHA-256")
         == "RSASSA-PSS"
     )
     assert (
-        attestation_module._normalise_signature_algorithm_name("custom algo")
+        signature_algorithms.normalise_signature_algorithm_name("custom algo")
         == "CUSTOMALGO"
     )
 
-    assert attestation_module._derive_certificate_algorithm_info("not-a-mapping") == ""
+    assert attestation_certificate_names._derive_certificate_algorithm_info("not-a-mapping") == ""
     assert (
-        attestation_module._derive_certificate_algorithm_info(
+        attestation_certificate_names._derive_certificate_algorithm_info(
             {"algorithm": "ecdsa", "hash": "sha-256"}
         )
         == "ECDSA_SHA256"
     )
     assert (
-        attestation_module._derive_certificate_algorithm_info({"algorithm": "ed25519"})
+        attestation_certificate_names._derive_certificate_algorithm_info({"algorithm": "ed25519"})
         == "ED25519_SHA512"
     )
     assert (
-        attestation_module._derive_certificate_algorithm_info({"algorithm": "ed448"})
+        attestation_certificate_names._derive_certificate_algorithm_info({"algorithm": "ed448"})
         == "ED448_SHAKE256"
     )
 
@@ -58,7 +66,7 @@ def test_attestation_helper_residual_branches(monkeypatch, certificate_public_ke
             ],
         ),
     )
-    fallback = attestation_module._serialize_attestation_certificate_fallback(
+    fallback = attestation_certificates._serialize_attestation_certificate_fallback(
         b"\x30\x82\x01\x00",
         ValueError("parse-error"),
     )
@@ -139,12 +147,12 @@ def test_serialize_attestation_certificate_mocked_certificate_residual_paths(mon
         ),
     )
     monkeypatch.setitem(
-        attestation_module.EXTENSION_DISPLAY_METADATA,
+        attestation_constants.EXTENSION_DISPLAY_METADATA,
         "1.2.3",
         {"friendly_name": "FriendlyOne", "include_oid_in_header": False},
     )
     monkeypatch.setitem(
-        attestation_module.EXTENSION_DISPLAY_METADATA,
+        attestation_constants.EXTENSION_DISPLAY_METADATA,
         "9.9.9",
         {"include_oid_in_header": False},
     )
@@ -154,7 +162,7 @@ def test_serialize_attestation_certificate_mocked_certificate_residual_paths(mon
         lambda _ext: {"skip": "", "nested": [None, {"k": "v"}]},
     )
 
-    serialized = attestation_module.serialize_attestation_certificate(b"\x30\x82\x01\x00")
+    serialized = attestation_certificates.serialize_attestation_certificate(b"\x30\x82\x01\x00")
     assert serialized["signatureAlgorithm"] == "FriendlySig"
     assert "FriendlyOne" in serialized["summary"]
     assert "9.9.9" in serialized["summary"]

@@ -10,6 +10,11 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID, ObjectIdentifier
 from fido2.utils import ByteBuffer
 
+from server.app.webauthn.attestation import (
+    certificate_extensions as attestation_certificate_extensions,
+)
+from server.app.webauthn.attestation import certificates as attestation_certificates
+from server.app.webauthn.attestation import trust as attestation_trust
 from tests.app.entry_app import entry_app
 
 
@@ -30,7 +35,7 @@ def _self_signed_cert_der() -> bytes:
 
 
 def test_collect_trust_path_entries_and_certificate_bytes_coercion_helpers(attestation_module):
-    trust_path = attestation_module._collect_trust_path_entries(
+    trust_path = attestation_trust._collect_trust_path_entries(
         [b"leaf", bytearray(b"intermediate"), "ignored", ByteBuffer(b"root")]
     )
     assert trust_path == [b"leaf", b"intermediate", b"root"]
@@ -38,8 +43,8 @@ def test_collect_trust_path_entries_and_certificate_bytes_coercion_helpers(attes
     cert_bytes = b"\x30\x82\x01\x00"
     cert_b64 = base64.b64encode(cert_bytes).decode("ascii")
 
-    assert attestation_module._coerce_certificate_bytes(cert_b64) == cert_bytes
-    assert attestation_module._coerce_certificate_bytes("   ") is None
+    assert attestation_trust._coerce_certificate_bytes(cert_b64) == cert_bytes
+    assert attestation_trust._coerce_certificate_bytes("   ") is None
 
 
 def test_collect_metadata_root_certificates_supports_object_and_mapping_shapes(attestation_module):
@@ -52,7 +57,7 @@ def test_collect_metadata_root_certificates_supports_object_and_mapping_shapes(a
         )
     )
 
-    roots_obj = attestation_module._collect_metadata_root_certificates(metadata_entry_obj)
+    roots_obj = attestation_trust._collect_metadata_root_certificates(metadata_entry_obj)
     assert roots_obj == [root_a, root_b]
 
     metadata_entry_map = {
@@ -61,7 +66,7 @@ def test_collect_metadata_root_certificates_supports_object_and_mapping_shapes(a
             base64.b64encode(root_b).decode("ascii"),
         ]
     }
-    roots_map = attestation_module._collect_metadata_root_certificates(metadata_entry_map)
+    roots_map = attestation_trust._collect_metadata_root_certificates(metadata_entry_map)
     assert roots_map == [root_a, root_b]
 
 
@@ -84,7 +89,7 @@ def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monke
         set(),
     )
     with app.app_context():
-        assert attestation_module._is_trusted_ca_certificate(cert_der) is True
+        assert attestation_trust._is_trusted_ca_certificate(cert_der) is True
 
     monkeypatch.setitem(
         app.config,
@@ -97,7 +102,7 @@ def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monke
         {subject},
     )
     with app.app_context():
-        assert attestation_module._is_trusted_ca_certificate(cert_der) is True
+        assert attestation_trust._is_trusted_ca_certificate(cert_der) is True
 
     monkeypatch.setitem(
         app.config,
@@ -105,24 +110,24 @@ def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monke
         {"CN=other"},
     )
     with app.app_context():
-        assert attestation_module._is_trusted_ca_certificate(cert_der) is False
+        assert attestation_trust._is_trusted_ca_certificate(cert_der) is False
 
 
 def test_resolve_root_validity_handles_partial_success_and_failures(attestation_module):
     assert (
-        attestation_module._resolve_root_validity(
+        attestation_trust._resolve_root_validity(
             {"trusted_ca": True, "chain": True, "fido_mds": None}
         )
         is True
     )
     assert (
-        attestation_module._resolve_root_validity(
+        attestation_trust._resolve_root_validity(
             {"trusted_ca": True, "chain": False, "fido_mds": False}
         )
         is False
     )
     assert (
-        attestation_module._resolve_root_validity(
+        attestation_trust._resolve_root_validity(
             {"trusted_ca": False, "chain": None, "fido_mds": None}
         )
         is None
@@ -136,7 +141,7 @@ def test_serialize_extension_value_handles_known_unrecognized_oids_and_transport
         value=x509.UnrecognizedExtension(device_oid, b"\x04\x04demo"),
     )
 
-    device_value = attestation_module._serialize_extension_value(device_ext)
+    device_value = attestation_certificate_extensions._serialize_extension_value(device_ext)
     assert device_value["Device identifier"] == "demo"
     assert "Hex value" in device_value
 
@@ -145,7 +150,7 @@ def test_serialize_extension_value_handles_known_unrecognized_oids_and_transport
         oid=transports_oid,
         value=x509.UnrecognizedExtension(transports_oid, bytes.fromhex("03020430")),
     )
-    transport_value = attestation_module._serialize_extension_value(transports_ext)
+    transport_value = attestation_certificate_extensions._serialize_extension_value(transports_ext)
     assert transport_value["Transports"] == "USB NFC"
 
 
@@ -167,12 +172,12 @@ def test_serialize_extension_value_handles_known_unrecognized_oids_and_transport
     ],
 )
 def test_parse_fido_transport_bitfield_reads_fidos_named_bits(attestation_module, der, transports):
-    assert attestation_module._parse_fido_transport_bitfield(bytes.fromhex(der)) == transports
+    assert attestation_certificate_extensions._parse_fido_transport_bitfield(bytes.fromhex(der)) == transports
 
 
 @pytest.mark.parametrize("raw", [b"", b"\x03", b"\x04\x01\x00", bytes.fromhex("0302043000")])
 def test_parse_fido_transport_bitfield_names_nothing_for_what_is_not_a_bit_string(attestation_module, raw):
-    assert attestation_module._parse_fido_transport_bitfield(raw) is None
+    assert attestation_certificate_extensions._parse_fido_transport_bitfield(raw) is None
 
 
 def test_coerce_attestation_certificate_bytes_handles_mapping_variants(attestation_module):
@@ -183,12 +188,12 @@ def test_coerce_attestation_certificate_bytes_handles_mapping_variants(attestati
         + "\n-----END CERTIFICATE-----"
     )
 
-    assert attestation_module._coerce_attestation_certificate_bytes({"raw": cert_bytes.hex()}) == cert_bytes
+    assert attestation_certificates._coerce_attestation_certificate_bytes({"raw": cert_bytes.hex()}) == cert_bytes
     assert (
-        attestation_module._coerce_attestation_certificate_bytes(
+        attestation_certificates._coerce_attestation_certificate_bytes(
             {"derBase64": base64.b64encode(cert_bytes).decode("ascii")}
         )
         == cert_bytes
     )
-    assert attestation_module._coerce_attestation_certificate_bytes({"pem": pem}) == cert_bytes
-    assert attestation_module._coerce_attestation_certificate_bytes(ByteBuffer(cert_bytes)) == cert_bytes
+    assert attestation_certificates._coerce_attestation_certificate_bytes({"pem": pem}) == cert_bytes
+    assert attestation_certificates._coerce_attestation_certificate_bytes(ByteBuffer(cert_bytes)) == cert_bytes

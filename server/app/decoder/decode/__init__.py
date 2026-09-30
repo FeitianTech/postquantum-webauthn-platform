@@ -8,7 +8,6 @@ callers of *this module* see, not what the fragments call.
 """
 from __future__ import annotations
 
-from ...webauthn import attestation
 from . import (
     binary,
     cbor_parser,
@@ -25,14 +24,6 @@ __all__ = ["decode_payload_text"]
 
 # The decoder entry point.
 decode_payload_text = pipeline.decode_payload_text
-
-# Encoding helpers shared with the attestation package.
-encode_base64url = attestation.encode_base64url
-format_hex_bytes_lines = attestation.format_hex_bytes_lines
-format_hex_string_lines = attestation.format_hex_string_lines
-make_json_safe = attestation.make_json_safe
-serialize_attestation_certificate = attestation.serialize_attestation_certificate
-summarize_authenticator_extensions = attestation.summarize_authenticator_extensions
 
 # Mapping-key coercion and JSON-safety helpers.
 _MISSING = keys.MISSING

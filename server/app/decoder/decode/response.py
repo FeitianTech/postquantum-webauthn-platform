@@ -5,7 +5,8 @@ import uuid
 from collections.abc import Mapping
 from typing import Any
 
-from ...webauthn.attestation import make_json_safe, serialize_attestation_certificate
+from ...json_values import make_json_safe
+from ...webauthn.attestation.certificates import serialize_attestation_certificate
 from . import binary
 from .binary import (
     _convert_cose_key_for_display,

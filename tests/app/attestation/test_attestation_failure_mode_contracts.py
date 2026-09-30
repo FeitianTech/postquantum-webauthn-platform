@@ -9,6 +9,7 @@ from fido2.attestation import (
 )
 from fido2.webauthn import Aaguid, RegistrationResponse
 
+from server.app.webauthn.attestation import checks as attestation_checks
 from server.app.webauthn.attestation import evaluation
 from server.app.webauthn.metadata import verifier as metadata_verifier
 from tests.app.entry_app import entry_app
@@ -66,7 +67,7 @@ class _FakeRegistrationResponse:
 
 
 def _perform_checks(attestation_module, response, state, public_key_options, rp_id="example.com"):
-    return attestation_module.perform_attestation_checks(
+    return attestation_checks.perform_attestation_checks(
         response=response,
         state=state,
         public_key_options=public_key_options,

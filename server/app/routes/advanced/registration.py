@@ -7,8 +7,8 @@ from typing import Any
 from fido2.webauthn import PublicKeyCredentialUserEntity
 from flask import jsonify, request, session
 
+from ... import json_values
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
-from ...webauthn import attestation
 from . import (
     algorithms,
     constants,
@@ -109,7 +109,7 @@ def _record_verified_registration(
     )
 
     if extensions_summary:
-        material["rpInfo"]["registrationData"]["authenticatorExtensions"] = attestation.make_json_safe(
+        material["rpInfo"]["registrationData"]["authenticatorExtensions"] = json_values.make_json_safe(
             extensions_summary
         )
 
@@ -199,4 +199,4 @@ def advanced_register_begin():
         response_payload["warnings"] = warnings
 
     # The extensions may hold bytes (prf's eval inputs).
-    return jsonify(attestation.make_json_safe(response_payload))
+    return jsonify(json_values.make_json_safe(response_payload))

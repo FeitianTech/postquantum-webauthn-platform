@@ -9,6 +9,15 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed25519, rsa
 from cryptography.x509.oid import NameOID
 from fido2.utils import ByteBuffer
 
+from server.app.webauthn import signature_algorithms
+from server.app.webauthn.attestation import (
+    certificate_names as attestation_certificate_names,
+)
+from server.app.webauthn.attestation import (
+    certificate_public_keys as attestation_certificate_public_keys,
+)
+from server.app.webauthn.attestation import certificates as attestation_certificates
+from server.app.webauthn.attestation import trust as attestation_trust
 from tests.app.entry_app import entry_app
 
 
@@ -29,9 +38,9 @@ def _self_signed_cert_der() -> bytes:
 
 
 def test_bytes_helpers(attestation_module):
-    assert attestation_module._coerce_bytes(ByteBuffer(b"abc")) == b"abc"
-    assert attestation_module._coerce_bytes(memoryview(b"xyz")) == b"xyz"
-    assert attestation_module._coerce_bytes("abc") is None
+    assert attestation_trust._coerce_bytes(ByteBuffer(b"abc")) == b"abc"
+    assert attestation_trust._coerce_bytes(memoryview(b"xyz")) == b"xyz"
+    assert attestation_trust._coerce_bytes("abc") is None
 
 
 def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch, attestation_module):
@@ -40,17 +49,17 @@ def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch, attestation_modu
     monkeypatch.setitem(app.config, "TRUSTED_ATTESTATION_CA_FINGERPRINTS", ("abc", "def"))
 
     with app.app_context():
-        assert attestation_module._trusted_ca_subjects() == {"CN=Root"}
-        assert attestation_module._trusted_ca_fingerprints() == {"ABC", "DEF"}
+        assert attestation_trust._trusted_ca_subjects() == {"CN=Root"}
+        assert attestation_trust._trusted_ca_fingerprints() == {"ABC", "DEF"}
 
-    fingerprint = attestation_module._certificate_fingerprint(b"cert")
+    fingerprint = attestation_trust._certificate_fingerprint(b"cert")
     assert isinstance(fingerprint, str)
     assert fingerprint == fingerprint.upper()
 
 
 def test_format_helpers(attestation_module):
-    assert attestation_module._format_algorithm_component(" RSASSA PSS ") == "RSASSAPSS"
-    assert attestation_module._format_algorithm_component("—") == ""
+    assert signature_algorithms.format_algorithm_component(" RSASSA PSS ") == "RSASSAPSS"
+    assert signature_algorithms.format_algorithm_component("—") == ""
 
     name = x509.Name(
         [
@@ -58,7 +67,7 @@ def test_format_helpers(attestation_module):
             x509.NameAttribute(NameOID.COMMON_NAME, "Demo CN"),
         ]
     )
-    assert attestation_module._extract_common_names(name) == ["Demo CN"]
+    assert attestation_certificate_names._extract_common_names(name) == ["Demo CN"]
 
 
 def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(monkeypatch, certificate_public_keys, attestation_module):
@@ -81,7 +90,7 @@ def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(
         },
     )
 
-    info, summary = attestation_module._build_unknown_public_key_info(b"\x01\x02", RuntimeError("bad cert"))
+    info, summary = attestation_certificate_public_keys._build_unknown_public_key_info(b"\x01\x02", RuntimeError("bad cert"))
     assert info["algorithm"]["mlDsaParameterSet"] == "ML-DSA-65"
     assert info["algorithm"]["claimedNistLevel"] == 3
     assert info["publicKeyBase64"] == base64.b64encode(b"\x01\x02").decode("ascii")
@@ -92,7 +101,7 @@ def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(
         "_build_unknown_public_key_info",
         lambda _cert, _err: ({"type": "Unknown", "algorithm": {"name": "Unknown"}}, [("Type", "Unknown")]),
     )
-    fallback = attestation_module._serialize_attestation_certificate_fallback(
+    fallback = attestation_certificates._serialize_attestation_certificate_fallback(
         b"\x30\x82\x01\x00",
         ValueError("parse failed"),
     )
@@ -102,9 +111,9 @@ def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(
 
 
 def test_public_key_serialization_paths(monkeypatch, attestation_module):
-    ec_info = attestation_module._serialize_public_key_info(ec.generate_private_key(ec.SECP256R1()).public_key())
-    rsa_info = attestation_module._serialize_public_key_info(rsa.generate_private_key(public_exponent=65537, key_size=2048).public_key())
-    ed_info = attestation_module._serialize_public_key_info(ed25519.Ed25519PrivateKey.generate().public_key())
+    ec_info = attestation_certificate_public_keys._serialize_public_key_info(ec.generate_private_key(ec.SECP256R1()).public_key())
+    rsa_info = attestation_certificate_public_keys._serialize_public_key_info(rsa.generate_private_key(public_exponent=65537, key_size=2048).public_key())
+    ed_info = attestation_certificate_public_keys._serialize_public_key_info(ed25519.Ed25519PrivateKey.generate().public_key())
 
     assert ec_info["type"] == "ECC"
     assert rsa_info["type"] == "RSA"
@@ -114,6 +123,6 @@ def test_public_key_serialization_paths(monkeypatch, attestation_module):
         def public_bytes(self, *, encoding, format):
             return b"spki"
 
-    unknown_info = attestation_module._serialize_public_key_info(_UnknownKey())
+    unknown_info = attestation_certificate_public_keys._serialize_public_key_info(_UnknownKey())
     assert unknown_info["type"] == "_UnknownKey"
     assert unknown_info["algorithm"]["name"] == "_UnknownKey"

@@ -9,6 +9,16 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed25519, rsa
 from cryptography.x509.oid import NameOID, ObjectIdentifier
 from fido2.webauthn import RegistrationResponse
 
+from server.app.webauthn.attestation import (
+    certificate_extensions as attestation_certificate_extensions,
+)
+from server.app.webauthn.attestation import (
+    certificate_names as attestation_certificate_names,
+)
+from server.app.webauthn.attestation import certificates as certificates_module
+from server.app.webauthn.attestation import constants as attestation_constants
+from server.app.webauthn.attestation import trust as attestation_trust
+
 
 def _build_certificate(
     subject_key,
@@ -66,7 +76,7 @@ def test_serialize_attestation_certificate_rsa_success_path_includes_extensions_
         custom_extensions=[custom_device_identifier, custom_transports],
     )
 
-    result = attestation_module.serialize_attestation_certificate(cert_bytes)
+    result = certificates_module.serialize_attestation_certificate(cert_bytes)
 
     assert result is not None
     assert result["signatureAlgorithm"]
@@ -85,7 +95,7 @@ def test_serialize_attestation_certificate_handles_ec_and_ed25519_public_key_var
         subject_cn="EC Device",
         issuer_cn="EC Root",
     )
-    ec_result = attestation_module.serialize_attestation_certificate(ec_cert)
+    ec_result = certificates_module.serialize_attestation_certificate(ec_cert)
     assert ec_result["publicKeyInfo"]["type"] == "ECC"
     assert ec_result["publicKeyInfo"]["curve"]
 
@@ -94,7 +104,7 @@ def test_serialize_attestation_certificate_handles_ec_and_ed25519_public_key_var
         subject_cn="Ed Device",
         issuer_cn="Ed Root",
     )
-    ed_result = attestation_module.serialize_attestation_certificate(ed_cert)
+    ed_result = certificates_module.serialize_attestation_certificate(ed_cert)
     assert "Ed" in ed_result["publicKeyInfo"]["type"]
     assert ed_result["publicKeyInfo"]["algorithm"]["name"] == "EdDSA"
 
@@ -141,7 +151,7 @@ def test_extract_attestation_details_populates_chain_and_extension_outputs(monke
         client_extensions,
         attestation_certificate,
         attestation_certificates,
-    ) = attestation_module.extract_attestation_details({"dummy": True})
+    ) = certificates_module.extract_attestation_details({"dummy": True})
 
     assert attestation_format == "packed"
     assert "x5c" in attestation_statement
@@ -154,15 +164,15 @@ def test_extract_attestation_details_populates_chain_and_extension_outputs(monke
 
 def test_extract_certificate_aaguid_reads_aaguid_extension_bytes(attestation_module):
     aaguid = bytes.fromhex("00112233445566778899aabbccddeeff")
-    extension = x509.UnrecognizedExtension(attestation_module.AAGUID_EXTENSION_OID, b"\x04\x10" + aaguid)
+    extension = x509.UnrecognizedExtension(attestation_constants.AAGUID_EXTENSION_OID, b"\x04\x10" + aaguid)
     cert_bytes = _build_certificate(
         rsa.generate_private_key(public_exponent=65537, key_size=2048),
         custom_extensions=[extension],
     )
 
-    extracted = attestation_module._extract_certificate_aaguid(cert_bytes)
+    extracted = attestation_trust._extract_certificate_aaguid(cert_bytes)
     assert extracted == aaguid
-    assert attestation_module._extract_certificate_aaguid(b"not-a-cert") == b""
+    assert attestation_trust._extract_certificate_aaguid(b"not-a-cert") == b""
 
 
 def test_serialize_extension_value_handles_known_extension_types_from_real_certificate(attestation_module):
@@ -174,7 +184,7 @@ def test_serialize_extension_value_handles_known_extension_types_from_real_certi
     cert = x509.load_der_x509_certificate(cert_bytes)
 
     extension_values = {
-        ext.oid.dotted_string: attestation_module._serialize_extension_value(ext)
+        ext.oid.dotted_string: attestation_certificate_extensions._serialize_extension_value(ext)
         for ext in cert.extensions
     }
 
@@ -186,7 +196,7 @@ def test_serialize_extension_value_handles_known_extension_types_from_real_certi
 
 def test_derive_certificate_algorithm_info_formats_signature_components_consistently(attestation_module):
     assert (
-        attestation_module._derive_certificate_algorithm_info(
+        attestation_certificate_names._derive_certificate_algorithm_info(
             {
                 "algorithm": {"name": "ecdsa"},
                 "hash": {"name": "sha-256"},
@@ -196,7 +206,7 @@ def test_derive_certificate_algorithm_info_formats_signature_components_consiste
     )
 
     assert (
-        attestation_module._derive_certificate_algorithm_info(
+        attestation_certificate_names._derive_certificate_algorithm_info(
             {
                 "algorithm": "ed25519",
                 "hash": None,

@@ -9,6 +9,9 @@ from fido2 import cbor
 
 from server.app.config import relying_party
 from server.app.routes import simple as simple_module
+from server.app.webauthn.attestation import aaguid as attestation_aaguid
+from server.app.webauthn.attestation import certificates as attestation_certificates
+from server.app.webauthn.attestation import checks as attestation_checks
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
@@ -137,7 +140,7 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monke
         lambda **_kwargs: _RegisterServer(auth_data)
     )
     monkeypatch.setattr(
-        attestation_module,
+        attestation_certificates,
         "extract_attestation_details",
         lambda _response: (
             "none",
@@ -149,9 +152,9 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monke
             [],
         )
     )
-    monkeypatch.setattr(attestation_module, "extract_min_pin_length", lambda _results: None)
+    monkeypatch.setattr(attestation_aaguid, "extract_min_pin_length", lambda _results: None)
     monkeypatch.setattr(
-        attestation_module,
+        attestation_checks,
         "perform_attestation_checks",
         lambda *_args, **_kwargs: {
             "signature_valid": True,

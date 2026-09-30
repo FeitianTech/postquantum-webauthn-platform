@@ -3,6 +3,9 @@ import hashlib
 import time
 
 from server.app.config import relying_party
+from server.app.webauthn.attestation import aaguid as attestation_aaguid
+from server.app.webauthn.attestation import certificates as attestation_certificates
+from server.app.webauthn.attestation import checks as attestation_checks
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
@@ -252,18 +255,18 @@ def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, me
     monkeypatch.setattr(relying_party, "determine_rp_id", lambda: rp_id)
     monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
-        attestation_module,
+        attestation_certificates,
         "extract_attestation_details",
         lambda _response: ("none", {}, None, None, {}, None, [])
     )
-    monkeypatch.setattr(attestation_module, "perform_attestation_checks", lambda *args, **kwargs: {
+    monkeypatch.setattr(attestation_checks, "perform_attestation_checks", lambda *args, **kwargs: {
         "signature_valid": True,
         "root_valid": True,
         "rp_id_hash_valid": True,
         "aaguid_match": True,
         "warnings": [],
     })
-    monkeypatch.setattr(attestation_module, "extract_min_pin_length", lambda _ext: None)
+    monkeypatch.setattr(attestation_aaguid, "extract_min_pin_length", lambda _ext: None)
     monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(storage_module, "read_for_update", lambda *_args, **_kwargs: ([], None))

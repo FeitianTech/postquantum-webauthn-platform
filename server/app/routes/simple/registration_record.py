@@ -16,9 +16,10 @@ from typing import Any
 
 from fido2 import cbor
 
+from ... import json_values
 from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials
-from ...webauthn import attestation, pqc
+from ...webauthn import pqc
 from ..advanced import algorithms
 
 
@@ -136,7 +137,7 @@ def initialize_registration_context(ctx: dict[str, Any]) -> None:
     )
 
     if ctx["parsed_attestation_object"]:
-        credential_info["attestation_object_decoded"] = attestation.make_json_safe(
+        credential_info["attestation_object_decoded"] = json_values.make_json_safe(
             ctx["parsed_attestation_object"]
         )
 
@@ -145,7 +146,7 @@ def initialize_registration_context(ctx: dict[str, Any]) -> None:
         credential_properties["attestationCertificates"] = ctx["attestation_certificates_details"]
 
     if isinstance(ctx["response"], Mapping):
-        credential_info["registration_response"] = attestation.make_json_safe(ctx["response"])
+        credential_info["registration_response"] = json_values.make_json_safe(ctx["response"])
 
     _record_aaguid(credential_properties, ctx["auth_data"].credential_data)
 
@@ -266,7 +267,7 @@ def _relying_party_info(
     rp_registration_data = {
         "authenticatorData": ctx["authenticator_data_hex"],
         "authenticatorDataHash": ctx["authenticator_data_hash"],
-        "clientExtensionResults": attestation.make_json_safe(ctx["client_extension_results"]),
+        "clientExtensionResults": json_values.make_json_safe(ctx["client_extension_results"]),
         "flags": ctx["flags_dict"],
         "signatureCounter": getattr(ctx["auth_data"], "counter", 0),
         "attestationChecks": ctx["attestation_checks_safe"],
@@ -351,7 +352,7 @@ def populate_rp_debug_context(ctx: dict[str, Any]) -> None:
         large_blob_result=large_blob_result,
         user_handle_bytes=user_handle_bytes,
     )
-    ctx["credential_info"]["relying_party"] = attestation.make_json_safe(rp_info)
+    ctx["credential_info"]["relying_party"] = json_values.make_json_safe(rp_info)
     debug_info = _debug_info(ctx)
 
     ctx["credential_id_hex"], ctx["credential_id_b64"], ctx["credential_id_b64u"] = credential_ids
@@ -381,11 +382,11 @@ def build_stored_credential_context(ctx: dict[str, Any]) -> None:
         "publicKeyAlgorithm": ctx["credential_info"].get("publicKeyAlgorithm") or ctx["algo"],
         "signCount": getattr(ctx["auth_data"], "counter", 0),
         "createdAt": ctx["credential_info"]["registration_time"],
-        "clientExtensionOutputs": attestation.make_json_safe(ctx["client_extension_results"]),
+        "clientExtensionOutputs": json_values.make_json_safe(ctx["client_extension_results"]),
         "attestationFormat": ctx["attestation_format"],
-        "attestationStatement": attestation.make_json_safe(ctx["attestation_statement"]),
-        "properties": attestation.make_json_safe(ctx["credential_properties"]),
-        "publicKeyCose": attestation.make_json_safe(ctx["cose_public_key"]),
+        "attestationStatement": json_values.make_json_safe(ctx["attestation_statement"]),
+        "properties": json_values.make_json_safe(ctx["credential_properties"]),
+        "publicKeyCose": json_values.make_json_safe(ctx["cose_public_key"]),
         "publicKeyBytes": encode_base64url(ctx["public_key_bytes"]),
         "authenticatorAttachment": ctx["authenticator_attachment_response"],
         "clientDataJSON": ctx["credential_info"].get("client_data_json"),
@@ -393,7 +394,7 @@ def build_stored_credential_context(ctx: dict[str, Any]) -> None:
         "authenticatorData": ctx["authenticator_data_raw"],
         "authenticatorDataHex": ctx["authenticator_data_hex"],
         "authenticatorDataHash": ctx["authenticator_data_hash"] or None,
-        "relyingParty": attestation.make_json_safe(ctx["rp_info"]),
+        "relyingParty": json_values.make_json_safe(ctx["rp_info"]),
         "registrationResponse": ctx["credential_info"].get("registration_response"),
     }
 
@@ -406,7 +407,7 @@ def build_register_complete_response_payload(ctx: dict[str, Any]) -> dict[str, A
         "status": "OK",
         "algo": ctx["algoname"],
         **ctx["debug_info"],
-        "storedCredential": attestation.make_json_safe(ctx["stored_credential"]),
+        "storedCredential": json_values.make_json_safe(ctx["stored_credential"]),
         "relyingParty": ctx["rp_info"],
     }
     if ctx["warnings"]:

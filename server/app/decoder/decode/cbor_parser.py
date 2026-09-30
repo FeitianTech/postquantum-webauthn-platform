@@ -20,8 +20,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from ...encoding import decode_hex, encode_base64
-from ...webauthn.attestation import encode_base64url
+from ...encoding import decode_hex, encode_base64, encode_base64url
 from .. import edn
 from . import key_equivalence
 

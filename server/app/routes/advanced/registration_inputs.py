@@ -20,7 +20,8 @@ from ...attachments import (
     resolve_effective_attachments,
 )
 from ...config import relying_party
-from ...webauthn import attestation
+from ...webauthn.attestation import aaguid as attestation_aaguid
+from ...webauthn.attestation import certificates as attestation_certificates
 from ...webauthn.metadata import sessions as metadata_sessions
 
 
@@ -72,7 +73,7 @@ def _attestation_inputs(response: Any, credential_response: Mapping[str, Any]) -
         parsed_extension_results,
         attestation_certificate_details,
         attestation_certificates_details,
-    ) = attestation.extract_attestation_details(response)
+    ) = attestation_certificates.extract_attestation_details(response)
 
     attestation_object_b64 = credential_response.get("attestationObject")
     client_data_json_b64 = credential_response.get("clientDataJSON")
@@ -92,7 +93,7 @@ def _attestation_inputs(response: Any, credential_response: Mapping[str, Any]) -
         "clientDataJsonB64": client_data_json_b64,
         "clientDataJson": parsed_client_data_json or client_data_json_b64,
         "clientExtensionResults": client_extension_results,
-        "minPinLengthValue": attestation.extract_min_pin_length(client_extension_results),
+        "minPinLengthValue": attestation_aaguid.extract_min_pin_length(client_extension_results),
         "authenticatorAttachmentResponse": normalize_attachment(
             response.get("authenticatorAttachment") if isinstance(response, Mapping) else None
         ),

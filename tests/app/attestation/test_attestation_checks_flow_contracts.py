@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from fido2.attestation import Attestation
 from fido2.webauthn import AuthenticatorData, CollectedClientData, RegistrationResponse
 
+from server.app.webauthn.attestation import checks as attestation_checks
 from server.app.webauthn.metadata import verifier as metadata_verifier
 
 
@@ -57,7 +58,7 @@ def test_perform_attestation_checks_reports_client_authenticator_mismatches(monk
         lambda _response: _registration_for(attestation_object, client_data),
     )
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response={"dummy": True},
         state={"challenge": b"expected-challenge", "user_verification": "required"},
         public_key_options={
@@ -123,7 +124,7 @@ def test_perform_attestation_checks_classical_success_path_populates_metadata(mo
         },
     )
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response={"dummy": True},
         state={"challenge": b"expected", "user_verification": "preferred"},
         public_key_options={"challenge": b"expected", "pubKeyCredParams": [{"alg": -7}]},

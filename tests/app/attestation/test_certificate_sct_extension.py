@@ -12,7 +12,9 @@ from __future__ import annotations
 import base64
 import json
 
-from server.app.webauthn.attestation import serialize_attestation_certificate
+from server.app.webauthn.attestation.certificates import (
+    serialize_attestation_certificate,
+)
 from tests.app.decoder import real_vectors
 
 SCT_LIST_OID = "1.3.6.1.4.1.11129.2.4.2"

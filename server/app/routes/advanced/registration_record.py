@@ -17,9 +17,11 @@ from typing import Any, NamedTuple
 
 from fido2 import cbor
 
+from ... import json_values
 from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials
-from ...webauthn import attestation, pqc
+from ...webauthn import pqc
+from ...webauthn.attestation import aaguid as attestation_aaguid
 from . import algorithms, binary
 
 
@@ -94,13 +96,13 @@ def build_credential_info(
         credential_info["properties"]["attestationCertificates"] = attestation_certificates_details
 
     credentials.add_public_key_material(credential_info, getattr(auth_data.credential_data, "public_key", {}))
-    attestation.augment_aaguid_fields(credential_info)
+    attestation_aaguid.augment_aaguid_fields(credential_info)
     if extensions_summary:
         credential_info["authenticator_extensions"] = extensions_summary
     if attestation_certificate_details is not None:
         credential_info["attestation_certificate"] = attestation_certificate_details
     if isinstance(prepared["response"], Mapping):
-        credential_info["registration_response"] = attestation.make_json_safe(prepared["response"])
+        credential_info["registration_response"] = json_values.make_json_safe(prepared["response"])
     return credential_info
 
 
@@ -132,7 +134,7 @@ def _cred_protect_used(extensions_requested: Mapping[str, Any]) -> Any:
     if cred_protect_requested is None:
         cred_protect_requested = extensions_requested.get("credProtect")
     if isinstance(cred_protect_requested, int):
-        return attestation.describe_cred_protect(cred_protect_requested)
+        return attestation_aaguid.describe_cred_protect(cred_protect_requested)
     if cred_protect_requested:
         return cred_protect_requested
     return "none"
@@ -388,7 +390,7 @@ def _relying_party_info(
         "registrationData": {
             "authenticatorData": authenticator_data_hex,
             "authenticatorDataHash": authenticator_data_hash,
-            "clientExtensionResults": attestation.make_json_safe(client_extension_results),
+            "clientExtensionResults": json_values.make_json_safe(client_extension_results),
             "flags": facts.flags,
             "signatureCounter": auth_data.counter,
             "attestationChecks": attestation_checks_safe,
@@ -443,7 +445,7 @@ def build_registration_material(
     if attestation_certificates_details:
         rp_info["attestationCertificates"] = attestation_certificates_details
 
-    credential_info["relying_party"] = attestation.make_json_safe(rp_info)
+    credential_info["relying_party"] = json_values.make_json_safe(rp_info)
 
     stored_credential = _stored_credential(
         credential_info=credential_info,
@@ -492,8 +494,8 @@ def _stored_credential(
     user_handle_b64url = encode_base64url(user_handle)
     user_handle_b64 = encode_base64(user_handle)
 
-    stored_properties = attestation.make_json_safe(credential_info.get("properties", {}))
-    stored_extensions = attestation.make_json_safe(client_extension_results)
+    stored_properties = json_values.make_json_safe(credential_info.get("properties", {}))
+    stored_extensions = json_values.make_json_safe(client_extension_results)
     public_key_b64, public_key_b64url = _public_key_encodings(auth_data)
 
     stored_credential: dict[str, Any] = {
@@ -520,12 +522,12 @@ def _stored_credential(
         "createdAt": credential_info["registration_time"],
         "clientExtensionOutputs": stored_extensions,
         "attestationFormat": attestation_format,
-        "attestationStatement": attestation.make_json_safe(attestation_statement),
-        "attestationObject": attestation.make_json_safe(credential_info.get("attestation_object")),
+        "attestationStatement": json_values.make_json_safe(attestation_statement),
+        "attestationObject": json_values.make_json_safe(credential_info.get("attestation_object")),
         "authenticatorData": authenticator_data_hex,
         "authenticatorDataHash": authenticator_data_hash,
-        "clientDataJSON": attestation.make_json_safe(credential_info.get("client_data_json")),
-        "relyingParty": attestation.make_json_safe(rp_info),
+        "clientDataJSON": json_values.make_json_safe(credential_info.get("client_data_json")),
+        "relyingParty": json_values.make_json_safe(rp_info),
         "properties": stored_properties,
         "registrationResponse": credential_info.get("registration_response"),
         "userHandle": user_handle_b64url,
@@ -534,6 +536,6 @@ def _stored_credential(
         "userHandleHex": user_handle.hex(),
     }
 
-    return attestation.make_json_safe(
+    return json_values.make_json_safe(
         {k: v for k, v in stored_credential.items() if v is not None}
     )

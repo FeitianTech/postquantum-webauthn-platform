@@ -12,8 +12,10 @@ from typing import Any
 
 from flask import request
 
+from ... import json_values
 from ...config import origins
-from ...webauthn import attestation
+from ...webauthn.attestation import aaguid as attestation_aaguid
+from ...webauthn.attestation import checks
 
 
 def check_attestation(
@@ -46,7 +48,7 @@ def check_attestation(
     expected_origin = origins.determine_expected_origin(ceremony_origin) or (
         request.host_url.rstrip("/")
     )
-    attestation_checks = attestation.perform_attestation_checks(
+    attestation_checks = checks.perform_attestation_checks(
         response if isinstance(response, Mapping) else {},
         state if isinstance(state, Mapping) else None,
         public_key_for_checks,
@@ -64,7 +66,7 @@ def summarise_attestation(attestation_checks: Mapping[str, Any]) -> dict[str, An
     root_valid = attestation_checks.get("root_valid")
     rp_id_hash_valid = attestation_checks.get("rp_id_hash_valid")
     aaguid_match = attestation_checks.get("aaguid_match")
-    checks_safe = attestation.make_json_safe(attestation_checks)
+    checks_safe = json_values.make_json_safe(attestation_checks)
 
     warnings: list[str] = []
     attestation_warnings = attestation_checks.get("warnings")
@@ -116,5 +118,5 @@ def authenticator_extensions_summary(auth_data: Any) -> dict[str, Any]:
     if hasattr(auth_data, "extensions"):
         authenticator_extensions = getattr(auth_data, "extensions")
         if isinstance(authenticator_extensions, Mapping):
-            return attestation.summarize_authenticator_extensions(authenticator_extensions)
+            return attestation_aaguid.summarize_authenticator_extensions(authenticator_extensions)
     return {}

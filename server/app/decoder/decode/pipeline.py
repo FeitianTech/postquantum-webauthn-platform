@@ -15,15 +15,13 @@ from ...encoding import (
     EncodingError,
     SniffResult,
     encode_base64,
+    encode_base64url,
     sniff,
     try_decode_base64,
     try_decode_base64url,
 )
-from ...webauthn.attestation import (
-    encode_base64url,
-    make_json_safe,
-    serialize_attestation_certificate,
-)
+from ...json_values import make_json_safe
+from ...webauthn.attestation.certificates import serialize_attestation_certificate
 from . import (
     ambiguous_input,
     authenticator_data_findings,

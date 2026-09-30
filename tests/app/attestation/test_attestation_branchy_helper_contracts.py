@@ -11,6 +11,16 @@ from cryptography.x509.oid import NameOID, ObjectIdentifier
 from fido2.attestation import InvalidSignature
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
+from server.app import json_values
+from server.app.webauthn.attestation import aaguid as attestation_aaguid
+from server.app.webauthn.attestation import (
+    certificate_extensions as attestation_certificate_extensions,
+)
+from server.app.webauthn.attestation import (
+    certificate_names as attestation_certificate_names,
+)
+from server.app.webauthn.attestation import checks as attestation_checks
+from server.app.webauthn.attestation import classical as attestation_classical
 from server.app.webauthn.metadata import verifier as metadata_verifier
 
 
@@ -68,7 +78,7 @@ def _registration(attestation_object, client_data):
 
 
 def test_perform_attestation_checks_rejects_non_mapping_response(attestation_module):
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response=["not-a-mapping"],
         state=None,
         public_key_options=None,
@@ -94,7 +104,7 @@ def test_perform_attestation_checks_coerces_challenge_from_base64_and_hex_wrappe
     )
     monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: None)
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response={"dummy": True},
         state={"challenge": {"$base64": "%%%"}},
         public_key_options={
@@ -129,7 +139,7 @@ def test_perform_attestation_checks_accepts_base64url_wrapped_challenge_and_enum
     )
     monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: None)
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response={"dummy": True},
         state={
             "challenge": {"$base64url": _b64url(challenge)},
@@ -176,7 +186,7 @@ def test_perform_attestation_checks_handles_broken_credential_shapes(monkeypatch
     )
     monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: None)
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response={"dummy": True},
         state={"challenge": b"x"},
         public_key_options={"pubKeyCredParams": [{"alg": -7}]},
@@ -219,7 +229,7 @@ def test_perform_attestation_checks_uses_fallback_metadata_lookup_and_mapping_ro
     )
     monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: verifier)
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response={"dummy": True},
         state={"challenge": b"meta"},
         public_key_options={"pubKeyCredParams": [{"alg": -7}]},
@@ -251,7 +261,7 @@ def test_perform_attestation_checks_ignores_metadata_fallback_lookup_exceptions(
     )
     monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: _FailingVerifier())
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response={"dummy": True},
         state={"challenge": b"meta2"},
         public_key_options={"pubKeyCredParams": [{"alg": -7}]},
@@ -264,7 +274,7 @@ def test_perform_attestation_checks_ignores_metadata_fallback_lookup_exceptions(
 
 
 def test_evaluate_classical_attestation_root_handles_missing_trust_path_and_metadata(attestation_module):
-    outcome = attestation_module._evaluate_classical_attestation_root(
+    outcome = attestation_classical._evaluate_classical_attestation_root(
         SimpleNamespace(att_stmt={}),
         SimpleNamespace(trust_path=[]),
         b"client-hash",
@@ -294,7 +304,7 @@ def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures
         lambda _der: (_ for _ in ()).throw(ValueError("bad cert")),
     )
 
-    outcome = attestation_module._evaluate_classical_attestation_root(
+    outcome = attestation_classical._evaluate_classical_attestation_root(
         SimpleNamespace(att_stmt={}),
         SimpleNamespace(trust_path=[b"broken-cert"]),
         b"client-hash",
@@ -333,7 +343,7 @@ def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_erro
     monkeypatch.setattr(trust, "_is_trusted_ca_certificate", lambda _root: False)
 
     monkeypatch.setattr(classical.evaluation, "evaluate_attestation", lambda _verifier, _obj, _hash: evaluation)
-    outcome = attestation_module._evaluate_classical_attestation_root(
+    outcome = attestation_classical._evaluate_classical_attestation_root(
         SimpleNamespace(att_stmt={}),
         SimpleNamespace(trust_path=[b"leaf"]),
         b"client-hash",
@@ -374,7 +384,7 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
     monkeypatch.setattr(metadata_verifier, "metadata_entry_trust_anchor_status", lambda _entry: False)
 
     monkeypatch.setattr(classical.evaluation, "evaluate_attestation", lambda _verifier, _obj, _hash: evaluation)
-    outcome = attestation_module._evaluate_classical_attestation_root(
+    outcome = attestation_classical._evaluate_classical_attestation_root(
         SimpleNamespace(att_stmt={}),
         SimpleNamespace(trust_path=[b"expired-leaf"]),
         b"client-hash",
@@ -391,18 +401,18 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
 
 
 def test_numeric_aaguid_and_extension_helpers_cover_fallback_paths(attestation_module):
-    assert attestation_module.coerce_non_negative_int(True) is None
-    assert attestation_module.coerce_non_negative_int(-1) is None
-    assert attestation_module.coerce_non_negative_int(3.9) == 3
-    assert attestation_module.coerce_non_negative_int(math.inf) is None
-    assert attestation_module.coerce_non_negative_int(" 42 ") == 42
-    assert attestation_module.coerce_non_negative_int("not-int") is None
+    assert attestation_aaguid.coerce_non_negative_int(True) is None
+    assert attestation_aaguid.coerce_non_negative_int(-1) is None
+    assert attestation_aaguid.coerce_non_negative_int(3.9) == 3
+    assert attestation_aaguid.coerce_non_negative_int(math.inf) is None
+    assert attestation_aaguid.coerce_non_negative_int(" 42 ") == 42
+    assert attestation_aaguid.coerce_non_negative_int("not-int") is None
 
-    assert attestation_module.normalize_aaguid_string("00112233-4455-6677-8899-aabbccddeeff") == "00112233445566778899aabbccddeeff"
-    assert attestation_module.normalize_aaguid_string(123) is None
+    assert attestation_aaguid.normalize_aaguid_string("00112233-4455-6677-8899-aabbccddeeff") == "00112233445566778899aabbccddeeff"
+    assert attestation_aaguid.normalize_aaguid_string(123) is None
 
     enriched = {"aaguid": {"raw": "00112233-4455-6677-8899-aabbccddeeff"}}
-    attestation_module.augment_aaguid_fields(enriched)
+    attestation_aaguid.augment_aaguid_fields(enriched)
     assert enriched["aaguidHex"] == "00112233445566778899aabbccddeeff"
     assert enriched["aaguidRaw"] == "00112233445566778899aabbccddeeff"
     assert "aaguidGuid" in enriched
@@ -413,26 +423,26 @@ def test_numeric_aaguid_and_extension_helpers_cover_fallback_paths(attestation_m
         "aaguidGuid": "stale",
         "aaguidRaw": "stale",
     }
-    attestation_module.augment_aaguid_fields(stripped)
+    attestation_aaguid.augment_aaguid_fields(stripped)
     assert "aaguidHex" not in stripped
     assert "aaguidGuid" not in stripped
     assert "aaguidRaw" not in stripped
 
-    assert attestation_module.extract_min_pin_length({"minPinLength": 6}) == 6
+    assert attestation_aaguid.extract_min_pin_length({"minPinLength": 6}) == 6
     assert (
-        attestation_module.extract_min_pin_length({"minPinLength": {"minimumPinLength": "9"}})
+        attestation_aaguid.extract_min_pin_length({"minPinLength": {"minimumPinLength": "9"}})
         == 9
     )
-    assert attestation_module.extract_min_pin_length({"minPinLength": {"value": ""}}) is None
-    assert attestation_module.extract_min_pin_length(None) is None
+    assert attestation_aaguid.extract_min_pin_length({"minPinLength": {"value": ""}}) is None
+    assert attestation_aaguid.extract_min_pin_length(None) is None
 
-    summary = attestation_module.summarize_authenticator_extensions(
+    summary = attestation_aaguid.summarize_authenticator_extensions(
         {"credProtect": 2, "hmac-secret": True}
     )
     assert summary["credProtectLabel"] == "userVerificationOptionalWithCredentialIDList"
     assert summary["hmac-secret"] is True
 
-    safe = attestation_module.make_json_safe(
+    safe = json_values.make_json_safe(
         {
             "bytes": b"abc",
             "list": [bytearray(b"d")],
@@ -451,14 +461,14 @@ def test_serialize_extension_value_covers_authority_constraints_and_fallback_rep
         authority_cert_issuer=[x509.DirectoryName(issuer_name)],
         authority_cert_serial_number=17,
     )
-    aki_value = attestation_module._serialize_extension_value(
+    aki_value = attestation_certificate_extensions._serialize_extension_value(
         SimpleNamespace(oid=ObjectIdentifier("2.5.29.35"), value=aki)
     )
     assert "Authority Cert Serial Number" in aki_value
     assert aki_value["Authority Cert Issuer"]
     assert "Demo Issuer" in aki_value["Authority Cert Issuer"][0]
 
-    constraints = attestation_module._serialize_extension_value(
+    constraints = attestation_certificate_extensions._serialize_extension_value(
         SimpleNamespace(
             oid=ObjectIdentifier("2.5.29.19"),
             value=x509.BasicConstraints(ca=True, path_length=0),
@@ -466,7 +476,7 @@ def test_serialize_extension_value_covers_authority_constraints_and_fallback_rep
     )
     assert constraints["Path Length"] == 0
 
-    firmware_value = attestation_module._serialize_extension_value(
+    firmware_value = attestation_certificate_extensions._serialize_extension_value(
         SimpleNamespace(
             oid=ObjectIdentifier("1.3.6.1.4.1.41482.13.1"),
             value=x509.UnrecognizedExtension(
@@ -477,7 +487,7 @@ def test_serialize_extension_value_covers_authority_constraints_and_fallback_rep
     )
     assert firmware_value == {"Firmware version": "1.2.3"}
 
-    aaguid_fallback = attestation_module._serialize_extension_value(
+    aaguid_fallback = attestation_certificate_extensions._serialize_extension_value(
         SimpleNamespace(
             oid=ObjectIdentifier("1.3.6.1.4.1.45724.1.1.4"),
             value=x509.UnrecognizedExtension(
@@ -495,7 +505,7 @@ def test_serialize_extension_value_covers_authority_constraints_and_fallback_rep
         def __repr__(self):
             return "<bad-str-value>"
 
-    fallback_repr = attestation_module._serialize_extension_value(
+    fallback_repr = attestation_certificate_extensions._serialize_extension_value(
         SimpleNamespace(oid=ObjectIdentifier("1.2.3"), value=_BadStr())
     )
     assert fallback_repr == "<bad-str-value>"
@@ -509,4 +519,4 @@ def test_format_x509_name_falls_back_to_string_when_rfc4514_fails(attestation_mo
         def __str__(self):
             return "BrokenNameFallback"
 
-    assert attestation_module.format_x509_name(_BrokenName()) == "BrokenNameFallback"
+    assert attestation_certificate_names.format_x509_name(_BrokenName()) == "BrokenNameFallback"

@@ -5,7 +5,7 @@ import json
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
-from ...webauthn.attestation import make_json_safe
+from ...json_values import make_json_safe
 from ..decode import (
     _binary_summary,
     _stringify_mapping_keys,

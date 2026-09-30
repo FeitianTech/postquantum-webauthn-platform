@@ -8,7 +8,10 @@ from cryptography import x509
 from fido2.attestation import Attestation
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
-from server.app.webauthn import attestation as attestation_module
+from server.app.webauthn import signature_algorithms
+from server.app.webauthn.attestation import certificates as attestation_certificates
+from server.app.webauthn.attestation import checks as attestation_checks
+from server.app.webauthn.attestation import trust as attestation_trust
 from server.app.webauthn.metadata import verifier as metadata_verifier
 
 
@@ -56,8 +59,8 @@ def test_coerce_certificate_bytes_falls_back_to_hex_parsing_when_base64_decode_f
         lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("bad-base64")),
     )
 
-    assert attestation_module._coerce_certificate_bytes("0a0b") == b"\x0a\x0b"
-    assert attestation_module._coerce_certificate_bytes("zz") is None
+    assert attestation_trust._coerce_certificate_bytes("0a0b") == b"\x0a\x0b"
+    assert attestation_trust._coerce_certificate_bytes("zz") is None
 
 
 def test_extract_certificate_aaguid_handles_non_hex_string_extension_values(monkeypatch, attestation_module):
@@ -80,7 +83,7 @@ def test_extract_certificate_aaguid_handles_non_hex_string_extension_values(monk
         lambda _data: _Certificate(),
     )
 
-    extracted = attestation_module._extract_certificate_aaguid(b"cert")
+    extracted = attestation_trust._extract_certificate_aaguid(b"cert")
     assert extracted == b"Z" * 16
 
 
@@ -93,15 +96,15 @@ def test_coerce_attestation_certificate_bytes_string_path_falls_back_to_base64ur
 
     # Standard base64 first, then base64url -- and each reading is exact, so
     # the fallback recovers the same certificate rather than a shorter one.
-    assert attestation_module._coerce_attestation_certificate_bytes(standard) == raw
-    assert attestation_module._coerce_attestation_certificate_bytes(urlsafe) == raw
+    assert attestation_certificates._coerce_attestation_certificate_bytes(standard) == raw
+    assert attestation_certificates._coerce_attestation_certificate_bytes(urlsafe) == raw
 
-    assert attestation_module._coerce_attestation_certificate_bytes("not a certificate!") is None
+    assert attestation_certificates._coerce_attestation_certificate_bytes("not a certificate!") is None
 
 
 def test_normalise_signature_algorithm_name_covers_ed448_and_dsa_paths(attestation_module):
-    assert attestation_module._normalise_signature_algorithm_name("ed448 with shake") == "ED448"
-    assert attestation_module._normalise_signature_algorithm_name("dsa-with-sha1") == "DSA"
+    assert signature_algorithms.normalise_signature_algorithm_name("ed448 with shake") == "ED448"
+    assert signature_algorithms.normalise_signature_algorithm_name("dsa-with-sha1") == "DSA"
 
 
 def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, metadata_module, certificates, attestation_module):
@@ -130,7 +133,7 @@ def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_a
     )
     monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: None)
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response={"dummy": True},
         state={"challenge": challenge.decode("utf-8")},
         public_key_options={"pubKeyCredParams": [{"alg": -7}]},
@@ -158,7 +161,7 @@ def test_perform_attestation_checks_falls_back_to_public_key_options_when_state_
     )
     monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: None)
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response={"dummy": True},
         state={"challenge": {"$hex": "zz"}},
         public_key_options={

@@ -12,6 +12,8 @@ import importlib
 
 import pytest
 
+from server.app.webauthn.attestation import checks as attestation_checks
+
 from .ceremony_helpers import (
     ORIGIN,
     RP_ID,
@@ -65,7 +67,7 @@ def test_an_mldsa_attestation_that_does_not_verify_is_invalid_with_its_errors(at
         authenticator, challenge=challenge, attestation_alg=MLDSA44_ALG
     )
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response,
         {"challenge": challenge},
         None,
@@ -89,7 +91,7 @@ def test_a_classical_attestation_that_does_not_verify_is_invalid_with_its_errors
     response = _packed_registration_response(
         authenticator, challenge=challenge, attestation_alg=-7
     )
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response,
         {"challenge": challenge},
         None,
@@ -165,7 +167,7 @@ def test_a_good_signature_does_not_rescue_a_certificate_packed_refuses(attestati
     challenge = b"\x64" * 32
     response = _mldsa_basic_attestation_response(authenticator, challenge=challenge)
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response,
         {"challenge": challenge},
         None,
@@ -190,7 +192,7 @@ def test_a_signature_from_another_mldsa_key_is_invalid(attestation_module):
         signing_key=mldsa.MLDSA44PrivateKey.generate(),
     )
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response,
         {"challenge": challenge},
         None,

@@ -9,6 +9,12 @@ from fido2.attestation import Attestation
 from fido2.cose import CoseKey
 from fido2.webauthn import Aaguid, AuthenticatorData, RegistrationResponse
 
+from server.app.webauthn.attestation import aaguid as attestation_aaguid
+from server.app.webauthn.attestation import (
+    certificate_extensions as attestation_certificate_extensions,
+)
+from server.app.webauthn.attestation import certificates as attestation_certificates
+from server.app.webauthn.attestation import checks as attestation_checks
 from server.app.webauthn.metadata import verifier as metadata_verifier
 
 
@@ -57,7 +63,7 @@ def _registration(attestation_object, client_data, extension_results):
 
 
 def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases(monkeypatch, certificates, attestation_module):
-    defaults = attestation_module.extract_attestation_details(["not-a-dict"])
+    defaults = attestation_certificates.extract_attestation_details(["not-a-dict"])
     assert defaults[0] == "none"
     assert defaults[1] == {}
 
@@ -88,7 +94,7 @@ def test_extract_attestation_details_handles_non_dict_and_certificate_edge_cases
         lambda _cert: None,
     )
 
-    extracted = attestation_module.extract_attestation_details({"ok": True})
+    extracted = attestation_certificates.extract_attestation_details({"ok": True})
     assert extracted[0] == "packed"
     assert extracted[5]["error"] == "Unable to decode attestation certificate bytes."
     assert extracted[6][1]["error"] == "Unable to parse attestation certificate."
@@ -105,7 +111,7 @@ def test_extract_attestation_details_keeps_non_mapping_extension_outputs(monkeyp
         lambda _response: registration,
     )
 
-    extracted = attestation_module.extract_attestation_details({"ok": True})
+    extracted = attestation_certificates.extract_attestation_details({"ok": True})
     assert extracted[4] == ["raw-extension"]
 
 
@@ -136,9 +142,9 @@ def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch, 
         value=x509.UnrecognizedExtension(aaguid_oid, b"aaguid"),
     )
 
-    assert "Hex value" in attestation_module._serialize_extension_value(firmware_ext)
-    assert "Hex value" in attestation_module._serialize_extension_value(security_ext)
-    assert "Hex value" in attestation_module._serialize_extension_value(aaguid_ext)
+    assert "Hex value" in attestation_certificate_extensions._serialize_extension_value(firmware_ext)
+    assert "Hex value" in attestation_certificate_extensions._serialize_extension_value(security_ext)
+    assert "Hex value" in attestation_certificate_extensions._serialize_extension_value(aaguid_ext)
 
 
 def test_perform_attestation_checks_challenge_coercion_and_uv_requirement_paths(monkeypatch, attestation_module):
@@ -160,7 +166,7 @@ def test_perform_attestation_checks_challenge_coercion_and_uv_requirement_paths(
         lambda _response: registration,
     )
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response={"ok": True},
         state={"challenge": {"$base64": "%%%"}},
         public_key_options={
@@ -238,7 +244,7 @@ def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_pa
         lambda _hex: (_ for _ in ()).throw(ValueError("bad-aaguid")),
     )
 
-    result = attestation_module.perform_attestation_checks(
+    result = attestation_checks.perform_attestation_checks(
         response={"ok": True},
         state={"challenge": b"challenge"},
         public_key_options={"pubKeyCredParams": [{"alg": -7}]},
@@ -252,11 +258,11 @@ def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_pa
 
 
 def test_coerce_attestation_certificate_bytes_and_aaguid_field_cleanup_edges(attestation_module):
-    assert attestation_module._coerce_attestation_certificate_bytes({"raw": "zz"}) is None
-    assert attestation_module._coerce_attestation_certificate_bytes({"derBase64": "A"}) is None
+    assert attestation_certificates._coerce_attestation_certificate_bytes({"raw": "zz"}) is None
+    assert attestation_certificates._coerce_attestation_certificate_bytes({"derBase64": "A"}) is None
     # A PEM body of "@@@" decodes to nothing at all now, rather than to b""
     # via a decoder that quietly discarded every character in it.
-    assert attestation_module._coerce_attestation_certificate_bytes(
+    assert attestation_certificates._coerce_attestation_certificate_bytes(
         {"pem": "-----BEGIN CERTIFICATE-----\n@@@\n-----END CERTIFICATE-----"}
     ) is None
 
@@ -266,7 +272,7 @@ def test_coerce_attestation_certificate_bytes_and_aaguid_field_cleanup_edges(att
         "aaguidGuid": "existing",
         "aaguidRaw": "existing",
     }
-    attestation_module.augment_aaguid_fields(container)
+    attestation_aaguid.augment_aaguid_fields(container)
     assert "aaguidHex" not in container
     assert "aaguidGuid" not in container
     assert "aaguidRaw" not in container

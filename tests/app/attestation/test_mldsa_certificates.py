@@ -262,7 +262,9 @@ def test_an_issuer_whose_key_does_not_load_is_refused():
 @pytest.mark.parametrize(("label", "key_cls", "key_len", "sig_len", "oid"), PARAMETER_SETS)
 def test_a_certificates_mldsa_key_is_shown_with_its_parameter_set_and_raw_key(label, key_cls, key_len, sig_len, oid):
     from server.app.encoding import encode_base64
-    from server.app.webauthn.attestation import serialize_attestation_certificate
+    from server.app.webauthn.attestation.certificates import (
+        serialize_attestation_certificate,
+    )
 
     der = mldsa_helpers.certificate(label)
     raw = x509.load_der_x509_certificate(der).public_key().public_bytes_raw()

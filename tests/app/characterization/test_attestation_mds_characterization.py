@@ -147,11 +147,11 @@ def mds(monkeypatch):
 
 
 def test_attestation_checks_with_mds_match_their_golden_record(app, mds):
-    from server.app.webauthn import attestation
+    from server.app.webauthn.attestation import checks as attestation_checks
 
     with app.app_context():
         record = {
-            name: harness.json_safe(attestation.perform_attestation_checks(response, STATE, None, None, ORIGIN, RP_ID))
+            name: harness.json_safe(attestation_checks.perform_attestation_checks(response, STATE, None, None, ORIGIN, RP_ID))
             for name, response in _cases().items()
         }
     harness.check_golden("attestation-checks-mds.json", record)

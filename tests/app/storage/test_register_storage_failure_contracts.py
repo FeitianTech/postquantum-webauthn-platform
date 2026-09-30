@@ -5,6 +5,9 @@ import time
 from server.app import config as config_module
 from server.app.config import relying_party
 from server.app.routes import advanced as advanced_module
+from server.app.webauthn.attestation import aaguid as attestation_aaguid
+from server.app.webauthn.attestation import certificates as attestation_certificates
+from server.app.webauthn.attestation import checks as attestation_checks
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
@@ -61,12 +64,12 @@ def test_simple_register_complete_returns_500_when_saving_fails(monkeypatch, met
         lambda **_kwargs: _SimpleFakeServer(auth_data)
     )
     monkeypatch.setattr(
-        attestation_module,
+        attestation_certificates,
         "extract_attestation_details",
         lambda _response: ("none", {}, None, None, {}, None, [])
     )
     monkeypatch.setattr(
-        attestation_module,
+        attestation_checks,
         "perform_attestation_checks",
         lambda *_args, **_kwargs: {
             "signature_valid": True,
@@ -76,7 +79,7 @@ def test_simple_register_complete_returns_500_when_saving_fails(monkeypatch, met
             "warnings": [],
         }
     )
-    monkeypatch.setattr(attestation_module, "extract_min_pin_length", lambda _ext: None)
+    monkeypatch.setattr(attestation_aaguid, "extract_min_pin_length", lambda _ext: None)
     monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(storage_module, "read_for_update", lambda *_args, **_kwargs: ([], None))
@@ -123,12 +126,12 @@ def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module
     )
     monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
-        attestation_module,
+        attestation_certificates,
         "extract_attestation_details",
         lambda _response: ("none", {}, None, None, {}, None, [])
     )
     monkeypatch.setattr(
-        attestation_module,
+        attestation_checks,
         "perform_attestation_checks",
         lambda *_args, **_kwargs: {
             "signature_valid": True,
@@ -138,9 +141,9 @@ def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module
             "warnings": [],
         }
     )
-    monkeypatch.setattr(attestation_module, "extract_min_pin_length", lambda _ext: None)
+    monkeypatch.setattr(attestation_aaguid, "extract_min_pin_length", lambda _ext: None)
     monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(attestation_module, "augment_aaguid_fields", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(attestation_aaguid, "augment_aaguid_fields", lambda *_args, **_kwargs: None)
 
 
 def _advanced_register_payload(rp_id: str, credential_id: bytes):

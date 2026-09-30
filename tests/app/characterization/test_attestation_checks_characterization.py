@@ -85,15 +85,15 @@ def no_mds(monkeypatch):
 
 
 def test_attestation_checks_match_their_golden_record(no_mds):
-    from server.app.webauthn import attestation
+    from server.app.webauthn.attestation import checks as attestation_checks
 
     record = {}
     for name, (response, state, options) in _cases().items():
-        record[name] = harness.json_safe(attestation.perform_attestation_checks(response, state, options, None, ORIGIN, RP_ID))
+        record[name] = harness.json_safe(attestation_checks.perform_attestation_checks(response, state, options, None, ORIGIN, RP_ID))
     auth_data = AuthenticatorData(material.Authenticator("checks-auth-data").authenticator_data())
     response, state, options = _cases()["none-valid"]
     record["explicit-auth-data"] = harness.json_safe(
-        attestation.perform_attestation_checks(response, state, options, auth_data, ORIGIN, RP_ID)
+        attestation_checks.perform_attestation_checks(response, state, options, auth_data, ORIGIN, RP_ID)
     )
     harness.check_golden("attestation-checks.json", record)
 

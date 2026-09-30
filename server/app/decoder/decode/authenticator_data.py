@@ -12,11 +12,9 @@ from typing import Any
 
 from fido2.webauthn import AuthenticatorData
 
-from ...webauthn.attestation import (
-    encode_base64url,
-    make_json_safe,
-    summarize_authenticator_extensions,
-)
+from ...encoding import encode_base64url
+from ...json_values import make_json_safe
+from ...webauthn.attestation.aaguid import summarize_authenticator_extensions
 from . import cbor_parser, pipeline
 
 

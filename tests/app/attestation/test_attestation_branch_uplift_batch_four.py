@@ -2,17 +2,19 @@ from __future__ import annotations
 
 from cryptography import x509
 
+from server.app.webauthn.attestation import formatting as attestation_formatting
+from server.app.webauthn.attestation import trust as attestation_trust
 from tests.app.entry_app import entry_app
 
 
 def test_hex_format_helpers_cover_empty_odd_and_invalid_inputs(attestation_module):
-    assert attestation_module.format_hex_bytes_lines(b"") == []
-    assert attestation_module.format_hex_string_lines("abc", bytes_per_line=2) == ["0a:bc"]
-    assert attestation_module.format_hex_string_lines("zz") == ["zz"]
+    assert attestation_formatting.format_hex_bytes_lines(b"") == []
+    assert attestation_formatting.format_hex_string_lines("abc", bytes_per_line=2) == ["0a:bc"]
+    assert attestation_formatting.format_hex_string_lines("zz") == ["zz"]
 
 
 def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_shapes(monkeypatch, formatting, attestation_module):
-    assert attestation_module._extract_certificate_aaguid(b"") == b""
+    assert attestation_trust._extract_certificate_aaguid(b"") == b""
 
     class _MissingExtensionCert:
         class extensions:
@@ -25,7 +27,7 @@ def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_sh
         "load_der_x509_certificate",
         lambda _der: _MissingExtensionCert(),
     )
-    assert attestation_module._extract_certificate_aaguid(b"cert") == b""
+    assert attestation_trust._extract_certificate_aaguid(b"cert") == b""
 
     class _BytesValue:
         value = b"\x01" * 16
@@ -49,7 +51,7 @@ def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_sh
         "load_der_x509_certificate",
         lambda _der: _BytesCert(),
     )
-    assert attestation_module._extract_certificate_aaguid(b"cert") == (b"\x01" * 16)
+    assert attestation_trust._extract_certificate_aaguid(b"cert") == (b"\x01" * 16)
 
     class _NoUsableValue:
         value = object()
@@ -68,21 +70,21 @@ def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_sh
         "load_der_x509_certificate",
         lambda _der: _NoUsableCert(),
     )
-    assert attestation_module._extract_certificate_aaguid(b"cert") == b""
+    assert attestation_trust._extract_certificate_aaguid(b"cert") == b""
 
 
 def test_coerce_certificate_bytes_non_bytes_path(attestation_module):
-    assert attestation_module._coerce_certificate_bytes(12345) is None
+    assert attestation_trust._coerce_certificate_bytes(12345) is None
 
 
 def test_collect_metadata_roots_handles_singleton_and_missing_candidates(attestation_module):
     metadata_entry = {
         "attestationRootCertificates": "AQID",
     }
-    roots = attestation_module._collect_metadata_root_certificates(metadata_entry)
+    roots = attestation_trust._collect_metadata_root_certificates(metadata_entry)
     assert roots == [b"\x01\x02\x03"]
 
-    assert attestation_module._collect_metadata_root_certificates({"other": "value"}) == []
+    assert attestation_trust._collect_metadata_root_certificates({"other": "value"}) == []
 
 
 def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeypatch, trust, attestation_module):
@@ -100,8 +102,8 @@ def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeyp
     )
 
     with app.app_context():
-        assert attestation_module._trusted_ca_subjects() == {"CN=Root A", "CN=Root B"}
-        assert attestation_module._trusted_ca_fingerprints() == {"AA", "BB"}
+        assert attestation_trust._trusted_ca_subjects() == {"CN=Root A", "CN=Root B"}
+        assert attestation_trust._trusted_ca_fingerprints() == {"AA", "BB"}
 
     monkeypatch.setattr(
         trust,
@@ -115,4 +117,4 @@ def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeyp
     )
 
     with app.app_context():
-        assert attestation_module._is_trusted_ca_certificate(b"cert", allow_subject_parsing=True) is False
+        assert attestation_trust._is_trusted_ca_certificate(b"cert", allow_subject_parsing=True) is False

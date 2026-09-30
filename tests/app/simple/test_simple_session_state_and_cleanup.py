@@ -2,6 +2,7 @@ import base64
 import time
 
 from server.app.config import relying_party
+from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.entry_app import entry_app
 
 
@@ -16,7 +17,7 @@ class _MatchedCredential:
 
 def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatch, attestation_module):
     monkeypatch.setattr(
-        attestation_module,
+        attestation_certificates,
         "extract_attestation_details",
         lambda _response: ("none", {}, None, None, {}, None, [])
     )

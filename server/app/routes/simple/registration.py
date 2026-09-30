@@ -13,6 +13,7 @@ from fido2.webauthn import (
 )
 from flask import jsonify, request, session
 
+from ... import json_values
 from ...attachments import normalize_attachment
 from ...challenge_registry import (
     CHALLENGE_FRESH,
@@ -21,7 +22,9 @@ from ...challenge_registry import (
     stamp_ceremony_state,
 )
 from ...config import origins, relying_party
-from ...webauthn import attestation
+from ...webauthn.attestation import aaguid as attestation_aaguid
+from ...webauthn.attestation import certificates as attestation_certificates
+from ...webauthn.attestation import checks
 from . import parsing, registration_persistence, registration_record
 
 logger = logging.getLogger(__name__)
@@ -38,7 +41,7 @@ def _complete_inputs(response: Any, credential_response: Mapping[str, Any]) -> d
         parsed_extension_results,
         attestation_certificate_details,
         attestation_certificates_details,
-    ) = attestation.extract_attestation_details(response)
+    ) = attestation_certificates.extract_attestation_details(response)
 
     client_data_json_b64 = credential_response.get("clientDataJSON")
     client_data_json = client_data_json_b64
@@ -59,7 +62,7 @@ def _complete_inputs(response: Any, credential_response: Mapping[str, Any]) -> d
         "attestation_certificates_details": attestation_certificates_details,
         "client_data_json": client_data_json,
         "client_extension_results": client_extension_results,
-        "min_pin_length_value": attestation.extract_min_pin_length(client_extension_results),
+        "min_pin_length_value": attestation_aaguid.extract_min_pin_length(client_extension_results),
     }
 
 
@@ -124,7 +127,7 @@ def _verify_registration(
         request.host_url.rstrip("/")
     )
 
-    attestation_checks = attestation.perform_attestation_checks(
+    attestation_checks = checks.perform_attestation_checks(
         response if isinstance(response, Mapping) else {},
         state if isinstance(state, Mapping) else None,
         public_key_options_for_checks if isinstance(public_key_options_for_checks, Mapping) else None,
@@ -156,7 +159,7 @@ def _registration_context(
         "attestation_root_valid": attestation_checks.get("root_valid"),
         "attestation_rp_id_hash_valid": attestation_checks.get("rp_id_hash_valid"),
         "attestation_aaguid_match": attestation_checks.get("aaguid_match"),
-        "attestation_checks_safe": attestation.make_json_safe(attestation_checks),
+        "attestation_checks_safe": json_values.make_json_safe(attestation_checks),
     }
 
 

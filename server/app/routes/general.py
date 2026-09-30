@@ -24,7 +24,7 @@ from ..mds_provisioning import (
     waits_for_the_snapshot,
 )
 from ..static_assets import asset_url, snapshot_version
-from ..webauthn.attestation import serialize_attestation_certificate
+from ..webauthn.attestation.certificates import serialize_attestation_certificate
 from ..webauthn.metadata.blob import (
     load_packaged_explorer_summary,
     load_packaged_snapshot_meta,

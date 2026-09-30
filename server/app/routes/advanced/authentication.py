@@ -6,6 +6,7 @@ from typing import Any
 
 from flask import jsonify, request, session
 
+from ... import json_values
 from ...attachments import (
     attachment_hint_violation,
     normalize_attachment,
@@ -14,7 +15,6 @@ from ...attachments import (
 )
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
 from ...encoding import encode_base64url
-from ...webauthn import attestation
 from .. import binary_helpers
 from . import (
     algorithms,
@@ -103,7 +103,7 @@ def advanced_authenticate_begin():
     }
 
     # The extensions may hold bytes (prf's eval inputs).
-    return jsonify(attestation.make_json_safe(_begin_payload(options, resident_key_only)))
+    return jsonify(json_values.make_json_safe(_begin_payload(options, resident_key_only)))
 
 
 def _offer_credential_algorithms(temp_server: Any, credentials: Iterable[Any]) -> None:

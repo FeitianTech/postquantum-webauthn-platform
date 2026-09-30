@@ -25,7 +25,9 @@ from cryptography.hazmat.primitives.asymmetric import (
 from cryptography.x509.oid import NameOID
 
 import server.app.mds_snapshot as mds_snapshot
-from server.app.webauthn.attestation import serialize_attestation_certificate
+from server.app.webauthn.attestation.certificates import (
+    serialize_attestation_certificate,
+)
 
 
 def _self_signed(key, algorithm, common_name, rsa_padding=None) -> bytes:

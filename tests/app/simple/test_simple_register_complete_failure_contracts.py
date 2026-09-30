@@ -2,6 +2,7 @@ import base64
 import time
 
 from server.app.config import relying_party
+from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.entry_app import entry_app
 
 
@@ -30,7 +31,7 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
     monkeypatch.setattr(relying_party, "determine_rp_id", lambda: "example.com")
     monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(
-        attestation_module,
+        attestation_certificates,
         "extract_attestation_details",
         lambda _response: ("none", {}, None, None, {}, None, [])
     )
@@ -68,7 +69,7 @@ def test_simple_register_complete_rejects_request_state_fallback_before_verifica
     monkeypatch.setattr(relying_party, "determine_rp_id", lambda: "example.com")
     monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FailingServer())
     monkeypatch.setattr(
-        attestation_module,
+        attestation_certificates,
         "extract_attestation_details",
         lambda _response: ("none", {}, None, None, {}, None, [])
     )

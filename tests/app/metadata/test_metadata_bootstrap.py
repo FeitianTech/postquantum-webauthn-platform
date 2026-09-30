@@ -62,7 +62,7 @@ def test_packaged_metadata_loads_without_download(packaged_metadata_env):
 
 
 def test_metadata_not_available_is_warning_classical():
-    from server.app.webauthn import attestation
+    from server.app.webauthn.attestation import classical as attestation_classical
 
     attestation_object = type("obj", (), {"att_stmt": {}})()
     attestation_result = type(
@@ -70,7 +70,7 @@ def test_metadata_not_available_is_warning_classical():
         (),
         {"trust_path": [], "metadata_entry": None, "metadata_lookup_source": None},
     )()
-    outcome = attestation._evaluate_classical_attestation_root(
+    outcome = attestation_classical._evaluate_classical_attestation_root(
         attestation_object,
         attestation_result,
         b"",

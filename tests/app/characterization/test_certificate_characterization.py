@@ -15,14 +15,14 @@ from . import harness, material
 
 
 def test_certificate_serialisation_matches_its_golden_record():
-    from server.app.webauthn import attestation
+    from server.app.webauthn.attestation import certificates as attestation_certificates
 
     certificates = {**material.captured_certificates(), **material.generated_certificates()}
     record = {
-        name: harness.json_safe(attestation.serialize_attestation_certificate(der))
+        name: harness.json_safe(attestation_certificates.serialize_attestation_certificate(der))
         for name, der in certificates.items()
     }
-    record["empty-input"] = harness.json_safe(attestation.serialize_attestation_certificate(b""))
+    record["empty-input"] = harness.json_safe(attestation_certificates.serialize_attestation_certificate(b""))
     harness.check_golden("certificates.json", record)
 
 
@@ -41,7 +41,7 @@ def _registration_response(attestation_object: bytes, **response_extra) -> dict:
 
 
 def test_attestation_details_match_their_golden_record():
-    from server.app.webauthn import attestation
+    from server.app.webauthn.attestation import certificates as attestation_certificates
 
     leaf = material.attestation_leaf_certificate(bytes(16))
     auth_data = material.Authenticator("details").authenticator_data()
@@ -51,7 +51,7 @@ def test_attestation_details_match_their_golden_record():
     inputs["not-cbor"] = _registration_response(b"\xff\xfe")
     inputs["not-a-dict"] = ["not", "a", "dict"]
     inputs["no-response"] = {"id": "x", "type": "public-key"}
-    record = {name: harness.json_safe(attestation.extract_attestation_details(value)) for name, value in inputs.items()}
+    record = {name: harness.json_safe(attestation_certificates.extract_attestation_details(value)) for name, value in inputs.items()}
     harness.check_golden("attestation-details.json", record)
 
 
@@ -60,7 +60,14 @@ def test_certificate_helpers_match_their_golden_record():
 
     from fido2.utils import ByteBuffer
 
-    from server.app.webauthn import attestation
+    from server.app.webauthn import signature_algorithms
+    from server.app.webauthn.attestation import (
+        certificate_names as attestation_certificate_names,
+    )
+    from server.app.webauthn.attestation import (
+        certificate_public_keys as attestation_certificate_public_keys,
+    )
+    from server.app.webauthn.attestation import certificates as attestation_certificates
 
     der = material.generated_certificates()["generated-ec-p256"]
     mldsa_der = material.generated_certificates()["generated-ml-dsa-44"]
@@ -78,24 +85,24 @@ def test_certificate_helpers_match_their_golden_record():
     record = {"coerce": {}}
     for name, value in coerce_inputs.items():
         try:
-            record["coerce"][name] = harness.json_safe(attestation._coerce_attestation_certificate_bytes(value))
+            record["coerce"][name] = harness.json_safe(attestation_certificates._coerce_attestation_certificate_bytes(value))
         except Exception as exc:
             record["coerce"][name] = f"raises {type(exc).__name__}: {exc}"
     error = ValueError("unparsable for the test")
     for name, cert in {"ec": der, "ml-dsa": mldsa_der, "truncated": der[:40], "garbage": b"\x01\x02"}.items():
-        record[f"unknown-key/{name}"] = harness.json_safe(attestation._build_unknown_public_key_info(cert, error))
-        record[f"fallback/{name}"] = harness.json_safe(attestation._serialize_attestation_certificate_fallback(cert, error))
+        record[f"unknown-key/{name}"] = harness.json_safe(attestation_certificate_public_keys._build_unknown_public_key_info(cert, error))
+        record[f"fallback/{name}"] = harness.json_safe(attestation_certificates._serialize_attestation_certificate_fallback(cert, error))
     names = ["", "  ", "ecdsa-with-SHA256", "RSASSA-PSS", "sha256WithRSAEncryption", "ed25519", "Ed448",
              "dsa-with-sha1", "ML-DSA-44", "some thing-else", "rsassaPss", "ML-DSA-65", "ML-DSA-87",
              "2.16.840.1.101.3.4.3.10", "2.16.840.1.101.3.4.3.14"]
-    record["normalise"] = {name: attestation._normalise_signature_algorithm_name(name) for name in names}
-    record["hash"] = {repr(value): attestation._format_hash_value(value) for value in (None, "", " ", "sha-256", "SHA384", "shake-256", "md5", "sha3-256", "SHA3-512")}
-    record["component"] = {repr(value): attestation._format_algorithm_component(value) for value in (None, "", "\u2014", " RSA PSS ", 5)}
+    record["normalise"] = {name: signature_algorithms.normalise_signature_algorithm_name(name) for name in names}
+    record["hash"] = {repr(value): signature_algorithms.format_hash_name(value) for value in (None, "", " ", "sha-256", "SHA384", "shake-256", "md5", "sha3-256", "SHA3-512")}
+    record["component"] = {repr(value): signature_algorithms.format_algorithm_component(value) for value in (None, "", "\u2014", " RSA PSS ", 5)}
     signature_infos = [
         "not-a-mapping", {}, {"algorithm": "ecdsa-with-SHA256", "hash": {"name": "sha256"}},
         {"algorithm": {"name": "sha256WithRSAEncryption"}, "hash": "sha-256"}, {"algorithm": "ed25519"},
         {"algorithm": "Ed448", "hash": ""}, {"algorithm": "ML-DSA-65"}, {"algorithm": "sha1", "hash": "sha1"},
         {"algorithm": 5, "hash": {"name": None}},
     ]
-    record["algorithm-info"] = [attestation._derive_certificate_algorithm_info(info) for info in signature_infos]
+    record["algorithm-info"] = [attestation_certificate_names._derive_certificate_algorithm_info(info) for info in signature_infos]
     harness.check_golden("certificate-helpers.json", record)

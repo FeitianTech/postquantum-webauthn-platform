@@ -11,6 +11,9 @@ from server.app.routes import binary_helpers as shared_binary_helpers
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import algorithms as algorithms_module
 from server.app.routes.advanced import parsing as advanced_parsing
+from server.app.webauthn.attestation import aaguid as attestation_aaguid
+from server.app.webauthn.attestation import certificates as attestation_certificates
+from server.app.webauthn.attestation import checks as attestation_checks
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
@@ -52,7 +55,7 @@ def _install_register_begin_server(monkeypatch, advanced_module, captured: dict,
 def _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module):
     monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(attestation_module, "augment_aaguid_fields", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(attestation_aaguid, "augment_aaguid_fields", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
     monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
@@ -187,7 +190,7 @@ def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_co
 
     monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _Server())
     monkeypatch.setattr(
-        attestation_module,
+        attestation_certificates,
         "extract_attestation_details",
         lambda _response: (
             "packed",
@@ -199,9 +202,9 @@ def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_co
             [{"chain": 1}],
         )
     )
-    monkeypatch.setattr(attestation_module, "extract_min_pin_length", lambda _results: 6)
+    monkeypatch.setattr(attestation_aaguid, "extract_min_pin_length", lambda _results: 6)
     monkeypatch.setattr(
-        attestation_module,
+        attestation_checks,
         "perform_attestation_checks",
         lambda *_args, **_kwargs: {
             "signature_valid": True,
@@ -213,7 +216,7 @@ def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_co
         }
     )
     monkeypatch.setattr(
-        attestation_module,
+        attestation_aaguid,
         "summarize_authenticator_extensions",
         lambda _extensions: {"ext": True}
     )
@@ -290,13 +293,13 @@ def test_register_complete_returns_400_for_non_mapping_extensions_payload(monkey
 
     monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _Server())
     monkeypatch.setattr(
-        attestation_module,
+        attestation_certificates,
         "extract_attestation_details",
         lambda _response: ("none", {}, None, None, {}, None, [])
     )
-    monkeypatch.setattr(attestation_module, "extract_min_pin_length", lambda _results: None)
+    monkeypatch.setattr(attestation_aaguid, "extract_min_pin_length", lambda _results: None)
     monkeypatch.setattr(
-        attestation_module,
+        attestation_checks,
         "perform_attestation_checks",
         lambda *_args, **_kwargs: {
             "signature_valid": True,
@@ -370,13 +373,13 @@ def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_
 
     monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _Server())
     monkeypatch.setattr(
-        attestation_module,
+        attestation_certificates,
         "extract_attestation_details",
         lambda _response: ("none", {}, None, None, {"largeBlob": {"supported": True}}, None, [])
     )
-    monkeypatch.setattr(attestation_module, "extract_min_pin_length", lambda _results: None)
+    monkeypatch.setattr(attestation_aaguid, "extract_min_pin_length", lambda _results: None)
     monkeypatch.setattr(
-        attestation_module,
+        attestation_checks,
         "perform_attestation_checks",
         lambda *_args, **_kwargs: {
             "signature_valid": True,
@@ -387,7 +390,7 @@ def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_
             "warnings": [],
         }
     )
-    monkeypatch.setattr(attestation_module, "summarize_authenticator_extensions", lambda _ext: {})
+    monkeypatch.setattr(attestation_aaguid, "summarize_authenticator_extensions", lambda _ext: {})
     monkeypatch.setattr(advanced_summary, "_generate_storage_id", lambda _source: "generated::storage::id")
     monkeypatch.setattr(
         advanced_registration_record.uuid,
