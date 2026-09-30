@@ -21,10 +21,10 @@ from flask import (
 
 from .. import encoding
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
+from ..mds import cache as mds_cache
 from ..mds import files as mds_files
 from ..mds import provisioning as mds_provisioning
 from ..webauthn.attestation import certificates as attestation_certificates
-from ..webauthn.metadata import blob as metadata_blob
 from ..webauthn.metadata import effective as metadata_effective
 from ..webauthn.metadata import entries as metadata_entries
 from ..webauthn.metadata import sessions as metadata_sessions
@@ -68,7 +68,7 @@ def _packaged_snapshot_url() -> str | None:
     The URL carries the snapshot's own version (``assets.snapshot_version``),
     so a new snapshot is a new URL."""
 
-    version = assets.snapshot_version(metadata_blob.load_packaged_snapshot_meta())
+    version = assets.snapshot_version(mds_cache.load_packaged_snapshot_meta())
     if version is None:
         return None
     return f"{assets.asset_url(_MDS_EXPLORER_FULL_STATIC_FILENAME)}?v={version}"
@@ -87,7 +87,7 @@ def _initial_mds_info() -> dict[str, Any]:
     mds_provisioning.follow_newer_snapshot()
     metadata_session_id = metadata_sessions.ensure_metadata_session_id()
 
-    initial_mds_info = dict(metadata_blob.load_packaged_explorer_summary() or {})
+    initial_mds_info = dict(mds_cache.load_packaged_explorer_summary() or {})
     snapshot_url = _packaged_snapshot_url()
     if snapshot_url:
         initial_mds_info["snapshotUrl"] = snapshot_url

@@ -47,9 +47,9 @@ def _run_background_warmup() -> None:
         logger.warning("Background MDS snapshot provisioning failed.", exc_info=True)
 
     try:
-        from .webauthn.metadata import blob
+        from .mds import cache as mds_cache
 
-        blob.load_cached_metadata_snapshot()
+        mds_cache.load_cached_metadata_snapshot()
     except Exception:
         logger.warning("Background metadata warm-up failed.", exc_info=True)
 

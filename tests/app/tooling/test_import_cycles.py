@@ -29,7 +29,7 @@ ALLOWED_CYCLES: list[frozenset[str]] = [
 ALLOWED_DEFERRED: dict[tuple[str, str], str] = {
     ("server/app/mds/provisioning.py", "tools"): "the updater is imported only when a refresh runs, and may be absent",
     ("server/app/startup.py", "server.app.mds.provisioning"): "the warm-up loads the MDS runtime on its own thread",
-    ("server/app/startup.py", "server.app.webauthn.metadata.blob"): "the warm-up loads the MDS runtime on its own thread",
+    ("server/app/startup.py", "server.app.mds.cache"): "the warm-up loads the MDS runtime on its own thread",
     ("server/app/storage/common.py", "server.app.webauthn.metadata.sessions"): "reaches the visitor session, which imports storage",
 }
 

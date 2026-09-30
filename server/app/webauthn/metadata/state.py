@@ -4,7 +4,7 @@ A leaf: it imports nothing from ``server.app``, so any module here can depend
 on it. The cleanup's entries are reached through the module
 (``state._session_cleanup_worker = ...``), since a ``from ... import`` binding
 cannot be rebound for other readers; the constants are safe to import by name.
-The snapshot's caches are ``blob.CACHE``.
+The snapshot's caches are ``server.app.mds.cache.CACHE``.
 """
 from __future__ import annotations
 

@@ -7,8 +7,8 @@ import os
 
 import pytest
 
+from server.app.mds import cache as mds_cache
 from server.app.webauthn import metadata as module
-from server.app.webauthn.metadata import blob as metadata_blob
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ def test_matching_meta_uses_packaged_snapshot_despite_older_mtime(metadata_modul
     verified_path, explorer_path = metadata_module._test_paths
     _write_meta(verified_path, explorer_path)
 
-    snapshot, _ = metadata_blob._load_base_explorer_snapshot()
+    snapshot, _ = mds_cache._load_base_explorer_snapshot()
 
     assert snapshot["meta"]["source"] == "packaged-snapshot"
     assert metadata_module._test_builds == []
@@ -72,7 +72,7 @@ def test_mismatched_meta_rebuilds_from_verified_snapshot(metadata_module):
     verified_path, explorer_path = metadata_module._test_paths
     _write_meta(verified_path, explorer_path, explorer_no=6)
 
-    snapshot, _ = metadata_blob._load_base_explorer_snapshot()
+    snapshot, _ = mds_cache._load_base_explorer_snapshot()
 
     assert snapshot["meta"]["source"] == "rebuilt"
     assert metadata_module._test_builds == [1]
@@ -87,7 +87,7 @@ def test_summary_reads_meta_file_without_loading_snapshot(metadata_module, monke
         lambda: pytest.fail("summary should not load the full explorer snapshot"),
     )
 
-    summary = metadata_blob.load_packaged_explorer_summary()
+    summary = mds_cache.load_packaged_explorer_summary()
 
     assert summary["no"] == 7
     assert summary["source"] == "packaged"

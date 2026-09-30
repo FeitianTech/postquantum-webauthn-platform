@@ -6,9 +6,9 @@ from types import MappingProxyType, SimpleNamespace
 
 import pytest
 
+from server.app.mds import cache as mds_cache
 from server.app.mds import files as mds_files
 from server.app.webauthn import metadata as module
-from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import sessions as metadata_sessions
@@ -107,7 +107,7 @@ def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_modu
         lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("open-failure")),
         raising=False,
     )
-    assert metadata_blob.load_metadata_cache_entry() == {}
+    assert mds_cache.load_metadata_cache_entry() == {}
 
     monkeypatch.setattr(os.path, "getmtime", lambda _path: (_ for _ in ()).throw(OSError("no-mtime")))
     monkeypatch.setattr(
@@ -116,7 +116,7 @@ def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_modu
         lambda *_args, **_kwargs: (_ for _ in ()).throw(FileNotFoundError("missing")),
         raising=False,
     )
-    loaded, mtime = metadata_blob._load_verified_metadata_fallback()
+    loaded, mtime = mds_cache._load_verified_metadata_fallback()
     assert loaded is None
     assert mtime is None
 
@@ -127,7 +127,7 @@ def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_modu
         lambda *_args, **_kwargs: io.StringIO("{invalid-json"),
         raising=False,
     )
-    loaded, mtime = metadata_blob._load_verified_metadata_fallback()
+    loaded, mtime = mds_cache._load_verified_metadata_fallback()
     assert loaded is None
     assert mtime == 123.0
 
@@ -138,7 +138,7 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
 
     monkeypatch.setattr(os.path, "getmtime", _getmtime)
     monkeypatch.setattr(blob, "_load_verified_metadata_payload", lambda: None)
-    snapshot, marker = metadata_blob._load_base_explorer_snapshot()
+    snapshot, marker = mds_cache._load_base_explorer_snapshot()
     assert snapshot is None
     assert marker == (None, None, None, None)
 
@@ -164,7 +164,7 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
         "build_explorer_snapshot",
         lambda _payload, _cache: {"meta": {"entryCount": 0}},
     )
-    snapshot, marker = metadata_blob._load_base_explorer_snapshot()
+    snapshot, marker = mds_cache._load_base_explorer_snapshot()
     assert snapshot == {"meta": {"entryCount": 0}}
     assert marker == (10.0, 5.0, 5.0, 5.0)
 
@@ -173,7 +173,7 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
         "_load_base_explorer_snapshot",
         lambda: ({"meta": MappingProxyType({"entryCount": 2})}, (1.0, 1.0)),
     )
-    assert metadata_blob.load_packaged_explorer_summary() == {"entryCount": 2}
+    assert mds_cache.load_packaged_explorer_summary() == {"entryCount": 2}
 
     item = SimpleNamespace(payload={"aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}, uploaded_at="now")
     monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [item])

@@ -15,9 +15,9 @@ from urllib.parse import quote
 
 from flask import Blueprint, Flask, abort, request
 
+from ..mds import cache as mds_cache
 from ..mds import files as mds_files
 from ..mds import provisioning as mds_provisioning
-from ..webauthn.metadata import blob as metadata_blob
 from . import web_export
 
 # The path segment of the snapshot's URL; no other segment is served.
@@ -90,7 +90,7 @@ def versioned_static_asset(filename: str):
 
     # Only the current snapshot's URL is immutable; a page given an earlier one
     # must revalidate.
-    current = snapshot_version(metadata_blob.load_packaged_snapshot_meta())
+    current = snapshot_version(mds_cache.load_packaged_snapshot_meta())
     if current is not None and request.args.get("v") == current:
         return web_export.send_precompressed(path, web_export.IMMUTABLE_CACHE_CONTROL)
     return web_export.send_precompressed(path, web_export.REVALIDATE_CACHE_CONTROL)

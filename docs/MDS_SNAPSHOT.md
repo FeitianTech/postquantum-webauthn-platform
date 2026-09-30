@@ -30,7 +30,7 @@ served under a URL of its own.
 without it answers `instance/mds-snapshot` (in the image, `/app/instance/mds-snapshot`;
 `docker compose` mounts `./instance`, so a local container keeps its copy there). It is a leaf with no Flask import, so every
 reader and writer follows the one setting: the server's metadata loaders
-(`webauthn/metadata/blob.py`), the provisioning below,
+(`mds/cache.py`), the provisioning below,
 `tools/update_mds_snapshot.py`, and the packaged snapshot browsers load
 (`/assets/mds/fido-mds3.explorer.full.json`, served from that directory with its `.gz`
 sibling, `server/app/routes/assets.py`). The page is given that URL as `snapshotUrl`

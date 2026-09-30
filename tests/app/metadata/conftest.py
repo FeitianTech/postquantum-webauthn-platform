@@ -7,7 +7,7 @@ import shutil
 
 import pytest
 
-from server.app.webauthn.metadata import blob as metadata_blob
+from server.app.mds import cache as mds_cache
 from server.app.webauthn.metadata import state
 
 # The inactive-session cleanup's state, with the value each holds on a freshly
@@ -29,7 +29,7 @@ def metadata_state(monkeypatch):
     while exercising stale state.
     """
 
-    monkeypatch.setattr(metadata_blob, "CACHE", metadata_blob.SnapshotCache())
+    monkeypatch.setattr(mds_cache, "CACHE", mds_cache.SnapshotCache())
     for name, default in _CLEANUP_STATE_DEFAULTS.items():
         monkeypatch.setattr(state, name, default)
     return state
@@ -53,7 +53,7 @@ def entries():
 def blob():
     """The fragment that defines the base/explorer/full snapshot loaders. The fragment that defines the metadata cache helpers."""
 
-    return importlib.import_module("server.app.webauthn.metadata.blob")
+    return importlib.import_module("server.app.mds.cache")
 
 
 @pytest.fixture

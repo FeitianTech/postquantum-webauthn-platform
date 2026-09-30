@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
+from server.app.mds import cache as mds_cache
 from server.app.routes import assets
-from server.app.webauthn.metadata import blob as metadata_blob
 from tests.app.entry_app import entry_app
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -29,7 +29,7 @@ def assets_env(monkeypatch, tmp_path):
     (snapshot / _EXPLORER_FULL).write_bytes(_BODY)
     (snapshot / f"{_EXPLORER_FULL}.gz").write_bytes(gzip.compress(_BODY))
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(snapshot))
-    monkeypatch.setattr(metadata_blob, "load_packaged_snapshot_meta", lambda: dict(_META))
+    monkeypatch.setattr(mds_cache, "load_packaged_snapshot_meta", lambda: dict(_META))
     version = assets.snapshot_version(_META)
     return assets, entry_app().test_client(), version
 
@@ -80,7 +80,7 @@ def test_no_other_segment_serves_the_snapshot(assets_env, segment):
 
 def test_without_a_snapshot_meta_nothing_is_immutable(assets_env, monkeypatch):
     assets, client, version = assets_env
-    monkeypatch.setattr(metadata_blob, "load_packaged_snapshot_meta", lambda: None)
+    monkeypatch.setattr(mds_cache, "load_packaged_snapshot_meta", lambda: None)
 
     with client.get(f"/assets/mds/{_EXPLORER_FULL}?v={version}") as response:
         assert response.status_code == 200

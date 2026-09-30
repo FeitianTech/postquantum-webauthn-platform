@@ -11,9 +11,9 @@ import pytest
 from fido2.mds3 import MetadataBlobPayloadEntry
 from flask import ctx, g, session
 
+from server.app.mds import cache as mds_cache
 from server.app.mds import files as mds_files
 from server.app.webauthn import metadata as module
-from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import sessions as cleanup
@@ -428,7 +428,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
 
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     cache_path.write_text("[]", encoding="utf-8")
-    assert metadata_blob.load_metadata_cache_entry() == {}
+    assert mds_cache.load_metadata_cache_entry() == {}
 
     cache_path.write_text(
         json.dumps(
@@ -441,16 +441,16 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
         ),
         encoding="utf-8",
     )
-    loaded_cache = metadata_blob.load_metadata_cache_entry()
+    loaded_cache = mds_cache.load_metadata_cache_entry()
     assert loaded_cache["last_modified_iso"] == "2015-10-21T07:28:00+00:00"
     assert loaded_cache["etag"] == "etag-value"
 
     real_load_base_metadata = blob._load_base_metadata
 
     monkeypatch.setattr(blob, "_load_base_metadata", lambda: (None, None))
-    assert metadata_blob.load_cached_metadata_snapshot() is False
+    assert mds_cache.load_cached_metadata_snapshot() is False
     monkeypatch.setattr(blob, "_load_base_metadata", lambda: (object(), None))
-    assert metadata_blob.load_cached_metadata_snapshot() is True
+    assert mds_cache.load_cached_metadata_snapshot() is True
 
     monkeypatch.setattr(blob, "_load_base_metadata", real_load_base_metadata)
 
@@ -462,23 +462,23 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     monkeypatch.setattr(blob, "_load_verified_metadata_fallback", lambda: (None, None))
     metadata_value, marker = blob._load_base_metadata()
     assert metadata_value is None and marker is None
-    assert metadata_blob.CACHE.metadata_source is None
-    assert metadata_blob.CACHE.trust_verified is None
+    assert mds_cache.CACHE.metadata_source is None
+    assert mds_cache.CACHE.trust_verified is None
 
     snapshot_dir = tmp_path / "snapshot"
     snapshot_dir.mkdir()
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(snapshot_dir))
     verified_path = snapshot_dir / "fido-mds3.verified.json"
 
-    missing_loaded, _ = metadata_blob._load_verified_metadata_fallback()
+    missing_loaded, _ = mds_cache._load_verified_metadata_fallback()
     assert missing_loaded is None
 
     verified_path.write_text("{not-json", encoding="utf-8")
-    invalid_loaded, _ = metadata_blob._load_verified_metadata_fallback()
+    invalid_loaded, _ = mds_cache._load_verified_metadata_fallback()
     assert invalid_loaded is None
 
     verified_path.write_text("[]", encoding="utf-8")
-    assert metadata_blob._load_verified_metadata_payload() is None
+    assert mds_cache._load_verified_metadata_payload() is None
 
     verified_payload = {
         "legalHeader": "L",
@@ -491,16 +491,16 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     monkeypatch.setattr(os.path, "getmtime", lambda path: 20.0 if path == str(verified_path) else 10.0)
     # The explorer, the verified snapshot, and their metas.
     explorer_cache_marker = (10.0, 20.0, 10.0, 10.0)
-    monkeypatch.setattr(metadata_blob.CACHE, "explorer", {"meta": {"entryCount": 9}})
-    monkeypatch.setattr(metadata_blob.CACHE, "explorer_mtime", explorer_cache_marker)
-    cached_snapshot, cached_marker = metadata_blob._load_base_explorer_snapshot()
+    monkeypatch.setattr(mds_cache.CACHE, "explorer", {"meta": {"entryCount": 9}})
+    monkeypatch.setattr(mds_cache.CACHE, "explorer_mtime", explorer_cache_marker)
+    cached_snapshot, cached_marker = mds_cache._load_base_explorer_snapshot()
     assert cached_snapshot == {"meta": {"entryCount": 9}}
     assert cached_marker == explorer_cache_marker
 
     explorer_path = snapshot_dir / "fido-mds3.explorer.json"
     explorer_path.write_text("{invalid-json", encoding="utf-8")
-    monkeypatch.setattr(metadata_blob.CACHE, "explorer", None)
-    monkeypatch.setattr(metadata_blob.CACHE, "explorer_mtime", None)
+    monkeypatch.setattr(mds_cache.CACHE, "explorer", None)
+    monkeypatch.setattr(mds_cache.CACHE, "explorer_mtime", None)
     monkeypatch.setattr(blob, "load_metadata_cache_entry", lambda: {"etag": "x"})
     monkeypatch.setattr(
         blob,
@@ -511,7 +511,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
         },
     )
 
-    snapshot, _ = metadata_blob._load_base_explorer_snapshot()
+    snapshot, _ = mds_cache._load_base_explorer_snapshot()
     assert snapshot["meta"] == {"entryCount": 0, "etag": "x"}
 
     monkeypatch.setattr(
@@ -519,22 +519,22 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
         "getmtime",
         lambda _path: (_ for _ in ()).throw(OSError("missing mtime")),
     )
-    monkeypatch.setattr(metadata_blob.CACHE, "full", None)
-    monkeypatch.setattr(metadata_blob.CACHE, "full_mtime", None)
+    monkeypatch.setattr(mds_cache.CACHE, "full", None)
+    monkeypatch.setattr(mds_cache.CACHE, "full_mtime", None)
     monkeypatch.setattr(blob, "_load_verified_metadata_payload", lambda: None)
 
-    full_snapshot, full_marker = metadata_blob._load_base_full_snapshot()
+    full_snapshot, full_marker = mds_cache._load_base_full_snapshot()
     assert full_snapshot is None and full_marker == (None, None, None, None)
 
-    monkeypatch.setattr(metadata_blob.CACHE, "full", {"meta": {"entryCount": 1}})
-    monkeypatch.setattr(metadata_blob.CACHE, "full_mtime", (None, None, None, None))
-    cached_full, cached_full_marker = metadata_blob._load_base_full_snapshot()
+    monkeypatch.setattr(mds_cache.CACHE, "full", {"meta": {"entryCount": 1}})
+    monkeypatch.setattr(mds_cache.CACHE, "full_mtime", (None, None, None, None))
+    cached_full, cached_full_marker = mds_cache._load_base_full_snapshot()
     assert cached_full == {"meta": {"entryCount": 1}}
     assert cached_full_marker == (None, None, None, None)
 
     monkeypatch.setattr(blob, "_load_base_explorer_snapshot", lambda: ({}, None))
     monkeypatch.setattr(blob, "_load_verified_metadata_payload", lambda: None)
-    assert metadata_blob.load_packaged_explorer_summary() == {}
+    assert mds_cache.load_packaged_explorer_summary() == {}
 
     monkeypatch.setattr(blob, "_load_verified_metadata_payload", lambda: verified_payload)
     monkeypatch.setattr(blob, "load_metadata_cache_entry", lambda: {})
@@ -543,7 +543,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
         "build_explorer_snapshot",
         lambda _payload, _cache: {"meta": {"entryCount": 0}},
     )
-    assert metadata_blob.load_packaged_explorer_summary() == {"entryCount": 0}
+    assert mds_cache.load_packaged_explorer_summary() == {"entryCount": 0}
 
     compose_calls = []
     monkeypatch.setattr(blob, "_load_base_explorer_snapshot", lambda: ({"meta": {}, "entries": []}, None))
@@ -648,14 +648,14 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, m
     assert metadata_verifier.metadata_entry_trust_anchor_status(object()) is None
 
     entry = MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
-    metadata_blob.CACHE.entry_ids = set()
-    metadata_blob.CACHE.trust_verified = False
+    mds_cache.CACHE.entry_ids = set()
+    mds_cache.CACHE.trust_verified = False
     assert metadata_verifier.metadata_entry_trust_anchor_status(entry) is None
 
     monkeypatch.setattr(blob, "_load_base_metadata", lambda: (None, 77.0))
     monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [])
     assert metadata_verifier.get_mds_verifier() is None
-    assert metadata_blob.CACHE.verifier_mtime == 77.0
+    assert mds_cache.CACHE.verifier_mtime == 77.0
 
     created = []
 

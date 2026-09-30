@@ -136,7 +136,7 @@ def test_resolve_serves_a_packaged_entry_as_the_blob_has_it(mds_fixture_snapshot
 
 
 def test_raw_entries_follow_only_the_file_the_metadata_was_read_from(mds_fixture_snapshot, monkeypatch):
-    from server.app.webauthn.metadata import blob
+    from server.app.mds import cache as blob
 
     verified = mds_fixture_snapshot / mds_files.VERIFIED
     mtime = os.path.getmtime(verified)

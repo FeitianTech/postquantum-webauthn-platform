@@ -6,8 +6,8 @@ from types import SimpleNamespace
 import pytest
 from fido2.mds3 import MetadataBlobPayloadEntry
 
+from server.app.mds import cache as mds_cache
 from server.app.webauthn import metadata as module
-from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import sessions as metadata_sessions
@@ -200,10 +200,10 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metada
     os.utime(explorer_path, (now, now))
 
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
-    monkeypatch.setattr(metadata_blob.CACHE, "explorer", None)
-    monkeypatch.setattr(metadata_blob.CACHE, "explorer_mtime", None)
+    monkeypatch.setattr(mds_cache.CACHE, "explorer", None)
+    monkeypatch.setattr(mds_cache.CACHE, "explorer_mtime", None)
 
-    snapshot, marker = metadata_blob._load_base_explorer_snapshot()
+    snapshot, marker = mds_cache._load_base_explorer_snapshot()
 
     assert snapshot["meta"]["entryCount"] == 1
     assert marker is not None
@@ -223,7 +223,7 @@ def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadat
         lambda payload, _cache: {"meta": {"entryCount": len(payload.get("entries", []))}},
     )
 
-    summary = metadata_blob.load_packaged_explorer_summary()
+    summary = mds_cache.load_packaged_explorer_summary()
     assert summary["entryCount"] == 0
 
     created = []
@@ -266,6 +266,6 @@ def test_metadata_entry_trust_anchor_status_uses_session_and_base_entry_sets(met
         }
     )
 
-    metadata_blob.CACHE.entry_ids = {id(entry)}
-    metadata_blob.CACHE.trust_verified = True
+    mds_cache.CACHE.entry_ids = {id(entry)}
+    mds_cache.CACHE.trust_verified = True
     assert metadata_verifier.metadata_entry_trust_anchor_status(entry) is True

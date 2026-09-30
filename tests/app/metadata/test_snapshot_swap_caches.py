@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import os
 
+from server.app.mds import cache as blob
 from server.app.mds import files as mds_files
-from server.app.webauthn.metadata import blob
 from tests.app.metadata.snapshot_versions import snapshot_version
 
 

@@ -6,8 +6,8 @@ import itsdangerous
 from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
 from flask import g, session
 
+from server.app.mds import cache as mds_cache
 from server.app.mds import files as mds_files
-from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import sessions as metadata_sessions
@@ -144,8 +144,8 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
 
 
 def test_cache_cleaning_and_formatting_helpers():
-    assert metadata_blob._clean_metadata_cache_value("  etag-value  ") == "etag-value"
-    assert metadata_blob._clean_metadata_cache_value("   ") is None
+    assert mds_cache._clean_metadata_cache_value("  etag-value  ") == "etag-value"
+    assert mds_cache._clean_metadata_cache_value("   ") is None
 
     iso_value = mds_files.format_last_modified("Wed, 21 Oct 2015 07:28:00 GMT")
     assert iso_value == "2015-10-21T07:28:00+00:00"

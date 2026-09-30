@@ -16,8 +16,8 @@ from typing import Any
 
 from fido2.mds3 import MdsAttestationVerifier, MetadataBlobPayload
 
-from ...mds import files as mds_files
-from ...mds.build import build_bootstrap_snapshot, build_explorer_snapshot
+from . import files as mds_files
+from .build import build_bootstrap_snapshot, build_explorer_snapshot
 
 logger = logging.getLogger(__name__)
 

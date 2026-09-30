@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 
 import pytest
 
+from server.app.mds import cache as mds_cache
 from server.app.routes import mds as mds_routes
-from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import sessions as metadata_sessions
@@ -90,8 +90,8 @@ def test_metadata_not_available_is_warning_classical():
 
 def test_the_mds_info_answers_the_summary_and_the_custom_entries_state(monkeypatch, app_config):
     monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(metadata_blob, "load_packaged_explorer_summary", lambda: {})
-    monkeypatch.setattr(metadata_blob, "load_packaged_snapshot_meta", lambda: None)
+    monkeypatch.setattr(mds_cache, "load_packaged_explorer_summary", lambda: {})
+    monkeypatch.setattr(mds_cache, "load_packaged_snapshot_meta", lambda: None)
 
     with entry_app().test_request_context("/api/mds/metadata/info"):
         result = mds_routes._initial_mds_info()

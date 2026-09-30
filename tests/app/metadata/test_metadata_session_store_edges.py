@@ -2,8 +2,8 @@ import json
 
 import pytest
 
+from server.app.mds import cache as mds_cache
 from server.app.webauthn import metadata
-from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
@@ -139,12 +139,12 @@ def test_load_verified_metadata_helpers_handle_invalid_and_missing_payloads(meta
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
     verified_path = tmp_path / "fido-mds3.verified.json"
 
-    assert metadata_blob._load_verified_metadata_payload() is None
+    assert mds_cache._load_verified_metadata_payload() is None
 
     verified_path.write_text("[]", encoding="utf-8")
-    assert metadata_blob._load_verified_metadata_payload() is None
+    assert mds_cache._load_verified_metadata_payload() is None
 
     verified_path.write_text("{\"broken\": true}", encoding="utf-8")
-    loaded, mtime = metadata_blob._load_verified_metadata_fallback()
+    loaded, mtime = mds_cache._load_verified_metadata_fallback()
     assert loaded is None
     assert mtime is not None

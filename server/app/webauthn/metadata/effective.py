@@ -5,8 +5,9 @@ from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
+from ...mds import cache as mds_cache
 from ...mds.build import build_entry_id, build_explorer_entry, normalise_aaguid_key
-from . import blob, sessions
+from . import sessions
 
 if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed
     from .sessions import SessionMetadataItem
@@ -150,7 +151,7 @@ def _compose_effective_snapshot(
 
 
 def load_effective_full_snapshot() -> dict[str, Any]:
-    base_snapshot, _ = blob._load_base_full_snapshot()
+    base_snapshot, _ = mds_cache._load_base_full_snapshot()
     return _compose_effective_snapshot(
         base_snapshot,
         include_detail=True,
@@ -165,7 +166,7 @@ def resolve_effective_metadata_entry(
     aaguid: str | None = None,
     aaid: str | None = None,
 ) -> dict[str, Any] | None:
-    base_summary = blob.load_packaged_explorer_summary()
+    base_summary = mds_cache.load_packaged_explorer_summary()
     session_items = sessions.list_session_metadata_items()
     seen_aaguids: set[str] = set()
 
@@ -193,12 +194,12 @@ def resolve_effective_metadata_entry(
         if aaguid_key:
             seen_aaguids.add(aaguid_key)
 
-    base_metadata, metadata_mtime = blob._load_base_metadata()
+    base_metadata, metadata_mtime = mds_cache._load_base_metadata()
     if base_metadata is None:
         return None
 
     # The entry as the BLOB has it: the dataclasses drop what they do not model.
-    raw_entries = blob._load_base_raw_entries(metadata_mtime)
+    raw_entries = mds_cache._load_base_raw_entries(metadata_mtime)
     if raw_entries is None or len(raw_entries) != len(base_metadata.entries):
         raw_entries = [dict(entry) for entry in base_metadata.entries]
 
