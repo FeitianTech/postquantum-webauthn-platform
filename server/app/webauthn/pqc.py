@@ -1,4 +1,4 @@
-"""Helpers for integrating ML-DSA algorithms into the demo server.
+"""The ML-DSA algorithms in the server's WebAuthn: their names, and whether this build verifies them.
 
 Signing and verification are provided by ``cryptography``, which has native
 ML-DSA support; whether this build can verify it is fido2's to say

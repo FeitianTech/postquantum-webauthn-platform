@@ -102,8 +102,8 @@ def allowed_origins_from_config(config: Mapping[str, Any]) -> tuple[str, ...] | 
 def is_origin_allowed(candidate: str | None) -> bool:
     """Return ``True`` when ``candidate`` is permitted by the allowlist.
 
-    With no allowlist configured every origin is permitted, preserving the
-    development-time behaviour of the demo server.
+    With no allowlist configured every origin is permitted, as local
+    development needs.
     """
 
     allowed = get_allowed_origins()

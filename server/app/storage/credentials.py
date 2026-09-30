@@ -1,4 +1,4 @@
-"""Credential storage helpers for the demo server backed by pluggable storage.
+"""The Simple tab's credential store, on local disk or Google Cloud Storage.
 
 Two properties this module is responsible for, both of which used to be absent:
 

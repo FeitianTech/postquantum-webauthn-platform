@@ -1,4 +1,4 @@
-"""Application entry point for the WebAuthn demo server."""
+"""The WSGI entry point: ``app``, the application ``create_app()`` builds."""
 from __future__ import annotations
 
 from .factory import create_app
