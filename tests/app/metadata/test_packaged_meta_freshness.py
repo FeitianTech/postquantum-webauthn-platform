@@ -87,7 +87,7 @@ def test_summary_reads_meta_file_without_loading_snapshot(metadata_module, monke
         lambda: pytest.fail("summary should not load the full explorer snapshot"),
     )
 
-    summary = metadata_module.load_packaged_explorer_summary()
+    summary = metadata_blob.load_packaged_explorer_summary()
 
     assert summary["no"] == 7
     assert summary["source"] == "packaged"

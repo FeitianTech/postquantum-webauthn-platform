@@ -25,19 +25,23 @@ from ..mds_provisioning import (
 )
 from ..static_assets import asset_url, snapshot_version
 from ..webauthn.attestation import serialize_attestation_certificate
-from ..webauthn.metadata import (
-    delete_session_metadata_item,
-    ensure_metadata_session_id,
-    expand_metadata_entry_payloads,
-    list_session_metadata_items,
-    load_effective_full_snapshot,
+from ..webauthn.metadata.blob import (
     load_packaged_explorer_summary,
     load_packaged_snapshot_meta,
-    maybe_store_uploaded_metadata_file,
+)
+from ..webauthn.metadata.effective import (
+    load_effective_full_snapshot,
     resolve_effective_metadata_entry,
+)
+from ..webauthn.metadata.entries import expand_metadata_entry_payloads
+from ..webauthn.metadata.sessions import (
+    delete_session_metadata_item,
+    ensure_metadata_session_id,
+    list_session_metadata_items,
     save_session_metadata_item,
     serialize_session_metadata_item,
 )
+from ..webauthn.metadata.uploads import maybe_store_uploaded_metadata_file
 
 logger = logging.getLogger(__name__)
 

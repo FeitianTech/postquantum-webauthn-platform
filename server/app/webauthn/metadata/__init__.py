@@ -1,51 +1,8 @@
-"""Metadata handling utilities for the WebAuthn demo server.
+"""The FIDO MDS runtime: the packaged snapshot, visitors' uploaded metadata, the verifier.
 
-The implementation lives in this package's submodules; this module re-exports
-the pieces the rest of the server uses. A name here is the same object the
-submodule defines: patch the submodule, not this module.
+``blob`` loads the snapshot files into the caches ``state`` holds, ``entries``
+reads uploaded metadata statements, ``sessions`` keeps each visitor's uploads,
+``effective`` merges the snapshot with a visitor's uploads, ``verifier`` builds
+fido2's MDS verifier from them, and ``uploads`` mirrors uploads to GitHub.
+Importers name the module they need; this package re-exports nothing.
 """
-from __future__ import annotations
-
-from . import (
-    blob,
-    effective,
-    entries,
-    sessions,
-    uploads,
-    verifier,
-)
-
-__all__ = ["get_mds_verifier",
-           "load_cached_metadata_snapshot", "load_packaged_explorer_summary", "load_packaged_snapshot_meta",
-           "load_effective_full_snapshot", "resolve_effective_metadata_entry", "ensure_metadata_session_id",
-           "list_session_metadata_items", "save_session_metadata_item", "serialize_session_metadata_item",
-           "delete_session_metadata_item", "expand_metadata_entry_payloads",
-           "metadata_entry_trust_anchor_status", "maybe_store_uploaded_metadata_file"]
-
-# Repository upload helpers.
-maybe_store_uploaded_metadata_file = uploads.maybe_store_uploaded_metadata_file
-
-# Entry payload expansion.
-expand_metadata_entry_payloads = entries.expand_metadata_entry_payloads
-
-# Packaged snapshot loaders.
-load_cached_metadata_snapshot = blob.load_cached_metadata_snapshot
-load_packaged_explorer_summary = blob.load_packaged_explorer_summary
-load_packaged_snapshot_meta = blob.load_packaged_snapshot_meta
-
-# The metadata session identifier.
-ensure_metadata_session_id = sessions.ensure_metadata_session_id
-
-# Session metadata item CRUD.
-save_session_metadata_item = sessions.save_session_metadata_item
-list_session_metadata_items = sessions.list_session_metadata_items
-delete_session_metadata_item = sessions.delete_session_metadata_item
-serialize_session_metadata_item = sessions.serialize_session_metadata_item
-
-# Effective (base + session) snapshot composition.
-load_effective_full_snapshot = effective.load_effective_full_snapshot
-resolve_effective_metadata_entry = effective.resolve_effective_metadata_entry
-
-# Trust anchor status and the verifier.
-metadata_entry_trust_anchor_status = verifier.metadata_entry_trust_anchor_status
-get_mds_verifier = verifier.get_mds_verifier

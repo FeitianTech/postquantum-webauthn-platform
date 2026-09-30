@@ -121,9 +121,9 @@ def build_session_scoped_prefix(
 def resolve_metadata_session_id(session_id: str | None = None) -> str:
     """Resolve a session id using metadata fallback with lazy import cycle-avoidance."""
 
-    from ..webauthn.metadata import ensure_metadata_session_id
+    from ..webauthn.metadata import sessions
 
-    return resolve_session_id(session_id, ensure_metadata_session_id)
+    return resolve_session_id(session_id, sessions.ensure_metadata_session_id)
 
 
 def validate_storage_component(

@@ -13,6 +13,7 @@ from flask import g
 
 from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import sessions as metadata_sessions
+from server.app.webauthn.metadata import verifier as metadata_verifier
 from tests.app.entry_app import entry_app
 
 
@@ -49,14 +50,14 @@ def _entry(module, aaguid: str):
 def test_unknown_entry_is_never_reported_as_trusted(metadata_module):
     entry = _entry(metadata_module, "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 
-    assert metadata_module.metadata_entry_trust_anchor_status(entry) is None
+    assert metadata_verifier.metadata_entry_trust_anchor_status(entry) is None
 
 
 def test_base_entry_reports_base_trust(metadata_module, metadata_state):
     entry = _entry(metadata_module, "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
     metadata_state._base_metadata_entry_ids = {id(entry)}
 
-    assert metadata_module.metadata_entry_trust_anchor_status(entry) is True
+    assert metadata_verifier.metadata_entry_trust_anchor_status(entry) is True
 
 
 def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module, monkeypatch, metadata_state, sessions, blob, app_config):
@@ -94,10 +95,10 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module
             for _ in range(iterations):
                 with app.test_request_context("/"):
                     g._test_has_custom_metadata = True
-                    metadata_module.get_mds_verifier()
+                    metadata_verifier.get_mds_verifier()
                     barrier.wait(timeout=5)
                     observed.append(
-                        metadata_module.metadata_entry_trust_anchor_status(custom_entry)
+                        metadata_verifier.metadata_entry_trust_anchor_status(custom_entry)
                     )
         except Exception as exc:  # pragma: no cover - surfaced below
             failures.append(exc)
@@ -106,10 +107,10 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module
         try:
             for _ in range(iterations):
                 with app.test_request_context("/"):
-                    metadata_module.get_mds_verifier()
+                    metadata_verifier.get_mds_verifier()
                     barrier.wait(timeout=5)
                     observed.append(
-                        ("base", metadata_module.metadata_entry_trust_anchor_status(base_entry))
+                        ("base", metadata_verifier.metadata_entry_trust_anchor_status(base_entry))
                     )
         except Exception as exc:  # pragma: no cover - surfaced below
             failures.append(exc)

@@ -1,6 +1,5 @@
 import os
 
-from server.app.webauthn import metadata as metadata_module
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import uploads as metadata_uploads
 
@@ -40,7 +39,7 @@ def test_maybe_store_uploaded_metadata_file_returns_false_when_logging_disabled(
         lambda *_args, **_kwargs: listed.append(True),
     )
 
-    stored = metadata_module.maybe_store_uploaded_metadata_file("demo.json", b"{}")
+    stored = metadata_uploads.maybe_store_uploaded_metadata_file("demo.json", b"{}")
 
     assert stored is False
     assert listed == []
@@ -71,7 +70,7 @@ def test_maybe_store_uploaded_metadata_file_skips_upload_when_identical_sha_exis
         lambda *args, **kwargs: upload_calls.append((args, kwargs)),
     )
 
-    stored = metadata_module.maybe_store_uploaded_metadata_file("demo.json", content)
+    stored = metadata_uploads.maybe_store_uploaded_metadata_file("demo.json", content)
 
     assert stored is False
     assert upload_calls == []
@@ -101,7 +100,7 @@ def test_maybe_store_uploaded_metadata_file_updates_existing_name_with_sha(monke
         lambda *args, **kwargs: upload_calls.append((args, kwargs)),
     )
 
-    stored = metadata_module.maybe_store_uploaded_metadata_file("demo.json", content)
+    stored = metadata_uploads.maybe_store_uploaded_metadata_file("demo.json", content)
 
     assert stored is True
     assert len(upload_calls) == 1
@@ -125,7 +124,7 @@ def test_maybe_store_uploaded_metadata_file_adds_new_file_with_sanitized_name(mo
         lambda *args, **kwargs: upload_calls.append((args, kwargs)),
     )
 
-    stored = metadata_module.maybe_store_uploaded_metadata_file("../../../custom.json", content)
+    stored = metadata_uploads.maybe_store_uploaded_metadata_file("../../../custom.json", content)
 
     assert stored is True
     assert len(upload_calls) == 1

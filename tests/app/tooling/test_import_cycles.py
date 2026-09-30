@@ -35,8 +35,8 @@ ALLOWED_CYCLES: list[frozenset[str]] = [
 ALLOWED_DEFERRED: dict[tuple[str, str], str] = {
     ("server/app/mds_provisioning.py", "tools"): "the updater is imported only when a refresh runs, and may be absent",
     ("server/app/startup.py", "server.app.mds_provisioning"): "the warm-up loads the MDS runtime on its own thread",
-    ("server/app/startup.py", "server.app.webauthn.metadata"): "the warm-up loads the MDS runtime on its own thread",
-    ("server/app/storage/common.py", "server.app.webauthn.metadata"): "reaches the visitor session, which imports storage",
+    ("server/app/startup.py", "server.app.webauthn.metadata.blob"): "the warm-up loads the MDS runtime on its own thread",
+    ("server/app/storage/common.py", "server.app.webauthn.metadata.sessions"): "reaches the visitor session, which imports storage",
 }
 
 REPO_ROOT = Path(__file__).resolve().parents[3]

@@ -18,6 +18,7 @@ from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import sessions as cleanup
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import state as metadata_state
+from server.app.webauthn.metadata import uploads as metadata_uploads
 from server.app.webauthn.metadata import verifier as metadata_verifier
 from tests.app.entry_app import entry_app
 
@@ -129,7 +130,7 @@ def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch
     with entry_app().test_request_context("/"):
         monkeypatch.setattr(sessions, "_get_metadata_session_id", lambda **_kwargs: None)
         with pytest.raises(RuntimeError, match="Unable to establish"):
-            metadata_module.ensure_metadata_session_id()
+            metadata_sessions.ensure_metadata_session_id()
 
     with entry_app().test_request_context("/"):
         monkeypatch.setattr(
@@ -137,7 +138,7 @@ def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch
             "_get_metadata_session_id",
             lambda **_kwargs: "ensured-session",
         )
-        assert metadata_module.ensure_metadata_session_id() == "ensured-session"
+        assert metadata_sessions.ensure_metadata_session_id() == "ensured-session"
         assert session.permanent is True
 
     assert scheduled == ["cookie-session", "generated-session"]
@@ -217,7 +218,7 @@ def test_upload_and_normalisation_error_edges(metadata_module, monkeypatch, uplo
         lambda *args, **kwargs: recorded.append((args, kwargs)),
     )
 
-    assert metadata_module.maybe_store_uploaded_metadata_file("target.json", b"{}") is True
+    assert metadata_uploads.maybe_store_uploaded_metadata_file("target.json", b"{}") is True
     assert recorded[0][0][0] == "metadata/target.json"
     assert recorded[0][1] == {"sha": "old-sha"}
 
@@ -251,11 +252,11 @@ def test_build_expand_extract_and_merge_error_branches(metadata_module, monkeypa
     assert entry["metadataStatement"]["description"] == "Demo"
 
     with pytest.raises(TypeError, match="must be an object"):
-        metadata_module.expand_metadata_entry_payloads("not-a-mapping")
+        metadata_entries.expand_metadata_entry_payloads("not-a-mapping")
 
     monkeypatch.setattr(entries, "_clone_json_value", lambda _value: None)
     with pytest.raises(ValueError, match="could not be cloned"):
-        metadata_module.expand_metadata_entry_payloads({"entries": [{"metadataStatement": {"description": "x"}}]})
+        metadata_entries.expand_metadata_entry_payloads({"entries": [{"metadataStatement": {"description": "x"}}]})
 
     assert metadata_entries._normalise_aaguid(123) is None
 
@@ -317,11 +318,11 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
     )
 
     with pytest.raises(ValueError, match="unsupported types"):
-        metadata_module.save_session_metadata_item({"bad": _NotJSONSerializable()})
+        metadata_sessions.save_session_metadata_item({"bad": _NotJSONSerializable()})
 
     monkeypatch.setattr(sessions, "_get_metadata_session_id", lambda **_kwargs: "session-a")
     monkeypatch.setattr(sessions, "_session_metadata_directory", lambda *_args, **_kwargs: None)
-    assert metadata_module.list_session_metadata_items() == []
+    assert metadata_sessions.list_session_metadata_items() == []
 
     monkeypatch.setattr(sessions, "_session_metadata_directory", lambda *_args, **_kwargs: "session-a")
     monkeypatch.setattr(sessions, "_note_session_activity", lambda *_args, **_kwargs: None)
@@ -330,7 +331,7 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
         "list_files",
         lambda _sid: (_ for _ in ()).throw(RuntimeError("list failed")),
     )
-    assert metadata_module.list_session_metadata_items() == []
+    assert metadata_sessions.list_session_metadata_items() == []
 
     monkeypatch.setattr(
         session_store,
@@ -356,14 +357,14 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("mtime failed")),
     )
 
-    listed = metadata_module.list_session_metadata_items("session-a")
+    listed = metadata_sessions.list_session_metadata_items("session-a")
     assert len(listed) == 1
     assert listed[0].mtime is None
     assert listed[0].uploaded_at == "2026-04-04T00:00:00+00:00"
     assert listed[0].original_filename == "original.json"
 
     monkeypatch.setattr(sessions, "_session_metadata_directory", lambda *_args, **_kwargs: None)
-    assert metadata_module.delete_session_metadata_item("entry.json", session_id="session-a") is False
+    assert metadata_sessions.delete_session_metadata_item("entry.json", session_id="session-a") is False
 
     monkeypatch.setattr(sessions, "_session_metadata_directory", lambda *_args, **_kwargs: "session-a")
     monkeypatch.setattr(
@@ -371,7 +372,7 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
         "file_exists",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("exists failed")),
     )
-    assert metadata_module.delete_session_metadata_item("entry.json", session_id="session-a") is False
+    assert metadata_sessions.delete_session_metadata_item("entry.json", session_id="session-a") is False
 
     delete_calls = []
 
@@ -392,11 +393,11 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
     )
     monkeypatch.setattr(sessions, "_prune_session_metadata_directory", lambda *_args, **_kwargs: None)
 
-    assert metadata_module.delete_session_metadata_item("entry.json", session_id="session-a") is True
+    assert metadata_sessions.delete_session_metadata_item("entry.json", session_id="session-a") is True
     assert delete_calls[0] == ("entry.json", False)
     assert delete_calls[1] == ("entry.json.meta.json", True)
 
-    serialized = metadata_module.serialize_session_metadata_item(
+    serialized = metadata_sessions.serialize_session_metadata_item(
         metadata_sessions.SessionMetadataItem(
             filename="stored.json",
             payload={"metadataStatement": {"description": "Demo"}},
@@ -446,9 +447,9 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     real_load_base_metadata = blob._load_base_metadata
 
     monkeypatch.setattr(blob, "_load_base_metadata", lambda: (None, None))
-    assert metadata_module.load_cached_metadata_snapshot() is False
+    assert metadata_blob.load_cached_metadata_snapshot() is False
     monkeypatch.setattr(blob, "_load_base_metadata", lambda: (object(), None))
-    assert metadata_module.load_cached_metadata_snapshot() is True
+    assert metadata_blob.load_cached_metadata_snapshot() is True
 
     monkeypatch.setattr(blob, "_load_base_metadata", real_load_base_metadata)
 
@@ -532,7 +533,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
 
     monkeypatch.setattr(blob, "_load_base_explorer_snapshot", lambda: ({}, None))
     monkeypatch.setattr(blob, "_load_verified_metadata_payload", lambda: None)
-    assert metadata_module.load_packaged_explorer_summary() == {}
+    assert metadata_blob.load_packaged_explorer_summary() == {}
 
     monkeypatch.setattr(blob, "_load_verified_metadata_payload", lambda: verified_payload)
     monkeypatch.setattr(blob, "load_metadata_cache_entry", lambda: {})
@@ -541,7 +542,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
         "build_explorer_snapshot",
         lambda _payload, _cache: {"meta": {"entryCount": 0}},
     )
-    assert metadata_module.load_packaged_explorer_summary() == {"entryCount": 0}
+    assert metadata_blob.load_packaged_explorer_summary() == {"entryCount": 0}
 
     compose_calls = []
     monkeypatch.setattr(blob, "_load_base_explorer_snapshot", lambda: ({"meta": {}, "entries": []}, None))
@@ -552,7 +553,7 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
         lambda base_snapshot, **kwargs: compose_calls.append(kwargs) or {"meta": {}, "entries": [base_snapshot]},
     )
 
-    full_effective = metadata_module.load_effective_full_snapshot()
+    full_effective = metadata_effective.load_effective_full_snapshot()
     assert full_effective["entries"]
     assert compose_calls == [
         {"include_detail": True, "include_raw_entry": False, "compact_detail": True},
@@ -638,21 +639,21 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, m
         ),
     )
 
-    assert metadata_module.resolve_effective_metadata_entry(aaid="missing") is None
+    assert metadata_effective.resolve_effective_metadata_entry(aaid="missing") is None
 
     monkeypatch.setattr(blob, "_load_base_metadata", lambda: (None, None))
-    assert metadata_module.resolve_effective_metadata_entry(aaguid="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb") is None
+    assert metadata_effective.resolve_effective_metadata_entry(aaguid="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb") is None
 
-    assert metadata_module.metadata_entry_trust_anchor_status(object()) is None
+    assert metadata_verifier.metadata_entry_trust_anchor_status(object()) is None
 
     entry = MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
     metadata_state._base_metadata_entry_ids = set()
     metadata_state._base_metadata_trust_verified = False
-    assert metadata_module.metadata_entry_trust_anchor_status(entry) is None
+    assert metadata_verifier.metadata_entry_trust_anchor_status(entry) is None
 
     monkeypatch.setattr(blob, "_load_base_metadata", lambda: (None, 77.0))
     monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [])
-    assert metadata_module.get_mds_verifier() is None
+    assert metadata_verifier.get_mds_verifier() is None
     assert metadata_state._base_verifier_mtime == 77.0
 
     created = []
@@ -673,11 +674,16 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, m
     )
     monkeypatch.setattr(verifier, "MdsAttestationVerifier", _FakeVerifier)
 
-    metadata_module.get_mds_verifier()
+    metadata_verifier.get_mds_verifier()
     assert created == [{"base": None, "count": 1}]
 
 
-def test_the_never_raised_metadata_download_error_is_gone(metadata_module):
+def test_the_never_raised_metadata_download_error_is_gone():
     # Nothing raised or caught it; it was exported for nobody.
-    assert not hasattr(metadata_module, "MetadataDownloadError")
-    assert "MetadataDownloadError" not in metadata_module.__all__
+    import importlib
+    import pkgutil
+
+    import server.app.webauthn.metadata as package
+
+    for info in pkgutil.iter_modules(package.__path__, f"{package.__name__}."):
+        assert not hasattr(importlib.import_module(info.name), "MetadataDownloadError")

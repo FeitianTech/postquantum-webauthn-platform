@@ -21,7 +21,7 @@ from fido2.webauthn import (
 )
 
 from ... import encoding
-from .. import metadata
+from ..metadata import verifier as metadata_verifier
 from . import classical, formatting, trust
 
 
@@ -69,7 +69,7 @@ def _metadata_entry_by_aaguid(verifier: Any, credential_aaguid_bytes: bytes) -> 
     except Exception:
         return None
     if verifier is None:
-        verifier = metadata.get_mds_verifier()
+        verifier = metadata_verifier.get_mds_verifier()
     if verifier is None:
         return None
     try:
@@ -493,7 +493,7 @@ def _evaluate_root_validation(
     root_check_details: dict[str, bool | None] | None = None
 
     if signature_valid and attestation_result is not None:
-        verifier = metadata.get_mds_verifier()
+        verifier = metadata_verifier.get_mds_verifier()
         classical_outcome = classical._evaluate_classical_attestation_root(
             attestation_object,
             attestation_result,

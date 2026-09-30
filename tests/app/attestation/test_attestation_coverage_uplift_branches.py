@@ -9,6 +9,7 @@ from fido2.attestation import Attestation
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
 from server.app.webauthn import attestation as attestation_module
+from server.app.webauthn.metadata import verifier as metadata_verifier
 
 
 class _CredentialData:
@@ -127,7 +128,7 @@ def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_a
         "for_type",
         lambda _fmt: _AttestationVerifier,
     )
-    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: None)
+    monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: None)
 
     result = attestation_module.perform_attestation_checks(
         response={"dummy": True},
@@ -155,7 +156,7 @@ def test_perform_attestation_checks_falls_back_to_public_key_options_when_state_
         "from_dict",
         lambda _response: _registration(attestation_object, client_data),
     )
-    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: None)
+    monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: None)
 
     result = attestation_module.perform_attestation_checks(
         response={"dummy": True},

@@ -3,7 +3,7 @@ import os
 import pytest
 
 from server.app import credential_artifacts
-from server.app.webauthn import metadata as metadata_module
+from server.app.webauthn.metadata import sessions as metadata_sessions
 
 
 @pytest.fixture
@@ -154,7 +154,7 @@ def test_resolve_session_id_prefers_explicit_value(artifact_module):
 
 def test_resolve_session_id_falls_back_to_metadata_session(monkeypatch, artifact_module):
     monkeypatch.setattr(
-        metadata_module,
+        metadata_sessions,
         "ensure_metadata_session_id",
         lambda: "metadata-session",
     )
@@ -357,7 +357,7 @@ def test_using_gcs_depends_on_flag_and_bucket(monkeypatch):
 
 def test_resolve_session_id_falls_back_for_non_string(monkeypatch, artifact_module):
     monkeypatch.setattr(
-        metadata_module,
+        metadata_sessions,
         "ensure_metadata_session_id",
         lambda: "metadata-non-string-fallback",
     )

@@ -8,7 +8,7 @@ import time
 
 import pytest
 
-from server.app.webauthn import metadata
+from server.app.webauthn.metadata import blob as metadata_blob
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ def test_run_background_warmup_survives_failures(startup_module, monkeypatch):
         lambda: (_ for _ in ()).throw(RuntimeError("no bucket")),
     )
     monkeypatch.setattr(
-        metadata,
+        metadata_blob,
         "load_cached_metadata_snapshot",
         lambda: (_ for _ in ()).throw(RuntimeError("no metadata")),
     )

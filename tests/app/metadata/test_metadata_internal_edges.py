@@ -11,6 +11,8 @@ from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import sessions as metadata_sessions
+from server.app.webauthn.metadata import uploads as metadata_uploads
+from server.app.webauthn.metadata import verifier as metadata_verifier
 
 
 @pytest.fixture
@@ -37,7 +39,7 @@ def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(
         lambda *args, **kwargs: recorded.append((args, kwargs)),
     )
 
-    assert metadata_module.maybe_store_uploaded_metadata_file("metadata.json", content) is False
+    assert metadata_uploads.maybe_store_uploaded_metadata_file("metadata.json", content) is False
     assert recorded == []
 
     monkeypatch.setattr(
@@ -53,13 +55,13 @@ def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(
         ],
     )
 
-    assert metadata_module.maybe_store_uploaded_metadata_file(" metadata.json ", content) is True
+    assert metadata_uploads.maybe_store_uploaded_metadata_file(" metadata.json ", content) is True
     assert recorded and recorded[-1][0][0] == "metadata/metadata.json"
     assert recorded[-1][0][2] == "metadata: update metadata.json"
     assert recorded[-1][1]["sha"] == "old-sha"
 
     monkeypatch.setattr(uploads, "is_logging_enabled", lambda: False)
-    assert metadata_module.maybe_store_uploaded_metadata_file("metadata.json", content) is False
+    assert metadata_uploads.maybe_store_uploaded_metadata_file("metadata.json", content) is False
 
 
 def test_session_identifier_and_filename_validation_helpers(metadata_module):
@@ -117,7 +119,7 @@ def test_build_metadata_entry_components_and_expand_payloads(metadata_module):
     assert payload["statusReports"][0]["status"] == "NOT_FIDO_CERTIFIED"
     assert entry["metadataStatement"]["description"] == "Demo authenticator"
 
-    expanded = metadata_module.expand_metadata_entry_payloads(
+    expanded = metadata_entries.expand_metadata_entry_payloads(
         {
             "legalHeader": "Bulk legal",
             "entries": [
@@ -130,10 +132,10 @@ def test_build_metadata_entry_components_and_expand_payloads(metadata_module):
     assert all(item.get("legalHeader") == "Bulk legal" for item in expanded)
 
     with pytest.raises(ValueError, match="does not contain any entries"):
-        metadata_module.expand_metadata_entry_payloads({"entries": []})
+        metadata_entries.expand_metadata_entry_payloads({"entries": []})
 
     with pytest.raises(ValueError, match="is not a JSON object"):
-        metadata_module.expand_metadata_entry_payloads({"entries": ["bad-entry"]})
+        metadata_entries.expand_metadata_entry_payloads({"entries": ["bad-entry"]})
 
 
 def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_module, monkeypatch, sessions, effective):
@@ -221,7 +223,7 @@ def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadat
         lambda payload, _cache: {"meta": {"entryCount": len(payload.get("entries", []))}},
     )
 
-    summary = metadata_module.load_packaged_explorer_summary()
+    summary = metadata_blob.load_packaged_explorer_summary()
     assert summary["entryCount"] == 0
 
     created = []
@@ -236,8 +238,8 @@ def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadat
     monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [])
     monkeypatch.setattr(verifier, "MdsAttestationVerifier", _FakeVerifier)
 
-    first = metadata_module.get_mds_verifier()
-    second = metadata_module.get_mds_verifier()
+    first = metadata_verifier.get_mds_verifier()
+    second = metadata_verifier.get_mds_verifier()
 
     assert first is second
     assert created == [fake_metadata]
@@ -266,4 +268,4 @@ def test_metadata_entry_trust_anchor_status_uses_session_and_base_entry_sets(met
 
     metadata_state._base_metadata_entry_ids = {id(entry)}
     metadata_state._base_metadata_trust_verified = True
-    assert metadata_module.metadata_entry_trust_anchor_status(entry) is True
+    assert metadata_verifier.metadata_entry_trust_anchor_status(entry) is True

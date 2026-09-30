@@ -4,6 +4,7 @@ import pytest
 from flask import session as flask_session
 
 from server.app.webauthn import metadata
+from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import sessions as cleanup
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import state as metadata_state
@@ -38,20 +39,20 @@ def test_session_metadata_is_isolated(session_metadata_env):
     app, metadata = session_metadata_env
 
     with app.test_request_context("/"):
-        first_session_id = metadata.ensure_metadata_session_id()
-        metadata.save_session_metadata_item(_sample_entry("Session entry"))
-        items_for_first = metadata.list_session_metadata_items()
+        first_session_id = metadata_sessions.ensure_metadata_session_id()
+        metadata_sessions.save_session_metadata_item(_sample_entry("Session entry"))
+        items_for_first = metadata_sessions.list_session_metadata_items()
         assert len(items_for_first) == 1
 
     with app.test_request_context("/"):
-        assert metadata.list_session_metadata_items() == []
-        second_session_id = metadata.ensure_metadata_session_id()
+        assert metadata_sessions.list_session_metadata_items() == []
+        second_session_id = metadata_sessions.ensure_metadata_session_id()
         assert second_session_id != first_session_id
-        assert metadata.list_session_metadata_items() == []
+        assert metadata_sessions.list_session_metadata_items() == []
 
     with app.test_request_context("/"):
         flask_session[metadata_state._SESSION_METADATA_SESSION_KEY] = first_session_id
-        items = metadata.list_session_metadata_items()
+        items = metadata_sessions.list_session_metadata_items()
         assert len(items) == 1
         assert items[0].payload["metadataStatement"]["description"] == "Session entry"
 
@@ -95,7 +96,7 @@ def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch,
         lambda: (SimpleNamespace(entries=[base_entry]), "packaged"),
     )
 
-    resolved = metadata.resolve_effective_metadata_entry(
+    resolved = metadata_effective.resolve_effective_metadata_entry(
         aaguid="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
     )
 
@@ -139,7 +140,7 @@ def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch, blob, s
     monkeypatch.setattr(blob, "_load_base_full_snapshot", lambda: (base_snapshot, 1.0))
     monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [session_item])
 
-    snapshot = metadata.load_effective_full_snapshot()
+    snapshot = metadata_effective.load_effective_full_snapshot()
 
     assert snapshot["meta"]["entryCount"] == 1
     assert snapshot["meta"]["customEntryCount"] == 1

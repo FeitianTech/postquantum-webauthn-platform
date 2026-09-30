@@ -1,6 +1,7 @@
 import base64
 import hashlib
 
+from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
 
@@ -117,7 +118,7 @@ def test_advanced_register_complete_requires_attachment_when_hints_resolve_to_at
 
 
 def test_advanced_register_complete_prefers_session_attachment_scope_over_tampered_request_hints(monkeypatch, metadata_module, attestation_module, config_module):
-    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         attestation_module,
         "extract_attestation_details",
@@ -195,7 +196,7 @@ def test_advanced_register_complete_success_contract_propagates_warnings_and_rec
 
     monkeypatch.setattr(config_module, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(config_module, "determine_rp_id", lambda value=None: value or rp_id)
-    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(attestation_module, "perform_attestation_checks", _perform_attestation_checks)
     monkeypatch.setattr(
         attestation_module,

@@ -9,6 +9,7 @@ import pytest
 from server.app import mds_snapshot_dir
 from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import blob as metadata_blob
+from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import state as metadata_state
@@ -55,7 +56,7 @@ def test_metadata_build_and_expand_residual_paths(metadata_module):
     assert entry["metadataStatement"]["description"] == "demo"
 
     raw_payload = {"metadataStatement": {"description": "single-entry"}}
-    assert metadata_module.expand_metadata_entry_payloads(raw_payload) == [raw_payload]
+    assert metadata_entries.expand_metadata_entry_payloads(raw_payload) == [raw_payload]
 
 
 def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_module, monkeypatch, sessions, entries, session_store):
@@ -66,7 +67,7 @@ def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_
         lambda *_args, **_kwargs: None,
     )
     with pytest.raises(RuntimeError, match="Unable to resolve session metadata storage path"):
-        metadata_module.save_session_metadata_item({"anything": True})
+        metadata_sessions.save_session_metadata_item({"anything": True})
 
     monkeypatch.setattr(
         sessions,
@@ -94,7 +95,7 @@ def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("mtime-failure")),
     )
 
-    saved = metadata_module.save_session_metadata_item({"payload": "ok"}, original_filename="demo.json")
+    saved = metadata_sessions.save_session_metadata_item({"payload": "ok"}, original_filename="demo.json")
     assert saved.mtime is None
     assert saved.original_filename == "demo.json"
 
@@ -172,7 +173,7 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
         "_load_base_explorer_snapshot",
         lambda: ({"meta": MappingProxyType({"entryCount": 2})}, (1.0, 1.0)),
     )
-    assert metadata_module.load_packaged_explorer_summary() == {"entryCount": 2}
+    assert metadata_blob.load_packaged_explorer_summary() == {"entryCount": 2}
 
     item = SimpleNamespace(payload={"aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}, uploaded_at="now")
     monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [item])
@@ -183,5 +184,5 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
         "build_explorer_entry",
         lambda payload, **_kwargs: {"source": "session", "payload": payload},
     )
-    resolved = metadata_module.resolve_effective_metadata_entry(entry_id="any")
+    resolved = metadata_effective.resolve_effective_metadata_entry(entry_id="any")
     assert resolved["source"] == "session"

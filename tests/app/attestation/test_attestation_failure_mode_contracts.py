@@ -10,6 +10,7 @@ from fido2.attestation import (
 from fido2.webauthn import Aaguid, RegistrationResponse
 
 from server.app.webauthn.attestation import evaluation
+from server.app.webauthn.metadata import verifier as metadata_verifier
 from tests.app.entry_app import entry_app
 
 
@@ -136,7 +137,7 @@ def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(mon
             return AttestationResult(AttestationType.BASIC, [])
 
     monkeypatch.setattr(Attestation, "for_type", lambda _fmt: _PassingAttestation)
-    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: None)
+    monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: None)
 
     result = _perform_checks(
         attestation_module,
@@ -181,7 +182,7 @@ def test_perform_attestation_checks_captures_verifier_evaluation_exception(monke
         raise RuntimeError("verifier exploded")
 
     monkeypatch.setattr(Attestation, "for_type", lambda _fmt: _PassingAttestation)
-    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: object())
+    monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(evaluation, "evaluate_attestation", _exploding)
 
     result = _perform_checks(
@@ -252,7 +253,7 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
     outcome = evaluation.MdsEvaluation(trust_path, metadata_entry, "aaguid")
 
     monkeypatch.setattr(Attestation, "for_type", lambda _fmt: _PassingAttestation)
-    monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: object())
+    monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(evaluation, "evaluate_attestation", lambda *_args, **_kwargs: outcome)
 
     # The trusted-CA allowlist is read from the current app.

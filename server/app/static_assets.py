@@ -19,7 +19,7 @@ from flask import Blueprint, Flask, abort, request, send_file
 
 from . import mds_snapshot_dir
 from .mds_provisioning import ensure_snapshot_available
-from .webauthn.metadata import load_packaged_snapshot_meta
+from .webauthn.metadata.blob import load_packaged_snapshot_meta
 
 __all__ = ["asset_url", "bp", "init_app", "send_precompressed", "snapshot_version"]
 

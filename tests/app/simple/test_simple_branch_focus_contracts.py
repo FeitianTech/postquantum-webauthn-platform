@@ -3,6 +3,7 @@ import hashlib
 import time
 
 from server.app.routes import simple as simple_module
+from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
 
@@ -193,7 +194,7 @@ def test_simple_register_complete_covers_warning_metadata_and_session_fallback_p
         }
     )
     monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "meta-session")
+    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "meta-session")
     monkeypatch.setattr(storage_module, "read_for_update", lambda *_args, **_kwargs: ([], None))
 
     def _save_if_unchanged(email, credentials, version, *, session_id=None):

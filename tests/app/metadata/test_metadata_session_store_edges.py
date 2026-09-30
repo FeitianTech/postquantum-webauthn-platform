@@ -34,8 +34,8 @@ def test_session_metadata_item_lifecycle_save_list_serialize_delete(metadata_loc
     metadata, _session_store, app = metadata_local_env
 
     with app.test_request_context("/"):
-        metadata.ensure_metadata_session_id()
-        saved = metadata.save_session_metadata_item(
+        metadata_sessions.ensure_metadata_session_id()
+        saved = metadata_sessions.save_session_metadata_item(
             _sample_payload("Lifecycle test"),
             original_filename="custom.json",
         )
@@ -43,16 +43,16 @@ def test_session_metadata_item_lifecycle_save_list_serialize_delete(metadata_loc
         assert saved.filename.endswith(".json")
         assert saved.original_filename == "custom.json"
 
-        listed = metadata.list_session_metadata_items()
+        listed = metadata_sessions.list_session_metadata_items()
         assert len(listed) == 1
         assert listed[0].payload["metadataStatement"]["description"] == "Lifecycle test"
 
-        serialized = metadata.serialize_session_metadata_item(listed[0])
+        serialized = metadata_sessions.serialize_session_metadata_item(listed[0])
         assert serialized["source"]["storedFilename"] == listed[0].filename
         assert serialized["source"]["originalFilename"] == "custom.json"
 
-        assert metadata.delete_session_metadata_item(listed[0].filename) is True
-        assert metadata.list_session_metadata_items() == []
+        assert metadata_sessions.delete_session_metadata_item(listed[0].filename) is True
+        assert metadata_sessions.list_session_metadata_items() == []
 
 
 def test_save_session_metadata_item_surfaces_storage_failures(metadata_local_env, monkeypatch, session_store):
@@ -67,9 +67,9 @@ def test_save_session_metadata_item_surfaces_storage_failures(metadata_local_env
     monkeypatch.setattr(session_store, "write_file", _failing_write)
 
     with app.test_request_context("/"):
-        metadata.ensure_metadata_session_id()
+        metadata_sessions.ensure_metadata_session_id()
         with pytest.raises(RuntimeError, match="Failed to store uploaded metadata"):
-            metadata.save_session_metadata_item(_sample_payload("broken"))
+            metadata_sessions.save_session_metadata_item(_sample_payload("broken"))
 
     assert calls == ["write"]
 
@@ -78,7 +78,7 @@ def test_list_session_metadata_items_skips_invalid_payloads_and_returns_valid_en
     metadata, session_store, app = metadata_local_env
 
     with app.test_request_context("/"):
-        session_id = metadata.ensure_metadata_session_id()
+        session_id = metadata_sessions.ensure_metadata_session_id()
         directory = metadata_sessions._session_metadata_directory(session_id, create=True)
 
         session_store.write_file(
@@ -100,7 +100,7 @@ def test_list_session_metadata_items_skips_invalid_payloads_and_returns_valid_en
             content_type="application/json",
         )
 
-        items = metadata.list_session_metadata_items()
+        items = metadata_sessions.list_session_metadata_items()
 
     assert len(items) == 1
     assert items[0].payload["metadataStatement"]["description"] == "valid"
@@ -110,15 +110,15 @@ def test_delete_session_metadata_item_validates_session_filename_and_storage_err
     metadata, session_store, app = metadata_local_env
 
     with pytest.raises(ValueError, match="No active metadata session"):
-        metadata.delete_session_metadata_item("entry.json", session_id=None)
+        metadata_sessions.delete_session_metadata_item("entry.json", session_id=None)
 
     with app.test_request_context("/"):
-        session_id = metadata.ensure_metadata_session_id()
+        session_id = metadata_sessions.ensure_metadata_session_id()
 
         with pytest.raises(ValueError, match="Invalid metadata filename"):
-            metadata.delete_session_metadata_item("../evil.json", session_id=session_id)
+            metadata_sessions.delete_session_metadata_item("../evil.json", session_id=session_id)
 
-        assert metadata.delete_session_metadata_item("missing.json", session_id=session_id) is False
+        assert metadata_sessions.delete_session_metadata_item("missing.json", session_id=session_id) is False
 
         directory = metadata_sessions._session_metadata_directory(session_id, create=True)
         session_store.write_file(directory, "present.json", b"{}", content_type="application/json")
@@ -130,7 +130,7 @@ def test_delete_session_metadata_item_validates_session_filename_and_storage_err
         )
 
         with pytest.raises(RuntimeError, match="Failed to delete"):
-            metadata.delete_session_metadata_item("present.json", session_id=session_id)
+            metadata_sessions.delete_session_metadata_item("present.json", session_id=session_id)
 
 
 def test_load_verified_metadata_helpers_handle_invalid_and_missing_payloads(metadata_local_env, monkeypatch, tmp_path, blob, session_store):

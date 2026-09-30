@@ -54,7 +54,7 @@ def _seal(app, identifier: str) -> str:
 def _seed_victim(app, metadata, namespace: str) -> None:
     with app.test_request_context("/"):
         flask_session[metadata_state._SESSION_METADATA_SESSION_KEY] = namespace
-        metadata.save_session_metadata_item(_entry("victim secret entry"))
+        metadata_sessions.save_session_metadata_item(_entry("victim secret entry"))
 
 
 def _custom_items(app, cookie_value=None):
@@ -87,7 +87,7 @@ def test_forged_plaintext_cookie_cannot_reach_another_namespace(session_env):
 
     with app.test_request_context("/"):
         flask_session[metadata_state._SESSION_METADATA_SESSION_KEY] = "victim-namespace"
-        assert len(metadata.list_session_metadata_items()) == 1
+        assert len(metadata_sessions.list_session_metadata_items()) == 1
 
     # The attacker names the victim's namespace directly.
     assert _custom_items(app, "victim-namespace") == []
@@ -100,13 +100,13 @@ def test_forged_cookie_cannot_write_into_another_namespace(session_env):
     with app.test_request_context(
         "/", headers={"Cookie": "fido.mds.session=victim-namespace"}
     ):
-        attacker_namespace = metadata.ensure_metadata_session_id()
+        attacker_namespace = metadata_sessions.ensure_metadata_session_id()
         assert attacker_namespace != "victim-namespace"
-        metadata.save_session_metadata_item(_entry("attacker entry"))
+        metadata_sessions.save_session_metadata_item(_entry("attacker entry"))
 
     with app.test_request_context("/"):
         flask_session[metadata_state._SESSION_METADATA_SESSION_KEY] = "victim-namespace"
-        items = metadata.list_session_metadata_items()
+        items = metadata_sessions.list_session_metadata_items()
     assert len(items) == 1
     assert items[0].payload["metadataStatement"]["description"] == "victim secret entry"
 
@@ -208,9 +208,9 @@ def test_fresh_visitor_gets_an_unguessable_namespace(session_env):
     app, metadata = session_env
 
     with app.test_request_context("/"):
-        first = metadata.ensure_metadata_session_id()
+        first = metadata_sessions.ensure_metadata_session_id()
     with app.test_request_context("/"):
-        second = metadata.ensure_metadata_session_id()
+        second = metadata_sessions.ensure_metadata_session_id()
 
     assert first != second
     assert len(first) >= 32

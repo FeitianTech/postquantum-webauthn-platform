@@ -8,7 +8,7 @@ import pickle
 import pytest
 
 from server.app.storage import credentials as storage
-from server.app.webauthn import metadata as metadata_module
+from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.storage.credential_seed import seed_records
 
 
@@ -48,7 +48,7 @@ def test_resolve_session_id_uses_explicit_value_or_metadata_fallback(storage_loc
     assert storage._resolve_session_id("  explicit-session  ") == "explicit-session"
 
     monkeypatch.setattr(
-        metadata_module,
+        metadata_sessions,
         "ensure_metadata_session_id",
         lambda: "fallback-session",
     )

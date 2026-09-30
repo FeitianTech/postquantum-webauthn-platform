@@ -20,7 +20,8 @@ from ...attachments import (
     resolve_allowed_attachments,
     resolve_effective_attachments,
 )
-from ...webauthn import attestation, metadata
+from ...webauthn import attestation
+from ...webauthn.metadata import sessions as metadata_sessions
 
 
 def _request_allowed_attachments(original_public_key: Any) -> list[str]:
@@ -136,7 +137,7 @@ def prepare_register_complete_inputs(
     if not username:
         return None, (jsonify({"error": "Username is required in user.name"}), 400)
 
-    metadata_session_id = metadata.ensure_metadata_session_id()
+    metadata_session_id = metadata_sessions.ensure_metadata_session_id()
     resident_key_requested, resident_key_required = _resident_key_requirement(public_key)
 
     return {

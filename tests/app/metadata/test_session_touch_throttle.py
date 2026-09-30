@@ -63,7 +63,7 @@ def test_new_session_does_not_write_marker(touch_env):
     metadata, app, calls = touch_env
 
     with app.test_request_context("/"):
-        identifier = metadata.ensure_metadata_session_id()
+        identifier = metadata_sessions.ensure_metadata_session_id()
         assert identifier
         assert metadata_state._SESSION_METADATA_TOUCH_KEY in session
 

@@ -10,6 +10,7 @@ from server.app.routes import binary_helpers as shared_binary_helpers
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import algorithms as algorithms_module
 from server.app.routes.advanced import parsing as advanced_parsing
+from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
 
@@ -48,7 +49,7 @@ def _install_register_begin_server(monkeypatch, advanced_module, captured: dict,
 
 
 def _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module):
-    monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(attestation_module, "augment_aaguid_fields", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
