@@ -9,9 +9,9 @@ from flask import g, session
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import files as mds_files
+from server.app.mds import uploads as mds_uploads
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
-from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import verifier as metadata_verifier
 from tests.app.entry_app import entry_app
 
@@ -108,7 +108,7 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
         == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     )
 
-    session_item = metadata_sessions.SessionMetadataItem(
+    session_item = mds_uploads.SessionMetadataItem(
         filename="session.json",
         payload=session_payload,
         legal_header="Session Legal",
@@ -161,7 +161,7 @@ def test_prune_helper_and_request_session_identifier_paths(monkeypatch, tmp_path
         "prune_session",
         lambda _sid: (_ for _ in ()).throw(RuntimeError("ignore prune errors")),
     )
-    metadata_sessions._prune_session_metadata_directory("session-1")
+    mds_uploads._prune_session_metadata_directory("session-1")
 
     # Only a cookie signed with the application secret names a namespace; an
     # unsigned one is ignored (it would otherwise be an IDOR).

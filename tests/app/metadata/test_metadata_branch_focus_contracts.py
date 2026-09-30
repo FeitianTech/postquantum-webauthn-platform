@@ -14,11 +14,10 @@ from flask import ctx, g, session
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import files as mds_files
+from server.app.mds import uploads as mds_uploads
 from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
-from server.app.webauthn.metadata import sessions as metadata_sessions
-from server.app.webauthn.metadata import state as metadata_state
 from server.app.webauthn.metadata import uploads as metadata_uploads
 from server.app.webauthn.metadata import verifier as metadata_verifier
 from tests.app.entry_app import entry_app
@@ -153,8 +152,8 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
         lambda: schedule_calls.append(True),
     )
 
-    assert metadata_sessions._session_metadata_directory("", create=False) is None
-    assert metadata_sessions._session_metadata_directory("../escape", create=False) is None
+    assert mds_uploads._session_metadata_directory("", create=False) is None
+    assert mds_uploads._session_metadata_directory("../escape", create=False) is None
 
     errors = []
     monkeypatch.setattr(
@@ -169,7 +168,7 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
     )
 
     with pytest.raises(RuntimeError, match="ensure failed"):
-        metadata_sessions._session_metadata_directory("session-a", create=True)
+        mds_uploads._session_metadata_directory("session-a", create=True)
 
     monkeypatch.setattr(
         session_store,
@@ -177,10 +176,10 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
         lambda _sid: None,
     )
     assert (
-        metadata_sessions._session_metadata_directory("session-a", create=True, cleanup=False)
+        mds_uploads._session_metadata_directory("session-a", create=True, cleanup=False)
         == "session-a"
     )
-    assert metadata_sessions._session_metadata_directory("session-a", create=False, cleanup=True) == "session-a"
+    assert mds_uploads._session_metadata_directory("session-a", create=False, cleanup=True) == "session-a"
 
     monkeypatch.setattr(
         session_store,
@@ -271,7 +270,7 @@ def test_build_expand_extract_and_merge_error_branches(metadata_module, monkeypa
     session_entry_one = MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
     session_entry_two = MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
 
-    item_one = metadata_sessions.SessionMetadataItem(
+    item_one = mds_uploads.SessionMetadataItem(
         filename="one.json",
         payload=_minimal_entry_payload(),
         legal_header=None,
@@ -280,7 +279,7 @@ def test_build_expand_extract_and_merge_error_branches(metadata_module, monkeypa
         original_filename="one.json",
         mtime=1.0,
     )
-    item_two = metadata_sessions.SessionMetadataItem(
+    item_two = mds_uploads.SessionMetadataItem(
         filename="two.json",
         payload=_minimal_entry_payload(),
         legal_header="Session Legal",
@@ -319,11 +318,11 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
     )
 
     with pytest.raises(ValueError, match="unsupported types"):
-        metadata_sessions.save_session_metadata_item({"bad": _NotJSONSerializable()})
+        mds_uploads.save_session_metadata_item({"bad": _NotJSONSerializable()})
 
     monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: "session-a")
     monkeypatch.setattr(sessions, "_session_metadata_directory", lambda *_args, **_kwargs: None)
-    assert metadata_sessions.list_session_metadata_items() == []
+    assert mds_uploads.list_session_metadata_items() == []
 
     monkeypatch.setattr(sessions, "_session_metadata_directory", lambda *_args, **_kwargs: "session-a")
     monkeypatch.setattr(visitor_session, "note_activity", lambda *_args, **_kwargs: None)
@@ -332,7 +331,7 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
         "list_files",
         lambda _sid: (_ for _ in ()).throw(RuntimeError("list failed")),
     )
-    assert metadata_sessions.list_session_metadata_items() == []
+    assert mds_uploads.list_session_metadata_items() == []
 
     monkeypatch.setattr(
         session_store,
@@ -358,14 +357,14 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("mtime failed")),
     )
 
-    listed = metadata_sessions.list_session_metadata_items("session-a")
+    listed = mds_uploads.list_session_metadata_items("session-a")
     assert len(listed) == 1
     assert listed[0].mtime is None
     assert listed[0].uploaded_at == "2026-04-04T00:00:00+00:00"
     assert listed[0].original_filename == "original.json"
 
     monkeypatch.setattr(sessions, "_session_metadata_directory", lambda *_args, **_kwargs: None)
-    assert metadata_sessions.delete_session_metadata_item("entry.json", session_id="session-a") is False
+    assert mds_uploads.delete_session_metadata_item("entry.json", session_id="session-a") is False
 
     monkeypatch.setattr(sessions, "_session_metadata_directory", lambda *_args, **_kwargs: "session-a")
     monkeypatch.setattr(
@@ -373,13 +372,13 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
         "file_exists",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("exists failed")),
     )
-    assert metadata_sessions.delete_session_metadata_item("entry.json", session_id="session-a") is False
+    assert mds_uploads.delete_session_metadata_item("entry.json", session_id="session-a") is False
 
     delete_calls = []
 
     def _delete_file(_sid, name, *, missing_ok=True):
         delete_calls.append((name, missing_ok))
-        if name.endswith(metadata_state._SESSION_METADATA_INFO_SUFFIX):
+        if name.endswith(mds_uploads._SESSION_METADATA_INFO_SUFFIX):
             raise OSError("info delete ignored")
 
     monkeypatch.setattr(
@@ -394,12 +393,12 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
     )
     monkeypatch.setattr(sessions, "_prune_session_metadata_directory", lambda *_args, **_kwargs: None)
 
-    assert metadata_sessions.delete_session_metadata_item("entry.json", session_id="session-a") is True
+    assert mds_uploads.delete_session_metadata_item("entry.json", session_id="session-a") is True
     assert delete_calls[0] == ("entry.json", False)
     assert delete_calls[1] == ("entry.json.meta.json", True)
 
-    serialized = metadata_sessions.serialize_session_metadata_item(
-        metadata_sessions.SessionMetadataItem(
+    serialized = mds_uploads.serialize_session_metadata_item(
+        mds_uploads.SessionMetadataItem(
             filename="stored.json",
             payload={"metadataStatement": {"description": "Demo"}},
             legal_header="Legal Header",

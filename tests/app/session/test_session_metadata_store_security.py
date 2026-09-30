@@ -1,7 +1,7 @@
 import pytest
 
+from server.app.mds import uploads as mds_uploads
 from server.app.storage import session_metadata as session_store
-from server.app.webauthn.metadata import sessions as metadata_sessions
 
 
 def test_normalise_local_session_id_accepts_clean_identifier():
@@ -36,7 +36,7 @@ def test_session_blob_builds_session_scoped_path():
 
 
 def test_validate_session_metadata_filename_accepts_safe_json_name():
-    assert metadata_sessions._validate_session_metadata_filename("entry.json") == "entry.json"
+    assert mds_uploads._validate_session_metadata_filename("entry.json") == "entry.json"
 
 
 @pytest.mark.parametrize(
@@ -52,7 +52,7 @@ def test_validate_session_metadata_filename_accepts_safe_json_name():
 )
 def test_validate_session_metadata_filename_rejects_unsafe_values(filename):
     with pytest.raises(ValueError):
-        metadata_sessions._validate_session_metadata_filename(filename)
+        mds_uploads._validate_session_metadata_filename(filename)
 
 
 def test_prune_session_removes_empty_session(monkeypatch):

@@ -6,7 +6,7 @@ from datetime import timedelta
 import pytest
 
 from server.app import visitor_session
-from server.app.webauthn.metadata import sessions as module
+from server.app.mds import uploads as module
 
 
 @pytest.fixture

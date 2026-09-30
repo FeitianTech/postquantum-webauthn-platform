@@ -13,9 +13,9 @@ import pytest
 from flask import session as flask_session
 
 from server.app import visitor_session
+from server.app.mds import uploads as mds_uploads
 from server.app.storage import session_metadata as session_store
 from server.app.webauthn import metadata
-from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
 COOKIE_SALT = "fido.mds.session-cookie.v1"
@@ -52,7 +52,7 @@ def _seal(app, identifier: str) -> str:
 def _seed_victim(app, metadata, namespace: str) -> None:
     with app.test_request_context("/"):
         flask_session[visitor_session.SESSION_KEY] = namespace
-        metadata_sessions.save_session_metadata_item(_entry("victim secret entry"))
+        mds_uploads.save_session_metadata_item(_entry("victim secret entry"))
 
 
 def _custom_items(app, cookie_value=None):
@@ -85,7 +85,7 @@ def test_forged_plaintext_cookie_cannot_reach_another_namespace(session_env):
 
     with app.test_request_context("/"):
         flask_session[visitor_session.SESSION_KEY] = "victim-namespace"
-        assert len(metadata_sessions.list_session_metadata_items()) == 1
+        assert len(mds_uploads.list_session_metadata_items()) == 1
 
     # The attacker names the victim's namespace directly.
     assert _custom_items(app, "victim-namespace") == []
@@ -100,11 +100,11 @@ def test_forged_cookie_cannot_write_into_another_namespace(session_env):
     ):
         attacker_namespace = visitor_session.ensure_id()
         assert attacker_namespace != "victim-namespace"
-        metadata_sessions.save_session_metadata_item(_entry("attacker entry"))
+        mds_uploads.save_session_metadata_item(_entry("attacker entry"))
 
     with app.test_request_context("/"):
         flask_session[visitor_session.SESSION_KEY] = "victim-namespace"
-        items = metadata_sessions.list_session_metadata_items()
+        items = mds_uploads.list_session_metadata_items()
     assert len(items) == 1
     assert items[0].payload["metadataStatement"]["description"] == "victim secret entry"
 

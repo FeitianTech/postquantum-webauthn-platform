@@ -6,11 +6,11 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from ...mds import cache as mds_cache
+from ...mds import uploads as mds_uploads
 from ...mds.build import build_entry_id, build_explorer_entry, normalise_aaguid_key
-from . import sessions
 
 if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed
-    from .sessions import SessionMetadataItem
+    from ...mds.uploads import SessionMetadataItem
 
 
 def _build_session_snapshot_entry(
@@ -99,7 +99,7 @@ def _compose_effective_snapshot(
         if isinstance(raw_entries, list):
             raw_base_entries = [entry for entry in raw_entries if isinstance(entry, Mapping)]
 
-    session_items = sessions.list_session_metadata_items()
+    session_items = mds_uploads.list_session_metadata_items()
 
     if not session_items:
         # Sessions without uploads (nearly all of them) share the cached base
@@ -167,7 +167,7 @@ def resolve_effective_metadata_entry(
     aaid: str | None = None,
 ) -> dict[str, Any] | None:
     base_summary = mds_cache.load_packaged_explorer_summary()
-    session_items = sessions.list_session_metadata_items()
+    session_items = mds_uploads.list_session_metadata_items()
     seen_aaguids: set[str] = set()
 
     for index, item in enumerate(session_items):

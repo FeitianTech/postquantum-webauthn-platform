@@ -13,7 +13,8 @@ from fido2.mds3 import (
 from flask import g, has_request_context
 
 from ...mds import cache as mds_cache
-from . import entries, sessions
+from ...mds import uploads as mds_uploads
+from . import entries
 
 if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed
     from .sessions import SessionMetadataItem
@@ -98,7 +99,7 @@ def get_mds_verifier() -> MdsAttestationVerifier | None:
     """Return an MDS attestation verifier using session metadata when available."""
 
     base_metadata, base_mtime = mds_cache._load_base_metadata()
-    session_items = sessions.list_session_metadata_items()
+    session_items = mds_uploads.list_session_metadata_items()
 
     if has_request_context():
         # Holding the entry objects on ``g`` keeps their ids valid for the

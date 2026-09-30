@@ -31,7 +31,7 @@ def metadata_state(monkeypatch):
 def sessions():
     """The fragment that defines the session identity helpers. Patch here rather than on ``server.app.webauthn.metadata``: the other fragments call these through this module, so this is the binding that is actually read. The fragment that defines the session metadata item helpers. The fragment that defines the session cleanup worker and scheduler."""
 
-    return importlib.import_module("server.app.webauthn.metadata.sessions")
+    return importlib.import_module("server.app.mds.uploads")
 
 
 @pytest.fixture

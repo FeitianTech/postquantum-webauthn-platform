@@ -16,15 +16,15 @@ from typing import Any
 
 from fido2.mds3 import MetadataBlobPayloadEntry
 
-from ... import visitor_session
-from ...storage import session_metadata
-from . import entries
-from .state import (
-    _SESSION_METADATA_INFO_SUFFIX,
-    _SESSION_METADATA_SUFFIX,
-)
+from .. import visitor_session
+from ..storage import session_metadata
+from ..webauthn.metadata import entries
 
 logger = logging.getLogger(__name__)
+
+# An upload is <uuid>.json, with its info (original name, time) beside it in <uuid>.json.meta.json.
+_SESSION_METADATA_SUFFIX = ".json"
+_SESSION_METADATA_INFO_SUFFIX = ".meta.json"
 
 
 def _session_metadata_directory(

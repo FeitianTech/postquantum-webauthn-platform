@@ -9,8 +9,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-_SESSION_METADATA_SUFFIX = ".json"
-_SESSION_METADATA_INFO_SUFFIX = ".meta.json"
 _METADATA_REPO_FOLDER = "metadata"
 
 _METADATA_STATEMENT_REQUIRED_DEFAULTS: Mapping[str, Any] = {

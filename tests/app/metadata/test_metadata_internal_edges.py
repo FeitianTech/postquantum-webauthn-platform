@@ -8,10 +8,10 @@ from fido2.mds3 import MetadataBlobPayloadEntry
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
+from server.app.mds import uploads as mds_uploads
 from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
-from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import uploads as metadata_uploads
 from server.app.webauthn.metadata import verifier as metadata_verifier
 
@@ -71,14 +71,14 @@ def test_session_identifier_and_filename_validation_helpers(metadata_module):
     assert visitor_session.normalise_id(".hidden") is None
     assert visitor_session.normalise_id("a/b") is None
 
-    assert metadata_sessions._validate_session_metadata_filename("entry.json") == "entry.json"
+    assert mds_uploads._validate_session_metadata_filename("entry.json") == "entry.json"
 
     with pytest.raises(ValueError):
-        metadata_sessions._validate_session_metadata_filename("../entry.json")
+        mds_uploads._validate_session_metadata_filename("../entry.json")
     with pytest.raises(ValueError):
-        metadata_sessions._validate_session_metadata_filename(".entry.json")
+        mds_uploads._validate_session_metadata_filename(".entry.json")
     with pytest.raises(ValueError):
-        metadata_sessions._validate_session_metadata_filename("entry.txt")
+        mds_uploads._validate_session_metadata_filename("entry.txt")
 
 
 def test_load_session_metadata_info_and_clone_helpers(metadata_module, monkeypatch, session_store):
@@ -87,7 +87,7 @@ def test_load_session_metadata_info_and_clone_helpers(metadata_module, monkeypat
         "read_file",
         lambda _sid, _name: b'{"uploaded_at":"now"}',
     )
-    assert metadata_sessions._load_session_metadata_info("session", "entry.meta.json") == {
+    assert mds_uploads._load_session_metadata_info("session", "entry.meta.json") == {
         "uploaded_at": "now"
     }
 
@@ -96,7 +96,7 @@ def test_load_session_metadata_info_and_clone_helpers(metadata_module, monkeypat
         "read_file",
         lambda _sid, _name: b"not-json",
     )
-    assert metadata_sessions._load_session_metadata_info("session", "entry.meta.json") == {}
+    assert mds_uploads._load_session_metadata_info("session", "entry.meta.json") == {}
 
     assert metadata_entries._clone_json_value({"a": [1, 2]}) == {"a": [1, 2]}
     assert metadata_entries._clone_json_value(object()) is None

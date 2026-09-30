@@ -14,9 +14,9 @@ import json
 import pytest
 
 from server.app import visitor_session
+from server.app.mds import uploads as mds_uploads
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
-from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import uploads as metadata_uploads
 
 _CONSTANTS = '{"a": NaN, "b": [Infinity, -Infinity]}'
@@ -124,8 +124,8 @@ def test_an_uploaded_metadata_file_with_nan_is_refused(client, monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(metadata_entries, "expand_metadata_entry_payloads", lambda payload: [payload])
     monkeypatch.setattr(metadata_uploads, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False)
-    monkeypatch.setattr(metadata_sessions, "save_session_metadata_item", lambda payload, original_filename=None: saved.append(payload))
-    monkeypatch.setattr(metadata_sessions, "serialize_session_metadata_item", lambda _item: {"storedFilename": "custom.json"})
+    monkeypatch.setattr(mds_uploads, "save_session_metadata_item", lambda payload, original_filename=None: saved.append(payload))
+    monkeypatch.setattr(mds_uploads, "serialize_session_metadata_item", lambda _item: {"storedFilename": "custom.json"})
     monkeypatch.setattr(metadata_effective, "load_effective_full_snapshot", lambda: {"entries": []})
 
     response = client.post(

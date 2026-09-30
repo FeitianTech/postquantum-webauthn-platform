@@ -4,9 +4,9 @@ import pytest
 from flask import session as flask_session
 
 from server.app import visitor_session
+from server.app.mds import uploads as mds_uploads
 from server.app.webauthn import metadata
 from server.app.webauthn.metadata import effective as metadata_effective
-from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
 
@@ -38,19 +38,19 @@ def test_session_metadata_is_isolated(session_metadata_env):
 
     with app.test_request_context("/"):
         first_session_id = visitor_session.ensure_id()
-        metadata_sessions.save_session_metadata_item(_sample_entry("Session entry"))
-        items_for_first = metadata_sessions.list_session_metadata_items()
+        mds_uploads.save_session_metadata_item(_sample_entry("Session entry"))
+        items_for_first = mds_uploads.list_session_metadata_items()
         assert len(items_for_first) == 1
 
     with app.test_request_context("/"):
-        assert metadata_sessions.list_session_metadata_items() == []
+        assert mds_uploads.list_session_metadata_items() == []
         second_session_id = visitor_session.ensure_id()
         assert second_session_id != first_session_id
-        assert metadata_sessions.list_session_metadata_items() == []
+        assert mds_uploads.list_session_metadata_items() == []
 
     with app.test_request_context("/"):
         flask_session[visitor_session.SESSION_KEY] = first_session_id
-        items = metadata_sessions.list_session_metadata_items()
+        items = mds_uploads.list_session_metadata_items()
         assert len(items) == 1
         assert items[0].payload["metadataStatement"]["description"] == "Session entry"
 
@@ -118,7 +118,7 @@ def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch, blob, s
         ],
     }
 
-    session_item = metadata_sessions.SessionMetadataItem(
+    session_item = mds_uploads.SessionMetadataItem(
         filename="custom.json",
         payload={
             "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",

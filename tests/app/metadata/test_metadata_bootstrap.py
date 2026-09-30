@@ -6,10 +6,10 @@ import pytest
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
+from server.app.mds import uploads as mds_uploads
 from server.app.routes import mds as mds_routes
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
-from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import uploads as metadata_uploads
 from tests.app.entry_app import entry_app
 
@@ -171,12 +171,12 @@ def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
     )
     monkeypatch.setattr(metadata_uploads, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False)
     monkeypatch.setattr(
-        metadata_sessions,
+        mds_uploads,
         "save_session_metadata_item",
         lambda payload, original_filename=None: {"payload": payload, "original_filename": original_filename},
     )
     monkeypatch.setattr(
-        metadata_sessions,
+        mds_uploads,
         "serialize_session_metadata_item",
         lambda item: {"storedFilename": "custom.json", "originalFilename": item["original_filename"]},
     )
@@ -199,7 +199,7 @@ def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
 
 def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-    monkeypatch.setattr(metadata_sessions, "delete_session_metadata_item", lambda _name: True)
+    monkeypatch.setattr(mds_uploads, "delete_session_metadata_item", lambda _name: True)
     monkeypatch.setattr(
         metadata_effective,
         "load_effective_full_snapshot",

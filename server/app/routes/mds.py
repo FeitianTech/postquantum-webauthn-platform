@@ -24,10 +24,10 @@ from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
 from ..mds import cache as mds_cache
 from ..mds import files as mds_files
 from ..mds import provisioning as mds_provisioning
+from ..mds import uploads as mds_uploads
 from ..webauthn.attestation import certificates as attestation_certificates
 from ..webauthn.metadata import effective as metadata_effective
 from ..webauthn.metadata import entries as metadata_entries
-from ..webauthn.metadata import sessions as metadata_sessions
 from ..webauthn.metadata import uploads as metadata_uploads
 from . import assets
 
@@ -161,7 +161,7 @@ def api_resolve_metadata_entry():
 @bp.route("/api/mds/metadata/custom", methods=["GET"])
 def api_list_custom_metadata():
     visitor_session.ensure_id()
-    items = [metadata_sessions.serialize_session_metadata_item(item) for item in metadata_sessions.list_session_metadata_items()]
+    items = [mds_uploads.serialize_session_metadata_item(item) for item in mds_uploads.list_session_metadata_items()]
     return jsonify({"items": items})
 
 
@@ -236,7 +236,7 @@ def api_upload_custom_metadata():
             )
 
             try:
-                item = metadata_sessions.save_session_metadata_item(
+                item = mds_uploads.save_session_metadata_item(
                     entry_payload,
                     original_filename=display_name,
                 )
@@ -246,7 +246,7 @@ def api_upload_custom_metadata():
             except RuntimeError as exc:
                 return jsonify({"error": str(exc)}), 500
 
-            saved_items.append(metadata_sessions.serialize_session_metadata_item(item))
+            saved_items.append(mds_uploads.serialize_session_metadata_item(item))
 
     return _upload_answer(saved_items, errors)
 
@@ -271,7 +271,7 @@ def _upload_answer(saved_items: list[Any], errors: list[str]):
 def api_delete_custom_metadata(stored_filename: str):
     visitor_session.ensure_id()
     try:
-        deleted = metadata_sessions.delete_session_metadata_item(stored_filename)
+        deleted = mds_uploads.delete_session_metadata_item(stored_filename)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     except RuntimeError as exc:

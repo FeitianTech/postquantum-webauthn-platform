@@ -3,11 +3,11 @@ from types import SimpleNamespace
 
 from server.app import visitor_session
 from server.app.decoder.decode import pipeline as decode_pipeline
+from server.app.mds import uploads as mds_uploads
 from server.app.routes import mds as mds_routes
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
-from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import uploads as metadata_uploads
 from tests.app.entry_app import entry_app
 
@@ -104,12 +104,12 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
             lambda: session_calls.append("called") or "session-abc",
         )
         monkeypatch.setattr(
-            metadata_sessions,
+            mds_uploads,
             "list_session_metadata_items",
             lambda: [{"storedFilename": "one.json"}],
         )
         monkeypatch.setattr(
-            metadata_sessions,
+            mds_uploads,
             "serialize_session_metadata_item",
             lambda item: {"storedFilename": item["storedFilename"], "label": "demo"},
         )
@@ -248,9 +248,9 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
                 raise ValueError("duplicate entry")
             return {"storedFilename": "stored-2.json", "originalFilename": original_filename}
 
-        monkeypatch.setattr(metadata_sessions, "save_session_metadata_item", _save_item)
+        monkeypatch.setattr(mds_uploads, "save_session_metadata_item", _save_item)
         monkeypatch.setattr(
-            metadata_sessions,
+            mds_uploads,
             "serialize_session_metadata_item",
             lambda item: item,
         )
@@ -277,7 +277,7 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
         assert payload["snapshot"] == {"meta": {"entryCount": 1}}
 
         monkeypatch.setattr(
-            metadata_sessions,
+            mds_uploads,
             "save_session_metadata_item",
             lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("persistence down")),
         )
@@ -294,7 +294,7 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
         monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-abc")
 
         monkeypatch.setattr(
-            metadata_sessions,
+            mds_uploads,
             "delete_session_metadata_item",
             lambda _name: (_ for _ in ()).throw(ValueError("invalid filename")),
         )
@@ -303,7 +303,7 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
         assert delete_value_error.get_json() == {"error": "invalid filename"}
 
         monkeypatch.setattr(
-            metadata_sessions,
+            mds_uploads,
             "delete_session_metadata_item",
             lambda _name: (_ for _ in ()).throw(RuntimeError("storage unavailable")),
         )
@@ -312,7 +312,7 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
         assert delete_runtime_error.get_json() == {"error": "storage unavailable"}
 
         monkeypatch.setattr(
-            metadata_sessions,
+            mds_uploads,
             "delete_session_metadata_item",
             lambda _name: False,
         )
@@ -361,11 +361,11 @@ def test_general_empty_snapshot_and_upload_branches(monkeypatch):
     monkeypatch.setattr(metadata_entries, "expand_metadata_entry_payloads", lambda payload: [payload])
     monkeypatch.setattr(metadata_uploads, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(
-        metadata_sessions,
+        mds_uploads,
         "save_session_metadata_item",
         lambda _payload, original_filename=None: {"originalFilename": original_filename},
     )
-    monkeypatch.setattr(metadata_sessions, "serialize_session_metadata_item", lambda item: item)
+    monkeypatch.setattr(mds_uploads, "serialize_session_metadata_item", lambda item: item)
     monkeypatch.setattr(metadata_effective, "load_effective_full_snapshot", lambda: {"meta": {"entryCount": 1}})
 
     with entry_app().app_context():
