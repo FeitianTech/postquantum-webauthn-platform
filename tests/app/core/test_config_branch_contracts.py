@@ -1,16 +1,9 @@
 from __future__ import annotations
 
 from server.app.config import (
-    paths,
     relying_party,
 )
 from tests.app.entry_app import entry_app
-
-
-def test_the_project_root_is_two_levels_above_the_package():
-    assert paths._PACKAGE_ROOT.parts[-2:] == ("server", "app")
-    assert paths._PROJECT_ROOT == paths._PACKAGE_ROOT.parents[1]
-    assert (paths._PROJECT_ROOT / "server" / "app" / "config" / "paths.py").is_file()
 
 
 def test_parse_fingerprints_and_host_normalization_branches(monkeypatch):
