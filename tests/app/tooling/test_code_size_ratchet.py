@@ -23,7 +23,6 @@ MAX_FUNCTION_LINES = 80
 MAX_MODULE_LINES = 700
 
 LONG_FUNCTIONS: dict[str, int] = {
-    "server/app/config/session_secret.py::_resolve_secret_key": 84,
     "server/app/webauthn/attestation/classical.py::_evaluate_classical_attestation_root": 122,
 }
 

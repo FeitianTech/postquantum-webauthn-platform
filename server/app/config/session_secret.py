@@ -33,54 +33,83 @@ _CLOUD_RUN_REFUSAL = (
 def _resolve_secret_key(app: Flask) -> bytes:
     """Return the session secret for ``app``, generating a local one if need be."""
 
+    configured = _configured_secret_key()
+    if configured:
+        return configured
+
+    default_path = os.path.join(app.instance_path, "session-secret.key")
+    stored = _read_stored_key(default_path)
+    if stored:
+        return stored
+
+    secret = os.urandom(32)
+    if not _store_generated_key(default_path, secret):
+        return secret
+
+    stored = _read_stored_key(default_path)
+    if stored:
+        return stored
+
+    return secret
+
+
+def _configured_secret_key() -> bytes | None:
+    """``FIDO_SERVER_SECRET_KEY``, else the file ``FIDO_SERVER_SECRET_KEY_FILE`` names.
+
+    On Cloud Run one of them must give a key: without one, building the app fails.
+    """
+
     env_value = os.environ.get("FIDO_SERVER_SECRET_KEY")
     if isinstance(env_value, str) and env_value:
         return env_value.encode("utf-8")
 
     file_path = os.environ.get("FIDO_SERVER_SECRET_KEY_FILE")
     if isinstance(file_path, str) and file_path:
-        try:
-            with open(file_path, "rb") as key_file:
-                file_value = key_file.read()
-                if file_value:
-                    return file_value
-            problem = f"FIDO_SERVER_SECRET_KEY_FILE ({file_path}) is empty"
-        except OSError as exc:
-            problem = f"FIDO_SERVER_SECRET_KEY_FILE ({file_path}) cannot be read: {exc}"
-        if proxy._running_behind_managed_proxy():
-            raise RuntimeError(_CLOUD_RUN_REFUSAL % problem)
-        logger.warning("%s; falling back to a locally stored key.", problem)
-    elif proxy._running_behind_managed_proxy():
+        return _secret_key_from_file(file_path)
+    if proxy._running_behind_managed_proxy():
         raise RuntimeError(
             _CLOUD_RUN_REFUSAL
             % "neither FIDO_SERVER_SECRET_KEY nor FIDO_SERVER_SECRET_KEY_FILE is set"
         )
+    return None
 
-    default_path = os.path.join(app.instance_path, "session-secret.key")
 
-    def _read_stored_key() -> bytes | None:
-        try:
-            with open(default_path, "rb") as stored_key:
-                stored_value = stored_key.read()
-                if stored_value:
-                    return stored_value
-        except FileNotFoundError:
-            return None
-        except OSError:
-            return None
+def _secret_key_from_file(file_path: str) -> bytes | None:
+    try:
+        with open(file_path, "rb") as key_file:
+            file_value = key_file.read()
+            if file_value:
+                return file_value
+        problem = f"FIDO_SERVER_SECRET_KEY_FILE ({file_path}) is empty"
+    except OSError as exc:
+        problem = f"FIDO_SERVER_SECRET_KEY_FILE ({file_path}) cannot be read: {exc}"
+    if proxy._running_behind_managed_proxy():
+        raise RuntimeError(_CLOUD_RUN_REFUSAL % problem)
+    logger.warning("%s; falling back to a locally stored key.", problem)
+    return None
+
+
+def _read_stored_key(default_path: str) -> bytes | None:
+    try:
+        with open(default_path, "rb") as stored_key:
+            stored_value = stored_key.read()
+            if stored_value:
+                return stored_value
+    except FileNotFoundError:
         return None
+    except OSError:
+        return None
+    return None
 
-    stored = _read_stored_key()
-    if stored:
-        return stored
 
-    secret = os.urandom(32)
+def _store_generated_key(default_path: str, secret: bytes) -> bool:
+    """Write ``secret`` whole to ``default_path``; ``False`` when its directory takes no file."""
 
     try:
         os.makedirs(os.path.dirname(default_path), exist_ok=True)
     except OSError as exc:  # pragma: no cover - depends on deployment
         logger.warning("Unable to store generated session secret: %s", exc)
-        return secret
+        return False
 
     try:
         fd, temp_path = tempfile.mkstemp(
@@ -88,7 +117,7 @@ def _resolve_secret_key(app: Flask) -> bytes:
         )
     except OSError as exc:  # pragma: no cover - depends on deployment
         logger.warning("Unable to store generated session secret: %s", exc)
-        return secret
+        return False
     try:
         with os.fdopen(fd, "wb") as target:
             target.write(secret)
@@ -108,12 +137,7 @@ def _resolve_secret_key(app: Flask) -> bytes:
                 os.unlink(temp_path)
             except OSError:
                 pass
-
-    stored = _read_stored_key()
-    if stored:
-        return stored
-
-    return secret
+    return True
 
 
 def init_app(app: Flask) -> None:
