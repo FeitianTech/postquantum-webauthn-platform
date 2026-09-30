@@ -12,8 +12,8 @@ import threading
 
 import pytest
 
-from server.app import mds_provisioning
 from server.app.mds import files as mds_files
+from server.app.mds import provisioning as mds_provisioning
 from server.app.mds import sets as snapshot_sets
 from tests.app.metadata.snapshot_versions import snapshot_version
 from tests.app.storage import fake_gcs

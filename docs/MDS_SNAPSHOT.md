@@ -55,7 +55,7 @@ tests' Flask (`web/e2e/serve-flask.mjs`) serves such a copy too.
 
 ## How the snapshot reaches the application
 
-`server/app/mds_provisioning.py` materialises the files into the snapshot directory
+`server/app/mds/provisioning.py` materialises the files into the snapshot directory
 on demand, trying three tiers in order. It runs once per process, from the
 background warm-up on a Cloud Run cold start and from the first request that
 needs the snapshot otherwise.

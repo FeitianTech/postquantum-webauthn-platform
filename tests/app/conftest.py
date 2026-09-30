@@ -40,7 +40,7 @@ def _the_snapshot_provisioning_attempted_once():
     A test that provisions for itself patches the state and the lock it needs.
     """
 
-    from server.app import mds_provisioning
+    from server.app.mds import provisioning as mds_provisioning
 
     mds_provisioning.ensure_snapshot_available()
 

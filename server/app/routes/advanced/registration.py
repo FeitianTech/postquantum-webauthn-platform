@@ -7,8 +7,9 @@ from typing import Any
 from fido2.webauthn import PublicKeyCredentialUserEntity
 from flask import Blueprint, jsonify, request, session
 
-from ... import json_values, mds_provisioning
+from ... import json_values
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
+from ...mds import provisioning as mds_provisioning
 from . import (
     algorithms,
     constants,

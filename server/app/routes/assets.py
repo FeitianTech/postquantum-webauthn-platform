@@ -15,8 +15,8 @@ from urllib.parse import quote
 
 from flask import Blueprint, Flask, abort, request
 
-from .. import mds_provisioning
 from ..mds import files as mds_files
+from ..mds import provisioning as mds_provisioning
 from ..webauthn.metadata import blob as metadata_blob
 from . import web_export
 

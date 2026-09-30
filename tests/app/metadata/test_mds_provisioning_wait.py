@@ -12,7 +12,7 @@ import threading
 
 import pytest
 
-from server.app import mds_provisioning
+from server.app.mds import provisioning as mds_provisioning
 from tests.app.metadata import mds_fixture
 from tests.app.security.ceremony_helpers import (
     ORIGIN,

@@ -19,9 +19,10 @@ from flask import (
     session,
 )
 
-from .. import encoding, mds_provisioning
+from .. import encoding
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
 from ..mds import files as mds_files
+from ..mds import provisioning as mds_provisioning
 from ..webauthn.attestation import certificates as attestation_certificates
 from ..webauthn.metadata import blob as metadata_blob
 from ..webauthn.metadata import effective as metadata_effective

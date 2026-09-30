@@ -40,7 +40,7 @@ def _run_background_warmup() -> None:
     # The MDS snapshot is provisioned at runtime rather than shipped in the
     # image, so a cold instance fetches it here instead of on the first request.
     try:
-        from .mds_provisioning import ensure_snapshot_available
+        from .mds.provisioning import ensure_snapshot_available
 
         ensure_snapshot_available()
     except Exception:
