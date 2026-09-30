@@ -20,7 +20,7 @@ REPO_ROOT = TESTS_ROOT.parent
 FIRST_PARTY = ("server", "tools", "tests")
 
 ALLOWED: dict[str, int] = {
-    "tests/app/conftest.py": 5,
+
 }
 
 

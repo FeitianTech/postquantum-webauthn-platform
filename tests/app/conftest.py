@@ -15,10 +15,13 @@ exercising the real code.
 
 from __future__ import annotations
 
+import importlib
 from collections.abc import Mapping
 from typing import Any
 
 import pytest
+
+from server.app import factory
 
 # Every app a test builds gets this secret, so building one never reads or
 # writes instance/session-secret.key.
@@ -49,8 +52,6 @@ def make_app():
     The environment is read when the app is built, so ``monkeypatch.setenv``
     before calling this configures that app and no other.
     """
-
-    factory = pytest.importorskip("server.app.factory")
 
     def _make(config: Mapping[str, Any] | None = None):
         return factory.create_app(
@@ -96,22 +97,22 @@ def _app():
     only ``config_module`` passes in a full run and 404s on its own.
     """
 
-    return pytest.importorskip("server.app.app")
+    return importlib.import_module("server.app.app")
 
 
 def _advanced_fragment(name: str):
     _app()
-    return pytest.importorskip(f"server.app.routes.advanced.{name}")
+    return importlib.import_module(f"server.app.routes.advanced.{name}")
 
 
 def _simple_fragment(name: str):
     _app()
-    return pytest.importorskip(f"server.app.routes.simple.{name}")
+    return importlib.import_module(f"server.app.routes.simple.{name}")
 
 
 def _module(path: str):
     _app()
-    return pytest.importorskip(path)
+    return importlib.import_module(path)
 
 
 # The advanced route submodules.
