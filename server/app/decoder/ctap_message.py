@@ -4,7 +4,7 @@ A view is ``{message: {label: value}}``, ``message`` one of ``MESSAGES``. Its
 members are labelled as CTAP 2.2 section 6 numbers them: ``"1 (fmt)"`` for a
 member, the number alone for an integer the message does not define, and any
 other key with its type, text too (``"rpId" (text)``). Every value is spelled by
-``ctap_view``, except two shown interpreted in place, each carrying the exact
+``view_spelling``, except two shown interpreted in place, each carrying the exact
 bytes it was read from, which alone are read back:
 
 - authenticator data, member 2 of both responses: ``raw`` (the bytes its flags
@@ -26,7 +26,7 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
-from . import ctap_tables, ctap_view, values
+from . import ctap_tables, values, view_spelling
 from .cbor_canonical import _canonical_cbor_dumps
 from .decode import json_keys
 
@@ -56,7 +56,7 @@ def member_label(message: str, key_node: Mapping[str, Any]) -> str:
         # Always with its type: a CTAP message numbers its members, so the text
         # "rpId" is never read back as member 1.
         return f"{json.dumps(key_node['value'], ensure_ascii=False)} (text)"
-    return ctap_view.key_label(key_node)
+    return view_spelling.key_label(key_node)
 
 
 def read_member_key(message: str, label: str, path: str = "$") -> Any:
@@ -70,7 +70,7 @@ def read_member_key(message: str, label: str, path: str = "$") -> Any:
             said = f"is {member}" if member else "is not defined in CTAP 2.2"
             raise ValueError(f'{path}: the label "{label}" names {name}, but member {number} of a {message} {said}.')
         return number
-    key = ctap_view.read_key(label, path)
+    key = view_spelling.read_key(label, path)
     if isinstance(key, str) and not values.typed_spelling(label):
         example = f"1 ({MESSAGES[message][1]})"
         raise ValueError(
@@ -105,19 +105,19 @@ def _read_value(message: str, key: Any, value: Any, path: str) -> Any:
         statement = {}
         for label, entry in value.items():
             entry_path = f"{path}{{{json.dumps(label, ensure_ascii=False)}}}"
-            member = ctap_view.read_key(label, entry_path)
+            member = view_spelling.read_key(label, entry_path)
             if member == "x5c" and isinstance(entry, list):
                 statement[member] = [_certificate(item, f"{entry_path}[{index}]") for index, item in enumerate(entry)]
             else:
-                statement[member] = ctap_view.read(entry, entry_path)
+                statement[member] = view_spelling.read(entry, entry_path)
         return statement
-    return ctap_view.read(value, path)
+    return view_spelling.read(value, path)
 
 
 def _certificate(entry: Any, path: str) -> Any:
     if isinstance(entry, Mapping) and "raw" in entry:
         return _hex(entry["raw"], f"{path}.raw")
-    return ctap_view.read(entry, path)
+    return view_spelling.read(entry, path)
 
 
 def _hex(value: Any, path: str) -> bytes:

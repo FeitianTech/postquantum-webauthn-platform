@@ -1,6 +1,6 @@
 """Decode a CTAP message, take the decoder's view of it, encode that: the same bytes, or a refusal by name.
 
-The required property of the CTAP views (``decoder/ctap_view.py``,
+The required property of the CTAP views (``decoder/view_spelling.py``,
 ``decoder/ctap_message.py``): ``ctapDecoded`` with ``data.ctap`` beside it
 carries what the bytes held -- each value's type, nulls, the command or status
 byte or its absence, the bytes after the message -- and the encoder rebuilds it,

@@ -1,10 +1,10 @@
-"""The spelling of values inside a CTAP view, and its exact reader (``decoder/ctap_view.py``)."""
+"""The spelling of values inside a CTAP view, and its exact reader (``decoder/view_spelling.py``)."""
 from __future__ import annotations
 
 import pytest
 from hypothesis import event, given, settings
 
-from server.app.decoder import ctap_view
+from server.app.decoder import view_spelling
 from server.app.decoder.cbor_canonical import _canonical_cbor_dumps
 from server.app.decoder.decode import canonical, cbor_parser
 
@@ -37,12 +37,12 @@ def _node(hex_text: str) -> dict:
     ],
 )
 def test_a_value_is_spelled_so_its_type_comes_back(hex_text, spelled):
-    assert ctap_view.spell(_node(hex_text)) == spelled
+    assert view_spelling.spell(_node(hex_text)) == spelled
 
 
 def test_text_that_looks_typed_is_typed():
-    assert ctap_view.spell_text("h'01' (bytes)") == "\"h'01' (bytes)\" (text)"
-    assert ctap_view.spell_text("Temperature (C)") == "Temperature (C)"
+    assert view_spelling.spell_text("h'01' (bytes)") == "\"h'01' (bytes)\" (text)"
+    assert view_spelling.spell_text("Temperature (C)") == "Temperature (C)"
 
 
 @pytest.mark.parametrize(
@@ -60,7 +60,7 @@ def test_text_that_looks_typed_is_typed():
     ],
 )
 def test_a_map_key_is_labelled_so_its_type_comes_back(hex_text, labels):
-    assert list(ctap_view.spell(_node(hex_text))) == labels
+    assert list(view_spelling.spell(_node(hex_text))) == labels
 
 
 @pytest.mark.parametrize(
@@ -75,7 +75,7 @@ def test_a_map_key_is_labelled_so_its_type_comes_back(hex_text, labels):
 )
 def test_a_value_the_reader_cannot_read_is_refused_by_its_path(value, message):
     with pytest.raises(ValueError, match=message):
-        ctap_view.read({"a": value})
+        view_spelling.read({"a": value})
 
 
 @pytest.mark.parametrize(
@@ -89,11 +89,11 @@ def test_a_value_the_reader_cannot_read_is_refused_by_its_path(value, message):
 )
 def test_a_key_the_reader_cannot_read_is_refused(label, message):
     with pytest.raises(ValueError, match=message):
-        ctap_view.read({label: 1})
+        view_spelling.read({label: 1})
 
 
 def test_the_reader_reads_each_spelling_as_its_type():
-    read = ctap_view.read(
+    read = view_spelling.read(
         {"1": "0102", "a": '"0102" (text)', "-2": None, '"3" (text)': True, "h'01' (bytes)": "1.5 (float)", "x": "abc"}
     )
 
@@ -113,14 +113,14 @@ def test_the_reader_reads_each_spelling_as_its_type():
 def test_spelling_then_reading_gives_back_an_item_in_canonical_form(data):
     node, end, _skipped = cbor_parser.decode_item(data)
     try:
-        rebuilt = _canonical_cbor_dumps(ctap_view.read(ctap_view.spell(node)))
+        rebuilt = _canonical_cbor_dumps(view_spelling.read(view_spelling.spell(node)))
     except ValueError:
         # Only a repeated key: a view holds one of them, numbering the other.
         assert any(finding["code"] == "duplicate-map-key" for finding in canonical.check(node, data))
         event("a repeated key, refused")
         return
     again, _end, _ = cbor_parser.decode_item(rebuilt)
-    assert ctap_view.spell(again) == ctap_view.spell(node)
+    assert view_spelling.spell(again) == view_spelling.spell(node)
     if not canonical.check(node, data):
         event("canonical: the same bytes")
         assert rebuilt == data

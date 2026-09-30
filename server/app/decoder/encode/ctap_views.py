@@ -2,7 +2,7 @@
 
 The view is ``ctapDecoded`` (``{message: members}``), or ``expandedJson`` beside
 a framing that names its message; the framing is ``data.ctap``. The members are
-read by ``ctap_message``, by the one spelling ``ctap_view`` gives them, and
+read by ``ctap_message``, by the one spelling ``view_spelling`` gives them, and
 written in CTAP2 canonical form: nothing is guessed, and what the view cannot
 say is refused, naming where.
 """

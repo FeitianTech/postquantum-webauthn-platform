@@ -204,7 +204,7 @@ nothing dropped (a null is null), nothing re-read (a byte string stays bytes).
   section 6 defines, the number alone for an integer it does not, any other key
   with its type, text too (`"rpId" (text)`). `decode/ctap_conformance.py` reports
   each key that is not an integer as `ctap-non-integer-key`, getInfo included.
-- **Values** (`decoder/ctap_view.py`): a byte string is its lowercase hex; text
+- **Values** (`decoder/view_spelling.py`): a byte string is its lowercase hex; text
   is itself unless it would read as something else (an even number of hex digits,
   `""` too, or a typed spelling), when it is `"<text>" (text)` -- SafetyNet's
   `ver` "14574037" is `"14574037" (text)`; null, booleans and integers are JSON's;
@@ -213,8 +213,8 @@ nothing dropped (a null is null), nothing re-read (a byte string stays bytes).
   value a map's integer key is its number (`"1"`), unlike `decodedValue` and the
   encoder's plain JSON input, where `"1"` is the text "1"; text keys that look
   like integers, typed spellings or numbered labels (`"a #2"`) are typed.
-  `ctap_view.read` reads that spelling back exactly and refuses, naming the JSON
-  path, what it cannot read: a JSON number with a fraction or exponent, an
+  `view_spelling.read` reads that spelling back exactly and refuses, naming the
+  JSON path, what it cannot read: a JSON number with a fraction or exponent, an
   integer beyond 64 bits, a key like `"01"`, a numbered or unknown spelling.
 - **Interpreted in place**, carrying the bytes they were read from, which alone
   are read back (edits to the parsed fields are ignored): authenticator data,
@@ -288,6 +288,6 @@ shape), `ctap_views.py` (the views), `ctap_auth_data.py`, `ctap_self_check.py`,
 are. `text.py` imports the readers and none imports it back: nothing in
 `server/app` imports in a cycle (`tests/app/tooling/test_import_cycles.py`).
 Spelling shared by both
-sides lives in `server/app/decoder/` itself (`ctap_view.py`, `ctap_message.py`,
+sides lives in `server/app/decoder/` itself (`view_spelling.py`, `ctap_message.py`,
 `cbor_canonical.py`, `cbor_head.py`, `ctap2_order.py`), since `decode/` never
 imports `encode/`.
