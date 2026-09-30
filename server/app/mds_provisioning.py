@@ -13,7 +13,7 @@ demand, in three tiers:
    and it is the only tier that needs no network access at all.
 2. **Cloud Storage.** When GCS is configured (``FIDO_SERVER_GCS_ENABLED``), the
    set ``<bucket>/mds/current.json`` points to is downloaded, each file checked
-   against the pointer (``mds_snapshot_sets``); without a usable one, the files
+   against the pointer (``mds.sets``); without a usable one, the files
    missing locally from the flat ``<bucket>/mds/<file>`` objects of earlier
    releases. This is how a Cloud Run cold start gets the snapshot without
    shipping it in the image.
@@ -38,9 +38,9 @@ import threading
 import time
 from pathlib import Path
 
-from . import mds_snapshot_sets
 from .env_flags import parse_env_flag
 from .mds import files as mds_files
+from .mds import sets as snapshot_sets
 from .storage import cloud
 
 logger = logging.getLogger(__name__)
@@ -127,10 +127,10 @@ def _download_set_from_gcs() -> dict | None:
     if not cloud.gcs_enabled():
         return None
     try:
-        pointer, _generation = mds_snapshot_sets.read_pointer()
-        if not mds_snapshot_sets.usable(pointer):
+        pointer, _generation = snapshot_sets.read_pointer()
+        if not snapshot_sets.usable(pointer):
             return None
-        files = mds_snapshot_sets.download_set(pointer)
+        files = snapshot_sets.download_set(pointer)
     except Exception as exc:
         logger.warning("Could not download the MDS snapshot set from Cloud Storage: %s", exc)
         return None
@@ -192,7 +192,7 @@ def _publish_to_gcs() -> None:
         return
     try:
         files = {name: snapshot_path(name).read_bytes() for name in SNAPSHOT_FILENAMES}
-        result = mds_snapshot_sets.publish(files)
+        result = snapshot_sets.publish(files)
     except Exception as exc:
         logger.warning("Could not publish the MDS snapshot to Cloud Storage: %s", exc)
         return
@@ -279,13 +279,13 @@ def follow_newer_snapshot() -> bool:
             return False
         _follow_state["checked_at"] = now
 
-        pointer, _generation = mds_snapshot_sets.read_pointer(timeout=_POINTER_TIMEOUT_SECONDS, attempts=1)
-        if not mds_snapshot_sets.usable(pointer):
+        pointer, _generation = snapshot_sets.read_pointer(timeout=_POINTER_TIMEOUT_SECONDS, attempts=1)
+        if not snapshot_sets.usable(pointer):
             return False
         local_no = _local_snapshot_no()
         if local_no is not None and pointer["no"] <= local_no:
             return False
-        files = mds_snapshot_sets.download_set(pointer, timeout=_SET_TIMEOUT_SECONDS)
+        files = snapshot_sets.download_set(pointer, timeout=_SET_TIMEOUT_SECONDS)
         _write_set(files)
         _provision_state["source"] = "gcs"
         logger.info("Took MDS snapshot no. %s from Cloud Storage (was %s).", pointer["no"], local_no)

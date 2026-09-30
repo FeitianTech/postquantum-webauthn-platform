@@ -8,8 +8,8 @@ import sys
 import pytest
 
 from server.app import mds_provisioning as provisioning
-from server.app import mds_snapshot_sets
 from server.app.mds import files as mds_files
+from server.app.mds import sets as snapshot_sets
 from tests.app.metadata.snapshot_versions import snapshot_version
 from tests.app.storage import fake_gcs
 
@@ -67,7 +67,7 @@ def test_local_files_are_used_without_touching_cloud_storage(static_root, monkey
 def test_a_new_instance_takes_the_set_the_pointer_names(static_root, gcs):
     for name, data in snapshot_version(7).items():
         gcs.put(f"mds/{name}", data)
-    mds_snapshot_sets.publish(snapshot_version(8))
+    snapshot_sets.publish(snapshot_version(8))
 
     assert provisioning.ensure_snapshot_available() == "gcs"
     assert _local(static_root) == snapshot_version(8)
@@ -84,7 +84,7 @@ def test_without_a_pointer_the_flat_objects_are_downloaded(static_root, gcs):
 def test_a_set_that_is_not_the_one_named_falls_back_to_the_flat_objects(static_root, gcs):
     for name, data in snapshot_version(7).items():
         gcs.put(f"mds/{name}", data)
-    pointer = mds_snapshot_sets.publish(snapshot_version(8)).pointer
+    pointer = snapshot_sets.publish(snapshot_version(8)).pointer
     gcs.put(pointer["set"] + mds_files.VERIFIED, b"{}")
 
     assert provisioning.ensure_snapshot_available() == "gcs"
@@ -92,7 +92,7 @@ def test_a_set_that_is_not_the_one_named_falls_back_to_the_flat_objects(static_r
 
 
 def test_provisioning_result_is_reused_within_a_process(static_root, gcs):
-    mds_snapshot_sets.publish(snapshot_version(8))
+    snapshot_sets.publish(snapshot_version(8))
 
     assert provisioning.ensure_snapshot_available() == "gcs"
     downloads = len(gcs.download_options)
@@ -120,9 +120,9 @@ def test_an_empty_bucket_falls_through_to_an_upstream_refresh_it_publishes(stati
     monkeypatch.setattr(update_mds_snapshot, "main", _refresh)
 
     assert provisioning.ensure_snapshot_available() == "upstream"
-    pointer, _generation = mds_snapshot_sets.read_pointer()
+    pointer, _generation = snapshot_sets.read_pointer()
     assert pointer["no"] == 9
-    assert mds_snapshot_sets.download_set(pointer) == snapshot_version(9)
+    assert snapshot_sets.download_set(pointer) == snapshot_version(9)
 
 
 def test_a_failed_upstream_refresh_leaves_the_snapshot_unavailable(static_root, gcs, monkeypatch):

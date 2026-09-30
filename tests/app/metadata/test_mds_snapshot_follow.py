@@ -12,8 +12,9 @@ import threading
 
 import pytest
 
-from server.app import mds_provisioning, mds_snapshot_sets
+from server.app import mds_provisioning
 from server.app.mds import files as mds_files
+from server.app.mds import sets as snapshot_sets
 from tests.app.metadata.snapshot_versions import snapshot_version
 from tests.app.storage import fake_gcs
 
@@ -50,7 +51,7 @@ def test_a_newer_set_in_the_bucket_reaches_a_running_instance(instance, client):
     no, url = _info(client)
     assert no == 7 and "?v=7." in url
 
-    mds_snapshot_sets.publish(snapshot_version(8))
+    snapshot_sets.publish(snapshot_version(8))
 
     no, url = _info(client)
     assert no == 8 and "?v=8." in url
@@ -70,7 +71,7 @@ def test_the_pointer_is_read_at_most_once_per_interval(instance, client, monkeyp
     monkeypatch.setattr(mds_provisioning.time, "monotonic", lambda: clock[0])
 
     _info(client)
-    mds_snapshot_sets.publish(snapshot_version(8))
+    snapshot_sets.publish(snapshot_version(8))
     reads = len(bucket.download_options)
 
     clock[0] += 899
@@ -85,14 +86,14 @@ def test_the_pointer_is_read_at_most_once_per_interval(instance, client, monkeyp
 
 def test_an_older_or_the_same_set_is_left_alone(instance, client):
     directory, bucket = instance
-    mds_snapshot_sets.publish(snapshot_version(6))
+    snapshot_sets.publish(snapshot_version(6))
     assert _info(client)[0] == 7
     assert _local(directory) == snapshot_version(7)
 
 
 def test_other_requests_go_on_while_one_takes_the_new_set(instance, client, app):
     directory, bucket = instance
-    pointer = mds_snapshot_sets.publish(snapshot_version(8)).pointer
+    pointer = snapshot_sets.publish(snapshot_version(8)).pointer
     downloading = threading.Event()
     release = threading.Event()
 
@@ -117,7 +118,7 @@ def test_other_requests_go_on_while_one_takes_the_new_set(instance, client, app)
 @pytest.mark.parametrize("failure", ["a file not the one named", "the bucket unreachable", "a file gone"])
 def test_a_failed_follow_keeps_the_snapshot(instance, client, failure):
     directory, bucket = instance
-    pointer = mds_snapshot_sets.publish(snapshot_version(8)).pointer
+    pointer = snapshot_sets.publish(snapshot_version(8)).pointer
     if failure == "a file not the one named":
         bucket.put(pointer["set"] + mds_files.EXPLORER_FULL, b"{}")
     elif failure == "the bucket unreachable":
@@ -133,7 +134,7 @@ def test_a_failed_follow_keeps_the_snapshot(instance, client, failure):
 
 def test_a_set_pruned_under_a_following_instance_is_taken_on_the_next_check(instance, client):
     directory, bucket = instance
-    pointer = mds_snapshot_sets.publish(snapshot_version(8)).pointer
+    pointer = snapshot_sets.publish(snapshot_version(8)).pointer
     raced = []
 
     # While this instance downloads no. 8, two more publishes land: no. 10
@@ -141,8 +142,8 @@ def test_a_set_pruned_under_a_following_instance_is_taken_on_the_next_check(inst
     def _publishers(name):
         if name.startswith(pointer["set"]) and not raced:
             raced.append(name)
-            mds_snapshot_sets.publish(snapshot_version(9))
-            mds_snapshot_sets.publish(snapshot_version(10))
+            snapshot_sets.publish(snapshot_version(9))
+            snapshot_sets.publish(snapshot_version(10))
 
     bucket.on_download.append(_publishers)
 
@@ -155,7 +156,7 @@ def test_a_set_pruned_under_a_following_instance_is_taken_on_the_next_check(inst
 def test_without_cloud_storage_nothing_is_asked(instance, client, monkeypatch):
     directory, bucket = instance
     monkeypatch.setattr(mds_provisioning.cloud, "gcs_enabled", lambda: False)
-    mds_snapshot_sets.publish(snapshot_version(8))
+    snapshot_sets.publish(snapshot_version(8))
     reads = len(bucket.download_options)
 
     assert _info(client)[0] == 7

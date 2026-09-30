@@ -4,7 +4,7 @@
 Downloads the BLOB, verifies it against the pinned trust root, and writes the
 snapshot's seven files. ``--verify-only`` writes nothing; ``--publish`` (earlier
 ``--gcs-upload``) also publishes them to Cloud Storage as a snapshot set
-(``server/app/mds_snapshot_sets.py``), which every server instance follows.
+(``server/app/mds/sets.py``), which every server instance follows.
 """
 
 from __future__ import annotations
@@ -268,9 +268,9 @@ def _build_verified_snapshot(
 
 def _publish_to_cloud_storage(files: dict[str, bytes]) -> int:
     """Publish the verified snapshot's files as a set in the bucket the server
-    provisions from, and point to it (``server/app/mds_snapshot_sets.py``)."""
+    provisions from, and point to it (``server/app/mds/sets.py``)."""
 
-    from server.app import mds_snapshot_sets
+    from server.app.mds import sets as snapshot_sets
     from server.app.storage import cloud
 
     if not cloud.gcs_enabled():
@@ -284,7 +284,7 @@ def _publish_to_cloud_storage(files: dict[str, bytes]) -> int:
         # Losing the pointer to another publisher leaves the bucket at theirs, which
         # may be older than this one: read it again and publish over it if so.
         for _attempt in range(3):
-            result = mds_snapshot_sets.publish(files)
+            result = snapshot_sets.publish(files)
             if result.outcome != "lost":
                 break
     except Exception as exc:

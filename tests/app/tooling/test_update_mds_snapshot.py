@@ -502,13 +502,13 @@ def bucket(monkeypatch):
 
 @pytest.mark.parametrize("flag", ["--publish", "--gcs-upload"])
 def test_publish_points_the_bucket_at_the_verified_snapshot(stubbed_refresh, bucket, flag, capsys):
-    from server.app import mds_snapshot_sets
+    from server.app.mds import sets as snapshot_sets
 
     assert updater.main([flag]) == 0
 
-    pointer, _generation = mds_snapshot_sets.read_pointer()
+    pointer, _generation = snapshot_sets.read_pointer()
     assert pointer["no"] == 42
-    files = mds_snapshot_sets.download_set(pointer)
+    files = snapshot_sets.download_set(pointer)
     assert files[mds_files.BLOB] == b"a-blob"
     assert files == {name: _file(name).read_bytes() for name in mds_files.SNAPSHOT_FILENAMES}
     assert f"Published snapshot no. 42 as {pointer['set']}." in capsys.readouterr().out
@@ -543,23 +543,23 @@ def test_publish_reports_a_bucket_failure(stubbed_refresh, bucket, monkeypatch, 
 
 
 def test_publish_takes_the_pointer_back_from_an_older_publisher(stubbed_refresh, bucket, capsys):
-    from server.app import mds_snapshot_sets
+    from server.app.mds import sets as snapshot_sets
     from tests.app.metadata.snapshot_versions import snapshot_version
 
-    mds_snapshot_sets.publish(snapshot_version(6))
+    snapshot_sets.publish(snapshot_version(6))
     fired = []
 
     # An older publisher's pointer lands between this run's read and its write.
     def _older_publisher(name):
         if name.endswith("current.json") and not fired:
             fired.append(name)
-            mds_snapshot_sets.publish(snapshot_version(7))
+            snapshot_sets.publish(snapshot_version(7))
 
     bucket.on_download.append(_older_publisher)
 
     assert updater.main(["--publish"]) == 0
     assert fired
-    pointer = mds_snapshot_sets.read_pointer()[0]
+    pointer = snapshot_sets.read_pointer()[0]
     assert pointer["no"] == 42
     assert pointer["previous"].startswith("mds/sets/1/7-")
 
@@ -580,13 +580,13 @@ def _rate_limited(monkeypatch):
 
 
 def test_a_rate_limited_refresh_keeps_the_snapshot_and_the_bucket(isolated_mds_paths, bucket, monkeypatch, capsys):
-    from server.app import mds_snapshot_sets
+    from server.app.mds import sets as snapshot_sets
     from tests.app.metadata.snapshot_versions import snapshot_version
 
     current = snapshot_version(7)
     for name, data in current.items():
         mds_files.write_file(_file(name), data)
-    mds_snapshot_sets.publish(current)
+    snapshot_sets.publish(current)
     before = dict(bucket.objects)
     attempts = _rate_limited(monkeypatch)
 

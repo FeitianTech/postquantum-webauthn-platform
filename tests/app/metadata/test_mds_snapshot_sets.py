@@ -7,8 +7,8 @@ import threading
 
 import pytest
 
-from server.app import mds_snapshot_sets
 from server.app.mds import files as mds_files
+from server.app.mds import sets as snapshot_sets
 from server.app.storage import cloud
 from tests.app.metadata.snapshot_versions import snapshot_version
 from tests.app.storage import fake_gcs
@@ -16,7 +16,7 @@ from tests.app.storage import fake_gcs
 
 @pytest.fixture
 def bucket(monkeypatch):
-    monkeypatch.delenv(mds_snapshot_sets.PREFIX_ENV, raising=False)
+    monkeypatch.delenv(snapshot_sets.PREFIX_ENV, raising=False)
     return fake_gcs.install(monkeypatch)
 
 
@@ -31,14 +31,14 @@ def _sets(bucket):
 def test_a_publish_writes_a_complete_set_then_points_to_it(bucket):
     files = snapshot_version(8)
 
-    result = mds_snapshot_sets.publish(files)
+    result = snapshot_sets.publish(files)
 
     assert result.outcome == "published"
     pointer = _pointer(bucket)
     assert pointer == result.pointer
     assert pointer["format"] == 1 and pointer["no"] == 8 and pointer["previous"] is None
     assert pointer["set"].startswith("mds/sets/1/8-")
-    assert mds_snapshot_sets.download_set(pointer) == files
+    assert snapshot_sets.download_set(pointer) == files
     # Every file created fresh, the metas after the payloads, the pointer last.
     generations = {name: bucket.objects[pointer["set"] + name][1] for name in files}
     assert sorted(generations, key=generations.get) == list(mds_files.WRITE_ORDER)
@@ -46,16 +46,16 @@ def test_a_publish_writes_a_complete_set_then_points_to_it(bucket):
 
 
 def test_the_pointer_only_moves_forward(bucket):
-    mds_snapshot_sets.publish(snapshot_version(8))
+    snapshot_sets.publish(snapshot_version(8))
     before = dict(bucket.objects)
 
-    assert mds_snapshot_sets.publish(snapshot_version(8)).outcome == "current"
-    assert mds_snapshot_sets.publish(snapshot_version(7)).outcome == "current"
+    assert snapshot_sets.publish(snapshot_version(8)).outcome == "current"
+    assert snapshot_sets.publish(snapshot_version(7)).outcome == "current"
     assert bucket.objects == before
 
 
 def test_a_failure_halfway_through_a_set_leaves_the_current_set(bucket, monkeypatch):
-    mds_snapshot_sets.publish(snapshot_version(8))
+    snapshot_sets.publish(snapshot_version(8))
     before = dict(bucket.objects)
     upload = cloud.upload_bytes_if_generation
 
@@ -66,7 +66,7 @@ def test_a_failure_halfway_through_a_set_leaves_the_current_set(bucket, monkeypa
 
     monkeypatch.setattr(cloud, "upload_bytes_if_generation", _failing)
     with pytest.raises(OSError):
-        mds_snapshot_sets.publish(snapshot_version(9))
+        snapshot_sets.publish(snapshot_version(9))
 
     assert bucket.objects == before
 
@@ -75,23 +75,23 @@ def test_a_pointer_of_another_format_is_not_replaced(bucket):
     bucket.put("mds/current.json", json.dumps({"format": 2, "set": "mds/sets/2/9-x/"}).encode())
     before = dict(bucket.objects)
 
-    with pytest.raises(mds_snapshot_sets.SnapshotSetError):
-        mds_snapshot_sets.publish(snapshot_version(9))
+    with pytest.raises(snapshot_sets.SnapshotSetError):
+        snapshot_sets.publish(snapshot_version(9))
     assert bucket.objects == before
 
 
 def test_the_writer_that_loses_the_pointer_deletes_its_set(bucket):
-    mds_snapshot_sets.publish(snapshot_version(7))
+    snapshot_sets.publish(snapshot_version(7))
     results = {}
 
     # Another writer publishes between this one's read of the pointer and its write.
     def _other_writer(name):
         if name == "mds/current.json" and "other" not in results:
             results["other"] = None
-            results["other"] = mds_snapshot_sets.publish(snapshot_version(9))
+            results["other"] = snapshot_sets.publish(snapshot_version(9))
 
     bucket.on_download.append(_other_writer)
-    results["this"] = mds_snapshot_sets.publish(snapshot_version(8))
+    results["this"] = snapshot_sets.publish(snapshot_version(8))
 
     assert results["other"].outcome == "published"
     assert results["this"].outcome == "lost"
@@ -99,7 +99,7 @@ def test_the_writer_that_loses_the_pointer_deletes_its_set(bucket):
     pointer = _pointer(bucket)
     assert pointer["no"] == 9
     assert not any(name.startswith("mds/sets/1/8-") for name in bucket.objects)
-    assert mds_snapshot_sets.download_set(pointer) == snapshot_version(9)
+    assert snapshot_sets.download_set(pointer) == snapshot_version(9)
 
 
 def test_writers_at_once_leave_one_pointer_to_one_complete_set(bucket):
@@ -109,7 +109,7 @@ def test_writers_at_once_leave_one_pointer_to_one_complete_set(bucket):
 
     def _publish(no):
         start.wait()
-        outcomes.append(mds_snapshot_sets.publish(versions[no]).outcome)
+        outcomes.append(snapshot_sets.publish(versions[no]).outcome)
 
     threads = [threading.Thread(target=_publish, args=(no,)) for no in versions]
     for thread in threads:
@@ -119,39 +119,39 @@ def test_writers_at_once_leave_one_pointer_to_one_complete_set(bucket):
 
     assert "published" in outcomes
     pointer = _pointer(bucket)
-    assert mds_snapshot_sets.download_set(pointer) == snapshot_version(pointer["no"])
+    assert snapshot_sets.download_set(pointer) == snapshot_version(pointer["no"])
     # Nothing but the current set and the one it replaced; every loser's is gone.
     assert _sets(bucket) <= {pointer["set"], pointer["previous"]}
     assert pointer["set"] in _sets(bucket)
 
 
 def test_a_publish_deletes_the_set_two_back(bucket):
-    first = mds_snapshot_sets.publish(snapshot_version(8)).pointer["set"]
-    second = mds_snapshot_sets.publish(snapshot_version(9)).pointer["set"]
+    first = snapshot_sets.publish(snapshot_version(8)).pointer["set"]
+    second = snapshot_sets.publish(snapshot_version(9)).pointer["set"]
     assert _sets(bucket) == {first, second}
 
-    third = mds_snapshot_sets.publish(snapshot_version(10)).pointer
+    third = snapshot_sets.publish(snapshot_version(10)).pointer
     assert _sets(bucket) == {second, third["set"]}
     assert third["previous"] == second
 
 
 def test_a_set_that_is_not_the_one_named_is_refused(bucket):
-    pointer = mds_snapshot_sets.publish(snapshot_version(8)).pointer
+    pointer = snapshot_sets.publish(snapshot_version(8)).pointer
     bucket.put(pointer["set"] + mds_files.EXPLORER_FULL, b"{}")
-    with pytest.raises(mds_snapshot_sets.SnapshotSetError, match="not the file"):
-        mds_snapshot_sets.download_set(pointer)
+    with pytest.raises(snapshot_sets.SnapshotSetError, match="not the file"):
+        snapshot_sets.download_set(pointer)
 
     del bucket.objects[pointer["set"] + mds_files.VERIFIED]
-    with pytest.raises(mds_snapshot_sets.SnapshotSetError, match="missing"):
-        mds_snapshot_sets.download_set(pointer)
+    with pytest.raises(snapshot_sets.SnapshotSetError, match="missing"):
+        snapshot_sets.download_set(pointer)
 
 
 def test_a_pointer_is_usable_only_in_this_format(bucket):
-    pointer = mds_snapshot_sets.publish(snapshot_version(8)).pointer
-    assert mds_snapshot_sets.usable(pointer)
-    assert not mds_snapshot_sets.usable({**pointer, "format": 2})
-    assert not mds_snapshot_sets.usable({**pointer, "files": {}})
-    assert not mds_snapshot_sets.usable(None)
+    pointer = snapshot_sets.publish(snapshot_version(8)).pointer
+    assert snapshot_sets.usable(pointer)
+    assert not snapshot_sets.usable({**pointer, "format": 2})
+    assert not snapshot_sets.usable({**pointer, "files": {}})
+    assert not snapshot_sets.usable(None)
 
     bucket.put("mds/current.json", b"not json")
-    assert mds_snapshot_sets.read_pointer() == (None, bucket.objects["mds/current.json"][1])
+    assert snapshot_sets.read_pointer() == (None, bucket.objects["mds/current.json"][1])

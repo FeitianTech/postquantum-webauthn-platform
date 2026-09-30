@@ -139,7 +139,7 @@ python tools/update_mds_snapshot.py --verify-only
 
 ## Snapshot sets in Cloud Storage
 
-`server/app/mds_snapshot_sets.py` (a leaf, like `mds/files.py`) keeps the bucket's
+`server/app/mds/sets.py` (a leaf, like `mds/files.py`) keeps the bucket's
 snapshot as immutable sets and a pointer:
 
 - **A set** is the seven files under `mds/sets/1/<serial>-<random>/` (`1` is the

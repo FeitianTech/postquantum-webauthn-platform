@@ -188,7 +188,7 @@ their exports or sentences. A new surface splits its logic out here first.
 - `mds/trust.py` (the MDS trust anchor), `mds/blob.py` (the BLOB's chain to that root, which
   may end in a cross-certificate fido2's `parse_blob` refuses, its signature and payload),
   `mds/files.py` (the snapshot's file names, its directory, the whole-file and `.gz`
-  sibling writers) and `mds_snapshot_sets.py` (the snapshot in Cloud Storage) are Flask-free
+  sibling writers) and `mds/sets.py` (the snapshot in Cloud Storage) are Flask-free
   leaves the updater imports.
 - Routes: `routes/simple/` and `routes/advanced/` (begin/complete; the bodies are short
   orchestrators over modules named for their stage; the try blocks and the order of session
@@ -308,7 +308,7 @@ goldens show what it changes).
   (local files, then Cloud Storage, then a verified upstream refresh). Whatever writes the
   snapshot writes each file whole, metas last, and the explorer file's `.gz` sibling too.
 - Cloud Storage holds immutable sets and `mds/current.json`, the pointer to one
-  (`server/app/mds_snapshot_sets.py`: create-only sets, a generation-checked pointer that only
+  (`server/app/mds/sets.py`: create-only sets, a generation-checked pointer that only
   moves forward); `tools/update_mds_snapshot.py --publish` publishes a verified snapshot, and a
   running instance takes a newer set from `/api/mds/metadata/info` (`follow_newer_snapshot`).
 - Locally, run `python tools/update_mds_snapshot.py` once. Without a snapshot the explorer APIs
