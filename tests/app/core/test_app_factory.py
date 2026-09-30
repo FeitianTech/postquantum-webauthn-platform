@@ -6,7 +6,7 @@ from pathlib import Path
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from server.app import factory, static_assets
+from server.app import factory
 from server.app.config import (
     attestation_trust,
     compression,
@@ -20,6 +20,7 @@ from server.app.config import (
     session_secret,
     web_export,
 )
+from server.app.routes import assets
 
 _SERVER_APP = Path(__file__).resolve().parents[3] / "server" / "app"
 
@@ -33,7 +34,7 @@ def test_init_steps_are_pinned_in_order():
         proxy.init_app,
         compression.init_app,
         security_headers.init_app,
-        static_assets.init_app,
+        assets.init_app,
         factory._register_blueprints,
         relying_party.init_app,
     )
@@ -72,8 +73,8 @@ def test_hooks_and_blueprints_are_registered_in_order(app):
         compression.maybe_compress_response,
         security_headers.set_security_headers,
     ]
-    assert app.before_request_funcs[None] == [static_assets._hide_private_static_files]
-    assert list(app.blueprints) == ["static_assets", "advanced", "mds", "codec", "simple", "csp_report", "web_export"]
+    assert app.before_request_funcs[None] == [assets._hide_private_static_files]
+    assert list(app.blueprints) == ["assets", "advanced", "mds", "codec", "simple", "csp_report", "web_export"]
     # No static rule of Flask's own: the page rule (routes/web_export.py) is the site's catch-all.
     assert app.static_folder is None
     assert "static" not in app.view_functions

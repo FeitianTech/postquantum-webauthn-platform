@@ -3,7 +3,7 @@
 
 Writes a ``.gz`` copy of each compressible file under DIR (``web/out``) when the
 copy is smaller, so the server sends it to gzip clients instead of compressing per
-request (``server/app/static_assets.py``, ``send_precompressed``). The export's
+request (``server/app/routes/web_export.py``, ``send_precompressed``). The export's
 file names carry their own content hashes. Run at image build time; the copies
 are not committed.
 

@@ -1,30 +1,23 @@
-"""The MDS explorer's snapshot as a versioned static asset, and precompressed files.
+"""The MDS explorer's snapshot as a versioned static asset.
 
 Browsers load one file of the MDS snapshot, the explorer's, from
 ``/assets/mds/fido-mds3.explorer.full.json?v=<version>``, where the version
 names the snapshot (``snapshot_version``): a URL with the current version is cached
-as immutable, any other revalidates. ``send_precompressed`` also serves the web
-export (``routes/web_export.py``).
+as immutable, any other revalidates. No other snapshot file is served, at any path.
 """
 from __future__ import annotations
 
 import hashlib
 import json
-import mimetypes
 import os
 from typing import Any
 from urllib.parse import quote
 
-from flask import Blueprint, Flask, abort, request, send_file
+from flask import Blueprint, Flask, abort, request
 
-from . import mds_snapshot_dir
-from .mds_provisioning import ensure_snapshot_available
-from .webauthn.metadata.blob import load_packaged_snapshot_meta
-
-__all__ = ["asset_url", "bp", "init_app", "send_precompressed", "snapshot_version"]
-
-IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
-REVALIDATE_CACHE_CONTROL = "no-cache"
+from .. import mds_provisioning, mds_snapshot_dir
+from ..webauthn.metadata import blob as metadata_blob
+from . import web_export
 
 # The path segment of the snapshot's URL; no other segment is served.
 _ASSET_SEGMENT = "mds"
@@ -68,7 +61,7 @@ def _hide_private_static_files():
     return None
 
 
-bp = Blueprint("static_assets", __name__)
+bp = Blueprint("assets", __name__)
 
 
 def init_app(app: Flask) -> None:
@@ -89,40 +82,14 @@ def versioned_static_asset(filename: str):
 
     # On a cold instance the snapshot may still be being provisioned: wait for that
     # (after the first attempt it returns at once).
-    ensure_snapshot_available()
+    mds_provisioning.ensure_snapshot_available()
     path = os.fspath(mds_snapshot_dir.snapshot_file(filename))
     if not os.path.isfile(path):
         abort(404)
 
     # Only the current snapshot's URL is immutable; a page given an earlier one
     # must revalidate.
-    current = snapshot_version(load_packaged_snapshot_meta())
+    current = snapshot_version(metadata_blob.load_packaged_snapshot_meta())
     if current is not None and request.args.get("v") == current:
-        return send_precompressed(path, IMMUTABLE_CACHE_CONTROL)
-    return send_precompressed(path, REVALIDATE_CACHE_CONTROL)
-
-
-def send_precompressed(path: str, cache_control: str):
-    """Send ``path``, or its precompressed ``.gz`` copy when the client accepts gzip.
-
-    Conditional (ETag, 304) like any static file. ``Vary: Accept-Encoding`` is
-    added whenever a ``.gz`` copy exists, so a cache keeps both.
-    """
-
-    mimetype = mimetypes.guess_type(path)[0] or "application/octet-stream"
-    gzip_path = f"{path}.gz"
-    has_gzip_variant = os.path.isfile(gzip_path)
-    use_gzip = has_gzip_variant and "gzip" in request.headers.get("Accept-Encoding", "").lower()
-
-    response = send_file(
-        gzip_path if use_gzip else path,
-        mimetype=mimetype,
-        conditional=True,
-        etag=True,
-    )
-    if use_gzip:
-        response.headers["Content-Encoding"] = "gzip"
-    if has_gzip_variant:
-        response.vary.add("Accept-Encoding")
-    response.headers["Cache-Control"] = cache_control
-    return response
+        return web_export.send_precompressed(path, web_export.IMMUTABLE_CACHE_CONTROL)
+    return web_export.send_precompressed(path, web_export.REVALIDATE_CACHE_CONTROL)

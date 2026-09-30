@@ -26,21 +26,20 @@ headers as every other response, the strict CSP included. The export root is
 """
 from __future__ import annotations
 
+import mimetypes
 import os
 
 from flask import Blueprint, abort, current_app, redirect, request, send_file, url_for
 from werkzeug.security import safe_join
 
 from ..config.web_export import WEB_EXPORT_ROOT_KEY
-from ..static_assets import (
-    IMMUTABLE_CACHE_CONTROL,
-    REVALIDATE_CACHE_CONTROL,
-    send_precompressed,
-)
 
-__all__ = ["bp"]
+__all__ = ["IMMUTABLE_CACHE_CONTROL", "REVALIDATE_CACHE_CONTROL", "bp", "send_precompressed"]
 
 bp = Blueprint("web_export", __name__)
+
+IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
+REVALIDATE_CACHE_CONTROL = "no-cache"
 
 _IMMUTABLE_PREFIX = "_next/static/"
 # The export's error pages are served as errors, never as a page of their own.
@@ -111,4 +110,30 @@ def beta(subpath: str = ""):
         location = f"{location}?{request.query_string.decode('latin-1')}"
     response = redirect(location, code=308)
     response.headers["Cache-Control"] = REVALIDATE_CACHE_CONTROL
+    return response
+
+
+def send_precompressed(path: str, cache_control: str):
+    """Send ``path``, or its precompressed ``.gz`` copy when the client accepts gzip.
+
+    Conditional (ETag, 304) like any static file. ``Vary: Accept-Encoding`` is
+    added whenever a ``.gz`` copy exists, so a cache keeps both.
+    """
+
+    mimetype = mimetypes.guess_type(path)[0] or "application/octet-stream"
+    gzip_path = f"{path}.gz"
+    has_gzip_variant = os.path.isfile(gzip_path)
+    use_gzip = has_gzip_variant and "gzip" in request.headers.get("Accept-Encoding", "").lower()
+
+    response = send_file(
+        gzip_path if use_gzip else path,
+        mimetype=mimetype,
+        conditional=True,
+        etag=True,
+    )
+    if use_gzip:
+        response.headers["Content-Encoding"] = "gzip"
+    if has_gzip_variant:
+        response.vary.add("Accept-Encoding")
+    response.headers["Cache-Control"] = cache_control
     return response

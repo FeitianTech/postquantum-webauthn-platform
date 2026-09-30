@@ -9,7 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from server.app import static_assets
+from server.app.routes import assets
+from server.app.webauthn.metadata import blob as metadata_blob
 from tests.app.entry_app import entry_app
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -28,13 +29,13 @@ def assets_env(monkeypatch, tmp_path):
     (snapshot / _EXPLORER_FULL).write_bytes(_BODY)
     (snapshot / f"{_EXPLORER_FULL}.gz").write_bytes(gzip.compress(_BODY))
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(snapshot))
-    monkeypatch.setattr(static_assets, "load_packaged_snapshot_meta", lambda: dict(_META))
-    version = static_assets.snapshot_version(_META)
-    return static_assets, entry_app().test_client(), version
+    monkeypatch.setattr(metadata_blob, "load_packaged_snapshot_meta", lambda: dict(_META))
+    version = assets.snapshot_version(_META)
+    return assets, entry_app().test_client(), version
 
 
 def test_the_current_snapshot_is_immutable_and_precompressed(assets_env):
-    _static_assets, client, version = assets_env
+    _assets, client, version = assets_env
 
     with client.get(f"/assets/mds/{_EXPLORER_FULL}?v={version}", headers={"Accept-Encoding": "gzip, br"}) as response:
         assert response.status_code == 200
@@ -53,7 +54,7 @@ def test_the_current_snapshot_is_immutable_and_precompressed(assets_env):
 
 
 def test_identity_encoding_when_gzip_not_accepted(assets_env):
-    _static_assets, client, version = assets_env
+    _assets, client, version = assets_env
 
     with client.get(f"/assets/mds/{_EXPLORER_FULL}?v={version}", headers={"Accept-Encoding": "identity"}) as response:
         assert response.status_code == 200
@@ -63,7 +64,7 @@ def test_identity_encoding_when_gzip_not_accepted(assets_env):
 
 @pytest.mark.parametrize("query", ["", "?v=6.000000000000", "?v="])
 def test_another_version_or_none_must_revalidate(assets_env, query):
-    _static_assets, client, _version = assets_env
+    _assets, client, _version = assets_env
 
     with client.get(f"/assets/mds/{_EXPLORER_FULL}{query}") as response:
         assert response.status_code == 200
@@ -72,14 +73,14 @@ def test_another_version_or_none_must_revalidate(assets_env, query):
 
 @pytest.mark.parametrize("segment", ["0ldbu1ld", "dev"])
 def test_no_other_segment_serves_the_snapshot(assets_env, segment):
-    _static_assets, client, version = assets_env
+    _assets, client, version = assets_env
 
     assert client.get(f"/assets/{segment}/{_EXPLORER_FULL}?v={version}").status_code == 404
 
 
 def test_without_a_snapshot_meta_nothing_is_immutable(assets_env, monkeypatch):
-    static_assets, client, version = assets_env
-    monkeypatch.setattr(static_assets, "load_packaged_snapshot_meta", lambda: None)
+    assets, client, version = assets_env
+    monkeypatch.setattr(metadata_blob, "load_packaged_snapshot_meta", lambda: None)
 
     with client.get(f"/assets/mds/{_EXPLORER_FULL}?v={version}") as response:
         assert response.status_code == 200
@@ -104,7 +105,7 @@ def test_without_a_snapshot_meta_nothing_is_immutable(assets_env, monkeypatch):
     ],
 )
 def test_the_route_refuses_every_other_name(assets_env, name):
-    _static_assets, client, _version = assets_env
+    _assets, client, _version = assets_env
     snapshot = Path(os.environ["FIDO_SERVER_MDS_SNAPSHOT_DIR"])
     for other in ("blob.jwt", "fido-mds3.verified.json", "scripts/main.js", "favicon.ico"):
         (snapshot / other).parent.mkdir(parents=True, exist_ok=True)
@@ -114,7 +115,7 @@ def test_the_route_refuses_every_other_name(assets_env, name):
 
 
 def test_a_missing_snapshot_is_not_found(assets_env, monkeypatch, tmp_path):
-    _static_assets, client, version = assets_env
+    _assets, client, version = assets_env
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path / "empty"))
 
     assert client.get(f"/assets/mds/{_EXPLORER_FULL}?v={version}").status_code == 404
@@ -139,13 +140,13 @@ def test_no_snapshot_file_is_served_at_the_site_root(assets_env, monkeypatch, tm
 
 
 def test_asset_url_has_a_fixed_segment_and_the_version_names_the_snapshot(assets_env):
-    static_assets, _client, version = assets_env
+    assets, _client, version = assets_env
 
-    assert static_assets.asset_url("/fido-mds3.explorer.full.json") == "/assets/mds/fido-mds3.explorer.full.json"
-    assert static_assets.snapshot_version(None) is None
+    assert assets.asset_url("/fido-mds3.explorer.full.json") == "/assets/mds/fido-mds3.explorer.full.json"
+    assert assets.snapshot_version(None) is None
     assert version.startswith("7.")
     assert len(version.split(".")[1]) == 12
-    assert static_assets.snapshot_version({**_META, "etag": '"fixture-8"'}) != version
+    assert assets.snapshot_version({**_META, "etag": '"fixture-8"'}) != version
 
 
 def _load_build_tool():

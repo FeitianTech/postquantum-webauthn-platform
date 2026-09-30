@@ -9,7 +9,7 @@ import io
 import json
 
 from server.app import mds_snapshot_dir
-from server.app.static_assets import asset_url
+from server.app.routes.assets import asset_url
 from tests.app.metadata import mds_fixture
 
 

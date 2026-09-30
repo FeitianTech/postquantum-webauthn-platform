@@ -19,7 +19,7 @@ from flask import (
     session,
 )
 
-from .. import encoding, mds_provisioning, mds_snapshot_dir, static_assets
+from .. import encoding, mds_provisioning, mds_snapshot_dir
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
 from ..webauthn.attestation import certificates as attestation_certificates
 from ..webauthn.metadata import blob as metadata_blob
@@ -27,6 +27,7 @@ from ..webauthn.metadata import effective as metadata_effective
 from ..webauthn.metadata import entries as metadata_entries
 from ..webauthn.metadata import sessions as metadata_sessions
 from ..webauthn.metadata import uploads as metadata_uploads
+from . import assets
 
 # The HTTP rules, registered on the app by server.app.app.
 bp = Blueprint("mds", __name__)
@@ -62,13 +63,13 @@ def _packaged_snapshot_url() -> str | None:
     """Where browsers load the packaged snapshot from, or None when there is no
     file there that the explorer API would agree with (the page then asks the API).
 
-    The URL carries the snapshot's own version (``static_assets.snapshot_version``),
+    The URL carries the snapshot's own version (``assets.snapshot_version``),
     so a new snapshot is a new URL."""
 
-    version = static_assets.snapshot_version(metadata_blob.load_packaged_snapshot_meta())
+    version = assets.snapshot_version(metadata_blob.load_packaged_snapshot_meta())
     if version is None:
         return None
-    return f"{static_assets.asset_url(_MDS_EXPLORER_FULL_STATIC_FILENAME)}?v={version}"
+    return f"{assets.asset_url(_MDS_EXPLORER_FULL_STATIC_FILENAME)}?v={version}"
 
 
 def _initial_mds_info() -> dict[str, Any]:

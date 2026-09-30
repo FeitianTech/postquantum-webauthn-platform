@@ -12,7 +12,6 @@ from typing import Any
 
 from flask import Flask
 
-from . import static_assets
 from .config import (
     application,
     attestation_trust,
@@ -27,7 +26,7 @@ from .config import (
     session_secret,
     web_export,
 )
-from .routes import advanced, codec, csp_report, errors, simple
+from .routes import advanced, assets, codec, csp_report, errors, simple
 from .routes import mds as mds_routes
 from .routes import web_export as web_export_routes
 
@@ -63,7 +62,7 @@ INIT_STEPS: tuple[Callable[[Flask], None], ...] = (
     proxy.init_app,
     compression.init_app,
     security_headers.init_app,
-    static_assets.init_app,
+    assets.init_app,
     _register_blueprints,
     relying_party.init_app,
 )
