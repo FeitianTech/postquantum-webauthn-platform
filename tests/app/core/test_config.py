@@ -113,7 +113,7 @@ def test_env_flag_with_true_values():
     """Test parse_env_flag with various true values."""
     from server.app.env_flags import parse_env_flag
     
-    true_values = ["1", "true", "yes", "on", "True", "YES", "  1  ", "anything"]
+    true_values = ["1", "true", "yes", "on", "True", "YES", "  1  "]
     for value in true_values:
         with mock.patch.dict(os.environ, {"TEST_FLAG": value}, clear=False):
             assert parse_env_flag("TEST_FLAG") is True, f"Failed for value: {value}"

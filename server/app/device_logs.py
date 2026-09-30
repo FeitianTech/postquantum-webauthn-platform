@@ -16,6 +16,7 @@ import cbor2
 
 from . import encoding
 from .encoding import encode_base64url
+from .env_flags import parse_env_flag
 from .github_client import (
     github_upload_json,
     is_logging_enabled,
@@ -36,8 +37,6 @@ _logger = logging.getLogger(__name__)
 BEIJING_TZ = ZoneInfo("Asia/Shanghai")
 TIMEZONE_LABEL = "CST"
 _LOGS_DIR = "logs"
-_TRUTHY_VALUES = {"1", "true", "yes", "on"}
-_FALSY_VALUES = {"0", "false", "no", "off", ""}
 
 
 @dataclass(frozen=True)
@@ -207,13 +206,9 @@ def _upload_worker(
 def _should_upload_async() -> bool:
     """Return ``True`` when uploads should be handed off to a background thread."""
 
-    explicit = os.environ.get("GITHUB_LOG_ASYNC")
+    explicit = parse_env_flag("GITHUB_LOG_ASYNC")
     if explicit is not None:
-        normalised = explicit.strip().lower()
-        if normalised in _TRUTHY_VALUES:
-            return True
-        if normalised in _FALSY_VALUES:
-            return False
+        return explicit
 
     # Cloud Run request-based services can throttle CPU after the HTTP response is
     # sent, so background uploads may never complete. Prefer inline delivery there.

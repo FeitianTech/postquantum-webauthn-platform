@@ -77,10 +77,6 @@ def test_is_logging_enabled_empty_string(monkeypatch):
     assert is_logging_enabled() is False
 
 
-def test_is_truthy_returns_false_for_none():
-    assert github_client._is_truthy(None) is False
-
-
 def test_api_url_uses_default_log_repository(monkeypatch):
     monkeypatch.delenv("GITHUB_LOG_REPO_OWNER", raising=False)
     monkeypatch.delenv("GITHUB_LOG_REPO_NAME", raising=False)

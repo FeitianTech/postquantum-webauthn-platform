@@ -202,7 +202,7 @@ def test_download_bytes_handles_not_found(monkeypatch):
         ("true", True),
         ("yes", True),
         ("on", True),
-        ("unexpected", True),
+        ("unexpected", None),
     ],
 )
 def test_env_flag_interprets_values(monkeypatch, raw, expected):

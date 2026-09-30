@@ -10,6 +10,7 @@ from urllib import error as urllib_error
 from urllib import request as urllib_request
 
 from .encoding import encode_base64
+from .env_flags import parse_env_flag
 
 __all__ = [
     "credential_log_repository",
@@ -23,21 +24,14 @@ __all__ = [
 _API_BASE = "https://api.github.com"
 _DEFAULT_REPO_OWNER = "rainzhang05"
 _DEFAULT_REPO_NAME = "CredentialLogs"
-_TRUTHY_VALUES = {"1", "true", "yes", "on"}
-
-
-def _is_truthy(value: str | None) -> bool:
-    if value is None:
-        return False
-    return value.strip().lower() in _TRUTHY_VALUES
 
 
 def is_logging_enabled() -> bool:
     """Return ``True`` when GitHub logging should be active."""
 
-    explicit = os.environ.get("ENABLE_GITHUB_LOGGING")
+    explicit = parse_env_flag("ENABLE_GITHUB_LOGGING")
     if explicit is not None:
-        return _is_truthy(explicit)
+        return explicit
 
     # On by default, on Cloud Run and locally alike; ENABLE_GITHUB_LOGGING=false
     # turns it off.
