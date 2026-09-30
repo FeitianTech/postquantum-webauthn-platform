@@ -260,8 +260,8 @@ Guards on the code and the checkout (`tests/app/tooling/`; each `ALLOWED` list m
 - `test_web_dev_csp.py`: the dev server's CSP is Flask's default.
 - `test_npm_lockfiles.py`: `web/package-lock.json` lists every platform's native build.
 - `test_no_silent_monkeypatch.py`: no `raising=False` / `create=True` patch.
-- `test_code_size_ratchet.py`: no function over 80 lines or module over 700 in `server/app`
-  beyond the listed ones, whose entries only go down.
+- `test_code_size_ratchet.py`: no function over 80 lines or module over 700 in `server/app`,
+  with no exceptions.
 - `test_commit_messages.py`: the commit message check.
 
 ## Linting

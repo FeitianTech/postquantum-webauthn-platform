@@ -1,10 +1,8 @@
-"""No function in server/app over 80 lines, no module over 700, except the listed ones.
+"""No function in server/app over 80 lines, and no module over 700.
 
 The big route and attestation functions were split along the stages of the work
-they do; this keeps new ones from growing. A function or module
-already over its limit is listed below at its current length. The lists only
-tighten: an entry must equal the current length (edit it down when the code
-shrinks, never up), and an entry that is now within the limit must be removed.
+they do; this keeps new ones from growing. There are no exceptions: split a
+function or a module that would pass its limit.
 
 A function's length is its ``def`` line through its last line, decorators
 excluded, nested functions counted inside their parent too. It is named
@@ -21,10 +19,6 @@ SOURCE_ROOT = REPO_ROOT / "server" / "app"
 
 MAX_FUNCTION_LINES = 80
 MAX_MODULE_LINES = 700
-
-LONG_FUNCTIONS: dict[str, int] = {}
-
-LONG_MODULES: dict[str, int] = {}
 
 
 def _functions(tree: ast.Module, path: str) -> list[tuple[str, int]]:
@@ -60,33 +54,23 @@ def _measure() -> tuple[dict[str, int], dict[str, int]]:
     return functions, modules
 
 
-def _problems(measured: dict[str, int], allowed: dict[str, int], limit: int, kind: str) -> list[str]:
-    problems = []
-    for name, length in sorted(measured.items()):
-        if length <= limit:
-            if name in allowed:
-                problems.append(f"{name} is {length} lines, within the {limit}-line limit: remove its entry")
-            continue
-        if name not in allowed:
-            problems.append(f"{name} is {length} lines, over the {limit}-line {kind} limit: split it")
-        elif length > allowed[name]:
-            problems.append(f"{name} grew from {allowed[name]} to {length} lines: split it rather than raise the entry")
-        elif length < allowed[name]:
-            problems.append(f"{name} shrank from {allowed[name]} to {length} lines: lower its entry to {length}")
-    for name in sorted(set(allowed) - set(measured)):
-        problems.append(f"{name} is listed but no longer exists: remove its entry")
-    return problems
+def _problems(measured: dict[str, int], limit: int, kind: str) -> list[str]:
+    return [
+        f"{name} is {length} lines, over the {limit}-line {kind} limit: split it"
+        for name, length in sorted(measured.items())
+        if length > limit
+    ]
 
 
 def test_no_function_is_over_its_limit():
     functions, _modules = _measure()
-    problems = _problems(functions, LONG_FUNCTIONS, MAX_FUNCTION_LINES, "function")
+    problems = _problems(functions, MAX_FUNCTION_LINES, "function")
     assert not problems, "\n".join(problems)
 
 
 def test_no_module_is_over_its_limit():
     _functions_measured, modules = _measure()
-    problems = _problems(modules, LONG_MODULES, MAX_MODULE_LINES, "module")
+    problems = _problems(modules, MAX_MODULE_LINES, "module")
     assert not problems, "\n".join(problems)
 
 
