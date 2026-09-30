@@ -1,9 +1,11 @@
-"""On Cloud Run the app refuses to start without a shared session secret.
+"""The session secret ``config.session_secret`` resolves for ``create_app()``.
 
-With ``K_SERVICE`` set and no ``FIDO_SERVER_SECRET_KEY`` or readable
+On Cloud Run the app refuses to start without a shared secret: with
+``K_SERVICE`` set and no ``FIDO_SERVER_SECRET_KEY`` or readable
 ``FIDO_SERVER_SECRET_KEY_FILE``, each instance used to generate its own key and
 only log a warning; at ``maxScale: 10`` that invalidates sessions at random.
-Local development keeps generating and persisting a key.
+Local development generates a key and keeps it in the instance folder, and still
+gets one when that folder cannot hold it.
 """
 from __future__ import annotations
 
@@ -91,3 +93,70 @@ def test_local_development_falls_back_when_the_secret_file_is_unreadable(monkeyp
     assert (tmp_path / "session-secret.key").read_bytes() == secret
     assert len(warnings) == 1
     assert "cannot be read" in warnings[0]
+
+
+@pytest.fixture
+def local_development(monkeypatch):
+    monkeypatch.delenv("K_SERVICE", raising=False)
+    monkeypatch.delenv("FIDO_SERVER_SECRET_KEY", raising=False)
+    monkeypatch.delenv("FIDO_SERVER_SECRET_KEY_FILE", raising=False)
+
+
+def _resolve(instance_path) -> bytes:
+    return session_secret._resolve_secret_key(SimpleNamespace(instance_path=str(instance_path)))
+
+
+def test_an_empty_stored_key_is_replaced_by_a_fresh_one(local_development, tmp_path):
+    (tmp_path / "session-secret.key").write_bytes(b"")
+
+    secret = _resolve(tmp_path)
+
+    assert len(secret) == 32
+    assert (tmp_path / "session-secret.key").read_bytes() == secret
+
+
+def test_a_key_path_that_is_a_directory_gives_a_fresh_key_each_time(local_development, tmp_path):
+    (tmp_path / "session-secret.key").mkdir()
+
+    first, second = _resolve(tmp_path), _resolve(tmp_path)
+
+    assert len(first) == len(second) == 32
+    assert first != second
+    # Nothing replaced the directory, and no temporary file was left beside it.
+    assert [entry.name for entry in tmp_path.iterdir()] == ["session-secret.key"]
+    assert (tmp_path / "session-secret.key").is_dir()
+
+
+def test_an_instance_folder_that_cannot_be_created_still_gives_a_key(local_development, tmp_path):
+    (tmp_path / "not-a-directory").write_bytes(b"")
+
+    secret = _resolve(tmp_path / "not-a-directory" / "instance")
+
+    assert len(secret) == 32
+    assert [entry.name for entry in tmp_path.iterdir()] == ["not-a-directory"]
+
+
+def test_a_key_that_cannot_be_written_fails_and_leaves_no_temporary_file(local_development, monkeypatch, tmp_path):
+    def _disk_full(_fd):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(session_secret.os, "fsync", _disk_full)
+
+    with pytest.raises(OSError, match="disk full"):
+        _resolve(tmp_path)
+
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_a_temporary_file_that_cannot_be_removed_does_not_hide_the_write_error(local_development, monkeypatch, tmp_path):
+    def _disk_full(_fd):
+        raise OSError("disk full")
+
+    def _busy(_path):
+        raise OSError("busy")
+
+    monkeypatch.setattr(session_secret.os, "fsync", _disk_full)
+    monkeypatch.setattr(session_secret.os, "unlink", _busy)
+
+    with pytest.raises(OSError, match="disk full"):
+        _resolve(tmp_path)

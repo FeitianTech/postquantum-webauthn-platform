@@ -1,33 +1,9 @@
 from __future__ import annotations
 
-import io
 from types import SimpleNamespace
 
-from server.app.config import compression, relying_party, session_secret
+from server.app.config import compression, relying_party
 from tests.app.entry_app import entry_app
-
-
-def test_resolve_secret_key_reads_empty_stored_key_and_generates(monkeypatch):
-    fake_app = SimpleNamespace(instance_path="/virtual-instance")
-
-    monkeypatch.delenv("FIDO_SERVER_SECRET_KEY", raising=False)
-    monkeypatch.delenv("FIDO_SERVER_SECRET_KEY_FILE", raising=False)
-    monkeypatch.setattr(session_secret.os, "urandom", lambda size: b"Z" * size)
-    monkeypatch.setattr(session_secret.os, "makedirs", lambda *_a, **_k: None)
-    monkeypatch.setattr(
-        session_secret.tempfile,
-        "mkstemp",
-        lambda **_kwargs: (_ for _ in ()).throw(OSError("skip write")),
-    )
-
-    def _open_empty_read(path, mode="r", *args, **kwargs):
-        if "rb" in mode:
-            return io.BytesIO(b"")
-        raise AssertionError(f"unexpected open mode: {mode} for {path}")
-
-    monkeypatch.setattr(session_secret, "open", _open_empty_read, raising=False)
-
-    assert session_secret._resolve_secret_key(fake_app) == b"Z" * 32
 
 
 def test_maybe_compress_response_returns_early_for_small_payload():

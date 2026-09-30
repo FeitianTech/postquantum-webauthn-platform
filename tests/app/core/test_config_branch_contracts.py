@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import builtins
 import gzip
-import types
 
 from flask import Flask
 
@@ -12,7 +10,6 @@ from server.app.config import (
     compression,
     paths,
     relying_party,
-    session_secret,
 )
 from tests.app.entry_app import entry_app
 
@@ -21,77 +18,6 @@ def test_the_project_root_is_two_levels_above_the_package():
     assert paths._PACKAGE_ROOT.parts[-2:] == ("server", "app")
     assert paths._PROJECT_ROOT == paths._PACKAGE_ROOT.parents[1]
     assert (paths._PROJECT_ROOT / "server" / "app" / "config" / "paths.py").is_file()
-
-
-def test_resolve_secret_key_handles_read_oserror_and_makedirs_failure(monkeypatch):
-    fake_app = types.SimpleNamespace(instance_path="/virtual-instance")
-
-    monkeypatch.delenv("FIDO_SERVER_SECRET_KEY", raising=False)
-    monkeypatch.delenv("FIDO_SERVER_SECRET_KEY_FILE", raising=False)
-
-    def _open_read_error(path, mode="r", *args, **kwargs):
-        if "rb" in mode:
-            raise OSError("read failure")
-        raise AssertionError("unexpected write open")
-
-    def _raise_makedirs(*_args, **_kwargs):
-        raise OSError("mkdir failure")
-
-    monkeypatch.setattr(builtins, "open", _open_read_error)
-    monkeypatch.setattr(session_secret.os, "urandom", lambda size: b"S" * size)
-    monkeypatch.setattr(session_secret.os, "makedirs", _raise_makedirs)
-
-    assert session_secret._resolve_secret_key(fake_app) == b"S" * 32
-
-
-def test_resolve_secret_key_replace_failure_cleanup_paths(monkeypatch):
-    fake_app = types.SimpleNamespace(instance_path="/virtual-instance")
-
-    monkeypatch.delenv("FIDO_SERVER_SECRET_KEY", raising=False)
-    monkeypatch.delenv("FIDO_SERVER_SECRET_KEY_FILE", raising=False)
-
-    class _DummyTarget:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
-        def write(self, _data):
-            return None
-
-        def flush(self):
-            return None
-
-        def fileno(self):
-            return 7
-
-    def _open_missing(path, mode="r", *args, **kwargs):
-        if "rb" in mode:
-            raise FileNotFoundError(path)
-        raise AssertionError("unexpected builtin open write")
-
-    def _replace_failure(*_args, **_kwargs):
-        raise OSError("replace failed")
-
-    unlink_calls = []
-
-    def _unlink_failure(path):
-        unlink_calls.append(path)
-        raise OSError("unlink failed")
-
-    monkeypatch.setattr(builtins, "open", _open_missing)
-    monkeypatch.setattr(session_secret.os, "urandom", lambda size: b"T" * size)
-    monkeypatch.setattr(session_secret.os, "makedirs", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(session_secret.tempfile, "mkstemp", lambda **_kwargs: (42, "/tmp/session-secret.tmp"))
-    monkeypatch.setattr(session_secret.os, "fdopen", lambda _fd, _mode: _DummyTarget())
-    monkeypatch.setattr(session_secret.os, "fsync", lambda _fd: None)
-    monkeypatch.setattr(session_secret.os, "replace", _replace_failure)
-    monkeypatch.setattr(session_secret.os.path, "exists", lambda _path: True)
-    monkeypatch.setattr(session_secret.os, "unlink", _unlink_failure)
-
-    assert session_secret._resolve_secret_key(fake_app) == b"T" * 32
-    assert unlink_calls
 
 
 def test_response_compression_paths_and_accepts_gzip_guard(monkeypatch):
