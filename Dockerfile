@@ -19,17 +19,6 @@ FROM python:3.12-slim AS builder
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Install build dependencies
-RUN set -eux; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        build-essential \
-        git \
-        libssl-dev \
-        libssl3 \
-        pkg-config; \
-    rm -rf /var/lib/apt/lists/*
-
 # uv reads the lockfile; the version is pinned so builds do not drift with uv releases.
 COPY --from=ghcr.io/astral-sh/uv:0.12.15 /uv /usr/local/bin/uv
 
@@ -39,15 +28,11 @@ COPY pyproject.toml uv.lock ./
 
 # Install Python dependencies into /install from uv.lock, the same lock CI and
 # local venvs install from. --locked fails the build if the lock is stale, and
-# --require-hashes rejects anything not pinned by it.
-RUN pip install --upgrade pip setuptools wheel && \
-    uv export --locked --no-dev --no-emit-local -o /tmp/requirements.txt && \
-    pip install --prefix=/install --no-cache-dir --no-deps --require-hashes \
-        -r /tmp/requirements.txt && \
-    # Remove build tools
-    apt-get purge -y build-essential git pkg-config libssl-dev && \
-    apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/*
+# --require-hashes rejects anything not pinned by it. Every locked package ships
+# wheels (cryptography bundles its own OpenSSL): nothing is compiled.
+RUN uv export --locked --no-dev --no-emit-local -o /tmp/requirements.txt && \
+    pip install --prefix=/install --no-cache-dir --no-deps --require-hashes --only-binary :all: \
+        -r /tmp/requirements.txt
 
 # Stage 2: Runtime
 FROM python:3.12-slim AS runtime
@@ -55,13 +40,12 @@ FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Only install minimal runtime deps. The upgrade pulls the base image's Debian
-# packages up to current security releases: without it the image ships whatever
-# perl-base, gzip, libpcre2 and libsqlite3 were current when the python:3.12-slim
-# tag was built, which the Trivy gate in ci-security.yml rejects.
+# The upgrade pulls the base image's Debian packages up to current security
+# releases: without it the image ships whatever perl-base, gzip, libpcre2 and
+# libsqlite3 were current when the python:3.12-slim tag was built, which the
+# Trivy gate in ci-security.yml rejects.
 RUN apt-get update && \
     apt-get upgrade -y --no-install-recommends && \
-    apt-get install -y --no-install-recommends libssl3 && \
     rm -rf /var/lib/apt/lists/* /root/.cache
 
 # Copy Python packages from builder
