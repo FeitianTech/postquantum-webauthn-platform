@@ -3,7 +3,6 @@ import base64
 import cbor2
 
 from server.app.decoder.decode import answer as decode_answer
-from server.app.decoder.decode import binary as decode_binary
 from server.app.decoder.decode import certificates as decode_certificates
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
@@ -116,8 +115,8 @@ def test_build_authenticator_data_payload_uses_bytes_and_details_to_build_creden
 
 
 def test_extract_bytes_from_binary_prefers_hex_and_then_base64url_raw():
-    assert decode_binary._extract_bytes_from_binary({"hex": "AA BB"}) == b"\xaa\xbb"
+    assert decode_answer._extract_bytes_from_binary({"hex": "AA BB"}) == b"\xaa\xbb"
 
     raw_value = base64.urlsafe_b64encode(b"\x01\x02\x03").decode("ascii").rstrip("=")
-    assert decode_binary._extract_bytes_from_binary({"raw": raw_value}) == b"\x01\x02\x03"
-    assert decode_binary._extract_bytes_from_binary({"raw": ""}) is None
+    assert decode_answer._extract_bytes_from_binary({"raw": raw_value}) == b"\x01\x02\x03"
+    assert decode_answer._extract_bytes_from_binary({"raw": ""}) is None

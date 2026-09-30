@@ -10,9 +10,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from ... import encoding
 from ...json_values import make_json_safe
 from .. import values
-from . import binary, certificates
+from . import cbor_parser, certificates
 from .binary import (
     _convert_cose_key_for_display,
     _describe_cose_key,
@@ -191,7 +192,7 @@ def _convert_attestation_object_data(result: Mapping[str, Any]) -> dict[str, Any
 
     authenticator_details = decoded.get("authenticatorData") if isinstance(decoded, Mapping) else None
     authenticator_section = _build_authenticator_data_payload(
-        binary._extract_authenticator_bytes_from_attestation(decoded),
+        _extract_authenticator_bytes_from_attestation(decoded),
         authenticator_details,
         decoded.get("publicKeyAlgorithm") if isinstance(decoded, Mapping) else None,
     )
@@ -208,9 +209,9 @@ def _convert_attestation_object_data(result: Mapping[str, Any]) -> dict[str, Any
 def _convert_authenticator_data_result(result: Mapping[str, Any]) -> dict[str, Any]:
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
     result.get("binary")
-    auth_bytes = binary._extract_bytes_from_binary(result.get("binary"))
+    auth_bytes = _extract_bytes_from_binary(result.get("binary"))
     if auth_bytes is None:
-        auth_bytes = binary._extract_bytes_from_binary(decoded)
+        auth_bytes = _extract_bytes_from_binary(decoded)
     authenticator_section = _build_authenticator_data_payload(
         auth_bytes,
         decoded,
@@ -247,7 +248,7 @@ def _build_authenticator_section(
     response_mapping = response if isinstance(response, Mapping) else {}
     attestation_mapping = attestation_entry if isinstance(attestation_entry, Mapping) else {}
 
-    auth_bytes = binary._extract_authenticator_bytes(response_mapping, attestation_entry)
+    auth_bytes = _extract_authenticator_bytes(response_mapping, attestation_entry)
 
     details = None
     auth_entry = response_mapping.get("authenticatorData")
@@ -582,3 +583,63 @@ def _collect_response_extras(response: Any) -> dict[str, Any]:
             extras[field] = make_json_safe(response[field])
 
     return extras
+
+
+def _extract_hex_from_binary(entry: Any) -> str | None:
+    if not isinstance(entry, Mapping):
+        return None
+    direct_hex = entry.get("hex")
+    if isinstance(direct_hex, str) and direct_hex:
+        return direct_hex
+    binary = entry.get("binary")
+    if isinstance(binary, Mapping):
+        hex_value = binary.get("hex")
+        if isinstance(hex_value, str) and hex_value:
+            return hex_value
+    return None
+
+
+def _extract_bytes_from_binary(entry: Any) -> bytes | None:
+    if not isinstance(entry, Mapping):
+        return None
+    hex_value = _extract_hex_from_binary(entry)
+    if isinstance(hex_value, str):
+        decoded = encoding.try_decode_hex(hex_value)
+        if decoded is not None:
+            return decoded
+
+    raw_value = entry.get("raw")
+    if isinstance(raw_value, str) and raw_value:
+        return encoding.try_decode_base64url(raw_value)
+
+    return None
+
+
+def _extract_authenticator_bytes(response: Any, attestation_entry: Any = None) -> bytes | None:
+    if isinstance(response, Mapping):
+        auth_entry = response.get("authenticatorData")
+        auth_bytes = _extract_bytes_from_binary(auth_entry)
+        if auth_bytes is not None:
+            return auth_bytes
+        if attestation_entry is None:
+            attestation_entry = response.get("attestationObject")
+    return _extract_authenticator_bytes_from_attestation(attestation_entry)
+
+
+def _extract_authenticator_bytes_from_attestation(attestation_entry: Any) -> bytes | None:
+    attestation_bytes = _extract_bytes_from_binary(attestation_entry)
+    if attestation_bytes is None and isinstance(attestation_entry, Mapping):
+        raw_value = attestation_entry.get("raw")
+        if isinstance(raw_value, str) and raw_value:
+            attestation_bytes = encoding.try_decode_base64(raw_value)
+
+    if attestation_bytes is None:
+        return None
+
+    try:
+        node, _, _ = cbor_parser.decode_item(attestation_bytes)
+    except ValueError:
+        return None
+    attestation = cbor_parser._structure_to_value(node)
+    auth_data = attestation.get("authData") if isinstance(attestation, Mapping) else None
+    return auth_data if isinstance(auth_data, bytes) else None

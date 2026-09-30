@@ -64,7 +64,7 @@ def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, binar
     assert pk_data["clientDataJSON"]["type"] == "webauthn.create"
     assert pk_data["responseDetails"]["signature"] == "aa"
 
-    monkeypatch.setattr(binary, "_extract_authenticator_bytes_from_attestation", lambda _e: b"\x00" * 37)
+    monkeypatch.setattr(decode_answer, "_extract_authenticator_bytes_from_attestation", lambda _e: b"\x00" * 37)
     monkeypatch.setattr(decode_answer, "_build_authenticator_data_payload", lambda *_a, **_k: {"flags": {"UP": True}})
     att_obj_data = decode_answer._convert_attestation_object_data(
         {"decoded": {"extensions": {"credProps": {"rk": True}}}, "binary": {"base64": "AQI="}}

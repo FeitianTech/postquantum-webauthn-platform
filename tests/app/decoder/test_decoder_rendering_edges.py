@@ -4,7 +4,6 @@ import hashlib
 import cbor2
 
 from server.app.decoder.decode import answer as decode_answer
-from server.app.decoder.decode import binary as decode_binary
 
 
 def _build_authenticator_data_bytes() -> bytes:
@@ -58,7 +57,7 @@ def test_extract_authenticator_bytes_from_attestation_parses_valid_object_and_ha
     attestation_bytes, auth_data_bytes = _build_attestation_object_bytes()
     attestation_entry = {"raw": base64.b64encode(attestation_bytes).decode("ascii")}
 
-    extracted = decode_binary._extract_authenticator_bytes_from_attestation(attestation_entry)
+    extracted = decode_answer._extract_authenticator_bytes_from_attestation(attestation_entry)
     assert extracted == auth_data_bytes
 
-    assert decode_binary._extract_authenticator_bytes_from_attestation({"raw": "%%%%"}) is None
+    assert decode_answer._extract_authenticator_bytes_from_attestation({"raw": "%%%%"}) is None
