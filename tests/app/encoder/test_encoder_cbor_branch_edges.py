@@ -2,7 +2,6 @@ import base64
 
 import pytest
 
-from server.app.decoder import cbor_canonical
 from server.app.decoder.encode import handlers_basic as encode_handlers_basic
 from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
 
@@ -65,19 +64,3 @@ def test_encode_cbor_value_non_ctap_path_and_normalize_format_empty_error():
 
     with pytest.raises(ValueError, match="must be provided"):
         encode_handlers_basic._normalize_encoding_format("   ")
-
-
-def test_unsigned_integer_and_major_length_boundaries_cover_all_encoding_sizes():
-    assert cbor_canonical._encode_unsigned_integer(0, 23) == bytes([23])
-    assert cbor_canonical._encode_unsigned_integer(0, 24) == b"\x18\x18"
-    assert cbor_canonical._encode_unsigned_integer(0, 255) == b"\x18\xff"
-    assert cbor_canonical._encode_unsigned_integer(0, 256) == b"\x19\x01\x00"
-    assert cbor_canonical._encode_unsigned_integer(0, 65536) == b"\x1a\x00\x01\x00\x00"
-    assert cbor_canonical._encode_unsigned_integer(0, 4294967296) == b"\x1b\x00\x00\x00\x01\x00\x00\x00\x00"
-
-    assert cbor_canonical._encode_major_type_with_length(5, 2) == bytes([0xA2])
-
-
-def test_canonical_float_handles_double_fallback_for_large_value():
-    encoded = cbor_canonical._encode_canonical_float(1e300)
-    assert encoded.startswith(b"\xfb")

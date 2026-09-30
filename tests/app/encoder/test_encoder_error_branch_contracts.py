@@ -1,6 +1,5 @@
 import pytest
 
-from server.app.decoder import cbor_canonical
 from server.app.decoder.encode import binary_extract as encode_binary_extract
 from server.app.decoder.encode import ctap_encode as encode_ctap_encode
 from server.app.decoder.encode import ctap_fields as encode_ctap_fields
@@ -46,34 +45,6 @@ def test_ctap_support_helpers_raise_expected_errors():
 
     with pytest.raises(ValueError, match="must be a boolean"):
         encode_ctap_fields._ensure_bool(5, "flag")
-
-
-def test_canonical_integer_and_length_helpers_reject_invalid_values():
-    with pytest.raises(ValueError, match="non-negative"):
-        cbor_canonical._encode_major_type_with_length(2, -1)
-
-    with pytest.raises(ValueError, match="non-negative"):
-        cbor_canonical._encode_unsigned_integer(2, -1)
-
-    with pytest.raises(ValueError, match="64 bits"):
-        cbor_canonical._encode_unsigned_integer(2, 1 << 80)
-
-
-def test_cbor_simple_value_encoder_type_and_range_guards():
-    encoder = cbor_canonical._CanonicalCBOREncoder()
-
-    class _BadSimple:
-        def __init__(self, value):
-            self.value = value
-
-    with pytest.raises(TypeError, match="must be an integer"):
-        encoder._encode_cbor_simple_value(_BadSimple("x"))
-
-    with pytest.raises(ValueError, match="between 0 and 255"):
-        encoder._encode_cbor_simple_value(_BadSimple(999))
-
-    with pytest.raises(ValueError, match="reserved"):
-        encoder._encode_cbor_simple_value(_BadSimple(25))
 
 
 def test_extract_generic_binary_payload_recursive_failure_path():

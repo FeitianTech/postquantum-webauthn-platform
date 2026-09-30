@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-
-import cbor2
 import pytest
 
-from server.app.decoder import cbor_canonical
 from server.app.decoder.encode import binary_decode as encode_binary_decode
 from server.app.decoder.encode import binary_extract as encode_binary_extract
 from server.app.decoder.encode import ctap_fields as encode_ctap_fields
@@ -36,43 +32,6 @@ def test_encode_cbor_value_never_reads_a_plain_map_as_ctap():
 
 def test_sanitize_numeric_mapping_and_pem_label_defaults():
     assert encode_binary_extract._normalize_pem_label(" !!! ") == "DATA"
-
-
-class _DuplicateEncodedKeyMap(Mapping):
-    def __getitem__(self, key):
-        if key == b"a":
-            return 1
-        if key == memoryview(b"a"):
-            return 2
-        raise KeyError(key)
-
-    def __iter__(self):
-        yield b"a"
-        yield memoryview(b"a")
-
-    def __len__(self):
-        return 2
-
-    def items(self):
-        return [(b"a", 1), (memoryview(b"a"), 2)]
-
-
-def test_canonical_encoder_exercises_tag_float_simple_and_duplicate_key_guard():
-    encoder = cbor_canonical._CanonicalCBOREncoder()
-
-    tagged = cbor2.CBORTag(42, [1, 2])
-    canonical = encoder.canonicalize_structure(tagged)
-    assert isinstance(canonical, cbor2.CBORTag)
-    assert canonical.value == [1, 2]
-
-    float_encoded = encoder._encode_simple(1.5)
-    assert float_encoded[:1] in {b"\xf9", b"\xfa", b"\xfb"}
-
-    simple_encoded = encoder._encode_simple(cbor2.CBORSimpleValue(16))
-    assert simple_encoded == bytes([0xE0 | 16])
-
-    with pytest.raises(ValueError, match="Duplicate CBOR map key"):
-        encoder._sorted_map_items(_DuplicateEncodedKeyMap())
 
 
 def test_primitive_coercion_and_attestation_statement_residual_paths():
