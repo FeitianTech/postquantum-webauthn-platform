@@ -6,7 +6,7 @@ from types import MappingProxyType, SimpleNamespace
 
 import pytest
 
-from server.app import mds_snapshot_dir
+from server.app.mds import files as mds_files
 from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import effective as metadata_effective
@@ -143,7 +143,7 @@ def test_base_explorer_snapshot_and_summary_and_resolution_session_match(metadat
     assert marker == (None, None, None, None)
 
     def _getmtime_ordered(path):
-        if path == blob._path(mds_snapshot_dir.EXPLORER):
+        if path == blob._path(mds_files.EXPLORER):
             return 10.0
         return 5.0
 

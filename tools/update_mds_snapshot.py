@@ -23,8 +23,8 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 # Imported after the sys.path bootstrap above.
-from server.app import mds_snapshot_dir  # noqa: E402
 from server.app.mds import blob as mds_blob  # noqa: E402
+from server.app.mds import files as mds_files  # noqa: E402
 from server.app.mds.trust import FIDO_METADATA_TRUST_ROOT_CERT  # noqa: E402
 from server.app.mds_snapshot import (  # noqa: E402
     build_bootstrap_snapshot,
@@ -32,7 +32,7 @@ from server.app.mds_snapshot import (  # noqa: E402
 )
 
 MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
-MDS_METADATA_FILENAME = mds_snapshot_dir.BLOB
+MDS_METADATA_FILENAME = mds_files.BLOB
 
 MDS_DOWNLOAD_MAX_ATTEMPTS = 5
 MDS_DOWNLOAD_BACKOFF_BASE_SECONDS = 10
@@ -44,7 +44,7 @@ def _path(name: str) -> Path:
     """A snapshot file, in the directory the server reads it from
     (``FIDO_SERVER_MDS_SNAPSHOT_DIR``, else ``instance/mds-snapshot``)."""
 
-    return mds_snapshot_dir.snapshot_file(name)
+    return mds_files.snapshot_file(name)
 
 
 
@@ -121,7 +121,7 @@ def _fetch_remote_blob_with_retry() -> tuple[bytes, str | None, str | None]:
 
 
 def _write_blob(blob: bytes) -> None:
-    path = _path(mds_snapshot_dir.BLOB)
+    path = _path(mds_files.BLOB)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(blob)
 
@@ -157,15 +157,15 @@ def _write_if_changed(path: Path, payload: str | bytes) -> bool:
     if path.exists() and path.read_bytes() == new_bytes:
         return False
 
-    mds_snapshot_dir.write_file(path, new_bytes)
+    mds_files.write_file(path, new_bytes)
     return True
 
 
 def _load_existing_cache() -> dict[str, object]:
-    if not _path(mds_snapshot_dir.VERIFIED_META).exists():
+    if not _path(mds_files.VERIFIED_META).exists():
         return {}
     try:
-        data = json.loads(_path(mds_snapshot_dir.VERIFIED_META).read_text(encoding="utf-8"))
+        data = json.loads(_path(mds_files.VERIFIED_META).read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return {}
     return data if isinstance(data, dict) else {}
@@ -244,13 +244,13 @@ def snapshot_files(
         build_bootstrap_snapshot(verified_snapshot, cache_state)
     )
     return {
-        mds_snapshot_dir.BLOB: blob,
-        mds_snapshot_dir.VERIFIED: _serialise_json(verified_snapshot).encode("utf-8"),
-        mds_snapshot_dir.VERIFIED_META: _serialise_json(cache_state).encode("utf-8"),
-        mds_snapshot_dir.EXPLORER: _serialise_json(explorer_snapshot).encode("utf-8"),
-        mds_snapshot_dir.EXPLORER_META: _serialise_json(explorer_snapshot.get("meta", {})).encode("utf-8"),
-        mds_snapshot_dir.EXPLORER_FULL: _serialise_compact_json(full_snapshot).encode("utf-8"),
-        mds_snapshot_dir.EXPLORER_FULL_META: _serialise_json(full_snapshot.get("meta", {})).encode("utf-8"),
+        mds_files.BLOB: blob,
+        mds_files.VERIFIED: _serialise_json(verified_snapshot).encode("utf-8"),
+        mds_files.VERIFIED_META: _serialise_json(cache_state).encode("utf-8"),
+        mds_files.EXPLORER: _serialise_json(explorer_snapshot).encode("utf-8"),
+        mds_files.EXPLORER_META: _serialise_json(explorer_snapshot.get("meta", {})).encode("utf-8"),
+        mds_files.EXPLORER_FULL: _serialise_compact_json(full_snapshot).encode("utf-8"),
+        mds_files.EXPLORER_FULL_META: _serialise_json(full_snapshot.get("meta", {})).encode("utf-8"),
     }
 
 
@@ -313,7 +313,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"::error::Failed to download metadata BLOB: {exc}")
         return 1
 
-    current_path = _path(mds_snapshot_dir.BLOB)
+    current_path = _path(mds_files.BLOB)
     blob_unchanged = current_path.exists() and current_path.read_bytes() == new_blob
 
     try:
@@ -341,12 +341,12 @@ def main(argv: list[str] | None = None) -> int:
     # Each file whole, the payloads before the metas that describe them, so the
     # server reading the directory meanwhile never takes a new meta for an old file.
     changed = False
-    for name in mds_snapshot_dir.WRITE_ORDER:
+    for name in mds_files.WRITE_ORDER:
         written = _write_if_changed(_path(name), files[name])
         changed |= written
-        if name in mds_snapshot_dir.BROWSER_FILENAMES and not written:
+        if name in mds_files.BROWSER_FILENAMES and not written:
             # Rewritten every run, so a sibling from an earlier file never outlives it.
-            mds_snapshot_dir.write_gzip_sibling(_path(name), files[name])
+            mds_files.write_gzip_sibling(_path(name), files[name])
 
     if changed:
         print("Packaged metadata snapshot refreshed.")

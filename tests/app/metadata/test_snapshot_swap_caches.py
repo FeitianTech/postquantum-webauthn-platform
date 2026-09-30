@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import os
 
-from server.app import mds_snapshot_dir
+from server.app.mds import files as mds_files
 from server.app.webauthn.metadata import blob
 from tests.app.metadata.snapshot_versions import snapshot_version
 
 
 def _replace_one_by_one(directory, files, order, loads):
-    stamp = os.path.getmtime(directory / mds_snapshot_dir.VERIFIED)
+    stamp = os.path.getmtime(directory / mds_files.VERIFIED)
     for step, name in enumerate(order, start=1):
         path = directory / name
         path.write_bytes(files[name])
@@ -30,8 +30,8 @@ def test_the_full_snapshot_follows_every_file_it_was_built_from(mds_fixture_snap
 
     # The verified snapshot first: until the rest lands, the old explorer rows
     # still agree with the old metas and are what a request gets.
-    order = (mds_snapshot_dir.VERIFIED,) + tuple(
-        name for name in mds_snapshot_dir.SNAPSHOT_FILENAMES if name != mds_snapshot_dir.VERIFIED
+    order = (mds_files.VERIFIED,) + tuple(
+        name for name in mds_files.SNAPSHOT_FILENAMES if name != mds_files.VERIFIED
     )
     _replace_one_by_one(
         mds_fixture_snapshot,
@@ -51,8 +51,8 @@ def test_the_metas_landing_last_move_every_cache(mds_fixture_snapshot):
     blob._load_base_full_snapshot()
     blob._load_base_explorer_snapshot()
 
-    payloads = tuple(name for name in mds_snapshot_dir.SNAPSHOT_FILENAMES if not name.endswith(".meta.json"))
-    metas = tuple(name for name in mds_snapshot_dir.SNAPSHOT_FILENAMES if name.endswith(".meta.json"))
+    payloads = tuple(name for name in mds_files.SNAPSHOT_FILENAMES if not name.endswith(".meta.json"))
+    metas = tuple(name for name in mds_files.SNAPSHOT_FILENAMES if name.endswith(".meta.json"))
     _replace_one_by_one(
         mds_fixture_snapshot,
         newer,

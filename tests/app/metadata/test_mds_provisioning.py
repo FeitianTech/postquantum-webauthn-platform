@@ -8,7 +8,8 @@ import sys
 import pytest
 
 from server.app import mds_provisioning as provisioning
-from server.app import mds_snapshot_dir, mds_snapshot_sets
+from server.app import mds_snapshot_sets
+from server.app.mds import files as mds_files
 from tests.app.metadata.snapshot_versions import snapshot_version
 from tests.app.storage import fake_gcs
 
@@ -84,7 +85,7 @@ def test_a_set_that_is_not_the_one_named_falls_back_to_the_flat_objects(static_r
     for name, data in snapshot_version(7).items():
         gcs.put(f"mds/{name}", data)
     pointer = mds_snapshot_sets.publish(snapshot_version(8)).pointer
-    gcs.put(pointer["set"] + mds_snapshot_dir.VERIFIED, b"{}")
+    gcs.put(pointer["set"] + mds_files.VERIFIED, b"{}")
 
     assert provisioning.ensure_snapshot_available() == "gcs"
     assert _local(static_root) == snapshot_version(7)
@@ -113,7 +114,7 @@ def test_an_empty_bucket_falls_through_to_an_upstream_refresh_it_publishes(stati
 
     def _refresh(argv):
         for name, data in snapshot_version(9).items():
-            mds_snapshot_dir.write_file(static_root / name, data)
+            mds_files.write_file(static_root / name, data)
         return 0
 
     monkeypatch.setattr(update_mds_snapshot, "main", _refresh)
@@ -179,7 +180,7 @@ def test_the_blob_prefix_is_configurable(monkeypatch, app_config):
 
 
 def test_an_incompressible_payload_gets_no_gzip_sibling(static_root, monkeypatch):
-    monkeypatch.setattr(mds_snapshot_dir.gzip, "compress", lambda data, **kwargs: data + b"pad")
+    monkeypatch.setattr(mds_files.gzip, "compress", lambda data, **kwargs: data + b"pad")
 
     provisioning.write_snapshot_file("fido-mds3.explorer.full.json", b"z" * 4096)
 

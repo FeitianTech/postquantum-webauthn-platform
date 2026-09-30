@@ -13,7 +13,7 @@ import os
 
 import pytest
 
-from server.app import mds_snapshot_dir
+from server.app.mds import files as mds_files
 from tests.app.metadata import mds_fixture
 
 
@@ -35,11 +35,11 @@ def test_the_committed_fixture_is_what_the_generator_builds():
 
 
 def _full_snapshot():
-    return json.loads((mds_fixture.SNAPSHOT_DIR / mds_snapshot_dir.EXPLORER_FULL).read_text(encoding="utf-8"))
+    return json.loads((mds_fixture.SNAPSHOT_DIR / mds_files.EXPLORER_FULL).read_text(encoding="utf-8"))
 
 
 def test_the_fixture_is_a_whole_snapshot():
-    assert sorted(path.name for path in mds_fixture.SNAPSHOT_DIR.iterdir()) == sorted(mds_snapshot_dir.SNAPSHOT_FILENAMES)
+    assert sorted(path.name for path in mds_fixture.SNAPSHOT_DIR.iterdir()) == sorted(mds_files.SNAPSHOT_FILENAMES)
 
 
 def test_the_fixture_holds_what_the_explorer_must_show_well():
@@ -79,7 +79,7 @@ def test_flask_serves_the_fixture(mds_fixture_snapshot, client):
     # A file response holds the file open until it is closed.
     with client.get("/assets/mds/fido-mds3.explorer.full.json") as static:
         assert static.status_code == 200
-        assert static.data == (mds_fixture_snapshot / mds_snapshot_dir.EXPLORER_FULL).read_bytes()
+        assert static.data == (mds_fixture_snapshot / mds_files.EXPLORER_FULL).read_bytes()
 
     resolved = client.get("/api/mds/metadata/resolve", query_string={"aaid": "F1D0#0012"})
     assert resolved.status_code == 200
@@ -108,7 +108,7 @@ def test_an_uploaded_statement_joins_the_fixture(mds_fixture_snapshot, client):
     assert removed.get_json()["snapshot"]["meta"]["customEntryCount"] == 0
 
 
-@pytest.mark.parametrize("name", mds_snapshot_dir.SNAPSHOT_FILENAMES)
+@pytest.mark.parametrize("name", mds_files.SNAPSHOT_FILENAMES)
 def test_serving_the_fixture_never_writes_to_it(mds_fixture_snapshot, client, name):
     before = (mds_fixture.SNAPSHOT_DIR / name).read_bytes()
     client.get("/api/mds/metadata/explorer/full")
@@ -121,7 +121,7 @@ def test_resolve_serves_a_packaged_entry_as_the_blob_has_it(mds_fixture_snapshot
     # nor a field no MDS3 version defines yet: none may be lost on the way.
     blob_entry = next(
         entry
-        for entry in json.loads((mds_fixture_snapshot / mds_snapshot_dir.VERIFIED).read_text())["entries"]
+        for entry in json.loads((mds_fixture_snapshot / mds_files.VERIFIED).read_text())["entries"]
         if entry.get("aaguid") == "f1d0f1d0-0000-4000-8000-000000000001"
     )
 
@@ -138,7 +138,7 @@ def test_resolve_serves_a_packaged_entry_as_the_blob_has_it(mds_fixture_snapshot
 def test_raw_entries_follow_only_the_file_the_metadata_was_read_from(mds_fixture_snapshot, monkeypatch):
     from server.app.webauthn.metadata import blob
 
-    verified = mds_fixture_snapshot / mds_snapshot_dir.VERIFIED
+    verified = mds_fixture_snapshot / mds_files.VERIFIED
     mtime = os.path.getmtime(verified)
 
     assert blob._load_base_raw_entries(None) is None

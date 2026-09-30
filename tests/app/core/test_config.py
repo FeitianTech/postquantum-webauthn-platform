@@ -135,13 +135,13 @@ def test_basepath():
 
 def test_mds_metadata_paths(monkeypatch):
     """The snapshot's files are absolute paths in one directory."""
-    from server.app import mds_snapshot_dir
+    from server.app.mds import files as mds_files
 
     monkeypatch.delenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", raising=False)
-    for name in mds_snapshot_dir.SNAPSHOT_FILENAMES:
-        path = mds_snapshot_dir.snapshot_file(name)
+    for name in mds_files.SNAPSHOT_FILENAMES:
+        path = mds_files.snapshot_file(name)
         assert path.is_absolute()
-        assert path.parent == mds_snapshot_dir.DEFAULT_SNAPSHOT_DIR
+        assert path.parent == mds_files.DEFAULT_SNAPSHOT_DIR
 
 
 def test_create_fido_server():

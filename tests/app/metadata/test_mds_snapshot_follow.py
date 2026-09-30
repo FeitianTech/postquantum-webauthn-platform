@@ -12,7 +12,8 @@ import threading
 
 import pytest
 
-from server.app import mds_provisioning, mds_snapshot_dir, mds_snapshot_sets
+from server.app import mds_provisioning, mds_snapshot_sets
+from server.app.mds import files as mds_files
 from tests.app.metadata.snapshot_versions import snapshot_version
 from tests.app.storage import fake_gcs
 
@@ -22,8 +23,8 @@ def instance(monkeypatch, tmp_path, metadata_state):
     """A running instance with snapshot no. 7, and Cloud Storage as an in-memory bucket."""
 
     directory = tmp_path / "mds-snapshot"
-    for name in mds_snapshot_dir.WRITE_ORDER:
-        mds_snapshot_dir.write_file(directory / name, snapshot_version(7)[name])
+    for name in mds_files.WRITE_ORDER:
+        mds_files.write_file(directory / name, snapshot_version(7)[name])
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(directory))
     monkeypatch.delenv("FIDO_SERVER_MDS_GCS_PREFIX", raising=False)
     monkeypatch.setenv("FIDO_SERVER_MDS_POINTER_CHECK_SECONDS", "0")
@@ -36,7 +37,7 @@ def instance(monkeypatch, tmp_path, metadata_state):
 
 
 def _local(directory):
-    return {name: (directory / name).read_bytes() for name in mds_snapshot_dir.SNAPSHOT_FILENAMES}
+    return {name: (directory / name).read_bytes() for name in mds_files.SNAPSHOT_FILENAMES}
 
 
 def _info(client):
@@ -118,11 +119,11 @@ def test_a_failed_follow_keeps_the_snapshot(instance, client, failure):
     directory, bucket = instance
     pointer = mds_snapshot_sets.publish(snapshot_version(8)).pointer
     if failure == "a file not the one named":
-        bucket.put(pointer["set"] + mds_snapshot_dir.EXPLORER_FULL, b"{}")
+        bucket.put(pointer["set"] + mds_files.EXPLORER_FULL, b"{}")
     elif failure == "the bucket unreachable":
         bucket.failing["mds/current.json"] = fake_gcs.ServiceUnavailable("unreachable")
     else:
-        del bucket.objects[pointer["set"] + mds_snapshot_dir.EXPLORER_FULL_META]
+        del bucket.objects[pointer["set"] + mds_files.EXPLORER_FULL_META]
 
     no, url = _info(client)
     assert no == 7 and "?v=7." in url

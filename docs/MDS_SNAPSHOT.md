@@ -25,7 +25,7 @@ served under a URL of its own.
 
 ## Where the files are
 
-`server/app/mds_snapshot_dir.py` names the seven files once and says where they are:
+`server/app/mds/files.py` names the seven files once and says where they are:
 `snapshot_dir()` reads `FIDO_SERVER_MDS_SNAPSHOT_DIR` whenever a path is needed, and
 without it answers `instance/mds-snapshot` (in the image, `/app/instance/mds-snapshot`;
 `docker compose` mounts `./instance`, so a local container keeps its copy there). It is a leaf with no Flask import, so every
@@ -92,10 +92,10 @@ own bucket, and **off** locally, so a first request never silently blocks on a
 
 Whatever writes the snapshot (the Cloud Storage tier, a running instance taking a
 newer set, the updater) writes each file whole, through a temporary file renamed over
-it, the payloads first and the three metas last (`mds_snapshot_dir.write_file`,
+it, the payloads first and the three metas last (`mds/files.py`'s `write_file`,
 `WRITE_ORDER`). With the browser-facing `fido-mds3.explorer.full.json` goes its
 precompressed `.gz` sibling, or the removal of a sibling left from an earlier file
-when the new one does not compress smaller (`mds_snapshot_dir.write_gzip_sibling`),
+when the new one does not compress smaller (`mds/files.py`'s `write_gzip_sibling`),
 so a gzip client is never sent an older snapshot. The server's metadata caches key on
 every file they are built from (`blob._mtimes`): a request that reads a snapshot
 halfway through its replacement may answer from the mix once, but never keeps it.
@@ -139,7 +139,7 @@ python tools/update_mds_snapshot.py --verify-only
 
 ## Snapshot sets in Cloud Storage
 
-`server/app/mds_snapshot_sets.py` (a leaf, like `mds_snapshot_dir`) keeps the bucket's
+`server/app/mds_snapshot_sets.py` (a leaf, like `mds/files.py`) keeps the bucket's
 snapshot as immutable sets and a pointer:
 
 - **A set** is the seven files under `mds/sets/1/<serial>-<random>/` (`1` is the

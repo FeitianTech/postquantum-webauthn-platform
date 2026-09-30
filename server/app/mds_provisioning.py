@@ -5,7 +5,7 @@ payload and the explorer views). It is not tracked in git and is not baked into
 the container image, so a daily refresh no longer rewrites repository history or
 invalidates a Docker layer. Instead the files are materialised into
 the snapshot directory (``instance/mds-snapshot`` unless
-``FIDO_SERVER_MDS_SNAPSHOT_DIR`` names another, ``server.app.mds_snapshot_dir``) on
+``FIDO_SERVER_MDS_SNAPSHOT_DIR`` names another, ``server.app.mds.files``) on
 demand, in three tiers:
 
 1. **Local files.** Anything already on disk is used as-is. This is the path a
@@ -38,8 +38,9 @@ import threading
 import time
 from pathlib import Path
 
-from . import mds_snapshot_dir, mds_snapshot_sets
+from . import mds_snapshot_sets
 from .env_flags import parse_env_flag
+from .mds import files as mds_files
 from .storage import cloud
 
 logger = logging.getLogger(__name__)
@@ -58,7 +59,7 @@ __all__ = [
 # their .meta.json companions are generated together and describe each other, so
 # they are provisioned together too; mixing generations would make the freshness
 # check in metadata/blob.py compare mismatched snapshots.
-SNAPSHOT_FILENAMES = mds_snapshot_dir.SNAPSHOT_FILENAMES
+SNAPSHOT_FILENAMES = mds_files.SNAPSHOT_FILENAMES
 
 
 _DEFAULT_BLOB_PREFIX = "mds"
@@ -79,7 +80,7 @@ _follow_state: dict[str, float | None] = {"checked_at": None}
 
 
 def snapshot_path(filename: str) -> Path:
-    return mds_snapshot_dir.snapshot_file(filename)
+    return mds_files.snapshot_file(filename)
 
 
 def snapshot_blob_name(filename: str) -> str:
@@ -108,14 +109,14 @@ def write_snapshot_file(filename: str, data: bytes) -> Path:
     """Write one snapshot file, plus its .gz sibling where browsers need one."""
 
     path = snapshot_path(filename)
-    mds_snapshot_dir.write_file(path, data)
+    mds_files.write_file(path, data)
     return path
 
 
 def _write_set(files: dict[str, bytes]) -> None:
     """Write a complete set, payloads first and metas last (``WRITE_ORDER``)."""
 
-    for filename in mds_snapshot_dir.WRITE_ORDER:
+    for filename in mds_files.WRITE_ORDER:
         write_snapshot_file(filename, files[filename])
 
 
@@ -250,7 +251,7 @@ def _pointer_check_seconds() -> float:
 
 def _local_snapshot_no() -> int | None:
     try:
-        meta = json.loads(snapshot_path(mds_snapshot_dir.VERIFIED_META).read_text(encoding="utf-8"))
+        meta = json.loads(snapshot_path(mds_files.VERIFIED_META).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
     no = meta.get("no") if isinstance(meta, dict) else None

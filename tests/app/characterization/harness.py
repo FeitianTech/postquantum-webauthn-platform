@@ -172,7 +172,8 @@ class Environment:
         )
         mp.setattr(uuid, "uuid4", lambda: uuid.UUID(bytes=stream.take(16), version=4))
 
-        from server.app import device_logs, mds_snapshot_dir
+        from server.app import device_logs
+        from server.app.mds import files as mds_files
         from server.app.webauthn.metadata import sessions
         from server.app.webauthn.metadata import verifier as metadata_verifier
 
@@ -186,7 +187,7 @@ class Environment:
         if not _SNAPSHOT_GUARD["installed"]:
             sys.addaudithook(_audit)
             _SNAPSHOT_GUARD["installed"] = True
-        _SNAPSHOT_GUARD["root"] = str(mds_snapshot_dir.DEFAULT_SNAPSHOT_DIR)
+        _SNAPSHOT_GUARD["root"] = str(mds_files.DEFAULT_SNAPSHOT_DIR)
         _SNAPSHOT_GUARD["hits"] = []
 
     def close(self) -> None:

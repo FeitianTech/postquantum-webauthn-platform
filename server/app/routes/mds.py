@@ -19,8 +19,9 @@ from flask import (
     session,
 )
 
-from .. import encoding, mds_provisioning, mds_snapshot_dir
+from .. import encoding, mds_provisioning
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
+from ..mds import files as mds_files
 from ..webauthn.attestation import certificates as attestation_certificates
 from ..webauthn.metadata import blob as metadata_blob
 from ..webauthn.metadata import effective as metadata_effective
@@ -33,7 +34,7 @@ from . import assets
 bp = Blueprint("mds", __name__)
 
 
-_MDS_EXPLORER_FULL_STATIC_FILENAME = mds_snapshot_dir.EXPLORER_FULL
+_MDS_EXPLORER_FULL_STATIC_FILENAME = mds_files.EXPLORER_FULL
 _MDS_CUSTOM_ENTRIES_SESSION_KEY = "fido.mds.custom"
 
 

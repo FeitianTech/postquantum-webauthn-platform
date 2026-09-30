@@ -187,7 +187,7 @@ their exports or sentences. A new surface splits its logic out here first.
   generates `instance/session-secret.key`, and tests never do.
 - `mds/trust.py` (the MDS trust anchor), `mds/blob.py` (the BLOB's chain to that root, which
   may end in a cross-certificate fido2's `parse_blob` refuses, its signature and payload),
-  `mds_snapshot_dir.py` (the snapshot's file names, its directory, the whole-file and `.gz`
+  `mds/files.py` (the snapshot's file names, its directory, the whole-file and `.gz`
   sibling writers) and `mds_snapshot_sets.py` (the snapshot in Cloud Storage) are Flask-free
   leaves the updater imports.
 - Routes: `routes/simple/` and `routes/advanced/` (begin/complete; the bodies are short

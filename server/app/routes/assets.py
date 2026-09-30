@@ -15,7 +15,8 @@ from urllib.parse import quote
 
 from flask import Blueprint, Flask, abort, request
 
-from .. import mds_provisioning, mds_snapshot_dir
+from .. import mds_provisioning
+from ..mds import files as mds_files
 from ..webauthn.metadata import blob as metadata_blob
 from . import web_export
 
@@ -25,8 +26,8 @@ _ASSET_SEGMENT = "mds"
 # Of the MDS snapshot's files (and the .gz sibling written next to the browsers'
 # copy), browsers get only that copy, at its versioned URL, from the snapshot
 # directory: no route serves the rest, nor any of them at the site root.
-_SNAPSHOT_FILES = frozenset(mds_snapshot_dir.SNAPSHOT_FILENAMES) | frozenset(
-    f"{name}.gz" for name in mds_snapshot_dir.BROWSER_FILENAMES
+_SNAPSHOT_FILES = frozenset(mds_files.SNAPSHOT_FILENAMES) | frozenset(
+    f"{name}.gz" for name in mds_files.BROWSER_FILENAMES
 )
 
 
@@ -77,13 +78,13 @@ def init_app(app: Flask) -> None:
 
 @bp.route(f"/assets/{_ASSET_SEGMENT}/<path:filename>")
 def versioned_static_asset(filename: str):
-    if filename not in mds_snapshot_dir.BROWSER_FILENAMES:
+    if filename not in mds_files.BROWSER_FILENAMES:
         abort(404)
 
     # On a cold instance the snapshot may still be being provisioned: wait for that
     # (after the first attempt it returns at once).
     mds_provisioning.ensure_snapshot_available()
-    path = os.fspath(mds_snapshot_dir.snapshot_file(filename))
+    path = os.fspath(mds_files.snapshot_file(filename))
     if not os.path.isfile(path):
         abort(404)
 

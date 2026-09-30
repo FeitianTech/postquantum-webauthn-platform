@@ -1,6 +1,6 @@
 """Where the per-session metadata uploads live.
 
-The MDS snapshot's own files are found through ``server.app.mds_snapshot_dir``
+The MDS snapshot's own files are found through ``server.app.mds.files``
 (``FIDO_SERVER_MDS_SNAPSHOT_DIR``), which the updater shares without Flask.
 """
 from __future__ import annotations

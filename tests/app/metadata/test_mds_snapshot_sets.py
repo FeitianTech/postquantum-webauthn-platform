@@ -7,7 +7,8 @@ import threading
 
 import pytest
 
-from server.app import mds_snapshot_dir, mds_snapshot_sets
+from server.app import mds_snapshot_sets
+from server.app.mds import files as mds_files
 from server.app.storage import cloud
 from tests.app.metadata.snapshot_versions import snapshot_version
 from tests.app.storage import fake_gcs
@@ -40,7 +41,7 @@ def test_a_publish_writes_a_complete_set_then_points_to_it(bucket):
     assert mds_snapshot_sets.download_set(pointer) == files
     # Every file created fresh, the metas after the payloads, the pointer last.
     generations = {name: bucket.objects[pointer["set"] + name][1] for name in files}
-    assert sorted(generations, key=generations.get) == list(mds_snapshot_dir.WRITE_ORDER)
+    assert sorted(generations, key=generations.get) == list(mds_files.WRITE_ORDER)
     assert bucket.objects["mds/current.json"][1] > max(generations.values())
 
 
@@ -59,7 +60,7 @@ def test_a_failure_halfway_through_a_set_leaves_the_current_set(bucket, monkeypa
     upload = cloud.upload_bytes_if_generation
 
     def _failing(name, data, **kwargs):
-        if name.endswith(mds_snapshot_dir.EXPLORER_FULL):
+        if name.endswith(mds_files.EXPLORER_FULL):
             raise OSError("the bucket went away")
         return upload(name, data, **kwargs)
 
@@ -136,11 +137,11 @@ def test_a_publish_deletes_the_set_two_back(bucket):
 
 def test_a_set_that_is_not_the_one_named_is_refused(bucket):
     pointer = mds_snapshot_sets.publish(snapshot_version(8)).pointer
-    bucket.put(pointer["set"] + mds_snapshot_dir.EXPLORER_FULL, b"{}")
+    bucket.put(pointer["set"] + mds_files.EXPLORER_FULL, b"{}")
     with pytest.raises(mds_snapshot_sets.SnapshotSetError, match="not the file"):
         mds_snapshot_sets.download_set(pointer)
 
-    del bucket.objects[pointer["set"] + mds_snapshot_dir.VERIFIED]
+    del bucket.objects[pointer["set"] + mds_files.VERIFIED]
     with pytest.raises(mds_snapshot_sets.SnapshotSetError, match="missing"):
         mds_snapshot_sets.download_set(pointer)
 

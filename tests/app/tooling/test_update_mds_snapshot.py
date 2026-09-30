@@ -15,7 +15,7 @@ from cryptography import x509
 from fido2.attestation.base import InvalidSignature
 
 import tools.update_mds_snapshot as updater
-from server.app import mds_snapshot_dir
+from server.app.mds import files as mds_files
 from tests.app.metadata import mds_fixture
 
 
@@ -33,7 +33,7 @@ def isolated_mds_paths(monkeypatch, tmp_path):
 
 
 def _file(name):
-    return mds_snapshot_dir.snapshot_file(name)
+    return mds_files.snapshot_file(name)
 
 
 def test_module_import_inserts_repo_root_when_missing(monkeypatch):
@@ -162,7 +162,7 @@ def test_fetch_remote_blob_uses_expected_request_contract(monkeypatch):
 
 def test_write_blob_write_if_changed_and_serialisers(isolated_mds_paths, tmp_path):
     updater._write_blob(b"initial")
-    assert _file(mds_snapshot_dir.BLOB).read_bytes() == b"initial"
+    assert _file(mds_files.BLOB).read_bytes() == b"initial"
 
     target = tmp_path / "nested" / "payload.txt"
     assert updater._write_if_changed(target, "hello") is True
@@ -193,14 +193,14 @@ def test_write_blob_write_if_changed_and_serialisers(isolated_mds_paths, tmp_pat
 def test_load_existing_cache_handles_missing_invalid_and_non_dict(isolated_mds_paths):
     assert updater._load_existing_cache() == {}
 
-    _file(mds_snapshot_dir.VERIFIED_META).parent.mkdir(parents=True, exist_ok=True)
-    _file(mds_snapshot_dir.VERIFIED_META).write_text("not-json", encoding="utf-8")
+    _file(mds_files.VERIFIED_META).parent.mkdir(parents=True, exist_ok=True)
+    _file(mds_files.VERIFIED_META).write_text("not-json", encoding="utf-8")
     assert updater._load_existing_cache() == {}
 
-    _file(mds_snapshot_dir.VERIFIED_META).write_text("[1, 2, 3]", encoding="utf-8")
+    _file(mds_files.VERIFIED_META).write_text("[1, 2, 3]", encoding="utf-8")
     assert updater._load_existing_cache() == {}
 
-    _file(mds_snapshot_dir.VERIFIED_META).write_text('{"fetched_at": "x"}', encoding="utf-8")
+    _file(mds_files.VERIFIED_META).write_text('{"fetched_at": "x"}', encoding="utf-8")
     assert updater._load_existing_cache() == {"fetched_at": "x"}
 
 
@@ -338,12 +338,12 @@ def test_build_verified_snapshot_and_snapshot_files(monkeypatch, isolated_mds_pa
         updater, "build_bootstrap_snapshot", lambda _verified, _cache: {"entries": [{}], "meta": {}}
     )
     files = updater.snapshot_files(b"blob-data", verified, {"a": 1})
-    assert tuple(files) == mds_snapshot_dir.SNAPSHOT_FILENAMES
+    assert tuple(files) == mds_files.SNAPSHOT_FILENAMES
     assert files["blob.jwt"] == b"blob-data"
     assert files["fido-mds3.verified.json.meta.json"] == b'{\n  "a": 1\n}\n'
     assert json.loads(files["fido-mds3.explorer.json.meta.json"]) == {"kind": "e"}
     assert json.loads(files["fido-mds3.explorer.full.json"])["meta"]["baseEntryCount"] == 1
-    assert not any(_file(name).exists() for name in mds_snapshot_dir.SNAPSHOT_FILENAMES)
+    assert not any(_file(name).exists() for name in mds_files.SNAPSHOT_FILENAMES)
 
 
 def test_main_reports_refresh_then_up_to_date(monkeypatch, isolated_mds_paths, capsys):
@@ -382,9 +382,9 @@ def test_main_reports_refresh_then_up_to_date(monkeypatch, isolated_mds_paths, c
     assert first == 0
     assert "Packaged metadata snapshot refreshed." in first_output
 
-    assert _file(mds_snapshot_dir.BLOB).read_bytes() == b"same-blob"
-    assert json.loads(_file(mds_snapshot_dir.VERIFIED).read_text(encoding="utf-8"))["no"] == 99
-    assert json.loads(_file(mds_snapshot_dir.EXPLORER_META).read_text(encoding="utf-8")) == {"kind": "explorer"}
+    assert _file(mds_files.BLOB).read_bytes() == b"same-blob"
+    assert json.loads(_file(mds_files.VERIFIED).read_text(encoding="utf-8"))["no"] == 99
+    assert json.loads(_file(mds_files.EXPLORER_META).read_text(encoding="utf-8")) == {"kind": "explorer"}
     expected_full_meta = {
         "kind": "full",
         "entryCount": 1,
@@ -392,8 +392,8 @@ def test_main_reports_refresh_then_up_to_date(monkeypatch, isolated_mds_paths, c
         "customEntryCount": 0,
         "hasCustomEntries": False,
     }
-    assert json.loads(_file(mds_snapshot_dir.EXPLORER_FULL_META).read_text(encoding="utf-8")) == expected_full_meta
-    assert json.loads(_file(mds_snapshot_dir.EXPLORER_FULL).read_text(encoding="utf-8")) == {
+    assert json.loads(_file(mds_files.EXPLORER_FULL_META).read_text(encoding="utf-8")) == expected_full_meta
+    assert json.loads(_file(mds_files.EXPLORER_FULL).read_text(encoding="utf-8")) == {
         "entries": [{"name": "demo"}],
         "meta": expected_full_meta,
     }
@@ -426,14 +426,14 @@ def test_main_replaces_the_explorer_snapshot_gzip_sibling(monkeypatch, isolated_
         "build_bootstrap_snapshot",
         lambda _verified, _cache: {"entries": entries, "meta": {"kind": "full"}},
     )
-    sibling = _file(mds_snapshot_dir.EXPLORER_FULL + ".gz")
+    sibling = _file(mds_files.EXPLORER_FULL + ".gz")
     sibling.parent.mkdir(parents=True, exist_ok=True)
     sibling.write_bytes(gzip.compress(b"an earlier snapshot"))
 
     assert updater.main() == 0
 
-    assert gzip.decompress(sibling.read_bytes()) == _file(mds_snapshot_dir.EXPLORER_FULL).read_bytes()
-    assert not _file(mds_snapshot_dir.BLOB + ".gz").exists()
+    assert gzip.decompress(sibling.read_bytes()) == _file(mds_files.EXPLORER_FULL).read_bytes()
+    assert not _file(mds_files.BLOB + ".gz").exists()
 
 
 @pytest.fixture
@@ -465,7 +465,7 @@ def stubbed_refresh(monkeypatch, isolated_mds_paths):
 
 def test_a_refresh_writes_each_file_whole_and_the_metas_last(stubbed_refresh, monkeypatch):
     written = []
-    write_file = mds_snapshot_dir.write_file
+    write_file = mds_files.write_file
 
     def _record(path, data):
         written.append(path.name)
@@ -473,12 +473,12 @@ def test_a_refresh_writes_each_file_whole_and_the_metas_last(stubbed_refresh, mo
         assert not path.with_name(path.name + ".partial").exists()
         write_file(path, data)
 
-    monkeypatch.setattr(mds_snapshot_dir, "write_file", _record)
+    monkeypatch.setattr(mds_files, "write_file", _record)
 
     assert updater.main([]) == 0
-    assert written == list(mds_snapshot_dir.WRITE_ORDER)
-    assert written[-3:] == list(mds_snapshot_dir.META_FILENAMES)
-    assert sorted(written) == sorted(mds_snapshot_dir.SNAPSHOT_FILENAMES)
+    assert written == list(mds_files.WRITE_ORDER)
+    assert written[-3:] == list(mds_files.META_FILENAMES)
+    assert sorted(written) == sorted(mds_files.SNAPSHOT_FILENAMES)
     assert not list(stubbed_refresh.glob("*.partial"))
 
 
@@ -486,8 +486,8 @@ def test_verify_only_checks_the_blob_without_writing_files(stubbed_refresh, caps
     assert updater.main(["--verify-only"]) == 0
 
     assert "no. 42" in capsys.readouterr().out
-    assert not _file(mds_snapshot_dir.BLOB).exists()
-    assert not _file(mds_snapshot_dir.VERIFIED).exists()
+    assert not _file(mds_files.BLOB).exists()
+    assert not _file(mds_files.VERIFIED).exists()
 
 
 @pytest.fixture
@@ -509,8 +509,8 @@ def test_publish_points_the_bucket_at_the_verified_snapshot(stubbed_refresh, buc
     pointer, _generation = mds_snapshot_sets.read_pointer()
     assert pointer["no"] == 42
     files = mds_snapshot_sets.download_set(pointer)
-    assert files[mds_snapshot_dir.BLOB] == b"a-blob"
-    assert files == {name: _file(name).read_bytes() for name in mds_snapshot_dir.SNAPSHOT_FILENAMES}
+    assert files[mds_files.BLOB] == b"a-blob"
+    assert files == {name: _file(name).read_bytes() for name in mds_files.SNAPSHOT_FILENAMES}
     assert f"Published snapshot no. 42 as {pointer['set']}." in capsys.readouterr().out
 
     # The next run finds it there and publishes nothing.
@@ -585,7 +585,7 @@ def test_a_rate_limited_refresh_keeps_the_snapshot_and_the_bucket(isolated_mds_p
 
     current = snapshot_version(7)
     for name, data in current.items():
-        mds_snapshot_dir.write_file(_file(name), data)
+        mds_files.write_file(_file(name), data)
     mds_snapshot_sets.publish(current)
     before = dict(bucket.objects)
     attempts = _rate_limited(monkeypatch)

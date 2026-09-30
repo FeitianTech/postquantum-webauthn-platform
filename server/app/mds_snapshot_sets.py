@@ -2,7 +2,7 @@
 
 A set is the seven snapshot files under ``<prefix>/sets/<format>/<no>-<token>/``,
 each uploaded only if no object has its name yet, payloads first and metas last
-(``mds_snapshot_dir.WRITE_ORDER``). ``<prefix>/current.json`` names the current set
+(``mds_files.WRITE_ORDER``). ``<prefix>/current.json`` names the current set
 with every file's SHA-256 and size; it is written after its set is complete, only
 if it is still the object its writer read (its generation), and only forward: a
 set whose ``no`` is not above the current one's is not published. So a reader that
@@ -12,7 +12,7 @@ current set where it was. A publish then deletes the set two back (the pointer's
 ``previous`` before it), never the one it replaced, which an instance may still be
 reading.
 
-A leaf like ``mds_snapshot_dir``: it imports nothing from the app but the storage
+A leaf like ``mds_files``: it imports nothing from the app but the storage
 helpers, so the updater publishes with it without building the Flask app.
 docs/MDS_SNAPSHOT.md has the whole picture.
 """
@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from . import mds_snapshot_dir
+from .mds import files as mds_files
 from .storage import cloud
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ def _content_type(name: str) -> str | None:
 
 
 def _describe(files: Mapping[str, bytes]) -> dict[str, Any]:
-    meta = json.loads(files[mds_snapshot_dir.VERIFIED_META])
+    meta = json.loads(files[mds_files.VERIFIED_META])
     return {
         "no": meta.get("no"),
         "etag": meta.get("etag"),
@@ -77,7 +77,7 @@ def _describe(files: Mapping[str, bytes]) -> dict[str, Any]:
         "nextUpdate": meta.get("nextUpdate"),
         "files": {
             name: {"sha256": hashlib.sha256(files[name]).hexdigest(), "size": len(files[name])}
-            for name in mds_snapshot_dir.SNAPSHOT_FILENAMES
+            for name in mds_files.SNAPSHOT_FILENAMES
         },
     }
 
@@ -91,7 +91,7 @@ def usable(pointer: Any) -> bool:
         and isinstance(pointer.get("set"), str)
         and isinstance(pointer.get("no"), int)
         and isinstance(pointer.get("files"), dict)
-        and all(isinstance(pointer["files"].get(name), dict) for name in mds_snapshot_dir.SNAPSHOT_FILENAMES)
+        and all(isinstance(pointer["files"].get(name), dict) for name in mds_files.SNAPSHOT_FILENAMES)
     )
 
 
@@ -111,7 +111,7 @@ def read_pointer(*, timeout: float | None = None, attempts: int | None = None) -
 
 
 def _delete_set(set_name: str) -> None:
-    for name in mds_snapshot_dir.SNAPSHOT_FILENAMES:
+    for name in mds_files.SNAPSHOT_FILENAMES:
         try:
             cloud.delete_blob(set_name + name)
         except Exception as exc:  # the set stays behind, unreferenced
@@ -136,7 +136,7 @@ def publish(files: Mapping[str, bytes]) -> Published:
     set_name = f"{prefix()}sets/{FORMAT}/{description['no']}-{secrets.token_hex(6)}/"
     uploaded: list[str] = []
     try:
-        for name in mds_snapshot_dir.WRITE_ORDER:
+        for name in mds_files.WRITE_ORDER:
             if not cloud.upload_bytes_if_generation(
                 set_name + name, files[name], generation=0, content_type=_content_type(name)
             ):
@@ -178,7 +178,7 @@ def download_set(pointer: Mapping[str, Any], *, timeout: float | None = None) ->
     """The seven files of the set ``pointer`` names, each checked against it."""
 
     files: dict[str, bytes] = {}
-    for name in mds_snapshot_dir.SNAPSHOT_FILENAMES:
+    for name in mds_files.SNAPSHOT_FILENAMES:
         expected = pointer["files"][name]
         data, _generation = cloud.download_bytes_with_generation(pointer["set"] + name, timeout=timeout)
         if data is None:

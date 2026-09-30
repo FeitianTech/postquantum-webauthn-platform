@@ -122,11 +122,11 @@ def test_a_missing_snapshot_is_not_found(assets_env, monkeypatch, tmp_path):
 
 
 def test_no_snapshot_file_is_served_at_the_site_root(assets_env, monkeypatch, tmp_path, make_app, export_root):
-    from server.app import mds_snapshot_dir
     from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
+    from server.app.mds import files as mds_files
 
     # The site's root is the UI's export: a snapshot file there is never served.
-    names = [*mds_snapshot_dir.SNAPSHOT_FILENAMES, f"{_EXPLORER_FULL}.gz"]
+    names = [*mds_files.SNAPSHOT_FILENAMES, f"{_EXPLORER_FULL}.gz"]
     for name in names:
         (export_root / name).write_text("{}", encoding="utf-8")
     (export_root / "favicon.ico").write_bytes(b"\x00\x01ico")
