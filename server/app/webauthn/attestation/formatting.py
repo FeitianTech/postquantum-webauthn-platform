@@ -27,8 +27,3 @@ def der_octet_string_content(data: bytes) -> bytes:
         return asn1.decode_der(bytes, data)
     except ValueError:
         return data
-
-
-def encode_base64url(data: bytes) -> str:
-    """Encode bytes as unpadded base64url."""
-    return encoding.encode_base64url(data)

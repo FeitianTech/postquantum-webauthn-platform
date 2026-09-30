@@ -374,7 +374,7 @@ def extract_attestation_details(
     attestation_object = registration.response.attestation_object
     attestation_format = getattr(attestation_object, "fmt", None) or "none"
     attestation_statement = attestation_object.att_stmt or {}
-    attestation_object_b64 = formatting.encode_base64url(bytes(attestation_object))
+    attestation_object_b64 = encoding.encode_base64url(bytes(attestation_object))
 
     attestation_certificates = _serialized_certificate_chain(attestation_statement)
     attestation_certificate = attestation_certificates[0] if attestation_certificates else None
@@ -382,7 +382,7 @@ def extract_attestation_details(
     client_data = registration.response.client_data
     client_data_b64 = getattr(client_data, "b64", None)
     if client_data_b64 is None:
-        client_data_b64 = formatting.encode_base64url(bytes(client_data))
+        client_data_b64 = encoding.encode_base64url(bytes(client_data))
 
     return (
         attestation_format,

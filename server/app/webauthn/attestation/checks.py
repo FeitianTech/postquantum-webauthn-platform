@@ -22,7 +22,7 @@ from fido2.webauthn import (
 
 from ... import encoding
 from ...mds import verifier as mds_verifier
-from . import classical, formatting, trust
+from . import classical, trust
 
 
 def _resolve_uv_required(
@@ -260,9 +260,9 @@ def _populate_client_data_results(
         "expected_type": CollectedClientData.TYPE.CREATE.value,
         "type_valid": client_data.type
         == CollectedClientData.TYPE.CREATE.value,
-        "challenge": formatting.encode_base64url(client_data.challenge),
+        "challenge": encoding.encode_base64url(client_data.challenge),
         "expected_challenge": (
-            formatting.encode_base64url(expected_challenge_bytes)
+            encoding.encode_base64url(expected_challenge_bytes)
             if expected_challenge_bytes
             else None
         ),
@@ -556,8 +556,8 @@ def _hash_binding(auth_data_obj: Any, client_data_hash: bytes) -> dict[str, str]
 
     verification_data = bytes(auth_data_obj) + client_data_hash
     return {
-        "client_data_hash": formatting.encode_base64url(client_data_hash),
-        "verification_data": formatting.encode_base64url(verification_data),
+        "client_data_hash": encoding.encode_base64url(client_data_hash),
+        "verification_data": encoding.encode_base64url(verification_data),
     }
 
 
