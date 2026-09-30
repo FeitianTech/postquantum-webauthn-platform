@@ -3,7 +3,7 @@
 The format reads a map numbered by CTAP members. Given a decoder answer, it
 took the first numbered map it found in it and guessed which message it was
 from its values' lengths; now a view, beside its framing, is rebuilt as format
-CBOR rebuilds it (``encode/ctap_views.py``), exactly.
+CBOR rebuilds it (``encode/ctap_view_reader.py``), exactly.
 """
 from __future__ import annotations
 

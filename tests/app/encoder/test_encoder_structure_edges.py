@@ -11,14 +11,14 @@ def _b64url(data: bytes) -> str:
 
 
 def test_a_ctap_view_holds_one_message():
-    from server.app.decoder.encode import ctap_views
+    from server.app.decoder.encode import ctap_view_reader
 
-    message, view = ctap_views.one_message({"makeCredentialRequest": {"1 (clientDataHash)": "aa" * 32}})
+    message, view = ctap_view_reader.one_message({"makeCredentialRequest": {"1 (clientDataHash)": "aa" * 32}})
 
     assert (message, view) == ("makeCredentialRequest", {"1 (clientDataHash)": "aa" * 32})
     # Two messages: encoding the first would drop the second without a word.
     with pytest.raises(ValueError, match="ctapDecoded holds 2 messages"):
-        ctap_views.one_message({"makeCredentialRequest": {}, "getAssertionRequest": {}})
+        ctap_view_reader.one_message({"makeCredentialRequest": {}, "getAssertionRequest": {}})
 
 
 def test_ctap_key_match_and_value_lookup_handle_labeled_variants_case_insensitively():

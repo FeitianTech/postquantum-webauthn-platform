@@ -6,7 +6,7 @@ from typing import Any
 
 from .. import values
 from ..cbor_canonical import _canonical_cbor_dumps, _canonicalize_cbor_structure
-from . import ctap_views
+from . import ctap_view_reader
 from .constants import _CTAP_FIELD_LABELS, _CTAP_PREFIX_DETAILS, _CTAP_REQUIRED_FIELDS
 from .cose_key import encode_cose_key
 from .ctap_encode import (
@@ -24,13 +24,14 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> d
     """JSON as CTAP2-canonical CBOR; a CTAP message only from the decoder's explicit CTAP view.
 
     That view is ``ctapDecoded``, or ``expandedJson`` beside the ``ctap``
-    framing that names its message (``ctap_views``); either must rebuild, or the
-    encoder says why. Any other object is a plain map -- even one whose keys look like
-    CTAP members ("1", "fmt", "signature"): the encoder does not guess.
+    framing that names its message (``ctap_view_reader``); either must rebuild,
+    or the encoder says why. Any other object is a plain map -- even one whose
+    keys look like CTAP members ("1", "fmt", "signature"): the encoder does not
+    guess.
     """
 
     if isinstance(parsed, Mapping):
-        answer = ctap_views.encode(parsed, base_type)
+        answer = ctap_view_reader.encode(parsed, base_type)
         if answer is not None:
             return answer
 
@@ -47,7 +48,7 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> d
 
 def _encode_ctap_webauthn_value(parsed: Any) -> dict[str, Any]:
     # The decoder's view of a CTAP message is rebuilt as it is, as format CBOR rebuilds it.
-    if isinstance(parsed, Mapping) and (answer := ctap_views.encode(parsed, "CBOR (CTAP/WebAuthn Data)")):
+    if isinstance(parsed, Mapping) and (answer := ctap_view_reader.encode(parsed, "CBOR (CTAP/WebAuthn Data)")):
         return answer
     numeric_map, ctap_type = _extract_ctap_numeric_payload(parsed)
 

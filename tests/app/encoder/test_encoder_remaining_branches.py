@@ -36,11 +36,11 @@ def test_extract_generic_binary_payload_cycle_and_pem_label_fallbacks():
 
 
 def test_a_ctap_view_names_one_message_the_encoder_builds():
-    from server.app.decoder.encode import ctap_views
+    from server.app.decoder.encode import ctap_view_reader
 
     with pytest.raises(ValueError, match="ctapDecoded names no CTAP message"):
-        ctap_views.one_message({})
+        ctap_view_reader.one_message({})
     with pytest.raises(ValueError, match="ctapDecoded.makeCredentialRequest must be an object"):
-        ctap_views.one_message({"makeCredentialRequest": "not-a-map"})
+        ctap_view_reader.one_message({"makeCredentialRequest": "not-a-map"})
     with pytest.raises(ValueError, match="ctapDecoded holds 2 messages"):
-        ctap_views.one_message({"makeCredentialRequest": "not-a-map", "getAssertionRequest": "still-not-a-map"})
+        ctap_view_reader.one_message({"makeCredentialRequest": "not-a-map", "getAssertionRequest": "still-not-a-map"})
