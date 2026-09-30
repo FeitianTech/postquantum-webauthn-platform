@@ -13,7 +13,7 @@ import json
 import pytest
 
 from server.app.decoder.cbor_canonical import _canonical_cbor_dumps
-from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.decode.text import decode_payload_text
 from server.app.decoder.encode.text import encode_payload_text
 from server.app.decoder.values import CborDiagnostic
 

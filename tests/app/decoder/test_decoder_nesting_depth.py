@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import cbor2
 
-from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.decode.text import decode_payload_text
 
 
 def _depth_findings(value) -> list[dict]:

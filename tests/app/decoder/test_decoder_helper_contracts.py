@@ -9,7 +9,7 @@ from server.app.decoder.decode import authenticator_data as decode_authenticator
 from server.app.decoder.decode import binary_text, credential_json, json_input
 from server.app.decoder.decode import ctap as decode_ctap
 from server.app.decoder.decode import pem as decode_pem
-from server.app.decoder.decode import pipeline as decode_pipeline
+from server.app.decoder.decode import text as decode_text
 
 
 def test_extract_ctap_prefix_handles_empty_command_status_and_unknown_codes():
@@ -93,16 +93,16 @@ def test_stringify_and_hex_helpers_convert_nested_values():
     assert decoder_values.make_hex_only(payload) == hex_only
 
 
-def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, pipeline, response):
+def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, response):
     with pytest.raises(ValueError, match="Decoder input is empty"):
-        decode_pipeline.decode_payload_text("   ")
+        decode_text.decode_payload_text("   ")
 
     monkeypatch.setattr(json_input, "read_or_none", lambda _v, **_kwargs: ({"a": 1}, []))
     monkeypatch.setattr(
         credential_json, "decode_json_object", lambda value, raw_text=None, **_kwargs: {"kind": "json", "raw": raw_text, "value": value}
     )
     monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"wrapped": result})
-    assert decode_pipeline.decode_payload_text(" {\"a\": 1} ") == {
+    assert decode_text.decode_payload_text(" {\"a\": 1} ") == {
         "wrapped": {"kind": "json", "raw": '{"a": 1}', "value": {"a": 1}, "decodeMode": "strict"}
     }
 
@@ -110,25 +110,25 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, p
     monkeypatch.setattr(decode_pem, "looks_like_pem", lambda _v: True)
     monkeypatch.setattr(decode_pem, "decode_pem_certificates", lambda _v: {"kind": "pem"})
     monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"pem": result})
-    assert decode_pipeline.decode_payload_text("-----BEGIN CERTIFICATE-----") == {
+    assert decode_text.decode_payload_text("-----BEGIN CERTIFICATE-----") == {
         "pem": {"kind": "pem", "decodeMode": "strict"}
     }
 
     monkeypatch.setattr(decode_pem, "looks_like_pem", lambda _v: False)
     monkeypatch.setattr(binary_text, "decode_binary_input", lambda _v: (b"\x01\x02", "hex"))
     monkeypatch.setattr(
-        pipeline,
+        decode_text,
         "_decode_binary_payload",
         lambda data, encoding, lenient=False: {"kind": "bin", "data": data, "encoding": encoding, "lenient": lenient},
     )
     monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"bin": result})
-    assert decode_pipeline.decode_payload_text("0102") == {
+    assert decode_text.decode_payload_text("0102") == {
         "bin": {"kind": "bin", "data": b"\x01\x02", "encoding": "hex", "lenient": False, "decodeMode": "strict"}
     }
-    assert decode_pipeline.decode_payload_text("0102", lenient=True)["bin"]["lenient"] is True
+    assert decode_text.decode_payload_text("0102", lenient=True)["bin"]["lenient"] is True
 
 
-def test_decode_json_object_handles_client_data_and_plain_json(monkeypatch, pipeline):
+def test_decode_json_object_handles_client_data_and_plain_json(monkeypatch):
     monkeypatch.setattr(credential_json, "is_public_key_credential", lambda _v: False)
     monkeypatch.setattr(credential_json, "is_client_data_dict", lambda _v: True)
     monkeypatch.setattr(credential_json, "build_client_data_details", lambda value, raw_text=None: {"built": value, "raw": raw_text})
@@ -149,7 +149,7 @@ def test_decode_json_object_handles_client_data_and_plain_json(monkeypatch, pipe
     }
 
 
-def test_decode_public_key_credential_uses_rawid_and_extension_fallbacks(monkeypatch, pipeline):
+def test_decode_public_key_credential_uses_rawid_and_extension_fallbacks(monkeypatch):
     monkeypatch.setattr(binary_text, "decode_binary_field", lambda _v: None)
 
     credential = {
@@ -172,7 +172,7 @@ def test_decode_public_key_credential_uses_rawid_and_extension_fallbacks(monkeyp
     assert decoded["response"] == {"other": "value"}
 
 
-def test_decode_binary_field_handles_invalid_inputs(monkeypatch, pipeline):
+def test_decode_binary_field_handles_invalid_inputs(monkeypatch):
     monkeypatch.setattr(
         binary_text,
         "decode_binary_input",
@@ -183,13 +183,13 @@ def test_decode_binary_field_handles_invalid_inputs(monkeypatch, pipeline):
     assert binary_text.decode_binary_field(123) is None
 
 
-def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(monkeypatch, pipeline):
+def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(monkeypatch):
     monkeypatch.setattr(decoder_values, "try_decode_utf8", lambda _data: "-----BEGIN CERTIFICATE-----")
     monkeypatch.setattr(decode_pem, "looks_like_pem", lambda text: text.startswith("-----BEGIN"))
     monkeypatch.setattr(decode_pem, "decode_pem_certificates", lambda _text: {"format": "X.509 certificate (PEM)", "decoded": {"pem": True}})
     monkeypatch.setattr(decoder_values, "binary_summary", lambda _data, _encoding=None: {"hex": "616263"})
 
-    pem_result = decode_pipeline._decode_binary_payload(b"abc", "base64url")
+    pem_result = decode_text._decode_binary_payload(b"abc", "base64url")
     assert pem_result["format"] == "X.509 certificate (PEM)"
     assert pem_result["inputEncoding"] == "base64url"
     assert pem_result["binary"] == {"hex": "616263"}
@@ -198,7 +198,7 @@ def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(m
     monkeypatch.setattr(json_input, "read_or_none", lambda _text, **_kwargs: ({"k": 1}, []))
     monkeypatch.setattr(credential_json, "is_client_data_dict", lambda _obj: False)
 
-    json_result = decode_pipeline._decode_binary_payload(b"abc", "hex")
+    json_result = decode_text._decode_binary_payload(b"abc", "hex")
     assert json_result == {
         "format": "JSON (binary)",
         "inputEncoding": "hex",
@@ -214,4 +214,4 @@ def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(m
     # What nothing else claims is read as CBOR. Bytes that are not CBOR fail,
     # saying where, instead of coming back as an unexplained "Binary data".
     with pytest.raises(ValueError, match=r"offset 0 \(\$\): byte string declares 8 bytes; 1 remain"):
-        decode_pipeline._decode_binary_payload(b"\x48\xaa", "hex")
+        decode_text._decode_binary_payload(b"\x48\xaa", "hex")

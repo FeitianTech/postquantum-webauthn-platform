@@ -24,13 +24,6 @@ def _fragment(name: str):
 
 
 @pytest.fixture
-def pipeline():
-    """The submodule that drives decoding end to end and builds per-field details."""
-
-    return _fragment("pipeline")
-
-
-@pytest.fixture
 def ctap():
     """The submodule that classifies, parses, interprets and repairs CTAP payloads."""
 

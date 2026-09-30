@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from server.app.decoder import edn
 from server.app.decoder.decode import cbor_parser, edn_view
-from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.decode.text import decode_payload_text
 from tests.app.decoder.real_vectors import (
     GET_ASSERTION_RESPONSE,
     MAKE_CREDENTIAL_RESPONSE,

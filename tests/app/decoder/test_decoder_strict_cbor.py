@@ -14,16 +14,16 @@ from fido2 import cbor
 
 from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
-from server.app.decoder.decode import pipeline as decode_pipeline
+from server.app.decoder.decode import text as decode_text
 
 
 def _decode(hex_text: str) -> dict[str, Any]:
-    return decode_pipeline.decode_payload_text(hex_text)
+    return decode_text.decode_payload_text(hex_text)
 
 
 def _decode_error(hex_text: str) -> Any:
     with pytest.raises(ValueError) as caught:
-        decode_pipeline.decode_payload_text(hex_text)
+        decode_text.decode_payload_text(hex_text)
     return caught.value
 
 

@@ -129,7 +129,7 @@ def _safetynet_attestation_object(header: bytes, payload: bytes) -> bytes:
 
 
 def test_a_repeated_key_in_the_jws_header_or_payload_is_reported_at_the_response():
-    from server.app.decoder.decode.pipeline import decode_payload_text
+    from server.app.decoder.decode.text import decode_payload_text
 
     data = _safetynet_attestation_object(b'{"alg": "RS256", "alg": "ES256"}', b'{"nonce": "a", "nonce": "b"}')
     result = decode_payload_text(data.hex())

@@ -16,7 +16,7 @@ from server.app.decoder import edn
 from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import json_keys
 from server.app.decoder.decode.cbor_parser import _map_key, decode_item
-from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.decode.text import decode_payload_text
 from server.app.decoder.encode.text import encode_payload_text
 from server.app.decoder.values import CborDiagnostic
 

@@ -56,7 +56,7 @@ jobs:
               "server.app.app",
               "server.app.webauthn.attestation.checks",
               "server.app.mds.verifier",
-              "server.app.decoder.decode.pipeline",
+              "server.app.decoder.decode.text",
               "server.app.decoder.encode.text",
               "server.app.storage.credentials",
               "server.app.routes.advanced.artifacts",

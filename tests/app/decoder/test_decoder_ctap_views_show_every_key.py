@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 
 from server.app.decoder import edn
-from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.decode.text import decode_payload_text
 from server.app.decoder.encode.text import encode_payload_text
 
 AUTH_DATA = "00" * 32 + "01" + "00000001"

@@ -33,7 +33,7 @@ def _build_attestation_bytes() -> bytes:
     return bytes(attestation)
 
 
-def test_describe_client_data_from_bytes_success_and_collected_client_data_fallback(monkeypatch, pipeline):
+def test_describe_client_data_from_bytes_success_and_collected_client_data_fallback(monkeypatch):
     raw_json = {
         "type": "webauthn.create",
         "challenge": "AQID",

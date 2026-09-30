@@ -19,17 +19,12 @@ import importlib
 import pytest
 
 from server.app.decoder.decode import binary_text
-from server.app.decoder.decode import pipeline as decode_pipeline
+from server.app.decoder.decode import text as decode_text
 from server.app.routes import binary_helpers
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.entry_app import entry_app
 
 PLAIN_TEXT = "Hello, this is plain text!"
-
-
-@pytest.fixture()
-def pipeline():
-    return importlib.import_module("server.app.decoder.decode.pipeline")
 
 
 @pytest.fixture()
@@ -47,17 +42,17 @@ def simple_binary():
     return importlib.import_module("server.app.routes.simple.binary")
 
 
-def test_decoder_rejects_plain_english_text(pipeline):
+def test_decoder_rejects_plain_english_text():
     """Prose is not base64url, and must not be reported as decoded CBOR."""
 
     with pytest.raises(ValueError):
         binary_text.decode_binary_input(PLAIN_TEXT)
 
     with pytest.raises(ValueError):
-        decode_pipeline.decode_payload_text(PLAIN_TEXT)
+        decode_text.decode_payload_text(PLAIN_TEXT)
 
 
-def test_decoder_never_left_pads_odd_length_hex(pipeline):
+def test_decoder_never_left_pads_odd_length_hex():
     """``abc`` is not ``0abc``; guessing a leading nibble invents data.
 
     It is base64 (69 b7), and read as that; odd-length digits that are not
@@ -71,7 +66,7 @@ def test_decoder_never_left_pads_odd_length_hex(pipeline):
     assert binary_text.decode_binary_input("0abc") == (b"\x0a\xbc", "hex")
 
 
-def test_decoder_reports_encoding_ambiguity_rather_than_guessing(pipeline):
+def test_decoder_reports_encoding_ambiguity_rather_than_guessing():
     """A dash-free payload is valid under both base64 alphabets; say so."""
 
     ambiguous = binary_text.sniff_binary_input("QUJD")

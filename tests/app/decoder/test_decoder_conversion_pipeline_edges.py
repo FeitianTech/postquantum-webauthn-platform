@@ -5,8 +5,8 @@ import json
 import cbor2
 
 from server.app.decoder.decode import credential_json
-from server.app.decoder.decode import pipeline as decode_pipeline
 from server.app.decoder.decode import response as decode_response
+from server.app.decoder.decode import text as decode_text
 
 
 def _b64url(data: bytes) -> str:
@@ -240,7 +240,7 @@ def test_decode_payload_text_json_public_key_credential_and_cbor_roundtrip():
         },
     }
 
-    decoded_credential = decode_pipeline.decode_payload_text(json.dumps(credential))
+    decoded_credential = decode_text.decode_payload_text(json.dumps(credential))
     assert decoded_credential["success"] is True
     assert decoded_credential["type"] == "PublicKeyCredential"
     assert decoded_credential["data"]["attestationObject"]["fmt"] in {
@@ -249,7 +249,7 @@ def test_decode_payload_text_json_public_key_credential_and_cbor_roundtrip():
     }
 
     cbor_payload = cbor2.dumps({1: b"\x00" * 32, 2: "example.com"})
-    decoded_cbor = decode_pipeline.decode_payload_text(_b64url(cbor_payload))
+    decoded_cbor = decode_text.decode_payload_text(_b64url(cbor_payload))
     assert decoded_cbor["success"] is True
     assert decoded_cbor["type"].startswith("CBOR")
     assert "decodedValue" in decoded_cbor["data"]

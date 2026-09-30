@@ -2,7 +2,7 @@ import base64
 from types import SimpleNamespace
 
 from server.app import visitor_session
-from server.app.decoder.decode import pipeline as decode_pipeline
+from server.app.decoder.decode import text as decode_text
 from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
@@ -25,7 +25,7 @@ def test_decode_and_certificate_routes_cover_error_and_success_paths(monkeypatch
             raise ValueError("certificate parse failed")
         return {"length": len(certificate_bytes), "hex": certificate_bytes.hex()}
 
-    monkeypatch.setattr(decode_pipeline, "decode_payload_text", _fake_decode)
+    monkeypatch.setattr(decode_text, "decode_payload_text", _fake_decode)
     monkeypatch.setattr(attestation_certificates, "serialize_attestation_certificate", _fake_serialize)
 
     bad_cert_b64 = base64.b64encode(b"bad-cert").decode("ascii")

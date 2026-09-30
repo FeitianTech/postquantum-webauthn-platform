@@ -11,7 +11,7 @@ import cbor2
 import pytest
 
 from server.app.decoder import values as decoder_values
-from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.decode.text import decode_payload_text
 
 _AUTH_DATA = bytes(32) + b"\x01" + (5).to_bytes(4, "big")
 _SIGNATURE = bytes.fromhex("3006020101020101")

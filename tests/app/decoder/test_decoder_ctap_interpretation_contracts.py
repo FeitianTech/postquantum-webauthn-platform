@@ -126,7 +126,7 @@ def test_a_make_credential_view_shows_every_member_as_sent_and_each_certificate_
 
 
 def test_a_bare_map_of_a_make_credential_request_is_shown_as_one():
-    from server.app.decoder.decode.pipeline import decode_payload_text
+    from server.app.decoder.decode.text import decode_payload_text
 
     value = {
         1: b"\x11" * 32,

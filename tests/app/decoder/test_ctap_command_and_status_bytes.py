@@ -20,7 +20,7 @@ from fido2.ctap import CtapError
 from fido2.ctap2.base import Ctap2
 
 from server.app.decoder.decode import ctap
-from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.decode.text import decode_payload_text
 
 _COMMAND_CODES = {int(command) for command in Ctap2.CMD}
 _ERROR_STATUSES = [status for status in CtapError.ERR if status != CtapError.ERR.SUCCESS]

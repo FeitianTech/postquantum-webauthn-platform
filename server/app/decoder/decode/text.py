@@ -1,4 +1,8 @@
-"""Top-level decode pipeline helpers."""
+"""The decoder's entry, ``decode_payload_text``: text in, the answer out.
+
+Text is read as JSON (``credential_json``), as PEM (``pem``), or as bytes
+(``binary_text``) that ``readings`` reads in order; ``response`` shapes the answer.
+"""
 from __future__ import annotations
 
 from typing import Any

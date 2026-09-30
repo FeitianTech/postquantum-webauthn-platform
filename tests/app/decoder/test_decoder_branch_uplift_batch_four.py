@@ -10,7 +10,7 @@ from server.app.decoder.decode import authenticator_data as decode_authenticator
 from server.app.decoder.decode import binary_text, credential_json
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
 from server.app.decoder.decode import pem as decode_pem
-from server.app.decoder.decode import pipeline as decode_pipeline
+from server.app.decoder.decode import text as decode_text
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
 
@@ -20,7 +20,7 @@ def _pem_block(der_bytes: bytes) -> str:
     return f"-----BEGIN CERTIFICATE-----\n{wrapped}\n-----END CERTIFICATE-----"
 
 
-def test_decode_public_key_credential_includes_signature_and_user_handle_summaries(monkeypatch, pipeline):
+def test_decode_public_key_credential_includes_signature_and_user_handle_summaries(monkeypatch):
     def _decode_binary(value):
         if value == "sig":
             return b"\xaa\xbb", "base64"
@@ -57,7 +57,7 @@ def test_decode_pem_certificates_skips_decode_errors_and_uses_single_certificate
     assert "certificates" not in result["decoded"]
 
 
-def test_decode_binary_payload_uses_authenticator_data_path_when_other_binary_decoders_fail(monkeypatch, pipeline):
+def test_decode_binary_payload_uses_authenticator_data_path_when_other_binary_decoders_fail(monkeypatch):
     monkeypatch.setattr(decoder_values, "try_decode_utf8", lambda _data: None)
     monkeypatch.setattr(decode_pem, "try_decode_der_certificate", lambda _data, _enc: None)
     monkeypatch.setattr(decode_attestation_object, "try_decode", lambda _data, _enc: None)
@@ -67,7 +67,7 @@ def test_decode_binary_payload_uses_authenticator_data_path_when_other_binary_de
         lambda _data, enc: {"format": "Authenticator data (binary)", "inputEncoding": enc},
     )
 
-    result = decode_pipeline._decode_binary_payload(b"raw", "hex")
+    result = decode_text._decode_binary_payload(b"raw", "hex")
     assert result["format"] == "Authenticator data (binary)"
     assert result["inputEncoding"] == "hex"
 
@@ -186,7 +186,7 @@ def test_parse_simple_major_type_values_and_structure_to_value_fallback_branches
     assert tagged == {"tag": 33, "value": 42}
 
 
-def test_try_decode_authenticator_data_returns_structured_payload_on_success(monkeypatch, pipeline):
+def test_try_decode_authenticator_data_returns_structured_payload_on_success(monkeypatch):
     monkeypatch.setattr(
         decode_authenticator_data,
         "_describe_authenticator_data_bytes",

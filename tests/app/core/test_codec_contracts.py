@@ -5,7 +5,7 @@ import json
 import cbor2
 import pytest
 
-from server.app.decoder.decode import pipeline as decode_pipeline
+from server.app.decoder.decode import text as decode_text
 from server.app.decoder.encode import ctap_numeric as encode_ctap_numeric
 from server.app.decoder.encode import handlers_basic as encode_handlers_basic
 from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
@@ -195,7 +195,7 @@ def test_decode_public_key_credential_preserves_key_fields_and_extensions():
         },
     }
 
-    decoded = decode_pipeline.decode_payload_text(json.dumps(credential))
+    decoded = decode_text.decode_payload_text(json.dumps(credential))
 
     assert decoded["success"] is True
     assert decoded["type"] == "PublicKeyCredential"

@@ -10,7 +10,7 @@ from typing import Any
 
 from flask import Blueprint, jsonify, request
 
-from ..decoder.decode import pipeline
+from ..decoder.decode import text as decode_text
 from ..decoder.encode import text as encode_text
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ def _refusal(exc: ValueError) -> dict[str, Any]:
 
 def _perform_decode(decoder_input: str, *, lenient: bool = False):
     try:
-        return pipeline.decode_payload_text(decoder_input, lenient=lenient), 200
+        return decode_text.decode_payload_text(decoder_input, lenient=lenient), 200
     except ValueError as exc:
         return _refusal(exc), 422
     except Exception as exc:  # pylint: disable=broad-except

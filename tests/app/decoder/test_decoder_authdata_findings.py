@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import cbor2
 
-from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.decode.text import decode_payload_text
 from tests.app.python_fido2_vectors import GA_RESP as _GA_RESP
 from tests.app.python_fido2_vectors import MC_RESP as _MC_RESP
 

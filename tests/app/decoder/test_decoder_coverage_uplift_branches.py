@@ -19,7 +19,7 @@ def test_get_mapping_entry_reads_a_bytebuffer_key_as_the_byte_string_it_holds():
     assert decoder_values.get_mapping_entry({"1": "str"}, ByteBuffer(b"\x01")) is decoder_values.MISSING
 
 
-def test_decode_public_key_credential_marks_authentication_without_attestation(monkeypatch, pipeline):
+def test_decode_public_key_credential_marks_authentication_without_attestation(monkeypatch):
     auth_bytes = b"\x00" * 37
     monkeypatch.setattr(
         decode_authenticator_data,
@@ -82,7 +82,7 @@ def test_extract_authenticator_bytes_from_attestation_uses_raw_base64_and_handle
     )
 
 
-def test_extract_attestation_certificate_handles_non_string_chain_entries_and_serializer_errors(monkeypatch, pipeline):
+def test_extract_attestation_certificate_handles_non_string_chain_entries_and_serializer_errors(monkeypatch):
     class _BytesEntry:
         def __bytes__(self):
             return b"\x01\x02"

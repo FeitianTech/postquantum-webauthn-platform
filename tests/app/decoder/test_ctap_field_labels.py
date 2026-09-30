@@ -15,7 +15,7 @@ import pytest
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
-from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.decode.text import decode_payload_text
 from server.app.decoder.encode import ctap_encode as encode_ctap_encode
 from server.app.decoder.encode.text import encode_payload_text
 
