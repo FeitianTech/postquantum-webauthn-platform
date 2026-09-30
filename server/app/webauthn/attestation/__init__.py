@@ -24,7 +24,6 @@ from . import (
 )
 
 __all__ = [
-    "CRED_PROTECT_LABELS",
     "EXTENSION_DISPLAY_METADATA",
     "augment_aaguid_fields",
     "describe_cred_protect",
@@ -41,7 +40,6 @@ __all__ = [
 # Constants shared with the fragments.
 AAGUID_EXTENSION_OID = constants.AAGUID_EXTENSION_OID
 EXTENSION_DISPLAY_METADATA = constants.EXTENSION_DISPLAY_METADATA
-CRED_PROTECT_LABELS = aaguid.CRED_PROTECT_LABELS
 
 # AAGUID, CredProtect, and authenticator extension helpers.
 augment_aaguid_fields = aaguid.augment_aaguid_fields

@@ -6,20 +6,21 @@ import uuid
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
-CRED_PROTECT_LABELS: dict[Any, str] = {
-    1: "userVerificationOptional",
-    2: "userVerificationOptionalWithCredentialIDList",
-    3: "userVerificationRequired",
-    "userVerificationOptional": "userVerificationOptional",
-    "userVerificationOptionalWithCredentialIDList": "userVerificationOptionalWithCredentialIDList",
-    "userVerificationOptionalWithCredentialIdList": "userVerificationOptionalWithCredentialIDList",
-    "userVerificationRequired": "userVerificationRequired",
-}
+from fido2.ctap2.extensions import CredProtectExtension
+
+_CRED_PROTECT_POLICIES = tuple(CredProtectExtension.POLICY)
+# WebAuthn's spelling, which a request may also use, of fido2's "...CredentialIDList".
+_OPTIONAL_WITH_LIST_ALIAS = "userVerificationOptionalWithCredentialIdList"
 
 
 def describe_cred_protect(value: Any) -> Any:
-    """Return a human readable credProtect description when possible."""
-    return CRED_PROTECT_LABELS.get(value, value)
+    """A credProtect policy's name, for its CTAP number (1-3) or a name; anything else as given."""
+
+    if isinstance(value, int) and 1 <= value <= len(_CRED_PROTECT_POLICIES):
+        return _CRED_PROTECT_POLICIES[value - 1].value
+    if value == _OPTIONAL_WITH_LIST_ALIAS:
+        return CredProtectExtension.POLICY.OPTIONAL_WITH_LIST.value
+    return value
 
 
 def coerce_non_negative_int(value: Any) -> int | None:

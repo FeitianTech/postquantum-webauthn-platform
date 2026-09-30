@@ -21,19 +21,8 @@ from flask import jsonify
 
 from ... import config
 from ...attachments import normalize_attachment, resolve_effective_attachments
+from ...webauthn.attestation.aaguid import describe_cred_protect
 from . import binary
-
-_CRED_PROTECT_BY_NUMBER = {
-    1: "userVerificationOptional",
-    2: "userVerificationOptionalWithCredentialIDList",
-    3: "userVerificationRequired",
-}
-_CRED_PROTECT_ALIASES = {
-    "userVerificationOptional": "userVerificationOptional",
-    "userVerificationOptionalWithCredentialIDList": "userVerificationOptionalWithCredentialIDList",
-    "userVerificationOptionalWithCredentialIdList": "userVerificationOptionalWithCredentialIDList",
-    "userVerificationRequired": "userVerificationRequired",
-}
 
 
 class BeginRequest(NamedTuple):
@@ -112,15 +101,11 @@ def registration_server(public_key: Any) -> tuple[Any, Any]:
     timeout = public_key.get("timeout", 90000)
     temp_server.timeout = timeout / 1000.0 if timeout else None
 
-    attestation_preference = public_key.get("attestation", "none")
-    if attestation_preference == "direct":
-        temp_server.attestation = AttestationConveyancePreference.DIRECT
-    elif attestation_preference == "indirect":
-        temp_server.attestation = AttestationConveyancePreference.INDIRECT
-    elif attestation_preference == "enterprise":
-        temp_server.attestation = AttestationConveyancePreference.ENTERPRISE
-    else:
-        temp_server.attestation = AttestationConveyancePreference.NONE
+    # fido2's string enums answer None for a value they do not know.
+    temp_server.attestation = (
+        AttestationConveyancePreference(public_key.get("attestation", "none"))
+        or AttestationConveyancePreference.NONE
+    )
 
     return temp_server, rp_entity
 
@@ -146,30 +131,23 @@ def authenticator_selection(public_key: Any) -> AuthenticatorSelection:
         requested_attachment,
     )
 
-    uv_req = UserVerificationRequirement.PREFERRED
-    user_verification = auth_selection.get("userVerification", "preferred")
-    if user_verification == "required":
-        uv_req = UserVerificationRequirement.REQUIRED
-    elif user_verification == "discouraged":
-        uv_req = UserVerificationRequirement.DISCOURAGED
+    uv_req = (
+        UserVerificationRequirement(auth_selection.get("userVerification", "preferred"))
+        or UserVerificationRequirement.PREFERRED
+    )
 
-    auth_attachment = None
     attachment_source = requested_attachment
     if not attachment_source and len(allowed_attachment_values) == 1:
         attachment_source = allowed_attachment_values[0]
-    if attachment_source == "platform":
-        auth_attachment = AuthenticatorAttachment.PLATFORM
-    elif attachment_source == "cross-platform":
-        auth_attachment = AuthenticatorAttachment.CROSS_PLATFORM
+    auth_attachment = AuthenticatorAttachment(attachment_source) if attachment_source else None
 
-    rk_req = ResidentKeyRequirement.PREFERRED
-    resident_key = auth_selection.get("residentKey", "preferred")
     if auth_selection.get("requireResidentKey") is True:
         rk_req = ResidentKeyRequirement.REQUIRED
-    elif resident_key == "required":
-        rk_req = ResidentKeyRequirement.REQUIRED
-    elif resident_key == "discouraged":
-        rk_req = ResidentKeyRequirement.DISCOURAGED
+    else:
+        rk_req = (
+            ResidentKeyRequirement(auth_selection.get("residentKey", "preferred"))
+            or ResidentKeyRequirement.PREFERRED
+        )
 
     return AuthenticatorSelection(allowed_attachment_values, uv_req, auth_attachment, rk_req)
 
@@ -189,14 +167,6 @@ def build_exclude_list(public_key: Mapping[str, Any]) -> list[Any]:
                         )
                     )
     return exclude_list
-
-
-def _cred_protect_policy(value: Any) -> Any:
-    if isinstance(value, int):
-        return _CRED_PROTECT_BY_NUMBER.get(value, value)
-    if isinstance(value, str):
-        return _CRED_PROTECT_ALIASES.get(value, value)
-    return value
 
 
 def _prf_extension(value: Any) -> Any:
@@ -222,7 +192,7 @@ def build_processed_extensions(public_key: Mapping[str, Any]) -> dict[str, Any]:
         elif ext_name == "minPinLength":
             processed_extensions["minPinLength"] = bool(ext_value)
         elif ext_name in ("credProtect", "credentialProtectionPolicy"):
-            processed_extensions["credentialProtectionPolicy"] = _cred_protect_policy(ext_value)
+            processed_extensions["credentialProtectionPolicy"] = describe_cred_protect(ext_value)
         elif ext_name in ("enforceCredProtect", "enforceCredentialProtectionPolicy"):
             processed_extensions["enforceCredentialProtectionPolicy"] = bool(ext_value)
         elif ext_name == "largeBlob":

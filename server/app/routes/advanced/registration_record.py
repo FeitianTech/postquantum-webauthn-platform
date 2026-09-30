@@ -22,12 +22,6 @@ from ...storage import credentials
 from ...webauthn import attestation, pqc
 from . import algorithms, binary
 
-_CRED_PROTECT_NAMES = {
-    1: "userVerificationOptional",
-    2: "userVerificationOptionalWithCredentialIDList",
-    3: "userVerificationRequired",
-}
-
 
 def resolve_user_handle(user_info: Mapping[str, Any], username: str) -> Any:
     """``user.id`` decoded, or the user name's bytes when it is missing or undecodable."""
@@ -138,7 +132,7 @@ def _cred_protect_used(extensions_requested: Mapping[str, Any]) -> Any:
     if cred_protect_requested is None:
         cred_protect_requested = extensions_requested.get("credProtect")
     if isinstance(cred_protect_requested, int):
-        return _CRED_PROTECT_NAMES.get(cred_protect_requested, cred_protect_requested)
+        return attestation.describe_cred_protect(cred_protect_requested)
     if cred_protect_requested:
         return cred_protect_requested
     return "none"
