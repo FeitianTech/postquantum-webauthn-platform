@@ -5,32 +5,8 @@ from __future__ import annotations
 import importlib
 import json
 import pickle
-import sys
-import types
-from pathlib import Path
 
 import pytest
-
-
-def _discover_repo_root(start: Path) -> Path:
-    for candidate in start.parents:
-        if (candidate / "server").is_dir() and (candidate / "tests").is_dir():
-            return candidate
-
-    return start.parents[3]
-
-
-_ROOT = _discover_repo_root(Path(__file__).resolve())
-
-server_pkg = types.ModuleType("server")
-server_pkg.__path__ = [str(_ROOT / "server")]
-sys.modules.setdefault("server", server_pkg)
-
-server_server_pkg = types.ModuleType("server.app")
-server_server_pkg.__path__ = [str(_ROOT / "server" / "app")]
-sys.modules.setdefault("server.app", server_server_pkg)
-
-
 
 credentials = importlib.import_module("server.app.storage.credentials")
 StorageReadError = importlib.import_module("server.app.storage.common").StorageReadError

@@ -1,7 +1,5 @@
 import base64
 
-import pytest
-
 from tests.app.entry_app import entry_app
 
 
@@ -41,8 +39,6 @@ class _AuthResult:
 
 
 def test_simple_register_begin_accepts_existing_credentials_alias(monkeypatch, config_module):
-    pytest.importorskip("server.app.app")
-
     captured = {}
 
     class _FakeServer:
@@ -79,8 +75,6 @@ def test_simple_register_begin_accepts_existing_credentials_alias(monkeypatch, c
 
 
 def test_simple_authenticate_begin_accepts_stored_credentials_alias(monkeypatch, config_module):
-    pytest.importorskip("server.app.app")
-
     captured = {}
 
     class _FakeServer:
@@ -112,8 +106,6 @@ def test_simple_authenticate_begin_accepts_stored_credentials_alias(monkeypatch,
 
 
 def test_advanced_register_begin_accepts_base64url_wrapped_user_id_and_challenge(monkeypatch, config_module):
-    pytest.importorskip("server.app.app")
-
     captured = {}
 
     class _FakeServer:
@@ -155,9 +147,6 @@ def test_advanced_register_begin_accepts_base64url_wrapped_user_id_and_challenge
 
 
 def test_advanced_register_begin_rejects_invalid_binary_wrapper_in_user_id():
-    pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/register/begin",
@@ -180,8 +169,6 @@ def test_advanced_register_begin_rejects_invalid_binary_wrapper_in_user_id():
 
 
 def test_advanced_authenticate_begin_accepts_storedcredentials_without_dunder(monkeypatch, config_module):
-    pytest.importorskip("server.app.app")
-
     captured = {}
 
     class _FakeServer:
@@ -232,8 +219,6 @@ def test_advanced_authenticate_begin_accepts_storedcredentials_without_dunder(mo
 
 
 def test_advanced_authenticate_begin_accepts_credentials_fallback_field(monkeypatch, config_module):
-    pytest.importorskip("server.app.app")
-
     captured = {}
 
     class _FakeServer:
@@ -262,8 +247,6 @@ def test_advanced_authenticate_begin_accepts_credentials_fallback_field(monkeypa
 
 
 def test_advanced_authenticate_complete_accepts_storedcredentials_without_dunder(monkeypatch, config_module, advanced_algorithms):
-    pytest.importorskip("server.app.app")
-
     credential_id = b"adv-complete-storedCredentials"
     encoded_credential_id = _b64url(credential_id)
 
@@ -299,8 +282,6 @@ def test_advanced_authenticate_complete_accepts_storedcredentials_without_dunder
 
 
 def test_advanced_authenticate_complete_accepts_credentials_fallback_field(monkeypatch, config_module, advanced_algorithms):
-    pytest.importorskip("server.app.app")
-
     credential_id = b"adv-complete-credentials-field"
     encoded_credential_id = _b64url(credential_id)
 

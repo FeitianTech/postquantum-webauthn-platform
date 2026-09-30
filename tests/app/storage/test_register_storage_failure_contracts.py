@@ -2,8 +2,8 @@ import base64
 import hashlib
 import time
 
-import pytest
-
+from server.app import config as config_module
+from server.app.routes import advanced as advanced_module
 from tests.app.entry_app import entry_app
 
 
@@ -47,8 +47,6 @@ class _SimpleFakeServer:
 
 
 def test_simple_register_complete_returns_500_when_saving_fails(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
-    pytest.importorskip("server.app.app")
-
     credential_id = b"simple-save-fail"
     rp_id = "example.com"
 
@@ -162,10 +160,6 @@ def _advanced_register_payload(rp_id: str, credential_id: bytes):
 
 
 def test_advanced_register_complete_returns_500_when_artifact_store_returns_false(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module, storage_module):
-    config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     credential_id = b"advanced-store-false"
     rp_id = "example.com"
     auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)
@@ -207,10 +201,6 @@ def test_advanced_register_complete_returns_500_when_artifact_store_returns_fals
 
 
 def test_advanced_register_complete_returns_500_when_artifact_store_raises(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module, storage_module):
-    config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     credential_id = b"advanced-store-raises"
     rp_id = "example.com"
     auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)
@@ -256,10 +246,6 @@ def test_advanced_register_complete_returns_500_when_artifact_store_raises(monke
 
 
 def test_advanced_register_complete_returns_400_when_add_public_key_material_raises(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module, storage_module):
-    config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     credential_id = b"advanced-public-key-material-raises"
     rp_id = "example.com"
     auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)

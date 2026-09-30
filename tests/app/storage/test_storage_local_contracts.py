@@ -7,12 +7,13 @@ import pickle
 
 import pytest
 
+from server.app.storage import credentials as storage
+from server.app.webauthn import metadata as metadata_module
 from tests.app.storage.credential_seed import seed_records
 
 
 @pytest.fixture
 def storage_local(monkeypatch, tmp_path):
-    storage = pytest.importorskip("server.app.storage.credentials")
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "session-credentials"))
     monkeypatch.setattr(storage, "_using_gcs", lambda: False)
 
@@ -46,7 +47,6 @@ def test_resolve_session_id_uses_explicit_value_or_metadata_fallback(storage_loc
 
     assert storage._resolve_session_id("  explicit-session  ") == "explicit-session"
 
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
     monkeypatch.setattr(
         metadata_module,
         "ensure_metadata_session_id",

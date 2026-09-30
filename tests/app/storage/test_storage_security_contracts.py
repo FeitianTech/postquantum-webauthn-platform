@@ -15,46 +15,23 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import importlib
 import json
 import os
 import pickle
 import struct
-import sys
 import types
 from pathlib import Path
 
 import pytest
+from fido2.cose import ES256
+from fido2.webauthn import AttestedCredentialData, AuthenticatorData
 
+from server.app.config import paths
+from server.app.storage import common as storage_common
+from server.app.storage import credentials
 from tests.app.entry_app import entry_app
+from tests.app.security import ceremony_helpers as ceremony
 from tests.app.storage.credential_seed import seed_records
-
-
-def _discover_repo_root(start: Path) -> Path:
-    for candidate in start.parents:
-        if (candidate / "server").is_dir() and (candidate / "tests").is_dir():
-            return candidate
-
-    return start.parents[3]
-
-
-_ROOT = _discover_repo_root(Path(__file__).resolve())
-
-# Mirrors the bootstrap in ``test_storage.py`` so this module imports cleanly on
-# its own (``pytest tests/app/storage/test_storage_security_contracts.py``).
-_server_pkg = types.ModuleType("server")
-_server_pkg.__path__ = [str(_ROOT / "server")]
-sys.modules.setdefault("server", _server_pkg)
-
-_server_app_pkg = types.ModuleType("server.app")
-_server_app_pkg.__path__ = [str(_ROOT / "server" / "app")]
-sys.modules.setdefault("server.app", _server_app_pkg)
-
-credentials = importlib.import_module("server.app.storage.credentials")
-record_format = importlib.import_module("server.app.storage.record_format")
-
-from fido2.cose import ES256  # noqa: E402
-from fido2.webauthn import AttestedCredentialData, AuthenticatorData  # noqa: E402
 
 # Every one of these must be refused outright, not sanitised into something
 # that happens to land inside the root.
@@ -212,7 +189,6 @@ def test_dotted_name_is_not_confused_with_a_parent_reference(local_store):
 def test_resolve_contained_path_rejects_a_symlink_escape(local_store):
     """Containment is checked after symlink resolution, not just lexically."""
 
-    storage_common = importlib.import_module("server.app.storage.common")
     root = local_store.root
     outside = local_store.tmp_path / "outside"
     outside.mkdir()
@@ -250,7 +226,6 @@ def test_gcs_object_keys_stay_under_the_configured_prefix(gcs_store, name):
 
 
 def test_assert_contained_blob_name_rejects_escapes():
-    storage_common = importlib.import_module("server.app.storage.common")
 
     with pytest.raises(ValueError):
         storage_common.assert_contained_blob_name("user-data/../loot", prefix="user-data")
@@ -271,7 +246,6 @@ def test_assert_contained_blob_name_rejects_escapes():
 
 
 def test_credential_root_is_not_inside_the_source_tree():
-    paths = importlib.import_module("server.app.config.paths")
     package_dir = os.path.realpath(paths.basepath)
     root = os.path.realpath(credentials._local_credential_base())
 
@@ -453,9 +427,6 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
     ``AuthenticatorData``, COSE maps keyed by integers and raw attestation
     bytes -- and that the app still reads the result back.
     """
-
-    pytest.importorskip("server.app.app")
-    ceremony = pytest.importorskip("tests.app.security.ceremony_helpers")
 
     root = tmp_path / "instance" / "session-credentials"
     root.mkdir(parents=True)

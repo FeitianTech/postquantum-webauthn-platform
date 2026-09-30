@@ -2,13 +2,15 @@ import os
 
 import pytest
 
+from server.app import credential_artifacts
+from server.app.webauthn import metadata as metadata_module
+
 
 @pytest.fixture
 def artifact_module(monkeypatch, tmp_path):
-    module = pytest.importorskip("server.app.credential_artifacts")
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", str(tmp_path))
-    monkeypatch.setattr(module, "_using_gcs", lambda: False)
-    return module
+    monkeypatch.setattr(credential_artifacts, "_using_gcs", lambda: False)
+    return credential_artifacts
 
 
 def test_store_load_delete_credential_artifact_round_trip_local(artifact_module):
@@ -151,7 +153,6 @@ def test_resolve_session_id_prefers_explicit_value(artifact_module):
 
 
 def test_resolve_session_id_falls_back_to_metadata_session(monkeypatch, artifact_module):
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
     monkeypatch.setattr(
         metadata_module,
         "ensure_metadata_session_id",
@@ -346,18 +347,15 @@ def test_delete_credential_artifact_rejects_invalid_storage_id(artifact_module):
 
 
 def test_using_gcs_depends_on_flag_and_bucket(monkeypatch):
-    artifact_module = pytest.importorskip("server.app.credential_artifacts")
-
-    monkeypatch.setattr(artifact_module, "gcs_enabled", lambda: True)
+    monkeypatch.setattr(credential_artifacts, "gcs_enabled", lambda: True)
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "bucket-a")
-    assert artifact_module._using_gcs() is True
+    assert credential_artifacts._using_gcs() is True
 
     monkeypatch.delenv("FIDO_SERVER_GCS_BUCKET", raising=False)
-    assert artifact_module._using_gcs() is False
+    assert credential_artifacts._using_gcs() is False
 
 
 def test_resolve_session_id_falls_back_for_non_string(monkeypatch, artifact_module):
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
     monkeypatch.setattr(
         metadata_module,
         "ensure_metadata_session_id",

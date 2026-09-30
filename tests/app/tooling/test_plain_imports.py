@@ -24,11 +24,6 @@ ALLOWED: dict[str, int] = {
     "tests/app/security/conftest.py": 5,
     "tests/app/security/test_pqc_attestation_reporting.py": 1,
     "tests/app/security/test_sign_count_regression.py": 1,
-    "tests/app/storage/test_credential_artifacts_store_contracts.py": 4,
-    "tests/app/storage/test_frontend_payload_contracts.py": 9,
-    "tests/app/storage/test_register_storage_failure_contracts.py": 10,
-    "tests/app/storage/test_storage_local_contracts.py": 2,
-    "tests/app/storage/test_storage_security_contracts.py": 2,
 }
 
 
