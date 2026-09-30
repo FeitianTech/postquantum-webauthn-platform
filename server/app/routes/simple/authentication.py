@@ -86,9 +86,12 @@ def _challenge_rejection_message(replayed: bool) -> str:
     return "Authentication challenge has expired. Please restart the authentication flow."
 
 
-@bp.route("/api/authenticate/complete", methods=["POST"])
-def authenticate_complete():
-    response = request.get_json(silent=True)
+def _consume_authentication_state(response: Any) -> tuple[tuple[Any, Any, list[Any], Any] | None, Any]:
+    """The ceremony state, the session's credentials and RP ID, each taken from the session; or the 400.
+
+    The session keys are popped in this order whatever the outcome, so a
+    request that fails leaves nothing of the ceremony behind.
+    """
 
     # Popping the state is not enough on its own: the session is a client-side
     # cookie, so an earlier copy that still holds this state can be resent.
@@ -112,7 +115,7 @@ def authenticate_complete():
         response.pop("__session_state", None)
     if state is None:
         session.pop("authenticate_rp_id", None)
-        return (
+        return None, (
             jsonify(
                 {
                     "error": "Authentication state not found or has expired. Please restart the authentication flow."
@@ -124,7 +127,7 @@ def authenticate_complete():
     rp_id = session.pop("authenticate_rp_id", None)
     if challenge_verdict != CHALLENGE_FRESH:
         session.pop("simple_credentials_email", None)
-        return (
+        return None, (
             jsonify(
                 {
                     "error": _challenge_rejection_message(
@@ -134,12 +137,15 @@ def authenticate_complete():
             ),
             400,
         )
+    return (state, session_credentials, credential_data_list, rp_id), None
+
+
+def _verify_assertion(
+    state: Any, credential_data_list: list[Any], response: Any, response_mapping: Mapping[str, Any], rp_id: Any
+) -> tuple[Any, Any]:
+    """fido2's verification of the assertion: the credential it matched, or the 400 naming the one sent."""
 
     server = relying_party.create_fido_server(rp_id=rp_id)
-
-    response_mapping: Mapping[str, Any]
-    response_mapping = response if isinstance(response, Mapping) else {}
-
     try:
         matched_credential = server.authenticate_complete(
             state,
@@ -159,21 +165,22 @@ def authenticate_complete():
             response_payload["failedCredentialId"] = failed_credential_id
 
         session.pop("simple_credentials_email", None)
-        return jsonify(response_payload), 400
+        return None, (jsonify(response_payload), 400)
+    return matched_credential, None
 
+
+def _matched_credential_id(matched_credential: Any) -> bytes:
     try:
-        authenticated_id_bytes = bytes(getattr(matched_credential, "credential_id", b"") or b"")
+        return bytes(getattr(matched_credential, "credential_id", b"") or b"")
     except Exception:
-        authenticated_id_bytes = b""
-    authenticated_id = (
-        encode_base64url(authenticated_id_bytes)
-        if authenticated_id_bytes
-        else None
-    )
+        return b""
 
-    # The counter comes from the authenticatorData the signature was just
-    # verified over. It is base64url: the standard-alphabet decode used here
-    # previously silently dropped '-' and '_' and could misread the counter.
+
+def _asserted_sign_count(response_mapping: Mapping[str, Any]) -> int | None:
+    """The counter in the authenticatorData the signature was just verified over; ``None`` if it does not read."""
+
+    # It is base64url: the standard-alphabet decode used here previously
+    # silently dropped '-' and '_' and could misread the counter.
     credential_response = response_mapping.get("response")
     auth_data_value = (
         credential_response.get("authenticatorData")
@@ -181,11 +188,38 @@ def authenticate_complete():
         else None
     )
     try:
-        sign_count = AuthenticatorData(
+        return AuthenticatorData(
             client_binary.decode_base64url_bytes(auth_data_value)
         ).counter
     except Exception:
-        sign_count = None
+        return None
+
+
+@bp.route("/api/authenticate/complete", methods=["POST"])
+def authenticate_complete():
+    response = request.get_json(silent=True)
+
+    consumed, error_response = _consume_authentication_state(response)
+    if error_response is not None:
+        return error_response
+    state, session_credentials, credential_data_list, rp_id = consumed
+
+    response_mapping: Mapping[str, Any]
+    response_mapping = response if isinstance(response, Mapping) else {}
+
+    matched_credential, error_response = _verify_assertion(
+        state, credential_data_list, response, response_mapping, rp_id
+    )
+    if error_response is not None:
+        return error_response
+
+    authenticated_id_bytes = _matched_credential_id(matched_credential)
+    authenticated_id = (
+        encode_base64url(authenticated_id_bytes)
+        if authenticated_id_bytes
+        else None
+    )
+    sign_count = _asserted_sign_count(response_mapping)
 
     uname = request.args.get("email")
     session.pop("simple_credentials_email", None)
