@@ -5,6 +5,7 @@ import hashlib
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData
 
+from server.app.decoder.decode import certificates as decode_certificates
 from server.app.decoder.decode import ctap_classify as decode_ctap_classify
 from server.app.decoder.decode import response as decode_response
 
@@ -49,7 +50,7 @@ def test_ctap_shape_detection_and_classification_helpers():
 
 def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, response, binary):
     monkeypatch.setattr(response, "_build_credential_overview", lambda _d: {"id": "cred"})
-    monkeypatch.setattr(response, "_convert_attestation_entry", lambda _e: {"fmt": "none"})
+    monkeypatch.setattr(decode_certificates, "convert_attestation_entry", lambda _e: {"fmt": "none"})
     monkeypatch.setattr(response, "_build_authenticator_section", lambda *_a, **_k: {"counter": 1})
     monkeypatch.setattr(response, "_convert_client_data_entry", lambda _e: {"type": "webauthn.create"})
     monkeypatch.setattr(response, "_collect_response_extras", lambda _e: {"signature": "aa"})

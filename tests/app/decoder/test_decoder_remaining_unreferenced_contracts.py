@@ -6,9 +6,10 @@ from fido2.webauthn import AttestedCredentialData, AuthenticatorData
 
 from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
+from server.app.decoder.decode import certificates as decode_certificates
 from server.app.decoder.decode import ctap_auth_data as decode_ctap_auth_data
 from server.app.decoder.decode import ctap_classify as decode_ctap_classify
-from server.app.decoder.decode import response as decode_response
+from server.app.webauthn.attestation import certificates as attestation_certificates
 
 
 def _auth_data_bytes() -> bytes:
@@ -46,7 +47,7 @@ def test_remaining_mapping_and_auth_data_format_helpers():
 
 def test_remaining_certificate_conversion_helpers(monkeypatch, response):
     monkeypatch.setattr(
-        response,
+        attestation_certificates,
         "serialize_attestation_certificate",
         lambda cert_bytes: {
             "derBase64": cbor2.dumps(cert_bytes).hex(),
@@ -55,12 +56,12 @@ def test_remaining_certificate_conversion_helpers(monkeypatch, response):
         },
     )
 
-    chain = decode_response._convert_certificate_chain([b"\x01\x02", "AQI=", {"derBase64": "AQI="}])
+    chain = decode_certificates.convert_certificate_chain([b"\x01\x02", "AQI=", {"derBase64": "AQI="}])
     assert len(chain) == 3
 
-    converted_bytes = decode_response._convert_certificate_bytes("AQI=")
+    converted_bytes = decode_certificates.convert_certificate_bytes("AQI=")
     assert "parsedX5c" in converted_bytes
 
-    converted_payload = decode_response._convert_certificate_payload({"derBase64": "AQI=", "pem": "PEM"})
+    converted_payload = decode_certificates.convert_certificate_payload({"derBase64": "AQI=", "pem": "PEM"})
     assert converted_payload["raw"] == "0102"
     assert converted_payload["pem"] == "PEM"

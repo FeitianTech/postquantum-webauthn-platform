@@ -5,6 +5,7 @@ import base64
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
+from server.app.decoder.decode import certificates as decode_certificates
 from server.app.decoder.decode import ctap_auth_data as decode_ctap_auth_data
 from server.app.decoder.decode import response as decode_response
 
@@ -73,14 +74,14 @@ def test_parse_authenticator_data_bytes_reads_extensions_and_reports_bytes_after
 
 
 def test_attestation_entry_and_payload_helpers_cover_remaining_edges():
-    assert decode_response._convert_attestation_entry("not-mapping") == {}
+    assert decode_certificates.convert_attestation_entry("not-mapping") == {}
 
     cert_bytes = b"\x30\x82\x01\x00"
     cert_payload = {
         "raw": cert_bytes.hex(),
         "derBase64": base64.b64encode(cert_bytes).decode("ascii"),
     }
-    converted_attestation = decode_response._convert_attestation_entry(
+    converted_attestation = decode_certificates.convert_attestation_entry(
         {
             "details": {
                 "cbor": {"fmt": "packed"},

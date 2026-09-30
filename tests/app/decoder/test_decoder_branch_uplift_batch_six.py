@@ -5,9 +5,11 @@ import hashlib
 from fido2.webauthn import AuthenticatorData
 
 from server.app.decoder.decode import authenticator_data as decode_authenticator_data
+from server.app.decoder.decode import certificates as decode_certificates
 from server.app.decoder.decode import credential_json
 from server.app.decoder.decode import ctap_classify as decode_ctap_classify
 from server.app.decoder.decode import response as decode_response
+from server.app.webauthn.attestation import certificates as attestation_certificates
 
 
 def test_looks_like_get_assertion_request_rejects_signature_or_authdata_binary_shapes():
@@ -81,10 +83,10 @@ def test_convert_result_to_data_covers_empty_cbor_and_generic_fallback_paths():
 
 
 def test_convert_certificate_bytes_guard_paths(monkeypatch, response):
-    assert decode_response._convert_certificate_bytes("%%") == {}
+    assert decode_certificates.convert_certificate_bytes("%%") == {}
 
-    monkeypatch.setattr(response, "serialize_attestation_certificate", lambda _bytes: None)
-    assert decode_response._convert_certificate_bytes(b"\x30\x82\x01\x00") == {}
+    monkeypatch.setattr(attestation_certificates, "serialize_attestation_certificate", lambda _bytes: None)
+    assert decode_certificates.convert_certificate_bytes(b"\x30\x82\x01\x00") == {}
 
 
 def test_build_authenticator_data_payload_covers_non_mapping_and_partial_details():

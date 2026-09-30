@@ -3,6 +3,7 @@ import base64
 import cbor2
 
 from server.app.decoder.decode import binary as decode_binary
+from server.app.decoder.decode import certificates as decode_certificates
 from server.app.decoder.decode import response as decode_response
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
@@ -73,7 +74,7 @@ def test_convert_attestation_entry_injects_certificate_when_x5c_is_empty():
         },
     }
 
-    converted = decode_response._convert_attestation_entry(entry)
+    converted = decode_certificates.convert_attestation_entry(entry)
 
     assert converted["fmt"] == "packed"
     assert converted["attStmt"]["sig"] == "0102"

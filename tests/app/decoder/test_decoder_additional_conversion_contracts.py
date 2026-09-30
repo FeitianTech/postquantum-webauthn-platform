@@ -8,8 +8,10 @@ from fido2.cose import CoseKey
 from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData
 
 from server.app.decoder.decode import authenticator_data as decode_authenticator_data
+from server.app.decoder.decode import certificates as decode_certificates
 from server.app.decoder.decode import credential_json
 from server.app.decoder.decode import response as decode_response
+from server.app.webauthn.attestation import certificates as attestation_certificates
 
 
 def _build_auth_data_bytes() -> bytes:
@@ -69,7 +71,7 @@ def test_describe_authenticator_data_bytes_includes_flags_and_attested_credentia
 
 def test_convert_attestation_statement_and_certificate_chain_paths(monkeypatch, response):
     monkeypatch.setattr(
-        response,
+        attestation_certificates,
         "serialize_attestation_certificate",
         lambda cert_bytes: {
             "derBase64": base64.b64encode(cert_bytes).decode("ascii"),
@@ -84,14 +86,14 @@ def test_convert_attestation_statement_and_certificate_chain_paths(monkeypatch, 
             "x5c": [b"\x01\x02", "AQI=", {"derBase64": "AQI="}],
         }
     }
-    statement = decode_response._convert_attestation_statement(details)
+    statement = decode_certificates.convert_attestation_statement(details)
 
     assert statement["alg"] == -7
     assert len(statement["x5c"]) == 3
     assert statement["x5c"][0]["raw"] == "0102"
     assert "parsedX5c" in statement["x5c"][1]
 
-    cbor_fallback = decode_response._convert_attestation_statement(
+    cbor_fallback = decode_certificates.convert_attestation_statement(
         {"cbor": {"attStmt": {"sig": b"\xaa"}}}
     )
     assert cbor_fallback["sig"] == "aa"

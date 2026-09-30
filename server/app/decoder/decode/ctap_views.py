@@ -15,7 +15,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from .. import ctap_message, ctap_view
-from . import response
+from . import certificates
 from .ctap_auth_data import _format_auth_data_for_expanded_json
 
 
@@ -51,7 +51,7 @@ def _certificate(node: Mapping[str, Any]) -> Any:
 
     if not _whole_bytes(node):
         return ctap_view.spell(node)
-    shown = dict(response._convert_certificate_bytes(bytes.fromhex(node["hex"])))
+    shown = dict(certificates.convert_certificate_bytes(bytes.fromhex(node["hex"])))
     shown["raw"] = node["hex"]
     return shown
 

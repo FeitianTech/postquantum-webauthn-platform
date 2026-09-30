@@ -1,14 +1,21 @@
-"""Certificate conversion for the decoder's answer."""
+"""A certificate as the decoder's answer shows it: its DER in hex, its PEM, its parsed fields.
+
+``convert_attestation_entry`` shows an attestation object's format and
+statement, each certificate in its ``x5c`` converted and every other value with
+its bytes as hex (``values.make_hex_only``).
+"""
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from typing import Any
 
 from ... import encoding
 from ...encoding import encode_base64
+from ...webauthn.attestation import certificates as attestation_certificates
+from .. import values
 
 
-def _convert_certificate_payload_impl(
+def convert_certificate_payload(
     entry: Mapping[str, Any], cert_bytes: bytes | None = None
 ) -> dict[str, Any]:
     if not isinstance(entry, Mapping):
@@ -29,17 +36,12 @@ def _convert_certificate_payload_impl(
         payload["pem"] = pem_value
 
     parsed_entry = {key: value for key, value in entry.items() if key != "summary"}
-    payload["parsedX5c"] = parsed_entry
+    payload["parsedX5c"] = values.make_hex_only(parsed_entry)
 
     return payload
 
 
-def _convert_certificate_bytes_impl(
-    value: Any,
-    *,
-    serializer: Callable[[bytes], Any],
-    convert_certificate_payload: Callable[[Mapping[str, Any], bytes | None], dict[str, Any]],
-) -> dict[str, Any]:
+def convert_certificate_bytes(value: Any) -> dict[str, Any]:
     cert_bytes: bytes | None = None
     if isinstance(value, (bytes, bytearray)):
         cert_bytes = bytes(value)
@@ -51,7 +53,7 @@ def _convert_certificate_bytes_impl(
     if cert_bytes is None:
         return {}
 
-    parsed = serializer(cert_bytes)
+    parsed = attestation_certificates.serialize_attestation_certificate(cert_bytes)
     if not isinstance(parsed, Mapping):
         return {}
 
@@ -61,11 +63,7 @@ def _convert_certificate_bytes_impl(
     return convert_certificate_payload(parsed_copy, cert_bytes)
 
 
-def _convert_certificate_chain_impl(
-    value: Any,
-    *,
-    convert_certificate_bytes: Callable[[Any], dict[str, Any]],
-) -> list[dict[str, Any]]:
+def convert_certificate_chain(value: Any) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         return []
 
@@ -77,11 +75,7 @@ def _convert_certificate_chain_impl(
     return certificates
 
 
-def _convert_attestation_statement_impl(
-    details: Any,
-    *,
-    convert_certificate_chain: Callable[[Any], list[dict[str, Any]]],
-) -> dict[str, Any]:
+def convert_attestation_statement(details: Any) -> dict[str, Any]:
     if not isinstance(details, Mapping):
         return {}
 
@@ -101,16 +95,11 @@ def _convert_attestation_statement_impl(
         if key == "x5c":
             payload["x5c"] = convert_certificate_chain(value)
         else:
-            payload[key] = value
+            payload[key] = values.make_hex_only(value)
     return payload
 
 
-def _convert_attestation_entry_impl(
-    entry: Any,
-    *,
-    convert_attestation_statement: Callable[[Any], dict[str, Any]],
-    convert_certificate_payload: Callable[[Mapping[str, Any], bytes | None], dict[str, Any]],
-) -> dict[str, Any]:
+def convert_attestation_entry(entry: Any) -> dict[str, Any]:
     if not isinstance(entry, Mapping):
         return {}
 

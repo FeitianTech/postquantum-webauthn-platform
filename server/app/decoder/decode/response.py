@@ -6,20 +6,12 @@ from collections.abc import Mapping
 from typing import Any
 
 from ...json_values import make_json_safe
-from ...webauthn.attestation.certificates import serialize_attestation_certificate
 from .. import values
-from . import binary
+from . import binary, certificates
 from .binary import (
     _convert_cose_key_for_display,
     _describe_cose_key,
     _resolve_cose_algorithm,
-)
-from .certificates import (
-    _convert_attestation_entry_impl,
-    _convert_attestation_statement_impl,
-    _convert_certificate_bytes_impl,
-    _convert_certificate_chain_impl,
-    _convert_certificate_payload_impl,
 )
 
 
@@ -145,7 +137,7 @@ def _convert_public_key_credential_data(result: Mapping[str, Any]) -> dict[str, 
         payload["credential"] = credential_overview
 
     attestation_entry = response.get("attestationObject") if isinstance(response, Mapping) else None
-    attestation_section = _convert_attestation_entry(attestation_entry)
+    attestation_section = certificates.convert_attestation_entry(attestation_entry)
     if attestation_section:
         payload["attestationObject"] = attestation_section
 
@@ -181,7 +173,7 @@ def _convert_public_key_credential_data(result: Mapping[str, Any]) -> dict[str, 
 def _convert_attestation_object_data(result: Mapping[str, Any]) -> dict[str, Any]:
     decoded = result.get("decoded") if isinstance(result.get("decoded"), Mapping) else {}
 
-    attestation_section = _convert_attestation_entry(decoded)
+    attestation_section = certificates.convert_attestation_entry(decoded)
     payload: dict[str, Any] = {}
     if attestation_section:
         if "raw" not in attestation_section:
@@ -234,64 +226,13 @@ def _convert_certificate_result(result: Mapping[str, Any]) -> dict[str, Any]:
         return {}
 
     if "certificates" in decoded and isinstance(decoded["certificates"], list):
-        certificates = [
-            _convert_certificate_payload(entry) for entry in decoded["certificates"] if isinstance(entry, Mapping)
+        converted = [
+            certificates.convert_certificate_payload(entry) for entry in decoded["certificates"] if isinstance(entry, Mapping)
         ]
-        return {"certificates": [cert for cert in certificates if cert]}
+        return {"certificates": [cert for cert in converted if cert]}
 
-    certificate_payload = _convert_certificate_payload(decoded)
+    certificate_payload = certificates.convert_certificate_payload(decoded)
     return certificate_payload or {}
-
-
-def _convert_attestation_entry(entry: Any) -> dict[str, Any]:
-    return _convert_attestation_entry_impl(
-        entry,
-        convert_attestation_statement=_convert_attestation_statement,
-        convert_certificate_payload=lambda payload, cert_bytes=None: _convert_certificate_payload(
-            payload, cert_bytes
-        ),
-    )
-
-
-def _convert_attestation_statement(details: Any) -> dict[str, Any]:
-    payload = _convert_attestation_statement_impl(
-        details,
-        convert_certificate_chain=_convert_certificate_chain,
-    )
-    normalized: dict[str, Any] = {}
-    for key, value in payload.items():
-        if key == "x5c":
-            normalized[key] = value
-        else:
-            normalized[key] = values.make_hex_only(value)
-    return normalized
-
-
-def _convert_certificate_chain(value: Any) -> list[dict[str, Any]]:
-    return _convert_certificate_chain_impl(
-        value,
-        convert_certificate_bytes=_convert_certificate_bytes,
-    )
-
-
-def _convert_certificate_bytes(value: Any) -> dict[str, Any]:
-    return _convert_certificate_bytes_impl(
-        value,
-        serializer=serialize_attestation_certificate,
-        convert_certificate_payload=lambda payload, cert_bytes=None: _convert_certificate_payload(
-            payload, cert_bytes
-        ),
-    )
-
-
-def _convert_certificate_payload(
-    entry: Mapping[str, Any], cert_bytes: bytes | None = None
-) -> dict[str, Any]:
-    payload = _convert_certificate_payload_impl(entry, cert_bytes)
-    parsed_entry = payload.get("parsedX5c")
-    if parsed_entry is not None:
-        payload["parsedX5c"] = values.make_hex_only(parsed_entry)
-    return payload
 
 
 def _build_authenticator_section(
