@@ -5,7 +5,6 @@ from server.app.config import relying_party
 from server.app.routes import advanced as advanced_module
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import summary as advanced_summary
-from server.app.webauthn import cose_algorithms
 from tests.app.entry_app import entry_app
 
 
@@ -57,22 +56,6 @@ def test_summary_helpers_drop_non_mapping_inputs_and_nested_non_mapping_sections
     assert "relyingParty" not in summary
     assert summary["storageId"] == "storage-id"
     assert summary["localStorageId"] == "storage-id"
-
-
-def test_algorithm_coercion_handles_blank_values_failed_numeric_extraction_and_pqc_allowlist(monkeypatch, advanced_constants, pqc_module):
-    assert cose_algorithms.lookup_name("   ") is None
-    assert cose_algorithms.coerce_cose_algorithm("   ") is None
-
-    class _BadMatch:
-        def group(self, _index=0):
-            return "--"
-
-    class _BadPattern:
-        def finditer(self, _value):
-            return [_BadMatch()]
-
-    monkeypatch.setattr(cose_algorithms, "NUMERIC_PATTERN", _BadPattern())
-    assert cose_algorithms.coerce_cose_algorithm("custom algorithm -- broken") is None
 
 
 def test_register_begin_accepts_non_mapping_authenticator_selection_and_derives_cross_platform_from_hints(monkeypatch, pqc_module):

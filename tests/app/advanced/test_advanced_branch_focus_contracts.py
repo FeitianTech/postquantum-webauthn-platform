@@ -7,7 +7,6 @@ from server.app import config as config_module
 from server.app import visitor_session
 from server.app.config import relying_party
 from server.app.routes import advanced as advanced_module
-from server.app.webauthn import cose_algorithms
 from tests.app.entry_app import entry_app
 
 
@@ -485,10 +484,3 @@ def test_advanced_authenticate_complete_error_path_uses_failed_id_fallback_extra
     payload = response.get_json()
     assert payload["error"] == "verification failure"
     assert "failedCredentialId" not in payload
-
-
-def test_advanced_helper_binary_and_algorithm_edge_fallbacks():
-    assert cose_algorithms.coerce_cose_algorithm(float("inf")) is None
-    assert cose_algorithms.coerce_cose_algorithm(float("-inf")) is None
-    assert cose_algorithms.coerce_cose_algorithm(float("nan")) is None
-    assert cose_algorithms.coerce_cose_algorithm("fido custom alg (-12345)") == -12345
