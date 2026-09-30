@@ -7,11 +7,10 @@ import sys
 
 import pytest
 
+from server.app import mds_provisioning as provisioning
 from server.app import mds_snapshot_dir, mds_snapshot_sets
 from tests.app.metadata.snapshot_versions import snapshot_version
 from tests.app.storage import fake_gcs
-
-provisioning = pytest.importorskip("server.app.mds_provisioning")
 
 
 @pytest.fixture

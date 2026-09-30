@@ -3,6 +3,8 @@ from types import SimpleNamespace
 import pytest
 from flask import session as flask_session
 
+from server.app.webauthn import metadata
+from server.app.webauthn.metadata import sessions as cleanup
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import state as metadata_state
 from tests.app.entry_app import entry_app
@@ -10,9 +12,6 @@ from tests.app.entry_app import entry_app
 
 @pytest.fixture
 def session_metadata_env(monkeypatch, tmp_path, metadata_state, session_store, app_config):
-    metadata = pytest.importorskip("server.app.webauthn.metadata")
-    session_store = pytest.importorskip("server.app.storage.session_metadata")
-
     session_dir = tmp_path / "sessions"
     session_dir.mkdir()
 
@@ -61,7 +60,6 @@ def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypat
     _, metadata = session_metadata_env
 
     calls = []
-    cleanup = pytest.importorskip("server.app.webauthn.metadata.sessions")
     monkeypatch.setattr(cleanup, "_touch_session_last_access", lambda sid: calls.append(("touch", sid)))
     monkeypatch.setattr(cleanup, "_schedule_inactive_session_cleanup", lambda: calls.append(("schedule", None)))
     monkeypatch.setattr(
@@ -76,8 +74,6 @@ def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypat
 
 
 def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch, blob, sessions):
-    metadata = pytest.importorskip("server.app.webauthn.metadata")
-
     base_entry = {
         "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
         "metadataStatement": {
@@ -109,8 +105,6 @@ def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch,
 
 
 def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch, blob, sessions):
-    metadata = pytest.importorskip("server.app.webauthn.metadata")
-
     base_snapshot = {
         "meta": {"entryCount": 1, "source": "packaged"},
         "entries": [

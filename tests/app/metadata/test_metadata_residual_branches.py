@@ -7,6 +7,7 @@ from types import MappingProxyType, SimpleNamespace
 import pytest
 
 from server.app import mds_snapshot_dir
+from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import sessions as metadata_sessions
@@ -15,7 +16,6 @@ from server.app.webauthn.metadata import state as metadata_state
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
-    module = pytest.importorskip("server.app.webauthn.metadata")
     return module
 
 

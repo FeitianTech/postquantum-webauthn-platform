@@ -1,7 +1,6 @@
 import os
 
-import pytest
-
+from server.app.webauthn import metadata as metadata_module
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import uploads as metadata_uploads
 
@@ -33,8 +32,6 @@ def test_safe_metadata_repo_filename_sanitizes_traversal_and_invalid_input():
 
 
 def test_maybe_store_uploaded_metadata_file_returns_false_when_logging_disabled(monkeypatch, uploads):
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
-
     listed = []
     monkeypatch.setattr(uploads, "is_logging_enabled", lambda: False)
     monkeypatch.setattr(
@@ -50,8 +47,6 @@ def test_maybe_store_uploaded_metadata_file_returns_false_when_logging_disabled(
 
 
 def test_maybe_store_uploaded_metadata_file_skips_upload_when_identical_sha_exists(monkeypatch, uploads):
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
-
     content = b'{"entry":1}'
     blob_sha = "same-blob-sha"
     upload_calls = []
@@ -83,8 +78,6 @@ def test_maybe_store_uploaded_metadata_file_skips_upload_when_identical_sha_exis
 
 
 def test_maybe_store_uploaded_metadata_file_updates_existing_name_with_sha(monkeypatch, uploads):
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
-
     content = b'{"entry":2}'
     upload_calls = []
 
@@ -120,8 +113,6 @@ def test_maybe_store_uploaded_metadata_file_updates_existing_name_with_sha(monke
 
 
 def test_maybe_store_uploaded_metadata_file_adds_new_file_with_sanitized_name(monkeypatch, uploads):
-    metadata_module = pytest.importorskip("server.app.webauthn.metadata")
-
     content = b'{"entry":3}'
     upload_calls = []
 

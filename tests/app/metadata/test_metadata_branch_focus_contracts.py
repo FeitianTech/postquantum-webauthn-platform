@@ -11,9 +11,11 @@ import pytest
 from fido2.mds3 import MetadataBlobPayloadEntry
 from flask import ctx, g, session
 
+from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
+from server.app.webauthn.metadata import sessions as cleanup
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import state as metadata_state
 from server.app.webauthn.metadata import verifier as metadata_verifier
@@ -22,8 +24,6 @@ from tests.app.entry_app import entry_app
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
-    module = pytest.importorskip("server.app.webauthn.metadata")
-
 
     return module
 
@@ -144,7 +144,6 @@ def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch
 
 
 def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkeypatch, session_store, app_config, sessions):
-    cleanup = pytest.importorskip("server.app.webauthn.metadata.sessions")
     schedule_calls = []
     monkeypatch.setattr(
         cleanup,

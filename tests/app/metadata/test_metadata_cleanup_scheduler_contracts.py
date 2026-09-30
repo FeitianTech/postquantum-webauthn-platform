@@ -1,3 +1,4 @@
+import importlib
 import threading
 import time
 from datetime import timedelta
@@ -5,18 +6,18 @@ from datetime import timedelta
 import pytest
 
 from server.app.webauthn.metadata import sessions as metadata_sessions
+from server.app.webauthn.metadata import sessions as module
 
 
 @pytest.fixture
 def sessions(monkeypatch):
-    module = pytest.importorskip("server.app.webauthn.metadata.sessions")
     monkeypatch.setattr(module, "_SESSION_METADATA_CLEANUP_INTERVAL", timedelta(seconds=1))
     return module
 
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state, sessions):
-    return pytest.importorskip("server.app.webauthn.metadata")
+    return importlib.import_module("server.app.webauthn.metadata")
 
 
 def test_schedule_inactive_session_cleanup_runs_inline_when_async_disabled(metadata_module, monkeypatch, metadata_state, sessions):

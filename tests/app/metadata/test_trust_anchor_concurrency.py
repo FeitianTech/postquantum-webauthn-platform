@@ -11,14 +11,13 @@ import pytest
 from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
 from flask import g
 
+from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
-    module = pytest.importorskip("server.app.webauthn.metadata")
-
     monkeypatch.setattr(metadata_state, "_base_metadata_trust_verified", True)
 
     return module

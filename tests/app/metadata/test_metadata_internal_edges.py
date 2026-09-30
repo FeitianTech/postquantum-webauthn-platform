@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 from fido2.mds3 import MetadataBlobPayloadEntry
 
+from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
@@ -14,8 +15,6 @@ from server.app.webauthn.metadata import sessions as metadata_sessions
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
-    module = pytest.importorskip("server.app.webauthn.metadata")
-
 
     return module
 

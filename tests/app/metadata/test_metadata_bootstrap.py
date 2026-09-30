@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 import pytest
 
+from server.app.routes import general as general_module
 from tests.app.entry_app import entry_app
 
 
@@ -83,8 +84,6 @@ def test_metadata_not_available_is_warning_classical():
 
 
 def test_the_mds_info_answers_the_summary_and_the_custom_entries_state(monkeypatch, app_config):
-    general_module = pytest.importorskip("server.app.routes.general")
-
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {})
     monkeypatch.setattr(general_module, "load_packaged_snapshot_meta", lambda: None)
@@ -96,7 +95,6 @@ def test_the_mds_info_answers_the_summary_and_the_custom_entries_state(monkeypat
 
 
 def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_config):
-    general_module = pytest.importorskip("server.app.routes.general")
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         general_module,
@@ -114,7 +112,6 @@ def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_con
 
 
 def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch, app_config):
-    general_module = pytest.importorskip("server.app.routes.general")
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
 
     with entry_app().test_client() as client:
@@ -125,7 +122,6 @@ def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch, app_con
 
 
 def test_resolve_metadata_entry_returns_not_found(monkeypatch, app_config):
-    general_module = pytest.importorskip("server.app.routes.general")
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         general_module,
@@ -141,7 +137,6 @@ def test_resolve_metadata_entry_returns_not_found(monkeypatch, app_config):
 
 
 def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
-    general_module = pytest.importorskip("server.app.routes.general")
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         general_module,
@@ -162,7 +157,6 @@ def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
 
 
 def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):
-    general_module = pytest.importorskip("server.app.routes.general")
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         general_module,
@@ -198,7 +192,6 @@ def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
 
 
 def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):
-    general_module = pytest.importorskip("server.app.routes.general")
     monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(general_module, "delete_session_metadata_item", lambda _name: True)
     monkeypatch.setattr(

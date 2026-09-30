@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import importlib
 import shutil
 
 import pytest
+
+from server.app.webauthn.metadata import state
 
 # The caches the metadata submodules share, with the value each one holds
 # on a freshly imported module. Six test modules used to carry their own copy of
@@ -40,7 +43,6 @@ def metadata_state(monkeypatch):
     while exercising stale state.
     """
 
-    state = pytest.importorskip("server.app.webauthn.metadata.state")
     for name, default in _RUNTIME_STATE_DEFAULTS.items():
         monkeypatch.setattr(state, name, set() if default is frozenset() else default)
     return state
@@ -50,56 +52,56 @@ def metadata_state(monkeypatch):
 def sessions():
     """The fragment that defines the session identity helpers. Patch here rather than on ``server.app.webauthn.metadata``: the other fragments call these through this module, so this is the binding that is actually read. The fragment that defines the session metadata item helpers. The fragment that defines the session cleanup worker and scheduler."""
 
-    return pytest.importorskip("server.app.webauthn.metadata.sessions")
+    return importlib.import_module("server.app.webauthn.metadata.sessions")
 
 
 @pytest.fixture
 def entries():
     """The fragment that defines the entry payload helpers."""
 
-    return pytest.importorskip("server.app.webauthn.metadata.entries")
+    return importlib.import_module("server.app.webauthn.metadata.entries")
 
 
 @pytest.fixture
 def blob():
     """The fragment that defines the base/explorer/full snapshot loaders. The fragment that defines the metadata cache helpers."""
 
-    return pytest.importorskip("server.app.webauthn.metadata.blob")
+    return importlib.import_module("server.app.webauthn.metadata.blob")
 
 
 @pytest.fixture
 def uploads():
     """The fragment that defines the repository upload helpers."""
 
-    return pytest.importorskip("server.app.webauthn.metadata.uploads")
+    return importlib.import_module("server.app.webauthn.metadata.uploads")
 
 
 @pytest.fixture
 def effective():
     """The fragment that composes base and session snapshots."""
 
-    return pytest.importorskip("server.app.webauthn.metadata.effective")
+    return importlib.import_module("server.app.webauthn.metadata.effective")
 
 
 @pytest.fixture
 def session_store():
     """The storage module the metadata fragments write through."""
 
-    return pytest.importorskip("server.app.storage.session_metadata")
+    return importlib.import_module("server.app.storage.session_metadata")
 
 
 @pytest.fixture
 def app_config():
     """The app config module, for the Flask app and its logger."""
 
-    return pytest.importorskip("server.app.config")
+    return importlib.import_module("server.app.config")
 
 
 @pytest.fixture
 def verifier():
     """The fragment that defines the metadata merge and verifier helpers."""
 
-    return pytest.importorskip("server.app.webauthn.metadata.verifier")
+    return importlib.import_module("server.app.webauthn.metadata.verifier")
 
 
 @pytest.fixture

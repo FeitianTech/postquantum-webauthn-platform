@@ -7,6 +7,8 @@ import time
 import pytest
 from flask import session
 
+from server.app.webauthn import metadata
+from server.app.webauthn.metadata import sessions as cleanup
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import state as metadata_state
 from tests.app.entry_app import entry_app
@@ -14,9 +16,6 @@ from tests.app.entry_app import entry_app
 
 @pytest.fixture
 def touch_env(monkeypatch, app_config, sessions):
-    metadata = pytest.importorskip("server.app.webauthn.metadata")
-    cleanup = pytest.importorskip("server.app.webauthn.metadata.sessions")
-
     calls = []
     monkeypatch.setattr(cleanup, "_touch_session_last_access", lambda sid: calls.append(sid))
     monkeypatch.setattr(cleanup, "_schedule_inactive_session_cleanup", lambda: None)
@@ -81,8 +80,6 @@ def test_touch_outside_request_context_is_unthrottled(touch_env):
 
 
 def test_health_endpoint_sets_no_session_cookie(app_config):
-    pytest.importorskip("server.app.app")
-
     response = entry_app().test_client().get("/health")
 
     assert response.status_code == 200

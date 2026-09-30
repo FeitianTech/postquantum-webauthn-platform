@@ -7,13 +7,12 @@ import os
 
 import pytest
 
+from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import blob as metadata_blob
 
 
 @pytest.fixture
 def metadata_module(monkeypatch, tmp_path, metadata_state, blob):
-    module = pytest.importorskip("server.app.webauthn.metadata")
-
     verified_path = tmp_path / "fido-mds3.verified.json"
     explorer_path = tmp_path / "fido-mds3.explorer.json"
     verified_path.write_text(json.dumps({"entries": []}), encoding="utf-8")
