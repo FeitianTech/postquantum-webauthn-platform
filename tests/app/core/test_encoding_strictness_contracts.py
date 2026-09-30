@@ -18,6 +18,7 @@ import importlib
 
 import pytest
 
+from server.app.decoder.decode import binary_text
 from server.app.decoder.decode import pipeline as decode_pipeline
 from server.app.routes import binary_helpers
 from server.app.webauthn.attestation import certificates as attestation_certificates
@@ -50,7 +51,7 @@ def test_decoder_rejects_plain_english_text(pipeline):
     """Prose is not base64url, and must not be reported as decoded CBOR."""
 
     with pytest.raises(ValueError):
-        pipeline._decode_binary_input(PLAIN_TEXT)
+        binary_text.decode_binary_input(PLAIN_TEXT)
 
     with pytest.raises(ValueError):
         decode_pipeline.decode_payload_text(PLAIN_TEXT)
@@ -63,21 +64,21 @@ def test_decoder_never_left_pads_odd_length_hex(pipeline):
     base64 either are refused.
     """
 
-    assert pipeline._decode_binary_input("abc") == (b"\x69\xb7", "base64 or base64url")
+    assert binary_text.decode_binary_input("abc") == (b"\x69\xb7", "base64 or base64url")
     with pytest.raises(ValueError):
-        pipeline._decode_binary_input("abcde")
+        binary_text.decode_binary_input("abcde")
 
-    assert pipeline._decode_binary_input("0abc") == (b"\x0a\xbc", "hex")
+    assert binary_text.decode_binary_input("0abc") == (b"\x0a\xbc", "hex")
 
 
 def test_decoder_reports_encoding_ambiguity_rather_than_guessing(pipeline):
     """A dash-free payload is valid under both base64 alphabets; say so."""
 
-    ambiguous = pipeline._sniff_binary_input("QUJD")
+    ambiguous = binary_text.sniff_binary_input("QUJD")
     assert ambiguous.data == b"ABC"
     assert ambiguous.ambiguous is True
 
-    urlsafe = pipeline._sniff_binary_input(
+    urlsafe = binary_text.sniff_binary_input(
         base64.urlsafe_b64encode(b"\xfb\xef\xbe").decode("ascii").rstrip("=")
     )
     assert urlsafe.encoding == "base64url"

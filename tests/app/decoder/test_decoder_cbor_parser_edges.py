@@ -2,6 +2,7 @@ import pytest
 from fido2.utils import ByteBuffer
 
 from server.app.decoder import values as decoder_values
+from server.app.decoder.decode import binary_text
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
 from server.app.decoder.decode import pipeline as decode_pipeline
 
@@ -135,15 +136,15 @@ def test_expand_cbor_value_and_binary_input_decoder_helpers():
     assert expanded["items"][0]["hex"] == "05"
     assert expanded["items"][1]["nested"]["hex"] == "06"
 
-    hex_data, hex_encoding = decode_pipeline._decode_binary_input("0abc")
+    hex_data, hex_encoding = binary_text.decode_binary_input("0abc")
     assert hex_data == bytes.fromhex("0abc")
     assert hex_encoding == "hex"
 
     # "abc" is not silently left-padded to "0abc"; the missing nibble is data
     # the caller never supplied. It is base64, and read as that.
-    assert decode_pipeline._decode_binary_input("abc") == (b"\x69\xb7", "base64 or base64url")
+    assert binary_text.decode_binary_input("abc") == (b"\x69\xb7", "base64 or base64url")
     with pytest.raises(ValueError, match="an odd number, so no bytes"):
-        decode_pipeline._decode_binary_input("abcde")
+        binary_text.decode_binary_input("abcde")
 
     with pytest.raises(ValueError, match="No binary data present"):
-        decode_pipeline._decode_binary_input("   ")
+        binary_text.decode_binary_input("   ")

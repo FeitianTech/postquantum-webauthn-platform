@@ -280,9 +280,14 @@ serialise encoder output with cbor2. Every CBOR head either writes goes through
 keep them there by putting new code in a module named for what it does, as
 `ctap_prefix.py` (the command or status byte), `ctap_classify.py` (a map's CTAP
 shape), `ctap_views.py` (the views), `ctap_auth_data.py`, `ctap_self_check.py`,
-`readings.py` (the binary readings), `findings.py` (collecting and ordering
-findings), `authenticator_data.py`, `json_input.py`, `edn_view.py`,
-`key_equivalence.py` and `ctap_conformance.py` are. Spelling shared by both
+`readings.py` (the binary readings), `binary_text.py` (text read as bytes),
+`pem.py` (a certificate given whole), `attestation_object.py`,
+`credential_json.py` (a PublicKeyCredential, client data or other JSON),
+`findings.py` (collecting and ordering findings), `authenticator_data.py`,
+`json_input.py`, `edn_view.py`, `key_equivalence.py` and `ctap_conformance.py`
+are. `pipeline.py` imports the readers and none imports it back: nothing in
+`server/app` imports in a cycle (`tests/app/tooling/test_import_cycles.py`).
+Spelling shared by both
 sides lives in `server/app/decoder/` itself (`ctap_view.py`, `ctap_message.py`,
 `cbor_canonical.py`, `cbor_head.py`, `ctap2_order.py`), since `decode/` never
 imports `encode/`.

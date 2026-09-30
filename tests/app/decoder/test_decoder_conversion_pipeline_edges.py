@@ -4,6 +4,7 @@ import json
 
 import cbor2
 
+from server.app.decoder.decode import credential_json
 from server.app.decoder.decode import pipeline as decode_pipeline
 from server.app.decoder.decode import response as decode_response
 
@@ -207,16 +208,16 @@ def test_prepare_decoder_response_and_detector_helpers():
         "type": "public-key",
         "response": {"clientDataJSON": _b64url(b"{}")},
     }
-    assert decode_pipeline._is_public_key_credential(credential_candidate) is True
-    assert decode_pipeline._is_public_key_credential({"response": {}}) is False
+    assert credential_json.is_public_key_credential(credential_candidate) is True
+    assert credential_json.is_public_key_credential({"response": {}}) is False
 
     client_data_candidate = {
         "type": "webauthn.create",
         "challenge": "AQID",
         "origin": "https://example.com",
     }
-    assert decode_pipeline._is_client_data_dict(client_data_candidate) is True
-    assert decode_pipeline._is_client_data_dict({"type": "x", "challenge": "AQID"}) is False
+    assert credential_json.is_client_data_dict(client_data_candidate) is True
+    assert credential_json.is_client_data_dict({"type": "x", "challenge": "AQID"}) is False
 
 
 def test_decode_payload_text_json_public_key_credential_and_cbor_roundtrip():

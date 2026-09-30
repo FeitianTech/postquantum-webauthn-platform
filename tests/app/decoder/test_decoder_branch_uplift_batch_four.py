@@ -5,8 +5,11 @@ import base64
 import pytest
 
 from server.app.decoder import values as decoder_values
+from server.app.decoder.decode import attestation_object as decode_attestation_object
 from server.app.decoder.decode import authenticator_data as decode_authenticator_data
+from server.app.decoder.decode import binary_text, credential_json
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
+from server.app.decoder.decode import pem as decode_pem
 from server.app.decoder.decode import pipeline as decode_pipeline
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
@@ -25,9 +28,9 @@ def test_decode_public_key_credential_includes_signature_and_user_handle_summari
             return b"\x01\x02", "base64url"
         return None
 
-    monkeypatch.setattr(pipeline, "_decode_binary_field", _decode_binary)
+    monkeypatch.setattr(binary_text, "decode_binary_field", _decode_binary)
 
-    result = decode_pipeline._decode_public_key_credential(
+    result = credential_json.decode_public_key_credential(
         {
             "id": "credential-id",
             "type": "public-key",
@@ -47,7 +50,7 @@ def test_decode_pem_certificates_skips_decode_errors_and_uses_single_certificate
     invalid_body_block = "-----BEGIN CERTIFICATE-----\nA\n-----END CERTIFICATE-----"
     pem_text = "\n".join([invalid_body_block, _pem_block(_GSR2_DER)])
 
-    result = decode_pipeline._decode_pem_certificates(pem_text)
+    result = decode_pem.decode_pem_certificates(pem_text)
     assert result["format"] == "X.509 certificate (PEM)"
     assert isinstance(result["decoded"], dict)
     assert "rawPem" in result["decoded"]
@@ -56,11 +59,11 @@ def test_decode_pem_certificates_skips_decode_errors_and_uses_single_certificate
 
 def test_decode_binary_payload_uses_authenticator_data_path_when_other_binary_decoders_fail(monkeypatch, pipeline):
     monkeypatch.setattr(decoder_values, "try_decode_utf8", lambda _data: None)
-    monkeypatch.setattr(pipeline, "_try_decode_certificate_bytes", lambda _data, _enc: None)
-    monkeypatch.setattr(pipeline, "_try_decode_attestation_object", lambda _data, _enc: None)
+    monkeypatch.setattr(decode_pem, "try_decode_der_certificate", lambda _data, _enc: None)
+    monkeypatch.setattr(decode_attestation_object, "try_decode", lambda _data, _enc: None)
     monkeypatch.setattr(
-        pipeline,
-        "_try_decode_authenticator_data",
+        decode_authenticator_data,
+        "try_decode",
         lambda _data, enc: {"format": "Authenticator data (binary)", "inputEncoding": enc},
     )
 
@@ -87,7 +90,7 @@ def test_decode_binary_input_has_no_lenient_fallback_when_strict_decoding_fails(
     monkeypatch.setattr(base64, "b64decode", _patched_b64decode)
 
     with pytest.raises(ValueError, match="does not appear to be valid"):
-        decode_pipeline._decode_binary_input("AQID")
+        binary_text.decode_binary_input("AQID")
 
 
 def test_read_cbor_length_reads_arguments_and_rejects_reserved_additional_information():
@@ -209,7 +212,7 @@ def test_try_decode_authenticator_data_returns_structured_payload_on_success(mon
         lambda data, encoding=None: {"hex": data.hex(), "encoding": encoding},
     )
 
-    result = decode_pipeline._try_decode_authenticator_data(b"\x01\x02", "hex")
+    result = decode_authenticator_data.try_decode(b"\x01\x02", "hex")
     assert result == {
         "format": "Authenticator data (binary)",
         "inputEncoding": "hex",

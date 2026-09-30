@@ -5,8 +5,8 @@ import hashlib
 from fido2.webauthn import AuthenticatorData
 
 from server.app.decoder.decode import authenticator_data as decode_authenticator_data
+from server.app.decoder.decode import credential_json
 from server.app.decoder.decode import ctap_classify as decode_ctap_classify
-from server.app.decoder.decode import pipeline as decode_pipeline
 from server.app.decoder.decode import response as decode_response
 
 
@@ -48,7 +48,7 @@ def test_describe_authenticator_data_bytes_includes_extensions_summary_when_mapp
 
 
 def test_build_client_data_details_handles_invalid_challenge_and_optional_fields():
-    details = decode_pipeline._build_client_data_details(
+    details = credential_json.build_client_data_details(
         {
             "type": "webauthn.create",
             "challenge": "not-valid-binary",
@@ -64,7 +64,7 @@ def test_build_client_data_details_handles_invalid_challenge_and_optional_fields
     assert details["tokenBinding"] == {"status": "present"}
     assert details["rawText"] == "raw-json-text"
 
-    no_challenge = decode_pipeline._build_client_data_details({"type": "x", "origin": "https://e"})
+    no_challenge = credential_json.build_client_data_details({"type": "x", "origin": "https://e"})
     assert no_challenge["challenge"] is None
 
 

@@ -5,15 +5,15 @@ import hashlib
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
+from server.app.decoder.decode import attestation_object as decode_attestation_object
 from server.app.decoder.decode import ctap_auth_data as decode_ctap_auth_data
-from server.app.decoder.decode import pipeline as decode_pipeline
 from server.app.decoder.decode import response as decode_response
 
 
 def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(monkeypatch, cbor_parser, ctap):
     # _extract_attestation_certificate and _convert_certificate_bytes/payload guards.
-    assert decode_pipeline._extract_attestation_certificate("not-a-map") is None
-    assert decode_pipeline._extract_attestation_certificate({"x5c": ["A"]}) is None
+    assert decode_attestation_object.extract_certificate("not-a-map") is None
+    assert decode_attestation_object.extract_certificate({"x5c": ["A"]}) is None
 
     assert decode_response._convert_certificate_bytes("A") == {}
     assert decode_response._convert_certificate_bytes(123) == {}

@@ -11,8 +11,8 @@ finding. "Whole" is strict whatever the request asked for: one well-formed CBOR
 item and nothing after it, a CTAP message whose framing keeps the bytes after it,
 authenticator data exactly as long as its flags say, JSON as RFC 8259 has it.
 
-The readings reach the pipeline's helpers through the module, so a test that
-patches one there patches it here too.
+The readings call each reader through its module, so a test that patches one
+there patches it here too.
 """
 from __future__ import annotations
 
@@ -24,13 +24,15 @@ from cryptography import x509
 from .. import values
 from . import (
     ambiguous_input,
+    attestation_object,
     authenticator_data,
     cbor_parser,
+    credential_json,
     ctap,
     ctap_classify,
     ctap_prefix,
     json_input,
-    pipeline,
+    pem,
 )
 from .ambiguous_input import finding
 
@@ -59,9 +61,9 @@ def _lone_ctap_byte(data: bytes, encoding: str, lenient: bool) -> Result | None:
 
 def _utf8_pem(data: bytes, encoding: str, lenient: bool) -> Result | None:
     text = values.try_decode_utf8(data)
-    if not (text and pipeline._looks_like_pem(text)):
+    if not (text and pem.looks_like_pem(text)):
         return None
-    result = pipeline._decode_pem_certificates(text)
+    result = pem.decode_pem_certificates(text)
     result["inputEncoding"] = encoding
     result["binary"] = values.binary_summary(data, encoding)
     return result
@@ -71,14 +73,14 @@ def _utf8_json(data: bytes, encoding: str, lenient: bool) -> Result | None:
     text = values.try_decode_utf8(data)
     if not text:
         return None
-    json_obj, json_findings = pipeline._read_json(text, lenient=lenient, in_bytes=True)
+    json_obj, json_findings = json_input.read_or_none(text, lenient=lenient, in_bytes=True)
     if json_obj is json_input.NOT_JSON:
         return None
-    if isinstance(json_obj, Mapping) and pipeline._is_client_data_dict(json_obj):
+    if isinstance(json_obj, Mapping) and credential_json.is_client_data_dict(json_obj):
         result = {
             "format": "WebAuthn client data (binary)",
             "inputEncoding": encoding,
-            "decoded": pipeline._describe_client_data_from_bytes(data, lenient=lenient),
+            "decoded": credential_json.describe_client_data_from_bytes(data, lenient=lenient),
             "binary": values.binary_summary(data, encoding),
         }
     else:
@@ -94,11 +96,11 @@ def _utf8_json(data: bytes, encoding: str, lenient: bool) -> Result | None:
 
 
 def _der_certificate(data: bytes, encoding: str, lenient: bool) -> Result | None:
-    return pipeline._try_decode_certificate_bytes(data, encoding)
+    return pem.try_decode_der_certificate(data, encoding)
 
 
 def _attestation_object(data: bytes, encoding: str, lenient: bool) -> Result | None:
-    return pipeline._try_decode_attestation_object(data, encoding)
+    return attestation_object.try_decode(data, encoding)
 
 
 def _one_ctap_message(data: bytes, encoding: str, lenient: bool) -> Result | None:
@@ -123,7 +125,7 @@ def _ctap_message_and_bytes(data: bytes, encoding: str, lenient: bool) -> Result
 
 
 def _authenticator_data(data: bytes, encoding: str, lenient: bool) -> Result | None:
-    return pipeline._try_decode_authenticator_data(data, encoding)
+    return authenticator_data.try_decode(data, encoding)
 
 
 def _cbor(data: bytes, encoding: str, lenient: bool) -> Result | None:
@@ -182,10 +184,10 @@ def _is_lone_ctap_byte(data: bytes) -> bool:
 
 def _is_pem_text(data: bytes) -> bool:
     text = values.try_decode_utf8(data)
-    if not text or not pipeline._looks_like_pem(text):
+    if not text or not pem.looks_like_pem(text):
         return False
     try:
-        pipeline._decode_pem_certificates(text)
+        pem.decode_pem_certificates(text)
     except ValueError:
         return False
     return True

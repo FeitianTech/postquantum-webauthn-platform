@@ -16,7 +16,7 @@ from ...encoding import encode_base64url
 from ...json_values import make_json_safe
 from ...webauthn.attestation.aaguid import summarize_authenticator_extensions
 from .. import values
-from . import cbor_parser
+from . import cbor_parser, findings, interpretations
 
 
 def _read_authenticator_data(data: bytes) -> dict[str, Any]:
@@ -130,3 +130,23 @@ def _describe_authenticator_data_bytes(data: bytes) -> dict[str, Any]:
         details["extensions"] = extensions_payload
 
     return details
+
+
+def try_decode(data: bytes, encoding: str) -> dict[str, Any] | None:
+    """Authenticator data as the decoder's whole input, with what it holds; ``None`` if it is not."""
+
+    try:
+        details = _describe_authenticator_data_bytes(data)
+    except Exception:
+        return None
+
+    extra, located = interpretations.for_authenticator_data(data)
+    result = {
+        "format": "Authenticator data (binary)",
+        "inputEncoding": encoding,
+        "decoded": details,
+        "binary": values.binary_summary(data, encoding),
+        "extraData": extra,
+    }
+    findings._attach_findings(result, located)
+    return result

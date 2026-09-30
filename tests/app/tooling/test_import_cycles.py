@@ -7,22 +7,12 @@ imports B" makes A depend on B and on each package of B's that is not also one o
 A's, since importing B runs those packages' ``__init__`` first.
 
 An import inside a function runs later and so hides a cycle rather than removing
-it; the few kept are listed with their reason.
-
-Both lists only shrink: a cycle that is gone, or one that got smaller, must be
-removed or edited to what is left.
+it; the few kept are listed with their reason, and the list only shrinks.
 """
 from __future__ import annotations
 
 import ast
 from pathlib import Path
-
-ALLOWED_CYCLES: list[frozenset[str]] = [
-    frozenset({
-        "server.app.decoder.decode.pipeline",
-        "server.app.decoder.decode.readings",
-    }),
-]
 
 ALLOWED_DEFERRED: dict[tuple[str, str], str] = {
     ("server/app/mds/provisioning.py", "tools"): "the updater is imported only when a refresh runs, and may be absent",
@@ -155,13 +145,7 @@ def _cycles(edges: dict[str, set[str]]) -> list[frozenset[str]]:
 
 def test_no_import_cycle():
     edges, _deferred = _graph()
-    found = set(_cycles(edges))
-    allowed = set(ALLOWED_CYCLES)
-    problems = [f"import cycle: {' -> '.join(sorted(cycle))}" for cycle in sorted(found - allowed, key=sorted)]
-    problems += [
-        f"listed cycle no longer exists as listed (remove or shrink it): {sorted(cycle)}"
-        for cycle in sorted(allowed - found, key=sorted)
-    ]
+    problems = [f"import cycle: {' -> '.join(sorted(cycle))}" for cycle in sorted(_cycles(edges), key=sorted)]
     assert not problems, "\n".join(problems)
 
 

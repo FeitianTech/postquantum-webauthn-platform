@@ -4,8 +4,11 @@ import pytest
 from fido2.utils import ByteBuffer
 
 from server.app.decoder import values as decoder_values
+from server.app.decoder.decode import attestation_object as decode_attestation_object
+from server.app.decoder.decode import authenticator_data as decode_authenticator_data
+from server.app.decoder.decode import binary_text, credential_json, json_input
 from server.app.decoder.decode import ctap as decode_ctap
-from server.app.decoder.decode import json_input
+from server.app.decoder.decode import pem as decode_pem
 from server.app.decoder.decode import pipeline as decode_pipeline
 
 
@@ -94,25 +97,25 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, p
     with pytest.raises(ValueError, match="Decoder input is empty"):
         decode_pipeline.decode_payload_text("   ")
 
-    monkeypatch.setattr(pipeline, "_read_json", lambda _v, **_kwargs: ({"a": 1}, []))
+    monkeypatch.setattr(json_input, "read_or_none", lambda _v, **_kwargs: ({"a": 1}, []))
     monkeypatch.setattr(
-        pipeline, "_decode_json_object", lambda value, raw_text=None, **_kwargs: {"kind": "json", "raw": raw_text, "value": value}
+        credential_json, "decode_json_object", lambda value, raw_text=None, **_kwargs: {"kind": "json", "raw": raw_text, "value": value}
     )
     monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"wrapped": result})
     assert decode_pipeline.decode_payload_text(" {\"a\": 1} ") == {
         "wrapped": {"kind": "json", "raw": '{"a": 1}', "value": {"a": 1}, "decodeMode": "strict"}
     }
 
-    monkeypatch.setattr(pipeline, "_read_json", lambda _v, **_kwargs: (json_input.NOT_JSON, []))
-    monkeypatch.setattr(pipeline, "_looks_like_pem", lambda _v: True)
-    monkeypatch.setattr(pipeline, "_decode_pem_certificates", lambda _v: {"kind": "pem"})
+    monkeypatch.setattr(json_input, "read_or_none", lambda _v, **_kwargs: (json_input.NOT_JSON, []))
+    monkeypatch.setattr(decode_pem, "looks_like_pem", lambda _v: True)
+    monkeypatch.setattr(decode_pem, "decode_pem_certificates", lambda _v: {"kind": "pem"})
     monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"pem": result})
     assert decode_pipeline.decode_payload_text("-----BEGIN CERTIFICATE-----") == {
         "pem": {"kind": "pem", "decodeMode": "strict"}
     }
 
-    monkeypatch.setattr(pipeline, "_looks_like_pem", lambda _v: False)
-    monkeypatch.setattr(pipeline, "_decode_binary_input", lambda _v: (b"\x01\x02", "hex"))
+    monkeypatch.setattr(decode_pem, "looks_like_pem", lambda _v: False)
+    monkeypatch.setattr(binary_text, "decode_binary_input", lambda _v: (b"\x01\x02", "hex"))
     monkeypatch.setattr(
         pipeline,
         "_decode_binary_payload",
@@ -126,19 +129,19 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, p
 
 
 def test_decode_json_object_handles_client_data_and_plain_json(monkeypatch, pipeline):
-    monkeypatch.setattr(pipeline, "_is_public_key_credential", lambda _v: False)
-    monkeypatch.setattr(pipeline, "_is_client_data_dict", lambda _v: True)
-    monkeypatch.setattr(pipeline, "_build_client_data_details", lambda value, raw_text=None: {"built": value, "raw": raw_text})
+    monkeypatch.setattr(credential_json, "is_public_key_credential", lambda _v: False)
+    monkeypatch.setattr(credential_json, "is_client_data_dict", lambda _v: True)
+    monkeypatch.setattr(credential_json, "build_client_data_details", lambda value, raw_text=None: {"built": value, "raw": raw_text})
 
-    client_result = decode_pipeline._decode_json_object({"type": "webauthn.get"}, raw_text="raw-json")
+    client_result = credential_json.decode_json_object({"type": "webauthn.get"}, raw_text="raw-json")
     assert client_result == {
         "format": "WebAuthn client data (JSON)",
         "inputEncoding": "json",
         "decoded": {"built": {"type": "webauthn.get"}, "raw": "raw-json"},
     }
 
-    monkeypatch.setattr(pipeline, "_is_client_data_dict", lambda _v: False)
-    plain_result = decode_pipeline._decode_json_object([1, 2, 3])
+    monkeypatch.setattr(credential_json, "is_client_data_dict", lambda _v: False)
+    plain_result = credential_json.decode_json_object([1, 2, 3])
     assert plain_result == {
         "format": "JSON",
         "inputEncoding": "json",
@@ -147,7 +150,7 @@ def test_decode_json_object_handles_client_data_and_plain_json(monkeypatch, pipe
 
 
 def test_decode_public_key_credential_uses_rawid_and_extension_fallbacks(monkeypatch, pipeline):
-    monkeypatch.setattr(pipeline, "_decode_binary_field", lambda _v: None)
+    monkeypatch.setattr(binary_text, "decode_binary_field", lambda _v: None)
 
     credential = {
         "id": "credential-id",
@@ -157,7 +160,7 @@ def test_decode_public_key_credential_uses_rawid_and_extension_fallbacks(monkeyp
         "response": {"other": "value"},
     }
 
-    result = decode_pipeline._decode_public_key_credential(credential, raw_text="{\"x\":1}")
+    result = credential_json.decode_public_key_credential(credential, raw_text="{\"x\":1}")
 
     assert result["format"] == "PublicKeyCredential"
     assert result["inputEncoding"] == "json"
@@ -171,19 +174,19 @@ def test_decode_public_key_credential_uses_rawid_and_extension_fallbacks(monkeyp
 
 def test_decode_binary_field_handles_invalid_inputs(monkeypatch, pipeline):
     monkeypatch.setattr(
-        pipeline,
-        "_decode_binary_input",
+        binary_text,
+        "decode_binary_input",
         lambda _value: (_ for _ in ()).throw(ValueError("bad")),
     )
-    assert decode_pipeline._decode_binary_field("bad") is None
-    assert decode_pipeline._decode_binary_field(memoryview(b"abc")) == (b"abc", "binary")
-    assert decode_pipeline._decode_binary_field(123) is None
+    assert binary_text.decode_binary_field("bad") is None
+    assert binary_text.decode_binary_field(memoryview(b"abc")) == (b"abc", "binary")
+    assert binary_text.decode_binary_field(123) is None
 
 
 def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(monkeypatch, pipeline):
     monkeypatch.setattr(decoder_values, "try_decode_utf8", lambda _data: "-----BEGIN CERTIFICATE-----")
-    monkeypatch.setattr(pipeline, "_looks_like_pem", lambda text: text.startswith("-----BEGIN"))
-    monkeypatch.setattr(pipeline, "_decode_pem_certificates", lambda _text: {"format": "X.509 certificate (PEM)", "decoded": {"pem": True}})
+    monkeypatch.setattr(decode_pem, "looks_like_pem", lambda text: text.startswith("-----BEGIN"))
+    monkeypatch.setattr(decode_pem, "decode_pem_certificates", lambda _text: {"format": "X.509 certificate (PEM)", "decoded": {"pem": True}})
     monkeypatch.setattr(decoder_values, "binary_summary", lambda _data, _encoding=None: {"hex": "616263"})
 
     pem_result = decode_pipeline._decode_binary_payload(b"abc", "base64url")
@@ -192,8 +195,8 @@ def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(m
     assert pem_result["binary"] == {"hex": "616263"}
 
     monkeypatch.setattr(decoder_values, "try_decode_utf8", lambda _data: '{"k": 1}')
-    monkeypatch.setattr(pipeline, "_read_json", lambda _text, **_kwargs: ({"k": 1}, []))
-    monkeypatch.setattr(pipeline, "_is_client_data_dict", lambda _obj: False)
+    monkeypatch.setattr(json_input, "read_or_none", lambda _text, **_kwargs: ({"k": 1}, []))
+    monkeypatch.setattr(credential_json, "is_client_data_dict", lambda _obj: False)
 
     json_result = decode_pipeline._decode_binary_payload(b"abc", "hex")
     assert json_result == {
@@ -204,9 +207,9 @@ def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(m
     }
 
     monkeypatch.setattr(decoder_values, "try_decode_utf8", lambda _data: None)
-    monkeypatch.setattr(pipeline, "_try_decode_certificate_bytes", lambda _data, _enc: None)
-    monkeypatch.setattr(pipeline, "_try_decode_attestation_object", lambda _data, _enc: None)
-    monkeypatch.setattr(pipeline, "_try_decode_authenticator_data", lambda _data, _enc: None)
+    monkeypatch.setattr(decode_pem, "try_decode_der_certificate", lambda _data, _enc: None)
+    monkeypatch.setattr(decode_attestation_object, "try_decode", lambda _data, _enc: None)
+    monkeypatch.setattr(decode_authenticator_data, "try_decode", lambda _data, _enc: None)
 
     # What nothing else claims is read as CBOR. Bytes that are not CBOR fail,
     # saying where, instead of coming back as an unexplained "Binary data".

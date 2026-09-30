@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from server.app.decoder.decode import pipeline
+from server.app.decoder.decode import binary_text
 from server.app.decoder.decode.pipeline import decode_payload_text
 
 
@@ -14,14 +14,14 @@ def test_the_json_text_null_is_json_null():
 
 
 def test_0x_is_a_hexadecimal_prefix_only_at_the_start():
-    assert pipeline._decode_binary_input("a0xb") == (b"\x6b\x4c\x5b", "base64 or base64url")
-    assert pipeline._decode_binary_input("0xa0") == (b"\xa0", "hex")
-    assert pipeline._decode_binary_input("0Xde:ad") == (b"\xde\xad", "hex")
+    assert binary_text.decode_binary_input("a0xb") == (b"\x6b\x4c\x5b", "base64 or base64url")
+    assert binary_text.decode_binary_input("0xa0") == (b"\xa0", "hex")
+    assert binary_text.decode_binary_input("0Xde:ad") == (b"\xde\xad", "hex")
 
 
 def test_an_odd_number_of_hexadecimal_digits_is_read_as_the_base64_it_may_be():
     # "abc" is no hexadecimal, but it is base64: 69 b7.
-    assert pipeline._decode_binary_input("abc") == (b"\x69\xb7", "base64 or base64url")
+    assert binary_text.decode_binary_input("abc") == (b"\x69\xb7", "base64 or base64url")
     with pytest.raises(ValueError, match=r"text string declares 9 bytes.*read as base64: as hexadecimal, its 3 digits") as refused:
         decode_payload_text("abc")
     assert refused.value.offset == 0

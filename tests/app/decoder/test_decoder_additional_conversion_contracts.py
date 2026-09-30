@@ -8,7 +8,7 @@ from fido2.cose import CoseKey
 from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData
 
 from server.app.decoder.decode import authenticator_data as decode_authenticator_data
-from server.app.decoder.decode import pipeline as decode_pipeline
+from server.app.decoder.decode import credential_json
 from server.app.decoder.decode import response as decode_response
 
 
@@ -40,7 +40,7 @@ def test_describe_client_data_from_bytes_success_and_collected_client_data_fallb
     }
     payload = json.dumps(raw_json).encode("utf-8")
 
-    success = decode_pipeline._describe_client_data_from_bytes(payload)
+    success = credential_json.describe_client_data_from_bytes(payload)
     assert success["type"] == "webauthn.create"
     assert success["origin"] == "https://example.com"
     assert success["crossOrigin"] is False
@@ -50,8 +50,8 @@ def test_describe_client_data_from_bytes_success_and_collected_client_data_fallb
         def __init__(self, _payload):
             raise ValueError("broken collected client data")
 
-    monkeypatch.setattr(pipeline, "CollectedClientData", _BrokenClientData)
-    fallback = decode_pipeline._describe_client_data_from_bytes(payload)
+    monkeypatch.setattr(credential_json, "CollectedClientData", _BrokenClientData)
+    fallback = credential_json.describe_client_data_from_bytes(payload)
     assert fallback["type"] == "webauthn.create"
     assert fallback["challenge"]["raw"] == "AQID"
 

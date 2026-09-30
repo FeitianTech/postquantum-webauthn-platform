@@ -4,20 +4,21 @@ import cbor2
 import pytest
 
 from server.app.decoder import values as decoder_values
+from server.app.decoder.decode import binary_text
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
 from server.app.decoder.decode import ctap as decode_ctap
 from server.app.decoder.decode import pipeline as decode_pipeline
 
 
 def test_decode_binary_input_prefers_hex_when_candidate_is_valid_hex():
-    decoded, encoding = decode_pipeline._decode_binary_input("414243")
+    decoded, encoding = binary_text.decode_binary_input("414243")
 
     assert decoded == b"ABC"
     assert encoding == "hex"
 
 
 def test_decode_binary_input_prefers_hex_for_ambiguous_alphabetic_payload():
-    decoded, encoding = decode_pipeline._decode_binary_input("AAAA")
+    decoded, encoding = binary_text.decode_binary_input("AAAA")
 
     assert decoded == bytes.fromhex("AAAA")
     assert encoding == "hex"
@@ -27,7 +28,7 @@ def test_decode_binary_input_accepts_base64url_without_padding():
     original = b"\xfb\xff"
     base64url_value = base64.urlsafe_b64encode(original).decode("ascii").rstrip("=")
 
-    decoded, encoding = decode_pipeline._decode_binary_input(base64url_value)
+    decoded, encoding = binary_text.decode_binary_input(base64url_value)
 
     assert decoded == original
     assert encoding == "base64url"
@@ -35,7 +36,7 @@ def test_decode_binary_input_accepts_base64url_without_padding():
 
 def test_decode_binary_input_rejects_invalid_binary_text():
     with pytest.raises(ValueError, match="Input does not appear to be valid"):
-        decode_pipeline._decode_binary_input("g$")
+        binary_text.decode_binary_input("g$")
 
 
 def test_parse_cbor_item_rejects_a_truncated_byte_string_and_keeps_its_bytes_only_when_lenient():
