@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
-from datetime import datetime, timezone
 from typing import Any
 
 from flask import jsonify, session
@@ -138,17 +137,10 @@ def _update_session_simple_credentials(ctx: dict[str, Any]) -> None:
 
 
 def _record_registration_event(ctx: dict[str, Any]) -> None:
-    metadata_description: str | None = None
-    if isinstance(ctx["metadata_summary"], Mapping):
-        raw_description = ctx["metadata_summary"].get("description")
-        if isinstance(raw_description, str):
-            metadata_description = raw_description
-
-    event = github_mirror.RegistrationEvent(
-        timestamp=datetime.now(timezone.utc),
+    event = github_mirror.registration_event(
         rp_id=ctx["resolved_rp_id"],
-        aaguid=ctx["aaguid_bytes"] or None,
-        device_name_mds=metadata_description,
+        aaguid=ctx["aaguid_bytes"],
+        metadata_summary=ctx["metadata_summary"],
         attestation_object=client_binary.decode_base64url_bytes(ctx["raw_attestation_object_b64"]),
         signature_valid=ctx["attestation_signature_valid"],
         root_valid=ctx["attestation_root_valid"],

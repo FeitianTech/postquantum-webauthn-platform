@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Mapping
-from datetime import datetime, timezone
 from typing import Any
 
 from flask import jsonify
@@ -66,17 +64,10 @@ def _record_registration_event(
     aaguid_bytes: bytes | None,
     attestation_object_b64: Any,
 ) -> None:
-    metadata_description: str | None = None
-    if isinstance(metadata_summary, Mapping):
-        raw_description = metadata_summary.get("description")
-        if isinstance(raw_description, str):
-            metadata_description = raw_description
-
-    event = github_mirror.RegistrationEvent(
-        timestamp=datetime.now(timezone.utc),
+    event = github_mirror.registration_event(
         rp_id=resolved_rp_id,
-        aaguid=aaguid_bytes or None,
-        device_name_mds=metadata_description,
+        aaguid=aaguid_bytes,
+        metadata_summary=metadata_summary,
         attestation_object=client_binary.decode_base64url_bytes(attestation_object_b64),
     )
 

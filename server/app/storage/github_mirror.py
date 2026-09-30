@@ -42,6 +42,7 @@ __all__ = [
     "maybe_store_uploaded_metadata_file",
     "random_shortid",
     "record_registration_event",
+    "registration_event",
     "safe_cbor_decode",
     "to_b64url",
     "uuid_bytes_to_str",
@@ -221,6 +222,41 @@ class RegistrationEvent:
     root_valid: bool | None = None
     rp_id_hash_valid: bool | None = None
     aaguid_match: bool | None = None
+
+
+def registration_event(
+    *,
+    rp_id: str,
+    aaguid: bytes | None,
+    metadata_summary: Any,
+    attestation_object: bytes,
+    signature_valid: bool | None = None,
+    root_valid: bool | None = None,
+    rp_id_hash_valid: bool | None = None,
+    aaguid_match: bool | None = None,
+) -> RegistrationEvent:
+    """The event for a registration now: the device's MDS description when its summary has one.
+
+    The Simple tab passes the four attestation checks; the Advanced tab leaves them out.
+    """
+
+    metadata_description: str | None = None
+    if isinstance(metadata_summary, Mapping):
+        raw_description = metadata_summary.get("description")
+        if isinstance(raw_description, str):
+            metadata_description = raw_description
+
+    return RegistrationEvent(
+        timestamp=datetime.now(timezone.utc),
+        rp_id=rp_id,
+        aaguid=aaguid or None,
+        device_name_mds=metadata_description,
+        attestation_object=attestation_object,
+        signature_valid=signature_valid,
+        root_valid=root_valid,
+        rp_id_hash_valid=rp_id_hash_valid,
+        aaguid_match=aaguid_match,
+    )
 
 
 def to_b64url(data: bytes) -> str:
