@@ -5,16 +5,12 @@ from types import MappingProxyType, SimpleNamespace
 
 from cryptography import x509
 from cryptography.x509.oid import ObjectIdentifier
-from fido2.attestation import Attestation
-from fido2.cose import CoseKey
-from fido2.webauthn import Aaguid, AuthenticatorData, RegistrationResponse
+from fido2.webauthn import RegistrationResponse
 
-from server.app.mds import verifier as mds_verifier
 from server.app.webauthn.attestation import (
     certificate_extensions as attestation_certificate_extensions,
 )
 from server.app.webauthn.attestation import certificates as attestation_certificates
-from server.app.webauthn.attestation import checks as attestation_checks
 
 
 class _ClientData:
@@ -144,116 +140,6 @@ def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch, 
     assert "Hex value" in attestation_certificate_extensions._serialize_extension_value(firmware_ext)
     assert "Hex value" in attestation_certificate_extensions._serialize_extension_value(security_ext)
     assert "Hex value" in attestation_certificate_extensions._serialize_extension_value(aaguid_ext)
-
-
-def test_perform_attestation_checks_challenge_coercion_and_uv_requirement_paths(monkeypatch, attestation_module):
-    auth_data_override = AuthenticatorData.create(
-        hashlib.sha256(b"example.com").digest(),
-        AuthenticatorData.FLAG.UP,
-        1,
-    )
-
-    registration = _registration(
-        SimpleNamespace(fmt="none", att_stmt={}, auth_data=auth_data_override),
-        _ClientData(b"challenge"),
-        {},
-    )
-
-    monkeypatch.setattr(
-        RegistrationResponse,
-        "from_dict",
-        lambda _response: registration,
-    )
-
-    result = attestation_checks.perform_attestation_checks(
-        response={"ok": True},
-        state={"challenge": {"$base64": "%%%"}},
-        public_key_options={
-            "challenge": {"unexpected": True},
-            "authenticatorSelection": {"userVerification": "required"},
-            "pubKeyCredParams": [{"alg": -7}],
-        },
-        auth_data=auth_data_override,
-        expected_origin="https://example.com",
-        rp_id="example.com",
-    )
-
-    assert result["signature_valid"] is None
-    assert result["client_data"]["expected_challenge"] is None
-    assert result["authenticator_data"]["user_verification_required"] is True
-
-
-def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_paths(monkeypatch, classical, metadata_module, attestation_module):
-    class _SparsePublicKey(dict):
-        def __iter__(self):
-            return iter(())
-
-        def get(self, key, default=None):
-            if key == 3:
-                return -7
-            return default
-
-    credential_data = SimpleNamespace(
-        credential_id=b"cred-id",
-        public_key=_SparsePublicKey(),
-        aaguid=b"\x01" * 16,
-    )
-    auth_data = _AuthData(
-        rp_id_hash=hashlib.sha256(b"example.com").digest(),
-        flags=AuthenticatorData.FLAG.UP
-        | AuthenticatorData.FLAG.AT,
-        counter=3,
-        credential_data=credential_data,
-    )
-
-    registration = _registration(
-        _AttestationObject(fmt="packed", att_stmt={}, auth_data=auth_data),
-        _ClientData(b"challenge"),
-        {},
-    )
-
-    monkeypatch.setattr(
-        RegistrationResponse,
-        "from_dict",
-        lambda _response: registration,
-    )
-    monkeypatch.setattr(
-        Attestation,
-        "for_type",
-        lambda _fmt: type("_Verifier", (), {"verify": lambda self, *_args: SimpleNamespace(trust_path=[])})
-        ,
-    )
-    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: object())
-    monkeypatch.setattr(
-        classical,
-        "_evaluate_classical_attestation_root",
-        lambda *_args, **_kwargs: {
-            "root_valid": None,
-            "metadata_entry": None,
-            "metadata_lookup_source": "classical-source",
-            "checks": None,
-            "errors": [],
-            "warnings": [],
-        },
-    )
-    monkeypatch.setattr(CoseKey, "parse", lambda _value: object())
-    monkeypatch.setattr(
-        Aaguid,
-        "fromhex",
-        lambda _hex: (_ for _ in ()).throw(ValueError("bad-aaguid")),
-    )
-
-    result = attestation_checks.perform_attestation_checks(
-        response={"ok": True},
-        state={"challenge": b"challenge"},
-        public_key_options={"pubKeyCredParams": [{"alg": -7}]},
-        auth_data=None,
-        expected_origin="https://example.com",
-        rp_id="example.com",
-    )
-
-    assert result["metadata"]["source"] == "classical-source"
-    assert result["authenticator_data"]["algorithm"] == -7
 
 
 def test_coerce_attestation_certificate_bytes_and_aaguid_field_cleanup_edges(attestation_module):

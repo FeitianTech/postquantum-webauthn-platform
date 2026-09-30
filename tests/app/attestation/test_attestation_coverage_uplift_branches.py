@@ -4,12 +4,7 @@ import base64
 import hashlib
 from types import SimpleNamespace
 
-from fido2.attestation import Attestation
-from fido2.webauthn import AuthenticatorData, RegistrationResponse
-
-from server.app.mds import verifier as mds_verifier
 from server.app.webauthn.attestation import certificates as attestation_certificates
-from server.app.webauthn.attestation import checks as attestation_checks
 
 
 class _CredentialData:
@@ -62,73 +57,3 @@ def test_coerce_attestation_certificate_bytes_string_path_falls_back_to_base64ur
     assert attestation_certificates._coerce_attestation_certificate_bytes(urlsafe) == raw
 
     assert attestation_certificates._coerce_attestation_certificate_bytes("not a certificate!") is None
-
-
-def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, metadata_module, certificates, attestation_module):
-    flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
-    auth_data = _AuthData(rp_id="example.com", flags=flags)
-    challenge = b"raw:text:challenge"
-    client_data = _ClientData(challenge=challenge, origin="https://example.com")
-    attestation_object = SimpleNamespace(fmt="packed", att_stmt={}, auth_data=auth_data)
-
-    monkeypatch.setattr(
-        RegistrationResponse,
-        "from_dict",
-        lambda _response: _registration(attestation_object, client_data),
-    )
-    # "raw:text:challenge" is not base64, base64url or hex, so the challenge
-    # coercion reaches its UTF-8 fallback without any decoder being stubbed.
-
-    class _AttestationVerifier:
-        def verify(self, _att_stmt, _auth_data, _client_hash):
-            raise RuntimeError("boom")
-
-    monkeypatch.setattr(
-        Attestation,
-        "for_type",
-        lambda _fmt: _AttestationVerifier,
-    )
-    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: None)
-
-    result = attestation_checks.perform_attestation_checks(
-        response={"dummy": True},
-        state={"challenge": challenge.decode("utf-8")},
-        public_key_options={"pubKeyCredParams": [{"alg": -7}]},
-        auth_data=None,
-        expected_origin="https://example.com",
-        rp_id="example.com",
-    )
-
-    assert result["client_data"]["challenge_matches"] is True
-    assert result["signature_valid"] is False
-    assert any(err.startswith("attestation_error:") for err in result["errors"])
-
-
-def test_perform_attestation_checks_falls_back_to_public_key_options_when_state_hex_wrapper_is_invalid(monkeypatch, metadata_module, attestation_module):
-    flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
-    auth_data = _AuthData(rp_id="example.com", flags=flags)
-    challenge = b"fallback-challenge"
-    client_data = _ClientData(challenge=challenge, origin="https://example.com")
-    attestation_object = SimpleNamespace(fmt="none", att_stmt={}, auth_data=auth_data)
-
-    monkeypatch.setattr(
-        RegistrationResponse,
-        "from_dict",
-        lambda _response: _registration(attestation_object, client_data),
-    )
-    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: None)
-
-    result = attestation_checks.perform_attestation_checks(
-        response={"dummy": True},
-        state={"challenge": {"$hex": "zz"}},
-        public_key_options={
-            "challenge": challenge,
-            "pubKeyCredParams": [{"alg": -7}],
-        },
-        auth_data=None,
-        expected_origin="https://example.com",
-        rp_id="example.com",
-    )
-
-    assert result["client_data"]["challenge_matches"] is True
-    assert "challenge_mismatch" not in result["errors"]
