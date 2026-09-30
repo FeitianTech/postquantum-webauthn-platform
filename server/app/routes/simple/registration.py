@@ -114,22 +114,10 @@ def _verify_registration(
         session.pop("register_rp_id", None)
         return None, (jsonify({"error": str(exc)}), 400)
 
-    # The origin the ceremony claims, read from clientDataJSON -- NOT from the
-    # request's own Origin header, which the caller also controls.
+    # fido2 checked the origin against the RP ID and the allowlist. It is read from
+    # clientDataJSON -- NOT from the request's own Origin header, which the caller
+    # also controls.
     ceremony_origin = config.extract_client_data_origin(credential_response)
-    if not config.is_origin_allowed(ceremony_origin):
-        session.pop("register_rp_id", None)
-        return None, (
-            jsonify(
-                {
-                    "error": (
-                        "Ceremony origin is not permitted by the configured "
-                        "FIDO_SERVER_ALLOWED_ORIGINS allowlist."
-                    )
-                }
-            ),
-            400,
-        )
 
     # determine_expected_origin only echoes a candidate that is itself
     # allowlisted, so this can never become a self-referential comparison.

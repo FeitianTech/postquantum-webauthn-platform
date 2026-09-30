@@ -399,7 +399,7 @@
     ],
     [
      "Content-Length",
-     "163"
+     "307"
     ],
     [
      "X-Content-Type-Options",
@@ -446,11 +446,17 @@
      "contents": null
     }
    ],
-   "bodySha256": "5ebf4cc32ed8ab8e2c5631a1b1585e06a5a84f5cb98e76f37fa1b59d8cf94487",
+   "bodySha256": "50c4e0149eca24ed7aa6f688e9b1f07bc9d890c6acf2200d73a9fa0381f02b2c",
    "body": {
+    "algorithm": -7,
+    "algorithmDescription": "ES256 (ECDSA)",
     "challengeSource": "server-session",
     "challengeStatus": "fresh",
-    "error": "Ceremony origin is not permitted by the configured FIDO_SERVER_ALLOWED_ORIGINS allowlist."
+    "error": "Invalid origin in CollectedClientData.",
+    "failedCredentialId": "jijP2bGPoUQOn8cM7-x2sOaIgvQ8vWCTzUPNVmNnniY",
+    "signatureVerified": false,
+    "status": "VERIFICATION_FAILED",
+    "verified": false
    }
   },
   {

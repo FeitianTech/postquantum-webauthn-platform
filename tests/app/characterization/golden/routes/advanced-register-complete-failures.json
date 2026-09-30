@@ -1966,7 +1966,7 @@
     ],
     [
      "Content-Length",
-     "166"
+     "115"
     ],
     [
      "X-Content-Type-Options",
@@ -2026,11 +2026,11 @@
      }
     }
    ],
-   "bodySha256": "a7c376f968cd9cb3a387d32eaa810d331639ad3831b0646b0caf65a27e8e1180",
+   "bodySha256": "87d71ac36605b9c235c3201df4f6d9050d8b88656ed41249286db3644160db77",
    "body": {
     "challengeSource": "server-session",
     "challengeStatus": "replayed",
-    "error": "Ceremony origin is not permitted by the configured FIDO_SERVER_ALLOWED_ORIGINS allowlist."
+    "error": "Invalid origin in CollectedClientData."
    }
   },
   {

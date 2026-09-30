@@ -6,7 +6,6 @@ from typing import Any
 
 from flask import jsonify, request, session
 
-from ... import config
 from ...attachments import (
     attachment_hint_violation,
     normalize_attachment,
@@ -178,7 +177,7 @@ def advanced_authenticate_complete():
     if non_discoverable is not None:
         return _fail(non_discoverable)
 
-    state, refusal = _state_and_origin(state, response, trace)
+    state, refusal = _ceremony_state(state, trace)
     if refusal is not None:
         return refusal
 
@@ -223,8 +222,8 @@ def _unexpected_failure(exc: Exception, response: Any, credential_id_bytes: byte
     return jsonify(response_payload), 400
 
 
-def _state_and_origin(state: Any, response: Any, trace: Mapping[str, Any]) -> tuple[Any, Any]:
-    """The session's ceremony state, or the 400 for none or a bad origin."""
+def _ceremony_state(state: Any, trace: Mapping[str, Any]) -> tuple[Any, Any]:
+    """The session's ceremony state, or the 400 for none. fido2 checks the origin."""
 
     if state is None:
         session.pop("advanced_auth_rp", None)
@@ -234,24 +233,6 @@ def _state_and_origin(state: Any, response: Any, trace: Mapping[str, Any]) -> tu
                     "error": (
                         "Authentication state not found or has expired. "
                         "Please restart the authentication flow."
-                    ),
-                    **trace,
-                }
-            ),
-            400,
-        )
-
-    ceremony_origin = config.extract_client_data_origin(
-        response.get("response") if isinstance(response, Mapping) else None
-    )
-    if not config.is_origin_allowed(ceremony_origin):
-        session.pop("advanced_auth_rp", None)
-        return None, (
-            jsonify(
-                {
-                    "error": (
-                        "Ceremony origin is not permitted by the configured "
-                        "FIDO_SERVER_ALLOWED_ORIGINS allowlist."
                     ),
                     **trace,
                 }

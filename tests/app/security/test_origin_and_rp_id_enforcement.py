@@ -17,6 +17,7 @@ from .ceremony_helpers import (
     ORIGIN,
     RP_ID,
     Authenticator,
+    assertion_payload,
     registration_payload,
     unb64u,
 )
@@ -70,7 +71,7 @@ def test_allowlist_rejects_host_header_derived_rp_id_attack(config_module, simpl
     assert response.status_code == 400
     body = response.get_json()
     assert body.get("status") != "OK"
-    assert "not permitted" in body["error"]
+    assert body["error"] == "Invalid origin in CollectedClientData."
     assert simple_storage == {}
 
 
@@ -89,8 +90,32 @@ def test_allowlist_rejects_an_unlisted_ceremony_origin(config_module, simple_mod
     )
 
     assert response.status_code == 400
-    assert "not permitted" in response.get_json()["error"]
+    assert response.get_json()["error"] == "Invalid origin in CollectedClientData."
     assert simple_storage == {}
+
+
+@pytest.mark.parametrize("unlisted", ["http://localhost:8443", "https://localhost"])
+def test_allowlist_gates_simple_authentication_too(config_module, simple_module, simple_storage, allowed_origins, unlisted):
+    """Simple authentication never applied the allowlist: fido2's RP ID rule alone
+    accepts these origins for RP ID ``localhost``, and so did the route."""
+
+    allowed_origins(ORIGIN)
+    authenticator = Authenticator()
+    client = entry_app().test_client()
+    begin = client.post(
+        "/api/authenticate/begin?email=user@example.com",
+        json={"credentials": [authenticator.stored_credential_entry()]},
+    )
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+
+    response = client.post(
+        "/api/authenticate/complete?email=user@example.com",
+        json=assertion_payload(authenticator, challenge=challenge, origin=unlisted),
+        headers={"Origin": unlisted},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json().get("status") != "OK"
 
 
 def test_expected_origin_is_not_taken_from_the_request_origin_header(config_module, simple_module, simple_storage):

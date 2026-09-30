@@ -65,14 +65,11 @@ def _record_verified_registration(
     public_key = prepared["publicKey"]
     auth_data = state_ctx["authData"]
 
-    attestation_checks, origin_error = registration_attestation.check_origin_and_attestation(
+    attestation_checks = registration_attestation.check_attestation(
         response=response,
         state_ctx=state_ctx,
         public_key=public_key,
-        challenge_source=state_trace["challengeSource"],
     )
-    if origin_error is not None:
-        return origin_error
 
     analysis = registration_attestation.summarise_attestation(attestation_checks)
     extensions_summary = registration_attestation.authenticator_extensions_summary(auth_data)

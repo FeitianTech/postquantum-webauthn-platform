@@ -1523,7 +1523,7 @@
     ],
     [
      "Content-Length",
-     "102"
+     "51"
     ],
     [
      "X-Content-Type-Options",
@@ -1570,9 +1570,9 @@
      "contents": null
     }
    ],
-   "bodySha256": "059e5c762f6a63b9819fd999eb452b6edbeee52e92e0df16c1f4006ca32378ed",
+   "bodySha256": "7a61186f7844051e0a283387b326659b46882772a4fa314960e3365de7c88f5b",
    "body": {
-    "error": "Ceremony origin is not permitted by the configured FIDO_SERVER_ALLOWED_ORIGINS allowlist."
+    "error": "Invalid origin in CollectedClientData."
    }
   },
   {

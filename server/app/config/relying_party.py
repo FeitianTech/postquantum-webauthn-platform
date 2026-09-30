@@ -14,6 +14,7 @@ from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlsplit
 
+from fido2.rpid import verify_rp_id
 from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
 from flask import Flask, current_app, has_request_context, request
@@ -179,8 +180,17 @@ def create_fido_server(
     rp_id: str | None = None,
     rp_name: str | None = None,
 ) -> Fido2Server:
-    """Instantiate a :class:`Fido2Server` bound to the resolved RP ID."""
+    """A :class:`Fido2Server` bound to the resolved RP ID.
+
+    Its origin check is fido2's RP ID rule and, when one is configured, the
+    exact-origin allowlist (``FIDO_SERVER_ALLOWED_ORIGINS``), for every ceremony.
+    """
 
     entity = build_rp_entity(rp_data, rp_id=rp_id, rp_name=rp_name)
-    return Fido2Server(entity)
+    resolved_rp_id = entity.id
+
+    def verify_origin(origin: str) -> bool:
+        return verify_rp_id(resolved_rp_id, origin) and origins.is_origin_allowed(origin)
+
+    return Fido2Server(entity, verify_origin=verify_origin)
 
