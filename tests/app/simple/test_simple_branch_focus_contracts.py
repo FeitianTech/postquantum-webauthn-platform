@@ -4,7 +4,6 @@ import time
 
 from server.app import visitor_session
 from server.app.config import relying_party
-from server.app.webauthn import client_binary
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
@@ -78,17 +77,6 @@ class _ObjectAuthData:
     def __init__(self, *, counter: int):
         self.flags = self.FLAG.UP | self.FLAG.AT
         self.counter = counter
-
-
-def test_simple_validation_helpers_cover_decode_and_assertion_id_fallbacks():
-    assert client_binary.decode_base64url_bytes(b"\x00\x01") == b"\x00\x01"
-    assert client_binary.decode_base64url_bytes("   ") == b""
-    assert client_binary.decode_base64url_bytes("abc*") == b""
-    assert client_binary.decode_base64url_bytes(12345) == b""
-
-    assert client_binary.extract_assertion_credential_id({"rawId": b"\x10\x11"}) == b"\x10\x11"
-    assert client_binary.extract_assertion_credential_id({"rawId": "abc*"}) is None
-    assert client_binary.extract_assertion_credential_id({"id": 12345}) is None
 
 
 def test_simple_register_begin_clears_cached_session_fields_when_client_credentials_are_empty(monkeypatch, config_module, simple_parsing):

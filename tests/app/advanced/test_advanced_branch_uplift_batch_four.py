@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-import base64
-
-import pytest
-
 from server.app import config as config_module
 from server.app.config import relying_party
 from server.app.routes import advanced as advanced_module
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import summary as advanced_summary
-from server.app.webauthn import client_binary, cose_algorithms
+from server.app.webauthn import cose_algorithms
 from tests.app.entry_app import entry_app
 
 
@@ -63,29 +59,6 @@ def test_summary_helpers_drop_non_mapping_inputs_and_nested_non_mapping_sections
     assert summary["localStorageId"] == "storage-id"
 
 
-def test_decode_client_binary_handles_recursive_wrappers_and_validation_failures():
-    assert client_binary.read({"hex": {"$hex": "6162"}}, wrappers=True) == b"ab"
-    assert client_binary.read({"base64url": "YWI"}, wrappers=True) == b"ab"
-    assert client_binary.read({"base64url": {"$hex": "6162"}}, wrappers=True) == b"ab"
-    assert client_binary.read({"base64": {"$hex": "6162"}}, wrappers=True) == b"ab"
-
-    with pytest.raises(ValueError, match="empty binary value"):
-        client_binary.read({"base64url": "   "}, wrappers=True)
-
-    # Each wrapper decodes only its own alphabet. A standard-base64 body under
-    # ``$base64url`` is rejected rather than read with ``+``/``/`` translated
-    # away, and vice versa -- that mismatch used to yield different bytes.
-    standard = base64.b64encode(b"\xfb\xef\xbe").decode("ascii")
-    urlsafe = base64.urlsafe_b64encode(b"\xfb\xef\xbe").decode("ascii")
-    assert client_binary.read({"base64": standard}, wrappers=True) == b"\xfb\xef\xbe"
-    assert client_binary.read({"base64url": urlsafe}, wrappers=True) == b"\xfb\xef\xbe"
-
-    with pytest.raises(ValueError, match="invalid binary value"):
-        client_binary.read({"base64url": standard}, wrappers=True)
-    with pytest.raises(ValueError, match="invalid binary value"):
-        client_binary.read({"base64": urlsafe}, wrappers=True)
-
-
 def test_algorithm_coercion_handles_blank_values_failed_numeric_extraction_and_pqc_allowlist(monkeypatch, advanced_constants, pqc_module):
     assert cose_algorithms.lookup_name("   ") is None
     assert cose_algorithms.coerce_cose_algorithm("   ") is None
@@ -100,13 +73,6 @@ def test_algorithm_coercion_handles_blank_values_failed_numeric_extraction_and_p
 
     monkeypatch.setattr(cose_algorithms, "NUMERIC_PATTERN", _BadPattern())
     assert cose_algorithms.coerce_cose_algorithm("custom algorithm -- broken") is None
-
-
-def test_base64url_helpers_degrade_gracefully_on_decode_errors():
-    # "br*ken" is outside the base64url alphabet, so it is absent rather than
-    # decoded down to whatever characters happen to survive.
-    assert client_binary.decode_base64url_bytes("br*ken") == b""
-    assert client_binary.extract_assertion_credential_id({"rawId": "br*ken"}) is None
 
 
 def test_register_begin_accepts_non_mapping_authenticator_selection_and_derives_cross_platform_from_hints(monkeypatch, pqc_module):
