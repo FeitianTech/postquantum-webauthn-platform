@@ -22,9 +22,7 @@ SOURCE_ROOT = REPO_ROOT / "server" / "app"
 MAX_FUNCTION_LINES = 80
 MAX_MODULE_LINES = 700
 
-LONG_FUNCTIONS: dict[str, int] = {
-    "server/app/webauthn/attestation/classical.py::_evaluate_classical_attestation_root": 122,
-}
+LONG_FUNCTIONS: dict[str, int] = {}
 
 LONG_MODULES: dict[str, int] = {}
 
