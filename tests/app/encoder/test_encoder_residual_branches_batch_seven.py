@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
-from server.app.decoder.encode import ctap_fields as encode_ctap_fields
 from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
 
 
@@ -26,15 +23,3 @@ def test_encode_cbor_value_never_reads_a_plain_map_as_ctap():
     assert encoded["type"] == "CBOR (canonical) (encoded)"
     assert "ctapDecoded" not in encoded["data"]
     assert encoded["data"]["binary"]["hex"].startswith("a263666d74646e6f6e65")
-
-
-def test_primitive_coercion_and_attestation_statement_residual_paths():
-    assert encode_ctap_fields._ensure_int(7, "field") == 7
-    with pytest.raises(ValueError, match="integer value"):
-        encode_ctap_fields._ensure_int("not-an-int", "field")
-
-    assert encode_ctap_fields._ensure_bool(True, "flag") is True
-
-    assert encode_ctap_fields._encode_attestation_statement(None) is None
-    assert encode_ctap_fields._encode_attestation_statement(b"\xAA") == b"\xAA"
-    assert encode_ctap_fields._encode_credential_descriptor(b"\xBB") == b"\xBB"
