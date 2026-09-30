@@ -79,9 +79,9 @@ def _cases():
 
 @pytest.fixture
 def no_mds(monkeypatch):
-    from server.app.webauthn.metadata import verifier as metadata_verifier
+    from server.app.mds import verifier as mds_verifier
 
-    monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: None)
+    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: None)
 
 
 def test_attestation_checks_match_their_golden_record(no_mds):
@@ -110,8 +110,8 @@ class _Verifier:
 
 
 def test_metadata_finalisation_matches_its_golden_record(monkeypatch):
+    from server.app.mds import verifier as mds_verifier
     from server.app.webauthn.attestation import checks
-    from server.app.webauthn.metadata import verifier as metadata_verifier
 
     aaguid = uuid.UUID("f8a011f3-8c0a-4d15-8006-17111f9edc7d")
     statement = types.SimpleNamespace(
@@ -137,7 +137,7 @@ def test_metadata_finalisation_matches_its_golden_record(monkeypatch):
         ("fallback-global-verifier", dict(metadata_entry=None, verifier=None)),
     ]
     global_verifier = _Verifier(entries["object"])
-    monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: global_verifier)
+    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: global_verifier)
     for name, kwargs in variants:
         for credential, certificate in ((aaguid.bytes, aaguid.bytes), (aaguid.bytes, b"\x01" * 16), (b"", b""), (b"\x05", b"")):
             results = {"authenticator_data": {"algorithm": -7}, "errors": [], "warnings": []}

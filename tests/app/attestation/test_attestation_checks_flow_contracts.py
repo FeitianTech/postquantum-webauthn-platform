@@ -4,8 +4,8 @@ from types import SimpleNamespace
 from fido2.attestation import Attestation
 from fido2.webauthn import AuthenticatorData, CollectedClientData, RegistrationResponse
 
+from server.app.mds import verifier as mds_verifier
 from server.app.webauthn.attestation import checks as attestation_checks
-from server.app.webauthn.metadata import verifier as metadata_verifier
 
 
 class _FakeCredentialData:
@@ -110,7 +110,7 @@ def test_perform_attestation_checks_classical_success_path_populates_metadata(mo
         lambda _response: _registration_for(attestation_object, client_data),
     )
     monkeypatch.setattr(Attestation, "for_type", lambda _fmt: (lambda: _FakeAttestation()))
-    monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: object())
+    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(
         classical,
         "_evaluate_classical_attestation_root",

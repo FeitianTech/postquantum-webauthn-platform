@@ -12,6 +12,7 @@ from fido2.attestation import InvalidSignature
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
 from server.app import json_values
+from server.app.mds import verifier as mds_verifier
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import (
     certificate_extensions as attestation_certificate_extensions,
@@ -21,7 +22,6 @@ from server.app.webauthn.attestation import (
 )
 from server.app.webauthn.attestation import checks as attestation_checks
 from server.app.webauthn.attestation import classical as attestation_classical
-from server.app.webauthn.metadata import verifier as metadata_verifier
 
 
 def _b64url(data: bytes) -> str:
@@ -102,7 +102,7 @@ def test_perform_attestation_checks_coerces_challenge_from_base64_and_hex_wrappe
         "from_dict",
         lambda _response: _registration(attestation_object, client_data),
     )
-    monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: None)
+    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: None)
 
     result = attestation_checks.perform_attestation_checks(
         response={"dummy": True},
@@ -137,7 +137,7 @@ def test_perform_attestation_checks_accepts_base64url_wrapped_challenge_and_enum
         "from_dict",
         lambda _response: _registration(attestation_object, client_data),
     )
-    monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: None)
+    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: None)
 
     result = attestation_checks.perform_attestation_checks(
         response={"dummy": True},
@@ -184,7 +184,7 @@ def test_perform_attestation_checks_handles_broken_credential_shapes(monkeypatch
         "from_dict",
         lambda _response: _registration(attestation_object, client_data),
     )
-    monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: None)
+    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: None)
 
     result = attestation_checks.perform_attestation_checks(
         response={"dummy": True},
@@ -227,7 +227,7 @@ def test_perform_attestation_checks_uses_fallback_metadata_lookup_and_mapping_ro
         "from_dict",
         lambda _response: _registration(attestation_object, client_data),
     )
-    monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: verifier)
+    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: verifier)
 
     result = attestation_checks.perform_attestation_checks(
         response={"dummy": True},
@@ -259,7 +259,7 @@ def test_perform_attestation_checks_ignores_metadata_fallback_lookup_exceptions(
         "from_dict",
         lambda _response: _registration(attestation_object, client_data),
     )
-    monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: _FailingVerifier())
+    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: _FailingVerifier())
 
     result = attestation_checks.perform_attestation_checks(
         response={"dummy": True},
@@ -381,7 +381,7 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
     monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _der: expired_cert)
     monkeypatch.setattr(trust, "_collect_metadata_root_certificates", lambda _entry: [])
     monkeypatch.setattr(trust, "_is_trusted_ca_certificate", lambda _root: True)
-    monkeypatch.setattr(metadata_verifier, "metadata_entry_trust_anchor_status", lambda _entry: False)
+    monkeypatch.setattr(mds_verifier, "metadata_entry_trust_anchor_status", lambda _entry: False)
 
     monkeypatch.setattr(classical.evaluation, "evaluate_attestation", lambda _verifier, _obj, _hash: evaluation)
     outcome = attestation_classical._evaluate_classical_attestation_root(

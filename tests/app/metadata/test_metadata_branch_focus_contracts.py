@@ -17,9 +17,9 @@ from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
+from server.app.mds import verifier as mds_verifier
 from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import uploads as metadata_uploads
-from server.app.webauthn.metadata import verifier as metadata_verifier
 from tests.app.entry_app import entry_app
 
 
@@ -295,7 +295,7 @@ def test_build_expand_extract_and_merge_error_branches(metadata_module, monkeypa
         lambda value: mds_entries._normalise_aaguid(str(getattr(value, "aaguid", ""))),
     )
 
-    merged = metadata_verifier._merge_metadata(None, [item_one, item_two])
+    merged = mds_verifier._merge_metadata(None, [item_one, item_two])
     assert merged.legal_header == "Session Legal"
     assert len(merged.entries) == 1
 
@@ -644,16 +644,16 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, m
     monkeypatch.setattr(blob, "_load_base_metadata", lambda: (None, None))
     assert mds_effective.resolve_effective_metadata_entry(aaguid="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb") is None
 
-    assert metadata_verifier.metadata_entry_trust_anchor_status(object()) is None
+    assert mds_verifier.metadata_entry_trust_anchor_status(object()) is None
 
     entry = MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
     mds_cache.CACHE.entry_ids = set()
     mds_cache.CACHE.trust_verified = False
-    assert metadata_verifier.metadata_entry_trust_anchor_status(entry) is None
+    assert mds_verifier.metadata_entry_trust_anchor_status(entry) is None
 
     monkeypatch.setattr(blob, "_load_base_metadata", lambda: (None, 77.0))
     monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [])
-    assert metadata_verifier.get_mds_verifier() is None
+    assert mds_verifier.get_mds_verifier() is None
     assert mds_cache.CACHE.verifier_mtime == 77.0
 
     created = []
@@ -674,7 +674,7 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, m
     )
     monkeypatch.setattr(verifier, "MdsAttestationVerifier", _FakeVerifier)
 
-    metadata_verifier.get_mds_verifier()
+    mds_verifier.get_mds_verifier()
     assert created == [{"base": None, "count": 1}]
 
 

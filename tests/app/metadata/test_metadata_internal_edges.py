@@ -11,9 +11,9 @@ from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
+from server.app.mds import verifier as mds_verifier
 from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import uploads as metadata_uploads
-from server.app.webauthn.metadata import verifier as metadata_verifier
 
 
 @pytest.fixture
@@ -239,8 +239,8 @@ def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadat
     monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [])
     monkeypatch.setattr(verifier, "MdsAttestationVerifier", _FakeVerifier)
 
-    first = metadata_verifier.get_mds_verifier()
-    second = metadata_verifier.get_mds_verifier()
+    first = mds_verifier.get_mds_verifier()
+    second = mds_verifier.get_mds_verifier()
 
     assert first is second
     assert created == [fake_metadata]
@@ -269,4 +269,4 @@ def test_metadata_entry_trust_anchor_status_uses_session_and_base_entry_sets(met
 
     mds_cache.CACHE.entry_ids = {id(entry)}
     mds_cache.CACHE.trust_verified = True
-    assert metadata_verifier.metadata_entry_trust_anchor_status(entry) is True
+    assert mds_verifier.metadata_entry_trust_anchor_status(entry) is True

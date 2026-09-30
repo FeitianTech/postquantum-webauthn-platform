@@ -174,13 +174,13 @@ class Environment:
 
         from server.app import device_logs, visitor_session
         from server.app.mds import files as mds_files
-        from server.app.webauthn.metadata import verifier as metadata_verifier
+        from server.app.mds import verifier as mds_verifier
 
         mp.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(self.tmp_path / "credentials"))
         mp.setenv("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", str(self.tmp_path / "artifacts"))
         mp.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(self.tmp_path / "session-metadata"))
         mp.setattr(visitor_session, "schedule_cleanup", lambda: None)
-        mp.setattr(metadata_verifier, "get_mds_verifier", lambda: None)
+        mp.setattr(mds_verifier, "get_mds_verifier", lambda: None)
         mp.setattr(device_logs, "record_registration_event", self.events.append)
 
         if not _SNAPSHOT_GUARD["installed"]:

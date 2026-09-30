@@ -9,13 +9,13 @@ from fido2.attestation import Attestation
 from fido2.cose import CoseKey
 from fido2.webauthn import Aaguid, AuthenticatorData, RegistrationResponse
 
+from server.app.mds import verifier as mds_verifier
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import (
     certificate_extensions as attestation_certificate_extensions,
 )
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
-from server.app.webauthn.metadata import verifier as metadata_verifier
 
 
 class _ClientData:
@@ -224,7 +224,7 @@ def test_perform_attestation_checks_classical_lookup_and_aaguid_parse_failure_pa
         lambda _fmt: type("_Verifier", (), {"verify": lambda self, *_args: SimpleNamespace(trust_path=[])})
         ,
     )
-    monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: object())
+    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(
         classical,
         "_evaluate_classical_attestation_root",

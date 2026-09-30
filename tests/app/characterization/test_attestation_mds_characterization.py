@@ -139,10 +139,10 @@ def _cases():
 
 @pytest.fixture
 def mds(monkeypatch):
-    from server.app.webauthn.metadata import verifier as metadata_verifier
+    from server.app.mds import verifier as mds_verifier
 
     verifier = _verifier()
-    monkeypatch.setattr(metadata_verifier, "get_mds_verifier", lambda: verifier)
+    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: verifier)
     return verifier
 
 

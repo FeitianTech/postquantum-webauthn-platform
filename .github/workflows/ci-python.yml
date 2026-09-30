@@ -55,7 +55,7 @@ jobs:
           modules = [
               "server.app.app",
               "server.app.webauthn.attestation.checks",
-              "server.app.webauthn.metadata.verifier",
+              "server.app.mds.verifier",
               "server.app.decoder.decode.pipeline",
               "server.app.decoder.encode.text",
               "server.app.storage.credentials",

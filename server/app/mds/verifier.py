@@ -12,12 +12,12 @@ from fido2.mds3 import (
 )
 from flask import g, has_request_context
 
-from ...mds import cache as mds_cache
-from ...mds import entries as mds_entries
-from ...mds import uploads as mds_uploads
+from . import cache as mds_cache
+from . import entries as mds_entries
+from . import uploads as mds_uploads
 
 if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed
-    from .sessions import SessionMetadataItem
+    from .uploads import SessionMetadataItem
 
 
 def _merge_metadata(

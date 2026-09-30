@@ -80,7 +80,7 @@ def app_config():
 def verifier():
     """The fragment that defines the metadata merge and verifier helpers."""
 
-    return importlib.import_module("server.app.webauthn.metadata.verifier")
+    return importlib.import_module("server.app.mds.verifier")
 
 
 @pytest.fixture

@@ -12,7 +12,7 @@ from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
-from server.app.webauthn.metadata import verifier as metadata_verifier
+from server.app.mds import verifier as mds_verifier
 from tests.app.entry_app import entry_app
 
 
@@ -131,7 +131,7 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
         lambda entry: mds_entries._normalise_aaguid(str(getattr(entry, "aaguid", ""))),
     )
 
-    merged = metadata_verifier._merge_metadata(base_metadata, [session_item])
+    merged = mds_verifier._merge_metadata(base_metadata, [session_item])
     merged_descriptions = [entry["metadataStatement"]["description"] for entry in merged.entries]
     assert merged_descriptions == ["Session metadata", "Base unique"]
     assert merged.legal_header == "Session Legal"
