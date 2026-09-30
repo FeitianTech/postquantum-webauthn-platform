@@ -3,31 +3,8 @@
 from __future__ import annotations
 
 import os
-import sys
 import types
-from pathlib import Path
 from unittest import mock
-
-
-def _discover_repo_root(start: Path) -> Path:
-    for candidate in start.parents:
-        if (candidate / "server").is_dir() and (candidate / "tests").is_dir():
-            return candidate
-
-    return start.parents[3]
-
-
-_ROOT = _discover_repo_root(Path(__file__).resolve())
-
-# Setup module structure
-server_pkg = types.ModuleType("server")
-server_pkg.__path__ = [str(_ROOT / "server")]
-sys.modules.setdefault("server", server_pkg)
-
-server_server_pkg = types.ModuleType("server.app")
-server_server_pkg.__path__ = [str(_ROOT / "server" / "app")]
-sys.modules.setdefault("server.app", server_server_pkg)
-
 
 
 def test_env_flag_with_none():

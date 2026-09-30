@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import types
 
-import pytest
+from server.app import app as app_module
 
 
 def test_main_starts_the_development_server(monkeypatch):
-    app_module = pytest.importorskip("server.app.app")
-
     calls = {}
 
     def _run(**kwargs):

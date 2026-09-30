@@ -21,15 +21,6 @@ FIRST_PARTY = ("server", "tools", "tests")
 
 ALLOWED: dict[str, int] = {
     "tests/app/conftest.py": 5,
-    "tests/app/core/test_app_entrypoint_contracts.py": 1,
-    "tests/app/core/test_authentication_failure_payloads.py": 2,
-    "tests/app/core/test_background_warmup.py": 2,
-    "tests/app/core/test_codec_contracts.py": 26,
-    "tests/app/core/test_encoding_module.py": 1,
-    "tests/app/core/test_encoding_strictness_contracts.py": 14,
-    "tests/app/core/test_general_route_contracts.py": 6,
-    "tests/app/core/test_security_headers.py": 6,
-    "tests/app/core/test_static_assets.py": 2,
     "tests/app/metadata/conftest.py": 9,
     "tests/app/metadata/test_mds_provisioning.py": 1,
     "tests/app/metadata/test_metadata_bootstrap.py": 7,

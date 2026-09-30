@@ -5,15 +5,14 @@ from datetime import timedelta
 
 import pytest
 
+from server.app import app as app_module
+from server.app import config as config_module
+from server.app.config import proxy as config_proxy
+from server.app.config import relying_party as config_relying_party
+from server.app.config import security_headers as config_security_headers
 from server.app.config import security_headers as security_headers_module
+from server.app.config import session_cookie as config_session_cookie
 from tests.app.entry_app import entry_app
-
-config_module = pytest.importorskip("server.app.config")
-config_proxy = pytest.importorskip("server.app.config.proxy")
-config_session_cookie = pytest.importorskip("server.app.config.session_cookie")
-config_security_headers = pytest.importorskip("server.app.config.security_headers")
-config_relying_party = pytest.importorskip("server.app.config.relying_party")
-app_module = pytest.importorskip("server.app.app")
 
 app = entry_app()
 

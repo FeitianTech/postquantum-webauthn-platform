@@ -2,30 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-import types
-from pathlib import Path
-
-
-def _discover_repo_root(start: Path) -> Path:
-    for candidate in start.parents:
-        if (candidate / "server").is_dir() and (candidate / "tests").is_dir():
-            return candidate
-
-    return start.parents[3]
-
-
-_ROOT = _discover_repo_root(Path(__file__).resolve())
-
-# Setup module structure
-server_pkg = types.ModuleType("server")
-server_pkg.__path__ = [str(_ROOT / "server")]
-sys.modules.setdefault("server", server_pkg)
-
-server_server_pkg = types.ModuleType("server.app")
-server_server_pkg.__path__ = [str(_ROOT / "server" / "app")]
-sys.modules.setdefault("server.app", server_server_pkg)
-
 
 def test_should_warm_cloud_storage_disabled(monkeypatch):
     """Test that cloud storage warming is disabled when GCS is disabled."""

@@ -11,7 +11,7 @@ import base64
 
 import pytest
 
-encoding = pytest.importorskip("server.app.encoding")
+from server.app import encoding
 
 _PAYLOADS = [bytes(range(256))[start:start + length] for start in (0, 61, 200) for length in range(0, 9)]
 

@@ -14,9 +14,13 @@ cover the four ways an open-coded decoder used to accept malformed input:
 from __future__ import annotations
 
 import base64
+import importlib
 
 import pytest
 
+from server.app.decoder import decode
+from server.app.routes import general as general_module
+from server.app.routes import simple as simple_module
 from tests.app.entry_app import entry_app
 
 PLAIN_TEXT = "Hello, this is plain text!"
@@ -24,26 +28,22 @@ PLAIN_TEXT = "Hello, this is plain text!"
 
 @pytest.fixture()
 def pipeline():
-    pytest.importorskip("server.app.app")
-    return pytest.importorskip("server.app.decoder.decode.pipeline")
+    return importlib.import_module("server.app.decoder.decode.pipeline")
 
 
 @pytest.fixture()
 def shared_binary_helpers():
-    pytest.importorskip("server.app.app")
-    return pytest.importorskip("server.app.routes.binary_helpers")
+    return importlib.import_module("server.app.routes.binary_helpers")
 
 
 @pytest.fixture()
 def advanced_binary():
-    pytest.importorskip("server.app.app")
-    return pytest.importorskip("server.app.routes.advanced.binary")
+    return importlib.import_module("server.app.routes.advanced.binary")
 
 
 @pytest.fixture()
 def simple_binary():
-    pytest.importorskip("server.app.app")
-    return pytest.importorskip("server.app.routes.simple.binary")
+    return importlib.import_module("server.app.routes.simple.binary")
 
 
 def test_decoder_rejects_plain_english_text(pipeline):
@@ -52,7 +52,6 @@ def test_decoder_rejects_plain_english_text(pipeline):
     with pytest.raises(ValueError):
         pipeline._decode_binary_input(PLAIN_TEXT)
 
-    decode = pytest.importorskip("server.app.decoder.decode")
     with pytest.raises(ValueError):
         decode.decode_payload_text(PLAIN_TEXT)
 
@@ -101,7 +100,6 @@ def test_base64url_helpers_do_not_return_garbage_for_plain_text(shared_binary_he
     assert shared_binary_helpers.decode_base64url_bytes(PLAIN_TEXT) == b""
     assert shared_binary_helpers.extract_assertion_credential_id({"rawId": PLAIN_TEXT}) is None
 
-    simple_module = pytest.importorskip("server.app.routes.simple")
     assert simple_module._decode_base64url_bytes(PLAIN_TEXT) == b""
     assert simple_module._extract_assertion_credential_id({"rawId": PLAIN_TEXT}) is None
 
@@ -121,9 +119,6 @@ def test_credential_intake_reads_both_base64_alphabets_exactly(advanced_binary, 
 
 def test_mds_certificate_route_decodes_base64url_without_truncation(monkeypatch):
     """A base64url certificate must decode whole, or be refused -- not truncated."""
-
-    general_module = pytest.importorskip("server.app.routes.general")
-    pytest.importorskip("server.app.app")
 
     certificate = bytes(range(24, 63))
     monkeypatch.setattr(
@@ -148,9 +143,6 @@ def test_mds_certificate_route_decodes_base64url_without_truncation(monkeypatch)
 
 
 def test_mds_certificate_route_refuses_plain_text_with_400(monkeypatch):
-    general_module = pytest.importorskip("server.app.routes.general")
-    pytest.importorskip("server.app.app")
-
     monkeypatch.setattr(
         general_module,
         "serialize_attestation_certificate",

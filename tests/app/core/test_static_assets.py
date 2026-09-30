@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from server.app import static_assets
 from tests.app.entry_app import entry_app
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -22,8 +23,6 @@ _BODY = b'{"entries": [], "meta": {"no": 7}}' * 64
 
 @pytest.fixture
 def assets_env(monkeypatch, tmp_path):
-    pytest.importorskip("server.app.app")
-    static_assets = pytest.importorskip("server.app.static_assets")
     snapshot = tmp_path / "snapshot"
     snapshot.mkdir()
     (snapshot / _EXPLORER_FULL).write_bytes(_BODY)

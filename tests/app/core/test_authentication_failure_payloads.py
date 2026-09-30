@@ -1,8 +1,6 @@
 import base64
 import time
 
-import pytest
-
 from tests.app.entry_app import entry_app
 
 
@@ -11,8 +9,6 @@ def _encode_base64url(data: bytes) -> str:
 
 
 def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch, config_module, simple_parsing):
-    pytest.importorskip("server.app.app")
-
     credential_id = b"simple-credential-id"
     encoded_id = _encode_base64url(credential_id)
 
@@ -45,8 +41,6 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch,
 
 
 def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
-    pytest.importorskip("server.app.app")
-
     credential_id = b"advanced-credential-id"
     encoded_id = _encode_base64url(credential_id)
 

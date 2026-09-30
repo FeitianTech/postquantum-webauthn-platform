@@ -1,15 +1,11 @@
 import base64
 from types import SimpleNamespace
 
-import pytest
-
+from server.app.routes import general as general_module
 from tests.app.entry_app import entry_app
 
 
 def test_decode_and_certificate_routes_cover_error_and_success_paths(monkeypatch):
-    general_module = pytest.importorskip("server.app.routes.general")
-    pytest.importorskip("server.app.app")
-
     def _fake_decode(payload_text, **_options):
         if payload_text == "bad":
             raise ValueError("bad payload")
@@ -93,9 +89,6 @@ def test_decode_and_certificate_routes_cover_error_and_success_paths(monkeypatch
 
 
 def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
-    general_module = pytest.importorskip("server.app.routes.general")
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         session_calls = []
         monkeypatch.setattr(
@@ -325,9 +318,6 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
 
 
 def test_general_empty_snapshot_and_upload_branches(monkeypatch):
-    general_module = pytest.importorskip("server.app.routes.general")
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
         monkeypatch.setattr(general_module, "load_effective_full_snapshot", lambda: {})

@@ -5,6 +5,9 @@ import json
 import cbor2
 import pytest
 
+from server.app import decoder as decoder_module
+from server.app.decoder import encode as encode_module
+from server.app.routes import general as general_module
 from tests.app.entry_app import entry_app
 
 
@@ -44,8 +47,6 @@ def _build_attestation_object(*, rp_id: str = "example.com", counter: int = 1, c
 
 
 def test_codec_api_rejects_non_json_payload():
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         response = client.post(
             "/api/codec",
@@ -58,8 +59,6 @@ def test_codec_api_rejects_non_json_payload():
 
 
 def test_codec_api_requires_non_empty_payload():
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         response = client.post(
             "/api/codec",
@@ -71,8 +70,6 @@ def test_codec_api_requires_non_empty_payload():
 
 
 def test_codec_api_encode_requires_format():
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         response = client.post(
             "/api/codec",
@@ -84,8 +81,6 @@ def test_codec_api_encode_requires_format():
 
 
 def test_codec_api_encode_returns_422_for_unsupported_format():
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         response = client.post(
             "/api/codec",
@@ -97,8 +92,6 @@ def test_codec_api_encode_returns_422_for_unsupported_format():
 
 
 def test_codec_api_returns_422_for_invalid_decode_payload():
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         response = client.post(
             "/api/codec",
@@ -110,8 +103,6 @@ def test_codec_api_returns_422_for_invalid_decode_payload():
 
 
 def test_codec_api_round_trip_cbor_encode_then_decode():
-    pytest.importorskip("server.app.app")
-
     original = {"beta": "value", "alpha": [1, 2, 3], "flag": True}
 
     with entry_app().test_client() as client:
@@ -144,8 +135,6 @@ def test_codec_api_round_trip_cbor_encode_then_decode():
 
 
 def test_encode_payload_text_cbor_is_deterministic_for_same_input():
-    decoder_module = pytest.importorskip("server.app.decoder")
-
     source = json.dumps({"z": 1, "a": [2, 3], "nested": {"x": "ok"}})
 
     first = decoder_module.encode_payload_text(source, "cbor")
@@ -156,23 +145,17 @@ def test_encode_payload_text_cbor_is_deterministic_for_same_input():
 
 
 def test_normalize_encoding_format_aliases_and_case_insensitive():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     assert encode_module._normalize_encoding_format("  JSON (binary)  ") == "json"
     assert encode_module._normalize_encoding_format("CBOR (CANONICAL)") == "cbor"
     assert encode_module._normalize_encoding_format("cbor (ctap/webauthn data)") == "ctap-webauthn"
 
 
 def test_normalize_encoding_format_rejects_unknown_values():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match="Unsupported encoder format"):
         encode_module._normalize_encoding_format("totally-unknown")
 
 
 def test_encode_ctap_webauthn_requires_mandatory_fields_for_make_credential_request():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     client_data_hash = base64.urlsafe_b64encode(b"\x00" * 32).decode("ascii").rstrip("=")
 
     with pytest.raises(ValueError, match=r"Missing field 0x03 \(user\)"):
@@ -185,8 +168,6 @@ def test_encode_ctap_webauthn_requires_mandatory_fields_for_make_credential_requ
 
 
 def test_decode_public_key_credential_preserves_key_fields_and_extensions():
-    decoder_module = pytest.importorskip("server.app.decoder")
-
     raw_id = b"codec-public-key-cred"
     attestation_object = _build_attestation_object(counter=3, credential_id=raw_id)
     client_data_json = json.dumps(
@@ -227,8 +208,6 @@ def test_decode_public_key_credential_preserves_key_fields_and_extensions():
 
 
 def test_encode_payload_text_cbor_is_canonical_for_equivalent_key_orderings():
-    decoder_module = pytest.importorskip("server.app.decoder")
-
     left_payload = json.dumps({"z": 1, "nested": {"b": 2, "a": 1}, "k": [3, {"y": 2, "x": 1}]})
     right_payload = json.dumps({"k": [3, {"x": 1, "y": 2}], "nested": {"a": 1, "b": 2}, "z": 1})
 
@@ -240,8 +219,6 @@ def test_encode_payload_text_cbor_is_canonical_for_equivalent_key_orderings():
 
 
 def test_codec_api_decodes_attestation_object_contract():
-    pytest.importorskip("server.app.app")
-
     attestation_object = _build_attestation_object(counter=9, credential_id=b"codec-api-attestation")
     payload = _b64url(bytes(attestation_object))
 
@@ -260,15 +237,11 @@ def test_codec_api_decodes_attestation_object_contract():
 
 
 def test_classify_ctap_numeric_mapping_requires_field_two():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match=r"Missing field 0x02"):
         encode_module._classify_ctap_numeric_mapping({1: "example.com"})
 
 
 def test_classify_ctap_numeric_mapping_rejects_short_auth_data_for_signature_response():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(
         ValueError,
         match=r"must contain authenticator data for GetAssertion response",
@@ -283,8 +256,6 @@ def test_classify_ctap_numeric_mapping_rejects_short_auth_data_for_signature_res
 
 
 def test_classify_ctap_numeric_mapping_uses_field_two_length_boundaries_for_string_field_one():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     get_assertion_request = encode_module._classify_ctap_numeric_mapping(
         {
             1: "example.com",
@@ -311,8 +282,6 @@ def test_classify_ctap_numeric_mapping_uses_field_two_length_boundaries_for_stri
 
 
 def test_classify_ctap_numeric_mapping_requires_exact_client_data_hash_length_for_make_credential_request():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(
         ValueError,
         match=r"clientDataHash\) must be exactly 32 bytes",
@@ -326,8 +295,6 @@ def test_classify_ctap_numeric_mapping_requires_exact_client_data_hash_length_fo
 
 
 def test_encode_ctap_webauthn_rejects_duplicate_fields_after_key_normalization():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match=r"Duplicate field 0x01"):
         encode_module._encode_ctap_webauthn_value(
             {
@@ -345,8 +312,6 @@ def test_encode_ctap_webauthn_rejects_duplicate_fields_after_key_normalization()
 
 
 def test_encode_ctap_webauthn_preserves_unknown_extra_numeric_fields():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     result = encode_module._encode_ctap_webauthn_value(
         {
             "1": "example.com",
@@ -364,8 +329,6 @@ def test_encode_ctap_webauthn_preserves_unknown_extra_numeric_fields():
 
 
 def test_encode_payload_text_cbor_is_deterministic_across_equivalent_permutations():
-    decoder_module = pytest.importorskip("server.app.decoder")
-
     variants = [
         json.dumps(
             {
@@ -402,8 +365,6 @@ def test_encode_payload_text_cbor_is_deterministic_across_equivalent_permutation
 
 
 def test_codec_api_encode_pem_binary_contract():
-    pytest.importorskip("server.app.app")
-
     payload_bytes = bytes(range(48))
     request_payload = {
         "mode": "encode",
@@ -432,8 +393,6 @@ def test_codec_api_encode_pem_binary_contract():
 
 
 def test_codec_api_encode_der_from_nested_binary_payload():
-    pytest.importorskip("server.app.app")
-
     payload_bytes = b"\x10\x11\x12\x13\x14"
     request_payload = {
         "mode": "encode",
@@ -453,9 +412,6 @@ def test_codec_api_encode_der_from_nested_binary_payload():
 
 
 def test_codec_api_encode_maps_value_error_to_422(monkeypatch):
-    pytest.importorskip("server.app.app")
-    general_module = pytest.importorskip("server.app.routes.general")
-
     monkeypatch.setattr(
         general_module,
         "encode_payload_text",
@@ -473,9 +429,6 @@ def test_codec_api_encode_maps_value_error_to_422(monkeypatch):
 
 
 def test_codec_api_encode_maps_unexpected_error_to_500(monkeypatch):
-    pytest.importorskip("server.app.app")
-    general_module = pytest.importorskip("server.app.routes.general")
-
     monkeypatch.setattr(
         general_module,
         "encode_payload_text",
