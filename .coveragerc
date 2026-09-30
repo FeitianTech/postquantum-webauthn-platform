@@ -5,10 +5,10 @@ source =
     server
 
 [report]
-# A floor, not a target: measured 95.36% on a macOS checkout and 95.74% on the
-# Linux CI runner on 2026-09-17, when the fido2 library was part of the tree and
-# measured with it. Set just under both so a real regression fails but ordinary
-# churn does not. Raise it when coverage rises; never lower it to go green.
+# A floor, not a target: the app and tools measured 96.7% on 2026-09-30 (fido2
+# comes from PyPI and is not measured). Set below that so a real regression
+# fails but ordinary churn does not. Raise it when coverage rises; never lower
+# it to go green.
 fail_under = 95
 omit =
     tests/*
