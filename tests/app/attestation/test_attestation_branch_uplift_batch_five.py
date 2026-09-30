@@ -126,7 +126,7 @@ def test_serialize_extension_value_unrecognized_oid_fallback_paths(monkeypatch, 
             return b"\xff\xfe"
         return b"short"
 
-    monkeypatch.setattr(formatting, "decode_asn1_octet_string", _decode_stub)
+    monkeypatch.setattr(formatting, "der_octet_string_content", _decode_stub)
 
     firmware_ext = SimpleNamespace(
         oid=firmware_oid,

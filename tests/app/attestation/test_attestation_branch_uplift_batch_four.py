@@ -47,7 +47,7 @@ def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_sh
 
     monkeypatch.setattr(
         formatting,
-        "decode_asn1_octet_string",
+        "der_octet_string_content",
         lambda _value: b"\x00" * 5,
     )
     monkeypatch.setattr(

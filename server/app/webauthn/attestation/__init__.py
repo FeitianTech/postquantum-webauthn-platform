@@ -52,7 +52,7 @@ normalize_aaguid_string = aaguid.normalize_aaguid_string
 summarize_authenticator_extensions = aaguid.summarize_authenticator_extensions
 
 # Hex, base64url, and JSON encoding helpers.
-decode_asn1_octet_string = formatting.decode_asn1_octet_string
+der_octet_string_content = formatting.der_octet_string_content
 encode_base64url = formatting.encode_base64url
 format_hex_bytes_lines = formatting.format_hex_bytes_lines
 format_hex_string_lines = formatting.format_hex_string_lines

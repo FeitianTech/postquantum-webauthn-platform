@@ -119,7 +119,7 @@ def _extract_certificate_aaguid(cert_der: bytes) -> bytes:
     if raw_value is None:
         return b""
 
-    decoded = formatting.decode_asn1_octet_string(raw_value)
+    decoded = formatting.der_octet_string_content(raw_value)
     if len(decoded) == 16:
         return decoded
     if len(raw_value) == 16:

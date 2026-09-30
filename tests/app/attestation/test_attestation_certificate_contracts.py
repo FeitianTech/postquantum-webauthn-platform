@@ -4,32 +4,32 @@ import hashlib
 import pytest
 
 
-def test_decode_asn1_octet_string_unwraps_nested_octet_strings(attestation_module):
+def test_der_octet_string_content_unwraps_one_octet_string(attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
-    payload = b"\x04\x04\x04\x02\xaa\xbb"
+    assert attestation_module.der_octet_string_content(b"\x04\x02\xaa\xbb") == b"\xaa\xbb"
+    # The content is shown as it is: an OCTET STRING inside is not unwrapped too.
+    assert attestation_module.der_octet_string_content(b"\x04\x04\x04\x02\xaa\xbb") == b"\x04\x02\xaa\xbb"
+    # Trailing bytes are not DER: the bytes are shown as sent.
+    assert attestation_module.der_octet_string_content(b"\x04\x01\xaa\xbb") == b"\x04\x01\xaa\xbb"
 
-    decoded = attestation_module.decode_asn1_octet_string(payload)
 
-    assert decoded == b"\xaa\xbb"
-
-
-def test_decode_asn1_octet_string_stops_on_truncated_long_form_length(attestation_module):
+def test_der_octet_string_content_keeps_a_truncated_long_form_length(attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     payload = b"\x04\x82\x00"
 
-    decoded = attestation_module.decode_asn1_octet_string(payload)
+    decoded = attestation_module.der_octet_string_content(payload)
 
     assert decoded == payload
 
 
-def test_decode_asn1_octet_string_stops_on_indefinite_length_marker(attestation_module):
+def test_der_octet_string_content_keeps_an_indefinite_length(attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     payload = b"\x04\x80\xaa\xbb"
 
-    decoded = attestation_module.decode_asn1_octet_string(payload)
+    decoded = attestation_module.der_octet_string_content(payload)
 
     assert decoded == payload
 

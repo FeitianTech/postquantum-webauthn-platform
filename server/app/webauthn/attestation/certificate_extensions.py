@@ -91,7 +91,7 @@ def _signed_certificate_timestamps_value(scts: Any) -> list[dict[str, Any]]:
 def _firmware_version_value(raw_bytes: bytes, raw_hex: str) -> dict[str, Any]:
     """Yubico's 1.3.6.1.4.1.41482.13.1: the firmware version, one byte per component."""
 
-    version_bytes = formatting.decode_asn1_octet_string(raw_bytes)
+    version_bytes = formatting.der_octet_string_content(raw_bytes)
     if version_bytes:
         version_components = "".join(
             f"{byte}." for byte in version_bytes
@@ -104,7 +104,7 @@ def _firmware_version_value(raw_bytes: bytes, raw_hex: str) -> dict[str, Any]:
 def _device_identifier_value(raw_bytes: bytes, raw_hex: str) -> dict[str, Any]:
     """Yubico's 1.3.6.1.4.1.41482.2: the device identifier, as ASCII."""
 
-    identifier_bytes = formatting.decode_asn1_octet_string(raw_bytes)
+    identifier_bytes = formatting.der_octet_string_content(raw_bytes)
     text_value: str | None
     try:
         text_value = identifier_bytes.decode("ascii").strip()
@@ -120,7 +120,7 @@ def _device_identifier_value(raw_bytes: bytes, raw_hex: str) -> dict[str, Any]:
 def _yubico_identifier_value(raw_bytes: bytes, raw_hex: str) -> dict[str, Any]:
     """Yubico's 1.3.6.1.4.1.41482.1.1: an ASCII identifier."""
 
-    identifier_bytes = formatting.decode_asn1_octet_string(raw_bytes)
+    identifier_bytes = formatting.der_octet_string_content(raw_bytes)
     try:
         identifier_text = identifier_bytes.decode("ascii").strip()
     except Exception:  # pragma: no cover - defensive
@@ -134,7 +134,7 @@ def _yubico_identifier_value(raw_bytes: bytes, raw_hex: str) -> dict[str, Any]:
 def _aaguid_value(raw_bytes: bytes, raw_hex: str) -> dict[str, Any]:
     """FIDO's id-fido-gen-ce-aaguid (1.3.6.1.4.1.45724.1.1.4)."""
 
-    aaguid_bytes = formatting.decode_asn1_octet_string(raw_bytes)
+    aaguid_bytes = formatting.der_octet_string_content(raw_bytes)
     if len(aaguid_bytes) == 16:
         return {"AAGUID": aaguid_bytes.hex()}
     return {"Hex value": raw_hex}

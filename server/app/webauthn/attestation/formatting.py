@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from cryptography.hazmat import asn1
 from fido2.utils import ByteBuffer
 
 from ... import encoding
@@ -23,38 +24,13 @@ def format_hex_string_lines(hex_string: str, bytes_per_line: int = 16) -> list[s
     return format_hex_bytes_lines(data, bytes_per_line)
 
 
-def decode_asn1_octet_string(data: bytes) -> bytes:
-    """Best-effort decode of a DER-encoded OCTET STRING payload."""
+def der_octet_string_content(data: bytes) -> bytes:
+    """The content of a DER OCTET STRING; ``data`` as it is when it is not one."""
 
-    current = data
-    for _ in range(4):
-        if not current or current[0] != 0x04 or len(current) < 2:
-            break
-
-        length_byte = current[1]
-        offset = 2
-
-        if length_byte == 0x80:
-            break
-
-        if length_byte & 0x80:
-            length_octets = length_byte & 0x7F
-            if length_octets == 0 or len(current) < offset + length_octets:
-                break
-            length = int.from_bytes(current[offset : offset + length_octets], "big")
-            offset += length_octets
-        else:
-            length = length_byte
-
-        if len(current) < offset + length:
-            break
-
-        next_value = current[offset : offset + length]
-        if next_value == current:
-            break
-        current = next_value
-
-    return current
+    try:
+        return asn1.decode_der(bytes, data)
+    except ValueError:
+        return data
 
 
 def encode_base64url(data: bytes) -> str:
