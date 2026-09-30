@@ -166,32 +166,10 @@ def populate_authenticator_data_context(ctx: dict[str, Any]) -> None:
     flags_value = getattr(ctx["auth_data"], "flags", 0)
     flags_dict = registration_facts.flags(ctx["auth_data"])
 
-    rp_id_hash_bytes = getattr(ctx["auth_data"], "rp_id_hash", b"")
-    if isinstance(rp_id_hash_bytes, (bytearray, memoryview)):
-        rp_id_hash_bytes = bytes(rp_id_hash_bytes)
-    elif not isinstance(rp_id_hash_bytes, bytes):
-        rp_id_hash_bytes = b""
-
-    rp_id_hash_hex = rp_id_hash_bytes.hex() if rp_id_hash_bytes else ""
-    rp_id_hash_b64 = (
-        encode_base64url(rp_id_hash_bytes)
-        if rp_id_hash_bytes
-        else ""
-    )
-
-    expected_rp_hash_bytes = hashlib.sha256((ctx["resolved_rp_id"] or "").encode("utf-8")).digest()
-    expected_rp_hash_hex = expected_rp_hash_bytes.hex()
-    expected_rp_hash_b64 = encode_base64url(expected_rp_hash_bytes)
-
+    rp_hash = registration_facts.rp_id_hash_report(ctx["auth_data"], ctx["resolved_rp_id"])
     if ctx["attestation_rp_id_hash_valid"] is None:
-        ctx["attestation_rp_id_hash_valid"] = rp_id_hash_bytes == expected_rp_hash_bytes
-
-    if rp_id_hash_hex:
-        ctx["credential_properties"]["rpIdHash"] = rp_id_hash_hex
-    if rp_id_hash_b64:
-        ctx["credential_properties"]["rpIdHashBase64"] = rp_id_hash_b64
-    ctx["credential_properties"]["rpIdHashExpected"] = expected_rp_hash_hex
-    ctx["credential_properties"]["rpIdHashExpectedBase64"] = expected_rp_hash_b64
+        ctx["attestation_rp_id_hash_valid"] = rp_hash["bytes"] == rp_hash["expectedBytes"]
+    registration_facts.record_rp_id_hash(ctx["credential_properties"], rp_hash)
 
     ctx["authenticator_data_raw"] = authenticator_data_raw
     ctx["authenticator_data_hex"] = authenticator_data_hex
@@ -200,12 +178,12 @@ def populate_authenticator_data_context(ctx: dict[str, Any]) -> None:
     ctx["algoname"] = algoname
     ctx["flags_value"] = flags_value
     ctx["flags_dict"] = flags_dict
-    ctx["rp_id_hash_bytes"] = rp_id_hash_bytes
-    ctx["rp_id_hash_hex"] = rp_id_hash_hex
-    ctx["rp_id_hash_b64"] = rp_id_hash_b64
-    ctx["expected_rp_hash_bytes"] = expected_rp_hash_bytes
-    ctx["expected_rp_hash_hex"] = expected_rp_hash_hex
-    ctx["expected_rp_hash_b64"] = expected_rp_hash_b64
+    ctx["rp_id_hash_bytes"] = rp_hash["bytes"]
+    ctx["rp_id_hash_hex"] = rp_hash["hex"]
+    ctx["rp_id_hash_b64"] = rp_hash["base64url"]
+    ctx["expected_rp_hash_bytes"] = rp_hash["expectedBytes"]
+    ctx["expected_rp_hash_hex"] = rp_hash["expectedHex"]
+    ctx["expected_rp_hash_b64"] = rp_hash["expectedBase64url"]
 
 
 def _user_handle_bytes(user_info: Mapping[str, Any]) -> bytes:

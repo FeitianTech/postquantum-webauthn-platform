@@ -178,30 +178,6 @@ def build_debug_info(
     return debug_info
 
 
-def _rp_id_hash_report(auth_data: Any, resolved_rp_id: str) -> dict[str, Any]:
-    """authData's rpIdHash and the hash of the RP ID it should be, as bytes, hex and base64url."""
-
-    rp_id_hash_hex = ""
-    rp_id_hash_b64 = ""
-    try:
-        rp_id_hash_bytes = bytes(getattr(auth_data, "rp_id_hash", b""))
-    except (TypeError, ValueError):
-        rp_id_hash_bytes = b""
-    else:
-        rp_id_hash_hex = rp_id_hash_bytes.hex()
-        rp_id_hash_b64 = encode_base64url(rp_id_hash_bytes)
-
-    expected_rp_hash_bytes = hashlib.sha256((resolved_rp_id or "").encode("utf-8")).digest()
-    return {
-        "bytes": rp_id_hash_bytes,
-        "hex": rp_id_hash_hex,
-        "base64url": rp_id_hash_b64,
-        "expectedBytes": expected_rp_hash_bytes,
-        "expectedHex": expected_rp_hash_bytes.hex(),
-        "expectedBase64url": encode_base64url(expected_rp_hash_bytes),
-    }
-
-
 def _resident_key_result(client_extension_results: Any, auth_data: Any, resident_key_required: bool) -> bool:
     """credProps' ``rk`` when reported, else the BE flag or the requirement."""
 
@@ -269,15 +245,10 @@ def _registration_facts(
     authenticator_data_hash = hashlib.sha256(auth_data_bytes).hexdigest()
     registration_timestamp = datetime.fromtimestamp(credential_info["registration_time"], timezone.utc).isoformat()
 
-    rp_hash = _rp_id_hash_report(auth_data, resolved_rp_id)
+    rp_hash = registration_facts.rp_id_hash_report(auth_data, resolved_rp_id)
     if attestation_rp_id_hash_valid is None:
         attestation_rp_id_hash_valid = rp_hash["bytes"] == rp_hash["expectedBytes"]
-    if rp_hash["hex"]:
-        properties["rpIdHash"] = rp_hash["hex"]
-    if rp_hash["base64url"]:
-        properties["rpIdHashBase64"] = rp_hash["base64url"]
-    properties["rpIdHashExpected"] = rp_hash["expectedHex"]
-    properties["rpIdHashExpectedBase64"] = rp_hash["expectedBase64url"]
+    registration_facts.record_rp_id_hash(properties, rp_hash)
 
     resident_key_result = _resident_key_result(client_extension_results, auth_data, resident_key_required)
     properties["residentKey"] = bool(resident_key_result)

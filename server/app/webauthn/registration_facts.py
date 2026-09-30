@@ -1,11 +1,14 @@
 """What a verified registration's authenticator data and extension outputs say, one way for both tabs.
 
 The flags in the order of their bits (``flags``), whether largeBlob did anything
-(``large_blob_result``), a byte string's three spellings (``byte_forms``), and
-the AAGUID (``aaguid_values``, ``record_aaguid``, ``aaguid_block``).
+(``large_blob_result``), a byte string's three spellings (``byte_forms``), the
+AAGUID (``aaguid_values``, ``record_aaguid``, ``aaguid_block``), and authData's
+rpIdHash beside the hash of the RP ID it should be (``rp_id_hash_report``,
+``record_rp_id_hash``).
 """
 from __future__ import annotations
 
+import hashlib
 import uuid
 from collections.abc import Mapping
 from typing import Any
@@ -82,3 +85,38 @@ def aaguid_block(aaguid_hex: str | None, aaguid_guid: str | None) -> dict[str, A
     """The AAGUID as the relying party's view shows it."""
 
     return {"raw": aaguid_hex, "guid": aaguid_guid}
+
+
+def rp_id_hash_report(auth_data: Any, resolved_rp_id: str) -> dict[str, Any]:
+    """authData's rpIdHash and the hash of the RP ID it should be, as bytes, hex and base64url."""
+
+    rp_id_hash_hex = ""
+    rp_id_hash_b64 = ""
+    try:
+        rp_id_hash_bytes = bytes(getattr(auth_data, "rp_id_hash", b""))
+    except (TypeError, ValueError):
+        rp_id_hash_bytes = b""
+    else:
+        rp_id_hash_hex = rp_id_hash_bytes.hex()
+        rp_id_hash_b64 = encode_base64url(rp_id_hash_bytes)
+
+    expected_rp_hash_bytes = hashlib.sha256((resolved_rp_id or "").encode("utf-8")).digest()
+    return {
+        "bytes": rp_id_hash_bytes,
+        "hex": rp_id_hash_hex,
+        "base64url": rp_id_hash_b64,
+        "expectedBytes": expected_rp_hash_bytes,
+        "expectedHex": expected_rp_hash_bytes.hex(),
+        "expectedBase64url": encode_base64url(expected_rp_hash_bytes),
+    }
+
+
+def record_rp_id_hash(properties: dict[str, Any], report: Mapping[str, Any]) -> None:
+    """Add the rpIdHash and the expected one to a stored credential's properties."""
+
+    if report["hex"]:
+        properties["rpIdHash"] = report["hex"]
+    if report["base64url"]:
+        properties["rpIdHashBase64"] = report["base64url"]
+    properties["rpIdHashExpected"] = report["expectedHex"]
+    properties["rpIdHashExpectedBase64"] = report["expectedBase64url"]
