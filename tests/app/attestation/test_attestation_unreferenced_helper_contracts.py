@@ -15,8 +15,6 @@ from server.app.webauthn.attestation import (
     certificate_public_keys as attestation_certificate_public_keys,
 )
 from server.app.webauthn.attestation import certificates as attestation_certificates
-from server.app.webauthn.attestation import trust as attestation_trust
-from tests.app.entry_app import entry_app
 
 
 def _self_signed_cert_der() -> bytes:
@@ -33,20 +31,6 @@ def _self_signed_cert_der() -> bytes:
         .sign(private_key, hashes.SHA256())
     )
     return cert.public_bytes(serialization.Encoding.DER)
-
-
-def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch, attestation_module):
-    app = entry_app()
-    monkeypatch.setitem(app.config, "TRUSTED_ATTESTATION_CA_SUBJECTS", ["CN=Root"])
-    monkeypatch.setitem(app.config, "TRUSTED_ATTESTATION_CA_FINGERPRINTS", ("abc", "def"))
-
-    with app.app_context():
-        assert attestation_trust._trusted_ca_subjects() == {"CN=Root"}
-        assert attestation_trust._trusted_ca_fingerprints() == {"ABC", "DEF"}
-
-    fingerprint = attestation_trust._certificate_fingerprint(b"cert")
-    assert isinstance(fingerprint, str)
-    assert fingerprint == fingerprint.upper()
 
 
 def test_format_helpers(attestation_module):

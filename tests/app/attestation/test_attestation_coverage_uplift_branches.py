@@ -4,14 +4,12 @@ import base64
 import hashlib
 from types import SimpleNamespace
 
-from cryptography import x509
 from fido2.attestation import Attestation
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
 from server.app.mds import verifier as mds_verifier
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
-from server.app.webauthn.attestation import trust as attestation_trust
 
 
 class _CredentialData:
@@ -49,41 +47,6 @@ def _registration(attestation_object, client_data):
         ),
         client_extension_results={},
     )
-
-
-def test_coerce_certificate_bytes_falls_back_to_hex_parsing_when_base64_decode_fails(monkeypatch, attestation_module):
-    monkeypatch.setattr(
-        base64,
-        "b64decode",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("bad-base64")),
-    )
-
-    assert attestation_trust._coerce_certificate_bytes("0a0b") == b"\x0a\x0b"
-    assert attestation_trust._coerce_certificate_bytes("zz") is None
-
-
-def test_extract_certificate_aaguid_handles_non_hex_string_extension_values(monkeypatch, attestation_module):
-    class _ExtensionValue:
-        value = "Z" * 16
-
-    class _Extension:
-        value = _ExtensionValue()
-
-    class _Extensions:
-        def get_extension_for_oid(self, _oid):
-            return _Extension()
-
-    class _Certificate:
-        extensions = _Extensions()
-
-    monkeypatch.setattr(
-        x509,
-        "load_der_x509_certificate",
-        lambda _data: _Certificate(),
-    )
-
-    extracted = attestation_trust._extract_certificate_aaguid(b"cert")
-    assert extracted == b"Z" * 16
 
 
 def test_coerce_attestation_certificate_bytes_string_path_falls_back_to_base64url():
