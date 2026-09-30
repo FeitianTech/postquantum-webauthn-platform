@@ -62,8 +62,6 @@ __all__ = [
 SNAPSHOT_FILENAMES = mds_files.SNAPSHOT_FILENAMES
 
 
-_DEFAULT_BLOB_PREFIX = "mds"
-_BLOB_PREFIX_ENV = "FIDO_SERVER_MDS_GCS_PREFIX"
 _UPSTREAM_ENV_FLAG = "FIDO_SERVER_MDS_FETCH_UPSTREAM"
 
 _provision_lock = threading.Lock()
@@ -84,8 +82,8 @@ def snapshot_path(filename: str) -> Path:
 
 
 def snapshot_blob_name(filename: str) -> str:
-    prefix = os.environ.get(_BLOB_PREFIX_ENV, _DEFAULT_BLOB_PREFIX)
-    return cloud.build_blob_name(filename, prefix=prefix)
+    # The flat objects of the snapshot's first layout, under the sets' own prefix.
+    return cloud.build_blob_name(filename, prefix=snapshot_sets.prefix())
 
 
 def missing_snapshot_files() -> tuple[str, ...]:
