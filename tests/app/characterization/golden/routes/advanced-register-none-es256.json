@@ -130,7 +130,7 @@
     ],
     [
      "Content-Length",
-     "9668"
+     "9614"
     ],
     [
      "X-Content-Type-Options",
@@ -190,7 +190,7 @@
      }
     }
    ],
-   "bodySha256": "81612331c5652e97417160641e4d84ff5d1bb9253e9f59dff3826bee118ccf54",
+   "bodySha256": "41cfbae5d3176a6f83f907bbb2fff9be6615aa0c4f69bcf0ce76117919ff2aaa",
    "body": {
     "actualResidentKey": true,
     "algo": "ES256 (ECDSA)",
@@ -239,7 +239,6 @@
       "description": null,
       "root_certificates_present": false
      },
-     "pqc_signature_valid": null,
      "root_valid": null,
      "rp_id_hash_valid": true,
      "signature_valid": null,
@@ -332,7 +331,6 @@
         "description": null,
         "root_certificates_present": false
        },
-       "pqc_signature_valid": null,
        "root_valid": null,
        "rp_id_hash_valid": true,
        "signature_valid": null,
@@ -491,7 +489,7 @@
    "stored": [
     {
      "file": "artifacts/szCDHLxETTCKJ8LLZMt8h4oRkUkXqEH-veDgEl9PHMI/8cedae684cc0008b408c5da52374f9d489ef8111f09983afd2201521ec297c09.json",
-     "sha256": "0fa27f012a7df9a01ce345b00364269a9855467fbca8320d48a29d468142e02f",
+     "sha256": "b33d578c9df6e3477c666b2fbc47e8b35f87be285e20b0a49e44cd54518ff7e9",
      "content": {
       "storageId": "THBi3GyG-MexchMynbz3x5Nv::1a0c4506c00::abb1b052d88044e486bb1446aa6a1e87",
       "createdAt": 1790000000.0,
@@ -570,7 +568,6 @@
           "attestationChecks": {
            "attestation_format": "none",
            "signature_valid": null,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": null,
@@ -656,7 +653,6 @@
          "attestationChecks": {
           "attestation_format": "none",
           "signature_valid": null,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": null,

@@ -1,14 +1,10 @@
-"""Fix 5 -- the PQC fallback must not launder attestation errors away.
+"""An ML-DSA attestation is verified as any other: fido2's full packed verification.
 
-When normal attestation verification failed, a PQC fallback re-ran a bare
-signature check and, on success, set ``signature_valid = True`` *and cleared*
-``attestation_errors``. The fallback only checks the signature -- it skips the
-packed-attestation certificate policy checks (Subject OU, AAGUID extension
-match, Basic Constraints) -- so a narrow pass was being promoted into a clean
-overall verdict.
-
-The PQC result must now be reported as its own field and must never replace
-the verdict or erase the errors.
+A PQC fallback once re-ran a bare signature check when that failed, and on
+success set ``signature_valid = True`` and cleared the errors, though it skipped
+the packed certificate policy checks (Subject OU, AAGUID extension match, Basic
+Constraints). There is no fallback now, and no separate PQC result: what fido2
+refuses is invalid, with its errors.
 """
 from __future__ import annotations
 
@@ -58,8 +54,7 @@ def _packed_registration_response(authenticator, *, challenge, attestation_alg):
     }
 
 
-def test_pqc_fallback_failure_never_clears_attestation_errors(attestation_module):
-    """A failing PQC fallback must append, never erase."""
+def test_an_mldsa_attestation_that_does_not_verify_is_invalid_with_its_errors(attestation_module):
 
     authenticator = Authenticator()
     challenge = b"\x61" * 32
@@ -77,42 +72,14 @@ def test_pqc_fallback_failure_never_clears_attestation_errors(attestation_module
         RP_ID,
     )
 
-    # The overall verdict stays negative...
     assert result["signature_valid"] is False
-    # ...the PQC result is reported separately...
-    assert result["pqc_signature_valid"] is False
-    # ...and the original failure is still visible.
+    assert "pqc_signature_valid" not in result
     assert result["errors"], "attestation errors must not be cleared"
     joined = "\n".join(result["errors"])
     assert "attestation" in joined
 
 
-def test_pqc_signature_result_is_a_separate_field_from_the_verdict(attestation_module):
-    """``pqc_signature_valid`` exists and is distinct from ``signature_valid``."""
-
-    authenticator = Authenticator()
-    challenge = b"\x62" * 32
-
-    response = _packed_registration_response(
-        authenticator, challenge=challenge, attestation_alg=MLDSA44_ALG
-    )
-    result = attestation_module.perform_attestation_checks(
-        response,
-        {"challenge": challenge},
-        None,
-        None,
-        ORIGIN,
-        RP_ID,
-    )
-
-    assert "pqc_signature_valid" in result
-    assert result["signature_valid"] is not result["pqc_signature_valid"] or (
-        result["signature_valid"] is False
-    )
-
-
-def test_non_pqc_attestation_leaves_pqc_field_unset(attestation_module):
-    """A classical failure must not invent a PQC result."""
+def test_a_classical_attestation_that_does_not_verify_is_invalid_with_its_errors(attestation_module):
 
     authenticator = Authenticator()
     challenge = b"\x63" * 32
@@ -130,7 +97,6 @@ def test_non_pqc_attestation_leaves_pqc_field_unset(attestation_module):
     )
 
     assert result["signature_valid"] is False
-    assert result["pqc_signature_valid"] is None
     assert result["errors"]
 
 
@@ -139,8 +105,7 @@ def _mldsa_basic_attestation_response(authenticator, *, challenge, signing_key=N
 
     The x5c certificate is a real ML-DSA-44 certificate, but it lacks the
     packed-attestation policy extensions (Basic Constraints etc.), so full
-    packed verification genuinely fails while the bare signature check the
-    PQC fallback performs genuinely succeeds.
+    packed verification genuinely fails although the signature itself verifies.
     """
 
     import datetime
@@ -190,14 +155,9 @@ def _mldsa_basic_attestation_response(authenticator, *, challenge, signing_key=N
     }
 
 
-def test_pqc_fallback_success_does_not_become_the_verdict(attestation_module):
-    """The laundering case itself, driven with real ML-DSA crypto.
-
-    The attestation signature is a genuine ML-DSA-44 signature from the x5c
-    certificate's key, so the fallback's bare signature check succeeds. The
-    certificate fails the packed policy checks, so that success must not
-    promote ``signature_valid`` or clear the errors full verification produced.
-    """
+def test_a_good_signature_does_not_rescue_a_certificate_packed_refuses(attestation_module):
+    """The laundering case itself, driven with real ML-DSA crypto: the signature
+    is genuine, the certificate fails the packed policy checks."""
 
     authenticator = Authenticator()
     challenge = b"\x64" * 32
@@ -212,15 +172,11 @@ def test_pqc_fallback_success_does_not_become_the_verdict(attestation_module):
         RP_ID,
     )
 
-    # The bare signature check genuinely passed...
-    assert result["pqc_signature_valid"] is True
-    # ...but it is NOT the verdict, and the errors survive.
     assert result["signature_valid"] is False
-    assert result["errors"], "the PQC fallback must not clear attestation errors"
+    assert result["errors"]
 
 
-def test_pqc_fallback_rejects_signature_from_another_mldsa_key(attestation_module):
-    """The fallback's success above depends on the signature, not the shape."""
+def test_a_signature_from_another_mldsa_key_is_invalid(attestation_module):
 
     from cryptography.hazmat.primitives.asymmetric import mldsa
 
@@ -241,6 +197,5 @@ def test_pqc_fallback_rejects_signature_from_another_mldsa_key(attestation_modul
         RP_ID,
     )
 
-    assert result["pqc_signature_valid"] is False
     assert result["signature_valid"] is False
     assert result["errors"]

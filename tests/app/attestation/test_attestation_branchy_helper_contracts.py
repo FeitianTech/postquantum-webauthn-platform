@@ -10,7 +10,6 @@ import pytest
 from cryptography import x509
 from cryptography.x509.oid import NameOID, ObjectIdentifier
 from fido2.attestation import InvalidSignature
-from fido2.cose import CoseKey
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
 
@@ -408,118 +407,6 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
     assert outcome["checks"]["fido_mds"] is False
     assert outcome["checks"]["chain"] is False
     assert outcome["root_valid"] is False
-
-
-def test_attempt_pqc_attestation_signature_validation_covers_trust_path_error_paths(monkeypatch, pqc, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
-    auth_data = SimpleNamespace(credential_data=SimpleNamespace(public_key={}), __bytes__=lambda self=None: b"auth")
-
-    monkeypatch.setattr(
-        CoseKey,
-        "for_alg",
-        lambda _alg: (_ for _ in ()).throw(RuntimeError("unsupported")),
-    )
-    unsupported = attestation_module._attempt_pqc_attestation_signature_validation(
-        SimpleNamespace(att_stmt={"alg": -49, "sig": b"sig"}, auth_data=auth_data),
-        b"client-hash",
-    )
-    assert unsupported["attempted"] is True
-    assert unsupported["error"].startswith("pqc_attestation_unsupported_algorithm:")
-
-    monkeypatch.setattr(CoseKey, "for_alg", lambda _alg: (lambda _map: object()))
-    monkeypatch.setattr(
-        pqc,
-        "extract_certificate_public_key_info",
-        lambda _cert: (_ for _ in ()).throw(ValueError("bad cert key")),
-    )
-    key_error = attestation_module._attempt_pqc_attestation_signature_validation(
-        SimpleNamespace(att_stmt={"alg": -49, "sig": b"sig", "x5c": [b"cert"]}, auth_data=auth_data),
-        b"client-hash",
-    )
-    assert key_error["error"].startswith("pqc_attestation_public_key_error:")
-
-    monkeypatch.setattr(
-        pqc,
-        "extract_certificate_public_key_info",
-        lambda _cert: {"subject_public_key": None},
-    )
-    missing_key = attestation_module._attempt_pqc_attestation_signature_validation(
-        SimpleNamespace(att_stmt={"alg": -49, "sig": b"sig", "x5c": [b"cert"]}, auth_data=auth_data),
-        b"client-hash",
-    )
-    assert missing_key["error"] == "pqc_attestation_public_key_missing"
-
-
-def test_attempt_pqc_attestation_signature_validation_verification_failure_and_success(monkeypatch, pqc, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
-    class _VerifyFails:
-        def verify(self, _message, _signature):
-            raise RuntimeError("invalid signature")
-
-    class _VerifyPasses:
-        def verify(self, _message, _signature):
-            return None
-
-    class _AuthData:
-        credential_data = SimpleNamespace(public_key={})
-
-        def __bytes__(self):
-            return b"auth-data"
-
-    monkeypatch.setattr(
-        pqc,
-        "extract_certificate_public_key_info",
-        lambda _cert: {"subject_public_key": b"public-key"},
-    )
-
-    monkeypatch.setattr(CoseKey, "for_alg", lambda _alg: (lambda _map: _VerifyFails()))
-    verify_failed = attestation_module._attempt_pqc_attestation_signature_validation(
-        SimpleNamespace(att_stmt={"alg": -49, "sig": b"sig", "x5c": [b"cert"]}, auth_data=_AuthData()),
-        b"client-hash",
-    )
-    assert verify_failed["attempted"] is True
-    assert verify_failed["success"] is False
-    assert verify_failed["error"].startswith("pqc_attestation_verification_failed:")
-
-    monkeypatch.setattr(CoseKey, "for_alg", lambda _alg: (lambda _map: _VerifyPasses()))
-    verified = attestation_module._attempt_pqc_attestation_signature_validation(
-        SimpleNamespace(att_stmt={"alg": -49, "sig": b"sig", "x5c": [b"cert"]}, auth_data=_AuthData()),
-        b"client-hash",
-    )
-    assert verified["attempted"] is True
-    assert verified["success"] is True
-    assert list(verified["attestation_result"].trust_path) == [b"cert"]
-
-
-def test_attempt_pqc_attestation_signature_validation_covers_no_chain_branches(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
-    monkeypatch.setattr(CoseKey, "for_alg", lambda _alg: object())
-
-    missing_credential = attestation_module._attempt_pqc_attestation_signature_validation(
-        SimpleNamespace(att_stmt={"alg": -49, "sig": b"sig"}, auth_data=SimpleNamespace(credential_data=None, __bytes__=lambda self=None: b"auth")),
-        b"client-hash",
-    )
-    assert missing_credential["error"] == "pqc_attestation_credential_data_missing"
-
-    monkeypatch.setattr(
-        CoseKey,
-        "parse",
-        lambda _pk: (_ for _ in ()).throw(ValueError("cannot parse")),
-    )
-    parse_error = attestation_module._attempt_pqc_attestation_signature_validation(
-        SimpleNamespace(
-            att_stmt={"alg": -49, "sig": b"sig"},
-            auth_data=SimpleNamespace(
-                credential_data=SimpleNamespace(public_key={}),
-                __bytes__=lambda self=None: b"auth",
-            ),
-        ),
-        b"client-hash",
-    )
-    assert parse_error["error"].startswith("pqc_attestation_public_key_parse_error:")
 
 
 def test_numeric_aaguid_and_extension_helpers_cover_fallback_paths(attestation_module):

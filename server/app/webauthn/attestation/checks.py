@@ -22,8 +22,7 @@ from fido2.webauthn import (
 
 from ... import encoding
 from .. import metadata
-from ..pqc import is_pqc_algorithm
-from . import classical, formatting, pqc, trust
+from . import classical, formatting, trust
 
 
 def _resolve_uv_required(
@@ -444,31 +443,9 @@ def _resolve_signature_validation(
             attestation_errors.append(f"attestation_error: {exc}")
             signature_valid = False
 
-    pqc_signature_valid: bool | None = None
-    if signature_valid is False and attestation_format_value != "none":
-        pqc_outcome = pqc._attempt_pqc_attestation_signature_validation(
-            attestation_object, client_data_hash
-        )
-        if pqc_outcome.get("attempted"):
-            pqc_error = pqc_outcome.get("error")
-            if pqc_outcome.get("success"):
-                # The PQC fallback checks the attestation SIGNATURE only; it
-                # skips the packed-attestation certificate policy checks
-                # (Subject OU, AAGUID extension match, Basic Constraints).
-                # It is therefore reported as its own result and must never
-                # overwrite the overall verdict or erase the errors that the
-                # full verification produced.
-                pqc_signature_valid = True
-                attestation_result = pqc_outcome.get("attestation_result")
-            else:
-                pqc_signature_valid = False
-                if pqc_error:
-                    attestation_errors.append(str(pqc_error))
-
     return {
         "attestation_format_value": attestation_format_value,
         "signature_valid": signature_valid,
-        "pqc_signature_valid": pqc_signature_valid,
         "attestation_result": attestation_result,
         "attestation_errors": attestation_errors,
     }
@@ -493,11 +470,9 @@ def _collect_attestation_trust_path(
 def _evaluate_root_validation(
     results: dict[str, Any],
     *,
-    algorithm: int | None,
     attestation_object: Any,
     attestation_result: Any,
     client_data_hash: bytes,
-    credential_aaguid_bytes: bytes,
     signature_valid: bool | None,
     attestation_format_value: str,
 ) -> dict[str, Any]:
@@ -517,26 +492,7 @@ def _evaluate_root_validation(
     verifier = None
     root_check_details: dict[str, bool | None] | None = None
 
-    pqc_registration = isinstance(algorithm, int) and is_pqc_algorithm(algorithm)
-    if pqc_registration:
-        verifier = metadata.get_mds_verifier()
-        pqc_outcome = pqc._evaluate_mldsa_attestation_root(
-            attestation_object,
-            credential_aaguid_bytes,
-            verifier,
-            now,
-        )
-        root_valid = pqc_outcome.get("root_valid")
-        metadata_entry = pqc_outcome.get("metadata_entry") or metadata_entry
-        metadata_lookup_source = pqc_outcome.get("metadata_lookup_source")
-        root_check_details = pqc_outcome.get("checks")
-        pqc_errors = pqc_outcome.get("errors") or []
-        pqc_warnings = pqc_outcome.get("warnings") or []
-        if pqc_errors:
-            results["errors"].extend(str(err) for err in pqc_errors)
-        if pqc_warnings:
-            results["warnings"].extend(str(warn) for warn in pqc_warnings)
-    elif signature_valid and attestation_result is not None:
+    if signature_valid and attestation_result is not None:
         verifier = metadata.get_mds_verifier()
         classical_outcome = classical._evaluate_classical_attestation_root(
             attestation_object,
@@ -577,14 +533,12 @@ def _record_signature_result(results: dict[str, Any], signature_ctx: Mapping[str
         results["errors"].append(error_message)
 
     results["signature_valid"] = signature_ctx["signature_valid"]
-    results["pqc_signature_valid"] = signature_ctx.get("pqc_signature_valid")
 
 
 def _empty_results() -> dict[str, Any]:
     return {
         "attestation_format": None,
         "signature_valid": None,
-        "pqc_signature_valid": None,
         "root_valid": None,
         "rp_id_hash_valid": None,
         "aaguid_match": None,
@@ -663,11 +617,9 @@ def perform_attestation_checks(
 
     root_ctx = _evaluate_root_validation(
         results,
-        algorithm=auth_ctx["algorithm"],
         attestation_object=attestation_object,
         attestation_result=signature_ctx["attestation_result"],
         client_data_hash=client_data_hash,
-        credential_aaguid_bytes=auth_ctx["credential_aaguid_bytes"],
         signature_valid=signature_ctx["signature_valid"],
         attestation_format_value=signature_ctx["attestation_format_value"],
     )

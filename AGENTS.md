@@ -200,9 +200,10 @@ their exports or sentences. A new surface splits its logic out here first.
   immutable when the version is current, and no other snapshot file at any path;
   `send_precompressed`); `routes/csp_report.py` (one WARNING line per violation, bounded);
   `routes/errors.py`.
-- `webauthn/attestation/` (checks, trust, PQC and classical, certificate serialisation;
-  `chain.py` verifies certificate chains, ML-DSA included, which fido2's `verify_x509_chain`
-  does not; `evaluation.py` checks an attestation against the MDS metadata step by step),
+- `webauthn/attestation/` (checks, trust, the root evaluation for every algorithm, ML-DSA
+  included, certificate serialisation; `chain.py` verifies certificate chains with
+  `verify_directly_issued_by` (RSA-PSS, EdDSA and ML-DSA too, which fido2's `verify_x509_chain`
+  does not); `evaluation.py` checks an attestation against the MDS metadata step by step),
   `webauthn/signature_algorithms.py` (the one spelling of a signature algorithm),
   `webauthn/metadata/` (MDS resolution), `webauthn/pqc.py` (the ML-DSA adapter),
   `webauthn/mldsa.py` (ML-DSA parameter sets, sizes and certificate keys),

@@ -282,7 +282,7 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
     assert result["root_checks"]["chain"] is True
 
 
-def test_perform_attestation_checks_reports_pqc_algorithm_mismatch_during_fallback(monkeypatch, attestation_module):
+def test_perform_attestation_checks_reports_an_mldsa_signature_that_does_not_verify(monkeypatch, attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     challenge = b"pqc-fallback"
@@ -323,5 +323,4 @@ def test_perform_attestation_checks_reports_pqc_algorithm_mismatch_during_fallba
     assert result["signature_valid"] is False
     assert result["root_valid"] is False
     assert any(error.startswith("attestation_invalid:") for error in result["errors"])
-    assert "pqc_attestation_algorithm_mismatch" in result["errors"]
     assert "attestation_signature_invalid" in result["errors"]

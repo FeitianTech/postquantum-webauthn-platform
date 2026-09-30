@@ -202,7 +202,7 @@
     ],
     [
      "Content-Length",
-     "21807"
+     "21753"
     ],
     [
      "X-Content-Type-Options",
@@ -262,7 +262,7 @@
      }
     }
    ],
-   "bodySha256": "ab33cfecb7a6f787790a1e3620b54cad4c409804f619a72c412ac2f4ce011f5d",
+   "bodySha256": "7f0e5fa1b486c287c7b2ce4edef1d7cf39b1b4202adcaf50e7c4812211dc5dea",
    "body": {
     "actualResidentKey": true,
     "algo": "ES256 (ECDSA)",
@@ -312,7 +312,6 @@
       "description": null,
       "root_certificates_present": false
      },
-     "pqc_signature_valid": null,
      "root_checks": {
       "chain": null,
       "fido_mds": null,
@@ -581,7 +580,6 @@
         "description": null,
         "root_certificates_present": false
        },
-       "pqc_signature_valid": null,
        "root_checks": {
         "chain": null,
         "fido_mds": null,
@@ -788,7 +786,7 @@
    "stored": [
     {
      "file": "artifacts/VRJf72bDgaMlsA4lFvicETd02L9bX7zOxiqEty5JtjQ/226feaa5be0796b1c34f27fe5a7101b8fdbbd7e38874fdd5f6d9a257f0a0a268.json",
-     "sha256": "d97b81c0a6e25647baf472661d184c433a993a18b10b68b6db346a5e534288af",
+     "sha256": "a3b916d8ff3249be25466efe5b1fa6b7296df5a5da2641b5b15bdf8e4333589a",
      "content": {
       "storageId": "HhfJJzOBVmmUZYuGYc2aY9SM::1a0c4506c00::02f5575ac1c848f2bfd09f36c6fe1da5",
       "createdAt": 1790000000.0,
@@ -896,7 +894,6 @@
           "attestationChecks": {
            "attestation_format": "packed",
            "signature_valid": true,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": true,
@@ -1164,7 +1161,6 @@
          "attestationChecks": {
           "attestation_format": "packed",
           "signature_valid": true,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": true,

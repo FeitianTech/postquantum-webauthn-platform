@@ -43,13 +43,6 @@ def response():
 
 
 @pytest.fixture
-def summary():
-    """The submodule that renders the human-readable summary lines."""
-
-    return _fragment("summary")
-
-
-@pytest.fixture
 def cbor_parser():
     """The submodule that parses CBOR: strict, lenient and sequence forms."""
 

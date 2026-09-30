@@ -228,7 +228,7 @@
     ],
     [
      "Content-Length",
-     "11832"
+     "11751"
     ],
     [
      "X-Content-Type-Options",
@@ -288,7 +288,7 @@
      }
     }
    ],
-   "bodySha256": "364ea651f6af11f81d089a66aa38edeba814721361f95e81c09f18a7266cf3ef",
+   "bodySha256": "db69535372524dacaa5f0f4a439d86a1c4a6736c40690f430d5e7a2eab5b1314",
    "body": {
     "actualResidentKey": false,
     "algo": "EdDSA",
@@ -368,7 +368,6 @@
         "description": null,
         "root_certificates_present": false
        },
-       "pqc_signature_valid": null,
        "root_valid": null,
        "rp_id_hash_valid": true,
        "signature_valid": null,
@@ -479,7 +478,6 @@
         "description": null,
         "root_certificates_present": false
        },
-       "pqc_signature_valid": null,
        "root_valid": null,
        "rp_id_hash_valid": true,
        "signature_valid": null,
@@ -593,7 +591,6 @@
          "description": null,
          "root_certificates_present": false
         },
-        "pqc_signature_valid": null,
         "root_valid": null,
         "rp_id_hash_valid": true,
         "signature_valid": null,
@@ -645,7 +642,7 @@
    "stored": [
     {
      "file": "credentials/xHS3P3oz5S028pTaO5cKNcZJweTtcaVV-dxaFHPdouc/user@example.com_credential_data.json",
-     "sha256": "92e56bce7840550f1498d8351f7b996a9357c2ef85d0276e5d3640db18d2cd38",
+     "sha256": "8f0351f7a6f0ad54deeab2983c28d8b490f705be30a2643c1877ded86062c88b",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -705,7 +702,6 @@
          "attestationChecks": {
           "attestation_format": "none",
           "signature_valid": null,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": null,
@@ -801,7 +797,6 @@
           "attestationChecks": {
            "attestation_format": "none",
            "signature_valid": null,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": null,

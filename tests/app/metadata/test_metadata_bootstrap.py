@@ -82,21 +82,6 @@ def test_metadata_not_available_is_warning_classical():
     assert "metadata_entry_missing" not in outcome["errors"]
 
 
-def test_metadata_not_available_is_warning_pqc():
-    from server.app.webauthn import attestation
-
-    attestation_object = type("obj", (), {"att_stmt": {}})()
-    outcome = attestation._evaluate_mldsa_attestation_root(
-        attestation_object,
-        b"",
-        None,
-        datetime.now(timezone.utc),
-    )
-
-    assert "metadata_not_available" in outcome["warnings"]
-    assert "metadata_not_available" not in outcome["errors"]
-
-
 def test_the_mds_info_answers_the_summary_and_the_custom_entries_state(monkeypatch, app_config):
     general_module = pytest.importorskip("server.app.routes.general")
 

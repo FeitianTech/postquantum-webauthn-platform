@@ -25,8 +25,30 @@ export function expectedFor(name: string): ExpectedDifference[] {
       section: 'Properties',
       reason: 'the roots Root Valid tried (FIDO MDS, Chain) are chips, each in its verdict\'s tone, not a list in parentheses',
     },
+    {
+      only: 'recorded',
+      token: /^("pqc_signature_valid"|null)$/,
+      section: 'Server-retrieved Data',
+      reason: 'no separate ML-DSA signature result (pqc_signature_valid): ML-DSA attestations are verified like any other',
+    },
+    ...(name === 'mldsa65@example.com' ? MLDSA_NONE_ATTESTATION : []),
   ];
 }
+
+// The ML-DSA-65 registration's attestation is "none": the ML-DSA-only root
+// evaluation that gave it root checks and a metadata warning is gone, as for any
+// other "none" attestation.
+const MLDSA_NONE_REASON = 'a "none" ML-DSA attestation has no root evaluation, as any other "none" attestation';
+const MLDSA_NONE_ATTESTATION: ExpectedDifference[] = [
+  {
+    only: 'recorded',
+    token: /^("root_checks"|"chain"|"fido_mds"|"trusted_ca"|"warnings"|"metadata_not_available"|[[\]{}])$/,
+    section: 'Server-retrieved Data',
+    reason: MLDSA_NONE_REASON,
+  },
+  { only: 'shown', token: /^\[\]$/, section: 'Server-retrieved Data', reason: MLDSA_NONE_REASON },
+  { only: 'recorded', token: /^(FIDO|MDS|Chain)$/, section: 'Properties', reason: MLDSA_NONE_REASON },
+];
 
 export async function keep(page: Page, records: object[]) {
   await page.evaluate(([key, value]) => window.localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify(records)] as const);

@@ -29,16 +29,6 @@ def _self_signed_cert_der() -> bytes:
     return cert.public_bytes(serialization.Encoding.DER)
 
 
-def test_normalise_pqc_algorithm_identifier_handles_numeric_name_and_embedded_values(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
-    assert attestation_module._normalise_pqc_algorithm_identifier(-49) == -49
-    assert attestation_module._normalise_pqc_algorithm_identifier("-48") == -48
-    assert attestation_module._normalise_pqc_algorithm_identifier("ML-DSA-87") == -50
-    assert attestation_module._normalise_pqc_algorithm_identifier("algorithm:-49") == -49
-    assert attestation_module._normalise_pqc_algorithm_identifier("not-an-alg") is None
-
-
 def test_collect_trust_path_entries_and_certificate_bytes_coercion_helpers(attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
@@ -213,49 +203,3 @@ def test_coerce_attestation_certificate_bytes_handles_mapping_variants(attestati
     )
     assert attestation_module._coerce_attestation_certificate_bytes({"pem": pem}) == cert_bytes
     assert attestation_module._coerce_attestation_certificate_bytes(ByteBuffer(cert_bytes)) == cert_bytes
-
-
-def test_attempt_pqc_attestation_signature_validation_reports_missing_sig_and_algorithm_mismatch(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
-    missing_sig_attestation = SimpleNamespace(att_stmt={"alg": -49}, auth_data=SimpleNamespace())
-    missing_sig = attestation_module._attempt_pqc_attestation_signature_validation(
-        missing_sig_attestation,
-        b"\x11" * 32,
-    )
-    assert missing_sig["attempted"] is True
-    assert missing_sig["success"] is False
-    assert missing_sig["error"] == "pqc_attestation_missing_signature"
-
-    auth_data = SimpleNamespace(
-        credential_data=SimpleNamespace(
-            public_key={1: 2, 3: -7, -1: 1, -2: b"\x01" * 32, -3: b"\x02" * 32}
-        )
-    )
-    mismatch_attestation = SimpleNamespace(
-        att_stmt={"alg": -49, "sig": b"signature"},
-        auth_data=auth_data,
-    )
-
-    mismatch = attestation_module._attempt_pqc_attestation_signature_validation(
-        mismatch_attestation,
-        b"\x22" * 32,
-    )
-
-    assert mismatch["attempted"] is True
-    assert mismatch["success"] is False
-    assert mismatch["error"] == "pqc_attestation_algorithm_mismatch"
-
-
-def test_check_pqc_certificate_constraints_returns_parse_error_for_invalid_der(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
-    error = attestation_module._check_pqc_certificate_constraints(
-        b"not-der",
-        now=datetime.now(timezone.utc),
-        is_leaf=True,
-        remaining_subordinates=0,
-    )
-
-    assert isinstance(error, str)
-    assert error.startswith("pqc_certificate_parse_error:")

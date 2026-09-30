@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import base64
 import hashlib
-from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
 from cryptography import x509
 from fido2.attestation import Attestation
-from fido2.cose import CoseKey
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
 
@@ -88,34 +86,6 @@ def test_extract_certificate_aaguid_handles_non_hex_string_extension_values(monk
     assert extracted == b"Z" * 16
 
 
-def test_attempt_pqc_attestation_signature_validation_reports_public_key_construction_errors(monkeypatch, pqc, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
-    monkeypatch.setattr(
-        pqc,
-        "extract_certificate_public_key_info",
-        lambda _cert: {"subject_public_key": b"pub"},
-    )
-    monkeypatch.setattr(
-        CoseKey,
-        "for_alg",
-        lambda _alg: (
-            lambda _mapping: (_ for _ in ()).throw(ValueError("invalid-public-key"))
-        ),
-    )
-
-    outcome = attestation_module._attempt_pqc_attestation_signature_validation(
-        SimpleNamespace(
-            att_stmt={"alg": -49, "sig": b"sig", "x5c": [b"cert"]},
-            auth_data=SimpleNamespace(credential_data=SimpleNamespace(public_key={}), __bytes__=lambda self=None: b"auth"),
-        ),
-        b"client-hash",
-    )
-
-    assert outcome["attempted"] is True
-    assert outcome["error"].startswith("pqc_attestation_public_key_invalid:")
-
-
 def test_coerce_attestation_certificate_bytes_string_path_falls_back_to_base64url():
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
@@ -133,100 +103,6 @@ def test_coerce_attestation_certificate_bytes_string_path_falls_back_to_base64ur
     assert attestation_module._coerce_attestation_certificate_bytes("not a certificate!") is None
 
 
-def test_evaluate_mldsa_attestation_root_clears_chain_errors_after_later_success(monkeypatch, trust, pqc, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
-    metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
-    monkeypatch.setattr(
-        trust,
-        "_find_metadata_entry_for_aaguid",
-        lambda _verifier, _aaguid: metadata_entry,
-    )
-    monkeypatch.setattr(
-        trust,
-        "_collect_metadata_root_certificates",
-        lambda _entry: [b"root-a", b"root-b"],
-    )
-    monkeypatch.setattr(
-        trust,
-        "_is_trusted_ca_certificate",
-        lambda _root, allow_subject_parsing=False: True,
-    )
-    monkeypatch.setattr(
-        metadata_module,
-        "metadata_entry_trust_anchor_status",
-        lambda _entry: None,
-    )
-    monkeypatch.setattr(
-        trust,
-        "_collect_trust_path_entries",
-        lambda _x5c: [b"leaf"],
-    )
-    monkeypatch.setattr(
-        pqc,
-        "_verify_pqc_attestation_chain",
-        lambda _trust_path, root, now: (False, ["dup", "dup"])
-        if root == b"root-a"
-        else (True, []),
-    )
-
-    outcome = attestation_module._evaluate_mldsa_attestation_root(
-        SimpleNamespace(att_stmt={"x5c": [b"leaf"]}),
-        bytes.fromhex("00112233445566778899aabbccddeeff"),
-        verifier=object(),
-        now=datetime.now(timezone.utc),
-    )
-
-    assert outcome["checks"]["chain"] is True
-    assert "dup" not in outcome["errors"]
-
-
-def test_evaluate_mldsa_attestation_root_deduplicates_chain_errors_when_all_roots_fail(monkeypatch, trust, pqc, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
-    metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
-    monkeypatch.setattr(
-        trust,
-        "_find_metadata_entry_for_aaguid",
-        lambda _verifier, _aaguid: metadata_entry,
-    )
-    monkeypatch.setattr(
-        trust,
-        "_collect_metadata_root_certificates",
-        lambda _entry: [b"root-a", b"root-b"],
-    )
-    monkeypatch.setattr(
-        trust,
-        "_is_trusted_ca_certificate",
-        lambda _root, allow_subject_parsing=False: True,
-    )
-    monkeypatch.setattr(
-        metadata_module,
-        "metadata_entry_trust_anchor_status",
-        lambda _entry: None,
-    )
-    monkeypatch.setattr(
-        trust,
-        "_collect_trust_path_entries",
-        lambda _x5c: [b"leaf"],
-    )
-    monkeypatch.setattr(
-        pqc,
-        "_verify_pqc_attestation_chain",
-        lambda _trust_path, _root, now: (False, ["dup", "dup"]),
-    )
-
-    outcome = attestation_module._evaluate_mldsa_attestation_root(
-        SimpleNamespace(att_stmt={"x5c": [b"leaf"]}),
-        bytes.fromhex("00112233445566778899aabbccddeeff"),
-        verifier=object(),
-        now=datetime.now(timezone.utc),
-    )
-
-    assert outcome["checks"]["chain"] is False
-    assert outcome["errors"].count("dup") == 1
-
-
 def test_normalise_signature_algorithm_name_covers_ed448_and_dsa_paths(attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
@@ -234,7 +110,7 @@ def test_normalise_signature_algorithm_name_covers_ed448_and_dsa_paths(attestati
     assert attestation_module._normalise_signature_algorithm_name("dsa-with-sha1") == "DSA"
 
 
-def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, pqc, metadata_module, certificates, attestation_module):
+def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, metadata_module, certificates, attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
@@ -259,11 +135,6 @@ def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_a
         Attestation,
         "for_type",
         lambda _fmt: _AttestationVerifier,
-    )
-    monkeypatch.setattr(
-        pqc,
-        "_attempt_pqc_attestation_signature_validation",
-        lambda _att_obj, _client_hash: {"attempted": False, "success": False, "error": None},
     )
     monkeypatch.setattr(metadata_module, "get_mds_verifier", lambda: None)
 

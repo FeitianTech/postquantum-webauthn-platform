@@ -12,14 +12,6 @@ from cryptography.exceptions import UnsupportedAlgorithm
 def test_attestation_helper_residual_branches(monkeypatch, certificate_public_keys, attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
 
-    assert attestation_module._normalise_pqc_algorithm_identifier("   ") is None
-    assert (
-        attestation_module._normalise_pqc_algorithm_identifier("prefix ml-dsa-65 suffix")
-        == -49
-    )
-    huge_numeric = f"value {'9' * 5000}"
-    assert attestation_module._normalise_pqc_algorithm_identifier(huge_numeric) is None
-
     attestation_module.augment_aaguid_fields(("not", "mutable"))
 
     monkeypatch.setattr(

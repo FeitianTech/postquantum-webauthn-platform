@@ -130,7 +130,7 @@
     ],
     [
      "Content-Length",
-     "9879"
+     "9825"
     ],
     [
      "X-Content-Type-Options",
@@ -190,7 +190,7 @@
      }
     }
    ],
-   "bodySha256": "44e7c4891ec69b145012c6fb40e13577b0db119fbb118f149acc288d4485135e",
+   "bodySha256": "ad518b3ffff1f4f354dfbede186cf4b03eec7b3856b8d3b56350ddefc69c863e",
    "body": {
     "actualResidentKey": true,
     "algo": "EdDSA",
@@ -241,7 +241,6 @@
       "description": null,
       "root_certificates_present": false
      },
-     "pqc_signature_valid": null,
      "root_checks": {
       "chain": null,
       "fido_mds": null,
@@ -350,7 +349,6 @@
         "description": null,
         "root_certificates_present": false
        },
-       "pqc_signature_valid": null,
        "root_checks": {
         "chain": null,
         "fido_mds": null,
@@ -528,7 +526,7 @@
    "stored": [
     {
      "file": "artifacts/cQUQf5EliGThHs2boeS0VepH7C5DXjV-PqfXfYXsTS0/d932fdc2c432c7050ce6b728173357d2a53f73df2a0673588ef329a3019a00f5.json",
-     "sha256": "930a6e31df292dd854f386183f2d0ea68a70431bcc9fb3869d9c33b8072b1c9b",
+     "sha256": "a6adf83a476d2c3a004dbbd1abf74b5760a3a4a939a96564daf68cacaf577821",
      "content": {
       "storageId": "82wp6a6k5qtS_SKwtOva7IZ5::1a0c4506c00::de402f3397aa41e3ad0732a1222b43f4",
       "createdAt": 1790000000.0,
@@ -609,7 +607,6 @@
           "attestationChecks": {
            "attestation_format": "packed",
            "signature_valid": true,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": null,
@@ -709,7 +706,6 @@
          "attestationChecks": {
           "attestation_format": "packed",
           "signature_valid": true,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": null,

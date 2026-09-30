@@ -228,7 +228,7 @@
     ],
     [
      "Content-Length",
-     "12524"
+     "12443"
     ],
     [
      "X-Content-Type-Options",
@@ -288,7 +288,7 @@
      }
     }
    ],
-   "bodySha256": "f9e2aa7b2baadc07bcdc301594eeeb4382783df9634d071f0acf326a19da8d05",
+   "bodySha256": "17da16a2cab4629ff0fe0712474a3455eb77f502f7db88032b0cdc2ca4959d60",
    "body": {
     "actualResidentKey": false,
     "algo": "ES256 (ECDSA)",
@@ -368,7 +368,6 @@
         "description": null,
         "root_certificates_present": false
        },
-       "pqc_signature_valid": null,
        "root_valid": null,
        "rp_id_hash_valid": true,
        "signature_valid": null,
@@ -479,7 +478,6 @@
         "description": null,
         "root_certificates_present": false
        },
-       "pqc_signature_valid": null,
        "root_valid": null,
        "rp_id_hash_valid": true,
        "signature_valid": null,
@@ -594,7 +592,6 @@
          "description": null,
          "root_certificates_present": false
         },
-        "pqc_signature_valid": null,
         "root_valid": null,
         "rp_id_hash_valid": true,
         "signature_valid": null,
@@ -646,7 +643,7 @@
    "stored": [
     {
      "file": "credentials/DdizytcaA7m71UfOfAnkzD53wgyVTifuq7UKX6YN1qw/user@example.com_credential_data.json",
-     "sha256": "d7f26732d1d6449c0555bc3af3a236ae1e1d0c6cd6105cba67c4faaf459044a7",
+     "sha256": "d0db875b35f9a64866fd64e72ea01b1539d19e0894fd9910cf80c422e8bc3b36",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -706,7 +703,6 @@
          "attestationChecks": {
           "attestation_format": "none",
           "signature_valid": null,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": null,
@@ -802,7 +798,6 @@
           "attestationChecks": {
            "attestation_format": "none",
            "signature_valid": null,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": null,
@@ -1134,7 +1129,7 @@
     ],
     [
      "Content-Length",
-     "11832"
+     "11751"
     ],
     [
      "X-Content-Type-Options",
@@ -1194,7 +1189,7 @@
      }
     }
    ],
-   "bodySha256": "a5f2bbb28000bb0ad2455cfb172f7f0df5466a2ed631035e3e528f30c3abc59c",
+   "bodySha256": "9a38563eb643499f006e5a43c23d1d1102bce385d7e451de85403d89e13c9891",
    "body": {
     "actualResidentKey": false,
     "algo": "EdDSA",
@@ -1274,7 +1269,6 @@
         "description": null,
         "root_certificates_present": false
        },
-       "pqc_signature_valid": null,
        "root_valid": null,
        "rp_id_hash_valid": true,
        "signature_valid": null,
@@ -1385,7 +1379,6 @@
         "description": null,
         "root_certificates_present": false
        },
-       "pqc_signature_valid": null,
        "root_valid": null,
        "rp_id_hash_valid": true,
        "signature_valid": null,
@@ -1499,7 +1492,6 @@
          "description": null,
          "root_certificates_present": false
         },
-        "pqc_signature_valid": null,
         "root_valid": null,
         "rp_id_hash_valid": true,
         "signature_valid": null,
@@ -1551,7 +1543,7 @@
    "stored": [
     {
      "file": "credentials/DdizytcaA7m71UfOfAnkzD53wgyVTifuq7UKX6YN1qw/user@example.com_credential_data.json",
-     "sha256": "b02c165b2c8b271f45b740aa8589de63ab2fbe84547f4ea369cbef248e53831a",
+     "sha256": "0ba4e9167e6a9aec52b99c3a12a30600878ba0a489b0a6807e4ab18dad406787",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -1611,7 +1603,6 @@
          "attestationChecks": {
           "attestation_format": "none",
           "signature_valid": null,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": null,
@@ -1707,7 +1698,6 @@
           "attestationChecks": {
            "attestation_format": "none",
            "signature_valid": null,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": null,
@@ -1842,7 +1832,6 @@
          "attestationChecks": {
           "attestation_format": "none",
           "signature_valid": null,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": null,
@@ -1938,7 +1927,6 @@
           "attestationChecks": {
            "attestation_format": "none",
            "signature_valid": null,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": null,
@@ -2270,7 +2258,7 @@
     ],
     [
      "Content-Length",
-     "49543"
+     "48886"
     ],
     [
      "X-Content-Type-Options",
@@ -2330,7 +2318,7 @@
      }
     }
    ],
-   "bodySha256": "9ee2967aae8274938a1e001eb4010d8582879dc50a78464f56a41035611abb3d",
+   "bodySha256": "71447564ef4d0effba3c6ab9041b843153fea69f57456964735349c7662c9d45",
    "body": {
     "actualResidentKey": false,
     "algo": "ML-DSA-65 (PQC)",
@@ -2349,10 +2337,7 @@
      },
      "rootValid": null,
      "rpIdHashValid": true,
-     "signatureValid": null,
-     "warnings": [
-      "metadata_not_available"
-     ]
+     "signatureValid": null
     },
     "credProtectUsed": "none",
     "enforceCredProtectUsed": false,
@@ -2413,18 +2398,10 @@
         "description": null,
         "root_certificates_present": false
        },
-       "pqc_signature_valid": null,
-       "root_checks": {
-        "chain": null,
-        "fido_mds": null,
-        "trusted_ca": null
-       },
        "root_valid": null,
        "rp_id_hash_valid": true,
        "signature_valid": null,
-       "warnings": [
-        "metadata_not_available"
-       ]
+       "warnings": []
       },
       "attestationSummary": {
        "aaguidMatch": null,
@@ -2437,10 +2414,7 @@
        },
        "rootValid": null,
        "rpIdHashValid": true,
-       "signatureValid": null,
-       "warnings": [
-        "metadata_not_available"
-       ]
+       "signatureValid": null
       },
       "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97634500000000000000000000000000000000000000000020e5876899ba88d759ea177526b0cc5ef841ae497ff48e20286a43245a80099f2ea30107033830205907a0d271f43e5fecb2fe6d206fc12bcbf77b1c5b4b2c8a5db4c8fd60fdcff2b028edf0d8481a765f9fd68bbe4ec6b8c7660cc26a75bb37424ecbf858b6be4983a195d904eb156af1a9c831c6bf76fc87310f2536e43d129a8367df23d0ac1d45673ef8724dbcd74a9cad8503563d68fc3baff5b7de1d15a66bbe54d3f1b44b32def3179e0269d4368ddbd9aaf2592c1743a66ebed2b1889379e8ac6f55ddb955407247adc319603acaccf5fe277030716ce6b99321460658281d5007dd815a99080267ab6612fe3311428353621c6b638e565b72a1ecc079ff9be4768da6cf65b9a142678d05c176411023310645b8de159dbad5b500fc526a4d297b50631db9b42c1b3acb08ccf190f21c5fd2cf843eafd5093b341203582cf8b98ef93fe554a17d6922cfae7d16014716819a7d3be7bc510eb10ad5b1a9f86e338ba895a29b16d7b47a26c4f004e95b9e81b5c40ca95c128f341893c2f6c32847d48365b0338b7445ac204258850995a336e335b65d245820b845cbf4935d162052455086ea75e4d7cf2cd1e29cebe1497864647484b9c31ad8b8f2db75edd5c57df503a0c1e4a25174f95c1848120cd1c9c92fc5f0dd37faff5a5605051704c6e46b5ea2ae10dcbc8311cbe7b092286120132be3c895418d5eeb6e8827a9d40729b76b31d11cf96649eb59a30adbbc05e6ca82fdfea9ee4934442e096dc3fe14f9c337c0025f8184556f58a3f121c49532ffc591c087544dd616b828c4a2d3981844a9a53e41b9639213f43650583d448076c794deaca6b07158c7372ca084d19b759829ab280d8dbd0036867a1df80f795f367bda8f763170540c2f2abbea85f62d2403049ba67f71ea740e1bc9fd212354133120a0f1bc0ef5d9a05e062f9c9361b327ac0163d49f430c6f1e2ccb511cc498924e8779d58c90e2c01be2b07bfb70b0240402f649746993e71167830f8eaccc1cb8bd31786dbba7c11b47becfd1eff2fb50b3cb89fd85009148dea61c87d3bd0c15e7a2d913519d303917b5d86b08b1f5f432cded97084b78721d5a1a007a9cc25d040347132ba4b294e0f667cc2df79074739477e455b6e2a9518a1d6a669a203c2ad5baf132e0a3620dce8848c32ffbd9995fcb593812c1803f7521b281c772df723e9ee88a435408e8baf26ea80ab7358694ef705d9bedfb353f7ade4365a957196904a31fcd22a72528c607b0923e13a2589c9ae11d8640f32a59e70d098408b27e58ccb9028c911748f4c64aa67aa7c5b99102c03d4b17f16d0ae038886635c4b05f77bb891bba10dfa6d667f825518320da171963f869e814df3ebac81fec05412834ff2b56b3333d6b201dc3098ca3ef10464868091e3c2ff82476cdc0df705f228259ba1228b8eb2361f6068ce7e68ef56f523a458cec86b9fc84dbf622882288b8117baebcaa102eb62b994b99cd423de149cefc7a8756ac61d99a9b44a518d495fa2498f3f15ba3e287f5d5c4605412be613f51fb0b3a3d622d4faa63574c910a021608cfdbcb829010718ad66f7846c85a85cdf452c02760bef3966340ecd11e603f6e1dd59348108147b7103e1dff85202ab982cc1eebfb07c77e8833ac6949b3fe847bf35f216dae96df18be6c4443316c863ed23766106c4720009ac141194eb66fcdea6d923cfa70a48ec13d7bc40ac379c2a10d5e9f5342eca8fe42b56e0dbef8b9ae9259a8fd26a8a399cbaf1eabfd99be89db3b149b2320c4a168cb735c1c6636bc08760e16d2112d9e75618d3a9c245cbbbfeea436b73d138bd34bd04dc36fb0748ab23b3bdebcba8fdc4fcd1b82296c8a0a554366f02407c413470ef7f71146ce26137aed3fa6596b649fe48c41ae458745d4c03a4d5fd09d349f1cd0677c66055762ab156e293ce1883a0da5f5973bef9ec627bef7a3afc6fb5b79163905dc30ce9b638abe6e7ed96abcc7a04bb4c8e9f6bd649458eeb1fbe58dd6b2361f909cb731172789854618acc4f1bd9fd61a82bd4b132fc6fa07d82f27675b5e359d1ea6b7f7f1dff33042753c16375510ba03362e3b4ebb5704190cd644f9c603546059d4d10d569b8f86735e31edd520dd62a5aac0851c464929db02f792be55841332072740a8ba972663a14e4202fc5f3bea8798c0dc44ab40617c42a8493d0324575c5ac9e9169905758c32d506ad25e311a15b775ceff67a33a7e36ea8f15d835ab8f075aa8fd0f6cbe53fc55004f4ea630f80f03b0008d47b748c63ca4f9a3d0902c22c3665832b8c086b07f6813fbb7100c1e026338bbc40b11d3a40d212ee315a85f43dd886a58fe8abd7866877c25d3b343eb7c41cdf0db3df0ebb52389e1e2ca66e263036e05df3860d55f86dfdd8f10f1aff5744f88d0e7f9732c0ab798d1cd94fdd02850c33b46f86e3831a1dfb2c6b81475c9c6603aaf5a5370c24d4a9fe3c1344c233deaa72de235e3eba49d7e1dceff1dfc5b96e7f06cc25c08a21fa4c69fb98794e34d4f7cbbfe3ba6fbe95a9ed91ef579926c018be301573d3d4756662cb9cf88a4d1a19b9743d7a830db1f98ab0c558f7f96da672986f2748317c7387b1f3e571498caa75512f639a693c7ffe4ba706a63f55e4abcde1c1379c3edd783150f7f9e0daa65ca9cbed116d022c3a0a2b623f2ff98a8b88de3dc350604b324158a0fe451df53a1326e39dad875c4e9d9863fb28452588ee9bf6aae5c0245f6a2082671171c86d7a26b6ec874c6c3eabcc55bdbe097dfb3798952baf7d94e3d0ac6b9a7bd4",
       "authenticatorDataHash": "5fc587fa04c1dce6e8ba4a494c4d1f779dcebfc50261a9c839a2e4b5bf6fa84a",
@@ -2453,10 +2427,7 @@
        "UP": true,
        "UV": true
       },
-      "signatureCounter": 0,
-      "warnings": [
-       "metadata_not_available"
-      ]
+      "signatureCounter": 0
      },
      "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
      "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
@@ -2537,18 +2508,10 @@
         "description": null,
         "root_certificates_present": false
        },
-       "pqc_signature_valid": null,
-       "root_checks": {
-        "chain": null,
-        "fido_mds": null,
-        "trusted_ca": null
-       },
        "root_valid": null,
        "rp_id_hash_valid": true,
        "signature_valid": null,
-       "warnings": [
-        "metadata_not_available"
-       ]
+       "warnings": []
       },
       "attestationRootValid": null,
       "attestationRpIdHashValid": true,
@@ -2564,14 +2527,8 @@
        },
        "rootValid": null,
        "rpIdHashValid": true,
-       "signatureValid": null,
-       "warnings": [
-        "metadata_not_available"
-       ]
+       "signatureValid": null
       },
-      "attestationWarnings": [
-       "metadata_not_available"
-      ],
       "authenticatorAttachment": null,
       "authenticatorDataHash": "5fc587fa04c1dce6e8ba4a494c4d1f779dcebfc50261a9c839a2e4b5bf6fa84a",
       "credentialIdLength": 32,
@@ -2663,18 +2620,10 @@
          "description": null,
          "root_certificates_present": false
         },
-        "pqc_signature_valid": null,
-        "root_checks": {
-         "chain": null,
-         "fido_mds": null,
-         "trusted_ca": null
-        },
         "root_valid": null,
         "rp_id_hash_valid": true,
         "signature_valid": null,
-        "warnings": [
-         "metadata_not_available"
-        ]
+        "warnings": []
        },
        "attestationSummary": {
         "aaguidMatch": null,
@@ -2687,10 +2636,7 @@
         },
         "rootValid": null,
         "rpIdHashValid": true,
-        "signatureValid": null,
-        "warnings": [
-         "metadata_not_available"
-        ]
+        "signatureValid": null
        },
        "authenticatorData": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97634500000000000000000000000000000000000000000020e5876899ba88d759ea177526b0cc5ef841ae497ff48e20286a43245a80099f2ea30107033830205907a0d271f43e5fecb2fe6d206fc12bcbf77b1c5b4b2c8a5db4c8fd60fdcff2b028edf0d8481a765f9fd68bbe4ec6b8c7660cc26a75bb37424ecbf858b6be4983a195d904eb156af1a9c831c6bf76fc87310f2536e43d129a8367df23d0ac1d45673ef8724dbcd74a9cad8503563d68fc3baff5b7de1d15a66bbe54d3f1b44b32def3179e0269d4368ddbd9aaf2592c1743a66ebed2b1889379e8ac6f55ddb955407247adc319603acaccf5fe277030716ce6b99321460658281d5007dd815a99080267ab6612fe3311428353621c6b638e565b72a1ecc079ff9be4768da6cf65b9a142678d05c176411023310645b8de159dbad5b500fc526a4d297b50631db9b42c1b3acb08ccf190f21c5fd2cf843eafd5093b341203582cf8b98ef93fe554a17d6922cfae7d16014716819a7d3be7bc510eb10ad5b1a9f86e338ba895a29b16d7b47a26c4f004e95b9e81b5c40ca95c128f341893c2f6c32847d48365b0338b7445ac204258850995a336e335b65d245820b845cbf4935d162052455086ea75e4d7cf2cd1e29cebe1497864647484b9c31ad8b8f2db75edd5c57df503a0c1e4a25174f95c1848120cd1c9c92fc5f0dd37faff5a5605051704c6e46b5ea2ae10dcbc8311cbe7b092286120132be3c895418d5eeb6e8827a9d40729b76b31d11cf96649eb59a30adbbc05e6ca82fdfea9ee4934442e096dc3fe14f9c337c0025f8184556f58a3f121c49532ffc591c087544dd616b828c4a2d3981844a9a53e41b9639213f43650583d448076c794deaca6b07158c7372ca084d19b759829ab280d8dbd0036867a1df80f795f367bda8f763170540c2f2abbea85f62d2403049ba67f71ea740e1bc9fd212354133120a0f1bc0ef5d9a05e062f9c9361b327ac0163d49f430c6f1e2ccb511cc498924e8779d58c90e2c01be2b07bfb70b0240402f649746993e71167830f8eaccc1cb8bd31786dbba7c11b47becfd1eff2fb50b3cb89fd85009148dea61c87d3bd0c15e7a2d913519d303917b5d86b08b1f5f432cded97084b78721d5a1a007a9cc25d040347132ba4b294e0f667cc2df79074739477e455b6e2a9518a1d6a669a203c2ad5baf132e0a3620dce8848c32ffbd9995fcb593812c1803f7521b281c772df723e9ee88a435408e8baf26ea80ab7358694ef705d9bedfb353f7ade4365a957196904a31fcd22a72528c607b0923e13a2589c9ae11d8640f32a59e70d098408b27e58ccb9028c911748f4c64aa67aa7c5b99102c03d4b17f16d0ae038886635c4b05f77bb891bba10dfa6d667f825518320da171963f869e814df3ebac81fec05412834ff2b56b3333d6b201dc3098ca3ef10464868091e3c2ff82476cdc0df705f228259ba1228b8eb2361f6068ce7e68ef56f523a458cec86b9fc84dbf622882288b8117baebcaa102eb62b994b99cd423de149cefc7a8756ac61d99a9b44a518d495fa2498f3f15ba3e287f5d5c4605412be613f51fb0b3a3d622d4faa63574c910a021608cfdbcb829010718ad66f7846c85a85cdf452c02760bef3966340ecd11e603f6e1dd59348108147b7103e1dff85202ab982cc1eebfb07c77e8833ac6949b3fe847bf35f216dae96df18be6c4443316c863ed23766106c4720009ac141194eb66fcdea6d923cfa70a48ec13d7bc40ac379c2a10d5e9f5342eca8fe42b56e0dbef8b9ae9259a8fd26a8a399cbaf1eabfd99be89db3b149b2320c4a168cb735c1c6636bc08760e16d2112d9e75618d3a9c245cbbbfeea436b73d138bd34bd04dc36fb0748ab23b3bdebcba8fdc4fcd1b82296c8a0a554366f02407c413470ef7f71146ce26137aed3fa6596b649fe48c41ae458745d4c03a4d5fd09d349f1cd0677c66055762ab156e293ce1883a0da5f5973bef9ec627bef7a3afc6fb5b79163905dc30ce9b638abe6e7ed96abcc7a04bb4c8e9f6bd649458eeb1fbe58dd6b2361f909cb731172789854618acc4f1bd9fd61a82bd4b132fc6fa07d82f27675b5e359d1ea6b7f7f1dff33042753c16375510ba03362e3b4ebb5704190cd644f9c603546059d4d10d569b8f86735e31edd520dd62a5aac0851c464929db02f792be55841332072740a8ba972663a14e4202fc5f3bea8798c0dc44ab40617c42a8493d0324575c5ac9e9169905758c32d506ad25e311a15b775ceff67a33a7e36ea8f15d835ab8f075aa8fd0f6cbe53fc55004f4ea630f80f03b0008d47b748c63ca4f9a3d0902c22c3665832b8c086b07f6813fbb7100c1e026338bbc40b11d3a40d212ee315a85f43dd886a58fe8abd7866877c25d3b343eb7c41cdf0db3df0ebb52389e1e2ca66e263036e05df3860d55f86dfdd8f10f1aff5744f88d0e7f9732c0ab798d1cd94fdd02850c33b46f86e3831a1dfb2c6b81475c9c6603aaf5a5370c24d4a9fe3c1344c233deaa72de235e3eba49d7e1dceff1dfc5b96e7f06cc25c08a21fa4c69fb98794e34d4f7cbbfe3ba6fbe95a9ed91ef579926c018be301573d3d4756662cb9cf88a4d1a19b9743d7a830db1f98ab0c558f7f96da672986f2748317c7387b1f3e571498caa75512f639a693c7ffe4ba706a63f55e4abcde1c1379c3edd783150f7f9e0daa65ca9cbed116d022c3a0a2b623f2ff98a8b88de3dc350604b324158a0fe451df53a1326e39dad875c4e9d9863fb28452588ee9bf6aae5c0245f6a2082671171c86d7a26b6ec874c6c3eabcc55bdbe097dfb3798952baf7d94e3d0ac6b9a7bd4",
        "authenticatorDataHash": "5fc587fa04c1dce6e8ba4a494c4d1f779dcebfc50261a9c839a2e4b5bf6fa84a",
@@ -2703,10 +2649,7 @@
         "UP": true,
         "UV": true
        },
-       "signatureCounter": 0,
-       "warnings": [
-        "metadata_not_available"
-       ]
+       "signatureCounter": 0
       },
       "rpIdHash": "49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763",
       "rpIdHashBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M",
@@ -2723,15 +2666,12 @@
      "type": "simple",
      "userHandle": "dXNlckBleGFtcGxlLmNvbQ",
      "userName": "user@example.com"
-    },
-    "warnings": [
-     "metadata_not_available"
-    ]
+    }
    },
    "stored": [
     {
      "file": "credentials/DdizytcaA7m71UfOfAnkzD53wgyVTifuq7UKX6YN1qw/user@example.com_credential_data.json",
-     "sha256": "b69ca289b2d2148aeb1f935cd43bc7f5b7e09e55d52130376458fe29b268f39a",
+     "sha256": "d45a1b4efb1e154471cb3234907ee4adef4515e561940cbc61b7cd90caa54535",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -2791,7 +2731,6 @@
          "attestationChecks": {
           "attestation_format": "none",
           "signature_valid": null,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": null,
@@ -2887,7 +2826,6 @@
           "attestationChecks": {
            "attestation_format": "none",
            "signature_valid": null,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": null,
@@ -3022,7 +2960,6 @@
          "attestationChecks": {
           "attestation_format": "none",
           "signature_valid": null,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": null,
@@ -3118,7 +3055,6 @@
           "attestationChecks": {
            "attestation_format": "none",
            "signature_valid": null,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": null,
@@ -3253,7 +3189,6 @@
          "attestationChecks": {
           "attestation_format": "none",
           "signature_valid": null,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": null,
@@ -3295,14 +3230,7 @@
            "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIOWHaJm6iNdZ6hd1JrDMXvhBrkl_9I4gKGpDJFqACZ8uowEHAzgwIFkHoNJx9D5f7LL-bSBvwSvL93scW0ssil20yP1g_c_ysCjt8NhIGnZfn9aLvk7GuMdmDMJqdbs3Qk7L-Fi2vkmDoZXZBOsVavGpyDHGv3b8hzEPJTbkPRKag2ffI9CsHUVnPvhyTbzXSpythQNWPWj8O6_1t94dFaZrvlTT8bRLMt7zF54CadQ2jdvZqvJZLBdDpm6-0rGIk3norG9V3blVQHJHrcMZYDrKzPX-J3AwcWzmuZMhRgZYKB1QB92BWpkIAmerZhL-MxFCg1NiHGtjjlZbcqHswHn_m-R2jabPZbmhQmeNBcF2QRAjMQZFuN4VnbrVtQD8UmpNKXtQYx25tCwbOssIzPGQ8hxf0s-EPq_VCTs0EgNYLPi5jvk_5VShfWkiz659FgFHFoGafTvnvFEOsQrVsan4bjOLqJWimxbXtHomxPAE6VuegbXEDKlcEo80GJPC9sMoR9SDZbAzi3RFrCBCWIUJlaM24zW2XSRYILhFy_STXRYgUkVQhup15NfPLNHinOvhSXhkZHSEucMa2Ljy23Xt1cV99QOgweSiUXT5XBhIEgzRyckvxfDdN_r_WlYFBRcExuRrXqKuENy8gxHL57CSKGEgEyvjyJVBjV7rbognqdQHKbdrMdEc-WZJ61mjCtu8BebKgv3-qe5JNEQuCW3D_hT5wzfAAl-BhFVvWKPxIcSVMv_FkcCHVE3WFrgoxKLTmBhEqaU-QbljkhP0NlBYPUSAdseU3qymsHFYxzcsoITRm3WYKasoDY29ADaGeh34D3lfNnvaj3YxcFQMLyq76oX2LSQDBJumf3HqdA4byf0hI1QTMSCg8bwO9dmgXgYvnJNhsyesAWPUn0MMbx4sy1EcxJiSTod51YyQ4sAb4rB7-3CwJAQC9kl0aZPnEWeDD46szBy4vTF4bbunwRtHvs_R7_L7ULPLif2FAJFI3qYch9O9DBXnotkTUZ0wORe12GsIsfX0Ms3tlwhLeHIdWhoAepzCXQQDRxMrpLKU4PZnzC33kHRzlHfkVbbiqVGKHWpmmiA8KtW68TLgo2INzohIwy_72Zlfy1k4EsGAP3UhsoHHct9yPp7oikNUCOi68m6oCrc1hpTvcF2b7fs1P3reQ2WpVxlpBKMfzSKnJSjGB7CSPhOiWJya4R2GQPMqWecNCYQIsn5YzLkCjJEXSPTGSqZ6p8W5kQLAPUsX8W0K4DiIZjXEsF93u4kbuhDfptZn-CVRgyDaFxlj-GnoFN8-usgf7AVBKDT_K1azMz1rIB3DCYyj7xBGSGgJHjwv-CR2zcDfcF8iglm6Eii46yNh9gaM5-aO9W9SOkWM7Ia5_ITb9iKIIoi4EXuuvKoQLrYrmUuZzUI94UnO_HqHVqxh2ZqbRKUY1JX6JJjz8Vuj4of11cRgVBK-YT9R-ws6PWItT6pjV0yRCgIWCM_by4KQEHGK1m94Rshahc30UsAnYL7zlmNA7NEeYD9uHdWTSBCBR7cQPh3_hSAquYLMHuv7B8d-iDOsaUmz_oR7818hba6W3xi-bERDMWyGPtI3ZhBsRyAAmsFBGU62b83qbZI8-nCkjsE9e8QKw3nCoQ1en1NC7Kj-QrVuDb74ua6SWaj9JqijmcuvHqv9mb6J2zsUmyMgxKFoy3NcHGY2vAh2DhbSES2edWGNOpwkXLu_7qQ2tz0Ti9NL0E3Db7B0irI7O968uo_cT80bgilsigpVQ2bwJAfEE0cO9_cRRs4mE3rtP6ZZa2Sf5IxBrkWHRdTAOk1f0J00nxzQZ3xmBVdiqxVuKTzhiDoNpfWXO--exie-96OvxvtbeRY5Bdwwzptjir5uftlqvMegS7TI6fa9ZJRY7rH75Y3WsjYfkJy3MRcniYVGGKzE8b2f1hqCvUsTL8b6B9gvJ2dbXjWdHqa39_Hf8zBCdTwWN1UQugM2LjtOu1cEGQzWRPnGA1RgWdTRDVabj4ZzXjHt1SDdYqWqwIUcRkkp2wL3kr5VhBMyBydAqLqXJmOhTkIC_F876oeYwNxEq0BhfEKoST0DJFdcWsnpFpkFdYwy1QatJeMRoVt3XO_2ejOn426o8V2DWrjwdaqP0PbL5T_FUAT06mMPgPA7AAjUe3SMY8pPmj0JAsIsNmWDK4wIawf2gT-7cQDB4CYzi7xAsR06QNIS7jFahfQ92Ialj-ir14Zod8JdOzQ-t8Qc3w2z3w67UjieHiymbiYwNuBd84YNVfht_djxDxr_V0T4jQ5_lzLAq3mNHNlP3QKFDDO0b4bjgxod-yxrgUdcnGYDqvWlNwwk1Kn-PBNEwjPeqnLeI14-uknX4dzv8d_FuW5_BswlwIoh-kxp-5h5TjTU98u_47pvvpWp7ZHvV5kmwBi-MBVz09R1ZmLLnPiKTRoZuXQ9eoMNsfmKsMVY9_ltpnKYbydIMXxzh7Hz5XFJjKp1US9jmmk8f_5LpwamP1Xkq83hwTecPt14MVD3-eDaplypy-0RbQIsOgorYj8v-YqLiN49w1BgSzJBWKD-RR31OhMm452th1xOnZhj-yhFJYjum_aq5cAkX2oggmcRcchteia27IdMbD6rzFW9vgl9-zeYlSuvfZTj0KxrmnvUq_-4hYWV0Fey2FJ8-rW878vwJuBCOcoTuvYAVeiEWOs"
           },
           "errors": [],
-          "warnings": [
-           "metadata_not_available"
-          ],
-          "root_checks": {
-           "trusted_ca": null,
-           "chain": null,
-           "fido_mds": null
-          }
+          "warnings": []
          },
          "attestationSummary": {
           "signatureValid": null,
@@ -3315,14 +3243,8 @@
            "aaguid": null,
            "algorithm_supported": null,
            "root_certificates_present": false
-          },
-          "warnings": [
-           "metadata_not_available"
-          ]
+          }
          },
-         "attestationWarnings": [
-          "metadata_not_available"
-         ],
          "aaguid": "00000000000000000000000000000000",
          "aaguidHex": "00000000000000000000000000000000",
          "aaguidGuid": "00000000-0000-0000-0000-000000000000",
@@ -3362,7 +3284,6 @@
           "attestationChecks": {
            "attestation_format": "none",
            "signature_valid": null,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": null,
@@ -3404,14 +3325,7 @@
             "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIOWHaJm6iNdZ6hd1JrDMXvhBrkl_9I4gKGpDJFqACZ8uowEHAzgwIFkHoNJx9D5f7LL-bSBvwSvL93scW0ssil20yP1g_c_ysCjt8NhIGnZfn9aLvk7GuMdmDMJqdbs3Qk7L-Fi2vkmDoZXZBOsVavGpyDHGv3b8hzEPJTbkPRKag2ffI9CsHUVnPvhyTbzXSpythQNWPWj8O6_1t94dFaZrvlTT8bRLMt7zF54CadQ2jdvZqvJZLBdDpm6-0rGIk3norG9V3blVQHJHrcMZYDrKzPX-J3AwcWzmuZMhRgZYKB1QB92BWpkIAmerZhL-MxFCg1NiHGtjjlZbcqHswHn_m-R2jabPZbmhQmeNBcF2QRAjMQZFuN4VnbrVtQD8UmpNKXtQYx25tCwbOssIzPGQ8hxf0s-EPq_VCTs0EgNYLPi5jvk_5VShfWkiz659FgFHFoGafTvnvFEOsQrVsan4bjOLqJWimxbXtHomxPAE6VuegbXEDKlcEo80GJPC9sMoR9SDZbAzi3RFrCBCWIUJlaM24zW2XSRYILhFy_STXRYgUkVQhup15NfPLNHinOvhSXhkZHSEucMa2Ljy23Xt1cV99QOgweSiUXT5XBhIEgzRyckvxfDdN_r_WlYFBRcExuRrXqKuENy8gxHL57CSKGEgEyvjyJVBjV7rbognqdQHKbdrMdEc-WZJ61mjCtu8BebKgv3-qe5JNEQuCW3D_hT5wzfAAl-BhFVvWKPxIcSVMv_FkcCHVE3WFrgoxKLTmBhEqaU-QbljkhP0NlBYPUSAdseU3qymsHFYxzcsoITRm3WYKasoDY29ADaGeh34D3lfNnvaj3YxcFQMLyq76oX2LSQDBJumf3HqdA4byf0hI1QTMSCg8bwO9dmgXgYvnJNhsyesAWPUn0MMbx4sy1EcxJiSTod51YyQ4sAb4rB7-3CwJAQC9kl0aZPnEWeDD46szBy4vTF4bbunwRtHvs_R7_L7ULPLif2FAJFI3qYch9O9DBXnotkTUZ0wORe12GsIsfX0Ms3tlwhLeHIdWhoAepzCXQQDRxMrpLKU4PZnzC33kHRzlHfkVbbiqVGKHWpmmiA8KtW68TLgo2INzohIwy_72Zlfy1k4EsGAP3UhsoHHct9yPp7oikNUCOi68m6oCrc1hpTvcF2b7fs1P3reQ2WpVxlpBKMfzSKnJSjGB7CSPhOiWJya4R2GQPMqWecNCYQIsn5YzLkCjJEXSPTGSqZ6p8W5kQLAPUsX8W0K4DiIZjXEsF93u4kbuhDfptZn-CVRgyDaFxlj-GnoFN8-usgf7AVBKDT_K1azMz1rIB3DCYyj7xBGSGgJHjwv-CR2zcDfcF8iglm6Eii46yNh9gaM5-aO9W9SOkWM7Ia5_ITb9iKIIoi4EXuuvKoQLrYrmUuZzUI94UnO_HqHVqxh2ZqbRKUY1JX6JJjz8Vuj4of11cRgVBK-YT9R-ws6PWItT6pjV0yRCgIWCM_by4KQEHGK1m94Rshahc30UsAnYL7zlmNA7NEeYD9uHdWTSBCBR7cQPh3_hSAquYLMHuv7B8d-iDOsaUmz_oR7818hba6W3xi-bERDMWyGPtI3ZhBsRyAAmsFBGU62b83qbZI8-nCkjsE9e8QKw3nCoQ1en1NC7Kj-QrVuDb74ua6SWaj9JqijmcuvHqv9mb6J2zsUmyMgxKFoy3NcHGY2vAh2DhbSES2edWGNOpwkXLu_7qQ2tz0Ti9NL0E3Db7B0irI7O968uo_cT80bgilsigpVQ2bwJAfEE0cO9_cRRs4mE3rtP6ZZa2Sf5IxBrkWHRdTAOk1f0J00nxzQZ3xmBVdiqxVuKTzhiDoNpfWXO--exie-96OvxvtbeRY5Bdwwzptjir5uftlqvMegS7TI6fa9ZJRY7rH75Y3WsjYfkJy3MRcniYVGGKzE8b2f1hqCvUsTL8b6B9gvJ2dbXjWdHqa39_Hf8zBCdTwWN1UQugM2LjtOu1cEGQzWRPnGA1RgWdTRDVabj4ZzXjHt1SDdYqWqwIUcRkkp2wL3kr5VhBMyBydAqLqXJmOhTkIC_F876oeYwNxEq0BhfEKoST0DJFdcWsnpFpkFdYwy1QatJeMRoVt3XO_2ejOn426o8V2DWrjwdaqP0PbL5T_FUAT06mMPgPA7AAjUe3SMY8pPmj0JAsIsNmWDK4wIawf2gT-7cQDB4CYzi7xAsR06QNIS7jFahfQ92Ialj-ir14Zod8JdOzQ-t8Qc3w2z3w67UjieHiymbiYwNuBd84YNVfht_djxDxr_V0T4jQ5_lzLAq3mNHNlP3QKFDDO0b4bjgxod-yxrgUdcnGYDqvWlNwwk1Kn-PBNEwjPeqnLeI14-uknX4dzv8d_FuW5_BswlwIoh-kxp-5h5TjTU98u_47pvvpWp7ZHvV5kmwBi-MBVz09R1ZmLLnPiKTRoZuXQ9eoMNsfmKsMVY9_ltpnKYbydIMXxzh7Hz5XFJjKp1US9jmmk8f_5LpwamP1Xkq83hwTecPt14MVD3-eDaplypy-0RbQIsOgorYj8v-YqLiN49w1BgSzJBWKD-RR31OhMm452th1xOnZhj-yhFJYjum_aq5cAkX2oggmcRcchteia27IdMbD6rzFW9vgl9-zeYlSuvfZTj0KxrmnvUq_-4hYWV0Fey2FJ8-rW878vwJuBCOcoTuvYAVeiEWOs"
            },
            "errors": [],
-           "warnings": [
-            "metadata_not_available"
-           ],
-           "root_checks": {
-            "trusted_ca": null,
-            "chain": null,
-            "fido_mds": null
-           }
+           "warnings": []
           },
           "attestationSummary": {
            "signatureValid": null,
@@ -3424,14 +3338,8 @@
             "aaguid": null,
             "algorithm_supported": null,
             "root_certificates_present": false
-           },
-           "warnings": [
-            "metadata_not_available"
-           ]
-          },
-          "warnings": [
-           "metadata_not_available"
-          ]
+           }
+          }
          },
          "userHandle": {
           "base64": "dXNlckBleGFtcGxlLmNvbQ==",
@@ -3707,7 +3615,7 @@
     ],
     [
      "Content-Length",
-     "20681"
+     "20600"
     ],
     [
      "X-Content-Type-Options",
@@ -3767,7 +3675,7 @@
      }
     }
    ],
-   "bodySha256": "07777e0767884d40eaba0526876c9cf8557004ff83702c65c509e927e9ccf92a",
+   "bodySha256": "558111bbd2f81f676d780f5fa74ee4e973f4fae8e9915ec50fa386bbed7a6c12",
    "body": {
     "actualResidentKey": false,
     "algo": "ES256 (ECDSA)",
@@ -3850,7 +3758,6 @@
         "description": null,
         "root_certificates_present": false
        },
-       "pqc_signature_valid": null,
        "root_checks": {
         "chain": null,
         "fido_mds": null,
@@ -4079,7 +3986,6 @@
         "description": null,
         "root_certificates_present": false
        },
-       "pqc_signature_valid": null,
        "root_checks": {
         "chain": null,
         "fido_mds": null,
@@ -4227,7 +4133,6 @@
          "description": null,
          "root_certificates_present": false
         },
-        "pqc_signature_valid": null,
         "root_checks": {
          "chain": null,
          "fido_mds": null,
@@ -4303,7 +4208,7 @@
    "stored": [
     {
      "file": "credentials/DdizytcaA7m71UfOfAnkzD53wgyVTifuq7UKX6YN1qw/user@example.com_credential_data.json",
-     "sha256": "04c2083dceee264358917fe628152f947de3915bae3b54e63721362451a0f907",
+     "sha256": "f839d06778e33c801030cdac8150edf21076d8c7f99457640e2845a7b9bd8471",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -4363,7 +4268,6 @@
          "attestationChecks": {
           "attestation_format": "none",
           "signature_valid": null,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": null,
@@ -4459,7 +4363,6 @@
           "attestationChecks": {
            "attestation_format": "none",
            "signature_valid": null,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": null,
@@ -4594,7 +4497,6 @@
          "attestationChecks": {
           "attestation_format": "none",
           "signature_valid": null,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": null,
@@ -4690,7 +4592,6 @@
           "attestationChecks": {
            "attestation_format": "none",
            "signature_valid": null,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": null,
@@ -4825,7 +4726,6 @@
          "attestationChecks": {
           "attestation_format": "none",
           "signature_valid": null,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": null,
@@ -4867,14 +4767,7 @@
            "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIOWHaJm6iNdZ6hd1JrDMXvhBrkl_9I4gKGpDJFqACZ8uowEHAzgwIFkHoNJx9D5f7LL-bSBvwSvL93scW0ssil20yP1g_c_ysCjt8NhIGnZfn9aLvk7GuMdmDMJqdbs3Qk7L-Fi2vkmDoZXZBOsVavGpyDHGv3b8hzEPJTbkPRKag2ffI9CsHUVnPvhyTbzXSpythQNWPWj8O6_1t94dFaZrvlTT8bRLMt7zF54CadQ2jdvZqvJZLBdDpm6-0rGIk3norG9V3blVQHJHrcMZYDrKzPX-J3AwcWzmuZMhRgZYKB1QB92BWpkIAmerZhL-MxFCg1NiHGtjjlZbcqHswHn_m-R2jabPZbmhQmeNBcF2QRAjMQZFuN4VnbrVtQD8UmpNKXtQYx25tCwbOssIzPGQ8hxf0s-EPq_VCTs0EgNYLPi5jvk_5VShfWkiz659FgFHFoGafTvnvFEOsQrVsan4bjOLqJWimxbXtHomxPAE6VuegbXEDKlcEo80GJPC9sMoR9SDZbAzi3RFrCBCWIUJlaM24zW2XSRYILhFy_STXRYgUkVQhup15NfPLNHinOvhSXhkZHSEucMa2Ljy23Xt1cV99QOgweSiUXT5XBhIEgzRyckvxfDdN_r_WlYFBRcExuRrXqKuENy8gxHL57CSKGEgEyvjyJVBjV7rbognqdQHKbdrMdEc-WZJ61mjCtu8BebKgv3-qe5JNEQuCW3D_hT5wzfAAl-BhFVvWKPxIcSVMv_FkcCHVE3WFrgoxKLTmBhEqaU-QbljkhP0NlBYPUSAdseU3qymsHFYxzcsoITRm3WYKasoDY29ADaGeh34D3lfNnvaj3YxcFQMLyq76oX2LSQDBJumf3HqdA4byf0hI1QTMSCg8bwO9dmgXgYvnJNhsyesAWPUn0MMbx4sy1EcxJiSTod51YyQ4sAb4rB7-3CwJAQC9kl0aZPnEWeDD46szBy4vTF4bbunwRtHvs_R7_L7ULPLif2FAJFI3qYch9O9DBXnotkTUZ0wORe12GsIsfX0Ms3tlwhLeHIdWhoAepzCXQQDRxMrpLKU4PZnzC33kHRzlHfkVbbiqVGKHWpmmiA8KtW68TLgo2INzohIwy_72Zlfy1k4EsGAP3UhsoHHct9yPp7oikNUCOi68m6oCrc1hpTvcF2b7fs1P3reQ2WpVxlpBKMfzSKnJSjGB7CSPhOiWJya4R2GQPMqWecNCYQIsn5YzLkCjJEXSPTGSqZ6p8W5kQLAPUsX8W0K4DiIZjXEsF93u4kbuhDfptZn-CVRgyDaFxlj-GnoFN8-usgf7AVBKDT_K1azMz1rIB3DCYyj7xBGSGgJHjwv-CR2zcDfcF8iglm6Eii46yNh9gaM5-aO9W9SOkWM7Ia5_ITb9iKIIoi4EXuuvKoQLrYrmUuZzUI94UnO_HqHVqxh2ZqbRKUY1JX6JJjz8Vuj4of11cRgVBK-YT9R-ws6PWItT6pjV0yRCgIWCM_by4KQEHGK1m94Rshahc30UsAnYL7zlmNA7NEeYD9uHdWTSBCBR7cQPh3_hSAquYLMHuv7B8d-iDOsaUmz_oR7818hba6W3xi-bERDMWyGPtI3ZhBsRyAAmsFBGU62b83qbZI8-nCkjsE9e8QKw3nCoQ1en1NC7Kj-QrVuDb74ua6SWaj9JqijmcuvHqv9mb6J2zsUmyMgxKFoy3NcHGY2vAh2DhbSES2edWGNOpwkXLu_7qQ2tz0Ti9NL0E3Db7B0irI7O968uo_cT80bgilsigpVQ2bwJAfEE0cO9_cRRs4mE3rtP6ZZa2Sf5IxBrkWHRdTAOk1f0J00nxzQZ3xmBVdiqxVuKTzhiDoNpfWXO--exie-96OvxvtbeRY5Bdwwzptjir5uftlqvMegS7TI6fa9ZJRY7rH75Y3WsjYfkJy3MRcniYVGGKzE8b2f1hqCvUsTL8b6B9gvJ2dbXjWdHqa39_Hf8zBCdTwWN1UQugM2LjtOu1cEGQzWRPnGA1RgWdTRDVabj4ZzXjHt1SDdYqWqwIUcRkkp2wL3kr5VhBMyBydAqLqXJmOhTkIC_F876oeYwNxEq0BhfEKoST0DJFdcWsnpFpkFdYwy1QatJeMRoVt3XO_2ejOn426o8V2DWrjwdaqP0PbL5T_FUAT06mMPgPA7AAjUe3SMY8pPmj0JAsIsNmWDK4wIawf2gT-7cQDB4CYzi7xAsR06QNIS7jFahfQ92Ialj-ir14Zod8JdOzQ-t8Qc3w2z3w67UjieHiymbiYwNuBd84YNVfht_djxDxr_V0T4jQ5_lzLAq3mNHNlP3QKFDDO0b4bjgxod-yxrgUdcnGYDqvWlNwwk1Kn-PBNEwjPeqnLeI14-uknX4dzv8d_FuW5_BswlwIoh-kxp-5h5TjTU98u_47pvvpWp7ZHvV5kmwBi-MBVz09R1ZmLLnPiKTRoZuXQ9eoMNsfmKsMVY9_ltpnKYbydIMXxzh7Hz5XFJjKp1US9jmmk8f_5LpwamP1Xkq83hwTecPt14MVD3-eDaplypy-0RbQIsOgorYj8v-YqLiN49w1BgSzJBWKD-RR31OhMm452th1xOnZhj-yhFJYjum_aq5cAkX2oggmcRcchteia27IdMbD6rzFW9vgl9-zeYlSuvfZTj0KxrmnvUq_-4hYWV0Fey2FJ8-rW878vwJuBCOcoTuvYAVeiEWOs"
           },
           "errors": [],
-          "warnings": [
-           "metadata_not_available"
-          ],
-          "root_checks": {
-           "trusted_ca": null,
-           "chain": null,
-           "fido_mds": null
-          }
+          "warnings": []
          },
          "attestationSummary": {
           "signatureValid": null,
@@ -4887,14 +4780,8 @@
            "aaguid": null,
            "algorithm_supported": null,
            "root_certificates_present": false
-          },
-          "warnings": [
-           "metadata_not_available"
-          ]
+          }
          },
-         "attestationWarnings": [
-          "metadata_not_available"
-         ],
          "aaguid": "00000000000000000000000000000000",
          "aaguidHex": "00000000000000000000000000000000",
          "aaguidGuid": "00000000-0000-0000-0000-000000000000",
@@ -4934,7 +4821,6 @@
           "attestationChecks": {
            "attestation_format": "none",
            "signature_valid": null,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": null,
@@ -4976,14 +4862,7 @@
             "verification_data": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAAAAAAAAAAAAAAAAAAAAAAAAIOWHaJm6iNdZ6hd1JrDMXvhBrkl_9I4gKGpDJFqACZ8uowEHAzgwIFkHoNJx9D5f7LL-bSBvwSvL93scW0ssil20yP1g_c_ysCjt8NhIGnZfn9aLvk7GuMdmDMJqdbs3Qk7L-Fi2vkmDoZXZBOsVavGpyDHGv3b8hzEPJTbkPRKag2ffI9CsHUVnPvhyTbzXSpythQNWPWj8O6_1t94dFaZrvlTT8bRLMt7zF54CadQ2jdvZqvJZLBdDpm6-0rGIk3norG9V3blVQHJHrcMZYDrKzPX-J3AwcWzmuZMhRgZYKB1QB92BWpkIAmerZhL-MxFCg1NiHGtjjlZbcqHswHn_m-R2jabPZbmhQmeNBcF2QRAjMQZFuN4VnbrVtQD8UmpNKXtQYx25tCwbOssIzPGQ8hxf0s-EPq_VCTs0EgNYLPi5jvk_5VShfWkiz659FgFHFoGafTvnvFEOsQrVsan4bjOLqJWimxbXtHomxPAE6VuegbXEDKlcEo80GJPC9sMoR9SDZbAzi3RFrCBCWIUJlaM24zW2XSRYILhFy_STXRYgUkVQhup15NfPLNHinOvhSXhkZHSEucMa2Ljy23Xt1cV99QOgweSiUXT5XBhIEgzRyckvxfDdN_r_WlYFBRcExuRrXqKuENy8gxHL57CSKGEgEyvjyJVBjV7rbognqdQHKbdrMdEc-WZJ61mjCtu8BebKgv3-qe5JNEQuCW3D_hT5wzfAAl-BhFVvWKPxIcSVMv_FkcCHVE3WFrgoxKLTmBhEqaU-QbljkhP0NlBYPUSAdseU3qymsHFYxzcsoITRm3WYKasoDY29ADaGeh34D3lfNnvaj3YxcFQMLyq76oX2LSQDBJumf3HqdA4byf0hI1QTMSCg8bwO9dmgXgYvnJNhsyesAWPUn0MMbx4sy1EcxJiSTod51YyQ4sAb4rB7-3CwJAQC9kl0aZPnEWeDD46szBy4vTF4bbunwRtHvs_R7_L7ULPLif2FAJFI3qYch9O9DBXnotkTUZ0wORe12GsIsfX0Ms3tlwhLeHIdWhoAepzCXQQDRxMrpLKU4PZnzC33kHRzlHfkVbbiqVGKHWpmmiA8KtW68TLgo2INzohIwy_72Zlfy1k4EsGAP3UhsoHHct9yPp7oikNUCOi68m6oCrc1hpTvcF2b7fs1P3reQ2WpVxlpBKMfzSKnJSjGB7CSPhOiWJya4R2GQPMqWecNCYQIsn5YzLkCjJEXSPTGSqZ6p8W5kQLAPUsX8W0K4DiIZjXEsF93u4kbuhDfptZn-CVRgyDaFxlj-GnoFN8-usgf7AVBKDT_K1azMz1rIB3DCYyj7xBGSGgJHjwv-CR2zcDfcF8iglm6Eii46yNh9gaM5-aO9W9SOkWM7Ia5_ITb9iKIIoi4EXuuvKoQLrYrmUuZzUI94UnO_HqHVqxh2ZqbRKUY1JX6JJjz8Vuj4of11cRgVBK-YT9R-ws6PWItT6pjV0yRCgIWCM_by4KQEHGK1m94Rshahc30UsAnYL7zlmNA7NEeYD9uHdWTSBCBR7cQPh3_hSAquYLMHuv7B8d-iDOsaUmz_oR7818hba6W3xi-bERDMWyGPtI3ZhBsRyAAmsFBGU62b83qbZI8-nCkjsE9e8QKw3nCoQ1en1NC7Kj-QrVuDb74ua6SWaj9JqijmcuvHqv9mb6J2zsUmyMgxKFoy3NcHGY2vAh2DhbSES2edWGNOpwkXLu_7qQ2tz0Ti9NL0E3Db7B0irI7O968uo_cT80bgilsigpVQ2bwJAfEE0cO9_cRRs4mE3rtP6ZZa2Sf5IxBrkWHRdTAOk1f0J00nxzQZ3xmBVdiqxVuKTzhiDoNpfWXO--exie-96OvxvtbeRY5Bdwwzptjir5uftlqvMegS7TI6fa9ZJRY7rH75Y3WsjYfkJy3MRcniYVGGKzE8b2f1hqCvUsTL8b6B9gvJ2dbXjWdHqa39_Hf8zBCdTwWN1UQugM2LjtOu1cEGQzWRPnGA1RgWdTRDVabj4ZzXjHt1SDdYqWqwIUcRkkp2wL3kr5VhBMyBydAqLqXJmOhTkIC_F876oeYwNxEq0BhfEKoST0DJFdcWsnpFpkFdYwy1QatJeMRoVt3XO_2ejOn426o8V2DWrjwdaqP0PbL5T_FUAT06mMPgPA7AAjUe3SMY8pPmj0JAsIsNmWDK4wIawf2gT-7cQDB4CYzi7xAsR06QNIS7jFahfQ92Ialj-ir14Zod8JdOzQ-t8Qc3w2z3w67UjieHiymbiYwNuBd84YNVfht_djxDxr_V0T4jQ5_lzLAq3mNHNlP3QKFDDO0b4bjgxod-yxrgUdcnGYDqvWlNwwk1Kn-PBNEwjPeqnLeI14-uknX4dzv8d_FuW5_BswlwIoh-kxp-5h5TjTU98u_47pvvpWp7ZHvV5kmwBi-MBVz09R1ZmLLnPiKTRoZuXQ9eoMNsfmKsMVY9_ltpnKYbydIMXxzh7Hz5XFJjKp1US9jmmk8f_5LpwamP1Xkq83hwTecPt14MVD3-eDaplypy-0RbQIsOgorYj8v-YqLiN49w1BgSzJBWKD-RR31OhMm452th1xOnZhj-yhFJYjum_aq5cAkX2oggmcRcchteia27IdMbD6rzFW9vgl9-zeYlSuvfZTj0KxrmnvUq_-4hYWV0Fey2FJ8-rW878vwJuBCOcoTuvYAVeiEWOs"
            },
            "errors": [],
-           "warnings": [
-            "metadata_not_available"
-           ],
-           "root_checks": {
-            "trusted_ca": null,
-            "chain": null,
-            "fido_mds": null
-           }
+           "warnings": []
           },
           "attestationSummary": {
            "signatureValid": null,
@@ -4996,14 +4875,8 @@
             "aaguid": null,
             "algorithm_supported": null,
             "root_certificates_present": false
-           },
-           "warnings": [
-            "metadata_not_available"
-           ]
-          },
-          "warnings": [
-           "metadata_not_available"
-          ]
+           }
+          }
          },
          "userHandle": {
           "base64": "dXNlckBleGFtcGxlLmNvbQ==",
@@ -5266,7 +5139,6 @@
          "attestationChecks": {
           "attestation_format": "packed",
           "signature_valid": true,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": true,
@@ -5467,7 +5339,6 @@
           "attestationChecks": {
            "attestation_format": "packed",
            "signature_valid": true,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": true,

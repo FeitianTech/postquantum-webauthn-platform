@@ -174,45 +174,22 @@ def _ec_certificate_der() -> bytes:
     return _certificate(ec.generate_private_key(ec.SECP256R1()), name="classical", algorithm=hashes.SHA256())
 
 
-def test_mldsa_certificate_signature_refuses_malformed_input():
-    with pytest.raises(InvalidSignature, match="Unable to parse ML-DSA certificate"):
-        chain.verify_mldsa_certificate_signature(b"not a certificate", b"issuer")
-
-    mldsa_der = mldsa_helpers.certificate("ML-DSA-44")
-    with pytest.raises(InvalidSignature, match="Unable to parse issuer public key"):
-        chain.verify_mldsa_certificate_signature(mldsa_der, b"not a certificate")
-
-    with pytest.raises(InvalidSignature, match="Unsupported signature algorithm OID"):
-        chain.verify_mldsa_certificate_signature(_ec_certificate_der(), mldsa_der)
-
-    with pytest.raises(InvalidSignature, match="not an ML-DSA key"):
-        chain.verify_mldsa_certificate_signature(mldsa_der, _ec_certificate_der())
-
-    # The issuer holds an ML-DSA key of another parameter set than the one the
-    # certificate says signed it.
-    with pytest.raises(InvalidSignature, match="does not match the certificate"):
-        chain.verify_mldsa_certificate_signature(mldsa_der, mldsa_helpers.certificate("ML-DSA-65"))
-
-
 @pytest.mark.parametrize("parameter_set", mldsa_helpers.PARAMETER_SETS)
 def test_mldsa_chains_verify_only_against_the_real_issuer(parameter_set):
     issued = mldsa_helpers.certificate(parameter_set, label="leaf", issuer_label="ca", common_name=f"{parameter_set} leaf")
     real_issuer = mldsa_helpers.certificate(parameter_set, label="ca", ca=True)
     other_issuer = mldsa_helpers.certificate(parameter_set, label="impostor", ca=True)
 
-    chain.verify_mldsa_certificate_signature(issued, real_issuer)
     chain.verify_certificate_chain([issued, real_issuer])
 
-    with pytest.raises(InvalidSignature, match="verification failed"):
-        chain.verify_mldsa_certificate_signature(issued, other_issuer)
     with pytest.raises(InvalidSignature):
         chain.verify_certificate_chain([issued, other_issuer])
 
     # A single flipped bit anywhere in the signed certificate is refused.
     tampered = bytearray(issued)
     tampered[-1] ^= 0x01
-    with pytest.raises(InvalidSignature, match="verification failed"):
-        chain.verify_mldsa_certificate_signature(bytes(tampered), real_issuer)
+    with pytest.raises(InvalidSignature):
+        chain.verify_certificate_chain([bytes(tampered), real_issuer])
 
 
 @pytest.mark.parametrize(

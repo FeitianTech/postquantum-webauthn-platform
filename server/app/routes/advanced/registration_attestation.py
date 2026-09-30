@@ -90,9 +90,6 @@ def summarise_attestation(attestation_checks: Mapping[str, Any]) -> dict[str, An
         "errors": errors,
         "verified": not errors,
     }
-    pqc_signature_valid = attestation_checks.get("pqc_signature_valid")
-    if pqc_signature_valid is not None:
-        summary["pqcSignatureValid"] = pqc_signature_valid
     metadata_summary = checks_safe.get("metadata")
     if isinstance(metadata_summary, Mapping):
         summary["metadata"] = metadata_summary

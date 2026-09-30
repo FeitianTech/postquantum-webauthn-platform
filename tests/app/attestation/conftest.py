@@ -64,13 +64,6 @@ def classical():
 
 
 @pytest.fixture
-def pqc():
-    """The fragment that defines the PQC attestation root evaluation. The fragment that defines the PQC certificate constraint checks."""
-
-    return _fragment("pqc")
-
-
-@pytest.fixture
 def checks():
     """The submodule that runs the attestation checks: client and authenticator
     data, the attestation signature and root, the policy, and the metadata result."""

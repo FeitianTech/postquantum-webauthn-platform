@@ -20,7 +20,6 @@ from . import (
     classical,
     constants,
     formatting,
-    pqc,
     trust,
 )
 
@@ -42,7 +41,6 @@ __all__ = [
 # Constants shared with the fragments.
 AAGUID_EXTENSION_OID = constants.AAGUID_EXTENSION_OID
 EXTENSION_DISPLAY_METADATA = constants.EXTENSION_DISPLAY_METADATA
-_PQC_ALGORITHM_NAME_TO_ID = pqc._PQC_ALGORITHM_NAME_TO_ID
 CRED_PROTECT_LABELS = aaguid.CRED_PROTECT_LABELS
 
 # AAGUID, CredProtect, and authenticator extension helpers.
@@ -108,15 +106,6 @@ _trusted_ca_subjects = trust._trusted_ca_subjects
 
 # Classical attestation root evaluation.
 _evaluate_classical_attestation_root = classical._evaluate_classical_attestation_root
-
-# PQC certificate constraint checks.
-_check_pqc_certificate_constraints = pqc._check_pqc_certificate_constraints
-_normalise_pqc_algorithm_identifier = pqc._normalise_pqc_algorithm_identifier
-_verify_pqc_attestation_chain = pqc._verify_pqc_attestation_chain
-
-# PQC attestation root and signature evaluation.
-_attempt_pqc_attestation_signature_validation = pqc._attempt_pqc_attestation_signature_validation
-_evaluate_mldsa_attestation_root = pqc._evaluate_mldsa_attestation_root
 
 # Registration policy resolution.
 _collect_allowed_algorithms = checks._collect_allowed_algorithms

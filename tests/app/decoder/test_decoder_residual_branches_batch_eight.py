@@ -47,37 +47,3 @@ def test_binary_extractors_and_authenticator_fallback_paths(monkeypatch, binary)
         )
         == b"from-attestation"
     )
-
-
-def test_append_authenticator_section_uses_response_context_public_key_algorithm(monkeypatch, summary):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
-    captured = {}
-
-    def _collect(attested, auth_bytes, fallback_alg=None):
-        captured["fallback_alg"] = fallback_alg
-        return {
-            "credential_lines": ["cred"],
-            "aaguid_lines": ["aaguid"],
-            "credential_id": "id",
-            "algorithm": "ES256",
-            "public_key_lines": ["pk"],
-        }
-
-    monkeypatch.setattr(summary, "_collect_attested_info", _collect)
-
-    lines = []
-    decode_module._extend_with_authenticator_details(
-        lines,
-        {
-            "rpIdHash": {"hex": "abcd"},
-            "flags": {"UP": True},
-            "signCount": 1,
-            "attestedCredentialData": {"aaguidHex": "aa"},
-        },
-        None,
-        response_context={"publicKeyAlgorithm": -7},
-    )
-
-    assert captured["fallback_alg"] == -7
-    assert any("Credential data" in line for line in lines)

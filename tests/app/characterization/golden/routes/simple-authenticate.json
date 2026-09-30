@@ -228,7 +228,7 @@
     ],
     [
      "Content-Length",
-     "12524"
+     "12443"
     ],
     [
      "X-Content-Type-Options",
@@ -288,7 +288,7 @@
      }
     }
    ],
-   "bodySha256": "43934e525254484e23a99ac3d7c7a9ff89e4e04d0ba69de86e51ae9145c56fd0",
+   "bodySha256": "bed84b25f2719547263085ec6d25d32587d208b1c1864b141798d1bd5c5bc969",
    "body": {
     "actualResidentKey": false,
     "algo": "ES256 (ECDSA)",
@@ -368,7 +368,6 @@
         "description": null,
         "root_certificates_present": false
        },
-       "pqc_signature_valid": null,
        "root_valid": null,
        "rp_id_hash_valid": true,
        "signature_valid": null,
@@ -479,7 +478,6 @@
         "description": null,
         "root_certificates_present": false
        },
-       "pqc_signature_valid": null,
        "root_valid": null,
        "rp_id_hash_valid": true,
        "signature_valid": null,
@@ -594,7 +592,6 @@
          "description": null,
          "root_certificates_present": false
         },
-        "pqc_signature_valid": null,
         "root_valid": null,
         "rp_id_hash_valid": true,
         "signature_valid": null,
@@ -646,7 +643,7 @@
    "stored": [
     {
      "file": "credentials/gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY/user@example.com_credential_data.json",
-     "sha256": "b51c45c0971952de2b749771bda92c59fcd3a4e6e7f4c42592563df642690dcf",
+     "sha256": "d45d524c62d714ea619b778845779e91dc16374ce89cfb1913861d9575bbbb60",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -706,7 +703,6 @@
          "attestationChecks": {
           "attestation_format": "none",
           "signature_valid": null,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": null,
@@ -802,7 +798,6 @@
           "attestationChecks": {
            "attestation_format": "none",
            "signature_valid": null,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": null,
@@ -1074,7 +1069,7 @@
    "stored": [
     {
      "file": "credentials/gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY/user@example.com_credential_data.json",
-     "sha256": "5e501eaf15ea088ab94b1f25e79d9e603fcad884854e711f7b9fe7cae370eb32",
+     "sha256": "5d28293eeb06072016e03d759142b717db4e5ba370ce3ee89857d5658cf06f88",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -1134,7 +1129,6 @@
          "attestationChecks": {
           "attestation_format": "none",
           "signature_valid": null,
-          "pqc_signature_valid": null,
           "root_valid": null,
           "rp_id_hash_valid": true,
           "aaguid_match": null,
@@ -1230,7 +1224,6 @@
           "attestationChecks": {
            "attestation_format": "none",
            "signature_valid": null,
-           "pqc_signature_valid": null,
            "root_valid": null,
            "rp_id_hash_valid": true,
            "aaguid_match": null,
