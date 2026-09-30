@@ -64,8 +64,8 @@ The routes that read the snapshot (`/api/mds/metadata/info`,
 `explorer/full`, `resolve`, the upload and the delete, the browsers'
 copy at its versioned URL, and both registrations' complete, which look the new
 credential's AAGUID up and record what they found for good) call
-`ensure_snapshot_available()` first (`mds_provisioning.waits_for_the_snapshot`): on a cold
-instance they wait for the provisioning under way (about 20 s from Cloud Storage)
+`ensure_snapshot_available()` first (`waits_for_the_snapshot` in `server/app/mds/provisioning.py`):
+on a cold instance they wait for the provisioning under way (about 20 s from Cloud Storage)
 instead of answering meanwhile as if there were no snapshot, and after the first
 attempt they return at once. The pages are static (the UI's export) and never wait,
 so a cold instance's first page is not held; the explorer asks the info route, which
@@ -104,7 +104,7 @@ halfway through its replacement may answer from the mix once, but never keeps it
 
 A Cloud Run instance lives as long as it has traffic, and would otherwise keep the
 snapshot it started with. `/api/mds/metadata/info`, where the explorer starts, calls
-`mds_provisioning.follow_newer_snapshot()`: at most once every
+`follow_newer_snapshot()` (`server/app/mds/provisioning.py`): at most once every
 `FIDO_SERVER_MDS_POINTER_CHECK_SECONDS` (default 900) it reads the bucket's pointer,
 with a 5 s timeout and no retry, inside the request (the service has CPU only while
 serving one). When the pointer names a set with a higher serial than the local one,
