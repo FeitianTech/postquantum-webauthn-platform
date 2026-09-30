@@ -6,6 +6,7 @@ import itsdangerous
 from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
 from flask import g, session
 
+from server.app.mds import files as mds_files
 from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
@@ -146,9 +147,9 @@ def test_cache_cleaning_and_formatting_helpers():
     assert metadata_blob._clean_metadata_cache_value("  etag-value  ") == "etag-value"
     assert metadata_blob._clean_metadata_cache_value("   ") is None
 
-    iso_value = metadata_blob._format_last_modified("Wed, 21 Oct 2015 07:28:00 GMT")
+    iso_value = mds_files.format_last_modified("Wed, 21 Oct 2015 07:28:00 GMT")
     assert iso_value == "2015-10-21T07:28:00+00:00"
-    assert metadata_blob._format_last_modified("not-a-date") == "not-a-date"
+    assert mds_files.format_last_modified("not-a-date") == "not-a-date"
 
 
 def test_prune_helper_and_request_session_identifier_paths(monkeypatch, tmp_path, session_store, app_config):

@@ -11,6 +11,7 @@ import pytest
 from fido2.mds3 import MetadataBlobPayloadEntry
 from flask import ctx, g, session
 
+from server.app.mds import files as mds_files
 from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import effective as metadata_effective
@@ -411,13 +412,13 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
     assert serialized["source"] == {"storedFilename": "stored.json"}
     assert serialized["legalHeader"] == "Legal Header"
 
-    assert metadata_blob._parse_http_datetime(None) is None
-    monkeypatch.setattr(blob, "parsedate_to_datetime", lambda _value: datetime(2026, 1, 1, 0, 0, 0))
-    parsed = metadata_blob._parse_http_datetime("Wed, 01 Jan 2026 00:00:00 GMT")
+    assert mds_files.parse_http_datetime(None) is None
+    monkeypatch.setattr(mds_files, "parsedate_to_datetime", lambda _value: datetime(2026, 1, 1, 0, 0, 0))
+    parsed = mds_files.parse_http_datetime("Wed, 01 Jan 2026 00:00:00 GMT")
     assert parsed is not None and parsed.tzinfo is not None
 
-    assert metadata_blob._format_last_modified(None) is None
-    assert metadata_blob._format_last_modified("Thu, 01 Jan 1970 00:00:00 GMT") == "2026-01-01T00:00:00+00:00"
+    assert mds_files.format_last_modified(None) is None
+    assert mds_files.format_last_modified("Thu, 01 Jan 1970 00:00:00 GMT") == "2026-01-01T00:00:00+00:00"
 
 
 def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_path, metadata_state, blob, effective):

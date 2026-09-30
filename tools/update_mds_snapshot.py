@@ -15,7 +15,6 @@ import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
-from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -48,27 +47,6 @@ def _path(name: str) -> Path:
 
 
 
-def _parse_http_datetime(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    try:
-        parsed = parsedate_to_datetime(value)
-    except (TypeError, ValueError, IndexError):
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    else:
-        parsed = parsed.astimezone(timezone.utc)
-    return parsed
-
-
-def format_last_modified_header(header: str | None) -> str | None:
-    parsed = _parse_http_datetime(header)
-    if parsed is None:
-        return header
-    return parsed.isoformat()
-
-
 def _fetch_remote_blob() -> tuple[bytes, str | None, str | None]:
     request = urllib.request.Request(
         MDS_METADATA_URL,
@@ -89,7 +67,7 @@ def _parse_retry_after(value: str | None) -> int | None:
     if value.isdigit():
         seconds = int(value)
     else:
-        retry_at = _parse_http_datetime(value)
+        retry_at = mds_files.parse_http_datetime(value)
         if retry_at is None:
             return None
         seconds = int((retry_at - datetime.now(timezone.utc)).total_seconds())
@@ -199,7 +177,7 @@ def _build_cache_state(
         resolved_last_modified_iso = (
             existing_cache.get("last_modified_iso")
             if isinstance(existing_cache.get("last_modified_iso"), str)
-            else format_last_modified_header(last_modified)
+            else mds_files.format_last_modified(last_modified)
         )
         resolved_etag = (
             existing_cache.get("etag")
@@ -210,7 +188,7 @@ def _build_cache_state(
         fetched_at = now_iso
         generated_at = now_iso
         resolved_last_modified = last_modified
-        resolved_last_modified_iso = format_last_modified_header(last_modified)
+        resolved_last_modified_iso = mds_files.format_last_modified(last_modified)
         resolved_etag = etag
 
     entries = verified_snapshot.get("entries")

@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import gzip
 import os
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 # Where the snapshot is, when not the default below. Read whenever a path is needed
@@ -93,3 +95,26 @@ def write_file(path: Path, data: bytes) -> None:
     temporary.replace(path)
     if path.name in BROWSER_FILENAMES:
         write_gzip_sibling(path, data)
+
+
+def parse_http_datetime(value: str | None) -> datetime | None:
+    """An HTTP date (``Last-Modified``, ``Retry-After``) as an aware UTC time, or None."""
+
+    if not value:
+        return None
+    try:
+        parsed = parsedate_to_datetime(value)
+    except (TypeError, ValueError, IndexError):
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def format_last_modified(header: str | None) -> str | None:
+    """A ``Last-Modified`` header as ISO 8601; the header as it is when it is not a date."""
+
+    parsed = parse_http_datetime(header)
+    if parsed is None:
+        return header
+    return parsed.isoformat()
