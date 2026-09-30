@@ -11,9 +11,9 @@ from fido2.webauthn import (
     PublicKeyCredentialType,
     PublicKeyCredentialUserEntity,
 )
-from flask import jsonify, request, session
+from flask import Blueprint, jsonify, request, session
 
-from ... import json_values
+from ... import json_values, mds_provisioning
 from ...attachments import normalize_attachment
 from ...challenge_registry import (
     CHALLENGE_FRESH,
@@ -26,6 +26,8 @@ from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
 from ...webauthn.attestation import checks
 from . import parsing, registration_persistence, registration_record
+
+bp = Blueprint("simple_registration", __name__)
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +186,8 @@ def _attestation_error_response(attestation_checks: Mapping[str, Any]) -> Any:
     return None
 
 
+@bp.route("/api/register/complete", methods=["POST"])
+@mds_provisioning.waits_for_the_snapshot
 def register_complete():
     uname = request.args.get("email")
     response = request.get_json(silent=True) or {}
@@ -237,6 +241,7 @@ _SIMPLE_REQUEST_ALGORITHMS: tuple[int, ...] = (
     -48, -49, -50, -7, -9, -8, -19, -53, -35, -36, -51, -52, -47, -37, -38, -39, -257, -258, -259, -65535,
 )
 
+@bp.route("/api/register/begin", methods=["POST"])
 def register_begin():
     payload = request.get_json(silent=True) or {}
 

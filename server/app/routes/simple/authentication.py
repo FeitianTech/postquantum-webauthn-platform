@@ -19,7 +19,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from fido2.webauthn import AuthenticatorData
-from flask import abort, jsonify, request, session
+from flask import Blueprint, abort, jsonify, request, session
 
 from ...challenge_registry import (
     CHALLENGE_FRESH,
@@ -36,9 +36,12 @@ from ...webauthn.sign_count import SIGN_COUNT_REGRESSED, sign_count_status
 from .. import binary_helpers
 from . import binary, parsing
 
+bp = Blueprint("simple_authentication", __name__)
+
 logger = logging.getLogger(__name__)
 
 
+@bp.route("/api/authenticate/begin", methods=["POST"])
 def authenticate_begin():
     uname = request.args.get("email")
     payload = request.get_json(silent=True) or {}
@@ -83,6 +86,7 @@ def _challenge_rejection_message(replayed: bool) -> str:
     return "Authentication challenge has expired. Please restart the authentication flow."
 
 
+@bp.route("/api/authenticate/complete", methods=["POST"])
 def authenticate_complete():
     response = request.get_json(silent=True)
 
