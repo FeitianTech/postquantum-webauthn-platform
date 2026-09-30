@@ -13,7 +13,6 @@ from fido2.mds3 import (
 from flask import g, has_request_context
 
 from . import blob, entries, sessions
-from . import state as _state
 
 if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed
     from .sessions import SessionMetadataItem
@@ -88,8 +87,8 @@ def metadata_entry_trust_anchor_status(entry: Any) -> bool | None:
     )
     if request_session_ids and entry_id in request_session_ids:
         return False
-    if entry_id in _state._base_metadata_entry_ids:
-        return _state._base_metadata_trust_verified
+    if entry_id in blob.CACHE.entry_ids:
+        return blob.CACHE.trust_verified
 
     return None
 
@@ -113,28 +112,28 @@ def get_mds_verifier() -> MdsAttestationVerifier | None:
 
     if not session_items:
         if base_metadata is None:
-            _state._base_verifier_cache = None
-            _state._base_verifier_mtime = base_mtime
+            blob.CACHE.verifier = None
+            blob.CACHE.verifier_mtime = base_mtime
             return None
 
         if (
-            _state._base_verifier_cache is not None
-            and _state._base_verifier_mtime is not None
-            and _state._base_verifier_mtime == base_mtime
+            blob.CACHE.verifier is not None
+            and blob.CACHE.verifier_mtime is not None
+            and blob.CACHE.verifier_mtime == base_mtime
         ):
-            return _state._base_verifier_cache
+            return blob.CACHE.verifier
 
-        with _state._base_verifier_lock:
+        with blob.CACHE.verifier_lock:
             if (
-                _state._base_verifier_cache is not None
-                and _state._base_verifier_mtime is not None
-                and _state._base_verifier_mtime == base_mtime
+                blob.CACHE.verifier is not None
+                and blob.CACHE.verifier_mtime is not None
+                and blob.CACHE.verifier_mtime == base_mtime
             ):
-                return _state._base_verifier_cache
+                return blob.CACHE.verifier
 
             verifier = MdsAttestationVerifier(base_metadata)
-            _state._base_verifier_cache = verifier
-            _state._base_verifier_mtime = base_mtime
+            blob.CACHE.verifier = verifier
+            blob.CACHE.verifier_mtime = base_mtime
             return verifier
 
     metadata = _merge_metadata(base_metadata, session_items)

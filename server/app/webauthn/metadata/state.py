@@ -1,43 +1,17 @@
-"""The mutable state the metadata submodules share: caches, locks and settings.
+"""The settings the metadata modules share, and the inactive-session cleanup's state.
 
-This module is the single home for the caches, locks and constants the
-metadata runtime shares. It is deliberately a leaf: it imports nothing from
-``server.app`` and nothing from its sibling fragments, so any fragment can
-depend on it without creating a cycle.
-
-Fragments reach the mutable entries through the module
-(``state._base_metadata_cache = ...``) rather than by importing the
-name, because a ``from ... import`` binding cannot be rebound for other
-readers. The constants below are safe to import by name.
+A leaf: it imports nothing from ``server.app``, so any module here can depend
+on it. The cleanup's entries are reached through the module
+(``state._session_cleanup_worker = ...``), since a ``from ... import`` binding
+cannot be rebound for other readers; the constants are safe to import by name.
+The snapshot's caches are ``blob.CACHE``.
 """
 from __future__ import annotations
 
 import threading
 from collections.abc import Mapping
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:  # annotations only; keeps this module free of runtime imports
-    from fido2.mds3 import MdsAttestationVerifier, MetadataBlobPayload
-
-_base_metadata_cache: MetadataBlobPayload | None = None
-_base_metadata_mtime: float | None = None
-_base_metadata_source: str | None = None
-_base_verifier_cache: MdsAttestationVerifier | None = None
-_base_verifier_mtime: float | None = None
-_base_metadata_trust_verified: bool | None = None
-_base_metadata_entry_ids: set[int] = set()
-_base_explorer_snapshot_cache: dict[str, Any] | None = None
-_base_explorer_snapshot_mtime: tuple[float | None, ...] | None = None
-_base_full_snapshot_cache: dict[str, Any] | None = None
-_base_full_snapshot_mtime: tuple[float | None, ...] | None = None
-_base_raw_entries_cache: list[Any] | None = None
-_base_raw_entries_mtime: float | None = None
-
-_base_metadata_lock = threading.RLock()
-_base_explorer_snapshot_lock = threading.RLock()
-_base_full_snapshot_lock = threading.RLock()
-_base_verifier_lock = threading.RLock()
+from typing import Any
 
 _SESSION_METADATA_SUFFIX = ".json"
 _SESSION_METADATA_INFO_SUFFIX = ".meta.json"

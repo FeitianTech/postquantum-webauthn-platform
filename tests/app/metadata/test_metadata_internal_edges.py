@@ -200,8 +200,8 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metada
     os.utime(explorer_path, (now, now))
 
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
-    monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_cache", None)
-    monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_mtime", None)
+    monkeypatch.setattr(metadata_blob.CACHE, "explorer", None)
+    monkeypatch.setattr(metadata_blob.CACHE, "explorer_mtime", None)
 
     snapshot, marker = metadata_blob._load_base_explorer_snapshot()
 
@@ -266,6 +266,6 @@ def test_metadata_entry_trust_anchor_status_uses_session_and_base_entry_sets(met
         }
     )
 
-    metadata_state._base_metadata_entry_ids = {id(entry)}
-    metadata_state._base_metadata_trust_verified = True
+    metadata_blob.CACHE.entry_ids = {id(entry)}
+    metadata_blob.CACHE.trust_verified = True
     assert metadata_verifier.metadata_entry_trust_anchor_status(entry) is True

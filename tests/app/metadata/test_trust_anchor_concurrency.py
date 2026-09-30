@@ -12,6 +12,7 @@ from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
 from flask import g
 
 from server.app.webauthn import metadata as module
+from server.app.webauthn.metadata import blob as metadata_blob
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import verifier as metadata_verifier
 from tests.app.entry_app import entry_app
@@ -19,7 +20,7 @@ from tests.app.entry_app import entry_app
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
-    monkeypatch.setattr(metadata_state, "_base_metadata_trust_verified", True)
+    monkeypatch.setattr(metadata_blob.CACHE, "trust_verified", True)
 
     return module
 
@@ -55,7 +56,7 @@ def test_unknown_entry_is_never_reported_as_trusted(metadata_module):
 
 def test_base_entry_reports_base_trust(metadata_module, metadata_state):
     entry = _entry(metadata_module, "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
-    metadata_state._base_metadata_entry_ids = {id(entry)}
+    metadata_blob.CACHE.entry_ids = {id(entry)}
 
     assert metadata_verifier.metadata_entry_trust_anchor_status(entry) is True
 
@@ -69,7 +70,7 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module
         next_update=None,
         entries=(base_entry,),
     )
-    metadata_state._base_metadata_entry_ids = {id(base_entry)}
+    metadata_blob.CACHE.entry_ids = {id(base_entry)}
 
     monkeypatch.setattr(
         blob, "_load_base_metadata", lambda: (base_metadata, 1.0)

@@ -462,8 +462,8 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     monkeypatch.setattr(blob, "_load_verified_metadata_fallback", lambda: (None, None))
     metadata_value, marker = blob._load_base_metadata()
     assert metadata_value is None and marker is None
-    assert metadata_state._base_metadata_source is None
-    assert metadata_state._base_metadata_trust_verified is None
+    assert metadata_blob.CACHE.metadata_source is None
+    assert metadata_blob.CACHE.trust_verified is None
 
     snapshot_dir = tmp_path / "snapshot"
     snapshot_dir.mkdir()
@@ -491,16 +491,16 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
     monkeypatch.setattr(os.path, "getmtime", lambda path: 20.0 if path == str(verified_path) else 10.0)
     # The explorer, the verified snapshot, and their metas.
     explorer_cache_marker = (10.0, 20.0, 10.0, 10.0)
-    monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_cache", {"meta": {"entryCount": 9}})
-    monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_mtime", explorer_cache_marker)
+    monkeypatch.setattr(metadata_blob.CACHE, "explorer", {"meta": {"entryCount": 9}})
+    monkeypatch.setattr(metadata_blob.CACHE, "explorer_mtime", explorer_cache_marker)
     cached_snapshot, cached_marker = metadata_blob._load_base_explorer_snapshot()
     assert cached_snapshot == {"meta": {"entryCount": 9}}
     assert cached_marker == explorer_cache_marker
 
     explorer_path = snapshot_dir / "fido-mds3.explorer.json"
     explorer_path.write_text("{invalid-json", encoding="utf-8")
-    monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_cache", None)
-    monkeypatch.setattr(metadata_state, "_base_explorer_snapshot_mtime", None)
+    monkeypatch.setattr(metadata_blob.CACHE, "explorer", None)
+    monkeypatch.setattr(metadata_blob.CACHE, "explorer_mtime", None)
     monkeypatch.setattr(blob, "load_metadata_cache_entry", lambda: {"etag": "x"})
     monkeypatch.setattr(
         blob,
@@ -519,15 +519,15 @@ def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_
         "getmtime",
         lambda _path: (_ for _ in ()).throw(OSError("missing mtime")),
     )
-    monkeypatch.setattr(metadata_state, "_base_full_snapshot_cache", None)
-    monkeypatch.setattr(metadata_state, "_base_full_snapshot_mtime", None)
+    monkeypatch.setattr(metadata_blob.CACHE, "full", None)
+    monkeypatch.setattr(metadata_blob.CACHE, "full_mtime", None)
     monkeypatch.setattr(blob, "_load_verified_metadata_payload", lambda: None)
 
     full_snapshot, full_marker = metadata_blob._load_base_full_snapshot()
     assert full_snapshot is None and full_marker == (None, None, None, None)
 
-    monkeypatch.setattr(metadata_state, "_base_full_snapshot_cache", {"meta": {"entryCount": 1}})
-    monkeypatch.setattr(metadata_state, "_base_full_snapshot_mtime", (None, None, None, None))
+    monkeypatch.setattr(metadata_blob.CACHE, "full", {"meta": {"entryCount": 1}})
+    monkeypatch.setattr(metadata_blob.CACHE, "full_mtime", (None, None, None, None))
     cached_full, cached_full_marker = metadata_blob._load_base_full_snapshot()
     assert cached_full == {"meta": {"entryCount": 1}}
     assert cached_full_marker == (None, None, None, None)
@@ -648,14 +648,14 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, m
     assert metadata_verifier.metadata_entry_trust_anchor_status(object()) is None
 
     entry = MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
-    metadata_state._base_metadata_entry_ids = set()
-    metadata_state._base_metadata_trust_verified = False
+    metadata_blob.CACHE.entry_ids = set()
+    metadata_blob.CACHE.trust_verified = False
     assert metadata_verifier.metadata_entry_trust_anchor_status(entry) is None
 
     monkeypatch.setattr(blob, "_load_base_metadata", lambda: (None, 77.0))
     monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [])
     assert metadata_verifier.get_mds_verifier() is None
-    assert metadata_state._base_verifier_mtime == 77.0
+    assert metadata_blob.CACHE.verifier_mtime == 77.0
 
     created = []
 

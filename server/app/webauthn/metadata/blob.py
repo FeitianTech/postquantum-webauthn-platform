@@ -1,19 +1,55 @@
-"""Metadata cache and HTTP header helpers."""
+"""The packaged snapshot's files, loaded into the caches between requests.
+
+``CACHE`` holds what was read, keyed by the modification times of the files it
+came from, so a snapshot swapped in (written whole, metas last) is read again on
+the next request. It is the one copy per process: gunicorn runs one worker.
+"""
 from __future__ import annotations
 
 import json
 import logging
 import os
+import threading
 from collections.abc import Mapping
+from dataclasses import dataclass, field
 from typing import Any
 
-from fido2.mds3 import MetadataBlobPayload
+from fido2.mds3 import MdsAttestationVerifier, MetadataBlobPayload
 
 from ...mds import files as mds_files
 from ...mds.build import build_bootstrap_snapshot, build_explorer_snapshot
-from . import state as _state
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SnapshotCache:
+    """The snapshot as last read: each value with the file modification times it was read at."""
+
+    # The verified BLOB payload, where it came from, and the ids of its entries,
+    # published before ``trust_verified`` so a reader never sees the flag without them.
+    metadata: MetadataBlobPayload | None = None
+    metadata_mtime: float | None = None
+    metadata_source: str | None = None
+    trust_verified: bool | None = None
+    entry_ids: set[int] = field(default_factory=set)
+    raw_entries: list[Any] | None = None
+    raw_entries_mtime: float | None = None
+    # The explorer's and the full snapshot, keyed by the mtimes of their four files.
+    explorer: dict[str, Any] | None = None
+    explorer_mtime: tuple[float | None, ...] | None = None
+    full: dict[str, Any] | None = None
+    full_mtime: tuple[float | None, ...] | None = None
+    # fido2's verifier over the payload.
+    verifier: MdsAttestationVerifier | None = None
+    verifier_mtime: float | None = None
+    metadata_lock: threading.RLock = field(default_factory=threading.RLock)
+    explorer_lock: threading.RLock = field(default_factory=threading.RLock)
+    full_lock: threading.RLock = field(default_factory=threading.RLock)
+    verifier_lock: threading.RLock = field(default_factory=threading.RLock)
+
+
+CACHE = SnapshotCache()
 
 
 def _path(name: str) -> str:
@@ -73,37 +109,37 @@ def _load_base_metadata() -> tuple[MetadataBlobPayload | None, float | None]:
         verified_mtime = None
 
     if (
-        _state._base_metadata_cache is not None
-        and _state._base_metadata_source == "verified"
-        and _state._base_metadata_mtime == verified_mtime
+        CACHE.metadata is not None
+        and CACHE.metadata_source == "verified"
+        and CACHE.metadata_mtime == verified_mtime
     ):
-        return _state._base_metadata_cache, verified_mtime
+        return CACHE.metadata, verified_mtime
 
     # Concurrent requests on a cold instance wait for a single parse of the
     # multi-megabyte snapshot instead of each loading their own copy.
-    with _state._base_metadata_lock:
+    with CACHE.metadata_lock:
         if (
-            _state._base_metadata_cache is not None
-            and _state._base_metadata_source == "verified"
-            and _state._base_metadata_mtime == verified_mtime
+            CACHE.metadata is not None
+            and CACHE.metadata_source == "verified"
+            and CACHE.metadata_mtime == verified_mtime
         ):
-            return _state._base_metadata_cache, verified_mtime
+            return CACHE.metadata, verified_mtime
 
         metadata, fallback_mtime = _load_verified_metadata_fallback()
 
         # Entry ids are published before the trust flag so a concurrent reader
         # can only ever observe "not yet trusted", never a stale trusted state.
         if metadata is not None:
-            _state._base_metadata_entry_ids = {id(entry) for entry in metadata.entries}
-            _state._base_metadata_trust_verified = True
-            _state._base_metadata_source = "verified"
+            CACHE.entry_ids = {id(entry) for entry in metadata.entries}
+            CACHE.trust_verified = True
+            CACHE.metadata_source = "verified"
         else:
-            _state._base_metadata_trust_verified = None
-            _state._base_metadata_entry_ids = set()
-            _state._base_metadata_source = None
+            CACHE.trust_verified = None
+            CACHE.entry_ids = set()
+            CACHE.metadata_source = None
 
-        _state._base_metadata_cache = metadata
-        _state._base_metadata_mtime = fallback_mtime
+        CACHE.metadata = metadata
+        CACHE.metadata_mtime = fallback_mtime
         return metadata, fallback_mtime
 
 
@@ -164,14 +200,14 @@ def _load_base_raw_entries(metadata_mtime: float | None) -> list[Any] | None:
     if metadata_mtime is None or verified_mtime != metadata_mtime:
         return None
 
-    with _state._base_metadata_lock:
-        if _state._base_raw_entries_mtime == verified_mtime:
-            return _state._base_raw_entries_cache
+    with CACHE.metadata_lock:
+        if CACHE.raw_entries_mtime == verified_mtime:
+            return CACHE.raw_entries
         payload = _load_verified_metadata_payload()
         entries = payload.get("entries") if payload is not None else None
-        _state._base_raw_entries_cache = entries if isinstance(entries, list) else None
-        _state._base_raw_entries_mtime = verified_mtime
-        return _state._base_raw_entries_cache
+        CACHE.raw_entries = entries if isinstance(entries, list) else None
+        CACHE.raw_entries_mtime = verified_mtime
+        return CACHE.raw_entries
 
 
 def _load_packaged_explorer_meta(snapshot_path: str | None = None) -> dict[str, Any] | None:
@@ -250,17 +286,17 @@ def _load_base_explorer_snapshot() -> tuple[dict[str, Any] | None, tuple[float |
     )
     explorer_mtime, verified_mtime = cache_marker[:2]
     if (
-        _state._base_explorer_snapshot_cache is not None
-        and _state._base_explorer_snapshot_mtime == cache_marker
+        CACHE.explorer is not None
+        and CACHE.explorer_mtime == cache_marker
     ):
-        return _state._base_explorer_snapshot_cache, cache_marker
+        return CACHE.explorer, cache_marker
 
-    with _state._base_explorer_snapshot_lock:
+    with CACHE.explorer_lock:
         if (
-            _state._base_explorer_snapshot_cache is not None
-            and _state._base_explorer_snapshot_mtime == cache_marker
+            CACHE.explorer is not None
+            and CACHE.explorer_mtime == cache_marker
         ):
-            return _state._base_explorer_snapshot_cache, cache_marker
+            return CACHE.explorer, cache_marker
 
         snapshot: dict[str, Any] | None = None
 
@@ -283,8 +319,8 @@ def _load_base_explorer_snapshot() -> tuple[dict[str, Any] | None, tuple[float |
             if payload is not None:
                 snapshot = build_explorer_snapshot(payload, load_metadata_cache_entry())
 
-        _state._base_explorer_snapshot_cache = snapshot
-        _state._base_explorer_snapshot_mtime = cache_marker
+        CACHE.explorer = snapshot
+        CACHE.explorer_mtime = cache_marker
         return snapshot, cache_marker
 
 
@@ -297,17 +333,17 @@ def _load_base_full_snapshot() -> tuple[dict[str, Any] | None, tuple[float | Non
     )
 
     if (
-        _state._base_full_snapshot_cache is not None
-        and _state._base_full_snapshot_mtime == cache_marker
+        CACHE.full is not None
+        and CACHE.full_mtime == cache_marker
     ):
-        return _state._base_full_snapshot_cache, cache_marker
+        return CACHE.full, cache_marker
 
-    with _state._base_full_snapshot_lock:
+    with CACHE.full_lock:
         if (
-            _state._base_full_snapshot_cache is not None
-            and _state._base_full_snapshot_mtime == cache_marker
+            CACHE.full is not None
+            and CACHE.full_mtime == cache_marker
         ):
-            return _state._base_full_snapshot_cache, cache_marker
+            return CACHE.full, cache_marker
 
         snapshot: dict[str, Any] | None = None
 
@@ -327,15 +363,15 @@ def _load_base_full_snapshot() -> tuple[dict[str, Any] | None, tuple[float | Non
             if payload is not None:
                 snapshot = build_bootstrap_snapshot(payload, load_metadata_cache_entry())
 
-        _state._base_full_snapshot_cache = snapshot
-        _state._base_full_snapshot_mtime = cache_marker
+        CACHE.full = snapshot
+        CACHE.full_mtime = cache_marker
         return snapshot, cache_marker
 
 
 def load_packaged_explorer_summary() -> dict[str, Any]:
     # The summary is only the snapshot's meta block, which the packaged meta
     # file already holds; avoid parsing the multi-megabyte snapshot for it.
-    if _state._base_explorer_snapshot_cache is None:
+    if CACHE.explorer is None:
         packaged_meta = _load_packaged_explorer_meta()
         if packaged_meta is not None:
             return dict(packaged_meta)
