@@ -181,6 +181,6 @@ def test_an_encoder_refusal_counts_the_offset_in_the_text_as_sent(client, text, 
 
 
 def test_edn_between_blank_lines_is_encoded():
-    from server.app.decoder.encode import encode_payload_text
+    from server.app.decoder.encode.text import encode_payload_text
 
     assert encode_payload_text("\n  [1, 2]\n\n", "EDN")["data"]["binary"]["hex"] == "820102"

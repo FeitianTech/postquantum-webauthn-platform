@@ -3,19 +3,20 @@ from __future__ import annotations
 
 import pytest
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import keys as decode_keys
+from server.app.decoder.decode import pipeline as decode_pipeline
 
 
 def test_a_byte_string_map_key_is_shown_as_hex_like_a_byte_string_value():
     # {h'99999999': h'0102'}
-    result = decode_module.decode_payload_text("a144999999994201 02".replace(" ", ""))
+    result = decode_pipeline.decode_payload_text("a144999999994201 02".replace(" ", ""))
 
     assert result["data"]["decodedValue"] == {"99999999": "0102"}
 
 
 def test_key_helpers_never_leak_a_python_bytes_repr():
-    assert decode_module._hex_json_safe({b"\x01\xff": {b"\x02": b"\x03"}}) == {"01ff": {"02": "03"}}
-    assert decode_module._stringify_mapping_keys({b"\xaa": 1, 2: 3}) == {"aa": 1, "2": 3}
+    assert decode_keys.hex_json_safe({b"\x01\xff": {b"\x02": b"\x03"}}) == {"01ff": {"02": "03"}}
+    assert decode_keys.stringify_mapping_keys({b"\xaa": 1, 2: 3}) == {"aa": 1, "2": 3}
 
 
 @pytest.mark.parametrize(
@@ -32,6 +33,6 @@ def test_key_helpers_never_leak_a_python_bytes_repr():
     ],
 )
 def test_keys_json_has_no_spelling_for_are_spelled_in_edn(hex_text, decoded):
-    from server.app.decoder import decode_payload_text
+    from server.app.decoder.decode.pipeline import decode_payload_text
 
     assert decode_payload_text(hex_text.replace(" ", ""))["data"]["decodedValue"] == decoded

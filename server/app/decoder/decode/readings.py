@@ -23,6 +23,7 @@ from cryptography import x509
 
 from . import (
     ambiguous_input,
+    authenticator_data,
     cbor_parser,
     ctap,
     ctap_classify,
@@ -239,7 +240,7 @@ def _is_ctap_message_and_bytes(data: bytes) -> bool:
 
 def _is_authenticator_data(data: bytes) -> bool:
     try:
-        pipeline._describe_authenticator_data_bytes(data)
+        authenticator_data._describe_authenticator_data_bytes(data)
     except ValueError:
         return False
     return True

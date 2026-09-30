@@ -5,8 +5,11 @@ import json
 import cbor2
 import pytest
 
-from server.app import decoder as decoder_module
-from server.app.decoder import encode as encode_module
+from server.app.decoder.decode import pipeline as decode_pipeline
+from server.app.decoder.encode import ctap_numeric as encode_ctap_numeric
+from server.app.decoder.encode import handlers_basic as encode_handlers_basic
+from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
+from server.app.decoder.encode import text as encode_text
 from server.app.routes import general as general_module
 from tests.app.entry_app import entry_app
 
@@ -137,29 +140,29 @@ def test_codec_api_round_trip_cbor_encode_then_decode():
 def test_encode_payload_text_cbor_is_deterministic_for_same_input():
     source = json.dumps({"z": 1, "a": [2, 3], "nested": {"x": "ok"}})
 
-    first = decoder_module.encode_payload_text(source, "cbor")
-    second = decoder_module.encode_payload_text(source, "cbor")
+    first = encode_text.encode_payload_text(source, "cbor")
+    second = encode_text.encode_payload_text(source, "cbor")
 
     assert first["data"]["binary"]["hex"] == second["data"]["binary"]["hex"]
     assert first["data"]["binary"]["base64url"] == second["data"]["binary"]["base64url"]
 
 
 def test_normalize_encoding_format_aliases_and_case_insensitive():
-    assert encode_module._normalize_encoding_format("  JSON (binary)  ") == "json"
-    assert encode_module._normalize_encoding_format("CBOR (CANONICAL)") == "cbor"
-    assert encode_module._normalize_encoding_format("cbor (ctap/webauthn data)") == "ctap-webauthn"
+    assert encode_handlers_basic._normalize_encoding_format("  JSON (binary)  ") == "json"
+    assert encode_handlers_basic._normalize_encoding_format("CBOR (CANONICAL)") == "cbor"
+    assert encode_handlers_basic._normalize_encoding_format("cbor (ctap/webauthn data)") == "ctap-webauthn"
 
 
 def test_normalize_encoding_format_rejects_unknown_values():
     with pytest.raises(ValueError, match="Unsupported encoder format"):
-        encode_module._normalize_encoding_format("totally-unknown")
+        encode_handlers_basic._normalize_encoding_format("totally-unknown")
 
 
 def test_encode_ctap_webauthn_requires_mandatory_fields_for_make_credential_request():
     client_data_hash = base64.urlsafe_b64encode(b"\x00" * 32).decode("ascii").rstrip("=")
 
     with pytest.raises(ValueError, match=r"Missing field 0x03 \(user\)"):
-        encode_module._encode_ctap_webauthn_value(
+        encode_handlers_cbor._encode_ctap_webauthn_value(
             {
                 "1": client_data_hash,
                 "2": {"id": "example.com", "name": "Example RP"},
@@ -193,7 +196,7 @@ def test_decode_public_key_credential_preserves_key_fields_and_extensions():
         },
     }
 
-    decoded = decoder_module.decode_payload_text(json.dumps(credential))
+    decoded = decode_pipeline.decode_payload_text(json.dumps(credential))
 
     assert decoded["success"] is True
     assert decoded["type"] == "PublicKeyCredential"
@@ -211,8 +214,8 @@ def test_encode_payload_text_cbor_is_canonical_for_equivalent_key_orderings():
     left_payload = json.dumps({"z": 1, "nested": {"b": 2, "a": 1}, "k": [3, {"y": 2, "x": 1}]})
     right_payload = json.dumps({"k": [3, {"x": 1, "y": 2}], "nested": {"a": 1, "b": 2}, "z": 1})
 
-    left = decoder_module.encode_payload_text(left_payload, "cbor")
-    right = decoder_module.encode_payload_text(right_payload, "cbor")
+    left = encode_text.encode_payload_text(left_payload, "cbor")
+    right = encode_text.encode_payload_text(right_payload, "cbor")
 
     assert left["data"]["binary"]["hex"] == right["data"]["binary"]["hex"]
     assert left["data"]["binary"]["base64url"] == right["data"]["binary"]["base64url"]
@@ -238,7 +241,7 @@ def test_codec_api_decodes_attestation_object_contract():
 
 def test_classify_ctap_numeric_mapping_requires_field_two():
     with pytest.raises(ValueError, match=r"Missing field 0x02"):
-        encode_module._classify_ctap_numeric_mapping({1: "example.com"})
+        encode_ctap_numeric._classify_ctap_numeric_mapping({1: "example.com"})
 
 
 def test_classify_ctap_numeric_mapping_rejects_short_auth_data_for_signature_response():
@@ -246,7 +249,7 @@ def test_classify_ctap_numeric_mapping_rejects_short_auth_data_for_signature_res
         ValueError,
         match=r"must contain authenticator data for GetAssertion response",
     ):
-        encode_module._classify_ctap_numeric_mapping(
+        encode_ctap_numeric._classify_ctap_numeric_mapping(
             {
                 1: "credential",
                 2: b"\x00" * 36,
@@ -256,7 +259,7 @@ def test_classify_ctap_numeric_mapping_rejects_short_auth_data_for_signature_res
 
 
 def test_classify_ctap_numeric_mapping_uses_field_two_length_boundaries_for_string_field_one():
-    get_assertion_request = encode_module._classify_ctap_numeric_mapping(
+    get_assertion_request = encode_ctap_numeric._classify_ctap_numeric_mapping(
         {
             1: "example.com",
             2: b"\x00" * 32,
@@ -264,7 +267,7 @@ def test_classify_ctap_numeric_mapping_uses_field_two_length_boundaries_for_stri
     )
     assert get_assertion_request == "getAssertionRequest"
 
-    make_credential_response = encode_module._classify_ctap_numeric_mapping(
+    make_credential_response = encode_ctap_numeric._classify_ctap_numeric_mapping(
         {
             1: "example.com",
             2: b"\x00" * 37,
@@ -273,7 +276,7 @@ def test_classify_ctap_numeric_mapping_uses_field_two_length_boundaries_for_stri
     assert make_credential_response == "makeCredentialResponse"
 
     with pytest.raises(ValueError, match=r"length is not valid"):
-        encode_module._classify_ctap_numeric_mapping(
+        encode_ctap_numeric._classify_ctap_numeric_mapping(
             {
                 1: "example.com",
                 2: b"\x00" * 33,
@@ -286,7 +289,7 @@ def test_classify_ctap_numeric_mapping_requires_exact_client_data_hash_length_fo
         ValueError,
         match=r"clientDataHash\) must be exactly 32 bytes",
     ):
-        encode_module._classify_ctap_numeric_mapping(
+        encode_ctap_numeric._classify_ctap_numeric_mapping(
             {
                 1: b"\x01" * 31,
                 2: {"id": "example.com", "name": "Example"},
@@ -296,7 +299,7 @@ def test_classify_ctap_numeric_mapping_requires_exact_client_data_hash_length_fo
 
 def test_encode_ctap_webauthn_rejects_duplicate_fields_after_key_normalization():
     with pytest.raises(ValueError, match=r"Duplicate field 0x01"):
-        encode_module._encode_ctap_webauthn_value(
+        encode_handlers_cbor._encode_ctap_webauthn_value(
             {
                 "1 (clientDataHash)": _b64url(b"\x00" * 32),
                 "01": _b64url(b"\x11" * 32),
@@ -312,7 +315,7 @@ def test_encode_ctap_webauthn_rejects_duplicate_fields_after_key_normalization()
 
 
 def test_encode_ctap_webauthn_preserves_unknown_extra_numeric_fields():
-    result = encode_module._encode_ctap_webauthn_value(
+    result = encode_handlers_cbor._encode_ctap_webauthn_value(
         {
             "1": "example.com",
             "2": _b64url(b"\x22" * 32),
@@ -357,7 +360,7 @@ def test_encode_payload_text_cbor_is_deterministic_across_equivalent_permutation
     ]
 
     encoded_hex_values = [
-        decoder_module.encode_payload_text(payload, "cbor")["data"]["binary"]["hex"]
+        encode_text.encode_payload_text(payload, "cbor")["data"]["binary"]["hex"]
         for payload in variants
     ]
 

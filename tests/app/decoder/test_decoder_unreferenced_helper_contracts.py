@@ -5,7 +5,8 @@ import hashlib
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import ctap_classify as decode_ctap_classify
+from server.app.decoder.decode import response as decode_response
 
 
 def _auth_data_bytes() -> bytes:
@@ -35,15 +36,15 @@ def test_ctap_shape_detection_and_classification_helpers():
     make_output = {1: "packed", 2: auth_data, 3: {"alg": -7, "sig": b"\xaa"}}
     get_output = {1: {"id": b"id"}, 2: auth_data, 3: b"\xaa" * 32}
 
-    assert decode_module._looks_like_make_credential_request(make_request) is True
-    assert decode_module._looks_like_get_assertion_request(get_request) is True
-    assert decode_module._looks_like_make_credential_output(make_output) is True
-    assert decode_module._looks_like_get_assertion_output(get_output) is True
+    assert decode_ctap_classify._looks_like_make_credential_request(make_request) is True
+    assert decode_ctap_classify._looks_like_get_assertion_request(get_request) is True
+    assert decode_ctap_classify._looks_like_make_credential_output(make_output) is True
+    assert decode_ctap_classify._looks_like_get_assertion_output(get_output) is True
 
-    assert decode_module._classify_ctap_map(make_output) == "make_credential_output"
-    assert decode_module._classify_ctap_map(get_output) == "get_assertion_output"
-    assert decode_module._classify_ctap_map(make_request) == "make_credential_input"
-    assert decode_module._classify_ctap_map(get_request) == "get_assertion_input"
+    assert decode_ctap_classify._classify_ctap_map(make_output) == "make_credential_output"
+    assert decode_ctap_classify._classify_ctap_map(get_output) == "get_assertion_output"
+    assert decode_ctap_classify._classify_ctap_map(make_request) == "make_credential_input"
+    assert decode_ctap_classify._classify_ctap_map(get_request) == "get_assertion_input"
 
 
 def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, response, binary):
@@ -53,7 +54,7 @@ def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, respo
     monkeypatch.setattr(response, "_convert_client_data_entry", lambda _e: {"type": "webauthn.create"})
     monkeypatch.setattr(response, "_collect_response_extras", lambda _e: {"signature": "aa"})
 
-    pk_data = decode_module._convert_public_key_credential_data(
+    pk_data = decode_response._convert_public_key_credential_data(
         {"decoded": {"response": {}, "clientExtensionResults": {"credProps": {"rk": True}}}}
     )
     assert pk_data["credential"]["id"] == "cred"
@@ -64,22 +65,22 @@ def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, respo
 
     monkeypatch.setattr(binary, "_extract_authenticator_bytes_from_attestation", lambda _e: b"\x00" * 37)
     monkeypatch.setattr(response, "_build_authenticator_data_payload", lambda *_a, **_k: {"flags": {"UP": True}})
-    att_obj_data = decode_module._convert_attestation_object_data(
+    att_obj_data = decode_response._convert_attestation_object_data(
         {"decoded": {"extensions": {"credProps": {"rk": True}}}, "binary": {"base64": "AQI="}}
     )
     assert att_obj_data["attestationObject"]["fmt"] == "none"
     assert att_obj_data["authenticatorData"]["flags"]["UP"] is True
     assert att_obj_data["extensions"]["credProps"]["rk"] is True
 
-    auth_result = decode_module._convert_authenticator_data_result(
+    auth_result = decode_response._convert_authenticator_data_result(
         {"decoded": {}, "binary": {"hex": "00" * 37}}
     )
     assert auth_result["flags"]["UP"] is True
 
-    client_result = decode_module._convert_client_data_result({"decoded": {"type": "webauthn.get"}})
+    client_result = decode_response._convert_client_data_result({"decoded": {"type": "webauthn.get"}})
     assert client_result["type"] == "webauthn.create"
 
-    cert_result = decode_module._convert_certificate_result(
+    cert_result = decode_response._convert_certificate_result(
         {"decoded": {"certificates": [{"derBase64": "AQI=", "pem": "PEM"}]}}
     )
     assert cert_result["certificates"][0]["parsedX5c"]["derBase64"] == "AQI="

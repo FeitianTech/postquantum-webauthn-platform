@@ -12,16 +12,17 @@ from typing import Any
 import pytest
 from fido2 import cbor
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import cbor_parser as decode_cbor_parser
+from server.app.decoder.decode import pipeline as decode_pipeline
 
 
 def _decode(hex_text: str) -> dict[str, Any]:
-    return decode_module.decode_payload_text(hex_text)
+    return decode_pipeline.decode_payload_text(hex_text)
 
 
 def _decode_error(hex_text: str) -> Any:
     with pytest.raises(ValueError) as caught:
-        decode_module.decode_payload_text(hex_text)
+        decode_pipeline.decode_payload_text(hex_text)
     return caught.value
 
 
@@ -155,7 +156,7 @@ def test_zero_padding_after_a_response_is_reported_too():
 
 
 def test_lenient_parsing_keeps_what_is_there_and_says_what_it_stepped_over():
-    node, end, skipped = decode_module.decode_item(bytes.fromhex("48aabb"), lenient=True)
+    node, end, skipped = decode_cbor_parser.decode_item(bytes.fromhex("48aabb"), lenient=True)
 
     assert node["hex"] == "aabb"
     assert node["truncated"] is True
@@ -173,9 +174,9 @@ def test_lenient_parsing_keeps_what_is_there_and_says_what_it_stepped_over():
 
 
 def test_lenient_parsing_closes_a_short_container_and_steps_over_a_reserved_byte():
-    node, end, skipped = decode_module.decode_item(bytes.fromhex("831e01"), lenient=True)
+    node, end, skipped = decode_cbor_parser.decode_item(bytes.fromhex("831e01"), lenient=True)
 
-    assert decode_module._structure_to_value(node) == [decode_module.CborDiagnostic("invalid(h'1e')"), 1]
+    assert decode_cbor_parser._structure_to_value(node) == [decode_cbor_parser.CborDiagnostic("invalid(h'1e')"), 1]
     assert end == 3
     assert [(entry["code"], entry["offset"], entry["path"]) for entry in skipped] == [
         ("reserved-additional-info", 1, "$[0]"),
@@ -184,7 +185,7 @@ def test_lenient_parsing_closes_a_short_container_and_steps_over_a_reserved_byte
 
 
 def test_strict_parsing_never_records_skips():
-    node, end, skipped = decode_module.decode_item(bytes.fromhex("a10102"))
+    node, end, skipped = decode_cbor_parser.decode_item(bytes.fromhex("a10102"))
 
     assert skipped == []
     assert (node["offset"], node["end"], end) == (0, 3, 3)

@@ -19,14 +19,8 @@ from pathlib import Path
 
 ALLOWED_CYCLES: list[frozenset[str]] = [
     frozenset({
-        "server.app.decoder.cbor_canonical",
-        "server.app.decoder.ctap_message",
-        "server.app.decoder.ctap_view",
-        "server.app.decoder.decode",
         "server.app.decoder.decode.authenticator_data",
         "server.app.decoder.decode.ctap",
-        "server.app.decoder.decode.ctap_self_check",
-        "server.app.decoder.decode.ctap_views",
         "server.app.decoder.decode.pipeline",
         "server.app.decoder.decode.readings",
     }),

@@ -5,7 +5,12 @@ from collections.abc import Mapping
 import cbor2
 import pytest
 
-from server.app.decoder import encode as encode_module
+from server.app.decoder import cbor_canonical
+from server.app.decoder.encode import binary_decode as encode_binary_decode
+from server.app.decoder.encode import binary_extract as encode_binary_extract
+from server.app.decoder.encode import ctap_fields as encode_ctap_fields
+from server.app.decoder.encode import ctap_numeric as encode_ctap_numeric
+from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
 
 
 def _b64url(data: bytes) -> str:
@@ -22,7 +27,7 @@ def test_encode_cbor_value_never_reads_a_plain_map_as_ctap():
         "authData": b"\x00" * 37,
     }
 
-    encoded = encode_module._encode_cbor_value(payload)
+    encoded = encode_handlers_cbor._encode_cbor_value(payload)
 
     assert encoded["success"] is True
     assert encoded["type"] == "CBOR (canonical) (encoded)"
@@ -32,7 +37,7 @@ def test_encode_cbor_value_never_reads_a_plain_map_as_ctap():
 
 def test_extract_ctap_numeric_payload_salvage_classification_errors_are_preserved():
     with pytest.raises(ValueError, match="Missing field 0x02"):
-        encode_module._extract_ctap_numeric_payload(
+        encode_ctap_numeric._extract_ctap_numeric_payload(
             {
                 "01": "fmt-only",
                 "nonNumericKey": True,
@@ -44,7 +49,7 @@ def test_extract_ctap_numeric_payload_skips_visited_mappings_in_recursive_inputs
     loop: dict[str, object] = {}
     loop["self"] = loop
 
-    numeric_map, ctap_type = encode_module._extract_ctap_numeric_payload(
+    numeric_map, ctap_type = encode_ctap_numeric._extract_ctap_numeric_payload(
         [
             loop,
             {
@@ -60,9 +65,9 @@ def test_extract_ctap_numeric_payload_skips_visited_mappings_in_recursive_inputs
 
 def test_sanitize_numeric_mapping_and_pem_label_defaults():
     with pytest.raises(ValueError, match="at least one CTAP field"):
-        encode_module._sanitize_ctap_numeric_mapping({})
+        encode_ctap_numeric._sanitize_ctap_numeric_mapping({})
 
-    assert encode_module._normalize_pem_label(" !!! ") == "DATA"
+    assert encode_binary_extract._normalize_pem_label(" !!! ") == "DATA"
 
 
 class _DuplicateEncodedKeyMap(Mapping):
@@ -85,7 +90,7 @@ class _DuplicateEncodedKeyMap(Mapping):
 
 
 def test_canonical_encoder_exercises_tag_float_simple_and_duplicate_key_guard():
-    encoder = encode_module._CanonicalCBOREncoder()
+    encoder = cbor_canonical._CanonicalCBOREncoder()
 
     tagged = cbor2.CBORTag(42, [1, 2])
     canonical = encoder.canonicalize_structure(tagged)
@@ -103,20 +108,20 @@ def test_canonical_encoder_exercises_tag_float_simple_and_duplicate_key_guard():
 
 
 def test_primitive_coercion_and_attestation_statement_residual_paths():
-    assert encode_module._ensure_int(7, "field") == 7
+    assert encode_ctap_fields._ensure_int(7, "field") == 7
     with pytest.raises(ValueError, match="integer value"):
-        encode_module._ensure_int("not-an-int", "field")
+        encode_ctap_fields._ensure_int("not-an-int", "field")
 
-    assert encode_module._ensure_bool(True, "flag") is True
+    assert encode_ctap_fields._ensure_bool(True, "flag") is True
 
-    assert encode_module._encode_attestation_statement(None) is None
-    assert encode_module._encode_attestation_statement(b"\xAA") == b"\xAA"
-    assert encode_module._encode_credential_descriptor(b"\xBB") == b"\xBB"
+    assert encode_ctap_fields._encode_attestation_statement(None) is None
+    assert encode_ctap_fields._encode_attestation_statement(b"\xAA") == b"\xAA"
+    assert encode_ctap_fields._encode_credential_descriptor(b"\xBB") == b"\xBB"
 
 
 def test_require_certificate_bytes_handles_empty_pem_decoding_and_non_mapping_failure():
     with pytest.raises(ValueError, match="Unable to decode certificate PEM contents"):
-        encode_module._require_certificate_bytes({"pem": "===="}, 0)
+        encode_binary_decode._require_certificate_bytes({"pem": "===="}, 0)
 
     with pytest.raises(ValueError, match=r"x5c\[1\]"):
-        encode_module._require_certificate_bytes({"pem": 123}, 1)
+        encode_binary_decode._require_certificate_bytes({"pem": 123}, 1)

@@ -260,8 +260,7 @@ Guards on the code and the checkout (`tests/app/tooling/`; each `ALLOWED` list m
 `uvx ruff@0.16.8 check .` (config in `ruff.toml`; ruff is kept out of `uv.lock`). CI fails on
 any violation of the gated set (`E4`, `E7`, `E9`, `F`, `I`, `UP006/UP007/UP035/UP045`), which is
 at zero; `F821` has nothing ignored and there is no per-file ignore. Do not run `ruff format`
-(the repo is not format-clean). The only `# noqa: F401` markers are in
-`server/app/decoder/encode/__init__.py`.
+(the repo is not format-clean). No package re-exports names, so there is no `# noqa: F401`.
 
 ## Python dependencies
 

@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pytest
 
-from server.app.decoder import decode_payload_text
 from server.app.decoder.decode import pipeline
+from server.app.decoder.decode.pipeline import decode_payload_text
 
 
 def test_the_json_text_null_is_json_null():

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from server.app.decoder.encode import encode_payload_text
+from server.app.decoder.encode.text import encode_payload_text
 
 
 @pytest.mark.parametrize("target", ["cbor", "json", "cose", "CBOR (CTAP/WebAuthn Data)"])

@@ -12,8 +12,8 @@ from __future__ import annotations
 import cbor2
 import pytest
 
-from server.app.decoder import decode_payload_text
 from server.app.decoder.decode import extensions, get_info, keys
+from server.app.decoder.decode.pipeline import decode_payload_text
 from tests.app.decoder import real_vectors as rv
 
 _CLIENT_DATA_HASH = bytes(range(32))

@@ -17,7 +17,9 @@ from typing import Any
 from ... import encoding
 from .. import cose_tables
 from ..cbor_canonical import _canonical_cbor_dumps
-from ..decode import _binary_summary, _hex_json_safe, _stringify_mapping_keys
+from ..decode.keys import hex_json_safe as _hex_json_safe
+from ..decode.keys import stringify_mapping_keys as _stringify_mapping_keys
+from ..decode.pipeline import _binary_summary
 from .handlers_basic import _prepare_encoder_response
 
 _LABEL = re.compile(r"^\s*(-?\d+)\s*(?:\([^()]*\))?\s*$")

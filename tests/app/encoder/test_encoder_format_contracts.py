@@ -4,8 +4,10 @@ import json
 import cbor2
 import pytest
 
-from server.app import decoder as decoder_module
-from server.app.decoder import encode as encode_module
+from server.app.decoder.encode import binary_decode as encode_binary_decode
+from server.app.decoder.encode import ctap_fields as encode_ctap_fields
+from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
+from server.app.decoder.encode import text as encode_text
 
 
 def _pad_base64(value: str) -> str:
@@ -18,12 +20,12 @@ def _b64url(data: bytes) -> str:
 
 def test_encode_payload_text_rejects_empty_input():
     with pytest.raises(ValueError, match="Encoder input is empty"):
-        encode_module.encode_payload_text("   ", "json")
+        encode_text.encode_payload_text("   ", "json")
 
 
 def test_encode_payload_text_rejects_non_json_document():
     with pytest.raises(ValueError, match="expects a JSON document"):
-        encode_module.encode_payload_text("not-json", "json")
+        encode_text.encode_payload_text("not-json", "json")
 
 
 def test_encode_pem_normalizes_label_and_wraps_64_columns():
@@ -33,7 +35,7 @@ def test_encode_pem_normalizes_label_and_wraps_64_columns():
         "pemLabel": "x509 certificate",
     }
 
-    result = decoder_module.encode_payload_text(json.dumps(payload), "pem")
+    result = encode_text.encode_payload_text(json.dumps(payload), "pem")
 
     assert result["success"] is True
     assert result["type"] == "PEM (encoded)"
@@ -55,7 +57,7 @@ def test_encode_pem_normalizes_label_and_wraps_64_columns():
 
 def test_encode_der_extracts_nested_binary_payload():
     payload_bytes = b"\x01\x02\x03\x04\x05"
-    encoded = decoder_module.encode_payload_text(
+    encoded = encode_text.encode_payload_text(
         json.dumps({"binary": {"base64url": _b64url(payload_bytes)}}),
         "der",
     )
@@ -74,7 +76,7 @@ def test_encode_attestation_statement_converts_sig_and_x5c_entries():
         + "\n-----END CERTIFICATE-----"
     )
 
-    statement = encode_module._encode_attestation_statement(
+    statement = encode_ctap_fields._encode_attestation_statement(
         {
             "sig": {"hex": "aabbcc"},
             "x5c": [
@@ -94,12 +96,12 @@ def test_encode_attestation_statement_converts_sig_and_x5c_entries():
 
 def test_require_certificate_bytes_rejects_unrecoverable_pem_entry():
     with pytest.raises(ValueError, match="Unable to decode certificate PEM contents"):
-        encode_module._require_certificate_bytes({"pem": "%%%%"}, 0)
+        encode_binary_decode._require_certificate_bytes({"pem": "%%%%"}, 0)
 
 
 def test_encode_ctap_webauthn_rejects_negative_numeric_field_ids():
     with pytest.raises(ValueError, match="must be non-negative"):
-        encode_module._encode_ctap_webauthn_value(
+        encode_handlers_cbor._encode_ctap_webauthn_value(
             {
                 -1: "AA",
                 2: _b64url(b"\x00" * 32),
@@ -123,7 +125,7 @@ def test_encode_cbor_writes_the_byte_the_ctap_framing_names():
         },
     }
 
-    result = encode_module._encode_cbor_value(payload)
+    result = encode_handlers_cbor._encode_cbor_value(payload)
 
     assert result["success"] is True
     assert result["type"] == "CBOR (canonical) (encoded getAssertionRequest)"

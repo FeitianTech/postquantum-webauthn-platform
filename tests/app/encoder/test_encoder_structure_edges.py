@@ -2,7 +2,8 @@ import base64
 
 import pytest
 
-from server.app.decoder import encode as encode_module
+from server.app.decoder.encode import binary_decode as encode_binary_decode
+from server.app.decoder.encode import ctap_fields as encode_ctap_fields
 
 
 def _b64url(data: bytes) -> str:
@@ -21,28 +22,28 @@ def test_a_ctap_view_holds_one_message():
 
 
 def test_ctap_key_match_and_value_lookup_handle_labeled_variants_case_insensitively():
-    assert encode_module._ctap_key_matches("1 (rpId)", {"1", "rpid"}) is True
-    assert encode_module._ctap_key_matches("RPID", {"rpid"}) is True
-    assert encode_module._ctap_key_matches("2 (clientDataHash)", {"clientdatahash"}) is True
-    assert encode_module._ctap_key_matches("3", {"2"}) is False
+    assert encode_ctap_fields._ctap_key_matches("1 (rpId)", {"1", "rpid"}) is True
+    assert encode_ctap_fields._ctap_key_matches("RPID", {"rpid"}) is True
+    assert encode_ctap_fields._ctap_key_matches("2 (clientDataHash)", {"clientdatahash"}) is True
+    assert encode_ctap_fields._ctap_key_matches("3", {"2"}) is False
 
     structure = {"1 (rpId)": "example.com", "2 (clientDataHash)": _b64url(b"\x01" * 32)}
-    assert encode_module._get_ctap_field_value(structure, "rpId", 1) == "example.com"
-    assert encode_module._get_ctap_field_value(structure, "clientDataHash", 2) == _b64url(b"\x01" * 32)
+    assert encode_ctap_fields._get_ctap_field_value(structure, "rpId", 1) == "example.com"
+    assert encode_ctap_fields._get_ctap_field_value(structure, "clientDataHash", 2) == _b64url(b"\x01" * 32)
 
 
 def test_encode_attestation_statement_and_certificate_bytes_error_paths():
-    assert encode_module._encode_attestation_statement(_b64url(b"sig")) == b"sig"
+    assert encode_ctap_fields._encode_attestation_statement(_b64url(b"sig")) == b"sig"
 
     with pytest.raises(ValueError, match="attStmt.x5c must be an array"):
-        encode_module._encode_attestation_statement({"x5c": 123})
+        encode_ctap_fields._encode_attestation_statement({"x5c": 123})
 
     with pytest.raises(ValueError, match="Unable to decode certificate PEM contents"):
-        encode_module._require_certificate_bytes({"pem": "%%%%"}, 0)
+        encode_binary_decode._require_certificate_bytes({"pem": "%%%%"}, 0)
 
 
 def test_encode_ctap_user_and_descriptor_handle_binary_extras_and_validation_errors():
-    user = encode_module._encode_ctap_user(
+    user = encode_ctap_fields._encode_ctap_user(
         {
             "id": _b64url(b"user-id"),
             "name": "alice",
@@ -58,7 +59,7 @@ def test_encode_ctap_user_and_descriptor_handle_binary_extras_and_validation_err
     assert user["icon"] == "https://example.com/icon.png"
     assert user["customBlob"] == b"blob"
 
-    descriptor = encode_module._encode_credential_descriptor(
+    descriptor = encode_ctap_fields._encode_credential_descriptor(
         {
             "type": "public-key",
             "id": _b64url(b"cred-id"),
@@ -70,28 +71,28 @@ def test_encode_ctap_user_and_descriptor_handle_binary_extras_and_validation_err
     assert descriptor["extra"] == b"ABC"
 
     with pytest.raises(ValueError, match="allowList must be an array"):
-        encode_module._encode_allow_list("not-a-list")
+        encode_ctap_fields._encode_allow_list("not-a-list")
 
 
 def test_numeric_and_boolean_coercion_and_require_bytes_guards():
-    assert encode_module._ensure_int("0x10", "field") == 16
-    assert encode_module._ensure_bool("yes", "field") is True
-    assert encode_module._ensure_bool("0", "field") is False
+    assert encode_ctap_fields._ensure_int("0x10", "field") == 16
+    assert encode_ctap_fields._ensure_bool("yes", "field") is True
+    assert encode_ctap_fields._ensure_bool("0", "field") is False
 
     with pytest.raises(ValueError, match="not a boolean"):
-        encode_module._ensure_int(True, "field")
+        encode_ctap_fields._ensure_int(True, "field")
 
     with pytest.raises(ValueError, match="must be a boolean"):
-        encode_module._ensure_bool("maybe", "field")
+        encode_ctap_fields._ensure_bool("maybe", "field")
 
-    assert encode_module._require_bytes({"hex": "aabb"}, "binary") == b"\xaa\xbb"
+    assert encode_binary_decode._require_bytes({"hex": "aabb"}, "binary") == b"\xaa\xbb"
 
     with pytest.raises(ValueError, match="Unable to interpret binary"):
-        encode_module._require_bytes({"text": "plain"}, "binary")
+        encode_binary_decode._require_bytes({"text": "plain"}, "binary")
 
 
 def test_maybe_decode_bytes_supports_mapping_and_sequence_forms():
-    assert encode_module._maybe_decode_bytes({"bytes": [1, 2, 3]}) == b"\x01\x02\x03"
-    assert encode_module._maybe_decode_bytes({"base64url": _b64url(b"xyz")}) == b"xyz"
-    assert encode_module._maybe_decode_bytes("AA:BB") == b"\xaa\xbb"
-    assert encode_module._maybe_decode_bytes([65, 66, 67]) == b"ABC"
+    assert encode_binary_decode._maybe_decode_bytes({"bytes": [1, 2, 3]}) == b"\x01\x02\x03"
+    assert encode_binary_decode._maybe_decode_bytes({"base64url": _b64url(b"xyz")}) == b"xyz"
+    assert encode_binary_decode._maybe_decode_bytes("AA:BB") == b"\xaa\xbb"
+    assert encode_binary_decode._maybe_decode_bytes([65, 66, 67]) == b"ABC"

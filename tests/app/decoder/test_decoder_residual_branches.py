@@ -5,23 +5,25 @@ import hashlib
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import ctap_auth_data as decode_ctap_auth_data
+from server.app.decoder.decode import pipeline as decode_pipeline
+from server.app.decoder.decode import response as decode_response
 
 
 def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(monkeypatch, cbor_parser, ctap):
     # _extract_attestation_certificate and _convert_certificate_bytes/payload guards.
-    assert decode_module._extract_attestation_certificate("not-a-map") is None
-    assert decode_module._extract_attestation_certificate({"x5c": ["A"]}) is None
+    assert decode_pipeline._extract_attestation_certificate("not-a-map") is None
+    assert decode_pipeline._extract_attestation_certificate({"x5c": ["A"]}) is None
 
-    assert decode_module._convert_certificate_bytes("A") == {}
-    assert decode_module._convert_certificate_bytes(123) == {}
-    assert decode_module._convert_certificate_payload("not-a-map") == {}
-    assert decode_module._convert_certificate_payload({"derBase64": "A"})["parsedX5c"]["derBase64"] == "A"
+    assert decode_response._convert_certificate_bytes("A") == {}
+    assert decode_response._convert_certificate_bytes(123) == {}
+    assert decode_response._convert_certificate_payload("not-a-map") == {}
+    assert decode_response._convert_certificate_payload({"derBase64": "A"})["parsedX5c"]["derBase64"] == "A"
 
     # _convert_client_data_entry edge paths.
-    assert decode_module._convert_client_data_entry("not-a-map") == {}
-    assert decode_module._convert_client_data_entry({"details": "not-a-map"}) == {}
-    challenge_payload = decode_module._convert_client_data_entry(
+    assert decode_response._convert_client_data_entry("not-a-map") == {}
+    assert decode_response._convert_client_data_entry({"details": "not-a-map"}) == {}
+    challenge_payload = decode_response._convert_client_data_entry(
         {"details": {"type": "webauthn.create", "challenge": {"nested": "value"}}}
     )
     assert challenge_payload["challenge"] == {"nested": "value"}
@@ -35,7 +37,7 @@ def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(mo
         + (0).to_bytes(2, "big")
         + cbor.encode(5)
     )
-    details, _, _ = decode_module._parse_authenticator_data_bytes(auth_with_cose_int)
+    details, _, _ = decode_ctap_auth_data._parse_authenticator_data_bytes(auth_with_cose_int)
     assert details["attestedCredentialData"]["credentialPublicKey"] == 5
 
     # Extensions that are not well-formed CBOR are shown as their bytes with
@@ -47,7 +49,7 @@ def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(mo
         + (1).to_bytes(4, "big")
         + broken_extensions
     )
-    details, _, trailing = decode_module._parse_authenticator_data_bytes(extension_payload)
+    details, _, trailing = decode_ctap_auth_data._parse_authenticator_data_bytes(extension_payload)
     assert details["extensions"] == broken_extensions.hex()
     assert details["parseError"] == (
         'extensions is not well-formed CBOR at authData offset 38: map key "ext" has no value'

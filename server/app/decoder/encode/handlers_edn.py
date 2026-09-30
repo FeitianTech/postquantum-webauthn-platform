@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from .. import edn
-from ..decode import _binary_summary
+from ..decode.pipeline import _binary_summary
 from .handlers_basic import _prepare_encoder_response
 
 

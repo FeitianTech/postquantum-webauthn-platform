@@ -14,7 +14,8 @@ import os
 import cbor2
 import pytest
 
-from server.app.decoder import decode_payload_text, encode_payload_text
+from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.encode.text import encode_payload_text
 from tests.app.decoder.real_vectors import (
     MAKE_CREDENTIAL_RESPONSE,
     NONE_AUTH_DATA,

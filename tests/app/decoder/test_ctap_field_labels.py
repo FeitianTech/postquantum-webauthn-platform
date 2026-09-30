@@ -15,8 +15,9 @@ import pytest
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
-from server.app.decoder import decode_payload_text, encode_payload_text
-from server.app.decoder import encode as encode_module
+from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.encode import ctap_encode as encode_ctap_encode
+from server.app.decoder.encode.text import encode_payload_text
 
 _AUTH_DATA = bytes(AuthenticatorData.create(hashlib.sha256(b"example.com").digest(), 0x05, 7))
 
@@ -182,11 +183,11 @@ def test_the_encoder_writes_unsigned_extension_outputs_at_the_response_members_n
 
 
 def test_request_fields_named_only_by_number_are_refused_not_dropped():
-    mapping = encode_module._encode_get_assertion_request({1: "example.com", 2: "22" * 32})
+    mapping = encode_ctap_encode._encode_get_assertion_request({1: "example.com", 2: "22" * 32})
 
     assert (mapping[1], mapping[2]) == ("example.com", b"\x22" * 32)
     # 0x0c is not a getAssertion parameter: it is neither encoded nor dropped.
     with pytest.raises(ValueError, match="getAssertionRequest has no member '0x0c'"):
-        encode_module._encode_get_assertion_request({1: "example.com", 2: "22" * 32, "0x0c": "raw"})
+        encode_ctap_encode._encode_get_assertion_request({1: "example.com", 2: "22" * 32, "0x0c": "raw"})
     with pytest.raises(ValueError, match="no parameter named 0xzz"):
-        encode_module._encode_get_assertion_request({1: "example.com", 2: "22" * 32, "0xzz": "raw"})
+        encode_ctap_encode._encode_get_assertion_request({1: "example.com", 2: "22" * 32, "0xzz": "raw"})

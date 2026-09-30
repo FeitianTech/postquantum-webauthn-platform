@@ -34,7 +34,7 @@ from . import (
     readings,
     response,
 )
-from .authenticator_data import _describe_authenticator_data_bytes, _LocatedError
+from . import authenticator_data as auth_data_reader
 from .json_input import read_or_none as _read_json
 
 _PEM_CERT_PATTERN = re.compile(
@@ -213,7 +213,7 @@ def _read_nested(
 
 
 def _error_location(exc: ValueError) -> tuple[int, str, str]:
-    if isinstance(exc, (cbor_parser._CborDecodingError, _LocatedError, json_input.JsonConstantError)):
+    if isinstance(exc, (cbor_parser._CborDecodingError, auth_data_reader._LocatedError, json_input.JsonConstantError)):
         return exc.offset, exc.path, exc.reason
     if isinstance(exc, json.JSONDecodeError):
         return exc.pos, "$", exc.msg
@@ -229,7 +229,7 @@ def _nested_attestation_object(data: bytes) -> tuple[dict[str, Any], list[dict[s
 
 
 def _nested_authenticator_data(data: bytes) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    return _describe_authenticator_data_bytes(data), authenticator_data_findings.check(data, 0, "$")
+    return auth_data_reader._describe_authenticator_data_bytes(data), authenticator_data_findings.check(data, 0, "$")
 
 
 def _nested_client_data(data: bytes, *, lenient: bool = False) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -379,7 +379,7 @@ def _try_decode_attestation_object(data: bytes, encoding: str) -> dict[str, Any]
 
 def _try_decode_authenticator_data(data: bytes, encoding: str) -> dict[str, Any] | None:
     try:
-        details = _describe_authenticator_data_bytes(data)
+        details = auth_data_reader._describe_authenticator_data_bytes(data)
     except Exception:
         return None
 
@@ -520,8 +520,8 @@ def _read_attestation_object(data: bytes) -> tuple[dict[str, Any], dict[str, Any
         )
 
     try:
-        authenticator_data = _describe_authenticator_data_bytes(auth_data)
-    except (cbor_parser._CborDecodingError, _LocatedError) as exc:
+        authenticator_data = auth_data_reader._describe_authenticator_data_bytes(auth_data)
+    except (cbor_parser._CborDecodingError, auth_data_reader._LocatedError) as exc:
         member = authenticator_data_findings.member_node(node, ("authData",))
         start = member["end"] - member["length"] if member and not member.get("indefinite") else 0
         path = member["path"] if member else "$"

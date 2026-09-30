@@ -3,18 +3,21 @@ import base64
 import cbor2
 import pytest
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import cbor_parser as decode_cbor_parser
+from server.app.decoder.decode import ctap as decode_ctap
+from server.app.decoder.decode import keys as decode_keys
+from server.app.decoder.decode import pipeline as decode_pipeline
 
 
 def test_decode_binary_input_prefers_hex_when_candidate_is_valid_hex():
-    decoded, encoding = decode_module._decode_binary_input("414243")
+    decoded, encoding = decode_pipeline._decode_binary_input("414243")
 
     assert decoded == b"ABC"
     assert encoding == "hex"
 
 
 def test_decode_binary_input_prefers_hex_for_ambiguous_alphabetic_payload():
-    decoded, encoding = decode_module._decode_binary_input("AAAA")
+    decoded, encoding = decode_pipeline._decode_binary_input("AAAA")
 
     assert decoded == bytes.fromhex("AAAA")
     assert encoding == "hex"
@@ -24,7 +27,7 @@ def test_decode_binary_input_accepts_base64url_without_padding():
     original = b"\xfb\xff"
     base64url_value = base64.urlsafe_b64encode(original).decode("ascii").rstrip("=")
 
-    decoded, encoding = decode_module._decode_binary_input(base64url_value)
+    decoded, encoding = decode_pipeline._decode_binary_input(base64url_value)
 
     assert decoded == original
     assert encoding == "base64url"
@@ -32,17 +35,17 @@ def test_decode_binary_input_accepts_base64url_without_padding():
 
 def test_decode_binary_input_rejects_invalid_binary_text():
     with pytest.raises(ValueError, match="Input does not appear to be valid"):
-        decode_module._decode_binary_input("g$")
+        decode_pipeline._decode_binary_input("g$")
 
 
 def test_parse_cbor_item_rejects_a_truncated_byte_string_and_keeps_its_bytes_only_when_lenient():
     # Major type 2, additional info 26 -> 4-byte length; declares 5 bytes, carries only 2.
     payload = b"\x5a\x00\x00\x00\x05\x01\x02"
 
-    with pytest.raises(decode_module._CborDecodingError, match="byte string declares 5 bytes; 2 remain"):
-        decode_module._parse_cbor_item(payload, 0)
+    with pytest.raises(decode_cbor_parser._CborDecodingError, match="byte string declares 5 bytes; 2 remain"):
+        decode_cbor_parser._parse_cbor_item(payload, 0)
 
-    node, offset, skipped = decode_module.decode_item(payload, lenient=True)
+    node, offset, skipped = decode_cbor_parser.decode_item(payload, lenient=True)
 
     assert offset == len(payload)
     assert node["majorType"] == 2
@@ -56,10 +59,10 @@ def test_parse_cbor_item_rejects_a_truncated_byte_string_and_keeps_its_bytes_onl
 
 def test_parse_cbor_item_rejects_invalid_utf8_and_keeps_its_bytes_only_when_lenient():
     payload = b"\x63\xff\xff\xff"
-    with pytest.raises(decode_module._CborDecodingError, match="text string is not valid UTF-8"):
-        decode_module._parse_cbor_item(payload, 0)
+    with pytest.raises(decode_cbor_parser._CborDecodingError, match="text string is not valid UTF-8"):
+        decode_cbor_parser._parse_cbor_item(payload, 0)
 
-    node, offset, _ = decode_module.decode_item(payload, lenient=True)
+    node, offset, _ = decode_cbor_parser.decode_item(payload, lenient=True)
 
     assert offset == len(payload)
     assert node["majorType"] == 3
@@ -70,13 +73,13 @@ def test_parse_cbor_item_rejects_invalid_utf8_and_keeps_its_bytes_only_when_leni
 
 
 def test_try_decode_cbor_returns_none_for_empty_data():
-    assert decode_module._try_decode_cbor(b"", "hex") is None
+    assert decode_ctap._try_decode_cbor(b"", "hex") is None
 
 
 def test_try_decode_cbor_reports_bytes_after_the_first_item_as_trailing():
     payload = cbor2.dumps({"a": 1}) + cbor2.dumps(2) + cbor2.dumps(3)
 
-    result = decode_module._try_decode_cbor(payload, "base64url")
+    result = decode_ctap._try_decode_cbor(payload, "base64url")
 
     assert result["format"] == "CBOR"
     assert result["inputEncoding"] == "base64url"
@@ -86,10 +89,10 @@ def test_try_decode_cbor_reports_bytes_after_the_first_item_as_trailing():
 
 def test_parse_cbor_item_rejects_break_code_outside_indefinite_container():
     with pytest.raises(
-        decode_module._CborDecodingError,
+        decode_cbor_parser._CborDecodingError,
         match=r"a break byte \(0xff\) outside an indefinite-length item",
     ):
-        decode_module._parse_cbor_item(b"\xff", 0)
+        decode_cbor_parser._parse_cbor_item(b"\xff", 0)
 
 
 def test_parse_cbor_item_rejects_non_bytes_segment_in_indefinite_byte_string():
@@ -97,10 +100,10 @@ def test_parse_cbor_item_rejects_non_bytes_segment_in_indefinite_byte_string():
     payload = b"\x5f\x61a\xff"
 
     with pytest.raises(
-        decode_module._CborDecodingError,
+        decode_cbor_parser._CborDecodingError,
         match="a chunk of an indefinite-length byte string must be a definite-length byte string",
     ):
-        decode_module._parse_cbor_item(payload, 0)
+        decode_cbor_parser._parse_cbor_item(payload, 0)
 
 
 def test_parse_cbor_item_rejects_non_text_segment_in_indefinite_text_string():
@@ -108,21 +111,21 @@ def test_parse_cbor_item_rejects_non_text_segment_in_indefinite_text_string():
     payload = b"\x7f\x41a\xff"
 
     with pytest.raises(
-        decode_module._CborDecodingError,
+        decode_cbor_parser._CborDecodingError,
         match="a chunk of an indefinite-length text string must be a definite-length text string",
     ):
-        decode_module._parse_cbor_item(payload, 0)
+        decode_cbor_parser._parse_cbor_item(payload, 0)
 
 
 def test_parse_cbor_item_rejects_an_orphan_map_key_and_keeps_completed_pairs_only_when_lenient():
     # 0xbf => indefinite map: {"a": 1, "b": <missing-value>}
     payload = b"\xbf\x61a\x01\x61b\xff"
 
-    with pytest.raises(decode_module._CborDecodingError) as caught:
-        decode_module._parse_cbor_item(payload, 0)
+    with pytest.raises(decode_cbor_parser._CborDecodingError) as caught:
+        decode_cbor_parser._parse_cbor_item(payload, 0)
     assert (caught.value.reason, caught.value.offset, caught.value.path) == ('map key "b" has no value', 4, '${"b"}')
 
-    node, offset, skipped = decode_module.decode_item(payload, lenient=True)
+    node, offset, skipped = decode_cbor_parser.decode_item(payload, lenient=True)
 
     assert node["majorType"] == 5
     assert node["type"] == "map"
@@ -139,10 +142,10 @@ def test_parse_cbor_item_rejects_an_unterminated_indefinite_array_and_keeps_its_
     # with no break byte for the outer container.
     payload = b"\x9f\x82\x01\x02"
 
-    with pytest.raises(decode_module._CborDecodingError, match="indefinite-length array has no break byte"):
-        decode_module._parse_cbor_item(payload, 0)
+    with pytest.raises(decode_cbor_parser._CborDecodingError, match="indefinite-length array has no break byte"):
+        decode_cbor_parser._parse_cbor_item(payload, 0)
 
-    node, offset, skipped = decode_module.decode_item(payload, lenient=True)
+    node, offset, skipped = decode_cbor_parser.decode_item(payload, lenient=True)
 
     assert offset == len(payload)
     assert node["majorType"] == 4
@@ -157,7 +160,7 @@ def test_parse_cbor_item_rejects_an_unterminated_indefinite_array_and_keeps_its_
 
 
 def test_try_decode_cbor_handles_ctap_prefix_without_payload():
-    result = decode_module._try_decode_cbor(b"\x01", "hex")
+    result = decode_ctap._try_decode_cbor(b"\x01", "hex")
 
     assert result is not None
     assert result["format"] == "CBOR"
@@ -170,7 +173,7 @@ def test_try_decode_cbor_handles_ctap_prefix_without_payload():
 def test_try_decode_cbor_reports_ctap_padding_bytes_as_padding():
     payload = b"\x01" + cbor2.dumps({"a": 1}) + b"\x00\xff"
 
-    result = decode_module._try_decode_cbor(payload, "base64url")
+    result = decode_ctap._try_decode_cbor(payload, "base64url")
 
     assert result["format"] == "CBOR"
     ctap = result["decoded"]["ctap"]
@@ -196,7 +199,7 @@ def test_structure_to_value_preserves_integer_map_keys():
         ],
     }
 
-    value = decode_module._structure_to_value(structure)
+    value = decode_cbor_parser._structure_to_value(structure)
 
     assert value == {1: "first", 2: "second"}
 
@@ -220,15 +223,15 @@ def test_structure_to_value_keeps_an_array_key_as_a_key_of_its_own_type():
         ],
     }
 
-    value = decode_module._structure_to_value(structure)
+    value = decode_cbor_parser._structure_to_value(structure)
 
     # Not the text "[1, 2]": a text key spelled that way stays a different key.
-    assert value == {decode_module.CborDiagnostic("[1, 2]", "array"): "value"}
-    assert decode_module._stringify_mapping_keys(value) == {"[1, 2]": "value"}
+    assert value == {decode_cbor_parser.CborDiagnostic("[1, 2]", "array"): "value"}
+    assert decode_keys.stringify_mapping_keys(value) == {"[1, 2]": "value"}
 
 
 def test_expand_cbor_value_stringifies_mapping_keys_and_summarizes_binary_values():
-    expanded = decode_module._expand_cbor_value(
+    expanded = decode_pipeline._expand_cbor_value(
         {1: b"\xaa\xbb", "nested": [b"\xcc", {2: b"\xdd"}]}
     )
 

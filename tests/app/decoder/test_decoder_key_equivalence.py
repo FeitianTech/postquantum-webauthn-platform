@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from server.app.decoder import decode_payload_text
 from server.app.decoder.decode import cbor_parser, key_equivalence
+from server.app.decoder.decode.pipeline import decode_payload_text
 
 
 def _decode(hex_text: str) -> dict:

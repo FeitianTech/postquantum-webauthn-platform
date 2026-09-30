@@ -11,7 +11,7 @@ from __future__ import annotations
 import base64
 import json
 
-from server.app.decoder import decode_payload_text
+from server.app.decoder.decode.pipeline import decode_payload_text
 
 
 def _duplicates(result: dict) -> list[dict]:

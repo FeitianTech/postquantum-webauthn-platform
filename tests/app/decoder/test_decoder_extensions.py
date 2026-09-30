@@ -15,8 +15,8 @@ import json
 import cbor2
 import pytest
 
-from server.app.decoder import decode_payload_text
 from server.app.decoder.decode import extensions
+from server.app.decoder.decode.pipeline import decode_payload_text
 from tests.app.decoder.real_vectors import (
     WEBAUTHN_L3_PACKED_SELF_ATTESTATION_OBJECT,
     WEBAUTHN_L3_PACKED_SELF_CLIENT_DATA_JSON,

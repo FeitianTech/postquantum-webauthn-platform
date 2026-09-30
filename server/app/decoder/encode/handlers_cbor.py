@@ -5,7 +5,9 @@ from collections.abc import Mapping
 from typing import Any
 
 from ..cbor_canonical import _canonical_cbor_dumps, _canonicalize_cbor_structure
-from ..decode import _binary_summary, _hex_json_safe, _stringify_mapping_keys
+from ..decode.keys import hex_json_safe as _hex_json_safe
+from ..decode.keys import stringify_mapping_keys as _stringify_mapping_keys
+from ..decode.pipeline import _binary_summary
 from . import ctap_views
 from .constants import _CTAP_FIELD_LABELS, _CTAP_PREFIX_DETAILS, _CTAP_REQUIRED_FIELDS
 from .cose_key import encode_cose_key

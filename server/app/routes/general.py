@@ -17,7 +17,8 @@ from flask import (
 
 from .. import encoding, mds_snapshot_dir
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
-from ..decoder import decode_payload_text, encode_payload_text
+from ..decoder.decode.pipeline import decode_payload_text
+from ..decoder.encode.text import encode_payload_text
 from ..mds_provisioning import (
     ensure_snapshot_available,
     follow_newer_snapshot,

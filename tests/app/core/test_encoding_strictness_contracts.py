@@ -18,7 +18,7 @@ import importlib
 
 import pytest
 
-from server.app.decoder import decode
+from server.app.decoder.decode import pipeline as decode_pipeline
 from server.app.routes import general as general_module
 from server.app.routes import simple as simple_module
 from tests.app.entry_app import entry_app
@@ -53,7 +53,7 @@ def test_decoder_rejects_plain_english_text(pipeline):
         pipeline._decode_binary_input(PLAIN_TEXT)
 
     with pytest.raises(ValueError):
-        decode.decode_payload_text(PLAIN_TEXT)
+        decode_pipeline.decode_payload_text(PLAIN_TEXT)
 
 
 def test_decoder_never_left_pads_odd_length_hex(pipeline):

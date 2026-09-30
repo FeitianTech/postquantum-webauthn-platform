@@ -14,8 +14,8 @@ import json
 
 import pytest
 
-from server.app.decoder import decode_payload_text
-from server.app.decoder.encode import encode_payload_text
+from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.encode.text import encode_payload_text
 from tests.app.decoder.real_vectors import (
     GET_ASSERTION_RESPONSE,
     MAKE_CREDENTIAL_RESPONSE,

@@ -15,8 +15,8 @@ import json
 import cbor2
 import pytest
 
-from server.app.decoder import decode_payload_text
 from server.app.decoder.decode import attestation_statement
+from server.app.decoder.decode.pipeline import decode_payload_text
 from tests.app.decoder.real_vectors import (
     ANDROID_SAFETYNET_ATT_STMT,
     ANDROID_SAFETYNET_AUTH_DATA,

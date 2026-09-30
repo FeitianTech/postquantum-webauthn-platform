@@ -11,12 +11,12 @@ from typing import Any
 import pytest
 from fido2 import cbor
 
-from server.app.decoder import decode as decode_module
-from server.app.decoder import decode_payload_text
+from server.app.decoder.decode import pipeline as decode_pipeline
+from server.app.decoder.decode.pipeline import decode_payload_text
 
 
 def _decode(hex_text: str) -> dict[str, Any]:
-    return decode_module.decode_payload_text(hex_text)
+    return decode_pipeline.decode_payload_text(hex_text)
 
 
 def _located(result: dict[str, Any]) -> list[tuple[str, int, str]]:
@@ -83,7 +83,7 @@ def test_a_duplicate_inside_a_value_the_decoded_value_drops_says_it_keeps_neithe
     ],
 )
 def test_a_lenient_read_reports_duplicates_under_keys_it_could_not_read(hex_text, decoded, located):
-    result = decode_module.decode_payload_text(hex_text.replace(" ", ""), lenient=True)
+    result = decode_pipeline.decode_payload_text(hex_text.replace(" ", ""), lenient=True)
 
     assert result["data"]["decodedValue"] == decoded
     assert [entry for entry in _located(result) if entry[0] == "duplicate-map-key"] == located

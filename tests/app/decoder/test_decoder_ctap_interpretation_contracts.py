@@ -2,7 +2,8 @@ import base64
 
 import cbor2
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import ctap as decode_ctap
+from server.app.decoder.decode import ctap_auth_data as decode_ctap_auth_data
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
 
@@ -20,7 +21,7 @@ def _auth_data_with_trailing_pairs(pairs: list[tuple[int, object]]) -> bytes:
 
 
 def test_parse_authenticator_data_bytes_returns_parse_error_for_short_payload():
-    details, trimmed, trailing = decode_module._parse_authenticator_data_bytes(b"\x00" * 10)
+    details, trimmed, trailing = decode_ctap_auth_data._parse_authenticator_data_bytes(b"\x00" * 10)
 
     assert details["parseError"].startswith("Authenticator data shorter")
     assert trimmed == b"\x00" * 10
@@ -44,7 +45,7 @@ def test_parse_authenticator_data_bytes_parses_attested_and_extension_sections_w
         + trailer
     )
 
-    details, trimmed, trailing = decode_module._parse_authenticator_data_bytes(payload)
+    details, trimmed, trailing = decode_ctap_auth_data._parse_authenticator_data_bytes(payload)
 
     assert details["rpIdHash"] == bytes(range(32)).hex()
     assert details["flags"]["AT"] is True
@@ -125,7 +126,7 @@ def test_a_make_credential_view_shows_every_member_as_sent_and_each_certificate_
 
 
 def test_a_bare_map_of_a_make_credential_request_is_shown_as_one():
-    from server.app.decoder import decode_payload_text
+    from server.app.decoder.decode.pipeline import decode_payload_text
 
     value = {
         1: b"\x11" * 32,
@@ -176,7 +177,7 @@ def test_try_decode_cbor_interprets_prefixed_get_assertion_request_payload():
     map_payload = cbor2.dumps({1: "example.com", 2: b"\x22" * 32})
     data = b"\x02" + map_payload
 
-    result = decode_module._try_decode_cbor(data, "hex")
+    result = decode_ctap._try_decode_cbor(data, "hex")
 
     assert result is not None
     assert result["format"] == "CBOR"

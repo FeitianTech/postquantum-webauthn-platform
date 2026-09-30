@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import json
 
-from server.app.decoder import decode_payload_text, edn
-from server.app.decoder.encode import encode_payload_text
+from server.app.decoder import edn
+from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.encode.text import encode_payload_text
 
 AUTH_DATA = "00" * 32 + "01" + "00000001"
 # {1: null, 2: authData, 3: h'01020304', 4: null, "note": 1}, after the SUCCESS status byte.

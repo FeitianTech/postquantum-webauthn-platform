@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import ctap as decode_ctap
 
 
 def _build_attested_auth_data(sign_count: int = 1) -> bytes:
@@ -34,7 +34,7 @@ def test_try_decode_cbor_reports_bytes_after_a_make_credential_response_and_keep
     response_map = {1: "packed", 2: auth_data, 3: {"alg": -7, "sig": b"\x01\x02"}}
     data = b"\x00" + cbor.encode(response_map) + b"\xaa\xbb\xcc\xdd"
 
-    result = decode_module._try_decode_cbor(data, "hex")
+    result = decode_ctap._try_decode_cbor(data, "hex")
 
     decoded = result["decoded"]
     assert decoded["ctap"]["kind"] == "status"
@@ -53,7 +53,7 @@ def test_try_decode_cbor_does_not_call_a_status_prefixed_auth_data_map_a_get_ass
     auth_data = _build_attested_auth_data(sign_count=3)
     data = b"\x00" + cbor.encode({"authData": auth_data}) + b"\x12\x34"
 
-    result = decode_module._try_decode_cbor(data, "hex")
+    result = decode_ctap._try_decode_cbor(data, "hex")
 
     decoded = result["decoded"]
     assert decoded["ctap"]["kind"] == "status"

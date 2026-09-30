@@ -9,7 +9,8 @@ import json
 
 import pytest
 
-from server.app.decoder import decode_payload_text, encode_payload_text
+from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.encode.text import encode_payload_text
 
 # 37 bytes of JSON text whose byte 32, "1" (0x31), is authenticator-data flags without AT or ED.
 _JSON_37 = ('"' + "z" * 31 + "1" + "zzz" + '"').encode()

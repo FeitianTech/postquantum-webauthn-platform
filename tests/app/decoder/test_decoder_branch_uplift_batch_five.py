@@ -5,12 +5,13 @@ import base64
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import ctap_auth_data as decode_ctap_auth_data
+from server.app.decoder.decode import response as decode_response
 
 
 def test_parse_authenticator_data_bytes_reports_truncated_attested_data_instead_of_dropping_it():
     truncated_payload = b"\x00" * 32 + bytes([AuthenticatorData.FLAG.AT]) + (1).to_bytes(4, "big")
-    details, trimmed, trailing = decode_module._parse_authenticator_data_bytes(truncated_payload)
+    details, trimmed, trailing = decode_ctap_auth_data._parse_authenticator_data_bytes(truncated_payload)
     assert details["attestedCredentialData"] == {
         "parseError": "Attested credential data truncated: it needs at least 18 bytes, 0 remain."
     }
@@ -25,7 +26,7 @@ def test_parse_authenticator_data_bytes_reports_truncated_attested_data_instead_
         + (4).to_bytes(2, "big")
         + b"AB"
     )
-    mismatch = decode_module._parse_authenticator_data_bytes(mismatch_payload)[0]["attestedCredentialData"]
+    mismatch = decode_ctap_auth_data._parse_authenticator_data_bytes(mismatch_payload)[0]["attestedCredentialData"]
     assert mismatch["lengthMismatch"] is True
     assert mismatch["parseError"] == "The credential ID declares 4 bytes; 2 remain."
     assert "credentialPublicKey" not in mismatch
@@ -42,7 +43,7 @@ def test_parse_authenticator_data_bytes_shows_a_cose_key_that_is_not_well_formed
         + b"\xa1"
     )
 
-    details, trimmed, trailing = decode_module._parse_authenticator_data_bytes(payload_with_bad_cose)
+    details, trimmed, trailing = decode_ctap_auth_data._parse_authenticator_data_bytes(payload_with_bad_cose)
 
     attested = details["attestedCredentialData"]
     assert attested["credentialPublicKey"] == "a1"
@@ -61,25 +62,25 @@ def test_parse_authenticator_data_bytes_reads_extensions_and_reports_bytes_after
         + (3).to_bytes(4, "big")
         + cbor.encode(7)
     )
-    details, _, trailing = decode_module._parse_authenticator_data_bytes(extension_payload)
+    details, _, trailing = decode_ctap_auth_data._parse_authenticator_data_bytes(extension_payload)
     assert details["extensions"] == 7
     assert trailing == b""
 
-    details, trimmed, trailing = decode_module._parse_authenticator_data_bytes(extension_payload + b"\x99")
+    details, trimmed, trailing = decode_ctap_auth_data._parse_authenticator_data_bytes(extension_payload + b"\x99")
     assert details["extensions"] == 7
     assert trimmed == extension_payload
     assert trailing == b"\x99"
 
 
 def test_attestation_entry_and_payload_helpers_cover_remaining_edges():
-    assert decode_module._convert_attestation_entry("not-mapping") == {}
+    assert decode_response._convert_attestation_entry("not-mapping") == {}
 
     cert_bytes = b"\x30\x82\x01\x00"
     cert_payload = {
         "raw": cert_bytes.hex(),
         "derBase64": base64.b64encode(cert_bytes).decode("ascii"),
     }
-    converted_attestation = decode_module._convert_attestation_entry(
+    converted_attestation = decode_response._convert_attestation_entry(
         {
             "details": {
                 "cbor": {"fmt": "packed"},
@@ -91,10 +92,10 @@ def test_attestation_entry_and_payload_helpers_cover_remaining_edges():
     assert converted_attestation["fmt"] == "packed"
     assert converted_attestation["attStmt"]["x5c"]
 
-    assert decode_module._build_flag_payload(None, None, auth_byte_length=20) == {}
-    assert decode_module._build_flag_payload({"value": "bad"}, None) == {}
+    assert decode_response._build_flag_payload(None, None, auth_byte_length=20) == {}
+    assert decode_response._build_flag_payload({"value": "bad"}, None) == {}
 
-    credential_payload = decode_module._build_credential_payload(
+    credential_payload = decode_response._build_credential_payload(
         {
             "credentialId": {"hex": "aa", "length": "len-as-text"},
             "publicKey": {},

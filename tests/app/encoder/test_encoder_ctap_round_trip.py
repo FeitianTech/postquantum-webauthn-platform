@@ -14,8 +14,9 @@ import pytest
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
-from server.app.decoder import decode_payload_text, encode_payload_text
-from server.app.decoder import encode as encode_module
+from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.encode import ctap_fields as encode_ctap_fields
+from server.app.decoder.encode.text import encode_payload_text
 
 _AUTH_DATA = bytes(AuthenticatorData.create(hashlib.sha256(b"example.com").digest(), 0x05, 7))
 
@@ -75,10 +76,10 @@ def test_the_expanded_json_alone_encodes_back_to_the_same_bytes(kind):
 
 
 def test_a_numbered_key_matches_a_field_only_under_that_fields_name():
-    assert encode_module._ctap_key_matches("1 (rpId)", {"1", "rpid", "1 (rpid)"}) is True
-    assert encode_module._ctap_key_matches("1 (rpId)", {"1", "fmt", "1 (fmt)"}) is False
-    assert encode_module._ctap_key_matches("5 (rpId)", {"1", "rpid", "1 (rpid)"}) is False
-    assert encode_module._ctap_key_matches("2 (authData trailing)", {"2", "authdata", "2 (authdata)"}) is False
+    assert encode_ctap_fields._ctap_key_matches("1 (rpId)", {"1", "rpid", "1 (rpid)"}) is True
+    assert encode_ctap_fields._ctap_key_matches("1 (rpId)", {"1", "fmt", "1 (fmt)"}) is False
+    assert encode_ctap_fields._ctap_key_matches("5 (rpId)", {"1", "rpid", "1 (rpid)"}) is False
+    assert encode_ctap_fields._ctap_key_matches("2 (authData trailing)", {"2", "authdata", "2 (authdata)"}) is False
 
 
 def test_the_message_ctap_decoded_names_is_the_one_its_members_are_read_as():

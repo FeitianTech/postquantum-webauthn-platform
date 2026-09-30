@@ -3,16 +3,18 @@ from __future__ import annotations
 import pytest
 from fido2.utils import ByteBuffer
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import ctap as decode_ctap
 from server.app.decoder.decode import json_input
+from server.app.decoder.decode import keys as decode_keys
+from server.app.decoder.decode import pipeline as decode_pipeline
 
 
 def test_extract_ctap_prefix_handles_empty_command_status_and_unknown_codes():
-    prefix, remaining = decode_module._extract_ctap_prefix(b"")
+    prefix, remaining = decode_ctap._extract_ctap_prefix(b"")
     assert prefix is None
     assert remaining == b""
 
-    prefix, remaining = decode_module._extract_ctap_prefix(b"\x01\xaa\xbb")
+    prefix, remaining = decode_ctap._extract_ctap_prefix(b"\x01\xaa\xbb")
     assert prefix == {
         "code": 1,
         "codeHex": "0x01",
@@ -22,7 +24,7 @@ def test_extract_ctap_prefix_handles_empty_command_status_and_unknown_codes():
     }
     assert remaining == b"\xaa\xbb"
 
-    prefix, remaining = decode_module._extract_ctap_prefix(b"\x00\xcc")
+    prefix, remaining = decode_ctap._extract_ctap_prefix(b"\x00\xcc")
     assert prefix == {
         "code": 0,
         "codeHex": "0x00",
@@ -32,24 +34,24 @@ def test_extract_ctap_prefix_handles_empty_command_status_and_unknown_codes():
     }
     assert remaining == b"\xcc"
 
-    prefix, remaining = decode_module._extract_ctap_prefix(b"\x7f\xdd")
+    prefix, remaining = decode_ctap._extract_ctap_prefix(b"\x7f\xdd")
     assert prefix is None
     assert remaining == b"\x7f\xdd"
 
 
 def test_is_padding_bytes_distinguishes_padding_from_content():
-    assert decode_module._is_padding_bytes(b"") is True
-    assert decode_module._is_padding_bytes(b"\x00\xff\x00") is True
-    assert decode_module._is_padding_bytes(b"\x00\x01\xff") is False
+    assert decode_ctap._is_padding_bytes(b"") is True
+    assert decode_ctap._is_padding_bytes(b"\x00\xff\x00") is True
+    assert decode_ctap._is_padding_bytes(b"\x00\x01\xff") is False
 
 
 def test_key_identity_names_the_cbor_type_of_a_key():
-    assert decode_module._key_identity(7) == ("int", 7)
-    assert decode_module._key_identity(True) == ("bool", True)
-    assert decode_module._key_identity("7") == ("text", "7")
-    assert decode_module._key_identity(b"\x07") == ("bytes", b"\x07")
-    assert decode_module._key_identity(ByteBuffer(b"\x07")) == ("bytes", b"\x07")
-    assert decode_module._key_identity(1.5) == ("other", 1.5)
+    assert decode_keys.key_identity(7) == ("int", 7)
+    assert decode_keys.key_identity(True) == ("bool", True)
+    assert decode_keys.key_identity("7") == ("text", "7")
+    assert decode_keys.key_identity(b"\x07") == ("bytes", b"\x07")
+    assert decode_keys.key_identity(ByteBuffer(b"\x07")) == ("bytes", b"\x07")
+    assert decode_keys.key_identity(1.5) == ("other", 1.5)
 
 
 def test_get_mapping_entry_matches_keys_by_exact_type_and_missing_sentinel():
@@ -59,22 +61,22 @@ def test_get_mapping_entry_matches_keys_by_exact_type_and_missing_sentinel():
         "custom": "custom-key",
     }
 
-    assert decode_module._get_mapping_entry(mapping, 1) == "int-key"
-    assert decode_module._get_mapping_entry(mapping, "1") is decode_module._MISSING
-    assert decode_module._get_mapping_entry(mapping, True) is decode_module._MISSING
-    assert decode_module._get_mapping_entry(mapping, 2) is decode_module._MISSING
-    assert decode_module._get_mapping_entry(mapping, b"\x02") == "bytes-key"
-    assert decode_module._get_mapping_entry(mapping, "missing", "custom") == "custom-key"
-    assert decode_module._get_mapping_entry(mapping, "does-not-exist") is decode_module._MISSING
-    assert decode_module._get_mapping_entry([1, 2, 3], 1) is decode_module._MISSING
+    assert decode_keys.get_mapping_entry(mapping, 1) == "int-key"
+    assert decode_keys.get_mapping_entry(mapping, "1") is decode_keys.MISSING
+    assert decode_keys.get_mapping_entry(mapping, True) is decode_keys.MISSING
+    assert decode_keys.get_mapping_entry(mapping, 2) is decode_keys.MISSING
+    assert decode_keys.get_mapping_entry(mapping, b"\x02") == "bytes-key"
+    assert decode_keys.get_mapping_entry(mapping, "missing", "custom") == "custom-key"
+    assert decode_keys.get_mapping_entry(mapping, "does-not-exist") is decode_keys.MISSING
+    assert decode_keys.get_mapping_entry([1, 2, 3], 1) is decode_keys.MISSING
 
 
 def test_coerce_cbor_bytes_supports_supported_binary_types():
-    assert decode_module._coerce_cbor_bytes(ByteBuffer(b"abc")) == b"abc"
-    assert decode_module._coerce_cbor_bytes(b"abc") == b"abc"
-    assert decode_module._coerce_cbor_bytes(bytearray(b"abc")) == b"abc"
-    assert decode_module._coerce_cbor_bytes(memoryview(b"abc")) == b"abc"
-    assert decode_module._coerce_cbor_bytes("abc") is None
+    assert decode_keys.coerce_cbor_bytes(ByteBuffer(b"abc")) == b"abc"
+    assert decode_keys.coerce_cbor_bytes(b"abc") == b"abc"
+    assert decode_keys.coerce_cbor_bytes(bytearray(b"abc")) == b"abc"
+    assert decode_keys.coerce_cbor_bytes(memoryview(b"abc")) == b"abc"
+    assert decode_keys.coerce_cbor_bytes("abc") is None
 
 
 def test_stringify_and_hex_helpers_convert_nested_values():
@@ -83,28 +85,28 @@ def test_stringify_and_hex_helpers_convert_nested_values():
         "buf": ByteBuffer(b"\xcc"),
     }
 
-    stringified = decode_module._stringify_mapping_keys(payload)
+    stringified = decode_keys.stringify_mapping_keys(payload)
     assert sorted(stringified.keys()) == ["1", "buf"]
     assert stringified["1"][0] == b"\xaa"
 
-    hex_only = decode_module._make_hex_only(payload)
+    hex_only = decode_keys.make_hex_only(payload)
     assert hex_only == {
         "1": ["aa", {"x": "bb"}],
         "buf": "cc",
     }
-    assert decode_module._hex_json_safe(payload) == hex_only
+    assert decode_keys.hex_json_safe(payload) == hex_only
 
 
 def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, pipeline, response):
     with pytest.raises(ValueError, match="Decoder input is empty"):
-        decode_module.decode_payload_text("   ")
+        decode_pipeline.decode_payload_text("   ")
 
     monkeypatch.setattr(pipeline, "_read_json", lambda _v, **_kwargs: ({"a": 1}, []))
     monkeypatch.setattr(
         pipeline, "_decode_json_object", lambda value, raw_text=None, **_kwargs: {"kind": "json", "raw": raw_text, "value": value}
     )
     monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"wrapped": result})
-    assert decode_module.decode_payload_text(" {\"a\": 1} ") == {
+    assert decode_pipeline.decode_payload_text(" {\"a\": 1} ") == {
         "wrapped": {"kind": "json", "raw": '{"a": 1}', "value": {"a": 1}, "decodeMode": "strict"}
     }
 
@@ -112,7 +114,7 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, p
     monkeypatch.setattr(pipeline, "_looks_like_pem", lambda _v: True)
     monkeypatch.setattr(pipeline, "_decode_pem_certificates", lambda _v: {"kind": "pem"})
     monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"pem": result})
-    assert decode_module.decode_payload_text("-----BEGIN CERTIFICATE-----") == {
+    assert decode_pipeline.decode_payload_text("-----BEGIN CERTIFICATE-----") == {
         "pem": {"kind": "pem", "decodeMode": "strict"}
     }
 
@@ -124,10 +126,10 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, p
         lambda data, encoding, lenient=False: {"kind": "bin", "data": data, "encoding": encoding, "lenient": lenient},
     )
     monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"bin": result})
-    assert decode_module.decode_payload_text("0102") == {
+    assert decode_pipeline.decode_payload_text("0102") == {
         "bin": {"kind": "bin", "data": b"\x01\x02", "encoding": "hex", "lenient": False, "decodeMode": "strict"}
     }
-    assert decode_module.decode_payload_text("0102", lenient=True)["bin"]["lenient"] is True
+    assert decode_pipeline.decode_payload_text("0102", lenient=True)["bin"]["lenient"] is True
 
 
 def test_decode_json_object_handles_client_data_and_plain_json(monkeypatch, pipeline):
@@ -135,7 +137,7 @@ def test_decode_json_object_handles_client_data_and_plain_json(monkeypatch, pipe
     monkeypatch.setattr(pipeline, "_is_client_data_dict", lambda _v: True)
     monkeypatch.setattr(pipeline, "_build_client_data_details", lambda value, raw_text=None: {"built": value, "raw": raw_text})
 
-    client_result = decode_module._decode_json_object({"type": "webauthn.get"}, raw_text="raw-json")
+    client_result = decode_pipeline._decode_json_object({"type": "webauthn.get"}, raw_text="raw-json")
     assert client_result == {
         "format": "WebAuthn client data (JSON)",
         "inputEncoding": "json",
@@ -143,7 +145,7 @@ def test_decode_json_object_handles_client_data_and_plain_json(monkeypatch, pipe
     }
 
     monkeypatch.setattr(pipeline, "_is_client_data_dict", lambda _v: False)
-    plain_result = decode_module._decode_json_object([1, 2, 3])
+    plain_result = decode_pipeline._decode_json_object([1, 2, 3])
     assert plain_result == {
         "format": "JSON",
         "inputEncoding": "json",
@@ -162,7 +164,7 @@ def test_decode_public_key_credential_uses_rawid_and_extension_fallbacks(monkeyp
         "response": {"other": "value"},
     }
 
-    result = decode_module._decode_public_key_credential(credential, raw_text="{\"x\":1}")
+    result = decode_pipeline._decode_public_key_credential(credential, raw_text="{\"x\":1}")
 
     assert result["format"] == "PublicKeyCredential"
     assert result["inputEncoding"] == "json"
@@ -180,9 +182,9 @@ def test_decode_binary_field_handles_invalid_inputs(monkeypatch, pipeline):
         "_decode_binary_input",
         lambda _value: (_ for _ in ()).throw(ValueError("bad")),
     )
-    assert decode_module._decode_binary_field("bad") is None
-    assert decode_module._decode_binary_field(memoryview(b"abc")) == (b"abc", "binary")
-    assert decode_module._decode_binary_field(123) is None
+    assert decode_pipeline._decode_binary_field("bad") is None
+    assert decode_pipeline._decode_binary_field(memoryview(b"abc")) == (b"abc", "binary")
+    assert decode_pipeline._decode_binary_field(123) is None
 
 
 def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(monkeypatch, pipeline):
@@ -191,7 +193,7 @@ def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(m
     monkeypatch.setattr(pipeline, "_decode_pem_certificates", lambda _text: {"format": "X.509 certificate (PEM)", "decoded": {"pem": True}})
     monkeypatch.setattr(pipeline, "_binary_summary", lambda _data, _encoding=None: {"hex": "616263"})
 
-    pem_result = decode_module._decode_binary_payload(b"abc", "base64url")
+    pem_result = decode_pipeline._decode_binary_payload(b"abc", "base64url")
     assert pem_result["format"] == "X.509 certificate (PEM)"
     assert pem_result["inputEncoding"] == "base64url"
     assert pem_result["binary"] == {"hex": "616263"}
@@ -200,7 +202,7 @@ def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(m
     monkeypatch.setattr(pipeline, "_read_json", lambda _text, **_kwargs: ({"k": 1}, []))
     monkeypatch.setattr(pipeline, "_is_client_data_dict", lambda _obj: False)
 
-    json_result = decode_module._decode_binary_payload(b"abc", "hex")
+    json_result = decode_pipeline._decode_binary_payload(b"abc", "hex")
     assert json_result == {
         "format": "JSON (binary)",
         "inputEncoding": "hex",
@@ -216,4 +218,4 @@ def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(m
     # What nothing else claims is read as CBOR. Bytes that are not CBOR fail,
     # saying where, instead of coming back as an unexplained "Binary data".
     with pytest.raises(ValueError, match=r"offset 0 \(\$\): byte string declares 8 bytes; 1 remain"):
-        decode_module._decode_binary_payload(b"\x48\xaa", "hex")
+        decode_pipeline._decode_binary_payload(b"\x48\xaa", "hex")

@@ -11,13 +11,13 @@ from typing import Any
 
 from fido2 import cbor
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import pipeline as decode_pipeline
 
 CLIENT_DATA_HASH = bytes(range(32))
 
 
 def _decode(data: bytes) -> dict[str, Any]:
-    return decode_module.decode_payload_text(data.hex())
+    return decode_pipeline.decode_payload_text(data.hex())
 
 
 def _authenticator_data() -> bytes:

@@ -22,8 +22,10 @@ import json
 import pytest
 from hypothesis import event, example, given, settings
 
-from server.app.decoder import decode_payload_text, edn, encode_payload_text
+from server.app.decoder import edn
 from server.app.decoder.decode.cbor_parser import decode_item
+from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.encode.text import encode_payload_text
 
 from .. import cbor_items, codec_corpus
 

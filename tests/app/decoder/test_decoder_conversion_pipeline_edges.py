@@ -4,7 +4,8 @@ import json
 
 import cbor2
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import pipeline as decode_pipeline
+from server.app.decoder.decode import response as decode_response
 
 
 def _b64url(data: bytes) -> str:
@@ -33,7 +34,7 @@ def _build_attestation_and_auth_data() -> tuple[bytes, bytes]:
 
 
 def test_build_decoder_payload_for_cbor_deduplicates_qualifiers_and_normalizes_malformed():
-    payload = decode_module._build_decoder_payload(
+    payload = decode_response._build_decoder_payload(
         {
             "format": "CBOR",
             "decoded": {
@@ -58,11 +59,11 @@ def test_build_decoder_payload_for_cbor_deduplicates_qualifiers_and_normalizes_m
 
 
 def test_convert_result_to_data_covers_json_cbor_and_fallback_paths():
-    assert decode_module._convert_result_to_data("JSON", {"decoded": {"a": 1}}) == {
+    assert decode_response._convert_result_to_data("JSON", {"decoded": {"a": 1}}) == {
         "json": {"a": 1}
     }
 
-    cbor_payload = decode_module._convert_result_to_data(
+    cbor_payload = decode_response._convert_result_to_data(
         "CBOR",
         {
             "decoded": {
@@ -78,7 +79,7 @@ def test_convert_result_to_data_covers_json_cbor_and_fallback_paths():
     assert "decodedValue" in cbor_payload
     assert cbor_payload["ctap"]["code"] == 2
 
-    fallback = decode_module._convert_result_to_data(
+    fallback = decode_response._convert_result_to_data(
         "Unknown type",
         {"decoded": None, "binary": {"hex": "aabb"}},
     )
@@ -118,7 +119,7 @@ def test_convert_public_key_credential_and_attestation_object_data_paths():
         }
     }
 
-    converted_public = decode_module._convert_result_to_data("PublicKeyCredential", public_key_result)
+    converted_public = decode_response._convert_result_to_data("PublicKeyCredential", public_key_result)
     assert converted_public["credential"]["type"] == "public-key"
     assert converted_public["attestationObject"]["fmt"] == "none"
     assert converted_public["clientExtensionResults"]["credProps"]["rk"] is True
@@ -140,7 +141,7 @@ def test_convert_public_key_credential_and_attestation_object_data_paths():
         "binary": {"base64": attestation_b64},
     }
 
-    converted_attestation = decode_module._convert_result_to_data("Attestation object", attestation_result)
+    converted_attestation = decode_response._convert_result_to_data("Attestation object", attestation_result)
     assert converted_attestation["attestationObject"]["raw"] == attestation_b64
     assert converted_attestation["extensions"]["credProps"]["rk"] is True
     assert converted_attestation["authenticatorData"]["counter"] == 2
@@ -157,7 +158,7 @@ def test_convert_authenticator_clientdata_and_certificate_result_paths():
         },
         "binary": {"hex": auth_data_bytes.hex()},
     }
-    converted_auth = decode_module._convert_result_to_data("Authenticator data", auth_result)
+    converted_auth = decode_response._convert_result_to_data("Authenticator data", auth_result)
     assert converted_auth["raw"] == auth_data_bytes.hex()
     assert converted_auth["counter"] == 2
 
@@ -169,7 +170,7 @@ def test_convert_authenticator_clientdata_and_certificate_result_paths():
             "crossOrigin": True,
         }
     }
-    converted_client = decode_module._convert_result_to_data("WebAuthn client data", client_result)
+    converted_client = decode_response._convert_result_to_data("WebAuthn client data", client_result)
     assert converted_client["type"] == "webauthn.get"
     assert converted_client["crossOrigin"] is True
 
@@ -184,7 +185,7 @@ def test_convert_authenticator_clientdata_and_certificate_result_paths():
             ]
         }
     }
-    converted_certificate = decode_module._convert_result_to_data(
+    converted_certificate = decode_response._convert_result_to_data(
         "X.509 certificate", certificate_result
     )
     assert converted_certificate["certificates"]
@@ -192,7 +193,7 @@ def test_convert_authenticator_clientdata_and_certificate_result_paths():
 
 
 def test_prepare_decoder_response_and_detector_helpers():
-    prepared = decode_module._prepare_decoder_response(
+    prepared = decode_response._prepare_decoder_response(
         {
             "format": "JSON",
             "decoded": {"ok": True},
@@ -206,16 +207,16 @@ def test_prepare_decoder_response_and_detector_helpers():
         "type": "public-key",
         "response": {"clientDataJSON": _b64url(b"{}")},
     }
-    assert decode_module._is_public_key_credential(credential_candidate) is True
-    assert decode_module._is_public_key_credential({"response": {}}) is False
+    assert decode_pipeline._is_public_key_credential(credential_candidate) is True
+    assert decode_pipeline._is_public_key_credential({"response": {}}) is False
 
     client_data_candidate = {
         "type": "webauthn.create",
         "challenge": "AQID",
         "origin": "https://example.com",
     }
-    assert decode_module._is_client_data_dict(client_data_candidate) is True
-    assert decode_module._is_client_data_dict({"type": "x", "challenge": "AQID"}) is False
+    assert decode_pipeline._is_client_data_dict(client_data_candidate) is True
+    assert decode_pipeline._is_client_data_dict({"type": "x", "challenge": "AQID"}) is False
 
 
 def test_decode_payload_text_json_public_key_credential_and_cbor_roundtrip():
@@ -238,7 +239,7 @@ def test_decode_payload_text_json_public_key_credential_and_cbor_roundtrip():
         },
     }
 
-    decoded_credential = decode_module.decode_payload_text(json.dumps(credential))
+    decoded_credential = decode_pipeline.decode_payload_text(json.dumps(credential))
     assert decoded_credential["success"] is True
     assert decoded_credential["type"] == "PublicKeyCredential"
     assert decoded_credential["data"]["attestationObject"]["fmt"] in {
@@ -247,7 +248,7 @@ def test_decode_payload_text_json_public_key_credential_and_cbor_roundtrip():
     }
 
     cbor_payload = cbor2.dumps({1: b"\x00" * 32, 2: "example.com"})
-    decoded_cbor = decode_module.decode_payload_text(_b64url(cbor_payload))
+    decoded_cbor = decode_pipeline.decode_payload_text(_b64url(cbor_payload))
     assert decoded_cbor["success"] is True
     assert decoded_cbor["type"].startswith("CBOR")
     assert "decodedValue" in decoded_cbor["data"]

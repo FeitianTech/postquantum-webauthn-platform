@@ -25,7 +25,7 @@ import pytest
 from hypothesis import event, given, settings
 from hypothesis import strategies as st
 
-from server.app.decoder import decode_payload_text
+from server.app.decoder.decode.pipeline import decode_payload_text
 from server.app.factory import create_app
 
 from .. import codec_corpus, ctap_messages

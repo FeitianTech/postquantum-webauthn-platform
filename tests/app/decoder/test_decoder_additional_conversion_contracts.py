@@ -7,7 +7,9 @@ import json
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import authenticator_data as decode_authenticator_data
+from server.app.decoder.decode import pipeline as decode_pipeline
+from server.app.decoder.decode import response as decode_response
 
 
 def _build_auth_data_bytes() -> bytes:
@@ -38,7 +40,7 @@ def test_describe_client_data_from_bytes_success_and_collected_client_data_fallb
     }
     payload = json.dumps(raw_json).encode("utf-8")
 
-    success = decode_module._describe_client_data_from_bytes(payload)
+    success = decode_pipeline._describe_client_data_from_bytes(payload)
     assert success["type"] == "webauthn.create"
     assert success["origin"] == "https://example.com"
     assert success["crossOrigin"] is False
@@ -49,14 +51,14 @@ def test_describe_client_data_from_bytes_success_and_collected_client_data_fallb
             raise ValueError("broken collected client data")
 
     monkeypatch.setattr(pipeline, "CollectedClientData", _BrokenClientData)
-    fallback = decode_module._describe_client_data_from_bytes(payload)
+    fallback = decode_pipeline._describe_client_data_from_bytes(payload)
     assert fallback["type"] == "webauthn.create"
     assert fallback["challenge"]["raw"] == "AQID"
 
 
 def test_describe_authenticator_data_bytes_includes_flags_and_attested_credential_details():
     auth_bytes = _build_auth_data_bytes()
-    details = decode_module._describe_authenticator_data_bytes(auth_bytes)
+    details = decode_authenticator_data._describe_authenticator_data_bytes(auth_bytes)
 
     assert details["rpIdHash"]["hex"] == hashlib.sha256(b"example.com").hexdigest()
     assert details["flags"]["userPresent"] is True
@@ -82,14 +84,14 @@ def test_convert_attestation_statement_and_certificate_chain_paths(monkeypatch, 
             "x5c": [b"\x01\x02", "AQI=", {"derBase64": "AQI="}],
         }
     }
-    statement = decode_module._convert_attestation_statement(details)
+    statement = decode_response._convert_attestation_statement(details)
 
     assert statement["alg"] == -7
     assert len(statement["x5c"]) == 3
     assert statement["x5c"][0]["raw"] == "0102"
     assert "parsedX5c" in statement["x5c"][1]
 
-    cbor_fallback = decode_module._convert_attestation_statement(
+    cbor_fallback = decode_response._convert_attestation_statement(
         {"cbor": {"attStmt": {"sig": b"\xaa"}}}
     )
     assert cbor_fallback["sig"] == "aa"
@@ -97,7 +99,7 @@ def test_convert_attestation_statement_and_certificate_chain_paths(monkeypatch, 
 
 def test_build_authenticator_payload_flag_and_credential_helpers_cover_fallback_paths():
     auth_bytes = _build_auth_data_bytes()
-    payload = decode_module._build_authenticator_data_payload(auth_bytes, {}, fallback_alg=-7)
+    payload = decode_response._build_authenticator_data_payload(auth_bytes, {}, fallback_alg=-7)
 
     assert payload["raw"] == auth_bytes.hex()
     assert payload["flags"]["UP"] is True
@@ -105,8 +107,8 @@ def test_build_authenticator_payload_flag_and_credential_helpers_cover_fallback_
     assert payload["counter"] == 9
     assert payload["credential"]["publicKey"]["alg"] == "ES256 (ECDSA)"
 
-    assert decode_module._build_flag_payload(None, None, auth_byte_length=12) == {}
-    mapped_flags = decode_module._build_flag_payload(
+    assert decode_response._build_flag_payload(None, None, auth_byte_length=12) == {}
+    mapped_flags = decode_response._build_flag_payload(
         {
             "value": 0x45,
             "bitfield": "0b01000101",
@@ -124,7 +126,7 @@ def test_build_authenticator_payload_flag_and_credential_helpers_cover_fallback_
     assert mapped_flags["UP"] is True
     assert mapped_flags["AT"] is True
 
-    credential_only = decode_module._build_credential_payload(
+    credential_only = decode_response._build_credential_payload(
         {
             "aaguid": "00112233-4455-6677-8899-aabbccddeeff",
             "aaguidHex": "00112233445566778899aabbccddeeff",
@@ -139,7 +141,7 @@ def test_build_authenticator_payload_flag_and_credential_helpers_cover_fallback_
 
 
 def test_client_data_entry_response_extras_and_base_type_helpers():
-    converted_client_data = decode_module._convert_client_data_entry(
+    converted_client_data = decode_response._convert_client_data_entry(
         {
             "details": {
                 "type": "webauthn.get",
@@ -153,7 +155,7 @@ def test_client_data_entry_response_extras_and_base_type_helpers():
     assert converted_client_data["challenge"] == "AQID"
     assert converted_client_data["crossOrigin"] == 1
 
-    extras = decode_module._collect_response_extras(
+    extras = decode_response._collect_response_extras(
         {
             "signature": b"\x01\x02",
             "userHandle": None,
@@ -165,5 +167,5 @@ def test_client_data_entry_response_extras_and_base_type_helpers():
     assert "signature" in extras
     assert extras["publicKeyAlgorithm"] == -7
 
-    assert decode_module._base_type("CBOR (GetAssertion response)") == "CBOR"
-    assert decode_module._base_type(None) == "Decoded data"
+    assert decode_response._base_type("CBOR (GetAssertion response)") == "CBOR"
+    assert decode_response._base_type(None) == "Decoded data"

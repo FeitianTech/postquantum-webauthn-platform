@@ -13,7 +13,9 @@ from typing import Any
 
 from ..cbor_canonical import _canonical_cbor_dumps, _canonicalize_cbor_structure
 from ..ctap_message import read_members
-from ..decode import _binary_summary, _hex_json_safe, _stringify_mapping_keys
+from ..decode.keys import hex_json_safe as _hex_json_safe
+from ..decode.keys import stringify_mapping_keys as _stringify_mapping_keys
+from ..decode.pipeline import _binary_summary
 from . import ctap_framing
 from .handlers_basic import _prepare_encoder_response
 

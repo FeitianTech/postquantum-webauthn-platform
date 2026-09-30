@@ -1,11 +1,14 @@
 import pytest
 
-from server.app.decoder import encode as encode_module
+from server.app.decoder import cbor_canonical
+from server.app.decoder.encode import binary_extract as encode_binary_extract
+from server.app.decoder.encode import ctap_encode as encode_ctap_encode
+from server.app.decoder.encode import ctap_fields as encode_ctap_fields
 
 
 def test_ctap_request_and_response_encoders_raise_for_missing_required_fields():
     with pytest.raises(ValueError, match="requires pubKeyCredParams"):
-        encode_module._encode_make_credential_request(
+        encode_ctap_encode._encode_make_credential_request(
             {
                 "clientDataHash": "00",
                 "rp": {"id": "example.com"},
@@ -14,7 +17,7 @@ def test_ctap_request_and_response_encoders_raise_for_missing_required_fields():
         )
 
     with pytest.raises(ValueError, match="non-empty string"):
-        encode_module._encode_get_assertion_request(
+        encode_ctap_encode._encode_get_assertion_request(
             {
                 "rpId": "",
                 "clientDataHash": "00",
@@ -22,7 +25,7 @@ def test_ctap_request_and_response_encoders_raise_for_missing_required_fields():
         )
 
     with pytest.raises(ValueError, match="non-empty string"):
-        encode_module._encode_make_credential_response(
+        encode_ctap_encode._encode_make_credential_response(
             {
                 "fmt": "",
                 "authData": "00",
@@ -30,7 +33,7 @@ def test_ctap_request_and_response_encoders_raise_for_missing_required_fields():
         )
 
     with pytest.raises(ValueError, match="Unable to interpret authData"):
-        encode_module._encode_get_assertion_response(
+        encode_ctap_encode._encode_get_assertion_response(
             {
                 "signature": "00",
             }
@@ -39,25 +42,25 @@ def test_ctap_request_and_response_encoders_raise_for_missing_required_fields():
 
 def test_ctap_support_helpers_raise_expected_errors():
     with pytest.raises(ValueError, match="must be an array"):
-        encode_module._encode_allow_list("not-a-list")
+        encode_ctap_fields._encode_allow_list("not-a-list")
 
     with pytest.raises(ValueError, match="must be a boolean"):
-        encode_module._ensure_bool(5, "flag")
+        encode_ctap_fields._ensure_bool(5, "flag")
 
 
 def test_canonical_integer_and_length_helpers_reject_invalid_values():
     with pytest.raises(ValueError, match="non-negative"):
-        encode_module._encode_major_type_with_length(2, -1)
+        cbor_canonical._encode_major_type_with_length(2, -1)
 
     with pytest.raises(ValueError, match="non-negative"):
-        encode_module._encode_unsigned_integer(2, -1)
+        cbor_canonical._encode_unsigned_integer(2, -1)
 
     with pytest.raises(ValueError, match="64 bits"):
-        encode_module._encode_unsigned_integer(2, 1 << 80)
+        cbor_canonical._encode_unsigned_integer(2, 1 << 80)
 
 
 def test_cbor_simple_value_encoder_type_and_range_guards():
-    encoder = encode_module._CanonicalCBOREncoder()
+    encoder = cbor_canonical._CanonicalCBOREncoder()
 
     class _BadSimple:
         def __init__(self, value):
@@ -80,4 +83,4 @@ def test_extract_generic_binary_payload_recursive_failure_path():
     }
 
     with pytest.raises(ValueError, match="Unable to extract binary payload"):
-        encode_module._extract_generic_binary_payload(payload)
+        encode_binary_extract._extract_generic_binary_payload(payload)

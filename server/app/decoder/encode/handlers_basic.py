@@ -6,10 +6,8 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from ...json_values import make_json_safe
-from ..decode import (
-    _binary_summary,
-    _stringify_mapping_keys,
-)
+from ..decode.keys import stringify_mapping_keys as _stringify_mapping_keys
+from ..decode.pipeline import _binary_summary
 from .binary_extract import (
     _determine_pem_label,
     _extract_generic_binary_payload,

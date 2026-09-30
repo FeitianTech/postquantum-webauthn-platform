@@ -3,7 +3,8 @@ import hashlib
 
 import cbor2
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import binary as decode_binary
+from server.app.decoder.decode import response as decode_response
 
 
 def _build_authenticator_data_bytes() -> bytes:
@@ -42,7 +43,7 @@ def _build_attestation_object_bytes() -> tuple[bytes, bytes]:
 
 def test_build_authenticator_data_payload_falls_back_to_raw_bytes_when_details_absent():
     auth_bytes = _build_authenticator_data_bytes()
-    payload = decode_module._build_authenticator_data_payload(auth_bytes, None, fallback_alg=-7)
+    payload = decode_response._build_authenticator_data_payload(auth_bytes, None, fallback_alg=-7)
 
     assert payload["rpIdHash"] == hashlib.sha256(b"example.com").hexdigest()
     assert payload["flags"]["UP"] is True
@@ -57,7 +58,7 @@ def test_extract_authenticator_bytes_from_attestation_parses_valid_object_and_ha
     attestation_bytes, auth_data_bytes = _build_attestation_object_bytes()
     attestation_entry = {"raw": base64.b64encode(attestation_bytes).decode("ascii")}
 
-    extracted = decode_module._extract_authenticator_bytes_from_attestation(attestation_entry)
+    extracted = decode_binary._extract_authenticator_bytes_from_attestation(attestation_entry)
     assert extracted == auth_data_bytes
 
-    assert decode_module._extract_authenticator_bytes_from_attestation({"raw": "%%%%"}) is None
+    assert decode_binary._extract_authenticator_bytes_from_attestation({"raw": "%%%%"}) is None

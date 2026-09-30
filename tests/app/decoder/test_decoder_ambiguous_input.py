@@ -11,8 +11,8 @@ import json
 
 import pytest
 
-from server.app.decoder import decode_payload_text
 from server.app.decoder.decode import ambiguous_input
+from server.app.decoder.decode.pipeline import decode_payload_text
 
 
 def _ambiguity(result: dict) -> list[tuple[str, str]]:

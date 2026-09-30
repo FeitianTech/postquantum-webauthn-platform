@@ -4,11 +4,12 @@ import base64
 
 import cbor2
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import binary as decode_binary
+from server.app.decoder.decode import response as decode_response
 
 
 def test_build_credential_payload_covers_length_string_and_empty_public_key_payload():
-    payload = decode_module._build_credential_payload(
+    payload = decode_response._build_credential_payload(
         {
             "credentialId": {
                 "hex": "aabb",
@@ -26,7 +27,7 @@ def test_build_credential_payload_covers_length_string_and_empty_public_key_payl
 
 
 def test_binary_extractors_and_authenticator_fallback_paths(monkeypatch, binary):
-    assert decode_module._extract_hex_from_binary({"binary": {"hex": "aabb"}}) == "aabb"
+    assert decode_binary._extract_hex_from_binary({"binary": {"hex": "aabb"}}) == "aabb"
 
     monkeypatch.setattr(
         binary,
@@ -35,7 +36,7 @@ def test_binary_extractors_and_authenticator_fallback_paths(monkeypatch, binary)
     )
 
     assert (
-        decode_module._extract_authenticator_bytes(
+        decode_binary._extract_authenticator_bytes(
             {
                 "attestationObject": {
                     "raw": base64.b64encode(cbor2.dumps({"authData": b"\x00" * 37})).decode("ascii")

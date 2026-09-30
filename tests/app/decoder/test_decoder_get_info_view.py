@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import json
 
-from server.app.decoder import decode_payload_text, edn, encode_payload_text
+from server.app.decoder import edn
+from server.app.decoder.decode.pipeline import decode_payload_text
+from server.app.decoder.encode.text import encode_payload_text
 
 # SUCCESS, then {1: ["FIDO_2_0"], 3: aaguid, 4: {"rk": true}, 99: 2, "1": 1}.
 _GET_INFO = "00" + edn.encode('{1: ["FIDO_2_0"], 3: h\'' + "00" * 16 + '\', 4: {"rk": true}, 99: 2, "1": 1}').hex()

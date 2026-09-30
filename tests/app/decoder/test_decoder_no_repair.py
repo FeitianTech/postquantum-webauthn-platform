@@ -16,7 +16,7 @@ from typing import Any
 import pytest
 from fido2 import cbor
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import pipeline as decode_pipeline
 
 # The "Credential Creation ES256 Output" dump from CBOR_hexcode.txt (ce03e270).
 ES256_MAKE_CREDENTIAL_DUMP = (
@@ -40,7 +40,7 @@ ES256_GET_ASSERTION_DUMP = (
 
 
 def _decode(text: str) -> dict[str, Any]:
-    return decode_module.decode_payload_text(text)
+    return decode_pipeline.decode_payload_text(text)
 
 
 def _walk_items(value: Any):
@@ -112,7 +112,7 @@ def test_the_get_assertion_dump_with_a_lost_byte_fails_where_it_runs_out():
     # pieces: the decode fails at the last byte, saying which item ran out.
 
     with pytest.raises(ValueError) as caught:
-        decode_module.decode_payload_text(ES256_GET_ASSERTION_DUMP)
+        decode_pipeline.decode_payload_text(ES256_GET_ASSERTION_DUMP)
 
     assert caught.value.offset == len(ES256_GET_ASSERTION_DUMP) // 2 - 1
     assert caught.value.path.startswith("${h'3045022100aad84e")

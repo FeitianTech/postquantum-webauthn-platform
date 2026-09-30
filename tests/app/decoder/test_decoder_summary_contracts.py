@@ -2,7 +2,8 @@ import base64
 
 import cbor2
 
-from server.app.decoder import decode as decode_module
+from server.app.decoder.decode import binary as decode_binary
+from server.app.decoder.decode import response as decode_response
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
 
@@ -41,7 +42,7 @@ def test_build_decoder_payload_cbor_adds_unique_qualifiers_and_ctap_sections():
         },
     }
 
-    payload = decode_module._build_decoder_payload(result)
+    payload = decode_response._build_decoder_payload(result)
 
     assert payload["success"] is True
     assert payload["type"].startswith("CBOR (")
@@ -72,7 +73,7 @@ def test_convert_attestation_entry_injects_certificate_when_x5c_is_empty():
         },
     }
 
-    converted = decode_module._convert_attestation_entry(entry)
+    converted = decode_response._convert_attestation_entry(entry)
 
     assert converted["fmt"] == "packed"
     assert converted["attStmt"]["sig"] == "0102"
@@ -102,7 +103,7 @@ def test_build_authenticator_data_payload_uses_bytes_and_details_to_build_creden
         },
     }
 
-    payload = decode_module._build_authenticator_data_payload(auth_bytes, details, -7)
+    payload = decode_response._build_authenticator_data_payload(auth_bytes, details, -7)
 
     assert payload["rpIdHash"] == bytes(range(32)).hex()
     assert payload["counter"] == 5
@@ -114,8 +115,8 @@ def test_build_authenticator_data_payload_uses_bytes_and_details_to_build_creden
 
 
 def test_extract_bytes_from_binary_prefers_hex_and_then_base64url_raw():
-    assert decode_module._extract_bytes_from_binary({"hex": "AA BB"}) == b"\xaa\xbb"
+    assert decode_binary._extract_bytes_from_binary({"hex": "AA BB"}) == b"\xaa\xbb"
 
     raw_value = base64.urlsafe_b64encode(b"\x01\x02\x03").decode("ascii").rstrip("=")
-    assert decode_module._extract_bytes_from_binary({"raw": raw_value}) == b"\x01\x02\x03"
-    assert decode_module._extract_bytes_from_binary({"raw": ""}) is None
+    assert decode_binary._extract_bytes_from_binary({"raw": raw_value}) == b"\x01\x02\x03"
+    assert decode_binary._extract_bytes_from_binary({"raw": ""}) is None
