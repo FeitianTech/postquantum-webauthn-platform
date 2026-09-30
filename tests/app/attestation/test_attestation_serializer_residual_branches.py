@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import uuid
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
 from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
 
-from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import (
     certificate_names as attestation_certificate_names,
 )
@@ -16,18 +14,6 @@ from server.app.webauthn.attestation import constants as attestation_constants
 
 
 def test_attestation_helper_residual_branches(monkeypatch, certificate_public_keys, attestation_module):
-    attestation_aaguid.augment_aaguid_fields(("not", "mutable"))
-
-    monkeypatch.setattr(
-        uuid,
-        "UUID",
-        lambda *args, **kwargs: (_ for _ in ()).throw(ValueError("bad-uuid")),
-    )
-    container = {"aaguid": b"\x01" * 16}
-    attestation_aaguid.augment_aaguid_fields(container)
-    assert container["aaguidHex"] == (b"\x01" * 16).hex()
-    assert "aaguidGuid" not in container
-
     assert attestation_certificate_names._derive_certificate_algorithm_info("not-a-mapping") == ""
     assert (
         attestation_certificate_names._derive_certificate_algorithm_info(

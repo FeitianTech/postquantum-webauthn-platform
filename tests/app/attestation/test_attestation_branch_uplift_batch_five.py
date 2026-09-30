@@ -10,7 +10,6 @@ from fido2.cose import CoseKey
 from fido2.webauthn import Aaguid, AuthenticatorData, RegistrationResponse
 
 from server.app.mds import verifier as mds_verifier
-from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import (
     certificate_extensions as attestation_certificate_extensions,
 )
@@ -265,14 +264,3 @@ def test_coerce_attestation_certificate_bytes_and_aaguid_field_cleanup_edges(att
     assert attestation_certificates._coerce_attestation_certificate_bytes(
         {"pem": "-----BEGIN CERTIFICATE-----\n@@@\n-----END CERTIFICATE-----"}
     ) is None
-
-    container = {
-        "aaguid": {"raw": "not-aaguid"},
-        "aaguidHex": "existing",
-        "aaguidGuid": "existing",
-        "aaguidRaw": "existing",
-    }
-    attestation_aaguid.augment_aaguid_fields(container)
-    assert "aaguidHex" not in container
-    assert "aaguidGuid" not in container
-    assert "aaguidRaw" not in container

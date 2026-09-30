@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import math
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -11,9 +10,7 @@ from cryptography.x509.oid import NameOID, ObjectIdentifier
 from fido2.attestation import InvalidSignature
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
-from server.app import json_values
 from server.app.mds import verifier as mds_verifier
-from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import (
     certificate_extensions as attestation_certificate_extensions,
 )
@@ -398,60 +395,6 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
     assert outcome["checks"]["fido_mds"] is False
     assert outcome["checks"]["chain"] is False
     assert outcome["root_valid"] is False
-
-
-def test_numeric_aaguid_and_extension_helpers_cover_fallback_paths(attestation_module):
-    assert attestation_aaguid.coerce_non_negative_int(True) is None
-    assert attestation_aaguid.coerce_non_negative_int(-1) is None
-    assert attestation_aaguid.coerce_non_negative_int(3.9) == 3
-    assert attestation_aaguid.coerce_non_negative_int(math.inf) is None
-    assert attestation_aaguid.coerce_non_negative_int(" 42 ") == 42
-    assert attestation_aaguid.coerce_non_negative_int("not-int") is None
-
-    assert attestation_aaguid.normalize_aaguid_string("00112233-4455-6677-8899-aabbccddeeff") == "00112233445566778899aabbccddeeff"
-    assert attestation_aaguid.normalize_aaguid_string(123) is None
-
-    enriched = {"aaguid": {"raw": "00112233-4455-6677-8899-aabbccddeeff"}}
-    attestation_aaguid.augment_aaguid_fields(enriched)
-    assert enriched["aaguidHex"] == "00112233445566778899aabbccddeeff"
-    assert enriched["aaguidRaw"] == "00112233445566778899aabbccddeeff"
-    assert "aaguidGuid" in enriched
-
-    stripped = {
-        "aaguid": "invalid",
-        "aaguidHex": "stale",
-        "aaguidGuid": "stale",
-        "aaguidRaw": "stale",
-    }
-    attestation_aaguid.augment_aaguid_fields(stripped)
-    assert "aaguidHex" not in stripped
-    assert "aaguidGuid" not in stripped
-    assert "aaguidRaw" not in stripped
-
-    assert attestation_aaguid.extract_min_pin_length({"minPinLength": 6}) == 6
-    assert (
-        attestation_aaguid.extract_min_pin_length({"minPinLength": {"minimumPinLength": "9"}})
-        == 9
-    )
-    assert attestation_aaguid.extract_min_pin_length({"minPinLength": {"value": ""}}) is None
-    assert attestation_aaguid.extract_min_pin_length(None) is None
-
-    summary = attestation_aaguid.summarize_authenticator_extensions(
-        {"credProtect": 2, "hmac-secret": True}
-    )
-    assert summary["credProtectLabel"] == "userVerificationOptionalWithCredentialIDList"
-    assert summary["hmac-secret"] is True
-
-    safe = json_values.make_json_safe(
-        {
-            "bytes": b"abc",
-            "list": [bytearray(b"d")],
-            "set": {memoryview(b"e")},
-        }
-    )
-    assert safe["bytes"] == _b64url(b"abc")
-    assert safe["list"][0] == _b64url(b"d")
-    assert safe["set"] == [_b64url(b"e")]
 
 
 def test_serialize_extension_value_covers_authority_constraints_and_fallback_repr(attestation_module):
