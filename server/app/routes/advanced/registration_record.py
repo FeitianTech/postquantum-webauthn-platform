@@ -388,7 +388,7 @@ def _relying_party_info(
         "registrationData": {
             "authenticatorData": authenticator_data_hex,
             "authenticatorDataHash": authenticator_data_hash,
-            "clientExtensionResults": credentials.convert_bytes_for_json(client_extension_results),
+            "clientExtensionResults": attestation.make_json_safe(client_extension_results),
             "flags": facts.flags,
             "signatureCounter": auth_data.counter,
             "attestationChecks": attestation_checks_safe,
@@ -492,8 +492,8 @@ def _stored_credential(
     user_handle_b64url = encode_base64url(user_handle)
     user_handle_b64 = encode_base64(user_handle)
 
-    stored_properties = credentials.convert_bytes_for_json(credential_info.get("properties", {}))
-    stored_extensions = credentials.convert_bytes_for_json(client_extension_results)
+    stored_properties = attestation.make_json_safe(credential_info.get("properties", {}))
+    stored_extensions = attestation.make_json_safe(client_extension_results)
     public_key_b64, public_key_b64url = _public_key_encodings(auth_data)
 
     stored_credential: dict[str, Any] = {
@@ -520,11 +520,11 @@ def _stored_credential(
         "createdAt": credential_info["registration_time"],
         "clientExtensionOutputs": stored_extensions,
         "attestationFormat": attestation_format,
-        "attestationStatement": credentials.convert_bytes_for_json(attestation_statement),
-        "attestationObject": credentials.convert_bytes_for_json(credential_info.get("attestation_object")),
+        "attestationStatement": attestation.make_json_safe(attestation_statement),
+        "attestationObject": attestation.make_json_safe(credential_info.get("attestation_object")),
         "authenticatorData": authenticator_data_hex,
         "authenticatorDataHash": authenticator_data_hash,
-        "clientDataJSON": credentials.convert_bytes_for_json(credential_info.get("client_data_json")),
+        "clientDataJSON": attestation.make_json_safe(credential_info.get("client_data_json")),
         "relyingParty": attestation.make_json_safe(rp_info),
         "properties": stored_properties,
         "registrationResponse": credential_info.get("registration_response"),
@@ -534,6 +534,6 @@ def _stored_credential(
         "userHandleHex": user_handle.hex(),
     }
 
-    return credentials.convert_bytes_for_json(
+    return attestation.make_json_safe(
         {k: v for k, v in stored_credential.items() if v is not None}
     )

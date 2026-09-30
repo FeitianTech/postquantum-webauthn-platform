@@ -31,7 +31,7 @@ from ...challenge_registry import (
 from ...encoding import encode_base64url
 from ...storage import credentials
 from ...storage.common import InvalidStorageIdentifier
-from ...webauthn import attestation, metadata
+from ...webauthn import metadata
 from ...webauthn.sign_count import SIGN_COUNT_REGRESSED, sign_count_status
 from .. import binary_helpers
 from . import binary, parsing
@@ -71,7 +71,7 @@ def authenticate_begin():
     options_payload = dict(options)
     # The ceremony state (and therefore the challenge) stays server-side.
 
-    return jsonify(attestation.make_json_safe(options_payload))
+    return jsonify(options_payload)
 
 
 def _challenge_rejection_message(replayed: bool) -> str:

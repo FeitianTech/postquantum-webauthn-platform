@@ -8,6 +8,7 @@ callers of *this module* see, not what the fragments call.
 """
 from __future__ import annotations
 
+from ... import json_values
 from .. import signature_algorithms
 from . import (
     aaguid,
@@ -54,7 +55,7 @@ der_octet_string_content = formatting.der_octet_string_content
 encode_base64url = formatting.encode_base64url
 format_hex_bytes_lines = formatting.format_hex_bytes_lines
 format_hex_string_lines = formatting.format_hex_string_lines
-make_json_safe = formatting.make_json_safe
+make_json_safe = json_values.make_json_safe
 
 # X.509 name and signature-algorithm helpers.
 _derive_certificate_algorithm_info = certificate_names._derive_certificate_algorithm_info

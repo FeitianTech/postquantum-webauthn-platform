@@ -102,6 +102,7 @@ def advanced_authenticate_begin():
         "resident_count": sum(1 for entry in serialized_credentials if entry.get("resident")),
     }
 
+    # The extensions may hold bytes (prf's eval inputs).
     return jsonify(attestation.make_json_safe(_begin_payload(options, resident_key_only)))
 
 

@@ -272,28 +272,6 @@ def test_safe_cbor_decode_wraps_non_mapping_values_under_value_key():
     assert decoded == {"value": ["a", "b"]}
 
 
-def test_json_safe_converts_nested_bytes_datetime_and_uuid():
-    timestamp = datetime(2026, 4, 3, 12, 34, 56, 123456, tzinfo=timezone.utc)
-    test_uuid = uuid.UUID("7701a390-8b53-4ce0-bf7c-b331569b8d1a")
-
-    converted = device_logs._json_safe(
-        {
-            "raw": b"\x01\x02",
-            "list": [bytearray(b"\x03"), memoryview(b"\x04")],
-            "uuid": test_uuid,
-            "time": timestamp,
-        }
-    )
-
-    assert converted["raw"] == device_logs.to_b64url(b"\x01\x02")
-    assert converted["list"] == [
-        device_logs.to_b64url(b"\x03"),
-        device_logs.to_b64url(b"\x04"),
-    ]
-    assert converted["uuid"] == str(test_uuid)
-    assert converted["time"] == "2026-04-03T12:34:56Z"
-
-
 def test_log_path_sanitizes_folder_and_formats_timestamp(monkeypatch):
     monkeypatch.setattr(device_logs, "random_shortid", lambda length=8: "path01")
 

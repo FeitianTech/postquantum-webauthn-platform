@@ -80,17 +80,8 @@ def test_local_readkey_returns_empty_for_content_that_is_not_json(storage_local)
     assert storage.readkey("alice", session_id="session-a") == []
 
 
-def test_convert_bytes_and_public_key_material_helpers(storage_local):
+def test_public_key_material_helper(storage_local):
     storage, _ = storage_local
-
-    converted = storage.convert_bytes_for_json(
-        {
-            "raw": b"\x01\x02",
-            "nested": [bytearray(b"\x03"), memoryview(b"\x04")],
-        }
-    )
-    assert converted["raw"] == "AQI"
-    assert converted["nested"] == ["Aw", "BA"]
 
     target = {}
     public_key = {1: "type-a", 3: -7, -1: b"\xAA\xBB"}

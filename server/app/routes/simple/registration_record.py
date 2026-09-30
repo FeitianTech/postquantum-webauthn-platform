@@ -266,7 +266,7 @@ def _relying_party_info(
     rp_registration_data = {
         "authenticatorData": ctx["authenticator_data_hex"],
         "authenticatorDataHash": ctx["authenticator_data_hash"],
-        "clientExtensionResults": credentials.convert_bytes_for_json(ctx["client_extension_results"]),
+        "clientExtensionResults": attestation.make_json_safe(ctx["client_extension_results"]),
         "flags": ctx["flags_dict"],
         "signatureCounter": getattr(ctx["auth_data"], "counter", 0),
         "attestationChecks": ctx["attestation_checks_safe"],
@@ -381,11 +381,11 @@ def build_stored_credential_context(ctx: dict[str, Any]) -> None:
         "publicKeyAlgorithm": ctx["credential_info"].get("publicKeyAlgorithm") or ctx["algo"],
         "signCount": getattr(ctx["auth_data"], "counter", 0),
         "createdAt": ctx["credential_info"]["registration_time"],
-        "clientExtensionOutputs": credentials.convert_bytes_for_json(ctx["client_extension_results"]),
+        "clientExtensionOutputs": attestation.make_json_safe(ctx["client_extension_results"]),
         "attestationFormat": ctx["attestation_format"],
-        "attestationStatement": credentials.convert_bytes_for_json(ctx["attestation_statement"]),
-        "properties": credentials.convert_bytes_for_json(ctx["credential_properties"]),
-        "publicKeyCose": credentials.convert_bytes_for_json(ctx["cose_public_key"]),
+        "attestationStatement": attestation.make_json_safe(ctx["attestation_statement"]),
+        "properties": attestation.make_json_safe(ctx["credential_properties"]),
+        "publicKeyCose": attestation.make_json_safe(ctx["cose_public_key"]),
         "publicKeyBytes": encode_base64url(ctx["public_key_bytes"]),
         "authenticatorAttachment": ctx["authenticator_attachment_response"],
         "clientDataJSON": ctx["credential_info"].get("client_data_json"),
@@ -406,7 +406,7 @@ def build_register_complete_response_payload(ctx: dict[str, Any]) -> dict[str, A
         "status": "OK",
         "algo": ctx["algoname"],
         **ctx["debug_info"],
-        "storedCredential": credentials.convert_bytes_for_json(ctx["stored_credential"]),
+        "storedCredential": attestation.make_json_safe(ctx["stored_credential"]),
         "relyingParty": ctx["rp_info"],
     }
     if ctx["warnings"]:

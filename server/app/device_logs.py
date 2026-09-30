@@ -6,7 +6,7 @@ import os
 import secrets
 import threading
 import uuid
-from collections.abc import Mapping, MutableMapping, Sequence
+from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -21,6 +21,7 @@ from .github_client import (
     github_upload_json,
     is_logging_enabled,
 )
+from .json_values import make_json_safe
 
 __all__ = [
     "RegistrationEvent",
@@ -84,22 +85,6 @@ def uuid_bytes_to_str(value: bytes | None) -> str:
     return to_b64url(value)
 
 
-def _json_safe(obj: Any) -> Any:
-    """Recursively convert objects to JSON-safe representations."""
-
-    if isinstance(obj, (bytes, bytearray, memoryview)):
-        return to_b64url(bytes(obj))
-    if isinstance(obj, datetime):
-        return obj.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-    if isinstance(obj, uuid.UUID):
-        return str(obj)
-    if isinstance(obj, Mapping):
-        return {str(key): _json_safe(value) for key, value in obj.items()}
-    if isinstance(obj, Sequence) and not isinstance(obj, (str, bytes, bytearray)):
-        return [_json_safe(item) for item in obj]
-    return obj
-
-
 def safe_cbor_decode(data: bytes | str) -> Mapping[str, Any]:
     """Decode a CBOR payload into JSON-safe data.
 
@@ -122,7 +107,7 @@ def safe_cbor_decode(data: bytes | str) -> Mapping[str, Any]:
     except Exception:
         return {"error": "decode_failed"}
 
-    json_safe = _json_safe(decoded)
+    json_safe = make_json_safe(decoded, string_keys=True)
     if isinstance(json_safe, Mapping):
         return json_safe
     return {"value": json_safe}

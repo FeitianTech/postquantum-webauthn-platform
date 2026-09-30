@@ -198,4 +198,5 @@ def advanced_register_begin():
     if warnings:
         response_payload["warnings"] = warnings
 
+    # The extensions may hold bytes (prf's eval inputs).
     return jsonify(attestation.make_json_safe(response_payload))

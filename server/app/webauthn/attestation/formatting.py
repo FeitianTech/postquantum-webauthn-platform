@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any
-
 from cryptography.hazmat import asn1
-from fido2.utils import ByteBuffer
 
 from ... import encoding
 
@@ -36,14 +32,3 @@ def der_octet_string_content(data: bytes) -> bytes:
 def encode_base64url(data: bytes) -> str:
     """Encode bytes as unpadded base64url."""
     return encoding.encode_base64url(data)
-
-
-def make_json_safe(value: Any) -> Any:
-    """Recursively convert bytes-like WebAuthn option values into JSON-friendly data."""
-    if isinstance(value, (bytes, bytearray, memoryview, ByteBuffer)):
-        return encode_base64url(bytes(value))
-    if isinstance(value, Mapping):
-        return {key: make_json_safe(val) for key, val in value.items()}
-    if isinstance(value, (list, tuple, set)):
-        return [make_json_safe(item) for item in value]
-    return value

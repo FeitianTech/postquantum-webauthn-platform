@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import logging
 from collections.abc import Mapping, MutableMapping
 from typing import Any
@@ -278,7 +279,8 @@ def register_begin():
     # server-side session only.
     public_key_options = options_dict.get("publicKey")
     if isinstance(public_key_options, MutableMapping):
-        session["simple_register_public_key"] = attestation.make_json_safe(public_key_options)
+        # A copy: the parameters below are filtered in place.
+        session["simple_register_public_key"] = copy.deepcopy(public_key_options)
     else:
         session.pop("simple_register_public_key", None)
 
@@ -303,4 +305,4 @@ def register_begin():
                     allowed_params.append({"type": "public-key", "alg": alg})
             public_key_options["pubKeyCredParams"] = allowed_params
 
-    return jsonify(attestation.make_json_safe(options_dict))
+    return jsonify(options_dict)
