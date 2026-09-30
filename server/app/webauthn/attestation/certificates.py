@@ -148,6 +148,8 @@ def _public_key_view(certificate: Any, cert_bytes: bytes) -> tuple[Any, dict[str
         )
     else:
         public_key_info = certificate_public_keys._serialize_public_key_info(public_key)
+        if public_key_info.get("mechanismFamily") == "ML-DSA":
+            fallback_public_key_summary = certificate_public_keys._mldsa_key_summary(public_key_info)
     return public_key, public_key_info, fallback_public_key_summary
 
 

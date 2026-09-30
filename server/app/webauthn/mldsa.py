@@ -20,6 +20,7 @@ __all__ = [
     "describe_mldsa_oid",
     "describe_mldsa_oid_name",
     "extract_certificate_public_key_info",
+    "key_parameter_set",
     "parameter_details",
     "with_raw_public_key",
 ]
@@ -47,6 +48,23 @@ PUBLIC_KEY_TYPES: tuple[type, ...] = (
     mldsa.MLDSA65PublicKey,
     mldsa.MLDSA87PublicKey,
 )
+
+
+_KEY_PARAMETER_SETS: dict[type, str] = {
+    mldsa.MLDSA44PublicKey: "ML-DSA-44",
+    mldsa.MLDSA65PublicKey: "ML-DSA-65",
+    mldsa.MLDSA87PublicKey: "ML-DSA-87",
+}
+
+
+def key_parameter_set(public_key: Any) -> tuple[str, str] | None:
+    """An ML-DSA public key's parameter set and its algorithm OID; None for any other key."""
+
+    for key_type, parameter_set in _KEY_PARAMETER_SETS.items():
+        if isinstance(public_key, key_type):
+            oid = next(oid for oid, name in _OID_TO_PARAMETER_SET.items() if name == parameter_set)
+            return parameter_set, oid
+    return None
 
 
 def parameter_details(parameter_set: str | None) -> dict[str, int]:

@@ -277,3 +277,31 @@ def test_an_issuer_whose_key_does_not_load_is_refused():
 
     with pytest.raises(ValueError, match="Unsupported issuer key"):
         chain.verify_certificate_chain([leaf, off_curve])
+
+
+# -- the certificate views ------------------------------------------------------
+
+
+@pytest.mark.parametrize(("label", "key_cls", "key_len", "sig_len", "oid"), PARAMETER_SETS)
+def test_a_certificates_mldsa_key_is_shown_with_its_parameter_set_and_raw_key(label, key_cls, key_len, sig_len, oid):
+    from server.app.encoding import encode_base64
+    from server.app.webauthn.attestation import serialize_attestation_certificate
+
+    der = mldsa_helpers.certificate(label)
+    raw = x509.load_der_x509_certificate(der).public_key().public_bytes_raw()
+
+    view = serialize_attestation_certificate(der)
+    info = view["publicKeyInfo"]
+
+    assert info["type"] == "ML-DSA"
+    assert info["mechanismName"] == label
+    assert info["keySize"] == key_len * 8
+    assert info["publicKeyBase64"] == encode_base64(raw)
+    assert info["algorithm"] == {
+        "name": "ML-DSA",
+        "oid": oid,
+        "mlDsaParameterSet": label,
+        "claimedNistLevel": mldsa_info.parameter_details(label)["claimed_nist_level"],
+        "signatureLengthBytes": sig_len,
+    }
+    assert f"ML-DSA parameter set: {label}" in view["summary"]

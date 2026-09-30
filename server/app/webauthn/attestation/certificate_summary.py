@@ -15,6 +15,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, rsa
 from cryptography.x509.oid import ExtensionOID
 
+from ..mldsa import PUBLIC_KEY_TYPES
 from . import certificate_names, formatting, trust
 
 
@@ -26,7 +27,7 @@ def _public_key_entries(public_key: Any, fallback_public_key_summary: Sequence[t
     """Label/value pairs for the key: the loadable types' own, else the best-effort summary."""
 
     pk_summary_entries: list[tuple[str, Any]] = []
-    if public_key is None:
+    if public_key is None or isinstance(public_key, PUBLIC_KEY_TYPES):
         pk_summary_entries.extend(fallback_public_key_summary)
     elif isinstance(public_key, ec.EllipticCurvePublicKey):
         pk_summary_entries.append(("Type", "ECC"))

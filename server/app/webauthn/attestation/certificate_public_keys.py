@@ -1,9 +1,10 @@
 """How the certificate views describe a certificate's public key.
 
 ``_serialize_public_key_info`` covers the key types cryptography loads (EC, RSA,
-Ed25519, Ed448; anything else by class name). ``_build_unknown_public_key_info``
-is the best effort for a key it will not load, read from the SubjectPublicKeyInfo
-by ``mldsa``, with ML-DSA's parameter set, NIST level and sizes.
+Ed25519, Ed448, ML-DSA with its parameter set, NIST level, sizes and raw key;
+anything else by class name). ``_build_unknown_public_key_info`` is the best
+effort for a key it will not load, read from the SubjectPublicKeyInfo by
+``mldsa``, in the same fields.
 """
 from __future__ import annotations
 
@@ -14,7 +15,11 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, rsa
 
 from ...encoding import encode_base64
-from ..mldsa import extract_certificate_public_key_info
+from ..mldsa import (
+    extract_certificate_public_key_info,
+    key_parameter_set,
+    parameter_details,
+)
 from . import formatting
 
 
@@ -138,6 +143,33 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> tuple
     return info, summary_entries
 
 
+def _mldsa_key_info(public_key: Any, parameter_set: str, oid: str) -> dict[str, Any]:
+    """An ML-DSA key in the fields ``_build_unknown_public_key_info`` gives one."""
+
+    details = parameter_details(parameter_set)
+    raw = public_key.public_bytes_raw()
+    return {
+        "type": "ML-DSA",
+        "keySize": len(raw) * 8,
+        "algorithm": {
+            "name": "ML-DSA",
+            "oid": oid,
+            "mlDsaParameterSet": parameter_set,
+            "claimedNistLevel": details["claimed_nist_level"],
+            "signatureLengthBytes": details["signature_length"],
+        },
+        "mechanismName": parameter_set,
+        "mechanismFamily": "ML-DSA",
+        "publicKeyBase64": encode_base64(raw),
+        "publicKeyHex": formatting.colon_hex(raw),
+        "publicKeyHexLines": formatting.format_hex_bytes_lines(raw),
+    }
+
+
+def _mldsa_key_summary(info: Mapping[str, Any]) -> list[tuple[str, Any]]:
+    return _unknown_key_summary(info, info["algorithm"], info["keySize"])
+
+
 def _serialize_public_key_info(public_key: Any) -> dict[str, Any]:
     info = {
         "type": public_key.__class__.__name__,
@@ -153,7 +185,10 @@ def _serialize_public_key_info(public_key: Any) -> dict[str, Any]:
         },
     }
 
-    if isinstance(public_key, ec.EllipticCurvePublicKey):
+    mldsa_key = key_parameter_set(public_key)
+    if mldsa_key is not None:
+        info.update(_mldsa_key_info(public_key, *mldsa_key))
+    elif isinstance(public_key, ec.EllipticCurvePublicKey):
         curve_name = getattr(public_key.curve, "name", "unknown")
         info.update(
             {
