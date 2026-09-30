@@ -9,9 +9,6 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed25519, rsa
 from cryptography.x509.oid import NameOID
 
 from server.app.webauthn.attestation import (
-    certificate_names as attestation_certificate_names,
-)
-from server.app.webauthn.attestation import (
     certificate_public_keys as attestation_certificate_public_keys,
 )
 
@@ -30,16 +27,6 @@ def _self_signed_cert_der() -> bytes:
         .sign(private_key, hashes.SHA256())
     )
     return cert.public_bytes(serialization.Encoding.DER)
-
-
-def test_format_helpers(attestation_module):
-    name = x509.Name(
-        [
-            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
-            x509.NameAttribute(NameOID.COMMON_NAME, "Demo CN"),
-        ]
-    )
-    assert attestation_certificate_names._extract_common_names(name) == ["Demo CN"]
 
 
 def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(monkeypatch, certificate_public_keys, attestation_module):

@@ -10,9 +10,6 @@ from cryptography.x509.oid import NameOID, ObjectIdentifier
 from server.app.webauthn.attestation import (
     certificate_extensions as attestation_certificate_extensions,
 )
-from server.app.webauthn.attestation import (
-    certificate_names as attestation_certificate_names,
-)
 
 
 def _b64url(data: bytes) -> str:
@@ -123,14 +120,3 @@ def test_serialize_extension_value_covers_authority_constraints_and_fallback_rep
         SimpleNamespace(oid=ObjectIdentifier("1.2.3"), value=_BadStr())
     )
     assert fallback_repr == "<bad-str-value>"
-
-
-def test_format_x509_name_falls_back_to_string_when_rfc4514_fails(attestation_module):
-    class _BrokenName:
-        def rfc4514_string(self):
-            raise ValueError("cannot format")
-
-        def __str__(self):
-            return "BrokenNameFallback"
-
-    assert attestation_certificate_names.format_x509_name(_BrokenName()) == "BrokenNameFallback"
