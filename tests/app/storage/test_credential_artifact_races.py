@@ -184,7 +184,7 @@ def _merge_in_a_process(root, key, start):
     os.environ.pop("FIDO_SERVER_GCS_ENABLED", None)
     from server.app import credential_artifacts as child
 
-    child._ARTIFACT_DIR = root
+    os.environ["FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR"] = root
     # The read a merge extends: slowed so that, without the lock, the two merges'
     # read-then-write windows overlap and one update is lost.
     read = child._record_to_merge_into
@@ -205,7 +205,7 @@ def _merge_in_a_process(root, key, start):
 
 def test_two_processes_merging_one_artifact_keep_both_updates(monkeypatch, tmp_path):
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
-    monkeypatch.setattr(artifacts, "_ARTIFACT_DIR", str(tmp_path))
+    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", str(tmp_path))
     monkeypatch.setattr(artifacts, "_using_gcs", lambda: False)
     assert artifacts.store_credential_artifact(STORAGE_ID, ORIGINAL, session_id=SESSION)
 
@@ -225,7 +225,7 @@ def test_two_processes_merging_one_artifact_keep_both_updates(monkeypatch, tmp_p
 
 
 def test_a_local_delete_takes_the_record_lock_only_when_there_is_a_record(monkeypatch, tmp_path):
-    monkeypatch.setattr(artifacts, "_ARTIFACT_DIR", str(tmp_path))
+    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", str(tmp_path))
     monkeypatch.setattr(artifacts, "_using_gcs", lambda: False)
 
     assert artifacts.delete_credential_artifact_with_status("absent-id", session_id=SESSION) == "absent"

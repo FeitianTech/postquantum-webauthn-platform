@@ -14,7 +14,7 @@ def metadata_local_env(monkeypatch, tmp_path, metadata_state, session_store, app
     session_dir = tmp_path / "session-metadata"
     session_dir.mkdir()
 
-    monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(session_dir))
+    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(session_dir))
 
     monkeypatch.setattr(session_store, "gcs_enabled", lambda: False)
     monkeypatch.setattr(session_store, "_using_gcs", lambda: False)

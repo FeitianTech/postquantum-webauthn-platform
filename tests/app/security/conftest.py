@@ -32,9 +32,8 @@ def advanced_module():
 
 def _session_metadata_in(tmp_path, monkeypatch) -> None:
     # A ceremony creates the caller's metadata session directory.
-    from server.app.storage import session_metadata
 
-    monkeypatch.setattr(session_metadata, "SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
+    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
 
 
 @pytest.fixture

@@ -175,7 +175,8 @@ their exports or sentences. A new surface splits its logic out here first.
   `session_cookie.py`, `security_headers.py` (the strict CSP and the Trusted Types report-only
   policy, both reporting to `/api/csp-report`; `FIDO_SERVER_CONTENT_SECURITY_POLICY` replaces
   the enforced policy), `origins.py`, `attestation_trust.py`, `mds.py`, `relying_party.py`,
-  `paths.py` (project, runtime and instance roots), `request_limits.py` (8 MiB, the metadata
+  `paths.py` (the project and instance roots; `store_dir`: every local store under
+  `instance/`, its setting read when used), `request_limits.py` (8 MiB, the metadata
   upload 16 MiB; 413 in JSON), `web_export.py`. Importing it configures nothing. Routes call
   `config.create_fido_server` / `config.determine_rp_id` through the package, so patch those
   there and every other name in its submodule. Tests reach the entry point's app through

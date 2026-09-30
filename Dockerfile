@@ -67,8 +67,7 @@ RUN apt-get update && \
 # Copy Python packages from builder
 COPY --from=builder /install /usr/local
 # The same path as in a checkout, so server.app is the same package in both and
-# every module has one import path. Only server/app, not server/: server/runtime
-# holds local credential artifacts and .dockerignore does not exclude it.
+# every module has one import path. Only server/app: the rest of server/ is not the app.
 COPY server/app /app/server/app
 COPY --from=web /src/web/out /app/web/out
 COPY gunicorn.conf.py /app/gunicorn.conf.py

@@ -18,7 +18,7 @@ import os
 from typing import Any
 
 from .. import encoding
-from ..config.paths import INSTANCE_ROOT
+from ..config.paths import store_dir
 from . import record_format
 from .cloud import (
     build_blob_name,
@@ -55,13 +55,14 @@ __all__ = [
 _USER_FOLDER_PREFIX = "user-data"
 _USER_CREDENTIAL_SUBDIR = "credentials"
 
-# The credential store lives under the Flask instance path (gitignored), not
-# next to the source. ``FIDO_SERVER_CREDENTIAL_DIR`` overrides it for
-# deployments that mount a volume somewhere else.
-_LOCAL_CREDENTIAL_BASE = os.environ.get(
-    "FIDO_SERVER_CREDENTIAL_DIR",
-    os.path.join(INSTANCE_ROOT, "session-credentials"),
-)
+
+
+def _local_credential_base() -> str:
+    """The local store's root: under the instance folder (gitignored), not next to
+    the source. ``FIDO_SERVER_CREDENTIAL_DIR`` moves it, e.g. onto a mounted volume."""
+
+    return store_dir("FIDO_SERVER_CREDENTIAL_DIR", "session-credentials")
+
 
 _JSON_SUFFIX = "_credential_data.json"
 
@@ -123,7 +124,7 @@ def _make_session_directory(root: str, directory: str) -> None:
 
 
 def _local_filename(name: str, session_id: str, *, create: bool = False) -> str:
-    root = _LOCAL_CREDENTIAL_BASE
+    root = _local_credential_base()
     cleaned_session = _validate_session_id(session_id)
     cleaned_name = _validate_name(name)
     if create:

@@ -27,10 +27,8 @@ node_modules/
 # SSL certificates
 *.pem
 
-# Session-scoped metadata uploads
+# Where earlier versions kept session metadata and credential artifacts (now in instance/)
 server/runtime/session-metadata/
-
-# Advanced credential artifact cache
 server/runtime/credential-artifacts/
 
 # Local state: the session secret, local credentials and the generated FIDO MDS

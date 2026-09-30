@@ -25,6 +25,19 @@ os.environ["FIDO_SERVER_MDS_SNAPSHOT_DIR"] = _MDS_SNAPSHOT_DIR
 os.environ["FIDO_SERVER_MDS_FETCH_UPSTREAM"] = "0"
 atexit.register(shutil.rmtree, _MDS_SNAPSHOT_DIR, ignore_errors=True)
 
+# The local stores default to instance/ (config.paths.store_dir), the checkout's.
+# Every test starts from directories of this run's instead; a test that needs its
+# own sets the variable, and when that is undone a worker thread that outlives the
+# test (the session-metadata cleanup) still finds this run's, never the checkout's.
+_STORES = tempfile.mkdtemp(prefix="stores-")
+for _setting, _name in (
+    ("FIDO_SERVER_CREDENTIAL_DIR", "session-credentials"),
+    ("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", "credential-artifacts"),
+    ("FIDO_SERVER_SESSION_METADATA_DIR", "session-metadata"),
+):
+    os.environ[_setting] = os.path.join(_STORES, _name)
+atexit.register(shutil.rmtree, _STORES, ignore_errors=True)
+
 # The UI's static export is served from FIDO_SERVER_WEB_EXPORT_ROOT, else
 # web/out, which a local build -- or Cloud Build's web step, running beside the
 # Python tests -- may be writing, and which the Python CI job never builds. Every

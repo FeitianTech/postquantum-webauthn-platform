@@ -12,7 +12,8 @@ Importing the package configures nothing and writes nothing.
 ``config_from_env()`` ones supply settings, the ``init_app()`` ones configure the
 app, in the order ``factory.INIT_STEPS`` fixes.
 
-- ``paths``: the project, runtime and instance locations, and ``basepath``.
+- ``paths``: the project and instance locations, each store's directory
+  (``store_dir``), and ``basepath``.
 - ``application``: ``build_app()``, the bare Flask object.
 - ``logs``: attaches the handler every module logger reaches stderr through.
 - ``session_secret``: the session secret. May write
@@ -27,7 +28,7 @@ app, in the order ``factory.INIT_STEPS`` fixes.
 - ``request_limits``: how large a request body the app reads.
 - ``origins``: the exact-origin allowlist and the origin helpers.
 - ``attestation_trust``: operator-trusted attestation CAs.
-- ``mds``: where the MDS comes from and where the session metadata lives (the
+- ``mds``: where the session metadata lives (the
   snapshot's own files: ``server.app.mds_snapshot_dir``).
 - ``web_export``: where the UI's static export is (``web/out``), served at ``/``.
 - ``relying_party``: the RP ID and name, and ``create_fido_server``.
@@ -38,9 +39,7 @@ the snapshot updater can import them without anything from Flask.
 from __future__ import annotations
 
 from . import (
-    mds,
     origins,
-    paths,
     relying_party,
 )
 
@@ -51,12 +50,7 @@ __all__ = [
     "determine_rp_id",
     "extract_client_data_origin",
     "is_origin_allowed",
-    "SESSION_METADATA_DIR",
 ]
-
-# Filesystem locations. The private runtime root is imported by credential_artifacts.
-_SERVER_RUNTIME_ROOT = paths._SERVER_RUNTIME_ROOT
-SESSION_METADATA_DIR = mds.SESSION_METADATA_DIR
 
 # The relying party.
 build_rp_entity = relying_party.build_rp_entity

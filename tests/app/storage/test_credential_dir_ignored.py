@@ -16,7 +16,7 @@ from tests.app.storage.credential_seed import seed_records
 @pytest.fixture
 def store_in(monkeypatch, storage_module):
     def _point(root):
-        monkeypatch.setattr(storage_module, "_LOCAL_CREDENTIAL_BASE", str(root))
+        monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(root))
         monkeypatch.setattr(storage_module, "_using_gcs", lambda: False)
         return storage_module
 

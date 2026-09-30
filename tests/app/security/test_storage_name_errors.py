@@ -25,7 +25,7 @@ TRAVERSAL = "../x"
 @pytest.fixture
 def store(monkeypatch, tmp_path, storage_module, device_logs_module):
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
-    monkeypatch.setattr(storage_module, "_LOCAL_CREDENTIAL_BASE", str(tmp_path / "credentials"))
+    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
     return tmp_path
 

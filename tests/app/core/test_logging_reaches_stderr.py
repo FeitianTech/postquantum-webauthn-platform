@@ -44,7 +44,6 @@ def _env(tmp: Path) -> dict[str, str]:
         "PYTHONPATH": str(_REPO_ROOT),
         "PYTHONDONTWRITEBYTECODE": "1",
         "FIDO_SERVER_SECRET_KEY": _SECRET,
-        "FIDO_SERVER_RUNTIME_ROOT": str(tmp / "runtime"),
         "FIDO_SERVER_SESSION_METADATA_DIR": str(tmp / "runtime" / "session-metadata"),
         "FIDO_SERVER_CREDENTIAL_DIR": str(tmp / "credentials"),
         "FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR": str(tmp / "runtime" / "artifacts"),

@@ -36,8 +36,9 @@ def test_instance_path_is_where_flask_derived_it_for_the_old_app_name(tmp_path):
         "PYTHONPATH": str(_REPO_ROOT),
         "PYTHONDONTWRITEBYTECODE": "1",
         "FIDO_SERVER_SECRET_KEY": "instance-path-test-secret",
-        "FIDO_SERVER_RUNTIME_ROOT": str(tmp_path / "runtime"),
-        "FIDO_SERVER_SESSION_METADATA_DIR": str(tmp_path / "runtime" / "session-metadata"),
+        "FIDO_SERVER_CREDENTIAL_DIR": str(tmp_path / "stores" / "credentials"),
+        "FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR": str(tmp_path / "stores" / "artifacts"),
+        "FIDO_SERVER_SESSION_METADATA_DIR": str(tmp_path / "stores" / "session-metadata"),
     }
     result = subprocess.run(
         [sys.executable, "-c", code],

@@ -26,7 +26,7 @@ NAME = "alice@example.com"
 @pytest.fixture
 def local_store(monkeypatch, tmp_path):
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
-    monkeypatch.setattr(store, "_LOCAL_CREDENTIAL_BASE", str(tmp_path / "credentials"))
+    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
     seed_records(store, NAME, [{"sign_count": 5}], session_id=SESSION)
     return tmp_path
 
@@ -81,7 +81,7 @@ def _race_in_a_process(root, value, barrier, results):
     os.environ.pop("FIDO_SERVER_GCS_ENABLED", None)
     from server.app.storage import credentials as child_store
 
-    child_store._LOCAL_CREDENTIAL_BASE = os.path.join(root, "credentials")
+    os.environ["FIDO_SERVER_CREDENTIAL_DIR"] = os.path.join(root, "credentials")
     records, version = child_store.read_for_update(NAME, session_id=SESSION)
     barrier.wait()
     records[0]["sign_count"] = value

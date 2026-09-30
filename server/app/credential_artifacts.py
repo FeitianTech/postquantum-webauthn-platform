@@ -16,7 +16,7 @@ import threading
 import time
 from typing import Any
 
-from .config import _SERVER_RUNTIME_ROOT
+from .config.paths import store_dir
 from .storage.cloud import (
     blob_exists,
     build_blob_name,
@@ -55,10 +55,12 @@ class ArtifactUndecodable(Exception):
     """
 
 
-_ARTIFACT_DIR = os.environ.get(
-    "FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR",
-    os.path.join(str(_SERVER_RUNTIME_ROOT), "credential-artifacts"),
-)
+
+
+def _artifact_dir() -> str:
+    return store_dir("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", "credential-artifacts")
+
+
 _USER_FOLDER_PREFIX = "user-data"
 _ARTIFACT_SUBDIR = "credential-artifacts"
 # Striped per-key locks: serialise read-merge-write for one artifact without
@@ -88,7 +90,7 @@ def _normalise_storage_id(storage_id: Any) -> str | None:
 
 
 def _session_directory(session_id: str) -> str:
-    return resolve_contained_path(_ARTIFACT_DIR, validate_storage_component(session_id))
+    return resolve_contained_path(_artifact_dir(), validate_storage_component(session_id))
 
 
 def _artifact_path(storage_id: str, session_id: str) -> str:

@@ -94,7 +94,7 @@ def local_store(monkeypatch, tmp_path):
     root = tmp_path / "instance" / "session-credentials"
     root.mkdir(parents=True)
 
-    monkeypatch.setattr(credentials, "_LOCAL_CREDENTIAL_BASE", str(root))
+    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(root))
     monkeypatch.setattr(credentials, "_using_gcs", lambda: False)
 
     return types.SimpleNamespace(
@@ -273,7 +273,7 @@ def test_assert_contained_blob_name_rejects_escapes():
 def test_credential_root_is_not_inside_the_source_tree():
     paths = importlib.import_module("server.app.config.paths")
     package_dir = os.path.realpath(paths.basepath)
-    root = os.path.realpath(credentials._LOCAL_CREDENTIAL_BASE)
+    root = os.path.realpath(credentials._local_credential_base())
 
     assert not root.startswith(package_dir + os.sep)
     assert root != package_dir
@@ -459,7 +459,7 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
 
     root = tmp_path / "instance" / "session-credentials"
     root.mkdir(parents=True)
-    monkeypatch.setattr(credentials, "_LOCAL_CREDENTIAL_BASE", str(root))
+    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(root))
     (tmp_path / "flat").mkdir()
     monkeypatch.setattr(credentials, "_using_gcs", lambda: False)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)

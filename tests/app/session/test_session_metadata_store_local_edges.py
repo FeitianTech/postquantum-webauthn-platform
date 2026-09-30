@@ -15,7 +15,7 @@ def session_store_local(monkeypatch, tmp_path):
     session_dir = tmp_path / "sessions"
     session_dir.mkdir()
 
-    monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(session_dir))
+    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(session_dir))
     monkeypatch.setattr(session_store, "_using_gcs", lambda: False)
     monkeypatch.setattr(session_store, "_local_last_cleanup", 0.0)
 
@@ -634,7 +634,7 @@ def test_local_store_creates_its_base_directory_on_first_write(session_store_loc
 
     session_store, session_dir = session_store_local
     base = session_dir / "not-created-yet"
-    monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(base))
+    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(base))
 
     assert session_store.list_sessions() == []
     assert not session_store.file_exists("session-a", "entry.json")

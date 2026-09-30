@@ -28,7 +28,6 @@ const flask = spawn(
       ...process.env,
       FLASK_DEBUG: '0',
       FIDO_SERVER_SECRET_KEY: randomBytes(32).toString('hex'),
-      FIDO_SERVER_RUNTIME_ROOT: join(stores, 'runtime'),
       FIDO_SERVER_CREDENTIAL_DIR: join(stores, 'credentials'),
       FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR: join(stores, 'artifacts'),
       FIDO_SERVER_SESSION_METADATA_DIR: join(stores, 'session-metadata'),

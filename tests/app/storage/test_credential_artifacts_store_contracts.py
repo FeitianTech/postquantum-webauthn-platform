@@ -6,7 +6,7 @@ import pytest
 @pytest.fixture
 def artifact_module(monkeypatch, tmp_path):
     module = pytest.importorskip("server.app.credential_artifacts")
-    monkeypatch.setattr(module, "_ARTIFACT_DIR", str(tmp_path))
+    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", str(tmp_path))
     monkeypatch.setattr(module, "_using_gcs", lambda: False)
     return module
 

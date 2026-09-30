@@ -141,13 +141,11 @@ def test_the_page_does_not_wait(slow_provisioning, make_app, export_root):
 def stores(monkeypatch, tmp_path, storage_module, device_logs_module):
     """Every store a registration writes, in this test's own directory."""
 
-    from server.app import credential_artifacts
-    from server.app.storage import session_metadata
 
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
-    monkeypatch.setattr(storage_module, "_LOCAL_CREDENTIAL_BASE", str(tmp_path / "credentials"))
-    monkeypatch.setattr(credential_artifacts, "_ARTIFACT_DIR", str(tmp_path / "artifacts"))
-    monkeypatch.setattr(session_metadata, "SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
+    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
+    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", str(tmp_path / "artifacts"))
+    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
 
 

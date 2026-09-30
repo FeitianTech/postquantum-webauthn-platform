@@ -74,7 +74,7 @@ class _Gcs:
 @pytest.fixture(params=["local", "gcs"])
 def backend(request, monkeypatch, tmp_path, storage_module):
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
-    monkeypatch.setattr(storage_module, "_LOCAL_CREDENTIAL_BASE", str(tmp_path / "credentials"))
+    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
     if request.param == "gcs":
         return _Gcs(storage_module, fake_gcs.install(monkeypatch, storage_module))
     return _Local(storage_module, tmp_path)

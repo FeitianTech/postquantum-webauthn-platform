@@ -9,7 +9,7 @@ import threading
 import time
 from datetime import timedelta
 
-from ..config import SESSION_METADATA_DIR
+from ..config.mds import session_metadata_dir
 from .cloud import (
     blob_exists,
     blob_updated_timestamp,
@@ -114,7 +114,7 @@ def _local_session_directory(session_id: str, *, create: bool = False) -> str | 
     except ValueError:
         return None
 
-    directory = os.path.join(SESSION_METADATA_DIR, normalised)
+    directory = os.path.join(session_metadata_dir(), normalised)
 
     if create:
         try:
@@ -178,7 +178,7 @@ def _local_maybe_cleanup(now: float | None = None) -> None:
     cutoff = current_time - _LOCAL_INACTIVE_AGE.total_seconds()
 
     try:
-        entries = os.listdir(SESSION_METADATA_DIR)
+        entries = os.listdir(session_metadata_dir())
     except OSError:
         return
 
@@ -186,7 +186,7 @@ def _local_maybe_cleanup(now: float | None = None) -> None:
         if entry.startswith("."):
             continue
 
-        directory = os.path.join(SESSION_METADATA_DIR, entry)
+        directory = os.path.join(session_metadata_dir(), entry)
         if not os.path.isdir(directory):
             continue
 
@@ -231,13 +231,13 @@ def list_sessions() -> list[str]:
         return sorted(seen)
 
     try:
-        entries = os.listdir(SESSION_METADATA_DIR)
+        entries = os.listdir(session_metadata_dir())
     except OSError:
         return []
 
     sessions: list[str] = []
     for entry in entries:
-        path = os.path.join(SESSION_METADATA_DIR, entry)
+        path = os.path.join(session_metadata_dir(), entry)
         if os.path.isdir(path) and not entry.startswith("."):
             sessions.append(entry)
     return sorted(sessions)

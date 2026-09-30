@@ -13,14 +13,10 @@ from tests.app.storage.credential_seed import seed_records
 @pytest.fixture
 def storage_local(monkeypatch, tmp_path):
     storage = pytest.importorskip("server.app.storage.credentials")
-    monkeypatch.setattr(
-        storage,
-        "_LOCAL_CREDENTIAL_BASE",
-        str(tmp_path / "session-credentials"),
-    )
+    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "session-credentials"))
     monkeypatch.setattr(storage, "_using_gcs", lambda: False)
 
-    os.makedirs(storage._LOCAL_CREDENTIAL_BASE, exist_ok=True)
+    os.makedirs(storage._local_credential_base(), exist_ok=True)
 
     return storage, tmp_path
 

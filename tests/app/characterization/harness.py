@@ -172,14 +172,13 @@ class Environment:
         )
         mp.setattr(uuid, "uuid4", lambda: uuid.UUID(bytes=stream.take(16), version=4))
 
-        from server.app import credential_artifacts, device_logs, mds_snapshot_dir
-        from server.app.storage import credentials, session_metadata
+        from server.app import device_logs, mds_snapshot_dir
         from server.app.webauthn import metadata
         from server.app.webauthn.metadata import sessions
 
-        mp.setattr(credentials, "_LOCAL_CREDENTIAL_BASE", str(self.tmp_path / "credentials"))
-        mp.setattr(credential_artifacts, "_ARTIFACT_DIR", str(self.tmp_path / "artifacts"))
-        mp.setattr(session_metadata, "SESSION_METADATA_DIR", str(self.tmp_path / "session-metadata"))
+        mp.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(self.tmp_path / "credentials"))
+        mp.setenv("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", str(self.tmp_path / "artifacts"))
+        mp.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(self.tmp_path / "session-metadata"))
         mp.setattr(sessions, "_schedule_inactive_session_cleanup", lambda: None)
         mp.setattr(metadata, "get_mds_verifier", lambda: None)
         mp.setattr(device_logs, "record_registration_event", self.events.append)

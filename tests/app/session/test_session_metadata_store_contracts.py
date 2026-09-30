@@ -11,7 +11,7 @@ def session_store_module(monkeypatch, tmp_path):
     session_dir = tmp_path / "session-metadata"
     session_dir.mkdir()
 
-    monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(session_dir))
+    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(session_dir))
     monkeypatch.setattr(session_store, "_local_last_cleanup", 0.0)
 
     return session_store, session_dir

@@ -28,7 +28,11 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 GUARDED_TREES = ("server/runtime", "instance", ".hypothesis")
 # A store the environment may move into the checkout, where the repository's
 # .gitignore does not reach: guarded too when it is inside, read as the app reads it.
-GUARDED_SETTINGS = ("FIDO_SERVER_CREDENTIAL_DIR",)
+GUARDED_SETTINGS = (
+    "FIDO_SERVER_CREDENTIAL_DIR",
+    "FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR",
+    "FIDO_SERVER_SESSION_METADATA_DIR",
+)
 
 
 def pytest_addoption(parser):

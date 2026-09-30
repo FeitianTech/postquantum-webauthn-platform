@@ -30,7 +30,7 @@ def session_env(monkeypatch, tmp_path):
     session_dir.mkdir()
 
     # The store copied the directory from config at import: patch the copy it reads.
-    monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(session_dir))
+    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(session_dir))
 
     monkeypatch.setattr(session_store, "gcs_enabled", lambda: False)
     monkeypatch.setattr(session_store, "_using_gcs", lambda: False)

@@ -16,7 +16,7 @@ _SESSION = "session-failures"
 def local_store(monkeypatch, tmp_path, storage_module):
     root = tmp_path / "session-credentials"
     root.mkdir()
-    monkeypatch.setattr(storage_module, "_LOCAL_CREDENTIAL_BASE", str(root))
+    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(root))
     monkeypatch.setattr(storage_module, "_using_gcs", lambda: False)
     return storage_module
 

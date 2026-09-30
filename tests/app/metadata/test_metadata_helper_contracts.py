@@ -153,7 +153,7 @@ def test_cache_cleaning_and_formatting_helpers():
 
 def test_prune_helper_and_request_session_identifier_paths(monkeypatch, tmp_path, session_store, app_config):
     # Resolving the cookie's namespace refreshes its directory's last-access marker.
-    monkeypatch.setattr(session_store, "SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
+    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
 
     monkeypatch.setattr(
         session_store,

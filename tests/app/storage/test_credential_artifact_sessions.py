@@ -23,7 +23,7 @@ PAYLOAD = {"storedCredential": {"credentialId": "cred-1"}}
 
 @pytest.fixture
 def root(monkeypatch, tmp_path):
-    monkeypatch.setattr(artifacts, "_ARTIFACT_DIR", str(tmp_path))
+    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", str(tmp_path))
     monkeypatch.setattr(artifacts, "_using_gcs", lambda: False)
     return tmp_path
 

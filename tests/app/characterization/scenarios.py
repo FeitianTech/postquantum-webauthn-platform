@@ -731,12 +731,11 @@ def _(r: Recorder) -> None:
 
 @scenario("simple-register-store-unwritable")
 def _(r: Recorder) -> None:
-    from server.app.storage import credentials
 
     # A regular file where the store's directory should be: reads and writes both fail.
     blocker = r.env.tmp_path / "blocker"
     blocker.write_text("not a directory")
-    r.env.monkeypatch.setattr(credentials, "_LOCAL_CREDENTIAL_BASE", str(blocker / "credentials"))
+    r.env.monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(blocker / "credentials"))
     _simple_register(r, r.client(), m.Authenticator("simple-unwritable"))
 
 
