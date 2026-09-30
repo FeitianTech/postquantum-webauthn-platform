@@ -7,7 +7,7 @@ cross-certificate, for trust stores that only have R3. fido2's ``parse_blob``
 checks ``x5c`` and the root as one straight chain, so with R46 pinned it would
 refuse the real BLOB; this builds the path cryptography's verifier finds.
 
-A Flask-free leaf like ``mds_trust``: ``tools/update_mds_snapshot.py`` uses it
+A Flask-free leaf like ``mds.trust``: ``tools/update_mds_snapshot.py`` uses it
 without building the app, and it imports nothing from the app.
 """
 from __future__ import annotations

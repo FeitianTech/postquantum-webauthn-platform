@@ -29,6 +29,6 @@ app, in the order ``factory.INIT_STEPS`` fixes.
 - ``web_export``: where the UI's static export is (``web/out``), served at ``/``.
 - ``relying_party``: the RP ID and name, and ``create_fido_server``.
 
-The MDS trust anchors live in ``server.app.mds_trust``, outside this package, so
+The MDS trust anchors live in ``server.app.mds.trust``, outside this package, so
 the snapshot updater can import them without anything from Flask.
 """

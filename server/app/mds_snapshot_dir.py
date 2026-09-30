@@ -1,7 +1,7 @@
 """Where the FIDO MDS snapshot is: the seven files ``tools/update_mds_snapshot.py``
 writes together, and the one directory they are read from and written to.
 
-A leaf like ``mds_trust``: it imports nothing from the app, so the updater can use
+A leaf like ``mds.trust``: it imports nothing from the app, so the updater can use
 it without building the Flask app. docs/MDS_SNAPSHOT.md has the whole picture.
 """
 from __future__ import annotations

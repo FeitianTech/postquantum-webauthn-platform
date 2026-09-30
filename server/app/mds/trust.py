@@ -10,7 +10,7 @@ the Flask app or resolving the session secret the way importing ``config`` does.
 """
 from __future__ import annotations
 
-from . import encoding
+from .. import encoding
 
 FIDO_METADATA_TRUST_ROOT_B64 = (
     "MIIFWjCCA0KgAwIBAgISEdK7udcjGJ5AXwqdLdDfJWfRMA0GCSqGSIb3DQEBDAUA"

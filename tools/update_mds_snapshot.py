@@ -24,11 +24,11 @@ if str(REPO_ROOT) not in sys.path:
 
 # Imported after the sys.path bootstrap above.
 from server.app import mds_blob, mds_snapshot_dir  # noqa: E402
+from server.app.mds.trust import FIDO_METADATA_TRUST_ROOT_CERT  # noqa: E402
 from server.app.mds_snapshot import (  # noqa: E402
     build_bootstrap_snapshot,
     build_explorer_snapshot,
 )
-from server.app.mds_trust import FIDO_METADATA_TRUST_ROOT_CERT  # noqa: E402
 
 MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
 MDS_METADATA_FILENAME = mds_snapshot_dir.BLOB
