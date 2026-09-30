@@ -2,9 +2,9 @@ import base64
 
 import pytest
 
-from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import binary as advanced_binary
 from server.app.routes.advanced import parsing as advanced_parsing
+from server.app.webauthn import cose_algorithms
 
 
 def _b64url(data: bytes) -> str:
@@ -194,5 +194,5 @@ def test_parse_client_supplied_credentials_uses_property_attachment_and_defaults
 
 
 def test_lookup_named_cose_algorithm_supports_suffix_matching_for_descriptive_labels():
-    assert advanced_algorithms._lookup_named_cose_algorithm("WebAuthn: RSASSA-PKCS1-V1_5-SHA1") == -65535
-    assert advanced_algorithms._lookup_named_cose_algorithm("Experimental profile ML-DSA-65") == -49
+    assert cose_algorithms.lookup_name("WebAuthn: RSASSA-PKCS1-V1_5-SHA1") == -65535
+    assert cose_algorithms.lookup_name("Experimental profile ML-DSA-65") == -49

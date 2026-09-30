@@ -9,8 +9,8 @@ from server.app import config as config_module
 from server.app import visitor_session
 from server.app.config import relying_party
 from server.app.routes import advanced as advanced_module
-from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import binary as advanced_binary
+from server.app.webauthn import cose_algorithms
 from tests.app.entry_app import entry_app
 
 
@@ -499,7 +499,7 @@ def test_advanced_helper_binary_and_algorithm_edge_fallbacks():
     with pytest.raises(ValueError, match="empty binary value"):
         advanced_binary._decode_client_binary({"base64": "   "})
 
-    assert advanced_algorithms._coerce_cose_algorithm(float("inf")) is None
-    assert advanced_algorithms._coerce_cose_algorithm(float("-inf")) is None
-    assert advanced_algorithms._coerce_cose_algorithm(float("nan")) is None
-    assert advanced_algorithms._coerce_cose_algorithm("fido custom alg (-12345)") == -12345
+    assert cose_algorithms.coerce_cose_algorithm(float("inf")) is None
+    assert cose_algorithms.coerce_cose_algorithm(float("-inf")) is None
+    assert cose_algorithms.coerce_cose_algorithm(float("nan")) is None
+    assert cose_algorithms.coerce_cose_algorithm("fido custom alg (-12345)") == -12345

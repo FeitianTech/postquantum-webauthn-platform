@@ -11,6 +11,7 @@ from server.app.routes import binary_helpers as shared_binary_helpers
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import binary as advanced_binary
 from server.app.routes.advanced import summary as advanced_summary
+from server.app.webauthn import cose_algorithms
 from tests.app.entry_app import entry_app
 
 
@@ -88,8 +89,8 @@ def test_decode_client_binary_handles_recursive_wrappers_and_validation_failures
 
 
 def test_algorithm_coercion_handles_blank_values_failed_numeric_extraction_and_pqc_allowlist(monkeypatch, advanced_constants, pqc_module):
-    assert advanced_algorithms._lookup_named_cose_algorithm("   ") is None
-    assert advanced_algorithms._coerce_cose_algorithm("   ") is None
+    assert cose_algorithms.lookup_name("   ") is None
+    assert cose_algorithms.coerce_cose_algorithm("   ") is None
 
     class _BadMatch:
         def group(self, _index=0):
@@ -99,8 +100,8 @@ def test_algorithm_coercion_handles_blank_values_failed_numeric_extraction_and_p
         def finditer(self, _value):
             return [_BadMatch()]
 
-    monkeypatch.setattr(advanced_constants, "COSE_ALGORITHM_NUMERIC_PATTERN", _BadPattern())
-    assert advanced_algorithms._coerce_cose_algorithm("custom algorithm -- broken") is None
+    monkeypatch.setattr(cose_algorithms, "NUMERIC_PATTERN", _BadPattern())
+    assert cose_algorithms.coerce_cose_algorithm("custom algorithm -- broken") is None
 
 
 def test_base64url_helpers_degrade_gracefully_on_decode_errors():

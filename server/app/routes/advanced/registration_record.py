@@ -20,9 +20,9 @@ from fido2 import cbor
 from ... import json_values
 from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials
-from ...webauthn import pqc
+from ...webauthn import cose_algorithms, pqc
 from ...webauthn.attestation import aaguid as attestation_aaguid
-from . import algorithms, binary
+from . import binary
 
 
 def resolve_user_handle(user_info: Mapping[str, Any], username: str) -> Any:
@@ -122,7 +122,7 @@ def resolve_algorithm(credential_info: dict[str, Any], auth_data: Any) -> tuple[
         except Exception:
             raw_alg_value = None
 
-    algo = algorithms._coerce_cose_algorithm(raw_alg_value)
+    algo = cose_algorithms.coerce_cose_algorithm(raw_alg_value)
     credential_info["publicKeyAlgorithm"] = algo
     algoname = pqc.describe_algorithm(algo)
     pqc.log_algorithm_selection("registration", algo)

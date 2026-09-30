@@ -8,9 +8,9 @@ from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData
 
 from ...encoding import encode_base64url
-from ...webauthn import mldsa
+from ...webauthn import cose_algorithms, mldsa
 from ...webauthn.attachments import normalize_attachment
-from . import algorithms, binary
+from . import binary
 
 
 def _coerce_optional_bool(value: Any) -> bool | None:
@@ -97,7 +97,7 @@ def _parse_client_supplied_credentials(
             )
 
             raw_alg_value = entry.get("algorithm") or entry.get("publicKeyAlgorithm")
-            algorithm_value = algorithms._coerce_cose_algorithm(raw_alg_value)
+            algorithm_value = cose_algorithms.coerce_cose_algorithm(raw_alg_value)
 
             resident_flag = _extract_flag_from_mapping(
                 entry,

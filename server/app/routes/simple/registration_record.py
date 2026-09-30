@@ -19,8 +19,7 @@ from fido2 import cbor
 from ... import json_values
 from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials
-from ...webauthn import pqc
-from ..advanced import algorithms
+from ...webauthn import cose_algorithms, pqc
 
 
 def _attestation_summary(ctx: Mapping[str, Any]) -> tuple[dict[str, Any], Any, list[str]]:
@@ -179,7 +178,7 @@ def populate_authenticator_data_context(ctx: dict[str, Any]) -> None:
     # Named as the advanced route names it: the one COSE name table is
     # ``pqc.describe_algorithm``. A crafted key's alg need not be an int, or even
     # hashable; the coercion gives None ("Unknown") for one it cannot read.
-    algoname = pqc.describe_algorithm(algorithms._coerce_cose_algorithm(algo))
+    algoname = pqc.describe_algorithm(cose_algorithms.coerce_cose_algorithm(algo))
 
     flags_value = getattr(ctx["auth_data"], "flags", 0)
     flags_dict = {

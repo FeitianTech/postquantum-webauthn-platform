@@ -6,28 +6,28 @@ import pytest
 
 from server.app.routes import advanced as advanced_module
 from server.app.routes import binary_helpers as shared_binary_helpers
-from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import binary as advanced_binary
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.routes.advanced import summary as advanced_summary
+from server.app.webauthn import cose_algorithms
 
 
 def test_algorithm_name_normalization_lookup_and_coercion_matrix():
-    assert advanced_algorithms._normalize_algorithm_name_key(" FIDO ALG ES-256 (ECDSA) ") == "ES256"
-    assert advanced_algorithms._normalize_algorithm_name_key("") == ""
-    assert advanced_algorithms._normalize_algorithm_name_key("COSE ALG RS-256") == "RS256"
+    assert cose_algorithms.normalise_name(" FIDO ALG ES-256 (ECDSA) ") == "ES256"
+    assert cose_algorithms.normalise_name("") == ""
+    assert cose_algorithms.normalise_name("COSE ALG RS-256") == "RS256"
 
-    assert advanced_algorithms._lookup_named_cose_algorithm("ES256") == -7
-    assert advanced_algorithms._lookup_named_cose_algorithm("FIDO ALG RS-256") == -257
-    assert advanced_algorithms._lookup_named_cose_algorithm("unknown") is None
+    assert cose_algorithms.lookup_name("ES256") == -7
+    assert cose_algorithms.lookup_name("FIDO ALG RS-256") == -257
+    assert cose_algorithms.lookup_name("unknown") is None
 
-    assert advanced_algorithms._coerce_cose_algorithm(-7) == -7
-    assert advanced_algorithms._coerce_cose_algorithm(3.0) == 3
-    assert advanced_algorithms._coerce_cose_algorithm(3.5) is None
-    assert advanced_algorithms._coerce_cose_algorithm("-257") == -257
-    assert advanced_algorithms._coerce_cose_algorithm("ES256") == -7
-    assert advanced_algorithms._coerce_cose_algorithm("algorithm id: -49") == -49
-    assert advanced_algorithms._coerce_cose_algorithm(True) is None
+    assert cose_algorithms.coerce_cose_algorithm(-7) == -7
+    assert cose_algorithms.coerce_cose_algorithm(3.0) == 3
+    assert cose_algorithms.coerce_cose_algorithm(3.5) is None
+    assert cose_algorithms.coerce_cose_algorithm("-257") == -257
+    assert cose_algorithms.coerce_cose_algorithm("ES256") == -7
+    assert cose_algorithms.coerce_cose_algorithm("algorithm id: -49") == -49
+    assert cose_algorithms.coerce_cose_algorithm(True) is None
 
 
 def test_storage_id_and_summary_helpers_strip_heavy_fields_and_add_artifact_markers():
@@ -60,13 +60,13 @@ def test_storage_id_and_summary_helpers_strip_heavy_fields_and_add_artifact_mark
 
 def test_extract_credential_algorithm_from_mapping_and_objects():
     mapping = {"credential_id": b"cred", "public_key": {3: -7}}
-    assert advanced_algorithms._extract_credential_algorithm(mapping) == -7
+    assert cose_algorithms.credential_algorithm(mapping) == -7
 
     class _CredentialObj:
         credential_id = b"obj-cred"
         public_key = {"alg": -257}
 
-    assert advanced_algorithms._extract_credential_algorithm(_CredentialObj()) == -257
+    assert cose_algorithms.credential_algorithm(_CredentialObj()) == -257
 
     class _IndexablePublicKey:
         alg = -8
@@ -80,7 +80,7 @@ def test_extract_credential_algorithm_from_mapping_and_objects():
         credential_id = None
         public_key = _IndexablePublicKey()
 
-    assert advanced_algorithms._extract_credential_algorithm(_IndexableCredentialObj()) == -8
+    assert cose_algorithms.credential_algorithm(_IndexableCredentialObj()) == -8
 
 
 def test_optional_bool_flag_and_first_value_helpers():
