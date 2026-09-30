@@ -68,7 +68,7 @@ def _unknown_key_material(parsed: Mapping[str, Any], info: dict[str, Any]) -> in
         if candidate:
             raw_bytes = candidate
             info["publicKeyBase64"] = encode_base64(raw_bytes)
-            info["publicKeyHex"] = formatting.colon_hex(raw_bytes)
+            info["publicKeyHex"] = raw_bytes.hex(":")
             info["publicKeyHexLines"] = formatting.format_hex_bytes_lines(raw_bytes)
             key_size_bits = len(raw_bytes) * 8
 
@@ -161,7 +161,7 @@ def _mldsa_key_info(public_key: Any, parameter_set: str, oid: str) -> dict[str, 
         "mechanismName": parameter_set,
         "mechanismFamily": "ML-DSA",
         "publicKeyBase64": encode_base64(raw),
-        "publicKeyHex": formatting.colon_hex(raw),
+        "publicKeyHex": raw.hex(":"),
         "publicKeyHexLines": formatting.format_hex_bytes_lines(raw),
     }
 
@@ -194,12 +194,10 @@ def _serialize_public_key_info(public_key: Any) -> dict[str, Any]:
             {
                 "type": "ECC",
                 "curve": curve_name,
-                "uncompressedPoint": formatting.colon_hex(
-                    public_key.public_bytes(
+                "uncompressedPoint": public_key.public_bytes(
                         encoding=serialization.Encoding.X962,
                         format=serialization.PublicFormat.UncompressedPoint,
-                    )
-                ),
+                    ).hex(":"),
             }
         )
         info["algorithm"].update(
@@ -229,12 +227,10 @@ def _serialize_public_key_info(public_key: Any) -> dict[str, Any]:
         info.update(
             {
                 "type": public_key.__class__.__name__,
-                "publicKeyHex": formatting.colon_hex(
-                    public_key.public_bytes(
+                "publicKeyHex": public_key.public_bytes(
                         encoding=serialization.Encoding.Raw,
                         format=serialization.PublicFormat.Raw,
-                    )
-                ),
+                    ).hex(":"),
             }
         )
         info["algorithm"].update(

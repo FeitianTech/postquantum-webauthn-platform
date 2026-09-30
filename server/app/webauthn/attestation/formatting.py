@@ -8,23 +8,10 @@ from fido2.utils import ByteBuffer
 from ... import encoding
 
 
-def colon_hex(data: bytes) -> str:
-    return ":".join(f"{byte:02x}" for byte in data)
-
-
 def format_hex_bytes_lines(data: bytes, bytes_per_line: int = 16) -> list[str]:
-    """Return colon separated hex grouped across multiple lines."""
-    if not data:
-        return []
+    """Colon-separated hex, ``bytes_per_line`` bytes to a line."""
 
-    hex_pairs = [f"{byte:02x}" for byte in data]
-    lines = []
-    for start in range(0, len(hex_pairs), bytes_per_line):
-        chunk = hex_pairs[start : start + bytes_per_line]
-        if not chunk:
-            continue
-        lines.append(":".join(chunk))
-    return lines
+    return [data[start : start + bytes_per_line].hex(":") for start in range(0, len(data), bytes_per_line)]
 
 
 def format_hex_string_lines(hex_string: str, bytes_per_line: int = 16) -> list[str]:

@@ -40,7 +40,7 @@ def _parse_fido_transport_bitfield(raw_value: bytes) -> list[str] | None:
 def _key_identifier_value(digest: bytes) -> dict[str, Any]:
     hex_lines = formatting.format_hex_bytes_lines(digest)
     return {
-        "Hex value": hex_lines if hex_lines else formatting.colon_hex(digest),
+        "Hex value": hex_lines if hex_lines else digest.hex(":"),
     }
 
 
@@ -48,7 +48,7 @@ def _authority_key_identifier_value(value: x509.AuthorityKeyIdentifier) -> dict[
     serialized: dict[str, Any] = {}
     if value.key_identifier:
         hex_lines = formatting.format_hex_bytes_lines(value.key_identifier)
-        serialized["Hex value"] = hex_lines if hex_lines else formatting.colon_hex(value.key_identifier)
+        serialized["Hex value"] = hex_lines if hex_lines else value.key_identifier.hex(":")
     if value.authority_cert_serial_number is not None:
         serialized["Authority Cert Serial Number"] = (
             f"{value.authority_cert_serial_number} "

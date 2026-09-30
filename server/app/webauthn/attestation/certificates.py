@@ -171,7 +171,7 @@ def _signature_view(certificate: Any, oid: Any, algorithm: Any, details: Any) ->
         "algorithm": algorithm,
         "hash": _signature_hash(certificate),
         "hex": signature_bytes.hex(),
-        "colon": formatting.colon_hex(signature_bytes),
+        "colon": signature_bytes.hex(":"),
         "lines": formatting.format_hex_bytes_lines(signature_bytes),
         "oid": oid,
         "details": details,

@@ -20,7 +20,6 @@ from ...encoding import (
     try_decode_base64url,
 )
 from ...webauthn.attestation import (
-    colon_hex,
     encode_base64url,
     make_json_safe,
     serialize_attestation_certificate,
@@ -619,7 +618,7 @@ def _binary_summary(data: bytes, encoding: str | None = None) -> dict[str, Any]:
         "base64": encode_base64(data),
         "base64url": encode_base64url(data),
         "hex": data.hex(),
-        "colonHex": colon_hex(data),
+        "colonHex": data.hex(":"),
     }
     if encoding:
         summary["encoding"] = encoding

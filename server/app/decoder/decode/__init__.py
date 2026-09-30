@@ -27,7 +27,6 @@ __all__ = ["decode_payload_text"]
 decode_payload_text = pipeline.decode_payload_text
 
 # Encoding helpers shared with the attestation package.
-colon_hex = attestation.colon_hex
 encode_base64url = attestation.encode_base64url
 format_hex_bytes_lines = attestation.format_hex_bytes_lines
 format_hex_string_lines = attestation.format_hex_string_lines
