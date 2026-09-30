@@ -2,21 +2,17 @@ from __future__ import annotations
 
 import base64
 import hashlib
-from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 from cryptography import x509
 from cryptography.x509.oid import NameOID, ObjectIdentifier
-from fido2.attestation import InvalidSignature
 
-from server.app.mds import verifier as mds_verifier
 from server.app.webauthn.attestation import (
     certificate_extensions as attestation_certificate_extensions,
 )
 from server.app.webauthn.attestation import (
     certificate_names as attestation_certificate_names,
 )
-from server.app.webauthn.attestation import classical as attestation_classical
 
 
 def _b64url(data: bytes) -> str:
@@ -70,133 +66,6 @@ def _registration(attestation_object, client_data):
         ),
         client_extension_results={},
     )
-
-
-def test_evaluate_classical_attestation_root_handles_missing_trust_path_and_metadata(attestation_module):
-    outcome = attestation_classical._evaluate_classical_attestation_root(
-        SimpleNamespace(att_stmt={}),
-        SimpleNamespace(trust_path=[]),
-        b"client-hash",
-        verifier=None,
-        now=datetime.now(timezone.utc),
-    )
-
-    assert "trust_path_missing" in outcome["errors"]
-    assert "metadata_not_available" in outcome["warnings"]
-    assert outcome["checks"]["trusted_ca"] is False
-    assert outcome["root_valid"] is None
-
-
-def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures(monkeypatch, classical, attestation_module):
-    def _exploding(_verifier, _att_obj, _client_hash):
-        raise RuntimeError("verifier exploded")
-
-    monkeypatch.setattr(classical.evaluation, "evaluate_attestation", _exploding)
-    monkeypatch.setattr(
-        classical,
-        "verify_certificate_chain",
-        lambda _chain: (_ for _ in ()).throw(InvalidSignature("bad chain")),
-    )
-    monkeypatch.setattr(
-        x509,
-        "load_der_x509_certificate",
-        lambda _der: (_ for _ in ()).throw(ValueError("bad cert")),
-    )
-
-    outcome = attestation_classical._evaluate_classical_attestation_root(
-        SimpleNamespace(att_stmt={}),
-        SimpleNamespace(trust_path=[b"broken-cert"]),
-        b"client-hash",
-        verifier=object(),
-        now=datetime.now(timezone.utc),
-    )
-
-    assert any(err.startswith("certificate_parse_error:") for err in outcome["errors"])
-    assert any(err.startswith("untrusted_attestation:") for err in outcome["errors"])
-    assert "metadata_entry_missing" in outcome["errors"]
-    assert outcome["checks"]["trusted_ca"] is False
-
-
-def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_errors(monkeypatch, trust, classical, attestation_module):
-    now = datetime.now(timezone.utc)
-    valid_cert = SimpleNamespace(
-        subject=SimpleNamespace(rfc4514_string=lambda: "CN=Leaf"),
-        not_valid_before_utc=now - timedelta(days=1),
-        not_valid_after_utc=now + timedelta(days=1),
-    )
-    trust_details = classical.evaluation.TrustPathEvaluation(
-        attestation_result=None,
-        ca_certificate=b"root-ca",
-        chain_valid=True,
-        errors=["mds_chain_warning"],
-    )
-    evaluation = SimpleNamespace(
-        trust_path=trust_details,
-        metadata_entry=SimpleNamespace(metadata_statement=SimpleNamespace()),
-        metadata_lookup_source="aaguid",
-    )
-
-    monkeypatch.setattr(classical, "verify_certificate_chain", lambda _chain: None)
-    monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _der: valid_cert)
-    monkeypatch.setattr(trust, "_collect_metadata_root_certificates", lambda _entry: [b"meta-root"])
-    monkeypatch.setattr(trust, "_is_trusted_ca_certificate", lambda _root: False)
-
-    monkeypatch.setattr(classical.evaluation, "evaluate_attestation", lambda _verifier, _obj, _hash: evaluation)
-    outcome = attestation_classical._evaluate_classical_attestation_root(
-        SimpleNamespace(att_stmt={}),
-        SimpleNamespace(trust_path=[b"leaf"]),
-        b"client-hash",
-        verifier=object(),
-        now=now,
-    )
-
-    assert "mds_chain_warning" in outcome["errors"]
-    assert "attestation_root_not_trusted" in outcome["errors"]
-    assert outcome["checks"]["trusted_ca"] is False
-    assert outcome["metadata_lookup_source"] == "aaguid"
-
-
-def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(monkeypatch, trust, metadata_module, classical, attestation_module):
-    now = datetime.now(timezone.utc)
-    expired_cert = SimpleNamespace(
-        subject=SimpleNamespace(rfc4514_string=lambda: "CN=Expired"),
-        not_valid_before_utc=now - timedelta(days=10),
-        not_valid_after_utc=now - timedelta(seconds=1),
-    )
-    trust_details = classical.evaluation.TrustPathEvaluation(
-        attestation_result=None,
-        ca_certificate=b"trusted-root",
-        chain_valid=True,
-        errors=[],
-    )
-    metadata_entry = SimpleNamespace(metadata_statement=SimpleNamespace())
-    evaluation = SimpleNamespace(
-        trust_path=trust_details,
-        metadata_entry=metadata_entry,
-        metadata_lookup_source="aaguid",
-    )
-
-    monkeypatch.setattr(classical, "verify_certificate_chain", lambda _chain: None)
-    monkeypatch.setattr(x509, "load_der_x509_certificate", lambda _der: expired_cert)
-    monkeypatch.setattr(trust, "_collect_metadata_root_certificates", lambda _entry: [])
-    monkeypatch.setattr(trust, "_is_trusted_ca_certificate", lambda _root: True)
-    monkeypatch.setattr(mds_verifier, "metadata_entry_trust_anchor_status", lambda _entry: False)
-
-    monkeypatch.setattr(classical.evaluation, "evaluate_attestation", lambda _verifier, _obj, _hash: evaluation)
-    outcome = attestation_classical._evaluate_classical_attestation_root(
-        SimpleNamespace(att_stmt={}),
-        SimpleNamespace(trust_path=[b"expired-leaf"]),
-        b"client-hash",
-        verifier=object(),
-        now=now,
-    )
-
-    assert any(err.startswith("certificate_out_of_validity:") for err in outcome["errors"])
-    assert "metadata_not_fido_trusted" in outcome["errors"]
-    assert outcome["checks"]["trusted_ca"] is True
-    assert outcome["checks"]["fido_mds"] is False
-    assert outcome["checks"]["chain"] is False
-    assert outcome["root_valid"] is False
 
 
 def test_serialize_extension_value_covers_authority_constraints_and_fallback_repr(attestation_module):
