@@ -1,33 +1,20 @@
 *.pyc
-*.egg
-*.egg-info
-build/
-dist/
-.eggs/
-.idea/
-.ropeproject/
-ChangeLog
-man/*.1
-**/_build
 *.venv
 .qoder/
 
 # Unit test / coverage reports
 htmlcov/
 .hypothesis/
-.tox/
 .coverage
 .coverage.*
 coverage/
 node_modules/
 
-# Registration data for authenticators
-*.pkl
-
 # SSL certificates
 *.pem
 
-# Where earlier versions kept session metadata and credential artifacts (now in instance/)
+# Where earlier versions kept session metadata and credential artifacts (now in
+# instance/); a checkout may still hold them.
 server/runtime/session-metadata/
 server/runtime/credential-artifacts/
 
