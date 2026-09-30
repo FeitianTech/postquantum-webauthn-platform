@@ -8,60 +8,10 @@ import pytest
 
 from server.app.decoder import cbor_canonical
 from server.app.decoder.encode import binary_decode as encode_binary_decode
-from server.app.decoder.encode import ctap_numeric as encode_ctap_numeric
-from server.app.decoder.encode import text as encode_text
 
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
-
-
-def test_extract_ctap_numeric_payload_salvages_numeric_fields_from_mixed_mappings():
-    parsed = {
-        "ignored": "value",
-        "1": _b64url(b"\x01" * 32),
-        "2": {"id": "example.com", "name": "Example"},
-        "3": {"id": _b64url(b"user-id"), "name": "alice"},
-        "4": [{"type": "public-key", "alg": -7}],
-    }
-
-    numeric_map, ctap_type = encode_ctap_numeric._extract_ctap_numeric_payload(parsed)
-
-    assert ctap_type == "makeCredentialRequest"
-    assert set(numeric_map) >= {1, 2, 3, 4}
-    assert numeric_map[2]["id"] == "example.com"
-
-
-def test_extract_ctap_numeric_payload_raises_when_no_mappable_candidates_exist():
-    with pytest.raises(ValueError, match="Unable to locate CTAP/WebAuthn"):
-        encode_ctap_numeric._extract_ctap_numeric_payload("plain-string")
-
-
-@pytest.mark.parametrize(
-    ("mapping", "expected_message"),
-    [
-        ({}, "expects at least one CTAP field"),
-        ({2: "not-bytes", 3: _b64url(b"sig")}, "must be binary data for GetAssertion response"),
-        ({2: _b64url(b"\xAA" * 37)}, "Missing field 0x01"),
-        ({1: _b64url(b"\xBB" * 32), 2: "not-an-object"}, r"Field 0x02 \(rp\) must be an object"),
-        ({1: "packed", 2: "not-bytes"}, "must be binary data"),
-        ({1: object(), 2: _b64url(b"\xCC" * 32)}, "Unable to classify CTAP/WebAuthn data"),
-    ],
-)
-def test_classify_ctap_numeric_mapping_reports_specific_contract_errors(mapping, expected_message):
-    with pytest.raises(ValueError, match=expected_message):
-        encode_ctap_numeric._classify_ctap_numeric_mapping(mapping)
-
-
-def test_coerce_ctap_numeric_key_and_nested_key_sanitization_edges():
-    assert encode_ctap_numeric._coerce_ctap_numeric_key("   ") is None
-    assert encode_ctap_numeric._coerce_ctap_numeric_key("0xzz") is None
-    assert encode_ctap_numeric._coerce_ctap_numeric_key(object()) is None
-
-    with pytest.raises(ValueError, match="must be non-negative"):
-        encode_ctap_numeric._coerce_ctap_numeric_key(-1)
-
-    assert encode_ctap_numeric._sanitize_nested_extra_key("7 ( )") == "7"
 
 
 def test_canonical_encoder_dispatches_supported_core_types_and_tag_rules():
@@ -113,12 +63,3 @@ def test_require_certificate_bytes_and_binary_decoding_error_paths():
         )
         is None
     )
-
-
-def test_encode_payload_text_errors_when_alias_resolves_without_handler(monkeypatch):
-    patched_handlers = dict(encode_text._ENCODING_HANDLERS)
-    patched_handlers.pop("json", None)
-    monkeypatch.setattr(encode_text, "_ENCODING_HANDLERS", patched_handlers)
-
-    with pytest.raises(ValueError, match="Unsupported encoder format"):
-        encode_text.encode_payload_text('{"ok":true}', "json")

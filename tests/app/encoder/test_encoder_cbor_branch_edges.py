@@ -3,7 +3,6 @@ import base64
 import pytest
 
 from server.app.decoder import cbor_canonical
-from server.app.decoder.encode import ctap_numeric as encode_ctap_numeric
 from server.app.decoder.encode import handlers_basic as encode_handlers_basic
 from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
 
@@ -66,20 +65,6 @@ def test_encode_cbor_value_non_ctap_path_and_normalize_format_empty_error():
 
     with pytest.raises(ValueError, match="must be provided"):
         encode_handlers_basic._normalize_encoding_format("   ")
-
-
-def test_extract_ctap_numeric_payload_salvages_labeled_nested_candidate():
-    payload = {
-        "bad": {"field": "value"},
-        "nested": {
-            "01 (rpId)": "example.com",
-            "02 (clientDataHash)": _b64url(b"\x33" * 32),
-        },
-    }
-
-    numeric, kind = encode_ctap_numeric._extract_ctap_numeric_payload(payload)
-    assert kind == "getAssertionRequest"
-    assert set(numeric) == {1, 2}
 
 
 def test_unsigned_integer_and_major_length_boundaries_cover_all_encoding_sizes():

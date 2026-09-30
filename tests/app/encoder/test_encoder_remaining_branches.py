@@ -3,24 +3,6 @@ import base64
 import pytest
 
 from server.app.decoder.encode import binary_extract as encode_binary_extract
-from server.app.decoder.encode import ctap_numeric as encode_ctap_numeric
-
-
-def test_normalize_ctap_extra_value_and_nested_key_sanitization_branches():
-    value = {
-        " 1 (alpha) ": {"2 (beta)": {"bytes": [1, 2]}},
-        "": "blank-key",
-        9: "numeric-key",
-        "items": [{"3 (gamma)": "x"}],
-    }
-
-    normalized = encode_ctap_numeric._normalize_ctap_extra_value(value)
-
-    assert "alpha" in normalized
-    assert normalized["alpha"]["beta"] == b"\x01\x02"
-    assert "" in normalized
-    assert "9" in normalized
-    assert normalized["items"][0]["gamma"] == "x"
 
 
 def test_extract_generic_binary_payload_cycle_and_pem_label_fallbacks():

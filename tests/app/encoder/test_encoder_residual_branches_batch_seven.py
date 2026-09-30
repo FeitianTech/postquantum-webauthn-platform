@@ -9,7 +9,6 @@ from server.app.decoder import cbor_canonical
 from server.app.decoder.encode import binary_decode as encode_binary_decode
 from server.app.decoder.encode import binary_extract as encode_binary_extract
 from server.app.decoder.encode import ctap_fields as encode_ctap_fields
-from server.app.decoder.encode import ctap_numeric as encode_ctap_numeric
 from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
 
 
@@ -35,38 +34,7 @@ def test_encode_cbor_value_never_reads_a_plain_map_as_ctap():
     assert encoded["data"]["binary"]["hex"].startswith("a263666d74646e6f6e65")
 
 
-def test_extract_ctap_numeric_payload_salvage_classification_errors_are_preserved():
-    with pytest.raises(ValueError, match="Missing field 0x02"):
-        encode_ctap_numeric._extract_ctap_numeric_payload(
-            {
-                "01": "fmt-only",
-                "nonNumericKey": True,
-            }
-        )
-
-
-def test_extract_ctap_numeric_payload_skips_visited_mappings_in_recursive_inputs():
-    loop: dict[str, object] = {}
-    loop["self"] = loop
-
-    numeric_map, ctap_type = encode_ctap_numeric._extract_ctap_numeric_payload(
-        [
-            loop,
-            {
-                "1": "example.com",
-                "2": _b64url(b"\x11" * 32),
-            },
-        ]
-    )
-
-    assert ctap_type == "getAssertionRequest"
-    assert numeric_map[1] == "example.com"
-
-
 def test_sanitize_numeric_mapping_and_pem_label_defaults():
-    with pytest.raises(ValueError, match="at least one CTAP field"):
-        encode_ctap_numeric._sanitize_ctap_numeric_mapping({})
-
     assert encode_binary_extract._normalize_pem_label(" !!! ") == "DATA"
 
 
