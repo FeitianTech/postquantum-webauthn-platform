@@ -113,11 +113,7 @@ def test_register_begin_accepts_non_mapping_authenticator_selection_and_derives_
     pytest.importorskip("server.app.app")
 
     captured = {}
-    monkeypatch.setattr(
-        pqc_module,
-        "detect_available_pqc_algorithms",
-        lambda: ({-50, -49, -48}, None)
-    )
+    monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_register_begin_payload()
@@ -150,11 +146,7 @@ def test_register_begin_maps_discouraged_uv_require_resident_key_and_extension_a
     pytest.importorskip("server.app.app")
 
     captured = {}
-    monkeypatch.setattr(
-        pqc_module,
-        "detect_available_pqc_algorithms",
-        lambda: ({-50, -49, -48}, None)
-    )
+    monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_register_begin_payload()

@@ -85,67 +85,6 @@ def test_describe_algorithm_for_unknown():
     assert pqc.describe_algorithm(123) == "COSE alg 123"
 
 
-def test_detect_available_pqc_algorithms_all_available():
-    """cryptography ships all three ML-DSA parameter sets, so all are offered."""
-    from server.app.webauthn import pqc
-
-    available, error = pqc.detect_available_pqc_algorithms()
-
-    assert available == {-48, -49, -50}
-    assert error is None
-
-
-def test_detect_available_pqc_algorithms_partial_available(monkeypatch):
-    """A build missing a parameter set offers the rest and names the gap."""
-    from server.app.webauthn import pqc
-
-    monkeypatch.setattr(
-        pqc, "_load_enabled_mechanisms", lambda: {"ML-DSA-44", "ML-DSA-65"}
-    )
-    available, error = pqc.detect_available_pqc_algorithms()
-
-    assert available == {-48, -49}
-    assert error is not None
-    assert "ML-DSA-87" in error
-
-
-def test_detect_available_pqc_algorithms_none_available(monkeypatch):
-    """With no ML-DSA support at all, every parameter set is reported missing."""
-    from server.app.webauthn import pqc
-
-    monkeypatch.setattr(pqc, "_load_enabled_mechanisms", lambda: set())
-    available, error = pqc.detect_available_pqc_algorithms()
-
-    assert available == set()
-    assert error is not None
-    for mechanism in ("ML-DSA-44", "ML-DSA-65", "ML-DSA-87"):
-        assert mechanism in error
-
-
-def test_detect_available_pqc_algorithms_import_error(monkeypatch):
-    """A cryptography build without the mldsa module degrades with guidance."""
-    from server.app.webauthn import pqc
-
-    def _raise():
-        raise ImportError("no mldsa module")
-
-    monkeypatch.setattr(pqc, "_load_enabled_mechanisms", _raise)
-    available, error = pqc.detect_available_pqc_algorithms()
-
-    assert available == set()
-    assert error is not None
-    assert "cryptography" in error.lower()
-    # The old message named a package that does not exist.
-    assert "oqs" not in error.lower()
-
-
-def test_load_enabled_mechanisms_reports_cryptography_support():
-    """The probe reads real cryptography key classes, not a stubbed module."""
-    from server.app.webauthn import pqc
-
-    assert pqc._load_enabled_mechanisms() == {"ML-DSA-44", "ML-DSA-65", "ML-DSA-87"}
-
-
 def test_log_algorithm_selection_with_none(monkeypatch):
     """Test logging when no algorithm is selected."""
     from server.app.webauthn import pqc
@@ -186,3 +125,9 @@ def test_log_algorithm_selection_with_classical(monkeypatch):
     assert len(logged) == 1
     assert "classical algorithm" in logged[0][0]
     assert logged[0][1] == ("ES256 (ECDSA)", -7, "registration")
+
+
+def test_fido2_verifies_every_mldsa_parameter_set_in_this_build():
+    from server.app.routes.advanced import algorithms
+
+    assert {-48, -49, -50} <= algorithms._verifiable_algorithms()

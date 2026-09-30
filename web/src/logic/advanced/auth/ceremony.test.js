@@ -307,7 +307,7 @@ describe('collectPotentialUnsupportedFeatures', () => {
 
   it('names the signature algorithms when none the options offer is commonly supported', () => {
     expect(collectPotentialUnsupportedFeatures({}, undefined, beginOptions(MLDSA.begin))).toEqual(['selected signature algorithms']);
-    expect(collectPotentialUnsupportedFeatures({}, undefined, beginOptions(PQC_UNAVAILABLE[0]))).toEqual([]);
+    expect(collectPotentialUnsupportedFeatures({}, undefined, beginOptions(PQC_UNAVAILABLE[1]))).toEqual([]);
   });
 
   it('reads only the numeric algorithms of the parameters that are objects', () => {
@@ -531,7 +531,7 @@ describe('registerAdvancedCredential', () => {
 
   it('warns with the server\'s warnings about the request, joined, and hands the authenticator none of them', async () => {
     // The first recorded answer's warning, then the second's: two warnings in one answer.
-    const [first, second] = PQC_UNAVAILABLE;
+    const [, first, second] = PQC_UNAVAILABLE;
     const warned = { ...first, body: { ...first.body, warnings: [...first.body.warnings, ...second.body.warnings] } };
     serving({ [BEGIN]: warned, [COMPLETE]: NONE.complete });
     const options = formOptions();
@@ -542,7 +542,7 @@ describe('registerAdvancedCredential', () => {
     expect(sent(0).body.publicKey.pubKeyCredParams).toEqual(pqc);
     expect(options.onWarning).toHaveBeenCalledTimes(1);
     expect(options.onWarning).toHaveBeenCalledWith(
-      'Unsupported PQC algorithms were skipped (ML-DSA-65, ML-DSA-44); falling back to classical algorithms. Unsupported PQC algorithms were skipped (ML-DSA-87).',
+      'Unsupported PQC algorithms were skipped (ML-DSA-87). Unsupported PQC algorithms were skipped (ML-DSA-87, ML-DSA-65, ML-DSA-44).',
     );
     expect(authenticator.create.mock.calls[0][0]).not.toHaveProperty('warnings');
   });
@@ -609,7 +609,7 @@ describe('registerAdvancedCredential', () => {
   });
 
   it('registers without being told where to say its steps', async () => {
-    serving({ [BEGIN]: PQC_UNAVAILABLE[0], [COMPLETE]: NONE.complete });
+    serving({ [BEGIN]: PQC_UNAVAILABLE[1], [COMPLETE]: NONE.complete });
     const { onStart, onProgress, onWarning, onResult, ...silent } = formOptions();
     const outcome = await registerAdvancedCredential(text(request()), silent);
 

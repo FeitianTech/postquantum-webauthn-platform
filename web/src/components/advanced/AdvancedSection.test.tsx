@@ -207,7 +207,7 @@ describe('a registration', () => {
 
   it('gives the begin answer\'s warnings as a toast', async () => {
     authenticator = installAuthenticator(vi, { create: recordedCredential(NONE) });
-    const [warned] = goldenAnswers('advanced-register-begin-pqc-unavailable');
+    const [, warned] = goldenAnswers('advanced-register-begin-pqc-unavailable');
     renderSection([], { ...registrationRoutes(NONE), '/api/advanced/register/begin': answer(warned) });
     await ready();
 

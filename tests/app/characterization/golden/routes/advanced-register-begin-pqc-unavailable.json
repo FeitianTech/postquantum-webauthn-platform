@@ -3,7 +3,7 @@
  "requests": [
   {
    "request": "POST /api/advanced/register/begin",
-   "status": 200,
+   "status": 400,
    "headers": [
     [
      "Content-Type",
@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "603"
+     "100"
     ],
     [
      "X-Content-Type-Options",
@@ -40,103 +40,12 @@
     [
      "Permissions-Policy",
      "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
-    ],
-    [
-     "Vary",
-     "Cookie"
     ]
    ],
-   "cookies": [
-    {
-     "name": "session",
-     "attributes": [
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": {
-      "advanced_original_request": {
-       "publicKey": {
-        "challenge": {
-         "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
-        },
-        "pubKeyCredParams": [
-         {
-          "alg": -7,
-          "type": "public-key"
-         },
-         {
-          "alg": -8,
-          "type": "public-key"
-         },
-         {
-          "alg": -257,
-          "type": "public-key"
-         }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "Demo server"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
-       }
-      },
-      "advanced_register_allowed_attachments": [],
-      "advanced_rp": {
-       "id": "localhost",
-       "name": "Demo server"
-      },
-      "advanced_state": {
-       "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
-       "issued_at": 1790000000.0,
-       "user_verification": "preferred"
-      }
-     }
-    }
-   ],
-   "bodySha256": "46e095eed16abba10ff68ce69cb35140253752adc0c264b336cf65ba0f8e1e06",
+   "cookies": [],
+   "bodySha256": "e3517a487eadae61f3891998de138af632bd4f5c095faff6aca09334a02cbf11",
    "body": {
-    "publicKey": {
-     "attestation": "none",
-     "authenticatorSelection": {
-      "requireResidentKey": false,
-      "residentKey": "preferred",
-      "userVerification": "preferred"
-     },
-     "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
-     "excludeCredentials": [],
-     "pubKeyCredParams": [
-      {
-       "alg": -7,
-       "type": "public-key"
-      },
-      {
-       "alg": -8,
-       "type": "public-key"
-      },
-      {
-       "alg": -257,
-       "type": "public-key"
-      }
-     ],
-     "rp": {
-      "id": "localhost",
-      "name": "Demo server"
-     },
-     "timeout": 90,
-     "user": {
-      "displayName": "A. User",
-      "id": "dXNlci1oYW5kbGU",
-      "name": "user@example.com"
-     }
-    },
-    "warnings": [
-     "Unsupported PQC algorithms were skipped (ML-DSA-65, ML-DSA-44); falling back to classical algorithms."
-    ]
+    "error": "None of the requested algorithms can be verified by this server (ML-DSA-65, ML-DSA-44)."
    }
   },
   {

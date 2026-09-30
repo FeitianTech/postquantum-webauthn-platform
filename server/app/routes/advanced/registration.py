@@ -157,7 +157,9 @@ def advanced_register_begin():
     warnings: list[str] = []
     temp_server, rp_entity = registration_options.registration_server(public_key)
 
-    algorithms.configure_allowed_algorithms(public_key, temp_server, warnings)
+    refusal = algorithms.configure_allowed_algorithms(public_key, temp_server, warnings)
+    if refusal is not None:
+        return jsonify({"error": refusal}), 400
     public_key["pubKeyCredParams"] = algorithms.advertised_algorithm_params(temp_server)
 
     logger.info(

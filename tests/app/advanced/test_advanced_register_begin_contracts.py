@@ -2,6 +2,7 @@ import types
 
 import pytest
 
+from server.app.routes.advanced import algorithms as advanced_algorithms
 from tests.app.entry_app import entry_app
 
 
@@ -144,11 +145,7 @@ def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkey
         "build_rp_entity",
         lambda _rp: types.SimpleNamespace(id="normalized.example", name="Normalized RP")
     )
-    monkeypatch.setattr(
-        pqc_module,
-        "detect_available_pqc_algorithms",
-        lambda: ({-50, -49, -48}, None)
-    )
+    monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_payload()
@@ -194,11 +191,7 @@ def test_advanced_register_begin_normalizes_pubkeycredparams_and_filters_invalid
     pytest.importorskip("server.app.app")
 
     captured = {}
-    monkeypatch.setattr(
-        pqc_module,
-        "detect_available_pqc_algorithms",
-        lambda: ({-50, -49, -48}, None)
-    )
+    monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_payload()
@@ -232,11 +225,7 @@ def test_advanced_register_begin_uses_default_algorithms_without_pubkeycredparam
     pytest.importorskip("server.app.app")
 
     captured = {}
-    monkeypatch.setattr(
-        pqc_module,
-        "detect_available_pqc_algorithms",
-        lambda: ({-50, -49, -48}, None)
-    )
+    monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_payload()
@@ -263,11 +252,7 @@ def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorith
     pytest.importorskip("server.app.app")
 
     captured = {}
-    monkeypatch.setattr(
-        pqc_module,
-        "detect_available_pqc_algorithms",
-        lambda: ({-49}, "limited pqc")
-    )
+    monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-49})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_payload()
@@ -285,17 +270,13 @@ def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorith
     assert any("Unsupported PQC algorithms were skipped" in warning for warning in body.get("warnings", []))
 
 
-def test_advanced_register_begin_falls_back_to_classical_when_no_requested_pqc_available(monkeypatch, pqc_module):
+def test_advanced_register_begin_refuses_when_no_requested_algorithm_is_verifiable(monkeypatch, pqc_module):
     config_module = pytest.importorskip("server.app.config")
     advanced_module = pytest.importorskip("server.app.routes.advanced")
     pytest.importorskip("server.app.app")
 
     captured = {}
-    monkeypatch.setattr(
-        pqc_module,
-        "detect_available_pqc_algorithms",
-        lambda: (set(), "no oqs available")
-    )
+    monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: set())
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_payload()
@@ -304,10 +285,11 @@ def test_advanced_register_begin_falls_back_to_classical_when_no_requested_pqc_a
     with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json=payload)
 
-    assert response.status_code == 200
-    body = response.get_json()
-    assert [entry["alg"] for entry in body["publicKey"]["pubKeyCredParams"]] == [-7, -8, -257]
-    assert any("falling back to classical algorithms" in warning for warning in body.get("warnings", []))
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "error": "None of the requested algorithms can be verified by this server (ML-DSA-87)."
+    }
+    assert "create_fido_server_kwargs" in captured and "allowed_algorithms" not in captured
 
 
 def test_advanced_register_begin_maps_auth_selection_exclusions_extensions_and_timeout(monkeypatch, pqc_module):
@@ -316,11 +298,7 @@ def test_advanced_register_begin_maps_auth_selection_exclusions_extensions_and_t
     pytest.importorskip("server.app.app")
 
     captured = {}
-    monkeypatch.setattr(
-        pqc_module,
-        "detect_available_pqc_algorithms",
-        lambda: ({-50, -49, -48}, None)
-    )
+    monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
 
     payload = _base_payload()

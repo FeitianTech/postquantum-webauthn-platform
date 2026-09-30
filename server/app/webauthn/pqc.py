@@ -1,7 +1,8 @@
 """Helpers for integrating ML-DSA algorithms into the demo server.
 
 Signing and verification are provided by ``cryptography``, which has native
-ML-DSA support.  liboqs is no longer required.
+ML-DSA support; whether this build can verify it is fido2's to say
+(``CoseKey.supported_algorithms``).
 """
 
 from __future__ import annotations
@@ -20,58 +21,6 @@ PQC_ALGORITHM_ID_TO_NAME: dict[int, str] = {
 _PQC_ALGORITHM_NAME_TO_ID: dict[str, int] = {
     name: alg_id for alg_id, name in PQC_ALGORITHM_ID_TO_NAME.items()
 }
-
-
-def _load_enabled_mechanisms() -> set[str]:
-    """Return the ML-DSA parameter sets ``cryptography`` can verify."""
-
-    from cryptography.hazmat.primitives.asymmetric import mldsa
-
-    key_classes = {
-        "ML-DSA-44": "MLDSA44PublicKey",
-        "ML-DSA-65": "MLDSA65PublicKey",
-        "ML-DSA-87": "MLDSA87PublicKey",
-    }
-    return {
-        mechanism
-        for mechanism, attribute in key_classes.items()
-        if getattr(mldsa, attribute, None) is not None
-    }
-
-
-def detect_available_pqc_algorithms() -> tuple[set[int], str | None]:
-    """Detect the ML-DSA algorithms this build can verify."""
-
-    try:
-        mechanism_names = _load_enabled_mechanisms()
-    except ImportError:
-        return set(), (
-            "Post-quantum algorithms require a cryptography build with ML-DSA support. "
-            "Install cryptography>=49."
-        )
-    except Exception as exc:  # pragma: no cover - defensive logging path
-        logger.exception("Failed to enumerate ML-DSA mechanisms: %s", exc)
-        return set(), "Unable to determine which post-quantum algorithms are available."
-
-    available_ids = {
-        alg_id
-        for alg_id, mechanism in PQC_ALGORITHM_ID_TO_NAME.items()
-        if mechanism in mechanism_names
-    }
-
-    if len(available_ids) == len(PQC_ALGORITHM_ID_TO_NAME):
-        return available_ids, None
-
-    missing = [
-        PQC_ALGORITHM_ID_TO_NAME[alg_id]
-        for alg_id in sorted(PQC_ALGORITHM_ID_TO_NAME)
-        if alg_id not in available_ids
-    ]
-    return available_ids, (
-        "The installed cryptography build does not support: "
-        + ", ".join(missing)
-        + ". Upgrade cryptography to a release providing all ML-DSA parameter sets."
-    )
 
 
 def is_pqc_algorithm(alg_id: int) -> bool:
@@ -146,9 +95,7 @@ def log_algorithm_selection(stage: str, alg_id: int | None) -> None:
 
 __all__ = [
     "describe_algorithm",
-    "detect_available_pqc_algorithms",
     "is_pqc_algorithm",
     "log_algorithm_selection",
     "PQC_ALGORITHM_ID_TO_NAME",
 ]
-

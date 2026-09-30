@@ -5,6 +5,7 @@ import hashlib
 import pytest
 
 from server.app.routes import binary_helpers as shared_binary_helpers
+from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import parsing as advanced_parsing
 from tests.app.entry_app import entry_app
 
@@ -75,7 +76,7 @@ def test_register_begin_maps_attestation_modes_and_exercises_pqc_warning_branch(
 
     algorithms_module = pytest.importorskip("server.app.routes.advanced.algorithms")
     warning_messages = []
-    monkeypatch.setattr(pqc_module, "detect_available_pqc_algorithms", lambda: (set(), None))
+    monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: set())
     monkeypatch.setattr(
         algorithms_module.logger,
         "warning",
@@ -88,6 +89,7 @@ def test_register_begin_maps_attestation_modes_and_exercises_pqc_warning_branch(
             "attestation": attestation_value,
             "pubKeyCredParams": [
                 {"type": "public-key", "alg": -50},
+                {"type": "public-key", "alg": -7},
                 [],
             ],
             "extensions": {

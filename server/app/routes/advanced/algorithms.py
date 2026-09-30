@@ -7,6 +7,7 @@ import re
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from fido2.cose import CoseKey
 from fido2.webauthn import (
     PublicKeyCredentialParameters,
     PublicKeyCredentialType,
@@ -19,8 +20,12 @@ logger = logging.getLogger(__name__)
 
 # What a registration offers when its request names no algorithms.
 _DEFAULT_REGISTRATION_ALGORITHMS = (-50, -48, -49, -7, -257)
-# What it falls back to when every requested algorithm is an unavailable PQC one.
-_CLASSICAL_FALLBACK_ALGORITHMS = (-7, -8, -257)
+
+
+def _verifiable_algorithms() -> set[int]:
+    """The COSE algorithms fido2 verifies here: ML-DSA only where cryptography's backend has it."""
+
+    return set(CoseKey.supported_algorithms())
 
 
 def _normalize_algorithm_name_key(name: str) -> str:
@@ -148,8 +153,9 @@ def configure_allowed_algorithms(
     public_key: Mapping[str, Any],
     temp_server: Any,
     warnings: list[str],
-) -> None:
-    """Set what a registration offers: the requested algorithms, else the defaults, less unavailable PQC."""
+) -> str | None:
+    """Set what a registration offers: the requested algorithms, else the defaults, less
+    the ML-DSA ones fido2 cannot verify here. Gives the refusal when nothing is left."""
 
     pub_key_cred_params = public_key.get("pubKeyCredParams", [])
     if pub_key_cred_params:
@@ -160,10 +166,10 @@ def configure_allowed_algorithms(
     else:
         temp_server.allowed_algorithms = [_public_key_param(alg) for alg in _DEFAULT_REGISTRATION_ALGORITHMS]
 
-    _drop_unavailable_pqc(temp_server, warnings)
+    return _drop_unavailable_pqc(temp_server, warnings)
 
 
-def _drop_unavailable_pqc(temp_server: Any, warnings: list[str]) -> None:
+def _drop_unavailable_pqc(temp_server: Any, warnings: list[str]) -> str | None:
     allowed_algorithm_ids = [
         getattr(param, "alg", None)
         for param in getattr(temp_server, "allowed_algorithms", [])
@@ -171,36 +177,20 @@ def _drop_unavailable_pqc(temp_server: Any, warnings: list[str]) -> None:
     allowed_algorithm_ids = [alg for alg in allowed_algorithm_ids if isinstance(alg, int)]
 
     pqc_in_allowed = {alg for alg in allowed_algorithm_ids if pqc.is_pqc_algorithm(alg)}
-    if not pqc_in_allowed:
-        return
-
-    pqc_available_ids, pqc_error_message = pqc.detect_available_pqc_algorithms()
-    missing_pqc = pqc_in_allowed - pqc_available_ids
+    missing_pqc = pqc_in_allowed - _verifiable_algorithms()
     if not missing_pqc:
-        return
+        return None
 
-    missing_names = ", ".join(
-        pqc.PQC_ALGORITHM_ID_TO_NAME[alg] for alg in sorted(missing_pqc)
-    )
-    if pqc_error_message:
-        logger.warning("Post-quantum support unavailable: %s", pqc_error_message)
-    else:
-        logger.warning(
-            "Post-quantum algorithms requested (%s) but not available in this environment.",
-            missing_names,
-        )
-
+    missing_names = ", ".join(pqc.PQC_ALGORITHM_ID_TO_NAME[alg] for alg in sorted(missing_pqc))
+    logger.warning("Post-quantum algorithms requested (%s) but not verifiable here.", missing_names)
     filtered_allowed = [
         param for param in temp_server.allowed_algorithms if getattr(param, "alg", None) not in missing_pqc
     ]
-    if filtered_allowed:
-        temp_server.allowed_algorithms = filtered_allowed
-        warnings.append(f"Unsupported PQC algorithms were skipped ({missing_names}).")
-    else:
-        temp_server.allowed_algorithms = [_public_key_param(alg) for alg in _CLASSICAL_FALLBACK_ALGORITHMS]
-        warnings.append(
-            f"Unsupported PQC algorithms were skipped ({missing_names}); falling back to classical algorithms."
-        )
+    if not filtered_allowed:
+        return f"None of the requested algorithms can be verified by this server ({missing_names})."
+    temp_server.allowed_algorithms = filtered_allowed
+    warnings.append(f"Unsupported PQC algorithms were skipped ({missing_names}).")
+    return None
 
 
 def advertised_algorithm_params(temp_server: Any) -> list[dict[str, Any]]:

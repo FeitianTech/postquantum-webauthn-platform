@@ -10,6 +10,8 @@ import copy
 from collections.abc import Callable
 from typing import Any
 
+from server.app.routes.advanced import algorithms as advanced_algorithms
+
 from ..security.ceremony_helpers import (
     ORIGIN,
     advanced_public_key_options,
@@ -290,9 +292,8 @@ def _(r: Recorder) -> None:
 
 @scenario("advanced-register-begin-pqc-unavailable")
 def _(r: Recorder) -> None:
-    from server.app.webauthn import pqc
 
-    r.env.monkeypatch.setattr(pqc, "detect_available_pqc_algorithms", lambda: (set(), "liboqs unavailable"))
+    r.env.monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: set())
     client = r.client()
     post = lambda options: r.post(client, "/api/advanced/register/begin", json={"publicKey": options})  # noqa: E731
     post(_options(pubKeyCredParams=[{"type": "public-key", "alg": -48}, {"type": "public-key", "alg": -49}]))
