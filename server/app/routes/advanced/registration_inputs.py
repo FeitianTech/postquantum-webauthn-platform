@@ -14,13 +14,13 @@ from typing import Any
 from flask import jsonify, session
 
 from ... import visitor_session
-from ...attachments import (
+from ...config import relying_party
+from ...webauthn.attachments import (
     attachment_hint_violation,
     normalize_attachment,
     resolve_allowed_attachments,
     resolve_effective_attachments,
 )
-from ...config import relying_party
 from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
 

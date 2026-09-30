@@ -7,9 +7,9 @@ from fido2 import cbor
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData
 
-from ...attachments import normalize_attachment
 from ...encoding import encode_base64url
 from ...webauthn import mldsa
+from ...webauthn.attachments import normalize_attachment
 from . import algorithms, binary
 
 

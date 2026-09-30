@@ -14,7 +14,6 @@ from fido2.webauthn import (
 from flask import Blueprint, jsonify, request, session
 
 from ... import json_values
-from ...attachments import normalize_attachment
 from ...challenge_registry import (
     CHALLENGE_FRESH,
     CHALLENGE_REPLAYED,
@@ -23,6 +22,7 @@ from ...challenge_registry import (
 )
 from ...config import origins, relying_party
 from ...mds import provisioning as mds_provisioning
+from ...webauthn.attachments import normalize_attachment
 from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
 from ...webauthn.attestation import checks

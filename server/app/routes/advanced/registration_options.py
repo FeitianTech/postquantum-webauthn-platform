@@ -19,8 +19,8 @@ from fido2.webauthn import (
 )
 from flask import jsonify
 
-from ...attachments import normalize_attachment, resolve_effective_attachments
 from ...config import relying_party
+from ...webauthn.attachments import normalize_attachment, resolve_effective_attachments
 from ...webauthn.attestation.aaguid import describe_cred_protect
 from . import binary
 

@@ -7,14 +7,14 @@ from typing import Any
 from flask import Blueprint, jsonify, request, session
 
 from ... import json_values
-from ...attachments import (
+from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
+from ...encoding import encode_base64url
+from ...webauthn.attachments import (
     attachment_hint_violation,
     normalize_attachment,
     resolve_allowed_attachments,
     resolve_effective_attachments,
 )
-from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
-from ...encoding import encode_base64url
 from .. import binary_helpers
 from . import (
     algorithms,
