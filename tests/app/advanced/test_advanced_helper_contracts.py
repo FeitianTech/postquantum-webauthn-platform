@@ -8,7 +8,7 @@ from server.app import encoding
 from server.app.routes import advanced as advanced_module
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.routes.advanced import summary as advanced_summary
-from server.app.webauthn import client_binary, cose_algorithms
+from server.app.webauthn import client_binary, client_credentials, cose_algorithms
 
 
 def test_algorithm_name_normalization_lookup_and_coercion_matrix():
@@ -95,7 +95,8 @@ def test_optional_bool_flag_and_first_value_helpers():
     assert advanced_parsing._extract_flag_from_mapping({}, ("resident",)) is None
 
     values = {"first": None, "second": 0, "third": "x"}
-    assert advanced_parsing._select_first(values, ("first", "second", "third")) == 0
+    assert client_credentials.select_first(values, ("first", "second", "third")) == 0
+    assert client_credentials.select_first(values, ("first", "second", "third"), skip_none=False) is None
 
 
 def test_base64_assertion_and_binary_extraction_helpers():

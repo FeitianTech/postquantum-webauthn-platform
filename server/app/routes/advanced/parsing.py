@@ -3,12 +3,8 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from fido2 import cbor
-from fido2.cose import CoseKey
-from fido2.webauthn import AttestedCredentialData
-
 from ...encoding import encode_base64url
-from ...webauthn import client_binary, cose_algorithms, mldsa
+from ...webauthn import client_credentials, cose_algorithms
 from ...webauthn.attachments import normalize_attachment
 
 
@@ -44,13 +40,13 @@ def _extract_flag_from_mapping(
     return None
 
 
-def _select_first(mapping: Mapping[str, Any], keys: Iterable[str]) -> Any:
-    for key in keys:
-        if key in mapping:
-            value = mapping[key]
-            if value is not None:
-                return value
-    return None
+_FIELDS = client_credentials.CredentialFields(
+    aaguid=("aaguid", "aaguidBase64Url", "aaguidBase64", "aaguidHex"),
+    credential_id=("credentialId", "credentialID", "credentialIdBase64Url", "id", "rawId"),
+    public_key=("publicKey", "publicKeyBase64", "publicKeyBase64Url", "publicKeyBytes", "publicKeyCbor"),
+    default_aaguid=b"\x00" * 16,
+    wrappers=True,
+)
 
 
 def _parse_client_supplied_credentials(
@@ -67,30 +63,12 @@ def _parse_client_supplied_credentials(
             continue
 
         try:
-            aaguid_raw = _select_first(
-                entry,
-                ("aaguid", "aaguidBase64Url", "aaguidBase64", "aaguidHex"),
-            )
-            credential_id_raw = _select_first(
-                entry,
-                ("credentialId", "credentialID", "credentialIdBase64Url", "id", "rawId"),
-            )
-            public_key_raw = _select_first(
-                entry,
-                ("publicKey", "publicKeyBase64", "publicKeyBase64Url", "publicKeyBytes", "publicKeyCbor"),
-            )
-            if credential_id_raw is None or public_key_raw is None:
+            material = client_credentials.read_key_material(entry, _FIELDS)
+            if material is None:
                 continue
 
-            aaguid_bytes = b"\x00" * 16 if aaguid_raw is None else client_binary.read(aaguid_raw, wrappers=True)
-            credential_id_bytes = client_binary.read(credential_id_raw, wrappers=True)
-            public_key_bytes = client_binary.read(public_key_raw, wrappers=True)
-
-            cose_key = CoseKey.parse(mldsa.with_raw_public_key(cbor.decode(public_key_bytes)))
-            attested = AttestedCredentialData.create(aaguid_bytes, credential_id_bytes, cose_key)
-
             attachment_value = normalize_attachment(
-                _select_first(entry, ("authenticatorAttachment", "attachment"))
+                client_credentials.select_first(entry, ("authenticatorAttachment", "attachment"))
                 or (entry.get("properties") or {}).get("authenticatorAttachment")
                 or (entry.get("properties") or {}).get("authenticator_attachment")
             )
@@ -98,34 +76,12 @@ def _parse_client_supplied_credentials(
             raw_alg_value = entry.get("algorithm") or entry.get("publicKeyAlgorithm")
             algorithm_value = cose_algorithms.coerce_cose_algorithm(raw_alg_value)
 
-            resident_flag = _extract_flag_from_mapping(
-                entry,
-                ("resident", "residentKey", "discoverable"),
-            )
-            if resident_flag is None:
-                properties = entry.get("properties")
-                if isinstance(properties, Mapping):
-                    resident_flag = _extract_flag_from_mapping(
-                        properties,
-                        ("resident", "residentKey", "discoverable", "actualResidentKey"),
-                    )
-
-            if resident_flag is None:
-                client_outputs = entry.get("clientExtensionOutputs")
-                if isinstance(client_outputs, Mapping):
-                    cred_props_value = client_outputs.get("credProps")
-                    if isinstance(cred_props_value, Mapping):
-                        resident_flag = _coerce_optional_bool(cred_props_value.get("rk"))
-                    elif isinstance(cred_props_value, bool):
-                        resident_flag = cred_props_value
-
-            if resident_flag is None:
-                resident_flag = False
+            resident_flag = _resident_flag(entry)
 
             records.append(
                 {
-                    "data": attested,
-                    "id": credential_id_bytes,
+                    "data": material.attested,
+                    "id": material.credential_id,
                     "attachment": attachment_value,
                     "algorithm": algorithm_value,
                     "resident": bool(resident_flag),
@@ -134,22 +90,59 @@ def _parse_client_supplied_credentials(
                     else 0,
                 }
             )
-
-            serialized_entry: dict[str, Any] = {
-                "credentialId": encode_base64url(credential_id_bytes),
-                "publicKey": encode_base64url(public_key_bytes),
-                "signCount": int(entry.get("signCount")) if isinstance(entry.get("signCount"), int) else 0,
-                "resident": bool(resident_flag),
-            }
-            if aaguid_bytes:
-                serialized_entry["aaguid"] = encode_base64url(aaguid_bytes)
-            if attachment_value:
-                serialized_entry["authenticatorAttachment"] = attachment_value
-            if algorithm_value is not None:
-                serialized_entry["algorithm"] = algorithm_value
-
-            serialized.append(serialized_entry)
+            serialized.append(_serialized_entry(entry, material, attachment_value, algorithm_value, resident_flag))
         except Exception:
             continue
 
     return records, serialized
+
+
+def _resident_flag(entry: Mapping[str, Any]) -> bool:
+    """Whether the entry says its credential is discoverable: its own flags, its properties, or credProps."""
+
+    resident_flag = _extract_flag_from_mapping(
+        entry,
+        ("resident", "residentKey", "discoverable"),
+    )
+    if resident_flag is None:
+        properties = entry.get("properties")
+        if isinstance(properties, Mapping):
+            resident_flag = _extract_flag_from_mapping(
+                properties,
+                ("resident", "residentKey", "discoverable", "actualResidentKey"),
+            )
+
+    if resident_flag is None:
+        client_outputs = entry.get("clientExtensionOutputs")
+        if isinstance(client_outputs, Mapping):
+            cred_props_value = client_outputs.get("credProps")
+            if isinstance(cred_props_value, Mapping):
+                resident_flag = _coerce_optional_bool(cred_props_value.get("rk"))
+            elif isinstance(cred_props_value, bool):
+                resident_flag = cred_props_value
+
+    if resident_flag is None:
+        resident_flag = False
+    return resident_flag
+
+
+def _serialized_entry(
+    entry: Mapping[str, Any],
+    material: client_credentials.KeyMaterial,
+    attachment_value: Any,
+    algorithm_value: Any,
+    resident_flag: bool,
+) -> dict[str, Any]:
+    serialized_entry: dict[str, Any] = {
+        "credentialId": encode_base64url(material.credential_id),
+        "publicKey": encode_base64url(material.public_key),
+        "signCount": int(entry.get("signCount")) if isinstance(entry.get("signCount"), int) else 0,
+        "resident": bool(resident_flag),
+    }
+    if material.aaguid:
+        serialized_entry["aaguid"] = encode_base64url(material.aaguid)
+    if attachment_value:
+        serialized_entry["authenticatorAttachment"] = attachment_value
+    if algorithm_value is not None:
+        serialized_entry["algorithm"] = algorithm_value
+    return serialized_entry

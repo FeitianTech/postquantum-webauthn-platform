@@ -3,13 +3,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from fido2 import cbor
-from fido2.cose import CoseKey
-from fido2.webauthn import AttestedCredentialData
-
 from ...encoding import encode_base64url
-from ...webauthn import client_binary, mldsa
-from . import binary
+from ...webauthn import client_binary, client_credentials
 
 _AAGUID_SESSION_FIELD_PRECEDENCE = (
     "aaguid",
@@ -47,6 +42,15 @@ _PUBLIC_KEY_FIELD_PRECEDENCE = (
     "publicKeyCbor",
 )
 
+# A field present but null is taken as it is, and an entry without an AAGUID is skipped.
+_PARSE_FIELDS = client_credentials.CredentialFields(
+    aaguid=_AAGUID_PARSE_FIELD_PRECEDENCE,
+    credential_id=_CREDENTIAL_ID_PARSE_FIELD_PRECEDENCE,
+    public_key=_PUBLIC_KEY_FIELD_PRECEDENCE,
+    skip_none=False,
+    iterables=True,
+)
+
 
 def _serialize_credential_for_session(entry: Mapping[str, Any]) -> dict[str, Any]:
     serialized: dict[str, Any] = {}
@@ -62,18 +66,20 @@ def _serialize_credential_for_session(entry: Mapping[str, Any]) -> dict[str, Any
         if source_key in entry:
             serialized[dest_key] = entry[source_key]
 
-    aaguid_value = binary._select_first(entry, _AAGUID_SESSION_FIELD_PRECEDENCE)
+    aaguid_value = client_credentials.select_first(entry, _AAGUID_SESSION_FIELD_PRECEDENCE, skip_none=False)
     if aaguid_value is None and "aaguidHex" in entry:
         aaguid_value = entry["aaguidHex"]
 
-    credential_id_value = binary._select_first(
+    credential_id_value = client_credentials.select_first(
         entry,
         _CREDENTIAL_ID_SESSION_FIELD_PRECEDENCE,
+        skip_none=False,
     )
 
-    public_key_value = binary._select_first(
+    public_key_value = client_credentials.select_first(
         entry,
         _PUBLIC_KEY_FIELD_PRECEDENCE,
+        skip_none=False,
     )
 
     if aaguid_value is not None:
@@ -107,48 +113,24 @@ def _parse_client_credentials(
             continue
 
         try:
-            aaguid_raw = binary._select_first(
-                entry,
-                _AAGUID_PARSE_FIELD_PRECEDENCE,
-            )
-            credential_id_raw = binary._select_first(
-                entry,
-                _CREDENTIAL_ID_PARSE_FIELD_PRECEDENCE,
-            )
-            public_key_raw = binary._select_first(
-                entry,
-                _PUBLIC_KEY_FIELD_PRECEDENCE,
-            )
-
-            if aaguid_raw is None or credential_id_raw is None or public_key_raw is None:
+            material = client_credentials.read_key_material(entry, _PARSE_FIELDS)
+            if material is None:
                 continue
 
-            aaguid_bytes = client_binary.read(aaguid_raw, iterables=True)
-            credential_id_bytes = client_binary.read(credential_id_raw, iterables=True)
-            public_key_bytes = client_binary.read(public_key_raw, iterables=True)
-
-            cose_key = CoseKey.parse(mldsa.with_raw_public_key(cbor.decode(public_key_bytes)))
-
-            attested = AttestedCredentialData.create(
-                aaguid_bytes,
-                credential_id_bytes,
-                cose_key,
-            )
-
-            attested_credentials.append(attested)
+            attested_credentials.append(material.attested)
 
             serialized_entry = _serialize_credential_for_session(entry)
             serialized_entry.setdefault(
                 "credentialId",
-                encode_base64url(credential_id_bytes),
+                encode_base64url(material.credential_id),
             )
             serialized_entry.setdefault(
                 "aaguid",
-                encode_base64url(aaguid_bytes),
+                encode_base64url(material.aaguid),
             )
             serialized_entry.setdefault(
                 "publicKey",
-                encode_base64url(public_key_bytes),
+                encode_base64url(material.public_key),
             )
             if "signCount" not in serialized_entry and isinstance(entry.get("signCount"), int):
                 serialized_entry["signCount"] = entry["signCount"]
