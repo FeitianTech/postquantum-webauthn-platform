@@ -1,4 +1,4 @@
-"""The one JSON-safe converter: bytes as unpadded base64url, walked through containers."""
+"""The one JSON-safe converter, bytes as unpadded base64url through containers, and the one byte reading."""
 from __future__ import annotations
 
 import uuid
@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from fido2.utils import ByteBuffer
 
-from server.app.json_values import make_json_safe
+from server.app.json_values import as_bytes, make_json_safe
 
 
 def test_bytes_of_every_kind_become_unpadded_base64url_through_every_container():
@@ -47,3 +47,12 @@ def test_anything_else_is_left_as_it_is():
         "none": None,
         "flag": True,
     }
+
+
+def test_as_bytes_reads_every_byte_string_kind_and_nothing_else():
+    assert as_bytes(ByteBuffer(b"abc")) == b"abc"
+    assert as_bytes(b"abc") == b"abc"
+    assert as_bytes(bytearray(b"abc")) == b"abc"
+    assert as_bytes(memoryview(b"xyz")) == b"xyz"
+    assert as_bytes("abc") is None
+    assert as_bytes([0x61]) is None

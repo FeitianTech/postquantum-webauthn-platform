@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from ... import json_values
 from .. import values
 from . import get_info
 from .ambiguous_input import finding
@@ -33,7 +34,7 @@ def _extract_mapping_bytes(value: Mapping[Any, Any], keys: Iterable[Any]) -> byt
     candidate = values.get_mapping_entry(value, *keys)
     if candidate is values.MISSING:
         return None
-    candidate_bytes = values.coerce_cbor_bytes(candidate)
+    candidate_bytes = json_values.as_bytes(candidate)
     if candidate_bytes is not None:
         return candidate_bytes
     return None
@@ -63,7 +64,7 @@ def _looks_like_make_credential_output(value: Mapping[Any, Any]) -> bool:
     att_stmt_value = values.get_mapping_entry(value, 3)
     if att_stmt_value is values.MISSING:
         att_stmt_value = None
-    att_stmt_bytes = values.coerce_cbor_bytes(att_stmt_value)
+    att_stmt_bytes = json_values.as_bytes(att_stmt_value)
     att_stmt_map = att_stmt_value if isinstance(att_stmt_value, Mapping) else None
     compound = fmt_value == "compound" and isinstance(att_stmt_value, list)
     return fmt_value is not None and auth_data_bytes is not None and (

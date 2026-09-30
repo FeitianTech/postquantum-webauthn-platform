@@ -5,10 +5,9 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from cryptography import x509
-from fido2.utils import ByteBuffer
 from flask import current_app
 
-from ... import encoding
+from ... import encoding, json_values
 from . import formatting
 from .constants import AAGUID_EXTENSION_OID
 
@@ -59,16 +58,6 @@ def _is_trusted_ca_certificate(cert_bytes: bytes, *, allow_subject_parsing: bool
     return False
 
 
-def _coerce_bytes(value: Any) -> bytes | None:
-    """Return ``value`` as ``bytes`` when possible."""
-
-    if isinstance(value, ByteBuffer):
-        return value.getvalue()
-    if isinstance(value, (bytes, bytearray, memoryview)):
-        return bytes(value)
-    return None
-
-
 def _collect_trust_path_entries(x5c: Any) -> list[bytes]:
     """Coerce an ``x5c`` attestation entry into a list of DER certificates."""
 
@@ -77,7 +66,7 @@ def _collect_trust_path_entries(x5c: Any) -> list[bytes]:
 
     trust_path: list[bytes] = []
     for entry in x5c:
-        data = _coerce_bytes(entry)
+        data = json_values.as_bytes(entry)
         if data:
             trust_path.append(data)
     return trust_path
@@ -129,7 +118,7 @@ def _extract_certificate_aaguid(cert_der: bytes) -> bytes:
 def _coerce_certificate_bytes(value: Any) -> bytes | None:
     """Decode certificate data from common encodings into raw DER bytes."""
 
-    byte_value = _coerce_bytes(value)
+    byte_value = json_values.as_bytes(value)
     if byte_value is not None:
         return byte_value
 

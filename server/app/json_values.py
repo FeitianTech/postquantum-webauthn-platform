@@ -2,7 +2,8 @@
 
 Byte strings become unpadded base64url, like every byte field the server sends;
 mappings and sequences are walked. The Codec shows bytes as hex instead
-(``decoder.decode.keys.hex_json_safe``): that is its display, not this.
+(``decoder.values.make_hex_only``): that is its display, not this.
+``as_bytes`` is the one reading of a value as a byte string.
 """
 from __future__ import annotations
 
@@ -15,7 +16,17 @@ from fido2.utils import ByteBuffer
 
 from .encoding import encode_base64url
 
-__all__ = ["make_json_safe"]
+__all__ = ["as_bytes", "make_json_safe"]
+
+
+def as_bytes(value: Any) -> bytes | None:
+    """``value`` as ``bytes`` when it is a byte string (``ByteBuffer`` included), else ``None``."""
+
+    if isinstance(value, ByteBuffer):
+        return value.getvalue()
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+    return None
 
 
 def make_json_safe(value: Any, *, string_keys: bool = False) -> Any:

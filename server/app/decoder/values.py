@@ -17,6 +17,7 @@ from typing import Any
 
 from fido2.utils import ByteBuffer
 
+from .. import json_values
 from ..encoding import encode_base64, encode_base64url
 
 MISSING = object()
@@ -91,14 +92,6 @@ def get_mapping_entry(mapping: Mapping[Any, Any], *keys: Any) -> Any:
     return MISSING
 
 
-def coerce_cbor_bytes(value: Any) -> bytes | None:
-    if isinstance(value, ByteBuffer):
-        return value.getvalue()
-    if isinstance(value, (bytes, bytearray, memoryview)):
-        return bytes(value)
-    return None
-
-
 def key_text(key: Any) -> str:
     """Spell a map key for JSON: a byte string as hex, like a byte string value."""
 
@@ -122,7 +115,7 @@ def qualified_key_text(key: Any) -> str:
         return str(key)
     if isinstance(key, str):
         return f"{json.dumps(key, ensure_ascii=False)} (text)"
-    raw = coerce_cbor_bytes(key)
+    raw = json_values.as_bytes(key)
     if raw is not None:
         return f"h'{raw.hex()}' (bytes)"
     if isinstance(key, CborDiagnostic):

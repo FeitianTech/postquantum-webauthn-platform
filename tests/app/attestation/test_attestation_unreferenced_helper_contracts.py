@@ -7,7 +7,6 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, rsa
 from cryptography.x509.oid import NameOID
-from fido2.utils import ByteBuffer
 
 from server.app.webauthn import signature_algorithms
 from server.app.webauthn.attestation import (
@@ -35,12 +34,6 @@ def _self_signed_cert_der() -> bytes:
         .sign(private_key, hashes.SHA256())
     )
     return cert.public_bytes(serialization.Encoding.DER)
-
-
-def test_bytes_helpers(attestation_module):
-    assert attestation_trust._coerce_bytes(ByteBuffer(b"abc")) == b"abc"
-    assert attestation_trust._coerce_bytes(memoryview(b"xyz")) == b"xyz"
-    assert attestation_trust._coerce_bytes("abc") is None
 
 
 def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch, attestation_module):

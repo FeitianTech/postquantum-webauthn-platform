@@ -71,14 +71,6 @@ def test_get_mapping_entry_matches_keys_by_exact_type_and_missing_sentinel():
     assert decoder_values.get_mapping_entry([1, 2, 3], 1) is decoder_values.MISSING
 
 
-def test_coerce_cbor_bytes_supports_supported_binary_types():
-    assert decoder_values.coerce_cbor_bytes(ByteBuffer(b"abc")) == b"abc"
-    assert decoder_values.coerce_cbor_bytes(b"abc") == b"abc"
-    assert decoder_values.coerce_cbor_bytes(bytearray(b"abc")) == b"abc"
-    assert decoder_values.coerce_cbor_bytes(memoryview(b"abc")) == b"abc"
-    assert decoder_values.coerce_cbor_bytes("abc") is None
-
-
 def test_stringify_and_hex_helpers_convert_nested_values():
     payload = {
         1: [b"\xaa", {"x": memoryview(b"\xbb")}],
