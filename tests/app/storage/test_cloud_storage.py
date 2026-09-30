@@ -3,160 +3,21 @@
 from __future__ import annotations
 
 import importlib
-import sys
 import types
 from datetime import datetime, timezone
 
 import pytest
 
-
-def _install_google_stubs():
-    google_pkg = types.ModuleType("google")
-    google_pkg.__path__ = []
-    sys.modules.setdefault("google", google_pkg)
-
-    google_api_core_pkg = sys.modules.setdefault(
-        "google.api_core", types.ModuleType("google.api_core")
-    )
-    google_api_core_pkg.__path__ = []
-    google_api_core_exceptions_pkg = sys.modules.setdefault(
-        "google.api_core.exceptions", types.ModuleType("google.api_core.exceptions")
-    )
-
-    class _BaseError(Exception):
-        pass
-
-    class _NotFound(_BaseError):
-        pass
-
-    class _GoogleAPICallError(_BaseError):
-        pass
-
-    class _RetryError(_BaseError):
-        pass
-
-    google_api_core_exceptions_pkg.NotFound = _NotFound
-    google_api_core_exceptions_pkg.GoogleAPICallError = _GoogleAPICallError
-    google_api_core_exceptions_pkg.RetryError = _RetryError
-    google_api_core_pkg.exceptions = google_api_core_exceptions_pkg
-
-    google_cloud_pkg = sys.modules.setdefault(
-        "google.cloud", types.ModuleType("google.cloud")
-    )
-    google_cloud_pkg.__path__ = []
-    google_cloud_storage_pkg = sys.modules.setdefault(
-        "google.cloud.storage", types.ModuleType("google.cloud.storage")
-    )
-
-    class _DummyClient:
-        def bucket(self, *_args, **_kwargs):  # pragma: no cover - defensive fallback
-            raise RuntimeError("Not configured")
-
-    google_cloud_storage_pkg.Client = _DummyClient
-    google_cloud_pkg.storage = google_cloud_storage_pkg
-
-    google_oauth_pkg = sys.modules.setdefault(
-        "google.oauth2", types.ModuleType("google.oauth2")
-    )
-    google_oauth_pkg.__path__ = []
-    google_service_account_pkg = sys.modules.setdefault(
-        "google.oauth2.service_account",
-        types.ModuleType("google.oauth2.service_account"),
-    )
-
-    class _DummyCredentials:
-        @classmethod
-        def from_service_account_file(cls, *_args, **_kwargs):
-            return cls()
-
-        @classmethod
-        def from_service_account_info(cls, *_args, **_kwargs):
-            return cls()
-
-    google_service_account_pkg.Credentials = _DummyCredentials
-    google_oauth_pkg.service_account = google_service_account_pkg
-
-    google_auth_pkg = sys.modules.setdefault("google.auth", types.ModuleType("google.auth"))
-    google_auth_pkg.__path__ = []
-    google_auth_exceptions_pkg = sys.modules.setdefault(
-        "google.auth.exceptions", types.ModuleType("google.auth.exceptions")
-    )
-
-    class _RefreshError(Exception):
-        pass
-
-    google_auth_exceptions_pkg.RefreshError = _RefreshError
-    google_auth_pkg.exceptions = google_auth_exceptions_pkg
-
-
-_install_google_stubs()
 cloud = importlib.import_module("server.app.storage.cloud")
 
 
-def test_with_retry_succeeds_after_transient_error(monkeypatch):
-    attempts = {"count": 0}
-
-    class _Blob:
-        def upload_from_string(self, *_args, **_kwargs):
-            attempts["count"] += 1
-            if attempts["count"] < 2:
-                raise cloud._lazy("gcs_exceptions").GoogleAPICallError("retry")
-
-    class _Bucket:
-        def blob(self, _name):
-            return _Blob()
-
-    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
-
-    sleeps = []
-    monkeypatch.setattr(cloud.time, "sleep", lambda delay: sleeps.append(delay))
-
-    cloud.upload_bytes("test", b"data")
-
-    assert attempts["count"] == 2
-    assert sleeps == [cloud._DEFAULT_RETRY_BASE_DELAY]
+RETRY = "the client's retry"
 
 
-def test_with_retry_raises_after_exhausting_attempts(monkeypatch):
-    class _Blob:
-        def upload_from_string(self, *_args, **_kwargs):
-            raise cloud._lazy("gcs_exceptions").GoogleAPICallError("fail")
-
-    class _Bucket:
-        def blob(self, _name):
-            return _Blob()
-
-    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
-    monkeypatch.setattr(cloud.time, "sleep", lambda _delay: None)
-
-    with pytest.raises(cloud._lazy("gcs_exceptions").GoogleAPICallError):
-        cloud.upload_bytes("test", b"data")
-
-
-def test_list_blob_names_retries_and_returns_results(monkeypatch):
-    call_state = {"attempt": 0}
-
-    class _Bucket:
-        def list_blobs(self, prefix=None, **_kwargs):
-            call_state["attempt"] += 1
-            if call_state["attempt"] == 1:
-                class _Iterator:
-                    def __iter__(self):
-                        return self
-
-                    def __next__(self):
-                        raise cloud._lazy("gcs_exceptions").RetryError("transient")
-
-                return _Iterator()
-            return [types.SimpleNamespace(name="one"), types.SimpleNamespace(name="two")]
-
-    monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
-    monkeypatch.setattr(cloud.time, "sleep", lambda _delay: None)
-
-    names = list(cloud.list_blob_names("prefix"))
-
-    assert names == ["one", "two"]
-    assert call_state["attempt"] == 2
+@pytest.fixture(autouse=True)
+def _the_clients_retry(monkeypatch, request):
+    if request.node.name != "test_every_call_is_given_the_client_librarys_retry_within_a_bound":
+        monkeypatch.setattr(cloud, "_retry", lambda: RETRY)
 
 
 def test_list_blob_names_passes_a_delimiter_only_when_asked(monkeypatch):
@@ -171,12 +32,15 @@ def test_list_blob_names_passes_a_delimiter_only_when_asked(monkeypatch):
 
     assert list(cloud.list_blob_names("user-data/")) == ["user-data/flat"]
     assert list(cloud.list_blob_names("user-data/", delimiter="/")) == ["user-data/flat"]
-    assert calls == [{"prefix": "user-data/"}, {"prefix": "user-data/", "delimiter": "/"}]
+    assert calls == [
+        {"prefix": "user-data/", "retry": RETRY},
+        {"prefix": "user-data/", "delimiter": "/", "retry": RETRY},
+    ]
 
 
 def test_download_bytes_handles_not_found(monkeypatch):
     class _Blob:
-        def download_as_bytes(self):
+        def download_as_bytes(self, **_options):
             raise cloud._lazy("gcs_exceptions").NotFound("missing")
 
     class _Bucket:
@@ -184,7 +48,6 @@ def test_download_bytes_handles_not_found(monkeypatch):
             return _Blob()
 
     monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
-    monkeypatch.setattr(cloud.time, "sleep", lambda _delay: None)
 
     assert cloud.download_bytes("missing") is None
 
@@ -311,41 +174,6 @@ def test_ensure_bucket_builds_and_caches_bucket(monkeypatch):
     assert bucket_calls["count"] == 1
 
 
-def test_with_retry_does_not_retry_not_found(monkeypatch):
-    calls = {"count": 0}
-    sleeps = []
-
-    def _operation():
-        calls["count"] += 1
-        raise cloud._lazy("gcs_exceptions").NotFound("missing")
-
-    monkeypatch.setattr(cloud.time, "sleep", lambda delay: sleeps.append(delay))
-
-    with pytest.raises(cloud._lazy("gcs_exceptions").NotFound):
-        cloud._with_retry(_operation)
-
-    assert calls["count"] == 1
-    assert sleeps == []
-
-
-def test_with_retry_uses_exponential_backoff(monkeypatch):
-    calls = {"count": 0}
-    sleeps = []
-
-    def _operation():
-        calls["count"] += 1
-        if calls["count"] < 3:
-            raise cloud._lazy("gcs_exceptions").GoogleAPICallError("transient")
-        return "ok"
-
-    monkeypatch.setattr(cloud.time, "sleep", lambda delay: sleeps.append(delay))
-
-    result = cloud._with_retry(_operation)
-
-    assert result == "ok"
-    assert sleeps == [0.5, 1.0]
-
-
 def test_build_blob_name_normalizes_components_and_prefix():
     blob = cloud.build_blob_name(
         "/session-id/",
@@ -364,7 +192,7 @@ def test_build_blob_name_raises_for_empty_path_components():
 
 def test_delete_blob_honors_missing_ok_false(monkeypatch):
     class _Blob:
-        def delete(self):
+        def delete(self, retry=None):
             raise cloud._lazy("gcs_exceptions").NotFound("missing")
 
     class _Bucket:
@@ -379,7 +207,7 @@ def test_delete_blob_honors_missing_ok_false(monkeypatch):
 
 def test_blob_exists_casts_result_to_bool(monkeypatch):
     class _Blob:
-        def exists(self):
+        def exists(self, retry=None):
             return "truthy"
 
     class _Bucket:
@@ -395,7 +223,7 @@ def test_blob_updated_timestamp_returns_none_when_blob_missing(monkeypatch):
     class _Blob:
         updated = None
 
-        def reload(self):
+        def reload(self, retry=None):
             raise cloud._lazy("gcs_exceptions").NotFound("missing")
 
     class _Bucket:
@@ -411,7 +239,7 @@ def test_blob_updated_timestamp_returns_none_when_updated_unset(monkeypatch):
     class _Blob:
         updated = None
 
-        def reload(self):
+        def reload(self, retry=None):
             return None
 
     class _Bucket:
@@ -430,7 +258,7 @@ def test_blob_updated_timestamp_returns_epoch_seconds(monkeypatch):
         def __init__(self):
             self.updated = updated
 
-        def reload(self):
+        def reload(self, retry=None):
             return None
 
     class _Bucket:
@@ -440,11 +268,6 @@ def test_blob_updated_timestamp_returns_epoch_seconds(monkeypatch):
     monkeypatch.setattr(cloud, "_ensure_bucket", lambda: _Bucket())
 
     assert cloud.blob_updated_timestamp("existing") == updated.timestamp()
-
-
-def test_with_retry_raises_runtime_when_no_attempts_configured():
-    with pytest.raises(RuntimeError, match="failed without raising"):
-        cloud._with_retry(lambda: "ok", max_attempts=0)
 
 
 def test_normalise_prefix_handles_empty_inputs():
@@ -480,7 +303,7 @@ def test_ensure_bucket_reuses_existing_client(monkeypatch):
 
 def test_delete_blob_ignores_not_found_when_missing_ok_true(monkeypatch):
     class _Blob:
-        def delete(self):
+        def delete(self, retry=None):
             raise cloud._lazy("gcs_exceptions").NotFound("missing")
 
     class _Bucket:
@@ -497,20 +320,23 @@ def test_a_download_can_be_bounded_to_one_short_attempt(monkeypatch):
 
     bucket = fake_gcs.install(monkeypatch)
     bucket.put("mds/current.json", b"{}")
-    slept = []
-    monkeypatch.setattr(cloud.time, "sleep", slept.append)
 
     assert cloud.download_bytes_with_generation("mds/current.json", timeout=5, attempts=1) == (b"{}", 1)
     assert bucket.download_options[-1] == ("mds/current.json", {"timeout": 5, "retry": None})
 
-    # A transient failure is not retried: the caller hears of it at once.
-    bucket.failing["mds/current.json"] = OSError("unavailable")
-    with pytest.raises(OSError):
-        cloud.download_bytes_with_generation("mds/current.json", timeout=5, attempts=1)
-    assert slept == []
+    # Without a bound the client library's own retry is used.
+    assert cloud.download_bytes_with_generation("mds/current.json") == (b"{}", 1)
+    assert bucket.download_options[-1] == ("mds/current.json", {"retry": "the client's retry"})
 
-    # The default keeps the client's own retry and the three attempts.
-    with pytest.raises(OSError):
-        cloud.download_bytes_with_generation("mds/current.json")
-    assert bucket.download_options[-1] == ("mds/current.json", {})
-    assert len(slept) == 2
+
+def test_every_call_is_given_the_client_librarys_retry_within_a_bound(monkeypatch):
+    """No loop of our own around the client's: its DEFAULT_RETRY, for 30 s at most."""
+
+    monkeypatch.setattr(cloud, "_RETRY", None)
+    retry = cloud._retry()
+    storage_retry = importlib.import_module("google.cloud.storage.retry")
+
+    assert retry._predicate is storage_retry.DEFAULT_RETRY._predicate
+    assert retry._timeout == 30.0
+    assert cloud._retry() is retry
+

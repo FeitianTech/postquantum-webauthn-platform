@@ -4,9 +4,8 @@ from __future__ import annotations
 import importlib
 import os
 import threading
-import time
-from collections.abc import Callable, Iterable
-from typing import Any, TypeVar
+from collections.abc import Iterable
+from typing import Any
 
 from ..env_flags import parse_env_flag
 
@@ -37,11 +36,10 @@ _CLIENT_LOCK = threading.Lock()
 _CLIENT: Any | None = None
 _BUCKET: Any | None = None
 
-_RETRYABLE_EXCEPTIONS_CACHE: tuple[type, ...] | None = None
-_DEFAULT_RETRY_ATTEMPTS = 3
-_DEFAULT_RETRY_BASE_DELAY = 0.5
-
-_T = TypeVar("_T")
+# How long one call keeps retrying what the client library calls transient (429,
+# 408, 5xx, dropped connections, timeouts), with its own backoff.
+_RETRY_TIMEOUT_SECONDS = 30.0
+_RETRY: Any | None = None
 
 
 def _lazy(name: str) -> Any:
@@ -55,18 +53,14 @@ def _lazy(name: str) -> Any:
     return module
 
 
-def _retryable_exceptions() -> tuple[type, ...]:
-    global _RETRYABLE_EXCEPTIONS_CACHE
+def _retry() -> Any:
+    """google-cloud-storage's own ``DEFAULT_RETRY``, within ``_RETRY_TIMEOUT_SECONDS``."""
 
-    if _RETRYABLE_EXCEPTIONS_CACHE is None:
-        gcs_exceptions = _lazy("gcs_exceptions")
-        _RETRYABLE_EXCEPTIONS_CACHE = (
-            gcs_exceptions.GoogleAPICallError,
-            gcs_exceptions.RetryError,
-            _lazy("auth_exceptions").RefreshError,
-            OSError,
-        )
-    return _RETRYABLE_EXCEPTIONS_CACHE
+    global _RETRY
+    if _RETRY is None:
+        storage_retry = importlib.import_module("google.cloud.storage.retry")
+        _RETRY = storage_retry.DEFAULT_RETRY.with_timeout(_RETRY_TIMEOUT_SECONDS)
+    return _RETRY
 
 
 def _not_found_error() -> type:
@@ -118,34 +112,6 @@ def _ensure_bucket() -> Any:
         return _BUCKET
 
 
-def _with_retry(
-    operation: Callable[[], _T],
-    *,
-    max_attempts: int = _DEFAULT_RETRY_ATTEMPTS,
-    base_delay: float = _DEFAULT_RETRY_BASE_DELAY,
-) -> _T:
-    """Execute ``operation`` with retries for transient failures."""
-
-    last_error: Exception | None = None
-
-    for attempt in range(1, max_attempts + 1):
-        try:
-            return operation()
-        except _not_found_error():
-            raise
-        except _retryable_exceptions() as exc:
-            last_error = exc
-            if attempt >= max_attempts:
-                break
-            delay = base_delay * (2 ** (attempt - 1))
-            time.sleep(delay)
-
-    if last_error is not None:
-        raise last_error
-
-    raise RuntimeError("Retryable operation failed without raising an error")
-
-
 def normalise_blob_prefix(prefix: str | None) -> str:
     """Return ``prefix`` as an empty string or a single trailing-slash prefix."""
 
@@ -174,28 +140,22 @@ def build_blob_name(*components: str, prefix: str | None = None) -> str:
 def upload_bytes(blob_name: str, data: bytes, *, content_type: str | None = None) -> None:
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
-
-    def _upload() -> None:
-        blob.upload_from_string(data, content_type=content_type)
-
-    _with_retry(_upload)
+    # Retried although unconditional: it writes the same bytes each time.
+    blob.upload_from_string(data, content_type=content_type, retry=_retry())
 
 
 def download_bytes(blob_name: str) -> bytes | None:
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
 
-    def _download() -> bytes | None:
-        try:
-            return blob.download_as_bytes()
-        except _not_found_error():
-            return None
-
-    return _with_retry(_download)
+    try:
+        return blob.download_as_bytes(retry=_retry())
+    except _not_found_error():
+        return None
 
 
 def download_bytes_with_generation(
-    blob_name: str, *, timeout: float | None = None, attempts: int = _DEFAULT_RETRY_ATTEMPTS
+    blob_name: str, *, timeout: float | None = None, attempts: int | None = None
 ) -> tuple[bytes | None, int]:
     """The object's bytes and generation; ``(None, 0)`` when there is no object.
 
@@ -206,21 +166,15 @@ def download_bytes_with_generation(
 
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
-    options: dict[str, Any] = {}
+    options: dict[str, Any] = {"retry": None if attempts == 1 else _retry()}
     if timeout is not None:
         options["timeout"] = timeout
-    if attempts == 1:
-        options["retry"] = None
-
-    def _download() -> tuple[bytes | None, int]:
-        try:
-            data = blob.download_as_bytes(**options)
-        except _not_found_error():
-            return None, 0
-        # The download sets the generation from the response it read.
-        return data, int(blob.generation or 0)
-
-    return _with_retry(_download, max_attempts=attempts)
+    try:
+        data = blob.download_as_bytes(**options)
+    except _not_found_error():
+        return None, 0
+    # The download sets the generation from the response it read.
+    return data, int(blob.generation or 0)
 
 
 def upload_bytes_if_generation(
@@ -249,14 +203,11 @@ def delete_blob(blob_name: str, *, missing_ok: bool = True) -> None:
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
 
-    def _delete() -> None:
-        try:
-            blob.delete()
-        except _not_found_error():
-            if not missing_ok:
-                raise
-
-    _with_retry(_delete)
+    try:
+        blob.delete(retry=_retry())
+    except _not_found_error():
+        if not missing_ok:
+            raise
 
 
 def list_blob_names(prefix: str, *, delimiter: str | None = None) -> Iterable[str]:
@@ -268,15 +219,11 @@ def list_blob_names(prefix: str, *, delimiter: str | None = None) -> Iterable[st
 
     bucket = _ensure_bucket()
 
-    def _list() -> Iterable[str]:
-        if delimiter is None:
-            iterator = bucket.list_blobs(prefix=prefix)
-        else:
-            iterator = bucket.list_blobs(prefix=prefix, delimiter=delimiter)
-        return [blob.name for blob in iterator]
-
-    for name in _with_retry(_list):
-        yield name
+    options: dict[str, Any] = {"prefix": prefix, "retry": _retry()}
+    if delimiter is not None:
+        options["delimiter"] = delimiter
+    names = [blob.name for blob in bucket.list_blobs(**options)]
+    yield from names
 
 
 def list_prefixes(prefix: str) -> list[str]:
@@ -289,36 +236,27 @@ def list_prefixes(prefix: str) -> list[str]:
 
     bucket = _ensure_bucket()
 
-    def _list() -> list[str]:
-        iterator = bucket.list_blobs(prefix=prefix, delimiter="/")
-        for _blob in iterator:
-            pass
-        return sorted(iterator.prefixes)
-
-    return _with_retry(_list)
+    iterator = bucket.list_blobs(prefix=prefix, delimiter="/", retry=_retry())
+    for _blob in iterator:
+        pass
+    return sorted(iterator.prefixes)
 
 
 def blob_exists(blob_name: str) -> bool:
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
 
-    def _exists() -> bool:
-        return blob.exists()
-
-    return bool(_with_retry(_exists))
+    return bool(blob.exists(retry=_retry()))
 
 
 def blob_updated_timestamp(blob_name: str) -> float | None:
     bucket = _ensure_bucket()
     blob = bucket.blob(blob_name)
 
-    def _resolve_timestamp() -> float | None:
-        try:
-            blob.reload()
-        except _not_found_error():
-            return None
-        if blob.updated is None:
-            return None
-        return blob.updated.timestamp()
-
-    return _with_retry(_resolve_timestamp)
+    try:
+        blob.reload(retry=_retry())
+    except _not_found_error():
+        return None
+    if blob.updated is None:
+        return None
+    return blob.updated.timestamp()

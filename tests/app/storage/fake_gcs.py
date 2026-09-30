@@ -44,7 +44,9 @@ class Bucket:
     def blob(self, name: str) -> Blob:
         return Blob(self, name)
 
-    def list_blobs(self, prefix: str = "", max_results: int | None = None, delimiter: str | None = None) -> Listing:
+    def list_blobs(
+        self, prefix: str = "", max_results: int | None = None, delimiter: str | None = None, retry: object = None
+    ) -> Listing:
         """The objects under ``prefix``, as Cloud Storage lists them; every call is recorded.
 
         With ``delimiter``, a name with another delimiter after the prefix is not
@@ -112,13 +114,13 @@ class Blob:
             self.bucket.objects[self.name] = (bytes(data), self.bucket.next_generation)
             self.bucket.next_generation += 1
 
-    def delete(self) -> None:
+    def delete(self, retry: object = None) -> None:
         with self.bucket.lock:
             if self.name not in self.bucket.objects:
                 raise NotFound(self.name)
             del self.bucket.objects[self.name]
 
-    def exists(self) -> bool:
+    def exists(self, retry: object = None) -> bool:
         with self.bucket.lock:
             return self.name in self.bucket.objects
 
@@ -131,10 +133,9 @@ def install(monkeypatch, *stores) -> Bucket:
         NotFound=NotFound, PreconditionFailed=PreconditionFailed, GoogleAPICallError=OSError, RetryError=OSError
     )
     monkeypatch.setitem(vars(cloud), "gcs_exceptions", exceptions)
-    # The retryable-error tuple is cached from whichever exceptions module is in
-    # place when a retry is first considered; computed from these stand-ins, it
-    # must not outlive the test and leave other modules' stubs unretried.
-    monkeypatch.setattr(cloud, "_RETRYABLE_EXCEPTIONS_CACHE", None)
+    # The client library's retry policy is what the calls are given; the fake
+    # bucket records it and never needs the library.
+    monkeypatch.setattr(cloud, "_retry", lambda: "the client's retry")
     monkeypatch.setattr(cloud, "_ensure_bucket", lambda: bucket)
     for store in stores:
         monkeypatch.setattr(store, "_using_gcs", lambda: True)
