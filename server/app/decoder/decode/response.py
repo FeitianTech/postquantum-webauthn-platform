@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any
 
 from ...json_values import make_json_safe
@@ -423,6 +424,19 @@ def _build_flag_payload(
     return payload
 
 
+@dataclass
+class _CredentialFacts:
+    """What the answer shows of attested credential data: from the decoded details, else from the bytes."""
+
+    aaguid_hex: Any = None
+    aaguid_uuid: Any = None
+    credential_id_hex: Any = None
+    credential_id_length: Any = None
+    cose_key: Mapping[str, Any] | None = None
+    attested_raw_hex: str | None = None
+    public_key_raw_hex: str | None = None
+
+
 def _build_credential_payload(
     credential_details: Any,
     auth_bytes: bytes | None,
@@ -431,82 +445,93 @@ def _build_credential_payload(
     if credential_details is None and auth_bytes is None:
         return {}
 
-    aaguid_hex = None
-    aaguid_uuid = None
-    credential_id_hex = None
-    credential_id_length = None
-    cose_key: Mapping[str, Any] | None = None
+    facts = _CredentialFacts()
+    _read_credential_details(facts, credential_details)
+    _read_attested_bytes(facts, auth_bytes)
+    return _credential_payload(facts, _public_key_payload(facts, fallback_alg))
 
-    if isinstance(credential_details, Mapping):
-        aaguid_uuid = credential_details.get("aaguid")
-        aaguid_hex = credential_details.get("aaguidHex")
-        credential_id_info = credential_details.get("credentialId")
-        if isinstance(credential_id_info, Mapping):
-            credential_id_hex = credential_id_info.get("hex")
-            length_value = credential_id_info.get("length")
-            try:
-                credential_id_length = f"{int(length_value):04x}".upper()
-            except (TypeError, ValueError):
-                if isinstance(length_value, str):
-                    credential_id_length = length_value
-        public_key_info = credential_details.get("publicKey")
-        if isinstance(public_key_info, Mapping):
-            cose_key = public_key_info
 
-    attested_raw_hex = None
-    public_key_raw_hex = None
-    if auth_bytes is not None and len(auth_bytes) > 37:
-        attested_bytes = auth_bytes[37:]
-        attested_raw_hex = attested_bytes.hex()
-        if len(attested_bytes) >= 18:
-            aaguid_bytes = attested_bytes[:16]
-            length_bytes = attested_bytes[16:18]
-            cred_length = int.from_bytes(length_bytes, "big")
-            credential_bytes = attested_bytes[18 : 18 + cred_length]
-            public_key_bytes = attested_bytes[18 + cred_length :]
-            if not aaguid_hex:
-                aaguid_hex = aaguid_bytes.hex()
-            if not aaguid_uuid:
-                try:
-                    aaguid_uuid = str(uuid.UUID(bytes=aaguid_bytes))
-                except Exception:
-                    aaguid_uuid = None
-            if credential_id_hex is None:
-                credential_id_hex = credential_bytes.hex()
-            if credential_id_length is None:
-                credential_id_length = f"{cred_length:04x}".upper()
-            if public_key_bytes:
-                public_key_raw_hex = public_key_bytes.hex()
+def _read_credential_details(facts: _CredentialFacts, credential_details: Any) -> None:
+    if not isinstance(credential_details, Mapping):
+        return
 
-    public_key_payload: dict[str, Any] = {}
-    if cose_key is not None:
-        cose_display = _convert_cose_key_for_display(cose_key)
-        public_key_payload["cose"] = make_json_safe(cose_display)
-        alg_label = _resolve_cose_algorithm(cose_key, fallback_alg)
+    facts.aaguid_uuid = credential_details.get("aaguid")
+    facts.aaguid_hex = credential_details.get("aaguidHex")
+    credential_id_info = credential_details.get("credentialId")
+    if isinstance(credential_id_info, Mapping):
+        facts.credential_id_hex = credential_id_info.get("hex")
+        length_value = credential_id_info.get("length")
+        try:
+            facts.credential_id_length = f"{int(length_value):04x}".upper()
+        except (TypeError, ValueError):
+            if isinstance(length_value, str):
+                facts.credential_id_length = length_value
+    public_key_info = credential_details.get("publicKey")
+    if isinstance(public_key_info, Mapping):
+        facts.cose_key = public_key_info
+
+
+def _read_attested_bytes(facts: _CredentialFacts, auth_bytes: bytes | None) -> None:
+    """Fill in from the attested credential data bytes whatever the decoded details did not give."""
+
+    if auth_bytes is None or len(auth_bytes) <= 37:
+        return
+
+    attested_bytes = auth_bytes[37:]
+    facts.attested_raw_hex = attested_bytes.hex()
+    if len(attested_bytes) < 18:
+        return
+
+    aaguid_bytes = attested_bytes[:16]
+    length_bytes = attested_bytes[16:18]
+    cred_length = int.from_bytes(length_bytes, "big")
+    credential_bytes = attested_bytes[18 : 18 + cred_length]
+    public_key_bytes = attested_bytes[18 + cred_length :]
+    if not facts.aaguid_hex:
+        facts.aaguid_hex = aaguid_bytes.hex()
+    if not facts.aaguid_uuid:
+        try:
+            facts.aaguid_uuid = str(uuid.UUID(bytes=aaguid_bytes))
+        except Exception:
+            facts.aaguid_uuid = None
+    if facts.credential_id_hex is None:
+        facts.credential_id_hex = credential_bytes.hex()
+    if facts.credential_id_length is None:
+        facts.credential_id_length = f"{cred_length:04x}".upper()
+    if public_key_bytes:
+        facts.public_key_raw_hex = public_key_bytes.hex()
+
+
+def _public_key_payload(facts: _CredentialFacts, fallback_alg: Any | None) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
+    if facts.cose_key is not None:
+        payload["cose"] = make_json_safe(_convert_cose_key_for_display(facts.cose_key))
+        alg_label = _resolve_cose_algorithm(facts.cose_key, fallback_alg)
     else:
         alg_label = _resolve_cose_algorithm({}, fallback_alg)
     if alg_label is not None:
-        public_key_payload["alg"] = alg_label
-    public_key_payload.update(_describe_cose_key(cose_key))
-    if public_key_raw_hex:
-        public_key_payload["raw"] = public_key_raw_hex
-    if not public_key_payload:
-        public_key_payload = {}
+        payload["alg"] = alg_label
+    payload.update(_describe_cose_key(facts.cose_key))
+    if facts.public_key_raw_hex:
+        payload["raw"] = facts.public_key_raw_hex
+    return payload
 
+
+def _credential_payload(facts: _CredentialFacts, public_key_payload: dict[str, Any]) -> dict[str, Any]:
     credential_payload: dict[str, Any] = {}
-    if attested_raw_hex:
-        credential_payload["raw"] = attested_raw_hex
-    if aaguid_hex or aaguid_uuid:
+    if facts.attested_raw_hex:
+        credential_payload["raw"] = facts.attested_raw_hex
+    if facts.aaguid_hex or facts.aaguid_uuid:
         aaguid_payload: dict[str, Any] = {}
-        if aaguid_hex:
-            aaguid_payload["raw"] = aaguid_hex
-        if aaguid_uuid:
-            aaguid_payload["uuid"] = aaguid_uuid
+        if facts.aaguid_hex:
+            aaguid_payload["raw"] = facts.aaguid_hex
+        if facts.aaguid_uuid:
+            aaguid_payload["uuid"] = facts.aaguid_uuid
         credential_payload["aaguid"] = aaguid_payload
-    if credential_id_length:
-        credential_payload["credentialIdLength"] = credential_id_length
-    if credential_id_hex:
-        credential_payload["credentialId"] = credential_id_hex
+    if facts.credential_id_length:
+        credential_payload["credentialIdLength"] = facts.credential_id_length
+    if facts.credential_id_hex:
+        credential_payload["credentialId"] = facts.credential_id_hex
     if public_key_payload:
         credential_payload["publicKey"] = public_key_payload
 
