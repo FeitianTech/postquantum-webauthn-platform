@@ -7,7 +7,7 @@ import os
 import shutil
 import time
 
-from ..config.mds import session_metadata_dir
+from ..config.paths import store_dir
 from .cloud import (
     blob_exists,
     blob_updated_timestamp,
@@ -47,6 +47,13 @@ _USER_FOLDER_PREFIX = "user-data"
 _METADATA_SUBDIR = "metadata"
 _LAST_ACCESS_BLOB = ".last-access"
 
+
+
+
+def session_metadata_dir() -> str:
+    """Where the visitors' uploads are kept locally (``FIDO_SERVER_SESSION_METADATA_DIR``)."""
+
+    return store_dir("FIDO_SERVER_SESSION_METADATA_DIR", "session-metadata")
 
 
 def _using_gcs() -> bool:

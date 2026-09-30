@@ -24,8 +24,6 @@ app, in the order ``factory.INIT_STEPS`` fixes.
 - ``request_limits``: how large a request body the app reads.
 - ``origins``: the exact-origin allowlist and the origin helpers.
 - ``attestation_trust``: operator-trusted attestation CAs.
-- ``mds``: where the session metadata lives (the
-  snapshot's own files: ``server.app.mds.files``).
 - ``web_export``: where the UI's static export is (``web/out``), served at ``/``.
 - ``relying_party``: the RP ID and name, and ``create_fido_server``.
 
