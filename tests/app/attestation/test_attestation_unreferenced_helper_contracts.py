@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 from datetime import datetime, timedelta, timezone
-from types import SimpleNamespace
 
 import pytest
 from cryptography import x509
@@ -54,32 +53,8 @@ def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch, attestation_modu
     assert fingerprint == fingerprint.upper()
 
 
-def test_metadata_lookup_subject_description_and_format_helpers(attestation_module):
+def test_format_helpers(attestation_module):
     attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
-    verifier = SimpleNamespace(find_entry_by_aaguid=lambda _aaguid: {"ok": True})
-    found = attestation_module._find_metadata_entry_for_aaguid(
-        verifier,
-        bytes.fromhex("00112233445566778899aabbccddeeff"),
-    )
-    assert found == {"ok": True}
-    assert attestation_module._find_metadata_entry_for_aaguid(verifier, b"") is None
-
-    class _BrokenVerifier:
-        def find_entry_by_aaguid(self, _aaguid):
-            raise RuntimeError("boom")
-
-    assert (
-        attestation_module._find_metadata_entry_for_aaguid(
-            _BrokenVerifier(),
-            bytes.fromhex("00112233445566778899aabbccddeeff"),
-        )
-        is None
-    )
-
-    cert_der = _self_signed_cert_der()
-    cert = x509.load_der_x509_certificate(cert_der)
-    assert "CN=" in attestation_module._describe_certificate_subject(cert)
 
     assert attestation_module._format_algorithm_component(" RSASSA PSS ") == "RSASSAPSS"
     assert attestation_module._format_algorithm_component("—") == ""

@@ -6,7 +6,6 @@ from typing import Any
 
 from cryptography import x509
 from fido2.utils import ByteBuffer
-from fido2.webauthn import Aaguid
 from flask import current_app
 
 from ... import encoding
@@ -180,21 +179,6 @@ def _collect_metadata_root_certificates(metadata_entry: Any) -> list[bytes]:
     return roots
 
 
-def _find_metadata_entry_for_aaguid(verifier: Any, aaguid_bytes: bytes) -> Any | None:
-    """Lookup metadata by AAGUID without invoking attestation verification."""
-
-    if verifier is None or not aaguid_bytes:
-        return None
-    try:
-        aaguid_obj = Aaguid.fromhex(aaguid_bytes.hex())
-    except Exception:
-        return None
-    try:
-        return verifier.find_entry_by_aaguid(aaguid_obj)
-    except Exception:
-        return None
-
-
 def _resolve_root_validity(checks: Mapping[str, bool | None]) -> bool | None:
     """Normalise root validity so red is only shown after explicit failures."""
 
@@ -217,8 +201,3 @@ def _resolve_root_validity(checks: Mapping[str, bool | None]) -> bool | None:
         return None
 
     return None
-
-
-def _describe_certificate_subject(cert: Any) -> str:
-    subject = cert.subject.rfc4514_string()
-    return subject or "(unknown)"

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pytest
 from cryptography import x509
-from fido2.webauthn import Aaguid
 
 from tests.app.entry_app import entry_app
 
@@ -127,22 +126,3 @@ def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeyp
 
     with app.app_context():
         assert attestation_module._is_trusted_ca_certificate(b"cert", allow_subject_parsing=True) is False
-
-
-def test_find_metadata_entry_for_aaguid_handles_parse_and_lookup_failures(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
-    monkeypatch.setattr(
-        Aaguid,
-        "fromhex",
-        lambda _hex: (_ for _ in ()).throw(ValueError("bad-aaguid")),
-    )
-    assert attestation_module._find_metadata_entry_for_aaguid(object(), b"\x00" * 16) is None
-
-    monkeypatch.setattr(Aaguid, "fromhex", lambda _hex: object())
-
-    class _Verifier:
-        def find_entry_by_aaguid(self, _aaguid):
-            raise RuntimeError("lookup failed")
-
-    assert attestation_module._find_metadata_entry_for_aaguid(_Verifier(), b"\x00" * 16) is None

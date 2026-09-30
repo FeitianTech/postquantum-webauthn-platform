@@ -107,7 +107,3 @@ def _decode_request_binary(value: Any) -> Any:
     if isinstance(decoded, str):
         decoded = encoding.decode_hex(decoded)
     return decoded
-
-
-def _encode_base64url(data: bytes) -> str:
-    return encoding.encode_base64url(data)

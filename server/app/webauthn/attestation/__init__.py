@@ -89,9 +89,7 @@ _coerce_bytes = trust._coerce_bytes
 _coerce_certificate_bytes = trust._coerce_certificate_bytes
 _collect_metadata_root_certificates = trust._collect_metadata_root_certificates
 _collect_trust_path_entries = trust._collect_trust_path_entries
-_describe_certificate_subject = trust._describe_certificate_subject
 _extract_certificate_aaguid = trust._extract_certificate_aaguid
-_find_metadata_entry_for_aaguid = trust._find_metadata_entry_for_aaguid
 _resolve_root_validity = trust._resolve_root_validity
 
 # Trusted-CA allowlist helpers.
