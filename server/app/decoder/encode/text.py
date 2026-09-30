@@ -6,7 +6,7 @@ from collections.abc import Callable
 from typing import Any
 
 from ..decode.json_input import read as read_json
-from ..decode.keys import as_written
+from ..decode.json_keys import as_written
 from .handlers_basic import (
     _encode_der_value,
     _encode_json_value,

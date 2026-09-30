@@ -1,6 +1,6 @@
 """The CBOR keys a JSON object's keys spell, read the way the decoder wrote them.
 
-``decode/keys.read_json_key`` reads each key: a typed spelling (``"1" (text)``,
+``decode/json_keys.read_json_key`` reads each key: a typed spelling (``"1" (text)``,
 ``h'01' (bytes)``, ``1.5 (float)``) is the key it names, never the literal text;
 any other key is text. Two JSON keys that name the same CBOR key -- ``"a"`` and
 ``"a" (text)``, or two spellings of one float -- are refused, naming both:
@@ -12,10 +12,10 @@ import json
 from collections.abc import Hashable, Mapping
 from typing import Any
 
-from .. import edn
-from ..decode.cbor_parser import CborDiagnostic, decode_item
+from .. import edn, values
+from ..decode.cbor_parser import decode_item
+from ..decode.json_keys import read_json_key
 from ..decode.key_equivalence import identity
-from ..decode.keys import read_json_key
 
 
 def with_cbor_keys(value: Any, path: str = "$") -> Any:
@@ -57,7 +57,7 @@ def key_identity(key: Any) -> Hashable:
         return ("text", key)
     if isinstance(key, (bytes, bytearray)):
         return ("bytes", bytes(key).hex())
-    if isinstance(key, CborDiagnostic):
+    if isinstance(key, values.CborDiagnostic):
         return identity(decode_item(edn.encode(key.diagnostic))[0])
     return ("other", repr(key))
 

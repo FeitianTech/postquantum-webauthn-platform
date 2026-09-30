@@ -35,8 +35,8 @@ import re
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from . import edn
-from .decode import keys
+from . import edn, values
+from .decode import json_keys
 
 # Text the reader would take for bytes: an even number of hexadecimal digits.
 _HEX_BYTES = re.compile(r"(?:[0-9A-Fa-f]{2})*")
@@ -78,7 +78,7 @@ def spell(node: Mapping[str, Any]) -> Any:
 def spell_text(text: str) -> str:
     """Text as itself, unless the reader would take it for bytes or a typed spelling."""
 
-    if _HEX_BYTES.fullmatch(text) or keys.typed_spelling(text):
+    if _HEX_BYTES.fullmatch(text) or values.typed_spelling(text):
         return f"{json.dumps(text, ensure_ascii=False)} (text)"
     return text
 
@@ -104,7 +104,7 @@ def labelled(
             # hold both, and the check marks it; the later is numbered, not lost.
             number += 1
         # A label, never spelled again as though it were a text key the input held.
-        spelled[keys.JsonLabel(candidate)] = value_of(entry)
+        spelled[values.JsonLabel(candidate)] = value_of(entry)
     return spelled
 
 
@@ -118,7 +118,7 @@ def key_label(node: Mapping[str, Any]) -> str:
         return str(node["value"])
     if major == 3:
         text = node["value"]
-        if _DIGITS_KEY.fullmatch(text) or _NUMBERED.fullmatch(text) or keys.typed_spelling(text):
+        if _DIGITS_KEY.fullmatch(text) or _NUMBERED.fullmatch(text) or values.typed_spelling(text):
             return f"{json.dumps(text, ensure_ascii=False)} (text)"
         return text
     if major == 2:
@@ -156,10 +156,10 @@ def read(value: Any, path: str = "$") -> Any:
 def read_text(value: str, path: str = "$") -> Any:
     """A string of a CTAP view: a typed spelling's value, bytes from hex, else the text itself."""
 
-    if keys.typed_spelling(value):
+    if values.typed_spelling(value):
         try:
-            return keys.read_typed(value)
-        except keys.TypedSpellingError as exc:
+            return json_keys.read_typed(value)
+        except json_keys.TypedSpellingError as exc:
             raise ValueError(f"{path}: {json.dumps(value, ensure_ascii=False)} is no value the encoder can read: {exc.reason}.") from None
     if _HEX_BYTES.fullmatch(value):
         return bytes.fromhex(value)
@@ -169,8 +169,8 @@ def read_text(value: str, path: str = "$") -> Any:
 def read_key(label: str, path: str = "$") -> Any:
     """A map key of a CTAP view: an integer from its number, a typed spelling's key, else the text."""
 
-    if keys.typed_spelling(label):
-        return keys.read_json_key(label)
+    if values.typed_spelling(label):
+        return json_keys.read_json_key(label)
     if _NUMBERED.fullmatch(label):
         raise ValueError(
             f"{path}: the key {json.dumps(label, ensure_ascii=False)} is numbered: keys that are one key "

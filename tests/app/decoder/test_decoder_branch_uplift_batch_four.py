@@ -4,6 +4,7 @@ import base64
 
 import pytest
 
+from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import authenticator_data as decode_authenticator_data
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
 from server.app.decoder.decode import pipeline as decode_pipeline
@@ -54,7 +55,7 @@ def test_decode_pem_certificates_skips_decode_errors_and_uses_single_certificate
 
 
 def test_decode_binary_payload_uses_authenticator_data_path_when_other_binary_decoders_fail(monkeypatch, pipeline):
-    monkeypatch.setattr(pipeline, "_try_decode_utf8", lambda _data: None)
+    monkeypatch.setattr(decoder_values, "try_decode_utf8", lambda _data: None)
     monkeypatch.setattr(pipeline, "_try_decode_certificate_bytes", lambda _data, _enc: None)
     monkeypatch.setattr(pipeline, "_try_decode_attestation_object", lambda _data, _enc: None)
     monkeypatch.setattr(
@@ -145,7 +146,7 @@ def test_parse_simple_major_type_values_and_structure_to_value_fallback_branches
     assert decode_cbor_parser._parse_cbor_item(b"\xf0", 0)[0]["summary"] == "simple(16)"
 
     assert decode_cbor_parser._structure_to_value({"majorType": 7, "type": "null"}) is None
-    assert decode_cbor_parser._structure_to_value({"majorType": 7, "type": "undefined"}) == decode_cbor_parser.CborDiagnostic(
+    assert decode_cbor_parser._structure_to_value({"majorType": 7, "type": "undefined"}) == decoder_values.CborDiagnostic(
         "undefined"
     )
     assert decode_cbor_parser._structure_to_value({"majorType": 7, "type": "boolean", "value": 0}) is False
@@ -203,8 +204,8 @@ def test_try_decode_authenticator_data_returns_structured_payload_on_success(mon
         lambda _data: {"parsed": True},
     )
     monkeypatch.setattr(
-        pipeline,
-        "_binary_summary",
+        decoder_values,
+        "binary_summary",
         lambda data, encoding=None: {"hex": data.hex(), "encoding": encoding},
     )
 

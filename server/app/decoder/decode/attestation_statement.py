@@ -21,6 +21,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from ...webauthn import pqc
+from .. import values
 from . import (
     android_key,
     apple_anonymous,
@@ -29,7 +30,6 @@ from . import (
     safetynet,
     tpm_structures,
 )
-from .keys import hex_json_safe, json_items
 
 NOT_VERIFIED = "not verified: the decoder shows this statement; it checks no signature, chain or value in it"
 
@@ -40,10 +40,10 @@ def interpret(fmt: Any, att_stmt: Any, auth_data: Any = None, *, nested: bool = 
     known = _FORMATS.get(fmt) if isinstance(fmt, str) else None
     if known is None:
         return {
-            "fmt": hex_json_safe(fmt),
+            "fmt": values.make_hex_only(fmt),
             "known": False,
             "meaning": "not an attestation statement format WebAuthn L3 section 8 defines; shown as sent",
-            "attStmt": hex_json_safe(att_stmt),
+            "attStmt": values.make_hex_only(att_stmt),
         }
     section, types, members, required, read, not_checked = known
     view: dict[str, Any] = {
@@ -58,7 +58,7 @@ def interpret(fmt: Any, att_stmt: Any, auth_data: Any = None, *, nested: bool = 
         view.update(_compound(att_stmt, auth_data, nested=nested))
         return view
     if not isinstance(att_stmt, Mapping):
-        view["attStmt"] = hex_json_safe(att_stmt)
+        view["attStmt"] = values.make_hex_only(att_stmt)
         view["note"] = f"section {section} defines attStmt as a map; this is not"
         return view
     view["fields"] = read(att_stmt, auth_data)
@@ -66,7 +66,7 @@ def interpret(fmt: Any, att_stmt: Any, auth_data: Any = None, *, nested: bool = 
     if missing:
         view["missing"] = {"members": missing, "note": f"section {section}'s attStmt syntax requires them; absent here"}
     extra = {key: value for key, value in att_stmt.items() if key not in members}
-    unrecognized = {label: hex_json_safe(value) for label, _key, value in json_items(extra)}
+    unrecognized = {label: values.make_hex_only(value) for label, _key, value in values.json_items(extra)}
     if unrecognized:
         view["notInSyntax"] = {
             "members": unrecognized,
@@ -78,18 +78,18 @@ def interpret(fmt: Any, att_stmt: Any, auth_data: Any = None, *, nested: bool = 
 def _algorithm(value: Any) -> Any:
     if isinstance(value, int) and not isinstance(value, bool):
         return {"value": value, "name": pqc.describe_algorithm(value)}
-    return hex_json_safe(value)
+    return values.make_hex_only(value)
 
 
 def _signature(value: Any) -> Any:
     if isinstance(value, bytes):
         return {"length": len(value), "hex": value.hex()}
-    return hex_json_safe(value)
+    return values.make_hex_only(value)
 
 
 def _chain(value: Any) -> Any:
     if not isinstance(value, list):
-        return {"value": hex_json_safe(value), "note": "x5c is an array of DER certificates; this is not"}
+        return {"value": values.make_hex_only(value), "note": "x5c is an array of DER certificates; this is not"}
     return {"count": len(value), "certificates": [certificate_summary.summarize(entry) for entry in value]}
 
 
@@ -132,7 +132,7 @@ def _packed(att_stmt: Mapping[Any, Any], auth_data: Any) -> dict[str, Any]:
 def _tpm(att_stmt: Mapping[Any, Any], _auth_data: Any) -> dict[str, Any]:
     fields: dict[str, Any] = {}
     if "ver" in att_stmt:
-        fields["ver"] = hex_json_safe(att_stmt["ver"])
+        fields["ver"] = values.make_hex_only(att_stmt["ver"])
     fields.update(_common(att_stmt))
     if isinstance(fields.get("sig"), dict):
         fields["sig"]["note"] = "section 8.3 calls sig a TPMT_SIGNATURE; shown as bytes, not parsed"
@@ -141,7 +141,7 @@ def _tpm(att_stmt: Mapping[Any, Any], _auth_data: Any) -> dict[str, Any]:
         if isinstance(value, bytes):
             fields[name] = read(value, name)
         elif name in att_stmt:
-            fields[name] = {"value": hex_json_safe(value), "note": f"{name} is a byte string; this is not"}
+            fields[name] = {"value": values.make_hex_only(value), "note": f"{name} is a byte string; this is not"}
     return fields
 
 
@@ -157,7 +157,7 @@ def _safetynet(att_stmt: Mapping[Any, Any], _auth_data: Any) -> dict[str, Any]:
     fields: dict[str, Any] = {}
     if "ver" in att_stmt:
         fields["ver"] = {
-            "value": hex_json_safe(att_stmt["ver"]),
+            "value": values.make_hex_only(att_stmt["ver"]),
             "meaning": "the Google Play Services version that produced the response",
         }
     if "response" in att_stmt:
@@ -204,15 +204,15 @@ def _apple(att_stmt: Mapping[Any, Any], _auth_data: Any) -> dict[str, Any]:
 def _compound(att_stmt: Any, auth_data: Any, *, nested: bool) -> dict[str, Any]:
     if nested:
         return {"note": "section 8.9: a compound statement's statements are not compound; shown as sent",
-                "attStmt": hex_json_safe(att_stmt)}
+                "attStmt": values.make_hex_only(att_stmt)}
     if not isinstance(att_stmt, list):
-        return {"attStmt": hex_json_safe(att_stmt), "note": "section 8.9 defines attStmt as an array of statements"}
+        return {"attStmt": values.make_hex_only(att_stmt), "note": "section 8.9 defines attStmt as an array of statements"}
     view: dict[str, Any] = {"statements": []}
     for entry in att_stmt:
         if isinstance(entry, Mapping) and "fmt" in entry:
             view["statements"].append(interpret(entry["fmt"], entry.get("attStmt"), auth_data, nested=True))
         else:
-            view["statements"].append({"value": hex_json_safe(entry), "note": "each statement is a map with fmt and attStmt"})
+            view["statements"].append({"value": values.make_hex_only(entry), "note": "each statement is a map with fmt and attStmt"})
     if len(att_stmt) < 2:
         view["note"] = f"section 8.9: [2* nonCompoundAttStmt], at least two statements; this has {len(att_stmt)}"
     return view

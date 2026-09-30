@@ -14,6 +14,7 @@ from typing import Any
 
 from fido2.webauthn import AuthenticatorData
 
+from .. import values
 from . import (
     attestation_statement,
     authenticator_data_findings,
@@ -22,7 +23,6 @@ from . import (
     extensions,
     get_info,
 )
-from .keys import MISSING, get_mapping_entry
 
 _AUTH_DATA_LOCATION = "authenticator data extensions (ED flag)"
 _UNSIGNED_LOCATION = "unsignedExtensionOutputs"
@@ -45,9 +45,9 @@ def for_ctap(classification: str, value: Any, node: Mapping[str, Any], data: byt
         # Beside the view, which shows every member as sent.
         extra["getInfoDecoded"] = get_info.interpret_get_info(value)
     elif classification == "make_credential_input":
-        _add(blocks, get_mapping_entry(value, 6), extensions.MAKE_CREDENTIAL_INPUT, "extensions (0x06)", "${6}")
+        _add(blocks, values.get_mapping_entry(value, 6), extensions.MAKE_CREDENTIAL_INPUT, "extensions (0x06)", "${6}")
     elif classification == "get_assertion_input":
-        _add(blocks, get_mapping_entry(value, 4), extensions.GET_ASSERTION_INPUT, "extensions (0x04)", "${4}")
+        _add(blocks, values.get_mapping_entry(value, 4), extensions.GET_ASSERTION_INPUT, "extensions (0x04)", "${4}")
     elif classification in ("make_credential_output", "get_assertion_output"):
         registration = classification == "make_credential_output"
         findings += authenticator_data_findings.for_member(node, data, (2,))
@@ -58,7 +58,7 @@ def for_ctap(classification: str, value: Any, node: Mapping[str, Any], data: byt
         unsigned = extensions.MAKE_CREDENTIAL_UNSIGNED if registration else extensions.GET_ASSERTION_UNSIGNED
         _add(
             blocks,
-            get_mapping_entry(value, unsigned_key),
+            values.get_mapping_entry(value, unsigned_key),
             unsigned,
             f"{_UNSIGNED_LOCATION} (0x{unsigned_key:02x})",
             f"${{{unsigned_key}}}",
@@ -118,10 +118,10 @@ def for_public_key_credential(
         _add_auth_data(
             blocks, authenticator_data, extensions.GET_ASSERTION_OUTPUT, "$", source="response.authenticatorData"
         )
-    results = credential.get("clientExtensionResults", MISSING)
-    if results is MISSING:
-        results = credential.get("getClientExtensionResults", MISSING)
-    if results is not MISSING:
+    results = credential.get("clientExtensionResults", values.MISSING)
+    if results is values.MISSING:
+        results = credential.get("getClientExtensionResults", values.MISSING)
+    if results is not values.MISSING:
         _add(blocks, results, extensions.CLIENT_OUTPUT, "clientExtensionResults", "clientExtensionResults")
     _extensions(extra, blocks)
     return extra, findings
@@ -129,16 +129,16 @@ def for_public_key_credential(
 
 def _looks_like_attestation_object(value: Any) -> bool:
     return (
-        isinstance(get_mapping_entry(value, "fmt"), str)
-        and isinstance(get_mapping_entry(value, "authData"), bytes)
-        and get_mapping_entry(value, "attStmt") is not MISSING
+        isinstance(values.get_mapping_entry(value, "fmt"), str)
+        and isinstance(values.get_mapping_entry(value, "authData"), bytes)
+        and values.get_mapping_entry(value, "attStmt") is not values.MISSING
     )
 
 
 def _member(value: Any, keys: Sequence[Any]) -> tuple[Any, Any]:
     for key in keys:
-        entry = get_mapping_entry(value, key)
-        if entry is not MISSING:
+        entry = values.get_mapping_entry(value, key)
+        if entry is not values.MISSING:
             return key, entry
     return keys[0], None
 
@@ -221,7 +221,7 @@ def _add_auth_data(
     if not isinstance(auth_data, bytes):
         return
     found = authenticator_data_findings.extensions(auth_data)
-    if found is MISSING or found == {}:
+    if found is values.MISSING or found == {}:
         return
     blocks.append(extensions.block(found, role=role, location=_AUTH_DATA_LOCATION, path=f"{path}<extensions>", basis=basis))
     if source:
@@ -230,7 +230,7 @@ def _add_auth_data(
 
 def _add(blocks: list[dict[str, Any]], value: Any, role: str, location: str, path: str) -> None:
     # An empty map has nothing to interpret, so it adds nothing.
-    if value is None or value is MISSING or value == {}:
+    if value is None or value is values.MISSING or value == {}:
         return
     blocks.append(extensions.block(value, role=role, location=location, path=path))
 

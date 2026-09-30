@@ -26,9 +26,9 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
-from . import ctap_tables, ctap_view
+from . import ctap_tables, ctap_view, values
 from .cbor_canonical import _canonical_cbor_dumps
-from .decode import keys
+from .decode import json_keys
 
 # Each message's members, by number (CTAP 2.2 section 6).
 MESSAGES: dict[str, Mapping[int, str]] = {
@@ -63,7 +63,7 @@ def read_member_key(message: str, label: str, path: str = "$") -> Any:
     """The key a member label names; refuses a name that is not the member's, and plain text."""
 
     match = _MEMBER_LABEL.fullmatch(label)
-    if match and keys.typed_key_kind(label) is None:
+    if match and json_keys.typed_key_kind(label) is None:
         number, name = int(match[1]), match[2]
         member = MESSAGES[message].get(number)
         if member != name:
@@ -71,7 +71,7 @@ def read_member_key(message: str, label: str, path: str = "$") -> Any:
             raise ValueError(f'{path}: the label "{label}" names {name}, but member {number} of a {message} {said}.')
         return number
     key = ctap_view.read_key(label, path)
-    if isinstance(key, str) and not keys.typed_spelling(label):
+    if isinstance(key, str) and not values.typed_spelling(label):
         example = f"1 ({MESSAGES[message][1]})"
         raise ValueError(
             f"{path}: {json.dumps(label, ensure_ascii=False)} names no member: a {message} numbers its members, "

@@ -15,7 +15,8 @@ from fido2.webauthn import AuthenticatorData
 from ...encoding import encode_base64url
 from ...json_values import make_json_safe
 from ...webauthn.attestation.aaguid import summarize_authenticator_extensions
-from . import cbor_parser, pipeline
+from .. import values
+from . import cbor_parser
 
 
 def _read_authenticator_data(data: bytes) -> dict[str, Any]:
@@ -113,7 +114,7 @@ def _describe_authenticator_data_bytes(data: bytes) -> dict[str, Any]:
         details["attestedCredentialData"] = {
             "aaguid": str(uuid.UUID(bytes=aaguid)),
             "aaguidHex": aaguid.hex(),
-            "credentialId": pipeline._binary_summary(credential_id, "binary"),
+            "credentialId": values.binary_summary(credential_id, "binary"),
             "publicKey": make_json_safe(dict(public_key)),
         }
 

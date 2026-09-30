@@ -13,9 +13,9 @@ import json
 import pytest
 
 from server.app.decoder.cbor_canonical import _canonical_cbor_dumps
-from server.app.decoder.decode.cbor_parser import CborDiagnostic
 from server.app.decoder.decode.pipeline import decode_payload_text
 from server.app.decoder.encode.text import encode_payload_text
+from server.app.decoder.values import CborDiagnostic
 
 _AUTH_DATA = hashlib.sha256(b"example.com").digest() + b"\x01" + bytes(4)
 _HASH = b"\x11" * 32

@@ -10,7 +10,7 @@ from __future__ import annotations
 import cbor2
 import pytest
 
-from server.app.decoder.decode import keys
+from server.app.decoder import values as decoder_values
 from server.app.decoder.decode.pipeline import decode_payload_text
 
 _AUTH_DATA = bytes(32) + b"\x01" + (5).to_bytes(4, "big")
@@ -43,7 +43,7 @@ def test_text_or_byte_string_keys_are_not_a_get_assertion_response(message):
     assert result["type"] == "CBOR (SUCCESS status)"
     assert "ctapDecoded" not in result["data"]
     assert "expandedJson" not in result["data"]
-    # Shown as sent: both entries are there, under their own keys.
+    # Shown as sent: both entries are there, under their own json_keys.
     assert set(result["data"]["decodedValue"]) == {key.hex() if isinstance(key, bytes) else key for key in message}
 
 
@@ -97,12 +97,12 @@ def test_a_byte_string_key_in_a_credential_descriptor_is_not_its_id():
 def test_get_mapping_entry_does_not_cross_key_types():
     mapping = {1: "integer", "2": "text", b"\x03": "bytes"}
 
-    assert keys.get_mapping_entry(mapping, 1) == "integer"
-    assert keys.get_mapping_entry(mapping, "1") is keys.MISSING
-    assert keys.get_mapping_entry(mapping, b"\x01") is keys.MISSING
-    assert keys.get_mapping_entry(mapping, 2) is keys.MISSING
-    assert keys.get_mapping_entry(mapping, 3) is keys.MISSING
-    assert keys.get_mapping_entry(mapping, True) is keys.MISSING
+    assert decoder_values.get_mapping_entry(mapping, 1) == "integer"
+    assert decoder_values.get_mapping_entry(mapping, "1") is decoder_values.MISSING
+    assert decoder_values.get_mapping_entry(mapping, b"\x01") is decoder_values.MISSING
+    assert decoder_values.get_mapping_entry(mapping, 2) is decoder_values.MISSING
+    assert decoder_values.get_mapping_entry(mapping, 3) is decoder_values.MISSING
+    assert decoder_values.get_mapping_entry(mapping, True) is decoder_values.MISSING
 
 
 def test_only_an_integer_key_is_labelled_as_a_member():

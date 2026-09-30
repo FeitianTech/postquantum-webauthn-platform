@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 from fido2 import cbor
 
+from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
 from server.app.decoder.decode import pipeline as decode_pipeline
 
@@ -176,7 +177,7 @@ def test_lenient_parsing_keeps_what_is_there_and_says_what_it_stepped_over():
 def test_lenient_parsing_closes_a_short_container_and_steps_over_a_reserved_byte():
     node, end, skipped = decode_cbor_parser.decode_item(bytes.fromhex("831e01"), lenient=True)
 
-    assert decode_cbor_parser._structure_to_value(node) == [decode_cbor_parser.CborDiagnostic("invalid(h'1e')"), 1]
+    assert decode_cbor_parser._structure_to_value(node) == [decoder_values.CborDiagnostic("invalid(h'1e')"), 1]
     assert end == 3
     assert [(entry["code"], entry["offset"], entry["path"]) for entry in skipped] == [
         ("reserved-additional-info", 1, "$[0]"),

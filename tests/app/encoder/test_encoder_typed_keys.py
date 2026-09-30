@@ -1,6 +1,6 @@
 """Typed key spellings the decoder writes are read back by the module that wrote them.
 
-``decode/keys.qualified_key_text`` spells a key that JSON cannot tell apart with
+``decode/decoder_values.qualified_key_text`` spells a key that JSON cannot tell apart with
 its type -- ``"1" (text)``, ``h'01' (bytes)``, ``1.5 (float)``, ``[1, 2]
 (array)`` -- and ``read_json_key`` reads each back to that key. The encoder
 used to write such a spelling as a literal text key. A spelling it does not
@@ -13,10 +13,12 @@ import json
 import pytest
 
 from server.app.decoder import edn
-from server.app.decoder.decode import keys
-from server.app.decoder.decode.cbor_parser import CborDiagnostic, _map_key, decode_item
+from server.app.decoder import values as decoder_values
+from server.app.decoder.decode import json_keys
+from server.app.decoder.decode.cbor_parser import _map_key, decode_item
 from server.app.decoder.decode.pipeline import decode_payload_text
 from server.app.decoder.encode.text import encode_payload_text
+from server.app.decoder.values import CborDiagnostic
 
 
 def _cbor(value: dict) -> str:
@@ -44,7 +46,7 @@ def _cbor(value: dict) -> str:
     ],
 )
 def test_a_typed_spelling_is_read_as_the_key_it_names(label, key):
-    assert keys.read_json_key(label) == key
+    assert json_keys.read_json_key(label) == key
 
 
 @pytest.mark.parametrize(
@@ -65,7 +67,7 @@ def test_a_typed_spelling_is_read_as_the_key_it_names(label, key):
 )
 def test_a_spelling_it_does_not_recognise_is_an_error_naming_the_key(label, reason):
     with pytest.raises(ValueError) as raised:
-        keys.read_json_key(label)
+        json_keys.read_json_key(label)
 
     assert str(raised.value).startswith(f"The key {json.dumps(label)} is not a key the encoder can read: ")
     assert reason in str(raised.value)
@@ -82,7 +84,7 @@ def test_the_spelling_of_every_key_the_decoder_makes_reads_back_to_it(key_item):
     node = decode_item(bytes.fromhex(f"a1{key_item.replace(' ', '')}00"))[0]
     key = _map_key(node["entries"][0]["key"])
 
-    assert keys.read_json_key(keys.qualified_key_text(key)) == key
+    assert json_keys.read_json_key(decoder_values.qualified_key_text(key)) == key
 
 
 def test_a_text_key_spelled_like_a_typed_key_is_spelled_with_its_type_and_reads_back():
@@ -91,7 +93,7 @@ def test_a_text_key_spelled_like_a_typed_key_is_spelled_with_its_type_and_reads_
     decoded = decode_payload_text(item.hex())["data"]["decodedValue"]
 
     assert list(decoded) == ['"1 (fmt)" (text)', '"\\"1\\" (text)" (text)', '"h\'01\' (bytes)" (text)']
-    assert [keys.read_json_key(label) for label in decoded] == ["1 (fmt)", '"1" (text)', "h'01' (bytes)"]
+    assert [json_keys.read_json_key(label) for label in decoded] == ["1 (fmt)", '"1" (text)', "h'01' (bytes)"]
     assert _cbor(decoded) == item.hex()
 
 

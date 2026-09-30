@@ -5,9 +5,9 @@ from typing import Any
 
 from fido2.webauthn import AuthenticatorData
 
+from .. import values
 from . import cbor_parser
 from .cbor_parser import _CborDecodingError, _structure_to_value
-from .keys import hex_json_safe as _hex_json_safe
 
 
 def _parse_authenticator_data_bytes(data: bytes) -> tuple[dict[str, Any], bytes, bytes]:
@@ -86,7 +86,7 @@ def _read_embedded_cbor(data: bytes, offset: int, target: dict[str, Any], field:
             f"{field} is not well-formed CBOR at authData offset {exc.offset}: {exc.reason}"
         )
         return len(data)
-    target[field] = _hex_json_safe(_structure_to_value(node))
+    target[field] = values.make_hex_only(_structure_to_value(node))
     return end
 
 

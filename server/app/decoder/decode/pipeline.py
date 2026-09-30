@@ -14,7 +14,6 @@ from fido2.webauthn import CollectedClientData
 from ...encoding import (
     EncodingError,
     SniffResult,
-    encode_base64,
     encode_base64url,
     sniff,
     try_decode_base64,
@@ -22,6 +21,7 @@ from ...encoding import (
 )
 from ...json_values import make_json_safe
 from ...webauthn.attestation.certificates import serialize_attestation_certificate
+from .. import values
 from . import (
     ambiguous_input,
     authenticator_data_findings,
@@ -120,7 +120,7 @@ def _credential_fields(credential: Mapping[str, Any], raw_text: str | None) -> d
         raw_id, raw_id_encoding = raw_id_bytes
         decoded["rawId"] = {
             "raw": credential.get("rawId"),
-            "binary": _binary_summary(raw_id, raw_id_encoding),
+            "binary": values.binary_summary(raw_id, raw_id_encoding),
         }
     elif "rawId" in credential:
         decoded["rawId"] = {"raw": credential.get("rawId")}
@@ -161,7 +161,7 @@ def _response_fields(
         field_bytes, field_encoding = entry
         response_details[name] = {
             "raw": response_mapping.get(name),
-            "binary": _binary_summary(field_bytes, field_encoding),
+            "binary": values.binary_summary(field_bytes, field_encoding),
         }
         read = readers.get(name)
         if read is not None:
@@ -354,7 +354,7 @@ def _try_decode_certificate_bytes(data: bytes, encoding: str) -> dict[str, Any] 
         "format": "X.509 certificate (DER)",
         "inputEncoding": encoding,
         "decoded": serialize_attestation_certificate(data),
-        "binary": _binary_summary(data, encoding),
+        "binary": values.binary_summary(data, encoding),
     }
 
 
@@ -369,7 +369,7 @@ def _try_decode_attestation_object(data: bytes, encoding: str) -> dict[str, Any]
         "format": "Attestation object (CBOR)",
         "inputEncoding": encoding,
         "decoded": details,
-        "binary": _binary_summary(data, encoding),
+        "binary": values.binary_summary(data, encoding),
         "extraData": extra,
     }
     structure = canonical.check(node, data) + key_collisions.check(node)
@@ -388,7 +388,7 @@ def _try_decode_authenticator_data(data: bytes, encoding: str) -> dict[str, Any]
         "format": "Authenticator data (binary)",
         "inputEncoding": encoding,
         "decoded": details,
-        "binary": _binary_summary(data, encoding),
+        "binary": values.binary_summary(data, encoding),
         "extraData": extra,
     }
     ctap._attach_findings(result, located)
@@ -397,9 +397,9 @@ def _try_decode_authenticator_data(data: bytes, encoding: str) -> dict[str, Any]
 
 def _expand_cbor_value(value: Any) -> Any:
     if isinstance(value, ByteBuffer):
-        return _binary_summary(value.getvalue())
+        return values.binary_summary(value.getvalue())
     if isinstance(value, (bytes, bytearray, memoryview)):
-        return _binary_summary(bytes(value))
+        return values.binary_summary(bytes(value))
     if isinstance(value, Mapping):
         expanded: dict[str, Any] = {}
         for key, entry in value.items():
@@ -586,7 +586,7 @@ def _build_client_data_details(
             except ValueError:
                 pass
             else:
-                challenge_info.update(_binary_summary(challenge_bytes, challenge_encoding))
+                challenge_info.update(values.binary_summary(challenge_bytes, challenge_encoding))
         details["challenge"] = challenge_info
     else:
         details["challenge"] = None
@@ -608,26 +608,6 @@ def _build_client_data_details(
         details["rawText"] = raw_text
 
     return details
-
-
-def _binary_summary(data: bytes, encoding: str | None = None) -> dict[str, Any]:
-    summary = {
-        "length": len(data),
-        "base64": encode_base64(data),
-        "base64url": encode_base64url(data),
-        "hex": data.hex(),
-        "colonHex": data.hex(":"),
-    }
-    if encoding:
-        summary["encoding"] = encoding
-    return summary
-
-
-def _try_decode_utf8(data: bytes) -> str | None:
-    try:
-        return data.decode("utf-8")
-    except UnicodeDecodeError:
-        return None
 
 
 def _is_public_key_credential(value: Mapping[str, Any]) -> bool:

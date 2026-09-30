@@ -11,11 +11,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from .. import values
 from ..cbor_canonical import _canonical_cbor_dumps, _canonicalize_cbor_structure
 from ..ctap_message import read_members
-from ..decode.keys import hex_json_safe as _hex_json_safe
-from ..decode.keys import stringify_mapping_keys as _stringify_mapping_keys
-from ..decode.pipeline import _binary_summary
 from . import ctap_framing
 from .handlers_basic import _prepare_encoder_response
 
@@ -63,8 +61,8 @@ def encode(parsed: Mapping[str, Any], base_type: str) -> dict[str, Any] | None:
         return None
     members = read_members(message, view, "ctapDecoded")
     payload = {
-        "binary": _binary_summary(ctap_framing.frame(framing, _canonical_cbor_dumps(members)), "cbor"),
-        "encodedValue": _stringify_mapping_keys(_hex_json_safe(_canonicalize_cbor_structure(members))),
+        "binary": values.binary_summary(ctap_framing.frame(framing, _canonical_cbor_dumps(members)), "cbor"),
+        "encodedValue": values.stringify_mapping_keys(values.make_hex_only(_canonicalize_cbor_structure(members))),
         # The view as it was given, keys as written, so the answer can be pasted back.
         "ctapDecoded": {message: view},
         "ctap": dict(framing),

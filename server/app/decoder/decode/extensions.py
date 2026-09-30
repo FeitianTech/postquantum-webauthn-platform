@@ -24,9 +24,8 @@ from typing import Any
 
 from ... import encoding
 from ...webauthn import pqc
-from .. import ctap_tables
+from .. import ctap_tables, values
 from .binary import _describe_cose_key
-from .keys import MISSING, get_mapping_entry, hex_json_safe, json_items, key_text
 
 MAKE_CREDENTIAL_INPUT = "makeCredential input"
 GET_ASSERTION_INPUT = "getAssertion input"
@@ -56,16 +55,16 @@ def block(value: Any, *, role: str, location: str, path: str, basis: str | None 
     if basis:
         result["basis"] = basis
     if not isinstance(value, Mapping):
-        result["value"] = hex_json_safe(value)
+        result["value"] = values.make_hex_only(value)
         result["note"] = "extensions are a map from extension identifier to value; this is not a map"
         return result
     interpret = _client_entry if role == CLIENT_OUTPUT else _authenticator_entry
-    result["entries"] = {label: interpret(name, entry, role) for label, name, entry in json_items(value)}
+    result["entries"] = {label: interpret(name, entry, role) for label, name, entry in values.json_items(value)}
     return result
 
 
 def _authenticator_entry(name: Any, value: Any, role: str) -> dict[str, Any]:
-    view: dict[str, Any] = {"value": hex_json_safe(value)}
+    view: dict[str, Any] = {"value": values.make_hex_only(value)}
     section = ctap_tables.EXTENSIONS.get(name) if isinstance(name, str) else None
     if section is None:
         view.update(known=False, meaning=_UNKNOWN)
@@ -80,7 +79,7 @@ def _authenticator_entry(name: Any, value: Any, role: str) -> dict[str, Any]:
 
 
 def _client_entry(name: Any, value: Any, _role: str) -> dict[str, Any]:
-    view: dict[str, Any] = {"value": hex_json_safe(value)}
+    view: dict[str, Any] = {"value": values.make_hex_only(value)}
     known = _CLIENT.get(name) if isinstance(name, str) else None
     if known is None:
         view.update(known=False, meaning=_UNKNOWN)
@@ -132,7 +131,7 @@ def _blob(meaning: str) -> Callable[[Any], dict[str, Any]]:
 def _members(value: Any, names: tuple[str, ...], expected: str) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         return _unexpected(expected)
-    extra = [key_text(key) for key in value if key not in names]
+    extra = [values.key_text(key) for key in value if key not in names]
     view: dict[str, Any] = {}
     if extra:
         view["note"] = f"{', '.join(extra)}: not in the section's CDDL ({', '.join(names)})"
@@ -150,7 +149,7 @@ def _cred_protect(value: Any) -> dict[str, Any]:
 
 
 def _protocol(value: Mapping[Any, Any]) -> tuple[int, str]:
-    protocol = get_mapping_entry(value, 4)
+    protocol = values.get_mapping_entry(value, 4)
     if _is_int(protocol):
         return protocol, f"pinUvAuthProtocol {protocol}, member 0x04"
     return 1, "pinUvAuthProtocol 1: member 0x04 is absent (CTAP 2.2 section 12.7)"
@@ -171,12 +170,12 @@ def _hmac_secret_input(value: Any) -> dict[str, Any]:
         return _unexpected("a map of keyAgreement (0x01), saltEnc (0x02), saltAuth (0x03), pinUvAuthProtocol (0x04)")
     protocol, basis = _protocol(value)
     members: dict[str, Any] = {}
-    for label, key, entry in json_items(value, _hmac_secret_label):
+    for label, key, entry in values.json_items(value, _hmac_secret_label):
         name = ctap_tables.HMAC_SECRET_INPUT.get(key) if _is_int(key) else None
-        view: dict[str, Any] = {"value": hex_json_safe(entry)}
+        view: dict[str, Any] = {"value": values.make_hex_only(entry)}
         if name == "keyAgreement":
             view.update(_describe_cose_key(entry))
-            alg = get_mapping_entry(entry, 3)
+            alg = values.get_mapping_entry(entry, 3)
             if _is_int(alg):
                 view["algorithm"] = pqc.describe_algorithm(alg)
             view["meaning"] = "the platform's key-agreement public key"
@@ -214,7 +213,7 @@ def _hmac_secret_output(value: Any) -> dict[str, Any]:
 
 def _large_blob_make_credential_input(value: Any) -> dict[str, Any]:
     view = _members(value, ctap_tables.LARGE_BLOB_MAKE_CREDENTIAL_INPUT, "a map {support: \"required\" / \"preferred\"}")
-    support = get_mapping_entry(value, "support")
+    support = values.get_mapping_entry(value, "support")
     if support in ("required", "preferred"):
         view["meaning"] = f"large blob support {support}"
     return view
@@ -222,21 +221,21 @@ def _large_blob_make_credential_input(value: Any) -> dict[str, Any]:
 
 def _large_blob_get_assertion_input(value: Any) -> dict[str, Any]:
     view = _members(value, ctap_tables.LARGE_BLOB_GET_ASSERTION_INPUT, "a map of read, write, originalSize")
-    if get_mapping_entry(value, "read") is True:
+    if values.get_mapping_entry(value, "read") is True:
         view["meaning"] = "read the credential's large blob"
-    elif isinstance(get_mapping_entry(value, "write"), bytes):
+    elif isinstance(values.get_mapping_entry(value, "write"), bytes):
         view["meaning"] = "write a compressed large blob, with its original size"
     return view
 
 
 def _large_blob_output(value: Any) -> dict[str, Any]:
     view = _members(value, ctap_tables.LARGE_BLOB_OUTPUTS, "a map of supported, written, blob, originalSize")
-    blob = get_mapping_entry(value, "blob")
+    blob = values.get_mapping_entry(value, "blob")
     if isinstance(blob, bytes):
         view["meaning"] = f"the stored blob, {len(blob)} bytes compressed"
-    elif isinstance(get_mapping_entry(value, "written"), bool):
-        view["meaning"] = "written" if get_mapping_entry(value, "written") else "not written"
-    elif get_mapping_entry(value, "supported") is True:
+    elif isinstance(values.get_mapping_entry(value, "written"), bool):
+        view["meaning"] = "written" if values.get_mapping_entry(value, "written") else "not written"
+    elif values.get_mapping_entry(value, "supported") is True:
         view["meaning"] = "the new credential supports large blobs"
     return view
 
@@ -317,12 +316,12 @@ def _client_blob(meaning: str) -> Callable[[Any], dict[str, Any]]:
 def _cred_props(value: Any) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         return _unexpected("a CredentialPropertiesOutput map")
-    rk = value.get("rk", MISSING)
+    rk = value.get("rk", values.MISSING)
     if rk is True:
         return {"meaning": "rk true: a client-side discoverable credential"}
     if rk is False:
         return {"meaning": "rk false: not a client-side discoverable credential"}
-    if rk is MISSING:
+    if rk is values.MISSING:
         return {"meaning": "rk absent: the client does not know whether the credential is discoverable"}
     return _unexpected("rk as a boolean")
 

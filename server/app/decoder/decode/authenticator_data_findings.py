@@ -17,9 +17,9 @@ from typing import Any
 
 from fido2.webauthn import AuthenticatorData
 
+from .. import values
 from . import canonical, key_collisions
 from .cbor_parser import _CborDecodingError, _structure_to_value, decode_item
-from .keys import MISSING, key_identity
 
 _HEADER_LENGTH = 37
 
@@ -74,13 +74,13 @@ def check(auth_data: bytes, base_offset: int, path: str) -> list[dict[str, Any]]
 
 
 def extensions(auth_data: bytes) -> Any:
-    """The extensions ``auth_data`` carries under its ED flag, or ``MISSING``."""
+    """The extensions ``auth_data`` carries under its ED flag, or ``values.MISSING``."""
 
     items, _end = embedded_items(auth_data)
     for name, node in items:
         if name == "extensions":
             return _structure_to_value(node)
-    return MISSING
+    return values.MISSING
 
 
 def embedded_items(auth_data: bytes) -> tuple[list[tuple[str, dict[str, Any]]], int | None]:
@@ -119,15 +119,15 @@ def member_node(root: Mapping[str, Any], keys: Sequence[Any]) -> Mapping[str, An
         if not isinstance(key_node, Mapping) or not isinstance(value_node, Mapping):
             continue
         if key_node.get("type") in ("unsigned", "negative"):
-            identity = key_identity(key_node.get("value"))
+            identity = values.key_identity(key_node.get("value"))
         elif key_node.get("type") == "text string" and isinstance(key_node.get("value"), str):
-            identity = key_identity(key_node["value"])
+            identity = values.key_identity(key_node["value"])
         else:
             continue
         # The decoded value keeps the later of two duplicate keys; so does this.
         by_key[identity] = {**value_node, "path": entry.get("path")}
     for key in keys:
-        node = by_key.get(key_identity(key))
+        node = by_key.get(values.key_identity(key))
         if node is not None:
             return node
     return None

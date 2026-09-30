@@ -23,14 +23,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from ...webauthn import pqc
-from .. import ctap_tables
-from .keys import (
-    MISSING,
-    get_mapping_entry,
-    hex_json_safe,
-    json_items,
-    qualified_key_text,
-)
+from .. import ctap_tables, values
 
 _AAGUID_LENGTH = 16
 
@@ -38,8 +31,8 @@ _AAGUID_LENGTH = 16
 def looks_like_get_info(value: Any) -> bool:
     """The two members section 6.4 requires: versions (text array), aaguid (bytes)."""
 
-    versions = get_mapping_entry(value, 1)
-    aaguid = get_mapping_entry(value, 3)
+    versions = values.get_mapping_entry(value, 1)
+    aaguid = values.get_mapping_entry(value, 3)
     return (
         isinstance(versions, list)
         and bool(versions)
@@ -52,13 +45,13 @@ def interpret_get_info(value: Mapping[Any, Any]) -> dict[str, Any]:
     """``data.getInfoDecoded``: what each member means, labelled as ``ctapDecoded`` labels it."""
 
     interpreted: dict[str, Any] = {}
-    for label, key, entry in json_items(value, _member_label):
+    for label, key, entry in values.json_items(value, _member_label):
         name = ctap_tables.GET_INFO_RESPONSE.get(key) if _is_member_number(key) else None
         if name:
-            interpreted[label] = _MEMBER_VIEWS.get(name, hex_json_safe)(entry)
+            interpreted[label] = _MEMBER_VIEWS.get(name, values.make_hex_only)(entry)
         else:
             note = _NOT_DEFINED if _is_member_number(key) else _NOT_A_MEMBER
-            interpreted[label] = {"value": hex_json_safe(entry), "note": note}
+            interpreted[label] = {"value": values.make_hex_only(entry), "note": note}
     return interpreted
 
 
@@ -73,14 +66,14 @@ def _is_member_number(key: Any) -> bool:
 def _member_label(key: Any, text: str) -> str:
     # As every CTAP view labels a member: "N (name)", the number alone, or the key with its type.
     if not _is_member_number(key):
-        return qualified_key_text(key)
+        return values.qualified_key_text(key)
     name = ctap_tables.GET_INFO_RESPONSE.get(key)
     return f"{text} ({name})" if name else text
 
 
 def _aaguid(value: Any) -> Any:
     if not isinstance(value, bytes):
-        return hex_json_safe(value)
+        return values.make_hex_only(value)
     view: dict[str, Any] = {"hex": value.hex()}
     if len(value) == _AAGUID_LENGTH:
         view["guid"] = str(uuid.UUID(bytes=value))
@@ -91,13 +84,13 @@ def _aaguid(value: Any) -> Any:
 
 def _options(value: Any) -> Any:
     if not isinstance(value, Mapping):
-        return hex_json_safe(value)
+        return values.make_hex_only(value)
     options: dict[str, Any] = {}
-    for name, option, setting in json_items(value):
+    for name, option, setting in values.json_items(value):
         known = ctap_tables.GET_INFO_OPTIONS.get(option) if isinstance(option, str) else None
         if known is None:
             options[name] = {
-                "value": hex_json_safe(setting),
+                "value": values.make_hex_only(setting),
                 "known": False,
                 "meaning": "not an option ID CTAP 2.2 section 6.4 defines",
             }
@@ -107,20 +100,20 @@ def _options(value: Any) -> Any:
             meaning = if_true if setting else if_false
         else:
             meaning = "not a boolean: CTAP 2.2 option values are booleans"
-        options[name] = {"value": hex_json_safe(setting), "meaning": meaning, "defaultWhenAbsent": default}
+        options[name] = {"value": values.make_hex_only(setting), "meaning": meaning, "defaultWhenAbsent": default}
     for option, (_if_true, _if_false, default) in ctap_tables.GET_INFO_OPTIONS.items():
-        if get_mapping_entry(value, option) is MISSING:
+        if values.get_mapping_entry(value, option) is values.MISSING:
             options[option] = {"value": None, "sent": False, "meaning": f"not sent; absent means: {default}"}
     return options
 
 
 def _algorithms(value: Any) -> Any:
     if not isinstance(value, list):
-        return hex_json_safe(value)
+        return values.make_hex_only(value)
     algorithms = []
     for entry in value:
-        view = hex_json_safe(entry)
-        alg = get_mapping_entry(entry, "alg")
+        view = values.make_hex_only(entry)
+        alg = values.get_mapping_entry(entry, "alg")
         if isinstance(view, dict) and isinstance(alg, int) and not isinstance(alg, bool):
             view.setdefault("algorithm", pqc.describe_algorithm(alg))
         algorithms.append(view)
@@ -129,7 +122,7 @@ def _algorithms(value: Any) -> Any:
 
 def _uv_modality(value: Any) -> Any:
     if not isinstance(value, int) or isinstance(value, bool):
-        return hex_json_safe(value)
+        return values.make_hex_only(value)
     view: dict[str, Any] = {
         "value": value,
         "hex": f"0x{value:08x}",
@@ -149,11 +142,11 @@ def _fido_level(value: int) -> str:
 
 def _certifications(value: Any) -> Any:
     if not isinstance(value, Mapping):
-        return hex_json_safe(value)
+        return values.make_hex_only(value)
     certifications: dict[str, Any] = {}
-    for name, certification, level in json_items(value):
+    for name, certification, level in values.json_items(value):
         meaning = ctap_tables.GET_INFO_CERTIFICATIONS.get(certification) if isinstance(certification, str) else None
-        view: dict[str, Any] = {"value": hex_json_safe(level)}
+        view: dict[str, Any] = {"value": values.make_hex_only(level)}
         if meaning is None:
             view.update(known=False, meaning="not a certification ID CTAP 2.2 section 7.3.1 defines")
         else:
@@ -166,7 +159,7 @@ def _certifications(value: Any) -> Any:
 
 def _text_bytes(value: Any) -> Any:
     if not isinstance(value, bytes):
-        return hex_json_safe(value)
+        return values.make_hex_only(value)
     view: dict[str, Any] = {"hex": value.hex()}
     try:
         view["text"] = value.decode("utf-8")
@@ -177,7 +170,7 @@ def _text_bytes(value: Any) -> Any:
 
 def _enc_identifier(value: Any) -> Any:
     if not isinstance(value, bytes):
-        return hex_json_safe(value)
+        return values.make_hex_only(value)
     return {
         "hex": value.hex(),
         "length": len(value),

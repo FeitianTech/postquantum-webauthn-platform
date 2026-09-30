@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
-from ..decode.keys import read_json_key, typed_key_kind
+from ..decode.json_keys import read_json_key, typed_key_kind
 from .binary_decode import (
     _maybe_decode_bytes,
     _require_bytes,

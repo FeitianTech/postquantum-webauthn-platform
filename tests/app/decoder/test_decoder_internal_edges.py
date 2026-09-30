@@ -3,9 +3,9 @@ import base64
 import cbor2
 import pytest
 
+from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
 from server.app.decoder.decode import ctap as decode_ctap
-from server.app.decoder.decode import keys as decode_keys
 from server.app.decoder.decode import pipeline as decode_pipeline
 
 
@@ -226,8 +226,8 @@ def test_structure_to_value_keeps_an_array_key_as_a_key_of_its_own_type():
     value = decode_cbor_parser._structure_to_value(structure)
 
     # Not the text "[1, 2]": a text key spelled that way stays a different key.
-    assert value == {decode_cbor_parser.CborDiagnostic("[1, 2]", "array"): "value"}
-    assert decode_keys.stringify_mapping_keys(value) == {"[1, 2]": "value"}
+    assert value == {decoder_values.CborDiagnostic("[1, 2]", "array"): "value"}
+    assert decoder_values.stringify_mapping_keys(value) == {"[1, 2]": "value"}
 
 
 def test_expand_cbor_value_stringifies_mapping_keys_and_summarizes_binary_values():

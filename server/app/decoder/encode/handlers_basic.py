@@ -6,8 +6,7 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from ...json_values import make_json_safe
-from ..decode.keys import stringify_mapping_keys as _stringify_mapping_keys
-from ..decode.pipeline import _binary_summary
+from .. import values
 from .binary_extract import (
     _determine_pem_label,
     _extract_generic_binary_payload,
@@ -26,7 +25,7 @@ def _prepare_encoder_response(
     if qualifier:
         type_label = f"{base_type} ({qualifier})"
 
-    safe_data = _stringify_mapping_keys(make_json_safe(data))
+    safe_data = values.stringify_mapping_keys(make_json_safe(data))
     return {
         "success": True,
         "type": type_label,
@@ -69,7 +68,7 @@ def _encode_json_value(parsed: Any) -> dict[str, Any]:
     payload = {
         "json": make_json_safe(parsed),
         "text": text,
-        "binary": _binary_summary(data_bytes, "json"),
+        "binary": values.binary_summary(data_bytes, "json"),
     }
     return _prepare_encoder_response("JSON", payload, qualifier="encoded")
 
@@ -84,7 +83,7 @@ def _encode_binary_variant(
     qualifier: str,
 ) -> dict[str, Any]:
     data_bytes = _extract_generic_binary_payload(parsed)
-    summary = _binary_summary(data_bytes, encoding)
+    summary = values.binary_summary(data_bytes, encoding)
     payload = {
         "binary": summary,
         output_key: output_value(summary, data_bytes),
@@ -105,7 +104,7 @@ def _encode_der_value(parsed: Any) -> dict[str, Any]:
 
 def _encode_pem_value(parsed: Any) -> dict[str, Any]:
     data_bytes = _extract_generic_binary_payload(parsed)
-    summary = _binary_summary(data_bytes, "pem")
+    summary = values.binary_summary(data_bytes, "pem")
     label = _determine_pem_label(parsed)
     payload = {
         "binary": summary,

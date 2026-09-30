@@ -4,10 +4,10 @@ import cbor2
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData
 
+from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
 from server.app.decoder.decode import ctap_auth_data as decode_ctap_auth_data
 from server.app.decoder.decode import ctap_classify as decode_ctap_classify
-from server.app.decoder.decode import keys as decode_keys
 from server.app.decoder.decode import response as decode_response
 
 
@@ -25,8 +25,8 @@ def _auth_data_bytes() -> bytes:
 
 
 def test_remaining_cbor_key_and_float_helpers():
-    assert decode_keys.key_identity(b"x") == ("bytes", b"x")
-    assert decode_keys.key_identity(7) == ("int", 7)
+    assert decoder_values.key_identity(b"x") == ("bytes", b"x")
+    assert decoder_values.key_identity(7) == ("int", 7)
 
     assert decode_cbor_parser._float_summary(float("inf")) == "float(+Infinity)"
     assert decode_cbor_parser._float_summary(float("-inf")) == "float(-Infinity)"

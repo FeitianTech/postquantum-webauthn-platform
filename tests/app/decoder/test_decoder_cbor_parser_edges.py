@@ -1,8 +1,8 @@
 import pytest
 from fido2.utils import ByteBuffer
 
+from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
-from server.app.decoder.decode import keys as decode_keys
 from server.app.decoder.decode import pipeline as decode_pipeline
 
 
@@ -92,8 +92,8 @@ def test_structure_to_value_handles_chunks_and_unhashable_map_keys():
     }
     converted = decode_cbor_parser._structure_to_value(map_node)
     # An array key is a key of its own, spelled as the array it is.
-    assert converted == {decode_cbor_parser.CborDiagnostic("[1]"): 7}
-    assert decode_keys.stringify_mapping_keys(converted) == {"[1]": 7}
+    assert converted == {decoder_values.CborDiagnostic("[1]"): 7}
+    assert decoder_values.stringify_mapping_keys(converted) == {"[1]": 7}
 
 
 def test_decode_item_reads_indefinite_containers_and_never_makes_up_a_short_float():

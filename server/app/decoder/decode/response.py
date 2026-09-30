@@ -7,6 +7,7 @@ from typing import Any
 
 from ...json_values import make_json_safe
 from ...webauthn.attestation.certificates import serialize_attestation_certificate
+from .. import values
 from . import binary
 from .binary import (
     _convert_cose_key_for_display,
@@ -20,9 +21,6 @@ from .certificates import (
     _convert_certificate_chain_impl,
     _convert_certificate_payload_impl,
 )
-from .keys import hex_json_safe as _hex_json_safe
-from .keys import json_ready
-from .keys import stringify_mapping_keys as _stringify_mapping_keys
 
 
 def _base_type(format_label: str | None) -> str:
@@ -84,7 +82,7 @@ def _build_decoder_payload(result: dict[str, Any]) -> dict[str, Any]:
         "success": True,
         "type": type_label,
         # A map whose keys JSON would spell alike still arrives whole.
-        "data": json_ready(data),
+        "data": values.json_ready(data),
         "decodeMode": result.get("decodeMode", "strict"),
         "findings": findings if isinstance(findings, list) else [],
         "malformed": malformed,
@@ -109,19 +107,19 @@ def _convert_result_to_data(base_type: str, result: dict[str, Any]) -> Any:
         if isinstance(decoded, Mapping):
             payload: dict[str, Any] = {}
             if "ctapDecoded" in decoded:
-                payload["ctapDecoded"] = _stringify_mapping_keys(
-                    _hex_json_safe(decoded["ctapDecoded"])
+                payload["ctapDecoded"] = values.stringify_mapping_keys(
+                    values.make_hex_only(decoded["ctapDecoded"])
                 )
             if "expandedJson" in decoded:
-                payload["expandedJson"] = _stringify_mapping_keys(
-                    _hex_json_safe(decoded["expandedJson"])
+                payload["expandedJson"] = values.stringify_mapping_keys(
+                    values.make_hex_only(decoded["expandedJson"])
                 )
             if "decodedValue" in decoded:
-                payload["decodedValue"] = _stringify_mapping_keys(
-                    _hex_json_safe(decoded["decodedValue"])
+                payload["decodedValue"] = values.stringify_mapping_keys(
+                    values.make_hex_only(decoded["decodedValue"])
                 )
             if "ctap" in decoded:
-                payload["ctap"] = _stringify_mapping_keys(make_json_safe(decoded["ctap"]))
+                payload["ctap"] = values.stringify_mapping_keys(make_json_safe(decoded["ctap"]))
             if not payload:
                 payload["cbor"] = make_json_safe(decoded)
             return payload
@@ -265,7 +263,7 @@ def _convert_attestation_statement(details: Any) -> dict[str, Any]:
         if key == "x5c":
             normalized[key] = value
         else:
-            normalized[key] = _hex_json_safe(value)
+            normalized[key] = values.make_hex_only(value)
     return normalized
 
 
@@ -292,7 +290,7 @@ def _convert_certificate_payload(
     payload = _convert_certificate_payload_impl(entry, cert_bytes)
     parsed_entry = payload.get("parsedX5c")
     if parsed_entry is not None:
-        payload["parsedX5c"] = _hex_json_safe(parsed_entry)
+        payload["parsedX5c"] = values.make_hex_only(parsed_entry)
     return payload
 
 

@@ -8,11 +8,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from .. import edn
-from ..decode.pipeline import _binary_summary
+from .. import edn, values
 from .handlers_basic import _prepare_encoder_response
 
 
 def _encode_edn_value(text: str) -> dict[str, Any]:
     data = edn.encode(text)
-    return _prepare_encoder_response("EDN", {"binary": _binary_summary(data, "cbor")}, qualifier="encoded")
+    return _prepare_encoder_response("EDN", {"binary": values.binary_summary(data, "cbor")}, qualifier="encoded")

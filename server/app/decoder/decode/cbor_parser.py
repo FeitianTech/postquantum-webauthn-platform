@@ -17,11 +17,10 @@ from __future__ import annotations
 import math
 import struct
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
 from typing import Any
 
 from ...encoding import decode_hex, encode_base64, encode_base64url
-from .. import edn
+from .. import edn, values
 from . import key_equivalence
 
 # Deep enough for any WebAuthn or CTAP structure; shallow enough that hostile
@@ -48,26 +47,6 @@ class _CborDecodingError(ValueError):
         self.reason = message
         self.offset = offset
         self.path = path
-
-
-@dataclass(frozen=True)
-class CborDiagnostic:
-    """A CBOR value JSON has no spelling for, in CBOR diagnostic notation.
-
-    ``undefined``, ``simple(16)``, ``NaN`` and ``Infinity`` are values JSON
-    cannot hold; ``true``, ``null`` and ``1.5`` become one of these when they
-    are map keys, so that Python does not fold them into the integer 1 or 0,
-    and so do array, map and tag keys, which Python cannot use as keys at all.
-    """
-
-    diagnostic: str
-    #: What a map key spelled this way is ("boolean", "float", "array"), so a key
-    #: that JSON would spell like a text key can be shown with its type. Empty
-    #: for a value.
-    kind: str = ""
-
-    def __str__(self) -> str:
-        return self.diagnostic
 
 
 class _ParseState:
@@ -432,7 +411,7 @@ def decode_item(
     return node, end, state.skipped
 
 
-# The type a map key held as a CborDiagnostic is, named for a reader.
+# The type a map key held as a values.CborDiagnostic is, named for a reader.
 _KEY_KINDS = {"simple": "simple value", "text string": "text, not UTF-8"}
 
 
@@ -440,31 +419,31 @@ def _map_key(key_node: Mapping[str, Any]) -> Any:
     # A string the lenient parser damaged (a chunk skipped) is no string it holds a
     # part of: named by what and where it is, as a damaged container is.
     if key_equivalence.damaged_string(key_node):
-        return CborDiagnostic(f"invalid({key_node.get('summary')} at offset {key_node.get('offset')})", "invalid")
+        return values.CborDiagnostic(f"invalid({key_node.get('summary')} at offset {key_node.get('offset')})", "invalid")
     # Text with a chunk that is not UTF-8 is not the text of its readable chunks.
     raw_text = key_equivalence.unreadable_text_hex(key_node)
     if raw_text is not None and "error" not in key_node:
-        return CborDiagnostic(f"h'{raw_text}' (not UTF-8)", "text, not UTF-8")
+        return values.CborDiagnostic(f"h'{raw_text}' (not UTF-8)", "text, not UTF-8")
     key = _structure_to_value(key_node)
     node_type = key_node.get("type")
     kind = _KEY_KINDS.get(node_type, node_type) if isinstance(node_type, str) else ""
     # A NaN key is spelled by its bits: NaNs with different payloads are different keys.
-    if isinstance(key, CborDiagnostic) and key.diagnostic == "NaN":
+    if isinstance(key, values.CborDiagnostic) and key.diagnostic == "NaN":
         return _edn_or(key_node, "NaN", kind)
     # Python folds 1 == 1.0 == True, three different CBOR keys, into one.
     if key is None or isinstance(key, (bool, float)):
-        return CborDiagnostic(_diagnostic_value(key_node), kind)
-    if isinstance(key, CborDiagnostic):
-        return CborDiagnostic(key.diagnostic, kind)
+        return values.CborDiagnostic(_diagnostic_value(key_node), kind)
+    if isinstance(key, values.CborDiagnostic):
+        return values.CborDiagnostic(key.diagnostic, kind)
     # An array, map or tag key: a key of its own type, spelled in EDN, which
-    # ``keys.read_json_key`` can read back.
+    # ``json_keys.read_json_key`` can read back.
     if isinstance(key, (list, dict)):
         # Damaged, it is named by what and where it is: two such keys never share a spelling.
         return _edn_or(key_node, f"invalid({key_node.get('summary')} at offset {key_node.get('offset')})", kind)
     return key
 
 
-def _edn_or(node: Mapping[str, Any], fallback: str, kind: str) -> CborDiagnostic:
+def _edn_or(node: Mapping[str, Any], fallback: str, kind: str) -> values.CborDiagnostic:
     """``node`` in EDN, on one line, a key of its ``kind``.
 
     A node the lenient parser damaged has no exact spelling: it is shown by
@@ -473,9 +452,9 @@ def _edn_or(node: Mapping[str, Any], fallback: str, kind: str) -> CborDiagnostic
     """
 
     try:
-        return CborDiagnostic(edn.spell(node, inline=True), kind)
+        return values.CborDiagnostic(edn.spell(node, inline=True), kind)
     except (KeyError, TypeError, ValueError):
-        return CborDiagnostic(fallback, "invalid")
+        return values.CborDiagnostic(fallback, "invalid")
 
 
 def _diagnostic_value(node: Mapping[str, Any]) -> str:
@@ -499,21 +478,21 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
     node_type = node.get("type")
 
     if node_type == "invalid":
-        return CborDiagnostic(str(node.get("summary")))
+        return values.CborDiagnostic(str(node.get("summary")))
 
     if major_type in (0, 1, 7):
         if node_type == "null":
             return None
         if node_type == "undefined":
-            return CborDiagnostic("undefined")
+            return values.CborDiagnostic("undefined")
         if node_type == "simple":
-            return CborDiagnostic(f"simple({node.get('value')})")
+            return values.CborDiagnostic(f"simple({node.get('value')})")
         if node_type == "boolean":
             return bool(node.get("value"))
         if node_type == "float":
             value = node.get("value")
             if isinstance(value, float) and not math.isfinite(value):
-                return CborDiagnostic(_diagnostic_value(node))
+                return values.CborDiagnostic(_diagnostic_value(node))
             return value
         return node.get("value")
 
@@ -537,7 +516,7 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
         if isinstance(text_value, str):
             return text_value
         if isinstance(node.get("hex"), str):
-            return CborDiagnostic(f"h'{node['hex']}' (not UTF-8)")
+            return values.CborDiagnostic(f"h'{node['hex']}' (not UTF-8)")
         return ""
 
     if major_type == 4:

@@ -4,10 +4,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from .. import values
 from ..cbor_canonical import _canonical_cbor_dumps, _canonicalize_cbor_structure
-from ..decode.keys import hex_json_safe as _hex_json_safe
-from ..decode.keys import stringify_mapping_keys as _stringify_mapping_keys
-from ..decode.pipeline import _binary_summary
 from . import ctap_views
 from .constants import _CTAP_FIELD_LABELS, _CTAP_PREFIX_DETAILS, _CTAP_REQUIRED_FIELDS
 from .cose_key import encode_cose_key
@@ -39,9 +37,9 @@ def _encode_cbor_value(parsed: Any, *, base_type: str = "CBOR (canonical)") -> d
     parsed = with_cbor_keys(parsed)
     payload_bytes = _canonical_cbor_dumps(parsed)
     payload = {
-        "binary": _binary_summary(payload_bytes, "cbor"),
-        "decodedValue": _stringify_mapping_keys(
-            _hex_json_safe(_canonicalize_cbor_structure(parsed))
+        "binary": values.binary_summary(payload_bytes, "cbor"),
+        "decodedValue": values.stringify_mapping_keys(
+            values.make_hex_only(_canonicalize_cbor_structure(parsed))
         ),
     }
     return _prepare_encoder_response(base_type, payload, qualifier="encoded")
@@ -103,12 +101,12 @@ def _encode_ctap_webauthn_value(parsed: Any) -> dict[str, Any]:
     canonical_decoded_structure = _canonicalize_cbor_structure(decoded_structure)
 
     payload: dict[str, Any] = {
-        "binary": _binary_summary(full_bytes, "cbor"),
-        "encodedValue": _stringify_mapping_keys(
-            _hex_json_safe(canonical_encoded_map)
+        "binary": values.binary_summary(full_bytes, "cbor"),
+        "encodedValue": values.stringify_mapping_keys(
+            values.make_hex_only(canonical_encoded_map)
         ),
-        "ctapDecoded": _stringify_mapping_keys(
-            _hex_json_safe({ctap_type: canonical_decoded_structure})
+        "ctapDecoded": values.stringify_mapping_keys(
+            values.make_hex_only({ctap_type: canonical_decoded_structure})
         ),
     }
 

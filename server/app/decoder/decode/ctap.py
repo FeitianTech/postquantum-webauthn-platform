@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from .. import values
 from . import (
     canonical,
     cbor_parser,
@@ -12,14 +13,11 @@ from . import (
     ctap_views,
     interpretations,
     key_collisions,
-    pipeline,
 )
 from .cbor_parser import _structure_to_value
 from .ctap_classify import _classify_ctap_payload
 from .ctap_prefix import _extract_ctap_prefix, _is_padding_bytes, prefix_not_read
 from .findings import _attach_findings, _trailing_findings
-from .keys import hex_json_safe as _hex_json_safe
-from .keys import stringify_mapping_keys as _stringify_mapping_keys
 
 # What ``ctapDecoded`` calls the message each shape is.
 MESSAGE_NAMES = {
@@ -69,7 +67,7 @@ def _try_decode_cbor(data: bytes, encoding: str, *, lenient: bool = False) -> di
         "format": "CBOR",
         "inputEncoding": encoding,
         "decoded": decoded_payload,
-        "binary": pipeline._binary_summary(data, encoding),
+        "binary": values.binary_summary(data, encoding),
         "decodeMode": "lenient" if lenient else "strict",
         "extraData": extra,
     }
@@ -85,12 +83,12 @@ def _empty_payload(data: bytes, encoding: str, ctap_details: dict[str, Any] | No
     }
     if ctap_details is not None:
         ctap_details["payloadLength"] = 0
-        decoded_payload["ctap"] = _stringify_mapping_keys(ctap_details)
+        decoded_payload["ctap"] = values.stringify_mapping_keys(ctap_details)
     return {
         "format": "CBOR",
         "inputEncoding": encoding,
         "decoded": decoded_payload,
-        "binary": pipeline._binary_summary(data, encoding),
+        "binary": values.binary_summary(data, encoding),
     }
 
 
@@ -104,7 +102,7 @@ def _payload_views(node: Mapping[str, Any], base_value: Any, classification: str
     if message is not None:
         shown = ctap_views.view(message, node)
         return {"ctapDecoded": {message: shown}, "expandedJson": shown}
-    return {"decodedValue": _stringify_mapping_keys(_hex_json_safe(base_value))}
+    return {"decodedValue": values.stringify_mapping_keys(values.make_hex_only(base_value))}
 
 
 def _framing(
@@ -126,4 +124,4 @@ def _framing(
         framing["trailingBytesHex"] = remaining.hex()
         if _is_padding_bytes(remaining):
             framing["paddingBytes"] = len(remaining)
-    return _stringify_mapping_keys(framing)
+    return values.stringify_mapping_keys(framing)

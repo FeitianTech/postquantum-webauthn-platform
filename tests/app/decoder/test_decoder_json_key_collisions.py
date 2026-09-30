@@ -12,7 +12,8 @@ from __future__ import annotations
 import cbor2
 import pytest
 
-from server.app.decoder.decode import extensions, get_info, keys
+from server.app.decoder import values as decoder_values
+from server.app.decoder.decode import extensions, get_info
 from server.app.decoder.decode.pipeline import decode_payload_text
 from tests.app.decoder import real_vectors as rv
 
@@ -175,20 +176,19 @@ def test_extension_entries_keep_colliding_identifiers():
 
 
 def test_json_keys_never_returns_two_alike_whatever_decorate_does():
-    assert keys.json_keys([1, 2], lambda key, text: "same") == ["same", "same #2"]
-    assert keys.json_keys([1, "1", '"1" (text)']) == ["1", '"1" (text)', '"\\"1\\" (text)" (text)']
+    assert decoder_values.json_keys([1, 2], lambda key, text: "same") == ["same", "same #2"]
+    assert decoder_values.json_keys([1, "1", '"1" (text)']) == ["1", '"1" (text)', '"\\"1\\" (text)" (text)']
 
 
 def test_a_map_spelled_once_is_not_spelled_again():
     # The decoder passes one map through json_items several times (the decoded
     # value, then the response); a label from an earlier pass is kept as it is.
-    from server.app.decoder.decode import keys
-    from server.app.decoder.decode.cbor_parser import CborDiagnostic
+    from server.app.decoder.values import CborDiagnostic
 
     value = {1: "a", "1": "b", b"\x01": "c", "01": "d", CborDiagnostic("true", "boolean"): "e", "true": "f"}
-    once = keys.make_hex_only(value)
+    once = decoder_values.make_hex_only(value)
 
-    assert all(isinstance(label, keys.JsonLabel) for label in once)
-    assert keys.stringify_mapping_keys(keys.make_hex_only(once)) == once
-    assert keys.json_ready(once) == once
+    assert all(isinstance(label, decoder_values.JsonLabel) for label in once)
+    assert decoder_values.stringify_mapping_keys(decoder_values.make_hex_only(once)) == once
+    assert decoder_values.json_ready(once) == once
     assert list(once) == ["1", '"1" (text)', "h'01' (bytes)", '"01" (text)', "true (boolean)", '"true" (text)']

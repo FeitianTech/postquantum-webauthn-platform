@@ -21,10 +21,9 @@ from typing import Any
 
 from cbor2 import CBORSimpleValue, CBORTag, undefined
 
-from . import edn
+from . import edn, values
 from .cbor_head import encode_head
 from .ctap2_order import ctap2_key_order
-from .decode.cbor_parser import CborDiagnostic
 
 
 def _canonical_cbor_dumps(value: Any) -> bytes:
@@ -50,8 +49,8 @@ class _CanonicalCBOREncoder:
         return self._canonicalize(value)
 
     def _encode(self, value: Any) -> bytes:
-        if isinstance(value, CborDiagnostic):
-            # A typed map key read back from its EDN (decode/keys.read_json_key).
+        if isinstance(value, values.CborDiagnostic):
+            # A typed map key read back from its EDN (decode/json_keys.read_json_key).
             return edn.encode(value.diagnostic)
         if isinstance(value, Mapping):
             return self._encode_map(value)

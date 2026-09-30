@@ -15,11 +15,8 @@ from collections.abc import Mapping
 from typing import Any
 
 from ... import encoding
-from .. import cose_tables
+from .. import cose_tables, values
 from ..cbor_canonical import _canonical_cbor_dumps
-from ..decode.keys import hex_json_safe as _hex_json_safe
-from ..decode.keys import stringify_mapping_keys as _stringify_mapping_keys
-from ..decode.pipeline import _binary_summary
 from .handlers_basic import _prepare_encoder_response
 
 _LABEL = re.compile(r"^\s*(-?\d+)\s*(?:\([^()]*\))?\s*$")
@@ -45,8 +42,8 @@ def encode_cose_key(parsed: Any) -> dict[str, Any]:
 
     encoded = _canonical_cbor_dumps(cose_key)
     payload = {
-        "binary": _binary_summary(encoded, "cbor"),
-        "encodedValue": _stringify_mapping_keys(_hex_json_safe(cose_key)),
+        "binary": values.binary_summary(encoded, "cbor"),
+        "encodedValue": values.stringify_mapping_keys(values.make_hex_only(cose_key)),
     }
     warnings = []
     if ignored:

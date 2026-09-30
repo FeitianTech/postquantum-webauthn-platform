@@ -4,17 +4,17 @@ import base64
 
 from fido2.utils import ByteBuffer
 
+from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import authenticator_data as decode_authenticator_data
 from server.app.decoder.decode import binary as decode_binary
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
-from server.app.decoder.decode import keys as decode_keys
 from server.app.decoder.decode import pipeline as decode_pipeline
 
 
 def test_get_mapping_entry_reads_a_bytebuffer_key_as_the_byte_string_it_holds():
-    assert decode_keys.get_mapping_entry({b"\x01": "bytes"}, ByteBuffer(b"\x01")) == "bytes"
-    assert decode_keys.get_mapping_entry({1: "int"}, ByteBuffer(b"\x01")) is decode_keys.MISSING
-    assert decode_keys.get_mapping_entry({"1": "str"}, ByteBuffer(b"\x01")) is decode_keys.MISSING
+    assert decoder_values.get_mapping_entry({b"\x01": "bytes"}, ByteBuffer(b"\x01")) == "bytes"
+    assert decoder_values.get_mapping_entry({1: "int"}, ByteBuffer(b"\x01")) is decoder_values.MISSING
+    assert decoder_values.get_mapping_entry({"1": "str"}, ByteBuffer(b"\x01")) is decoder_values.MISSING
 
 
 def test_decode_public_key_credential_marks_authentication_without_attestation(monkeypatch, pipeline):

@@ -21,6 +21,7 @@ from typing import Any
 
 from cryptography import x509
 
+from .. import values
 from . import (
     ambiguous_input,
     authenticator_data,
@@ -57,17 +58,17 @@ def _lone_ctap_byte(data: bytes, encoding: str, lenient: bool) -> Result | None:
 
 
 def _utf8_pem(data: bytes, encoding: str, lenient: bool) -> Result | None:
-    text = pipeline._try_decode_utf8(data)
+    text = values.try_decode_utf8(data)
     if not (text and pipeline._looks_like_pem(text)):
         return None
     result = pipeline._decode_pem_certificates(text)
     result["inputEncoding"] = encoding
-    result["binary"] = pipeline._binary_summary(data, encoding)
+    result["binary"] = values.binary_summary(data, encoding)
     return result
 
 
 def _utf8_json(data: bytes, encoding: str, lenient: bool) -> Result | None:
-    text = pipeline._try_decode_utf8(data)
+    text = values.try_decode_utf8(data)
     if not text:
         return None
     json_obj, json_findings = pipeline._read_json(text, lenient=lenient, in_bytes=True)
@@ -78,14 +79,14 @@ def _utf8_json(data: bytes, encoding: str, lenient: bool) -> Result | None:
             "format": "WebAuthn client data (binary)",
             "inputEncoding": encoding,
             "decoded": pipeline._describe_client_data_from_bytes(data, lenient=lenient),
-            "binary": pipeline._binary_summary(data, encoding),
+            "binary": values.binary_summary(data, encoding),
         }
     else:
         result = {
             "format": "JSON (binary)",
             "inputEncoding": encoding,
             "decoded": json_obj,
-            "binary": pipeline._binary_summary(data, encoding),
+            "binary": values.binary_summary(data, encoding),
         }
     if json_findings:
         ctap._attach_findings(result, json_findings)
@@ -179,15 +180,8 @@ def _is_lone_ctap_byte(data: bytes) -> bool:
     return len(data) == 1 and ctap_prefix._read_prefix(data)[0] is not None
 
 
-def _text(data: bytes) -> str | None:
-    try:
-        return data.decode("utf-8")
-    except UnicodeDecodeError:
-        return None
-
-
 def _is_pem_text(data: bytes) -> bool:
-    text = _text(data)
+    text = values.try_decode_utf8(data)
     if not text or not pipeline._looks_like_pem(text):
         return False
     try:
@@ -198,7 +192,7 @@ def _is_pem_text(data: bytes) -> bool:
 
 
 def _is_json_text(data: bytes) -> bool:
-    text = _text(data)
+    text = values.try_decode_utf8(data)
     if text is None:
         return False
     try:

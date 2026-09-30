@@ -3,9 +3,9 @@ from __future__ import annotations
 import pytest
 from fido2.utils import ByteBuffer
 
+from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import ctap as decode_ctap
 from server.app.decoder.decode import json_input
-from server.app.decoder.decode import keys as decode_keys
 from server.app.decoder.decode import pipeline as decode_pipeline
 
 
@@ -46,12 +46,12 @@ def test_is_padding_bytes_distinguishes_padding_from_content():
 
 
 def test_key_identity_names_the_cbor_type_of_a_key():
-    assert decode_keys.key_identity(7) == ("int", 7)
-    assert decode_keys.key_identity(True) == ("bool", True)
-    assert decode_keys.key_identity("7") == ("text", "7")
-    assert decode_keys.key_identity(b"\x07") == ("bytes", b"\x07")
-    assert decode_keys.key_identity(ByteBuffer(b"\x07")) == ("bytes", b"\x07")
-    assert decode_keys.key_identity(1.5) == ("other", 1.5)
+    assert decoder_values.key_identity(7) == ("int", 7)
+    assert decoder_values.key_identity(True) == ("bool", True)
+    assert decoder_values.key_identity("7") == ("text", "7")
+    assert decoder_values.key_identity(b"\x07") == ("bytes", b"\x07")
+    assert decoder_values.key_identity(ByteBuffer(b"\x07")) == ("bytes", b"\x07")
+    assert decoder_values.key_identity(1.5) == ("other", 1.5)
 
 
 def test_get_mapping_entry_matches_keys_by_exact_type_and_missing_sentinel():
@@ -61,22 +61,22 @@ def test_get_mapping_entry_matches_keys_by_exact_type_and_missing_sentinel():
         "custom": "custom-key",
     }
 
-    assert decode_keys.get_mapping_entry(mapping, 1) == "int-key"
-    assert decode_keys.get_mapping_entry(mapping, "1") is decode_keys.MISSING
-    assert decode_keys.get_mapping_entry(mapping, True) is decode_keys.MISSING
-    assert decode_keys.get_mapping_entry(mapping, 2) is decode_keys.MISSING
-    assert decode_keys.get_mapping_entry(mapping, b"\x02") == "bytes-key"
-    assert decode_keys.get_mapping_entry(mapping, "missing", "custom") == "custom-key"
-    assert decode_keys.get_mapping_entry(mapping, "does-not-exist") is decode_keys.MISSING
-    assert decode_keys.get_mapping_entry([1, 2, 3], 1) is decode_keys.MISSING
+    assert decoder_values.get_mapping_entry(mapping, 1) == "int-key"
+    assert decoder_values.get_mapping_entry(mapping, "1") is decoder_values.MISSING
+    assert decoder_values.get_mapping_entry(mapping, True) is decoder_values.MISSING
+    assert decoder_values.get_mapping_entry(mapping, 2) is decoder_values.MISSING
+    assert decoder_values.get_mapping_entry(mapping, b"\x02") == "bytes-key"
+    assert decoder_values.get_mapping_entry(mapping, "missing", "custom") == "custom-key"
+    assert decoder_values.get_mapping_entry(mapping, "does-not-exist") is decoder_values.MISSING
+    assert decoder_values.get_mapping_entry([1, 2, 3], 1) is decoder_values.MISSING
 
 
 def test_coerce_cbor_bytes_supports_supported_binary_types():
-    assert decode_keys.coerce_cbor_bytes(ByteBuffer(b"abc")) == b"abc"
-    assert decode_keys.coerce_cbor_bytes(b"abc") == b"abc"
-    assert decode_keys.coerce_cbor_bytes(bytearray(b"abc")) == b"abc"
-    assert decode_keys.coerce_cbor_bytes(memoryview(b"abc")) == b"abc"
-    assert decode_keys.coerce_cbor_bytes("abc") is None
+    assert decoder_values.coerce_cbor_bytes(ByteBuffer(b"abc")) == b"abc"
+    assert decoder_values.coerce_cbor_bytes(b"abc") == b"abc"
+    assert decoder_values.coerce_cbor_bytes(bytearray(b"abc")) == b"abc"
+    assert decoder_values.coerce_cbor_bytes(memoryview(b"abc")) == b"abc"
+    assert decoder_values.coerce_cbor_bytes("abc") is None
 
 
 def test_stringify_and_hex_helpers_convert_nested_values():
@@ -85,16 +85,16 @@ def test_stringify_and_hex_helpers_convert_nested_values():
         "buf": ByteBuffer(b"\xcc"),
     }
 
-    stringified = decode_keys.stringify_mapping_keys(payload)
+    stringified = decoder_values.stringify_mapping_keys(payload)
     assert sorted(stringified.keys()) == ["1", "buf"]
     assert stringified["1"][0] == b"\xaa"
 
-    hex_only = decode_keys.make_hex_only(payload)
+    hex_only = decoder_values.make_hex_only(payload)
     assert hex_only == {
         "1": ["aa", {"x": "bb"}],
         "buf": "cc",
     }
-    assert decode_keys.hex_json_safe(payload) == hex_only
+    assert decoder_values.make_hex_only(payload) == hex_only
 
 
 def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, pipeline, response):
@@ -188,17 +188,17 @@ def test_decode_binary_field_handles_invalid_inputs(monkeypatch, pipeline):
 
 
 def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(monkeypatch, pipeline):
-    monkeypatch.setattr(pipeline, "_try_decode_utf8", lambda _data: "-----BEGIN CERTIFICATE-----")
+    monkeypatch.setattr(decoder_values, "try_decode_utf8", lambda _data: "-----BEGIN CERTIFICATE-----")
     monkeypatch.setattr(pipeline, "_looks_like_pem", lambda text: text.startswith("-----BEGIN"))
     monkeypatch.setattr(pipeline, "_decode_pem_certificates", lambda _text: {"format": "X.509 certificate (PEM)", "decoded": {"pem": True}})
-    monkeypatch.setattr(pipeline, "_binary_summary", lambda _data, _encoding=None: {"hex": "616263"})
+    monkeypatch.setattr(decoder_values, "binary_summary", lambda _data, _encoding=None: {"hex": "616263"})
 
     pem_result = decode_pipeline._decode_binary_payload(b"abc", "base64url")
     assert pem_result["format"] == "X.509 certificate (PEM)"
     assert pem_result["inputEncoding"] == "base64url"
     assert pem_result["binary"] == {"hex": "616263"}
 
-    monkeypatch.setattr(pipeline, "_try_decode_utf8", lambda _data: '{"k": 1}')
+    monkeypatch.setattr(decoder_values, "try_decode_utf8", lambda _data: '{"k": 1}')
     monkeypatch.setattr(pipeline, "_read_json", lambda _text, **_kwargs: ({"k": 1}, []))
     monkeypatch.setattr(pipeline, "_is_client_data_dict", lambda _obj: False)
 
@@ -210,7 +210,7 @@ def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(m
         "binary": {"hex": "616263"},
     }
 
-    monkeypatch.setattr(pipeline, "_try_decode_utf8", lambda _data: None)
+    monkeypatch.setattr(decoder_values, "try_decode_utf8", lambda _data: None)
     monkeypatch.setattr(pipeline, "_try_decode_certificate_bytes", lambda _data, _enc: None)
     monkeypatch.setattr(pipeline, "_try_decode_attestation_object", lambda _data, _enc: None)
     monkeypatch.setattr(pipeline, "_try_decode_authenticator_data", lambda _data, _enc: None)

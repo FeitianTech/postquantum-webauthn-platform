@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from server.app.decoder.decode import keys as decode_keys
+from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import pipeline as decode_pipeline
 
 
@@ -15,8 +15,8 @@ def test_a_byte_string_map_key_is_shown_as_hex_like_a_byte_string_value():
 
 
 def test_key_helpers_never_leak_a_python_bytes_repr():
-    assert decode_keys.hex_json_safe({b"\x01\xff": {b"\x02": b"\x03"}}) == {"01ff": {"02": "03"}}
-    assert decode_keys.stringify_mapping_keys({b"\xaa": 1, 2: 3}) == {"aa": 1, "2": 3}
+    assert decoder_values.make_hex_only({b"\x01\xff": {b"\x02": b"\x03"}}) == {"01ff": {"02": "03"}}
+    assert decoder_values.stringify_mapping_keys({b"\xaa": 1, 2: 3}) == {"aa": 1, "2": 3}
 
 
 @pytest.mark.parametrize(

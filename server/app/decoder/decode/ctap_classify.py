@@ -9,18 +9,16 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from .. import values
 from . import get_info
 from .ambiguous_input import finding
-from .keys import MISSING
-from .keys import coerce_cbor_bytes as _coerce_cbor_bytes
-from .keys import get_mapping_entry as _get_mapping_entry
 
 
 def _extract_mapping_string(value: Mapping[Any, Any], keys: Iterable[Any]) -> str | None:
     if not isinstance(value, Mapping):
         return None
-    candidate = _get_mapping_entry(value, *keys)
-    if candidate is MISSING:
+    candidate = values.get_mapping_entry(value, *keys)
+    if candidate is values.MISSING:
         return None
     if isinstance(candidate, str):
         stripped = candidate.strip()
@@ -32,10 +30,10 @@ def _extract_mapping_string(value: Mapping[Any, Any], keys: Iterable[Any]) -> st
 def _extract_mapping_bytes(value: Mapping[Any, Any], keys: Iterable[Any]) -> bytes | None:
     if not isinstance(value, Mapping):
         return None
-    candidate = _get_mapping_entry(value, *keys)
-    if candidate is MISSING:
+    candidate = values.get_mapping_entry(value, *keys)
+    if candidate is values.MISSING:
         return None
-    candidate_bytes = _coerce_cbor_bytes(candidate)
+    candidate_bytes = values.coerce_cbor_bytes(candidate)
     if candidate_bytes is not None:
         return candidate_bytes
     return None
@@ -49,7 +47,7 @@ def _looks_like_make_credential_request(value: Mapping[Any, Any]) -> bool:
     # clientDataHash (1) is bytes; rp (2) is a map, where a response has authData bytes.
     if _extract_mapping_bytes(value, (1,)) is None or _extract_mapping_bytes(value, (2,)) is not None:
         return False
-    return _get_mapping_entry(value, 2) is not MISSING and _get_mapping_entry(value, 3) is not MISSING
+    return values.get_mapping_entry(value, 2) is not values.MISSING and values.get_mapping_entry(value, 3) is not values.MISSING
 
 
 def _looks_like_get_assertion_request(value: Mapping[Any, Any]) -> bool:
@@ -62,10 +60,10 @@ def _looks_like_get_assertion_request(value: Mapping[Any, Any]) -> bool:
 def _looks_like_make_credential_output(value: Mapping[Any, Any]) -> bool:
     fmt_value = _extract_mapping_string(value, (1,))
     auth_data_bytes = _extract_mapping_bytes(value, (2,))
-    att_stmt_value = _get_mapping_entry(value, 3)
-    if att_stmt_value is MISSING:
+    att_stmt_value = values.get_mapping_entry(value, 3)
+    if att_stmt_value is values.MISSING:
         att_stmt_value = None
-    att_stmt_bytes = _coerce_cbor_bytes(att_stmt_value)
+    att_stmt_bytes = values.coerce_cbor_bytes(att_stmt_value)
     att_stmt_map = att_stmt_value if isinstance(att_stmt_value, Mapping) else None
     compound = fmt_value == "compound" and isinstance(att_stmt_value, list)
     return fmt_value is not None and auth_data_bytes is not None and (
