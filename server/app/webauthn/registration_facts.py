@@ -2,9 +2,10 @@
 
 The flags in the order of their bits (``flags``), whether largeBlob did anything
 (``large_blob_result``), a byte string's three spellings (``byte_forms``), the
-AAGUID (``aaguid_values``, ``record_aaguid``, ``aaguid_block``), and authData's
+AAGUID (``aaguid_values``, ``record_aaguid``, ``aaguid_block``), authData's
 rpIdHash beside the hash of the RP ID it should be (``rp_id_hash_report``,
-``record_rp_id_hash``).
+``record_rp_id_hash``), and the relying party's view of the registration
+(``relying_party_info``, ``registration_data``), in one key order for both tabs.
 """
 from __future__ import annotations
 
@@ -13,6 +14,7 @@ import uuid
 from collections.abc import Mapping
 from typing import Any
 
+from .. import json_values
 from ..encoding import encode_base64, encode_base64url
 
 # authData's flags, in the order of their bits (WebAuthn L3 section 6.1).
@@ -120,3 +122,92 @@ def record_rp_id_hash(properties: dict[str, Any], report: Mapping[str, Any]) -> 
         properties["rpIdHashBase64"] = report["base64url"]
     properties["rpIdHashExpected"] = report["expectedHex"]
     properties["rpIdHashExpectedBase64"] = report["expectedBase64url"]
+
+
+def registration_data(
+    *,
+    authenticator_data: tuple[str, str],
+    client_extension_results: Any,
+    flags: dict[str, bool],
+    signature_counter: Any,
+    attestation_checks: Any,
+    attestation_summary: Any,
+    warnings: list[str] | None = None,
+) -> dict[str, Any]:
+    """What the registration sent and what its checks found; ``authenticator_data`` is its hex and SHA-256."""
+
+    authenticator_data_hex, authenticator_data_hash = authenticator_data
+    data: dict[str, Any] = {
+        "authenticatorData": authenticator_data_hex,
+        "authenticatorDataHash": authenticator_data_hash,
+        "clientExtensionResults": json_values.make_json_safe(client_extension_results),
+        "flags": flags,
+        "signatureCounter": signature_counter,
+        "attestationChecks": attestation_checks,
+        "attestationSummary": attestation_summary,
+    }
+    if warnings:
+        data["warnings"] = warnings
+    return data
+
+
+def relying_party_info(
+    *,
+    aaguid: dict[str, Any] | None,
+    attestation_format: Any,
+    created_at: str,
+    credential_id: Mapping[str, Any],
+    rp_hash: Mapping[str, Any],
+    rp_id_hash_match: bool,
+    authenticator_data_hash: str,
+    large_blob: bool,
+    public_key_algorithm: Any,
+    registration: dict[str, Any],
+    user_handle: bytes,
+    attestation_object: Any = None,
+    device: dict[str, Any] | None = None,
+    resident_key: bool | None = None,
+    attestation_certificate: Any = None,
+    attestation_certificates: Any = None,
+) -> dict[str, Any]:
+    """The relying party's view of the registration, as the answer reports it and the record keeps it.
+
+    ``credential_id`` holds its ``hex``, ``base64`` and ``base64url``. What only
+    one tab reports is left out when not given: the AAGUID block and the
+    attestation object, the device, the resident-key result, and the
+    attestation certificates.
+    """
+
+    rp_info: dict[str, Any] = {}
+    if aaguid is not None:
+        rp_info["aaguid"] = aaguid
+    rp_info["attestationFmt"] = attestation_format
+    if attestation_object is not None:
+        rp_info["attestationObject"] = attestation_object
+    rp_info.update(
+        {
+            "createdAt": created_at,
+            "credentialId": credential_id["hex"],
+            "credentialIdBase64": credential_id["base64"],
+            "credentialIdBase64Url": credential_id["base64url"],
+            "rpIdHash": rp_hash["hex"],
+            "rpIdHashBase64": rp_hash["base64url"],
+            "rpIdHashExpected": rp_hash["expectedHex"],
+            "rpIdHashExpectedBase64": rp_hash["expectedBase64url"],
+            "rpIdHashMatch": rp_id_hash_match,
+            "authenticatorDataHash": authenticator_data_hash,
+        }
+    )
+    if device is not None:
+        rp_info["device"] = device
+    rp_info["largeBlob"] = large_blob
+    rp_info["publicKeyAlgorithm"] = public_key_algorithm
+    rp_info["registrationData"] = registration
+    if resident_key is not None:
+        rp_info["residentKey"] = resident_key
+    rp_info["userHandle"] = byte_forms(user_handle)
+    if attestation_certificate:
+        rp_info["attestationCertificate"] = attestation_certificate
+    if attestation_certificates:
+        rp_info["attestationCertificates"] = attestation_certificates
+    return rp_info

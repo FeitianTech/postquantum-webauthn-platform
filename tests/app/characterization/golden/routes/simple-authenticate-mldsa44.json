@@ -641,7 +641,7 @@
    "stored": [
     {
      "file": "credentials/cGourgMF_TKe-v8yiLbvgeZOruAAf7YK6id8pibnwCw/user@example.com_credential_data.json",
-     "sha256": "c785f2eb73859ab0b0883915dfa11cafec3c9ee5cbf55477d4196553d6a6b034",
+     "sha256": "eac5a1becb63450e6be5bdab3624e84e8e908538b76b68f3fe04ddad6e595c5b",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -767,6 +767,10 @@
          "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
         },
         "relying_party": {
+         "aaguid": {
+          "raw": "00000000000000000000000000000000",
+          "guid": "00000000-0000-0000-0000-000000000000"
+         },
          "attestationFmt": "none",
          "createdAt": "2026-09-21T14:13:20+00:00",
          "credentialId": "23ec7fcb1d2efdbc3a2538c4f7ffafa1a8b126f55815f6aabffcce260ec702a1",
@@ -857,10 +861,6 @@
           "base64": "dXNlckBleGFtcGxlLmNvbQ==",
           "base64url": "dXNlckBleGFtcGxlLmNvbQ",
           "hex": "75736572406578616d706c652e636f6d"
-         },
-         "aaguid": {
-          "raw": "00000000000000000000000000000000",
-          "guid": "00000000-0000-0000-0000-000000000000"
          }
         },
         "registration_response": {
@@ -1067,7 +1067,7 @@
    "stored": [
     {
      "file": "credentials/cGourgMF_TKe-v8yiLbvgeZOruAAf7YK6id8pibnwCw/user@example.com_credential_data.json",
-     "sha256": "46991141f20924c992a3fde35f91bbab36f2177b62e22bed8e6296edb831b085",
+     "sha256": "abbba4243d964e4a800880c56ca5eab86444b63931a68ef7892333711a17d03e",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -1193,6 +1193,10 @@
          "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
         },
         "relying_party": {
+         "aaguid": {
+          "raw": "00000000000000000000000000000000",
+          "guid": "00000000-0000-0000-0000-000000000000"
+         },
          "attestationFmt": "none",
          "createdAt": "2026-09-21T14:13:20+00:00",
          "credentialId": "23ec7fcb1d2efdbc3a2538c4f7ffafa1a8b126f55815f6aabffcce260ec702a1",
@@ -1283,10 +1287,6 @@
           "base64": "dXNlckBleGFtcGxlLmNvbQ==",
           "base64url": "dXNlckBleGFtcGxlLmNvbQ",
           "hex": "75736572406578616d706c652e636f6d"
-         },
-         "aaguid": {
-          "raw": "00000000000000000000000000000000",
-          "guid": "00000000-0000-0000-0000-000000000000"
          }
         },
         "registration_response": {

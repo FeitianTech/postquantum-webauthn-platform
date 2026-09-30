@@ -642,7 +642,7 @@
    "stored": [
     {
      "file": "credentials/V4KSFiJPprQkzn_uAlSg2IZXnQP5m6BSTsQ1g-rm2Fk/user@example.com_credential_data.json",
-     "sha256": "118bbb28356832e363a9610e0eb9157422c384512b8631ac5268941b3462d54d",
+     "sha256": "67d47c1a360a9bbc4d1b6df89670ebd2eb54e119ac6bf51aa2f280c946b8208f",
      "content": {
       "version": 1,
       "encoding": "base64url",
@@ -768,6 +768,10 @@
          "rpIdHashExpectedBase64": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2M"
         },
         "relying_party": {
+         "aaguid": {
+          "raw": "00000000000000000000000000000000",
+          "guid": "00000000-0000-0000-0000-000000000000"
+         },
          "attestationFmt": "none",
          "createdAt": "2026-09-21T14:13:20+00:00",
          "credentialId": "bcaf857d7841d8afe6bd3893d5b94131d79084d94b054ccc8de61c38205b4919",
@@ -858,10 +862,6 @@
           "base64": "dXNlckBleGFtcGxlLmNvbQ==",
           "base64url": "dXNlckBleGFtcGxlLmNvbQ",
           "hex": "75736572406578616d706c652e636f6d"
-         },
-         "aaguid": {
-          "raw": "00000000000000000000000000000000",
-          "guid": "00000000-0000-0000-0000-000000000000"
          }
         },
         "registration_response": {

@@ -170,6 +170,7 @@ def populate_authenticator_data_context(ctx: dict[str, Any]) -> None:
     if ctx["attestation_rp_id_hash_valid"] is None:
         ctx["attestation_rp_id_hash_valid"] = rp_hash["bytes"] == rp_hash["expectedBytes"]
     registration_facts.record_rp_id_hash(ctx["credential_properties"], rp_hash)
+    ctx["rp_hash"] = rp_hash
 
     ctx["authenticator_data_raw"] = authenticator_data_raw
     ctx["authenticator_data_hex"] = authenticator_data_hex
@@ -197,48 +198,36 @@ def _relying_party_info(
     ctx: Mapping[str, Any],
     *,
     registration_timestamp: str,
-    credential_ids: tuple[str, str, str],
+    credential_id_forms: Mapping[str, str],
     aaguid: tuple[bytes, str | None, str | None],
     large_blob_result: bool,
     user_handle_bytes: bytes,
 ) -> dict[str, Any]:
     """The relying party's view of the registration, as the answer reports it."""
 
-    credential_id_hex, credential_id_b64, credential_id_b64u = credential_ids
-    rp_registration_data = {
-        "authenticatorData": ctx["authenticator_data_hex"],
-        "authenticatorDataHash": ctx["authenticator_data_hash"],
-        "clientExtensionResults": json_values.make_json_safe(ctx["client_extension_results"]),
-        "flags": ctx["flags_dict"],
-        "signatureCounter": getattr(ctx["auth_data"], "counter", 0),
-        "attestationChecks": ctx["attestation_checks_safe"],
-        "attestationSummary": ctx["attestation_summary"],
-    }
-    if ctx["warnings"]:
-        rp_registration_data["warnings"] = ctx["warnings"]
-
-    rp_info: dict[str, Any] = {
-        "attestationFmt": ctx["attestation_format"],
-        "createdAt": registration_timestamp,
-        "credentialId": credential_id_hex,
-        "credentialIdBase64": credential_id_b64,
-        "credentialIdBase64Url": credential_id_b64u,
-        "rpIdHash": ctx["rp_id_hash_hex"],
-        "rpIdHashBase64": ctx["rp_id_hash_b64"],
-        "rpIdHashExpected": ctx["expected_rp_hash_hex"],
-        "rpIdHashExpectedBase64": ctx["expected_rp_hash_b64"],
-        "rpIdHashMatch": bool(ctx["attestation_rp_id_hash_valid"]),
-        "authenticatorDataHash": ctx["authenticator_data_hash"],
-        "largeBlob": large_blob_result,
-        "publicKeyAlgorithm": ctx["algo"],
-        "registrationData": rp_registration_data,
-        "userHandle": registration_facts.byte_forms(user_handle_bytes),
-    }
-
     aaguid_bytes, aaguid_hex, aaguid_guid = aaguid
-    if aaguid_bytes:
-        rp_info["aaguid"] = registration_facts.aaguid_block(aaguid_hex, aaguid_guid)
-    return rp_info
+    authenticator_data = (ctx["authenticator_data_hex"], ctx["authenticator_data_hash"])
+    return registration_facts.relying_party_info(
+        aaguid=registration_facts.aaguid_block(aaguid_hex, aaguid_guid) if aaguid_bytes else None,
+        attestation_format=ctx["attestation_format"],
+        created_at=registration_timestamp,
+        credential_id=credential_id_forms,
+        rp_hash=ctx["rp_hash"],
+        rp_id_hash_match=bool(ctx["attestation_rp_id_hash_valid"]),
+        authenticator_data_hash=ctx["authenticator_data_hash"],
+        large_blob=large_blob_result,
+        public_key_algorithm=ctx["algo"],
+        registration=registration_facts.registration_data(
+            authenticator_data=authenticator_data,
+            client_extension_results=ctx["client_extension_results"],
+            flags=ctx["flags_dict"],
+            signature_counter=getattr(ctx["auth_data"], "counter", 0),
+            attestation_checks=ctx["attestation_checks_safe"],
+            attestation_summary=ctx["attestation_summary"],
+            warnings=ctx["warnings"],
+        ),
+        user_handle=user_handle_bytes,
+    )
 
 
 def _debug_info(ctx: Mapping[str, Any]) -> dict[str, Any]:
@@ -276,7 +265,7 @@ def populate_rp_debug_context(ctx: dict[str, Any]) -> None:
     rp_info = _relying_party_info(
         ctx,
         registration_timestamp=registration_timestamp,
-        credential_ids=credential_ids,
+        credential_id_forms=credential_id_forms,
         aaguid=(aaguid_bytes, aaguid_hex, aaguid_guid),
         large_blob_result=large_blob_result,
         user_handle_bytes=user_handle_bytes,
