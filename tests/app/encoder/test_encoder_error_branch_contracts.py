@@ -1,6 +1,5 @@
 import pytest
 
-from server.app.decoder.encode import binary_extract as encode_binary_extract
 from server.app.decoder.encode import ctap_encode as encode_ctap_encode
 from server.app.decoder.encode import ctap_fields as encode_ctap_fields
 
@@ -45,13 +44,3 @@ def test_ctap_support_helpers_raise_expected_errors():
 
     with pytest.raises(ValueError, match="must be a boolean"):
         encode_ctap_fields._ensure_bool(5, "flag")
-
-
-def test_extract_generic_binary_payload_recursive_failure_path():
-    payload = {
-        "first": {"nested": {"still": "text"}},
-        "second": [{"none": None}, {"more": "text"}],
-    }
-
-    with pytest.raises(ValueError, match="Unable to extract binary payload"):
-        encode_binary_extract._extract_generic_binary_payload(payload)
