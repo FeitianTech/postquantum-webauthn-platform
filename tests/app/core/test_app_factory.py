@@ -74,7 +74,18 @@ def test_hooks_and_blueprints_are_registered_in_order(app):
         security_headers.set_security_headers,
     ]
     assert app.before_request_funcs[None] == [assets._hide_private_static_files]
-    assert list(app.blueprints) == ["assets", "advanced", "mds", "codec", "simple_registration", "simple_authentication", "csp_report", "web_export"]
+    assert list(app.blueprints) == [
+        "assets",
+        "advanced_registration",
+        "advanced_artifacts",
+        "advanced_authentication",
+        "mds",
+        "codec",
+        "simple_registration",
+        "simple_authentication",
+        "csp_report",
+        "web_export",
+    ]
     # No static rule of Flask's own: the page rule (routes/web_export.py) is the site's catch-all.
     assert app.static_folder is None
     assert "static" not in app.view_functions

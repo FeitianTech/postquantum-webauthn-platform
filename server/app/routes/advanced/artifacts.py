@@ -3,12 +3,15 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from flask import jsonify, request
+from flask import Blueprint, jsonify, request
 
 from ... import credential_artifacts
 from ...webauthn.metadata import sessions as metadata_sessions
 
+bp = Blueprint("advanced_artifacts", __name__)
 
+
+@bp.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["GET"])
 def api_get_advanced_credential_artifact(storage_id: str):
     metadata_session_id = metadata_sessions.ensure_metadata_session_id()
     artifact = credential_artifacts.load_credential_artifact(storage_id, session_id=metadata_session_id)
@@ -18,6 +21,7 @@ def api_get_advanced_credential_artifact(storage_id: str):
     return jsonify({"storageId": storage_id, "artifact": artifact})
 
 
+@bp.route("/api/advanced/credential-artifacts/bulk", methods=["POST"])
 def api_get_advanced_credential_artifacts_bulk():
     data = request.get_json(silent=True) or {}
     raw_storage_ids = data.get("storageIds")
@@ -45,6 +49,7 @@ def api_get_advanced_credential_artifacts_bulk():
     return jsonify({"artifacts": artifacts})
 
 
+@bp.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["PUT"])
 def api_put_advanced_credential_artifact(storage_id: str):
     data = request.get_json(silent=True) or {}
     merge = True
@@ -72,6 +77,7 @@ def api_put_advanced_credential_artifact(storage_id: str):
     return jsonify({"status": "OK"})
 
 
+@bp.route("/api/advanced/credential-artifacts/<string:storage_id>/snapshot", methods=["PUT"])
 def api_put_advanced_credential_snapshot(storage_id: str):
     data = request.get_json(silent=True) or {}
     snapshot = data.get("snapshot")
@@ -91,6 +97,7 @@ def api_put_advanced_credential_snapshot(storage_id: str):
     return jsonify({"status": "OK"})
 
 
+@bp.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["DELETE"])
 def api_delete_advanced_credential_artifact(storage_id: str):
     if not isinstance(storage_id, str) or not storage_id.strip():
         return jsonify(

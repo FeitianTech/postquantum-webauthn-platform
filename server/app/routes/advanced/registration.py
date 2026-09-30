@@ -5,9 +5,9 @@ from collections.abc import Mapping
 from typing import Any
 
 from fido2.webauthn import PublicKeyCredentialUserEntity
-from flask import jsonify, request, session
+from flask import Blueprint, jsonify, request, session
 
-from ... import json_values
+from ... import json_values, mds_provisioning
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
 from . import (
     algorithms,
@@ -21,7 +21,11 @@ from . import (
 
 logger = logging.getLogger(__name__)
 
+bp = Blueprint("advanced_registration", __name__)
 
+
+@bp.route("/api/advanced/register/complete", methods=["POST"])
+@mds_provisioning.waits_for_the_snapshot
 def advanced_register_complete():
     data = request.get_json(silent=True) or {}
     # Consumed before anything can fail, as in the simple flow: an early error
@@ -147,6 +151,7 @@ def _with_challenge_source(
     return jsonify(merged), status
 
 
+@bp.route("/api/advanced/register/begin", methods=["POST"])
 def advanced_register_begin():
     data = request.get_json(silent=True)
     begin_request, error_response = registration_options.parse_begin_request(data)

@@ -4,7 +4,7 @@ import logging
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from flask import jsonify, request, session
+from flask import Blueprint, jsonify, request, session
 
 from ... import json_values
 from ...attachments import (
@@ -28,6 +28,8 @@ from . import (
 
 logger = logging.getLogger(__name__)
 
+bp = Blueprint("advanced_authentication", __name__)
+
 
 def _hints(public_key: Mapping[str, Any]) -> list[str]:
     raw_hints = public_key.get("hints")
@@ -36,6 +38,7 @@ def _hints(public_key: Mapping[str, Any]) -> list[str]:
     return []
 
 
+@bp.route("/api/advanced/authenticate/begin", methods=["POST"])
 def advanced_authenticate_begin():
     data = request.get_json(silent=True)
 
@@ -124,6 +127,7 @@ def _begin_payload(options: Any, resident_key_only: bool) -> dict[str, Any]:
     return options_payload
 
 
+@bp.route("/api/advanced/authenticate/complete", methods=["POST"])
 def advanced_authenticate_complete():
     data = request.get_json(silent=True) or {}
 

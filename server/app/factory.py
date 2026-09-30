@@ -26,9 +26,12 @@ from .config import (
     session_secret,
     web_export,
 )
-from .routes import advanced, assets, codec, csp_report, errors
+from .routes import assets, codec, csp_report, errors
 from .routes import mds as mds_routes
 from .routes import web_export as web_export_routes
+from .routes.advanced import artifacts as advanced_artifacts
+from .routes.advanced import authentication as advanced_authentication
+from .routes.advanced import registration as advanced_registration
 from .routes.simple import authentication as simple_authentication
 from .routes.simple import registration as simple_registration
 
@@ -47,7 +50,17 @@ CONFIG_SOURCES = (
 
 
 def _register_blueprints(app: Flask) -> None:
-    for blueprint in (advanced.bp, mds_routes.bp, codec.bp, simple_registration.bp, simple_authentication.bp, csp_report.bp, web_export_routes.bp):
+    for blueprint in (
+        advanced_registration.bp,
+        advanced_artifacts.bp,
+        advanced_authentication.bp,
+        mds_routes.bp,
+        codec.bp,
+        simple_registration.bp,
+        simple_authentication.bp,
+        csp_report.bp,
+        web_export_routes.bp,
+    ):
         app.register_blueprint(blueprint)
     errors.init_app(app)
 
