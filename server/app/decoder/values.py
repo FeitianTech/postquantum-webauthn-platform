@@ -53,22 +53,22 @@ class CborDiagnostic:
 
 
 def key_identity(key: Any) -> tuple[str, Any]:
-    """What makes a map key the key it is: its CBOR type and its value.
+    """What makes a map key the key it is: its CBOR type and its value (RFC 8949 section 5.6.1).
 
     1, "1" and h'01' are three different CBOR map keys; Python would still fold
-    1 and True together, so a bool never stands in for an integer.
+    1 and True together, so a bool never stands in for an integer. The labels are
+    ``decode.key_equivalence.identity``'s, so a key compares with a decoded key node's.
     """
 
     if isinstance(key, bool):
-        return ("bool", key)
+        return ("simple", 21 if key else 20)
     if isinstance(key, int):
-        return ("int", key)
+        return ("integer", key)
     if isinstance(key, str):
         return ("text", key)
-    if isinstance(key, ByteBuffer):
-        return ("bytes", key.getvalue())
-    if isinstance(key, (bytes, bytearray, memoryview)):
-        return ("bytes", bytes(key))
+    raw = json_values.as_bytes(key)
+    if raw is not None:
+        return ("bytes", raw.hex())
     return ("other", key)
 
 

@@ -25,8 +25,8 @@ def _auth_data_bytes() -> bytes:
 
 
 def test_remaining_cbor_key_and_float_helpers():
-    assert decoder_values.key_identity(b"x") == ("bytes", b"x")
-    assert decoder_values.key_identity(7) == ("int", 7)
+    assert decoder_values.key_identity(b"x") == ("bytes", "78")
+    assert decoder_values.key_identity(7) == ("integer", 7)
 
     assert decode_cbor_parser._float_summary(float("inf")) == "float(+Infinity)"
     assert decode_cbor_parser._float_summary(float("-inf")) == "float(-Infinity)"

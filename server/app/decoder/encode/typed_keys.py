@@ -47,19 +47,11 @@ def add_key(converted: Mapping[Any, Any], spelled: dict[Hashable, Any], key: Any
 
 
 def key_identity(key: Any) -> Hashable:
-    """When two keys are one key in CBOR (RFC 8949 section 5.6.1)."""
+    """When two keys are one key in CBOR: ``values.key_identity``, a diagnostic key the key its EDN encodes."""
 
-    if isinstance(key, bool):
-        return ("simple", 21 if key else 20)
-    if isinstance(key, int):
-        return ("integer", key)
-    if isinstance(key, str):
-        return ("text", key)
-    if isinstance(key, (bytes, bytearray)):
-        return ("bytes", bytes(key).hex())
     if isinstance(key, values.CborDiagnostic):
         return identity(decode_item(edn.encode(key.diagnostic))[0])
-    return ("other", repr(key))
+    return values.key_identity(key)
 
 
 def _spelling(label: Any) -> str:

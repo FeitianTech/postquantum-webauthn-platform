@@ -46,11 +46,12 @@ def test_is_padding_bytes_distinguishes_padding_from_content():
 
 
 def test_key_identity_names_the_cbor_type_of_a_key():
-    assert decoder_values.key_identity(7) == ("int", 7)
-    assert decoder_values.key_identity(True) == ("bool", True)
+    assert decoder_values.key_identity(7) == ("integer", 7)
+    assert decoder_values.key_identity(True) == ("simple", 21)
+    assert decoder_values.key_identity(False) == ("simple", 20)
     assert decoder_values.key_identity("7") == ("text", "7")
-    assert decoder_values.key_identity(b"\x07") == ("bytes", b"\x07")
-    assert decoder_values.key_identity(ByteBuffer(b"\x07")) == ("bytes", b"\x07")
+    assert decoder_values.key_identity(b"\x07") == ("bytes", "07")
+    assert decoder_values.key_identity(ByteBuffer(b"\x07")) == ("bytes", "07")
     assert decoder_values.key_identity(1.5) == ("other", 1.5)
 
 
