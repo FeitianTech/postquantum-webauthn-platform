@@ -38,13 +38,6 @@ def cbor_parser():
 
 
 @pytest.fixture
-def binary():
-    """The submodule that extracts and displays binary payload fields."""
-
-    return _fragment("binary")
-
-
-@pytest.fixture
 def keys():
     """The submodule that coerces and varies CBOR mapping keys."""
 

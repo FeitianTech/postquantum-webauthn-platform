@@ -25,7 +25,7 @@ from typing import Any
 from ... import encoding
 from ...webauthn import pqc
 from .. import ctap_tables, values
-from .binary import _describe_cose_key
+from . import cose_display
 
 MAKE_CREDENTIAL_INPUT = "makeCredential input"
 GET_ASSERTION_INPUT = "getAssertion input"
@@ -174,7 +174,7 @@ def _hmac_secret_input(value: Any) -> dict[str, Any]:
         name = ctap_tables.HMAC_SECRET_INPUT.get(key) if _is_int(key) else None
         view: dict[str, Any] = {"value": values.make_hex_only(entry)}
         if name == "keyAgreement":
-            view.update(_describe_cose_key(entry))
+            view.update(cose_display._describe_cose_key(entry))
             alg = values.get_mapping_entry(entry, 3)
             if _is_int(alg):
                 view["algorithm"] = pqc.describe_algorithm(alg)

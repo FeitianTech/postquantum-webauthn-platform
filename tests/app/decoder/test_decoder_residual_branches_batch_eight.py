@@ -25,7 +25,7 @@ def test_build_credential_payload_covers_length_string_and_empty_public_key_payl
     assert "publicKey" not in payload
 
 
-def test_binary_extractors_and_authenticator_fallback_paths(monkeypatch, binary):
+def test_binary_extractors_and_authenticator_fallback_paths(monkeypatch):
     assert decode_answer._extract_hex_from_binary({"binary": {"hex": "aabb"}}) == "aabb"
 
     monkeypatch.setattr(

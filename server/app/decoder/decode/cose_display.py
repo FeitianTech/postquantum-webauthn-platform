@@ -1,4 +1,4 @@
-"""Binary/COSE/authenticator extraction utilities for decoder internals."""
+"""A COSE key as the decoder shows it: its algorithm, key type, curve or parameter set, and its fields."""
 from __future__ import annotations
 
 from collections.abc import Mapping

@@ -48,7 +48,7 @@ def test_ctap_shape_detection_and_classification_helpers():
     assert decode_ctap_classify._classify_ctap_map(get_request) == "get_assertion_input"
 
 
-def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, binary):
+def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch):
     monkeypatch.setattr(decode_answer, "_build_credential_overview", lambda _d: {"id": "cred"})
     monkeypatch.setattr(decode_certificates, "convert_attestation_entry", lambda _e: {"fmt": "none"})
     monkeypatch.setattr(decode_answer, "_build_authenticator_section", lambda *_a, **_k: {"counter": 1})

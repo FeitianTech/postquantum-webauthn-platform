@@ -14,7 +14,7 @@ from fido2 import cbor
 from fido2.cose import ES256, ES384, ES512, MLDSA44, MLDSA65, MLDSA87, PS256
 from fido2.webauthn import Aaguid, AttestedCredentialData, AuthenticatorData
 
-from server.app.decoder.decode import binary
+from server.app.decoder.decode import cose_display
 from server.app.webauthn import pqc
 
 
@@ -45,7 +45,7 @@ def _decoded_public_key(client, cose_key) -> dict:
     ],
 )
 def test_p384_p521_rsa_pss_and_secp256k1_carry_their_own_names(alg, expected):
-    assert binary._resolve_cose_algorithm({3: alg}) == expected
+    assert cose_display._resolve_cose_algorithm({3: alg}) == expected
 
 
 @pytest.mark.parametrize(
@@ -53,20 +53,20 @@ def test_p384_p521_rsa_pss_and_secp256k1_carry_their_own_names(alg, expected):
     [(-48, "ML-DSA-44"), (-49, "ML-DSA-65"), (-50, "ML-DSA-87")],
 )
 def test_ml_dsa_algorithms_are_named_not_shown_as_bare_numbers(alg, parameter_set):
-    assert binary._resolve_cose_algorithm({3: alg}) == f"{parameter_set} (PQC)"
-    assert binary._resolve_cose_algorithm({}, {"publicKeyAlgorithm": alg}) == f"{parameter_set} (PQC)"
+    assert cose_display._resolve_cose_algorithm({3: alg}) == f"{parameter_set} (PQC)"
+    assert cose_display._resolve_cose_algorithm({}, {"publicKeyAlgorithm": alg}) == f"{parameter_set} (PQC)"
 
 
 @pytest.mark.parametrize(
     "alg", [-7, -8, -9, -19, -35, -36, -37, -38, -39, -47, -48, -49, -50, -51, -52, -53, -257, -258, -259, -65535, -999]
 )
 def test_every_algorithm_label_comes_from_describe_algorithm(alg):
-    assert binary._resolve_cose_algorithm({3: alg}) == pqc.describe_algorithm(alg)
-    assert binary._resolve_cose_algorithm({"3": str(alg)}) == pqc.describe_algorithm(alg)
+    assert cose_display._resolve_cose_algorithm({3: alg}) == pqc.describe_algorithm(alg)
+    assert cose_display._resolve_cose_algorithm({"3": str(alg)}) == pqc.describe_algorithm(alg)
 
 
 def test_the_decoder_keeps_no_algorithm_table_of_its_own():
-    assert not hasattr(binary, "_COSE_ALG_LABELS")
+    assert not hasattr(cose_display, "_COSE_ALG_LABELS")
 
 
 @pytest.mark.parametrize(
@@ -120,7 +120,7 @@ def test_api_decode_describes_ec2_and_rsa_keys_the_same_way(client):
 
 
 def test_an_akp_key_of_the_wrong_length_says_what_fips_204_expects():
-    described = binary._describe_cose_key({1: 7, 3: -48, -1: b"\x00" * 100})
+    described = cose_display._describe_cose_key({1: 7, 3: -48, -1: b"\x00" * 100})
     assert described == {
         "keyType": "AKP (7)",
         "parameterSet": "ML-DSA-44",
@@ -130,29 +130,29 @@ def test_an_akp_key_of_the_wrong_length_says_what_fips_204_expects():
 
 
 def test_an_akp_key_reads_json_safe_string_labels_and_base64url_values():
-    described = binary._describe_cose_key({"1": 7, "3": -49, "-1": "AAEC"})
+    described = cose_display._describe_cose_key({"1": 7, "3": -49, "-1": "AAEC"})
     assert described["parameterSet"] == "ML-DSA-65"
     assert described["publicKeyBytes"] == 3
 
 
 def test_an_akp_key_without_an_ml_dsa_algorithm_names_no_parameter_set():
-    described = binary._describe_cose_key({1: 7, 3: -7, -1: b"\x01\x02"})
+    described = cose_display._describe_cose_key({1: 7, 3: -7, -1: b"\x01\x02"})
     assert described == {"keyType": "AKP (7)", "publicKeyBytes": 2}
 
 
 def test_okp_keys_and_unregistered_values_are_named_without_guessing():
-    assert binary._describe_cose_key({1: 1, 3: -8, -1: 6, -2: b"\x00" * 32}) == {
+    assert cose_display._describe_cose_key({1: 1, 3: -8, -1: 6, -2: b"\x00" * 32}) == {
         "keyType": "OKP (1)",
         "curve": "Ed25519 (6)",
     }
-    assert binary._describe_cose_key({1: 2, -1: 99}) == {"keyType": "EC2 (2)", "curve": "COSE crv 99"}
-    assert binary._describe_cose_key({1: 42}) == {"keyType": "COSE kty 42"}
-    assert binary._describe_cose_key({3: -7}) == {}
-    assert binary._describe_cose_key("not a key") == {}
+    assert cose_display._describe_cose_key({1: 2, -1: 99}) == {"keyType": "EC2 (2)", "curve": "COSE crv 99"}
+    assert cose_display._describe_cose_key({1: 42}) == {"keyType": "COSE kty 42"}
+    assert cose_display._describe_cose_key({3: -7}) == {}
+    assert cose_display._describe_cose_key("not a key") == {}
 
 
 def test_key_parameters_of_the_wrong_type_are_left_undescribed():
-    assert binary._describe_cose_key({1: True}) == {}
-    assert binary._describe_cose_key({1: "seven"}) == {}
-    assert binary._describe_cose_key({1: "7", 3: "-48", -1: 5}) == {"keyType": "AKP (7)", "parameterSet": "ML-DSA-44"}
-    assert binary._describe_cose_key({1: 3, -1: None}) == {"keyType": "RSA (3)"}
+    assert cose_display._describe_cose_key({1: True}) == {}
+    assert cose_display._describe_cose_key({1: "seven"}) == {}
+    assert cose_display._describe_cose_key({1: "7", 3: "-48", -1: 5}) == {"keyType": "AKP (7)", "parameterSet": "ML-DSA-44"}
+    assert cose_display._describe_cose_key({1: 3, -1: None}) == {"keyType": "RSA (3)"}

@@ -13,12 +13,7 @@ from typing import Any
 from ... import encoding
 from ...json_values import make_json_safe
 from .. import values
-from . import cbor_parser, certificates
-from .binary import (
-    _convert_cose_key_for_display,
-    _describe_cose_key,
-    _resolve_cose_algorithm,
-)
+from . import cbor_parser, certificates, cose_display
 
 
 def _base_type(format_label: str | None) -> str:
@@ -510,13 +505,13 @@ def _read_attested_bytes(facts: _CredentialFacts, auth_bytes: bytes | None) -> N
 def _public_key_payload(facts: _CredentialFacts, fallback_alg: Any | None) -> dict[str, Any]:
     payload: dict[str, Any] = {}
     if facts.cose_key is not None:
-        payload["cose"] = make_json_safe(_convert_cose_key_for_display(facts.cose_key))
-        alg_label = _resolve_cose_algorithm(facts.cose_key, fallback_alg)
+        payload["cose"] = make_json_safe(cose_display._convert_cose_key_for_display(facts.cose_key))
+        alg_label = cose_display._resolve_cose_algorithm(facts.cose_key, fallback_alg)
     else:
-        alg_label = _resolve_cose_algorithm({}, fallback_alg)
+        alg_label = cose_display._resolve_cose_algorithm({}, fallback_alg)
     if alg_label is not None:
         payload["alg"] = alg_label
-    payload.update(_describe_cose_key(facts.cose_key))
+    payload.update(cose_display._describe_cose_key(facts.cose_key))
     if facts.public_key_raw_hex:
         payload["raw"] = facts.public_key_raw_hex
     return payload

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from server.app.decoder import cose_tables
-from server.app.decoder.decode import binary
+from server.app.decoder.decode import cose_display
 
 
 def test_the_iana_cose_key_types_and_curves():
@@ -29,5 +29,5 @@ def test_the_iana_cose_key_types_and_curves():
 
 
 def test_the_decoder_reads_the_shared_registries_not_a_copy():
-    assert binary._COSE_KEY_TYPES is cose_tables.KEY_TYPES
-    assert binary._COSE_CURVES is cose_tables.CURVES
+    assert cose_display._COSE_KEY_TYPES is cose_tables.KEY_TYPES
+    assert cose_display._COSE_CURVES is cose_tables.CURVES

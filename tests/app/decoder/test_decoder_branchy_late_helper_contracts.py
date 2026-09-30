@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 
 from server.app.decoder.decode import answer as decode_answer
-from server.app.decoder.decode import binary as decode_binary
+from server.app.decoder.decode import cose_display
 from server.app.decoder.decode import ctap as decode_ctap
 
 
@@ -12,13 +12,13 @@ def _auth_header(flags: int = 0x01, sign_count: int = 1) -> bytes:
 
 
 def test_late_cose_and_base64_helpers_cover_fallback_and_conversion_branches():
-    assert decode_binary._resolve_cose_algorithm({"3": "-257"}) == "RS256 (RSA)"
-    assert decode_binary._resolve_cose_algorithm({"alg": "custom-alg"}) == "custom-alg"
-    assert decode_binary._resolve_cose_algorithm({}, {"publicKeyAlgorithm": -259}) == "RS512 (RSA)"
-    assert decode_binary._resolve_cose_algorithm({}, -999) == "COSE alg -999"
-    assert decode_binary._resolve_cose_algorithm({}, None) is None
+    assert cose_display._resolve_cose_algorithm({"3": "-257"}) == "RS256 (RSA)"
+    assert cose_display._resolve_cose_algorithm({"alg": "custom-alg"}) == "custom-alg"
+    assert cose_display._resolve_cose_algorithm({}, {"publicKeyAlgorithm": -259}) == "RS512 (RSA)"
+    assert cose_display._resolve_cose_algorithm({}, -999) == "COSE alg -999"
+    assert cose_display._resolve_cose_algorithm({}, None) is None
 
-    converted = decode_binary._convert_cose_key_for_display([
+    converted = cose_display._convert_cose_key_for_display([
         "AQI=",
         {"k": "AQI="},
         "not-base64$$",
@@ -27,11 +27,11 @@ def test_late_cose_and_base64_helpers_cover_fallback_and_conversion_branches():
     assert converted[1]["k"] == "0102"
     assert converted[2] == "not-base64$$"
 
-    assert decode_binary._decode_base64_field("++8") == b"\xfb\xef"
-    assert decode_binary._decode_base64_field("   ") is None
+    assert cose_display._decode_base64_field("++8") == b"\xfb\xef"
+    assert cose_display._decode_base64_field("   ") is None
 
 
-def test_binary_extract_helpers_cover_nested_hex_error_and_fallback(monkeypatch, binary):
+def test_binary_extract_helpers_cover_nested_hex_error_and_fallback(monkeypatch):
     assert decode_answer._extract_hex_from_binary({"binary": {"hex": "AABB"}}) == "AABB"
 
     monkeypatch.setattr(

@@ -55,7 +55,7 @@ def test_parse_cbor_item_covers_simple_and_single_double_precision_float_paths()
     assert double_node["value"] == 1.0
 
 
-def test_extract_authenticator_bytes_from_attestation_uses_raw_base64_and_handles_decode_failure(monkeypatch, binary):
+def test_extract_authenticator_bytes_from_attestation_uses_raw_base64_and_handles_decode_failure(monkeypatch):
     monkeypatch.setattr(
         decode_answer,
         "_extract_bytes_from_binary",
