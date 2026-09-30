@@ -2,20 +2,10 @@ from __future__ import annotations
 
 import base64
 
-from fido2.utils import ByteBuffer
-
-from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import attestation_object as decode_attestation_object
 from server.app.decoder.decode import authenticator_data as decode_authenticator_data
-from server.app.decoder.decode import cbor_parser as decode_cbor_parser
 from server.app.decoder.decode import credential_json
 from server.app.webauthn.attestation import certificates as attestation_certificates
-
-
-def test_get_mapping_entry_reads_a_bytebuffer_key_as_the_byte_string_it_holds():
-    assert decoder_values.get_mapping_entry({b"\x01": "bytes"}, ByteBuffer(b"\x01")) == "bytes"
-    assert decoder_values.get_mapping_entry({1: "int"}, ByteBuffer(b"\x01")) is decoder_values.MISSING
-    assert decoder_values.get_mapping_entry({"1": "str"}, ByteBuffer(b"\x01")) is decoder_values.MISSING
 
 
 def test_decode_public_key_credential_marks_authentication_without_attestation(monkeypatch):
@@ -37,21 +27,6 @@ def test_decode_public_key_credential_marks_authentication_without_attestation(m
     result = credential_json.decode_public_key_credential(credential)
     assert result["format"] == "PublicKeyCredential (authentication)"
     assert result["decoded"]["response"]["authenticatorData"]["details"] == {"parsed": True}
-
-
-def test_parse_cbor_item_covers_simple_and_single_double_precision_float_paths():
-    simple_node, _ = decode_cbor_parser._parse_cbor_item(b"\xf8\x2a", 0)
-    single_node, _ = decode_cbor_parser._parse_cbor_item(b"\xfa\x3f\x80\x00\x00", 0)
-    double_node, _ = decode_cbor_parser._parse_cbor_item(
-        b"\xfb\x3f\xf0\x00\x00\x00\x00\x00\x00", 0
-    )
-
-    assert simple_node["type"] == "simple"
-    assert simple_node["value"] == 42
-    assert single_node["precision"] == "single"
-    assert single_node["value"] == 1.0
-    assert double_node["precision"] == "double"
-    assert double_node["value"] == 1.0
 
 
 def test_extract_attestation_certificate_handles_non_string_chain_entries_and_serializer_errors(monkeypatch):

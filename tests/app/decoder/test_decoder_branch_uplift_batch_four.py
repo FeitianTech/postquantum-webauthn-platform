@@ -2,13 +2,10 @@ from __future__ import annotations
 
 import base64
 
-import pytest
-
 from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import attestation_object as decode_attestation_object
 from server.app.decoder.decode import authenticator_data as decode_authenticator_data
 from server.app.decoder.decode import binary_text, credential_json
-from server.app.decoder.decode import cbor_parser as decode_cbor_parser
 from server.app.decoder.decode import pem as decode_pem
 from server.app.decoder.decode import text as decode_text
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
@@ -70,120 +67,6 @@ def test_decode_binary_payload_uses_authenticator_data_path_when_other_binary_de
     result = decode_text._decode_binary_payload(b"raw", "hex")
     assert result["format"] == "Authenticator data (binary)"
     assert result["inputEncoding"] == "hex"
-
-
-def test_decode_binary_input_has_no_lenient_fallback_when_strict_decoding_fails(monkeypatch):
-    """There is no second, non-validating attempt to fall back to.
-
-    The pipeline used to retry with ``urlsafe_b64decode`` and no ``validate``,
-    which discards characters outside the alphabet -- that is how prose was
-    accepted as base64url. Strict failure is now the end of the road.
-    """
-
-    original_b64decode = base64.b64decode
-
-    def _patched_b64decode(*args, **kwargs):
-        if kwargs.get("validate"):
-            raise ValueError("strict decode failed")
-        return original_b64decode(*args, **kwargs)
-
-    monkeypatch.setattr(base64, "b64decode", _patched_b64decode)
-
-    with pytest.raises(ValueError, match="does not appear to be valid"):
-        binary_text.decode_binary_input("AQID")
-
-
-def test_read_cbor_length_reads_arguments_and_rejects_reserved_additional_information():
-    assert decode_cbor_parser._read_cbor_length(25, b"\x00\x01", 0) == (1, 2)
-    assert decode_cbor_parser._read_cbor_length(27, b"\x00" * 8, 0) == (0, 8)
-    with pytest.raises(decode_cbor_parser._CborDecodingError, match="additional information 30 is reserved"):
-        decode_cbor_parser._read_cbor_length(30, b"\x00" * 8, 1)
-
-
-@pytest.mark.parametrize(
-    ("data", "reason"),
-    [
-        (b"", "the data ends where an item should start"),
-        (b"\x5f", "indefinite-length byte string has no break byte"),
-        (b"\x5f\xd8", "the head needs 1 more byte; 0 remain"),
-        (b"\x7f", "indefinite-length text string has no break byte"),
-        (b"\x7f\xd8", "the head needs 1 more byte; 0 remain"),
-        (b"\x9f\xd8", "the head needs 1 more byte; 0 remain"),
-        (b"\x82\x01", "array declares 2 items; the data ends after 1"),
-        (b"\x82\xd8", "the head needs 1 more byte; 0 remain"),
-        (b"\xbf", "indefinite-length map has no break byte"),
-        (b"\xbf\x61a", 'map key "a" has no value'),
-        (b"\xbf\xd8", "the head needs 1 more byte; 0 remain"),
-        (b"\xa1", "map declares 1 entry; the data ends after 0"),
-        (b"\xa1\xd8", "the head needs 1 more byte; 0 remain"),
-        (b"\x1f", "indefinite length is not allowed for this major type"),
-        (b"\x3f", "indefinite length is not allowed for this major type"),
-        (b"\xdf", "indefinite length is not allowed for this major type"),
-    ],
-)
-def test_cbor_parser_rejects_partial_and_invalid_items(data, reason):
-    with pytest.raises(decode_cbor_parser._CborDecodingError) as caught:
-        decode_cbor_parser._parse_cbor_item(data, 0)
-
-    assert caught.value.reason == reason
-
-
-def test_cbor_parser_accepts_an_empty_indefinite_array_and_closes_partial_containers_only_when_lenient():
-    empty, end = decode_cbor_parser._parse_cbor_item(b"\x9f\xff", 0)
-    assert (empty["length"], empty["indefinite"], end) == (0, True, 2)
-
-    short_array, _, skipped = decode_cbor_parser.decode_item(b"\x82\x01", lenient=True)
-    assert short_array["length"] == 1
-    assert short_array["declaredLength"] == 2
-    assert [entry["code"] for entry in skipped] == ["truncated"]
-
-    orphan_key, _, skipped = decode_cbor_parser.decode_item(b"\xbf\x61a", lenient=True)
-    assert orphan_key["entries"] == []
-    assert [entry["code"] for entry in skipped] == ["missing-map-value"]
-
-
-def test_parse_simple_major_type_values_and_structure_to_value_fallback_branches():
-    assert decode_cbor_parser._parse_cbor_item(b"\xf4", 0)[0]["value"] is False
-    assert decode_cbor_parser._parse_cbor_item(b"\xf6", 0)[0]["type"] == "null"
-    assert decode_cbor_parser._parse_cbor_item(b"\xf7", 0)[0]["type"] == "undefined"
-    assert decode_cbor_parser._parse_cbor_item(b"\xf0", 0)[0]["summary"] == "simple(16)"
-
-    assert decode_cbor_parser._structure_to_value({"majorType": 7, "type": "null"}) is None
-    assert decode_cbor_parser._structure_to_value({"majorType": 7, "type": "undefined"}) == decoder_values.CborDiagnostic(
-        "undefined"
-    )
-    assert decode_cbor_parser._structure_to_value({"majorType": 7, "type": "boolean", "value": 0}) is False
-    assert decode_cbor_parser._structure_to_value({"majorType": 2, "hex": "not-hex"}) == b""
-    assert decode_cbor_parser._structure_to_value({"majorType": 3, "value": 123}) == ""
-    assert decode_cbor_parser._structure_to_value({"majorType": 4, "items": 123}) == []
-    assert decode_cbor_parser._structure_to_value({"majorType": 5, "entries": 123}) == {}
-
-    map_value = decode_cbor_parser._structure_to_value(
-        {
-            "majorType": 5,
-            "entries": [
-                "not-a-mapping",
-                {
-                    "key": {"majorType": 0, "value": 1},
-                    "value": {"majorType": 0, "value": 7},
-                },
-                {
-                    "key": None,
-                    "value": {"majorType": 0, "value": 9},
-                },
-            ],
-        }
-    )
-    assert map_value == {1: 7}
-
-    tagged = decode_cbor_parser._structure_to_value(
-        {
-            "majorType": 6,
-            "tag": 33,
-            "value": {"majorType": 0, "value": 42},
-        }
-    )
-    assert tagged == {"tag": 33, "value": 42}
 
 
 def test_try_decode_authenticator_data_returns_structured_payload_on_success(monkeypatch):

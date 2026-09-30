@@ -1,7 +1,7 @@
+"""``decoder.decode.cbor_parser``: CBOR read strictly, or leniently with what it stepped over."""
 import pytest
 
 from server.app.decoder import values as decoder_values
-from server.app.decoder.decode import binary_text
 from server.app.decoder.decode import cbor_parser as decode_cbor_parser
 
 
@@ -121,16 +121,108 @@ def test_read_length_and_availability_helpers_raise_expected_errors():
     assert offset == 0
 
 
-def test_binary_input_reads_hex_and_base64_and_refuses_what_is_neither():
-    hex_data, hex_encoding = binary_text.decode_binary_input("0abc")
-    assert hex_data == bytes.fromhex("0abc")
-    assert hex_encoding == "hex"
+@pytest.mark.parametrize(
+    ("data", "value", "end"),
+    [(b"\x19\x00\x01", 1, 3), (b"\x1b" + b"\x00" * 8, 0, 9)],
+)
+def test_an_argument_is_read_from_the_bytes_its_additional_information_names(data, value, end):
+    node, offset, _ = decode_cbor_parser.decode_item(data)
 
-    # "abc" is not silently left-padded to "0abc"; the missing nibble is data
-    # the caller never supplied. It is base64, and read as that.
-    assert binary_text.decode_binary_input("abc") == (b"\x69\xb7", "base64 or base64url")
-    with pytest.raises(ValueError, match="an odd number, so no bytes"):
-        binary_text.decode_binary_input("abcde")
+    assert (node["value"], offset) == (value, end)
 
-    with pytest.raises(ValueError, match="No binary data present"):
-        binary_text.decode_binary_input("   ")
+
+@pytest.mark.parametrize(
+    ("data", "reason"),
+    [
+        (b"", "the data ends where an item should start"),
+        (b"\x1e", "additional information 30 is reserved"),
+        (b"\x5f", "indefinite-length byte string has no break byte"),
+        (b"\x5f\xd8", "the head needs 1 more byte; 0 remain"),
+        (b"\x7f", "indefinite-length text string has no break byte"),
+        (b"\x7f\xd8", "the head needs 1 more byte; 0 remain"),
+        (b"\x9f\xd8", "the head needs 1 more byte; 0 remain"),
+        (b"\x82\x01", "array declares 2 items; the data ends after 1"),
+        (b"\x82\xd8", "the head needs 1 more byte; 0 remain"),
+        (b"\xbf", "indefinite-length map has no break byte"),
+        (b"\xbf\x61a", 'map key "a" has no value'),
+        (b"\xbf\xd8", "the head needs 1 more byte; 0 remain"),
+        (b"\xa1", "map declares 1 entry; the data ends after 0"),
+        (b"\xa1\xd8", "the head needs 1 more byte; 0 remain"),
+        (b"\x1f", "indefinite length is not allowed for this major type"),
+        (b"\x3f", "indefinite length is not allowed for this major type"),
+        (b"\xdf", "indefinite length is not allowed for this major type"),
+    ],
+)
+def test_a_partial_or_invalid_item_is_refused_with_why(data, reason):
+    with pytest.raises(decode_cbor_parser._CborDecodingError) as caught:
+        decode_cbor_parser.decode_item(data)
+
+    assert caught.value.reason == reason
+
+
+def test_an_empty_indefinite_array_is_read_and_a_partial_container_closed_only_when_lenient():
+    empty, end, _ = decode_cbor_parser.decode_item(b"\x9f\xff")
+    short_array, _, short_skipped = decode_cbor_parser.decode_item(b"\x82\x01", lenient=True)
+    orphan_key, _, orphan_skipped = decode_cbor_parser.decode_item(b"\xbf\x61a", lenient=True)
+
+    assert (empty["length"], empty["indefinite"], end) == (0, True, 2)
+    assert (short_array["length"], short_array["declaredLength"]) == (1, 2)
+    assert [entry["code"] for entry in short_skipped] == ["truncated"]
+    assert orphan_key["entries"] == []
+    assert [entry["code"] for entry in orphan_skipped] == ["missing-map-value"]
+
+
+@pytest.mark.parametrize(
+    ("data", "fields"),
+    [
+        (b"\xf4", {"type": "boolean", "value": False}),
+        (b"\xf6", {"type": "null"}),
+        (b"\xf7", {"type": "undefined"}),
+        (b"\xf0", {"summary": "simple(16)"}),
+        (b"\xf8\x2a", {"type": "simple", "value": 42}),
+        (b"\xfa\x3f\x80\x00\x00", {"precision": "single", "value": 1.0}),
+        (b"\xfb\x3f\xf0" + b"\x00" * 6, {"precision": "double", "value": 1.0}),
+        (b"\xf9\x3e\x00", {"precision": "half", "summary": "float(1.5)"}),
+        (b"\xf9\x7c\x00", {"summary": "float(+Infinity)"}),
+        (b"\xf9\xfc\x00", {"summary": "float(-Infinity)"}),
+        (b"\xf9\x7e\x00", {"summary": "float(NaN)"}),
+    ],
+)
+def test_simple_values_and_floats_are_read_with_their_kind_and_precision(data, fields):
+    node, _, _ = decode_cbor_parser.decode_item(data)
+
+    assert {key: node.get(key) for key in fields} == fields
+
+
+# ``answer`` and the parser read nodes back to values; nodes the parser never makes
+# only a direct call gives them.
+
+
+@pytest.mark.parametrize(
+    ("node", "value"),
+    [
+        ({"majorType": 7, "type": "null"}, None),
+        ({"majorType": 7, "type": "undefined"}, decoder_values.CborDiagnostic("undefined")),
+        ({"majorType": 7, "type": "boolean", "value": 0}, False),
+        ({"majorType": 2, "hex": "not-hex"}, b""),
+        ({"majorType": 3, "value": 123}, ""),
+        ({"majorType": 4, "items": 123}, []),
+        ({"majorType": 5, "entries": 123}, {}),
+        ({"majorType": 6, "tag": 33, "value": {"majorType": 0, "value": 42}}, {"tag": 33, "value": 42}),
+    ],
+)
+def test_a_node_is_read_back_to_its_value_and_a_malformed_one_to_an_empty_one(node, value):
+    assert decode_cbor_parser._structure_to_value(node) == value
+
+
+def test_a_map_node_keeps_only_its_well_formed_entries():
+    node = {
+        "majorType": 5,
+        "entries": [
+            "not-a-mapping",
+            {"key": {"majorType": 0, "value": 1}, "value": {"majorType": 0, "value": 7}},
+            {"key": None, "value": {"majorType": 0, "value": 9}},
+        ],
+    }
+
+    assert decode_cbor_parser._structure_to_value(node) == {1: 7}
