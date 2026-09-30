@@ -185,11 +185,14 @@ their exports or sentences. A new surface splits its logic out here first.
   with `logging.getLogger(__name__)`. On Cloud Run (`K_SERVICE`) the app refuses to start
   without `FIDO_SERVER_SECRET_KEY` or `FIDO_SERVER_SECRET_KEY_FILE`; only local development
   generates `instance/session-secret.key`, and tests never do.
-- `mds/trust.py` (the MDS trust anchor), `mds/blob.py` (the BLOB's chain to that root, which
-  may end in a cross-certificate fido2's `parse_blob` refuses, its signature and payload),
-  `mds/files.py` (the snapshot's file names, its directory, the whole-file and `.gz`
-  sibling writers) and `mds/sets.py` (the snapshot in Cloud Storage) are Flask-free
-  leaves the updater imports.
+- `mds/`: the FIDO MDS snapshot. Its `__init__` imports nothing, so the updater takes
+  `trust.py` (the MDS trust anchor), `blob.py` (the BLOB's chain to that root, which may end in
+  a cross-certificate fido2's `parse_blob` refuses, its signature and payload), `files.py` (the
+  snapshot's file names, its directory, the whole-file and `.gz` sibling writers, Last-Modified),
+  `build.py` (the explorer rows) and `sets.py` (the snapshot in Cloud Storage) without Flask.
+  The runtime: `provisioning.py` (local files, Cloud Storage, upstream), `cache.py` (the
+  loaders and their one `SnapshotCache`), `uploads.py` (a visitor's uploaded metadata),
+  `entries.py`, `effective.py` (the snapshot merged with a visitor's uploads), `verifier.py`.
 - `visitor_session.py`: the namespace a visitor's uploads and credentials are stored under (its id
   in the signed session and a signed recovery cookie, the throttled last-access touch, and the one
   sweep of idle namespaces, on both backends).
