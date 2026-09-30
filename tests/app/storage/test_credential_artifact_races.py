@@ -20,7 +20,7 @@ import time
 
 import pytest
 
-from server.app import credential_artifacts as artifacts
+from server.app.storage import credential_artifacts as artifacts
 from server.app.storage.common import StorageReadError
 
 from . import fake_gcs
@@ -182,7 +182,7 @@ def test_a_lost_reply_counts_as_stored_only_if_the_record_holds_every_merged_val
 
 def _merge_in_a_process(root, key, start):
     os.environ.pop("FIDO_SERVER_GCS_ENABLED", None)
-    from server.app import credential_artifacts as child
+    from server.app.storage import credential_artifacts as child
 
     os.environ["FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR"] = root
     # The read a merge extends: slowed so that, without the lock, the two merges'

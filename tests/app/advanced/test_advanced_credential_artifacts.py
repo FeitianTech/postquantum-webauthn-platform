@@ -277,7 +277,7 @@ def test_an_artifact_the_store_cannot_read_answers_503_not_missing_or_unstored(
     # bulk answer), and a merge that could not read answered 400.
     import json
 
-    from server.app import credential_artifacts
+    from server.app.storage import credential_artifacts
 
     from ..storage import fake_gcs
 

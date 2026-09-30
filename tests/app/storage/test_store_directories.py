@@ -9,9 +9,8 @@ from __future__ import annotations
 
 import os
 
-from server.app import credential_artifacts
 from server.app.config import paths
-from server.app.storage import credentials, session_metadata
+from server.app.storage import credential_artifacts, credentials, session_metadata
 
 _SETTINGS = (
     "FIDO_SERVER_CREDENTIAL_DIR",

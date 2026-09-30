@@ -16,9 +16,9 @@ import threading
 import time
 from typing import Any
 
-from . import visitor_session
-from .config.paths import store_dir
-from .storage.cloud import (
+from .. import visitor_session
+from ..config.paths import store_dir
+from .cloud import (
     blob_exists,
     build_blob_name,
     delete_blob,
@@ -28,7 +28,7 @@ from .storage.cloud import (
     upload_bytes,
     upload_bytes_if_generation,
 )
-from .storage.common import (
+from .common import (
     StorageReadError,
     assert_contained_blob_name,
     build_session_scoped_prefix,

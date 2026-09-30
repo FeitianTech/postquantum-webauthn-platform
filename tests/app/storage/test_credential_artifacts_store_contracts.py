@@ -2,7 +2,8 @@ import os
 
 import pytest
 
-from server.app import credential_artifacts, visitor_session
+from server.app import visitor_session
+from server.app.storage import credential_artifacts
 
 
 @pytest.fixture
@@ -203,7 +204,7 @@ def test_read_record_gcs_raises_on_a_download_error_and_skips_what_does_not_deco
     for content in undecodable:
         monkeypatch.setattr(artifact_module, "download_bytes", lambda _blob, content=content: content)
         caplog.clear()
-        with caplog.at_level("WARNING", logger="server.app.credential_artifacts"):
+        with caplog.at_level("WARNING", logger="server.app.storage.credential_artifacts"):
             assert artifact_module._read_record("cred-1", "session-a") is None
         messages = [record.getMessage() for record in caplog.records]
         assert len(messages) == 1 and blob_name in messages[0], messages

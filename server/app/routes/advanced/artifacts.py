@@ -5,7 +5,8 @@ from typing import Any
 
 from flask import Blueprint, jsonify, request
 
-from ... import credential_artifacts, visitor_session
+from ... import visitor_session
+from ...storage import credential_artifacts
 
 bp = Blueprint("advanced_artifacts", __name__)
 

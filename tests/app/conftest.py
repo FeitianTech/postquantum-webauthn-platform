@@ -245,9 +245,9 @@ def attestation_module():
 
 @pytest.fixture
 def credential_artifacts_module():
-    """``server.app.credential_artifacts`` -- advanced credential artifacts."""
+    """``server.app.storage.credential_artifacts`` -- advanced credential artifacts."""
 
-    return _module("server.app.credential_artifacts")
+    return _module("server.app.storage.credential_artifacts")
 
 
 @pytest.fixture

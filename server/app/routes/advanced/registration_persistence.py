@@ -14,8 +14,7 @@ from typing import Any
 
 from flask import jsonify
 
-from ... import credential_artifacts
-from ...storage import github_mirror
+from ...storage import credential_artifacts, github_mirror
 from .. import binary_helpers
 from . import summary
 

@@ -14,7 +14,7 @@ import os
 
 import pytest
 
-from server.app import credential_artifacts as artifacts
+from server.app.storage import credential_artifacts as artifacts
 from server.app.storage.common import InvalidStorageIdentifier
 
 STORAGE_ID = "credential-1::artifact"

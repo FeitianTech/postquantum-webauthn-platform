@@ -1,10 +1,10 @@
 # Storage
 
 `server/app/storage/` keeps what the app persists: `credentials.py` (credential
-records), `record_format.py` (the JSON envelope), `session_metadata.py`, `cloud.py` (Cloud Storage) and
-`common.py`. Credential artifacts live in `server/app/credential_artifacts.py`.
-These are its rules. Read them before changing `server/app/storage` or
-`credential_artifacts.py`; `AGENTS.md` keeps only a summary.
+records), `record_format.py` (the JSON envelope), `credential_artifacts.py`,
+`session_metadata.py` (visitors' uploads), `cloud.py` (Cloud Storage), `common.py`, and
+`github_mirror.py` (the copy of registrations and uploads kept on GitHub). These are its
+rules. Read them before changing `server/app/storage`; `AGENTS.md` keeps only a summary.
 
 ## Compare-and-swap
 
@@ -28,7 +28,7 @@ is logged by file or object name (never its content) and skipped.
 
 ## Credential artifacts
 
-Credential artifacts (`server/app/credential_artifacts.py`) are kept per session
+Credential artifacts (`server/app/storage/credential_artifacts.py`) are kept per session
 on both backends (locally `<artifact dir>/<session>/`) and merge the same way:
 conditional on the generation on GCS, under the record's `flock` locally. Their
 reads keep the same three cases: an artifact that cannot be read raises

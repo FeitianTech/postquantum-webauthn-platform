@@ -767,7 +767,7 @@ def _(r: Recorder) -> None:
 
 @scenario("advanced-register-artifact-store-fails")
 def _(r: Recorder) -> None:
-    from server.app import credential_artifacts
+    from server.app.storage import credential_artifacts
 
     client = r.client()
     authenticator = m.Authenticator("adv-artifact-fails")

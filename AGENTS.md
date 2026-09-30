@@ -217,7 +217,7 @@ their exports or sentences. A new surface splits its logic out here first.
   `CoseKey` lookups find them), `webauthn/assertion_hash.py` (the Advanced tab's hash choice
   for an assertion), `webauthn/sign_count.py`. `config/logs.py` holds `fido2.server`'s
   logger at WARNING: fido2 logs credential IDs at INFO.
-- `storage/` and `credential_artifacts.py`: every read-modify-write is compare-and-swap; a
+- `storage/` (with `credential_artifacts.py`): every read-modify-write is compare-and-swap; a
   failed read raises `StorageReadError` (503), never a shorter list. **Read `docs/STORAGE.md`
   first.** `decoder/`: the Codec's server side; it shows what was sent and never repairs it.
   **Read `docs/DECODER.md` first.**
