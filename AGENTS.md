@@ -26,7 +26,8 @@ in `server/app` (see "Backend").
 
 ## Layout
 
-- `server/app/`: the Flask app (factory, config, routes, WebAuthn, storage, decoder, MDS).
+- `server/app/`: the Flask app (factory, config, routes, WebAuthn, storage, the visitor session,
+  decoder, MDS).
 - `web/`: the UI (Next.js 15 Pages Router, TypeScript, Tailwind CSS v4). `web/src/logic` is
   its DOM-free logic in plain JavaScript; `web/e2e` its Playwright tests.
 - `tests/`: `app/` (the Flask app, tooling guards, characterization; `python_fido2_vectors.py`
@@ -171,11 +172,12 @@ their exports or sentences. A new surface splits its logic out here first.
   fallbacks.
 - `factory.py`: `create_app(config=None)`: each config submodule's `config_from_env()`, then the
   overrides, then `INIT_STEPS` in order (`test_app_factory.py` pins it).
-- `config/`: `application.py`, `logs.py`, `session_secret.py`, `compression.py`, `proxy.py`,
-  `session_cookie.py`, `security_headers.py` (the strict CSP and the Trusted Types report-only
-  policy, both reporting to `/api/csp-report`; `FIDO_SERVER_CONTENT_SECURITY_POLICY` replaces
-  the enforced policy), `origins.py`, `attestation_trust.py`, `mds.py`, `relying_party.py`,
-  `paths.py` (the project and instance roots; `store_dir`: every local store under
+- `config/`: `application.py` (the bare app, and `add_after_request_once`), `logs.py`,
+  `session_secret.py`, `compression.py`, `proxy.py`, `session_cookie.py`, `security_headers.py`
+  (the strict CSP and the Trusted Types report-only policy, both reporting to
+  `/api/csp-report`; `FIDO_SERVER_CONTENT_SECURITY_POLICY` replaces the enforced policy),
+  `origins.py`, `attestation_trust.py`, `relying_party.py` (the default RP name is the site's,
+  `APP_TITLE`), `paths.py` (the project and instance roots; `store_dir`: every local store under
   `instance/`, its setting read when used), `request_limits.py` (8 MiB, the metadata
   upload 16 MiB; 413 in JSON), `web_export.py`. Importing it configures nothing, and the
   package re-exports nothing: routes call `relying_party.create_fido_server` and
@@ -193,6 +195,9 @@ their exports or sentences. A new surface splits its logic out here first.
   The runtime: `provisioning.py` (local files, Cloud Storage, upstream), `cache.py` (the
   loaders and their one `SnapshotCache`), `uploads.py` (a visitor's uploaded metadata),
   `entries.py`, `effective.py` (the snapshot merged with a visitor's uploads), `verifier.py`.
+- Leaves the rest import: `encoding.py` (base64, base64url and hex, written and read strictly),
+  `json_values.py` (`make_json_safe`, and `as_bytes`, the one reading of a value as bytes),
+  `aaguid.py` (an AAGUID's GUID spelling), `env_flags.py`.
 - `visitor_session.py`: the namespace a visitor's uploads and credentials are stored under (its id
   in the signed session and a signed recovery cookie, the throttled last-access touch, and the one
   sweep of idle namespaces, on both backends).
@@ -211,6 +216,8 @@ their exports or sentences. A new surface splits its logic out here first.
   `verify_directly_issued_by` (RSA-PSS, EdDSA and ML-DSA too, which fido2's `verify_x509_chain`
   does not); `evaluation.py` checks an attestation against the MDS metadata step by step),
   `webauthn/signature_algorithms.py` (the one spelling of a signature algorithm),
+  `webauthn/cose_algorithms.py` (a named COSE algorithm read, for both tabs),
+  `webauthn/attachments.py` (the authenticator attachment hints),
   `webauthn/pqc.py` (the ML-DSA adapter),
   `webauthn/mldsa.py` (ML-DSA parameter sets, sizes and certificate keys),
   `webauthn/cose_keys.py` (RS384, RS512, PS384, PS512: the package imports it so fido2's
@@ -218,14 +225,19 @@ their exports or sentences. A new surface splits its logic out here first.
   for an assertion), `webauthn/sign_count.py`, `webauthn/client_binary.py` (bytes a client
   sends, read one way for both tabs), `webauthn/client_credentials.py` (a saved credential the
   page sends back, read into its key material for both tabs), `webauthn/registration_facts.py`
-  (what a verified registration's authData and extension outputs say, for both tabs). `config/logs.py` holds `fido2.server`'s
-  logger at WARNING: fido2 logs credential IDs at INFO.
-- `storage/` (with `credential_artifacts.py`): every read-modify-write is compare-and-swap; a
-  failed read raises `StorageReadError` (503), never a shorter list. **Read `docs/STORAGE.md`
-  first.** `decoder/`: the Codec's server side; it shows what was sent and never repairs it.
-  **Read `docs/DECODER.md` first.**
-- Each package keeps its public surface in `__init__.py` and its implementation in submodules
-  named for what they do; import the submodule you need and patch there.
+  (what a verified registration's authData and extension outputs say, the relying party's view
+  of it and the saved credential record, each in one key order for both tabs). `config/logs.py`
+  holds `fido2.server`'s logger at WARNING: fido2 logs credential IDs at INFO.
+- `storage/` (`credentials.py`, `credential_artifacts.py`, `session_metadata.py`,
+  `github_mirror.py`, over `cloud.py` and `common.py`): every read-modify-write is
+  compare-and-swap; a failed read raises `StorageReadError` (503), never a shorter list. **Read
+  `docs/STORAGE.md` first.** `decoder/`: the Codec's server side (`decode/text.py` the entry,
+  `encode/text.py` the encoder's, `values.py` the leaf both share); it shows what was sent and
+  never repairs it. **Read `docs/DECODER.md` first.**
+- A package's `__init__.py` is a docstring (`webauthn`'s imports `cose_keys`, and `decoder/edn`
+  exports its two functions); the code lives in submodules named for what they do. Import the
+  module that defines a name, call it through that module, and patch it there. Nothing in
+  `server/app` imports in a cycle.
 
 Data flow of a ceremony: the page collects the stored credentials; begin issues options and
 keeps state in the Flask session, and only there; the browser
@@ -260,6 +272,9 @@ Guards on the code and the checkout (`tests/app/tooling/`; each `ALLOWED` list m
 - `test_web_dev_csp.py`: the dev server's CSP is Flask's default.
 - `test_npm_lockfiles.py`: `web/package-lock.json` lists every platform's native build.
 - `test_no_silent_monkeypatch.py`: no `raising=False` / `create=True` patch.
+- `test_plain_imports.py`: no `pytest.importorskip` of the app's own modules, `tools` or `tests`.
+- `test_import_cycles.py`: no import cycle in `server/app`, and no import inside a function but
+  the listed ones.
 - `test_code_size_ratchet.py`: no function over 80 lines or module over 700 in `server/app`,
   with no exceptions.
 - `test_commit_messages.py`: the commit message check.
