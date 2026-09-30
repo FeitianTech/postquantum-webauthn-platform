@@ -190,6 +190,9 @@ their exports or sentences. A new surface splits its logic out here first.
   `mds/files.py` (the snapshot's file names, its directory, the whole-file and `.gz`
   sibling writers) and `mds/sets.py` (the snapshot in Cloud Storage) are Flask-free
   leaves the updater imports.
+- `visitor_session.py`: the namespace a visitor's uploads and credentials are stored under (its id
+  in the signed session and a signed recovery cookie, the throttled last-access touch, and the one
+  sweep of idle namespaces, on both backends).
 - Routes: `routes/simple/` and `routes/advanced/` (begin/complete; the bodies are short
   orchestrators over modules named for their stage; the try blocks and the order of session
   reads are behaviour); `routes/mds.py` (the MDS routes and certificate decoding);

@@ -13,10 +13,9 @@ from typing import Any
 
 from flask import jsonify, session
 
-from ... import device_logs, json_values
+from ... import device_logs, json_values, visitor_session
 from ...storage import credentials
 from ...storage.common import InvalidStorageIdentifier, StorageReadError
-from ...webauthn.metadata import sessions as metadata_sessions
 from .. import binary_helpers
 
 logger = logging.getLogger(__name__)
@@ -74,7 +73,7 @@ def _credential_is_stored(uname: str, credential_id: bytes, metadata_session_id:
 
 
 def _persist_registered_credential_entry(ctx: dict[str, Any]) -> Any | None:
-    metadata_session_id = metadata_sessions.ensure_metadata_session_id()
+    metadata_session_id = visitor_session.ensure_id()
     uname = ctx["uname"]
     credential_entry = _build_credential_entry(ctx)
 

@@ -21,6 +21,7 @@ from typing import Any
 from fido2.webauthn import AuthenticatorData
 from flask import Blueprint, abort, jsonify, request, session
 
+from ... import visitor_session
 from ...challenge_registry import (
     CHALLENGE_FRESH,
     CHALLENGE_REPLAYED,
@@ -31,7 +32,6 @@ from ...config import relying_party
 from ...encoding import encode_base64url
 from ...storage import credentials
 from ...storage.common import InvalidStorageIdentifier
-from ...webauthn.metadata import sessions as metadata_sessions
 from ...webauthn.sign_count import SIGN_COUNT_REGRESSED, sign_count_status
 from .. import binary_helpers
 from . import binary, parsing
@@ -369,7 +369,7 @@ def load_server_records(uname: Any) -> tuple[list[Any] | None, Any, str | None]:
     if not isinstance(uname, str) or not uname:
         return None, None, None
     try:
-        session_id = metadata_sessions.ensure_metadata_session_id()
+        session_id = visitor_session.ensure_id()
         records, version = credentials.read_for_update(uname, session_id=session_id)
     except InvalidStorageIdentifier:
         # A name the store refuses is the caller's error: the app answers 400.

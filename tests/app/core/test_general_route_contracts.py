@@ -1,6 +1,7 @@
 import base64
 from types import SimpleNamespace
 
+from server.app import visitor_session
 from server.app.decoder.decode import pipeline as decode_pipeline
 from server.app.routes import mds as mds_routes
 from server.app.webauthn.attestation import certificates as attestation_certificates
@@ -98,8 +99,8 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
     with entry_app().test_client() as client:
         session_calls = []
         monkeypatch.setattr(
-            metadata_sessions,
-            "ensure_metadata_session_id",
+            visitor_session,
+            "ensure_id",
             lambda: session_calls.append("called") or "session-abc",
         )
         monkeypatch.setattr(
@@ -145,7 +146,7 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
                 raise self._exc
             return self._data
 
-    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-abc")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-abc")
 
     with entry_app().app_context():
         monkeypatch.setattr(mds_routes, "request", SimpleNamespace(files=None))
@@ -290,7 +291,7 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
         assert response.get_json() == {"error": "persistence down"}
 
     with entry_app().test_client() as client:
-        monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-abc")
+        monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-abc")
 
         monkeypatch.setattr(
             metadata_sessions,
@@ -325,7 +326,7 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
 
 def test_general_empty_snapshot_and_upload_branches(monkeypatch):
     with entry_app().test_client() as client:
-        monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
+        monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
         monkeypatch.setattr(metadata_effective, "load_effective_full_snapshot", lambda: {})
 
         full_explorer_missing = client.get("/api/mds/metadata/explorer/full")
@@ -356,7 +357,7 @@ def test_general_empty_snapshot_and_upload_branches(monkeypatch):
             return response, status
         return result, result.status_code
 
-    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(metadata_entries, "expand_metadata_entry_payloads", lambda payload: [payload])
     monkeypatch.setattr(metadata_uploads, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(

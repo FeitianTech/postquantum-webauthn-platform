@@ -12,11 +12,10 @@ import itsdangerous
 import pytest
 from flask import session as flask_session
 
+from server.app import visitor_session
 from server.app.storage import session_metadata as session_store
 from server.app.webauthn import metadata
 from server.app.webauthn.metadata import sessions as metadata_sessions
-from server.app.webauthn.metadata import state
-from server.app.webauthn.metadata import state as metadata_state
 from tests.app.entry_app import entry_app
 
 COOKIE_SALT = "fido.mds.session-cookie.v1"
@@ -33,7 +32,7 @@ def session_env(monkeypatch, tmp_path):
     monkeypatch.setattr(session_store, "gcs_enabled", lambda: False)
     monkeypatch.setattr(session_store, "_using_gcs", lambda: False)
     monkeypatch.setattr(session_store, "_local_last_cleanup", 0.0)
-    monkeypatch.setattr(state, "_session_metadata_last_cleanup", 0.0)
+    monkeypatch.setattr(visitor_session.CLEANUP, "last_run", 0.0)
 
     return entry_app(), metadata
 
@@ -53,7 +52,7 @@ def _seal(app, identifier: str) -> str:
 
 def _seed_victim(app, metadata, namespace: str) -> None:
     with app.test_request_context("/"):
-        flask_session[metadata_state._SESSION_METADATA_SESSION_KEY] = namespace
+        flask_session[visitor_session.SESSION_KEY] = namespace
         metadata_sessions.save_session_metadata_item(_entry("victim secret entry"))
 
 
@@ -86,7 +85,7 @@ def test_forged_plaintext_cookie_cannot_reach_another_namespace(session_env):
     _seed_victim(app, metadata, "victim-namespace")
 
     with app.test_request_context("/"):
-        flask_session[metadata_state._SESSION_METADATA_SESSION_KEY] = "victim-namespace"
+        flask_session[visitor_session.SESSION_KEY] = "victim-namespace"
         assert len(metadata_sessions.list_session_metadata_items()) == 1
 
     # The attacker names the victim's namespace directly.
@@ -100,12 +99,12 @@ def test_forged_cookie_cannot_write_into_another_namespace(session_env):
     with app.test_request_context(
         "/", headers={"Cookie": "fido.mds.session=victim-namespace"}
     ):
-        attacker_namespace = metadata_sessions.ensure_metadata_session_id()
+        attacker_namespace = visitor_session.ensure_id()
         assert attacker_namespace != "victim-namespace"
         metadata_sessions.save_session_metadata_item(_entry("attacker entry"))
 
     with app.test_request_context("/"):
-        flask_session[metadata_state._SESSION_METADATA_SESSION_KEY] = "victim-namespace"
+        flask_session[visitor_session.SESSION_KEY] = "victim-namespace"
         items = metadata_sessions.list_session_metadata_items()
     assert len(items) == 1
     assert items[0].payload["metadataStatement"]["description"] == "victim secret entry"
@@ -175,8 +174,8 @@ def test_signed_flask_session_takes_precedence_over_the_cookie(session_env):
     with app.test_request_context(
         "/", headers={"Cookie": f"fido.mds.session={_seal(app, 'from-cookie')}"}
     ):
-        flask_session[metadata_state._SESSION_METADATA_SESSION_KEY] = "from-session"
-        assert metadata_sessions._get_metadata_session_id(create=False) == "from-session"
+        flask_session[visitor_session.SESSION_KEY] = "from-session"
+        assert visitor_session.current_id(create=False) == "from-session"
 
 
 def test_issued_cookie_is_signed_httponly_and_round_trips(session_env):
@@ -201,16 +200,16 @@ def test_issued_cookie_is_signed_httponly_and_round_trips(session_env):
     ).loads(value)
     # The wire value is not the namespace name itself.
     assert value != identifier
-    assert metadata_sessions._normalise_session_identifier(identifier) == identifier
+    assert visitor_session.normalise_id(identifier) == identifier
 
 
 def test_fresh_visitor_gets_an_unguessable_namespace(session_env):
     app, metadata = session_env
 
     with app.test_request_context("/"):
-        first = metadata_sessions.ensure_metadata_session_id()
+        first = visitor_session.ensure_id()
     with app.test_request_context("/"):
-        second = metadata_sessions.ensure_metadata_session_id()
+        second = visitor_session.ensure_id()
 
     assert first != second
     assert len(first) >= 32

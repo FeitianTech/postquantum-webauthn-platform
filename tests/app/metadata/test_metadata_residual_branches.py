@@ -6,6 +6,7 @@ from types import MappingProxyType, SimpleNamespace
 
 import pytest
 
+from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import files as mds_files
 from server.app.webauthn import metadata as module
@@ -60,7 +61,7 @@ def test_metadata_build_and_expand_residual_paths(metadata_module):
 
 
 def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_module, monkeypatch, sessions, entries, session_store):
-    monkeypatch.setattr(sessions, "ensure_metadata_session_id", lambda: "session-1")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-1")
     monkeypatch.setattr(
         sessions,
         "_session_metadata_directory",

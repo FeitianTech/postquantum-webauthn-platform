@@ -2,6 +2,7 @@ import json
 
 import pytest
 
+from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.webauthn import metadata
 from server.app.webauthn.metadata import sessions as metadata_sessions
@@ -34,7 +35,7 @@ def test_session_metadata_item_lifecycle_save_list_serialize_delete(metadata_loc
     metadata, _session_store, app = metadata_local_env
 
     with app.test_request_context("/"):
-        metadata_sessions.ensure_metadata_session_id()
+        visitor_session.ensure_id()
         saved = metadata_sessions.save_session_metadata_item(
             _sample_payload("Lifecycle test"),
             original_filename="custom.json",
@@ -67,7 +68,7 @@ def test_save_session_metadata_item_surfaces_storage_failures(metadata_local_env
     monkeypatch.setattr(session_store, "write_file", _failing_write)
 
     with app.test_request_context("/"):
-        metadata_sessions.ensure_metadata_session_id()
+        visitor_session.ensure_id()
         with pytest.raises(RuntimeError, match="Failed to store uploaded metadata"):
             metadata_sessions.save_session_metadata_item(_sample_payload("broken"))
 
@@ -78,7 +79,7 @@ def test_list_session_metadata_items_skips_invalid_payloads_and_returns_valid_en
     metadata, session_store, app = metadata_local_env
 
     with app.test_request_context("/"):
-        session_id = metadata_sessions.ensure_metadata_session_id()
+        session_id = visitor_session.ensure_id()
         directory = metadata_sessions._session_metadata_directory(session_id, create=True)
 
         session_store.write_file(
@@ -113,7 +114,7 @@ def test_delete_session_metadata_item_validates_session_filename_and_storage_err
         metadata_sessions.delete_session_metadata_item("entry.json", session_id=None)
 
     with app.test_request_context("/"):
-        session_id = metadata_sessions.ensure_metadata_session_id()
+        session_id = visitor_session.ensure_id()
 
         with pytest.raises(ValueError, match="Invalid metadata filename"):
             metadata_sessions.delete_session_metadata_item("../evil.json", session_id=session_id)

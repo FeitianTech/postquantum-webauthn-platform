@@ -7,16 +7,9 @@ import shutil
 
 import pytest
 
+from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.webauthn.metadata import state
-
-# The inactive-session cleanup's state, with the value each holds on a freshly
-# imported module.
-_CLEANUP_STATE_DEFAULTS = {
-    "_session_metadata_last_cleanup": 0.0,
-    "_session_cleanup_worker": None,
-    "_session_cleanup_pending": False,
-}
 
 
 @pytest.fixture
@@ -30,8 +23,7 @@ def metadata_state(monkeypatch):
     """
 
     monkeypatch.setattr(mds_cache, "CACHE", mds_cache.SnapshotCache())
-    for name, default in _CLEANUP_STATE_DEFAULTS.items():
-        monkeypatch.setattr(state, name, default)
+    monkeypatch.setattr(visitor_session, "CLEANUP", visitor_session.CleanupState())
     return state
 
 

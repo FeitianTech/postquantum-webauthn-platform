@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 import pytest
 
+from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.routes import mds as mds_routes
 from server.app.webauthn.metadata import effective as metadata_effective
@@ -89,7 +90,7 @@ def test_metadata_not_available_is_warning_classical():
 
 
 def test_the_mds_info_answers_the_summary_and_the_custom_entries_state(monkeypatch, app_config):
-    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(mds_cache, "load_packaged_explorer_summary", lambda: {})
     monkeypatch.setattr(mds_cache, "load_packaged_snapshot_meta", lambda: None)
 
@@ -100,7 +101,7 @@ def test_the_mds_info_answers_the_summary_and_the_custom_entries_state(monkeypat
 
 
 def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_config):
-    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
         metadata_effective,
         "load_effective_full_snapshot",
@@ -117,7 +118,7 @@ def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_con
 
 
 def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch, app_config):
-    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
 
     with entry_app().test_client() as client:
         response = client.get("/api/mds/metadata/resolve")
@@ -127,7 +128,7 @@ def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch, app_con
 
 
 def test_resolve_metadata_entry_returns_not_found(monkeypatch, app_config):
-    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
         metadata_effective,
         "resolve_effective_metadata_entry",
@@ -142,7 +143,7 @@ def test_resolve_metadata_entry_returns_not_found(monkeypatch, app_config):
 
 
 def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
-    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
         metadata_effective,
         "resolve_effective_metadata_entry",
@@ -162,7 +163,7 @@ def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
 
 
 def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):
-    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
         metadata_entries,
         "expand_metadata_entry_payloads",
@@ -197,7 +198,7 @@ def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
 
 
 def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):
-    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(metadata_sessions, "delete_session_metadata_item", lambda _name: True)
     monkeypatch.setattr(
         metadata_effective,

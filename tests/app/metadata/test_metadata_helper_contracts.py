@@ -6,12 +6,12 @@ import itsdangerous
 from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
 from flask import g, session
 
+from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import files as mds_files
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import sessions as metadata_sessions
-from server.app.webauthn.metadata import state as metadata_state
 from server.app.webauthn.metadata import verifier as metadata_verifier
 from tests.app.entry_app import entry_app
 
@@ -170,24 +170,24 @@ def test_prune_helper_and_request_session_identifier_paths(monkeypatch, tmp_path
     ).dumps("cookie-session")
     with entry_app().test_request_context(
         "/",
-        headers={"Cookie": f"{metadata_state._SESSION_METADATA_COOKIE_NAME}=cookie-session"},
+        headers={"Cookie": f"{visitor_session.COOKIE_NAME}=cookie-session"},
     ):
-        assert metadata_sessions._get_metadata_session_id(create=False) is None
+        assert visitor_session.current_id(create=False) is None
 
     with entry_app().test_request_context(
         "/",
-        headers={"Cookie": f"{metadata_state._SESSION_METADATA_COOKIE_NAME}={sealed}"},
+        headers={"Cookie": f"{visitor_session.COOKIE_NAME}={sealed}"},
     ):
-        identifier = metadata_sessions._get_metadata_session_id(create=False)
+        identifier = visitor_session.current_id(create=False)
         assert identifier == "cookie-session"
-        assert session[metadata_state._SESSION_METADATA_SESSION_KEY] == "cookie-session"
+        assert session[visitor_session.SESSION_KEY] == "cookie-session"
         assert g._session_metadata_cookie == "cookie-session"
 
     with entry_app().test_request_context("/"):
-        generated = metadata_sessions._get_metadata_session_id(create=True)
+        generated = visitor_session.current_id(create=True)
         assert isinstance(generated, str)
-        assert session[metadata_state._SESSION_METADATA_SESSION_KEY] == generated
+        assert session[visitor_session.SESSION_KEY] == generated
         assert g._session_metadata_cookie == generated
 
     with entry_app().test_request_context("/"):
-        assert metadata_sessions._get_metadata_session_id(create=False) is None
+        assert visitor_session.current_id(create=False) is None

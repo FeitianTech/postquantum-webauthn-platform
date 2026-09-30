@@ -8,7 +8,7 @@ import pickle
 
 import pytest
 
-from server.app.webauthn.metadata import sessions as metadata_sessions
+from server.app import visitor_session
 
 credentials = importlib.import_module("server.app.storage.credentials")
 StorageReadError = importlib.import_module("server.app.storage.common").StorageReadError
@@ -32,8 +32,8 @@ def test_readkey_returns_empty_list_for_corrupted_payload(monkeypatch):
 
 def test_resolve_session_id_falls_back_to_metadata_session(monkeypatch):
     monkeypatch.setattr(
-        metadata_sessions,
-        "ensure_metadata_session_id",
+        visitor_session,
+        "ensure_id",
         lambda: "fallback-session-id",
     )
 

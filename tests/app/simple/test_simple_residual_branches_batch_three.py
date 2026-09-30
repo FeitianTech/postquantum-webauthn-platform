@@ -7,12 +7,12 @@ from types import SimpleNamespace
 import pytest
 from fido2 import cbor
 
+from server.app import visitor_session
 from server.app.config import relying_party
 from server.app.routes.simple import parsing as simple_parsing
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
-from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
 
@@ -170,7 +170,7 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monke
         credential_info["user_info"]["user_handle"] = "string-user-handle"
 
     monkeypatch.setattr(storage_module, "add_public_key_material", _mutate_user_handle)
-    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "meta-session")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "meta-session")
     monkeypatch.setattr(storage_module, "read_for_update", lambda *_args, **_kwargs: ([], None))
     monkeypatch.setattr(storage_module, "save_if_unchanged", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)

@@ -11,12 +11,12 @@ import pytest
 from fido2.mds3 import MetadataBlobPayloadEntry
 from flask import ctx, g, session
 
+from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import files as mds_files
 from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
-from server.app.webauthn.metadata import sessions as cleanup
 from server.app.webauthn.metadata import sessions as metadata_sessions
 from server.app.webauthn.metadata import state as metadata_state
 from server.app.webauthn.metadata import uploads as metadata_uploads
@@ -54,28 +54,28 @@ def _minimal_entry_payload(*, aaguid: str = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa
 def test_session_cookie_scheduler_branches_and_after_request_cookie(metadata_module, monkeypatch, sessions, app_config):
     touched = []
     monkeypatch.setattr(
-        sessions,
-        "_note_session_activity",
+        visitor_session,
+        "note_activity",
         lambda session_id, **_kwargs: touched.append(session_id),
     )
 
-    metadata_sessions._schedule_session_cookie("outside-context")
+    visitor_session._schedule_cookie("outside-context")
 
     with entry_app().test_request_context("/", base_url="https://localhost"):
-        metadata_sessions._schedule_session_cookie("   ")
+        visitor_session._schedule_cookie("   ")
         request_ctx = ctx._cv_request.get()
         assert request_ctx._after_request_functions == []
 
-        metadata_sessions._schedule_session_cookie("session-cookie")
+        visitor_session._schedule_cookie("session-cookie")
         assert g._session_metadata_cookie == "session-cookie"
         assert len(request_ctx._after_request_functions) == 1
 
-        metadata_sessions._schedule_session_cookie("session-cookie")
+        visitor_session._schedule_cookie("session-cookie")
         assert len(request_ctx._after_request_functions) == 1
 
         response = request_ctx._after_request_functions[0](entry_app().response_class("ok"))
         set_cookie = response.headers["Set-Cookie"]
-        assert set_cookie.startswith(f"{metadata_state._SESSION_METADATA_COOKIE_NAME}=")
+        assert set_cookie.startswith(f"{visitor_session.COOKIE_NAME}=")
         assert "Secure" in set_cookie
         assert "SameSite=Lax" in set_cookie
         assert "SameSite=None" not in set_cookie
@@ -92,12 +92,12 @@ def test_session_cookie_scheduler_branches_and_after_request_cookie(metadata_mod
 
 
 def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch(metadata_module, monkeypatch, sessions, app_config):
-    assert metadata_sessions._get_metadata_session_id(create=True) is None
+    assert visitor_session.current_id(create=True) is None
 
     scheduled = []
     monkeypatch.setattr(
-        sessions,
-        "_schedule_session_cookie",
+        visitor_session,
+        "_schedule_cookie",
         lambda identifier: scheduled.append(identifier),
     )
     monkeypatch.setattr(secrets, "token_urlsafe", lambda _n: "generated-session")
@@ -106,10 +106,10 @@ def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch
     # an IDOR, since any caller could name another visitor's namespace.
     with entry_app().test_request_context(
         "/",
-        headers={"Cookie": f"{metadata_state._SESSION_METADATA_COOKIE_NAME}=cookie-session"},
+        headers={"Cookie": f"{visitor_session.COOKIE_NAME}=cookie-session"},
     ):
-        session[metadata_state._SESSION_METADATA_SESSION_KEY] = ".invalid"
-        assert metadata_sessions._get_metadata_session_id(create=False) is None
+        session[visitor_session.SESSION_KEY] = ".invalid"
+        assert visitor_session.current_id(create=False) is None
 
     # A cookie this server signed still restores the namespace it names.
     sealed = itsdangerous.URLSafeTimedSerializer(
@@ -117,29 +117,29 @@ def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch
     ).dumps("cookie-session")
     with entry_app().test_request_context(
         "/",
-        headers={"Cookie": f"{metadata_state._SESSION_METADATA_COOKIE_NAME}={sealed}"},
+        headers={"Cookie": f"{visitor_session.COOKIE_NAME}={sealed}"},
     ):
-        session[metadata_state._SESSION_METADATA_SESSION_KEY] = ".invalid"
-        assert metadata_sessions._get_metadata_session_id(create=False) == "cookie-session"
-        assert session[metadata_state._SESSION_METADATA_SESSION_KEY] == "cookie-session"
+        session[visitor_session.SESSION_KEY] = ".invalid"
+        assert visitor_session.current_id(create=False) == "cookie-session"
+        assert session[visitor_session.SESSION_KEY] == "cookie-session"
 
     with entry_app().test_request_context("/"):
-        session[metadata_state._SESSION_METADATA_SESSION_KEY] = ".invalid"
-        assert metadata_sessions._get_metadata_session_id(create=False) is None
-        assert metadata_sessions._get_metadata_session_id(create=True) == "generated-session"
+        session[visitor_session.SESSION_KEY] = ".invalid"
+        assert visitor_session.current_id(create=False) is None
+        assert visitor_session.current_id(create=True) == "generated-session"
 
     with entry_app().test_request_context("/"):
-        monkeypatch.setattr(sessions, "_get_metadata_session_id", lambda **_kwargs: None)
+        monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: None)
         with pytest.raises(RuntimeError, match="Unable to establish"):
-            metadata_sessions.ensure_metadata_session_id()
+            visitor_session.ensure_id()
 
     with entry_app().test_request_context("/"):
         monkeypatch.setattr(
-            sessions,
-            "_get_metadata_session_id",
+            visitor_session,
+            "current_id",
             lambda **_kwargs: "ensured-session",
         )
-        assert metadata_sessions.ensure_metadata_session_id() == "ensured-session"
+        assert visitor_session.ensure_id() == "ensured-session"
         assert session.permanent is True
 
     assert scheduled == ["cookie-session", "generated-session"]
@@ -148,8 +148,8 @@ def test_get_session_id_and_ensure_paths_cover_invalid_existing_and_error_branch
 def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkeypatch, session_store, app_config, sessions):
     schedule_calls = []
     monkeypatch.setattr(
-        cleanup,
-        "_schedule_inactive_session_cleanup",
+        visitor_session,
+        "schedule_cleanup",
         lambda: schedule_calls.append(True),
     )
 
@@ -187,14 +187,14 @@ def test_session_directory_touch_and_resolve_error_paths(metadata_module, monkey
         "touch_last_access",
         lambda _sid: (_ for _ in ()).throw(RuntimeError("touch failed")),
     )
-    metadata_sessions._touch_session_last_access("session-a")
+    visitor_session._touch_last_access("session-a")
 
     monkeypatch.setattr(
         session_store,
         "resolve_last_access",
         lambda _sid: (_ for _ in ()).throw(RuntimeError("resolve failed")),
     )
-    assert metadata_sessions._resolve_session_last_access("session-a") is None
+    assert visitor_session._resolve_last_access("session-a") is None
 
     assert errors
     assert schedule_calls == [True]
@@ -306,7 +306,7 @@ class _NotJSONSerializable:
 
 
 def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, monkeypatch, sessions, entries, blob, session_store):
-    monkeypatch.setattr(sessions, "ensure_metadata_session_id", lambda: "session-a")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-a")
     monkeypatch.setattr(sessions, "_session_metadata_directory", lambda *_args, **_kwargs: "session-a")
     monkeypatch.setattr(
         entries,
@@ -321,12 +321,12 @@ def test_save_list_delete_serialize_and_datetime_edge_paths(metadata_module, mon
     with pytest.raises(ValueError, match="unsupported types"):
         metadata_sessions.save_session_metadata_item({"bad": _NotJSONSerializable()})
 
-    monkeypatch.setattr(sessions, "_get_metadata_session_id", lambda **_kwargs: "session-a")
+    monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: "session-a")
     monkeypatch.setattr(sessions, "_session_metadata_directory", lambda *_args, **_kwargs: None)
     assert metadata_sessions.list_session_metadata_items() == []
 
     monkeypatch.setattr(sessions, "_session_metadata_directory", lambda *_args, **_kwargs: "session-a")
-    monkeypatch.setattr(sessions, "_note_session_activity", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(visitor_session, "note_activity", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(
         session_store,
         "list_files",

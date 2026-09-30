@@ -19,7 +19,7 @@ import threading
 
 import pytest
 
-from server.app.webauthn.metadata import state as metadata_state
+from server.app import visitor_session
 
 from ..storage import fake_gcs
 from .ceremony_helpers import ORIGIN, Authenticator, registration_payload, unb64u
@@ -65,7 +65,7 @@ def _register(client, authenticator):
 def _stored_ids(store, client) -> list[bytes]:
 
     with client.session_transaction() as session:
-        namespace = session[metadata_state._SESSION_METADATA_SESSION_KEY]
+        namespace = session[visitor_session.SESSION_KEY]
     return sorted(bytes(record["credential_data"].credential_id) for record in store.readkey(EMAIL, session_id=namespace))
 
 
@@ -199,7 +199,7 @@ def _break_the_current_copy(store, client, how: str):
     from server.app.storage import cloud
 
     with client.session_transaction() as session:
-        namespace = session[metadata_state._SESSION_METADATA_SESSION_KEY]
+        namespace = session[visitor_session.SESSION_KEY]
     if store._using_gcs():
         bucket = cloud._ensure_bucket()
         blob = store._credential_blob(EMAIL, namespace)

@@ -16,6 +16,7 @@ import threading
 import time
 from typing import Any
 
+from . import visitor_session
 from .config.paths import store_dir
 from .storage.cloud import (
     blob_exists,
@@ -33,7 +34,7 @@ from .storage.common import (
     build_session_scoped_prefix,
     file_lock,
     resolve_contained_path,
-    resolve_metadata_session_id,
+    resolve_session_id,
     using_gcs_backend,
     validate_storage_component,
 )
@@ -137,7 +138,7 @@ def _write_file(path: str, payload: dict[str, Any]) -> None:
 
 
 def _resolve_session_id(session_id: str | None = None) -> str:
-    return resolve_metadata_session_id(session_id)
+    return resolve_session_id(session_id, visitor_session.ensure_id)
 
 
 def _read_stored(storage_id: str, session_id: str) -> tuple[bytes | None, str]:

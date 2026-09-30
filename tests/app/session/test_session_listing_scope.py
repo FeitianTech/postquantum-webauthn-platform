@@ -9,9 +9,8 @@ from __future__ import annotations
 
 import pytest
 
+from server.app import visitor_session
 from server.app.storage import session_metadata
-from server.app.webauthn.metadata import sessions
-from server.app.webauthn.metadata import state as metadata_state
 
 from ..storage import fake_gcs
 
@@ -39,8 +38,8 @@ def test_the_inactive_session_cleanup_still_sees_every_session(bucket, monkeypat
     removed = []
     monkeypatch.setattr(session_metadata, "resolve_last_access", lambda _session: 0.0)
     monkeypatch.setattr(session_metadata, "delete_session", removed.append)
-    monkeypatch.setattr(metadata_state, "_session_metadata_last_cleanup", 0.0)
+    monkeypatch.setattr(visitor_session.CLEANUP, "last_run", 0.0)
 
-    sessions._maybe_cleanup_inactive_sessions(now=10.0 ** 9)
+    visitor_session._maybe_cleanup(now=10.0 ** 9)
 
     assert removed == list(SESSIONS)

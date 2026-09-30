@@ -6,11 +6,11 @@ import types
 import pytest
 
 from server.app import config as config_module
+from server.app import visitor_session
 from server.app.config import relying_party
 from server.app.routes import advanced as advanced_module
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import binary as advanced_binary
-from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
 
@@ -69,7 +69,7 @@ def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, conf
 
 
 def test_advanced_put_snapshot_route_returns_400_when_store_fails(monkeypatch, metadata_module, credential_artifacts_module):
-    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", lambda *_args, **_kwargs: False)
 
     with entry_app().test_client() as client:

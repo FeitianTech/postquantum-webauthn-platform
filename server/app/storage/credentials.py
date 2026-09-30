@@ -17,6 +17,7 @@ import logging
 import os
 from typing import Any
 
+from .. import visitor_session
 from ..config.paths import store_dir
 from ..json_values import make_json_safe
 from . import record_format
@@ -35,7 +36,7 @@ from .common import (
     file_lock,
     replace_file,
     resolve_contained_path,
-    resolve_metadata_session_id,
+    resolve_session_id,
     using_gcs_backend,
     validate_storage_component,
 )
@@ -134,7 +135,7 @@ def _local_filename(name: str, session_id: str, *, create: bool = False) -> str:
 
 
 def _resolve_session_id(session_id: str | None = None) -> str:
-    return resolve_metadata_session_id(session_id)
+    return resolve_session_id(session_id, visitor_session.ensure_id)
 
 
 def read_for_update(name: str, *, session_id: str | None = None) -> tuple[list[Any], Any]:

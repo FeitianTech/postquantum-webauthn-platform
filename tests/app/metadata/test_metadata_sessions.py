@@ -3,11 +3,10 @@ from types import SimpleNamespace
 import pytest
 from flask import session as flask_session
 
+from server.app import visitor_session
 from server.app.webauthn import metadata
 from server.app.webauthn.metadata import effective as metadata_effective
-from server.app.webauthn.metadata import sessions as cleanup
 from server.app.webauthn.metadata import sessions as metadata_sessions
-from server.app.webauthn.metadata import state as metadata_state
 from tests.app.entry_app import entry_app
 
 
@@ -39,19 +38,19 @@ def test_session_metadata_is_isolated(session_metadata_env):
     app, metadata = session_metadata_env
 
     with app.test_request_context("/"):
-        first_session_id = metadata_sessions.ensure_metadata_session_id()
+        first_session_id = visitor_session.ensure_id()
         metadata_sessions.save_session_metadata_item(_sample_entry("Session entry"))
         items_for_first = metadata_sessions.list_session_metadata_items()
         assert len(items_for_first) == 1
 
     with app.test_request_context("/"):
         assert metadata_sessions.list_session_metadata_items() == []
-        second_session_id = metadata_sessions.ensure_metadata_session_id()
+        second_session_id = visitor_session.ensure_id()
         assert second_session_id != first_session_id
         assert metadata_sessions.list_session_metadata_items() == []
 
     with app.test_request_context("/"):
-        flask_session[metadata_state._SESSION_METADATA_SESSION_KEY] = first_session_id
+        flask_session[visitor_session.SESSION_KEY] = first_session_id
         items = metadata_sessions.list_session_metadata_items()
         assert len(items) == 1
         assert items[0].payload["metadataStatement"]["description"] == "Session entry"
@@ -61,15 +60,15 @@ def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypat
     _, metadata = session_metadata_env
 
     calls = []
-    monkeypatch.setattr(cleanup, "_touch_session_last_access", lambda sid: calls.append(("touch", sid)))
-    monkeypatch.setattr(cleanup, "_schedule_inactive_session_cleanup", lambda: calls.append(("schedule", None)))
+    monkeypatch.setattr(visitor_session, "_touch_last_access", lambda sid: calls.append(("touch", sid)))
+    monkeypatch.setattr(visitor_session, "schedule_cleanup", lambda: calls.append(("schedule", None)))
     monkeypatch.setattr(
-        sessions,
-        "_maybe_cleanup_inactive_sessions",
+        visitor_session,
+        "_maybe_cleanup",
         lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("inline cleanup should not run")),
     )
 
-    metadata_sessions._note_session_activity("session-123")
+    visitor_session.note_activity("session-123")
 
     assert calls == [("touch", "session-123"), ("schedule", None)]
 

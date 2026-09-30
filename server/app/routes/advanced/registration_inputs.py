@@ -13,6 +13,7 @@ from typing import Any
 
 from flask import jsonify, session
 
+from ... import visitor_session
 from ...attachments import (
     attachment_hint_violation,
     normalize_attachment,
@@ -22,7 +23,6 @@ from ...attachments import (
 from ...config import relying_party
 from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
-from ...webauthn.metadata import sessions as metadata_sessions
 
 
 def _request_allowed_attachments(original_public_key: Any) -> list[str]:
@@ -138,7 +138,7 @@ def prepare_register_complete_inputs(
     if not username:
         return None, (jsonify({"error": "Username is required in user.name"}), 400)
 
-    metadata_session_id = metadata_sessions.ensure_metadata_session_id()
+    metadata_session_id = visitor_session.ensure_id()
     resident_key_requested, resident_key_required = _resident_key_requirement(public_key)
 
     return {

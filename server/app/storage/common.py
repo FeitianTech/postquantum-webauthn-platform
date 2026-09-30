@@ -24,7 +24,6 @@ __all__ = [
     "file_lock",
     "normalize_nonempty_str",
     "resolve_contained_path",
-    "resolve_metadata_session_id",
     "replace_file",
     "resolve_session_id",
     "using_gcs_backend",
@@ -116,14 +115,6 @@ def build_session_scoped_prefix(
         empty_error=empty_error,
     )
     return build_blob_name(subdir, prefix=root)
-
-
-def resolve_metadata_session_id(session_id: str | None = None) -> str:
-    """Resolve a session id using metadata fallback with lazy import cycle-avoidance."""
-
-    from ..webauthn.metadata import sessions
-
-    return resolve_session_id(session_id, sessions.ensure_metadata_session_id)
 
 
 def validate_storage_component(

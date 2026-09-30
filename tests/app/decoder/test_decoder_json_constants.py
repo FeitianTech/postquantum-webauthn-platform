@@ -13,6 +13,7 @@ import json
 
 import pytest
 
+from server.app import visitor_session
 from server.app.webauthn.metadata import effective as metadata_effective
 from server.app.webauthn.metadata import entries as metadata_entries
 from server.app.webauthn.metadata import sessions as metadata_sessions
@@ -120,7 +121,7 @@ def test_client_data_with_nan_in_a_credential_is_read_leniently_and_said_so(clie
 
 def test_an_uploaded_metadata_file_with_nan_is_refused(client, monkeypatch):
     saved = []
-    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(metadata_entries, "expand_metadata_entry_payloads", lambda payload: [payload])
     monkeypatch.setattr(metadata_uploads, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False)
     monkeypatch.setattr(metadata_sessions, "save_session_metadata_item", lambda payload, original_filename=None: saved.append(payload))

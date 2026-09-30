@@ -19,7 +19,7 @@ from flask import (
     session,
 )
 
-from .. import encoding
+from .. import encoding, visitor_session
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
 from ..mds import cache as mds_cache
 from ..mds import files as mds_files
@@ -85,7 +85,7 @@ def _initial_mds_info() -> dict[str, Any]:
 
     mds_provisioning.ensure_snapshot_available()
     mds_provisioning.follow_newer_snapshot()
-    metadata_session_id = metadata_sessions.ensure_metadata_session_id()
+    metadata_session_id = visitor_session.ensure_id()
 
     initial_mds_info = dict(mds_cache.load_packaged_explorer_summary() or {})
     snapshot_url = _packaged_snapshot_url()
@@ -114,7 +114,7 @@ def api_get_metadata_info():
 @bp.route("/api/mds/metadata/explorer/full", methods=["GET"])
 @mds_provisioning.waits_for_the_snapshot
 def api_get_full_explorer_metadata():
-    metadata_sessions.ensure_metadata_session_id()
+    visitor_session.ensure_id()
     snapshot = metadata_effective.load_effective_full_snapshot()
     if not snapshot.get("entries") and not snapshot.get("meta"):
         return _no_store_json_response(
@@ -128,7 +128,7 @@ def api_get_full_explorer_metadata():
 @bp.route("/api/mds/metadata/resolve", methods=["GET"])
 @mds_provisioning.waits_for_the_snapshot
 def api_resolve_metadata_entry():
-    metadata_sessions.ensure_metadata_session_id()
+    visitor_session.ensure_id()
 
     requested = {
         "entry_id": request.args.get("entryId", type=str),
@@ -160,7 +160,7 @@ def api_resolve_metadata_entry():
 
 @bp.route("/api/mds/metadata/custom", methods=["GET"])
 def api_list_custom_metadata():
-    metadata_sessions.ensure_metadata_session_id()
+    visitor_session.ensure_id()
     items = [metadata_sessions.serialize_session_metadata_item(item) for item in metadata_sessions.list_session_metadata_items()]
     return jsonify({"items": items})
 
@@ -179,7 +179,7 @@ def _read_metadata_json(text: str) -> Any:
 def api_upload_custom_metadata():
     # Its own limit, before the body is read: the whole MDS metadata (config/request_limits.py).
     request.max_content_length = current_app.config[METADATA_UPLOAD_LIMIT_KEY]
-    metadata_sessions.ensure_metadata_session_id()
+    visitor_session.ensure_id()
 
     file_entries = request.files.getlist("files") if request.files else []
     if not file_entries:
@@ -269,7 +269,7 @@ def _upload_answer(saved_items: list[Any], errors: list[str]):
 @bp.route("/api/mds/metadata/custom/<string:stored_filename>", methods=["DELETE"])
 @mds_provisioning.waits_for_the_snapshot
 def api_delete_custom_metadata(stored_filename: str):
-    metadata_sessions.ensure_metadata_session_id()
+    visitor_session.ensure_id()
     try:
         deleted = metadata_sessions.delete_session_metadata_item(stored_filename)
     except ValueError as exc:

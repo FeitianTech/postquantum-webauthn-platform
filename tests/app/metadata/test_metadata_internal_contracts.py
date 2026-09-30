@@ -1,26 +1,26 @@
 import os
 
-from server.app.webauthn.metadata import sessions as metadata_sessions
+from server.app import visitor_session
 from server.app.webauthn.metadata import uploads as metadata_uploads
 
 
 def test_normalise_session_identifier_rejects_path_separators(monkeypatch):
-    assert metadata_sessions._normalise_session_identifier("session/abc") is None
+    assert visitor_session.normalise_id("session/abc") is None
 
     monkeypatch.setattr(os, "altsep", "\\")
-    assert metadata_sessions._normalise_session_identifier("session\\abc") is None
+    assert visitor_session.normalise_id("session\\abc") is None
 
 
 def test_normalise_session_identifier_accepts_clean_value_and_rejects_invalid_shapes():
     assert (
-        metadata_sessions._normalise_session_identifier(
+        visitor_session.normalise_id(
             "550e8400-e29b-41d4-a716-446655440000"
         )
         == "550e8400-e29b-41d4-a716-446655440000"
     )
-    assert metadata_sessions._normalise_session_identifier("   ") is None
-    assert metadata_sessions._normalise_session_identifier(".hidden") is None
-    assert metadata_sessions._normalise_session_identifier(123) is None
+    assert visitor_session.normalise_id("   ") is None
+    assert visitor_session.normalise_id(".hidden") is None
+    assert visitor_session.normalise_id(123) is None
 
 
 def test_safe_metadata_repo_filename_sanitizes_traversal_and_invalid_input():

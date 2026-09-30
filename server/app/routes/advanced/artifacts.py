@@ -5,15 +5,14 @@ from typing import Any
 
 from flask import Blueprint, jsonify, request
 
-from ... import credential_artifacts
-from ...webauthn.metadata import sessions as metadata_sessions
+from ... import credential_artifacts, visitor_session
 
 bp = Blueprint("advanced_artifacts", __name__)
 
 
 @bp.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["GET"])
 def api_get_advanced_credential_artifact(storage_id: str):
-    metadata_session_id = metadata_sessions.ensure_metadata_session_id()
+    metadata_session_id = visitor_session.ensure_id()
     artifact = credential_artifacts.load_credential_artifact(storage_id, session_id=metadata_session_id)
     if artifact is None:
         return jsonify({"error": "Credential artifact not found."}), 404
@@ -39,7 +38,7 @@ def api_get_advanced_credential_artifacts_bulk():
         seen.add(trimmed)
         storage_ids.append(trimmed)
 
-    metadata_session_id = metadata_sessions.ensure_metadata_session_id()
+    metadata_session_id = visitor_session.ensure_id()
     artifacts: dict[str, Any] = {}
     for storage_id in storage_ids:
         artifact = credential_artifacts.load_credential_artifact(storage_id, session_id=metadata_session_id)
@@ -65,7 +64,7 @@ def api_put_advanced_credential_artifact(storage_id: str):
     if artifact_payload is None:
         return jsonify({"error": "Artifact payload must be an object."}), 400
 
-    metadata_session_id = metadata_sessions.ensure_metadata_session_id()
+    metadata_session_id = visitor_session.ensure_id()
     if not credential_artifacts.store_credential_artifact(
         storage_id,
         artifact_payload,
@@ -85,7 +84,7 @@ def api_put_advanced_credential_snapshot(storage_id: str):
         return jsonify({"error": "Snapshot must be an object."}), 400
 
     payload = {"registrationDetailSnapshot": snapshot}
-    metadata_session_id = metadata_sessions.ensure_metadata_session_id()
+    metadata_session_id = visitor_session.ensure_id()
     if not credential_artifacts.store_credential_artifact(
         storage_id,
         payload,
@@ -104,7 +103,7 @@ def api_delete_advanced_credential_artifact(storage_id: str):
             {"status": "failed", "error": "Invalid storage identifier."},
         ), 400
 
-    metadata_session_id = metadata_sessions.ensure_metadata_session_id()
+    metadata_session_id = visitor_session.ensure_id()
     status = credential_artifacts.delete_credential_artifact_with_status(
         storage_id,
         session_id=metadata_session_id,

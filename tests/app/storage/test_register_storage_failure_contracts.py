@@ -3,12 +3,12 @@ import hashlib
 import time
 
 from server.app import config as config_module
+from server.app import visitor_session
 from server.app.config import relying_party
 from server.app.routes import advanced as advanced_module
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
-from server.app.webauthn.metadata import sessions as metadata_sessions
 from tests.app.entry_app import entry_app
 
 
@@ -81,7 +81,7 @@ def test_simple_register_complete_returns_500_when_saving_fails(monkeypatch, met
     )
     monkeypatch.setattr(attestation_aaguid, "extract_min_pin_length", lambda _ext: None)
     monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(storage_module, "read_for_update", lambda *_args, **_kwargs: ([], None))
     monkeypatch.setattr(
         storage_module,
@@ -124,7 +124,7 @@ def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module
         "create_fido_server",
         lambda **_kwargs: _AdvancedFakeServer()
     )
-    monkeypatch.setattr(metadata_sessions, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
         attestation_certificates,
         "extract_attestation_details",

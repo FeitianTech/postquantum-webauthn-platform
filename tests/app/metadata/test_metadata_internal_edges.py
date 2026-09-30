@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 from fido2.mds3 import MetadataBlobPayloadEntry
 
+from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.webauthn import metadata as module
 from server.app.webauthn.metadata import effective as metadata_effective
@@ -65,10 +66,10 @@ def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(
 
 
 def test_session_identifier_and_filename_validation_helpers(metadata_module):
-    assert metadata_sessions._normalise_session_identifier("  session-1  ") == "session-1"
-    assert metadata_sessions._normalise_session_identifier(123) is None
-    assert metadata_sessions._normalise_session_identifier(".hidden") is None
-    assert metadata_sessions._normalise_session_identifier("a/b") is None
+    assert visitor_session.normalise_id("  session-1  ") == "session-1"
+    assert visitor_session.normalise_id(123) is None
+    assert visitor_session.normalise_id(".hidden") is None
+    assert visitor_session.normalise_id("a/b") is None
 
     assert metadata_sessions._validate_session_metadata_filename("entry.json") == "entry.json"
 
