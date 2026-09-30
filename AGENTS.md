@@ -149,7 +149,7 @@ their exports or sentences. A new surface splits its logic out here first.
   older composed HTML is never read.
 - `decoder/codec/`: the Codec's requests, results and values. `advanced/mds/`: the MDS
   explorer's loading, filters, sort, columns, rows, entry, certificate, raw view and Manage
-  Metadata (the server builds each row: `mds_snapshot.build_explorer_entry`).
+  Metadata (the server builds each row: `mds/build.py`'s `build_explorer_entry`).
 - `shared/browser/`: the Analyze Browser's facts. It reports what the browser says and where
   each answer came from, or that it cannot know; it never guesses. Web pages cannot ask
   which transports a browser supports: do not add WebUSB/WebHID/Bluetooth/Serial checks. The

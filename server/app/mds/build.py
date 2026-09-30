@@ -11,8 +11,8 @@ from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.x509.oid import NameOID
 
-from . import encoding
-from .webauthn import signature_algorithms
+from .. import encoding
+from ..webauthn import signature_algorithms
 
 __all__ = [
     "build_entry_id",

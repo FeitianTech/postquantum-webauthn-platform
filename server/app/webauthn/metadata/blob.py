@@ -12,7 +12,7 @@ from typing import Any
 from fido2.mds3 import MetadataBlobPayload
 
 from ...mds import files as mds_files
-from ...mds_snapshot import build_bootstrap_snapshot, build_explorer_snapshot
+from ...mds.build import build_bootstrap_snapshot, build_explorer_snapshot
 from . import state as _state
 
 logger = logging.getLogger(__name__)

@@ -1,6 +1,6 @@
 import copy
 
-from server.app.mds_snapshot import (
+from server.app.mds.build import (
     build_bootstrap_snapshot,
     build_entry_id,
     build_explorer_entry,

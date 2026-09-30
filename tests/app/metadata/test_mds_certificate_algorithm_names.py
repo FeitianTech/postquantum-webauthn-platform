@@ -1,6 +1,6 @@
 """The MDS explorer and the certificate view spell a signature algorithm one way.
 
-``mds_snapshot`` kept its own copies of the certificate view's algorithm-name
+``mds.build`` (then ``mds_snapshot``) kept its own copies of the certificate view's algorithm-name
 helpers, so the two could drift; they now share ``webauthn/signature_algorithms``.
 The copy had drifted once already: an Ed25519-signed certificate, whose
 signature has no separate hash, raised ``AttributeError`` in the MDS summary
@@ -24,7 +24,7 @@ from cryptography.hazmat.primitives.asymmetric import (
 )
 from cryptography.x509.oid import NameOID
 
-import server.app.mds_snapshot as mds_snapshot
+from server.app.mds import build as mds_build
 from server.app.webauthn.attestation.certificates import (
     serialize_attestation_certificate,
 )
@@ -78,7 +78,7 @@ def _pss(hash_algorithm):
 def test_the_mds_summary_names_a_root_as_the_certificate_view_does(key, algorithm, rsa_padding, expected):
     der = _self_signed(key, algorithm, "Root", rsa_padding)
 
-    algorithms, common_names = mds_snapshot._summarise_attestation_certificates([der])
+    algorithms, common_names = mds_build._summarise_attestation_certificates([der])
 
     assert algorithms == [expected]
     assert serialize_attestation_certificate(der)["algorithmInfo"] == expected
@@ -87,7 +87,7 @@ def test_the_mds_summary_names_a_root_as_the_certificate_view_does(key, algorith
 
 def test_mds_snapshot_keeps_no_copy_of_the_helpers():
     for name in ("_normalise_signature_algorithm_name", "_format_hash_value", "_derive_certificate_algorithm_info"):
-        assert not hasattr(mds_snapshot, name), name
+        assert not hasattr(mds_build, name), name
 
 
 def _without_pss_parameters(der: bytes) -> bytes:
@@ -113,7 +113,7 @@ def test_a_pss_signature_without_parameters_is_named_with_the_default_hash():
     der = _without_pss_parameters(_self_signed(_RSA_KEY, hashes.SHA256(), "Root", _pss(hashes.SHA256())))
     assert x509.load_der_x509_certificate(der).signature_hash_algorithm.name == "sha1"
 
-    algorithms, _names = mds_snapshot._summarise_attestation_certificates([der])
+    algorithms, _names = mds_build._summarise_attestation_certificates([der])
 
     assert algorithms == ["RSASSA-PSS_SHA1"]
     assert serialize_attestation_certificate(der)["algorithmInfo"] == "RSASSA-PSS_SHA1"
@@ -195,7 +195,7 @@ def test_how_a_signature_algorithm_without_a_hash_from_cryptography_is_spelled(n
 def test_a_dsa_certificate_signed_with_sha384_or_sha512_is_named_in_both_views(algorithm, expected):
     der = _self_signed(_DSA_KEY, algorithm, "Root")
 
-    algorithms, _names = mds_snapshot._summarise_attestation_certificates([der])
+    algorithms, _names = mds_build._summarise_attestation_certificates([der])
 
     assert algorithms == [expected]
     assert serialize_attestation_certificate(der)["algorithmInfo"] == expected

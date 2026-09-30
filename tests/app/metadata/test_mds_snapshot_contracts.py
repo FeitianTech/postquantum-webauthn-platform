@@ -3,7 +3,7 @@ from __future__ import annotations
 import types
 from datetime import date, datetime, timezone
 
-import server.app.mds_snapshot as m
+from server.app.mds import build as m
 from server.app.webauthn import signature_algorithms as names
 
 

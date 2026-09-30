@@ -1,7 +1,7 @@
 """How a certificate's signature algorithm is spelled: ``ECDSA_SHA256``, ``ED25519_SHA512``.
 
 The one spelling for the certificate views (``attestation/certificate_names``)
-and the MDS explorer (``mds_snapshot``). A leaf that imports nothing from the
+and the MDS explorer (``mds.build``). A leaf that imports nothing from the
 app, so ``tools/update_mds_snapshot.py`` reaches it without Flask: the
 attestation package it would otherwise live in imports the whole attestation
 stack.
