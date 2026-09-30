@@ -12,7 +12,10 @@ import itsdangerous
 import pytest
 from flask import session as flask_session
 
+from server.app.storage import session_metadata as session_store
+from server.app.webauthn import metadata
 from server.app.webauthn.metadata import sessions as metadata_sessions
+from server.app.webauthn.metadata import state
 from server.app.webauthn.metadata import state as metadata_state
 from tests.app.entry_app import entry_app
 
@@ -21,11 +24,6 @@ COOKIE_SALT = "fido.mds.session-cookie.v1"
 
 @pytest.fixture
 def session_env(monkeypatch, tmp_path):
-    metadata = pytest.importorskip("server.app.webauthn.metadata")
-    session_store = pytest.importorskip("server.app.storage.session_metadata")
-    state = pytest.importorskip("server.app.webauthn.metadata.state")
-    pytest.importorskip("server.app.app")
-
     session_dir = tmp_path / "sessions"
     session_dir.mkdir()
 

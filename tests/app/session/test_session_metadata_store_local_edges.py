@@ -7,11 +7,11 @@ import types
 
 import pytest
 
+from server.app.storage import session_metadata as session_store
+
 
 @pytest.fixture
 def session_store_local(monkeypatch, tmp_path):
-    session_store = pytest.importorskip("server.app.storage.session_metadata")
-
     session_dir = tmp_path / "sessions"
     session_dir.mkdir()
 
