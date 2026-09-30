@@ -31,7 +31,6 @@ from .cloud import (
 from .common import (
     StorageReadError,
     assert_contained_blob_name,
-    build_session_scoped_prefix,
     file_lock,
     resolve_contained_path,
     resolve_session_id,
@@ -61,7 +60,6 @@ def _artifact_dir() -> str:
     return store_dir("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", "credential-artifacts")
 
 
-_USER_FOLDER_PREFIX = "user-data"
 _ARTIFACT_SUBDIR = "credential-artifacts"
 # Striped per-key locks: serialise read-merge-write for one artifact without
 # making every artifact operation in the process wait on network I/O. They keep
@@ -106,13 +104,7 @@ def _artifact_filename(storage_id: str) -> str:
 
 
 def _artifact_prefix(session_id: str) -> str:
-    return build_session_scoped_prefix(
-        session_id,
-        user_folder_prefix=_USER_FOLDER_PREFIX,
-        subdir=_ARTIFACT_SUBDIR,
-        type_error="Session identifier must be a string",
-        empty_error="Session identifier must be a string",
-    )
+    return common.session_prefix(session_id, _ARTIFACT_SUBDIR)
 
 
 def _artifact_blob(storage_id: str, session_id: str) -> str:

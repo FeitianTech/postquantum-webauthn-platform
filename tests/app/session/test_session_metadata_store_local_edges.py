@@ -35,7 +35,7 @@ def test_user_root_prefix_rejects_missing_or_blank_session_id(session_store_loca
 def test_base_prefix_returns_empty_for_blank_folder_prefix(session_store_local, monkeypatch):
     session_store, _ = session_store_local
 
-    monkeypatch.setattr(session_store, "_USER_FOLDER_PREFIX", "   ")
+    monkeypatch.setattr(storage_common, "USER_FOLDER_PREFIX", "   ")
 
     assert session_store._base_prefix() == ""
 

@@ -19,10 +19,6 @@ from .cloud import (
     list_prefixes,
     upload_bytes,
 )
-from .common import (
-    build_session_root_prefix,
-    build_session_scoped_prefix,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +38,6 @@ __all__ = [
     "write_file",
 ]
 
-_USER_FOLDER_PREFIX = "user-data"
 _METADATA_SUBDIR = "metadata"
 _LAST_ACCESS_BLOB = ".last-access"
 
@@ -57,22 +52,11 @@ def session_metadata_dir() -> str:
 
 
 def _user_root_prefix(session_id: str) -> str:
-    return build_session_root_prefix(
-        session_id,
-        user_folder_prefix=_USER_FOLDER_PREFIX,
-        type_error="Session identifier is required",
-        empty_error="Session identifier is required",
-    )
+    return common.session_root_prefix(session_id)
 
 
 def _metadata_prefix(session_id: str) -> str:
-    return build_session_scoped_prefix(
-        session_id,
-        user_folder_prefix=_USER_FOLDER_PREFIX,
-        subdir=_METADATA_SUBDIR,
-        type_error="Session identifier is required",
-        empty_error="Session identifier is required",
-    )
+    return common.session_prefix(session_id, _METADATA_SUBDIR)
 
 
 def _last_access_blob(session_id: str) -> str:
@@ -89,7 +73,7 @@ def _session_blob(session_id: str, name: str) -> str:
 
 
 def _base_prefix() -> str:
-    cleaned = (_USER_FOLDER_PREFIX or "").strip().strip("/")
+    cleaned = (common.USER_FOLDER_PREFIX or "").strip().strip("/")
     return f"{cleaned}/" if cleaned else ""
 
 

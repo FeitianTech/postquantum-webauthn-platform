@@ -16,17 +16,18 @@ from . import cloud
 from .cloud import build_blob_name, normalise_blob_prefix
 
 __all__ = [
+    "USER_FOLDER_PREFIX",
     "InvalidStorageIdentifier",
     "StorageReadError",
     "assert_contained_blob_name",
-    "build_session_root_prefix",
-    "build_session_scoped_prefix",
     "file_digest",
     "file_lock",
     "normalize_nonempty_str",
     "resolve_contained_path",
     "replace_file",
     "resolve_session_id",
+    "session_prefix",
+    "session_root_prefix",
     "using_gcs",
     "validate_storage_component",
 ]
@@ -85,40 +86,25 @@ def resolve_session_id(session_id: str | None, fallback: Callable[[], str]) -> s
     return fallback()
 
 
-def build_session_root_prefix(
-    session_id: Any,
-    *,
-    user_folder_prefix: str,
-    type_error: str = "Session identifier must be a string",
-    empty_error: str = "Session identifier is empty",
-) -> str:
-    """Build a session root blob prefix for a module-specific user folder."""
+# On Cloud Storage every store keeps a visitor's objects under user-data/<session>/<store>/.
+USER_FOLDER_PREFIX = "user-data"
+
+
+def session_root_prefix(session_id: Any) -> str:
+    """``user-data/<session>``: the root of a visitor's objects on Cloud Storage."""
 
     cleaned = normalize_nonempty_str(
         session_id,
-        type_error=type_error,
-        empty_error=empty_error,
+        type_error="Session identifier must be a string",
+        empty_error="Session identifier is empty",
     )
-    return build_blob_name(cleaned, prefix=user_folder_prefix)
+    return build_blob_name(cleaned, prefix=USER_FOLDER_PREFIX)
 
 
-def build_session_scoped_prefix(
-    session_id: Any,
-    *,
-    user_folder_prefix: str,
-    subdir: str,
-    type_error: str = "Session identifier must be a string",
-    empty_error: str = "Session identifier is empty",
-) -> str:
-    """Build a ``<user-folder>/<session>/<subdir>`` blob prefix."""
+def session_prefix(session_id: Any, subdir: str) -> str:
+    """``user-data/<session>/<subdir>``: where one store keeps a visitor's objects."""
 
-    root = build_session_root_prefix(
-        session_id,
-        user_folder_prefix=user_folder_prefix,
-        type_error=type_error,
-        empty_error=empty_error,
-    )
-    return build_blob_name(subdir, prefix=root)
+    return build_blob_name(subdir, prefix=session_root_prefix(session_id))
 
 
 def validate_storage_component(

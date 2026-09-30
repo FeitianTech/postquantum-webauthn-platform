@@ -30,7 +30,6 @@ from .cloud import (
 from .common import (
     StorageReadError,
     assert_contained_blob_name,
-    build_session_scoped_prefix,
     file_digest,
     file_lock,
     replace_file,
@@ -50,7 +49,6 @@ __all__ = [
 ]
 
 
-_USER_FOLDER_PREFIX = "user-data"
 _USER_CREDENTIAL_SUBDIR = "credentials"
 
 
@@ -91,11 +89,7 @@ def _validate_session_id(session_id: Any) -> str:
 
 
 def _credential_prefix(session_id: str) -> str:
-    return build_session_scoped_prefix(
-        _validate_session_id(session_id),
-        user_folder_prefix=_USER_FOLDER_PREFIX,
-        subdir=_USER_CREDENTIAL_SUBDIR,
-    )
+    return common.session_prefix(_validate_session_id(session_id), _USER_CREDENTIAL_SUBDIR)
 
 
 def _credential_blob(name: str, session_id: str) -> str:
