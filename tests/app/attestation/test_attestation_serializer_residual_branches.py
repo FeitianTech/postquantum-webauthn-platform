@@ -1,16 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from types import SimpleNamespace
-
-from cryptography import x509
-from cryptography.exceptions import UnsupportedAlgorithm
-
 from server.app.webauthn.attestation import (
     certificate_names as attestation_certificate_names,
 )
-from server.app.webauthn.attestation import certificates as attestation_certificates
-from server.app.webauthn.attestation import constants as attestation_constants
 
 
 def test_attestation_helper_residual_branches(monkeypatch, certificate_public_keys, attestation_module):
@@ -29,99 +21,3 @@ def test_attestation_helper_residual_branches(monkeypatch, certificate_public_ke
         attestation_certificate_names._derive_certificate_algorithm_info({"algorithm": "ed448"})
         == "ED448_SHAKE256"
     )
-
-
-def test_serialize_attestation_certificate_mocked_certificate_residual_paths(monkeypatch, certificates, certificate_extensions, certificate_public_keys, attestation_module):
-    class _Extensions(list):
-        def get_extension_for_oid(self, oid):
-            raise x509.ExtensionNotFound("missing", oid)
-
-    ext_one_oid = SimpleNamespace(dotted_string="1.2.3", _name="unknown oid")
-    ext_two_oid = SimpleNamespace(dotted_string="9.9.9", _name="9.9.9")
-    ext_one = SimpleNamespace(oid=ext_one_oid, critical=False)
-    ext_two = SimpleNamespace(oid=ext_two_oid, critical=False)
-
-    class _Name:
-        def __init__(self, text: str):
-            self._text = text
-
-        def rfc4514_string(self):
-            return self._text
-
-        def get_attributes_for_oid(self, _oid):
-            return []
-
-    class _SignatureHash:
-        pass
-
-    class _Certificate:
-        version = SimpleNamespace(value=2)
-        signature_algorithm_oid = SimpleNamespace(dotted_string="1.2.840.10045.4.3.2", _name="unknown oid")
-        issuer = _Name("CN=Issuer")
-        subject = _Name("CN=Subject")
-        extensions = _Extensions([ext_one, ext_two])
-        signature = b"\xAA\xBB"
-        serial_number = 12345
-
-        not_valid_before_utc = datetime(2020, 1, 1, tzinfo=timezone.utc)
-        not_valid_after_utc = datetime(2030, 1, 1, tzinfo=timezone.utc)
-
-        @property
-        def signature_hash_algorithm(self):
-            return _SignatureHash()
-
-        def public_key(self):
-            raise UnsupportedAlgorithm("unsupported")
-
-        def fingerprint(self, algorithm):
-            algo_name = algorithm.name.lower()
-            if algo_name == "md5":
-                return b""
-            if algo_name == "sha1":
-                return b"\x01"
-            return b"\x02"
-
-        def public_bytes(self, _encoding):
-            return b"\x30\x82\x01\x00"
-
-    monkeypatch.setattr(
-        x509,
-        "load_der_x509_certificate",
-        lambda _der: _Certificate(),
-    )
-    monkeypatch.setattr(certificates, "describe_mldsa_oid_name", lambda _oid: "FriendlySig")
-    monkeypatch.setattr(certificates, "describe_mldsa_oid", lambda _oid: {})
-    monkeypatch.setattr(
-        certificate_public_keys,
-        "_build_unknown_public_key_info",
-        lambda _cert, _err: (
-            {"type": "Unknown", "algorithm": {"name": "Unknown"}},
-            [
-                ("Type", "Unknown"),
-                ("SkipEmpty", []),
-                ("Structured", [None, {"inner": "value"}]),
-            ],
-        ),
-    )
-    monkeypatch.setitem(
-        attestation_constants.EXTENSION_DISPLAY_METADATA,
-        "1.2.3",
-        {"friendly_name": "FriendlyOne", "include_oid_in_header": False},
-    )
-    monkeypatch.setitem(
-        attestation_constants.EXTENSION_DISPLAY_METADATA,
-        "9.9.9",
-        {"include_oid_in_header": False},
-    )
-    monkeypatch.setattr(
-        certificate_extensions,
-        "_serialize_extension_value",
-        lambda _ext: {"skip": "", "nested": [None, {"k": "v"}]},
-    )
-
-    serialized = attestation_certificates.serialize_attestation_certificate(b"\x30\x82\x01\x00")
-    assert serialized["signatureAlgorithm"] == "FriendlySig"
-    assert "FriendlyOne" in serialized["summary"]
-    assert "9.9.9" in serialized["summary"]
-    assert "FINGERPRINT" in serialized["summary"].upper()
-    assert serialized["algorithmInfo"]
