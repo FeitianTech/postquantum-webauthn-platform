@@ -3,9 +3,9 @@
 # image, CI and local venvs all install from. After editing, run `uv lock`.
 
 [project]
-name = "fido2-example-server"
+name = "pqc-webauthn-platform"
 version = "0.1.0"
-description = "Example server for python-fido2"
+description = "FIDO2/WebAuthn post-quantum test platform"
 authors = [{ name = "Rain Zhang", email = "rainzhang.zty@gmail.com" }]
 license = "Apache-2.0"
 requires-python = ">=3.12"
