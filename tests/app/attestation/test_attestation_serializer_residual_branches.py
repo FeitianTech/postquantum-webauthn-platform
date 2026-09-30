@@ -4,14 +4,11 @@ import uuid
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
-import pytest
 from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
 
 
 def test_attestation_helper_residual_branches(monkeypatch, certificate_public_keys, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     attestation_module.augment_aaguid_fields(("not", "mutable"))
 
     monkeypatch.setattr(
@@ -70,8 +67,6 @@ def test_attestation_helper_residual_branches(monkeypatch, certificate_public_ke
 
 
 def test_serialize_attestation_certificate_mocked_certificate_residual_paths(monkeypatch, certificates, certificate_extensions, certificate_public_keys, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     class _Extensions(list):
         def get_extension_for_oid(self, oid):
             raise x509.ExtensionNotFound("missing", oid)

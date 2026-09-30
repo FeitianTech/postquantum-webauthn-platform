@@ -14,11 +14,13 @@ exercising the real code.
 
 from __future__ import annotations
 
+import importlib
+
 import pytest
 
 
 def _fragment(name: str):
-    return pytest.importorskip(f"server.app.webauthn.attestation.{name}")
+    return importlib.import_module(f"server.app.webauthn.attestation.{name}")
 
 
 @pytest.fixture
@@ -75,4 +77,4 @@ def checks():
 def metadata_module():
     """``server.app.webauthn.metadata`` -- the fragments call into it through the module."""
 
-    return pytest.importorskip("server.app.webauthn.metadata")
+    return importlib.import_module("server.app.webauthn.metadata")

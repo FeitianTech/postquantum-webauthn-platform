@@ -30,8 +30,6 @@ def _self_signed_cert_der() -> bytes:
 
 
 def test_collect_trust_path_entries_and_certificate_bytes_coercion_helpers(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     trust_path = attestation_module._collect_trust_path_entries(
         [b"leaf", bytearray(b"intermediate"), "ignored", ByteBuffer(b"root")]
     )
@@ -45,8 +43,6 @@ def test_collect_trust_path_entries_and_certificate_bytes_coercion_helpers(attes
 
 
 def test_collect_metadata_root_certificates_supports_object_and_mapping_shapes(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     root_a = b"root-a"
     root_b = b"root-b"
 
@@ -70,7 +66,6 @@ def test_collect_metadata_root_certificates_supports_object_and_mapping_shapes(a
 
 
 def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
     app = entry_app()
 
     cert_der = _self_signed_cert_der()
@@ -114,8 +109,6 @@ def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monke
 
 
 def test_resolve_root_validity_handles_partial_success_and_failures(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     assert (
         attestation_module._resolve_root_validity(
             {"trusted_ca": True, "chain": True, "fido_mds": None}
@@ -137,8 +130,6 @@ def test_resolve_root_validity_handles_partial_success_and_failures(attestation_
 
 
 def test_serialize_extension_value_handles_known_unrecognized_oids_and_transport_bits(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     device_oid = ObjectIdentifier("1.3.6.1.4.1.41482.2")
     device_ext = SimpleNamespace(
         oid=device_oid,
@@ -185,8 +176,6 @@ def test_parse_fido_transport_bitfield_names_nothing_for_what_is_not_a_bit_strin
 
 
 def test_coerce_attestation_certificate_bytes_handles_mapping_variants(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     cert_bytes = b"\x30\x82\x01\x00"
     pem = (
         "-----BEGIN CERTIFICATE-----\n"

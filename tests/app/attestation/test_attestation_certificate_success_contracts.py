@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
-import pytest
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, rsa
@@ -51,8 +50,6 @@ def _build_certificate(
 
 
 def test_serialize_attestation_certificate_rsa_success_path_includes_extensions_and_summary(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     custom_device_identifier = x509.UnrecognizedExtension(
         ObjectIdentifier("1.3.6.1.4.1.41482.2"),
         b"\x04\x04demo",
@@ -83,8 +80,6 @@ def test_serialize_attestation_certificate_rsa_success_path_includes_extensions_
 
 
 def test_serialize_attestation_certificate_handles_ec_and_ed25519_public_key_variants(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     ec_cert = _build_certificate(
         ec.generate_private_key(ec.SECP256R1()),
         subject_cn="EC Device",
@@ -105,8 +100,6 @@ def test_serialize_attestation_certificate_handles_ec_and_ed25519_public_key_var
 
 
 def test_extract_attestation_details_populates_chain_and_extension_outputs(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     cert_bytes = _build_certificate(
         rsa.generate_private_key(public_exponent=65537, key_size=2048),
         subject_cn="Chain Device",
@@ -160,8 +153,6 @@ def test_extract_attestation_details_populates_chain_and_extension_outputs(monke
 
 
 def test_extract_certificate_aaguid_reads_aaguid_extension_bytes(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     aaguid = bytes.fromhex("00112233445566778899aabbccddeeff")
     extension = x509.UnrecognizedExtension(attestation_module.AAGUID_EXTENSION_OID, b"\x04\x10" + aaguid)
     cert_bytes = _build_certificate(
@@ -175,8 +166,6 @@ def test_extract_certificate_aaguid_reads_aaguid_extension_bytes(attestation_mod
 
 
 def test_serialize_extension_value_handles_known_extension_types_from_real_certificate(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     cert_bytes = _build_certificate(
         rsa.generate_private_key(public_exponent=65537, key_size=2048),
         subject_cn="Ext Subject",
@@ -196,8 +185,6 @@ def test_serialize_extension_value_handles_known_extension_types_from_real_certi
 
 
 def test_derive_certificate_algorithm_info_formats_signature_components_consistently(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     assert (
         attestation_module._derive_certificate_algorithm_info(
             {

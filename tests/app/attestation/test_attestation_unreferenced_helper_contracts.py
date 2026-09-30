@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 from datetime import datetime, timedelta, timezone
 
-import pytest
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, rsa
@@ -30,16 +29,12 @@ def _self_signed_cert_der() -> bytes:
 
 
 def test_bytes_helpers(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     assert attestation_module._coerce_bytes(ByteBuffer(b"abc")) == b"abc"
     assert attestation_module._coerce_bytes(memoryview(b"xyz")) == b"xyz"
     assert attestation_module._coerce_bytes("abc") is None
 
 
 def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     app = entry_app()
     monkeypatch.setitem(app.config, "TRUSTED_ATTESTATION_CA_SUBJECTS", ["CN=Root"])
     monkeypatch.setitem(app.config, "TRUSTED_ATTESTATION_CA_FINGERPRINTS", ("abc", "def"))
@@ -54,8 +49,6 @@ def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch, attestation_modu
 
 
 def test_format_helpers(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     assert attestation_module._format_algorithm_component(" RSASSA PSS ") == "RSASSAPSS"
     assert attestation_module._format_algorithm_component("—") == ""
 
@@ -69,8 +62,6 @@ def test_format_helpers(attestation_module):
 
 
 def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(monkeypatch, certificate_public_keys, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     monkeypatch.setattr(
         certificate_public_keys,
         "extract_certificate_public_key_info",
@@ -111,8 +102,6 @@ def test_fallback_certificate_serialization_and_unknown_public_key_info_helpers(
 
 
 def test_public_key_serialization_paths(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     ec_info = attestation_module._serialize_public_key_info(ec.generate_private_key(ec.SECP256R1()).public_key())
     rsa_info = attestation_module._serialize_public_key_info(rsa.generate_private_key(public_exponent=65537, key_size=2048).public_key())
     ed_info = attestation_module._serialize_public_key_info(ed25519.Ed25519PrivateKey.generate().public_key())

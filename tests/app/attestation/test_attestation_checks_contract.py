@@ -91,8 +91,6 @@ class _FakeCertificate:
 
 
 def test_perform_attestation_checks_reports_core_validation_failures(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     expected_challenge = b"expected-challenge"
     actual_challenge = b"different-challenge"
 
@@ -138,8 +136,6 @@ def test_perform_attestation_checks_reports_core_validation_failures(monkeypatch
 
 
 def test_perform_attestation_checks_accepts_valid_none_attestation(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     rp_id = "example.com"
     expected_challenge = b"valid-challenge"
 
@@ -181,8 +177,6 @@ def test_perform_attestation_checks_accepts_valid_none_attestation(monkeypatch, 
 
 
 def test_perform_attestation_checks_returns_registration_parse_error(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     def _raise_parse_error(_value):
         raise ValueError("invalid payload")
 
@@ -213,8 +207,6 @@ def test_perform_attestation_checks_returns_registration_parse_error(monkeypatch
     ],
 )
 def test_resolve_root_validity_matrix(checks, expected, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     assert attestation_module._resolve_root_validity(checks) is expected
 
 
@@ -228,14 +220,10 @@ def test_resolve_root_validity_matrix(checks, expected, attestation_module):
     ],
 )
 def test_resolve_root_validity_additional_matrix_cases(checks, expected, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     assert attestation_module._resolve_root_validity(checks) is expected
 
 
 def test_resolve_root_validity_returns_none_when_all_checks_unknown(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     assert (
         attestation_module._resolve_root_validity(
             {

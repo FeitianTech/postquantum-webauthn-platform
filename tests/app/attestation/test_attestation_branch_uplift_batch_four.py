@@ -1,22 +1,17 @@
 from __future__ import annotations
 
-import pytest
 from cryptography import x509
 
 from tests.app.entry_app import entry_app
 
 
 def test_hex_format_helpers_cover_empty_odd_and_invalid_inputs(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     assert attestation_module.format_hex_bytes_lines(b"") == []
     assert attestation_module.format_hex_string_lines("abc", bytes_per_line=2) == ["0a:bc"]
     assert attestation_module.format_hex_string_lines("zz") == ["zz"]
 
 
 def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_shapes(monkeypatch, formatting, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     assert attestation_module._extract_certificate_aaguid(b"") == b""
 
     class _MissingExtensionCert:
@@ -77,14 +72,10 @@ def test_extract_certificate_aaguid_handles_missing_and_nonstandard_extension_sh
 
 
 def test_coerce_certificate_bytes_non_bytes_path(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     assert attestation_module._coerce_certificate_bytes(12345) is None
 
 
 def test_collect_metadata_roots_handles_singleton_and_missing_candidates(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     metadata_entry = {
         "attestationRootCertificates": "AQID",
     }
@@ -95,7 +86,6 @@ def test_collect_metadata_roots_handles_singleton_and_missing_candidates(attesta
 
 
 def test_trusted_ca_helpers_cover_list_configs_and_subject_parse_failure(monkeypatch, trust, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
     app = entry_app()
 
     monkeypatch.setitem(

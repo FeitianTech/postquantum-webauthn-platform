@@ -4,10 +4,11 @@ import base64
 import hashlib
 from types import SimpleNamespace
 
-import pytest
 from cryptography import x509
 from fido2.attestation import Attestation
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
+
+from server.app.webauthn import attestation as attestation_module
 
 
 class _CredentialData:
@@ -48,8 +49,6 @@ def _registration(attestation_object, client_data):
 
 
 def test_coerce_certificate_bytes_falls_back_to_hex_parsing_when_base64_decode_fails(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     monkeypatch.setattr(
         base64,
         "b64decode",
@@ -61,8 +60,6 @@ def test_coerce_certificate_bytes_falls_back_to_hex_parsing_when_base64_decode_f
 
 
 def test_extract_certificate_aaguid_handles_non_hex_string_extension_values(monkeypatch, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     class _ExtensionValue:
         value = "Z" * 16
 
@@ -87,8 +84,6 @@ def test_extract_certificate_aaguid_handles_non_hex_string_extension_values(monk
 
 
 def test_coerce_attestation_certificate_bytes_string_path_falls_back_to_base64url():
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     raw = b"\xfb\xef\xbe"
     standard = base64.b64encode(raw).decode("ascii")
     urlsafe = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
@@ -104,15 +99,11 @@ def test_coerce_attestation_certificate_bytes_string_path_falls_back_to_base64ur
 
 
 def test_normalise_signature_algorithm_name_covers_ed448_and_dsa_paths(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     assert attestation_module._normalise_signature_algorithm_name("ed448 with shake") == "ED448"
     assert attestation_module._normalise_signature_algorithm_name("dsa-with-sha1") == "DSA"
 
 
 def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, metadata_module, certificates, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _AuthData(rp_id="example.com", flags=flags)
     challenge = b"raw:text:challenge"
@@ -153,8 +144,6 @@ def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_a
 
 
 def test_perform_attestation_checks_falls_back_to_public_key_options_when_state_hex_wrapper_is_invalid(monkeypatch, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _AuthData(rp_id="example.com", flags=flags)
     challenge = b"fallback-challenge"

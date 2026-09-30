@@ -6,7 +6,6 @@ import math
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
-import pytest
 from cryptography import x509
 from cryptography.x509.oid import NameOID, ObjectIdentifier
 from fido2.attestation import InvalidSignature
@@ -67,8 +66,6 @@ def _registration(attestation_object, client_data):
 
 
 def test_perform_attestation_checks_rejects_non_mapping_response(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     result = attestation_module.perform_attestation_checks(
         response=["not-a-mapping"],
         state=None,
@@ -82,8 +79,6 @@ def test_perform_attestation_checks_rejects_non_mapping_response(attestation_mod
 
 
 def test_perform_attestation_checks_coerces_challenge_from_base64_and_hex_wrappers(monkeypatch, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _AuthData(rp_id="example.com", flags=flags)
     challenge = b"challenge-from-hex"
@@ -115,8 +110,6 @@ def test_perform_attestation_checks_coerces_challenge_from_base64_and_hex_wrappe
 
 
 def test_perform_attestation_checks_accepts_base64url_wrapped_challenge_and_enum_uv(monkeypatch, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     flags = int(
         AuthenticatorData.FLAG.UP
         | AuthenticatorData.FLAG.UV
@@ -153,8 +146,6 @@ def test_perform_attestation_checks_accepts_base64url_wrapped_challenge_and_enum
 
 
 def test_perform_attestation_checks_handles_broken_credential_shapes(monkeypatch, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     class _BrokenPublicKey:
         def __iter__(self):
             raise TypeError("cannot iterate")
@@ -201,8 +192,6 @@ def test_perform_attestation_checks_handles_broken_credential_shapes(monkeypatch
 
 
 def test_perform_attestation_checks_uses_fallback_metadata_lookup_and_mapping_roots(monkeypatch, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     class _MetadataAaguid:
         def __str__(self):
             return "00112233-4455-6677-8899-aabbccddeeff"
@@ -244,8 +233,6 @@ def test_perform_attestation_checks_uses_fallback_metadata_lookup_and_mapping_ro
 
 
 def test_perform_attestation_checks_ignores_metadata_fallback_lookup_exceptions(monkeypatch, metadata_module, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     class _FailingVerifier:
         def find_entry_by_aaguid(self, _aaguid):
             raise RuntimeError("lookup failure")
@@ -275,8 +262,6 @@ def test_perform_attestation_checks_ignores_metadata_fallback_lookup_exceptions(
 
 
 def test_evaluate_classical_attestation_root_handles_missing_trust_path_and_metadata(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     outcome = attestation_module._evaluate_classical_attestation_root(
         SimpleNamespace(att_stmt={}),
         SimpleNamespace(trust_path=[]),
@@ -292,8 +277,6 @@ def test_evaluate_classical_attestation_root_handles_missing_trust_path_and_meta
 
 
 def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures(monkeypatch, classical, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     def _exploding(_verifier, _att_obj, _client_hash):
         raise RuntimeError("verifier exploded")
 
@@ -324,8 +307,6 @@ def test_evaluate_classical_attestation_root_records_parse_and_verifier_failures
 
 
 def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_errors(monkeypatch, trust, classical, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     now = datetime.now(timezone.utc)
     valid_cert = SimpleNamespace(
         subject=SimpleNamespace(rfc4514_string=lambda: "CN=Leaf"),
@@ -365,8 +346,6 @@ def test_evaluate_classical_attestation_root_reports_untrusted_root_and_mds_erro
 
 
 def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(monkeypatch, trust, metadata_module, classical, attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     now = datetime.now(timezone.utc)
     expired_cert = SimpleNamespace(
         subject=SimpleNamespace(rfc4514_string=lambda: "CN=Expired"),
@@ -410,8 +389,6 @@ def test_evaluate_classical_attestation_root_forces_chain_false_on_expired_leaf(
 
 
 def test_numeric_aaguid_and_extension_helpers_cover_fallback_paths(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     assert attestation_module.coerce_non_negative_int(True) is None
     assert attestation_module.coerce_non_negative_int(-1) is None
     assert attestation_module.coerce_non_negative_int(3.9) == 3
@@ -466,8 +443,6 @@ def test_numeric_aaguid_and_extension_helpers_cover_fallback_paths(attestation_m
 
 
 def test_serialize_extension_value_covers_authority_constraints_and_fallback_repr(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     issuer_name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Demo Issuer")])
     aki = x509.AuthorityKeyIdentifier(
         key_identifier=b"\x01\x02",
@@ -525,8 +500,6 @@ def test_serialize_extension_value_covers_authority_constraints_and_fallback_rep
 
 
 def test_format_x509_name_falls_back_to_string_when_rfc4514_fails(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
-
     class _BrokenName:
         def rfc4514_string(self):
             raise ValueError("cannot format")
