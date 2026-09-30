@@ -143,27 +143,24 @@ def _verify_registration(
 
 def _registration_context(
     uname: Any, response: Any, credential_response: Mapping[str, Any], inputs: Mapping[str, Any], verified: Mapping[str, Any]
-) -> dict[str, Any]:
+) -> registration_record.SimpleRegistration:
     attestation_checks = verified["attestation_checks"]
-    raw_attestation_object_b64 = credential_response.get("attestationObject")
-    return {
-        "uname": uname,
-        "response": response,
-        "credential_response": credential_response,
+    return registration_record.SimpleRegistration(
+        uname=uname,
+        response=response,
         **inputs,
-        "auth_data": verified["auth_data"],
-        "authenticator_attachment_response": normalize_attachment(
+        auth_data=verified["auth_data"],
+        authenticator_attachment_response=normalize_attachment(
             response.get("authenticatorAttachment") if isinstance(response, Mapping) else None
         ),
-        "raw_attestation_object_b64": raw_attestation_object_b64,
-        "raw_attestation_object": raw_attestation_object_b64,
-        "resolved_rp_id": verified["resolved_rp_id"],
-        "attestation_signature_valid": attestation_checks.get("signature_valid"),
-        "attestation_root_valid": attestation_checks.get("root_valid"),
-        "attestation_rp_id_hash_valid": attestation_checks.get("rp_id_hash_valid"),
-        "attestation_aaguid_match": attestation_checks.get("aaguid_match"),
-        "attestation_checks_safe": json_values.make_json_safe(attestation_checks),
-    }
+        raw_attestation_object_b64=credential_response.get("attestationObject"),
+        resolved_rp_id=verified["resolved_rp_id"],
+        attestation_signature_valid=attestation_checks.get("signature_valid"),
+        attestation_root_valid=attestation_checks.get("root_valid"),
+        attestation_rp_id_hash_valid=attestation_checks.get("rp_id_hash_valid"),
+        attestation_aaguid_match=attestation_checks.get("aaguid_match"),
+        attestation_checks_safe=json_values.make_json_safe(attestation_checks),
+    )
 
 
 def _attestation_error_response(attestation_checks: Mapping[str, Any]) -> Any:
@@ -209,24 +206,24 @@ def register_complete():
     if error_response is not None:
         return error_response
 
-    ctx = _registration_context(uname, response, credential_response, inputs, verified)
+    reg = _registration_context(uname, response, credential_response, inputs, verified)
     error_response = _attestation_error_response(verified["attestation_checks"])
     if error_response is not None:
         return error_response
 
-    registration_record.initialize_registration_context(ctx)
-    registration_record.populate_authenticator_data_context(ctx)
-    registration_record.populate_rp_debug_context(ctx)
+    registration_record.initialize_registration_context(reg)
+    registration_record.populate_authenticator_data_context(reg)
+    registration_record.populate_rp_debug_context(reg)
 
     session.pop("register_rp_id", None)
 
-    registration_record.build_stored_credential_context(ctx)
+    registration_record.build_stored_credential_context(reg)
 
-    persist_response = registration_persistence.persist_registration_context(ctx)
+    persist_response = registration_persistence.persist_registration_context(reg)
     if persist_response is not None:
         return persist_response
 
-    return jsonify(registration_record.build_register_complete_response_payload(ctx))
+    return jsonify(registration_record.build_register_complete_response_payload(reg))
 
 
 _SIMPLE_ALLOWED_ALGORITHMS: tuple[int, ...] = tuple(
