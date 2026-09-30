@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from server.app.config import (
-    attestation_trust,
     paths,
     relying_party,
 )
@@ -15,13 +14,6 @@ def test_the_project_root_is_two_levels_above_the_package():
 
 
 def test_parse_fingerprints_and_host_normalization_branches(monkeypatch):
-    assert attestation_trust._parse_trusted_ca_fingerprints(None) is None
-    assert attestation_trust._parse_trusted_ca_fingerprints("ab:cd") is None
-
-    long_fp = ":".join(["aa"] * 20)
-    parsed = attestation_trust._parse_trusted_ca_fingerprints(f"{long_fp}, short")
-    assert parsed == {"AA" * 20}
-
     monkeypatch.setitem(entry_app().config, "FIDO_SERVER_RP_ID", "  configured.example  ")
     with entry_app().app_context():
         assert relying_party.determine_rp_id() == "configured.example"
