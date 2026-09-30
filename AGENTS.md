@@ -185,7 +185,7 @@ their exports or sentences. A new surface splits its logic out here first.
   with `logging.getLogger(__name__)`. On Cloud Run (`K_SERVICE`) the app refuses to start
   without `FIDO_SERVER_SECRET_KEY` or `FIDO_SERVER_SECRET_KEY_FILE`; only local development
   generates `instance/session-secret.key`, and tests never do.
-- `mds/trust.py` (the MDS trust anchor), `mds_blob.py` (the BLOB's chain to that root, which
+- `mds/trust.py` (the MDS trust anchor), `mds/blob.py` (the BLOB's chain to that root, which
   may end in a cross-certificate fido2's `parse_blob` refuses, its signature and payload),
   `mds_snapshot_dir.py` (the snapshot's file names, its directory, the whole-file and `.gz`
   sibling writers) and `mds_snapshot_sets.py` (the snapshot in Cloud Storage) are Flask-free

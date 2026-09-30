@@ -23,7 +23,8 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 # Imported after the sys.path bootstrap above.
-from server.app import mds_blob, mds_snapshot_dir  # noqa: E402
+from server.app import mds_snapshot_dir  # noqa: E402
+from server.app.mds import blob as mds_blob  # noqa: E402
 from server.app.mds.trust import FIDO_METADATA_TRUST_ROOT_CERT  # noqa: E402
 from server.app.mds_snapshot import (  # noqa: E402
     build_bootstrap_snapshot,
@@ -256,7 +257,7 @@ def snapshot_files(
 def _build_verified_snapshot(
     blob: bytes, trust_root: bytes = FIDO_METADATA_TRUST_ROOT_CERT
 ) -> dict[str, object]:
-    """The BLOB's payload as the BLOB has it, once ``mds_blob`` has checked its
+    """The BLOB's payload as the BLOB has it, once ``mds.blob`` has checked its
     signature against the trust root and read it (a BLOB it cannot read fails
     here). Its own JSON rather than fido2's dataclasses, which drop every field
     they do not model: a status report's ``sunsetDate`` or

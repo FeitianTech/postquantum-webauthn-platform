@@ -1,4 +1,4 @@
-"""``mds_blob``: the MDS BLOB's chain to the pinned root, its signature, and its payload.
+"""``mds.blob``: the MDS BLOB's chain to the pinned root, its signature, and its payload.
 
 The chains are real certificates in the shape the FIDO BLOB has: a signing
 certificate, its CA, and a cross-certificate from the pinned root's older
@@ -20,7 +20,7 @@ from cryptography.x509.oid import NameOID
 from fido2.attestation import InvalidSignature, verify_x509_chain
 from fido2.utils import websafe_encode
 
-from server.app import mds_blob
+from server.app.mds import blob as mds_blob
 
 _NOW = datetime.now(timezone.utc)
 
