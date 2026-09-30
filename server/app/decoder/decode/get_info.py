@@ -1,8 +1,8 @@
 """What an authenticatorGetInfo response means: CTAP 2.2 section 6.4, as ``data.getInfoDecoded``.
 
-``ctapDecoded.getInfoResponse`` shows every member as sent (``ctap_views``), and
-the encoder rebuilds it; this is beside it, labelled the same way, and says what
-each member means where the spec says:
+``ctapDecoded.getInfoResponse`` shows every member as sent
+(``ctap_message_view``), and the encoder rebuilds it; this is beside it,
+labelled the same way, and says what each member means where the spec says:
 
 * aaguid as a GUID;
 * each option ID with what its value means and the default when it is absent

@@ -196,9 +196,10 @@ A map read as a CTAP message (makeCredential or getAssertion, request or
 response, or a getInfo response) is shown in `ctapDecoded` as
 `{message: members}`, with its framing in `data.ctap`; `expandedJson` is the same
 view, for makeCredential and getAssertion. The view is built once, from the
-parser's nodes, by `decode/ctap_views.py`, and it shows every member as sent:
-nothing added (no member the map did not hold, no wrapper around one it did),
-nothing dropped (a null is null), nothing re-read (a byte string stays bytes).
+parser's nodes, by `decode/ctap_message_view.py`, and it shows every member as
+sent: nothing added (no member the map did not hold, no wrapper around one it
+did), nothing dropped (a null is null), nothing re-read (a byte string stays
+bytes).
 
 - **Labels** (`decoder/ctap_message.py`): `"1 (fmt)"` for a member CTAP 2.2
   section 6 defines, the number alone for an integer it does not, any other key
@@ -279,8 +280,8 @@ serialise encoder output with cbor2. Every CBOR head either writes goes through
 `decode/ctap.py` and `decode/text.py` are under the module size limit now;
 keep them there by putting new code in a module named for what it does, as
 `ctap_prefix.py` (the command or status byte), `ctap_classify.py` (a map's CTAP
-shape), `ctap_views.py` (the views), `ctap_auth_data.py`, `ctap_self_check.py`,
-`readings.py` (the binary readings), `binary_text.py` (text read as bytes),
+shape), `ctap_message_view.py` (the views), `ctap_auth_data.py`,
+`ctap_self_check.py`, `readings.py` (the binary readings), `binary_text.py` (text read as bytes),
 `pem.py` (a certificate given whole), `attestation_object.py`,
 `credential_json.py` (a PublicKeyCredential, client data or other JSON),
 `findings.py` (collecting and ordering findings), `authenticator_data.py`,

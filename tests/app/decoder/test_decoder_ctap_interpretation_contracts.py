@@ -60,9 +60,9 @@ def test_parse_authenticator_data_bytes_parses_attested_and_extension_sections_w
 def _view(message: str, value: dict) -> dict:
     """The decoder's view of ``value``, a ``message``, built from its parsed nodes."""
 
-    from server.app.decoder.decode import cbor_parser, ctap_views
+    from server.app.decoder.decode import cbor_parser, ctap_message_view
 
-    return ctap_views.view(message, cbor_parser.decode_item(cbor2.dumps(value))[0])
+    return ctap_message_view.view(message, cbor_parser.decode_item(cbor2.dumps(value))[0])
 
 
 def test_bytes_after_auth_data_are_reported_not_read_as_members_and_nothing_is_added():
