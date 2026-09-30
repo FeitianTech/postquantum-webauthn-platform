@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import time
-import uuid
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
@@ -17,9 +16,9 @@ from typing import Any
 from fido2 import cbor
 
 from ... import json_values
-from ...encoding import encode_base64, encode_base64url
+from ...encoding import encode_base64url
 from ...storage import credentials
-from ...webauthn import cose_algorithms, pqc
+from ...webauthn import cose_algorithms, pqc, registration_facts
 
 
 def _attestation_summary(ctx: Mapping[str, Any]) -> tuple[dict[str, Any], Any, list[str]]:
@@ -96,23 +95,6 @@ def _credential_info(ctx: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _record_aaguid(credential_properties: dict[str, Any], credential_data: Any) -> None:
-    aaguid_value = getattr(credential_data, "aaguid", None)
-    if aaguid_value is not None:
-        try:
-            aaguid_bytes = bytes(aaguid_value)
-        except Exception:
-            aaguid_bytes = None
-        if aaguid_bytes is not None and len(aaguid_bytes) == 16:
-            aaguid_hex = aaguid_bytes.hex()
-            credential_properties["aaguid"] = aaguid_hex
-            credential_properties["aaguidHex"] = aaguid_hex
-            try:
-                credential_properties["aaguidGuid"] = str(uuid.UUID(bytes=aaguid_bytes))
-            except ValueError:
-                pass
-
-
 def initialize_registration_context(ctx: dict[str, Any]) -> None:
     attestation_summary, metadata_summary, warnings = _attestation_summary(ctx)
     credential_info = _credential_info(ctx)
@@ -147,7 +129,8 @@ def initialize_registration_context(ctx: dict[str, Any]) -> None:
     if isinstance(ctx["response"], Mapping):
         credential_info["registration_response"] = json_values.make_json_safe(ctx["response"])
 
-    _record_aaguid(credential_properties, ctx["auth_data"].credential_data)
+    _aaguid_bytes, aaguid_hex, aaguid_guid = registration_facts.aaguid_values(ctx["auth_data"].credential_data)
+    registration_facts.record_aaguid(credential_properties, aaguid_hex, aaguid_guid)
 
     ctx["metadata_summary"] = metadata_summary
     ctx["warnings"] = warnings
@@ -181,10 +164,7 @@ def populate_authenticator_data_context(ctx: dict[str, Any]) -> None:
     algoname = pqc.describe_algorithm(cose_algorithms.coerce_cose_algorithm(algo))
 
     flags_value = getattr(ctx["auth_data"], "flags", 0)
-    flags_dict = {
-        flag: bool(flags_value & getattr(ctx["auth_data"].FLAG, flag, 0))
-        for flag in ("UP", "UV", "BE", "BS", "AT", "ED")
-    }
+    flags_dict = registration_facts.flags(ctx["auth_data"])
 
     rp_id_hash_bytes = getattr(ctx["auth_data"], "rp_id_hash", b"")
     if isinstance(rp_id_hash_bytes, (bytearray, memoryview)):
@@ -228,22 +208,6 @@ def populate_authenticator_data_context(ctx: dict[str, Any]) -> None:
     ctx["expected_rp_hash_b64"] = expected_rp_hash_b64
 
 
-def _large_blob_result(client_extension_results: Any) -> bool:
-    large_blob_result = False
-    if isinstance(client_extension_results, Mapping) and "largeBlob" in client_extension_results:
-        large_blob_value = client_extension_results.get("largeBlob")
-        if isinstance(large_blob_value, Mapping):
-            large_blob_result = bool(
-                large_blob_value.get("supported")
-                or large_blob_value.get("written")
-                or large_blob_value.get("blob")
-                or large_blob_value.get("result")
-            )
-        else:
-            large_blob_result = bool(large_blob_value)
-    return large_blob_result
-
-
 def _user_handle_bytes(user_info: Mapping[str, Any]) -> bytes:
     user_handle_value = user_info.get("user_handle")
     if isinstance(user_handle_value, (bytes, bytearray, memoryview)):
@@ -256,7 +220,7 @@ def _relying_party_info(
     *,
     registration_timestamp: str,
     credential_ids: tuple[str, str, str],
-    aaguid_bytes: bytes,
+    aaguid: tuple[bytes, str | None, str | None],
     large_blob_result: bool,
     user_handle_bytes: bytes,
 ) -> dict[str, Any]:
@@ -290,18 +254,12 @@ def _relying_party_info(
         "largeBlob": large_blob_result,
         "publicKeyAlgorithm": ctx["algo"],
         "registrationData": rp_registration_data,
-        "userHandle": {
-            "base64": encode_base64(user_handle_bytes),
-            "base64url": encode_base64url(user_handle_bytes),
-            "hex": user_handle_bytes.hex(),
-        },
+        "userHandle": registration_facts.byte_forms(user_handle_bytes),
     }
 
+    aaguid_bytes, aaguid_hex, aaguid_guid = aaguid
     if aaguid_bytes:
-        rp_info["aaguid"] = {
-            "raw": aaguid_bytes.hex(),
-            "guid": str(uuid.UUID(bytes=aaguid_bytes)) if len(aaguid_bytes) == 16 else None,
-        }
+        rp_info["aaguid"] = registration_facts.aaguid_block(aaguid_hex, aaguid_guid)
     return rp_info
 
 
@@ -325,19 +283,13 @@ def populate_rp_debug_context(ctx: dict[str, Any]) -> None:
     registration_timestamp = datetime.fromtimestamp(
         ctx["credential_info"]["registration_time"], timezone.utc
     ).isoformat()
-    large_blob_result = _large_blob_result(ctx["client_extension_results"])
+    large_blob_result = registration_facts.large_blob_result(ctx["client_extension_results"])
 
-    credential_id_bytes = ctx["auth_data"].credential_data.credential_id
-    credential_ids = (
-        credential_id_bytes.hex(),
-        encode_base64(credential_id_bytes),
-        encode_base64url(credential_id_bytes),
-    )
+    credential_id_forms = registration_facts.byte_forms(ctx["auth_data"].credential_data.credential_id)
+    credential_ids = (credential_id_forms["hex"], credential_id_forms["base64"], credential_id_forms["base64url"])
 
-    try:
-        aaguid_bytes = bytes(ctx["auth_data"].credential_data.aaguid)
-    except Exception:
-        aaguid_bytes = b""
+    aaguid_bytes, aaguid_hex, aaguid_guid = registration_facts.aaguid_values(ctx["auth_data"].credential_data)
+    aaguid_bytes = aaguid_bytes or b""
 
     cose_public_key = dict(getattr(ctx["auth_data"].credential_data, "public_key", {}))
     public_key_bytes = cbor.encode(cose_public_key)
@@ -347,7 +299,7 @@ def populate_rp_debug_context(ctx: dict[str, Any]) -> None:
         ctx,
         registration_timestamp=registration_timestamp,
         credential_ids=credential_ids,
-        aaguid_bytes=aaguid_bytes,
+        aaguid=(aaguid_bytes, aaguid_hex, aaguid_guid),
         large_blob_result=large_blob_result,
         user_handle_bytes=user_handle_bytes,
     )

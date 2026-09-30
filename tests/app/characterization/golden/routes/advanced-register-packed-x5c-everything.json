@@ -786,7 +786,7 @@
    "stored": [
     {
      "file": "artifacts/VRJf72bDgaMlsA4lFvicETd02L9bX7zOxiqEty5JtjQ/226feaa5be0796b1c34f27fe5a7101b8fdbbd7e38874fdd5f6d9a257f0a0a268.json",
-     "sha256": "a3b916d8ff3249be25466efe5b1fa6b7296df5a5da2641b5b15bdf8e4333589a",
+     "sha256": "d29d44b68de4070c8c78b9a982fc08a9e74c2ee5dc97c4ed2dd612b7fcdccc29",
      "content": {
       "storageId": "HhfJJzOBVmmUZYuGYc2aY9SM::1a0c4506c00::02f5575ac1c848f2bfd09f36c6fe1da5",
       "createdAt": 1790000000.0,
@@ -883,12 +883,12 @@
            }
           },
           "flags": {
-           "AT": true,
+           "UP": true,
+           "UV": true,
            "BE": false,
            "BS": false,
-           "ED": false,
-           "UP": true,
-           "UV": true
+           "AT": true,
+           "ED": false
           },
           "signatureCounter": 0,
           "attestationChecks": {

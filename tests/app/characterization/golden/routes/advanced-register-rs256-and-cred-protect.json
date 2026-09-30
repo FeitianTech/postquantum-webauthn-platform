@@ -503,7 +503,7 @@
    "stored": [
     {
      "file": "artifacts/UY1Q3aJ51FaIt4g0lxH6dHI6zZGMYthL9vyCT-NEfIA/e0a7d07676dd951985997c62669fa2e54edef57021a1573bd841aa3193af46da.json",
-     "sha256": "77b875dc20bd9167e3b9dd84fdd1c6251960a351ddc9e3f2330f55e7a4736cf5",
+     "sha256": "25fcd1276dd98a5a29ba17246d3d3962ae3ee1f62b87723845037c9f34953a1b",
      "content": {
       "storageId": "cOGTrHbpGdKgKbjwbVxTSVV4::1a0c4506c00::4c2b8bcaeabd4dd8ae3e09ee7e49a620",
       "createdAt": 1790000000.0,
@@ -577,12 +577,12 @@
            "largeBlob": true
           },
           "flags": {
-           "AT": true,
+           "UP": true,
+           "UV": true,
            "BE": false,
            "BS": false,
-           "ED": false,
-           "UP": true,
-           "UV": true
+           "AT": true,
+           "ED": false
           },
           "signatureCounter": 0,
           "attestationChecks": {
@@ -1284,7 +1284,7 @@
    "stored": [
     {
      "file": "artifacts/UY1Q3aJ51FaIt4g0lxH6dHI6zZGMYthL9vyCT-NEfIA/675997dfdc1e95df89f6547473cea136ec23678ebf65b62fdadd2ead7a29e4ca.json",
-     "sha256": "d2c30b183b9e227c42bcfc7b1b5551d6adbd69ab231dabf918d7965f97e54691",
+     "sha256": "693e3d5d133c2cf254a0885bc48c349cdf825431257b2994fe35918cc813581b",
      "content": {
       "storageId": "cOGTrHbpGdKgKbjwbVxTSVV4::1a0c4506c00::43fbae171d324f4e8953762ba73f896c",
       "createdAt": 1790000000.0,
@@ -1358,12 +1358,12 @@
            "largeBlob": false
           },
           "flags": {
-           "AT": true,
+           "UP": true,
+           "UV": true,
            "BE": false,
            "BS": false,
-           "ED": false,
-           "UP": true,
-           "UV": true
+           "AT": true,
+           "ED": false
           },
           "signatureCounter": 0,
           "attestationChecks": {
@@ -2065,7 +2065,7 @@
    "stored": [
     {
      "file": "artifacts/UY1Q3aJ51FaIt4g0lxH6dHI6zZGMYthL9vyCT-NEfIA/3f3383afd58bfd3c98c684f082245fca9ba607153b453e3c9522c3995525f02f.json",
-     "sha256": "ef4ddda400e92f88129600788e5a323bf77ca24563a023002d1f2660ce76944e",
+     "sha256": "269926856df2df1f99b808cf532f354672ccd423f15f7d8a22285331cdd4dd5f",
      "content": {
       "storageId": "cOGTrHbpGdKgKbjwbVxTSVV4::1a0c4506c00::8e466d9930134a389550cf73e468257a",
       "createdAt": 1790000000.0,
@@ -2139,12 +2139,12 @@
            "largeBlob": true
           },
           "flags": {
-           "AT": true,
+           "UP": true,
+           "UV": true,
            "BE": false,
            "BS": false,
-           "ED": false,
-           "UP": true,
-           "UV": true
+           "AT": true,
+           "ED": false
           },
           "signatureCounter": 0,
           "attestationChecks": {
@@ -2852,7 +2852,7 @@
    "stored": [
     {
      "file": "artifacts/UY1Q3aJ51FaIt4g0lxH6dHI6zZGMYthL9vyCT-NEfIA/68d2c9fd722d84ce5803fa3591e3273cd98356854f3a96dc183001f5563780df.json",
-     "sha256": "edafa243c0d7d2bad9549c32b4d31a48fb6ae6303b9f7a1d6ceb5dc4486f8af2",
+     "sha256": "1af5538fcb9f3c163bab15c3ac1918aedc4c469e408d600ff4e6b3c849127f5e",
      "content": {
       "storageId": "cOGTrHbpGdKgKbjwbVxTSVV4::1a0c4506c00::abf93d5a9d944bc3b84db79e2d75ba5a",
       "createdAt": 1790000000.0,
@@ -2926,12 +2926,12 @@
            "largeBlob": false
           },
           "flags": {
-           "AT": true,
+           "UP": true,
+           "UV": true,
            "BE": false,
            "BS": false,
-           "ED": false,
-           "UP": true,
-           "UV": true
+           "AT": true,
+           "ED": false
           },
           "signatureCounter": 0,
           "attestationChecks": {

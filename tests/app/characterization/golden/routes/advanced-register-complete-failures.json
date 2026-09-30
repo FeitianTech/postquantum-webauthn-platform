@@ -720,7 +720,7 @@
    "stored": [
     {
      "file": "artifacts/RCwQ_e2mdacpbW9TWRyln6Yfq7alEzciAIw_aJmbqK8/1556ed03d42b6fa819390dfecd2e0c56f33656e3b9643f82e651793dfb6cf07f.json",
-     "sha256": "d52c6e2f70a0de9e4340c299cfbf732f794798ed9756f2e4073dad5489c3238f",
+     "sha256": "779502ef5a35ace7b2f657d1b462a27dabf6ce64b48b2f94c8252c15350cf324",
      "content": {
       "storageId": "O-aakOAtlR6RWHdApN4rXqGK::1a0c4506c00::11104dd440fd4448b42ae058ba84b657",
       "createdAt": 1790000000.0,
@@ -788,12 +788,12 @@
           "authenticatorDataHash": "b56fe330e5b37c60d74bbf501c5b0f1d263640fb06e3e2535a8f81c0dabd625d",
           "clientExtensionResults": {},
           "flags": {
-           "AT": true,
+           "UP": true,
+           "UV": true,
            "BE": false,
            "BS": false,
-           "ED": false,
-           "UP": true,
-           "UV": true
+           "AT": true,
+           "ED": false
           },
           "signatureCounter": 0,
           "attestationChecks": {
@@ -1358,7 +1358,7 @@
    "stored": [
     {
      "file": "artifacts/RCwQ_e2mdacpbW9TWRyln6Yfq7alEzciAIw_aJmbqK8/3175a16ee727e093aef7ed1c0312a0e0a08ab32b419fc170e1eb25fc0c183037.json",
-     "sha256": "2f26574df07f8fa5226c3606e8404be7cbc7adc61516f622f681131dad31ed59",
+     "sha256": "f283a8e7088a35592d17157c43dc76389a4b00e8c313914882b0b43d65a508c9",
      "content": {
       "storageId": "O-aakOAtlR6RWHdApN4rXqGK::1a0c4506c00::65bb1f918a5843eaa4a40336688b7e69",
       "createdAt": 1790000000.0,
@@ -1426,12 +1426,12 @@
           "authenticatorDataHash": "b56fe330e5b37c60d74bbf501c5b0f1d263640fb06e3e2535a8f81c0dabd625d",
           "clientExtensionResults": {},
           "flags": {
-           "AT": true,
+           "UP": true,
+           "UV": true,
            "BE": false,
            "BS": false,
-           "ED": false,
-           "UP": true,
-           "UV": true
+           "AT": true,
+           "ED": false
           },
           "signatureCounter": 0,
           "attestationChecks": {
@@ -2727,7 +2727,7 @@
    "stored": [
     {
      "file": "artifacts/RCwQ_e2mdacpbW9TWRyln6Yfq7alEzciAIw_aJmbqK8/18d9a8fd4a5f0233b08a7bb809aa4f6219dad83169dd03676b85c9781de9cc93.json",
-     "sha256": "5d3672296b4d23479eb51b6d1d82856eea8808e701f79eff3589a112fe51e63b",
+     "sha256": "8131aa836a09577317478a9f291ad37a68f1c90ac6476a2f05b71cdb2bed3693",
      "content": {
       "storageId": "O-aakOAtlR6RWHdApN4rXqGK::1a0c4506c00::f86a88600dee46a3bfe2b6122d09b5d5",
       "createdAt": 1790000000.0,
@@ -2795,12 +2795,12 @@
           "authenticatorDataHash": "b56fe330e5b37c60d74bbf501c5b0f1d263640fb06e3e2535a8f81c0dabd625d",
           "clientExtensionResults": {},
           "flags": {
-           "AT": true,
+           "UP": true,
+           "UV": true,
            "BE": false,
            "BS": false,
-           "ED": false,
-           "UP": true,
-           "UV": true
+           "AT": true,
+           "ED": false
           },
           "signatureCounter": 0,
           "attestationChecks": {

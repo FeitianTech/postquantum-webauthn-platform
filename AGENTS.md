@@ -217,7 +217,8 @@ their exports or sentences. A new surface splits its logic out here first.
   `CoseKey` lookups find them), `webauthn/assertion_hash.py` (the Advanced tab's hash choice
   for an assertion), `webauthn/sign_count.py`, `webauthn/client_binary.py` (bytes a client
   sends, read one way for both tabs), `webauthn/client_credentials.py` (a saved credential the
-  page sends back, read into its key material for both tabs). `config/logs.py` holds `fido2.server`'s
+  page sends back, read into its key material for both tabs), `webauthn/registration_facts.py`
+  (what a verified registration's authData and extension outputs say, for both tabs). `config/logs.py` holds `fido2.server`'s
   logger at WARNING: fido2 logs credential IDs at INFO.
 - `storage/` (with `credential_artifacts.py`): every read-modify-write is compare-and-swap; a
   failed read raises `StorageReadError` (503), never a shorter list. **Read `docs/STORAGE.md`

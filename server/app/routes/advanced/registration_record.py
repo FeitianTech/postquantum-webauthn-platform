@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import hashlib
 import time
-import uuid
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any, NamedTuple
@@ -20,7 +19,7 @@ from fido2 import cbor
 from ... import json_values
 from ...encoding import encode_base64, encode_base64url
 from ...storage import credentials
-from ...webauthn import client_binary, cose_algorithms, pqc
+from ...webauthn import client_binary, cose_algorithms, pqc, registration_facts
 from ...webauthn.attestation import aaguid as attestation_aaguid
 
 
@@ -179,38 +178,6 @@ def build_debug_info(
     return debug_info
 
 
-def _aaguid_values(credential_data: Any) -> tuple[bytes | None, str | None, str | None]:
-    """The AAGUID's bytes, hex and GUID spelling; hex and GUID only for 16 bytes."""
-
-    aaguid_hex = None
-    aaguid_guid = None
-    aaguid_bytes: bytes | None = None
-    aaguid_value = getattr(credential_data, "aaguid", None)
-    if aaguid_value is not None:
-        try:
-            aaguid_bytes = bytes(aaguid_value)
-        except (TypeError, ValueError):
-            aaguid_bytes = None
-        if aaguid_bytes is not None and len(aaguid_bytes) == 16:
-            aaguid_hex = aaguid_bytes.hex()
-            try:
-                aaguid_guid = str(uuid.UUID(bytes=aaguid_bytes))
-            except ValueError:
-                aaguid_guid = None
-    return aaguid_bytes, aaguid_hex, aaguid_guid
-
-
-def _flags(auth_data: Any) -> dict[str, bool]:
-    return {
-        "AT": bool(auth_data.flags & auth_data.FLAG.AT),
-        "BE": bool(auth_data.flags & auth_data.FLAG.BE),
-        "BS": bool(auth_data.flags & auth_data.FLAG.BS),
-        "ED": bool(auth_data.flags & auth_data.FLAG.ED),
-        "UP": bool(auth_data.flags & auth_data.FLAG.UP),
-        "UV": bool(auth_data.flags & auth_data.FLAG.UV),
-    }
-
-
 def _rp_id_hash_report(auth_data: Any, resolved_rp_id: str) -> dict[str, Any]:
     """authData's rpIdHash and the hash of the RP ID it should be, as bytes, hex and base64url."""
 
@@ -246,22 +213,6 @@ def _resident_key_result(client_extension_results: Any, auth_data: Any, resident
     if isinstance(cred_props, bool):
         return bool(cred_props)
     return bool(auth_data.flags & auth_data.FLAG.BE) or bool(resident_key_required)
-
-
-def _large_blob_result(client_extension_results: Any) -> bool:
-    large_blob_result = False
-    if isinstance(client_extension_results, dict) and "largeBlob" in client_extension_results:
-        large_blob_value = client_extension_results.get("largeBlob")
-        if isinstance(large_blob_value, dict):
-            large_blob_result = bool(
-                large_blob_value.get("supported")
-                or large_blob_value.get("written")
-                or large_blob_value.get("blob")
-                or large_blob_value.get("result")
-            )
-        else:
-            large_blob_result = bool(large_blob_value)
-    return large_blob_result
 
 
 def _public_key_encodings(auth_data: Any) -> tuple[str | None, str | None]:
@@ -303,20 +254,15 @@ def _registration_facts(
     properties = credential_info["properties"]
     credential_data = auth_data.credential_data
     credential_id_bytes = getattr(credential_data, "credential_id", b"") or b""
-    identifiers = (
-        encode_base64(credential_id_bytes) if credential_id_bytes else None,
-        encode_base64url(credential_id_bytes) if credential_id_bytes else None,
-        credential_id_bytes.hex() if credential_id_bytes else None,
-    )
+    identifiers: tuple[Any, Any, Any] = (None, None, None)
+    if credential_id_bytes:
+        forms = registration_facts.byte_forms(credential_id_bytes)
+        identifiers = (forms["base64"], forms["base64url"], forms["hex"])
 
-    aaguid_bytes, aaguid_hex, aaguid_guid = _aaguid_values(credential_data)
-    if aaguid_hex:
-        properties["aaguid"] = aaguid_hex
-        properties["aaguidHex"] = aaguid_hex
-    if aaguid_guid:
-        properties["aaguidGuid"] = aaguid_guid
+    aaguid_bytes, aaguid_hex, aaguid_guid = registration_facts.aaguid_values(credential_data)
+    registration_facts.record_aaguid(properties, aaguid_hex, aaguid_guid)
 
-    flags_dict = _flags(auth_data)
+    flags_dict = registration_facts.flags(auth_data)
 
     auth_data_bytes = bytes(auth_data)
     authenticator_data_hex = auth_data_bytes.hex()
@@ -348,7 +294,7 @@ def _registration_facts(
         rp_hash=rp_hash,
         rp_id_hash_valid=attestation_rp_id_hash_valid,
         resident_key=resident_key_result,
-        large_blob=_large_blob_result(client_extension_results),
+        large_blob=registration_facts.large_blob_result(client_extension_results),
     )
 
 
@@ -370,7 +316,7 @@ def _relying_party_info(
     authenticator_data_hex, authenticator_data_hash = facts.authenticator_data
     rp_hash = facts.rp_hash
     return {
-        "aaguid": {"raw": aaguid_hex, "guid": aaguid_guid},
+        "aaguid": registration_facts.aaguid_block(aaguid_hex, aaguid_guid),
         "attestationFmt": attestation_format,
         "attestationObject": credential_info.get("attestation_object"),
         "createdAt": facts.registration_timestamp,
@@ -396,11 +342,7 @@ def _relying_party_info(
             "attestationSummary": attestation_summary,
         },
         "residentKey": facts.resident_key,
-        "userHandle": {
-            "base64": encode_base64(user_handle),
-            "base64url": encode_base64url(user_handle),
-            "hex": user_handle.hex(),
-        },
+        "userHandle": registration_facts.byte_forms(user_handle),
     }
 
 
@@ -490,8 +432,7 @@ def _stored_credential(
     aaguid_bytes, aaguid_hex, aaguid_guid = aaguid
     authenticator_data_hex, authenticator_data_hash = authenticator_data
 
-    user_handle_b64url = encode_base64url(user_handle)
-    user_handle_b64 = encode_base64(user_handle)
+    user_handle_forms = registration_facts.byte_forms(user_handle)
 
     stored_properties = json_values.make_json_safe(credential_info.get("properties", {}))
     stored_extensions = json_values.make_json_safe(client_extension_results)
@@ -529,10 +470,10 @@ def _stored_credential(
         "relyingParty": json_values.make_json_safe(rp_info),
         "properties": stored_properties,
         "registrationResponse": credential_info.get("registration_response"),
-        "userHandle": user_handle_b64url,
-        "userHandleBase64": user_handle_b64,
-        "userHandleBase64Url": user_handle_b64url,
-        "userHandleHex": user_handle.hex(),
+        "userHandle": user_handle_forms["base64url"],
+        "userHandleBase64": user_handle_forms["base64"],
+        "userHandleBase64Url": user_handle_forms["base64url"],
+        "userHandleHex": user_handle_forms["hex"],
     }
 
     return json_values.make_json_safe(

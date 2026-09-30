@@ -512,7 +512,7 @@
    "stored": [
     {
      "file": "artifacts/D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0/2ca9f82170cb7466b12500d502684ebcefc5ce5311b00db084db4be249812728.json",
-     "sha256": "8fae3ac6f351e5aff7a0d16b0959ac0aab271c2a0f499762da9e20f380e506b3",
+     "sha256": "adae951c4b23a0741633d93ea47002b6b2da78ecfa85cecf66b75b1f1ab52876",
      "content": {
       "storageId": "FUDL9FtaCCi0t5cmftvdu_uF::1a0c4506c00::8519419803004b79b63be7ab3de1d328",
       "createdAt": 1790000000.0,
@@ -601,12 +601,12 @@
            }
           },
           "flags": {
-           "AT": true,
+           "UP": true,
+           "UV": true,
            "BE": false,
            "BS": false,
-           "ED": false,
-           "UP": true,
-           "UV": true
+           "AT": true,
+           "ED": false
           },
           "signatureCounter": 0,
           "attestationChecks": {
@@ -1313,7 +1313,7 @@
    "stored": [
     {
      "file": "artifacts/D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0/f3d6d3d45cf2f84ae334987bde4a464dc295db4fb6bc78ce60bcd2433d591831.json",
-     "sha256": "71874a8b43cb87d45a5d69b9aeeb8b084961e724db68e03934872a36ba990c64",
+     "sha256": "8b2bcaaecb88714685f422c5c4cd0b1aa839e515916c6cdaaba584c63fc7b963",
      "content": {
       "storageId": "n7wy1DpbX_5tdftEzGtCpie2::1a0c4506c00::c0908714dc8f4c09ada5e8aadacf9b9f",
       "createdAt": 1790000000.0,
@@ -1382,12 +1382,12 @@
           "authenticatorDataHash": "fbf822b7b685c1ae704753a1e59f55205bceaf02cbd657d7df24de72b3bc84c9",
           "clientExtensionResults": {},
           "flags": {
-           "AT": true,
+           "UP": true,
+           "UV": true,
            "BE": false,
            "BS": false,
-           "ED": false,
-           "UP": true,
-           "UV": true
+           "AT": true,
+           "ED": false
           },
           "signatureCounter": 0,
           "attestationChecks": {
