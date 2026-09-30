@@ -25,7 +25,6 @@ MAX_MODULE_LINES = 700
 LONG_FUNCTIONS: dict[str, int] = {
     "server/app/config/session_secret.py::_resolve_secret_key": 84,
     "server/app/decoder/decode/response.py::_build_credential_payload": 88,
-    "server/app/mds_snapshot.py::build_explorer_entry": 131,
     "server/app/routes/advanced/parsing.py::_parse_client_supplied_credentials": 100,
     "server/app/routes/simple/authentication.py::authenticate_complete": 126,
     "server/app/webauthn/attestation/classical.py::_evaluate_classical_attestation_root": 122,

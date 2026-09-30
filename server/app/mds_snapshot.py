@@ -476,33 +476,10 @@ def build_snapshot_meta(
     }
 
 
-def build_explorer_entry(
-    entry_payload: Mapping[str, Any],
-    *,
-    index: int = 0,
-    source: str,
-    trust_anchor_status: bool | None,
-    snapshot_meta: Mapping[str, Any] | None = None,
-    include_detail: bool = False,
-    include_raw_entry: bool = True,
-    compact_detail: bool = False,
-    source_info: Mapping[str, Any] | None = None,
+def _authenticator_fields(
+    metadata_mapping: Mapping[str, Any], entry_payload: Mapping[str, Any], status_reports: list[Mapping[str, Any]]
 ) -> dict[str, Any]:
-    metadata = _mapping_value(entry_payload, "metadataStatement", "metadata_statement")
-    metadata_mapping = metadata if isinstance(metadata, Mapping) else {}
-    status_reports = [
-        report for report in _extract_list(_mapping_value(entry_payload, "statusReports", "status_reports"))
-        if isinstance(report, Mapping)
-    ]
-
-    name = _resolve_name(metadata_mapping, entry_payload)
-    protocol = _format_protocol(
-        _mapping_value(metadata_mapping, "protocolFamily", "protocol_family")
-        or _mapping_value(metadata_mapping, "protocolType", "protocol_type")
-    )
     certification, certification_status = _format_certification(status_reports)
-    identifier = _resolve_identifier(entry_payload, metadata_mapping)
-    aaguid = _resolve_aaguid(entry_payload, metadata_mapping)
     user_verification_list = _extract_user_verification(
         _mapping_value(metadata_mapping, "userVerificationDetails", "user_verification_details")
     )
@@ -521,35 +498,20 @@ def build_explorer_entry(
             _mapping_value(metadata_mapping, "authenticationAlgorithms", "authentication_algorithms")
         )
     ]
-    icon = _normalise_icon(
-        _mapping_value(metadata_mapping, "icon"),
-        _mapping_value(metadata_mapping, "iconType", "icon_type"),
-    )
-    attestation_certificates = _extract_list(
-        _mapping_value(metadata_mapping, "attestationRootCertificates", "attestation_root_certificates")
-    )
-    attestation_key_identifiers = _extract_attestation_key_identifiers(metadata_mapping, entry_payload)
-
-    latest_status_date = _latest_effective_date(status_reports)
-    raw_date = (
-        _string_or_none(_mapping_value(entry_payload, "timeOfLastStatusChange", "time_of_last_status_change"))
-        or latest_status_date
-    )
-    date_updated = _format_date(raw_date)
-
-    algorithm_info_list, common_name_list = _summarise_attestation_certificates(attestation_certificates)
-    source_info_payload = dict(source_info) if isinstance(source_info, Mapping) else None
-
-    entry: dict[str, Any] = {
-        "entryId": build_entry_id(entry_payload),
-        "index": index,
-        "name": name,
-        "protocol": protocol,
+    return {
+        "name": _resolve_name(metadata_mapping, entry_payload),
+        "protocol": _format_protocol(
+            _mapping_value(metadata_mapping, "protocolFamily", "protocol_family")
+            or _mapping_value(metadata_mapping, "protocolType", "protocol_type")
+        ),
         "certification": certification,
         "certificationStatus": certification_status,
-        "id": identifier,
-        "aaguid": aaguid,
-        "icon": icon,
+        "id": _resolve_identifier(entry_payload, metadata_mapping),
+        "aaguid": _resolve_aaguid(entry_payload, metadata_mapping),
+        "icon": _normalise_icon(
+            _mapping_value(metadata_mapping, "icon"),
+            _mapping_value(metadata_mapping, "iconType", "icon_type"),
+        ),
         "userVerification": ", ".join(user_verification_list),
         "userVerificationList": user_verification_list,
         "attachment": ", ".join(attachment_list),
@@ -560,17 +522,44 @@ def build_explorer_entry(
         "keyProtectionList": key_protection_list,
         "algorithms": ", ".join(algorithms_list),
         "algorithmsList": algorithms_list,
-        "certificateAlgorithmInfo": ", ".join(algorithm_info_list) if algorithm_info_list else "—",
+    }
+
+
+def _certificate_fields(attestation_certificates: list[Any]) -> dict[str, Any]:
+    algorithm_info_list, common_name_list = _summarise_attestation_certificates(attestation_certificates)
+    algorithm_info = ", ".join(algorithm_info_list) if algorithm_info_list else "—"
+    common_names = ", ".join(common_name_list) if common_name_list else "—"
+    return {
+        "certificateAlgorithmInfo": algorithm_info,
         "certificateAlgorithmInfoList": algorithm_info_list,
-        "certificateCommonNames": ", ".join(common_name_list) if common_name_list else "—",
+        "certificateCommonNames": common_names,
         "certificateCommonNameList": common_name_list,
-        "algorithmInfo": ", ".join(algorithm_info_list) if algorithm_info_list else "—",
-        "commonName": ", ".join(common_name_list) if common_name_list else "—",
-        "dateUpdated": date_updated,
+        "algorithmInfo": algorithm_info,
+        "commonName": common_names,
+    }
+
+
+def _date_fields(entry_payload: Mapping[str, Any], status_reports: list[Mapping[str, Any]]) -> dict[str, Any]:
+    raw_date = (
+        _string_or_none(_mapping_value(entry_payload, "timeOfLastStatusChange", "time_of_last_status_change"))
+        or _latest_effective_date(status_reports)
+    )
+    return {
+        "dateUpdated": _format_date(raw_date),
         "dateTooltip": raw_date or None,
         "timeOfLastStatusChange": raw_date or None,
+    }
+
+
+def _provenance_fields(
+    source: str,
+    source_info: Mapping[str, Any] | None,
+    trust_anchor_status: bool | None,
+    snapshot_meta: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    return {
         "source": source,
-        "sourceInfo": source_info_payload,
+        "sourceInfo": dict(source_info) if isinstance(source_info, Mapping) else None,
         "trustAnchorStatus": trust_anchor_status,
         "snapshotNo": _mapping_value(snapshot_meta or {}, "no"),
         "snapshotNextUpdate": _mapping_value(snapshot_meta or {}, "nextUpdate"),
@@ -578,34 +567,79 @@ def build_explorer_entry(
         "snapshotGeneratedAt": _mapping_value(snapshot_meta or {}, "generatedAt"),
     }
 
+
+def _detail_fields(
+    entry_payload: Mapping[str, Any],
+    metadata_mapping: Mapping[str, Any],
+    status_reports: list[Mapping[str, Any]],
+    attestation_certificates: list[Any],
+    *,
+    include_raw_entry: bool,
+    compact_detail: bool,
+) -> dict[str, Any]:
+    return {
+        "metadataStatement": (
+            _compact_metadata_statement(metadata_mapping) if compact_detail else dict(metadata_mapping)
+        ),
+        "rawEntry": dict(entry_payload) if include_raw_entry else None,
+        "statusReports": [dict(report) for report in status_reports],
+        "attestationCertificates": [str(value) for value in attestation_certificates if value],
+        "attestationKeyIdentifiers": _extract_attestation_key_identifiers(metadata_mapping, entry_payload),
+        "isLightweightEntry": False,
+    }
+
+
+def _lightweight_fields() -> dict[str, Any]:
+    return {
+        "metadataStatement": None,
+        "rawEntry": None,
+        "statusReports": [],
+        "attestationCertificates": [],
+        "attestationKeyIdentifiers": [],
+        "isLightweightEntry": True,
+    }
+
+
+def build_explorer_entry(
+    entry_payload: Mapping[str, Any],
+    *,
+    index: int = 0,
+    source: str,
+    trust_anchor_status: bool | None,
+    snapshot_meta: Mapping[str, Any] | None = None,
+    include_detail: bool = False,
+    include_raw_entry: bool = True,
+    compact_detail: bool = False,
+    source_info: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    metadata = _mapping_value(entry_payload, "metadataStatement", "metadata_statement")
+    metadata_mapping = metadata if isinstance(metadata, Mapping) else {}
+    status_reports = [
+        report for report in _extract_list(_mapping_value(entry_payload, "statusReports", "status_reports"))
+        if isinstance(report, Mapping)
+    ]
+    attestation_certificates = _extract_list(
+        _mapping_value(metadata_mapping, "attestationRootCertificates", "attestation_root_certificates")
+    )
+
+    entry: dict[str, Any] = {"entryId": build_entry_id(entry_payload), "index": index}
+    entry.update(_authenticator_fields(metadata_mapping, entry_payload, status_reports))
+    entry.update(_certificate_fields(attestation_certificates))
+    entry.update(_date_fields(entry_payload, status_reports))
+    entry.update(_provenance_fields(source, source_info, trust_anchor_status, snapshot_meta))
     if include_detail:
-        detail_metadata = (
-            _compact_metadata_statement(metadata_mapping)
-            if compact_detail
-            else dict(metadata_mapping)
-        )
         entry.update(
-            {
-                "metadataStatement": detail_metadata,
-                "rawEntry": dict(entry_payload) if include_raw_entry else None,
-                "statusReports": [dict(report) for report in status_reports],
-                "attestationCertificates": [str(value) for value in attestation_certificates if value],
-                "attestationKeyIdentifiers": attestation_key_identifiers,
-                "isLightweightEntry": False,
-            }
+            _detail_fields(
+                entry_payload,
+                metadata_mapping,
+                status_reports,
+                attestation_certificates,
+                include_raw_entry=include_raw_entry,
+                compact_detail=compact_detail,
+            )
         )
     else:
-        entry.update(
-            {
-                "metadataStatement": None,
-                "rawEntry": None,
-                "statusReports": [],
-                "attestationCertificates": [],
-                "attestationKeyIdentifiers": [],
-                "isLightweightEntry": True,
-            }
-        )
-
+        entry.update(_lightweight_fields())
     return entry
 
 
