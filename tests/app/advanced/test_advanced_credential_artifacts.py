@@ -107,7 +107,6 @@ def test_get_credential_artifact_route_returns_404_when_missing(monkeypatch, met
 
 
 def test_put_credential_artifact_route_requires_object_payload(monkeypatch):
-    pytest.importorskip("server.app.routes.advanced")
     with entry_app().test_client() as client:
         response = client.put(
             "/api/advanced/credential-artifacts/cred-1",
@@ -197,7 +196,6 @@ def test_put_credential_artifact_route_returns_400_when_store_fails(monkeypatch,
 
 
 def test_put_snapshot_route_rejects_non_object_snapshot(monkeypatch):
-    pytest.importorskip("server.app.routes.advanced")
     with entry_app().test_client() as client:
         response = client.put(
             "/api/advanced/credential-artifacts/cred-4/snapshot",

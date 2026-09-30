@@ -5,6 +5,8 @@ import types
 
 import pytest
 
+from server.app import config as config_module
+from server.app.routes import advanced as advanced_module
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import binary as advanced_binary
 from tests.app.entry_app import entry_app
@@ -79,9 +81,6 @@ def test_advanced_put_snapshot_route_returns_400_when_store_fails(monkeypatch, m
 
 
 def test_advanced_authenticate_begin_returns_no_matching_credentials_for_invalid_record_ids(monkeypatch, advanced_parsing):
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
@@ -113,9 +112,6 @@ def test_advanced_authenticate_begin_returns_no_matching_credentials_for_invalid
 
 
 def test_advanced_authenticate_begin_resident_mode_reports_no_resident_keys_when_ids_invalid(monkeypatch, advanced_parsing):
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
@@ -146,9 +142,6 @@ def test_advanced_authenticate_begin_resident_mode_reports_no_resident_keys_when
 
 
 def test_advanced_authenticate_begin_uses_algorithm_source_fallback_and_extension_passthrough(monkeypatch, advanced_algorithms, advanced_parsing):
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    config_module = pytest.importorskip("server.app.config")
-
     marker = object()
 
     monkeypatch.setattr(
@@ -201,9 +194,6 @@ def test_advanced_authenticate_begin_uses_algorithm_source_fallback_and_extensio
 
 
 def test_advanced_authenticate_begin_largeblob_dict_passthrough_when_no_read_or_write(monkeypatch, advanced_algorithms, advanced_parsing):
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
@@ -234,9 +224,6 @@ def test_advanced_authenticate_begin_largeblob_dict_passthrough_when_no_read_or_
 
 
 def test_advanced_authenticate_begin_largeblob_non_dict_and_prf_passthrough(monkeypatch, advanced_algorithms, advanced_parsing):
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    config_module = pytest.importorskip("server.app.config")
-
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
@@ -273,8 +260,6 @@ def test_advanced_authenticate_begin_largeblob_non_dict_and_prf_passthrough(monk
 
 
 def test_advanced_authenticate_complete_requires_assertion_response():
-    pytest.importorskip("server.app.routes.advanced")
-
     with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/complete",
@@ -288,8 +273,6 @@ def test_advanced_authenticate_complete_requires_assertion_response():
 
 
 def test_advanced_authenticate_complete_requires_public_key_payload():
-    pytest.importorskip("server.app.routes.advanced")
-
     with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/complete",
@@ -356,8 +339,6 @@ def test_advanced_authenticate_complete_uses_legacy_session_credentials_fallback
 
 
 def test_advanced_authenticate_complete_returns_404_when_no_credentials_found_anywhere():
-    pytest.importorskip("server.app.routes.advanced")
-
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_auth_credentials_meta"] = {"count": 2, "resident_count": 1}

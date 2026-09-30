@@ -2,6 +2,8 @@ import types
 
 import pytest
 
+from server.app import config as config_module
+from server.app.routes import advanced as advanced_module
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from tests.app.entry_app import entry_app
 
@@ -58,9 +60,6 @@ def _install_fake_register_server(monkeypatch, advanced_module, captured, config
 
 
 def test_advanced_register_begin_requires_public_key_payload():
-    pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         response = client.post("/api/advanced/register/begin", json={})
 
@@ -79,9 +78,6 @@ def test_advanced_register_begin_requires_public_key_payload():
     ],
 )
 def test_advanced_register_begin_requires_mandatory_fields(missing_key, expected_error):
-    pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     payload = _base_payload()
     payload["publicKey"].pop(missing_key)
 
@@ -93,9 +89,6 @@ def test_advanced_register_begin_requires_mandatory_fields(missing_key, expected
 
 
 def test_advanced_register_begin_requires_user_name():
-    pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     payload = _base_payload()
     payload["publicKey"]["user"]["name"] = ""
 
@@ -107,9 +100,6 @@ def test_advanced_register_begin_requires_user_name():
 
 
 def test_advanced_register_begin_rejects_invalid_user_id_format():
-    pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     payload = _base_payload()
     payload["publicKey"]["user"]["id"] = "g$"
 
@@ -121,9 +111,6 @@ def test_advanced_register_begin_rejects_invalid_user_id_format():
 
 
 def test_advanced_register_begin_rejects_invalid_challenge_format():
-    pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     payload = _base_payload()
     payload["publicKey"]["challenge"] = "not-hex"
 
@@ -135,9 +122,6 @@ def test_advanced_register_begin_rejects_invalid_challenge_format():
 
 
 def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkeypatch, pqc_module, config_module):
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     captured = {}
 
     monkeypatch.setattr(
@@ -186,10 +170,6 @@ def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkey
 
 
 def test_advanced_register_begin_normalizes_pubkeycredparams_and_filters_invalid_entries(monkeypatch, pqc_module):
-    config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
@@ -220,10 +200,6 @@ def test_advanced_register_begin_normalizes_pubkeycredparams_and_filters_invalid
 
 
 def test_advanced_register_begin_uses_default_algorithms_without_pubkeycredparams(monkeypatch, pqc_module):
-    config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
@@ -247,10 +223,6 @@ def test_advanced_register_begin_uses_default_algorithms_without_pubkeycredparam
 
 
 def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorithms_remain(monkeypatch, pqc_module):
-    config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-49})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
@@ -271,10 +243,6 @@ def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorith
 
 
 def test_advanced_register_begin_refuses_when_no_requested_algorithm_is_verifiable(monkeypatch, pqc_module):
-    config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: set())
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
@@ -293,10 +261,6 @@ def test_advanced_register_begin_refuses_when_no_requested_algorithm_is_verifiab
 
 
 def test_advanced_register_begin_maps_auth_selection_exclusions_extensions_and_timeout(monkeypatch, pqc_module):
-    config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)

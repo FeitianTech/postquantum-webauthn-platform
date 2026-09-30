@@ -1,8 +1,6 @@
 import base64
 import hashlib
 
-import pytest
-
 from tests.app.entry_app import entry_app
 
 
@@ -53,8 +51,6 @@ class _FakeAuthData:
 
 
 def test_advanced_register_complete_reads_the_session_state_not_the_requests(monkeypatch, config_module):
-    pytest.importorskip("server.app.app")
-
     captured = {}
 
     class _FailingServer:
@@ -92,9 +88,6 @@ def test_advanced_register_complete_reads_the_session_state_not_the_requests(mon
 
 
 def test_advanced_register_complete_without_session_state_returns_400(monkeypatch):
-    pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         with client.session_transaction() as session_store:
             session_store["advanced_rp"] = {"id": "example.com", "name": "Example RP"}
@@ -113,9 +106,6 @@ def test_advanced_register_complete_without_session_state_returns_400(monkeypatc
 
 
 def test_advanced_register_complete_requires_attachment_when_hints_resolve_to_attachment():
-    pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         payload = _minimal_register_complete_payload()
         payload["publicKey"]["hints"] = ["security-key"]
@@ -127,8 +117,6 @@ def test_advanced_register_complete_requires_attachment_when_hints_resolve_to_at
 
 
 def test_advanced_register_complete_prefers_session_attachment_scope_over_tampered_request_hints(monkeypatch, metadata_module, attestation_module, config_module):
-    pytest.importorskip("server.app.app")
-
     monkeypatch.setattr(metadata_module, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
         attestation_module,
@@ -167,8 +155,6 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
 
 
 def test_advanced_register_complete_success_contract_propagates_warnings_and_records_artifact(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module, storage_module, config_module):
-    pytest.importorskip("server.app.app")
-
     credential_id = b"advanced-register-success"
     rp_id = "rp.example"
 

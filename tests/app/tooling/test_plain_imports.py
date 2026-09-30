@@ -20,16 +20,6 @@ REPO_ROOT = TESTS_ROOT.parent
 FIRST_PARTY = ("server", "tools", "tests")
 
 ALLOWED: dict[str, int] = {
-    "tests/app/advanced/test_advanced_auth_flows.py": 7,
-    "tests/app/advanced/test_advanced_auth_session_edges.py": 9,
-    "tests/app/advanced/test_advanced_authenticate_begin_contracts.py": 22,
-    "tests/app/advanced/test_advanced_branch_focus_contracts.py": 13,
-    "tests/app/advanced/test_advanced_branch_uplift_batch_five.py": 13,
-    "tests/app/advanced/test_advanced_branch_uplift_batch_four.py": 6,
-    "tests/app/advanced/test_advanced_credential_artifacts.py": 2,
-    "tests/app/advanced/test_advanced_helper_contracts.py": 1,
-    "tests/app/advanced/test_advanced_register_begin_contracts.py": 27,
-    "tests/app/advanced/test_advanced_register_complete_contracts.py": 7,
     "tests/app/conftest.py": 5,
     "tests/app/core/test_app_entrypoint_contracts.py": 1,
     "tests/app/core/test_authentication_failure_payloads.py": 2,

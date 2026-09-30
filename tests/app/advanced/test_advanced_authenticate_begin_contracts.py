@@ -2,6 +2,8 @@ import types
 
 import pytest
 
+from server.app import config as config_module
+from server.app.routes import advanced as advanced_module
 from tests.app.entry_app import entry_app
 
 
@@ -52,9 +54,6 @@ def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, conf
 
 
 def test_advanced_authenticate_begin_requires_public_key_payload():
-    pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         response = client.post("/api/advanced/authenticate/begin", json={})
 
@@ -65,9 +64,6 @@ def test_advanced_authenticate_begin_requires_public_key_payload():
 
 
 def test_advanced_authenticate_begin_requires_challenge():
-    pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
@@ -79,9 +75,6 @@ def test_advanced_authenticate_begin_requires_challenge():
 
 
 def test_advanced_authenticate_begin_rejects_invalid_challenge_format():
-    pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
@@ -93,9 +86,6 @@ def test_advanced_authenticate_begin_rejects_invalid_challenge_format():
 
 
 def test_advanced_authenticate_begin_returns_404_when_no_credentials_detected():
-    pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         response = client.post(
             "/api/advanced/authenticate/begin",
@@ -109,10 +99,6 @@ def test_advanced_authenticate_begin_returns_404_when_no_credentials_detected():
 
 
 def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(monkeypatch, advanced_parsing):
-    config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     cred_one = b"cred-one"
     cred_two = b"cred-two"
 
@@ -169,10 +155,6 @@ def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(m
 
 
 def test_advanced_authenticate_begin_falls_back_to_all_records_when_allow_credentials_do_not_match(monkeypatch, advanced_parsing):
-    config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     marker_one = object()
     marker_two = object()
 
@@ -208,8 +190,6 @@ def test_advanced_authenticate_begin_falls_back_to_all_records_when_allow_creden
 
 
 def test_advanced_authenticate_begin_returns_hints_error_when_filtered_allow_credentials_empty(monkeypatch, advanced_parsing):
-    pytest.importorskip("server.app.app")
-
     cred_id = b"platform-only-credential"
 
     monkeypatch.setattr(
@@ -239,10 +219,6 @@ def test_advanced_authenticate_begin_returns_hints_error_when_filtered_allow_cre
 
 
 def test_advanced_authenticate_begin_resident_mode_prefers_resident_records_and_hides_allow_credentials(monkeypatch, advanced_parsing):
-    config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     resident_marker = object()
     nonresident_marker = object()
 
@@ -285,8 +261,6 @@ def test_advanced_authenticate_begin_resident_mode_prefers_resident_records_and_
 
 
 def test_advanced_authenticate_begin_resident_mode_returns_hints_error_when_resident_candidates_filtered(monkeypatch, advanced_parsing):
-    pytest.importorskip("server.app.app")
-
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
@@ -324,10 +298,6 @@ def test_advanced_authenticate_begin_resident_mode_returns_hints_error_when_resi
 
 
 def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_preferences(monkeypatch, advanced_algorithms, advanced_parsing):
-    config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     records = [_credential_record(b"credential-id", resident=True, attachment="platform")]
     serialized = [_serialized_record(resident=True)]
 

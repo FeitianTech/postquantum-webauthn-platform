@@ -4,6 +4,8 @@ import base64
 
 import pytest
 
+from server.app import config as config_module
+from server.app.routes import advanced as advanced_module
 from server.app.routes import binary_helpers as shared_binary_helpers
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import binary as advanced_binary
@@ -108,10 +110,6 @@ def test_base64url_helpers_degrade_gracefully_on_decode_errors():
 
 
 def test_register_begin_accepts_non_mapping_authenticator_selection_and_derives_cross_platform_from_hints(monkeypatch, pqc_module):
-    config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
@@ -141,10 +139,6 @@ def test_register_begin_accepts_non_mapping_authenticator_selection_and_derives_
 
 
 def test_register_begin_maps_discouraged_uv_require_resident_key_and_extension_aliases(monkeypatch, pqc_module):
-    config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)

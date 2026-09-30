@@ -1,7 +1,5 @@
 import base64
 
-import pytest
-
 from tests.app.entry_app import entry_app
 
 
@@ -15,8 +13,6 @@ class _AuthResult:
 
 
 def test_advanced_authenticate_complete_without_session_state_returns_400(monkeypatch, advanced_parsing):
-    pytest.importorskip("server.app.app")
-
     credential_id = b"advanced-invalid-fallback"
     encoded_id = _b64url(credential_id)
 
@@ -57,8 +53,6 @@ def test_advanced_authenticate_complete_without_session_state_returns_400(monkey
 
 
 def test_advanced_authenticate_complete_reports_cookie_restore_failure(monkeypatch, advanced_parsing):
-    pytest.importorskip("server.app.app")
-
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
@@ -90,9 +84,6 @@ def test_advanced_authenticate_complete_reports_cookie_restore_failure(monkeypat
 
 
 def test_advanced_authenticate_complete_requires_attachment_when_session_scopes_allowed_attachments():
-    pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_authenticate_allowed_attachments"] = ["platform"]
@@ -113,9 +104,6 @@ def test_advanced_authenticate_complete_requires_attachment_when_session_scopes_
 
 
 def test_advanced_authenticate_complete_rejects_attachment_not_allowed_by_session_scope():
-    pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
             session_state["advanced_authenticate_allowed_attachments"] = ["platform"]
@@ -139,8 +127,6 @@ def test_advanced_authenticate_complete_rejects_attachment_not_allowed_by_sessio
 
 
 def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
-    pytest.importorskip("server.app.app")
-
     credential_id = b"advanced-hash-forward"
     encoded_id = _b64url(credential_id)
     captured = {}
@@ -195,8 +181,6 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
 
 
 def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_invalid(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
-    pytest.importorskip("server.app.app")
-
     credential_id = b"advanced-hash-default"
     encoded_id = _b64url(credential_id)
     captured = {}
@@ -251,8 +235,6 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
 
 
 def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authenticator_data(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
-    pytest.importorskip("server.app.app")
-
     credential_id = b"advanced-malformed-authdata"
     encoded_id = _b64url(credential_id)
 

@@ -4,6 +4,7 @@ import base64
 
 import pytest
 
+from server.app.routes import advanced as advanced_module
 from server.app.routes import binary_helpers as shared_binary_helpers
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import binary as advanced_binary
@@ -122,7 +123,6 @@ def test_base64_assertion_and_binary_extraction_helpers():
 )
 def test_helpers_no_route_called_are_gone(name):
     # Each existed only for tests: no route, and no other helper, called it.
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
     from server.app.routes.advanced import algorithms, parsing
 
     assert not hasattr(advanced_module, name)

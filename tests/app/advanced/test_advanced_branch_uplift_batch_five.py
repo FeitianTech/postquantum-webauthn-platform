@@ -4,8 +4,11 @@ import hashlib
 
 import pytest
 
+from server.app import config as config_module
+from server.app.routes import advanced as advanced_module
 from server.app.routes import binary_helpers as shared_binary_helpers
 from server.app.routes.advanced import algorithms as advanced_algorithms
+from server.app.routes.advanced import algorithms as algorithms_module
 from server.app.routes.advanced import parsing as advanced_parsing
 from tests.app.entry_app import entry_app
 
@@ -67,14 +70,9 @@ def test_helper_none_and_non_string_decode_paths():
     ],
 )
 def test_register_begin_maps_attestation_modes_and_exercises_pqc_warning_branch(monkeypatch, attestation_value, expected_value, pqc_module):
-    config_module = pytest.importorskip("server.app.config")
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     captured = {}
     _install_register_begin_server(monkeypatch, advanced_module, captured, config_module, include_extensions=True)
 
-    algorithms_module = pytest.importorskip("server.app.routes.advanced.algorithms")
     warning_messages = []
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: set())
     monkeypatch.setattr(
@@ -111,9 +109,6 @@ def test_register_begin_maps_attestation_modes_and_exercises_pqc_warning_branch(
 
 
 def test_register_complete_validates_required_payload_and_username_fields():
-    pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     with entry_app().test_client() as client:
         missing_response = client.post(
             "/api/advanced/register/complete",
@@ -147,9 +142,6 @@ def test_register_complete_validates_required_payload_and_username_fields():
 
 
 def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_contract(monkeypatch, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module):
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module)
 
     class _BadBytes:
@@ -264,9 +256,6 @@ def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_co
 
 
 def test_register_complete_returns_400_for_non_mapping_extensions_payload(monkeypatch, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module):
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module)
 
     class _CredentialData:
@@ -347,9 +336,6 @@ def test_register_complete_returns_400_for_non_mapping_extensions_payload(monkey
     ],
 )
 def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_fallbacks(monkeypatch, cred_protect_value, expected_display, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module, advanced_summary, advanced_registration_record):
-    advanced_module = pytest.importorskip("server.app.routes.advanced")
-    pytest.importorskip("server.app.app")
-
     _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module)
 
     class _CredentialData:
@@ -433,8 +419,6 @@ def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_
 
 
 def test_authenticate_begin_uses_stored_rp_required_uv_and_skips_invalid_allow_credentials(monkeypatch, config_module, advanced_parsing):
-    pytest.importorskip("server.app.app")
-
     marker = object()
     monkeypatch.setattr(
         advanced_parsing,
