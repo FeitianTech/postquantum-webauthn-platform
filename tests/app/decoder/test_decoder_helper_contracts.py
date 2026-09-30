@@ -3,12 +3,11 @@ from __future__ import annotations
 import pytest
 from fido2.utils import ByteBuffer
 
+from server.app.decoder import decode as decode_module
 from server.app.decoder.decode import json_input
 
 
 def test_extract_ctap_prefix_handles_empty_command_status_and_unknown_codes():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     prefix, remaining = decode_module._extract_ctap_prefix(b"")
     assert prefix is None
     assert remaining == b""
@@ -39,16 +38,12 @@ def test_extract_ctap_prefix_handles_empty_command_status_and_unknown_codes():
 
 
 def test_is_padding_bytes_distinguishes_padding_from_content():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     assert decode_module._is_padding_bytes(b"") is True
     assert decode_module._is_padding_bytes(b"\x00\xff\x00") is True
     assert decode_module._is_padding_bytes(b"\x00\x01\xff") is False
 
 
 def test_key_identity_names_the_cbor_type_of_a_key():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     assert decode_module._key_identity(7) == ("int", 7)
     assert decode_module._key_identity(True) == ("bool", True)
     assert decode_module._key_identity("7") == ("text", "7")
@@ -58,8 +53,6 @@ def test_key_identity_names_the_cbor_type_of_a_key():
 
 
 def test_get_mapping_entry_matches_keys_by_exact_type_and_missing_sentinel():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     mapping = {
         1: "int-key",
         b"\x02": "bytes-key",
@@ -77,8 +70,6 @@ def test_get_mapping_entry_matches_keys_by_exact_type_and_missing_sentinel():
 
 
 def test_coerce_cbor_bytes_supports_supported_binary_types():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     assert decode_module._coerce_cbor_bytes(ByteBuffer(b"abc")) == b"abc"
     assert decode_module._coerce_cbor_bytes(b"abc") == b"abc"
     assert decode_module._coerce_cbor_bytes(bytearray(b"abc")) == b"abc"
@@ -87,8 +78,6 @@ def test_coerce_cbor_bytes_supports_supported_binary_types():
 
 
 def test_stringify_and_hex_helpers_convert_nested_values():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     payload = {
         1: [b"\xaa", {"x": memoryview(b"\xbb")}],
         "buf": ByteBuffer(b"\xcc"),
@@ -107,8 +96,6 @@ def test_stringify_and_hex_helpers_convert_nested_values():
 
 
 def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, pipeline, response):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     with pytest.raises(ValueError, match="Decoder input is empty"):
         decode_module.decode_payload_text("   ")
 
@@ -144,8 +131,6 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, p
 
 
 def test_decode_json_object_handles_client_data_and_plain_json(monkeypatch, pipeline):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     monkeypatch.setattr(pipeline, "_is_public_key_credential", lambda _v: False)
     monkeypatch.setattr(pipeline, "_is_client_data_dict", lambda _v: True)
     monkeypatch.setattr(pipeline, "_build_client_data_details", lambda value, raw_text=None: {"built": value, "raw": raw_text})
@@ -167,8 +152,6 @@ def test_decode_json_object_handles_client_data_and_plain_json(monkeypatch, pipe
 
 
 def test_decode_public_key_credential_uses_rawid_and_extension_fallbacks(monkeypatch, pipeline):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     monkeypatch.setattr(pipeline, "_decode_binary_field", lambda _v: None)
 
     credential = {
@@ -192,8 +175,6 @@ def test_decode_public_key_credential_uses_rawid_and_extension_fallbacks(monkeyp
 
 
 def test_decode_binary_field_handles_invalid_inputs(monkeypatch, pipeline):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     monkeypatch.setattr(
         pipeline,
         "_decode_binary_input",
@@ -205,8 +186,6 @@ def test_decode_binary_field_handles_invalid_inputs(monkeypatch, pipeline):
 
 
 def test_decode_binary_payload_prefers_pem_and_json_and_then_reads_strict_cbor(monkeypatch, pipeline):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     monkeypatch.setattr(pipeline, "_try_decode_utf8", lambda _data: "-----BEGIN CERTIFICATE-----")
     monkeypatch.setattr(pipeline, "_looks_like_pem", lambda text: text.startswith("-----BEGIN"))
     monkeypatch.setattr(pipeline, "_decode_pem_certificates", lambda _text: {"format": "X.509 certificate (PEM)", "decoded": {"pem": True}})

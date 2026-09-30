@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 
-import pytest
+from server.app.decoder import decode as decode_module
 
 
 def _build_attested_auth_data(sign_count: int = 1) -> bytes:
@@ -28,7 +28,6 @@ def _build_attested_auth_data(sign_count: int = 1) -> bytes:
 def test_try_decode_cbor_reports_bytes_after_a_make_credential_response_and_keeps_its_att_stmt():
     # Bytes after the response are reported. They are not a signature: the
     # attStmt is shown exactly as the authenticator sent it.
-    decode_module = pytest.importorskip("server.app.decoder.decode")
     from fido2 import cbor
 
     auth_data = _build_attested_auth_data(sign_count=2)
@@ -49,7 +48,6 @@ def test_try_decode_cbor_reports_bytes_after_a_make_credential_response_and_keep
 def test_try_decode_cbor_does_not_call_a_status_prefixed_auth_data_map_a_get_assertion_response():
     # A status byte says "response", not which command it answers. A map with
     # only authData is neither response shape, so it is not labelled as one.
-    decode_module = pytest.importorskip("server.app.decoder.decode")
     from fido2 import cbor
 
     auth_data = _build_attested_auth_data(sign_count=3)

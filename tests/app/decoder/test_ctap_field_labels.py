@@ -16,6 +16,7 @@ from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
 from server.app.decoder import decode_payload_text, encode_payload_text
+from server.app.decoder import encode as encode_module
 
 _AUTH_DATA = bytes(AuthenticatorData.create(hashlib.sha256(b"example.com").digest(), 0x05, 7))
 
@@ -181,8 +182,6 @@ def test_the_encoder_writes_unsigned_extension_outputs_at_the_response_members_n
 
 
 def test_request_fields_named_only_by_number_are_refused_not_dropped():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     mapping = encode_module._encode_get_assertion_request({1: "example.com", 2: "22" * 32})
 
     assert (mapping[1], mapping[2]) == ("example.com", b"\x22" * 32)

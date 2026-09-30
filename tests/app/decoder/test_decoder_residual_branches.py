@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import hashlib
 
-import pytest
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
+from server.app.decoder import decode as decode_module
+
 
 def test_decoder_residual_helpers_cover_remaining_parse_and_conversion_guards(monkeypatch, cbor_parser, ctap):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
     # _extract_attestation_certificate and _convert_certificate_bytes/payload guards.
     assert decode_module._extract_attestation_certificate("not-a-map") is None
     assert decode_module._extract_attestation_certificate({"x5c": ["A"]}) is None

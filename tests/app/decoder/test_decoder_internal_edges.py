@@ -3,10 +3,10 @@ import base64
 import cbor2
 import pytest
 
+from server.app.decoder import decode as decode_module
+
 
 def test_decode_binary_input_prefers_hex_when_candidate_is_valid_hex():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     decoded, encoding = decode_module._decode_binary_input("414243")
 
     assert decoded == b"ABC"
@@ -14,8 +14,6 @@ def test_decode_binary_input_prefers_hex_when_candidate_is_valid_hex():
 
 
 def test_decode_binary_input_prefers_hex_for_ambiguous_alphabetic_payload():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     decoded, encoding = decode_module._decode_binary_input("AAAA")
 
     assert decoded == bytes.fromhex("AAAA")
@@ -23,8 +21,6 @@ def test_decode_binary_input_prefers_hex_for_ambiguous_alphabetic_payload():
 
 
 def test_decode_binary_input_accepts_base64url_without_padding():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     original = b"\xfb\xff"
     base64url_value = base64.urlsafe_b64encode(original).decode("ascii").rstrip("=")
 
@@ -35,15 +31,11 @@ def test_decode_binary_input_accepts_base64url_without_padding():
 
 
 def test_decode_binary_input_rejects_invalid_binary_text():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     with pytest.raises(ValueError, match="Input does not appear to be valid"):
         decode_module._decode_binary_input("g$")
 
 
 def test_parse_cbor_item_rejects_a_truncated_byte_string_and_keeps_its_bytes_only_when_lenient():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     # Major type 2, additional info 26 -> 4-byte length; declares 5 bytes, carries only 2.
     payload = b"\x5a\x00\x00\x00\x05\x01\x02"
 
@@ -63,8 +55,6 @@ def test_parse_cbor_item_rejects_a_truncated_byte_string_and_keeps_its_bytes_onl
 
 
 def test_parse_cbor_item_rejects_invalid_utf8_and_keeps_its_bytes_only_when_lenient():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     payload = b"\x63\xff\xff\xff"
     with pytest.raises(decode_module._CborDecodingError, match="text string is not valid UTF-8"):
         decode_module._parse_cbor_item(payload, 0)
@@ -80,14 +70,10 @@ def test_parse_cbor_item_rejects_invalid_utf8_and_keeps_its_bytes_only_when_leni
 
 
 def test_try_decode_cbor_returns_none_for_empty_data():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     assert decode_module._try_decode_cbor(b"", "hex") is None
 
 
 def test_try_decode_cbor_reports_bytes_after_the_first_item_as_trailing():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     payload = cbor2.dumps({"a": 1}) + cbor2.dumps(2) + cbor2.dumps(3)
 
     result = decode_module._try_decode_cbor(payload, "base64url")
@@ -99,8 +85,6 @@ def test_try_decode_cbor_reports_bytes_after_the_first_item_as_trailing():
 
 
 def test_parse_cbor_item_rejects_break_code_outside_indefinite_container():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     with pytest.raises(
         decode_module._CborDecodingError,
         match=r"a break byte \(0xff\) outside an indefinite-length item",
@@ -109,8 +93,6 @@ def test_parse_cbor_item_rejects_break_code_outside_indefinite_container():
 
 
 def test_parse_cbor_item_rejects_non_bytes_segment_in_indefinite_byte_string():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     # 0x5f => start indefinite byte string; next chunk is text string (major type 3).
     payload = b"\x5f\x61a\xff"
 
@@ -122,8 +104,6 @@ def test_parse_cbor_item_rejects_non_bytes_segment_in_indefinite_byte_string():
 
 
 def test_parse_cbor_item_rejects_non_text_segment_in_indefinite_text_string():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     # 0x7f => start indefinite text string; next chunk is byte string (major type 2).
     payload = b"\x7f\x41a\xff"
 
@@ -135,8 +115,6 @@ def test_parse_cbor_item_rejects_non_text_segment_in_indefinite_text_string():
 
 
 def test_parse_cbor_item_rejects_an_orphan_map_key_and_keeps_completed_pairs_only_when_lenient():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     # 0xbf => indefinite map: {"a": 1, "b": <missing-value>}
     payload = b"\xbf\x61a\x01\x61b\xff"
 
@@ -157,8 +135,6 @@ def test_parse_cbor_item_rejects_an_orphan_map_key_and_keeps_completed_pairs_onl
 
 
 def test_parse_cbor_item_rejects_an_unterminated_indefinite_array_and_keeps_its_items_only_when_lenient():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     # 0x9f => indefinite array containing a single nested definite array [1, 2],
     # with no break byte for the outer container.
     payload = b"\x9f\x82\x01\x02"
@@ -181,8 +157,6 @@ def test_parse_cbor_item_rejects_an_unterminated_indefinite_array_and_keeps_its_
 
 
 def test_try_decode_cbor_handles_ctap_prefix_without_payload():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     result = decode_module._try_decode_cbor(b"\x01", "hex")
 
     assert result is not None
@@ -194,8 +168,6 @@ def test_try_decode_cbor_handles_ctap_prefix_without_payload():
 
 
 def test_try_decode_cbor_reports_ctap_padding_bytes_as_padding():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     payload = b"\x01" + cbor2.dumps({"a": 1}) + b"\x00\xff"
 
     result = decode_module._try_decode_cbor(payload, "base64url")
@@ -209,8 +181,6 @@ def test_try_decode_cbor_reports_ctap_padding_bytes_as_padding():
 
 
 def test_structure_to_value_preserves_integer_map_keys():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     structure = {
         "majorType": 5,
         "type": "map",
@@ -232,8 +202,6 @@ def test_structure_to_value_preserves_integer_map_keys():
 
 
 def test_structure_to_value_keeps_an_array_key_as_a_key_of_its_own_type():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     structure = {
         "majorType": 5,
         "type": "map",
@@ -260,8 +228,6 @@ def test_structure_to_value_keeps_an_array_key_as_a_key_of_its_own_type():
 
 
 def test_expand_cbor_value_stringifies_mapping_keys_and_summarizes_binary_values():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     expanded = decode_module._expand_cbor_value(
         {1: b"\xaa\xbb", "nested": [b"\xcc", {2: b"\xdd"}]}
     )

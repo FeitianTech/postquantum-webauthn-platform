@@ -1,8 +1,8 @@
 import base64
 
 import cbor2
-import pytest
 
+from server.app.decoder import decode as decode_module
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
 
@@ -20,8 +20,6 @@ def _build_authenticator_data_bytes() -> bytes:
 
 
 def test_build_decoder_payload_cbor_adds_unique_qualifiers_and_ctap_sections():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     result = {
         "format": "CBOR",
         "decoded": {
@@ -56,8 +54,6 @@ def test_build_decoder_payload_cbor_adds_unique_qualifiers_and_ctap_sections():
 
 
 def test_convert_attestation_entry_injects_certificate_when_x5c_is_empty():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     der_b64 = base64.b64encode(_GSR2_DER).decode("ascii")
     entry = {
         "raw": "raw-attestation",
@@ -85,8 +81,6 @@ def test_convert_attestation_entry_injects_certificate_when_x5c_is_empty():
 
 
 def test_build_authenticator_data_payload_uses_bytes_and_details_to_build_credential_fields():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     auth_bytes = _build_authenticator_data_bytes()
     details = {
         "flags": {
@@ -120,8 +114,6 @@ def test_build_authenticator_data_payload_uses_bytes_and_details_to_build_creden
 
 
 def test_extract_bytes_from_binary_prefers_hex_and_then_base64url_raw():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     assert decode_module._extract_bytes_from_binary({"hex": "AA BB"}) == b"\xaa\xbb"
 
     raw_value = base64.urlsafe_b64encode(b"\x01\x02\x03").decode("ascii").rstrip("=")

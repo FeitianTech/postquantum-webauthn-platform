@@ -16,6 +16,8 @@ from typing import Any
 import pytest
 from fido2 import cbor
 
+from server.app.decoder import decode as decode_module
+
 # The "Credential Creation ES256 Output" dump from CBOR_hexcode.txt (ce03e270).
 ES256_MAKE_CREDENTIAL_DUMP = (
     "00a301667061636b656402589d49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97"
@@ -38,7 +40,6 @@ ES256_GET_ASSERTION_DUMP = (
 
 
 def _decode(text: str) -> dict[str, Any]:
-    decode_module = pytest.importorskip("server.app.decoder.decode")
     return decode_module.decode_payload_text(text)
 
 
@@ -109,7 +110,6 @@ def test_the_get_assertion_dump_with_a_lost_byte_fails_where_it_runs_out():
     # key and the user entity as its value -- and the user map's own lost byte
     # leaves its last key without a value. Nothing is assembled from the
     # pieces: the decode fails at the last byte, saying which item ran out.
-    decode_module = pytest.importorskip("server.app.decoder.decode")
 
     with pytest.raises(ValueError) as caught:
         decode_module.decode_payload_text(ES256_GET_ASSERTION_DUMP)

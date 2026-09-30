@@ -4,9 +4,10 @@ import base64
 import hashlib
 import json
 
-import pytest
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData
+
+from server.app.decoder import decode as decode_module
 
 
 def _build_auth_data_bytes() -> bytes:
@@ -29,8 +30,6 @@ def _build_attestation_bytes() -> bytes:
 
 
 def test_describe_client_data_from_bytes_success_and_collected_client_data_fallback(monkeypatch, pipeline):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     raw_json = {
         "type": "webauthn.create",
         "challenge": "AQID",
@@ -56,8 +55,6 @@ def test_describe_client_data_from_bytes_success_and_collected_client_data_fallb
 
 
 def test_describe_authenticator_data_bytes_includes_flags_and_attested_credential_details():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     auth_bytes = _build_auth_data_bytes()
     details = decode_module._describe_authenticator_data_bytes(auth_bytes)
 
@@ -69,8 +66,6 @@ def test_describe_authenticator_data_bytes_includes_flags_and_attested_credentia
 
 
 def test_convert_attestation_statement_and_certificate_chain_paths(monkeypatch, response):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     monkeypatch.setattr(
         response,
         "serialize_attestation_certificate",
@@ -101,8 +96,6 @@ def test_convert_attestation_statement_and_certificate_chain_paths(monkeypatch, 
 
 
 def test_build_authenticator_payload_flag_and_credential_helpers_cover_fallback_paths():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     auth_bytes = _build_auth_data_bytes()
     payload = decode_module._build_authenticator_data_payload(auth_bytes, {}, fallback_alg=-7)
 
@@ -146,8 +139,6 @@ def test_build_authenticator_payload_flag_and_credential_helpers_cover_fallback_
 
 
 def test_client_data_entry_response_extras_and_base_type_helpers():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     converted_client_data = decode_module._convert_client_data_entry(
         {
             "details": {

@@ -14,11 +14,13 @@ while exercising the real code.
 
 from __future__ import annotations
 
+import importlib
+
 import pytest
 
 
 def _fragment(name: str):
-    return pytest.importorskip(f"server.app.decoder.decode.{name}")
+    return importlib.import_module(f"server.app.decoder.decode.{name}")
 
 
 @pytest.fixture
@@ -74,4 +76,4 @@ def certificates():
 def attestation_module():
     """``server.app.webauthn.attestation`` -- the decoder fragments import from it."""
 
-    return pytest.importorskip("server.app.webauthn.attestation")
+    return importlib.import_module("server.app.webauthn.attestation")

@@ -1,11 +1,12 @@
 import pytest
 from fido2.utils import ByteBuffer
 
+from server.app.decoder import decode as decode_module
+
 
 def test_parse_cbor_item_reads_one_byte_integers_and_rejects_reserved_additional_information():
     # 0x1e and 0x3e use additional information 30, which RFC 8949 reserves:
     # they are not the integers 30 and -31.
-    decode_module = pytest.importorskip("server.app.decoder.decode")
 
     unsigned_23, offset_u = decode_module._parse_cbor_item(bytes([0x17]), 0)
     negative_24, offset_n = decode_module._parse_cbor_item(bytes([0x37]), 0)
@@ -18,8 +19,6 @@ def test_parse_cbor_item_reads_one_byte_integers_and_rejects_reserved_additional
 
 
 def test_parse_cbor_item_byte_string_indefinite_and_truncated_forms():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     indefinite_node, indefinite_offset = decode_module._parse_cbor_item(
         b"\x5f\x42ab\x41c\xff", 0
     )
@@ -40,8 +39,6 @@ def test_parse_cbor_item_byte_string_indefinite_and_truncated_forms():
 
 
 def test_parse_cbor_item_text_string_indefinite_and_invalid_utf8():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     text_node, _ = decode_module._parse_cbor_item(b"\x7f\x62hi\x61!\xff", 0)
     assert text_node["type"] == "text string"
     assert text_node["value"] == "hi!"
@@ -57,8 +54,6 @@ def test_parse_cbor_item_text_string_indefinite_and_invalid_utf8():
 
 
 def test_parse_cbor_item_array_map_tag_and_simple_float_values():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     array_node, _ = decode_module._parse_cbor_item(b"\x82\x01\x02", 0)
     assert array_node["summary"] == "array[2]"
 
@@ -75,8 +70,6 @@ def test_parse_cbor_item_array_map_tag_and_simple_float_values():
 
 
 def test_structure_to_value_handles_chunks_and_unhashable_map_keys():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     byte_chunks_node = {
         "majorType": 2,
         "chunks": [
@@ -102,8 +95,6 @@ def test_structure_to_value_handles_chunks_and_unhashable_map_keys():
 
 
 def test_decode_item_reads_indefinite_containers_and_never_makes_up_a_short_float():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     node, offset, _ = decode_module.decode_item(b"\x9f\x01\x02\xff")
     assert decode_module._structure_to_value(node) == [1, 2]
     assert offset == len(b"\x9f\x01\x02\xff")
@@ -121,8 +112,6 @@ def test_decode_item_reads_indefinite_containers_and_never_makes_up_a_short_floa
 
 
 def test_read_length_and_availability_helpers_raise_expected_errors():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     with pytest.raises(decode_module._CborDecodingError):
         decode_module._read_cbor_length(31, b"", 0, allow_indefinite=False)
 
@@ -132,8 +121,6 @@ def test_read_length_and_availability_helpers_raise_expected_errors():
 
 
 def test_expand_cbor_value_and_binary_input_decoder_helpers():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     expanded = decode_module._expand_cbor_value(
         {
             "bytes": b"\x01\x02",

@@ -1,8 +1,8 @@
 import base64
 
 import cbor2
-import pytest
 
+from server.app.decoder import decode as decode_module
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
 
@@ -20,8 +20,6 @@ def _auth_data_with_trailing_pairs(pairs: list[tuple[int, object]]) -> bytes:
 
 
 def test_parse_authenticator_data_bytes_returns_parse_error_for_short_payload():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     details, trimmed, trailing = decode_module._parse_authenticator_data_bytes(b"\x00" * 10)
 
     assert details["parseError"].startswith("Authenticator data shorter")
@@ -30,8 +28,6 @@ def test_parse_authenticator_data_bytes_returns_parse_error_for_short_payload():
 
 
 def test_parse_authenticator_data_bytes_parses_attested_and_extension_sections_with_trailing():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     aaguid = bytes.fromhex("00112233445566778899aabbccddeeff")
     credential_id = b"\xAA\xBB"
     public_key = cbor2.dumps({1: 2, 3: -7})
@@ -177,8 +173,6 @@ def test_a_credential_descriptor_shows_every_member():
 
 
 def test_try_decode_cbor_interprets_prefixed_get_assertion_request_payload():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     map_payload = cbor2.dumps({1: "example.com", 2: b"\x22" * 32})
     data = b"\x02" + map_payload
 

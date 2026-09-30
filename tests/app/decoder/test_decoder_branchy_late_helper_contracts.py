@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import base64
 
-import pytest
+from server.app.decoder import decode as decode_module
 
 
 def _auth_header(flags: int = 0x01, sign_count: int = 1) -> bytes:
@@ -10,8 +10,6 @@ def _auth_header(flags: int = 0x01, sign_count: int = 1) -> bytes:
 
 
 def test_late_cose_and_base64_helpers_cover_fallback_and_conversion_branches():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     assert decode_module._resolve_cose_algorithm({"3": "-257"}) == "RS256 (RSA)"
     assert decode_module._resolve_cose_algorithm({"alg": "custom-alg"}) == "custom-alg"
     assert decode_module._resolve_cose_algorithm({}, {"publicKeyAlgorithm": -259}) == "RS512 (RSA)"
@@ -32,8 +30,6 @@ def test_late_cose_and_base64_helpers_cover_fallback_and_conversion_branches():
 
 
 def test_binary_extract_helpers_cover_nested_hex_error_and_fallback(monkeypatch, binary):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     assert decode_module._extract_hex_from_binary({"binary": {"hex": "AABB"}}) == "AABB"
 
     monkeypatch.setattr(
@@ -76,7 +72,6 @@ def test_binary_extract_helpers_cover_nested_hex_error_and_fallback(monkeypatch,
 def test_try_decode_cbor_reports_trailing_bytes_and_padding_alike():
     # MAKE_CREDENTIAL, the integer 42, then two more bytes. Padding is reported
     # as well, as padding: nothing after the item goes unmentioned.
-    decode_module = pytest.importorskip("server.app.decoder.decode")
 
     result = decode_module._try_decode_cbor(b"\x01\x18\x2a\x11\x22", "hex")
     assert result["malformed"] == ["Trailing 2 byte(s) after CBOR payload."]

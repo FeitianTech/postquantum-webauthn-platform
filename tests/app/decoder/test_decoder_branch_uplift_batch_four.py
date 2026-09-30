@@ -4,6 +4,7 @@ import base64
 
 import pytest
 
+from server.app.decoder import decode as decode_module
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
 
@@ -14,8 +15,6 @@ def _pem_block(der_bytes: bytes) -> str:
 
 
 def test_decode_public_key_credential_includes_signature_and_user_handle_summaries(monkeypatch, pipeline):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     def _decode_binary(value):
         if value == "sig":
             return b"\xaa\xbb", "base64"
@@ -42,8 +41,6 @@ def test_decode_public_key_credential_includes_signature_and_user_handle_summari
 
 
 def test_decode_pem_certificates_skips_decode_errors_and_uses_single_certificate_payload_shape():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     invalid_body_block = "-----BEGIN CERTIFICATE-----\nA\n-----END CERTIFICATE-----"
     pem_text = "\n".join([invalid_body_block, _pem_block(_GSR2_DER)])
 
@@ -55,8 +52,6 @@ def test_decode_pem_certificates_skips_decode_errors_and_uses_single_certificate
 
 
 def test_decode_binary_payload_uses_authenticator_data_path_when_other_binary_decoders_fail(monkeypatch, pipeline):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     monkeypatch.setattr(pipeline, "_try_decode_utf8", lambda _data: None)
     monkeypatch.setattr(pipeline, "_try_decode_certificate_bytes", lambda _data, _enc: None)
     monkeypatch.setattr(pipeline, "_try_decode_attestation_object", lambda _data, _enc: None)
@@ -79,8 +74,6 @@ def test_decode_binary_input_has_no_lenient_fallback_when_strict_decoding_fails(
     accepted as base64url. Strict failure is now the end of the road.
     """
 
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     original_b64decode = base64.b64decode
 
     def _patched_b64decode(*args, **kwargs):
@@ -95,8 +88,6 @@ def test_decode_binary_input_has_no_lenient_fallback_when_strict_decoding_fails(
 
 
 def test_read_cbor_length_reads_arguments_and_rejects_reserved_additional_information():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     assert decode_module._read_cbor_length(25, b"\x00\x01", 0) == (1, 2)
     assert decode_module._read_cbor_length(27, b"\x00" * 8, 0) == (0, 8)
     with pytest.raises(decode_module._CborDecodingError, match="additional information 30 is reserved"):
@@ -125,8 +116,6 @@ def test_read_cbor_length_reads_arguments_and_rejects_reserved_additional_inform
     ],
 )
 def test_cbor_parser_rejects_partial_and_invalid_items(data, reason):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     with pytest.raises(decode_module._CborDecodingError) as caught:
         decode_module._parse_cbor_item(data, 0)
 
@@ -134,8 +123,6 @@ def test_cbor_parser_rejects_partial_and_invalid_items(data, reason):
 
 
 def test_cbor_parser_accepts_an_empty_indefinite_array_and_closes_partial_containers_only_when_lenient():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     empty, end = decode_module._parse_cbor_item(b"\x9f\xff", 0)
     assert (empty["length"], empty["indefinite"], end) == (0, True, 2)
 
@@ -150,8 +137,6 @@ def test_cbor_parser_accepts_an_empty_indefinite_array_and_closes_partial_contai
 
 
 def test_parse_simple_major_type_values_and_structure_to_value_fallback_branches():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     assert decode_module._parse_cbor_item(b"\xf4", 0)[0]["value"] is False
     assert decode_module._parse_cbor_item(b"\xf6", 0)[0]["type"] == "null"
     assert decode_module._parse_cbor_item(b"\xf7", 0)[0]["type"] == "undefined"
@@ -196,8 +181,6 @@ def test_parse_simple_major_type_values_and_structure_to_value_fallback_branches
 
 
 def test_expand_cbor_value_falls_back_to_make_json_safe_for_unknown_types(monkeypatch, pipeline):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     class _Unknown:
         pass
 
@@ -212,8 +195,6 @@ def test_expand_cbor_value_falls_back_to_make_json_safe_for_unknown_types(monkey
 
 
 def test_try_decode_authenticator_data_returns_structured_payload_on_success(monkeypatch, pipeline):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     monkeypatch.setattr(
         pipeline,
         "_describe_authenticator_data_bytes",

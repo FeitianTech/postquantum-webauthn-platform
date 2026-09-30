@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import cbor2
-import pytest
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData
+
+from server.app.decoder import decode as decode_module
 
 
 def _auth_data_bytes() -> bytes:
@@ -20,8 +21,6 @@ def _auth_data_bytes() -> bytes:
 
 
 def test_remaining_cbor_key_and_float_helpers():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     assert decode_module._key_identity(b"x") == ("bytes", b"x")
     assert decode_module._key_identity(7) == ("int", 7)
 
@@ -32,8 +31,6 @@ def test_remaining_cbor_key_and_float_helpers():
 
 
 def test_remaining_mapping_and_auth_data_format_helpers():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     mapping = {1: "packed", 2: b"\xaa\xbb"}
     assert decode_module._extract_mapping_string(mapping, (1, "fmt")) == "packed"
     assert decode_module._extract_mapping_bytes(mapping, (2, "authData")) == b"\xaa\xbb"
@@ -44,8 +41,6 @@ def test_remaining_mapping_and_auth_data_format_helpers():
 
 
 def test_remaining_certificate_conversion_helpers(monkeypatch, response):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     monkeypatch.setattr(
         response,
         "serialize_attestation_certificate",

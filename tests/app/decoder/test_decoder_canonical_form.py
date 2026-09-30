@@ -11,11 +11,11 @@ from typing import Any
 import pytest
 from fido2 import cbor
 
+from server.app.decoder import decode as decode_module
 from server.app.decoder import decode_payload_text
 
 
 def _decode(hex_text: str) -> dict[str, Any]:
-    decode_module = pytest.importorskip("server.app.decoder.decode")
     return decode_module.decode_payload_text(hex_text)
 
 
@@ -83,7 +83,6 @@ def test_a_duplicate_inside_a_value_the_decoded_value_drops_says_it_keeps_neithe
     ],
 )
 def test_a_lenient_read_reports_duplicates_under_keys_it_could_not_read(hex_text, decoded, located):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
     result = decode_module.decode_payload_text(hex_text.replace(" ", ""), lenient=True)
 
     assert result["data"]["decodedValue"] == decoded

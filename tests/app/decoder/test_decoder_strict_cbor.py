@@ -12,14 +12,14 @@ from typing import Any
 import pytest
 from fido2 import cbor
 
+from server.app.decoder import decode as decode_module
+
 
 def _decode(hex_text: str) -> dict[str, Any]:
-    decode_module = pytest.importorskip("server.app.decoder.decode")
     return decode_module.decode_payload_text(hex_text)
 
 
 def _decode_error(hex_text: str) -> Any:
-    decode_module = pytest.importorskip("server.app.decoder.decode")
     with pytest.raises(ValueError) as caught:
         decode_module.decode_payload_text(hex_text)
     return caught.value
@@ -155,8 +155,6 @@ def test_zero_padding_after_a_response_is_reported_too():
 
 
 def test_lenient_parsing_keeps_what_is_there_and_says_what_it_stepped_over():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     node, end, skipped = decode_module.decode_item(bytes.fromhex("48aabb"), lenient=True)
 
     assert node["hex"] == "aabb"
@@ -175,8 +173,6 @@ def test_lenient_parsing_keeps_what_is_there_and_says_what_it_stepped_over():
 
 
 def test_lenient_parsing_closes_a_short_container_and_steps_over_a_reserved_byte():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     node, end, skipped = decode_module.decode_item(bytes.fromhex("831e01"), lenient=True)
 
     assert decode_module._structure_to_value(node) == [decode_module.CborDiagnostic("invalid(h'1e')"), 1]
@@ -188,8 +184,6 @@ def test_lenient_parsing_closes_a_short_container_and_steps_over_a_reserved_byte
 
 
 def test_strict_parsing_never_records_skips():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     node, end, skipped = decode_module.decode_item(bytes.fromhex("a10102"))
 
     assert skipped == []

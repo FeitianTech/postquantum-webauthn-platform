@@ -2,7 +2,8 @@ import base64
 import hashlib
 
 import cbor2
-import pytest
+
+from server.app.decoder import decode as decode_module
 
 
 def _build_authenticator_data_bytes() -> bytes:
@@ -40,8 +41,6 @@ def _build_attestation_object_bytes() -> tuple[bytes, bytes]:
 
 
 def test_build_authenticator_data_payload_falls_back_to_raw_bytes_when_details_absent():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     auth_bytes = _build_authenticator_data_bytes()
     payload = decode_module._build_authenticator_data_payload(auth_bytes, None, fallback_alg=-7)
 
@@ -55,8 +54,6 @@ def test_build_authenticator_data_payload_falls_back_to_raw_bytes_when_details_a
 
 
 def test_extract_authenticator_bytes_from_attestation_parses_valid_object_and_handles_invalid():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     attestation_bytes, auth_data_bytes = _build_attestation_object_bytes()
     attestation_entry = {"raw": base64.b64encode(attestation_bytes).decode("ascii")}
 

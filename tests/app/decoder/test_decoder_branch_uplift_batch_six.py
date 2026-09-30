@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import hashlib
 
-import pytest
 from fido2.webauthn import AuthenticatorData
+
+from server.app.decoder import decode as decode_module
 
 
 def test_looks_like_get_assertion_request_rejects_signature_or_authdata_binary_shapes():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     assert decode_module._looks_like_get_assertion_request("not-a-map") is False
     assert (
         decode_module._looks_like_get_assertion_request(
@@ -31,8 +30,6 @@ def test_looks_like_get_assertion_request_rejects_signature_or_authdata_binary_s
 
 
 def test_describe_authenticator_data_bytes_includes_extensions_summary_when_mapping_present():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     auth_data = AuthenticatorData.create(
         hashlib.sha256(b"example.com").digest(),
         AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.ED,
@@ -48,8 +45,6 @@ def test_describe_authenticator_data_bytes_includes_extensions_summary_when_mapp
 
 
 def test_build_client_data_details_handles_invalid_challenge_and_optional_fields():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     details = decode_module._build_client_data_details(
         {
             "type": "webauthn.create",
@@ -71,8 +66,6 @@ def test_build_client_data_details_handles_invalid_challenge_and_optional_fields
 
 
 def test_convert_result_to_data_covers_empty_cbor_and_generic_fallback_paths():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     cbor_payload = decode_module._convert_result_to_data("CBOR", {"decoded": {"only": "decoded"}})
     assert cbor_payload["cbor"] == {"only": "decoded"}
 
@@ -85,8 +78,6 @@ def test_convert_result_to_data_covers_empty_cbor_and_generic_fallback_paths():
 
 
 def test_convert_certificate_bytes_guard_paths(monkeypatch, response):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     assert decode_module._convert_certificate_bytes("%%") == {}
 
     monkeypatch.setattr(response, "serialize_attestation_certificate", lambda _bytes: None)
@@ -94,8 +85,6 @@ def test_convert_certificate_bytes_guard_paths(monkeypatch, response):
 
 
 def test_build_authenticator_data_payload_covers_non_mapping_and_partial_details():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     payload = decode_module._build_authenticator_data_payload(None, "not-a-map")
     assert payload == {}
 

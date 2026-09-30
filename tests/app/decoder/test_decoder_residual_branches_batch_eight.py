@@ -3,12 +3,11 @@ from __future__ import annotations
 import base64
 
 import cbor2
-import pytest
+
+from server.app.decoder import decode as decode_module
 
 
 def test_build_credential_payload_covers_length_string_and_empty_public_key_payload():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     payload = decode_module._build_credential_payload(
         {
             "credentialId": {
@@ -27,8 +26,6 @@ def test_build_credential_payload_covers_length_string_and_empty_public_key_payl
 
 
 def test_binary_extractors_and_authenticator_fallback_paths(monkeypatch, binary):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     assert decode_module._extract_hex_from_binary({"binary": {"hex": "aabb"}}) == "aabb"
 
     monkeypatch.setattr(

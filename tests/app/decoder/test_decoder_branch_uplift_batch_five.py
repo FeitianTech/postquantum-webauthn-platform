@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import base64
 
-import pytest
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
+from server.app.decoder import decode as decode_module
+
 
 def test_parse_authenticator_data_bytes_reports_truncated_attested_data_instead_of_dropping_it():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     truncated_payload = b"\x00" * 32 + bytes([AuthenticatorData.FLAG.AT]) + (1).to_bytes(4, "big")
     details, trimmed, trailing = decode_module._parse_authenticator_data_bytes(truncated_payload)
     assert details["attestedCredentialData"] == {
@@ -33,8 +32,6 @@ def test_parse_authenticator_data_bytes_reports_truncated_attested_data_instead_
 
 
 def test_parse_authenticator_data_bytes_shows_a_cose_key_that_is_not_well_formed_as_hex_with_its_location():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     payload_with_bad_cose = (
         b"\x01" * 32
         + bytes([AuthenticatorData.FLAG.AT])
@@ -58,8 +55,6 @@ def test_parse_authenticator_data_bytes_shows_a_cose_key_that_is_not_well_formed
 
 
 def test_parse_authenticator_data_bytes_reads_extensions_and_reports_bytes_after_them():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     extension_payload = (
         b"\x03" * 32
         + bytes([AuthenticatorData.FLAG.ED])
@@ -77,8 +72,6 @@ def test_parse_authenticator_data_bytes_reads_extensions_and_reports_bytes_after
 
 
 def test_attestation_entry_and_payload_helpers_cover_remaining_edges():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     assert decode_module._convert_attestation_entry("not-mapping") == {}
 
     cert_bytes = b"\x30\x82\x01\x00"

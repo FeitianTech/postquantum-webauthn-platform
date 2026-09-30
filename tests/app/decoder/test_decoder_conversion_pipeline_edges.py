@@ -3,7 +3,8 @@ import hashlib
 import json
 
 import cbor2
-import pytest
+
+from server.app.decoder import decode as decode_module
 
 
 def _b64url(data: bytes) -> str:
@@ -32,8 +33,6 @@ def _build_attestation_and_auth_data() -> tuple[bytes, bytes]:
 
 
 def test_build_decoder_payload_for_cbor_deduplicates_qualifiers_and_normalizes_malformed():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     payload = decode_module._build_decoder_payload(
         {
             "format": "CBOR",
@@ -59,8 +58,6 @@ def test_build_decoder_payload_for_cbor_deduplicates_qualifiers_and_normalizes_m
 
 
 def test_convert_result_to_data_covers_json_cbor_and_fallback_paths():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     assert decode_module._convert_result_to_data("JSON", {"decoded": {"a": 1}}) == {
         "json": {"a": 1}
     }
@@ -89,8 +86,6 @@ def test_convert_result_to_data_covers_json_cbor_and_fallback_paths():
 
 
 def test_convert_public_key_credential_and_attestation_object_data_paths():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     attestation_bytes, auth_data_bytes = _build_attestation_and_auth_data()
     attestation_b64 = base64.b64encode(attestation_bytes).decode("ascii")
 
@@ -153,8 +148,6 @@ def test_convert_public_key_credential_and_attestation_object_data_paths():
 
 
 def test_convert_authenticator_clientdata_and_certificate_result_paths():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     _attestation_bytes, auth_data_bytes = _build_attestation_and_auth_data()
 
     auth_result = {
@@ -199,8 +192,6 @@ def test_convert_authenticator_clientdata_and_certificate_result_paths():
 
 
 def test_prepare_decoder_response_and_detector_helpers():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     prepared = decode_module._prepare_decoder_response(
         {
             "format": "JSON",
@@ -228,8 +219,6 @@ def test_prepare_decoder_response_and_detector_helpers():
 
 
 def test_decode_payload_text_json_public_key_credential_and_cbor_roundtrip():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     attestation_bytes, _auth_data_bytes = _build_attestation_and_auth_data()
     client_data_json = json.dumps(
         {

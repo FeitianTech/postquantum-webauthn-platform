@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import hashlib
 
-import pytest
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData
+
+from server.app.decoder import decode as decode_module
 
 
 def _auth_data_bytes() -> bytes:
@@ -26,8 +27,6 @@ def _attestation_object_bytes() -> bytes:
 
 
 def test_ctap_shape_detection_and_classification_helpers():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     client_data_hash = b"\x11" * 32
     auth_data = _auth_data_bytes()
 
@@ -48,8 +47,6 @@ def test_ctap_shape_detection_and_classification_helpers():
 
 
 def test_result_conversion_helpers_for_all_base_payload_types(monkeypatch, response, binary):
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     monkeypatch.setattr(response, "_build_credential_overview", lambda _d: {"id": "cred"})
     monkeypatch.setattr(response, "_convert_attestation_entry", lambda _e: {"fmt": "none"})
     monkeypatch.setattr(response, "_build_authenticator_section", lambda *_a, **_k: {"counter": 1})

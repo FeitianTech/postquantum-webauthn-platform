@@ -2,6 +2,7 @@ import base64
 
 import pytest
 
+from server.app.decoder import decode as decode_module
 from tests.app.entry_app import entry_app
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
@@ -17,8 +18,6 @@ def _b64url(data: bytes) -> str:
 
 
 def test_decode_pem_certificates_ignores_invalid_blocks_and_keeps_valid_certificates():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     invalid_block = "-----BEGIN CERTIFICATE-----\n%%%%\n-----END CERTIFICATE-----"
     pem_bundle = "\n".join([_pem_block(_GSR2_DER), invalid_block, _pem_block(_GSR2_DER)])
 
@@ -36,8 +35,6 @@ def test_decode_pem_certificates_ignores_invalid_blocks_and_keeps_valid_certific
 
 
 def test_decode_pem_certificates_rejects_payload_without_any_valid_pem_certificate():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     pem_text = "-----BEGIN CERTIFICATE-----\n%%%%\n-----END CERTIFICATE-----"
 
     with pytest.raises(ValueError, match="No PEM certificate data found"):
@@ -45,16 +42,12 @@ def test_decode_pem_certificates_rejects_payload_without_any_valid_pem_certifica
 
 
 def test_try_decode_certificate_bytes_returns_none_for_malformed_der_payload():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     malformed_der = _GSR2_DER[:24]
 
     assert decode_module._try_decode_certificate_bytes(malformed_der, "base64url") is None
 
 
 def test_codec_api_decodes_der_certificate_payload_successfully():
-    pytest.importorskip("server.app.app")
-
     payload = _b64url(_GSR2_DER)
 
     with entry_app().test_client() as client:

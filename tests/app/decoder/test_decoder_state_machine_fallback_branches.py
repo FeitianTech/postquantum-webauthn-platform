@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import pytest
+from server.app.decoder import decode as decode_module
 
 
 def test_build_decoder_payload_names_the_kind_ctap_decoded_names_only():
-    decode_module = pytest.importorskip("server.app.decoder.decode")
-
     payload = decode_module._build_decoder_payload(
         {
             "format": "CBOR",

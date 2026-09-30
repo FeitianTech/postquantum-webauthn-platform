@@ -9,14 +9,14 @@ from __future__ import annotations
 import hashlib
 from typing import Any
 
-import pytest
 from fido2 import cbor
+
+from server.app.decoder import decode as decode_module
 
 CLIENT_DATA_HASH = bytes(range(32))
 
 
 def _decode(data: bytes) -> dict[str, Any]:
-    decode_module = pytest.importorskip("server.app.decoder.decode")
     return decode_module.decode_payload_text(data.hex())
 
 
