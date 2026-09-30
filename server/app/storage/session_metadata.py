@@ -5,9 +5,7 @@ import json
 import logging
 import os
 import shutil
-import threading
 import time
-from datetime import timedelta
 
 from ..config.mds import session_metadata_dir
 from .cloud import (
@@ -49,10 +47,6 @@ _USER_FOLDER_PREFIX = "user-data"
 _METADATA_SUBDIR = "metadata"
 _LAST_ACCESS_BLOB = ".last-access"
 
-_LOCAL_INACTIVE_AGE = timedelta(days=14)
-_LOCAL_CLEANUP_INTERVAL = timedelta(hours=6)
-_local_last_cleanup: float = 0.0
-_local_cleanup_lock = threading.Lock()
 
 
 def _using_gcs() -> bool:
@@ -166,45 +160,11 @@ def _local_resolve_last_access(directory: str) -> float | None:
         return None
 
 
-def _local_maybe_cleanup(now: float | None = None) -> None:
-    global _local_last_cleanup
-
-    current_time = now or time.time()
-    with _local_cleanup_lock:
-        if current_time - _local_last_cleanup < _LOCAL_CLEANUP_INTERVAL.total_seconds():
-            return
-        _local_last_cleanup = current_time
-
-    cutoff = current_time - _LOCAL_INACTIVE_AGE.total_seconds()
-
-    try:
-        entries = os.listdir(session_metadata_dir())
-    except OSError:
-        return
-
-    for entry in entries:
-        if entry.startswith("."):
-            continue
-
-        directory = os.path.join(session_metadata_dir(), entry)
-        if not os.path.isdir(directory):
-            continue
-
-        last_access = _local_resolve_last_access(directory)
-        if last_access is None or last_access >= cutoff:
-            continue
-
-        try:
-            shutil.rmtree(directory)
-        except OSError as exc:
-            logger.warning("Failed to remove inactive metadata session %s: %s", directory, exc)
-
-
 def _local_note_activity(session_id: str) -> None:
+    # Idle sessions are swept by server.app.visitor_session, on both backends.
     directory = _local_session_directory(session_id)
     if directory and os.path.isdir(directory):
         _local_touch_last_access(directory)
-    _local_maybe_cleanup()
 
 
 def ensure_session(session_id: str) -> None:
@@ -212,7 +172,6 @@ def ensure_session(session_id: str) -> None:
         touch_last_access(session_id)
     else:
         _local_session_directory(session_id, create=True)
-        _local_maybe_cleanup()
 
 
 def list_sessions() -> list[str]:

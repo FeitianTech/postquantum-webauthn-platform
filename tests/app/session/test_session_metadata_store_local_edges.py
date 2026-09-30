@@ -7,6 +7,7 @@ import types
 
 import pytest
 
+from server.app import visitor_session
 from server.app.storage import session_metadata as session_store
 
 
@@ -17,7 +18,6 @@ def session_store_local(monkeypatch, tmp_path):
 
     monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(session_dir))
     monkeypatch.setattr(session_store, "_using_gcs", lambda: False)
-    monkeypatch.setattr(session_store, "_local_last_cleanup", 0.0)
 
     return session_store, session_dir
 
@@ -147,18 +147,6 @@ def test_local_resolve_last_access_returns_none_when_scandir_fails(session_store
     assert session_store._local_resolve_last_access("/tmp/session-a") is None
 
 
-def test_local_cleanup_returns_when_listdir_fails(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
-    monkeypatch.setattr(
-        session_store.os,
-        "listdir",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("cannot list")),
-    )
-
-    session_store._local_maybe_cleanup(now=1000.0)
-
-
 def test_local_cleanup_logs_warning_when_stale_directory_removal_fails(session_store_local, monkeypatch):
     session_store, session_dir = session_store_local
 
@@ -181,8 +169,9 @@ def test_local_cleanup_logs_warning_when_stale_directory_removal_fails(session_s
     warnings = []
     monkeypatch.setattr(session_store.logger, "warning", lambda *args, **kwargs: warnings.append((args, kwargs)))
 
-    now = session_store._LOCAL_INACTIVE_AGE.total_seconds() + 1000.0
-    session_store._local_maybe_cleanup(now=now)
+    monkeypatch.setattr(visitor_session, "CLEANUP", visitor_session.CleanupState())
+    now = visitor_session.INACTIVE_AGE.total_seconds() + 1000.0
+    visitor_session._maybe_cleanup(now=now)
 
     assert warnings
 
@@ -191,17 +180,14 @@ def test_local_note_activity_skips_touch_when_directory_missing(session_store_lo
     session_store, _ = session_store_local
 
     touched = []
-    cleanup = []
 
     monkeypatch.setattr(session_store, "_local_session_directory", lambda _sid: "/tmp/missing")
     monkeypatch.setattr(session_store.os.path, "isdir", lambda _path: False)
     monkeypatch.setattr(session_store, "_local_touch_last_access", lambda directory: touched.append(directory))
-    monkeypatch.setattr(session_store, "_local_maybe_cleanup", lambda: cleanup.append(True))
 
     session_store._local_note_activity("session-a")
 
     assert touched == []
-    assert cleanup == [True]
 
 
 def test_ensure_session_uses_touch_last_access_in_gcs_mode(session_store_local, monkeypatch):
@@ -514,8 +500,9 @@ def test_local_cleanup_handles_listdir_oserror_after_interval_elapsed(session_st
         lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("cannot list")),
     )
 
-    now = session_store._LOCAL_CLEANUP_INTERVAL.total_seconds() + 1.0
-    session_store._local_maybe_cleanup(now=now)
+    monkeypatch.setattr(visitor_session, "CLEANUP", visitor_session.CleanupState())
+    now = visitor_session.CLEANUP_INTERVAL.total_seconds() + 1.0
+    visitor_session._maybe_cleanup(now=now)
 
 
 def test_list_sessions_gcs_skips_empty_session_components(session_store_local, monkeypatch):

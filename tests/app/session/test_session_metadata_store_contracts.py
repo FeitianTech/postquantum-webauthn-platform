@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from server.app import visitor_session
 from server.app.storage import session_metadata as session_store
 
 
@@ -12,7 +13,6 @@ def session_store_module(monkeypatch, tmp_path):
     session_dir.mkdir()
 
     monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(session_dir))
-    monkeypatch.setattr(session_store, "_local_last_cleanup", 0.0)
 
     return session_store, session_dir
 
@@ -49,6 +49,7 @@ def test_local_touch_last_access_with_explicit_timestamp(session_store_module, m
 def test_local_cleanup_removes_only_stale_non_hidden_sessions(session_store_module, monkeypatch):
     session_store, session_dir = session_store_module
     monkeypatch.setattr(session_store, "_using_gcs", lambda: False)
+    monkeypatch.setattr(visitor_session, "CLEANUP", visitor_session.CleanupState())
 
     stale_dir = session_dir / "stale-session"
     fresh_dir = session_dir / "fresh-session"
@@ -70,7 +71,7 @@ def test_local_cleanup_removes_only_stale_non_hidden_sessions(session_store_modu
         lambda directory: last_access.get(Path(directory).name),
     )
 
-    session_store._local_maybe_cleanup(now=now)
+    visitor_session._maybe_cleanup(now=now)
 
     assert stale_dir.exists() is False
     assert fresh_dir.exists() is True
@@ -80,7 +81,7 @@ def test_local_cleanup_removes_only_stale_non_hidden_sessions(session_store_modu
 def test_local_cleanup_respects_cleanup_interval_guard(session_store_module, monkeypatch):
     session_store, _ = session_store_module
     monkeypatch.setattr(session_store, "_using_gcs", lambda: False)
-    monkeypatch.setattr(session_store, "_local_last_cleanup", 2_000.0)
+    monkeypatch.setattr(visitor_session, "CLEANUP", visitor_session.CleanupState(last_run=2_000.0))
 
     monkeypatch.setattr(
         session_store.os,
@@ -88,7 +89,7 @@ def test_local_cleanup_respects_cleanup_interval_guard(session_store_module, mon
         lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("listdir should not run")),
     )
 
-    session_store._local_maybe_cleanup(now=2_500.0)
+    visitor_session._maybe_cleanup(now=2_500.0)
 
 
 def test_gcs_touch_last_access_uploads_json_marker(session_store_module, monkeypatch):
