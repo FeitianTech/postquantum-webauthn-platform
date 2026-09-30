@@ -4,8 +4,8 @@ import json
 
 import cbor2
 
+from server.app.decoder.decode import answer as decode_answer
 from server.app.decoder.decode import credential_json
-from server.app.decoder.decode import response as decode_response
 from server.app.decoder.decode import text as decode_text
 
 
@@ -35,7 +35,7 @@ def _build_attestation_and_auth_data() -> tuple[bytes, bytes]:
 
 
 def test_build_decoder_payload_for_cbor_deduplicates_qualifiers_and_normalizes_malformed():
-    payload = decode_response._build_decoder_payload(
+    payload = decode_answer._build_decoder_payload(
         {
             "format": "CBOR",
             "decoded": {
@@ -60,11 +60,11 @@ def test_build_decoder_payload_for_cbor_deduplicates_qualifiers_and_normalizes_m
 
 
 def test_convert_result_to_data_covers_json_cbor_and_fallback_paths():
-    assert decode_response._convert_result_to_data("JSON", {"decoded": {"a": 1}}) == {
+    assert decode_answer._convert_result_to_data("JSON", {"decoded": {"a": 1}}) == {
         "json": {"a": 1}
     }
 
-    cbor_payload = decode_response._convert_result_to_data(
+    cbor_payload = decode_answer._convert_result_to_data(
         "CBOR",
         {
             "decoded": {
@@ -80,7 +80,7 @@ def test_convert_result_to_data_covers_json_cbor_and_fallback_paths():
     assert "decodedValue" in cbor_payload
     assert cbor_payload["ctap"]["code"] == 2
 
-    fallback = decode_response._convert_result_to_data(
+    fallback = decode_answer._convert_result_to_data(
         "Unknown type",
         {"decoded": None, "binary": {"hex": "aabb"}},
     )
@@ -120,7 +120,7 @@ def test_convert_public_key_credential_and_attestation_object_data_paths():
         }
     }
 
-    converted_public = decode_response._convert_result_to_data("PublicKeyCredential", public_key_result)
+    converted_public = decode_answer._convert_result_to_data("PublicKeyCredential", public_key_result)
     assert converted_public["credential"]["type"] == "public-key"
     assert converted_public["attestationObject"]["fmt"] == "none"
     assert converted_public["clientExtensionResults"]["credProps"]["rk"] is True
@@ -142,7 +142,7 @@ def test_convert_public_key_credential_and_attestation_object_data_paths():
         "binary": {"base64": attestation_b64},
     }
 
-    converted_attestation = decode_response._convert_result_to_data("Attestation object", attestation_result)
+    converted_attestation = decode_answer._convert_result_to_data("Attestation object", attestation_result)
     assert converted_attestation["attestationObject"]["raw"] == attestation_b64
     assert converted_attestation["extensions"]["credProps"]["rk"] is True
     assert converted_attestation["authenticatorData"]["counter"] == 2
@@ -159,7 +159,7 @@ def test_convert_authenticator_clientdata_and_certificate_result_paths():
         },
         "binary": {"hex": auth_data_bytes.hex()},
     }
-    converted_auth = decode_response._convert_result_to_data("Authenticator data", auth_result)
+    converted_auth = decode_answer._convert_result_to_data("Authenticator data", auth_result)
     assert converted_auth["raw"] == auth_data_bytes.hex()
     assert converted_auth["counter"] == 2
 
@@ -171,7 +171,7 @@ def test_convert_authenticator_clientdata_and_certificate_result_paths():
             "crossOrigin": True,
         }
     }
-    converted_client = decode_response._convert_result_to_data("WebAuthn client data", client_result)
+    converted_client = decode_answer._convert_result_to_data("WebAuthn client data", client_result)
     assert converted_client["type"] == "webauthn.get"
     assert converted_client["crossOrigin"] is True
 
@@ -186,7 +186,7 @@ def test_convert_authenticator_clientdata_and_certificate_result_paths():
             ]
         }
     }
-    converted_certificate = decode_response._convert_result_to_data(
+    converted_certificate = decode_answer._convert_result_to_data(
         "X.509 certificate", certificate_result
     )
     assert converted_certificate["certificates"]
@@ -194,7 +194,7 @@ def test_convert_authenticator_clientdata_and_certificate_result_paths():
 
 
 def test_prepare_decoder_response_and_detector_helpers():
-    prepared = decode_response._prepare_decoder_response(
+    prepared = decode_answer._prepare_decoder_response(
         {
             "format": "JSON",
             "decoded": {"ok": True},

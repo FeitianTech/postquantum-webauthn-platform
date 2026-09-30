@@ -4,6 +4,7 @@ import pytest
 from fido2.utils import ByteBuffer
 
 from server.app.decoder import values as decoder_values
+from server.app.decoder.decode import answer as decode_answer
 from server.app.decoder.decode import attestation_object as decode_attestation_object
 from server.app.decoder.decode import authenticator_data as decode_authenticator_data
 from server.app.decoder.decode import binary_text, credential_json, json_input
@@ -93,7 +94,7 @@ def test_stringify_and_hex_helpers_convert_nested_values():
     assert decoder_values.make_hex_only(payload) == hex_only
 
 
-def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, response):
+def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch):
     with pytest.raises(ValueError, match="Decoder input is empty"):
         decode_text.decode_payload_text("   ")
 
@@ -101,7 +102,7 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, r
     monkeypatch.setattr(
         credential_json, "decode_json_object", lambda value, raw_text=None, **_kwargs: {"kind": "json", "raw": raw_text, "value": value}
     )
-    monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"wrapped": result})
+    monkeypatch.setattr(decode_answer, "_prepare_decoder_response", lambda result: {"wrapped": result})
     assert decode_text.decode_payload_text(" {\"a\": 1} ") == {
         "wrapped": {"kind": "json", "raw": '{"a": 1}', "value": {"a": 1}, "decodeMode": "strict"}
     }
@@ -109,7 +110,7 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, r
     monkeypatch.setattr(json_input, "read_or_none", lambda _v, **_kwargs: (json_input.NOT_JSON, []))
     monkeypatch.setattr(decode_pem, "looks_like_pem", lambda _v: True)
     monkeypatch.setattr(decode_pem, "decode_pem_certificates", lambda _v: {"kind": "pem"})
-    monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"pem": result})
+    monkeypatch.setattr(decode_answer, "_prepare_decoder_response", lambda result: {"pem": result})
     assert decode_text.decode_payload_text("-----BEGIN CERTIFICATE-----") == {
         "pem": {"kind": "pem", "decodeMode": "strict"}
     }
@@ -121,7 +122,7 @@ def test_decode_payload_text_dispatches_json_pem_and_binary_paths(monkeypatch, r
         "_decode_binary_payload",
         lambda data, encoding, lenient=False: {"kind": "bin", "data": data, "encoding": encoding, "lenient": lenient},
     )
-    monkeypatch.setattr(response, "_prepare_decoder_response", lambda result: {"bin": result})
+    monkeypatch.setattr(decode_answer, "_prepare_decoder_response", lambda result: {"bin": result})
     assert decode_text.decode_payload_text("0102") == {
         "bin": {"kind": "bin", "data": b"\x01\x02", "encoding": "hex", "lenient": False, "decodeMode": "strict"}
     }

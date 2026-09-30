@@ -2,9 +2,9 @@ import base64
 
 import cbor2
 
+from server.app.decoder.decode import answer as decode_answer
 from server.app.decoder.decode import binary as decode_binary
 from server.app.decoder.decode import certificates as decode_certificates
-from server.app.decoder.decode import response as decode_response
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
 
@@ -43,7 +43,7 @@ def test_build_decoder_payload_cbor_adds_unique_qualifiers_and_ctap_sections():
         },
     }
 
-    payload = decode_response._build_decoder_payload(result)
+    payload = decode_answer._build_decoder_payload(result)
 
     assert payload["success"] is True
     assert payload["type"].startswith("CBOR (")
@@ -104,7 +104,7 @@ def test_build_authenticator_data_payload_uses_bytes_and_details_to_build_creden
         },
     }
 
-    payload = decode_response._build_authenticator_data_payload(auth_bytes, details, -7)
+    payload = decode_answer._build_authenticator_data_payload(auth_bytes, details, -7)
 
     assert payload["rpIdHash"] == bytes(range(32)).hex()
     assert payload["counter"] == 5

@@ -31,13 +31,6 @@ def ctap():
 
 
 @pytest.fixture
-def response():
-    """The submodule that converts a decoded result into the decoder response."""
-
-    return _fragment("response")
-
-
-@pytest.fixture
 def cbor_parser():
     """The submodule that parses CBOR: strict, lenient and sequence forms."""
 

@@ -3,8 +3,8 @@ import hashlib
 
 import cbor2
 
+from server.app.decoder.decode import answer as decode_answer
 from server.app.decoder.decode import binary as decode_binary
-from server.app.decoder.decode import response as decode_response
 
 
 def _build_authenticator_data_bytes() -> bytes:
@@ -43,7 +43,7 @@ def _build_attestation_object_bytes() -> tuple[bytes, bytes]:
 
 def test_build_authenticator_data_payload_falls_back_to_raw_bytes_when_details_absent():
     auth_bytes = _build_authenticator_data_bytes()
-    payload = decode_response._build_authenticator_data_payload(auth_bytes, None, fallback_alg=-7)
+    payload = decode_answer._build_authenticator_data_payload(auth_bytes, None, fallback_alg=-7)
 
     assert payload["rpIdHash"] == hashlib.sha256(b"example.com").hexdigest()
     assert payload["flags"]["UP"] is True

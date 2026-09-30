@@ -1,7 +1,7 @@
 """The decoder's entry, ``decode_payload_text``: text in, the answer out.
 
 Text is read as JSON (``credential_json``), as PEM (``pem``), or as bytes
-(``binary_text``) that ``readings`` reads in order; ``response`` shapes the answer.
+(``binary_text``) that ``readings`` reads in order; ``answer`` builds the answer.
 """
 from __future__ import annotations
 
@@ -10,13 +10,13 @@ from typing import Any
 from ...encoding import try_decode_base64, try_decode_base64url
 from . import (
     ambiguous_input,
+    answer,
     binary_text,
     credential_json,
     ctap,
     json_input,
     pem,
     readings,
-    response,
 )
 
 
@@ -77,7 +77,7 @@ def decode_payload_text(value: str, *, lenient: bool = False) -> dict[str, Any]:
         ctap._attach_findings(result, [*noted, *(result.get("findings") or [])])
     # JSON is read leniently too, not only CBOR: the answer says how it was read.
     result.setdefault("decodeMode", "lenient" if lenient else "strict")
-    return response._prepare_decoder_response(result)
+    return answer._prepare_decoder_response(result)
 
 
 def _other_text_readings(text: str, taken: str) -> list[dict[str, Any]]:

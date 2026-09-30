@@ -1,4 +1,8 @@
-"""Decoder payload and result conversion helpers."""
+"""The decoder's answer, built from what a reading returned (``_prepare_decoder_response``).
+
+Its ``type`` names what was read, ``data`` shows it for the page, and the
+findings and what was skipped come with it.
+"""
 from __future__ import annotations
 
 import uuid

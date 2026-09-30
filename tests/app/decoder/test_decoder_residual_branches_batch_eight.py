@@ -4,12 +4,12 @@ import base64
 
 import cbor2
 
+from server.app.decoder.decode import answer as decode_answer
 from server.app.decoder.decode import binary as decode_binary
-from server.app.decoder.decode import response as decode_response
 
 
 def test_build_credential_payload_covers_length_string_and_empty_public_key_payload():
-    payload = decode_response._build_credential_payload(
+    payload = decode_answer._build_credential_payload(
         {
             "credentialId": {
                 "hex": "aabb",

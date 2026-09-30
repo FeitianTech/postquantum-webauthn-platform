@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from server.app.decoder.decode import response as decode_response
+from server.app.decoder.decode import answer as decode_answer
 
 
 def test_build_decoder_payload_names_the_kind_ctap_decoded_names_only():
-    payload = decode_response._build_decoder_payload(
+    payload = decode_answer._build_decoder_payload(
         {
             "format": "CBOR",
             "decoded": {

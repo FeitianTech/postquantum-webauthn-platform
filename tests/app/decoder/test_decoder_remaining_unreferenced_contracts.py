@@ -45,7 +45,7 @@ def test_remaining_mapping_and_auth_data_format_helpers():
     assert isinstance(trailing, bytes)
 
 
-def test_remaining_certificate_conversion_helpers(monkeypatch, response):
+def test_remaining_certificate_conversion_helpers(monkeypatch):
     monkeypatch.setattr(
         attestation_certificates,
         "serialize_attestation_certificate",
