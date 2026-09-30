@@ -162,21 +162,36 @@ def test_serialize_extension_value_handles_known_unrecognized_oids_and_transport
     transports_oid = ObjectIdentifier("1.3.6.1.4.1.45724.2.1.1")
     transports_ext = SimpleNamespace(
         oid=transports_oid,
-        value=x509.UnrecognizedExtension(transports_oid, b"\x03\x02\x00\x03"),
+        value=x509.UnrecognizedExtension(transports_oid, bytes.fromhex("03020430")),
     )
     transport_value = attestation_module._serialize_extension_value(transports_ext)
     assert transport_value["Transports"] == "USB NFC"
 
 
-def test_parse_fido_transport_bitfield_supports_plain_and_der_bitstring_encodings(attestation_module):
-    attestation_module = pytest.importorskip("server.app.webauthn.attestation")
+@pytest.mark.parametrize(
+    ("der", "transports"),
+    [
+        # FIDO's named bits, bit 0 the first byte's most significant:
+        # bluetoothRadio 0, bluetoothLowEnergyRadio 1, uSB 2, nFC 3, uSBInternal 4.
+        ("03020780", ["BT CLASSIC"]),
+        ("03020640", ["BLE"]),
+        ("03020520", ["USB"]),
+        ("03020410", ["NFC"]),
+        ("03020308", ["USB INTERNAL"]),
+        ("03020430", ["USB", "NFC"]),
+        ("030204f0", ["BT CLASSIC", "BLE", "USB", "NFC"]),
+        # A bit FIDO names nothing for is shown by its number.
+        ("03020104", ["bit 5"]),
+        ("030100", []),
+    ],
+)
+def test_parse_fido_transport_bitfield_reads_fidos_named_bits(attestation_module, der, transports):
+    assert attestation_module._parse_fido_transport_bitfield(bytes.fromhex(der)) == transports
 
-    assert attestation_module._parse_fido_transport_bitfield(b"\x03") == ["USB", "NFC"]
-    assert attestation_module._parse_fido_transport_bitfield(b"\x03\x02\x00\x03") == [
-        "USB",
-        "NFC",
-    ]
-    assert attestation_module._parse_fido_transport_bitfield(b"") == []
+
+@pytest.mark.parametrize("raw", [b"", b"\x03", b"\x04\x01\x00", bytes.fromhex("0302043000")])
+def test_parse_fido_transport_bitfield_names_nothing_for_what_is_not_a_bit_string(attestation_module, raw):
+    assert attestation_module._parse_fido_transport_bitfield(raw) is None
 
 
 def test_coerce_attestation_certificate_bytes_handles_mapping_variants(attestation_module):

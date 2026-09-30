@@ -11,40 +11,29 @@ import datetime
 from typing import Any
 
 from cryptography import x509
+from cryptography.hazmat import asn1
 
 from . import certificate_names, formatting
 
+# id-fido-gen-ce-transports is a BIT STRING with named bits, bit 0 the first
+# byte's most significant: bluetoothRadio, bluetoothLowEnergyRadio, uSB, nFC,
+# uSBInternal (FIDO Authenticator Transports Extension).
+_FIDO_TRANSPORT_BITS = ("BT CLASSIC", "BLE", "USB", "NFC", "USB INTERNAL")
 
-def _parse_fido_transport_bitfield(raw_value: bytes) -> list[str]:
-    if not raw_value:
-        return []
 
-    data = raw_value
-    if raw_value[0] == 0x03 and len(raw_value) >= 3:
-        unused_bits = raw_value[2]
-        data = raw_value[3: 3 + raw_value[1] - 1]
-    else:
-        unused_bits = 0
+def _parse_fido_transport_bitfield(raw_value: bytes) -> list[str] | None:
+    """The transports the extension names; ``None`` when it is not a DER BIT STRING."""
 
-    aggregate = 0
-    for byte in data:
-        aggregate = (aggregate << 8) | byte
-
-    if unused_bits:
-        aggregate >>= unused_bits
-
-    transport_map = [
-        (0x01, "USB"),
-        (0x02, "NFC"),
-        (0x04, "BLE"),
-        (0x08, "TEST"),
-        (0x10, "INTERNAL"),
-        (0x20, "USB-C"),
-        (0x40, "LIGHTNING"),
-        (0x80, "BT CLASSIC"),
-    ]
-
-    transports = [label for mask, label in transport_map if aggregate & mask]
+    try:
+        bits = asn1.decode_der(asn1.BitString, raw_value)
+    except ValueError:
+        return None
+    data = bits.as_bytes()
+    transports = []
+    for index in range(len(data) * 8 - bits.padding_bits()):
+        if data[index // 8] & (0x80 >> (index % 8)):
+            known = index < len(_FIDO_TRANSPORT_BITS)
+            transports.append(_FIDO_TRANSPORT_BITS[index] if known else f"bit {index}")
     return transports
 
 
