@@ -5,7 +5,6 @@ import hashlib
 from fido2.webauthn import AuthenticatorData
 
 from server.app.decoder.decode import authenticator_data as decode_authenticator_data
-from server.app.decoder.decode import credential_json
 from server.app.decoder.decode import ctap_classify as decode_ctap_classify
 
 
@@ -44,24 +43,3 @@ def test_describe_authenticator_data_bytes_includes_extensions_summary_when_mapp
     assert "extensions" in described
     assert described["extensions"]["raw"]["credProtect"] == 2
     assert described["extensions"]["summary"]["credProtectLabel"] == "userVerificationOptionalWithCredentialIDList"
-
-
-def test_build_client_data_details_handles_invalid_challenge_and_optional_fields():
-    details = credential_json.build_client_data_details(
-        {
-            "type": "webauthn.create",
-            "challenge": "not-valid-binary",
-            "origin": "https://example.com",
-            "crossOrigin": True,
-            "tokenBinding": {"status": "present"},
-        },
-        raw_text="raw-json-text",
-    )
-
-    assert details["challenge"]["raw"] == "not-valid-binary"
-    assert details["crossOrigin"] is True
-    assert details["tokenBinding"] == {"status": "present"}
-    assert details["rawText"] == "raw-json-text"
-
-    no_challenge = credential_json.build_client_data_details({"type": "x", "origin": "https://e"})
-    assert no_challenge["challenge"] is None

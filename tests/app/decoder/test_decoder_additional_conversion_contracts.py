@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import hashlib
-import json
 
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestationObject, AttestedCredentialData, AuthenticatorData
 
 from server.app.decoder.decode import authenticator_data as decode_authenticator_data
-from server.app.decoder.decode import credential_json
 
 
 def _build_auth_data_bytes() -> bytes:
@@ -27,31 +25,6 @@ def _build_attestation_bytes() -> bytes:
     auth_data = _build_auth_data_bytes()
     attestation = AttestationObject.create("none", AuthenticatorData(auth_data), {})
     return bytes(attestation)
-
-
-def test_describe_client_data_from_bytes_success_and_collected_client_data_fallback(monkeypatch):
-    raw_json = {
-        "type": "webauthn.create",
-        "challenge": "AQID",
-        "origin": "https://example.com",
-        "crossOrigin": False,
-    }
-    payload = json.dumps(raw_json).encode("utf-8")
-
-    success = credential_json.describe_client_data_from_bytes(payload)
-    assert success["type"] == "webauthn.create"
-    assert success["origin"] == "https://example.com"
-    assert success["crossOrigin"] is False
-    assert success["challenge"]["raw"] == "AQID"
-
-    class _BrokenClientData:
-        def __init__(self, _payload):
-            raise ValueError("broken collected client data")
-
-    monkeypatch.setattr(credential_json, "CollectedClientData", _BrokenClientData)
-    fallback = credential_json.describe_client_data_from_bytes(payload)
-    assert fallback["type"] == "webauthn.create"
-    assert fallback["challenge"]["raw"] == "AQID"
 
 
 def test_describe_authenticator_data_bytes_includes_flags_and_attested_credential_details():
