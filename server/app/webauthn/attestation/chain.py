@@ -1,9 +1,10 @@
 """Certificate chain signatures, ML-DSA included.
 
-fido2's ``verify_x509_chain`` verifies RSA and ECDSA issuers only; an attestation
-chain an ML-DSA key signed would be refused as an unsupported key type. This is
-its walk with the ML-DSA case added: each certificate is checked against the
-public key of the next, the leaf first and the root last.
+fido2's ``verify_x509_chain`` verifies RSA (PKCS#1 v1.5) and ECDSA issuers only.
+This is its walk with cryptography's ``verify_directly_issued_by`` for each link,
+which also verifies RSA-PSS, EdDSA and ML-DSA signatures and checks that the
+issuer's name is the one the certificate names: each certificate is checked
+against the next, the leaf first and the root last.
 """
 from __future__ import annotations
 
@@ -11,7 +12,7 @@ from collections.abc import Sequence
 
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature as _InvalidSignature
-from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+from cryptography.exceptions import UnsupportedAlgorithm
 from fido2.attestation import InvalidSignature
 
 from ..mldsa import PUBLIC_KEY_TYPES, describe_mldsa_oid
@@ -21,33 +22,23 @@ __all__ = ["verify_certificate_chain", "verify_mldsa_certificate_signature"]
 
 def _verify_issued_by(child: x509.Certificate, issuer: x509.Certificate) -> None:
     try:
-        public_key = issuer.public_key()
-    except ValueError:
-        public_key = None
+        issuer.public_key()
+    except (ValueError, UnsupportedAlgorithm) as exc:
+        raise ValueError(f"Unsupported issuer key: {exc}") from None
     try:
-        if isinstance(public_key, rsa.RSAPublicKey):
-            assert child.signature_hash_algorithm is not None  # nosec
-            public_key.verify(
-                child.signature, child.tbs_certificate_bytes, padding.PKCS1v15(), child.signature_hash_algorithm
-            )
-        elif isinstance(public_key, ec.EllipticCurvePublicKey):
-            assert child.signature_hash_algorithm is not None  # nosec
-            public_key.verify(child.signature, child.tbs_certificate_bytes, ec.ECDSA(child.signature_hash_algorithm))
-        elif isinstance(public_key, PUBLIC_KEY_TYPES):
-            # ML-DSA signs the TBSCertificate directly (pure mode).
-            public_key.verify(child.signature, child.tbs_certificate_bytes)
-        else:
-            raise ValueError("Unsupported signature key type")
-    except _InvalidSignature:
+        child.verify_directly_issued_by(issuer)
+    except (_InvalidSignature, ValueError):
+        # A signature that does not verify, a name that is not the issuer's, or a
+        # signature of another key type: the certificate was not issued by it.
         raise InvalidSignature() from None
 
 
 def verify_certificate_chain(chain: Sequence[bytes]) -> None:
     """Check that each DER certificate in ``chain`` is signed by the next.
 
-    Raises fido2's ``InvalidSignature`` for a signature that does not verify and
-    ``ValueError`` for a certificate that does not parse or an issuer key type
-    this cannot verify with.
+    Raises fido2's ``InvalidSignature`` for a certificate the next did not issue and
+    ``ValueError`` for a certificate that does not parse or an issuer key that does
+    not load.
     """
 
     certificates = [x509.load_der_x509_certificate(bytes(der)) for der in chain]

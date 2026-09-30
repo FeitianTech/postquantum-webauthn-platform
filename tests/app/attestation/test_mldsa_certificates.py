@@ -11,7 +11,14 @@ import datetime
 import pytest
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import dsa, ec, ed25519, mldsa, rsa
+from cryptography.hazmat.primitives.asymmetric import (
+    dsa,
+    ec,
+    ed25519,
+    mldsa,
+    padding,
+    rsa,
+)
 from cryptography.x509.oid import NameOID
 from fido2.attestation import InvalidSignature
 
@@ -27,7 +34,9 @@ PARAMETER_SETS = [
 _NOW = datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc)
 
 
-def _certificate(subject_key, *, issuer_key=None, name="subject", issuer_name=None, algorithm=None) -> bytes:
+def _certificate(
+    subject_key, *, issuer_key=None, name="subject", issuer_name=None, algorithm=None, rsa_padding=None
+) -> bytes:
     subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, name)])
     issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, issuer_name or name)])
     builder = (
@@ -39,7 +48,8 @@ def _certificate(subject_key, *, issuer_key=None, name="subject", issuer_name=No
         .not_valid_before(_NOW - datetime.timedelta(days=1))
         .not_valid_after(_NOW + datetime.timedelta(days=1))
     )
-    signed = builder.sign(issuer_key or subject_key, algorithm)
+    signing = {"rsa_padding": rsa_padding} if rsa_padding is not None else {}
+    signed = builder.sign(issuer_key or subject_key, algorithm, **signing)
     return signed.public_bytes(serialization.Encoding.DER)
 
 
@@ -224,15 +234,37 @@ def test_classical_chains_verify_only_against_the_real_issuer(issuer_key):
         chain.verify_certificate_chain([leaf, impostor])
 
 
-def test_an_issuer_key_type_without_a_verifier_is_refused():
-    issuer_key = ed25519.Ed25519PrivateKey.generate()
-    root = _certificate(issuer_key, name="root")
-    leaf = _certificate(ec.generate_private_key(ec.SECP256R1()), issuer_key=issuer_key, name="leaf", issuer_name="root")
+def test_rsa_pss_and_eddsa_signed_chains_verify():
+    leaf_key = ec.generate_private_key(ec.SECP256R1())
+    rsa_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    pss = padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=32)
+    rsa_root = _certificate(rsa_key, name="root", algorithm=hashes.SHA256())
+    pss_leaf = _certificate(
+        leaf_key, issuer_key=rsa_key, name="leaf", issuer_name="root", algorithm=hashes.SHA256(), rsa_padding=pss
+    )
+    ed_key = ed25519.Ed25519PrivateKey.generate()
+    ed_root = _certificate(ed_key, name="root")
+    ed_leaf = _certificate(leaf_key, issuer_key=ed_key, name="leaf", issuer_name="root")
 
-    with pytest.raises(ValueError, match="Unsupported signature key type"):
-        chain.verify_certificate_chain([leaf, root])
+    chain.verify_certificate_chain([pss_leaf, rsa_root])
+    chain.verify_certificate_chain([ed_leaf, ed_root])
+    with pytest.raises(InvalidSignature):
+        chain.verify_certificate_chain([ed_leaf, _certificate(ed25519.Ed25519PrivateKey.generate(), name="root")])
     with pytest.raises(ValueError):
-        chain.verify_certificate_chain([leaf, b"not a certificate"])
+        chain.verify_certificate_chain([ed_leaf, b"not a certificate"])
+
+
+def test_an_issuer_of_another_name_or_key_type_did_not_issue_the_certificate():
+    issuer_key = ec.generate_private_key(ec.SECP256R1())
+    root = _certificate(issuer_key, name="root", algorithm=hashes.SHA256())
+    elsewhere = _certificate(ec.generate_private_key(ec.SECP256R1()), issuer_key=issuer_key, name="leaf", issuer_name="other", algorithm=hashes.SHA256())
+    rsa_root = _certificate(rsa.generate_private_key(public_exponent=65537, key_size=2048), name="root", algorithm=hashes.SHA256())
+    ec_signed = _certificate(ec.generate_private_key(ec.SECP256R1()), issuer_key=issuer_key, name="leaf", issuer_name="root", algorithm=hashes.SHA256())
+
+    with pytest.raises(InvalidSignature):
+        chain.verify_certificate_chain([elsewhere, root])
+    with pytest.raises(InvalidSignature):
+        chain.verify_certificate_chain([ec_signed, rsa_root])
 
 
 def test_an_issuer_whose_key_does_not_load_is_refused():
@@ -243,5 +275,5 @@ def test_an_issuer_whose_key_does_not_load_is_refused():
     # Not a point on P-256: the certificate parses, its key does not.
     off_curve = root.replace(point, b"\x04" + b"\x01" * 64)
 
-    with pytest.raises(ValueError, match="Unsupported signature key type"):
+    with pytest.raises(ValueError, match="Unsupported issuer key"):
         chain.verify_certificate_chain([leaf, off_curve])
