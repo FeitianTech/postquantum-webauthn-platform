@@ -17,7 +17,7 @@ from server.app import visitor_session
 from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
-from server.app.webauthn.metadata import uploads as metadata_uploads
+from server.app.storage import github_mirror
 
 _CONSTANTS = '{"a": NaN, "b": [Infinity, -Infinity]}'
 _REFUSED = (
@@ -123,7 +123,7 @@ def test_an_uploaded_metadata_file_with_nan_is_refused(client, monkeypatch):
     saved = []
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(mds_entries, "expand_metadata_entry_payloads", lambda payload: [payload])
-    monkeypatch.setattr(metadata_uploads, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(github_mirror, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False)
     monkeypatch.setattr(mds_uploads, "save_session_metadata_item", lambda payload, original_filename=None: saved.append(payload))
     monkeypatch.setattr(mds_uploads, "serialize_session_metadata_item", lambda _item: {"storedFilename": "custom.json"})
     monkeypatch.setattr(mds_effective, "load_effective_full_snapshot", lambda: {"entries": []})

@@ -13,8 +13,8 @@ from typing import Any
 
 from flask import jsonify, session
 
-from ... import device_logs, json_values, visitor_session
-from ...storage import credentials
+from ... import json_values, visitor_session
+from ...storage import credentials, github_mirror
 from ...storage.common import InvalidStorageIdentifier, StorageReadError
 from .. import binary_helpers
 
@@ -144,7 +144,7 @@ def _record_registration_event(ctx: dict[str, Any]) -> None:
         if isinstance(raw_description, str):
             metadata_description = raw_description
 
-    event = device_logs.RegistrationEvent(
+    event = github_mirror.RegistrationEvent(
         timestamp=datetime.now(timezone.utc),
         rp_id=ctx["resolved_rp_id"],
         aaguid=ctx["aaguid_bytes"] or None,
@@ -156,7 +156,7 @@ def _record_registration_event(ctx: dict[str, Any]) -> None:
         aaguid_match=ctx["attestation_aaguid_match"],
     )
 
-    device_logs.record_registration_event(event)
+    github_mirror.record_registration_event(event)
 
 
 def persist_registration_context(ctx: dict[str, Any]) -> Any | None:

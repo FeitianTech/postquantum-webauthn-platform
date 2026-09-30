@@ -10,7 +10,7 @@ import ast
 import logging
 from pathlib import Path
 
-from server.app import device_logs
+from server.app.storage import github_mirror
 from server.app.webauthn.attestation import certificates
 
 SERVER = Path(__file__).resolve().parents[3] / "server"
@@ -30,10 +30,10 @@ def test_a_failed_log_upload_is_a_warning(monkeypatch, caplog, capsys):
     def _fail(_path, _payload):
         raise OSError("github unreachable")
 
-    monkeypatch.setattr(device_logs, "github_upload_json", _fail)
+    monkeypatch.setattr(github_mirror, "github_upload_json", _fail)
 
-    with caplog.at_level(logging.INFO, logger=device_logs.__name__):
-        device_logs._upload_worker("logs/x.json", {}, {"timestamp": "t", "aaguid": "a"})
+    with caplog.at_level(logging.INFO, logger=github_mirror.__name__):
+        github_mirror._upload_worker("logs/x.json", {}, {"timestamp": "t", "aaguid": "a"})
 
     assert capsys.readouterr().out == ""
     (record,) = caplog.records
@@ -42,10 +42,10 @@ def test_a_failed_log_upload_is_a_warning(monkeypatch, caplog, capsys):
 
 
 def test_an_uploaded_log_is_info(monkeypatch, caplog, capsys):
-    monkeypatch.setattr(device_logs, "github_upload_json", lambda _path, _payload: None)
+    monkeypatch.setattr(github_mirror, "github_upload_json", lambda _path, _payload: None)
 
-    with caplog.at_level(logging.INFO, logger=device_logs.__name__):
-        device_logs._upload_worker("logs/x.json", {}, {"timestamp": "t", "aaguid": "a", "device": "d", "action": "create"})
+    with caplog.at_level(logging.INFO, logger=github_mirror.__name__):
+        github_mirror._upload_worker("logs/x.json", {}, {"timestamp": "t", "aaguid": "a", "device": "d", "action": "create"})
 
     assert capsys.readouterr().out == ""
     (record,) = caplog.records

@@ -7,8 +7,8 @@ from urllib.error import HTTPError, URLError
 import pytest
 
 # Imported after the sys.path bootstrap above.
-from server.app import github_client  # noqa: E402
-from server.app.github_client import is_logging_enabled  # noqa: E402
+from server.app.storage import github_mirror  # noqa: E402
+from server.app.storage.github_mirror import is_logging_enabled  # noqa: E402
 
 
 class _FakeResponse:
@@ -59,7 +59,7 @@ def test_api_url_uses_default_log_repository(monkeypatch):
     monkeypatch.delenv("GITHUB_LOG_REPO_OWNER", raising=False)
     monkeypatch.delenv("GITHUB_LOG_REPO_NAME", raising=False)
 
-    assert github_client._api_url("contents/logs/example.json") == (
+    assert github_mirror._api_url("contents/logs/example.json") == (
         "https://api.github.com/repos/rainzhang05/CredentialLogs/contents/logs/example.json"
     )
 
@@ -68,7 +68,7 @@ def test_api_url_uses_repo_env_override(monkeypatch):
     monkeypatch.setenv("GITHUB_LOG_REPO_OWNER", "example-owner")
     monkeypatch.setenv("GITHUB_LOG_REPO_NAME", "example-repo")
 
-    assert github_client._api_url("contents/logs/example.json") == (
+    assert github_mirror._api_url("contents/logs/example.json") == (
         "https://api.github.com/repos/example-owner/example-repo/contents/logs/example.json"
     )
 
@@ -77,7 +77,7 @@ def test_credential_log_repository_falls_back_when_env_values_are_blank(monkeypa
     monkeypatch.setenv("GITHUB_LOG_REPO_OWNER", "   ")
     monkeypatch.setenv("GITHUB_LOG_REPO_NAME", "")
 
-    owner, repo = github_client.credential_log_repository()
+    owner, repo = github_mirror.credential_log_repository()
 
     assert owner == "rainzhang05"
     assert repo == "CredentialLogs"
@@ -87,7 +87,7 @@ def test_credential_log_repository_strips_env_values(monkeypatch):
     monkeypatch.setenv("GITHUB_LOG_REPO_OWNER", "  custom-owner  ")
     monkeypatch.setenv("GITHUB_LOG_REPO_NAME", "  custom-repo  ")
 
-    owner, repo = github_client.credential_log_repository()
+    owner, repo = github_mirror.credential_log_repository()
 
     assert owner == "custom-owner"
     assert repo == "custom-repo"
@@ -96,7 +96,7 @@ def test_credential_log_repository_strips_env_values(monkeypatch):
 def test_token_returns_value_when_present(monkeypatch):
     monkeypatch.setenv("GITHUB_TOKEN", "secret-token")
 
-    assert github_client._token() == "secret-token"
+    assert github_mirror._token() == "secret-token"
 
 
 def test_token_raises_with_repository_context_when_missing(monkeypatch):
@@ -105,13 +105,13 @@ def test_token_raises_with_repository_context_when_missing(monkeypatch):
     monkeypatch.setenv("GITHUB_LOG_REPO_NAME", "repo-a")
 
     with pytest.raises(RuntimeError, match="owner-a/repo-a"):
-        github_client._token()
+        github_mirror._token()
 
 
 def test_encode_content_returns_base64_ascii():
     data = b"hello-world"
 
-    encoded = github_client._encode_content(data)
+    encoded = github_mirror._encode_content(data)
 
     assert encoded == base64.b64encode(data).decode("ascii")
 
@@ -135,9 +135,9 @@ def test_request_sets_expected_headers_and_json_body(monkeypatch):
         captured["body"] = request_obj.data
         return _FakeResponse(status=201, body=b'{"ok":true}')
 
-    monkeypatch.setattr(github_client.urllib_request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(github_mirror.urllib_request, "urlopen", _fake_urlopen)
 
-    status, body = github_client._request(
+    status, body = github_mirror._request(
         "PUT", "https://api.github.com/example", {"alpha": 1}
     )
 
@@ -170,10 +170,10 @@ def test_request_retries_once_on_5xx_http_error(monkeypatch):
             )
         return _FakeResponse(status=200, body=b"ok")
 
-    monkeypatch.setattr(github_client.urllib_request, "urlopen", _fake_urlopen)
-    monkeypatch.setattr(github_client.time, "sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr(github_mirror.urllib_request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(github_mirror.time, "sleep", lambda seconds: sleeps.append(seconds))
 
-    status, body = github_client._request("GET", "https://api.github.com/example")
+    status, body = github_mirror._request("GET", "https://api.github.com/example")
 
     assert calls["count"] == 2
     assert sleeps == [1]
@@ -197,11 +197,11 @@ def test_request_does_not_retry_on_4xx_http_error(monkeypatch):
             fp=io.BytesIO(b"invalid"),
         )
 
-    monkeypatch.setattr(github_client.urllib_request, "urlopen", _fake_urlopen)
-    monkeypatch.setattr(github_client.time, "sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr(github_mirror.urllib_request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(github_mirror.time, "sleep", lambda seconds: sleeps.append(seconds))
 
     with pytest.raises(HTTPError):
-        github_client._request("GET", "https://api.github.com/example")
+        github_mirror._request("GET", "https://api.github.com/example")
 
     assert calls["count"] == 1
     assert sleeps == []
@@ -219,10 +219,10 @@ def test_request_retries_once_on_url_error(monkeypatch):
             raise URLError("network down")
         return _FakeResponse(status=200, body=b"ok")
 
-    monkeypatch.setattr(github_client.urllib_request, "urlopen", _fake_urlopen)
-    monkeypatch.setattr(github_client.time, "sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr(github_mirror.urllib_request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(github_mirror.time, "sleep", lambda seconds: sleeps.append(seconds))
 
-    status, body = github_client._request("GET", "https://api.github.com/example")
+    status, body = github_mirror._request("GET", "https://api.github.com/example")
 
     assert calls["count"] == 2
     assert sleeps == [1]
@@ -235,14 +235,14 @@ def test_request_raises_after_retrying_url_error(monkeypatch):
     sleeps = []
 
     monkeypatch.setattr(
-        github_client.urllib_request,
+        github_mirror.urllib_request,
         "urlopen",
         lambda _request_obj, timeout=None: (_ for _ in ()).throw(URLError("still down")),
     )
-    monkeypatch.setattr(github_client.time, "sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr(github_mirror.time, "sleep", lambda seconds: sleeps.append(seconds))
 
     with pytest.raises(URLError):
-        github_client._request("GET", "https://api.github.com/example")
+        github_mirror._request("GET", "https://api.github.com/example")
 
     assert sleeps == [1]
 
@@ -255,14 +255,14 @@ def test_request_passes_configured_timeout(monkeypatch):
         captured.append(timeout)
         return _FakeResponse(status=200, body=b"ok")
 
-    monkeypatch.setattr(github_client.urllib_request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(github_mirror.urllib_request, "urlopen", _fake_urlopen)
 
     monkeypatch.delenv("GITHUB_HTTP_TIMEOUT_SECONDS", raising=False)
-    github_client._request("GET", "https://api.github.com/example")
+    github_mirror._request("GET", "https://api.github.com/example")
     monkeypatch.setenv("GITHUB_HTTP_TIMEOUT_SECONDS", "2.5")
-    github_client._request("GET", "https://api.github.com/example")
+    github_mirror._request("GET", "https://api.github.com/example")
     monkeypatch.setenv("GITHUB_HTTP_TIMEOUT_SECONDS", "invalid")
-    github_client._request("GET", "https://api.github.com/example")
+    github_mirror._request("GET", "https://api.github.com/example")
 
     assert captured == [4.0, 2.5, 4.0]
 
@@ -276,11 +276,11 @@ def test_request_does_not_retry_timeouts(monkeypatch):
         calls["count"] += 1
         raise URLError(TimeoutError("timed out"))
 
-    monkeypatch.setattr(github_client.urllib_request, "urlopen", _fake_urlopen)
-    monkeypatch.setattr(github_client.time, "sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr(github_mirror.urllib_request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(github_mirror.time, "sleep", lambda seconds: sleeps.append(seconds))
 
     with pytest.raises(URLError):
-        github_client._request("GET", "https://api.github.com/example")
+        github_mirror._request("GET", "https://api.github.com/example")
 
     assert calls["count"] == 1
     assert sleeps == []
@@ -288,10 +288,10 @@ def test_request_does_not_retry_timeouts(monkeypatch):
 
 def test_request_raises_runtime_when_retry_loop_is_bypassed(monkeypatch):
     monkeypatch.setenv("GITHUB_TOKEN", "token-123")
-    monkeypatch.setattr(github_client, "range", lambda _n: [], raising=False)
+    monkeypatch.setattr(github_mirror, "range", lambda _n: [], raising=False)
 
     with pytest.raises(RuntimeError, match="failed after retries"):
-        github_client._request("GET", "https://api.github.com/example")
+        github_mirror._request("GET", "https://api.github.com/example")
 
 
 def test_github_upload_json_builds_add_message_and_base64_content(monkeypatch):
@@ -303,9 +303,9 @@ def test_github_upload_json_builds_add_message_and_base64_content(monkeypatch):
         captured["body"] = body
         return 200, b"{}"
 
-    monkeypatch.setattr(github_client, "_request", _fake_request)
+    monkeypatch.setattr(github_mirror, "_request", _fake_request)
 
-    github_client.github_upload_json("logs/aaguid-1/file.json", {"k": 1})
+    github_mirror.github_upload_json("logs/aaguid-1/file.json", {"k": 1})
 
     assert captured["method"] == "PUT"
     assert "contents/logs/aaguid-1/file.json" in captured["url"]
@@ -324,9 +324,9 @@ def test_github_upload_file_passes_message_content_and_optional_sha(monkeypatch)
         captured["body"] = body
         return 200, b"{}"
 
-    monkeypatch.setattr(github_client, "_request", _fake_request)
+    monkeypatch.setattr(github_mirror, "_request", _fake_request)
 
-    github_client.github_upload_file(
+    github_mirror.github_upload_file(
         "logs/test.bin",
         b"\x00\x01\x02",
         "binary upload",
@@ -349,9 +349,9 @@ def test_github_upload_file_omits_sha_when_not_provided(monkeypatch):
         captured["body"] = body
         return 200, b"{}"
 
-    monkeypatch.setattr(github_client, "_request", _fake_request)
+    monkeypatch.setattr(github_mirror, "_request", _fake_request)
 
-    github_client.github_upload_file("logs/test.bin", b"\x00", "binary upload")
+    github_mirror.github_upload_file("logs/test.bin", b"\x00", "binary upload")
 
     assert captured["method"] == "PUT"
     assert "sha" not in captured["body"]
@@ -361,19 +361,19 @@ def test_github_list_directory_returns_list_payload(monkeypatch):
     directory_payload = [{"name": "a.json"}, {"name": "b.json"}]
 
     monkeypatch.setattr(
-        github_client,
+        github_mirror,
         "_request",
         lambda _method, _url: (200, json.dumps(directory_payload).encode("utf-8")),
     )
 
-    result = github_client.github_list_directory("logs")
+    result = github_mirror.github_list_directory("logs")
 
     assert result == directory_payload
 
 
 def test_github_list_directory_returns_empty_list_on_404(monkeypatch):
     monkeypatch.setattr(
-        github_client,
+        github_mirror,
         "_request",
         lambda _method, _url: (_ for _ in ()).throw(
             HTTPError(
@@ -386,12 +386,12 @@ def test_github_list_directory_returns_empty_list_on_404(monkeypatch):
         ),
     )
 
-    assert github_client.github_list_directory("missing") == []
+    assert github_mirror.github_list_directory("missing") == []
 
 
 def test_github_list_directory_reraises_non_404_http_error(monkeypatch):
     monkeypatch.setattr(
-        github_client,
+        github_mirror,
         "_request",
         lambda _method, _url: (_ for _ in ()).throw(
             HTTPError(
@@ -405,23 +405,23 @@ def test_github_list_directory_reraises_non_404_http_error(monkeypatch):
     )
 
     with pytest.raises(HTTPError):
-        github_client.github_list_directory("logs")
+        github_mirror.github_list_directory("logs")
 
 
 def test_github_list_directory_raises_on_non_list_response(monkeypatch):
     monkeypatch.setattr(
-        github_client,
+        github_mirror,
         "_request",
         lambda _method, _url: (200, json.dumps({"unexpected": True}).encode("utf-8")),
     )
 
     with pytest.raises(RuntimeError, match="Unexpected response listing directory"):
-        github_client.github_list_directory("logs")
+        github_mirror.github_list_directory("logs")
 
 
 def test_git_blob_sha_matches_git_blob_spec():
     payload = b"hello\n"
 
-    result = github_client.git_blob_sha(payload)
+    result = github_mirror.git_blob_sha(payload)
 
     assert result == "ce013625030ba8dba906f756967f9e9ca394464a"

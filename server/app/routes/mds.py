@@ -27,8 +27,8 @@ from ..mds import entries as mds_entries
 from ..mds import files as mds_files
 from ..mds import provisioning as mds_provisioning
 from ..mds import uploads as mds_uploads
+from ..storage import github_mirror
 from ..webauthn.attestation import certificates as attestation_certificates
-from ..webauthn.metadata import uploads as metadata_uploads
 from . import assets
 
 # The HTTP rules, registered on the app by server.app.app.
@@ -226,7 +226,7 @@ def api_upload_custom_metadata():
             errors.append(f"{trimmed}: {exc}")
             continue
 
-        metadata_uploads.maybe_store_uploaded_metadata_file(trimmed, raw_bytes)
+        github_mirror.maybe_store_uploaded_metadata_file(trimmed, raw_bytes)
 
         for index, entry_payload in enumerate(entry_payloads, start=1):
             display_name = (

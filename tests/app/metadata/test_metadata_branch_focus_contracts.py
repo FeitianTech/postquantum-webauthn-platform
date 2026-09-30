@@ -18,15 +18,15 @@ from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
 from server.app.mds import verifier as mds_verifier
-from server.app.webauthn import metadata as module
-from server.app.webauthn.metadata import uploads as metadata_uploads
+from server.app.storage import github_mirror
 from tests.app.entry_app import entry_app
 
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
+    """A fresh MDS cache and sweep state."""
 
-    return module
+    """A fresh MDS cache and sweep state."""
 
 
 def _minimal_entry_payload(*, aaguid: str = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa") -> dict:
@@ -218,7 +218,7 @@ def test_upload_and_normalisation_error_edges(metadata_module, monkeypatch, uplo
         lambda *args, **kwargs: recorded.append((args, kwargs)),
     )
 
-    assert metadata_uploads.maybe_store_uploaded_metadata_file("target.json", b"{}") is True
+    assert github_mirror.maybe_store_uploaded_metadata_file("target.json", b"{}") is True
     assert recorded[0][0][0] == "metadata/target.json"
     assert recorded[0][1] == {"sha": "old-sha"}
 
@@ -683,7 +683,7 @@ def test_the_never_raised_metadata_download_error_is_gone():
     import importlib
     import pkgutil
 
-    import server.app.webauthn.metadata as package
+    import server.app.mds as package
 
     for info in pkgutil.iter_modules(package.__path__, f"{package.__name__}."):
         assert not hasattr(importlib.import_module(info.name), "MetadataDownloadError")

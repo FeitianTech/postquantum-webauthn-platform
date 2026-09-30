@@ -9,8 +9,8 @@ import logging
 
 import pytest
 
-from server.app import device_logs, env_flags, github_client
-from server.app.storage import cloud
+from server.app import env_flags
+from server.app.storage import cloud, github_mirror
 
 _FLAGS = ("FIDO_SERVER_GCS_ENABLED", "ENABLE_GITHUB_LOGGING", "GITHUB_LOG_ASYNC")
 
@@ -24,7 +24,7 @@ def _fresh(monkeypatch):
 
 
 def _readings() -> tuple[bool, bool, bool]:
-    return cloud.gcs_enabled(), github_client.is_logging_enabled(), device_logs._should_upload_async()
+    return cloud.gcs_enabled(), github_mirror.is_logging_enabled(), github_mirror._should_upload_async()
 
 
 @pytest.mark.parametrize("value", ["1", "true", "YES", " on "])

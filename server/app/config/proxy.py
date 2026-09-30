@@ -19,7 +19,7 @@ def _running_behind_managed_proxy() -> bool:
     """Return ``True`` when the platform terminates TLS in front of this process.
 
     Cloud Run sets ``K_SERVICE``; the rest of the codebase already treats that as
-    the "running on Cloud Run" signal (see ``startup.py`` and ``device_logs.py``).
+    the "running on Cloud Run" signal (see ``startup.py`` and ``storage/github_mirror.py``).
     """
 
     return bool(os.environ.get("K_SERVICE"))

@@ -75,6 +75,6 @@ def checks():
 
 @pytest.fixture
 def metadata_module():
-    """``server.app.webauthn.metadata`` -- the fragments call into it through the module."""
+    """``server.app.mds.verifier`` -- the fragments call into it through the module."""
 
-    return importlib.import_module("server.app.webauthn.metadata")
+    return importlib.import_module("server.app.mds.verifier")

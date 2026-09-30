@@ -14,7 +14,8 @@ from typing import Any
 
 from flask import jsonify
 
-from ... import credential_artifacts, device_logs
+from ... import credential_artifacts
+from ...storage import github_mirror
 from .. import binary_helpers
 from . import summary
 
@@ -72,7 +73,7 @@ def _record_registration_event(
         if isinstance(raw_description, str):
             metadata_description = raw_description
 
-    event = device_logs.RegistrationEvent(
+    event = github_mirror.RegistrationEvent(
         timestamp=datetime.now(timezone.utc),
         rp_id=resolved_rp_id,
         aaguid=aaguid_bytes or None,
@@ -80,7 +81,7 @@ def _record_registration_event(
         attestation_object=binary_helpers.decode_base64url_bytes(attestation_object_b64),
     )
 
-    device_logs.record_registration_event(event)
+    github_mirror.record_registration_event(event)
 
 
 def finalize_registration_completion(

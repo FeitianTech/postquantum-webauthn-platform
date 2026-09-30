@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import json
 import os
+import types
 
 import pytest
 
 from server.app.mds import cache as mds_cache
-from server.app.webauthn import metadata as module
 
 
 @pytest.fixture
@@ -35,9 +35,7 @@ def metadata_module(monkeypatch, tmp_path, metadata_state, blob):
     )
     monkeypatch.setattr(blob, "load_metadata_cache_entry", lambda: None)
 
-    module._test_paths = (verified_path, explorer_path)
-    module._test_builds = builds
-    return module
+    return types.SimpleNamespace(_test_paths=(verified_path, explorer_path), _test_builds=builds)
 
 
 def _write_meta(verified_path, explorer_path, *, verified_no=7, explorer_no=7):

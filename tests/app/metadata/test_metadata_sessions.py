@@ -6,7 +6,6 @@ from flask import session as flask_session
 from server.app import visitor_session
 from server.app.mds import effective as mds_effective
 from server.app.mds import uploads as mds_uploads
-from server.app.webauthn import metadata
 from tests.app.entry_app import entry_app
 
 
@@ -21,7 +20,7 @@ def session_metadata_env(monkeypatch, tmp_path, metadata_state, session_store, a
     monkeypatch.setattr(session_store, "_using_gcs", lambda: False)
 
 
-    return entry_app(), metadata
+    return entry_app(), mds_uploads
 
 
 def _sample_entry(description: str) -> dict:
@@ -34,7 +33,7 @@ def _sample_entry(description: str) -> dict:
 
 
 def test_session_metadata_is_isolated(session_metadata_env):
-    app, metadata = session_metadata_env
+    app, mds_uploads = session_metadata_env
 
     with app.test_request_context("/"):
         first_session_id = visitor_session.ensure_id()
@@ -56,7 +55,7 @@ def test_session_metadata_is_isolated(session_metadata_env):
 
 
 def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypatch, sessions):
-    _, metadata = session_metadata_env
+    _, mds_uploads = session_metadata_env
 
     calls = []
     monkeypatch.setattr(visitor_session, "_touch_last_access", lambda sid: calls.append(("touch", sid)))

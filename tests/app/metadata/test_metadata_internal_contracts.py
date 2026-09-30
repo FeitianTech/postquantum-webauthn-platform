@@ -1,7 +1,7 @@
 import os
 
 from server.app import visitor_session
-from server.app.webauthn.metadata import uploads as metadata_uploads
+from server.app.storage import github_mirror
 
 
 def test_normalise_session_identifier_rejects_path_separators(monkeypatch):
@@ -24,10 +24,10 @@ def test_normalise_session_identifier_accepts_clean_value_and_rejects_invalid_sh
 
 
 def test_safe_metadata_repo_filename_sanitizes_traversal_and_invalid_input():
-    assert metadata_uploads._safe_metadata_repo_filename("../../../etc/passwd") == "passwd"
-    assert metadata_uploads._safe_metadata_repo_filename(" /tmp/demo.json ") == "demo.json"
-    assert metadata_uploads._safe_metadata_repo_filename("///") == "metadata.json"
-    assert metadata_uploads._safe_metadata_repo_filename(None) == "metadata.json"
+    assert github_mirror._safe_metadata_repo_filename("../../../etc/passwd") == "passwd"
+    assert github_mirror._safe_metadata_repo_filename(" /tmp/demo.json ") == "demo.json"
+    assert github_mirror._safe_metadata_repo_filename("///") == "metadata.json"
+    assert github_mirror._safe_metadata_repo_filename(None) == "metadata.json"
 
 
 def test_maybe_store_uploaded_metadata_file_returns_false_when_logging_disabled(monkeypatch, uploads):
@@ -39,7 +39,7 @@ def test_maybe_store_uploaded_metadata_file_returns_false_when_logging_disabled(
         lambda *_args, **_kwargs: listed.append(True),
     )
 
-    stored = metadata_uploads.maybe_store_uploaded_metadata_file("demo.json", b"{}")
+    stored = github_mirror.maybe_store_uploaded_metadata_file("demo.json", b"{}")
 
     assert stored is False
     assert listed == []
@@ -70,7 +70,7 @@ def test_maybe_store_uploaded_metadata_file_skips_upload_when_identical_sha_exis
         lambda *args, **kwargs: upload_calls.append((args, kwargs)),
     )
 
-    stored = metadata_uploads.maybe_store_uploaded_metadata_file("demo.json", content)
+    stored = github_mirror.maybe_store_uploaded_metadata_file("demo.json", content)
 
     assert stored is False
     assert upload_calls == []
@@ -100,7 +100,7 @@ def test_maybe_store_uploaded_metadata_file_updates_existing_name_with_sha(monke
         lambda *args, **kwargs: upload_calls.append((args, kwargs)),
     )
 
-    stored = metadata_uploads.maybe_store_uploaded_metadata_file("demo.json", content)
+    stored = github_mirror.maybe_store_uploaded_metadata_file("demo.json", content)
 
     assert stored is True
     assert len(upload_calls) == 1
@@ -124,7 +124,7 @@ def test_maybe_store_uploaded_metadata_file_adds_new_file_with_sanitized_name(mo
         lambda *args, **kwargs: upload_calls.append((args, kwargs)),
     )
 
-    stored = metadata_uploads.maybe_store_uploaded_metadata_file("../../../custom.json", content)
+    stored = github_mirror.maybe_store_uploaded_metadata_file("../../../custom.json", content)
 
     assert stored is True
     assert len(upload_calls) == 1

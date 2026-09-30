@@ -231,9 +231,9 @@ def storage_module():
 
 @pytest.fixture
 def metadata_module():
-    """``server.app.webauthn.metadata`` -- the metadata session identity."""
+    """``server.app.visitor_session`` -- the visitor's session id."""
 
-    return _module("server.app.webauthn.metadata")
+    return _module("server.app.visitor_session")
 
 
 @pytest.fixture
@@ -252,9 +252,9 @@ def credential_artifacts_module():
 
 @pytest.fixture
 def device_logs_module():
-    """``server.app.device_logs`` -- registration event recording."""
+    """``server.app.storage.github_mirror`` -- registration event recording."""
 
-    return _module("server.app.device_logs")
+    return _module("server.app.storage.github_mirror")
 
 
 @pytest.fixture

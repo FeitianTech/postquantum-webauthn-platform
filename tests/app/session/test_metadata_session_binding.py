@@ -15,7 +15,6 @@ from flask import session as flask_session
 from server.app import visitor_session
 from server.app.mds import uploads as mds_uploads
 from server.app.storage import session_metadata as session_store
-from server.app.webauthn import metadata
 from tests.app.entry_app import entry_app
 
 COOKIE_SALT = "fido.mds.session-cookie.v1"
@@ -33,7 +32,7 @@ def session_env(monkeypatch, tmp_path):
     monkeypatch.setattr(session_store, "_using_gcs", lambda: False)
     monkeypatch.setattr(visitor_session.CLEANUP, "last_run", 0.0)
 
-    return entry_app(), metadata
+    return entry_app(), mds_uploads
 
 
 def _entry(description: str) -> dict:
@@ -49,7 +48,7 @@ def _seal(app, identifier: str) -> str:
     ).dumps(identifier)
 
 
-def _seed_victim(app, metadata, namespace: str) -> None:
+def _seed_victim(app, mds_uploads, namespace: str) -> None:
     with app.test_request_context("/"):
         flask_session[visitor_session.SESSION_KEY] = namespace
         mds_uploads.save_session_metadata_item(_entry("victim secret entry"))
@@ -80,8 +79,8 @@ def _custom_items(app, cookie_value=None):
 
 
 def test_forged_plaintext_cookie_cannot_reach_another_namespace(session_env):
-    app, metadata = session_env
-    _seed_victim(app, metadata, "victim-namespace")
+    app, mds_uploads = session_env
+    _seed_victim(app, mds_uploads, "victim-namespace")
 
     with app.test_request_context("/"):
         flask_session[visitor_session.SESSION_KEY] = "victim-namespace"
@@ -92,8 +91,8 @@ def test_forged_plaintext_cookie_cannot_reach_another_namespace(session_env):
 
 
 def test_forged_cookie_cannot_write_into_another_namespace(session_env):
-    app, metadata = session_env
-    _seed_victim(app, metadata, "victim-namespace")
+    app, mds_uploads = session_env
+    _seed_victim(app, mds_uploads, "victim-namespace")
 
     with app.test_request_context(
         "/", headers={"Cookie": "fido.mds.session=victim-namespace"}
@@ -110,8 +109,8 @@ def test_forged_cookie_cannot_write_into_another_namespace(session_env):
 
 
 def test_cookie_signed_with_a_different_secret_is_rejected(session_env):
-    app, metadata = session_env
-    _seed_victim(app, metadata, "victim-namespace")
+    app, mds_uploads = session_env
+    _seed_victim(app, mds_uploads, "victim-namespace")
 
     forged = itsdangerous.URLSafeTimedSerializer(
         b"not-the-application-secret", salt=COOKIE_SALT
@@ -121,8 +120,8 @@ def test_cookie_signed_with_a_different_secret_is_rejected(session_env):
 
 
 def test_cookie_signed_with_the_wrong_salt_is_rejected(session_env):
-    app, metadata = session_env
-    _seed_victim(app, metadata, "victim-namespace")
+    app, mds_uploads = session_env
+    _seed_victim(app, mds_uploads, "victim-namespace")
 
     forged = itsdangerous.URLSafeTimedSerializer(
         app.secret_key, salt="some.other.purpose"
@@ -132,8 +131,8 @@ def test_cookie_signed_with_the_wrong_salt_is_rejected(session_env):
 
 
 def test_tampered_signature_is_rejected(session_env):
-    app, metadata = session_env
-    _seed_victim(app, metadata, "victim-namespace")
+    app, mds_uploads = session_env
+    _seed_victim(app, mds_uploads, "victim-namespace")
 
     sealed = _seal(app, "victim-namespace")
     tampered = sealed[:-4] + ("zzzz" if not sealed.endswith("zzzz") else "yyyy")
@@ -155,8 +154,8 @@ def test_malformed_cookies_never_raise_and_never_bind(session_env, value):
 
 
 def test_returning_visitor_keeps_their_namespace_via_the_signed_cookie(session_env):
-    app, metadata = session_env
-    _seed_victim(app, metadata, "victim-namespace")
+    app, mds_uploads = session_env
+    _seed_victim(app, mds_uploads, "victim-namespace")
 
     # A brand-new client (no Flask session cookie at all) carrying only the
     # signed recovery cookie must land back in its own namespace.
@@ -168,7 +167,7 @@ def test_returning_visitor_keeps_their_namespace_via_the_signed_cookie(session_e
 
 
 def test_signed_flask_session_takes_precedence_over_the_cookie(session_env):
-    app, metadata = session_env
+    app, mds_uploads = session_env
 
     with app.test_request_context(
         "/", headers={"Cookie": f"fido.mds.session={_seal(app, 'from-cookie')}"}
@@ -178,7 +177,7 @@ def test_signed_flask_session_takes_precedence_over_the_cookie(session_env):
 
 
 def test_issued_cookie_is_signed_httponly_and_round_trips(session_env):
-    app, metadata = session_env
+    app, mds_uploads = session_env
 
     client = app.test_client()
     response = client.get("/api/mds/metadata/custom")
@@ -203,7 +202,7 @@ def test_issued_cookie_is_signed_httponly_and_round_trips(session_env):
 
 
 def test_fresh_visitor_gets_an_unguessable_namespace(session_env):
-    app, metadata = session_env
+    app, mds_uploads = session_env
 
     with app.test_request_context("/"):
         first = visitor_session.ensure_id()

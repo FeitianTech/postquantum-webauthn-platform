@@ -10,7 +10,7 @@ from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
 from server.app.routes import mds as mds_routes
-from server.app.webauthn.metadata import uploads as metadata_uploads
+from server.app.storage import github_mirror
 from tests.app.entry_app import entry_app
 
 
@@ -169,7 +169,7 @@ def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
         "expand_metadata_entry_payloads",
         lambda payload: [payload],
     )
-    monkeypatch.setattr(metadata_uploads, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(github_mirror, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False)
     monkeypatch.setattr(
         mds_uploads,
         "save_session_metadata_item",

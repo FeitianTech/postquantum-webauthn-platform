@@ -208,7 +208,7 @@ their exports or sentences. A new surface splits its logic out here first.
   `verify_directly_issued_by` (RSA-PSS, EdDSA and ML-DSA too, which fido2's `verify_x509_chain`
   does not); `evaluation.py` checks an attestation against the MDS metadata step by step),
   `webauthn/signature_algorithms.py` (the one spelling of a signature algorithm),
-  `webauthn/metadata/` (MDS resolution), `webauthn/pqc.py` (the ML-DSA adapter),
+  `webauthn/pqc.py` (the ML-DSA adapter),
   `webauthn/mldsa.py` (ML-DSA parameter sets, sizes and certificate keys),
   `webauthn/cose_keys.py` (RS384, RS512, PS384, PS512: the package imports it so fido2's
   `CoseKey` lookups find them), `webauthn/assertion_hash.py` (the Advanced tab's hash choice

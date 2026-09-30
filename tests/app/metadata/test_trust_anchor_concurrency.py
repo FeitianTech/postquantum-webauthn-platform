@@ -14,15 +14,12 @@ from flask import g
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import verifier as mds_verifier
-from server.app.webauthn import metadata as module
 from tests.app.entry_app import entry_app
 
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
     monkeypatch.setattr(mds_cache.CACHE, "trust_verified", True)
-
-    return module
 
 
 def _entry(module, aaguid: str):

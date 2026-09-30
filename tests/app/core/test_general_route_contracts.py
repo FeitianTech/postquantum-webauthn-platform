@@ -7,8 +7,8 @@ from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
 from server.app.routes import mds as mds_routes
+from server.app.storage import github_mirror
 from server.app.webauthn.attestation import certificates as attestation_certificates
-from server.app.webauthn.metadata import uploads as metadata_uploads
 from tests.app.entry_app import entry_app
 
 
@@ -238,7 +238,7 @@ def test_metadata_routes_cover_custom_error_branches(monkeypatch, tmp_path):
             lambda _payload: [{"entry": 1}, {"entry": 2}],
         )
         monkeypatch.setattr(
-            metadata_uploads,
+            github_mirror,
             "maybe_store_uploaded_metadata_file",
             lambda *_args, **_kwargs: None,
         )
@@ -359,7 +359,7 @@ def test_general_empty_snapshot_and_upload_branches(monkeypatch):
 
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(mds_entries, "expand_metadata_entry_payloads", lambda payload: [payload])
-    monkeypatch.setattr(metadata_uploads, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(github_mirror, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(
         mds_uploads,
         "save_session_metadata_item",

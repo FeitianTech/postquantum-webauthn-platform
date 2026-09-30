@@ -17,7 +17,7 @@ def sessions(monkeypatch):
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state, sessions):
-    return importlib.import_module("server.app.webauthn.metadata")
+    return importlib.import_module("server.app.visitor_session")
 
 
 def test_schedule_inactive_session_cleanup_runs_inline_when_async_disabled(metadata_module, monkeypatch, metadata_state, sessions):

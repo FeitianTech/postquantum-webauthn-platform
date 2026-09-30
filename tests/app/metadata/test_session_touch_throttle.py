@@ -8,7 +8,7 @@ import pytest
 from flask import session
 
 from server.app import visitor_session
-from server.app.webauthn import metadata
+from server.app.mds import uploads as mds_uploads
 from tests.app.entry_app import entry_app
 
 
@@ -17,11 +17,11 @@ def touch_env(monkeypatch, app_config, sessions):
     calls = []
     monkeypatch.setattr(visitor_session, "_touch_last_access", lambda sid: calls.append(sid))
     monkeypatch.setattr(visitor_session, "schedule_cleanup", lambda: None)
-    return metadata, entry_app(), calls
+    return mds_uploads, entry_app(), calls
 
 
 def test_touch_is_deduplicated_within_one_request(touch_env):
-    metadata, app, calls = touch_env
+    mds_uploads, app, calls = touch_env
 
     with app.test_request_context("/"):
         visitor_session.note_activity("session-a")
@@ -32,7 +32,7 @@ def test_touch_is_deduplicated_within_one_request(touch_env):
 
 
 def test_touch_is_throttled_across_requests(touch_env):
-    metadata, app, calls = touch_env
+    mds_uploads, app, calls = touch_env
     key = visitor_session.TOUCH_KEY
 
     with app.test_request_context("/"):
@@ -47,7 +47,7 @@ def test_touch_is_throttled_across_requests(touch_env):
 
 
 def test_throttle_window_is_configurable(touch_env, monkeypatch, app_config):
-    metadata, app, calls = touch_env
+    mds_uploads, app, calls = touch_env
     monkeypatch.setattr(visitor_session, "TOUCH_THROTTLE_SECONDS", 30.0)
 
     with app.test_request_context("/"):
@@ -58,7 +58,7 @@ def test_throttle_window_is_configurable(touch_env, monkeypatch, app_config):
 
 
 def test_new_session_does_not_write_marker(touch_env):
-    metadata, app, calls = touch_env
+    mds_uploads, app, calls = touch_env
 
     with app.test_request_context("/"):
         identifier = visitor_session.ensure_id()
@@ -69,7 +69,7 @@ def test_new_session_does_not_write_marker(touch_env):
 
 
 def test_touch_outside_request_context_is_unthrottled(touch_env):
-    metadata, _app, calls = touch_env
+    mds_uploads, _app, calls = touch_env
 
     visitor_session.note_activity("session-a")
     visitor_session.note_activity("session-a")

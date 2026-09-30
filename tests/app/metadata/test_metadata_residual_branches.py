@@ -12,12 +12,11 @@ from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
-from server.app.webauthn import metadata as module
 
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
-    return module
+    """A fresh MDS cache and sweep state."""
 
 
 def test_metadata_validation_and_info_loader_residual_guards(metadata_module, monkeypatch, session_store):

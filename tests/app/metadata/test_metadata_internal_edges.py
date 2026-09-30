@@ -12,14 +12,14 @@ from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
 from server.app.mds import verifier as mds_verifier
-from server.app.webauthn import metadata as module
-from server.app.webauthn.metadata import uploads as metadata_uploads
+from server.app.storage import github_mirror
 
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
+    """A fresh MDS cache and sweep state."""
 
-    return module
+    """A fresh MDS cache and sweep state."""
 
 
 def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(metadata_module, monkeypatch, uploads):
@@ -40,7 +40,7 @@ def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(
         lambda *args, **kwargs: recorded.append((args, kwargs)),
     )
 
-    assert metadata_uploads.maybe_store_uploaded_metadata_file("metadata.json", content) is False
+    assert github_mirror.maybe_store_uploaded_metadata_file("metadata.json", content) is False
     assert recorded == []
 
     monkeypatch.setattr(
@@ -56,13 +56,13 @@ def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(
         ],
     )
 
-    assert metadata_uploads.maybe_store_uploaded_metadata_file(" metadata.json ", content) is True
+    assert github_mirror.maybe_store_uploaded_metadata_file(" metadata.json ", content) is True
     assert recorded and recorded[-1][0][0] == "metadata/metadata.json"
     assert recorded[-1][0][2] == "metadata: update metadata.json"
     assert recorded[-1][1]["sha"] == "old-sha"
 
     monkeypatch.setattr(uploads, "is_logging_enabled", lambda: False)
-    assert metadata_uploads.maybe_store_uploaded_metadata_file("metadata.json", content) is False
+    assert github_mirror.maybe_store_uploaded_metadata_file("metadata.json", content) is False
 
 
 def test_session_identifier_and_filename_validation_helpers(metadata_module):
