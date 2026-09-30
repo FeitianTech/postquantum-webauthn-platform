@@ -13,7 +13,7 @@ import json
 
 import pytest
 
-from server.app.routes import general
+from server.app.routes import mds as mds_routes
 
 _CONSTANTS = '{"a": NaN, "b": [Infinity, -Infinity]}'
 _REFUSED = (
@@ -117,12 +117,12 @@ def test_client_data_with_nan_in_a_credential_is_read_leniently_and_said_so(clie
 
 def test_an_uploaded_metadata_file_with_nan_is_refused(client, monkeypatch):
     saved = []
-    monkeypatch.setattr(general, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(general, "expand_metadata_entry_payloads", lambda payload: [payload])
-    monkeypatch.setattr(general, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False)
-    monkeypatch.setattr(general, "save_session_metadata_item", lambda payload, original_filename=None: saved.append(payload))
-    monkeypatch.setattr(general, "serialize_session_metadata_item", lambda _item: {"storedFilename": "custom.json"})
-    monkeypatch.setattr(general, "load_effective_full_snapshot", lambda: {"entries": []})
+    monkeypatch.setattr(mds_routes, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(mds_routes, "expand_metadata_entry_payloads", lambda payload: [payload])
+    monkeypatch.setattr(mds_routes, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(mds_routes, "save_session_metadata_item", lambda payload, original_filename=None: saved.append(payload))
+    monkeypatch.setattr(mds_routes, "serialize_session_metadata_item", lambda _item: {"storedFilename": "custom.json"})
+    monkeypatch.setattr(mds_routes, "load_effective_full_snapshot", lambda: {"entries": []})
 
     response = client.post(
         "/api/mds/metadata/upload",

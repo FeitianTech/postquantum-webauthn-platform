@@ -1,4 +1,9 @@
-"""General application routes."""
+"""The MDS routes: the packaged snapshot's info and entries, a visitor's uploaded metadata, certificate decoding.
+
+Every route that reads the snapshot waits for a provisioning under way
+(``waits_for_the_snapshot``); the answers that depend on the visitor are
+``no-store``.
+"""
 from __future__ import annotations
 
 import json
@@ -42,7 +47,7 @@ from ..webauthn.metadata.sessions import (
 from ..webauthn.metadata.uploads import maybe_store_uploaded_metadata_file
 
 # The HTTP rules, registered on the app by server.app.app.
-bp = Blueprint("general", __name__)
+bp = Blueprint("mds", __name__)
 
 
 _MDS_EXPLORER_FULL_STATIC_FILENAME = mds_snapshot_dir.EXPLORER_FULL

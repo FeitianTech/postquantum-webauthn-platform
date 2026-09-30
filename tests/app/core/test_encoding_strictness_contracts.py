@@ -20,7 +20,7 @@ import pytest
 
 from server.app.decoder.decode import pipeline as decode_pipeline
 from server.app.routes import binary_helpers
-from server.app.routes import general as general_module
+from server.app.routes import mds as mds_routes
 from tests.app.entry_app import entry_app
 
 PLAIN_TEXT = "Hello, this is plain text!"
@@ -122,7 +122,7 @@ def test_mds_certificate_route_decodes_base64url_without_truncation(monkeypatch)
 
     certificate = bytes(range(24, 63))
     monkeypatch.setattr(
-        general_module,
+        mds_routes,
         "serialize_attestation_certificate",
         lambda data: {"length": len(data), "hex": data.hex()},
     )
@@ -144,7 +144,7 @@ def test_mds_certificate_route_decodes_base64url_without_truncation(monkeypatch)
 
 def test_mds_certificate_route_refuses_plain_text_with_400(monkeypatch):
     monkeypatch.setattr(
-        general_module,
+        mds_routes,
         "serialize_attestation_certificate",
         lambda data: {"length": len(data), "hex": data.hex()},
     )

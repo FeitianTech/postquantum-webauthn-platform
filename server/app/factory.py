@@ -27,7 +27,8 @@ from .config import (
     session_secret,
     web_export,
 )
-from .routes import advanced, codec, csp_report, errors, general, simple
+from .routes import advanced, codec, csp_report, errors, simple
+from .routes import mds as mds_routes
 from .routes import web_export as web_export_routes
 
 __all__ = ["INIT_STEPS", "create_app"]
@@ -45,7 +46,7 @@ CONFIG_SOURCES = (
 
 
 def _register_blueprints(app: Flask) -> None:
-    for blueprint in (advanced.bp, general.bp, codec.bp, simple.bp, csp_report.bp, web_export_routes.bp):
+    for blueprint in (advanced.bp, mds_routes.bp, codec.bp, simple.bp, csp_report.bp, web_export_routes.bp):
         app.register_blueprint(blueprint)
     errors.init_app(app)
 

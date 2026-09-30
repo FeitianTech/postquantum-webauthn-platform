@@ -59,7 +59,7 @@ def test_app_logger_is_an_ancestor_of_every_module_logger():
     app = entry_app()
 
     assert app.logger.name == "server.app"
-    for name in ("server.app.storage.credentials", "server.app.webauthn.pqc", "server.app.routes.general"):
+    for name in ("server.app.storage.credentials", "server.app.webauthn.pqc", "server.app.routes.codec"):
         logger = logging.getLogger(name)
         ancestors = []
         while logger is not None:

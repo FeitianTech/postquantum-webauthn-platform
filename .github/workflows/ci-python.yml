@@ -61,7 +61,8 @@ jobs:
               "server.app.storage.credentials",
               "server.app.routes.advanced",
               "server.app.routes.csp_report",
-              "server.app.routes.general",
+              "server.app.routes.codec",
+              "server.app.routes.mds",
               "server.app.routes.simple",
               "server.app.routes.web_export",
           ]

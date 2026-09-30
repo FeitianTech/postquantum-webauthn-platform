@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from server.app.routes import general as general_module
+from server.app.routes import mds as mds_routes
 from tests.app.entry_app import entry_app
 
 
@@ -84,20 +84,20 @@ def test_metadata_not_available_is_warning_classical():
 
 
 def test_the_mds_info_answers_the_summary_and_the_custom_entries_state(monkeypatch, app_config):
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(general_module, "load_packaged_explorer_summary", lambda: {})
-    monkeypatch.setattr(general_module, "load_packaged_snapshot_meta", lambda: None)
+    monkeypatch.setattr(mds_routes, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(mds_routes, "load_packaged_explorer_summary", lambda: {})
+    monkeypatch.setattr(mds_routes, "load_packaged_snapshot_meta", lambda: None)
 
     with entry_app().test_request_context("/api/mds/metadata/info"):
-        result = general_module._initial_mds_info()
+        result = mds_routes._initial_mds_info()
 
     assert result == {"customEntriesState": "unknown"}
 
 
 def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_config):
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(mds_routes, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
-        general_module,
+        mds_routes,
         "load_effective_full_snapshot",
         lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test", "metadataStatement": {}}]},
     )
@@ -112,7 +112,7 @@ def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_con
 
 
 def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch, app_config):
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(mds_routes, "ensure_metadata_session_id", lambda: "session-id")
 
     with entry_app().test_client() as client:
         response = client.get("/api/mds/metadata/resolve")
@@ -122,9 +122,9 @@ def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch, app_con
 
 
 def test_resolve_metadata_entry_returns_not_found(monkeypatch, app_config):
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(mds_routes, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
-        general_module,
+        mds_routes,
         "resolve_effective_metadata_entry",
         lambda **_kwargs: None,
     )
@@ -137,9 +137,9 @@ def test_resolve_metadata_entry_returns_not_found(monkeypatch, app_config):
 
 
 def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(mds_routes, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
-        general_module,
+        mds_routes,
         "resolve_effective_metadata_entry",
         lambda **_kwargs: {"entryId": "aaguid:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "name": "Demo"},
     )
@@ -157,25 +157,25 @@ def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
 
 
 def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(mds_routes, "ensure_metadata_session_id", lambda: "session-id")
     monkeypatch.setattr(
-        general_module,
+        mds_routes,
         "expand_metadata_entry_payloads",
         lambda payload: [payload],
     )
-    monkeypatch.setattr(general_module, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(mds_routes, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False)
     monkeypatch.setattr(
-        general_module,
+        mds_routes,
         "save_session_metadata_item",
         lambda payload, original_filename=None: {"payload": payload, "original_filename": original_filename},
     )
     monkeypatch.setattr(
-        general_module,
+        mds_routes,
         "serialize_session_metadata_item",
         lambda item: {"storedFilename": "custom.json", "originalFilename": item["original_filename"]},
     )
     monkeypatch.setattr(
-        general_module,
+        mds_routes,
         "load_effective_full_snapshot",
         lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test"}]},
     )
@@ -192,10 +192,10 @@ def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
 
 
 def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):
-    monkeypatch.setattr(general_module, "ensure_metadata_session_id", lambda: "session-id")
-    monkeypatch.setattr(general_module, "delete_session_metadata_item", lambda _name: True)
+    monkeypatch.setattr(mds_routes, "ensure_metadata_session_id", lambda: "session-id")
+    monkeypatch.setattr(mds_routes, "delete_session_metadata_item", lambda _name: True)
     monkeypatch.setattr(
-        general_module,
+        mds_routes,
         "load_effective_full_snapshot",
         lambda: {"meta": {"entryCount": 3}, "entries": [{"entryId": "aaguid:test"}]},
     )
