@@ -21,9 +21,6 @@ FIRST_PARTY = ("server", "tools", "tests")
 
 ALLOWED: dict[str, int] = {
     "tests/app/conftest.py": 5,
-    "tests/app/security/conftest.py": 5,
-    "tests/app/security/test_pqc_attestation_reporting.py": 1,
-    "tests/app/security/test_sign_count_regression.py": 1,
 }
 
 

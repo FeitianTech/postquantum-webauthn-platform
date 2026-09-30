@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import pytest
 
+from server.app.storage import credentials as storage
 from tests.app.entry_app import entry_app
 
 from .ceremony_helpers import (
@@ -31,7 +32,6 @@ EMAIL = "user@example.com"
 def credential_store(simple_module, tmp_path, monkeypatch, device_logs_module):
     """Point the real credential store at a temporary directory."""
 
-    storage = pytest.importorskip("server.app.storage.credentials")
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)

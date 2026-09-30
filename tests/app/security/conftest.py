@@ -6,6 +6,7 @@ Only *storage* side effects are neutralised here. Every verification code path
 """
 from __future__ import annotations
 
+import importlib
 from typing import Any
 
 import pytest
@@ -15,19 +16,17 @@ from tests.app.entry_app import entry_app
 
 @pytest.fixture
 def config_module():
-    return pytest.importorskip("server.app.config")
+    return importlib.import_module("server.app.config")
 
 
 @pytest.fixture
 def simple_module():
-    pytest.importorskip("server.app.app")
-    return pytest.importorskip("server.app.routes.simple")
+    return importlib.import_module("server.app.routes.simple")
 
 
 @pytest.fixture
 def advanced_module():
-    pytest.importorskip("server.app.app")
-    return pytest.importorskip("server.app.routes.advanced")
+    return importlib.import_module("server.app.routes.advanced")
 
 
 def _session_metadata_in(tmp_path, monkeypatch) -> None:
