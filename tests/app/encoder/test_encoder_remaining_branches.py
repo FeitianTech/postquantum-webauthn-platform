@@ -2,10 +2,10 @@ import base64
 
 import pytest
 
+from server.app.decoder import encode as encode_module
+
 
 def test_normalize_ctap_extra_value_and_nested_key_sanitization_branches():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     value = {
         " 1 (alpha) ": {"2 (beta)": {"bytes": [1, 2]}},
         "": "blank-key",
@@ -23,8 +23,6 @@ def test_normalize_ctap_extra_value_and_nested_key_sanitization_branches():
 
 
 def test_extract_generic_binary_payload_cycle_and_pem_label_fallbacks():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     cyclic = {}
     cyclic["self"] = cyclic
     cyclic["nested"] = {"payload": [{"base64": base64.b64encode(b"abc").decode("ascii")}]} 

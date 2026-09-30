@@ -1,9 +1,9 @@
 import pytest
 
+from server.app.decoder import encode as encode_module
+
 
 def test_ctap_request_and_response_encoders_raise_for_missing_required_fields():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match="requires pubKeyCredParams"):
         encode_module._encode_make_credential_request(
             {
@@ -38,8 +38,6 @@ def test_ctap_request_and_response_encoders_raise_for_missing_required_fields():
 
 
 def test_ctap_support_helpers_raise_expected_errors():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match="must be an array"):
         encode_module._encode_allow_list("not-a-list")
 
@@ -48,8 +46,6 @@ def test_ctap_support_helpers_raise_expected_errors():
 
 
 def test_canonical_integer_and_length_helpers_reject_invalid_values():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match="non-negative"):
         encode_module._encode_major_type_with_length(2, -1)
 
@@ -61,8 +57,6 @@ def test_canonical_integer_and_length_helpers_reject_invalid_values():
 
 
 def test_cbor_simple_value_encoder_type_and_range_guards():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     encoder = encode_module._CanonicalCBOREncoder()
 
     class _BadSimple:
@@ -80,8 +74,6 @@ def test_cbor_simple_value_encoder_type_and_range_guards():
 
 
 def test_extract_generic_binary_payload_recursive_failure_path():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     payload = {
         "first": {"nested": {"still": "text"}},
         "second": [{"none": None}, {"more": "text"}],

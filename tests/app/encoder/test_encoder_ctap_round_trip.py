@@ -15,6 +15,7 @@ from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
 from server.app.decoder import decode_payload_text, encode_payload_text
+from server.app.decoder import encode as encode_module
 
 _AUTH_DATA = bytes(AuthenticatorData.create(hashlib.sha256(b"example.com").digest(), 0x05, 7))
 
@@ -74,8 +75,6 @@ def test_the_expanded_json_alone_encodes_back_to_the_same_bytes(kind):
 
 
 def test_a_numbered_key_matches_a_field_only_under_that_fields_name():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     assert encode_module._ctap_key_matches("1 (rpId)", {"1", "rpid", "1 (rpid)"}) is True
     assert encode_module._ctap_key_matches("1 (rpId)", {"1", "fmt", "1 (fmt)"}) is False
     assert encode_module._ctap_key_matches("5 (rpId)", {"1", "rpid", "1 (rpid)"}) is False

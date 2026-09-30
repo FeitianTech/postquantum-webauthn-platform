@@ -2,6 +2,8 @@ import base64
 
 import pytest
 
+from server.app.decoder import encode as encode_module
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -19,8 +21,6 @@ def test_a_ctap_view_holds_one_message():
 
 
 def test_ctap_key_match_and_value_lookup_handle_labeled_variants_case_insensitively():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     assert encode_module._ctap_key_matches("1 (rpId)", {"1", "rpid"}) is True
     assert encode_module._ctap_key_matches("RPID", {"rpid"}) is True
     assert encode_module._ctap_key_matches("2 (clientDataHash)", {"clientdatahash"}) is True
@@ -32,8 +32,6 @@ def test_ctap_key_match_and_value_lookup_handle_labeled_variants_case_insensitiv
 
 
 def test_encode_attestation_statement_and_certificate_bytes_error_paths():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     assert encode_module._encode_attestation_statement(_b64url(b"sig")) == b"sig"
 
     with pytest.raises(ValueError, match="attStmt.x5c must be an array"):
@@ -44,8 +42,6 @@ def test_encode_attestation_statement_and_certificate_bytes_error_paths():
 
 
 def test_encode_ctap_user_and_descriptor_handle_binary_extras_and_validation_errors():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     user = encode_module._encode_ctap_user(
         {
             "id": _b64url(b"user-id"),
@@ -78,8 +74,6 @@ def test_encode_ctap_user_and_descriptor_handle_binary_extras_and_validation_err
 
 
 def test_numeric_and_boolean_coercion_and_require_bytes_guards():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     assert encode_module._ensure_int("0x10", "field") == 16
     assert encode_module._ensure_bool("yes", "field") is True
     assert encode_module._ensure_bool("0", "field") is False
@@ -97,8 +91,6 @@ def test_numeric_and_boolean_coercion_and_require_bytes_guards():
 
 
 def test_maybe_decode_bytes_supports_mapping_and_sequence_forms():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     assert encode_module._maybe_decode_bytes({"bytes": [1, 2, 3]}) == b"\x01\x02\x03"
     assert encode_module._maybe_decode_bytes({"base64url": _b64url(b"xyz")}) == b"xyz"
     assert encode_module._maybe_decode_bytes("AA:BB") == b"\xaa\xbb"

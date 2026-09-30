@@ -2,6 +2,8 @@ import base64
 
 import pytest
 
+from server.app.decoder import encode as encode_module
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
@@ -18,8 +20,6 @@ def _make_make_credential_request_payload() -> dict:
 
 
 def test_encode_cbor_value_prefers_ctap_decoded_when_present():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     parsed = {
         "ctap": {"code": 1, "codeHex": "0x01", "kind": "command"},
         "ctapDecoded": {"makeCredentialRequest": _make_make_credential_request_payload()},
@@ -32,7 +32,6 @@ def test_encode_cbor_value_prefers_ctap_decoded_when_present():
 
 
 def test_encode_cbor_value_reads_ctap_only_from_an_explicit_view():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
     expanded = {"1 (rpId)": "example.com", "2 (clientDataHash)": (b"\x22" * 32).hex()}
 
     # A ctapDecoded naming something the encoder does not build is refused, not skipped.
@@ -57,8 +56,6 @@ def test_encode_cbor_value_reads_ctap_only_from_an_explicit_view():
 
 
 def test_encode_cbor_value_non_ctap_path_and_normalize_format_empty_error():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     result = encode_module._encode_cbor_value([1, 2, 3])
     assert result["success"] is True
     assert result["type"].startswith("CBOR")
@@ -69,8 +66,6 @@ def test_encode_cbor_value_non_ctap_path_and_normalize_format_empty_error():
 
 
 def test_extract_ctap_numeric_payload_salvages_labeled_nested_candidate():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     payload = {
         "bad": {"field": "value"},
         "nested": {
@@ -85,8 +80,6 @@ def test_extract_ctap_numeric_payload_salvages_labeled_nested_candidate():
 
 
 def test_unsigned_integer_and_major_length_boundaries_cover_all_encoding_sizes():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     assert encode_module._encode_unsigned_integer(0, 23) == bytes([23])
     assert encode_module._encode_unsigned_integer(0, 24) == b"\x18\x18"
     assert encode_module._encode_unsigned_integer(0, 255) == b"\x18\xff"
@@ -98,7 +91,5 @@ def test_unsigned_integer_and_major_length_boundaries_cover_all_encoding_sizes()
 
 
 def test_canonical_float_handles_double_fallback_for_large_value():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     encoded = encode_module._encode_canonical_float(1e300)
     assert encoded.startswith(b"\xfb")

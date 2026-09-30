@@ -2,6 +2,8 @@ import base64
 
 import pytest
 
+from server.app.decoder import encode as encode_module
+
 
 def _b64(data: bytes) -> str:
     return base64.b64encode(data).decode("ascii")
@@ -12,8 +14,6 @@ def _b64url(data: bytes) -> str:
 
 
 def test_encode_make_credential_request_full_structure():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     structure = {
         "1 (clientDataHash)": _b64url(b"\x01" * 32),
         "2 (rp)": {"id": "example.com", "name": "Example"},
@@ -45,8 +45,6 @@ def test_encode_make_credential_request_full_structure():
 
 
 def test_encode_get_assertion_request_and_response_full_structures():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     request_mapping = encode_module._encode_get_assertion_request(
         {
             "rpId": "example.com",
@@ -83,8 +81,6 @@ def test_encode_get_assertion_request_and_response_full_structures():
 
 
 def test_encode_make_credential_response_and_attestation_statement_edges():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     mapping = encode_module._encode_make_credential_response(
         {
             "fmt": "packed",
@@ -115,8 +111,6 @@ def test_encode_make_credential_response_and_attestation_statement_edges():
 
 
 def test_core_validators_key_matching_and_prefix_determination():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match="must be an object"):
         encode_module._require_mapping([], "field")
 
@@ -141,8 +135,6 @@ def test_core_validators_key_matching_and_prefix_determination():
 
 
 def test_binary_decoding_helpers_and_ctap_structure_detection():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     assert encode_module._maybe_decode_bytes("aabb") == b"\xaa\xbb"
     assert encode_module._maybe_decode_bytes("hello") is None
     assert encode_module._maybe_decode_bytes({"base64": _b64(b"abc")}) == b"abc"

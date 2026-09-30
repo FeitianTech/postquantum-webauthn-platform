@@ -2,10 +2,10 @@ from types import SimpleNamespace
 
 import pytest
 
+from server.app.decoder import encode as encode_module
+
 
 def test_normalize_encoding_format_aliases_and_validation_errors():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     assert encode_module._normalize_encoding_format("JSON") == "json"
     assert encode_module._normalize_encoding_format("EDN (exact bytes)") == "edn"
     assert encode_module._normalize_encoding_format("CBOR (CTAP/WebAuthn Data)") == "ctap-webauthn"
@@ -18,8 +18,6 @@ def test_normalize_encoding_format_aliases_and_validation_errors():
 
 
 def test_ctap_numeric_key_coercion_and_classification_paths():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     assert encode_module._coerce_ctap_numeric_key("0x02") == 2
     assert encode_module._coerce_ctap_numeric_key("02 (clientDataHash)") == 2
     assert encode_module._coerce_ctap_numeric_key("not-a-key") is None
@@ -40,8 +38,6 @@ def test_ctap_numeric_key_coercion_and_classification_paths():
 
 
 def test_extract_ctap_numeric_payload_and_encode_ctap_webauthn_with_extra_fields():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     nested = {
         "wrapper": {
             "02 (authData)": {"base64": "A" * 52},
@@ -61,8 +57,6 @@ def test_extract_ctap_numeric_payload_and_encode_ctap_webauthn_with_extra_fields
 
 
 def test_canonical_encoder_map_ordering_and_duplicate_detection():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     encoder = encode_module._CanonicalCBOREncoder()
 
     encoded = encoder.encode({"b": 2, "a": 1})
@@ -76,8 +70,6 @@ def test_canonical_encoder_map_ordering_and_duplicate_detection():
 
 
 def test_canonical_float_encoding_and_unsigned_integer_helpers():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     nan_bytes = encode_module._encode_canonical_float(float("nan"))
     assert nan_bytes == b"\xf9\x7e\x00"
 
@@ -94,8 +86,6 @@ def test_canonical_float_encoding_and_unsigned_integer_helpers():
 
 
 def test_extract_generic_binary_payload_and_pem_label_helpers():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     payload = {
         "meta": {"ignored": True},
         "container": {
@@ -123,8 +113,6 @@ def test_extract_generic_binary_payload_and_pem_label_helpers():
 
 
 def test_encode_cose_value_and_prepare_response_helpers():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     cose_response = encode_module._encode_cose_value(
         {"cose": {1: 2, 3: -7, -1: 1, -2: b"\x01", -3: b"\x02"}}
     )

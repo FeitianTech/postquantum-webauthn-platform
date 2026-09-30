@@ -2,14 +2,14 @@ import base64
 
 import pytest
 
+from server.app.decoder import encode as encode_module
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
 def test_encode_payload_text_dispatches_json():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     json_result = encode_module.encode_payload_text('{"a":1}', "json")
     assert json_result["success"] is True
     assert json_result["type"].startswith("JSON")
@@ -17,8 +17,6 @@ def test_encode_payload_text_dispatches_json():
 
 
 def test_encode_payload_text_reports_empty_invalid_json_and_unsupported_format():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match="input is empty"):
         encode_module.encode_payload_text("   ", "json")
 
@@ -30,8 +28,6 @@ def test_encode_payload_text_reports_empty_invalid_json_and_unsupported_format()
 
 
 def test_der_and_pem_helpers():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     der_result = encode_module._encode_der_value({"value": {"hex": "aabb"}})
     assert der_result["data"]["derBase64"] == "qrs="
 
@@ -40,8 +36,6 @@ def test_der_and_pem_helpers():
 
 
 def test_require_bytes_and_ctap_numeric_mapping_error_paths():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match="Unable to interpret"):
         encode_module._require_bytes({"oops": True}, "field")
 
@@ -53,8 +47,6 @@ def test_require_bytes_and_ctap_numeric_mapping_error_paths():
 
 
 def test_ctap_webauthn_encoder_validates_required_fields_and_can_encode_response():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match="Missing field"):
         encode_module._encode_ctap_webauthn_value({"01": "example.com"})
 

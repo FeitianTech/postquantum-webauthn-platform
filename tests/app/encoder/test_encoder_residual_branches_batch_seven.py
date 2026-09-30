@@ -5,6 +5,8 @@ from collections.abc import Mapping
 import cbor2
 import pytest
 
+from server.app.decoder import encode as encode_module
+
 
 def _b64url(data: bytes) -> str:
     import base64
@@ -14,7 +16,6 @@ def _b64url(data: bytes) -> str:
 
 def test_encode_cbor_value_never_reads_a_plain_map_as_ctap():
     # A root map with CTAP member names was read as a makeCredential response.
-    encode_module = pytest.importorskip("server.app.decoder.encode")
 
     payload = {
         "fmt": "none",
@@ -30,8 +31,6 @@ def test_encode_cbor_value_never_reads_a_plain_map_as_ctap():
 
 
 def test_extract_ctap_numeric_payload_salvage_classification_errors_are_preserved():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match="Missing field 0x02"):
         encode_module._extract_ctap_numeric_payload(
             {
@@ -42,8 +41,6 @@ def test_extract_ctap_numeric_payload_salvage_classification_errors_are_preserve
 
 
 def test_extract_ctap_numeric_payload_skips_visited_mappings_in_recursive_inputs():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     loop: dict[str, object] = {}
     loop["self"] = loop
 
@@ -62,8 +59,6 @@ def test_extract_ctap_numeric_payload_skips_visited_mappings_in_recursive_inputs
 
 
 def test_sanitize_numeric_mapping_and_pem_label_defaults():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match="at least one CTAP field"):
         encode_module._sanitize_ctap_numeric_mapping({})
 
@@ -90,8 +85,6 @@ class _DuplicateEncodedKeyMap(Mapping):
 
 
 def test_canonical_encoder_exercises_tag_float_simple_and_duplicate_key_guard():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     encoder = encode_module._CanonicalCBOREncoder()
 
     tagged = cbor2.CBORTag(42, [1, 2])
@@ -110,8 +103,6 @@ def test_canonical_encoder_exercises_tag_float_simple_and_duplicate_key_guard():
 
 
 def test_primitive_coercion_and_attestation_statement_residual_paths():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     assert encode_module._ensure_int(7, "field") == 7
     with pytest.raises(ValueError, match="integer value"):
         encode_module._ensure_int("not-an-int", "field")
@@ -124,8 +115,6 @@ def test_primitive_coercion_and_attestation_statement_residual_paths():
 
 
 def test_require_certificate_bytes_handles_empty_pem_decoding_and_non_mapping_failure():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match="Unable to decode certificate PEM contents"):
         encode_module._require_certificate_bytes({"pem": "===="}, 0)
 

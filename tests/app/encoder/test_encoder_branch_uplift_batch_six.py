@@ -5,14 +5,14 @@ from decimal import Decimal
 
 import pytest
 
+from server.app.decoder import encode as encode_module
+
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
 def test_extract_ctap_numeric_payload_salvages_numeric_fields_from_mixed_mappings():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     parsed = {
         "ignored": "value",
         "1": _b64url(b"\x01" * 32),
@@ -29,8 +29,6 @@ def test_extract_ctap_numeric_payload_salvages_numeric_fields_from_mixed_mapping
 
 
 def test_extract_ctap_numeric_payload_raises_when_no_mappable_candidates_exist():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match="Unable to locate CTAP/WebAuthn"):
         encode_module._extract_ctap_numeric_payload("plain-string")
 
@@ -47,15 +45,11 @@ def test_extract_ctap_numeric_payload_raises_when_no_mappable_candidates_exist()
     ],
 )
 def test_classify_ctap_numeric_mapping_reports_specific_contract_errors(mapping, expected_message):
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match=expected_message):
         encode_module._classify_ctap_numeric_mapping(mapping)
 
 
 def test_coerce_ctap_numeric_key_and_nested_key_sanitization_edges():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     assert encode_module._coerce_ctap_numeric_key("   ") is None
     assert encode_module._coerce_ctap_numeric_key("0xzz") is None
     assert encode_module._coerce_ctap_numeric_key(object()) is None
@@ -67,8 +61,6 @@ def test_coerce_ctap_numeric_key_and_nested_key_sanitization_edges():
 
 
 def test_canonical_encoder_dispatches_supported_core_types_and_tag_rules():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     encoder = encode_module._CanonicalCBOREncoder()
 
     assert encoder._encode(True) == b"\xf5"
@@ -95,8 +87,6 @@ def test_canonical_encoder_dispatches_supported_core_types_and_tag_rules():
 
 
 def test_require_certificate_bytes_and_binary_decoding_error_paths():
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     with pytest.raises(ValueError, match="Unable to decode certificate PEM contents"):
         encode_module._require_certificate_bytes(
             {"pem": "-----BEGIN CERTIFICATE-----\n====\n-----END CERTIFICATE-----"},
@@ -122,8 +112,6 @@ def test_require_certificate_bytes_and_binary_decoding_error_paths():
 
 
 def test_encode_payload_text_errors_when_alias_resolves_without_handler(monkeypatch):
-    encode_module = pytest.importorskip("server.app.decoder.encode")
-
     patched_handlers = dict(encode_module._ENCODING_HANDLERS)
     patched_handlers.pop("json", None)
     monkeypatch.setattr(encode_module, "_ENCODING_HANDLERS", patched_handlers)
