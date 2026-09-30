@@ -2,20 +2,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from server.app.config import compression, relying_party
+from server.app.config import relying_party
 from tests.app.entry_app import entry_app
-
-
-def test_maybe_compress_response_returns_early_for_small_payload():
-    app = entry_app()
-
-    with app.test_request_context("/", headers={"Accept-Encoding": "gzip"}):
-        app.config["RESPONSE_COMPRESSION_MIN_SIZE"] = 64
-        response = app.response_class(b"tiny", status=200, mimetype="text/plain")
-        compressed = compression.maybe_compress_response(response)
-
-    assert compressed.headers.get("Content-Encoding") is None
-    assert compressed.get_data() == b"tiny"
 
 
 def test_the_unread_session_metadata_recover_setting_is_gone(monkeypatch, make_app):

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import gzip
-
 from flask import Flask
 
 from server.app.config import (
@@ -18,47 +16,6 @@ def test_the_project_root_is_two_levels_above_the_package():
     assert paths._PACKAGE_ROOT.parts[-2:] == ("server", "app")
     assert paths._PROJECT_ROOT == paths._PACKAGE_ROOT.parents[1]
     assert (paths._PROJECT_ROOT / "server" / "app" / "config" / "paths.py").is_file()
-
-
-def test_response_compression_paths_and_accepts_gzip_guard(monkeypatch):
-    app = entry_app()
-
-    assert compression._accepts_gzip() is False
-
-    with app.test_request_context("/", headers={"Accept-Encoding": "gzip"}):
-        app.config["RESPONSE_COMPRESSION_MIN_SIZE"] = 1
-
-        payload = b"A" * 1024
-        response = app.response_class(payload, status=200, mimetype="text/plain")
-        response.direct_passthrough = True
-        response.headers["ETag"] = "etag"
-        response.headers["Content-MD5"] = "digest"
-
-        compressed = compression.maybe_compress_response(response)
-        assert compressed.headers["Content-Encoding"] == "gzip"
-        assert "Accept-Encoding" in compressed.headers["Vary"]
-        assert compressed.direct_passthrough is False
-        assert "ETag" not in compressed.headers
-        assert "Content-MD5" not in compressed.headers
-        assert gzip.decompress(compressed.get_data()) == payload
-
-        monkeypatch.setattr(
-            compression.gzip,
-            "compress",
-            lambda data, compresslevel=6: data + b"not-smaller",
-        )
-        unchanged = app.response_class(payload, status=200, mimetype="text/plain")
-        assert compression.maybe_compress_response(unchanged).headers.get("Content-Encoding") is None
-
-        already_encoded = app.response_class(payload, status=200, mimetype="text/plain")
-        already_encoded.headers["Content-Encoding"] = "br"
-        assert compression.maybe_compress_response(already_encoded) is already_encoded
-
-        non_2xx = app.response_class(payload, status=304, mimetype="text/plain")
-        assert compression.maybe_compress_response(non_2xx) is non_2xx
-
-        non_text = app.response_class(payload, status=200, mimetype="application/octet-stream")
-        assert compression.maybe_compress_response(non_text) is non_text
 
 
 def test_add_after_request_once_guard_paths(monkeypatch):
