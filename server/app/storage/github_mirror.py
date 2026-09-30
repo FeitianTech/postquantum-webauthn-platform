@@ -15,7 +15,6 @@ import os
 import secrets
 import threading
 import time
-import uuid
 from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -26,7 +25,7 @@ from zoneinfo import ZoneInfo
 
 import cbor2
 
-from .. import encoding
+from .. import aaguid, encoding
 from ..encoding import encode_base64, encode_base64url
 from ..env_flags import parse_env_flag
 from ..json_values import make_json_safe
@@ -281,12 +280,8 @@ def uuid_bytes_to_str(value: bytes | None) -> str:
 
     if not value:
         return "unknown"
-    try:
-        if len(value) == 16:
-            return str(uuid.UUID(bytes=value))
-    except Exception:
-        pass
-    return to_b64url(value)
+    guid = aaguid.guid(value)
+    return guid if guid is not None else to_b64url(value)
 
 
 def safe_cbor_decode(data: bytes | str) -> Mapping[str, Any]:

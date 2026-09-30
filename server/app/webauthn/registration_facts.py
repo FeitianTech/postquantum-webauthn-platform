@@ -11,11 +11,10 @@ browser keeps (``stored_credential``): each in one key order for both tabs.
 from __future__ import annotations
 
 import hashlib
-import uuid
 from collections.abc import Mapping
 from typing import Any
 
-from .. import json_values
+from .. import aaguid, json_values
 from ..encoding import encode_base64, encode_base64url
 
 # authData's flags, in the order of their bits (WebAuthn L3 section 6.1).
@@ -108,10 +107,7 @@ def aaguid_values(credential_data: Any) -> tuple[bytes | None, str | None, str |
             aaguid_bytes = None
         if aaguid_bytes is not None and len(aaguid_bytes) == 16:
             aaguid_hex = aaguid_bytes.hex()
-            try:
-                aaguid_guid = str(uuid.UUID(bytes=aaguid_bytes))
-            except ValueError:
-                aaguid_guid = None
+            aaguid_guid = aaguid.guid(aaguid_bytes)
     return aaguid_bytes, aaguid_hex, aaguid_guid
 
 

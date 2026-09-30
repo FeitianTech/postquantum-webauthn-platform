@@ -5,12 +5,11 @@ findings and what was skipped come with it.
 """
 from __future__ import annotations
 
-import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from ... import encoding
+from ... import aaguid, encoding
 from ...json_values import make_json_safe
 from .. import values
 from . import cbor_parser, certificates, cose_display
@@ -490,10 +489,7 @@ def _read_attested_bytes(facts: _CredentialFacts, auth_bytes: bytes | None) -> N
     if not facts.aaguid_hex:
         facts.aaguid_hex = aaguid_bytes.hex()
     if not facts.aaguid_uuid:
-        try:
-            facts.aaguid_uuid = str(uuid.UUID(bytes=aaguid_bytes))
-        except Exception:
-            facts.aaguid_uuid = None
+        facts.aaguid_uuid = aaguid.guid(aaguid_bytes)
     if facts.credential_id_hex is None:
         facts.credential_id_hex = credential_bytes.hex()
     if facts.credential_id_length is None:

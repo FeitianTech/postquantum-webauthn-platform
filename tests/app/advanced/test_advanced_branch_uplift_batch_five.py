@@ -11,7 +11,7 @@ from server.app.routes import advanced as advanced_module
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import algorithms as algorithms_module
 from server.app.routes.advanced import parsing as advanced_parsing
-from server.app.webauthn import client_binary, registration_facts
+from server.app.webauthn import client_binary
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
@@ -392,11 +392,6 @@ def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_
     )
     monkeypatch.setattr(attestation_aaguid, "summarize_authenticator_extensions", lambda _ext: {})
     monkeypatch.setattr(advanced_summary, "_generate_storage_id", lambda _source: "generated::storage::id")
-    monkeypatch.setattr(
-        registration_facts.uuid,
-        "UUID",
-        lambda **_kwargs: (_ for _ in ()).throw(ValueError("invalid uuid"))
-    )
 
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:

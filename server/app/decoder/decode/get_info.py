@@ -18,10 +18,10 @@ MUSTs section 6.4 places on it.
 """
 from __future__ import annotations
 
-import uuid
 from collections.abc import Callable, Mapping
 from typing import Any
 
+from ... import aaguid
 from ...webauthn import pqc
 from .. import ctap_tables, values
 
@@ -76,7 +76,7 @@ def _aaguid(value: Any) -> Any:
         return values.make_hex_only(value)
     view: dict[str, Any] = {"hex": value.hex()}
     if len(value) == _AAGUID_LENGTH:
-        view["guid"] = str(uuid.UUID(bytes=value))
+        view["guid"] = aaguid.guid(value)
     else:
         view["note"] = f"an aaguid is {_AAGUID_LENGTH} bytes (CTAP 2.2 section 6.4); this one is {len(value)}"
     return view
