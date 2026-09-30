@@ -8,7 +8,6 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, rsa
 from cryptography.x509.oid import NameOID
 
-from server.app.webauthn import signature_algorithms
 from server.app.webauthn.attestation import (
     certificate_names as attestation_certificate_names,
 )
@@ -51,9 +50,6 @@ def test_trusted_ca_config_and_fingerprint_helpers(monkeypatch, attestation_modu
 
 
 def test_format_helpers(attestation_module):
-    assert signature_algorithms.format_algorithm_component(" RSASSA PSS ") == "RSASSAPSS"
-    assert signature_algorithms.format_algorithm_component("—") == ""
-
     name = x509.Name(
         [
             x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),

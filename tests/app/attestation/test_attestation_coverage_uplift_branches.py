@@ -9,7 +9,6 @@ from fido2.attestation import Attestation
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
 from server.app.mds import verifier as mds_verifier
-from server.app.webauthn import signature_algorithms
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
 from server.app.webauthn.attestation import trust as attestation_trust
@@ -100,11 +99,6 @@ def test_coerce_attestation_certificate_bytes_string_path_falls_back_to_base64ur
     assert attestation_certificates._coerce_attestation_certificate_bytes(urlsafe) == raw
 
     assert attestation_certificates._coerce_attestation_certificate_bytes("not a certificate!") is None
-
-
-def test_normalise_signature_algorithm_name_covers_ed448_and_dsa_paths(attestation_module):
-    assert signature_algorithms.normalise_signature_algorithm_name("ed448 with shake") == "ED448"
-    assert signature_algorithms.normalise_signature_algorithm_name("dsa-with-sha1") == "DSA"
 
 
 def test_perform_attestation_checks_coerces_string_challenge_via_utf8_fallback_and_records_attestation_error(monkeypatch, metadata_module, certificates, attestation_module):

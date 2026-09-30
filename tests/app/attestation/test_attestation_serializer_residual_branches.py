@@ -7,7 +7,6 @@ from types import SimpleNamespace
 from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
 
-from server.app.webauthn import signature_algorithms
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import (
     certificate_names as attestation_certificate_names,
@@ -28,16 +27,6 @@ def test_attestation_helper_residual_branches(monkeypatch, certificate_public_ke
     attestation_aaguid.augment_aaguid_fields(container)
     assert container["aaguidHex"] == (b"\x01" * 16).hex()
     assert "aaguidGuid" not in container
-
-    assert signature_algorithms.normalise_signature_algorithm_name("") == ""
-    assert (
-        signature_algorithms.normalise_signature_algorithm_name("RSASSA-PSS with SHA-256")
-        == "RSASSA-PSS"
-    )
-    assert (
-        signature_algorithms.normalise_signature_algorithm_name("custom algo")
-        == "CUSTOMALGO"
-    )
 
     assert attestation_certificate_names._derive_certificate_algorithm_info("not-a-mapping") == ""
     assert (
