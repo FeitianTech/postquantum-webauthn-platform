@@ -192,10 +192,11 @@ their exports or sentences. A new surface splits its logic out here first.
   leaves the updater imports.
 - Routes: `routes/simple/` and `routes/advanced/` (begin/complete; the bodies are short
   orchestrators over modules named for their stage; the try blocks and the order of session
-  reads are behaviour); `routes/general.py` (MDS info, decoder endpoints, misc);
-  `routes/web_export.py` (the export at `/`: the site's catch-all, since Flask has no static
-  rule; HTML `no-cache`, `/_next/static/` immutable with the build's `.gz`, the export's 404
-  page, a plain 404 under `/api/`; `/beta…` 308 to `/…`, built with `url_for`);
+  reads are behaviour); `routes/general.py` (the MDS routes and certificate decoding);
+  `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`, and the export at `/`:
+  the site's catch-all, since Flask has no static rule; HTML `no-cache`, `/_next/static/`
+  immutable with the build's `.gz`, the export's 404 page, a plain 404 under `/api/`; `/beta…`
+  308 to `/…`, built with `url_for`);
   `static_assets.py` (the snapshot browsers load, `/assets/mds/<file>?v=<version>`,
   immutable when the version is current, and no other snapshot file at any path;
   `send_precompressed`); `routes/csp_report.py` (one WARNING line per violation, bounded);

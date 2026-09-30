@@ -10,7 +10,6 @@ from server.app.decoder.encode import ctap_numeric as encode_ctap_numeric
 from server.app.decoder.encode import handlers_basic as encode_handlers_basic
 from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
 from server.app.decoder.encode import text as encode_text
-from server.app.routes import general as general_module
 from tests.app.entry_app import entry_app
 
 
@@ -416,7 +415,7 @@ def test_codec_api_encode_der_from_nested_binary_payload():
 
 def test_codec_api_encode_maps_value_error_to_422(monkeypatch):
     monkeypatch.setattr(
-        general_module,
+        encode_text,
         "encode_payload_text",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("bad encode request")),
     )
@@ -433,7 +432,7 @@ def test_codec_api_encode_maps_value_error_to_422(monkeypatch):
 
 def test_codec_api_encode_maps_unexpected_error_to_500(monkeypatch):
     monkeypatch.setattr(
-        general_module,
+        encode_text,
         "encode_payload_text",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("encoder crashed")),
     )

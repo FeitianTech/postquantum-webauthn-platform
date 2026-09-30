@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import logging
 from collections.abc import Mapping
 from typing import Any
 
@@ -17,8 +16,6 @@ from flask import (
 
 from .. import encoding, mds_snapshot_dir
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
-from ..decoder.decode.pipeline import decode_payload_text
-from ..decoder.encode.text import encode_payload_text
 from ..mds_provisioning import (
     ensure_snapshot_available,
     follow_newer_snapshot,
@@ -43,8 +40,6 @@ from ..webauthn.metadata.sessions import (
     serialize_session_metadata_item,
 )
 from ..webauthn.metadata.uploads import maybe_store_uploaded_metadata_file
-
-logger = logging.getLogger(__name__)
 
 # The HTTP rules, registered on the app by server.app.app.
 bp = Blueprint("general", __name__)
@@ -301,63 +296,6 @@ def api_delete_custom_metadata(stored_filename: str):
     snapshot = load_effective_full_snapshot()
     _remember_custom_entries_state(snapshot)
     return _no_store_json_response({"deleted": True, "snapshot": snapshot})
-
-
-def _refusal(exc: ValueError) -> dict[str, Any]:
-    body: dict[str, Any] = {"error": str(exc)}
-    # A parse error says where the input stops being well-formed (CBOR, EDN, JSON).
-    for field in ("offset", "path"):
-        if hasattr(exc, field):
-            body[field] = getattr(exc, field)
-    return body
-
-
-def _perform_decode(decoder_input: str, *, lenient: bool = False):
-    try:
-        return decode_payload_text(decoder_input, lenient=lenient), 200
-    except ValueError as exc:
-        return _refusal(exc), 422
-    except Exception as exc:  # pylint: disable=broad-except
-        logger.exception("Failed to decode payload: %s", exc)
-        return {"error": "Unable to decode payload."}, 500
-
-
-def _perform_encode(encoder_input: str, target_format: str):
-    try:
-        return encode_payload_text(encoder_input, target_format), 200
-    except ValueError as exc:
-        return _refusal(exc), 422
-    except Exception as exc:  # pylint: disable=broad-except
-        logger.exception("Failed to encode payload: %s", exc)
-        return {"error": "Unable to encode payload."}, 500
-
-
-@bp.route("/api/codec", methods=["POST"])
-def api_codec_payload():
-    if not request.is_json:
-        return jsonify({"error": "Expected JSON payload."}), 400
-
-    payload = request.get_json(silent=True) or {}
-    codec_input = payload.get("payload")
-    if not isinstance(codec_input, str) or not codec_input.strip():
-        return jsonify({"error": "Codec payload must be a non-empty string."}), 400
-
-    mode = payload.get("mode", "decode")
-    mode_normalized = mode.lower() if isinstance(mode, str) else "decode"
-
-    if mode_normalized == "encode":
-        target_format = payload.get("format")
-        if not isinstance(target_format, str) or not target_format.strip():
-            return jsonify({"error": "Encoder format must be provided."}), 400
-        result, status = _perform_encode(codec_input, target_format)
-        return jsonify(result), status
-
-    lenient = payload.get("lenient", False)
-    if not isinstance(lenient, bool):
-        return jsonify({"error": "lenient must be true or false."}), 400
-
-    result, status = _perform_decode(codec_input, lenient=lenient)
-    return jsonify(result), status
 
 
 @bp.route("/api/mds/decode-certificate", methods=["POST"])

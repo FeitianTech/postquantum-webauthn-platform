@@ -1,6 +1,7 @@
 import base64
 from types import SimpleNamespace
 
+from server.app.decoder.decode import pipeline as decode_pipeline
 from server.app.routes import general as general_module
 from tests.app.entry_app import entry_app
 
@@ -18,7 +19,7 @@ def test_decode_and_certificate_routes_cover_error_and_success_paths(monkeypatch
             raise ValueError("certificate parse failed")
         return {"length": len(certificate_bytes), "hex": certificate_bytes.hex()}
 
-    monkeypatch.setattr(general_module, "decode_payload_text", _fake_decode)
+    monkeypatch.setattr(decode_pipeline, "decode_payload_text", _fake_decode)
     monkeypatch.setattr(general_module, "serialize_attestation_certificate", _fake_serialize)
 
     bad_cert_b64 = base64.b64encode(b"bad-cert").decode("ascii")
