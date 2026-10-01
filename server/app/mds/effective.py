@@ -20,13 +20,9 @@ def _build_session_snapshot_entry(
     include_detail: bool,
     include_raw_entry: bool = True,
     compact_detail: bool = False,
-) -> dict[str, Any] | None:
-    payload = item.payload
-    if not isinstance(payload, Mapping):
-        return None
-
+) -> dict[str, Any]:
     return build_explorer_entry(
-        payload,
+        item.payload,
         index=index,
         source="session",
         trust_anchor_status=False,
@@ -124,9 +120,6 @@ def _compose_effective_snapshot(
             include_raw_entry=include_raw_entry,
             compact_detail=compact_detail,
         )
-        if custom_entry is None:
-            continue
-
         aaguid_key = normalise_aaguid_key(custom_entry.get("aaguid"))
         if aaguid_key:
             if aaguid_key in seen_aaguids:
@@ -172,8 +165,6 @@ def resolve_effective_metadata_entry(
 
     for index, item in enumerate(session_items):
         payload = item.payload
-        if not isinstance(payload, Mapping):
-            continue
         if _entry_matches_lookup(payload, entry_id=entry_id, aaguid=aaguid, aaid=aaid):
             return build_explorer_entry(
                 payload,
