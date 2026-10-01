@@ -4,8 +4,7 @@
 // form decides is given: the hints' check, the records sent to the server, and
 // the two values it reads from the form as the ceremony runs.
 
-import { get, parseRequestOptionsFromJSON } from '../../shared/webauthn/json-ponyfill.js';
-import { convertExtensionsForClient, normalizeClientExtensionResults } from '../../shared/utils/binary.js';
+import { getAssertion, parseRequestOptions, requireNativeJson } from '../../shared/webauthn/native-json.js';
 import { printAuthenticationDebug } from '../../shared/debug/auth.js';
 import { FailedResponseError, readFailedResponse } from '../../shared/api/failed-response.js';
 import { state } from '../../shared/state.js';
@@ -52,29 +51,6 @@ export function readAssertionRequest(text) {
     return parsed;
 }
 
-// The assertion as the server is sent it: its JSON (the ponyfill's get() gives
-// every assertion its toJSON()), with its attachment and every client
-// extension result, read from the assertion when it can give them.
-function assertionJson(assertion) {
-    const json = assertion.toJSON();
-    json.authenticatorAttachment = assertion.authenticatorAttachment ?? null;
-    const extensionResults = assertion.getClientExtensionResults
-        ? assertion.getClientExtensionResults()
-        : (assertion.clientExtensionResults || {});
-    const normalizedExtensionResults = normalizeClientExtensionResults(extensionResults);
-    const existingExtensionResults = json.clientExtensionResults || {};
-    if (normalizedExtensionResults && typeof normalizedExtensionResults === 'object' &&
-        Object.keys(normalizedExtensionResults).length > 0) {
-        json.clientExtensionResults = {
-            ...existingExtensionResults,
-            ...normalizedExtensionResults,
-        };
-    } else if (json.clientExtensionResults === undefined) {
-        json.clientExtensionResults = existingExtensionResults;
-    }
-    return json;
-}
-
 function postJson(path, body) {
     return fetch(path, {
         method: 'POST',
@@ -105,6 +81,7 @@ export async function authenticateAdvancedCredential(text, {
     onProgress = () => {},
 }) {
     try {
+        requireNativeJson();
         const parsed = readAssertionRequest(text);
 
         try {
@@ -131,24 +108,15 @@ export async function authenticateAdvancedCredential(text, {
         }
 
         const json = await response.json();
-        const originalExtensions = json?.publicKey?.extensions;
-        const assertOptions = parseRequestOptionsFromJSON(json);
-
-        const convertedExtensions = convertExtensionsForClient(originalExtensions);
-        if (convertedExtensions) {
-            // Extensions to convert come with a publicKey, which the parsed options keep.
-            assertOptions.publicKey.extensions = {
-                ...(assertOptions.publicKey.extensions || {}),
-                ...convertedExtensions
-            };
-        }
+        // The browser reads the options, every extension it implements included.
+        const publicKey = parseRequestOptions(json?.publicKey);
 
         state.lastFakeCredLength = fakeCredentialLength();
 
         onProgress(ADVANCED_CEREMONY_TEXT.connecting);
 
-        const assertion = await get(assertOptions);
-        const assertionResponse = assertionJson(assertion);
+        // Its JSON as the browser writes it: the attachment, and every extension output in base64url.
+        const { credential: assertion, json: assertionResponse } = await getAssertion(publicKey);
 
         onProgress(ADVANCED_ASSERTION_TEXT.completing);
 
@@ -176,7 +144,7 @@ export async function authenticateAdvancedCredential(text, {
         }
 
         const answer = await result.json();
-        printAuthenticationDebug(assertion, assertOptions, answer);
+        printAuthenticationDebug(assertion, publicKey, answer);
         return {
             authenticated: true,
             answer,

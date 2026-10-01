@@ -1,14 +1,6 @@
 // The Advanced tab's authentication with no DOM (advanced/auth/assertion.js), over the server's recorded answers.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// The browser's get() through the real ponyfill, which a test may replace with a
-// stand-in that gives less (an assertion without its extension results, or whose
-// JSON holds none).
-vi.mock('../../shared/webauthn/json-ponyfill.js', async (importOriginal) => {
-  const actual = await importOriginal();
-  return { ...actual, get: vi.fn(actual.get), parseRequestOptionsFromJSON: vi.fn(actual.parseRequestOptionsFromJSON) };
-});
-
 import {
   ADVANCED_ASSERTION_TEXT,
   advancedAuthenticationFailureText,
@@ -18,8 +10,8 @@ import {
 import { ADVANCED_CEREMONY_TEXT } from './ceremony.js';
 import { ensureAuthenticationHintsAllowed } from './hint-rules.js';
 import { state } from '../../shared/state.js';
-import { get, parseRequestOptionsFromJSON } from '../../shared/webauthn/json-ponyfill.js';
-import { answerResponse, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
+import { UPDATE_BROWSER_TEXT } from '../../shared/webauthn/native-json.js';
+import { answerResponse, credentialToJSON, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
 import { advancedAuthentications, recordedAssertion } from '@/test/logic/advanced/auth/advanced-answers.js';
 
 const BEGIN = '/api/advanced/authenticate/begin';
@@ -149,7 +141,7 @@ describe('an authentication', () => {
     expect(ADVANCED_ASSERTION_TEXT.authenticated).toBe('Advanced authentication successful!');
   });
 
-  it('gives the browser the begin\'s extensions, converted, and sends every extension result it gives', async () => {
+  it('gives the browser the begin\'s extensions, and sends every extension result as its JSON writes it', async () => {
     serving({
       begin: { ...regressed.begin, body: { ...regressed.begin.body, publicKey: { ...regressed.begin.body.publicKey, extensions: { largeBlob: { read: true } } } } },
       complete: regressed.complete,
@@ -158,17 +150,16 @@ describe('an authentication', () => {
     const outcome = await authenticateAdvancedCredential(request({ extensions: { largeBlob: { read: true } } }), formOptions());
 
     expect(authenticator.get.mock.calls[0][0].publicKey.extensions).toEqual({ largeBlob: { read: true } });
-    expect(sent(1).body.__assertion_response.clientExtensionResults).toEqual({ largeBlob: { blob: { $hex: '0102' } } });
+    expect(sent(1).body.__assertion_response.clientExtensionResults).toEqual({ largeBlob: { blob: 'AQI' } });
     // A counter below the stored one is reported, and the tab does not reject it.
     expect(outcome.result).toMatchObject({ signCount: 2, signCountStatus: 'regressed', challengeStatus: 'replayed' });
   });
 
-  it('gives the browser the converted extensions when the parsed options hold none, as a stand-in ponyfill parses them', async () => {
+  it('gives the browser prf\'s inputs as the bytes the begin names', async () => {
     serving({
       begin: { ...first.begin, body: { ...first.begin.body, publicKey: { ...first.begin.body.publicKey, extensions: { prf: { eval: { first: 'AQ' } } } } } },
       complete: first.complete,
     });
-    parseRequestOptionsFromJSON.mockReturnValueOnce({ publicKey: { challenge: new Uint8Array(32).buffer } });
     await authenticateAdvancedCredential(request(), formOptions());
     const { first: evaluation } = authenticator.get.mock.calls[0][0].publicKey.extensions.prf.eval;
     expect(Array.from(new Uint8Array(evaluation))).toEqual([1]);
@@ -279,26 +270,25 @@ describe('the hints', () => {
 });
 
 describe('the assertion the server is sent', () => {
-  it('keeps the results its JSON holds when the browser gives none, or gives them as null', async () => {
+  it('is its JSON as the browser writes it: its attachment, and no userHandle when it has none', async () => {
     serving(first);
-    authenticatorGiving({ ...recordedAssertion(first), getClientExtensionResults: () => null });
     await authenticateAdvancedCredential(request(), formOptions());
-    expect(sent(1).body.__assertion_response.clientExtensionResults).toBeNull();
+
+    const sentAssertion = sent(1).body.__assertion_response;
+    expect(sentAssertion).toEqual(credentialToJSON(recordedAssertion(first)));
+    expect(sentAssertion.authenticatorAttachment).toBe('cross-platform');
+    expect(sentAssertion.response).not.toHaveProperty('userHandle');
   });
 
-  it('reads the results an assertion holds without their getter, as a stand-in ponyfill gives it', async () => {
+  it('asks nothing in a browser without WebAuthn\'s JSON methods, and says to update it', async () => {
     serving(first);
-    get.mockResolvedValueOnce({ toJSON: () => ({ id: 'AQ', clientExtensionResults: { appid: true } }), clientExtensionResults: { prf: { enabled: true } } });
-    await authenticateAdvancedCredential(request(), formOptions());
-    expect(sent(1).body.__assertion_response).toEqual({
-      id: 'AQ',
-      authenticatorAttachment: null,
-      clientExtensionResults: { appid: true, prf: { enabled: true } },
-    });
+    delete globalThis.PublicKeyCredential;
+    const options = formOptions();
+    const outcome = await authenticateAdvancedCredential(request(), options);
 
-    serving(first);
-    get.mockResolvedValueOnce({ toJSON: () => ({ id: 'AQ' }) });
-    await authenticateAdvancedCredential(request(), formOptions());
-    expect(sent(1).body.__assertion_response.clientExtensionResults).toEqual({});
+    expect(outcome).toEqual({ authenticated: false, text: `Advanced authentication failed: ${UPDATE_BROWSER_TEXT}` });
+    expect(asked()).toEqual([]);
+    expect(options.onStart).not.toHaveBeenCalled();
+    expect(authenticator.get).not.toHaveBeenCalled();
   });
 });
