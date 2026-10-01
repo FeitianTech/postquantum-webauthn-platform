@@ -4,6 +4,7 @@ import pytest
 
 from server.app.decoder.encode import binary_decode as encode_binary_decode
 from server.app.decoder.encode import ctap_fields as encode_ctap_fields
+from server.app.decoder.encode import ctap_view_reader
 
 
 def _b64url(data: bytes) -> str:
@@ -11,8 +12,6 @@ def _b64url(data: bytes) -> str:
 
 
 def test_a_ctap_view_holds_one_message():
-    from server.app.decoder.encode import ctap_view_reader
-
     message, view = ctap_view_reader.one_message({"makeCredentialRequest": {"1 (clientDataHash)": "aa" * 32}})
 
     assert (message, view) == ("makeCredentialRequest", {"1 (clientDataHash)": "aa" * 32})

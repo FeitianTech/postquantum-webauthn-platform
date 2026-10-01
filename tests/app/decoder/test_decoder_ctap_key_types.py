@@ -10,7 +10,9 @@ from __future__ import annotations
 import cbor2
 import pytest
 
+from server.app.decoder import ctap_message
 from server.app.decoder import values as decoder_values
+from server.app.decoder.decode import cbor_parser
 from server.app.decoder.decode.text import decode_payload_text
 
 _AUTH_DATA = bytes(32) + b"\x01" + (5).to_bytes(4, "big")
@@ -106,9 +108,6 @@ def test_get_mapping_entry_does_not_cross_key_types():
 
 
 def test_only_an_integer_key_is_labelled_as_a_member():
-    from server.app.decoder import ctap_message
-    from server.app.decoder.decode import cbor_parser
-
     def label(key) -> str:
         return ctap_message.member_label("getAssertionResponse", cbor_parser.decode_item(cbor2.dumps(key))[0])
 

@@ -2,8 +2,10 @@ import base64
 
 import cbor2
 
+from server.app.decoder.decode import cbor_parser, ctap_message_view
 from server.app.decoder.decode import ctap as decode_ctap
 from server.app.decoder.decode import ctap_auth_data as decode_ctap_auth_data
+from server.app.decoder.decode.text import decode_payload_text
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
 
@@ -60,7 +62,6 @@ def test_parse_authenticator_data_bytes_parses_attested_and_extension_sections_w
 def _view(message: str, value: dict) -> dict:
     """The decoder's view of ``value``, a ``message``, built from its parsed nodes."""
 
-    from server.app.decoder.decode import cbor_parser, ctap_message_view
 
     return ctap_message_view.view(message, cbor_parser.decode_item(cbor2.dumps(value))[0])
 
@@ -126,8 +127,6 @@ def test_a_make_credential_view_shows_every_member_as_sent_and_each_certificate_
 
 
 def test_a_bare_map_of_a_make_credential_request_is_shown_as_one():
-    from server.app.decoder.decode.text import decode_payload_text
-
     value = {
         1: b"\x11" * 32,
         2: {"id": "example.com", "name": "Example"},

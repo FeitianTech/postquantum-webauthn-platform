@@ -14,6 +14,7 @@ import os
 import cbor2
 import pytest
 
+from server.app.decoder import cose_tables
 from server.app.decoder.decode.text import decode_payload_text
 from server.app.decoder.encode.text import encode_payload_text
 from tests.app.decoder.real_vectors import (
@@ -128,8 +129,6 @@ def test_an_unknown_label_with_an_integer_value_is_kept():
 
 
 def test_the_parameter_tables_are_rfc_9052_9053_and_8230():
-    from server.app.decoder import cose_tables
-
     assert {label: name for label, (name, _type) in cose_tables.COMMON_PARAMETERS.items()} == {
         1: "kty", 2: "kid", 3: "alg", 4: "key_ops", 5: "Base IV",
     }

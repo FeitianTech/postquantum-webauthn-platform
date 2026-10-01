@@ -15,6 +15,7 @@ import pytest
 from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import extensions, get_info
 from server.app.decoder.decode.text import decode_payload_text
+from server.app.decoder.values import CborDiagnostic
 from tests.app.decoder import real_vectors as rv
 
 _CLIENT_DATA_HASH = bytes(range(32))
@@ -183,7 +184,6 @@ def test_json_keys_never_returns_two_alike_whatever_decorate_does():
 def test_a_map_spelled_once_is_not_spelled_again():
     # The decoder passes one map through json_items several times (the decoded
     # value, then the response); a label from an earlier pass is kept as it is.
-    from server.app.decoder.values import CborDiagnostic
 
     value = {1: "a", "1": "b", b"\x01": "c", "01": "d", CborDiagnostic("true", "boolean"): "e", "true": "f"}
     once = decoder_values.make_hex_only(value)

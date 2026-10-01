@@ -12,6 +12,9 @@ from tests.app.decoder.real_vectors import (
     GET_ASSERTION_RESPONSE,
     MAKE_CREDENTIAL_RESPONSE,
 )
+from tests.app.decoder.real_vectors import (
+    WEBAUTHN_L3_PACKED_SELF_ATTESTATION_OBJECT as ATTESTATION_OBJECT,
+)
 
 
 def test_an_integer_key_and_a_text_key_decode_alike_and_spell_apart():
@@ -70,10 +73,6 @@ def test_the_endpoint_answers_with_the_edn(client):
 
 
 def test_an_attestation_object_shows_its_edn_too():
-    from tests.app.decoder.real_vectors import (
-        WEBAUTHN_L3_PACKED_SELF_ATTESTATION_OBJECT as ATTESTATION_OBJECT,
-    )
-
     data = decode_payload_text(ATTESTATION_OBJECT.hex())["data"]
 
     assert "attestationObject" in data

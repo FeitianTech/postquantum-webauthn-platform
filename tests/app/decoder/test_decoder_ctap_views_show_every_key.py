@@ -15,6 +15,11 @@ import json
 from server.app.decoder import edn
 from server.app.decoder.decode.text import decode_payload_text
 from server.app.decoder.encode.text import encode_payload_text
+from tests.app.decoder.real_vectors import (
+    GET_ASSERTION_RESPONSE,
+    GET_INFO,
+    MAKE_CREDENTIAL_RESPONSE,
+)
 
 AUTH_DATA = "00" * 32 + "01" + "00000001"
 # {1: null, 2: authData, 3: h'01020304', 4: null, "note": 1}, after the SUCCESS status byte.
@@ -88,11 +93,5 @@ def test_a_request_with_a_text_key_is_reported_too():
 
 
 def test_a_conformant_ctap_message_and_a_plain_map_have_no_such_finding():
-    from tests.app.decoder.real_vectors import (
-        GET_ASSERTION_RESPONSE,
-        GET_INFO,
-        MAKE_CREDENTIAL_RESPONSE,
-    )
-
     for message in (MAKE_CREDENTIAL_RESPONSE, GET_ASSERTION_RESPONSE, GET_INFO, b"\xa1\x61\x61\x01"):
         assert _non_integer_keys(decode_payload_text(message.hex())) == []

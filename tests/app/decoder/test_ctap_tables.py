@@ -12,7 +12,7 @@ from dataclasses import fields
 
 from fido2.ctap2.base import AssertionResponse, AttestationResponse, Ctap2
 
-from server.app.decoder import ctap_tables
+from server.app.decoder import ctap_message, ctap_tables
 from server.app.decoder.encode import constants
 
 
@@ -78,8 +78,6 @@ def test_response_members_follow_the_fido2_dataclasses():
 
 
 def test_the_decoder_and_encoder_read_the_same_tables():
-    from server.app.decoder import ctap_message
-
     tables = {
         "makeCredentialRequest": ctap_tables.MAKE_CREDENTIAL_PARAMETERS,
         "getAssertionRequest": ctap_tables.GET_ASSERTION_PARAMETERS,

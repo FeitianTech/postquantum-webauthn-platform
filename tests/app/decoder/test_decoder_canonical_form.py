@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 from fido2 import cbor
 
+from server.app.decoder import edn
 from server.app.decoder.decode import text as decode_text
 from server.app.decoder.decode.text import decode_payload_text
 
@@ -90,8 +91,6 @@ def test_a_lenient_read_reports_duplicates_under_keys_it_could_not_read(hex_text
 
 
 def test_a_duplicate_label_inside_a_credential_public_key_is_located_in_the_input():
-    from server.app.decoder import edn
-
     # A COSE key {1: 2, 1: 2, 3: -7} inside authData inside an attestation object.
     cose = bytes.fromhex("a3 01 02 01 02 03 26".replace(" ", ""))
     auth_data = bytes(32) + b"\x41" + bytes(4) + bytes(16) + b"\x00\x01" + b"\x07" + cose
@@ -128,8 +127,6 @@ def test_a_duplicate_label_inside_a_ctap_response_is_quoted_at_its_input_offsets
 
 
 def test_a_duplicate_inside_chunked_authenticator_data_points_at_the_string():
-    from server.app.decoder import edn
-
     cose = bytes.fromhex("a3 01 02 01 02 03 26".replace(" ", ""))
     auth_data = bytes(32) + b"\x41" + bytes(4) + bytes(16) + b"\x00\x01" + b"\x07" + cose
     half = len(auth_data) // 2

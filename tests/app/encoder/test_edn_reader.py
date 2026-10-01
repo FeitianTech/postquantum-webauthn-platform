@@ -10,7 +10,9 @@ from __future__ import annotations
 import pytest
 
 from server.app.decoder import edn
+from server.app.decoder.decode import cbor_parser
 from server.app.decoder.edn import reader
+from server.app.decoder.encode.text import encode_payload_text
 
 
 @pytest.mark.parametrize(
@@ -136,8 +138,6 @@ def test_edn_that_cannot_be_encoded_is_refused_with_its_offset(text, offset, rea
 
 
 def test_edn_nested_as_deep_as_the_decoder_reads_is_encoded():
-    from server.app.decoder.decode import cbor_parser
-
     assert reader._MAX_DEPTH == cbor_parser._MAX_DEPTH
     data = edn.encode("[" * 64 + "0" + "]" * 64)
 
@@ -181,6 +181,4 @@ def test_an_encoder_refusal_counts_the_offset_in_the_text_as_sent(client, text, 
 
 
 def test_edn_between_blank_lines_is_encoded():
-    from server.app.decoder.encode.text import encode_payload_text
-
     assert encode_payload_text("\n  [1, 2]\n\n", "EDN")["data"]["binary"]["hex"] == "820102"

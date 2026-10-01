@@ -19,6 +19,7 @@ from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.x509.oid import NameOID
 
 from server.app.decoder.decode import apple_anonymous, safetynet
+from server.app.decoder.decode.text import decode_payload_text
 from tests.app.decoder.real_vectors import (
     ANDROID_SAFETYNET_ATT_STMT,
     ANDROID_SAFETYNET_AUTH_DATA,
@@ -129,8 +130,6 @@ def _safetynet_attestation_object(header: bytes, payload: bytes) -> bytes:
 
 
 def test_a_repeated_key_in_the_jws_header_or_payload_is_reported_at_the_response():
-    from server.app.decoder.decode.text import decode_payload_text
-
     data = _safetynet_attestation_object(b'{"alg": "RS256", "alg": "ES256"}', b'{"nonce": "a", "nonce": "b"}')
     result = decode_payload_text(data.hex())
 

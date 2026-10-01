@@ -14,6 +14,7 @@ import pytest
 from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
+from server.app.decoder import ctap_message
 from server.app.decoder.decode.text import decode_payload_text
 from server.app.decoder.encode import ctap_fields as encode_ctap_fields
 from server.app.decoder.encode.text import encode_payload_text
@@ -83,8 +84,6 @@ def test_a_numbered_key_matches_a_field_only_under_that_fields_name():
 
 
 def test_the_message_ctap_decoded_names_is_the_one_its_members_are_read_as():
-    from server.app.decoder import ctap_message
-
     members = ctap_message.read_members(
         "getAssertionRequest",
         {"1 (rpId)": "example.com", "2 (clientDataHash)": "22" * 32, "5 (options)": {"up": True}},

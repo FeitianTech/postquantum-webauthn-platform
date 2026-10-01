@@ -21,6 +21,7 @@ from fido2.ctap2.base import Ctap2
 
 from server.app.decoder.decode import ctap
 from server.app.decoder.decode.text import decode_payload_text
+from server.app.decoder.encode import constants
 
 _COMMAND_CODES = {int(command) for command in Ctap2.CMD}
 _ERROR_STATUSES = [status for status in CtapError.ERR if status != CtapError.ERR.SUCCESS]
@@ -124,8 +125,6 @@ def test_a_client_pin_command_is_named():
 
 
 def test_the_encoder_prefixes_ctap_messages_with_fido2_codes():
-    from server.app.decoder.encode import constants
-
     assert constants._CTAP_PREFIX_DETAILS == {
         "makeCredentialRequest": (int(Ctap2.CMD.MAKE_CREDENTIAL), "command"),
         "getAssertionRequest": (int(Ctap2.CMD.GET_ASSERTION), "command"),

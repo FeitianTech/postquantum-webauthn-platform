@@ -5,6 +5,7 @@ import pytest
 from server.app.decoder.encode import binary_decode as encode_binary_decode
 from server.app.decoder.encode import ctap_encode as encode_ctap_encode
 from server.app.decoder.encode import ctap_fields as encode_ctap_fields
+from server.app.decoder.encode import ctap_view_reader
 
 
 def _b64(data: bytes) -> str:
@@ -148,7 +149,6 @@ def test_binary_decoding_helpers_and_ctap_structure_detection():
     with pytest.raises(ValueError, match="Unable to interpret field"):
         encode_binary_decode._require_bytes({"oops": True}, "field")
 
-    from server.app.decoder.encode import ctap_view_reader
 
     with pytest.raises(ValueError, match="ctapDecoded.ignored is not a CTAP message"):
         ctap_view_reader.one_message({"ignored": "value"})

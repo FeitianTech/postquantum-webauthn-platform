@@ -19,6 +19,7 @@ from server.app.decoder.decode.cbor_parser import _map_key, decode_item
 from server.app.decoder.decode.text import decode_payload_text
 from server.app.decoder.encode.text import encode_payload_text
 from server.app.decoder.values import CborDiagnostic
+from tests.app.decoder.real_vectors import MAKE_CREDENTIAL_RESPONSE
 
 
 def _cbor(value: dict) -> str:
@@ -164,8 +165,6 @@ def test_a_user_entity_with_an_integer_key_and_its_text_twin_keeps_both():
 
 
 def test_the_encoder_shows_a_pasted_ctap_view_as_written_and_takes_its_own_output_back():
-    from tests.app.decoder.real_vectors import MAKE_CREDENTIAL_RESPONSE
-
     prefix = "00"  # the status byte
     data = decode_payload_text(prefix + MAKE_CREDENTIAL_RESPONSE.hex())["data"]
     first = encode_payload_text(json.dumps(data), "CBOR (canonical)")["data"]

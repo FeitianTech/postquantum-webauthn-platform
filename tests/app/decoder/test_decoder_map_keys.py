@@ -5,6 +5,7 @@ import pytest
 
 from server.app.decoder import values as decoder_values
 from server.app.decoder.decode import text as decode_text
+from server.app.decoder.decode.text import decode_payload_text
 
 
 def test_a_byte_string_map_key_is_shown_as_hex_like_a_byte_string_value():
@@ -33,6 +34,4 @@ def test_key_helpers_never_leak_a_python_bytes_repr():
     ],
 )
 def test_keys_json_has_no_spelling_for_are_spelled_in_edn(hex_text, decoded):
-    from server.app.decoder.decode.text import decode_payload_text
-
     assert decode_payload_text(hex_text.replace(" ", ""))["data"]["decodedValue"] == decoded

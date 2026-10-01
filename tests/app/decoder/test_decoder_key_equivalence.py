@@ -79,8 +79,6 @@ def test_a_nan_node_without_its_bits_is_identified_by_the_bits_of_its_value():
 
 
 def test_a_damaged_container_key_is_shown_by_its_summary_and_offset_as_an_invalid_key():
-    from server.app.decoder.decode import cbor_parser
-
     # {[{_ 1: <missing>}]: 5}, read leniently: the key's inner map lost its value.
     node, _end, _skipped = cbor_parser.decode_item(bytes.fromhex("a181bf01ff05"), lenient=True)
     (key,) = cbor_parser._structure_to_value(node)
