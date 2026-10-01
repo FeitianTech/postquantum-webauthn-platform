@@ -22,22 +22,11 @@ from .ceremony_helpers import (
     ORIGIN,
     Authenticator,
     assertion_payload,
-    registration_payload,
+    register_simple,
     unb64u,
 )
 
 EMAIL = "user@example.com"
-
-
-def _register(client, authenticator, counter):
-    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
-    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
-    complete = client.post(
-        f"/api/register/complete?email={EMAIL}",
-        json=registration_payload(authenticator, challenge=challenge, counter=counter),
-        headers={"Origin": ORIGIN},
-    )
-    assert complete.status_code == 200, complete.get_json()
 
 
 def _begin(client, authenticator):
@@ -58,7 +47,7 @@ def _stored_counter(root, authenticator):
 def test_two_authentications_with_the_same_counter_cannot_both_succeed(app, monkeypatch, credential_store, tmp_path):
     authenticator = Authenticator()
     first, second = app.test_client(), app.test_client()
-    _register(first, authenticator, counter=5)
+    register_simple(first, authenticator, counter=5)
     # The same browser session, so the same server-side records.
     second.set_cookie("session", first.get_cookie("session").value)
     challenges = [_begin(first, authenticator), _begin(second, authenticator)]
@@ -104,7 +93,7 @@ def test_two_authentications_with_the_same_counter_cannot_both_succeed(app, monk
 def test_losing_the_race_twice_rejects_the_authentication(app, monkeypatch, credential_store):
     authenticator = Authenticator()
     client = app.test_client()
-    _register(client, authenticator, counter=5)
+    register_simple(client, authenticator, counter=5)
     challenge = _begin(client, authenticator)
     attempts = []
 
@@ -128,7 +117,7 @@ def test_losing_the_race_twice_rejects_the_authentication(app, monkeypatch, cred
 def test_an_uncontended_authentication_saves_its_counter_once(app, monkeypatch, credential_store):
     authenticator = Authenticator()
     client = app.test_client()
-    _register(client, authenticator, counter=5)
+    register_simple(client, authenticator, counter=5)
     challenge = _begin(client, authenticator)
     saves = []
     original = authentication.credentials.save_if_unchanged

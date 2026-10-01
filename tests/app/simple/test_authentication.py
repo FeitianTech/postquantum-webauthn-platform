@@ -14,41 +14,14 @@ from server.app.routes.simple import authentication as simple_authentication
 from server.app.storage import credentials as storage_credentials
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import (
-    ORIGIN,
     RP_ID,
     Authenticator,
-    assertion_payload,
+    authenticate_simple,
     b64u,
-    registration_payload,
-    unb64u,
+    register_simple,
 )
 
 EMAIL = "user@example.com"
-
-
-def _register(client, authenticator, *, counter):
-    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
-    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
-    complete = client.post(
-        f"/api/register/complete?email={EMAIL}",
-        json=registration_payload(authenticator, challenge=challenge, counter=counter),
-        headers={"Origin": ORIGIN},
-    )
-    assert complete.status_code == 200, complete.get_json()
-
-
-def _authenticate(client, authenticator, *, counter, query=f"?email={EMAIL}", client_sign_count=None):
-    entry = authenticator.stored_credential_entry()
-    if client_sign_count is not None:
-        entry["signCount"] = client_sign_count
-    begin = client.post(f"/api/authenticate/begin{query}", json={"credentials": [entry]})
-    assert begin.status_code == 200, begin.get_json()
-    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
-    return client.post(
-        f"/api/authenticate/complete{query}",
-        json=assertion_payload(authenticator, challenge=challenge, counter=counter),
-        headers={"Origin": ORIGIN},
-    )
 
 
 def test_a_begin_body_that_is_no_object_offers_no_credential():
@@ -77,8 +50,8 @@ def test_without_an_email_the_counter_is_checked_against_the_browsers_copy(crede
     authenticator = Authenticator()
     client = entry_app().test_client()
 
-    lower = _authenticate(client, authenticator, counter=3, query="", client_sign_count=5)
-    higher = _authenticate(client, authenticator, counter=6, query="", client_sign_count=5)
+    lower = authenticate_simple(client, authenticator, counter=3, email=None, client_sign_count=5)
+    higher = authenticate_simple(client, authenticator, counter=6, email=None, client_sign_count=5)
 
     assert lower.status_code == 400
     assert lower.get_json()["signCountStatus"] == "regressed"
@@ -91,9 +64,9 @@ def test_a_credential_the_server_holds_no_record_of_is_checked_against_the_brows
     registered = Authenticator(credential_id=b"\x01" * 32)
     unregistered = Authenticator(credential_id=b"\x02" * 32)
     client = entry_app().test_client()
-    _register(client, registered, counter=10)
+    register_simple(client, registered, counter=10)
 
-    response = _authenticate(client, unregistered, counter=2, client_sign_count=4)
+    response = authenticate_simple(client, unregistered, counter=2, client_sign_count=4)
 
     assert response.status_code == 400
     assert "stored 4, received 2" in response.get_json()["error"]
@@ -103,13 +76,13 @@ def test_a_credential_the_server_holds_no_record_of_is_checked_against_the_brows
 def test_a_counter_that_cannot_be_saved_fails_the_authentication(credential_store, monkeypatch, caplog):
     authenticator = Authenticator()
     client = entry_app().test_client()
-    _register(client, authenticator, counter=1)
+    register_simple(client, authenticator, counter=1)
 
     def _refuse(*_args, **_kwargs):
         raise OSError("the disk is full")
 
     monkeypatch.setattr(storage_credentials, "save_if_unchanged", _refuse)
-    response = _authenticate(client, authenticator, counter=5)
+    response = authenticate_simple(client, authenticator, counter=5)
 
     assert response.status_code == 500
     assert response.get_json() == {"error": "Unable to persist the signature counter."}

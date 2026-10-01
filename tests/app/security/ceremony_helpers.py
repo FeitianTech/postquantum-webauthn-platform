@@ -255,3 +255,53 @@ def advanced_public_key_options(
         "challenge": {"$base64url": b64u(challenge)},
         "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
     }
+
+
+SIMPLE_EMAIL = "user@example.com"
+
+
+def _simple_query(email: str | None) -> str:
+    return f"?email={email}" if email else ""
+
+
+def register_simple(client: Any, authenticator: Authenticator, *, counter: int = 0, email: str | None = SIMPLE_EMAIL) -> Any:
+    """Register ``authenticator`` through the Simple tab's routes; asserts it worked, returns complete's answer."""
+
+    query = _simple_query(email)
+    begin = client.post(f"/api/register/begin{query}", json={"credentials": []})
+    assert begin.status_code == 200, begin.get_json()
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    complete = client.post(
+        f"/api/register/complete{query}",
+        json=registration_payload(authenticator, challenge=challenge, counter=counter),
+        headers={"Origin": ORIGIN},
+    )
+    assert complete.status_code == 200, complete.get_json()
+    return complete
+
+
+def authenticate_simple(
+    client: Any,
+    authenticator: Authenticator,
+    *,
+    counter: int,
+    client_sign_count: int | None = None,
+    email: str | None = SIMPLE_EMAIL,
+) -> Any:
+    """Authenticate with ``authenticator`` through the Simple tab's routes; complete's answer.
+
+    ``client_sign_count`` is the counter the browser's copy of the credential claims.
+    """
+
+    entry = authenticator.stored_credential_entry()
+    if client_sign_count is not None:
+        entry["signCount"] = client_sign_count
+    query = _simple_query(email)
+    begin = client.post(f"/api/authenticate/begin{query}", json={"credentials": [entry]})
+    assert begin.status_code == 200, begin.get_json()
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    return client.post(
+        f"/api/authenticate/complete{query}",
+        json=assertion_payload(authenticator, challenge=challenge, counter=counter),
+        headers={"Origin": ORIGIN},
+    )

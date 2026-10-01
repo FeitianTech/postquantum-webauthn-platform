@@ -21,8 +21,9 @@ from .ceremony_helpers import (
     ORIGIN,
     Authenticator,
     assertion_payload,
+    authenticate_simple,
     b64u,
-    registration_payload,
+    register_simple,
     unb64u,
 )
 
@@ -51,30 +52,8 @@ def credential_store(tmp_path, monkeypatch):
 
 
 def _register(client, authenticator, *, counter):
-    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
-    assert begin.status_code == 200
-    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
-    complete = client.post(
-        f"/api/register/complete?email={EMAIL}",
-        json=registration_payload(authenticator, challenge=challenge, counter=counter),
-        headers={"Origin": ORIGIN},
-    )
-    assert complete.status_code == 200, complete.get_json()
+    complete = register_simple(client, authenticator, counter=counter)
     assert complete.get_json()["storedCredential"]["signCount"] == counter
-
-
-def _authenticate(client, authenticator, *, counter, client_sign_count=None):
-    entry = authenticator.stored_credential_entry()
-    if client_sign_count is not None:
-        entry["signCount"] = client_sign_count
-    begin = client.post(f"/api/authenticate/begin?email={EMAIL}", json={"credentials": [entry]})
-    assert begin.status_code == 200, begin.get_json()
-    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
-    return client.post(
-        f"/api/authenticate/complete?email={EMAIL}",
-        json=assertion_payload(authenticator, challenge=challenge, counter=counter),
-        headers={"Origin": ORIGIN},
-    )
 
 
 def _assert_cloned_rejection(response, authenticator):
@@ -96,7 +75,7 @@ def test_simple_sign_count_going_backwards_is_rejected(credential_store):
     client = entry_app().test_client()
     _register(client, authenticator, counter=5)
 
-    response = _authenticate(client, authenticator, counter=4)
+    response = authenticate_simple(client, authenticator, counter=4)
 
     _assert_cloned_rejection(response, authenticator)
     # A rejected assertion does not move the stored counter.
@@ -108,7 +87,7 @@ def test_simple_sign_count_equal_to_stored_is_rejected(credential_store):
     client = entry_app().test_client()
     _register(client, authenticator, counter=5)
 
-    response = _authenticate(client, authenticator, counter=5)
+    response = authenticate_simple(client, authenticator, counter=5)
 
     _assert_cloned_rejection(response, authenticator)
 
@@ -119,9 +98,9 @@ def test_simple_sign_count_dropping_to_zero_is_rejected(credential_store):
     authenticator = Authenticator()
     client = entry_app().test_client()
     _register(client, authenticator, counter=0)
-    assert _authenticate(client, authenticator, counter=1).status_code == 200
+    assert authenticate_simple(client, authenticator, counter=1).status_code == 200
 
-    response = _authenticate(client, authenticator, counter=0)
+    response = authenticate_simple(client, authenticator, counter=0)
 
     _assert_cloned_rejection(response, authenticator)
 
@@ -137,9 +116,9 @@ def test_simple_persisted_counter_is_what_the_next_assertion_is_compared_to(cred
     client = entry_app().test_client()
     _register(client, authenticator, counter=1)
 
-    assert _authenticate(client, authenticator, counter=10).status_code == 200
+    assert authenticate_simple(client, authenticator, counter=10).status_code == 200
 
-    response = _authenticate(client, authenticator, counter=9)
+    response = authenticate_simple(client, authenticator, counter=9)
 
     _assert_cloned_rejection(response, authenticator)
     assert credential_store(authenticator.credential_id) == 10
@@ -152,7 +131,7 @@ def test_simple_client_supplied_sign_count_cannot_lower_the_stored_value(credent
     client = entry_app().test_client()
     _register(client, authenticator, counter=5)
 
-    response = _authenticate(client, authenticator, counter=3, client_sign_count=0)
+    response = authenticate_simple(client, authenticator, counter=3, client_sign_count=0)
 
     _assert_cloned_rejection(response, authenticator)
 
@@ -163,7 +142,7 @@ def test_simple_synced_passkey_reporting_zero_is_accepted(credential_store):
     _register(client, authenticator, counter=0)
 
     for _ in range(3):
-        response = _authenticate(client, authenticator, counter=0)
+        response = authenticate_simple(client, authenticator, counter=0)
         assert response.status_code == 200, response.get_json()
         assert response.get_json()["status"] == "OK"
         assert response.get_json()["signCount"] == 0
@@ -178,7 +157,7 @@ def test_simple_increasing_sign_count_succeeds_and_is_persisted(credential_store
     assert credential_store(authenticator.credential_id) == 5
 
     for counter in (6, 42):
-        response = _authenticate(client, authenticator, counter=counter)
+        response = authenticate_simple(client, authenticator, counter=counter)
         assert response.status_code == 200, response.get_json()
         body = response.get_json()
         assert body["status"] == "OK"
@@ -191,11 +170,11 @@ def test_simple_success_reports_the_counter_state(credential_store):
     zero = Authenticator()
     client = entry_app().test_client()
     _register(client, zero, counter=0)
-    no_counter = _authenticate(client, zero, counter=0)
+    no_counter = authenticate_simple(client, zero, counter=0)
 
     counting = Authenticator()
     _register(client, counting, counter=5)
-    increased = _authenticate(client, counting, counter=6)
+    increased = authenticate_simple(client, counting, counter=6)
 
     assert no_counter.status_code == 200, no_counter.get_json()
     assert increased.status_code == 200, increased.get_json()
@@ -216,7 +195,7 @@ def test_simple_counter_with_base64url_only_characters_is_read_correctly(credent
     _register(client, authenticator, counter=0)
 
     counter = 0xFBEFBE01
-    response = _authenticate(client, authenticator, counter=counter)
+    response = authenticate_simple(client, authenticator, counter=counter)
 
     assert response.status_code == 200, response.get_json()
     assert response.get_json()["signCount"] == counter
@@ -308,8 +287,7 @@ def test_the_stored_counter_is_the_last_authentications(credential_store):
     authenticator = Authenticator()
     client = entry_app().test_client()
     _register(client, authenticator, counter=5)
-    assert _authenticate(client, authenticator, counter=9).status_code == 200
+    assert authenticate_simple(client, authenticator, counter=9).status_code == 200
 
     # Not 5, the counter the authenticator reported at registration.
     assert credential_store(authenticator.credential_id) == 9
-

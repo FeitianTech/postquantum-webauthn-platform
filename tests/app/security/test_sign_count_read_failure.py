@@ -23,7 +23,8 @@ from .ceremony_helpers import (
     ORIGIN,
     Authenticator,
     assertion_payload,
-    registration_payload,
+    authenticate_simple,
+    register_simple,
     unb64u,
 )
 
@@ -44,31 +45,6 @@ def saves(monkeypatch, credential_store):
     return calls
 
 
-def _register(client, authenticator, counter):
-    begin = client.post(f"/api/register/begin?email={EMAIL}", json={"credentials": []})
-    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
-    complete = client.post(
-        f"/api/register/complete?email={EMAIL}",
-        json=registration_payload(authenticator, challenge=challenge, counter=counter),
-        headers={"Origin": ORIGIN},
-    )
-    assert complete.status_code == 200, complete.get_json()
-
-
-def _authenticate(client, authenticator, *, counter, client_sign_count=None):
-    entry = authenticator.stored_credential_entry()
-    if client_sign_count is not None:
-        entry["signCount"] = client_sign_count
-    begin = client.post(f"/api/authenticate/begin?email={EMAIL}", json={"credentials": [entry]})
-    assert begin.status_code == 200, begin.get_json()
-    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
-    return client.post(
-        f"/api/authenticate/complete?email={EMAIL}",
-        json=assertion_payload(authenticator, challenge=challenge, counter=counter),
-        headers={"Origin": ORIGIN},
-    )
-
-
 def _session(client):
     with client.session_transaction() as state:
         return dict(state)
@@ -81,7 +57,7 @@ def test_a_failed_read_of_the_stored_counter_rejects_the_authentication(
     authenticator = Authenticator()
     client = app.test_client()
     # Stored 10: an assertion carrying 5 is a regression the store would catch.
-    _register(client, authenticator, counter=10)
+    register_simple(client, authenticator, counter=10)
     saves.clear()
 
     def _unreachable(*_args, **_kwargs):
@@ -121,14 +97,14 @@ def test_a_failed_read_of_the_stored_counter_rejects_the_authentication(
 def test_a_refused_storage_name_is_still_a_400(app, monkeypatch, credential_store):
     authenticator = Authenticator()
     client = app.test_client()
-    _register(client, authenticator, counter=1)
+    register_simple(client, authenticator, counter=1)
 
     def _refused(*_args, **_kwargs):
         raise InvalidStorageIdentifier("Storage identifier contains a path separator")
 
     monkeypatch.setattr(storage_credentials, "read_for_update", _refused)
 
-    response = _authenticate(client, authenticator, counter=2)
+    response = authenticate_simple(client, authenticator, counter=2)
 
     assert response.status_code == 400
     assert response.get_json()["error"].startswith("Invalid credential name: ")
@@ -144,12 +120,12 @@ def test_no_stored_record_still_falls_back_to_the_client_count(
 ):
     authenticator = Authenticator()
     client = app.test_client()
-    _register(client, authenticator, counter=10)
+    register_simple(client, authenticator, counter=10)
     saves.clear()
     # The read works and finds nothing for this credential.
     monkeypatch.setattr(storage_credentials, "read_for_update", lambda *_a, **_k: ([], None))
 
-    response = _authenticate(client, authenticator, counter=counter, client_sign_count=client_sign_count)
+    response = authenticate_simple(client, authenticator, counter=counter, client_sign_count=client_sign_count)
 
     assert response.status_code == status, response.get_json()
     if status == 400:
@@ -161,11 +137,11 @@ def test_no_stored_record_still_falls_back_to_the_client_count(
 def test_a_readable_stored_counter_is_checked_and_advanced(app, credential_store, saves):
     authenticator = Authenticator()
     client = app.test_client()
-    _register(client, authenticator, counter=10)
+    register_simple(client, authenticator, counter=10)
     saves.clear()
 
-    rejected = _authenticate(client, authenticator, counter=5)
-    accepted = _authenticate(client, authenticator, counter=11)
+    rejected = authenticate_simple(client, authenticator, counter=5)
+    accepted = authenticate_simple(client, authenticator, counter=11)
 
     assert rejected.status_code == 400
     assert rejected.get_json()["signCountStatus"] == "regressed"
