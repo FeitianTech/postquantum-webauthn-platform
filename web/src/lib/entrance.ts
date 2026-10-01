@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 // names, or an MDS entry or certificate it names, is simply there, however
 // late its data arrives. Until the person first presses a key or a pointer, or
 // the history moves, nothing on the page enters.
-export const ENTRANCE_CLASS = 'animate-[section-in_var(--duration-slow)_var(--ease-out)] motion-reduce:animate-none';
+const ENTRANCE_CLASS = 'animate-[section-in_var(--duration-slow)_var(--ease-out)] motion-reduce:animate-none';
 
 let acted = false;
 const ACTIONS = ['pointerdown', 'keydown', 'hashchange', 'popstate'] as const;

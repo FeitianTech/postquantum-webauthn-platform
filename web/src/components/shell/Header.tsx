@@ -7,7 +7,7 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { cx } from '@/lib/cx';
 import { APP_TITLE, NAV_ID, SECTION_OPTIONS, SECTIONS, type SectionId } from '@/lib/sections';
 
-export const GITHUB_URL = 'https://github.com/FeitianTech/postquantum-webauthn-platform';
+const GITHUB_URL = 'https://github.com/FeitianTech/postquantum-webauthn-platform';
 export const ANALYZE_PANEL_ID = 'analyze-browser-panel';
 
 type HeaderProps = {

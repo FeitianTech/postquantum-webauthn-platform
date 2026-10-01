@@ -15,7 +15,7 @@ import { pathToFileURL } from 'node:url';
 
 import { parse } from 'parse5';
 
-export const OWN_PREFIX = '/_next/';
+const OWN_PREFIX = '/_next/';
 const URL_ATTRIBUTES = new Set(['href', 'src', 'action', 'formaction', 'xlink:href']);
 
 function attributes(node) {
