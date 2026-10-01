@@ -13,6 +13,7 @@ from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
 from server.app.mds import verifier as mds_verifier
+from server.app.storage import session_metadata
 from tests.app.entry_app import entry_app
 
 
@@ -79,7 +80,7 @@ def test_a_statement_gets_the_legal_header_and_defaults_for_fields_that_do_not_r
     assert isinstance(statement["attestationRootCertificates"], list)
 
 
-def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
+def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch):
     session_payload = _entry_payload(
         aaguid="AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA",
         description="Session metadata",
@@ -130,7 +131,7 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch, entries):
     )
 
     monkeypatch.setattr(
-        entries,
+        mds_entries,
         "_extract_entry_aaguid",
         lambda entry: mds_entries._normalise_aaguid(str(getattr(entry, "aaguid", ""))),
     )
@@ -156,12 +157,12 @@ def test_cache_cleaning_and_formatting_helpers():
     assert mds_files.format_last_modified("not-a-date") == "not-a-date"
 
 
-def test_prune_helper_and_request_session_identifier_paths(monkeypatch, tmp_path, session_store, app_config):
+def test_prune_helper_and_request_session_identifier_paths(monkeypatch, tmp_path):
     # Resolving the cookie's namespace refreshes its directory's last-access marker.
     monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
 
     monkeypatch.setattr(
-        session_store,
+        session_metadata,
         "prune_session",
         lambda _sid: (_ for _ in ()).throw(RuntimeError("ignore prune errors")),
     )

@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 from server.app.config import paths
+from server.app.mds import cache as mds_cache
 from server.app.mds import files as mds_files
 
 
@@ -50,13 +51,13 @@ def test_a_relative_setting_is_made_absolute_as_given(monkeypatch, tmp_path):
     assert mds_files.snapshot_dir() == tmp_path / "mds"
 
 
-def test_the_server_reads_the_snapshot_where_the_setting_says(monkeypatch, tmp_path, metadata_state, blob):
+def test_the_server_reads_the_snapshot_where_the_setting_says(monkeypatch, tmp_path, metadata_state):
     payload = {"legalHeader": "L", "no": 3, "nextUpdate": "2099-01-01", "entries": []}
     (tmp_path / "fido-mds3.verified.json").write_text(json.dumps(payload), encoding="utf-8")
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
 
-    assert blob._path(mds_files.VERIFIED) == os.fspath(tmp_path / "fido-mds3.verified.json")
-    assert blob._load_verified_metadata_payload() == payload
+    assert mds_cache._path(mds_files.VERIFIED) == os.fspath(tmp_path / "fido-mds3.verified.json")
+    assert mds_cache._load_verified_metadata_payload() == payload
 
 
 def test_the_test_run_never_reads_the_checkout_snapshot():

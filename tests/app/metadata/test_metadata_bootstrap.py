@@ -15,7 +15,7 @@ from tests.app.entry_app import entry_app
 
 
 @pytest.fixture
-def packaged_metadata_env(monkeypatch, tmp_path, metadata_state, blob):
+def packaged_metadata_env(monkeypatch, tmp_path, metadata_state):
 
     verified_path = tmp_path / "fido-mds3.verified.json"
     cache_path = tmp_path / "fido-mds3.verified.json.meta.json"
@@ -58,7 +58,7 @@ def packaged_metadata_env(monkeypatch, tmp_path, metadata_state, blob):
 
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
 
-    return blob
+    return mds_cache
 
 
 def test_packaged_metadata_loads_without_download(packaged_metadata_env):
@@ -89,7 +89,7 @@ def test_metadata_not_available_is_warning_classical():
     assert "metadata_entry_missing" not in outcome["errors"]
 
 
-def test_the_mds_info_answers_the_summary_and_the_custom_entries_state(monkeypatch, app_config):
+def test_the_mds_info_answers_the_summary_and_the_custom_entries_state(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(mds_cache, "load_packaged_explorer_summary", lambda: {})
     monkeypatch.setattr(mds_cache, "load_packaged_snapshot_meta", lambda: None)
@@ -100,7 +100,7 @@ def test_the_mds_info_answers_the_summary_and_the_custom_entries_state(monkeypat
     assert result == {"customEntriesState": "unknown"}
 
 
-def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_config):
+def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
         mds_effective,
@@ -117,7 +117,7 @@ def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch, app_con
     assert response.headers["Vary"] == "Cookie"
 
 
-def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch, app_config):
+def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
 
     with entry_app().test_client() as client:
@@ -127,7 +127,7 @@ def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch, app_con
     assert response.get_json()["error"] == "Provide exactly one of entryId, aaguid, or aaid."
 
 
-def test_resolve_metadata_entry_returns_not_found(monkeypatch, app_config):
+def test_resolve_metadata_entry_returns_not_found(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
         mds_effective,
@@ -142,7 +142,7 @@ def test_resolve_metadata_entry_returns_not_found(monkeypatch, app_config):
     assert response.get_json()["error"] == "Metadata entry not found."
 
 
-def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
+def test_resolve_metadata_entry_returns_entry(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
         mds_effective,
@@ -162,7 +162,7 @@ def test_resolve_metadata_entry_returns_entry(monkeypatch, app_config):
     }
 
 
-def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):
+def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
         mds_entries,
@@ -197,7 +197,7 @@ def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config
     assert response.get_json()["snapshot"]["meta"]["entryCount"] == 1
 
 
-def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch, app_config):
+def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(mds_uploads, "delete_session_metadata_item", lambda _name: True)
     monkeypatch.setattr(

@@ -4,6 +4,7 @@ import pytest
 from flask import session as flask_session
 
 from server.app import visitor_session
+from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
 from server.app.mds import uploads as mds_uploads
 from server.app.storage import cloud as storage_cloud
@@ -12,7 +13,7 @@ from tests.app.entry_app import entry_app
 
 
 @pytest.fixture
-def session_metadata_env(monkeypatch, tmp_path, metadata_state, session_store, app_config):
+def session_metadata_env(monkeypatch, tmp_path, metadata_state):
     session_dir = tmp_path / "sessions"
     session_dir.mkdir()
 
@@ -56,7 +57,7 @@ def test_session_metadata_is_isolated(session_metadata_env):
         assert items[0].payload["metadataStatement"]["description"] == "Session entry"
 
 
-def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypatch, sessions):
+def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypatch):
     _, mds_uploads = session_metadata_env
 
     calls = []
@@ -73,7 +74,7 @@ def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypat
     assert calls == [("touch", "session-123"), ("schedule", None)]
 
 
-def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch, blob, sessions):
+def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch):
     base_entry = {
         "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
         "metadataStatement": {
@@ -83,14 +84,14 @@ def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch,
         "statusReports": [],
     }
 
-    monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [])
+    monkeypatch.setattr(mds_uploads, "list_session_metadata_items", lambda: [])
     monkeypatch.setattr(
-        blob,
+        mds_cache,
         "load_packaged_explorer_summary",
         lambda: {"generatedAt": "2026-04-02T00:00:00+00:00", "no": 1},
     )
     monkeypatch.setattr(
-        blob,
+        mds_cache,
         "_load_base_metadata",
         lambda: (SimpleNamespace(entries=[base_entry]), "packaged"),
     )
@@ -104,7 +105,7 @@ def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch,
     assert resolved["metadataStatement"]["description"] == "Packaged authenticator"
 
 
-def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch, blob, sessions):
+def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch):
     base_snapshot = {
         "meta": {"entryCount": 1, "source": "packaged"},
         "entries": [
@@ -136,8 +137,8 @@ def test_load_effective_full_snapshot_prefers_session_entry(monkeypatch, blob, s
         mtime=None,
     )
 
-    monkeypatch.setattr(blob, "_load_base_full_snapshot", lambda: (base_snapshot, 1.0))
-    monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [session_item])
+    monkeypatch.setattr(mds_cache, "_load_base_full_snapshot", lambda: (base_snapshot, 1.0))
+    monkeypatch.setattr(mds_uploads, "list_session_metadata_items", lambda: [session_item])
 
     snapshot = mds_effective.load_effective_full_snapshot()
 

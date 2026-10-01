@@ -13,7 +13,9 @@ from flask import g
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
+from server.app.mds import uploads as mds_uploads
 from server.app.mds import verifier as mds_verifier
+from server.app.storage import session_metadata
 from tests.app.entry_app import entry_app
 
 
@@ -58,7 +60,7 @@ def test_base_entry_reports_base_trust(metadata_module, metadata_state):
     assert mds_verifier.metadata_entry_trust_anchor_status(entry) is True
 
 
-def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module, monkeypatch, metadata_state, sessions, blob, app_config):
+def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module, monkeypatch, metadata_state):
     base_entry = _entry(metadata_module, "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
     custom_entry = _entry(metadata_module, "cccccccc-cccc-cccc-cccc-cccccccccccc")
     base_metadata = MetadataBlobPayload(
@@ -70,10 +72,10 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module
     mds_cache.CACHE.entry_ids = {id(base_entry)}
 
     monkeypatch.setattr(
-        blob, "_load_base_metadata", lambda: (base_metadata, 1.0)
+        mds_cache, "_load_base_metadata", lambda: (base_metadata, 1.0)
     )
     monkeypatch.setattr(
-        sessions,
+        mds_uploads,
         "list_session_metadata_items",
         lambda: (
             [SimpleNamespace(entry=custom_entry, legal_header="")]
@@ -126,7 +128,7 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(metadata_module
     assert base_results == [True] * iterations
 
 
-def test_concurrent_cold_loads_parse_base_metadata_once(metadata_module, monkeypatch, tmp_path, blob):
+def test_concurrent_cold_loads_parse_base_metadata_once(metadata_module, monkeypatch, tmp_path):
     calls = []
 
     # The real snapshot is generated, not tracked, so this stands in for it.
@@ -141,11 +143,11 @@ def test_concurrent_cold_loads_parse_base_metadata_once(metadata_module, monkeyp
         return SimpleNamespace(entries=()), verified_mtime
 
     monkeypatch.setattr(
-        blob, "_load_verified_metadata_fallback", _slow_fallback
+        mds_cache, "_load_verified_metadata_fallback", _slow_fallback
     )
 
     threads = [
-        threading.Thread(target=blob._load_base_metadata) for _ in range(8)
+        threading.Thread(target=mds_cache._load_base_metadata) for _ in range(8)
     ]
     for thread in threads:
         thread.start()
@@ -155,7 +157,7 @@ def test_concurrent_cold_loads_parse_base_metadata_once(metadata_module, monkeyp
     assert len(calls) == 1
 
 
-def test_concurrent_cleanup_checks_run_cleanup_once(metadata_module, monkeypatch, metadata_state, session_store):
+def test_concurrent_cleanup_checks_run_cleanup_once(metadata_module, monkeypatch, metadata_state):
     calls = []
 
     def _slow_list_sessions():
@@ -165,7 +167,7 @@ def test_concurrent_cleanup_checks_run_cleanup_once(metadata_module, monkeypatch
 
     monkeypatch.setattr(visitor_session.CLEANUP, "last_run", 0.0)
     monkeypatch.setattr(
-        session_store, "list_sessions", _slow_list_sessions
+        session_metadata, "list_sessions", _slow_list_sessions
     )
 
     now = time.time()

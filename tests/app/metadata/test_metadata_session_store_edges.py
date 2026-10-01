@@ -7,11 +7,12 @@ from server.app.mds import cache as mds_cache
 from server.app.mds import uploads as mds_uploads
 from server.app.storage import cloud as storage_cloud
 from server.app.storage import common as storage_common
+from server.app.storage import session_metadata
 from tests.app.entry_app import entry_app
 
 
 @pytest.fixture
-def metadata_local_env(monkeypatch, tmp_path, metadata_state, session_store, app_config):
+def metadata_local_env(monkeypatch, tmp_path, metadata_state):
     session_dir = tmp_path / "session-metadata"
     session_dir.mkdir()
 
@@ -21,7 +22,7 @@ def metadata_local_env(monkeypatch, tmp_path, metadata_state, session_store, app
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
 
 
-    return mds_uploads, session_store, entry_app()
+    return mds_uploads, session_metadata, entry_app()
 
 
 def _sample_payload(description: str = "Session entry") -> dict:
@@ -32,7 +33,7 @@ def _sample_payload(description: str = "Session entry") -> dict:
     }
 
 
-def test_session_metadata_item_lifecycle_save_list_serialize_delete(metadata_local_env, session_store):
+def test_session_metadata_item_lifecycle_save_list_serialize_delete(metadata_local_env):
     mds_uploads, _session_store, app = metadata_local_env
 
     with app.test_request_context("/"):
@@ -57,7 +58,7 @@ def test_session_metadata_item_lifecycle_save_list_serialize_delete(metadata_loc
         assert mds_uploads.list_session_metadata_items() == []
 
 
-def test_save_session_metadata_item_surfaces_storage_failures(metadata_local_env, monkeypatch, session_store):
+def test_save_session_metadata_item_surfaces_storage_failures(metadata_local_env, monkeypatch):
     mds_uploads, session_store, app = metadata_local_env
 
     calls = []
@@ -76,7 +77,7 @@ def test_save_session_metadata_item_surfaces_storage_failures(metadata_local_env
     assert calls == ["write"]
 
 
-def test_list_session_metadata_items_skips_invalid_payloads_and_returns_valid_entries(metadata_local_env, session_store):
+def test_list_session_metadata_items_skips_invalid_payloads_and_returns_valid_entries(metadata_local_env):
     mds_uploads, session_store, app = metadata_local_env
 
     with app.test_request_context("/"):
@@ -108,7 +109,7 @@ def test_list_session_metadata_items_skips_invalid_payloads_and_returns_valid_en
     assert items[0].payload["metadataStatement"]["description"] == "valid"
 
 
-def test_delete_session_metadata_item_validates_session_filename_and_storage_errors(metadata_local_env, monkeypatch, session_store):
+def test_delete_session_metadata_item_validates_session_filename_and_storage_errors(metadata_local_env, monkeypatch):
     mds_uploads, session_store, app = metadata_local_env
 
     with pytest.raises(ValueError, match="No active metadata session"):
@@ -135,7 +136,7 @@ def test_delete_session_metadata_item_validates_session_filename_and_storage_err
             mds_uploads.delete_session_metadata_item("present.json", session_id=session_id)
 
 
-def test_load_verified_metadata_helpers_handle_invalid_and_missing_payloads(metadata_local_env, monkeypatch, tmp_path, blob, session_store):
+def test_load_verified_metadata_helpers_handle_invalid_and_missing_payloads(metadata_local_env, monkeypatch, tmp_path):
     mds_uploads, _session_store, _app = metadata_local_env
 
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
