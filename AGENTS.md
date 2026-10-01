@@ -146,7 +146,7 @@ their exports or sentences. A new surface splits its logic out here first.
   algorithm tag, hydration from its server artifact, and its details and registration view as
   data. Registration snapshots (`schemaVersion` 2) hold the registration as data, never markup;
   older composed HTML is never read.
-- `codec/`: the Codec's requests, results and values. `advanced/mds/`: the MDS
+- `codec/`: the Codec's requests, results and values. `mds/`: the MDS
   explorer's loading, filters, sort, columns, rows, entry, certificate, raw view and Manage
   Metadata (the server builds each row: `mds/build.py`'s `build_explorer_entry`).
 - `browser/`: the Analyze Browser's facts. It reports what the browser says and where

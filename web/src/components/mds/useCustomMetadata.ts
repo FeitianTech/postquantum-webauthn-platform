@@ -15,7 +15,7 @@ import {
   requestCustomMetadataDelete,
   requestCustomMetadataList,
   requestCustomMetadataUpload,
-} from '@/logic/advanced/mds/explorer/custom-metadata.js';
+} from '@/logic/mds/explorer/custom-metadata.js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { MdsSnapshot } from './model';

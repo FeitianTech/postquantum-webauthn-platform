@@ -1,6 +1,6 @@
 // How an explorer entry is found when the list does not hold it, and how another
 // surface (a saved credential) opens one by its AAGUID. No DOM.
-import { readFailedResponse } from '../../../shared/api/failed-response.js';
+import { readFailedResponse } from '../../shared/api/failed-response.js';
 import { MDS_RESOLVE_PATH } from '../constants.js';
 import { normaliseAaguid } from '../utils/resolvers.js';
 

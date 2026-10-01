@@ -1,4 +1,4 @@
-import { NO_MATCHING_OPTIONS } from '@/logic/advanced/mds/explorer/options.js';
+import { NO_MATCHING_OPTIONS } from '@/logic/mds/explorer/options.js';
 import { type KeyboardEvent, useId, useMemo, useState } from 'react';
 
 import { TextField } from '@/components/ui/Field';

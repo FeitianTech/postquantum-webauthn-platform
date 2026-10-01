@@ -1,4 +1,4 @@
-import { MISSING_CELL_TEXT } from '@/logic/advanced/mds/explorer/rows.js';
+import { MISSING_CELL_TEXT } from '@/logic/mds/explorer/rows.js';
 
 import { MonoValue } from '@/components/ui/MonoValue';
 import { TBody, THead, Table, Td, Th, Tr } from '@/components/ui/Table';

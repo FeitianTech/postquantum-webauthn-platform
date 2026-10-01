@@ -1,25 +1,25 @@
-// The MDS explorer's logic comes from src/logic/advanced/mds (explorer/ and the
+// The MDS explorer's logic comes from src/logic/mds (explorer/ and the
 // leaves it stands on). These are the types the components read it through, and
 // the words the logic does not hold: the columns' headers and the filters'
 // labels and placeholders.
-import { FILTER_CONFIG } from '@/logic/advanced/mds/constants.js';
+import { FILTER_CONFIG } from '@/logic/mds/constants.js';
 import {
   classifyExplorerAnswer,
   fetchExplorerInfo,
   prepareSnapshotEntries,
   requestExplorerSnapshot,
-} from '@/logic/advanced/mds/explorer/loading.js';
+} from '@/logic/mds/explorer/loading.js';
 import {
   countActiveExplorerFilters,
   defaultExplorerSort,
   matchesExplorerFilters,
   nextExplorerSort,
   sortExplorerEntries,
-} from '@/logic/advanced/mds/explorer/filter-sort.js';
-import { explorerFilterOptionLists, matchingFilterOptions } from '@/logic/advanced/mds/explorer/options.js';
-import { certificationParts, identifierLabel } from '@/logic/advanced/mds/explorer/rows.js';
-import { explorerLoadedStatus } from '@/logic/advanced/mds/explorer/status.js';
-import { createExplorerSource } from '@/logic/advanced/mds/metadata/explorer-source.js';
+} from '@/logic/mds/explorer/filter-sort.js';
+import { explorerFilterOptionLists, matchingFilterOptions } from '@/logic/mds/explorer/options.js';
+import { certificationParts, identifierLabel } from '@/logic/mds/explorer/rows.js';
+import { explorerLoadedStatus } from '@/logic/mds/explorer/status.js';
+import { createExplorerSource } from '@/logic/mds/metadata/explorer-source.js';
 
 /** One authenticator as the server lists it: every column's text is already there. */
 export type MdsEntry = {

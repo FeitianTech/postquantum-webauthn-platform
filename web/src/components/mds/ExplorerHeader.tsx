@@ -1,4 +1,4 @@
-import { formatEntryCount } from '@/logic/advanced/mds/explorer/status.js';
+import { formatEntryCount } from '@/logic/mds/explorer/status.js';
 
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/icons';

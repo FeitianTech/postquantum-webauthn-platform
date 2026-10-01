@@ -1,5 +1,5 @@
 // What the explorer's certificate page shows of an attestation root. No DOM.
-import { readFailedResponse } from '../../../shared/api/failed-response.js';
+import { readFailedResponse } from '../../shared/api/failed-response.js';
 import { formatCertificateDateDisplay, formatSignatureHashName } from '../utils/formatters.js';
 
 export const CERTIFICATE_DECODE_PATH = '/api/mds/decode-certificate';

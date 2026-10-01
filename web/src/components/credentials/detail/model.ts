@@ -18,7 +18,7 @@ import {
   describeAuthenticatorData,
 } from '@/logic/advanced/credential-display/registration-view.js';
 import { HYDRATE_TEXT, hydrateCredentialFromServer } from '@/logic/advanced/credentials/hydrate.js';
-import { certificateSummary } from '@/logic/advanced/mds/explorer/certificate.js';
+import { certificateSummary } from '@/logic/mds/explorer/certificate.js';
 import { fetchCredentialArtifact } from '@/logic/shared/storage/artifacts-client.js';
 import { updateAdvancedCredentialRegistrationSnapshot } from '@/logic/shared/storage/records.js';
 

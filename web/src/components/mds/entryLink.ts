@@ -1,4 +1,4 @@
-import { ENTRY_LINK_MESSAGES } from '@/logic/advanced/mds/explorer/entry-link.js';
+import { ENTRY_LINK_MESSAGES } from '@/logic/mds/explorer/entry-link.js';
 import { useCallback } from 'react';
 
 import { type GoToSection, useSectionNavigation } from '@/lib/useSection';

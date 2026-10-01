@@ -1,5 +1,5 @@
-import { MISSING_METADATA_MESSAGE } from '@/logic/advanced/mds/constants.js';
-import { EXPLORER_NO_MATCHES } from '@/logic/advanced/mds/explorer/status.js';
+import { MISSING_METADATA_MESSAGE } from '@/logic/mds/constants.js';
+import { EXPLORER_NO_MATCHES } from '@/logic/mds/explorer/status.js';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
