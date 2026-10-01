@@ -1,15 +1,12 @@
 
+from types import SimpleNamespace
+
 from server.app.config import relying_party
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.webauthn import assertion_hash
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import b64u
-
-
-class _AuthResult:
-    def __init__(self, public_key=None):
-        self.public_key = public_key or {3: -7}
 
 
 def test_advanced_authenticate_complete_without_session_state_returns_400(monkeypatch):
@@ -136,7 +133,7 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
 
         def authenticate_complete(self, _state, _credentials, response):
             captured["response"] = response
-            return _AuthResult({3: -7})
+            return SimpleNamespace(public_key={3: -7})
 
     def _hashed_with(response, algorithm):
         captured["hash_algorithm"] = algorithm
@@ -189,7 +186,7 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
 
         def authenticate_complete(self, _state, _credentials, response):
             captured["response"] = response
-            return _AuthResult({3: -7})
+            return SimpleNamespace(public_key={3: -7})
 
     def _hashed_with(response, algorithm):
         captured["hash_algorithm"] = algorithm
@@ -240,7 +237,7 @@ def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authentic
         allowed_algorithms = []
 
         def authenticate_complete(self, *_args, **_kwargs):
-            return _AuthResult({3: -7})
+            return SimpleNamespace(public_key={3: -7})
 
     monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")

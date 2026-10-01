@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import time
+from types import SimpleNamespace
 
 from server.app import visitor_session
 from server.app.config import relying_party
@@ -40,11 +41,6 @@ class _FakeAuthData:
 
     def __bytes__(self):
         return self.rp_id_hash + bytes([self.flags]) + int(self.counter).to_bytes(4, "big")
-
-
-class _MatchedCredential:
-    def __init__(self, credential_id: bytes):
-        self.credential_id = credential_id
 
 
 def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch):
@@ -120,7 +116,7 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch):
 
     class _FakeServer:
         def authenticate_complete(self, *_args, **_kwargs):
-            return _MatchedCredential(credential_id)
+            return SimpleNamespace(credential_id=credential_id)
 
     monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(
@@ -169,7 +165,7 @@ def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch
     class _FakeServer:
         def authenticate_complete(self, state, *_args, **_kwargs):
             captured["state"] = state
-            return _MatchedCredential(credential_id)
+            return SimpleNamespace(credential_id=credential_id)
 
     monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(

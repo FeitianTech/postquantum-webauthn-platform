@@ -1,15 +1,11 @@
 import time
+from types import SimpleNamespace
 
 from server.app.config import relying_party
 from server.app.routes.simple import parsing as simple_parsing
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import b64u
-
-
-class _MatchedCredential:
-    def __init__(self, credential_id: bytes):
-        self.credential_id = credential_id
 
 
 def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatch):
@@ -73,7 +69,7 @@ def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypa
 
     class _FakeServer:
         def authenticate_complete(self, *_args, **_kwargs):
-            return _MatchedCredential(credential_id)
+            return SimpleNamespace(credential_id=credential_id)
 
     monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
     monkeypatch.setattr(

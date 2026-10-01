@@ -1,4 +1,6 @@
 
+from types import SimpleNamespace
+
 from server.app.config import relying_party
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from tests.app.entry_app import entry_app
@@ -16,11 +18,6 @@ def _stored_credential_entry(credential_id: bytes) -> dict:
         "authenticatorAttachment": "platform",
         "algorithm": -7,
     }
-
-
-class _AuthResult:
-    def __init__(self, public_key=None):
-        self.public_key = public_key or {3: -7}
 
 
 def test_simple_register_begin_accepts_existing_credentials_alias(monkeypatch):
@@ -239,7 +236,7 @@ def test_advanced_authenticate_complete_accepts_storedcredentials_without_dunder
         allowed_algorithms = []
 
         def authenticate_complete(self, *_args, **_kwargs):
-            return _AuthResult({3: -7})
+            return SimpleNamespace(public_key={3: -7})
 
     monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
@@ -274,7 +271,7 @@ def test_advanced_authenticate_complete_accepts_credentials_fallback_field(monke
         allowed_algorithms = []
 
         def authenticate_complete(self, *_args, **_kwargs):
-            return _AuthResult({3: -7})
+            return SimpleNamespace(public_key={3: -7})
 
     monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
     monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())

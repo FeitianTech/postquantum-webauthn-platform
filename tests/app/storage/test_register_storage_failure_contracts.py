@@ -9,14 +9,8 @@ from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
 from tests.app.entry_app import entry_app
+from tests.app.fido2_stand_ins import ES256_KEY, CredentialData
 from tests.app.security.ceremony_helpers import b64u
-
-
-class _FakeCredentialData:
-    def __init__(self, credential_id: bytes, *, algorithm: int = -7):
-        self.credential_id = credential_id
-        self.public_key = {1: 2, 3: algorithm, -1: 1, -2: b"\x01" * 32, -3: b"\x02" * 32}
-        self.aaguid = bytes.fromhex("00112233445566778899aabbccddeeff")
 
 
 class _FakeAuthData:
@@ -29,7 +23,7 @@ class _FakeAuthData:
         ED = 0x80
 
     def __init__(self, *, credential_id: bytes, rp_id: str, counter: int = 7, algorithm: int = -7):
-        self.credential_data = _FakeCredentialData(credential_id, algorithm=algorithm)
+        self.credential_data = CredentialData(credential_id=credential_id, public_key={**ES256_KEY, 3: algorithm})
         self.rp_id_hash = hashlib.sha256(rp_id.encode("utf-8")).digest()
         self.flags = self.FLAG.UP | self.FLAG.AT
         self.counter = counter
