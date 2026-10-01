@@ -123,22 +123,23 @@ def _request(method: str, url: str, body: dict[str, Any] | None = None) -> tuple
         req.add_header("Content-Type", "application/json")
 
     timeout = _http_timeout()
-    for attempt in range(2):
-        try:
-            with urllib_request.urlopen(req, timeout=timeout) as resp:
-                return resp.getcode(), resp.read()
-        except urllib_error.HTTPError as exc:
-            if 500 <= exc.code < 600 and attempt == 0:
-                time.sleep(1)
-                continue
+    # One retry, a second later, after a server error or a failure to connect.
+    try:
+        return _send(req, timeout)
+    except urllib_error.HTTPError as exc:
+        if not 500 <= exc.code < 600:
             raise
-        except urllib_error.URLError as exc:
-            # Retrying a timeout would double the worst-case request latency.
-            if attempt == 0 and not isinstance(exc.reason, TimeoutError):
-                time.sleep(1)
-                continue
+    except urllib_error.URLError as exc:
+        # Retrying a timeout would double the worst-case request latency.
+        if isinstance(exc.reason, TimeoutError):
             raise
-    raise RuntimeError("GitHub request failed after retries")
+    time.sleep(1)
+    return _send(req, timeout)
+
+
+def _send(req: urllib_request.Request, timeout: float) -> tuple[int, bytes]:
+    with urllib_request.urlopen(req, timeout=timeout) as resp:
+        return resp.getcode(), resp.read()
 
 
 def _encode_content(data: bytes) -> str:
