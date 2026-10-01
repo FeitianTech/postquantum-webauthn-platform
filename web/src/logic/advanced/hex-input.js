@@ -7,7 +7,7 @@ import {
     base64UrlToHex,
     getCurrentBinaryFormat,
     jsToHex,
-} from '../shared/utils/binary.js';
+} from '../shared/binary.js';
 
 export function hexInputIsValid(text, minBytes = 0, format = getCurrentBinaryFormat()) {
     const value = typeof text === 'string' ? text.trim() : '';

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { describeCeremonyResult } from './result.js';
+import { describeCeremonyResult } from './ceremony-result.js';
 
-// What the result panel under each tab's buttons says (shared/ceremony/result.js).
+// What the result panel under each tab's buttons says (shared/ceremony-result.js).
 
 describe('the signature counter', () => {
   it('says nothing without a number or a verdict', () => {

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 
 import { CeremonyResult } from './CeremonyResult';
 
-// The result panel over the sentences shared/ceremony/result.js gives.
+// The result panel over the sentences shared/ceremony-result.js gives.
 describe('the ceremony result panel', () => {
   it('stays in the page, hidden and empty, until there is something to say', () => {
     render(<CeremonyResult result={null} />);

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { FailedResponseError } from '../shared/api/failed-response.js';
-import { UPDATE_BROWSER_TEXT, UnsupportedBrowserError } from '../shared/webauthn/native-json.js';
+import { FailedResponseError } from '../shared/failed-response.js';
+import { UPDATE_BROWSER_TEXT, UnsupportedBrowserError } from '../shared/native-json.js';
 import {
   SIMPLE_CEREMONY_TEXT,
   authenticateSimplePasskey,

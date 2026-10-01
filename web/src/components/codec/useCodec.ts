@@ -4,7 +4,7 @@ import {
   requestCodec,
   validateCodecInput,
 } from '@/logic/codec/request.js';
-import { FailedResponseError } from '@/logic/shared/api/failed-response.js';
+import { FailedResponseError } from '@/logic/shared/failed-response.js';
 import { useCallback, useRef, useState } from 'react';
 
 import { useToast } from '@/components/ui/Toast';

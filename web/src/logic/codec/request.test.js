@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { FailedResponseError } from '../shared/api/failed-response.js';
+import { FailedResponseError } from '../shared/failed-response.js';
 import {
   buildCodecRequest,
   codecFailureText,

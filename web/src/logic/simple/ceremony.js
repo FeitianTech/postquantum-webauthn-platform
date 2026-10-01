@@ -9,8 +9,8 @@ import {
     parseCreationOptions,
     parseRequestOptions,
     requireNativeJson,
-} from '../shared/webauthn/native-json.js';
-import { FailedResponseError, readFailedResponse } from '../shared/api/failed-response.js';
+} from '../shared/native-json.js';
+import { FailedResponseError, readFailedResponse } from '../shared/failed-response.js';
 
 export const SIMPLE_CEREMONY_TEXT = {
     usernameRequired: 'Please enter a username.',
@@ -72,7 +72,7 @@ function postJson(path, email, body) {
  * credential, the server's verdict. Says each step through onProgress. Gives the
  * server's answer (its storedCredential is what the browser keeps); throws a
  * FailedResponseError for a refused request, or the browser's error. A browser
- * without WebAuthn's JSON methods (shared/webauthn/native-json.js) is asked
+ * without WebAuthn's JSON methods (shared/native-json.js) is asked
  * nothing: an UnsupportedBrowserError before the first request.
  */
 export async function registerSimplePasskey(email, { onProgress = () => {} } = {}) {
@@ -103,7 +103,7 @@ export async function registerSimplePasskey(email, { onProgress = () => {} } = {
  * is sent of them. Says each step through onProgress. Gives
  * `{answer, result}` on success, `{failure, result}` when the server refused the
  * assertion (readFailedResponse's reading; `result` is what the result panel
- * shows: shared/ceremony/result.js); throws for anything before that.
+ * shows: shared/ceremony-result.js); throws for anything before that.
  */
 export async function authenticateSimplePasskey(email, { credentialsFor, prepareForServer, onProgress = () => {} }) {
     requireNativeJson();

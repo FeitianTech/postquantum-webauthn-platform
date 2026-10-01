@@ -14,8 +14,8 @@ import {
   applyAuthenticatorAttachmentPreference,
   enforceAuthenticatorAttachmentWithHints,
 } from '../hints.js';
-import { FailedResponseError } from '../../shared/api/failed-response.js';
-import { UPDATE_BROWSER_TEXT } from '../../shared/webauthn/native-json.js';
+import { FailedResponseError } from '../../shared/failed-response.js';
+import { UPDATE_BROWSER_TEXT } from '../../shared/native-json.js';
 import {
   StandInPublicKeyCredential,
   answerResponse,

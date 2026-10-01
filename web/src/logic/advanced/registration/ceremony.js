@@ -4,9 +4,9 @@
 // form decides is given: the hints' rules, and the two values it reads from the
 // form as the ceremony runs.
 
-import { createCredential, parseCreationOptions, requireNativeJson } from '../../shared/webauthn/native-json.js';
-import { bufferSourceToUint8Array, bytesToHex } from '../../shared/utils/binary.js';
-import { FailedResponseError, readFailedResponse } from '../../shared/api/failed-response.js';
+import { createCredential, parseCreationOptions, requireNativeJson } from '../../shared/native-json.js';
+import { bufferSourceToUint8Array, bytesToHex } from '../../shared/binary.js';
+import { FailedResponseError, readFailedResponse } from '../../shared/failed-response.js';
 
 export const ADVANCED_CEREMONY_TEXT = {
     missingPublicKey: 'Invalid JSON structure: Missing "publicKey" property',
@@ -213,7 +213,7 @@ function postJson(path, body) {
  * extension whatever the text says, read when the ceremony gets there). It says what it does through
  * onStart (the request checked: the last ceremony's messages may go),
  * onProgress, onWarning (the server's warnings about the request) and onResult
- * (the result panel's input, shared/ceremony/result.js). Gives
+ * (the result panel's input, shared/ceremony-result.js). Gives
  * `{registered: true, answer, credential, credentialJson, publicKey, record}`,
  * or `{registered: false, text, context}` with the failure's sentence.
  */

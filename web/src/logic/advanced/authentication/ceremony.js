@@ -4,8 +4,8 @@
 // form decides is given: the hints' check, the records sent to the server, and
 // the two values it reads from the form as the ceremony runs.
 
-import { getAssertion, parseRequestOptions, requireNativeJson } from '../../shared/webauthn/native-json.js';
-import { FailedResponseError, readFailedResponse } from '../../shared/api/failed-response.js';
+import { getAssertion, parseRequestOptions, requireNativeJson } from '../../shared/native-json.js';
+import { FailedResponseError, readFailedResponse } from '../../shared/failed-response.js';
 import { ADVANCED_CEREMONY_TEXT } from '../registration/ceremony.js';
 
 export const ADVANCED_ASSERTION_TEXT = {
@@ -65,7 +65,7 @@ function postJson(path, body) {
  * through onStart (the request checked: the last ceremony's messages may go)
  * and onProgress. Gives `{authenticated: true, answer, result}`, or
  * `{authenticated: false, text, result, failedCredentialId}` with the
- * failure's sentence (the result panel's input, shared/ceremony/result.js,
+ * failure's sentence (the result panel's input, shared/ceremony-result.js,
  * when the server answered the assertion; the credential it refused, if it
  * named one). A refusal of the hints says its own message alone.
  */

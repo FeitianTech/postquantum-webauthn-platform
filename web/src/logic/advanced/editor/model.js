@@ -2,7 +2,7 @@
 // written as, reading an edit (and where text that does not parse stops being
 // JSON, the same in every browser), and the keys an edit adds beside
 // `publicKey`. DOM-free.
-import { sortObjectKeys } from '../../shared/utils/binary.js';
+import { sortObjectKeys } from '../../shared/binary.js';
 
 import { isPlainObject } from './schema.js';
 

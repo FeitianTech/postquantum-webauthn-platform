@@ -53,14 +53,14 @@ import {
   registrationControls,
   registrationDefaults,
 } from '@/logic/advanced/registration/request.js';
-import { generateRandom10DigitUsername } from '@/logic/shared/auth/random-username.js';
+import { generateRandom10DigitUsername } from '@/logic/shared/random-username.js';
 import {
   prepareAdvancedCredentialsForServer,
   saveAdvancedCredential,
   updateAdvancedCredentialRegistrationSnapshot,
   updateAdvancedCredentialSignCount,
 } from '@/logic/credentials/storage/records.js';
-import { generateRandomHex } from '@/logic/shared/utils/binary.js';
+import { generateRandomHex } from '@/logic/shared/binary.js';
 
 import type { CeremonyResultInput } from '@/components/ceremony/model';
 import type { SavedCredential } from '@/components/credentials/model';

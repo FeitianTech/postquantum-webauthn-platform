@@ -1,4 +1,4 @@
-import {hexToGuid} from '../shared/utils/binary.js';
+import {hexToGuid} from '../shared/binary.js';
 import {
     deriveAaguidFromCredentialData,
     normaliseAaguidValue,

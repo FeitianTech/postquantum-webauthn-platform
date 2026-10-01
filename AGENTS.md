@@ -155,14 +155,14 @@ their exports or sentences. A new surface splits its logic out here first.
   which transports a browser supports: do not add WebUSB/WebHID/Bluetooth/Serial checks. The
   identity cases are real user-agent strings with Client Hints in
   `src/test/logic/browser/identity-matrix.js`; add a browser there.
-- `shared/api/failed-response.js`: the one reader of a failed response (`readFailedResponse`,
+- `shared/failed-response.js`: the one reader of a failed response (`readFailedResponse`,
   `FailedResponseError`): the server's `error`, the codec's `offset` and `path`, what to do for
   a 400, 409, 413 or 503. Never show a raw response body.
-- `shared/ceremony/result.js`: the result panel's signature counter and challenge sentences.
-- `shared/utils/base64.js`: bytes on the wire are unpadded base64url; a field named for base64
+- `shared/ceremony-result.js`: the result panel's signature counter and challenge sentences.
+- `shared/base64.js`: bytes on the wire are unpadded base64url; a field named for base64
   (`derBase64`, …) is standard base64. Decode with the strict `base64UrlToBytes` /
   `base64ToBytes`; `forgivingBase64ToBytes` only for typed text. No `atob`.
-- `shared/webauthn/native-json.js`: the browser's own WebAuthn JSON
+- `shared/native-json.js`: the browser's own WebAuthn JSON
   (`PublicKeyCredential.parseCreationOptionsFromJSON` / `parseRequestOptionsFromJSON`,
   `credential.toJSON()`; Chrome and Edge 129, Firefox 119, Safari 18.4). A begin answer's
   `publicKey` goes to the browser's parser as the server wrote it, and the credential's own JSON

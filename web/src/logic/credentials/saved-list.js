@@ -3,7 +3,7 @@
 // it links to FIDO MDS; the warm-up after the list is drawn. DOM-free. What it
 // needs from the credential helpers and from storage is passed in.
 
-import { normalizeToHex } from '../shared/utils/binary.js';
+import { normalizeToHex } from '../shared/binary.js';
 import {
     ensureBase64Url,
     getRecordIdentifier,

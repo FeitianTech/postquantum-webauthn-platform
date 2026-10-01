@@ -12,7 +12,7 @@ own readers (``test_html_sinks.py``, ``test_inline_code.py``):
   ``setAttribute('style')``, and no ``<style>`` or ``<script>`` element;
 - no ``next/script``, no ``eval`` or ``new Function`` (no ``'unsafe-eval'``);
 - nothing written to ``window`` / ``globalThis`` / ``self``, and no ``atob``
-  (``shared/utils/base64.js`` decodes strictly).
+  (``shared/base64.js`` decodes strictly).
 
 In every source that ships, the logic modules too, what the platform does itself
 is not written by hand: no ``btoa`` (``base64.js`` encodes), no deep copy through
@@ -209,7 +209,7 @@ def find_rule_breaks(text: str) -> list[tuple[int, str]]:
 # What the platform now does itself, written by hand: no source that ships, the
 # logic modules included, keeps the old spelling.
 _NATIVE_RULES: dict[str, re.Pattern[str]] = {
-    "btoa (encode with shared/utils/base64.js)": re.compile(r"(?<![\w$.])btoa\s*\("),
+    "btoa (encode with shared/base64.js)": re.compile(r"(?<![\w$.])btoa\s*\("),
     "JSON deep copy (structuredClone)": re.compile(r"\bJSON\.parse\(\s*JSON\.stringify\("),
     "hasOwnProperty.call (Object.hasOwn)": re.compile(r"\bhasOwnProperty\.call\("),
 }
@@ -241,7 +241,7 @@ def test_the_reader_finds_each_hand_written_stand_in():
     )
 
     assert find_native_rule_breaks(source) == [
-        (1, "btoa (encode with shared/utils/base64.js)"),
+        (1, "btoa (encode with shared/base64.js)"),
         (2, "JSON deep copy (structuredClone)"),
         (3, "hasOwnProperty.call (Object.hasOwn)"),
     ]

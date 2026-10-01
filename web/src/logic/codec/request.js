@@ -1,7 +1,7 @@
 // What the Codec sends and what it says around a request, without the page:
 // the checks made before sending, the request itself, and the sentences for
 // progress, success and failure.
-import { FailedResponseError, readFailedResponse } from '../shared/api/failed-response.js';
+import { FailedResponseError, readFailedResponse } from '../shared/failed-response.js';
 
 import { canEncodeToFormat } from './encoding/can-encode.js';
 

@@ -1,4 +1,4 @@
-"""The logic modules decode base64 with ``shared/utils/base64.js``, never ``atob``.
+"""The logic modules decode base64 with ``shared/base64.js``, never ``atob``.
 
 ``atob`` takes either spelling of a byte string -- padded or not, with or
 without whitespace, with stray bits in its last character -- so the bytes a
@@ -36,7 +36,7 @@ def _calls() -> dict[str, list[int]]:
 def test_frontend_scripts_do_not_call_atob():
     calls = {path: lines for path, lines in _calls().items() if path not in ALLOWED}
 
-    assert calls == {}, "decode with shared/utils/base64.js instead of atob"
+    assert calls == {}, "decode with shared/base64.js instead of atob"
 
 
 def test_allowed_files_still_call_atob():

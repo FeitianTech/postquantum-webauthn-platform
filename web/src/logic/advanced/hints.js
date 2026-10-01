@@ -7,7 +7,7 @@ import {
     convertFormat,
     currentFormatToJsonFormat,
     getCurrentBinaryFormat
-} from '../shared/utils/binary.js';
+} from '../shared/binary.js';
 import {
     extractHexFromJsonFormat,
     getCredentialIdHex,

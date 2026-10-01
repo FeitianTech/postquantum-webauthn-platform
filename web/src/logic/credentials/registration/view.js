@@ -6,7 +6,7 @@
 import {
     base64UrlToJson,
     base64UrlToUtf8String,
-} from '../../shared/utils/binary.js';
+} from '../../shared/binary.js';
 import {
     normaliseCertificateEntryForModal,
     partitionCertificateEntries,

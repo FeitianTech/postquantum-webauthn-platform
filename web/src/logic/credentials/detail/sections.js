@@ -8,8 +8,8 @@ import {
     base64UrlToBytes,
     bytesToBase64,
     bytesToBase64Url,
-} from '../../shared/utils/base64.js';
-import {hexToGuid} from '../../shared/utils/binary.js';
+} from '../../shared/base64.js';
+import {hexToGuid} from '../../shared/binary.js';
 import {resolveCredentialAlgorithmIdentifier} from '../algorithm-tag.js';
 import {
     deriveAaguidDisplayValues,

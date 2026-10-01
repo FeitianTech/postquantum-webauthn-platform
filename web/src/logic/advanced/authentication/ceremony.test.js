@@ -9,7 +9,7 @@ import {
 } from './ceremony.js';
 import { ADVANCED_CEREMONY_TEXT } from '../registration/ceremony.js';
 import { ensureAuthenticationHintsAllowed } from '../hints.js';
-import { UPDATE_BROWSER_TEXT } from '../../shared/webauthn/native-json.js';
+import { UPDATE_BROWSER_TEXT } from '../../shared/native-json.js';
 import { answerResponse, credentialToJSON, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
 import { advancedAuthentications, recordedAssertion } from '@/test/logic/advanced/advanced-answers.js';
 

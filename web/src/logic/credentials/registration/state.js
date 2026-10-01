@@ -6,8 +6,8 @@ import {
     base64UrlToHex,
     bytesToHex,
     hexToUint8Array,
-} from '../../shared/utils/binary.js';
-import {base64ToBytes, base64UrlToBytes} from '../../shared/utils/base64.js';
+} from '../../shared/binary.js';
+import {base64ToBytes, base64UrlToBytes} from '../../shared/base64.js';
 import {
     deriveCertificateIdentity,
     normaliseCertificateEntryForModal,

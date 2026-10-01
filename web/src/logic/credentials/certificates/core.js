@@ -1,5 +1,5 @@
-import {bytesToHex} from '../../shared/utils/binary.js';
-import {base64ToBytes} from '../../shared/utils/base64.js';
+import {bytesToHex} from '../../shared/binary.js';
+import {base64ToBytes} from '../../shared/base64.js';
 import {normaliseAaguidValue} from '../utils.js';
 
 const AAGUID_EXTENSION_OID = '1.3.6.1.4.1.45724.1.1.4';

@@ -1,7 +1,7 @@
 import { useLayoutEffect, useState } from 'react';
 
 import { AlertIcon } from '@/components/ui/icons';
-import { UPDATE_BROWSER_TEXT, nativeJsonSupported } from '@/logic/shared/webauthn/native-json.js';
+import { UPDATE_BROWSER_TEXT, nativeJsonSupported } from '@/logic/shared/native-json.js';
 
 /**
  * Whether this browser reads and writes WebAuthn's JSON itself, which every
