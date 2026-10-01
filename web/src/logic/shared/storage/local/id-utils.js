@@ -23,8 +23,6 @@ export function normaliseAdvancedCredentialId(record) {
     }
     const candidates = [
         record.credentialIdBase64Url,
-        record.credentialIdBase64URL,
-        record.credentialIdBase64,
         record.credentialId,
         record.id,
     ];
@@ -78,7 +76,7 @@ export function ensureAdvancedCredentialStorageId(record, { forceNew = false } =
     }
 
     const baseId = normaliseAdvancedCredentialId(record);
-    const timestampSource = record.createdAt || record.registrationTime || record.registration_time;
+    const timestampSource = record.createdAt;
     const timestampValue = isNonEmptyString(timestampSource) ? timestampSource.trim() : '';
     const randomSegment = generateRandomIdSegment();
     const parts = [];
