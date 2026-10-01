@@ -15,11 +15,8 @@ from __future__ import annotations
 
 import threading
 
-import pytest
-
 from server.app.routes.simple import authentication
 from server.app.storage import credentials as storage_credentials
-from server.app.storage import github_mirror
 
 from .ceremony_helpers import (
     ORIGIN,
@@ -30,13 +27,6 @@ from .ceremony_helpers import (
 )
 
 EMAIL = "user@example.com"
-
-
-@pytest.fixture
-def credential_store(monkeypatch, tmp_path):
-    monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
-    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
-    monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
 
 
 def _register(client, authenticator, counter):

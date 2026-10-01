@@ -17,7 +17,6 @@ import logging
 import pytest
 
 from server.app.storage import credentials as storage_credentials
-from server.app.storage import github_mirror
 from server.app.storage.common import InvalidStorageIdentifier
 
 from .ceremony_helpers import (
@@ -30,13 +29,6 @@ from .ceremony_helpers import (
 
 EMAIL = "user@example.com"
 _CEREMONY_KEYS = {"state", "simple_credentials", "authenticate_rp_id", "simple_credentials_email"}
-
-
-@pytest.fixture
-def credential_store(monkeypatch, tmp_path):
-    monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
-    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
-    monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
 
 
 @pytest.fixture

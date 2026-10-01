@@ -8,12 +8,10 @@ from __future__ import annotations
 import hashlib
 from types import SimpleNamespace
 
-import pytest
 from fido2.webauthn import AuthenticatorData
 
 from server.app.routes.simple import authentication as simple_authentication
 from server.app.storage import credentials as storage_credentials
-from server.app.storage import github_mirror
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import (
     ORIGIN,
@@ -26,15 +24,6 @@ from tests.app.security.ceremony_helpers import (
 )
 
 EMAIL = "user@example.com"
-
-
-@pytest.fixture
-def credential_store(monkeypatch, tmp_path):
-    """The real credential store, in this test's directory; no registration is mirrored."""
-
-    monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
-    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
-    monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
 
 
 def _register(client, authenticator, *, counter):

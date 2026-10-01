@@ -12,6 +12,7 @@ import pytest
 from server.app import factory, visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import provisioning as mds_provisioning
+from server.app.storage import github_mirror
 from tests.app.metadata import mds_fixture
 from tests.app.web_export_files import write, write_export
 
@@ -64,6 +65,15 @@ def client(app):
     """A test client for ``app``."""
 
     return app.test_client()
+
+
+@pytest.fixture
+def credential_store(monkeypatch, tmp_path):
+    """The real credential store, in this test's directory; no registration is mirrored to GitHub."""
+
+    monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
+    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
+    monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
 
 
 @pytest.fixture
