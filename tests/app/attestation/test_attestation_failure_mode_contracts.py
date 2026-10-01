@@ -112,7 +112,7 @@ def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_f
     assert any(error.startswith("unsupported_attestation:") for error in result["errors"])
 
 
-def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(monkeypatch, metadata_module, attestation_module):
+def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(monkeypatch, attestation_module):
     challenge = b"metadata-unavailable"
     rp_id = "example.com"
     auth_data = _FakeAuthData(
@@ -154,7 +154,7 @@ def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(mon
     assert "trust_path_missing" in result["errors"]
 
 
-def test_perform_attestation_checks_captures_verifier_evaluation_exception(monkeypatch, metadata_module, attestation_module):
+def test_perform_attestation_checks_captures_verifier_evaluation_exception(monkeypatch, attestation_module):
     challenge = b"verifier-exception"
     rp_id = "example.com"
     auth_data = _FakeAuthData(
@@ -200,7 +200,7 @@ def test_perform_attestation_checks_captures_verifier_evaluation_exception(monke
     assert result["root_checks"]["trusted_ca"] is False
 
 
-def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is_valid(monkeypatch, metadata_module, attestation_module):
+def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is_valid(monkeypatch, attestation_module):
     challenge = b"metadata-algorithm"
     rp_id = "example.com"
     auth_data = _FakeAuthData(

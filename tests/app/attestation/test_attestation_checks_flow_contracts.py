@@ -6,6 +6,7 @@ from fido2.webauthn import AuthenticatorData, CollectedClientData, RegistrationR
 
 from server.app.mds import verifier as mds_verifier
 from server.app.webauthn.attestation import checks as attestation_checks
+from server.app.webauthn.attestation import classical as attestation_classical
 
 
 class _FakeCredentialData:
@@ -82,7 +83,7 @@ def test_perform_attestation_checks_reports_client_authenticator_mismatches(monk
     assert "attested_credential_data_missing" in result["errors"]
 
 
-def test_perform_attestation_checks_classical_success_path_populates_metadata(monkeypatch, classical, metadata_module, attestation_module):
+def test_perform_attestation_checks_classical_success_path_populates_metadata(monkeypatch, attestation_module):
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _FakeAuthData(rp_id="example.com", flags=flags, counter=7, alg=-7)
     attestation_object = SimpleNamespace(fmt="packed", att_stmt={"alg": -7}, auth_data=auth_data)
@@ -112,7 +113,7 @@ def test_perform_attestation_checks_classical_success_path_populates_metadata(mo
     monkeypatch.setattr(Attestation, "for_type", lambda _fmt: (lambda: _FakeAttestation()))
     monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: object())
     monkeypatch.setattr(
-        classical,
+        attestation_classical,
         "_evaluate_classical_attestation_root",
         lambda *_args, **_kwargs: {
             "root_valid": True,
