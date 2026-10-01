@@ -2,34 +2,27 @@
 
 from __future__ import annotations
 
-import importlib
 import threading
 import time
 
-import pytest
-
+from server.app import startup
 from server.app.mds import cache as mds_cache
 from server.app.storage import common as storage_common
 
 
-@pytest.fixture
-def startup_module():
-    return importlib.import_module("server.app.startup")
-
-
-def test_background_warmup_defaults_to_cloud_run_only(startup_module, monkeypatch):
+def test_background_warmup_defaults_to_cloud_run_only(monkeypatch):
     monkeypatch.delenv("FIDO_SERVER_BACKGROUND_WARMUP", raising=False)
     monkeypatch.delenv("K_SERVICE", raising=False)
-    assert startup_module.background_warmup_enabled() is False
+    assert startup.background_warmup_enabled() is False
 
     monkeypatch.setenv("K_SERVICE", "pqcwebauthn")
-    assert startup_module.background_warmup_enabled() is True
+    assert startup.background_warmup_enabled() is True
 
     monkeypatch.setenv("FIDO_SERVER_BACKGROUND_WARMUP", "0")
-    assert startup_module.background_warmup_enabled() is False
+    assert startup.background_warmup_enabled() is False
 
 
-def test_start_background_warmup_returns_immediately(startup_module, monkeypatch):
+def test_start_background_warmup_returns_immediately(monkeypatch):
     monkeypatch.setenv("FIDO_SERVER_BACKGROUND_WARMUP", "1")
     finished = threading.Event()
 
@@ -37,10 +30,10 @@ def test_start_background_warmup_returns_immediately(startup_module, monkeypatch
         time.sleep(0.2)
         finished.set()
 
-    monkeypatch.setattr(startup_module, "_run_background_warmup", _slow_warmup)
+    monkeypatch.setattr(startup, "_run_background_warmup", _slow_warmup)
 
     started = time.perf_counter()
-    thread = startup_module.start_background_warmup()
+    thread = startup.start_background_warmup()
     elapsed = time.perf_counter() - started
 
     assert thread is not None
@@ -49,16 +42,16 @@ def test_start_background_warmup_returns_immediately(startup_module, monkeypatch
     assert finished.is_set()
 
 
-def test_start_background_warmup_disabled_does_nothing(startup_module, monkeypatch):
+def test_start_background_warmup_disabled_does_nothing(monkeypatch):
     monkeypatch.setenv("FIDO_SERVER_BACKGROUND_WARMUP", "0")
 
-    assert startup_module.start_background_warmup() is None
+    assert startup.start_background_warmup() is None
 
 
-def test_run_background_warmup_survives_failures(startup_module, monkeypatch):
+def test_run_background_warmup_survives_failures(monkeypatch):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(
-        startup_module.cloud,
+        startup.cloud,
         "_ensure_bucket",
         lambda: (_ for _ in ()).throw(RuntimeError("no bucket")),
     )
@@ -68,4 +61,4 @@ def test_run_background_warmup_survives_failures(startup_module, monkeypatch):
         lambda: (_ for _ in ()).throw(RuntimeError("no metadata")),
     )
 
-    startup_module._run_background_warmup()
+    startup._run_background_warmup()

@@ -8,10 +8,6 @@ refuses is invalid, with its errors.
 """
 from __future__ import annotations
 
-import importlib
-
-import pytest
-
 from server.app.webauthn.attestation import checks as attestation_checks
 
 from .ceremony_helpers import (
@@ -24,11 +20,6 @@ from .ceremony_helpers import (
 )
 
 MLDSA44_ALG = -48
-
-
-@pytest.fixture
-def attestation_module():
-    return importlib.import_module("server.app.webauthn.attestation")
 
 
 def _packed_registration_response(authenticator, *, challenge, attestation_alg):
@@ -58,7 +49,7 @@ def _packed_registration_response(authenticator, *, challenge, attestation_alg):
     }
 
 
-def test_an_mldsa_attestation_that_does_not_verify_is_invalid_with_its_errors(attestation_module):
+def test_an_mldsa_attestation_that_does_not_verify_is_invalid_with_its_errors():
 
     authenticator = Authenticator()
     challenge = b"\x61" * 32
@@ -83,7 +74,7 @@ def test_an_mldsa_attestation_that_does_not_verify_is_invalid_with_its_errors(at
     assert "attestation" in joined
 
 
-def test_a_classical_attestation_that_does_not_verify_is_invalid_with_its_errors(attestation_module):
+def test_a_classical_attestation_that_does_not_verify_is_invalid_with_its_errors():
 
     authenticator = Authenticator()
     challenge = b"\x63" * 32
@@ -159,7 +150,7 @@ def _mldsa_basic_attestation_response(authenticator, *, challenge, signing_key=N
     }
 
 
-def test_a_good_signature_does_not_rescue_a_certificate_packed_refuses(attestation_module):
+def test_a_good_signature_does_not_rescue_a_certificate_packed_refuses():
     """The laundering case itself, driven with real ML-DSA crypto: the signature
     is genuine, the certificate fails the packed policy checks."""
 
@@ -180,7 +171,7 @@ def test_a_good_signature_does_not_rescue_a_certificate_packed_refuses(attestati
     assert result["errors"]
 
 
-def test_a_signature_from_another_mldsa_key_is_invalid(attestation_module):
+def test_a_signature_from_another_mldsa_key_is_invalid():
 
     from cryptography.hazmat.primitives.asymmetric import mldsa
 

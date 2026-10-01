@@ -32,23 +32,22 @@ _CEREMONY_KEYS = {"state", "simple_credentials", "authenticate_rp_id", "simple_c
 
 
 @pytest.fixture
-def store(monkeypatch, tmp_path):
+def credential_store(monkeypatch, tmp_path):
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
     monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
-    return storage_credentials
 
 
 @pytest.fixture
-def saves(monkeypatch, store):
+def saves(monkeypatch, credential_store):
     calls = []
-    original = store.save_if_unchanged
+    original = storage_credentials.save_if_unchanged
 
     def _recording_save(*args, **kwargs):
         calls.append(args)
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(store, "save_if_unchanged", _recording_save)
+    monkeypatch.setattr(storage_credentials, "save_if_unchanged", _recording_save)
     return calls
 
 
@@ -84,7 +83,7 @@ def _session(client):
 
 @pytest.mark.parametrize("client_sign_count", [None, 3], ids=["no-client-count", "client-count"])
 def test_a_failed_read_of_the_stored_counter_rejects_the_authentication(
-    app, monkeypatch, caplog, store, saves, client_sign_count
+    app, monkeypatch, caplog, credential_store, saves, client_sign_count
 ):
     authenticator = Authenticator()
     client = app.test_client()
@@ -95,7 +94,7 @@ def test_a_failed_read_of_the_stored_counter_rejects_the_authentication(
     def _unreachable(*_args, **_kwargs):
         raise OSError("bucket unreachable at /secret/path")
 
-    monkeypatch.setattr(store, "read_for_update", _unreachable)
+    monkeypatch.setattr(storage_credentials, "read_for_update", _unreachable)
     entry = authenticator.stored_credential_entry()
     if client_sign_count is not None:
         entry["signCount"] = client_sign_count
@@ -126,7 +125,7 @@ def test_a_failed_read_of_the_stored_counter_rejects_the_authentication(
     assert "\n" not in logged[0].getMessage()
 
 
-def test_a_refused_storage_name_is_still_a_400(app, monkeypatch, store):
+def test_a_refused_storage_name_is_still_a_400(app, monkeypatch, credential_store):
     from server.app.storage.common import InvalidStorageIdentifier
 
     authenticator = Authenticator()
@@ -136,7 +135,7 @@ def test_a_refused_storage_name_is_still_a_400(app, monkeypatch, store):
     def _refused(*_args, **_kwargs):
         raise InvalidStorageIdentifier("Storage identifier contains a path separator")
 
-    monkeypatch.setattr(store, "read_for_update", _refused)
+    monkeypatch.setattr(storage_credentials, "read_for_update", _refused)
 
     response = _authenticate(client, authenticator, counter=2)
 
@@ -150,14 +149,14 @@ def test_a_refused_storage_name_is_still_a_400(app, monkeypatch, store):
     ids=["no-client-count-accepts", "client-count-still-rejects-a-regression", "client-count-increase-accepts"],
 )
 def test_no_stored_record_still_falls_back_to_the_client_count(
-    app, monkeypatch, store, saves, client_sign_count, counter, status
+    app, monkeypatch, credential_store, saves, client_sign_count, counter, status
 ):
     authenticator = Authenticator()
     client = app.test_client()
     _register(client, authenticator, counter=10)
     saves.clear()
     # The read works and finds nothing for this credential.
-    monkeypatch.setattr(store, "read_for_update", lambda *_a, **_k: ([], None))
+    monkeypatch.setattr(storage_credentials, "read_for_update", lambda *_a, **_k: ([], None))
 
     response = _authenticate(client, authenticator, counter=counter, client_sign_count=client_sign_count)
 
@@ -168,7 +167,7 @@ def test_no_stored_record_still_falls_back_to_the_client_count(
     assert saves == []
 
 
-def test_a_readable_stored_counter_is_checked_and_advanced(app, store, saves):
+def test_a_readable_stored_counter_is_checked_and_advanced(app, credential_store, saves):
     authenticator = Authenticator()
     client = app.test_client()
     _register(client, authenticator, counter=10)

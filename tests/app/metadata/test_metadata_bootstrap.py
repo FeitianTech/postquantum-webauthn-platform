@@ -58,11 +58,9 @@ def packaged_metadata_env(monkeypatch, tmp_path, metadata_state):
 
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
 
-    return mds_cache
-
 
 def test_packaged_metadata_loads_without_download(packaged_metadata_env):
-    metadata, _ = packaged_metadata_env._load_base_metadata()
+    metadata, _ = mds_cache._load_base_metadata()
     assert metadata is not None
     assert metadata.entries == []
 

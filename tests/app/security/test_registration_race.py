@@ -34,7 +34,7 @@ SAVE_ATTEMPTS = 8
 
 
 @pytest.fixture(params=["local", "gcs"])
-def store(request, monkeypatch, tmp_path):
+def credential_store(request, monkeypatch, tmp_path):
 
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
@@ -42,7 +42,6 @@ def store(request, monkeypatch, tmp_path):
     monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
     if request.param == "gcs":
         fake_gcs.install(monkeypatch, storage_credentials)
-    return storage_credentials
 
 
 def _begin(client) -> bytes:
@@ -65,14 +64,14 @@ def _register(client, authenticator):
     return response
 
 
-def _stored_ids(store, client) -> list[bytes]:
+def _stored_ids(client) -> list[bytes]:
 
     with client.session_transaction() as session:
         namespace = session[visitor_session.SESSION_KEY]
-    return sorted(bytes(record["credential_data"].credential_id) for record in store.readkey(EMAIL, session_id=namespace))
+    return sorted(bytes(record["credential_data"].credential_id) for record in storage_credentials.readkey(EMAIL, session_id=namespace))
 
 
-def test_eight_registrations_for_one_user_at_once_all_keep_their_credential(app, monkeypatch, store):
+def test_eight_registrations_for_one_user_at_once_all_keep_their_credential(app, monkeypatch, credential_store):
     first = app.test_client()
     existing = Authenticator(credential_id=b"\x01" * 32)
     _register(first, existing)
@@ -98,7 +97,7 @@ def test_eight_registrations_for_one_user_at_once_all_keep_their_credential(app,
 
         return _write
 
-    monkeypatch.setattr(store, "save_if_unchanged", _after_everyone_has_read(store.save_if_unchanged))
+    monkeypatch.setattr(storage_credentials, "save_if_unchanged", _after_everyone_has_read(storage_credentials.save_if_unchanged))
 
     responses = [None] * WRITERS
 
@@ -113,72 +112,72 @@ def test_eight_registrations_for_one_user_at_once_all_keep_their_credential(app,
 
     assert [response.status_code for response in responses] == [200] * WRITERS, [r.get_json() for r in responses]
     expected = sorted([existing.credential_id] + [authenticator.credential_id for authenticator in authenticators])
-    assert _stored_ids(store, first) == expected
+    assert _stored_ids(first) == expected
 
 
-def test_losing_every_race_rejects_the_registration_and_stores_nothing(app, monkeypatch, store):
+def test_losing_every_race_rejects_the_registration_and_stores_nothing(app, monkeypatch, credential_store):
     attempts = []
 
     def _always_lose(name, key, version, *, session_id=None):
         attempts.append(version)
         return False
 
-    monkeypatch.setattr(store, "save_if_unchanged", _always_lose)
+    monkeypatch.setattr(storage_credentials, "save_if_unchanged", _always_lose)
     client = app.test_client()
     response = _complete(client, Authenticator(), _begin(client))
 
     assert response.status_code == 409
     assert response.get_json()["error"].startswith("The stored credentials changed while this one was being saved")
     assert len(attempts) == SAVE_ATTEMPTS
-    assert _stored_ids(store, client) == []
+    assert _stored_ids(client) == []
 
 
-def test_an_uncontended_registration_saves_once(app, monkeypatch, store):
+def test_an_uncontended_registration_saves_once(app, monkeypatch, credential_store):
     saves = []
-    original = store.save_if_unchanged
+    original = storage_credentials.save_if_unchanged
 
     def _counting(*args, **kwargs):
         saves.append(args[0])
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(store, "save_if_unchanged", _counting)
+    monkeypatch.setattr(storage_credentials, "save_if_unchanged", _counting)
     client = app.test_client()
     authenticator = Authenticator()
     _register(client, authenticator)
 
     assert saves == [EMAIL]
-    assert _stored_ids(store, client) == [authenticator.credential_id]
+    assert _stored_ids(client) == [authenticator.credential_id]
 
 
-def test_a_save_that_landed_before_it_failed_counts_as_saved(app, monkeypatch, store):
-    original = store.save_if_unchanged
+def test_a_save_that_landed_before_it_failed_counts_as_saved(app, monkeypatch, credential_store):
+    original = storage_credentials.save_if_unchanged
 
     def _lands_then_fails(*args, **kwargs):
         original(*args, **kwargs)
         raise OSError("connection reset after the write")
 
-    monkeypatch.setattr(store, "save_if_unchanged", _lands_then_fails)
+    monkeypatch.setattr(storage_credentials, "save_if_unchanged", _lands_then_fails)
     client = app.test_client()
     authenticator = Authenticator()
     _register(client, authenticator)
 
-    assert _stored_ids(store, client) == [authenticator.credential_id]
+    assert _stored_ids(client) == [authenticator.credential_id]
 
 
-def test_a_save_that_failed_before_it_landed_is_an_error(app, monkeypatch, store):
+def test_a_save_that_failed_before_it_landed_is_an_error(app, monkeypatch, credential_store):
     def _fails(*_args, **_kwargs):
         raise OSError("bucket unreachable")
 
-    monkeypatch.setattr(store, "save_if_unchanged", _fails)
+    monkeypatch.setattr(storage_credentials, "save_if_unchanged", _fails)
     client = app.test_client()
     response = _complete(client, Authenticator(), _begin(client))
 
     assert response.status_code == 500
     assert response.get_json() == {"error": "Unable to persist registered credential."}
-    assert _stored_ids(store, client) == []
+    assert _stored_ids(client) == []
 
 
-def test_a_failed_read_is_an_error_not_an_empty_list_to_overwrite(app, monkeypatch, store):
+def test_a_failed_read_is_an_error_not_an_empty_list_to_overwrite(app, monkeypatch, credential_store):
     client = app.test_client()
     first = Authenticator(credential_id=b"\x01" * 32)
     _register(client, first)
@@ -186,15 +185,15 @@ def test_a_failed_read_is_an_error_not_an_empty_list_to_overwrite(app, monkeypat
     def _unreadable(*_args, **_kwargs):
         raise OSError("transient read failure")
 
-    monkeypatch.setattr(store, "read_for_update", _unreadable)
+    monkeypatch.setattr(storage_credentials, "read_for_update", _unreadable)
     response = _complete(client, Authenticator(credential_id=b"\x02" * 32), _begin(client))
 
     assert response.status_code == 500
     assert response.get_json() == {"error": "Unable to persist registered credential."}
-    assert _stored_ids(store, client) == [first.credential_id]
+    assert _stored_ids(client) == [first.credential_id]
 
 
-def _break_the_current_copy(store, client, how: str):
+def _break_the_current_copy(client, how: str):
     """Make the user's current copy unreadable (``"unreadable"``) or undecodable; return a repair."""
 
     import os
@@ -205,7 +204,7 @@ def _break_the_current_copy(store, client, how: str):
         namespace = session[visitor_session.SESSION_KEY]
     if storage_common.using_gcs():
         bucket = cloud._ensure_bucket()
-        blob = store._credential_blob(EMAIL, namespace)
+        blob = storage_credentials._credential_blob(EMAIL, namespace)
         original = bucket.objects[blob][0]
         if how == "unreadable":
             bucket.failing[blob] = fake_gcs.ServiceUnavailable("503 at /secret/path")
@@ -218,7 +217,7 @@ def _break_the_current_copy(store, client, how: str):
             return left
 
         return _restore_object
-    path = store._local_filename(EMAIL, namespace)
+    path = storage_credentials._local_filename(EMAIL, namespace)
     with open(path, "rb") as handle:
         original = handle.read()
     if how == "unreadable":
@@ -245,14 +244,14 @@ def _break_the_current_copy(store, client, how: str):
 
 
 @pytest.mark.parametrize("how", ["unreadable", "undecodable"])
-def test_a_store_that_cannot_be_read_answers_503_and_saves_nothing(app, caplog, store, how):
+def test_a_store_that_cannot_be_read_answers_503_and_saves_nothing(app, caplog, credential_store, how):
     import logging
 
     client = app.test_client()
     first = Authenticator(credential_id=b"\x01" * 32)
     _register(client, first)
     challenge = _begin(client)
-    repair = _break_the_current_copy(store, client, how)
+    repair = _break_the_current_copy(client, how)
 
     with caplog.at_level(logging.INFO, logger="server.app"):
         response = _complete(client, Authenticator(credential_id=b"\x02" * 32), challenge)
@@ -269,4 +268,4 @@ def test_a_store_that_cannot_be_read_answers_503_and_saves_nothing(app, caplog, 
     if how == "undecodable":
         # The copy nobody could read was not replaced.
         assert left == b"not a credential record"
-    assert _stored_ids(store, client) == [first.credential_id]
+    assert _stored_ids(client) == [first.credential_id]

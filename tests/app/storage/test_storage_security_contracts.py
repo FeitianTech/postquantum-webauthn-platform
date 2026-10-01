@@ -74,17 +74,12 @@ def local_store(monkeypatch, tmp_path):
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(root))
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
 
-    return types.SimpleNamespace(
-        storage=credentials,
-        root=root,
-        tmp_path=tmp_path,
-    )
+    return types.SimpleNamespace(root=root, tmp_path=tmp_path)
 
 
 @pytest.fixture
-def gcs_store(monkeypatch):
+def gcs_backend(monkeypatch):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
-    return credentials
 
 
 def _build_attested_credential_data(credential_id: bytes = b"credential-id") -> AttestedCredentialData:
@@ -109,7 +104,7 @@ def _build_authenticator_data(credential_data: AttestedCredentialData) -> Authen
 
 @pytest.mark.parametrize("name", TRAVERSAL_NAMES)
 def test_local_path_helpers_reject_traversal_names(local_store, name):
-    store = local_store.storage
+    store = credentials
 
     with pytest.raises(ValueError):
         store._local_filename(name, "session-a")
@@ -119,7 +114,7 @@ def test_local_path_helpers_reject_traversal_names(local_store, name):
 def test_public_api_rejects_traversal_names(local_store, name):
     """Saving and reading refuse rather than touching the path."""
 
-    store = local_store.storage
+    store = credentials
 
     with pytest.raises(ValueError):
         store.save_if_unchanged(name, [{"credential_data": "x"}], None, session_id="session-a")
@@ -133,7 +128,7 @@ def test_public_api_rejects_traversal_names(local_store, name):
 def test_session_identifier_rejects_traversal(local_store, session_id):
     """The session segment is attacker-influenced too, so it gets the same check."""
 
-    store = local_store.storage
+    store = credentials
 
     with pytest.raises(ValueError):
         store._local_filename("alice@example.com", session_id)
@@ -142,7 +137,7 @@ def test_session_identifier_rejects_traversal(local_store, session_id):
 def test_traversal_never_creates_anything_outside_the_root(local_store):
     """The verified exploit path: ``?email=../../../..`` must not write out."""
 
-    store = local_store.storage
+    store = credentials
     outside = local_store.tmp_path / "outside"
     outside.mkdir()
     escape = "../../outside/pwned"
@@ -155,7 +150,7 @@ def test_traversal_never_creates_anything_outside_the_root(local_store):
 
 @pytest.mark.parametrize("name", LEGITIMATE_NAMES)
 def test_legitimate_names_resolve_inside_the_credential_root(local_store, name):
-    store = local_store.storage
+    store = credentials
     root = os.path.realpath(str(local_store.root))
 
     path = store._local_filename(name, "session-a")
@@ -167,7 +162,7 @@ def test_legitimate_names_resolve_inside_the_credential_root(local_store, name):
 
 @pytest.mark.parametrize("name", LEGITIMATE_NAMES)
 def test_legitimate_names_round_trip_through_the_store(local_store, name):
-    store = local_store.storage
+    store = credentials
     payload = [{"credential_data": "demo", "user_info": {"name": name}}]
 
     seed_records(store, name, payload, session_id="session-a")
@@ -177,7 +172,7 @@ def test_legitimate_names_round_trip_through_the_store(local_store, name):
 def test_dotted_name_is_not_confused_with_a_parent_reference(local_store):
     """``first.last`` must work even though ``..`` is rejected."""
 
-    store = local_store.storage
+    store = credentials
 
     seed_records(store, "first.last@example.com", [{"a": 1}], session_id="session-a")
 
@@ -204,21 +199,21 @@ def test_resolve_contained_path_rejects_a_symlink_escape(local_store):
 
 
 @pytest.mark.parametrize("name", TRAVERSAL_NAMES)
-def test_gcs_blob_helpers_reject_traversal_names(gcs_store, name):
+def test_gcs_blob_helpers_reject_traversal_names(gcs_backend, name):
     with pytest.raises(ValueError):
-        gcs_store._credential_blob(name, "session-a")
+        credentials._credential_blob(name, "session-a")
 
 
 @pytest.mark.parametrize("session_id", TRAVERSAL_NAMES)
-def test_gcs_blob_helpers_reject_traversal_sessions(gcs_store, session_id):
+def test_gcs_blob_helpers_reject_traversal_sessions(gcs_backend, session_id):
     with pytest.raises(ValueError):
-        gcs_store._credential_blob("alice@example.com", session_id)
+        credentials._credential_blob("alice@example.com", session_id)
 
 
 @pytest.mark.parametrize("name", LEGITIMATE_NAMES)
-def test_gcs_object_keys_stay_under_the_configured_prefix(gcs_store, name):
-    blob_name = gcs_store._credential_blob(name, "session-a")
-    prefix = gcs_store._credential_prefix("session-a")
+def test_gcs_object_keys_stay_under_the_configured_prefix(gcs_backend, name):
+    blob_name = credentials._credential_blob(name, "session-a")
+    prefix = credentials._credential_prefix("session-a")
 
     assert blob_name.startswith(prefix.rstrip("/") + "/")
     assert ".." not in blob_name.split("/")
@@ -264,7 +259,7 @@ def test_credential_root_is_not_inside_the_source_tree():
 
 
 def test_json_round_trip_preserves_bytes_fields_exactly(local_store):
-    store = local_store.storage
+    store = credentials
     credential_data = _build_attested_credential_data()
     auth_data = _build_authenticator_data(credential_data)
 
@@ -310,7 +305,7 @@ def test_json_round_trip_preserves_bytes_fields_exactly(local_store):
 
 
 def test_stored_file_is_json_with_base64url_bytes(local_store):
-    store = local_store.storage
+    store = credentials
     raw = bytes([0xFB, 0xFF, 0x3E, 0x3F])  # encodes with - and _ in base64url
 
     seed_records(store, "alice@example.com", [{"blob": raw}], session_id="session-a")
@@ -328,7 +323,7 @@ def test_stored_file_is_json_with_base64url_bytes(local_store):
 
 
 def test_saving_never_writes_a_pickle_file(local_store):
-    store = local_store.storage
+    store = credentials
 
     seed_records(store, "alice@example.com", [{"a": 1}], session_id="session-a")
 
@@ -344,7 +339,7 @@ def test_saving_never_writes_a_pickle_file(local_store):
 
 
 def test_readkey_ignores_corrupt_json(local_store):
-    store = local_store.storage
+    store = credentials
     path = store._local_filename("alice@example.com", "session-a", create=True)
     Path(path).write_bytes(b"{not json at all")
 
@@ -379,7 +374,7 @@ def test_crafted_pickle_payload_is_never_executed(local_store):
     an attacker who planted it there. ``readkey`` must not run it.
     """
 
-    store = local_store.storage
+    store = credentials
     control_marker = local_store.tmp_path / "control-executed"
     attack_marker = local_store.tmp_path / "pwned"
 

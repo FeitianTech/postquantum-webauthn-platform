@@ -32,11 +32,10 @@ EMAIL = "user@example.com"
 
 
 @pytest.fixture
-def store(monkeypatch, tmp_path):
+def credential_store(monkeypatch, tmp_path):
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
     monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
-    return storage_credentials
 
 
 def _register(client, authenticator, counter):
@@ -58,14 +57,14 @@ def _begin(client, authenticator):
     return unb64u(begin.get_json()["publicKey"]["challenge"])
 
 
-def _stored_counter(store, root, authenticator):
+def _stored_counter(root, authenticator):
     (session_id,) = [entry.name for entry in (root / "credentials").iterdir() if entry.is_dir()]
-    records = store.readkey(EMAIL, session_id=session_id)
+    records = storage_credentials.readkey(EMAIL, session_id=session_id)
     (record,) = [r for r in records if bytes(r["credential_data"].credential_id) == authenticator.credential_id]
     return record["sign_count"]
 
 
-def test_two_authentications_with_the_same_counter_cannot_both_succeed(app, monkeypatch, store, tmp_path):
+def test_two_authentications_with_the_same_counter_cannot_both_succeed(app, monkeypatch, credential_store, tmp_path):
     from server.app.routes.simple import authentication
 
     authenticator = Authenticator()
@@ -110,10 +109,10 @@ def test_two_authentications_with_the_same_counter_cannot_both_succeed(app, monk
     assert "stored 6, received 6" in loser["error"]
     # The loser read again after losing: three reads, not two.
     assert len(reads) == 3
-    assert _stored_counter(store, tmp_path, authenticator) == 6
+    assert _stored_counter(tmp_path, authenticator) == 6
 
 
-def test_losing_the_race_twice_rejects_the_authentication(app, monkeypatch, store):
+def test_losing_the_race_twice_rejects_the_authentication(app, monkeypatch, credential_store):
     from server.app.routes.simple import authentication
 
     authenticator = Authenticator()
@@ -139,7 +138,7 @@ def test_losing_the_race_twice_rejects_the_authentication(app, monkeypatch, stor
     assert len(attempts) == 2
 
 
-def test_an_uncontended_authentication_saves_its_counter_once(app, monkeypatch, store):
+def test_an_uncontended_authentication_saves_its_counter_once(app, monkeypatch, credential_store):
     from server.app.routes.simple import authentication
 
     authenticator = Authenticator()

@@ -16,12 +16,11 @@ _SESSION = "session-failures"
 
 
 @pytest.fixture
-def local_store(monkeypatch, tmp_path):
+def local_credential_store(monkeypatch, tmp_path):
     root = tmp_path / "session-credentials"
     root.mkdir()
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(root))
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
-    return storage_credentials
 
 
 def _unreadable(store, name):
@@ -29,11 +28,11 @@ def _unreadable(store, name):
     os.makedirs(store._local_filename(name, _SESSION, create=True))
 
 
-def test_a_copy_the_store_cannot_read_raises_instead_of_reading_as_empty(local_store):
+def test_a_copy_the_store_cannot_read_raises_instead_of_reading_as_empty(local_credential_store):
     from server.app.storage.common import StorageReadError
 
-    _unreadable(local_store, "alice@example.com")
+    _unreadable(storage_credentials, "alice@example.com")
 
     # An empty list would say "nothing stored for alice".
     with pytest.raises(StorageReadError):
-        local_store.readkey("alice@example.com", session_id=_SESSION)
+        storage_credentials.readkey("alice@example.com", session_id=_SESSION)
