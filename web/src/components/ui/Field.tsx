@@ -73,7 +73,7 @@ const TEXT_FIELD =
   'disabled:cursor-not-allowed disabled:text-ink-muted read-only:text-ink-muted';
 
 function borderFor(error: ReactNode) {
-  return error ? 'border-danger' : 'border-line-strong enabled:hover-or-demo:border-line-hover';
+  return error ? 'border-danger' : 'border-line-strong enabled:hover:border-line-hover';
 }
 
 /** A text control's look, for one a field row does not hold (named by a heading, say). */

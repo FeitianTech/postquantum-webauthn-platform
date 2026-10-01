@@ -72,7 +72,7 @@ export function CredentialRow({ row, busy, flash, onOpen, onDelete }: Credential
       onClick={openFromRow}
       className={cx(
         '@container cursor-pointer border-t border-line px-5 py-4 transition-colors duration-(--duration-base) first:border-t-0 motion-reduce:transition-none',
-        'hover-or-demo:bg-accent-tint/40 data-[flash=failure]:bg-danger-tint data-[flash=success]:bg-success-tint',
+        'hover:bg-accent-tint/40 data-[flash=failure]:bg-danger-tint data-[flash=success]:bg-success-tint',
       )}
     >
       <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
@@ -81,7 +81,7 @@ export function CredentialRow({ row, busy, flash, onOpen, onDelete }: Credential
             type="button"
             data-role="name"
             onClick={onOpen}
-            className="max-w-full rounded-xs text-left text-title-sm font-semibold break-words text-ink [overflow-wrap:anywhere] hover-or-demo:underline"
+            className="max-w-full rounded-xs text-left text-title-sm font-semibold break-words text-ink [overflow-wrap:anywhere] hover:underline"
           >
             {row.name}
           </button>

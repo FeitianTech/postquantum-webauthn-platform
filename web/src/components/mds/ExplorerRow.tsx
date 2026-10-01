@@ -37,7 +37,7 @@ function SmallControl({ label, onClick, children, ...props }: { label: string; o
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="inline-flex size-6 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors duration-(--duration-fast) hover-or-demo:bg-accent-tint hover-or-demo:text-accent-ink"
+      className="inline-flex size-6 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors duration-(--duration-fast) hover:bg-accent-tint hover:text-accent-ink"
       {...props}
     >
       {children}
@@ -152,7 +152,7 @@ export const ExplorerRow = memo(function ExplorerRow({ entry, hidden, expanded, 
         // Out of view, a row is neither laid out nor painted; it keeps the size it last had.
         '[contain-intrinsic-size:auto_2.5625rem] [content-visibility:auto]',
         'transition-colors duration-(--duration-fast)',
-        open && 'cursor-pointer hover-or-demo:bg-accent-tint',
+        open && 'cursor-pointer hover:bg-accent-tint',
       )}
     >
       <Cell expanded={expanded} className="py-1 max-sm:px-2">
@@ -180,7 +180,7 @@ export const ExplorerRow = memo(function ExplorerRow({ entry, hidden, expanded, 
                 event.preventDefault();
                 open();
               }}
-              className={cx('min-w-0 pt-0.5 font-medium text-ink no-underline hover-or-demo:underline', expanded ? null : 'truncate')}
+              className={cx('min-w-0 pt-0.5 font-medium text-ink no-underline hover:underline', expanded ? null : 'truncate')}
             >
               {name}
             </a>

@@ -75,7 +75,7 @@ export function CodeBlock({ value, label, collapsible = true, className }: CodeB
           type="button"
           onClick={() => setExpanded(!expanded)}
           aria-expanded={expanded}
-          className="mt-1.5 rounded-xs px-1 text-caption font-medium text-accent-ink hover-or-demo:underline"
+          className="mt-1.5 rounded-xs px-1 text-caption font-medium text-accent-ink hover:underline"
         >
           {expanded ? 'Show less' : 'Show all'}
         </button>

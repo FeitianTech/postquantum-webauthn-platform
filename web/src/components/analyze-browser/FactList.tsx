@@ -7,7 +7,7 @@ import type { Fact, FactState } from './types';
 
 // Each state keeps its words (from the logic module) and gets a mark and a tone:
 // yes ✓ green, no ✕ red, not available – neutral, could not be determined ! amber.
-export const STATE_TONES: Record<FactState, Tone> = {
+const STATE_TONES: Record<FactState, Tone> = {
   yes: 'success',
   no: 'danger',
   unavailable: 'neutral',

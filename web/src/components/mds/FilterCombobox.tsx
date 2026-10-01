@@ -110,7 +110,7 @@ export function FilterCombobox({
                 onClick={() => pick(option)}
                 className={cx(
                   'cursor-pointer px-3 py-1.5 text-body text-ink',
-                  index === active ? 'bg-accent-tint text-accent-ink' : 'hover-or-demo:bg-accent-tint',
+                  index === active ? 'bg-accent-tint text-accent-ink' : 'hover:bg-accent-tint',
                 )}
               >
                 {option}

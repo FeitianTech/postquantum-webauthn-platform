@@ -2,8 +2,8 @@
 
 The site's UI is `web/`: Next.js 15 (Pages Router), TypeScript and Tailwind CSS v4,
 exported as static files that Flask serves at `/`. These are the rules it keeps.
-`AGENTS.md` maps the code; `web/src/pages/design.tsx` (the unlisted `/design` page)
-shows every component in every state.
+`AGENTS.md` maps the code; `web/e2e/smoke.spec.ts` checks the focus and fill rules on
+the page in a real browser.
 
 ## Look
 
@@ -105,8 +105,8 @@ shows every component in every state.
 
 ## What serves what
 
-- **The export** (`web/out`): four pages (`index`, `design` — unlisted, `noindex` —,
-  `404`, `500`) and `/_next/static/`. Flask's `web_export` blueprint serves it at `/`:
+- **The export** (`web/out`): three pages (`index`, `404`, `500`) and
+  `/_next/static/`. Flask's `web_export` blueprint serves it at `/`:
   HTML `no-cache`; `/_next/static/` immutable for a year, gzipped from the build's
   `.gz` copies; the export's 404 page for an unknown path. No Node runs in production.
 - **Flask** answers everything with a static segment first: `/health`, `/api/…` (a

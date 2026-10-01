@@ -119,40 +119,6 @@
   --header-height: 3.75rem;
 }
 
-/*
- * The design page shows hover, keyboard focus and pressed states without a
- * pointer: an element with data-demo="hover" (or "focus", "active") gets the
- * same styles. Components use these variants in place of hover:/focus-visible:/active:.
- */
-@custom-variant hover-or-demo {
-  @media (hover: hover) {
-    &:hover {
-      @slot;
-    }
-  }
-  &[data-demo~="hover"] {
-    @slot;
-  }
-}
-
-@custom-variant focus-or-demo {
-  &:focus-visible {
-    @slot;
-  }
-  &[data-demo~="focus"] {
-    @slot;
-  }
-}
-
-@custom-variant active-or-demo {
-  &:active {
-    @slot;
-  }
-  &[data-demo~="active"] {
-    @slot;
-  }
-}
-
 @layer base {
   html {
     background-color: var(--color-canvas);
@@ -226,13 +192,7 @@
   }
 }
 
-@layer base {
-  /* The design page's still image of keyboard focus, as :focus-visible draws it. */
-  [data-demo~="focus"]:not([data-text-field]) {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-}
+
 
 @layer components {
   /* Before the segmented control has measured itself (before hydration), the

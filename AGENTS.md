@@ -46,15 +46,13 @@ in `server/app` (see "Backend").
 components, no focus effect on text fields, the section slide, the MDS page's structure,
 the CSP and the source rules.
 
-- `src/pages/`: `index.tsx` (the app shell), `design.tsx` (the unlisted `/design` page,
-  `noindex`: every component in every state), `404.tsx`, `500.tsx`, `_error.tsx` (Next's own
+- `src/pages/`: `index.tsx` (the app shell), `404.tsx`, `500.tsx`, `_error.tsx` (Next's own
   error pages use style attributes the CSP refuses), `_app.tsx` (Geist and Geist Mono from
   the `geist` package via `next/font/local`, on a wrapper holding `#app-root` and
   `#overlay-root`, so portalled overlays get them), `_document.tsx`.
 - `src/styles/globals.css`: the design tokens (`@theme`, Tailwind's defaults cleared first);
-  text fields carry `data-text-field`; `hover-or-demo` / `focus-or-demo` / `active-or-demo`
-  let `/design` show a state still (`data-demo`). `@source not` keeps Tailwind out of
-  `src/logic` and `src/test/logic`.
+  text fields carry `data-text-field`. `@source not` keeps Tailwind out of `src/logic` and
+  `src/test/logic`.
 - `src/components/ui/`: the primitives (Button, IconButton, text fields, Select, Switch,
   ToggleChip, SegmentedControl, Card, Badge, StatusChip, Overlay with Dialog / Drawer / Sheet,
   Toast, InfoPopover, the table primitives, MonoValue, CodeBlock, KeyValueGrid,

@@ -9,7 +9,7 @@ import { expect, test } from './fixtures';
 // The site at /, served by Flask from the built export under the strict CSP:
 // the shell, the sections, the Analyze Browser panel, the phone menu, the 404
 // page, the old /beta links, and the design system's rules checked on the
-// design page in a real browser.
+// page itself in a real browser.
 
 const repo = resolve(import.meta.dirname, '..', '..');
 const SECTIONS = ['Simple Authentication', 'Advanced Authentication', 'Codec', 'FIDO MDS Authenticators'];
@@ -201,11 +201,9 @@ test.describe('the app shell', () => {
     await expect(page.getByRole('button', { name: 'Menu' })).toBeFocused();
     await expect(page.getByRole('button', { name: 'Analyze Browser' })).toBeHidden();
 
-    // Neither page scrolls sideways on a phone.
-    for (const path of ['/', '/design']) {
-      await page.goto(path);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth), path).toBeLessThanOrEqual(375);
-    }
+    // The page does not scroll sideways on a phone.
+    await page.goto('/');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
   });
 
   test('leads from the 404 page to the home page by a plain link, so Back shows the 404 page again', async ({ page, watch }) => {
@@ -226,10 +224,10 @@ test.describe('the app shell', () => {
   });
 
   test('keeps the design rules: no focus effect on text fields, a focus ring on controls, no grey fill', async ({ page }) => {
-    await page.goto('/design');
+    await page.goto('/#simple');
 
     // Text fields: focus changes nothing around them.
-    const field = page.getByLabel('Filled');
+    const field = page.getByRole('tabpanel', { name: 'Simple Authentication' }).getByRole('textbox', { name: 'Username' });
     const look = (locator: Locator) =>
       locator.evaluate((element) => {
         const style = getComputedStyle(element);
@@ -243,23 +241,27 @@ test.describe('the app shell', () => {
     expect(before.shadow).toBe('none');
 
     // Controls: keyboard focus draws a ring.
-    await page.locator('body').click({ position: { x: 5, y: 5 } });
     await page.keyboard.press('Tab');
     const focused = page.locator(':focus');
-    await expect(focused).toHaveText('Default');
+    await expect(focused).toHaveAccessibleName('Generate random username');
     expect(await focused.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('solid');
+    await page.getByRole('tab', { name: 'Advanced Authentication' }).nth(0).click();
+    const advanced = page.locator('#advanced-ceremony-panel-registration');
     for (const control of [
       page.getByRole('tab', { name: 'Simple Authentication' }).nth(0),
-      page.getByRole('switch', { name: 'Off', exact: true }),
-      page.getByRole('button', { name: 'ML-DSA-44', exact: true }),
+      advanced.getByRole('switch', { name: 'Exclude Credentials' }),
+      advanced.getByRole('button', { name: 'ML-DSA-44', exact: true }),
     ]) {
+      await page.keyboard.press('Tab');
       await control.focus();
       expect(await control.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('solid');
     }
 
-    // No neutral grey background anywhere (white, colours and tints only).
-    const greys = await greyFills(page);
-    expect(greys).toEqual([]);
+    // No neutral grey background in any section (white, colours and tints only).
+    for (const hash of ['#simple', '#advanced', '#codec', '#mds']) {
+      await page.goto(`/${hash}`);
+      expect(await greyFills(page), hash).toEqual([]);
+    }
   });
 });
 
@@ -269,7 +271,7 @@ test.describe('an old /beta link', () => {
   test('is answered by a permanent redirect to the same path at /, not cached', async ({ page }) => {
     for (const [from, to] of [
       ['/beta', '/'],
-      ['/beta/design', '/design'],
+      ['/beta/favicon.ico', '/favicon.ico'],
       ['/beta?x=1', '/?x=1'],
     ]) {
       const answer = await page.request.get(from, { maxRedirects: 0 });
@@ -310,12 +312,8 @@ test.describe('an old /beta link', () => {
     await expect(page.getByRole('dialog').locator('[data-level="registration"]')).toBeVisible();
   });
 
-  test('to the design page or a missing page lands on it', async ({ page, watch }) => {
+  test('to a missing page lands on it', async ({ page, watch }) => {
     watch.allow(/status of 404/);
-    await page.goto('/beta/design');
-    await expect(page).toHaveURL(/\/design$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Design system' })).toBeVisible();
-
     const missing = await page.goto('/beta/no-such-page');
     expect(missing?.status()).toBe(404);
     await expect(page).toHaveURL(/\/no-such-page$/);

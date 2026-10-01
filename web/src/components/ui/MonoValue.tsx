@@ -80,7 +80,7 @@ export function MonoValue({ value, label, className, wrapOnPhone = false }: Mono
             data-role="show-all"
             aria-expanded={expanded}
             onClick={() => setExpanded(!expanded)}
-            className="shrink-0 rounded-xs px-1 text-caption font-medium text-accent-ink hover-or-demo:underline"
+            className="shrink-0 rounded-xs px-1 text-caption font-medium text-accent-ink hover:underline"
           >
             {expanded ? 'Show less' : 'Show all'}
           </button>

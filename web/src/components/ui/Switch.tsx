@@ -24,8 +24,8 @@ export function SwitchControl({ checked, onCheckedChange, className, disabled, .
         'transition-[background-color,border-color] duration-(--duration-base) ease-standard',
         'disabled:cursor-not-allowed disabled:opacity-45',
         checked
-          ? 'border-accent bg-accent enabled:hover-or-demo:border-accent-hover enabled:hover-or-demo:bg-accent-hover'
-          : 'border-line-strong bg-surface enabled:hover-or-demo:border-line-hover',
+          ? 'border-accent bg-accent enabled:hover:border-accent-hover enabled:hover:bg-accent-hover'
+          : 'border-line-strong bg-surface enabled:hover:border-line-hover',
         className,
       )}
       {...props}
@@ -95,10 +95,10 @@ export function ToggleChip({ pressed, onPressedChange, className, children, ...p
       className={cx(
         'inline-flex h-8 shrink-0 select-none items-center gap-1.5 rounded-full border px-3.5 text-label font-medium',
         'transition-[background-color,border-color,color,scale] duration-(--duration-fast) ease-standard',
-        'enabled:active-or-demo:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-45',
+        'enabled:active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-45',
         pressed
-          ? 'border-accent-line bg-accent-tint text-accent-ink enabled:hover-or-demo:border-accent'
-          : 'border-line-strong bg-surface text-ink enabled:hover-or-demo:border-line-hover',
+          ? 'border-accent-line bg-accent-tint text-accent-ink enabled:hover:border-accent'
+          : 'border-line-strong bg-surface text-ink enabled:hover:border-line-hover',
         className,
       )}
       {...props}

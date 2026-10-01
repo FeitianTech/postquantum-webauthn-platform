@@ -54,7 +54,7 @@ function DropZone({ busy, onFiles }: { busy: boolean; onFiles: (files: File[]) =
         disabled={busy}
         aria-describedby={hintId}
         onClick={() => inputRef.current?.click()}
-        className="rounded-xs text-body-lg font-medium text-accent-ink hover-or-demo:underline disabled:cursor-not-allowed disabled:opacity-60"
+        className="rounded-xs text-body-lg font-medium text-accent-ink hover:underline disabled:cursor-not-allowed disabled:opacity-60"
       >
         Drop JSON files here or click to browse
       </button>

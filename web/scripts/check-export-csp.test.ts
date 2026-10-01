@@ -71,13 +71,13 @@ describe('the export CSP scan', () => {
     it('scans every HTML file, in subdirectories too, and names the file of each finding', () => {
       exportWith({
         'index.html': page('<script src="/_next/a.js"></script>'),
-        'nested/design.html': page('', '<p style="x"></p>'),
+        'nested/page.html': page('', '<p style="x"></p>'),
         '_next/static/a.js': 'console.log(1)',
       });
       expect(scanExport(dir)).toEqual({
         files: 2,
         scripts: 1,
-        findings: [{ file: join('nested', 'design.html'), kind: 'style attribute', detail: '<p style="x">' }],
+        findings: [{ file: join('nested', 'page.html'), kind: 'style attribute', detail: '<p style="x">' }],
       });
     });
 

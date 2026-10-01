@@ -128,7 +128,7 @@ export function InfoPopover({ label, en, zh }: InfoPopoverProps) {
             setPinned(true);
           }
         }}
-        className="inline-flex size-5 items-center justify-center rounded-full text-ink-faint transition-colors hover-or-demo:text-ink"
+        className="inline-flex size-5 items-center justify-center rounded-full text-ink-faint transition-colors hover:text-ink"
       >
         <InfoIcon />
       </button>
@@ -159,7 +159,7 @@ export function InfoPopover({ label, en, zh }: InfoPopoverProps) {
           aria-label={language === 'en' ? 'ENG, show in Chinese' : '中, show in English'}
           className={cx(
             'absolute right-3 bottom-3 h-6 rounded-full border border-line-strong bg-surface px-2 text-caption font-semibold',
-            'text-ink-muted transition-colors hover-or-demo:border-line-hover hover-or-demo:text-ink',
+            'text-ink-muted transition-colors hover:border-line-hover hover:text-ink',
           )}
         >
           {language === 'en' ? 'ENG' : '中'}

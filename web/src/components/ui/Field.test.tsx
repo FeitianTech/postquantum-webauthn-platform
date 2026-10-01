@@ -29,7 +29,7 @@ describe('TextField', () => {
 
     expect(input).toHaveAttribute('data-text-field');
     expect(input.className).toContain('outline-none');
-    expect(input.className).not.toMatch(/(^|\s)(focus|focus-visible|focus-within|focus-or-demo):/);
+    expect(input.className).not.toMatch(/(^|\s)(focus|focus-visible|focus-within):/);
   });
 
   it('holds a control at its right edge and can be monospaced and read-only', () => {

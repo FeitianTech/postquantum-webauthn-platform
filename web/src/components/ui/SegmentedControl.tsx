@@ -152,7 +152,7 @@ export function SegmentedControl<T extends string>({
             onClick={() => choose(option.value)}
             className={cx(
               'relative inline-flex shrink-0 items-center justify-center rounded-full font-medium whitespace-nowrap',
-              'text-ink-muted transition-colors duration-(--duration-fast) hover-or-demo:text-ink in-data-instant:transition-none',
+              'text-ink-muted transition-colors duration-(--duration-fast) hover:text-ink in-data-instant:transition-none',
               'aria-selected:font-semibold aria-selected:text-ink',
               size === 'sm' ? 'h-7 px-3 text-label' : 'h-8 px-4 text-label',
             )}

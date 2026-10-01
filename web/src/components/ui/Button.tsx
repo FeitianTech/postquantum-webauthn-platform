@@ -18,7 +18,7 @@ type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'style'> & {
 const BASE =
   'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-full font-medium ' +
   'transition-[background-color,border-color,color,scale] duration-(--duration-fast) ease-standard ' +
-  'disabled:cursor-not-allowed disabled:opacity-45 enabled:active-or-demo:scale-[0.97]';
+  'disabled:cursor-not-allowed disabled:opacity-45 enabled:active:scale-[0.97]';
 
 const SIZES: Record<ButtonSize, string> = {
   sm: 'h-8 px-3.5 text-label',
@@ -28,14 +28,14 @@ const SIZES: Record<ButtonSize, string> = {
 // No grey fill anywhere: secondary and danger are white with a hairline that
 // darkens on hover; pressed gets a faint tint of their colour.
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-accent text-white enabled:hover-or-demo:bg-accent-hover enabled:active-or-demo:bg-accent-press',
+  primary: 'bg-accent text-white enabled:hover:bg-accent-hover enabled:active:bg-accent-press',
   secondary:
-    'border border-line-strong bg-surface text-ink enabled:hover-or-demo:border-line-hover ' +
-    'enabled:active-or-demo:bg-accent-tint',
+    'border border-line-strong bg-surface text-ink enabled:hover:border-line-hover ' +
+    'enabled:active:bg-accent-tint',
   danger:
-    'border border-danger-line bg-surface text-danger enabled:hover-or-demo:border-danger ' +
-    'enabled:active-or-demo:bg-danger-tint',
-  quiet: 'bg-transparent text-accent-ink enabled:hover-or-demo:bg-accent-tint enabled:active-or-demo:bg-accent-tint-strong',
+    'border border-danger-line bg-surface text-danger enabled:hover:border-danger ' +
+    'enabled:active:bg-danger-tint',
+  quiet: 'bg-transparent text-accent-ink enabled:hover:bg-accent-tint enabled:active:bg-accent-tint-strong',
 };
 
 // The same look for a link that goes somewhere, such as GitHub in the header.
@@ -83,11 +83,11 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       className={cx(
         'inline-flex shrink-0 items-center justify-center rounded-full text-ink-muted',
         'transition-[background-color,border-color,color,scale] duration-(--duration-fast) ease-standard',
-        'enabled:hover-or-demo:text-ink enabled:active-or-demo:scale-[0.94] disabled:cursor-not-allowed disabled:opacity-45',
+        'enabled:hover:text-ink enabled:active:scale-[0.94] disabled:cursor-not-allowed disabled:opacity-45',
         size === 'sm' ? 'size-8' : 'size-9',
         variant === 'secondary'
-          ? 'border border-line-strong bg-surface enabled:hover-or-demo:border-line-hover'
-          : 'bg-transparent enabled:hover-or-demo:bg-accent-tint enabled:hover-or-demo:text-accent-ink',
+          ? 'border border-line-strong bg-surface enabled:hover:border-line-hover'
+          : 'bg-transparent enabled:hover:bg-accent-tint enabled:hover:text-accent-ink',
         className,
       )}
       {...props}

@@ -127,7 +127,7 @@ function ColumnResizer({
       className={cx(
         'absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize touch-none rounded-xs',
         'after:absolute after:inset-y-2 after:left-1/2 after:w-px after:-translate-x-1/2 after:bg-line-strong',
-        'hover-or-demo:after:bg-accent',
+        'hover:after:bg-accent',
       )}
     />
   );
@@ -163,7 +163,7 @@ function HeaderCell({
         type="button"
         onClick={() => onSort(column.key)}
         className={cx(
-          '-mx-1 inline-flex max-w-full items-center gap-1 rounded-xs px-1 hover-or-demo:text-ink',
+          '-mx-1 inline-flex max-w-full items-center gap-1 rounded-xs px-1 hover:text-ink',
           direction !== 'none' && 'text-ink',
         )}
       >
@@ -214,7 +214,7 @@ function BackToTop({ frameRef }: { frameRef: RefObject<HTMLDivElement | null> })
       onClick={toTop}
       className={cx(
         'absolute right-4 bottom-4 z-20 inline-flex size-11 items-center justify-center rounded-full border border-line',
-        'bg-surface text-title text-ink shadow-float-sm transition-colors hover-or-demo:border-line-hover',
+        'bg-surface text-title text-ink shadow-float-sm transition-colors hover:border-line-hover',
       )}
     >
       ↑

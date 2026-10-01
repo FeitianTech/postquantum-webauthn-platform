@@ -91,7 +91,7 @@ export function Header({ section, onSection, onAnalyze, analyzing, analyzeButton
             title="View project on GitHub"
             className={cx(
               'hidden size-9 items-center justify-center rounded-full text-ink transition-colors menu:inline-flex',
-              'hover-or-demo:bg-accent-tint hover-or-demo:text-accent-ink',
+              'hover:bg-accent-tint hover:text-accent-ink',
             )}
           >
             <GitHubIcon />
@@ -133,7 +133,7 @@ export function Header({ section, onSection, onAnalyze, analyzing, analyzeButton
                   }}
                   className={cx(
                     'flex h-11 w-full items-center rounded-md px-3.5 text-left text-body-lg text-ink transition-colors',
-                    'hover-or-demo:bg-accent-tint aria-[current]:bg-accent-tint aria-[current]:font-semibold aria-[current]:text-accent-ink',
+                    'hover:bg-accent-tint aria-[current]:bg-accent-tint aria-[current]:font-semibold aria-[current]:text-accent-ink',
                   )}
                 >
                   {option.label}

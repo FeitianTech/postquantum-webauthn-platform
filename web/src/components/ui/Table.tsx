@@ -53,7 +53,7 @@ export function TBody({ className, children, ...props }: GroupProps) {
 
 export function Tr({ className, children, ...props }: Strip<HTMLAttributes<HTMLTableRowElement>>) {
   return (
-    <tr className={cx('border-b border-line last:border-b-0 [tbody>&]:hover-or-demo:bg-accent-tint', className)} {...props}>
+    <tr className={cx('border-b border-line last:border-b-0 [tbody>&]:hover:bg-accent-tint', className)} {...props}>
       {children}
     </tr>
   );
@@ -84,7 +84,7 @@ export function Th({ sort, onSort, className, children, ...props }: ThProps) {
       {...props}
     >
       {onSort ? (
-        <button type="button" onClick={onSort} className="-mx-1 rounded-xs px-1 hover-or-demo:text-ink">
+        <button type="button" onClick={onSort} className="-mx-1 rounded-xs px-1 hover:text-ink">
           {label}
         </button>
       ) : (

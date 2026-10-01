@@ -47,7 +47,6 @@ jobs:
           # image, its HTML revalidates, and its hashed assets are immutable and gzipped.
           curl -fsS -D /tmp/index.headers -o /tmp/index.html http://localhost:8080/
           grep -qi '^cache-control: no-cache' /tmp/index.headers
-          curl -fsS -o /dev/null http://localhost:8080/design
           curl -fsS -o /dev/null http://localhost:8080/favicon.ico
           chunk=$(grep -o '/_next/static/chunks/[^"]*\.js' /tmp/index.html | head -1)
           test -n "$chunk"
@@ -56,9 +55,9 @@ jobs:
           grep -qi '^content-encoding: gzip' /tmp/chunk.headers
           echo "/ serves the export: ${chunk} is immutable and gzipped"
           # /beta and /beta/... are a permanent redirect to the same path at /.
-          curl -sS -D /tmp/beta.headers -o /dev/null http://localhost:8080/beta/design
+          curl -sS -D /tmp/beta.headers -o /dev/null http://localhost:8080/beta/favicon.ico
           grep -qE '^HTTP/[0-9.]+ 308' /tmp/beta.headers
-          grep -qi '^location: /design' /tmp/beta.headers
+          grep -qi '^location: /favicon.ico' /tmp/beta.headers
 
       - name: Show container logs
         if: always()
