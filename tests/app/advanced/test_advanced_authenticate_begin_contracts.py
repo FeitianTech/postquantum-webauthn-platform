@@ -2,9 +2,7 @@ import types
 
 import pytest
 
-from server.app import config as config_module
 from server.app.config import relying_party
-from server.app.routes import advanced as advanced_module
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import parsing as advanced_parsing
 from tests.app.entry_app import entry_app
@@ -28,7 +26,7 @@ def _serialized_record(*, resident=False):
     }
 
 
-def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module, *, include_allow_credentials=True):
+def _install_fake_auth_begin_server(monkeypatch, captured, *, include_allow_credentials=True):
     class _FakeServer:
         def __init__(self):
             self.allowed_algorithms = []
@@ -121,7 +119,7 @@ def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(m
     )
 
     captured = {}
-    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
+    _install_fake_auth_begin_server(monkeypatch, captured)
 
     request_payload = {
         "publicKey": {
@@ -174,7 +172,7 @@ def test_advanced_authenticate_begin_falls_back_to_all_records_when_allow_creden
     )
 
     captured = {}
-    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
+    _install_fake_auth_begin_server(monkeypatch, captured)
 
     with entry_app().test_client() as client:
         response = client.post(
@@ -243,7 +241,7 @@ def test_advanced_authenticate_begin_resident_mode_prefers_resident_records_and_
     )
 
     captured = {}
-    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module, include_allow_credentials=True)
+    _install_fake_auth_begin_server(monkeypatch, captured, include_allow_credentials=True)
 
     with entry_app().test_client() as client:
         response = client.post(
@@ -318,7 +316,7 @@ def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_pre
     )
 
     captured = {}
-    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
+    _install_fake_auth_begin_server(monkeypatch, captured)
 
     with entry_app().test_client() as client:
         response = client.post(

@@ -2,9 +2,7 @@ import types
 
 import pytest
 
-from server.app import config as config_module
 from server.app.config import relying_party
-from server.app.routes import advanced as advanced_module
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from tests.app.entry_app import entry_app
 
@@ -24,7 +22,7 @@ def _base_payload():
     }
 
 
-def _install_fake_register_server(monkeypatch, advanced_module, captured, config_module):
+def _install_fake_register_server(monkeypatch, captured):
     class _FakeServer:
         def __init__(self):
             self.allowed_algorithms = []
@@ -131,7 +129,7 @@ def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkey
         lambda _rp: types.SimpleNamespace(id="normalized.example", name="Normalized RP")
     )
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
-    _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
+    _install_fake_register_server(monkeypatch, captured)
 
     payload = _base_payload()
     payload["publicKey"]["rp"] = {
@@ -173,7 +171,7 @@ def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkey
 def test_advanced_register_begin_normalizes_pubkeycredparams_and_filters_invalid_entries(monkeypatch):
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
-    _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
+    _install_fake_register_server(monkeypatch, captured)
 
     payload = _base_payload()
     payload["publicKey"]["pubKeyCredParams"] = [
@@ -203,7 +201,7 @@ def test_advanced_register_begin_normalizes_pubkeycredparams_and_filters_invalid
 def test_advanced_register_begin_uses_default_algorithms_without_pubkeycredparams(monkeypatch):
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
-    _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
+    _install_fake_register_server(monkeypatch, captured)
 
     payload = _base_payload()
     payload["publicKey"].pop("pubKeyCredParams")
@@ -226,7 +224,7 @@ def test_advanced_register_begin_uses_default_algorithms_without_pubkeycredparam
 def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorithms_remain(monkeypatch):
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-49})
-    _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
+    _install_fake_register_server(monkeypatch, captured)
 
     payload = _base_payload()
     payload["publicKey"]["pubKeyCredParams"] = [
@@ -246,7 +244,7 @@ def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorith
 def test_advanced_register_begin_refuses_when_no_requested_algorithm_is_verifiable(monkeypatch):
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: set())
-    _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
+    _install_fake_register_server(monkeypatch, captured)
 
     payload = _base_payload()
     payload["publicKey"]["pubKeyCredParams"] = [{"type": "public-key", "alg": -50}]
@@ -264,7 +262,7 @@ def test_advanced_register_begin_refuses_when_no_requested_algorithm_is_verifiab
 def test_advanced_register_begin_maps_auth_selection_exclusions_extensions_and_timeout(monkeypatch):
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
-    _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
+    _install_fake_register_server(monkeypatch, captured)
 
     payload = _base_payload()
     payload["publicKey"].update(
