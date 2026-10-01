@@ -23,6 +23,10 @@ from pathlib import Path
 
 from server.app.decoder.ctap_tables import COMMANDS, STATUSES
 from server.app.decoder.decode.cbor_parser import _CborDecodingError, decode_item
+from tests.app.characterization import material
+from tests.app.decoder import real_vectors
+from tests.app.python_fido2_vectors import CBOR_TEST_VECTORS as _TEST_VECTORS
+from tests.app.python_fido2_vectors import CLIENT_MC_RESP as _CLIENT_MC_RESP
 
 _TESTS = Path(__file__).resolve().parents[1]
 
@@ -67,8 +71,6 @@ def _auth_data_items(auth_data: bytes) -> dict[str, bytes]:
 
 
 def _registration_objects() -> dict[str, bytes]:
-    from tests.app.characterization import material
-
     objects = {}
     for key_type in ("es256", "ed25519", "rs256", "ML-DSA-44", "ML-DSA-65"):
         payload = material.registration_payload(material.Authenticator(f"corpus-{key_type}", key_type=key_type),
@@ -152,10 +154,6 @@ def _binary_readings(text: str) -> list[bytes]:
 def corpus() -> dict[str, bytes]:
     """Name -> item, for every source above."""
 
-    from tests.app.characterization import material
-    from tests.app.decoder import real_vectors
-    from tests.app.python_fido2_vectors import CBOR_TEST_VECTORS as _TEST_VECTORS
-    from tests.app.python_fido2_vectors import CLIENT_MC_RESP as _CLIENT_MC_RESP
 
     items: dict[str, bytes] = {}
     for name, value in sorted(vars(real_vectors).items()):

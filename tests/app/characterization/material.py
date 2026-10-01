@@ -32,6 +32,9 @@ from cryptography.hazmat.primitives.asymmetric import (
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 from fido2 import cbor, cose
 
+from tests.app.decoder import real_vectors
+from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
+
 from ..security import ceremony_helpers
 
 FROZEN_PATH = Path(__file__).parent / "inputs" / "frozen.json"
@@ -472,8 +475,6 @@ def captured_certificates() -> dict[str, bytes]:
 
     import base64
 
-    from tests.app.decoder import real_vectors
-    from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
 
     found = {"gsr2-root": _GSR2_DER}
     for name, statement in (
@@ -504,7 +505,6 @@ def captured_certificates() -> dict[str, bytes]:
 def captured_attestation_objects() -> dict[str, bytes]:
     """Attestation objects built from captured statements, for ``extract_attestation_details``."""
 
-    from tests.app.decoder import real_vectors
 
     objects = {
         "tpm": real_vectors.attestation_object(

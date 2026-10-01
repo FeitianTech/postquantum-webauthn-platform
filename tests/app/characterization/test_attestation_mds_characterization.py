@@ -19,6 +19,9 @@ from cryptography.hazmat.primitives import hashes, serialization
 from fido2 import cbor
 from fido2.mds3 import MdsAttestationVerifier, MetadataBlobPayload
 
+from server.app.mds import verifier as mds_verifier
+from server.app.webauthn.attestation import checks as attestation_checks
+
 from ..metadata import mds_fixture
 from ..security.ceremony_helpers import ORIGIN, RP_ID, b64u
 from . import harness, material
@@ -139,16 +142,12 @@ def _cases():
 
 @pytest.fixture
 def mds(monkeypatch):
-    from server.app.mds import verifier as mds_verifier
-
     verifier = _verifier()
     monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: verifier)
     return verifier
 
 
 def test_attestation_checks_with_mds_match_their_golden_record(app, mds):
-    from server.app.webauthn.attestation import checks as attestation_checks
-
     with app.app_context():
         record = {
             name: harness.json_safe(attestation_checks.perform_attestation_checks(response, STATE, None, None, ORIGIN, RP_ID))

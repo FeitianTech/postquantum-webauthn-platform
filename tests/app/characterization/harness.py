@@ -40,6 +40,12 @@ from typing import Any
 
 import pytest
 
+from server.app import visitor_session
+from server.app.factory import create_app
+from server.app.mds import files as mds_files
+from server.app.mds import verifier as mds_verifier
+from server.app.storage import github_mirror
+
 FIXED_TIME = 1_790_000_000.0
 TEST_SECRET_KEY = "characterization-secret-0123456789abcdef"
 GOLDEN_DIR = Path(__file__).parent / "golden"
@@ -172,10 +178,6 @@ class Environment:
         )
         mp.setattr(uuid, "uuid4", lambda: uuid.UUID(bytes=stream.take(16), version=4))
 
-        from server.app import visitor_session
-        from server.app.mds import files as mds_files
-        from server.app.mds import verifier as mds_verifier
-        from server.app.storage import github_mirror
 
         mp.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(self.tmp_path / "credentials"))
         mp.setenv("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", str(self.tmp_path / "artifacts"))
@@ -194,8 +196,6 @@ class Environment:
         _SNAPSHOT_GUARD["root"] = None
 
     def app(self):
-        from server.app.factory import create_app
-
         return create_app(
             {
                 "TESTING": True,

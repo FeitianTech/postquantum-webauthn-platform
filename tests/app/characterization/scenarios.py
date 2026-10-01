@@ -11,6 +11,7 @@ from collections.abc import Callable
 from typing import Any
 
 from server.app.routes.advanced import algorithms as advanced_algorithms
+from server.app.storage import credential_artifacts, credentials
 
 from ..security.ceremony_helpers import (
     ORIGIN,
@@ -742,8 +743,6 @@ def _(r: Recorder) -> None:
 
 @scenario("simple-register-save-fails")
 def _(r: Recorder) -> None:
-    from server.app.storage import credentials
-
     client = r.client()
     # A stored credential, so the read before each save below reads a record.
     _simple_register(r, client, m.Authenticator("simple-save-first"))
@@ -767,8 +766,6 @@ def _(r: Recorder) -> None:
 
 @scenario("advanced-register-artifact-store-fails")
 def _(r: Recorder) -> None:
-    from server.app.storage import credential_artifacts
-
     client = r.client()
     authenticator = m.Authenticator("adv-artifact-fails")
     r.env.monkeypatch.setattr(credential_artifacts, "store_credential_artifact", lambda *_a, **_k: False)

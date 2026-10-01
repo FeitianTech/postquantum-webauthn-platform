@@ -11,6 +11,9 @@ import pytest
 
 from server.app import factory, visitor_session
 from server.app.mds import cache as mds_cache
+from server.app.mds import provisioning as mds_provisioning
+from tests.app.metadata import mds_fixture
+from tests.app.web_export_files import write, write_export
 
 # Every app a test builds gets this secret, so building one never reads or
 # writes instance/session-secret.key.
@@ -29,7 +32,6 @@ def _the_snapshot_provisioning_attempted_once():
     A test that provisions for itself patches the state and the lock it needs.
     """
 
-    from server.app.mds import provisioning as mds_provisioning
 
     mds_provisioning.ensure_snapshot_available()
 
@@ -84,7 +86,6 @@ def mds_fixture_snapshot(monkeypatch, tmp_path, metadata_state):
     nothing a test does lands in the checkout; with fresh modification times,
     since the metadata caches key on them."""
 
-    from tests.app.metadata import mds_fixture
 
     target = tmp_path / "mds-snapshot"
     shutil.copytree(mds_fixture.SNAPSHOT_DIR, target, copy_function=shutil.copy)
@@ -97,7 +98,6 @@ def export_root(tmp_path):
     """A small static export of the UI in ``tmp_path/out`` (``web_export_files``),
     with a ``secret.txt`` beside it that nothing may serve."""
 
-    from tests.app.web_export_files import write, write_export
 
     write(tmp_path / "secret.txt", b"outside the export")
     return write_export(tmp_path / "out")

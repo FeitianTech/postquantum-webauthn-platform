@@ -10,13 +10,20 @@ from __future__ import annotations
 
 from fido2 import cbor
 
+from server.app.webauthn import signature_algorithms
+from server.app.webauthn.attestation import (
+    certificate_names as attestation_certificate_names,
+)
+from server.app.webauthn.attestation import (
+    certificate_public_keys as attestation_certificate_public_keys,
+)
+from server.app.webauthn.attestation import certificates as attestation_certificates
+
 from ..security.ceremony_helpers import b64u, client_data
 from . import harness, material
 
 
 def test_certificate_serialisation_matches_its_golden_record():
-    from server.app.webauthn.attestation import certificates as attestation_certificates
-
     certificates = {**material.captured_certificates(), **material.generated_certificates()}
     record = {
         name: harness.json_safe(attestation_certificates.serialize_attestation_certificate(der))
@@ -41,8 +48,6 @@ def _registration_response(attestation_object: bytes, **response_extra) -> dict:
 
 
 def test_attestation_details_match_their_golden_record():
-    from server.app.webauthn.attestation import certificates as attestation_certificates
-
     leaf = material.attestation_leaf_certificate(bytes(16))
     auth_data = material.Authenticator("details").authenticator_data()
     odd_chain = cbor.encode({"fmt": "packed", "attStmt": {"alg": -7, "sig": b"\x00", "x5c": [leaf, b"\x30\x00", 5]}, "authData": auth_data})
@@ -60,14 +65,6 @@ def test_certificate_helpers_match_their_golden_record():
 
     from fido2.utils import ByteBuffer
 
-    from server.app.webauthn import signature_algorithms
-    from server.app.webauthn.attestation import (
-        certificate_names as attestation_certificate_names,
-    )
-    from server.app.webauthn.attestation import (
-        certificate_public_keys as attestation_certificate_public_keys,
-    )
-    from server.app.webauthn.attestation import certificates as attestation_certificates
 
     der = material.generated_certificates()["generated-ec-p256"]
     mldsa_der = material.generated_certificates()["generated-ml-dsa-44"]

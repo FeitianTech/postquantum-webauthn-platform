@@ -14,6 +14,10 @@ import uuid
 import pytest
 from fido2.webauthn import AuthenticatorData
 
+from server.app.mds import verifier as mds_verifier
+from server.app.webauthn.attestation import checks
+from server.app.webauthn.attestation import checks as attestation_checks
+
 from ..security.ceremony_helpers import ORIGIN, RP_ID, b64u, client_data
 from . import harness, material
 
@@ -79,14 +83,10 @@ def _cases():
 
 @pytest.fixture
 def no_mds(monkeypatch):
-    from server.app.mds import verifier as mds_verifier
-
     monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: None)
 
 
 def test_attestation_checks_match_their_golden_record(no_mds):
-    from server.app.webauthn.attestation import checks as attestation_checks
-
     record = {}
     for name, (response, state, options) in _cases().items():
         record[name] = harness.json_safe(attestation_checks.perform_attestation_checks(response, state, options, None, ORIGIN, RP_ID))
@@ -110,9 +110,6 @@ class _Verifier:
 
 
 def test_metadata_finalisation_matches_its_golden_record(monkeypatch):
-    from server.app.mds import verifier as mds_verifier
-    from server.app.webauthn.attestation import checks
-
     aaguid = uuid.UUID("f8a011f3-8c0a-4d15-8006-17111f9edc7d")
     statement = types.SimpleNamespace(
         description="Model", authenticator_get_info={"algorithms": [-7, -8]}, attestation_root_certificates=[b"root"]
