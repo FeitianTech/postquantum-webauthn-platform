@@ -10,6 +10,7 @@ from server.app.mds import uploads as mds_uploads
 from server.app.storage import cloud as storage_cloud
 from server.app.storage import common as storage_common
 from tests.app.entry_app import entry_app
+from tests.app.metadata.upload_entries import minimal_entry
 
 
 @pytest.fixture
@@ -26,21 +27,12 @@ def session_metadata_env(monkeypatch, tmp_path, metadata_state):
     return entry_app()
 
 
-def _sample_entry(description: str) -> dict:
-    return {
-        "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-        "metadataStatement": {
-            "description": description,
-        },
-    }
-
-
 def test_session_metadata_is_isolated(session_metadata_env):
     app = session_metadata_env
 
     with app.test_request_context("/"):
         first_session_id = visitor_session.ensure_id()
-        mds_uploads.save_session_metadata_item(_sample_entry("Session entry"))
+        mds_uploads.save_session_metadata_item(minimal_entry("Session entry"))
         items_for_first = mds_uploads.list_session_metadata_items()
         assert len(items_for_first) == 1
 

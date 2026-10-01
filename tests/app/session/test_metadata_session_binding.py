@@ -17,6 +17,7 @@ from server.app.mds import uploads as mds_uploads
 from server.app.storage import cloud as storage_cloud
 from server.app.storage import common as storage_common
 from tests.app.entry_app import entry_app
+from tests.app.metadata.upload_entries import minimal_entry
 
 COOKIE_SALT = "fido.mds.session-cookie.v1"
 
@@ -36,13 +37,6 @@ def session_env(monkeypatch, tmp_path):
     return entry_app()
 
 
-def _entry(description: str) -> dict:
-    return {
-        "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-        "metadataStatement": {"description": description},
-    }
-
-
 def _seal(app, identifier: str) -> str:
     return itsdangerous.URLSafeTimedSerializer(
         app.secret_key, salt=COOKIE_SALT
@@ -52,7 +46,7 @@ def _seal(app, identifier: str) -> str:
 def _seed_victim(app, mds_uploads, namespace: str) -> None:
     with app.test_request_context("/"):
         flask_session[visitor_session.SESSION_KEY] = namespace
-        mds_uploads.save_session_metadata_item(_entry("victim secret entry"))
+        mds_uploads.save_session_metadata_item(minimal_entry("victim secret entry"))
 
 
 def _custom_items(app, cookie_value=None):
@@ -100,7 +94,7 @@ def test_forged_cookie_cannot_write_into_another_namespace(session_env):
     ):
         attacker_namespace = visitor_session.ensure_id()
         assert attacker_namespace != "victim-namespace"
-        mds_uploads.save_session_metadata_item(_entry("attacker entry"))
+        mds_uploads.save_session_metadata_item(minimal_entry("attacker entry"))
 
     with app.test_request_context("/"):
         flask_session[visitor_session.SESSION_KEY] = "victim-namespace"
