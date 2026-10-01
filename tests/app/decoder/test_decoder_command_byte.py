@@ -6,22 +6,23 @@ A status byte says only that a response follows. ``ctapDecoded`` and
 """
 from __future__ import annotations
 
-import hashlib
 from typing import Any
 
 from fido2 import cbor
 
 from server.app.decoder.decode import text as decode_text
+from tests.app.security.ceremony_helpers import Authenticator
+
+# Authenticator data for example.com, user present, counter 5, no attested credential.
+_AUTHENTICATOR_DATA = Authenticator().authenticator_data(
+    rp_id="example.com", counter=5, include_credential=False, user_verified=False
+)
 
 CLIENT_DATA_HASH = bytes(range(32))
 
 
 def _decode(data: bytes) -> dict[str, Any]:
     return decode_text.decode_payload_text(data.hex())
-
-
-def _authenticator_data() -> bytes:
-    return hashlib.sha256(b"example.com").digest() + b"\x01" + (5).to_bytes(4, "big")
 
 
 def test_a_get_assertion_request_without_an_allow_list_is_a_get_assertion_request():
@@ -36,7 +37,7 @@ def test_a_get_assertion_request_without_an_allow_list_is_a_get_assertion_reques
 
 
 def test_the_command_byte_wins_over_a_body_shaped_like_a_response():
-    body = cbor.encode({1: "packed", 2: _authenticator_data(), 3: {}})
+    body = cbor.encode({1: "packed", 2: _AUTHENTICATOR_DATA, 3: {}})
 
     result = _decode(b"\x02" + body)
 

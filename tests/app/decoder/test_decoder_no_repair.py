@@ -9,7 +9,6 @@ invented an attStmt, an algorithm and a signature to fill them in.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 from typing import Any
 
@@ -17,6 +16,12 @@ import pytest
 from fido2 import cbor
 
 from server.app.decoder.decode import text as decode_text
+from tests.app.security.ceremony_helpers import Authenticator
+
+# Authenticator data for example.com, user present, counter 5, no attested credential.
+_AUTHENTICATOR_DATA = Authenticator().authenticator_data(
+    rp_id="example.com", counter=5, include_credential=False, user_verified=False
+)
 
 # The "Credential Creation ES256 Output" dump from CBOR_hexcode.txt (ce03e270).
 ES256_MAKE_CREDENTIAL_DUMP = (
@@ -53,10 +58,6 @@ def _walk_items(value: Any):
             yield from _walk_items(item)
 
 
-def _authenticator_data() -> bytes:
-    return hashlib.sha256(b"example.com").digest() + b"\x01" + (5).to_bytes(4, "big")
-
-
 def test_the_es256_dump_with_a_lost_byte_is_not_given_an_att_stmt():
     result = _decode(ES256_MAKE_CREDENTIAL_DUMP)
 
@@ -78,7 +79,7 @@ def test_a_byte_string_map_key_is_not_turned_into_an_ml_dsa_87_att_stmt():
         + cbor.encode(1)
         + cbor.encode("packed")
         + cbor.encode(2)
-        + cbor.encode(_authenticator_data())
+        + cbor.encode(_AUTHENTICATOR_DATA)
         + cbor.encode(b"\x99\x99\x99\x99")
         + cbor.encode(0)
     )
@@ -95,7 +96,7 @@ def test_a_byte_string_map_key_is_not_turned_into_an_ml_dsa_87_att_stmt():
 
 def test_bytes_after_an_attestation_object_are_never_read_as_its_signature():
     attestation_object = cbor.encode(
-        {"fmt": "packed", "authData": _authenticator_data(), "attStmt": {"alg": -7, "sig": b"\x30\x06"}}
+        {"fmt": "packed", "authData": _AUTHENTICATOR_DATA, "attStmt": {"alg": -7, "sig": b"\x30\x06"}}
     )
     junk = bytes.fromhex("c0ffee00c0ffee")
 
