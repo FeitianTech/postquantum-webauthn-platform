@@ -5,24 +5,16 @@ message has is carried, and the answer shows it by name.
 """
 from __future__ import annotations
 
-import json
-
 import pytest
 
 from server.app.decoder.encode import ctap_encode as encode_ctap_encode
-from server.app.decoder.encode import text as encode_text
+from tests.app.encoder.ctap_answers import encoded_members
 from tests.app.security.ceremony_helpers import b64u
 
-CTAP = "CBOR (CTAP/WebAuthn Data)"
 HASH = b64u(b"\x11" * 32)
 # authData whose base64url is no hex, so it is read as base64url.
 AUTH_DATA = b64u(b"\xab" * 37)
 MAKE_CREDENTIAL = {"1": HASH, "2": {"id": "example.com"}, "3": {"id": "AQI"}, "4": [{"type": "public-key", "alg": -7}]}
-
-
-def _members(value) -> dict:
-    (members,) = encode_text.encode_payload_text(json.dumps(value), CTAP)["data"]["ctapDecoded"].values()
-    return members
 
 
 def test_a_make_credential_request_carries_every_optional_member():
@@ -36,7 +28,7 @@ def test_a_make_credential_request_carries_every_optional_member():
         "attestationFormatsPreference": ["packed", "none"],
     }
 
-    members = _members(
+    members = encoded_members(
         {**MAKE_CREDENTIAL, "5": ["0102"], "6": {"credProtect": 2}, "7": {"rk": True}, "8": "0a0b", "9": "0x02", "10": 1, "11": ["packed", "none"]}
     )
 
@@ -49,24 +41,24 @@ def test_a_make_credential_request_carries_every_optional_member():
 )
 def test_attestation_formats_preference_is_a_list_of_names(formats, error):
     with pytest.raises(ValueError, match=error):
-        _members({**MAKE_CREDENTIAL, "11": formats})
+        encoded_members({**MAKE_CREDENTIAL, "11": formats})
 
 
 def test_a_get_assertion_request_carries_every_optional_member():
-    members = _members({"1": "example.com", "2": HASH, "3": ["0102"], "4": {"hmac-secret": {}}, "5": {"up": False}, "6": "0a0b", "7": 1})
+    members = encoded_members({"1": "example.com", "2": HASH, "3": ["0102"], "4": {"hmac-secret": {}}, "5": {"up": False}, "6": "0a0b", "7": 1})
 
     assert (members["allowList"], members["extensions"], members["options"]) == (["0102"], {"hmac-secret": {}}, {"up": False})
     assert (members["pinUvAuthParam"], members["pinUvAuthProtocol"]) == ("0a0b", 1)
 
 
 def test_a_make_credential_response_carries_every_optional_member():
-    members = _members({"1": "packed", "2": AUTH_DATA, "3": {"alg": -7, "sig": "aa"}, "4": True, "5": "0102", "6": {"x": 1}})
+    members = encoded_members({"1": "packed", "2": AUTH_DATA, "3": {"alg": -7, "sig": "aa"}, "4": True, "5": "0102", "6": {"x": 1}})
 
     assert (members["epAtt"], members["largeBlobKey"], members["unsignedExtensionOutputs"]) == (True, "0102", {"x": 1})
 
 
 def test_a_get_assertion_response_carries_every_optional_member():
-    members = _members(
+    members = encoded_members(
         {"1": {"type": "public-key", "id": "AQI"}, "2": AUTH_DATA, "3": b64u(b"sig"), "4": {"id": "AQI", "name": "a"}, "5": "7",
          "6": "yes", "7": "0102", "8": {"x": 1}}
     )
@@ -78,11 +70,11 @@ def test_a_get_assertion_response_carries_every_optional_member():
 
 
 def test_authdata_is_written_with_the_bytes_the_decoder_showed_after_it():
-    members = _members({"1": "packed", "2": {"hex": "ab" * 37, "trailingBytesHex": "0102"}})
+    members = encoded_members({"1": "packed", "2": {"hex": "ab" * 37, "trailingBytesHex": "0102"}})
 
     assert members["authData"] == "ab" * 37 + "0102"
     with pytest.raises(ValueError, match="authData trailingBytesHex must be hex"):
-        _members({"1": "packed", "2": {"hex": "ab" * 37, "trailingBytesHex": "zz"}})
+        encoded_members({"1": "packed", "2": {"hex": "ab" * 37, "trailingBytesHex": "zz"}})
 
 
 # The format refuses a missing or empty required field before any encoder runs;
