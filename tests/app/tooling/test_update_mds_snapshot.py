@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import builtins
 import gzip
 import importlib.util
 import json
@@ -47,40 +46,14 @@ def test_module_import_inserts_repo_root_when_missing(monkeypatch):
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
 
-    sys.modules[module_name] = module
-    try:
-        spec.loader.exec_module(module)
-        assert sys.path[0] == repo_root
-    finally:
-        sys.modules.pop(module_name, None)
+    spec.loader.exec_module(module)
 
-
-def test_module_import_does_not_require_flask_dependency(monkeypatch):
-    module_name = "_update_mds_snapshot_no_flask_import_test"
-    module_file = Path(updater.__file__).resolve()
-    original_import = builtins.__import__
-
-    def _guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
-        if name == "flask" or name.startswith("flask."):
-            raise AssertionError("update_mds_snapshot import unexpectedly requires flask")
-        return original_import(name, globals, locals, fromlist, level)
-
-    monkeypatch.setattr(builtins, "__import__", _guarded_import)
-
-    spec = importlib.util.spec_from_file_location(module_name, module_file)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-
-    sys.modules[module_name] = module
-    try:
-        spec.loader.exec_module(module)
-    finally:
-        sys.modules.pop(module_name, None)
+    assert sys.path[0] == repo_root
 
 
 def test_the_updater_imports_without_flask_in_a_fresh_interpreter():
-    # The in-process check above cannot see an import of flask by a module
-    # another test already loaded; a fresh interpreter loads everything.
+    # In-process, an import of flask by a module another test already loaded
+    # would go unseen; a fresh interpreter loads everything.
     repo_root = Path(updater.__file__).resolve().parents[1]
     code = "import sys, tools.update_mds_snapshot; print(sorted(m for m in sys.modules if m.split('.')[0] == 'flask'))"
     result = subprocess.run(
