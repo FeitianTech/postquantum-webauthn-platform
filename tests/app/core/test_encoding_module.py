@@ -103,14 +103,11 @@ def test_decoders_reject_characters_outside_the_alphabet():
         encoding.decode_hex("not hex at all")
 
 
-def test_lenient_decoding_must_be_asked_for_and_is_reported():
+def test_a_character_outside_the_alphabet_is_refused_not_dropped():
     with pytest.raises(encoding.EncodingError):
         encoding.decode_base64url("QU*JD")
-    assert encoding.decode_base64url("QU*JD", lenient=True) == b"ABC"
-
-    result = encoding.sniff("QU*JD", lenient=True)
-    assert result.data == b"ABC"
-    assert result.lenient is True
+    with pytest.raises(encoding.EncodingError):
+        encoding.sniff("QU*JD")
     assert encoding.sniff("QUJD").lenient is False
 
 

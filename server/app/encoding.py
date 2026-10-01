@@ -14,16 +14,13 @@ text "decodes" to garbage; every decoder here passes ``validate=True`` and also
 checks the alphabet up front so ``-``/``_`` cannot slip into a standard-base64
 decode (or vice versa).
 
-Two relaxations are available, and both must be asked for explicitly:
-
-``lenient=True``
-    Drop characters outside the alphabet before decoding, i.e. the old
-    ``validate=False`` behaviour. :func:`sniff` records this on the result as
-    :attr:`SniffResult.lenient` so a caller can never lose track of it.
+One relaxation is available, and it must be asked for explicitly:
 
 ``allow_odd_length=True`` (hex only)
     Left-pad an odd-length hex string with ``0``. Strict hex rejects it,
     because "abc" is as likely to be a truncated string as it is to be 0x0abc.
+    :func:`sniff` records it on the result as :attr:`SniffResult.lenient` so a
+    caller can never lose track of it.
 
 Whitespace is *not* leniency: removing it cannot change the decoded bytes, so
 ``ignore_whitespace`` defaults to ``True``. Hex separators (``:`` and a ``0x``
@@ -40,7 +37,6 @@ views); every other byte field in an API response is base64url.
 from __future__ import annotations
 
 import base64
-import binascii
 import re
 from dataclasses import dataclass
 
@@ -115,10 +111,8 @@ def _b64_decode_strict(value: str, *, urlsafe: bool) -> bytes:
     if len(body) % 4 == 1:
         raise EncodingError("invalid base64 length")
     translated = body.translate(_URLSAFE_TO_STANDARD) if urlsafe else body
-    try:
-        decoded = base64.b64decode(_pad(translated), validate=True)
-    except (binascii.Error, ValueError) as exc:
-        raise EncodingError(f"invalid base64 data: {exc}") from exc
+    # The caller checked the alphabet and the padding, so this cannot fail.
+    decoded = base64.b64decode(_pad(translated), validate=True)
 
     if base64.b64encode(decoded).rstrip(b"=").decode("ascii") != translated:
         raise EncodingError("base64 data has a non-canonical final quantum")
@@ -131,12 +125,7 @@ def encode_base64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(bytes(data)).rstrip(b"=").decode("ascii")
 
 
-def decode_base64url(
-    text: str,
-    *,
-    ignore_whitespace: bool = True,
-    lenient: bool = False,
-) -> bytes:
+def decode_base64url(text: str, *, ignore_whitespace: bool = True) -> bytes:
     """Decode base64url ``text``, rejecting anything outside ``A-Za-z0-9_-``.
 
     ``+`` and ``/`` are rejected: they belong to standard base64, and accepting
@@ -144,9 +133,7 @@ def decode_base64url(
     """
 
     cleaned = _prepare(text, ignore_whitespace=ignore_whitespace)
-    if lenient:
-        cleaned = re.sub(r"[^A-Za-z0-9_=-]", "", cleaned)
-    elif not _BASE64URL_ALPHABET.fullmatch(cleaned):
+    if not _BASE64URL_ALPHABET.fullmatch(cleaned):
         raise EncodingError("input is not base64url")
     return _b64_decode_strict(cleaned, urlsafe=True)
 
@@ -157,21 +144,14 @@ def encode_base64(data: bytes) -> str:
     return base64.b64encode(bytes(data)).decode("ascii")
 
 
-def decode_base64(
-    text: str,
-    *,
-    ignore_whitespace: bool = True,
-    lenient: bool = False,
-) -> bytes:
+def decode_base64(text: str, *, ignore_whitespace: bool = True) -> bytes:
     """Decode standard base64 ``text``, rejecting anything outside ``A-Za-z0-9+/``.
 
     ``-`` and ``_`` are rejected so a base64url payload cannot be misread here.
     """
 
     cleaned = _prepare(text, ignore_whitespace=ignore_whitespace)
-    if lenient:
-        cleaned = re.sub(r"[^A-Za-z0-9+/=]", "", cleaned)
-    elif not _BASE64_ALPHABET.fullmatch(cleaned):
+    if not _BASE64_ALPHABET.fullmatch(cleaned):
         raise EncodingError("input is not standard base64")
     return _b64_decode_strict(cleaned, urlsafe=False)
 
@@ -205,7 +185,7 @@ def decode_hex(
         raise EncodingError(f"invalid hexadecimal data: {exc}") from exc
 
 
-def decode_pem_body(text: str, *, lenient: bool = False) -> bytes:
+def decode_pem_body(text: str) -> bytes:
     """Decode the base64 body of a PEM block, ignoring ``-----`` armour lines."""
 
     body = "".join(
@@ -215,7 +195,7 @@ def decode_pem_body(text: str, *, lenient: bool = False) -> bytes:
     )
     if not body:
         raise EncodingError("no PEM body present")
-    return decode_base64(body, lenient=lenient)
+    return decode_base64(body)
 
 
 def try_decode_base64url(text: str, **kwargs: object) -> bytes | None:
@@ -250,7 +230,6 @@ def sniff(
     *,
     allow_separators: bool = True,
     allow_odd_length_hex: bool = False,
-    lenient: bool = False,
 ) -> SniffResult:
     """Decode ``text`` and report which encoding actually matched.
 
@@ -286,17 +265,8 @@ def sniff(
         raise EncodingError("input mixes base64 and base64url alphabets")
 
     if has_url_chars:
-        return SniffResult(
-            decode_base64url(cleaned, lenient=lenient), BASE64URL, lenient=lenient
-        )
+        return SniffResult(decode_base64url(cleaned), BASE64URL)
     if has_std_chars:
-        return SniffResult(
-            decode_base64(cleaned, lenient=lenient), BASE64, lenient=lenient
-        )
+        return SniffResult(decode_base64(cleaned), BASE64)
 
-    return SniffResult(
-        decode_base64(cleaned, lenient=lenient),
-        BASE64,
-        ambiguous=True,
-        lenient=lenient,
-    )
+    return SniffResult(decode_base64(cleaned), BASE64, ambiguous=True)
