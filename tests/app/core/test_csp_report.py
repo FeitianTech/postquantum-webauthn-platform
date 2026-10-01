@@ -214,7 +214,7 @@ def test_a_flood_logs_the_burst_then_says_how_many_it_dropped(app, lines):
     ]
 
 
-def test_a_large_batch_logs_its_first_hundred_and_counts_the_rest(app, lines):
+def test_a_large_report_to_batch_logs_its_first_hundred_and_counts_the_rest(app, lines):
     clock = _Clock()
     app.extensions[csp_report.LOG_EXTENSION] = csp_reports.ViolationLog(burst=500, per_minute=30, clock=clock)
     batch = [REPORT_TO_BODY[0]] * (csp_report.MAX_VIOLATIONS_PER_REQUEST + 5)
