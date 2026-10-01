@@ -207,22 +207,13 @@ def test_perform_attestation_checks_returns_registration_parse_error(monkeypatch
         ({"trusted_ca": False, "chain": True, "fido_mds": False}, True),
         ({"trusted_ca": False, "chain": False, "fido_mds": False}, False),
         ({"trusted_ca": None, "chain": True, "fido_mds": True}, None),
-    ],
-)
-def test_resolve_root_validity_matrix(checks, expected, attestation_module):
-    assert attestation_trust._resolve_root_validity(checks) is expected
-
-
-@pytest.mark.parametrize(
-    "checks,expected",
-    [
         ({"trusted_ca": True, "chain": True, "fido_mds": False}, True),
         ({"trusted_ca": True, "chain": False, "fido_mds": True}, True),
         ({"trusted_ca": False, "chain": None, "fido_mds": False}, False),
         ({"trusted_ca": None, "chain": True, "fido_mds": False}, None),
     ],
 )
-def test_resolve_root_validity_additional_matrix_cases(checks, expected, attestation_module):
+def test_resolve_root_validity_matrix(checks, expected, attestation_module):
     assert attestation_trust._resolve_root_validity(checks) is expected
 
 
