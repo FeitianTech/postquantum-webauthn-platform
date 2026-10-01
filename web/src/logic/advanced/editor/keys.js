@@ -3,7 +3,7 @@
 // insert their pair, Enter keeps the line's indent (one more after an opener),
 // Tab and Shift+Tab indent and dedent. DOM-free: the JSON editor applies them to
 // a copy of its state.
-import { JSON_EDITOR_INDENT_UNIT } from '../constants.js';
+const JSON_EDITOR_INDENT_UNIT = '  ';
 
 export function wrapSelectionWithPair(editor, opening, closing) {
     const start = editor.selectionStart;

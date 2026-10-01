@@ -1,4 +1,4 @@
-import { COSE_ALGORITHM_LABELS } from '../constants.js';
+import { COSE_ALGORITHM_LABELS } from '../../credentials/cose-labels.js';
 
 export const KNOWN_REGISTRATION_PUBLIC_KEY_KEYS = new Set([
     'rp',

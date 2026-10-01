@@ -2,7 +2,6 @@
 // form: the hints' values in the form's order, the attachments they imply, the
 // attachment given to the browser, and the allowCredentials the stored
 // credentials' attachments allow. DOM-free.
-import { HINT_ATTACHMENT_MAP } from './constants.js';
 import {
     convertFormat,
     currentFormatToJsonFormat,
@@ -14,6 +13,12 @@ import {
     getStoredCredentialAttachment,
     normalizeAttachmentValue,
 } from '../credentials/record-fields.js';
+
+const HINT_ATTACHMENT_MAP = {
+    'security-key': 'cross-platform',
+    'hybrid': 'cross-platform',
+    'client-device': 'platform',
+};
 
 /** The hints the form offers, in its order. */
 export const HINT_VALUES = ['client-device', 'hybrid', 'security-key'];

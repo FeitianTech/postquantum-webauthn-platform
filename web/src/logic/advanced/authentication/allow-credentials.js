@@ -4,7 +4,10 @@
 // authentication's hints allow, the attachments given), each one's words, and
 // the choice kept when the offer changes. What the credential helpers say of a
 // record is given, as is the algorithm's name. DOM-free.
-import { ATTACHMENT_LABELS } from '../constants.js';
+const ATTACHMENT_LABELS = {
+    'cross-platform': 'Cross-platform (Security key / Hybrid)',
+    'platform': 'Platform (Client device)',
+};
 
 export const ALLOW_CREDENTIALS_TEXT = {
     all: 'All credentials',
