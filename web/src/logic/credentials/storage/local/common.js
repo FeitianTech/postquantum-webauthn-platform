@@ -2,13 +2,6 @@ export function isNonEmptyString(value) {
     return typeof value === 'string' && value.trim() !== '';
 }
 
-export function cloneJsonValue(value) {
-    if (!value || typeof value !== 'object') {
-        return null;
-    }
-    return structuredClone(value);
-}
-
 export function removeObjectKeys(target, keys) {
     if (!target || typeof target !== 'object' || !Array.isArray(keys)) {
         return;

@@ -22,14 +22,6 @@ export function normalizeClientDataString(value) {
     return trimmed;
 }
 
-export function cloneJson(value) {
-    if (!value || typeof value !== 'object') {
-        return null;
-    }
-
-    return structuredClone(value);
-}
-
 export function collectTruthyEntries(...sources) {
     const result = [];
     sources.forEach(source => {

@@ -2,7 +2,6 @@ import { Buffer } from 'node:buffer';
 import { describe, expect, it } from 'vitest';
 
 import {
-  cloneJson,
   collectTruthyEntries,
   normalizeClientDataString,
 } from './data-utils.js';
@@ -34,27 +33,6 @@ describe('normalizeClientDataString', () => {
   it('has nothing for blank text or a value that is not text', () => {
     expect(normalizeClientDataString('  ')).toBe('');
     expect(normalizeClientDataString({ type: 'webauthn.create' })).toBe('');
-  });
-});
-
-describe('cloneJson', () => {
-  it('copies a map or a list through JSON', () => {
-    const value = { fmt: 'packed', attStmt: { x5c: ['MIIB'] }, skipped: undefined };
-    const copy = cloneJson(value);
-    expect(copy).toEqual({ fmt: 'packed', attStmt: { x5c: ['MIIB'] } });
-    expect(copy.attStmt).not.toBe(value.attStmt);
-    expect(cloneJson([1, 'two'])).toEqual([1, 'two']);
-  });
-
-  it('has no copy of a value that is not a map or a list', () => {
-    expect([null, undefined, 'o2Nm', 5, true].map(cloneJson)).toEqual([null, null, null, null, null]);
-  });
-
-  it('copies every level, so the copy shares nothing with the value', () => {
-    const value = { fmt: 'packed', attStmt: { x5c: ['MIIB'] } };
-    const copy = cloneJson(value);
-    copy.attStmt.x5c.push('MIIC');
-    expect(value.attStmt.x5c).toEqual(['MIIB']);
   });
 });
 

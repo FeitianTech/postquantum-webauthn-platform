@@ -4,9 +4,9 @@ import {
 import { deriveAaguidFromCredentialData } from '../record-fields.js';
 import { normaliseAaguidValue } from '../../shared/aaguid.js';
 import {extractAaguidFromCertificateEntries} from '../certificates/core.js';
+import { cloneJson } from '../../shared/json.js';
 import {
     collectTruthyEntries,
-    cloneJson,
     normalizeClientDataString,
 } from '../registration/data-utils.js';
 import {

@@ -6,7 +6,8 @@ import {
     SERVER_ARTIFACT_VERSION,
     SHARED_STORAGE_KEY,
 } from './constants.js';
-import { cloneJsonValue, isNonEmptyString } from './common.js';
+import { cloneJson } from '../../../shared/json.js';
+import { isNonEmptyString } from './common.js';
 import { ensureAdvancedCredentialStorageId } from './id-utils.js';
 import { sanitiseRegistrationDetailSnapshot } from './snapshot-sanitize.js';
 import {
@@ -49,7 +50,7 @@ async function synchroniseAdvancedCredentialArtifacts() {
         let artifactAvailable = Boolean(working.hasServerArtifact);
 
         if (needsUpload && storageId) {
-            const artifactRecord = cloneJsonValue(record);
+            const artifactRecord = cloneJson(record);
             const payload = {
                 schemaVersion: SERVER_ARTIFACT_VERSION,
                 storedCredential: artifactRecord,

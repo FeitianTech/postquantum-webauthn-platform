@@ -1,3 +1,4 @@
+import { cloneJson } from '../../../shared/json.js';
 import {
     AGGRESSIVE_DROP_KEYS,
     CERTIFICATE_COLLECTION_KEYS,
@@ -8,7 +9,6 @@ import {
     SERVER_ARTIFACT_VERSION,
 } from './constants.js';
 import {
-    cloneJsonValue,
     isNonEmptyString,
     removeObjectKeys,
 } from './common.js';
@@ -135,7 +135,7 @@ export function pruneAdvancedCredentialPayload(record, { aggressive = false } = 
 
     let registrationSnapshot = null;
     if (record.registrationDetailSnapshot && typeof record.registrationDetailSnapshot === 'object') {
-        registrationSnapshot = cloneJsonValue(record.registrationDetailSnapshot);
+        registrationSnapshot = cloneJson(record.registrationDetailSnapshot);
         delete record.registrationDetailSnapshot;
     }
 

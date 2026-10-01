@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  cloneJsonValue,
   computeUpdatedSignCount,
   removeObjectKeys,
   safeParse,
@@ -9,16 +8,6 @@ import {
 } from './common.js';
 
 describe('storage helpers', () => {
-  it('copy a record at every level', () => {
-    const record = { credentialId: 't0QZievwTqmQrciJwJ-SL9RtBhRiQAlGJwrOmUt4C8I', properties: { residentKey: true } };
-
-    const clone = cloneJsonValue(record);
-
-    expect(clone).toEqual(record);
-    expect(clone.properties).not.toBe(record.properties);
-    expect(cloneJsonValue('t0QZ')).toBeNull();
-  });
-
   it('remove no keys from a target that is not a record, or with keys that are not a list', () => {
     const record = { attestationObject: 'o2NmbXRkbm9uZQ' };
 

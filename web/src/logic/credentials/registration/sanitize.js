@@ -1,4 +1,4 @@
-import {cloneJson} from './data-utils.js';
+import {cloneJson} from '../../shared/json.js';
 
 const CERTIFICATE_COLLECTION_KEYS = [
     'attestationCertificate',

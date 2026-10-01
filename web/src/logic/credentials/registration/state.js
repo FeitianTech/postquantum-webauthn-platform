@@ -12,7 +12,7 @@ import {
     deriveCertificateIdentity,
     normaliseCertificateEntryForModal,
 } from '../certificates/core.js';
-import {cloneJson} from './data-utils.js';
+import {cloneJson} from '../../shared/json.js';
 
 export const EMPTY_DETAIL_PREPARATION = Object.freeze({
     attestationObjectValue: '',

@@ -9,7 +9,7 @@ import {
     stripCertificateCollections,
     stripSignatureFormatting,
 } from './sanitize.js';
-import {cloneJson} from './data-utils.js';
+import {cloneJson} from '../../shared/json.js';
 
 // The attestation object as the registration view shows it: `fmt` first, each
 // x5c certificate replaced by what the view knows of it (`certificates`, its

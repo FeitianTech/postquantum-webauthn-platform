@@ -8,7 +8,8 @@ import {
     SNAPSHOT_CERT_STRIP_KEYS,
     SNAPSHOT_EXTENSION_STRIP_KEYS,
 } from './constants.js';
-import { cloneJsonValue, truncateString } from './common.js';
+import { cloneJson } from '../../../shared/json.js';
+import { truncateString } from './common.js';
 
 export function stripKeysRecursively(target, keys, skipRoot = false) {
     if (!target || typeof target !== 'object' || !Array.isArray(keys) || !keys.length) {
@@ -42,14 +43,14 @@ export function stripKeysRecursively(target, keys, skipRoot = false) {
 
 // Called with an object (the entry's own check).
 function sanitiseParsedCertificateForSnapshot(parsed) {
-    const parsedClone = cloneJsonValue(parsed);
+    const parsedClone = cloneJson(parsed);
 
     stripKeysRecursively(parsedClone, SNAPSHOT_CERT_STRIP_KEYS, false);
 
     if (Array.isArray(parsedClone.extensions)) {
         parsedClone.extensions = parsedClone.extensions
             .map(ext => {
-                const extClone = cloneJsonValue(ext);
+                const extClone = cloneJson(ext);
                 if (!extClone) {
                     return null;
                 }
@@ -63,7 +64,7 @@ function sanitiseParsedCertificateForSnapshot(parsed) {
 }
 
 function sanitiseCertificateEntryForSnapshot(entry) {
-    const clone = cloneJsonValue(entry);
+    const clone = cloneJson(entry);
     if (!clone) {
         return null;
     }
@@ -92,7 +93,7 @@ function sanitiseDetailPreparationSnapshot(preparation) {
 
 // Called with an object (sanitiseRegistrationDetailStateSnapshot checks).
 function sanitiseAttestationObjectForSnapshot(attestationObject) {
-    const clone = cloneJsonValue(attestationObject);
+    const clone = cloneJson(attestationObject);
 
     if (clone.attStmt && typeof clone.attStmt === 'object') {
         const attStmtClone = { ...clone.attStmt };
@@ -108,7 +109,7 @@ function sanitiseAttestationObjectForSnapshot(attestationObject) {
 
 // Called with an object (sanitiseRegistrationDetailStateSnapshot checks).
 function sanitiseAuthenticatorDataForSnapshot(authData) {
-    const clone = cloneJsonValue(authData);
+    const clone = cloneJson(authData);
 
     stripKeysRecursively(clone, SNAPSHOT_AUTH_DATA_STRIP_KEYS, false);
     return clone;
@@ -179,7 +180,7 @@ function sanitiseSnapshotResponse(response) {
 
     const sanitised = {};
     ['credential', 'relyingParty'].forEach(key => {
-        const clone = cloneJsonValue(response[key]);
+        const clone = cloneJson(response[key]);
         if (clone && typeof clone === 'object' && !Array.isArray(clone) && fitsInSnapshot(clone)) {
             sanitised[key] = clone;
         }
