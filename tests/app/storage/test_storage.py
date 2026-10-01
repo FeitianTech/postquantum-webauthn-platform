@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib
 import json
 import pickle
 
@@ -10,9 +9,8 @@ import pytest
 
 from server.app import visitor_session
 from server.app.storage import cloud as storage_cloud
-
-credentials = importlib.import_module("server.app.storage.credentials")
-StorageReadError = importlib.import_module("server.app.storage.common").StorageReadError
+from server.app.storage import credentials
+from server.app.storage.common import StorageReadError
 
 
 @pytest.fixture(autouse=True)

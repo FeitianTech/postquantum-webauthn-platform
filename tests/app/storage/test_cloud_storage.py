@@ -8,8 +8,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-cloud = importlib.import_module("server.app.storage.cloud")
-
+from server.app.storage import cloud
+from tests.app.storage import fake_gcs
 
 RETRY = "the client's retry"
 
@@ -316,8 +316,6 @@ def test_delete_blob_ignores_not_found_when_missing_ok_true(monkeypatch):
 
 
 def test_a_download_can_be_bounded_to_one_short_attempt(monkeypatch):
-    from tests.app.storage import fake_gcs
-
     bucket = fake_gcs.install(monkeypatch)
     bucket.put("mds/current.json", b"{}")
 
