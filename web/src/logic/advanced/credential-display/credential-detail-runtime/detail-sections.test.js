@@ -16,8 +16,8 @@ import {
   describeCoseAlgorithm,
   describeCoseKeyType,
   describeMldsaParameterSet,
-} from '../../cose-labels.js';
-import { advancedRecord, simpleRecord } from '@/test/logic/advanced/credentials/registration-detail-answers.js';
+} from '../../../credentials/cose-labels.js';
+import { advancedRecord, simpleRecord } from '@/test/logic/credentials/registration-detail-answers.js';
 
 // What a saved credential's details show above its registration
 // (credential-display/credential-detail-runtime/detail-sections.js).

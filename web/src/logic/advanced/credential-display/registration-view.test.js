@@ -21,7 +21,7 @@ import {
   completeAnswer,
   recordedDecoder,
   simpleRecord,
-} from '@/test/logic/advanced/credentials/registration-detail-answers.js';
+} from '@/test/logic/credentials/registration-detail-answers.js';
 
 // What the registration view shows, as data (credential-display/registration-view.js).
 

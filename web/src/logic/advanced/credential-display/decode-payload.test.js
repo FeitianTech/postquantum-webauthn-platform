@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { decodePayloadThroughApi } from './decode-payload.js';
 import { answerResponse } from '@/test/logic/simple/ceremony-answers.js';
-import { registration } from '@/test/logic/advanced/credentials/registration-detail-answers.js';
+import { registration } from '@/test/logic/credentials/registration-detail-answers.js';
 
 function failedResponse(status, body, contentType = 'application/json') {
   const text = typeof body === 'string' ? body : JSON.stringify(body);

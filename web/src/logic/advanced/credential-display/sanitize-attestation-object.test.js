@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createRegistrationState, prepareRegistrationState } from './registration-state.js';
 import { sanitiseAttestationObjectForDisplay } from './sanitize-attestation-object.js';
 import { sanitizeParsedCertificateDetails } from './sanitize-common.js';
-import { advancedComplete, goldenDecode, registration } from '@/test/logic/advanced/credentials/registration-detail-answers.js';
+import { advancedComplete, goldenDecode, registration } from '@/test/logic/credentials/registration-detail-answers.js';
 
 // The attestation object as the registration view shows it
 // (advanced/credential-display/sanitize-attestation-object.js).

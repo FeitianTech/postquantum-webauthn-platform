@@ -13,7 +13,7 @@ import {
     getCredentialIdHex,
     getStoredCredentialAttachment,
     normalizeAttachmentValue
-} from '../credentials/utils.js';
+} from '../../credentials/utils.js';
 
 /** The hints the form offers, in its order. */
 export const HINT_VALUES = ['client-device', 'hybrid', 'security-key'];

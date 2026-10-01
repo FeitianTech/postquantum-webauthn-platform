@@ -142,7 +142,7 @@ their exports or sentences. A new surface splits its logic out here first.
   form's rules), the editor's model and keys, `request-patch.js` (`followForm`), hints, fake
   credential IDs, byte fields, Allow Credentials' choices, extension availability, and both
   ceremonies (`ceremony.js`, `assertion.js`).
-- `advanced/credentials/`, `advanced/credential-display/`: a saved credential's row, deletion,
+- `credentials/`, `advanced/credential-display/`: a saved credential's row, deletion,
   algorithm tag, hydration from its server artifact, and its details and registration view as
   data. Registration snapshots (`schemaVersion` 2) hold the registration as data, never markup;
   older composed HTML is never read.

@@ -11,19 +11,19 @@ import {
   registrationSnapshotPayload,
 } from '../registration-view.js';
 import { createRegistrationState } from '../registration-state.js';
-import { hydrateCredentialFromServer } from '../../credentials/hydrate.js';
+import { hydrateCredentialFromServer } from '../../../credentials/hydrate.js';
 import {
   describeCoseAlgorithm,
   describeCoseKeyType,
   describeMldsaParameterSet,
-} from '../../cose-labels.js';
+} from '../../../credentials/cose-labels.js';
 import { sanitiseRegistrationDetailSnapshot } from '../../../credentials/storage/local/snapshot-sanitize.js';
 import {
   advancedArtifact,
   advancedRecord,
   recordedDecoder,
   simpleRecord,
-} from '@/test/logic/advanced/credentials/registration-detail-answers.js';
+} from '@/test/logic/credentials/registration-detail-answers.js';
 
 // A saved credential's details, as data (credential-detail-runtime/compose.js).
 

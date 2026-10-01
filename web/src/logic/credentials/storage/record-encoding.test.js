@@ -6,7 +6,7 @@ import { base64ToBytes, base64UrlToBytes } from '../../shared/utils/base64.js';
 import {
   getCredentialIdHex,
   getCredentialUserHandleHex,
-} from '../../advanced/credentials/utils.js';
+} from '../utils.js';
 
 vi.mock('./artifacts-client.js', () => ({
   fetchCredentialArtifactsBulk: vi.fn(),

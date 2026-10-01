@@ -3,7 +3,7 @@
 // equal to the server; CHARACTERIZATION_WRITE=1 rewrites them).
 import { vi } from 'vitest';
 
-import { goldenAnswers, goldenArtifact } from '../../simple/ceremony-answers.js';
+import { goldenAnswers, goldenArtifact } from '../simple/ceremony-answers.js';
 
 // registration-detail-decodes: four Simple registrations (ES256 with AAGUID
 // 00112233..., EdDSA, ML-DSA-65, packed with an x5c certificate), then POST

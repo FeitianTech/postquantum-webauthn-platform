@@ -11,7 +11,7 @@ import {
     extractHexFromJsonFormat,
     getCredentialIdHex,
     getStoredCredentialAttachment,
-} from '../credentials/utils.js';
+} from '../../credentials/utils.js';
 import { deriveAllowedAttachmentsFromHints } from '../auth/hint-rules.js';
 import { decodeJsonBinaryToHex, requestTimeout } from './registration-request.js';
 

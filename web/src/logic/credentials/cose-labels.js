@@ -1,6 +1,6 @@
 // How a COSE algorithm and key type are named: "ES256 (-7)", "EC2 (2)", and an
 // ML-DSA algorithm's parameter set. DOM-free.
-import { COSE_ALGORITHM_LABELS, COSE_KEY_TYPE_LABELS } from './constants.js';
+import { COSE_ALGORITHM_LABELS, COSE_KEY_TYPE_LABELS } from '../advanced/constants.js';
 
 export function describeCoseAlgorithm(alg) {
     if (alg === null || alg === undefined || (typeof alg === 'number' && Number.isNaN(alg))) {

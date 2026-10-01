@@ -3,12 +3,12 @@
 // it links to FIDO MDS; the warm-up after the list is drawn. DOM-free. What it
 // needs from the credential helpers and from storage is passed in.
 
-import { normalizeToHex } from '../../shared/utils/binary.js';
+import { normalizeToHex } from '../shared/utils/binary.js';
 import {
     ensureBase64Url,
     getRecordIdentifier,
     normaliseAdvancedCredentialId,
-} from '../../credentials/storage/local/id-utils.js';
+} from './storage/local/id-utils.js';
 
 export const SAVED_LIST_TEXT = {
     empty: 'No credentials registered yet.',
@@ -28,7 +28,7 @@ export const CREDENTIAL_CHECKS = [
  * The stored records as the list holds them: an advanced record with its storage
  * ids and normalised AAGUID, both kinds with their credential id and user handle
  * in hex. helpers: normaliseAaguidValue, getCredentialIdHex,
- * getCredentialUserHandleHex (advanced/credentials/utils.js).
+ * getCredentialUserHandleHex (credentials/utils.js).
  */
 export function listSavedCredentials(records, helpers) {
     const { normaliseAaguidValue, getCredentialIdHex, getCredentialUserHandleHex } = helpers;

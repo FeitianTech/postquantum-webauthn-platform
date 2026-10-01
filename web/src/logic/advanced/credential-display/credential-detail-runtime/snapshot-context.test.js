@@ -11,7 +11,7 @@ import {
   prepareRegistrationState,
 } from '../registration-state.js';
 import { sanitizeRelyingPartyInfo } from '../sanitize-common.js';
-import { goldenDecode, registration } from '@/test/logic/advanced/credentials/registration-detail-answers.js';
+import { goldenDecode, registration } from '@/test/logic/credentials/registration-detail-answers.js';
 
 // A saved registration snapshot read back (credential-detail-runtime/snapshot-context.js).
 

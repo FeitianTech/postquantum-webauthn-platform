@@ -6,12 +6,12 @@ import {
   authenticationCredentials,
   keptChoice,
 } from './allow-credentials.js';
-import { describeCoseAlgorithm } from '../cose-labels.js';
-import { describeCredentialAlgorithmWith } from '../credentials/algorithm-tag.js';
+import { describeCoseAlgorithm } from '../../credentials/cose-labels.js';
+import { describeCredentialAlgorithmWith } from '../../credentials/algorithm-tag.js';
 import {
   getCredentialIdHex,
   getStoredCredentialAttachment,
-} from '../credentials/utils.js';
+} from '../../credentials/utils.js';
 
 // The Allow Credentials select of the Advanced tab's authentication, with no
 // page (advanced/auth/allow-credentials.js), over the real credential helpers.

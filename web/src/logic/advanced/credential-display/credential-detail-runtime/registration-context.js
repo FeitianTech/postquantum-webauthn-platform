@@ -4,7 +4,7 @@ import {
 import {
     deriveAaguidFromCredentialData,
     normaliseAaguidValue,
-} from '../../credentials/utils.js';
+} from '../../../credentials/utils.js';
 import {extractAaguidFromCertificateEntries} from '../certificate-core.js';
 import {
     collectTruthyEntries,

@@ -4,10 +4,10 @@
 // the registration's own view (credential-display/registration-view.js), both
 // composed by credential-detail-runtime/compose.js over a registration state
 // (credential-display/registration-state.js), the decode (decode-payload.js), the
-// artifact's hydration (advanced/credentials/hydrate.js) and a certificate's
+// artifact's hydration (credentials/hydrate.js) and a certificate's
 // text (credential-display/certificate-text.js). These are the types the components read
 // them through.
-import { describeCoseAlgorithm, describeCoseKeyType, describeMldsaParameterSet } from '@/logic/advanced/cose-labels.js';
+import { describeCoseAlgorithm, describeCoseKeyType, describeMldsaParameterSet } from '@/logic/credentials/cose-labels.js';
 import { composeCredentialDetail, needsArtifact } from '@/logic/advanced/credential-display/credential-detail-runtime/compose.js';
 import { DETAIL_TEXT, describeValue } from '@/logic/advanced/credential-display/credential-detail-runtime/detail-sections.js';
 import { decodePayloadThroughApi } from '@/logic/advanced/credential-display/decode-payload.js';
@@ -17,7 +17,7 @@ import {
   describeAttestationCertificate,
   describeAuthenticatorData,
 } from '@/logic/advanced/credential-display/registration-view.js';
-import { HYDRATE_TEXT, hydrateCredentialFromServer } from '@/logic/advanced/credentials/hydrate.js';
+import { HYDRATE_TEXT, hydrateCredentialFromServer } from '@/logic/credentials/hydrate.js';
 import { certificateSummary } from '@/logic/mds/explorer/certificate.js';
 import { fetchCredentialArtifact } from '@/logic/credentials/storage/artifacts-client.js';
 import { updateAdvancedCredentialRegistrationSnapshot } from '@/logic/credentials/storage/records.js';

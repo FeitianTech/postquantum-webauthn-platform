@@ -5,8 +5,8 @@ import {
     bufferSourceToUint8Array,
     hexToUint8Array,
     normalizeToHex
-} from '../../shared/utils/binary.js';
-import { base64UrlToBytes, bytesToBase64, bytesToBase64Url } from '../../shared/utils/base64.js';
+} from '../shared/utils/binary.js';
+import { base64UrlToBytes, bytesToBase64, bytesToBase64Url } from '../shared/utils/base64.js';
 
 const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

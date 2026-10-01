@@ -10,14 +10,14 @@ import {
     bytesToBase64Url,
 } from '../../../shared/utils/base64.js';
 import {hexToGuid} from '../../../shared/utils/binary.js';
-import {resolveCredentialAlgorithmIdentifier} from '../../credentials/algorithm-tag.js';
+import {resolveCredentialAlgorithmIdentifier} from '../../../credentials/algorithm-tag.js';
 import {
     deriveAaguidDisplayValues,
     deriveAaguidFromCredentialData,
     extractMinPinLengthValue,
     getCoseMapValue,
     normaliseAaguidValue,
-} from '../../credentials/utils.js';
+} from '../../../credentials/utils.js';
 import {
     computeCredentialAaguidMatchStatus,
     normaliseAttestationResultValue,

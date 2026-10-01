@@ -5,7 +5,7 @@ import {
   describeCredentialAlgorithmWith,
   resolveCredentialAlgorithmIdentifier,
 } from './algorithm-tag.js';
-import { describeCoseAlgorithm } from '../cose-labels.js';
+import { describeCoseAlgorithm } from './cose-labels.js';
 import { goldenAnswers } from '@/test/logic/simple/ceremony-answers.js';
 
 // The saved record register-complete answers, as the characterization goldens hold it.

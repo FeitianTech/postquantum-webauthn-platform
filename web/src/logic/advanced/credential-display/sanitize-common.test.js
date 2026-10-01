@@ -9,7 +9,7 @@ import {
   stripCertificateCollections,
   stripSignatureFormatting,
 } from './sanitize-common.js';
-import { advancedComplete, registration } from '@/test/logic/advanced/credentials/registration-detail-answers.js';
+import { advancedComplete, registration } from '@/test/logic/credentials/registration-detail-answers.js';
 
 // What the registration view leaves out of the data it shows
 // (advanced/credential-display/sanitize-common.js).

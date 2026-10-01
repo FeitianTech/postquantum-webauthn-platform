@@ -12,7 +12,7 @@ import {
     extractHexFromJsonFormat,
     getCredentialIdHex,
     getCredentialUserHandleHex,
-} from '../credentials/utils.js';
+} from '../../credentials/utils.js';
 import { ALGORITHM_OPTIONS } from './algorithm-options.js';
 
 /**

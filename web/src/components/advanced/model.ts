@@ -29,9 +29,9 @@ import {
   enforceAuthenticatorAttachmentWithHints,
   ensureAuthenticationHintsAllowed,
 } from '@/logic/advanced/auth/hint-rules.js';
-import { describeCoseAlgorithm } from '@/logic/advanced/cose-labels.js';
-import { describeCredentialAlgorithmWith } from '@/logic/advanced/credentials/algorithm-tag.js';
-import { getCredentialIdHex, getStoredCredentialAttachment } from '@/logic/advanced/credentials/utils.js';
+import { describeCoseAlgorithm } from '@/logic/credentials/cose-labels.js';
+import { describeCredentialAlgorithmWith } from '@/logic/credentials/algorithm-tag.js';
+import { getCredentialIdHex, getStoredCredentialAttachment } from '@/logic/credentials/utils.js';
 import { decodePayloadThroughApi } from '@/logic/advanced/credential-display/decode-payload.js';
 import { keepRegistrationSnapshot } from '@/logic/advanced/credential-display/registration-snapshot.js';
 import { createRegistrationState } from '@/logic/advanced/credential-display/registration-state.js';

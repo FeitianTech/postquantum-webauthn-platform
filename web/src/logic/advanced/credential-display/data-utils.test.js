@@ -6,7 +6,7 @@ import {
   collectTruthyEntries,
   normalizeClientDataString,
 } from './data-utils.js';
-import { registration } from '@/test/logic/advanced/credentials/registration-detail-answers.js';
+import { registration } from '@/test/logic/credentials/registration-detail-answers.js';
 
 // The registration view's small helpers (advanced/credential-display/data-utils.js).
 

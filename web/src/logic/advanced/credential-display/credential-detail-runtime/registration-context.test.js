@@ -12,7 +12,7 @@ import {
   pickFirstObject,
   pickFirstString,
 } from './helpers.js';
-import { advancedArtifact, attestationDecodeAnswer, simpleRecord } from '@/test/logic/advanced/credentials/registration-detail-answers.js';
+import { advancedArtifact, attestationDecodeAnswer, simpleRecord } from '@/test/logic/credentials/registration-detail-answers.js';
 
 // What a saved credential's registration view is built from, read from the
 // record under each name it may use (credential-detail-runtime/registration-context.js

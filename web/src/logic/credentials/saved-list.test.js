@@ -11,7 +11,7 @@ import {
 } from './saved-list.js';
 import { goldenAnswers } from '@/test/logic/simple/ceremony-answers.js';
 
-// The saved-credential list both tabs show (advanced/credentials/saved-list.js).
+// The saved-credential list both tabs show (credentials/saved-list.js).
 
 const STORED = goldenAnswers('simple-register-es256')[1].body.storedCredential;
 

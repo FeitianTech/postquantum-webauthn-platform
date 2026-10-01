@@ -1,17 +1,17 @@
 // The saved credentials' logic comes from the modules in src/logic: the storage
 // (credentials/storage/records.js, the one localStorage array both tabs read and
 // write), what a card
-// shows (advanced/credentials/saved-list.js and the helpers it is given),
-// deleting and clearing (advanced/credentials/delete-flow.js). These are the
+// shows (credentials/saved-list.js and the helpers it is given),
+// deleting and clearing (credentials/delete-flow.js). These are the
 // types the components read them through.
-import { describeCoseAlgorithm } from '@/logic/advanced/cose-labels.js';
-import { describeCredentialAlgorithmTagWith } from '@/logic/advanced/credentials/algorithm-tag.js';
+import { describeCoseAlgorithm } from '@/logic/credentials/cose-labels.js';
+import { describeCredentialAlgorithmTagWith } from '@/logic/credentials/algorithm-tag.js';
 import {
   CLEAR_ALL_CONFIRMATION,
   clearSavedCredentials,
   deleteConfirmation,
   deleteSavedCredential,
-} from '@/logic/advanced/credentials/delete-flow.js';
+} from '@/logic/credentials/delete-flow.js';
 import {
   SAVED_LIST_TEXT,
   credentialFlashKey,
@@ -19,12 +19,12 @@ import {
   describeCredentialCard,
   listSavedCredentials,
   warmSavedCredentials,
-} from '@/logic/advanced/credentials/saved-list.js';
+} from '@/logic/credentials/saved-list.js';
 import {
   getCredentialIdHex,
   getCredentialUserHandleHex,
   normaliseAaguidValue,
-} from '@/logic/advanced/credentials/utils.js';
+} from '@/logic/credentials/utils.js';
 import { deriveCredentialStatusIndicators } from '@/logic/advanced/credential-display/attestation-context.js';
 import { deleteCredentialArtifact } from '@/logic/credentials/storage/artifacts-client.js';
 import {

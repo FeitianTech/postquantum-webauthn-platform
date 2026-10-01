@@ -2,8 +2,8 @@
 // open: the artifact's fields (read as saved records are read) merged into the
 // record, and its registration snapshot kept as far as the sanitiser allows and
 // saved back. DOM-free: both interfaces use it, each giving its own storage.
-import {migrateStoredRecord} from '../../credentials/storage/local/record-migration.js';
-import {sanitiseRegistrationDetailSnapshot} from '../../credentials/storage/local/snapshot-sanitize.js';
+import {migrateStoredRecord} from './storage/local/record-migration.js';
+import {sanitiseRegistrationDetailSnapshot} from './storage/local/snapshot-sanitize.js';
 
 export const HYDRATE_TEXT = Object.freeze({
     failed: 'Unable to fetch credential artifact',

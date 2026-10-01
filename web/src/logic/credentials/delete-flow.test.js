@@ -8,7 +8,7 @@ import {
   deleteSavedCredential,
 } from './delete-flow.js';
 
-// Deleting a saved credential and clearing them all (advanced/credentials/delete-flow.js):
+// Deleting a saved credential and clearing them all (credentials/delete-flow.js):
 // what is asked, in what order, and what each outcome says.
 
 const SIMPLE = { type: 'simple', credentialIdBase64Url: 'AQID', email: 'alice' };

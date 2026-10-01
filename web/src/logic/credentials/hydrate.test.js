@@ -4,16 +4,16 @@ import {
   HYDRATE_TEXT,
   hydrateCredentialFromServer,
 } from './hydrate.js';
-import { needsArtifact } from '../credential-display/credential-detail-runtime/compose.js';
+import { needsArtifact } from '../advanced/credential-display/credential-detail-runtime/compose.js';
 import {
   composeRegistration,
   registrationSnapshotPayload,
-} from '../credential-display/registration-view.js';
-import { createRegistrationState } from '../credential-display/registration-state.js';
-import { sanitiseRegistrationDetailSnapshot } from '../../credentials/storage/local/snapshot-sanitize.js';
-import { advancedArtifact, advancedRecord, recordedDecoder, simpleRecord } from '@/test/logic/advanced/credentials/registration-detail-answers.js';
+} from '../advanced/credential-display/registration-view.js';
+import { createRegistrationState } from '../advanced/credential-display/registration-state.js';
+import { sanitiseRegistrationDetailSnapshot } from './storage/local/snapshot-sanitize.js';
+import { advancedArtifact, advancedRecord, recordedDecoder, simpleRecord } from '@/test/logic/credentials/registration-detail-answers.js';
 
-// A saved advanced credential completed from its server artifact (advanced/credentials/hydrate.js).
+// A saved advanced credential completed from its server artifact (credentials/hydrate.js).
 
 afterEach(() => {
   vi.restoreAllMocks();

@@ -2,7 +2,7 @@ import {hexToGuid} from '../../shared/utils/binary.js';
 import {
     deriveAaguidFromCredentialData,
     normaliseAaguidValue,
-} from '../credentials/utils.js';
+} from '../../credentials/utils.js';
 import {
     collectCredentialCertificates,
     extractAaguidFromCertificateEntries,
