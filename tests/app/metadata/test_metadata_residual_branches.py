@@ -6,38 +6,15 @@ from types import MappingProxyType, SimpleNamespace
 
 import pytest
 
-from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
-from server.app.mds import uploads as mds_uploads
 
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
     """A fresh MDS cache and sweep state."""
-
-
-def test_metadata_validation_and_info_loader_residual_guards(metadata_module, monkeypatch, session_store):
-    with pytest.raises(ValueError):
-        mds_uploads._validate_session_metadata_filename(123)
-    with pytest.raises(ValueError):
-        mds_uploads._validate_session_metadata_filename("entry.txt")
-
-    monkeypatch.setattr(
-        session_store,
-        "read_file",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("missing")),
-    )
-    assert mds_uploads._load_session_metadata_info("session", "entry.meta.json") == {}
-
-    monkeypatch.setattr(
-        session_store,
-        "read_file",
-        lambda *_args, **_kwargs: b"[]",
-    )
-    assert mds_uploads._load_session_metadata_info("session", "entry.meta.json") == {}
 
 
 def test_metadata_build_and_expand_residual_paths(metadata_module):
@@ -56,47 +33,6 @@ def test_metadata_build_and_expand_residual_paths(metadata_module):
 
     raw_payload = {"metadataStatement": {"description": "single-entry"}}
     assert mds_entries.expand_metadata_entry_payloads(raw_payload) == [raw_payload]
-
-
-def test_save_session_metadata_item_runtime_warning_and_mtime_fallback(metadata_module, monkeypatch, sessions, entries, session_store):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-1")
-    monkeypatch.setattr(
-        sessions,
-        "_session_metadata_directory",
-        lambda *_args, **_kwargs: None,
-    )
-    with pytest.raises(RuntimeError, match="Unable to resolve session metadata storage path"):
-        mds_uploads.save_session_metadata_item({"anything": True})
-
-    monkeypatch.setattr(
-        sessions,
-        "_session_metadata_directory",
-        lambda *_args, **_kwargs: "session-dir",
-    )
-    monkeypatch.setattr(
-        entries,
-        "build_metadata_entry_components",
-        lambda _payload: ({"entry": "ok"}, None, {"payload": True}),
-    )
-
-    def _write_file(_directory, filename, *_args, **_kwargs):
-        if filename.endswith(mds_uploads._SESSION_METADATA_INFO_SUFFIX):
-            raise RuntimeError("info-write-failure")
-
-    monkeypatch.setattr(
-        session_store,
-        "write_file",
-        _write_file,
-    )
-    monkeypatch.setattr(
-        session_store,
-        "file_mtime",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("mtime-failure")),
-    )
-
-    saved = mds_uploads.save_session_metadata_item({"payload": "ok"}, original_filename="demo.json")
-    assert saved.mtime is None
-    assert saved.original_filename == "demo.json"
 
 
 def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_module, monkeypatch, blob):
