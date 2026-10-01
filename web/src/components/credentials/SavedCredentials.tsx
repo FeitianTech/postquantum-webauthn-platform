@@ -18,7 +18,7 @@ const NOTICE_TONES = {
 
 type Question = { kind: 'one'; row: CredentialRowView; from: HTMLButtonElement } | { kind: 'all'; from: HTMLButtonElement };
 
-export type CredentialDeletion = {
+type CredentialDeletion = {
   saved: SavedCredentialsState;
   listRef: RefObject<HTMLUListElement | null>;
   /** Asks before deleting one credential, or all of them, from the button pressed. */

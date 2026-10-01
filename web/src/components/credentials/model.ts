@@ -42,10 +42,10 @@ import {
 /** A saved credential as the list holds it (the stored record, typed, with its ids in hex). */
 export type SavedCredential = { type: 'simple' | 'advanced'; [field: string]: unknown };
 
-export type CredentialCheck = { label: string; value: boolean | null };
+type CredentialCheck = { label: string; value: boolean | null };
 
 /** What a row shows. */
-export type CredentialCardView = {
+type CredentialCardView = {
   name: string;
   checks: CredentialCheck[];
   tags: string[];

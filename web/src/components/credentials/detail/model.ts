@@ -27,13 +27,13 @@ import type { CertificateSummary } from '@/components/mds/entryModel';
 import type { SavedCredential } from '../model';
 
 export type ValueKind = 'true' | 'false' | 'missing' | 'other';
-export type DescribedValue = { kind: ValueKind; text: string };
+type DescribedValue = { kind: ValueKind; text: string };
 export type Check = { label: string; value: unknown; rootChecks: { label: string; value: unknown }[] | null };
 export type Identifier =
   | { title: string; spellings: { label: string; value: string }[]; stored?: undefined; note?: undefined }
   | { title: string; stored: string; note: string; spellings?: undefined };
 
-export type DetailSectionsView = {
+type DetailSectionsView = {
   properties: {
     title: string;
     discoverable: unknown;
@@ -49,7 +49,7 @@ export type DetailSectionsView = {
   publicKey: { title: string; lines: { label: string; value: string }[] } | null;
 };
 
-export type AttestationBody = { kind: 'json' | 'placeholder' | 'error'; text: string };
+type AttestationBody = { kind: 'json' | 'placeholder' | 'error'; text: string };
 export type AttestationView = {
   body: AttestationBody;
   certificates: { index: number; title: string }[];

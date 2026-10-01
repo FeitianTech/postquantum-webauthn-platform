@@ -24,7 +24,7 @@ function bare(label: string) {
 }
 
 /** A property's or a check's value: true, false, N/A or as written, with its tone and mark. */
-export function ValueChip({ value }: { value: unknown }) {
+function ValueChip({ value }: { value: unknown }) {
   const described = valueOf(value);
   return (
     <StatusChip tone={TONES[described.kind]} data-value={described.kind}>

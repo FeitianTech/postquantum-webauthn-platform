@@ -18,9 +18,9 @@ import {
 
 // How long a row keeps the tint of the ceremony it was just used in (the current
 // cards' flash).
-export const FLASH_MS = 2200;
+const FLASH_MS = 2200;
 
-export type ListNotice = { tone: Exclude<ListTone, 'success'>; text: string };
+type ListNotice = { tone: Exclude<ListTone, 'success'>; text: string };
 export type RowFlash = { key: string; variant: 'success' | 'failure' };
 
 export type SavedCredentialsState = {

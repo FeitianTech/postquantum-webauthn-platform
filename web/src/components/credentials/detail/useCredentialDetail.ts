@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { SavedCredential } from '../model';
 import { type CredentialDetail, type RegistrationState, compose, hydrate, needsItsArtifact } from './model';
 
-export type DetailPhase =
+type DetailPhase =
   | { phase: 'loading' }
   | { phase: 'ready'; detail: CredentialDetail; state: RegistrationState; hydrationFailed: boolean };
 
