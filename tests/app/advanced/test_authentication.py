@@ -86,3 +86,16 @@ def test_begin_names_no_hints_when_the_request_has_none():
 
     assert response.status_code == 200, response.get_json()
     assert "hints" not in response.get_json()["publicKey"]
+
+
+def test_begin_refuses_an_extension_value_it_cannot_read():
+    authenticator = Authenticator(credential_id=b"\x04" * 32)
+
+    response = begin(
+        entry_app().test_client(),
+        [authenticator.stored_credential_entry()],
+        extensions={"largeBlob": {"write": "not hex"}},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "Invalid extension value: input is not hexadecimal"}

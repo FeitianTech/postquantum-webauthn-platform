@@ -66,3 +66,10 @@ def test_begin_gives_the_browser_the_attestation_formats_the_request_prefers():
 
     assert response.status_code == 200, response.get_json()
     assert response.get_json()["publicKey"]["attestationFormats"] == ["packed", "tpm"]
+
+
+def test_begin_refuses_an_extension_value_it_cannot_read():
+    response = _begin({"extensions": {"prf": {"eval": {"first": "not hex"}}}})
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "Invalid extension value: input is not hexadecimal"}

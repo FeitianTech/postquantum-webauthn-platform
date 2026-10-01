@@ -79,7 +79,10 @@ def advanced_authenticate_begin():
         record["data"] for record in stored_records if record.get("data") is not None
     ])
 
-    processed_extensions = assertion_options.process_assertion_extensions(public_key.get("extensions", {}))
+    try:
+        processed_extensions = assertion_options.process_assertion_extensions(public_key.get("extensions", {}))
+    except ValueError as exc:
+        return jsonify({"error": f"Invalid extension value: {exc}"}), 400
 
     credentials_argument: list[Any] | None = credentials_for_begin if credentials_for_begin else None
     options, state = temp_server.authenticate_begin(

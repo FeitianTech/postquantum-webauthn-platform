@@ -184,7 +184,10 @@ def advanced_register_begin():
     )
 
     exclude_list = registration_options.build_exclude_list(public_key)
-    processed_extensions = registration_options.build_processed_extensions(public_key)
+    try:
+        processed_extensions = registration_options.build_processed_extensions(public_key)
+    except ValueError as exc:
+        return jsonify({"error": f"Invalid extension value: {exc}"}), 400
 
     options, state = temp_server.register_begin(
         user_entity,
