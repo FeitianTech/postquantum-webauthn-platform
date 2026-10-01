@@ -19,8 +19,10 @@ from server.app.webauthn import cose_algorithms
         ("Experimental ML-DSA-65", -49),
         # What is in parentheses is a comment on the name.
         ("ES256 (ECDSA)", -7),
+        ("WebAuthn: RS256 (RSASSA)", -257),
         # No name it knows: the last number in the text.
         ("fido custom alg (-12345)", -12345),
+        ("SHA-256 (RS256)", 256),
     ],
 )
 def test_an_algorithm_is_read_from_a_number_or_a_name(value, expected):

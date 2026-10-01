@@ -3,7 +3,8 @@
 Both ceremonies read the algorithm a request or a stored credential gives with
 ``coerce_cose_algorithm``; names are matched after ``normalise_name`` drops
 punctuation and a ``FIDO_ALG_`` / ``COSE_ALG_`` prefix, then as a suffix, so
-"WebAuthn: RSASSA-PKCS1-v1_5 w/ SHA-256 (RS256)" still reads as -257.
+"WebAuthn: RS256 (RSASSA)" reads as -257. What follows "(" is a comment; text
+that names no algorithm gives its last number, so "SHA-256 (RS256)" reads as 256.
 """
 from __future__ import annotations
 
