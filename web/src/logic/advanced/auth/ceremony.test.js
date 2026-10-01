@@ -499,7 +499,7 @@ describe('registerAdvancedCredential', () => {
     expect(sent(0).body).toEqual(EVERYTHING_REQUEST);
     const { extensions } = authenticator.create.mock.calls[0][0].publicKey;
     expect(extensions).toEqual({
-      credBlob: { $base64url: 'YmxvYg' },
+      credBlob: 'YmxvYg',
       credProps: true,
       credentialProtectionPolicy: 'userVerificationOptionalWithCredentialIDList',
       enforceCredentialProtectionPolicy: true,

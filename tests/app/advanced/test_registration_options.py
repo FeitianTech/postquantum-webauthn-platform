@@ -73,3 +73,8 @@ def test_attestation_formats_are_the_text_items_of_the_requests_list():
     assert registration_options.attestation_formats({"attestationFormats": ["none", 1, "packed"]}) == ["none", "packed"]
     assert registration_options.attestation_formats({"attestationFormats": "packed"}) == []
     assert registration_options.attestation_formats({}) == []
+
+
+@pytest.mark.parametrize("cred_blob", [{"$base64url": "YmxvYg"}, {"$hex": "626c6f62"}, "626c6f62"])
+def test_a_cred_blob_is_given_to_the_browser_as_base64url(cred_blob):
+    assert _begin(extensions={"credBlob": cred_blob})["extensions"] == {"credBlob": "YmxvYg"}

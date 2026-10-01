@@ -130,7 +130,7 @@
     ],
     [
      "Content-Length",
-     "1170"
+     "1155"
     ],
     [
      "X-Content-Type-Options",
@@ -290,7 +290,7 @@
      }
     }
    ],
-   "bodySha256": "ec8477d99256fdcd389af95a4e85b22c90fed0e647cfb774e2b9a6292c554488",
+   "bodySha256": "0d5d4623f30e910906d6c9d0792d61fe0ec770749c7b9cf71f854d502e8524a6",
    "body": {
     "publicKey": {
      "attestation": "direct",
@@ -312,9 +312,7 @@
       }
      ],
      "extensions": {
-      "credBlob": {
-       "$base64url": "YmxvYg"
-      },
+      "credBlob": "YmxvYg",
       "credProps": true,
       "credentialProtectionPolicy": "userVerificationOptionalWithCredentialIDList",
       "enforceCredentialProtectionPolicy": true,

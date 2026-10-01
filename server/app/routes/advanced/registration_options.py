@@ -207,6 +207,9 @@ def build_processed_extensions(public_key: Mapping[str, Any]) -> dict[str, Any]:
             processed_extensions["largeBlob"] = {"support": ext_value} if isinstance(ext_value, str) else ext_value
         elif ext_name == "prf":
             processed_extensions["prf"] = _prf_extension(ext_value)
+        elif ext_name == "credBlob":
+            # Bytes: the editor's wrapper read, so the browser is given base64url.
+            processed_extensions["credBlob"] = client_binary.read_request_field(ext_value)
         else:
             processed_extensions[ext_name] = ext_value
 
