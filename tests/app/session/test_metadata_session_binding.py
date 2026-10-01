@@ -33,7 +33,7 @@ def session_env(monkeypatch, tmp_path):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
     monkeypatch.setattr(visitor_session.CLEANUP, "last_run", 0.0)
 
-    return entry_app(), mds_uploads
+    return entry_app()
 
 
 def _entry(description: str) -> dict:
@@ -80,7 +80,7 @@ def _custom_items(app, cookie_value=None):
 
 
 def test_forged_plaintext_cookie_cannot_reach_another_namespace(session_env):
-    app, mds_uploads = session_env
+    app = session_env
     _seed_victim(app, mds_uploads, "victim-namespace")
 
     with app.test_request_context("/"):
@@ -92,7 +92,7 @@ def test_forged_plaintext_cookie_cannot_reach_another_namespace(session_env):
 
 
 def test_forged_cookie_cannot_write_into_another_namespace(session_env):
-    app, mds_uploads = session_env
+    app = session_env
     _seed_victim(app, mds_uploads, "victim-namespace")
 
     with app.test_request_context(
@@ -110,7 +110,7 @@ def test_forged_cookie_cannot_write_into_another_namespace(session_env):
 
 
 def test_cookie_signed_with_a_different_secret_is_rejected(session_env):
-    app, mds_uploads = session_env
+    app = session_env
     _seed_victim(app, mds_uploads, "victim-namespace")
 
     forged = itsdangerous.URLSafeTimedSerializer(
@@ -121,7 +121,7 @@ def test_cookie_signed_with_a_different_secret_is_rejected(session_env):
 
 
 def test_cookie_signed_with_the_wrong_salt_is_rejected(session_env):
-    app, mds_uploads = session_env
+    app = session_env
     _seed_victim(app, mds_uploads, "victim-namespace")
 
     forged = itsdangerous.URLSafeTimedSerializer(
@@ -132,7 +132,7 @@ def test_cookie_signed_with_the_wrong_salt_is_rejected(session_env):
 
 
 def test_tampered_signature_is_rejected(session_env):
-    app, mds_uploads = session_env
+    app = session_env
     _seed_victim(app, mds_uploads, "victim-namespace")
 
     sealed = _seal(app, "victim-namespace")
@@ -145,7 +145,7 @@ def test_tampered_signature_is_rejected(session_env):
     "value", ["", "   ", ".hidden", "../escape", "not-base64-at-all", "a.b.c"]
 )
 def test_malformed_cookies_never_raise_and_never_bind(session_env, value):
-    app, _metadata = session_env
+    app = session_env
     assert _custom_items(app, value) == []
 
 
@@ -155,7 +155,7 @@ def test_malformed_cookies_never_raise_and_never_bind(session_env, value):
 
 
 def test_returning_visitor_keeps_their_namespace_via_the_signed_cookie(session_env):
-    app, mds_uploads = session_env
+    app = session_env
     _seed_victim(app, mds_uploads, "victim-namespace")
 
     # A brand-new client (no Flask session cookie at all) carrying only the
@@ -168,7 +168,7 @@ def test_returning_visitor_keeps_their_namespace_via_the_signed_cookie(session_e
 
 
 def test_signed_flask_session_takes_precedence_over_the_cookie(session_env):
-    app, mds_uploads = session_env
+    app = session_env
 
     with app.test_request_context(
         "/", headers={"Cookie": f"fido.mds.session={_seal(app, 'from-cookie')}"}
@@ -178,7 +178,7 @@ def test_signed_flask_session_takes_precedence_over_the_cookie(session_env):
 
 
 def test_issued_cookie_is_signed_httponly_and_round_trips(session_env):
-    app, mds_uploads = session_env
+    app = session_env
 
     client = app.test_client()
     response = client.get("/api/mds/metadata/custom")
@@ -203,7 +203,7 @@ def test_issued_cookie_is_signed_httponly_and_round_trips(session_env):
 
 
 def test_fresh_visitor_gets_an_unguessable_namespace(session_env):
-    app, mds_uploads = session_env
+    app = session_env
 
     with app.test_request_context("/"):
         first = visitor_session.ensure_id()
@@ -218,7 +218,7 @@ def test_issued_cookie_is_same_site_lax_over_https(session_env):
     # The metadata upload is a multipart form another site can post. Neither the
     # session cookie nor the recovery cookie may ride along on that request, or
     # the upload lands in the visitor's namespace.
-    app, _metadata = session_env
+    app = session_env
 
     client = app.test_client()
     response = client.get("/api/mds/metadata/custom", base_url="https://localhost")

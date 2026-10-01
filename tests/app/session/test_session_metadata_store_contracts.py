@@ -15,11 +15,10 @@ def session_store_module(monkeypatch, tmp_path):
 
     monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(session_dir))
 
-    return session_store, session_dir
+    return session_dir
 
 
 def test_local_write_read_list_delete_roundtrip(session_store_module, monkeypatch):
-    session_store, _ = session_store_module
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
 
     session_store.write_file("session-local", "entry.json", b"{\"ok\":true}")
@@ -36,7 +35,6 @@ def test_local_write_read_list_delete_roundtrip(session_store_module, monkeypatc
 
 
 def test_local_touch_last_access_with_explicit_timestamp(session_store_module, monkeypatch):
-    session_store, _ = session_store_module
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
 
     expected_timestamp = 1_700_000_123.0
@@ -48,7 +46,7 @@ def test_local_touch_last_access_with_explicit_timestamp(session_store_module, m
 
 
 def test_local_cleanup_removes_only_stale_non_hidden_sessions(session_store_module, monkeypatch):
-    session_store, session_dir = session_store_module
+    session_dir = session_store_module
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
     monkeypatch.setattr(visitor_session, "CLEANUP", visitor_session.CleanupState())
 
@@ -80,7 +78,6 @@ def test_local_cleanup_removes_only_stale_non_hidden_sessions(session_store_modu
 
 
 def test_local_cleanup_respects_cleanup_interval_guard(session_store_module, monkeypatch):
-    session_store, _ = session_store_module
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
     monkeypatch.setattr(visitor_session, "CLEANUP", visitor_session.CleanupState(last_run=2_000.0))
 
@@ -94,7 +91,6 @@ def test_local_cleanup_respects_cleanup_interval_guard(session_store_module, mon
 
 
 def test_gcs_touch_last_access_uploads_json_marker(session_store_module, monkeypatch):
-    session_store, _ = session_store_module
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     uploads = []
@@ -116,7 +112,6 @@ def test_gcs_touch_last_access_uploads_json_marker(session_store_module, monkeyp
 
 
 def test_gcs_resolve_last_access_prefers_marker_timestamp(session_store_module, monkeypatch):
-    session_store, _ = session_store_module
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     monkeypatch.setattr(
@@ -130,7 +125,6 @@ def test_gcs_resolve_last_access_prefers_marker_timestamp(session_store_module, 
 
 
 def test_gcs_resolve_last_access_falls_back_to_blob_timestamp(session_store_module, monkeypatch):
-    session_store, _ = session_store_module
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     monkeypatch.setattr(session_store, "download_bytes", lambda _blob_name: b"not-json")
@@ -140,7 +134,6 @@ def test_gcs_resolve_last_access_falls_back_to_blob_timestamp(session_store_modu
 
 
 def test_gcs_list_files_filters_last_access_and_folder_markers(session_store_module, monkeypatch):
-    session_store, _ = session_store_module
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     prefix = session_store._metadata_prefix("session-gcs") + "/"
@@ -157,7 +150,6 @@ def test_gcs_list_files_filters_last_access_and_folder_markers(session_store_mod
 
 
 def test_gcs_delete_session_deletes_all_session_blobs(session_store_module, monkeypatch):
-    session_store, _ = session_store_module
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     prefix = session_store._user_root_prefix("session-gcs") + "/"
@@ -182,7 +174,6 @@ def test_gcs_delete_session_deletes_all_session_blobs(session_store_module, monk
 
 
 def test_gcs_write_file_uploads_and_updates_last_access(session_store_module, monkeypatch):
-    session_store, _ = session_store_module
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     uploads = []
@@ -211,7 +202,6 @@ def test_gcs_write_file_uploads_and_updates_last_access(session_store_module, mo
 
 
 def test_gcs_file_exists_proxies_blob_exists(session_store_module, monkeypatch):
-    session_store, _ = session_store_module
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     monkeypatch.setattr(

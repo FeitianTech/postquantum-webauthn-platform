@@ -23,7 +23,7 @@ def session_metadata_env(monkeypatch, tmp_path, metadata_state):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
 
 
-    return entry_app(), mds_uploads
+    return entry_app()
 
 
 def _sample_entry(description: str) -> dict:
@@ -36,7 +36,7 @@ def _sample_entry(description: str) -> dict:
 
 
 def test_session_metadata_is_isolated(session_metadata_env):
-    app, mds_uploads = session_metadata_env
+    app = session_metadata_env
 
     with app.test_request_context("/"):
         first_session_id = visitor_session.ensure_id()
@@ -58,8 +58,6 @@ def test_session_metadata_is_isolated(session_metadata_env):
 
 
 def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypatch):
-    _, mds_uploads = session_metadata_env
-
     calls = []
     monkeypatch.setattr(visitor_session, "_touch_last_access", lambda sid: calls.append(("touch", sid)))
     monkeypatch.setattr(visitor_session, "schedule_cleanup", lambda: calls.append(("schedule", None)))

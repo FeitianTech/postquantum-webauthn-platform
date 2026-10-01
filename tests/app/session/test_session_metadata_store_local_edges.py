@@ -20,12 +20,10 @@ def session_store_local(monkeypatch, tmp_path):
     monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(session_dir))
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
 
-    return session_store, session_dir
+    return session_dir
 
 
 def test_user_root_prefix_rejects_missing_or_blank_session_id(session_store_local):
-    session_store, _ = session_store_local
-
     with pytest.raises(ValueError):
         session_store._user_root_prefix(None)
     with pytest.raises(ValueError):
@@ -33,29 +31,21 @@ def test_user_root_prefix_rejects_missing_or_blank_session_id(session_store_loca
 
 
 def test_base_prefix_returns_empty_for_blank_folder_prefix(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(storage_common, "USER_FOLDER_PREFIX", "   ")
 
     assert session_store._base_prefix() == ""
 
 
 def test_normalise_local_session_id_rejects_non_string_values(session_store_local):
-    session_store, _ = session_store_local
-
     with pytest.raises(ValueError):
         session_store._normalise_local_session_id(123)
 
 
 def test_local_session_directory_returns_none_for_invalid_ids(session_store_local):
-    session_store, _ = session_store_local
-
     assert session_store._local_session_directory("../escape") is None
 
 
 def test_local_session_directory_logs_and_raises_on_create_failure(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     errors = []
     monkeypatch.setattr(session_store.logger, "error", lambda *args, **kwargs: errors.append((args, kwargs)))
     monkeypatch.setattr(
@@ -71,8 +61,6 @@ def test_local_session_directory_logs_and_raises_on_create_failure(session_store
 
 
 def test_local_touch_last_access_swallows_os_errors(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(
         session_store.os,
         "makedirs",
@@ -83,8 +71,6 @@ def test_local_touch_last_access_swallows_os_errors(session_store_local, monkeyp
 
 
 def test_local_resolve_last_access_uses_latest_entry_mtime_when_marker_missing(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     marker_suffix = os.path.join("session-a", session_store._LAST_ACCESS_BLOB)
 
     def _fake_getmtime(path):
@@ -113,8 +99,6 @@ def test_local_resolve_last_access_uses_latest_entry_mtime_when_marker_missing(s
 
 
 def test_local_resolve_last_access_falls_back_to_directory_mtime(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     marker_suffix = os.path.join("session-a", session_store._LAST_ACCESS_BLOB)
 
     def _fake_getmtime(path):
@@ -136,8 +120,6 @@ def test_local_resolve_last_access_falls_back_to_directory_mtime(session_store_l
 
 
 def test_local_resolve_last_access_returns_none_when_scandir_fails(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(session_store.os.path, "getmtime", lambda _path: (_ for _ in ()).throw(OSError("no marker")))
     monkeypatch.setattr(
         session_store.os,
@@ -149,7 +131,7 @@ def test_local_resolve_last_access_returns_none_when_scandir_fails(session_store
 
 
 def test_local_cleanup_logs_warning_when_stale_directory_removal_fails(session_store_local, monkeypatch):
-    session_store, session_dir = session_store_local
+    session_dir = session_store_local
 
     stale = session_dir / "stale"
     stale.mkdir()
@@ -178,8 +160,6 @@ def test_local_cleanup_logs_warning_when_stale_directory_removal_fails(session_s
 
 
 def test_local_note_activity_skips_touch_when_directory_missing(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     touched = []
 
     monkeypatch.setattr(session_store, "_local_session_directory", lambda _sid: "/tmp/missing")
@@ -192,8 +172,6 @@ def test_local_note_activity_skips_touch_when_directory_missing(session_store_lo
 
 
 def test_ensure_session_uses_touch_last_access_in_gcs_mode(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     touched = []
     monkeypatch.setattr(session_store, "touch_last_access", lambda sid: touched.append(sid))
@@ -204,8 +182,6 @@ def test_ensure_session_uses_touch_last_access_in_gcs_mode(session_store_local, 
 
 
 def test_list_sessions_gcs_extracts_unique_session_ids(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(session_store, "_base_prefix", lambda: "user-data/")
     monkeypatch.setattr(
@@ -218,8 +194,6 @@ def test_list_sessions_gcs_extracts_unique_session_ids(session_store_local, monk
 
 
 def test_list_sessions_gcs_logs_and_returns_empty_on_errors(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(
         session_store,
@@ -235,8 +209,6 @@ def test_list_sessions_gcs_logs_and_returns_empty_on_errors(session_store_local,
 
 
 def test_list_sessions_local_returns_empty_when_directory_unreadable(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(
         session_store.os,
         "listdir",
@@ -247,15 +219,13 @@ def test_list_sessions_local_returns_empty_when_directory_unreadable(session_sto
 
 
 def test_touch_last_access_local_returns_when_session_directory_invalid(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(session_store, "_local_session_directory", lambda *_args, **_kwargs: None)
 
     session_store.touch_last_access("../invalid")
 
 
 def test_touch_last_access_local_with_timestamp_swallows_oserror(session_store_local, monkeypatch):
-    session_store, session_dir = session_store_local
+    session_dir = session_store_local
 
     directory = str(session_dir / "session-a")
     monkeypatch.setattr(session_store, "_local_session_directory", lambda *_args, **_kwargs: directory)
@@ -269,8 +239,6 @@ def test_touch_last_access_local_with_timestamp_swallows_oserror(session_store_l
 
 
 def test_resolve_last_access_gcs_falls_back_when_timestamp_is_not_numeric(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(session_store, "download_bytes", lambda _blob: b'{"timestamp":"bad"}')
     monkeypatch.setattr(session_store, "blob_updated_timestamp", lambda _blob: 7.5)
@@ -279,8 +247,6 @@ def test_resolve_last_access_gcs_falls_back_when_timestamp_is_not_numeric(sessio
 
 
 def test_list_files_gcs_handles_empty_prefix_and_filters_entries(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(session_store, "_metadata_prefix", lambda _sid: "")
     monkeypatch.setattr(
@@ -293,8 +259,6 @@ def test_list_files_gcs_handles_empty_prefix_and_filters_entries(session_store_l
 
 
 def test_list_files_local_handles_invalid_directory_and_os_errors(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(session_store, "_local_session_directory", lambda _sid: None)
     assert session_store.list_files("session-a") == []
 
@@ -308,8 +272,6 @@ def test_list_files_local_handles_invalid_directory_and_os_errors(session_store_
 
 
 def test_list_files_local_filters_non_files(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(session_store, "_local_session_directory", lambda _sid: "/tmp/session-a")
     monkeypatch.setattr(session_store.os, "listdir", lambda _path: ["entry.json", "nested"]) 
     monkeypatch.setattr(session_store.os.path, "isfile", lambda path: path.endswith("entry.json"))
@@ -318,8 +280,6 @@ def test_list_files_local_filters_non_files(session_store_local, monkeypatch):
 
 
 def test_read_file_handles_gcs_and_local_error_paths(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(session_store, "download_bytes", lambda _blob: b"payload")
     assert session_store.read_file("session-a", "entry.json") == b"payload"
@@ -338,8 +298,6 @@ def test_read_file_handles_gcs_and_local_error_paths(session_store_local, monkey
 
 
 def test_write_file_local_raises_for_invalid_session_directory(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(session_store, "_local_session_directory", lambda *_args, **_kwargs: None)
 
     with pytest.raises(ValueError, match="Invalid session identifier"):
@@ -347,8 +305,6 @@ def test_write_file_local_raises_for_invalid_session_directory(session_store_loc
 
 
 def test_delete_file_gcs_updates_last_access(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     deleted = []
@@ -368,8 +324,6 @@ def test_delete_file_gcs_updates_last_access(session_store_local, monkeypatch):
 
 
 def test_delete_file_local_handles_invalid_directory_and_raises_when_requested(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(session_store, "_local_session_directory", lambda _sid: None)
     session_store.delete_file("session-a", "entry.json")
 
@@ -393,8 +347,6 @@ def test_delete_file_local_handles_invalid_directory_and_raises_when_requested(s
 
 
 def test_file_mtime_handles_gcs_and_local_failure_paths(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(session_store, "blob_updated_timestamp", lambda _blob: 123.5)
     assert session_store.file_mtime("session-a", "entry.json") == 123.5
@@ -413,8 +365,6 @@ def test_file_mtime_handles_gcs_and_local_failure_paths(session_store_local, mon
 
 
 def test_delete_session_handles_gcs_empty_prefix_and_local_invalid_directory(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(session_store, "_user_root_prefix", lambda _sid: "")
     monkeypatch.setattr(session_store, "list_blob_names", lambda _prefix: iter(["a", "b"]))
@@ -436,8 +386,6 @@ def test_delete_session_handles_gcs_empty_prefix_and_local_invalid_directory(ses
 
 
 def test_prune_session_second_check_can_skip_delete(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     emptiness = iter([True, False])
     monkeypatch.setattr(session_store, "session_is_empty", lambda _sid: next(emptiness))
 
@@ -458,16 +406,12 @@ def test_prune_session_second_check_can_skip_delete(session_store_local, monkeyp
 
 
 def test_file_exists_returns_false_for_invalid_local_directory(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(session_store, "_local_session_directory", lambda _sid: None)
 
     assert session_store.file_exists("session-a", "entry.json") is False
 
 
 def test_local_resolve_last_access_skips_entries_with_stat_errors_and_returns_none_when_directory_mtime_fails(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     marker_suffix = os.path.join("session-a", session_store._LAST_ACCESS_BLOB)
 
     def _fake_getmtime(path):
@@ -493,8 +437,6 @@ def test_local_resolve_last_access_skips_entries_with_stat_errors_and_returns_no
 
 
 def test_local_cleanup_handles_listdir_oserror_after_interval_elapsed(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(
         session_store.os,
         "listdir",
@@ -507,8 +449,6 @@ def test_local_cleanup_handles_listdir_oserror_after_interval_elapsed(session_st
 
 
 def test_list_sessions_gcs_skips_empty_session_components(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(session_store, "_base_prefix", lambda: "user-data/")
     monkeypatch.setattr(
@@ -521,7 +461,7 @@ def test_list_sessions_gcs_skips_empty_session_components(session_store_local, m
 
 
 def test_list_sessions_local_skips_hidden_and_non_directory_entries(session_store_local):
-    session_store, session_dir = session_store_local
+    session_dir = session_store_local
 
     (session_dir / ".hidden").mkdir()
     (session_dir / "regular-file.txt").write_text("x", encoding="utf-8")
@@ -530,8 +470,6 @@ def test_list_sessions_local_skips_hidden_and_non_directory_entries(session_stor
 
 
 def test_resolve_last_access_gcs_falls_back_when_marker_payload_missing(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(session_store, "download_bytes", lambda _blob: None)
     monkeypatch.setattr(session_store, "blob_updated_timestamp", lambda _blob: 42.0)
@@ -540,8 +478,6 @@ def test_resolve_last_access_gcs_falls_back_when_marker_payload_missing(session_
 
 
 def test_resolve_last_access_local_returns_none_for_invalid_session(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
     monkeypatch.setattr(session_store, "_local_session_directory", lambda _sid: None)
 
@@ -549,8 +485,6 @@ def test_resolve_last_access_local_returns_none_for_invalid_session(session_stor
 
 
 def test_list_files_gcs_skips_empty_remainders(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(session_store, "_metadata_prefix", lambda _sid: "meta")
     monkeypatch.setattr(session_store, "list_blob_names", lambda _prefix: iter(["meta/"]))
@@ -559,8 +493,6 @@ def test_list_files_gcs_skips_empty_remainders(session_store_local, monkeypatch)
 
 
 def test_delete_file_local_swallows_errors_when_missing_ok_true(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(session_store, "_local_session_directory", lambda _sid: "/tmp/session-a")
     monkeypatch.setattr(
         session_store.os,
@@ -578,8 +510,6 @@ def test_delete_file_local_swallows_errors_when_missing_ok_true(session_store_lo
 
 
 def test_session_is_empty_reflects_list_files_results(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     monkeypatch.setattr(session_store, "list_files", lambda _sid: [])
     assert session_store.session_is_empty("session-a") is True
 
@@ -588,8 +518,6 @@ def test_session_is_empty_reflects_list_files_results(session_store_local, monke
 
 
 def test_local_resolve_last_access_keeps_existing_latest_when_next_candidate_is_older(session_store_local, monkeypatch):
-    session_store, _ = session_store_local
-
     marker_suffix = os.path.join("session-a", session_store._LAST_ACCESS_BLOB)
 
     def _fake_getmtime(path):
@@ -620,7 +548,7 @@ def test_local_resolve_last_access_keeps_existing_latest_when_next_candidate_is_
 def test_local_store_creates_its_base_directory_on_first_write(session_store_local, monkeypatch):
     """Importing the store creates nothing; the first write creates the base."""
 
-    session_store, session_dir = session_store_local
+    session_dir = session_store_local
     base = session_dir / "not-created-yet"
     monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(base))
 
