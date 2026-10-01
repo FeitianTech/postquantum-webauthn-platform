@@ -13,7 +13,7 @@ export type CeremonyResultInput = {
   challengeStatus?: string | null;
 };
 
-export type CeremonyResultRow = { label: string; value: string | null; text: string; after: string | null };
-export type CeremonyResultView = { title: string; rows: CeremonyResultRow[]; warning: boolean };
+type CeremonyResultRow = { label: string; value: string | null; text: string; after: string | null };
+type CeremonyResultView = { title: string; rows: CeremonyResultRow[]; warning: boolean };
 
 export const describeResultPanel = describeCeremonyResult as (result: CeremonyResultInput) => CeremonyResultView | null;

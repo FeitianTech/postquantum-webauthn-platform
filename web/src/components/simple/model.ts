@@ -38,7 +38,7 @@ export const CEREMONY_TEXT = SIMPLE_CEREMONY_TEXT as Record<
 /** What the server answered a registration: storedCredential is what this browser keeps. */
 export type RegistrationAnswer = { algo?: string; storedCredential?: Record<string, unknown> | null; [field: string]: unknown };
 export type AuthenticationAnswer = { authenticatedCredentialId?: string; signCount?: number; signCountStatus?: string; [field: string]: unknown };
-export type RefusedAssertion = { text: string; failedCredentialId: string | null; signCountStatus: string | null };
+type RefusedAssertion = { text: string; failedCredentialId: string | null; signCountStatus: string | null };
 
 export type AuthenticationOutcome =
   | { answer: AuthenticationAnswer; failure?: undefined; result: CeremonyResultInput }
