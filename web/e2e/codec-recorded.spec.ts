@@ -35,6 +35,15 @@ const EXPECTED: ExpectedDifference[] = [
     token: /^(rendering|canonical|malformed|skipped|trailing|json|limit|input|ambiguous|ctap)$/,
     reason: "the finding's category, shown as a chip (not in the recording)",
   },
+  // The TPM certificate's extensions: the recording holds cryptography's repr of
+  // each value, which the server now writes as OpenSSL does.
+  {
+    only: 'recorded',
+    section: 'Attestation object',
+    token: /^(<KeyUsage\()?[a-z_]+=(True|False)(\)>)?$/,
+    reason: 'KeyUsage was shown as a Python repr; it is now the usages in words',
+  },
+  { only: 'shown', section: 'Attestation object', token: /^(Digital|Signature)$/, reason: 'KeyUsage in words: Digital Signature' },
 ];
 
 async function betaText(page: Page, input: string, lenient: boolean) {

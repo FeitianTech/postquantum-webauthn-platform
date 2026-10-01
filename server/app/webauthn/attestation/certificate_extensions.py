@@ -80,6 +80,30 @@ def _authority_key_identifier_value(value: x509.AuthorityKeyIdentifier) -> dict[
     return serialized
 
 
+# OpenSSL's names for the key usage bits, in their order (RFC 5280, 4.2.1.3).
+_KEY_USAGES = (
+    ("digital_signature", "Digital Signature"),
+    ("content_commitment", "Non Repudiation"),
+    ("key_encipherment", "Key Encipherment"),
+    ("data_encipherment", "Data Encipherment"),
+    ("key_agreement", "Key Agreement"),
+    ("key_cert_sign", "Certificate Sign"),
+    ("crl_sign", "CRL Sign"),
+)
+
+
+def _key_usage_value(value: x509.KeyUsage) -> str:
+    """The usages the key is for, in OpenSSL's words; encipher and decipher only qualify key agreement."""
+
+    usages = [label for attribute, label in _KEY_USAGES if getattr(value, attribute)]
+    if value.key_agreement:
+        if value.encipher_only:
+            usages.append("Encipher Only")
+        if value.decipher_only:
+            usages.append("Decipher Only")
+    return ", ".join(usages)
+
+
 def _basic_constraints_value(value: x509.BasicConstraints) -> dict[str, Any]:
     serialized: dict[str, Any] = {"CA": "TRUE" if value.ca else "FALSE"}
     if value.path_length is not None:
@@ -188,6 +212,8 @@ def _serialize_extension_value(ext: Any) -> Any:
         return _authority_key_identifier_value(value)
     if isinstance(value, x509.BasicConstraints):
         return _basic_constraints_value(value)
+    if isinstance(value, x509.KeyUsage):
+        return _key_usage_value(value)
     if isinstance(value, (x509.PrecertificateSignedCertificateTimestamps, x509.SignedCertificateTimestamps)):
         return _signed_certificate_timestamps_value(value)
     if isinstance(value, x509.UnrecognizedExtension):

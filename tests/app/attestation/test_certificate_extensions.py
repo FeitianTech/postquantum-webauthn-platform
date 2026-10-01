@@ -68,6 +68,37 @@ def test_basic_constraints_show_the_ca_flag_and_its_path_length():
     assert _shown("2.5.29.19", x509.BasicConstraints(ca=True, path_length=0)) == {"CA": "TRUE", "Path Length": 0}
 
 
+def _key_usage(**chosen: bool) -> x509.KeyUsage:
+    usages = dict.fromkeys(
+        (
+            "digital_signature",
+            "content_commitment",
+            "key_encipherment",
+            "data_encipherment",
+            "key_agreement",
+            "key_cert_sign",
+            "crl_sign",
+            "encipher_only",
+            "decipher_only",
+        ),
+        False,
+    )
+    return x509.KeyUsage(**{**usages, **chosen})
+
+
+@pytest.mark.parametrize(
+    ("usage", "shown"),
+    [
+        (_key_usage(digital_signature=True, key_cert_sign=True, crl_sign=True), "Digital Signature, Certificate Sign, CRL Sign"),
+        (_key_usage(content_commitment=True, key_encipherment=True, data_encipherment=True), "Non Repudiation, Key Encipherment, Data Encipherment"),
+        (_key_usage(key_agreement=True, encipher_only=True), "Key Agreement, Encipher Only"),
+        (_key_usage(key_agreement=True, decipher_only=True), "Key Agreement, Decipher Only"),
+    ],
+)
+def test_key_usage_names_each_usage_in_openssl_words(usage, shown):
+    assert _shown("2.5.29.15", usage) == shown
+
+
 @pytest.mark.parametrize(
     ("oid", "raw", "shown"),
     [

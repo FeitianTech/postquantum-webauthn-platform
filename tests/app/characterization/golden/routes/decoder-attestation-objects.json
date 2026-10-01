@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "33742"
+     "33550"
     ],
     [
      "X-Content-Type-Options",
@@ -43,7 +43,7 @@
     ]
    ],
    "cookies": [],
-   "bodySha256": "022af99cc6efca3ed536084928310ba3894a85bce84b47ad1bccfd66a71c7226",
+   "bodySha256": "adac89a6243ffcdf24cc948127c502d004cdaf26f6bd79ae788821d56cfac099",
    "body": {
     "data": {
      "attestationObject": {
@@ -65,7 +65,7 @@
             "includeOidInHeader": true,
             "name": "keyUsage",
             "oid": "2.5.29.15",
-            "value": "<KeyUsage(digital_signature=True, content_commitment=False, key_encipherment=False, data_encipherment=False, key_agreement=False, key_cert_sign=False, crl_sign=False, encipher_only=False, decipher_only=False)>"
+            "value": "Digital Signature"
            },
            {
             "critical": true,
@@ -910,7 +910,7 @@
     ],
     [
      "Content-Length",
-     "13600"
+     "13465"
     ],
     [
      "X-Content-Type-Options",
@@ -942,7 +942,7 @@
     ]
    ],
    "cookies": [],
-   "bodySha256": "53ab95ae335014b80cc3b5f082cb19f49274a9ba25f43ddde0cbd95845c8cb01",
+   "bodySha256": "1afaf7b5150d600a8127ddf2395c48a5ffb32bf066c3c8321706d78f46ec4d32",
    "body": {
     "data": {
      "attestationObject": {
@@ -972,7 +972,7 @@
             "includeOidInHeader": true,
             "name": "keyUsage",
             "oid": "2.5.29.15",
-            "value": "<KeyUsage(digital_signature=True, content_commitment=True, key_encipherment=True, data_encipherment=True, key_agreement=False, key_cert_sign=False, crl_sign=False, encipher_only=False, decipher_only=False)>"
+            "value": "Digital Signature, Non Repudiation, Key Encipherment, Data Encipherment"
            },
            {
             "critical": false,
@@ -1315,7 +1315,7 @@
     ],
     [
      "Content-Length",
-     "13419"
+     "13227"
     ],
     [
      "X-Content-Type-Options",
@@ -1347,7 +1347,7 @@
     ]
    ],
    "cookies": [],
-   "bodySha256": "f3c72442b6c7466bee4d80ca74f6affea09c2207fe7c883336a9ebae08bdf6d7",
+   "bodySha256": "1714eed139669c8ebbcc1ae2d41ed23c4f3c66ebf68aa37dcb7d5bd178721ad8",
    "body": {
     "data": {
      "attestationObject": {
@@ -1378,7 +1378,7 @@
             "includeOidInHeader": true,
             "name": "keyUsage",
             "oid": "2.5.29.15",
-            "value": "<KeyUsage(digital_signature=True, content_commitment=False, key_encipherment=False, data_encipherment=False, key_agreement=False, key_cert_sign=False, crl_sign=False, encipher_only=False, decipher_only=False)>"
+            "value": "Digital Signature"
            },
            {
             "critical": false,
