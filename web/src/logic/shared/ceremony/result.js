@@ -3,18 +3,18 @@
 // where the challenge came from. DOM-free: the result panel shows this model.
 
 // server/app/webauthn/sign_count.py
-export const SIGN_COUNT_SENTENCES = {
+const SIGN_COUNT_SENTENCES = {
     ok: 'Higher than the last counter the server saw for this credential, as it should be.',
     'not-supported': 'This authenticator keeps no counter: it reported 0, as synced passkeys do, so the counter cannot show whether it was cloned.',
     regressed: 'Not higher than the counter the server stored: the authenticator may have been cloned.',
 };
 
 // server/app/routes/advanced/constants.py and server/app/challenge_registry.py
-export const CHALLENGE_SOURCES = {
+const CHALLENGE_SOURCES = {
     'server-session': 'Issued by this server for this ceremony.',
 };
 
-export const CHALLENGE_STATUSES = {
+const CHALLENGE_STATUSES = {
     fresh: 'First use.',
     replayed: 'Used before: this is a replay.',
     expired: 'Expired before it was used.',
