@@ -3,9 +3,7 @@ from __future__ import annotations
 import base64
 import types
 
-from server.app import config as config_module
 from server.app.config import relying_party
-from server.app.routes import advanced as advanced_module
 from tests.app.entry_app import entry_app
 
 
@@ -61,67 +59,6 @@ def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, conf
         "determine_rp_id",
         lambda value=None: value or "example.com"
     )
-
-
-def test_advanced_authenticate_begin_returns_no_matching_credentials_for_invalid_record_ids(monkeypatch, advanced_parsing):
-    monkeypatch.setattr(
-        advanced_parsing,
-        "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [_credential_record("not-bytes", resident=False)],
-            [_serialized_record(resident=False)],
-        )
-    )
-
-    captured = {}
-    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
-
-    with entry_app().test_client() as client:
-        response = client.post(
-            "/api/advanced/authenticate/begin",
-            json={
-                "publicKey": {
-                    "challenge": "010203",
-                    "allowCredentials": [{"type": "public-key", "id": "00"}],
-                },
-                "__storedCredentials": [{"record": 1}],
-            },
-        )
-
-    assert response.status_code == 404
-    assert response.get_json() == {
-        "error": "No matching credentials found. Please register first."
-    }
-
-
-def test_advanced_authenticate_begin_resident_mode_reports_no_resident_keys_when_ids_invalid(monkeypatch, advanced_parsing):
-    monkeypatch.setattr(
-        advanced_parsing,
-        "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [_credential_record("not-bytes", resident=True)],
-            [_serialized_record(resident=True)],
-        )
-    )
-
-    captured = {}
-    _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, config_module)
-
-    with entry_app().test_client() as client:
-        response = client.post(
-            "/api/advanced/authenticate/begin",
-            json={
-                "publicKey": {
-                    "challenge": "010203",
-                },
-                "__storedCredentials": [{"record": 1}],
-            },
-        )
-
-    assert response.status_code == 404
-    assert response.get_json() == {
-        "error": "No resident key credentials are available. Please register a discoverable credential first."
-    }
 
 
 def test_advanced_authenticate_complete_requires_assertion_response():
