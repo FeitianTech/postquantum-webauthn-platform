@@ -104,14 +104,6 @@ describe('resolveRegistrationSnapshotContext', () => {
     expect(registrationDetailState.attestationObject).toEqual(state.attestationObject);
   });
 
-  it('finds the snapshot under each name records have used', async () => {
-    const { snapshot } = await savedSnapshot('es256');
-    for (const key of ['registration_detail_snapshot', 'registrationDetailCopy', 'registration_detail_copy']) {
-      const context = resolveRegistrationSnapshotContext({ registrationDetailSnapshot: 'markup', [key]: snapshot }, createRegistrationState());
-      expect(context.snapshotState).toBe(snapshot.state);
-    }
-  });
-
   it('reads a snapshot that is its own state', async () => {
     const { snapshot, preparation } = await savedSnapshot('es256');
     const context = resolveRegistrationSnapshotContext({ registrationDetailSnapshot: snapshot.state }, createRegistrationState());

@@ -11,15 +11,13 @@ const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
 const MARKUP = '<section><img src=x onerror="window.__xss=1"></section>';
 
 // A record saved by an earlier version: registration detail stored as composed
-// HTML, in the snapshot and under the raw registrationDetailHtml-style keys.
+// HTML in the snapshot.
 function savedRecord() {
   return {
     type: 'advanced',
     credentialId: 'AQID',
     storageId: 'AQID::storage',
     userName: 'alice',
-    registrationDetailHtml: MARKUP,
-    registration_detail_combined_html: MARKUP,
     registrationDetailSnapshot: {
       schemaVersion: 1,
       html: MARKUP,
@@ -47,8 +45,6 @@ describe('registration markup saved by an earlier version', () => {
     const storage = await loadStored();
     const [record] = storage.getAllAdvancedCredentials();
 
-    expect(record.registrationDetailHtml).toBeUndefined();
-    expect(record.registration_detail_combined_html).toBeUndefined();
     expect(record.registrationDetailSnapshot).toEqual({ schemaVersion: 1, state: { authenticatorDataHex: '0a0b' } });
     expect(record.userName).toBe('alice');
 

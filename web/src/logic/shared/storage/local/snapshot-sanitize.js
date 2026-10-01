@@ -203,7 +203,7 @@ export function sanitiseRegistrationDetailSnapshot(snapshot) {
         sanitised.capturedAt = snapshot.capturedAt.trim();
     }
 
-    const stateClone = sanitiseRegistrationDetailStateSnapshot(snapshot.state || snapshot.stateSnapshot || {});
+    const stateClone = sanitiseRegistrationDetailStateSnapshot(snapshot.state || {});
     if (stateClone) {
         sanitised.state = stateClone;
     }

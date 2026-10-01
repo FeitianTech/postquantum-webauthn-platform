@@ -1,9 +1,8 @@
 // Records saved by earlier versions, brought to today's format when they are read.
 //
-// Registration detail used to be stored as composed HTML: in the snapshot and
-// under raw registrationDetailHtml-style keys. The detail view is now built from
-// data and never reads markup, so the markup is dropped; the snapshot's
-// structured state stays.
+// Registration detail used to be stored as composed HTML in the snapshot. The
+// detail view is now built from data and never reads markup, so the markup is
+// dropped; the snapshot's structured state stays.
 //
 // Byte fields the server did not label used to arrive as standard base64; they
 // are base64url now, like every byte field on the wire. The old spelling is
@@ -18,20 +17,6 @@ const ROOT_BYTE_FIELDS = ['credentialId', 'publicKey', 'publicKeyBytes', 'userHa
 // attStmt byte strings (WebAuthn L3 section 8); `ver` and `alg` are not bytes.
 const ATTESTATION_BYTE_FIELDS = ['sig', 'certInfo', 'pubArea', 'response', 'ecdaaKeyId'];
 const STANDARD_ONLY = /[+/=]/;
-
-const RECORD_MARKUP_KEYS = [
-    'registrationDetailHtml',
-    'registration_detail_html',
-    'registrationDetailCombinedHtml',
-    'registration_detail_combined_html',
-];
-
-const SNAPSHOT_KEYS = [
-    'registrationDetailSnapshot',
-    'registration_detail_snapshot',
-    'registrationDetailCopy',
-    'registration_detail_copy',
-];
 
 const SNAPSHOT_MARKUP_KEYS = ['html', 'attestationSectionHtml', 'combinedHtml'];
 
@@ -106,29 +91,20 @@ export function migrateStoredRecord(record) {
         return migrated;
     };
 
-    RECORD_MARKUP_KEYS.forEach(key => {
-        if (Object.hasOwn(migrated, key)) {
-            delete edit()[key];
-        }
-    });
-
-    SNAPSHOT_KEYS.forEach(key => {
-        const snapshot = migrated[key];
-        if (!snapshot || typeof snapshot !== 'object' || !SNAPSHOT_MARKUP_KEYS.some(name => Object.hasOwn(snapshot, name))) {
-            return;
-        }
+    const snapshot = migrated.registrationDetailSnapshot;
+    if (snapshot && typeof snapshot === 'object' && SNAPSHOT_MARKUP_KEYS.some(name => Object.hasOwn(snapshot, name))) {
         const cleaned = { ...snapshot };
         SNAPSHOT_MARKUP_KEYS.forEach(name => {
             delete cleaned[name];
         });
         // A snapshot that held only markup holds nothing now; without it the
         // record is completed from its server artifact again.
-        if (cleaned.state || cleaned.stateSnapshot || cleaned.response) {
-            edit()[key] = cleaned;
+        if (cleaned.state || cleaned.response) {
+            edit().registrationDetailSnapshot = cleaned;
         } else {
-            delete edit()[key];
+            delete edit().registrationDetailSnapshot;
         }
-    });
+    }
 
     respellByteFields(migrated, edit);
 

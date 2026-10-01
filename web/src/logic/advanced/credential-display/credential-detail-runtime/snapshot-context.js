@@ -22,16 +22,12 @@ export function readSnapshotResponse(snapshot) {
 }
 
 // The saved registration detail, as data, applied to `state` (the module's one,
-// ../state.js, by default). Markup is never read from a snapshot or from a record: older
-// snapshots carried composed HTML, and records could carry
-// registrationDetailHtml-style keys; the view is built from data instead.
+// ../state.js, by default). Markup is never read from a snapshot: older snapshots
+// carried composed HTML; the view is built from data instead.
 export function resolveRegistrationSnapshotContext(cred, state = registrationDetailState) {
-    const registrationDetailSnapshot = [
-        cred.registrationDetailSnapshot,
-        cred.registration_detail_snapshot,
-        cred.registrationDetailCopy,
-        cred.registration_detail_copy,
-    ].find(candidate => candidate && typeof candidate === 'object') || null;
+    const registrationDetailSnapshot = cred.registrationDetailSnapshot && typeof cred.registrationDetailSnapshot === 'object'
+        ? cred.registrationDetailSnapshot
+        : null;
 
     if (!registrationDetailSnapshot) {
         return {

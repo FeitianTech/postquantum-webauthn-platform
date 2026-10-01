@@ -69,7 +69,7 @@ describe('local-storage edge cases', () => {
         storedCredential: {
           registrationDetailSnapshot: {
             combinedHtml: '<section>combined-fallback</section>',
-            stateSnapshot: {
+            state: {
               visibleAttestationCertificateIndices: ['1', 'NaN', null],
               attestationCertificates: [
                 {
