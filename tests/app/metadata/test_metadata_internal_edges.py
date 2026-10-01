@@ -15,14 +15,7 @@ from server.app.storage import common as storage_common
 from server.app.storage import github_mirror, session_metadata
 
 
-@pytest.fixture
-def metadata_module(monkeypatch, metadata_state):
-    """A fresh MDS cache and sweep state."""
-
-    """A fresh MDS cache and sweep state."""
-
-
-def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(metadata_module, monkeypatch):
+def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(metadata_state, monkeypatch):
     content = b"metadata-payload"
 
     recorded = []
@@ -65,7 +58,7 @@ def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(
     assert github_mirror.maybe_store_uploaded_metadata_file("metadata.json", content) is False
 
 
-def test_session_identifier_and_filename_validation_helpers(metadata_module):
+def test_session_identifier_and_filename_validation_helpers(metadata_state):
     assert storage_common.normalise_session_id("  session-1  ") == "session-1"
     assert storage_common.normalise_session_id(123) is None
     assert storage_common.normalise_session_id(".hidden") is None
@@ -81,7 +74,7 @@ def test_session_identifier_and_filename_validation_helpers(metadata_module):
         mds_uploads._validate_session_metadata_filename("entry.txt")
 
 
-def test_load_session_metadata_info_and_clone_helpers(metadata_module, monkeypatch):
+def test_load_session_metadata_info_and_clone_helpers(metadata_state, monkeypatch):
     monkeypatch.setattr(
         session_metadata,
         "read_file",
@@ -102,7 +95,7 @@ def test_load_session_metadata_info_and_clone_helpers(metadata_module, monkeypat
     assert mds_entries._clone_json_value(object()) is None
 
 
-def test_build_metadata_entry_components_and_expand_payloads(metadata_module):
+def test_build_metadata_entry_components_and_expand_payloads(metadata_state):
     raw = {
         "legalHeader": "Demo legal",
         "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -139,7 +132,7 @@ def test_build_metadata_entry_components_and_expand_payloads(metadata_module):
         mds_entries.expand_metadata_entry_payloads({"entries": ["bad-entry"]})
 
 
-def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_module, monkeypatch):
+def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_state, monkeypatch):
     payload = {
         "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
         "aaid": "A1B2#0001",
@@ -183,7 +176,7 @@ def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_mo
     assert [entry["entryId"] for entry in snapshot["entries"]] == ["session-1", "base-2"]
 
 
-def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metadata_module, monkeypatch, tmp_path, metadata_state):
+def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(monkeypatch, tmp_path, metadata_state):
     verified_path = tmp_path / "fido-mds3.verified.json"
     explorer_path = tmp_path / "fido-mds3.explorer.json"
 
@@ -210,7 +203,7 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(metada
     assert marker is not None
 
 
-def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadata_module, monkeypatch):
+def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadata_state, monkeypatch):
     monkeypatch.setattr(mds_cache, "_load_packaged_explorer_meta", lambda: None)
     monkeypatch.setattr(mds_cache, "_load_base_explorer_snapshot", lambda: (None, None))
     monkeypatch.setattr(
@@ -246,7 +239,7 @@ def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadat
     assert created == [fake_metadata]
 
 
-def test_metadata_entry_trust_anchor_status_uses_session_and_base_entry_sets(metadata_module, metadata_state):
+def test_metadata_entry_trust_anchor_status_uses_session_and_base_entry_sets(metadata_state):
     entry = MetadataBlobPayloadEntry.from_dict(
         {
             "statusReports": [],
