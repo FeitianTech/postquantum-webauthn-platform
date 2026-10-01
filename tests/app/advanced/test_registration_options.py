@@ -1,0 +1,68 @@
+"""Tests for the options advanced register begin gives fido2 and the browser."""
+from __future__ import annotations
+
+import pytest
+
+from tests.app.entry_app import entry_app
+from tests.app.security.ceremony_helpers import advanced_public_key_options
+
+
+def _begin(client=None, **changes):
+    client = client or entry_app().test_client()
+    response = client.post(
+        "/api/advanced/register/begin",
+        json={"publicKey": {**advanced_public_key_options(challenge=b"\x01" * 32), **changes}},
+    )
+    assert response.status_code == 200, response.get_json()
+    return response.get_json()["publicKey"]
+
+
+@pytest.mark.parametrize("attestation", ["direct", "indirect", "enterprise"])
+def test_the_requested_attestation_is_asked_for(attestation):
+    assert _begin(attestation=attestation)["attestation"] == attestation
+
+
+def test_the_hints_choose_the_attachment_when_the_request_names_none():
+    client = entry_app().test_client()
+
+    options = _begin(client, hints=["security-key"], authenticatorSelection="not an object")
+
+    assert options["authenticatorSelection"]["authenticatorAttachment"] == "cross-platform"
+    with client.session_transaction() as session:
+        assert session["advanced_register_allowed_attachments"] == ["cross-platform"]
+
+
+def test_a_required_resident_key_and_discouraged_verification_are_asked_for():
+    options = _begin(authenticatorSelection={"userVerification": "discouraged", "requireResidentKey": True})
+
+    assert options["authenticatorSelection"] == {
+        "requireResidentKey": True,
+        "residentKey": "required",
+        "userVerification": "discouraged",
+    }
+
+
+def test_extensions_are_passed_on_with_cred_protect_by_its_name():
+    options = _begin(
+        extensions={
+            "credProtect": "userVerificationOptionalWithCredentialIdList",
+            "prf": {"eval": "not an object"},
+            "customExtension": {"enabled": True},
+        }
+    )
+
+    assert options["extensions"] == {
+        "credentialProtectionPolicy": "userVerificationOptionalWithCredentialIDList",
+        "customExtension": {"enabled": True},
+        "prf": {"eval": "not an object"},
+    }
+
+
+def test_extension_values_of_an_unexpected_shape_are_passed_on_as_they_are():
+    options = _begin(extensions={"credProtect": ["a list"], "prf": "text", "largeBlob": {"support": "required"}})
+
+    assert options["extensions"] == {
+        "credentialProtectionPolicy": ["a list"],
+        "largeBlob": {"support": "required"},
+        "prf": "text",
+    }
