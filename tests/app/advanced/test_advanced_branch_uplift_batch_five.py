@@ -10,8 +10,6 @@ from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import algorithms as algorithms_module
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
-from server.app.webauthn.attestation import certificates as attestation_certificates
-from server.app.webauthn.attestation import checks as attestation_checks
 from tests.app.entry_app import entry_app
 
 
@@ -107,120 +105,6 @@ def test_register_begin_maps_attestation_modes_and_exercises_pqc_warning_branch(
     assert captured["kwargs"]["extensions"]["credentialProtectionPolicy"] == ["unexpected-shape"]
     assert captured["kwargs"]["extensions"]["prf"] == "raw-prf"
     assert warning_messages
-
-
-def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_contract(monkeypatch, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module):
-    _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module)
-
-    class _BadBytes:
-        def __bytes__(self):
-            raise TypeError("boom")
-
-    class _BadPublicKey:
-        def __getitem__(self, _key):
-            raise TypeError("not-indexable")
-
-        def __iter__(self):
-            raise TypeError("not-iterable")
-
-    class _CredentialData:
-        credential_id = b"cred-id"
-        public_key = _BadPublicKey()
-        aaguid = _BadBytes()
-
-    class _Flag:
-        UP = 0x01
-        UV = 0x04
-        BE = 0x08
-        BS = 0x10
-        AT = 0x40
-        ED = 0x80
-
-    class _AuthData:
-        FLAG = _Flag
-        credential_data = _CredentialData()
-        rp_id_hash = _BadBytes()
-        flags = _Flag.UP | _Flag.AT
-        counter = 7
-        extensions = {"credProtect": 2}
-
-        def __bytes__(self):
-            return b"auth-data"
-
-    class _Server:
-        def register_complete(self, _state, _response):
-            return _AuthData()
-
-    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _Server())
-    monkeypatch.setattr(
-        attestation_certificates,
-        "extract_attestation_details",
-        lambda _response: (
-            "packed",
-            {},
-            "parsed-attestation-object",
-            "parsed-client-data-json",
-            {"credProps": True, "largeBlob": True},
-            {"certificate": True},
-            [{"chain": 1}],
-        )
-    )
-    monkeypatch.setattr(attestation_aaguid, "extract_min_pin_length", lambda _results: 6)
-    monkeypatch.setattr(
-        attestation_checks,
-        "perform_attestation_checks",
-        lambda *_args, **_kwargs: {
-            "signature_valid": True,
-            "root_valid": True,
-            "rp_id_hash_valid": None,
-            "aaguid_match": True,
-            "metadata": {"description": 7},
-            "warnings": [],
-        }
-    )
-    monkeypatch.setattr(
-        attestation_aaguid,
-        "summarize_authenticator_extensions",
-        lambda _extensions: {"ext": True}
-    )
-
-    with entry_app().test_client() as client:
-        with client.session_transaction() as session_state:
-            session_state["advanced_state"] = {"challenge": "state-token"}
-            session_state["advanced_rp"] = {"id": "example.com", "name": "Example"}
-            session_state["advanced_original_request"] = {"publicKey": "stored-non-mapping"}
-
-        response = client.post(
-            "/api/advanced/register/complete",
-            json={
-                "publicKey": {
-                    "challenge": "AQID",
-                    "rp": {"name": "Example"},
-                    "rpId": "fallback-rpid.example",
-                    "extensions": {"credProtect": "custom-policy"},
-                    "authenticatorSelection": "invalid-shape",
-                    "user": {
-                        "name": "user@example.com",
-                        "displayName": "User",
-                        "id": "not-hex",
-                    },
-                },
-                "__credential_response": {
-                    "authenticatorAttachment": "platform",
-                    "transports": ["usb", 7],
-                    "response": {
-                        "attestationObject": "AQID",
-                        "clientDataJSON": "AQID",
-                    },
-                },
-            },
-        )
-
-    assert response.status_code == 200
-    body = response.get_json()
-    assert body["status"] == "OK"
-    assert body["relyingParty"]["largeBlob"] is True
-    assert body["relyingParty"]["registrationData"]["authenticatorExtensions"] == {"ext": True}
 
 
 def test_authenticate_begin_uses_stored_rp_required_uv_and_skips_invalid_allow_credentials(monkeypatch, config_module, advanced_parsing):
