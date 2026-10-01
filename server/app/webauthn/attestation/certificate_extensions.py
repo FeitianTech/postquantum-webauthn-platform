@@ -104,6 +104,13 @@ def _key_usage_value(value: x509.KeyUsage) -> str:
     return ", ".join(usages)
 
 
+def _oid_text(oid: x509.ObjectIdentifier) -> str:
+    """An OID as cryptography's name for it with its number, or the number when it has no name."""
+
+    name = oid._name
+    return oid.dotted_string if name == "Unknown OID" else f"{name} ({oid.dotted_string})"
+
+
 def _basic_constraints_value(value: x509.BasicConstraints) -> dict[str, Any]:
     serialized: dict[str, Any] = {"CA": "TRUE" if value.ca else "FALSE"}
     if value.path_length is not None:
@@ -214,6 +221,8 @@ def _serialize_extension_value(ext: Any) -> Any:
         return _basic_constraints_value(value)
     if isinstance(value, x509.KeyUsage):
         return _key_usage_value(value)
+    if isinstance(value, x509.ExtendedKeyUsage):
+        return [_oid_text(purpose) for purpose in value]
     if isinstance(value, (x509.PrecertificateSignedCertificateTimestamps, x509.SignedCertificateTimestamps)):
         return _signed_certificate_timestamps_value(value)
     if isinstance(value, x509.UnrecognizedExtension):

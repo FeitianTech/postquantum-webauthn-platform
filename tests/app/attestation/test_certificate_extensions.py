@@ -10,7 +10,7 @@ from types import SimpleNamespace
 
 import pytest
 from cryptography import x509
-from cryptography.x509.oid import NameOID, ObjectIdentifier
+from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID, ObjectIdentifier
 
 from server.app.webauthn.attestation import (
     certificate_extensions as attestation_certificate_extensions,
@@ -97,6 +97,12 @@ def _key_usage(**chosen: bool) -> x509.KeyUsage:
 )
 def test_key_usage_names_each_usage_in_openssl_words(usage, shown):
     assert _shown("2.5.29.15", usage) == shown
+
+
+def test_extended_key_usage_names_each_purpose_with_its_oid():
+    usage = x509.ExtendedKeyUsage([ExtendedKeyUsageOID.CLIENT_AUTH, ObjectIdentifier("2.23.133.8.3")])
+
+    assert _shown("2.5.29.37", usage) == ["clientAuth (1.3.6.1.5.5.7.3.2)", "2.23.133.8.3"]
 
 
 @pytest.mark.parametrize(

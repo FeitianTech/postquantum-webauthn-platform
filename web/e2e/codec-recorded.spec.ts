@@ -44,6 +44,13 @@ const EXPECTED: ExpectedDifference[] = [
     reason: 'KeyUsage was shown as a Python repr; it is now the usages in words',
   },
   { only: 'shown', section: 'Attestation object', token: /^(Digital|Signature)$/, reason: 'KeyUsage in words: Digital Signature' },
+  {
+    only: 'recorded',
+    section: 'Attestation object',
+    token: /^(<ExtendedKeyUsage\(\[<ObjectIdentifier\(oid=2\.23\.133\.8\.3|name=Unknown|OID\)>\]\)>)$/,
+    reason: 'ExtendedKeyUsage was shown as a Python repr; it is now each purpose by name or number',
+  },
+  { only: 'shown', section: 'Attestation object', token: /^2\.23\.133\.8\.3$/, reason: 'ExtendedKeyUsage: the TPM purpose, by number' },
 ];
 
 async function betaText(page: Page, input: string, lenient: boolean) {

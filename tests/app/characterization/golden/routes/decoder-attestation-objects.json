@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "33550"
+     "33488"
     ],
     [
      "X-Content-Type-Options",
@@ -43,7 +43,7 @@
     ]
    ],
    "cookies": [],
-   "bodySha256": "adac89a6243ffcdf24cc948127c502d004cdaf26f6bd79ae788821d56cfac099",
+   "bodySha256": "e1932059caa47d057aa20041e0d4db7f3d1060407cd5c2f95fdade10be0fb751",
    "body": {
     "data": {
      "attestationObject": {
@@ -94,7 +94,9 @@
             "includeOidInHeader": true,
             "name": "extendedKeyUsage",
             "oid": "2.5.29.37",
-            "value": "<ExtendedKeyUsage([<ObjectIdentifier(oid=2.23.133.8.3, name=Unknown OID)>])>"
+            "value": [
+             "2.23.133.8.3"
+            ]
            },
            {
             "critical": true,
