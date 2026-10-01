@@ -27,18 +27,18 @@ export const CREDENTIAL_CHECKS = [
 /**
  * The stored records as the list holds them: an advanced record with its storage
  * ids and normalised AAGUID, both kinds with their credential id and user handle
- * in hex. helpers: normaliseAaguidValue, getCredentialIdHex,
+ * in hex. helpers: aaguidHex, getCredentialIdHex,
  * getCredentialUserHandleHex (credentials/record-fields.js).
  */
 export function listSavedCredentials(records, helpers) {
-    const { normaliseAaguidValue, getCredentialIdHex, getCredentialUserHandleHex } = helpers;
+    const { aaguidHex, getCredentialIdHex, getCredentialUserHandleHex } = helpers;
     return records.map(record => {
         if (record.type === 'advanced') {
             const relyingPartyInfo = record.relyingParty;
             const relyingPartyAaguid = relyingPartyInfo && typeof relyingPartyInfo === 'object'
                 ? relyingPartyInfo.aaguid
                 : null;
-            const normalizedAaguidHex = normaliseAaguidValue(
+            const normalizedAaguidHex = aaguidHex(
                 record.aaguidHex || record.aaguid || relyingPartyAaguid,
             );
 

@@ -8,7 +8,7 @@
 // Overview and the Metadata Statement always are, even with nothing under them.
 import { MISSING_CELL_TEXT } from './rows.js';
 import { formatDetailValue, formatUpv } from '../formatters.js';
-import { formatGuidCandidate } from '../../shared/aaguid.js';
+import { aaguidGuid } from '../../shared/aaguid.js';
 
 export function extractList(value) {
     if (!value) {
@@ -244,7 +244,7 @@ function authenticatorInfoSection(info) {
         key: 'authenticatorGetInfo',
         title: 'Authenticator Get Info',
         fields: present([
-            info.aaguid ? field('AAGUID', formatGuidCandidate(info.aaguid) || String(info.aaguid), { identifier: true }) : null,
+            info.aaguid ? field('AAGUID', aaguidGuid(info.aaguid) || String(info.aaguid), { identifier: true }) : null,
             ...GET_INFO_NUMBERS.map(([key, label]) => field(label, info[key])),
         ]),
         chipLists: present([

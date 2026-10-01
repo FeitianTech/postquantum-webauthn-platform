@@ -21,7 +21,7 @@ import {
   warmSavedCredentials,
 } from '@/logic/credentials/saved-list.js';
 import { getCredentialIdHex, getCredentialUserHandleHex } from '@/logic/credentials/record-fields.js';
-import { normaliseAaguidValue } from '@/logic/shared/aaguid.js';
+import { aaguidHex } from '@/logic/shared/aaguid.js';
 import { deriveCredentialStatusIndicators } from '@/logic/credentials/attestation-context.js';
 import { deleteCredentialArtifact } from '@/logic/credentials/storage/artifacts-client.js';
 import {
@@ -71,7 +71,7 @@ export const recordKey = credentialKey as (record: SavedCredential) => string;
 export function readSavedCredentials(): SavedCredential[] {
   return (listSavedCredentials as (records: unknown[], helpers: object) => SavedCredential[])(
     (getAllStoredCredentialsInOrder as () => unknown[])(),
-    { normaliseAaguidValue, getCredentialIdHex, getCredentialUserHandleHex },
+    { aaguidHex, getCredentialIdHex, getCredentialUserHandleHex },
   );
 }
 

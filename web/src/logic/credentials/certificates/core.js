@@ -1,6 +1,6 @@
 import {bytesToHex} from '../../shared/bytes.js';
 import {base64ToBytes} from '../../shared/base64.js';
-import { normaliseAaguidValue } from '../../shared/aaguid.js';
+import { aaguidHex } from '../../shared/aaguid.js';
 
 const AAGUID_EXTENSION_OID = '1.3.6.1.4.1.45724.1.1.4';
 
@@ -175,7 +175,7 @@ export function extractAaguidFromExtensionValue(extValue) {
     }
 
     if (typeof extValue === 'string') {
-        return normaliseAaguidValue(extValue);
+        return aaguidHex(extValue);
     }
 
     if (Array.isArray(extValue)) {
@@ -193,7 +193,7 @@ export function extractAaguidFromExtensionValue(extValue) {
 
         for (const key of keys) {
             if (typeof key === 'string' && key.toLowerCase().includes('aaguid')) {
-                const candidate = normaliseAaguidValue(extValue[key]);
+                const candidate = aaguidHex(extValue[key]);
                 if (candidate) {
                     return candidate;
                 }
@@ -252,7 +252,7 @@ export function extractAaguidFromCertificateEntry(entry) {
     ];
 
     for (const source of candidateSources) {
-        const direct = normaliseAaguidValue(source);
+        const direct = aaguidHex(source);
         if (direct) {
             return direct;
         }

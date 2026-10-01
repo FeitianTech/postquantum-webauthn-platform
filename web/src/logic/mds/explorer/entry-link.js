@@ -2,7 +2,7 @@
 // surface (a saved credential) opens one by its AAGUID. No DOM.
 import { readFailedResponse } from '../../shared/failed-response.js';
 import { MDS_RESOLVE_PATH } from '../constants.js';
-import { normaliseAaguid } from '../../shared/aaguid.js';
+import { aaguidGuid } from '../../shared/aaguid.js';
 
 // What the jump from a saved credential says while and after it looks.
 export const ENTRY_LINK_MESSAGES = Object.freeze({
@@ -17,7 +17,7 @@ export const ENTRY_LINK_MESSAGES = Object.freeze({
 // The entry id of an AAGUID's entry (`aaguid:` and the AAGUID dashed, lower
 // case), which is also its URL in web (#mds/aaguid:…); '' when it is no AAGUID.
 export function entryIdForAaguid(aaguid) {
-    const normalised = normaliseAaguid(aaguid);
+    const normalised = aaguidGuid(aaguid);
     return normalised ? `aaguid:${normalised}` : '';
 }
 
@@ -28,7 +28,7 @@ export function resolveQueryForEntry(entry) {
         return { entryId: entry.entryId };
     }
     if (typeof entry?.aaguid === 'string' && entry.aaguid) {
-        return { aaguid: normaliseAaguid(entry.aaguid) };
+        return { aaguid: aaguidGuid(entry.aaguid) };
     }
     if (typeof entry?.id === 'string' && entry.id) {
         return { aaid: entry.id };

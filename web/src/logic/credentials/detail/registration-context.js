@@ -2,7 +2,7 @@ import {
     base64ToBase64Url,
 } from '../../shared/bytes.js';
 import { deriveAaguidFromCredentialData } from '../record-fields.js';
-import { normaliseAaguidValue } from '../../shared/aaguid.js';
+import { aaguidHex } from '../../shared/aaguid.js';
 import {extractAaguidFromCertificateEntries} from '../certificates/core.js';
 import { cloneJson } from '../../shared/json.js';
 import {
@@ -69,10 +69,10 @@ export function buildRegistrationContext(cred, {
         authenticatorDataBase64 = detailPreparation.authenticatorDataValue || authenticatorDataBase64;
     }
 
-    const certificateAaguidHex = normaliseAaguidValue(
+    const certificateAaguidHex = aaguidHex(
         extractAaguidFromCertificateEntries(fallbackCertificates)
     );
-    const authDataAaguidHex = normaliseAaguidValue(deriveAaguidFromCredentialData(cred));
+    const authDataAaguidHex = aaguidHex(deriveAaguidFromCredentialData(cred));
 
     const relyingPartyInfo = pickFirstObject(
         cred.relyingParty,

@@ -16,7 +16,7 @@ import { goldenAnswers } from '@/test/logic/simple/ceremony-answers.js';
 const STORED = goldenAnswers('simple-register-es256')[1].body.storedCredential;
 
 const helpers = {
-  normaliseAaguidValue: vi.fn((value) => (typeof value === 'string' ? value.replace(/-/g, '').toLowerCase() : '')),
+  aaguidHex: vi.fn((value) => (typeof value === 'string' ? value.replace(/-/g, '').toLowerCase() : '')),
   getCredentialIdHex: vi.fn(() => 'b744'),
   getCredentialUserHandleHex: vi.fn(() => '7573'),
 };
@@ -62,7 +62,7 @@ describe('the records the list holds', () => {
   it('keeps an advanced record\'s AAGUID as stored when it does not normalise', () => {
     const [record] = listSavedCredentials([{ type: 'advanced', aaguidHex: 'not hex', relyingParty: 'none' }], {
       ...helpers,
-      normaliseAaguidValue: () => '',
+      aaguidHex: () => '',
     });
     expect(record.aaguidHex).toBe('not hex');
   });

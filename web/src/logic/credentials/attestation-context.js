@@ -1,4 +1,4 @@
-import { hexToGuid, normaliseAaguidValue } from '../shared/aaguid.js';
+import { aaguidGuid, aaguidHex } from '../shared/aaguid.js';
 import { deriveAaguidFromCredentialData } from './record-fields.js';
 import {
     collectCredentialCertificates,
@@ -127,13 +127,13 @@ export function computeCredentialAaguidMatchStatus(cred, options = {}) {
             : collectCredentialCertificates(cred);
         certificateHex = extractAaguidFromCertificateEntries(entries);
     }
-    certificateHex = normaliseAaguidValue(certificateHex);
+    certificateHex = aaguidHex(certificateHex);
 
     let authDataHex = authDataAaguidHex;
     if (authDataHex === undefined) {
         authDataHex = deriveAaguidFromCredentialData(cred);
     }
-    authDataHex = normaliseAaguidValue(authDataHex);
+    authDataHex = aaguidHex(authDataHex);
 
     if (certificateHex && authDataHex) {
         return certificateHex === authDataHex;
@@ -181,10 +181,10 @@ export function deriveCredentialStatusIndicators(cred) {
     );
 
     const certificateEntries = collectCredentialCertificates(cred);
-    const certificateAaguidHex = normaliseAaguidValue(
+    const certificateAaguidHex = aaguidHex(
         extractAaguidFromCertificateEntries(certificateEntries)
     );
-    const authDataAaguidHex = normaliseAaguidValue(deriveAaguidFromCredentialData(cred));
+    const authDataAaguidHex = aaguidHex(deriveAaguidFromCredentialData(cred));
 
     const aaguidStatus = computeCredentialAaguidMatchStatus(cred, {
         certificateEntries,
@@ -211,19 +211,19 @@ export function deriveCredentialStatusIndicators(cred) {
     });
 
     const storedAaguid = cred?.aaguidHex || cred?.aaguid || cred?.aaguidGuid;
-    const primaryAaguidHex = normaliseAaguidValue(
+    const primaryAaguidHex = aaguidHex(
         storedAaguid
         || authDataAaguidHex
         || certificateAaguidHex
     );
 
-    let aaguidGuid = '';
+    let guid = '';
     if (primaryAaguidHex && primaryAaguidHex.length === 32) {
-        aaguidGuid = hexToGuid(primaryAaguidHex);
+        guid = aaguidGuid(primaryAaguidHex);
     }
     // The record's own AAGUID, as stored, when it is not sixteen bytes in any
     // spelling: the list shows it marked as unreadable rather than nothing.
-    const aaguidUnreadable = !aaguidGuid && typeof storedAaguid === 'string' ? storedAaguid.trim() : '';
+    const aaguidUnreadable = !guid && typeof storedAaguid === 'string' ? storedAaguid.trim() : '';
 
     return {
         attestationContext,
@@ -232,7 +232,7 @@ export function deriveCredentialStatusIndicators(cred) {
         rpidStatus,
         aaguidStatus,
         metadataAvailable,
-        aaguidGuid,
+        aaguidGuid: guid,
         aaguidUnreadable,
     };
 }

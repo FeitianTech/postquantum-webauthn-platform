@@ -10,7 +10,7 @@ import {
     bytesToBase64Url,
 } from '../../shared/base64.js';
 import {hexToUint8Array} from '../../shared/bytes.js';
-import {hexToGuid, normaliseAaguidValue} from '../../shared/aaguid.js';
+import {aaguidGuid, aaguidHex} from '../../shared/aaguid.js';
 import {resolveCredentialAlgorithmIdentifier} from '../algorithm-tag.js';
 import {extractMinPinLengthValue} from '../min-pin-length.js';
 import {deriveAaguidFromCredentialData} from '../record-fields.js';
@@ -31,8 +31,8 @@ export function getCoseMapValue(coseMap, key) {
     return undefined;
 }
 
-export function deriveAaguidDisplayValues(aaguidHex) {
-    const normalizedAaguidHex = aaguidHex ? aaguidHex.toLowerCase() : '';
+export function deriveAaguidDisplayValues(hex) {
+    const normalizedAaguidHex = hex ? hex.toLowerCase() : '';
     const bytes = normalizedAaguidHex ? hexToUint8Array(normalizedAaguidHex) : null;
     return {
         aaguidHex: normalizedAaguidHex,
@@ -204,15 +204,15 @@ function resolveAaguidHex(cred, attestationContext) {
         attestationChecksData,
     } = attestationContext;
 
-    let aaguidHex = '';
+    let hex = '';
     for (const explicit of [cred.aaguidHex, cred.aaguidGuid, propertiesData?.aaguidHex, propertiesData?.aaguidGuid]) {
-        aaguidHex = normaliseAaguidValue(explicit);
-        if (aaguidHex) {
+        hex = aaguidHex(explicit);
+        if (hex) {
             break;
         }
     }
-    if (!aaguidHex) {
-        aaguidHex = normaliseAaguidValue(cred.aaguid);
+    if (!hex) {
+        hex = aaguidHex(cred.aaguid);
     }
 
     const fallbackAaguidCandidates = [
@@ -247,21 +247,21 @@ function resolveAaguidHex(cred, attestationContext) {
         fallbackAaguidCandidates.push(relyingPartyAaguid);
     }
 
-    if (!aaguidHex) {
+    if (!hex) {
         for (const candidate of fallbackAaguidCandidates) {
-            const normalised = normaliseAaguidValue(candidate);
+            const normalised = aaguidHex(candidate);
             if (normalised) {
-                aaguidHex = normalised;
+                hex = normalised;
                 break;
             }
         }
     }
 
-    if (!aaguidHex) {
-        aaguidHex = deriveAaguidFromCredentialData(cred);
+    if (!hex) {
+        hex = deriveAaguidFromCredentialData(cred);
     }
 
-    return aaguidHex;
+    return hex;
 }
 
 /** The AAGUID in each spelling (b64, b64u, hex, guid), each "N/A" when unknown. */
@@ -272,7 +272,7 @@ export function describeAaguid(cred, attestationContext) {
         aaguidB64u,
     } = deriveAaguidDisplayValues(resolveAaguidHex(cred, attestationContext));
 
-    const aaguidGuid = normalizedAaguidHex && normalizedAaguidHex.length === 32 ? hexToGuid(normalizedAaguidHex) : '';
+    const guid = normalizedAaguidHex && normalizedAaguidHex.length === 32 ? aaguidGuid(normalizedAaguidHex) : '';
 
     const hasAaguid = Boolean(normalizedAaguidHex);
     const or = value => value || DETAIL_TEXT.notAvailable;
@@ -282,7 +282,7 @@ export function describeAaguid(cred, attestationContext) {
             { label: 'b64', value: or(hasAaguid && aaguidB64) },
             { label: 'b64u', value: or(hasAaguid && aaguidB64u) },
             { label: 'hex', value: or(hasAaguid && normalizedAaguidHex) },
-            { label: 'guid', value: or(aaguidGuid) },
+            { label: 'guid', value: or(guid) },
         ],
     };
 }
