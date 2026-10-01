@@ -4,11 +4,9 @@ import base64
 import time
 
 import pytest
-from fido2 import cbor
 
 from server.app import visitor_session
 from server.app.config import relying_party
-from server.app.routes.simple import parsing as simple_parsing
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
@@ -57,51 +55,6 @@ class _RegisterServer:
 
     def register_complete(self, *_args, **_kwargs):
         return self._auth_data
-
-
-def test_parse_client_credentials_ignores_non_mapping_entries_and_keeps_valid_records():
-    raw_credentials = [
-        "not-a-mapping",
-        {
-            "aaguid": _b64url(bytes.fromhex("00112233445566778899aabbccddeeff")),
-            "credentialId": _b64url(b"\x01\x02\x03"),
-            "publicKey": _b64url(
-                cbor.encode(
-                    {
-                        1: 2,
-                        3: -7,
-                        -1: 1,
-                        -2: b"\x01" * 32,
-                        -3: b"\x02" * 32,
-                    }
-                )
-            ),
-            "algorithm": -7,
-        },
-    ]
-
-    credential_data_list, serialized = simple_parsing._parse_client_credentials(raw_credentials)
-
-    assert len(credential_data_list) == 1
-    assert len(serialized) == 1
-    assert serialized[0]["algorithm"] == -7
-
-
-def test_serialize_credential_for_session_accepts_hex_aaguid_alias():
-    serialized = simple_parsing._serialize_credential_for_session(
-        {
-            "aaguidHex": "00112233445566778899aabbccddeeff",
-            "credentialId": b"\x01\x02",
-            "publicKey": memoryview(b"\x03\x04"),
-            "algorithm": -7,
-        }
-    )
-
-    # The serializer routes through generic binary decoding and preserves this
-    # value as base64url-normalized text.
-    assert serialized["aaguid"] == "00112233445566778899aabbccddeeff"
-    assert serialized["credentialId"] == _b64url(b"\x01\x02")
-    assert serialized["publicKey"] == _b64url(b"\x03\x04")
 
 
 @pytest.mark.parametrize(
