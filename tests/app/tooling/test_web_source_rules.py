@@ -14,6 +14,11 @@ own readers (``test_html_sinks.py``, ``test_inline_code.py``):
 - nothing written to ``window`` / ``globalThis`` / ``self``, and no ``atob``
   (``shared/utils/base64.js`` decodes strictly).
 
+In every source that ships, the logic modules too, what the platform does itself
+is not written by hand: no ``btoa`` (``base64.js`` encodes), no deep copy through
+``JSON.parse(JSON.stringify(…))`` (``structuredClone``), no
+``hasOwnProperty.call`` (``Object.hasOwn``).
+
 And the logic is imported, never copied: no module in ``web/src`` defines a name
 the logic modules export, or carries one of their sentences. The logic modules
 are the ``.js`` files under ``web/src/logic`` (their tests aside), which import
@@ -198,6 +203,47 @@ def find_rule_breaks(text: str) -> list[tuple[int, str]]:
     found += [(number, "setAttribute('style')") for number in find_style_attributes(without_comments)]
     found += [(number, "write to window") for number in find_global_writes(without_comments)]
     return sorted(found)
+
+
+# What the platform now does itself, written by hand: no source that ships, the
+# logic modules included, keeps the old spelling.
+_NATIVE_RULES: dict[str, re.Pattern[str]] = {
+    "btoa (encode with shared/utils/base64.js)": re.compile(r"(?<![\w$.])btoa\s*\("),
+    "JSON deep copy (structuredClone)": re.compile(r"\bJSON\.parse\(\s*JSON\.stringify\("),
+    "hasOwnProperty.call (Object.hasOwn)": re.compile(r"\bhasOwnProperty\.call\("),
+}
+
+
+def find_native_rule_breaks(text: str) -> list[tuple[int, str]]:
+    """(line, rule) for each hand-written stand-in for a platform feature in ``text``'s code."""
+
+    return [(number, rule) for number, code in _code_lines(text) for rule, pattern in _NATIVE_RULES.items() if pattern.search(code)]
+
+
+def test_shipped_sources_use_what_the_platform_offers():
+    found: dict[str, list[tuple[int, str]]] = {}
+    for path in [*_shipped_sources(), *_logic_files()]:
+        for number, rule in find_native_rule_breaks(path.read_text(encoding="utf-8")):
+            found.setdefault(path.relative_to(_WEB_SRC).as_posix(), []).append((number, rule))
+    assert found == {}
+
+
+def test_the_reader_finds_each_hand_written_stand_in():
+    source = "\n".join(
+        [
+            "const text = btoa(String.fromCharCode(...bytes));",
+            "const copy = JSON.parse(JSON.stringify(record));",
+            "if (Object.prototype.hasOwnProperty.call(map, key)) {}",
+            "// btoa(x); JSON.parse(JSON.stringify(y)); a comment",
+            "const ok = structuredClone(record) && Object.hasOwn(map, key) && toBtoa(x);",
+        ]
+    )
+
+    assert find_native_rule_breaks(source) == [
+        (1, "btoa (encode with shared/utils/base64.js)"),
+        (2, "JSON deep copy (structuredClone)"),
+        (3, "hasOwnProperty.call (Object.hasOwn)"),
+    ]
 
 
 def _breaks() -> dict[tuple[str, str], list[int]]:
