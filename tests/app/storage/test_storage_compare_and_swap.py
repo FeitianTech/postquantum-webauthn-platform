@@ -79,13 +79,11 @@ def test_of_eight_threads_that_read_the_same_version_one_writes(local_store):
 
 def _race_in_a_process(root, value, barrier, results):
     os.environ.pop("FIDO_SERVER_GCS_ENABLED", None)
-    from server.app.storage import credentials as child_store
-
     os.environ["FIDO_SERVER_CREDENTIAL_DIR"] = os.path.join(root, "credentials")
-    records, version = child_store.read_for_update(NAME, session_id=SESSION)
+    records, version = store.read_for_update(NAME, session_id=SESSION)
     barrier.wait()
     records[0]["sign_count"] = value
-    results.put(child_store.save_if_unchanged(NAME, records, version, session_id=SESSION))
+    results.put(store.save_if_unchanged(NAME, records, version, session_id=SESSION))
 
 
 def test_of_three_processes_that_read_the_same_version_one_writes(local_store):

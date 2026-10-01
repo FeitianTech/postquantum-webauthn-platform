@@ -183,12 +183,10 @@ def test_a_lost_reply_counts_as_stored_only_if_the_record_holds_every_merged_val
 
 def _merge_in_a_process(root, key, start):
     os.environ.pop("FIDO_SERVER_GCS_ENABLED", None)
-    from server.app.storage import credential_artifacts as child
-
     os.environ["FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR"] = root
     # The read a merge extends: slowed so that, without the lock, the two merges'
     # read-then-write windows overlap and one update is lost.
-    read = child._record_to_merge_into
+    read = artifacts._record_to_merge_into
     slowed = []
 
     def _slow_read(*args, **kwargs):
@@ -197,9 +195,9 @@ def _merge_in_a_process(root, key, start):
         time.sleep(0.5)
         return record
 
-    child._record_to_merge_into = _slow_read
+    artifacts._record_to_merge_into = _slow_read
     start.wait()
-    assert child.store_credential_artifact(STORAGE_ID, {key: True}, merge=True, session_id=SESSION)
+    assert artifacts.store_credential_artifact(STORAGE_ID, {key: True}, merge=True, session_id=SESSION)
     # Were the read not the one the merge does, the test would pass without the lock.
     assert slowed == [True]
 
