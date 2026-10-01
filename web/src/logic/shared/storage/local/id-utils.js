@@ -53,32 +53,24 @@ export function ensureBase64Url(value) {
     }
 }
 
-export function ensureAdvancedCredentialStorageId(record, { forceNew = false } = {}) {
+export function ensureAdvancedCredentialStorageId(record) {
     if (!record || typeof record !== 'object') {
         return '';
     }
 
-    if (!forceNew) {
-        const existing = isNonEmptyString(record.storageId) ? record.storageId.trim() : '';
-        if (existing) {
-            record.storageId = existing;
-            return existing;
-        }
+    const existing = isNonEmptyString(record.storageId) ? record.storageId.trim() : '';
+    if (existing) {
+        record.storageId = existing;
+        return existing;
     }
 
     const baseId = normaliseAdvancedCredentialId(record);
-    const timestampSource = record.createdAt;
-    const timestampValue = isNonEmptyString(timestampSource) ? timestampSource.trim() : '';
     const randomSegment = crypto.randomUUID();
     const parts = [];
     if (baseId) {
         parts.push(baseId);
     }
-    if (timestampValue) {
-        parts.push(timestampValue);
-    } else {
-        parts.push(Date.now().toString(36));
-    }
+    parts.push(Date.now().toString(36));
     parts.push(randomSegment);
     const storageId = parts.join('::');
     record.storageId = storageId;

@@ -33,7 +33,7 @@ export function saveAdvancedCredential(rawCredential) {
     }
 
     credential.credentialIdBase64Url = ensureBase64Url(credentialId);
-    const storageId = ensureAdvancedCredentialStorageId(credential, { forceNew: !isNonEmptyString(credential.storageId) });
+    const storageId = ensureAdvancedCredentialStorageId(credential);
 
     const { simpleRecords, advancedRecords } = readAdvancedCredentialPartitions();
 

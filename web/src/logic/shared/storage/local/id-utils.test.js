@@ -39,14 +39,22 @@ describe('ensureAdvancedCredentialStorageId', () => {
     expect(ensureAdvancedCredentialStorageId('AQID')).toBe('');
   });
 
-  it('replaces the saved storage id when asked for a new one', () => {
+  it('builds a missing storage id from the credential id, the time and a random segment', () => {
     vi.stubGlobal('crypto', { randomUUID: () => UUID });
-    const record = { credentialId: CREDENTIAL_ID, createdAt: '2026-09-25T00:00:00Z', storageId: 'old::id' };
+    vi.spyOn(Date, 'now').mockReturnValue(1790631838901);
+    const record = { credentialId: CREDENTIAL_ID, createdAt: 1790631838.9 };
 
-    const storageId = ensureAdvancedCredentialStorageId(record, { forceNew: true });
+    const storageId = ensureAdvancedCredentialStorageId(record);
 
-    expect(storageId).toBe(`${CREDENTIAL_ID}::2026-09-25T00:00:00Z::${UUID}`);
+    expect(storageId).toBe(`${CREDENTIAL_ID}::mulrypit::${UUID}`);
     expect(record.storageId).toBe(storageId);
+  });
+
+  it('keeps a saved storage id, trimmed', () => {
+    const record = { credentialId: CREDENTIAL_ID, storageId: ' saved::id ' };
+
+    expect(ensureAdvancedCredentialStorageId(record)).toBe('saved::id');
+    expect(record.storageId).toBe('saved::id');
   });
 });
 

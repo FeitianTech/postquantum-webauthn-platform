@@ -73,7 +73,6 @@ describe('local-storage module', () => {
       signCount: 4,
       authenticatorAttachment: 'platform',
       residentKey: true,
-      createdAt: '2026-04-03T00:00:00Z',
     });
 
     expect(saved.storageId).toContain('adv-1');
