@@ -11,11 +11,7 @@ from server.app.decoder.encode import handlers_basic as encode_handlers_basic
 from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
 from server.app.decoder.encode import text as encode_text
 from tests.app.entry_app import entry_app
-from tests.app.security.ceremony_helpers import b64u
-
-
-def _pad_base64(value: str) -> str:
-    return value + "=" * (-len(value) % 4)
+from tests.app.security.ceremony_helpers import b64u, unb64u
 
 
 def _build_attestation_object(*, rp_id: str = "example.com", counter: int = 1, credential_id: bytes = b"codec-cred"):
@@ -119,7 +115,7 @@ def test_codec_api_round_trip_cbor_encode_then_decode():
         assert encoded_payload["success"] is True
 
         encoded_b64url = encoded_payload["data"]["binary"]["base64url"]
-        encoded_bytes = base64.urlsafe_b64decode(_pad_base64(encoded_b64url))
+        encoded_bytes = unb64u(encoded_b64url)
         assert cbor2.loads(encoded_bytes) == original
 
         decoded_response = client.post(

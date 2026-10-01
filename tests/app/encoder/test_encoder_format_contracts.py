@@ -8,11 +8,7 @@ from server.app.decoder.encode import binary_decode as encode_binary_decode
 from server.app.decoder.encode import ctap_fields as encode_ctap_fields
 from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
 from server.app.decoder.encode import text as encode_text
-from tests.app.security.ceremony_helpers import b64u
-
-
-def _pad_base64(value: str) -> str:
-    return value + "=" * (-len(value) % 4)
+from tests.app.security.ceremony_helpers import b64u, unb64u
 
 
 def test_encode_payload_text_rejects_empty_input():
@@ -129,7 +125,7 @@ def test_encode_cbor_writes_the_byte_the_ctap_framing_names():
     assert result["data"]["ctap"]["code"] == 2
     assert result["data"]["ctap"]["kind"] == "command"
 
-    raw_bytes = base64.urlsafe_b64decode(_pad_base64(result["data"]["binary"]["base64url"]))
+    raw_bytes = unb64u(result["data"]["binary"]["base64url"])
     assert raw_bytes[0] == 0x02
 
     encoded_mapping = cbor2.loads(raw_bytes[1:])
