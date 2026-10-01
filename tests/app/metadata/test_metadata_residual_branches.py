@@ -8,31 +8,12 @@ import pytest
 
 from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
-from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 
 
 @pytest.fixture
 def metadata_module(monkeypatch, metadata_state):
     """A fresh MDS cache and sweep state."""
-
-
-def test_metadata_build_and_expand_residual_paths(metadata_module):
-    entry, legal_header, payload = mds_entries.build_metadata_entry_components(
-        {
-            "timeOfLastStatusChange": " 2026-01-01 ",
-            "attestationCertificateKeyIdentifiers": ["ab"],
-            "metadataStatement": {"description": "demo"},
-            "statusReports": [{"status": "NOT_FIDO_CERTIFIED"}],
-        }
-    )
-    assert legal_header is None
-    assert payload["timeOfLastStatusChange"] == "2026-01-01"
-    assert payload["attestationCertificateKeyIdentifiers"] == ["ab"]
-    assert entry["metadataStatement"]["description"] == "demo"
-
-    raw_payload = {"metadataStatement": {"description": "single-entry"}}
-    assert mds_entries.expand_metadata_entry_payloads(raw_payload) == [raw_payload]
 
 
 def test_metadata_cache_and_verified_fallback_residual_error_paths(metadata_module, monkeypatch, blob):

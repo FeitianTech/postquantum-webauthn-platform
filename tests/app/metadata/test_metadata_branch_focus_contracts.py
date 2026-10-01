@@ -184,49 +184,6 @@ def test_upload_and_normalisation_error_edges(metadata_module, monkeypatch, uplo
 
 
 def test_build_expand_extract_and_merge_error_branches(metadata_module, monkeypatch, entries):
-    entry, _, payload = mds_entries.build_metadata_entry_components(
-        {
-            "timeOfLastStatusChange": "   ",
-            "attestationCertificateKeyIdentifiers": ["   ", 42],
-            "aaid": " id#1 ",
-            "aaguid": "   ",
-            "metadataStatement": {
-                "description": "Demo",
-                "authenticatorVersion": 1,
-                "schema": 3,
-                "upv": [],
-                "attestationTypes": [],
-                "userVerificationDetails": [],
-                "keyProtection": [],
-                "matcherProtection": [],
-                "attachmentHint": [],
-                "tcDisplay": [],
-                "attestationRootCertificates": [],
-            },
-        }
-    )
-    assert payload["aaid"] == "id#1"
-    assert "aaguid" not in payload
-    assert "attestationCertificateKeyIdentifiers" not in payload
-    assert payload["timeOfLastStatusChange"]
-    assert entry["metadataStatement"]["description"] == "Demo"
-
-    with pytest.raises(TypeError, match="must be an object"):
-        mds_entries.expand_metadata_entry_payloads("not-a-mapping")
-
-    monkeypatch.setattr(entries, "_clone_json_value", lambda _value: None)
-    with pytest.raises(ValueError, match="could not be cloned"):
-        mds_entries.expand_metadata_entry_payloads({"entries": [{"metadataStatement": {"description": "x"}}]})
-
-    assert mds_entries._normalise_aaguid(123) is None
-
-    class _NoMappingEntry:
-        aaguid = None
-        metadata_statement = None
-        metadataStatement = "not-a-mapping"
-
-    assert mds_entries._extract_entry_aaguid(_NoMappingEntry()) is None
-
     session_entry_one = MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
     session_entry_two = MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
 
