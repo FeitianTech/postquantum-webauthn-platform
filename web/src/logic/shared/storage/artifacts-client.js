@@ -69,8 +69,8 @@ export async function fetchCredentialArtifactsBulk(storageIds) {
         if (result && typeof result === 'object' && result.artifacts && typeof result.artifacts === 'object') {
             return result.artifacts;
         }
-    } catch (error) {
-        console.warn('Failed to fetch credential artifacts in bulk', error);
+    } catch {
+        // No artifacts: each record shows what it holds.
     }
 
     return {};
@@ -88,8 +88,7 @@ export async function uploadCredentialArtifact(storageId, artifact, { merge = tr
             body: JSON.stringify({ artifact, merge }),
         });
         return true;
-    } catch (error) {
-        console.warn('Failed to upload credential artifact', error);
+    } catch {
         return false;
     }
 }
@@ -106,8 +105,7 @@ export async function updateCredentialSnapshot(storageId, snapshot) {
             body: JSON.stringify({ snapshot }),
         });
         return true;
-    } catch (error) {
-        console.warn('Failed to update credential snapshot', error);
+    } catch {
         return false;
     }
 }
@@ -181,7 +179,6 @@ export async function deleteCredentialArtifact(storageId) {
             error: errorMessage,
         };
     } catch (error) {
-        console.warn('Failed to delete credential artifact', error);
         return {
             ok: false,
             status: 'failed',

@@ -159,8 +159,7 @@ describe('hydrateCredentialFromServer', () => {
     expect(record.__artifactHydrated).toBe(record.storageId);
   });
 
-  it('logs a failure, marks the record, and changes nothing else', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('marks the record when the artifact cannot be fetched, and changes nothing else', async () => {
     const failure = new Error('Request failed with status 500');
     const record = advancedRecord();
     const before = structuredClone(record);
@@ -171,7 +170,6 @@ describe('hydrateCredentialFromServer', () => {
     });
 
     expect(stored).toBeNull();
-    expect(warn).toHaveBeenCalledWith(HYDRATE_TEXT.failed, failure);
     expect(record).toEqual({ ...before, __artifactHydrated: 'error' });
   });
 });

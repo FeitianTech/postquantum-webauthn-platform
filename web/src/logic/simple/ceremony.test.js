@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FailedResponseError } from '../shared/api/failed-response.js';
-import { state } from '../shared/state.js';
 import { UPDATE_BROWSER_TEXT, UnsupportedBrowserError } from '../shared/webauthn/native-json.js';
 import {
   SIMPLE_CEREMONY_TEXT,
@@ -38,8 +37,6 @@ const prepareForServer = vi.fn((records) => records.map(({ credentialId }) => ({
 
 beforeEach(() => {
   authenticator = installAuthenticator(vi);
-  vi.spyOn(console, 'log').mockImplementation(() => {});
-  state.lastFakeCredLength = 7;
 });
 
 afterEach(() => {
@@ -73,7 +70,6 @@ describe('registering a passkey', () => {
     const { publicKey } = authenticator.create.mock.calls[0][0];
     expect(publicKey.challenge).toBeInstanceOf(ArrayBuffer);
     expect(publicKey.rp).toEqual(REGISTER[0].body.publicKey.rp);
-    expect(state.lastFakeCredLength).toBe(0);
   });
 
   it('says each step as it starts', async () => {
@@ -86,12 +82,6 @@ describe('registering a passkey', () => {
       'Connecting your authenticator device...',
       'Completing registration...',
     ]);
-  });
-
-  it('prints the registration to the console', async () => {
-    answering(REGISTER[0], REGISTER[1]);
-    await registerSimplePasskey('alice');
-    expect(console.log).toHaveBeenCalledWith('pubkeycredparam used:', expect.anything());
   });
 
   it('passes the extensions the server asked for', async () => {
@@ -160,7 +150,6 @@ describe('authenticating with a passkey', () => {
       'Connecting your authenticator device...',
       'Completing authentication...',
     ]);
-    expect(console.log).toHaveBeenCalled();
   });
 
   it('asks nothing when this browser keeps no passkey for the name', async () => {

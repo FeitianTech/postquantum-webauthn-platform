@@ -61,10 +61,6 @@ async function ready() {
   await waitFor(() => expect(editorText()).toContain('"publicKey"'));
 }
 
-beforeEach(() => {
-  vi.spyOn(console, 'log').mockImplementation(() => {});
-});
-
 afterEach(() => {
   authenticator?.remove();
   vi.unstubAllGlobals();

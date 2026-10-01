@@ -247,8 +247,7 @@ export async function clearSavedCredentials(deps) {
 
         // Something was saved (else the flow ended above), and none failed or was absent.
         showSharedCredentialStatus(DELETE_TEXT.deleted, 'success');
-    } catch (error) {
-        console.error('Failed to clear saved credentials.', error);
+    } catch {
         showSharedCredentialStatus(DELETE_TEXT.clearFailed, 'error');
     } finally {
         hideSharedCredentialProgress();

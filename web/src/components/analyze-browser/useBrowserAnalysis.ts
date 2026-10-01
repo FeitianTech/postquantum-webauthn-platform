@@ -24,8 +24,9 @@ export function useBrowserAnalysis() {
       try {
         cached.current = await gatherAnalysis();
         setAnalysis(cached.current);
-      } catch (error) {
-        console.error('Analyze Browser could not gather its findings.', error);
+      } catch {
+        // gatherAnalysis answers each question itself, so this is a bug: nothing
+        // opens, and the next click asks again.
         return;
       } finally {
         busy.current = false;

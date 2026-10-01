@@ -167,7 +167,6 @@ type CeremonyOptions = {
   enforceHints: (publicKey: Json) => string[];
   applyAttachmentPreference: (...args: unknown[]) => void;
   minPinLength: () => boolean;
-  fakeCredentialLength: () => number;
   onStart: () => void;
   onProgress: (text: string) => void;
   onWarning: (text: string) => void;
@@ -264,7 +263,6 @@ type AssertionOptions = {
   ensureHints: (publicKey: Json) => unknown;
   prepareForServer: () => unknown[];
   hashAlgorithm: () => string;
-  fakeCredentialLength: () => number;
   onStart: () => void;
   onProgress: (text: string) => void;
 };

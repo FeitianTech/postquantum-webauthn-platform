@@ -36,7 +36,6 @@ export function useRegistrationCeremony(request: AdvancedRequest, openRegistrati
         enforceHints,
         applyAttachmentPreference: attachmentPreference,
         minPinLength: () => settings.minPinLength,
-        fakeCredentialLength: () => parseInt(settings.fakeCredLength) || 0,
         onStart: () => {
           setFailure(null);
           setResult(null);

@@ -11,8 +11,6 @@ import {
     requireNativeJson,
 } from '../shared/webauthn/native-json.js';
 import { FailedResponseError, readFailedResponse } from '../shared/api/failed-response.js';
-import { printAuthenticationDebug, printRegistrationDebug } from '../shared/debug/auth.js';
-import { state } from '../shared/state.js';
 
 export const SIMPLE_CEREMONY_TEXT = {
     usernameRequired: 'Please enter a username.',
@@ -87,19 +85,16 @@ export async function registerSimplePasskey(email, { onProgress = () => {} } = {
 
     const options = await response.json();
     const publicKey = parseCreationOptions(options?.publicKey);
-    state.lastFakeCredLength = 0;
 
     onProgress(SIMPLE_CEREMONY_TEXT.connecting);
-    const { credential, json: credentialJson } = await createCredential(publicKey);
+    const { json: credentialJson } = await createCredential(publicKey);
 
     onProgress(SIMPLE_CEREMONY_TEXT.registrationCompleting);
     const result = await postJson('/api/register/complete', email, credentialJson);
     if (!result.ok) {
         throw new FailedResponseError(await readFailedResponse(result), 'Registration failed');
     }
-    const answer = await result.json();
-    printRegistrationDebug(credential, publicKey, answer);
-    return answer;
+    return result.json();
 }
 
 /**
@@ -130,10 +125,9 @@ export async function authenticateSimplePasskey(email, { credentialsFor, prepare
 
     const options = await response.json();
     const publicKey = parseRequestOptions(options?.publicKey);
-    state.lastFakeCredLength = 0;
 
     onProgress(SIMPLE_CEREMONY_TEXT.connecting);
-    const { credential: assertion, json: assertionJson } = await getAssertion(publicKey);
+    const { json: assertionJson } = await getAssertion(publicKey);
 
     onProgress(SIMPLE_CEREMONY_TEXT.authenticationCompleting);
     const result = await postJson('/api/authenticate/complete', email, assertionJson);
@@ -149,7 +143,6 @@ export async function authenticateSimplePasskey(email, { credentialsFor, prepare
         };
     }
     const answer = await result.json();
-    printAuthenticationDebug(assertion, publicKey, answer);
     return {
         answer,
         result: {

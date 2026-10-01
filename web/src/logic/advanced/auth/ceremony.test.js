@@ -15,7 +15,6 @@ import {
   enforceAuthenticatorAttachmentWithHints,
 } from './hint-rules.js';
 import { FailedResponseError } from '../../shared/api/failed-response.js';
-import { state } from '../../shared/state.js';
 import { UPDATE_BROWSER_TEXT } from '../../shared/webauthn/native-json.js';
 import {
   StandInPublicKeyCredential,
@@ -104,7 +103,6 @@ function formOptions(overrides = {}) {
     enforceHints: vi.fn(enforceAuthenticatorAttachmentWithHints),
     applyAttachmentPreference: vi.fn(applyAuthenticatorAttachmentPreference),
     minPinLength: vi.fn(() => false),
-    fakeCredentialLength: vi.fn(() => 12),
     onStart: vi.fn(),
     onProgress: vi.fn(),
     onWarning: vi.fn(),
@@ -138,12 +136,10 @@ function sentCredential({ begin, complete }) {
 
 beforeEach(() => {
   authenticator = installAuthenticator(vi, { create: recordedCredential(NONE) });
-  vi.spyOn(console, 'log').mockImplementation(() => {});
 });
 
 afterEach(() => {
   authenticator.remove();
-  state.lastFakeCredLength = 0;
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -454,20 +450,6 @@ describe('registerAdvancedCredential', () => {
       challengeSource: 'server-session',
       challengeStatus: 'fresh',
     });
-  });
-
-  it('reads the fake credential length once the server has begun, and prints it with the registration', async () => {
-    serving({ [BEGIN]: NONE.begin, [COMPLETE]: NONE.complete });
-    const options = formOptions();
-    await registerAdvancedCredential(text(request()), options);
-
-    expect(asked()).toEqual([BEGIN, COMPLETE]);
-    expect(options.fakeCredentialLength).toHaveBeenCalledTimes(1);
-    expect(fetch.mock.invocationCallOrder[0]).toBeLessThan(options.fakeCredentialLength.mock.invocationCallOrder[0]);
-    expect(options.fakeCredentialLength.mock.invocationCallOrder[0]).toBeLessThan(authenticator.create.mock.invocationCallOrder[0]);
-    expect(state.lastFakeCredLength).toBe(12);
-    expect(console.log).toHaveBeenCalledWith('fake credential id length:', 12);
-    expect(console.log).toHaveBeenCalledWith('Attestation (retrieve or not, plus the format):', 'false, none');
   });
 
   it('hands the authenticator the server\'s options, their bytes as buffers', async () => {

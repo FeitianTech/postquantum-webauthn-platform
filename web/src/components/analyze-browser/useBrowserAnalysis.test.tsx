@@ -14,7 +14,6 @@ vi.mock('@/logic/shared/browser/report.js', async (importOriginal) => {
 
 describe('when the analysis fails', () => {
   it('does not open, enables the trigger again, and asks again on the next click', async () => {
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     gather.mockRejectedValueOnce(new Error('the browser threw'));
     renderPage(<AppShell />);
     const trigger = screen.getByRole('button', { name: 'Analyze Browser' });
@@ -22,7 +21,6 @@ describe('when the analysis fails', () => {
     await userEvent.click(trigger);
     await waitFor(() => expect(trigger).toBeEnabled());
     expect(screen.queryByRole('dialog', { name: 'Browser Analysis' })).toBeNull();
-    expect(error).toHaveBeenCalledWith('Analyze Browser could not gather its findings.', expect.any(Error));
 
     await userEvent.click(trigger);
     expect(await screen.findByRole('dialog', { name: 'Browser Analysis' })).toBeInTheDocument();

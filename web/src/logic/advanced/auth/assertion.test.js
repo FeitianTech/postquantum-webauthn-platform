@@ -9,7 +9,6 @@ import {
 } from './assertion.js';
 import { ADVANCED_CEREMONY_TEXT } from './ceremony.js';
 import { ensureAuthenticationHintsAllowed } from './hint-rules.js';
-import { state } from '../../shared/state.js';
 import { UPDATE_BROWSER_TEXT } from '../../shared/webauthn/native-json.js';
 import { answerResponse, credentialToJSON, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
 import { advancedAuthentications, recordedAssertion } from '@/test/logic/advanced/auth/advanced-answers.js';
@@ -49,7 +48,6 @@ function formOptions(overrides = {}) {
     ensureHints: vi.fn((publicKey) => ensureAuthenticationHintsAllowed(publicKey, { storedCredentials: records })),
     prepareForServer: vi.fn(() => STORED),
     hashAlgorithm: vi.fn(() => 'SHA-384'),
-    fakeCredentialLength: vi.fn(() => 21),
     onStart: vi.fn(),
     onProgress: vi.fn(),
     ...overrides,
@@ -63,8 +61,6 @@ function authenticatorGiving(assertion) {
 
 beforeEach(() => {
   authenticator = installAuthenticator(vi, { get: recordedAssertion(first) });
-  vi.spyOn(console, 'log').mockImplementation(() => {});
-  state.lastFakeCredLength = null;
 });
 
 afterEach(() => {
@@ -123,7 +119,6 @@ describe('an authentication', () => {
       authenticatorAttachment: 'cross-platform',
       clientExtensionResults: {},
     });
-    expect(state.lastFakeCredLength).toBe(21);
 
     expect(outcome).toEqual({
       authenticated: true,

@@ -126,8 +126,6 @@ export function warmSavedCredentials({ syncArtifacts, prefetchSnapshots, reload 
         }
         return changed;
     })()
-        .catch(error => {
-            console.warn('Failed to warm saved credential state', error);
-            return false;
-        });
+        // A warm-up that fails changes nothing: the list shows what is stored.
+        .catch(() => false);
 }

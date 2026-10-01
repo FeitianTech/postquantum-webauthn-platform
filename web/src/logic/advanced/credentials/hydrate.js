@@ -65,8 +65,8 @@ export async function hydrateCredentialFromServer(cred, { fetchCredentialArtifac
 
         cred.__artifactHydrated = storageId;
         return storedCredential;
-    } catch (error) {
-        console.warn(HYDRATE_TEXT.failed, error);
+    } catch {
+        // The details say so (HYDRATE_TEXT.failed), and the next opening asks again.
         cred.__artifactHydrated = 'error';
         return null;
     }

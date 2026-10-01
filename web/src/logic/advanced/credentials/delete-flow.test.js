@@ -238,11 +238,9 @@ describe('clearing every credential', () => {
   });
 
   it('says clearing failed when a step throws, and lets the list be used again', async () => {
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const flow = deps({ loadSavedCredentials: vi.fn(async () => { throw new Error('storage gone'); }) });
     await clearSavedCredentials(flow);
     expect(statusOf(flow)).toEqual([DELETE_TEXT.clearFailed, 'error']);
-    expect(error).toHaveBeenCalled();
     expect(flow.setCredentialDeletionInProgress).toHaveBeenLastCalledWith(false);
   });
 });

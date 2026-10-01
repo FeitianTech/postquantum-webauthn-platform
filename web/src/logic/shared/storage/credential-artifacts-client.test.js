@@ -58,10 +58,7 @@ describe('credential-artifacts-client', () => {
     expect(JSON.parse(options.body)).toEqual({ storageIds: ['a', 'b'] });
 
     fetch.mockRejectedValueOnce(new Error('network'));
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await expect(fetchCredentialArtifactsBulk(['id'])).resolves.toEqual({});
-    expect(warnSpy).toHaveBeenCalled();
-    warnSpy.mockRestore();
   });
 
   it('uploadCredentialArtifact validates inputs and handles success/failure', async () => {
@@ -76,10 +73,7 @@ describe('credential-artifacts-client', () => {
     expect(JSON.parse(options.body)).toEqual({ artifact: { a: 1 }, merge: false });
 
     fetch.mockRejectedValueOnce(new Error('upload failed'));
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await expect(uploadCredentialArtifact('id', { a: 1 })).resolves.toBe(false);
-    expect(warnSpy).toHaveBeenCalled();
-    warnSpy.mockRestore();
   });
 
   it('updateCredentialSnapshot validates and performs snapshot update', async () => {
@@ -94,10 +88,7 @@ describe('credential-artifacts-client', () => {
     expect(JSON.parse(options.body)).toEqual({ snapshot: { snap: 1 } });
 
     fetch.mockRejectedValueOnce(new Error('snapshot failed'));
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await expect(updateCredentialSnapshot('id', {})).resolves.toBe(false);
-    expect(warnSpy).toHaveBeenCalled();
-    warnSpy.mockRestore();
   });
 
   it('deleteCredentialArtifact validates and handles delete outcomes', async () => {
@@ -134,7 +125,6 @@ describe('credential-artifacts-client', () => {
     });
 
     fetch.mockRejectedValueOnce(new Error('delete failed'));
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await expect(deleteCredentialArtifact('id')).resolves.toEqual(
       expect.objectContaining({
         ok: false,
@@ -142,8 +132,6 @@ describe('credential-artifacts-client', () => {
         httpStatus: null,
       }),
     );
-    expect(warnSpy).toHaveBeenCalled();
-    warnSpy.mockRestore();
   });
 
   it('jsonFetch returns null for non-json content type', async () => {

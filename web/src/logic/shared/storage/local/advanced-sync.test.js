@@ -55,7 +55,6 @@ function requestedStorageIds(fetchMock) {
 beforeEach(() => {
   seedUnifiedCredentialRecords(null);
   window.localStorage.clear();
-  vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -172,10 +171,6 @@ describe('prefetching advanced credential snapshots', () => {
     });
 
     await expect(ensureAdvancedCredentialSnapshotsPrefetched()).resolves.toBe(false);
-    expect(console.warn).toHaveBeenCalledWith(
-      'Failed to prefetch advanced credential snapshots',
-      expect.any(DOMException),
-    );
   });
 
   it('shares the prefetch already under way', async () => {

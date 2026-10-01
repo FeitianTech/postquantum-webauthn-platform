@@ -152,8 +152,7 @@ describe('the warm-up after the list is drawn', () => {
     expect(reload).not.toHaveBeenCalled();
   });
 
-  it('logs a failure and changes nothing', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('changes nothing when warming up fails', async () => {
     const failure = new Error('offline');
     const changed = await warmSavedCredentials({
       syncArtifacts: async () => {
@@ -163,6 +162,5 @@ describe('the warm-up after the list is drawn', () => {
       reload: vi.fn(),
     });
     expect(changed).toBe(false);
-    expect(warn).toHaveBeenCalledWith('Failed to warm saved credential state', failure);
   });
 });

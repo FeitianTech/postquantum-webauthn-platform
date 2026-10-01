@@ -17,7 +17,8 @@ own readers (``test_html_sinks.py``, ``test_inline_code.py``):
 In every source that ships, the logic modules too, what the platform does itself
 is not written by hand: no ``btoa`` (``base64.js`` encodes), no deep copy through
 ``JSON.parse(JSON.stringify(…))`` (``structuredClone``), no
-``hasOwnProperty.call`` (``Object.hasOwn``).
+``hasOwnProperty.call`` (``Object.hasOwn``). And nothing writes to the console:
+the page says what happens in words.
 
 And the logic is imported, never copied: no module in ``web/src`` defines a name
 the logic modules export, or carries one of their sentences. The logic modules
@@ -244,6 +245,31 @@ def test_the_reader_finds_each_hand_written_stand_in():
         (2, "JSON deep copy (structuredClone)"),
         (3, "hasOwnProperty.call (Object.hasOwn)"),
     ]
+
+
+# The page says what happens in words; nothing ships that writes to the console.
+_CONSOLE = re.compile(r"(?<![\w$.])console\s*\.")
+
+
+def find_console_writes(text: str) -> list[int]:
+    """The lines of ``text`` whose code writes to the console."""
+
+    return [number for number, code in _code_lines(text) if _CONSOLE.search(code)]
+
+
+def test_shipped_sources_write_nothing_to_the_console():
+    found = {
+        path.relative_to(_WEB_SRC).as_posix(): lines
+        for path in [*_shipped_sources(), *_logic_files()]
+        if (lines := find_console_writes(path.read_text(encoding="utf-8")))
+    }
+    assert found == {}, "say it on the page, or nothing"
+
+
+def test_the_reader_finds_console_writes_in_code_only():
+    source = "console.log(value);\n// console.warn('a comment');\nconst text = 'console.error';\nmyconsole.log(x);\n"
+
+    assert find_console_writes(source) == [1]
 
 
 def _breaks() -> dict[tuple[str, str], list[int]]:

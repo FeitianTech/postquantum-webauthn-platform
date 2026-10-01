@@ -26,7 +26,6 @@ function droppedBody() {
 
 describe('the credential artifacts client', () => {
   beforeEach(() => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {

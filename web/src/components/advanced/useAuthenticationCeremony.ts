@@ -37,7 +37,6 @@ export function useAuthenticationCeremony(request: AuthenticationRequest) {
         ensureHints: (publicKey) => checkHints(publicKey, { storedCredentials }),
         prepareForServer: recordsForServer,
         hashAlgorithm: () => latest.current.settings.hashAlgorithm,
-        fakeCredentialLength: () => parseInt(latest.current.settings.fakeCredLength) || 0,
         onStart: () => {
           setFailure(null);
           setResult(null);

@@ -165,10 +165,8 @@ async function synchroniseAdvancedCredentialSnapshots() {
 export function ensureAdvancedCredentialArtifactsSynced() {
     if (!advancedArtifactSyncPromise) {
         advancedArtifactSyncPromise = synchroniseAdvancedCredentialArtifacts()
-            .catch(error => {
-                console.warn('Failed to synchronise advanced credential artifacts', error);
-                return false;
-            })
+            // A sync that fails is tried again at the next load.
+            .catch(() => false)
             .finally(() => {
                 advancedArtifactSyncPromise = null;
             });
@@ -179,10 +177,7 @@ export function ensureAdvancedCredentialArtifactsSynced() {
 export function ensureAdvancedCredentialSnapshotsPrefetched() {
     if (!advancedSnapshotSyncPromise) {
         advancedSnapshotSyncPromise = synchroniseAdvancedCredentialSnapshots()
-            .catch(error => {
-                console.warn('Failed to prefetch advanced credential snapshots', error);
-                return false;
-            })
+            .catch(() => false)
             .finally(() => {
                 advancedSnapshotSyncPromise = null;
             });

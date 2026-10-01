@@ -50,7 +50,6 @@ const ceremonyCalls = (fetch: ReturnType<typeof stubFetch>) =>
 
 beforeEach(() => {
   authenticator = installAuthenticator(vi);
-  vi.spyOn(console, 'log').mockImplementation(() => {});
 });
 
 afterEach(() => {

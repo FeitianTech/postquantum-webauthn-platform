@@ -6,9 +6,7 @@
 
 import { createCredential, parseCreationOptions, requireNativeJson } from '../../shared/webauthn/native-json.js';
 import { bufferSourceToUint8Array, bytesToHex } from '../../shared/utils/binary.js';
-import { printRegistrationDebug } from '../../shared/debug/auth.js';
 import { FailedResponseError, readFailedResponse } from '../../shared/api/failed-response.js';
-import { state } from '../../shared/state.js';
 
 export const ADVANCED_CEREMONY_TEXT = {
     missingPublicKey: 'Invalid JSON structure: Missing "publicKey" property',
@@ -211,9 +209,8 @@ function postJson(path, body) {
  * Registers a credential from the editor's text. The form's views give:
  * enforceHints(publicKey) (the attachments the hints allow; it may throw),
  * applyAttachmentPreference(options, attachments, ...sources) (the attachment
- * the browser is given), minPinLength() (the switch, which asks for the
- * extension whatever the text says) and fakeCredentialLength() (for the debug
- * print), both read when the ceremony gets there. It says what it does through
+ * the browser is given) and minPinLength() (the switch, which asks for the
+ * extension whatever the text says, read when the ceremony gets there). It says what it does through
  * onStart (the request checked: the last ceremony's messages may go),
  * onProgress, onWarning (the server's warnings about the request) and onResult
  * (the result panel's input, shared/ceremony/result.js). Gives
@@ -224,7 +221,6 @@ export async function registerAdvancedCredential(text, {
     enforceHints,
     applyAttachmentPreference,
     minPinLength,
-    fakeCredentialLength,
     onStart = () => {},
     onProgress = () => {},
     onWarning = () => {},
@@ -276,8 +272,6 @@ export async function registerAdvancedCredential(text, {
             publicKey,
         );
 
-        state.lastFakeCredLength = fakeCredentialLength();
-
         onProgress(ADVANCED_CEREMONY_TEXT.connecting);
 
         // Its JSON as the browser writes it: the attachment, and every extension output in base64url.
@@ -302,7 +296,6 @@ export async function registerAdvancedCredential(text, {
         }
 
         const answer = await result.json();
-        printRegistrationDebug(credential, createOptions, answer);
         onResult({
             title: ADVANCED_CEREMONY_TEXT.lastRegistration,
             showChallenge: true,

@@ -5,9 +5,7 @@
 // the two values it reads from the form as the ceremony runs.
 
 import { getAssertion, parseRequestOptions, requireNativeJson } from '../../shared/webauthn/native-json.js';
-import { printAuthenticationDebug } from '../../shared/debug/auth.js';
 import { FailedResponseError, readFailedResponse } from '../../shared/api/failed-response.js';
-import { state } from '../../shared/state.js';
 import { ADVANCED_CEREMONY_TEXT } from './ceremony.js';
 
 export const ADVANCED_ASSERTION_TEXT = {
@@ -62,9 +60,8 @@ function postJson(path, body) {
 /**
  * Authenticates with the editor's text. The form's views give: ensureHints
  * (the hints' check, which may narrow allowCredentials and may throw),
- * prepareForServer() (the records the server is sent), and hashAlgorithm() and
- * fakeCredentialLength() (the Hash Algorithm, and the fake ID length for the
- * debug print), each read when the ceremony gets there. It says what it does
+ * prepareForServer() (the records the server is sent), and hashAlgorithm() (the
+ * Hash Algorithm, read when the ceremony gets there). It says what it does
  * through onStart (the request checked: the last ceremony's messages may go)
  * and onProgress. Gives `{authenticated: true, answer, result}`, or
  * `{authenticated: false, text, result, failedCredentialId}` with the
@@ -76,7 +73,6 @@ export async function authenticateAdvancedCredential(text, {
     ensureHints,
     prepareForServer,
     hashAlgorithm,
-    fakeCredentialLength,
     onStart = () => {},
     onProgress = () => {},
 }) {
@@ -111,12 +107,10 @@ export async function authenticateAdvancedCredential(text, {
         // The browser reads the options, every extension it implements included.
         const publicKey = parseRequestOptions(json?.publicKey);
 
-        state.lastFakeCredLength = fakeCredentialLength();
-
         onProgress(ADVANCED_CEREMONY_TEXT.connecting);
 
         // Its JSON as the browser writes it: the attachment, and every extension output in base64url.
-        const { credential: assertion, json: assertionResponse } = await getAssertion(publicKey);
+        const { json: assertionResponse } = await getAssertion(publicKey);
 
         onProgress(ADVANCED_ASSERTION_TEXT.completing);
 
@@ -144,7 +138,6 @@ export async function authenticateAdvancedCredential(text, {
         }
 
         const answer = await result.json();
-        printAuthenticationDebug(assertion, publicKey, answer);
         return {
             authenticated: true,
             answer,

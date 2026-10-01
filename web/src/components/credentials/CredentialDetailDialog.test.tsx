@@ -163,7 +163,6 @@ describe('a saved credential\'s details, the detail', () => {
   });
 
   it('say the artifact could not be fetched, and show what this browser keeps', async () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
     renderShell([ADVANCED], '', {
       [`/api/advanced/credential-artifacts/${encodeURIComponent(ARTIFACT.storageId)}`]: () => json({ error: 'Store unavailable.' }, 503),
     });
