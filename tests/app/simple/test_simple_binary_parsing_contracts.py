@@ -5,20 +5,7 @@ import pytest
 from server.app.routes.simple import parsing as simple_parsing
 from server.app.webauthn import client_binary
 from tests.app.security.ceremony_helpers import b64u
-
-
-def _sample_public_key_bytes() -> bytes:
-    from fido2 import cbor
-
-    return cbor.encode(
-        {
-            1: 2,
-            3: -7,
-            -1: 1,
-            -2: b"\x01" * 32,
-            -3: b"\x02" * 32,
-        }
-    )
+from tests.app.storage.credential_seed import sample_public_key_bytes
 
 
 def _valid_credential_entry(**overrides):
@@ -29,7 +16,7 @@ def _valid_credential_entry(**overrides):
         "type": "simple",
         "aaguid": b64u(bytes.fromhex("00112233445566778899aabbccddeeff")),
         "credentialId": b64u(b"simple-credential-1"),
-        "publicKey": b64u(_sample_public_key_bytes()),
+        "publicKey": b64u(sample_public_key_bytes()),
         "signCount": 7,
         "algorithm": -7,
     }
@@ -95,8 +82,8 @@ def test_parse_client_credentials_returns_empty_for_non_list_input():
 def test_parse_client_credentials_skips_entries_missing_required_fields():
     credentials, serialized = simple_parsing._parse_client_credentials(
         [
-            {"credentialId": b64u(b"id-only"), "publicKey": b64u(_sample_public_key_bytes())},
-            {"aaguid": b64u(bytes(16)), "publicKey": b64u(_sample_public_key_bytes())},
+            {"credentialId": b64u(b"id-only"), "publicKey": b64u(sample_public_key_bytes())},
+            {"aaguid": b64u(bytes(16)), "publicKey": b64u(sample_public_key_bytes())},
             {"aaguid": b64u(bytes(16)), "credentialId": b64u(b"id-only")},
         ]
     )
@@ -108,7 +95,7 @@ def test_parse_client_credentials_skips_entries_missing_required_fields():
 def test_parse_client_credentials_parses_aliases_and_serializes_metadata_fields():
     aaguid_bytes = bytes.fromhex("00112233445566778899aabbccddeeff")
     credential_id = b"alias-credential"
-    public_key_bytes = _sample_public_key_bytes()
+    public_key_bytes = sample_public_key_bytes()
 
     entry = {
         "email": "alias@example.com",

@@ -4,26 +4,13 @@ import pytest
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.webauthn import client_binary, cose_algorithms
 from tests.app.security.ceremony_helpers import b64u
-
-
-def _sample_public_key_bytes() -> bytes:
-    from fido2 import cbor
-
-    return cbor.encode(
-        {
-            1: 2,
-            3: -7,
-            -1: 1,
-            -2: b"\x01" * 32,
-            -3: b"\x02" * 32,
-        }
-    )
+from tests.app.storage.credential_seed import sample_public_key_bytes
 
 
 def _valid_credential_entry(*, resident=None, properties=None, algorithm=None):
     entry = {
         "credentialId": b64u(b"credential-id-1"),
-        "publicKey": b64u(_sample_public_key_bytes()),
+        "publicKey": b64u(sample_public_key_bytes()),
         "aaguid": b64u(bytes.fromhex("00112233445566778899aabbccddeeff")),
         "signCount": 7,
     }
@@ -72,7 +59,7 @@ def test_decode_client_binary_rejects_unsupported_input_type():
 def test_parse_client_supplied_credentials_skips_entries_missing_required_fields():
     records, serialized = advanced_parsing._parse_client_supplied_credentials(
         [
-            {"publicKey": b64u(_sample_public_key_bytes())},
+            {"publicKey": b64u(sample_public_key_bytes())},
             {"credentialId": b64u(b"id-only")},
         ]
     )
@@ -84,7 +71,7 @@ def test_parse_client_supplied_credentials_skips_entries_missing_required_fields
 def test_parse_client_supplied_credentials_skips_malformed_entries_and_keeps_valid_ones():
     malformed = {
         "credentialId": "g$",
-        "publicKey": b64u(_sample_public_key_bytes()),
+        "publicKey": b64u(sample_public_key_bytes()),
     }
     valid = _valid_credential_entry(resident=True)
 

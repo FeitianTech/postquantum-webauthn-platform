@@ -3,26 +3,13 @@ from server.app.config import relying_party
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import b64u
-
-
-def _sample_public_key_bytes() -> bytes:
-    from fido2 import cbor
-
-    return cbor.encode(
-        {
-            1: 2,
-            3: -7,
-            -1: 1,
-            -2: b"\x01" * 32,
-            -3: b"\x02" * 32,
-        }
-    )
+from tests.app.storage.credential_seed import sample_public_key_bytes
 
 
 def _stored_credential_entry(credential_id: bytes) -> dict:
     return {
         "credentialId": b64u(credential_id),
-        "publicKey": b64u(_sample_public_key_bytes()),
+        "publicKey": b64u(sample_public_key_bytes()),
         "aaguid": b64u(bytes.fromhex("00112233445566778899aabbccddeeff")),
         "signCount": 3,
         "resident": True,
@@ -192,7 +179,7 @@ def test_advanced_authenticate_begin_accepts_storedcredentials_without_dunder(mo
 
     wrapped_entry = {
         "credentialId": {"$base64url": b64u(credential_id)},
-        "publicKey": {"$base64url": b64u(_sample_public_key_bytes())},
+        "publicKey": {"$base64url": b64u(sample_public_key_bytes())},
         "aaguid": {"$hex": "00112233445566778899aabbccddeeff"},
         "resident": True,
         "authenticatorAttachment": "platform",
