@@ -34,7 +34,7 @@ def _self_signed_cert_der() -> bytes:
     return cert.public_bytes(serialization.Encoding.DER)
 
 
-def test_collect_trust_path_entries_and_certificate_bytes_coercion_helpers(attestation_module):
+def test_collect_trust_path_entries_and_certificate_bytes_coercion_helpers():
     trust_path = attestation_trust._collect_trust_path_entries(
         [b"leaf", bytearray(b"intermediate"), "ignored", ByteBuffer(b"root")]
     )
@@ -47,7 +47,7 @@ def test_collect_trust_path_entries_and_certificate_bytes_coercion_helpers(attes
     assert attestation_trust._coerce_certificate_bytes("   ") is None
 
 
-def test_collect_metadata_root_certificates_supports_object_and_mapping_shapes(attestation_module):
+def test_collect_metadata_root_certificates_supports_object_and_mapping_shapes():
     root_a = b"root-a"
     root_b = b"root-b"
 
@@ -70,7 +70,7 @@ def test_collect_metadata_root_certificates_supports_object_and_mapping_shapes(a
     assert roots_map == [root_a, root_b]
 
 
-def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monkeypatch, attestation_module):
+def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monkeypatch):
     app = entry_app()
 
     cert_der = _self_signed_cert_der()
@@ -113,7 +113,7 @@ def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monke
         assert attestation_trust._is_trusted_ca_certificate(cert_der) is False
 
 
-def test_resolve_root_validity_handles_partial_success_and_failures(attestation_module):
+def test_resolve_root_validity_handles_partial_success_and_failures():
     assert (
         attestation_trust._resolve_root_validity(
             {"trusted_ca": True, "chain": True, "fido_mds": None}
@@ -134,7 +134,7 @@ def test_resolve_root_validity_handles_partial_success_and_failures(attestation_
     )
 
 
-def test_serialize_extension_value_handles_known_unrecognized_oids_and_transport_bits(attestation_module):
+def test_serialize_extension_value_handles_known_unrecognized_oids_and_transport_bits():
     device_oid = ObjectIdentifier("1.3.6.1.4.1.41482.2")
     device_ext = SimpleNamespace(
         oid=device_oid,
@@ -171,16 +171,16 @@ def test_serialize_extension_value_handles_known_unrecognized_oids_and_transport
         ("030100", []),
     ],
 )
-def test_parse_fido_transport_bitfield_reads_fidos_named_bits(attestation_module, der, transports):
+def test_parse_fido_transport_bitfield_reads_fidos_named_bits(der, transports):
     assert attestation_certificate_extensions._parse_fido_transport_bitfield(bytes.fromhex(der)) == transports
 
 
 @pytest.mark.parametrize("raw", [b"", b"\x03", b"\x04\x01\x00", bytes.fromhex("0302043000")])
-def test_parse_fido_transport_bitfield_names_nothing_for_what_is_not_a_bit_string(attestation_module, raw):
+def test_parse_fido_transport_bitfield_names_nothing_for_what_is_not_a_bit_string(raw):
     assert attestation_certificate_extensions._parse_fido_transport_bitfield(raw) is None
 
 
-def test_coerce_attestation_certificate_bytes_handles_mapping_variants(attestation_module):
+def test_coerce_attestation_certificate_bytes_handles_mapping_variants():
     cert_bytes = b"\x30\x82\x01\x00"
     pem = (
         "-----BEGIN CERTIFICATE-----\n"

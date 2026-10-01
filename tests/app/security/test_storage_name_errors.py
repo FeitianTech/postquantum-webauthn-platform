@@ -10,6 +10,9 @@ import logging
 
 import pytest
 
+from server.app.storage import credentials as storage_credentials
+from server.app.storage import github_mirror
+
 from .ceremony_helpers import (
     ORIGIN,
     Authenticator,
@@ -23,10 +26,10 @@ TRAVERSAL = "../x"
 
 
 @pytest.fixture
-def store(monkeypatch, tmp_path, storage_module, device_logs_module):
+def store(monkeypatch, tmp_path):
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
-    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
+    monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
     return tmp_path
 
 
@@ -37,11 +40,11 @@ def _assert_refused_without_traceback(response, caplog):
     assert any("Refused a storage name" in record.getMessage() for record in caplog.records)
 
 
-def test_the_store_refuses_a_traversal_name_before_touching_a_path(store, storage_module):
+def test_the_store_refuses_a_traversal_name_before_touching_a_path(store):
     from server.app.storage.common import InvalidStorageIdentifier
 
     with pytest.raises(InvalidStorageIdentifier):
-        storage_module.readkey(TRAVERSAL, session_id="session-name-errors")
+        storage_credentials.readkey(TRAVERSAL, session_id="session-name-errors")
 
     assert sorted(path.name for path in store.iterdir()) == []
 
@@ -112,10 +115,10 @@ def test_the_advanced_flow_does_not_hand_its_user_name_to_the_store(client, capl
     assert [record for record in caplog.records if record.exc_info] == []
 
 
-def test_the_refusal_is_still_a_value_error(storage_module):
+def test_the_refusal_is_still_a_value_error():
     from server.app.storage.common import InvalidStorageIdentifier
 
     with pytest.raises(InvalidStorageIdentifier) as refused:
-        storage_module.readkey(TRAVERSAL, session_id="session-a")
+        storage_credentials.readkey(TRAVERSAL, session_id="session-a")
 
     assert isinstance(refused.value, ValueError)

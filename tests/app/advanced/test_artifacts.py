@@ -1,10 +1,11 @@
 import pytest
 
 from server.app import visitor_session
+from server.app.storage import credential_artifacts
 from tests.app.entry_app import entry_app
 
 
-def test_bulk_credential_artifact_route_returns_requested_items(monkeypatch, metadata_module, credential_artifacts_module):
+def test_bulk_credential_artifact_route_returns_requested_items(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
 
     def _load(storage_id, *, session_id=None):
@@ -13,7 +14,7 @@ def test_bulk_credential_artifact_route_returns_requested_items(monkeypatch, met
             return {"registrationDetailSnapshot": {"html": "<p>ready</p>"}}
         return None
 
-    monkeypatch.setattr(credential_artifacts_module, "load_credential_artifact", _load)
+    monkeypatch.setattr(credential_artifacts, "load_credential_artifact", _load)
 
     with entry_app().test_client() as client:
         response = client.post(
@@ -29,7 +30,7 @@ def test_bulk_credential_artifact_route_returns_requested_items(monkeypatch, met
     }
 
 
-def test_bulk_credential_artifact_route_requires_array(monkeypatch, metadata_module):
+def test_bulk_credential_artifact_route_requires_array(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
 
     with entry_app().test_client() as client:
@@ -42,7 +43,7 @@ def test_bulk_credential_artifact_route_requires_array(monkeypatch, metadata_mod
     assert response.get_json()["error"] == "storageIds must be an array."
 
 
-def test_bulk_credential_artifact_route_trims_dedupes_and_ignores_invalid_ids(monkeypatch, metadata_module, credential_artifacts_module):
+def test_bulk_credential_artifact_route_trims_dedupes_and_ignores_invalid_ids(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
 
     observed_storage_ids = []
@@ -56,7 +57,7 @@ def test_bulk_credential_artifact_route_trims_dedupes_and_ignores_invalid_ids(mo
             return {"storedCredential": {"id": "cred-2"}}
         return None
 
-    monkeypatch.setattr(credential_artifacts_module, "load_credential_artifact", _load)
+    monkeypatch.setattr(credential_artifacts, "load_credential_artifact", _load)
 
     with entry_app().test_client() as client:
         response = client.post(
@@ -76,10 +77,10 @@ def test_bulk_credential_artifact_route_trims_dedupes_and_ignores_invalid_ids(mo
     }
 
 
-def test_get_credential_artifact_route_returns_payload(monkeypatch, metadata_module, credential_artifacts_module):
+def test_get_credential_artifact_route_returns_payload(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
-        credential_artifacts_module,
+        credential_artifacts,
         "load_credential_artifact",
         lambda storage_id, *, session_id=None: (
             {"storedCredential": {"id": storage_id}} if session_id == "session-id" else None
@@ -96,9 +97,9 @@ def test_get_credential_artifact_route_returns_payload(monkeypatch, metadata_mod
     }
 
 
-def test_get_credential_artifact_route_returns_404_when_missing(monkeypatch, metadata_module, credential_artifacts_module):
+def test_get_credential_artifact_route_returns_404_when_missing(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-    monkeypatch.setattr(credential_artifacts_module, "load_credential_artifact", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(credential_artifacts, "load_credential_artifact", lambda *_args, **_kwargs: None)
 
     with entry_app().test_client() as client:
         response = client.get("/api/advanced/credential-artifacts/missing")
@@ -118,7 +119,7 @@ def test_put_credential_artifact_route_requires_object_payload(monkeypatch):
     assert response.get_json() == {"error": "Artifact payload must be an object."}
 
 
-def test_put_credential_artifact_route_defaults_merge_true(monkeypatch, metadata_module, credential_artifacts_module):
+def test_put_credential_artifact_route_defaults_merge_true(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
 
     captured = {}
@@ -130,7 +131,7 @@ def test_put_credential_artifact_route_defaults_merge_true(monkeypatch, metadata
         captured["session_id"] = session_id
         return True
 
-    monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", _store)
+    monkeypatch.setattr(credential_artifacts, "store_credential_artifact", _store)
 
     with entry_app().test_client() as client:
         response = client.put(
@@ -148,7 +149,7 @@ def test_put_credential_artifact_route_defaults_merge_true(monkeypatch, metadata
     }
 
 
-def test_put_credential_artifact_route_supports_payload_alias_and_merge_override(monkeypatch, metadata_module, credential_artifacts_module):
+def test_put_credential_artifact_route_supports_payload_alias_and_merge_override(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
 
     captured = {}
@@ -160,7 +161,7 @@ def test_put_credential_artifact_route_supports_payload_alias_and_merge_override
         captured["session_id"] = session_id
         return True
 
-    monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", _store)
+    monkeypatch.setattr(credential_artifacts, "store_credential_artifact", _store)
 
     with entry_app().test_client() as client:
         response = client.put(
@@ -178,10 +179,10 @@ def test_put_credential_artifact_route_supports_payload_alias_and_merge_override
     }
 
 
-def test_put_credential_artifact_route_returns_400_when_store_fails(monkeypatch, metadata_module, credential_artifacts_module):
+def test_put_credential_artifact_route_returns_400_when_store_fails(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
-        credential_artifacts_module,
+        credential_artifacts,
         "store_credential_artifact",
         lambda *_args, **_kwargs: False
     )
@@ -207,10 +208,10 @@ def test_put_snapshot_route_rejects_non_object_snapshot(monkeypatch):
     assert response.get_json() == {"error": "Snapshot must be an object."}
 
 
-def test_put_snapshot_route_returns_400_when_store_fails(monkeypatch, metadata_module, credential_artifacts_module):
+def test_put_snapshot_route_returns_400_when_store_fails(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
-        credential_artifacts_module,
+        credential_artifacts,
         "store_credential_artifact",
         lambda *_args, **_kwargs: False
     )
@@ -225,7 +226,7 @@ def test_put_snapshot_route_returns_400_when_store_fails(monkeypatch, metadata_m
     assert response.get_json() == {"error": "Unable to store artifact snapshot."}
 
 
-def test_put_snapshot_route_stores_snapshot_using_merge(monkeypatch, metadata_module, credential_artifacts_module):
+def test_put_snapshot_route_stores_snapshot_using_merge(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
 
     captured = {}
@@ -237,7 +238,7 @@ def test_put_snapshot_route_stores_snapshot_using_merge(monkeypatch, metadata_mo
         captured["session_id"] = session_id
         return True
 
-    monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", _store)
+    monkeypatch.setattr(credential_artifacts, "store_credential_artifact", _store)
 
     snapshot = {"html": "<section>snapshot</section>"}
 
@@ -272,10 +273,10 @@ def test_put_snapshot_route_stores_snapshot_using_merge(monkeypatch, metadata_mo
         ),
     ],
 )
-def test_delete_credential_artifact_route_reports_status(monkeypatch, delete_status, expected_http_status, expected_payload, metadata_module, credential_artifacts_module):
+def test_delete_credential_artifact_route_reports_status(monkeypatch, delete_status, expected_http_status, expected_payload):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
-        credential_artifacts_module,
+        credential_artifacts,
         "delete_credential_artifact_with_status",
         lambda storage_id, *, session_id=None: delete_status
     )
@@ -289,7 +290,7 @@ def test_delete_credential_artifact_route_reports_status(monkeypatch, delete_sta
 
 @pytest.mark.parametrize("route", ["get", "bulk", "merging-put", "snapshot"])
 def test_an_artifact_the_store_cannot_read_answers_503_not_missing_or_unstored(
-    monkeypatch, client, metadata_module, route
+    monkeypatch, client, route
 ):
     # A failed download used to read as "no artifact" (404, or left out of the
     # bulk answer), and a merge that could not read answered 400.

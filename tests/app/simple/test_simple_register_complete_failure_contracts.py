@@ -23,7 +23,7 @@ def _register_complete_payload(*, state=None):
     return payload
 
 
-def test_simple_register_complete_returns_400_and_cleans_state_when_verification_fails(monkeypatch, attestation_module, config_module):
+def test_simple_register_complete_returns_400_and_cleans_state_when_verification_fails(monkeypatch):
     class _FailingServer:
         def register_complete(self, *_args, **_kwargs):
             raise ValueError("register verification failed")
@@ -56,7 +56,7 @@ def test_simple_register_complete_returns_400_and_cleans_state_when_verification
             assert "simple_register_public_key" not in session_state
 
 
-def test_simple_register_complete_rejects_request_state_fallback_before_verification(monkeypatch, attestation_module, config_module):
+def test_simple_register_complete_rejects_request_state_fallback_before_verification(monkeypatch):
     """The request-supplied state must be discarded before any verification."""
 
     captured = {}

@@ -28,7 +28,7 @@ from fido2.webauthn import AttestedCredentialData, AuthenticatorData
 
 from server.app.config import paths
 from server.app.storage import common as storage_common
-from server.app.storage import credentials
+from server.app.storage import credentials, github_mirror
 from tests.app.entry_app import entry_app
 from tests.app.security import ceremony_helpers as ceremony
 from tests.app.storage.credential_seed import seed_records
@@ -419,7 +419,7 @@ def test_crafted_pickle_payload_is_never_executed_from_gcs(monkeypatch, tmp_path
 # --------------------------------------------------------------------------
 
 
-def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_path, device_logs_module):
+def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_path):
     """A genuinely-signed registration must persist and read back intact.
 
     The unit tests above pin the codec; this one proves the codec covers what
@@ -433,7 +433,7 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(root))
     (tmp_path / "flat").mkdir()
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
-    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
+    monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
 
     # Any value the encoder cannot represent is logged; the flow must not need it.
     warnings: list[str] = []

@@ -1,6 +1,8 @@
 import base64
 
 from server.app.config import relying_party
+from server.app.routes.advanced import algorithms as advanced_algorithms
+from server.app.routes.advanced import parsing as advanced_parsing
 from tests.app.entry_app import entry_app
 
 
@@ -28,7 +30,7 @@ def test_advanced_register_complete_rejects_attachment_mismatch():
     assert "Authenticator attachment is not permitted by the selected hints" in response.get_json()["error"]
 
 
-def test_advanced_authenticate_complete_rejects_non_resident_in_resident_mode(monkeypatch, advanced_parsing):
+def test_advanced_authenticate_complete_rejects_non_resident_in_resident_mode(monkeypatch):
     credential_id = b"advanced-resident-required"
     encoded_id = _b64url(credential_id)
 
@@ -65,7 +67,7 @@ def test_advanced_authenticate_complete_rejects_non_resident_in_resident_mode(mo
     assert payload["failedCredentialId"] == encoded_id
 
 
-def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch, advanced_parsing):
+def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch):
     credential_id = b"advanced-missing-state"
     encoded_id = _b64url(credential_id)
 
@@ -109,7 +111,7 @@ def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch, a
             assert "advanced_auth_rp" not in session_state
 
 
-def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verification(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
+def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verification(monkeypatch):
     """A custom/unknown declared algorithm must never yield status OK."""
 
     credential_id = b"advanced-custom-alg"
@@ -171,7 +173,7 @@ def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verific
     assert "customAlgorithmBypass" not in payload
 
 
-def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_requested_algorithm_match(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
+def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_requested_algorithm_match(monkeypatch):
     credential_id = b"advanced-custom-alg-mismatch"
     encoded_id = _b64url(credential_id)
     stored_custom_alg = -99999
@@ -228,7 +230,7 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_request
     assert payload["failedCredentialId"] == encoded_id
 
 
-def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_signature_errors(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
+def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_signature_errors(monkeypatch):
     credential_id = b"advanced-custom-alg-non-signature"
     encoded_id = _b64url(credential_id)
     custom_alg = -99999

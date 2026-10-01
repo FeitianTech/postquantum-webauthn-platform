@@ -3,6 +3,8 @@ import hashlib
 
 from server.app import visitor_session
 from server.app.config import relying_party
+from server.app.storage import credential_artifacts, github_mirror
+from server.app.storage import credentials as storage_credentials
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
@@ -55,7 +57,7 @@ class _FakeAuthData:
         return self.rp_id_hash + bytes([self.flags]) + int(self.counter).to_bytes(4, "big")
 
 
-def test_advanced_register_complete_reads_the_session_state_not_the_requests(monkeypatch, config_module):
+def test_advanced_register_complete_reads_the_session_state_not_the_requests(monkeypatch):
     captured = {}
 
     class _FailingServer:
@@ -121,7 +123,7 @@ def test_advanced_register_complete_requires_attachment_when_hints_resolve_to_at
     assert "Authenticator attachment could not be determined" in response.get_json()["error"]
 
 
-def test_advanced_register_complete_prefers_session_attachment_scope_over_tampered_request_hints(monkeypatch, metadata_module, attestation_module, config_module):
+def test_advanced_register_complete_prefers_session_attachment_scope_over_tampered_request_hints(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
         attestation_certificates,
@@ -159,7 +161,7 @@ def test_advanced_register_complete_prefers_session_attachment_scope_over_tamper
             assert "advanced_register_allowed_attachments" not in session_store
 
 
-def test_advanced_register_complete_success_contract_propagates_warnings_and_records_artifact(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module, storage_module, config_module):
+def test_advanced_register_complete_success_contract_propagates_warnings_and_records_artifact(monkeypatch):
     credential_id = b"advanced-register-success"
     rp_id = "rp.example"
 
@@ -215,10 +217,10 @@ def test_advanced_register_complete_success_contract_propagates_warnings_and_rec
             [],
         )
     )
-    monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(storage_credentials, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(attestation_aaguid, "augment_aaguid_fields", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", _store_credential_artifact)
-    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
+    monkeypatch.setattr(credential_artifacts, "store_credential_artifact", _store_credential_artifact)
+    monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
 
     with entry_app().test_client() as client:
         with client.session_transaction() as session_store:

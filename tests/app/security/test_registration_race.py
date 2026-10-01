@@ -21,6 +21,8 @@ import pytest
 
 from server.app import visitor_session
 from server.app.storage import common as storage_common
+from server.app.storage import credentials as storage_credentials
+from server.app.storage import github_mirror
 
 from ..storage import fake_gcs
 from .ceremony_helpers import ORIGIN, Authenticator, registration_payload, unb64u
@@ -32,15 +34,15 @@ SAVE_ATTEMPTS = 8
 
 
 @pytest.fixture(params=["local", "gcs"])
-def store(request, monkeypatch, tmp_path, storage_module, device_logs_module):
+def store(request, monkeypatch, tmp_path):
 
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
     monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
-    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
+    monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
     if request.param == "gcs":
-        fake_gcs.install(monkeypatch, storage_module)
-    return storage_module
+        fake_gcs.install(monkeypatch, storage_credentials)
+    return storage_credentials
 
 
 def _begin(client) -> bytes:

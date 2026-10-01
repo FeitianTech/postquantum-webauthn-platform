@@ -1,6 +1,8 @@
 import base64
 
 from server.app.config import relying_party
+from server.app.routes.advanced import algorithms as advanced_algorithms
+from server.app.routes.advanced import parsing as advanced_parsing
 from tests.app.entry_app import entry_app
 
 
@@ -13,7 +15,7 @@ class _AuthResult:
         self.public_key = public_key or {3: -7}
 
 
-def test_advanced_authenticate_complete_without_session_state_returns_400(monkeypatch, advanced_parsing):
+def test_advanced_authenticate_complete_without_session_state_returns_400(monkeypatch):
     credential_id = b"advanced-invalid-fallback"
     encoded_id = _b64url(credential_id)
 
@@ -53,7 +55,7 @@ def test_advanced_authenticate_complete_without_session_state_returns_400(monkey
             assert "advanced_auth_rp" not in session_state
 
 
-def test_advanced_authenticate_complete_reports_cookie_restore_failure(monkeypatch, advanced_parsing):
+def test_advanced_authenticate_complete_reports_cookie_restore_failure(monkeypatch):
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
@@ -127,7 +129,7 @@ def test_advanced_authenticate_complete_rejects_attachment_not_allowed_by_sessio
             assert "advanced_authenticate_allowed_attachments" not in session_state
 
 
-def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
+def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeypatch):
     credential_id = b"advanced-hash-forward"
     encoded_id = _b64url(credential_id)
     captured = {}
@@ -181,7 +183,7 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
     assert captured["hash_algorithm"] == "SHA-512"
 
 
-def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_invalid(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
+def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_invalid(monkeypatch):
     credential_id = b"advanced-hash-default"
     encoded_id = _b64url(credential_id)
     captured = {}
@@ -235,7 +237,7 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
     assert captured["hash_algorithm"] == "SHA-256"
 
 
-def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authenticator_data(monkeypatch, config_module, advanced_algorithms, advanced_parsing):
+def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authenticator_data(monkeypatch):
     credential_id = b"advanced-malformed-authdata"
     encoded_id = _b64url(credential_id)
 

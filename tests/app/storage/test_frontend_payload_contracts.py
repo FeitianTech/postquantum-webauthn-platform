@@ -1,6 +1,7 @@
 import base64
 
 from server.app.config import relying_party
+from server.app.routes.advanced import algorithms as advanced_algorithms
 from tests.app.entry_app import entry_app
 
 
@@ -39,7 +40,7 @@ class _AuthResult:
         self.public_key = public_key or {3: -7}
 
 
-def test_simple_register_begin_accepts_existing_credentials_alias(monkeypatch, config_module):
+def test_simple_register_begin_accepts_existing_credentials_alias(monkeypatch):
     captured = {}
 
     class _FakeServer:
@@ -75,7 +76,7 @@ def test_simple_register_begin_accepts_existing_credentials_alias(monkeypatch, c
             assert len(session_state["simple_credentials"]) == 1
 
 
-def test_simple_authenticate_begin_accepts_stored_credentials_alias(monkeypatch, config_module):
+def test_simple_authenticate_begin_accepts_stored_credentials_alias(monkeypatch):
     captured = {}
 
     class _FakeServer:
@@ -106,7 +107,7 @@ def test_simple_authenticate_begin_accepts_stored_credentials_alias(monkeypatch,
             assert len(session_state["simple_credentials"]) == 1
 
 
-def test_advanced_register_begin_accepts_base64url_wrapped_user_id_and_challenge(monkeypatch, config_module):
+def test_advanced_register_begin_accepts_base64url_wrapped_user_id_and_challenge(monkeypatch):
     captured = {}
 
     class _FakeServer:
@@ -169,7 +170,7 @@ def test_advanced_register_begin_rejects_invalid_binary_wrapper_in_user_id():
     assert "Invalid user ID format" in response.get_json()["error"]
 
 
-def test_advanced_authenticate_begin_accepts_storedcredentials_without_dunder(monkeypatch, config_module):
+def test_advanced_authenticate_begin_accepts_storedcredentials_without_dunder(monkeypatch):
     captured = {}
 
     class _FakeServer:
@@ -219,7 +220,7 @@ def test_advanced_authenticate_begin_accepts_storedcredentials_without_dunder(mo
         assert captured["challenge"] == challenge
 
 
-def test_advanced_authenticate_begin_accepts_credentials_fallback_field(monkeypatch, config_module):
+def test_advanced_authenticate_begin_accepts_credentials_fallback_field(monkeypatch):
     captured = {}
 
     class _FakeServer:
@@ -247,7 +248,7 @@ def test_advanced_authenticate_begin_accepts_credentials_fallback_field(monkeypa
     assert captured["credential_count"] == 1
 
 
-def test_advanced_authenticate_complete_accepts_storedcredentials_without_dunder(monkeypatch, config_module, advanced_algorithms):
+def test_advanced_authenticate_complete_accepts_storedcredentials_without_dunder(monkeypatch):
     credential_id = b"adv-complete-storedCredentials"
     encoded_credential_id = _b64url(credential_id)
 
@@ -282,7 +283,7 @@ def test_advanced_authenticate_complete_accepts_storedcredentials_without_dunder
     assert response.get_json()["authenticatedCredentialId"] == encoded_credential_id
 
 
-def test_advanced_authenticate_complete_accepts_credentials_fallback_field(monkeypatch, config_module, advanced_algorithms):
+def test_advanced_authenticate_complete_accepts_credentials_fallback_field(monkeypatch):
     credential_id = b"adv-complete-credentials-field"
     encoded_credential_id = _b64url(credential_id)
 

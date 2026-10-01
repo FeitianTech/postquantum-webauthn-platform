@@ -21,6 +21,7 @@ import os
 
 import pytest
 
+from server.app.storage import credentials as storage_credentials
 from server.app.storage import record_format
 from server.app.storage.common import StorageReadError
 
@@ -72,12 +73,12 @@ class _Gcs:
         self.bucket.failing[self.put_current(name, _records("unreachable"))] = fake_gcs.ServiceUnavailable("503")
 
 @pytest.fixture(params=["local", "gcs"])
-def backend(request, monkeypatch, tmp_path, storage_module):
+def backend(request, monkeypatch, tmp_path):
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
     if request.param == "gcs":
-        return _Gcs(storage_module, fake_gcs.install(monkeypatch, storage_module))
-    return _Local(storage_module, tmp_path)
+        return _Gcs(storage_credentials, fake_gcs.install(monkeypatch, storage_credentials))
+    return _Local(storage_credentials, tmp_path)
 
 
 # --------------------------------------------------------------------------

@@ -2,6 +2,7 @@ import base64
 import time
 
 from server.app.config import relying_party
+from server.app.routes.simple import parsing as simple_parsing
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.entry_app import entry_app
 
@@ -15,7 +16,7 @@ class _MatchedCredential:
         self.credential_id = credential_id
 
 
-def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatch, attestation_module):
+def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatch):
     monkeypatch.setattr(
         attestation_certificates,
         "extract_attestation_details",
@@ -41,7 +42,7 @@ def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatc
     assert "Registration state not found or has expired" in response.get_json()["error"]
 
 
-def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkeypatch, simple_parsing):
+def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkeypatch):
     monkeypatch.setattr(
         simple_parsing,
         "_parse_client_credentials",
@@ -71,7 +72,7 @@ def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkey
             assert session_state.get("simple_credentials_email") == "user@example.com"
 
 
-def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypatch, config_module, simple_parsing):
+def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypatch):
     credential_id = b"simple-auth-no-sign-count"
 
     class _FakeServer:

@@ -13,6 +13,7 @@ import threading
 import pytest
 
 from server.app.mds import provisioning as mds_provisioning
+from server.app.storage import github_mirror
 from tests.app.metadata import mds_fixture
 from tests.app.security.ceremony_helpers import (
     ORIGIN,
@@ -138,7 +139,7 @@ def test_the_page_does_not_wait(slow_provisioning, make_app, export_root):
 
 
 @pytest.fixture
-def stores(monkeypatch, tmp_path, storage_module, device_logs_module):
+def stores(monkeypatch, tmp_path):
     """Every store a registration writes, in this test's own directory."""
 
 
@@ -146,7 +147,7 @@ def stores(monkeypatch, tmp_path, storage_module, device_logs_module):
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(tmp_path / "credentials"))
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", str(tmp_path / "artifacts"))
     monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
-    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
+    monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
 
 
 def _post_in_a_thread(client, path, body):

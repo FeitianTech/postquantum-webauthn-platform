@@ -2,10 +2,10 @@ import base64
 import hashlib
 import time
 
-from server.app import config as config_module
 from server.app import visitor_session
 from server.app.config import relying_party
-from server.app.routes import advanced as advanced_module
+from server.app.storage import credential_artifacts, github_mirror
+from server.app.storage import credentials as storage_credentials
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
@@ -51,7 +51,7 @@ class _SimpleFakeServer:
         return self._auth_data
 
 
-def test_simple_register_complete_returns_500_when_saving_fails(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
+def test_simple_register_complete_returns_500_when_saving_fails(monkeypatch):
     credential_id = b"simple-save-fail"
     rp_id = "example.com"
 
@@ -80,17 +80,17 @@ def test_simple_register_complete_returns_500_when_saving_fails(monkeypatch, met
         }
     )
     monkeypatch.setattr(attestation_aaguid, "extract_min_pin_length", lambda _ext: None)
-    monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(storage_credentials, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-    monkeypatch.setattr(storage_module, "read_for_update", lambda *_args, **_kwargs: ([], None))
+    monkeypatch.setattr(storage_credentials, "read_for_update", lambda *_args, **_kwargs: ([], None))
     monkeypatch.setattr(
-        storage_module,
+        storage_credentials,
         "save_if_unchanged",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("storage unavailable"))
     )
     # Read again after the failed save, to tell a write that landed from one that did not.
-    monkeypatch.setattr(storage_module, "readkey", lambda *_args, **_kwargs: [])
-    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(storage_credentials, "readkey", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(github_mirror, "record_registration_event", lambda *_args, **_kwargs: None)
 
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
@@ -113,7 +113,7 @@ def test_simple_register_complete_returns_500_when_saving_fails(monkeypatch, met
     assert response.get_json() == {"error": "Unable to persist registered credential."}
 
 
-def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module, metadata_module, auth_data, rp_id, attestation_module, storage_module, config_module):
+def _install_advanced_register_common_monkeypatches(monkeypatch, auth_data, rp_id):
     class _AdvancedFakeServer:
         def register_complete(self, *_args, **_kwargs):
             return auth_data
@@ -142,7 +142,7 @@ def _install_advanced_register_common_monkeypatches(monkeypatch, advanced_module
         }
     )
     monkeypatch.setattr(attestation_aaguid, "extract_min_pin_length", lambda _ext: None)
-    monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(storage_credentials, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(attestation_aaguid, "augment_aaguid_fields", lambda *_args, **_kwargs: None)
 
 
@@ -164,18 +164,16 @@ def _advanced_register_payload(rp_id: str, credential_id: bytes):
     }
 
 
-def test_advanced_register_complete_returns_500_when_artifact_store_returns_false(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module, storage_module):
+def test_advanced_register_complete_returns_500_when_artifact_store_returns_false(monkeypatch):
     credential_id = b"advanced-store-false"
     rp_id = "example.com"
     auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)
     registration_events = []
 
-    _install_advanced_register_common_monkeypatches(
-        monkeypatch, advanced_module, metadata_module, auth_data, rp_id
-    , attestation_module, storage_module, config_module)
-    monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", lambda *_args, **_kwargs: False)
+    _install_advanced_register_common_monkeypatches(monkeypatch, auth_data, rp_id)
+    monkeypatch.setattr(credential_artifacts, "store_credential_artifact", lambda *_args, **_kwargs: False)
     monkeypatch.setattr(
-        device_logs_module,
+        github_mirror,
         "record_registration_event",
         lambda event: registration_events.append(event)
     )
@@ -205,22 +203,20 @@ def test_advanced_register_complete_returns_500_when_artifact_store_returns_fals
     assert registration_events == []
 
 
-def test_advanced_register_complete_returns_500_when_artifact_store_raises(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module, storage_module):
+def test_advanced_register_complete_returns_500_when_artifact_store_raises(monkeypatch):
     credential_id = b"advanced-store-raises"
     rp_id = "example.com"
     auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)
     registration_events = []
 
-    _install_advanced_register_common_monkeypatches(
-        monkeypatch, advanced_module, metadata_module, auth_data, rp_id
-    , attestation_module, storage_module, config_module)
+    _install_advanced_register_common_monkeypatches(monkeypatch, auth_data, rp_id)
     monkeypatch.setattr(
-        credential_artifacts_module,
+        credential_artifacts,
         "store_credential_artifact",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("artifact store down"))
     )
     monkeypatch.setattr(
-        device_logs_module,
+        github_mirror,
         "record_registration_event",
         lambda event: registration_events.append(event)
     )
@@ -250,28 +246,26 @@ def test_advanced_register_complete_returns_500_when_artifact_store_raises(monke
     assert registration_events == []
 
 
-def test_advanced_register_complete_returns_400_when_add_public_key_material_raises(monkeypatch, metadata_module, credential_artifacts_module, device_logs_module, attestation_module, storage_module):
+def test_advanced_register_complete_returns_400_when_add_public_key_material_raises(monkeypatch):
     credential_id = b"advanced-public-key-material-raises"
     rp_id = "example.com"
     auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)
     registration_events = []
     artifact_store_calls = []
 
-    _install_advanced_register_common_monkeypatches(
-        monkeypatch, advanced_module, metadata_module, auth_data, rp_id
-    , attestation_module, storage_module, config_module)
+    _install_advanced_register_common_monkeypatches(monkeypatch, auth_data, rp_id)
     monkeypatch.setattr(
-        storage_module,
+        storage_credentials,
         "add_public_key_material",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("public key material unavailable"))
     )
     monkeypatch.setattr(
-        credential_artifacts_module,
+        credential_artifacts,
         "store_credential_artifact",
         lambda *args, **kwargs: artifact_store_calls.append((args, kwargs)) or True
     )
     monkeypatch.setattr(
-        device_logs_module,
+        github_mirror,
         "record_registration_event",
         lambda event: registration_events.append(event)
     )

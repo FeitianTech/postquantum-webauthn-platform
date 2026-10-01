@@ -11,15 +11,16 @@ import subprocess
 import pytest
 
 from server.app.storage import common as storage_common
+from server.app.storage import credentials as storage_credentials
 from tests.app.storage.credential_seed import seed_records
 
 
 @pytest.fixture
-def store_in(monkeypatch, storage_module):
+def store_in(monkeypatch):
     def _point(root):
         monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(root))
         monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
-        return storage_module
+        return storage_credentials
 
     return _point
 

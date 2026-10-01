@@ -43,7 +43,7 @@ def _registration_for(attestation_object, client_data, *, extensions=None):
     )
 
 
-def test_perform_attestation_checks_reports_client_authenticator_mismatches(monkeypatch, attestation_module):
+def test_perform_attestation_checks_reports_client_authenticator_mismatches(monkeypatch):
     auth_data = _FakeAuthData(rp_id="wrong.example", flags=0, counter=0, alg=-7)
     attestation_object = SimpleNamespace(fmt="none", att_stmt={}, auth_data=auth_data)
     client_data = _FakeClientData(
@@ -83,7 +83,7 @@ def test_perform_attestation_checks_reports_client_authenticator_mismatches(monk
     assert "attested_credential_data_missing" in result["errors"]
 
 
-def test_perform_attestation_checks_classical_success_path_populates_metadata(monkeypatch, attestation_module):
+def test_perform_attestation_checks_classical_success_path_populates_metadata(monkeypatch):
     flags = int(AuthenticatorData.FLAG.UP | AuthenticatorData.FLAG.AT)
     auth_data = _FakeAuthData(rp_id="example.com", flags=flags, counter=7, alg=-7)
     attestation_object = SimpleNamespace(fmt="packed", att_stmt={"alg": -7}, auth_data=auth_data)

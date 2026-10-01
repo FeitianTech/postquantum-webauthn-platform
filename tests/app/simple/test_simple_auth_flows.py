@@ -4,6 +4,10 @@ import time
 
 from server.app import visitor_session
 from server.app.config import relying_party
+from server.app.routes.simple import parsing as simple_parsing
+from server.app.routes.simple import registration as simple_registration
+from server.app.storage import credentials as storage_credentials
+from server.app.storage import github_mirror
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
@@ -46,7 +50,7 @@ class _MatchedCredential:
         self.credential_id = credential_id
 
 
-def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch, config_module, simple_registration, simple_parsing):
+def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch):
     state = {"challenge": "register-state"}
 
     class _FakeServer:
@@ -100,7 +104,7 @@ def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch
             assert "simple_register_public_key" in session_state
 
 
-def test_simple_authenticate_begin_requires_valid_credentials(monkeypatch, simple_parsing):
+def test_simple_authenticate_begin_requires_valid_credentials(monkeypatch):
     monkeypatch.setattr(simple_parsing, "_parse_client_credentials", lambda _raw: ([], []))
 
     with entry_app().test_client() as client:
@@ -112,7 +116,7 @@ def test_simple_authenticate_begin_requires_valid_credentials(monkeypatch, simpl
     assert response.status_code == 404
 
 
-def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch, config_module, simple_parsing):
+def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch):
     credential_id = b"simple-auth-success"
     auth_data_bytes = b"\x00" * 32 + b"\x01" + (7).to_bytes(4, "big")
     auth_data_b64 = base64.b64encode(auth_data_bytes).decode("ascii").rstrip("=")
@@ -159,7 +163,7 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch, co
             assert "simple_credentials_email" not in session_state
 
 
-def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch, config_module, simple_parsing):
+def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch):
     """A client-supplied ``__session_state`` must never become the challenge."""
 
     credential_id = b"simple-auth-fallback"
@@ -198,7 +202,7 @@ def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch
         assert "state" not in captured
 
 
-def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch, simple_parsing):
+def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch):
     monkeypatch.setattr(
         simple_parsing,
         "_parse_client_credentials",
@@ -224,7 +228,7 @@ def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch, sim
             assert session_state.get("simple_credentials_email") == "user@example.com"
 
 
-def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
+def test_simple_register_complete_rejects_request_state_fallback(monkeypatch):
     """A cold /complete with a self-chosen challenge must be rejected."""
 
     rp_id = "example.com"
@@ -267,9 +271,9 @@ def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, me
         "warnings": [],
     })
     monkeypatch.setattr(attestation_aaguid, "extract_min_pin_length", lambda _ext: None)
-    monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(storage_credentials, "add_public_key_material", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-    monkeypatch.setattr(storage_module, "read_for_update", lambda *_args, **_kwargs: ([], None))
+    monkeypatch.setattr(storage_credentials, "read_for_update", lambda *_args, **_kwargs: ([], None))
 
     def _fake_save_if_unchanged(email, credentials, version, *, session_id=None):
         saved["email"] = email
@@ -277,8 +281,8 @@ def test_simple_register_complete_rejects_request_state_fallback(monkeypatch, me
         saved["session_id"] = session_id
         return True
 
-    monkeypatch.setattr(storage_module, "save_if_unchanged", _fake_save_if_unchanged)
-    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
+    monkeypatch.setattr(storage_credentials, "save_if_unchanged", _fake_save_if_unchanged)
+    monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
 
     request_state = {"challenge": "fallback-register-state"}
 

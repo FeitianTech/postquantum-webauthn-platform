@@ -66,7 +66,7 @@ class _FakeRegistrationResponse:
         )()
 
 
-def _perform_checks(attestation_module, response, state, public_key_options, rp_id="example.com"):
+def _perform_checks(response, state, public_key_options, rp_id="example.com"):
     return attestation_checks.perform_attestation_checks(
         response=response,
         state=state,
@@ -77,7 +77,7 @@ def _perform_checks(attestation_module, response, state, public_key_options, rp_
     )
 
 
-def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_failure(monkeypatch, attestation_module):
+def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_failure(monkeypatch):
     challenge = b"challenge"
     rp_id = "example.com"
     auth_data = _FakeAuthData(
@@ -99,7 +99,6 @@ def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_f
     monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
     result = _perform_checks(
-        attestation_module,
         response={"raw": "value"},
         state={"challenge": _b64url(challenge), "user_verification": "required"},
         public_key_options={"pubKeyCredParams": [{"alg": -7}]},
@@ -112,7 +111,7 @@ def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_f
     assert any(error.startswith("unsupported_attestation:") for error in result["errors"])
 
 
-def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(monkeypatch, attestation_module):
+def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(monkeypatch):
     challenge = b"metadata-unavailable"
     rp_id = "example.com"
     auth_data = _FakeAuthData(
@@ -141,7 +140,6 @@ def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(mon
     monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: None)
 
     result = _perform_checks(
-        attestation_module,
         response={"raw": "value"},
         state={"challenge": _b64url(challenge), "user_verification": "required"},
         public_key_options={"pubKeyCredParams": [{"alg": -7}]},
@@ -154,7 +152,7 @@ def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(mon
     assert "trust_path_missing" in result["errors"]
 
 
-def test_perform_attestation_checks_captures_verifier_evaluation_exception(monkeypatch, attestation_module):
+def test_perform_attestation_checks_captures_verifier_evaluation_exception(monkeypatch):
     challenge = b"verifier-exception"
     rp_id = "example.com"
     auth_data = _FakeAuthData(
@@ -187,7 +185,6 @@ def test_perform_attestation_checks_captures_verifier_evaluation_exception(monke
     monkeypatch.setattr(evaluation, "evaluate_attestation", _exploding)
 
     result = _perform_checks(
-        attestation_module,
         response={"raw": "value"},
         state={"challenge": _b64url(challenge), "user_verification": "required"},
         public_key_options={"pubKeyCredParams": [{"alg": -7}]},
@@ -200,7 +197,7 @@ def test_perform_attestation_checks_captures_verifier_evaluation_exception(monke
     assert result["root_checks"]["trusted_ca"] is False
 
 
-def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is_valid(monkeypatch, attestation_module):
+def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is_valid(monkeypatch):
     challenge = b"metadata-algorithm"
     rp_id = "example.com"
     auth_data = _FakeAuthData(
@@ -260,7 +257,6 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
     # The trusted-CA allowlist is read from the current app.
     with entry_app().app_context():
         result = _perform_checks(
-            attestation_module,
             response={"raw": "value"},
             state={"challenge": _b64url(challenge), "user_verification": "required"},
             public_key_options={"pubKeyCredParams": [{"alg": -7}]},
@@ -275,7 +271,7 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
     assert result["root_checks"]["chain"] is True
 
 
-def test_perform_attestation_checks_reports_an_mldsa_signature_that_does_not_verify(monkeypatch, attestation_module):
+def test_perform_attestation_checks_reports_an_mldsa_signature_that_does_not_verify(monkeypatch):
     challenge = b"pqc-fallback"
     rp_id = "example.com"
     auth_data = _FakeAuthData(
@@ -304,7 +300,6 @@ def test_perform_attestation_checks_reports_an_mldsa_signature_that_does_not_ver
     monkeypatch.setattr(Attestation, "for_type", lambda _fmt: _FailingAttestation)
 
     result = _perform_checks(
-        attestation_module,
         response={"raw": "value"},
         state={"challenge": _b64url(challenge), "user_verification": "required"},
         public_key_options={"pubKeyCredParams": [{"alg": -7}]},

@@ -93,7 +93,7 @@ class _FakeCertificate:
         self.extensions = _FakeExtensions(extension_map, missing_exception)
 
 
-def test_perform_attestation_checks_reports_core_validation_failures(monkeypatch, attestation_module):
+def test_perform_attestation_checks_reports_core_validation_failures(monkeypatch):
     expected_challenge = b"expected-challenge"
     actual_challenge = b"different-challenge"
 
@@ -138,7 +138,7 @@ def test_perform_attestation_checks_reports_core_validation_failures(monkeypatch
     assert "algorithm_not_allowed" in errors
 
 
-def test_perform_attestation_checks_accepts_valid_none_attestation(monkeypatch, attestation_module):
+def test_perform_attestation_checks_accepts_valid_none_attestation(monkeypatch):
     rp_id = "example.com"
     expected_challenge = b"valid-challenge"
 
@@ -179,7 +179,7 @@ def test_perform_attestation_checks_accepts_valid_none_attestation(monkeypatch, 
     assert result["authenticator_data"]["user_verification_satisfied"] is True
 
 
-def test_perform_attestation_checks_returns_registration_parse_error(monkeypatch, attestation_module):
+def test_perform_attestation_checks_returns_registration_parse_error(monkeypatch):
     def _raise_parse_error(_value):
         raise ValueError("invalid payload")
 
@@ -213,11 +213,11 @@ def test_perform_attestation_checks_returns_registration_parse_error(monkeypatch
         ({"trusted_ca": None, "chain": True, "fido_mds": False}, None),
     ],
 )
-def test_resolve_root_validity_matrix(checks, expected, attestation_module):
+def test_resolve_root_validity_matrix(checks, expected):
     assert attestation_trust._resolve_root_validity(checks) is expected
 
 
-def test_resolve_root_validity_returns_none_when_all_checks_unknown(attestation_module):
+def test_resolve_root_validity_returns_none_when_all_checks_unknown():
     assert (
         attestation_trust._resolve_root_validity(
             {

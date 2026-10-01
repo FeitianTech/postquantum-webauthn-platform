@@ -122,7 +122,7 @@ def test_advanced_register_begin_rejects_invalid_challenge_format():
     assert "Invalid challenge format" in response.get_json()["error"]
 
 
-def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkeypatch, pqc_module, config_module):
+def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkeypatch):
     captured = {}
 
     monkeypatch.setattr(
@@ -170,7 +170,7 @@ def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkey
             }
 
 
-def test_advanced_register_begin_normalizes_pubkeycredparams_and_filters_invalid_entries(monkeypatch, pqc_module):
+def test_advanced_register_begin_normalizes_pubkeycredparams_and_filters_invalid_entries(monkeypatch):
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
@@ -200,7 +200,7 @@ def test_advanced_register_begin_normalizes_pubkeycredparams_and_filters_invalid
     assert captured["allowed_algorithms"] == [-7, -257, -35, -8]
 
 
-def test_advanced_register_begin_uses_default_algorithms_without_pubkeycredparams(monkeypatch, pqc_module):
+def test_advanced_register_begin_uses_default_algorithms_without_pubkeycredparams(monkeypatch):
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
@@ -223,7 +223,7 @@ def test_advanced_register_begin_uses_default_algorithms_without_pubkeycredparam
     assert captured["allowed_algorithms"] == [-50, -48, -49, -7, -257]
 
 
-def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorithms_remain(monkeypatch, pqc_module):
+def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorithms_remain(monkeypatch):
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-49})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
@@ -243,7 +243,7 @@ def test_advanced_register_begin_filters_unavailable_pqc_when_classical_algorith
     assert any("Unsupported PQC algorithms were skipped" in warning for warning in body.get("warnings", []))
 
 
-def test_advanced_register_begin_refuses_when_no_requested_algorithm_is_verifiable(monkeypatch, pqc_module):
+def test_advanced_register_begin_refuses_when_no_requested_algorithm_is_verifiable(monkeypatch):
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: set())
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)
@@ -261,7 +261,7 @@ def test_advanced_register_begin_refuses_when_no_requested_algorithm_is_verifiab
     assert "create_fido_server_kwargs" in captured and "allowed_algorithms" not in captured
 
 
-def test_advanced_register_begin_maps_auth_selection_exclusions_extensions_and_timeout(monkeypatch, pqc_module):
+def test_advanced_register_begin_maps_auth_selection_exclusions_extensions_and_timeout(monkeypatch):
     captured = {}
     monkeypatch.setattr(advanced_algorithms, "_verifiable_algorithms", lambda: {-50, -49, -48})
     _install_fake_register_server(monkeypatch, advanced_module, captured, config_module)

@@ -10,17 +10,18 @@ import os
 import pytest
 
 from server.app.storage import common as storage_common
+from server.app.storage import credentials as storage_credentials
 
 _SESSION = "session-failures"
 
 
 @pytest.fixture
-def local_store(monkeypatch, tmp_path, storage_module):
+def local_store(monkeypatch, tmp_path):
     root = tmp_path / "session-credentials"
     root.mkdir()
     monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_DIR", str(root))
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
-    return storage_module
+    return storage_credentials
 
 
 def _unreadable(store, name):

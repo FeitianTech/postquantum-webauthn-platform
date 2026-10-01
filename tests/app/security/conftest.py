@@ -10,6 +10,8 @@ from typing import Any
 
 import pytest
 
+from server.app.storage import credential_artifacts, github_mirror
+from server.app.storage import credentials as storage_credentials
 from tests.app.entry_app import entry_app
 
 
@@ -20,7 +22,7 @@ def _session_metadata_in(tmp_path, monkeypatch) -> None:
 
 
 @pytest.fixture
-def simple_storage(monkeypatch, tmp_path, device_logs_module, storage_module) -> dict[str, Any]:
+def simple_storage(monkeypatch, tmp_path) -> dict[str, Any]:
     """Neutralise simple-flow persistence and capture what it would store."""
 
     _session_metadata_in(tmp_path, monkeypatch)
@@ -32,14 +34,14 @@ def simple_storage(monkeypatch, tmp_path, device_logs_module, storage_module) ->
         saved["session_id"] = session_id
         return True
 
-    monkeypatch.setattr(storage_module, "save_if_unchanged", _save_if_unchanged)
-    monkeypatch.setattr(storage_module, "read_for_update", lambda *_a, **_k: ([], None))
-    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
+    monkeypatch.setattr(storage_credentials, "save_if_unchanged", _save_if_unchanged)
+    monkeypatch.setattr(storage_credentials, "read_for_update", lambda *_a, **_k: ([], None))
+    monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
     return saved
 
 
 @pytest.fixture
-def advanced_storage(monkeypatch, tmp_path, credential_artifacts_module, device_logs_module) -> list[Any]:
+def advanced_storage(monkeypatch, tmp_path) -> list[Any]:
     """Neutralise advanced-flow persistence and capture stored artifacts."""
 
     _session_metadata_in(tmp_path, monkeypatch)
@@ -49,8 +51,8 @@ def advanced_storage(monkeypatch, tmp_path, credential_artifacts_module, device_
         stored.append((storage_id, payload, session_id))
         return True
 
-    monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", _store)
-    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
+    monkeypatch.setattr(credential_artifacts, "store_credential_artifact", _store)
+    monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
     return stored
 
 
