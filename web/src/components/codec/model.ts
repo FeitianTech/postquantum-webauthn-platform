@@ -23,11 +23,11 @@ export type FindingView = {
   malformed: boolean;
 };
 
-export type EncodedFormatView = { key: string; label: string; value: string };
+type EncodedFormatView = { key: string; label: string; value: string };
 export type EncodedView = { label: string; formats: EncodedFormatView[]; byteLength: number | null };
 export type SectionView = { key: string; label: string; kind: 'edn' | 'expandedJson' | 'value'; value: unknown };
 
-export type ResultView = {
+type ResultView = {
   empty: null;
   success: boolean;
   pill: string;
@@ -41,9 +41,9 @@ export type ResultView = {
   noSections: string | null;
 };
 
-export type CodecView = { empty: string } | ResultView;
+type CodecView = { empty: string } | ResultView;
 
-export type BadgeView = [kind: string, text: string];
+type BadgeView = [kind: string, text: string];
 export type MapEntryView = { key: string; label: string; value: unknown };
 type TextValueView<K extends string> = { kind: K; text: string };
 export type ValueView =
