@@ -12,7 +12,6 @@ from fido2.attestation import (
     UnsupportedType,
 )
 from fido2.cose import CoseKey
-from fido2.utils import ByteBuffer
 from fido2.webauthn import (
     Aaguid,
     AuthenticatorData,
@@ -194,8 +193,6 @@ def _finalize_metadata_results(
 def _coerce_expected_bytes(value: Any) -> bytes:
     if value is None:
         return b""
-    if isinstance(value, ByteBuffer):
-        return bytes(value)
     if isinstance(value, (bytes, bytearray, memoryview)):
         return bytes(value)
     if isinstance(value, str):
