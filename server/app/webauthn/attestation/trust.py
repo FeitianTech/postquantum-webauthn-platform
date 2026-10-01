@@ -88,25 +88,8 @@ def _extract_certificate_aaguid(cert_der: bytes) -> bytes:
     except x509.ExtensionNotFound:
         return b""
 
-    raw_value: bytes | None = None
-    value = extension.value
-
-    if isinstance(value, x509.UnrecognizedExtension):
-        raw_value = bytes(value.value)
-    else:
-        candidate = getattr(value, "value", None)
-        if isinstance(candidate, (bytes, bytearray, memoryview)):
-            raw_value = bytes(candidate)
-        elif isinstance(value, (bytes, bytearray, memoryview)):
-            raw_value = bytes(value)
-        elif isinstance(candidate, str):
-            raw_value = encoding.try_decode_hex(candidate)
-            if raw_value is None:
-                raw_value = candidate.encode("utf-8")
-
-    if raw_value is None:
-        return b""
-
+    # cryptography has no type for FIDO's AAGUID extension: it is always unrecognised, its value the DER.
+    raw_value = bytes(extension.value.value)
     decoded = formatting.der_octet_string_content(raw_value)
     if len(decoded) == 16:
         return decoded
