@@ -13,7 +13,6 @@ import {
   groupCapabilities,
   omittedNote,
   reportText,
-  writeToClipboard,
 } from './report.js';
 
 function capability(key, kind, state = 'yes') {
@@ -158,29 +157,17 @@ describe('Analyze Browser report data', () => {
   describe('the clipboard', () => {
     const analysis = analysisWith({ state: 'yes', returned: {}, capabilities: [], omitted: [] });
 
-    it('writes the text and says nothing went wrong', async () => {
+    it('copies the report and says so', async () => {
       const written = [];
       const nav = { clipboard: { writeText: async (text) => written.push(text) } };
 
-      expect(await writeToClipboard('hello', nav)).toBeNull();
-      expect(written).toEqual(['hello']);
-
       const result = await copyReport(analysis, nav);
       expect(result).toEqual({ copied: true, message: 'Report copied to the clipboard.', text: reportText(analysis) });
-      expect(written[1]).toBe(reportText(analysis));
+      expect(written).toEqual([reportText(analysis)]);
     });
 
-    it('says the clipboard is not available when there is none, or it cannot be read', async () => {
-      expect(await writeToClipboard('x', {})).toBe('the clipboard is not available on this page');
-      expect(await writeToClipboard('x', { clipboard: {} })).toBe('the clipboard is not available on this page');
-      expect(await writeToClipboard('x', undefined)).toBe('the clipboard is not available on this page');
-      const throwing = {};
-      Object.defineProperty(throwing, 'clipboard', {
-        get() {
-          throw new Error('denied');
-        },
-      });
-      expect(await writeToClipboard('x', throwing)).toBe('the clipboard is not available on this page');
+    it('says the clipboard is not available when there is none', async () => {
+      expect(await copyReport(analysis, {})).toMatchObject({ copied: false, message: expect.stringContaining('the clipboard is not available on this page') });
     });
 
     it('gives the error when writing is refused, and the report to copy by hand', async () => {
@@ -192,7 +179,6 @@ describe('Analyze Browser report data', () => {
         },
       };
 
-      expect(await writeToClipboard('x', nav)).toBe('NotAllowedError: Write permission denied.');
       expect(await copyReport(analysis, nav)).toEqual({
         copied: false,
         message:

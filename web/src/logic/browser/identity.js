@@ -3,7 +3,7 @@
 // readIdentityInputs() copies what the browser exposes; determineIdentity() is a
 // pure function of that copy, so the same inputs always give the same answer.
 
-import { attempt, describeError } from './probe.js';
+import { attempt, describeError } from '../shared/probe.js';
 
 export const SOURCE_TEXT = {
     'client-hints': 'from User-Agent Client Hints',

@@ -2,8 +2,9 @@
 // capabilities are grouped, and the report a person copies. Nothing here touches
 // the DOM: the panel builds its view from these answers and says these words.
 
+import { writeToClipboard } from '../shared/clipboard.js';
+
 import { determineIdentity, readIdentityInputs } from './identity.js';
-import { attempt, describeError } from './probe.js';
 import { CLIENT_CAPABILITY_LABELS, gatherWebAuthnFacts } from './webauthn-facts.js';
 
 export const IDENTITY_FIELDS = ['name', 'version', 'engine', 'system'];
@@ -17,7 +18,6 @@ export const CAPABILITY_GROUPS = [
 
 export const NO_CAPABILITIES = 'The browser returned no capabilities.';
 export const COPIED = 'Report copied to the clipboard.';
-const NO_CLIPBOARD = 'the clipboard is not available on this page';
 
 const DEFINED_ORDER = Object.keys(CLIENT_CAPABILITY_LABELS);
 
@@ -73,20 +73,6 @@ export function buildReport(analysis) {
 
 export function reportText(analysis) {
     return JSON.stringify(buildReport(analysis), null, 2);
-}
-
-// Why the text could not be written, or null when it was.
-export async function writeToClipboard(text, nav = globalThis.navigator) {
-    const clipboard = attempt(() => nav.clipboard).value;
-    if (typeof clipboard?.writeText !== 'function') {
-        return NO_CLIPBOARD;
-    }
-    try {
-        await clipboard.writeText(text);
-        return null;
-    } catch (error) {
-        return describeError(error);
-    }
 }
 
 export function copyFailedMessage(failure) {

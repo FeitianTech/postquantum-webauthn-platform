@@ -2,7 +2,7 @@
 // the browser said yes, said no, has no way to ask (the method is missing), or the
 // question could not be answered (the call threw, or the answer was not a boolean).
 
-import { attempt, describeError, describeValue } from './probe.js';
+import { attempt, describeError, describeValue } from '../shared/probe.js';
 
 export const STATE_TEXT = {
     yes: 'Yes',

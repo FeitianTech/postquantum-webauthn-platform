@@ -1,4 +1,4 @@
-import { writeToClipboard } from '@/logic/browser/report.js';
+import { writeToClipboard } from '@/logic/shared/clipboard.js';
 import { useCallback, useEffect, useState } from 'react';
 
 const COPIED_MS = 2000;
