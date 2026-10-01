@@ -829,3 +829,43 @@ def test_build_log_payload_handles_unknown_aaguid_and_decode_failures(monkeypatc
     assert payload["decoded_attestation_object"] == {"error": "decode_failed"}
     assert summary["aaguid"] == "unknown"
     assert summary["device"] == "unknown"
+
+
+def _store_metadata_against_listing(monkeypatch, listing, filename, content):
+    """Store ``content`` against a metadata folder that lists ``listing``; returns the upload made."""
+
+    uploads = []
+    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "true")
+    monkeypatch.setattr(github_mirror, "github_list_directory", lambda _folder: listing)
+    monkeypatch.setattr(
+        github_mirror,
+        "github_upload_file",
+        lambda path, data, message, sha=None: uploads.append((path, data, message, sha)),
+    )
+
+    assert github_mirror.maybe_store_uploaded_metadata_file(filename, content) is True
+    assert len(uploads) == 1
+    return uploads[0]
+
+
+def test_metadata_upload_ignores_listing_entries_that_are_not_files(monkeypatch):
+    content = b'{"legalHeader": "demo"}'
+    same_content = github_mirror.git_blob_sha(content)
+    listing = [
+        123,
+        "target.json",
+        {"type": "dir", "name": "target.json", "sha": same_content, "path": "metadata/target.json"},
+    ]
+
+    upload = _store_metadata_against_listing(monkeypatch, listing, "target.json", content)
+
+    assert upload == ("metadata/target.json", content, "metadata: add target.json", None)
+
+
+def test_metadata_upload_replaces_a_same_named_file_listed_without_a_path(monkeypatch):
+    content = b'{"legalHeader": "demo"}'
+    listing = [{"type": "file", "name": "target.json", "sha": "old-sha", "path": 99}]
+
+    upload = _store_metadata_against_listing(monkeypatch, listing, "target.json", content)
+
+    assert upload == ("metadata/target.json", content, "metadata: update target.json", "old-sha")
