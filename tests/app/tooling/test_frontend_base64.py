@@ -18,12 +18,7 @@ from tests.app.tooling.test_html_sinks import LOGIC_ROOT, logic_modules
 
 _ATOB = re.compile(r"(?<![\w.$])atob\s*\(")
 
-ALLOWED: dict[str, str] = {
-    "shared/webauthn/json-ponyfill.js": (
-        "vendored @github/webauthn-json, kept as published with its source map; it turns the "
-        "server's base64url request options into buffers for navigator.credentials"
-    ),
-}
+ALLOWED: dict[str, str] = {}
 
 
 def _calls() -> dict[str, list[int]]:

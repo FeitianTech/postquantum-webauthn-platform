@@ -8,12 +8,7 @@ import {
   bytesToBase64Url,
   forgivingBase64ToBytes,
 } from './base64.js';
-import {
-  base64ToHex,
-  base64ToUint8Array,
-  base64UrlToHex,
-  base64UrlToUint8Array,
-} from './binary.js';
+import { base64ToHex, base64UrlToHex, base64UrlToUint8Array } from './binary.js';
 
 const text = (value) => Uint8Array.from(value, (character) => character.charCodeAt(0));
 
@@ -108,7 +103,6 @@ describe('binary.js decoders built on it', () => {
     expect(base64UrlToHex('+/8=')).toBe('fbff');
     expect(base64ToHex('+/8=')).toBe('fbff');
     expect(() => base64ToHex('-_8')).toThrow(Base64Error);
-    expect(() => base64ToUint8Array('-_8')).toThrow(Base64Error);
     expect(Array.from(base64UrlToUint8Array('-_8'))).toEqual([0xfb, 0xff]);
     expect(base64ToHex('')).toBe('');
     expect(base64UrlToUint8Array('')).toBeNull();

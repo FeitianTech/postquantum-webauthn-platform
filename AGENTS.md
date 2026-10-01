@@ -129,7 +129,7 @@ with the app's dependencies, `.venv/bin/python` by default; `E2E_PORT`, default 
 
 DOM-free plain JavaScript modules, each module's tests beside it, imported by components as
 `@/logic/…`. They import only each other (no npm package) and touch no DOM; every file is
-held at 100 % coverage (the vendored ponyfill aside). Components import them and never copy
+held at 100 % coverage. Components import them and never copy
 their exports or sentences. A new surface splits its logic out here first.
 
 - `shared/storage/records.js`, `shared/storage/local/`: the saved credentials, one
@@ -162,8 +162,13 @@ their exports or sentences. A new surface splits its logic out here first.
 - `shared/ceremony/result.js`: the result panel's signature counter and challenge sentences.
 - `shared/utils/base64.js`: bytes on the wire are unpadded base64url; a field named for base64
   (`derBase64`, …) is standard base64. Decode with the strict `base64UrlToBytes` /
-  `base64ToBytes`; `forgivingBase64ToBytes` only for typed text. No `atob` outside the vendored
-  `shared/webauthn/json-ponyfill.js` (@github/webauthn-json, kept with its source map).
+  `base64ToBytes`; `forgivingBase64ToBytes` only for typed text. No `atob`.
+- `shared/webauthn/native-json.js`: the browser's own WebAuthn JSON
+  (`PublicKeyCredential.parseCreationOptionsFromJSON` / `parseRequestOptionsFromJSON`,
+  `credential.toJSON()`; Chrome and Edge 129, Firefox 119, Safari 18.4). A begin answer's
+  `publicKey` goes to the browser's parser as the server wrote it, and the credential's own JSON
+  to the server; nothing is converted or merged on the way. A browser without the methods runs
+  no ceremony: `UPDATE_BROWSER_TEXT` (`components/ceremony/UpdateBrowserNotice.tsx`).
 
 ## Backend (`server/app`)
 

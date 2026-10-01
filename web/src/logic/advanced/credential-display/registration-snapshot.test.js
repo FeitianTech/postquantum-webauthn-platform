@@ -4,8 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { keepRegistrationSnapshot } from './registration-snapshot.js';
 import { createRegistrationState } from './registration-state.js';
 import { composeRegistration } from './registration-view.js';
-import { create } from '../../shared/webauthn/json-ponyfill.js';
-import { installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
+import { credentialToJSON } from '@/test/logic/simple/ceremony-answers.js';
 import { advancedDecodeAnswer, advancedRegistrations, recordedCredential } from '@/test/logic/advanced/auth/advanced-answers.js';
 
 // The three recorded registrations: a none attestation (ES256), a packed one
@@ -35,20 +34,15 @@ function composer(decode = recordedDecoder()) {
   return vi.fn((options) => composeRegistration(options, { state: createRegistrationState(), decode }));
 }
 
-/** The credential's JSON as the WebAuthn ponyfill writes it for a recorded registration's credential. */
-async function credentialJsonOf(registration) {
-  const authenticator = installAuthenticator(vi, { create: recordedCredential(registration) });
-  try {
-    return (await create({ publicKey: {} })).toJSON();
-  } finally {
-    authenticator.remove();
-  }
+/** The credential's JSON as the browser writes it for a recorded registration's credential. */
+function credentialJsonOf(registration) {
+  return credentialToJSON(recordedCredential(registration));
 }
 
 /** What the result is given for a recorded registration: the credential's JSON, the relying party's view, the saved record's storage ID. */
 async function resultOf(registration, storageId = registration.complete.body.storedCredential.storageId) {
   return {
-    credentialJson: await credentialJsonOf(registration),
+    credentialJson: credentialJsonOf(registration),
     relyingPartyInfo: registration.complete.body.relyingParty,
     storageId,
   };

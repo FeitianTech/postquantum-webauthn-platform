@@ -1,11 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { state } from '../state.js';
 import {
   arrayBufferToHex,
   base64ToBase64Url,
   base64ToHex,
-  base64ToUint8Array,
   base64UrlToHex,
   base64UrlToHexFixed,
   base64UrlToJson,
@@ -13,11 +12,7 @@ import {
   base64UrlToUtf8String,
   bytesToHex,
   bufferSourceToUint8Array,
-  convertCredProtectValue,
-  convertExtensionsForClient,
   convertFormat,
-  convertLargeBlobExtension,
-  convertPrfExtension,
   currentFormatToBase64Url,
   currentFormatToJsonFormat,
   generateRandomHex,
@@ -29,9 +24,6 @@ import {
   hexToUint8Array,
   isValidHex,
   jsToHex,
-  jsonValueToArrayBuffer,
-  jsonValueToUint8Array,
-  normalizeClientExtensionResults,
   normalizeToHex,
   sortObjectKeys,
 } from './binary.js';
@@ -81,7 +73,6 @@ describe('binary-utils', () => {
 
     expect(Array.from(hexToUint8Array('0a0b0c'))).toEqual([10, 11, 12]);
     expect(hexToUint8Array('0a0')).toBeNull();
-    expect(Array.from(base64ToUint8Array('QUJD'))).toEqual([65, 66, 67]);
     expect(Array.from(base64UrlToUint8Array('QUJD'))).toEqual([65, 66, 67]);
 
     const bytes = new Uint8Array([1, 2, 3]);
@@ -90,7 +81,7 @@ describe('binary-utils', () => {
     expect(arrayBufferToHex(bytes.buffer)).toBe('010203');
   });
 
-  it('decodes structured values and extension payloads', () => {
+  it('decodes structured values', () => {
     const originalDecoder = state.utf8Decoder;
     state.utf8Decoder = new TextDecoder('utf-8');
 
@@ -98,55 +89,10 @@ describe('binary-utils', () => {
     expect(base64UrlToUtf8String(jsonValue)).toBe('{"a":1}');
     expect(base64UrlToJson(jsonValue)).toEqual({ a: 1 });
 
-    expect(jsonValueToUint8Array({ $hex: '0a0b' })).toEqual(new Uint8Array([10, 11]));
-    expect(jsonValueToUint8Array({ $base64: 'QUJD' })).toEqual(new Uint8Array([65, 66, 67]));
-    expect(jsonValueToUint8Array({ $base64url: 'QUJD' })).toEqual(new Uint8Array([65, 66, 67]));
-    expect(jsonValueToUint8Array('4142')).toEqual(new Uint8Array([65, 66]));
-    expect(jsonValueToArrayBuffer({ $hex: '4142' })).toBeInstanceOf(ArrayBuffer);
-
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    expect(jsonValueToUint8Array({ $js: 'not-json' })).toBeNull();
-    expect(warnSpy).toHaveBeenCalled();
-
-    const converted = convertExtensionsForClient({
-      credProtect: 2,
-      enforceCredProtect: 1,
-      largeBlob: { support: 'preferred', write: { $hex: '4142' } },
-      prf: {
-        eval: { first: { $hex: '41424344' } },
-        evalByCredential: {
-          cred1: { first: { $hex: '4142' }, second: { $base64url: 'QUJDRA' } },
-        },
-        passthrough: 'keep-me',
-      },
-      credProps: true,
-      custom: 'value',
-    });
-
-    expect(converted.credentialProtectionPolicy).toBe('userVerificationOptionalWithCredentialIDList');
-    expect(converted.enforceCredentialProtectionPolicy).toBe(true);
-    expect(converted.largeBlob.write).toBeInstanceOf(ArrayBuffer);
-    expect(converted.prf.eval.first).toBeInstanceOf(ArrayBuffer);
-    expect(converted.prf.evalByCredential.cred1.first).toBeInstanceOf(ArrayBuffer);
-    expect(converted.prf.evalByCredential.cred1.second).toBeInstanceOf(ArrayBuffer);
-    expect(converted.prf.passthrough).toBe('keep-me');
-    expect(converted.credProps).toBe(true);
-    expect(converted.custom).toBe('value');
-    expect(convertExtensionsForClient(null)).toBeUndefined();
-
     state.utf8Decoder = originalDecoder;
   });
 
-  it('normalizes nested structures and sorts objects', () => {
-    const nested = normalizeClientExtensionResults({
-      direct: new Uint8Array([1, 2]),
-      list: [new Uint8Array([3, 4]), { value: new Uint8Array([5]) }],
-    });
-    expect(nested).toEqual({
-      direct: { $hex: '0102' },
-      list: [{ $hex: '0304' }, { value: { $hex: '05' } }],
-    });
-
+  it('normalizes values to hex and sorts objects', () => {
     expect(sortObjectKeys({ z: 1, a: { c: 3, b: 2 } })).toEqual({
       a: { b: 2, c: 3 },
       z: 1,
@@ -168,7 +114,7 @@ describe('binary-utils', () => {
     ]);
   });
 
-  it('covers conversion and extension fallback branches for malformed or alternate inputs', () => {
+  it('reads malformed or alternate inputs as their conversions allow', () => {
     expect(hexToBase64Url('f')).toBe('Dw');
     expect(bytesToHex(null)).toBe('');
     expect(base64UrlToHexFixed('QQ')).toBe('41');
@@ -182,42 +128,6 @@ describe('binary-utils', () => {
     expect(hexToUint8Array('zz')).toBeNull();
     expect(arrayBufferToHex(null)).toBe('');
     expect(arrayBufferToHex({})).toBe('');
-    expect(normalizeClientExtensionResults(42)).toBe(42);
-
-    const rawBuffer = new Uint8Array([1, 2, 3]).buffer;
-    expect(jsonValueToUint8Array(rawBuffer)).toEqual(new Uint8Array([1, 2, 3]));
-    expect(jsonValueToUint8Array('   ')).toBeNull();
-    expect(jsonValueToUint8Array('QQ')).toEqual(new Uint8Array([65]));
-    expect(jsonValueToUint8Array({ $js: '[1,2,3]' })).toEqual(new Uint8Array([1, 2, 3]));
-
-    expect(convertCredProtectValue('userVerificationRequired')).toBe('userVerificationRequired');
-    expect(convertCredProtectValue(true)).toBe(true);
-
-    expect(convertLargeBlobExtension(null)).toBeNull();
-    expect(convertLargeBlobExtension('required')).toEqual({ support: 'required' });
-    expect(convertLargeBlobExtension(7)).toBe(7);
-
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    expect(convertLargeBlobExtension({ support: { $js: 'not-json' } })).toEqual({ support: 'not-json' });
-    warnSpy.mockRestore();
-
-    expect(convertPrfExtension('not-object')).toBe('not-object');
-    const convertedPrf = convertPrfExtension({
-      eval: {
-        first: { $hex: '41' },
-        second: { $base64url: 'Qg' },
-      },
-      evalByCredential: {
-        credA: {
-          first: { $hex: '43' },
-          second: { $base64: 'RA==' },
-        },
-      },
-      passthrough: 'keep',
-    });
-    expect(convertedPrf.eval.second).toBeInstanceOf(ArrayBuffer);
-    expect(convertedPrf.evalByCredential.credA.second).toBeInstanceOf(ArrayBuffer);
-    expect(convertedPrf.passthrough).toBe('keep');
   });
 
   it('returns null for utf8 and json decode failures without throwing', () => {

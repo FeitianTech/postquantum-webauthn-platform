@@ -64,18 +64,8 @@ export default defineConfig({
       reporter: ['text', 'json-summary'],
       include: ['src/**/*.{ts,tsx}', 'src/logic/**/*.js', 'scripts/**/*.mjs'],
       // Pages only compose components (the design page is a gallery); the
-      // components and hooks they use carry the tests. The WebAuthn ponyfill is
-      // the vendored @github/webauthn-json build: its source map points coverage
-      // at TypeScript sources that are not here (src/logic/src/…), so neither is
-      // measured.
-      exclude: [
-        'src/**/*.test.{ts,tsx}',
-        'src/**/*.test.js',
-        'src/test/**',
-        'src/pages/**',
-        'src/logic/shared/webauthn/json-ponyfill.js',
-        'src/logic/src/**',
-      ],
+      // components and hooks they use carry the tests.
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/**/*.test.js', 'src/test/**', 'src/pages/**'],
       thresholds: {
         // A floor, not a target: set just under what was measured on 2026-09-25
         // (97.82 statements / 93.63 branches / 96.89 functions / 99.09 lines), so

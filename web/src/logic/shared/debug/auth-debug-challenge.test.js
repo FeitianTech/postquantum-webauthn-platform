@@ -5,8 +5,8 @@ import {
   printRegistrationDebug,
 } from './auth.js';
 
-// The ponyfill's create()/get() resolve to the browser's own credential, whose
-// response.clientDataJSON is an ArrayBuffer, not text.
+// navigator.credentials.create()/get() resolve to the browser's own credential,
+// whose response.clientDataJSON is an ArrayBuffer, not text.
 function clientDataBuffer(challenge) {
   const json = JSON.stringify({ type: 'webauthn.get', challenge, origin: 'https://example.com' });
   return Uint8Array.from(json, (character) => character.charCodeAt(0)).buffer;
