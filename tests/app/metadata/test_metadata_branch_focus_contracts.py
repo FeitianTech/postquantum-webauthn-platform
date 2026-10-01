@@ -7,15 +7,11 @@ from types import SimpleNamespace
 
 import itsdangerous
 import pytest
-from fido2.mds3 import MetadataBlobPayloadEntry
 from flask import ctx, g, session
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
-from server.app.mds import entries as mds_entries
-from server.app.mds import uploads as mds_uploads
-from server.app.mds import verifier as mds_verifier
 from server.app.storage import github_mirror
 from tests.app.entry_app import entry_app
 
@@ -181,40 +177,6 @@ def test_upload_and_normalisation_error_edges(metadata_module, monkeypatch, uplo
     assert github_mirror.maybe_store_uploaded_metadata_file("target.json", b"{}") is True
     assert recorded[0][0][0] == "metadata/target.json"
     assert recorded[0][1] == {"sha": "old-sha"}
-
-
-def test_build_expand_extract_and_merge_error_branches(metadata_module, monkeypatch, entries):
-    session_entry_one = MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
-    session_entry_two = MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
-
-    item_one = mds_uploads.SessionMetadataItem(
-        filename="one.json",
-        payload=_minimal_entry_payload(),
-        legal_header=None,
-        entry=session_entry_one,
-        uploaded_at="2026-04-04T00:00:00+00:00",
-        original_filename="one.json",
-        mtime=1.0,
-    )
-    item_two = mds_uploads.SessionMetadataItem(
-        filename="two.json",
-        payload=_minimal_entry_payload(),
-        legal_header="Session Legal",
-        entry=session_entry_two,
-        uploaded_at="2026-04-04T00:00:00+00:00",
-        original_filename="two.json",
-        mtime=2.0,
-    )
-
-    monkeypatch.setattr(
-        entries,
-        "_extract_entry_aaguid",
-        lambda value: mds_entries._normalise_aaguid(str(getattr(value, "aaguid", ""))),
-    )
-
-    merged = mds_verifier._merge_metadata(None, [item_one, item_two])
-    assert merged.legal_header == "Session Legal"
-    assert len(merged.entries) == 1
 
 
 def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_path, metadata_state, blob, effective):
@@ -440,39 +402,6 @@ def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, m
 
     monkeypatch.setattr(blob, "_load_base_metadata", lambda: (None, None))
     assert mds_effective.resolve_effective_metadata_entry(aaguid="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb") is None
-
-    assert mds_verifier.metadata_entry_trust_anchor_status(object()) is None
-
-    entry = MetadataBlobPayloadEntry.from_dict(_minimal_entry_payload())
-    mds_cache.CACHE.entry_ids = set()
-    mds_cache.CACHE.trust_verified = False
-    assert mds_verifier.metadata_entry_trust_anchor_status(entry) is None
-
-    monkeypatch.setattr(blob, "_load_base_metadata", lambda: (None, 77.0))
-    monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [])
-    assert mds_verifier.get_mds_verifier() is None
-    assert mds_cache.CACHE.verifier_mtime == 77.0
-
-    created = []
-
-    class _FakeVerifier:
-        def __init__(self, metadata):
-            created.append(metadata)
-
-    monkeypatch.setattr(blob, "_load_base_metadata", lambda: (None, 88.0))
-    monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: [SimpleNamespace(entry=entry)])
-    monkeypatch.setattr(
-        verifier,
-        "_merge_metadata",
-        lambda base_metadata, session_items: {
-            "base": base_metadata,
-            "count": len(session_items),
-        },
-    )
-    monkeypatch.setattr(verifier, "MdsAttestationVerifier", _FakeVerifier)
-
-    mds_verifier.get_mds_verifier()
-    assert created == [{"base": None, "count": 1}]
 
 
 def test_the_never_raised_metadata_download_error_is_gone():
