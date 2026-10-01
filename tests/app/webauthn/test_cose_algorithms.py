@@ -23,6 +23,8 @@ from server.app.webauthn import cose_algorithms
         # No name it knows: the last number in the text.
         ("fido custom alg (-12345)", -12345),
         ("SHA-256 (RS256)", 256),
+        # Any digits \d reads, as int() does: Arabic-Indic 35.
+        ("alg \u0663\u0665", 35),
     ],
 )
 def test_an_algorithm_is_read_from_a_number_or_a_name(value, expected):

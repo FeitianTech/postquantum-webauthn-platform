@@ -103,10 +103,8 @@ def coerce_cose_algorithm(
                 return normalized_alg
             matches = list(NUMERIC_PATTERN.finditer(stripped))
             if matches:
-                try:
-                    return int(matches[-1].group(0), 10)
-                except ValueError:
-                    return None
+                # int() reads every digit \d matches, Unicode's included.
+                return int(matches[-1].group(0), 10)
             return None
     return None
 
