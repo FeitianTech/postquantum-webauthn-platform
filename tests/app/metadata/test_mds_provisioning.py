@@ -12,6 +12,7 @@ from server.app.mds import provisioning
 from server.app.mds import sets as snapshot_sets
 from tests.app.metadata.snapshot_versions import snapshot_version
 from tests.app.storage import fake_gcs
+from tools import update_mds_snapshot
 
 
 @pytest.fixture
@@ -108,8 +109,6 @@ def test_snapshot_is_unavailable_without_cloud_storage_or_upstream(static_root, 
 
 
 def test_an_empty_bucket_falls_through_to_an_upstream_refresh_it_publishes(static_root, gcs, monkeypatch):
-    from tools import update_mds_snapshot
-
     monkeypatch.setenv("FIDO_SERVER_MDS_FETCH_UPSTREAM", "1")
 
     def _refresh(argv):
@@ -188,8 +187,6 @@ def test_an_incompressible_payload_gets_no_gzip_sibling(static_root, monkeypatch
 
 
 def test_upstream_refresh_runs_the_packaged_updater(static_root, monkeypatch):
-    from tools import update_mds_snapshot
-
     monkeypatch.setattr(update_mds_snapshot, "main", lambda argv: 0 if argv == [] else 2)
     assert provisioning._refresh_from_upstream() is True
 
@@ -198,8 +195,6 @@ def test_upstream_refresh_runs_the_packaged_updater(static_root, monkeypatch):
 
 
 def test_a_failing_updater_is_reported_rather_than_raised(static_root, monkeypatch):
-    from tools import update_mds_snapshot
-
     def _raise(argv):
         raise RuntimeError("upstream is down")
 

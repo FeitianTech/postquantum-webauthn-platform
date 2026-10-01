@@ -15,7 +15,11 @@ from fido2.attestation.base import InvalidSignature
 
 import tools.update_mds_snapshot as updater
 from server.app.mds import files as mds_files
+from server.app.mds import sets as snapshot_sets
+from server.app.storage import cloud
 from tests.app.metadata import mds_fixture
+from tests.app.metadata.snapshot_versions import snapshot_version
+from tests.app.storage import fake_gcs
 
 
 def test_metadata_trust_root_is_globalsign_r46():
@@ -429,9 +433,6 @@ def test_verify_only_checks_the_blob_without_writing_files(stubbed_refresh, caps
 
 @pytest.fixture
 def bucket(monkeypatch):
-    from server.app.storage import cloud
-    from tests.app.storage import fake_gcs
-
     monkeypatch.delenv("FIDO_SERVER_MDS_GCS_PREFIX", raising=False)
     monkeypatch.setattr(cloud, "gcs_enabled", lambda: True)
     return fake_gcs.install(monkeypatch)
@@ -439,8 +440,6 @@ def bucket(monkeypatch):
 
 @pytest.mark.parametrize("flag", ["--publish", "--gcs-upload"])
 def test_publish_points_the_bucket_at_the_verified_snapshot(stubbed_refresh, bucket, flag, capsys):
-    from server.app.mds import sets as snapshot_sets
-
     assert updater.main([flag]) == 0
 
     pointer, _generation = snapshot_sets.read_pointer()
@@ -458,8 +457,6 @@ def test_publish_points_the_bucket_at_the_verified_snapshot(stubbed_refresh, buc
 
 
 def test_publish_fails_loudly_when_cloud_storage_is_disabled(stubbed_refresh, monkeypatch, capsys):
-    from server.app.storage import cloud
-
     monkeypatch.setattr(cloud, "gcs_enabled", lambda: False)
 
     assert updater.main(["--publish"]) == 1
@@ -467,8 +464,6 @@ def test_publish_fails_loudly_when_cloud_storage_is_disabled(stubbed_refresh, mo
 
 
 def test_publish_reports_a_bucket_failure(stubbed_refresh, bucket, monkeypatch, capsys):
-    from server.app.storage import cloud
-
     def _unavailable(*_args, **_kwargs):
         raise OSError("bucket unavailable")
 
@@ -480,9 +475,6 @@ def test_publish_reports_a_bucket_failure(stubbed_refresh, bucket, monkeypatch, 
 
 
 def test_publish_takes_the_pointer_back_from_an_older_publisher(stubbed_refresh, bucket, capsys):
-    from server.app.mds import sets as snapshot_sets
-    from tests.app.metadata.snapshot_versions import snapshot_version
-
     snapshot_sets.publish(snapshot_version(6))
     fired = []
 
@@ -517,9 +509,6 @@ def _rate_limited(monkeypatch):
 
 
 def test_a_rate_limited_refresh_keeps_the_snapshot_and_the_bucket(isolated_mds_paths, bucket, monkeypatch, capsys):
-    from server.app.mds import sets as snapshot_sets
-    from tests.app.metadata.snapshot_versions import snapshot_version
-
     current = snapshot_version(7)
     for name, data in current.items():
         mds_files.write_file(_file(name), data)
