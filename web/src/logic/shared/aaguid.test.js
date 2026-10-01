@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { normaliseAaguidValue } from './aaguid.js';
+import { hexToGuid, normaliseAaguidValue } from './aaguid.js';
 import { goldenAnswers } from '@/test/logic/simple/ceremony-answers.js';
 
 // An AAGUID as lower-case hex, from any spelling a record or the server gives
@@ -73,5 +73,16 @@ describe('normaliseAaguidValue', () => {
 
   it('finds none when an object\'s hex method throws', () => {
     expect(normaliseAaguidValue({ hex() { throw new Error('bad hex encoder'); } })).toBe('');
+  });
+});
+
+describe('hexToGuid', () => {
+  it('dashes thirty-two hex digits as a GUID', () => {
+    expect(hexToGuid(AAGUID)).toBe('00112233-4455-6677-8899-aabbccddeeff');
+  });
+
+  it('gives none for anything but thirty-two digits', () => {
+    expect(hexToGuid('00112233')).toBe('');
+    expect(hexToGuid('')).toBe('');
   });
 });

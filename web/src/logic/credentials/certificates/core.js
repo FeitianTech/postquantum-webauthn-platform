@@ -1,4 +1,4 @@
-import {bytesToHex} from '../../shared/binary.js';
+import {bytesToHex} from '../../shared/bytes.js';
 import {base64ToBytes} from '../../shared/base64.js';
 import { normaliseAaguidValue } from '../../shared/aaguid.js';
 

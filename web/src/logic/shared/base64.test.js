@@ -8,7 +8,7 @@ import {
   bytesToBase64Url,
   forgivingBase64ToBytes,
 } from './base64.js';
-import { base64ToHex, base64UrlToHex } from './binary.js';
+import { base64ToHex, base64UrlToHex } from './bytes.js';
 
 const text = (value) => Uint8Array.from(value, (character) => character.charCodeAt(0));
 

@@ -8,6 +8,7 @@ import {
   requestText,
   topLevelExtras,
   validationFailedText,
+  sortObjectKeys,
 } from './model.js';
 import { buildCreationOptions, registrationDefaults } from '../registration/request.js';
 
@@ -154,5 +155,16 @@ describe('an edit of the editor', () => {
     const edit = readEditedRequest('{"publicKey": {"challenge": {"$hex": "00"}, "userVerification": "always"}}', 'authentication');
     expect(edit).toMatchObject({ status: 'refused', message: 'JSON validation failed: publicKey.userVerification must be required, preferred, or discouraged.' });
     expect(readEditedRequest('{"publicKey": {"challenge": {"$hex": "00"}}}', 'authentication').status).toBe('accepted');
+  });
+});
+
+describe('sortObjectKeys', () => {
+  it('orders every object\'s keys, in nested objects and lists too', () => {
+    expect(sortObjectKeys({ z: 1, a: { c: 3, b: 2 } })).toEqual({ a: { b: 2, c: 3 }, z: 1 });
+    expect(sortObjectKeys([{ z: 1, a: 2 }, { b: { d: 4, c: 3 } }])).toEqual([{ a: 2, z: 1 }, { b: { c: 3, d: 4 } }]);
+  });
+
+  it('leaves a value that is not a plain object as it is', () => {
+    expect(sortObjectKeys('text')).toBe('text');
   });
 });

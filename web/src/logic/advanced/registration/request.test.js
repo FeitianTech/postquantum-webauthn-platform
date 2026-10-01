@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   buildCreationOptions,
@@ -22,10 +22,6 @@ function settings(extra = {}) {
 }
 
 const build = (extra = {}, context = CONTEXT) => buildCreationOptions(settings(extra), context).publicKey;
-
-afterEach(() => {
-  delete window.__binaryFormat;
-});
 
 describe('the defaults', () => {
   it('are the form\'s, without the values drawn at random', () => {
@@ -156,11 +152,10 @@ describe('the credentials a registration excludes', () => {
     expect(buildCreationOptions(settings()).publicKey.excludeCredentials).toEqual([]);
   });
 
-  it('write the fake IDs in the page\'s byte spelling, keeping as hex one that does not convert', () => {
-    window.__binaryFormat = 'b64';
+  it('write the fake IDs as hex, as typed', () => {
     const excluded = build({}, { ...CONTEXT, fakeExcludeCredentials: ['cafe', 'a'] }).excludeCredentials;
     expect(excluded).toEqual([
-      { type: 'public-key', id: { $base64: 'yv4=' } },
+      { type: 'public-key', id: { $hex: 'cafe' } },
       { type: 'public-key', id: { $hex: 'a' } },
     ]);
   });

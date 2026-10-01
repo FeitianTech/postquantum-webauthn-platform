@@ -5,7 +5,7 @@
 // form as the ceremony runs.
 
 import { createCredential, parseCreationOptions, requireNativeJson } from '../../shared/native-json.js';
-import { bufferSourceToUint8Array, bytesToHex } from '../../shared/binary.js';
+import { bufferSourceToUint8Array, bytesToHex } from '../../shared/bytes.js';
 import { FailedResponseError, readFailedResponse } from '../../shared/failed-response.js';
 
 export const ADVANCED_CEREMONY_TEXT = {

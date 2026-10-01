@@ -2,14 +2,28 @@
 // written as, reading an edit (and where text that does not parse stops being
 // JSON, the same in every browser), and the keys an edit adds beside
 // `publicKey`. DOM-free.
-import { sortObjectKeys } from '../../shared/binary.js';
-
 import { isPlainObject } from './schema.js';
-
 import { validateAuthenticationPublicKey } from '../authentication/validation.js';
-
 import { validateRegistrationPublicKey } from '../registration/validation.js';
 
+// A value with every object's keys in order, as the editor shows a request.
+export function sortObjectKeys(value) {
+    if (Array.isArray(value)) {
+        return value.map(item => sortObjectKeys(item));
+    }
+
+    if (value && Object.prototype.toString.call(value) === '[object Object]') {
+        const sorted = {};
+        Object.keys(value)
+            .sort((a, b) => a.localeCompare(b))
+            .forEach(key => {
+                sorted[key] = sortObjectKeys(value[key]);
+            });
+        return sorted;
+    }
+
+    return value;
+}
 
 export const EDITOR_TEXT = {
     title: 'JSON Editor',

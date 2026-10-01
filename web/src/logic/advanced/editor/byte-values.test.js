@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { extractHexFromJsonFormat } from './byte-values.js';
+import { extractHexFromJsonFormat, jsonBytes } from './byte-values.js';
 
 // The byte values a request's JSON spells, read as hex (advanced/editor/byte-values.js).
 
@@ -19,5 +19,13 @@ describe('extractHexFromJsonFormat', () => {
   it('finds no hex in an absent value or an object that spells no bytes', () => {
     expect(extractHexFromJsonFormat(undefined)).toBe('');
     expect(extractHexFromJsonFormat({ unsupported: true })).toBe('');
+  });
+});
+
+describe('jsonBytes', () => {
+  it('writes hex as the request\'s byte value, and nothing as nothing', () => {
+    expect(jsonBytes('cafe')).toEqual({ $hex: 'cafe' });
+    expect(jsonBytes('')).toBe('');
+    expect(jsonBytes(undefined)).toBe('');
   });
 });

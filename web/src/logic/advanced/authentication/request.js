@@ -2,12 +2,7 @@
 // settings it is built from, with no page: the settings' defaults, the request
 // they build, what a request says the settings are, and the rules one setting's
 // change applies to others. DOM-free: the form keeps the settings as data.
-import {
-    convertFormat,
-    currentFormatToJsonFormat,
-    getCurrentBinaryFormat,
-} from '../../shared/binary.js';
-import { extractHexFromJsonFormat } from '../editor/byte-values.js';
+import { extractHexFromJsonFormat, jsonBytes } from '../editor/byte-values.js';
 import { getCredentialIdHex, getStoredCredentialAttachment } from '../../credentials/record-fields.js';
 import { deriveAllowedAttachmentsFromHints } from '../hints.js';
 import { decodeJsonBinaryToHex, requestTimeout } from '../registration/request.js';
@@ -33,11 +28,11 @@ export function authenticationDefaults() {
     };
 }
 
-// A credential's ID in the request, in the page's byte spelling.
+// A credential's ID in the request, as hex.
 function descriptorFor(credentialIdHex) {
     return {
         type: 'public-key',
-        id: currentFormatToJsonFormat(convertFormat(credentialIdHex, 'hex', getCurrentBinaryFormat())),
+        id: jsonBytes(credentialIdHex),
     };
 }
 
@@ -80,7 +75,7 @@ export function allowedCredentials(storedCredentials, selection, allowedAttachme
 export function buildRequestOptions(settings, context = {}) {
     const hints = settings.hints;
     const publicKey = {
-        challenge: currentFormatToJsonFormat(settings.challenge),
+        challenge: jsonBytes(settings.challenge),
         timeout: requestTimeout(settings.timeout),
         rpId: context.hostname,
         allowCredentials: [],
@@ -112,13 +107,13 @@ export function buildRequestOptions(settings, context = {}) {
     if (settings.largeBlob === 'read') {
         publicKey.extensions.largeBlob = { read: true };
     } else if (settings.largeBlob === 'write' && settings.largeBlobWrite) {
-        publicKey.extensions.largeBlob = { write: currentFormatToJsonFormat(settings.largeBlobWrite) };
+        publicKey.extensions.largeBlob = { write: jsonBytes(settings.largeBlobWrite) };
     }
 
     if (settings.prfFirst) {
-        publicKey.extensions.prf = { eval: { first: currentFormatToJsonFormat(settings.prfFirst) } };
+        publicKey.extensions.prf = { eval: { first: jsonBytes(settings.prfFirst) } };
         if (settings.prfSecond) {
-            publicKey.extensions.prf.eval.second = currentFormatToJsonFormat(settings.prfSecond);
+            publicKey.extensions.prf.eval.second = jsonBytes(settings.prfSecond);
         }
     }
 

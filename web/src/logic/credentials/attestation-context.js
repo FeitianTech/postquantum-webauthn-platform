@@ -1,6 +1,5 @@
-import {hexToGuid} from '../shared/binary.js';
+import { hexToGuid, normaliseAaguidValue } from '../shared/aaguid.js';
 import { deriveAaguidFromCredentialData } from './record-fields.js';
-import { normaliseAaguidValue } from '../shared/aaguid.js';
 import {
     collectCredentialCertificates,
     extractAaguidFromCertificateEntries,

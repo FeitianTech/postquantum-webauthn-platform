@@ -9,8 +9,8 @@ import {
     bytesToBase64,
     bytesToBase64Url,
 } from '../../shared/base64.js';
-import {hexToGuid, hexToUint8Array} from '../../shared/binary.js';
-import {normaliseAaguidValue} from '../../shared/aaguid.js';
+import {hexToUint8Array} from '../../shared/bytes.js';
+import {hexToGuid, normaliseAaguidValue} from '../../shared/aaguid.js';
 import {resolveCredentialAlgorithmIdentifier} from '../algorithm-tag.js';
 import {extractMinPinLengthValue} from '../min-pin-length.js';
 import {deriveAaguidFromCredentialData} from '../record-fields.js';

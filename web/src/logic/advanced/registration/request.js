@@ -2,13 +2,8 @@
 // it is built from, with no page: the settings' defaults, the request they
 // build, what a request says the settings are, and the rules one setting's
 // change applies to others. DOM-free: the form keeps the settings as data.
-import {
-    base64UrlToHex,
-    convertFormat,
-    currentFormatToJsonFormat,
-    getCurrentBinaryFormat,
-} from '../../shared/binary.js';
-import { extractHexFromJsonFormat } from '../editor/byte-values.js';
+import { base64UrlToHex } from '../../shared/bytes.js';
+import { extractHexFromJsonFormat, jsonBytes } from '../editor/byte-values.js';
 import { getCredentialIdHex, getCredentialUserHandleHex } from '../../credentials/record-fields.js';
 import { ALGORITHM_OPTIONS } from './algorithm-options.js';
 
@@ -47,17 +42,11 @@ export function requestTimeout(text) {
     return Number.isNaN(timeout) ? 90000 : timeout;
 }
 
-/** A byte value as the request writes it ({"$hex": …} for the page's hex), or '' for none. */
-function requestBytes(value) {
-    return currentFormatToJsonFormat(value);
-}
-
 // The saved credentials of this user (its user handle is the User ID) first,
-// then the fake IDs, each in the page's byte spelling.
+// then the fake IDs, each as hex.
 function excludedCredentials(settings, { storedCredentials = [], fakeExcludeCredentials = [] }) {
     const excludeList = [];
-    const currentBinaryFormat = getCurrentBinaryFormat();
-    const userIdHex = (convertFormat(settings.userId, currentBinaryFormat, 'hex') || '').toLowerCase();
+    const userIdHex = (settings.userId || '').toLowerCase();
 
     if (userIdHex && Array.isArray(storedCredentials) && storedCredentials.length > 0) {
         storedCredentials.forEach(cred => {
@@ -80,17 +69,9 @@ function excludedCredentials(settings, { storedCredentials = [], fakeExcludeCred
             return;
         }
 
-        // Text that is not hex does not convert to another spelling: kept as hex.
-        let idValue = { $hex: hexValue };
-        try {
-            idValue = currentFormatToJsonFormat(convertFormat(hexValue, 'hex', currentBinaryFormat));
-        } catch (error) {
-            // Fall back to hex representation on conversion errors
-        }
-
         excludeList.push({
             type: 'public-key',
-            id: idValue,
+            id: { $hex: hexValue },
         });
     });
     return excludeList;
@@ -108,11 +89,11 @@ export function buildCreationOptions(settings, context = {}) {
             id: context.hostname,
         },
         user: {
-            id: requestBytes(settings.userId),
+            id: jsonBytes(settings.userId),
             name: settings.userName,
             displayName: settings.displayName,
         },
-        challenge: requestBytes(settings.challenge),
+        challenge: jsonBytes(settings.challenge),
         pubKeyCredParams: ALGORITHM_OPTIONS
             .filter(option => settings.algorithms.includes(option.alg))
             .map(option => ({ type: 'public-key', alg: option.alg })),
@@ -158,11 +139,11 @@ export function buildCreationOptions(settings, context = {}) {
     if (settings.prf && settings.prfFirst) {
         publicKey.extensions.prf = {
             eval: {
-                first: requestBytes(settings.prfFirst),
+                first: jsonBytes(settings.prfFirst),
             },
         };
         if (settings.prfSecond) {
-            publicKey.extensions.prf.eval.second = requestBytes(settings.prfSecond);
+            publicKey.extensions.prf.eval.second = jsonBytes(settings.prfSecond);
         }
     }
 

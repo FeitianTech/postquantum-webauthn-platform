@@ -6,7 +6,7 @@ import {
     base64UrlToHex,
     bytesToHex,
     hexToUint8Array,
-} from '../../shared/binary.js';
+} from '../../shared/bytes.js';
 import {base64ToBytes, base64UrlToBytes} from '../../shared/base64.js';
 import {
     deriveCertificateIdentity,

@@ -1,6 +1,6 @@
 import {
     base64ToBase64Url,
-} from '../../shared/binary.js';
+} from '../../shared/bytes.js';
 import { deriveAaguidFromCredentialData } from '../record-fields.js';
 import { normaliseAaguidValue } from '../../shared/aaguid.js';
 import {extractAaguidFromCertificateEntries} from '../certificates/core.js';

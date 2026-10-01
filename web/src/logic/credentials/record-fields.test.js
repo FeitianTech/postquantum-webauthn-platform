@@ -8,6 +8,7 @@ import {
   getCredentialUserHandleHex,
   getStoredCredentialAttachment,
   normalizeAttachmentValue,
+  normalizeToHex,
 } from './record-fields.js';
 import { goldenAnswers } from '@/test/logic/simple/ceremony-answers.js';
 
@@ -110,5 +111,29 @@ describe('the AAGUID in the authenticator data', () => {
   it('is none without a record or without authenticator data', () => {
     expect(deriveAaguidFromCredentialData(null)).toBe('');
     expect(deriveAaguidFromCredentialData({})).toBe('');
+  });
+});
+
+describe('normalizeToHex', () => {
+  it('reads hex or base64url text as lower-case hex', () => {
+    expect(normalizeToHex('414243')).toBe('414243');
+    expect(normalizeToHex('ABCD')).toBe('abcd');
+    expect(normalizeToHex('QUJD')).toBe('414243');
+  });
+
+  it('reads a JSON byte value', () => {
+    expect(normalizeToHex({ $hex: '414243' })).toBe('414243');
+    expect(normalizeToHex({ $base64url: 'QUJD' })).toBe('414243');
+    expect(normalizeToHex({ $base64: 'QUJD' })).toBe('414243');
+    expect(normalizeToHex({ $js: 'new Uint8Array([65, 66])' })).toBe('4142');
+  });
+
+  it('reads no hex from blank or unreadable text, a number or an object that spells no bytes', () => {
+    expect(normalizeToHex('   ')).toBe('');
+    expect(normalizeToHex('###not-binary###')).toBe('');
+    expect(normalizeToHex(42)).toBe('');
+    expect(normalizeToHex({ unsupported: true })).toBe('');
+    expect(normalizeToHex({ $js: 'Uint8Array.from([1, 2])' })).toBe('');
+    expect(normalizeToHex({ $js: '' })).toBe('');
   });
 });

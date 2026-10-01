@@ -60,7 +60,7 @@ import {
   updateAdvancedCredentialRegistrationSnapshot,
   updateAdvancedCredentialSignCount,
 } from '@/logic/credentials/storage/records.js';
-import { generateRandomHex } from '@/logic/shared/binary.js';
+import { generateRandomHex } from '@/logic/shared/bytes.js';
 
 import type { CeremonyResultInput } from '@/components/ceremony/model';
 import type { SavedCredential } from '@/components/credentials/model';

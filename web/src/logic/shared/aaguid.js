@@ -1,7 +1,7 @@
 // An AAGUID as lower-case hex, from whichever spelling a record or the server
 // gives it: hex, a dashed GUID, base64url (or base64), bytes, or an object with
 // one of those spellings. DOM-free.
-import { base64ToHex, base64UrlToHex, bytesToHex } from './binary.js';
+import { base64ToHex, base64UrlToHex, bytesToHex } from './bytes.js';
 import { base64UrlToBytes } from './base64.js';
 
 const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -149,4 +149,16 @@ export function normaliseAaguidValue(value) {
     }
 
     return '';
+}
+
+// Thirty-two hex digits as a dashed GUID; anything else as none.
+export function hexToGuid(hexString) {
+    if (!hexString || hexString.length !== 32) return '';
+    return [
+        hexString.substring(0, 8),
+        hexString.substring(8, 12),
+        hexString.substring(12, 16),
+        hexString.substring(16, 20),
+        hexString.substring(20, 32)
+    ].join('-');
 }

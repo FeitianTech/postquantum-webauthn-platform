@@ -2,12 +2,7 @@
 // form: the hints' values in the form's order, the attachments they imply, the
 // attachment given to the browser, and the allowCredentials the stored
 // credentials' attachments allow. DOM-free.
-import {
-    convertFormat,
-    currentFormatToJsonFormat,
-    getCurrentBinaryFormat
-} from '../shared/binary.js';
-import { extractHexFromJsonFormat } from './editor/byte-values.js';
+import { extractHexFromJsonFormat, jsonBytes } from './editor/byte-values.js';
 import {
     getCredentialIdHex,
     getStoredCredentialAttachment,
@@ -204,8 +199,7 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
                 });
                 if (fallbackCredential) {
                     const credentialIdHex = fallbackCredential.credentialIdHex || getCredentialIdHex(fallbackCredential);
-                    const formatValue = convertFormat(credentialIdHex, 'hex', getCurrentBinaryFormat());
-                    const formattedId = currentFormatToJsonFormat(formatValue);
+                    const formattedId = jsonBytes(credentialIdHex);
                     if (formattedId && typeof formattedId === 'object') {
                         publicKey.allowCredentials = [{
                             type: 'public-key',
@@ -224,10 +218,9 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
                         if (!credentialIdHex) {
                             return null;
                         }
-                        const formatValue = convertFormat(credentialIdHex, 'hex', getCurrentBinaryFormat());
                         return {
                             type: 'public-key',
-                            id: currentFormatToJsonFormat(formatValue),
+                            id: jsonBytes(credentialIdHex),
                         };
                     })
                     .filter(Boolean);

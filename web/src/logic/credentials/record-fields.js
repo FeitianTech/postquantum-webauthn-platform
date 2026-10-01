@@ -5,8 +5,60 @@ import {
     base64ToHex,
     base64UrlToHex,
     bytesToHex,
-    normalizeToHex,
-} from '../shared/binary.js';
+} from '../shared/bytes.js';
+
+function isValidHex(str) {
+    return /^[0-9a-fA-F]*$/.test(str) && str.length > 0;
+}
+
+// Called with a value's $js text, which is never empty.
+function jsToHex(jsString) {
+    const match = jsString.match(/new Uint8Array\(\[([0-9, ]+)\]\)/);
+    if (!match) return '';
+    const numbers = match[1].split(',').map(n => parseInt(n.trim()));
+    return numbers.map(n => n.toString(16).padStart(2, '0')).join('');
+}
+
+// A byte value as hex: hex or base64url text, or a JSON byte value ({"$hex"}, …).
+export function normalizeToHex(value) {
+    if (!value) {
+        return '';
+    }
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return '';
+        }
+
+        if (isValidHex(trimmed) && trimmed.length % 2 === 0) {
+            return trimmed.toLowerCase();
+        }
+
+        try {
+            return base64UrlToHex(trimmed).toLowerCase();
+        } catch (error) {
+            return '';
+        }
+    }
+
+    if (typeof value === 'object') {
+        if (value.$hex) {
+            return normalizeToHex(value.$hex);
+        }
+        if (value.$base64url) {
+            return normalizeToHex(value.$base64url);
+        }
+        if (value.$base64) {
+            return normalizeToHex(value.$base64);
+        }
+        if (value.$js) {
+            return normalizeToHex(jsToHex(value.$js));
+        }
+    }
+
+    return '';
+}
 
 export function getCredentialIdHex(credential) {
     if (!credential) {
