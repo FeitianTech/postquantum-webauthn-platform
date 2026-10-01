@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { state } from '../state.js';
+import { Base64Error } from './base64.js';
 import {
-  arrayBufferToHex,
   base64ToBase64Url,
   base64ToHex,
   base64UrlToHex,
-  base64UrlToHexFixed,
   base64UrlToJson,
-  base64UrlToUint8Array,
   base64UrlToUtf8String,
   bytesToHex,
   bufferSourceToUint8Array,
@@ -38,7 +36,6 @@ describe('binary-utils', () => {
     expect(base64ToBase64Url('QUJD+/==')).toBe('QUJD-_');
     expect(hexToBase64Url('414243')).toBe('QUJD');
     expect(base64UrlToHex('QUJD')).toBe('414243');
-    expect(base64UrlToHexFixed('QUJD')).toBe('414243');
     expect(hexToGuid('00112233445566778899aabbccddeeff')).toBe('00112233-4455-6677-8899-aabbccddeeff');
     expect(hexToJs('0a0b')).toBe('new Uint8Array([10, 11])');
     expect(jsToHex('new Uint8Array([10, 11])')).toBe('0a0b');
@@ -73,12 +70,10 @@ describe('binary-utils', () => {
 
     expect(Array.from(hexToUint8Array('0a0b0c'))).toEqual([10, 11, 12]);
     expect(hexToUint8Array('0a0')).toBeNull();
-    expect(Array.from(base64UrlToUint8Array('QUJD'))).toEqual([65, 66, 67]);
 
     const bytes = new Uint8Array([1, 2, 3]);
     const view = bufferSourceToUint8Array(bytes);
     expect(Array.from(view)).toEqual([1, 2, 3]);
-    expect(arrayBufferToHex(bytes.buffer)).toBe('010203');
   });
 
   it('decodes structured values', () => {
@@ -116,8 +111,10 @@ describe('binary-utils', () => {
 
   it('reads malformed or alternate inputs as their conversions allow', () => {
     expect(hexToBase64Url('f')).toBe('Dw');
+    expect(() => hexToBase64Url('zz')).toThrow(Base64Error);
+    expect(() => hexToBase64('abc')).toThrow(Base64Error);
     expect(bytesToHex(null)).toBe('');
-    expect(base64UrlToHexFixed('QQ')).toBe('41');
+    expect(base64UrlToHex('QQ')).toBe('41');
 
     expect(convertFormat('QUJD', 'b64', 'hex')).toBe('414243');
     expect(convertFormat('new Uint8Array([65, 66])', 'js', 'hex')).toBe('4142');
@@ -126,8 +123,6 @@ describe('binary-utils', () => {
     expect(convertFormat('4142', 'hex', 'unknown')).toBe('4142');
 
     expect(hexToUint8Array('zz')).toBeNull();
-    expect(arrayBufferToHex(null)).toBe('');
-    expect(arrayBufferToHex({})).toBe('');
   });
 
   it('returns null for utf8 and json decode failures without throwing', () => {

@@ -4,7 +4,7 @@
 // DOM-free.
 import {
     base64ToHex,
-    base64UrlToHexFixed,
+    base64UrlToHex,
     getCurrentBinaryFormat,
     jsToHex,
 } from '../../shared/utils/binary.js';
@@ -22,7 +22,7 @@ export function hexInputIsValid(text, minBytes = 0, format = getCurrentBinaryFor
             case 'b64':
                 return base64ToHex(value).length >= minBytes * 2;
             case 'b64u':
-                return base64UrlToHexFixed(value).length >= minBytes * 2;
+                return base64UrlToHex(value).length >= minBytes * 2;
             case 'js':
                 return jsToHex(value).length >= minBytes * 2;
             default:

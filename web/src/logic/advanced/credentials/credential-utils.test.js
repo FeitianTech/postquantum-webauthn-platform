@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   deriveAaguidDisplayValues,
@@ -212,26 +212,14 @@ describe('credential-utils', () => {
     expect(extractHexFromJsonFormat({ unsupported: true })).toBe('');
   });
 
-  it('falls back to empty encoded AAGUID display fields when base64 conversion fails', async () => {
-    vi.resetModules();
-    vi.doMock('../../shared/utils/binary.js', async () => {
-      const actual = await vi.importActual('../../shared/utils/binary.js');
-      return {
-        ...actual,
-        hexToBase64: vi.fn(() => {
-          throw new Error('hex conversion failed');
-        }),
-      };
-    });
-
-    const reloaded = await import('./utils.js');
-    expect(reloaded.deriveAaguidDisplayValues('00112233445566778899aabbccddeeff')).toEqual({
+  it('gives an AAGUID that is not whole bytes of hex no base64 spellings', () => {
+    expect(deriveAaguidDisplayValues('00112233445566778899aabbccddeeff')).toEqual({
       aaguidHex: '00112233445566778899aabbccddeeff',
-      aaguidB64: '',
-      aaguidB64u: '',
+      aaguidB64: 'ABEiM0RVZneImaq7zN3u/w==',
+      aaguidB64u: 'ABEiM0RVZneImaq7zN3u_w',
     });
-
-    vi.doUnmock('../../shared/utils/binary.js');
-    vi.resetModules();
+    expect(deriveAaguidDisplayValues('ZZ')).toEqual({ aaguidHex: 'zz', aaguidB64: '', aaguidB64u: '' });
+    expect(deriveAaguidDisplayValues('abc')).toEqual({ aaguidHex: 'abc', aaguidB64: '', aaguidB64u: '' });
+    expect(deriveAaguidDisplayValues('')).toEqual({ aaguidHex: '', aaguidB64: '', aaguidB64u: '' });
   });
 });

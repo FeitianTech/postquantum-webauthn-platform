@@ -1,5 +1,5 @@
 import { state } from '../state.js';
-import { Base64Error, forgivingBase64ToBytes } from './base64.js';
+import { Base64Error, base64UrlToBytes, bytesToBase64, bytesToBase64Url, forgivingBase64ToBytes } from './base64.js';
 
 export function isValidHex(str) {
     return /^[0-9a-fA-F]*$/.test(str) && str.length > 0;
@@ -11,16 +11,19 @@ export function generateRandomHex(bytes) {
     return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Hex as bytes, or a refusal: the caller keeps what does not convert as hex.
+function wholeBytes(hexString) {
+    const bytes = hexToUint8Array(hexString);
+    if (!bytes) {
+        throw new Base64Error('hex that is not whole bytes has no base64');
+    }
+    return bytes;
+}
+
+// An odd number of digits is read with a leading zero.
 export function hexToBase64Url(hexString) {
     if (!hexString) return '';
-
-    if (hexString.length % 2 !== 0) {
-        hexString = '0' + hexString;
-    }
-
-    const bytes = new Uint8Array(hexString.match(/.{2}/g).map(byte => parseInt(byte, 16)));
-    const base64 = btoa(String.fromCharCode(...bytes));
-    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    return bytesToBase64Url(wholeBytes(hexString.length % 2 === 0 ? hexString : `0${hexString}`));
 }
 
 // Tolerant of either alphabet, padding and whitespace: for values a person typed.
@@ -36,8 +39,7 @@ export function base64ToBase64Url(base64) {
 
 export function hexToBase64(hexString) {
     if (!hexString) return '';
-    const bytes = new Uint8Array(hexString.match(/.{2}/g).map(byte => parseInt(byte, 16)));
-    return btoa(String.fromCharCode(...bytes));
+    return bytesToBase64(wholeBytes(hexString));
 }
 
 export function hexToGuid(hexString) {
@@ -76,10 +78,6 @@ export function base64ToHex(base64) {
     return bytesToHex(forgivingBase64ToBytes(base64));
 }
 
-export function base64UrlToHexFixed(base64url) {
-    return base64UrlToHex(base64url);
-}
-
 export function jsToHex(jsString) {
     if (!jsString) return '';
     const match = jsString.match(/new Uint8Array\(\[([0-9, ]+)\]\)/);
@@ -100,7 +98,7 @@ export function convertFormat(value, fromFormat, toFormat) {
             hexValue = base64ToHex(value);
             break;
         case 'b64u':
-            hexValue = base64UrlToHexFixed(value);
+            hexValue = base64UrlToHex(value);
             break;
         case 'js':
             hexValue = jsToHex(value);
@@ -139,16 +137,12 @@ export function hexToUint8Array(hex) {
     return bytes;
 }
 
-export function base64UrlToUint8Array(base64url) {
-    if (!base64url) return null;
-    return forgivingBase64ToBytes(base64url);
-}
-
+// Text the browser or the server wrote in base64url (a credential's client
+// data): decoded strictly, so other text throws rather than decoding to junk.
 export function base64UrlToUtf8String(base64url) {
     if (!base64url) return null;
     if (!state.utf8Decoder) return null;
-    // Bytes, or a throw: forgivingBase64ToBytes never gives null for text.
-    const bytes = base64UrlToUint8Array(base64url);
+    const bytes = base64UrlToBytes(base64url);
     try {
         return state.utf8Decoder.decode(bytes);
     } catch (error) {
@@ -176,19 +170,6 @@ export function bufferSourceToUint8Array(value) {
     }
 
     return null;
-}
-
-export function arrayBufferToHex(buffer) {
-    if (!buffer) {
-        return '';
-    }
-
-    const view = bufferSourceToUint8Array(buffer);
-    if (!view) {
-        return '';
-    }
-
-    return Array.from(view).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export function sortObjectKeys(value) {
@@ -273,7 +254,7 @@ export function normalizeToHex(value) {
         }
 
         try {
-            return base64UrlToHexFixed(trimmed).toLowerCase();
+            return base64UrlToHex(trimmed).toLowerCase();
         } catch (error) {
             return '';
         }

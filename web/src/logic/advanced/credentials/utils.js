@@ -1,13 +1,12 @@
 import {
-    arrayBufferToHex,
     base64ToHex,
     base64UrlToHex,
     bytesToHex,
     bufferSourceToUint8Array,
-    hexToBase64,
+    hexToUint8Array,
     normalizeToHex
 } from '../../shared/utils/binary.js';
-import { base64UrlToBytes } from '../../shared/utils/base64.js';
+import { base64UrlToBytes, bytesToBase64, bytesToBase64Url } from '../../shared/utils/base64.js';
 
 const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -449,7 +448,7 @@ export function getStoredCredentialAttachment(cred) {
 export function extractHexFromJsonFormat(jsonValue) {
     if (!jsonValue) return '';
     const directBuffer = bufferSourceToUint8Array(jsonValue);
-    if (directBuffer) return arrayBufferToHex(directBuffer);
+    if (directBuffer) return bytesToHex(directBuffer);
     if (jsonValue.$hex) return jsonValue.$hex;
     if (jsonValue.$base64url) return base64UrlToHex(jsonValue.$base64url);
     if (jsonValue.$base64) return base64ToHex(jsonValue.$base64);
@@ -459,23 +458,10 @@ export function extractHexFromJsonFormat(jsonValue) {
 
 export function deriveAaguidDisplayValues(aaguidHex) {
     const normalizedAaguidHex = aaguidHex ? aaguidHex.toLowerCase() : '';
-    let aaguidB64 = '';
-    let aaguidB64u = '';
-    if (normalizedAaguidHex && normalizedAaguidHex.length % 2 === 0) {
-        try {
-            aaguidB64 = hexToBase64(normalizedAaguidHex);
-        } catch (error) {
-            aaguidB64 = '';
-        }
-        try {
-            aaguidB64u = hexToBase64(normalizedAaguidHex).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-        } catch (error) {
-            aaguidB64u = '';
-        }
-    }
+    const bytes = normalizedAaguidHex ? hexToUint8Array(normalizedAaguidHex) : null;
     return {
         aaguidHex: normalizedAaguidHex,
-        aaguidB64,
-        aaguidB64u
+        aaguidB64: bytes ? bytesToBase64(bytes) : '',
+        aaguidB64u: bytes ? bytesToBase64Url(bytes) : '',
     };
 }
