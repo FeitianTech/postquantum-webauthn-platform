@@ -239,6 +239,22 @@ _SIMPLE_REQUEST_ALGORITHMS: tuple[int, ...] = (
     -48, -49, -50, -7, -9, -8, -19, -53, -35, -36, -51, -52, -47, -37, -38, -39, -257, -258, -259, -65535,
 )
 
+
+def _offered_parameters(params: Any) -> list[dict[str, Any]]:
+    """The algorithms the browser is offered: _SIMPLE_ALLOWED_ALGORITHMS, in its order, as fido2 wrote them."""
+
+    existing_param_map: dict[int, dict[str, Any]] = {}
+    if isinstance(params, list):
+        for param in params:
+            if isinstance(param, MutableMapping):
+                alg_value = param.get("alg")
+                if isinstance(alg_value, int) and alg_value in _SIMPLE_ALLOWED_ALGORITHMS:
+                    cloned = dict(param)
+                    cloned["type"] = "public-key"
+                    existing_param_map[alg_value] = cloned
+    return [existing_param_map.get(alg, {"type": "public-key", "alg": alg}) for alg in _SIMPLE_ALLOWED_ALGORITHMS]
+
+
 @bp.route("/api/register/begin", methods=["POST"])
 def register_begin():
     payload = request.get_json(silent=True) or {}
@@ -280,33 +296,10 @@ def register_begin():
     options_dict = dict(options)
     # The ceremony state (and therefore the challenge) is deliberately NOT
     # returned to the client: the simple flow binds the challenge to the
-    # server-side session only.
-    public_key_options = options_dict.get("publicKey")
-    if isinstance(public_key_options, MutableMapping):
-        # A copy: the parameters below are filtered in place.
-        session["simple_register_public_key"] = copy.deepcopy(public_key_options)
-    else:
-        session.pop("simple_register_public_key", None)
-
-    if _SIMPLE_ALLOWED_ALGORITHMS:
-        public_key_options = options_dict.get("publicKey")
-        if isinstance(public_key_options, MutableMapping):
-            params = public_key_options.get("pubKeyCredParams")
-            allowed_params: list[dict[str, Any]] = []
-            existing_param_map: dict[int, dict[str, Any]] = {}
-            if isinstance(params, list):
-                for param in params:
-                    if isinstance(param, MutableMapping):
-                        alg_value = param.get("alg")
-                        if isinstance(alg_value, int) and alg_value in _SIMPLE_ALLOWED_ALGORITHMS:
-                            cloned = dict(param)
-                            cloned["type"] = "public-key"
-                            existing_param_map[alg_value] = cloned
-            for alg in _SIMPLE_ALLOWED_ALGORITHMS:
-                if alg in existing_param_map:
-                    allowed_params.append(existing_param_map[alg])
-                else:
-                    allowed_params.append({"type": "public-key", "alg": alg})
-            public_key_options["pubKeyCredParams"] = allowed_params
+    # server-side session only. fido2 gives publicKey as a dict.
+    public_key_options = options_dict["publicKey"]
+    # A copy: the parameters below are replaced.
+    session["simple_register_public_key"] = copy.deepcopy(public_key_options)
+    public_key_options["pubKeyCredParams"] = _offered_parameters(public_key_options.get("pubKeyCredParams"))
 
     return jsonify(options_dict)
