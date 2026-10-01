@@ -124,11 +124,6 @@ export function removeAdvancedCredential(credentialId, storageId = null) {
     return changed;
 }
 
-export function clearAdvancedCredentials() {
-    const { simpleRecords } = readAdvancedCredentialPartitions();
-    persistCredentialPartitions(simpleRecords, [], { prepareAdvancedCredentialForStorage });
-}
-
 export function updateAdvancedCredentialSignCount(credentialId, signCount, storageId = null) {
     const id = credentialId ? String(credentialId) : '';
     const storageKey = isNonEmptyString(storageId) ? storageId.trim() : '';

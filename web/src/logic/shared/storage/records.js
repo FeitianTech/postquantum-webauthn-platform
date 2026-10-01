@@ -9,7 +9,6 @@ import {
     ensureAdvancedCredentialSnapshotsPrefetched,
 } from './local/advanced-sync.js';
 import {
-    clearAdvancedCredentials,
     getAllAdvancedCredentials,
     prepareAdvancedCredentialsForServer,
     removeAdvancedCredential,
@@ -51,7 +50,6 @@ export {
     getAllAdvancedCredentials,
     saveAdvancedCredential,
     removeAdvancedCredential,
-    clearAdvancedCredentials,
     updateAdvancedCredentialSignCount,
     updateAdvancedCredentialRegistrationSnapshot,
     prepareAdvancedCredentialsForServer,

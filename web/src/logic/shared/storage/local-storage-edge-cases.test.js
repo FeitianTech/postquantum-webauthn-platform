@@ -179,9 +179,6 @@ describe('local-storage edge cases', () => {
     storage.clearSimpleCredentials();
     expect(storage.getAllSimpleCredentials()).toHaveLength(0);
     expect(storage.getAllAdvancedCredentials()).toHaveLength(1);
-
-    storage.clearAdvancedCredentials();
-    expect(storage.getAllAdvancedCredentials()).toHaveLength(0);
   });
 
   it('updates sign counts across partitions and handles snapshot prefetch failures', async () => {

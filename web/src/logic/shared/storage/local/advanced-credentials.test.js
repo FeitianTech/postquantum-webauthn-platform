@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  clearAdvancedCredentials,
   getAllAdvancedCredentials,
   removeAdvancedCredential,
   saveAdvancedCredential,
@@ -170,15 +169,6 @@ describe('removeAdvancedCredential', () => {
   });
 });
 
-describe('clearAdvancedCredentials', () => {
-  it('removes every advanced credential and keeps the simple ones', () => {
-    store([storedAdvanced(CREDENTIAL_ID, 'mine'), { type: 'simple', credentialId: OTHER_ID, email: 'bob@example.com' }]);
-
-    clearAdvancedCredentials();
-
-    expect(stored().map(record => record.type)).toEqual(['simple']);
-  });
-});
 
 describe('updateAdvancedCredentialSignCount', () => {
   it('does nothing without an id or a storage id', () => {
