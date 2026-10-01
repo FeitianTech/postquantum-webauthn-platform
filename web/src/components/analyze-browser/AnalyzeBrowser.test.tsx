@@ -1,7 +1,7 @@
 // The Analyze Browser panel: what it shows and does for each browser, over the
 // logic's own fixtures (imported, not copied).
-import { CHROMIUM_152_CAPABILITIES } from '@/test/logic/shared/browser/chromium-152.js';
-import { IDENTITY_MATRIX } from '@/test/logic/shared/browser/identity-matrix.js';
+import { CHROMIUM_152_CAPABILITIES } from '@/test/logic/browser/chromium-152.js';
+import { IDENTITY_MATRIX } from '@/test/logic/browser/identity-matrix.js';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 

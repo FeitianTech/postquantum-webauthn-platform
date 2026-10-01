@@ -1,4 +1,4 @@
-import type { gatherAnalysis } from '@/logic/shared/browser/report.js';
+import type { gatherAnalysis } from '@/logic/browser/report.js';
 
 // The shapes the logic modules return, named for the views. The modules are the
 // only implementation; these types only narrow what TypeScript infers from them.

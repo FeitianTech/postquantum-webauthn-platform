@@ -7,7 +7,7 @@ import {
   WEBAUTHN_FACTS,
   gatherWebAuthnFacts,
 } from './webauthn-facts.js';
-import { CHROMIUM_152_CAPABILITIES } from '@/test/logic/shared/browser/chromium-152.js';
+import { CHROMIUM_152_CAPABILITIES } from '@/test/logic/browser/chromium-152.js';
 
 function makePublicKeyCredential(statics = {}, prototype = { toJSON() {} }) {
   function PublicKeyCredential() {}

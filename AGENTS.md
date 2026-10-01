@@ -149,11 +149,11 @@ their exports or sentences. A new surface splits its logic out here first.
 - `codec/`: the Codec's requests, results and values. `advanced/mds/`: the MDS
   explorer's loading, filters, sort, columns, rows, entry, certificate, raw view and Manage
   Metadata (the server builds each row: `mds/build.py`'s `build_explorer_entry`).
-- `shared/browser/`: the Analyze Browser's facts. It reports what the browser says and where
+- `browser/`: the Analyze Browser's facts. It reports what the browser says and where
   each answer came from, or that it cannot know; it never guesses. Web pages cannot ask
   which transports a browser supports: do not add WebUSB/WebHID/Bluetooth/Serial checks. The
   identity cases are real user-agent strings with Client Hints in
-  `src/test/logic/shared/browser/identity-matrix.js`; add a browser there.
+  `src/test/logic/browser/identity-matrix.js`; add a browser there.
 - `shared/api/failed-response.js`: the one reader of a failed response (`readFailedResponse`,
   `FailedResponseError`): the server's `error`, the codec's `offset` and `path`, what to do for
   a 400, 409, 413 or 503. Never show a raw response body.

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { attempt, describeError, describeValue } from './probe.js';
 
-// Reading a browser API that may be missing or throw (shared/browser/probe.js).
+// Reading a browser API that may be missing or throw (browser/probe.js).
 
 describe('describeValue', () => {
   it('writes a value as JSON, and undefined as its name', () => {

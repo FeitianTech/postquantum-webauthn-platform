@@ -1,5 +1,5 @@
-import { copyReport } from '@/logic/shared/browser/report.js';
-import { AUTHENTICATOR_FACTS, WEBAUTHN_FACTS } from '@/logic/shared/browser/webauthn-facts.js';
+import { copyReport } from '@/logic/browser/report.js';
+import { AUTHENTICATOR_FACTS, WEBAUTHN_FACTS } from '@/logic/browser/webauthn-facts.js';
 import { type ReactNode, useRef } from 'react';
 import { flushSync } from 'react-dom';
 
@@ -38,7 +38,7 @@ function PanelSection({ id, title, children }: { id: string; title: string; chil
 
 // The Analyze Browser panel: what the browser says about itself and about
 // WebAuthn, each answer with where it came from, or why there is none. The
-// answers and their words come from the logic modules in src/logic/shared/browser.
+// answers and their words come from the logic modules in src/logic/browser.
 export function AnalyzeBrowserDialog({ open, onClose, analysis, returnFocusTo, copy, onCopied }: AnalyzeBrowserDialogProps) {
   const reportRef = useRef<HTMLTextAreaElement>(null);
 

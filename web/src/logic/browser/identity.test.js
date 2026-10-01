@@ -5,7 +5,7 @@ import {
   determineIdentity,
   readIdentityInputs,
 } from './identity.js';
-import { IDENTITY_MATRIX } from '@/test/logic/shared/browser/identity-matrix.js';
+import { IDENTITY_MATRIX } from '@/test/logic/browser/identity-matrix.js';
 
 async function identify(navigatorLike) {
   return determineIdentity(await readIdentityInputs(navigatorLike));
