@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from server.app import visitor_session
@@ -296,10 +298,6 @@ def test_an_artifact_the_store_cannot_read_answers_503_not_missing_or_unstored(
 ):
     # A failed download used to read as "no artifact" (404, or left out of the
     # bulk answer), and a merge that could not read answered 400.
-    import json
-
-
-
     bucket = fake_gcs.install(monkeypatch, credential_artifacts)
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     blob_name = credential_artifacts._artifact_blob("cred-1", "session-id")
