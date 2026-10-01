@@ -49,9 +49,8 @@ def encode_payload_text(value: str, target_format: str) -> dict[str, Any]:
             "which can repeat a key."
         )
 
-    handler = _ENCODING_HANDLERS.get(canonical)
-    if handler is None:
-        raise ValueError(f"Unsupported encoder format: {target_format}")
+    # _normalize_encoding_format refused any format that has no handler.
+    handler = _ENCODING_HANDLERS[canonical]
 
     # Keys are shown back as they were written; the CBOR key each spells is read where it is encoded.
     return handler(as_written(parsed))
