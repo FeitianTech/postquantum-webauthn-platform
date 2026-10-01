@@ -10,7 +10,7 @@
 // the two ceremonies (advanced/auth/ceremony.js, assertion.js) and the snapshot
 // a registration's result keeps (credential-display/registration-snapshot.js).
 // These are the types the components read them through.
-import { ADVANCED_CEREMONY_TEXT, advancedRegisteredMessage, advancedRegistrationFailureText, registerAdvancedCredential } from '@/logic/advanced/auth/ceremony.js';
+import { advancedRegisteredMessage, advancedRegistrationFailureText, registerAdvancedCredential } from '@/logic/advanced/auth/ceremony.js';
 import {
   FAKE_CREDENTIAL_TEXT,
   fakeCredentialLength,
@@ -152,7 +152,6 @@ export const autoIndent = applyJsonEditorAutoIndent as (typed: EditorState) => v
 export const indent = applyTabIndentation as (typed: EditorState, shift: boolean) => void;
 
 // The ceremony and the result it keeps.
-export const CEREMONY_WORDS = ADVANCED_CEREMONY_TEXT as Record<'lastRegistration' | 'invalidHints', string>;
 export type RegistrationAnswer = { algo?: string; relyingParty?: Json | null; storedCredential?: Json | null; [field: string]: unknown };
 export type RegistrationOutcome =
   | {
