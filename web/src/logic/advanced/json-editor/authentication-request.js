@@ -200,7 +200,7 @@ export function readRequestOptions(publicKey, previous, context = {}) {
     settings.hints = Array.isArray(publicKey.hints) ? publicKey.hints : [];
 
     let fakeAllowCredentials = [];
-    if (!Object.prototype.hasOwnProperty.call(publicKey, 'allowCredentials')) {
+    if (!Object.hasOwn(publicKey, 'allowCredentials')) {
         settings.allowCredentials = 'empty';
     } else if (!Array.isArray(publicKey.allowCredentials)) {
         settings.allowCredentials = 'all';
@@ -210,7 +210,7 @@ export function readRequestOptions(publicKey, previous, context = {}) {
         fakeAllowCredentials = others;
     }
 
-    if (Object.prototype.hasOwnProperty.call(publicKey, 'userVerification')) {
+    if (Object.hasOwn(publicKey, 'userVerification')) {
         settings.userVerification = publicKey.userVerification || 'preferred';
     }
 

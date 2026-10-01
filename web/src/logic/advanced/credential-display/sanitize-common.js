@@ -33,7 +33,7 @@ export function stripCertificateCollections(target) {
     }
 
     CERTIFICATE_COLLECTION_KEYS.forEach(key => {
-        if (Object.prototype.hasOwnProperty.call(target, key)) {
+        if (Object.hasOwn(target, key)) {
             delete target[key];
         }
     });
@@ -63,7 +63,7 @@ export function removeKeysFromObject(target, keys) {
     }
 
     keys.forEach(key => {
-        if (Object.prototype.hasOwnProperty.call(target, key)) {
+        if (Object.hasOwn(target, key)) {
             delete target[key];
         }
     });
@@ -125,7 +125,7 @@ export function sanitiseRegistrationData(raw) {
     stripCertificateCollections(cloned);
     stripSignatureFormatting(cloned);
 
-    if (Object.prototype.hasOwnProperty.call(cloned, 'attestation_summary') && !cloned.attestationSummary) {
+    if (Object.hasOwn(cloned, 'attestation_summary') && !cloned.attestationSummary) {
         const summary = cloned.attestation_summary;
         delete cloned.attestation_summary;
         if (summary && typeof summary === 'object') {
@@ -133,7 +133,7 @@ export function sanitiseRegistrationData(raw) {
         }
     }
 
-    if (Object.prototype.hasOwnProperty.call(cloned, 'attestation_checks') && !cloned.attestationChecks) {
+    if (Object.hasOwn(cloned, 'attestation_checks') && !cloned.attestationChecks) {
         const checks = cloned.attestation_checks;
         delete cloned.attestation_checks;
         if (checks && typeof checks === 'object') {
@@ -225,11 +225,11 @@ export function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
 
     if (registrationData) {
         cloned.registrationData = registrationData;
-    } else if (Object.prototype.hasOwnProperty.call(cloned, 'registrationData')) {
+    } else if (Object.hasOwn(cloned, 'registrationData')) {
         delete cloned.registrationData;
     }
 
-    if (Object.prototype.hasOwnProperty.call(cloned, 'attestation_summary') && !cloned.attestationSummary) {
+    if (Object.hasOwn(cloned, 'attestation_summary') && !cloned.attestationSummary) {
         const summaryValue = cloned.attestation_summary;
         delete cloned.attestation_summary;
         if (summaryValue && typeof summaryValue === 'object') {
@@ -334,7 +334,7 @@ export function sanitizeParsedCertificateDetails(parsed) {
     }
 
     ['pem', 'der', 'derBase64', 'der_base64', 'raw', 'summary', 'error'].forEach(key => {
-        if (Object.prototype.hasOwnProperty.call(parsedCopy, key)) {
+        if (Object.hasOwn(parsedCopy, key)) {
             delete parsedCopy[key];
         }
     });
@@ -348,7 +348,7 @@ export function sanitizeParsedCertificateDetails(parsed) {
 
                 // Already a copy (parsedCopy is one).
                 ['raw', 'hex', 'rawHex', 'der', 'derBase64', 'der_base64', 'valueHex'].forEach(key => {
-                    if (Object.prototype.hasOwnProperty.call(ext, key)) {
+                    if (Object.hasOwn(ext, key)) {
                         delete ext[key];
                     }
                 });
@@ -380,10 +380,10 @@ export function stripSignatureFormatting(target) {
     Object.keys(target).forEach(key => {
         const value = target[key];
         if ((key === 'signature' || key === 'sig') && value && typeof value === 'object') {
-            if (Object.prototype.hasOwnProperty.call(value, 'colon')) {
+            if (Object.hasOwn(value, 'colon')) {
                 delete value.colon;
             }
-            if (Object.prototype.hasOwnProperty.call(value, 'lines')) {
+            if (Object.hasOwn(value, 'lines')) {
                 delete value.lines;
             }
         }

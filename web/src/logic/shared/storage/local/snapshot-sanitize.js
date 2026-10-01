@@ -26,7 +26,7 @@ export function stripKeysRecursively(target, keys, skipRoot = false) {
 
     if (!skipRoot) {
         keys.forEach(key => {
-            if (Object.prototype.hasOwnProperty.call(target, key)) {
+            if (Object.hasOwn(target, key)) {
                 delete target[key];
             }
         });

@@ -20,7 +20,7 @@ function same(left, right) {
     if (isPlainObject(left) && isPlainObject(right)) {
         const keys = Object.keys(left);
         return keys.length === Object.keys(right).length
-            && keys.every(key => Object.prototype.hasOwnProperty.call(right, key) && same(left[key], right[key]));
+            && keys.every(key => Object.hasOwn(right, key) && same(left[key], right[key]));
     }
     return false;
 }
@@ -40,7 +40,7 @@ function memberKey(member) {
     if (!isPlainObject(member)) {
         return null;
     }
-    if (Object.prototype.hasOwnProperty.call(member, 'alg')) {
+    if (Object.hasOwn(member, 'alg')) {
         return `alg:${member.alg}`;
     }
     try {

@@ -127,7 +127,7 @@ export function sanitiseAttestationObjectForDisplay(
     if (!formatValue && typeof cloned.fmt === 'string') {
         formatValue = cloned.fmt;
     }
-    if (Object.prototype.hasOwnProperty.call(cloned, 'fmt')) {
+    if (Object.hasOwn(cloned, 'fmt')) {
         delete cloned.fmt;
     }
 

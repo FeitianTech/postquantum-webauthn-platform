@@ -105,7 +105,7 @@ export function describeCredentialAlgorithmTagWith(credential, describeCoseAlgor
     const identifier = resolveCredentialAlgorithmIdentifier(credential);
     if (identifier !== null && identifier !== undefined) {
         const key = String(identifier);
-        if (Object.prototype.hasOwnProperty.call(COSE_ALGORITHM_TAG_LABELS, key)) {
+        if (Object.hasOwn(COSE_ALGORITHM_TAG_LABELS, key)) {
             return COSE_ALGORITHM_TAG_LABELS[key];
         }
     }

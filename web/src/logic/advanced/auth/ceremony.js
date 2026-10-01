@@ -78,7 +78,7 @@ export function collectPotentialUnsupportedFeatures(publicKeyOptions, createOpti
 
     extensionSources.forEach(source => {
         extensionLabels.forEach(([key, label]) => {
-            if (Object.prototype.hasOwnProperty.call(source, key) && !issues.includes(label)) {
+            if (Object.hasOwn(source, key) && !issues.includes(label)) {
                 issues.push(label);
             }
         });
@@ -113,7 +113,7 @@ export function advancedRegistrationFailureText(error, context = {}) {
     let errorMessage = error && typeof error === 'object' && typeof error.message === 'string'
         ? error.message
         : String(error);
-    if (Object.prototype.hasOwnProperty.call(REGISTRATION_ERROR_TEXT, errorName)) {
+    if (Object.hasOwn(REGISTRATION_ERROR_TEXT, errorName)) {
         errorMessage = REGISTRATION_ERROR_TEXT[errorName];
     }
 

@@ -233,14 +233,14 @@ export function readCreationOptions(publicKey, previous, context = {}) {
         settings.timeout = publicKey.timeout.toString();
     }
 
-    if (Object.prototype.hasOwnProperty.call(publicKey, 'attestation')) {
+    if (Object.hasOwn(publicKey, 'attestation')) {
         settings.attestation = publicKey.attestation || 'direct';
     }
 
     if (Array.isArray(publicKey.pubKeyCredParams)) {
         const chosen = new Set();
         publicKey.pubKeyCredParams.forEach(param => {
-            if (param && Object.prototype.hasOwnProperty.call(param, 'alg')) {
+            if (param && Object.hasOwn(param, 'alg')) {
                 const alg = typeof param.alg === 'string' ? Number.parseInt(param.alg, 10) : param.alg;
                 chosen.add(alg);
             }
@@ -258,7 +258,7 @@ export function readCreationOptions(publicKey, previous, context = {}) {
         settings.residentKey = selection.requireResidentKey === true
             ? 'required'
             : selection.residentKey || 'discouraged';
-        if (Object.prototype.hasOwnProperty.call(selection, 'userVerification')) {
+        if (Object.hasOwn(selection, 'userVerification')) {
             settings.userVerification = selection.userVerification || 'preferred';
         }
     }

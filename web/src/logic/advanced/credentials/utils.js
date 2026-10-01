@@ -200,7 +200,7 @@ export function extractMinPinLengthValue(source) {
     const clientOutputs = (source.clientExtensionOutputs && typeof source.clientExtensionOutputs === 'object')
         ? source.clientExtensionOutputs
         : null;
-    if (clientOutputs && Object.prototype.hasOwnProperty.call(clientOutputs, 'minPinLength')) {
+    if (clientOutputs && Object.hasOwn(clientOutputs, 'minPinLength')) {
         const extensionValue = clientOutputs.minPinLength;
         const directValue = normalizeMinPinLengthValue(extensionValue);
         if (directValue !== null) {
@@ -227,7 +227,7 @@ export function extractMinPinLengthValue(source) {
     if (registrationData) {
         const authenticatorExtensions = registrationData.authenticatorExtensions;
         if (authenticatorExtensions && typeof authenticatorExtensions === 'object') {
-            if (Object.prototype.hasOwnProperty.call(authenticatorExtensions, 'minPinLength')) {
+            if (Object.hasOwn(authenticatorExtensions, 'minPinLength')) {
                 const normalized = normalizeMinPinLengthValue(authenticatorExtensions.minPinLength);
                 if (normalized !== null) {
                     return normalized;
@@ -369,7 +369,7 @@ export function getCoseMapValue(coseMap, key) {
         return undefined;
     }
     // A number key finds its string key too: property keys are strings.
-    if (Object.prototype.hasOwnProperty.call(coseMap, key)) {
+    if (Object.hasOwn(coseMap, key)) {
         return coseMap[key];
     }
     return undefined;

@@ -44,7 +44,7 @@ export const CODEC_NO_STRUCTURED_DATA = 'No structured data available.';
 export const CODEC_LENIENT_NOTE = 'Decoded in lenient mode (best effort); skipped items are listed below.';
 
 function hasOwn(object, key) {
-    return Object.prototype.hasOwnProperty.call(object, key);
+    return Object.hasOwn(object, key);
 }
 
 // One section: the EDN view (the bytes exactly), a top-level expandedJson, or

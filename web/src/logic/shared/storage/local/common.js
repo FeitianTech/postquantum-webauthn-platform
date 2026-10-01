@@ -18,7 +18,7 @@ export function removeObjectKeys(target, keys) {
         return;
     }
     keys.forEach(key => {
-        if (Object.prototype.hasOwnProperty.call(target, key)) {
+        if (Object.hasOwn(target, key)) {
             delete target[key];
         }
     });

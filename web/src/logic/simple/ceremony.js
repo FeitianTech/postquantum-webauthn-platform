@@ -55,7 +55,7 @@ export function ceremonyErrorText(error, ceremony) {
     if (name === 'InvalidStateError') {
         return INVALID_STATE_TEXT[ceremony];
     }
-    if (Object.prototype.hasOwnProperty.call(ERROR_NAME_TEXT, name)) {
+    if (Object.hasOwn(ERROR_NAME_TEXT, name)) {
         return ERROR_NAME_TEXT[name];
     }
     return error?.message;

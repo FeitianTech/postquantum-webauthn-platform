@@ -73,7 +73,7 @@ export function hasBinaryConvertibleValue(value) {
 
     if (typeof value === 'object') {
         for (const key of BINARY_CONVERTIBLE_KEYS) {
-            if (Object.prototype.hasOwnProperty.call(value, key)) {
+            if (Object.hasOwn(value, key)) {
                 if (hasBinaryConvertibleValue(value[key])) {
                     return true;
                 }

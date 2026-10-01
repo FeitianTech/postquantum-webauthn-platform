@@ -25,7 +25,7 @@ function reported(value) {
 }
 
 function known(table, value) {
-    return Object.prototype.hasOwnProperty.call(table, value) ? table[value] : reported(value);
+    return Object.hasOwn(table, value) ? table[value] : reported(value);
 }
 
 // A row: its label, the value the server gave (shown as a figure), the sentence,

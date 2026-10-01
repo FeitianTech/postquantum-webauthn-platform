@@ -74,7 +74,7 @@ export function applyAuthenticatorAttachmentPreference(targetOptions, allowedAtt
                 continue;
             }
             const selection = source.authenticatorSelection;
-            if (selection && typeof selection === 'object' && Object.prototype.hasOwnProperty.call(selection, 'authenticatorAttachment')) {
+            if (selection && typeof selection === 'object' && Object.hasOwn(selection, 'authenticatorAttachment')) {
                 const normalized = normalizeAttachmentValue(selection.authenticatorAttachment);
                 if (normalized) {
                     preferredAttachment = normalized;
@@ -105,7 +105,7 @@ export function applyAuthenticatorAttachmentPreference(targetOptions, allowedAtt
 
     if (preferredAttachment) {
         publicKey.authenticatorSelection.authenticatorAttachment = preferredAttachment;
-    } else if (Object.prototype.hasOwnProperty.call(publicKey.authenticatorSelection, 'authenticatorAttachment')) {
+    } else if (Object.hasOwn(publicKey.authenticatorSelection, 'authenticatorAttachment')) {
         delete publicKey.authenticatorSelection.authenticatorAttachment;
     }
 }
@@ -138,7 +138,7 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
         ? publicKey.authenticatorSelection
         : null;
 
-    if (!resolvedAttachments.length && selection && Object.prototype.hasOwnProperty.call(selection, 'authenticatorAttachment')) {
+    if (!resolvedAttachments.length && selection && Object.hasOwn(selection, 'authenticatorAttachment')) {
         addAttachment(selection.authenticatorAttachment);
     }
 

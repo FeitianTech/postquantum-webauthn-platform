@@ -168,14 +168,14 @@ export function nextExplorerSortDirection(sortKey, currentDirection) {
     const key = typeof sortKey === 'string' ? sortKey : '';
     const direction = currentDirection || SORT_NONE;
     const override = key && SORT_SEQUENCE_OVERRIDES[key];
-    if (override && Object.prototype.hasOwnProperty.call(override, direction)) {
+    if (override && Object.hasOwn(override, direction)) {
         return override[direction];
     }
     return SORT_SEQUENCE[direction] || SORT_ASCENDING;
 }
 
 export function isExplorerSortKey(key) {
-    return typeof key === 'string' && Boolean(key) && Object.prototype.hasOwnProperty.call(MDS_SORT_ACCESSORS, key);
+    return typeof key === 'string' && Boolean(key) && Object.hasOwn(MDS_SORT_ACCESSORS, key);
 }
 
 // The sort after a click on a column's sort control: another column starts from

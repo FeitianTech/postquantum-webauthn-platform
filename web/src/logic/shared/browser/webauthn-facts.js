@@ -137,7 +137,7 @@ function describeCapability(key, value) {
     if (key.startsWith(EXTENSION_PREFIX)) {
         return { key, kind: 'extension', label: key.slice(EXTENSION_PREFIX.length), ...fact };
     }
-    if (Object.prototype.hasOwnProperty.call(CLIENT_CAPABILITY_LABELS, key)) {
+    if (Object.hasOwn(CLIENT_CAPABILITY_LABELS, key)) {
         return { key, kind: 'defined', label: CLIENT_CAPABILITY_LABELS[key], ...fact };
     }
     return { key, kind: 'unrecognised', label: key, ...fact };

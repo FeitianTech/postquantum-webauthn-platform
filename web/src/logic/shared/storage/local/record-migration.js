@@ -35,10 +35,6 @@ const SNAPSHOT_KEYS = [
 
 const SNAPSHOT_MARKUP_KEYS = ['html', 'attestationSectionHtml', 'combinedHtml'];
 
-function hasOwn(target, key) {
-    return Object.prototype.hasOwnProperty.call(target, key);
-}
-
 // The same bytes in base64url when `value` is standard base64 that base64url
 // could not be; anything else is returned as it is.
 function respell(value) {
@@ -111,14 +107,14 @@ export function migrateStoredRecord(record) {
     };
 
     RECORD_MARKUP_KEYS.forEach(key => {
-        if (hasOwn(migrated, key)) {
+        if (Object.hasOwn(migrated, key)) {
             delete edit()[key];
         }
     });
 
     SNAPSHOT_KEYS.forEach(key => {
         const snapshot = migrated[key];
-        if (!snapshot || typeof snapshot !== 'object' || !SNAPSHOT_MARKUP_KEYS.some(name => hasOwn(snapshot, name))) {
+        if (!snapshot || typeof snapshot !== 'object' || !SNAPSHOT_MARKUP_KEYS.some(name => Object.hasOwn(snapshot, name))) {
             return;
         }
         const cleaned = { ...snapshot };

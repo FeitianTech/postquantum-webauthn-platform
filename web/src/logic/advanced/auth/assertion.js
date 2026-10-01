@@ -28,7 +28,7 @@ const AUTHENTICATION_ERROR_TEXT = {
 
 /** What a failed authentication says: the browser's refusals by name, anything else by its own message. */
 export function advancedAuthenticationFailureText(error) {
-    const message = Object.prototype.hasOwnProperty.call(AUTHENTICATION_ERROR_TEXT, error.name)
+    const message = Object.hasOwn(AUTHENTICATION_ERROR_TEXT, error.name)
         ? AUTHENTICATION_ERROR_TEXT[error.name]
         : error.message;
     return `Advanced authentication failed: ${message}`;

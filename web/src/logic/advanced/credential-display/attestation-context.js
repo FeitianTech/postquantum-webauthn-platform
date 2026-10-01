@@ -54,7 +54,7 @@ export function resolveCredentialAttestationValue(cred, summaryKey, propertyKey,
     if (
         attestationSummaryData
         && attestationSummaryData !== null
-        && Object.prototype.hasOwnProperty.call(attestationSummaryData, summaryKey)
+        && Object.hasOwn(attestationSummaryData, summaryKey)
     ) {
         return attestationSummaryData[summaryKey];
     }
@@ -62,12 +62,12 @@ export function resolveCredentialAttestationValue(cred, summaryKey, propertyKey,
     if (
         propertiesData
         && propertiesData !== null
-        && Object.prototype.hasOwnProperty.call(propertiesData, propertyKey)
+        && Object.hasOwn(propertiesData, propertyKey)
     ) {
         return propertiesData[propertyKey];
     }
 
-    if (cred && cred !== null && Object.prototype.hasOwnProperty.call(cred, propertyKey)) {
+    if (cred && cred !== null && Object.hasOwn(cred, propertyKey)) {
         return cred[propertyKey];
     }
 

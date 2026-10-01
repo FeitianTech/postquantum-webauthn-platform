@@ -220,7 +220,7 @@ export function extractAaguidFromExtensionValue(extValue) {
         ];
 
         for (const key of fallbackKeys) {
-            if (Object.prototype.hasOwnProperty.call(extValue, key)) {
+            if (Object.hasOwn(extValue, key)) {
                 const candidate = extractAaguidFromExtensionValue(extValue[key]);
                 if (candidate) {
                     return candidate;

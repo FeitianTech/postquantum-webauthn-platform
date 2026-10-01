@@ -150,7 +150,7 @@ export function pruneAdvancedCredentialPayload(record, { aggressive = false } = 
         // Keep attestation certificate collections even in aggressively trimmed payloads so
         // credential detail views can reuse the parsed attestation data without re-decoding.
         AGGRESSIVE_DROP_KEYS.forEach(key => {
-            if (Object.prototype.hasOwnProperty.call(record, key)) {
+            if (Object.hasOwn(record, key)) {
                 delete record[key];
             }
         });

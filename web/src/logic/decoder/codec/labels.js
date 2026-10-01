@@ -20,7 +20,7 @@ export function formatKey(key) {
         return key;
     }
 
-    if (Object.prototype.hasOwnProperty.call(SPECIAL_LABELS, key)) {
+    if (Object.hasOwn(SPECIAL_LABELS, key)) {
         return SPECIAL_LABELS[key];
     }
 
