@@ -13,7 +13,7 @@ from typing import Any
 from cryptography import x509
 from cryptography.hazmat import asn1
 
-from . import certificate_names, formatting
+from . import formatting
 
 # id-fido-gen-ce-transports is a BIT STRING with named bits, bit 0 the first
 # byte's most significant: bluetoothRadio, bluetoothLowEnergyRadio, uSB, nFC,
@@ -44,6 +44,27 @@ def _key_identifier_value(digest: bytes) -> dict[str, Any]:
     }
 
 
+# OpenSSL's word for each kind of general name (RFC 5280, 4.2.1.6) whose value is text.
+_GENERAL_NAME_KINDS: dict[type, str] = {
+    x509.DNSName: "DNS",
+    x509.RFC822Name: "email",
+    x509.UniformResourceIdentifier: "URI",
+    x509.IPAddress: "IP Address",
+}
+
+
+def _general_name(name: x509.GeneralName) -> str:
+    """A general name as OpenSSL writes it: its kind, a colon, its value."""
+
+    if isinstance(name, x509.DirectoryName):
+        return f"DirName:{name.value.rfc4514_string()}"
+    if isinstance(name, x509.RegisteredID):
+        return f"Registered ID:{name.value.dotted_string}"
+    if isinstance(name, x509.OtherName):
+        return f"othername:{name.type_id.dotted_string}:{name.value.hex()}"
+    return f"{_GENERAL_NAME_KINDS[type(name)]}:{name.value}"
+
+
 def _authority_key_identifier_value(value: x509.AuthorityKeyIdentifier) -> dict[str, Any]:
     serialized: dict[str, Any] = {}
     if value.key_identifier:
@@ -55,9 +76,7 @@ def _authority_key_identifier_value(value: x509.AuthorityKeyIdentifier) -> dict[
             f"(0x{value.authority_cert_serial_number:x})"
         )
     if value.authority_cert_issuer:
-        serialized["Authority Cert Issuer"] = [
-            certificate_names.format_x509_name(name) for name in value.authority_cert_issuer
-        ]
+        serialized["Authority Cert Issuer"] = [_general_name(name) for name in value.authority_cert_issuer]
     return serialized
 
 

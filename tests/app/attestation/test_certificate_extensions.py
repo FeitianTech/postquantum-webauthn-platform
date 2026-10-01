@@ -5,6 +5,7 @@ cryptography's own extension values.
 """
 from __future__ import annotations
 
+import ipaddress
 from types import SimpleNamespace
 
 import pytest
@@ -38,7 +39,23 @@ def test_an_authority_key_identifier_shows_its_key_serial_and_issuer():
 
     assert shown["Hex value"] == ["01:02"]
     assert shown["Authority Cert Serial Number"] == "17 (0x11)"
-    assert "CN=Demo Issuer" in shown["Authority Cert Issuer"][0]
+    assert shown["Authority Cert Issuer"] == ["DirName:CN=Demo Issuer"]
+
+
+@pytest.mark.parametrize(
+    ("name", "shown"),
+    [
+        (x509.DNSName("authenticator.example"), "DNS:authenticator.example"),
+        (x509.RFC822Name("ca@example.com"), "email:ca@example.com"),
+        (x509.UniformResourceIdentifier("http://ca.example/ca.crt"), "URI:http://ca.example/ca.crt"),
+        (x509.IPAddress(ipaddress.ip_address("192.0.2.1")), "IP Address:192.0.2.1"),
+        (x509.DirectoryName(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Demo CA")])), "DirName:CN=Demo CA"),
+        (x509.RegisteredID(ObjectIdentifier("1.2.3.4")), "Registered ID:1.2.3.4"),
+        (x509.OtherName(ObjectIdentifier("2.23.133.2.1"), b"\x0c\x02id"), "othername:2.23.133.2.1:0c026964"),
+    ],
+)
+def test_a_general_name_is_shown_with_its_kind_as_openssl_writes_it(name, shown):
+    assert attestation_certificate_extensions._general_name(name) == shown
 
 
 def test_an_authority_key_identifier_without_a_key_shows_what_it_has():
