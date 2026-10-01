@@ -70,6 +70,18 @@ const EXPECTED: ExpectedDifference[] = [
     token: /^(caIssuers|-|URI:https:\/\/azcsprodncuaikpublish\..+)$/,
     reason: "AuthorityInformationAccess: where the TPM's issuer certificate is",
   },
+  {
+    only: 'recorded',
+    section: 'Attestation object',
+    token: /^(<CertificatePolicies\(\[<PolicyInformation\(policy_identifier=<ObjectIdentifier\(oid=1\.3\.6\.1\.4\.1\.311\.21\.31|OID\)>|policy_qualifiers=\[<UserNotice\(notice_reference=None|explicit_text='TCPA|Identity'\)>\]\)>\]\)>)$/,
+    reason: 'CertificatePolicies was shown as a Python repr; it is now each policy with its notices',
+  },
+  {
+    only: 'shown',
+    section: 'Attestation object',
+    token: /^(Policy|1\.3\.6\.1\.4\.1\.311\.21\.31|User|Notice|TCPA|Identity)$/,
+    reason: "CertificatePolicies: the TPM's policy and its notice",
+  },
 ];
 
 async function betaText(page: Page, input: string, lenient: boolean) {

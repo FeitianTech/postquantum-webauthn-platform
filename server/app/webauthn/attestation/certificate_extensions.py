@@ -131,6 +131,24 @@ def _distribution_point_lines(point: x509.DistributionPoint) -> list[str]:
     return lines
 
 
+def _policy_lines(policy: x509.PolicyInformation) -> list[str]:
+    """A certificate policy, as OpenSSL writes it: its OID, then each CPS pointer and user notice."""
+
+    lines = [f"Policy: {_oid_text(policy.policy_identifier)}"]
+    for qualifier in policy.policy_qualifiers or ():
+        if isinstance(qualifier, str):
+            lines.append(f"CPS: {qualifier}")
+            continue
+        reference = qualifier.notice_reference
+        if reference is not None:
+            organization = f"{reference.organization} " if reference.organization else ""
+            numbers = ", ".join(str(number) for number in reference.notice_numbers)
+            lines.append(f"Notice Reference: {organization}({numbers})")
+        if qualifier.explicit_text:
+            lines.append(f"User Notice: {qualifier.explicit_text}")
+    return lines
+
+
 def _basic_constraints_value(value: x509.BasicConstraints) -> dict[str, Any]:
     serialized: dict[str, Any] = {"CA": "TRUE" if value.ca else "FALSE"}
     if value.path_length is not None:
@@ -249,6 +267,8 @@ def _serialize_extension_value(ext: Any) -> Any:
         return [_access_description(description) for description in value]
     if isinstance(value, (x509.CRLDistributionPoints, x509.FreshestCRL)):
         return [line for point in value for line in _distribution_point_lines(point)]
+    if isinstance(value, x509.CertificatePolicies):
+        return [line for policy in value for line in _policy_lines(policy)]
     if isinstance(value, (x509.PrecertificateSignedCertificateTimestamps, x509.SignedCertificateTimestamps)):
         return _signed_certificate_timestamps_value(value)
     if isinstance(value, x509.UnrecognizedExtension):

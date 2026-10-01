@@ -12,6 +12,7 @@ import pytest
 from cryptography import x509
 from cryptography.x509.oid import (
     AuthorityInformationAccessOID,
+    CertificatePoliciesOID,
     ExtendedKeyUsageOID,
     NameOID,
     ObjectIdentifier,
@@ -157,6 +158,36 @@ def test_crl_distribution_points_name_each_place_reason_and_issuer():
         "Relative Name: CN=CRL1",
         "Reasons: cACompromise, keyCompromise",
         "CRL Issuer: DirName:CN=Demo CA",
+    ]
+
+
+def test_certificate_policies_name_each_policy_with_its_pointers_and_notices():
+    value = x509.CertificatePolicies(
+        [
+            x509.PolicyInformation(
+                ObjectIdentifier("1.3.6.1.4.1.311.21.31"),
+                [x509.UserNotice(None, "TCPA Trusted Platform Identity")],
+            ),
+            x509.PolicyInformation(
+                CertificatePoliciesOID.ANY_POLICY,
+                [
+                    "https://ca.example/cps",
+                    x509.UserNotice(x509.NoticeReference("Demo CA", [1, 2]), None),
+                    x509.UserNotice(x509.NoticeReference(None, [3]), None),
+                ],
+            ),
+            x509.PolicyInformation(ObjectIdentifier("2.23.140.1.2.1"), None),
+        ]
+    )
+
+    assert _shown("2.5.29.32", value) == [
+        "Policy: 1.3.6.1.4.1.311.21.31",
+        "User Notice: TCPA Trusted Platform Identity",
+        "Policy: 2.5.29.32.0",
+        "CPS: https://ca.example/cps",
+        "Notice Reference: Demo CA (1, 2)",
+        "Notice Reference: (3)",
+        "Policy: 2.23.140.1.2.1",
     ]
 
 

@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "33261"
+     "33106"
     ],
     [
      "X-Content-Type-Options",
@@ -43,7 +43,7 @@
     ]
    ],
    "cookies": [],
-   "bodySha256": "4caa769971b0f90952f417ba1f8790df8e64b44a46afb5282e4e25a909dea85a",
+   "bodySha256": "4fa4b83003db10be599256ea0a3793d8edefe1534292ace8a2340f86b153ae82",
    "body": {
     "data": {
      "attestationObject": {
@@ -85,7 +85,10 @@
             "includeOidInHeader": true,
             "name": "certificatePolicies",
             "oid": "2.5.29.32",
-            "value": "<CertificatePolicies([<PolicyInformation(policy_identifier=<ObjectIdentifier(oid=1.3.6.1.4.1.311.21.31, name=Unknown OID)>, policy_qualifiers=[<UserNotice(notice_reference=None, explicit_text='TCPA  Trusted  Platform  Identity')>])>])>"
+            "value": [
+             "Policy: 1.3.6.1.4.1.311.21.31",
+             "User Notice: TCPA  Trusted  Platform  Identity"
+            ]
            },
            {
             "critical": false,
