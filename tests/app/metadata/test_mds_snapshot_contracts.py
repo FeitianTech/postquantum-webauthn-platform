@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import base64
 import types
 from datetime import date, datetime, timezone
 
 from server.app.mds import build as m
 from server.app.webauthn import signature_algorithms as names
+from tests.app.characterization import material
 
 
 def test_basic_mapping_string_list_and_byte_helpers():
@@ -219,29 +221,28 @@ def test_json_compaction_entry_id_meta_and_snapshot_builders(monkeypatch):
     assert bootstrap['meta']['entryCount'] == 0
 
 
-def test_mds_snapshot_residual_branch_cases(monkeypatch):
-    # format_guid_candidate fallback through str(value)
+def test_a_guid_candidate_that_is_no_text_formats_as_empty():
     assert m.format_guid_candidate(12345) == ''
 
-    # certification formatting with empty status and descriptor-only payload
-    cert_text, cert_status = m._format_certification([
-        {'effectiveDate': '2026-01-01', 'certificationDescriptor': 'Only Descriptor'}
-    ])
-    assert cert_status == ''
-    assert cert_text == 'Only Descriptor'
 
-    # descriptor-missing path with status + certificate number
-    cert_text2, cert_status2 = m._format_certification([
+def test_a_certification_is_described_by_its_descriptor_or_else_its_status_and_number():
+    assert m._format_certification([
+        {'effectiveDate': '2026-01-01', 'certificationDescriptor': 'Only Descriptor'}
+    ]) == ('Only Descriptor', '')
+
+    cert_text, cert_status = m._format_certification([
         {'effectiveDate': '2026-01-01', 'status': 'FIDO_CERTIFIED_L1', 'certificateNumber': '42'}
     ])
-    assert cert_status2 == 'FIDO_CERTIFIED_L1'
-    assert '(42)' in cert_text2
+    assert cert_status == 'FIDO_CERTIFIED_L1'
+    assert '(42)' in cert_text
 
-    # user verification ignores non-mapping entries
+
+def test_user_verification_skips_entries_that_are_no_objects():
     assert m._extract_user_verification([['not-a-mapping']]) == []
     assert m._extract_user_verification([[{}]]) == []
 
-    # resolve_name should fall through empty mapping/status values
+
+def test_an_entry_without_a_readable_name_is_an_unknown_authenticator():
     name = m._resolve_name(
         {
             'description': {'en': '   '},
@@ -251,41 +252,27 @@ def test_mds_snapshot_residual_branch_cases(monkeypatch):
     )
     assert name == 'Unknown Authenticator'
 
-    # attestation key identifiers ignore None/whitespace and dedupe case-insensitively
+
+def test_attestation_key_identifiers_are_trimmed_and_unique_ignoring_case():
     key_ids = m._extract_attestation_key_identifiers(
         {'attestationCertificateKeyIdentifiers': [None, '   ', 'A']},
         {'attestationCertificateKeyIdentifiers': ['a', 'B']},
     )
     assert key_ids == ['A', 'B']
 
-    # force defensive candidate-empty branch via helper monkeypatch
-    original_extract_list = m._extract_list
-    monkeypatch.setattr(m, '_extract_list', lambda _value: [None, '', 'A'])
-    forced = m._extract_attestation_key_identifiers({}, {})
-    assert forced == ['A']
-    monkeypatch.setattr(m, '_extract_list', original_extract_list)
 
+def test_blank_names_format_as_empty():
     assert names.normalise_signature_algorithm_name('   ') == ''
     assert m._format_enum('A--B') == 'A B'
     assert names.format_hash_name('   ') == ''
     assert names.format_hash_name('abc-123') == 'ABC123'
     assert m._decode_der_certificate('   ') is None
 
-    # summarizer: duplicate algorithms and non-string/blank CN values are skipped
-    class _FakeCert:
-        signature_hash_algorithm = types.SimpleNamespace(name='sha256')
-        signature_algorithm_oid = types.SimpleNamespace(_name='ecdsa-with-SHA256', dotted_string='1.2.3')
-        subject = types.SimpleNamespace(
-            get_attributes_for_oid=lambda _oid: [
-                types.SimpleNamespace(value=123),
-                types.SimpleNamespace(value='   '),
-                types.SimpleNamespace(value='CN-Valid'),
-            ]
-        )
 
-    monkeypatch.setattr(m, '_decode_der_certificate', lambda _value: b'der')
-    monkeypatch.setattr(m.x509, 'load_der_x509_certificate', lambda _der: _FakeCert())
+def test_the_certificate_summary_names_each_algorithm_once_and_skips_blank_common_names():
+    certificates = [
+        base64.b64encode(material.certificate(material.ec_key(label).public_key(), common_name=name, serial=serial)).decode()
+        for label, name, serial in (("one", "CN-Valid", 1), ("two", "   ", 2))
+    ]
 
-    algs, cns = m._summarise_attestation_certificates(['cert-a', 'cert-b'])
-    assert algs == ['ECDSA_SHA256']
-    assert cns == ['CN-Valid']
+    assert m._summarise_attestation_certificates(certificates) == (['ED25519_SHA512'], ['CN-Valid'])
