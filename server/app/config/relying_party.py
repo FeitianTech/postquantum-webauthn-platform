@@ -105,8 +105,6 @@ def determine_rp_id(explicit_id: str | None = None) -> str:
                 return "localhost"
         except ValueError:
             pass
-        if host in {"127.0.0.1", "::1"}:
-            return "localhost"
         return host
 
     return "localhost"
