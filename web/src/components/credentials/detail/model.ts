@@ -1,22 +1,22 @@
 // A saved credential's details come from the modules in src/logic: what the
 // sections above the registration show
-// (advanced/credential-display/credential-detail-runtime/detail-sections.js),
-// the registration's own view (credential-display/registration-view.js), both
-// composed by credential-detail-runtime/compose.js over a registration state
-// (credential-display/registration-state.js), the decode (decode-payload.js), the
+// (credentials/detail/sections.js),
+// the registration's own view (credentials/registration/view.js), both
+// composed by credentials/detail/compose.js over a registration state
+// (credentials/registration/state.js), the decode (decode-payload.js), the
 // artifact's hydration (credentials/hydrate.js) and a certificate's
-// text (credential-display/certificate-text.js). These are the types the components read
+// text (credentials/certificates/text.js). These are the types the components read
 // them through.
 import { describeCoseAlgorithm, describeCoseKeyType, describeMldsaParameterSet } from '@/logic/credentials/cose-labels.js';
-import { composeCredentialDetail, needsArtifact } from '@/logic/advanced/credential-display/credential-detail-runtime/compose.js';
-import { DETAIL_TEXT, describeValue } from '@/logic/advanced/credential-display/credential-detail-runtime/detail-sections.js';
-import { decodePayloadThroughApi } from '@/logic/advanced/credential-display/decode-payload.js';
-import { createRegistrationState } from '@/logic/advanced/credential-display/registration-state.js';
+import { composeCredentialDetail, needsArtifact } from '@/logic/credentials/detail/compose.js';
+import { DETAIL_TEXT, describeValue } from '@/logic/credentials/detail/sections.js';
+import { decodePayloadThroughApi } from '@/logic/credentials/registration/decode-payload.js';
+import { createRegistrationState } from '@/logic/credentials/registration/state.js';
 import {
   REGISTRATION_TEXT,
   describeAttestationCertificate,
   describeAuthenticatorData,
-} from '@/logic/advanced/credential-display/registration-view.js';
+} from '@/logic/credentials/registration/view.js';
 import { HYDRATE_TEXT, hydrateCredentialFromServer } from '@/logic/credentials/hydrate.js';
 import { certificateSummary } from '@/logic/mds/explorer/certificate.js';
 import { fetchCredentialArtifact } from '@/logic/credentials/storage/artifacts-client.js';

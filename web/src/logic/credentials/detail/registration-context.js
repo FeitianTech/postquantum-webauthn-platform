@@ -1,16 +1,16 @@
 import {
     base64ToBase64Url,
-} from '../../../shared/utils/binary.js';
+} from '../../shared/utils/binary.js';
 import {
     deriveAaguidFromCredentialData,
     normaliseAaguidValue,
-} from '../../../credentials/utils.js';
-import {extractAaguidFromCertificateEntries} from '../certificate-core.js';
+} from '../utils.js';
+import {extractAaguidFromCertificateEntries} from '../certificates/core.js';
 import {
     collectTruthyEntries,
     cloneJson,
     normalizeClientDataString,
-} from '../data-utils.js';
+} from '../registration/data-utils.js';
 import {
     pickFirstObject,
     pickFirstString,

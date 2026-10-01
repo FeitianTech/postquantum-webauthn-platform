@@ -8,11 +8,11 @@ import {
   sanitizeRelyingPartyInfo,
   stripCertificateCollections,
   stripSignatureFormatting,
-} from './sanitize-common.js';
+} from './sanitize.js';
 import { advancedComplete, registration } from '@/test/logic/credentials/registration-detail-answers.js';
 
 // What the registration view leaves out of the data it shows
-// (advanced/credential-display/sanitize-common.js).
+// (credentials/registration/sanitize.js).
 
 /** The advanced registration's relying party, as register-complete answers it (with its certificates). */
 const advancedRelyingParty = () => advancedComplete().relyingParty;

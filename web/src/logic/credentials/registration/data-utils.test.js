@@ -8,7 +8,7 @@ import {
 } from './data-utils.js';
 import { registration } from '@/test/logic/credentials/registration-detail-answers.js';
 
-// The registration view's small helpers (advanced/credential-display/data-utils.js).
+// The registration view's small helpers (credentials/registration/data-utils.js).
 
 /** The client data a registration kept, as the browser sent it: base64url. */
 const clientData = () => registration('es256').storedCredential.clientDataJSON;

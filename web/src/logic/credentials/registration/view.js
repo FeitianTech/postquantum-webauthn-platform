@@ -2,7 +2,7 @@
 // client data, the relying party's view of the registration, the attestation
 // object with its certificates and authenticator data, and each certificate's
 // and the authenticator data's own view. DOM-free. The state the view is built
-// from is passed in (./registration-state.js).
+// from is passed in (./state.js).
 import {
     base64UrlToJson,
     base64UrlToUtf8String,
@@ -10,8 +10,8 @@ import {
 import {
     normaliseCertificateEntryForModal,
     partitionCertificateEntries,
-} from './certificate-core.js';
-import {formatCertificateDetails} from './certificate-text.js';
+} from '../certificates/core.js';
+import {formatCertificateDetails} from '../certificates/text.js';
 import {
     collectTruthyEntries,
     normalizeClientDataString,
@@ -22,9 +22,9 @@ import {
     hashAuthenticatorData,
     prepareRegistrationState,
     visibleStateCertificates,
-} from './registration-state.js';
+} from './state.js';
 import {sanitiseAttestationObjectForDisplay} from './sanitize-attestation-object.js';
-import {sanitizeRelyingPartyInfo} from './sanitize-common.js';
+import {sanitizeRelyingPartyInfo} from './sanitize.js';
 
 export const REGISTRATION_TEXT = Object.freeze({
     responseTitle: 'Authenticator Response',

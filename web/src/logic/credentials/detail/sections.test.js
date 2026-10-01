@@ -10,17 +10,17 @@ import {
   describePublicKey,
   describeUserInfo,
   describeValue,
-} from './detail-sections.js';
+} from './sections.js';
 import { extractCredentialAttestationContext } from '../attestation-context.js';
 import {
   describeCoseAlgorithm,
   describeCoseKeyType,
   describeMldsaParameterSet,
-} from '../../../credentials/cose-labels.js';
+} from '../cose-labels.js';
 import { advancedRecord, simpleRecord } from '@/test/logic/credentials/registration-detail-answers.js';
 
 // What a saved credential's details show above its registration
-// (credential-display/credential-detail-runtime/detail-sections.js).
+// (credentials/detail/sections.js).
 
 const AAGUID = '00112233445566778899aabbccddeeff';
 const AAGUID_GUID = '00112233-4455-6677-8899-aabbccddeeff';

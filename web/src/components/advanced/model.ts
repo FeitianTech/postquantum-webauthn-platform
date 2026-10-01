@@ -8,7 +8,7 @@
 // choices and the extensions' availability (advanced/auth/hint-rules.js,
 // fake-credentials.js, hex-input.js, allow-credentials.js, capabilities.js),
 // the two ceremonies (advanced/auth/ceremony.js, assertion.js) and the snapshot
-// a registration's result keeps (credential-display/registration-snapshot.js).
+// a registration's result keeps (credentials/registration/snapshot.js).
 // These are the types the components read them through.
 import { advancedRegisteredMessage, advancedRegistrationFailureText, registerAdvancedCredential } from '@/logic/advanced/auth/ceremony.js';
 import {
@@ -32,10 +32,10 @@ import {
 import { describeCoseAlgorithm } from '@/logic/credentials/cose-labels.js';
 import { describeCredentialAlgorithmWith } from '@/logic/credentials/algorithm-tag.js';
 import { getCredentialIdHex, getStoredCredentialAttachment } from '@/logic/credentials/utils.js';
-import { decodePayloadThroughApi } from '@/logic/advanced/credential-display/decode-payload.js';
-import { keepRegistrationSnapshot } from '@/logic/advanced/credential-display/registration-snapshot.js';
-import { createRegistrationState } from '@/logic/advanced/credential-display/registration-state.js';
-import { composeRegistration } from '@/logic/advanced/credential-display/registration-view.js';
+import { decodePayloadThroughApi } from '@/logic/credentials/registration/decode-payload.js';
+import { keepRegistrationSnapshot } from '@/logic/credentials/registration/snapshot.js';
+import { createRegistrationState } from '@/logic/credentials/registration/state.js';
+import { composeRegistration } from '@/logic/credentials/registration/view.js';
 import { applyJsonEditorAutoIndent, applyTabIndentation, wrapSelectionWithPair } from '@/logic/advanced/editor/json-editing.js';
 import { ALGORITHM_OPTIONS } from '@/logic/advanced/json-editor/algorithm-options.js';
 import {

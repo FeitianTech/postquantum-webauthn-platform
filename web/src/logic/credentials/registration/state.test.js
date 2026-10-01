@@ -13,10 +13,10 @@ import {
   prepareRegistrationState,
   resetRegistrationState,
   visibleStateCertificates,
-} from './registration-state.js';
+} from './state.js';
 import { advancedComplete, goldenDecode, registration } from '@/test/logic/credentials/registration-detail-answers.js';
 
-// What the registration view is built from (advanced/credential-display/registration-state.js),
+// What the registration view is built from (credentials/registration/state.js),
 // over the server's recorded answers.
 
 const EMPTY_STATE = {

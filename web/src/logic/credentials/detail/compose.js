@@ -1,11 +1,11 @@
 // A saved credential's details, as data: the sections above its registration
-// (./detail-sections.js) and the registration's own view (../registration-view.js),
-// composed into `state` (../registration-state.js) from the record, its saved
+// (./sections.js) and the registration's own view (../registration/view.js),
+// composed into `state` (../registration/state.js) from the record, its saved
 // snapshot, or the decoder (`decode`). DOM-free: the credential's details dialog
 // builds from it.
 import {extractCredentialAttestationContext} from '../attestation-context.js';
-import {resetRegistrationState} from '../registration-state.js';
-import {composeRegistration} from '../registration-view.js';
+import {resetRegistrationState} from '../registration/state.js';
+import {composeRegistration} from '../registration/view.js';
 import {
     describeAaguid,
     describeAttestationFormat,
@@ -14,7 +14,7 @@ import {
     describeProperties,
     describePublicKey,
     describeUserInfo,
-} from './detail-sections.js';
+} from './sections.js';
 import {pickFirstString} from './helpers.js';
 import {buildRegistrationContext} from './registration-context.js';
 import {

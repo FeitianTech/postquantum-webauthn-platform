@@ -1,14 +1,14 @@
 import {
     normaliseCertificateEntryForModal,
     partitionCertificateEntries,
-} from './certificate-core.js';
+} from '../certificates/core.js';
 import {
     removeKeysCaseInsensitive,
     removeKeysFromObject,
     sanitizeParsedCertificateDetails,
     stripCertificateCollections,
     stripSignatureFormatting,
-} from './sanitize-common.js';
+} from './sanitize.js';
 import {cloneJson} from './data-utils.js';
 
 // The attestation object as the registration view shows it: `fmt` first, each

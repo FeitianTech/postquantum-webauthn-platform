@@ -10,7 +10,7 @@ import {
   normaliseHexFingerprint,
   normalisePemString,
   partitionCertificateEntries,
-} from './certificate-core.js';
+} from './core.js';
 import { goldenAnswers } from '@/test/logic/simple/ceremony-answers.js';
 
 const AAGUID = '00112233445566778899aabbccddeeff';

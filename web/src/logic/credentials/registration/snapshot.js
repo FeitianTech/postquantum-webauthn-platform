@@ -1,7 +1,7 @@
 // What a registration's result keeps once it is composed: the registration as
 // data, saved as the record's snapshot (schemaVersion 2) in the browser and on
 // the server, so its details build from it without asking again. DOM-free.
-import { registrationResultInput, registrationSnapshotPayload } from './registration-view.js';
+import { registrationResultInput, registrationSnapshotPayload } from './view.js';
 
 /**
  * Composes the registration the browser's credential and the relying party's

@@ -1,12 +1,12 @@
-import {hexToGuid} from '../../shared/utils/binary.js';
+import {hexToGuid} from '../shared/utils/binary.js';
 import {
     deriveAaguidFromCredentialData,
     normaliseAaguidValue,
-} from '../../credentials/utils.js';
+} from './utils.js';
 import {
     collectCredentialCertificates,
     extractAaguidFromCertificateEntries,
-} from './certificate-core.js';
+} from './certificates/core.js';
 
 export function extractCredentialAttestationContext(cred) {
     const propertiesData = cred && typeof cred.properties === 'object' && cred.properties !== null

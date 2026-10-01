@@ -25,7 +25,7 @@ import {
   getCredentialUserHandleHex,
   normaliseAaguidValue,
 } from '@/logic/credentials/utils.js';
-import { deriveCredentialStatusIndicators } from '@/logic/advanced/credential-display/attestation-context.js';
+import { deriveCredentialStatusIndicators } from '@/logic/credentials/attestation-context.js';
 import { deleteCredentialArtifact } from '@/logic/credentials/storage/artifacts-client.js';
 import {
   clearSimpleCredentials,

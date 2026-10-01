@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { createRegistrationState, prepareRegistrationState } from './registration-state.js';
+import { createRegistrationState, prepareRegistrationState } from './state.js';
 import { sanitiseAttestationObjectForDisplay } from './sanitize-attestation-object.js';
-import { sanitizeParsedCertificateDetails } from './sanitize-common.js';
+import { sanitizeParsedCertificateDetails } from './sanitize.js';
 import { advancedComplete, goldenDecode, registration } from '@/test/logic/credentials/registration-detail-answers.js';
 
 // The attestation object as the registration view shows it
-// (advanced/credential-display/sanitize-attestation-object.js).
+// (credentials/registration/sanitize-attestation-object.js).
 
 /** The packed x5c registration's state, as the view prepares it from the decoder's answers. */
 async function packedState() {

@@ -11,9 +11,9 @@ import {
   describeClientData,
   registrationResultInput,
   registrationSnapshotPayload,
-} from './registration-view.js';
-import { createRegistrationState } from './registration-state.js';
-import { sanitiseRegistrationDetailSnapshot } from '../../credentials/storage/local/snapshot-sanitize.js';
+} from './view.js';
+import { createRegistrationState } from './state.js';
+import { sanitiseRegistrationDetailSnapshot } from '../storage/local/snapshot-sanitize.js';
 import {
   advancedArtifact,
   advancedCompleteAnswer,
@@ -23,7 +23,7 @@ import {
   simpleRecord,
 } from '@/test/logic/credentials/registration-detail-answers.js';
 
-// What the registration view shows, as data (credential-display/registration-view.js).
+// What the registration view shows, as data (credentials/registration/view.js).
 
 afterEach(() => {
   vi.restoreAllMocks();

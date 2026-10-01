@@ -11,7 +11,7 @@ import {base64ToBytes, base64UrlToBytes} from '../../shared/utils/base64.js';
 import {
     deriveCertificateIdentity,
     normaliseCertificateEntryForModal,
-} from './certificate-core.js';
+} from '../certificates/core.js';
 import {cloneJson} from './data-utils.js';
 
 export const EMPTY_DETAIL_PREPARATION = Object.freeze({

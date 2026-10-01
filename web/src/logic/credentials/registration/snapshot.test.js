@@ -1,9 +1,9 @@
-// What a registration's result keeps (advanced/credential-display/registration-snapshot.js), over the recorded advanced registrations and the decoder's answers.
+// What a registration's result keeps (credentials/registration/snapshot.js), over the recorded advanced registrations and the decoder's answers.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { keepRegistrationSnapshot } from './registration-snapshot.js';
-import { createRegistrationState } from './registration-state.js';
-import { composeRegistration } from './registration-view.js';
+import { keepRegistrationSnapshot } from './snapshot.js';
+import { createRegistrationState } from './state.js';
+import { composeRegistration } from './view.js';
 import { credentialToJSON } from '@/test/logic/simple/ceremony-answers.js';
 import { advancedDecodeAnswer, advancedRegistrations, recordedCredential } from '@/test/logic/advanced/auth/advanced-answers.js';
 

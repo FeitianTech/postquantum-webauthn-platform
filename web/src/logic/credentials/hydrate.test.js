@@ -4,12 +4,12 @@ import {
   HYDRATE_TEXT,
   hydrateCredentialFromServer,
 } from './hydrate.js';
-import { needsArtifact } from '../advanced/credential-display/credential-detail-runtime/compose.js';
+import { needsArtifact } from './detail/compose.js';
 import {
   composeRegistration,
   registrationSnapshotPayload,
-} from '../advanced/credential-display/registration-view.js';
-import { createRegistrationState } from '../advanced/credential-display/registration-state.js';
+} from './registration/view.js';
+import { createRegistrationState } from './registration/state.js';
 import { sanitiseRegistrationDetailSnapshot } from './storage/local/snapshot-sanitize.js';
 import { advancedArtifact, advancedRecord, recordedDecoder, simpleRecord } from '@/test/logic/credentials/registration-detail-answers.js';
 

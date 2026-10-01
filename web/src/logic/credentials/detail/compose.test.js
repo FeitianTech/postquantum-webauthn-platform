@@ -9,15 +9,15 @@ import {
   composeRegistration,
   describeAttestationCertificate,
   registrationSnapshotPayload,
-} from '../registration-view.js';
-import { createRegistrationState } from '../registration-state.js';
-import { hydrateCredentialFromServer } from '../../../credentials/hydrate.js';
+} from '../registration/view.js';
+import { createRegistrationState } from '../registration/state.js';
+import { hydrateCredentialFromServer } from '../hydrate.js';
 import {
   describeCoseAlgorithm,
   describeCoseKeyType,
   describeMldsaParameterSet,
-} from '../../../credentials/cose-labels.js';
-import { sanitiseRegistrationDetailSnapshot } from '../../../credentials/storage/local/snapshot-sanitize.js';
+} from '../cose-labels.js';
+import { sanitiseRegistrationDetailSnapshot } from '../storage/local/snapshot-sanitize.js';
 import {
   advancedArtifact,
   advancedRecord,
@@ -25,7 +25,7 @@ import {
   simpleRecord,
 } from '@/test/logic/credentials/registration-detail-answers.js';
 
-// A saved credential's details, as data (credential-detail-runtime/compose.js).
+// A saved credential's details, as data (credentials/detail/compose.js).
 
 const AAGUID_GUID = '00112233-4455-6677-8899-aabbccddeeff';
 const DESCRIBERS = { describeCoseAlgorithm, describeCoseKeyType, describeMldsaParameterSet };

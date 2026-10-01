@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatCertificateDetails } from './certificate-text.js';
+import { formatCertificateDetails } from './text.js';
 import { advancedComplete, registration } from '@/test/logic/credentials/registration-detail-answers.js';
 
-// A certificate as text (advanced/credential-display/certificate-text.js), as the
+// A certificate as text (credentials/certificates/text.js), as the
 // registration view's certificate shows it.
 
 /** The attestation certificate as the decoder parsed it (POST /api/codec): no summary. */

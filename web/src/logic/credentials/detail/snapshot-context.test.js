@@ -9,11 +9,11 @@ import {
   captureRegistrationState,
   createRegistrationState,
   prepareRegistrationState,
-} from '../registration-state.js';
-import { sanitizeRelyingPartyInfo } from '../sanitize-common.js';
+} from '../registration/state.js';
+import { sanitizeRelyingPartyInfo } from '../registration/sanitize.js';
 import { goldenDecode, registration } from '@/test/logic/credentials/registration-detail-answers.js';
 
-// A saved registration snapshot read back (credential-detail-runtime/snapshot-context.js).
+// A saved registration snapshot read back (credentials/detail/snapshot-context.js).
 
 /**
  * The snapshot the registration view saves for a registration (schemaVersion 2):

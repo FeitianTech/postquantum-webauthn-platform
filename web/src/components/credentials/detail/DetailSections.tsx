@@ -188,7 +188,7 @@ function UserInfo({ detail, row, idBase }: { detail: CredentialDetail; row: Cred
 }
 
 /**
- * The detail's level: everything detail-sections.js shows above the registration,
+ * The detail's level: everything detail/sections.js shows above the registration,
  * in its order, then the way to the registration's own level.
  */
 export function DetailSections({

@@ -15,7 +15,7 @@ import {
 import { advancedArtifact, attestationDecodeAnswer, simpleRecord } from '@/test/logic/credentials/registration-detail-answers.js';
 
 // What a saved credential's registration view is built from, read from the
-// record under each name it may use (credential-detail-runtime/registration-context.js
+// record under each name it may use (credentials/detail/registration-context.js
 // over registration-candidates.js and helpers.js).
 
 const AAGUID = '00112233445566778899aabbccddeeff';
