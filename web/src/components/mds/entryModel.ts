@@ -18,7 +18,7 @@ import type { MdsEntry } from './model';
 /** A field: a value (an identifier is copyable, in Geist Mono), or a list of codes. */
 export type DetailField = { label: string; value?: string; codes?: string[]; identifier?: boolean };
 export type ChipList = { label: string; values: string[] };
-export type VerificationMethod = {
+type VerificationMethod = {
   method: string;
   codeAccuracy: string;
   biometricAccuracy: string;
@@ -49,14 +49,14 @@ export type DetailSection = {
   statusReports?: StatusReportRow[];
 };
 
-export type SubtitlePart = { label: string; value: string };
+type SubtitlePart = { label: string; value: string };
 
 export const entrySections = detailSections as (entry: MdsEntry | null) => DetailSection[];
 export const entryTitle = detailTitle as (entry: MdsEntry | null) => string;
 export const entrySubtitle = detailSubtitleParts as (entry: MdsEntry | null) => SubtitlePart[];
 export const entrySubtitleText = formatDetailSubtitle as (entry: MdsEntry | null) => string;
 
-export type ResolveAnswer = { entry: MdsEntry | null; failure?: { status: number; message: string } };
+type ResolveAnswer = { entry: MdsEntry | null; failure?: { status: number; message: string } };
 export const resolveEntry = requestResolvedEntry as (
   query: Record<string, string>,
   options?: { signal?: AbortSignal },

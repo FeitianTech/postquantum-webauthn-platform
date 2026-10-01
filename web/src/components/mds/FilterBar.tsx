@@ -8,7 +8,7 @@ import { cx } from '@/lib/cx';
 import { FilterCombobox } from './FilterCombobox';
 import { EXPLORER_FILTERS } from './model';
 
-export type FilterBarProps = {
+type FilterBarProps = {
   filters: Record<string, string>;
   options: Record<string, string[]>;
   activeFilters: number;

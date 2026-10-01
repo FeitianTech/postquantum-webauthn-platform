@@ -9,7 +9,7 @@ import { downloadText, fileNameFor } from '@/lib/download';
 import { entrySubtitleText, rawData, rawText, rawTitle } from './entryModel';
 import type { MdsEntry } from './model';
 
-export const RAW_DIALOG_ID = 'mds-entry-raw';
+const RAW_DIALOG_ID = 'mds-entry-raw';
 
 // The entry as MDS publishes it, in a dialog (a popup window is blocked in some
 // browsers): its title and subtitle, and the JSON,

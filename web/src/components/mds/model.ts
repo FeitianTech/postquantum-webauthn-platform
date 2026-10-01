@@ -55,12 +55,12 @@ export type MdsEntry = {
 export type MdsSnapshot = { meta?: { [key: string]: unknown }; entries: MdsEntry[] };
 
 /** What GET /api/mds/metadata/info answers: the packaged summary, snapshotUrl and customEntriesState. */
-export type MdsInfo = { [key: string]: unknown };
+type MdsInfo = { [key: string]: unknown };
 
-export type StatusVariant = 'info' | 'success' | 'error';
+type StatusVariant = 'info' | 'success' | 'error';
 export type ExplorerStatus = { text: string; variant: StatusVariant; title: string };
 
-export type SortDirection = 'none' | 'asc' | 'desc';
+type SortDirection = 'none' | 'asc' | 'desc';
 export type ExplorerSort = { key: string; direction: SortDirection };
 
 export type ExplorerSource = {
@@ -69,8 +69,8 @@ export type ExplorerSource = {
   noteSnapshotMeta: (meta: unknown) => void;
 };
 
-export type ExplorerAnswer = { response: Response; payload: unknown };
-export type ExplorerOutcome =
+type ExplorerAnswer = { response: Response; payload: unknown };
+type ExplorerOutcome =
   | { kind: 'missing'; message: string }
   | { kind: 'failed'; message: string }
   | { kind: 'snapshot'; payload: MdsSnapshot };
@@ -124,7 +124,6 @@ export const EXPLORER_COLUMNS = [
 ] as const satisfies readonly { key: string; header: string; width: number; phoneWidth?: number; min?: number; list?: keyof MdsEntry }[];
 
 export type ExplorerColumn = (typeof EXPLORER_COLUMNS)[number];
-export type ColumnKey = ExplorerColumn['key'];
 
 type FilterConfig = { key: string; optionsKey?: string; expandDropdown?: boolean };
 

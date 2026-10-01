@@ -222,7 +222,7 @@ function BackToTop({ frameRef }: { frameRef: RefObject<HTMLDivElement | null> })
   );
 }
 
-export type ExplorerTableProps = {
+type ExplorerTableProps = {
   rows: MdsEntry[];
   /** The entries the filters let through; the others stay in the table, hidden. */
   shown: Set<string>;

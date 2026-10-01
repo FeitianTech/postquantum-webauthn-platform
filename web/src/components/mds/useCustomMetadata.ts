@@ -21,8 +21,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MdsSnapshot } from './model';
 
 export type MessageVariant = 'info' | 'success' | 'warning' | 'error';
-export type PanelMessage = { text: string; variant: MessageVariant };
-export type CustomItem = { name: string; storedFilename: string; deleteLabel: string; details: string };
+type PanelMessage = { text: string; variant: MessageVariant };
+type CustomItem = { name: string; storedFilename: string; deleteLabel: string; details: string };
 
 type Answer = { response: Response; payload: unknown };
 
