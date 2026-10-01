@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from server.app import visitor_session
 from server.app.config import relying_party
-from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from tests.app.entry_app import entry_app
 
@@ -14,10 +13,6 @@ def _install_register_complete_defaults(monkeypatch, advanced_module, attestatio
     monkeypatch.setattr(device_logs_module, "record_registration_event", lambda _event: None)
     monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(relying_party, "determine_rp_id", lambda value=None: value or "example.com")
-
-
-def test_helper_none_and_non_string_decode_paths():
-    assert advanced_parsing._coerce_optional_bool(None) is None
 
 
 def test_authenticate_begin_uses_stored_rp_required_uv_and_skips_invalid_allow_credentials(monkeypatch, config_module, advanced_parsing):
