@@ -5,6 +5,8 @@ import tempfile
 
 import pytest
 
+from server.app import challenge_registry
+
 # Hypothesis writes under <cwd>/.hypothesis whatever its database setting -- a
 # cache of each local module's constants, the Unicode character map -- so its
 # storage is pointed at a directory of this run's before anything reads it. The
@@ -19,7 +21,7 @@ if "HYPOTHESIS_STORAGE_DIRECTORY" not in os.environ:
 # snapshot lives. Every test starts from an empty directory of this run's instead,
 # whatever the shell exports: no test reads or writes the real snapshot, and a
 # test that needs one points the setting at a fixture of its own
-# (tests/app/metadata/conftest.py). Nothing is fetched from upstream either.
+# (mds_fixture_snapshot, tests/app/conftest.py). Nothing is fetched from upstream either.
 _MDS_SNAPSHOT_DIR = tempfile.mkdtemp(prefix="mds-snapshot-")
 os.environ["FIDO_SERVER_MDS_SNAPSHOT_DIR"] = _MDS_SNAPSHOT_DIR
 os.environ["FIDO_SERVER_MDS_FETCH_UPSTREAM"] = "0"
@@ -77,11 +79,6 @@ def _isolated_challenge_registry(monkeypatch):
     replay in the next.
     """
 
-    try:
-        from server.app import challenge_registry
-    except Exception:  # pragma: no cover - app not importable in this run
-        yield None
-        return
     registry = challenge_registry.InMemoryChallengeRegistry()
     monkeypatch.setattr(challenge_registry, "_registry", registry)
     yield registry

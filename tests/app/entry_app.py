@@ -1,14 +1,15 @@
 """The application the entry point builds (``server.app.app:app``).
 
-Imported when first asked for, as the entry point builds its app on import.
+Read from the module each time it is asked for, so a test that patches the
+module's ``app`` is the only one that sees its stand-in.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+from server.app import app as app_module
+
 
 def entry_app() -> Any:
-    from server.app.app import app
-
-    return app
+    return app_module.app
