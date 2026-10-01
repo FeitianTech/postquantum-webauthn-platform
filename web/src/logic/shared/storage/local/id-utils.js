@@ -34,15 +34,6 @@ export function normaliseAdvancedCredentialId(record) {
     return '';
 }
 
-export function generateRandomIdSegment() {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-        return crypto.randomUUID();
-    }
-    const random = Math.random().toString(36).slice(2, 11);
-    const randomB = Math.random().toString(36).slice(2, 11);
-    return `${random}${randomB}`;
-}
-
 // A stored identifier as base64url. Base64url (hex digits included, as before)
 // is kept as it is; standard base64 is decoded strictly and the same bytes
 // re-spelled. Anything else is returned as written rather than read as some
@@ -78,7 +69,7 @@ export function ensureAdvancedCredentialStorageId(record, { forceNew = false } =
     const baseId = normaliseAdvancedCredentialId(record);
     const timestampSource = record.createdAt;
     const timestampValue = isNonEmptyString(timestampSource) ? timestampSource.trim() : '';
-    const randomSegment = generateRandomIdSegment();
+    const randomSegment = crypto.randomUUID();
     const parts = [];
     if (baseId) {
         parts.push(baseId);
@@ -131,5 +122,5 @@ export function buildRecordKey(record, fallbackType = 'simple') {
     if (identifier) {
         return `${typed.type}:${identifier}`;
     }
-    return `${typed.type}:generated:${generateRandomIdSegment()}`;
+    return `${typed.type}:generated:${crypto.randomUUID()}`;
 }

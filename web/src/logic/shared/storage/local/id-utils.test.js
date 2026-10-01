@@ -4,7 +4,6 @@ import {
   buildRecordKey,
   ensureAdvancedCredentialStorageId,
   ensureRecordType,
-  generateRandomIdSegment,
   getRecordIdentifier,
   normaliseAdvancedCredentialId,
   normaliseCredentialId,
@@ -32,15 +31,6 @@ describe('normaliseCredentialId', () => {
 describe('normaliseAdvancedCredentialId', () => {
   it('reads nothing from a missing record', () => {
     expect(normaliseAdvancedCredentialId(undefined)).toBe('');
-  });
-});
-
-describe('generateRandomIdSegment', () => {
-  it('uses Math.random where crypto has no randomUUID, as in an insecure context', () => {
-    vi.stubGlobal('crypto', {});
-    vi.spyOn(Math, 'random').mockReturnValueOnce(0.5).mockReturnValueOnce(0.25);
-
-    expect(generateRandomIdSegment()).toBe('i9');
   });
 });
 
