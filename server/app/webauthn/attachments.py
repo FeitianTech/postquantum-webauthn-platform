@@ -10,6 +10,7 @@ __all__ = [
     "derive_allowed_attachments_from_hints",
     "normalize_attachment",
     "normalize_attachment_list",
+    "request_hints",
     "resolve_allowed_attachments",
     "resolve_effective_attachments",
 ]
@@ -27,6 +28,15 @@ def normalize_attachment(value: Any) -> str | None:
         return None
     normalized = value.strip().lower()
     return normalized or None
+
+
+def request_hints(public_key: Mapping[str, Any]) -> list[str]:
+    """The hints a request names: the text items of its ``hints`` list, in its order."""
+
+    raw_hints = public_key.get("hints")
+    if isinstance(raw_hints, list):
+        return [item for item in raw_hints if isinstance(item, str)]
+    return []
 
 
 def derive_allowed_attachments_from_hints(hints: Iterable[str] | None) -> list[str]:

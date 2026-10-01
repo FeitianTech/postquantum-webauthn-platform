@@ -66,3 +66,23 @@ def test_credentials_an_earlier_version_kept_in_the_session_are_used_when_none_a
     assert response.get_json()["status"] == "OK"
     with client.session_transaction() as session:
         assert "advanced_auth_credentials" not in session
+
+
+def test_begin_gives_the_browser_the_requests_hints():
+    authenticator = Authenticator(credential_id=b"\x04" * 32)
+
+    entry = {**authenticator.stored_credential_entry(), "authenticatorAttachment": "cross-platform"}
+
+    response = begin(entry_app().test_client(), [entry], hints=["security-key"])
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["publicKey"]["hints"] == ["security-key"]
+
+
+def test_begin_names_no_hints_when_the_request_has_none():
+    authenticator = Authenticator(credential_id=b"\x04" * 32)
+
+    response = begin(entry_app().test_client(), [authenticator.stored_credential_entry()])
+
+    assert response.status_code == 200, response.get_json()
+    assert "hints" not in response.get_json()["publicKey"]

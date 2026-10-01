@@ -189,7 +189,7 @@
     ],
     [
      "Content-Length",
-     "234"
+     "259"
     ],
     [
      "X-Content-Type-Options",
@@ -252,7 +252,7 @@
      }
     }
    ],
-   "bodySha256": "a35615a42a9c9bf936daf80db7e96cf7c28a1aa825afbd06fad38c7d3e3c63d6",
+   "bodySha256": "b82442bc60a610cb8a8e8481d25e09985f633dec07120d2869b926bcaf2c3687",
    "body": {
     "publicKey": {
      "allowCredentials": [
@@ -262,6 +262,9 @@
       }
      ],
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
+     "hints": [
+      "security-key"
+     ],
      "rpId": "localhost",
      "timeout": 90000,
      "userVerification": "preferred"
@@ -356,7 +359,7 @@
     ],
     [
      "Content-Length",
-     "124"
+     "143"
     ],
     [
      "X-Content-Type-Options",
@@ -419,10 +422,13 @@
      }
     }
    ],
-   "bodySha256": "9012ccbceda1285555171fa2fd5885d63e95cd78a2c2b03098d8404b0469ed3b",
+   "bodySha256": "eeae92e1fe16f778d9a672371af0312244b0929e76f4b3de1d4f9bc4d8a6a292",
    "body": {
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
+     "hints": [
+      "hybrid"
+     ],
      "rpId": "localhost",
      "userVerification": "preferred"
     }

@@ -4,6 +4,7 @@ from __future__ import annotations
 from fido2 import cbor
 
 from tests.app.entry_app import entry_app
+from tests.app.security.ceremony_helpers import advanced_public_key_options
 
 from .registration_ceremony import register
 
@@ -39,3 +40,22 @@ def test_requested_extensions_that_are_no_object_fail_the_registration(advanced_
     assert response.status_code == 400
     assert response.get_json()["error"]
     assert response.get_json()["challengeStatus"] == "fresh"
+
+
+def _begin(public_key_changes):
+    options = {**advanced_public_key_options(challenge=b"\x73" * 32), **public_key_changes}
+    return entry_app().test_client().post("/api/advanced/register/begin", json={"publicKey": options})
+
+
+def test_begin_gives_the_browser_the_requests_hints_in_its_order():
+    response = _begin({"hints": ["hybrid", 7, "security-key"]})
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["publicKey"]["hints"] == ["hybrid", "security-key"]
+
+
+def test_begin_names_no_hints_when_the_request_has_none():
+    response = _begin({"hints": []})
+
+    assert response.status_code == 200, response.get_json()
+    assert "hints" not in response.get_json()["publicKey"]

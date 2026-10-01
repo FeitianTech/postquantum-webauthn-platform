@@ -214,3 +214,9 @@ def test_resolve_effective_attachments_empty():
     
     result = attachments.resolve_effective_attachments([], None)
     assert result == []
+
+
+def test_a_requests_hints_are_its_text_hints_in_order():
+    assert attachments.request_hints({"hints": ["hybrid", None, 3, "client-device"]}) == ["hybrid", "client-device"]
+    assert attachments.request_hints({"hints": "security-key"}) == []
+    assert attachments.request_hints({}) == []

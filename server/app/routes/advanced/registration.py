@@ -10,6 +10,7 @@ from flask import Blueprint, jsonify, request, session
 from ... import json_values
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
 from ...mds import provisioning as mds_provisioning
+from ...webauthn.attachments import request_hints
 from . import (
     algorithms,
     constants,
@@ -201,6 +202,10 @@ def advanced_register_begin():
     session["advanced_original_request"] = data
 
     response_payload = dict(options)
+    # The browser reads the hints from the options too (its JSON parser keeps them).
+    hints = request_hints(public_key)
+    if hints:
+        response_payload["publicKey"]["hints"] = hints
     if warnings:
         response_payload["warnings"] = warnings
 

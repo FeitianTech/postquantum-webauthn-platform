@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "928"
+     "953"
     ],
     [
      "X-Content-Type-Options",
@@ -133,7 +133,7 @@
      }
     }
    ],
-   "bodySha256": "076a38e33e40ce7912e6381935d90eeae19b3c1ea8b4626aedb182a4c13bb46f",
+   "bodySha256": "cf8e3a200960592acbfeeac832cb074e57690e0b7b09997a7036de23450d373b",
    "body": {
     "publicKey": {
      "attestation": "direct",
@@ -169,6 +169,9 @@
        }
       }
      },
+     "hints": [
+      "security-key"
+     ],
      "pubKeyCredParams": [
       {
        "alg": -7,

@@ -130,7 +130,7 @@
     ],
     [
      "Content-Length",
-     "1144"
+     "1170"
     ],
     [
      "X-Content-Type-Options",
@@ -290,7 +290,7 @@
      }
     }
    ],
-   "bodySha256": "fdc0a50362aa8f4a6b7e5b220e4ca7cb7e14c0945490c46f6e4641b063093fcd",
+   "bodySha256": "ec8477d99256fdcd389af95a4e85b22c90fed0e647cfb774e2b9a6292c554488",
    "body": {
     "publicKey": {
      "attestation": "direct",
@@ -330,6 +330,9 @@
        }
       }
      },
+     "hints": [
+      "client-device"
+     ],
      "pubKeyCredParams": [
       {
        "alg": -7,
@@ -813,7 +816,7 @@
     ],
     [
      "Content-Length",
-     "483"
+     "508"
     ],
     [
      "X-Content-Type-Options",
@@ -902,7 +905,7 @@
      }
     }
    ],
-   "bodySha256": "7370acb8cd46e6b2f826ef796d7cafa907b65051a779b01dd50c0fb4a6b73b9d",
+   "bodySha256": "9e66a73ea44b2309b18c76b2bbfd5a9138704677c24231a55db4492aeec7d495",
    "body": {
     "publicKey": {
      "attestation": "enterprise",
@@ -914,6 +917,9 @@
      },
      "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
      "excludeCredentials": [],
+     "hints": [
+      "security-key"
+     ],
      "pubKeyCredParams": [
       {
        "alg": -7,
@@ -942,7 +948,7 @@
     ],
     [
      "Content-Length",
-     "491"
+     "510"
     ],
     [
      "X-Content-Type-Options",
@@ -1028,7 +1034,7 @@
      }
     }
    ],
-   "bodySha256": "b08331a3633410b6faba12c6333ca5342e0190caa9ffabad789c7414e64dc942",
+   "bodySha256": "2ad6bca311623cb291a4dc6d2c08aa17467bd841d69231a76ca36e780a624693",
    "body": {
     "publicKey": {
      "attestation": "none",
@@ -1040,6 +1046,9 @@
      },
      "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
      "excludeCredentials": [],
+     "hints": [
+      "hybrid"
+     ],
      "pubKeyCredParams": [
       {
        "alg": -7,

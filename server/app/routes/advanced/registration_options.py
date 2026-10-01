@@ -21,7 +21,11 @@ from flask import jsonify
 
 from ...config import relying_party
 from ...webauthn import client_binary
-from ...webauthn.attachments import normalize_attachment, resolve_effective_attachments
+from ...webauthn.attachments import (
+    normalize_attachment,
+    request_hints,
+    resolve_effective_attachments,
+)
 from ...webauthn.attestation.aaguid import describe_cred_protect
 
 
@@ -118,16 +122,11 @@ def authenticator_selection(public_key: Any) -> AuthenticatorSelection:
         auth_selection = {}
         public_key["authenticatorSelection"] = auth_selection
 
-    raw_hints = public_key.get("hints")
-    hints_list: list[str] = []
-    if isinstance(raw_hints, list):
-        hints_list = [item for item in raw_hints if isinstance(item, str)]
-
     requested_attachment = normalize_attachment(
         auth_selection.get("authenticatorAttachment")
     )
     allowed_attachment_values = resolve_effective_attachments(
-        hints_list,
+        request_hints(public_key),
         requested_attachment,
     )
 

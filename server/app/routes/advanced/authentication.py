@@ -13,6 +13,7 @@ from ...webauthn import client_binary
 from ...webauthn.attachments import (
     attachment_hint_violation,
     normalize_attachment,
+    request_hints,
     resolve_allowed_attachments,
     resolve_effective_attachments,
 )
@@ -30,13 +31,6 @@ logger = logging.getLogger(__name__)
 bp = Blueprint("advanced_authentication", __name__)
 
 
-def _hints(public_key: Mapping[str, Any]) -> list[str]:
-    raw_hints = public_key.get("hints")
-    if isinstance(raw_hints, list):
-        return [item for item in raw_hints if isinstance(item, str)]
-    return []
-
-
 @bp.route("/api/advanced/authenticate/begin", methods=["POST"])
 def advanced_authenticate_begin():
     data = request.get_json(silent=True)
@@ -51,7 +45,7 @@ def advanced_authenticate_begin():
     if not public_key.get("challenge"):
         return jsonify({"error": "Missing required field: challenge"}), 400
 
-    allowed_attachment_values = resolve_effective_attachments(_hints(public_key), None)
+    allowed_attachment_values = resolve_effective_attachments(request_hints(public_key), None)
     session["advanced_authenticate_allowed_attachments"] = list(allowed_attachment_values)
 
     challenge_value = public_key.get("challenge", "")
@@ -105,7 +99,7 @@ def advanced_authenticate_begin():
     }
 
     # The extensions may hold bytes (prf's eval inputs).
-    return jsonify(json_values.make_json_safe(_begin_payload(options, resident_key_only)))
+    return jsonify(json_values.make_json_safe(_begin_payload(options, resident_key_only, request_hints(public_key))))
 
 
 def _offer_credential_algorithms(temp_server: Any, credentials: Iterable[Any]) -> None:
@@ -114,8 +108,8 @@ def _offer_credential_algorithms(temp_server: Any, credentials: Iterable[Any]) -
         temp_server.allowed_algorithms = derived_algorithms
 
 
-def _begin_payload(options: Any, resident_key_only: bool) -> dict[str, Any]:
-    """The options, with no allow list when discoverable-only."""
+def _begin_payload(options: Any, resident_key_only: bool, hints: list[str]) -> dict[str, Any]:
+    """The options, with no allow list when discoverable-only, and the request's hints for the browser."""
 
     options_payload = dict(options)
     public_key_dict = options_payload.get("publicKey")
@@ -123,6 +117,8 @@ def _begin_payload(options: Any, resident_key_only: bool) -> dict[str, Any]:
         allow_list = public_key_dict.get("allowCredentials")
         if resident_key_only or allow_list is None:
             public_key_dict.pop("allowCredentials", None)
+        if hints:
+            public_key_dict["hints"] = hints
     return options_payload
 
 
@@ -206,7 +202,7 @@ def _attachment_violation(public_key: Mapping[str, Any], response: Any) -> str |
 
     allowed_attachments = resolve_allowed_attachments(
         session.pop("advanced_authenticate_allowed_attachments", None),
-        resolve_effective_attachments(_hints(public_key), None),
+        resolve_effective_attachments(request_hints(public_key), None),
     )
     return attachment_hint_violation(
         allowed_attachments,
