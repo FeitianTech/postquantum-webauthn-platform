@@ -66,9 +66,11 @@ def _serialize_credential_for_session(entry: Mapping[str, Any]) -> dict[str, Any
         if source_key in entry:
             serialized[dest_key] = entry[source_key]
 
-    aaguid_value = client_credentials.select_first(entry, _AAGUID_SESSION_FIELD_PRECEDENCE, skip_none=False)
+    aaguid_field, aaguid_value = client_credentials.select_field(
+        entry, _AAGUID_SESSION_FIELD_PRECEDENCE, skip_none=False
+    )
     if aaguid_value is None and "aaguidHex" in entry:
-        aaguid_value = entry["aaguidHex"]
+        aaguid_field, aaguid_value = "aaguidHex", entry["aaguidHex"]
 
     credential_id_value = client_credentials.select_first(
         entry,
@@ -83,7 +85,7 @@ def _serialize_credential_for_session(entry: Mapping[str, Any]) -> dict[str, Any
     )
 
     if aaguid_value is not None:
-        aaguid_bytes = client_binary.read(aaguid_value, iterables=True)
+        aaguid_bytes = client_credentials.read_aaguid(aaguid_field, aaguid_value, iterables=True)
         serialized["aaguid"] = encode_base64url(aaguid_bytes)
 
     if credential_id_value is not None:

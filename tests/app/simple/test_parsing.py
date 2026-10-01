@@ -33,3 +33,15 @@ def test_an_aaguid_given_in_hex_is_kept_in_the_sessions_copy():
 
     assert len(excluded) == 1
     assert kept[0]["aaguid"] == b64u(aaguid)
+
+
+def test_an_aaguid_given_as_plain_hex_is_read_as_hex_not_as_base64():
+    aaguid = bytes.fromhex("00112233445566778899aabbccddeeff")
+    entry = Authenticator(aaguid=aaguid).stored_credential_entry()
+    del entry["aaguid"]
+    entry["aaguidHex"] = aaguid.hex()
+
+    excluded, kept = _begin_registration([entry])
+
+    assert len(excluded) == 1
+    assert kept[0]["aaguid"] == b64u(aaguid)

@@ -15,6 +15,7 @@ from fido2 import cbor
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData
 
+from .. import encoding
 from . import client_binary, mldsa
 
 
@@ -44,21 +45,38 @@ class KeyMaterial:
     attested: AttestedCredentialData
 
 
-def select_first(mapping: Mapping[str, Any], keys: Iterable[str], *, skip_none: bool = True) -> Any:
-    """The value of the first of ``keys`` in ``mapping``; with ``skip_none``, the first that is not null."""
+def select_field(mapping: Mapping[str, Any], keys: Iterable[str], *, skip_none: bool = True) -> tuple[str | None, Any]:
+    """The first of ``keys`` in ``mapping`` and its value; with ``skip_none``, the first that is not null."""
 
     for key in keys:
         if key in mapping:
             value = mapping[key]
             if value is not None or not skip_none:
-                return value
-    return None
+                return key, value
+    return None, None
+
+
+def select_first(mapping: Mapping[str, Any], keys: Iterable[str], *, skip_none: bool = True) -> Any:
+    """The value of the first of ``keys`` in ``mapping``; with ``skip_none``, the first that is not null."""
+
+    return select_field(mapping, keys, skip_none=skip_none)[1]
+
+
+def read_aaguid(field: str | None, value: Any, *, iterables: bool = False, wrappers: bool = False) -> bytes:
+    """An AAGUID's bytes: ``aaguidHex`` holds hex, as its name says; any other field is read as a client's bytes.
+
+    Read as a client's bytes, 32 hex digits would be valid base64url: 24 wrong bytes.
+    """
+
+    if field == "aaguidHex" and isinstance(value, str):
+        return encoding.decode_hex(value, allow_separators=True)
+    return client_binary.read(value, iterables=iterables, wrappers=wrappers)
 
 
 def read_key_material(entry: Mapping[str, Any], fields: CredentialFields) -> KeyMaterial | None:
     """The entry's key material; ``None`` when a part it needs is absent, and raises when one does not read."""
 
-    aaguid_raw = select_first(entry, fields.aaguid, skip_none=fields.skip_none)
+    aaguid_field, aaguid_raw = select_field(entry, fields.aaguid, skip_none=fields.skip_none)
     credential_id_raw = select_first(entry, fields.credential_id, skip_none=fields.skip_none)
     public_key_raw = select_first(entry, fields.public_key, skip_none=fields.skip_none)
     if credential_id_raw is None or public_key_raw is None:
@@ -69,7 +87,11 @@ def read_key_material(entry: Mapping[str, Any], fields: CredentialFields) -> Key
     def read(value: Any) -> bytes:
         return client_binary.read(value, iterables=fields.iterables, wrappers=fields.wrappers)
 
-    aaguid = fields.default_aaguid if aaguid_raw is None else read(aaguid_raw)
+    aaguid = (
+        fields.default_aaguid
+        if aaguid_raw is None
+        else read_aaguid(aaguid_field, aaguid_raw, iterables=fields.iterables, wrappers=fields.wrappers)
+    )
     credential_id = read(credential_id_raw)
     public_key = read(public_key_raw)
 
