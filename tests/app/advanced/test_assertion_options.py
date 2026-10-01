@@ -51,3 +51,26 @@ def test_extensions_without_bytes_to_read_are_passed_on_as_they_are(extensions):
     options = _options(begin(entry_app().test_client(), [Authenticator().stored_credential_entry()], extensions=extensions))
 
     assert options["extensions"] == extensions
+
+
+def test_prf_inputs_for_each_credential_are_given_to_the_browser_with_the_general_ones():
+    extensions = {
+        "prf": {
+            "eval": {"first": {"$hex": "0101"}},
+            "evalByCredential": {"BAQE": {"first": "0202", "second": {"$base64url": "AwM"}}},
+        }
+    }
+
+    options = _options(begin(entry_app().test_client(), [Authenticator().stored_credential_entry()], extensions=extensions))
+
+    assert options["extensions"] == {
+        "prf": {"eval": {"first": "AQE"}, "evalByCredential": {"BAQE": {"first": "AgI", "second": "AwM"}}},
+    }
+
+
+def test_prf_with_no_input_to_read_asks_for_no_prf():
+    options = _options(
+        begin(entry_app().test_client(), [Authenticator().stored_credential_entry()], extensions={"prf": {"eval": {}}})
+    )
+
+    assert "extensions" not in options or "prf" not in options["extensions"]

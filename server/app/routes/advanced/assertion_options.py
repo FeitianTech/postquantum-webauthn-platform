@@ -52,23 +52,44 @@ def _large_blob_extension(ext_value: Any) -> Any:
     return ext_value
 
 
+def _prf_inputs(inputs: Any) -> dict[str, Any]:
+    """A PRF evaluation's first and second inputs, each read as bytes."""
+
+    return {
+        name: client_binary.read_request_field(inputs[name])
+        for name in ("first", "second")
+        if isinstance(inputs, Mapping) and name in inputs
+    }
+
+
+def _prf_extension(value: Any) -> Any:
+    """PRF's eval and evalByCredential inputs as bytes; None for an eval with neither input."""
+
+    if not (isinstance(value, dict) and ("eval" in value or "evalByCredential" in value)):
+        return value
+    processed: dict[str, Any] = {}
+    if "eval" in value:
+        evaluation = _prf_inputs(value["eval"])
+        if evaluation:
+            processed["eval"] = evaluation
+    by_credential = value.get("evalByCredential")
+    if isinstance(by_credential, Mapping):
+        # Keyed by base64url credential ID, as the browser reads it.
+        processed["evalByCredential"] = {
+            credential_id: _prf_inputs(inputs) for credential_id, inputs in by_credential.items()
+        }
+    return processed or None
+
+
 def process_assertion_extensions(extensions: Any) -> dict[str, Any]:
     processed_extensions = {}
     for ext_name, ext_value in extensions.items():
         if ext_name == "largeBlob":
             processed_extensions["largeBlob"] = _large_blob_extension(ext_value)
         elif ext_name == "prf":
-            if isinstance(ext_value, dict) and "eval" in ext_value:
-                prf_eval = ext_value["eval"]
-                processed_eval = {}
-                if "first" in prf_eval:
-                    processed_eval["first"] = client_binary.read_request_field(prf_eval["first"])
-                if "second" in prf_eval:
-                    processed_eval["second"] = client_binary.read_request_field(prf_eval["second"])
-                if processed_eval:
-                    processed_extensions["prf"] = {"eval": processed_eval}
-            else:
-                processed_extensions["prf"] = ext_value
+            prf = _prf_extension(ext_value)
+            if prf is not None:
+                processed_extensions["prf"] = prf
         else:
             processed_extensions[ext_name] = ext_value
     return processed_extensions
