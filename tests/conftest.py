@@ -57,8 +57,8 @@ atexit.register(shutil.rmtree, _WEB_EXPORT_ROOT, ignore_errors=True)
 os.environ.setdefault("FIDO_SERVER_SECRET_KEY", "test-session-secret-0123456789abcdef")
 
 # The checkout guard (tests/checkout_guard.py) fails the run if a test wrote app
-# state into the checkout.
-pytest_plugins = ["tests.checkout_guard"]
+# state into the checkout; tests/fixture_values.py fails a fixture whose value is a module.
+pytest_plugins = ["tests.checkout_guard", "tests.fixture_values"]
 
 
 def pytest_configure(config):
