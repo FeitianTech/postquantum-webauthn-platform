@@ -16,16 +16,6 @@ PACKAGED = "f1d0f1d0-0000-4000-8000-000000000001"
 PACKAGED_AAID = "F1D0#0012"
 
 
-@pytest.fixture
-def visitor(monkeypatch, tmp_path, metadata_state, make_app):
-    """A request whose visitor can upload metadata into a store of this test's."""
-
-    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
-    monkeypatch.setattr(visitor_session, "schedule_cleanup", lambda: None)
-    with make_app().test_request_context("/"):
-        yield
-
-
 def _upload(description: str, aaguid: str | None = None):
     raw = {"metadataStatement": {"description": description}}
     if aaguid:

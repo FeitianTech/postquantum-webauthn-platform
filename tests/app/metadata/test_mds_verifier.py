@@ -4,26 +4,14 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import datetime, timezone
 
-import pytest
 from flask import g
 
-from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import uploads as mds_uploads
 from server.app.mds import verifier as mds_verifier
 
 PACKAGED = "f1d0f1d0-0000-4000-8000-000000000001"
 OTHER = "0badc0de-0000-4000-8000-000000000001"
-
-
-@pytest.fixture
-def visitor(monkeypatch, tmp_path, metadata_state, make_app):
-    """A request whose visitor can upload metadata into a store of this test's."""
-
-    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
-    monkeypatch.setattr(visitor_session, "schedule_cleanup", lambda: None)
-    with make_app().test_request_context("/"):
-        yield
 
 
 def _upload(aaguid: str, description: str, legal_header: str | None = None):
