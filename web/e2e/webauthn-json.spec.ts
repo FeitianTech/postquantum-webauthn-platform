@@ -44,8 +44,10 @@ async function recordCeremonies(page: Page) {
 
 const ceremonies = (page: Page) => page.evaluate(() => (window as unknown as { recordedCeremonies: Ceremony[] }).recordedCeremonies);
 
+// What the page sent to `path` when `act` ran, once the server has answered it.
 async function sentBody(page: Page, path: string, act: () => Promise<void>) {
   const [request] = await Promise.all([page.waitForRequest((sent) => new URL(sent.url()).pathname === path), act()]);
+  expect((await request.response())?.status(), path).toBe(200);
   return request.postDataJSON();
 }
 
@@ -118,8 +120,8 @@ test.describe('the browser\'s own WebAuthn JSON', () => {
     expect(bytesOf(writeOutputs.prf.results.first)).toHaveLength(32);
 
     await auth.getByLabel('largeBlob', { exact: true }).selectOption('read');
+    // The first authentication's toast may still be up: the server's answer says this one passed.
     const read = await sentBody(page, '/api/advanced/authenticate/complete', () => advanced(page).getByRole('button', { name: 'Assert Credential' }).click());
-    await expect(page.getByText('Advanced authentication successful!')).toBeVisible();
     expect(bytesOf(read.__assertion_response.clientExtensionResults.largeBlob.blob).toString('hex')).toBe(BLOB);
   });
 
