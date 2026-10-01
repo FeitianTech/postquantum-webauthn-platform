@@ -5,7 +5,6 @@ import {
   classifyExplorerAnswer,
   explorerLoadFailure,
   fetchExplorerInfo,
-  indexEntriesByAaguid,
   isMissingSnapshot,
   prepareSnapshotEntries,
   requestExplorerSnapshot,
@@ -199,25 +198,6 @@ describe('explorer loading: the entries shown', () => {
   it('reads no entries from a snapshot without them', () => {
     expect(prepareSnapshotEntries(null)).toEqual([]);
     expect(prepareSnapshotEntries({ entries: 'no' })).toEqual([]);
-  });
-
-  it('indexes the entries by AAGUID and caches every entry with an id', () => {
-    const cache = new Map();
-    const byAaguid = indexEntriesByAaguid(
-      [
-        { entryId: 'aaguid:a', aaguid: 'FCB1BCB4-F370-078C-6993-BC24D0AE3FBE' },
-        { entryId: 'aaguid:b', id: 'ee041bce-25e5-4cdb-8f86-897fd6418464' },
-        { entryId: 'aaid:4e4e#4005', id: '4e4e#4005' },
-        null,
-      ],
-      cache,
-    );
-    expect([...byAaguid.keys()]).toEqual([
-      'fcb1bcb4-f370-078c-6993-bc24d0ae3fbe',
-      'ee041bce-25e5-4cdb-8f86-897fd6418464',
-    ]);
-    expect([...cache.keys()]).toEqual(['aaguid:a', 'aaguid:b', 'aaid:4e4e#4005']);
-    expect(indexEntriesByAaguid([{ aaguid: 'fcb1bcb4-f370-078c-6993-bc24d0ae3fbe' }]).size).toBe(1);
   });
 
   it('calls a snapshot with no entry missing', () => {

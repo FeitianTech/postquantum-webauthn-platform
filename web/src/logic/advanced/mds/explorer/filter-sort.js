@@ -190,11 +190,6 @@ export function nextExplorerSort(sort, key) {
     return nextDirection === SORT_NONE ? defaultExplorerSort() : { key, direction: nextDirection };
 }
 
-export function filterAndSortExplorerEntries(entries, filters, sort, certificationOptions = []) {
-    const matched = entries.filter(entry => matchesExplorerFilters(entry, filters, certificationOptions));
-    return sortExplorerEntries(matched, sort);
-}
-
 export function countActiveExplorerFilters(filters) {
     return Object.values(filters || {}).filter(value => typeof value === 'string' && value.trim()).length;
 }

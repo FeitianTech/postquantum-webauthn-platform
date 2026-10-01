@@ -1,10 +1,6 @@
 // Where the explorer's entries come from and what an answer means. No DOM.
 import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MISSING_METADATA_MESSAGE } from '../constants.js';
-
 import { cloneMetadataEntry, hasInlineDetail } from '../metadata/metadata-helpers.js';
-
-import { normaliseAaguid } from '../utils/resolvers.js';
-
 
 async function fetchExplorerAnswer(source, signal) {
     const fetchOptions = {
@@ -97,22 +93,6 @@ export function prepareSnapshotEntries(snapshot, resolvedEntryCache = new Map())
             const cached = entry.entryId ? resolvedEntryCache.get(entry.entryId) : null;
             return cached && typeof cached === 'object' ? { ...entry, ...cached } : entry;
         });
-}
-
-// Entries by AAGUID (the credential cards look entries up that way); every entry
-// with an `entryId` also goes into the resolved-entry cache.
-export function indexEntriesByAaguid(entries, resolvedEntryCache = new Map()) {
-    const byAaguid = new Map();
-    entries.forEach(entry => {
-        const key = normaliseAaguid(entry?.aaguid || entry?.id);
-        if (key) {
-            byAaguid.set(key, entry);
-        }
-        if (entry?.entryId) {
-            resolvedEntryCache.set(entry.entryId, entry);
-        }
-    });
-    return byAaguid;
 }
 
 // What the page starts from (GET /api/mds/metadata/info: the packaged summary,

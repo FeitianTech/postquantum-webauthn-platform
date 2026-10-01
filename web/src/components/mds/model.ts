@@ -6,14 +6,12 @@ import { FILTER_CONFIG } from '@/logic/advanced/mds/constants.js';
 import {
   classifyExplorerAnswer,
   fetchExplorerInfo,
-  indexEntriesByAaguid,
   prepareSnapshotEntries,
   requestExplorerSnapshot,
 } from '@/logic/advanced/mds/explorer/loading.js';
 import {
   countActiveExplorerFilters,
   defaultExplorerSort,
-  filterAndSortExplorerEntries,
   matchesExplorerFilters,
   nextExplorerSort,
   sortExplorerEntries,
@@ -85,7 +83,6 @@ export const askExplorerSnapshot = requestExplorerSnapshot as (
 ) => Promise<ExplorerAnswer>;
 export const readExplorerAnswer = classifyExplorerAnswer as (answer: ExplorerAnswer) => ExplorerOutcome;
 export const snapshotEntries = prepareSnapshotEntries as (snapshot: MdsSnapshot) => MdsEntry[];
-export const entriesByAaguid = indexEntriesByAaguid as (entries: MdsEntry[]) => Map<string, MdsEntry>;
 export const loadedStatus = explorerLoadedStatus as (snapshot: MdsSnapshot, note: string, entryCount: number) => ExplorerStatus;
 
 export const initialSort = defaultExplorerSort as () => ExplorerSort;
@@ -96,12 +93,6 @@ export const entryMatches = matchesExplorerFilters as (
   filters: Record<string, string>,
   certificationOptions: string[],
 ) => boolean;
-export const filterAndSort = filterAndSortExplorerEntries as (
-  entries: MdsEntry[],
-  filters: Record<string, string>,
-  sort: ExplorerSort,
-  certificationOptions: string[],
-) => MdsEntry[];
 export const activeFilterCount = countActiveExplorerFilters as (filters: Record<string, string>) => number;
 export const optionLists = explorerFilterOptionLists as (entries: MdsEntry[]) => Record<string, string[]>;
 export const optionsMatching = matchingFilterOptions as (options: string[], query: string) => string[];

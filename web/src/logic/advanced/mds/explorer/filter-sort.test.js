@@ -10,7 +10,6 @@ import {
   compareExplorerSortValues,
   countActiveExplorerFilters,
   defaultExplorerSort,
-  filterAndSortExplorerEntries,
   isExplorerSortKey,
   matchesExplorerFilters,
   nextExplorerSort,
@@ -162,14 +161,6 @@ describe('filters', () => {
     expect(matchesExplorerFilters(L1, { certification: '•' })).toBe(true);
     expect(matchesExplorerFilters(L1, { certification: 'revoked' })).toBe(false);
     expect(matchesExplorerFilters({}, { certification: 'x' })).toBe(false);
-  });
-
-  it('filters, then sorts', () => {
-    const entries = [{ name: 'b key' }, { name: 'a key' }, { name: 'other' }];
-    expect(filterAndSortExplorerEntries(entries, { name: 'key' }, { key: 'name', direction: 'asc' })).toEqual([
-      { name: 'a key' },
-      { name: 'b key' },
-    ]);
   });
 
   it('counts the filters in use', () => {
