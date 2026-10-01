@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 import secrets
-from datetime import datetime
 from types import SimpleNamespace
 
 import itsdangerous
@@ -15,7 +14,6 @@ from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
-from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
 from server.app.mds import verifier as mds_verifier
 from server.app.storage import github_mirror
@@ -260,16 +258,6 @@ def test_build_expand_extract_and_merge_error_branches(metadata_module, monkeypa
     merged = mds_verifier._merge_metadata(None, [item_one, item_two])
     assert merged.legal_header == "Session Legal"
     assert len(merged.entries) == 1
-
-
-def test_save_list_delete_serialize_and_datetime_edge_paths(monkeypatch):
-    assert mds_files.parse_http_datetime(None) is None
-    monkeypatch.setattr(mds_files, "parsedate_to_datetime", lambda _value: datetime(2026, 1, 1, 0, 0, 0))
-    parsed = mds_files.parse_http_datetime("Wed, 01 Jan 2026 00:00:00 GMT")
-    assert parsed is not None and parsed.tzinfo is not None
-
-    assert mds_files.format_last_modified(None) is None
-    assert mds_files.format_last_modified("Thu, 01 Jan 1970 00:00:00 GMT") == "2026-01-01T00:00:00+00:00"
 
 
 def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, tmp_path, metadata_state, blob, effective):

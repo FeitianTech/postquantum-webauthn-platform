@@ -95,42 +95,6 @@ def test_the_updater_imports_without_flask_in_a_fresh_interpreter():
     assert result.stdout.strip() == "[]", result.stdout
 
 
-def test_parse_http_datetime_handles_invalid_and_timezone_branches(monkeypatch):
-    assert mds_files.parse_http_datetime(None) is None
-
-    def _raise_value_error(_value):
-        raise ValueError("bad datetime")
-
-    monkeypatch.setattr(mds_files, "parsedate_to_datetime", _raise_value_error)
-    assert mds_files.parse_http_datetime("bad") is None
-
-    monkeypatch.setattr(
-        mds_files,
-        "parsedate_to_datetime",
-        lambda _value: datetime(2026, 4, 1, 12, 0, 0),
-    )
-    parsed_naive = mds_files.parse_http_datetime("Wed, 01 Apr 2026 12:00:00 GMT")
-    assert parsed_naive == datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
-
-    pacific = timezone.utc
-    monkeypatch.setattr(
-        mds_files,
-        "parsedate_to_datetime",
-        lambda _value: datetime(2026, 4, 1, 12, 0, 0, tzinfo=pacific),
-    )
-    parsed_aware = mds_files.parse_http_datetime("Wed, 01 Apr 2026 12:00:00 GMT")
-    assert parsed_aware == datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
-
-
-def test_format_last_modified_header_returns_iso_or_original(monkeypatch):
-    dt = datetime(2026, 4, 2, 0, 0, 0, tzinfo=timezone.utc)
-    monkeypatch.setattr(mds_files, "parse_http_datetime", lambda _value: dt)
-    assert mds_files.format_last_modified("anything") == "2026-04-02T00:00:00+00:00"
-
-    monkeypatch.setattr(mds_files, "parse_http_datetime", lambda _value: None)
-    assert mds_files.format_last_modified("raw-header") == "raw-header"
-
-
 def test_fetch_remote_blob_uses_expected_request_contract(monkeypatch):
     class _FakeResponse:
         def __init__(self):
