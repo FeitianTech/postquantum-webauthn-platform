@@ -12,6 +12,10 @@ export type VirtualCredential = {
 
 type AuthenticatorOptions = {
   protocol?: 'ctap2' | 'u2f';
+  /** CTAP 2.1 for the largeBlob and prf (hmac-secret) extensions. */
+  ctap2Version?: 'ctap2_0' | 'ctap2_1';
+  hasLargeBlob?: boolean;
+  hasPrf?: boolean;
   transport?: 'usb' | 'nfc' | 'ble' | 'cable' | 'internal';
   hasResidentKey?: boolean;
   hasUserVerification?: boolean;
