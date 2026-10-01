@@ -63,9 +63,8 @@ def _serialize_attestation_certificate_fallback(
     if summary_entries:
         summary_lines.append("")
         summary_lines.append("Best-effort public key details:")
+        # The entries hold no empty value: _unknown_key_summary leaves those out.
         for label, value in summary_entries:
-            if value in (None, ""):
-                continue
             if isinstance(value, list):
                 summary_lines.append(f"    {label}:")
                 for item in value:
