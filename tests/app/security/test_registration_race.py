@@ -70,7 +70,7 @@ def _stored_ids(store, client) -> list[bytes]:
     return sorted(bytes(record["credential_data"].credential_id) for record in store.readkey(EMAIL, session_id=namespace))
 
 
-def test_eight_registrations_for_one_user_at_once_all_keep_their_credential(app, monkeypatch, store, simple_module):
+def test_eight_registrations_for_one_user_at_once_all_keep_their_credential(app, monkeypatch, store):
     first = app.test_client()
     existing = Authenticator(credential_id=b"\x01" * 32)
     _register(first, existing)
@@ -114,7 +114,7 @@ def test_eight_registrations_for_one_user_at_once_all_keep_their_credential(app,
     assert _stored_ids(store, first) == expected
 
 
-def test_losing_every_race_rejects_the_registration_and_stores_nothing(app, monkeypatch, store, simple_module):
+def test_losing_every_race_rejects_the_registration_and_stores_nothing(app, monkeypatch, store):
     attempts = []
 
     def _always_lose(name, key, version, *, session_id=None):
@@ -131,7 +131,7 @@ def test_losing_every_race_rejects_the_registration_and_stores_nothing(app, monk
     assert _stored_ids(store, client) == []
 
 
-def test_an_uncontended_registration_saves_once(app, monkeypatch, store, simple_module):
+def test_an_uncontended_registration_saves_once(app, monkeypatch, store):
     saves = []
     original = store.save_if_unchanged
 
@@ -148,7 +148,7 @@ def test_an_uncontended_registration_saves_once(app, monkeypatch, store, simple_
     assert _stored_ids(store, client) == [authenticator.credential_id]
 
 
-def test_a_save_that_landed_before_it_failed_counts_as_saved(app, monkeypatch, store, simple_module):
+def test_a_save_that_landed_before_it_failed_counts_as_saved(app, monkeypatch, store):
     original = store.save_if_unchanged
 
     def _lands_then_fails(*args, **kwargs):
@@ -163,7 +163,7 @@ def test_a_save_that_landed_before_it_failed_counts_as_saved(app, monkeypatch, s
     assert _stored_ids(store, client) == [authenticator.credential_id]
 
 
-def test_a_save_that_failed_before_it_landed_is_an_error(app, monkeypatch, store, simple_module):
+def test_a_save_that_failed_before_it_landed_is_an_error(app, monkeypatch, store):
     def _fails(*_args, **_kwargs):
         raise OSError("bucket unreachable")
 
@@ -176,7 +176,7 @@ def test_a_save_that_failed_before_it_landed_is_an_error(app, monkeypatch, store
     assert _stored_ids(store, client) == []
 
 
-def test_a_failed_read_is_an_error_not_an_empty_list_to_overwrite(app, monkeypatch, store, simple_module):
+def test_a_failed_read_is_an_error_not_an_empty_list_to_overwrite(app, monkeypatch, store):
     client = app.test_client()
     first = Authenticator(credential_id=b"\x01" * 32)
     _register(client, first)
@@ -243,7 +243,7 @@ def _break_the_current_copy(store, client, how: str):
 
 
 @pytest.mark.parametrize("how", ["unreadable", "undecodable"])
-def test_a_store_that_cannot_be_read_answers_503_and_saves_nothing(app, caplog, store, simple_module, how):
+def test_a_store_that_cannot_be_read_answers_503_and_saves_nothing(app, caplog, store, how):
     import logging
 
     client = app.test_client()

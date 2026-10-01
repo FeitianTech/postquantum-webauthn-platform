@@ -29,7 +29,7 @@ EMAIL = "user@example.com"
 
 
 @pytest.fixture
-def credential_store(simple_module, tmp_path, monkeypatch, device_logs_module):
+def credential_store(tmp_path, monkeypatch, device_logs_module):
     """Point the real credential store at a temporary directory."""
 
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
@@ -90,7 +90,7 @@ def _assert_cloned_rejection(response, authenticator):
 # --------------------------------------------------------------------------
 
 
-def test_simple_sign_count_going_backwards_is_rejected(config_module, credential_store):
+def test_simple_sign_count_going_backwards_is_rejected(credential_store):
     authenticator = Authenticator()
     client = entry_app().test_client()
     _register(client, authenticator, counter=5)
@@ -102,7 +102,7 @@ def test_simple_sign_count_going_backwards_is_rejected(config_module, credential
     assert credential_store(authenticator.credential_id) == 5
 
 
-def test_simple_sign_count_equal_to_stored_is_rejected(config_module, credential_store):
+def test_simple_sign_count_equal_to_stored_is_rejected(credential_store):
     authenticator = Authenticator()
     client = entry_app().test_client()
     _register(client, authenticator, counter=5)
@@ -112,7 +112,7 @@ def test_simple_sign_count_equal_to_stored_is_rejected(config_module, credential
     _assert_cloned_rejection(response, authenticator)
 
 
-def test_simple_sign_count_dropping_to_zero_is_rejected(config_module, credential_store):
+def test_simple_sign_count_dropping_to_zero_is_rejected(credential_store):
     """Only 0/0 is exempt; a counter that was non-zero may not fall back to 0."""
 
     authenticator = Authenticator()
@@ -125,7 +125,7 @@ def test_simple_sign_count_dropping_to_zero_is_rejected(config_module, credentia
     _assert_cloned_rejection(response, authenticator)
 
 
-def test_simple_persisted_counter_is_what_the_next_assertion_is_compared_to(config_module, credential_store):
+def test_simple_persisted_counter_is_what_the_next_assertion_is_compared_to(credential_store):
     """Replaying the counter of the previous *authentication* is caught.
 
     This fails if the new counter is not persisted, because the comparison
@@ -144,7 +144,7 @@ def test_simple_persisted_counter_is_what_the_next_assertion_is_compared_to(conf
     assert credential_store(authenticator.credential_id) == 10
 
 
-def test_simple_client_supplied_sign_count_cannot_lower_the_stored_value(config_module, credential_store):
+def test_simple_client_supplied_sign_count_cannot_lower_the_stored_value(credential_store):
     """The browser's copy of signCount is attacker-controlled; the server's wins."""
 
     authenticator = Authenticator()
@@ -156,7 +156,7 @@ def test_simple_client_supplied_sign_count_cannot_lower_the_stored_value(config_
     _assert_cloned_rejection(response, authenticator)
 
 
-def test_simple_synced_passkey_reporting_zero_is_accepted(config_module, credential_store):
+def test_simple_synced_passkey_reporting_zero_is_accepted(credential_store):
     authenticator = Authenticator()
     client = entry_app().test_client()
     _register(client, authenticator, counter=0)
@@ -170,7 +170,7 @@ def test_simple_synced_passkey_reporting_zero_is_accepted(config_module, credent
     assert credential_store(authenticator.credential_id) == 0
 
 
-def test_simple_increasing_sign_count_succeeds_and_is_persisted(config_module, credential_store):
+def test_simple_increasing_sign_count_succeeds_and_is_persisted(credential_store):
     authenticator = Authenticator()
     client = entry_app().test_client()
     _register(client, authenticator, counter=5)
@@ -186,7 +186,7 @@ def test_simple_increasing_sign_count_succeeds_and_is_persisted(config_module, c
         assert credential_store(authenticator.credential_id) == counter
 
 
-def test_simple_success_reports_the_counter_state(config_module, credential_store):
+def test_simple_success_reports_the_counter_state(credential_store):
     zero = Authenticator()
     client = entry_app().test_client()
     _register(client, zero, counter=0)
@@ -202,7 +202,7 @@ def test_simple_success_reports_the_counter_state(config_module, credential_stor
     assert increased.get_json()["signCountStatus"] == "ok"
 
 
-def test_simple_counter_with_base64url_only_characters_is_read_correctly(config_module, credential_store):
+def test_simple_counter_with_base64url_only_characters_is_read_correctly(credential_store):
     """authenticatorData is base64url; a standard-alphabet decode mishandles it.
 
     Counter 0xFBEFBE01 encodes its own bytes as "----AQ". The previous
@@ -227,7 +227,7 @@ def test_simple_counter_with_base64url_only_characters_is_read_correctly(config_
 # --------------------------------------------------------------------------
 
 
-def _advanced_authenticate(config_module, authenticator, *, stored_sign_count, counter):
+def _advanced_authenticate(authenticator, *, stored_sign_count, counter):
     stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
     if stored_sign_count is not None:
         stored_entry["signCount"] = stored_sign_count
@@ -261,11 +261,11 @@ def _advanced_authenticate(config_module, authenticator, *, stored_sign_count, c
     [(10, 3), (10, 10), (7, 0)],
     ids=["backwards", "equal", "dropped-to-zero"],
 )
-def test_advanced_reports_regressed_without_rejecting(config_module, advanced_module, stored, received):
+def test_advanced_reports_regressed_without_rejecting(stored, received):
     authenticator = Authenticator()
 
     response = _advanced_authenticate(
-        config_module, authenticator, stored_sign_count=stored, counter=received
+        authenticator, stored_sign_count=stored, counter=received
     )
 
     # Not rejected: the signature genuinely verified ...
@@ -278,11 +278,11 @@ def test_advanced_reports_regressed_without_rejecting(config_module, advanced_mo
     assert body["signCountStatus"] == "regressed"
 
 
-def test_advanced_reports_ok_for_an_increasing_counter(config_module, advanced_module):
+def test_advanced_reports_ok_for_an_increasing_counter():
     authenticator = Authenticator()
 
     response = _advanced_authenticate(
-        config_module, authenticator, stored_sign_count=3, counter=4
+        authenticator, stored_sign_count=3, counter=4
     )
 
     assert response.status_code == 200, response.get_json()
@@ -291,11 +291,11 @@ def test_advanced_reports_ok_for_an_increasing_counter(config_module, advanced_m
 
 
 @pytest.mark.parametrize("stored", [0, None], ids=["stored-zero", "stored-absent"])
-def test_advanced_reports_not_supported_for_zero_counters(config_module, advanced_module, stored):
+def test_advanced_reports_not_supported_for_zero_counters(stored):
     authenticator = Authenticator()
 
     response = _advanced_authenticate(
-        config_module, authenticator, stored_sign_count=stored, counter=0
+        authenticator, stored_sign_count=stored, counter=0
     )
 
     assert response.status_code == 200, response.get_json()
@@ -303,7 +303,7 @@ def test_advanced_reports_not_supported_for_zero_counters(config_module, advance
     assert response.get_json()["signCountStatus"] == "not-supported"
 
 
-def test_the_stored_counter_is_the_last_authentications(config_module, credential_store):
+def test_the_stored_counter_is_the_last_authentications(credential_store):
     authenticator = Authenticator()
     client = entry_app().test_client()
     _register(client, authenticator, counter=5)

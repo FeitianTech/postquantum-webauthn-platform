@@ -6,27 +6,11 @@ Only *storage* side effects are neutralised here. Every verification code path
 """
 from __future__ import annotations
 
-import importlib
 from typing import Any
 
 import pytest
 
 from tests.app.entry_app import entry_app
-
-
-@pytest.fixture
-def config_module():
-    return importlib.import_module("server.app.config")
-
-
-@pytest.fixture
-def simple_module():
-    return importlib.import_module("server.app.routes.simple")
-
-
-@pytest.fixture
-def advanced_module():
-    return importlib.import_module("server.app.routes.advanced")
 
 
 def _session_metadata_in(tmp_path, monkeypatch) -> None:
@@ -36,7 +20,7 @@ def _session_metadata_in(tmp_path, monkeypatch) -> None:
 
 
 @pytest.fixture
-def simple_storage(simple_module, monkeypatch, tmp_path, device_logs_module, storage_module) -> dict[str, Any]:
+def simple_storage(monkeypatch, tmp_path, device_logs_module, storage_module) -> dict[str, Any]:
     """Neutralise simple-flow persistence and capture what it would store."""
 
     _session_metadata_in(tmp_path, monkeypatch)
@@ -55,7 +39,7 @@ def simple_storage(simple_module, monkeypatch, tmp_path, device_logs_module, sto
 
 
 @pytest.fixture
-def advanced_storage(advanced_module, monkeypatch, tmp_path, credential_artifacts_module, device_logs_module) -> list[Any]:
+def advanced_storage(monkeypatch, tmp_path, credential_artifacts_module, device_logs_module) -> list[Any]:
     """Neutralise advanced-flow persistence and capture stored artifacts."""
 
     _session_metadata_in(tmp_path, monkeypatch)
@@ -71,7 +55,7 @@ def advanced_storage(advanced_module, monkeypatch, tmp_path, credential_artifact
 
 
 @pytest.fixture
-def allowed_origins(config_module, monkeypatch):
+def allowed_origins(monkeypatch):
     """Set (and automatically restore) the exact-origin allowlist."""
 
     def _apply(value):

@@ -28,7 +28,7 @@ from .ceremony_helpers import (
 # --------------------------------------------------------------------------
 
 
-def test_cold_simple_register_complete_with_self_chosen_challenge_is_rejected(config_module, simple_module, simple_storage):
+def test_cold_simple_register_complete_with_self_chosen_challenge_is_rejected(simple_storage):
     """A cold /complete with no session cookie and a self-chosen challenge.
 
     This is the confirmed-exploitable PoC: the attacker never calls /begin, and
@@ -60,7 +60,7 @@ def test_cold_simple_register_complete_with_self_chosen_challenge_is_rejected(co
     assert simple_storage == {}
 
 
-def test_cold_simple_authenticate_complete_with_self_chosen_challenge_is_rejected(config_module, simple_module):
+def test_cold_simple_authenticate_complete_with_self_chosen_challenge_is_rejected():
     """The same bypass against the authentication ceremony."""
 
     authenticator = Authenticator()
@@ -86,7 +86,7 @@ def test_cold_simple_authenticate_complete_with_self_chosen_challenge_is_rejecte
     assert "state" in body["error"].lower()
 
 
-def test_simple_register_complete_ignores_request_supplied_state(config_module, simple_module, simple_storage):
+def test_simple_register_complete_ignores_request_supplied_state(simple_storage):
     """Even with a valid session, the request-supplied state must be ignored."""
 
     authenticator = Authenticator()
@@ -118,7 +118,7 @@ def test_simple_register_complete_ignores_request_supplied_state(config_module, 
 # --------------------------------------------------------------------------
 
 
-def test_simple_register_begin_does_not_disclose_ceremony_state(config_module):
+def test_simple_register_begin_does_not_disclose_ceremony_state():
     client = entry_app().test_client()
     response = client.post("/api/register/begin?email=user@example.com", json={"credentials": []})
 
@@ -126,7 +126,7 @@ def test_simple_register_begin_does_not_disclose_ceremony_state(config_module):
     assert "__session_state" not in response.get_json()
 
 
-def test_simple_authenticate_begin_does_not_disclose_ceremony_state(config_module):
+def test_simple_authenticate_begin_does_not_disclose_ceremony_state():
     authenticator = Authenticator()
     client = entry_app().test_client()
     response = client.post(
@@ -143,7 +143,7 @@ def test_simple_authenticate_begin_does_not_disclose_ceremony_state(config_modul
 # --------------------------------------------------------------------------
 
 
-def test_simple_registration_and_authentication_happy_path(config_module, simple_module, simple_storage):
+def test_simple_registration_and_authentication_happy_path(simple_storage):
     authenticator = Authenticator()
     client = entry_app().test_client()
 
@@ -181,7 +181,7 @@ def test_simple_registration_and_authentication_happy_path(config_module, simple
 # --------------------------------------------------------------------------
 
 
-def test_advanced_register_complete_reports_server_session_challenge_source(config_module, advanced_module, advanced_storage):
+def test_advanced_register_complete_reports_server_session_challenge_source(advanced_storage):
     authenticator = Authenticator()
     client = entry_app().test_client()
     challenge = b"\x31" * 32
@@ -212,7 +212,7 @@ def test_advanced_register_complete_reports_server_session_challenge_source(conf
     assert payload["challengeSource"] == "server-session"
 
 
-def test_advanced_register_complete_refuses_a_request_supplied_state(config_module, advanced_module, advanced_storage):
+def test_advanced_register_complete_refuses_a_request_supplied_state(advanced_storage):
     authenticator = Authenticator()
     client = entry_app().test_client()
     client_challenge = b"\x77" * 32
@@ -239,7 +239,7 @@ def test_advanced_register_complete_refuses_a_request_supplied_state(config_modu
     assert advanced_storage == []
 
 
-def test_advanced_register_complete_reports_the_challenge_source_on_error(config_module, advanced_module):
+def test_advanced_register_complete_reports_the_challenge_source_on_error():
     client = entry_app().test_client()
     begin = client.post(
         "/api/advanced/register/begin",
@@ -265,7 +265,7 @@ def test_advanced_register_complete_reports_the_challenge_source_on_error(config
     assert response.get_json()["challengeSource"] == "server-session"
 
 
-def test_advanced_authenticate_complete_reports_the_challenge_source_on_early_errors(config_module, advanced_module):
+def test_advanced_authenticate_complete_reports_the_challenge_source_on_early_errors():
     """Including on the early input-validation errors."""
 
     authenticator = Authenticator()

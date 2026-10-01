@@ -62,7 +62,7 @@ def _stored_counter(store, root, authenticator):
     return record["sign_count"]
 
 
-def test_two_authentications_with_the_same_counter_cannot_both_succeed(app, monkeypatch, store, simple_module, tmp_path):
+def test_two_authentications_with_the_same_counter_cannot_both_succeed(app, monkeypatch, store, tmp_path):
     from server.app.routes.simple import authentication
 
     authenticator = Authenticator()
@@ -110,7 +110,7 @@ def test_two_authentications_with_the_same_counter_cannot_both_succeed(app, monk
     assert _stored_counter(store, tmp_path, authenticator) == 6
 
 
-def test_losing_the_race_twice_rejects_the_authentication(app, monkeypatch, store, simple_module):
+def test_losing_the_race_twice_rejects_the_authentication(app, monkeypatch, store):
     from server.app.routes.simple import authentication
 
     authenticator = Authenticator()
@@ -136,7 +136,7 @@ def test_losing_the_race_twice_rejects_the_authentication(app, monkeypatch, stor
     assert len(attempts) == 2
 
 
-def test_an_uncontended_authentication_saves_its_counter_once(app, monkeypatch, store, simple_module):
+def test_an_uncontended_authentication_saves_its_counter_once(app, monkeypatch, store):
     from server.app.routes.simple import authentication
 
     authenticator = Authenticator()

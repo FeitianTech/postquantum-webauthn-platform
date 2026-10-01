@@ -44,7 +44,7 @@ def _authenticate(client, *, stored_entry, assertion, challenge):
 # --------------------------------------------------------------------------
 
 
-def test_wrong_signature_with_custom_declared_algorithm_is_not_ok(config_module, advanced_module):
+def test_wrong_signature_with_custom_declared_algorithm_is_not_ok():
     """A real key + a wrong signature + ``"algorithm": -12345`` must not pass.
 
     The credential's COSE key is a genuine, fully supported ES256 key; only the
@@ -92,7 +92,7 @@ def test_wrong_signature_with_custom_declared_algorithm_is_not_ok(config_module,
     assert "customAlgorithmBypass" not in payload
 
 
-def test_wrong_signature_with_ordinary_algorithm_is_not_ok(config_module, advanced_module):
+def test_wrong_signature_with_ordinary_algorithm_is_not_ok():
     """The plain case: a wrong signature on a normally-declared credential."""
 
     authenticator = Authenticator()
@@ -121,7 +121,7 @@ def test_wrong_signature_with_ordinary_algorithm_is_not_ok(config_module, advanc
     assert payload["verified"] is False
 
 
-def test_genuinely_unsupported_algorithm_reports_explicit_non_ok_status(config_module, advanced_module):
+def test_genuinely_unsupported_algorithm_reports_explicit_non_ok_status():
     """An algorithm this server cannot verify is reported, but never as OK.
 
     Here the credential's OWN COSE key declares an algorithm the server has no
@@ -168,7 +168,7 @@ def test_genuinely_unsupported_algorithm_reports_explicit_non_ok_status(config_m
 # --------------------------------------------------------------------------
 
 
-def test_valid_assertion_still_authenticates(config_module, advanced_module):
+def test_valid_assertion_still_authenticates():
     authenticator = Authenticator()
     stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
 
@@ -197,7 +197,7 @@ def test_valid_assertion_still_authenticates(config_module, advanced_module):
     assert payload["challengeSource"] == "server-session"
 
 
-def test_valid_ed25519_assertion_still_authenticates(config_module, advanced_module):
+def test_valid_ed25519_assertion_still_authenticates():
     """A second real algorithm, to prove the fix is not ES256-specific."""
 
     authenticator = Authenticator(key_type="ed25519")

@@ -54,7 +54,7 @@ def _register(client, *, host=RP_ID, origin=ORIGIN, client_data_origin=None):
 # --------------------------------------------------------------------------
 
 
-def test_allowlist_rejects_host_header_derived_rp_id_attack(config_module, simple_module, simple_storage, allowed_origins):
+def test_allowlist_rejects_host_header_derived_rp_id_attack(simple_storage, allowed_origins):
     """The core Fix 3 case.
 
     With no allowlist the attacker controls the RP ID (via ``Host``) *and* the
@@ -76,7 +76,7 @@ def test_allowlist_rejects_host_header_derived_rp_id_attack(config_module, simpl
     assert simple_storage == {}
 
 
-def test_allowlist_rejects_an_unlisted_ceremony_origin(config_module, simple_module, simple_storage, allowed_origins):
+def test_allowlist_rejects_an_unlisted_ceremony_origin(simple_storage, allowed_origins):
     """The allowlist gates clientDataJSON.origin, the ceremony's real origin.
 
     The Host header keeps the RP ID consistent so that the library-level origin
@@ -96,7 +96,7 @@ def test_allowlist_rejects_an_unlisted_ceremony_origin(config_module, simple_mod
 
 
 @pytest.mark.parametrize("unlisted", ["http://localhost:8443", "https://localhost"])
-def test_allowlist_gates_simple_authentication_too(config_module, simple_module, simple_storage, allowed_origins, unlisted):
+def test_allowlist_gates_simple_authentication_too(simple_storage, allowed_origins, unlisted):
     """Simple authentication never applied the allowlist: fido2's RP ID rule alone
     accepts these origins for RP ID ``localhost``, and so did the route."""
 
@@ -119,7 +119,7 @@ def test_allowlist_gates_simple_authentication_too(config_module, simple_module,
     assert response.get_json().get("status") != "OK"
 
 
-def test_expected_origin_is_not_taken_from_the_request_origin_header(config_module, simple_module, simple_storage):
+def test_expected_origin_is_not_taken_from_the_request_origin_header(simple_storage):
     """The self-referential check is gone.
 
     The attacker sets BOTH ``Origin`` and ``clientDataJSON.origin`` to the same
@@ -139,7 +139,7 @@ def test_expected_origin_is_not_taken_from_the_request_origin_header(config_modu
     assert simple_storage == {}
 
 
-def test_simple_flow_never_takes_rp_id_from_the_request_body(config_module, simple_module, simple_storage):
+def test_simple_flow_never_takes_rp_id_from_the_request_body(simple_storage):
     """A body-supplied ``rp.id``/``rpId`` must have no effect in the simple flow."""
 
     client = entry_app().test_client()
@@ -164,7 +164,7 @@ def test_simple_flow_never_takes_rp_id_from_the_request_body(config_module, simp
 # --------------------------------------------------------------------------
 
 
-def test_allowlist_permits_a_listed_origin(config_module, simple_module, simple_storage, allowed_origins):
+def test_allowlist_permits_a_listed_origin(simple_storage, allowed_origins):
     allowed_origins("http://localhost, https://app.example")
 
     client = entry_app().test_client()
@@ -175,7 +175,7 @@ def test_allowlist_permits_a_listed_origin(config_module, simple_module, simple_
     assert simple_storage["email"] == "user@example.com"
 
 
-def test_unconfigured_server_still_works_for_local_development(config_module, simple_module, simple_storage):
+def test_unconfigured_server_still_works_for_local_development(simple_storage):
     """With nothing configured the dev fallback keeps the demo usable."""
 
     with entry_app().app_context():
@@ -207,19 +207,19 @@ def test_unconfigured_server_still_works_for_local_development(config_module, si
         ("", False),
     ],
 )
-def test_is_origin_allowed_is_an_exact_match(config_module, allowed_origins, candidate, expected):
+def test_is_origin_allowed_is_an_exact_match(allowed_origins, candidate, expected):
     allowed_origins("https://app.example")
     with entry_app().app_context():
         assert origins.is_origin_allowed(candidate) is expected
 
 
-def test_is_origin_allowed_permits_everything_when_unconfigured(config_module, allowed_origins):
+def test_is_origin_allowed_permits_everything_when_unconfigured(allowed_origins):
     allowed_origins(None)
     with entry_app().app_context():
         assert origins.is_origin_allowed("https://anything.example") is True
 
 
-def test_determine_expected_origin_never_echoes_an_unlisted_candidate(config_module, allowed_origins):
+def test_determine_expected_origin_never_echoes_an_unlisted_candidate(allowed_origins):
     allowed_origins("https://app.example, https://second.example")
 
     with entry_app().app_context():
@@ -233,7 +233,7 @@ def test_determine_expected_origin_never_echoes_an_unlisted_candidate(config_mod
         )
 
 
-def test_development_fallback_warning_is_emitted_once(config_module, monkeypatch):
+def test_development_fallback_warning_is_emitted_once(monkeypatch):
     from server.app.config import relying_party
 
     warnings = []
