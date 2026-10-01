@@ -173,7 +173,7 @@ export function prepareCredentialsForServer(credentials) {
         .filter(item => item && typeof item === 'object')
         .map(item => {
             const credentialId = normaliseCredentialId(item);
-            const aaguid = item.aaguid || item.aaguidHex || null;
+            const aaguid = item.aaguid || null;
             const publicKey = item.publicKeyBase64Url || item.publicKey || null;
             const algorithm = typeof item.publicKeyAlgorithm === 'number'
                 ? item.publicKeyAlgorithm
