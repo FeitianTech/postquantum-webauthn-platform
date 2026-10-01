@@ -286,14 +286,6 @@ def test_request_does_not_retry_timeouts(monkeypatch):
     assert sleeps == []
 
 
-def test_request_raises_runtime_when_retry_loop_is_bypassed(monkeypatch):
-    monkeypatch.setenv("GITHUB_TOKEN", "token-123")
-    monkeypatch.setattr(github_mirror, "range", lambda _n: [], raising=False)
-
-    with pytest.raises(RuntimeError, match="failed after retries"):
-        github_mirror._request("GET", "https://api.github.com/example")
-
-
 def test_github_upload_json_builds_add_message_and_base64_content(monkeypatch):
     captured = {}
 

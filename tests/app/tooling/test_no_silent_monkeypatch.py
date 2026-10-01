@@ -17,11 +17,7 @@ from pathlib import Path
 TESTS_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = TESTS_ROOT.parent
 
-_BUILTIN = "shadows the builtin {} in this module's globals only; a module never has one of its own"
-
-ALLOWED: dict[tuple[str, str], str] = {
-    ("tests/app/storage/test_github_client.py", "range"): _BUILTIN.format("range"),
-}
+ALLOWED: dict[tuple[str, str], str] = {}
 
 _PATCHERS = {"patch", "object", "multiple", "dict"}
 
