@@ -4,7 +4,7 @@
 // certificate and every extension, an ML-DSA one, each followed by the
 // decoder's answer for its attestation object), and the credential the
 // authenticator gave for each.
-import { goldenAnswers } from '../../simple/ceremony-answers.js';
+import { credentialToJSON, goldenAnswers } from '../../simple/ceremony-answers.js';
 
 export const ADVANCED_SCENARIO = 'advanced-registration-detail-decodes';
 
@@ -46,6 +46,9 @@ export function recordedCredential({ begin, complete }) {
       getTransports: () => ['usb'],
     },
     getClientExtensionResults: () => ({ credProps: { rk: false } }),
+    toJSON() {
+      return credentialToJSON(this);
+    },
   };
 }
 
@@ -97,5 +100,8 @@ export function recordedAssertion({ begin, complete }, extensionResults = {}) {
       userHandle: null,
     },
     getClientExtensionResults: () => extensionResults,
+    toJSON() {
+      return credentialToJSON(this);
+    },
   };
 }

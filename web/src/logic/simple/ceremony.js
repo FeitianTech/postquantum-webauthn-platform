@@ -4,13 +4,13 @@
 // what happened its own way.
 
 import {
-    create,
-    get,
-    parseCreationOptionsFromJSON,
-    parseRequestOptionsFromJSON,
-} from '../shared/webauthn/json-ponyfill.js';
+    createCredential,
+    getAssertion,
+    parseCreationOptions,
+    parseRequestOptions,
+    requireNativeJson,
+} from '../shared/webauthn/native-json.js';
 import { FailedResponseError, readFailedResponse } from '../shared/api/failed-response.js';
-import { convertExtensionsForClient } from '../shared/utils/binary.js';
 import { printAuthenticationDebug, printRegistrationDebug } from '../shared/debug/auth.js';
 import { state } from '../shared/state.js';
 
@@ -73,9 +73,12 @@ function postJson(path, email, body) {
  * Registers a passkey for `email`: the server's options, the authenticator's
  * credential, the server's verdict. Says each step through onProgress. Gives the
  * server's answer (its storedCredential is what the browser keeps); throws a
- * FailedResponseError for a refused request, or the browser's error.
+ * FailedResponseError for a refused request, or the browser's error. A browser
+ * without WebAuthn's JSON methods (shared/webauthn/native-json.js) is asked
+ * nothing: an UnsupportedBrowserError before the first request.
  */
 export async function registerSimplePasskey(email, { onProgress = () => {} } = {}) {
+    requireNativeJson();
     onProgress(SIMPLE_CEREMONY_TEXT.registrationStarting);
     const response = await postJson('/api/register/begin', email, {});
     if (!response.ok) {
@@ -83,22 +86,11 @@ export async function registerSimplePasskey(email, { onProgress = () => {} } = {
     }
 
     const options = await response.json();
-    const originalExtensions = options?.publicKey?.extensions;
-    const createOptions = parseCreationOptionsFromJSON(options);
-    const convertedExtensions = convertExtensionsForClient(originalExtensions);
-    if (convertedExtensions) {
-        // The parsed options always hold publicKey (the ponyfill requires it).
-        createOptions.publicKey.extensions = {
-            ...createOptions.publicKey.extensions,
-            ...convertedExtensions,
-        };
-    }
+    const publicKey = parseCreationOptions(options?.publicKey);
     state.lastFakeCredLength = 0;
 
     onProgress(SIMPLE_CEREMONY_TEXT.connecting);
-    const credential = await create(createOptions);
-    // The ponyfill's create() and get() give every credential its toJSON().
-    const credentialJson = credential.toJSON();
+    const { credential, json: credentialJson } = await createCredential(publicKey);
 
     onProgress(SIMPLE_CEREMONY_TEXT.registrationCompleting);
     const result = await postJson('/api/register/complete', email, credentialJson);
@@ -106,7 +98,7 @@ export async function registerSimplePasskey(email, { onProgress = () => {} } = {
         throw new FailedResponseError(await readFailedResponse(result), 'Registration failed');
     }
     const answer = await result.json();
-    printRegistrationDebug(credential, createOptions, answer);
+    printRegistrationDebug(credential, publicKey, answer);
     return answer;
 }
 
@@ -119,6 +111,7 @@ export async function registerSimplePasskey(email, { onProgress = () => {} } = {
  * shows: shared/ceremony/result.js); throws for anything before that.
  */
 export async function authenticateSimplePasskey(email, { credentialsFor, prepareForServer, onProgress = () => {} }) {
+    requireNativeJson();
     onProgress(SIMPLE_CEREMONY_TEXT.authenticationStarting);
     const storedCredentials = credentialsFor(email);
     if (!storedCredentials.length) {
@@ -135,12 +128,12 @@ export async function authenticateSimplePasskey(email, { credentialsFor, prepare
         throw new FailedResponseError(await readFailedResponse(response), 'Authentication could not start');
     }
 
-    const getOptions = parseRequestOptionsFromJSON(await response.json());
+    const options = await response.json();
+    const publicKey = parseRequestOptions(options?.publicKey);
     state.lastFakeCredLength = 0;
 
     onProgress(SIMPLE_CEREMONY_TEXT.connecting);
-    const assertion = await get(getOptions);
-    const assertionJson = assertion.toJSON();
+    const { credential: assertion, json: assertionJson } = await getAssertion(publicKey);
 
     onProgress(SIMPLE_CEREMONY_TEXT.authenticationCompleting);
     const result = await postJson('/api/authenticate/complete', email, assertionJson);
@@ -156,7 +149,7 @@ export async function authenticateSimplePasskey(email, { credentialsFor, prepare
         };
     }
     const answer = await result.json();
-    printAuthenticationDebug(assertion, getOptions, answer);
+    printAuthenticationDebug(assertion, publicKey, answer);
     return {
         answer,
         result: {

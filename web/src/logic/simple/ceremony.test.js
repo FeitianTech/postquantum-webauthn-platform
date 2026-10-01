@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FailedResponseError } from '../shared/api/failed-response.js';
 import { state } from '../shared/state.js';
+import { UPDATE_BROWSER_TEXT, UnsupportedBrowserError } from '../shared/webauthn/native-json.js';
 import {
   SIMPLE_CEREMONY_TEXT,
   authenticateSimplePasskey,
@@ -11,8 +12,8 @@ import {
 } from './ceremony.js';
 import { answerResponse, goldenAnswers, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
 
-// The Simple tab's ceremonies (simple/ceremony.js) over the real WebAuthn
-// ponyfill, a stand-in authenticator and the server's recorded answers.
+// The Simple tab's ceremonies (simple/ceremony.js) over a stand-in for the
+// browser's WebAuthn JSON methods and authenticator, and the server's recorded answers.
 
 const REGISTER = goldenAnswers('simple-register-es256');
 const AUTHENTICATE = goldenAnswers('simple-authenticate');
@@ -119,6 +120,20 @@ describe('registering a passkey', () => {
     await expect(registerSimplePasskey('alice')).rejects.toThrow('Registration failed: Registration verification failed.');
   });
 
+  it('sends the credential as the browser writes it: its JSON, with its attachment', async () => {
+    answering(REGISTER[0], REGISTER[1]);
+    await registerSimplePasskey('alice');
+
+    expect(sent(1).body).toEqual({
+      type: 'public-key',
+      id: 'AQIDBA',
+      rawId: 'AQIDBA',
+      authenticatorAttachment: 'cross-platform',
+      response: { clientDataJSON: 'eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIn0', attestationObject: 'oA', transports: ['usb'] },
+      clientExtensionResults: {},
+    });
+  });
+
   it('names the algorithm the server chose, or says it is unknown', () => {
     expect(registeredText(REGISTER[1].body)).toBe('Registration successful! Algorithm: ES256 (ECDSA)');
     expect(registeredText({})).toBe('Registration successful! Algorithm: Unknown');
@@ -204,5 +219,20 @@ describe('what a failed ceremony says', () => {
   it('gives anything else its own message, a name that is also an object property included', () => {
     expect(ceremonyErrorText(new Error('Registration failed: Invalid signature.'), 'registration')).toBe('Registration failed: Invalid signature.');
     expect(ceremonyErrorText({ name: 'toString', message: 'odd' }, 'registration')).toBe('odd');
+  });
+});
+
+describe('a browser without WebAuthn\'s JSON methods', () => {
+  it('asks nothing of the server or the authenticator, and says to update the browser', async () => {
+    delete globalThis.PublicKeyCredential;
+    answering();
+
+    await expect(registerSimplePasskey('alice')).rejects.toThrow(UPDATE_BROWSER_TEXT);
+    await expect(authenticateSimplePasskey('alice', { credentialsFor, prepareForServer })).rejects.toBeInstanceOf(
+      UnsupportedBrowserError,
+    );
+    expect(fetch).not.toHaveBeenCalled();
+    expect(authenticator.create).not.toHaveBeenCalled();
+    expect(authenticator.get).not.toHaveBeenCalled();
   });
 });
