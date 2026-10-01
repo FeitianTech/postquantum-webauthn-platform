@@ -16,9 +16,13 @@ import {
 } from './hint-rules.js';
 import { FailedResponseError } from '../../shared/api/failed-response.js';
 import { state } from '../../shared/state.js';
-import { convertExtensionsForClient } from '../../shared/utils/binary.js';
-import { parseCreationOptionsFromJSON } from '../../shared/webauthn/json-ponyfill.js';
-import { answerResponse, goldenAnswers, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
+import { UPDATE_BROWSER_TEXT } from '../../shared/webauthn/native-json.js';
+import {
+  StandInPublicKeyCredential,
+  answerResponse,
+  goldenAnswers,
+  installAuthenticator,
+} from '@/test/logic/simple/ceremony-answers.js';
 import { advancedRegistrations, recordedCredential } from '@/test/logic/advanced/auth/advanced-answers.js';
 
 const BEGIN = '/api/advanced/register/begin';
@@ -267,16 +271,16 @@ describe('registeredRecord', () => {
 });
 
 describe('collectPotentialUnsupportedFeatures', () => {
-  // The options the authenticator is given for a recorded begin answer.
-  const beginOptions = (begin) => parseCreationOptionsFromJSON({ publicKey: begin.body.publicKey });
+  // The options the authenticator is given for a recorded begin answer, as the browser reads them.
+  const beginOptions = (begin) => ({ publicKey: StandInPublicKeyCredential.parseCreationOptionsFromJSON(begin.body.publicKey) });
 
   it('names nothing for a request that is not an object', () => {
-    expect(collectPotentialUnsupportedFeatures(null, { prf: {} }, beginOptions(MLDSA.begin))).toEqual([]);
-    expect(collectPotentialUnsupportedFeatures('publicKey', { prf: {} }, beginOptions(MLDSA.begin))).toEqual([]);
+    expect(collectPotentialUnsupportedFeatures(null, beginOptions(MLDSA.begin))).toEqual([]);
+    expect(collectPotentialUnsupportedFeatures('publicKey', beginOptions(MLDSA.begin))).toEqual([]);
   });
 
   it('names nothing an authenticator commonly supports', () => {
-    expect(collectPotentialUnsupportedFeatures(request().publicKey, undefined, beginOptions(NONE.begin))).toEqual([]);
+    expect(collectPotentialUnsupportedFeatures(request().publicKey, beginOptions(NONE.begin))).toEqual([]);
   });
 
   it('names a required resident key, by either spelling, and required user verification', () => {
@@ -290,9 +294,8 @@ describe('collectPotentialUnsupportedFeatures', () => {
     expect(collectPotentialUnsupportedFeatures({ authenticatorSelection: 'not-a-mapping' })).toEqual([]);
   });
 
-  it('names each extension the request, then the converted extensions, hold, once and in the labels\' order', () => {
-    const converted = convertExtensionsForClient(EVERYTHING.begin.body.publicKey.extensions);
-    expect(collectPotentialUnsupportedFeatures({ extensions: { credProps: true, prf: {} } }, converted)).toEqual([
+  it('names each extension the request, then the options the browser was given, hold, once and in the labels\' order', () => {
+    expect(collectPotentialUnsupportedFeatures({ extensions: { credProps: true, prf: {} } }, beginOptions(EVERYTHING.begin))).toEqual([
       'prf extension',
       'credProps extension',
       'largeBlob extension',
@@ -302,27 +305,27 @@ describe('collectPotentialUnsupportedFeatures', () => {
   });
 
   it('reads extensions that are not an object as none', () => {
-    expect(collectPotentialUnsupportedFeatures({ extensions: 'largeBlob' }, 'prf')).toEqual([]);
+    expect(collectPotentialUnsupportedFeatures({ extensions: 'largeBlob' }, { publicKey: { extensions: 'prf' } })).toEqual([]);
   });
 
   it('names the signature algorithms when none the options offer is commonly supported', () => {
-    expect(collectPotentialUnsupportedFeatures({}, undefined, beginOptions(MLDSA.begin))).toEqual(['selected signature algorithms']);
-    expect(collectPotentialUnsupportedFeatures({}, undefined, beginOptions(PQC_UNAVAILABLE[1]))).toEqual([]);
+    expect(collectPotentialUnsupportedFeatures({}, beginOptions(MLDSA.begin))).toEqual(['selected signature algorithms']);
+    expect(collectPotentialUnsupportedFeatures({}, beginOptions(PQC_UNAVAILABLE[1]))).toEqual([]);
   });
 
   it('reads only the numeric algorithms of the parameters that are objects', () => {
     const options = (pubKeyCredParams) => ({ publicKey: { pubKeyCredParams } });
-    expect(collectPotentialUnsupportedFeatures({}, undefined, options(['ES384', null, { alg: 'ES256' }, { alg: -48 }]))).toEqual([
+    expect(collectPotentialUnsupportedFeatures({}, options(['ES384', null, { alg: 'ES256' }, { alg: -48 }]))).toEqual([
       'selected signature algorithms',
     ]);
-    expect(collectPotentialUnsupportedFeatures({}, undefined, options(['ES384', { alg: 'not-a-number' }]))).toEqual([]);
-    expect(collectPotentialUnsupportedFeatures({}, undefined, options([]))).toEqual([]);
+    expect(collectPotentialUnsupportedFeatures({}, options(['ES384', { alg: 'not-a-number' }]))).toEqual([]);
+    expect(collectPotentialUnsupportedFeatures({}, options([]))).toEqual([]);
   });
 
   it('reads options without parameters as offering no algorithm', () => {
-    expect(collectPotentialUnsupportedFeatures({}, undefined, 'options')).toEqual([]);
-    expect(collectPotentialUnsupportedFeatures({}, undefined, { publicKey: null })).toEqual([]);
-    expect(collectPotentialUnsupportedFeatures({}, undefined, { publicKey: { pubKeyCredParams: { alg: -48 } } })).toEqual([]);
+    expect(collectPotentialUnsupportedFeatures({}, 'options')).toEqual([]);
+    expect(collectPotentialUnsupportedFeatures({}, { publicKey: null })).toEqual([]);
+    expect(collectPotentialUnsupportedFeatures({}, { publicKey: { pubKeyCredParams: { alg: -48 } } })).toEqual([]);
   });
 });
 
@@ -383,15 +386,6 @@ describe('registerAdvancedCredential', () => {
     expect(sent(1).init).toMatchObject({ method: 'POST', headers: { 'Content-Type': 'application/json' } });
     expect(fetch.mock.invocationCallOrder[0]).toBeLessThan(authenticator.create.mock.invocationCallOrder[0]);
     expect(authenticator.create.mock.invocationCallOrder[0]).toBeLessThan(fetch.mock.invocationCallOrder[1]);
-  });
-
-  it('sends no extension results as the authenticator reported them, when it reported none', async () => {
-    serving({ [BEGIN]: NONE.begin, [COMPLETE]: NONE.complete });
-    authenticatorGiving({ ...recordedCredential(NONE), getClientExtensionResults: () => null });
-    await registerAdvancedCredential(text(request()), formOptions());
-
-    expect(asked()).toEqual([BEGIN, COMPLETE]);
-    expect(sent(1).body.__credential_response.clientExtensionResults).toBeNull();
   });
 
   it('completes with the request and the credential as JSON', async () => {
@@ -499,7 +493,7 @@ describe('registerAdvancedCredential', () => {
     expect(sent(0).body).toEqual(EVERYTHING_REQUEST);
     const { extensions } = authenticator.create.mock.calls[0][0].publicKey;
     expect(extensions).toEqual({
-      credBlob: 'YmxvYg',
+      credBlob: expect.any(ArrayBuffer),
       credProps: true,
       credentialProtectionPolicy: 'userVerificationOptionalWithCredentialIDList',
       enforceCredentialProtectionPolicy: true,
@@ -509,6 +503,7 @@ describe('registerAdvancedCredential', () => {
       prf: { eval: { first: expect.any(ArrayBuffer), second: expect.any(ArrayBuffer) } },
     });
     expect([hex(extensions.prf.eval.first), hex(extensions.prf.eval.second)]).toEqual(['07'.repeat(32), '0a0b0c']);
+    expect(Buffer.from(extensions.credBlob).toString()).toBe('blob');
   });
 
   it('gives the attachment preference the hints\' attachments and both publicKeys, and the authenticator the attachment it chose', async () => {
@@ -577,7 +572,7 @@ describe('registerAdvancedCredential', () => {
     expect(outcome.text).toBe('Credential registration failed: Authenticator attachment could not be determined to enforce selected hints.');
   });
 
-  it('sends every extension result the browser gives, bytes as hex, over those its JSON keeps', async () => {
+  it('sends every extension result as the browser\'s JSON writes it, bytes in base64url', async () => {
     const results = { credProps: { rk: false }, prf: { enabled: true, results: { first: new Uint8Array([7, 7, 7]).buffer } } };
     authenticatorGiving({ ...recordedCredential(EVERYTHING), getClientExtensionResults: () => results });
     serving({ [BEGIN]: EVERYTHING.begin, [COMPLETE]: EVERYTHING.complete });
@@ -586,26 +581,17 @@ describe('registerAdvancedCredential', () => {
     expect(asked()).toEqual([BEGIN, COMPLETE]);
     expect(sent(1).body.__credential_response.clientExtensionResults).toEqual({
       credProps: { rk: false },
-      prf: { enabled: true, results: { first: { $hex: '070707' } } },
+      prf: { enabled: true, results: { first: 'BwcH' } },
     });
   });
 
-  it('sends the extension results its JSON keeps when the browser gives none', async () => {
+  it('sends no extension results when the browser gives none', async () => {
     authenticatorGiving({ ...recordedCredential(NONE), getClientExtensionResults: () => ({}) });
     serving({ [BEGIN]: NONE.begin, [COMPLETE]: NONE.complete });
     await registerAdvancedCredential(text(request()), formOptions());
 
     expect(asked()).toEqual([BEGIN, COMPLETE]);
     expect(sent(1).body.__credential_response.clientExtensionResults).toEqual({});
-  });
-
-  it('completes with null extension results when the browser answers them with null', async () => {
-    authenticatorGiving({ ...recordedCredential(NONE), getClientExtensionResults: () => null });
-    serving({ [BEGIN]: NONE.begin, [COMPLETE]: NONE.complete });
-    await registerAdvancedCredential(text(request()), formOptions());
-
-    expect(asked()).toEqual([BEGIN, COMPLETE]);
-    expect(sent(1).body.__credential_response.clientExtensionResults).toBeNull();
   });
 
   it('registers without being told where to say its steps', async () => {
@@ -631,10 +617,22 @@ describe('registerAdvancedCredential', () => {
     expect(outcome).toEqual({
       registered: false,
       text: `Credential registration failed: ${parserError}`,
-      context: { publicKey: null, convertedExtensions: null, createOptions: null },
+      context: { publicKey: null, createOptions: null },
     });
     expect(asked()).toEqual([]);
     expect(options.onStart).not.toHaveBeenCalled();
+  });
+
+  it('asks nothing in a browser without WebAuthn\'s JSON methods, and says to update it', async () => {
+    serving({});
+    delete globalThis.PublicKeyCredential;
+    const options = formOptions();
+    const outcome = await registerAdvancedCredential(text(request()), options);
+
+    expect(outcome).toMatchObject({ registered: false, text: `Credential registration failed: ${UPDATE_BROWSER_TEXT}` });
+    expect(asked()).toEqual([]);
+    expect(options.onStart).not.toHaveBeenCalled();
+    expect(authenticator.create).not.toHaveBeenCalled();
   });
 
   it('says what the request lacks, and asks nothing', async () => {
@@ -683,7 +681,7 @@ describe('registerAdvancedCredential', () => {
     const outcome = await registerAdvancedCredential(text(request()), options);
 
     expect(asked()).toEqual([BEGIN]);
-    expect(outcome.text).toBe('Credential registration failed: Missing key: publicKey');
+    expect(outcome.text).toMatch(/^Credential registration failed: \S/);
     expect(options.onWarning).not.toHaveBeenCalled();
     expect(authenticator.create).not.toHaveBeenCalled();
   });
@@ -701,7 +699,6 @@ describe('registerAdvancedCredential', () => {
     );
     expect(outcome.context).toEqual({
       publicKey: EVERYTHING_REQUEST.publicKey,
-      convertedExtensions: expect.objectContaining({ credentialProtectionPolicy: 'userVerificationOptionalWithCredentialIDList' }),
       createOptions: authenticator.create.mock.calls[0][0],
     });
     expect(asked()).toEqual([BEGIN]);

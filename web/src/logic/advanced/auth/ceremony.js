@@ -4,16 +4,8 @@
 // form decides is given: the hints' rules, and the two values it reads from the
 // form as the ceremony runs.
 
-import {
-    create,
-    parseCreationOptionsFromJSON,
-} from '../../shared/webauthn/json-ponyfill.js';
-import {
-    bufferSourceToUint8Array,
-    bytesToHex,
-    convertExtensionsForClient,
-    normalizeClientExtensionResults,
-} from '../../shared/utils/binary.js';
+import { createCredential, parseCreationOptions, requireNativeJson } from '../../shared/webauthn/native-json.js';
+import { bufferSourceToUint8Array, bytesToHex } from '../../shared/utils/binary.js';
 import { printRegistrationDebug } from '../../shared/debug/auth.js';
 import { FailedResponseError, readFailedResponse } from '../../shared/api/failed-response.js';
 import { state } from '../../shared/state.js';
@@ -47,8 +39,11 @@ const REGISTRATION_ERROR_TEXT = {
     SecurityError: 'Security error - check your connection and try again',
 };
 
-/** What of the request an authenticator may not support, in the order the failure names them. */
-export function collectPotentialUnsupportedFeatures(publicKeyOptions, convertedExtensions, createOptions) {
+/**
+ * What of the request an authenticator may not support, in the order the failure
+ * names them: from the editor's publicKey, and the options the browser was given.
+ */
+export function collectPotentialUnsupportedFeatures(publicKeyOptions, createOptions) {
     const issues = [];
 
     if (!publicKeyOptions || typeof publicKeyOptions !== 'object') {
@@ -66,13 +61,12 @@ export function collectPotentialUnsupportedFeatures(publicKeyOptions, convertedE
         issues.push('user verification requirement');
     }
 
-    const extensionSources = [];
-    if (publicKeyOptions.extensions && typeof publicKeyOptions.extensions === 'object') {
-        extensionSources.push(publicKeyOptions.extensions);
-    }
-    if (convertedExtensions && typeof convertedExtensions === 'object') {
-        extensionSources.push(convertedExtensions);
-    }
+    const pubKeyOptions = createOptions && typeof createOptions === 'object' && createOptions.publicKey && typeof createOptions.publicKey === 'object'
+        ? createOptions.publicKey
+        : null;
+
+    const extensionSources = [publicKeyOptions.extensions, pubKeyOptions?.extensions]
+        .filter(source => source && typeof source === 'object');
 
     const extensionLabels = [
         ['largeBlob', 'largeBlob extension'],
@@ -84,15 +78,12 @@ export function collectPotentialUnsupportedFeatures(publicKeyOptions, convertedE
 
     extensionSources.forEach(source => {
         extensionLabels.forEach(([key, label]) => {
-            if (source && Object.prototype.hasOwnProperty.call(source, key) && !issues.includes(label)) {
+            if (Object.prototype.hasOwnProperty.call(source, key) && !issues.includes(label)) {
                 issues.push(label);
             }
         });
     });
 
-    const pubKeyOptions = createOptions && typeof createOptions === 'object' && createOptions.publicKey && typeof createOptions.publicKey === 'object'
-        ? createOptions.publicKey
-        : null;
     const params = pubKeyOptions && Array.isArray(pubKeyOptions.pubKeyCredParams)
         ? pubKeyOptions.pubKeyCredParams
         : [];
@@ -115,7 +106,7 @@ export function collectPotentialUnsupportedFeatures(publicKeyOptions, convertedE
 /**
  * What a failed registration says: the browser's refusals by name, anything else
  * by its own message; when the authenticator refused, what of the request
- * (context: publicKey, convertedExtensions, createOptions) it may not support.
+ * (context: publicKey, createOptions) it may not support.
  */
 export function advancedRegistrationFailureText(error, context = {}) {
     const errorName = error && typeof error === 'object' ? error.name : undefined;
@@ -129,7 +120,7 @@ export function advancedRegistrationFailureText(error, context = {}) {
     // Only a refusal from the authenticator can be about what it supports; a
     // server's answer says what it means on its own.
     const potentialIssues = AUTHENTICATOR_ERROR_NAMES.has(errorName)
-        ? collectPotentialUnsupportedFeatures(context.publicKey, context.convertedExtensions, context.createOptions)
+        ? collectPotentialUnsupportedFeatures(context.publicKey, context.createOptions)
         : [];
     const detailMessage = potentialIssues.length
         ? ` The authenticator may not support: ${potentialIssues.join(', ')}.`
@@ -175,24 +166,6 @@ export function readCreationRequest(text) {
         throw new Error(ADVANCED_CEREMONY_TEXT.missingChallenge);
     }
     return parsed;
-}
-
-// The credential as the server is sent it: its JSON (the ponyfill's create()
-// gives every credential its toJSON(), which reads the credential's extension
-// results and always holds them), with its attachment and every client
-// extension result, their byte values as hex.
-function registrationCredentialJson(credential) {
-    const credentialJson = credential.toJSON();
-    credentialJson.authenticatorAttachment = credential.authenticatorAttachment ?? null;
-    const normalizedExtensionResults = normalizeClientExtensionResults(credential.getClientExtensionResults());
-    if (normalizedExtensionResults && typeof normalizedExtensionResults === 'object' &&
-        Object.keys(normalizedExtensionResults).length > 0) {
-        credentialJson.clientExtensionResults = {
-            ...credentialJson.clientExtensionResults,
-            ...normalizedExtensionResults,
-        };
-    }
-    return credentialJson;
 }
 
 /**
@@ -257,9 +230,10 @@ export async function registerAdvancedCredential(text, {
     onWarning = () => {},
     onResult = () => {},
 }) {
-    const context = { publicKey: null, convertedExtensions: null, createOptions: null };
+    const context = { publicKey: null, createOptions: null };
 
     try {
+        requireNativeJson();
         const parsed = readCreationRequest(text);
         const { publicKey } = parsed;
         context.publicKey = publicKey;
@@ -291,8 +265,8 @@ export async function registerAdvancedCredential(text, {
         const optionsJson = { ...(json || {}) };
         delete optionsJson.warnings;
 
-        const originalExtensions = optionsJson.publicKey?.extensions;
-        const createOptions = parseCreationOptionsFromJSON(optionsJson);
+        // The browser reads the options, every extension it implements included.
+        const createOptions = { publicKey: parseCreationOptions(optionsJson.publicKey) };
         context.createOptions = createOptions;
 
         applyAttachmentPreference(
@@ -302,22 +276,12 @@ export async function registerAdvancedCredential(text, {
             publicKey,
         );
 
-        const convertedExtensions = convertExtensionsForClient(originalExtensions);
-        context.convertedExtensions = convertedExtensions;
-        if (convertedExtensions) {
-            // Extensions to convert come with a publicKey, which the parsed options keep.
-            createOptions.publicKey.extensions = {
-                ...createOptions.publicKey.extensions,
-                ...convertedExtensions
-            };
-        }
-
         state.lastFakeCredLength = fakeCredentialLength();
 
         onProgress(ADVANCED_CEREMONY_TEXT.connecting);
 
-        const credential = await create(createOptions);
-        const credentialJson = registrationCredentialJson(credential);
+        // Its JSON as the browser writes it: the attachment, and every extension output in base64url.
+        const { credential, json: credentialJson } = await createCredential(createOptions.publicKey);
 
         onProgress(ADVANCED_CEREMONY_TEXT.registrationCompleting);
 
