@@ -394,3 +394,18 @@ describe('an authentication', () => {
     expect(JSON.parse(authText()).publicKey.timeout).toBe(4321);
   });
 });
+
+describe('the Advanced tab in a browser without WebAuthn\'s JSON methods', () => {
+  it('asks to update the browser in both segments, and neither ceremony can start', async () => {
+    delete (globalThis as { PublicKeyCredential?: unknown }).PublicKeyCredential;
+    renderSection();
+    await ready();
+
+    const notice = () => within(screen.getByRole('tabpanel', { name: 'Advanced Authentication' })).getByText(/cannot run WebAuthn ceremonies/);
+    expect(notice()).toBeVisible();
+    expect(button('Create Credential')).toBeDisabled();
+    await userEvent.click(screen.getByRole('tab', { name: 'Authentication' }));
+    expect(notice()).toBeVisible();
+    expect(button('Assert Credential')).toBeDisabled();
+  });
+});

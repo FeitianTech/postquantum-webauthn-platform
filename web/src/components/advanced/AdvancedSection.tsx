@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { CeremonyResult } from '@/components/ceremony/CeremonyResult';
+import { UpdateBrowserNotice, useNativeWebAuthn } from '@/components/ceremony/UpdateBrowserNotice';
 import { CredentialDetailDialog } from '@/components/credentials/CredentialDetailDialog';
 import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
 import { Badge } from '@/components/ui/Badge';
@@ -63,6 +64,8 @@ export function AdvancedSection({ active, route }: { active: boolean; route: Sec
   }, []);
   const registration = useRegistrationCeremony(request, openRegistration);
   const authentication = useAuthenticationCeremony(assertion);
+  // A browser without WebAuthn's JSON methods is told to update, and runs nothing.
+  const supported = useNativeWebAuthn();
 
   const { path, replace } = route;
   // What the URL may open here: a credential's details, #advanced/credential/<key>,
@@ -118,7 +121,7 @@ export function AdvancedSection({ active, route }: { active: boolean; route: Sec
               <Button
                 ref={createButton}
                 busy={registration.running}
-                disabled={authentication.running}
+                disabled={authentication.running || !supported}
                 onClick={() => void registration.register()}
               >
                 Create Credential
@@ -129,7 +132,11 @@ export function AdvancedSection({ active, route }: { active: boolean; route: Sec
               <Button variant="secondary" disabled={running} onClick={assertion.resetForm}>
                 Reset
               </Button>
-              <Button busy={authentication.running} disabled={registration.running} onClick={() => void authentication.assert()}>
+              <Button
+                busy={authentication.running}
+                disabled={registration.running || !supported}
+                onClick={() => void authentication.assert()}
+              >
                 Assert Credential
               </Button>
             </>
@@ -139,6 +146,7 @@ export function AdvancedSection({ active, route }: { active: boolean; route: Sec
 
       {/* What the ceremony of the segment shown is doing, or what stopped it. */}
       <div className="mt-5 flex flex-col gap-4 empty:hidden">
+        {supported ? null : <UpdateBrowserNotice />}
         {shown.progress ? (
           <p role="status" className="flex items-center gap-2 text-body text-ink-muted" data-role="progress">
             <Spinner />

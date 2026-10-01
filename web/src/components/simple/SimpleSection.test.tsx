@@ -215,3 +215,15 @@ describe('authenticating in the Simple tab', () => {
     );
   });
 });
+
+describe('a browser without WebAuthn\'s JSON methods', () => {
+  it('is asked to update, and neither ceremony can start', async () => {
+    authenticator.remove();
+    const fetch = renderTab();
+
+    expect(await screen.findByText(/This browser cannot run WebAuthn ceremonies here/)).toBeVisible();
+    expect(button('Register Passkey')).toBeDisabled();
+    expect(button('Authenticate')).toBeDisabled();
+    expect(ceremonyCalls(fetch)).toEqual([]);
+  });
+});

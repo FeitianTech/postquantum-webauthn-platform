@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react';
 
 import { CeremonyResult } from '@/components/ceremony/CeremonyResult';
+import { UpdateBrowserNotice, useNativeWebAuthn } from '@/components/ceremony/UpdateBrowserNotice';
 import { CredentialDetailDialog } from '@/components/credentials/CredentialDetailDialog';
 import { SavedCredentials } from '@/components/credentials/SavedCredentials';
 import { Button, IconButton } from '@/components/ui/Button';
@@ -15,9 +16,11 @@ import { useSimpleCeremony } from './useSimpleCeremony';
 
 // The username, the two ceremonies' buttons (one height, one width), what the
 // running step is doing, why the last one failed, and what the server made of
-// it. A card of its own beside the saved credentials: no card in a card.
+// it. A card of its own beside the saved credentials: no card in a card. A
+// browser without WebAuthn's JSON methods is told to update, and runs nothing.
 function CeremonyCard() {
   const ceremony = useSimpleCeremony();
+  const supported = useNativeWebAuthn();
   const running = ceremony.running !== null;
   return (
     <div className="flex min-w-0 flex-col gap-5 rounded-lg border border-line bg-surface p-5 sm:p-6" data-simple-ceremony="">
@@ -32,14 +35,15 @@ function CeremonyCard() {
         autoComplete="off"
         trailing={<IconButton size="sm" label="Generate random username" icon={<RefreshIcon />} onClick={ceremony.randomize} />}
       />
+      {supported ? null : <UpdateBrowserNotice />}
       <div className="grid grid-cols-2 gap-2">
-        <Button busy={ceremony.running === 'registration'} disabled={running} onClick={() => void ceremony.register()}>
+        <Button busy={ceremony.running === 'registration'} disabled={running || !supported} onClick={() => void ceremony.register()}>
           Register Passkey
         </Button>
         <Button
           variant="secondary"
           busy={ceremony.running === 'authentication'}
-          disabled={running}
+          disabled={running || !supported}
           onClick={() => void ceremony.authenticate()}
         >
           Authenticate
