@@ -3,8 +3,6 @@ import {cloneJson} from './data-utils.js';
 const CERTIFICATE_COLLECTION_KEYS = [
     'attestationCertificate',
     'attestationCertificates',
-    'attestation_certificate',
-    'attestation_certificates',
 ];
 
 const RP_INFO_EXCLUDED_KEYS = [
@@ -17,14 +15,10 @@ const RP_INFO_EXCLUDED_KEYS = [
     'rp_id_hash_valid',
     'signature_valid',
     'clientExtensionResults',
-    'client_extension_results',
     'flags',
     'signatureCounter',
-    'signature_counter',
     'residentKey',
-    'resident_key',
     'userHandle',
-    'user_handle',
 ];
 
 export function stripCertificateCollections(target) {
@@ -108,35 +102,15 @@ export function sanitiseRegistrationData(raw) {
 
     const keysToRemove = [
         'attestationObject',
-        'attestation_object',
         'attestationStatement',
-        'attestation_statement',
         'attStmt',
         'rawAuthenticatorData',
-        'raw_authenticator_data',
         'rawClientDataJSON',
-        'raw_client_data_json',
     ];
 
     removeKeysCaseInsensitive(cloned, keysToRemove);
     stripCertificateCollections(cloned);
     stripSignatureFormatting(cloned);
-
-    if (Object.hasOwn(cloned, 'attestation_summary') && !cloned.attestationSummary) {
-        const summary = cloned.attestation_summary;
-        delete cloned.attestation_summary;
-        if (summary && typeof summary === 'object') {
-            cloned.attestationSummary = summary;
-        }
-    }
-
-    if (Object.hasOwn(cloned, 'attestation_checks') && !cloned.attestationChecks) {
-        const checks = cloned.attestation_checks;
-        delete cloned.attestation_checks;
-        if (checks && typeof checks === 'object') {
-            cloned.attestationChecks = checks;
-        }
-    }
 
     return cloned;
 }
@@ -166,12 +140,10 @@ export function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
 
     if (info && typeof info === 'object') {
         recordCandidate(info.authenticatorData);
-        recordCandidate(info.authenticator_data);
 
-        const registrationData = info.registrationData || info.registration_data;
+        const registrationData = info.registrationData;
         if (registrationData && typeof registrationData === 'object') {
             recordCandidate(registrationData.authenticatorData);
-            recordCandidate(registrationData.authenticator_data);
         }
     }
 
@@ -213,23 +185,12 @@ export function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
     let registrationData = null;
     if (cloned.registrationData && typeof cloned.registrationData === 'object') {
         registrationData = sanitiseRegistrationData(cloned.registrationData);
-    } else if (cloned.registration_data && typeof cloned.registration_data === 'object') {
-        registrationData = sanitiseRegistrationData(cloned.registration_data);
-        delete cloned.registration_data;
     }
 
     if (registrationData) {
         cloned.registrationData = registrationData;
     } else if (Object.hasOwn(cloned, 'registrationData')) {
         delete cloned.registrationData;
-    }
-
-    if (Object.hasOwn(cloned, 'attestation_summary') && !cloned.attestationSummary) {
-        const summaryValue = cloned.attestation_summary;
-        delete cloned.attestation_summary;
-        if (summaryValue && typeof summaryValue === 'object') {
-            cloned.attestationSummary = summaryValue;
-        }
     }
 
     if (
@@ -302,19 +263,6 @@ export function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
         registrationData.authenticatorData = authenticatorHex;
     }
 
-    if (!cloned.rpIdHash && typeof cloned.rp_id_hash === 'string') {
-        cloned.rpIdHash = cloned.rp_id_hash;
-    }
-    if (!cloned.rpIdHashBase64 && typeof cloned.rp_id_hash_base64 === 'string') {
-        cloned.rpIdHashBase64 = cloned.rp_id_hash_base64;
-    }
-    if (!cloned.rpIdHashExpected && typeof cloned.rp_id_hash_expected === 'string') {
-        cloned.rpIdHashExpected = cloned.rp_id_hash_expected;
-    }
-    if (!cloned.rpIdHashExpectedBase64 && typeof cloned.rp_id_hash_expected_base64 === 'string') {
-        cloned.rpIdHashExpectedBase64 = cloned.rp_id_hash_expected_base64;
-    }
-
     return cloned;
 }
 
@@ -325,7 +273,7 @@ export function sanitizeParsedCertificateDetails(parsed) {
 
     const parsedCopy = cloneJson(parsed);
 
-    ['pem', 'der', 'derBase64', 'der_base64', 'raw', 'summary', 'error'].forEach(key => {
+    ['pem', 'der', 'derBase64', 'raw', 'summary', 'error'].forEach(key => {
         if (Object.hasOwn(parsedCopy, key)) {
             delete parsedCopy[key];
         }
@@ -339,7 +287,7 @@ export function sanitizeParsedCertificateDetails(parsed) {
                 }
 
                 // Already a copy (parsedCopy is one).
-                ['raw', 'hex', 'rawHex', 'der', 'derBase64', 'der_base64', 'valueHex'].forEach(key => {
+                ['raw', 'hex', 'rawHex', 'der', 'derBase64', 'valueHex'].forEach(key => {
                     if (Object.hasOwn(ext, key)) {
                         delete ext[key];
                     }

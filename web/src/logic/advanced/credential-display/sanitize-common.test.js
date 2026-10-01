@@ -22,8 +22,8 @@ describe('stripCertificateCollections', () => {
     const target = {
       attestationCertificate: {},
       attestationCertificates: [],
-      nested: { attestation_certificate: 'MIIB', keep: 1 },
-      list: [{ attestation_certificates: [] }, 'MIIB'],
+      nested: { attestationCertificate: 'MIIB', keep: 1 },
+      list: [{ attestationCertificates: [] }, 'MIIB'],
     };
     stripCertificateCollections(target);
     expect(target).toEqual({ nested: { keep: 1 }, list: [{}, 'MIIB'] });
@@ -105,12 +105,12 @@ describe('sanitizeParsedCertificateDetails', () => {
     const certificate = advancedRelyingParty().attestationCertificate;
     const { pem, derBase64, summary, ...rest } = certificate;
     expect([pem, derBase64, summary].every(Boolean)).toBe(true);
-    expect(sanitizeParsedCertificateDetails({ ...certificate, der: 'MIIB', der_base64: 'MIIB', raw: '3082', error: 'x' })).toEqual(rest);
+    expect(sanitizeParsedCertificateDetails({ ...certificate, der: 'MIIB', raw: '3082', error: 'x' })).toEqual(rest);
   });
 
   it("leaves out each extension's raw bytes", () => {
     const extension = {
-      oid: '2.5.29.19', raw: '3000', hex: '3000', rawHex: '3000', der: 'MAA=', derBase64: 'MAA=', der_base64: 'MAA=', valueHex: '3000',
+      oid: '2.5.29.19', raw: '3000', hex: '3000', rawHex: '3000', der: 'MAA=', derBase64: 'MAA=', valueHex: '3000',
       value: { CA: 'FALSE' },
     };
     expect(sanitizeParsedCertificateDetails({ extensions: [extension] })).toEqual({
@@ -136,7 +136,7 @@ describe('sanitiseRegistrationData', () => {
       attestationObject: 'o2Nm',
       attStmt: {},
       rawClientDataJSON: 'eyJ0',
-      nested: { raw_authenticator_data: 'SZYN', ATTESTATION_STATEMENT: {}, keep: 1 },
+      nested: { RawAuthenticatorData: 'SZYN', ATTESTATIONSTATEMENT: {}, keep: 1 },
       attestationCertificates: [],
       signature: { colon: '30:45', lines: [], hex: '3045' },
     };
@@ -147,27 +147,6 @@ describe('sanitiseRegistrationData', () => {
     const raw = { attestationObject: 'o2Nm' };
     sanitiseRegistrationData(raw);
     expect(raw).toEqual({ attestationObject: 'o2Nm' });
-  });
-
-  it('renames the snake_case summary and checks', () => {
-    expect(sanitiseRegistrationData({ attestation_summary: { verified: true }, attestation_checks: { errors: [] } })).toEqual({
-      attestationSummary: { verified: true },
-      attestationChecks: { errors: [] },
-    });
-  });
-
-  it('drops a snake_case summary or checks that is not a map', () => {
-    expect(sanitiseRegistrationData({ attestation_summary: 'verified', attestation_checks: null })).toEqual({});
-  });
-
-  it('leaves the snake_case summary and checks beside the camelCase ones', () => {
-    const raw = {
-      attestationSummary: { verified: true },
-      attestation_summary: { verified: false },
-      attestationChecks: { errors: [] },
-      attestation_checks: { errors: ['x'] },
-    };
-    expect(sanitiseRegistrationData(raw)).toEqual(raw);
   });
 
   it('has no data for what is not a map', () => {
@@ -229,18 +208,14 @@ describe("sanitizeRelyingPartyInfo: a registration's relying party", () => {
     expect(sanitizeRelyingPartyInfo({ authenticatorData: 'AB CD\nEF 01' })).toEqual({ authenticatorData: 'abcdef01' });
   });
 
-  it('reads the authenticator data under its snake_case names, and the registration data too', () => {
-    const copy = sanitizeRelyingPartyInfo({ authenticator_data: '  ', registration_data: { authenticator_data: 'abcd', signature_counter: 0 } });
-    expect(copy).toEqual({
-      authenticator_data: '  ',
-      registrationData: { authenticator_data: 'abcd', authenticatorData: 'abcd' },
-      authenticatorData: 'abcd',
-    });
+  it("passes over blank authenticator data for the registration data's", () => {
+    const copy = sanitizeRelyingPartyInfo({ authenticatorData: '  ', registrationData: { authenticatorData: 'abcd', signatureCounter: 0 } });
+    expect(copy).toEqual({ registrationData: { authenticatorData: 'abcd' }, authenticatorData: 'abcd' });
   });
 
   it('keeps authenticator data that is not hex as it is', () => {
     const base64url = registration('es256').authenticatorData;
-    expect(sanitizeRelyingPartyInfo({ authenticatorData: base64url, authenticator_data: 5 })).toMatchObject({ authenticatorData: base64url });
+    expect(sanitizeRelyingPartyInfo({ authenticatorData: base64url, registrationData: { authenticatorData: 5 } })).toMatchObject({ authenticatorData: base64url });
     expect(sanitizeRelyingPartyInfo({ authenticatorData: 'abc' })).toEqual({ authenticatorData: 'abc' });
   });
 
@@ -248,15 +223,9 @@ describe("sanitizeRelyingPartyInfo: a registration's relying party", () => {
     expect(sanitizeRelyingPartyInfo({ registrationData: 'SZYN', rpIdHashMatch: true })).toEqual({ rpIdHashMatch: true });
   });
 
-  it('renames a snake_case attestation summary, dropping one that is not a map', () => {
-    expect(sanitizeRelyingPartyInfo({ attestation_summary: { verified: true } })).toEqual({ attestationSummary: { verified: true } });
-    expect(sanitizeRelyingPartyInfo({ attestation_summary: 'verified', rpIdHashMatch: true })).toEqual({ rpIdHashMatch: true });
-  });
-
-  it('keeps its own attestation summary over the registration data\'s and a snake_case one', () => {
+  it('keeps its own attestation summary over the registration data\'s', () => {
     const info = {
       attestationSummary: { verified: true },
-      attestation_summary: { verified: false },
       registrationData: { attestationSummary: { verified: false } },
     };
     expect(sanitizeRelyingPartyInfo(info)).toEqual(info);
@@ -281,18 +250,6 @@ describe("sanitizeRelyingPartyInfo: a registration's relying party", () => {
   it('drops a map of errors left empty, and keeps errors that are text', () => {
     expect(sanitizeRelyingPartyInfo({ errors: { aaguid: 'AAGUID mismatch' }, rpIdHashMatch: true })).toEqual({ rpIdHashMatch: true });
     expect(sanitizeRelyingPartyInfo({ errors: 'AAGUID mismatch' })).toEqual({ errors: 'AAGUID mismatch' });
-  });
-
-  it('copies the snake_case RP ID hashes to their camelCase names', () => {
-    const info = { rp_id_hash: '4996', rp_id_hash_base64: 'SZY', rp_id_hash_expected: '4996', rp_id_hash_expected_base64: 'SZY' };
-    expect(sanitizeRelyingPartyInfo(info)).toEqual({
-      ...info, rpIdHash: '4996', rpIdHashBase64: 'SZY', rpIdHashExpected: '4996', rpIdHashExpectedBase64: 'SZY',
-    });
-  });
-
-  it('keeps the camelCase RP ID hashes it has', () => {
-    const info = { rpIdHash: 'a', rp_id_hash: 'b', rpIdHashBase64: 'c', rp_id_hash_base64: 5 };
-    expect(sanitizeRelyingPartyInfo(info)).toEqual(info);
   });
 });
 

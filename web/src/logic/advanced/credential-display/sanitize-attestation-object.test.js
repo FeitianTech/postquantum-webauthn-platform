@@ -140,7 +140,7 @@ describe('sanitiseAttestationObjectForDisplay', () => {
       attStmt: 'none',
       summary: 'none attestation',
       raw: 'o2Nm',
-      attestation_certificate: {},
+      attestationCertificates: [],
       publicKeyHexLines: ['a501'],
       authData: { raw: 'SZYN', rpIdHash: '4996', sig: { colon: '30:45', hex: '3045' } },
     };
