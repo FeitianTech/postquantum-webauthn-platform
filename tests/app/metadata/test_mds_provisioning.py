@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import builtins
 import gzip
-import sys
 
 import pytest
 
@@ -208,13 +208,21 @@ def test_a_failing_updater_is_reported_rather_than_raised(static_root, monkeypat
     assert provisioning._refresh_from_upstream() is False
 
 
-def test_upstream_refresh_reports_a_build_without_the_updater(static_root, monkeypatch):
-    # Setting a sys.modules entry to None makes importing that name raise.
-    monkeypatch.setitem(sys.modules, "tools", None)
-    monkeypatch.setitem(sys.modules, "tools.update_mds_snapshot", None)
-    monkeypatch.setitem(sys.modules, "update_mds_snapshot", None)
+def test_upstream_refresh_reports_a_build_without_the_updater(static_root, monkeypatch, caplog):
+    # A build without tools/ cannot import the updater. Provisioning imports it
+    # inside the refresh, where only the import machinery can make it fail, so
+    # builtins.__import__ is patched; every other import goes through it unchanged.
+    real_import = builtins.__import__
+
+    def _without_tools(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "tools" or name.startswith("tools."):
+            raise ImportError(f"No module named {name!r}")
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", _without_tools)
 
     assert provisioning._refresh_from_upstream() is False
+    assert "updater is not packaged with this build" in caplog.text
 
 
 def test_a_publish_is_skipped_when_cloud_storage_is_disabled(static_root, gcs, monkeypatch):
