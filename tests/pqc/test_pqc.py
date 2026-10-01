@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from server.app.routes.advanced import algorithms
+from server.app.webauthn import pqc
+
 
 def test_pqc_algorithm_id_to_name_mapping():
     """Test that PQC algorithm constants are correctly defined."""
-    from server.app.webauthn import pqc
     
     assert pqc.PQC_ALGORITHM_ID_TO_NAME == {
         -50: "ML-DSA-87",
@@ -16,7 +18,6 @@ def test_pqc_algorithm_id_to_name_mapping():
 
 def test_is_pqc_algorithm_recognizes_pqc():
     """Test that PQC algorithms are correctly identified."""
-    from server.app.webauthn import pqc
     
     assert pqc.is_pqc_algorithm(-48) is True
     assert pqc.is_pqc_algorithm(-49) is True
@@ -25,7 +26,6 @@ def test_is_pqc_algorithm_recognizes_pqc():
 
 def test_is_pqc_algorithm_rejects_non_pqc():
     """Test that non-PQC algorithms are correctly rejected."""
-    from server.app.webauthn import pqc
     
     assert pqc.is_pqc_algorithm(-7) is False
     assert pqc.is_pqc_algorithm(-8) is False
@@ -34,7 +34,6 @@ def test_is_pqc_algorithm_rejects_non_pqc():
 
 def test_describe_algorithm_for_pqc():
     """Test algorithm description for PQC algorithms."""
-    from server.app.webauthn import pqc
     
     assert pqc.describe_algorithm(-48) == "ML-DSA-44 (PQC)"
     assert pqc.describe_algorithm(-49) == "ML-DSA-65 (PQC)"
@@ -43,7 +42,6 @@ def test_describe_algorithm_for_pqc():
 
 def test_describe_algorithm_for_eddsa():
     """Test algorithm description for EdDSA variants."""
-    from server.app.webauthn import pqc
     
     assert pqc.describe_algorithm(-8) == "EdDSA"
     assert pqc.describe_algorithm(-19) == "Ed25519"
@@ -52,7 +50,6 @@ def test_describe_algorithm_for_eddsa():
 
 def test_describe_algorithm_for_ecdsa():
     """Test algorithm description for ECDSA variants."""
-    from server.app.webauthn import pqc
     
     assert pqc.describe_algorithm(-7) == "ES256 (ECDSA)"
     assert pqc.describe_algorithm(-9) == "ESP256 (ECDSA)"
@@ -65,7 +62,6 @@ def test_describe_algorithm_for_ecdsa():
 
 def test_describe_algorithm_for_rsa():
     """Test algorithm description for RSA variants."""
-    from server.app.webauthn import pqc
     
     assert pqc.describe_algorithm(-37) == "PS256 (RSA-PSS)"
     assert pqc.describe_algorithm(-38) == "PS384 (RSA-PSS)"
@@ -78,7 +74,6 @@ def test_describe_algorithm_for_rsa():
 
 def test_describe_algorithm_for_unknown():
     """Test algorithm description for unknown algorithms."""
-    from server.app.webauthn import pqc
     
     assert pqc.describe_algorithm(None) == "Unknown"
     assert pqc.describe_algorithm(-999) == "COSE alg -999"
@@ -87,7 +82,6 @@ def test_describe_algorithm_for_unknown():
 
 def test_log_algorithm_selection_with_none(monkeypatch):
     """Test logging when no algorithm is selected."""
-    from server.app.webauthn import pqc
     
     logged = []
     monkeypatch.setattr(pqc.logger, "info", lambda msg, *args: logged.append((msg, args)))
@@ -101,7 +95,6 @@ def test_log_algorithm_selection_with_none(monkeypatch):
 
 def test_log_algorithm_selection_with_pqc(monkeypatch):
     """Test logging when a PQC algorithm is selected."""
-    from server.app.webauthn import pqc
     
     logged = []
     monkeypatch.setattr(pqc.logger, "info", lambda msg, *args: logged.append((msg, args)))
@@ -115,7 +108,6 @@ def test_log_algorithm_selection_with_pqc(monkeypatch):
 
 def test_log_algorithm_selection_with_classical(monkeypatch):
     """Test logging when a classical algorithm is selected."""
-    from server.app.webauthn import pqc
     
     logged = []
     monkeypatch.setattr(pqc.logger, "info", lambda msg, *args: logged.append((msg, args)))
@@ -128,6 +120,4 @@ def test_log_algorithm_selection_with_classical(monkeypatch):
 
 
 def test_fido2_verifies_every_mldsa_parameter_set_in_this_build():
-    from server.app.routes.advanced import algorithms
-
     assert {-48, -49, -50} <= algorithms._verifiable_algorithms()
