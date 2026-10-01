@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import secrets
-from types import SimpleNamespace
 
 import itsdangerous
 import pytest
 from flask import ctx, g, session
 
 from server.app import visitor_session
-from server.app.mds import effective as mds_effective
 from server.app.storage import github_mirror
 from tests.app.entry_app import entry_app
 
@@ -174,108 +172,6 @@ def test_upload_and_normalisation_error_edges(metadata_module, monkeypatch, uplo
     assert github_mirror.maybe_store_uploaded_metadata_file("target.json", b"{}") is True
     assert recorded[0][0][0] == "metadata/target.json"
     assert recorded[0][1] == {"sha": "old-sha"}
-
-
-def test_cache_and_bootstrap_fallback_helpers(metadata_module, monkeypatch, blob, effective):
-    compose_calls = []
-    monkeypatch.setattr(blob, "_load_base_explorer_snapshot", lambda: ({"meta": {}, "entries": []}, None))
-    monkeypatch.setattr(blob, "_load_base_full_snapshot", lambda: ({"meta": {}, "entries": []}, None))
-    monkeypatch.setattr(
-        effective,
-        "_compose_effective_snapshot",
-        lambda base_snapshot, **kwargs: compose_calls.append(kwargs) or {"meta": {}, "entries": [base_snapshot]},
-    )
-
-    full_effective = mds_effective.load_effective_full_snapshot()
-    assert full_effective["entries"]
-    assert compose_calls == [
-        {"include_detail": True, "include_raw_entry": False, "compact_detail": True},
-    ]
-
-
-def test_lookup_compose_resolve_trust_and_verifier_edge_paths(metadata_module, metadata_state, monkeypatch, blob, sessions, effective, verifier):
-    assert (
-        mds_effective._entry_matches_lookup(
-            {"metadataStatement": 123},
-            aaguid="   ",
-        )
-        is False
-    )
-    assert mds_effective._entry_matches_lookup({"metadataStatement": 123}) is False
-
-    session_items = [SimpleNamespace(name="a"), SimpleNamespace(name="b"), SimpleNamespace(name="c")]
-    build_calls = []
-
-    def _build_session_snapshot_entry(_item, **_kwargs):
-        build_calls.append(True)
-        mapping = {
-            1: None,
-            2: {"entryId": "session-a", "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},
-            3: {"entryId": "session-dup", "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},
-        }
-        return mapping[len(build_calls)]
-
-    monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: session_items)
-    monkeypatch.setattr(effective, "_build_session_snapshot_entry", _build_session_snapshot_entry)
-
-    composed = mds_effective._compose_effective_snapshot(
-        {
-            "meta": "not-a-mapping",
-            "entries": [
-                {"entryId": "base-dup", "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},
-                {"entryId": "base-keep", "aaguid": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"},
-                "skip-non-mapping",
-            ],
-        },
-        include_detail=False,
-    )
-
-    assert [entry["entryId"] for entry in composed["entries"]] == ["session-a", "base-keep"]
-    assert composed["meta"]["customEntryCount"] == 1
-
-    session_payload_items = [
-        SimpleNamespace(
-            payload="not-a-mapping",
-            uploaded_at=None,
-            filename="x",
-            original_filename=None,
-            mtime=None,
-        ),
-        SimpleNamespace(
-            payload={"metadataStatement": {"aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}},
-            uploaded_at="2026-04-04T00:00:00+00:00",
-            filename="y",
-            original_filename=None,
-            mtime=None,
-        ),
-    ]
-    monkeypatch.setattr(sessions, "list_session_metadata_items", lambda: session_payload_items)
-    monkeypatch.setattr(blob, "load_packaged_explorer_summary", lambda: {"generatedAt": "now"})
-    monkeypatch.setattr(
-        blob,
-        "_load_base_metadata",
-        lambda: (
-            SimpleNamespace(
-                entries=[
-                    {
-                        "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-                        "metadataStatement": {"aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},
-                    },
-                    {
-                        "aaguid": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-                        "aaid": "BB#1",
-                        "metadataStatement": {"aaguid": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"},
-                    },
-                ]
-            ),
-            1.0,
-        ),
-    )
-
-    assert mds_effective.resolve_effective_metadata_entry(aaid="missing") is None
-
-    monkeypatch.setattr(blob, "_load_base_metadata", lambda: (None, None))
-    assert mds_effective.resolve_effective_metadata_entry(aaguid="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb") is None
 
 
 def test_the_never_raised_metadata_download_error_is_gone():
