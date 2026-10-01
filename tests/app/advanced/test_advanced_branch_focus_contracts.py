@@ -4,7 +4,6 @@ import base64
 import types
 
 from server.app import config as config_module
-from server.app import visitor_session
 from server.app.config import relying_party
 from server.app.routes import advanced as advanced_module
 from tests.app.entry_app import entry_app
@@ -62,20 +61,6 @@ def _install_fake_auth_begin_server(monkeypatch, advanced_module, captured, conf
         "determine_rp_id",
         lambda value=None: value or "example.com"
     )
-
-
-def test_advanced_put_snapshot_route_returns_400_when_store_fails(monkeypatch, metadata_module, credential_artifacts_module):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-    monkeypatch.setattr(credential_artifacts_module, "store_credential_artifact", lambda *_args, **_kwargs: False)
-
-    with entry_app().test_client() as client:
-        response = client.put(
-            "/api/advanced/credential-artifacts/snapshot-fail/snapshot",
-            json={"snapshot": {"html": "<p>snapshot</p>"}},
-        )
-
-    assert response.status_code == 400
-    assert response.get_json() == {"error": "Unable to store artifact snapshot."}
 
 
 def test_advanced_authenticate_begin_returns_no_matching_credentials_for_invalid_record_ids(monkeypatch, advanced_parsing):

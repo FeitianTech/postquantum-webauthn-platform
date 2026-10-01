@@ -207,6 +207,24 @@ def test_put_snapshot_route_rejects_non_object_snapshot(monkeypatch):
     assert response.get_json() == {"error": "Snapshot must be an object."}
 
 
+def test_put_snapshot_route_returns_400_when_store_fails(monkeypatch, metadata_module, credential_artifacts_module):
+    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
+    monkeypatch.setattr(
+        credential_artifacts_module,
+        "store_credential_artifact",
+        lambda *_args, **_kwargs: False
+    )
+
+    with entry_app().test_client() as client:
+        response = client.put(
+            "/api/advanced/credential-artifacts/cred-4/snapshot",
+            json={"snapshot": {"html": "<p>snapshot</p>"}},
+        )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "Unable to store artifact snapshot."}
+
+
 def test_put_snapshot_route_stores_snapshot_using_merge(monkeypatch, metadata_module, credential_artifacts_module):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
 
