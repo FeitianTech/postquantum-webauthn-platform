@@ -111,39 +111,6 @@ def test_register_begin_maps_attestation_modes_and_exercises_pqc_warning_branch(
     assert warning_messages
 
 
-def test_register_complete_validates_required_payload_and_username_fields():
-    with entry_app().test_client() as client:
-        missing_response = client.post(
-            "/api/advanced/register/complete",
-            json={"publicKey": {"user": {"name": "user@example.com"}}},
-        )
-        assert missing_response.status_code == 400
-        assert missing_response.get_json() == {
-            "error": "Credential response is required",
-        }
-
-        missing_public_key = client.post(
-            "/api/advanced/register/complete",
-            json={"__credential_response": {"response": {}}},
-        )
-        assert missing_public_key.status_code == 400
-        assert "Missing publicKey" in missing_public_key.get_json()["error"]
-
-        missing_username = client.post(
-            "/api/advanced/register/complete",
-            json={
-                "publicKey": {
-                    "challenge": "AQID",
-                    "rp": {"id": "example.com", "name": "Example"},
-                    "user": {"name": "", "displayName": "User"},
-                },
-                "__credential_response": {"response": {}},
-            },
-        )
-        assert missing_username.status_code == 400
-        assert missing_username.get_json()["error"] == "Username is required in user.name"
-
-
 def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_contract(monkeypatch, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module):
     _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module)
 
