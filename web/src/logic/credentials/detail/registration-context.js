@@ -10,16 +10,14 @@ import {
     normalizeClientDataString,
 } from '../registration/data-utils.js';
 import {
-    pickFirstObject,
-    pickFirstString,
-} from './helpers.js';
-import {
     attestationObjectDecodedCandidates,
     attestationObjectStringCandidates,
     authenticatorDataHexCandidates,
     authenticatorDataStringCandidates,
+    pickFirstObject,
+    pickFirstString,
     resolveStoredRegistrationResponse,
-} from './registration-candidates.js';
+} from './registration-fields.js';
 
 export function buildRegistrationContext(cred, {
     snapshotState = null,

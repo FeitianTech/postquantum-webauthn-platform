@@ -15,7 +15,7 @@ import {
     describePublicKey,
     describeUserInfo,
 } from './sections.js';
-import {pickFirstString} from './helpers.js';
+import {pickFirstString} from './registration-fields.js';
 import {buildRegistrationContext} from './registration-context.js';
 import {
     readSnapshotResponse,
