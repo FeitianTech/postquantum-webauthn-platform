@@ -1,12 +1,8 @@
-import base64
 
 from server.app.config import relying_party
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from tests.app.entry_app import entry_app
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+from tests.app.security.ceremony_helpers import b64u
 
 
 def _sample_public_key_bytes() -> bytes:
@@ -25,9 +21,9 @@ def _sample_public_key_bytes() -> bytes:
 
 def _stored_credential_entry(credential_id: bytes) -> dict:
     return {
-        "credentialId": _b64url(credential_id),
-        "publicKey": _b64url(_sample_public_key_bytes()),
-        "aaguid": _b64url(bytes.fromhex("00112233445566778899aabbccddeeff")),
+        "credentialId": b64u(credential_id),
+        "publicKey": b64u(_sample_public_key_bytes()),
+        "aaguid": b64u(bytes.fromhex("00112233445566778899aabbccddeeff")),
         "signCount": 3,
         "resident": True,
         "authenticatorAttachment": "platform",
@@ -133,11 +129,11 @@ def test_advanced_register_begin_accepts_base64url_wrapped_user_id_and_challenge
                 "publicKey": {
                     "rp": {"id": "example.com", "name": "Example"},
                     "user": {
-                        "id": {"$base64url": _b64url(user_id)},
+                        "id": {"$base64url": b64u(user_id)},
                         "name": "user@example.com",
                         "displayName": "User",
                     },
-                    "challenge": {"$base64url": _b64url(challenge)},
+                    "challenge": {"$base64url": b64u(challenge)},
                     "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
                 }
             },
@@ -195,8 +191,8 @@ def test_advanced_authenticate_begin_accepts_storedcredentials_without_dunder(mo
     challenge = b"frontend-auth-challenge"
 
     wrapped_entry = {
-        "credentialId": {"$base64url": _b64url(credential_id)},
-        "publicKey": {"$base64url": _b64url(_sample_public_key_bytes())},
+        "credentialId": {"$base64url": b64u(credential_id)},
+        "publicKey": {"$base64url": b64u(_sample_public_key_bytes())},
         "aaguid": {"$hex": "00112233445566778899aabbccddeeff"},
         "resident": True,
         "authenticatorAttachment": "platform",
@@ -207,7 +203,7 @@ def test_advanced_authenticate_begin_accepts_storedcredentials_without_dunder(mo
         response = client.post(
             "/api/advanced/authenticate/begin",
             json={
-                "publicKey": {"challenge": {"$base64url": _b64url(challenge)}},
+                "publicKey": {"challenge": {"$base64url": b64u(challenge)}},
                 "storedCredentials": [wrapped_entry],
             },
         )
@@ -250,7 +246,7 @@ def test_advanced_authenticate_begin_accepts_credentials_fallback_field(monkeypa
 
 def test_advanced_authenticate_complete_accepts_storedcredentials_without_dunder(monkeypatch):
     credential_id = b"adv-complete-storedCredentials"
-    encoded_credential_id = _b64url(credential_id)
+    encoded_credential_id = b64u(credential_id)
 
     class _FakeServer:
         allowed_algorithms = []
@@ -285,7 +281,7 @@ def test_advanced_authenticate_complete_accepts_storedcredentials_without_dunder
 
 def test_advanced_authenticate_complete_accepts_credentials_fallback_field(monkeypatch):
     credential_id = b"adv-complete-credentials-field"
-    encoded_credential_id = _b64url(credential_id)
+    encoded_credential_id = b64u(credential_id)
 
     class _FakeServer:
         allowed_algorithms = []

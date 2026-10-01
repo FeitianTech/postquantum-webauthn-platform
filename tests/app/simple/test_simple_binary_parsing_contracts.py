@@ -4,10 +4,7 @@ import pytest
 
 from server.app.routes.simple import parsing as simple_parsing
 from server.app.webauthn import client_binary
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+from tests.app.security.ceremony_helpers import b64u
 
 
 def _sample_public_key_bytes() -> bytes:
@@ -30,9 +27,9 @@ def _valid_credential_entry(**overrides):
         "userName": "user@example.com",
         "displayName": "User",
         "type": "simple",
-        "aaguid": _b64url(bytes.fromhex("00112233445566778899aabbccddeeff")),
-        "credentialId": _b64url(b"simple-credential-1"),
-        "publicKey": _b64url(_sample_public_key_bytes()),
+        "aaguid": b64u(bytes.fromhex("00112233445566778899aabbccddeeff")),
+        "credentialId": b64u(b"simple-credential-1"),
+        "publicKey": b64u(_sample_public_key_bytes()),
         "signCount": 7,
         "algorithm": -7,
     }
@@ -43,7 +40,7 @@ def _valid_credential_entry(**overrides):
 def test_decode_binary_value_decodes_base64url_string():
     raw = b"\x00\x01\xfe\xff"
 
-    assert client_binary.read(_b64url(raw), iterables=True) == raw
+    assert client_binary.read(b64u(raw), iterables=True) == raw
 
 
 def test_decode_binary_value_decodes_standard_base64_string():
@@ -98,9 +95,9 @@ def test_parse_client_credentials_returns_empty_for_non_list_input():
 def test_parse_client_credentials_skips_entries_missing_required_fields():
     credentials, serialized = simple_parsing._parse_client_credentials(
         [
-            {"credentialId": _b64url(b"id-only"), "publicKey": _b64url(_sample_public_key_bytes())},
-            {"aaguid": _b64url(bytes(16)), "publicKey": _b64url(_sample_public_key_bytes())},
-            {"aaguid": _b64url(bytes(16)), "credentialId": _b64url(b"id-only")},
+            {"credentialId": b64u(b"id-only"), "publicKey": b64u(_sample_public_key_bytes())},
+            {"aaguid": b64u(bytes(16)), "publicKey": b64u(_sample_public_key_bytes())},
+            {"aaguid": b64u(bytes(16)), "credentialId": b64u(b"id-only")},
         ]
     )
 
@@ -119,8 +116,8 @@ def test_parse_client_credentials_parses_aliases_and_serializes_metadata_fields(
         "displayName": "Alias User",
         "type": "simple",
         "aaguidBase64": base64.b64encode(aaguid_bytes).decode("ascii"),
-        "credentialID": _b64url(credential_id),
-        "publicKeyBase64Url": _b64url(public_key_bytes),
+        "credentialID": b64u(credential_id),
+        "publicKeyBase64Url": b64u(public_key_bytes),
         "signCount": 11,
         "publicKeyAlgorithm": -8,
     }
@@ -131,9 +128,9 @@ def test_parse_client_credentials_parses_aliases_and_serializes_metadata_fields(
     assert len(serialized) == 1
 
     payload = serialized[0]
-    assert payload["credentialId"] == _b64url(credential_id)
-    assert payload["aaguid"] == _b64url(aaguid_bytes)
-    assert payload["publicKey"] == _b64url(public_key_bytes)
+    assert payload["credentialId"] == b64u(credential_id)
+    assert payload["aaguid"] == b64u(aaguid_bytes)
+    assert payload["publicKey"] == b64u(public_key_bytes)
     assert payload["signCount"] == 11
     assert payload["algorithm"] == -8
     assert payload["publicKeyAlgorithm"] == -8
@@ -145,11 +142,11 @@ def test_parse_client_credentials_parses_aliases_and_serializes_metadata_fields(
 
 def test_parse_client_credentials_skips_malformed_entries_and_keeps_valid_entries():
     malformed = _valid_credential_entry(credentialId="g$")
-    valid = _valid_credential_entry(credentialId=_b64url(b"good-credential"), signCount=4)
+    valid = _valid_credential_entry(credentialId=b64u(b"good-credential"), signCount=4)
 
     credentials, serialized = simple_parsing._parse_client_credentials([malformed, valid])
 
     assert len(credentials) == 1
     assert len(serialized) == 1
-    assert serialized[0]["credentialId"] == _b64url(b"good-credential")
+    assert serialized[0]["credentialId"] == b64u(b"good-credential")
     assert serialized[0]["signCount"] == 4

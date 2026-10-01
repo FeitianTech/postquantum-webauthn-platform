@@ -1,4 +1,3 @@
-import base64
 import time
 
 from server.app.config import relying_party
@@ -6,15 +5,12 @@ from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.routes.simple import parsing as simple_parsing
 from tests.app.entry_app import entry_app
-
-
-def _encode_base64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+from tests.app.security.ceremony_helpers import b64u
 
 
 def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch):
     credential_id = b"simple-credential-id"
-    encoded_id = _encode_base64url(credential_id)
+    encoded_id = b64u(credential_id)
 
     class _FailingServer:
         def authenticate_complete(self, *_args, **_kwargs):
@@ -46,7 +42,7 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch)
 
 def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatch):
     credential_id = b"advanced-credential-id"
-    encoded_id = _encode_base64url(credential_id)
+    encoded_id = b64u(credential_id)
 
     class _FailingServer:
         allowed_algorithms = []

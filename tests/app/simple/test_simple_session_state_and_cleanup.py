@@ -1,14 +1,10 @@
-import base64
 import time
 
 from server.app.config import relying_party
 from server.app.routes.simple import parsing as simple_parsing
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.entry_app import entry_app
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+from tests.app.security.ceremony_helpers import b64u
 
 
 class _MatchedCredential:
@@ -32,8 +28,8 @@ def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatc
             json={
                 "__session_state": "not-a-mapping",
                 "response": {
-                    "attestationObject": _b64url(b"attestation"),
-                    "clientDataJSON": _b64url(b"client"),
+                    "attestationObject": b64u(b"attestation"),
+                    "clientDataJSON": b64u(b"client"),
                 },
             },
         )
@@ -83,12 +79,12 @@ def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypa
     monkeypatch.setattr(
         simple_parsing,
         "_parse_client_credentials",
-        lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}])
+        lambda _raw: ([object()], [{"credentialId": b64u(credential_id)}])
     )
 
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
-            session_state["simple_credentials"] = [{"credentialId": _b64url(credential_id)}]
+            session_state["simple_credentials"] = [{"credentialId": b64u(credential_id)}]
             session_state["state"] = {"challenge": "auth-state", "issued_at": time.time()}
             session_state["authenticate_rp_id"] = "example.com"
             session_state["simple_credentials_email"] = "user@example.com"
@@ -96,7 +92,7 @@ def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypa
         response = client.post(
             "/api/authenticate/complete?email=user@example.com",
             json={
-                "rawId": _b64url(credential_id),
+                "rawId": b64u(credential_id),
                 "response": {"authenticatorData": "not-valid-base64url"},
             },
         )

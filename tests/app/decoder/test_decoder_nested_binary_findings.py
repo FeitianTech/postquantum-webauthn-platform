@@ -9,7 +9,6 @@ field no longer turns the whole decode into a 422.
 """
 from __future__ import annotations
 
-import base64
 import json
 
 import cbor2
@@ -20,6 +19,7 @@ from tests.app.decoder.real_vectors import (
     WEBAUTHN_L3_PACKED_SELF_ATTESTATION_OBJECT,
     WEBAUTHN_L3_PACKED_SELF_CLIENT_DATA_JSON,
 )
+from tests.app.security.ceremony_helpers import b64u
 
 _ATTESTATION = WEBAUTHN_L3_PACKED_SELF_ATTESTATION_OBJECT
 _CLIENT_DATA = WEBAUTHN_L3_PACKED_SELF_CLIENT_DATA_JSON
@@ -27,16 +27,12 @@ _CLIENT_DATA = WEBAUTHN_L3_PACKED_SELF_CLIENT_DATA_JSON
 _UNSORTED_KEY = bytes.fromhex("a5" "0326" "0102" "2001" "215820") + bytes(32) + bytes.fromhex("225820") + bytes(32)
 
 
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
-
-
 def _credential(**response: bytes) -> dict:
     payload = {
         "id": "AQID",
         "rawId": "AQID",
         "type": "public-key",
-        "response": {name: _b64url(value) for name, value in response.items()},
+        "response": {name: b64u(value) for name, value in response.items()},
     }
     return decode_payload_text(json.dumps(payload))
 

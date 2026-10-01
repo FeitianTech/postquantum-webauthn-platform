@@ -1,13 +1,9 @@
-import base64
 
 import pytest
 
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.webauthn import client_binary, cose_algorithms
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+from tests.app.security.ceremony_helpers import b64u
 
 
 def _sample_public_key_bytes() -> bytes:
@@ -26,9 +22,9 @@ def _sample_public_key_bytes() -> bytes:
 
 def _valid_credential_entry(*, resident=None, properties=None, algorithm=None):
     entry = {
-        "credentialId": _b64url(b"credential-id-1"),
-        "publicKey": _b64url(_sample_public_key_bytes()),
-        "aaguid": _b64url(bytes.fromhex("00112233445566778899aabbccddeeff")),
+        "credentialId": b64u(b"credential-id-1"),
+        "publicKey": b64u(_sample_public_key_bytes()),
+        "aaguid": b64u(bytes.fromhex("00112233445566778899aabbccddeeff")),
         "signCount": 7,
     }
     if resident is not None:
@@ -42,7 +38,7 @@ def _valid_credential_entry(*, resident=None, properties=None, algorithm=None):
 
 def test_decode_client_binary_accepts_base64url_mapping_key():
     raw = b"\x00\x01\x02\xfa"
-    decoded = client_binary.read({"$base64url": _b64url(raw)}, wrappers=True)
+    decoded = client_binary.read({"$base64url": b64u(raw)}, wrappers=True)
 
     assert decoded == raw
 
@@ -76,8 +72,8 @@ def test_decode_client_binary_rejects_unsupported_input_type():
 def test_parse_client_supplied_credentials_skips_entries_missing_required_fields():
     records, serialized = advanced_parsing._parse_client_supplied_credentials(
         [
-            {"publicKey": _b64url(_sample_public_key_bytes())},
-            {"credentialId": _b64url(b"id-only")},
+            {"publicKey": b64u(_sample_public_key_bytes())},
+            {"credentialId": b64u(b"id-only")},
         ]
     )
 
@@ -88,7 +84,7 @@ def test_parse_client_supplied_credentials_skips_entries_missing_required_fields
 def test_parse_client_supplied_credentials_skips_malformed_entries_and_keeps_valid_ones():
     malformed = {
         "credentialId": "g$",
-        "publicKey": _b64url(_sample_public_key_bytes()),
+        "publicKey": b64u(_sample_public_key_bytes()),
     }
     valid = _valid_credential_entry(resident=True)
 
@@ -129,7 +125,7 @@ def test_parse_client_supplied_credentials_defaults_missing_aaguid_to_zero_bytes
 
     assert len(records) == 1
     assert len(records[0]["data"].aaguid) == 16
-    assert serialized[0]["aaguid"] == _b64url(bytes(16))
+    assert serialized[0]["aaguid"] == b64u(bytes(16))
 
 
 def test_parse_client_supplied_credentials_coerces_named_algorithm_identifier():
@@ -168,7 +164,7 @@ def test_parse_client_supplied_credentials_derives_resident_from_client_extensio
     rk_mapping_entry["clientExtensionOutputs"] = {"credProps": {"rk": True}}
 
     rk_boolean_entry = _valid_credential_entry()
-    rk_boolean_entry["credentialId"] = _b64url(b"credential-id-2")
+    rk_boolean_entry["credentialId"] = b64u(b"credential-id-2")
     rk_boolean_entry["clientExtensionOutputs"] = {"credProps": False}
 
     records, serialized = advanced_parsing._parse_client_supplied_credentials(

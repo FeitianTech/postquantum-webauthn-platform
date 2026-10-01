@@ -5,16 +5,13 @@ import pytest
 from server.app.decoder.decode import pem as decode_pem
 from tests.app.entry_app import entry_app
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
+from tests.app.security.ceremony_helpers import b64u
 
 
 def _pem_block(der_bytes: bytes) -> str:
     body = base64.b64encode(der_bytes).decode("ascii")
     wrapped = "\n".join(body[i : i + 64] for i in range(0, len(body), 64))
     return f"-----BEGIN CERTIFICATE-----\n{wrapped}\n-----END CERTIFICATE-----"
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
 def test_decode_pem_certificates_ignores_invalid_blocks_and_keeps_valid_certificates():
@@ -48,7 +45,7 @@ def test_try_decode_certificate_bytes_returns_none_for_malformed_der_payload():
 
 
 def test_codec_api_decodes_der_certificate_payload_successfully():
-    payload = _b64url(_GSR2_DER)
+    payload = b64u(_GSR2_DER)
 
     with entry_app().test_client() as client:
         response = client.post(

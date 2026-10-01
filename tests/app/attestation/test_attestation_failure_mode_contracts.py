@@ -1,4 +1,3 @@
-import base64
 import hashlib
 
 from fido2.attestation import (
@@ -13,10 +12,7 @@ from server.app.mds import verifier as mds_verifier
 from server.app.webauthn.attestation import checks as attestation_checks
 from server.app.webauthn.attestation import evaluation
 from tests.app.entry_app import entry_app
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+from tests.app.security.ceremony_helpers import b64u
 
 
 class _FakeCredentialData:
@@ -100,7 +96,7 @@ def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_f
 
     result = _perform_checks(
         response={"raw": "value"},
-        state={"challenge": _b64url(challenge), "user_verification": "required"},
+        state={"challenge": b64u(challenge), "user_verification": "required"},
         public_key_options={"pubKeyCredParams": [{"alg": -7}]},
         rp_id=rp_id,
     )
@@ -141,7 +137,7 @@ def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(mon
 
     result = _perform_checks(
         response={"raw": "value"},
-        state={"challenge": _b64url(challenge), "user_verification": "required"},
+        state={"challenge": b64u(challenge), "user_verification": "required"},
         public_key_options={"pubKeyCredParams": [{"alg": -7}]},
         rp_id=rp_id,
     )
@@ -186,7 +182,7 @@ def test_perform_attestation_checks_captures_verifier_evaluation_exception(monke
 
     result = _perform_checks(
         response={"raw": "value"},
-        state={"challenge": _b64url(challenge), "user_verification": "required"},
+        state={"challenge": b64u(challenge), "user_verification": "required"},
         public_key_options={"pubKeyCredParams": [{"alg": -7}]},
         rp_id=rp_id,
     )
@@ -258,7 +254,7 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
     with entry_app().app_context():
         result = _perform_checks(
             response={"raw": "value"},
-            state={"challenge": _b64url(challenge), "user_verification": "required"},
+            state={"challenge": b64u(challenge), "user_verification": "required"},
             public_key_options={"pubKeyCredParams": [{"alg": -7}]},
             rp_id=rp_id,
         )
@@ -301,7 +297,7 @@ def test_perform_attestation_checks_reports_an_mldsa_signature_that_does_not_ver
 
     result = _perform_checks(
         response={"raw": "value"},
-        state={"challenge": _b64url(challenge), "user_verification": "required"},
+        state={"challenge": b64u(challenge), "user_verification": "required"},
         public_key_options={"pubKeyCredParams": [{"alg": -7}]},
         rp_id=rp_id,
     )

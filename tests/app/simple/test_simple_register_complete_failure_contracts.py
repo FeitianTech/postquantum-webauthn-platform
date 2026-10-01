@@ -1,21 +1,17 @@
-import base64
 import time
 
 from server.app.config import relying_party
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.entry_app import entry_app
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+from tests.app.security.ceremony_helpers import b64u
 
 
 def _register_complete_payload(*, state=None):
     payload = {
-        "rawId": _b64url(b"simple-register-failure"),
+        "rawId": b64u(b"simple-register-failure"),
         "response": {
-            "attestationObject": _b64url(b"attestation"),
-            "clientDataJSON": _b64url(b"client-data"),
+            "attestationObject": b64u(b"attestation"),
+            "clientDataJSON": b64u(b"client-data"),
         },
     }
     if state is not None:

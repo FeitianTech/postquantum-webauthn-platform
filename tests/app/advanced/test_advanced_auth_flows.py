@@ -1,13 +1,9 @@
-import base64
 
 from server.app.config import relying_party
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import parsing as advanced_parsing
 from tests.app.entry_app import entry_app
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+from tests.app.security.ceremony_helpers import b64u
 
 
 def test_advanced_register_complete_rejects_attachment_mismatch():
@@ -32,7 +28,7 @@ def test_advanced_register_complete_rejects_attachment_mismatch():
 
 def test_advanced_authenticate_complete_rejects_non_resident_in_resident_mode(monkeypatch):
     credential_id = b"advanced-resident-required"
-    encoded_id = _b64url(credential_id)
+    encoded_id = b64u(credential_id)
 
     monkeypatch.setattr(
         advanced_parsing,
@@ -69,7 +65,7 @@ def test_advanced_authenticate_complete_rejects_non_resident_in_resident_mode(mo
 
 def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch):
     credential_id = b"advanced-missing-state"
-    encoded_id = _b64url(credential_id)
+    encoded_id = b64u(credential_id)
 
     monkeypatch.setattr(
         advanced_parsing,
@@ -115,7 +111,7 @@ def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verific
     """A custom/unknown declared algorithm must never yield status OK."""
 
     credential_id = b"advanced-custom-alg"
-    encoded_id = _b64url(credential_id)
+    encoded_id = b64u(credential_id)
     custom_alg = -99999
 
     class _FailingServer:
@@ -175,7 +171,7 @@ def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verific
 
 def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_requested_algorithm_match(monkeypatch):
     credential_id = b"advanced-custom-alg-mismatch"
-    encoded_id = _b64url(credential_id)
+    encoded_id = b64u(credential_id)
     stored_custom_alg = -99999
     requested_alg = -99998
 
@@ -232,7 +228,7 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_request
 
 def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_signature_errors(monkeypatch):
     credential_id = b"advanced-custom-alg-non-signature"
-    encoded_id = _b64url(credential_id)
+    encoded_id = b64u(credential_id)
     custom_alg = -99999
 
     class _FailingServer:

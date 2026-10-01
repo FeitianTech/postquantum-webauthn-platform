@@ -8,14 +8,11 @@ from server.app.decoder.encode import binary_decode as encode_binary_decode
 from server.app.decoder.encode import ctap_fields as encode_ctap_fields
 from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
 from server.app.decoder.encode import text as encode_text
+from tests.app.security.ceremony_helpers import b64u
 
 
 def _pad_base64(value: str) -> str:
     return value + "=" * (-len(value) % 4)
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
 def test_encode_payload_text_rejects_empty_input():
@@ -58,7 +55,7 @@ def test_encode_pem_normalizes_label_and_wraps_64_columns():
 def test_encode_der_extracts_nested_binary_payload():
     payload_bytes = b"\x01\x02\x03\x04\x05"
     encoded = encode_text.encode_payload_text(
-        json.dumps({"binary": {"base64url": _b64url(payload_bytes)}}),
+        json.dumps({"binary": {"base64url": b64u(payload_bytes)}}),
         "der",
     )
 
@@ -81,7 +78,7 @@ def test_encode_attestation_statement_converts_sig_and_x5c_entries():
             "sig": {"hex": "aabbcc"},
             "x5c": [
                 {"pem": first_cert_pem},
-                {"base64url": _b64url(b"second-cert")},
+                {"base64url": b64u(b"second-cert")},
             ],
             "alg": -7,
             "customBinary": {"base64": base64.b64encode(b"blob-data").decode("ascii")},
@@ -104,7 +101,7 @@ def test_encode_ctap_webauthn_rejects_negative_numeric_field_ids():
         encode_handlers_cbor._encode_ctap_webauthn_value(
             {
                 -1: "AA",
-                2: _b64url(b"\x00" * 32),
+                2: b64u(b"\x00" * 32),
             }
         )
 

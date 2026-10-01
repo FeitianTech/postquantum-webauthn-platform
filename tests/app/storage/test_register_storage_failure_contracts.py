@@ -1,4 +1,3 @@
-import base64
 import hashlib
 import time
 
@@ -10,10 +9,7 @@ from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
 from tests.app.entry_app import entry_app
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+from tests.app.security.ceremony_helpers import b64u
 
 
 class _FakeCredentialData:
@@ -101,10 +97,10 @@ def test_simple_register_complete_returns_500_when_saving_fails(monkeypatch):
         response = client.post(
             "/api/register/complete?email=user@example.com",
             json={
-                "rawId": _b64url(credential_id),
+                "rawId": b64u(credential_id),
                 "response": {
-                    "attestationObject": _b64url(b"attestation"),
-                    "clientDataJSON": _b64url(b"client-data"),
+                    "attestationObject": b64u(b"attestation"),
+                    "clientDataJSON": b64u(b"client-data"),
                 },
             },
         )
@@ -154,11 +150,11 @@ def _advanced_register_payload(rp_id: str, credential_id: bytes):
             "user": {"name": "user@example.com", "displayName": "User"},
         },
         "__credential_response": {
-            "rawId": _b64url(credential_id),
+            "rawId": b64u(credential_id),
             "authenticatorAttachment": "platform",
             "response": {
-                "attestationObject": _b64url(b"attestation"),
-                "clientDataJSON": _b64url(b"client-data"),
+                "attestationObject": b64u(b"attestation"),
+                "clientDataJSON": b64u(b"client-data"),
             },
         },
     }

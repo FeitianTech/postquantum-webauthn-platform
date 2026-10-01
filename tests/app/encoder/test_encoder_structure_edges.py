@@ -5,10 +5,7 @@ import pytest
 from server.app.decoder.encode import binary_decode as encode_binary_decode
 from server.app.decoder.encode import ctap_fields as encode_ctap_fields
 from server.app.decoder.encode import ctap_view_reader
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+from tests.app.security.ceremony_helpers import b64u
 
 
 def test_a_ctap_view_holds_one_message():
@@ -26,13 +23,13 @@ def test_ctap_key_match_and_value_lookup_handle_labeled_variants_case_insensitiv
     assert encode_ctap_fields._ctap_key_matches("2 (clientDataHash)", {"clientdatahash"}) is True
     assert encode_ctap_fields._ctap_key_matches("3", {"2"}) is False
 
-    structure = {"1 (rpId)": "example.com", "2 (clientDataHash)": _b64url(b"\x01" * 32)}
+    structure = {"1 (rpId)": "example.com", "2 (clientDataHash)": b64u(b"\x01" * 32)}
     assert encode_ctap_fields._get_ctap_field_value(structure, "rpId", 1) == "example.com"
-    assert encode_ctap_fields._get_ctap_field_value(structure, "clientDataHash", 2) == _b64url(b"\x01" * 32)
+    assert encode_ctap_fields._get_ctap_field_value(structure, "clientDataHash", 2) == b64u(b"\x01" * 32)
 
 
 def test_encode_attestation_statement_and_certificate_bytes_error_paths():
-    assert encode_ctap_fields._encode_attestation_statement(_b64url(b"sig")) == b"sig"
+    assert encode_ctap_fields._encode_attestation_statement(b64u(b"sig")) == b"sig"
 
     with pytest.raises(ValueError, match="attStmt.x5c must be an array"):
         encode_ctap_fields._encode_attestation_statement({"x5c": 123})
@@ -44,7 +41,7 @@ def test_encode_attestation_statement_and_certificate_bytes_error_paths():
 def test_encode_ctap_user_and_descriptor_handle_binary_extras_and_validation_errors():
     user = encode_ctap_fields._encode_ctap_user(
         {
-            "id": _b64url(b"user-id"),
+            "id": b64u(b"user-id"),
             "name": "alice",
             "displayName": "Alice",
             "icon": "https://example.com/icon.png",
@@ -61,7 +58,7 @@ def test_encode_ctap_user_and_descriptor_handle_binary_extras_and_validation_err
     descriptor = encode_ctap_fields._encode_credential_descriptor(
         {
             "type": "public-key",
-            "id": _b64url(b"cred-id"),
+            "id": b64u(b"cred-id"),
             "transports": ["usb"],
             "extra": {"hex": "414243"},
         }
@@ -92,6 +89,6 @@ def test_numeric_and_boolean_coercion_and_require_bytes_guards():
 
 def test_maybe_decode_bytes_supports_mapping_and_sequence_forms():
     assert encode_binary_decode._maybe_decode_bytes({"bytes": [1, 2, 3]}) == b"\x01\x02\x03"
-    assert encode_binary_decode._maybe_decode_bytes({"base64url": _b64url(b"xyz")}) == b"xyz"
+    assert encode_binary_decode._maybe_decode_bytes({"base64url": b64u(b"xyz")}) == b"xyz"
     assert encode_binary_decode._maybe_decode_bytes("AA:BB") == b"\xaa\xbb"
     assert encode_binary_decode._maybe_decode_bytes([65, 66, 67]) == b"ABC"

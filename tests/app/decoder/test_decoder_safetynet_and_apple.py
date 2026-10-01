@@ -29,10 +29,7 @@ from tests.app.decoder.real_vectors import (
     APPLE_CLIENT_DATA_HASH,
     PACKED_ATT_STMT,
 )
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+from tests.app.security.ceremony_helpers import b64u
 
 
 def test_the_real_safetynet_response_is_decoded_and_marked_not_verified():
@@ -57,8 +54,8 @@ def test_the_real_safetynet_response_is_decoded_and_marked_not_verified():
 
 
 def test_a_response_that_is_not_a_jws_says_where():
-    header = _b64url(json.dumps({"alg": "RS256", "x5c": ["not base64 der!", base64.b64encode(b"junk").decode()]}).encode())
-    payload = _b64url(b"{not json")
+    header = b64u(json.dumps({"alg": "RS256", "x5c": ["not base64 der!", base64.b64encode(b"junk").decode()]}).encode())
+    payload = b64u(b"{not json")
 
     assert safetynet.read_response(b"\xff\xfe")["error"] == "response is not UTF-8 (at byte 0)"
     assert safetynet.read_response(b"a.b")["error"] == (
@@ -71,7 +68,7 @@ def test_a_response_that_is_not_a_jws_says_where():
     assert view["payload"]["error"] == "the payload is not JSON: Expecting property name enclosed in double quotes at character 1"
     assert view["signature"] == {"error": "the signature part is not base64url"}
     assert safetynet.read_response("!!.e30.AA")["header"] == {"error": "the header part is not base64url"}
-    assert safetynet.read_response(f"{_b64url(b'\xff')}.e30.AA")["header"] == {"error": "the header is not UTF-8 (at byte 0)"}
+    assert safetynet.read_response(f"{b64u(b'\xff')}.e30.AA")["header"] == {"error": "the header is not UTF-8 (at byte 0)"}
 
 
 def test_the_real_apple_nonce_is_decoded_not_compared():
@@ -122,7 +119,7 @@ def test_certificates_without_the_nonce_or_that_are_not_certificates():
 def _safetynet_attestation_object(header: bytes, payload: bytes) -> bytes:
     from fido2 import cbor
 
-    response = f"{_b64url(header)}.{_b64url(payload)}.{_b64url(b'signature')}".encode()
+    response = f"{b64u(header)}.{b64u(payload)}.{b64u(b'signature')}".encode()
     auth_data = hashlib.sha256(b"example.com").digest() + b"\x01" + bytes(4)
     return cbor.encode(
         {"fmt": "android-safetynet", "attStmt": {"ver": "14574037", "response": response}, "authData": auth_data}
@@ -147,7 +144,7 @@ def test_a_repeated_key_in_the_jws_header_or_payload_is_reported_at_the_response
 
 
 def test_a_jws_header_holding_nan_is_not_json():
-    view = safetynet.read_response(f"{_b64url(b'{\"alg\": NaN}')}.e30.AA")
+    view = safetynet.read_response(f"{b64u(b'{\"alg\": NaN}')}.e30.AA")
 
     assert view["header"] == {
         "error": "the header is not JSON: NaN is not JSON: RFC 8259 has no NaN or Infinity (at byte 8)",

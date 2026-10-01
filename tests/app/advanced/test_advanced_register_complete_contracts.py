@@ -1,4 +1,3 @@
-import base64
 import hashlib
 
 from server.app import visitor_session
@@ -9,6 +8,7 @@ from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
 from tests.app.entry_app import entry_app
+from tests.app.security.ceremony_helpers import b64u
 
 
 def _minimal_register_complete_payload(*, include_public_key: bool = True):
@@ -24,10 +24,6 @@ def _minimal_register_complete_payload(*, include_public_key: bool = True):
             "user": {"name": "user@example.com", "displayName": "User"},
         }
     return payload
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
 class _FakeCredentialData:
@@ -231,11 +227,11 @@ def test_advanced_register_complete_success_contract_propagates_warnings_and_rec
         payload = _minimal_register_complete_payload()
         payload["publicKey"]["rp"] = {"id": rp_id, "name": "Example RP"}
         payload["__credential_response"] = {
-            "rawId": _b64url(credential_id),
+            "rawId": b64u(credential_id),
             "authenticatorAttachment": "platform",
             "response": {
-                "attestationObject": _b64url(b"attestation"),
-                "clientDataJSON": _b64url(b"client-data"),
+                "attestationObject": b64u(b"attestation"),
+                "clientDataJSON": b64u(b"client-data"),
             },
         }
 

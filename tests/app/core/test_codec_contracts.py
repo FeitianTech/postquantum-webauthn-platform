@@ -11,14 +11,11 @@ from server.app.decoder.encode import handlers_basic as encode_handlers_basic
 from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
 from server.app.decoder.encode import text as encode_text
 from tests.app.entry_app import entry_app
+from tests.app.security.ceremony_helpers import b64u
 
 
 def _pad_base64(value: str) -> str:
     return value + "=" * (-len(value) % 4)
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
 def _build_attestation_object(*, rp_id: str = "example.com", counter: int = 1, credential_id: bytes = b"codec-cred"):
@@ -183,15 +180,15 @@ def test_decode_public_key_credential_preserves_key_fields_and_extensions():
     ).encode("utf-8")
 
     credential = {
-        "id": _b64url(raw_id),
-        "rawId": _b64url(raw_id),
+        "id": b64u(raw_id),
+        "rawId": b64u(raw_id),
         "type": "public-key",
         "authenticatorAttachment": "platform",
         "transports": ["internal", "hybrid"],
         "clientExtensionResults": {"credProps": {"rk": True}},
         "response": {
-            "attestationObject": _b64url(bytes(attestation_object)),
-            "clientDataJSON": _b64url(client_data_json),
+            "attestationObject": b64u(bytes(attestation_object)),
+            "clientDataJSON": b64u(client_data_json),
         },
     }
 
@@ -222,7 +219,7 @@ def test_encode_payload_text_cbor_is_canonical_for_equivalent_key_orderings():
 
 def test_codec_api_decodes_attestation_object_contract():
     attestation_object = _build_attestation_object(counter=9, credential_id=b"codec-api-attestation")
-    payload = _b64url(bytes(attestation_object))
+    payload = b64u(bytes(attestation_object))
 
     with entry_app().test_client() as client:
         response = client.post(
@@ -300,11 +297,11 @@ def test_encode_ctap_webauthn_rejects_duplicate_fields_after_key_normalization()
     with pytest.raises(ValueError, match=r"Duplicate field 0x01"):
         encode_handlers_cbor._encode_ctap_webauthn_value(
             {
-                "1 (clientDataHash)": _b64url(b"\x00" * 32),
-                "01": _b64url(b"\x11" * 32),
+                "1 (clientDataHash)": b64u(b"\x00" * 32),
+                "01": b64u(b"\x11" * 32),
                 "2": {"id": "example.com", "name": "Example"},
                 "3": {
-                    "id": _b64url(b"user-id"),
+                    "id": b64u(b"user-id"),
                     "name": "user@example.com",
                     "displayName": "User",
                 },
@@ -317,7 +314,7 @@ def test_encode_ctap_webauthn_preserves_unknown_extra_numeric_fields():
     result = encode_handlers_cbor._encode_ctap_webauthn_value(
         {
             "1": "example.com",
-            "2": _b64url(b"\x22" * 32),
+            "2": b64u(b"\x22" * 32),
             "42": "debug-metadata",
         }
     )
@@ -373,7 +370,7 @@ def test_codec_api_encode_pem_binary_contract():
         "format": "pem",
         "payload": json.dumps(
             {
-                "value": {"base64url": _b64url(payload_bytes)},
+                "value": {"base64url": b64u(payload_bytes)},
                 "pemLabel": "demo cert",
             }
         ),
@@ -399,7 +396,7 @@ def test_codec_api_encode_der_from_nested_binary_payload():
     request_payload = {
         "mode": "encode",
         "format": "der",
-        "payload": json.dumps({"binary": {"base64url": _b64url(payload_bytes)}}),
+        "payload": json.dumps({"binary": {"base64url": b64u(payload_bytes)}}),
     }
 
     with entry_app().test_client() as client:

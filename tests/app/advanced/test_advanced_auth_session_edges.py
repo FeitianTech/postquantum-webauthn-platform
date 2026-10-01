@@ -1,14 +1,10 @@
-import base64
 
 from server.app.config import relying_party
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.webauthn import assertion_hash
 from tests.app.entry_app import entry_app
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+from tests.app.security.ceremony_helpers import b64u
 
 
 class _AuthResult:
@@ -18,7 +14,7 @@ class _AuthResult:
 
 def test_advanced_authenticate_complete_without_session_state_returns_400(monkeypatch):
     credential_id = b"advanced-invalid-fallback"
-    encoded_id = _b64url(credential_id)
+    encoded_id = b64u(credential_id)
 
     monkeypatch.setattr(
         advanced_parsing,
@@ -132,7 +128,7 @@ def test_advanced_authenticate_complete_rejects_attachment_not_allowed_by_sessio
 
 def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeypatch):
     credential_id = b"advanced-hash-forward"
-    encoded_id = _b64url(credential_id)
+    encoded_id = b64u(credential_id)
     captured = {}
 
     class _FakeServer:
@@ -185,7 +181,7 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
 
 def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_invalid(monkeypatch):
     credential_id = b"advanced-hash-default"
-    encoded_id = _b64url(credential_id)
+    encoded_id = b64u(credential_id)
     captured = {}
 
     class _FakeServer:
@@ -238,7 +234,7 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
 
 def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authenticator_data(monkeypatch):
     credential_id = b"advanced-malformed-authdata"
-    encoded_id = _b64url(credential_id)
+    encoded_id = b64u(credential_id)
 
     class _FakeServer:
         allowed_algorithms = []

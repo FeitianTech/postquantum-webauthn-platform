@@ -1,4 +1,3 @@
-import base64
 import hashlib
 from datetime import datetime, timedelta, timezone
 
@@ -7,10 +6,7 @@ from fido2.webauthn import RegistrationResponse
 
 from server.app.webauthn.attestation import checks as attestation_checks
 from server.app.webauthn.attestation import trust as attestation_trust
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+from tests.app.security.ceremony_helpers import b64u
 
 
 class _FakeCredentialData:
@@ -117,7 +113,7 @@ def test_perform_attestation_checks_reports_core_validation_failures(monkeypatch
 
     result = attestation_checks.perform_attestation_checks(
         response={"raw": "value"},
-        state={"challenge": _b64url(expected_challenge), "user_verification": "required"},
+        state={"challenge": b64u(expected_challenge), "user_verification": "required"},
         public_key_options={"pubKeyCredParams": [{"alg": -257}]},
         auth_data=None,
         expected_origin="https://example.com",
@@ -163,7 +159,7 @@ def test_perform_attestation_checks_accepts_valid_none_attestation(monkeypatch):
 
     result = attestation_checks.perform_attestation_checks(
         response={"raw": "value"},
-        state={"challenge": _b64url(expected_challenge), "user_verification": "required"},
+        state={"challenge": b64u(expected_challenge), "user_verification": "required"},
         public_key_options={"pubKeyCredParams": [{"alg": -7}]},
         auth_data=None,
         expected_origin="https://example.com",

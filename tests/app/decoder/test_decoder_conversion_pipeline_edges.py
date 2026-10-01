@@ -7,10 +7,7 @@ import cbor2
 from server.app.decoder.decode import answer as decode_answer
 from server.app.decoder.decode import credential_json
 from server.app.decoder.decode import text as decode_text
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+from tests.app.security.ceremony_helpers import b64u
 
 
 def _build_attestation_and_auth_data() -> tuple[bytes, bytes]:
@@ -93,7 +90,7 @@ def test_convert_public_key_credential_and_attestation_object_data_paths():
 
     public_key_result = {
         "decoded": {
-            "id": _b64url(b"cred"),
+            "id": b64u(b"cred"),
             "type": "public-key",
             "response": {
                 "attestationObject": {
@@ -206,7 +203,7 @@ def test_prepare_decoder_response_and_detector_helpers():
     credential_candidate = {
         "id": "credential-id",
         "type": "public-key",
-        "response": {"clientDataJSON": _b64url(b"{}")},
+        "response": {"clientDataJSON": b64u(b"{}")},
     }
     assert credential_json.is_public_key_credential(credential_candidate) is True
     assert credential_json.is_public_key_credential({"response": {}}) is False
@@ -231,12 +228,12 @@ def test_decode_payload_text_json_public_key_credential_and_cbor_roundtrip():
     ).encode("utf-8")
 
     credential = {
-        "id": _b64url(b"cred-id"),
-        "rawId": _b64url(b"cred-id"),
+        "id": b64u(b"cred-id"),
+        "rawId": b64u(b"cred-id"),
         "type": "public-key",
         "response": {
-            "attestationObject": _b64url(attestation_bytes),
-            "clientDataJSON": _b64url(client_data_json),
+            "attestationObject": b64u(attestation_bytes),
+            "clientDataJSON": b64u(client_data_json),
         },
     }
 
@@ -249,7 +246,7 @@ def test_decode_payload_text_json_public_key_credential_and_cbor_roundtrip():
     }
 
     cbor_payload = cbor2.dumps({1: b"\x00" * 32, 2: "example.com"})
-    decoded_cbor = decode_text.decode_payload_text(_b64url(cbor_payload))
+    decoded_cbor = decode_text.decode_payload_text(b64u(cbor_payload))
     assert decoded_cbor["success"] is True
     assert decoded_cbor["type"].startswith("CBOR")
     assert "decodedValue" in decoded_cbor["data"]

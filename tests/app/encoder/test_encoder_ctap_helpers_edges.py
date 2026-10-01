@@ -6,28 +6,25 @@ from server.app.decoder.encode import binary_decode as encode_binary_decode
 from server.app.decoder.encode import ctap_encode as encode_ctap_encode
 from server.app.decoder.encode import ctap_fields as encode_ctap_fields
 from server.app.decoder.encode import ctap_view_reader
+from tests.app.security.ceremony_helpers import b64u
 
 
 def _b64(data: bytes) -> str:
     return base64.b64encode(data).decode("ascii")
 
 
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
-
-
 def test_encode_make_credential_request_full_structure():
     structure = {
-        "1 (clientDataHash)": _b64url(b"\x01" * 32),
+        "1 (clientDataHash)": b64u(b"\x01" * 32),
         "2 (rp)": {"id": "example.com", "name": "Example"},
         "3 (user)": {
-            "id": _b64url(b"user-id"),
+            "id": b64u(b"user-id"),
             "name": "alice",
             "displayName": "Alice",
             "icon": "https://example.com/icon.png",
         },
         "4 (pubKeyCredParams)": [{"alg": -7, "type": "public-key"}],
-        "5 (excludeList)": [{"type": "public-key", "id": _b64url(b"cred-1")}],
+        "5 (excludeList)": [{"type": "public-key", "id": b64u(b"cred-1")}],
         "6 (extensions)": {"credProps": True},
         "7 (options)": {"rk": True},
         "8 (pinUvAuthParam)": {"hex": "aabb"},
@@ -51,11 +48,11 @@ def test_encode_get_assertion_request_and_response_full_structures():
     request_mapping = encode_ctap_encode._encode_get_assertion_request(
         {
             "rpId": "example.com",
-            "clientDataHash": _b64url(b"\x02" * 32),
-            "allowList": [{"type": "public-key", "id": _b64url(b"cred")}],
+            "clientDataHash": b64u(b"\x02" * 32),
+            "allowList": [{"type": "public-key", "id": b64u(b"cred")}],
             "extensions": {"largeBlob": True},
             "options": {"uv": True},
-            "pinUvAuthParam": _b64url(b"\x03\x04"),
+            "pinUvAuthParam": b64u(b"\x03\x04"),
             "pinUvAuthProtocol": "1",
         }
     )
@@ -66,10 +63,10 @@ def test_encode_get_assertion_request_and_response_full_structures():
 
     response_mapping = encode_ctap_encode._encode_get_assertion_response(
         {
-            "credential": {"type": "public-key", "id": _b64url(b"cred-1")},
-            "authData": _b64url(b"\xaa" * 37),
-            "signature": _b64url(b"\xbb" * 64),
-            "user": {"id": _b64url(b"u"), "name": "alice", "displayName": "Alice", "icon": 42},
+            "credential": {"type": "public-key", "id": b64u(b"cred-1")},
+            "authData": b64u(b"\xaa" * 37),
+            "signature": b64u(b"\xbb" * 64),
+            "user": {"id": b64u(b"u"), "name": "alice", "displayName": "Alice", "icon": 42},
             "numberOfCredentials": "2",
             "userSelected": "true",
             "largeBlobKey": {"hex": "a1a2"},
@@ -87,14 +84,14 @@ def test_encode_make_credential_response_and_attestation_statement_edges():
     mapping = encode_ctap_encode._encode_make_credential_response(
         {
             "fmt": "packed",
-            "authData": _b64url(b"\x11" * 37),
+            "authData": b64u(b"\x11" * 37),
             "attStmt": {
-                "sig": _b64url(b"\x22\x23"),
+                "sig": b64u(b"\x22\x23"),
                 "x5c": [{"hex": "aabb"}],
                 "alg": -7,
             },
             "epAtt": False,
-            "largeBlobKey": _b64url(b"\x33"),
+            "largeBlobKey": b64u(b"\x33"),
             "unsignedExtensionOutputs": {"credProps": {"rk": True}},
         }
     )
@@ -104,7 +101,7 @@ def test_encode_make_credential_response_and_attestation_statement_edges():
     assert mapping[3]["sig"] == b"\x22\x23"
     assert mapping[3]["x5c"][0] == b"\xaa\xbb"
 
-    assert encode_ctap_fields._encode_attestation_statement(_b64url(b"\xaa")) == b"\xaa"
+    assert encode_ctap_fields._encode_attestation_statement(b64u(b"\xaa")) == b"\xaa"
 
     with pytest.raises(ValueError, match="must be an array"):
         encode_ctap_fields._encode_attestation_statement({"x5c": 123})
@@ -141,7 +138,7 @@ def test_binary_decoding_helpers_and_ctap_structure_detection():
     assert encode_binary_decode._maybe_decode_bytes("aabb") == b"\xaa\xbb"
     assert encode_binary_decode._maybe_decode_bytes("hello") is None
     assert encode_binary_decode._maybe_decode_bytes({"base64": _b64(b"abc")}) == b"abc"
-    assert encode_binary_decode._maybe_decode_bytes({"base64url": _b64url(b"xyz")}) == b"xyz"
+    assert encode_binary_decode._maybe_decode_bytes({"base64url": b64u(b"xyz")}) == b"xyz"
     assert encode_binary_decode._maybe_decode_bytes({"bytes": [1, 2, 3]}) == b"\x01\x02\x03"
     assert encode_binary_decode._maybe_decode_bytes({"pem": "-----BEGIN DATA-----\nYWJj\n-----END DATA-----"}) == b"abc"
     assert encode_binary_decode._maybe_decode_bytes([4, 5, 6]) == b"\x04\x05\x06"

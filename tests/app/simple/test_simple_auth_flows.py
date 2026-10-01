@@ -12,10 +12,7 @@ from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
 from tests.app.entry_app import entry_app
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+from tests.app.security.ceremony_helpers import b64u
 
 
 class _FakeCredentialData:
@@ -129,12 +126,12 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch):
     monkeypatch.setattr(
         simple_parsing,
         "_parse_client_credentials",
-        lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}])
+        lambda _raw: ([object()], [{"credentialId": b64u(credential_id)}])
     )
 
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
-            session_state["simple_credentials"] = [{"credentialId": _b64url(credential_id)}]
+            session_state["simple_credentials"] = [{"credentialId": b64u(credential_id)}]
             session_state["state"] = {"challenge": "auth-state", "issued_at": time.time()}
             session_state["authenticate_rp_id"] = "example.com"
             session_state["simple_credentials_email"] = "user@example.com"
@@ -142,7 +139,7 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch):
         response = client.post(
             "/api/authenticate/complete?email=user@example.com",
             json={
-                "rawId": _b64url(credential_id),
+                "rawId": b64u(credential_id),
                 "response": {"authenticatorData": auth_data_b64},
             },
         )
@@ -152,7 +149,7 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch):
         assert payload == {
             "status": "OK",
             "hintsUsed": [],
-            "authenticatedCredentialId": _b64url(credential_id),
+            "authenticatedCredentialId": b64u(credential_id),
             "signCount": 7,
             "signCountStatus": "ok",
         }
@@ -178,19 +175,19 @@ def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch
     monkeypatch.setattr(
         simple_parsing,
         "_parse_client_credentials",
-        lambda _raw: ([object()], [{"credentialId": _b64url(credential_id)}])
+        lambda _raw: ([object()], [{"credentialId": b64u(credential_id)}])
     )
 
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
-            session_state["simple_credentials"] = [{"credentialId": _b64url(credential_id)}]
+            session_state["simple_credentials"] = [{"credentialId": b64u(credential_id)}]
             session_state["authenticate_rp_id"] = "example.com"
             # Deliberately no server-issued "state" in the session.
 
         response = client.post(
             "/api/authenticate/complete?email=user@example.com",
             json={
-                "rawId": _b64url(credential_id),
+                "rawId": b64u(credential_id),
                 "response": {"authenticatorData": "AQID"},
                 "__session_state": {"challenge": "fallback-state"},
             },
@@ -295,11 +292,11 @@ def test_simple_register_complete_rejects_request_state_fallback(monkeypatch):
             "/api/register/complete?email=user@example.com",
             json={
                 "__session_state": request_state,
-                "rawId": _b64url(credential_id),
+                "rawId": b64u(credential_id),
                 "authenticatorAttachment": "cross-platform",
                 "response": {
-                    "attestationObject": _b64url(b"attestation"),
-                    "clientDataJSON": _b64url(b"client-data"),
+                    "attestationObject": b64u(b"attestation"),
+                    "clientDataJSON": b64u(b"client-data"),
                 },
             },
         )

@@ -1,4 +1,3 @@
-import base64
 
 import pytest
 
@@ -7,10 +6,7 @@ from server.app.decoder.encode import ctap_numeric as encode_ctap_numeric
 from server.app.decoder.encode import handlers_basic as encode_handlers_basic
 from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
 from server.app.decoder.encode import text as encode_text
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+from tests.app.security.ceremony_helpers import b64u
 
 
 def test_encode_payload_text_dispatches_json():
@@ -56,8 +52,8 @@ def test_ctap_webauthn_encoder_validates_required_fields_and_can_encode_response
 
     encoded = encode_handlers_cbor._encode_ctap_webauthn_value(
         {
-            "02": _b64url(b"\xff" * 37),
-            "03": _b64url(b"\xfe" * 64),
+            "02": b64u(b"\xff" * 37),
+            "03": b64u(b"\xfe" * 64),
             "08": {"bytes": [1, 2, 3]},
         }
     )

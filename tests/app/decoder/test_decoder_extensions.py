@@ -9,7 +9,6 @@ published test vectors and the rest is built here.
 """
 from __future__ import annotations
 
-import base64
 import json
 
 import cbor2
@@ -21,6 +20,7 @@ from tests.app.decoder.real_vectors import (
     WEBAUTHN_L3_PACKED_SELF_ATTESTATION_OBJECT,
     WEBAUTHN_L3_PACKED_SELF_CLIENT_DATA_JSON,
 )
+from tests.app.security.ceremony_helpers import b64u
 
 # WebAuthn L3 section 16.17.1.2, "CTAP2 hmac-secret extension".
 _KEY_AGREEMENT = {
@@ -58,10 +58,6 @@ def _auth_data(flags: int, extensions: dict) -> bytes:
 
 def _blocks(data: bytes) -> list[dict]:
     return decode_payload_text(data.hex())["data"]["extensionsDecoded"]
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
 
 def test_make_credential_inputs_are_interpreted():
@@ -236,18 +232,18 @@ def test_client_extension_results_are_interpreted():
         "rawId": "AQID",
         "type": "public-key",
         "response": {
-            "attestationObject": _b64url(WEBAUTHN_L3_PACKED_SELF_ATTESTATION_OBJECT),
-            "clientDataJSON": _b64url(WEBAUTHN_L3_PACKED_SELF_CLIENT_DATA_JSON),
+            "attestationObject": b64u(WEBAUTHN_L3_PACKED_SELF_ATTESTATION_OBJECT),
+            "clientDataJSON": b64u(WEBAUTHN_L3_PACKED_SELF_CLIENT_DATA_JSON),
         },
         "clientExtensionResults": {
             "credProps": {"rk": True},
-            "prf": {"enabled": True, "results": {"first": _b64url(bytes(32))}},
+            "prf": {"enabled": True, "results": {"first": b64u(bytes(32))}},
             "largeBlob": {"supported": False},
             "appidExclude": True,
             "credBlob": True,
             "hmacCreateSecret": True,
-            "hmacGetSecret": {"output1": _b64url(bytes(32)), "output2": "!!"},
-            "getCredBlob": _b64url(b"blob"),
+            "hmacGetSecret": {"output1": b64u(bytes(32)), "output2": "!!"},
+            "getCredBlob": b64u(b"blob"),
             "appid": False,
             "mystery": {"a": 1},
         },
@@ -282,11 +278,11 @@ def test_an_assertions_authdata_and_client_results_are_both_read():
         "id": "AQID",
         "type": "public-key",
         "response": {
-            "authenticatorData": _b64url(auth_data),
-            "clientDataJSON": _b64url(b'{"type":"webauthn.get","challenge":"AA","origin":"https://example.org"}'),
-            "signature": _b64url(b"\x30\x00"),
+            "authenticatorData": b64u(auth_data),
+            "clientDataJSON": b64u(b'{"type":"webauthn.get","challenge":"AA","origin":"https://example.org"}'),
+            "signature": b64u(b"\x30\x00"),
         },
-        "clientExtensionResults": {"appid": True, "largeBlob": {"blob": _b64url(b"abc")}},
+        "clientExtensionResults": {"appid": True, "largeBlob": {"blob": b64u(b"abc")}},
     }
 
     authenticator, client = decode_payload_text(json.dumps(credential))["data"]["extensionsDecoded"]
@@ -394,8 +390,8 @@ def test_empty_extension_maps_add_nothing():
         "id": "AQID",
         "type": "public-key",
         "response": {
-            "attestationObject": _b64url(WEBAUTHN_L3_PACKED_SELF_ATTESTATION_OBJECT),
-            "clientDataJSON": _b64url(WEBAUTHN_L3_PACKED_SELF_CLIENT_DATA_JSON),
+            "attestationObject": b64u(WEBAUTHN_L3_PACKED_SELF_ATTESTATION_OBJECT),
+            "clientDataJSON": b64u(WEBAUTHN_L3_PACKED_SELF_CLIENT_DATA_JSON),
         },
         "clientExtensionResults": {},
     }
