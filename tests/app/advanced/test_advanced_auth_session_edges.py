@@ -3,6 +3,7 @@ import base64
 from server.app.config import relying_party
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import parsing as advanced_parsing
+from server.app.webauthn import assertion_hash
 from tests.app.entry_app import entry_app
 
 
@@ -145,7 +146,6 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
         captured["hash_algorithm"] = algorithm
         return response
 
-    from server.app.webauthn import assertion_hash
 
     monkeypatch.setattr(assertion_hash, "response_hashed_with", _hashed_with)
 
@@ -199,7 +199,6 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
         captured["hash_algorithm"] = algorithm
         return response
 
-    from server.app.webauthn import assertion_hash
 
     monkeypatch.setattr(assertion_hash, "response_hashed_with", _hashed_with)
 

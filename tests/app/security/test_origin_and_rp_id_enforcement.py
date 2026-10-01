@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from server.app.config import origins
+from server.app.config import origins, relying_party
 from server.app.config import origins as config_origins
 from server.app.config import relying_party as config_relying_party
 from tests.app.entry_app import entry_app
@@ -234,8 +234,6 @@ def test_determine_expected_origin_never_echoes_an_unlisted_candidate(allowed_or
 
 
 def test_development_fallback_warning_is_emitted_once(monkeypatch):
-    from server.app.config import relying_party
-
     warnings = []
     monkeypatch.setattr(
         relying_party.logger,

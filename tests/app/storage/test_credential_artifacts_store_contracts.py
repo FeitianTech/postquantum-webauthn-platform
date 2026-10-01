@@ -6,6 +6,7 @@ from server.app import visitor_session
 from server.app.storage import cloud as storage_cloud
 from server.app.storage import common as storage_common
 from server.app.storage import credential_artifacts
+from server.app.storage.common import StorageReadError
 
 
 @pytest.fixture
@@ -173,8 +174,6 @@ def test_artifact_prefix_rejects_invalid_session_identifiers(local_artifact_stor
 
 
 def test_read_record_gcs_raises_on_a_download_error_and_skips_what_does_not_decode(local_artifact_store, monkeypatch, caplog):
-    from server.app.storage.common import StorageReadError
-
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     blob_name = credential_artifacts._artifact_blob("cred-1", "session-a")
 
@@ -213,8 +212,6 @@ def test_read_record_gcs_raises_on_a_download_error_and_skips_what_does_not_deco
 
 
 def test_read_record_local_raises_when_the_file_cannot_be_read(local_artifact_store):
-    from server.app.storage.common import StorageReadError
-
     path = credential_artifacts._artifact_path("cred-dir", "session-a")
     # A directory where the file belongs: an OSError that is not "no such file".
     os.makedirs(path)
@@ -226,8 +223,6 @@ def test_read_record_local_raises_when_the_file_cannot_be_read(local_artifact_st
 
 @pytest.mark.parametrize("stored", ["{broken-json", '{"n": ' + "1" * 5000 + "}", "[" * 200000 + "]" * 200000])
 def test_a_local_merge_refuses_a_record_that_does_not_decode(local_artifact_store, stored):
-    from server.app.storage.common import StorageReadError
-
     path = credential_artifacts._artifact_path("cred-corrupt", "session-a")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as handle:

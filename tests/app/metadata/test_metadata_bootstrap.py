@@ -11,6 +11,7 @@ from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
 from server.app.routes import mds as mds_routes
 from server.app.storage import github_mirror
+from server.app.webauthn.attestation import classical as attestation_classical
 from tests.app.entry_app import entry_app
 
 
@@ -66,8 +67,6 @@ def test_packaged_metadata_loads_without_download(packaged_metadata_env):
 
 
 def test_metadata_not_available_is_warning_classical():
-    from server.app.webauthn.attestation import classical as attestation_classical
-
     attestation_object = type("obj", (), {"att_stmt": {}})()
     attestation_result = type(
         "result",

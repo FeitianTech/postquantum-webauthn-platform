@@ -18,6 +18,7 @@ import pytest
 
 from server.app.storage import credentials as storage_credentials
 from server.app.storage import github_mirror
+from server.app.storage.common import InvalidStorageIdentifier
 
 from .ceremony_helpers import (
     ORIGIN,
@@ -126,8 +127,6 @@ def test_a_failed_read_of_the_stored_counter_rejects_the_authentication(
 
 
 def test_a_refused_storage_name_is_still_a_400(app, monkeypatch, credential_store):
-    from server.app.storage.common import InvalidStorageIdentifier
-
     authenticator = Authenticator()
     client = app.test_client()
     _register(client, authenticator, counter=1)

@@ -12,6 +12,7 @@ import pytest
 
 from server.app.storage import credentials as storage_credentials
 from server.app.storage import github_mirror
+from server.app.storage.common import InvalidStorageIdentifier
 
 from .ceremony_helpers import (
     ORIGIN,
@@ -41,8 +42,6 @@ def _assert_refused_without_traceback(response, caplog):
 
 
 def test_the_store_refuses_a_traversal_name_before_touching_a_path(store):
-    from server.app.storage.common import InvalidStorageIdentifier
-
     with pytest.raises(InvalidStorageIdentifier):
         storage_credentials.readkey(TRAVERSAL, session_id="session-name-errors")
 
@@ -116,8 +115,6 @@ def test_the_advanced_flow_does_not_hand_its_user_name_to_the_store(client, capl
 
 
 def test_the_refusal_is_still_a_value_error():
-    from server.app.storage.common import InvalidStorageIdentifier
-
     with pytest.raises(InvalidStorageIdentifier) as refused:
         storage_credentials.readkey(TRAVERSAL, session_id="session-a")
 

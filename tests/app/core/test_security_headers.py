@@ -12,6 +12,7 @@ from server.app.config import relying_party as config_relying_party
 from server.app.config import security_headers as config_security_headers
 from server.app.config import security_headers as security_headers_module
 from server.app.config import session_cookie as config_session_cookie
+from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
 from tests.app.entry_app import entry_app
 
 app = entry_app()
@@ -21,7 +22,6 @@ app = entry_app()
 def client(make_app, export_root):
     """The app with a small export of the UI, so / answers its page."""
 
-    from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
 
     return make_app({WEB_EXPORT_ROOT_KEY: str(export_root)}).test_client()
 

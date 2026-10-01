@@ -4,6 +4,8 @@ from server.app import visitor_session
 from server.app.storage import credential_artifacts
 from tests.app.entry_app import entry_app
 
+from ..storage import fake_gcs
+
 
 def test_bulk_credential_artifact_route_returns_requested_items(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
@@ -296,9 +298,7 @@ def test_an_artifact_the_store_cannot_read_answers_503_not_missing_or_unstored(
     # bulk answer), and a merge that could not read answered 400.
     import json
 
-    from server.app.storage import credential_artifacts
 
-    from ..storage import fake_gcs
 
     bucket = fake_gcs.install(monkeypatch, credential_artifacts)
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")

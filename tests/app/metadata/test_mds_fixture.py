@@ -13,6 +13,7 @@ import os
 
 import pytest
 
+from server.app.mds import cache as mds_cache
 from server.app.mds import files as mds_files
 from tests.app.metadata import mds_fixture
 
@@ -136,20 +137,18 @@ def test_resolve_serves_a_packaged_entry_as_the_blob_has_it(mds_fixture_snapshot
 
 
 def test_raw_entries_follow_only_the_file_the_metadata_was_read_from(mds_fixture_snapshot, monkeypatch):
-    from server.app.mds import cache as blob
-
     verified = mds_fixture_snapshot / mds_files.VERIFIED
     mtime = os.path.getmtime(verified)
 
-    assert blob._load_base_raw_entries(None) is None
-    assert blob._load_base_raw_entries(mtime - 1) is None
-    entries = blob._load_base_raw_entries(mtime)
+    assert mds_cache._load_base_raw_entries(None) is None
+    assert mds_cache._load_base_raw_entries(mtime - 1) is None
+    entries = mds_cache._load_base_raw_entries(mtime)
     assert len(entries) == 32
-    assert blob._load_base_raw_entries(mtime) is entries
+    assert mds_cache._load_base_raw_entries(mtime) is entries
 
     # A payload without an entry list gives none, and a missing file nothing.
     os.utime(verified, (mtime + 5, mtime + 5))
-    monkeypatch.setattr(blob, "_load_verified_metadata_payload", lambda: {"entries": {}})
-    assert blob._load_base_raw_entries(mtime + 5) is None
+    monkeypatch.setattr(mds_cache, "_load_verified_metadata_payload", lambda: {"entries": {}})
+    assert mds_cache._load_base_raw_entries(mtime + 5) is None
     verified.unlink()
-    assert blob._load_base_raw_entries(mtime + 5) is None
+    assert mds_cache._load_base_raw_entries(mtime + 5) is None

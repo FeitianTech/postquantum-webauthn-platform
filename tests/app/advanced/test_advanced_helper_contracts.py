@@ -6,6 +6,7 @@ import pytest
 
 from server.app import encoding
 from server.app.routes import advanced as advanced_module
+from server.app.routes.advanced import algorithms, parsing
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.routes.advanced import summary as advanced_summary
 from server.app.webauthn import client_binary, client_credentials, cose_algorithms
@@ -123,7 +124,6 @@ def test_base64_assertion_and_binary_extraction_helpers():
 )
 def test_helpers_no_route_called_are_gone(name):
     # Each existed only for tests: no route, and no other helper, called it.
-    from server.app.routes.advanced import algorithms, parsing
 
     assert not hasattr(advanced_module, name)
     assert not hasattr(algorithms, name)

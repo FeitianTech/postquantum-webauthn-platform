@@ -17,6 +17,7 @@ import threading
 
 import pytest
 
+from server.app.routes.simple import authentication
 from server.app.storage import credentials as storage_credentials
 from server.app.storage import github_mirror
 
@@ -65,8 +66,6 @@ def _stored_counter(root, authenticator):
 
 
 def test_two_authentications_with_the_same_counter_cannot_both_succeed(app, monkeypatch, credential_store, tmp_path):
-    from server.app.routes.simple import authentication
-
     authenticator = Authenticator()
     first, second = app.test_client(), app.test_client()
     _register(first, authenticator, counter=5)
@@ -113,8 +112,6 @@ def test_two_authentications_with_the_same_counter_cannot_both_succeed(app, monk
 
 
 def test_losing_the_race_twice_rejects_the_authentication(app, monkeypatch, credential_store):
-    from server.app.routes.simple import authentication
-
     authenticator = Authenticator()
     client = app.test_client()
     _register(client, authenticator, counter=5)
@@ -139,8 +136,6 @@ def test_losing_the_race_twice_rejects_the_authentication(app, monkeypatch, cred
 
 
 def test_an_uncontended_authentication_saves_its_counter_once(app, monkeypatch, credential_store):
-    from server.app.routes.simple import authentication
-
     authenticator = Authenticator()
     client = app.test_client()
     _register(client, authenticator, counter=5)

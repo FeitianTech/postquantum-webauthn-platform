@@ -20,9 +20,9 @@ import threading
 import pytest
 
 from server.app import visitor_session
+from server.app.storage import cloud, github_mirror
 from server.app.storage import common as storage_common
 from server.app.storage import credentials as storage_credentials
-from server.app.storage import github_mirror
 
 from ..storage import fake_gcs
 from .ceremony_helpers import ORIGIN, Authenticator, registration_payload, unb64u
@@ -198,7 +198,6 @@ def _break_the_current_copy(client, how: str):
 
     import os
 
-    from server.app.storage import cloud
 
     with client.session_transaction() as session:
         namespace = session[visitor_session.SESSION_KEY]

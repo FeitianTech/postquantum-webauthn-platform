@@ -25,6 +25,7 @@ from cryptography.hazmat.primitives.asymmetric import (
 from cryptography.x509.oid import NameOID
 
 from server.app.mds import build as mds_build
+from server.app.webauthn import signature_algorithms
 from server.app.webauthn.attestation.certificates import (
     serialize_attestation_certificate,
 )
@@ -136,15 +137,12 @@ def test_a_pss_signature_without_parameters_is_named_with_the_default_hash():
     ],
 )
 def test_a_signature_algorithm_is_named_by_name_or_oid(name, expected):
-    from server.app.webauthn import signature_algorithms
-
     assert signature_algorithms.normalise_signature_algorithm_name(name) == expected
 
 
 def _spelled(name: str) -> str:
     """A signature algorithm's spelling from its name or dotted OID alone, as both views make it without a hash."""
 
-    from server.app.webauthn import signature_algorithms
 
     return signature_algorithms.join_algorithm_info(
         signature_algorithms.normalise_signature_algorithm_name(name),

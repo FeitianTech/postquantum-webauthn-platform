@@ -16,6 +16,7 @@ from tests.app.entry_app import entry_app
 from .ceremony_helpers import (
     ORIGIN,
     Authenticator,
+    advanced_public_key_options,
     assertion_payload,
     b64u,
     registration_payload,
@@ -303,16 +304,12 @@ def test_advanced_request_supplied_state_is_refused():
 
 
 def _advanced_register_begin(client, challenge=b"\x73" * 32):
-    from .ceremony_helpers import advanced_public_key_options
-
     begin = client.post("/api/advanced/register/begin", json={"publicKey": advanced_public_key_options(challenge=challenge)})
     assert begin.status_code == 200, begin.get_json()
     return begin.get_json()
 
 
 def _advanced_register_complete(client, body, authenticator, **overrides):
-    from .ceremony_helpers import advanced_public_key_options
-
     challenge = unb64u(body["publicKey"]["challenge"])
     payload = {
         "publicKey": advanced_public_key_options(challenge=challenge),

@@ -12,6 +12,7 @@ import threading
 
 import pytest
 
+from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
 from server.app.mds import provisioning as mds_provisioning
 from server.app.storage import github_mirror
 from tests.app.metadata import mds_fixture
@@ -120,8 +121,6 @@ def test_the_browsers_snapshot_file_waits_and_then_is_served(slow_provisioning, 
 
 
 def test_the_page_does_not_wait(slow_provisioning, make_app, export_root):
-    from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
-
     client = make_app({WEB_EXPORT_ROOT_KEY: str(export_root)}).test_client()
     thread, answer = _get_in_a_thread(client, "/")
     thread.join(5)

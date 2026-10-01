@@ -20,6 +20,7 @@ from server.app.config import (
     session_secret,
     web_export,
 )
+from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
 from server.app.routes import assets
 
 _SERVER_APP = Path(__file__).resolve().parents[3] / "server" / "app"
@@ -105,8 +106,6 @@ def test_proxy_fix_wraps_the_app_only_behind_a_trusted_proxy(monkeypatch, make_a
 
 
 def test_gzipped_response_still_carries_the_security_headers(make_app, export_root):
-    from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
-
     client = make_app({WEB_EXPORT_ROOT_KEY: str(export_root)}).test_client()
     response = client.get("/", base_url="https://localhost", headers={"Accept-Encoding": "gzip"})
 

@@ -11,6 +11,7 @@ import pytest
 
 from server.app.storage import common as storage_common
 from server.app.storage import credentials as storage_credentials
+from server.app.storage.common import StorageReadError
 
 _SESSION = "session-failures"
 
@@ -29,8 +30,6 @@ def _unreadable(store, name):
 
 
 def test_a_copy_the_store_cannot_read_raises_instead_of_reading_as_empty(local_credential_store):
-    from server.app.storage.common import StorageReadError
-
     _unreadable(storage_credentials, "alice@example.com")
 
     # An empty list would say "nothing stored for alice".

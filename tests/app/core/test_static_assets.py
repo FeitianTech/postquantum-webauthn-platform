@@ -9,7 +9,9 @@ from pathlib import Path
 
 import pytest
 
+from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
 from server.app.mds import cache as mds_cache
+from server.app.mds import files as mds_files
 from server.app.routes import assets
 from tests.app.entry_app import entry_app
 
@@ -122,9 +124,6 @@ def test_a_missing_snapshot_is_not_found(assets_env, monkeypatch, tmp_path):
 
 
 def test_no_snapshot_file_is_served_at_the_site_root(assets_env, monkeypatch, tmp_path, make_app, export_root):
-    from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
-    from server.app.mds import files as mds_files
-
     # The site's root is the UI's export: a snapshot file there is never served.
     names = [*mds_files.SNAPSHOT_FILENAMES, f"{_EXPLORER_FULL}.gz"]
     for name in names:
