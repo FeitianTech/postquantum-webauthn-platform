@@ -1,9 +1,9 @@
-// The Codec's logic comes from src/logic/decoder/codec/{request,result,values}.js.
+// The Codec's logic comes from src/logic/codec/{request,result,values}.js.
 // These are the types the components read them through, and the one piece the
 // logic does not hold: the encoder's formats.
-import { buildCodecRequest } from '@/logic/decoder/codec/request.js';
-import { describeCodecResult } from '@/logic/decoder/codec/result.js';
-import { classifyCodecValue } from '@/logic/decoder/codec/values.js';
+import { buildCodecRequest } from '@/logic/codec/request.js';
+import { describeCodecResult } from '@/logic/codec/result.js';
+import { classifyCodecValue } from '@/logic/codec/values.js';
 
 export type CodecMode = 'decode' | 'encode';
 

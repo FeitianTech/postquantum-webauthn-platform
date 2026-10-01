@@ -3,7 +3,7 @@ import {
   codecSuccessText,
   requestCodec,
   validateCodecInput,
-} from '@/logic/decoder/codec/request.js';
+} from '@/logic/codec/request.js';
 import { FailedResponseError } from '@/logic/shared/api/failed-response.js';
 import { useCallback, useRef, useState } from 'react';
 
