@@ -223,6 +223,8 @@ def _serialize_extension_value(ext: Any) -> Any:
         return _key_usage_value(value)
     if isinstance(value, x509.ExtendedKeyUsage):
         return [_oid_text(purpose) for purpose in value]
+    if isinstance(value, (x509.SubjectAlternativeName, x509.IssuerAlternativeName)):
+        return [_general_name(name) for name in value]
     if isinstance(value, (x509.PrecertificateSignedCertificateTimestamps, x509.SignedCertificateTimestamps)):
         return _signed_certificate_timestamps_value(value)
     if isinstance(value, x509.UnrecognizedExtension):

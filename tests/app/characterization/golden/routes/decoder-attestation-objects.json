@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "33488"
+     "33423"
     ],
     [
      "X-Content-Type-Options",
@@ -43,7 +43,7 @@
     ]
    ],
    "cookies": [],
-   "bodySha256": "e1932059caa47d057aa20041e0d4db7f3d1060407cd5c2f95fdade10be0fb751",
+   "bodySha256": "5602c8d302c83b8d0984e8ea6c9b72d2eb02685613c928e570214f7f50d79de5",
    "body": {
     "data": {
      "attestationObject": {
@@ -105,7 +105,9 @@
             "includeOidInHeader": true,
             "name": "subjectAltName",
             "oid": "2.5.29.17",
-            "value": "<SubjectAlternativeName(<GeneralNames([<DirectoryName(value=<Name(2.23.133.2.3=id:13+2.23.133.2.2=NPCT6xx+2.23.133.2.1=id:4E544300)>)>])>)>"
+            "value": [
+             "DirName:2.23.133.2.3=id:13+2.23.133.2.2=NPCT6xx+2.23.133.2.1=id:4E544300"
+            ]
            },
            {
             "critical": false,

@@ -51,6 +51,13 @@ const EXPECTED: ExpectedDifference[] = [
     reason: 'ExtendedKeyUsage was shown as a Python repr; it is now each purpose by name or number',
   },
   { only: 'shown', section: 'Attestation object', token: /^2\.23\.133\.8\.3$/, reason: 'ExtendedKeyUsage: the TPM purpose, by number' },
+  {
+    only: 'recorded',
+    section: 'Attestation object',
+    token: /^<SubjectAlternativeName\(<GeneralNames\(\[<DirectoryName\(value=<Name\((.+)\)>\)>\]\)>\)>$/,
+    reason: 'SubjectAlternativeName was shown as a Python repr; it is now each name with its kind',
+  },
+  { only: 'shown', section: 'Attestation object', token: /^DirName:2\.23\.133\.2\.3=/, reason: "SubjectAlternativeName: the TPM's directory name" },
 ];
 
 async function betaText(page: Page, input: string, lenient: boolean) {

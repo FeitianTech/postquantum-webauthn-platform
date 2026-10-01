@@ -106,6 +106,17 @@ def test_extended_key_usage_names_each_purpose_with_its_oid():
 
 
 @pytest.mark.parametrize(
+    ("oid", "names"),
+    [("2.5.29.17", x509.SubjectAlternativeName), ("2.5.29.18", x509.IssuerAlternativeName)],
+)
+def test_alternative_names_are_one_general_name_each(oid, names):
+    tpm = x509.Name([x509.NameAttribute(ObjectIdentifier("2.23.133.2.1"), "id:4E544300")])
+    value = names([x509.DirectoryName(tpm), x509.DNSName("authenticator.example")])
+
+    assert _shown(oid, value) == ["DirName:2.23.133.2.1=id:4E544300", "DNS:authenticator.example"]
+
+
+@pytest.mark.parametrize(
     ("oid", "raw", "shown"),
     [
         (FIRMWARE, b"\x04\x03\x05\x04\x03", {"Firmware version": "5.4.3"}),
