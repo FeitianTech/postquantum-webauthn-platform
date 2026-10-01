@@ -16,17 +16,13 @@ from server.app.decoder.decode import text as decode_text
 from server.app.decoder.decode.text import decode_payload_text
 
 
-def _decode(hex_text: str) -> dict[str, Any]:
-    return decode_text.decode_payload_text(hex_text)
-
-
 def _located(result: dict[str, Any]) -> list[tuple[str, int, str]]:
     return [(finding["code"], finding["offset"], finding["path"]) for finding in result["findings"]]
 
 
 def test_a_duplicate_map_key_is_reported_with_both_offsets():
     # {1: 1, 1: 2}: the second entry used to replace the first without a word.
-    result = _decode("a201010102")
+    result = decode_text.decode_payload_text("a201010102")
 
     assert result["data"]["decodedValue"] == {"1": 2}
     assert _located(result) == [("duplicate-map-key", 3, "${1}")]
@@ -44,7 +40,7 @@ def test_a_duplicate_map_key_is_reported_with_both_offsets():
 
 def test_a_key_repeated_three_times_is_one_finding_at_the_entry_kept():
     # {1: "a", 2: 0, 1: "b", 1: [1, 2]}
-    result = _decode("a4 01 6161 02 00 01 6162 01 820102".replace(" ", ""))
+    result = decode_text.decode_payload_text("a4 01 6161 02 00 01 6162 01 820102".replace(" ", ""))
 
     assert result["data"]["decodedValue"] == {"1": [1, 2], "2": 0}
     (finding,) = [finding for finding in result["findings"] if finding["code"] == "duplicate-map-key"]
@@ -61,7 +57,7 @@ def test_a_key_repeated_three_times_is_one_finding_at_the_entry_kept():
 
 def test_a_duplicate_inside_a_value_the_decoded_value_drops_says_it_keeps_neither_entry():
     # {1: {2: 1, 2: 2}, 1: {2: 3, 2: 4}}: the first inner map is dropped whole.
-    result = _decode("a2 01 a2 0201 0202 01 a2 0203 0204".replace(" ", ""))
+    result = decode_text.decode_payload_text("a2 01 a2 0201 0202 01 a2 0203 0204".replace(" ", ""))
 
     assert result["data"]["decodedValue"] == {"1": {"2": 4}}
     found = {finding["offset"]: finding for finding in result["findings"] if finding["code"] == "duplicate-map-key"}
@@ -97,7 +93,7 @@ def test_a_duplicate_label_inside_a_credential_public_key_is_located_in_the_inpu
     attestation_object = edn.encode(f'{{"fmt": "none", "attStmt": {{}}, "authData": h\'{auth_data.hex()}\'}}')
     cose_start = attestation_object.index(auth_data) + 56
 
-    result = _decode(attestation_object.hex())
+    result = decode_text.decode_payload_text(attestation_object.hex())
 
     (finding,) = [finding for finding in result["findings"] if finding["code"] == "duplicate-map-key"]
     assert finding["offset"] == cose_start + 3
@@ -118,7 +114,7 @@ def test_a_duplicate_label_inside_a_ctap_response_is_quoted_at_its_input_offsets
     response = b"\x00" + cbor.encode({1: "none", 2: auth_data, 3: {}})
     cose_start = response.index(auth_data) + 56
 
-    result = _decode(response.hex())
+    result = decode_text.decode_payload_text(response.hex())
 
     (finding,) = [finding for finding in result["findings"] if finding["code"] == "duplicate-map-key"]
     assert (finding["offset"], finding["earlier"][0]["offset"]) == (cose_start + 3, cose_start + 1)
@@ -134,7 +130,7 @@ def test_a_duplicate_inside_chunked_authenticator_data_points_at_the_string():
     attestation_object = edn.encode(text)
     string_offset = attestation_object.index(b"\x5f")
 
-    result = _decode(attestation_object.hex())
+    result = decode_text.decode_payload_text(attestation_object.hex())
 
     (finding,) = [finding for finding in result["findings"] if finding["code"] == "duplicate-map-key"]
     assert finding["offset"] == string_offset
@@ -145,7 +141,7 @@ def test_a_duplicate_inside_chunked_authenticator_data_points_at_the_string():
 
 def test_a_non_shortest_integer_is_reported_where_it_is_written():
     # {1: 2} with the key written as 18 01.
-    result = _decode("a1180102")
+    result = decode_text.decode_payload_text("a1180102")
 
     assert result["data"]["decodedValue"] == {"1": 2}
     assert _located(result) == [("non-shortest-integer", 1, "${1}")]
@@ -155,7 +151,7 @@ def test_a_non_shortest_integer_is_reported_where_it_is_written():
 
 
 def test_an_indefinite_length_map_is_reported():
-    result = _decode("bf0102ff")
+    result = decode_text.decode_payload_text("bf0102ff")
 
     assert result["data"]["decodedValue"] == {"1": 2}
     assert _located(result) == [("indefinite-length", 0, "$")]
@@ -177,12 +173,12 @@ def test_an_indefinite_length_map_is_reported():
     ],
 )
 def test_map_keys_out_of_ctap2_order_are_reported(hex_text, located):
-    assert _located(_decode(hex_text)) == located
+    assert _located(decode_text.decode_payload_text(hex_text)) == located
 
 
 def test_map_keys_in_ctap2_order_are_not_reported():
     # {5: 0, 24: 0, -1: 0, h'': 0, "": 0, "a": 0}
-    result = _decode("a60500181800200040006000616100")
+    result = decode_text.decode_payload_text("a60500181800200040006000616100")
 
     # h'' and "" are both "" as JSON keys: reported, but not a canonical-form problem.
     assert _located(result) == [("json-key-collision", 0, "$")]
@@ -190,7 +186,7 @@ def test_map_keys_in_ctap2_order_are_not_reported():
 
 def test_a_key_written_twice_in_different_lengths_is_one_key_twice():
     # {1: 0, 1: 0}, the second 1 written as 18 01.
-    result = _decode("a2010018 0100".replace(" ", ""))
+    result = decode_text.decode_payload_text("a2010018 0100".replace(" ", ""))
 
     assert _located(result) == [("non-shortest-integer", 3, "${1}"), ("duplicate-map-key", 3, "${1}")]
 
@@ -208,7 +204,7 @@ def test_a_key_written_twice_in_different_lengths_is_one_key_twice():
     ],
 )
 def test_other_canonical_form_violations_are_reported(hex_text, code, message):
-    finding = _decode(hex_text)["findings"][0]
+    finding = decode_text.decode_payload_text(hex_text)["findings"][0]
 
     assert finding["code"] == code
     assert finding["message"].startswith(message)
@@ -216,15 +212,15 @@ def test_other_canonical_form_violations_are_reported(hex_text, code, message):
 
 def test_findings_in_nested_items_carry_their_path():
     # {1: [0, {"x": 18 05}]}
-    result = _decode("a101820 0a1617818 05".replace(" ", ""))
+    result = decode_text.decode_payload_text("a101820 0a1617818 05".replace(" ", ""))
 
     assert _located(result) == [("non-shortest-integer", 7, '${1}[1]{"x"}')]
 
 
 def test_findings_never_change_the_decoded_value():
-    canonical = _decode("a2010203 04".replace(" ", ""))["data"]["decodedValue"]
+    canonical = decode_text.decode_payload_text("a2010203 04".replace(" ", ""))["data"]["decodedValue"]
     # The same map written with long heads, indefinite length and keys reversed.
-    other = _decode("bf1803041801 02ff".replace(" ", ""))
+    other = decode_text.decode_payload_text("bf1803041801 02ff".replace(" ", ""))
 
     assert other["data"]["decodedValue"] == canonical
     assert {finding["code"] for finding in other["findings"]} == {
@@ -235,7 +231,7 @@ def test_findings_never_change_the_decoded_value():
 
 
 def test_findings_are_listed_in_byte_order_with_trailing_bytes_last():
-    result = _decode("a2020001 00ff".replace(" ", ""))
+    result = decode_text.decode_payload_text("a2020001 00ff".replace(" ", ""))
 
     assert [finding["offset"] for finding in result["findings"]] == [3, 5]
     assert [finding["code"] for finding in result["findings"]] == ["map-key-order", "trailing-bytes"]
@@ -245,7 +241,7 @@ def test_findings_are_listed_in_byte_order_with_trailing_bytes_last():
 
 def test_malformed_lists_the_findings_about_form_and_only_those():
     # {1: 1, 1: 2}: a duplicate key is not canonical, so it is in malformed.
-    result = _decode("a201010102")
+    result = decode_text.decode_payload_text("a201010102")
 
     assert result["malformed"] == [finding["message"] for finding in result["findings"]]
 
@@ -263,7 +259,7 @@ def test_malformed_lists_the_findings_about_form_and_only_those():
     ],
 )
 def test_a_finding_is_in_malformed_only_when_it_is_about_form(payload, code, in_malformed):
-    result = _decode(payload.replace(" ", ""))
+    result = decode_text.decode_payload_text(payload.replace(" ", ""))
     findings = [finding for finding in result["findings"] if finding["code"] == code]
 
     assert findings
@@ -282,7 +278,7 @@ def test_a_ctap_message_is_checked_with_offsets_counting_its_prefix_byte():
     rp = cbor.encode({"id": "example.com"})
     body = b"\xa2" + cbor.encode(2) + rp + cbor.encode(1) + cbor.encode(bytes(32))
 
-    result = _decode((b"\x01" + body).hex())
+    result = decode_text.decode_payload_text((b"\x01" + body).hex())
 
     key_one_offset = 1 + 1 + 1 + len(rp)
     assert _located(result) == [("map-key-order", key_one_offset, "${1}")]
@@ -301,7 +297,7 @@ def test_an_attestation_object_is_checked_too():
         + cbor.encode({})
     )
 
-    result = _decode(attestation.hex())
+    result = decode_text.decode_payload_text(attestation.hex())
 
     assert result["type"] == "Attestation object"
     assert [finding["code"] for finding in result["findings"]] == ["map-key-order"]
@@ -318,7 +314,7 @@ def test_the_codec_endpoint_returns_findings_and_the_decode_mode(client):
 
 
 def test_canonical_input_has_no_findings():
-    result = _decode(cbor.encode({1: "packed", 2: b"\x01", 3: {"alg": -7, "sig": b"\x02"}}).hex())
+    result = decode_text.decode_payload_text(cbor.encode({1: "packed", 2: b"\x01", 3: {"alg": -7, "sig": b"\x02"}}).hex())
 
     # Only which reading was taken (a makeCredential response, sent with no status
     # byte): nothing about its form.

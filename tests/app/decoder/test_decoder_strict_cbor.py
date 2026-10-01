@@ -17,10 +17,6 @@ from server.app.decoder.decode import cbor_parser as decode_cbor_parser
 from server.app.decoder.decode import text as decode_text
 
 
-def _decode(hex_text: str) -> dict[str, Any]:
-    return decode_text.decode_payload_text(hex_text)
-
-
 def _decode_error(hex_text: str) -> Any:
     with pytest.raises(ValueError) as caught:
         decode_text.decode_payload_text(hex_text)
@@ -105,25 +101,25 @@ def test_nesting_deeper_than_the_limit_fails_instead_of_exhausting_the_stack():
     ],
 )
 def test_simple_values_and_floats_decode_to_what_they_are(hex_text, expected):
-    assert _decode(hex_text)["data"]["decodedValue"] == expected
+    assert decode_text.decode_payload_text(hex_text)["data"]["decodedValue"] == expected
 
 
 def test_a_float_consumes_its_payload_so_the_next_item_is_read_in_place():
     # [1.5, 7]. fido2.cbor alone reads the float as False and its four payload
     # bytes as the next items; the old chain only got this right by falling
     # through to cbor2 when fido2.cbor then choked.
-    assert _decode("82fa3fc0000007")["data"]["decodedValue"] == [1.5, 7]
+    assert decode_text.decode_payload_text("82fa3fc0000007")["data"]["decodedValue"] == [1.5, 7]
 
 
 def test_keys_that_json_would_collapse_stay_distinct():
     # {1: 0, true: 1, 1.0: 2, null: 3}
-    result = _decode("a40100f501f93c0002f603")
+    result = decode_text.decode_payload_text("a40100f501f93c0002f603")
 
     assert result["data"]["decodedValue"] == {"1": 0, "true": 1, "1.0": 2, "null": 3}
 
 
 def test_bytes_after_the_item_are_reported_and_not_read_as_more_items():
-    result = _decode("a10102deadbeef")
+    result = decode_text.decode_payload_text("a10102deadbeef")
 
     assert result["data"]["decodedValue"] == {"1": 2}
     assert result["malformed"] == ["Trailing 4 byte(s) after CBOR payload."]
@@ -131,7 +127,7 @@ def test_bytes_after_the_item_are_reported_and_not_read_as_more_items():
 
 def test_a_second_item_after_the_first_is_trailing_bytes_not_a_sequence():
     # "a", then 6a 6b: one item and two bytes after it.
-    result = _decode("61616a6b")
+    result = decode_text.decode_payload_text("61616a6b")
 
     assert result["data"]["decodedValue"] == "a"
     assert result["malformed"] == ["Trailing 2 byte(s) after CBOR payload."]
@@ -141,7 +137,7 @@ def test_bytes_after_a_make_credential_response_are_reported_with_the_response()
     auth_data = hashlib.sha256(b"example.com").digest() + b"\x01" + (5).to_bytes(4, "big")
     body = cbor.encode({1: "packed", 2: auth_data, 3: {"alg": -7, "sig": b"\x30\x06"}})
 
-    result = _decode((b"\x00" + body + b"\xde\xad\xbe\xef").hex())
+    result = decode_text.decode_payload_text((b"\x00" + body + b"\xde\xad\xbe\xef").hex())
 
     assert result["type"] == "CBOR (SUCCESS status; MakeCredential response)"
     assert result["data"]["ctap"]["trailingBytesHex"] == "deadbeef"
@@ -150,7 +146,7 @@ def test_bytes_after_a_make_credential_response_are_reported_with_the_response()
 
 
 def test_zero_padding_after_a_response_is_reported_too():
-    result = _decode("00a10102" + "00" * 8)
+    result = decode_text.decode_payload_text("00a10102" + "00" * 8)
 
     assert result["data"]["ctap"]["paddingBytes"] == 8
     assert result["malformed"] == ["Trailing 8 byte(s) after CBOR payload (all 0x00/0xff: HID report padding?)."]
