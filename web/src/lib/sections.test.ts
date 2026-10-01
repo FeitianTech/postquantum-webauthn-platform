@@ -1,4 +1,4 @@
-import { certificateHashPath, entryHashPath, hashPath, routeFromHash, sectionFromHash } from './sections';
+import { entryHashPath, hashPath, routeFromHash } from './sections';
 
 describe('the sections in the hash', () => {
   it('reads a section, and what is open in it, a segment at a time', () => {
@@ -24,9 +24,6 @@ describe('the sections in the hash', () => {
   it('reads nothing from an unknown section', () => {
     expect(routeFromHash('#elsewhere/x')).toBeNull();
     expect(routeFromHash('')).toBeNull();
-    expect(sectionFromHash('#codec')).toBe('codec');
-    expect(sectionFromHash('#mds/aaguid:x')).toBe('mds');
-    expect(sectionFromHash('#nope')).toBeNull();
   });
 
   it('writes an entry id into the hash, its # and / encoded and its colons readable', () => {
@@ -35,10 +32,5 @@ describe('the sections in the hash', () => {
     expect(routeFromHash(`#${entryHashPath('aaid:F1D0#0012')}`)?.path).toEqual(['aaid:F1D0#0012']);
     expect(routeFromHash(`#${entryHashPath('entry:a/b')}`)?.path).toEqual(['entry:a/b']);
     expect(hashPath('codec')).toBe('codec');
-  });
-
-  it('writes a certificate under its entry', () => {
-    expect(certificateHashPath('aaid:F1D0#0012', 3)).toBe('mds/aaid:F1D0%230012/certificate/3');
-    expect(routeFromHash(`#${certificateHashPath('aaid:F1D0#0012', 3)}`)?.path).toEqual(['aaid:F1D0#0012', 'certificate', '3']);
   });
 });

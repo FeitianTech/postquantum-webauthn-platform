@@ -1,7 +1,6 @@
 import { ENTRY_LINK_MESSAGES } from '@/logic/advanced/mds/explorer/entry-link.js';
 import { useCallback } from 'react';
 
-import { entryHashPath } from '@/lib/sections';
 import { type GoToSection, useSectionNavigation } from '@/lib/useSection';
 
 import { aaguidEntryId } from './entryModel';
@@ -11,12 +10,6 @@ import { aaguidEntryId } from './entryModel';
 // in lower case>, the id the server gives that entry; the entry's page finds it
 // in the list, or asks the server when the list does not hold it, and says so
 // meanwhile ("Opening…", "Locating…") and after ("…not found.").
-
-/** The URL of an AAGUID's entry (`#mds/aaguid:…`), or '' for a value that is no AAGUID. */
-export function mdsEntryPath(aaguid: unknown) {
-  const entryId = aaguidEntryId(aaguid);
-  return entryId ? `#${entryHashPath(entryId)}` : '';
-}
 
 /**
  * Opens an AAGUID's entry as a history entry of its own, so Back returns to

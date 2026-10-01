@@ -7,7 +7,7 @@ import { fixtureRoutes, stubFetch } from '@/test/mds';
 import { renderPage } from '@/test/page';
 import { SectionNavigationProvider, useSection } from '@/lib/useSection';
 
-import { mdsEntryPath, openMdsEntryForAaguid, useOpenMdsEntry } from './entryLink';
+import { openMdsEntryForAaguid, useOpenMdsEntry } from './entryLink';
 
 const AAGUID = 'F1D0F1D0-0000-4000-8000-000000000001';
 
@@ -17,12 +17,6 @@ afterEach(() => {
 });
 
 describe('opening an AAGUID\'s MDS entry', () => {
-  it('names the entry\'s URL, the AAGUID as the server writes it', () => {
-    expect(mdsEntryPath(AAGUID)).toBe('#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000001');
-    expect(mdsEntryPath('f1d0f1d000004000800000000000000A')).toBe('#mds/aaguid:f1d0f1d0-0000-4000-8000-00000000000a');
-    expect(mdsEntryPath('no')).toBe('');
-  });
-
   it('opens it, or says it cannot', () => {
     const go = vi.fn();
     expect(openMdsEntryForAaguid(AAGUID, go)).toBeNull();
@@ -57,7 +51,7 @@ describe('opening an AAGUID\'s MDS entry', () => {
   });
 
   it('shows the entry at its URL', async () => {
-    window.history.replaceState({ fromNext: true }, '', `/${mdsEntryPath(AAGUID)}`);
+    window.history.replaceState({ fromNext: true }, '', '/#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000001');
     stubFetch(fixtureRoutes());
     renderPage(
       <ToastProvider>

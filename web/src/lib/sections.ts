@@ -61,10 +61,6 @@ export function routeFromHash(hash: string): Route | null {
   return { section, path: rest.filter(Boolean).map(decodeSegment) };
 }
 
-export function sectionFromHash(hash: string): SectionId | null {
-  return routeFromHash(hash)?.section ?? null;
-}
-
 // A place in the URL, after the #: the section, then what is open in it.
 export function hashPath(section: SectionId, path: readonly string[] = []) {
   return [section, ...path.map(encodeSegment)].join('/');
@@ -72,11 +68,6 @@ export function hashPath(section: SectionId, path: readonly string[] = []) {
 
 export function entryHashPath(entryId: string) {
   return hashPath('mds', [entryId]);
-}
-
-/** An entry's attestation certificate, numbered from 1 as its page lists them. */
-export function certificateHashPath(entryId: string, number: number) {
-  return hashPath('mds', [entryId, 'certificate', String(number)]);
 }
 
 export const SECTION_OPTIONS = SECTIONS.map((section) => ({ value: section.id, label: section.label }));
