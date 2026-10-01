@@ -218,11 +218,6 @@ describe('buildRegistrationContext', () => {
     });
   });
 
-  it('keeps extension outputs that cannot be copied as they are', () => {
-    const outputs = { largeBlob: { blob: 1n } };
-    expect(buildRegistrationContext({ clientExtensionOutputs: outputs }).registrationCredential.clientExtensionResults).toBe(outputs);
-  });
-
   it('reads a response kept flat, without a nested response', () => {
     const decoded = { fmt: 'none' };
     const context = buildRegistrationContext({

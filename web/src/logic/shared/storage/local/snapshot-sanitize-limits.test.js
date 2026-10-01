@@ -76,18 +76,6 @@ describe('attestation certificates in a snapshot', () => {
     expect(state).toEqual({ authenticatorDataHex: '0a0b' });
   });
 
-  it('drops a parsed certificate with no JSON form, keeping the rest of its entry', () => {
-    // The BigInt keeps the entry from being copied through JSON, so the value reaches the certificate's own copy.
-    const state = keptState({ attestationCertificates: [{ parsedX5c: WRITES_AS_NULL, serialNumber: 7855n }] });
-
-    expect(state.attestationCertificates).toEqual([{ serialNumber: 7855n }]);
-  });
-
-  it('drops a certificate parsed under the older name with no JSON form', () => {
-    const state = keptState({ attestationCertificates: [{ parsed: WRITES_AS_NULL, serialNumber: 7855n }] });
-
-    expect(state.attestationCertificates).toEqual([{ serialNumber: 7855n }]);
-  });
 });
 
 // A packed self-attestation's parts (the advanced-register-packed-self-ed25519 golden).
@@ -105,14 +93,6 @@ describe('the decoded registration in a snapshot', () => {
     const attestationObject = { fmt: 'packed', attStmt: { alg: -8, sig: SELF_SIGNATURE }, authData: AUTH_DATA };
 
     expect(keptState({ attestationObject }).attestationObject).toEqual(attestationObject);
-  });
-
-  it('keeps no attestation object with no JSON form', () => {
-    expect(keptState({ attestationObject: WRITES_AS_NULL, authenticatorDataHex: '0a0b' })).toEqual({ authenticatorDataHex: '0a0b' });
-  });
-
-  it('keeps no authenticator data with no JSON form', () => {
-    expect(keptState({ authenticatorData: WRITES_AS_NULL, authenticatorDataHex: '0a0b' })).toEqual({ authenticatorDataHex: '0a0b' });
   });
 
   it('keeps no state that is not an object', () => {

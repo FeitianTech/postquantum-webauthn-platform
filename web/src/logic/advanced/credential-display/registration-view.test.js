@@ -96,13 +96,6 @@ describe('attestationObjectJson', () => {
     expect(shown.attStmt.x5c[0].details).not.toHaveProperty('derBase64');
   });
 
-  it('writes the format alone when the object cannot be copied but a format is known', () => {
-    expect(JSON.parse(attestationObjectJson({ fmt: 'none', counter: 1n }, 'none', []))).toEqual({ fmt: 'none' });
-  });
-
-  it('gives nothing when the object cannot be written as JSON', () => {
-    expect(attestationObjectJson({ fmt: 'none', counter: 1n }, '', [])).toBe('');
-  });
 });
 
 describe('describeAttestationSection', () => {
@@ -195,12 +188,6 @@ describe('describeAttestationSection', () => {
     const section = describeAttestationSection(state);
     expect(section.body.kind).toBe('json');
     expect(section.certificateMessage).toBe(REGISTRATION_TEXT.noCertificates);
-  });
-
-  it('says the attestation object could not be prepared when it cannot be written as JSON', () => {
-    const state = createRegistrationState();
-    state.attestationObject = { fmt: 'none', counter: 1n };
-    expect(describeAttestationSection(state).body).toEqual({ kind: 'placeholder', text: REGISTRATION_TEXT.unprepared });
   });
 
   it('gives the authenticator data\'s decode error when the data was sent but not decoded', () => {

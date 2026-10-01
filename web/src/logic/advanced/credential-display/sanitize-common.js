@@ -105,9 +105,6 @@ export function sanitiseRegistrationData(raw) {
     }
 
     const cloned = cloneJson(raw);
-    if (!cloned || typeof cloned !== 'object') {
-        return null;
-    }
 
     const keysToRemove = [
         'attestationObject',
@@ -194,23 +191,21 @@ export function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
         fallbackAuthenticatorValue = authenticatorCandidates[0];
     }
 
-    const cloned = cloneJson(info);
-    if (!cloned || typeof cloned !== 'object') {
-        if (authenticatorHex || summaryHash || fallbackAuthenticatorValue) {
-            const minimal = {};
-            if (authenticatorHex) {
-                minimal.authenticatorData = authenticatorHex;
-            } else if (fallbackAuthenticatorValue) {
-                minimal.authenticatorData = fallbackAuthenticatorValue;
-            }
-            if (summaryHash) {
-                minimal.authenticatorDataHash = summaryHash;
-            }
-            // The test above gives it at least one of the two.
-            return minimal;
+    // No relying party: the view's own hex and hash alone, when it has them.
+    if (!info || typeof info !== 'object') {
+        if (!authenticatorHex && !summaryHash) {
+            return null;
         }
-        return null;
+        const minimal = {};
+        if (authenticatorHex) {
+            minimal.authenticatorData = authenticatorHex;
+        }
+        if (summaryHash) {
+            minimal.authenticatorDataHash = summaryHash;
+        }
+        return minimal;
     }
+    const cloned = cloneJson(info);
 
     stripCertificateCollections(cloned);
     removeKeysCaseInsensitive(cloned, RP_INFO_EXCLUDED_KEYS);
@@ -329,9 +324,6 @@ export function sanitizeParsedCertificateDetails(parsed) {
     }
 
     const parsedCopy = cloneJson(parsed);
-    if (!parsedCopy || typeof parsedCopy !== 'object') {
-        return null;
-    }
 
     ['pem', 'der', 'derBase64', 'der_base64', 'raw', 'summary', 'error'].forEach(key => {
         if (Object.hasOwn(parsedCopy, key)) {

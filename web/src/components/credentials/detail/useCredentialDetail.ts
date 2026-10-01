@@ -13,7 +13,7 @@ export type DetailPhase =
 const hydrated = new Map<string, SavedCredential>();
 
 function copyOf(record: SavedCredential): SavedCredential {
-  return JSON.parse(JSON.stringify(record));
+  return structuredClone(record);
 }
 
 async function completed(record: SavedCredential, onSaved: () => void) {

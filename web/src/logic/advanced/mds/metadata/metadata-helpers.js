@@ -95,12 +95,7 @@ export function cloneMetadataEntry(entry) {
     if (!entry || typeof entry !== 'object') {
         return null;
     }
-    try {
-        return JSON.parse(JSON.stringify(entry));
-    } catch (error) {
-        console.warn('Failed to clone metadata entry.', error);
-        return entry;
-    }
+    return structuredClone(entry);
 }
 
 export function splitAcceptedFiles(files) {

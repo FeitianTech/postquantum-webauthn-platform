@@ -6,11 +6,7 @@ export function cloneJsonValue(value) {
     if (!value || typeof value !== 'object') {
         return null;
     }
-    try {
-        return JSON.parse(JSON.stringify(value));
-    } catch (error) {
-        return { ...value };
-    }
+    return structuredClone(value);
 }
 
 export function removeObjectKeys(target, keys) {

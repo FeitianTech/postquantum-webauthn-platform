@@ -40,11 +40,9 @@ export function stripKeysRecursively(target, keys, skipRoot = false) {
     });
 }
 
+// Called with an object (the entry's own check).
 function sanitiseParsedCertificateForSnapshot(parsed) {
     const parsedClone = cloneJsonValue(parsed);
-    if (!parsedClone) {
-        return null;
-    }
 
     stripKeysRecursively(parsedClone, SNAPSHOT_CERT_STRIP_KEYS, false);
 
@@ -73,17 +71,9 @@ function sanitiseCertificateEntryForSnapshot(entry) {
     stripKeysRecursively(clone, SNAPSHOT_CERT_STRIP_KEYS, false);
 
     if (clone.parsedX5c && typeof clone.parsedX5c === 'object') {
-        const sanitisedParsed = sanitiseParsedCertificateForSnapshot(clone.parsedX5c);
-        if (sanitisedParsed) {
-            clone.parsedX5c = sanitisedParsed;
-        } else {
-            delete clone.parsedX5c;
-        }
+        clone.parsedX5c = sanitiseParsedCertificateForSnapshot(clone.parsedX5c);
     } else if (clone.parsed && typeof clone.parsed === 'object') {
-        const sanitisedParsed = sanitiseParsedCertificateForSnapshot(clone.parsed);
-        if (sanitisedParsed) {
-            clone.parsedX5c = sanitisedParsed;
-        }
+        clone.parsedX5c = sanitiseParsedCertificateForSnapshot(clone.parsed);
         delete clone.parsed;
     }
 
@@ -100,11 +90,9 @@ function sanitiseDetailPreparationSnapshot(preparation) {
     };
 }
 
+// Called with an object (sanitiseRegistrationDetailStateSnapshot checks).
 function sanitiseAttestationObjectForSnapshot(attestationObject) {
     const clone = cloneJsonValue(attestationObject);
-    if (!clone) {
-        return null;
-    }
 
     if (clone.attStmt && typeof clone.attStmt === 'object') {
         const attStmtClone = { ...clone.attStmt };
@@ -118,11 +106,9 @@ function sanitiseAttestationObjectForSnapshot(attestationObject) {
     return clone;
 }
 
+// Called with an object (sanitiseRegistrationDetailStateSnapshot checks).
 function sanitiseAuthenticatorDataForSnapshot(authData) {
     const clone = cloneJsonValue(authData);
-    if (!clone) {
-        return null;
-    }
 
     stripKeysRecursively(clone, SNAPSHOT_AUTH_DATA_STRIP_KEYS, false);
     return clone;
@@ -140,10 +126,7 @@ function sanitiseRegistrationDetailStateSnapshot(state) {
     }
 
     if (state.attestationObject && typeof state.attestationObject === 'object') {
-        const attestationClone = sanitiseAttestationObjectForSnapshot(state.attestationObject);
-        if (attestationClone) {
-            sanitised.attestationObject = attestationClone;
-        }
+        sanitised.attestationObject = sanitiseAttestationObjectForSnapshot(state.attestationObject);
     }
 
     if (Array.isArray(state.attestationCertificates)) {
@@ -165,10 +148,7 @@ function sanitiseRegistrationDetailStateSnapshot(state) {
     }
 
     if (state.authenticatorData && typeof state.authenticatorData === 'object') {
-        const authClone = sanitiseAuthenticatorDataForSnapshot(state.authenticatorData);
-        if (authClone) {
-            sanitised.authenticatorData = authClone;
-        }
+        sanitised.authenticatorData = sanitiseAuthenticatorDataForSnapshot(state.authenticatorData);
     }
 
     if (typeof state.authenticatorDataHex === 'string' && state.authenticatorDataHex.trim()) {

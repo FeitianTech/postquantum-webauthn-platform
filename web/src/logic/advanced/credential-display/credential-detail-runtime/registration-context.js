@@ -194,7 +194,7 @@ export function buildRegistrationContext(cred, {
         cred.client_extension_outputs,
     );
     if (extensionResults && typeof extensionResults === 'object') {
-        registrationCredential.clientExtensionResults = cloneJson(extensionResults) || extensionResults;
+        registrationCredential.clientExtensionResults = cloneJson(extensionResults);
     }
 
     if (cred.authenticatorAttachment && !registrationCredential.authenticatorAttachment) {

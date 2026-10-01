@@ -135,11 +135,7 @@ export function pruneAdvancedCredentialPayload(record, { aggressive = false } = 
 
     let registrationSnapshot = null;
     if (record.registrationDetailSnapshot && typeof record.registrationDetailSnapshot === 'object') {
-        try {
-            registrationSnapshot = JSON.parse(JSON.stringify(record.registrationDetailSnapshot));
-        } catch (error) {
-            registrationSnapshot = { ...record.registrationDetailSnapshot };
-        }
+        registrationSnapshot = cloneJsonValue(record.registrationDetailSnapshot);
         delete record.registrationDetailSnapshot;
     }
 

@@ -27,11 +27,7 @@ export function cloneJson(value) {
         return null;
     }
 
-    try {
-        return JSON.parse(JSON.stringify(value));
-    } catch (error) {
-        return null;
-    }
+    return structuredClone(value);
 }
 
 export function collectTruthyEntries(...sources) {

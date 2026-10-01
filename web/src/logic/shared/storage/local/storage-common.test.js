@@ -9,15 +9,14 @@ import {
 } from './common.js';
 
 describe('storage helpers', () => {
-  it('copy a record JSON cannot write field by field', () => {
-    const record = { credentialId: 't0QZievwTqmQrciJwJ-SL9RtBhRiQAlGJwrOmUt4C8I' };
-    record.self = record;
+  it('copy a record at every level', () => {
+    const record = { credentialId: 't0QZievwTqmQrciJwJ-SL9RtBhRiQAlGJwrOmUt4C8I', properties: { residentKey: true } };
 
     const clone = cloneJsonValue(record);
 
-    expect(clone).not.toBe(record);
-    expect(clone.credentialId).toBe(record.credentialId);
-    expect(clone.self).toBe(record);
+    expect(clone).toEqual(record);
+    expect(clone.properties).not.toBe(record.properties);
+    expect(cloneJsonValue('t0QZ')).toBeNull();
   });
 
   it('remove no keys from a target that is not a record, or with keys that are not a list', () => {

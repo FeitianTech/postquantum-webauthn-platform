@@ -50,11 +50,11 @@ describe('cloneJson', () => {
     expect([null, undefined, 'o2Nm', 5, true].map(cloneJson)).toEqual([null, null, null, null, null]);
   });
 
-  it('has no copy of a value JSON cannot hold', () => {
-    const cyclic = { fmt: 'packed' };
-    cyclic.self = cyclic;
-    expect(cloneJson(cyclic)).toBeNull();
-    expect(cloneJson({ counter: 1n })).toBeNull();
+  it('copies every level, so the copy shares nothing with the value', () => {
+    const value = { fmt: 'packed', attStmt: { x5c: ['MIIB'] } };
+    const copy = cloneJson(value);
+    copy.attStmt.x5c.push('MIIC');
+    expect(value.attStmt.x5c).toEqual(['MIIB']);
   });
 });
 

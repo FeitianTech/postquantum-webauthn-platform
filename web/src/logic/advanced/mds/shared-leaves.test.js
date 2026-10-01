@@ -67,12 +67,11 @@ describe('snapshot helpers', () => {
     );
   });
 
-  it('keeps an entry that cannot be copied', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const entry = { name: 'loop' };
-    entry.self = entry;
-    expect(cloneMetadataEntry(entry)).toBe(entry);
-    expect(warn).toHaveBeenCalled();
+  it('copies an entry at every level', () => {
+    const entry = { name: 'Key', metadataStatement: { upv: [{ major: 1 }] } };
+    const copy = cloneMetadataEntry(entry);
+    expect(copy).toEqual(entry);
+    expect(copy.metadataStatement).not.toBe(entry.metadataStatement);
   });
 
   it('trims a summary\'s text and keeps its other values', () => {

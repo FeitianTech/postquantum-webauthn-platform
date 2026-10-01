@@ -36,7 +36,6 @@ export const REGISTRATION_TEXT = Object.freeze({
     noRelyingParty: 'No relying party data returned.',
     attestationTitle: 'Attestation Information',
     attestationObject: 'Attestation Object',
-    unprepared: 'Unable to prepare decoded attestationObject.',
     undecodable: 'Unable to decode attestationObject.',
     noAttestationObject: 'No attestationObject was provided.',
     certificate: 'Attestation Certificate',
@@ -52,22 +51,9 @@ export function certificateTitle(displayIndex, count) {
         : `${REGISTRATION_TEXT.certificate} ${displayIndex + 1}`;
 }
 
-/** The decoded attestation object as the view shows it, as JSON; '' when it cannot be written. */
+/** The decoded attestation object (JSON the decoder answered) as the view shows it, as JSON. */
 export function attestationObjectJson(attestationObject, attestationFormatRaw, certificates) {
-    const attestationDisplay = sanitiseAttestationObjectForDisplay(
-        attestationObject,
-        attestationFormatRaw,
-        certificates,
-    ) || attestationObject;
-    try {
-        return JSON.stringify(attestationDisplay, null, 2);
-    } catch (error) {
-        try {
-            return JSON.stringify(attestationObject, null, 2);
-        } catch (jsonError) {
-            return '';
-        }
-    }
+    return JSON.stringify(sanitiseAttestationObjectForDisplay(attestationObject, attestationFormatRaw, certificates), null, 2);
 }
 
 /**
@@ -122,10 +108,7 @@ export function describeAttestationSection(state, {
 
     let body;
     if (attestationObject) {
-        const text = attestationObjectJson(attestationObject, attestationFormatRaw, certificatesAll);
-        body = text
-            ? { kind: 'json', text }
-            : { kind: 'placeholder', text: REGISTRATION_TEXT.unprepared };
+        body = { kind: 'json', text: attestationObjectJson(attestationObject, attestationFormatRaw, certificatesAll) };
     } else if (attestationObjectValue) {
         body = { kind: 'error', text: attestationDecodeError || REGISTRATION_TEXT.undecodable };
     } else {

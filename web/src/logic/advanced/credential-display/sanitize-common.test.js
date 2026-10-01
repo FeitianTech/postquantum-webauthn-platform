@@ -17,13 +17,6 @@ import { advancedComplete, registration } from '@/test/logic/advanced/credential
 /** The advanced registration's relying party, as register-complete answers it (with its certificates). */
 const advancedRelyingParty = () => advancedComplete().relyingParty;
 
-/** A map that holds itself, which JSON cannot copy. */
-function cyclic(value) {
-  const map = { ...value };
-  map.self = map;
-  return map;
-}
-
 describe('stripCertificateCollections', () => {
   it('removes the certificate lists at every depth', () => {
     const target = {
@@ -131,10 +124,9 @@ describe('sanitizeParsedCertificateDetails', () => {
     });
   });
 
-  it('has no details for what is not a map, or for details JSON cannot copy', () => {
+  it('has no details for what is not a map', () => {
     expect(sanitizeParsedCertificateDetails(null)).toBeNull();
     expect(sanitizeParsedCertificateDetails('MIIB')).toBeNull();
-    expect(sanitizeParsedCertificateDetails(cyclic({ subject: 'CN=Leaf' }))).toBeNull();
   });
 });
 
@@ -178,10 +170,9 @@ describe('sanitiseRegistrationData', () => {
     expect(sanitiseRegistrationData(raw)).toEqual(raw);
   });
 
-  it('has no data for what is not a map, or for data JSON cannot copy', () => {
+  it('has no data for what is not a map', () => {
     expect(sanitiseRegistrationData(null)).toBeNull();
     expect(sanitiseRegistrationData('SZYN')).toBeNull();
-    expect(sanitiseRegistrationData(cyclic({ signatureCounter: 0 }))).toBeNull();
   });
 });
 
@@ -317,10 +308,6 @@ describe('sanitizeRelyingPartyInfo without a relying party', () => {
       authenticatorDataHash: 'ef01',
     });
     expect(sanitizeRelyingPartyInfo(undefined, { authenticatorDataHash: 'ef01' })).toEqual({ authenticatorDataHash: 'ef01' });
-  });
-
-  it('gives only the authenticator data of a relying party JSON cannot copy', () => {
-    expect(sanitizeRelyingPartyInfo(cyclic({ authenticatorData: 'ABCD' }))).toEqual({ authenticatorData: 'abcd' });
-    expect(sanitizeRelyingPartyInfo(cyclic({ authenticatorData: 'SZYN' }))).toEqual({ authenticatorData: 'SZYN' });
+    expect(sanitizeRelyingPartyInfo(undefined, { authenticatorDataHex: 'abcd' })).toEqual({ authenticatorData: 'abcd' });
   });
 });
