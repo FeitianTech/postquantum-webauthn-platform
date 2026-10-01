@@ -59,7 +59,7 @@ def test_build_decoder_payload_for_cbor_deduplicates_qualifiers_and_normalizes_m
     assert payload["malformed"] == []
 
 
-def test_convert_result_to_data_covers_json_cbor_and_fallback_paths():
+def test_json_cbor_and_unrecognised_results_become_their_data():
     assert decode_answer._convert_result_to_data("JSON", {"decoded": {"a": 1}}) == {
         "json": {"a": 1}
     }
