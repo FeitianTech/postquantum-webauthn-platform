@@ -284,6 +284,32 @@ def registration_payload(
     return payload
 
 
+def as_browser_writes_it(payload: dict[str, Any], authenticator: Authenticator, outputs: dict[str, Any]) -> dict[str, Any]:
+    """A response as a browser's own toJSON() writes it (WebAuthn Level 3).
+
+    A registration's response also holds its authenticator data, public key
+    (SubjectPublicKeyInfo) and algorithm; an assertion's has no userHandle when
+    there is none; the attachment is named; and ``outputs``, the client
+    extension outputs, have their bytes in base64url.
+    """
+
+    response = payload["response"]
+    if "attestationObject" in response:
+        attestation = cbor.decode(ceremony_helpers.unb64u(response["attestationObject"]))
+        response["authenticatorData"] = ceremony_helpers.b64u(attestation["authData"])
+        response["publicKey"] = ceremony_helpers.b64u(
+            authenticator._private_key.public_key().public_bytes(
+                serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
+            )
+        )
+        response["publicKeyAlgorithm"] = authenticator.algorithm
+    elif response.get("userHandle") is None:
+        response.pop("userHandle", None)
+    payload["authenticatorAttachment"] = "cross-platform"
+    payload["clientExtensionResults"] = outputs
+    return payload
+
+
 def assertion_payload(
     authenticator: Authenticator,
     *,

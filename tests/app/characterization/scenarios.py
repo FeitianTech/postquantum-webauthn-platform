@@ -785,3 +785,77 @@ def _(r: Recorder) -> None:
     # An assertion for a credential the request did not list.
     stranger = m.Authenticator("adv-auth-stranger")
     _advanced_authenticate(r, client, stranger, entries=[entry], valid=False)
+
+
+# -- the browser's own JSON ---------------------------------------------------------
+
+
+@scenario("native-webauthn-json")
+def _(r: Recorder) -> None:
+    """Both tabs' ceremonies with responses as a browser's own toJSON() writes them.
+
+    Registrations hold their authenticator data, public key and algorithm, an
+    assertion no userHandle, and the extension outputs their bytes in base64url
+    (prf results, a largeBlob blob): what the server stores of each.
+    """
+
+    client = r.client()
+    simple = m.Authenticator("native-json-simple")
+    challenge = _simple_begin(r, client)
+    registration = m.registration_payload(simple, challenge=challenge, transports=["usb"])
+    r.post(
+        client,
+        f"/api/register/complete?email={EMAIL}",
+        json=m.as_browser_writes_it(registration, simple, {"credProps": {"rk": True}}),
+        headers=HEADERS,
+    )
+    begin = r.post(client, f"/api/authenticate/begin?email={EMAIL}", json={"credentials": [simple.stored_credential_entry()]})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    r.post(
+        client,
+        f"/api/authenticate/complete?email={EMAIL}",
+        json=m.as_browser_writes_it(m.assertion_payload(simple, challenge=challenge, counter=1), simple, {}),
+        headers=HEADERS,
+    )
+
+    advanced = m.Authenticator("native-json-advanced")
+    prf = {"eval": {"first": {"$base64url": b64u(b"\x09" * 32)}}}
+    options = _options(
+        authenticatorSelection={"residentKey": "required"},
+        extensions={"credProps": True, "largeBlob": {"support": "required"}, "prf": prf},
+    )
+    begin = r.post(client, "/api/advanced/register/begin", json={"publicKey": copy.deepcopy(options)})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    outputs = {
+        "credProps": {"rk": True},
+        "largeBlob": {"supported": True},
+        "prf": {"enabled": True, "results": {"first": b64u(b"\x0a" * 32)}},
+    }
+    r.post(
+        client,
+        "/api/advanced/register/complete",
+        json={
+            "publicKey": copy.deepcopy(options),
+            "__credential_response": m.as_browser_writes_it(
+                m.registration_payload(advanced, challenge=challenge, transports=["usb"]), advanced, outputs
+            ),
+        },
+        headers=HEADERS,
+    )
+    written = {"largeBlob": {"written": True}, "prf": {"results": {"first": b64u(b"\x0b" * 32)}}}
+    read = {"largeBlob": {"blob": b64u(b"\x0a\x0b")}}
+    for counter, (extensions, outputs) in enumerate(
+        (({"largeBlob": {"write": "0a0b"}, "prf": prf}, written), ({"largeBlob": {"read": True}}, read)), start=1
+    ):
+        auth_options = _auth_options(extensions=extensions)
+        entries = [advanced.stored_credential_entry(declared_algorithm=-7)]
+        body = {"publicKey": copy.deepcopy(auth_options), "__storedCredentials": entries}
+        begin = r.post(client, "/api/advanced/authenticate/begin", json=body)
+        challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+        assertion = m.assertion_payload(advanced, challenge=challenge, counter=counter)
+        r.post(
+            client,
+            "/api/advanced/authenticate/complete",
+            json={**body, "__assertion_response": m.as_browser_writes_it(assertion, advanced, outputs)},
+            headers=HEADERS,
+        )
