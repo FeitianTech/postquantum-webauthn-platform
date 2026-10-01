@@ -5,11 +5,12 @@ source =
     server
 
 [report]
-# A floor, not a target: the app and tools measured 96.7% on 2026-09-30 (fido2
-# comes from PyPI and is not measured). Set below that so a real regression
-# fails but ordinary churn does not. Raise it when coverage rises; never lower
-# it to go green.
-fail_under = 95
+# A floor, not a target: the app and tools measured 97.6% on 2026-10-01 (fido2
+# comes from PyPI and is not measured), and 97.4% in the python:3.12-slim image,
+# where tools/commit_messages.py's tests skip for want of git. Set just below the
+# lower figure so a real regression fails. Raise it when coverage rises; never
+# lower it to go green.
+fail_under = 97.3
 omit =
     tests/*
     */tests/*
