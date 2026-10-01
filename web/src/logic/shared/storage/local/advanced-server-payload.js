@@ -3,11 +3,11 @@ import {
     normaliseAdvancedCredentialId,
 } from './id-utils.js';
 
+// The algorithm a saved record names: the server writes it twice, and in the COSE key.
 function extractAlgorithm(record) {
     const candidates = [
         record.algorithm,
         record.publicKeyAlgorithm,
-        record.coseAlgorithm,
         record.publicKeyCose && record.publicKeyCose[3],
     ];
     for (const candidate of candidates) {
@@ -18,35 +18,18 @@ function extractAlgorithm(record) {
     return undefined;
 }
 
-// Called with an object (the source is filtered to objects first).
+// The COSE public key the server wrote (base64url, or standard base64 in an
+// earlier release's publicKeyBase64): every saved record holds one of these.
 function extractPublicKey(record) {
-    const preferredCandidates = [
+    const candidates = [
         record.publicKey,
         record.publicKeyBase64,
         record.publicKeyBase64Url,
-        record.publicKeyCbor,
-    ];
-    for (const candidate of preferredCandidates) {
-        if (typeof candidate === 'string' && candidate.trim()) {
-            return ensureBase64Url(candidate);
-        }
-    }
-
-    const secondaryCandidates = [
         record.publicKeyBytes,
     ];
-    for (const candidate of secondaryCandidates) {
+    for (const candidate of candidates) {
         if (typeof candidate === 'string' && candidate.trim()) {
             return ensureBase64Url(candidate);
-        }
-    }
-
-    if (record.publicKeyCose && typeof record.publicKeyCose === 'object') {
-        try {
-            const json = JSON.stringify(record.publicKeyCose);
-            return ensureBase64Url(btoa(json));
-        } catch (error) {
-            return '';
         }
     }
     return '';
@@ -70,15 +53,11 @@ export function prepareAdvancedCredentialsForServerFromSource(source) {
             if (!publicKey) {
                 return;
             }
-            const aaguidCandidate = item.aaguidBase64Url || item.aaguid || item.aaguidHex;
-            const aaguid = aaguidCandidate ? ensureBase64Url(String(aaguidCandidate)) : null;
+            const aaguid = item.aaguid ? ensureBase64Url(String(item.aaguid)) : null;
             const signCount = Number.isFinite(item.signCount) ? Number(item.signCount) : 0;
             const algorithm = extractAlgorithm(item);
-            const attachment = item.authenticatorAttachment || item.attachment || item.properties?.authenticatorAttachment;
-            const residentSource = (
-                item.resident ?? item.residentKey ?? item.discoverable ?? item.properties?.residentKey ??
-                item.relyingParty?.residentKey
-            );
+            const attachment = item.authenticatorAttachment || item.properties?.authenticatorAttachment;
+            const residentSource = item.residentKey ?? item.properties?.residentKey ?? item.relyingParty?.residentKey;
             const resident = typeof residentSource === 'boolean' ? residentSource : Boolean(item.residentKey);
 
             const prepared = {

@@ -35,10 +35,19 @@ describe('the advanced credentials sent to the server', () => {
     expect(prepared.publicKey).toBe(PUBLIC_KEY);
   });
 
-  it('leave out a credential whose COSE key cannot be written as base64', () => {
+  it('leave out a credential that holds no public key the server can read', () => {
     expect(prepareAdvancedCredentialsForServerFromSource([
-      credential({ publicKey: undefined, publicKeyCose: { 1: 2, 3: -7, label: 'ключ' } }),
+      credential({ publicKey: undefined, publicKeyCose: { 1: 2, 3: -7 } }),
     ])).toEqual([]);
+  });
+
+  it('send the algorithm the record names, or its COSE key\'s', () => {
+    const [named, cose] = prepareAdvancedCredentialsForServerFromSource([
+      credential({ publicKeyAlgorithm: -8 }),
+      credential({ credentialId: 'AQID', publicKeyCose: { 1: 2, 3: -7 } }),
+    ]);
+
+    expect([named.algorithm, cose.algorithm]).toEqual([-8, -7]);
   });
 
   it('send the AAGUID in base64url', () => {

@@ -121,18 +121,20 @@ describe('local-storage edge cases', () => {
     expect(updateCredentialSnapshot).toHaveBeenCalledTimes(1);
   });
 
-  it('builds advanced server payloads from COSE maps and keeps highest signCount variant', async () => {
+  it('builds advanced server payloads with the COSE key\'s algorithm and keeps highest signCount variant', async () => {
     const storage = await loadLocalStorageModule();
 
     const payload = storage.prepareAdvancedCredentialsForServer([
       {
         credentialId: 'cose-derived',
+        publicKey: 'pQE',
         publicKeyCose: { 1: 2, 3: -8 },
         signCount: 3,
         relyingParty: { residentKey: true },
       },
       {
         credentialId: 'cose-derived',
+        publicKey: 'pQE',
         publicKeyCose: { 1: 2, 3: -8 },
         signCount: 9,
         authenticatorAttachment: 'platform',
@@ -148,7 +150,7 @@ describe('local-storage edge cases', () => {
         authenticatorAttachment: 'platform',
       }),
     );
-    expect(payload[0].publicKey).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(payload[0].publicKey).toBe('pQE');
     expect(payload[0].resident).toBe(false);
   });
 
