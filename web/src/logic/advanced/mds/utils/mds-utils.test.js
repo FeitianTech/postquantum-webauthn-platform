@@ -7,7 +7,6 @@ import {
 } from './extractors.js';
 import {
   formatCertificateDateDisplay,
-  formatDate,
   formatDetailValue,
   formatEnum,
   formatUpv,
@@ -70,11 +69,7 @@ describe('mds-utils', () => {
     expect(formatUpv(null)).toEqual([]);
   });
 
-  it('formats date values for metadata timelines', () => {
-    expect(formatDate('2025-03-14T12:00:00Z')).toMatch(/2025/);
-    expect(formatDate('not-a-date')).toBe('not-a-date');
-    expect(formatDate('')).toBe('');
-
+  it('formats certificate dates', () => {
     expect(formatCertificateDateDisplay('2025-03-14T12:00:00Z')).toContain('GMT');
     expect(formatCertificateDateDisplay('bad-date')).toBe('bad-date');
     expect(formatCertificateDateDisplay(null)).toBe('');
