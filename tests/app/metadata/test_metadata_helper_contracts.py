@@ -37,7 +37,7 @@ def _entry_payload(*, aaguid: str, description: str):
     }
 
 
-def test_metadata_normalisation_helpers_cover_status_identifiers_and_defaults():
+def test_status_reports_keep_only_the_objects():
     reports = mds_entries._normalise_status_reports(
         {
             "statusReports": [
@@ -52,11 +52,15 @@ def test_metadata_normalisation_helpers_cover_status_identifiers_and_defaults():
         {"status": "FIDO_CERTIFIED"},
     ]
 
+
+def test_attestation_key_identifiers_keep_only_trimmed_text():
     identifiers = mds_entries._normalise_attestation_identifiers(
         {"attestationCertificateKeyIdentifiers": [" id-1 ", "", 1, "id-2"]}
     )
     assert identifiers == ["id-1", "id-2"]
 
+
+def test_a_statement_gets_the_legal_header_and_defaults_for_fields_that_do_not_read():
     statement, legal = mds_entries._normalise_metadata_statement(
         {
             "legalHeader": " Demo legal ",
