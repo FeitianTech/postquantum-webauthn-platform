@@ -1,13 +1,8 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import {
-  createRegistrationState,
-  prepareRegistrationState,
-  resetRegistrationState,
-} from './registration-state.js';
+import { createRegistrationState, prepareRegistrationState } from './registration-state.js';
 import { sanitiseAttestationObjectForDisplay } from './sanitize-attestation-object.js';
 import { sanitizeParsedCertificateDetails } from './sanitize-common.js';
-import { registrationDetailState } from './state.js';
 import { advancedComplete, goldenDecode, registration } from '@/test/logic/advanced/credentials/registration-detail-answers.js';
 
 // The attestation object as the registration view shows it
@@ -32,10 +27,6 @@ function shownDetails(parsed) {
 /** An attestation statement's x5c entry as the decoder answers it. */
 const decodedEntry = () => registration('packedX5c').attestationDecode.data.attestationObject.attStmt.x5c[0];
 
-afterEach(() => {
-  resetRegistrationState(registrationDetailState);
-});
-
 describe('sanitiseAttestationObjectForDisplay', () => {
   it('shows the decoded attestation object with each certificate as the view knows it', async () => {
     const state = await packedState();
@@ -57,11 +48,10 @@ describe('sanitiseAttestationObjectForDisplay', () => {
     expect(state.attestationObject.raw).toBeTruthy();
   });
 
-  it("reads the current interface's certificates by default", async () => {
+  it('describes each x5c entry by the certificate the view knows at its place', async () => {
     const state = await packedState();
     const certificate = advancedComplete().relyingParty.attestationCertificate;
-    registrationDetailState.attestationCertificates = [{ parsedX5c: certificate }];
-    const shown = sanitiseAttestationObjectForDisplay(state.attestationObject, 'packed');
+    const shown = sanitiseAttestationObjectForDisplay(state.attestationObject, 'packed', [{ parsedX5c: certificate }]);
     expect(shown.attStmt.x5c).toMatchObject([{ certificateIndex: 1, details: shownDetails(certificate) }]);
   });
 

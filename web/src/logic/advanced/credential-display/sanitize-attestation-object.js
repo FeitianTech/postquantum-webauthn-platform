@@ -1,4 +1,3 @@
-import {registrationDetailState} from './state.js';
 import {
     normaliseCertificateEntryForModal,
     partitionCertificateEntries,
@@ -13,13 +12,9 @@ import {
 import {cloneJson} from './data-utils.js';
 
 // The attestation object as the registration view shows it: `fmt` first, each
-// x5c certificate replaced by what the view knows of it (`certificates`, those of
-// ./state.js by default), the raw and formatting keys left out.
-export function sanitiseAttestationObjectForDisplay(
-    attestationObject,
-    attestationFormatRaw = '',
-    certificates = registrationDetailState.attestationCertificates,
-) {
+// x5c certificate replaced by what the view knows of it (`certificates`, its
+// registration state's), the raw and formatting keys left out.
+export function sanitiseAttestationObjectForDisplay(attestationObject, attestationFormatRaw, certificates) {
     const cloned = cloneJson(attestationObject || null);
     if (!cloned || typeof cloned !== 'object') {
         const formatValue = typeof attestationFormatRaw === 'string' ? attestationFormatRaw.trim() : '';

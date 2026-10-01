@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   readSnapshotResponse,
@@ -9,10 +9,8 @@ import {
   captureRegistrationState,
   createRegistrationState,
   prepareRegistrationState,
-  resetRegistrationState,
 } from '../registration-state.js';
 import { sanitizeRelyingPartyInfo } from '../sanitize-common.js';
-import { registrationDetailState } from '../state.js';
 import { goldenDecode, registration } from '@/test/logic/advanced/credentials/registration-detail-answers.js';
 
 // A saved registration snapshot read back (credential-detail-runtime/snapshot-context.js).
@@ -46,10 +44,6 @@ async function savedSnapshot(name = 'packedX5c') {
     },
   };
 }
-
-afterEach(() => {
-  resetRegistrationState(registrationDetailState);
-});
 
 describe('readSnapshotResponse', () => {
   it('reads the response a version 2 snapshot keeps', async () => {
@@ -96,12 +90,6 @@ describe('resolveRegistrationSnapshotContext', () => {
     });
     expect(context.snapshotState).toBe(snapshot.state);
     expect(target).toEqual({ ...state, visibleAttestationCertificateIndices: [0] });
-  });
-
-  it("applies it to the current interface's state by default", async () => {
-    const { snapshot, state } = await savedSnapshot();
-    resolveRegistrationSnapshotContext({ registrationDetailSnapshot: snapshot });
-    expect(registrationDetailState.attestationObject).toEqual(state.attestationObject);
   });
 
   it('reads a snapshot that is its own state', async () => {
