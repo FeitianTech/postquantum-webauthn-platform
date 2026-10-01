@@ -10,7 +10,12 @@ from types import SimpleNamespace
 
 import pytest
 from cryptography import x509
-from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID, ObjectIdentifier
+from cryptography.x509.oid import (
+    AuthorityInformationAccessOID,
+    ExtendedKeyUsageOID,
+    NameOID,
+    ObjectIdentifier,
+)
 
 from server.app.webauthn.attestation import (
     certificate_extensions as attestation_certificate_extensions,
@@ -114,6 +119,22 @@ def test_alternative_names_are_one_general_name_each(oid, names):
     value = names([x509.DirectoryName(tpm), x509.DNSName("authenticator.example")])
 
     assert _shown(oid, value) == ["DirName:2.23.133.2.1=id:4E544300", "DNS:authenticator.example"]
+
+
+def test_information_access_names_each_method_and_place():
+    value = x509.AuthorityInformationAccess(
+        [
+            x509.AccessDescription(AuthorityInformationAccessOID.CA_ISSUERS, x509.UniformResourceIdentifier("http://ca.example/ca.crt")),
+            x509.AccessDescription(AuthorityInformationAccessOID.OCSP, x509.UniformResourceIdentifier("http://ocsp.example")),
+            x509.AccessDescription(ObjectIdentifier("1.2.3.4"), x509.DNSName("repository.example")),
+        ]
+    )
+
+    assert _shown("1.3.6.1.5.5.7.1.1", value) == [
+        "caIssuers - URI:http://ca.example/ca.crt",
+        "OCSP - URI:http://ocsp.example",
+        "1.2.3.4 - DNS:repository.example",
+    ]
 
 
 @pytest.mark.parametrize(

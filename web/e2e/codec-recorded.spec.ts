@@ -58,6 +58,18 @@ const EXPECTED: ExpectedDifference[] = [
     reason: 'SubjectAlternativeName was shown as a Python repr; it is now each name with its kind',
   },
   { only: 'shown', section: 'Attestation object', token: /^DirName:2\.23\.133\.2\.3=/, reason: "SubjectAlternativeName: the TPM's directory name" },
+  {
+    only: 'recorded',
+    section: 'Attestation object',
+    token: /^(<AuthorityInformationAccess\(\[<AccessDescription\(access_method=<ObjectIdentifier\(oid=1\.3\.6\.1\.5\.5\.7\.48\.2|name=caIssuers\)>|access_location=<UniformResourceIdentifier\(value='https:.+'\)>\)>\]\)>)$/,
+    reason: 'AuthorityInformationAccess was shown as a Python repr; it is now each method and place',
+  },
+  {
+    only: 'shown',
+    section: 'Attestation object',
+    token: /^(caIssuers|-|URI:https:\/\/azcsprodncuaikpublish\..+)$/,
+    reason: "AuthorityInformationAccess: where the TPM's issuer certificate is",
+  },
 ];
 
 async function betaText(page: Page, input: string, lenient: boolean) {

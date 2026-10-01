@@ -111,6 +111,14 @@ def _oid_text(oid: x509.ObjectIdentifier) -> str:
     return oid.dotted_string if name == "Unknown OID" else f"{name} ({oid.dotted_string})"
 
 
+def _access_description(description: x509.AccessDescription) -> str:
+    """Where to find something about the certificate, as OpenSSL writes it: the method, a dash, the place."""
+
+    method = description.access_method
+    name = method.dotted_string if method._name == "Unknown OID" else method._name
+    return f"{name} - {_general_name(description.access_location)}"
+
+
 def _basic_constraints_value(value: x509.BasicConstraints) -> dict[str, Any]:
     serialized: dict[str, Any] = {"CA": "TRUE" if value.ca else "FALSE"}
     if value.path_length is not None:
@@ -225,6 +233,8 @@ def _serialize_extension_value(ext: Any) -> Any:
         return [_oid_text(purpose) for purpose in value]
     if isinstance(value, (x509.SubjectAlternativeName, x509.IssuerAlternativeName)):
         return [_general_name(name) for name in value]
+    if isinstance(value, (x509.AuthorityInformationAccess, x509.SubjectInformationAccess)):
+        return [_access_description(description) for description in value]
     if isinstance(value, (x509.PrecertificateSignedCertificateTimestamps, x509.SignedCertificateTimestamps)):
         return _signed_certificate_timestamps_value(value)
     if isinstance(value, x509.UnrecognizedExtension):
