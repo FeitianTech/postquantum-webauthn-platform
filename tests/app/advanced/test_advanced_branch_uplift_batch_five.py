@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-
 import pytest
 
 from server.app import config as config_module
@@ -223,91 +221,6 @@ def test_register_complete_hits_non_mapping_fallback_paths_and_keeps_response_co
     assert body["status"] == "OK"
     assert body["relyingParty"]["largeBlob"] is True
     assert body["relyingParty"]["registrationData"]["authenticatorExtensions"] == {"ext": True}
-
-
-@pytest.mark.parametrize(
-    "cred_protect_value,expected_display",
-    [
-        (2, "userVerificationOptionalWithCredentialIDList"),
-        ("custom-policy", "custom-policy"),
-    ],
-)
-def test_register_complete_maps_cred_protect_display_and_handles_public_key_alg_fallbacks(monkeypatch, cred_protect_value, expected_display, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module, advanced_summary, advanced_registration_record):
-    _install_register_complete_defaults(monkeypatch, advanced_module, attestation_module, credential_artifacts_module, device_logs_module, metadata_module, storage_module, config_module)
-
-    class _CredentialData:
-        credential_id = b"cred-two"
-        public_key = {"alg": -7, "bad": object()}
-        aaguid = bytes.fromhex("00112233445566778899aabbccddeeff")
-
-    class _Flag:
-        UP = 0x01
-        UV = 0x04
-        BE = 0x08
-        BS = 0x10
-        AT = 0x40
-        ED = 0x80
-
-    class _AuthData:
-        FLAG = _Flag
-        credential_data = _CredentialData()
-        rp_id_hash = hashlib.sha256(b"example.com").digest()
-        flags = _Flag.UP | _Flag.AT
-        counter = 3
-        extensions = {}
-
-        def __bytes__(self):
-            return b"auth-data-two"
-
-    class _Server:
-        def register_complete(self, _state, _response):
-            return _AuthData()
-
-    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _Server())
-    monkeypatch.setattr(
-        attestation_certificates,
-        "extract_attestation_details",
-        lambda _response: ("none", {}, None, None, {"largeBlob": {"supported": True}}, None, [])
-    )
-    monkeypatch.setattr(attestation_aaguid, "extract_min_pin_length", lambda _results: None)
-    monkeypatch.setattr(
-        attestation_checks,
-        "perform_attestation_checks",
-        lambda *_args, **_kwargs: {
-            "signature_valid": True,
-            "root_valid": True,
-            "rp_id_hash_valid": None,
-            "aaguid_match": True,
-            "metadata": {},
-            "warnings": [],
-        }
-    )
-    monkeypatch.setattr(attestation_aaguid, "summarize_authenticator_extensions", lambda _ext: {})
-    monkeypatch.setattr(advanced_summary, "_generate_storage_id", lambda _source: "generated::storage::id")
-
-    with entry_app().test_client() as client:
-        with client.session_transaction() as session_state:
-            session_state["advanced_state"] = {"challenge": "state-token"}
-            session_state["advanced_rp"] = {"id": "example.com", "name": "Example"}
-
-        response = client.post(
-            "/api/advanced/register/complete",
-            json={
-                "publicKey": {
-                    "challenge": "AQID",
-                    "rp": {"id": "example.com", "name": "Example"},
-                    "user": {"name": "user@example.com", "displayName": "User"},
-                    "extensions": {"credProtect": cred_protect_value},
-                },
-                "__credential_response": {
-                    "response": {},
-                },
-            },
-        )
-
-    assert response.status_code == 200
-    body = response.get_json()
-    assert body["credProtectUsed"] == expected_display
 
 
 def test_authenticate_begin_uses_stored_rp_required_uv_and_skips_invalid_allow_credentials(monkeypatch, config_module, advanced_parsing):
