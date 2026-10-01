@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   HINT_VALUES,
@@ -8,7 +8,6 @@ import {
   ensureAuthenticationHintsAllowed,
   normalizeHintValue,
 } from './hint-rules.js';
-import { state } from '../../shared/state.js';
 
 // What the hints and the authenticator attachment mean for a request, with no
 // form (advanced/auth/hint-rules.js).
@@ -16,10 +15,6 @@ import { state } from '../../shared/state.js';
 const PLATFORM = { credentialIdHex: 'aa01', authenticatorAttachment: 'platform' };
 const SECURITY_KEY = { credentialIdHex: 'bb02', properties: { authenticatorAttachment: ' Cross-Platform ' } };
 const NO_ATTACHMENT = { credentialIdHex: 'cc03' };
-
-afterEach(() => {
-  state.storedCredentials = [];
-});
 
 describe('the hints', () => {
   it('are offered in the form\'s order', () => {
@@ -171,12 +166,11 @@ describe('the credentials a request allows', () => {
     expect(publicKey.allowCredentials).toEqual([]);
   });
 
-  it('read the list\'s credentials when none are given', () => {
-    state.storedCredentials = [PLATFORM];
+  it('offer no saved credential to a registration\'s request', () => {
     const publicKey = { hints: ['client-device'], allowCredentials: [] };
-    enforceAuthenticatorAttachmentWithHints(publicKey);
-    expect(publicKey.allowCredentials).toEqual([{ type: 'public-key', id: { $hex: 'aa01' } }]);
-    expect(enforceAuthenticatorAttachmentWithHints({ hints: ['hybrid'] }, null)).toEqual(['cross-platform']);
+    expect(enforceAuthenticatorAttachmentWithHints(publicKey)).toEqual(['platform']);
+    expect(publicKey.allowCredentials).toEqual([]);
+    expect(enforceAuthenticatorAttachmentWithHints({ hints: ['hybrid'] })).toEqual(['cross-platform']);
   });
 
   it('require no hint: a missing request, no hints or hints that imply no attachment give none', () => {

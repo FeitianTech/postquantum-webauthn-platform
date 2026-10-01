@@ -3,7 +3,6 @@
 // attachment given to the browser, and the allowCredentials the stored
 // credentials' attachments allow. DOM-free.
 import { HINT_ATTACHMENT_MAP } from '../constants.js';
-import { state } from '../../shared/state.js';
 import {
     convertFormat,
     currentFormatToJsonFormat,
@@ -42,9 +41,9 @@ export function deriveAllowedAttachmentsFromHints(hints) {
     return attachments;
 }
 
-export function enforceAuthenticatorAttachmentWithHints(publicKey, options = {}) {
-    const { storedCredentials } = options || {};
-    return ensureAuthenticationHintsAllowed(publicKey, { storedCredentials });
+// A registration's request: no saved credential to offer.
+export function enforceAuthenticatorAttachmentWithHints(publicKey) {
+    return ensureAuthenticationHintsAllowed(publicKey);
 }
 
 export function applyAuthenticatorAttachmentPreference(targetOptions, allowedAttachments, ...fallbackSources) {
@@ -110,9 +109,9 @@ export function applyAuthenticatorAttachmentPreference(targetOptions, allowedAtt
     }
 }
 
-// The stored credentials are the list's (state.storedCredentials) unless given.
+// storedCredentials: the saved credentials Allow Credentials may name (none when not given).
 export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
-    const { storedCredentials = state.storedCredentials } = options || {};
+    const { storedCredentials } = options || {};
     if (!publicKey || typeof publicKey !== 'object') {
         return [];
     }
