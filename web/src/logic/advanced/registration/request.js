@@ -8,11 +8,8 @@ import {
     currentFormatToJsonFormat,
     getCurrentBinaryFormat,
 } from '../../shared/binary.js';
-import {
-    extractHexFromJsonFormat,
-    getCredentialIdHex,
-    getCredentialUserHandleHex,
-} from '../../credentials/utils.js';
+import { extractHexFromJsonFormat } from '../editor/byte-values.js';
+import { getCredentialIdHex, getCredentialUserHandleHex } from '../../credentials/record-fields.js';
 import { ALGORITHM_OPTIONS } from './algorithm-options.js';
 
 /**

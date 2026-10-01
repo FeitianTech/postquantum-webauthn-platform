@@ -6,7 +6,7 @@
 // of a list it neither added nor dropped, in their place and with whatever else
 // they carry (transports, another user's credential, the order typed).
 // DOM-free.
-import { extractHexFromJsonFormat } from '../../credentials/utils.js';
+import { extractHexFromJsonFormat } from './byte-values.js';
 import { requestText } from './model.js';
 import { isPlainObject } from './schema.js';
 

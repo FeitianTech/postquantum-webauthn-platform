@@ -3,26 +3,43 @@
 // identifier in every spelling, the AAGUID, the attestation format, the
 // authenticator data's flags, the extension outputs and the public key. DOM-free.
 // How a COSE algorithm and key type are named is passed in (`describers`: the
-// callers give ../../cose-labels.js's).
+// callers give ../cose-labels.js's).
 import {
     base64UrlToBytes,
     bytesToBase64,
     bytesToBase64Url,
 } from '../../shared/base64.js';
-import {hexToGuid} from '../../shared/binary.js';
+import {hexToGuid, hexToUint8Array} from '../../shared/binary.js';
+import {normaliseAaguidValue} from '../../shared/aaguid.js';
 import {resolveCredentialAlgorithmIdentifier} from '../algorithm-tag.js';
-import {
-    deriveAaguidDisplayValues,
-    deriveAaguidFromCredentialData,
-    extractMinPinLengthValue,
-    getCoseMapValue,
-    normaliseAaguidValue,
-} from '../utils.js';
+import {extractMinPinLengthValue} from '../min-pin-length.js';
+import {deriveAaguidFromCredentialData} from '../record-fields.js';
 import {
     computeCredentialAaguidMatchStatus,
     normaliseAttestationResultValue,
     resolveCredentialAttestationValue,
 } from '../attestation-context.js';
+
+export function getCoseMapValue(coseMap, key) {
+    if (!coseMap || typeof coseMap !== 'object') {
+        return undefined;
+    }
+    // A number key finds its string key too: property keys are strings.
+    if (Object.hasOwn(coseMap, key)) {
+        return coseMap[key];
+    }
+    return undefined;
+}
+
+export function deriveAaguidDisplayValues(aaguidHex) {
+    const normalizedAaguidHex = aaguidHex ? aaguidHex.toLowerCase() : '';
+    const bytes = normalizedAaguidHex ? hexToUint8Array(normalizedAaguidHex) : null;
+    return {
+        aaguidHex: normalizedAaguidHex,
+        aaguidB64: bytes ? bytesToBase64(bytes) : '',
+        aaguidB64u: bytes ? bytesToBase64Url(bytes) : '',
+    };
+}
 
 export const DETAIL_TEXT = Object.freeze({
     properties: 'Properties',

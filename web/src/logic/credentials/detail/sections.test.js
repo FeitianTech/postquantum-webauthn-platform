@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  deriveAaguidDisplayValues,
   DETAIL_TEXT,
   describeAaguid,
   describeAttestationFormat,
@@ -10,6 +11,7 @@ import {
   describePublicKey,
   describeUserInfo,
   describeValue,
+  getCoseMapValue,
 } from './sections.js';
 import { extractCredentialAttestationContext } from '../attestation-context.js';
 import {
@@ -305,5 +307,37 @@ describe('describePublicKey', () => {
   it('has no section without an algorithm or a COSE key', () => {
     expect(describePublicKey({}, DESCRIBERS)).toBeNull();
     expect(describePublicKey({ publicKeyCose: {} }, DESCRIBERS)).toBeNull();
+  });
+});
+
+describe('getCoseMapValue', () => {
+  it('finds a COSE key\'s member by its number, whose property key is text', () => {
+    expect(getCoseMapValue({ 1: 'one', '-7': 'alg' }, -7)).toBe('alg');
+    expect(getCoseMapValue({ '-8': 'eddsa' }, -8)).toBe('eddsa');
+  });
+
+  it('finds nothing without a map, or for a member it does not hold', () => {
+    expect(getCoseMapValue(null, -7)).toBeUndefined();
+    expect(getCoseMapValue({ '-7': 'es256' }, -8)).toBeUndefined();
+  });
+});
+
+describe('deriveAaguidDisplayValues', () => {
+  it('spells an AAGUID in hex, base64 and base64url', () => {
+    expect(deriveAaguidDisplayValues('00112233445566778899AABBCCDDEEFF')).toEqual({
+      aaguidHex: '00112233445566778899aabbccddeeff',
+      aaguidB64: 'ABEiM0RVZneImaq7zN3u/w==',
+      aaguidB64u: 'ABEiM0RVZneImaq7zN3u_w',
+    });
+  });
+
+  it('gives an AAGUID that is not whole bytes of hex no base64 spellings', () => {
+    expect(deriveAaguidDisplayValues('ZZ')).toEqual({ aaguidHex: 'zz', aaguidB64: '', aaguidB64u: '' });
+    expect(deriveAaguidDisplayValues('abc')).toEqual({ aaguidHex: 'abc', aaguidB64: '', aaguidB64u: '' });
+  });
+
+  it('gives every spelling empty without an AAGUID', () => {
+    expect(deriveAaguidDisplayValues('')).toEqual({ aaguidHex: '', aaguidB64: '', aaguidB64u: '' });
+    expect(deriveAaguidDisplayValues(null)).toEqual({ aaguidHex: '', aaguidB64: '', aaguidB64u: '' });
   });
 });

@@ -29,7 +29,7 @@ import {
 } from '@/logic/advanced/hints.js';
 import { describeCoseAlgorithm } from '@/logic/credentials/cose-labels.js';
 import { describeCredentialAlgorithmWith } from '@/logic/credentials/algorithm-tag.js';
-import { getCredentialIdHex, getStoredCredentialAttachment } from '@/logic/credentials/utils.js';
+import { getCredentialIdHex, getStoredCredentialAttachment } from '@/logic/credentials/record-fields.js';
 import { decodePayloadThroughApi } from '@/logic/credentials/registration/decode-payload.js';
 import { keepRegistrationSnapshot } from '@/logic/credentials/registration/snapshot.js';
 import { createRegistrationState } from '@/logic/credentials/registration/state.js';

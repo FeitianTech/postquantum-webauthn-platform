@@ -7,11 +7,8 @@ import {
     currentFormatToJsonFormat,
     getCurrentBinaryFormat,
 } from '../../shared/binary.js';
-import {
-    extractHexFromJsonFormat,
-    getCredentialIdHex,
-    getStoredCredentialAttachment,
-} from '../../credentials/utils.js';
+import { extractHexFromJsonFormat } from '../editor/byte-values.js';
+import { getCredentialIdHex, getStoredCredentialAttachment } from '../../credentials/record-fields.js';
 import { deriveAllowedAttachmentsFromHints } from '../hints.js';
 import { decodeJsonBinaryToHex, requestTimeout } from '../registration/request.js';
 

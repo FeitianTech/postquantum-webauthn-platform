@@ -8,12 +8,12 @@ import {
     currentFormatToJsonFormat,
     getCurrentBinaryFormat
 } from '../shared/binary.js';
+import { extractHexFromJsonFormat } from './editor/byte-values.js';
 import {
-    extractHexFromJsonFormat,
     getCredentialIdHex,
     getStoredCredentialAttachment,
-    normalizeAttachmentValue
-} from '../credentials/utils.js';
+    normalizeAttachmentValue,
+} from '../credentials/record-fields.js';
 
 /** The hints the form offers, in its order. */
 export const HINT_VALUES = ['client-device', 'hybrid', 'security-key'];

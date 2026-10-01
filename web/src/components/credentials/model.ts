@@ -20,11 +20,8 @@ import {
   listSavedCredentials,
   warmSavedCredentials,
 } from '@/logic/credentials/saved-list.js';
-import {
-  getCredentialIdHex,
-  getCredentialUserHandleHex,
-  normaliseAaguidValue,
-} from '@/logic/credentials/utils.js';
+import { getCredentialIdHex, getCredentialUserHandleHex } from '@/logic/credentials/record-fields.js';
+import { normaliseAaguidValue } from '@/logic/shared/aaguid.js';
 import { deriveCredentialStatusIndicators } from '@/logic/credentials/attestation-context.js';
 import { deleteCredentialArtifact } from '@/logic/credentials/storage/artifacts-client.js';
 import {

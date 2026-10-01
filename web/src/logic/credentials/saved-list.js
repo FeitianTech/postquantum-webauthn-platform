@@ -28,7 +28,7 @@ export const CREDENTIAL_CHECKS = [
  * The stored records as the list holds them: an advanced record with its storage
  * ids and normalised AAGUID, both kinds with their credential id and user handle
  * in hex. helpers: normaliseAaguidValue, getCredentialIdHex,
- * getCredentialUserHandleHex (credentials/utils.js).
+ * getCredentialUserHandleHex (credentials/record-fields.js).
  */
 export function listSavedCredentials(records, helpers) {
     const { normaliseAaguidValue, getCredentialIdHex, getCredentialUserHandleHex } = helpers;

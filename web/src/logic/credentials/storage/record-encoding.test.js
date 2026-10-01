@@ -3,10 +3,7 @@ import { loadStorage, seedRecords } from '@/test/logic/credentials/storage/seed.
 
 import { ADVANCED_RECORD, SIMPLE_RECORD } from '@/test/logic/credentials/storage/standard-base64-records.js';
 import { base64ToBytes, base64UrlToBytes } from '../../shared/base64.js';
-import {
-  getCredentialIdHex,
-  getCredentialUserHandleHex,
-} from '../utils.js';
+import { getCredentialIdHex, getCredentialUserHandleHex } from '../record-fields.js';
 
 vi.mock('./artifacts-client.js', () => ({
   fetchCredentialArtifactsBulk: vi.fn(),
