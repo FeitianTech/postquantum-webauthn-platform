@@ -208,12 +208,5 @@ def test_an_extension_that_says_nothing_readable_is_shown_as_hex(oid, raw, shown
     assert _unrecognized(oid, raw) == shown
 
 
-def test_an_extension_value_that_cannot_be_a_string_is_shown_as_its_repr():
-    class ValueWithoutStr:
-        def __str__(self):
-            raise RuntimeError("cannot stringify")
-
-        def __repr__(self):
-            return "<a value>"
-
-    assert _shown("1.2.3", ValueWithoutStr()) == "<a value>"
+def test_any_other_extension_is_shown_as_its_der_value_in_hex():
+    assert _shown("2.5.29.54", x509.InhibitAnyPolicy(3)) == {"Hex value": "020103"}

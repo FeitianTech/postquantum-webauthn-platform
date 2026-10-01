@@ -1,9 +1,10 @@
 """How the certificate views show an X.509 extension's value.
 
-Key identifiers, basic constraints, signed certificate timestamps and the FIDO
-and Yubico extensions (AAGUID, transports, firmware version, device identifiers)
-get a structured value; any other extension shows ``str()`` of cryptography's
-parsed value.
+Key identifiers, key usages, basic constraints, alternative names, information
+access, CRL distribution points, certificate policies, signed certificate
+timestamps and the FIDO and Yubico extensions (AAGUID, transports, firmware
+version, device identifiers) are written out, the names and lists as OpenSSL
+writes them; any other extension shows its DER value in hex.
 """
 from __future__ import annotations
 
@@ -274,7 +275,5 @@ def _serialize_extension_value(ext: Any) -> Any:
     if isinstance(value, x509.UnrecognizedExtension):
         return _unrecognized_extension_value(ext.oid.dotted_string, value.value)
 
-    try:
-        return str(value)
-    except Exception:
-        return repr(value)
+    # Any other extension cryptography parses: its DER value, which says what it holds.
+    return {"Hex value": value.public_bytes().hex()}
