@@ -187,7 +187,6 @@ export function extractMinPinLengthValue(source) {
     if (properties) {
         const propertyCandidates = [
             properties.minPinLength,
-            properties.min_pin_length,
         ];
         for (const candidate of propertyCandidates) {
             const normalized = normalizeMinPinLengthValue(candidate);
@@ -340,17 +339,10 @@ export function deriveAaguidFromCredentialData(cred) {
 
     const sources = [
         cred.registrationData && cred.registrationData.authenticatorData,
-        cred.registrationData && cred.registrationData.authenticator_data,
         cred.properties && cred.properties.registrationData && cred.properties.registrationData.authenticatorData,
-        cred.properties && cred.properties.registrationData && cred.properties.registrationData.authenticator_data,
-        cred.properties && cred.properties.registration_data && cred.properties.registration_data.authenticatorData,
-        cred.properties && cred.properties.registration_data && cred.properties.registration_data.authenticator_data,
         cred.properties && cred.properties.authenticatorData,
-        cred.properties && cred.properties.authenticator_data,
         cred.relyingParty && cred.relyingParty.registrationData && cred.relyingParty.registrationData.authenticatorData,
-        cred.relyingParty && cred.relyingParty.registrationData && cred.relyingParty.registrationData.authenticator_data,
         cred.authenticatorData,
-        cred.authenticator_data,
     ];
 
     for (const source of sources) {
@@ -432,7 +424,7 @@ export function getStoredCredentialAttachment(cred) {
     if (!cred || typeof cred !== 'object') {
         return '';
     }
-    const directValue = normalizeAttachmentValue(cred.authenticatorAttachment || cred.authenticator_attachment);
+    const directValue = normalizeAttachmentValue(cred.authenticatorAttachment);
     if (directValue) {
         return directValue;
     }
@@ -440,7 +432,7 @@ export function getStoredCredentialAttachment(cred) {
         ? cred.properties
         : {};
     const propertyValue = normalizeAttachmentValue(
-        properties.authenticatorAttachment || properties.authenticator_attachment
+        properties.authenticatorAttachment
     );
     return propertyValue;
 }

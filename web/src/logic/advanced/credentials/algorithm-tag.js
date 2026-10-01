@@ -68,7 +68,6 @@ export function resolveCredentialAlgorithmIdentifier(credential) {
         credential.publicKeyAlgorithm,
         credential.algorithm,
         credential.coseAlgorithm,
-        credential.cose_alg,
     ];
 
     for (const candidate of candidates) {

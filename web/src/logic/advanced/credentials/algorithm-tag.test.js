@@ -42,7 +42,7 @@ describe('resolveCredentialAlgorithmIdentifier', () => {
   it('skips a WebCrypto algorithm object and reads the next field', () => {
     expect(resolveCredentialAlgorithmIdentifier({
       algorithm: { name: 'ECDSA', namedCurve: 'P-256' },
-      cose_alg: -7,
+      coseAlgorithm: -7,
     })).toBe(-7);
   });
 

@@ -113,7 +113,7 @@ describe('credential-utils', () => {
     expect(extractMinPinLengthValue({})).toBeNull();
 
     expect(extractMinPinLengthValue({
-      properties: { min_pin_length: ' 12 ' },
+      properties: { minPinLength: ' 12 ' },
     })).toBe(12);
 
     expect(extractMinPinLengthValue({
@@ -151,8 +151,8 @@ describe('credential-utils', () => {
 
     expect(deriveAaguidFromCredentialData({
       properties: {
-        registration_data: {
-          authenticator_data: `${'00'.repeat(32)}40${'00'.repeat(4)}00112233445566778899aabbccddeeff`,
+        registrationData: {
+          authenticatorData: `${'00'.repeat(32)}40${'00'.repeat(4)}00112233445566778899aabbccddeeff`,
         },
       },
     })).toBe('00112233445566778899aabbccddeeff');
@@ -163,8 +163,8 @@ describe('credential-utils', () => {
     expect(getCredentialIdHex(null)).toBe('');
     expect(getCredentialUserHandleHex({ userId: 'AQID' })).toBe('010203');
 
-    expect(getStoredCredentialAttachment({ authenticator_attachment: 'cross-platform' })).toBe('cross-platform');
-    expect(getStoredCredentialAttachment({ properties: { authenticator_attachment: 'platform' } })).toBe('platform');
+    expect(getStoredCredentialAttachment({ authenticatorAttachment: 'cross-platform' })).toBe('cross-platform');
+    expect(getStoredCredentialAttachment({ properties: { authenticatorAttachment: 'platform' } })).toBe('platform');
 
     const bytes = new Uint8Array([0xde, 0xad, 0xbe, 0xef]);
     expect(extractHexFromJsonFormat(bytes)).toBe('deadbeef');
