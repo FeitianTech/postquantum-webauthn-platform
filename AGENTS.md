@@ -248,6 +248,10 @@ page updates the saved credentials, which both tabs show.
 
 - `pytest -q` (`tests/`); `cd web && npm test` (both vitest projects); `npm run e2e`.
   Targeted: `pytest -q tests/app/<file>.py`, `npx vitest run --project logic <path>`.
+- A test goes in the file of the module it tests (`test_<module>.py`, in its area's folder under
+  `tests/app/`) and is named for the behaviour it checks. Tests import the app's modules at the
+  top; a shared helper lives once (`tests/app/fido2_stand_ins.py`,
+  `tests/app/security/ceremony_helpers.py`, `tests/app/storage/credential_seed.py`, …).
 - `make_app` (`tests/app/conftest.py`) builds an app from the environment at that moment:
   `monkeypatch.setenv` before it. Do not `importlib.reload` config modules. pytest never reads
   `web/out` (the `export_root` fixture builds a small export).
@@ -277,6 +281,11 @@ Guards on the code and the checkout (`tests/app/tooling/`; each `ALLOWED` list m
   the listed ones.
 - `test_code_size_ratchet.py`: no function over 80 lines or module over 700 in `server/app`,
   with no exceptions.
+- `test_test_names.py`: no test file or test named for how it was written (an uplift, a batch, a
+  residual, a branch focus, coverage) rather than what it tests.
+- `test_test_layout.py`: tests import first-party modules at the top, nothing writes
+  `sys.modules`, no helper is defined twice, and (with the `tests/fixture_values.py` plugin) no
+  fixture's value is or holds a module.
 - `test_commit_messages.py`: the commit message check.
 
 ## Linting
