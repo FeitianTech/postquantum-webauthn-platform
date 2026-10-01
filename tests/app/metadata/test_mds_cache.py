@@ -1,0 +1,186 @@
+"""``mds.cache``: the packaged snapshot's files, read into the caches between requests.
+
+The packaged explorer snapshot is trusted by its content (a meta describing the
+verified snapshot), not by file modification times; what cannot be read is rebuilt
+from the verified snapshot, or is nothing.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import types
+
+import pytest
+
+from server.app.mds import cache as mds_cache
+from server.app.mds import files as mds_files
+
+META = {"no": 7, "etag": "7"}
+
+
+@pytest.fixture
+def snapshot_dir(monkeypatch, tmp_path, metadata_state):
+    """An empty snapshot directory, the one the setting names."""
+
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
+    return tmp_path
+
+
+@pytest.fixture
+def packaged_snapshot(monkeypatch, snapshot_dir):
+    """A verified snapshot and a packaged explorer an instant older; rebuilding is counted."""
+
+    verified_path = snapshot_dir / "fido-mds3.verified.json"
+    explorer_path = snapshot_dir / "fido-mds3.explorer.json"
+    verified_path.write_text(json.dumps({"entries": []}), encoding="utf-8")
+    explorer_path.write_text(
+        json.dumps({"entries": [], "meta": {"no": 7, "source": "packaged-snapshot"}}),
+        encoding="utf-8",
+    )
+
+    # Simulate a checkout where the explorer file ends up slightly older.
+    os.utime(explorer_path, (1_000.0, 1_000.0))
+    os.utime(verified_path, (1_000.5, 1_000.5))
+
+    builds = []
+    monkeypatch.setattr(
+        mds_cache,
+        "build_explorer_snapshot",
+        lambda payload, cache: builds.append(1) or {"entries": [], "meta": {"source": "rebuilt"}},
+    )
+    monkeypatch.setattr(mds_cache, "load_metadata_cache_entry", lambda: None)
+
+    return types.SimpleNamespace(paths=(verified_path, explorer_path), builds=builds)
+
+
+def _write_meta(verified_path, explorer_path, *, verified_no=7, explorer_no=7):
+    (verified_path.parent / (verified_path.name + ".meta.json")).write_text(
+        json.dumps({"no": verified_no, "etag": "7", "generated_at": "2026-09-10T00:00:00+00:00"}),
+        encoding="utf-8",
+    )
+    (explorer_path.parent / (explorer_path.name + ".meta.json")).write_text(
+        json.dumps(
+            {
+                "no": explorer_no,
+                "etag": "7",
+                "generatedAt": "2026-09-10T00:00:00+00:00",
+                "source": "packaged",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_matching_meta_uses_packaged_snapshot_despite_older_mtime(packaged_snapshot):
+    _write_meta(*packaged_snapshot.paths)
+
+    snapshot, _ = mds_cache._load_base_explorer_snapshot()
+
+    assert snapshot["meta"]["source"] == "packaged-snapshot"
+    assert packaged_snapshot.builds == []
+
+
+def test_mismatched_meta_rebuilds_from_verified_snapshot(packaged_snapshot):
+    _write_meta(*packaged_snapshot.paths, explorer_no=6)
+
+    snapshot, _ = mds_cache._load_base_explorer_snapshot()
+
+    assert snapshot["meta"]["source"] == "rebuilt"
+    assert packaged_snapshot.builds == [1]
+
+
+def test_summary_reads_meta_file_without_loading_snapshot(packaged_snapshot, monkeypatch):
+    _write_meta(*packaged_snapshot.paths)
+    monkeypatch.setattr(
+        mds_cache,
+        "_load_base_explorer_snapshot",
+        lambda: pytest.fail("summary should not load the full explorer snapshot"),
+    )
+
+    summary = mds_cache.load_packaged_explorer_summary()
+
+    assert summary["no"] == 7
+    assert summary["source"] == "packaged"
+
+
+@pytest.mark.parametrize("meta", ["[]", "{not json"])
+def test_a_verified_meta_that_is_no_object_gives_no_cached_headers(snapshot_dir, meta):
+    (snapshot_dir / mds_files.VERIFIED_META).write_text(meta, encoding="utf-8")
+
+    assert mds_cache.load_metadata_cache_entry() == {}
+
+
+def test_cached_headers_are_trimmed_and_the_iso_date_read_from_the_header(snapshot_dir):
+    (snapshot_dir / mds_files.VERIFIED_META).write_text(
+        json.dumps({"last_modified": "Wed, 21 Oct 2015 07:28:00 GMT", "last_modified_iso": "  ", "etag": " etag ", "fetched_at": 5}),
+        encoding="utf-8",
+    )
+
+    assert mds_cache.load_metadata_cache_entry() == {
+        "last_modified": "Wed, 21 Oct 2015 07:28:00 GMT",
+        "last_modified_iso": "2015-10-21T07:28:00+00:00",
+        "etag": "etag",
+        "fetched_at": None,
+    }
+
+
+def test_the_verified_snapshot_is_loaded_once_and_kept_while_it_is_unchanged(mds_fixture_snapshot):
+    assert mds_cache.load_cached_metadata_snapshot() is True
+
+    first, first_mtime = mds_cache._load_base_metadata()
+    second, second_mtime = mds_cache._load_base_metadata()
+
+    assert second is first
+    assert second_mtime == first_mtime
+    assert mds_cache.CACHE.metadata_source == "verified"
+
+
+@pytest.mark.parametrize("verified", [None, "{not json", "[]"])
+def test_without_a_readable_verified_snapshot_there_is_no_metadata(snapshot_dir, verified):
+    if verified is not None:
+        (snapshot_dir / mds_files.VERIFIED).write_text(verified, encoding="utf-8")
+
+    assert mds_cache.load_cached_metadata_snapshot() is False
+    assert mds_cache.CACHE.trust_verified is None
+
+
+@pytest.mark.parametrize("explorer", ["a directory", "[]"])
+def test_a_packaged_explorer_that_cannot_be_read_is_rebuilt_from_the_verified_snapshot(mds_fixture_snapshot, explorer):
+    explorer_path = mds_fixture_snapshot / mds_files.EXPLORER
+    explorer_path.unlink()
+    if explorer == "a directory":
+        explorer_path.mkdir()
+    else:
+        explorer_path.write_text(explorer, encoding="utf-8")
+
+    snapshot, _ = mds_cache._load_base_explorer_snapshot()
+
+    assert len(snapshot["entries"]) == 32
+    # The rebuilt snapshot's meta is what the summary shows, now it is cached.
+    assert mds_cache.load_packaged_explorer_summary() == snapshot["meta"]
+
+
+@pytest.mark.parametrize("full", ["a directory", '{"entries": "not a list"}'])
+def test_a_packaged_full_snapshot_that_cannot_be_read_is_rebuilt(mds_fixture_snapshot, full):
+    full_path = mds_fixture_snapshot / mds_files.EXPLORER_FULL
+    full_path.unlink()
+    if full == "a directory":
+        full_path.mkdir()
+    else:
+        full_path.write_text(full, encoding="utf-8")
+
+    snapshot, _ = mds_cache._load_base_full_snapshot()
+
+    assert len(snapshot["entries"]) == 32
+
+
+def test_without_any_snapshot_there_is_no_full_snapshot_and_no_summary(snapshot_dir):
+    assert mds_cache._load_base_full_snapshot() == (None, (None, None, None, None))
+    assert mds_cache.load_packaged_explorer_summary() == {}
+
+
+def test_an_explorer_meta_that_is_no_object_does_not_describe_the_snapshot(mds_fixture_snapshot):
+    (mds_fixture_snapshot / mds_files.EXPLORER_META).write_text("[]", encoding="utf-8")
+
+    assert mds_cache._load_packaged_explorer_meta() is None

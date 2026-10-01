@@ -20,7 +20,6 @@ REPO_ROOT = TESTS_ROOT.parent
 _BUILTIN = "shadows the builtin {} in this module's globals only; a module never has one of its own"
 
 ALLOWED: dict[tuple[str, str], str] = {
-    ("tests/app/metadata/test_metadata_residual_branches.py", "open"): _BUILTIN.format("open"),
     ("tests/app/storage/test_github_client.py", "range"): _BUILTIN.format("range"),
 }
 
