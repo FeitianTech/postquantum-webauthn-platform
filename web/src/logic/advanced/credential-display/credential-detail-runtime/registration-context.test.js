@@ -57,16 +57,14 @@ describe('buildRegistrationContext', () => {
   });
 
   it('reads the certificates under each name the record may keep them', () => {
-    const [a, b, c, d, e, f, g, h] = 'abcdefgh'.split('').map((name) => ({ name }));
+    const [a, b, c, d, e, f] = 'abcdef'.split('').map((name) => ({ name }));
     const { fallbackCertificates } = buildRegistrationContext({
       attestationCertificate: a,
       attestationCertificates: [b, null],
-      attestation_certificate: c,
-      attestation_certificates: [d],
-      properties: { attestationCertificate: e, attestationCertificates: [f] },
-      relyingParty: { attestationCertificate: g, attestationCertificates: [h] },
+      properties: { attestationCertificate: c, attestationCertificates: [d] },
+      relyingParty: { attestationCertificate: e, attestationCertificates: [f] },
     });
-    expect(fallbackCertificates).toEqual([a, b, c, d, e, f, g, h]);
+    expect(fallbackCertificates).toEqual([a, b, c, d, e, f]);
   });
 
   it('takes the decoded attestation object, certificates and authenticator data hex from a saved snapshot', () => {
@@ -129,9 +127,8 @@ describe('buildRegistrationContext', () => {
   });
 
   it('spells a credential id kept as standard base64 in base64url', () => {
-    const { registrationCredential } = buildRegistrationContext({ credential_id: 'TfLEvM/Z+yTXAA==' });
+    const { registrationCredential } = buildRegistrationContext({ credentialId: 'TfLEvM/Z+yTXAA==' });
     expect([registrationCredential.id, registrationCredential.rawId]).toEqual(['TfLEvM_Z-yTXAA', 'TfLEvM_Z-yTXAA']);
-    expect(buildRegistrationContext({ credentialIdBase64: 'AQID' }).registrationCredential.id).toBe('AQID');
   });
 
   it('gives a bare response with only its type when the record holds nothing', () => {
@@ -155,9 +152,8 @@ describe('buildRegistrationContext', () => {
     const rp = { id: 'localhost' };
     expect([
       { registrationRelyingParty: rp },
-      { registration_relying_party: rp },
       { properties: { relyingParty: rp } },
-    ].map((cred) => buildRegistrationContext(cred).relyingPartyInfo)).toEqual([rp, rp, rp]);
+    ].map((cred) => buildRegistrationContext(cred).relyingPartyInfo)).toEqual([rp, rp]);
   });
 
   it('reads the client data as text or as an object, under each name the record may keep it', () => {
@@ -165,13 +161,11 @@ describe('buildRegistrationContext', () => {
     expect([
       { clientDataJson: 'eyJ9' },
       { clientData: 'eyJ9' },
-      { client_data_json: 'eyJ9' },
-    ].map((cred) => buildRegistrationContext(cred).fallbackClientDataString)).toEqual(['eyJ9', 'eyJ9', 'eyJ9']);
+    ].map((cred) => buildRegistrationContext(cred).fallbackClientDataString)).toEqual(['eyJ9', 'eyJ9']);
     expect([
-      { client_data_json: parsed },
       { clientDataParsed: parsed },
       { clientDataObject: parsed },
-    ].map((cred) => buildRegistrationContext(cred).fallbackClientDataObject)).toEqual([parsed, parsed, parsed]);
+    ].map((cred) => buildRegistrationContext(cred).fallbackClientDataObject)).toEqual([parsed, parsed]);
   });
 
   it('puts the record\'s client data in the response, in base64url', () => {
@@ -194,7 +188,7 @@ describe('buildRegistrationContext', () => {
       },
     };
     const { registrationCredential } = buildRegistrationContext({
-      registration_result: kept,
+      registrationResult: kept,
       credentialId: 'AQID',
       attestationObject: 'record-att',
       attestationObjectDecoded: { fmt: 'record' },
@@ -208,9 +202,9 @@ describe('buildRegistrationContext', () => {
 
   it('adds the record\'s attachment and extension outputs to a response without them', () => {
     const { registrationCredential } = buildRegistrationContext({
-      registration_response: {},
+      registrationResponse: {},
       authenticatorAttachment: 'platform',
-      client_extension_outputs: { credProps: { rk: true } },
+      clientExtensionOutputs: { credProps: { rk: true } },
     });
     expect(registrationCredential).toMatchObject({
       authenticatorAttachment: 'platform',
@@ -222,10 +216,10 @@ describe('buildRegistrationContext', () => {
     const decoded = { fmt: 'none' };
     const context = buildRegistrationContext({
       registrationResult: {
-        attestation_object_raw: 'flat-att',
-        attestation_object_decoded: decoded,
-        authenticator_data_raw: 'flat-ad',
-        authenticator_data_hex: 'abcd',
+        attestationObjectRaw: 'flat-att',
+        attestationObjectDecoded: decoded,
+        authenticatorDataRaw: 'flat-ad',
+        authenticatorDataHex: 'abcd',
       },
     });
     expect(context).toMatchObject({
@@ -250,9 +244,9 @@ describe('buildRegistrationContext', () => {
         authenticatorDataBase64Url: 'top-ad',
         authenticatorDataHex: 'top-hex',
         response: {
-          attestation_object: decoded,
+          attestationObject: decoded,
           attestationObjectBase64: 'nested-att',
-          authenticator_data: 'nested-ad',
+          authenticatorData: 'nested-ad',
           authenticatorDataHex: 'beef',
         },
       },
@@ -269,10 +263,10 @@ describe('buildRegistrationContext', () => {
     const decoded = { fmt: 'none' };
     const context = buildRegistrationContext({
       registrationResponse: {
-        attestation_object_base64: 'top-att',
+        attestationObjectBase64: 'top-att',
         attestationObject: decoded,
         authenticatorDataBase64: 'top-ad',
-        authenticator_data_hex: 'cafe',
+        authenticatorDataHex: 'cafe',
         response: {},
       },
     });
@@ -294,43 +288,27 @@ describe('the candidates a registration is read from', () => {
     const source = {
       attestationObjectRaw: 1,
       attestationObject: 2,
-      attestation_object_raw: 3,
-      attestation_object: 4,
-      attestationObjectBase64: 5,
-      attestation_object_base64: 6,
+      attestationObjectBase64: 3,
     };
-    expect(attestationObjectStringCandidates(source)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(attestationObjectStringCandidates(source)).toEqual([1, 2, 3]);
   });
 
   it('names the decoded attestation object\'s places, the encoded ones only when they hold an object', () => {
-    const [a, b, c, d] = [{}, {}, {}, {}];
-    expect(attestationObjectDecodedCandidates({
-      attestationObjectDecoded: a,
-      attestation_object_decoded: b,
-      attestationObject: c,
-      attestation_object: d,
-    })).toEqual([a, b, c, d]);
-    expect(attestationObjectDecodedCandidates({ attestationObject: 'text', attestation_object: 'text' })).toEqual([
-      undefined,
-      undefined,
-      null,
-      null,
-    ]);
+    const [a, b] = [{}, {}];
+    expect(attestationObjectDecodedCandidates({ attestationObjectDecoded: a, attestationObject: b })).toEqual([a, b]);
+    expect(attestationObjectDecodedCandidates({ attestationObject: 'text' })).toEqual([undefined, null]);
   });
 
   it('names the authenticator data\'s spellings, and its hex\'s', () => {
     const source = {
       authenticatorDataRaw: 1,
       authenticatorData: 2,
-      authenticator_data_raw: 3,
-      authenticator_data: 4,
-      authenticatorDataBase64: 5,
-      authenticatorDataBase64Url: 6,
-      authenticatorDataHex: 7,
-      authenticator_data_hex: 8,
+      authenticatorDataBase64: 3,
+      authenticatorDataBase64Url: 4,
+      authenticatorDataHex: 5,
     };
-    expect(authenticatorDataStringCandidates(source)).toEqual([1, 2, 3, 4, 5, 6]);
-    expect(authenticatorDataHexCandidates(source)).toEqual([7, 8]);
+    expect(authenticatorDataStringCandidates(source)).toEqual([1, 2, 3, 4]);
+    expect(authenticatorDataHexCandidates(source)).toEqual([5]);
   });
 
   it('names nothing for a source that is not an object', () => {

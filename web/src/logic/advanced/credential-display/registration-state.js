@@ -261,13 +261,13 @@ export async function prepareRegistrationState(state, options = {}, { decode } =
         : null;
     if (!state.attestationObject && decodedObject) {
         state.attestationObject = decodedObject;
-        const attStmt = decodedObject.attStmt || decodedObject.att_statement || null;
+        const attStmt = decodedObject.attStmt || null;
         if (
             attStmt
             && typeof attStmt === 'object'
             && !fallbackCertificatesAvailable
         ) {
-            addStateCertificates(state, attStmt.x5c || attStmt.X5C || []);
+            addStateCertificates(state, attStmt.x5c || []);
         }
     }
 

@@ -523,19 +523,13 @@ describe('registrationResultInput', () => {
     ]);
   });
 
-  it('takes the certificates under any of their spellings, here or in the registration data', () => {
-    const [a, b, c, d, e] = ['a', 'b', 'c', 'd', 'e'].map((name) => ({ name }));
+  it('takes the certificates in the registration data too, leaving out empty ones', () => {
+    const [a, b, c] = ['a', 'b', 'c'].map((name) => ({ name }));
     const input = registrationResultInput({}, {
-      attestation_certificate: a,
-      attestation_certificates: [b, null],
-      registrationData: {
-        attestationCertificate: c,
-        attestationCertificates: [d],
-        attestation_certificate: null,
-        attestation_certificates: [e],
-      },
+      attestationCertificates: [a, null],
+      registrationData: { attestationCertificate: b, attestationCertificates: [c] },
     });
-    expect(input.fallbackCertificates).toEqual([a, b, c, d, e]);
+    expect(input.fallbackCertificates).toEqual([a, b, c]);
   });
 
   it('gives nothing to decode without a response or a relying party', () => {

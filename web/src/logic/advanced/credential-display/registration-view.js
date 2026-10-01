@@ -316,7 +316,7 @@ export function describeAuthenticatorData(state) {
 /**
  * What an advanced registration's answer gives its registration view: the
  * browser's attestation object and authenticator data, and the relying party's
- * certificates under any of their spellings.
+ * certificates, at its root or in its registration data.
  */
 export function registrationResultInput(credentialJson, relyingPartyInfo) {
     return {
@@ -325,12 +325,8 @@ export function registrationResultInput(credentialJson, relyingPartyInfo) {
         fallbackCertificates: collectTruthyEntries(
             relyingPartyInfo?.attestationCertificate,
             relyingPartyInfo?.attestationCertificates,
-            relyingPartyInfo?.attestation_certificate,
-            relyingPartyInfo?.attestation_certificates,
             relyingPartyInfo?.registrationData?.attestationCertificate,
             relyingPartyInfo?.registrationData?.attestationCertificates,
-            relyingPartyInfo?.registrationData?.attestation_certificate,
-            relyingPartyInfo?.registrationData?.attestation_certificates,
         ),
     };
 }

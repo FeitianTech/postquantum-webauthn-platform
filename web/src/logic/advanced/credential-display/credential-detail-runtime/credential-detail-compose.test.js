@@ -174,7 +174,7 @@ describe('composeCredentialDetail', () => {
   it('names the attestation format from the first place that has one, else none', async () => {
     const bare = { credentialId: 'AQID' };
     const formats = await Promise.all([
-      { ...bare, attestation_format: 'packed' },
+      { ...bare, attestationFormat: 'packed' },
       { ...bare, attestationFmt: 'tpm' },
       { ...bare, relyingParty: { attestationFmt: 'apple' } },
       { ...bare, attestationObjectDecoded: { fmt: 'android-key' } },

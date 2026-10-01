@@ -12,18 +12,11 @@ export function collectCredentialCertificates(cred) {
     const sources = [
         cred.attestationCertificate,
         cred.attestationCertificates,
-        cred.attestation_certificate,
-        cred.attestation_certificates,
         cred.attestationCertificatesDetails,
-        cred.attestation_certificates_details,
         cred.properties?.attestationCertificate,
         cred.properties?.attestationCertificates,
-        cred.properties?.attestation_certificate,
-        cred.properties?.attestation_certificates,
         cred.relyingParty?.attestationCertificate,
         cred.relyingParty?.attestationCertificates,
-        cred.relyingParty?.attestation_certificate,
-        cred.relyingParty?.attestation_certificates,
     ];
 
     const collected = [];
@@ -106,7 +99,7 @@ export function deriveCertificateIdentity(entry) {
             return `raw:${parsedRaw}`;
         }
 
-        const parsedDer = pickBase64Value(parsed.derBase64 || parsed.der_base64);
+        const parsedDer = pickBase64Value(parsed.derBase64);
         if (parsedDer) {
             return `der:${parsedDer}`;
         }
@@ -158,7 +151,6 @@ export function normaliseCertificateEntryForModal(entry) {
     let rawHex = typeof entry.raw === 'string' && entry.raw.trim() !== '' ? entry.raw.trim() : null;
     if (!rawHex) {
         const derBase64 = entry.derBase64
-            || entry.der_base64
             || entry.parsedX5c?.derBase64
             || entry.parsed?.derBase64;
         if (typeof derBase64 === 'string' && derBase64.trim() !== '') {

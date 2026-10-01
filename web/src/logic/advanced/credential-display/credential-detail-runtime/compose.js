@@ -80,7 +80,6 @@ export async function composeCredentialDetail(cred, { state, decode, describers 
 
     const attestationFormatRaw = pickFirstString(
         cred.attestationFormat,
-        cred.attestation_format,
         cred.attestationFmt,
         relyingPartyInfo?.attestationFmt,
         attestationObjectDecoded && typeof attestationObjectDecoded.fmt === 'string'

@@ -46,8 +46,6 @@ export function buildRegistrationContext(cred, {
     let fallbackCertificates = collectTruthyEntries(
         cred.attestationCertificate,
         cred.attestationCertificates,
-        cred.attestation_certificate,
-        cred.attestation_certificates,
         cred.properties?.attestationCertificate,
         cred.properties?.attestationCertificates,
         cred.relyingParty?.attestationCertificate,
@@ -83,7 +81,6 @@ export function buildRegistrationContext(cred, {
     const relyingPartyInfo = pickFirstObject(
         cred.relyingParty,
         cred.registrationRelyingParty,
-        cred.registration_relying_party,
         cred.properties?.relyingParty,
     );
 
@@ -91,20 +88,16 @@ export function buildRegistrationContext(cred, {
         cred.clientDataJSON,
         cred.clientDataJson,
         cred.clientData,
-        typeof cred.client_data_json === 'string' ? cred.client_data_json : '',
     );
 
     const fallbackClientDataObject = pickFirstObject(
-        typeof cred.client_data_json === 'object' ? cred.client_data_json : null,
         cred.clientDataParsed,
         cred.clientDataObject,
     );
 
     const registrationResponseStored = pickFirstObject(
         cred.registrationResponse,
-        cred.registration_response,
         cred.registrationResult,
-        cred.registration_result,
     );
 
     let registrationCredential = cloneJson(registrationResponseStored);
@@ -118,11 +111,7 @@ export function buildRegistrationContext(cred, {
 
     const registrationResponse = registrationCredential.response;
 
-    const credentialIdBase64 = pickFirstString(
-        cred.credentialId,
-        cred.credential_id,
-        cred.credentialIdBase64,
-    );
+    const credentialIdBase64 = pickFirstString(cred.credentialId);
 
     const credentialIdBase64Url = credentialIdBase64 ? base64ToBase64Url(credentialIdBase64) : '';
 
@@ -191,7 +180,6 @@ export function buildRegistrationContext(cred, {
     const extensionResults = pickFirstObject(
         registrationCredential.clientExtensionResults,
         cred.clientExtensionOutputs,
-        cred.client_extension_outputs,
     );
     if (extensionResults && typeof extensionResults === 'object') {
         registrationCredential.clientExtensionResults = cloneJson(extensionResults);

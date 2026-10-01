@@ -387,13 +387,6 @@ describe('prepareRegistrationState', () => {
     expect(state.attestationCertificates).toHaveLength(1);
   });
 
-  it("reads a decoded object's certificates under their other spellings", async () => {
-    const certificate = decodedCertificate();
-    const state = createRegistrationState();
-    await prepareRegistrationState(state, { attestationObjectDecoded: { fmt: 'packed', att_statement: { X5C: [certificate] } } });
-    expect(state.attestationCertificates).toHaveLength(1);
-  });
-
   it('adds no certificate for a decoded object without them', async () => {
     for (const attestationObjectDecoded of [{ fmt: 'none', attStmt: {} }, { fmt: 'none' }]) {
       const state = createRegistrationState();
