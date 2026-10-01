@@ -7,9 +7,18 @@
 // `statusReports`. A section the page leaves out is not in the list; the
 // Overview and the Metadata Statement always are, even with nothing under them.
 import { MISSING_CELL_TEXT } from './rows.js';
-import { extractList } from '../utils/extractors.js';
-import { formatDetailValue, formatUpv } from '../utils/formatters.js';
-import { formatGuidCandidate } from '../utils/resolvers.js';
+import { formatDetailValue, formatUpv } from '../formatters.js';
+import { formatGuidCandidate } from '../../shared/aaguid.js';
+
+export function extractList(value) {
+    if (!value) {
+        return [];
+    }
+    if (Array.isArray(value)) {
+        return value.filter(Boolean);
+    }
+    return [value];
+}
 
 export const DEFAULT_DETAIL_TITLE = 'Authenticator';
 

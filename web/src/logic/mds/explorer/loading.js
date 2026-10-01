@@ -1,6 +1,22 @@
 // Where the explorer's entries come from and what an answer means. No DOM.
 import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MISSING_METADATA_MESSAGE } from '../constants.js';
-import { cloneMetadataEntry, hasInlineDetail } from '../metadata/metadata-helpers.js';
+
+export function hasInlineDetail(entry) {
+    return Boolean(
+        entry
+        && typeof entry === 'object'
+        && entry.isLightweightEntry !== true
+        && entry.metadataStatement
+        && typeof entry.metadataStatement === 'object',
+    );
+}
+
+export function cloneMetadataEntry(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return null;
+    }
+    return structuredClone(entry);
+}
 
 async function fetchExplorerAnswer(source, signal) {
     const fetchOptions = {
@@ -20,7 +36,7 @@ async function fetchExplorerAnswer(source, signal) {
     return { response, payload };
 }
 
-// Asks the source the explorer source chooses (metadata/explorer-source.js). The
+// Asks the source the explorer source chooses (../explorer-source.js). The
 // packaged file is an optimisation: any problem loading it falls back to the
 // per-session API. An abort is never swallowed.
 export async function requestExplorerSnapshot(

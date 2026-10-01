@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildLoadedStatus,
   EXPLORER_NO_MATCHES,
   EXPLORER_REFRESHED_NOTE,
-  buildLoadedStatus,
   explorerLoadedStatus,
   explorerLoadingStatus,
+  extractSnapshotTimestamp,
   formatEntryCount,
+  formatInitialExplorerStatus,
+  formatSnapshotTimestamp,
+  normaliseSnapshotInfo,
 } from './status.js';
 
 const noDate = () => null;
@@ -63,5 +67,33 @@ describe('the count', () => {
   it('shows the entries shown and, when there are any, the total', () => {
     expect(formatEntryCount(12, 517)).toEqual({ count: (12).toLocaleString(), total: `of ${(517).toLocaleString()} total` });
     expect(formatEntryCount(0, 0)).toEqual({ count: '0', total: '' });
+  });
+});
+
+describe('the packaged snapshot\'s summary', () => {
+  it('reads nothing from what is not an object', () => {
+    expect(normaliseSnapshotInfo('text')).toBeNull();
+    expect(extractSnapshotTimestamp(null)).toBeNull();
+    expect(formatInitialExplorerStatus(undefined)).toBe(
+      'Packaged FIDO metadata is available. Explorer data is loading in the background.',
+    );
+  });
+
+
+  it('trims a summary\'s text and keeps its other values', () => {
+    expect(normaliseSnapshotInfo({ no: 7, generatedAt: ' 2025-01-02T03:04:05Z ' })).toEqual({ no: 7, generatedAt: '2025-01-02T03:04:05Z' });
+  });
+
+  it('says a snapshot\'s number, count and date, and a date it cannot read as it is', () => {
+    expect(formatSnapshotTimestamp({})).toBeNull();
+    expect(formatSnapshotTimestamp({ generatedAt: 'last Tuesday' })).toBe('last Tuesday');
+    const sentence = formatInitialExplorerStatus({ no: 7, entryCount: 1234, generatedAt: '2025-01-02T03:04:05Z' });
+    expect(sentence).toMatch(/^Snapshot 7 • 1,234 authenticators • last updated .+\. Explorer data is loading in the background\.$/);
+    expect(formatInitialExplorerStatus({ fetchedAt: 'last Tuesday' })).toBe(
+      'last updated last Tuesday. Explorer data is loading in the background.',
+    );
+    expect(formatInitialExplorerStatus({ entryCount: 'many' })).toBe(
+      'Packaged FIDO metadata is available. Explorer data is loading in the background.',
+    );
   });
 });

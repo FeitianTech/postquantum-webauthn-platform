@@ -1,5 +1,5 @@
 // What the explorer's table cells show beyond an entry's own text. No DOM.
-import { normaliseEnumKey } from '../utils/formatters.js';
+import { normaliseEnumKey } from '../formatters.js';
 
 export const MISSING_CELL_TEXT = '—';
 export const NO_ICON_TEXT = 'N/A';

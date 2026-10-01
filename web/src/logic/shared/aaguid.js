@@ -1,8 +1,70 @@
-// An AAGUID as lower-case hex, from whichever spelling a record or the server
-// gives it: hex, a dashed GUID, base64url (or base64), bytes, or an object with
-// one of those spellings. DOM-free.
+// An AAGUID read from the spelling it comes in. A record's or the server's
+// (hex, a dashed GUID, base64url or base64, bytes, or an object with one of
+// those) as lower-case hex: normaliseAaguidValue. An MDS entry's, as the server
+// spells entry ids (its format_guid_candidate), as a dashed GUID:
+// formatGuidCandidate. DOM-free.
 import { base64ToHex, base64UrlToHex, bytesToHex } from './bytes.js';
 import { base64UrlToBytes } from './base64.js';
+
+export function formatGuidCandidate(value) {
+    if (value === undefined || value === null) {
+        return '';
+    }
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return '';
+        }
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+            return trimmed.toLowerCase();
+        }
+        const clean = trimmed.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
+        if (clean.length === 32) {
+            return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`;
+        }
+        return '';
+    }
+
+    const bytes = extractByteArray(value);
+    if (bytes && bytes.length === 16) {
+        const hex = bytes.map(byte => byte.toString(16).padStart(2, '0')).join('');
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
+
+    try {
+        if (typeof value.toString === 'function') {
+            return formatGuidCandidate(value.toString());
+        }
+    } catch (error) {
+        // Ignore conversion errors.
+    }
+    return '';
+}
+
+export function normaliseAaguid(value) {
+    const formatted = formatGuidCandidate(value);
+    return formatted ? formatted.toLowerCase() : '';
+}
+
+export function extractByteArray(value) {
+    if (!value) {
+        return null;
+    }
+    if (Array.isArray(value)) {
+        return value.every(item => Number.isInteger(item)) ? value : null;
+    }
+    if (value instanceof Uint8Array) {
+        return Array.from(value);
+    }
+    if (ArrayBuffer.isView(value)) {
+        return Array.from(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
+    }
+    if (value instanceof ArrayBuffer) {
+        return Array.from(new Uint8Array(value));
+    }
+    return null;
+}
 
 const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

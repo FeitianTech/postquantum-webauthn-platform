@@ -1,8 +1,29 @@
 // How the explorer's filters match and its columns sort. No DOM.
-import { normaliseSortValueInput } from '../sort-filter-normalise.js';
 
-import { normaliseEnumKey } from '../utils/formatters.js';
+import { normaliseEnumKey } from '../formatters.js';
 
+export function normaliseSortValueInput(value) {
+    if (value === undefined || value === null) {
+        return '';
+    }
+    if (typeof value === 'number') {
+        return value;
+    }
+    if (value instanceof Date) {
+        return value.getTime();
+    }
+
+    const text = String(value).trim();
+    if (!text || text === '—') {
+        return '';
+    }
+
+    const numeric = Number(text);
+    if (!Number.isNaN(numeric) && text !== '') {
+        return numeric;
+    }
+    return text.toLowerCase();
+}
 
 export const SORT_NONE = 'none';
 export const SORT_ASCENDING = 'asc';

@@ -1,6 +1,6 @@
 // What the explorer's certificate page shows of an attestation root. No DOM.
 import { readFailedResponse } from '../../shared/failed-response.js';
-import { formatCertificateDateDisplay, formatSignatureHashName } from '../utils/formatters.js';
+import { formatCertificateDateDisplay, formatSignatureHashName } from '../formatters.js';
 
 export const CERTIFICATE_DECODE_PATH = '/api/mds/decode-certificate';
 export const DEFAULT_CERTIFICATE_TITLE = 'Attestation Certificate';

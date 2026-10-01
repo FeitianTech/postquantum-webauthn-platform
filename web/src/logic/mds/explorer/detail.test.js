@@ -8,6 +8,7 @@ import {
   detailSections,
   detailSubtitleParts,
   detailTitle,
+  extractList,
   formatDetailSubtitle,
   rawListValues,
 } from './detail.js';
@@ -330,5 +331,13 @@ describe('the detail page: sections', () => {
       ].join(' • '),
     );
     expect(section({ statusReports: [{ certificate: 7 }] }, 'statusReports').statusReports[0].certificate).toBe('');
+  });
+});
+
+describe('extractList', () => {
+  it('lists a value, keeps a list\'s values, and lists nothing for none', () => {
+    expect(extractList('single')).toEqual(['single']);
+    expect(extractList(['a', '', null, 'b'])).toEqual(['a', 'b']);
+    expect(extractList(null)).toEqual([]);
   });
 });

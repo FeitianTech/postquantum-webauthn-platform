@@ -1,8 +1,23 @@
 // Manage Trusted Metadata's requests and everything it says. No DOM.
 import { CUSTOM_METADATA_DELETE_PATH, CUSTOM_METADATA_LIST_PATH, CUSTOM_METADATA_UPLOAD_PATH } from '../constants.js';
 
-import { splitAcceptedFiles } from '../metadata/metadata-helpers.js';
 
+export function splitAcceptedFiles(files) {
+    const accepted = [];
+    const rejected = [];
+    files.forEach(file => {
+        if (!file) {
+            return;
+        }
+        const name = typeof file.name === 'string' ? file.name : '';
+        if (name.toLowerCase().endsWith('.json')) {
+            accepted.push(file);
+        } else {
+            rejected.push(name || 'Unnamed file');
+        }
+    });
+    return { accepted, rejected };
+}
 
 export const CUSTOM_METADATA_UPDATED_NOTE = 'Custom metadata updated.';
 export const METADATA_UPDATE_CANCELLED = 'Metadata update cancelled.';

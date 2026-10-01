@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { hexToGuid, normaliseAaguidValue } from './aaguid.js';
+import { extractByteArray, formatGuidCandidate, hexToGuid, normaliseAaguid, normaliseAaguidValue } from './aaguid.js';
 import { goldenAnswers } from '@/test/logic/simple/ceremony-answers.js';
 
 // An AAGUID as lower-case hex, from any spelling a record or the server gives
@@ -84,5 +84,41 @@ describe('hexToGuid', () => {
   it('gives none for anything but thirty-two digits', () => {
     expect(hexToGuid('00112233')).toBe('');
     expect(hexToGuid('')).toBe('');
+  });
+});
+
+describe('formatGuidCandidate, the MDS entry\'s spelling', () => {
+  it('dashes thirty-two hex digits, or a GUID, in lower case', () => {
+    expect(formatGuidCandidate('00112233445566778899aabbccddeeff')).toBe('00112233-4455-6677-8899-aabbccddeeff');
+    expect(formatGuidCandidate('00112233-4455-6677-8899-aabbccddeeff')).toBe('00112233-4455-6677-8899-aabbccddeeff');
+    expect(normaliseAaguid('00112233-4455-6677-8899-AABBCCDDEEFF')).toBe('00112233-4455-6677-8899-aabbccddeeff');
+  });
+
+  it('reads sixteen bytes, and a value by its text form', () => {
+    const bytes = new Uint8Array([0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]);
+    expect(formatGuidCandidate(bytes)).toBe('00112233-4455-6677-8899-aabbccddeeff');
+    expect(formatGuidCandidate({ toString: () => '00112233445566778899aabbccddeeff' })).toBe('00112233-4455-6677-8899-aabbccddeeff');
+  });
+
+  it('reads no GUID from other text, blank text, or a value with no text form', () => {
+    expect(formatGuidCandidate('not-guid')).toBe('');
+    expect(normaliseAaguid('   ')).toBe('');
+    expect(formatGuidCandidate(Object.create(null))).toBe('');
+    expect(formatGuidCandidate({ toString() { throw new Error('no'); } })).toBe('');
+  });
+});
+
+describe('extractByteArray', () => {
+  it('reads a list of whole numbers, a view or a buffer as bytes', () => {
+    const bytes = new Uint8Array([1, 2, 3]);
+    expect(extractByteArray([1, 2, 3])).toEqual([1, 2, 3]);
+    expect(extractByteArray(bytes)).toEqual([1, 2, 3]);
+    expect(extractByteArray(new DataView(bytes.buffer))).toEqual([1, 2, 3]);
+    expect(extractByteArray(bytes.buffer)).toEqual([1, 2, 3]);
+  });
+
+  it('reads none from a list that is not whole numbers, or from nothing', () => {
+    expect(extractByteArray(['1', 2])).toBeNull();
+    expect(extractByteArray(null)).toBeNull();
   });
 });

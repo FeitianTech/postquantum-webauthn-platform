@@ -9,7 +9,7 @@ import {
   requestCertificateDecode,
 } from '@/logic/mds/explorer/certificate.js';
 import { entryIdForAaguid, requestResolvedEntry, resolveQueryForEntry } from '@/logic/mds/explorer/entry-link.js';
-import { hasInlineDetail } from '@/logic/mds/metadata/metadata-helpers.js';
+import { hasInlineDetail } from '@/logic/mds/explorer/loading.js';
 import { authenticatorRawTitle, getAuthenticatorRawData } from '@/logic/mds/raw-data.js';
 import { stringifyAuthenticatorRawData } from '@/logic/mds/raw-stringify.js';
 

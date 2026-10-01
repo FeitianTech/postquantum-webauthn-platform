@@ -1,4 +1,4 @@
-import { MDS_EXPLORER_FULL_PATH } from '../constants.js';
+import { MDS_EXPLORER_FULL_PATH } from './constants.js';
 
 function apiSource(forceReload) {
     return {

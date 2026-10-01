@@ -19,7 +19,7 @@ import {
 import { explorerFilterOptionLists, matchingFilterOptions } from '@/logic/mds/explorer/options.js';
 import { certificationParts, identifierLabel } from '@/logic/mds/explorer/rows.js';
 import { explorerLoadedStatus } from '@/logic/mds/explorer/status.js';
-import { createExplorerSource } from '@/logic/mds/metadata/explorer-source.js';
+import { createExplorerSource } from '@/logic/mds/explorer-source.js';
 
 /** One authenticator as the server lists it: every column's text is already there. */
 export type MdsEntry = {

@@ -1,6 +1,6 @@
 // The options a filter's combobox offers. No DOM.
 import { CERTIFICATION_OPTIONS, FILTER_CONFIG } from '../constants.js';
-import { formatEnum } from '../utils/formatters.js';
+import { formatEnum } from '../formatters.js';
 
 export const NO_MATCHING_OPTIONS = 'No matches';
 

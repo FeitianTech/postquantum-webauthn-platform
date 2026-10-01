@@ -2,7 +2,7 @@
 // surface (a saved credential) opens one by its AAGUID. No DOM.
 import { readFailedResponse } from '../../shared/failed-response.js';
 import { MDS_RESOLVE_PATH } from '../constants.js';
-import { normaliseAaguid } from '../utils/resolvers.js';
+import { normaliseAaguid } from '../../shared/aaguid.js';
 
 // What the jump from a saved credential says while and after it looks.
 export const ENTRY_LINK_MESSAGES = Object.freeze({

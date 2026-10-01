@@ -1,19 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  DEFAULT_SORT_DIRECTION,
-  DEFAULT_SORT_KEY,
-  MDS_SORT_ACCESSORS,
-  SORT_ASCENDING,
-  SORT_DESCENDING,
-  SORT_NONE,
   compareExplorerSortValues,
   countActiveExplorerFilters,
+  DEFAULT_SORT_DIRECTION,
+  DEFAULT_SORT_KEY,
   defaultExplorerSort,
   isExplorerSortKey,
   matchesExplorerFilters,
+  MDS_SORT_ACCESSORS,
   nextExplorerSort,
   nextExplorerSortDirection,
+  normaliseSortValueInput,
+  SORT_ASCENDING,
+  SORT_DESCENDING,
+  SORT_NONE,
   sortExplorerEntries,
 } from './filter-sort.js';
 
@@ -166,5 +167,18 @@ describe('filters', () => {
   it('counts the filters in use', () => {
     expect(countActiveExplorerFilters({ name: 'x', id: ' ', protocol: 'FIDO2', other: 3 })).toBe(2);
     expect(countActiveExplorerFilters(null)).toBe(0);
+  });
+});
+
+describe('sort values', () => {
+  it('reads a date as its time and a dash or blank as nothing', () => {
+    const date = new Date('2023-09-18T00:00:00Z');
+    expect(normaliseSortValueInput(date)).toBe(date.getTime());
+    expect(normaliseSortValueInput('—')).toBe('');
+    expect(normaliseSortValueInput('   ')).toBe('');
+  });
+
+  it('keeps a number as it is', () => {
+    expect(normaliseSortValueInput(42)).toBe(42);
   });
 });
