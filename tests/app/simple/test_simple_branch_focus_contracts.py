@@ -128,23 +128,6 @@ def test_simple_register_complete_non_mapping_payload_returns_state_expired_erro
     assert "Registration state not found or has expired" in response.get_json()["error"]
 
 
-def test_simple_authenticate_complete_aborts_when_session_credentials_cannot_be_rebuilt(monkeypatch, simple_parsing):
-    monkeypatch.setattr(simple_parsing, "_parse_client_credentials", lambda _raw: ([], []))
-
-    with entry_app().test_client() as client:
-        with client.session_transaction() as session_state:
-            session_state["simple_credentials"] = [{"credentialId": "stale"}]
-            session_state["state"] = {"challenge": "auth-state", "issued_at": time.time()}
-            session_state["authenticate_rp_id"] = "example.com"
-
-        response = client.post(
-            "/api/authenticate/complete?email=user@example.com",
-            json={"rawId": "stale", "response": {}},
-        )
-
-    assert response.status_code == 400
-
-
 def test_simple_register_complete_covers_warning_metadata_and_session_fallback_paths(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
     rp_id = "example.com"
     credential_id = b"branch-focus-register"

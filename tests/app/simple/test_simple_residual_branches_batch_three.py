@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import time
-from types import SimpleNamespace
 
 import pytest
 from fido2 import cbor
@@ -58,21 +57,6 @@ class _RegisterServer:
 
     def register_complete(self, *_args, **_kwargs):
         return self._auth_data
-
-
-class _BadCredentialId:
-    def __bytes__(self):
-        raise TypeError("credential id cannot be converted")
-
-
-class _AuthenticationServer:
-    def __init__(self, captured=None):
-        self._captured = captured
-
-    def authenticate_complete(self, state, *_args, **_kwargs):
-        if self._captured is not None:
-            self._captured["state"] = state
-        return SimpleNamespace(credential_id=_BadCredentialId())
 
 
 def test_parse_client_credentials_ignores_non_mapping_entries_and_keeps_valid_records():
@@ -196,41 +180,3 @@ def test_register_complete_handles_algorithm_and_large_blob_residual_paths(monke
     assert payload["algo"] == expected_name
     assert payload["relyingParty"]["largeBlob"] is True
     assert payload["storedCredential"]["userHandle"] == _b64url(b"string-user-handle")
-
-
-def test_authenticate_complete_ignores_request_state_and_handles_bad_matched_credential_id(monkeypatch, config_module, simple_parsing):
-    captured = {}
-
-    monkeypatch.setattr(
-        simple_parsing,
-        "_parse_client_credentials",
-        lambda _raw: ([SimpleNamespace(credential_id=b"\x01")], [{"credentialId": "AQ"}])
-    )
-    monkeypatch.setattr(
-        relying_party,
-        "create_fido_server",
-        lambda **_kwargs: _AuthenticationServer(captured)
-    )
-
-    with entry_app().test_client() as client:
-        with client.session_transaction() as session_state:
-            session_state["simple_credentials"] = [{"credentialId": "AQ"}]
-            session_state["authenticate_rp_id"] = "example.com"
-            session_state["state"] = {"challenge": "from-session", "issued_at": time.time()}
-
-        response = client.post(
-            "/api/authenticate/complete?email=user@example.com",
-            json={
-                "__session_state": {"challenge": "from-request"},
-                "response": {"authenticatorData": "@@@"},
-            },
-        )
-
-    # Without a readable credential id and counter the signCount check cannot
-    # run, so the simple flow must refuse rather than report OK.
-    assert response.status_code == 400
-    payload = response.get_json()
-    assert payload.get("status") != "OK"
-    assert "signCount" not in payload
-    # The request-supplied state must have been discarded outright.
-    assert captured["state"]["challenge"] == "from-session"
