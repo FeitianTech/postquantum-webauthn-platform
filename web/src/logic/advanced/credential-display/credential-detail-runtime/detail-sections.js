@@ -23,7 +23,6 @@ import {
     normaliseAttestationResultValue,
     resolveCredentialAttestationValue,
 } from '../attestation-context.js';
-import {pickFirstString} from './helpers.js';
 
 export const DETAIL_TEXT = Object.freeze({
     properties: 'Properties',
@@ -102,7 +101,7 @@ function describeRootChecks(attestationChecksData) {
     });
 }
 
-/** "Properties": discoverable, large blob, minPinLength, then the four checks, their note and the metadata's warning. */
+/** "Properties": discoverable, large blob, minPinLength, then the four checks and their note. */
 export function describeProperties({
     cred,
     attestationContext,
@@ -110,11 +109,7 @@ export function describeProperties({
     certificateAaguidHex,
     authDataAaguidHex,
 }) {
-    const {
-        propertiesData,
-        attestationSummaryData,
-        attestationChecksData,
-    } = attestationContext;
+    const { attestationChecksData } = attestationContext;
 
     const check = (summaryKey, propertyKey) => normaliseAttestationResultValue(
         resolveCredentialAttestationValue(cred, summaryKey, propertyKey, attestationContext),
@@ -122,7 +117,7 @@ export function describeProperties({
 
     return {
         title: DETAIL_TEXT.properties,
-        discoverable: cred.residentKey ?? cred.discoverable ?? false,
+        discoverable: cred.residentKey ?? false,
         largeBlob: cred.largeBlob ?? cred.largeBlobSupported ?? false,
         minPinLength: extractMinPinLengthValue(cred),
         checks: [
@@ -144,16 +139,6 @@ export function describeProperties({
                 rootChecks: null,
             },
         ],
-        warning: pickFirstString(
-            attestationChecksData?.metadata?.verification_warning,
-            attestationChecksData?.metadata?.verificationWarning,
-            attestationSummaryData?.metadata?.verification_warning,
-            attestationSummaryData?.metadata?.verificationWarning,
-            propertiesData?.metadata?.verification_warning,
-            propertiesData?.metadata?.verificationWarning,
-            cred?.metadata?.verification_warning,
-            cred?.metadata?.verificationWarning,
-        ),
     };
 }
 

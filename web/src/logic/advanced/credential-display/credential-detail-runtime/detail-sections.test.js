@@ -69,7 +69,6 @@ describe('describeProperties', () => {
       'RPID Hash Valid': true,
       'AAGUID Match': true,
     });
-    expect(section.warning).toBe('');
   });
 
   it('lists which roots the Root Valid check tried, each with its verdict', () => {
@@ -102,8 +101,8 @@ describe('describeProperties', () => {
     expect(checkValues(section)['AAGUID Match']).toBe(true);
   });
 
-  it('falls back to the older names for discoverable and large blob, then to false', () => {
-    expect(properties({ discoverable: true, largeBlobSupported: true })).toMatchObject({ discoverable: true, largeBlob: true });
+  it('falls back to the older name for large blob, then to false', () => {
+    expect(properties({ largeBlobSupported: true })).toMatchObject({ discoverable: false, largeBlob: true });
     expect(properties({})).toMatchObject({ discoverable: false, largeBlob: false, minPinLength: null });
   });
 
@@ -112,28 +111,6 @@ describe('describeProperties', () => {
     expect(checkValues(section)['AAGUID Match']).toBe(false);
   });
 
-  it('gives the metadata\'s warning from the first place that has one', () => {
-    const places = [
-      { attestationChecks: { metadata: { verification_warning: 'checks' } } },
-      { attestationChecks: { metadata: { verificationWarning: 'checks, camelCase' } } },
-      { attestationSummary: { metadata: { verification_warning: 'summary' } } },
-      { attestationSummary: { metadata: { verificationWarning: 'summary, camelCase' } } },
-      { properties: { metadata: { verification_warning: 'properties' } } },
-      { properties: { metadata: { verificationWarning: 'properties, camelCase' } } },
-      { metadata: { verification_warning: 'record' } },
-      { metadata: { verificationWarning: 'record, camelCase' } },
-    ];
-    expect(places.map((cred) => properties(cred).warning)).toEqual([
-      'checks',
-      'checks, camelCase',
-      'summary',
-      'summary, camelCase',
-      'properties',
-      'properties, camelCase',
-      'record',
-      'record, camelCase',
-    ]);
-  });
 });
 
 describe('describeUserInfo', () => {

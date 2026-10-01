@@ -40,7 +40,6 @@ export type DetailSectionsView = {
     largeBlob: unknown;
     minPinLength: number | null;
     checks: Check[];
-    warning: string;
   };
   userInfo: { title: string; name: string; displayName: string; identifiers: Identifier[] };
   aaguid: { title: string; values: { label: string; value: string }[] };

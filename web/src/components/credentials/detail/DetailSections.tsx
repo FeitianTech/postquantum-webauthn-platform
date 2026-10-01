@@ -97,11 +97,6 @@ function Properties({ detail, idBase }: { detail: CredentialDetail; idBase: stri
             <CheckRow key={check.label} check={check} />
           ))}
         </ul>
-        {properties.warning ? (
-          <p role="note" className="mt-3 rounded-sm border border-warning-line bg-warning-tint px-4 py-3 text-body text-warning" data-warning="">
-            {properties.warning}
-          </p>
-        ) : null}
       </div>
     </DetailSection>
   );

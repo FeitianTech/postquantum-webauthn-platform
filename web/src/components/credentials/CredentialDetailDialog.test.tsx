@@ -193,16 +193,11 @@ describe('a saved credential\'s details, what some records hold', () => {
     expect(section('Authenticator Response').querySelector('pre')).toHaveTextContent(ADVANCED.credentialIdBase64Url as string);
   });
 
-  it('give the metadata\'s warning in amber, and FIDO MDS beside the AAGUID when it has an entry', async () => {
-    const known = {
-      ...ES256,
-      aaguidHex: 'f1d0f1d0000040008000000000000001',
-      attestationSummary: { rootValid: true, metadata: { verification_warning: 'The metadata entry is revoked.' } },
-    };
+  it('give FIDO MDS beside the AAGUID when it has an entry', async () => {
+    const known = { ...ES256, aaguidHex: 'f1d0f1d0000040008000000000000001', attestationSummary: { rootValid: true } };
     renderShell([known]);
     await openDetail();
 
-    expect(section('Properties').querySelector('[data-warning]')).toHaveTextContent('The metadata entry is revoked.');
     await userEvent.click(within(section('User info at creation')).getByRole('button', { name: 'FIDO MDS' }));
     await waitFor(() => expect(window.location.hash).toBe('#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000001'));
   });
