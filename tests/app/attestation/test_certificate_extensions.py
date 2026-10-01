@@ -137,6 +137,29 @@ def test_information_access_names_each_method_and_place():
     ]
 
 
+def test_crl_distribution_points_name_each_place_reason_and_issuer():
+    issuer = x509.DirectoryName(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Demo CA")]))
+    relative = x509.RelativeDistinguishedName([x509.NameAttribute(NameOID.COMMON_NAME, "CRL1")])
+    value = x509.CRLDistributionPoints(
+        [
+            x509.DistributionPoint([x509.UniformResourceIdentifier("http://crl.example/ca.crl")], None, None, None),
+            x509.DistributionPoint(
+                None,
+                relative,
+                frozenset({x509.ReasonFlags.key_compromise, x509.ReasonFlags.ca_compromise}),
+                [issuer],
+            ),
+        ]
+    )
+
+    assert _shown("2.5.29.31", value) == [
+        "Full Name: URI:http://crl.example/ca.crl",
+        "Relative Name: CN=CRL1",
+        "Reasons: cACompromise, keyCompromise",
+        "CRL Issuer: DirName:CN=Demo CA",
+    ]
+
+
 @pytest.mark.parametrize(
     ("oid", "raw", "shown"),
     [
