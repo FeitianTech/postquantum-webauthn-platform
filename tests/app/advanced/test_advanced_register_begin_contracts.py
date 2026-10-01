@@ -310,7 +310,7 @@ def test_advanced_register_begin_maps_auth_selection_exclusions_extensions_and_t
         assert len(exclude_list) == 1
         assert bytes(getattr(exclude_list[0], "id")) == bytes.fromhex("0102")
 
-        assert captured["timeout"] == pytest.approx(15.0)
+        assert captured["timeout"] == 15000
         assert getattr(captured["attestation"], "value", captured["attestation"]) == "none"
 
         assert getattr(kwargs["user_verification"], "value", kwargs["user_verification"]) == "required"

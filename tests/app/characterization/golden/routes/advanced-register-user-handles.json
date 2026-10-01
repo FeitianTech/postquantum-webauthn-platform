@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "445"
+     "448"
     ],
     [
      "X-Content-Type-Options",
@@ -90,7 +90,7 @@
      }
     }
    ],
-   "bodySha256": "289c33bdacdbd277f0145c3c0a2bdb5a94e9ddba26aa72c6558b8eae45eebc91",
+   "bodySha256": "d52988785214cd8fb811e753b3454b775162eb08b7511f8c30d39ca1a5eacc5c",
    "body": {
     "publicKey": {
      "attestation": "none",
@@ -111,7 +111,7 @@
       "id": "localhost",
       "name": "FIDO2/WebAuthn PQC Developer Tools"
      },
-     "timeout": 90,
+     "timeout": 90000,
      "user": {
       "displayName": "A. User",
       "id": "dXNlci1oYW5kbGU",
@@ -768,7 +768,7 @@
     ],
     [
      "Content-Length",
-     "445"
+     "448"
     ],
     [
      "X-Content-Type-Options",
@@ -850,7 +850,7 @@
      }
     }
    ],
-   "bodySha256": "116b97db032e2489df7405c578be155c44afcab6426511afcbd5c0580f150d16",
+   "bodySha256": "b9e3267f936311f311783a2bd594a2604551d8bbf9cb5ffc6a4c7b0767dbb4c4",
    "body": {
     "publicKey": {
      "attestation": "none",
@@ -871,7 +871,7 @@
       "id": "localhost",
       "name": "FIDO2/WebAuthn PQC Developer Tools"
      },
-     "timeout": 90,
+     "timeout": 90000,
      "user": {
       "displayName": "A. User",
       "id": "dXNlci1oYW5kbGU",
@@ -1528,7 +1528,7 @@
     ],
     [
      "Content-Length",
-     "445"
+     "448"
     ],
     [
      "X-Content-Type-Options",
@@ -1610,7 +1610,7 @@
      }
     }
    ],
-   "bodySha256": "40a00e2229f905d562c28c20ca5c922f34119a4409ccf2da5a58011de35a23c9",
+   "bodySha256": "9e3ccc485d25c6ab6a708420a59306f9399c0ffe860fb6f81bc73f95b5ece44a",
    "body": {
     "publicKey": {
      "attestation": "none",
@@ -1631,7 +1631,7 @@
       "id": "localhost",
       "name": "FIDO2/WebAuthn PQC Developer Tools"
      },
-     "timeout": 90,
+     "timeout": 90000,
      "user": {
       "displayName": "A. User",
       "id": "dXNlci1oYW5kbGU",

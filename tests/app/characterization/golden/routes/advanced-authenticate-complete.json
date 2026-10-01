@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "137"
+     "140"
     ],
     [
      "X-Content-Type-Options",
@@ -72,12 +72,12 @@
      }
     }
    ],
-   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
+   "bodySha256": "9a9ad05e24165a619d612ce103945852b8e0d6e7518d1e16202cd67267afe31f",
    "body": {
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
-     "timeout": 90,
+     "timeout": 90000,
      "userVerification": "preferred"
     }
    }
@@ -164,7 +164,7 @@
     ],
     [
      "Content-Length",
-     "137"
+     "140"
     ],
     [
      "X-Content-Type-Options",
@@ -225,12 +225,12 @@
      }
     }
    ],
-   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
+   "bodySha256": "9a9ad05e24165a619d612ce103945852b8e0d6e7518d1e16202cd67267afe31f",
    "body": {
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
-     "timeout": 90,
+     "timeout": 90000,
      "userVerification": "preferred"
     }
    }
@@ -317,7 +317,7 @@
     ],
     [
      "Content-Length",
-     "137"
+     "140"
     ],
     [
      "X-Content-Type-Options",
@@ -378,12 +378,12 @@
      }
     }
    ],
-   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
+   "bodySha256": "9a9ad05e24165a619d612ce103945852b8e0d6e7518d1e16202cd67267afe31f",
    "body": {
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
-     "timeout": 90,
+     "timeout": 90000,
      "userVerification": "preferred"
     }
    }
@@ -468,7 +468,7 @@
     ],
     [
      "Content-Length",
-     "231"
+     "234"
     ],
     [
      "X-Content-Type-Options",
@@ -529,7 +529,7 @@
      }
     }
    ],
-   "bodySha256": "bf0673bcbfe9afe852a4b5ca8c2d515676aa410c77f56cad2cd3a67be656e8c3",
+   "bodySha256": "5fb2c1bc9822b44193a22d44ab6c14f984bf6af5e53a088d33b889b60c616398",
    "body": {
     "publicKey": {
      "allowCredentials": [
@@ -540,7 +540,7 @@
      ],
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
-     "timeout": 90,
+     "timeout": 90000,
      "userVerification": "preferred"
     }
    }
@@ -625,7 +625,7 @@
     ],
     [
      "Content-Length",
-     "137"
+     "140"
     ],
     [
      "X-Content-Type-Options",
@@ -686,12 +686,12 @@
      }
     }
    ],
-   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
+   "bodySha256": "9a9ad05e24165a619d612ce103945852b8e0d6e7518d1e16202cd67267afe31f",
    "body": {
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
-     "timeout": 90,
+     "timeout": 90000,
      "userVerification": "preferred"
     }
    }
@@ -778,7 +778,7 @@
     ],
     [
      "Content-Length",
-     "137"
+     "140"
     ],
     [
      "X-Content-Type-Options",
@@ -839,12 +839,12 @@
      }
     }
    ],
-   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
+   "bodySha256": "9a9ad05e24165a619d612ce103945852b8e0d6e7518d1e16202cd67267afe31f",
    "body": {
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
-     "timeout": 90,
+     "timeout": 90000,
      "userVerification": "preferred"
     }
    }
@@ -931,7 +931,7 @@
     ],
     [
      "Content-Length",
-     "137"
+     "140"
     ],
     [
      "X-Content-Type-Options",
@@ -992,12 +992,12 @@
      }
     }
    ],
-   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
+   "bodySha256": "9a9ad05e24165a619d612ce103945852b8e0d6e7518d1e16202cd67267afe31f",
    "body": {
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
-     "timeout": 90,
+     "timeout": 90000,
      "userVerification": "preferred"
     }
    }
@@ -1084,7 +1084,7 @@
     ],
     [
      "Content-Length",
-     "137"
+     "140"
     ],
     [
      "X-Content-Type-Options",
@@ -1145,12 +1145,12 @@
      }
     }
    ],
-   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
+   "bodySha256": "9a9ad05e24165a619d612ce103945852b8e0d6e7518d1e16202cd67267afe31f",
    "body": {
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
-     "timeout": 90,
+     "timeout": 90000,
      "userVerification": "preferred"
     }
    }
@@ -1236,7 +1236,7 @@
     ],
     [
      "Content-Length",
-     "137"
+     "140"
     ],
     [
      "X-Content-Type-Options",
@@ -1297,12 +1297,12 @@
      }
     }
    ],
-   "bodySha256": "8183e6a110c6f943bc87e5f189e83bff14e7f1d83fdcce95835cacd506698ecd",
+   "bodySha256": "9a9ad05e24165a619d612ce103945852b8e0d6e7518d1e16202cd67267afe31f",
    "body": {
     "publicKey": {
      "challenge": "cXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXE",
      "rpId": "localhost",
-     "timeout": 90,
+     "timeout": 90000,
      "userVerification": "preferred"
     }
    }

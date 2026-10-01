@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "445"
+     "448"
     ],
     [
      "X-Content-Type-Options",
@@ -90,7 +90,7 @@
      }
     }
    ],
-   "bodySha256": "3d60faddc67ec4f462c746e125ceb59824841115543e9502a5d476cb4055929d",
+   "bodySha256": "02447fd59ccee623868fa06decd2271093e32d3ed1fc0e9cea3cd3d7635ea153",
    "body": {
     "publicKey": {
      "attestation": "none",
@@ -111,7 +111,7 @@
       "id": "localhost",
       "name": "FIDO2/WebAuthn PQC Developer Tools"
      },
-     "timeout": 90,
+     "timeout": 90000,
      "user": {
       "displayName": "A. User",
       "id": "dXNlci1oYW5kbGU",

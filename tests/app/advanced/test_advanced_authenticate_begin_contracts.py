@@ -1,7 +1,5 @@
 import types
 
-import pytest
-
 from server.app.config import relying_party
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import parsing as advanced_parsing
@@ -342,7 +340,7 @@ def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_pre
 
     assert response.status_code == 200
     assert captured["challenge"] == b"\x01\x02\x03"
-    assert captured["timeout"] == pytest.approx(15.0)
+    assert captured["timeout"] == 15000
     assert captured["allowed_algorithms"] == expected_algorithms
     assert captured["extensions"] == {
         "largeBlob": {"write": b"abc"},

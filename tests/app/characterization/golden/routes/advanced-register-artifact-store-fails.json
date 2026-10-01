@@ -11,7 +11,7 @@
     ],
     [
      "Content-Length",
-     "445"
+     "448"
     ],
     [
      "X-Content-Type-Options",
@@ -90,7 +90,7 @@
      }
     }
    ],
-   "bodySha256": "d71dfc7ecc0e94d517f60989de74194efc5525f0ef96c3844ad8b67d06566eba",
+   "bodySha256": "1f58a6d263cf763775f234e5c2d26bbdc2851ffc1601713c9b67ba6283b6186a",
    "body": {
     "publicKey": {
      "attestation": "none",
@@ -111,7 +111,7 @@
       "id": "localhost",
       "name": "FIDO2/WebAuthn PQC Developer Tools"
      },
-     "timeout": 90,
+     "timeout": 90000,
      "user": {
       "displayName": "A. User",
       "id": "dXNlci1oYW5kbGU",
@@ -207,7 +207,7 @@
     ],
     [
      "Content-Length",
-     "445"
+     "448"
     ],
     [
      "X-Content-Type-Options",
@@ -289,7 +289,7 @@
      }
     }
    ],
-   "bodySha256": "d320f3cdf595a0c58a69dba6ff3de4ce3a58c7cf26b5d95ad148f2ecba8f6227",
+   "bodySha256": "66fffb8e9e984e00c026a7361ef102cd2dd675a68f008af361494cef8e2bbb1b",
    "body": {
     "publicKey": {
      "attestation": "none",
@@ -310,7 +310,7 @@
       "id": "localhost",
       "name": "FIDO2/WebAuthn PQC Developer Tools"
      },
-     "timeout": 90,
+     "timeout": 90000,
      "user": {
       "displayName": "A. User",
       "id": "dXNlci1oYW5kbGU",

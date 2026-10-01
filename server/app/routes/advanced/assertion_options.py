@@ -28,8 +28,8 @@ def assertion_server(public_key: Mapping[str, Any]) -> tuple[Any, Any, Any]:
     resolved_rp_id = relying_party.determine_rp_id(stored_rp_id)
     temp_server = relying_party.create_fido_server(rp_id=resolved_rp_id, rp_name=stored_rp_name)
 
-    timeout = public_key.get("timeout", 90000)
-    temp_server.timeout = timeout / 1000.0 if timeout else None
+    # In milliseconds, as the options carry it (fido2 passes the server's timeout through).
+    temp_server.timeout = public_key.get("timeout", 90000) or None
     return temp_server, resolved_rp_id, stored_rp_name
 
 

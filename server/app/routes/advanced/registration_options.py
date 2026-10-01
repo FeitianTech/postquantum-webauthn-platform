@@ -98,8 +98,8 @@ def registration_server(public_key: Any) -> tuple[Any, Any]:
 
     temp_server = relying_party.create_fido_server(rp_data=sanitized_rp)
 
-    timeout = public_key.get("timeout", 90000)
-    temp_server.timeout = timeout / 1000.0 if timeout else None
+    # In milliseconds, as the options carry it (fido2 passes the server's timeout through).
+    temp_server.timeout = public_key.get("timeout", 90000) or None
 
     # fido2's string enums answer None for a value they do not know.
     temp_server.attestation = (
