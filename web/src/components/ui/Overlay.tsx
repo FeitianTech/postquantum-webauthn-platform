@@ -8,7 +8,7 @@ import { BackButton } from './BackButton';
 import { IconButton } from './Button';
 import { CloseIcon } from './icons';
 
-export type OverlayVariant = 'dialog' | 'drawer' | 'sheet';
+type OverlayVariant = 'dialog' | 'drawer' | 'sheet';
 
 type OverlayProps = {
   open: boolean;
@@ -42,7 +42,7 @@ const LAYERS: HTMLElement[] = [];
 const LOWEST_LAYER = 50;
 const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
-export function focusableIn(panel: HTMLElement): HTMLElement[] {
+function focusableIn(panel: HTMLElement): HTMLElement[] {
   return Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
     (node) => !(node as HTMLButtonElement).disabled && !node.closest('[hidden]'),
   );
@@ -51,7 +51,7 @@ export function focusableIn(panel: HTMLElement): HTMLElement[] {
 // Tab and Shift+Tab go round the panel's controls and never leave it: from the
 // last to the first and back, and from the panel itself (or anywhere outside it)
 // to the first (Tab) or the last (Shift+Tab).
-export function keepFocusInside(event: KeyboardEvent, panel: HTMLElement) {
+function keepFocusInside(event: KeyboardEvent, panel: HTMLElement) {
   const focusable = focusableIn(panel);
   if (focusable.length === 0) {
     event.preventDefault();

@@ -7,8 +7,8 @@ import { useOverlayRoot } from '@/lib/useOverlayRoot';
 import { IconButton } from './Button';
 import { CloseIcon } from './icons';
 
-export type ToastTone = 'info' | 'success' | 'warning' | 'danger';
-export type ToastInput = { tone?: ToastTone; message: ReactNode; durationMs?: number };
+type ToastTone = 'info' | 'success' | 'warning' | 'danger';
+type ToastInput = { tone?: ToastTone; message: ReactNode; durationMs?: number };
 type ToastEntry = ToastInput & { id: number };
 
 // As long as today's status messages stay (shared/ui/status.js).

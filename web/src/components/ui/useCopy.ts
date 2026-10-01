@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 const COPIED_MS = 2000;
 
-export type CopyOutcome = { state: 'idle' | 'copied' | 'failed'; reason?: string };
+type CopyOutcome = { state: 'idle' | 'copied' | 'failed'; reason?: string };
 
 // Copies text and remembers how it went: "copied" for two seconds, or "failed"
 // with the browser's reason until the next copy. `copy` resolves to whether the

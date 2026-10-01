@@ -3,7 +3,7 @@ import { type KeyboardEvent, type ReactNode, useCallback, useEffect, useRef } fr
 import { cx } from '@/lib/cx';
 import { useIsomorphicLayoutEffect } from '@/lib/useIsomorphicLayoutEffect';
 
-export type SegmentOption<T extends string> = { value: T; label: ReactNode };
+type SegmentOption<T extends string> = { value: T; label: ReactNode };
 
 type SegmentedControlProps<T extends string> = {
   /** The accessible name of the tab list. */

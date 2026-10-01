@@ -4,8 +4,8 @@ import { cx } from '@/lib/cx';
 
 import { Spinner } from './icons';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'quiet';
-export type ButtonSize = 'sm' | 'md';
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'quiet';
+type ButtonSize = 'sm' | 'md';
 
 type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'style'> & {
   variant?: ButtonVariant;

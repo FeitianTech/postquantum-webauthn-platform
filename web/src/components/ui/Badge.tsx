@@ -31,7 +31,7 @@ export function Badge({ tone = 'neutral', className, children, ...props }: Badge
 }
 
 // Each tone's mark, so a status never rests on colour alone.
-export const STATUS_MARKS: Record<Tone, string> = {
+const STATUS_MARKS: Record<Tone, string> = {
   success: '✓',
   danger: '✕',
   neutral: '–',

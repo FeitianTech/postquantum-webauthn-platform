@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { cx } from '@/lib/cx';
 
-export type KeyValueItem = {
+type KeyValueItem = {
   /** Stable key, also written to data-item for tests and styling. */
   key: string;
   label: ReactNode;

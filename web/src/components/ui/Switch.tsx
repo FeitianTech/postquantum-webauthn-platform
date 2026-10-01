@@ -11,7 +11,7 @@ type SwitchControlProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'style' 
 
 // The bare switch: a button with role="switch". Off is a white track with a
 // hairline (never a grey fill), on is the accent.
-export function SwitchControl({ checked, onCheckedChange, className, disabled, ...props }: SwitchControlProps) {
+function SwitchControl({ checked, onCheckedChange, className, disabled, ...props }: SwitchControlProps) {
   return (
     <button
       type="button"
