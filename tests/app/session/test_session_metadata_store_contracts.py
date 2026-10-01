@@ -9,7 +9,7 @@ from server.app.storage import session_metadata as session_store
 
 
 @pytest.fixture
-def session_store_module(monkeypatch, tmp_path):
+def session_metadata_dir(monkeypatch, tmp_path):
     session_dir = tmp_path / "session-metadata"
     session_dir.mkdir()
 
@@ -18,7 +18,7 @@ def session_store_module(monkeypatch, tmp_path):
     return session_dir
 
 
-def test_local_write_read_list_delete_roundtrip(session_store_module, monkeypatch):
+def test_local_write_read_list_delete_roundtrip(session_metadata_dir, monkeypatch):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
 
     session_store.write_file("session-local", "entry.json", b"{\"ok\":true}")
@@ -34,7 +34,7 @@ def test_local_write_read_list_delete_roundtrip(session_store_module, monkeypatc
     assert session_store.list_files("session-local") == []
 
 
-def test_local_touch_last_access_with_explicit_timestamp(session_store_module, monkeypatch):
+def test_local_touch_last_access_with_explicit_timestamp(session_metadata_dir, monkeypatch):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
 
     expected_timestamp = 1_700_000_123.0
@@ -45,8 +45,8 @@ def test_local_touch_last_access_with_explicit_timestamp(session_store_module, m
     assert abs(resolved_timestamp - expected_timestamp) < 1.0
 
 
-def test_local_cleanup_removes_only_stale_non_hidden_sessions(session_store_module, monkeypatch):
-    session_dir = session_store_module
+def test_local_cleanup_removes_only_stale_non_hidden_sessions(session_metadata_dir, monkeypatch):
+    session_dir = session_metadata_dir
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
     monkeypatch.setattr(visitor_session, "CLEANUP", visitor_session.CleanupState())
 
@@ -77,7 +77,7 @@ def test_local_cleanup_removes_only_stale_non_hidden_sessions(session_store_modu
     assert hidden_dir.exists() is True
 
 
-def test_local_cleanup_respects_cleanup_interval_guard(session_store_module, monkeypatch):
+def test_local_cleanup_respects_cleanup_interval_guard(session_metadata_dir, monkeypatch):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
     monkeypatch.setattr(visitor_session, "CLEANUP", visitor_session.CleanupState(last_run=2_000.0))
 
@@ -90,7 +90,7 @@ def test_local_cleanup_respects_cleanup_interval_guard(session_store_module, mon
     visitor_session._maybe_cleanup(now=2_500.0)
 
 
-def test_gcs_touch_last_access_uploads_json_marker(session_store_module, monkeypatch):
+def test_gcs_touch_last_access_uploads_json_marker(session_metadata_dir, monkeypatch):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     uploads = []
@@ -111,7 +111,7 @@ def test_gcs_touch_last_access_uploads_json_marker(session_store_module, monkeyp
     assert payload["timestamp"] == 321.5
 
 
-def test_gcs_resolve_last_access_prefers_marker_timestamp(session_store_module, monkeypatch):
+def test_gcs_resolve_last_access_prefers_marker_timestamp(session_metadata_dir, monkeypatch):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     monkeypatch.setattr(
@@ -124,7 +124,7 @@ def test_gcs_resolve_last_access_prefers_marker_timestamp(session_store_module, 
     assert session_store.resolve_last_access("session-gcs") == 123.25
 
 
-def test_gcs_resolve_last_access_falls_back_to_blob_timestamp(session_store_module, monkeypatch):
+def test_gcs_resolve_last_access_falls_back_to_blob_timestamp(session_metadata_dir, monkeypatch):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     monkeypatch.setattr(session_store, "download_bytes", lambda _blob_name: b"not-json")
@@ -133,7 +133,7 @@ def test_gcs_resolve_last_access_falls_back_to_blob_timestamp(session_store_modu
     assert session_store.resolve_last_access("session-gcs") == 456.5
 
 
-def test_gcs_list_files_filters_last_access_and_folder_markers(session_store_module, monkeypatch):
+def test_gcs_list_files_filters_last_access_and_folder_markers(session_metadata_dir, monkeypatch):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     prefix = session_store._metadata_prefix("session-gcs") + "/"
@@ -149,7 +149,7 @@ def test_gcs_list_files_filters_last_access_and_folder_markers(session_store_mod
     assert session_store.list_files("session-gcs") == ["a.json", "b.json"]
 
 
-def test_gcs_delete_session_deletes_all_session_blobs(session_store_module, monkeypatch):
+def test_gcs_delete_session_deletes_all_session_blobs(session_metadata_dir, monkeypatch):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     prefix = session_store._user_root_prefix("session-gcs") + "/"
@@ -173,7 +173,7 @@ def test_gcs_delete_session_deletes_all_session_blobs(session_store_module, monk
     assert deleted == [(blob_names[0], True), (blob_names[1], True), (blob_names[2], True)]
 
 
-def test_gcs_write_file_uploads_and_updates_last_access(session_store_module, monkeypatch):
+def test_gcs_write_file_uploads_and_updates_last_access(session_metadata_dir, monkeypatch):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     uploads = []
@@ -201,7 +201,7 @@ def test_gcs_write_file_uploads_and_updates_last_access(session_store_module, mo
     assert touched == ["session-gcs"]
 
 
-def test_gcs_file_exists_proxies_blob_exists(session_store_module, monkeypatch):
+def test_gcs_file_exists_proxies_blob_exists(session_metadata_dir, monkeypatch):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
 
     monkeypatch.setattr(
