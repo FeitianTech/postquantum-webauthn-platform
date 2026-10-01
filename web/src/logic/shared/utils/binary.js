@@ -1,4 +1,3 @@
-import { state } from '../state.js';
 import { Base64Error, base64UrlToBytes, bytesToBase64, bytesToBase64Url, forgivingBase64ToBytes } from './base64.js';
 
 export function isValidHex(str) {
@@ -137,17 +136,13 @@ export function hexToUint8Array(hex) {
     return bytes;
 }
 
+const UTF8 = new TextDecoder();
+
 // Text the browser or the server wrote in base64url (a credential's client
 // data): decoded strictly, so other text throws rather than decoding to junk.
 export function base64UrlToUtf8String(base64url) {
     if (!base64url) return null;
-    if (!state.utf8Decoder) return null;
-    const bytes = base64UrlToBytes(base64url);
-    try {
-        return state.utf8Decoder.decode(bytes);
-    } catch (error) {
-        return null;
-    }
+    return UTF8.decode(base64UrlToBytes(base64url));
 }
 
 export function base64UrlToJson(base64url) {

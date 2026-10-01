@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { state } from '../state.js';
 import {
   base64ToBase64Url,
   base64UrlToHex,
@@ -47,16 +46,6 @@ describe('the binary helpers given text they cannot read', () => {
 
   it('reads no hex from text that is not a Uint8Array literal', () => {
     expect(jsToHex('Uint8Array.from([1, 2])')).toBe('');
-  });
-
-  it('decodes no text without a UTF-8 decoder', () => {
-    const decoder = state.utf8Decoder;
-    state.utf8Decoder = null;
-    try {
-      expect(base64UrlToUtf8String('e30')).toBeNull();
-    } finally {
-      state.utf8Decoder = decoder;
-    }
   });
 
   it('parses no JSON from base64url that holds no bytes', () => {

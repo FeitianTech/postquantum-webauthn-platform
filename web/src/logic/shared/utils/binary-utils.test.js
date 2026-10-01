@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import { state } from '../state.js';
 import { Base64Error } from './base64.js';
 import {
   base64ToBase64Url,
@@ -77,14 +76,9 @@ describe('binary-utils', () => {
   });
 
   it('decodes structured values', () => {
-    const originalDecoder = state.utf8Decoder;
-    state.utf8Decoder = new TextDecoder('utf-8');
-
     const jsonValue = hexToBase64Url('7b2261223a317d');
     expect(base64UrlToUtf8String(jsonValue)).toBe('{"a":1}');
     expect(base64UrlToJson(jsonValue)).toEqual({ a: 1 });
-
-    state.utf8Decoder = originalDecoder;
   });
 
   it('normalizes values to hex and sorts objects', () => {
@@ -125,19 +119,9 @@ describe('binary-utils', () => {
     expect(hexToUint8Array('zz')).toBeNull();
   });
 
-  it('returns null for utf8 and json decode failures without throwing', () => {
-    const originalDecoder = state.utf8Decoder;
-    state.utf8Decoder = {
-      decode() {
-        throw new Error('decode failure');
-      },
-    };
-
-    expect(base64UrlToUtf8String('QQ')).toBeNull();
-
-    state.utf8Decoder = new TextDecoder('utf-8');
+  it('reads text that is not JSON, or not base64url, as no JSON', () => {
     expect(base64UrlToJson('QQ')).toBeNull();
-
-    state.utf8Decoder = originalDecoder;
+    expect(base64UrlToJson('not base64url!')).toBeNull();
+    expect(() => base64UrlToUtf8String('not base64url!')).toThrow(Base64Error);
   });
 });
