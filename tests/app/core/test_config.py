@@ -6,10 +6,22 @@ import os
 import types
 from unittest import mock
 
+from server.app.config.attestation_trust import _parse_trusted_ca_subjects
+from server.app.config.paths import basepath
+from server.app.config.relying_party import (
+    build_rp_entity,
+    create_fido_server,
+    determine_rp_id,
+)
+from server.app.config.session_secret import _resolve_secret_key
+from server.app.env_flags import parse_env_flag
+from server.app.factory import create_app
+from server.app.mds import files as mds_files
+from tests.app.entry_app import entry_app
+
 
 def test_env_flag_with_none():
     """Test parse_env_flag when env var is not set."""
-    from server.app.env_flags import parse_env_flag
     
     with mock.patch.dict(os.environ, {}, clear=False):
         if "TEST_FLAG" in os.environ:
@@ -19,7 +31,6 @@ def test_env_flag_with_none():
 
 def test_env_flag_with_false_values():
     """Test parse_env_flag with various false values."""
-    from server.app.env_flags import parse_env_flag
     
     false_values = ["", "0", "false", "off", "no", "  false  ", "  0  "]
     for value in false_values:
@@ -29,7 +40,6 @@ def test_env_flag_with_false_values():
 
 def test_env_flag_with_true_values():
     """Test parse_env_flag with various true values."""
-    from server.app.env_flags import parse_env_flag
     
     true_values = ["1", "true", "yes", "on", "True", "YES", "  1  "]
     for value in true_values:
@@ -39,7 +49,6 @@ def test_env_flag_with_true_values():
 
 def test_resolve_secret_key_from_env(monkeypatch):
     """Test secret key resolution from environment variable."""
-    from server.app.factory import create_app
 
     test_key = "test-secret-key"
     monkeypatch.setenv("FIDO_SERVER_SECRET_KEY", test_key)
@@ -57,7 +66,6 @@ def test_resolve_secret_key_from_file(tmp_path, monkeypatch):
     secret_content = b"file-secret-key-content"
     secret_file.write_bytes(secret_content)
 
-    from server.app.factory import create_app
 
     monkeypatch.setenv("FIDO_SERVER_SECRET_KEY_FILE", str(secret_file))
     # The file is read only when no key is given directly.
@@ -78,7 +86,6 @@ def test_resolve_secret_key_generates_and_stores(tmp_path, monkeypatch):
     monkeypatch.delenv("FIDO_SERVER_SECRET_KEY", raising=False)
     monkeypatch.delenv("FIDO_SERVER_SECRET_KEY_FILE", raising=False)
 
-    from server.app.config.session_secret import _resolve_secret_key
 
     secret = _resolve_secret_key(types.SimpleNamespace(instance_path=str(instance_path)))
 
@@ -91,7 +98,6 @@ def test_resolve_secret_key_generates_and_stores(tmp_path, monkeypatch):
 
 def test_parse_trusted_ca_subjects():
     """Test parsing of trusted CA subjects."""
-    from server.app.config.attestation_trust import _parse_trusted_ca_subjects
     
     # Test None input
     assert _parse_trusted_ca_subjects(None) is None
@@ -123,7 +129,6 @@ def test_parse_trusted_ca_subjects():
 
 def test_basepath():
     """Test basepath configuration."""
-    from server.app.config.paths import basepath
     
     # basepath should be a valid path (could be str or Path)
     assert basepath is not None
@@ -135,7 +140,6 @@ def test_basepath():
 
 def test_mds_metadata_paths(monkeypatch):
     """The snapshot's files are absolute paths in one directory."""
-    from server.app.mds import files as mds_files
 
     monkeypatch.delenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", raising=False)
     for name in mds_files.SNAPSHOT_FILENAMES:
@@ -148,10 +152,8 @@ def test_create_fido_server():
     """Test that create_fido_server function works."""
     from fido2.server import Fido2Server
 
-    from server.app.app import app
-    from server.app.config.relying_party import create_fido_server
     
-    with app.app_context():
+    with entry_app().app_context():
         # Should create a Fido2Server instance
         server = create_fido_server()
         assert isinstance(server, Fido2Server)
@@ -173,10 +175,8 @@ def test_build_rp_entity():
     """Test build_rp_entity function."""
     from fido2.webauthn import PublicKeyCredentialRpEntity
 
-    from server.app.app import app
-    from server.app.config.relying_party import build_rp_entity
     
-    with app.app_context():
+    with entry_app().app_context():
         # Test with explicit rp_id
         rp = build_rp_entity(rp_id="example.com")
         assert isinstance(rp, PublicKeyCredentialRpEntity)
@@ -195,10 +195,8 @@ def test_build_rp_entity():
 
 def test_determine_rp_id():
     """Test determine_rp_id function."""
-    from server.app.app import app
-    from server.app.config.relying_party import determine_rp_id
     
-    with app.app_context():
+    with entry_app().app_context():
         # Test with explicit ID
         rp_id = determine_rp_id("example.com")
         assert rp_id == "example.com"
@@ -210,17 +208,15 @@ def test_determine_rp_id():
 
 def test_determine_rp_id_with_request_context():
     """Test determine_rp_id with Flask request context."""
-    from server.app.app import app
-    from server.app.config.relying_party import determine_rp_id
     
-    with app.test_request_context(
+    with entry_app().test_request_context(
         "https://example.com/path",
         headers={"Host": "example.com"}
     ):
         rp_id = determine_rp_id()
         assert rp_id == "example.com"
     
-    with app.test_request_context(
+    with entry_app().test_request_context(
         "https://test.example.com:8443/path",
         headers={"Host": "test.example.com:8443"}
     ):
@@ -228,7 +224,7 @@ def test_determine_rp_id_with_request_context():
         assert rp_id == "test.example.com"
     
     # Test with IP addresses
-    with app.test_request_context(
+    with entry_app().test_request_context(
         "http://127.0.0.1/path",
         headers={"Host": "127.0.0.1"}
     ):
@@ -236,7 +232,7 @@ def test_determine_rp_id_with_request_context():
         assert rp_id == "localhost"
     
     # IPv6 localhost from a raw host value without brackets.
-    with app.test_request_context(
+    with entry_app().test_request_context(
         "http://[::1]/path",
         headers={"Host": "::1"}  # Without brackets in header
     ):
@@ -244,7 +240,7 @@ def test_determine_rp_id_with_request_context():
         assert rp_id == "localhost"
 
     # IPv6 localhost with the bracketed host:port form browsers send.
-    with app.test_request_context(
+    with entry_app().test_request_context(
         "http://[::1]:8443/path",
         headers={"Host": "[::1]:8443"}
     ):
