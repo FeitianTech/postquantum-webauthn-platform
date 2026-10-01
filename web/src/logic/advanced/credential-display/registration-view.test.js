@@ -13,7 +13,7 @@ import {
   registrationSnapshotPayload,
 } from './registration-view.js';
 import { createRegistrationState } from './registration-state.js';
-import { sanitiseRegistrationDetailSnapshot } from '../../shared/storage/local/snapshot-sanitize.js';
+import { sanitiseRegistrationDetailSnapshot } from '../../credentials/storage/local/snapshot-sanitize.js';
 import {
   advancedArtifact,
   advancedCompleteAnswer,

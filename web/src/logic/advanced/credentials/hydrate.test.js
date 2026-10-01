@@ -10,7 +10,7 @@ import {
   registrationSnapshotPayload,
 } from '../credential-display/registration-view.js';
 import { createRegistrationState } from '../credential-display/registration-state.js';
-import { sanitiseRegistrationDetailSnapshot } from '../../shared/storage/local/snapshot-sanitize.js';
+import { sanitiseRegistrationDetailSnapshot } from '../../credentials/storage/local/snapshot-sanitize.js';
 import { advancedArtifact, advancedRecord, recordedDecoder, simpleRecord } from '@/test/logic/advanced/credentials/registration-detail-answers.js';
 
 // A saved advanced credential completed from its server artifact (advanced/credentials/hydrate.js).

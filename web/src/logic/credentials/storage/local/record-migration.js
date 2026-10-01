@@ -11,7 +11,7 @@
 // base64 (publicKeyBase64, userHandleBase64, ...) keep their spelling, and so do
 // extension outputs and properties, where text and bytes cannot be told apart.
 
-import { base64ToBytes, bytesToBase64Url } from '../../utils/base64.js';
+import { base64ToBytes, bytesToBase64Url } from '../../../shared/utils/base64.js';
 
 const ROOT_BYTE_FIELDS = ['credentialId', 'publicKey', 'publicKeyBytes', 'userHandle'];
 // attStmt byte strings (WebAuthn L3 section 8); `ver` and `alg` are not bytes.

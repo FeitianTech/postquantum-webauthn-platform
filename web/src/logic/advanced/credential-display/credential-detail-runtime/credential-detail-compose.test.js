@@ -17,7 +17,7 @@ import {
   describeCoseKeyType,
   describeMldsaParameterSet,
 } from '../../cose-labels.js';
-import { sanitiseRegistrationDetailSnapshot } from '../../../shared/storage/local/snapshot-sanitize.js';
+import { sanitiseRegistrationDetailSnapshot } from '../../../credentials/storage/local/snapshot-sanitize.js';
 import {
   advancedArtifact,
   advancedRecord,

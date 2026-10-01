@@ -10,7 +10,7 @@ export function seedRecords(records) {
 
 export async function loadStorage() {
   vi.resetModules();
-  const core = await import('@/logic/shared/storage/local/storage-core.js');
+  const core = await import('@/logic/credentials/storage/local/storage-core.js');
   core.seedUnifiedCredentialRecords(seed);
-  return import('@/logic/shared/storage/records.js');
+  return import('@/logic/credentials/storage/records.js');
 }

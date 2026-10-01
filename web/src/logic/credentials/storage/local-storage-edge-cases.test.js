@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { loadStorage, seedRecords } from '@/test/logic/shared/storage/seed.js';
+import { loadStorage, seedRecords } from '@/test/logic/credentials/storage/seed.js';
 
 vi.mock('./artifacts-client.js', () => ({
   fetchCredentialArtifactsBulk: vi.fn(),

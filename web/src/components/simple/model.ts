@@ -1,13 +1,13 @@
 // The Simple tab's ceremonies come from src/logic/simple/ceremony.js, and the
 // credentials they use and keep from the storage both tabs read and write
-// (shared/storage/records.js).
+// (credentials/storage/records.js).
 import { generateRandom10DigitUsername } from '@/logic/shared/auth/random-username.js';
 import {
   getSimpleCredentialsForEmail,
   prepareCredentialsForServer,
   saveSimpleCredential,
   updateSimpleCredentialSignCount,
-} from '@/logic/shared/storage/records.js';
+} from '@/logic/credentials/storage/records.js';
 import {
   SIMPLE_CEREMONY_TEXT,
   authenticateSimplePasskey,

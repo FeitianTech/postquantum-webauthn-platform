@@ -2,7 +2,7 @@
 // them (the goldens' register-complete answers), put in the browser's storage
 // both tabs read; and the server routes the list's warm-up asks.
 import { goldenAnswers, goldenArtifact } from '@/test/logic/simple/ceremony-answers.js';
-import { seedUnifiedCredentialRecords } from '@/logic/shared/storage/local/storage-core.js';
+import { seedUnifiedCredentialRecords } from '@/logic/credentials/storage/local/storage-core.js';
 
 import { json, type Route } from './fetch';
 

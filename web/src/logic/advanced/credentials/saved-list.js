@@ -8,7 +8,7 @@ import {
     ensureBase64Url,
     getRecordIdentifier,
     normaliseAdvancedCredentialId,
-} from '../../shared/storage/local/id-utils.js';
+} from '../../credentials/storage/local/id-utils.js';
 
 export const SAVED_LIST_TEXT = {
     empty: 'No credentials registered yet.',

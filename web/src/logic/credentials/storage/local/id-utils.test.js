@@ -8,7 +8,7 @@ import {
   normaliseAdvancedCredentialId,
   normaliseCredentialId,
 } from './id-utils.js';
-import { ADVANCED_RECORD } from '@/test/logic/shared/storage/standard-base64-records.js';
+import { ADVANCED_RECORD } from '@/test/logic/credentials/storage/standard-base64-records.js';
 
 const CREDENTIAL_ID = ADVANCED_RECORD.credentialIdBase64Url;
 const UUID = '1b4e28ba-2fa1-41d2-883f-0016d3cca427';

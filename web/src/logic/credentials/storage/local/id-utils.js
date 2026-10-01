@@ -1,4 +1,4 @@
-import { base64ToBytes, bytesToBase64Url } from '../../utils/base64.js';
+import { base64ToBytes, bytesToBase64Url } from '../../../shared/utils/base64.js';
 import { isNonEmptyString } from './common.js';
 
 export function normaliseCredentialId(record) {

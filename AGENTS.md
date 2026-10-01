@@ -130,12 +130,12 @@ DOM-free plain JavaScript modules, each module's tests beside it, imported by co
 held at 100 % coverage. Components import them and never copy
 their exports or sentences. A new surface splits its logic out here first.
 
-- `shared/storage/records.js`, `shared/storage/local/`: the saved credentials, one
+- `credentials/storage/records.js`, `credentials/storage/local/`: the saved credentials, one
   `localStorage` array visitors' browsers already hold. It reads no page; the first read is
   cached until another tab changes it (`followStoredCredentialChanges`); tests seed it with
   `seedUnifiedCredentialRecords`. `local/record-migration.js` brings records saved by earlier
   versions to today's format as they are read: when a stored format changes, add a step there
-  with an old-format fixture in `src/test/logic/shared/storage/`.
+  with an old-format fixture in `src/test/logic/credentials/storage/`.
 - `simple/ceremony.js`: the Simple tab's two ceremonies (requests, every step's sentence).
 - `advanced/json-editor/`, `advanced/editor/`, `advanced/auth/`: the Advanced tab's requests
   (`registration-request.js`, `authentication-request.js`: defaults, build, read back, the

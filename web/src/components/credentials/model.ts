@@ -1,5 +1,5 @@
 // The saved credentials' logic comes from the modules in src/logic: the storage
-// (shared/storage/records.js, the one localStorage array both tabs read and
+// (credentials/storage/records.js, the one localStorage array both tabs read and
 // write), what a card
 // shows (advanced/credentials/saved-list.js and the helpers it is given),
 // deleting and clearing (advanced/credentials/delete-flow.js). These are the
@@ -26,7 +26,7 @@ import {
   normaliseAaguidValue,
 } from '@/logic/advanced/credentials/utils.js';
 import { deriveCredentialStatusIndicators } from '@/logic/advanced/credential-display/attestation-context.js';
-import { deleteCredentialArtifact } from '@/logic/shared/storage/artifacts-client.js';
+import { deleteCredentialArtifact } from '@/logic/credentials/storage/artifacts-client.js';
 import {
   clearSimpleCredentials,
   ensureAdvancedCredentialArtifactsSynced,
@@ -37,7 +37,7 @@ import {
   getAllStoredCredentialsInOrder,
   removeAdvancedCredential,
   removeSimpleCredential,
-} from '@/logic/shared/storage/records.js';
+} from '@/logic/credentials/storage/records.js';
 
 /** A saved credential as the list holds it (the stored record, typed, with its ids in hex). */
 export type SavedCredential = { type: 'simple' | 'advanced'; [field: string]: unknown };
