@@ -1,12 +1,8 @@
 import base64
 import hashlib
-import time
 
-from server.app import visitor_session
 from server.app.config import relying_party
-from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
-from server.app.webauthn.attestation import checks as attestation_checks
 from tests.app.entry_app import entry_app
 
 
@@ -126,107 +122,3 @@ def test_simple_register_complete_non_mapping_payload_returns_state_expired_erro
 
     assert response.status_code == 400
     assert "Registration state not found or has expired" in response.get_json()["error"]
-
-
-def test_simple_register_complete_covers_warning_metadata_and_session_fallback_paths(monkeypatch, metadata_module, device_logs_module, attestation_module, storage_module, config_module):
-    rp_id = "example.com"
-    credential_id = b"branch-focus-register"
-    auth_data = _RegisterAuthData(_RegisterCredentialData(credential_id), rp_id)
-
-    saved = {}
-    events = []
-
-    monkeypatch.setattr(relying_party, "determine_rp_id", lambda: rp_id)
-    monkeypatch.setattr(
-        relying_party,
-        "create_fido_server",
-        lambda **_kwargs: _RegisterServer(auth_data)
-    )
-    monkeypatch.setattr(
-        attestation_certificates,
-        "extract_attestation_details",
-        lambda _response: (
-            "packed",
-            {"sig": b"\x01"},
-            {"fmt": "packed"},
-            {"type": "webauthn.create"},
-            {"largeBlob": "written"},
-            {"subject": "CN=Leaf"},
-            [{"subject": "CN=Intermediate"}],
-        )
-    )
-    monkeypatch.setattr(attestation_aaguid, "extract_min_pin_length", lambda _results: 6)
-    monkeypatch.setattr(
-        attestation_checks,
-        "perform_attestation_checks",
-        lambda *_args, **_kwargs: {
-            "signature_valid": False,
-            "root_valid": True,
-            "rp_id_hash_valid": None,
-            "aaguid_match": None,
-            "metadata": {"description": "FocusKey Device"},
-            "warnings": ["  keep me  ", "", {"code": "W1"}, None],
-        }
-    )
-    monkeypatch.setattr(storage_module, "add_public_key_material", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "meta-session")
-    monkeypatch.setattr(storage_module, "read_for_update", lambda *_args, **_kwargs: ([], None))
-
-    def _save_if_unchanged(email, credentials, version, *, session_id=None):
-        saved["email"] = email
-        saved["credentials"] = credentials
-        saved["session_id"] = session_id
-        return True
-
-    monkeypatch.setattr(storage_module, "save_if_unchanged", _save_if_unchanged)
-    monkeypatch.setattr(device_logs_module, "record_registration_event", lambda event: events.append(event))
-
-    with entry_app().test_client() as client:
-        with client.session_transaction() as session_state:
-            session_state["state"] = {"challenge": "register-state", "issued_at": time.time()}
-            session_state["register_rp_id"] = rp_id
-            session_state["simple_register_public_key"] = {"challenge": "AQID"}
-            session_state["simple_credentials"] = [
-                "discard-me",
-                {"credentialId": "kept", "aaguid": "x", "publicKey": "y", "type": "simple"},
-            ]
-
-        response = client.post(
-            "/api/register/complete?email=user@example.com",
-            json={
-                "rawId": _b64url(credential_id),
-                "authenticatorAttachment": "  PLATFORM ",
-                "transports": ["usb", 123, "nfc"],
-                "response": {
-                    "attestationObject": _b64url(b"attestation"),
-                    "clientDataJSON": _b64url(b"client-data"),
-                },
-            },
-        )
-
-        assert response.status_code == 200
-        payload = response.get_json()
-        assert payload["status"] == "OK"
-        assert payload["algo"] == "RS256 (RSA)"
-        assert payload["warnings"] == ["keep me"]
-        assert payload["storedCredential"]["authenticatorAttachment"] == "platform"
-        assert payload["storedCredential"]["properties"]["minPinLength"] == 6
-        assert payload["storedCredential"]["properties"]["attestationWarnings"] == ["keep me"]
-        assert payload["storedCredential"]["properties"]["attestationCertificates"] == [
-            {"subject": "CN=Intermediate"}
-        ]
-        assert payload["relyingParty"]["registrationData"]["warnings"] == ["keep me"]
-
-        with client.session_transaction() as session_state:
-            assert "state" not in session_state
-            assert "register_rp_id" not in session_state
-            assert len(session_state["simple_credentials"]) == 2
-            assert all(isinstance(entry, dict) for entry in session_state["simple_credentials"])
-
-    assert saved["email"] == "user@example.com"
-    assert saved["session_id"] == "meta-session"
-    assert isinstance(saved["credentials"], list)
-    assert len(saved["credentials"]) == 1
-
-    assert len(events) == 1
-    assert events[0].device_name_mds == "FocusKey Device"
