@@ -7,14 +7,14 @@ import {
     KNOWN_REGISTRATION_PUBLIC_KEY_KEYS,
     KNOWN_RP_KEYS,
     KNOWN_USER_KEYS,
-} from './schema.js';
+} from '../editor/schema.js';
 import {
     normalizeInteger,
     validateBinaryField,
     validateHints,
     validateLargeBlobExtension,
     validatePrfExtension,
-} from './validation-common.js';
+} from '../editor/validation.js';
 
 export function validateRegistrationPublicKey(publicKey) {
     assertPlainObject(publicKey, 'publicKey');

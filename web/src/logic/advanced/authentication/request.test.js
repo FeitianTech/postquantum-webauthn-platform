@@ -8,10 +8,10 @@ import {
   changeAuthentication,
   readRequestOptions,
   withAvailability,
-} from './authentication-request.js';
+} from './request.js';
 
 // An authentication's request and the form's settings it is built from, with
-// no page (advanced/json-editor/authentication-request.js).
+// no page (advanced/authentication/request.js).
 
 const CHALLENGE = '00112233445566778899aabbccddeeff';
 const PLATFORM = { type: 'advanced', credentialIdHex: 'aa01', authenticatorAttachment: 'platform' };

@@ -1,34 +1,32 @@
-// The Advanced tab's logic comes from the modules in src/logic: the
-// registration's and the authentication's requests
-// and the forms' settings (advanced/json-editor/registration-request.js,
-// authentication-request.js, algorithm-options.js), a form change over the
-// editor's text (json-editor/request-patch.js), the JSON editor
-// (json-editor/editor-model.js, advanced/editor/json-editing.js), the hints'
-// rules, the fake credential IDs, the byte fields' check, the Allow Credentials
-// choices and the extensions' availability (advanced/auth/hint-rules.js,
-// fake-credentials.js, hex-input.js, allow-credentials.js, capabilities.js),
-// the two ceremonies (advanced/auth/ceremony.js, assertion.js) and the snapshot
-// a registration's result keeps (credentials/registration/snapshot.js).
+// The Advanced tab's logic comes from the modules in src/logic/advanced: each
+// ceremony's request, form settings and ceremony (registration/request.js,
+// algorithm-options.js, ceremony.js; authentication/request.js, ceremony.js), a
+// form change over the editor's text (editor/request-patch.js), the JSON editor
+// (editor/model.js, editor/keys.js), the hints' rules, the fake credential IDs,
+// the byte fields' check, the Allow Credentials choices and the extensions'
+// availability (hints.js, fake-credentials.js, hex-input.js,
+// authentication/allow-credentials.js, authentication/capabilities.js), and the
+// snapshot a registration's result keeps (credentials/registration/snapshot.js).
 // These are the types the components read them through.
-import { advancedRegisteredMessage, advancedRegistrationFailureText, registerAdvancedCredential } from '@/logic/advanced/auth/ceremony.js';
+import { advancedRegisteredMessage, advancedRegistrationFailureText, registerAdvancedCredential } from '@/logic/advanced/registration/ceremony.js';
 import {
   FAKE_CREDENTIAL_TEXT,
   fakeCredentialLength,
   fakeCredentialSize,
   normaliseFakeCredentialList,
   withoutFakeCredential,
-} from '@/logic/advanced/auth/fake-credentials.js';
-import { ALLOW_CREDENTIALS_TEXT, allowCredentialChoices, authenticationCredentials, keptChoice } from '@/logic/advanced/auth/allow-credentials.js';
-import { ADVANCED_ASSERTION_TEXT, advancedAuthenticationFailureText, authenticateAdvancedCredential } from '@/logic/advanced/auth/assertion.js';
-import { authenticationAvailability } from '@/logic/advanced/auth/capabilities.js';
-import { hexInputIsValid } from '@/logic/advanced/auth/hex-input.js';
+} from '@/logic/advanced/fake-credentials.js';
+import { ALLOW_CREDENTIALS_TEXT, allowCredentialChoices, authenticationCredentials, keptChoice } from '@/logic/advanced/authentication/allow-credentials.js';
+import { ADVANCED_ASSERTION_TEXT, advancedAuthenticationFailureText, authenticateAdvancedCredential } from '@/logic/advanced/authentication/ceremony.js';
+import { authenticationAvailability } from '@/logic/advanced/authentication/capabilities.js';
+import { hexInputIsValid } from '@/logic/advanced/hex-input.js';
 import {
   HINT_VALUES,
   applyAuthenticatorAttachmentPreference,
   deriveAllowedAttachmentsFromHints,
   enforceAuthenticatorAttachmentWithHints,
   ensureAuthenticationHintsAllowed,
-} from '@/logic/advanced/auth/hint-rules.js';
+} from '@/logic/advanced/hints.js';
 import { describeCoseAlgorithm } from '@/logic/credentials/cose-labels.js';
 import { describeCredentialAlgorithmWith } from '@/logic/credentials/algorithm-tag.js';
 import { getCredentialIdHex, getStoredCredentialAttachment } from '@/logic/credentials/utils.js';
@@ -36,8 +34,8 @@ import { decodePayloadThroughApi } from '@/logic/credentials/registration/decode
 import { keepRegistrationSnapshot } from '@/logic/credentials/registration/snapshot.js';
 import { createRegistrationState } from '@/logic/credentials/registration/state.js';
 import { composeRegistration } from '@/logic/credentials/registration/view.js';
-import { applyJsonEditorAutoIndent, applyTabIndentation, wrapSelectionWithPair } from '@/logic/advanced/editor/json-editing.js';
-import { ALGORITHM_OPTIONS } from '@/logic/advanced/json-editor/algorithm-options.js';
+import { applyJsonEditorAutoIndent, applyTabIndentation, wrapSelectionWithPair } from '@/logic/advanced/editor/keys.js';
+import { ALGORITHM_OPTIONS } from '@/logic/advanced/registration/algorithm-options.js';
 import {
   authenticationControls,
   authenticationDefaults,
@@ -45,16 +43,16 @@ import {
   changeAuthentication,
   readRequestOptions,
   withAvailability,
-} from '@/logic/advanced/json-editor/authentication-request.js';
-import { EDITOR_TEXT, editorTitle, readEditedRequest, requestText, topLevelExtras } from '@/logic/advanced/json-editor/editor-model.js';
-import { followForm } from '@/logic/advanced/json-editor/request-patch.js';
+} from '@/logic/advanced/authentication/request.js';
+import { EDITOR_TEXT, editorTitle, readEditedRequest, requestText, topLevelExtras } from '@/logic/advanced/editor/model.js';
+import { followForm } from '@/logic/advanced/editor/request-patch.js';
 import {
   buildCreationOptions,
   changeRegistration,
   readCreationOptions,
   registrationControls,
   registrationDefaults,
-} from '@/logic/advanced/json-editor/registration-request.js';
+} from '@/logic/advanced/registration/request.js';
 import { generateRandom10DigitUsername } from '@/logic/shared/auth/random-username.js';
 import {
   prepareAdvancedCredentialsForServer,
@@ -67,7 +65,7 @@ import { generateRandomHex } from '@/logic/shared/utils/binary.js';
 import type { CeremonyResultInput } from '@/components/ceremony/model';
 import type { SavedCredential } from '@/components/credentials/model';
 
-/** The registration form's settings (registration-request.js): byte fields as hex text, numbers as text. */
+/** The registration form's settings (registration/request.js): byte fields as hex text, numbers as text. */
 export type RegistrationSettings = {
   userId: string;
   userName: string;
@@ -196,7 +194,7 @@ export function keepSnapshot(credentialJson: Json, relyingPartyInfo: Json | null
 }
 
 // The authentication's request and form.
-/** The authentication form's settings (authentication-request.js): byte fields as hex text, numbers as text. */
+/** The authentication form's settings (authentication/request.js): byte fields as hex text, numbers as text. */
 export type AuthenticationSettings = {
   userVerification: string;
   /** `all`, `empty`, or a saved credential's ID (hex). */

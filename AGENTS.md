@@ -137,11 +137,12 @@ their exports or sentences. A new surface splits its logic out here first.
   versions to today's format as they are read: when a stored format changes, add a step there
   with an old-format fixture in `src/test/logic/credentials/storage/`.
 - `simple/ceremony.js`: the Simple tab's two ceremonies (requests, every step's sentence).
-- `advanced/json-editor/`, `advanced/editor/`, `advanced/auth/`: the Advanced tab's requests
-  (`registration-request.js`, `authentication-request.js`: defaults, build, read back, the
-  form's rules), the editor's model and keys, `request-patch.js` (`followForm`), hints, fake
-  credential IDs, byte fields, Allow Credentials' choices, extension availability, and both
-  ceremonies (`ceremony.js`, `assertion.js`).
+- `advanced/`: the Advanced tab. `registration/` and `authentication/` each hold their
+  request (`request.js`: defaults, build, read back, the form's rules), its validation and
+  its ceremony (`ceremony.js`), with Allow Credentials' choices and extension availability
+  under `authentication/`; `editor/` the editor's model and keys, `request-patch.js`
+  (`followForm`) and what both requests' validation shares; `hints.js`,
+  `fake-credentials.js` and `hex-input.js` serve both forms.
 - `credentials/`: a saved credential's row, deletion, algorithm tag, hydration from its
   server artifact, and (`registration/`, `certificates/`, `detail/`) its details and
   registration view as data. Registration snapshots (`schemaVersion` 2) hold the

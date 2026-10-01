@@ -8,10 +8,10 @@ import {
   requestText,
   topLevelExtras,
   validationFailedText,
-} from './editor-model.js';
-import { buildCreationOptions, registrationDefaults } from './registration-request.js';
+} from './model.js';
+import { buildCreationOptions, registrationDefaults } from '../registration/request.js';
 
-// The JSON editor with no page (advanced/json-editor/editor-model.js).
+// The JSON editor with no page (advanced/editor/model.js).
 
 const REQUEST = buildCreationOptions(
   { ...registrationDefaults(), userId: 'abcd', userName: 'alice', displayName: 'alice', challenge: '00112233445566778899aabbccddeeff' },

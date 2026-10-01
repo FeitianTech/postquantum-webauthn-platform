@@ -7,10 +7,10 @@ import {
   enforceAuthenticatorAttachmentWithHints,
   ensureAuthenticationHintsAllowed,
   normalizeHintValue,
-} from './hint-rules.js';
+} from './hints.js';
 
 // What the hints and the authenticator attachment mean for a request, with no
-// form (advanced/auth/hint-rules.js).
+// form (advanced/hints.js).
 
 const PLATFORM = { credentialIdHex: 'aa01', authenticatorAttachment: 'platform' };
 const SECURITY_KEY = { credentialIdHex: 'bb02', properties: { authenticatorAttachment: ' Cross-Platform ' } };

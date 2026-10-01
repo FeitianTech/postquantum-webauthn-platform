@@ -1,7 +1,7 @@
-// What the JSON editor accepts as a registration request's publicKey (advanced/json-editor/validation-registration.js).
+// What the JSON editor accepts as a registration request's publicKey (advanced/registration/validation.js).
 import { describe, expect, it } from 'vitest';
 
-import { validateRegistrationPublicKey } from './validation-registration.js';
+import { validateRegistrationPublicKey } from './validation.js';
 
 function registration() {
   return {

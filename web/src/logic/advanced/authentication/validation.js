@@ -3,14 +3,14 @@ import {
     assertPlainObject,
     KNOWN_AUTHENTICATION_EXTENSION_KEYS,
     KNOWN_AUTHENTICATION_PUBLIC_KEY_KEYS,
-} from './schema.js';
+} from '../editor/schema.js';
 import {
     normalizeInteger,
     validateBinaryField,
     validateHints,
     validateLargeBlobExtension,
     validatePrfExtension,
-} from './validation-common.js';
+} from '../editor/validation.js';
 
 export function validateAuthenticationPublicKey(publicKey) {
     assertPlainObject(publicKey, 'publicKey');

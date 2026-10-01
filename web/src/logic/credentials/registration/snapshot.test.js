@@ -5,7 +5,7 @@ import { keepRegistrationSnapshot } from './snapshot.js';
 import { createRegistrationState } from './state.js';
 import { composeRegistration } from './view.js';
 import { credentialToJSON } from '@/test/logic/simple/ceremony-answers.js';
-import { advancedDecodeAnswer, advancedRegistrations, recordedCredential } from '@/test/logic/advanced/auth/advanced-answers.js';
+import { advancedDecodeAnswer, advancedRegistrations, recordedCredential } from '@/test/logic/advanced/advanced-answers.js';
 
 // The three recorded registrations: a none attestation (ES256), a packed one
 // with a certificate and every extension, and an ML-DSA-44 one.

@@ -7,7 +7,7 @@
 // they carry (transports, another user's credential, the order typed).
 // DOM-free.
 import { extractHexFromJsonFormat } from '../../credentials/utils.js';
-import { requestText } from './editor-model.js';
+import { requestText } from './model.js';
 import { isPlainObject } from './schema.js';
 
 function same(left, right) {

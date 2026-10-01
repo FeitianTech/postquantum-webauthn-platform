@@ -1,4 +1,4 @@
-// The Advanced tab's registration with no DOM (advanced/auth/ceremony.js), over the server's recorded answers.
+// The Advanced tab's registration with no DOM (advanced/registration/ceremony.js), over the server's recorded answers.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -13,7 +13,7 @@ import {
 import {
   applyAuthenticatorAttachmentPreference,
   enforceAuthenticatorAttachmentWithHints,
-} from './hint-rules.js';
+} from '../hints.js';
 import { FailedResponseError } from '../../shared/api/failed-response.js';
 import { UPDATE_BROWSER_TEXT } from '../../shared/webauthn/native-json.js';
 import {
@@ -22,7 +22,7 @@ import {
   goldenAnswers,
   installAuthenticator,
 } from '@/test/logic/simple/ceremony-answers.js';
-import { advancedRegistrations, recordedCredential } from '@/test/logic/advanced/auth/advanced-answers.js';
+import { advancedRegistrations, recordedCredential } from '@/test/logic/advanced/advanced-answers.js';
 
 const BEGIN = '/api/advanced/register/begin';
 const COMPLETE = '/api/advanced/register/complete';

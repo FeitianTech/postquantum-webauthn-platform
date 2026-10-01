@@ -8,7 +8,7 @@ import { ASSERTION_WORDS, assertionFailureText, authenticate, checkHints, keepAd
 import type { AuthenticationRequest } from './useAuthenticationRequest';
 
 // The Advanced tab's authentication, in the steps and words of
-// advanced/auth/assertion.js: the editor's text is the request; progress in a
+// advanced/authentication/ceremony.js: the editor's text is the request; progress in a
 // line, the success as a toast, a failure in place until the next ceremony, the
 // result panel with the signature counter and where the challenge came from.
 // The counter the server saw is kept in this browser and the credential's row

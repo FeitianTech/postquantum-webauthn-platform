@@ -1,4 +1,4 @@
-// The members the JSON editor knows in each part of a request, and how it checks keys (advanced/json-editor/schema.js).
+// The members the JSON editor knows in each part of a request, and how it checks keys (advanced/editor/schema.js).
 import { describe, expect, it } from 'vitest';
 
 import {

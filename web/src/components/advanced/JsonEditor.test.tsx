@@ -4,7 +4,7 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { advancedAuthentications } from '@/test/logic/advanced/auth/advanced-answers.js';
+import { advancedAuthentications } from '@/test/logic/advanced/advanced-answers.js';
 
 import { authEditor, authPublicKey, editor, publicKey, renderAuthenticationForm, renderForm } from '@/test/advanced';
 import { keepRecords, savedRecord } from '@/test/credentials';

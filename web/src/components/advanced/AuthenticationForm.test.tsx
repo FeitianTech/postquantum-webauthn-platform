@@ -1,7 +1,7 @@
 // The Advanced tab's authentication form: every field changes the request the
 // JSON editor holds, by the logic's rules and in its words, over the credentials
 // the recorded authentications registered.
-import { advancedAuthentications } from '@/test/logic/advanced/auth/advanced-answers.js';
+import { advancedAuthentications } from '@/test/logic/advanced/advanced-answers.js';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 

@@ -1,4 +1,4 @@
-// The checks both requests' validation shares: byte values, whole numbers, hints, and the prf and largeBlob extensions (advanced/json-editor/validation-common.js).
+// The checks both requests' validation shares: byte values, whole numbers, hints, and the prf and largeBlob extensions (advanced/editor/validation.js).
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -7,7 +7,7 @@ import {
   validateHints,
   validateLargeBlobExtension,
   validatePrfExtension,
-} from './validation-common.js';
+} from './validation.js';
 
 const NOT_BYTES = 'publicKey.challenge must be a base64url, base64, or hexadecimal value.';
 

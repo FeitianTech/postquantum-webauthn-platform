@@ -4,7 +4,7 @@
 // certificate and every extension, an ML-DSA one, each followed by the
 // decoder's answer for its attestation object), and the credential the
 // authenticator gave for each.
-import { credentialToJSON, goldenAnswers } from '../../simple/ceremony-answers.js';
+import { credentialToJSON, goldenAnswers } from '../simple/ceremony-answers.js';
 
 export const ADVANCED_SCENARIO = 'advanced-registration-detail-decodes';
 

@@ -11,7 +11,7 @@ import {
 } from './fake-credentials.js';
 
 // The fake credential IDs a request carries after the saved ones
-// (advanced/auth/fake-credentials.js).
+// (advanced/fake-credentials.js).
 
 describe('a fake credential ID as the list keeps it', () => {
   it('is its hex digits in lower case', () => {

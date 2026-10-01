@@ -4,10 +4,10 @@ import {
   applyJsonEditorAutoIndent,
   applyTabIndentation,
   wrapSelectionWithPair,
-} from './json-editing.js';
+} from './keys.js';
 
 // The JSON editor's own edits, on a value and a selection with no textarea
-// (advanced/editor/json-editing.js): what the editor does on a key.
+// (advanced/editor/keys.js): what the editor does on a key.
 
 /** A textarea's state: the text, and the selection given by a `|` for the caret or `«…»` around a selection. */
 function edit(marked) {

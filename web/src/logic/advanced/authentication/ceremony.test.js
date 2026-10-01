@@ -1,4 +1,4 @@
-// The Advanced tab's authentication with no DOM (advanced/auth/assertion.js), over the server's recorded answers.
+// The Advanced tab's authentication with no DOM (advanced/authentication/ceremony.js), over the server's recorded answers.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -6,12 +6,12 @@ import {
   advancedAuthenticationFailureText,
   authenticateAdvancedCredential,
   readAssertionRequest,
-} from './assertion.js';
-import { ADVANCED_CEREMONY_TEXT } from './ceremony.js';
-import { ensureAuthenticationHintsAllowed } from './hint-rules.js';
+} from './ceremony.js';
+import { ADVANCED_CEREMONY_TEXT } from '../registration/ceremony.js';
+import { ensureAuthenticationHintsAllowed } from '../hints.js';
 import { UPDATE_BROWSER_TEXT } from '../../shared/webauthn/native-json.js';
 import { answerResponse, credentialToJSON, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
-import { advancedAuthentications, recordedAssertion } from '@/test/logic/advanced/auth/advanced-answers.js';
+import { advancedAuthentications, recordedAssertion } from '@/test/logic/advanced/advanced-answers.js';
 
 const BEGIN = '/api/advanced/authenticate/begin';
 const COMPLETE = '/api/advanced/authenticate/complete';

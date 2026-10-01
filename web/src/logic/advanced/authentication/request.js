@@ -12,8 +12,8 @@ import {
     getCredentialIdHex,
     getStoredCredentialAttachment,
 } from '../../credentials/utils.js';
-import { deriveAllowedAttachmentsFromHints } from '../auth/hint-rules.js';
-import { decodeJsonBinaryToHex, requestTimeout } from './registration-request.js';
+import { deriveAllowedAttachmentsFromHints } from '../hints.js';
+import { decodeJsonBinaryToHex, requestTimeout } from '../registration/request.js';
 
 /**
  * The settings the form starts from and a reset returns to, without the values

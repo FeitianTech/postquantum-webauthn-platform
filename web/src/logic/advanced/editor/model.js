@@ -6,9 +6,9 @@ import { sortObjectKeys } from '../../shared/utils/binary.js';
 
 import { isPlainObject } from './schema.js';
 
-import { validateAuthenticationPublicKey } from './validation-authentication.js';
+import { validateAuthenticationPublicKey } from '../authentication/validation.js';
 
-import { validateRegistrationPublicKey } from './validation-registration.js';
+import { validateRegistrationPublicKey } from '../registration/validation.js';
 
 
 export const EDITOR_TEXT = {

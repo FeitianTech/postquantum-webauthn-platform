@@ -14,7 +14,7 @@ import {
 } from '../../credentials/utils.js';
 
 // The Allow Credentials select of the Advanced tab's authentication, with no
-// page (advanced/auth/allow-credentials.js), over the real credential helpers.
+// page (advanced/authentication/allow-credentials.js), over the real credential helpers.
 
 const HELPERS = {
   getCredentialIdHex,

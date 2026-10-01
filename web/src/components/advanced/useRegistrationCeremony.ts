@@ -9,7 +9,7 @@ import { attachmentPreference, enforceHints, failureText, keepSnapshot, register
 import type { AdvancedRequest } from './useAdvancedRequest';
 
 // The Advanced tab's registration, in the steps and words of
-// advanced/auth/ceremony.js: the editor's text is the request; progress in a
+// advanced/registration/ceremony.js: the editor's text is the request; progress in a
 // line, the server's warnings and the success as toasts, a failure in place until
 // the next ceremony, the result panel with where the challenge came from. The
 // record the server stored is kept in this browser with the registration as its

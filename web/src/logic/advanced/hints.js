@@ -2,18 +2,18 @@
 // form: the hints' values in the form's order, the attachments they imply, the
 // attachment given to the browser, and the allowCredentials the stored
 // credentials' attachments allow. DOM-free.
-import { HINT_ATTACHMENT_MAP } from '../constants.js';
+import { HINT_ATTACHMENT_MAP } from './constants.js';
 import {
     convertFormat,
     currentFormatToJsonFormat,
     getCurrentBinaryFormat
-} from '../../shared/utils/binary.js';
+} from '../shared/utils/binary.js';
 import {
     extractHexFromJsonFormat,
     getCredentialIdHex,
     getStoredCredentialAttachment,
     normalizeAttachmentValue
-} from '../../credentials/utils.js';
+} from '../credentials/utils.js';
 
 /** The hints the form offers, in its order. */
 export const HINT_VALUES = ['client-device', 'hybrid', 'security-key'];

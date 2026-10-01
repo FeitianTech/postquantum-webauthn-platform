@@ -6,7 +6,7 @@
 
 import { getAssertion, parseRequestOptions, requireNativeJson } from '../../shared/webauthn/native-json.js';
 import { FailedResponseError, readFailedResponse } from '../../shared/api/failed-response.js';
-import { ADVANCED_CEREMONY_TEXT } from './ceremony.js';
+import { ADVANCED_CEREMONY_TEXT } from '../registration/ceremony.js';
 
 export const ADVANCED_ASSERTION_TEXT = {
     missingChallenge: 'Invalid CredentialRequestOptions: Missing required "challenge" property',

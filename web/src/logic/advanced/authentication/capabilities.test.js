@@ -11,7 +11,7 @@ import {
 } from './capabilities.js';
 
 // Whether the saved credentials can use largeBlob and prf in an authentication,
-// with no page (advanced/auth/capabilities.js).
+// with no page (advanced/authentication/capabilities.js).
 
 describe('what a credential supports', () => {
   it('largeBlob: said by the record, its extension outputs or its properties', () => {

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { hexInputIsValid } from './hex-input.js';
 
-// Whether a byte field's text holds enough bytes (advanced/auth/hex-input.js).
+// Whether a byte field's text holds enough bytes (advanced/hex-input.js).
 
 afterEach(() => {
   delete window.__binaryFormat;

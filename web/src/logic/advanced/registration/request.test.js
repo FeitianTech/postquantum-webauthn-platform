@@ -7,10 +7,10 @@ import {
   readCreationOptions,
   registrationControls,
   registrationDefaults,
-} from './registration-request.js';
+} from './request.js';
 
 // A registration's request and the form's settings it is built from, with no
-// page (advanced/json-editor/registration-request.js).
+// page (advanced/registration/request.js).
 
 const CONTEXT = { rpName: 'FIDO2/WebAuthn PQC Developer Tools', hostname: 'localhost' };
 const ALICE = 'abcd';

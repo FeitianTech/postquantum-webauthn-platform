@@ -16,7 +16,7 @@ const SENDS: Record<RequestScope, string> = { registration: 'Create Credential',
 // The JSON editor beside a ceremony's form: the request the ceremony sends, as
 // text. An edit applies as it parses: the form follows at once; one that does
 // not parse says why and where, and the form keeps the last request it could
-// read. Tab, Shift+Tab, Enter, { and [ edit the text (json-editing.js); Escape,
+// read. Tab, Shift+Tab, Enter, { and [ edit the text (editor/keys.js); Escape,
 // then Tab, leaves it. Geist Mono for the JSON only.
 export function JsonEditor({ scope, request }: { scope: RequestScope; request: RequestEditor }) {
   const headingId = useId();

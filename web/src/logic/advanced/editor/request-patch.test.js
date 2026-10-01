@@ -3,18 +3,18 @@ import { describe, expect, it } from 'vitest';
 import {
   authenticationDefaults,
   buildRequestOptions,
-} from './authentication-request.js';
-import { requestText } from './editor-model.js';
+} from '../authentication/request.js';
+import { requestText } from './model.js';
 import {
   buildCreationOptions,
   changeRegistration,
   registrationDefaults,
   requestTimeout,
-} from './registration-request.js';
+} from '../registration/request.js';
 import { followForm, patchRequest } from './request-patch.js';
 
 // A form change applied to the request the editor holds, with no page
-// (advanced/json-editor/request-patch.js): the fields 29A's report found
+// (advanced/editor/request-patch.js): the fields 29A's report found
 // dropped by the next form change, typed, then followed by one.
 
 const CHALLENGE = '00112233445566778899aabbccddeeff';

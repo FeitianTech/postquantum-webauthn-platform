@@ -1,7 +1,7 @@
-// What the JSON editor accepts as an authentication request's publicKey (advanced/json-editor/validation-authentication.js).
+// What the JSON editor accepts as an authentication request's publicKey (advanced/authentication/validation.js).
 import { describe, expect, it } from 'vitest';
 
-import { validateAuthenticationPublicKey } from './validation-authentication.js';
+import { validateAuthenticationPublicKey } from './validation.js';
 
 function authentication() {
   return {

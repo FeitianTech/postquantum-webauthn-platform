@@ -9,7 +9,7 @@ import {
   advancedRegistrations,
   recordedAssertion,
   recordedCredential,
-} from '@/test/logic/advanced/auth/advanced-answers.js';
+} from '@/test/logic/advanced/advanced-answers.js';
 import { answerResponse, goldenAnswers, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
 
 import { forgetCompletedRecords } from '@/components/credentials/detail/useCredentialDetail';
