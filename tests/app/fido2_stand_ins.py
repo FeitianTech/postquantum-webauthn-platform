@@ -42,11 +42,18 @@ class AuthData:
 
 
 class ClientData:
-    def __init__(self, *, challenge: bytes, origin: str = "https://example.com", type_value: str = "webauthn.create"):
+    def __init__(
+        self,
+        *,
+        challenge: bytes,
+        origin: str = "https://example.com",
+        type_value: str = "webauthn.create",
+        cross_origin: bool = False,
+    ):
         self.type = type_value
         self.challenge = challenge
         self.origin = origin
-        self.cross_origin = False
+        self.cross_origin = cross_origin
         self.hash = hashlib.sha256(b"client-data").digest()
 
     def __bytes__(self) -> bytes:

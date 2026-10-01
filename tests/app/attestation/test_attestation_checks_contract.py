@@ -1,4 +1,3 @@
-import hashlib
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -6,54 +5,12 @@ from fido2.webauthn import RegistrationResponse
 
 from server.app.webauthn.attestation import checks as attestation_checks
 from server.app.webauthn.attestation import trust as attestation_trust
+from tests.app import fido2_stand_ins
+from tests.app.fido2_stand_ins import (
+    AuthData,
+    ClientData,
+)
 from tests.app.security.ceremony_helpers import b64u
-
-
-class _FakeCredentialData:
-    def __init__(self, *, algorithm: int = -7):
-        self.credential_id = b"cred-id"
-        self.public_key = {1: 2, 3: algorithm, -1: 1, -2: b"\x01" * 32, -3: b"\x02" * 32}
-        self.aaguid = bytes.fromhex("00112233445566778899aabbccddeeff")
-
-
-class _FakeAuthData:
-    class FLAG:
-        UP = 0x01
-        UV = 0x04
-        BE = 0x08
-        BS = 0x10
-        AT = 0x40
-        ED = 0x80
-
-    def __init__(self, *, rp_id_hash: bytes, flags: int, counter: int = 1, algorithm: int = -7):
-        self.rp_id_hash = rp_id_hash
-        self.flags = flags
-        self.counter = counter
-        self.credential_data = _FakeCredentialData(algorithm=algorithm)
-
-    def __bytes__(self):
-        return self.rp_id_hash + bytes([self.flags]) + int(self.counter).to_bytes(4, "big")
-
-
-class _FakeClientData:
-    def __init__(self, *, challenge: bytes, origin: str, cross_origin: bool = False):
-        self.type = "webauthn.create"
-        self.challenge = challenge
-        self.origin = origin
-        self.cross_origin = cross_origin
-        self.hash = hashlib.sha256(b"client-data").digest()
-
-
-class _FakeRegistrationResponse:
-    def __init__(self, client_data, attestation_object):
-        self.response = type(
-            "_Response",
-            (),
-            {
-                "client_data": client_data,
-                "attestation_object": attestation_object,
-            },
-        )()
 
 
 class _FakeSubject:
@@ -93,12 +50,8 @@ def test_perform_attestation_checks_reports_core_validation_failures(monkeypatch
     expected_challenge = b"expected-challenge"
     actual_challenge = b"different-challenge"
 
-    auth_data = _FakeAuthData(
-        rp_id_hash=hashlib.sha256(b"wrong-rp.example").digest(),
-        flags=_FakeAuthData.FLAG.AT,
-        algorithm=-7,
-    )
-    client_data = _FakeClientData(
+    auth_data = AuthData(rp_id="wrong-rp.example", flags=AuthData.FLAG.AT)
+    client_data = ClientData(
         challenge=actual_challenge,
         origin="https://evil.example",
     )
@@ -108,7 +61,7 @@ def test_perform_attestation_checks_reports_core_validation_failures(monkeypatch
         {"fmt": "none", "auth_data": auth_data, "att_stmt": {}},
     )()
 
-    registration = _FakeRegistrationResponse(client_data, attestation_object)
+    registration = fido2_stand_ins.registration(attestation_object, client_data)
     monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
     result = attestation_checks.perform_attestation_checks(
@@ -138,12 +91,8 @@ def test_perform_attestation_checks_accepts_valid_none_attestation(monkeypatch):
     rp_id = "example.com"
     expected_challenge = b"valid-challenge"
 
-    auth_data = _FakeAuthData(
-        rp_id_hash=hashlib.sha256(rp_id.encode("utf-8")).digest(),
-        flags=_FakeAuthData.FLAG.UP | _FakeAuthData.FLAG.UV | _FakeAuthData.FLAG.AT,
-        algorithm=-7,
-    )
-    client_data = _FakeClientData(
+    auth_data = AuthData(rp_id=rp_id, flags=AuthData.FLAG.UP | AuthData.FLAG.UV | AuthData.FLAG.AT)
+    client_data = ClientData(
         challenge=expected_challenge,
         origin="https://example.com",
         cross_origin=False,
@@ -154,7 +103,7 @@ def test_perform_attestation_checks_accepts_valid_none_attestation(monkeypatch):
         {"fmt": "none", "auth_data": auth_data, "att_stmt": {}},
     )()
 
-    registration = _FakeRegistrationResponse(client_data, attestation_object)
+    registration = fido2_stand_ins.registration(attestation_object, client_data)
     monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
     result = attestation_checks.perform_attestation_checks(

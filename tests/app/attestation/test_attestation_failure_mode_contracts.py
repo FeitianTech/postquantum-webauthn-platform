@@ -1,4 +1,3 @@
-import hashlib
 
 from fido2.attestation import (
     Attestation,
@@ -11,55 +10,13 @@ from fido2.webauthn import Aaguid, RegistrationResponse
 from server.app.mds import verifier as mds_verifier
 from server.app.webauthn.attestation import checks as attestation_checks
 from server.app.webauthn.attestation import evaluation
+from tests.app import fido2_stand_ins
 from tests.app.entry_app import entry_app
+from tests.app.fido2_stand_ins import (
+    AuthData,
+    ClientData,
+)
 from tests.app.security.ceremony_helpers import b64u
-
-
-class _FakeCredentialData:
-    def __init__(self, *, algorithm: int = -7):
-        self.credential_id = b"cred-id"
-        self.public_key = {1: 2, 3: algorithm, -1: 1, -2: b"\x01" * 32, -3: b"\x02" * 32}
-        self.aaguid = bytes.fromhex("00112233445566778899aabbccddeeff")
-
-
-class _FakeAuthData:
-    class FLAG:
-        UP = 0x01
-        UV = 0x04
-        BE = 0x08
-        BS = 0x10
-        AT = 0x40
-        ED = 0x80
-
-    def __init__(self, *, rp_id_hash: bytes, flags: int, counter: int = 1, algorithm: int = -7):
-        self.rp_id_hash = rp_id_hash
-        self.flags = flags
-        self.counter = counter
-        self.credential_data = _FakeCredentialData(algorithm=algorithm)
-
-    def __bytes__(self):
-        return self.rp_id_hash + bytes([self.flags]) + int(self.counter).to_bytes(4, "big")
-
-
-class _FakeClientData:
-    def __init__(self, *, challenge: bytes, origin: str, cross_origin: bool = False):
-        self.type = "webauthn.create"
-        self.challenge = challenge
-        self.origin = origin
-        self.cross_origin = cross_origin
-        self.hash = hashlib.sha256(b"client-data").digest()
-
-
-class _FakeRegistrationResponse:
-    def __init__(self, client_data, attestation_object):
-        self.response = type(
-            "_Response",
-            (),
-            {
-                "client_data": client_data,
-                "attestation_object": attestation_object,
-            },
-        )()
 
 
 def _perform_checks(response, state, public_key_options, rp_id="example.com"):
@@ -76,11 +33,8 @@ def _perform_checks(response, state, public_key_options, rp_id="example.com"):
 def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_failure(monkeypatch):
     challenge = b"challenge"
     rp_id = "example.com"
-    auth_data = _FakeAuthData(
-        rp_id_hash=hashlib.sha256(rp_id.encode("utf-8")).digest(),
-        flags=_FakeAuthData.FLAG.UP | _FakeAuthData.FLAG.UV | _FakeAuthData.FLAG.AT,
-    )
-    client_data = _FakeClientData(challenge=challenge, origin="https://example.com")
+    auth_data = AuthData(rp_id=rp_id, flags=AuthData.FLAG.UP | AuthData.FLAG.UV | AuthData.FLAG.AT)
+    client_data = ClientData(challenge=challenge, origin="https://example.com")
     attestation_object = type(
         "_AttestationObject",
         (),
@@ -91,7 +45,7 @@ def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_f
         },
     )()
 
-    registration = _FakeRegistrationResponse(client_data, attestation_object)
+    registration = fido2_stand_ins.registration(attestation_object, client_data)
     monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
     result = _perform_checks(
@@ -110,11 +64,8 @@ def test_perform_attestation_checks_unsupported_format_sets_signature_and_root_f
 def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(monkeypatch):
     challenge = b"metadata-unavailable"
     rp_id = "example.com"
-    auth_data = _FakeAuthData(
-        rp_id_hash=hashlib.sha256(rp_id.encode("utf-8")).digest(),
-        flags=_FakeAuthData.FLAG.UP | _FakeAuthData.FLAG.UV | _FakeAuthData.FLAG.AT,
-    )
-    client_data = _FakeClientData(challenge=challenge, origin="https://example.com")
+    auth_data = AuthData(rp_id=rp_id, flags=AuthData.FLAG.UP | AuthData.FLAG.UV | AuthData.FLAG.AT)
+    client_data = ClientData(challenge=challenge, origin="https://example.com")
     attestation_object = type(
         "_AttestationObject",
         (),
@@ -125,7 +76,7 @@ def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(mon
         },
     )()
 
-    registration = _FakeRegistrationResponse(client_data, attestation_object)
+    registration = fido2_stand_ins.registration(attestation_object, client_data)
     monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
     class _PassingAttestation:
@@ -151,11 +102,8 @@ def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(mon
 def test_perform_attestation_checks_captures_verifier_evaluation_exception(monkeypatch):
     challenge = b"verifier-exception"
     rp_id = "example.com"
-    auth_data = _FakeAuthData(
-        rp_id_hash=hashlib.sha256(rp_id.encode("utf-8")).digest(),
-        flags=_FakeAuthData.FLAG.UP | _FakeAuthData.FLAG.UV | _FakeAuthData.FLAG.AT,
-    )
-    client_data = _FakeClientData(challenge=challenge, origin="https://example.com")
+    auth_data = AuthData(rp_id=rp_id, flags=AuthData.FLAG.UP | AuthData.FLAG.UV | AuthData.FLAG.AT)
+    client_data = ClientData(challenge=challenge, origin="https://example.com")
     attestation_object = type(
         "_AttestationObject",
         (),
@@ -166,7 +114,7 @@ def test_perform_attestation_checks_captures_verifier_evaluation_exception(monke
         },
     )()
 
-    registration = _FakeRegistrationResponse(client_data, attestation_object)
+    registration = fido2_stand_ins.registration(attestation_object, client_data)
     monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
     class _PassingAttestation:
@@ -196,12 +144,8 @@ def test_perform_attestation_checks_captures_verifier_evaluation_exception(monke
 def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is_valid(monkeypatch):
     challenge = b"metadata-algorithm"
     rp_id = "example.com"
-    auth_data = _FakeAuthData(
-        rp_id_hash=hashlib.sha256(rp_id.encode("utf-8")).digest(),
-        flags=_FakeAuthData.FLAG.UP | _FakeAuthData.FLAG.UV | _FakeAuthData.FLAG.AT,
-        algorithm=-7,
-    )
-    client_data = _FakeClientData(challenge=challenge, origin="https://example.com")
+    auth_data = AuthData(rp_id=rp_id, flags=AuthData.FLAG.UP | AuthData.FLAG.UV | AuthData.FLAG.AT)
+    client_data = ClientData(challenge=challenge, origin="https://example.com")
     attestation_object = type(
         "_AttestationObject",
         (),
@@ -212,7 +156,7 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
         },
     )()
 
-    registration = _FakeRegistrationResponse(client_data, attestation_object)
+    registration = fido2_stand_ins.registration(attestation_object, client_data)
     monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
     class _PassingAttestation:
@@ -270,12 +214,8 @@ def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is
 def test_perform_attestation_checks_reports_an_mldsa_signature_that_does_not_verify(monkeypatch):
     challenge = b"pqc-fallback"
     rp_id = "example.com"
-    auth_data = _FakeAuthData(
-        rp_id_hash=hashlib.sha256(rp_id.encode("utf-8")).digest(),
-        flags=_FakeAuthData.FLAG.UP | _FakeAuthData.FLAG.UV | _FakeAuthData.FLAG.AT,
-        algorithm=-7,
-    )
-    client_data = _FakeClientData(challenge=challenge, origin="https://example.com")
+    auth_data = AuthData(rp_id=rp_id, flags=AuthData.FLAG.UP | AuthData.FLAG.UV | AuthData.FLAG.AT)
+    client_data = ClientData(challenge=challenge, origin="https://example.com")
     attestation_object = type(
         "_AttestationObject",
         (),
@@ -286,7 +226,7 @@ def test_perform_attestation_checks_reports_an_mldsa_signature_that_does_not_ver
         },
     )()
 
-    registration = _FakeRegistrationResponse(client_data, attestation_object)
+    registration = fido2_stand_ins.registration(attestation_object, client_data)
     monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
 
     class _FailingAttestation:
