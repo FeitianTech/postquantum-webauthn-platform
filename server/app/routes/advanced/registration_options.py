@@ -151,6 +151,15 @@ def authenticator_selection(public_key: Any) -> AuthenticatorSelection:
     return AuthenticatorSelection(allowed_attachment_values, uv_req, auth_attachment, rk_req)
 
 
+def attestation_formats(public_key: Mapping[str, Any]) -> list[str]:
+    """The attestation formats the request prefers, in its order: the text items of its list."""
+
+    formats = public_key.get("attestationFormats")
+    if isinstance(formats, list):
+        return [item for item in formats if isinstance(item, str)]
+    return []
+
+
 def build_exclude_list(public_key: Mapping[str, Any]) -> list[Any]:
     exclude_list = []
     exclude_credentials = public_key.get("excludeCredentials") if "excludeCredentials" in public_key else None

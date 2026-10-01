@@ -202,10 +202,13 @@ def advanced_register_begin():
     session["advanced_original_request"] = data
 
     response_payload = dict(options)
-    # The browser reads the hints from the options too (its JSON parser keeps them).
+    # The browser reads the hints and preferred formats from the options too (its JSON parser keeps them).
     hints = request_hints(public_key)
     if hints:
         response_payload["publicKey"]["hints"] = hints
+    formats = registration_options.attestation_formats(public_key)
+    if formats:
+        response_payload["publicKey"]["attestationFormats"] = formats
     if warnings:
         response_payload["warnings"] = warnings
 

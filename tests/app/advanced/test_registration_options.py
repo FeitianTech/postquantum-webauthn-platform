@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pytest
 
+from server.app.routes.advanced import registration_options
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import advanced_public_key_options
 
@@ -66,3 +67,9 @@ def test_extension_values_of_an_unexpected_shape_are_passed_on_as_they_are():
         "largeBlob": {"support": "required"},
         "prf": "text",
     }
+
+
+def test_attestation_formats_are_the_text_items_of_the_requests_list():
+    assert registration_options.attestation_formats({"attestationFormats": ["none", 1, "packed"]}) == ["none", "packed"]
+    assert registration_options.attestation_formats({"attestationFormats": "packed"}) == []
+    assert registration_options.attestation_formats({}) == []

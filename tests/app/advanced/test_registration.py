@@ -59,3 +59,10 @@ def test_begin_names_no_hints_when_the_request_has_none():
 
     assert response.status_code == 200, response.get_json()
     assert "hints" not in response.get_json()["publicKey"]
+
+
+def test_begin_gives_the_browser_the_attestation_formats_the_request_prefers():
+    response = _begin({"attestationFormats": ["packed", None, "tpm"]})
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["publicKey"]["attestationFormats"] == ["packed", "tpm"]
