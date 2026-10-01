@@ -120,8 +120,6 @@ def save_session_metadata_item(
 ) -> SessionMetadataItem:
     session_id = visitor_session.ensure_id()
     directory = _session_metadata_directory(session_id, create=True)
-    if not directory:
-        raise RuntimeError("Unable to resolve session metadata storage path.")
 
     entry, legal_header, payload = entries.build_metadata_entry_components(raw_payload)
 
