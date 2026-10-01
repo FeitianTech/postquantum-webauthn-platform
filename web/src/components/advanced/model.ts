@@ -94,7 +94,7 @@ export type RegistrationSettings = {
 
 export type RegistrationField = keyof RegistrationSettings;
 
-export type RequestContext = {
+type RequestContext = {
   rpName: string;
   hostname: string;
   storedCredentials: SavedCredential[];
@@ -102,7 +102,7 @@ export type RequestContext = {
 };
 
 type Json = Record<string, unknown>;
-export type CreationOptions = { publicKey: Json };
+type CreationOptions = { publicKey: Json };
 
 export const ALGORITHMS = ALGORITHM_OPTIONS as { key: string; alg: number; label: string; pqc: boolean }[];
 export const HINTS = HINT_VALUES as string[];
@@ -132,7 +132,7 @@ export const fakeList = normaliseFakeCredentialList as (values: unknown) => stri
 export const withoutFake = withoutFakeCredential as (list: string[], index: number) => string[] | null;
 
 // The editor.
-export type EditorLocation = { offset: number; line: number; column: number };
+type EditorLocation = { offset: number; line: number; column: number };
 export type EditedRequest =
   | { status: 'unparsed'; message: string; location: EditorLocation | null }
   | { status: 'refused'; root: unknown; message: string }
@@ -153,7 +153,7 @@ export const indent = applyTabIndentation as (typed: EditorState, shift: boolean
 
 // The ceremony and the result it keeps.
 export type RegistrationAnswer = { algo?: string; relyingParty?: Json | null; storedCredential?: Json | null; [field: string]: unknown };
-export type RegistrationOutcome =
+type RegistrationOutcome =
   | {
       registered: true;
       answer: RegistrationAnswer;
@@ -213,8 +213,8 @@ export type AuthenticationSettings = {
 };
 export type AuthenticationField = keyof AuthenticationSettings;
 export type AllowChoice = { value: string; label: string; attachment: string };
-export type Availability = { available: boolean; message: string };
-export type Availabilities = { largeBlob: Availability; prf: Availability };
+type Availability = { available: boolean; message: string };
+type Availabilities = { largeBlob: Availability; prf: Availability };
 type AuthenticationContext = { hostname: string; storedCredentials: SavedCredential[]; fakeAllowCredentials: string[] };
 
 export const authDefaults = authenticationDefaults as () => Omit<AuthenticationSettings, 'challenge'>;

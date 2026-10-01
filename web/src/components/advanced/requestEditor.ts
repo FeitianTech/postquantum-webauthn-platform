@@ -8,7 +8,7 @@ import { type EditedRequest, extrasOf, follow, readEdit, textOf } from './model'
 
 type Json = Record<string, unknown>;
 export type RequestScope = 'registration' | 'authentication';
-export type FormRequest = { publicKey: Json };
+type FormRequest = { publicKey: Json };
 
 export type RequestText = {
   /** The keys an accepted edit holds beside publicKey. */
