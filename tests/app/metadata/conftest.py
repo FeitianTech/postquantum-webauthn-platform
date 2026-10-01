@@ -3,25 +3,8 @@
 from __future__ import annotations
 
 import importlib
-import shutil
 
 import pytest
-
-from server.app import visitor_session
-from server.app.mds import cache as mds_cache
-
-
-@pytest.fixture
-def metadata_state(monkeypatch):
-    """A fresh snapshot cache and cleanup state for the duration of one test.
-
-    ``raising`` is deliberately left at its default: if either name moves, the patch
-    must fail loudly rather than quietly resetting nothing and leaving the test to
-    pass while exercising stale state.
-    """
-
-    monkeypatch.setattr(mds_cache, "CACHE", mds_cache.SnapshotCache())
-    monkeypatch.setattr(visitor_session, "CLEANUP", visitor_session.CleanupState())
 
 
 @pytest.fixture
@@ -78,18 +61,3 @@ def verifier():
     """``server.app.mds.verifier``: fido2's MDS verifier."""
 
     return importlib.import_module("server.app.mds.verifier")
-
-
-@pytest.fixture
-def mds_fixture_snapshot(monkeypatch, tmp_path, metadata_state):
-    """The fixture snapshot (tests/fixtures/mds/snapshot), copied into this test's
-    directory and made the snapshot directory. Copied, never served in place, so
-    nothing a test does lands in the checkout; with fresh modification times,
-    since the metadata caches key on them."""
-
-    from tests.app.metadata import mds_fixture
-
-    target = tmp_path / "mds-snapshot"
-    shutil.copytree(mds_fixture.SNAPSHOT_DIR, target, copy_function=shutil.copy)
-    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(target))
-    return target
