@@ -9,7 +9,6 @@ import gzip
 from pathlib import Path
 
 INDEX = b"<!DOCTYPE html><html><head><title>Index</title></head><body>index page " + b"x" * 600 + b"</body></html>"
-DESIGN = b"<!DOCTYPE html><html><body>design page</body></html>"
 NOT_FOUND = b"<!DOCTYPE html><html><body>export 404 page</body></html>"
 CHUNK = b"console.log('chunk');\n" * 200
 
@@ -21,7 +20,6 @@ def write(path: Path, data: bytes) -> None:
 
 def write_export(root: Path) -> Path:
     write(root / "index.html", INDEX)
-    write(root / "design.html", DESIGN)
     write(root / "404.html", NOT_FOUND)
     write(root / "500.html", b"<!DOCTYPE html><html><body>500</body></html>")
     write(root / "_next" / "static" / "chunks" / "main-abc123.js", CHUNK)

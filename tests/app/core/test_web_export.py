@@ -13,7 +13,7 @@ import gzip
 import pytest
 
 from server.app.config import paths, web_export
-from tests.app.web_export_files import CHUNK, DESIGN, INDEX, NOT_FOUND, write
+from tests.app.web_export_files import CHUNK, INDEX, NOT_FOUND, write
 
 SECURITY_HEADERS = (
     "Content-Security-Policy",
@@ -61,18 +61,9 @@ def test_the_site_answers_the_index_page(site, url):
     assert response.headers["Cache-Control"] == "no-cache"
 
 
-@pytest.mark.parametrize("url", ["/design", "/design.html"])
-def test_a_page_is_served_by_its_name(site, url):
-    response = site.get(url)
-
-    assert response.status_code == 200
-    assert response.data == DESIGN
-    assert response.headers["Cache-Control"] == "no-cache"
-
-
 def test_html_is_revalidated_with_its_etag(site):
-    first = site.get("/design")
-    again = site.get("/design", headers={"If-None-Match": first.headers["ETag"]})
+    first = site.get("/")
+    again = site.get("/", headers={"If-None-Match": first.headers["ETag"]})
 
     assert first.headers["ETag"]
     assert again.status_code == 304
@@ -123,7 +114,7 @@ def test_a_file_at_the_export_root_is_served_and_revalidated(site, export_root):
 
 @pytest.mark.parametrize(
     "url",
-    ["/nothing-here", "/_next/static/chunks/missing.js", "/design/", "/404", "/404.html", "/500.html", "/scripts/main.js"],
+    ["/nothing-here", "/_next/static/chunks/missing.js", "/index", "/404", "/404.html", "/500.html", "/scripts/main.js"],
 )
 def test_an_unknown_path_answers_the_export_404_page(site, url):
     response = site.get(url)
@@ -163,7 +154,7 @@ def test_nothing_outside_the_export_is_served(site, url):
 def test_without_an_export_every_page_is_a_plain_404(make_app, tmp_path):
     client = make_app({web_export.WEB_EXPORT_ROOT_KEY: str(tmp_path / "no-build")}).test_client()
 
-    for url in ("/", "/design", "/_next/static/chunks/main.js"):
+    for url in ("/", "/index.html", "/_next/static/chunks/main.js"):
         response = client.get(url)
         assert response.status_code == 404, url
         assert b"<title>404 Not Found</title>" in response.data
@@ -184,7 +175,7 @@ def test_an_export_without_a_404_page_answers_a_plain_404(make_app, tmp_path):
 def test_the_pages_carry_the_security_headers_of_every_answer(site):
     api = site.get("/health")
 
-    for url in ("/", "/design", "/_next/static/chunks/main-abc123.js", "/nothing-here", "/beta"):
+    for url in ("/", "/index.html", "/_next/static/chunks/main-abc123.js", "/nothing-here", "/beta"):
         response = site.get(url)
         for header in SECURITY_HEADERS:
             assert response.headers.get(header) == api.headers.get(header), (url, header)
@@ -200,7 +191,7 @@ def test_head_answers_without_a_body(site):
 
 def test_a_method_the_site_does_not_take_is_refused_as_before(site):
     assert site.post("/").status_code == 405
-    assert site.post("/design").status_code == 405
+    assert site.post("/index.html").status_code == 405
     assert site.post("/api/nothing-here").status_code == 405
 
 
@@ -225,12 +216,12 @@ def test_every_other_rule_still_answers_for_itself(site):
     [
         ("/beta", "/"),
         ("/beta/", "/"),
-        ("/beta/design", "/design"),
+        ("/beta/favicon.ico", "/favicon.ico"),
         ("/beta/index.html", "/index.html"),
         ("/beta/_next/static/chunks/main-abc123.js", "/_next/static/chunks/main-abc123.js"),
         ("/beta/no-such-page", "/no-such-page"),
         ("/beta?x=1&y=%20z", "/?x=1&y=%20z"),
-        ("/beta/design?q=%E2%9C%93", "/design?q=%E2%9C%93"),
+        ("/beta/favicon.ico?q=%E2%9C%93", "/favicon.ico?q=%E2%9C%93"),
         ("/beta/a%20b", "/a%20b"),
     ],
 )
@@ -257,5 +248,5 @@ def test_beta_never_redirects_to_another_origin(site, url):
 
 
 def test_beta_redirects_a_head_and_a_post_alike(site):
-    assert site.head("/beta/design").headers["Location"] == "/design"
-    assert site.post("/beta/design").status_code == 405
+    assert site.head("/beta/favicon.ico").headers["Location"] == "/favicon.ico"
+    assert site.post("/beta/favicon.ico").status_code == 405

@@ -1,7 +1,7 @@
 """The site's pages: the UI's Next.js static export in ``web/out`` (docs/DESIGN.md).
 
-- ``/`` answers ``index.html``; ``/design`` answers ``design.html`` (the export
-  writes one HTML file per page).
+- ``/`` answers ``index.html``, the one page; a file of the export answers at
+  its own path.
 - ``/_next/static/...`` holds content-hashed files: cached for a year,
   immutable, with the build-time ``.gz`` copy when there is one.
 - Everything else, the HTML above all, is revalidated (``no-cache``), so a
@@ -87,8 +87,6 @@ def page(subpath: str = ""):
     if relative in _ERROR_PAGES:
         return _not_found(root)
     path = _file(root, relative)
-    if path is None and not relative.endswith((".html", "/")):
-        path = _file(root, f"{relative}.html")
     if path is None:
         return _not_found(root)
 
