@@ -14,6 +14,11 @@ from server.app.mds import explorer_files
 from server.app.mds import files as mds_files
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"fixture icon" * 4
+# The list's bytes per row on the fixture, just above what it measured on
+# 2026-10-02 (1407 and 92.4; the real snapshot's 518 rows: 738,807 bytes, 66,807
+# gzipped). A field added to every row shows here; raise it only for one the
+# table needs.
+LIST_BYTES_PER_ROW = {"raw": 1440, "gzip": 96}
 
 
 @pytest.fixture
@@ -129,3 +134,11 @@ def test_without_a_snapshot_there_are_no_files(metadata_state, monkeypatch, tmp_
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
 
     assert mds_cache.load_explorer_files() is None
+
+
+def test_the_list_stays_within_its_bytes_per_row(files):
+    rows = len(files.listed["entries"])
+
+    assert len(files.list_json) / rows <= LIST_BYTES_PER_ROW["raw"]
+    assert len(files.list_gzip) / rows <= LIST_BYTES_PER_ROW["gzip"]
+
