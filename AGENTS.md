@@ -34,7 +34,8 @@ in `server/app` (see "Backend").
   holds the vectors taken from python-fido2's own tests), `pqc/`, `fixtures/` (the MDS fixture
   snapshot).
 - `tools/`: `update_mds_snapshot.py`, `build_static_assets.py` (precompresses the export at
-  image build), `commit_messages.py` (the commit message check), `update_footer_year.py`.
+  image build), `commit_messages.py` (the commit message check), `update_footer_year.py`,
+  `subset_geist.sh` (Geist's two faces in `web/src/fonts`, with fonttools through `uvx`).
 - `docs/`: `DESIGN.md` (the UI's design, security and serving rules), `DECODER.md`,
   `STORAGE.md`, `MDS_SNAPSHOT.md`.
 - `Dockerfile`, `cloudbuild.yaml` (the deploy gate), `deploy/` (Cloud Run service config),
@@ -47,8 +48,10 @@ components, no focus effect on text fields, the section slide, the MDS page's st
 the CSP and the source rules.
 
 - `src/pages/`: `index.tsx` (the app shell), `404.tsx`, `500.tsx`, `_error.tsx` (Next's own
-  error pages use style attributes the CSP refuses), `_app.tsx` (Geist and Geist Mono from
-  the `geist` package's files via `next/font/local`, only Geist preloaded, on a wrapper
+  error pages use style attributes the CSP refuses), `_app.tsx` (Geist and Geist Mono via
+  `next/font/local`: Geist as two faces of one family, the Latin one preloaded and the rest by
+  `unicode-range`, cut from the `geist` package's file into `src/fonts` by
+  `tools/subset_geist.sh`; Geist Mono the package's own file, not preloaded; on a wrapper
   holding `#app-root` and `#overlay-root`, so portalled overlays get them), `_document.tsx`.
 - `src/styles/globals.css`: the design tokens (`@theme`, Tailwind's defaults cleared first);
   text fields carry `data-text-field`. `@source not` keeps Tailwind out of `src/logic` and

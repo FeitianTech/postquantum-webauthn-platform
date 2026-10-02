@@ -23,7 +23,10 @@ the page in a real browser.
   highlight. No card inside a card; sections are separated by space and hairlines.
 - Geist for text and Geist Mono for data (identifiers, AAGUIDs, hex, base64, PEM,
   JSON, EDN), both self-hosted from the `geist` package, so no font origin reaches the
-  CSP. Mono never leaks into buttons or labels.
+  CSP. Geist is cut in two faces of one family (`tools/subset_geist.sh`, into
+  `web/src/fonts` with its licence): the Latin face the page preloads, and the rest,
+  fetched only for a character in its `unicode-range`. Geist Mono is fetched when mono
+  text first shows. Mono never leaks into buttons or labels.
 - The tokens are in `web/src/styles/globals.css` (`@theme`): Tailwind's palette, type
   scale, radii and shadows are cleared first, so only named tokens exist.
 - One component per job, with the same height, radius, padding and label placement
