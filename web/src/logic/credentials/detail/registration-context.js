@@ -40,9 +40,6 @@ export function buildRegistrationContext(cred, {
     );
 
     let fallbackCertificates = collectTruthyEntries(
-        cred.attestationCertificate,
-        cred.attestationCertificates,
-        cred.properties?.attestationCertificate,
         cred.properties?.attestationCertificates,
         cred.relyingParty?.attestationCertificate,
         cred.relyingParty?.attestationCertificates,
@@ -74,27 +71,11 @@ export function buildRegistrationContext(cred, {
     );
     const authDataAaguidHex = aaguidHex(deriveAaguidFromCredentialData(cred));
 
-    const relyingPartyInfo = pickFirstObject(
-        cred.relyingParty,
-        cred.registrationRelyingParty,
-        cred.properties?.relyingParty,
-    );
+    const relyingPartyInfo = pickFirstObject(cred.relyingParty);
 
-    const fallbackClientDataString = pickFirstString(
-        cred.clientDataJSON,
-        cred.clientDataJson,
-        cred.clientData,
-    );
+    const fallbackClientDataString = pickFirstString(cred.clientDataJSON);
 
-    const fallbackClientDataObject = pickFirstObject(
-        cred.clientDataParsed,
-        cred.clientDataObject,
-    );
-
-    const registrationResponseStored = pickFirstObject(
-        cred.registrationResponse,
-        cred.registrationResult,
-    );
+    const registrationResponseStored = pickFirstObject(cred.registrationResponse);
 
     let registrationCredential = cloneJson(registrationResponseStored);
     if (!registrationCredential || typeof registrationCredential !== 'object') {
@@ -196,7 +177,6 @@ export function buildRegistrationContext(cred, {
         authDataAaguidHex,
         relyingPartyInfo,
         fallbackClientDataString,
-        fallbackClientDataObject,
         registrationCredential,
         authenticatorDataForDetail,
     };

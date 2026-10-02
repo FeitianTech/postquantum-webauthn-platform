@@ -40,11 +40,7 @@ export function attestationObjectStringCandidates(source) {
         return [];
     }
 
-    return [
-        source.attestationObjectRaw,
-        source.attestationObject,
-        source.attestationObjectBase64,
-    ];
+    return [source.attestationObject];
 }
 
 export function attestationObjectDecodedCandidates(source) {
@@ -52,10 +48,7 @@ export function attestationObjectDecodedCandidates(source) {
         return [];
     }
 
-    return [
-        source.attestationObjectDecoded,
-        typeof source.attestationObject === 'object' ? source.attestationObject : null,
-    ];
+    return [typeof source.attestationObject === 'object' ? source.attestationObject : null];
 }
 
 export function authenticatorDataStringCandidates(source) {
@@ -63,12 +56,7 @@ export function authenticatorDataStringCandidates(source) {
         return [];
     }
 
-    return [
-        source.authenticatorDataRaw,
-        source.authenticatorData,
-        source.authenticatorDataBase64,
-        source.authenticatorDataBase64Url,
-    ];
+    return [source.authenticatorData];
 }
 
 export function authenticatorDataHexCandidates(source) {
@@ -76,7 +64,5 @@ export function authenticatorDataHexCandidates(source) {
         return [];
     }
 
-    return [
-        source.authenticatorDataHex,
-    ];
+    return [source.authenticatorDataHex];
 }

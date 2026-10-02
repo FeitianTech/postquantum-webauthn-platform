@@ -14,31 +14,17 @@ import {
 // a kind among candidates (credentials/detail/registration-fields.js).
 
 describe('the candidates a registration is read from', () => {
-  it('names the attestation object\'s spellings in the order they are read', () => {
-    const source = {
-      attestationObjectRaw: 1,
-      attestationObject: 2,
-      attestationObjectBase64: 3,
-    };
-    expect(attestationObjectStringCandidates(source)).toEqual([1, 2, 3]);
+  it('names the attestation object a record keeps, as text or decoded', () => {
+    const decoded = {};
+    expect(attestationObjectStringCandidates({ attestationObject: 'o2Nm', attestationObjectRaw: 'x' })).toEqual(['o2Nm']);
+    expect(attestationObjectDecodedCandidates({ attestationObject: decoded, attestationObjectDecoded: {} })).toEqual([decoded]);
+    expect(attestationObjectDecodedCandidates({ attestationObject: 'text' })).toEqual([null]);
   });
 
-  it('names the decoded attestation object\'s places, the encoded ones only when they hold an object', () => {
-    const [a, b] = [{}, {}];
-    expect(attestationObjectDecodedCandidates({ attestationObjectDecoded: a, attestationObject: b })).toEqual([a, b]);
-    expect(attestationObjectDecodedCandidates({ attestationObject: 'text' })).toEqual([undefined, null]);
-  });
-
-  it('names the authenticator data\'s spellings, and its hex\'s', () => {
-    const source = {
-      authenticatorDataRaw: 1,
-      authenticatorData: 2,
-      authenticatorDataBase64: 3,
-      authenticatorDataBase64Url: 4,
-      authenticatorDataHex: 5,
-    };
-    expect(authenticatorDataStringCandidates(source)).toEqual([1, 2, 3, 4]);
-    expect(authenticatorDataHexCandidates(source)).toEqual([5]);
+  it('names the authenticator data a record keeps, and its hex', () => {
+    const source = { authenticatorData: 'SZYN', authenticatorDataHex: '4996', authenticatorDataBase64: 'x' };
+    expect(authenticatorDataStringCandidates(source)).toEqual(['SZYN']);
+    expect(authenticatorDataHexCandidates(source)).toEqual(['4996']);
   });
 
   it('names nothing for a source that is not an object', () => {

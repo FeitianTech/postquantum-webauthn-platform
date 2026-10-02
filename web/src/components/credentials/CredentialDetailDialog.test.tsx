@@ -228,7 +228,11 @@ describe('a saved credential\'s details, what some records hold', () => {
   });
 
   it('say a certificate could not be parsed, and give no summary for it', async () => {
-    const broken = { ...ES256, attestationCertificates: [{ parsedX5c: { error: 'The certificate is not DER.' } }], attestationObject: '' };
+    const broken = {
+      ...ES256,
+      properties: { ...(ES256.properties as object), attestationCertificates: [{ parsedX5c: { error: 'The certificate is not DER.' } }] },
+      attestationObject: '',
+    };
     renderShell([broken], urlOf(ES256, 'registration', 'certificate', '1'));
     // The title shows while the details are still being composed: wait for the level.
     await waitFor(() => expect(shownLevel()).not.toBeNull());

@@ -251,14 +251,6 @@ describe('describeClientData', () => {
     expect(describeClientData(null, '==')).toBe('==');
   });
 
-  it('shows the parsed client data the record keeps when there is no encoded one', () => {
-    expect(JSON.parse(describeClientData(null, null, { type: 'webauthn.create' }))).toEqual({ type: 'webauthn.create' });
-  });
-
-  it('prefers the parsed client data the record keeps to text that is not JSON', () => {
-    expect(JSON.parse(describeClientData(null, 'aGVsbG8', { type: 'webauthn.create' }))).toEqual({ type: 'webauthn.create' });
-  });
-
   it('shows nothing without client data', () => {
     expect(describeClientData(null, 42, 'not an object')).toBe('');
     expect(describeClientData(undefined, '   ')).toBe('');

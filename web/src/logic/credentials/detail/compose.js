@@ -55,7 +55,6 @@ export async function composeCredentialDetail(cred, { state, decode, describers 
         authDataAaguidHex,
         relyingPartyInfo,
         fallbackClientDataString,
-        fallbackClientDataObject,
         registrationCredential,
         authenticatorDataForDetail,
     } = buildRegistrationContext(cred, {
@@ -73,7 +72,6 @@ export async function composeCredentialDetail(cred, { state, decode, describers 
         authenticatorDataHex,
         fallbackCertificates,
         fallbackClientData: fallbackClientDataString,
-        fallbackParsedClientData: fallbackClientDataObject,
         preferFallbackCertificates: Array.isArray(fallbackCertificates) && fallbackCertificates.length > 0,
         snapshotState: snapshotResponse ? snapshotState : null,
     }, { state, decode });

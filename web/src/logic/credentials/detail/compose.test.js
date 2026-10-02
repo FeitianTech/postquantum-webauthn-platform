@@ -177,8 +177,8 @@ describe('composeCredentialDetail', () => {
       { ...bare, attestationFormat: 'packed' },
       { ...bare, attestationFmt: 'tpm' },
       { ...bare, relyingParty: { attestationFmt: 'apple' } },
-      { ...bare, attestationObjectDecoded: { fmt: 'android-key' } },
-      { ...bare, attestationObjectDecoded: { fmt: 7 } },
+      { ...bare, attestationObject: { fmt: 'android-key' } },
+      { ...bare, attestationObject: { fmt: 7 } },
       bare,
     ].map(async (cred) => (await detailOf(cred)).detail.attestationFormat.value));
     expect(formats).toEqual(['packed', 'tpm', 'apple', 'android-key', 'none', 'none']);

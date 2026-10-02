@@ -136,7 +136,7 @@ export function describeAttestationSection(state, {
 }
 
 /** The parsed client data as the view shows it: indented JSON, else its text, else ''. */
-export function describeClientData(credentialJson, fallbackClientData, fallbackParsedClientData) {
+export function describeClientData(credentialJson, fallbackClientData) {
     const fallbackClientDataString = typeof fallbackClientData === 'string'
         ? fallbackClientData.trim()
         : '';
@@ -152,10 +152,6 @@ export function describeClientData(credentialJson, fallbackClientData, fallbackP
     let parsedClientData = null;
     if (clientDataBase64) {
         parsedClientData = base64UrlToJson(clientDataBase64);
-    }
-
-    if (!parsedClientData && fallbackParsedClientData && typeof fallbackParsedClientData === 'object') {
-        parsedClientData = fallbackParsedClientData;
     }
 
     if (parsedClientData) {
@@ -188,11 +184,10 @@ export async function composeRegistration({
     authenticatorDataHex = '',
     fallbackCertificates = [],
     fallbackClientData = null,
-    fallbackParsedClientData = null,
     preferFallbackCertificates = false,
     snapshotState = null,
 } = {}, { state, decode }) {
-    const clientDataDisplay = describeClientData(credentialJson, fallbackClientData, fallbackParsedClientData);
+    const clientDataDisplay = describeClientData(credentialJson, fallbackClientData);
 
     // A saved snapshot already holds the decoded attestation and certificates:
     // show those as they are, without asking the server to decode again.

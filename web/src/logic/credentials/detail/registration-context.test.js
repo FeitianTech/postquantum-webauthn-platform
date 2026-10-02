@@ -22,7 +22,6 @@ describe('buildRegistrationContext', () => {
       authDataAaguidHex: AAGUID,
       relyingPartyInfo: record.relyingParty,
       fallbackClientDataString: record.clientDataJSON,
-      fallbackClientDataObject: null,
       authenticatorDataForDetail: record.authenticatorData,
     });
   });
@@ -45,15 +44,15 @@ describe('buildRegistrationContext', () => {
     expect(context.certificateAaguidHex).toBe(AAGUID);
   });
 
-  it('reads the certificates under each name the record may keep them', () => {
+  it('reads the certificates where records keep them, and nowhere else', () => {
     const [a, b, c, d, e, f] = 'abcdef'.split('').map((name) => ({ name }));
     const { fallbackCertificates } = buildRegistrationContext({
       attestationCertificate: a,
-      attestationCertificates: [b, null],
-      properties: { attestationCertificate: c, attestationCertificates: [d] },
+      attestationCertificates: [b],
+      properties: { attestationCertificate: c, attestationCertificates: [d, null] },
       relyingParty: { attestationCertificate: e, attestationCertificates: [f] },
     });
-    expect(fallbackCertificates).toEqual([a, b, c, d, e, f]);
+    expect(fallbackCertificates).toEqual([d, e, f]);
   });
 
   it('takes the decoded attestation object, certificates and authenticator data hex from a saved snapshot', () => {
@@ -131,34 +130,27 @@ describe('buildRegistrationContext', () => {
       authDataAaguidHex: '',
       relyingPartyInfo: null,
       fallbackClientDataString: '',
-      fallbackClientDataObject: null,
       registrationCredential: { response: {}, type: 'public-key' },
       authenticatorDataForDetail: '',
     });
   });
 
-  it('reads the relying party under each name the record may keep it', () => {
+  it('reads the relying party and the client data under the names records keep them, and no other', () => {
     const rp = { id: 'localhost' };
     expect([
+      { relyingParty: rp },
       { registrationRelyingParty: rp },
       { properties: { relyingParty: rp } },
-    ].map((cred) => buildRegistrationContext(cred).relyingPartyInfo)).toEqual([rp, rp]);
-  });
-
-  it('reads the client data as text or as an object, under each name the record may keep it', () => {
-    const parsed = { type: 'webauthn.create' };
+    ].map((cred) => buildRegistrationContext(cred).relyingPartyInfo)).toEqual([rp, null, null]);
     expect([
+      { clientDataJSON: 'eyJ9' },
       { clientDataJson: 'eyJ9' },
       { clientData: 'eyJ9' },
-    ].map((cred) => buildRegistrationContext(cred).fallbackClientDataString)).toEqual(['eyJ9', 'eyJ9']);
-    expect([
-      { clientDataParsed: parsed },
-      { clientDataObject: parsed },
-    ].map((cred) => buildRegistrationContext(cred).fallbackClientDataObject)).toEqual([parsed, parsed]);
+    ].map((cred) => buildRegistrationContext(cred).fallbackClientDataString)).toEqual(['eyJ9', '', '']);
   });
 
   it('puts the record\'s client data in the response, in base64url', () => {
-    const { registrationCredential } = buildRegistrationContext({ clientData: 'eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIn0=' });
+    const { registrationCredential } = buildRegistrationContext({ clientDataJSON: 'eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIn0=' });
     expect(registrationCredential.response.clientDataJSON).toBe('eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIn0');
   });
 
@@ -177,10 +169,9 @@ describe('buildRegistrationContext', () => {
       },
     };
     const { registrationCredential } = buildRegistrationContext({
-      registrationResult: kept,
+      registrationResponse: kept,
       credentialId: 'AQID',
       attestationObject: 'record-att',
-      attestationObjectDecoded: { fmt: 'record' },
       clientDataJSON: 'record-cd',
       authenticatorData: 'record-ad',
       authenticatorAttachment: 'cross-platform',
@@ -204,21 +195,19 @@ describe('buildRegistrationContext', () => {
   it('reads a response kept flat, without a nested response', () => {
     const decoded = { fmt: 'none' };
     const context = buildRegistrationContext({
-      registrationResult: {
-        attestationObjectRaw: 'flat-att',
-        attestationObjectDecoded: decoded,
-        authenticatorDataRaw: 'flat-ad',
+      registrationResponse: {
+        attestationObject: decoded,
+        authenticatorData: 'flat-ad',
         authenticatorDataHex: 'abcd',
       },
     });
     expect(context).toMatchObject({
-      attestationObjectValue: 'flat-att',
+      attestationObjectValue: '',
       attestationObjectDecoded: decoded,
       authenticatorDataHex: 'abcd',
       authenticatorDataForDetail: 'flat-ad',
     });
     expect(context.registrationCredential.response).toEqual({
-      attestationObject: 'flat-att',
       attestationObjectDecoded: decoded,
       authenticatorData: 'flat-ad',
     });
@@ -228,20 +217,18 @@ describe('buildRegistrationContext', () => {
     const decoded = { fmt: 'none' };
     const context = buildRegistrationContext({
       registrationResponse: {
-        attestationObject: 'top-att',
-        attestationObjectDecoded: { fmt: 'top' },
-        authenticatorDataBase64Url: 'top-ad',
+        attestationObject: { fmt: 'top' },
+        authenticatorData: 'top-ad',
         authenticatorDataHex: 'top-hex',
         response: {
           attestationObject: decoded,
-          attestationObjectBase64: 'nested-att',
           authenticatorData: 'nested-ad',
           authenticatorDataHex: 'beef',
         },
       },
     });
     expect(context).toMatchObject({
-      attestationObjectValue: 'nested-att',
+      attestationObjectValue: '',
       attestationObjectDecoded: decoded,
       authenticatorDataHex: 'beef',
       authenticatorDataForDetail: 'nested-ad',
@@ -252,15 +239,14 @@ describe('buildRegistrationContext', () => {
     const decoded = { fmt: 'none' };
     const context = buildRegistrationContext({
       registrationResponse: {
-        attestationObjectBase64: 'top-att',
         attestationObject: decoded,
-        authenticatorDataBase64: 'top-ad',
+        authenticatorData: 'top-ad',
         authenticatorDataHex: 'cafe',
         response: {},
       },
     });
     expect(context).toMatchObject({
-      attestationObjectValue: 'top-att',
+      attestationObjectValue: '',
       attestationObjectDecoded: decoded,
       authenticatorDataHex: 'cafe',
       authenticatorDataForDetail: 'top-ad',
