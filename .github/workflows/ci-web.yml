@@ -54,6 +54,11 @@ jobs:
       - name: Scan the export against the CSP
         run: npm run check:csp
 
+      # First-load JS per page and each chunk, raw and gzipped, within the
+      # budget in web/scripts/check-size-budget.mjs.
+      - name: Check the export's size budget
+        run: npm run check:size
+
   # Browser tests: Playwright in Chromium, whose virtual authenticator (the
   # DevTools WebAuthn domain) answers real registrations and authentications,
   # against Flask serving the export at /, under the strict CSP. Cloud Build's

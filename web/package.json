@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "check:csp": "node scripts/check-export-csp.mjs out",
+    "check:size": "node scripts/check-size-budget.mjs out",
     "e2e": "playwright test"
   },
   "dependencies": {

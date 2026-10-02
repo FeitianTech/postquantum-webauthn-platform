@@ -27,9 +27,9 @@ steps:
         .venv/bin/python -m pytest -q
 
   # The UI (web/): typecheck, its unit tests and its logic's with their
-  # coverage floors, the static export, and the export's CSP scan. The
-  # image builds web/ again in its own stage (and scans it again); this step is
-  # the gate, and fails before any image exists.
+  # coverage floors, the static export, the export's CSP scan and its size
+  # budget. The image builds web/ again in its own stage (and scans it again);
+  # this step is the gate, and fails before any image exists.
   - name: node:22-slim
     id: Web tests
     waitFor: ['-']
@@ -44,6 +44,7 @@ steps:
         npm run test:coverage
         npm run build
         npm run check:csp
+        npm run check:size
 
   - name: gcr.io/cloud-builders/docker
     id: Build
