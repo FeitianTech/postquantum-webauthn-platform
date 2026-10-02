@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { AnalyzeBrowserDialog, type CopyResult } from '@/components/analyze-browser/AnalyzeBrowserDialog';
+import type { CopyResult } from '@/components/analyze-browser/AnalyzeBrowserDialog';
 import { SavedCredentialsProvider } from '@/components/credentials/useSavedCredentials';
 import { useBrowserAnalysis } from '@/components/analyze-browser/useBrowserAnalysis';
 import { SimpleSection } from '@/components/simple/SimpleSection';
@@ -21,6 +21,8 @@ import { SectionPlaceholder } from './SectionPlaceholder';
 const ADVANCED = lazyModule(() => import(/* webpackChunkName: "section-advanced" */ '@/components/advanced/AdvancedSection'));
 const CODEC = lazyModule(() => import(/* webpackChunkName: "section-codec" */ '@/components/codec/CodecSection'));
 const MDS = lazyModule(() => import(/* webpackChunkName: "section-mds" */ '@/components/mds/MdsSection'));
+// The Analyze Browser panel, in the chunk of the questions it shows the answers to.
+const ANALYZE_PANEL = lazyModule(() => import(/* webpackChunkName: "analyze-browser" */ '@/components/analyze-browser/AnalyzeBrowserDialog'));
 const LAZY_SECTIONS: Partial<Record<SectionId, LazyModule<unknown>>> = { advanced: ADVANCED, codec: CODEC, mds: MDS };
 
 // The page: the header, the chosen section, the footer, and the Analyze
@@ -39,6 +41,7 @@ export function AppShell() {
     if (section) void LAZY_SECTIONS[section]?.load().catch(() => {});
   }, [section]);
   const browser = useBrowserAnalysis();
+  const panel = useLazyModule(ANALYZE_PANEL, interactive || browser.running || browser.open);
   const [copy, setCopy] = useState<CopyResult | null>(null);
   // What is open belongs to the section shown; the others see nothing open.
   const routeOf = (id: SectionId) => (id === section ? route : CLOSED_ROUTE);
@@ -77,14 +80,16 @@ export function AppShell() {
           </SavedCredentialsProvider>
         </main>
         <Footer />
-        <AnalyzeBrowserDialog
-          open={browser.open}
-          onClose={browser.close}
-          analysis={browser.analysis}
-          returnFocusTo={browser.returnFocusTo}
-          copy={copy}
-          onCopied={setCopy}
-        />
+        {panel.module ? (
+          <panel.module.AnalyzeBrowserDialog
+            open={browser.open}
+            onClose={browser.close}
+            analysis={browser.analysis}
+            returnFocusTo={browser.returnFocusTo}
+            copy={copy}
+            onCopied={setCopy}
+          />
+        ) : null}
       </div>
     </SectionNavigationProvider>
   );

@@ -1,10 +1,15 @@
-import { type Analysis, gatherAnalysis } from '@/logic/browser/report.js';
+import type { Analysis } from '@/logic/browser/report.js';
 import { useCallback, useRef, useState } from 'react';
+
+import { lazyModule } from '@/lib/lazyModule';
+
+// The questions load as a chunk of their own, with the panel (AppShell).
+const BROWSER_REPORT = lazyModule(() => import(/* webpackChunkName: "analyze-browser" */ '@/logic/browser/report.js'));
 
 // The Analyze Browser's findings, asked once per page on the first request and
 // reused after (as today). While the questions run the trigger is disabled and
-// further requests are ignored; if they fail the panel does not open, and the
-// next request asks again.
+// further requests are ignored; if they fail (or their chunk cannot be loaded)
+// the panel does not open, and the next request asks again.
 export function useBrowserAnalysis() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [running, setRunning] = useState(false);
@@ -20,7 +25,7 @@ export function useBrowserAnalysis() {
       busy.current = true;
       setRunning(true);
       try {
-        cached.current = await gatherAnalysis();
+        cached.current = await (await BROWSER_REPORT.load()).gatherAnalysis();
         setAnalysis(cached.current);
       } catch {
         // gatherAnalysis answers each question itself, so this is a bug: nothing
