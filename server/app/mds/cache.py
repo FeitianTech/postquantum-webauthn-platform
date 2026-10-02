@@ -16,6 +16,7 @@ from typing import Any
 
 from fido2.mds3 import MdsAttestationVerifier, MetadataBlobPayload
 
+from . import explorer_files as mds_explorer_files
 from . import files as mds_files
 from .build import build_bootstrap_snapshot, build_explorer_snapshot
 
@@ -40,12 +41,16 @@ class SnapshotCache:
     explorer_mtime: tuple[float | None, ...] | None = None
     full: dict[str, Any] | None = None
     full_mtime: tuple[float | None, ...] | None = None
+    # The browsers' files derived from the full snapshot, keyed like it.
+    explorer_files: mds_explorer_files.ExplorerFiles | None = None
+    explorer_files_mtime: tuple[float | None, ...] | None = None
     # fido2's verifier over the payload.
     verifier: MdsAttestationVerifier | None = None
     verifier_mtime: float | None = None
     metadata_lock: threading.RLock = field(default_factory=threading.RLock)
     explorer_lock: threading.RLock = field(default_factory=threading.RLock)
     full_lock: threading.RLock = field(default_factory=threading.RLock)
+    explorer_files_lock: threading.RLock = field(default_factory=threading.RLock)
     verifier_lock: threading.RLock = field(default_factory=threading.RLock)
 
 
@@ -366,6 +371,24 @@ def _load_base_full_snapshot() -> tuple[dict[str, Any] | None, tuple[float | Non
         CACHE.full = snapshot
         CACHE.full_mtime = cache_marker
         return snapshot, cache_marker
+
+
+def load_explorer_files() -> mds_explorer_files.ExplorerFiles | None:
+    """The browsers' files of the full snapshot on disk (``explorer_files``),
+    derived once for each snapshot, from the very snapshot the cache holds."""
+
+    snapshot, cache_marker = _load_base_full_snapshot()
+    if snapshot is None:
+        return None
+    if CACHE.explorer_files is not None and CACHE.explorer_files_mtime == cache_marker:
+        return CACHE.explorer_files
+    with CACHE.explorer_files_lock:
+        if CACHE.explorer_files is not None and CACHE.explorer_files_mtime == cache_marker:
+            return CACHE.explorer_files
+        files = mds_explorer_files.build_explorer_files(snapshot)
+        CACHE.explorer_files = files
+        CACHE.explorer_files_mtime = cache_marker
+        return files
 
 
 def load_packaged_explorer_summary() -> dict[str, Any]:

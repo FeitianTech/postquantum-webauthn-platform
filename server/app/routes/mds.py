@@ -24,6 +24,7 @@ from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
 from ..mds import cache as mds_cache
 from ..mds import effective as mds_effective
 from ..mds import entries as mds_entries
+from ..mds import explorer_files as mds_explorer_files
 from ..mds import files as mds_files
 from ..mds import provisioning as mds_provisioning
 from ..mds import uploads as mds_uploads
@@ -68,10 +69,10 @@ def _packaged_snapshot_url() -> str | None:
     """Where browsers load the packaged snapshot from, or None when there is no
     file there that the explorer API would agree with (the page then asks the API).
 
-    The URL carries the snapshot's own version (``assets.snapshot_version``),
+    The URL carries the snapshot's own version (``explorer_files.snapshot_version``),
     so a new snapshot is a new URL."""
 
-    version = assets.snapshot_version(mds_cache.load_packaged_snapshot_meta())
+    version = mds_explorer_files.snapshot_version(mds_cache.load_packaged_snapshot_meta())
     if version is None:
         return None
     return f"{assets.asset_url(_MDS_EXPLORER_FULL_STATIC_FILENAME)}?v={version}"

@@ -7,6 +7,7 @@ cache the old explorer rows under the new key, and keep serving them.
 
 from __future__ import annotations
 
+import json
 import os
 
 from server.app.mds import cache as blob
@@ -37,13 +38,16 @@ def test_the_full_snapshot_follows_every_file_it_was_built_from(mds_fixture_snap
         mds_fixture_snapshot,
         newer,
         order,
-        (blob._load_base_full_snapshot, blob._load_base_explorer_snapshot),
+        (blob._load_base_full_snapshot, blob._load_base_explorer_snapshot, blob.load_explorer_files),
     )
 
     full, _ = blob._load_base_full_snapshot()
     explorer, _ = blob._load_base_explorer_snapshot()
     assert full["meta"]["no"] == 8 and full["meta"]["entryCount"] == 3
     assert explorer["meta"]["no"] == 8 and len(explorer["entries"]) == 3
+    browsers = blob.load_explorer_files()
+    assert browsers.version.startswith("8.")
+    assert len(json.loads(browsers.list_json)["entries"]) == 3
 
 
 def test_the_metas_landing_last_move_every_cache(mds_fixture_snapshot):

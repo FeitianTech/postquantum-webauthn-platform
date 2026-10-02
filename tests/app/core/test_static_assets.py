@@ -11,6 +11,7 @@ import pytest
 
 from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
 from server.app.mds import cache as mds_cache
+from server.app.mds import explorer_files as mds_explorer_files
 from server.app.mds import files as mds_files
 from server.app.routes import assets
 from tests.app.entry_app import entry_app
@@ -32,7 +33,7 @@ def assets_env(monkeypatch, tmp_path):
     (snapshot / f"{_EXPLORER_FULL}.gz").write_bytes(gzip.compress(_BODY))
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(snapshot))
     monkeypatch.setattr(mds_cache, "load_packaged_snapshot_meta", lambda: dict(_META))
-    version = assets.snapshot_version(_META)
+    version = mds_explorer_files.snapshot_version(_META)
     return entry_app().test_client(), version
 
 
@@ -142,10 +143,10 @@ def test_asset_url_has_a_fixed_segment_and_the_version_names_the_snapshot(assets
     _client, version = assets_env
 
     assert assets.asset_url("/fido-mds3.explorer.full.json") == "/assets/mds/fido-mds3.explorer.full.json"
-    assert assets.snapshot_version(None) is None
+    assert mds_explorer_files.snapshot_version(None) is None
     assert version.startswith("7.")
     assert len(version.split(".")[1]) == 12
-    assert assets.snapshot_version({**_META, "etag": '"fixture-8"'}) != version
+    assert mds_explorer_files.snapshot_version({**_META, "etag": '"fixture-8"'}) != version
 
 
 def _load_build_tool():

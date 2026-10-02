@@ -2,20 +2,17 @@
 
 Browsers load one file of the MDS snapshot, the explorer's, from
 ``/assets/mds/fido-mds3.explorer.full.json?v=<version>``, where the version
-names the snapshot (``snapshot_version``): a URL with the current version is cached
+names the snapshot (``explorer_files.snapshot_version``): a URL with the current version is cached
 as immutable, any other revalidates. No other snapshot file is served, at any path.
 """
 from __future__ import annotations
 
-import hashlib
-import json
 import os
-from typing import Any
-from urllib.parse import quote
 
 from flask import Blueprint, Flask, abort, request
 
 from ..mds import cache as mds_cache
+from ..mds import explorer_files as mds_explorer_files
 from ..mds import files as mds_files
 from ..mds import provisioning as mds_provisioning
 from . import web_export
@@ -29,21 +26,6 @@ _ASSET_SEGMENT = "mds"
 _SNAPSHOT_FILES = frozenset(mds_files.SNAPSHOT_FILENAMES) | frozenset(
     f"{name}.gz" for name in mds_files.BROWSER_FILENAMES
 )
-
-
-def snapshot_version(meta: dict[str, Any] | None) -> str | None:
-    """The version the browsers' snapshot is served under: its serial number and a
-    digest of its ETag and generation time, or None without a snapshot.
-
-    The file changes at runtime (Cloud Storage, an upstream refresh) and is cached
-    for a year, so each snapshot needs a URL of its own."""
-
-    if meta is None:
-        return None
-    digest = hashlib.sha256(
-        json.dumps([meta.get("etag"), meta.get("generatedAt")]).encode("utf-8")
-    ).hexdigest()[:12]
-    return quote(f"{meta.get('no')}.{digest}", safe=".")
 
 
 def asset_url(filename: str) -> str:
@@ -90,7 +72,7 @@ def versioned_static_asset(filename: str):
 
     # Only the current snapshot's URL is immutable; a page given an earlier one
     # must revalidate.
-    current = snapshot_version(mds_cache.load_packaged_snapshot_meta())
+    current = mds_explorer_files.snapshot_version(mds_cache.load_packaged_snapshot_meta())
     if current is not None and request.args.get("v") == current:
         return web_export.send_precompressed(path, web_export.IMMUTABLE_CACHE_CONTROL)
     return web_export.send_precompressed(path, web_export.REVALIDATE_CACHE_CONTROL)
