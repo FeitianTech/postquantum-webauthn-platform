@@ -62,7 +62,7 @@ import {
 } from '@/logic/credentials/storage/local/advanced-credentials.js';
 import { generateRandomHex } from '@/logic/shared/bytes.js';
 
-import type { SavedCredential } from '@/components/credentials/model';
+import type { SavedCredential } from '@/logic/credentials/saved-list.js';
 import type { CeremonyResultInput } from '@/logic/shared/ceremony-result.js';
 
 /** The registration form's settings (registration/request.js): byte fields as hex text, numbers as text. */

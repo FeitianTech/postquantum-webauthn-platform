@@ -5,8 +5,8 @@ import { Badge, StatusChip } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { MonoValue } from '@/components/ui/MonoValue';
 import { cx } from '@/lib/cx';
+import { type CredentialRowView, SAVED_LIST_TEXT } from '@/logic/credentials/saved-list.js';
 
-import { type CredentialRowView, LIST_TEXT } from './model';
 import type { RowFlash } from './useSavedCredentials';
 
 const CHECK_TONES = { true: 'success', false: 'danger', null: 'neutral' } as const;
@@ -107,7 +107,7 @@ export function CredentialRow({ row, busy, flash, onOpen, onDelete }: Credential
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           {row.mdsAaguid ? (
-            <Button variant="secondary" size="sm" title={LIST_TEXT.openMetadata} onClick={() => setMdsMessage(openMdsEntry(row.mdsAaguid))}>
+            <Button variant="secondary" size="sm" title={SAVED_LIST_TEXT.openMetadata} onClick={() => setMdsMessage(openMdsEntry(row.mdsAaguid))}>
               FIDO MDS
             </Button>
           ) : null}

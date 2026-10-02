@@ -4,12 +4,19 @@ import {
   clearSavedCredentials,
   deleteSavedCredential,
 } from '@/logic/credentials/delete-flow.js';
-import { describeCredentialRows, readSavedCredentials, warmSavedCredentials } from '@/logic/credentials/saved-list.js';
+import {
+  type CredentialRowView,
+  type SavedCredential,
+  credentialFlashKey,
+  describeCredentialRows,
+  readSavedCredentials,
+  warmSavedCredentials,
+} from '@/logic/credentials/saved-list.js';
+import { followStoredCredentialChanges } from '@/logic/credentials/storage/local/storage-core.js';
 import { type ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useToast } from '@/components/ui/Toast';
 
-import { type CredentialRowView, type SavedCredential, flashKey, followOtherTabs } from './model';
 
 // How long a row keeps the tint of the ceremony it was just used in (the current
 // cards' flash).
@@ -75,7 +82,7 @@ export function SavedCredentialsProvider({ children }: { children: ReactNode }) 
 
   // A change another tab makes (either interface) shows here without a reload.
   // Read again only: that tab warms its own change up.
-  useEffect(() => followOtherTabs(reload), [reload]);
+  useEffect(() => followStoredCredentialChanges(reload), [reload]);
 
   const report = useMemo<DeletionReport>(
     () => ({
@@ -100,7 +107,7 @@ export function SavedCredentialsProvider({ children }: { children: ReactNode }) 
 
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flashCredential = useCallback((credentialId: unknown, variant: RowFlash['variant']) => {
-    const key = flashKey(credentialId);
+    const key = credentialFlashKey(credentialId);
     if (flashTimer.current) clearTimeout(flashTimer.current);
     setFlash(key ? { key, variant } : null);
     flashTimer.current = setTimeout(() => setFlash(null), FLASH_MS);

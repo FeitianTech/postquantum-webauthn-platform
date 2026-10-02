@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { CodeBlock } from '@/components/ui/CodeBlock';
 import { KeyValueGrid } from '@/components/ui/KeyValueGrid';
 import { MonoValue } from '@/components/ui/MonoValue';
+import { type CredentialRowView, SAVED_LIST_TEXT } from '@/logic/credentials/saved-list.js';
 
-import { type CredentialRowView, LIST_TEXT } from '../model';
 import { type Check, type CredentialDetail, DETAIL_WORDS, type Identifier, type ValueKind, valueOf } from './model';
 
 const TONES: Record<ValueKind, 'success' | 'danger' | 'neutral'> = {
@@ -155,7 +155,7 @@ function Aaguid({ detail, row }: { detail: CredentialDetail; row: CredentialRowV
         </p>
       ) : null}
       {row.mdsAaguid ? (
-        <Button variant="secondary" size="sm" title={LIST_TEXT.openMetadata} onClick={() => setMessage(openMdsEntry(row.mdsAaguid))}>
+        <Button variant="secondary" size="sm" title={SAVED_LIST_TEXT.openMetadata} onClick={() => setMessage(openMdsEntry(row.mdsAaguid))}>
           FIDO MDS
         </Button>
       ) : null}

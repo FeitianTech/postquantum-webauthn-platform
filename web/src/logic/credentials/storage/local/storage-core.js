@@ -32,6 +32,8 @@ const STORED_KEYS = [SHARED_STORAGE_KEY, LEGACY_SIMPLE_STORAGE_KEY, LEGACY_ADVAN
  * then dropped, so the next read is the browser's storage and the next write
  * builds on what the other tab saved, and `onChange` is called. Gives the
  * function that stops following.
+ * @param {() => void} onChange
+ * @returns {() => void}
  */
 export function followStoredCredentialChanges(onChange) {
     if (typeof window === 'undefined') {

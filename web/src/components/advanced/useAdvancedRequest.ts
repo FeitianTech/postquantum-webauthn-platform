@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 
-import type { SavedCredential } from '@/components/credentials/model';
 import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
 import { APP_TITLE } from '@/lib/sections';
+import type { SavedCredential } from '@/logic/credentials/saved-list.js';
 
 import {
   type RegistrationField,

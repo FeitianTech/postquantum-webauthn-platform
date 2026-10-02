@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 
-import { recordKey } from '@/components/credentials/model';
 import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
 import { useToast } from '@/components/ui/Toast';
+import { credentialKey } from '@/logic/credentials/saved-list.js';
 import type { CeremonyResultInput } from '@/logic/shared/ceremony-result.js';
 
 import { attachmentPreference, enforceHints, failureText, keepSnapshot, registerCredential, registeredMessage, saveRecord } from './model';
@@ -55,7 +55,7 @@ export function useRegistrationCeremony(request: AdvancedRequest, openRegistrati
       const kept = outcome.record ? saveRecord(outcome.record) : null;
       await keepSnapshot(outcome.credentialJson, outcome.answer.relyingParty ?? null, kept?.storageId ?? null);
       saved.refresh();
-      if (kept) latest.current.openRegistration(recordKey(kept));
+      if (kept) latest.current.openRegistration(credentialKey(kept));
     } catch (error) {
       setFailure(failureText(error));
     } finally {

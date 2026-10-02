@@ -3,12 +3,12 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { Spinner } from '@/components/ui/icons';
 import { Dialog, OverlayBody, OverlayHeader } from '@/components/ui/Overlay';
 import type { SectionRoute } from '@/lib/useSection';
+import type { CredentialRowView } from '@/logic/credentials/saved-list.js';
 
 import { DetailSections } from './detail/DetailSections';
 import { HYDRATE_FAILED, authenticatorDataView, certificateView } from './detail/model';
 import { AuthenticatorDataLevel, CertificateLevel, RegistrationLevel } from './detail/RegistrationLevels';
 import { useCredentialDetail } from './detail/useCredentialDetail';
-import type { CredentialRowView } from './model';
 import { useSavedCredentials } from './useSavedCredentials';
 
 // What the URL opens inside a credential's details, after #…/credential/<key>:

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 
-import type { SavedCredential } from '@/components/credentials/model';
 import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
+import type { SavedCredential } from '@/logic/credentials/saved-list.js';
 
 import {
   type AllowChoice,

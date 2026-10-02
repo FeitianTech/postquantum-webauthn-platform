@@ -23,8 +23,7 @@ import { fetchCredentialArtifact } from '@/logic/credentials/storage/artifacts-c
 import { updateAdvancedCredentialRegistrationSnapshot } from '@/logic/credentials/storage/local/advanced-credentials.js';
 
 import type { CertificateSummary } from '@/logic/mds/explorer/certificate.js';
-
-import type { SavedCredential } from '../model';
+import type { SavedCredential } from '@/logic/credentials/saved-list.js';
 
 export type ValueKind = 'true' | 'false' | 'missing' | 'other';
 type DescribedValue = { kind: ValueKind; text: string };

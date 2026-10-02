@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
-import type { SavedCredential } from '../model';
+import type { SavedCredential } from '@/logic/credentials/saved-list.js';
+
 import { type CredentialDetail, type RegistrationState, compose, hydrate, needsItsArtifact } from './model';
 
 type DetailPhase =

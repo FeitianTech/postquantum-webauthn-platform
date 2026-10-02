@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Spinner } from '@/components/ui/icons';
 import { cx } from '@/lib/cx';
+import { CLEAR_ALL_CONFIRMATION, deleteConfirmation } from '@/logic/credentials/delete-flow.js';
+import { type CredentialRowView, SAVED_LIST_TEXT } from '@/logic/credentials/saved-list.js';
 
 import { CredentialRow } from './CredentialRow';
-import { CLEAR_ALL_QUESTION, type CredentialRowView, LIST_TEXT, deleteQuestion } from './model';
 import { type SavedCredentialsState, useSavedCredentials } from './useSavedCredentials';
 
 const NOTICE_TONES = {
@@ -76,7 +77,7 @@ export function useCredentialDeletion(fallback: () => HTMLElement | null): Crede
     <ConfirmDialog
       open={asking}
       title={question?.kind === 'one' ? 'Delete credential' : 'Clear All'}
-      question={question?.kind === 'one' ? deleteQuestion(question.row.credential) : CLEAR_ALL_QUESTION}
+      question={question?.kind === 'one' ? deleteConfirmation(question.row.credential) : CLEAR_ALL_CONFIRMATION}
       confirmLabel={question?.kind === 'one' ? 'Delete' : 'Clear All'}
       onConfirm={() => void answer()}
       onCancel={() => setAsking(false)}
@@ -164,7 +165,7 @@ export function SavedCredentialList({
         </ul>
       ) : (
         <p className={cx('px-5 py-8 text-body text-ink-muted', topRule && 'border-t border-line')} data-role="empty">
-          {LIST_TEXT.empty}
+          {SAVED_LIST_TEXT.empty}
         </p>
       )}
     </>
