@@ -217,6 +217,8 @@ test.describe('an MDS entry\'s identifiers', () => {
     test(`are whole at ${width} px, with no Show all`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await openEntry(page);
+      // Geist Mono is fetched when mono text first shows: measure in it, not in its fallback.
+      await page.evaluate(() => document.fonts.ready);
       for (const [key, label] of [
         ['overview', 'Identifier'],
         ['overview', 'AAGUID'],

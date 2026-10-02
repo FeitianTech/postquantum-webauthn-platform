@@ -15,8 +15,6 @@ export default defineConfig({
       // The MDS fixture snapshot (tests/fixtures/mds): real server answers to render.
       { find: '@test-fixtures', replacement: here('../tests/fixtures') },
       { find: '@', replacement: here('./src') },
-      // next/font only runs inside Next's compiler; tests get the class names.
-      { find: /^geist\/font\/(sans|mono)$/, replacement: here('./src/test/geist-stub.ts') },
     ],
   },
   // Tests read the fixtures and the characterization goldens under ../tests.

@@ -48,8 +48,8 @@ the CSP and the source rules.
 
 - `src/pages/`: `index.tsx` (the app shell), `404.tsx`, `500.tsx`, `_error.tsx` (Next's own
   error pages use style attributes the CSP refuses), `_app.tsx` (Geist and Geist Mono from
-  the `geist` package via `next/font/local`, on a wrapper holding `#app-root` and
-  `#overlay-root`, so portalled overlays get them), `_document.tsx`.
+  the `geist` package's files via `next/font/local`, only Geist preloaded, on a wrapper
+  holding `#app-root` and `#overlay-root`, so portalled overlays get them), `_document.tsx`.
 - `src/styles/globals.css`: the design tokens (`@theme`, Tailwind's defaults cleared first);
   text fields carry `data-text-field`. `@source not` keeps Tailwind out of `src/logic` and
   `src/test/logic`.

@@ -151,12 +151,15 @@ test.describe('a saved credential\'s details', () => {
       await page.reload();
       const rowCodes = rows(page).locator('[data-row-values] code');
       await expect(rowCodes.first()).toBeVisible();
+      // Geist Mono is fetched when mono text first shows: measure in it, not in its fallback.
+      await page.evaluate(() => document.fonts.ready);
       const cutInRow = await rowCodes.evaluateAll((codes) => codes.filter((code) => code.scrollWidth > code.clientWidth).map((code) => code.textContent));
       expect(cutInRow).toEqual([]);
 
       await openDetailOf(page, 'x5c-with-a-long-name-for-the-row@example.com');
       const aaguid = dialog(page).locator('[data-identifier="AAGUID"] code');
       await expect(aaguid.last()).toHaveText('00112233-4455-6677-8899-aabbccddeeff');
+      await page.evaluate(() => document.fonts.ready);
       const cutAaguid = await aaguid.evaluateAll((codes) => codes.filter((code) => code.scrollWidth > code.clientWidth).map((code) => code.textContent));
       expect(cutAaguid).toEqual([]);
       expect(await greyFills(page, '[data-overlay-panel]')).toEqual([]);
