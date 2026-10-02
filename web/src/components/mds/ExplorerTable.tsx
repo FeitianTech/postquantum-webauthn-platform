@@ -1,14 +1,11 @@
 import type { ExplorerSort } from '@/logic/mds/explorer/filter-sort.js';
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
-import { MDS_MIN_COLUMN_WIDTH, normaliseExplorerColumnWidths } from '@/logic/mds/explorer/columns.js';
 import {
   type KeyboardEvent,
   type PointerEvent,
   type ReactNode,
   type RefObject,
-  useCallback,
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
 } from 'react';
@@ -19,10 +16,9 @@ import { cx } from '@/lib/cx';
 import { ExplorerRow } from './ExplorerRow';
 import { ROW_GRID } from './grid';
 import { EXPLORER_COLUMNS, type ExplorerColumn } from './columns';
+import { minimumWidth, useColumnWidths } from './useColumnWidths';
 
 const KEY_STEP = 16;
-// The columns' widths, set on the table and read by every row's grid.
-const COLUMNS_PROPERTY = '--mds-columns';
 const ROWS_BEFORE_BACK_TO_TOP = 5;
 
 // A quiet sign that the table goes on to the right: a white fade over the
@@ -69,13 +65,6 @@ function EdgeFade({
       className="pointer-events-none absolute top-px z-[15] w-10 rounded-r-[13px] bg-linear-to-l from-white to-transparent"
     />
   );
-}
-
-// Below the `sm` breakpoint.
-const PHONE = '(max-width: 639px)';
-
-function minimumWidth(column: ExplorerColumn) {
-  return 'min' in column ? column.min : MDS_MIN_COLUMN_WIDTH;
 }
 
 // The handle on a header's right edge: drag it, or focus it and use the arrow
@@ -259,45 +248,8 @@ export function ExplorerTable({
   state,
   frameRef,
 }: ExplorerTableProps) {
-  const [widths, setWidths] = useState<number[]>(() => EXPLORER_COLUMNS.map((column) => column.width));
   const tableRef = useRef<HTMLTableElement>(null);
-
-  useLayoutEffect(() => {
-    const table = tableRef.current;
-    if (!table) return;
-    table.style.setProperty(COLUMNS_PROPERTY, widths.map((width) => `${width}px`).join(' '));
-    table.style.width = `${widths.reduce((sum, width) => sum + width, 0)}px`;
-  }, [widths]);
-
-  // A phone has the narrower columns, and the table follows the window as it
-  // narrows to a phone's width or widens from one (after hydration: the exported
-  // page has the wide columns, and a width is in its markup). A width a person
-  // set is kept.
-  useLayoutEffect(() => {
-    const phone = window.matchMedia(PHONE);
-    const follow = (narrow: boolean) =>
-      setWidths((current) =>
-        current.map((width, index) => {
-          const column = EXPLORER_COLUMNS[index];
-          if (!('phoneWidth' in column)) return width;
-          if (narrow && width === column.width) return column.phoneWidth;
-          if (!narrow && width === column.phoneWidth) return column.width;
-          return width;
-        }),
-      );
-    if (phone.matches) follow(true);
-    const onChange = (event: MediaQueryListEvent) => follow(event.matches);
-    phone.addEventListener('change', onChange);
-    return () => phone.removeEventListener('change', onChange);
-  }, []);
-
-  const resize = useCallback((index: number, width: number) => {
-    setWidths((current) => {
-      const next = [...current];
-      [next[index]] = normaliseExplorerColumnWidths([width], minimumWidth(EXPLORER_COLUMNS[index]));
-      return next;
-    });
-  }, []);
+  const { widths, resize } = useColumnWidths(tableRef);
 
   return (
     <div className="relative">
