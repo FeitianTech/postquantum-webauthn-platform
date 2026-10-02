@@ -3,10 +3,7 @@ import {
     MAX_AUTH_DATA_HEX_LENGTH,
     MAX_DETAIL_STRING_LENGTH,
     MAX_SNAPSHOT_RESPONSE_LENGTH,
-    SNAPSHOT_ATTESTATION_STRIP_KEYS,
-    SNAPSHOT_AUTH_DATA_STRIP_KEYS,
     SNAPSHOT_CERT_STRIP_KEYS,
-    SNAPSHOT_EXTENSION_STRIP_KEYS,
 } from './constants.js';
 import { cloneJson } from '../../../shared/json.js';
 import { truncateString } from './common.js';
@@ -48,16 +45,7 @@ function sanitiseParsedCertificateForSnapshot(parsed) {
     stripKeysRecursively(parsedClone, SNAPSHOT_CERT_STRIP_KEYS, false);
 
     if (Array.isArray(parsedClone.extensions)) {
-        parsedClone.extensions = parsedClone.extensions
-            .map(ext => {
-                const extClone = cloneJson(ext);
-                if (!extClone) {
-                    return null;
-                }
-                stripKeysRecursively(extClone, SNAPSHOT_EXTENSION_STRIP_KEYS, false);
-                return extClone;
-            })
-            .filter(Boolean);
+        parsedClone.extensions = parsedClone.extensions.filter(ext => ext && typeof ext === 'object');
     }
 
     return parsedClone;
@@ -97,18 +85,9 @@ function sanitiseAttestationObjectForSnapshot(attestationObject) {
         if (Array.isArray(attStmtClone.x5c)) {
             attStmtClone.x5c = new Array(attStmtClone.x5c.length).fill(null);
         }
-        stripKeysRecursively(attStmtClone, SNAPSHOT_ATTESTATION_STRIP_KEYS, false);
         clone.attStmt = attStmtClone;
     }
 
-    return clone;
-}
-
-// Called with an object (sanitiseRegistrationDetailStateSnapshot checks).
-function sanitiseAuthenticatorDataForSnapshot(authData) {
-    const clone = cloneJson(authData);
-
-    stripKeysRecursively(clone, SNAPSHOT_AUTH_DATA_STRIP_KEYS, false);
     return clone;
 }
 
@@ -146,7 +125,7 @@ function sanitiseRegistrationDetailStateSnapshot(state) {
     }
 
     if (state.authenticatorData && typeof state.authenticatorData === 'object') {
-        sanitised.authenticatorData = sanitiseAuthenticatorDataForSnapshot(state.authenticatorData);
+        sanitised.authenticatorData = cloneJson(state.authenticatorData);
     }
 
     if (typeof state.authenticatorDataHex === 'string' && state.authenticatorDataHex.trim()) {

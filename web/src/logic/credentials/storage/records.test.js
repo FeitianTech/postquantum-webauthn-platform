@@ -391,12 +391,12 @@ describe('the server\'s artifacts and snapshots', () => {
                 {
                   parsedX5c: {
                     subject: 'CN=Snapshot',
-                    extensions: [{ oid: '1.2.3.4', raw: 'drop', derBase64: 'drop' }],
+                    derBase64: 'drop',
+                    extensions: [{ oid: '1.2.3.4', value: { 'Hex value': '0102' } }],
                   },
                 },
               ],
               authenticatorData: {
-                rawBuffer: 'drop-buffer',
                 value: 'keep-value',
               },
             },
@@ -415,8 +415,8 @@ describe('the server\'s artifacts and snapshots', () => {
     expect(snapshot.html).toBeUndefined();
     expect(snapshot.combinedHtml).toBeUndefined();
     expect(snapshot.state.visibleAttestationCertificateIndices).toEqual([1]);
-    expect(snapshot.state.attestationCertificates[0].parsedX5c.extensions[0].raw).toBeUndefined();
-    expect(snapshot.state.authenticatorData.rawBuffer).toBeUndefined();
+    expect(snapshot.state.attestationCertificates[0].parsedX5c.derBase64).toBeUndefined();
+    expect(snapshot.state.attestationCertificates[0].parsedX5c.extensions).toEqual([{ oid: '1.2.3.4', value: { 'Hex value': '0102' } }]);
     expect(snapshot.state.authenticatorData.value).toBe('keep-value');
   });
 
@@ -447,7 +447,7 @@ describe('the server\'s artifacts and snapshots', () => {
         hasServerArtifact: false,
         attestationObject: 'heavy-object',
         properties: {
-          registrationData: { authenticatorData: 'aa' },
+          attestationChecks: { authenticator_data: { counter: 0 } },
           customFlag: true,
         },
         relyingParty: {
@@ -469,7 +469,7 @@ describe('the server\'s artifacts and snapshots', () => {
     expect(stored.hasServerArtifact).toBe(true);
     expect(stored.attestationObject).toBeUndefined();
     expect(stored.properties.customFlag).toBe(true);
-    expect(stored.properties.registrationData).toBeUndefined();
+    expect(stored.properties.attestationChecks).toBeUndefined();
     expect(stored.relyingParty.displayName).toBe('RP Display');
   });
 
