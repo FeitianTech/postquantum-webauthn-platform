@@ -1,27 +1,23 @@
-import { SOURCE_TEXT } from '@/logic/browser/identity.js';
+import { type Identity, SOURCE_TEXT } from '@/logic/browser/identity.js';
 import { IDENTITY_FIELDS, NOT_REPORTED } from '@/logic/browser/report.js';
 
 import { KeyValueGrid } from '@/components/ui/KeyValueGrid';
-
-import type { Analysis } from './types';
 
 const LABELS: Record<string, string> = { name: 'Browser', version: 'Version', engine: 'Engine', system: 'System' };
 const SOURCES: Record<string, string> = SOURCE_TEXT;
 
 // Browser, version, engine and system, each with where the answer came from, or
 // "Not reported" and why.
-export function IdentitySummary({ identity }: { identity: Analysis['identity'] }) {
-  const values: Record<string, unknown> = identity;
-  const sources: Record<string, string> = identity.sources;
+export function IdentitySummary({ identity }: { identity: Identity }) {
   return (
     <div className="flex flex-col gap-3">
       <KeyValueGrid
         columns={4}
-        items={IDENTITY_FIELDS.map((field: string) => ({
+        items={IDENTITY_FIELDS.map((field) => ({
           key: field,
           label: LABELS[field],
-          value: (values[field] as string | null) ?? NOT_REPORTED,
-          hint: SOURCES[sources[field]],
+          value: identity[field] ?? NOT_REPORTED,
+          hint: SOURCES[identity.sources[field]],
         }))}
       />
       {identity.onAppleWebKit ? (

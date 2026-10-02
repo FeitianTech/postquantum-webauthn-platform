@@ -312,6 +312,19 @@ function determineSystem(inputs, ua) {
     return { system: null, source: 'not-reported' };
 }
 
+/**
+ * What the browser is: each answer, and where it came from (a SOURCE_TEXT key).
+ * @typedef {'name' | 'version' | 'engine' | 'system'} IdentityField
+ * @typedef {Record<IdentityField, string | null> & {
+ *     sources: Record<IdentityField, string>,
+ *     onAppleWebKit: boolean,
+ * }} Identity
+ */
+
+/**
+ * @param {IdentityInputs} inputs
+ * @returns {Identity}
+ */
 export function determineIdentity(inputs) {
     const ua = inputs.userAgent ?? '';
     const brands = clientHintBrands(inputs);

@@ -1,7 +1,5 @@
-import { gatherAnalysis } from '@/logic/browser/report.js';
+import { type Analysis, gatherAnalysis } from '@/logic/browser/report.js';
 import { useCallback, useRef, useState } from 'react';
-
-import type { Analysis } from './types';
 
 // The Analyze Browser's findings, asked once per page on the first request and
 // reused after (as today). While the questions run the trigger is disabled and

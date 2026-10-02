@@ -7,6 +7,10 @@ import { writeToClipboard } from '../shared/clipboard.js';
 import { determineIdentity, readIdentityInputs } from './identity.js';
 import { CLIENT_CAPABILITY_LABELS, gatherWebAuthnFacts } from './webauthn-facts.js';
 
+/** @import { IdentityField } from './identity.js' */
+/** @import { Capability } from './webauthn-facts.js' */
+
+/** @type {IdentityField[]} */
 export const IDENTITY_FIELDS = ['name', 'version', 'engine', 'system'];
 export const NOT_REPORTED = 'Not reported';
 
@@ -21,6 +25,11 @@ export const COPIED = 'Report copied to the clipboard.';
 
 const DEFINED_ORDER = Object.keys(CLIENT_CAPABILITY_LABELS);
 
+/**
+ * Everything the panel shows.
+ * @typedef {Awaited<ReturnType<typeof gatherAnalysis>>} Analysis
+ */
+
 export async function gatherAnalysis(scope = globalThis) {
     const [inputs, webauthn] = await Promise.all([readIdentityInputs(scope.navigator), gatherWebAuthnFacts(scope)]);
     return {
@@ -32,8 +41,11 @@ export async function gatherAnalysis(scope = globalThis) {
     };
 }
 
-// The groups that have entries, in CAPABILITY_GROUPS order. Defined keys follow
-// the spec's order whatever order the browser used; the others stay as written.
+/**
+ * The groups that have entries, in CAPABILITY_GROUPS order. Defined keys follow
+ * the spec's order whatever order the browser used; the others stay as written.
+ * @param {Capability[]} capabilities
+ */
 export function groupCapabilities(capabilities) {
     return CAPABILITY_GROUPS.map(group => {
         const entries = capabilities.filter(entry => entry.kind === group.kind);

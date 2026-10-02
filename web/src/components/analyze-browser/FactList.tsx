@@ -1,9 +1,7 @@
-import { STATE_TEXT } from '@/logic/browser/webauthn-facts.js';
+import { type Fact, type FactState, STATE_TEXT } from '@/logic/browser/webauthn-facts.js';
 
 import { StatusChip, type Tone } from '@/components/ui/Badge';
 import { cx } from '@/lib/cx';
-
-import type { Fact, FactState } from './types';
 
 // Each state keeps its words (from the logic module) and gets a mark and a tone:
 // yes ✓ green, no ✕ red, not available – neutral, could not be determined ! amber.

@@ -1,11 +1,9 @@
 import { NO_CAPABILITIES, groupCapabilities, omittedNote } from '@/logic/browser/report.js';
+import type { ClientCapabilities as Answer } from '@/logic/browser/webauthn-facts.js';
 
 import { cx } from '@/lib/cx';
 
 import { FactRow, FactState } from './FactList';
-import type { Capability, ClientCapabilities as Answer } from './types';
-
-type Group = { kind: string; title: string; entries: Capability[] };
 
 // What getClientCapabilities() returned, grouped as today: the keys WebAuthn
 // Level 3 defines (with the key in code, in the spec's order), extensions, and
@@ -20,7 +18,7 @@ export function ClientCapabilities({ answer }: { answer: Answer }) {
     );
   }
 
-  const groups: Group[] = groupCapabilities(answer.capabilities);
+  const groups = groupCapabilities(answer.capabilities);
   const omitted = omittedNote(answer.omitted);
   return (
     <div className="flex flex-col gap-5">

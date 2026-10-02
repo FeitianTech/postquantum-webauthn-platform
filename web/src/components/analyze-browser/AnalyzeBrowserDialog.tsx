@@ -1,4 +1,4 @@
-import { copyReport } from '@/logic/browser/report.js';
+import { type Analysis, copyReport } from '@/logic/browser/report.js';
 import { AUTHENTICATOR_FACTS, WEBAUTHN_FACTS } from '@/logic/browser/webauthn-facts.js';
 import { type ReactNode, useRef } from 'react';
 import { flushSync } from 'react-dom';
@@ -11,7 +11,6 @@ import { cx } from '@/lib/cx';
 import { ClientCapabilities } from './ClientCapabilities';
 import { FactList } from './FactList';
 import { IdentitySummary } from './IdentitySummary';
-import type { Analysis, ClientCapabilities as CapabilitiesAnswer, Fact } from './types';
 
 export type CopyResult = { copied: boolean; message: string; text: string };
 
@@ -52,8 +51,8 @@ export function AnalyzeBrowserDialog({ open, onClose, analysis, returnFocusTo, c
     }
   };
 
-  const facts = analysis?.webauthn.facts as Record<string, Fact> | undefined;
-  const capabilities = analysis?.webauthn.clientCapabilities as CapabilitiesAnswer | undefined;
+  const facts = analysis?.webauthn.facts;
+  const capabilities = analysis?.webauthn.clientCapabilities;
 
   return (
     <Dialog

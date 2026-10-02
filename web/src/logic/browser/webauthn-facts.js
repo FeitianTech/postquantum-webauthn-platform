@@ -63,10 +63,27 @@ const NO_WEBAUTHN = 'The WebAuthn API is not available on this page.';
 const NO_CLIENT_CAPABILITIES =
     'getClientCapabilities() is a WebAuthn Level 3 feature this browser does not offer.';
 
+/**
+ * What the page found about one thing the browser may offer, and why when it cannot say.
+ * @typedef {'yes' | 'no' | 'unavailable' | 'undetermined'} FactState
+ * @typedef {{ state: FactState, note?: string }} Fact
+ * @typedef {Fact & { key: string, kind: 'defined' | 'extension' | 'unrecognised', label: string }} Capability
+ * @typedef {object} ClientCapabilityAnswer
+ * @property {Record<string, unknown> | null} returned
+ * @property {Capability[]} capabilities
+ * @property {string[]} omitted
+ * @typedef {Fact & ClientCapabilityAnswer} ClientCapabilities
+ */
+
+/**
+ * @param {string} note
+ * @returns {Fact}
+ */
 function undetermined(note) {
     return { state: 'undetermined', note };
 }
 
+/** @returns {Fact} */
 function booleanFact(value) {
     if (value === true) {
         return { state: 'yes' };
@@ -77,6 +94,7 @@ function booleanFact(value) {
     return undetermined(`The browser answered ${describeValue(value)}, not true or false.`);
 }
 
+/** @returns {Fact} */
 function offers(read) {
     const result = attempt(read);
     if (result.error) {
@@ -85,6 +103,7 @@ function offers(read) {
     return { state: typeof result.value === 'function' ? 'yes' : 'unavailable' };
 }
 
+/** @returns {Promise<Fact>} */
 async function ask(owner, method) {
     const read = attempt(() => owner[method]);
     if (read.error) {
@@ -100,6 +119,7 @@ async function ask(owner, method) {
     }
 }
 
+/** @returns {Fact} */
 function secureContextFact(scope) {
     const read = attempt(() => scope.isSecureContext);
     if (read.error) {
@@ -111,6 +131,10 @@ function secureContextFact(scope) {
     return read.value ? { state: 'yes' } : { state: 'no', note: 'WebAuthn works only over HTTPS or on localhost.' };
 }
 
+/**
+ * @param {Fact} secureContext
+ * @returns {Fact}
+ */
 function webauthnApiFact(scope, secureContext) {
     const publicKeyCredential = attempt(() => scope.PublicKeyCredential);
     const credentials = attempt(() => scope.navigator?.credentials);
@@ -132,6 +156,10 @@ function webauthnApiFact(scope, secureContext) {
     return { state: 'unavailable', note: `Missing: ${missing.join('; ')}.${why}` };
 }
 
+/**
+ * @param {string} key
+ * @returns {Capability}
+ */
 function describeCapability(key, value) {
     const fact = booleanFact(value);
     if (key.startsWith(EXTENSION_PREFIX)) {
@@ -143,6 +171,7 @@ function describeCapability(key, value) {
     return { key, kind: 'unrecognised', label: key, ...fact };
 }
 
+/** @returns {Promise<ClientCapabilities>} */
 async function readClientCapabilities(publicKeyCredential) {
     const nothing = { returned: null, capabilities: [], omitted: [] };
     if (typeof publicKeyCredential !== 'function') {
@@ -178,6 +207,10 @@ async function readClientCapabilities(publicKeyCredential) {
     };
 }
 
+/**
+ * @param {ClientCapabilities} clientCapabilities
+ * @returns {Fact}
+ */
 function hybridTransportFact(clientCapabilities) {
     if (clientCapabilities.state !== 'yes') {
         return { state: clientCapabilities.state, note: clientCapabilities.note };
@@ -193,6 +226,7 @@ export async function gatherWebAuthnFacts(scope = globalThis) {
     const secureContext = secureContextFact(scope);
     const publicKeyCredential = attempt(() => scope.PublicKeyCredential).value;
     const webauthnApi = webauthnApiFact(scope, secureContext);
+    /** @type {Fact} */
     const withoutWebAuthn = { state: 'unavailable', note: NO_WEBAUTHN };
     const hasPublicKeyCredential = typeof publicKeyCredential === 'function';
 
