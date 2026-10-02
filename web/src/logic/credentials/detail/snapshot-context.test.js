@@ -92,10 +92,12 @@ describe('resolveRegistrationSnapshotContext', () => {
     expect(target).toEqual({ ...state, visibleAttestationCertificateIndices: [0] });
   });
 
-  it('reads a snapshot that is its own state', async () => {
-    const { snapshot, preparation } = await savedSnapshot('es256');
-    const context = resolveRegistrationSnapshotContext({ registrationDetailSnapshot: snapshot.state }, createRegistrationState());
-    expect(context).toEqual({ detailPreparation: preparation, snapshotState: snapshot.state, snapshotResponse: null });
+  it('reads a snapshot without a state as an empty one, and no state from its own fields', async () => {
+    const { snapshot } = await savedSnapshot('es256');
+    const target = createRegistrationState();
+    const context = resolveRegistrationSnapshotContext({ registrationDetailSnapshot: snapshot.state }, target);
+    expect(context).toEqual({ detailPreparation: EMPTY_DETAIL_PREPARATION, snapshotState: {}, snapshotResponse: null });
+    expect(target).toEqual(createRegistrationState());
   });
 
   it('gives empty sentences for a snapshot that kept none', () => {

@@ -549,11 +549,11 @@ describe('applyRegistrationSnapshot', () => {
     expect(restored).toEqual(state);
   });
 
-  it('reads a snapshot that keeps the state under state', async () => {
+  it('reads the state a saved snapshot keeps under state', async () => {
     const { state, preparation } = await preparedState('es256');
     const snapshot = { schemaVersion: 2, state: captureRegistrationState(state, preparation) };
     const restored = createRegistrationState();
-    expect(applyRegistrationSnapshot(restored, snapshot)).toEqual(preparation);
+    expect(applyRegistrationSnapshot(restored, snapshot.state)).toEqual(preparation);
     expect(restored.attestationObject).toEqual(state.attestationObject);
   });
 

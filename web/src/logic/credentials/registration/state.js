@@ -343,15 +343,11 @@ export function captureRegistrationState(state, detailPreparation = EMPTY_DETAIL
     };
 }
 
-/** Fills `state` from a saved snapshot, as it was captured; gives what it said about the decodes. */
-export function applyRegistrationSnapshot(state, snapshot) {
-    if (!snapshot || typeof snapshot !== 'object') {
+/** Fills `state` from a saved snapshot's state, as it was captured; gives what it said about the decodes. */
+export function applyRegistrationSnapshot(state, stateSource) {
+    if (!stateSource || typeof stateSource !== 'object') {
         return;
     }
-
-    const stateSource = snapshot.state && typeof snapshot.state === 'object'
-        ? snapshot.state
-        : snapshot;
 
     const attObj = cloneJson(stateSource.attestationObject);
     state.attestationObject = attObj && typeof attObj === 'object' ? attObj : null;

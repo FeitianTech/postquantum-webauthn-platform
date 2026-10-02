@@ -36,11 +36,12 @@ export function resolveRegistrationSnapshotContext(cred, state) {
         };
     }
 
+    // A snapshot whose state kept nothing is saved without one: an empty state.
     const snapshotState = registrationDetailSnapshot.state && typeof registrationDetailSnapshot.state === 'object'
         ? registrationDetailSnapshot.state
-        : registrationDetailSnapshot;
+        : {};
 
-    const detailPreparation = applyRegistrationSnapshot(state, registrationDetailSnapshot);
+    const detailPreparation = applyRegistrationSnapshot(state, snapshotState);
 
     return {
         detailPreparation,
