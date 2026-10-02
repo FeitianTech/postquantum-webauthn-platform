@@ -7,7 +7,7 @@ import {
   truncateString,
 } from './common.js';
 
-describe('storage helpers', () => {
+describe('the storage\'s small helpers', () => {
   it('remove no keys from a target that is not a record, or with keys that are not a list', () => {
     const record = { attestationObject: 'o2NmbXRkbm9uZQ' };
 
