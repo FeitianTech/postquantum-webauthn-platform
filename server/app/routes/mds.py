@@ -56,6 +56,9 @@ def _remember_custom_entries_state(snapshot: Any) -> None:
 
 def _initial_custom_entries_state(metadata_session_id: str | None) -> str:
     if metadata_session_id and getattr(g, "_mds_session_new", None) == metadata_session_id:
+        # A namespace this request minted holds nothing: the session keeps
+        # saying so, so the next page load takes the cacheable list too.
+        session[_MDS_CUSTOM_ENTRIES_SESSION_KEY] = "none"
         return "none"
     stored = session.get(_MDS_CUSTOM_ENTRIES_SESSION_KEY)
     return stored if stored in ("none", "present") else "unknown"

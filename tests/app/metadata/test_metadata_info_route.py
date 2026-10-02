@@ -52,7 +52,8 @@ def test_the_answer_is_per_session_and_never_cached(mds_fixture_snapshot, client
 
 def test_a_known_session_says_what_its_last_explorer_answer_held(mds_fixture_snapshot, client):
     client.get("/api/mds/metadata/info")
-    assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "unknown"
+    # The namespace that answer minted holds nothing: the next page load is told so too.
+    assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "none"
 
     client.get("/api/mds/metadata/explorer/full")
     assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "none"
@@ -131,3 +132,12 @@ def test_an_upload_and_a_delete_record_whether_the_session_has_uploads(mds_fixtu
     stored = client.get("/api/mds/metadata/custom").get_json()["items"][0]["source"]["storedFilename"]
     assert client.delete(f"/api/mds/metadata/custom/{stored}").status_code == 200
     assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "none"
+
+
+def test_a_namespace_recovered_from_the_long_lived_cookie_may_hold_uploads(mds_fixture_snapshot, client):
+    client.get("/api/mds/metadata/info")
+    recovery = client.get_cookie("fido.mds.session")
+    client.delete_cookie("session")
+    client.set_cookie(recovery.key, recovery.value)
+
+    assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "unknown"
