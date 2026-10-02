@@ -119,9 +119,10 @@ Running it (Node 22, in `web/`): `npm ci`; `npm run dev` (at `http://localhost:3
 proxying `/api` to `FLASK_URL`, default `http://localhost:8000`; ceremonies need Flask's
 origin, so use the export for those); `npm run build` (the export in `web/out`, which Flask
 serves; `FIDO_SERVER_WEB_EXPORT_ROOT` points elsewhere); `npm run typecheck` (covers
-`e2e/`); `npm test`; `npm run test:coverage`; `npm run check:csp` (after a build); `npm run
-e2e` (after a build; `npx playwright install chromium` once; `E2E_PYTHON` names the Python
-with the app's dependencies, `.venv/bin/python` by default; `E2E_PORT`, default 5151).
+`e2e/`, and through `tsconfig.logic.json` checks the logic's JSDoc types with `checkJs`);
+`npm test`; `npm run test:coverage`; `npm run check:csp` (after a build); `npm run e2e`
+(after a build; `npx playwright install chromium` once; `E2E_PYTHON` names the Python with
+the app's dependencies, `.venv/bin/python` by default; `E2E_PORT`, default 5151).
 
 ## The logic (`web/src/logic`)
 

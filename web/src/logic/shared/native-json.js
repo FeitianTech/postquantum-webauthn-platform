@@ -45,12 +45,12 @@ export function parseRequestOptions(publicKeyJson, scope = globalThis) {
 
 /** Asks the authenticator for a new credential: gives it, and its JSON as the server is sent it. */
 export async function createCredential(publicKey, scope = globalThis) {
-    const credential = await scope.navigator.credentials.create({ publicKey });
+    const credential = /** @type {PublicKeyCredential} */ (await scope.navigator.credentials.create({ publicKey }));
     return { credential, json: credential.toJSON() };
 }
 
 /** Asks the authenticator for an assertion: gives it, and its JSON as the server is sent it. */
 export async function getAssertion(publicKey, scope = globalThis) {
-    const credential = await scope.navigator.credentials.get({ publicKey });
+    const credential = /** @type {PublicKeyCredential} */ (await scope.navigator.credentials.get({ publicKey }));
     return { credential, json: credential.toJSON() };
 }

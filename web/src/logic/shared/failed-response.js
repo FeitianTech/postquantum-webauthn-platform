@@ -103,7 +103,7 @@ function adviceFor(status, message, { body, hasServerMessage }) {
         // message of its own (the simple flow's abort(400) when its session holds
         // no ceremony), is answered by starting over.
         const aboutState = CEREMONY_STATE.test(message)
-            || ['expired', 'replayed'].includes(stringField(body, 'challengeStatus'));
+            || ['expired', 'replayed'].includes(/** @type {string} */ (stringField(body, 'challengeStatus')));
         return aboutState || !hasServerMessage ? START_AGAIN : '';
     }
     return STATUS_ADVICE[status] || '';

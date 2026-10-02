@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "checkJs": true,
+    "noImplicitAny": false,
+    "types": [],
+    "paths": {}
+  },
+  "include": [
+    "src/logic/shared/**/*.js"
+  ],
+  "exclude": [
+    "src/logic/**/*.test.js"
+  ]
+}

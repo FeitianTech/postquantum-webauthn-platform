@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "NEXT_TELEMETRY_DISABLED=1 next build",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.logic.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "check:csp": "node scripts/check-export-csp.mjs out",

@@ -30,6 +30,7 @@ function known(table, value) {
 
 // A row: its label, the value the server gave (shown as a figure), the sentence,
 // and what follows the sentence (the tab's consequence, the challenge's status).
+/** @param {CeremonyResultInput} result */
 function counterRow({ signCount, signCountStatus, consequence }) {
     const hasCount = typeof signCount === 'number' && Number.isFinite(signCount);
     if (!hasCount && !signCountStatus) {
@@ -45,6 +46,7 @@ function counterRow({ signCount, signCountStatus, consequence }) {
     }];
 }
 
+/** @param {CeremonyResultInput} result */
 function challengeRow({ challengeSource, challengeStatus }) {
     if (!challengeSource && !challengeStatus) {
         return [{ label: 'Challenge', value: null, text: 'Not reported by the server.', after: null }];
@@ -58,11 +60,29 @@ function challengeRow({ challengeSource, challengeStatus }) {
 }
 
 /**
+ * What a tab hands the result panel: the server's verdicts and the tab's consequence.
+ * @typedef {{
+ *   title?: string,
+ *   signCount?: number,
+ *   signCountStatus?: string | null,
+ *   consequence?: string,
+ *   showChallenge?: boolean,
+ *   challengeSource?: string | null,
+ *   challengeStatus?: string | null,
+ * }} CeremonyResultInput
+ */
+
+/** @typedef {{ label: string, value: string | null, text: string, after: string | null }} CeremonyResultRow */
+/** @typedef {{ title: string, rows: CeremonyResultRow[], warning: boolean }} CeremonyResultView */
+
+/**
  * What the panel shows for a ceremony's result, or null when it has nothing to
  * say. result: title ("Last authentication"), signCount, signCountStatus,
  * consequence (appended to a regressed verdict: what the tab did about it), and
  * with showChallenge, challengeSource and challengeStatus. A regressed counter or
  * a replayed challenge is a warning.
+ * @param {CeremonyResultInput} [result]
+ * @returns {CeremonyResultView | null}
  */
 export function describeCeremonyResult(result = {}) {
     const rows = [
