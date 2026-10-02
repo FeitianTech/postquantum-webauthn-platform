@@ -52,8 +52,8 @@ export default defineConfig({
           name: 'logic',
           include: ['src/logic/**/*.test.js'],
           setupFiles: ['./src/test/logic/setup.js'],
-          // Under the same load the heaviest of these (the import smoke test, the
-          // MDS explorer's) passed five seconds; one that hangs fails after thirty.
+          // Under the same load the heaviest of these (the MDS explorer's) passed
+          // five seconds; one that hangs fails after thirty.
           testTimeout: 30_000,
         },
       },
