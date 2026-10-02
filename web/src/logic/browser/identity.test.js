@@ -33,7 +33,7 @@ describe('browser identity matrix', () => {
   });
 });
 
-describe('browser identity edge cases', () => {
+describe('a browser the user-agent string alone names, or does not', () => {
   const CHROME_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.7977.130 Safari/537.36';
 
