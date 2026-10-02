@@ -32,6 +32,7 @@ describe('the app shell', () => {
     await screen.findByRole('heading', { level: 2, name: 'Codec' });
     expect(screen.getByRole('tabpanel', { name: 'Codec' }).className).toContain('animate-[section-in');
     await userEvent.click(screen.getByRole('tab', { name: 'Advanced Authentication' }));
+    await screen.findByRole('heading', { level: 2, name: 'Advanced Authentication' });
     expect(screen.getByRole('tabpanel', { name: 'Advanced Authentication' }).className).toContain('animate-[section-in');
   });
 
@@ -154,7 +155,8 @@ describe('the app shell', () => {
     window.history.replaceState(null, '', '/#advanced');
     renderPage(<AppShell />);
 
-    expect(await screen.findByRole('tabpanel', { name: 'Advanced Authentication' })).toHaveTextContent(
+    await screen.findByRole('heading', { level: 2, name: 'Advanced Authentication' });
+    expect(screen.getByRole('tabpanel', { name: 'Advanced Authentication' })).toHaveTextContent(
       'Configure WebAuthn registration and authentication requests with detailed settings.',
     );
     expect(screen.getByRole('tab', { name: 'Advanced Authentication' })).toHaveAttribute('aria-selected', 'true');

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 
-import { AdvancedSection } from '@/components/advanced/AdvancedSection';
 import { AnalyzeBrowserDialog, type CopyResult } from '@/components/analyze-browser/AnalyzeBrowserDialog';
 import { SavedCredentialsProvider } from '@/components/credentials/useSavedCredentials';
 import { MdsSection } from '@/components/mds/MdsSection';
@@ -19,8 +18,9 @@ import { SectionPlaceholder } from './SectionPlaceholder';
 // the shell and Simple, the default section, so Register works as soon as the
 // page does. The section the URL names loads at once; until it arrives its panel
 // is a placeholder.
+const ADVANCED = lazyModule(() => import(/* webpackChunkName: "section-advanced" */ '@/components/advanced/AdvancedSection'));
 const CODEC = lazyModule(() => import(/* webpackChunkName: "section-codec" */ '@/components/codec/CodecSection'));
-const LAZY_SECTIONS: Partial<Record<SectionId, LazyModule<unknown>>> = { codec: CODEC };
+const LAZY_SECTIONS: Partial<Record<SectionId, LazyModule<unknown>>> = { advanced: ADVANCED, codec: CODEC };
 
 // The section the URL opened, while it is still the one shown: a section that
 // arrives late plays no entrance for it.
@@ -38,6 +38,7 @@ function useLandingSection(section: SectionId | null) {
 export function AppShell() {
   const [section, setSection, route, go] = useSection();
   const landing = useLandingSection(section);
+  const advanced = useLazyModule(ADVANCED, section === 'advanced');
   const codec = useLazyModule(CODEC, section === 'codec');
   // Ask for the shown section's chunk before the frame is painted.
   useIsomorphicLayoutEffect(() => {
@@ -58,7 +59,16 @@ export function AppShell() {
               option.id === 'simple' ? (
                 <SimpleSection key={option.id} active={option.id === section} route={routeOf('simple')} />
               ) : option.id === 'advanced' ? (
-                <AdvancedSection key={option.id} active={option.id === section} route={routeOf('advanced')} />
+                advanced.module ? (
+                  <advanced.module.AdvancedSection
+                    key={option.id}
+                    active={option.id === section}
+                    route={routeOf('advanced')}
+                    openedByUrl={landing === 'advanced'}
+                  />
+                ) : (
+                  <SectionPlaceholder key={option.id} id="advanced" active={option.id === section} failed={advanced.failed} onRetry={advanced.retry} />
+                )
               ) : option.id === 'codec' ? (
                 codec.module ? (
                   <codec.module.CodecSection key={option.id} active={option.id === section} openedByUrl={landing === 'codec'} />

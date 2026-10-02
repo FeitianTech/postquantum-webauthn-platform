@@ -174,9 +174,17 @@ function CeremonyPanel({ scope, hidden, form, request }: { scope: Ceremony; hidd
 // credentials, Reset, the ceremony's button), what the last ceremony did, then
 // the form and, from a wide screen, the JSON editor beside it in view (under the
 // measured header) while the form scrolls; below it on narrower ones.
-export function AdvancedSection({ active, route }: { active: boolean; route: SectionRoute }) {
+export function AdvancedSection({
+  active,
+  route,
+  openedByUrl = false,
+}: {
+  active: boolean;
+  route: SectionRoute;
+  openedByUrl?: boolean;
+}) {
   const section = SECTIONS.find((candidate) => candidate.id === 'advanced')!;
-  const entrance = useEntrance(active);
+  const entrance = useEntrance(active, openedByUrl);
   const ids = segmentIds(NAV_ID, 'advanced');
   const [ceremony, setCeremony] = useState<Ceremony>('registration');
   const request = useAdvancedRequest();
