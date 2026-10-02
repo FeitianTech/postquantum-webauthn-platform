@@ -1,37 +1,19 @@
 // The saved credentials' logic comes from the modules in src/logic: the storage
-// (credentials/storage/records.js, the one localStorage array both tabs read and
-// write), what a card
-// shows (credentials/saved-list.js and the helpers it is given),
-// deleting and clearing (credentials/delete-flow.js). These are the
-// types the components read them through.
-import { describeCoseAlgorithm } from '@/logic/credentials/cose-labels.js';
-import { describeCredentialAlgorithmTagWith } from '@/logic/credentials/algorithm-tag.js';
+// (credentials/storage/), the list and what a card shows
+// (credentials/saved-list.js), deleting and clearing
+// (credentials/delete-flow.js). These are the types the components read them
+// through.
 import {
   CLEAR_ALL_CONFIRMATION,
   clearSavedCredentials,
   deleteConfirmation,
   deleteSavedCredential,
 } from '@/logic/credentials/delete-flow.js';
-import {
-  SAVED_LIST_TEXT,
-  credentialFlashKey,
-  credentialKey,
-  describeCredentialCard,
-  listSavedCredentials,
-  warmSavedCredentials,
-} from '@/logic/credentials/saved-list.js';
-import { getCredentialIdHex, getCredentialUserHandleHex } from '@/logic/credentials/record-fields.js';
-import { aaguidHex } from '@/logic/shared/aaguid.js';
-import { deriveCredentialStatusIndicators } from '@/logic/credentials/attestation-context.js';
+import { SAVED_LIST_TEXT, credentialFlashKey, credentialKey } from '@/logic/credentials/saved-list.js';
 import { deleteCredentialArtifact } from '@/logic/credentials/storage/artifacts-client.js';
 import { getAllAdvancedCredentials, removeAdvancedCredential } from '@/logic/credentials/storage/local/advanced-credentials.js';
-import {
-  ensureAdvancedCredentialArtifactsSynced,
-  ensureAdvancedCredentialSnapshotsPrefetched,
-} from '@/logic/credentials/storage/local/advanced-sync.js';
 import { clearSimpleCredentials, getAllSimpleCredentials, removeSimpleCredential } from '@/logic/credentials/storage/local/simple-credentials.js';
 import { followStoredCredentialChanges } from '@/logic/credentials/storage/local/storage-core.js';
-import { getAllStoredCredentialsInOrder } from '@/logic/credentials/storage/records.js';
 
 /** A saved credential as the list holds it (the stored record, typed, with its ids in hex). */
 export type SavedCredential = { type: 'simple' | 'advanced'; [field: string]: unknown };
@@ -64,41 +46,8 @@ export const flashKey = credentialFlashKey as (credentialId: unknown) => string;
 /** A saved record's key in the list, and in its details' URL (the storage's own identifier). */
 export const recordKey = credentialKey as (record: SavedCredential) => string;
 
-/** Every saved credential, simple and advanced, in the order stored. */
-export function readSavedCredentials(): SavedCredential[] {
-  return (listSavedCredentials as (records: unknown[], helpers: object) => SavedCredential[])(
-    (getAllStoredCredentialsInOrder as () => unknown[])(),
-    { aaguidHex, getCredentialIdHex, getCredentialUserHandleHex },
-  );
-}
-
 /** Calls `onChange` when another tab changes the saved credentials; gives the function that stops. */
 export const followOtherTabs = followStoredCredentialChanges as (onChange: () => void) => () => void;
-
-/** Each row: its key (the storage's own identifier) and what it shows. */
-export function describeRows(credentials: SavedCredential[]): CredentialRowView[] {
-  return credentials.map((credential) => ({
-    key: recordKey(credential),
-    credential,
-    ...(describeCredentialCard as (record: SavedCredential, inputs: object) => CredentialCardView)(credential, {
-      indicators: deriveCredentialStatusIndicators(credential),
-      algorithmTag: (describeCredentialAlgorithmTagWith as (record: SavedCredential, describe: unknown) => string)(
-        credential,
-        describeCoseAlgorithm,
-      ),
-      credentialIdHex: getCredentialIdHex(credential),
-    }),
-  }));
-}
-
-/** Heavy advanced records to the server, missing snapshots from it; `reload` when anything changed. */
-export function warmUp(reload: () => void): Promise<boolean> {
-  return (warmSavedCredentials as (steps: object) => Promise<boolean>)({
-    syncArtifacts: ensureAdvancedCredentialArtifactsSynced,
-    prefetchSnapshots: ensureAdvancedCredentialSnapshotsPrefetched,
-    reload,
-  });
-}
 
 /** Where a deletion's steps report, and whether one is running. */
 export type DeletionReport = {

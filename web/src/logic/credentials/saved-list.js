@@ -1,14 +1,45 @@
 // The saved-credential list both interfaces show: which records, in what shape,
 // and for each its name, its four checks, its tags, its identifiers and whether
-// it links to FIDO MDS; the warm-up after the list is drawn. DOM-free. What it
-// needs from the credential helpers and from storage is passed in.
+// it links to FIDO MDS; the warm-up after the list is drawn. DOM-free.
 
-import { normalizeToHex } from './record-fields.js';
+import { aaguidHex } from '../shared/aaguid.js';
+import { describeCredentialAlgorithmTagWith } from './algorithm-tag.js';
+import { deriveCredentialStatusIndicators } from './attestation-context.js';
+import { describeCoseAlgorithm } from './cose-labels.js';
+import { getCredentialIdHex, getCredentialUserHandleHex, normalizeToHex } from './record-fields.js';
+import {
+    ensureAdvancedCredentialArtifactsSynced,
+    ensureAdvancedCredentialSnapshotsPrefetched,
+} from './storage/local/advanced-sync.js';
 import {
     ensureBase64Url,
     getRecordIdentifier,
     normaliseAdvancedCredentialId,
 } from './storage/local/id-utils.js';
+import { getAllStoredCredentialsInOrder } from './storage/records.js';
+
+/**
+ * A saved credential as the list holds it (the stored record, typed, with its ids in hex).
+ * @typedef {{ type: 'simple' | 'advanced', [field: string]: unknown }} SavedCredential
+ */
+
+/**
+ * What a row shows: the account's name, the four checks (each true, false or
+ * unknown), the tags, the AAGUID "FIDO MDS" opens ('' when the row has no such
+ * button), the identifiers, and a stored AAGUID no spelling reads, as stored
+ * ('' when there is none).
+ * @typedef {object} CredentialCardView
+ * @property {string} name
+ * @property {Array<{ label: string, value: boolean | null }>} checks
+ * @property {string[]} tags
+ * @property {string} mdsAaguid
+ * @property {string} credentialIdHex
+ * @property {string} credentialId
+ * @property {string} aaguid
+ * @property {string} aaguidUnreadable
+ */
+
+/** @typedef {CredentialCardView & { key: string, credential: SavedCredential }} CredentialRowView */
 
 export const SAVED_LIST_TEXT = {
     empty: 'No credentials registered yet.',
@@ -27,11 +58,11 @@ export const CREDENTIAL_CHECKS = [
 /**
  * The stored records as the list holds them: an advanced record with its storage
  * ids and normalised AAGUID, both kinds with their credential id and user handle
- * in hex. helpers: aaguidHex, getCredentialIdHex,
- * getCredentialUserHandleHex (credentials/record-fields.js).
+ * in hex.
+ * @param {Array<Record<string, any>>} records
+ * @returns {SavedCredential[]}
  */
-export function listSavedCredentials(records, helpers) {
-    const { aaguidHex, getCredentialIdHex, getCredentialUserHandleHex } = helpers;
+export function listSavedCredentials(records) {
     return records.map(record => {
         if (record.type === 'advanced') {
             const relyingPartyInfo = record.relyingParty;
@@ -62,7 +93,20 @@ export function listSavedCredentials(records, helpers) {
     });
 }
 
-/** A credential's key: its storage id, else its credential id (as storage de-duplicates them). */
+/**
+ * Every saved credential, simple and advanced, in the order stored.
+ * @returns {SavedCredential[]}
+ */
+export function readSavedCredentials() {
+    return listSavedCredentials(getAllStoredCredentialsInOrder());
+}
+
+/**
+ * A credential's key: its storage id, else its credential id (as storage
+ * de-duplicates them); also its key in its details' URL.
+ * @param {Record<string, any>} credential
+ * @returns {string}
+ */
 export function credentialKey(credential) {
     return getRecordIdentifier(credential);
 }
@@ -73,6 +117,9 @@ export function credentialKey(credential) {
  * (describeCredentialAlgorithmTag), credentialIdHex (getCredentialIdHex).
  * `mdsAaguid` is the AAGUID FIDO MDS opens, or '' when the card has no such
  * button (no AAGUID, or neither a valid root nor known metadata).
+ * @param {Record<string, any>} credential
+ * @param {{ indicators: Record<string, any>, algorithmTag: string, credentialIdHex: string }} inputs
+ * @returns {CredentialCardView}
  */
 export function describeCredentialCard(credential, { indicators, algorithmTag, credentialIdHex }) {
     const tags = [];
@@ -99,7 +146,28 @@ export function describeCredentialCard(credential, { indicators, algorithmTag, c
     };
 }
 
-/** The key a flash after a ceremony matches a card by: the credential id in lower-case hex. */
+/**
+ * Each row: its key and what it shows.
+ * @param {SavedCredential[]} credentials
+ * @returns {CredentialRowView[]}
+ */
+export function describeCredentialRows(credentials) {
+    return credentials.map(credential => ({
+        key: credentialKey(credential),
+        credential,
+        ...describeCredentialCard(credential, {
+            indicators: deriveCredentialStatusIndicators(credential),
+            algorithmTag: describeCredentialAlgorithmTagWith(credential, describeCoseAlgorithm),
+            credentialIdHex: getCredentialIdHex(credential),
+        }),
+    }));
+}
+
+/**
+ * The key a flash after a ceremony matches a card by: the credential id in lower-case hex.
+ * @param {unknown} credentialId
+ * @returns {string}
+ */
 export function credentialFlashKey(credentialId) {
     if (typeof credentialId !== 'string') {
         return '';
@@ -111,14 +179,15 @@ export function credentialFlashKey(credentialId) {
 /**
  * After the list is drawn: heavy advanced records go to the server and missing
  * registration snapshots come from it; when anything changed the list is read
- * again. Gives whether anything changed; a failure is logged and changes nothing.
- * steps: syncArtifacts, prefetchSnapshots (storage), reload.
+ * again (`reload`). Gives whether anything changed; a failure changes nothing.
+ * @param {() => unknown} reload
+ * @returns {Promise<boolean>}
  */
-export function warmSavedCredentials({ syncArtifacts, prefetchSnapshots, reload }) {
+export function warmSavedCredentials(reload) {
     return (async () => {
         const [artifactChanged, snapshotChanged] = await Promise.all([
-            syncArtifacts(),
-            prefetchSnapshots(),
+            ensureAdvancedCredentialArtifactsSynced(),
+            ensureAdvancedCredentialSnapshotsPrefetched(),
         ]);
         const changed = Boolean(artifactChanged || snapshotChanged);
         if (changed) {

@@ -6,20 +6,30 @@ import {
   credentialFlashKey,
   credentialKey,
   describeCredentialCard,
+  describeCredentialRows,
   listSavedCredentials,
+  readSavedCredentials,
   warmSavedCredentials,
 } from './saved-list.js';
+import {
+  ensureAdvancedCredentialArtifactsSynced,
+  ensureAdvancedCredentialSnapshotsPrefetched,
+} from './storage/local/advanced-sync.js';
+import { seedUnifiedCredentialRecords } from './storage/local/storage-core.js';
 import { goldenAnswers } from '@/test/logic/simple/ceremony-answers.js';
 
 // The saved-credential list both tabs show (credentials/saved-list.js).
 
-const STORED = goldenAnswers('simple-register-es256')[1].body.storedCredential;
+// The warm-up's two syncs with the server, as each test says they went.
+vi.mock('./storage/local/advanced-sync.js', () => ({
+  ensureAdvancedCredentialArtifactsSynced: vi.fn(),
+  ensureAdvancedCredentialSnapshotsPrefetched: vi.fn(),
+}));
 
-const helpers = {
-  aaguidHex: vi.fn((value) => (typeof value === 'string' ? value.replace(/-/g, '').toLowerCase() : '')),
-  getCredentialIdHex: vi.fn(() => 'b744'),
-  getCredentialUserHandleHex: vi.fn(() => '7573'),
-};
+const STORED = goldenAnswers('simple-register-es256')[1].body.storedCredential;
+// The golden's user handle, "user@example.com", in hex.
+const USER_HANDLE_HEX = '75736572406578616d706c652e636f6d';
+const AAGUID = '00112233-4455-6677-8899-AABBCCDDEEFF';
 
 const INDICATORS = {
   signatureStatus: true,
@@ -32,39 +42,47 @@ const INDICATORS = {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  seedUnifiedCredentialRecords(null);
 });
 
 describe('the records the list holds', () => {
   it('gives a simple record its type and its identifiers in hex', () => {
-    const [record] = listSavedCredentials([{ ...STORED, type: 'simple' }], helpers);
-    expect(record).toMatchObject({ type: 'simple', credentialIdHex: 'b744', userHandleHex: '7573', email: STORED.email });
+    const [record] = listSavedCredentials([{ ...STORED, type: 'simple' }]);
+    expect(record).toMatchObject({
+      type: 'simple',
+      credentialIdHex: STORED.credentialIdHex,
+      userHandleHex: USER_HANDLE_HEX,
+      email: STORED.email,
+    });
   });
 
   it('gives an advanced record its storage ids and a normalised AAGUID', () => {
-    const [record] = listSavedCredentials([{ type: 'advanced', storageId: 's-1', aaguid: 'F1D0-AA' }], helpers);
-    expect(record).toMatchObject({ type: 'advanced', storageId: 's-1', localStorageId: 's-1', aaguidHex: 'f1d0aa' });
+    const [record] = listSavedCredentials([{ type: 'advanced', storageId: 's-1', aaguid: AAGUID }]);
+    expect(record).toMatchObject({ type: 'advanced', storageId: 's-1', localStorageId: 's-1', aaguidHex: STORED.aaguidHex });
   });
 
   it('takes an advanced record\'s storage id from its local one, or has none', () => {
-    const [local, none] = listSavedCredentials(
-      [{ type: 'advanced', localStorageId: 'l-1' }, { type: 'advanced' }],
-      helpers,
-    );
+    const [local, none] = listSavedCredentials([{ type: 'advanced', localStorageId: 'l-1' }, { type: 'advanced' }]);
     expect([local.storageId, local.localStorageId]).toEqual(['l-1', 'l-1']);
     expect([none.storageId, none.localStorageId, none.aaguidHex]).toEqual([null, null, null]);
   });
 
   it('takes an advanced record\'s AAGUID from its relying party when it has none of its own', () => {
-    const [record] = listSavedCredentials([{ type: 'advanced', relyingParty: { aaguid: 'AB-CD' } }], helpers);
-    expect(record.aaguidHex).toBe('abcd');
+    const [record] = listSavedCredentials([{ type: 'advanced', relyingParty: { aaguid: AAGUID } }]);
+    expect(record.aaguidHex).toBe(STORED.aaguidHex);
   });
 
   it('keeps an advanced record\'s AAGUID as stored when it does not normalise', () => {
-    const [record] = listSavedCredentials([{ type: 'advanced', aaguidHex: 'not hex', relyingParty: 'none' }], {
-      ...helpers,
-      aaguidHex: () => '',
-    });
-    expect(record.aaguidHex).toBe('not hex');
+    const [record] = listSavedCredentials([{ type: 'advanced', aaguidHex: 'AB-CD', relyingParty: 'none' }]);
+    expect(record.aaguidHex).toBe('AB-CD');
+  });
+
+  it('reads every saved record, in the order stored', () => {
+    seedUnifiedCredentialRecords([STORED, { type: 'advanced', storageId: 's-1' }]);
+    expect(readSavedCredentials().map((record) => [record.type, record.credentialIdHex])).toEqual([
+      ['simple', STORED.credentialIdHex],
+      ['advanced', ''],
+    ]);
   });
 });
 
@@ -128,6 +146,19 @@ describe('what a card shows', () => {
   });
 });
 
+describe('the rows', () => {
+  it('give each record its key and what its card shows', () => {
+    const [row] = describeCredentialRows([STORED]);
+    expect(row).toMatchObject({
+      key: `id:${STORED.credentialIdBase64Url}`,
+      credential: STORED,
+      name: STORED.userName,
+      credentialIdHex: STORED.credentialIdHex,
+      tags: ['ES256'],
+    });
+  });
+});
+
 describe('the key a flash after a ceremony matches a card by', () => {
   it('is the credential id in lower-case hex', () => {
     expect(credentialFlashKey(' AQID ')).toBe('010203');
@@ -142,27 +173,26 @@ describe('the key a flash after a ceremony matches a card by', () => {
 
 describe('the warm-up after the list is drawn', () => {
   it('reads the list again when the sync changed something', async () => {
+    vi.mocked(ensureAdvancedCredentialArtifactsSynced).mockResolvedValue(false);
+    vi.mocked(ensureAdvancedCredentialSnapshotsPrefetched).mockResolvedValue(true);
     const reload = vi.fn();
-    const changed = await warmSavedCredentials({ syncArtifacts: async () => false, prefetchSnapshots: async () => true, reload });
-    expect(changed).toBe(true);
+    expect(await warmSavedCredentials(reload)).toBe(true);
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it('leaves the list alone when nothing changed', async () => {
+    vi.mocked(ensureAdvancedCredentialArtifactsSynced).mockResolvedValue(false);
+    vi.mocked(ensureAdvancedCredentialSnapshotsPrefetched).mockResolvedValue(false);
     const reload = vi.fn();
-    expect(await warmSavedCredentials({ syncArtifacts: async () => false, prefetchSnapshots: async () => false, reload })).toBe(false);
+    expect(await warmSavedCredentials(reload)).toBe(false);
     expect(reload).not.toHaveBeenCalled();
   });
 
   it('changes nothing when warming up fails', async () => {
-    const failure = new Error('offline');
-    const changed = await warmSavedCredentials({
-      syncArtifacts: async () => {
-        throw failure;
-      },
-      prefetchSnapshots: async () => true,
-      reload: vi.fn(),
-    });
-    expect(changed).toBe(false);
+    vi.mocked(ensureAdvancedCredentialArtifactsSynced).mockRejectedValue(new Error('offline'));
+    vi.mocked(ensureAdvancedCredentialSnapshotsPrefetched).mockResolvedValue(true);
+    const reload = vi.fn();
+    expect(await warmSavedCredentials(reload)).toBe(false);
+    expect(reload).not.toHaveBeenCalled();
   });
 });

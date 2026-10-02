@@ -1,3 +1,4 @@
+import { describeCredentialRows, readSavedCredentials, warmSavedCredentials } from '@/logic/credentials/saved-list.js';
 import { type ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useToast } from '@/components/ui/Toast';
@@ -7,13 +8,10 @@ import {
   type DeletionReport,
   type ListTone,
   type SavedCredential,
-  describeRows,
   flashKey,
   followOtherTabs,
-  readSavedCredentials,
   removeCredential,
   removeEveryCredential,
-  warmUp,
 } from './model';
 
 // How long a row keeps the tint of the ceremony it was just used in (the current
@@ -68,7 +66,7 @@ export function SavedCredentialsProvider({ children }: { children: ReactNode }) 
   const refresh = useCallback(() => {
     reload();
     if (!warming.current) {
-      warming.current = warmUp(reload).finally(() => {
+      warming.current = warmSavedCredentials(reload).finally(() => {
         warming.current = null;
       });
     }
@@ -114,7 +112,7 @@ export function SavedCredentialsProvider({ children }: { children: ReactNode }) 
     if (flashTimer.current) clearTimeout(flashTimer.current);
   }, []);
 
-  const rows = useMemo(() => describeRows(credentials), [credentials]);
+  const rows = useMemo(() => describeCredentialRows(credentials), [credentials]);
   const value = useMemo(
     () => ({ loaded, rows, busy, progress, notice, flash, refresh, remove, clearAll, flashCredential }),
     [loaded, rows, busy, progress, notice, flash, refresh, remove, clearAll, flashCredential],
