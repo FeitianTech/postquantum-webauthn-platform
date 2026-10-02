@@ -100,6 +100,30 @@ describe('Overlay', () => {
     expect(document.getElementById('panel')).toHaveAttribute('data-state', 'closed');
   });
 
+  it('is a layer from its first frame when it mounts open, taking focus and Escape', async () => {
+    function MountedOpen() {
+      const [open, setOpen] = useState(true);
+      return (
+        <>
+          <div id="app-root" />
+          <div id="overlay-root" />
+          <Dialog id="panel" open={open} onClose={() => setOpen(false)} labelledBy="panel-title">
+            <OverlayHeader titleId="panel-title" title="Credential Details" closeLabel="Close" onClose={() => setOpen(false)} />
+          </Dialog>
+        </>
+      );
+    }
+    render(<MountedOpen />);
+
+    const dialog = await screen.findByRole('dialog', { name: 'Credential Details' });
+    expect(dialog.closest('[data-overlay-panel]') ?? dialog).toHaveFocus();
+    await userEvent.keyboard('{Escape}');
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
   it('closes from the close button and the backdrop, not from a click inside', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     render(<Harness />);

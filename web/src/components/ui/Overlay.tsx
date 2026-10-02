@@ -165,7 +165,9 @@ export function Overlay({
       if (!LAYERS.length) inert?.removeAttribute('inert');
       if (giveBackTo?.isConnected) giveBackTo.focus({ preventScroll: true });
     };
-  }, [open, mounted]);
+    // A layer mounted open (a dialog whose chunk arrived once it was asked for)
+    // has its root only once the overlay root is known: it becomes a layer then.
+  }, [open, mounted, target]);
 
   if (!target) return null;
   return createPortal(
