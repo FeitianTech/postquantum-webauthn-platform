@@ -7,40 +7,61 @@ import {
   deleteConfirmation,
   deleteSavedCredential,
 } from './delete-flow.js';
+import { deleteCredentialArtifact } from './storage/artifacts-client.js';
+import { getAllAdvancedCredentials, removeAdvancedCredential } from './storage/local/advanced-credentials.js';
+import { clearSimpleCredentials, getAllSimpleCredentials, removeSimpleCredential } from './storage/local/simple-credentials.js';
 
 // Deleting a saved credential and clearing them all (credentials/delete-flow.js):
-// what is asked, in what order, and what each outcome says.
+// in what order, and what each outcome says. The storage and the server answer
+// as each test says.
+
+vi.mock('./storage/artifacts-client.js', () => ({ deleteCredentialArtifact: vi.fn() }));
+vi.mock('./storage/local/advanced-credentials.js', () => ({
+  getAllAdvancedCredentials: vi.fn(),
+  removeAdvancedCredential: vi.fn(),
+}));
+vi.mock('./storage/local/simple-credentials.js', () => ({
+  clearSimpleCredentials: vi.fn(),
+  getAllSimpleCredentials: vi.fn(),
+  removeSimpleCredential: vi.fn(),
+}));
 
 const SIMPLE = { type: 'simple', credentialIdBase64Url: 'AQID', email: 'alice' };
 const ADVANCED = { type: 'advanced', credentialId: 'BAUG', storageId: ' s-1 ', userName: 'bob' };
 
-function deps(overrides = {}) {
+// The storage, the server and the list's report, each call written down in order.
+function flow({
+  running = false,
+  simple = [SIMPLE],
+  advanced = [ADVANCED],
+  removeSimple = true,
+  removeAdvanced = true,
+  artifact = { status: 'deleted' },
+  reload = async () => {},
+} = {}) {
   const calls = [];
-  const record = (name, result) => vi.fn((...args) => {
+  const record = (name, result) => (...args) => {
     calls.push([name, ...args]);
-    return result;
-  });
-  return {
-    calls,
-    isCredentialDeletionInProgress: record('inProgress?', false),
-    confirm: record('confirm', true),
-    setCredentialDeletionInProgress: record('busy'),
-    dismissAllTransientMessages: record('dismiss'),
-    showSharedCredentialProgress: record('progress'),
-    hideSharedCredentialProgress: record('progress done'),
-    showSharedCredentialStatus: record('status'),
-    removeSimpleCredentialFromLocal: record('remove simple', true),
-    removeAdvancedCredentialFromLocal: record('remove advanced', true),
-    deleteCredentialArtifact: record('delete artifact', Promise.resolve({ status: 'deleted' })),
-    loadSavedCredentials: record('reload', Promise.resolve()),
-    getAllSimpleCredentials: record('simple', [SIMPLE]),
-    getAllAdvancedCredentials: record('advanced', [ADVANCED]),
-    clearLocalSimpleCredentials: record('clear simple'),
-    ...overrides,
+    return typeof result === 'function' ? result(...args) : result;
   };
+  vi.mocked(getAllSimpleCredentials).mockImplementation(record('simple', simple));
+  vi.mocked(getAllAdvancedCredentials).mockImplementation(record('advanced', advanced));
+  vi.mocked(removeSimpleCredential).mockImplementation(record('remove simple', removeSimple));
+  vi.mocked(removeAdvancedCredential).mockImplementation(record('remove advanced', removeAdvanced));
+  vi.mocked(clearSimpleCredentials).mockImplementation(record('clear simple'));
+  vi.mocked(deleteCredentialArtifact).mockImplementation(record('delete artifact', async () => artifact));
+  const report = {
+    isRunning: vi.fn(record('running?', running)),
+    setRunning: vi.fn(record('busy')),
+    dismiss: vi.fn(record('dismiss')),
+    progress: vi.fn(record('progress')),
+    status: vi.fn(record('status')),
+    reload: vi.fn(record('reload', reload)),
+  };
+  return { calls, report };
 }
 
-const statusOf = (flow) => flow.showSharedCredentialStatus.mock.calls.at(-1);
+const statusOf = (report) => report.status.mock.calls.at(-1);
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -59,188 +80,177 @@ describe('the question before deleting', () => {
 });
 
 describe('deleting one credential', () => {
-  it('asks, then removes a simple one from this browser, reads the list again and says so', async () => {
-    const flow = deps();
-    await deleteSavedCredential(SIMPLE, flow);
-    expect(flow.calls).toEqual([
-      ['inProgress?'],
-      ['confirm', deleteConfirmation(SIMPLE)],
+  it('removes a simple one from this browser, reads the list again and says so', async () => {
+    const { calls, report } = flow();
+    await deleteSavedCredential(SIMPLE, report);
+    expect(calls).toEqual([
+      ['running?'],
       ['busy', true],
       ['dismiss'],
       ['progress', 'Deleting credential...'],
       ['remove simple', 'AQID', 'alice'],
       ['reload'],
       ['status', 'Deletion successful.', 'success'],
-      ['progress done'],
+      ['progress', null],
       ['busy', false],
     ]);
   });
 
   it('removes a simple one by its credential id or id, for its account', async () => {
-    const flow = deps();
-    await deleteSavedCredential({ type: 'simple', credentialId: 'X', userName: 'u' }, flow);
-    await deleteSavedCredential({ type: 'simple', id: 'Y', username: 'v' }, flow);
-    expect(flow.removeSimpleCredentialFromLocal.mock.calls).toEqual([['X', 'u'], ['Y', 'v']]);
+    const { report } = flow();
+    await deleteSavedCredential({ type: 'simple', credentialId: 'X', userName: 'u' }, report);
+    await deleteSavedCredential({ type: 'simple', id: 'Y', username: 'v' }, report);
+    expect(vi.mocked(removeSimpleCredential).mock.calls).toEqual([['X', 'u'], ['Y', 'v']]);
   });
 
   it('says when this browser kept a simple one', async () => {
-    const flow = deps({ removeSimpleCredentialFromLocal: vi.fn(() => false) });
-    await deleteSavedCredential(SIMPLE, flow);
-    expect(statusOf(flow)).toEqual([DELETE_TEXT.notRemovedLocally, 'error']);
-    expect(flow.loadSavedCredentials).not.toHaveBeenCalled();
+    const { report } = flow({ removeSimple: false });
+    await deleteSavedCredential(SIMPLE, report);
+    expect(statusOf(report)).toEqual([DELETE_TEXT.notRemovedLocally, 'error']);
+    expect(report.reload).not.toHaveBeenCalled();
   });
 
   it('deletes an advanced one on the server first, then here', async () => {
-    const flow = deps();
-    await deleteSavedCredential(ADVANCED, flow);
-    expect(flow.deleteCredentialArtifact).toHaveBeenCalledWith(' s-1 ');
-    expect(flow.removeAdvancedCredentialFromLocal).toHaveBeenCalledWith('BAUG', ' s-1 ');
-    expect(statusOf(flow)).toEqual(['Deletion successful.', 'success']);
+    const { report } = flow();
+    await deleteSavedCredential(ADVANCED, report);
+    expect(deleteCredentialArtifact).toHaveBeenCalledWith(' s-1 ');
+    expect(removeAdvancedCredential).toHaveBeenCalledWith('BAUG', ' s-1 ');
+    expect(statusOf(report)).toEqual(['Deletion successful.', 'success']);
   });
 
   it('keeps an advanced one the server refused to delete, with the server\'s reason or a sentence', async () => {
-    const refused = deps({ deleteCredentialArtifact: vi.fn(async () => ({ status: 'failed', error: 'Delete request failed.' })) });
-    await deleteSavedCredential(ADVANCED, refused);
-    expect(statusOf(refused)).toEqual(['Delete request failed.', 'error']);
-    expect(refused.removeAdvancedCredentialFromLocal).not.toHaveBeenCalled();
+    const refused = flow({ artifact: { status: 'failed', error: 'Delete request failed.' } });
+    await deleteSavedCredential(ADVANCED, refused.report);
+    expect(statusOf(refused.report)).toEqual(['Delete request failed.', 'error']);
+    expect(removeAdvancedCredential).not.toHaveBeenCalled();
 
-    const silent = deps({ deleteCredentialArtifact: vi.fn(async () => ({ status: 'failed' })) });
-    await deleteSavedCredential(ADVANCED, silent);
-    expect(statusOf(silent)).toEqual([DELETE_TEXT.serverRefused, 'error']);
+    const silent = flow({ artifact: { status: 'failed' } });
+    await deleteSavedCredential(ADVANCED, silent.report);
+    expect(statusOf(silent.report)).toEqual([DELETE_TEXT.serverRefused, 'error']);
   });
 
   it('says when the server deleted an advanced one but this browser kept it', async () => {
-    const flow = deps({ removeAdvancedCredentialFromLocal: vi.fn(() => false) });
-    await deleteSavedCredential(ADVANCED, flow);
-    expect(statusOf(flow)).toEqual([DELETE_TEXT.removedFromServerOnly, 'error']);
+    const { report } = flow({ removeAdvanced: false });
+    await deleteSavedCredential(ADVANCED, report);
+    expect(statusOf(report)).toEqual([DELETE_TEXT.removedFromServerOnly, 'error']);
   });
 
   it('warns when the server no longer had an advanced one', async () => {
-    const flow = deps({ deleteCredentialArtifact: vi.fn(async () => ({ status: 'absent' })) });
-    await deleteSavedCredential({ ...ADVANCED, storageId: null, localStorageId: 'l-1' }, flow);
-    expect(flow.deleteCredentialArtifact).toHaveBeenCalledWith('l-1');
-    expect(statusOf(flow)).toEqual([DELETE_TEXT.alreadyAbsent, 'warning']);
+    const { report } = flow({ artifact: { status: 'absent' } });
+    await deleteSavedCredential({ ...ADVANCED, storageId: null, localStorageId: 'l-1' }, report);
+    expect(deleteCredentialArtifact).toHaveBeenCalledWith('l-1');
+    expect(statusOf(report)).toEqual([DELETE_TEXT.alreadyAbsent, 'warning']);
   });
 
   it('removes an advanced one the server never held from this browser only', async () => {
-    const flow = deps();
-    await deleteSavedCredential({ type: 'advanced', id: 'CAkK' }, flow);
-    expect(flow.deleteCredentialArtifact).not.toHaveBeenCalled();
-    expect(flow.removeAdvancedCredentialFromLocal).toHaveBeenCalledWith('CAkK', null);
-    expect(statusOf(flow)).toEqual(['Deletion successful.', 'success']);
+    const removed = flow();
+    await deleteSavedCredential({ type: 'advanced', id: 'CAkK' }, removed.report);
+    expect(deleteCredentialArtifact).not.toHaveBeenCalled();
+    expect(removeAdvancedCredential).toHaveBeenCalledWith('CAkK', null);
+    expect(statusOf(removed.report)).toEqual(['Deletion successful.', 'success']);
 
-    const kept = deps({ removeAdvancedCredentialFromLocal: vi.fn(() => false) });
-    await deleteSavedCredential({ type: 'advanced', id: 'CAkK' }, kept);
-    expect(statusOf(kept)).toEqual([DELETE_TEXT.notRemovedLocally, 'error']);
+    const kept = flow({ removeAdvanced: false });
+    await deleteSavedCredential({ type: 'advanced', id: 'CAkK' }, kept.report);
+    expect(statusOf(kept.report)).toEqual([DELETE_TEXT.notRemovedLocally, 'error']);
   });
 
-  it('does nothing while another deletion runs, for no credential, or when the person says no', async () => {
-    const busy = deps({ isCredentialDeletionInProgress: vi.fn(() => true) });
-    await deleteSavedCredential(SIMPLE, busy);
-    expect(busy.calls).toEqual([['status', DELETE_TEXT.inProgress, 'info']]);
+  it('does nothing while another deletion runs, or for no credential', async () => {
+    const busy = flow({ running: true });
+    await deleteSavedCredential(SIMPLE, busy.report);
+    expect(busy.calls).toEqual([['running?'], ['status', DELETE_TEXT.inProgress, 'info']]);
 
-    const none = deps();
-    await deleteSavedCredential(undefined, none);
-    expect(none.confirm).not.toHaveBeenCalled();
-
-    const declined = deps({ confirm: vi.fn(() => false) });
-    await deleteSavedCredential(SIMPLE, declined);
-    expect(declined.setCredentialDeletionInProgress).not.toHaveBeenCalled();
+    const none = flow();
+    await deleteSavedCredential(undefined, none.report);
+    expect(none.report.setRunning).not.toHaveBeenCalled();
   });
 });
 
 describe('clearing every credential', () => {
-  it('asks, clears the simple ones, deletes each advanced one, reads the list again and says so', async () => {
-    const flow = deps();
-    await clearSavedCredentials(flow);
-    expect(flow.calls.map(([name]) => name)).toEqual([
-      'inProgress?', 'simple', 'advanced', 'confirm', 'busy', 'dismiss', 'progress', 'clear simple',
-      'delete artifact', 'remove advanced', 'reload', 'status', 'progress done', 'busy',
+  it('clears the simple ones, deletes each advanced one, reads the list again and says so', async () => {
+    const { calls, report } = flow();
+    await clearSavedCredentials(report);
+    expect(calls.map(([name]) => name)).toEqual([
+      'running?', 'simple', 'advanced', 'busy', 'dismiss', 'progress', 'clear simple',
+      'delete artifact', 'remove advanced', 'reload', 'status', 'progress', 'busy',
     ]);
-    expect(flow.confirm).toHaveBeenCalledWith(CLEAR_ALL_CONFIRMATION);
-    expect(flow.showSharedCredentialProgress).toHaveBeenCalledWith('Clearing all credentials...');
-    expect(flow.deleteCredentialArtifact).toHaveBeenCalledWith('s-1');
-    expect(flow.removeAdvancedCredentialFromLocal).toHaveBeenCalledWith('BAUG', 's-1');
-    expect(statusOf(flow)).toEqual(['Deletion successful.', 'success']);
+    expect(report.progress).toHaveBeenCalledWith('Clearing all credentials...');
+    expect(deleteCredentialArtifact).toHaveBeenCalledWith('s-1');
+    expect(removeAdvancedCredential).toHaveBeenCalledWith('BAUG', 's-1');
+    expect(statusOf(report)).toEqual(['Deletion successful.', 'success']);
   });
 
-  it('says there is nothing to clear, and asks nothing', async () => {
-    const flow = deps({ getAllSimpleCredentials: vi.fn(() => []), getAllAdvancedCredentials: vi.fn(() => []) });
-    await clearSavedCredentials(flow);
-    expect(statusOf(flow)).toEqual([DELETE_TEXT.nothingToClear, 'info']);
-    expect(flow.confirm).not.toHaveBeenCalled();
+  it('says there is nothing to clear', async () => {
+    const { report } = flow({ simple: [], advanced: [] });
+    await clearSavedCredentials(report);
+    expect(statusOf(report)).toEqual([DELETE_TEXT.nothingToClear, 'info']);
+    expect(report.setRunning).not.toHaveBeenCalled();
   });
 
-  it('does nothing while a deletion runs, or when the person says no', async () => {
-    const busy = deps({ isCredentialDeletionInProgress: vi.fn(() => true) });
-    await clearSavedCredentials(busy);
-    expect(statusOf(busy)).toEqual([DELETE_TEXT.inProgress, 'info']);
-
-    const declined = deps({ confirm: vi.fn(() => false) });
-    await clearSavedCredentials(declined);
-    expect(declined.clearLocalSimpleCredentials).not.toHaveBeenCalled();
+  it('does nothing while a deletion runs', async () => {
+    const { report } = flow({ running: true });
+    await clearSavedCredentials(report);
+    expect(statusOf(report)).toEqual([DELETE_TEXT.inProgress, 'info']);
+    expect(clearSimpleCredentials).not.toHaveBeenCalled();
   });
 
   it('removes an advanced one the server never held from this browser only', async () => {
-    const flow = deps({
-      getAllSimpleCredentials: vi.fn(() => []),
-      getAllAdvancedCredentials: vi.fn(() => [{ id: 'CAkK', storageId: '  ' }, { credentialIdBase64Url: 'DAsM' }, null]),
-      removeAdvancedCredentialFromLocal: vi.fn((id) => id === 'CAkK'),
+    const { report } = flow({
+      simple: [],
+      advanced: [{ id: 'CAkK', storageId: '  ' }, { credentialIdBase64Url: 'DAsM' }, null],
+      removeAdvanced: (id) => id === 'CAkK',
     });
-    await clearSavedCredentials(flow);
-    expect(flow.deleteCredentialArtifact).not.toHaveBeenCalled();
-    expect(flow.removeAdvancedCredentialFromLocal.mock.calls).toEqual([['CAkK', null], ['DAsM', null], [undefined, null]]);
-    expect(statusOf(flow)).toEqual([
+    await clearSavedCredentials(report);
+    expect(deleteCredentialArtifact).not.toHaveBeenCalled();
+    expect(vi.mocked(removeAdvancedCredential).mock.calls).toEqual([['CAkK', null], ['DAsM', null], [undefined, null]]);
+    expect(statusOf(report)).toEqual([
       'Clearing completed with issues: 2 credentials could not be deleted from server storage and were kept.',
       'error',
     ]);
   });
 
   it('counts one the server refused or this browser kept as kept', async () => {
-    const refused = deps({
-      getAllSimpleCredentials: vi.fn(() => []),
-      deleteCredentialArtifact: vi.fn(async () => ({ status: 'failed' })),
-    });
-    await clearSavedCredentials(refused);
-    expect(statusOf(refused)).toEqual([
+    const refused = flow({ simple: [], artifact: { status: 'failed' } });
+    await clearSavedCredentials(refused.report);
+    expect(statusOf(refused.report)).toEqual([
       'Clearing completed with issues: 1 credential could not be deleted from server storage and was kept.',
       'error',
     ]);
 
-    const kept = deps({ getAllSimpleCredentials: vi.fn(() => []), removeAdvancedCredentialFromLocal: vi.fn(() => false) });
-    await clearSavedCredentials(kept);
-    expect(statusOf(kept)[1]).toBe('error');
+    const kept = flow({ simple: [], removeAdvanced: false });
+    await clearSavedCredentials(kept.report);
+    expect(statusOf(kept.report)[1]).toBe('error');
   });
 
   it('warns of the ones the server no longer had', async () => {
-    const one = deps({ deleteCredentialArtifact: vi.fn(async () => ({ status: 'absent' })) });
-    await clearSavedCredentials(one);
-    expect(statusOf(one)).toEqual(['Clearing complete. 1 credential was already absent from server storage.', 'warning']);
+    const one = flow({ artifact: { status: 'absent' } });
+    await clearSavedCredentials(one.report);
+    expect(statusOf(one.report)).toEqual(['Clearing complete. 1 credential was already absent from server storage.', 'warning']);
 
-    const two = deps({
-      getAllAdvancedCredentials: vi.fn(() => [ADVANCED, { ...ADVANCED, credentialId: 'CAkK', storageId: 's-2' }]),
-      deleteCredentialArtifact: vi.fn(async () => ({ status: 'absent' })),
+    const two = flow({
+      advanced: [ADVANCED, { ...ADVANCED, credentialId: 'CAkK', storageId: 's-2' }],
+      artifact: { status: 'absent' },
     });
-    await clearSavedCredentials(two);
-    expect(statusOf(two)).toEqual(['Clearing complete. 2 credentials were already absent from server storage.', 'warning']);
+    await clearSavedCredentials(two.report);
+    expect(statusOf(two.report)).toEqual(['Clearing complete. 2 credentials were already absent from server storage.', 'warning']);
   });
 
   it('counts an answer that is neither deleted nor absent as kept', async () => {
-    const flow = deps({
-      getAllSimpleCredentials: vi.fn(() => []),
-      deleteCredentialArtifact: vi.fn(async () => ({ status: 'unknown' })),
-    });
-    await clearSavedCredentials(flow);
-    expect(statusOf(flow)).toEqual([
+    const { report } = flow({ simple: [], artifact: { status: 'unknown' } });
+    await clearSavedCredentials(report);
+    expect(statusOf(report)).toEqual([
       'Clearing completed with issues: 1 credential could not be deleted from server storage and was kept.',
       'error',
     ]);
   });
 
   it('says clearing failed when a step throws, and lets the list be used again', async () => {
-    const flow = deps({ loadSavedCredentials: vi.fn(async () => { throw new Error('storage gone'); }) });
-    await clearSavedCredentials(flow);
-    expect(statusOf(flow)).toEqual([DELETE_TEXT.clearFailed, 'error']);
-    expect(flow.setCredentialDeletionInProgress).toHaveBeenLastCalledWith(false);
+    const { report } = flow({
+      reload: async () => {
+        throw new Error('storage gone');
+      },
+    });
+    await clearSavedCredentials(report);
+    expect(statusOf(report)).toEqual([DELETE_TEXT.clearFailed, 'error']);
+    expect(report.setRunning).toHaveBeenLastCalledWith(false);
   });
 });

@@ -1,18 +1,15 @@
+import {
+  type DeletionReport,
+  type ListTone,
+  clearSavedCredentials,
+  deleteSavedCredential,
+} from '@/logic/credentials/delete-flow.js';
 import { describeCredentialRows, readSavedCredentials, warmSavedCredentials } from '@/logic/credentials/saved-list.js';
 import { type ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useToast } from '@/components/ui/Toast';
 
-import {
-  type CredentialRowView,
-  type DeletionReport,
-  type ListTone,
-  type SavedCredential,
-  flashKey,
-  followOtherTabs,
-  removeCredential,
-  removeEveryCredential,
-} from './model';
+import { type CredentialRowView, type SavedCredential, flashKey, followOtherTabs } from './model';
 
 // How long a row keeps the tint of the ceremony it was just used in (the current
 // cards' flash).
@@ -98,8 +95,8 @@ export function SavedCredentialsProvider({ children }: { children: ReactNode }) 
     [refresh, toast],
   );
 
-  const remove = useCallback((credential: SavedCredential) => removeCredential(credential, report), [report]);
-  const clearAll = useCallback(() => removeEveryCredential(report), [report]);
+  const remove = useCallback((credential: SavedCredential) => deleteSavedCredential(credential, report), [report]);
+  const clearAll = useCallback(() => clearSavedCredentials(report), [report]);
 
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flashCredential = useCallback((credentialId: unknown, variant: RowFlash['variant']) => {
