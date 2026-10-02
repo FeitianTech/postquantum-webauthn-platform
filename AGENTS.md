@@ -129,9 +129,16 @@ the app's dependencies, `.venv/bin/python` by default; `E2E_PORT`, default 5151)
 ## The logic (`web/src/logic`)
 
 DOM-free plain JavaScript modules, each module's tests beside it, imported by components as
-`@/logic/…`. They import only each other (no npm package) and touch no DOM; every file is
-held at 100 % coverage. Components import them and never copy
-their exports or sentences. A new surface splits its logic out here first.
+`@/logic/…`. They import only each other (no npm package) and touch no DOM; every file is held
+at 100 % coverage. The areas mirror the components' (`simple`, `advanced`, `credentials`,
+`mds`, `codec`, `browser`), with `shared` for what more than one uses: an area imports `shared`
+and itself, and another area only where its components do (`simple` and `advanced` read
+`credentials`). A module imports what it needs, the storage and the server's decoder too; its
+tests stub such a module with `vi.mock`, or seed the storage. Types are JSDoc, checked by `tsc`
+(`tsconfig.logic.json`, `checkJs`): a shape's `@typedef` lives in the module that builds it,
+and components `import type` it from there. Components call the logic by its own names, with
+nothing between (no `model.ts`), and never copy its exports or sentences. A new surface splits
+its logic out here first.
 
 - `credentials/storage/local/`, `credentials/storage/records.js` (all of them in order): the
   saved credentials, one `localStorage` array visitors' browsers already hold, each kind's
@@ -147,9 +154,11 @@ their exports or sentences. A new surface splits its logic out here first.
   under `authentication/`; `editor/` the editor's model and keys, `request-patch.js`
   (`followForm`) and what both requests' validation shares; `hints.js`,
   `fake-credentials.js` and `hex-input.js` serve both forms.
-- `credentials/`: a saved credential's row, deletion, algorithm tag, hydration from its
-  server artifact, and (`registration/`, `certificates/`, `detail/`) its details and
-  registration view as data. Registration snapshots (`schemaVersion` 2) hold the
+- `credentials/`: the saved list (`saved-list.js`: the records, each row, the warm-up),
+  deletion (`delete-flow.js`, through the list's report), the algorithm tag, hydration from
+  a server artifact (`hydrate.js`), and (`registration/`, `certificates/`, `detail/`) a
+  credential's details and registration view as data, which `detail/compose.js` composes into
+  a registration state of its own. Registration snapshots (`schemaVersion` 2) hold the
   registration as data, never markup; older composed HTML is never read.
 - `codec/`: the Codec's requests, results and values. `mds/`: the MDS
   explorer's loading, filters, sort, columns, rows, entry, certificate, raw view and Manage
@@ -163,6 +172,9 @@ their exports or sentences. A new surface splits its logic out here first.
   `FailedResponseError`): the server's `error`, the codec's `offset` and `path`, what to do for
   a 400, 409, 413 or 503. Never show a raw response body.
 - `shared/ceremony-result.js`: the result panel's signature counter and challenge sentences.
+- `shared/aaguid.js`: an AAGUID's two readings: `aaguidHex` (any spelling a record or the
+  server holds, as hex) and `aaguidGuid` (the dashed GUID, as the server's
+  `format_guid_candidate` builds an MDS entry's id).
 - `shared/base64.js`: bytes on the wire are unpadded base64url; a field named for base64
   (`derBase64`, …) is standard base64. Decode with the strict `base64UrlToBytes` /
   `base64ToBytes`; `forgivingBase64ToBytes` only for typed text. No `atob`.
