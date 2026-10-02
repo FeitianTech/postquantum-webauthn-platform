@@ -25,18 +25,15 @@ from ..mds import cache as mds_cache
 from ..mds import effective as mds_effective
 from ..mds import entries as mds_entries
 from ..mds import explorer_files as mds_explorer_files
-from ..mds import files as mds_files
 from ..mds import provisioning as mds_provisioning
 from ..mds import uploads as mds_uploads
 from ..storage import github_mirror
 from ..webauthn.attestation import certificates as attestation_certificates
-from . import assets
 
 # The HTTP rules, registered on the app by server.app.app.
 bp = Blueprint("mds", __name__)
 
 
-_MDS_EXPLORER_FULL_STATIC_FILENAME = mds_files.EXPLORER_FULL
 _MDS_CUSTOM_ENTRIES_SESSION_KEY = "fido.mds.custom"
 
 
@@ -66,16 +63,14 @@ def _initial_custom_entries_state(metadata_session_id: str | None) -> str:
 
 
 def _packaged_snapshot_url() -> str | None:
-    """Where browsers load the packaged snapshot from, or None when there is no
-    file there that the explorer API would agree with (the page then asks the API).
+    """Where browsers load the packaged snapshot's list from (one URL, revalidated
+    by its ETag, so the page may fetch it before asking here), or None when the
+    snapshot on disk is not one the explorer API would agree with (the page then
+    asks the API)."""
 
-    The URL carries the snapshot's own version (``explorer_files.snapshot_version``),
-    so a new snapshot is a new URL."""
-
-    version = mds_explorer_files.snapshot_version(mds_cache.load_packaged_snapshot_meta())
-    if version is None:
+    if mds_cache.load_packaged_snapshot_meta() is None:
         return None
-    return f"{assets.asset_url(_MDS_EXPLORER_FULL_STATIC_FILENAME)}?v={version}"
+    return mds_explorer_files.list_url()
 
 
 def _initial_mds_info() -> dict[str, Any]:

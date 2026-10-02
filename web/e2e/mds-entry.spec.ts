@@ -189,7 +189,7 @@ test.describe('the link to an AAGUID\'s MDS entry', () => {
 
   test('asks the server for an entry the list does not hold', async ({ page }) => {
     // The list this session loads leaves out Fixture Security Key L1.
-    for (const pattern of ['**/fido-mds3.explorer.full.json*', '**/api/mds/metadata/explorer/full']) {
+    for (const pattern of ['**/fido-mds3.explorer.list.json*', '**/api/mds/metadata/explorer/full']) {
       await page.route(pattern, async (route) => {
         const response = await route.fetch();
         const snapshot = await response.json();

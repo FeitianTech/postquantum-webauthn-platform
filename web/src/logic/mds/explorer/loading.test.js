@@ -77,7 +77,7 @@ describe('explorer loading: which source answers', () => {
     const source = createExplorerSource({ snapshotUrl: '/snap.json', customEntriesState: 'none' });
     const result = await requestExplorerSnapshot(source);
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-    expect(globalThis.fetch).toHaveBeenCalledWith('/snap.json', { cache: 'default' });
+    expect(globalThis.fetch).toHaveBeenCalledWith('/snap.json', { cache: 'default', credentials: 'omit' });
     expect(result.payload).toEqual(SNAPSHOT);
   });
 

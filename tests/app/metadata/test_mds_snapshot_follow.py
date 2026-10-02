@@ -49,16 +49,16 @@ def _info(client):
 def test_a_newer_set_in_the_bucket_reaches_a_running_instance(instance, client):
     directory, _bucket = instance
     no, url = _info(client)
-    assert no == 7 and "?v=7." in url
+    assert no == 7 and json.loads(client.get(url).data)["meta"]["no"] == 7
 
     snapshot_sets.publish(snapshot_version(8))
 
     no, url = _info(client)
-    assert no == 8 and "?v=8." in url
+    assert no == 8
     assert _local(directory) == snapshot_version(8)
-    with client.get(url) as asset:
-        assert asset.headers["Cache-Control"] == "public, max-age=31536000, immutable"
-        assert json.loads(asset.data)["meta"]["no"] == 8
+    with client.get(url, headers={"Accept-Encoding": "identity"}) as listed:
+        assert listed.headers["Cache-Control"] == "no-cache"
+        assert json.loads(listed.data)["meta"]["no"] == 8
     # The explorer's own rows follow too.
     rows = client.get("/api/mds/metadata/explorer/full").get_json()
     assert rows["meta"]["no"] == 8 and len(rows["entries"]) == 3
@@ -127,7 +127,7 @@ def test_a_failed_follow_keeps_the_snapshot(instance, client, failure):
         del bucket.objects[pointer["set"] + mds_files.EXPLORER_FULL_META]
 
     no, url = _info(client)
-    assert no == 7 and "?v=7." in url
+    assert no == 7 and json.loads(client.get(url).data)["meta"]["no"] == 7
     assert _local(directory) == snapshot_version(7)
     assert not list(directory.glob("*.partial"))
 

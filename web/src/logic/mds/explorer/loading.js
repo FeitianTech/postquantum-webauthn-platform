@@ -87,6 +87,11 @@ async function fetchExplorerAnswer(source, signal) {
     const fetchOptions = {
         cache: source.cache,
     };
+    // The packaged list is the same for everyone: it is fetched without the
+    // session's cookie, so its answer can never put back an older session.
+    if (source.kind === 'static') {
+        fetchOptions.credentials = 'omit';
+    }
     if (signal) {
         fetchOptions.signal = signal;
     }

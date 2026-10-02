@@ -4,13 +4,13 @@ The page asks for it when the MDS section is first shown.
 """
 from __future__ import annotations
 
-import hashlib
 import io
 import json
+import os
 
 from server.app.mds import files as mds_files
-from server.app.routes.assets import asset_url
 from tests.app.metadata import mds_fixture
+from tests.app.metadata.snapshot_versions import snapshot_version
 
 
 def _summary():
@@ -25,18 +25,13 @@ def _upload(client):
     )
 
 
-def _version(meta):
-    digest = hashlib.sha256(json.dumps([meta["etag"], meta["generatedAt"]]).encode("utf-8")).hexdigest()[:12]
-    return f"{meta['no']}.{digest}"
-
-
 def test_a_new_session_gets_the_packaged_summary_and_the_static_snapshot(mds_fixture_snapshot, client):
     answer = client.get("/api/mds/metadata/info")
 
     assert answer.status_code == 200
     assert answer.get_json() == {
         **_summary(),
-        "snapshotUrl": f"{asset_url('fido-mds3.explorer.full.json')}?v={_version(_summary())}",
+        "snapshotUrl": "/assets/mds/fido-mds3.explorer.list.json",
         "customEntriesState": "none",
     }
     assert client.get_cookie("session") is not None
@@ -63,33 +58,32 @@ def test_a_known_session_says_what_its_last_explorer_answer_held(mds_fixture_sna
     assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "present"
 
 
-def test_the_snapshot_url_names_the_snapshots_version_and_is_cached_for_good(mds_fixture_snapshot, client):
+def test_the_snapshot_url_is_the_explorer_list_revalidated_by_its_etag(mds_fixture_snapshot, client):
     url = client.get("/api/mds/metadata/info").get_json()["snapshotUrl"]
 
-    assert url.endswith("?v=7." + url.rsplit(".", 1)[1])
-    assert len(url.rsplit(".", 1)[1]) == 12
-    with client.get(url) as static:
-        assert static.status_code == 200
-        assert static.headers["Cache-Control"] == "public, max-age=31536000, immutable"
-        assert static.data == (mds_fixture_snapshot / mds_files.EXPLORER_FULL).read_bytes()
+    assert url == "/assets/mds/fido-mds3.explorer.list.json"
+    with client.get(url, headers={"Accept-Encoding": "identity"}) as listed:
+        assert listed.status_code == 200
+        assert listed.headers["Cache-Control"] == "no-cache"
+        assert listed.headers["ETag"]
+        assert json.loads(listed.data)["meta"]["no"] == 7
 
 
-def test_a_new_snapshot_is_a_new_url(mds_fixture_snapshot, client):
-    before = client.get("/api/mds/metadata/info").get_json()["snapshotUrl"]
+def test_a_new_snapshot_is_a_new_list_at_the_same_url(mds_fixture_snapshot, client):
+    url = client.get("/api/mds/metadata/info").get_json()["snapshotUrl"]
+    before = client.get(url).headers["ETag"]
 
-    # A refresh writes every file again: the same serial, a new ETag and time.
-    for name, key in (
-        (mds_files.EXPLORER_FULL_META, "generatedAt"),
-        (mds_files.EXPLORER_META, "generatedAt"),
-        (mds_files.VERIFIED_META, "generated_at"),
-    ):
+    # A refresh writes every file whole, metas last (with times of their own).
+    for step, (name, data) in enumerate(sorted(snapshot_version(8).items(), key=lambda item: item[0] in mds_files.META_FILENAMES)):
         path = mds_fixture_snapshot / name
-        meta = json.loads(path.read_text(encoding="utf-8"))
-        path.write_text(json.dumps({**meta, "etag": '"fixture-8"', key: "2026-09-27T08:00:00+00:00"}), encoding="utf-8")
+        path.write_bytes(data)
+        os.utime(path, (2_000_000_000 + step, 2_000_000_000 + step))
 
-    after = client.get("/api/mds/metadata/info").get_json()["snapshotUrl"]
-    assert after != before
-    assert after.split("?")[0] == before.split("?")[0]
+    assert client.get("/api/mds/metadata/info").get_json()["snapshotUrl"] == url
+    with client.get(url, headers={"If-None-Match": before, "Accept-Encoding": "identity"}) as after:
+        assert after.status_code == 200
+        assert after.headers["ETag"] != before
+        assert json.loads(after.data)["meta"]["no"] == 8
 
 
 def test_without_a_snapshot_it_names_no_snapshot_url(client):
