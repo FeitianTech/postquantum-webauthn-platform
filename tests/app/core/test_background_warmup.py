@@ -7,6 +7,7 @@ import time
 
 from server.app import startup
 from server.app.mds import cache as mds_cache
+from server.app.mds import provisioning as mds_provisioning
 from server.app.storage import common as storage_common
 
 
@@ -62,3 +63,15 @@ def test_run_background_warmup_survives_failures(monkeypatch):
     )
 
     startup._run_background_warmup()
+
+
+def test_the_warmup_derives_the_explorers_files_before_reading_the_metadata(monkeypatch):
+    calls = []
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
+    monkeypatch.setattr(mds_provisioning, "ensure_snapshot_available", lambda: calls.append("provision"))
+    monkeypatch.setattr(mds_cache, "load_explorer_files", lambda: calls.append("explorer files"))
+    monkeypatch.setattr(mds_cache, "load_cached_metadata_snapshot", lambda: calls.append("metadata"))
+
+    startup._run_background_warmup()
+
+    assert calls == ["provision", "explorer files", "metadata"]

@@ -49,6 +49,9 @@ def _run_background_warmup() -> None:
     try:
         from .mds import cache as mds_cache
 
+        # The explorer's files first: every page fetches the list once its
+        # first view is interactive.
+        mds_cache.load_explorer_files()
         mds_cache.load_cached_metadata_snapshot()
     except Exception:
         logger.warning("Background metadata warm-up failed.", exc_info=True)
