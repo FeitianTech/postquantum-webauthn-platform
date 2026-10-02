@@ -1,7 +1,7 @@
 // What a registration's result keeps (credentials/registration/snapshot.js), over the recorded advanced registrations and the decoder's answers.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { updateAdvancedCredentialRegistrationSnapshot } from '../storage/local/advanced-credentials.js';
+import { updateAdvancedCredentialRegistrationSnapshot } from '../storage/local/advanced-snapshot-update.js';
 import { decodePayloadThroughApi } from './decode-payload.js';
 import { keepRegistrationSnapshot } from './snapshot.js';
 import { createRegistrationState } from './state.js';
@@ -11,7 +11,7 @@ import { advancedDecodeAnswer, advancedRegistrations, recordedCredential } from 
 
 // The server's decoder (POST /api/codec), and the record the snapshot is saved into.
 vi.mock('./decode-payload.js', () => ({ decodePayloadThroughApi: vi.fn() }));
-vi.mock('../storage/local/advanced-credentials.js', () => ({ updateAdvancedCredentialRegistrationSnapshot: vi.fn() }));
+vi.mock('../storage/local/advanced-snapshot-update.js', () => ({ updateAdvancedCredentialRegistrationSnapshot: vi.fn() }));
 
 // The three recorded registrations: a none attestation (ES256), a packed one
 // with a certificate and every extension, and an ML-DSA-44 one.

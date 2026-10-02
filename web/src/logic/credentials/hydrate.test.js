@@ -11,7 +11,7 @@ import {
 } from './registration/view.js';
 import { createRegistrationState } from './registration/state.js';
 import { fetchCredentialArtifact } from './storage/artifacts-client.js';
-import { updateAdvancedCredentialRegistrationSnapshot } from './storage/local/advanced-credentials.js';
+import { updateAdvancedCredentialRegistrationSnapshot } from './storage/local/advanced-snapshot-update.js';
 import { sanitiseRegistrationDetailSnapshot } from './storage/local/snapshot-sanitize.js';
 import { advancedArtifact, advancedRecord, recordedDecoder, simpleRecord } from '@/test/logic/credentials/registration-detail-answers.js';
 
@@ -19,7 +19,7 @@ import { advancedArtifact, advancedRecord, recordedDecoder, simpleRecord } from 
 
 // The artifact the server answers, and the record this browser keeps the snapshot in.
 vi.mock('./storage/artifacts-client.js', () => ({ fetchCredentialArtifact: vi.fn() }));
-vi.mock('./storage/local/advanced-credentials.js', () => ({ updateAdvancedCredentialRegistrationSnapshot: vi.fn() }));
+vi.mock('./storage/local/advanced-snapshot-update.js', () => ({ updateAdvancedCredentialRegistrationSnapshot: vi.fn() }));
 
 afterEach(() => {
   vi.restoreAllMocks();

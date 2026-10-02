@@ -1,7 +1,7 @@
 // What a registration's result keeps once it is composed: the registration as
 // data, saved as the record's snapshot (schemaVersion 2) in the browser and on
 // the server, so its details build from it without asking again. DOM-free.
-import { updateAdvancedCredentialRegistrationSnapshot } from '../storage/local/advanced-credentials.js';
+import { updateAdvancedCredentialRegistrationSnapshot } from '../storage/local/advanced-snapshot-update.js';
 import { decodePayloadThroughApi } from './decode-payload.js';
 import { createRegistrationState } from './state.js';
 import { composeRegistration, registrationResultInput, registrationSnapshotPayload } from './view.js';

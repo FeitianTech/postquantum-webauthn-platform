@@ -17,6 +17,7 @@ export async function loadStorage() {
     ...(await import('@/logic/credentials/storage/local/simple-credentials.js')),
     ...(await import('@/logic/credentials/storage/local/advanced-credentials.js')),
     ...(await import('@/logic/credentials/storage/local/advanced-sync.js')),
+    ...(await import('@/logic/credentials/storage/local/advanced-snapshot-update.js')),
     ...(await import('@/logic/credentials/storage/records.js')),
   };
 }

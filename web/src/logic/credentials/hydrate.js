@@ -3,7 +3,7 @@
 // record, and its registration snapshot kept as far as the sanitiser allows and
 // saved back. DOM-free.
 import {fetchCredentialArtifact} from './storage/artifacts-client.js';
-import {updateAdvancedCredentialRegistrationSnapshot} from './storage/local/advanced-credentials.js';
+import {updateAdvancedCredentialRegistrationSnapshot} from './storage/local/advanced-snapshot-update.js';
 import {migrateStoredRecord} from './storage/local/record-migration.js';
 import {sanitiseRegistrationDetailSnapshot} from './storage/local/snapshot-sanitize.js';
 

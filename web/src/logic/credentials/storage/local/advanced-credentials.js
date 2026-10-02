@@ -12,7 +12,6 @@ import {
     readAdvancedCredentialPartitions,
 } from './advanced-storage-shaping.js';
 import { prepareAdvancedCredentialsForServerFromSource } from './advanced-server-payload.js';
-import { updateAdvancedCredentialRegistrationSnapshot } from './advanced-snapshot-update.js';
 
 /** @import { SavedCredential } from '../../saved-list.js' */
 
@@ -181,8 +180,6 @@ export function updateAdvancedCredentialSignCount(credentialId, signCount, stora
 
     return updated;
 }
-
-export { updateAdvancedCredentialRegistrationSnapshot };
 
 /**
  * @param {Array<Record<string, any>> | null} [credentials] The records sent (the stored ones when not given).
