@@ -52,6 +52,17 @@ describe('the app shell', () => {
     expect(screen.getByRole('tabpanel', { name: 'Advanced Authentication' }).className).toContain('animate-[section-in');
   });
 
+  it('loads the other sections once the first view is interactive, and keeps them hidden', async () => {
+    renderPage(<AppShell />);
+    expect(document.querySelectorAll('[data-section-placeholder]')).toHaveLength(3);
+
+    await waitFor(() => expect(document.querySelectorAll('[data-section-placeholder]')).toHaveLength(0));
+    for (const name of ['Advanced Authentication', 'Codec', 'FIDO MDS Authenticators']) {
+      expect(screen.getByRole('heading', { level: 2, name, hidden: true })).not.toBeVisible();
+    }
+    expect(screen.getByRole('tabpanel', { name: 'Simple Authentication' })).toBeVisible();
+  });
+
   it('shows the title, the four sections, Analyze Browser and GitHub', () => {
     renderPage(<AppShell />);
 

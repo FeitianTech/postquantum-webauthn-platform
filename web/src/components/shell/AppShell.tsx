@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { AnalyzeBrowserDialog, type CopyResult } from '@/components/analyze-browser/AnalyzeBrowserDialog';
 import { SavedCredentialsProvider } from '@/components/credentials/useSavedCredentials';
 import { useBrowserAnalysis } from '@/components/analyze-browser/useBrowserAnalysis';
 import { SimpleSection } from '@/components/simple/SimpleSection';
-import { type LazyModule, lazyModule, useLazyModule } from '@/lib/lazyModule';
+import { type LazyModule, lazyModule, useLazyModule, whenInteractive } from '@/lib/lazyModule';
 import { SECTIONS, type SectionId } from '@/lib/sections';
 import { useIsomorphicLayoutEffect } from '@/lib/useIsomorphicLayoutEffect';
 import { CLOSED_ROUTE, SectionNavigationProvider, useSection } from '@/lib/useSection';
@@ -16,7 +16,8 @@ import { SectionPlaceholder } from './SectionPlaceholder';
 // The sections that load as chunks of their own: the page's own chunk holds
 // the shell and Simple, the default section, so Register works as soon as the
 // page does. The section the URL names loads at once; until it arrives its panel
-// is a placeholder.
+// is a placeholder. The others load once the first view is interactive and
+// wait, hidden, so choosing one shows it at once.
 const ADVANCED = lazyModule(() => import(/* webpackChunkName: "section-advanced" */ '@/components/advanced/AdvancedSection'));
 const CODEC = lazyModule(() => import(/* webpackChunkName: "section-codec" */ '@/components/codec/CodecSection'));
 const MDS = lazyModule(() => import(/* webpackChunkName: "section-mds" */ '@/components/mds/MdsSection'));
@@ -28,9 +29,11 @@ const LAZY_SECTIONS: Partial<Record<SectionId, LazyModule<unknown>>> = { advance
 // another through useSectionNavigation().
 export function AppShell() {
   const [section, setSection, route, go] = useSection();
-  const advanced = useLazyModule(ADVANCED, section === 'advanced');
-  const codec = useLazyModule(CODEC, section === 'codec');
-  const mds = useLazyModule(MDS, section === 'mds');
+  const [interactive, setInteractive] = useState(false);
+  useEffect(() => whenInteractive(() => setInteractive(true)), []);
+  const advanced = useLazyModule(ADVANCED, interactive || section === 'advanced');
+  const codec = useLazyModule(CODEC, interactive || section === 'codec');
+  const mds = useLazyModule(MDS, interactive || section === 'mds');
   // Ask for the shown section's chunk before the frame is painted.
   useIsomorphicLayoutEffect(() => {
     if (section) void LAZY_SECTIONS[section]?.load().catch(() => {});
