@@ -2,8 +2,7 @@ import { Fragment } from 'react';
 
 import { AlertIcon } from '@/components/ui/icons';
 import { cx } from '@/lib/cx';
-
-import { type CeremonyResultInput, describeResultPanel } from './model';
+import { type CeremonyResultInput, describeCeremonyResult } from '@/logic/shared/ceremony-result.js';
 
 // What the server made of the last ceremony, under the tab's buttons: the
 // signature counter and its verdict (and in the Advanced tab where the challenge
@@ -13,7 +12,7 @@ import { type CeremonyResultInput, describeResultPanel } from './model';
 // card); a warning is an amber box with a mark. The live region is always in
 // the page, so a screen reader hears it fill.
 export function CeremonyResult({ result }: { result: CeremonyResultInput | null }) {
-  const view = result ? describeResultPanel(result) : null;
+  const view = result ? describeCeremonyResult(result) : null;
   return (
     <div
       role="status"

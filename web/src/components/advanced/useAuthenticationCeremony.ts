@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 
-import type { CeremonyResultInput } from '@/components/ceremony/model';
 import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
 import { useToast } from '@/components/ui/Toast';
+import type { CeremonyResultInput } from '@/logic/shared/ceremony-result.js';
 
 import { ASSERTION_WORDS, assertionFailureText, authenticate, checkHints, keepAdvancedSignCount, recordsForServer } from './model';
 import type { AuthenticationRequest } from './useAuthenticationRequest';

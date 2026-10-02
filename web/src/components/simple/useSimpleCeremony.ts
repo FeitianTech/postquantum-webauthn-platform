@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { CeremonyResultInput } from '@/components/ceremony/model';
 import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
 import { useToast } from '@/components/ui/Toast';
+import type { CeremonyResultInput } from '@/logic/shared/ceremony-result.js';
 
 import {
   CEREMONY_TEXT,

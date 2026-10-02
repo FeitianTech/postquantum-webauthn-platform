@@ -16,7 +16,7 @@ import {
   registeredText,
 } from '@/logic/simple/ceremony.js';
 
-import type { CeremonyResultInput } from '@/components/ceremony/model';
+import type { CeremonyResultInput } from '@/logic/shared/ceremony-result.js';
 
 export type Ceremony = 'registration' | 'authentication';
 

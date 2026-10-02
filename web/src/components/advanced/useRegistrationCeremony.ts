@@ -1,9 +1,9 @@
 import { useCallback, useRef, useState } from 'react';
 
-import type { CeremonyResultInput } from '@/components/ceremony/model';
 import { recordKey } from '@/components/credentials/model';
 import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
 import { useToast } from '@/components/ui/Toast';
+import type { CeremonyResultInput } from '@/logic/shared/ceremony-result.js';
 
 import { attachmentPreference, enforceHints, failureText, keepSnapshot, registerCredential, registeredMessage, saveRecord } from './model';
 import type { AdvancedRequest } from './useAdvancedRequest';
