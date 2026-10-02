@@ -2,7 +2,6 @@ import { useState } from 'react';
 
 import { AnalyzeBrowserDialog, type CopyResult } from '@/components/analyze-browser/AnalyzeBrowserDialog';
 import { SavedCredentialsProvider } from '@/components/credentials/useSavedCredentials';
-import { MdsSection } from '@/components/mds/MdsSection';
 import { useBrowserAnalysis } from '@/components/analyze-browser/useBrowserAnalysis';
 import { SimpleSection } from '@/components/simple/SimpleSection';
 import { type LazyModule, lazyModule, useLazyModule } from '@/lib/lazyModule';
@@ -20,7 +19,8 @@ import { SectionPlaceholder } from './SectionPlaceholder';
 // is a placeholder.
 const ADVANCED = lazyModule(() => import(/* webpackChunkName: "section-advanced" */ '@/components/advanced/AdvancedSection'));
 const CODEC = lazyModule(() => import(/* webpackChunkName: "section-codec" */ '@/components/codec/CodecSection'));
-const LAZY_SECTIONS: Partial<Record<SectionId, LazyModule<unknown>>> = { advanced: ADVANCED, codec: CODEC };
+const MDS = lazyModule(() => import(/* webpackChunkName: "section-mds" */ '@/components/mds/MdsSection'));
+const LAZY_SECTIONS: Partial<Record<SectionId, LazyModule<unknown>>> = { advanced: ADVANCED, codec: CODEC, mds: MDS };
 
 // The page: the header, the chosen section, the footer, and the Analyze
 // Browser panel, which floats above everything. The saved credentials are
@@ -30,6 +30,7 @@ export function AppShell() {
   const [section, setSection, route, go] = useSection();
   const advanced = useLazyModule(ADVANCED, section === 'advanced');
   const codec = useLazyModule(CODEC, section === 'codec');
+  const mds = useLazyModule(MDS, section === 'mds');
   // Ask for the shown section's chunk before the frame is painted.
   useIsomorphicLayoutEffect(() => {
     if (section) void LAZY_SECTIONS[section]?.load().catch(() => {});
@@ -64,8 +65,10 @@ export function AppShell() {
                 ) : (
                   <SectionPlaceholder key={option.id} id="codec" active={option.id === section} failed={codec.failed} onRetry={codec.retry} />
                 )
+              ) : mds.module ? (
+                <mds.module.MdsSection key={option.id} active={option.id === section} route={routeOf('mds')} />
               ) : (
-                <MdsSection key={option.id} active={option.id === section} route={routeOf('mds')} />
+                <SectionPlaceholder key={option.id} id="mds" active={option.id === section} failed={mds.failed} onRetry={mds.retry} />
               ),
             )}
           </SavedCredentialsProvider>

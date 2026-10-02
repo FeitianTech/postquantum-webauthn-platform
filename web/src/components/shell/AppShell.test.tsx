@@ -145,6 +145,7 @@ describe('the app shell', () => {
     expect(window.history.length).toBe(1);
 
     await userEvent.click(screen.getByRole('tab', { name: 'FIDO MDS Authenticators' }));
+    await screen.findByRole('heading', { level: 2, name: 'FIDO MDS Authenticators' });
     const mds = screen.getByRole('tabpanel', { name: 'FIDO MDS Authenticators' });
     expect(mds).toHaveTextContent('Explore the authenticators published by the FIDO Metadata Service (MDS).');
     // The MDS list has moved too: it loads its entries, and leads nowhere else.

@@ -114,6 +114,8 @@ test.describe('the app shell', () => {
         expect(frame.moving).toEqual([]);
       }
       expect(frames.at(-1)).toEqual({ selected: [`nav-tab-${section}`], shown: [`nav-panel-${section}`], moving: [] });
+      // Requests still held back (a section's chunk, a font) are let go before the page closes.
+      await page.unrouteAll({ behavior: 'ignoreErrors' });
     });
   }
 
@@ -257,9 +259,11 @@ test.describe('the app shell', () => {
       expect(await control.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('solid');
     }
 
-    // No neutral grey background in any section (white, colours and tints only).
-    for (const hash of ['#simple', '#advanced', '#codec', '#mds']) {
+    // No neutral grey background in any section (white, colours and tints only),
+    // once the section (a chunk of its own but Simple) is there.
+    for (const [index, hash] of ['#simple', '#advanced', '#codec', '#mds'].entries()) {
       await page.goto(`/${hash}`);
+      await expect(page.getByRole('heading', { level: 2, name: SECTIONS[index] })).toBeVisible();
       expect(await greyFills(page), hash).toEqual([]);
     }
   });
