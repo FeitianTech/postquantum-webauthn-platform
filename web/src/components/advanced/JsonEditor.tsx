@@ -11,7 +11,7 @@ import {
   applyTabIndentation,
   wrapSelectionWithPair,
 } from '@/logic/advanced/editor/keys.js';
-import { EDITOR_TEXT, type RequestScope, editorTitle } from '@/logic/advanced/editor/model.js';
+import { EDITOR_TEXT, type EditedRequest, type RequestScope, editorTitle } from '@/logic/advanced/editor/model.js';
 
 import type { RequestEditor } from './requestEditor';
 
@@ -19,26 +19,15 @@ const PAIRS: Record<string, string> = { '{': '}', '[': ']' };
 // The button that sends the request, which a refused edit's note names.
 const SENDS: Record<RequestScope, string> = { registration: 'Create Credential', authentication: 'Assert Credential' };
 
-// The JSON editor beside a ceremony's form: the request the ceremony sends, as
-// text. An edit applies as it parses: the form follows at once; one that does
-// not parse says why and where, and the form keeps the last request it could
-// read. Tab, Shift+Tab, Enter, { and [ edit the text (editor/keys.js); Escape,
-// then Tab, leaves it. Geist Mono for the JSON only.
-export function JsonEditor({ scope, request }: { scope: RequestScope; request: RequestEditor }) {
-  const headingId = useId();
-  const noteId = useId();
+// The editor's own edits (editor/keys.js): Tab, Shift+Tab, Enter, { and [ edit
+// the text, the selection set once the edit is rendered; Escape lets the next
+// Tab leave. Also where a parse error is: goTo(offset).
+function useEditorKeys(request: RequestEditor) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Where the selection goes once a key's edit is rendered.
   const pendingSelection = useRef<[number, number] | null>(null);
   // Escape lets the next Tab leave the editor.
   const leaving = useRef(false);
-  const title = editorTitle(scope);
-  const { edit } = request;
-  const toast = useToast();
-  const reset = () => {
-    request.resetEditor();
-    toast({ tone: 'info', message: EDITOR_TEXT.reset });
-  };
 
   useLayoutEffect(() => {
     const selection = pendingSelection.current;
@@ -77,6 +66,70 @@ export function JsonEditor({ scope, request }: { scope: RequestScope; request: R
     textarea.setSelectionRange(offset, offset);
   };
 
+  return { textareaRef, onKeyDown, goTo };
+}
+
+// Why the form does not follow the text: where it stops being JSON, or that
+// the request is sent as it is.
+function EditNote({
+  edit,
+  scope,
+  noteId,
+  goTo,
+}: {
+  edit: Exclude<EditedRequest, { status: 'accepted' }>;
+  scope: RequestScope;
+  noteId: string;
+  goTo: (offset: number) => void;
+}) {
+  return (
+    <div
+      id={noteId}
+      role={edit.status === 'unparsed' ? 'alert' : 'status'}
+      data-edit={edit.status}
+      className={cx(
+        'flex flex-col gap-2 rounded-sm border px-4 py-3 text-body',
+        edit.status === 'unparsed' ? 'border-danger-line bg-danger-tint text-danger' : 'border-warning-line bg-warning-tint text-warning',
+      )}
+    >
+      <p className="flex items-start gap-2 wrap-anywhere">
+        <AlertIcon size={14} className="mt-1 shrink-0" />
+        {edit.message}
+      </p>
+      {edit.status === 'unparsed' && edit.location ? (
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-label">
+          <span data-location="">
+            Line {edit.location.line}, column {edit.location.column}
+          </span>
+          <Button variant="quiet" size="sm" onClick={() => goTo(edit.location!.offset)}>
+            Go to line {edit.location.line}
+          </Button>
+        </p>
+      ) : null}
+      {edit.status === 'refused' ? (
+        <p className="text-label">The form keeps the last request it could read; {SENDS[scope]} sends this JSON as it is.</p>
+      ) : null}
+    </div>
+  );
+}
+
+// The JSON editor beside a ceremony's form: the request the ceremony sends, as
+// text. An edit applies as it parses: the form follows at once; one that does
+// not parse says why and where, and the form keeps the last request it could
+// read. Tab, Shift+Tab, Enter, { and [ edit the text (editor/keys.js); Escape,
+// then Tab, leaves it. Geist Mono for the JSON only.
+export function JsonEditor({ scope, request }: { scope: RequestScope; request: RequestEditor }) {
+  const headingId = useId();
+  const noteId = useId();
+  const { textareaRef, onKeyDown, goTo } = useEditorKeys(request);
+  const title = editorTitle(scope);
+  const { edit } = request;
+  const toast = useToast();
+  const reset = () => {
+    request.resetEditor();
+    toast({ tone: 'info', message: EDITOR_TEXT.reset });
+  };
+
   return (
     <section
       aria-labelledby={headingId}
@@ -113,35 +166,7 @@ export function JsonEditor({ scope, request }: { scope: RequestScope; request: R
         data-gramm_editor="false"
         data-enable-grammarly="false"
       />
-      {edit && edit.status !== 'accepted' ? (
-        <div
-          id={noteId}
-          role={edit.status === 'unparsed' ? 'alert' : 'status'}
-          data-edit={edit.status}
-          className={cx(
-            'flex flex-col gap-2 rounded-sm border px-4 py-3 text-body',
-            edit.status === 'unparsed' ? 'border-danger-line bg-danger-tint text-danger' : 'border-warning-line bg-warning-tint text-warning',
-          )}
-        >
-          <p className="flex items-start gap-2 wrap-anywhere">
-            <AlertIcon size={14} className="mt-1 shrink-0" />
-            {edit.message}
-          </p>
-          {edit.status === 'unparsed' && edit.location ? (
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-label">
-              <span data-location="">
-                Line {edit.location.line}, column {edit.location.column}
-              </span>
-              <Button variant="quiet" size="sm" onClick={() => goTo(edit.location!.offset)}>
-                Go to line {edit.location.line}
-              </Button>
-            </p>
-          ) : null}
-          {edit.status === 'refused' ? (
-            <p className="text-label">The form keeps the last request it could read; {SENDS[scope]} sends this JSON as it is.</p>
-          ) : null}
-        </div>
-      ) : null}
+      {edit && edit.status !== 'accepted' ? <EditNote edit={edit} scope={scope} noteId={noteId} goTo={goTo} /> : null}
     </section>
   );
 }
