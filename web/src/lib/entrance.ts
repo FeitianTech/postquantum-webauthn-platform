@@ -24,9 +24,11 @@ function listen() {
  * The entrance class for an element while it is `shown`, decided each time it
  * is shown: none when the person has done nothing yet. It never changes while
  * the element stays shown (adding an animation to a shown element plays it).
+ * `openedByUrl`: the element is what the URL opened, mounting late (a section
+ * whose chunk arrived after the person pressed something): it does not enter.
  */
-export function useEntrance(shown: boolean) {
-  const [showing, setShowing] = useState(() => ({ shown, enters: acted }));
+export function useEntrance(shown: boolean, openedByUrl = false) {
+  const [showing, setShowing] = useState(() => ({ shown, enters: acted && !openedByUrl }));
   if (showing.shown !== shown) setShowing({ shown, enters: acted });
   useEffect(listen, []);
   return shown && showing.enters ? ENTRANCE_CLASS : undefined;

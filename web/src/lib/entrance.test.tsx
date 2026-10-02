@@ -2,8 +2,8 @@ import { act, render, screen } from '@testing-library/react';
 
 import { useEntrance } from './entrance';
 
-function Panel({ shown }: { shown: boolean }) {
-  const entrance = useEntrance(shown);
+function Panel({ shown, openedByUrl }: { shown: boolean; openedByUrl?: boolean }) {
+  const entrance = useEntrance(shown, openedByUrl);
   return <div data-testid="panel" hidden={!shown} className={entrance} />;
 }
 
@@ -35,6 +35,18 @@ describe('the entrance', () => {
     unmount();
 
     render(<Panel shown />);
+    expect(panel().className).toContain('animate-[section-in');
+  });
+
+  it('is none for what the URL opened when it mounts late, and plays when it is shown again', () => {
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown'));
+    });
+    const { rerender } = render(<Panel shown openedByUrl />);
+    expect(panel()).not.toHaveAttribute('class');
+
+    rerender(<Panel shown={false} openedByUrl />);
+    rerender(<Panel shown openedByUrl />);
     expect(panel().className).toContain('animate-[section-in');
   });
 });

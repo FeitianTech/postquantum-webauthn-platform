@@ -28,9 +28,26 @@ describe('the app shell', () => {
     expect(advanced.className).not.toContain('animate-[section-in');
 
     await userEvent.click(screen.getByRole('tab', { name: 'Codec' }));
+    // The Codec's chunk arrives after the click: it comes in then.
+    await screen.findByRole('heading', { level: 2, name: 'Codec' });
     expect(screen.getByRole('tabpanel', { name: 'Codec' }).className).toContain('animate-[section-in');
     await userEvent.click(screen.getByRole('tab', { name: 'Advanced Authentication' }));
     expect(screen.getByRole('tabpanel', { name: 'Advanced Authentication' }).className).toContain('animate-[section-in');
+  });
+
+  it('keeps the section the URL names a placeholder until its chunk arrives, then shows it without an entrance', async () => {
+    window.history.replaceState({ fromNext: true }, '', '/#codec');
+    renderPage(<AppShell />);
+    const placeholder = screen.getByRole('tabpanel', { name: 'Codec' });
+
+    expect(placeholder).toHaveAttribute('aria-busy', 'true');
+    expect(placeholder).toBeEmptyDOMElement();
+    await userEvent.keyboard('{Shift}');
+    const heading = await screen.findByRole('heading', { level: 2, name: 'Codec' });
+    const panel = screen.getByRole('tabpanel', { name: 'Codec' });
+    expect(panel).toContainElement(heading);
+    expect(panel).not.toHaveAttribute('aria-busy');
+    expect(panel.className).not.toContain('animate-[section-in');
   });
 
   it('shows the title, the four sections, Analyze Browser and GitHub', () => {
@@ -113,6 +130,7 @@ describe('the app shell', () => {
     renderPage(<AppShell />);
 
     await userEvent.click(screen.getByRole('tab', { name: 'Codec' }));
+    await screen.findByRole('heading', { level: 2, name: 'Codec' });
     const panel = screen.getByRole('tabpanel', { name: 'Codec' });
     expect(panel).toHaveTextContent('Decode or encode WebAuthn payloads to inspect their underlying data formats.');
     // The Codec has moved: it leads nowhere else.

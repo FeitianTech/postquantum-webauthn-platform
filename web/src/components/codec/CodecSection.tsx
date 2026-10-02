@@ -146,9 +146,9 @@ function ModePanel({ mode, active, codec }: { mode: CodecMode; active: boolean; 
 
 // The Codec section: decode what a WebAuthn or CTAP payload holds, or encode a
 // value back to bytes. Each mode keeps its own input and answer.
-export function CodecSection({ active }: { active: boolean }) {
+export function CodecSection({ active, openedByUrl = false }: { active: boolean; openedByUrl?: boolean }) {
   const section = SECTIONS.find((candidate) => candidate.id === 'codec')!;
-  const entrance = useEntrance(active);
+  const entrance = useEntrance(active, openedByUrl);
   const ids = segmentIds(NAV_ID, 'codec');
   const [mode, setMode] = useState<CodecMode>('decode');
   const decode = useCodec('decode');
