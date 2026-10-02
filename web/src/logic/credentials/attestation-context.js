@@ -1,9 +1,7 @@
 import { aaguidGuid, aaguidHex } from '../shared/aaguid.js';
 import { deriveAaguidFromCredentialData } from './record-fields.js';
-import {
-    collectCredentialCertificates,
-    extractAaguidFromCertificateEntries,
-} from './certificates/core.js';
+import { extractAaguidFromCertificateEntries } from './certificates/aaguid.js';
+import { collectCredentialCertificates } from './certificates/core.js';
 
 export function extractCredentialAttestationContext(cred) {
     const propertiesData = cred && typeof cred.properties === 'object' && cred.properties !== null

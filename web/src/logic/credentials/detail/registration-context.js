@@ -3,7 +3,7 @@ import {
 } from '../../shared/bytes.js';
 import { deriveAaguidFromCredentialData } from '../record-fields.js';
 import { aaguidHex } from '../../shared/aaguid.js';
-import {extractAaguidFromCertificateEntries} from '../certificates/core.js';
+import {extractAaguidFromCertificateEntries} from '../certificates/aaguid.js';
 import { cloneJson } from '../../shared/json.js';
 import {
     collectTruthyEntries,
