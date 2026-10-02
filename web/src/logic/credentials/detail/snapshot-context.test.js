@@ -6,10 +6,10 @@ import {
 } from './snapshot-context.js';
 import {
   EMPTY_DETAIL_PREPARATION,
-  captureRegistrationState,
   createRegistrationState,
-  prepareRegistrationState,
 } from '../registration/state.js';
+import { prepareRegistrationState } from '../registration/prepare.js';
+import { captureRegistrationState } from '../registration/state-snapshot.js';
 import { sanitizeRelyingPartyInfo } from '../registration/sanitize.js';
 import { goldenDecode, registration } from '@/test/logic/credentials/registration-detail-answers.js';
 

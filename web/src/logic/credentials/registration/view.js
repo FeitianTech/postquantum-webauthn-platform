@@ -16,13 +16,9 @@ import {
     collectTruthyEntries,
     normalizeClientDataString,
 } from './data-utils.js';
-import {
-    applyRegistrationSnapshot,
-    captureRegistrationState,
-    hashAuthenticatorData,
-    prepareRegistrationState,
-    visibleStateCertificates,
-} from './state.js';
+import {hashAuthenticatorData, prepareRegistrationState} from './prepare.js';
+import {visibleStateCertificates} from './state.js';
+import {applyRegistrationSnapshot, captureRegistrationState} from './state-snapshot.js';
 import {sanitiseAttestationObjectForDisplay} from './sanitize-attestation-object.js';
 import {sanitizeRelyingPartyInfo} from './sanitize.js';
 

@@ -1,4 +1,4 @@
-import {applyRegistrationSnapshot} from '../registration/state.js';
+import {applyRegistrationSnapshot} from '../registration/state-snapshot.js';
 
 // A snapshot that holds the registration as data (schemaVersion 2 and later).
 // Anything else -- an older snapshot, or none -- leaves the credential to be

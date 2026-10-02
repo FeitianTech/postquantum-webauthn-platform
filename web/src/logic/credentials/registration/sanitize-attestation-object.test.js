@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { createRegistrationState, prepareRegistrationState } from './state.js';
+import { prepareRegistrationState } from './prepare.js';
+import { createRegistrationState } from './state.js';
 import { sanitiseAttestationObjectForDisplay } from './sanitize-attestation-object.js';
 import { sanitizeParsedCertificateDetails } from './sanitize.js';
 import { advancedComplete, goldenDecode, registration } from '@/test/logic/credentials/registration-detail-answers.js';
