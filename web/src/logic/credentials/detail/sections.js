@@ -135,7 +135,7 @@ export function describeProperties({
     return {
         title: DETAIL_TEXT.properties,
         discoverable: cred.residentKey ?? false,
-        largeBlob: cred.largeBlob ?? cred.largeBlobSupported ?? false,
+        largeBlob: cred.largeBlob ?? false,
         minPinLength: extractMinPinLengthValue(cred),
         checks: [
             { label: 'Signature Valid', value: check('signatureValid', 'attestationSignatureValid'), rootChecks: null },

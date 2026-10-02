@@ -16,7 +16,7 @@ export function credentialSupportsLargeBlob(cred) {
     if (!cred || typeof cred !== 'object') {
         return false;
     }
-    if (cred.largeBlob === true || cred.largeBlobSupported === true) {
+    if (cred.largeBlob === true) {
         return true;
     }
     const clientOutputs = cred.clientExtensionOutputs;
@@ -30,12 +30,6 @@ export function credentialSupportsLargeBlob(cred) {
             } else {
                 return true;
             }
-        }
-    }
-    const properties = cred.properties;
-    if (properties && typeof properties === 'object') {
-        if (properties.largeBlob === true || properties.largeBlobSupported === true) {
-            return true;
         }
     }
     return false;

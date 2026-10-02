@@ -82,7 +82,7 @@ export function describeCredentialCard(credential, { indicators, algorithmTag, c
     if (credential.residentKey === true || credential.discoverable === true) {
         tags.push('Discoverable');
     }
-    if (credential.largeBlob === true || credential.largeBlobSupported === true) {
+    if (credential.largeBlob === true) {
         tags.push('Large blob');
     }
     const { aaguidGuid, aaguidUnreadable, rootStatus, metadataAvailable } = indicators;

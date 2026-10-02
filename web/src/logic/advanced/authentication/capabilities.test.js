@@ -14,21 +14,19 @@ import {
 // with no page (advanced/authentication/capabilities.js).
 
 describe('what a credential supports', () => {
-  it('largeBlob: said by the record, its extension outputs or its properties', () => {
+  it('largeBlob: said by the record or its extension outputs', () => {
     expect(credentialSupportsLargeBlob(null)).toBe(false);
     expect(credentialSupportsLargeBlob('record')).toBe(false);
     expect(credentialSupportsLargeBlob({ largeBlob: true })).toBe(true);
-    expect(credentialSupportsLargeBlob({ largeBlobSupported: true })).toBe(true);
     for (const output of [{ supported: true }, { written: true }, { blob: 'x' }, { result: 'x' }, 'present']) {
       expect(credentialSupportsLargeBlob({ clientExtensionOutputs: { largeBlob: output } })).toBe(true);
     }
     expect(credentialSupportsLargeBlob({ clientExtensionOutputs: { largeBlob: { supported: false } } })).toBe(false);
     expect(credentialSupportsLargeBlob({ clientExtensionOutputs: { largeBlob: null } })).toBe(false);
     expect(credentialSupportsLargeBlob({ clientExtensionOutputs: 'none' })).toBe(false);
-    expect(credentialSupportsLargeBlob({ properties: { largeBlob: true } })).toBe(true);
-    expect(credentialSupportsLargeBlob({ properties: { largeBlobSupported: true } })).toBe(true);
-    expect(credentialSupportsLargeBlob({ properties: { largeBlob: 'yes' } })).toBe(false);
-    expect(credentialSupportsLargeBlob({ properties: 'none' })).toBe(false);
+    // No record holds largeBlob under its properties, or as largeBlobSupported.
+    expect(credentialSupportsLargeBlob({ properties: { largeBlob: true } })).toBe(false);
+    expect(credentialSupportsLargeBlob({ largeBlobSupported: true })).toBe(false);
   });
 
   it('prf: said by its extension outputs or its properties, unless they say it is not enabled', () => {

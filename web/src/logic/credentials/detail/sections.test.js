@@ -103,8 +103,8 @@ describe('describeProperties', () => {
     expect(checkValues(section)['AAGUID Match']).toBe(true);
   });
 
-  it('falls back to the older name for large blob, then to false', () => {
-    expect(properties({ largeBlobSupported: true })).toMatchObject({ discoverable: false, largeBlob: true });
+  it('reads large blob support from the record, and false when it says nothing', () => {
+    expect(properties({ largeBlob: true })).toMatchObject({ discoverable: false, largeBlob: true });
     expect(properties({})).toMatchObject({ discoverable: false, largeBlob: false, minPinLength: null });
   });
 
