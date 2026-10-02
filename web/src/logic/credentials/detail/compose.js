@@ -1,10 +1,12 @@
 // A saved credential's details, as data: the sections above its registration
 // (./sections.js) and the registration's own view (../registration/view.js),
-// composed into `state` (../registration/state.js) from the record, its saved
-// snapshot, or the decoder (`decode`). DOM-free: the credential's details dialog
-// builds from it.
+// composed into a state of their own (../registration/state.js) from the record,
+// its saved snapshot, or the server's decoder (../registration/decode-payload.js).
+// DOM-free: the credential's details dialog builds from it.
 import {extractCredentialAttestationContext} from '../attestation-context.js';
-import {resetRegistrationState} from '../registration/state.js';
+import {describeCoseAlgorithm, describeCoseKeyType, describeMldsaParameterSet} from '../cose-labels.js';
+import {decodePayloadThroughApi} from '../registration/decode-payload.js';
+import {createRegistrationState} from '../registration/state.js';
 import {composeRegistration} from '../registration/view.js';
 import {
     describeAaguid,
@@ -22,23 +24,36 @@ import {
     resolveRegistrationSnapshotContext,
 } from './snapshot-context.js';
 
+/** @import { RegistrationState } from '../registration/state.js' */
+/** @import { RegistrationView } from '../registration/view.js' */
+/** @import { DetailSectionsView } from './sections.js' */
+
+/**
+ * Everything a credential's details show.
+ * @typedef {DetailSectionsView & { registration: RegistrationView }} CredentialDetail
+ */
+
 /**
  * Whether the record must first be completed from its server artifact: an
  * advanced one whose snapshot does not hold the registration as data (an older
  * one lacks the response the sections are built from).
+ * @param {Record<string, any>} cred
+ * @returns {boolean}
  */
 export function needsArtifact(cred) {
     return cred.type !== 'simple' && !readSnapshotResponse(cred.registrationDetailSnapshot);
 }
 
 /**
- * Everything a credential's details show, in their order: `sections` (Properties,
- * User info with its AAGUID, Attestation Format, then Authenticator Data,
- * extensions and Public Key when the record has them) and `registration`.
- * describers: describeCoseAlgorithm, describeCoseKeyType, describeMldsaParameterSet.
+ * Everything a credential's details show, in their order: the sections
+ * (Properties, User info with its AAGUID, Attestation Format, then Authenticator
+ * Data, extensions and Public Key when the record has them) and `registration`;
+ * and the registration state it was composed into, which the details' levels read.
+ * @param {Record<string, any>} cred
+ * @returns {Promise<{ detail: CredentialDetail, state: RegistrationState }>}
  */
-export async function composeCredentialDetail(cred, { state, decode, describers }) {
-    resetRegistrationState(state);
+export async function composeCredentialDetail(cred) {
+    const state = createRegistrationState();
 
     const {
         detailPreparation,
@@ -74,7 +89,7 @@ export async function composeCredentialDetail(cred, { state, decode, describers 
         fallbackClientData: fallbackClientDataString,
         preferFallbackCertificates: Array.isArray(fallbackCertificates) && fallbackCertificates.length > 0,
         snapshotState: snapshotResponse ? snapshotState : null,
-    }, { state, decode });
+    }, { state, decode: decodePayloadThroughApi });
 
     const attestationFormatRaw = pickFirstString(
         cred.attestationFormat,
@@ -87,7 +102,8 @@ export async function composeCredentialDetail(cred, { state, decode, describers 
 
     const attestationContext = extractCredentialAttestationContext(cred);
 
-    return {
+    /** @type {CredentialDetail} */
+    const detail = {
         properties: describeProperties({
             cred,
             attestationContext,
@@ -100,7 +116,8 @@ export async function composeCredentialDetail(cred, { state, decode, describers 
         attestationFormat: describeAttestationFormat(attestationFormatRaw || 'none'),
         authenticatorData: describeAuthenticatorDataFlags(cred),
         extensions: describeExtensions(cred),
-        publicKey: describePublicKey(cred, describers),
+        publicKey: describePublicKey(cred, { describeCoseAlgorithm, describeCoseKeyType, describeMldsaParameterSet }),
         registration,
     };
+    return { detail, state };
 }

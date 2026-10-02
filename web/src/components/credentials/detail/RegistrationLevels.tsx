@@ -1,9 +1,15 @@
 import { CertificateSummary } from '@/components/mds/CertificateSummary';
 import { Button } from '@/components/ui/Button';
 import { CodeBlock } from '@/components/ui/CodeBlock';
+import {
+  type AttestationView,
+  type CertificateView,
+  REGISTRATION_TEXT,
+  type RegistrationView,
+} from '@/logic/credentials/registration/view.js';
+import { certificateSummary } from '@/logic/mds/explorer/certificate.js';
 
 import { DetailSection } from './DetailSections';
-import { type AttestationView, type CertificateView, REGISTRATION_WORDS, type RegistrationView, summaryOf } from './model';
 
 function Placeholder({ text }: { text: string }) {
   return <p className="text-body text-ink-muted italic">{text}</p>;
@@ -30,11 +36,11 @@ function Attestation({
 }) {
   const { body } = attestation;
   return (
-    <DetailSection id={`${idBase}-attestation`} title={REGISTRATION_WORDS.attestationTitle}>
+    <DetailSection id={`${idBase}-attestation`} title={REGISTRATION_TEXT.attestationTitle}>
       <div>
         {/* A heading of its own (the recorded specs split the words there). */}
         <h5 className="text-title-sm font-semibold text-ink" data-recorded-heading="">
-          {REGISTRATION_WORDS.attestationObject}
+          {REGISTRATION_TEXT.attestationObject}
         </h5>
         <div className="mt-2">
           {body.kind === 'json' ? (
@@ -63,7 +69,7 @@ function Attestation({
           {attestation.hasAuthenticatorData ? (
             <li>
               <Button variant="secondary" size="sm" data-level-open="authenticator-data" onClick={onAuthenticatorData}>
-                {REGISTRATION_WORDS.authenticatorData}
+                {REGISTRATION_TEXT.authenticatorData}
               </Button>
             </li>
           ) : null}
@@ -95,35 +101,35 @@ export function RegistrationLevel({
   // The level starts under the dialog's header: its first section needs no hairline.
   return (
     <div className="space-y-8 [&>section:first-child]:border-t-0 [&>section:first-child]:pt-0">
-      <DetailSection id={`${idBase}-response`} title={REGISTRATION_WORDS.responseTitle}>
+      <DetailSection id={`${idBase}-response`} title={REGISTRATION_TEXT.responseTitle}>
         <ol className="list-decimal space-y-5 pl-5 marker:text-ink-muted">
           <li className="min-w-0 pl-1">
-            <h5 className="text-title-sm font-semibold text-ink">{REGISTRATION_WORDS.createResponse}</h5>
+            <h5 className="text-title-sm font-semibold text-ink">{REGISTRATION_TEXT.createResponse}</h5>
             <div className="mt-2">
               {response.credential ? (
                 <CodeBlock value={response.credential} label="registration response" />
               ) : (
-                <Placeholder text={REGISTRATION_WORDS.noCredentialResponse} />
+                <Placeholder text={REGISTRATION_TEXT.noCredentialResponse} />
               )}
             </div>
           </li>
           <li className="min-w-0 pl-1">
-            <h5 className="text-title-sm font-semibold text-ink">{REGISTRATION_WORDS.parsedClientData}</h5>
+            <h5 className="text-title-sm font-semibold text-ink">{REGISTRATION_TEXT.parsedClientData}</h5>
             <div className="mt-2">
               {response.clientData ? (
                 <CodeBlock value={response.clientData} label="client data" />
               ) : (
-                <Placeholder text={REGISTRATION_WORDS.noClientData} />
+                <Placeholder text={REGISTRATION_TEXT.noClientData} />
               )}
             </div>
           </li>
         </ol>
       </DetailSection>
-      <DetailSection id={`${idBase}-server`} title={REGISTRATION_WORDS.serverDataTitle}>
+      <DetailSection id={`${idBase}-server`} title={REGISTRATION_TEXT.serverDataTitle}>
         {response.relyingParty ? (
           <CodeBlock value={response.relyingParty} label="server-retrieved data" />
         ) : (
-          <Placeholder text={REGISTRATION_WORDS.noRelyingParty} />
+          <Placeholder text={REGISTRATION_TEXT.noRelyingParty} />
         )}
       </DetailSection>
       {registration.attestation ? (
@@ -144,7 +150,7 @@ export function RegistrationLevel({
  * or why there is none.
  */
 export function CertificateLevel({ view, idBase }: { view: CertificateView; idBase: string }) {
-  const summary = summaryOf(view.details);
+  const summary = certificateSummary(view.details);
   const subject = typeof view.details.subject === 'string' ? view.details.subject.trim() : '';
   const issuer = typeof view.details.issuer === 'string' ? view.details.issuer.trim() : '';
   return (

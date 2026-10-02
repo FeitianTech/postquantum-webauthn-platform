@@ -12,11 +12,8 @@ import {
 } from '../registration/view.js';
 import { createRegistrationState } from '../registration/state.js';
 import { hydrateCredentialFromServer } from '../hydrate.js';
-import {
-  describeCoseAlgorithm,
-  describeCoseKeyType,
-  describeMldsaParameterSet,
-} from '../cose-labels.js';
+import { describeCoseAlgorithm } from '../cose-labels.js';
+import { decodePayloadThroughApi } from '../registration/decode-payload.js';
 import { sanitiseRegistrationDetailSnapshot } from '../storage/local/snapshot-sanitize.js';
 import {
   advancedArtifact,
@@ -27,16 +24,18 @@ import {
 
 // A saved credential's details, as data (credentials/detail/compose.js).
 
+// The server's decoder, answering as each test says.
+vi.mock('../registration/decode-payload.js', () => ({ decodePayloadThroughApi: vi.fn() }));
+
 const AAGUID_GUID = '00112233-4455-6677-8899-aabbccddeeff';
-const DESCRIBERS = { describeCoseAlgorithm, describeCoseKeyType, describeMldsaParameterSet };
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
 async function detailOf(cred, decode = recordedDecoder()) {
-  const state = createRegistrationState();
-  const detail = await composeCredentialDetail(cred, { state, decode, describers: DESCRIBERS });
+  vi.mocked(decodePayloadThroughApi).mockImplementation(decode);
+  const { detail, state } = await composeCredentialDetail(cred);
   return { state, decode, detail };
 }
 
@@ -116,12 +115,12 @@ describe('composeCredentialDetail', () => {
     expect(detail.publicKey.lines.at(-1)).toEqual({ label: 'ML-DSA parameter set:', value: 'ML-DSA-65' });
   });
 
-  it('empties the state it is given before composing', async () => {
-    const state = createRegistrationState();
-    state.attestationCertificates = [{ parsedX5c: { summary: 'left over' } }];
-    state.visibleAttestationCertificateIndices = [0];
-    await composeCredentialDetail(simpleRecord('es256'), { state, decode: recordedDecoder(), describers: DESCRIBERS });
-    expect(state.attestationCertificates).toEqual([]);
+  it('composes each detail into a state of its own', async () => {
+    const first = await detailOf(simpleRecord('packedX5c'));
+    const second = await detailOf(simpleRecord('es256'));
+    expect(second.state).not.toBe(first.state);
+    expect(first.state.attestationCertificates).toHaveLength(1);
+    expect(second.state.attestationCertificates).toEqual([]);
   });
 
   it('shows a saved snapshot as it is, without asking the decoder', async () => {

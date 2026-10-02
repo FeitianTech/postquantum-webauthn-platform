@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { type CredentialDetail, composeCredentialDetail, needsArtifact } from '@/logic/credentials/detail/compose.js';
 import { hydrateCredentialFromServer } from '@/logic/credentials/hydrate.js';
+import type { RegistrationState } from '@/logic/credentials/registration/state.js';
 import type { SavedCredential } from '@/logic/credentials/saved-list.js';
-
-import { type CredentialDetail, type RegistrationState, compose, needsItsArtifact } from './model';
 
 type DetailPhase =
   | { phase: 'loading' }
@@ -19,7 +19,7 @@ function copyOf(record: SavedCredential): SavedCredential {
 }
 
 async function completed(record: SavedCredential, onSaved: () => void) {
-  if (!needsItsArtifact(record)) return { record, failed: false };
+  if (!needsArtifact(record)) return { record, failed: false };
   const storageId = String(record.storageId || record.localStorageId || '');
   const known = storageId ? hydrated.get(storageId) : undefined;
   if (known) return { record: copyOf(known), failed: false };
@@ -47,7 +47,7 @@ export function useCredentialDetail(record: SavedCredential | null, key: string,
     let current = true;
     void (async () => {
       const { record: complete, failed } = await completed(copyOf(shown), () => latest.current.onSaved());
-      const { detail, state } = await compose(complete);
+      const { detail, state } = await composeCredentialDetail(complete);
       if (current) setResult({ key, phase: { phase: 'ready', detail, state, hydrationFailed: failed } });
     })();
     return () => {

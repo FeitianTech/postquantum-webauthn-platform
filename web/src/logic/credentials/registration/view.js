@@ -28,6 +28,34 @@ import {sanitizeRelyingPartyInfo} from './sanitize.js';
 
 /** @import { Decode, RegistrationSources, RegistrationState } from './state.js' */
 
+/**
+ * "Attestation Information": the attestation object's body (its JSON, a
+ * placeholder, or why it could not be decoded), a button per listed certificate,
+ * whether there is authenticator data, and the messages.
+ * @typedef {{ kind: 'json' | 'placeholder' | 'error', text: string }} AttestationBody
+ * @typedef {object} AttestationView
+ * @property {AttestationBody} body
+ * @property {Array<{ index: number, title: string }>} certificates
+ * @property {string} certificateMessage
+ * @property {boolean} hasAuthenticatorData
+ * @property {string} authenticatorError
+ */
+
+/**
+ * The registration's view: the response's three blocks as text, and the attestation.
+ * @typedef {{ response: { credential: string, clientData: string, relyingParty: string }, attestation: AttestationView | null }} RegistrationView
+ */
+
+/**
+ * A listed certificate's own view.
+ * @typedef {object} CertificateView
+ * @property {string} title
+ * @property {Record<string, unknown>} details
+ * @property {string} text
+ * @property {string} error
+ * @property {string} placeholder
+ */
+
 export const REGISTRATION_TEXT = Object.freeze({
     responseTitle: 'Authenticator Response',
     createResponse: 'Response for navigator.credentials.create()',
@@ -72,6 +100,7 @@ export function attestationObjectJson(attestationObject, attestationFormatRaw, c
  *     authenticatorDataValue?: string,
  *     authenticatorDecodeError?: string,
  * }} [parts]
+ * @returns {AttestationView | null}
  */
 export function describeAttestationSection(state, {
     attestationObjectValue = '',
@@ -117,6 +146,7 @@ export function describeAttestationSection(state, {
 
     const hasAuthenticatorData = Boolean(state.authenticatorData);
 
+    /** @type {AttestationBody} */
     let body;
     if (attestationObject) {
         body = { kind: 'json', text: attestationObjectJson(attestationObject, attestationFormatRaw, certificatesAll) };
@@ -295,6 +325,9 @@ export async function composeRegistration({
  * A listed certificate's own view (numbered from 0 in the list's order): its
  * title, its text, the parser's error when there is no text, or neither; and its
  * decoded details. Null when the view lists no such certificate.
+ * @param {RegistrationState} state
+ * @param {number} index
+ * @returns {CertificateView | null}
  */
 export function describeAttestationCertificate(state, index) {
     const visibleCertificates = visibleStateCertificates(state);
@@ -317,7 +350,11 @@ export function describeAttestationCertificate(state, index) {
     };
 }
 
-/** The authenticator data's own view: its title and the decoded data as JSON; null when there is none. */
+/**
+ * The authenticator data's own view: its title and the decoded data as JSON; null when there is none.
+ * @param {RegistrationState} state
+ * @returns {{ title: string, text: string } | null}
+ */
 export function describeAuthenticatorData(state) {
     const data = state.authenticatorData;
     if (!data) {

@@ -6,9 +6,15 @@ import { Button } from '@/components/ui/Button';
 import { CodeBlock } from '@/components/ui/CodeBlock';
 import { KeyValueGrid } from '@/components/ui/KeyValueGrid';
 import { MonoValue } from '@/components/ui/MonoValue';
+import type { CredentialDetail } from '@/logic/credentials/detail/compose.js';
+import {
+  type Check,
+  DETAIL_TEXT,
+  type Identifier,
+  type ValueKind,
+  describeValue,
+} from '@/logic/credentials/detail/sections.js';
 import { type CredentialRowView, SAVED_LIST_TEXT } from '@/logic/credentials/saved-list.js';
-
-import { type Check, type CredentialDetail, DETAIL_WORDS, type Identifier, type ValueKind, valueOf } from './model';
 
 const TONES: Record<ValueKind, 'success' | 'danger' | 'neutral'> = {
   true: 'success',
@@ -25,7 +31,7 @@ function bare(label: string) {
 
 /** A property's or a check's value: true, false, N/A or as written, with its tone and mark. */
 function ValueChip({ value }: { value: unknown }) {
-  const described = valueOf(value);
+  const described = describeValue(value);
   return (
     <StatusChip tone={TONES[described.kind]} data-value={described.kind}>
       {described.text}
@@ -63,7 +69,7 @@ function CheckRow({ check }: { check: Check }) {
 
 // A root the Root Valid check tried, named, in its verdict's tone.
 function ValueChipNamed({ label, value }: { label: string; value: unknown }) {
-  const described = valueOf(value);
+  const described = describeValue(value);
   return (
     <StatusChip tone={TONES[described.kind]} data-root={label}>
       {label}
@@ -74,15 +80,15 @@ function ValueChipNamed({ label, value }: { label: string; value: unknown }) {
 
 function Properties({ detail, idBase }: { detail: CredentialDetail; idBase: string }) {
   const { properties } = detail;
-  const [before, strong, after] = DETAIL_WORDS.checksNote;
+  const [before, strong, after] = DETAIL_TEXT.checksNote;
   return (
     <DetailSection id={`${idBase}-properties`} title={properties.title}>
       <KeyValueGrid
         items={[
-          { key: 'discoverable', label: bare(DETAIL_WORDS.discoverable), value: <ValueChip value={properties.discoverable} />, plain: true },
-          { key: 'largeBlob', label: bare(DETAIL_WORDS.largeBlob), value: <ValueChip value={properties.largeBlob} />, plain: true },
+          { key: 'discoverable', label: bare(DETAIL_TEXT.discoverable), value: <ValueChip value={properties.discoverable} />, plain: true },
+          { key: 'largeBlob', label: bare(DETAIL_TEXT.largeBlob), value: <ValueChip value={properties.largeBlob} />, plain: true },
           ...(properties.minPinLength !== null
-            ? [{ key: 'minPinLength', label: bare(DETAIL_WORDS.minPinLength), value: String(properties.minPinLength), plain: true }]
+            ? [{ key: 'minPinLength', label: bare(DETAIL_TEXT.minPinLength), value: String(properties.minPinLength), plain: true }]
             : []),
         ]}
       />
@@ -114,7 +120,7 @@ function Spellings({ title, values, context }: { title: string; values: { label:
           <div key={entry.label} className="relative grid min-w-0 grid-cols-1 items-baseline gap-x-3 sm:grid-cols-[3rem_minmax(0,1fr)]">
             <dt className="text-label text-ink-muted max-sm:flex max-sm:min-h-8 max-sm:items-center max-sm:pr-10">{entry.label}</dt>
             <dd className="min-w-0">
-              {entry.value === DETAIL_WORDS.notAvailable ? (
+              {entry.value === DETAIL_TEXT.notAvailable ? (
                 <span className="text-body text-ink-muted">{entry.value}</span>
               ) : (
                 <MonoValue value={entry.value} label={`${context} (${entry.label})`} wrapOnPhone />
@@ -175,8 +181,8 @@ function UserInfo({ detail, row, idBase }: { detail: CredentialDetail; row: Cred
       <KeyValueGrid
         columns={2}
         items={[
-          { key: 'name', label: bare(DETAIL_WORDS.name), value: userInfo.name, plain: true },
-          { key: 'displayName', label: bare(DETAIL_WORDS.displayName), value: userInfo.displayName, plain: true },
+          { key: 'name', label: bare(DETAIL_TEXT.name), value: userInfo.name, plain: true },
+          { key: 'displayName', label: bare(DETAIL_TEXT.displayName), value: userInfo.displayName, plain: true },
         ]}
       />
       {userInfo.identifiers.map((identifier) => (
@@ -217,7 +223,7 @@ export function DetailSections({
             columns={4}
             items={[
               ...detail.authenticatorData.flags.map((flag) => ({ key: flag.name, label: flag.name, value: flag.value, plain: true, mono: true })),
-              { key: 'counter', label: bare(DETAIL_WORDS.signatureCounter), value: detail.authenticatorData.counter, plain: true, mono: true },
+              { key: 'counter', label: bare(DETAIL_TEXT.signatureCounter), value: detail.authenticatorData.counter, plain: true, mono: true },
             ]}
           />
         </DetailSection>

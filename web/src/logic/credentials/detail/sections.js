@@ -41,6 +41,31 @@ export function deriveAaguidDisplayValues(hex) {
     };
 }
 
+/**
+ * How the details say a value, and what they show above the registration.
+ * @typedef {'true' | 'false' | 'missing' | 'other'} ValueKind
+ * @typedef {{ kind: ValueKind, text: string }} DescribedValue
+ * @typedef {{ label: string, value: unknown }} RootCheck
+ * @typedef {{ label: string, value: unknown, rootChecks: RootCheck[] | null }} Check
+ * @typedef {(
+ *     | { title: string, spellings: Array<{ label: string, value: string }>, stored?: undefined, note?: undefined }
+ *     | { title: string, stored: string, note: string, spellings?: undefined }
+ * )} Identifier
+ * @typedef {{ title: string, discoverable: unknown, largeBlob: unknown, minPinLength: number | null, checks: Check[] }} PropertiesView
+ * @typedef {{ title: string, name: string, displayName: string, identifiers: Identifier[] }} UserInfoView
+ * @typedef {{ title: string, values: Array<{ label: string, value: string }> }} AaguidView
+ * @typedef {{ title: string, flags: Array<{ name: string, value: string }>, counter: string }} AuthenticatorDataView
+ * @typedef {{ title: string, lines: Array<{ label: string, value: string }> }} PublicKeyView
+ * @typedef {object} DetailSectionsView
+ * @property {PropertiesView} properties
+ * @property {UserInfoView} userInfo
+ * @property {AaguidView} aaguid
+ * @property {{ title: string, value: string }} attestationFormat
+ * @property {AuthenticatorDataView | null} authenticatorData
+ * @property {{ title: string, text: string } | null} extensions
+ * @property {PublicKeyView | null} publicKey
+ */
+
 export const DETAIL_TEXT = Object.freeze({
     properties: 'Properties',
     discoverable: 'Discoverable (resident key):',
@@ -71,7 +96,11 @@ export const DETAIL_TEXT = Object.freeze({
     notAvailable: 'N/A',
 });
 
-/** A check's or a property's value as the details say it: true, false, N/A when absent, or as written. */
+/**
+ * A check's or a property's value as the details say it: true, false, N/A when absent, or as written.
+ * @param {unknown} value
+ * @returns {DescribedValue}
+ */
 export function describeValue(value) {
     const normalized = typeof value === 'string' ? value.trim().toLowerCase() : value;
     if (normalized === true || normalized === 'true') {
@@ -93,6 +122,7 @@ const ROOT_CHECKS = [
 
 // Which roots the Root Valid check tried (FIDO MDS, the certificate chain), each
 // with its verdict (null when it was not tried); null when the checks name none.
+/** @returns {RootCheck[] | null} */
 function describeRootChecks(attestationChecksData) {
     const rootChecksRaw = attestationChecksData?.root_checks;
     if (!rootChecksRaw || typeof rootChecksRaw !== 'object') {
@@ -108,7 +138,10 @@ function describeRootChecks(attestationChecksData) {
     });
 }
 
-/** "Properties": discoverable, large blob, minPinLength, then the four checks and their note. */
+/**
+ * "Properties": discoverable, large blob, minPinLength, then the four checks and their note.
+ * @returns {PropertiesView}
+ */
 export function describeProperties({
     cred,
     attestationContext,
@@ -151,6 +184,11 @@ export function describeProperties({
 
 // An identifier the record keeps as base64url, in each spelling of its bytes; or
 // the value as stored, with why, when it is not base64url.
+/**
+ * @param {string} title
+ * @param {string} value
+ * @returns {Identifier}
+ */
 function describeIdentifier(title, value) {
     let bytes;
     try {
@@ -168,8 +206,13 @@ function describeIdentifier(title, value) {
     };
 }
 
-/** "User info at creation": the name and display name, then the user handle and the credential id when there are. */
+/**
+ * "User info at creation": the name and display name, then the user handle and the credential id when there are.
+ * @param {Record<string, any>} cred
+ * @returns {UserInfoView}
+ */
 export function describeUserInfo(cred) {
+    /** @type {Identifier[]} */
     const identifiers = [];
     if (cred.userHandle) {
         identifiers.push(describeIdentifier(DETAIL_TEXT.userHandle, cred.userHandle));
@@ -230,7 +273,10 @@ function resolveAaguidHex(cred, attestationContext) {
     return hex;
 }
 
-/** The AAGUID in each spelling (b64, b64u, hex, guid), each "N/A" when unknown. */
+/**
+ * The AAGUID in each spelling (b64, b64u, hex, guid), each "N/A" when unknown.
+ * @returns {AaguidView}
+ */
 export function describeAaguid(cred, attestationContext) {
     const {
         aaguidHex: normalizedAaguidHex,
@@ -253,14 +299,21 @@ export function describeAaguid(cred, attestationContext) {
     };
 }
 
-/** "Attestation Format": the format as given. */
+/**
+ * "Attestation Format": the format as given.
+ * @param {string} format
+ */
 export function describeAttestationFormat(format) {
     return { title: DETAIL_TEXT.attestationFormat, value: format };
 }
 
 const FLAG_NAMES = ['at', 'be', 'bs', 'ed', 'up', 'uv'];
 
-/** "Authenticator Data (registration)": each flag and the signature counter; null without flags. */
+/**
+ * "Authenticator Data (registration)": each flag and the signature counter; null without flags.
+ * @param {Record<string, any>} cred
+ * @returns {AuthenticatorDataView | null}
+ */
 export function describeAuthenticatorDataFlags(cred) {
     if (!cred.flags) {
         return null;
@@ -281,6 +334,15 @@ export function describeExtensions(cred) {
 }
 
 /** "Public Key": the algorithm, the COSE key type, an ML-DSA key's parameter set; null without either. */
+/**
+ * @param {Record<string, any>} cred
+ * @param {{
+ *     describeCoseAlgorithm: (algorithm: unknown) => string,
+ *     describeCoseKeyType: (keyType: unknown) => string,
+ *     describeMldsaParameterSet: (algorithm: unknown) => string,
+ * }} describers
+ * @returns {PublicKeyView | null}
+ */
 export function describePublicKey(cred, { describeCoseAlgorithm, describeCoseKeyType, describeMldsaParameterSet }) {
     const hasPublicKeyData = cred.publicKeyAlgorithm !== undefined
         || cred.algorithm !== undefined

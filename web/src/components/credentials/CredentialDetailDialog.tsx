@@ -3,10 +3,11 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { Spinner } from '@/components/ui/icons';
 import { Dialog, OverlayBody, OverlayHeader } from '@/components/ui/Overlay';
 import type { SectionRoute } from '@/lib/useSection';
+import { HYDRATE_TEXT } from '@/logic/credentials/hydrate.js';
+import { describeAttestationCertificate, describeAuthenticatorData } from '@/logic/credentials/registration/view.js';
 import type { CredentialRowView } from '@/logic/credentials/saved-list.js';
 
 import { DetailSections } from './detail/DetailSections';
-import { HYDRATE_FAILED, authenticatorDataView, certificateView } from './detail/model';
 import { AuthenticatorDataLevel, CertificateLevel, RegistrationLevel } from './detail/RegistrationLevels';
 import { useCredentialDetail } from './detail/useCredentialDetail';
 import { useSavedCredentials } from './useSavedCredentials';
@@ -80,8 +81,8 @@ export function CredentialDetailDialog({
   const base = ['credential', key];
   const registrationPath = [...base, 'registration'];
   const wanted = levelOf(rest);
-  const certificate = ready && wanted?.kind === 'certificate' ? certificateView(ready.state, wanted.number - 1) : null;
-  const authenticatorData = ready && wanted?.kind === 'authenticator-data' ? authenticatorDataView(ready.state) : null;
+  const certificate = ready && wanted?.kind === 'certificate' ? describeAttestationCertificate(ready.state, wanted.number - 1) : null;
+  const authenticatorData = ready && wanted?.kind === 'authenticator-data' ? describeAuthenticatorData(ready.state) : null;
   const known =
     wanted !== null &&
     (wanted.kind === 'certificate' ? Boolean(certificate) : wanted.kind === 'authenticator-data' ? Boolean(authenticatorData) : true);
@@ -152,7 +153,7 @@ export function CredentialDetailDialog({
               <h3 className="text-heading font-semibold break-words text-ink">{shown.name}</h3>
               {ready?.hydrationFailed ? (
                 <p role="note" className="mt-4 rounded-sm border border-warning-line bg-warning-tint px-4 py-3 text-body text-warning" data-hydration="failed">
-                  {HYDRATE_FAILED}
+                  {HYDRATE_TEXT.failed}
                 </p>
               ) : null}
               <div className="mt-6">
