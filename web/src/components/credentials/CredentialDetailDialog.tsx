@@ -40,6 +40,52 @@ function levelName(level: Level) {
 
 const TITLES = { detail: 'Credential Details', registration: 'Registration Details' } as const;
 
+type ReadyDetail = Extract<ReturnType<typeof useCredentialDetail>, { phase: 'ready' }>;
+
+// The level the URL asks for, with its certificate's or authenticator data's
+// view. Until the details are composed a deeper level cannot be checked; then
+// one the credential does not have is corrected to the level above it.
+function useDetailLevel(route: SectionRoute, key: string, rest: string[], ready: ReadyDetail | null, shownHere: boolean) {
+  const wanted = levelOf(rest);
+  const certificate = ready && wanted?.kind === 'certificate' ? describeAttestationCertificate(ready.state, wanted.number - 1) : null;
+  const authenticatorData = ready && wanted?.kind === 'authenticator-data' ? describeAuthenticatorData(ready.state) : null;
+  const known =
+    wanted !== null &&
+    (wanted.kind === 'certificate' ? Boolean(certificate) : wanted.kind === 'authenticator-data' ? Boolean(authenticatorData) : true);
+  const level: Level = ready && !known ? (rest[0] === 'registration' ? { kind: 'registration', depth: 1 } : { kind: 'detail', depth: 0 }) : (wanted ?? { kind: 'detail', depth: 0 });
+  const correction = shownHere && (wanted === null || (ready && !known));
+  const { replace } = route;
+  useEffect(() => {
+    if (correction) replace(level.depth ? ['credential', key, 'registration'] : ['credential', key]);
+  }, [correction, level.depth, key, replace]);
+  return { level, certificate, authenticatorData };
+}
+
+// Going deeper starts at the top; going back finds the level as it was, the
+// focus on what opened the one left.
+function useLevelScroll(open: boolean, key: string, level: Level) {
+  const levelRef = useRef<HTMLDivElement>(null);
+  const previous = useRef<{ key: string; level: Level } | null>(null);
+  const scrolls = useRef(new Map<string, number>());
+  useLayoutEffect(() => {
+    const before = previous.current;
+    previous.current = open ? { key, level } : null;
+    const scroller = levelRef.current?.closest<HTMLElement>('[data-overlay-scroll]');
+    if (!before || before.key !== key || !scroller) return;
+    if (level.depth > before.level.depth) {
+      scrolls.current.set(levelName(before.level), scroller.scrollTop);
+      scroller.scrollTop = 0;
+      levelRef.current?.querySelector<HTMLElement>(`[data-level="${levelName(level)}"]`)?.focus({ preventScroll: true });
+    } else if (level.depth < before.level.depth) {
+      scroller.scrollTop = scrolls.current.get(levelName(level)) ?? 0;
+      levelRef.current
+        ?.querySelector<HTMLElement>(`[data-level="${levelName(level)}"] [data-level-open="${levelName(before.level)}"]`)
+        ?.focus({ preventScroll: true });
+    }
+  });
+  return levelRef;
+}
+
 /**
  * A saved credential's details, in a dialog over its section at its own URL
  * (#simple/credential/<key>): the detail, then the registration's level
@@ -80,41 +126,8 @@ export function CredentialDetailDialog({
 
   const base = ['credential', key];
   const registrationPath = [...base, 'registration'];
-  const wanted = levelOf(rest);
-  const certificate = ready && wanted?.kind === 'certificate' ? describeAttestationCertificate(ready.state, wanted.number - 1) : null;
-  const authenticatorData = ready && wanted?.kind === 'authenticator-data' ? describeAuthenticatorData(ready.state) : null;
-  const known =
-    wanted !== null &&
-    (wanted.kind === 'certificate' ? Boolean(certificate) : wanted.kind === 'authenticator-data' ? Boolean(authenticatorData) : true);
-  // Until the details are composed a deeper level cannot be checked; then one
-  // the credential does not have is corrected to the level above it.
-  const level: Level = ready && !known ? (rest[0] === 'registration' ? { kind: 'registration', depth: 1 } : { kind: 'detail', depth: 0 }) : (wanted ?? { kind: 'detail', depth: 0 });
-  const correction = open && row && (wanted === null || (ready && !known));
-  useEffect(() => {
-    if (correction) replace(level.depth ? ['credential', key, 'registration'] : ['credential', key]);
-  }, [correction, level.depth, key, replace]);
-
-  // Going deeper starts at the top; going back finds the level as it was, the
-  // focus on what opened the one left.
-  const levelRef = useRef<HTMLDivElement>(null);
-  const previous = useRef<{ key: string; level: Level } | null>(null);
-  const scrolls = useRef(new Map<string, number>());
-  useLayoutEffect(() => {
-    const before = previous.current;
-    previous.current = open ? { key, level } : null;
-    const scroller = levelRef.current?.closest<HTMLElement>('[data-overlay-scroll]');
-    if (!before || before.key !== key || !scroller) return;
-    if (level.depth > before.level.depth) {
-      scrolls.current.set(levelName(before.level), scroller.scrollTop);
-      scroller.scrollTop = 0;
-      levelRef.current?.querySelector<HTMLElement>(`[data-level="${levelName(level)}"]`)?.focus({ preventScroll: true });
-    } else if (level.depth < before.level.depth) {
-      scroller.scrollTop = scrolls.current.get(levelName(level)) ?? 0;
-      levelRef.current
-        ?.querySelector<HTMLElement>(`[data-level="${levelName(level)}"] [data-level-open="${levelName(before.level)}"]`)
-        ?.focus({ preventScroll: true });
-    }
-  });
+  const { level, certificate, authenticatorData } = useDetailLevel(route, key, rest, ready, Boolean(open && row));
+  const levelRef = useLevelScroll(open, key, level);
 
   const onRegistration = useCallback(() => openPath(registrationPath), [openPath, registrationPath]);
   const title =
