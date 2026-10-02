@@ -1,63 +1,26 @@
 // A saved credential's fields as the pages compare them: its credential ID and
 // user handle in hex, its authenticator attachment, and the AAGUID its
 // authenticator data holds. DOM-free.
-import {
-    base64ToHex,
-    base64UrlToHex,
-    bytesToHex,
-} from '../shared/bytes.js';
+import { base64ToHex, base64UrlToHex } from '../shared/bytes.js';
 
-function isValidHex(str) {
-    return /^[0-9a-fA-F]*$/.test(str) && str.length > 0;
-}
-
-// Called with a value's $js text, which is never empty.
-function jsToHex(jsString) {
-    const match = jsString.match(/new Uint8Array\(\[([0-9, ]+)\]\)/);
-    if (!match) return '';
-    const numbers = match[1].split(',').map(n => parseInt(n.trim()));
-    return numbers.map(n => n.toString(16).padStart(2, '0')).join('');
-}
-
-// A byte value as hex: hex or base64url text, or a JSON byte value ({"$hex"}, …).
+// A stored byte value as lower-case hex: hex text as it is, else base64url text
+// decoded; '' for anything else.
 export function normalizeToHex(value) {
-    if (!value) {
+    if (typeof value !== 'string') {
         return '';
     }
-
-    if (typeof value === 'string') {
-        const trimmed = value.trim();
-        if (!trimmed) {
-            return '';
-        }
-
-        if (isValidHex(trimmed) && trimmed.length % 2 === 0) {
-            return trimmed.toLowerCase();
-        }
-
-        try {
-            return base64UrlToHex(trimmed).toLowerCase();
-        } catch (error) {
-            return '';
-        }
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return '';
     }
-
-    if (typeof value === 'object') {
-        if (value.$hex) {
-            return normalizeToHex(value.$hex);
-        }
-        if (value.$base64url) {
-            return normalizeToHex(value.$base64url);
-        }
-        if (value.$base64) {
-            return normalizeToHex(value.$base64);
-        }
-        if (value.$js) {
-            return normalizeToHex(jsToHex(value.$js));
-        }
+    if (/^[0-9a-fA-F]+$/.test(trimmed) && trimmed.length % 2 === 0) {
+        return trimmed.toLowerCase();
     }
-
-    return '';
+    try {
+        return base64UrlToHex(trimmed).toLowerCase();
+    } catch (error) {
+        return '';
+    }
 }
 
 export function getCredentialIdHex(credential) {
@@ -68,9 +31,7 @@ export function getCredentialIdHex(credential) {
     const candidates = [
         credential.credentialIdHex,
         credential.credentialId,
-        credential.credentialID,
         credential.id,
-        credential.rawId
     ];
 
     for (const candidate of candidates) {
@@ -91,9 +52,8 @@ export function getCredentialUserHandleHex(credential) {
     const candidates = [
         credential.userHandleHex,
         credential.userHandle,
-        credential.userId,
         credential.userHandleBase64,
-        credential.userHandleBase64Url
+        credential.userHandleBase64Url,
     ];
 
     for (const candidate of candidates) {
@@ -130,75 +90,33 @@ export function getStoredCredentialAttachment(cred) {
     return propertyValue;
 }
 
+// Authenticator data as hex, from the text a record keeps it as: hex, base64 or
+// base64url; '' for anything else.
 export function extractAuthenticatorDataHex(source) {
-    if (!source) {
+    if (typeof source !== 'string') {
         return '';
     }
-
-    if (typeof source === 'string') {
-        const trimmed = source.trim();
-        if (!trimmed) {
-            return '';
-        }
-        const hexCandidate = trimmed.replace(/[^0-9a-fA-F]/g, '');
-        if (hexCandidate.length === trimmed.length && hexCandidate.length % 2 === 0) {
-            return hexCandidate.toLowerCase();
-        }
-        try {
-            const fromBase64 = base64ToHex(trimmed);
-            if (fromBase64) {
-                return fromBase64;
-            }
-        } catch (error) {
-            // Ignore decode errors and continue checking other encodings
-        }
-        try {
-            const fromBase64Url = base64UrlToHex(trimmed);
-            if (fromBase64Url) {
-                return fromBase64Url;
-            }
-        } catch (error) {
-            // Ignore decode errors
-        }
+    const trimmed = source.trim();
+    if (!trimmed) {
         return '';
     }
-
-    if (Array.isArray(source)) {
-        try {
-            return bytesToHex(Uint8Array.from(source));
-        } catch (error) {
-            return '';
+    const hexCandidate = trimmed.replace(/[^0-9a-fA-F]/g, '');
+    if (hexCandidate.length === trimmed.length && hexCandidate.length % 2 === 0) {
+        return hexCandidate.toLowerCase();
+    }
+    try {
+        const fromBase64 = base64ToHex(trimmed);
+        if (fromBase64) {
+            return fromBase64;
         }
+    } catch (error) {
+        // Not base64: base64url is tried next.
     }
-
-    if (ArrayBuffer.isView(source)) {
-        return bytesToHex(new Uint8Array(source.buffer, source.byteOffset, source.byteLength));
+    try {
+        return base64UrlToHex(trimmed);
+    } catch (error) {
+        return '';
     }
-
-    if (source instanceof ArrayBuffer) {
-        return bytesToHex(new Uint8Array(source));
-    }
-
-    if (typeof source === 'object') {
-        const candidates = [
-            source.$hex,
-            source.$base64,
-            source.$base64url,
-            source.hex,
-            source.base64,
-            source.base64url,
-            source.raw,
-            source.value,
-        ];
-        for (const candidate of candidates) {
-            const extracted = extractAuthenticatorDataHex(candidate);
-            if (extracted) {
-                return extracted;
-            }
-        }
-    }
-
-    return '';
 }
 
 export function extractAaguidFromAuthDataHex(authDataHex) {
@@ -230,10 +148,7 @@ export function deriveAaguidFromCredentialData(cred) {
     }
 
     const sources = [
-        cred.registrationData && cred.registrationData.authenticatorData,
-        cred.properties && cred.properties.registrationData && cred.properties.registrationData.authenticatorData,
-        cred.properties && cred.properties.authenticatorData,
-        cred.relyingParty && cred.relyingParty.registrationData && cred.relyingParty.registrationData.authenticatorData,
+        cred.relyingParty?.registrationData?.authenticatorData,
         cred.authenticatorData,
     ];
 

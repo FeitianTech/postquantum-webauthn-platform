@@ -36,8 +36,15 @@ describe('getCredentialIdHex', () => {
 
 describe('getCredentialUserHandleHex', () => {
   it('reads the user handle in hex from each spelling a record keeps', () => {
+    expect(getCredentialUserHandleHex({ userHandleHex: '414243' })).toBe('414243');
+    expect(getCredentialUserHandleHex({ userHandle: 'QUJD' })).toBe('414243');
     expect(getCredentialUserHandleHex({ userHandleBase64: 'QUJD' })).toBe('414243');
-    expect(getCredentialUserHandleHex({ userId: 'AQID' })).toBe('010203');
+    expect(getCredentialUserHandleHex({ userHandleBase64Url: 'QUJD' })).toBe('414243');
+  });
+
+  it('reads no credential id or user handle from names no record uses', () => {
+    expect(getCredentialIdHex({ credentialID: 'QUJD', rawId: 'QUJD' })).toBe('');
+    expect(getCredentialUserHandleHex({ userId: 'AQID' })).toBe('');
   });
 
   it('finds none without a record or a handle', () => {
@@ -70,23 +77,12 @@ describe('extractAuthenticatorDataHex', () => {
     expect(extractAuthenticatorDataHex('_w')).toBe('ff');
   });
 
-  it('reads bytes, as an array, a view or a buffer', () => {
-    expect(extractAuthenticatorDataHex([255, 0, 1])).toBe('ff0001');
-    expect(extractAuthenticatorDataHex(new Uint8Array([1, 2, 3]))).toBe('010203');
-    expect(extractAuthenticatorDataHex(new Uint8Array([7, 8]).buffer)).toBe('0708');
-  });
-
-  it('reads a JSON byte value, nested or not', () => {
-    expect(extractAuthenticatorDataHex({ $hex: 'aa55' })).toBe('aa55');
-    expect(extractAuthenticatorDataHex({ value: { $base64: 'QUJD' } })).toBe('414243');
-  });
-
-  it('finds no bytes in text it cannot read, a list that is not bytes, a number or an unknown object', () => {
+  it('finds no bytes in text it cannot read, or in anything but text', () => {
     expect(extractAuthenticatorDataHex('   ')).toBe('');
     expect(extractAuthenticatorDataHex('@@@')).toBe('');
-    expect(extractAuthenticatorDataHex([1, Symbol('x')])).toBe('');
     expect(extractAuthenticatorDataHex(37)).toBe('');
-    expect(extractAuthenticatorDataHex({ unsupported: true })).toBe('');
+    expect(extractAuthenticatorDataHex(new Uint8Array([1, 2, 3]))).toBe('');
+    expect(extractAuthenticatorDataHex({ $hex: 'aa55' })).toBe('');
   });
 });
 
@@ -100,12 +96,15 @@ describe('the AAGUID in the authenticator data', () => {
     expect(extractAaguidFromAuthDataHex('00')).toBe('');
   });
 
-  it('is read from the record\'s registration data, or from its properties\'', () => {
-    expect(deriveAaguidFromCredentialData({ registrationData: { authenticatorData: ATTESTED } })).toBe(AAGUID);
-    expect(deriveAaguidFromCredentialData({ properties: { registrationData: { authenticatorData: ATTESTED } } })).toBe(AAGUID);
-    expect(deriveAaguidFromCredentialData({
-      properties: { registrationData: { authenticatorData: ES256.authenticatorDataHex } },
-    })).toBe(AAGUID);
+  it('is read from the relying party\'s registration data, else from the record\'s authenticator data', () => {
+    expect(deriveAaguidFromCredentialData({ relyingParty: { registrationData: { authenticatorData: ATTESTED } } })).toBe(AAGUID);
+    expect(deriveAaguidFromCredentialData({ authenticatorData: ES256.authenticatorData })).toBe(AAGUID);
+    expect(deriveAaguidFromCredentialData({ authenticatorData: ES256.authenticatorDataHex })).toBe(AAGUID);
+  });
+
+  it('is not read from places no record keeps authenticator data', () => {
+    expect(deriveAaguidFromCredentialData({ registrationData: { authenticatorData: ATTESTED } })).toBe('');
+    expect(deriveAaguidFromCredentialData({ properties: { registrationData: { authenticatorData: ATTESTED } } })).toBe('');
   });
 
   it('is none without a record or without authenticator data', () => {
@@ -121,19 +120,11 @@ describe('normalizeToHex', () => {
     expect(normalizeToHex('QUJD')).toBe('414243');
   });
 
-  it('reads a JSON byte value', () => {
-    expect(normalizeToHex({ $hex: '414243' })).toBe('414243');
-    expect(normalizeToHex({ $base64url: 'QUJD' })).toBe('414243');
-    expect(normalizeToHex({ $base64: 'QUJD' })).toBe('414243');
-    expect(normalizeToHex({ $js: 'new Uint8Array([65, 66])' })).toBe('4142');
-  });
-
-  it('reads no hex from blank or unreadable text, a number or an object that spells no bytes', () => {
+  it('reads no hex from blank or unreadable text, or from anything but text', () => {
     expect(normalizeToHex('   ')).toBe('');
     expect(normalizeToHex('###not-binary###')).toBe('');
     expect(normalizeToHex(42)).toBe('');
-    expect(normalizeToHex({ unsupported: true })).toBe('');
-    expect(normalizeToHex({ $js: 'Uint8Array.from([1, 2])' })).toBe('');
-    expect(normalizeToHex({ $js: '' })).toBe('');
+    // No record holds an ID as a JSON byte value.
+    expect(normalizeToHex({ $hex: '414243' })).toBe('');
   });
 });
