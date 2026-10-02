@@ -20,7 +20,7 @@ import {
 import { HYDRATE_TEXT, hydrateCredentialFromServer } from '@/logic/credentials/hydrate.js';
 import { certificateSummary } from '@/logic/mds/explorer/certificate.js';
 import { fetchCredentialArtifact } from '@/logic/credentials/storage/artifacts-client.js';
-import { updateAdvancedCredentialRegistrationSnapshot } from '@/logic/credentials/storage/records.js';
+import { updateAdvancedCredentialRegistrationSnapshot } from '@/logic/credentials/storage/local/advanced-credentials.js';
 
 import type { CertificateSummary } from '@/logic/mds/explorer/certificate.js';
 

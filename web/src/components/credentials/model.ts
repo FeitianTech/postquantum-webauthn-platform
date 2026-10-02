@@ -24,17 +24,14 @@ import { getCredentialIdHex, getCredentialUserHandleHex } from '@/logic/credenti
 import { aaguidHex } from '@/logic/shared/aaguid.js';
 import { deriveCredentialStatusIndicators } from '@/logic/credentials/attestation-context.js';
 import { deleteCredentialArtifact } from '@/logic/credentials/storage/artifacts-client.js';
+import { getAllAdvancedCredentials, removeAdvancedCredential } from '@/logic/credentials/storage/local/advanced-credentials.js';
 import {
-  clearSimpleCredentials,
   ensureAdvancedCredentialArtifactsSynced,
   ensureAdvancedCredentialSnapshotsPrefetched,
-  followStoredCredentialChanges,
-  getAllAdvancedCredentials,
-  getAllSimpleCredentials,
-  getAllStoredCredentialsInOrder,
-  removeAdvancedCredential,
-  removeSimpleCredential,
-} from '@/logic/credentials/storage/records.js';
+} from '@/logic/credentials/storage/local/advanced-sync.js';
+import { clearSimpleCredentials, getAllSimpleCredentials, removeSimpleCredential } from '@/logic/credentials/storage/local/simple-credentials.js';
+import { followStoredCredentialChanges } from '@/logic/credentials/storage/local/storage-core.js';
+import { getAllStoredCredentialsInOrder } from '@/logic/credentials/storage/records.js';
 
 /** A saved credential as the list holds it (the stored record, typed, with its ids in hex). */
 export type SavedCredential = { type: 'simple' | 'advanced'; [field: string]: unknown };

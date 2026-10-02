@@ -59,7 +59,7 @@ import {
   saveAdvancedCredential,
   updateAdvancedCredentialRegistrationSnapshot,
   updateAdvancedCredentialSignCount,
-} from '@/logic/credentials/storage/records.js';
+} from '@/logic/credentials/storage/local/advanced-credentials.js';
 import { generateRandomHex } from '@/logic/shared/bytes.js';
 
 import type { SavedCredential } from '@/components/credentials/model';

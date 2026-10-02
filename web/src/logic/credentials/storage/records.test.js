@@ -764,7 +764,7 @@ describe('credential records saved before base64url', () => {
     expect(saved.publicKey).toBe(SIMPLE_RECORD.publicKeyBase64Url);
 
     vi.resetModules();
-    const again = await import('./records.js');
+    const again = await import('./local/simple-credentials.js');
     setItem.mockClear();
     again.getAllSimpleCredentials();
     expect(setItem).not.toHaveBeenCalled();
