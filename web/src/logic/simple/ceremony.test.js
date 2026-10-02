@@ -2,10 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FailedResponseError } from '../shared/failed-response.js';
 import { UPDATE_BROWSER_TEXT, UnsupportedBrowserError } from '../shared/native-json.js';
+import { getAllSimpleCredentials } from '../credentials/storage/local/simple-credentials.js';
+import { seedUnifiedCredentialRecords } from '../credentials/storage/local/storage-core.js';
 import {
   SIMPLE_CEREMONY_TEXT,
   authenticateSimplePasskey,
   ceremonyErrorText,
+  keepSimpleCredential,
   registerSimplePasskey,
   registeredText,
 } from './ceremony.js';
@@ -32,17 +35,17 @@ function sent(call) {
   return { url, init, body: JSON.parse(init.body) };
 }
 
-const credentialsFor = vi.fn(() => STORED);
-const prepareForServer = vi.fn((records) => records.map(({ credentialId }) => ({ credentialId })));
-
 beforeEach(() => {
   authenticator = installAuthenticator(vi);
+  // The passkeys this browser keeps.
+  seedUnifiedCredentialRecords(STORED);
 });
 
 afterEach(() => {
   authenticator.remove();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  seedUnifiedCredentialRecords(null);
 });
 
 describe('registering a passkey', () => {
@@ -134,11 +137,10 @@ describe('authenticating with a passkey', () => {
   it('sends the saved credentials, asks the authenticator, and gives the answer and the result', async () => {
     answering(AUTHENTICATE[2], AUTHENTICATE[3]);
     const onProgress = vi.fn();
-    const outcome = await authenticateSimplePasskey('alice', { credentialsFor, prepareForServer, onProgress });
+    const outcome = await authenticateSimplePasskey('alice', { onProgress });
 
-    expect(credentialsFor).toHaveBeenCalledWith('alice');
     expect(sent(0).url).toBe('/api/authenticate/begin?email=alice');
-    expect(sent(0).body).toEqual({ credentials: [{ credentialId: 'AQIDBA' }] });
+    expect(sent(0).body).toEqual({ credentials: [{ credentialId: 'AQIDBA', aaguid: null, publicKey: 'pQE', signCount: 0 }] });
     expect(sent(1).body).toMatchObject({ id: 'AQIDBA', response: { signature: 'MEQ', userHandle: 'dQ' } });
     expect(authenticator.get.mock.calls[0][0].publicKey.challenge).toBeInstanceOf(ArrayBuffer);
     expect(outcome).toEqual({
@@ -154,29 +156,27 @@ describe('authenticating with a passkey', () => {
 
   it('asks nothing when this browser keeps no passkey for the name', async () => {
     answering();
-    await expect(
-      authenticateSimplePasskey('bob', { credentialsFor: () => [], prepareForServer }),
-    ).rejects.toThrow(SIMPLE_CEREMONY_TEXT.noStoredCredentials);
+    await expect(authenticateSimplePasskey('bob')).rejects.toThrow(SIMPLE_CEREMONY_TEXT.noStoredCredentials);
     expect(fetch).not.toHaveBeenCalled();
   });
 
   it('says the server has no usable credential when it answers 404', async () => {
     answering(AUTHENTICATE[8]);
-    await expect(authenticateSimplePasskey('alice', { credentialsFor, prepareForServer })).rejects.toThrow(
+    await expect(authenticateSimplePasskey('alice')).rejects.toThrow(
       'No credentials found for this username. Please register first.',
     );
   });
 
   it('says a refused start as the server says it', async () => {
     answering({ status: 503, body: { error: 'The stored credentials could not be read. Please try again.' } });
-    await expect(authenticateSimplePasskey('alice', { credentialsFor, prepareForServer })).rejects.toThrow(
+    await expect(authenticateSimplePasskey('alice')).rejects.toThrow(
       'Authentication could not start: The stored credentials could not be read. Please try again.',
     );
   });
 
   it('gives a refused assertion as the server read it, with the rejection for the result panel', async () => {
     answering(AUTHENTICATE[4], AUTHENTICATE[5]);
-    const outcome = await authenticateSimplePasskey('alice', { credentialsFor, prepareForServer });
+    const outcome = await authenticateSimplePasskey('alice');
 
     expect(outcome.failure).toMatchObject({
       status: 400,
@@ -191,6 +191,15 @@ describe('authenticating with a passkey', () => {
     });
   });
 
+});
+
+describe('keeping a registration', () => {
+  it('saves the server\'s record in this browser, for the name it was registered under', () => {
+    seedUnifiedCredentialRecords([]);
+    keepSimpleCredential(REGISTER[1].body.storedCredential, 'alice@example.com');
+    const [kept] = getAllSimpleCredentials();
+    expect(kept).toMatchObject({ type: 'simple', email: 'alice@example.com', credentialId: REGISTER[1].body.storedCredential.credentialId });
+  });
 });
 
 describe('what a failed ceremony says', () => {
@@ -217,7 +226,7 @@ describe('a browser without WebAuthn\'s JSON methods', () => {
     answering();
 
     await expect(registerSimplePasskey('alice')).rejects.toThrow(UPDATE_BROWSER_TEXT);
-    await expect(authenticateSimplePasskey('alice', { credentialsFor, prepareForServer })).rejects.toBeInstanceOf(
+    await expect(authenticateSimplePasskey('alice')).rejects.toBeInstanceOf(
       UnsupportedBrowserError,
     );
     expect(fetch).not.toHaveBeenCalled();

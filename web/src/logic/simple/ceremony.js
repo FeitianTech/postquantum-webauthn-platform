@@ -11,6 +11,36 @@ import {
     requireNativeJson,
 } from '../shared/native-json.js';
 import { FailedResponseError, readFailedResponse } from '../shared/failed-response.js';
+import {
+    getSimpleCredentialsForEmail,
+    prepareCredentialsForServer,
+    saveSimpleCredential,
+} from '../credentials/storage/local/simple-credentials.js';
+
+/** @import { CeremonyResultInput } from '../shared/ceremony-result.js' */
+
+/**
+ * @typedef {'registration' | 'authentication'} Ceremony
+ */
+
+/**
+ * What the server answered a registration: storedCredential is what this browser keeps.
+ * @typedef {{ algo?: string, storedCredential?: Record<string, unknown> | null, [field: string]: unknown }} RegistrationAnswer
+ */
+
+/**
+ * What the server answered an assertion it accepted.
+ * @typedef {{ authenticatedCredentialId?: string, signCount?: number, signCountStatus?: string, [field: string]: unknown }} AuthenticationAnswer
+ */
+
+/**
+ * An authentication's end: the server's answer, or the assertion it refused (as
+ * readFailedResponse read it), and what the result panel shows either way.
+ * @typedef {(
+ *     | { answer: AuthenticationAnswer, failure?: undefined, result: CeremonyResultInput }
+ *     | { answer?: undefined, failure: { text: string, failedCredentialId: string | null, signCountStatus: string | null }, result: CeremonyResultInput }
+ * )} AuthenticationOutcome
+ */
 
 export const SIMPLE_CEREMONY_TEXT = {
     usernameRequired: 'Please enter a username.',
@@ -26,7 +56,11 @@ export const SIMPLE_CEREMONY_TEXT = {
     lastAuthentication: 'Last authentication',
 };
 
-/** The success toast of a registration, naming the algorithm the server chose. */
+/**
+ * The success toast of a registration, naming the algorithm the server chose.
+ * @param {RegistrationAnswer | null | undefined} answer
+ * @returns {string}
+ */
 export function registeredText(answer) {
     return `Registration successful! Algorithm: ${answer?.algo || 'Unknown'}`;
 }
@@ -47,6 +81,9 @@ const INVALID_STATE_TEXT = {
  * browser's refusals by their name (an InvalidStateError says something else in
  * each), anything else by its own message (a refused request's is
  * readFailedResponse's, prefixed by the step).
+ * @param {any} error
+ * @param {Ceremony} ceremony
+ * @returns {string}
  */
 export function ceremonyErrorText(error, ceremony) {
     const name = error?.name;
@@ -76,6 +113,7 @@ function postJson(path, email, body) {
  * nothing: an UnsupportedBrowserError before the first request.
  * @param {string} email
  * @param {{ onProgress?: (text: string) => void }} [steps]
+ * @returns {Promise<RegistrationAnswer>}
  */
 export async function registerSimplePasskey(email, { onProgress = () => {} } = {}) {
     requireNativeJson();
@@ -100,29 +138,25 @@ export async function registerSimplePasskey(email, { onProgress = () => {} } = {
 }
 
 /**
- * Authenticates `email` with the passkeys this browser keeps for it:
- * `credentialsFor(email)` gives them, `prepareForServer(records)` what the server
- * is sent of them. Says each step through onProgress. Gives
+ * Authenticates `email` with the passkeys this browser keeps for it, sending the
+ * server what it keeps of each. Says each step through onProgress. Gives
  * `{answer, result}` on success, `{failure, result}` when the server refused the
  * assertion (readFailedResponse's reading; `result` is what the result panel
  * shows: shared/ceremony-result.js); throws for anything before that.
  * @param {string} email
- * @param {{
- *     credentialsFor: (email: string) => Array<Record<string, any>>,
- *     prepareForServer: (records: Array<Record<string, any>>) => unknown,
- *     onProgress?: (text: string) => void,
- * }} steps
+ * @param {{ onProgress?: (text: string) => void }} [steps]
+ * @returns {Promise<AuthenticationOutcome>}
  */
-export async function authenticateSimplePasskey(email, { credentialsFor, prepareForServer, onProgress = () => {} }) {
+export async function authenticateSimplePasskey(email, { onProgress = () => {} } = {}) {
     requireNativeJson();
     onProgress(SIMPLE_CEREMONY_TEXT.authenticationStarting);
-    const storedCredentials = credentialsFor(email);
+    const storedCredentials = getSimpleCredentialsForEmail(email);
     if (!storedCredentials.length) {
         throw new Error(SIMPLE_CEREMONY_TEXT.noStoredCredentials);
     }
 
     const response = await postJson('/api/authenticate/begin', email, {
-        credentials: prepareForServer(storedCredentials),
+        credentials: prepareCredentialsForServer(storedCredentials),
     });
     if (!response.ok) {
         if (response.status === 404) {
@@ -159,4 +193,13 @@ export async function authenticateSimplePasskey(email, { credentialsFor, prepare
             signCountStatus: answer.signCountStatus,
         },
     };
+}
+
+/**
+ * Keeps what a registration saved in this browser: the server's record, for this email.
+ * @param {Record<string, unknown>} storedCredential
+ * @param {string} email
+ */
+export function keepSimpleCredential(storedCredential, email) {
+    saveSimpleCredential({ ...storedCredential, email });
 }

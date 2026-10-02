@@ -2,19 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
 import { useToast } from '@/components/ui/Toast';
+import { updateSimpleCredentialSignCount } from '@/logic/credentials/storage/local/simple-credentials.js';
 import type { CeremonyResultInput } from '@/logic/shared/ceremony-result.js';
-
+import { generateRandom10DigitUsername } from '@/logic/shared/random-username.js';
 import {
-  CEREMONY_TEXT,
   type Ceremony,
-  authenticateWithPasskey,
-  failureText,
-  keepRegistered,
-  keepSignCount,
-  randomUsername,
-  registerPasskey,
-  successText,
-} from './model';
+  SIMPLE_CEREMONY_TEXT,
+  authenticateSimplePasskey,
+  ceremonyErrorText,
+  keepSimpleCredential,
+  registerSimplePasskey,
+  registeredText,
+} from '@/logic/simple/ceremony.js';
 
 // The Simple tab's two ceremonies, in the steps and words of simple/ceremony.js:
 // the username, what each step is doing, a success as a toast, a failure in place
@@ -33,10 +32,10 @@ export function useSimpleCeremony() {
   const busy = useRef(false);
 
   // Once, after hydration (the exported page has the field empty).
-  useEffect(() => setUsername(randomUsername()), []);
+  useEffect(() => setUsername(generateRandom10DigitUsername()), []);
 
   const randomize = useCallback(() => {
-    setUsername(randomUsername());
+    setUsername(generateRandom10DigitUsername());
     setUsernameError(null);
   }, []);
 
@@ -49,7 +48,7 @@ export function useSimpleCeremony() {
     (ceremony: Ceremony) => {
       if (busy.current) return false;
       if (!username) {
-        setUsernameError(CEREMONY_TEXT.usernameRequired);
+        setUsernameError(SIMPLE_CEREMONY_TEXT.usernameRequired);
         return false;
       }
       busy.current = true;
@@ -70,14 +69,14 @@ export function useSimpleCeremony() {
   const register = useCallback(async () => {
     if (!begin('registration')) return;
     try {
-      const answer = await registerPasskey(username, { onProgress: setProgress });
-      toast({ tone: 'success', message: successText(answer) });
+      const answer = await registerSimplePasskey(username, { onProgress: setProgress });
+      toast({ tone: 'success', message: registeredText(answer) });
       if (answer.storedCredential && typeof answer.storedCredential === 'object') {
-        keepRegistered(answer.storedCredential, username);
+        keepSimpleCredential(answer.storedCredential, username);
         saved.refresh();
       }
     } catch (error) {
-      setFailure(failureText(error, 'registration'));
+      setFailure(ceremonyErrorText(error, 'registration'));
     } finally {
       end();
     }
@@ -86,22 +85,22 @@ export function useSimpleCeremony() {
   const authenticate = useCallback(async () => {
     if (!begin('authentication')) return;
     try {
-      const outcome = await authenticateWithPasskey(username, { onProgress: setProgress });
+      const outcome = await authenticateSimplePasskey(username, { onProgress: setProgress });
       setResult(outcome.result);
       if (outcome.failure) {
         if (outcome.failure.failedCredentialId) saved.flashCredential(outcome.failure.failedCredentialId, 'failure');
         setFailure(outcome.failure.text);
         return;
       }
-      toast({ tone: 'success', message: CEREMONY_TEXT.authenticated });
+      toast({ tone: 'success', message: SIMPLE_CEREMONY_TEXT.authenticated });
       const { authenticatedCredentialId, signCount } = outcome.answer;
       if (authenticatedCredentialId) {
-        keepSignCount(username, authenticatedCredentialId, typeof signCount === 'number' ? signCount : undefined);
+        updateSimpleCredentialSignCount(username, authenticatedCredentialId, typeof signCount === 'number' ? signCount : undefined);
         saved.flashCredential(authenticatedCredentialId, 'success');
         saved.refresh();
       }
     } catch (error) {
-      setFailure(failureText(error, 'authentication'));
+      setFailure(ceremonyErrorText(error, 'authentication'));
     } finally {
       end();
     }
