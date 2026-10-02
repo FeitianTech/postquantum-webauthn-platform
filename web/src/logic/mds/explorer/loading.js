@@ -1,5 +1,5 @@
 // Where the explorer's entries come from and what an answer means. No DOM.
-import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MISSING_METADATA_MESSAGE } from '../constants.js';
+import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MDS_LIST_PATH, MISSING_METADATA_MESSAGE } from '../constants.js';
 
 /** @import { ExplorerSource, SnapshotLocation } from '../explorer-source.js' */
 
@@ -80,13 +80,17 @@ export function cloneMetadataEntry(entry) {
 /**
  * @param {SnapshotLocation} source
  * @param {AbortSignal | null} signal
+ * @param {RequestPriority} [priority]
  * @returns {Promise<ExplorerAnswer>}
  */
-async function fetchExplorerAnswer(source, signal) {
+async function fetchExplorerAnswer(source, signal, priority) {
     /** @type {RequestInit} */
     const fetchOptions = {
         cache: source.cache,
     };
+    if (priority) {
+        fetchOptions.priority = priority;
+    }
     // The packaged list is the same for everyone: it is fetched without the
     // session's cookie, so its answer can never put back an older session.
     if (source.kind === 'static') {
@@ -104,6 +108,62 @@ async function fetchExplorerAnswer(source, signal) {
         payload = null;
     }
     return { response, payload };
+}
+
+// The packaged list as fetched for this page, by URL: ahead of the explorer
+// (not yet taken), or by it. An answer that is not a list is forgotten.
+/** @type {Map<string, { answer: Promise<ExplorerAnswer>, taken: boolean }>} */
+const lists = new Map();
+
+/**
+ * @param {string} url
+ * @param {Promise<ExplorerAnswer>} answer
+ * @param {boolean} taken
+ */
+function remember(url, answer, taken) {
+    lists.set(url, { answer, taken });
+    answer.then(
+        ({ response }) => {
+            if (!response.ok) {
+                lists.delete(url);
+            }
+        },
+        () => lists.delete(url),
+    );
+}
+
+// Fetches the packaged list ahead, once, so the explorer shows it as soon as it
+// is opened: the page asks once its first view is interactive (at low priority)
+// and at once when the URL opens #mds. The explorer's first load from that URL
+// takes the answer; a list this page has already fetched is not fetched ahead.
+/**
+ * @param {string} [url]
+ * @param {{ priority?: RequestPriority }} [options]
+ */
+export function prefetchExplorerList(url = MDS_LIST_PATH, { priority } = {}) {
+    if (!lists.has(url)) {
+        remember(url, fetchExplorerAnswer({ url, cache: 'default', kind: 'static' }, null, priority), false);
+    }
+}
+
+/** Forgets the lists fetched (each test's page starts afresh). */
+export function forgetExplorerList() {
+    lists.clear();
+}
+
+/**
+ * @param {SnapshotLocation} source
+ * @param {AbortSignal | null} signal
+ */
+function fetchOrTakePrefetched(source, signal) {
+    const ahead = lists.get(source.url);
+    if (ahead && !ahead.taken) {
+        ahead.taken = true;
+        return ahead.answer;
+    }
+    const answer = fetchExplorerAnswer(source, signal);
+    remember(source.url, answer, true);
+    return answer;
 }
 
 // Asks the source the explorer source chooses (../explorer-source.js). The
@@ -129,7 +189,7 @@ export async function requestExplorerSnapshot(
 
     let result = null;
     try {
-        result = await fetchExplorerAnswer(primarySource, signal);
+        result = await fetchOrTakePrefetched(primarySource, signal);
         if (!result.response.ok || !result.payload || typeof result.payload !== 'object') {
             result = null;
         }

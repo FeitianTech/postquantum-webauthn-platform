@@ -2,7 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { keepRecords } from '@/test/credentials';
-import { fixtureRoutes, stubFetch } from '@/test/mds';
+import { SNAPSHOT_URL, fixtureRoutes, stubFetch } from '@/test/mds';
 import { renderPage } from '@/test/page';
 
 import { AppShell } from './AppShell';
@@ -61,6 +61,30 @@ describe('the app shell', () => {
       expect(screen.getByRole('heading', { level: 2, name, hidden: true })).not.toBeVisible();
     }
     expect(screen.getByRole('tabpanel', { name: 'Simple Authentication' })).toBeVisible();
+  });
+
+  it('fetches the MDS list ahead once the first view is interactive, without hurry and without the cookie', async () => {
+    const fetch = stubFetch(fixtureRoutes());
+    renderPage(<AppShell />);
+    const listRequests = () => fetch.mock.calls.filter(([url]) => url === SNAPSHOT_URL);
+
+    await waitFor(() => expect(listRequests()).toHaveLength(1));
+    expect(listRequests()[0][1]).toEqual({ cache: 'default', priority: 'low', credentials: 'omit' });
+    // Ahead of the MDS page, and without asking anything first.
+    expect(fetch.mock.calls.map(([url]) => url)).not.toContain('/api/mds/metadata/info');
+  });
+
+  it('fetches the MDS list at once when the URL opens #mds, and shows it from that answer', async () => {
+    window.history.replaceState({ fromNext: true }, '', '/#mds');
+    const fetch = stubFetch(fixtureRoutes());
+    renderPage(<AppShell />);
+
+    expect(fetch.mock.calls[0]).toEqual([SNAPSHOT_URL, { cache: 'default', credentials: 'omit' }]);
+    await screen.findByRole('table', { name: 'FIDO MDS authenticators' });
+    await waitFor(() => expect(document.querySelectorAll('[data-entry-id]').length).toBeGreaterThan(0));
+    // Not again once the first view is interactive.
+    await waitFor(() => expect(document.querySelectorAll('[data-section-placeholder]')).toHaveLength(0));
+    expect(fetch.mock.calls.filter(([url]) => url === SNAPSHOT_URL)).toHaveLength(1);
   });
 
   it('shows the title, the four sections, Analyze Browser and GitHub', () => {

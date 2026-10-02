@@ -8,6 +8,7 @@ import { type LazyModule, lazyModule, useLazyModule, whenInteractive } from '@/l
 import { SECTIONS, type SectionId } from '@/lib/sections';
 import { useIsomorphicLayoutEffect } from '@/lib/useIsomorphicLayoutEffect';
 import { CLOSED_ROUTE, SectionNavigationProvider, useSection } from '@/lib/useSection';
+import { prefetchExplorerList } from '@/logic/mds/explorer/loading.js';
 
 import { Footer } from './Footer';
 import { Header } from './Header';
@@ -36,10 +37,16 @@ export function AppShell() {
   const advanced = useLazyModule(ADVANCED, interactive || section === 'advanced');
   const codec = useLazyModule(CODEC, interactive || section === 'codec');
   const mds = useLazyModule(MDS, interactive || section === 'mds');
-  // Ask for the shown section's chunk before the frame is painted.
+  // Ask for the shown section's chunk before the frame is painted, and for the
+  // MDS list with it when the URL opens #mds; the list is otherwise fetched,
+  // without hurry, once the first view is interactive.
   useIsomorphicLayoutEffect(() => {
     if (section) void LAZY_SECTIONS[section]?.load().catch(() => {});
+    if (section === 'mds') prefetchExplorerList();
   }, [section]);
+  useEffect(() => {
+    if (interactive) prefetchExplorerList(undefined, { priority: 'low' });
+  }, [interactive]);
   const browser = useBrowserAnalysis();
   const panel = useLazyModule(ANALYZE_PANEL, interactive || browser.running || browser.open);
   const [copy, setCopy] = useState<CopyResult | null>(null);

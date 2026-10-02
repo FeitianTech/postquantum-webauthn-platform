@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { configure } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 
+import { forgetExplorerList } from '@/logic/mds/explorer/loading.js';
 import { StandInPublicKeyCredential } from '@/test/logic/simple/ceremony-answers.js';
 
 // findBy* and waitFor give up after one second by default. The Cloud Build gate
@@ -47,4 +48,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  // The MDS list a page fetched ahead belongs to that page.
+  forgetExplorerList();
 });

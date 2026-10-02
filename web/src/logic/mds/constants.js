@@ -1,5 +1,6 @@
 export const MDS_EXPLORER_FULL_PATH = '/api/mds/metadata/explorer/full';
 export const MDS_INFO_PATH = '/api/mds/metadata/info';
+export const MDS_LIST_PATH = '/assets/mds/fido-mds3.explorer.list.json';
 export const MDS_RESOLVE_PATH = '/api/mds/metadata/resolve';
 export const CUSTOM_METADATA_LIST_PATH = '/api/mds/metadata/custom';
 export const CUSTOM_METADATA_UPLOAD_PATH = '/api/mds/metadata/upload';

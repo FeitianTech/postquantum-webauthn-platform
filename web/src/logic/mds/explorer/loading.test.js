@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MISSING_METADATA_MESSAGE } from '../constants.js';
+import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MDS_LIST_PATH, MISSING_METADATA_MESSAGE } from '../constants.js';
 import {
   classifyExplorerAnswer,
   cloneMetadataEntry,
   explorerLoadFailure,
   fetchExplorerInfo,
+  forgetExplorerList,
   isMissingSnapshot,
+  prefetchExplorerList,
   prepareSnapshotEntries,
   requestExplorerSnapshot,
 } from './loading.js';
@@ -250,3 +252,63 @@ describe('an entry the explorer keeps', () => {
     expect(copy.metadataStatement).not.toBe(entry.metadataStatement);
   });
 });
+
+describe('the packaged list fetched ahead', () => {
+  const LIST = { meta: { no: 7 }, entries: [{ entryId: 'aaguid:x', isLightweightEntry: true }] };
+  const listSource = () => createExplorerSource({ snapshotUrl: MDS_LIST_PATH, customEntriesState: 'none' });
+
+  afterEach(() => {
+    forgetExplorerList();
+  });
+
+  it('is fetched once, without the cookie, at the priority asked', async () => {
+    globalThis.fetch = vi.fn(async () => answer(LIST));
+
+    prefetchExplorerList(undefined, { priority: 'low' });
+    prefetchExplorerList();
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledWith(MDS_LIST_PATH, { cache: 'default', priority: 'low', credentials: 'omit' });
+  });
+
+  it('is what the explorer\'s first load from that URL gets; a later load fetches again', async () => {
+    globalThis.fetch = vi.fn(async () => answer(LIST));
+    prefetchExplorerList();
+
+    await expect(requestExplorerSnapshot(listSource())).resolves.toMatchObject({ payload: LIST });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    await requestExplorerSnapshot(listSource());
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ['a failed answer', async () => answer(null, { ok: false, status: 503 })],
+    ['a fetch that failed', async () => { throw new TypeError('Failed to fetch'); }],
+  ])('is dropped after %s, so the explorer fetches it again', async (_label, first) => {
+    globalThis.fetch = vi.fn().mockImplementationOnce(first).mockImplementation(async () => answer(LIST));
+    prefetchExplorerList();
+    await vi.waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    await expect(requestExplorerSnapshot(listSource())).resolves.toMatchObject({ payload: LIST });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    expect(globalThis.fetch).toHaveBeenLastCalledWith(MDS_LIST_PATH, { cache: 'default', credentials: 'omit' });
+  });
+
+  it('is not fetched ahead again once the explorer has fetched it', async () => {
+    globalThis.fetch = vi.fn(async () => answer(LIST));
+    await requestExplorerSnapshot(listSource());
+
+    prefetchExplorerList(undefined, { priority: 'low' });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('is forgotten when the page starts afresh', async () => {
+    globalThis.fetch = vi.fn(async () => answer(LIST));
+    prefetchExplorerList();
+    forgetExplorerList();
+
+    await requestExplorerSnapshot(listSource());
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
