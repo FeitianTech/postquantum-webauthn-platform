@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-// The Codec's encoding leaves: whether a value can be encoded to a format, and the
-// summary of what was encoded.
 import { canEncodeToFormat } from './can-encode.js';
-import { findEncodedSummary } from './summary.js';
 
-describe('codec encoding helpers', () => {
-  it('validates canonical and aliased encoder formats', () => {
+// Whether the encoder can write a value in a format (codec/encoding/can-encode.js).
+
+describe('what the encoder can take', () => {
+  it('encodes any value as JSON, CBOR or COSE, and only bytes as DER or PEM', () => {
     expect(canEncodeToFormat({ ok: true }, 'JSON (binary)')).toBe(true);
     expect(canEncodeToFormat({ ok: true }, 'CBOR (canonical)')).toBe(true);
     expect(canEncodeToFormat({ ok: true }, 'COSE')).toBe(true);
@@ -20,7 +19,7 @@ describe('codec encoding helpers', () => {
     expect(canEncodeToFormat({ value: true }, 'custom-format')).toBe(true);
   });
 
-  it('detects nested binary-convertible payloads for DER/PEM', () => {
+  it('finds bytes for DER or PEM nested in the value, and refuses what is not bytes', () => {
     expect(
       canEncodeToFormat({
         data: {
@@ -37,28 +36,5 @@ describe('codec encoding helpers', () => {
 
     expect(canEncodeToFormat({ bytes: [0, 256, -1] }, 'pem')).toBe(false);
     expect(canEncodeToFormat({ bytes: true }, 'pem')).toBe(false);
-  });
-
-  it('finds encoded summary objects and normalizes section labels', () => {
-    const nestedSummary = findEncodedSummary({
-      encodedValue: {
-        binary: {
-          hex: 'aabbccdd',
-          base64: 'qrvM3Q==',
-        },
-      },
-    }, 'binary');
-
-    expect(nestedSummary).not.toBeNull();
-    expect(nestedSummary?.label).toBe('Encoded value');
-    expect(nestedSummary?.summary).toMatchObject({ hex: 'aabbccdd' });
-
-    const arraySummary = findEncodedSummary([
-      null,
-      { base64url: 'qrvM3Q' },
-    ], 'responseDetails');
-
-    expect(arraySummary).not.toBeNull();
-    expect(arraySummary?.label).toBe('Response details');
   });
 });

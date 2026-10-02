@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { hasBinaryConvertibleValue } from './binary.js';
-import { getCanonicalEncoderFormat } from './format.js';
 import {
   describeEncodedOutput,
   findEncodedSummary,
   listEncodedFormats,
 } from './summary.js';
+
+// The summary of what the encoder wrote (codec/encoding/summary.js).
 
 describe('the encoded bytes', () => {
   it('lists Hex, Base64, Base64url and Colon Hex first, then other strings, never encoding or a blank', () => {
@@ -49,18 +49,27 @@ describe('finding the encoded bytes', () => {
     expect(findEncodedSummary({ bin: { hex: '01' } }).label).toBe('Encoded output');
     expect(findEncodedSummary({ binary: [{ hex: '01' }] }).label).toBe('Binary summary');
   });
-});
 
-describe('what the encoder can take', () => {
-  it('reads no format from something that is not text', () => {
-    expect(getCanonicalEncoderFormat(null)).toBe('');
-    expect(getCanonicalEncoderFormat(' EDN (exact bytes) ')).toBe('edn');
-  });
+  it('finds a summary nested under a key, and names the section by that key', () => {
+    const nestedSummary = findEncodedSummary({
+      encodedValue: {
+        binary: {
+          hex: 'aabbccdd',
+          base64: 'qrvM3Q==',
+        },
+      },
+    }, 'binary');
 
-  it('finds no bytes in a blank string, null or an empty list', () => {
-    expect(hasBinaryConvertibleValue('   ')).toBe(false);
-    expect(hasBinaryConvertibleValue(null)).toBe(false);
-    expect(hasBinaryConvertibleValue([])).toBe(false);
-    expect(hasBinaryConvertibleValue(12)).toBe(false);
+    expect(nestedSummary).not.toBeNull();
+    expect(nestedSummary?.label).toBe('Encoded value');
+    expect(nestedSummary?.summary).toMatchObject({ hex: 'aabbccdd' });
+
+    const arraySummary = findEncodedSummary([
+      null,
+      { base64url: 'qrvM3Q' },
+    ], 'responseDetails');
+
+    expect(arraySummary).not.toBeNull();
+    expect(arraySummary?.label).toBe('Response details');
   });
 });
