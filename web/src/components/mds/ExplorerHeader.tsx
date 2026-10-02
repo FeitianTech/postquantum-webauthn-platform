@@ -1,10 +1,8 @@
-import { formatEntryCount } from '@/logic/mds/explorer/status.js';
+import { type ExplorerStatus, formatEntryCount } from '@/logic/mds/explorer/status.js';
 
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/icons';
 import { cx } from '@/lib/cx';
-
-import type { ExplorerStatus } from './model';
 
 const countText = formatEntryCount as (filtered: number, total: number) => { count: string; total: string };
 

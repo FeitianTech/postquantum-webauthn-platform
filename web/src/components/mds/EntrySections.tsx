@@ -1,10 +1,12 @@
+import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
+import { certificationParts, identifierLabel } from '@/logic/mds/explorer/rows.js';
+
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { KeyValueGrid } from '@/components/ui/KeyValueGrid';
 import { MonoValue } from '@/components/ui/MonoValue';
 
 import type { ChipList, DetailField, DetailSection } from './entryModel';
-import { type MdsEntry, certificationBadge, identifierName } from './model';
 import { StatusReports } from './StatusReports';
 import { UserVerification } from './UserVerification';
 
@@ -26,11 +28,11 @@ function FieldValue({ field, entry }: { field: DetailField; entry: MdsEntry }) {
   const value = field.value as string;
   if (field.identifier) {
     // The overview's Identifier is the entry's id, named by its kind.
-    const label = field.label === 'Identifier' ? identifierName(entry) : field.label;
+    const label = field.label === 'Identifier' ? identifierLabel(entry) : field.label;
     return <MonoValue value={value} label={label} />;
   }
   if (field.label === 'Certification') {
-    const badge = certificationBadge(entry);
+    const badge = certificationParts(entry);
     return (
       <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <Badge tone={badge.tone}>{badge.level}</Badge>

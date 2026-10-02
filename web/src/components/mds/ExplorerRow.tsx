@@ -1,4 +1,5 @@
-import { MISSING_CELL_TEXT, NO_ICON_TEXT, iconAltText } from '@/logic/mds/explorer/rows.js';
+import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
+import { MISSING_CELL_TEXT, NO_ICON_TEXT, certificationParts, iconAltText, identifierLabel } from '@/logic/mds/explorer/rows.js';
 import { type MouseEvent, type ReactNode, memo, useEffect, useRef } from 'react';
 
 import { Badge } from '@/components/ui/Badge';
@@ -9,7 +10,7 @@ import { cx } from '@/lib/cx';
 import { entryHashPath } from '@/lib/sections';
 
 import { ROW_GRID } from './grid';
-import { EXPLORER_COLUMNS, type MdsEntry, certificationBadge, identifierName } from './model';
+import { EXPLORER_COLUMNS } from './columns';
 
 const iconAlt = iconAltText as (entry: MdsEntry) => string;
 
@@ -49,7 +50,7 @@ function IdCell({ entry, expanded }: { entry: MdsEntry; expanded: boolean }) {
   const toast = useToast();
   const { outcome, copy } = useCopy();
   const valueRef = useRef<HTMLElement>(null);
-  const label = identifierName(entry);
+  const label = identifierLabel(entry);
   const onCopy = async () => {
     const copied = await copy(entry.id);
     if (!copied) selectContents(valueRef.current);
@@ -107,7 +108,7 @@ function ListCell({ values, expanded }: { values: string[]; expanded: boolean })
 }
 
 function CertificationCell({ entry, expanded }: { entry: MdsEntry; expanded: boolean }) {
-  const { level, detail, tone } = certificationBadge(entry);
+  const { level, detail, tone } = certificationParts(entry);
   if (!entry.certification) return <Cell expanded={expanded}>{MISSING_CELL_TEXT}</Cell>;
   return (
     <Cell expanded={expanded} title={entry.certification}>

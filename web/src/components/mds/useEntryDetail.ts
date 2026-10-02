@@ -1,7 +1,7 @@
+import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { useCallback, useEffect, useState } from 'react';
 
 import { hasDetail, resolveEntry, resolveQuery } from './entryModel';
-import type { MdsEntry } from './model';
 import type { ExplorerPhase } from './useMdsExplorer';
 
 /**

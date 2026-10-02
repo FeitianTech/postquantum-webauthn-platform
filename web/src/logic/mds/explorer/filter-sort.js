@@ -74,6 +74,9 @@ export const MDS_SORT_ACCESSORS = {
     },
 };
 
+/** @typedef {{ key: string, direction: 'none' | 'asc' | 'desc' }} ExplorerSort */
+
+/** @returns {ExplorerSort} */
 export function defaultExplorerSort() {
     return { key: DEFAULT_SORT_KEY, direction: DEFAULT_SORT_DIRECTION };
 }
@@ -86,6 +89,12 @@ function certificationDisplayKey(entry) {
 // picked, found in the column's text ignoring case. Certification: text naming
 // one of the list's options must equal the entry's status, except "FIDO
 // Certified", which every certified level passes.
+/**
+ * @param {Record<string, any>} entry
+ * @param {Record<string, string>} filters
+ * @param {string[]} [certificationOptions]
+ * @returns {boolean}
+ */
 export function matchesExplorerFilters(entry, filters, certificationOptions = []) {
     return Object.entries(filters).every(([key, value]) => {
         if (!value) {
@@ -160,6 +169,12 @@ export function compareExplorerSortValues(entryA, entryB, accessor) {
 }
 
 // A copy of the entries in the sort's order; descending is ascending reversed.
+/**
+ * @template T
+ * @param {T[]} entries
+ * @param {ExplorerSort | null} sort
+ * @returns {T[]}
+ */
 export function sortExplorerEntries(entries, sort) {
     if (!Array.isArray(entries)) {
         return [];
@@ -201,6 +216,11 @@ export function isExplorerSortKey(key) {
 
 // The sort after a click on a column's sort control: another column starts from
 // none; reaching none restores the default. Null for a column that does not sort.
+/**
+ * @param {ExplorerSort | null} sort
+ * @param {string} key
+ * @returns {ExplorerSort | null}
+ */
 export function nextExplorerSort(sort, key) {
     if (!isExplorerSortKey(key)) {
         return null;
@@ -211,6 +231,10 @@ export function nextExplorerSort(sort, key) {
     return nextDirection === SORT_NONE ? defaultExplorerSort() : { key, direction: nextDirection };
 }
 
+/**
+ * @param {Record<string, string> | null | undefined} filters
+ * @returns {number}
+ */
 export function countActiveExplorerFilters(filters) {
     return Object.values(filters || {}).filter(value => typeof value === 'string' && value.trim()).length;
 }

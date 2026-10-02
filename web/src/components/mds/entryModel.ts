@@ -2,6 +2,7 @@
 // src/logic/mds: explorer/detail.js, certificate.js, entry-link.js,
 // raw-data.js and raw-stringify.js. These are the types the components read them
 // through.
+import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { detailSections, detailSubtitleParts, detailTitle, formatDetailSubtitle } from '@/logic/mds/explorer/detail.js';
 import {
   describeCertificate as describeCertificateJs,
@@ -13,7 +14,6 @@ import { hasInlineDetail } from '@/logic/mds/explorer/loading.js';
 import { authenticatorRawTitle, getAuthenticatorRawData } from '@/logic/mds/raw-data.js';
 import { stringifyAuthenticatorRawData } from '@/logic/mds/raw-stringify.js';
 
-import type { MdsEntry } from './model';
 
 /** A field: a value (an identifier is copyable, in Geist Mono), or a list of codes. */
 export type DetailField = { label: string; value?: string; codes?: string[]; identifier?: boolean };

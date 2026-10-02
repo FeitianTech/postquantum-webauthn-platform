@@ -15,6 +15,18 @@ export const CERTIFICATION_OPTIONS = [
     'REVOKED',
 ];
 
+/**
+ * A filter: the column it reads, its input's id, and the entry list its options
+ * come from (with those always offered, and whether the list shows whole).
+ * @typedef {object} FilterConfig
+ * @property {string} key
+ * @property {string} inputId
+ * @property {string} [optionsKey]
+ * @property {string[]} [staticOptions]
+ * @property {boolean} [expandDropdown]
+ */
+
+/** @type {FilterConfig[]} */
 export const FILTER_CONFIG = [
     { key: 'name', inputId: 'mds-filter-name' },
     { key: 'protocol', inputId: 'mds-filter-protocol', optionsKey: 'protocol' },

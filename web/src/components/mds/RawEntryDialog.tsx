@@ -1,3 +1,4 @@
+import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { RAW_DATA_LABEL } from '@/logic/mds/raw-data.js';
 import { useMemo } from 'react';
 
@@ -7,7 +8,6 @@ import { Dialog, OverlayBody, OverlayHeader } from '@/components/ui/Overlay';
 import { downloadText, fileNameFor } from '@/lib/download';
 
 import { entrySubtitleText, rawData, rawText, rawTitle } from './entryModel';
-import type { MdsEntry } from './model';
 
 const RAW_DIALOG_ID = 'mds-entry-raw';
 

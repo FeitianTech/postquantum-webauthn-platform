@@ -1,3 +1,5 @@
+import type { ExplorerSort } from '@/logic/mds/explorer/filter-sort.js';
+import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { MDS_MIN_COLUMN_WIDTH, normaliseExplorerColumnWidths } from '@/logic/mds/explorer/columns.js';
 import {
   type KeyboardEvent,
@@ -16,7 +18,7 @@ import { cx } from '@/lib/cx';
 
 import { ExplorerRow } from './ExplorerRow';
 import { ROW_GRID } from './grid';
-import { EXPLORER_COLUMNS, type ExplorerColumn, type ExplorerSort, type MdsEntry } from './model';
+import { EXPLORER_COLUMNS, type ExplorerColumn } from './columns';
 
 const normaliseWidths = normaliseExplorerColumnWidths as (widths: number[], minWidth?: number) => number[];
 const KEY_STEP = 16;

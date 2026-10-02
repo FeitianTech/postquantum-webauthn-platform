@@ -1,21 +1,24 @@
-import { explorerLoadFailure, isMissingSnapshot } from '@/logic/mds/explorer/loading.js';
-import { EXPLORER_REFRESHED_NOTE, explorerLoadingStatus } from '@/logic/mds/explorer/status.js';
-import { CUSTOM_METADATA_UPDATED_NOTE } from '@/logic/mds/explorer/custom-metadata.js';
-import { formatInitialExplorerStatus, normaliseSnapshotInfo } from '@/logic/mds/explorer/status.js';
-import { useCallback, useEffect, useRef, useState } from 'react';
-
+import { type ExplorerSource, createExplorerSource } from '@/logic/mds/explorer-source.js';
 import {
-  type ExplorerSource,
-  type ExplorerStatus,
   type MdsEntry,
   type MdsSnapshot,
-  askExplorerInfo,
-  askExplorerSnapshot,
-  loadedStatus,
-  makeExplorerSource,
-  readExplorerAnswer,
-  snapshotEntries,
-} from './model';
+  classifyExplorerAnswer,
+  explorerLoadFailure,
+  fetchExplorerInfo,
+  isMissingSnapshot,
+  prepareSnapshotEntries,
+  requestExplorerSnapshot,
+} from '@/logic/mds/explorer/loading.js';
+import {
+  EXPLORER_REFRESHED_NOTE,
+  type ExplorerStatus,
+  explorerLoadedStatus,
+  explorerLoadingStatus,
+  formatInitialExplorerStatus,
+  normaliseSnapshotInfo,
+} from '@/logic/mds/explorer/status.js';
+import { CUSTOM_METADATA_UPDATED_NOTE } from '@/logic/mds/explorer/custom-metadata.js';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type ExplorerPhase = 'idle' | 'loading' | 'loaded' | 'failed';
 
@@ -34,12 +37,6 @@ export type Explorer = {
   reload: () => Promise<void>;
 };
 
-const initialSentence = formatInitialExplorerStatus as (info: unknown) => string;
-const snapshotInfo = normaliseSnapshotInfo as (info: unknown) => unknown;
-const loadFailure = explorerLoadFailure as (error: unknown) => string;
-const loadingSentence = explorerLoadingStatus as (forceReload: boolean) => string;
-const missing = isMissingSnapshot as (snapshot: MdsSnapshot) => boolean;
-
 // The explorer's data, in explorer/loading.js's order: what the page starts
 // from (GET /api/mds/metadata/info), then the snapshot, from the packaged file while the
 // session has uploaded nothing and from the session's own list otherwise, and
@@ -48,7 +45,7 @@ const missing = isMissingSnapshot as (snapshot: MdsSnapshot) => boolean;
 export function useMdsExplorer(active: boolean): Explorer {
   const [phase, setPhase] = useState<ExplorerPhase>('idle');
   const [entries, setEntries] = useState<MdsEntry[]>([]);
-  const [status, setStatus] = useState<ExplorerStatus>({ text: initialSentence(null), variant: 'info', title: '' });
+  const [status, setStatus] = useState<ExplorerStatus>({ text: formatInitialExplorerStatus(null), variant: 'info', title: '' });
   const [isMissing, setMissing] = useState(false);
   const [version, setVersion] = useState(0);
   const source = useRef<ExplorerSource | null>(null);
@@ -58,10 +55,10 @@ export function useMdsExplorer(active: boolean): Explorer {
 
   const show = useCallback((snapshot: MdsSnapshot, note: string) => {
     source.current?.noteSnapshotMeta(snapshot.meta);
-    const shown = snapshotEntries(snapshot);
+    const shown = prepareSnapshotEntries(snapshot);
     setEntries(shown);
-    setMissing(missing(snapshot));
-    setStatus(loadedStatus(snapshot, note, shown.length));
+    setMissing(isMissingSnapshot(snapshot));
+    setStatus(explorerLoadedStatus(snapshot, note, shown.length));
     setVersion((value) => value + 1);
     setPhase('loaded');
   }, []);
@@ -70,9 +67,9 @@ export function useMdsExplorer(active: boolean): Explorer {
     async (note: string, forceReload: boolean) => {
       const current = ++generation.current;
       setPhase('loading');
-      setStatus({ text: loadingSentence(forceReload), variant: 'info', title: '' });
+      setStatus({ text: explorerLoadingStatus(forceReload), variant: 'info', title: '' });
       try {
-        const outcome = readExplorerAnswer(await askExplorerSnapshot(source.current, { forceReload }));
+        const outcome = classifyExplorerAnswer(await requestExplorerSnapshot(source.current, { forceReload }));
         if (current !== generation.current) return;
         if (outcome.kind === 'failed') throw new Error(outcome.message);
         if (outcome.kind === 'missing') {
@@ -83,7 +80,7 @@ export function useMdsExplorer(active: boolean): Explorer {
         show(outcome.payload, note);
       } catch (error) {
         if (current !== generation.current) return;
-        setStatus({ text: loadFailure(error), variant: 'error', title: '' });
+        setStatus({ text: explorerLoadFailure(error), variant: 'error', title: '' });
         setPhase('failed');
       }
     },
@@ -94,9 +91,9 @@ export function useMdsExplorer(active: boolean): Explorer {
     if (!active || started.current) return;
     started.current = true;
     void (async () => {
-      const info = await askExplorerInfo();
-      source.current = makeExplorerSource(info);
-      setStatus({ text: initialSentence(snapshotInfo(info)), variant: 'info', title: '' });
+      const info = await fetchExplorerInfo();
+      source.current = createExplorerSource(info);
+      setStatus({ text: formatInitialExplorerStatus(normaliseSnapshotInfo(info)), variant: 'info', title: '' });
       await load('', false);
     })();
   }, [active, load]);

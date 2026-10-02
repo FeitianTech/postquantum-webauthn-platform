@@ -57,6 +57,11 @@ export function sortFilterOptions(options) {
 }
 
 // The options containing the typed text, ignoring case; all of them for none.
+/**
+ * @param {string[]} options
+ * @param {string} query
+ * @returns {string[]}
+ */
 export function matchingFilterOptions(options, query) {
     const value = (query || '').trim().toLowerCase();
     if (!value) {
@@ -67,8 +72,13 @@ export function matchingFilterOptions(options, query) {
 
 // Every option filter's list, as shown, for the entries loaded (none yet: only
 // the static certification statuses).
+/**
+ * @param {Array<Record<string, any>>} entries
+ * @returns {Record<string, string[]>}
+ */
 export function explorerFilterOptionLists(entries) {
     const sets = collectOptionSets(entries);
+    /** @type {Record<string, string[]>} */
     const lists = {};
     FILTER_CONFIG.forEach(config => {
         if (config.optionsKey) {

@@ -1,4 +1,5 @@
 // The MDS table over the fixture's real entries (tests/fixtures/mds).
+import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useRef } from 'react';
@@ -8,7 +9,6 @@ import { FIXTURE_ENTRIES, entryNamed } from '@/test/mds';
 import { renderPage } from '@/test/page';
 
 import { ExplorerTable } from './ExplorerTable';
-import type { MdsEntry } from './model';
 import { useExplorerView } from './useExplorerView';
 
 function Harness({ entries, onOpen }: { entries: MdsEntry[]; onOpen?: (entryId: string) => void }) {

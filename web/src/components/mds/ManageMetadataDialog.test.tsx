@@ -1,4 +1,5 @@
 // Manage Trusted Metadata over the fixture snapshot.
+import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { act, createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -7,7 +8,6 @@ import { FIXTURE_ENTRIES, FIXTURE_INFO, FIXTURE_SNAPSHOT, SNAPSHOT_URL, fixtureR
 import { renderPage } from '@/test/page';
 
 import { MdsSection } from './MdsSection';
-import type { MdsEntry } from './model';
 
 const UPLOADED = {
   ...FIXTURE_ENTRIES[0],

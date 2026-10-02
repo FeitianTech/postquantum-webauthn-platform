@@ -1,3 +1,4 @@
+import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { useEffect, useRef } from 'react';
 
 import { CodeBlock } from '@/components/ui/CodeBlock';
@@ -8,7 +9,6 @@ import { CertificateSummary } from './CertificateSummary';
 import { CondensedBar } from './CondensedBar';
 import { BackButton } from './EntryHeader';
 import { type CertificateLink, type CertificateView, cleanCertificate, entryTitle } from './entryModel';
-import type { MdsEntry } from './model';
 
 // An attestation root certificate of an entry (#mds/<entryId>/certificate/<n>):
 // its subject as the title and its issuer under it, its summary, then the

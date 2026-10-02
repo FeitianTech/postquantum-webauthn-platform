@@ -4,7 +4,7 @@
 import summary from '@test-fixtures/mds/snapshot/fido-mds3.explorer.json.meta.json';
 import full from '@test-fixtures/mds/snapshot/fido-mds3.explorer.full.json';
 
-import type { MdsEntry, MdsSnapshot } from '@/components/mds/model';
+import type { MdsEntry, MdsSnapshot } from '@/logic/mds/explorer/loading.js';
 
 import { type Route, json } from './fetch';
 

@@ -1,10 +1,10 @@
-import { NO_MATCHING_OPTIONS } from '@/logic/mds/explorer/options.js';
+import { NO_MATCHING_OPTIONS, matchingFilterOptions } from '@/logic/mds/explorer/options.js';
 import { type KeyboardEvent, useId, useMemo, useState } from 'react';
 
 import { TextField } from '@/components/ui/Field';
 import { cx } from '@/lib/cx';
 
-import { type ExplorerFilter, optionsMatching } from './model';
+import type { ExplorerFilter } from './columns';
 
 // A filter that offers the values present, as an
 // ARIA combobox: typing narrows the list and filters at once; the arrow keys
@@ -24,7 +24,7 @@ export function FilterCombobox({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const listId = `${useId()}-options`;
-  const matching = useMemo(() => optionsMatching(options, value), [options, value]);
+  const matching = useMemo(() => matchingFilterOptions(options, value), [options, value]);
   const shown = open && options.length > 0;
 
   const pick = (option: string) => {

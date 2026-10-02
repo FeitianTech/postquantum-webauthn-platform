@@ -1,3 +1,4 @@
+import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import type { SectionRoute } from '@/lib/useSection';
@@ -5,7 +6,6 @@ import type { SectionRoute } from '@/lib/useSection';
 import { CertificatePage } from './CertificatePage';
 import { cleanCertificate, entrySections } from './entryModel';
 import { EntryPage } from './EntryPage';
-import type { MdsEntry } from './model';
 import { useCertificateDecode } from './useCertificateDecode';
 import { useEntryDetail } from './useEntryDetail';
 import type { ExplorerPhase } from './useMdsExplorer';

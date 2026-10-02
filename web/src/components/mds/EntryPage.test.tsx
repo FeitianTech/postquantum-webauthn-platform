@@ -1,4 +1,5 @@
 // The MDS entry page over the fixture's real entries (tests/fixtures/mds).
+import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -9,7 +10,6 @@ import { renderPage } from '@/test/page';
 import { EntryPage } from './EntryPage';
 import { rawData, rawText } from './entryModel';
 import { MdsSection } from './MdsSection';
-import type { MdsEntry } from './model';
 import type { EntryDetail } from './useEntryDetail';
 
 function renderEntry(entry: MdsEntry, props: Partial<Parameters<typeof EntryPage>[0]> = {}) {

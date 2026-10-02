@@ -1,10 +1,19 @@
 // What the explorer's status line and count say. No DOM.
 
+/** @import { MdsSnapshot } from './loading.js' */
+
+/** @typedef {{ text: string, variant: 'info' | 'success' | 'error', title: string }} ExplorerStatus */
+
+/**
+ * @param {unknown} info
+ * @returns {Record<string, unknown> | null}
+ */
 export function normaliseSnapshotInfo(info) {
     if (!info || typeof info !== 'object') {
         return null;
     }
 
+    /** @type {Record<string, unknown>} */
     const normalised = {};
     for (const [key, value] of Object.entries(info)) {
         if (typeof value === 'string') {
@@ -56,6 +65,10 @@ export function formatSnapshotTimestamp(info) {
     }).format(date);
 }
 
+/**
+ * @param {Record<string, any> | null | undefined} info
+ * @returns {string}
+ */
 export function formatInitialExplorerStatus(info) {
     if (!info || typeof info !== 'object') {
         return 'Packaged FIDO metadata is available. Explorer data is loading in the background.';
@@ -86,6 +99,7 @@ export function formatInitialExplorerStatus(info) {
 export const EXPLORER_REFRESHED_NOTE = 'Explorer refreshed.';
 export const EXPLORER_NO_MATCHES = 'No authenticators match the selected filters.';
 
+/** @param {boolean} forceReload */
 export function explorerLoadingStatus(forceReload) {
     return forceReload ? 'Refreshing authenticator explorer…' : 'Loading authenticator explorer…';
 }
@@ -115,6 +129,12 @@ export function buildLoadedStatus(snapshot, note, formatTimestamp = formatSnapsh
 
 // The line once a snapshot is shown: its sentence, its variant (success, or info
 // when there is nothing to show) and the snapshot's legal header as its title.
+/**
+ * @param {MdsSnapshot} snapshot
+ * @param {string} note
+ * @param {number} entryCount
+ * @returns {ExplorerStatus}
+ */
 export function explorerLoadedStatus(snapshot, note, entryCount, buildStatus = buildLoadedStatus) {
     const meta = snapshot?.meta && typeof snapshot.meta === 'object' ? snapshot.meta : {};
     return {

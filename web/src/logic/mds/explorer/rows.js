@@ -20,10 +20,15 @@ const DANGER_STATUSES = new Set([
 // latest status, as the server wrote it), then the descriptor and certificate
 // number; the tone is success for a certified level, danger for a revocation or
 // a compromise, neutral otherwise.
+/**
+ * @param {Record<string, any> | null | undefined} entry
+ * @returns {{ level: string, detail: string, tone: 'success' | 'danger' | 'neutral' }}
+ */
 export function certificationParts(entry) {
     const text = typeof entry?.certification === 'string' ? entry.certification.trim() : '';
     const [level, ...rest] = text ? text.split(' • ') : [];
     const statusKey = normaliseEnumKey(entry?.certificationStatus || level);
+    /** @type {'success' | 'danger' | 'neutral'} */
     let tone = 'neutral';
     if (DANGER_STATUSES.has(statusKey)) {
         tone = 'danger';
@@ -41,6 +46,10 @@ const IDENTIFIER_LABELS = {
 
 // What the ID column holds, from the entry's id kind (`aaguid:`, `aaid:`,
 // `akid:`), to name its copy button.
+/**
+ * @param {Record<string, any> | null | undefined} entry
+ * @returns {string}
+ */
 export function identifierLabel(entry) {
     const kind = typeof entry?.entryId === 'string' ? entry.entryId.split(':')[0] : '';
     return IDENTIFIER_LABELS[kind] || 'identifier';

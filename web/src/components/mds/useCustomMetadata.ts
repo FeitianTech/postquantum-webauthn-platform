@@ -1,3 +1,4 @@
+import type { MdsSnapshot } from '@/logic/mds/explorer/loading.js';
 import {
   CHOOSE_METADATA_FILES,
   DELETE_METADATA_FAILED,
@@ -18,7 +19,6 @@ import {
 } from '@/logic/mds/explorer/custom-metadata.js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { MdsSnapshot } from './model';
 
 export type MessageVariant = 'info' | 'success' | 'warning' | 'error';
 type PanelMessage = { text: string; variant: MessageVariant };

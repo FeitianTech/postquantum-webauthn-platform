@@ -1,3 +1,5 @@
+import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
+import { identifierLabel } from '@/logic/mds/explorer/rows.js';
 import { RAW_DATA_BUTTON_TITLE, RAW_DATA_UNAVAILABLE_TITLE } from '@/logic/mds/raw-data.js';
 import { type MouseEvent, forwardRef } from 'react';
 
@@ -7,7 +9,6 @@ import { Button } from '@/components/ui/Button';
 import { MonoValue } from '@/components/ui/MonoValue';
 
 import { entrySubtitle, entryTitle } from './entryModel';
-import { type MdsEntry, identifierName } from './model';
 
 export { BackButton };
 
@@ -22,7 +23,7 @@ function Subtitle({ entry }: { entry: MdsEntry }) {
         part.label ? (
           <span key={part.label} className="flex max-w-full min-w-0 flex-wrap items-center gap-x-1.5">
             <span className="shrink-0">{part.label}:</span>
-            <MonoValue value={part.value} label={part.label === 'ID' ? identifierName(entry) : part.label} />
+            <MonoValue value={part.value} label={part.label === 'ID' ? identifierLabel(entry) : part.label} />
           </span>
         ) : (
           <Badge key="protocol">{part.value}</Badge>

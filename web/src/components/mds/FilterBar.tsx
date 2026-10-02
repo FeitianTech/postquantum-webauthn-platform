@@ -6,7 +6,7 @@ import { TextField } from '@/components/ui/Field';
 import { cx } from '@/lib/cx';
 
 import { FilterCombobox } from './FilterCombobox';
-import { EXPLORER_FILTERS } from './model';
+import { EXPLORER_FILTERS } from './columns';
 
 type FilterBarProps = {
   filters: Record<string, string>;
