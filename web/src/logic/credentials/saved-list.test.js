@@ -98,7 +98,9 @@ describe('what a card shows', () => {
 
   it('tags the algorithm, a discoverable credential and large blob support', () => {
     expect(card({ residentKey: true, largeBlob: true }).tags).toEqual(['ES256', 'Discoverable', 'Large blob']);
-    expect(card({ discoverable: true, largeBlob: true }, { algorithmTag: '' }).tags).toEqual(['Discoverable', 'Large blob']);
+    expect(card({ residentKey: true, largeBlob: true }, { algorithmTag: '' }).tags).toEqual(['Discoverable', 'Large blob']);
+    // No record says it is discoverable under any other name.
+    expect(card({ discoverable: true }, { algorithmTag: '' }).tags).toEqual([]);
     expect(card({ residentKey: false }).tags).toEqual(['ES256']);
   });
 

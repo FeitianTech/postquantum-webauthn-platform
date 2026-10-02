@@ -79,7 +79,7 @@ export function describeCredentialCard(credential, { indicators, algorithmTag, c
     if (algorithmTag) {
         tags.push(algorithmTag);
     }
-    if (credential.residentKey === true || credential.discoverable === true) {
+    if (credential.residentKey === true) {
         tags.push('Discoverable');
     }
     if (credential.largeBlob === true) {
