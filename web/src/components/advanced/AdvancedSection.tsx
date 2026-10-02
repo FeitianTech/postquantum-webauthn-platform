@@ -2,7 +2,7 @@ import { type ReactNode, type RefObject, useCallback, useEffect, useRef, useStat
 
 import { CeremonyResult } from '@/components/ceremony/CeremonyResult';
 import { UpdateBrowserNotice, useNativeWebAuthn } from '@/components/ceremony/UpdateBrowserNotice';
-import { CredentialDetailDialog } from '@/components/credentials/CredentialDetailDialog';
+import { CredentialDetails } from '@/components/credentials/CredentialDetails';
 import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -261,7 +261,7 @@ export function AdvancedSection({ active, route }: { active: boolean; route: Sec
         }}
         returnFocusTo={() => drawerButton.current}
       />
-      <CredentialDetailDialog route={known ? route : { ...route, path: [] }} returnFocusTo={() => detailReturn.current} />
+      <CredentialDetails route={known ? route : { ...route, path: [] }} returnFocusTo={() => detailReturn.current} />
     </section>
   );
 }

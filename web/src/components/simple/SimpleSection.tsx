@@ -2,7 +2,7 @@ import { useCallback, useEffect } from 'react';
 
 import { CeremonyResult } from '@/components/ceremony/CeremonyResult';
 import { UpdateBrowserNotice, useNativeWebAuthn } from '@/components/ceremony/UpdateBrowserNotice';
-import { CredentialDetailDialog } from '@/components/credentials/CredentialDetailDialog';
+import { CredentialDetails } from '@/components/credentials/CredentialDetails';
 import { SavedCredentials } from '@/components/credentials/SavedCredentials';
 import { Button, IconButton } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/Field';
@@ -99,7 +99,7 @@ export function SimpleSection({ active, route }: { active: boolean; route: Secti
         </div>
         <SavedCredentials onOpen={(key) => route.open(['credential', key])} />
       </div>
-      <CredentialDetailDialog route={known ? route : { ...route, path: [] }} />
+      <CredentialDetails route={known ? route : { ...route, path: [] }} />
     </section>
   );
 }
