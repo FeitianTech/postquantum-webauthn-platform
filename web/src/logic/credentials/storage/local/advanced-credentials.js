@@ -104,6 +104,11 @@ export function saveAdvancedCredential(rawCredential) {
     return null;
 }
 
+/**
+ * @param {unknown} credentialId
+ * @param {unknown} [storageId]
+ * @returns {boolean}
+ */
 export function removeAdvancedCredential(credentialId, storageId = null) {
     const id = credentialId ? String(credentialId) : '';
     const storageKey = isNonEmptyString(storageId) ? storageId.trim() : '';
@@ -124,6 +129,12 @@ export function removeAdvancedCredential(credentialId, storageId = null) {
     return changed;
 }
 
+/**
+ * @param {unknown} credentialId
+ * @param {unknown} signCount
+ * @param {unknown} [storageId]
+ * @returns {boolean}
+ */
 export function updateAdvancedCredentialSignCount(credentialId, signCount, storageId = null) {
     const id = credentialId ? String(credentialId) : '';
     const storageKey = isNonEmptyString(storageId) ? storageId.trim() : '';

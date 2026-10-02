@@ -17,7 +17,9 @@ async function jsonFetch(url, options = {}) {
 
     if (!response.ok) {
         const text = await response.text();
-        const error = new Error(text || `Request failed with status ${response.status}`);
+        const error = /** @type {Error & { status?: number }} */ (
+            new Error(text || `Request failed with status ${response.status}`)
+        );
         error.status = response.status;
         throw error;
     }
@@ -42,7 +44,7 @@ export async function fetchCredentialArtifact(storageId) {
             return result.artifact;
         }
     } catch (error) {
-        if (error && typeof error === 'object' && Number(error.status) === 404) {
+        if (error && typeof error === 'object' && 'status' in error && Number(error.status) === 404) {
             return null;
         }
         throw error;
