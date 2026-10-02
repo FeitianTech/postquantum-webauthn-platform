@@ -22,67 +22,57 @@ import {
 /** @import { DetailPreparation } from '../registration/state.js' */
 
 /**
+ * The registration's values as the record keeps them, then as its saved
+ * snapshot and what it said about the decodes have them.
  * @param {Record<string, any>} cred
- * @param {{ snapshotState?: Record<string, any> | null, detailPreparation?: DetailPreparation | null }} [snapshot]
+ * @param {Record<string, any> | null} snapshotState
+ * @param {DetailPreparation | null} detailPreparation
  */
-export function buildRegistrationContext(cred, {
-    snapshotState = null,
-    detailPreparation = null,
-} = {}) {
-    let attestationObjectValue = pickFirstString(
-        ...attestationObjectStringCandidates(cred),
-    );
-
-    let attestationObjectDecoded = pickFirstObject(
-        ...attestationObjectDecodedCandidates(cred),
-    );
-
-    let authenticatorDataBase64 = pickFirstString(
-        ...authenticatorDataStringCandidates(cred),
-    );
-
-    let authenticatorDataHex = pickFirstString(
-        ...authenticatorDataHexCandidates(cred),
-    );
-
-    let fallbackCertificates = collectTruthyEntries(
-        cred.properties?.attestationCertificates,
-        cred.relyingParty?.attestationCertificate,
-        cred.relyingParty?.attestationCertificates,
-    );
+function storedRegistrationValues(cred, snapshotState, detailPreparation) {
+    const values = {
+        attestationObjectValue: pickFirstString(...attestationObjectStringCandidates(cred)),
+        attestationObjectDecoded: pickFirstObject(...attestationObjectDecodedCandidates(cred)),
+        authenticatorDataBase64: pickFirstString(...authenticatorDataStringCandidates(cred)),
+        authenticatorDataHex: pickFirstString(...authenticatorDataHexCandidates(cred)),
+        fallbackCertificates: collectTruthyEntries(
+            cred.properties?.attestationCertificates,
+            cred.relyingParty?.attestationCertificate,
+            cred.relyingParty?.attestationCertificates,
+        ),
+    };
 
     if (snapshotState) {
         const attObjSnapshot = cloneJson(snapshotState.attestationObject);
         if (attObjSnapshot && typeof attObjSnapshot === 'object') {
-            attestationObjectDecoded = attObjSnapshot;
+            values.attestationObjectDecoded = attObjSnapshot;
         }
 
         const certSnapshot = cloneJson(snapshotState.attestationCertificates);
         if (Array.isArray(certSnapshot)) {
-            fallbackCertificates = certSnapshot;
+            values.fallbackCertificates = certSnapshot;
         }
 
         if (typeof snapshotState.authenticatorDataHex === 'string') {
-            authenticatorDataHex = snapshotState.authenticatorDataHex;
+            values.authenticatorDataHex = snapshotState.authenticatorDataHex;
         }
     }
 
     if (detailPreparation) {
-        attestationObjectValue = detailPreparation.attestationObjectValue || attestationObjectValue;
-        authenticatorDataBase64 = detailPreparation.authenticatorDataValue || authenticatorDataBase64;
+        values.attestationObjectValue = detailPreparation.attestationObjectValue || values.attestationObjectValue;
+        values.authenticatorDataBase64 = detailPreparation.authenticatorDataValue || values.authenticatorDataBase64;
     }
+    return values;
+}
 
-    const certificateAaguidHex = aaguidHex(
-        extractAaguidFromCertificateEntries(fallbackCertificates)
-    );
-    const authDataAaguidHex = aaguidHex(deriveAaguidFromCredentialData(cred));
+/** @typedef {ReturnType<typeof storedRegistrationValues>} RegistrationValues */
 
-    const relyingPartyInfo = pickFirstObject(cred.relyingParty);
-
-    const fallbackClientDataString = pickFirstString(cred.clientDataJSON);
-
-    const registrationResponseStored = pickFirstObject(cred.registrationResponse);
-
+/**
+ * The browser's credential as the record keeps it, a copy: with the record's
+ * credential ID as its ID when it has none, a type, and a response to fill.
+ * @param {Record<string, any>} cred
+ * @returns {Record<string, any>}
+ */
+function storedRegistrationCredential(cred, registrationResponseStored) {
     let registrationCredential = cloneJson(registrationResponseStored);
     if (!registrationCredential || typeof registrationCredential !== 'object') {
         registrationCredential = {};
@@ -91,8 +81,6 @@ export function buildRegistrationContext(cred, {
     if (!registrationCredential.response || typeof registrationCredential.response !== 'object') {
         registrationCredential.response = {};
     }
-
-    const registrationResponse = registrationCredential.response;
 
     const credentialIdBase64 = pickFirstString(cred.credentialId);
 
@@ -110,43 +98,62 @@ export function buildRegistrationContext(cred, {
     if (!registrationCredential.type) {
         registrationCredential.type = 'public-key';
     }
+    return registrationCredential;
+}
 
-    const storedRegistrationResponse = resolveStoredRegistrationResponse(registrationResponseStored);
-
-    if (!attestationObjectValue) {
-        attestationObjectValue = pickFirstString(
+/**
+ * What the record's values lack, from the response it kept, then from the credential's.
+ * @param {RegistrationValues} values
+ * @param {Record<string, any>} registrationCredential
+ */
+function valuesFromResponses(values, storedRegistrationResponse, registrationCredential) {
+    if (!values.attestationObjectValue) {
+        values.attestationObjectValue = pickFirstString(
             ...attestationObjectStringCandidates(storedRegistrationResponse),
             ...attestationObjectStringCandidates(registrationCredential),
         );
     }
 
-    if (!attestationObjectDecoded) {
-        attestationObjectDecoded = pickFirstObject(
+    if (!values.attestationObjectDecoded) {
+        values.attestationObjectDecoded = pickFirstObject(
             ...attestationObjectDecodedCandidates(storedRegistrationResponse),
             ...attestationObjectDecodedCandidates(registrationCredential),
         );
     }
 
-    if (!authenticatorDataBase64) {
-        authenticatorDataBase64 = pickFirstString(
+    if (!values.authenticatorDataBase64) {
+        values.authenticatorDataBase64 = pickFirstString(
             ...authenticatorDataStringCandidates(storedRegistrationResponse),
             ...authenticatorDataStringCandidates(registrationCredential),
         );
     }
 
-    if (!authenticatorDataHex) {
-        authenticatorDataHex = pickFirstString(
+    if (!values.authenticatorDataHex) {
+        values.authenticatorDataHex = pickFirstString(
             ...authenticatorDataHexCandidates(storedRegistrationResponse),
             ...authenticatorDataHexCandidates(registrationCredential),
         );
     }
+}
 
-    if (attestationObjectValue && !registrationResponse.attestationObject) {
-        registrationResponse.attestationObject = attestationObjectValue;
+/**
+ * The credential's response given what it lacks of the values (the decoded
+ * attestation object too, which the details show when a snapshot has a state
+ * but no response), and the credential its extension outputs and attachment.
+ * @param {Record<string, any>} registrationCredential
+ * @param {RegistrationValues} values
+ * @param {string} fallbackClientDataString
+ * @param {Record<string, any>} cred
+ */
+function fillRegistrationResponse(registrationCredential, values, fallbackClientDataString, cred) {
+    const registrationResponse = registrationCredential.response;
+
+    if (values.attestationObjectValue && !registrationResponse.attestationObject) {
+        registrationResponse.attestationObject = values.attestationObjectValue;
     }
 
-    if (attestationObjectDecoded && !registrationResponse.attestationObjectDecoded) {
-        registrationResponse.attestationObjectDecoded = attestationObjectDecoded;
+    if (values.attestationObjectDecoded && !registrationResponse.attestationObjectDecoded) {
+        registrationResponse.attestationObjectDecoded = values.attestationObjectDecoded;
     }
 
     const normalizedClientDataForResponse = normalizeClientDataString(
@@ -156,8 +163,8 @@ export function buildRegistrationContext(cred, {
         registrationResponse.clientDataJSON = normalizedClientDataForResponse;
     }
 
-    if (authenticatorDataBase64 && !registrationResponse.authenticatorData) {
-        registrationResponse.authenticatorData = authenticatorDataBase64;
+    if (values.authenticatorDataBase64 && !registrationResponse.authenticatorData) {
+        registrationResponse.authenticatorData = values.authenticatorDataBase64;
     }
 
     const extensionResults = pickFirstObject(
@@ -171,19 +178,43 @@ export function buildRegistrationContext(cred, {
     if (cred.authenticatorAttachment && !registrationCredential.authenticatorAttachment) {
         registrationCredential.authenticatorAttachment = cred.authenticatorAttachment;
     }
+}
 
-    const authenticatorDataForDetail = authenticatorDataBase64 || authenticatorDataHex || '';
+/**
+ * @param {Record<string, any>} cred
+ * @param {{ snapshotState?: Record<string, any> | null, detailPreparation?: DetailPreparation | null }} [snapshot]
+ */
+export function buildRegistrationContext(cred, {
+    snapshotState = null,
+    detailPreparation = null,
+} = {}) {
+    const values = storedRegistrationValues(cred, snapshotState, detailPreparation);
+
+    const certificateAaguidHex = aaguidHex(
+        extractAaguidFromCertificateEntries(values.fallbackCertificates)
+    );
+    const authDataAaguidHex = aaguidHex(deriveAaguidFromCredentialData(cred));
+
+    const relyingPartyInfo = pickFirstObject(cred.relyingParty);
+
+    const fallbackClientDataString = pickFirstString(cred.clientDataJSON);
+
+    const registrationResponseStored = pickFirstObject(cred.registrationResponse);
+    const registrationCredential = storedRegistrationCredential(cred, registrationResponseStored);
+
+    valuesFromResponses(values, resolveStoredRegistrationResponse(registrationResponseStored), registrationCredential);
+    fillRegistrationResponse(registrationCredential, values, fallbackClientDataString, cred);
 
     return {
-        attestationObjectValue,
-        attestationObjectDecoded,
-        authenticatorDataHex,
-        fallbackCertificates,
+        attestationObjectValue: values.attestationObjectValue,
+        attestationObjectDecoded: values.attestationObjectDecoded,
+        authenticatorDataHex: values.authenticatorDataHex,
+        fallbackCertificates: values.fallbackCertificates,
         certificateAaguidHex,
         authDataAaguidHex,
         relyingPartyInfo,
         fallbackClientDataString,
         registrationCredential,
-        authenticatorDataForDetail,
+        authenticatorDataForDetail: values.authenticatorDataBase64 || values.authenticatorDataHex || '',
     };
 }
