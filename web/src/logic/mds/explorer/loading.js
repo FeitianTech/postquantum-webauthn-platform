@@ -55,7 +55,7 @@ import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MISSING_METADATA_MESSAGE } from 
  */
 
 /** @param {any} error */
-function isAbortError(error) {
+export function isAbortError(error) {
     return Boolean(error && error.name === 'AbortError');
 }
 

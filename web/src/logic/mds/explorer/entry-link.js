@@ -3,6 +3,7 @@
 import { readFailedResponse } from '../../shared/failed-response.js';
 import { MDS_RESOLVE_PATH } from '../constants.js';
 import { aaguidGuid } from '../../shared/aaguid.js';
+import { isAbortError } from './loading.js';
 
 /** @import { MdsEntry } from './loading.js' */
 
@@ -78,3 +79,34 @@ export async function requestResolvedEntry(query, { signal } = {}) {
     const entry = payload?.entry;
     return { entry: entry && typeof entry === 'object' ? entry : null };
 }
+
+// An entry's detail: the file its list row names (`detailUrl`), cached as the
+// browser keeps it and fetched without the session's cookie; else (no such row,
+// or the file is missing or unreadable) GET /api/mds/metadata/resolve, by what
+// the row holds or by the entry id. An abort is never swallowed.
+/**
+ * @param {Record<string, any> | null | undefined} listed
+ * @param {string} entryId
+ * @param {{ signal?: AbortSignal }} [options]
+ * @returns {Promise<{ entry: MdsEntry | null, failure?: { status: number, message: string } }>}
+ */
+export async function requestEntryDetail(listed, entryId, { signal } = {}) {
+    const url = typeof listed?.detailUrl === 'string' ? listed.detailUrl : '';
+    if (url) {
+        try {
+            /** @type {RequestInit} */
+            const init = signal ? { credentials: 'omit', signal } : { credentials: 'omit' };
+            const response = await fetch(url, init);
+            const entry = response.ok ? await response.json() : null;
+            if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
+                return { entry };
+            }
+        } catch (error) {
+            if (isAbortError(error)) {
+                throw error;
+            }
+        }
+    }
+    return requestResolvedEntry(listed ? resolveQueryForEntry(listed) : { entryId }, { signal });
+}
+

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ENTRY_LINK_MESSAGES,
   entryIdForAaguid,
+  requestEntryDetail,
   requestResolvedEntry,
   resolveQueryForEntry,
 } from './entry-link.js';
@@ -89,3 +90,48 @@ describe('resolving an entry the list does not hold', () => {
     await expect(requestResolvedEntry({ entryId: 'x' })).rejects.toThrow('not json');
   });
 });
+
+describe('an entry\'s detail', () => {
+  const LISTED = { entryId: 'aaid:F1D0#0012', id: 'F1D0#0012', detailUrl: '/assets/mds/entries/aaid%3AF1D0%230012?v=7.abc.1' };
+  const DETAIL = { ...LISTED, metadataStatement: { description: 'Key' }, isLightweightEntry: false };
+
+  it('comes from the file the listed entry names, without the cookie', async () => {
+    globalThis.fetch = vi.fn(async () => answer(DETAIL));
+    await expect(requestEntryDetail(LISTED, LISTED.entryId)).resolves.toEqual({ entry: DETAIL });
+    expect(globalThis.fetch).toHaveBeenCalledWith(LISTED.detailUrl, { credentials: 'omit' });
+
+    const signal = new AbortController().signal;
+    await requestEntryDetail(LISTED, LISTED.entryId, { signal });
+    expect(globalThis.fetch).toHaveBeenLastCalledWith(LISTED.detailUrl, { credentials: 'omit', signal });
+  });
+
+  it('is asked of the server when the file is missing, unreadable or not an entry', async () => {
+    const resolved = { entry: { ...DETAIL, rawEntry: {} } };
+    for (const fromFile of [
+      async () => answer({ error: 'gone' }, { ok: false, status: 404 }),
+      async () => { throw new TypeError('Failed to fetch'); },
+      async () => answer(['not an entry']),
+      async () => answer(null),
+    ]) {
+      globalThis.fetch = vi.fn().mockImplementationOnce(fromFile).mockImplementation(async () => answer(resolved));
+      await expect(requestEntryDetail(LISTED, LISTED.entryId)).resolves.toEqual(resolved);
+      expect(globalThis.fetch).toHaveBeenLastCalledWith('/api/mds/metadata/resolve?entryId=aaid%3AF1D0%230012', { cache: 'no-store' });
+    }
+  });
+
+  it('is asked of the server by the entry id for an entry the list does not hold, or one without a file', async () => {
+    globalThis.fetch = vi.fn(async () => answer({ entry: DETAIL }));
+    await requestEntryDetail(null, 'aaguid:gone');
+    expect(globalThis.fetch).toHaveBeenLastCalledWith('/api/mds/metadata/resolve?entryId=aaguid%3Agone', { cache: 'no-store' });
+    await requestEntryDetail({ entryId: 'aaguid:listed' }, 'aaguid:listed');
+    expect(globalThis.fetch).toHaveBeenLastCalledWith('/api/mds/metadata/resolve?entryId=aaguid%3Alisted', { cache: 'no-store' });
+  });
+
+  it('stops when it is called off', async () => {
+    const aborted = Object.assign(new Error('aborted'), { name: 'AbortError' });
+    globalThis.fetch = vi.fn(async () => { throw aborted; });
+    await expect(requestEntryDetail(LISTED, LISTED.entryId)).rejects.toBe(aborted);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+});
+

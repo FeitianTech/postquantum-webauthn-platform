@@ -1,4 +1,4 @@
-import { requestResolvedEntry, resolveQueryForEntry } from '@/logic/mds/explorer/entry-link.js';
+import { requestEntryDetail } from '@/logic/mds/explorer/entry-link.js';
 import { type MdsEntry, hasInlineDetail } from '@/logic/mds/explorer/loading.js';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -18,10 +18,11 @@ export type EntryDetail =
 
 type Resolved = { entryId: string; attempt: number; detail: EntryDetail };
 
-// The entry #mds/<entryId> names, with all it shows. The list holds every
-// entry with its detail inline, so it is shown from there once the list has
-// loaded; an entry the list does not hold (a link to another session's upload,
-// an entry gone since) is asked of GET /api/mds/metadata/resolve.
+// The entry #mds/<entryId> names, with all it shows. An entry the list holds
+// with its detail inline (an upload) is shown from there once the list has
+// loaded; one listed without it is read from the detail file its row names
+// (requestEntryDetail), and one the list does not hold (a link to another
+// session's upload, an entry gone since) is asked of GET /api/mds/metadata/resolve.
 export function useEntryDetail(entryId: string, entries: MdsEntry[], phase: ExplorerPhase) {
   const [resolved, setResolved] = useState<Resolved | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -37,7 +38,7 @@ export function useEntryDetail(entryId: string, entries: MdsEntry[], phase: Expl
     const settle = (detail: EntryDetail) => {
       if (!controller.signal.aborted) setResolved({ entryId, attempt, detail });
     };
-    requestResolvedEntry(listed ? resolveQueryForEntry(listed) : { entryId }, { signal: controller.signal })
+    requestEntryDetail(listed, entryId, { signal: controller.signal })
       .then(({ entry, failure }) => {
         if (entry) settle({ phase: 'found', entry });
         else if (failure && failure.status !== 404) settle({ phase: 'failed', message: failure.message });
