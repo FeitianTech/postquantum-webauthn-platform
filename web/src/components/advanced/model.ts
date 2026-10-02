@@ -15,20 +15,15 @@ import {
   normaliseFakeCredentialList,
   withoutFakeCredential,
 } from '@/logic/advanced/fake-credentials.js';
-import { ALLOW_CREDENTIALS_TEXT, allowCredentialChoices, authenticationCredentials, keptChoice } from '@/logic/advanced/authentication/allow-credentials.js';
 import { ADVANCED_ASSERTION_TEXT, advancedAuthenticationFailureText, authenticateAdvancedCredential } from '@/logic/advanced/authentication/ceremony.js';
 import { authenticationAvailability } from '@/logic/advanced/authentication/capabilities.js';
 import { hexInputIsValid } from '@/logic/advanced/hex-input.js';
 import {
   HINT_VALUES,
   applyAuthenticatorAttachmentPreference,
-  deriveAllowedAttachmentsFromHints,
   enforceAuthenticatorAttachmentWithHints,
   ensureAuthenticationHintsAllowed,
 } from '@/logic/advanced/hints.js';
-import { describeCoseAlgorithm } from '@/logic/credentials/cose-labels.js';
-import { describeCredentialAlgorithmWith } from '@/logic/credentials/algorithm-tag.js';
-import { getCredentialIdHex, getStoredCredentialAttachment } from '@/logic/credentials/record-fields.js';
 import { applyJsonEditorAutoIndent, applyTabIndentation, wrapSelectionWithPair } from '@/logic/advanced/editor/keys.js';
 import { ALGORITHM_OPTIONS } from '@/logic/advanced/registration/algorithm-options.js';
 import {
@@ -187,7 +182,6 @@ export type AuthenticationSettings = {
   prfSecond: string;
 };
 export type AuthenticationField = keyof AuthenticationSettings;
-export type AllowChoice = { value: string; label: string; attachment: string };
 type Availability = { available: boolean; message: string };
 type Availabilities = { largeBlob: Availability; prf: Availability };
 type AuthenticationContext = { hostname: string; storedCredentials: SavedCredential[]; fakeAllowCredentials: string[] };
@@ -210,22 +204,6 @@ export const lockedAuthFields = authenticationControls as (
   availability: Availabilities,
 ) => { largeBlob: boolean; largeBlobWrite: boolean; prfFirst: boolean; prfSecond: boolean };
 export const availabilityOf = authenticationAvailability as (storedCredentials: SavedCredential[], selection: string) => Availabilities;
-
-export const ALLOW_WORDS = ALLOW_CREDENTIALS_TEXT as { all: string; empty: string };
-export const keptAllowChoice = keptChoice as (choices: AllowChoice[], value: string) => string;
-/** The saved credentials an authentication can use: the advanced ones, which its ceremony sends. */
-export const usableForAuthentication = authenticationCredentials as (storedCredentials: SavedCredential[]) => SavedCredential[];
-/** The saved credentials Allow Credentials offers: those whose attachment the authentication's hints allow (every one without hints). */
-export function allowChoices(storedCredentials: SavedCredential[], hints: string[]): AllowChoice[] {
-  const attachments = (deriveAllowedAttachmentsFromHints as (hints: string[]) => string[])(hints);
-  return (allowCredentialChoices as (stored: SavedCredential[], helpers: object) => AllowChoice[])(storedCredentials, {
-    attachments,
-    getCredentialIdHex,
-    getStoredCredentialAttachment,
-    describeAlgorithm: (credential: SavedCredential) =>
-      (describeCredentialAlgorithmWith as (record: SavedCredential, describe: unknown) => string)(credential, describeCoseAlgorithm),
-  });
-}
 
 // The authentication ceremony.
 export const ASSERTION_WORDS = ADVANCED_ASSERTION_TEXT as Record<'authenticated' | 'lastAuthentication', string>;

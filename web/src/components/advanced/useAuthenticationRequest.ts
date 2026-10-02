@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 
 import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
+import {
+  type AllowChoice,
+  allowCredentialChoices,
+  authenticationCredentials,
+  keptChoice,
+} from '@/logic/advanced/authentication/allow-credentials.js';
 import type { SavedCredential } from '@/logic/credentials/saved-list.js';
 
 import {
-  type AllowChoice,
   type AuthenticationField,
   type AuthenticationSettings,
-  allowChoices,
   authDefaults,
   availabilityOf,
   buildAuthRequest,
@@ -15,12 +19,10 @@ import {
   extrasOf,
   fakeLength,
   fakeList,
-  keptAllowChoice,
   randomHex,
   readAuthRequest,
   readEdit,
   settleAvailability,
-  usableForAuthentication,
   withoutFake,
 } from './model';
 import { NO_TEXT, type RequestText, followedText, rebuiltText, resetText } from './requestEditor';
@@ -63,18 +65,18 @@ function formRequestOf(settings: AuthenticationSettings, fakeAllow: string[], co
 
 /** What Allow Credentials offers with these settings: the credentials their hints allow. */
 function choicesFor(settings: AuthenticationSettings, context: Context): AllowChoice[] {
-  return allowChoices(context.storedCredentials, settings.hints);
+  return allowCredentialChoices(context.storedCredentials, settings.hints);
 }
 
 /** The settings as the saved credentials leave them: a choice still offered, and only the extensions they can use. */
 function settled(settings: AuthenticationSettings, context: Context): AuthenticationSettings {
-  const allowCredentials = keptAllowChoice(choicesFor(settings, context), settings.allowCredentials);
+  const allowCredentials = keptChoice(choicesFor(settings, context), settings.allowCredentials);
   return settleAvailability({ ...settings, allowCredentials }, availabilityOf(context.storedCredentials, allowCredentials));
 }
 
 /** The settings with their choice still offered: a hint that refuses the chosen credential brings All back. */
 function offered(settings: AuthenticationSettings, context: Context): AuthenticationSettings {
-  const allowCredentials = keptAllowChoice(choicesFor(settings, context), settings.allowCredentials);
+  const allowCredentials = keptChoice(choicesFor(settings, context), settings.allowCredentials);
   return allowCredentials === settings.allowCredentials ? settings : settled({ ...settings, allowCredentials }, context);
 }
 
@@ -119,11 +121,11 @@ function reduce(current: RequestState, action: Action): RequestState {
       // hints decide whether its one credential is offered, else All.
       const read = readAuthRequest(edit.root.publicKey, current.settings, {
         storedCredentials: action.context.storedCredentials,
-        choices: ['all', 'empty', ...allowChoices(action.context.storedCredentials, []).map((choice) => choice.value)],
+        choices: ['all', 'empty', ...allowCredentialChoices(action.context.storedCredentials, []).map((choice) => choice.value)],
       });
       const settings = {
         ...read.settings,
-        allowCredentials: keptAllowChoice(choicesFor(read.settings, action.context), read.settings.allowCredentials),
+        allowCredentials: keptChoice(choicesFor(read.settings, action.context), read.settings.allowCredentials),
       };
       const fakeAllow = fakeList(read.fakeAllowCredentials);
       return {
@@ -151,8 +153,8 @@ const EMPTY: RequestState = {
 export function useAuthenticationRequest() {
   const saved = useSavedCredentials();
   const [current, dispatch] = useReducer(reduce, EMPTY);
-  const storedCredentials = useMemo(() => usableForAuthentication(saved.rows.map((row) => row.credential)), [saved.rows]);
-  const choices = useMemo(() => allowChoices(storedCredentials, current.settings.hints), [storedCredentials, current.settings.hints]);
+  const storedCredentials = useMemo(() => authenticationCredentials(saved.rows.map((row) => row.credential)), [saved.rows]);
+  const choices = useMemo(() => allowCredentialChoices(storedCredentials, current.settings.hints), [storedCredentials, current.settings.hints]);
   const contextRef = useRef<Context>({ hostname: '', storedCredentials });
   contextRef.current = { ...contextRef.current, storedCredentials };
   const context = () => contextRef.current;

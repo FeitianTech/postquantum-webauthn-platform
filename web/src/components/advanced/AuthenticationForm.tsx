@@ -1,8 +1,9 @@
 import { TextField } from '@/components/ui/Field';
+import { ALLOW_CREDENTIALS_TEXT } from '@/logic/advanced/authentication/allow-credentials.js';
 
 import { About, Chip, ChipGroupField, Chips, FakeCredentialField, FormSection, HexField, SelectField, toggled } from './FieldControls';
 import { AUTHENTICATION_FIELDS, AUTHENTICATION_SECTIONS } from './fieldText';
-import { ALLOW_WORDS, FAKE_TEXT, HINTS, lockedAuthFields } from './model';
+import { FAKE_TEXT, HINTS, lockedAuthFields } from './model';
 import type { AuthenticationRequest } from './useAuthenticationRequest';
 
 const FIELDS = AUTHENTICATION_FIELDS;
@@ -17,8 +18,8 @@ export function AuthenticationForm({ request }: { request: AuthenticationRequest
   const [selection, other, extensions] = AUTHENTICATION_SECTIONS;
   const hintOrder = [...HINTS, ...settings.hints.filter((hint) => !HINTS.includes(hint))];
   const allowOptions = [
-    { value: 'all', label: ALLOW_WORDS.all },
-    { value: 'empty', label: ALLOW_WORDS.empty },
+    { value: 'all', label: ALLOW_CREDENTIALS_TEXT.all },
+    { value: 'empty', label: ALLOW_CREDENTIALS_TEXT.empty },
     ...request.choices.map(({ value, label }) => ({ value, label })),
   ];
 

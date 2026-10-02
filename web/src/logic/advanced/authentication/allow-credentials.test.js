@@ -6,18 +6,9 @@ import {
   authenticationCredentials,
   keptChoice,
 } from './allow-credentials.js';
-import { describeCoseAlgorithm } from '../../credentials/cose-labels.js';
-import { describeCredentialAlgorithmWith } from '../../credentials/algorithm-tag.js';
-import { getCredentialIdHex, getStoredCredentialAttachment } from '../../credentials/record-fields.js';
 
 // The Allow Credentials select of the Advanced tab's authentication, with no
 // page (advanced/authentication/allow-credentials.js), over the real credential helpers.
-
-const HELPERS = {
-  getCredentialIdHex,
-  getStoredCredentialAttachment,
-  describeAlgorithm: (credential) => describeCredentialAlgorithmWith(credential, describeCoseAlgorithm),
-};
 
 const PLATFORM = { credentialIdHex: 'aa01', userName: 'alice', authenticatorAttachment: 'platform', publicKeyAlgorithm: -7 };
 const ROAMING = { credentialId: 'uwI', username: 'bob', properties: { authenticatorAttachment: ' Cross-Platform ' }, publicKeyAlgorithm: -8 };
@@ -26,7 +17,7 @@ const UNNAMED = { credentialIdHex: 'dd04', authenticatorAttachment: 'usb', publi
 const NO_ID = { userName: 'nobody' };
 const STORED = [PLATFORM, ROAMING, UNATTACHED, UNNAMED, NO_ID];
 
-const offered = (attachments) => allowCredentialChoices(STORED, { attachments, ...HELPERS });
+const offered = (hints) => allowCredentialChoices(STORED, hints);
 
 describe('the Allow Credentials choices', () => {
   it('begin with All and Empty', () => {
@@ -42,10 +33,11 @@ describe('the Allow Credentials choices', () => {
     ]);
   });
 
-  it('offer only the credentials whose attachment the filter names', () => {
-    expect(offered(['platform']).map((choice) => choice.value)).toEqual(['aa01']);
-    expect(offered(['cross-platform']).map((choice) => choice.value)).toEqual(['bb02']);
-    expect(allowCredentialChoices(undefined, { attachments: [], ...HELPERS })).toEqual([]);
+  it('offer only the credentials whose attachment the hints allow', () => {
+    expect(offered(['client-device']).map((choice) => choice.value)).toEqual(['aa01']);
+    expect(offered(['security-key']).map((choice) => choice.value)).toEqual(['bb02']);
+    expect(offered(['hybrid', 'client-device']).map((choice) => choice.value)).toEqual(['aa01', 'bb02']);
+    expect(allowCredentialChoices(undefined, [])).toEqual([]);
   });
 
   it('are made from the advanced credentials only, which the ceremony sends', () => {
@@ -60,6 +52,6 @@ describe('the Allow Credentials choices', () => {
     expect(keptChoice(choices, 'all')).toBe('all');
     expect(keptChoice(choices, 'empty')).toBe('empty');
     expect(keptChoice(choices, 'bb02')).toBe('bb02');
-    expect(keptChoice(offered(['platform']), 'bb02')).toBe('all');
+    expect(keptChoice(offered(['client-device']), 'bb02')).toBe('all');
   });
 });
