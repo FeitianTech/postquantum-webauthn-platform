@@ -5,8 +5,7 @@
 // (editor/model.js, editor/keys.js), the hints' rules, the fake credential IDs,
 // the byte fields' check, the Allow Credentials choices and the extensions'
 // availability (hints.js, fake-credentials.js, hex-input.js,
-// authentication/allow-credentials.js, authentication/capabilities.js), and the
-// snapshot a registration's result keeps (credentials/registration/snapshot.js).
+// authentication/allow-credentials.js, authentication/capabilities.js).
 // These are the types the components read them through.
 import { advancedRegisteredMessage, advancedRegistrationFailureText, registerAdvancedCredential } from '@/logic/advanced/registration/ceremony.js';
 import {
@@ -30,10 +29,6 @@ import {
 import { describeCoseAlgorithm } from '@/logic/credentials/cose-labels.js';
 import { describeCredentialAlgorithmWith } from '@/logic/credentials/algorithm-tag.js';
 import { getCredentialIdHex, getStoredCredentialAttachment } from '@/logic/credentials/record-fields.js';
-import { decodePayloadThroughApi } from '@/logic/credentials/registration/decode-payload.js';
-import { keepRegistrationSnapshot } from '@/logic/credentials/registration/snapshot.js';
-import { createRegistrationState } from '@/logic/credentials/registration/state.js';
-import { composeRegistration } from '@/logic/credentials/registration/view.js';
 import { applyJsonEditorAutoIndent, applyTabIndentation, wrapSelectionWithPair } from '@/logic/advanced/editor/keys.js';
 import { ALGORITHM_OPTIONS } from '@/logic/advanced/registration/algorithm-options.js';
 import {
@@ -57,7 +52,6 @@ import { generateRandom10DigitUsername } from '@/logic/shared/random-username.js
 import {
   prepareAdvancedCredentialsForServer,
   saveAdvancedCredential,
-  updateAdvancedCredentialRegistrationSnapshot,
   updateAdvancedCredentialSignCount,
 } from '@/logic/credentials/storage/local/advanced-credentials.js';
 import { generateRandomHex } from '@/logic/shared/bytes.js';
@@ -175,23 +169,6 @@ export const failureText = advancedRegistrationFailureText as (error: unknown) =
 export const enforceHints = enforceAuthenticatorAttachmentWithHints as (publicKey: Json) => string[];
 export const attachmentPreference = applyAuthenticatorAttachmentPreference as (...args: unknown[]) => void;
 export const saveRecord = saveAdvancedCredential as (record: SavedCredential) => (SavedCredential & { storageId?: string }) | null;
-
-/** Composes a registration into a state of its own, and saves it as the record's snapshot. */
-export function keepSnapshot(credentialJson: Json, relyingPartyInfo: Json | null, storageId: string | null) {
-  const registration = createRegistrationState();
-  return (
-    keepRegistrationSnapshot as (
-      input: { credentialJson: Json; relyingPartyInfo: Json | null; storageId: string | null },
-      options: { compose: (input: object) => Promise<unknown>; saveSnapshot: (id: string, payload: object) => Promise<boolean> },
-    ) => Promise<{ saved: boolean }>
-  )(
-    { credentialJson, relyingPartyInfo, storageId },
-    {
-      compose: (input) => (composeRegistration as (input: object, deps: object) => Promise<unknown>)(input, { state: registration, decode: decodePayloadThroughApi }),
-      saveSnapshot: updateAdvancedCredentialRegistrationSnapshot as (id: string, payload: object) => Promise<boolean>,
-    },
-  );
-}
 
 // The authentication's request and form.
 /** The authentication form's settings (authentication/request.js): byte fields as hex text, numbers as text. */

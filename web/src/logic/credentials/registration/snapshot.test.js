@@ -1,11 +1,17 @@
 // What a registration's result keeps (credentials/registration/snapshot.js), over the recorded advanced registrations and the decoder's answers.
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { updateAdvancedCredentialRegistrationSnapshot } from '../storage/local/advanced-credentials.js';
+import { decodePayloadThroughApi } from './decode-payload.js';
 import { keepRegistrationSnapshot } from './snapshot.js';
 import { createRegistrationState } from './state.js';
-import { composeRegistration } from './view.js';
+import { composeRegistration, registrationResultInput } from './view.js';
 import { credentialToJSON } from '@/test/logic/simple/ceremony-answers.js';
 import { advancedDecodeAnswer, advancedRegistrations, recordedCredential } from '@/test/logic/advanced/advanced-answers.js';
+
+// The server's decoder (POST /api/codec), and the record the snapshot is saved into.
+vi.mock('./decode-payload.js', () => ({ decodePayloadThroughApi: vi.fn() }));
+vi.mock('../storage/local/advanced-credentials.js', () => ({ updateAdvancedCredentialRegistrationSnapshot: vi.fn() }));
 
 // The three recorded registrations: a none attestation (ES256), a packed one
 // with a certificate and every extension, and an ML-DSA-44 one.
@@ -13,26 +19,26 @@ const REGISTRATIONS = advancedRegistrations();
 const [, EVERYTHING] = REGISTRATIONS;
 const CAPTURED_AT = '2026-09-21T14:13:20.000Z';
 
+/** The decoder's recorded answer, else its refusal thrown. */
+async function recordedDecode(payload) {
+  const { status, body } = advancedDecodeAnswer(payload);
+  if (status !== 200) {
+    throw new Error(body.error);
+  }
+  return body;
+}
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(CAPTURED_AT));
+  vi.mocked(decodePayloadThroughApi).mockImplementation(recordedDecode);
+  vi.mocked(updateAdvancedCredentialRegistrationSnapshot).mockImplementation(async () => true);
+});
+
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
-
-/** The decoder as the view calls it (POST /api/codec): its recorded answer, else its refusal thrown. */
-function recordedDecoder() {
-  return vi.fn(async (payload) => {
-    const { status, body } = advancedDecodeAnswer(payload);
-    if (status !== 200) {
-      throw new Error(body.error);
-    }
-    return body;
-  });
-}
-
-/** The composition the result runs: the registration view, into a state of its own. */
-function composer(decode = recordedDecoder()) {
-  return vi.fn((options) => composeRegistration(options, { state: createRegistrationState(), decode }));
-}
 
 /** The credential's JSON as the browser writes it for a recorded registration's credential. */
 function credentialJsonOf(registration) {
@@ -48,34 +54,37 @@ async function resultOf(registration, storageId = registration.complete.body.sto
   };
 }
 
+/** The snapshot saved, as the record's storage was given it. */
+function savedPayload() {
+  return vi.mocked(updateAdvancedCredentialRegistrationSnapshot).mock.calls[0][1];
+}
+
 describe('keepRegistrationSnapshot', () => {
   it('composes the registration from the credential, the relying party and what the result reads from them', async () => {
     const input = await resultOf(EVERYTHING);
-    const decode = recordedDecoder();
-    const compose = composer(decode);
-    const kept = await keepRegistrationSnapshot(input, { compose, saveSnapshot: vi.fn(async () => true), now: () => CAPTURED_AT });
+    const kept = await keepRegistrationSnapshot(input);
 
     const relyingParty = EVERYTHING.complete.body.relyingParty;
-    expect(compose).toHaveBeenCalledTimes(1);
-    expect(compose).toHaveBeenCalledWith({
-      credentialJson: input.credentialJson,
-      relyingPartyInfo: relyingParty,
+    expect(registrationResultInput(input.credentialJson, relyingParty)).toEqual({
       attestationObjectValue: relyingParty.attestationObject,
       authenticatorDataValue: '',
       fallbackCertificates: [relyingParty.attestationCertificate, ...relyingParty.attestationCertificates],
     });
-    expect(decode).toHaveBeenCalledTimes(1);
-    expect(decode).toHaveBeenCalledWith(relyingParty.attestationObject);
-    expect(kept.composed).toBe(await compose.mock.results[0].value);
+    expect(decodePayloadThroughApi).toHaveBeenCalledTimes(1);
+    expect(decodePayloadThroughApi).toHaveBeenCalledWith(relyingParty.attestationObject);
+    expect(kept.composed).toEqual(await composeRegistration({
+      credentialJson: input.credentialJson,
+      relyingPartyInfo: relyingParty,
+      ...registrationResultInput(input.credentialJson, relyingParty),
+    }, { state: createRegistrationState(), decode: recordedDecode }));
   });
 
-  it('saves a saved record\'s snapshot: the registration as data, captured when the clock says', async () => {
+  it('saves a saved record\'s snapshot: the registration as data, captured now', async () => {
     const input = await resultOf(EVERYTHING);
-    const saveSnapshot = vi.fn(async () => true);
-    const kept = await keepRegistrationSnapshot(input, { compose: composer(), saveSnapshot, now: () => CAPTURED_AT });
+    const kept = await keepRegistrationSnapshot(input);
 
-    expect(saveSnapshot).toHaveBeenCalledTimes(1);
-    expect(saveSnapshot).toHaveBeenCalledWith(EVERYTHING.complete.body.storedCredential.storageId, {
+    expect(updateAdvancedCredentialRegistrationSnapshot).toHaveBeenCalledTimes(1);
+    expect(updateAdvancedCredentialRegistrationSnapshot).toHaveBeenCalledWith(EVERYTHING.complete.body.storedCredential.storageId, {
       schemaVersion: 2,
       capturedAt: CAPTURED_AT,
       state: kept.composed.stateSnapshot,
@@ -86,10 +95,9 @@ describe('keepRegistrationSnapshot', () => {
 
   it('keeps the decoded attestation object, its certificates and the relying party\'s view in the snapshot', async () => {
     const input = await resultOf(EVERYTHING);
-    const saveSnapshot = vi.fn(async () => true);
-    await keepRegistrationSnapshot(input, { compose: composer(), saveSnapshot, now: () => CAPTURED_AT });
+    await keepRegistrationSnapshot(input);
 
-    const [, payload] = saveSnapshot.mock.calls[0];
+    const payload = savedPayload();
     const relyingParty = EVERYTHING.complete.body.relyingParty;
     expect(payload.state.attestationObject.fmt).toBe('packed');
     expect(payload.state.attestationCertificates.map(({ parsedX5c }) => parsedX5c.derBase64)).toEqual([
@@ -107,9 +115,9 @@ describe('keepRegistrationSnapshot', () => {
   it('keeps each recorded registration\'s attestation format as the decoder read it', async () => {
     const formats = [];
     for (const registration of REGISTRATIONS) {
-      const saveSnapshot = vi.fn(async () => true);
-      await keepRegistrationSnapshot(await resultOf(registration), { compose: composer(), saveSnapshot, now: () => CAPTURED_AT });
-      formats.push(saveSnapshot.mock.calls[0][1].state.attestationObject.fmt);
+      vi.mocked(updateAdvancedCredentialRegistrationSnapshot).mockClear();
+      await keepRegistrationSnapshot(await resultOf(registration));
+      formats.push(savedPayload().state.attestationObject.fmt);
     }
     expect(formats).toEqual(REGISTRATIONS.map(({ complete }) => complete.body.attestationFormat));
     expect(formats).toEqual(['none', 'packed', 'packed']);
@@ -118,42 +126,39 @@ describe('keepRegistrationSnapshot', () => {
   it('keeps the decoder\'s refusal when the attestation object does not decode', async () => {
     const input = await resultOf(EVERYTHING);
     input.credentialJson.response.attestationObject = 'oA';
-    const saveSnapshot = vi.fn(async () => true);
-    await keepRegistrationSnapshot(input, { compose: composer(), saveSnapshot, now: () => CAPTURED_AT });
+    await keepRegistrationSnapshot(input);
 
-    const [, payload] = saveSnapshot.mock.calls[0];
+    const payload = savedPayload();
     expect(payload.state.detailPreparation.attestationDecodeError).toBe('The payload is not valid CBOR.');
     expect(payload.state.attestationObject).toBeNull();
   });
 
   it('says the snapshot changed nothing when saving it changed nothing', async () => {
     const input = await resultOf(EVERYTHING);
-    const unchanged = await keepRegistrationSnapshot(input, { compose: composer(), saveSnapshot: vi.fn(async () => false), now: () => CAPTURED_AT });
-    const unanswered = await keepRegistrationSnapshot(input, { compose: composer(), saveSnapshot: vi.fn(async () => undefined), now: () => CAPTURED_AT });
+    vi.mocked(updateAdvancedCredentialRegistrationSnapshot).mockImplementation(async () => false);
+    const unchanged = await keepRegistrationSnapshot(input);
+    vi.mocked(updateAdvancedCredentialRegistrationSnapshot).mockImplementation(async () => undefined);
+    const unanswered = await keepRegistrationSnapshot(input);
 
     expect([unchanged.saved, unanswered.saved]).toEqual([false, false]);
   });
 
   it('saves nothing for a registration the browser did not save, and still gives the composition', async () => {
     const { storageId, ...unsaved } = await resultOf(EVERYTHING);
-    const compose = composer();
-    const saveSnapshot = vi.fn(async () => true);
-    const kept = await keepRegistrationSnapshot(unsaved, { compose, saveSnapshot, now: () => CAPTURED_AT });
-    const keptNull = await keepRegistrationSnapshot({ ...unsaved, storageId: null }, { compose, saveSnapshot, now: () => CAPTURED_AT });
+    const kept = await keepRegistrationSnapshot(unsaved);
+    const keptNull = await keepRegistrationSnapshot({ ...unsaved, storageId: null });
 
-    expect(saveSnapshot).not.toHaveBeenCalled();
-    expect(kept).toEqual({ composed: await compose.mock.results[0].value, saved: false });
+    expect(updateAdvancedCredentialRegistrationSnapshot).not.toHaveBeenCalled();
+    expect(kept.saved).toBe(false);
     expect(keptNull.saved).toBe(false);
     expect(kept.composed.attestation.body.kind).toBe('json');
   });
 
-  it('captures the snapshot at the present time when given no clock', async () => {
+  it('captures the snapshot at the present time', async () => {
     const input = await resultOf(EVERYTHING);
-    vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-28T08:30:00Z'));
-    const saveSnapshot = vi.fn(async () => true);
-    await keepRegistrationSnapshot(input, { compose: composer(), saveSnapshot });
+    await keepRegistrationSnapshot(input);
 
-    expect(saveSnapshot.mock.calls[0][1].capturedAt).toBe('2026-09-28T08:30:00.000Z');
+    expect(savedPayload().capturedAt).toBe('2026-09-28T08:30:00.000Z');
   });
 });

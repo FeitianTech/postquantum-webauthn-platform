@@ -1,24 +1,24 @@
 // What a registration's result keeps once it is composed: the registration as
 // data, saved as the record's snapshot (schemaVersion 2) in the browser and on
 // the server, so its details build from it without asking again. DOM-free.
-import { registrationResultInput, registrationSnapshotPayload } from './view.js';
+import { updateAdvancedCredentialRegistrationSnapshot } from '../storage/local/advanced-credentials.js';
+import { decodePayloadThroughApi } from './decode-payload.js';
+import { createRegistrationState } from './state.js';
+import { composeRegistration, registrationResultInput, registrationSnapshotPayload } from './view.js';
 
 /**
  * Composes the registration the browser's credential and the relying party's
- * answer describe (`compose(input)`, into the state its caller keeps), then, for
- * a record the browser saved (`storageId`), saves the snapshot
- * (`saveSnapshot(storageId, payload)`, true when anything changed). Gives the
- * composition and whether the snapshot changed anything.
+ * answer describe, into a state of its own, through the server's decoder; then,
+ * for a record the browser saved (`storageId`), saves the snapshot, captured now,
+ * into it. Gives the composition and whether the snapshot changed anything.
+ * @param {{ credentialJson: Record<string, any>, relyingPartyInfo: Record<string, any> | null, storageId?: string | null }} result
  */
-export async function keepRegistrationSnapshot(
-    { credentialJson, relyingPartyInfo, storageId = null },
-    { compose, saveSnapshot, now = () => new Date().toISOString() },
-) {
-    const composed = await compose({
+export async function keepRegistrationSnapshot({ credentialJson, relyingPartyInfo, storageId = null }) {
+    const composed = await composeRegistration({
         credentialJson,
         relyingPartyInfo,
         ...registrationResultInput(credentialJson, relyingPartyInfo),
-    });
+    }, { state: createRegistrationState(), decode: decodePayloadThroughApi });
 
     if (!storageId || !composed) {
         return { composed, saved: false };
@@ -30,6 +30,6 @@ export async function keepRegistrationSnapshot(
         stateSnapshot: composed.stateSnapshot,
         credentialJson,
         relyingPartyCopy: composed.relyingPartyCopy,
-    }, now());
-    return { composed, saved: Boolean(await saveSnapshot(storageId, payload)) };
+    }, new Date().toISOString());
+    return { composed, saved: Boolean(await updateAdvancedCredentialRegistrationSnapshot(storageId, payload)) };
 }

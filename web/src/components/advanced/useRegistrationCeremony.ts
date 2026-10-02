@@ -2,10 +2,11 @@ import { useCallback, useRef, useState } from 'react';
 
 import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
 import { useToast } from '@/components/ui/Toast';
+import { keepRegistrationSnapshot } from '@/logic/credentials/registration/snapshot.js';
 import { credentialKey } from '@/logic/credentials/saved-list.js';
 import type { CeremonyResultInput } from '@/logic/shared/ceremony-result.js';
 
-import { attachmentPreference, enforceHints, failureText, keepSnapshot, registerCredential, registeredMessage, saveRecord } from './model';
+import { attachmentPreference, enforceHints, failureText, registerCredential, registeredMessage, saveRecord } from './model';
 import type { AdvancedRequest } from './useAdvancedRequest';
 
 // The Advanced tab's registration, in the steps and words of
@@ -53,7 +54,11 @@ export function useRegistrationCeremony(request: AdvancedRequest, openRegistrati
       toast({ tone: message.tone, message: message.text });
       latest.current.request.redraw();
       const kept = outcome.record ? saveRecord(outcome.record) : null;
-      await keepSnapshot(outcome.credentialJson, outcome.answer.relyingParty ?? null, kept?.storageId ?? null);
+      await keepRegistrationSnapshot({
+        credentialJson: outcome.credentialJson,
+        relyingPartyInfo: outcome.answer.relyingParty ?? null,
+        storageId: kept?.storageId ?? null,
+      });
       saved.refresh();
       if (kept) latest.current.openRegistration(credentialKey(kept));
     } catch (error) {
