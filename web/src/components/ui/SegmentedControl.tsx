@@ -25,21 +25,12 @@ export function segmentIds(idBase: string, value: string) {
 const NEXT_KEYS = new Set(['ArrowRight', 'ArrowDown']);
 const PREVIOUS_KEYS = new Set(['ArrowLeft', 'ArrowUp']);
 
-// Tabs on a white track with one white highlight that slides to the chosen tab.
-// The highlight is placed through the CSSOM (element.style), which the CSP
-// allows, never through a style attribute. It jumps rather than slides on its
-// first placement, on a resize and when the value changes from outside (the URL
-// hash), and never slides under prefers-reduced-motion; when it jumps, the tabs'
-// colours change at once too, so no tab fades from the one chosen before.
-export function SegmentedControl<T extends string>({
-  label,
-  options,
-  value,
-  onChange,
-  idBase,
-  size = 'md',
-  className,
-}: SegmentedControlProps<T>) {
+// The highlight under the chosen tab, placed through the CSSOM (element.style),
+// which the CSP allows, never through a style attribute. It slides when this
+// control changed the value (`chosenHere`), and jumps on its first placement, on
+// a resize and when the value changes from outside; when it jumps, the tabs'
+// colours change at once too.
+function useSegmentHighlight(value: string | null) {
   const listRef = useRef<HTMLDivElement>(null);
   const highlightRef = useRef<HTMLSpanElement>(null);
   const tabs = useRef(new Map<string, HTMLButtonElement>());
@@ -89,6 +80,22 @@ export function SegmentedControl<T extends string>({
     observer.observe(list);
     return () => observer.disconnect();
   }, []);
+
+  return { listRef, highlightRef, tabs, chosenHere };
+}
+
+// Tabs on a white track with one white highlight that slides to the chosen tab
+// (useSegmentHighlight), and never slides under prefers-reduced-motion.
+export function SegmentedControl<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  idBase,
+  size = 'md',
+  className,
+}: SegmentedControlProps<T>) {
+  const { listRef, highlightRef, tabs, chosenHere } = useSegmentHighlight(value);
 
   const choose = (next: T) => {
     if (next !== value) {
