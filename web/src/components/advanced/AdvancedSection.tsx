@@ -13,15 +13,18 @@ import { NAV_ID, SECTIONS } from '@/lib/sections';
 import type { SectionRoute } from '@/lib/useSection';
 import type { CeremonyResultInput } from '@/logic/shared/ceremony-result.js';
 
+// The requests' hooks before the parts that show them: webpack lays the page's
+// modules out in the order they are imported, and the requests' logic beside the
+// editor's gzips about 2 KB smaller than with the forms between them.
+import { useAdvancedRequest } from './useAdvancedRequest';
+import { useAuthenticationCeremony } from './useAuthenticationCeremony';
+import { useAuthenticationRequest } from './useAuthenticationRequest';
+import { useRegistrationCeremony } from './useRegistrationCeremony';
 import { AuthenticationForm } from './AuthenticationForm';
 import { CredentialsDrawer, DRAWER_ID } from './CredentialsDrawer';
 import { JsonEditor } from './JsonEditor';
 import { RegistrationForm } from './RegistrationForm';
 import type { RequestEditor } from './requestEditor';
-import { useAdvancedRequest } from './useAdvancedRequest';
-import { useAuthenticationCeremony } from './useAuthenticationCeremony';
-import { useAuthenticationRequest } from './useAuthenticationRequest';
-import { useRegistrationCeremony } from './useRegistrationCeremony';
 
 type Ceremony = 'registration' | 'authentication';
 
