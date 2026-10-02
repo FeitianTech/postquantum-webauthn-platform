@@ -53,7 +53,8 @@ the page in a real browser.
   the hash is read before the hydrated page's first frame.
 - A section, a Codec mode or an MDS page plays its entrance (a short fade and rise,
   `section-in`) only for what the person brings up with a key, a pointer or the
-  browser's history, never for what the URL opens (`web/src/lib/entrance.ts`).
+  browser's history, never for what the URL opens (`web/src/lib/entrance.ts`), however
+  late its data or its chunk arrives.
 
 ## Layout
 
@@ -106,7 +107,10 @@ the page in a real browser.
 ## What serves what
 
 - **The export** (`web/out`): three pages (`index`, `404`, `500`) and
-  `/_next/static/`. Flask's `web_export` blueprint serves it at `/`:
+  `/_next/static/`. The page's own chunk holds the shell and the Simple tab; the other
+  sections, the credential details and the Analyze Browser panel are chunks of their own,
+  fetched once the first view is interactive (the section the URL names at once), and
+  only Geist is preloaded. Flask's `web_export` blueprint serves it at `/`:
   HTML `no-cache`; `/_next/static/` immutable for a year, gzipped from the build's
   `.gz` copies; the export's 404 page for an unknown path. No Node runs in production.
 - **Flask** answers everything with a static segment first: `/health`, `/api/…` (a

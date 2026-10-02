@@ -62,20 +62,26 @@ the CSP and the source rules.
   `MonoValue` measures overflow as if its "Show all" were not there, again when fonts load.
 - `src/components/shell/`: the header (title, the four sections, Analyze Browser, GitHub;
   the phone menu sheet below 900 px; it measures itself into `--header-height`), the footer
-  (its year kept by `tools/update_footer_year.py`), and `AppShell`, which mounts every
-  section and gives the route only to the one shown (the others get `CLOSED_ROUTE`).
+  (its year kept by `tools/update_footer_year.py`), and `AppShell`, which gives the route only
+  to the section shown (the others get `CLOSED_ROUTE`). Simple is in the page's chunk; Advanced,
+  Codec, MDS and the Analyze Browser panel are chunks of their own (`import()` through
+  `lib/lazyModule.ts`): the section the URL names loads at once, behind a `SectionPlaceholder`
+  panel, and the rest once the first view is interactive, each then mounted, hidden.
 - `src/lib/`: `sections.ts` (`SECTIONS`, `NAV_ID`, `APP_TITLE`, which is also the relying
   party's name; `routeFromHash` / `hashPath`), `useSection.ts` (the section in the hash with
   `replaceState`; what is open inside one as segments after it, e.g.
   `#mds/<entryId>/certificate/<n>`; `open` pushes so Back closes one level, `close`, `replace`,
   `closeAll` go back as many levels as the page opened: the pushed state's `pqcOpened`; it
   tells Next's router, `beforePopState`, to leave Back to the page while the path stays),
-  `entrance.ts` (entrances only for what the person brings up), `download.ts`,
-  `useOverlayRoot.ts`.
+  `entrance.ts` (entrances only for what the person brings up: what mounts already shown
+  enters only once the page has left its first URL), `lazyModule.ts` (a chunk loaded once,
+  `useLazyModule`, `whenInteractive`), `download.ts`, `useOverlayRoot.ts`.
 - Sections:
   - `simple/` and `credentials/`: the Simple tab, and the saved credentials both tabs share
     (`SavedCredentialsProvider` at the shell's level; it follows another tab's change through
-    the storage event). `CredentialDetailDialog` has four levels, each a pushed history entry:
+    the storage event). `CredentialDetailDialog` (a chunk of its own, loaded by
+    `CredentialDetails` when it is asked for or once the page is interactive) has four levels,
+    each a pushed history entry:
     `#<section>/credential/<key>`, `…/registration`, `…/registration/certificate/<n>`,
     `…/registration/authenticator-data`; a level the credential lacks is corrected upward.
   - `advanced/`: the Advanced tab. Registration and Authentication segments, both mounted,
@@ -110,8 +116,10 @@ the CSP and the source rules.
   recording in `e2e/recorded/` (`recorded-words.ts`, `recorded.ts`): a recording is never
   edited, and an intended change is an expected difference with its reason (the user name
   `paritycheck` is data inside a recording). `stored-records.spec.ts` loads what an earlier
-  release stored in visitors' browsers. Every section and both Advanced segments are
-  mounted: scope a query to its tabpanel (`#advanced-ceremony-panel-<segment>`).
+  release stored in visitors' browsers. Every section is mounted once its chunk has arrived,
+  and both Advanced segments with it: scope a query to its tabpanel
+  (`#advanced-ceremony-panel-<segment>`), and wait for a section's content, not its panel
+  (the placeholder answers to the same name).
 - `scripts/check-export-csp.mjs` scans every exported HTML file; `scripts/dev-csp.mjs` is the
   CSP `npm run dev` sends (Flask's, plus the two allowances the dev server needs);
   `scripts/code-size.mjs` holds `src` (tests and `src/test` aside) to no function over 120
