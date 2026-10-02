@@ -107,7 +107,9 @@ the CSP and the source rules.
   (`src/**/*.test.{ts,tsx}`, Testing Library, `src/test/setup.ts`) and `logic`
   (`src/logic/**/*.test.js`, `src/test/logic/setup.js`: a fresh storage, `fetch` mock and
   document per test). Helpers are in `src/test/` (`credentials.ts` keeps records in the
-  storage, `fetch.ts` answers `fetch` by path, `mds.ts` like Flask serving the fixture,
+  storage, `fetch.ts` answers `fetch` by path, `mds.ts` like Flask serving the fixture: its
+  list and details from `src/test/mds-files.json`, which `tests/app/tooling/test_web_mds_files.py`
+  keeps equal to what the server serves (`MDS_FILES_WRITE=1` rewrites it),
   `advanced.tsx`) and `src/test/logic/` (the real ceremonies from the characterization
   goldens, `repo-file.js` for files under the repository). The `@test-fixtures` alias is
   `tests/fixtures`.
@@ -123,7 +125,10 @@ the CSP and the source rules.
   and both Advanced segments with it: scope a query to its tabpanel
   (`#advanced-ceremony-panel-<segment>`), and wait for a section's content, not its panel
   (the placeholder answers to the same name).
-- `scripts/check-export-csp.mjs` scans every exported HTML file; `scripts/dev-csp.mjs` is the
+- `scripts/check-export-csp.mjs` scans every exported HTML file; `scripts/check-size-budget.mjs`
+  holds each page's first-load JS, each named chunk and the chunks no page names, raw and
+  gzipped, to its budget (`npm run check:size`, after the build, in CI and Cloud Build's gate);
+  `scripts/dev-csp.mjs` is the
   CSP `npm run dev` sends (Flask's, plus the two allowances the dev server needs);
   `scripts/code-size.mjs` holds `src` (tests and `src/test` aside) to no function over 120
   lines and no module over 400, with no exceptions (`code-size.test.ts` runs it in `npm test`).
@@ -133,7 +138,8 @@ proxying `/api` to `FLASK_URL`, default `http://localhost:8000`; ceremonies need
 origin, so use the export for those); `npm run build` (the export in `web/out`, which Flask
 serves; `FIDO_SERVER_WEB_EXPORT_ROOT` points elsewhere); `npm run typecheck` (covers
 `e2e/`, and through `tsconfig.logic.json` checks the logic's JSDoc types with `checkJs`);
-`npm test`; `npm run test:coverage`; `npm run check:csp` (after a build); `npm run e2e`
+`npm test`; `npm run test:coverage`; `npm run check:csp` and `npm run check:size` (after a
+build); `npm run e2e`
 (after a build; `npx playwright install chromium` once; `E2E_PYTHON` names the Python with
 the app's dependencies, `.venv/bin/python` by default; `E2E_PORT`, default 5151).
 
@@ -172,8 +178,10 @@ its logic out here first.
   a registration state of its own. Registration snapshots (`schemaVersion` 2) hold the
   registration as data, never markup; older composed HTML is never read.
 - `codec/`: the Codec's requests, results and values. `mds/`: the MDS
-  explorer's loading, filters, sort, columns, rows, entry, certificate, raw view and Manage
-  Metadata (the server builds each row: `mds/build.py`'s `build_explorer_entry`).
+  explorer's loading (the list fetched ahead, without the cookie: `prefetchExplorerList`), filters,
+  sort, columns, rows, entry (its detail from the file its row names, else resolve:
+  `requestEntryDetail`), certificate, raw view and Manage Metadata (the server builds each row:
+  `mds/build.py`'s `build_explorer_entry`, and the list's: `mds/explorer_files.py`).
 - `browser/`: the Analyze Browser's facts. It reports what the browser says and where
   each answer came from, or that it cannot know; it never guesses. Web pages cannot ask
   which transports a browser supports: do not add WebUSB/WebHID/Bluetooth/Serial checks. The
@@ -204,7 +212,9 @@ its logic out here first.
 - `factory.py`: `create_app(config=None)`: each config submodule's `config_from_env()`, then the
   overrides, then `INIT_STEPS` in order (`test_app_factory.py` pins it).
 - `config/`: `application.py` (the bare app, and `add_after_request_once`), `logs.py`,
-  `session_secret.py`, `compression.py`, `proxy.py`, `session_cookie.py`, `security_headers.py`
+  `session_secret.py`, `compression.py`, `proxy.py`, `session_cookie.py` (the cookie's flags
+  and lifetime, and a session interface whose cookie a file's answer never refreshes, so a
+  chunk or the MDS list landing after a ceremony's begin cannot undo it), `security_headers.py`
   (the strict CSP and the Trusted Types report-only policy, both reporting to
   `/api/csp-report`; `FIDO_SERVER_CONTENT_SECURITY_POLICY` replaces the enforced policy),
   `origins.py`, `attestation_trust.py`, `relying_party.py` (the default RP name is the site's,
@@ -224,7 +234,9 @@ its logic out here first.
   snapshot's file names, its directory, the whole-file and `.gz` sibling writers, Last-Modified),
   `build.py` (the explorer rows) and `sets.py` (the snapshot in Cloud Storage) without Flask.
   The runtime: `provisioning.py` (local files, Cloud Storage, upstream), `cache.py` (the
-  loaders and their one `SnapshotCache`), `uploads.py` (a visitor's uploaded metadata),
+  loaders and their one `SnapshotCache`), `explorer_files.py` (what browsers load, derived from
+  the full explorer snapshot: the list, the icons, each entry's detail; kept per snapshot by
+  `cache.load_explorer_files`), `uploads.py` (a visitor's uploaded metadata),
   `entries.py`, `effective.py` (the snapshot merged with a visitor's uploads), `verifier.py`.
 - Leaves the rest import: `encoding.py` (base64, base64url and hex, written and read strictly),
   `json_values.py` (`make_json_safe`, and `as_bytes`, the one reading of a value as bytes),
@@ -238,9 +250,10 @@ its logic out here first.
   `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`, and the export at `/`:
   the site's catch-all, since Flask has no static rule; HTML `no-cache`, `/_next/static/`
   immutable with the build's `.gz`, the export's 404 page, a plain 404 under `/api/`; `/beta…`
-  308 to `/…`, built with `url_for`; `send_precompressed`); `routes/assets.py` (the snapshot
-  browsers load, `/assets/mds/<file>?v=<version>`, immutable when the version is current, and
-  no other snapshot file at any path); `routes/csp_report.py` (one WARNING line per violation, bounded);
+  308 to `/…`, built with `url_for`; `send_precompressed`); `routes/assets.py` (the explorer's
+  files under `/assets/mds/`: the list at one URL revalidated by its ETag, the icons by digest,
+  each entry's detail at `?v=<version>`; no snapshot file at any path); `routes/csp_report.py`
+  (one WARNING line per violation, bounded);
   `routes/errors.py`.
 - `webauthn/attestation/` (checks, trust, the root evaluation for every algorithm, ML-DSA
   included, certificate serialisation; `chain.py` verifies certificate chains with
@@ -339,9 +352,9 @@ goldens show what it changes).
 
 - Two independent pipelines run on a push to `main`: GitHub Actions and Cloud Build. A red CI
   run does not stop Cloud Build, so `cloudbuild.yaml` runs its own gate first: `Python tests`
-  (pytest) and `Web tests` (typecheck, both vitest projects with coverage, build, CSP scan) in
-  parallel, then Build, Push and Deploy (Cloud Run `pqcwebauthn`). Playwright runs in GitHub CI
-  only. Keep that gate: it is all that stands between a commit and production.
+  (pytest) and `Web tests` (typecheck, both vitest projects with coverage, build, CSP scan,
+  size budget) in parallel, then Build, Push and Deploy (Cloud Run `pqcwebauthn`). Playwright
+  runs in GitHub CI only. Keep that gate: it is all that stands between a commit and production.
 - Workflows (`ci-*.yml` run on `pull_request` and on `push` to `main` only): `ci-python.yml`,
   `ci-web.yml` (web and the Playwright tests), `ci-docker.yml` (builds the image and checks it
   answers), `ci-security.yml` (`pip-audit`, `npm audit --audit-level=moderate` in `web/`, Trivy
@@ -371,7 +384,8 @@ goldens show what it changes).
   `/app/instance/mds-snapshot`); `FIDO_SERVER_MDS_SNAPSHOT_DIR` puts it elsewhere. Not tracked in
   git and not baked into the image: `server/app/mds/provisioning.py` provides it at runtime
   (local files, then Cloud Storage, then a verified upstream refresh). Whatever writes the
-  snapshot writes each file whole, metas last, and the explorer file's `.gz` sibling too.
+  snapshot writes each file whole, metas last. Browsers load none of them: the server derives
+  the explorer's list, icons and entry details from the snapshot it holds (`mds/explorer_files.py`).
 - Cloud Storage holds immutable sets and `mds/current.json`, the pointer to one
   (`server/app/mds/sets.py`: create-only sets, a generation-checked pointer that only
   moves forward); `tools/update_mds_snapshot.py --publish` publishes a verified snapshot, and a

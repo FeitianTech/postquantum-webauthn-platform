@@ -8,8 +8,8 @@ metadata service: seven files totalling about 30 MB, produced together by
 | --- | --- | --- |
 | `blob.jwt` | 10 MB | the updater, to tell whether the BLOB changed (the server does not read it) |
 | `fido-mds3.verified.json` | 8.2 MB | the server, as the base metadata payload: the BLOB's payload as the BLOB has it, once verified |
-| `fido-mds3.explorer.json` | 5.5 MB | the server, for the explorer table |
-| `fido-mds3.explorer.full.json` | 7.1 MB | the browser, as a cacheable static asset |
+| `fido-mds3.explorer.json` | 5.5 MB | the server, for the explorer's summary |
+| `fido-mds3.explorer.full.json` | 7.1 MB | the server, which derives what browsers load from it (below) |
 | `*.meta.json` (three files) | ~1 KB | the freshness check and the explorer banner |
 
 All seven live in one directory: `instance/mds-snapshot/`, unless
@@ -30,22 +30,40 @@ served under a URL of its own.
 without it answers `instance/mds-snapshot` (in the image, `/app/instance/mds-snapshot`;
 `docker compose` mounts `./instance`, so a local container keeps its copy there). It is a leaf with no Flask import, so every
 reader and writer follows the one setting: the server's metadata loaders
-(`mds/cache.py`), the provisioning below,
-`tools/update_mds_snapshot.py`, and the packaged snapshot browsers load
-(`/assets/mds/fido-mds3.explorer.full.json`, served from that directory with its `.gz`
-sibling, `server/app/routes/assets.py`). The page is given that URL as `snapshotUrl`
-only while the file is there and its meta matches the verified snapshot; otherwise it
-asks the explorer API, which answers from the verified snapshot either way. The URL ends
-in `?v=<serial>.<digest>` (the digest of the snapshot's ETag and generation time,
-`assets.snapshot_version`): the file changes at runtime without a deploy, so each
-snapshot has a URL of its own. A request naming the current version is cached as
-immutable for a year; any other revalidates.
+(`mds/cache.py`), the provisioning below, and `tools/update_mds_snapshot.py`.
 
-No route serves a snapshot file at the site's root: the seven names and the `.gz`
-sibling are refused there (the site's root is the UI's export), and the
-versioned route serves only the browsers' copy, from the snapshot directory. Nothing the pages
-use asks for any other snapshot file: the page's info carries the snapshot's timestamp
-whenever there is a snapshot.
+## What browsers load
+
+Browsers load no snapshot file. The server derives what they load from the full
+explorer snapshot it already holds (`server/app/mds/explorer_files.py`; kept in
+memory for each snapshot by `cache.load_explorer_files`, which the warm-up calls;
+served by `server/app/routes/assets.py`), so the sets in Cloud Storage and their
+seven files are exactly what they were:
+
+- **The list**, `/assets/mds/fido-mds3.explorer.list.json`: every entry with what the
+  table shows, filters and sorts by, without its detail or where it came from (about
+  740 KB, 67 KB gzipped, for 518 entries). One URL, `no-cache`, with an ETag naming the
+  version and the encoding, so the page fetches it without asking anything first (and
+  without the session's cookie) and a revisit costs a 304. The page fetches it once its
+  first view is interactive, and at once when the URL opens `#mds`.
+- **The icons**, `/assets/mds/icons/<digest>.<png|svg|…>`: each distinct image once (125
+  for 518 entries), named by its SHA-256, so immutable; served with a sandboxing CSP
+  of their own. The table loads them lazily, as rows scroll into view.
+- **Each entry's detail**, `/assets/mds/entries/<entryId>?v=<version>`: the entry as the
+  full snapshot holds it; the entry page reads it when it opens (and falls back to
+  `/api/mds/metadata/resolve`). Immutable at the version its URL names, where the
+  version is the snapshot's (`explorer_files.snapshot_version`: its serial and a digest
+  of its ETag and generation time) and `DERIVED_FORMAT`, which changes with what the
+  code derives.
+
+The page is given the list's URL as `snapshotUrl` only while the full file is there and
+its meta matches the verified snapshot; otherwise it asks the explorer API, which
+answers from the verified snapshot either way. The explorer API, an upload and a
+delete answer the same rows, with the session's uploads in full.
+
+No route serves a snapshot file, at `/assets/mds/` or at the site's root: the seven
+names, and the `.gz` copy earlier releases wrote beside the full one, are refused there
+(the site's root is the UI's export).
 
 The tests use it to keep off a developer's real snapshot: `tests/conftest.py` points
 every test at an empty directory of the run's, and a test that needs a snapshot
@@ -61,8 +79,8 @@ background warm-up on a Cloud Run cold start and from the first request that
 needs the snapshot otherwise.
 
 The routes that read the snapshot (`/api/mds/metadata/info`,
-`explorer/full`, `resolve`, the upload and the delete, the browsers'
-copy at its versioned URL, and both registrations' complete, which look the new
+`explorer/full`, `resolve`, the upload and the delete, the explorer's files
+under `/assets/mds/`, and both registrations' complete, which look the new
 credential's AAGUID up and record what they found for good) call
 `ensure_snapshot_available()` first (`waits_for_the_snapshot` in `server/app/mds/provisioning.py`):
 on a cold instance they wait for the provisioning under way (about 20 s from Cloud Storage)
@@ -74,8 +92,8 @@ waits.
 1. **Local files.** Anything already on disk is used unchanged. No network.
 2. **Cloud Storage.** With `FIDO_SERVER_GCS_ENABLED` set, the set the bucket's
    pointer names (below) is downloaded from `gs://$FIDO_SERVER_GCS_BUCKET/mds/` (the
-   prefix is `FIDO_SERVER_MDS_GCS_PREFIX`, default `mds`), each file checked against
-   the pointer's SHA-256 and size. Without a usable pointer, or when its set cannot
+   prefix is `FIDO_SERVER_MDS_GCS_PREFIX`, default `mds`), its seven files at once,
+   each checked against the pointer's SHA-256 and size. Without a usable pointer, or when its set cannot
    be read whole, the missing files come from the flat `mds/<file>` objects earlier
    releases wrote. This is the production path: the Cloud Run service account
    already has access to the `pqcwebauthn` bucket, so no new credentials are involved.
@@ -93,12 +111,10 @@ own bucket, and **off** locally, so a first request never silently blocks on a
 Whatever writes the snapshot (the Cloud Storage tier, a running instance taking a
 newer set, the updater) writes each file whole, through a temporary file renamed over
 it, the payloads first and the three metas last (`mds/files.py`'s `write_file`,
-`WRITE_ORDER`). With the browser-facing `fido-mds3.explorer.full.json` goes its
-precompressed `.gz` sibling, or the removal of a sibling left from an earlier file
-when the new one does not compress smaller (`mds/files.py`'s `write_gzip_sibling`),
-so a gzip client is never sent an older snapshot. The server's metadata caches key on
-every file they are built from (`blob._mtimes`): a request that reads a snapshot
-halfway through its replacement may answer from the mix once, but never keeps it.
+`WRITE_ORDER`). The server's metadata caches, and the explorer's files derived from
+them, key on every file they are built from (`cache._mtimes`): a request that reads a
+snapshot halfway through its replacement may answer from the mix once, but never
+keeps it.
 
 ### A running instance
 
