@@ -11,6 +11,118 @@ import {
 } from './sanitize.js';
 import {cloneJson} from '../../shared/json.js';
 
+const PUBLIC_KEY_SPELLINGS = ['publicKeyHex', 'publicKeyHexLines', 'publicKeyBase64'];
+
+// One certificate of the x5c chain as the view shows it: its number, its
+// sanitised details, its parser's error; null when nothing is known of it. A
+// certificate known only by its summary goes to `summariesOnly`.
+function chainEntry(index, info, sourceEntry, summariesOnly) {
+    const certificateEntry = info?.entry;
+
+    let parsedDetails = certificateEntry && typeof certificateEntry === 'object'
+        ? certificateEntry.parsedX5c
+        : null;
+
+    if ((!parsedDetails || typeof parsedDetails !== 'object') && sourceEntry) {
+        const normalised = normaliseCertificateEntryForModal(sourceEntry);
+        if (normalised && typeof normalised.parsedX5c === 'object') {
+            parsedDetails = normalised.parsedX5c;
+        }
+    }
+
+    if (!parsedDetails || typeof parsedDetails !== 'object') {
+        return null;
+    }
+
+    const sanitizedDetails = sanitizeParsedCertificateDetails(parsedDetails);
+    const summaryText = typeof parsedDetails.summary === 'string'
+        ? parsedDetails.summary.trim()
+        : '';
+    const errorText = typeof parsedDetails.error === 'string'
+        ? parsedDetails.error.trim()
+        : '';
+
+    const hasDetails = sanitizedDetails && Object.keys(sanitizedDetails).length > 0;
+    if (!hasDetails && !summaryText && !errorText) {
+        return null;
+    }
+
+    /** @type {Record<string, any>} */
+    const entry = {
+        certificateIndex: index + 1,
+    };
+
+    if (hasDetails) {
+        entry.details = sanitizedDetails;
+    }
+
+    if (summaryText && !hasDetails) {
+        summariesOnly.push({ entry, summaryText });
+    }
+
+    if (errorText) {
+        entry.error = errorText;
+    }
+    return entry;
+}
+
+// The attestation statement as the view shows it: its x5c chain made of what
+// the view knows of each certificate, the raw and formatting keys left out.
+function sanitisedStatement(attStmt, shownCertificates, summariesOnly) {
+    const attStmtClone = { ...attStmt };
+    const sourceArray = Array.isArray(attStmtClone.x5c) ? attStmtClone.x5c : [];
+    const maxLength = Math.max(sourceArray.length, shownCertificates.length);
+
+    if (maxLength > 0) {
+        const sanitizedChain = [];
+
+        for (let index = 0; index < maxLength; index += 1) {
+            const entry = chainEntry(index, shownCertificates[index], sourceArray[index], summariesOnly);
+            if (entry) {
+                sanitizedChain.push(entry);
+            }
+        }
+
+        if (sanitizedChain.length) {
+            attStmtClone.x5c = sanitizedChain;
+        } else {
+            delete attStmtClone.x5c;
+        }
+    } else {
+        delete attStmtClone.x5c;
+    }
+
+    delete attStmtClone.x5cParseErrors;
+
+    stripCertificateCollections(attStmtClone);
+    removeKeysCaseInsensitive(attStmtClone, PUBLIC_KEY_SPELLINGS);
+    stripSignatureFormatting(attStmtClone);
+    return attStmtClone;
+}
+
+// The object with `fmt` first: the format given, else its own.
+function withFormatFirst(cloned, attestationFormatRaw) {
+    let formatValue = typeof attestationFormatRaw === 'string' ? attestationFormatRaw.trim() : '';
+    if (!formatValue && typeof cloned.fmt === 'string') {
+        formatValue = cloned.fmt;
+    }
+    if (Object.hasOwn(cloned, 'fmt')) {
+        delete cloned.fmt;
+    }
+
+    /** @type {Record<string, any>} */
+    const ordered = {};
+    if (formatValue) {
+        ordered.fmt = formatValue;
+    }
+
+    Object.keys(cloned).forEach(key => {
+        ordered[key] = cloned[key];
+    });
+
+    return ordered;
+}
+
 // The attestation object as the registration view shows it: `fmt` first, each
 // x5c certificate replaced by what the view knows of it (`certificates`, its
 // registration state's), the raw and formatting keys left out.
@@ -34,80 +146,7 @@ export function sanitiseAttestationObjectForDisplay(attestationObject, attestati
         : parseFailureInfos;
 
     if (cloned.attStmt && typeof cloned.attStmt === 'object') {
-        const attStmtClone = { ...cloned.attStmt };
-        const sourceArray = Array.isArray(attStmtClone.x5c) ? attStmtClone.x5c : [];
-        const maxLength = Math.max(sourceArray.length, shownCertificates.length);
-
-        if (maxLength > 0) {
-            const sanitizedChain = [];
-
-            for (let index = 0; index < maxLength; index += 1) {
-                const info = shownCertificates[index];
-                const certificateEntry = info?.entry;
-                const sourceEntry = sourceArray[index];
-
-                let parsedDetails = certificateEntry && typeof certificateEntry === 'object'
-                    ? certificateEntry.parsedX5c
-                    : null;
-
-                if ((!parsedDetails || typeof parsedDetails !== 'object') && sourceEntry) {
-                    const normalised = normaliseCertificateEntryForModal(sourceEntry);
-                    if (normalised && typeof normalised.parsedX5c === 'object') {
-                        parsedDetails = normalised.parsedX5c;
-                    }
-                }
-
-                if (!parsedDetails || typeof parsedDetails !== 'object') {
-                    continue;
-                }
-
-                const sanitizedDetails = sanitizeParsedCertificateDetails(parsedDetails);
-                const summaryText = typeof parsedDetails.summary === 'string'
-                    ? parsedDetails.summary.trim()
-                    : '';
-                const errorText = typeof parsedDetails.error === 'string'
-                    ? parsedDetails.error.trim()
-                    : '';
-
-                const hasDetails = sanitizedDetails && Object.keys(sanitizedDetails).length > 0;
-                if (!hasDetails && !summaryText && !errorText) {
-                    continue;
-                }
-
-                const entry = {
-                    certificateIndex: index + 1,
-                };
-
-                if (hasDetails) {
-                    entry.details = sanitizedDetails;
-                }
-
-                if (summaryText && !hasDetails) {
-                    summariesOnly.push({ entry, summaryText });
-                }
-
-                if (errorText) {
-                    entry.error = errorText;
-                }
-
-                sanitizedChain.push(entry);
-            }
-
-            if (sanitizedChain.length) {
-                attStmtClone.x5c = sanitizedChain;
-            } else {
-                delete attStmtClone.x5c;
-            }
-        } else {
-            delete attStmtClone.x5c;
-        }
-
-        delete attStmtClone.x5cParseErrors;
-
-        stripCertificateCollections(attStmtClone);
-        removeKeysCaseInsensitive(attStmtClone, ['publicKeyHex', 'publicKeyHexLines', 'publicKeyBase64']);
-        stripSignatureFormatting(attStmtClone);
-        cloned.attStmt = attStmtClone;
+        cloned.attStmt = sanitisedStatement(cloned.attStmt, shownCertificates, summariesOnly);
     }
 
     stripCertificateCollections(cloned);
@@ -115,25 +154,8 @@ export function sanitiseAttestationObjectForDisplay(attestationObject, attestati
     summariesOnly.forEach(({ entry, summaryText }) => {
         entry.summary = summaryText;
     });
-    removeKeysCaseInsensitive(cloned, ['publicKeyHex', 'publicKeyHexLines', 'publicKeyBase64']);
+    removeKeysCaseInsensitive(cloned, PUBLIC_KEY_SPELLINGS);
     stripSignatureFormatting(cloned);
 
-    let formatValue = typeof attestationFormatRaw === 'string' ? attestationFormatRaw.trim() : '';
-    if (!formatValue && typeof cloned.fmt === 'string') {
-        formatValue = cloned.fmt;
-    }
-    if (Object.hasOwn(cloned, 'fmt')) {
-        delete cloned.fmt;
-    }
-
-    const ordered = {};
-    if (formatValue) {
-        ordered.fmt = formatValue;
-    }
-
-    Object.keys(cloned).forEach(key => {
-        ordered[key] = cloned[key];
-    });
-
-    return ordered;
+    return withFormatFirst(cloned, attestationFormatRaw);
 }
