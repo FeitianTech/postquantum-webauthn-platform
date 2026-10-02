@@ -87,30 +87,20 @@ export function describeValue(value) {
 }
 
 const ROOT_CHECKS = [
-    { key: 'fido_mds', altKey: 'fidoMds', label: 'FIDO MDS' },
-    { key: 'chain', altKey: 'chain', label: 'Chain' },
+    { key: 'fido_mds', label: 'FIDO MDS' },
+    { key: 'chain', label: 'Chain' },
 ];
 
 // Which roots the Root Valid check tried (FIDO MDS, the certificate chain), each
 // with its verdict (null when it was not tried); null when the checks name none.
 function describeRootChecks(attestationChecksData) {
-    let rootChecksRaw = null;
-    if (attestationChecksData && typeof attestationChecksData === 'object') {
-        if (attestationChecksData.root_checks && typeof attestationChecksData.root_checks === 'object') {
-            rootChecksRaw = attestationChecksData.root_checks;
-        } else if (attestationChecksData.rootChecks && typeof attestationChecksData.rootChecks === 'object') {
-            rootChecksRaw = attestationChecksData.rootChecks;
-        }
-    }
-    if (!rootChecksRaw) {
+    const rootChecksRaw = attestationChecksData?.root_checks;
+    if (!rootChecksRaw || typeof rootChecksRaw !== 'object') {
         return null;
     }
 
     return ROOT_CHECKS.map(descriptor => {
-        let rawValue = rootChecksRaw[descriptor.key];
-        if (rawValue === undefined) {
-            rawValue = rootChecksRaw[descriptor.altKey];
-        }
+        const rawValue = rootChecksRaw[descriptor.key];
         return {
             label: descriptor.label,
             value: rawValue === undefined ? null : normaliseAttestationResultValue(rawValue),
@@ -198,11 +188,7 @@ export function describeUserInfo(cred) {
 // The record's own spellings that say what they are come first (hex, GUID),
 // then `aaguid`, which the server writes in base64url.
 function resolveAaguidHex(cred, attestationContext) {
-    const {
-        propertiesData,
-        attestationSummaryData,
-        attestationChecksData,
-    } = attestationContext;
+    const { propertiesData, attestationChecksData } = attestationContext;
 
     let hex = '';
     for (const explicit of [cred.aaguidHex, cred.aaguidGuid, propertiesData?.aaguidHex, propertiesData?.aaguidGuid]) {
@@ -216,33 +202,13 @@ function resolveAaguidHex(cred, attestationContext) {
     }
 
     const fallbackAaguidCandidates = [
-        cred.aaguidRaw,
         propertiesData?.aaguid,
-        propertiesData?.aaguidRaw,
-        attestationSummaryData?.aaguid,
-        attestationSummaryData?.aaguidHex,
-        attestationSummaryData?.aaguidGuid,
         attestationChecksData?.metadata?.aaguid,
-        attestationChecksData?.metadata?.hex,
-        attestationChecksData?.metadata?.raw,
-        attestationChecksData?.metadata?.guid,
-        propertiesData?.metadata?.aaguid,
-        propertiesData?.metadata?.hex,
-        propertiesData?.metadata?.raw,
-        propertiesData?.metadata?.guid,
-        cred?.metadata?.aaguid,
-        cred?.metadata?.hex,
-        cred?.metadata?.raw,
-        cred?.metadata?.guid,
     ];
 
     const relyingPartyAaguid = cred?.relyingParty?.aaguid;
     if (relyingPartyAaguid && typeof relyingPartyAaguid === 'object') {
-        fallbackAaguidCandidates.push(
-            relyingPartyAaguid.raw,
-            relyingPartyAaguid.hex,
-            relyingPartyAaguid.guid,
-        );
+        fallbackAaguidCandidates.push(relyingPartyAaguid.raw, relyingPartyAaguid.guid);
     } else if (relyingPartyAaguid) {
         fallbackAaguidCandidates.push(relyingPartyAaguid);
     }

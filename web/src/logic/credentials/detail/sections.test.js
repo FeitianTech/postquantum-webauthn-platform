@@ -83,12 +83,14 @@ describe('describeProperties', () => {
     expect([signature.rootChecks, rpid.rootChecks, aaguid.rootChecks]).toEqual([null, null, null]);
   });
 
-  it('reads the roots under their camelCase names, and a root not tried as null', () => {
-    const section = properties({ attestationChecks: { rootChecks: { fidoMds: 'pass' } } });
+  it('reads each root\'s verdict under the server\'s names, and a root not tried as null', () => {
+    const section = properties({ attestationChecks: { root_checks: { fido_mds: 'pass' } } });
     expect(section.checks[1].rootChecks).toEqual([
       { label: 'FIDO MDS', value: true },
       { label: 'Chain', value: null },
     ]);
+    // No record holds them under camelCase names.
+    expect(properties({ attestationChecks: { rootChecks: { fidoMds: 'pass' } } }).checks[1].rootChecks).toBeNull();
   });
 
   it('names no roots when the checks name none, or there are no checks', () => {
@@ -155,13 +157,20 @@ describe('describeAaguid', () => {
 
   it('takes the AAGUID from where else the record keeps it', () => {
     expect(aaguid({ properties: { aaguidGuid: AAGUID_GUID } }).hex).toBe(AAGUID);
-    expect(aaguid({ attestationSummary: { aaguid: AAGUID } }).hex).toBe(AAGUID);
-    expect(aaguid({ metadata: { guid: AAGUID_GUID } }).hex).toBe(AAGUID);
+    expect(aaguid({ properties: { aaguid: AAGUID } }).hex).toBe(AAGUID);
+    expect(aaguid({ attestationChecks: { metadata: { aaguid: AAGUID_GUID } } }).hex).toBe(AAGUID);
   });
 
   it('takes the AAGUID the relying party reported, as an object or as text', () => {
     expect(aaguid({ relyingParty: { aaguid: { guid: AAGUID_GUID } } }).hex).toBe(AAGUID);
+    expect(aaguid({ relyingParty: { aaguid: { raw: AAGUID, guid: 'not it' } } }).hex).toBe(AAGUID);
     expect(aaguid({ relyingParty: { aaguid: AAGUID_GUID } }).hex).toBe(AAGUID);
+  });
+
+  it('reads no AAGUID from places no record keeps one', () => {
+    expect(aaguid({ aaguidRaw: AAGUID }).hex).toBe('N/A');
+    expect(aaguid({ attestationSummary: { aaguid: AAGUID } }).hex).toBe('N/A');
+    expect(aaguid({ metadata: { guid: AAGUID_GUID } }).hex).toBe('N/A');
   });
 
   it('reads the AAGUID from the authenticator data when nothing else names it', () => {
