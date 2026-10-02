@@ -112,8 +112,8 @@ describe('attestation certificates in a snapshot', () => {
     expect(entry.parsedX5c.extensions).toEqual(CERTIFICATE.extensions);
   });
 
-  it('moves a certificate parsed under the older name to parsedX5c', () => {
-    const [entry] = keptState({ attestationCertificates: [{ parsed: CERTIFICATE }] }).attestationCertificates;
+  it('keeps a certificate parsed under parsedX5c, without its DER', () => {
+    const [entry] = keptState({ attestationCertificates: [{ parsedX5c: CERTIFICATE }] }).attestationCertificates;
 
     expect(entry).toEqual({ parsedX5c: CERTIFICATE_WITHOUT_DER });
   });

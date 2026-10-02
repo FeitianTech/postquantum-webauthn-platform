@@ -89,8 +89,9 @@ describe('deriveCertificateIdentity', () => {
     expect(deriveCertificateIdentity(unparsed('3082ABCD'))).toBe('raw:3082abcd');
   });
 
-  it('reads the details under parsed as well as parsedX5c', () => {
-    expect(deriveCertificateIdentity({ parsed: { raw: '3082abcd' } })).toBe('raw:3082abcd');
+  it('reads the details under parsedX5c only', () => {
+    expect(deriveCertificateIdentity({ parsedX5c: { raw: '3082abcd' } })).toBe('raw:3082abcd');
+    expect(deriveCertificateIdentity({ parsed: { raw: '3082abcd' } })).not.toBe('raw:3082abcd');
   });
 
   it('names a parsed certificate by its DER', () => {
@@ -132,9 +133,9 @@ describe('normaliseCertificateEntryForModal', () => {
     expect(normalised.raw.endsWith(cert.signature.hex)).toBe(true);
   });
 
-  it('reads the details under parsed', () => {
+  it('reads the details under parsedX5c', () => {
     const details = { parseError: 'error parsing asn1 value' };
-    expect(normaliseCertificateEntryForModal({ parsed: details }).parsedX5c).toBe(details);
+    expect(normaliseCertificateEntryForModal({ parsedX5c: details }).parsedX5c).toBe(details);
   });
 
   it("takes a bare certificate as its own details", () => {
@@ -221,7 +222,7 @@ describe('extractAaguidFromCertificateEntry', () => {
 
   it('finds the AAGUID extension by its name alone', () => {
     const extensions = [{ name: 'id-fido-gen-ce-aaguid', value: AAGUID }];
-    expect(extractAaguidFromCertificateEntry({ parsed: { extensions } })).toBe(AAGUID);
+    expect(extractAaguidFromCertificateEntry({ parsedX5c: { extensions } })).toBe(AAGUID);
   });
 
   it('has no AAGUID when the extension holds none', () => {

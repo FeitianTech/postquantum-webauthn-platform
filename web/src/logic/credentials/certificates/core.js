@@ -87,11 +87,7 @@ export function deriveCertificateIdentity(entry) {
         return `pem:${directPem}`;
     }
 
-    const parsed = entry.parsedX5c && typeof entry.parsedX5c === 'object'
-        ? entry.parsedX5c
-        : entry.parsed && typeof entry.parsed === 'object'
-            ? entry.parsed
-            : null;
+    const parsed = entry.parsedX5c && typeof entry.parsedX5c === 'object' ? entry.parsedX5c : null;
 
     if (parsed) {
         const parsedRaw = pickHexValue(parsed.raw);
@@ -137,22 +133,18 @@ export function normaliseCertificateEntryForModal(entry) {
 
     if (entry.parsedX5c && typeof entry.parsedX5c === 'object') {
         normalised.parsedX5c = entry.parsedX5c;
-    } else if (entry.parsed && typeof entry.parsed === 'object') {
-        normalised.parsedX5c = entry.parsed;
     } else {
         normalised.parsedX5c = entry;
     }
 
-    const pemValue = entry.pem || entry.parsedX5c?.pem || entry.parsed?.pem;
+    const pemValue = entry.pem || entry.parsedX5c?.pem;
     if (typeof pemValue === 'string' && pemValue.trim() !== '') {
         normalised.pem = pemValue.trim();
     }
 
     let rawHex = typeof entry.raw === 'string' && entry.raw.trim() !== '' ? entry.raw.trim() : null;
     if (!rawHex) {
-        const derBase64 = entry.derBase64
-            || entry.parsedX5c?.derBase64
-            || entry.parsed?.derBase64;
+        const derBase64 = entry.derBase64 || entry.parsedX5c?.derBase64;
         if (typeof derBase64 === 'string' && derBase64.trim() !== '') {
             try {
                 // derBase64 is named for its encoding: standard base64, padded.
@@ -236,11 +228,7 @@ export function extractAaguidFromCertificateEntry(entry) {
         }
     }
 
-    const parsed = entry.parsedX5c && typeof entry.parsedX5c === 'object'
-        ? entry.parsedX5c
-        : entry.parsed && typeof entry.parsed === 'object'
-            ? entry.parsed
-            : entry;
+    const parsed = entry.parsedX5c && typeof entry.parsedX5c === 'object' ? entry.parsedX5c : entry;
 
     const candidateSources = [
         entry.aaguid,

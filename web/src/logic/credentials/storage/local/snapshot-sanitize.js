@@ -73,9 +73,6 @@ function sanitiseCertificateEntryForSnapshot(entry) {
 
     if (clone.parsedX5c && typeof clone.parsedX5c === 'object') {
         clone.parsedX5c = sanitiseParsedCertificateForSnapshot(clone.parsedX5c);
-    } else if (clone.parsed && typeof clone.parsed === 'object') {
-        clone.parsedX5c = sanitiseParsedCertificateForSnapshot(clone.parsed);
-        delete clone.parsed;
     }
 
     return Object.keys(clone).length ? clone : null;
