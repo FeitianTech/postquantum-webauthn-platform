@@ -43,6 +43,81 @@ function useHeaderHeightVariable(header: RefObject<HTMLElement | null>) {
   }, [header]);
 }
 
+// The phone's menu: the sections, Analyze Browser and GitHub, in a sheet.
+function MenuSheet({
+  open,
+  onClose,
+  section,
+  onSection,
+  onAnalyze,
+  analyzing,
+}: {
+  open: boolean;
+  onClose: () => void;
+  section: SectionId | null;
+  onSection: (section: SectionId) => void;
+  onAnalyze: () => void;
+  analyzing: boolean;
+}) {
+  return (
+    <Sheet id="menu-sheet" open={open} onClose={onClose} labelledBy="menu-sheet-title">
+      <div className="flex items-center justify-between border-b border-line py-2.5 pr-2.5 pl-5">
+        <h2 id="menu-sheet-title" className="text-title-sm font-semibold text-ink">
+          Menu
+        </h2>
+        <Button variant="quiet" size="sm" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+      <div className="overflow-y-auto p-2">
+        <ul aria-label="Sections" className="flex flex-col gap-0.5">
+          {SECTIONS.map((option) => (
+            <li key={option.id}>
+              <button
+                type="button"
+                aria-current={option.id === section ? 'true' : undefined}
+                onClick={() => {
+                  onSection(option.id);
+                  onClose();
+                }}
+                className={cx(
+                  'flex h-11 w-full items-center rounded-md px-3.5 text-left text-body-lg text-ink transition-colors',
+                  'hover:bg-accent-tint aria-[current]:bg-accent-tint aria-[current]:font-semibold aria-[current]:text-accent-ink',
+                )}
+              >
+                {option.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-2 flex flex-col gap-2 border-t border-line p-2 pt-4">
+          <Button
+            variant="secondary"
+            aria-haspopup="dialog"
+            aria-controls={ANALYZE_PANEL_ID}
+            disabled={analyzing}
+            onClick={() => {
+              onClose();
+              onAnalyze();
+            }}
+          >
+            Analyze Browser
+          </Button>
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonClassName({ variant: 'quiet' })}
+          >
+            <GitHubIcon />
+            View project on GitHub
+          </a>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
 // The top bar: the title, the four sections (a segmented control whose highlight
 // slides), Analyze Browser and GitHub. On a wide screen it is one row; between
 // 900 and 1280 px the sections take a second row; on a phone they move into a
@@ -111,61 +186,14 @@ export function Header({ section, onSection, onAnalyze, analyzing, analyzeButton
           </Button>
         </div>
       </div>
-      <Sheet id="menu-sheet" open={menuOpen} onClose={() => setMenuOpen(false)} labelledBy="menu-sheet-title">
-        <div className="flex items-center justify-between border-b border-line py-2.5 pr-2.5 pl-5">
-          <h2 id="menu-sheet-title" className="text-title-sm font-semibold text-ink">
-            Menu
-          </h2>
-          <Button variant="quiet" size="sm" onClick={() => setMenuOpen(false)}>
-            Close
-          </Button>
-        </div>
-        <div className="overflow-y-auto p-2">
-          <ul aria-label="Sections" className="flex flex-col gap-0.5">
-            {SECTIONS.map((option) => (
-              <li key={option.id}>
-                <button
-                  type="button"
-                  aria-current={option.id === section ? 'true' : undefined}
-                  onClick={() => {
-                    onSection(option.id);
-                    setMenuOpen(false);
-                  }}
-                  className={cx(
-                    'flex h-11 w-full items-center rounded-md px-3.5 text-left text-body-lg text-ink transition-colors',
-                    'hover:bg-accent-tint aria-[current]:bg-accent-tint aria-[current]:font-semibold aria-[current]:text-accent-ink',
-                  )}
-                >
-                  {option.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-2 flex flex-col gap-2 border-t border-line p-2 pt-4">
-            <Button
-              variant="secondary"
-              aria-haspopup="dialog"
-              aria-controls={ANALYZE_PANEL_ID}
-              disabled={analyzing}
-              onClick={() => {
-                setMenuOpen(false);
-                onAnalyze(menuButton.current);
-              }}
-            >
-              Analyze Browser
-            </Button>
-            <a
-              href={GITHUB_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={buttonClassName({ variant: 'quiet' })}
-            >
-              <GitHubIcon />
-              View project on GitHub
-            </a>
-          </div>
-        </div>
-      </Sheet>
+      <MenuSheet
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        section={section}
+        onSection={onSection}
+        onAnalyze={() => onAnalyze(menuButton.current)}
+        analyzing={analyzing}
+      />
     </header>
   );
 }
