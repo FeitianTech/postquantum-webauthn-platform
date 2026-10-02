@@ -51,7 +51,8 @@ export function fixtureRoutes(overrides: Record<string, Route> = {}) {
     '/api/mds/metadata/info': () => json(FIXTURE_INFO),
     '/api/mds/metadata/resolve': resolveFrom(),
     [SNAPSHOT_URL]: () => json(FIXTURE_LIST),
-    '/api/mds/metadata/explorer/full': () => json(FIXTURE_SNAPSHOT),
+    // A session without uploads gets the packaged list's rows here too.
+    '/api/mds/metadata/explorer/full': () => json(FIXTURE_LIST),
     ...detailRoutes(),
     ...overrides,
   };

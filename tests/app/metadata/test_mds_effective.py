@@ -34,8 +34,14 @@ def test_uploads_come_first_one_per_aaguid_in_place_of_the_packaged_entry(visito
     assert snapshot["meta"]["customEntryCount"] == 2
     assert snapshot["meta"]["entryCount"] == 33
     assert snapshot["meta"]["hasCustomEntries"] is True
-    assert [entry["source"] for entry in snapshot["entries"][:3]] == ["session", "session", "packaged"]
+    assert [entry.get("source") for entry in snapshot["entries"][:3]] == ["session", "session", None]
     assert sum(entry["aaguid"] == PACKAGED for entry in snapshot["entries"]) == 1
+    # The uploads come whole; the packaged entries as the list has them, each
+    # without its detail, which its detailUrl names.
+    uploaded, packaged = snapshot["entries"][0], snapshot["entries"][2]
+    assert uploaded["isLightweightEntry"] is False and uploaded["metadataStatement"]["description"] == "No AAGUID"
+    assert packaged["isLightweightEntry"] is True and "metadataStatement" not in packaged
+    assert packaged["detailUrl"].startswith("/assets/mds/entries/")
 
 
 def test_without_a_snapshot_the_uploads_are_the_whole_snapshot(visitor):

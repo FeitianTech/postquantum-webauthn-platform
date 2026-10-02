@@ -70,10 +70,12 @@ class Icon:
 
 @dataclass(frozen=True)
 class ExplorerFiles:
-    """The files of one snapshot: the list (as JSON and gzipped), the icons by
-    file name, and each entry's detail (JSON) by entry id."""
+    """The files of one snapshot: the list (as served: JSON and gzipped; and as
+    read, for the per-session explorer API), the icons by file name, and each
+    entry's detail (JSON) by entry id."""
 
     version: str
+    listed: dict[str, Any]
     list_json: bytes
     list_gzip: bytes
     icons: dict[str, Icon]
@@ -158,9 +160,11 @@ def build_explorer_files(snapshot: Mapping[str, Any]) -> ExplorerFiles | None:
             details[entry_id] = _json({**entry, "icon": row.get("icon")})
             row["detailUrl"] = detail_url(entry_id, version)
         rows.append(row)
-    list_json = _json({"meta": dict(meta or {}), "entries": rows})
+    listed = {"meta": dict(meta or {}), "entries": rows}
+    list_json = _json(listed)
     return ExplorerFiles(
         version=version,
+        listed=listed,
         list_json=list_json,
         list_gzip=gzip.compress(list_json, compresslevel=9, mtime=0),
         icons=icons,

@@ -40,6 +40,7 @@ def test_the_list_holds_every_entry_without_its_detail_or_where_it_came_from(ful
         assert not explorer_files.LIST_LEAVES_OUT & row.keys()
         assert row["name"] and row["entryId"]
     assert gzip.decompress(files.list_gzip) == files.list_json
+    assert files.listed == listed
 
 
 def test_each_icon_is_a_file_of_its_image_named_by_its_digest(full_snapshot, files):

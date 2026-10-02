@@ -144,7 +144,11 @@ def _compose_effective_snapshot(
 
 
 def load_effective_full_snapshot() -> dict[str, Any]:
-    base_snapshot, _ = mds_cache._load_base_full_snapshot()
+    """Every entry this session sees: the packaged list's rows (each without its
+    detail, which its ``detailUrl`` names) and the session's uploads in full."""
+
+    files = mds_cache.load_explorer_files()
+    base_snapshot = files.listed if files is not None else mds_cache._load_base_full_snapshot()[0]
     return _compose_effective_snapshot(
         base_snapshot,
         include_detail=True,
