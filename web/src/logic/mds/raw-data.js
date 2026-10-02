@@ -6,6 +6,10 @@ export const RAW_DATA_BUTTON_TITLE = 'View raw authenticator data';
 export const RAW_DATA_UNAVAILABLE_TITLE = 'Raw authenticator data unavailable';
 
 // "${name} – Authenticator Raw Data", or the second part alone without a name.
+/**
+ * @param {Record<string, any> | null | undefined} entry
+ * @returns {string}
+ */
 export function authenticatorRawTitle(entry) {
     const name = typeof entry?.name === 'string' ? entry.name.trim() : '';
     return name ? `${name} – ${RAW_DATA_TITLE}` : RAW_DATA_TITLE;
@@ -20,6 +24,10 @@ function isStatement(value) {
 // statement with the roots and key identifiers the explorer took out of it put
 // back, its status reports, AAGUID, id and time of the last status change. The
 // entry is not changed: a statement that gains a field is a copy.
+/**
+ * @param {Record<string, any> | null | undefined} entry
+ * @returns {Record<string, unknown> | null}
+ */
 export function getAuthenticatorRawData(entry) {
     if (!entry || typeof entry !== 'object') {
         return null;

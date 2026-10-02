@@ -103,6 +103,10 @@ function buildAuthenticatorRawLines(value, depth = 0, label) {
     return lines;
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 export function stringifyAuthenticatorRawData(value) {
     const seen = new WeakSet();
     const replacer = (key, currentValue) => {

@@ -23,16 +23,25 @@ export function extractList(value) {
 export const DEFAULT_DETAIL_TITLE = 'Authenticator';
 
 // The page's title: the entry's name as written, when it is not blank.
+/**
+ * @param {Record<string, any> | null | undefined} entry
+ * @returns {string}
+ */
 export function detailTitle(entry) {
     const name = entry?.name;
     return typeof name === 'string' && name.trim() ? name : DEFAULT_DETAIL_TITLE;
 }
 
 // The subtitle's parts: the AAGUID, the id when it is another, the protocol.
+/**
+ * @param {Record<string, any> | null | undefined} entry
+ * @returns {Array<{ label: string, value: string }>}
+ */
 export function detailSubtitleParts(entry) {
     if (!entry) {
         return [];
     }
+    /** @type {Array<{ label: string, value: string }>} */
     const parts = [];
     if (entry.aaguid) {
         parts.push({ label: 'AAGUID', value: String(entry.aaguid) });
@@ -47,6 +56,10 @@ export function detailSubtitleParts(entry) {
 }
 
 // "AAGUID: … • ID: … • FIDO2".
+/**
+ * @param {Record<string, any> | null | undefined} entry
+ * @returns {string}
+ */
 export function formatDetailSubtitle(entry) {
     return detailSubtitleParts(entry)
         .map(part => (part.label ? `${part.label}: ${part.value}` : part.value))

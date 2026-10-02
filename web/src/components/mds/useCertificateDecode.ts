@@ -1,6 +1,10 @@
+import {
+  type CertificateView,
+  describeCertificate,
+  normaliseCertificateBase64,
+  requestCertificateDecode,
+} from '@/logic/mds/explorer/certificate.js';
 import { useCallback, useRef, useState } from 'react';
-
-import { type CertificateView, certificateView, cleanCertificate, decodeCertificate } from './entryModel';
 
 // The certificates decoded while the explorer is open, by their base64: POST /api/mds/decode-certificate once for each,
 // and again only after a failure. A decode already running is shared.
@@ -10,15 +14,15 @@ export function useCertificateDecode() {
   const running = useRef(new Map<string, Promise<CertificateView>>());
 
   const decode = useCallback((certificate: string) => {
-    const cleaned = cleanCertificate(certificate);
+    const cleaned = normaliseCertificateBase64(certificate);
     const done = known.current.get(cleaned);
     if (done && !done.failed) return Promise.resolve(done);
     const pending = running.current.get(cleaned);
     if (pending) return pending;
-    const request = decodeCertificate(cleaned)
+    const request = requestCertificateDecode(cleaned)
       .then(
-        (details) => certificateView({ details }),
-        (error: unknown) => certificateView({ error }),
+        (details) => describeCertificate({ details }),
+        (error: unknown) => describeCertificate({ error }),
       )
       .then((view) => {
         running.current.delete(cleaned);
@@ -30,7 +34,7 @@ export function useCertificateDecode() {
     return request;
   }, []);
 
-  const viewFor = useCallback((certificate: string) => views.get(cleanCertificate(certificate)) ?? null, [views]);
+  const viewFor = useCallback((certificate: string) => views.get(normaliseCertificateBase64(certificate)) ?? null, [views]);
 
   return { decode, viewFor };
 }

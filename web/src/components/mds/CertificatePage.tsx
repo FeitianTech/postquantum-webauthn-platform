@@ -1,3 +1,5 @@
+import { type CertificateView, normaliseCertificateBase64 } from '@/logic/mds/explorer/certificate.js';
+import { type CertificateLink, detailTitle } from '@/logic/mds/explorer/detail.js';
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { useEffect, useRef } from 'react';
 
@@ -8,7 +10,6 @@ import { useEntrance } from '@/lib/entrance';
 import { CertificateSummary } from './CertificateSummary';
 import { CondensedBar } from './CondensedBar';
 import { BackButton } from './EntryHeader';
-import { type CertificateLink, type CertificateView, cleanCertificate, entryTitle } from './entryModel';
 
 // An attestation root certificate of an entry (#mds/<entryId>/certificate/<n>):
 // its subject as the title and its issuer under it, its summary, then the
@@ -31,7 +32,7 @@ export function CertificatePage({
 }) {
   const entrance = useEntrance(true);
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const backTitle = `Return to ${entryTitle(entry)}`;
+  const backTitle = `Return to ${detailTitle(entry)}`;
   const idBase = `mds-certificate-${certificate.number}`;
 
   useEffect(() => {
@@ -79,7 +80,7 @@ export function CertificatePage({
           <h4 id={`${idBase}-raw`} className="text-title font-semibold text-ink">
             Raw
           </h4>
-          <CodeBlock className="mt-4" value={cleanCertificate(certificate.certificate)} label="raw certificate" />
+          <CodeBlock className="mt-4" value={normaliseCertificateBase64(certificate.certificate)} label="raw certificate" />
         </section>
         <section aria-labelledby={`${idBase}-decoded`} className="min-w-0 border-t border-line pt-6">
           <h4 id={`${idBase}-decoded`} className="text-title font-semibold text-ink">

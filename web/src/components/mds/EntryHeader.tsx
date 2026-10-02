@@ -1,3 +1,4 @@
+import { detailSubtitleParts, detailTitle } from '@/logic/mds/explorer/detail.js';
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { identifierLabel } from '@/logic/mds/explorer/rows.js';
 import { RAW_DATA_BUTTON_TITLE, RAW_DATA_UNAVAILABLE_TITLE } from '@/logic/mds/raw-data.js';
@@ -8,14 +9,12 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { MonoValue } from '@/components/ui/MonoValue';
 
-import { entrySubtitle, entryTitle } from './entryModel';
-
 export { BackButton };
 
 // The subtitle's parts: "AAGUID: …" and "ID: …" (copyable; on a phone the value
 // takes its own line rather than being cut) and the protocol.
 function Subtitle({ entry }: { entry: MdsEntry }) {
-  const parts = entrySubtitle(entry);
+  const parts = detailSubtitleParts(entry);
   if (!parts.length) return null;
   return (
     <div data-entry-subtitle="" className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-body text-ink-muted">
@@ -74,7 +73,7 @@ export const EntryHeader = forwardRef<HTMLHeadingElement, EntryHeaderProps>(func
       <BackButton onBack={onBack} title="Return to authenticator list" />
       <div className="mt-6 flex items-start justify-between gap-4">
         <h3 ref={headingRef} tabIndex={-1} className="min-w-0 text-heading font-semibold break-words text-ink outline-none">
-          {entryTitle(entry)}
+          {detailTitle(entry)}
         </h3>
         <RawButton hasRaw={hasRaw} onRaw={onRaw} />
       </div>

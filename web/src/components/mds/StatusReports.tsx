@@ -1,9 +1,8 @@
+import type { StatusReportRow } from '@/logic/mds/explorer/detail.js';
 import { MISSING_CELL_TEXT } from '@/logic/mds/explorer/rows.js';
 
 import { MonoValue } from '@/components/ui/MonoValue';
 import { TBody, THead, Table, Td, Th, Tr } from '@/components/ui/Table';
-
-import type { StatusReportRow } from './entryModel';
 
 // On a phone each report is a block, each value after its column's name (from
 // data-label, in CSS: no text is added to the page); the roles are written out,

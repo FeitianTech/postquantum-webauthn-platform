@@ -1,4 +1,4 @@
-import type { Combination } from './entryModel';
+import type { Combination } from '@/logic/mds/explorer/detail.js';
 
 // The user-verification section: each combination under its title, its methods as
 // published, and under a method what it says of its accuracy (code, biometric

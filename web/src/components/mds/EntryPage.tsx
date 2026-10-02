@@ -1,4 +1,6 @@
+import { detailSections, detailTitle, formatDetailSubtitle } from '@/logic/mds/explorer/detail.js';
 import { ENTRY_LINK_MESSAGES } from '@/logic/mds/explorer/entry-link.js';
+import { getAuthenticatorRawData } from '@/logic/mds/raw-data.js';
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
@@ -7,7 +9,6 @@ import { useEntrance } from '@/lib/entrance';
 
 import { CondensedBar } from './CondensedBar';
 import { BackButton, EntryHeader, RawButton } from './EntryHeader';
-import { entrySections, entrySubtitleText, entryTitle, rawData } from './entryModel';
 import { EntrySections } from './EntrySections';
 import { RawEntryDialog } from './RawEntryDialog';
 import type { EntryDetail } from './useEntryDetail';
@@ -41,8 +42,8 @@ export function EntryPage({
   const rawOpener = useRef<HTMLButtonElement | null>(null);
   const [rawOpen, setRawOpen] = useState(false);
   const entry = detail.phase === 'found' ? detail.entry : null;
-  const sections = useMemo(() => (entry ? entrySections(entry) : []), [entry]);
-  const hasRaw = useMemo(() => Boolean(entry && rawData(entry)), [entry]);
+  const sections = useMemo(() => (entry ? detailSections(entry) : []), [entry]);
+  const hasRaw = useMemo(() => Boolean(entry && getAuthenticatorRawData(entry)), [entry]);
 
   // The heading takes the focus once there is one: at once, or when the entry arrives.
   useEffect(() => {
@@ -61,8 +62,8 @@ export function EntryPage({
       <>
         <CondensedBar
           watch={headingRef}
-          title={entryTitle(detail.entry)}
-          subtitle={entrySubtitleText(detail.entry)}
+          title={detailTitle(detail.entry)}
+          subtitle={formatDetailSubtitle(detail.entry)}
           onBack={onBack}
           backTitle="Return to authenticator list"
           active={active}

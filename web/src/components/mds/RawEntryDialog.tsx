@@ -1,13 +1,13 @@
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
-import { RAW_DATA_LABEL } from '@/logic/mds/raw-data.js';
+import { formatDetailSubtitle } from '@/logic/mds/explorer/detail.js';
+import { RAW_DATA_LABEL, authenticatorRawTitle, getAuthenticatorRawData } from '@/logic/mds/raw-data.js';
+import { stringifyAuthenticatorRawData } from '@/logic/mds/raw-stringify.js';
 import { useMemo } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { CodeBlock } from '@/components/ui/CodeBlock';
 import { Dialog, OverlayBody, OverlayHeader } from '@/components/ui/Overlay';
 import { downloadText, fileNameFor } from '@/lib/download';
-
-import { entrySubtitleText, rawData, rawText, rawTitle } from './entryModel';
 
 const RAW_DIALOG_ID = 'mds-entry-raw';
 
@@ -27,16 +27,16 @@ export function RawEntryDialog({
 }) {
   const titleId = `${RAW_DIALOG_ID}-title`;
   const text = useMemo(() => {
-    const data = rawData(entry);
-    return data ? rawText(data) : '';
+    const data = getAuthenticatorRawData(entry);
+    return data ? stringifyAuthenticatorRawData(data) : '';
   }, [entry]);
-  const subtitle = entrySubtitleText(entry);
+  const subtitle = formatDetailSubtitle(entry);
 
   return (
     <Dialog id={RAW_DIALOG_ID} open={open && Boolean(text)} onClose={onClose} labelledBy={titleId} returnFocusTo={returnFocusTo}>
       <OverlayHeader
         titleId={titleId}
-        title={rawTitle(entry)}
+        title={authenticatorRawTitle(entry)}
         closeLabel="Close raw authenticator data"
         onClose={onClose}
         actions={

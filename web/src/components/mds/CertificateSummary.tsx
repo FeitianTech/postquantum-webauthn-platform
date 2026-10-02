@@ -1,8 +1,8 @@
+import type { CertificateSummary as Summary, SummaryItem } from '@/logic/mds/explorer/certificate.js';
+
 import { CodeBlock } from '@/components/ui/CodeBlock';
 import { KeyValueGrid } from '@/components/ui/KeyValueGrid';
 import { MonoValue } from '@/components/ui/MonoValue';
-
-import type { CertificateSummary as Summary, SummaryItem } from './entryModel';
 
 function ItemValue({ item, context }: { item: SummaryItem; context: string }) {
   const name = `${context}${item.label}`.toLowerCase();

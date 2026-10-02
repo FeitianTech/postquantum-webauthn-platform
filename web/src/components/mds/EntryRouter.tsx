@@ -1,10 +1,11 @@
+import { normaliseCertificateBase64 } from '@/logic/mds/explorer/certificate.js';
+import { detailSections } from '@/logic/mds/explorer/detail.js';
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import type { SectionRoute } from '@/lib/useSection';
 
 import { CertificatePage } from './CertificatePage';
-import { cleanCertificate, entrySections } from './entryModel';
 import { EntryPage } from './EntryPage';
 import { useCertificateDecode } from './useCertificateDecode';
 import { useEntryDetail } from './useEntryDetail';
@@ -35,11 +36,11 @@ export function EntryRouter({ route, entries, phase }: { route: SectionRoute; en
 
   const entry = detail.phase === 'found' ? detail.entry : null;
   const certificates = useMemo(
-    () => (entry ? (entrySections(entry).find((section) => section.certificates)?.certificates ?? []) : []),
+    () => (entry ? (detailSections(entry).find((section) => section.certificates)?.certificates ?? []) : []),
     [entry],
   );
   const wanted = kind === 'certificate' && route.path.length === 3 && CERTIFICATE_NUMBER.test(numberText) ? Number(numberText) : null;
-  const certificate = certificates.find((candidate) => candidate.number === wanted && cleanCertificate(candidate.certificate)) ?? null;
+  const certificate = certificates.find((candidate) => candidate.number === wanted && normaliseCertificateBase64(candidate.certificate)) ?? null;
   const unknownPath = route.path.length > 1 && Boolean(entry) && !certificate;
   const { replace, open, close } = route;
 
@@ -49,7 +50,7 @@ export function EntryRouter({ route, entries, phase }: { route: SectionRoute; en
 
   const openCertificate = useCallback(
     async (number: number, value: string) => {
-      if (!cleanCertificate(value)) return;
+      if (!normaliseCertificateBase64(value)) return;
       entryScroll.current = window.scrollY;
       setBusy(number);
       await decode(value);

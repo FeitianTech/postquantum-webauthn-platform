@@ -7,7 +7,30 @@ export const DEFAULT_CERTIFICATE_TITLE = 'Attestation Certificate';
 export const NO_CERTIFICATE_DETAILS = 'No decoded certificate details available.';
 export const CERTIFICATE_DECODE_FAILED = 'Unable to decode certificate.';
 
+/**
+ * One line of a certificate's summary.
+ * @typedef {{ label: string, value?: string, lines?: string[], primary: boolean, code: boolean }} SummaryItem
+ * @typedef {{ title: string, items: SummaryItem[] }} SummarySection
+ * @typedef {{ items: SummaryItem[], sections: SummarySection[] }} CertificateSummary
+ */
+
+/**
+ * What the certificate page shows for a decode.
+ * @typedef {object} CertificateView
+ * @property {string} title
+ * @property {string} subtitle
+ * @property {CertificateSummary | null} summary
+ * @property {string} message
+ * @property {string} output
+ * @property {boolean} failed
+ * @property {string} reason
+ */
+
 // The certificate as sent to the server: the base64 without its whitespace.
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 export function normaliseCertificateBase64(value) {
     if (typeof value !== 'string') {
         return '';
@@ -29,6 +52,10 @@ export function formatCertificateOutput(details) {
 // POST /api/mds/decode-certificate. A refusal throws "Certificate decode failed
 // with status N" (what the page says), with the server's own sentence, when it
 // gave one, as the error's `reason`.
+/**
+ * @param {string} certificate
+ * @returns {Promise<Record<string, any> | null>}
+ */
 export async function requestCertificateDecode(certificate) {
     const response = await fetch(CERTIFICATE_DECODE_PATH, {
         method: 'POST',
@@ -80,6 +107,12 @@ export function determinePublicKeyAlgorithm(info) {
 
 // One line of the summary, or null when it has nothing to show: a label and its
 // value (trimmed), or its `lines` for a list; `code` values are shown as given.
+/**
+ * @param {string} label
+ * @param {any} value
+ * @param {{ primary?: boolean, code?: boolean }} [options]
+ * @returns {SummaryItem | null}
+ */
 export function certificateSummaryItem(label, value, { primary = false, code = false } = {}) {
     if (!label) {
         return null;
@@ -97,11 +130,17 @@ export function certificateSummaryItem(label, value, { primary = false, code = f
     return isList ? { ...item, lines: resolved.map(String) } : { ...item, value: String(text) };
 }
 
+/**
+ * @param {string} title
+ * @param {Array<SummaryItem | null>} items
+ * @returns {SummarySection | null}
+ */
 function summarySection(title, items) {
-    const present = items.filter(Boolean);
+    const present = items.filter(item => item !== null);
     return present.length ? { title, items: present } : null;
 }
 
+/** @returns {SummarySection | null} */
 export function certificatePublicKeySection(info) {
     if (!info || typeof info !== 'object') {
         return null;
@@ -124,6 +163,7 @@ export function certificatePublicKeySection(info) {
     ]);
 }
 
+/** @returns {SummarySection | null} */
 export function certificateSignatureSection(signature) {
     if (!signature || typeof signature !== 'object') {
         return null;
@@ -143,6 +183,10 @@ export function certificateSignatureSection(signature) {
 // The summary above the raw and decoded blocks: its first items (subject,
 // issuer, validity, serial numbers), then the Public Key and Signature
 // sections; null when it would show nothing.
+/**
+ * @param {any} details The server's decode of the certificate, as JSON.
+ * @returns {CertificateSummary | null}
+ */
 export function certificateSummary(details) {
     if (!details || typeof details !== 'object') {
         return null;
@@ -157,9 +201,9 @@ export function certificateSummary(details) {
         certificateSummaryItem('Not After', formatCertificateDateDisplay(validity.notAfter), primary),
         certificateSummaryItem('Serial Number', serialNumber.decimal || serialNumber.hex, primary),
         serialNumber.hex ? certificateSummaryItem('Serial Number (Hex)', serialNumber.hex) : null,
-    ].filter(Boolean);
+    ].filter(item => item !== null);
     const sections = [certificatePublicKeySection(details.publicKeyInfo), certificateSignatureSection(details.signature)]
-        .filter(Boolean);
+        .filter(section => section !== null);
     return items.length || sections.length ? { items, sections } : null;
 }
 
@@ -167,7 +211,8 @@ export function certificateSummary(details) {
 // issuer, '' for none), the summary or the sentence in its place, and Decoded
 // Output. A failure shows its sentence in both, under the default title.
 /**
- * @param {{ details?: Record<string, any> | null, error?: { reason?: unknown } | null }} [decode]
+ * @param {{ details?: Record<string, any> | null, error?: any }} [decode]
+ * @returns {CertificateView}
  */
 export function describeCertificate({ details = null, error = null } = {}) {
     if (error) {

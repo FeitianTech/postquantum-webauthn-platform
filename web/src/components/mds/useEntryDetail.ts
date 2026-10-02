@@ -1,7 +1,7 @@
-import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
+import { requestResolvedEntry, resolveQueryForEntry } from '@/logic/mds/explorer/entry-link.js';
+import { type MdsEntry, hasInlineDetail } from '@/logic/mds/explorer/loading.js';
 import { useCallback, useEffect, useState } from 'react';
 
-import { hasDetail, resolveEntry, resolveQuery } from './entryModel';
 import type { ExplorerPhase } from './useMdsExplorer';
 
 /**
@@ -27,7 +27,7 @@ export function useEntryDetail(entryId: string, entries: MdsEntry[], phase: Expl
   const [attempt, setAttempt] = useState(0);
 
   const listed = entries.find((entry) => entry.entryId === entryId);
-  const fromList = listed && hasDetail(listed) ? listed : null;
+  const fromList = listed && hasInlineDetail(listed) ? listed : null;
   const listLoading = phase === 'idle' || phase === 'loading';
   const mustAsk = Boolean(entryId) && !fromList && (Boolean(listed) || !listLoading);
 
@@ -37,7 +37,7 @@ export function useEntryDetail(entryId: string, entries: MdsEntry[], phase: Expl
     const settle = (detail: EntryDetail) => {
       if (!controller.signal.aborted) setResolved({ entryId, attempt, detail });
     };
-    resolveEntry(listed ? resolveQuery(listed) : { entryId }, { signal: controller.signal })
+    requestResolvedEntry(listed ? resolveQueryForEntry(listed) : { entryId }, { signal: controller.signal })
       .then(({ entry, failure }) => {
         if (entry) settle({ phase: 'found', entry });
         else if (failure && failure.status !== 404) settle({ phase: 'failed', message: failure.message });

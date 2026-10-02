@@ -22,7 +22,7 @@ import { certificateSummary } from '@/logic/mds/explorer/certificate.js';
 import { fetchCredentialArtifact } from '@/logic/credentials/storage/artifacts-client.js';
 import { updateAdvancedCredentialRegistrationSnapshot } from '@/logic/credentials/storage/records.js';
 
-import type { CertificateSummary } from '@/components/mds/entryModel';
+import type { CertificateSummary } from '@/logic/mds/explorer/certificate.js';
 
 import type { SavedCredential } from '../model';
 

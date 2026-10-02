@@ -4,6 +4,8 @@ import { readFailedResponse } from '../../shared/failed-response.js';
 import { MDS_RESOLVE_PATH } from '../constants.js';
 import { aaguidGuid } from '../../shared/aaguid.js';
 
+/** @import { MdsEntry } from './loading.js' */
+
 // What the jump from a saved credential says while and after it looks.
 export const ENTRY_LINK_MESSAGES = Object.freeze({
     locating: 'Locating metadata entry...',
@@ -16,6 +18,10 @@ export const ENTRY_LINK_MESSAGES = Object.freeze({
 
 // The entry id of an AAGUID's entry (`aaguid:` and the AAGUID dashed, lower
 // case), which is also its URL in web (#mds/aaguid:…); '' when it is no AAGUID.
+/**
+ * @param {unknown} aaguid
+ * @returns {string}
+ */
 export function entryIdForAaguid(aaguid) {
     const normalised = aaguidGuid(aaguid);
     return normalised ? `aaguid:${normalised}` : '';
@@ -23,6 +29,10 @@ export function entryIdForAaguid(aaguid) {
 
 // What GET /api/mds/metadata/resolve is asked for an entry: its entry id, else
 // its AAGUID, else its id as an AAID.
+/**
+ * @param {Record<string, any> | null | undefined} entry
+ * @returns {Record<string, string>}
+ */
 export function resolveQueryForEntry(entry) {
     if (typeof entry?.entryId === 'string' && entry.entryId) {
         return { entryId: entry.entryId };
@@ -43,6 +53,7 @@ export function resolveQueryForEntry(entry) {
 /**
  * @param {Record<string, unknown> | null | undefined} query
  * @param {{ signal?: AbortSignal }} [options]
+ * @returns {Promise<{ entry: MdsEntry | null, failure?: { status: number, message: string } }>}
  */
 export async function requestResolvedEntry(query, { signal } = {}) {
     const params = new URLSearchParams();

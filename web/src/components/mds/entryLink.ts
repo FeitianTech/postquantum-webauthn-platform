@@ -1,9 +1,7 @@
-import { ENTRY_LINK_MESSAGES } from '@/logic/mds/explorer/entry-link.js';
+import { ENTRY_LINK_MESSAGES, entryIdForAaguid } from '@/logic/mds/explorer/entry-link.js';
 import { useCallback } from 'react';
 
 import { type GoToSection, useSectionNavigation } from '@/lib/useSection';
-
-import { aaguidEntryId } from './entryModel';
 
 // How another surface (a saved credential's "FIDO MDS" button) opens
 // the MDS entry of an AAGUID. The entry's URL is #mds/aaguid:<the AAGUID dashed,
@@ -17,7 +15,7 @@ import { aaguidEntryId } from './entryModel';
  * no AAGUID).
  */
 export function openMdsEntryForAaguid(aaguid: unknown, go: GoToSection): string | null {
-  const entryId = aaguidEntryId(aaguid);
+  const entryId = entryIdForAaguid(aaguid);
   if (!entryId) return ENTRY_LINK_MESSAGES.unavailable;
   go('mds', [entryId]);
   return null;

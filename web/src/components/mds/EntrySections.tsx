@@ -1,3 +1,4 @@
+import type { ChipList, DetailField, DetailSection } from '@/logic/mds/explorer/detail.js';
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { certificationParts, identifierLabel } from '@/logic/mds/explorer/rows.js';
 
@@ -6,7 +7,6 @@ import { Button } from '@/components/ui/Button';
 import { KeyValueGrid } from '@/components/ui/KeyValueGrid';
 import { MonoValue } from '@/components/ui/MonoValue';
 
-import type { ChipList, DetailField, DetailSection } from './entryModel';
 import { StatusReports } from './StatusReports';
 import { UserVerification } from './UserVerification';
 

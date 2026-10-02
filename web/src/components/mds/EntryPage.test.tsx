@@ -1,5 +1,7 @@
 // The MDS entry page over the fixture's real entries (tests/fixtures/mds).
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
+import { getAuthenticatorRawData } from '@/logic/mds/raw-data.js';
+import { stringifyAuthenticatorRawData } from '@/logic/mds/raw-stringify.js';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -8,7 +10,6 @@ import { FIXTURE_ENTRIES, entryNamed, fixtureRoutes, json, resolveFrom, stubFetc
 import { renderPage } from '@/test/page';
 
 import { EntryPage } from './EntryPage';
-import { rawData, rawText } from './entryModel';
 import { MdsSection } from './MdsSection';
 import type { EntryDetail } from './useEntryDetail';
 
@@ -223,7 +224,7 @@ describe('the MDS entry page', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Fixture Security Key L1 – Authenticator Raw Data' });
     expect(dialog).toHaveTextContent(`AAGUID: ${entry.aaguid} • FIDO2`);
     const text = dialog.querySelector('pre')!.textContent!;
-    expect(text).toBe(rawText(rawData(entry)));
+    expect(text).toBe(stringifyAuthenticatorRawData(getAuthenticatorRawData(entry)));
     expect(JSON.parse(text).metadataStatement.attestationRootCertificates).toEqual(entry.attestationCertificates);
     expect(within(dialog).getByRole('button', { name: 'Copy Raw authenticator metadata' })).toBeInTheDocument();
 
