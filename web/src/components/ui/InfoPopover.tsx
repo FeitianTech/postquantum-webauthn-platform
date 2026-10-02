@@ -1,4 +1,14 @@
-import { type KeyboardEvent, type ReactNode, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import { cx } from '@/lib/cx';
 
@@ -17,26 +27,14 @@ export function placePopup(popup: DOMRect, trigger: DOMRect, viewport: { width: 
   return { side, align } as const;
 }
 
-type InfoPopoverProps = {
-  /** What the popover explains, for the trigger's name: "About prf eval first". */
-  label: string;
-  en: ReactNode;
-  zh: ReactNode;
-};
+type Placement = ReturnType<typeof placePopup>;
 
-// The info popups: an ⓘ that opens on hover, as today, and now also on click or
-// Enter for keyboard users. One is open at a time; Escape or a click elsewhere
-// closes it. The toggle switches between English and 中文 and reads "ENG" or "中"
-// as today, and the popup keeps its English size while showing Chinese.
-export function InfoPopover({ label, en, zh }: InfoPopoverProps) {
-  const id = useId();
+// Whether the popover is open, and pinned open by a click: one is open at a
+// time, a click outside closes it, and leaving an unpinned one closes it after
+// a moment.
+function usePinnedPopover(id: string, rootRef: RefObject<HTMLSpanElement | null>) {
   const [open, setOpen] = useState(false);
   const [pinned, setPinned] = useState(false);
-  const [language, setLanguage] = useState<'en' | 'zh'>('en');
-  const [placement, setPlacement] = useState<ReturnType<typeof placePopup>>({ side: 'bottom', align: 'start' });
-  const rootRef = useRef<HTMLSpanElement>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const close = useCallback(() => {
@@ -51,6 +49,21 @@ export function InfoPopover({ label, en, zh }: InfoPopoverProps) {
     setOpen(true);
   };
 
+  const leave = () => {
+    clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => {
+      if (!pinned) setOpen(false);
+    }, HIDE_DELAY_MS);
+  };
+
+  const toggle = () => {
+    if (open && pinned) close();
+    else {
+      show();
+      setPinned(true);
+    }
+  };
+
   useEffect(() => {
     const onOtherOpened = (event: Event) => {
       if ((event as CustomEvent<string>).detail !== id) close();
@@ -62,6 +75,26 @@ export function InfoPopover({ label, en, zh }: InfoPopoverProps) {
     };
   }, [id, close]);
 
+  useEffect(() => {
+    if (!open) return undefined;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) close();
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [open, close, rootRef]);
+
+  return { open, show, leave, toggle, close };
+}
+
+// Where the open popup goes (placePopup), measured before it is painted; below
+// and from the left while it is closed.
+function usePopoverPlacement(
+  open: boolean,
+  popupRef: RefObject<HTMLDivElement | null>,
+  triggerRef: RefObject<HTMLButtonElement | null>,
+): Placement {
+  const [placement, setPlacement] = useState<Placement>({ side: 'bottom', align: 'start' });
   useLayoutEffect(() => {
     const popup = popupRef.current;
     const trigger = triggerRef.current;
@@ -75,16 +108,29 @@ export function InfoPopover({ label, en, zh }: InfoPopoverProps) {
         height: window.innerHeight,
       }),
     );
-  }, [open]);
+  }, [open, popupRef, triggerRef]);
+  return placement;
+}
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) close();
-    };
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [open, close]);
+type InfoPopoverProps = {
+  /** What the popover explains, for the trigger's name: "About prf eval first". */
+  label: string;
+  en: ReactNode;
+  zh: ReactNode;
+};
+
+// The info popups: an ⓘ that opens on hover, as today, and now also on click or
+// Enter for keyboard users. One is open at a time; Escape or a click elsewhere
+// closes it. The toggle switches between English and 中文 and reads "ENG" or "中"
+// as today, and the popup keeps its English size while showing Chinese.
+export function InfoPopover({ label, en, zh }: InfoPopoverProps) {
+  const id = useId();
+  const [language, setLanguage] = useState<'en' | 'zh'>('en');
+  const rootRef = useRef<HTMLSpanElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const { open, show, leave, toggle, close } = usePinnedPopover(id, rootRef);
+  const placement = usePopoverPlacement(open, popupRef, triggerRef);
 
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === 'Escape' && open) {
@@ -107,12 +153,7 @@ export function InfoPopover({ label, en, zh }: InfoPopoverProps) {
       ref={rootRef}
       className="relative inline-flex"
       onMouseEnter={show}
-      onMouseLeave={() => {
-        clearTimeout(hideTimer.current);
-        hideTimer.current = setTimeout(() => {
-          if (!pinned) setOpen(false);
-        }, HIDE_DELAY_MS);
-      }}
+      onMouseLeave={leave}
       onKeyDown={onKeyDown}
     >
       <button
@@ -121,13 +162,7 @@ export function InfoPopover({ label, en, zh }: InfoPopoverProps) {
         aria-label={label}
         aria-expanded={open}
         aria-controls={`${id}-popup`}
-        onClick={() => {
-          if (open && pinned) close();
-          else {
-            show();
-            setPinned(true);
-          }
-        }}
+        onClick={toggle}
         className="inline-flex size-5 items-center justify-center rounded-full text-ink-faint transition-colors hover:text-ink"
       >
         <InfoIcon />
