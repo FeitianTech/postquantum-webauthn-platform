@@ -54,20 +54,11 @@ function listState(explorer: Explorer, view: ReturnType<typeof useExplorerView>)
 
 type ListPlace = { entryId: string; windowY: number; top: number; left: number };
 
-// The FIDO MDS section: every authenticator the FIDO Metadata Service
-// publishes, with what the explorer's logic shows of each, in a table that
-// sorts, filters, resizes and expands. A row opens its entry (#mds/<entryId>);
-// the list stays in the page meanwhile, so going back finds it as it was: its
-// filters, sort, widths and scroll, with the focus on the row.
-export function MdsSection({ active, route = CLOSED_ROUTE }: { active: boolean; route?: SectionRoute }) {
-  const section = SECTIONS.find((candidate) => candidate.id === 'mds')!;
-  const entrance = useEntrance(active);
-  const ids = segmentIds(NAV_ID, 'mds');
-  const explorer = useMdsExplorer(active);
-  const view = useExplorerView(explorer.entries, explorer.version);
+// Which entry the route opens (#mds/<entryId>), and the list's place kept while
+// it is open: back to the list finds it where it was, the focus on the row that
+// was opened (or on the entry a link opened, brought into view).
+function useEntryRouting(route: SectionRoute) {
   const frameRef = useRef<HTMLDivElement>(null);
-  const manageRef = useRef<HTMLButtonElement>(null);
-  const [managing, setManaging] = useState(false);
   const place = useRef<ListPlace | null>(null);
   const shownEntry = useRef('');
   const openEntryId = route.path[0] ?? '';
@@ -82,8 +73,6 @@ export function MdsSection({ active, route = CLOSED_ROUTE }: { active: boolean; 
     [open],
   );
 
-  // Back to the list: where it was, and the focus on the row that was opened (or
-  // on the entry a link opened, brought into view).
   useLayoutEffect(() => {
     const closed = shownEntry.current;
     shownEntry.current = openEntryId;
@@ -105,6 +94,24 @@ export function MdsSection({ active, route = CLOSED_ROUTE }: { active: boolean; 
     }
     link?.focus({ preventScroll: true });
   }, [openEntryId]);
+
+  return { frameRef, openEntryId, openEntry };
+}
+
+// The FIDO MDS section: every authenticator the FIDO Metadata Service
+// publishes, with what the explorer's logic shows of each, in a table that
+// sorts, filters, resizes and expands. A row opens its entry (#mds/<entryId>);
+// the list stays in the page meanwhile, so going back finds it as it was: its
+// filters, sort, widths and scroll, with the focus on the row.
+export function MdsSection({ active, route = CLOSED_ROUTE }: { active: boolean; route?: SectionRoute }) {
+  const section = SECTIONS.find((candidate) => candidate.id === 'mds')!;
+  const entrance = useEntrance(active);
+  const ids = segmentIds(NAV_ID, 'mds');
+  const explorer = useMdsExplorer(active);
+  const view = useExplorerView(explorer.entries, explorer.version);
+  const { frameRef, openEntryId, openEntry } = useEntryRouting(route);
+  const manageRef = useRef<HTMLButtonElement>(null);
+  const [managing, setManaging] = useState(false);
 
   return (
     <section
