@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_DETAIL_TITLE,
-  STATUS_REPORT_COLUMNS,
   detailSections,
   detailSubtitleParts,
   detailTitle,
@@ -12,6 +11,7 @@ import {
   formatDetailSubtitle,
   rawListValues,
 } from './detail.js';
+import { STATUS_REPORT_COLUMNS } from './status-reports.js';
 import { repoFile } from '@/test/logic/repo-file.js';
 
 const FIXTURE = JSON.parse(readFileSync(repoFile('tests/fixtures/mds/snapshot/fido-mds3.explorer.full.json'), 'utf8'));

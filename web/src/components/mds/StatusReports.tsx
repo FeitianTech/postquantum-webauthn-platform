@@ -1,4 +1,4 @@
-import type { StatusReportRow } from '@/logic/mds/explorer/detail.js';
+import type { StatusReportRow } from '@/logic/mds/explorer/status-reports.js';
 import { MISSING_CELL_TEXT } from '@/logic/mds/explorer/rows.js';
 
 import { MonoValue } from '@/components/ui/MonoValue';
