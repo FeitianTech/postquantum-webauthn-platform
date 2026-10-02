@@ -67,13 +67,14 @@ def _register_blueprints(app: Flask) -> None:
 
 # The order matters:
 # - logs first, so nothing that follows can log before the handler exists;
-# - the secret before anything could open a session;
+# - the secret and the session interface before anything could open a session;
 # - Flask runs after_request handlers in reverse registration order, so
 #   compression is registered before security_headers and runs after it: the
 #   headers are set on the response before its body is gzipped.
 INIT_STEPS: tuple[Callable[[Flask], None], ...] = (
     logs.init_app,
     session_secret.init_app,
+    session_cookie.init_app,
     proxy.init_app,
     compression.init_app,
     security_headers.init_app,

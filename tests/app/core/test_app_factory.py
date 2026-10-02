@@ -32,6 +32,7 @@ def test_init_steps_are_pinned_in_order():
     assert factory.INIT_STEPS == (
         logs.init_app,
         session_secret.init_app,
+        session_cookie.init_app,
         proxy.init_app,
         compression.init_app,
         security_headers.init_app,
