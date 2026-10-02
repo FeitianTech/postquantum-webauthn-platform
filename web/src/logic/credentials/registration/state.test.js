@@ -561,13 +561,6 @@ describe('applyRegistrationSnapshot', () => {
     expect(applyRegistrationSnapshot(createRegistrationState(), { attestationObject: { fmt: 'none' } })).toEqual(EMPTY_DETAIL_PREPARATION);
   });
 
-  it('does nothing without a snapshot', () => {
-    const state = createRegistrationState();
-    expect(applyRegistrationSnapshot(state, null)).toBeUndefined();
-    expect(applyRegistrationSnapshot(state, 'snapshot')).toBeUndefined();
-    expect(state).toEqual(EMPTY_STATE);
-  });
-
   it('lists every certificate when the snapshot names none', () => {
     const state = createRegistrationState();
     applyRegistrationSnapshot(state, { attestationCertificates: [decodedCertificate(), describedCertificate()] });
