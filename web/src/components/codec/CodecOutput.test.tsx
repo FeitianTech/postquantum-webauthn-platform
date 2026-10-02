@@ -1,12 +1,12 @@
 import { codecSections } from '@/logic/codec/result.js';
 import { formatKey } from '@/logic/codec/labels.js';
+import type { CodecAnswer, CodecMode } from '@/logic/codec/request.js';
 import { render, screen, within } from '@testing-library/react';
 
 import attestationGoldens from '../../../../tests/app/characterization/golden/routes/decoder-attestation-objects.json';
 import answers from '@/test/codec-answers.json';
 
 import { CodecOutput } from './CodecOutput';
-import type { CodecAnswer, CodecMode } from './model';
 
 type Recorded = { answer: CodecAnswer };
 const RECORDED = answers as Record<string, Recorded>;

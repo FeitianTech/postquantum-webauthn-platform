@@ -1,6 +1,6 @@
-import { CodeBlock } from '@/components/ui/CodeBlock';
+import type { EncodedView } from '@/logic/codec/encoding/summary.js';
 
-import type { EncodedView } from './model';
+import { CodeBlock } from '@/components/ui/CodeBlock';
 
 // The encoded bytes: each view (Hex, Base64, Base64url, Colon Hex, then any
 // other the answer gives) in a block with copy, and the byte length.

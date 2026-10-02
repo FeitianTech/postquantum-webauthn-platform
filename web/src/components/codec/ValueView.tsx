@@ -1,8 +1,8 @@
+import { type MapEntryView, classifyCodecValue } from '@/logic/codec/values.js';
+
 import { Badge, type Tone } from '@/components/ui/Badge';
 import { CodeBlock } from '@/components/ui/CodeBlock';
 import { cx } from '@/lib/cx';
-
-import { type MapEntryView, classifyValue } from './model';
 
 // The interpretation badges, by the kind values.js gives them.
 const BADGE_TONES: Record<string, Tone> = {
@@ -14,7 +14,7 @@ const BADGE_TONES: Record<string, Tone> = {
 const MONO = 'font-mono text-label wrap-anywhere';
 
 function holdsMore(value: unknown) {
-  const kind = classifyValue(value).kind;
+  const kind = classifyCodecValue(value).kind;
   return kind === 'map' || kind === 'list';
 }
 
@@ -35,7 +35,7 @@ function EntryLabel({ entry }: { entry: MapEntryView }) {
 // indented behind a hairline; a label and a plain value sit side by side only
 // where the map has room (a container query), so nothing deep is squeezed or cut.
 export function ValueView({ value, label }: { value: unknown; label: string }) {
-  const view = classifyValue(value);
+  const view = classifyCodecValue(value);
 
   if (view.kind === 'empty') return <span className={cx(MONO, 'text-ink-faint')}>{view.text}</span>;
   if (view.kind === 'inline' || view.kind === 'primitive') return <span className={cx(MONO, 'text-ink')}>{view.text}</span>;

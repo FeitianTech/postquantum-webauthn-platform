@@ -1,3 +1,5 @@
+import type { CodecAnswer, CodecMode } from '@/logic/codec/request.js';
+import { type SectionView, describeCodecResult } from '@/logic/codec/result.js';
 import { codecEdnText, codecExpandedJson } from '@/logic/codec/values.js';
 import { forwardRef } from 'react';
 
@@ -7,7 +9,6 @@ import { CodeBlock } from '@/components/ui/CodeBlock';
 
 import { EncodedOutput } from './EncodedOutput';
 import { Findings } from './Findings';
-import { type CodecAnswer, type CodecMode, type SectionView, describeResult } from './model';
 import { rawDialogId } from './RawDialog';
 import { ValueView } from './ValueView';
 
@@ -38,7 +39,7 @@ export const CodecOutput = forwardRef<HTMLButtonElement, CodecOutputProps>(funct
   { mode, answer, onRaw, rawOpen },
   rawButtonRef,
 ) {
-  const view = describeResult(answer, mode);
+  const view = describeCodecResult(answer, mode);
   const headingId = `codec-output-heading-${mode}`;
 
   return (

@@ -1,4 +1,8 @@
 import {
+  type CodecAnswer,
+  type CodecMode,
+  ENCODER_FORMATS,
+  buildCodecRequest,
   codecFailureText,
   codecSuccessText,
   requestCodec,
@@ -9,7 +13,8 @@ import { useCallback, useRef, useState } from 'react';
 
 import { useToast } from '@/components/ui/Toast';
 
-import { type CodecAnswer, type CodecFailure, type CodecMode, ENCODER_FORMATS, buildRequest } from './model';
+/** Why the last run showed no answer: the sentence, and where the input stops being well-formed when the server says. */
+export type CodecFailure = { text: string; offset: number | null; path: string | null };
 
 // One panel of the Codec (Decode or Encode): its input and options, and what the
 // last run gave, in this order: a check that fails leaves the last answer where
@@ -39,7 +44,7 @@ export function useCodec(mode: CodecMode) {
     setFailure(null);
     setRunning(true);
     try {
-      const payload = (await requestCodec(buildRequest(mode, input, { format, lenient }))) as CodecAnswer;
+      const payload = await requestCodec(buildCodecRequest(mode, input, { format, lenient }));
       if (current !== generation.current) return;
       setAnswer(payload);
       toast({ tone: 'success', message: codecSuccessText(mode) });

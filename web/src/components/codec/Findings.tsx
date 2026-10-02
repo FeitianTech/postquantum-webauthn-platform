@@ -1,6 +1,6 @@
-import { Badge } from '@/components/ui/Badge';
+import type { FindingView } from '@/logic/codec/result.js';
 
-import type { FindingView } from './model';
+import { Badge } from '@/components/ui/Badge';
 
 // What the decoder found, one row each: the category (amber when the server
 // also lists it among the malformed segments), where it is in mono (the field

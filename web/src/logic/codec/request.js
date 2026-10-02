@@ -8,8 +8,35 @@ import { canEncodeToFormat } from './encoding/can-encode.js';
 import { getCanonicalEncoderFormat } from './encoding/format.js';
 
 
-// Why `input` cannot be sent in `mode` (with `format` when encoding), or null
-// when it can.
+/** @typedef {'decode' | 'encode'} CodecMode */
+
+/**
+ * What POST /api/codec answered, as sent.
+ * @typedef {{ [key: string]: unknown }} CodecAnswer
+ */
+
+/** @typedef {{ payload: string, mode: CodecMode, format?: string | null, lenient?: boolean }} CodecRequest */
+
+// The encoder's formats, as the format select lists them: the value sent, and
+// the text shown.
+export const ENCODER_FORMATS = [
+    { value: 'CBOR (canonical)', text: 'CBOR (canonical)' },
+    { value: 'EDN', text: 'EDN (exact bytes)' },
+    { value: 'CBOR (CTAP/WebAuthn Data)', text: 'CBOR (CTAP/WebAuthn Data)' },
+    { value: 'JSON (binary)', text: 'JSON (binary)' },
+    { value: 'DER', text: 'DER' },
+    { value: 'PEM', text: 'PEM' },
+    { value: 'COSE', text: 'COSE' },
+];
+
+/**
+ * Why `input` cannot be sent in `mode` (with `format` when encoding), or null
+ * when it can.
+ * @param {CodecMode} mode
+ * @param {string} input
+ * @param {string | null} format
+ * @returns {string | null}
+ */
 export function validateCodecInput(mode, input, format) {
     if (!input.trim()) {
         return mode === 'encode'
@@ -40,9 +67,16 @@ export function validateCodecInput(mode, input, format) {
     return null;
 }
 
-// The body of POST /api/codec. The input goes as typed; `lenient` is sent only
-// when asked for, and only when decoding.
+/**
+ * The body of POST /api/codec. The input goes as typed; `lenient` is sent only
+ * when asked for, and only when decoding.
+ * @param {CodecMode} mode
+ * @param {string} input
+ * @param {{ format?: string | null, lenient?: boolean }} [options]
+ * @returns {CodecRequest}
+ */
 export function buildCodecRequest(mode, input, { format = null, lenient = false } = {}) {
+    /** @type {CodecRequest} */
     const body = { payload: input, mode };
     if (mode === 'encode') {
         body.format = format;
@@ -52,9 +86,13 @@ export function buildCodecRequest(mode, input, { format = null, lenient = false 
     return body;
 }
 
-// Send `body` and return the server's answer. A refusal is thrown as a
-// FailedResponseError (its failure carries the server's message, and the offset
-// and path where the input stops being well-formed when the server names them).
+/**
+ * Send `body` and return the server's answer. A refusal is thrown as a
+ * FailedResponseError (its failure carries the server's message, and the offset
+ * and path where the input stops being well-formed when the server names them).
+ * @param {CodecRequest} body
+ * @returns {Promise<CodecAnswer>}
+ */
 export async function requestCodec(body, fetchImpl = fetch) {
     const response = await fetchImpl('/api/codec', {
         method: 'POST',
@@ -75,16 +113,22 @@ export async function requestCodec(body, fetchImpl = fetch) {
     }
 }
 
+/** @param {CodecMode} mode */
 export function codecProgressText(mode) {
     return mode === 'encode' ? 'Encoding…' : 'Decoding…';
 }
 
+/** @param {CodecMode} mode */
 export function codecSuccessText(mode) {
     return mode === 'encode'
         ? 'Payload encoded successfully!'
         : 'Response decoded successfully!';
 }
 
+/**
+ * @param {CodecMode} mode
+ * @param {unknown} error
+ */
 export function codecFailureText(mode, error) {
     const message = error instanceof Error ? error.message : String(error);
     const failurePrefix = mode === 'encode' ? 'Encoding failed' : 'Decoding failed';

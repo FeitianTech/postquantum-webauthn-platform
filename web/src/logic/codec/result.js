@@ -3,6 +3,39 @@
 import { describeEncodedOutput } from './encoding/summary.js';
 import { formatKey } from './labels.js';
 
+/** @import { CodecMode } from './request.js' */
+/** @import { EncodedView } from './encoding/summary.js' */
+
+/**
+ * @typedef {object} FindingView
+ * @property {string | null} source
+ * @property {string | null} offset
+ * @property {string} path
+ * @property {string} message
+ * @property {string | null} category
+ * @property {string} line
+ * @property {boolean} malformed
+ */
+
+/** @typedef {{ key: string, label: string, kind: 'edn' | 'expandedJson' | 'value', value: unknown }} SectionView */
+
+/**
+ * @typedef {object} ResultView
+ * @property {null} empty
+ * @property {boolean} success
+ * @property {string} pill
+ * @property {string} type
+ * @property {string | null} lenientNote
+ * @property {string | null} findingsHeading
+ * @property {FindingView[]} findings
+ * @property {string | null} malformed
+ * @property {EncodedView | null} encoded
+ * @property {SectionView[]} sections
+ * @property {string | null} noSections
+ */
+
+/** @typedef {{ empty: string } | ResultView} CodecView */
+
 // Sections come in this order for each type (the part before " ("); any other
 // key follows in the answer's own order.
 const SECTION_ORDER = {
@@ -49,12 +82,19 @@ function hasOwn(object, key) {
 
 // One section: the EDN view (the bytes exactly), a top-level expandedJson, or
 // a value shown by values.js.
+/**
+ * @param {string} key
+ * @returns {SectionView}
+ */
 function codecSection(key, value) {
     const kind = key === 'edn' ? 'edn' : key === 'expandedJson' ? 'expandedJson' : 'value';
     return { key, label: formatKey(key), kind, value };
 }
 
-/** The sections of an answer's `data`, in the order they are shown. */
+/**
+ * The sections of an answer's `data`, in the order they are shown.
+ * @returns {SectionView[]}
+ */
 export function codecSections(type, data) {
     if (data === undefined) {
         return [];
@@ -66,6 +106,7 @@ export function codecSections(type, data) {
     const baseType = typeof type === 'string' ? type.split(' (', 1)[0] : '';
     const preferredOrder = hasOwn(SECTION_ORDER, baseType) ? SECTION_ORDER[baseType] : [];
     const usedKeys = new Set();
+    /** @type {SectionView[]} */
     const sections = [];
     preferredOrder.forEach((key) => {
         if (hasOwn(data, key)) {
@@ -107,6 +148,9 @@ export function codecFindingParts(finding) {
  * findings (or, when there are none, the malformed line), and either the encoded
  * bytes (encode mode, when the answer holds them) or the sections, with the
  * sentence for none.
+ * @param {Record<string, any> | null | undefined} payload The answer (CodecAnswer).
+ * @param {CodecMode} [mode]
+ * @returns {CodecView}
  */
 export function describeCodecResult(payload, mode = 'decode') {
     if (!payload || typeof payload !== 'object') {

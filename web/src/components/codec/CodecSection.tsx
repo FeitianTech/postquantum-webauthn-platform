@@ -1,4 +1,4 @@
-import { codecProgressText } from '@/logic/codec/request.js';
+import { type CodecMode, ENCODER_FORMATS, codecProgressText } from '@/logic/codec/request.js';
 import { type ReactNode, useCallback, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
@@ -11,7 +11,6 @@ import { NAV_ID, SECTIONS } from '@/lib/sections';
 
 import { CodecOutput } from './CodecOutput';
 import { FailureNotice } from './FailureNotice';
-import { type CodecMode, ENCODER_FORMATS } from './model';
 import { RawDialog } from './RawDialog';
 import { SupportedInputs } from './SupportedInputs';
 import { type CodecPanelState, useCodec } from './useCodec';

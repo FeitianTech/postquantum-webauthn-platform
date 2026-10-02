@@ -1,9 +1,8 @@
-import { codecRawJson } from '@/logic/codec/request.js';
+import { type CodecAnswer, type CodecMode, codecRawJson } from '@/logic/codec/request.js';
 
 import { CodeBlock } from '@/components/ui/CodeBlock';
 import { Dialog, OverlayBody, OverlayHeader } from '@/components/ui/Overlay';
 
-import type { CodecAnswer, CodecMode } from './model';
 
 const TITLES: Record<CodecMode, { title: string; close: string }> = {
   decode: { title: 'Raw Codec Output', close: 'Close raw codec output' },

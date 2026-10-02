@@ -2,13 +2,31 @@
 // it gets, the label of each key, and the badges an interpreted value carries.
 import { formatKey } from './labels.js';
 
+/**
+ * @typedef {[kind: string, text: string]} BadgeView
+ * @typedef {{ key: string, label: string, value: unknown }} MapEntryView
+ * @typedef {(
+ *     | { kind: 'empty', text: string }
+ *     | { kind: 'inline', text: string }
+ *     | { kind: 'block', text: string }
+ *     | { kind: 'primitive', text: string }
+ *     | { kind: 'list', items: unknown[] }
+ *     | { kind: 'map', badges: BadgeView[], entries: MapEntryView[] }
+ * )} ValueView
+ */
+
 // A string longer than this, or holding a newline, is shown as a block.
 const INLINE_LIMIT = 80;
 
-// What the server says about an interpreted value, shown before it: an
-// identifier nothing defines, something shown but not verified, a format the
-// spec deprecates. Each badge is [kind, text].
+/**
+ * What the server says about an interpreted value, shown before it: an
+ * identifier nothing defines, something shown but not verified, a format the
+ * spec deprecates. Each badge is [kind, text].
+ * @param {Record<string, any>} value
+ * @returns {BadgeView[]}
+ */
 export function badgesFor(value) {
+    /** @type {BadgeView[]} */
     const badges = [];
     if (value.known === false) {
         badges.push(['unknown', 'Unknown']);
@@ -27,6 +45,8 @@ export function badgesFor(value) {
  * `block` (a string), `primitive` (a number, boolean or anything else, as text),
  * `list` (its items, each shown by these rules) or `map` (its entries with their
  * labels, and the badges shown before them).
+ * @param {unknown} value
+ * @returns {ValueView}
  */
 export function classifyCodecValue(value) {
     if (value === null || value === undefined) {

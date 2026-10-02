@@ -1,4 +1,4 @@
-import type { CodecFailure } from './model';
+import type { CodecFailure } from './useCodec';
 
 // Why the last run showed no answer, where it stays until the next run or Clear:
 // the sentence request.js gives, and, when the server named them,

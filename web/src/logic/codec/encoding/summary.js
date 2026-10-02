@@ -73,15 +73,22 @@ export function findEncodedSummary(value, label = '') {
 }
 
 /**
+ * @typedef {{ key: string, label: string, value: string }} EncodedFormatView
+ * @typedef {{ label: string, formats: EncodedFormatView[], byteLength: number | null }} EncodedView
+ */
+
+/**
  * The views of the encoded bytes, each `{key, label, value}`: Hex, Base64,
  * Base64url and Colon Hex first, then any other string the summary holds
  * (not `encoding`); blank ones are left out.
+ * @returns {EncodedFormatView[]}
  */
 export function listEncodedFormats(summary) {
     if (!summary || typeof summary !== 'object') {
         return [];
     }
 
+    /** @type {EncodedFormatView[]} */
     const formats = [];
     const usedKeys = new Set();
     const add = (key, value) => {
@@ -112,6 +119,7 @@ function encodedByteLength(summary) {
  * The encoded bytes an encoder answer holds: the section's label, the views and
  * the byte length (null when the summary gives none). Null when the answer has
  * no summary.
+ * @returns {EncodedView | null}
  */
 export function describeEncodedOutput(data) {
     const summaryInfo = findEncodedSummary(data);
