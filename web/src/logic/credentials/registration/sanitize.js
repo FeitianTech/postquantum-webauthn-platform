@@ -115,22 +115,9 @@ export function sanitiseRegistrationData(raw) {
     return cloned;
 }
 
-/**
- * @param {any} info
- * @param {{ authenticatorDataHex: string, authenticatorDataHash: string } | null} [authenticatorSummary]
- */
-export function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
-    const summary = authenticatorSummary && typeof authenticatorSummary === 'object'
-        ? authenticatorSummary
-        : {};
-
-    const summaryHash = typeof summary.authenticatorDataHash === 'string'
-        ? summary.authenticatorDataHash.trim()
-        : '';
-    const summaryHex = typeof summary.authenticatorDataHex === 'string'
-        ? summary.authenticatorDataHex.trim()
-        : '';
-
+// The authenticator data as hex: the view's own, else the first spelling the
+// relying party gives that is hex; the first it gives, as it is, when none is.
+function authenticatorValuesOf(info, summaryHex) {
     const authenticatorCandidates = [];
     const recordCandidate = value => {
         if (typeof value !== 'string') {
@@ -166,26 +153,12 @@ export function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
     if (!authenticatorHex && authenticatorCandidates.length) {
         fallbackAuthenticatorValue = authenticatorCandidates[0];
     }
+    return { authenticatorHex, fallbackAuthenticatorValue };
+}
 
-    // No relying party: the view's own hex and hash alone, when it has them.
-    if (!info || typeof info !== 'object') {
-        if (!authenticatorHex && !summaryHash) {
-            return null;
-        }
-        const minimal = {};
-        if (authenticatorHex) {
-            minimal.authenticatorData = authenticatorHex;
-        }
-        if (summaryHash) {
-            minimal.authenticatorDataHash = summaryHash;
-        }
-        return minimal;
-    }
-    const cloned = cloneJson(info);
-
-    stripCertificateCollections(cloned);
-    removeKeysCaseInsensitive(cloned, RP_INFO_EXCLUDED_KEYS);
-
+// The copy's registration data, sanitised (none when nothing is left), and its
+// attestation summary when the copy has none of its own. Gives that data.
+function mergeRegistrationData(cloned) {
     let registrationData = null;
     if (cloned.registrationData && typeof cloned.registrationData === 'object') {
         registrationData = sanitiseRegistrationData(cloned.registrationData);
@@ -205,7 +178,12 @@ export function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
     ) {
         cloned.attestationSummary = cloneJson(registrationData.attestationSummary);
     }
+    return registrationData;
+}
 
+// The copy's errors without those about the AAGUID (the details show it
+// themselves); none left, no errors.
+function withoutAaguidErrors(cloned) {
     if (Array.isArray(cloned.errors)) {
         cloned.errors = cloned.errors.filter(item => {
             if (typeof item === 'string') {
@@ -240,7 +218,10 @@ export function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
             delete cloned.errors;
         }
     }
+}
 
+// The authenticator data and its hash, on the copy and on its registration data.
+function writeAuthenticatorData(cloned, registrationData, { authenticatorHex, fallbackAuthenticatorValue, summaryHash }) {
     if (authenticatorHex) {
         cloned.authenticatorData = authenticatorHex;
     } else if (fallbackAuthenticatorValue) {
@@ -266,6 +247,48 @@ export function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
     ) {
         registrationData.authenticatorData = authenticatorHex;
     }
+}
+
+/**
+ * @param {any} info
+ * @param {{ authenticatorDataHex: string, authenticatorDataHash: string } | null} [authenticatorSummary]
+ */
+export function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
+    const summary = authenticatorSummary && typeof authenticatorSummary === 'object'
+        ? authenticatorSummary
+        : {};
+
+    const summaryHash = typeof summary.authenticatorDataHash === 'string'
+        ? summary.authenticatorDataHash.trim()
+        : '';
+    const summaryHex = typeof summary.authenticatorDataHex === 'string'
+        ? summary.authenticatorDataHex.trim()
+        : '';
+
+    const { authenticatorHex, fallbackAuthenticatorValue } = authenticatorValuesOf(info, summaryHex);
+
+    // No relying party: the view's own hex and hash alone, when it has them.
+    if (!info || typeof info !== 'object') {
+        if (!authenticatorHex && !summaryHash) {
+            return null;
+        }
+        const minimal = {};
+        if (authenticatorHex) {
+            minimal.authenticatorData = authenticatorHex;
+        }
+        if (summaryHash) {
+            minimal.authenticatorDataHash = summaryHash;
+        }
+        return minimal;
+    }
+    const cloned = cloneJson(info);
+
+    stripCertificateCollections(cloned);
+    removeKeysCaseInsensitive(cloned, RP_INFO_EXCLUDED_KEYS);
+
+    const registrationData = mergeRegistrationData(cloned);
+    withoutAaguidErrors(cloned);
+    writeAuthenticatorData(cloned, registrationData, { authenticatorHex, fallbackAuthenticatorValue, summaryHash });
 
     return cloned;
 }
