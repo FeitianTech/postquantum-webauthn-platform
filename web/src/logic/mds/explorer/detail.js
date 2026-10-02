@@ -327,11 +327,43 @@ function statusReportRow(report) {
     };
 }
 
+/**
+ * A field: a value (an identifier is copyable, in Geist Mono), or a list of codes.
+ * @typedef {{ label: string, value?: string, codes?: string[], identifier?: boolean }} DetailField
+ * @typedef {{ label: string, values: string[] }} ChipList
+ * @typedef {object} VerificationMethod
+ * @property {string} method
+ * @property {string} codeAccuracy
+ * @property {string} biometricAccuracy
+ * @property {string} patternAccuracy
+ * @typedef {{ title: string, methods: VerificationMethod[] }} Combination
+ * @typedef {{ number: number, label: string, certificate: string }} CertificateLink
+ * @typedef {ReturnType<typeof statusReportRow>} StatusReportRow
+ */
+
+/**
+ * One of the page's sections, in this order; what it holds depends on its kind.
+ * @typedef {object} DetailSection
+ * @property {string} key
+ * @property {string} title
+ * @property {DetailField[]} [fields]
+ * @property {ChipList[]} [chipLists]
+ * @property {Combination[]} [combinations]
+ * @property {CertificateLink[]} [certificates]
+ * @property {string[]} [columns]
+ * @property {StatusReportRow[]} [statusReports]
+ */
+
+/**
+ * @param {Record<string, any> | null | undefined} entry
+ * @returns {DetailSection[]}
+ */
 export function detailSections(entry) {
     const source = entry && typeof entry === 'object' ? entry : {};
     const metadata = source.metadataStatement && typeof source.metadataStatement === 'object'
         ? source.metadataStatement
         : {};
+    /** @type {DetailSection[]} */
     const sections = [overviewSection(source, metadata), metadataStatementSection(source, metadata)];
 
     const combinations = verificationCombinations(metadata.userVerificationDetails);

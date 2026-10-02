@@ -8,7 +8,10 @@
   },
   "include": [
     "src/logic/shared/**/*.js",
-    "src/logic/credentials/storage/**/*.js"
+    "src/logic/credentials/storage/**/*.js",
+    "src/logic/codec/**/*.js",
+    "src/logic/browser/**/*.js",
+    "src/logic/mds/**/*.js"
   ],
   "exclude": [
     "src/logic/**/*.test.js"

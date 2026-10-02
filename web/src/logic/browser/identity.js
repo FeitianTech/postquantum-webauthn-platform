@@ -118,8 +118,31 @@ async function readBrave(nav) {
     }
 }
 
+/**
+ * @typedef {{ brand: string, version: string }} Brand
+ * @typedef {{ error: string }} ReadError
+ * @typedef {object} LowEntropyHints
+ * @property {Brand[] | null} brands
+ * @property {boolean | null} mobile
+ * @property {string | null} platform
+ * @property {Record<string, string>} [errors]
+ * @typedef {{ fullVersionList: Brand[] | null, platformVersion: string | null }} HighEntropyHints
+ * @typedef {object} IdentityInputs
+ * @property {string | null} userAgent
+ * @property {string | null} platform
+ * @property {number | null} maxTouchPoints
+ * @property {LowEntropyHints | ReadError | null} userAgentData
+ * @property {HighEntropyHints | ReadError | null} highEntropyValues
+ * @property {{ isBrave: boolean | null } | ReadError | null} brave
+ */
+
+/**
+ * @param {(Navigator & { userAgentData?: unknown, brave?: unknown }) | undefined} [nav]
+ * @returns {Promise<IdentityInputs>}
+ */
 export async function readIdentityInputs(nav = globalThis.navigator) {
     const touchPoints = attempt(() => nav?.maxTouchPoints);
+    /** @type {IdentityInputs} */
     const inputs = {
         userAgent: readString(() => nav?.userAgent),
         platform: readString(() => nav?.platform),

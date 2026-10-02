@@ -38,7 +38,9 @@ export async function requestCertificateDecode(certificate) {
     });
 
     if (!response.ok) {
-        const error = new Error(`Certificate decode failed with status ${response.status}`);
+        const error = /** @type {Error & { reason?: string }} */ (
+            new Error(`Certificate decode failed with status ${response.status}`)
+        );
         const failure = await readFailedResponse(response);
         error.reason = typeof failure.body?.error === 'string' ? failure.text : '';
         throw error;
@@ -164,6 +166,9 @@ export function certificateSummary(details) {
 // What the page shows for a decode: its title (the subject), subtitle (the
 // issuer, '' for none), the summary or the sentence in its place, and Decoded
 // Output. A failure shows its sentence in both, under the default title.
+/**
+ * @param {{ details?: Record<string, any> | null, error?: { reason?: unknown } | null }} [decode]
+ */
 export function describeCertificate({ details = null, error = null } = {}) {
     if (error) {
         const message = certificateDecodeFailure(error);

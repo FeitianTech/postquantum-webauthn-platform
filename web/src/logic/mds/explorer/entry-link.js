@@ -40,6 +40,10 @@ export function resolveQueryForEntry(entry) {
 // nothing to ask or the answer holds no entry), `{ entry: null, failure }` for a
 // refusal, with its status and the server's sentence ("Metadata entry not
 // found." for a 404). A body that is not JSON throws.
+/**
+ * @param {Record<string, unknown> | null | undefined} query
+ * @param {{ signal?: AbortSignal }} [options]
+ */
 export async function requestResolvedEntry(query, { signal } = {}) {
     const params = new URLSearchParams();
     Object.entries(query || {}).forEach(([key, value]) => {
@@ -51,6 +55,7 @@ export async function requestResolvedEntry(query, { signal } = {}) {
         return { entry: null };
     }
 
+    /** @type {RequestInit} */
     const init = signal ? { cache: 'no-store', signal } : { cache: 'no-store' };
     const response = await fetch(`${MDS_RESOLVE_PATH}?${params.toString()}`, init);
     if (!response.ok) {

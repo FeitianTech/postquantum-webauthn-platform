@@ -1,6 +1,11 @@
 // Where the explorer's entries come from and what an answer means. No DOM.
 import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MISSING_METADATA_MESSAGE } from '../constants.js';
 
+/** @param {any} error */
+function isAbortError(error) {
+    return Boolean(error && error.name === 'AbortError');
+}
+
 export function hasInlineDetail(entry) {
     return Boolean(
         entry
@@ -59,7 +64,7 @@ export async function requestExplorerSnapshot(
             result = null;
         }
     } catch (error) {
-        if (error && error.name === 'AbortError') {
+        if (isAbortError(error)) {
             throw error;
         }
         result = null;
@@ -114,6 +119,7 @@ export function prepareSnapshotEntries(snapshot, resolvedEntryCache = new Map())
 // What the page starts from (GET /api/mds/metadata/info: the packaged summary,
 // `snapshotUrl` and `customEntriesState`). Null when it cannot be had: the
 // explorer then asks the API.
+/** @param {{ signal?: AbortSignal }} [options] */
 export async function fetchExplorerInfo({ signal } = {}) {
     try {
         const response = await fetch(MDS_INFO_PATH, { cache: 'no-store', signal });
@@ -123,7 +129,7 @@ export async function fetchExplorerInfo({ signal } = {}) {
         const payload = await response.json();
         return payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : null;
     } catch (error) {
-        if (error && error.name === 'AbortError') {
+        if (isAbortError(error)) {
             throw error;
         }
         return null;

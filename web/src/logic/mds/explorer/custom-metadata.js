@@ -80,6 +80,10 @@ async function readCustomMetadataAnswer(response) {
     }
 }
 
+/**
+ * @param {File[]} files
+ * @param {{ signal?: AbortSignal, path?: string }} [options]
+ */
 export async function requestCustomMetadataUpload(files, { signal, path = CUSTOM_METADATA_UPLOAD_PATH } = {}) {
     const response = await fetch(path, {
         method: 'POST',
@@ -126,6 +130,10 @@ export function removedCustomMetadataMessage(itemName) {
     return `${itemName} removed.`;
 }
 
+/**
+ * @param {string} storedFilename
+ * @param {{ signal?: AbortSignal, path?: string }} [options]
+ */
 export async function requestCustomMetadataDelete(
     storedFilename,
     { signal, path = CUSTOM_METADATA_DELETE_PATH } = {},
@@ -178,6 +186,7 @@ export function describeCustomMetadataItem(item) {
 }
 
 // The files uploaded in this session (GET /api/mds/metadata/custom), newest first.
+/** @param {{ signal?: AbortSignal, path?: string }} [options] */
 export async function requestCustomMetadataList({ signal, path = CUSTOM_METADATA_LIST_PATH } = {}) {
     const response = await fetch(path, { cache: 'no-store', signal });
     const payload = await readCustomMetadataAnswer(response);
