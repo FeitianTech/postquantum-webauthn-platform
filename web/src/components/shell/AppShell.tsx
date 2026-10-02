@@ -22,22 +22,12 @@ const ADVANCED = lazyModule(() => import(/* webpackChunkName: "section-advanced"
 const CODEC = lazyModule(() => import(/* webpackChunkName: "section-codec" */ '@/components/codec/CodecSection'));
 const LAZY_SECTIONS: Partial<Record<SectionId, LazyModule<unknown>>> = { advanced: ADVANCED, codec: CODEC };
 
-// The section the URL opened, while it is still the one shown: a section that
-// arrives late plays no entrance for it.
-function useLandingSection(section: SectionId | null) {
-  const [landing, setLanding] = useState<SectionId | null | undefined>(undefined);
-  if (landing === undefined && section) setLanding(section);
-  else if (landing && section && section !== landing) setLanding(null);
-  return landing ?? null;
-}
-
 // The page: the header, the chosen section, the footer, and the Analyze
 // Browser panel, which floats above everything. The saved credentials are
 // the sections' shared list. A section opens something in
 // another through useSectionNavigation().
 export function AppShell() {
   const [section, setSection, route, go] = useSection();
-  const landing = useLandingSection(section);
   const advanced = useLazyModule(ADVANCED, section === 'advanced');
   const codec = useLazyModule(CODEC, section === 'codec');
   // Ask for the shown section's chunk before the frame is painted.
@@ -64,14 +54,13 @@ export function AppShell() {
                     key={option.id}
                     active={option.id === section}
                     route={routeOf('advanced')}
-                    openedByUrl={landing === 'advanced'}
                   />
                 ) : (
                   <SectionPlaceholder key={option.id} id="advanced" active={option.id === section} failed={advanced.failed} onRetry={advanced.retry} />
                 )
               ) : option.id === 'codec' ? (
                 codec.module ? (
-                  <codec.module.CodecSection key={option.id} active={option.id === section} openedByUrl={landing === 'codec'} />
+                  <codec.module.CodecSection key={option.id} active={option.id === section} />
                 ) : (
                   <SectionPlaceholder key={option.id} id="codec" active={option.id === section} failed={codec.failed} onRetry={codec.retry} />
                 )

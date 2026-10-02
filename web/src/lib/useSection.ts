@@ -1,6 +1,7 @@
 import Router from 'next/router';
 import { createContext, useCallback, useContext, useRef, useState } from 'react';
 
+import { noteMoved } from './entrance';
 import { DEFAULT_SECTION, type SectionId, hashPath, routeFromHash } from './sections';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect';
 
@@ -100,7 +101,10 @@ export function useSection(): [SectionId | null, (section: SectionId) => void, S
       setSection(route.section);
       setPath(route.path);
     };
-    const followLater = () => follow(false);
+    const followLater = () => {
+      noteMoved();
+      follow(false);
+    };
     follow(true);
     window.addEventListener('hashchange', followLater);
     window.addEventListener('popstate', followLater);
@@ -113,6 +117,7 @@ export function useSection(): [SectionId | null, (section: SectionId) => void, S
   }, []);
 
   const choose = useCallback((next: SectionId) => {
+    noteMoved();
     setSection(next);
     setPath([]);
     // Another section in this entry's place: nothing is open in it, so nothing
@@ -122,6 +127,7 @@ export function useSection(): [SectionId | null, (section: SectionId) => void, S
   }, []);
 
   const go = useCallback((next: SectionId, nextPath: string[]) => {
+    noteMoved();
     setSection(next);
     setPath(nextPath);
     const entry = window.history.state ?? {};
@@ -138,6 +144,7 @@ export function useSection(): [SectionId | null, (section: SectionId) => void, S
         window.history.back();
         return;
       }
+      noteMoved();
       setPath(parent);
       writeUrl('replaceState', window.history.state, hashPath(section!, parent));
     },

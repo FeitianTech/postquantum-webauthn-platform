@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react';
 // under prefers-reduced-motion). It plays for what the person brings up (a
 // tab, a link, Back), never for what the page opens with: the section the URL
 // names, or an MDS entry or certificate it names, is simply there, however
-// late its data arrives. Until the person first presses a key or a pointer, or
-// the history moves, nothing on the page enters.
+// late its data or its chunk arrives. Until the person first presses a key or a
+// pointer, or the history moves, nothing on the page enters; and what mounts
+// already shown enters only once the page has moved from the URL it opened on.
 const ENTRANCE_CLASS = 'animate-[section-in_var(--duration-slow)_var(--ease-out)] motion-reduce:animate-none';
 
 let acted = false;
+let moved = false;
 const ACTIONS = ['pointerdown', 'keydown', 'hashchange', 'popstate'] as const;
 
 function act() {
@@ -20,15 +22,18 @@ function listen() {
   if (!acted) ACTIONS.forEach((type) => window.addEventListener(type, act, true));
 }
 
+/** The page has moved from the URL it opened on (useSection: a section or a level opened, Back). */
+export function noteMoved() {
+  moved = true;
+}
+
 /**
  * The entrance class for an element while it is `shown`, decided each time it
  * is shown: none when the person has done nothing yet. It never changes while
  * the element stays shown (adding an animation to a shown element plays it).
- * `openedByUrl`: the element is what the URL opened, mounting late (a section
- * whose chunk arrived after the person pressed something): it does not enter.
  */
-export function useEntrance(shown: boolean, openedByUrl = false) {
-  const [showing, setShowing] = useState(() => ({ shown, enters: acted && !openedByUrl }));
+export function useEntrance(shown: boolean) {
+  const [showing, setShowing] = useState(() => ({ shown, enters: acted && moved }));
   if (showing.shown !== shown) setShowing({ shown, enters: acted });
   useEffect(listen, []);
   return shown && showing.enters ? ENTRANCE_CLASS : undefined;

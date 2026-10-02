@@ -18,7 +18,23 @@ afterEach(() => {
 });
 
 describe('the app shell', () => {
-  // First in the file: before the person has pressed anything.
+  // First in the file: the page has not moved from the URL it opened on.
+  it('keeps the section the URL names a placeholder until its chunk arrives, then shows it without an entrance', async () => {
+    window.history.replaceState({ fromNext: true }, '', '/#codec');
+    renderPage(<AppShell />);
+    const placeholder = screen.getByRole('tabpanel', { name: 'Codec' });
+
+    expect(placeholder).toHaveAttribute('aria-busy', 'true');
+    expect(placeholder).toBeEmptyDOMElement();
+    await userEvent.keyboard('{Shift}');
+    const heading = await screen.findByRole('heading', { level: 2, name: 'Codec' });
+    const panel = screen.getByRole('tabpanel', { name: 'Codec' });
+    expect(panel).toContainElement(heading);
+    expect(panel).not.toHaveAttribute('aria-busy');
+    expect(panel.className).not.toContain('animate-[section-in');
+  });
+
+  // Before the page has moved: what the URL opened is simply there.
   it('opens on the section the URL names, simply there; a section the person brings up comes in', async () => {
     window.history.replaceState({ fromNext: true }, '', '/#advanced');
     renderPage(<AppShell />);
@@ -34,21 +50,6 @@ describe('the app shell', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Advanced Authentication' }));
     await screen.findByRole('heading', { level: 2, name: 'Advanced Authentication' });
     expect(screen.getByRole('tabpanel', { name: 'Advanced Authentication' }).className).toContain('animate-[section-in');
-  });
-
-  it('keeps the section the URL names a placeholder until its chunk arrives, then shows it without an entrance', async () => {
-    window.history.replaceState({ fromNext: true }, '', '/#codec');
-    renderPage(<AppShell />);
-    const placeholder = screen.getByRole('tabpanel', { name: 'Codec' });
-
-    expect(placeholder).toHaveAttribute('aria-busy', 'true');
-    expect(placeholder).toBeEmptyDOMElement();
-    await userEvent.keyboard('{Shift}');
-    const heading = await screen.findByRole('heading', { level: 2, name: 'Codec' });
-    const panel = screen.getByRole('tabpanel', { name: 'Codec' });
-    expect(panel).toContainElement(heading);
-    expect(panel).not.toHaveAttribute('aria-busy');
-    expect(panel.className).not.toContain('animate-[section-in');
   });
 
   it('shows the title, the four sections, Analyze Browser and GitHub', () => {
