@@ -158,10 +158,10 @@ describe('composeCredentialDetail', () => {
   it('completes an advanced record from its artifact, then lists the relying party\'s certificate', async () => {
     const record = advancedRecord();
     const { storedCredential } = advancedArtifact();
-    await hydrateCredentialFromServer(record, {
-      fetchCredentialArtifact: async () => advancedArtifact(),
-      saveSnapshot: vi.fn(),
-    });
+    // GET …/credential-artifacts/<storage id>, as the server answers it.
+    vi.mocked(fetch).mockResolvedValue(Response.json({ artifact: advancedArtifact() }));
+    await hydrateCredentialFromServer(record, vi.fn());
+    expect(fetch).toHaveBeenCalledWith(`/api/advanced/credential-artifacts/${encodeURIComponent(record.storageId)}`, expect.anything());
 
     const { decode, detail } = await detailOf(record);
     expect(decode).toHaveBeenCalledWith(storedCredential.attestationObject);

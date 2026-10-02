@@ -17,10 +17,8 @@ import {
   describeAttestationCertificate,
   describeAuthenticatorData,
 } from '@/logic/credentials/registration/view.js';
-import { HYDRATE_TEXT, hydrateCredentialFromServer } from '@/logic/credentials/hydrate.js';
+import { HYDRATE_TEXT } from '@/logic/credentials/hydrate.js';
 import { certificateSummary } from '@/logic/mds/explorer/certificate.js';
-import { fetchCredentialArtifact } from '@/logic/credentials/storage/artifacts-client.js';
-import { updateAdvancedCredentialRegistrationSnapshot } from '@/logic/credentials/storage/local/advanced-credentials.js';
 
 import type { CertificateSummary } from '@/logic/mds/explorer/certificate.js';
 import type { SavedCredential } from '@/logic/credentials/saved-list.js';
@@ -102,21 +100,6 @@ export const valueOf = describeValue as (value: unknown) => DescribedValue;
 
 /** Whether the record must first be completed from its server artifact. */
 export const needsItsArtifact = needsArtifact as (record: SavedCredential) => boolean;
-
-/** Completes `record` (a copy) from its artifact; saving the snapshot calls `onSaved` when it was kept. */
-export function hydrate(record: SavedCredential, onSaved: () => void): Promise<unknown> {
-  return (hydrateCredentialFromServer as (record: SavedCredential, steps: object) => Promise<unknown>)(record, {
-    fetchCredentialArtifact,
-    saveSnapshot: async (storageId: string, snapshot: unknown) => {
-      const saved = await (updateAdvancedCredentialRegistrationSnapshot as (id: string, snapshot: unknown) => Promise<boolean>)(
-        storageId,
-        snapshot,
-      );
-      if (saved) onSaved();
-      return saved;
-    },
-  });
-}
 
 /** Everything the details show, composed into a state of their own (the levels read it). */
 export async function compose(record: SavedCredential): Promise<{ detail: CredentialDetail; state: RegistrationState }> {

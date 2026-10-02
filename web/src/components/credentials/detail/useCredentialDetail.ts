@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { hydrateCredentialFromServer } from '@/logic/credentials/hydrate.js';
 import type { SavedCredential } from '@/logic/credentials/saved-list.js';
 
-import { type CredentialDetail, type RegistrationState, compose, hydrate, needsItsArtifact } from './model';
+import { type CredentialDetail, type RegistrationState, compose, needsItsArtifact } from './model';
 
 type DetailPhase =
   | { phase: 'loading' }
@@ -22,7 +23,7 @@ async function completed(record: SavedCredential, onSaved: () => void) {
   const storageId = String(record.storageId || record.localStorageId || '');
   const known = storageId ? hydrated.get(storageId) : undefined;
   if (known) return { record: copyOf(known), failed: false };
-  await hydrate(record, onSaved);
+  await hydrateCredentialFromServer(record, onSaved);
   const failed = record.__artifactHydrated === 'error';
   if (storageId && !failed) hydrated.set(storageId, copyOf(record));
   return { record, failed };

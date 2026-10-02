@@ -1,7 +1,9 @@
 // A saved advanced credential completed from its server artifact, as its details
 // open: the artifact's fields (read as saved records are read) merged into the
 // record, and its registration snapshot kept as far as the sanitiser allows and
-// saved back. DOM-free: both interfaces use it, each giving its own storage.
+// saved back. DOM-free.
+import {fetchCredentialArtifact} from './storage/artifacts-client.js';
+import {updateAdvancedCredentialRegistrationSnapshot} from './storage/local/advanced-credentials.js';
 import {migrateStoredRecord} from './storage/local/record-migration.js';
 import {sanitiseRegistrationDetailSnapshot} from './storage/local/snapshot-sanitize.js';
 
@@ -9,13 +11,24 @@ export const HYDRATE_TEXT = Object.freeze({
     failed: 'Unable to fetch credential artifact',
 });
 
+// Saves the artifact's snapshot back into the record this browser keeps, and
+// says so when it was kept.
+async function saveSnapshot(storageId, snapshot, onSaved) {
+    if (await updateAdvancedCredentialRegistrationSnapshot(storageId, snapshot)) {
+        onSaved();
+    }
+}
+
 /**
  * Completes `cred` in place, once per storage id; marks it `__artifactHydrated`
  * (the storage id, 'missing' or 'error') and gives the artifact's stored
- * credential, or null. A failure is logged and changes nothing else.
- * steps: fetchCredentialArtifact(storageId), saveSnapshot(storageId, snapshot).
+ * credential, or null. A failure changes nothing else. The snapshot the
+ * artifact brings is saved, and `onSaved` called once it is.
+ * @param {Record<string, any> | null | undefined} cred
+ * @param {() => void} onSaved
+ * @returns {Promise<Record<string, any> | null>}
  */
-export async function hydrateCredentialFromServer(cred, { fetchCredentialArtifact, saveSnapshot }) {
+export async function hydrateCredentialFromServer(cred, onSaved) {
     if (!cred || typeof cred !== 'object') {
         return null;
     }
@@ -60,7 +73,7 @@ export async function hydrateCredentialFromServer(cred, { fetchCredentialArtifac
         );
         if (snapshot) {
             cred.registrationDetailSnapshot = snapshot;
-            void saveSnapshot(storageId, snapshot);
+            void saveSnapshot(storageId, snapshot, onSaved);
         }
 
         cred.__artifactHydrated = storageId;
