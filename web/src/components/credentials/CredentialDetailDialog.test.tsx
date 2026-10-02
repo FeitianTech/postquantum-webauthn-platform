@@ -137,6 +137,18 @@ describe('a saved credential\'s details, the detail', () => {
     expect(key.querySelector('[data-item="COSE key type:"]')).toHaveTextContent('EC2 (2)');
   });
 
+  it('give the flags and the signature counter of a record that keeps them', async () => {
+    const flags = { at: true, be: false, bs: false, ed: true, up: true, uv: false };
+    renderShell([{ ...X5C, flags, signCount: 7 }]);
+    await openDetail('x5c@example.com');
+
+    const authenticatorData = section('Authenticator Data (registration)');
+    for (const [name, value] of Object.entries(flags)) {
+      expect(authenticatorData.querySelector(`[data-item="${name.toUpperCase()}"]`)).toHaveTextContent(String(value));
+    }
+    expect(authenticatorData).toHaveTextContent('7');
+  });
+
   it('name an EdDSA key and an ML-DSA key with its parameter set', async () => {
     renderShell([EDDSA, MLDSA]);
     await openDetail('eddsa@example.com');
