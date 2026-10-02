@@ -113,7 +113,9 @@ the CSP and the source rules.
   release stored in visitors' browsers. Every section and both Advanced segments are
   mounted: scope a query to its tabpanel (`#advanced-ceremony-panel-<segment>`).
 - `scripts/check-export-csp.mjs` scans every exported HTML file; `scripts/dev-csp.mjs` is the
-  CSP `npm run dev` sends (Flask's, plus the two allowances the dev server needs).
+  CSP `npm run dev` sends (Flask's, plus the two allowances the dev server needs);
+  `scripts/code-size.mjs` holds `src` (tests and `src/test` aside) to no function over 120
+  lines and no module over 400, with no exceptions (`code-size.test.ts` runs it in `npm test`).
 
 Running it (Node 22, in `web/`): `npm ci`; `npm run dev` (at `http://localhost:3000/`,
 proxying `/api` to `FLASK_URL`, default `http://localhost:8000`; ceremonies need Flask's
