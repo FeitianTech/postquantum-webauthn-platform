@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import builtins
-import gzip
 
 import pytest
 
@@ -140,19 +139,14 @@ def test_a_cloud_storage_error_does_not_propagate(static_root, gcs, monkeypatch)
     assert provisioning.ensure_snapshot_available() == "unavailable"
 
 
-def test_the_browser_facing_snapshot_gets_a_precompressed_sibling(static_root):
+def test_a_snapshot_file_is_written_whole_and_alone(static_root):
     payload = b'{"entries": []}' + b" " * 4096
 
     provisioning.write_snapshot_file("fido-mds3.explorer.full.json", payload)
 
-    gzip_path = static_root / "fido-mds3.explorer.full.json.gz"
-    assert gzip.decompress(gzip_path.read_bytes()) == payload
-
-
-def test_server_only_snapshot_files_are_not_precompressed(static_root):
-    provisioning.write_snapshot_file("blob.jwt", b"x" * 4096)
-
-    assert not (static_root / "blob.jwt.gz").exists()
+    assert (static_root / "fido-mds3.explorer.full.json").read_bytes() == payload
+    # Browsers load the explorer's files the server derives: no .gz copy beside it.
+    assert [path.name for path in static_root.iterdir()] == ["fido-mds3.explorer.full.json"]
 
 
 def test_no_partial_files_are_left_behind(static_root):
@@ -176,14 +170,6 @@ def test_the_blob_prefix_is_configurable(monkeypatch):
 
     monkeypatch.setenv("FIDO_SERVER_MDS_GCS_PREFIX", "snapshots/fido")
     assert provisioning.snapshot_blob_name("blob.jwt") == "snapshots/fido/blob.jwt"
-
-
-def test_an_incompressible_payload_gets_no_gzip_sibling(static_root, monkeypatch):
-    monkeypatch.setattr(mds_files.gzip, "compress", lambda data, **kwargs: data + b"pad")
-
-    provisioning.write_snapshot_file("fido-mds3.explorer.full.json", b"z" * 4096)
-
-    assert not (static_root / "fido-mds3.explorer.full.json.gz").exists()
 
 
 def test_upstream_refresh_runs_the_packaged_updater(static_root, monkeypatch):

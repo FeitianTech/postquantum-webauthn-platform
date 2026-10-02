@@ -104,7 +104,7 @@ def upstream_refresh_enabled() -> bool:
 
 
 def write_snapshot_file(filename: str, data: bytes) -> Path:
-    """Write one snapshot file, plus its .gz sibling where browsers need one."""
+    """Write one snapshot file whole."""
 
     path = snapshot_path(filename)
     mds_files.write_file(path, data)

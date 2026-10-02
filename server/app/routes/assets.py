@@ -1,19 +1,15 @@
-"""What browsers load of the MDS snapshot, at ``/assets/mds/``.
+"""What browsers load of the MDS snapshot, at ``/assets/mds/``: the explorer's
+files derived from the snapshot (``mds/explorer_files.py``, kept by
+``cache.load_explorer_files``).
 
-- The explorer's files derived from the snapshot (``mds/explorer_files.py``,
-  kept by ``cache.load_explorer_files``): the list at one URL, revalidated by
-  its ETag, so the page fetches it without asking anything first; each icon,
-  named by its digest and so immutable; each entry's detail, immutable at the
-  version its URL names.
-- The explorer's full file, at ``fido-mds3.explorer.full.json?v=<version>``,
-  where the version names the snapshot (``explorer_files.snapshot_version``): a
-  URL with the current version is cached as immutable, any other revalidates.
+- The list, at one URL revalidated by its ETag, so the page fetches it without
+  asking anything first.
+- Each icon, named by its digest, so immutable.
+- Each entry's detail, immutable at the version its URL names.
 
-No other snapshot file is served, at any path.
+No file of the snapshot directory is served, at any path.
 """
 from __future__ import annotations
-
-import os
 
 from flask import Blueprint, Flask, Response, abort, request
 
@@ -23,21 +19,9 @@ from ..mds import files as mds_files
 from ..mds import provisioning as mds_provisioning
 from . import web_export
 
-# The path segment of the snapshot's URL; no other segment is served.
-_ASSET_SEGMENT = "mds"
-
-# Of the MDS snapshot's files (and the .gz sibling written next to the browsers'
-# copy), browsers get only that copy, at its versioned URL, from the snapshot
-# directory: no route serves the rest, nor any of them at the site root.
-_SNAPSHOT_FILES = frozenset(mds_files.SNAPSHOT_FILENAMES) | frozenset(
-    f"{name}.gz" for name in mds_files.BROWSER_FILENAMES
-)
-
-
-def asset_url(filename: str) -> str:
-    """The URL of a browser file of the snapshot, without its version."""
-
-    return f"/assets/{_ASSET_SEGMENT}/{filename.lstrip('/')}"
+# The snapshot's files, and the .gz copy earlier releases wrote beside the
+# full one: no route serves them, nor any of them at the site root.
+_SNAPSHOT_FILES = frozenset(mds_files.SNAPSHOT_FILENAMES) | {f"{mds_files.EXPLORER_FULL}.gz"}
 
 
 def _is_snapshot_file(filename: str) -> bool:
@@ -54,7 +38,7 @@ bp = Blueprint("assets", __name__)
 
 
 def init_app(app: Flask) -> None:
-    """Serve the snapshot's browser file and hide the other snapshot files.
+    """Serve the explorer's files and hide the snapshot's.
 
     The hook is registered on the app, not the blueprint, because a snapshot file
     at the site root would otherwise reach the page rule (``routes/web_export.py``).
@@ -62,26 +46,6 @@ def init_app(app: Flask) -> None:
 
     app.before_request(_hide_private_static_files)
     app.register_blueprint(bp)
-
-
-@bp.route(f"/assets/{_ASSET_SEGMENT}/<path:filename>")
-def versioned_static_asset(filename: str):
-    if filename not in mds_files.BROWSER_FILENAMES:
-        abort(404)
-
-    # On a cold instance the snapshot may still be being provisioned: wait for that
-    # (after the first attempt it returns at once).
-    mds_provisioning.ensure_snapshot_available()
-    path = os.fspath(mds_files.snapshot_file(filename))
-    if not os.path.isfile(path):
-        abort(404)
-
-    # Only the current snapshot's URL is immutable; a page given an earlier one
-    # must revalidate.
-    current = mds_explorer_files.snapshot_version(mds_cache.load_packaged_snapshot_meta())
-    if current is not None and request.args.get("v") == current:
-        return web_export.send_precompressed(path, web_export.IMMUTABLE_CACHE_CONTROL)
-    return web_export.send_precompressed(path, web_export.REVALIDATE_CACHE_CONTROL)
 
 
 # A navigated icon (an SVG opened in a tab) runs nothing and loads nothing.

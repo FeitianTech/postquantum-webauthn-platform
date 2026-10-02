@@ -6,7 +6,6 @@ it without building the Flask app. docs/MDS_SNAPSHOT.md has the whole picture.
 """
 from __future__ import annotations
 
-import gzip
 import os
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -43,11 +42,6 @@ SNAPSHOT_FILENAMES = (
 META_FILENAMES = (VERIFIED_META, EXPLORER_META, EXPLORER_FULL_META)
 WRITE_ORDER = tuple(name for name in SNAPSHOT_FILENAMES if name not in META_FILENAMES) + META_FILENAMES
 
-# Browsers fetch this one as a versioned static asset, with its .gz sibling.
-BROWSER_FILENAMES = frozenset({EXPLORER_FULL})
-# Smaller than this, a browser file gets no .gz sibling.
-MIN_GZIP_BYTES = 1024
-
 # server/app/mds/files.py -> the checkout (or /app in the image). The
 # instance folder holds what a deployment keeps beside its source, served by no
 # route and ignored by git and Docker.
@@ -66,35 +60,14 @@ def snapshot_file(name: str) -> Path:
     return snapshot_dir() / name
 
 
-def write_gzip_sibling(path: Path, data: bytes) -> None:
-    """Write the ``.gz`` sibling browsers are sent for ``path``, which holds ``data``.
-
-    Kept only when it is smaller than the file, and written through a temporary
-    file; otherwise a sibling left from an earlier file is removed, so gzip clients
-    are never sent an older snapshot than the file.
-    """
-
-    sibling = path.with_name(f"{path.name}.gz")
-    compressed = gzip.compress(data, compresslevel=9, mtime=0) if len(data) >= MIN_GZIP_BYTES else data
-    if len(compressed) >= len(data):
-        sibling.unlink(missing_ok=True)
-        return
-    temporary = path.with_name(f"{path.name}.gz.partial")
-    temporary.write_bytes(compressed)
-    temporary.replace(sibling)
-
-
 def write_file(path: Path, data: bytes) -> None:
     """Write one snapshot file whole: through a temporary file renamed over it, so
-    a reader sees the old file or the new one, never part of one. A browser file's
-    ``.gz`` sibling follows it."""
+    a reader sees the old file or the new one, never part of one."""
 
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f"{path.name}.partial")
     temporary.write_bytes(data)
     temporary.replace(path)
-    if path.name in BROWSER_FILENAMES:
-        write_gzip_sibling(path, data)
 
 
 def parse_http_datetime(value: str | None) -> datetime | None:

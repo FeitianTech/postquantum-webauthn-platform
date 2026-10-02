@@ -108,8 +108,8 @@ def test_resolve_waits_and_then_finds_the_entry(slow_provisioning, client):
     assert response.get_json()["entry"]["aaguid"] == AAGUID
 
 
-def test_the_browsers_snapshot_file_waits_and_then_is_served(slow_provisioning, client):
-    thread, answer = _get_in_a_thread(client, "/assets/mds/fido-mds3.explorer.full.json")
+def test_the_explorer_list_waits_and_then_is_served(slow_provisioning, client):
+    thread, answer = _get_in_a_thread(client, "/assets/mds/fido-mds3.explorer.list.json")
     try:
         thread.join(0.2)
         assert thread.is_alive()

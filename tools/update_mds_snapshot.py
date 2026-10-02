@@ -320,11 +320,7 @@ def main(argv: list[str] | None = None) -> int:
     # server reading the directory meanwhile never takes a new meta for an old file.
     changed = False
     for name in mds_files.WRITE_ORDER:
-        written = _write_if_changed(_path(name), files[name])
-        changed |= written
-        if name in mds_files.BROWSER_FILENAMES and not written:
-            # Rewritten every run, so a sibling from an earlier file never outlives it.
-            mds_files.write_gzip_sibling(_path(name), files[name])
+        changed |= _write_if_changed(_path(name), files[name])
 
     if changed:
         print("Packaged metadata snapshot refreshed.")
