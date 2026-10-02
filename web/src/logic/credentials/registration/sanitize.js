@@ -115,6 +115,10 @@ export function sanitiseRegistrationData(raw) {
     return cloned;
 }
 
+/**
+ * @param {any} info
+ * @param {{ authenticatorDataHex: string, authenticatorDataHash: string } | null} [authenticatorSummary]
+ */
 export function sanitizeRelyingPartyInfo(info, authenticatorSummary = null) {
     const summary = authenticatorSummary && typeof authenticatorSummary === 'object'
         ? authenticatorSummary

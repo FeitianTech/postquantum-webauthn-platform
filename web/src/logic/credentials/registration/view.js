@@ -26,6 +26,8 @@ import {
 import {sanitiseAttestationObjectForDisplay} from './sanitize-attestation-object.js';
 import {sanitizeRelyingPartyInfo} from './sanitize.js';
 
+/** @import { Decode, RegistrationSources, RegistrationState } from './state.js' */
+
 export const REGISTRATION_TEXT = Object.freeze({
     responseTitle: 'Authenticator Response',
     createResponse: 'Response for navigator.credentials.create()',
@@ -61,6 +63,15 @@ export function attestationObjectJson(attestationObject, attestationFormatRaw, c
  * the attestation object's body (its JSON, or why there is none), a button per
  * certificate that parsed, "Authenticator Data" when there is some, and the
  * messages. Records in `state` which certificates the view lists.
+ * @param {RegistrationState} state
+ * @param {{
+ *     attestationObjectValue?: string,
+ *     attestationDecodeError?: string,
+ *     attestationFormatRaw?: string,
+ *     attestationStatement?: Record<string, any> | null,
+ *     authenticatorDataValue?: string,
+ *     authenticatorDecodeError?: string,
+ * }} [parts]
  */
 export function describeAttestationSection(state, {
     attestationObjectValue = '',
@@ -174,6 +185,13 @@ export function describeClientData(credentialJson, fallbackClientData) {
  * The registration's view as data, and what its snapshot keeps. A saved
  * snapshot's state is shown as it is; otherwise the attestation object and the
  * authenticator data are decoded through `decode` into `state`.
+ * @param {RegistrationSources & {
+ *     credentialJson?: Record<string, any> | null,
+ *     authenticatorDataHex?: string,
+ *     fallbackClientData?: string | null,
+ *     snapshotState?: Record<string, any> | null,
+ * }} sources
+ * @param {{ state: RegistrationState, decode: Decode }} steps
  */
 export async function composeRegistration({
     credentialJson = null,

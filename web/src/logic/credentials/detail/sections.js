@@ -299,6 +299,7 @@ export function describePublicKey(cred, { describeCoseAlgorithm, describeCoseKey
     const keyType = cred.publicKeyType ?? getCoseMapValue(coseMap, 1);
     const parameterSet = describeMldsaParameterSet(algorithm);
 
+    /** @type {Array<{ label: string, value: string }>} */
     const lines = [{ label: DETAIL_TEXT.algorithm, value: describeCoseAlgorithm(algorithm) }];
     if (keyType !== undefined && keyType !== null) {
         lines.push({ label: DETAIL_TEXT.keyType, value: describeCoseKeyType(keyType) });

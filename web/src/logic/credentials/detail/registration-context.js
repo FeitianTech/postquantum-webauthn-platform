@@ -19,6 +19,12 @@ import {
     resolveStoredRegistrationResponse,
 } from './registration-fields.js';
 
+/** @import { DetailPreparation } from '../registration/state.js' */
+
+/**
+ * @param {Record<string, any>} cred
+ * @param {{ snapshotState?: Record<string, any> | null, detailPreparation?: DetailPreparation | null }} [snapshot]
+ */
 export function buildRegistrationContext(cred, {
     snapshotState = null,
     detailPreparation = null,

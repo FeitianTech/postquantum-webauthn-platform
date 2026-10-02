@@ -293,7 +293,14 @@ export function extractAaguidFromCertificateEntries(entries) {
     return '';
 }
 
+/**
+ * A certificate entry, its place in the list, and its parsed form (null when it has none).
+ * @typedef {{ entry: Record<string, any>, index: number, parsed: Record<string, any> | null }} PlacedCertificate
+ */
+
+/** @returns {{ valid: PlacedCertificate[], failures: PlacedCertificate[] }} */
 export function partitionCertificateEntries(entries) {
+    /** @type {{ valid: PlacedCertificate[], failures: PlacedCertificate[] }} */
     const result = {
         valid: [],
         failures: [],

@@ -14,6 +14,44 @@ import {
 } from '../certificates/core.js';
 import {cloneJson} from '../../shared/json.js';
 
+/**
+ * What the view says about the two decodes: the values decoded, and why one failed ('' when it did not).
+ * @typedef {object} DetailPreparation
+ * @property {string} attestationObjectValue
+ * @property {string} attestationDecodeError
+ * @property {string} authenticatorDataValue
+ * @property {string} authenticatorDecodeError
+ */
+
+/**
+ * One credential's registration as the view reads it: JSON the decoder answered
+ * (or a snapshot kept), and the authenticator data's hex and SHA-256 ('' for none).
+ * @typedef {object} RegistrationState
+ * @property {Record<string, any> | null} attestationObject
+ * @property {Array<Record<string, any>>} attestationCertificates
+ * @property {number[]} visibleAttestationCertificateIndices
+ * @property {Record<string, any> | null} authenticatorData
+ * @property {string} authenticatorDataHash
+ * @property {string} authenticatorDataHex
+ */
+
+/**
+ * What a registration not yet decoded is read from, as a record holds it.
+ * @typedef {object} RegistrationSources
+ * @property {any} [attestationObjectValue]
+ * @property {any} [attestationObjectDecoded]
+ * @property {any} [authenticatorDataValue]
+ * @property {any} [fallbackCertificates]
+ * @property {any} [relyingPartyInfo]
+ * @property {boolean} [preferFallbackCertificates]
+ */
+
+/**
+ * The decoder (POST /api/codec): JSON for base64url bytes.
+ * @typedef {(value: string) => Promise<any>} Decode
+ */
+
+/** @type {Readonly<DetailPreparation>} */
 export const EMPTY_DETAIL_PREPARATION = Object.freeze({
     attestationObjectValue: '',
     attestationDecodeError: '',
@@ -21,23 +59,30 @@ export const EMPTY_DETAIL_PREPARATION = Object.freeze({
     authenticatorDecodeError: '',
 });
 
-/** An empty state. */
+/**
+ * An empty state.
+ * @returns {RegistrationState}
+ */
 export function createRegistrationState() {
-    const state = {};
-    resetRegistrationState(state);
-    return state;
+    return {
+        attestationObject: null,
+        attestationCertificates: [],
+        visibleAttestationCertificateIndices: [],
+        authenticatorData: null,
+        authenticatorDataHash: '',
+        authenticatorDataHex: '',
+    };
 }
 
-/** Empties `state` in place (a view may hold on to it). */
+/**
+ * Empties `state` in place (a view may hold on to it).
+ * @param {RegistrationState} state
+ */
 export function resetRegistrationState(state) {
-    state.attestationObject = null;
-    state.attestationCertificates = [];
-    state.visibleAttestationCertificateIndices = [];
-    state.authenticatorData = null;
-    state.authenticatorDataHash = '';
-    state.authenticatorDataHex = '';
+    Object.assign(state, createRegistrationState());
 }
 
+/** @param {RegistrationState} state */
 export function addStateCertificate(state, entry) {
     const normalised = normaliseCertificateEntryForModal(entry);
     if (!normalised) {
@@ -78,6 +123,7 @@ export function addStateCertificate(state, entry) {
     existing.push(normalised);
 }
 
+/** @param {RegistrationState} state */
 export function addStateCertificates(state, entries) {
     if (!entries) {
         return;
@@ -89,7 +135,10 @@ export function addStateCertificates(state, entries) {
     }
 }
 
-/** The certificates the view lists, in its order. */
+/**
+ * The certificates the view lists, in its order.
+ * @param {RegistrationState} state
+ */
 export function visibleStateCertificates(state) {
     const indices = Array.isArray(state.visibleAttestationCertificateIndices)
         ? state.visibleAttestationCertificateIndices
@@ -100,7 +149,11 @@ export function visibleStateCertificates(state) {
         .filter(entry => entry && typeof entry === 'object');
 }
 
-/** The authenticator data's hex and SHA-256, from whichever spelling of its bytes reads. */
+/**
+ * The authenticator data's hex and SHA-256, from whichever spelling of its bytes reads.
+ * @param {RegistrationState} state
+ * @returns {Promise<string>}
+ */
 export async function hashAuthenticatorData(state) {
     state.authenticatorDataHash = '';
     state.authenticatorDataHex = '';
@@ -204,8 +257,16 @@ export async function hashAuthenticatorData(state) {
  * the authenticator data through `decode` (POST /api/codec), else what the
  * record holds already decoded; its certificates, else the relying party's.
  * Gives what the view says about the two decodes.
+ * @param {RegistrationState} state
+ * @param {RegistrationSources | null} [options]
+ * @param {{ decode: Decode }} [steps] Only a value to decode calls `decode`: a call with none may leave it out.
+ * @returns {Promise<DetailPreparation>}
  */
-export async function prepareRegistrationState(state, options = {}, { decode } = {}) {
+export async function prepareRegistrationState(
+    state,
+    options = {},
+    { decode } = /** @type {{ decode: Decode }} */ ({}),
+) {
     const {
         attestationObjectValue = '',
         attestationObjectDecoded = null,
@@ -252,7 +313,7 @@ export async function prepareRegistrationState(state, options = {}, { decode } =
                 state.authenticatorData = decoded.data.authenticatorData;
             }
         } catch (error) {
-            attestationDecodeError = error?.message || 'Failed to decode attestationObject.';
+            attestationDecodeError = decodeFailure(error, 'Failed to decode attestationObject.');
         }
     }
 
@@ -285,7 +346,7 @@ export async function prepareRegistrationState(state, options = {}, { decode } =
                 state.authenticatorData = decodedAuth.data;
             }
         } catch (error) {
-            authenticatorDecodeError = error?.message || 'Failed to decode authenticatorData.';
+            authenticatorDecodeError = decodeFailure(error, 'Failed to decode authenticatorData.');
         }
     }
 
@@ -309,6 +370,16 @@ export async function prepareRegistrationState(state, options = {}, { decode } =
     };
 }
 
+/**
+ * @param {any} error
+ * @param {string} fallback
+ * @returns {string}
+ */
+function decodeFailure(error, fallback) {
+    return error?.message || fallback;
+}
+
+/** @returns {DetailPreparation} */
 export function normaliseDetailPreparationSnapshot(value) {
     if (!value || typeof value !== 'object') {
         return { ...EMPTY_DETAIL_PREPARATION };
@@ -321,7 +392,11 @@ export function normaliseDetailPreparationSnapshot(value) {
     };
 }
 
-/** A copy of `state` as a registration snapshot keeps it (`schemaVersion` 2's `state`). */
+/**
+ * A copy of `state` as a registration snapshot keeps it (`schemaVersion` 2's `state`).
+ * @param {RegistrationState} state
+ * @param {DetailPreparation} [detailPreparation]
+ */
 export function captureRegistrationState(state, detailPreparation = EMPTY_DETAIL_PREPARATION) {
     const certificatesClone = cloneJson(state.attestationCertificates) || [];
     const visibleIndices = Array.isArray(state.visibleAttestationCertificateIndices)
@@ -346,6 +421,9 @@ export function captureRegistrationState(state, detailPreparation = EMPTY_DETAIL
 /**
  * Fills `state` from a saved snapshot's state (an object: both callers check), as it
  * was captured; gives what it said about the decodes.
+ * @param {RegistrationState} state
+ * @param {Record<string, any>} stateSource
+ * @returns {DetailPreparation}
  */
 export function applyRegistrationSnapshot(state, stateSource) {
     const attObj = cloneJson(stateSource.attestationObject);

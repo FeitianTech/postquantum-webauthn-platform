@@ -43,7 +43,7 @@ export function sanitiseAttestationObjectForDisplay(attestationObject, attestati
 
             for (let index = 0; index < maxLength; index += 1) {
                 const info = shownCertificates[index];
-                const certificateEntry = info && typeof info === 'object' && info.entry ? info.entry : info;
+                const certificateEntry = info?.entry;
                 const sourceEntry = sourceArray[index];
 
                 let parsedDetails = certificateEntry && typeof certificateEntry === 'object'
