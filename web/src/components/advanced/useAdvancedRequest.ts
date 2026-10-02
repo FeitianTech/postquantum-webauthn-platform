@@ -4,20 +4,18 @@ import { useSavedCredentials } from '@/components/credentials/useSavedCredential
 import { APP_TITLE } from '@/lib/sections';
 import { readEditedRequest, topLevelExtras } from '@/logic/advanced/editor/model.js';
 import type { SavedCredential } from '@/logic/credentials/saved-list.js';
-
+import { fakeCredentialLength, normaliseFakeCredentialList, withoutFakeCredential } from '@/logic/advanced/fake-credentials.js';
 import {
   type RegistrationField,
   type RegistrationSettings,
-  buildRequest,
-  changeSetting,
-  defaultSettings,
-  fakeLength,
-  fakeList,
-  randomHex,
-  randomName,
-  readRequest,
-  withoutFake,
-} from './model';
+  buildCreationOptions,
+  changeRegistration,
+  readCreationOptions,
+  registrationDefaults,
+} from '@/logic/advanced/registration/request.js';
+import { generateRandomHex } from '@/logic/shared/bytes.js';
+import { generateRandom10DigitUsername } from '@/logic/shared/random-username.js';
+
 import { NO_TEXT, type RequestText, followedText, rebuiltText, resetText } from './requestEditor';
 
 // A registration's request as the Advanced tab holds it: the JSON editor's text
@@ -50,16 +48,16 @@ type Action =
 
 /** The values the form draws at random: a User ID and challenge of 32 bytes, a ten-character name. */
 function randomIdentity() {
-  const name = randomName();
-  return { userId: randomHex(32), userName: name, displayName: name };
+  const name = generateRandom10DigitUsername();
+  return { userId: generateRandomHex(32), userName: name, displayName: name };
 }
 
 function freshSettings(): RegistrationSettings {
-  return { ...defaultSettings(), ...randomIdentity(), challenge: randomHex(32) };
+  return { ...registrationDefaults(), ...randomIdentity(), challenge: generateRandomHex(32) };
 }
 
 function formRequestOf(settings: RegistrationSettings, fakeExclude: string[], context: Context) {
-  return buildRequest(settings, {
+  return buildCreationOptions(settings, {
     rpName: APP_TITLE,
     hostname: context.hostname,
     storedCredentials: context.storedCredentials,
@@ -80,7 +78,7 @@ function reduce(current: RequestState, action: Action): RequestState {
         formRequestOf(action.settings, [], action.context),
       );
     case 'change':
-      return followed({ ...current, settings: changeSetting(current.settings, action.field, action.value) }, action.context);
+      return followed({ ...current, settings: changeRegistration(current.settings, action.field, action.value) }, action.context);
     case 'settings':
       return followed({ ...current, settings: action.settings }, action.context);
     case 'fake-add':
@@ -89,7 +87,7 @@ function reduce(current: RequestState, action: Action): RequestState {
         action.context,
       );
     case 'fake-remove':
-      return followed({ ...current, fakeExclude: withoutFake(current.fakeExclude, action.index) ?? current.fakeExclude, fakeMessage: null }, action.context);
+      return followed({ ...current, fakeExclude: withoutFakeCredential(current.fakeExclude, action.index) ?? current.fakeExclude, fakeMessage: null }, action.context);
     case 'rebuild':
       return followed(current, action.context, true);
     case 'reset-editor':
@@ -97,8 +95,8 @@ function reduce(current: RequestState, action: Action): RequestState {
     case 'edit': {
       const edit = readEditedRequest(action.text, 'registration');
       if (edit.status !== 'accepted') return { ...current, text: action.text, edit };
-      const read = readRequest(edit.root.publicKey, current.settings, { storedCredentials: action.context.storedCredentials });
-      const fakeExclude = fakeList(read.fakeExcludeCredentials);
+      const read = readCreationOptions(edit.root.publicKey, current.settings, { storedCredentials: action.context.storedCredentials });
+      const fakeExclude = normaliseFakeCredentialList(read.fakeExcludeCredentials);
       return {
         ...current,
         settings: read.settings,
@@ -115,7 +113,7 @@ function reduce(current: RequestState, action: Action): RequestState {
 
 const EMPTY: RequestState = {
   ...NO_TEXT,
-  settings: { ...defaultSettings(), userId: '', userName: '', displayName: '', challenge: '' },
+  settings: { ...registrationDefaults(), userId: '', userName: '', displayName: '', challenge: '' },
   fakeExclude: [],
   fakeMessage: null,
 };
@@ -151,24 +149,24 @@ export function useAdvancedRequest() {
   }, []);
 
   const randomizeIdentity = useCallback(() => update(randomIdentity()), [update]);
-  const randomizeChallenge = useCallback(() => update({ challenge: randomHex(32) }), [update]);
-  const randomizePrf = useCallback((which: 'prfFirst' | 'prfSecond') => update({ [which]: randomHex(32) }), [update]);
+  const randomizeChallenge = useCallback(() => update({ challenge: generateRandomHex(32) }), [update]);
+  const randomizePrf = useCallback((which: 'prfFirst' | 'prfSecond') => update({ [which]: generateRandomHex(32) }), [update]);
 
   /** After a registration, the random values drawn again: those that are not empty. */
   const redraw = useCallback(() => {
     const current = settingsRef.current;
     update({
       ...(current.userId.trim() || current.userName.trim() ? randomIdentity() : {}),
-      ...(current.challenge.trim() ? { challenge: randomHex(32) } : {}),
-      ...(current.prfFirst.trim() ? { prfFirst: randomHex(32) } : {}),
-      ...(current.prfSecond.trim() ? { prfSecond: randomHex(32) } : {}),
+      ...(current.challenge.trim() ? { challenge: generateRandomHex(32) } : {}),
+      ...(current.prfFirst.trim() ? { prfFirst: generateRandomHex(32) } : {}),
+      ...(current.prfSecond.trim() ? { prfSecond: generateRandomHex(32) } : {}),
     });
   }, [update]);
 
   const addFake = useCallback(() => {
-    const { bytes, error, notice } = fakeLength(settingsRef.current.fakeCredLength);
+    const { bytes, error, notice } = fakeCredentialLength(settingsRef.current.fakeCredLength);
     const message = error ? ({ tone: 'error', text: error } as const) : notice ? ({ tone: 'info', text: notice } as const) : null;
-    dispatch({ type: 'fake-add', hex: bytes ? randomHex(bytes) : null, message, context: context() });
+    dispatch({ type: 'fake-add', hex: bytes ? generateRandomHex(bytes) : null, message, context: context() });
   }, []);
   const removeFake = useCallback((index: number) => dispatch({ type: 'fake-remove', index, context: context() }), []);
 

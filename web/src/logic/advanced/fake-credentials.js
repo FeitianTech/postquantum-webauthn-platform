@@ -12,6 +12,8 @@ export const FAKE_CREDENTIAL_TEXT = {
 
 export const FAKE_CREDENTIAL_MAX_BYTES = 4096;
 
+/** @typedef {{ bytes: number, error: string | null, notice: string | null }} FakeLength */
+
 /** An ID as the list keeps it: its hex digits, lower case; '' when it has none. */
 export function normaliseFakeCredentialHex(value) {
     if (typeof value !== 'string') {
@@ -24,7 +26,11 @@ export function normaliseFakeCredentialHex(value) {
     return trimmed.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
 }
 
-/** A list of IDs as the list keeps it: each normalised, those with no hex left out. */
+/**
+ * A list of IDs as the list keeps it: each normalised, those with no hex left out.
+ * @param {unknown} values
+ * @returns {string[]}
+ */
 export function normaliseFakeCredentialList(values) {
     return Array.isArray(values) ? values.map(normaliseFakeCredentialHex).filter(Boolean) : [];
 }
@@ -33,6 +39,8 @@ export function normaliseFakeCredentialList(values) {
  * How many random bytes a new ID gets for the length typed: none, with the
  * error, for a length that is not a whole number above 0; at most 4096, with a
  * notice when the length asked for was more.
+ * @param {string} length
+ * @returns {FakeLength}
  */
 export function fakeCredentialLength(length) {
     const parsed = Number.parseInt(length, 10);
@@ -43,14 +51,22 @@ export function fakeCredentialLength(length) {
     return { bytes, error: null, notice: parsed !== bytes ? FAKE_CREDENTIAL_TEXT.truncated : null };
 }
 
-/** An ID's length as the list says it. */
+/**
+ * An ID's length as the list says it.
+ * @param {string} hex
+ */
 export function fakeCredentialSize(hex) {
     return `${Math.floor(hex.length / 2)} bytes`;
 }
 
-/** The list without the ID at `index` (a number or its text), or null when it has none there. */
+/**
+ * The list without the ID at `index` (a number or its text), or null when it has none there.
+ * @param {string[]} list
+ * @param {number | string} index
+ * @returns {string[] | null}
+ */
 export function withoutFakeCredential(list, index) {
-    const parsed = Number.parseInt(index, 10);
+    const parsed = Number.parseInt(String(index), 10);
     if (!Number.isInteger(parsed) || parsed < 0 || parsed >= list.length) {
         return null;
     }

@@ -24,6 +24,16 @@ import {
 } from '@/test/logic/simple/ceremony-answers.js';
 import { advancedRegistrations, recordedCredential } from '@/test/logic/advanced/advanced-answers.js';
 
+// The hints' rules, real, and watched.
+vi.mock('../hints.js', async (importOriginal) => {
+  const real = await importOriginal();
+  return {
+    ...real,
+    enforceAuthenticatorAttachmentWithHints: vi.fn(real.enforceAuthenticatorAttachmentWithHints),
+    applyAuthenticatorAttachmentPreference: vi.fn(real.applyAuthenticatorAttachmentPreference),
+  };
+});
+
 const BEGIN = '/api/advanced/register/begin';
 const COMPLETE = '/api/advanced/register/complete';
 
@@ -97,11 +107,9 @@ function sent(call) {
 /** The paths the ceremony asked the server, in order. */
 const asked = () => fetch.mock.calls.map(([url]) => url);
 
-/** What the form's views give the ceremony: the real hint rules, the switch off, and a fake credential length. */
+/** What the form's views give the ceremony: the switch off, and where it says what it does. */
 function formOptions(overrides = {}) {
   return {
-    enforceHints: vi.fn(enforceAuthenticatorAttachmentWithHints),
-    applyAttachmentPreference: vi.fn(applyAuthenticatorAttachmentPreference),
     minPinLength: vi.fn(() => false),
     onStart: vi.fn(),
     onProgress: vi.fn(),
@@ -498,10 +506,10 @@ describe('registerAdvancedCredential', () => {
     expect(outcome.registered).toBe(true);
     expect(asked()).toEqual([BEGIN, COMPLETE]);
     expect(sent(0).body).toEqual(hinted);
-    expect(options.enforceHints).toHaveBeenCalledWith(hinted.publicKey);
-    expect(options.enforceHints).toHaveReturnedWith(['platform']);
+    expect(enforceAuthenticatorAttachmentWithHints).toHaveBeenCalledWith(hinted.publicKey);
+    expect(enforceAuthenticatorAttachmentWithHints).toHaveReturnedWith(['platform']);
     const createOptions = authenticator.create.mock.calls[0][0];
-    expect(options.applyAttachmentPreference).toHaveBeenCalledWith(createOptions, ['platform'], ATTACHMENT_HINTS[4].body.publicKey, hinted.publicKey);
+    expect(applyAuthenticatorAttachmentPreference).toHaveBeenCalledWith(createOptions, ['platform'], ATTACHMENT_HINTS[4].body.publicKey, hinted.publicKey);
     expect(createOptions.publicKey.authenticatorSelection.authenticatorAttachment).toBe('platform');
     expect(sent(1).body.__credential_response.authenticatorAttachment).toBe('platform');
   });
@@ -625,17 +633,16 @@ describe('registerAdvancedCredential', () => {
 
     expect(outcome.text).toBe('Credential registration failed: Invalid CredentialCreationOptions: Missing required "rp" property');
     expect(asked()).toEqual([]);
-    expect(options.enforceHints).not.toHaveBeenCalled();
+    expect(enforceAuthenticatorAttachmentWithHints).not.toHaveBeenCalled();
     expect(options.onStart).not.toHaveBeenCalled();
   });
 
   it('stops before anything is asked when the hints refuse the request', async () => {
     serving({});
-    const options = formOptions({
-      enforceHints: vi.fn(() => {
-        throw new Error('base64 has "!" at position 0, outside its alphabet');
-      }),
+    vi.mocked(enforceAuthenticatorAttachmentWithHints).mockImplementationOnce(() => {
+      throw new Error('base64 has "!" at position 0, outside its alphabet');
     });
+    const options = formOptions();
     const outcome = await registerAdvancedCredential(text(request({ hints: ['unknown'] })), options);
 
     expect(outcome.text).toBe('Credential registration failed: base64 has "!" at position 0, outside its alphabet');

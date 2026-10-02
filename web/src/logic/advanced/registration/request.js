@@ -8,9 +8,47 @@ import { getCredentialIdHex, getCredentialUserHandleHex } from '../../credential
 import { ALGORITHM_OPTIONS } from './algorithm-options.js';
 
 /**
+ * The registration form's settings: byte fields as hex text, numbers as text.
+ * @typedef {object} RegistrationSettings
+ * @property {string} userId
+ * @property {string} userName
+ * @property {string} displayName
+ * @property {string} challenge
+ * @property {string} timeout
+ * @property {string} attachment
+ * @property {string} residentKey
+ * @property {string} userVerification
+ * @property {string} attestation
+ * @property {boolean} excludeCredentials
+ * @property {string} fakeCredLength
+ * @property {number[]} algorithms
+ * @property {string[]} hints
+ * @property {boolean} credProps
+ * @property {boolean} minPinLength
+ * @property {string} credProtect
+ * @property {boolean} enforceCredProtect
+ * @property {string} largeBlob
+ * @property {boolean} prf
+ * @property {string} prfFirst
+ * @property {string} prfSecond
+ */
+
+/** @typedef {keyof RegistrationSettings} RegistrationField */
+
+/**
+ * What a request is built against: the relying party, the saved credentials and the fake IDs.
+ * @typedef {object} RegistrationContext
+ * @property {string} rpName
+ * @property {string} hostname
+ * @property {Array<Record<string, any>>} storedCredentials
+ * @property {string[]} fakeExcludeCredentials
+ */
+
+/**
  * The settings the form starts from and a reset returns to, without the values
  * drawn at random (the user ID, name and display name, and the challenge).
  * Byte fields are hex text as typed; the timeout and the fake ID length are text.
+ * @returns {Omit<RegistrationSettings, 'userId' | 'userName' | 'displayName' | 'challenge'>}
  */
 export function registrationDefaults() {
     return {
@@ -44,7 +82,12 @@ export function requestTimeout(text) {
 
 // The saved credentials of this user (its user handle is the User ID) first,
 // then the fake IDs, each as hex.
+/**
+ * @param {RegistrationSettings} settings
+ * @param {Partial<RegistrationContext>} context
+ */
 function excludedCredentials(settings, { storedCredentials = [], fakeExcludeCredentials = [] }) {
+    /** @type {Array<{ type: 'public-key', id: { $hex: string } }>} */
     const excludeList = [];
     const userIdHex = (settings.userId || '').toLowerCase();
 
@@ -81,6 +124,9 @@ function excludedCredentials(settings, { storedCredentials = [], fakeExcludeCred
  * The request the settings build, `{ publicKey }`. context: rpName and
  * hostname (the relying party), storedCredentials (the list's records, whose
  * IDs of this user are excluded), fakeExcludeCredentials (hex).
+ * @param {RegistrationSettings} settings
+ * @param {Partial<RegistrationContext>} [context]
+ * @returns {{ publicKey: Record<string, any> }}
  */
 export function buildCreationOptions(settings, context = {}) {
     const publicKey = {
@@ -181,6 +227,10 @@ export function decodeJsonBinaryToHex(value) {
  * gives replaces them, what it leaves out stays. Also the IDs its
  * excludeCredentials holds that are not saved credentials' (context:
  * storedCredentials), as the fake IDs, as they are spelled there.
+ * @param {Record<string, any>} publicKey
+ * @param {RegistrationSettings} previous
+ * @param {{ storedCredentials?: Array<Record<string, any>> }} [context]
+ * @returns {{ settings: RegistrationSettings, fakeExcludeCredentials: string[] }}
  */
 export function readCreationOptions(publicKey, previous, context = {}) {
     const settings = { ...previous };
@@ -292,11 +342,17 @@ export function readCreationOptions(publicKey, previous, context = {}) {
  * the user name is also the display name; a credProtect of Unspecified
  * enforces it; a resident key that is not required cannot ask for largeBlob;
  * an empty first prf evaluation empties the second.
+ * @template {RegistrationField} F
+ * @param {RegistrationSettings} settings
+ * @param {F} field
+ * @param {RegistrationSettings[F]} value
+ * @returns {RegistrationSettings}
  */
 export function changeRegistration(settings, field, value) {
+    /** @type {RegistrationSettings} */
     const next = { ...settings, [field]: value };
     if (field === 'userName') {
-        next.displayName = value;
+        next.displayName = next.userName;
     }
     if (field === 'credProtect' && !value) {
         next.enforceCredProtect = true;
@@ -310,7 +366,11 @@ export function changeRegistration(settings, field, value) {
     return next;
 }
 
-/** Which of the settings' fields the form cannot change as they stand. */
+/**
+ * Which of the settings' fields the form cannot change as they stand.
+ * @param {RegistrationSettings} settings
+ * @returns {{ enforceCredProtect: boolean, prfSecond: boolean }}
+ */
 export function registrationControls(settings) {
     return {
         enforceCredProtect: !settings.credProtect,

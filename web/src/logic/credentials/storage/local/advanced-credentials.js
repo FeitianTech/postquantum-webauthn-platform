@@ -14,11 +14,17 @@ import {
 import { prepareAdvancedCredentialsForServerFromSource } from './advanced-server-payload.js';
 import { updateAdvancedCredentialRegistrationSnapshot } from './advanced-snapshot-update.js';
 
+/** @import { SavedCredential } from '../../saved-list.js' */
+
 export function getAllAdvancedCredentials() {
     const { advancedRecords } = readAdvancedCredentialPartitions();
     return advancedRecords.map(cloneAdvancedCredential).filter(Boolean);
 }
 
+/**
+ * @param {Record<string, any> | null | undefined} rawCredential
+ * @returns {(SavedCredential & { storageId?: string }) | null}
+ */
 export function saveAdvancedCredential(rawCredential) {
     if (!rawCredential || typeof rawCredential !== 'object') {
         return null;

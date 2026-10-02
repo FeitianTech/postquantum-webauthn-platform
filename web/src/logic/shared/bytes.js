@@ -3,6 +3,10 @@
 // base64url. DOM-free.
 import { Base64Error, base64UrlToBytes, forgivingBase64ToBytes } from './base64.js';
 
+/**
+ * @param {number} bytes
+ * @returns {string}
+ */
 export function generateRandomHex(bytes) {
     const array = new Uint8Array(bytes);
     crypto.getRandomValues(array);

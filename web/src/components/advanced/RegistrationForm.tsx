@@ -1,8 +1,11 @@
 import { TextField } from '@/components/ui/Field';
+import { FAKE_CREDENTIAL_TEXT } from '@/logic/advanced/fake-credentials.js';
+import { HINT_VALUES } from '@/logic/advanced/hints.js';
+import { ALGORITHM_OPTIONS } from '@/logic/advanced/registration/algorithm-options.js';
+import { registrationControls } from '@/logic/advanced/registration/request.js';
 
 import { About, Chip, ChipGroupField, Chips, FakeCredentialField, FormSection, HexField, SelectField, SwitchField, toggled } from './FieldControls';
 import { REGISTRATION_FIELDS, REGISTRATION_SECTIONS } from './fieldText';
-import { ALGORITHMS, FAKE_TEXT, HINTS, lockedFields } from './model';
 import type { AdvancedRequest } from './useAdvancedRequest';
 
 const FIELDS = REGISTRATION_FIELDS;
@@ -18,13 +21,13 @@ function AboutFor({ field }: { field: keyof typeof FIELDS }) {
 // and Extensions, each field changing the request (the JSON editor's text).
 export function RegistrationForm({ request }: { request: AdvancedRequest }) {
   const { settings, change } = request;
-  const locked = lockedFields(settings);
+  const locked = registrationControls(settings);
   const [user, selection, other, extensions] = REGISTRATION_SECTIONS;
-  const classical = ALGORITHMS.filter((option) => !option.pqc);
-  const pqc = ALGORITHMS.filter((option) => option.pqc);
-  const algorithmOrder = ALGORITHMS.map((option) => option.alg);
+  const classical = ALGORITHM_OPTIONS.filter((option) => !option.pqc);
+  const pqc = ALGORITHM_OPTIONS.filter((option) => option.pqc);
+  const algorithmOrder = ALGORITHM_OPTIONS.map((option) => option.alg);
   const toggleAlgorithm = (alg: number) => (pressed: boolean) => change('algorithms', toggled(settings.algorithms, alg, pressed, algorithmOrder));
-  const hintOrder = [...HINTS, ...settings.hints.filter((hint) => !HINTS.includes(hint))];
+  const hintOrder = [...HINT_VALUES, ...settings.hints.filter((hint) => !HINT_VALUES.includes(hint))];
 
   return (
     <div className="flex min-w-0 flex-col gap-6" data-registration-form="">
@@ -59,7 +62,7 @@ export function RegistrationForm({ request }: { request: AdvancedRequest }) {
           length={settings.fakeCredLength}
           onLength={(value) => change('fakeCredLength', value)}
           ids={request.fakeExclude}
-          emptyText={FAKE_TEXT.noExclude}
+          emptyText={FAKE_CREDENTIAL_TEXT.noExclude}
           message={request.fakeMessage}
           onAdd={request.addFake}
           onRemove={request.removeFake}

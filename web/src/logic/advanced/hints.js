@@ -41,11 +41,20 @@ export function deriveAllowedAttachmentsFromHints(hints) {
     return attachments;
 }
 
-// A registration's request: no saved credential to offer.
+/**
+ * A registration's request: no saved credential to offer.
+ * @param {Record<string, any>} publicKey
+ * @returns {string[]}
+ */
 export function enforceAuthenticatorAttachmentWithHints(publicKey) {
     return ensureAuthenticationHintsAllowed(publicKey);
 }
 
+/**
+ * @param {Record<string, any> | null | undefined} targetOptions
+ * @param {string[]} allowedAttachments
+ * @param {...unknown} fallbackSources
+ */
 export function applyAuthenticatorAttachmentPreference(targetOptions, allowedAttachments, ...fallbackSources) {
     if (!targetOptions || typeof targetOptions !== 'object') {
         return;

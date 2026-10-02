@@ -1,9 +1,11 @@
 import { TextField } from '@/components/ui/Field';
 import { ALLOW_CREDENTIALS_TEXT } from '@/logic/advanced/authentication/allow-credentials.js';
+import { FAKE_CREDENTIAL_TEXT } from '@/logic/advanced/fake-credentials.js';
+import { HINT_VALUES } from '@/logic/advanced/hints.js';
 
 import { About, Chip, ChipGroupField, Chips, FakeCredentialField, FormSection, HexField, SelectField, toggled } from './FieldControls';
 import { AUTHENTICATION_FIELDS, AUTHENTICATION_SECTIONS } from './fieldText';
-import { FAKE_TEXT, HINTS, lockedAuthFields } from './model';
+import { lockedAuthFields } from './model';
 import type { AuthenticationRequest } from './useAuthenticationRequest';
 
 const FIELDS = AUTHENTICATION_FIELDS;
@@ -16,7 +18,7 @@ export function AuthenticationForm({ request }: { request: AuthenticationRequest
   const { settings, change, availability } = request;
   const locked = lockedAuthFields(settings, availability);
   const [selection, other, extensions] = AUTHENTICATION_SECTIONS;
-  const hintOrder = [...HINTS, ...settings.hints.filter((hint) => !HINTS.includes(hint))];
+  const hintOrder = [...HINT_VALUES, ...settings.hints.filter((hint) => !HINT_VALUES.includes(hint))];
   const allowOptions = [
     { value: 'all', label: ALLOW_CREDENTIALS_TEXT.all },
     { value: 'empty', label: ALLOW_CREDENTIALS_TEXT.empty },
@@ -38,7 +40,7 @@ export function AuthenticationForm({ request }: { request: AuthenticationRequest
           length={settings.fakeCredLength}
           onLength={(value) => change('fakeCredLength', value)}
           ids={request.fakeAllow}
-          emptyText={FAKE_TEXT.noAllow}
+          emptyText={FAKE_CREDENTIAL_TEXT.noAllow}
           message={request.fakeMessage}
           onAdd={request.addFake}
           onRemove={request.removeFake}

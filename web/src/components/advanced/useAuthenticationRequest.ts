@@ -9,6 +9,8 @@ import {
 } from '@/logic/advanced/authentication/allow-credentials.js';
 import { readEditedRequest, topLevelExtras } from '@/logic/advanced/editor/model.js';
 import type { SavedCredential } from '@/logic/credentials/saved-list.js';
+import { fakeCredentialLength, normaliseFakeCredentialList, withoutFakeCredential } from '@/logic/advanced/fake-credentials.js';
+import { generateRandomHex } from '@/logic/shared/bytes.js';
 
 import {
   type AuthenticationField,
@@ -17,12 +19,8 @@ import {
   availabilityOf,
   buildAuthRequest,
   changeAuth,
-  fakeLength,
-  fakeList,
-  randomHex,
   readAuthRequest,
   settleAvailability,
-  withoutFake,
 } from './model';
 import { NO_TEXT, type RequestText, followedText, rebuiltText, resetText } from './requestEditor';
 
@@ -108,7 +106,7 @@ function reduce(current: RequestState, action: Action): RequestState {
         action.context,
       );
     case 'fake-remove':
-      return followed({ ...current, fakeAllow: withoutFake(current.fakeAllow, action.index) ?? current.fakeAllow, fakeMessage: null }, action.context);
+      return followed({ ...current, fakeAllow: withoutFakeCredential(current.fakeAllow, action.index) ?? current.fakeAllow, fakeMessage: null }, action.context);
     case 'context':
       return followed({ ...current, settings: settled(current.settings, action.context) }, action.context, true);
     case 'reset-editor':
@@ -126,7 +124,7 @@ function reduce(current: RequestState, action: Action): RequestState {
         ...read.settings,
         allowCredentials: keptChoice(choicesFor(read.settings, action.context), read.settings.allowCredentials),
       };
-      const fakeAllow = fakeList(read.fakeAllowCredentials);
+      const fakeAllow = normaliseFakeCredentialList(read.fakeAllowCredentials);
       return {
         ...current,
         settings,
@@ -164,7 +162,7 @@ export function useAuthenticationRequest() {
   useEffect(() => {
     if (!saved.loaded || current.started) return;
     contextRef.current = { ...contextRef.current, hostname: window.location.hostname };
-    dispatch({ type: 'start', settings: { ...authDefaults(), challenge: randomHex(32), largeBlobWrite: randomHex(32) }, context: contextRef.current });
+    dispatch({ type: 'start', settings: { ...authDefaults(), challenge: generateRandomHex(32), largeBlobWrite: generateRandomHex(32) }, context: contextRef.current });
   }, [saved.loaded, current.started]);
 
   // The saved credentials changed: a choice that went falls back to All.
@@ -184,25 +182,25 @@ export function useAuthenticationRequest() {
     dispatch({ type: 'settings', settings: { ...settingsRef.current, ...next }, context: context() });
   }, []);
 
-  const randomizeChallenge = useCallback(() => update({ challenge: randomHex(32) }), [update]);
-  const randomizePrf = useCallback((which: 'prfFirst' | 'prfSecond') => update({ [which]: randomHex(32) }), [update]);
-  const randomizeLargeBlobWrite = useCallback(() => update({ largeBlobWrite: randomHex(32) }), [update]);
+  const randomizeChallenge = useCallback(() => update({ challenge: generateRandomHex(32) }), [update]);
+  const randomizePrf = useCallback((which: 'prfFirst' | 'prfSecond') => update({ [which]: generateRandomHex(32) }), [update]);
+  const randomizeLargeBlobWrite = useCallback(() => update({ largeBlobWrite: generateRandomHex(32) }), [update]);
 
   /** After an authentication, the random values drawn again: those that are not empty. */
   const redraw = useCallback(() => {
     const now = settingsRef.current;
     update({
-      ...(now.challenge.trim() ? { challenge: randomHex(32) } : {}),
-      ...(now.prfFirst.trim() ? { prfFirst: randomHex(32) } : {}),
-      ...(now.prfSecond.trim() ? { prfSecond: randomHex(32) } : {}),
-      ...(now.largeBlobWrite.trim() ? { largeBlobWrite: randomHex(32) } : {}),
+      ...(now.challenge.trim() ? { challenge: generateRandomHex(32) } : {}),
+      ...(now.prfFirst.trim() ? { prfFirst: generateRandomHex(32) } : {}),
+      ...(now.prfSecond.trim() ? { prfSecond: generateRandomHex(32) } : {}),
+      ...(now.largeBlobWrite.trim() ? { largeBlobWrite: generateRandomHex(32) } : {}),
     });
   }, [update]);
 
   const addFake = useCallback(() => {
-    const { bytes, error, notice } = fakeLength(settingsRef.current.fakeCredLength);
+    const { bytes, error, notice } = fakeCredentialLength(settingsRef.current.fakeCredLength);
     const message = error ? ({ tone: 'error', text: error } as const) : notice ? ({ tone: 'info', text: notice } as const) : null;
-    dispatch({ type: 'fake-add', hex: bytes ? randomHex(bytes) : null, message, context: context() });
+    dispatch({ type: 'fake-add', hex: bytes ? generateRandomHex(bytes) : null, message, context: context() });
   }, []);
   const removeFake = useCallback((index: number) => dispatch({ type: 'fake-remove', index, context: context() }), []);
 
@@ -213,7 +211,7 @@ export function useAuthenticationRequest() {
   const resetForm = useCallback(() => {
     dispatch({
       type: 'start',
-      settings: { ...authDefaults(), hashAlgorithm: settingsRef.current.hashAlgorithm, challenge: randomHex(32) },
+      settings: { ...authDefaults(), hashAlgorithm: settingsRef.current.hashAlgorithm, challenge: generateRandomHex(32) },
       context: context(),
     });
   }, []);

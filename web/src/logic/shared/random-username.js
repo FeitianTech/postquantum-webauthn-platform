@@ -3,6 +3,7 @@
 
 const USERNAME_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
+/** @returns {string} */
 export function generateRandom10DigitUsername() {
     let result = '';
     for (let i = 0; i < 10; i++) {

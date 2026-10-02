@@ -7,9 +7,10 @@ import { InfoPopover } from '@/components/ui/InfoPopover';
 import { MonoValue } from '@/components/ui/MonoValue';
 import { Switch, ToggleChip } from '@/components/ui/Switch';
 import { cx } from '@/lib/cx';
+import { fakeCredentialSize } from '@/logic/advanced/fake-credentials.js';
+import { hexInputIsValid } from '@/logic/advanced/hex-input.js';
 
 import type { FieldAbout, FieldText } from './fieldText';
-import { fakeSize, hexIsValid } from './model';
 
 // The Advanced form's field rows: whatever the control, its label and ⓘ above
 // it, the control at one height, its error below; the info popup in English and
@@ -159,7 +160,7 @@ export function HexField({
       disabled={disabled}
       hint={note || undefined}
       onChange={(event) => onChange(event.target.value)}
-      error={hexIsValid(value, minBytes) ? undefined : text.error}
+      error={hexInputIsValid(value, minBytes) ? undefined : text.error}
       trailing={
         onRandom ? <IconButton size="sm" label={text.button!} icon={<RefreshIcon />} onClick={onRandom} disabled={disabled} /> : undefined
       }
@@ -211,7 +212,7 @@ export function FakeCredentialField({
           {ids.map((hex, index) => (
             <li key={`${index}-${hex}`} className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
               <MonoValue value={hex} label="fake credential ID" className="min-w-0 flex-1 basis-48" />
-              <span className="text-caption text-ink-muted">{fakeSize(hex)}</span>
+              <span className="text-caption text-ink-muted">{fakeCredentialSize(hex)}</span>
               <Button variant="danger" size="sm" onClick={() => onRemove(index)}>
                 Delete
               </Button>

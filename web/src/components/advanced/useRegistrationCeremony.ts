@@ -5,8 +5,13 @@ import { useToast } from '@/components/ui/Toast';
 import { keepRegistrationSnapshot } from '@/logic/credentials/registration/snapshot.js';
 import { credentialKey } from '@/logic/credentials/saved-list.js';
 import type { CeremonyResultInput } from '@/logic/shared/ceremony-result.js';
+import {
+  advancedRegisteredMessage,
+  advancedRegistrationFailureText,
+  registerAdvancedCredential,
+} from '@/logic/advanced/registration/ceremony.js';
+import { saveAdvancedCredential } from '@/logic/credentials/storage/local/advanced-credentials.js';
 
-import { attachmentPreference, enforceHints, failureText, registerCredential, registeredMessage, saveRecord } from './model';
 import type { AdvancedRequest } from './useAdvancedRequest';
 
 // The Advanced tab's registration, in the steps and words of
@@ -33,9 +38,7 @@ export function useRegistrationCeremony(request: AdvancedRequest, openRegistrati
     setRunning(true);
     try {
       const { settings, text } = latest.current.request;
-      const outcome = await registerCredential(text, {
-        enforceHints,
-        applyAttachmentPreference: attachmentPreference,
+      const outcome = await registerAdvancedCredential(text, {
         minPinLength: () => settings.minPinLength,
         onStart: () => {
           setFailure(null);
@@ -50,10 +53,10 @@ export function useRegistrationCeremony(request: AdvancedRequest, openRegistrati
         return;
       }
 
-      const message = registeredMessage(outcome.answer);
+      const message = advancedRegisteredMessage(outcome.answer);
       toast({ tone: message.tone, message: message.text });
       latest.current.request.redraw();
-      const kept = outcome.record ? saveRecord(outcome.record) : null;
+      const kept = outcome.record ? saveAdvancedCredential(outcome.record) : null;
       await keepRegistrationSnapshot({
         credentialJson: outcome.credentialJson,
         relyingPartyInfo: outcome.answer.relyingParty ?? null,
@@ -62,7 +65,7 @@ export function useRegistrationCeremony(request: AdvancedRequest, openRegistrati
       saved.refresh();
       if (kept) latest.current.openRegistration(credentialKey(kept));
     } catch (error) {
-      setFailure(failureText(error));
+      setFailure(advancedRegistrationFailureText(error));
     } finally {
       busy.current = false;
       setRunning(false);

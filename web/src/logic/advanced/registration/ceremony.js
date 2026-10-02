@@ -1,13 +1,39 @@
 // The Advanced tab's registration, with no DOM: the request the editor holds,
 // checked; what is asked of the server and of the authenticator, in what order;
 // what each step and each outcome says; the record the browser keeps. What the
-// form decides is given: the hints' rules, and the two values it reads from the
-// form as the ceremony runs.
+// form decides is given: the value it reads from the form as the ceremony runs.
 
+import { applyAuthenticatorAttachmentPreference, enforceAuthenticatorAttachmentWithHints } from '../hints.js';
 import { createCredential, parseCreationOptions, requireNativeJson } from '../../shared/native-json.js';
 import { bufferSourceToUint8Array, bytesToHex } from '../../shared/bytes.js';
 import { FailedResponseError, readFailedResponse } from '../../shared/failed-response.js';
 /** @import { CeremonyResultInput } from '../../shared/ceremony-result.js' */
+/** @import { SavedCredential } from '../../credentials/saved-list.js' */
+
+/**
+ * What the server answered a registration: storedCredential is what this browser keeps.
+ * @typedef {{
+ *     algo?: string,
+ *     relyingParty?: Record<string, unknown> | null,
+ *     storedCredential?: Record<string, unknown> | null,
+ *     [field: string]: unknown,
+ * }} RegistrationAnswer
+ */
+
+/**
+ * A registration's end: what the browser and the server gave, or the failure's sentence.
+ * @typedef {(
+ *     | {
+ *         registered: true,
+ *         answer: RegistrationAnswer,
+ *         credential: PublicKeyCredential,
+ *         credentialJson: Record<string, unknown>,
+ *         publicKey: Record<string, unknown>,
+ *         record: SavedCredential | null,
+ *     }
+ *     | { registered: false, text: string, context: Record<string, unknown> }
+ * )} RegistrationOutcome
+ */
 
 export const ADVANCED_CEREMONY_TEXT = {
     missingPublicKey: 'Invalid JSON structure: Missing "publicKey" property',
@@ -106,6 +132,9 @@ export function collectPotentialUnsupportedFeatures(publicKeyOptions, createOpti
  * What a failed registration says: the browser's refusals by name, anything else
  * by its own message; when the authenticator refused, what of the request
  * (context: publicKey, createOptions) it may not support.
+ * @param {any} error
+ * @param {{ publicKey?: Record<string, any> | null, createOptions?: Record<string, any> | null }} [context]
+ * @returns {string}
  */
 export function advancedRegistrationFailureText(error, context = {}) {
     const errorName = error && typeof error === 'object' ? error.name : undefined;
@@ -134,7 +163,11 @@ function textWarnings(json) {
         : [];
 }
 
-/** A registration's success message, and its tone: a warning when the server added warnings. */
+/**
+ * A registration's success message, and its tone: a warning when the server added warnings.
+ * @param {RegistrationAnswer} answer
+ * @returns {{ text: string, tone: 'success' | 'warning' }}
+ */
 export function advancedRegisteredMessage(answer) {
     const successMessage = `Advanced registration successful! Algorithm: ${answer.algo || 'Unknown'}`;
     const warnings = textWarnings(answer);
@@ -207,11 +240,11 @@ function postJson(path, body) {
 }
 
 /**
- * Registers a credential from the editor's text. The form's views give:
- * enforceHints(publicKey) (the attachments the hints allow; it may throw),
- * applyAttachmentPreference(options, attachments, ...sources) (the attachment
- * the browser is given) and minPinLength() (the switch, which asks for the
- * extension whatever the text says, read when the ceremony gets there). It says what it does through
+ * Registers a credential from the editor's text: the hints' rules give the
+ * attachments the hints allow (they may refuse the request) and the attachment
+ * the browser is given. The form's views give minPinLength() (the switch, which
+ * asks for the extension whatever the text says, read when the ceremony gets
+ * there). It says what it does through
  * onStart (the request checked: the last ceremony's messages may go),
  * onProgress, onWarning (the server's warnings about the request) and onResult
  * (the result panel's input, shared/ceremony-result.js). Gives
@@ -219,22 +252,15 @@ function postJson(path, body) {
  * or `{registered: false, text, context}` with the failure's sentence.
  * @param {string} text
  * @param {{
- *     enforceHints: (publicKey: Record<string, any>) => string[],
- *     applyAttachmentPreference: (
- *         options: { publicKey: PublicKeyCredentialCreationOptions },
- *         attachments: string[],
- *         ...sources: unknown[]
- *     ) => void,
  *     minPinLength: () => boolean,
  *     onStart?: () => void,
  *     onProgress?: (text: string) => void,
  *     onWarning?: (text: string) => void,
  *     onResult?: (result: CeremonyResultInput) => void,
  * }} steps
+ * @returns {Promise<RegistrationOutcome>}
  */
 export async function registerAdvancedCredential(text, {
-    enforceHints,
-    applyAttachmentPreference,
     minPinLength,
     onStart = () => {},
     onProgress = () => {},
@@ -262,7 +288,7 @@ export async function registerAdvancedCredential(text, {
             publicKey.extensions.minPinLength = true;
         }
 
-        const allowedAttachments = enforceHints(publicKey);
+        const allowedAttachments = enforceAuthenticatorAttachmentWithHints(publicKey);
 
         onStart();
         onProgress(ADVANCED_CEREMONY_TEXT.registrationStarting);
@@ -286,7 +312,7 @@ export async function registerAdvancedCredential(text, {
         const createOptions = { publicKey: parseCreationOptions(optionsJson.publicKey) };
         context.createOptions = createOptions;
 
-        applyAttachmentPreference(
+        applyAuthenticatorAttachmentPreference(
             createOptions,
             allowedAttachments,
             json?.publicKey,

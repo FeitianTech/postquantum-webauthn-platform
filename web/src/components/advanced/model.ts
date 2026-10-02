@@ -1,29 +1,10 @@
-// The Advanced tab's logic comes from the modules in src/logic/advanced: each
-// ceremony's request, form settings and ceremony (registration/request.js,
-// algorithm-options.js, ceremony.js; authentication/request.js, ceremony.js), a
-// the hints' rules, the fake credential IDs,
-// the byte fields' check, the Allow Credentials choices and the extensions'
-// availability (hints.js, fake-credentials.js, hex-input.js,
-// authentication/allow-credentials.js, authentication/capabilities.js).
-// These are the types the components read them through.
-import { advancedRegisteredMessage, advancedRegistrationFailureText, registerAdvancedCredential } from '@/logic/advanced/registration/ceremony.js';
-import {
-  FAKE_CREDENTIAL_TEXT,
-  fakeCredentialLength,
-  fakeCredentialSize,
-  normaliseFakeCredentialList,
-  withoutFakeCredential,
-} from '@/logic/advanced/fake-credentials.js';
+// The Advanced tab's authentication comes from the modules in
+// src/logic/advanced/authentication (request.js, ceremony.js, capabilities.js)
+// and the hints' rules (hints.js). These are the types the components read them
+// through.
 import { ADVANCED_ASSERTION_TEXT, advancedAuthenticationFailureText, authenticateAdvancedCredential } from '@/logic/advanced/authentication/ceremony.js';
 import { authenticationAvailability } from '@/logic/advanced/authentication/capabilities.js';
-import { hexInputIsValid } from '@/logic/advanced/hex-input.js';
-import {
-  HINT_VALUES,
-  applyAuthenticatorAttachmentPreference,
-  enforceAuthenticatorAttachmentWithHints,
-  ensureAuthenticationHintsAllowed,
-} from '@/logic/advanced/hints.js';
-import { ALGORITHM_OPTIONS } from '@/logic/advanced/registration/algorithm-options.js';
+import { ensureAuthenticationHintsAllowed } from '@/logic/advanced/hints.js';
 import {
   authenticationControls,
   authenticationDefaults,
@@ -33,113 +14,14 @@ import {
   withAvailability,
 } from '@/logic/advanced/authentication/request.js';
 import {
-  buildCreationOptions,
-  changeRegistration,
-  readCreationOptions,
-  registrationControls,
-  registrationDefaults,
-} from '@/logic/advanced/registration/request.js';
-import { generateRandom10DigitUsername } from '@/logic/shared/random-username.js';
-import {
   prepareAdvancedCredentialsForServer,
-  saveAdvancedCredential,
   updateAdvancedCredentialSignCount,
 } from '@/logic/credentials/storage/local/advanced-credentials.js';
-import { generateRandomHex } from '@/logic/shared/bytes.js';
 
 import type { SavedCredential } from '@/logic/credentials/saved-list.js';
 import type { CeremonyResultInput } from '@/logic/shared/ceremony-result.js';
 
-/** The registration form's settings (registration/request.js): byte fields as hex text, numbers as text. */
-export type RegistrationSettings = {
-  userId: string;
-  userName: string;
-  displayName: string;
-  challenge: string;
-  timeout: string;
-  attachment: string;
-  residentKey: string;
-  userVerification: string;
-  attestation: string;
-  excludeCredentials: boolean;
-  fakeCredLength: string;
-  algorithms: number[];
-  hints: string[];
-  credProps: boolean;
-  minPinLength: boolean;
-  credProtect: string;
-  enforceCredProtect: boolean;
-  largeBlob: string;
-  prf: boolean;
-  prfFirst: string;
-  prfSecond: string;
-};
-
-export type RegistrationField = keyof RegistrationSettings;
-
-type RequestContext = {
-  rpName: string;
-  hostname: string;
-  storedCredentials: SavedCredential[];
-  fakeExcludeCredentials: string[];
-};
-
 type Json = Record<string, unknown>;
-type CreationOptions = { publicKey: Json };
-
-export const ALGORITHMS = ALGORITHM_OPTIONS as { key: string; alg: number; label: string; pqc: boolean }[];
-export const HINTS = HINT_VALUES as string[];
-
-export const defaultSettings = registrationDefaults as () => Omit<RegistrationSettings, 'userId' | 'userName' | 'displayName' | 'challenge'>;
-export const buildRequest = buildCreationOptions as (settings: RegistrationSettings, context: RequestContext) => CreationOptions;
-export const readRequest = readCreationOptions as (
-  publicKey: Json,
-  previous: RegistrationSettings,
-  context: { storedCredentials: SavedCredential[] },
-) => { settings: RegistrationSettings; fakeExcludeCredentials: string[] };
-export const changeSetting = changeRegistration as <F extends RegistrationField>(
-  settings: RegistrationSettings,
-  field: F,
-  value: RegistrationSettings[F],
-) => RegistrationSettings;
-export const lockedFields = registrationControls as (settings: RegistrationSettings) => { enforceCredProtect: boolean; prfSecond: boolean };
-
-export const hexIsValid = hexInputIsValid as (text: string, minBytes: number) => boolean;
-export const randomHex = generateRandomHex as (bytes: number) => string;
-export const randomName = generateRandom10DigitUsername as () => string;
-
-export const FAKE_TEXT = FAKE_CREDENTIAL_TEXT as Record<'noExclude' | 'noAllow' | 'invalidLength' | 'truncated', string>;
-export const fakeLength = fakeCredentialLength as (length: string) => { bytes: number; error: string | null; notice: string | null };
-export const fakeSize = fakeCredentialSize as (hex: string) => string;
-export const fakeList = normaliseFakeCredentialList as (values: unknown) => string[];
-export const withoutFake = withoutFakeCredential as (list: string[], index: number) => string[] | null;
-
-// The ceremony and the result it keeps.
-export type RegistrationAnswer = { algo?: string; relyingParty?: Json | null; storedCredential?: Json | null; [field: string]: unknown };
-type RegistrationOutcome =
-  | {
-      registered: true;
-      answer: RegistrationAnswer;
-      credentialJson: Json;
-      publicKey: Json;
-      record: SavedCredential | null;
-    }
-  | { registered: false; text: string };
-type CeremonyOptions = {
-  enforceHints: (publicKey: Json) => string[];
-  applyAttachmentPreference: (...args: unknown[]) => void;
-  minPinLength: () => boolean;
-  onStart: () => void;
-  onProgress: (text: string) => void;
-  onWarning: (text: string) => void;
-  onResult: (result: CeremonyResultInput) => void;
-};
-export const registerCredential = registerAdvancedCredential as unknown as (text: string, options: CeremonyOptions) => Promise<RegistrationOutcome>;
-export const registeredMessage = advancedRegisteredMessage as (answer: RegistrationAnswer) => { text: string; tone: 'success' | 'warning' };
-export const failureText = advancedRegistrationFailureText as (error: unknown) => string;
-export const enforceHints = enforceAuthenticatorAttachmentWithHints as (publicKey: Json) => string[];
-export const attachmentPreference = applyAuthenticatorAttachmentPreference as (...args: unknown[]) => void;
-export const saveRecord = saveAdvancedCredential as (record: SavedCredential) => (SavedCredential & { storageId?: string }) | null;
 
 // The authentication's request and form.
 /** The authentication form's settings (authentication/request.js): byte fields as hex text, numbers as text. */

@@ -1,6 +1,7 @@
 // The signature algorithms the registration form offers, in the order the
 // request lists them (the most preferred first): the three ML-DSA parameter
 // sets, then the classical ones. DOM-free: the form's chips are built from it.
+/** @type {ReadonlyArray<{ key: string, alg: number, label: string, pqc: boolean }>} */
 export const ALGORITHM_OPTIONS = [
     { key: 'mldsa44', alg: -48, label: 'ML-DSA-44', pqc: true },
     { key: 'mldsa65', alg: -49, label: 'ML-DSA-65', pqc: true },
