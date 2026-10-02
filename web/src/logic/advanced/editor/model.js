@@ -25,6 +25,25 @@ export function sortObjectKeys(value) {
     return value;
 }
 
+/**
+ * Which request an editor holds.
+ * @typedef {'registration' | 'authentication'} RequestScope
+ */
+
+/**
+ * Where text stops being JSON: the offset, and the line and column from 1.
+ * @typedef {{ offset: number, line: number, column: number }} EditorLocation
+ */
+
+/**
+ * What an edit of the editor is (readEditedRequest).
+ * @typedef {(
+ *     | { status: 'unparsed', message: string, location: EditorLocation | null }
+ *     | { status: 'refused', root: unknown, message: string }
+ *     | { status: 'accepted', root: { publicKey: Record<string, unknown> } & Record<string, unknown> }
+ * )} EditedRequest
+ */
+
 export const EDITOR_TEXT = {
     title: 'JSON Editor',
     registrationTitle: 'JSON Editor (CredentialCreationOptions)',
@@ -36,6 +55,10 @@ export const EDITOR_TEXT = {
 };
 
 /** The editor's heading for the sub-tab shown. */
+/**
+ * @param {RequestScope} scope
+ * @returns {string}
+ */
 export function editorTitle(scope) {
     if (scope === 'registration') {
         return EDITOR_TEXT.registrationTitle;
@@ -52,6 +75,10 @@ export function validationFailedText(message) {
 }
 
 /** A request as the editor writes it: every object's keys sorted, two spaces of indent. */
+/**
+ * @param {unknown} options
+ * @returns {string}
+ */
 export function requestText(options) {
     return JSON.stringify(sortObjectKeys(options), null, 2);
 }
@@ -68,6 +95,10 @@ function checkEditorStructure(parsed) {
 }
 
 /** The keys an edit holds beside `publicKey`, which the editor keeps. */
+/**
+ * @param {any} root
+ * @returns {Record<string, unknown>}
+ */
 export function topLevelExtras(root) {
     if (!isPlainObject(root)) {
         return {};
@@ -179,6 +210,8 @@ function findJsonStop(text) {
  * Where text stops being JSON: the line and column (from 1) of the first
  * character that cannot be read, or of the end when the text ends too soon;
  * null for JSON.
+ * @param {string} text
+ * @returns {EditorLocation | null}
  */
 export function locateJsonSyntaxError(text) {
     const offset = findJsonStop(text);
@@ -204,6 +237,9 @@ const VALIDATORS = {
  * why and where), an object the form cannot follow (`refused`, with the
  * sentence: the structure's, or the first check the request fails), or one
  * it can (`accepted`). What parses is the request the ceremony sends either way.
+ * @param {string} text
+ * @param {RequestScope} scope
+ * @returns {EditedRequest}
  */
 export function readEditedRequest(text, scope) {
     let root;

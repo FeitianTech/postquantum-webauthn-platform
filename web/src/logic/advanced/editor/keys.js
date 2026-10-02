@@ -5,6 +5,16 @@
 // a copy of its state.
 const JSON_EDITOR_INDENT_UNIT = '  ';
 
+/**
+ * A textarea's state, which these edits change.
+ * @typedef {{ value: string, selectionStart: number, selectionEnd: number }} EditorState
+ */
+
+/**
+ * @param {EditorState} editor
+ * @param {string} opening
+ * @param {string} closing
+ */
 export function wrapSelectionWithPair(editor, opening, closing) {
     const start = editor.selectionStart;
     const end = editor.selectionEnd;
@@ -24,6 +34,7 @@ export function wrapSelectionWithPair(editor, opening, closing) {
     }
 }
 
+/** @param {EditorState} editor */
 export function applyJsonEditorAutoIndent(editor) {
     const value = editor.value;
     const selectionStart = editor.selectionStart;
@@ -33,7 +44,7 @@ export function applyJsonEditorAutoIndent(editor) {
     const lineStart = before.lastIndexOf('\n') + 1;
     const currentLine = before.slice(lineStart);
     const trimmedLine = currentLine.trimEnd();
-    const baseIndent = currentLine.match(/^\s*/)[0];
+    const baseIndent = currentLine.slice(0, currentLine.length - currentLine.trimStart().length);
     const closesImmediately = /^\s*[\}\]]/.test(after);
 
     let extraIndent = '';
@@ -68,6 +79,10 @@ export function applyJsonEditorAutoIndent(editor) {
     editor.selectionEnd = caretPosition;
 }
 
+/**
+ * @param {EditorState} editor
+ * @param {boolean} isShift
+ */
 export function applyTabIndentation(editor, isShift) {
     const value = editor.value;
     const selectionStart = editor.selectionStart;

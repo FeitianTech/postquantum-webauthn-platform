@@ -7,6 +7,7 @@ import {
   authenticationCredentials,
   keptChoice,
 } from '@/logic/advanced/authentication/allow-credentials.js';
+import { readEditedRequest, topLevelExtras } from '@/logic/advanced/editor/model.js';
 import type { SavedCredential } from '@/logic/credentials/saved-list.js';
 
 import {
@@ -16,12 +17,10 @@ import {
   availabilityOf,
   buildAuthRequest,
   changeAuth,
-  extrasOf,
   fakeLength,
   fakeList,
   randomHex,
   readAuthRequest,
-  readEdit,
   settleAvailability,
   withoutFake,
 } from './model';
@@ -115,7 +114,7 @@ function reduce(current: RequestState, action: Action): RequestState {
     case 'reset-editor':
       return resetText(current, formRequestOf(current.settings, current.fakeAllow, action.context), 'authentication');
     case 'edit': {
-      const edit = readEdit(action.text, 'authentication');
+      const edit = readEditedRequest(action.text, 'authentication');
       if (edit.status !== 'accepted') return { ...current, text: action.text, edit };
       // Read against every credential the request can name; then the edit's own
       // hints decide whether its one credential is offered, else All.
@@ -132,7 +131,7 @@ function reduce(current: RequestState, action: Action): RequestState {
         ...current,
         settings,
         fakeAllow,
-        extras: extrasOf(edit.root),
+        extras: topLevelExtras(edit.root),
         text: action.text,
         edit: null,
         // What the form now says, which the next form change is measured from.

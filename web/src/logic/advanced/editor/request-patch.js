@@ -120,6 +120,11 @@ export function patchRequest(typed, before, after) {
  * `before` to `after` (both `{ publicKey }`): the text patched when it is an
  * object holding a publicKey object; otherwise the form's request, with the
  * keys (`extras`) an edit last held beside publicKey.
+ * @param {string} text
+ * @param {{ publicKey: Record<string, unknown> }} before
+ * @param {{ publicKey: Record<string, unknown> }} after
+ * @param {Record<string, unknown>} [extras]
+ * @returns {string}
  */
 export function followForm(text, before, after, extras = {}) {
     let root = null;

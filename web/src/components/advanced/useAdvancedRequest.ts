@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 
 import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
 import { APP_TITLE } from '@/lib/sections';
+import { readEditedRequest, topLevelExtras } from '@/logic/advanced/editor/model.js';
 import type { SavedCredential } from '@/logic/credentials/saved-list.js';
 
 import {
@@ -10,12 +11,10 @@ import {
   buildRequest,
   changeSetting,
   defaultSettings,
-  extrasOf,
   fakeLength,
   fakeList,
   randomHex,
   randomName,
-  readEdit,
   readRequest,
   withoutFake,
 } from './model';
@@ -96,7 +95,7 @@ function reduce(current: RequestState, action: Action): RequestState {
     case 'reset-editor':
       return resetText(current, formRequestOf(current.settings, current.fakeExclude, action.context), 'registration');
     case 'edit': {
-      const edit = readEdit(action.text, 'registration');
+      const edit = readEditedRequest(action.text, 'registration');
       if (edit.status !== 'accepted') return { ...current, text: action.text, edit };
       const read = readRequest(edit.root.publicKey, current.settings, { storedCredentials: action.context.storedCredentials });
       const fakeExclude = fakeList(read.fakeExcludeCredentials);
@@ -104,7 +103,7 @@ function reduce(current: RequestState, action: Action): RequestState {
         ...current,
         settings: read.settings,
         fakeExclude,
-        extras: extrasOf(edit.root),
+        extras: topLevelExtras(edit.root),
         text: action.text,
         edit: null,
         // What the form now says, which the next form change is measured from.

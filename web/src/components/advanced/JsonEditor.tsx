@@ -5,9 +5,15 @@ import { textControlClassName } from '@/components/ui/Field';
 import { AlertIcon } from '@/components/ui/icons';
 import { useToast } from '@/components/ui/Toast';
 import { cx } from '@/lib/cx';
+import {
+  type EditorState,
+  applyJsonEditorAutoIndent,
+  applyTabIndentation,
+  wrapSelectionWithPair,
+} from '@/logic/advanced/editor/keys.js';
+import { EDITOR_TEXT, type RequestScope, editorTitle } from '@/logic/advanced/editor/model.js';
 
-import { EDITOR_WORDS, type EditorState, autoIndent, indent, titleOf, wrapPair } from './model';
-import type { RequestEditor, RequestScope } from './requestEditor';
+import type { RequestEditor } from './requestEditor';
 
 const PAIRS: Record<string, string> = { '{': '}', '[': ']' };
 // The button that sends the request, which a refused edit's note names.
@@ -26,12 +32,12 @@ export function JsonEditor({ scope, request }: { scope: RequestScope; request: R
   const pendingSelection = useRef<[number, number] | null>(null);
   // Escape lets the next Tab leave the editor.
   const leaving = useRef(false);
-  const title = titleOf(scope);
+  const title = editorTitle(scope);
   const { edit } = request;
   const toast = useToast();
   const reset = () => {
     request.resetEditor();
-    toast({ tone: 'info', message: EDITOR_WORDS.reset });
+    toast({ tone: 'info', message: EDITOR_TEXT.reset });
   };
 
   useLayoutEffect(() => {
@@ -57,9 +63,9 @@ export function JsonEditor({ scope, request }: { scope: RequestScope; request: R
     event.preventDefault();
     const target = event.currentTarget;
     const typed: EditorState = { value: target.value, selectionStart: target.selectionStart, selectionEnd: target.selectionEnd };
-    if (event.key === 'Tab') indent(typed, event.shiftKey);
-    else if (event.key === 'Enter') autoIndent(typed);
-    else wrapPair(typed, event.key, pair);
+    if (event.key === 'Tab') applyTabIndentation(typed, event.shiftKey);
+    else if (event.key === 'Enter') applyJsonEditorAutoIndent(typed);
+    else wrapSelectionWithPair(typed, event.key, pair);
     pendingSelection.current = [typed.selectionStart, typed.selectionEnd];
     request.editText(typed.value);
   };

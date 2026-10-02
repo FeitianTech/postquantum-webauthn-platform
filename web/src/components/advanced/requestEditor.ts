@@ -1,4 +1,11 @@
-import { type EditedRequest, extrasOf, follow, readEdit, textOf } from './model';
+import {
+  type EditedRequest,
+  type RequestScope,
+  readEditedRequest,
+  requestText,
+  topLevelExtras,
+} from '@/logic/advanced/editor/model.js';
+import { followForm } from '@/logic/advanced/editor/request-patch.js';
 
 // The part of a ceremony's request both the registration and the
 // authentication keep alike: the JSON editor's text is the request, the keys an
@@ -7,7 +14,6 @@ import { type EditedRequest, extrasOf, follow, readEdit, textOf } from './model'
 // ./useAuthenticationRequest.ts).
 
 type Json = Record<string, unknown>;
-export type RequestScope = 'registration' | 'authentication';
 type FormRequest = { publicKey: Json };
 
 export type RequestText = {
@@ -33,7 +39,7 @@ export const NO_TEXT: RequestText = { extras: {}, text: '', edit: null, formRequ
 
 /** The text rebuilt from the form's request, with the keys beside publicKey. */
 export function rebuiltText<T extends RequestText>(current: T, request: FormRequest): T {
-  return { ...current, text: textOf({ ...current.extras, ...request }), edit: null, formRequest: request };
+  return { ...current, text: requestText({ ...current.extras, ...request }), edit: null, formRequest: request };
 }
 
 /**
@@ -44,13 +50,13 @@ export function rebuiltText<T extends RequestText>(current: T, request: FormRequ
 export function followedText<T extends RequestText>(current: T, request: FormRequest, scope: RequestScope, background = false): T {
   if (!current.formRequest) return rebuiltText(current, request);
   if (background && current.edit?.status === 'unparsed') return { ...current, formRequest: request };
-  const text = follow(current.text, current.formRequest, request, current.extras);
-  const reading = readEdit(text, scope);
+  const text = followForm(current.text, current.formRequest, request, current.extras);
+  const reading = readEditedRequest(text, scope);
   return { ...current, text, edit: reading.status === 'accepted' ? null : reading, formRequest: request };
 }
 
 /** The editor's Reset: the form's request, with the keys beside publicKey the text holds, if it parses. */
 export function resetText<T extends RequestText>(current: T, request: FormRequest, scope: RequestScope): T {
-  const reading = readEdit(current.text, scope);
-  return rebuiltText({ ...current, extras: reading.status === 'unparsed' ? current.extras : extrasOf(reading.root) }, request);
+  const reading = readEditedRequest(current.text, scope);
+  return rebuiltText({ ...current, extras: reading.status === 'unparsed' ? current.extras : topLevelExtras(reading.root) }, request);
 }

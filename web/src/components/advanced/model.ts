@@ -1,8 +1,7 @@
 // The Advanced tab's logic comes from the modules in src/logic/advanced: each
 // ceremony's request, form settings and ceremony (registration/request.js,
 // algorithm-options.js, ceremony.js; authentication/request.js, ceremony.js), a
-// form change over the editor's text (editor/request-patch.js), the JSON editor
-// (editor/model.js, editor/keys.js), the hints' rules, the fake credential IDs,
+// the hints' rules, the fake credential IDs,
 // the byte fields' check, the Allow Credentials choices and the extensions'
 // availability (hints.js, fake-credentials.js, hex-input.js,
 // authentication/allow-credentials.js, authentication/capabilities.js).
@@ -24,7 +23,6 @@ import {
   enforceAuthenticatorAttachmentWithHints,
   ensureAuthenticationHintsAllowed,
 } from '@/logic/advanced/hints.js';
-import { applyJsonEditorAutoIndent, applyTabIndentation, wrapSelectionWithPair } from '@/logic/advanced/editor/keys.js';
 import { ALGORITHM_OPTIONS } from '@/logic/advanced/registration/algorithm-options.js';
 import {
   authenticationControls,
@@ -34,8 +32,6 @@ import {
   readRequestOptions,
   withAvailability,
 } from '@/logic/advanced/authentication/request.js';
-import { EDITOR_TEXT, editorTitle, readEditedRequest, requestText, topLevelExtras } from '@/logic/advanced/editor/model.js';
-import { followForm } from '@/logic/advanced/editor/request-patch.js';
 import {
   buildCreationOptions,
   changeRegistration,
@@ -117,26 +113,6 @@ export const fakeLength = fakeCredentialLength as (length: string) => { bytes: n
 export const fakeSize = fakeCredentialSize as (hex: string) => string;
 export const fakeList = normaliseFakeCredentialList as (values: unknown) => string[];
 export const withoutFake = withoutFakeCredential as (list: string[], index: number) => string[] | null;
-
-// The editor.
-type EditorLocation = { offset: number; line: number; column: number };
-export type EditedRequest =
-  | { status: 'unparsed'; message: string; location: EditorLocation | null }
-  | { status: 'refused'; root: unknown; message: string }
-  | { status: 'accepted'; root: { publicKey: Json } & Json };
-export const EDITOR_WORDS = EDITOR_TEXT as Record<'title' | 'registrationTitle' | 'authenticationTitle' | 'reset', string>;
-export const titleOf = editorTitle as (scope: 'registration' | 'authentication') => string;
-export const textOf = requestText as (options: unknown) => string;
-export const readEdit = readEditedRequest as (text: string, scope: 'registration' | 'authentication') => EditedRequest;
-export const extrasOf = topLevelExtras as (root: unknown) => Json;
-/** The editor's text after the form's request went from `before` to `after`, the rest kept as typed. */
-export const follow = followForm as (text: string, before: { publicKey: Json }, after: { publicKey: Json }, extras?: Json) => string;
-
-/** A textarea's state, which the editor's key edits change. */
-export type EditorState = { value: string; selectionStart: number; selectionEnd: number };
-export const wrapPair = wrapSelectionWithPair as (typed: EditorState, opening: string, closing: string) => void;
-export const autoIndent = applyJsonEditorAutoIndent as (typed: EditorState) => void;
-export const indent = applyTabIndentation as (typed: EditorState, shift: boolean) => void;
 
 // The ceremony and the result it keeps.
 export type RegistrationAnswer = { algo?: string; relyingParty?: Json | null; storedCredential?: Json | null; [field: string]: unknown };
