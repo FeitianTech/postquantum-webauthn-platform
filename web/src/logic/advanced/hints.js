@@ -118,24 +118,12 @@ export function applyAuthenticatorAttachmentPreference(targetOptions, allowedAtt
     }
 }
 
-/**
- * The attachments the request's hints allow; may narrow allowCredentials, and
- * throws for hints the request cannot keep. storedCredentials: the saved
- * credentials Allow Credentials may name (none when not given).
- * @param {Record<string, any>} publicKey
- * @param {{ storedCredentials?: Array<Record<string, any>> }} [options]
- * @returns {string[]}
- */
-export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
-    const { storedCredentials } = options || {};
-    const credentials = storedCredentials || [];
-    if (!publicKey || typeof publicKey !== 'object') {
-        return [];
-    }
-
+// The attachments the request allows: its hints', else its authenticatorSelection's.
+function requestAttachments(publicKey) {
     const hints = Array.isArray(publicKey.hints) ? publicKey.hints : [];
     const normalizedHints = hints.map(normalizeHintValue).filter(Boolean);
 
+    /** @type {string[]} */
     const resolvedAttachments = [];
     const seen = new Set();
 
@@ -157,96 +145,122 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
     if (!resolvedAttachments.length && selection && Object.hasOwn(selection, 'authenticatorAttachment')) {
         addAttachment(selection.authenticatorAttachment);
     }
+    return resolvedAttachments;
+}
+
+// The saved credential an allowCredentials descriptor names by its ID, or none.
+function storedCredentialFor(descriptor, credentials) {
+    if (!descriptor || typeof descriptor !== 'object') {
+        return null;
+    }
+    const hexId = extractHexFromJsonFormat(descriptor.id);
+    if (!hexId) {
+        return null;
+    }
+    return credentials.find(cred => {
+        const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
+        if (!credentialIdHex) {
+            return false;
+        }
+        return credentialIdHex.toLowerCase() === hexId.toLowerCase();
+    }) || null;
+}
+
+// When allowCredentials names a saved credential of an attachment not allowed,
+// only the saved credentials of an allowed one stay (none: no allowCredentials).
+// Gives whether it named one.
+function narrowAllowCredentials(publicKey, credentials, resolvedAttachments) {
+    const invalidDescriptor = publicKey.allowCredentials.find(descriptor => {
+        const matchingCredential = storedCredentialFor(descriptor, credentials);
+        if (!matchingCredential) {
+            return false;
+        }
+        const attachment = getStoredCredentialAttachment(matchingCredential);
+        return attachment && !resolvedAttachments.includes(attachment);
+    });
+    if (!invalidDescriptor) {
+        return false;
+    }
+    publicKey.allowCredentials = publicKey.allowCredentials.filter(descriptor => {
+        const matchingCredential = storedCredentialFor(descriptor, credentials);
+        if (!matchingCredential) {
+            return false;
+        }
+        const attachment = getStoredCredentialAttachment(matchingCredential);
+        return attachment && resolvedAttachments.includes(attachment);
+    });
+    if (!publicKey.allowCredentials.length) {
+        delete publicKey.allowCredentials;
+    }
+    return true;
+}
+
+// An empty allowCredentials, given saved credentials: with one attachment
+// allowed, the first saved credential of it (none: it stays empty); with more,
+// every saved credential of them (none: no allowCredentials).
+function fillEmptyAllowCredentials(publicKey, storedCredentials, resolvedAttachments) {
+    if (resolvedAttachments.length === 1) {
+        const allowedValue = resolvedAttachments[0];
+        const fallbackCredential = storedCredentials.find(cred => {
+            const attachment = getStoredCredentialAttachment(cred);
+            return attachment && attachment === allowedValue;
+        });
+        if (fallbackCredential) {
+            const credentialIdHex = fallbackCredential.credentialIdHex || getCredentialIdHex(fallbackCredential);
+            const formattedId = jsonBytes(credentialIdHex);
+            if (formattedId && typeof formattedId === 'object') {
+                publicKey.allowCredentials = [{
+                    type: 'public-key',
+                    id: formattedId,
+                }];
+            }
+        }
+        return;
+    }
+    const fallbackSource = storedCredentials.filter(cred => {
+        const attachment = getStoredCredentialAttachment(cred);
+        return attachment && resolvedAttachments.includes(attachment);
+    });
+    const fallbackCredentials = fallbackSource
+        .map(cred => {
+            const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
+            if (!credentialIdHex) {
+                return null;
+            }
+            return {
+                type: 'public-key',
+                id: jsonBytes(credentialIdHex),
+            };
+        })
+        .filter(Boolean);
+    if (fallbackCredentials.length > 0) {
+        publicKey.allowCredentials = fallbackCredentials;
+    } else {
+        delete publicKey.allowCredentials;
+    }
+}
+
+/**
+ * The attachments the request's hints allow; may narrow allowCredentials, and
+ * throws for hints the request cannot keep. storedCredentials: the saved
+ * credentials Allow Credentials may name (none when not given).
+ * @param {Record<string, any>} publicKey
+ * @param {{ storedCredentials?: Array<Record<string, any>> }} [options]
+ * @returns {string[]}
+ */
+export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
+    const { storedCredentials } = options || {};
+    const credentials = storedCredentials || [];
+    if (!publicKey || typeof publicKey !== 'object') {
+        return [];
+    }
+
+    const resolvedAttachments = requestAttachments(publicKey);
 
     if (Array.isArray(publicKey.allowCredentials) && resolvedAttachments.length > 0) {
-        const invalidDescriptor = publicKey.allowCredentials.find(descriptor => {
-            if (!descriptor || typeof descriptor !== 'object') {
-                return false;
-            }
-            const descriptorId = descriptor.id;
-            const hexId = extractHexFromJsonFormat(descriptorId);
-            if (!hexId) {
-                return false;
-            }
-            const matchingCredential = credentials.find(cred => {
-                const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
-                if (!credentialIdHex) {
-                    return false;
-                }
-                return credentialIdHex.toLowerCase() === hexId.toLowerCase();
-            });
-            if (!matchingCredential) {
-                return false;
-            }
-            const attachment = getStoredCredentialAttachment(matchingCredential);
-            return attachment && !resolvedAttachments.includes(attachment);
-        });
-        if (invalidDescriptor) {
-            publicKey.allowCredentials = publicKey.allowCredentials.filter(descriptor => {
-                if (!descriptor || typeof descriptor !== 'object') {
-                    return false;
-                }
-                const descriptorId = descriptor.id;
-                const hexId = extractHexFromJsonFormat(descriptorId);
-                if (!hexId) {
-                    return false;
-                }
-                const matchingCredential = credentials.find(cred => {
-                    const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
-                    if (!credentialIdHex) {
-                        return false;
-                    }
-                    return credentialIdHex.toLowerCase() === hexId.toLowerCase();
-                });
-                if (!matchingCredential) {
-                    return false;
-                }
-                const attachment = getStoredCredentialAttachment(matchingCredential);
-                return attachment && resolvedAttachments.includes(attachment);
-            });
-            if (!publicKey.allowCredentials.length) {
-                delete publicKey.allowCredentials;
-            }
-        } else if (publicKey.allowCredentials.length === 0 && Array.isArray(storedCredentials) && storedCredentials.length > 0) {
-            if (resolvedAttachments.length === 1) {
-                const allowedValue = resolvedAttachments[0];
-                const fallbackCredential = storedCredentials.find(cred => {
-                    const attachment = getStoredCredentialAttachment(cred);
-                    return attachment && attachment === allowedValue;
-                });
-                if (fallbackCredential) {
-                    const credentialIdHex = fallbackCredential.credentialIdHex || getCredentialIdHex(fallbackCredential);
-                    const formattedId = jsonBytes(credentialIdHex);
-                    if (formattedId && typeof formattedId === 'object') {
-                        publicKey.allowCredentials = [{
-                            type: 'public-key',
-                            id: formattedId,
-                        }];
-                    }
-                }
-            } else {
-                const fallbackSource = storedCredentials.filter(cred => {
-                    const attachment = getStoredCredentialAttachment(cred);
-                    return attachment && resolvedAttachments.includes(attachment);
-                });
-                const fallbackCredentials = fallbackSource
-                    .map(cred => {
-                        const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
-                        if (!credentialIdHex) {
-                            return null;
-                        }
-                        return {
-                            type: 'public-key',
-                            id: jsonBytes(credentialIdHex),
-                        };
-                    })
-                    .filter(Boolean);
-                if (fallbackCredentials.length > 0) {
-                    publicKey.allowCredentials = fallbackCredentials;
-                } else {
-                    delete publicKey.allowCredentials;
-                }
-            }
+        const narrowed = narrowAllowCredentials(publicKey, credentials, resolvedAttachments);
+        if (!narrowed && publicKey.allowCredentials.length === 0 && Array.isArray(storedCredentials) && storedCredentials.length > 0) {
+            fillEmptyAllowCredentials(publicKey, storedCredentials, resolvedAttachments);
         }
     }
 
