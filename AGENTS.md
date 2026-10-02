@@ -290,7 +290,8 @@ Guards on the code and the checkout (`tests/app/tooling/`; each `ALLOWED` list m
 - `test_code_size_ratchet.py`: no function over 80 lines or module over 700 in `server/app`,
   with no exceptions.
 - `test_test_names.py`: no test file or test named for how it was written (an uplift, a batch, a
-  residual, a branch focus, coverage) rather than what it tests.
+  residual, a branch focus, coverage) rather than what it tests; in `web/`, every test file is
+  named for a module beside it, and no file name or test title says such a word or "edge cases".
 - `test_test_layout.py`: tests import first-party modules at the top, nothing writes
   `sys.modules`, no helper is defined twice, and (with the `tests/fixture_values.py` plugin) no
   fixture's value is or holds a module.
