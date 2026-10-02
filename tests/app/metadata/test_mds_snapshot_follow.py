@@ -134,13 +134,13 @@ def test_a_failed_follow_keeps_the_snapshot(instance, client, failure):
 
 def test_a_set_pruned_under_a_following_instance_is_taken_on_the_next_check(instance, client):
     directory, bucket = instance
-    pointer = snapshot_sets.publish(snapshot_version(8)).pointer
+    snapshot_sets.publish(snapshot_version(8))
     raced = []
 
-    # While this instance downloads no. 8, two more publishes land: no. 10
-    # deletes no. 8, two back, under it.
+    # Once this instance has read the pointer to no. 8, two more publishes land
+    # before it fetches the set: no. 10 deletes no. 8, two back, under it.
     def _publishers(name):
-        if name.startswith(pointer["set"]) and not raced:
+        if name == "mds/current.json" and not raced:
             raced.append(name)
             snapshot_sets.publish(snapshot_version(9))
             snapshot_sets.publish(snapshot_version(10))

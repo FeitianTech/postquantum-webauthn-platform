@@ -146,6 +146,15 @@ def test_a_set_that_is_not_the_one_named_is_refused(bucket):
         snapshot_sets.download_set(pointer)
 
 
+def test_a_set_is_fetched_at_once(bucket):
+    pointer = snapshot_sets.publish(snapshot_version(8)).pointer
+    reading = threading.Barrier(len(mds_files.SNAPSHOT_FILENAMES), timeout=5)
+    # Each read waits until every file of the set is being read.
+    bucket.on_download.append(lambda name: reading.wait() if name.startswith(pointer["set"]) else None)
+
+    assert snapshot_sets.download_set(pointer) == snapshot_version(8)
+
+
 def test_a_pointer_is_usable_only_in_this_format(bucket):
     pointer = snapshot_sets.publish(snapshot_version(8)).pointer
     assert snapshot_sets.usable(pointer)

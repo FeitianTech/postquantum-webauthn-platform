@@ -24,6 +24,7 @@ import logging
 import os
 import secrets
 from collections.abc import Mapping
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -174,16 +175,24 @@ def publish(files: Mapping[str, bytes]) -> Published:
     return Published("published", pointer)
 
 
-def download_set(pointer: Mapping[str, Any], *, timeout: float | None = None) -> dict[str, bytes]:
-    """The seven files of the set ``pointer`` names, each checked against it."""
+def _download_file(pointer: Mapping[str, Any], name: str, timeout: float | None) -> bytes:
+    expected = pointer["files"][name]
+    data, _generation = cloud.download_bytes_with_generation(pointer["set"] + name, timeout=timeout)
+    if data is None:
+        raise SnapshotSetError(f"{pointer['set']}{name} is missing")
+    if len(data) != expected.get("size") or hashlib.sha256(data).hexdigest() != expected.get("sha256"):
+        raise SnapshotSetError(f"{pointer['set']}{name} is not the file the pointer names")
+    return data
 
-    files: dict[str, bytes] = {}
-    for name in mds_files.SNAPSHOT_FILENAMES:
-        expected = pointer["files"][name]
-        data, _generation = cloud.download_bytes_with_generation(pointer["set"] + name, timeout=timeout)
-        if data is None:
-            raise SnapshotSetError(f"{pointer['set']}{name} is missing")
-        if len(data) != expected.get("size") or hashlib.sha256(data).hexdigest() != expected.get("sha256"):
-            raise SnapshotSetError(f"{pointer['set']}{name} is not the file the pointer names")
-        files[name] = data
-    return files
+
+def download_set(pointer: Mapping[str, Any], *, timeout: float | None = None) -> dict[str, bytes]:
+    """The seven files of the set ``pointer`` names, each checked against it.
+
+    They are fetched at once (a cold instance waits for the largest, not for
+    all of them in turn); the first, in ``SNAPSHOT_FILENAMES`` order, that is
+    missing or not the file named is the error, whichever failed first."""
+
+    names = mds_files.SNAPSHOT_FILENAMES
+    with ThreadPoolExecutor(max_workers=len(names)) as pool:
+        downloads = [pool.submit(_download_file, pointer, name, timeout) for name in names]
+    return {name: download.result() for name, download in zip(names, downloads)}
