@@ -68,6 +68,14 @@ function postJson(path, body) {
  * failure's sentence (the result panel's input, shared/ceremony-result.js,
  * when the server answered the assertion; the credential it refused, if it
  * named one). A refusal of the hints says its own message alone.
+ * @param {string} text
+ * @param {{
+ *     ensureHints: (publicKey: Record<string, any>) => unknown,
+ *     prepareForServer: () => unknown,
+ *     hashAlgorithm: () => string,
+ *     onStart?: () => void,
+ *     onProgress?: (text: string) => void,
+ * }} steps
  */
 export async function authenticateAdvancedCredential(text, {
     ensureHints,
@@ -82,7 +90,7 @@ export async function authenticateAdvancedCredential(text, {
 
         try {
             ensureHints(parsed.publicKey);
-        } catch (hintError) {
+        } catch (/** @type {any} */ hintError) {
             return { authenticated: false, text: hintError.message || ADVANCED_CEREMONY_TEXT.invalidHints };
         }
 

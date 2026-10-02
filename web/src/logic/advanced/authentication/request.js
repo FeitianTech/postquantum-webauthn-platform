@@ -74,6 +74,7 @@ export function allowedCredentials(storedCredentials, selection, allowedAttachme
  */
 export function buildRequestOptions(settings, context = {}) {
     const hints = settings.hints;
+    /** @type {Record<string, any>} */
     const publicKey = {
         challenge: jsonBytes(settings.challenge),
         timeout: requestTimeout(settings.timeout),

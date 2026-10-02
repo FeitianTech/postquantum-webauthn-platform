@@ -7,11 +7,7 @@
     "paths": {}
   },
   "include": [
-    "src/logic/shared/**/*.js",
-    "src/logic/credentials/**/*.js",
-    "src/logic/codec/**/*.js",
-    "src/logic/browser/**/*.js",
-    "src/logic/mds/**/*.js"
+    "src/logic/**/*.js"
   ],
   "exclude": [
     "src/logic/**/*.test.js"

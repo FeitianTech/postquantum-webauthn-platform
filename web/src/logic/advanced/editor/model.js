@@ -85,6 +85,7 @@ class JsonStop {
 // A reader of JSON that only finds where text stops being JSON (RFC 8259).
 function findJsonStop(text) {
     let index = 0;
+    /** @type {() => never} */
     const stop = () => {
         throw new JsonStop(index);
     };
@@ -169,7 +170,7 @@ function findJsonStop(text) {
             stop();
         }
         return null;
-    } catch (error) {
+    } catch (/** @type {any} */ error) {
         return error.offset;
     }
 }
@@ -208,7 +209,7 @@ export function readEditedRequest(text, scope) {
     let root;
     try {
         root = JSON.parse(text || '{}');
-    } catch (error) {
+    } catch (/** @type {any} */ error) {
         return {
             status: 'unparsed',
             message: validationFailedText(error.message),
@@ -217,7 +218,7 @@ export function readEditedRequest(text, scope) {
     }
     try {
         VALIDATORS[scope](checkEditorStructure(root).publicKey);
-    } catch (error) {
+    } catch (/** @type {any} */ error) {
         return { status: 'refused', root, message: validationFailedText(error.message) };
     }
     return { status: 'accepted', root };

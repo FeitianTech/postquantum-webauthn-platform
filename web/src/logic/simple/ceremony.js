@@ -74,6 +74,8 @@ function postJson(path, email, body) {
  * FailedResponseError for a refused request, or the browser's error. A browser
  * without WebAuthn's JSON methods (shared/native-json.js) is asked
  * nothing: an UnsupportedBrowserError before the first request.
+ * @param {string} email
+ * @param {{ onProgress?: (text: string) => void }} [steps]
  */
 export async function registerSimplePasskey(email, { onProgress = () => {} } = {}) {
     requireNativeJson();
@@ -104,6 +106,12 @@ export async function registerSimplePasskey(email, { onProgress = () => {} } = {
  * `{answer, result}` on success, `{failure, result}` when the server refused the
  * assertion (readFailedResponse's reading; `result` is what the result panel
  * shows: shared/ceremony-result.js); throws for anything before that.
+ * @param {string} email
+ * @param {{
+ *     credentialsFor: (email: string) => Array<Record<string, any>>,
+ *     prepareForServer: (records: Array<Record<string, any>>) => unknown,
+ *     onProgress?: (text: string) => void,
+ * }} steps
  */
 export async function authenticateSimplePasskey(email, { credentialsFor, prepareForServer, onProgress = () => {} }) {
     requireNativeJson();

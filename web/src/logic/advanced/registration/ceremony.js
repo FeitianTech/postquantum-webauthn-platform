@@ -7,6 +7,7 @@
 import { createCredential, parseCreationOptions, requireNativeJson } from '../../shared/native-json.js';
 import { bufferSourceToUint8Array, bytesToHex } from '../../shared/bytes.js';
 import { FailedResponseError, readFailedResponse } from '../../shared/failed-response.js';
+/** @import { CeremonyResultInput } from '../../shared/ceremony-result.js' */
 
 export const ADVANCED_CEREMONY_TEXT = {
     missingPublicKey: 'Invalid JSON structure: Missing "publicKey" property',
@@ -216,6 +217,20 @@ function postJson(path, body) {
  * (the result panel's input, shared/ceremony-result.js). Gives
  * `{registered: true, answer, credential, credentialJson, publicKey, record}`,
  * or `{registered: false, text, context}` with the failure's sentence.
+ * @param {string} text
+ * @param {{
+ *     enforceHints: (publicKey: Record<string, any>) => string[],
+ *     applyAttachmentPreference: (
+ *         options: { publicKey: PublicKeyCredentialCreationOptions },
+ *         attachments: string[],
+ *         ...sources: unknown[]
+ *     ) => void,
+ *     minPinLength: () => boolean,
+ *     onStart?: () => void,
+ *     onProgress?: (text: string) => void,
+ *     onWarning?: (text: string) => void,
+ *     onResult?: (result: CeremonyResultInput) => void,
+ * }} steps
  */
 export async function registerAdvancedCredential(text, {
     enforceHints,
@@ -226,6 +241,12 @@ export async function registerAdvancedCredential(text, {
     onWarning = () => {},
     onResult = () => {},
 }) {
+    /**
+     * @type {{
+     *     publicKey: Record<string, any> | null,
+     *     createOptions: { publicKey: PublicKeyCredentialCreationOptions } | null,
+     * }}
+     */
     const context = { publicKey: null, createOptions: null };
 
     try {
