@@ -1,12 +1,30 @@
 // The Advanced tab's authentication, with no DOM: the request the editor holds,
 // checked; what is asked of the server and of the authenticator, in what order;
 // what each step and each outcome says; what the result panel shows. What the
-// form decides is given: the hints' check, the records sent to the server, and
-// the two values it reads from the form as the ceremony runs.
+// form decides is given: the hints' check over the credentials it lists, and the
+// value it reads from the form as the ceremony runs.
 
+import { prepareAdvancedCredentialsForServer } from '../../credentials/storage/local/advanced-credentials.js';
 import { getAssertion, parseRequestOptions, requireNativeJson } from '../../shared/native-json.js';
 import { FailedResponseError, readFailedResponse } from '../../shared/failed-response.js';
 import { ADVANCED_CEREMONY_TEXT } from '../registration/ceremony.js';
+
+/** @import { CeremonyResultInput } from '../../shared/ceremony-result.js' */
+
+/**
+ * What the server answered an assertion it accepted.
+ * @typedef {{ authenticatedCredentialId?: string, signCount?: number, [field: string]: unknown }} AuthenticationAnswer
+ */
+
+/**
+ * An authentication's end: the server's answer and the result panel's input, or
+ * the failure's sentence (with the result and the credential the server refused,
+ * when it answered the assertion).
+ * @typedef {(
+ *     | { authenticated: true, answer: AuthenticationAnswer, result: CeremonyResultInput }
+ *     | { authenticated: false, text: string, result?: CeremonyResultInput, failedCredentialId?: string | null }
+ * )} AuthenticationOutcome
+ */
 
 export const ADVANCED_ASSERTION_TEXT = {
     missingChallenge: 'Invalid CredentialRequestOptions: Missing required "challenge" property',
@@ -24,7 +42,11 @@ const AUTHENTICATION_ERROR_TEXT = {
     SecurityError: 'Security error - check your connection and try again',
 };
 
-/** What a failed authentication says: the browser's refusals by name, anything else by its own message. */
+/**
+ * What a failed authentication says: the browser's refusals by name, anything else by its own message.
+ * @param {any} error
+ * @returns {string}
+ */
 export function advancedAuthenticationFailureText(error) {
     const message = Object.hasOwn(AUTHENTICATION_ERROR_TEXT, error.name)
         ? AUTHENTICATION_ERROR_TEXT[error.name]
@@ -58,10 +80,10 @@ function postJson(path, body) {
 }
 
 /**
- * Authenticates with the editor's text. The form's views give: ensureHints
- * (the hints' check, which may narrow allowCredentials and may throw),
- * prepareForServer() (the records the server is sent), and hashAlgorithm() (the
- * Hash Algorithm, read when the ceremony gets there). It says what it does
+ * Authenticates with the editor's text, sending the server the advanced records
+ * this browser keeps. The form's views give: ensureHints (the hints' check, which
+ * may narrow allowCredentials and may throw) and hashAlgorithm() (the Hash
+ * Algorithm, read when the ceremony gets there). It says what it does
  * through onStart (the request checked: the last ceremony's messages may go)
  * and onProgress. Gives `{authenticated: true, answer, result}`, or
  * `{authenticated: false, text, result, failedCredentialId}` with the
@@ -71,15 +93,14 @@ function postJson(path, body) {
  * @param {string} text
  * @param {{
  *     ensureHints: (publicKey: Record<string, any>) => unknown,
- *     prepareForServer: () => unknown,
  *     hashAlgorithm: () => string,
  *     onStart?: () => void,
  *     onProgress?: (text: string) => void,
  * }} steps
+ * @returns {Promise<AuthenticationOutcome>}
  */
 export async function authenticateAdvancedCredential(text, {
     ensureHints,
-    prepareForServer,
     hashAlgorithm,
     onStart = () => {},
     onProgress = () => {},
@@ -97,7 +118,7 @@ export async function authenticateAdvancedCredential(text, {
         onStart();
         onProgress(ADVANCED_ASSERTION_TEXT.detecting);
 
-        const storedCredentials = prepareForServer();
+        const storedCredentials = prepareAdvancedCredentialsForServer();
         const response = await postJson('/api/advanced/authenticate/begin', {
             ...parsed,
             __storedCredentials: storedCredentials,

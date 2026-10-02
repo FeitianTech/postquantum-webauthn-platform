@@ -184,6 +184,10 @@ export function updateAdvancedCredentialSignCount(credentialId, signCount, stora
 
 export { updateAdvancedCredentialRegistrationSnapshot };
 
+/**
+ * @param {Array<Record<string, any>> | null} [credentials] The records sent (the stored ones when not given).
+ * @returns {Array<Record<string, unknown>>}
+ */
 export function prepareAdvancedCredentialsForServer(credentials = null) {
     const source = Array.isArray(credentials) ? credentials : getAllAdvancedCredentials();
     return prepareAdvancedCredentialsForServerFromSource(source);

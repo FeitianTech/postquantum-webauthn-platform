@@ -2,10 +2,10 @@ import { TextField } from '@/components/ui/Field';
 import { ALLOW_CREDENTIALS_TEXT } from '@/logic/advanced/authentication/allow-credentials.js';
 import { FAKE_CREDENTIAL_TEXT } from '@/logic/advanced/fake-credentials.js';
 import { HINT_VALUES } from '@/logic/advanced/hints.js';
+import { authenticationControls } from '@/logic/advanced/authentication/request.js';
 
 import { About, Chip, ChipGroupField, Chips, FakeCredentialField, FormSection, HexField, SelectField, toggled } from './FieldControls';
 import { AUTHENTICATION_FIELDS, AUTHENTICATION_SECTIONS } from './fieldText';
-import { lockedAuthFields } from './model';
 import type { AuthenticationRequest } from './useAuthenticationRequest';
 
 const FIELDS = AUTHENTICATION_FIELDS;
@@ -16,7 +16,7 @@ const WIDE = '@lg:col-span-full';
 // the saved credentials cannot ask for is locked, with a note saying why.
 export function AuthenticationForm({ request }: { request: AuthenticationRequest }) {
   const { settings, change, availability } = request;
-  const locked = lockedAuthFields(settings, availability);
+  const locked = authenticationControls(settings, availability);
   const [selection, other, extensions] = AUTHENTICATION_SECTIONS;
   const hintOrder = [...HINT_VALUES, ...settings.hints.filter((hint) => !HINT_VALUES.includes(hint))];
   const allowOptions = [

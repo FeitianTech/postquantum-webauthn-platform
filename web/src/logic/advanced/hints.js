@@ -118,9 +118,17 @@ export function applyAuthenticatorAttachmentPreference(targetOptions, allowedAtt
     }
 }
 
-// storedCredentials: the saved credentials Allow Credentials may name (none when not given).
+/**
+ * The attachments the request's hints allow; may narrow allowCredentials, and
+ * throws for hints the request cannot keep. storedCredentials: the saved
+ * credentials Allow Credentials may name (none when not given).
+ * @param {Record<string, any>} publicKey
+ * @param {{ storedCredentials?: Array<Record<string, any>> }} [options]
+ * @returns {string[]}
+ */
 export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
     const { storedCredentials } = options || {};
+    const credentials = storedCredentials || [];
     if (!publicKey || typeof publicKey !== 'object') {
         return [];
     }
@@ -160,7 +168,7 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
             if (!hexId) {
                 return false;
             }
-            const matchingCredential = (storedCredentials || []).find(cred => {
+            const matchingCredential = credentials.find(cred => {
                 const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
                 if (!credentialIdHex) {
                     return false;
@@ -183,7 +191,7 @@ export function ensureAuthenticationHintsAllowed(publicKey, options = {}) {
                 if (!hexId) {
                     return false;
                 }
-                const matchingCredential = storedCredentials.find(cred => {
+                const matchingCredential = credentials.find(cred => {
                     const credentialIdHex = cred.credentialIdHex || getCredentialIdHex(cred);
                     if (!credentialIdHex) {
                         return false;

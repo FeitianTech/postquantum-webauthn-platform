@@ -11,17 +11,17 @@ import { readEditedRequest, topLevelExtras } from '@/logic/advanced/editor/model
 import type { SavedCredential } from '@/logic/credentials/saved-list.js';
 import { fakeCredentialLength, normaliseFakeCredentialList, withoutFakeCredential } from '@/logic/advanced/fake-credentials.js';
 import { generateRandomHex } from '@/logic/shared/bytes.js';
-
+import { authenticationAvailability } from '@/logic/advanced/authentication/capabilities.js';
 import {
   type AuthenticationField,
   type AuthenticationSettings,
-  authDefaults,
-  availabilityOf,
-  buildAuthRequest,
-  changeAuth,
-  readAuthRequest,
-  settleAvailability,
-} from './model';
+  authenticationDefaults,
+  buildRequestOptions,
+  changeAuthentication,
+  readRequestOptions,
+  withAvailability,
+} from '@/logic/advanced/authentication/request.js';
+
 import { NO_TEXT, type RequestText, followedText, rebuiltText, resetText } from './requestEditor';
 
 // An authentication's request as the Advanced tab holds it, as the
@@ -57,7 +57,7 @@ type Action =
   | { type: 'reset-editor'; context: Context };
 
 function formRequestOf(settings: AuthenticationSettings, fakeAllow: string[], context: Context) {
-  return buildAuthRequest(settings, { hostname: context.hostname, storedCredentials: context.storedCredentials, fakeAllowCredentials: fakeAllow });
+  return buildRequestOptions(settings, { hostname: context.hostname, storedCredentials: context.storedCredentials, fakeAllowCredentials: fakeAllow });
 }
 
 /** What Allow Credentials offers with these settings: the credentials their hints allow. */
@@ -68,7 +68,7 @@ function choicesFor(settings: AuthenticationSettings, context: Context): AllowCh
 /** The settings as the saved credentials leave them: a choice still offered, and only the extensions they can use. */
 function settled(settings: AuthenticationSettings, context: Context): AuthenticationSettings {
   const allowCredentials = keptChoice(choicesFor(settings, context), settings.allowCredentials);
-  return settleAvailability({ ...settings, allowCredentials }, availabilityOf(context.storedCredentials, allowCredentials));
+  return withAvailability({ ...settings, allowCredentials }, authenticationAvailability(context.storedCredentials, allowCredentials));
 }
 
 /** The settings with their choice still offered: a hint that refuses the chosen credential brings All back. */
@@ -91,7 +91,7 @@ function reduce(current: RequestState, action: Action): RequestState {
       );
     }
     case 'change': {
-      const changed = changeAuth(current.settings, action.field, action.value);
+      const changed = changeAuthentication(current.settings, action.field, action.value);
       // A credential chosen is judged alone: what it cannot ask for goes. The
       // hints change what is offered: a choice they refuse falls back to All.
       const settings =
@@ -116,7 +116,7 @@ function reduce(current: RequestState, action: Action): RequestState {
       if (edit.status !== 'accepted') return { ...current, text: action.text, edit };
       // Read against every credential the request can name; then the edit's own
       // hints decide whether its one credential is offered, else All.
-      const read = readAuthRequest(edit.root.publicKey, current.settings, {
+      const read = readRequestOptions(edit.root.publicKey, current.settings, {
         storedCredentials: action.context.storedCredentials,
         choices: ['all', 'empty', ...allowCredentialChoices(action.context.storedCredentials, []).map((choice) => choice.value)],
       });
@@ -141,7 +141,7 @@ function reduce(current: RequestState, action: Action): RequestState {
 
 const EMPTY: RequestState = {
   ...NO_TEXT,
-  settings: { ...authDefaults(), challenge: '' },
+  settings: { ...authenticationDefaults(), challenge: '' },
   fakeAllow: [],
   fakeMessage: null,
   started: false,
@@ -162,7 +162,7 @@ export function useAuthenticationRequest() {
   useEffect(() => {
     if (!saved.loaded || current.started) return;
     contextRef.current = { ...contextRef.current, hostname: window.location.hostname };
-    dispatch({ type: 'start', settings: { ...authDefaults(), challenge: generateRandomHex(32), largeBlobWrite: generateRandomHex(32) }, context: contextRef.current });
+    dispatch({ type: 'start', settings: { ...authenticationDefaults(), challenge: generateRandomHex(32), largeBlobWrite: generateRandomHex(32) }, context: contextRef.current });
   }, [saved.loaded, current.started]);
 
   // The saved credentials changed: a choice that went falls back to All.
@@ -211,13 +211,13 @@ export function useAuthenticationRequest() {
   const resetForm = useCallback(() => {
     dispatch({
       type: 'start',
-      settings: { ...authDefaults(), hashAlgorithm: settingsRef.current.hashAlgorithm, challenge: generateRandomHex(32) },
+      settings: { ...authenticationDefaults(), hashAlgorithm: settingsRef.current.hashAlgorithm, challenge: generateRandomHex(32) },
       context: context(),
     });
   }, []);
 
   const availability = useMemo(
-    () => availabilityOf(storedCredentials, current.settings.allowCredentials),
+    () => authenticationAvailability(storedCredentials, current.settings.allowCredentials),
     [storedCredentials, current.settings.allowCredentials],
   );
 

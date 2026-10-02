@@ -7,11 +7,38 @@ import { getCredentialIdHex, getStoredCredentialAttachment } from '../../credent
 import { deriveAllowedAttachmentsFromHints } from '../hints.js';
 import { decodeJsonBinaryToHex, requestTimeout } from '../registration/request.js';
 
+/** @import { Availabilities } from './capabilities.js' */
+
+/**
+ * The authentication form's settings: byte fields as hex text, numbers as text.
+ * Allow Credentials is `all`, `empty`, or a saved credential's ID (hex).
+ * @typedef {object} AuthenticationSettings
+ * @property {string} userVerification
+ * @property {string} allowCredentials
+ * @property {string} fakeCredLength
+ * @property {string} challenge
+ * @property {string} timeout
+ * @property {string[]} hints
+ * @property {string} hashAlgorithm
+ * @property {string} largeBlob
+ * @property {string} largeBlobWrite
+ * @property {string} prfFirst
+ * @property {string} prfSecond
+ */
+
+/** @typedef {keyof AuthenticationSettings} AuthenticationField */
+
+/**
+ * What a request is built against: the relying party, the saved credentials and the fake IDs.
+ * @typedef {{ hostname: string, storedCredentials: Array<Record<string, any>>, fakeAllowCredentials: string[] }} AuthenticationContext
+ */
+
 /**
  * The settings the form starts from and a reset returns to, without the values
  * drawn at random (the challenge, and the largeBlob write value the page starts
  * with). Byte fields are hex text as typed; the timeout and the fake ID length
  * are text. Allow Credentials is `all`, `empty` or a saved credential's ID (hex).
+ * @returns {Omit<AuthenticationSettings, 'challenge'>}
  */
 export function authenticationDefaults() {
     return {
@@ -71,6 +98,11 @@ export function allowedCredentials(storedCredentials, selection, allowedAttachme
  * The request the settings build, `{ publicKey }`. context: hostname (the
  * relying party), storedCredentials (the list's records), fakeAllowCredentials
  * (hex), which follow the saved ones.
+ */
+/**
+ * @param {AuthenticationSettings} settings
+ * @param {Partial<AuthenticationContext>} [context]
+ * @returns {{ publicKey: Record<string, any> }}
  */
 export function buildRequestOptions(settings, context = {}) {
     const hints = settings.hints;
@@ -175,6 +207,10 @@ function allowChoiceOf(savedIds, previous, hints, context) {
  * offered credentials (context.choices, their IDs) is that credential; else
  * All. Also the IDs its allowCredentials holds that are no saved credential's
  * (context.storedCredentials), as the fake IDs, as they are spelled there.
+ * @param {Record<string, any>} publicKey
+ * @param {AuthenticationSettings} previous
+ * @param {{ storedCredentials?: Array<Record<string, any>>, choices?: string[] }} [context]
+ * @returns {{ settings: AuthenticationSettings, fakeAllowCredentials: string[] }}
  */
 export function readRequestOptions(publicKey, previous, context = {}) {
     const settings = { ...previous };
@@ -192,6 +228,7 @@ export function readRequestOptions(publicKey, previous, context = {}) {
 
     settings.hints = Array.isArray(publicKey.hints) ? publicKey.hints : [];
 
+    /** @type {string[]} */
     let fakeAllowCredentials = [];
     if (!Object.hasOwn(publicKey, 'allowCredentials')) {
         settings.allowCredentials = 'empty';
@@ -229,10 +266,18 @@ export function readRequestOptions(publicKey, previous, context = {}) {
     return { settings, fakeAllowCredentials };
 }
 
-/** The settings after one of them changes, with the form's rule: an empty first prf evaluation empties the second. */
+/**
+ * The settings after one of them changes, with the form's rule: an empty first prf evaluation empties the second.
+ * @template {AuthenticationField} F
+ * @param {AuthenticationSettings} settings
+ * @param {F} field
+ * @param {AuthenticationSettings[F]} value
+ * @returns {AuthenticationSettings}
+ */
 export function changeAuthentication(settings, field, value) {
+    /** @type {AuthenticationSettings} */
     const next = { ...settings, [field]: value };
-    if (field === 'prfFirst' && !value.trim()) {
+    if (field === 'prfFirst' && !next.prfFirst.trim()) {
         next.prfSecond = '';
     }
     return next;
@@ -242,6 +287,9 @@ export function changeAuthentication(settings, field, value) {
  * The settings as the extensions' availability leaves them
  * (../auth/capabilities.js): no largeBlob, and no value to write, when it may
  * not be asked for; no prf evaluation when prf may not be.
+ * @param {AuthenticationSettings} settings
+ * @param {Availabilities} availability
+ * @returns {AuthenticationSettings}
  */
 export function withAvailability(settings, availability) {
     const next = { ...settings };
@@ -256,7 +304,12 @@ export function withAvailability(settings, availability) {
     return next;
 }
 
-/** Which of the settings' fields the form cannot change as they stand, given the extensions' availability. */
+/**
+ * Which of the settings' fields the form cannot change as they stand, given the extensions' availability.
+ * @param {AuthenticationSettings} settings
+ * @param {Availabilities} availability
+ * @returns {{ largeBlob: boolean, largeBlobWrite: boolean, prfFirst: boolean, prfSecond: boolean }}
+ */
 export function authenticationControls(settings, availability) {
     return {
         largeBlob: !availability.largeBlob.available,

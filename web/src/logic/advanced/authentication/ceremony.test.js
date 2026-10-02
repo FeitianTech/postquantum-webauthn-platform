@@ -9,9 +9,13 @@ import {
 } from './ceremony.js';
 import { ADVANCED_CEREMONY_TEXT } from '../registration/ceremony.js';
 import { ensureAuthenticationHintsAllowed } from '../hints.js';
+import { prepareAdvancedCredentialsForServer } from '../../credentials/storage/local/advanced-credentials.js';
 import { UPDATE_BROWSER_TEXT } from '../../shared/native-json.js';
 import { answerResponse, credentialToJSON, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
 import { advancedAuthentications, recordedAssertion } from '@/test/logic/advanced/advanced-answers.js';
+
+// The advanced records this browser keeps, as the server is sent them.
+vi.mock('../../credentials/storage/local/advanced-credentials.js', () => ({ prepareAdvancedCredentialsForServer: vi.fn() }));
 
 const BEGIN = '/api/advanced/authenticate/begin';
 const COMPLETE = '/api/advanced/authenticate/complete';
@@ -42,11 +46,10 @@ function sent(call) {
 
 const asked = () => fetch.mock.calls.map(([url]) => url);
 
-/** What the form's views give the ceremony: the real hints' check over the saved records, the records sent, two form values. */
+/** What the form's views give the ceremony: the real hints' check over the saved records, and a form value. */
 function formOptions(overrides = {}) {
   return {
     ensureHints: vi.fn((publicKey) => ensureAuthenticationHintsAllowed(publicKey, { storedCredentials: records })),
-    prepareForServer: vi.fn(() => STORED),
     hashAlgorithm: vi.fn(() => 'SHA-384'),
     onStart: vi.fn(),
     onProgress: vi.fn(),
@@ -60,6 +63,7 @@ function authenticatorGiving(assertion) {
 }
 
 beforeEach(() => {
+  vi.mocked(prepareAdvancedCredentialsForServer).mockImplementation(() => STORED);
   authenticator = installAuthenticator(vi, { get: recordedAssertion(first) });
 });
 

@@ -5,6 +5,12 @@
 // when it may not. DOM-free.
 import { getCredentialIdHex } from '../../credentials/record-fields.js';
 
+/**
+ * Whether an extension may be asked for, and the note when not.
+ * @typedef {{ available: boolean, message: string }} Availability
+ * @typedef {{ largeBlob: Availability, prf: Availability }} Availabilities
+ */
+
 export const CAPABILITY_TEXT = {
     noLargeBlob: 'No largeBlob capable credentials available',
     selectedNoLargeBlob: 'Selected credential does not support largeBlob.',
@@ -109,6 +115,9 @@ export function prfAvailability(storedCredentials, selectedCredential = null) {
 /**
  * Both, for an Allow Credentials choice: a saved credential's ID (hex) is
  * judged alone; All and Empty judge the saved credentials.
+ * @param {Array<Record<string, any>>} storedCredentials
+ * @param {string} selection
+ * @returns {Availabilities}
  */
 export function authenticationAvailability(storedCredentials, selection) {
     const selected = selection && selection !== 'all' && selection !== 'empty'

@@ -3,8 +3,14 @@ import { useCallback, useRef, useState } from 'react';
 import { useSavedCredentials } from '@/components/credentials/useSavedCredentials';
 import { useToast } from '@/components/ui/Toast';
 import type { CeremonyResultInput } from '@/logic/shared/ceremony-result.js';
+import {
+  ADVANCED_ASSERTION_TEXT,
+  advancedAuthenticationFailureText,
+  authenticateAdvancedCredential,
+} from '@/logic/advanced/authentication/ceremony.js';
+import { ensureAuthenticationHintsAllowed } from '@/logic/advanced/hints.js';
+import { updateAdvancedCredentialSignCount } from '@/logic/credentials/storage/local/advanced-credentials.js';
 
-import { ASSERTION_WORDS, assertionFailureText, authenticate, checkHints, keepAdvancedSignCount, recordsForServer } from './model';
 import type { AuthenticationRequest } from './useAuthenticationRequest';
 
 // The Advanced tab's authentication, in the steps and words of
@@ -33,9 +39,8 @@ export function useAuthenticationCeremony(request: AuthenticationRequest) {
     try {
       const { text, storedCredentials } = latest.current;
       // The two form values are read when the ceremony gets to them.
-      const outcome = await authenticate(text, {
-        ensureHints: (publicKey) => checkHints(publicKey, { storedCredentials }),
-        prepareForServer: recordsForServer,
+      const outcome = await authenticateAdvancedCredential(text, {
+        ensureHints: (publicKey) => ensureAuthenticationHintsAllowed(publicKey, { storedCredentials }),
         hashAlgorithm: () => latest.current.settings.hashAlgorithm,
         onStart: () => {
           setFailure(null);
@@ -50,17 +55,17 @@ export function useAuthenticationCeremony(request: AuthenticationRequest) {
         return;
       }
 
-      toast({ tone: 'success', message: ASSERTION_WORDS.authenticated });
+      toast({ tone: 'success', message: ADVANCED_ASSERTION_TEXT.authenticated });
       setResult(outcome.result);
       const { authenticatedCredentialId, signCount } = outcome.answer;
       if (authenticatedCredentialId) {
-        keepAdvancedSignCount(authenticatedCredentialId, typeof signCount === 'number' ? signCount : undefined);
+        updateAdvancedCredentialSignCount(authenticatedCredentialId, typeof signCount === 'number' ? signCount : undefined);
         saved.flashCredential(authenticatedCredentialId, 'success');
         saved.refresh();
       }
       latest.current.redraw();
     } catch (error) {
-      setFailure(assertionFailureText(error));
+      setFailure(advancedAuthenticationFailureText(error));
     } finally {
       busy.current = false;
       setRunning(false);
