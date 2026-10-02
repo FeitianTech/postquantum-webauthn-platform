@@ -20,7 +20,6 @@ import { ExplorerRow } from './ExplorerRow';
 import { ROW_GRID } from './grid';
 import { EXPLORER_COLUMNS, type ExplorerColumn } from './columns';
 
-const normaliseWidths = normaliseExplorerColumnWidths as (widths: number[], minWidth?: number) => number[];
 const KEY_STEP = 16;
 // The columns' widths, set on the table and read by every row's grid.
 const COLUMNS_PROPERTY = '--mds-columns';
@@ -295,7 +294,7 @@ export function ExplorerTable({
   const resize = useCallback((index: number, width: number) => {
     setWidths((current) => {
       const next = [...current];
-      [next[index]] = normaliseWidths([width], minimumWidth(EXPLORER_COLUMNS[index]));
+      [next[index]] = normaliseExplorerColumnWidths([width], minimumWidth(EXPLORER_COLUMNS[index]));
       return next;
     });
   }, []);

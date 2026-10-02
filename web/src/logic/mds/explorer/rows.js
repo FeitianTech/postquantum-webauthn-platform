@@ -4,6 +4,10 @@ import { normaliseEnumKey } from '../formatters.js';
 export const MISSING_CELL_TEXT = '—';
 export const NO_ICON_TEXT = 'N/A';
 
+/**
+ * @param {Record<string, any> | null | undefined} entry
+ * @returns {string}
+ */
 export function iconAltText(entry) {
     return `${entry?.name || 'Authenticator'} icon`;
 }

@@ -1,9 +1,32 @@
 // Manage Trusted Metadata's requests and everything it says. No DOM.
 import { CUSTOM_METADATA_DELETE_PATH, CUSTOM_METADATA_LIST_PATH, CUSTOM_METADATA_UPLOAD_PATH } from '../constants.js';
 
+/** @import { MdsSnapshot } from './loading.js' */
 
+/**
+ * What the panel says, and how.
+ * @typedef {'info' | 'success' | 'warning' | 'error'} MessageVariant
+ * @typedef {{ text: string, variant: MessageVariant }} PanelMessage
+ */
+
+/**
+ * An uploaded file as the list shows it.
+ * @typedef {{ name: string, storedFilename: string, deleteLabel: string, details: string }} CustomItem
+ */
+
+/**
+ * A request's response, and its JSON (null when it was not JSON).
+ * @typedef {{ response: Response, payload: any }} CustomMetadataAnswer
+ */
+
+/**
+ * @param {File[]} files
+ * @returns {{ accepted: File[], rejected: string[] }}
+ */
 export function splitAcceptedFiles(files) {
+    /** @type {File[]} */
     const accepted = [];
+    /** @type {string[]} */
     const rejected = [];
     files.forEach(file => {
         if (!file) {
@@ -52,8 +75,13 @@ export const DELETE_PROGRESS = {
 
 // Which chosen files are sent (the `.json` ones), and what to say first: the
 // names refused, or that there was nothing to send.
+/**
+ * @param {File[]} files
+ * @returns {{ accepted: File[], message: PanelMessage | null }}
+ */
 export function describeFileSelection(files) {
     const { accepted, rejected } = splitAcceptedFiles(files);
+    /** @type {PanelMessage | null} */
     let message = null;
     if (rejected.length) {
         message = { text: `Ignored non-JSON files: ${rejected.join(', ')}`, variant: 'warning' };
@@ -83,6 +111,7 @@ async function readCustomMetadataAnswer(response) {
 /**
  * @param {File[]} files
  * @param {{ signal?: AbortSignal, path?: string }} [options]
+ * @returns {Promise<CustomMetadataAnswer>}
  */
 export async function requestCustomMetadataUpload(files, { signal, path = CUSTOM_METADATA_UPLOAD_PATH } = {}) {
     const response = await fetch(path, {
@@ -99,6 +128,11 @@ function trimmedText(value) {
 
 // An upload's answer: what the panel says (the server's warnings too), and the
 // snapshot to show when the server sends one.
+/**
+ * @param {Response} response
+ * @param {any} payload
+ * @returns {{ ok: boolean, message: string, variant: MessageVariant, snapshot?: MdsSnapshot | null }}
+ */
 export function describeUploadAnswer(response, payload) {
     const errors = Array.isArray(payload?.errors) ? payload.errors : [];
     if (!response.ok) {
@@ -118,14 +152,20 @@ export function describeUploadAnswer(response, payload) {
     };
 }
 
+/**
+ * @param {unknown} itemName
+ * @returns {string}
+ */
 export function customMetadataItemLabel(itemName) {
     return trimmedText(itemName) || 'metadata file';
 }
 
+/** @param {string} itemName */
 export function removingCustomMetadataMessage(itemName) {
     return `Removing ${itemName}…`;
 }
 
+/** @param {string} itemName */
 export function removedCustomMetadataMessage(itemName) {
     return `${itemName} removed.`;
 }
@@ -133,6 +173,7 @@ export function removedCustomMetadataMessage(itemName) {
 /**
  * @param {string} storedFilename
  * @param {{ signal?: AbortSignal, path?: string }} [options]
+ * @returns {Promise<CustomMetadataAnswer>}
  */
 export async function requestCustomMetadataDelete(
     storedFilename,
@@ -146,6 +187,11 @@ export async function requestCustomMetadataDelete(
 }
 
 // A delete's answer: a 404 (already gone) is a warning, other failures errors.
+/**
+ * @param {Response} response
+ * @param {any} payload
+ * @returns {{ ok: boolean, message?: string, variant?: MessageVariant, snapshot?: MdsSnapshot | null }}
+ */
 export function describeDeleteAnswer(response, payload) {
     if (!response.ok) {
         return {
@@ -162,6 +208,10 @@ export function describeDeleteAnswer(response, payload) {
 
 // One uploaded file as the list shows it: its name, the stored name a delete
 // needs, what the Delete button is called, and "Uploaded … · Includes legal header".
+/**
+ * @param {any} item
+ * @returns {CustomItem}
+ */
 export function describeCustomMetadataItem(item) {
     const storedFilename =
         (item?.source?.storedFilename && String(item.source.storedFilename).trim()) || '';
@@ -186,7 +236,10 @@ export function describeCustomMetadataItem(item) {
 }
 
 // The files uploaded in this session (GET /api/mds/metadata/custom), newest first.
-/** @param {{ signal?: AbortSignal, path?: string }} [options] */
+/**
+ * @param {{ signal?: AbortSignal, path?: string }} [options]
+ * @returns {Promise<unknown[]>}
+ */
 export async function requestCustomMetadataList({ signal, path = CUSTOM_METADATA_LIST_PATH } = {}) {
     const response = await fetch(path, { cache: 'no-store', signal });
     const payload = await readCustomMetadataAnswer(response);

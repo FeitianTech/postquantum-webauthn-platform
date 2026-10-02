@@ -12,7 +12,6 @@ import { entryHashPath } from '@/lib/sections';
 import { ROW_GRID } from './grid';
 import { EXPLORER_COLUMNS } from './columns';
 
-const iconAlt = iconAltText as (entry: MdsEntry) => string;
 
 // A cell: one line that ends in an ellipsis, or, with its row expanded, every word.
 function Cell({ expanded, title, className, children }: { expanded: boolean; title?: string; className?: string; children: ReactNode }) {
@@ -158,7 +157,7 @@ export const ExplorerRow = memo(function ExplorerRow({ entry, hidden, expanded, 
     >
       <Cell expanded={expanded} className="py-1 max-sm:px-2">
         {entry.icon ? (
-          <img src={entry.icon} alt={iconAlt(entry)} loading="lazy" decoding="async" className="size-7 object-contain" />
+          <img src={entry.icon} alt={iconAltText(entry)} loading="lazy" decoding="async" className="size-7 object-contain" />
         ) : (
           <span className="text-caption text-ink-faint">{NO_ICON_TEXT}</span>
         )}

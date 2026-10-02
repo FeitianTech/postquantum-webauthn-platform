@@ -1,8 +1,10 @@
 import type { MdsSnapshot } from '@/logic/mds/explorer/loading.js';
 import {
   CHOOSE_METADATA_FILES,
+  type CustomItem,
   DELETE_METADATA_FAILED,
   DELETE_PROGRESS,
+  type PanelMessage,
   UPLOADING_METADATA,
   UPLOAD_METADATA_FAILED,
   UPLOAD_PROGRESS,
@@ -18,30 +20,6 @@ import {
   requestCustomMetadataUpload,
 } from '@/logic/mds/explorer/custom-metadata.js';
 import { useCallback, useEffect, useRef, useState } from 'react';
-
-
-export type MessageVariant = 'info' | 'success' | 'warning' | 'error';
-type PanelMessage = { text: string; variant: MessageVariant };
-type CustomItem = { name: string; storedFilename: string; deleteLabel: string; details: string };
-
-type Answer = { response: Response; payload: unknown };
-
-const selection = describeFileSelection as (files: File[]) => { accepted: File[]; message: PanelMessage | null };
-const uploadAnswer = describeUploadAnswer as (
-  response: Response,
-  payload: unknown,
-) => { ok: boolean; message: string; variant: MessageVariant; snapshot?: MdsSnapshot | null };
-const deleteAnswer = describeDeleteAnswer as (
-  response: Response,
-  payload: unknown,
-) => { ok: boolean; message?: string; variant?: MessageVariant; snapshot?: MdsSnapshot | null };
-const describeItem = describeCustomMetadataItem as (item: unknown) => CustomItem;
-const itemLabel = customMetadataItemLabel as (name: string) => string;
-const removing = removingCustomMetadataMessage as (name: string) => string;
-const removed = removedCustomMetadataMessage as (name: string) => string;
-const upload = requestCustomMetadataUpload as (files: File[]) => Promise<Answer>;
-const remove = requestCustomMetadataDelete as (storedFilename: string) => Promise<Answer>;
-const list = requestCustomMetadataList as () => Promise<unknown[]>;
 
 // How long the last progress sentence stays.
 const SUCCESS_MS = 520;
@@ -80,7 +58,7 @@ export function useCustomMetadata({
 
   const refresh = useCallback(async () => {
     try {
-      setItems((await list()).map(describeItem));
+      setItems((await requestCustomMetadataList()).map(describeCustomMetadataItem));
     } catch {
       // The list shown stays as it was.
     }
@@ -106,8 +84,8 @@ export function useCustomMetadata({
     step(UPLOAD_PROGRESS.start);
     try {
       step(UPLOAD_PROGRESS.uploading);
-      const { response, payload } = await upload(files);
-      const answer = uploadAnswer(response, payload);
+      const { response, payload } = await requestCustomMetadataUpload(files);
+      const answer = describeUploadAnswer(response, payload);
       setMessage({ text: answer.message, variant: answer.variant });
       if (!answer.ok) {
         finish(UPLOAD_PROGRESS.failure, FAILURE_MS);
@@ -125,22 +103,22 @@ export function useCustomMetadata({
   };
 
   const choose = async (files: File[]) => {
-    const { accepted, message: chosen } = selection(files);
+    const { accepted, message: chosen } = describeFileSelection(files);
     if (chosen) setMessage(chosen);
     if (!accepted.length) return;
     await sendFiles(accepted);
   };
 
   const deleteItem = async (item: CustomItem) => {
-    const label = itemLabel(item.name);
+    const label = customMetadataItemLabel(item.name);
     setBusy(true);
     setRemovingFile(item.storedFilename);
-    setMessage({ text: removing(label), variant: 'info' });
+    setMessage({ text: removingCustomMetadataMessage(label), variant: 'info' });
     step(DELETE_PROGRESS.start);
     try {
       step(DELETE_PROGRESS.removing);
-      const { response, payload } = await remove(item.storedFilename);
-      const answer = deleteAnswer(response, payload);
+      const { response, payload } = await requestCustomMetadataDelete(item.storedFilename);
+      const answer = describeDeleteAnswer(response, payload);
       if (!answer.ok) {
         setMessage({ text: answer.message!, variant: answer.variant! });
         finish(answer.variant === 'error' ? DELETE_PROGRESS.failure : DELETE_PROGRESS.unchanged, FAILURE_MS);
@@ -148,7 +126,7 @@ export function useCustomMetadata({
         return;
       }
       await applyAnswer(answer.snapshot, { applying: DELETE_PROGRESS.applying, later: DELETE_PROGRESS.refreshing });
-      setMessage({ text: removed(label), variant: 'success' });
+      setMessage({ text: removedCustomMetadataMessage(label), variant: 'success' });
       finish(DELETE_PROGRESS.success, SUCCESS_MS);
       await refresh();
     } catch {

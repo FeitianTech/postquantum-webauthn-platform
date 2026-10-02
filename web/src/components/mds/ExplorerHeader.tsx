@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/icons';
 import { cx } from '@/lib/cx';
 
-const countText = formatEntryCount as (filtered: number, total: number) => { count: string; total: string };
 
 const DOTS = {
   info: 'bg-accent',
@@ -14,7 +13,7 @@ const DOTS = {
 
 // The count, as status.js words it: "Entries: 12 of 517 total".
 export function EntryCount({ shown, total }: { shown: number; total: number }) {
-  const text = countText(shown, total);
+  const text = formatEntryCount(shown, total);
   return (
     <p className="text-body text-ink-muted tabular-nums" aria-live="polite" data-mds-count="">
       Entries: <span className="font-semibold text-ink">{text.count}</span>

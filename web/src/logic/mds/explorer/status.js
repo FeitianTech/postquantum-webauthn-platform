@@ -144,6 +144,11 @@ export function explorerLoadedStatus(snapshot, note, entryCount, buildStatus = b
     };
 }
 
+/**
+ * @param {number} filtered
+ * @param {number} total
+ * @returns {{ count: string, total: string }}
+ */
 export function formatEntryCount(filtered, total) {
     return {
         count: filtered.toLocaleString(),

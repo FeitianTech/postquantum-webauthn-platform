@@ -1,5 +1,5 @@
 import type { MdsSnapshot } from '@/logic/mds/explorer/loading.js';
-import { NO_CUSTOM_METADATA } from '@/logic/mds/explorer/custom-metadata.js';
+import { type MessageVariant, NO_CUSTOM_METADATA } from '@/logic/mds/explorer/custom-metadata.js';
 import { type DragEvent, useEffect, useId, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
@@ -7,7 +7,7 @@ import { FolderIcon, Spinner } from '@/components/ui/icons';
 import { Dialog, OverlayBody, OverlayHeader } from '@/components/ui/Overlay';
 import { cx } from '@/lib/cx';
 
-import { type MessageVariant, useCustomMetadata } from './useCustomMetadata';
+import { useCustomMetadata } from './useCustomMetadata';
 
 const MESSAGE_TONES: Record<MessageVariant, string> = {
   info: 'border border-line text-ink',
