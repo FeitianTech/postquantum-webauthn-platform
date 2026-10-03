@@ -25,7 +25,7 @@ from .. import encoding
 # What this module derives changes with the code, not only with the snapshot:
 # the version the files are served under names both, so a page never reads an
 # earlier deploy's files under the current version.
-DERIVED_FORMAT = 1
+DERIVED_FORMAT = 2
 
 URL_PREFIX = "/assets/mds"
 LIST_FILENAME = "fido-mds3.explorer.list.json"
@@ -39,6 +39,9 @@ LIST_LEAVES_OUT = frozenset(
         "metadataStatement",
         "rawEntry",
         "statusReports",
+        "biometricStatusReports",
+        "rogueListURL",
+        "rogueListHash",
         "attestationCertificates",
         "attestationKeyIdentifiers",
         "timeOfLastStatusChange",

@@ -503,6 +503,13 @@ def _detail_fields(
         ),
         "rawEntry": dict(entry_payload) if include_raw_entry else None,
         "statusReports": [dict(report) for report in status_reports],
+        "biometricStatusReports": [
+            dict(report)
+            for report in _extract_list(_mapping_value(entry_payload, "biometricStatusReports"))
+            if isinstance(report, Mapping)
+        ],
+        "rogueListURL": _string_or_none(_mapping_value(entry_payload, "rogueListURL")),
+        "rogueListHash": _string_or_none(_mapping_value(entry_payload, "rogueListHash")),
         "attestationCertificates": [str(value) for value in attestation_certificates if value],
         "attestationKeyIdentifiers": _extract_attestation_key_identifiers(metadata_mapping, entry_payload),
         "isLightweightEntry": False,

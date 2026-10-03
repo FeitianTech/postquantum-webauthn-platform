@@ -65,7 +65,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000001?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000001?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000002",
@@ -118,7 +118,7 @@
           "Passcode Internal",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000002?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000002?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000003",
@@ -169,7 +169,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000003?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000003?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000004",
@@ -217,7 +217,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000004?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000004?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000005",
@@ -268,7 +268,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000005?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000005?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000006",
@@ -333,7 +333,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000006?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000006?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000007",
@@ -393,7 +393,7 @@
           "Presence Internal",
           "Voiceprint Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000007?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000007?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000008",
@@ -444,7 +444,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000008?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000008?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000009",
@@ -495,7 +495,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000009?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000009?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000010",
@@ -546,7 +546,7 @@
           "Passcode External",
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000010?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000010?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "",
@@ -591,7 +591,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/akid%3Af1d0000000000000000000000000000000000011?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/akid%3Af1d0000000000000000000000000000000000011?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "",
@@ -635,7 +635,7 @@
         "userVerificationList": [
           "Fingerprint Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaid%3AF1D0%230012?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaid%3AF1D0%230012?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000020",
@@ -684,7 +684,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000020?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000020?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000021",
@@ -733,7 +733,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000021?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000021?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000022",
@@ -782,7 +782,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000022?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000022?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000023",
@@ -831,7 +831,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000023?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000023?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000024",
@@ -880,7 +880,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000024?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000024?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000025",
@@ -929,7 +929,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000025?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000025?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000026",
@@ -978,7 +978,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000026?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000026?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000027",
@@ -1027,7 +1027,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000027?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000027?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000028",
@@ -1076,7 +1076,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000028?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000028?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000029",
@@ -1125,7 +1125,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000029?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000029?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000030",
@@ -1174,7 +1174,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000030?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000030?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000031",
@@ -1223,7 +1223,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000031?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000031?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000032",
@@ -1272,7 +1272,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000032?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000032?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000033",
@@ -1321,7 +1321,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000033?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000033?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000034",
@@ -1370,7 +1370,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000034?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000034?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000035",
@@ -1419,7 +1419,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000035?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000035?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000036",
@@ -1468,7 +1468,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000036?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000036?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000037",
@@ -1517,7 +1517,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000037?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000037?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000038",
@@ -1566,7 +1566,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000038?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000038?v=7.6adb59277e89.2"
       },
       {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000039",
@@ -1615,7 +1615,7 @@
         "userVerificationList": [
           "Presence Internal"
         ],
-        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000039?v=7.6adb59277e89.1"
+        "detailUrl": "/assets/mds/entries/aaguid%3Af1d0f1d0-0000-4000-8000-000000000039?v=7.6adb59277e89.2"
       }
     ]
   },
@@ -1638,6 +1638,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -1760,6 +1761,8 @@
       "name": "Fixture Security Key L1",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -1833,6 +1836,17 @@
         "MIIDbDCCAlSgAwIBAgICA+owDQYJKoZIhvcNAQELBQAweDELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjElMCMGA1UEAwwcRml4dHVyZSBSU0EgQXR0ZXN0YXRpb24gUm9vdDAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFoweDELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjElMCMGA1UEAwwcRml4dHVyZSBSU0EgQXR0ZXN0YXRpb24gUm9vdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAPl5PNcWVcBz47ZYfCCq1lmjEg/sCAe4XuEliTt9Ma2B9c+suFQx9WlvMPME2PCJCSEXq+EArqyjUBt/J1v2BnTp/125l17bPFL1ng2vwnCOEhmunWxuPf0NY3PAEKiheRKU+AhGLNNvRjEXZBEWD4ArlBIuKp5HxHfhzefrqn2KlPbh3qJ3+Km9jryJ/j9HT4D5a6VUbyoUmsKfWhmOmKVIiKxxOck5BQfmp0FUxDHXo1FIGJ2OUJCgcijRRj3JvLy/fEj+aSnz+eE2+Wtt/NSIBZaUykx4AsYmaftT/9puzkoUBb8GVgRLg5rUfnxujzKJZUHYpfiFjEIBUB9fWtUCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEASDZAoIR6CDoAqz8oJ5szVfqIaL+Gei3QDz58MjWrptZ0XybuJYizJjDzpFAvSSqWjmvDNn5MFTcbkdnvRXb64KFvdstyYOxXK5I6HgNCTlpSq0Z1hP1pu+BeK2JG6zs6JXuSVT4bug7TATZ4+O+2mcLaODnEMU3PrPBQAUUctYDwm94LJkSeKKxY6rIJcUh2/tix7HvJL8u26kXR3wDGlC3X9GU5QB158ESCxaIJV1U2y7QhkCXC7Sp4c1SFxtaryjBxm/uTWzKZKWzR/0ru0aUxAtagRSwNdQfWRWI4fgmouHc2nGFkUYmVuRdiKscEQN9yoXVgbCi6dGi3i2EaFQ=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [
+        {
+          "certLevel": 1,
+          "certificateNumber": "FIDOBIO20260815002",
+          "certificationDescriptor": "Fixture Fingerprint Sensor",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "3.0",
+          "effectiveDate": "2026-08-15",
+          "modality": "fingerprint_internal"
+        }
+      ],
       "certificateAlgorithmInfo": "RSASSA-PKCS1-v1_5_SHA256",
       "certificateAlgorithmInfoList": [
         "RSASSA-PKCS1-v1_5_SHA256"
@@ -1941,6 +1955,8 @@
       "name": "Fixture Security Key L2",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": "d156ed90c673639e9695aa88a6bd3937a1e1cea0c92034bd291a44bdbc6481ba",
+      "rogueListURL": "https://fixture.example/rogue-lists/fixture-security-key-l2.json",
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -1990,6 +2006,7 @@
         "MIIBTzCCAQGgAwIBAgICA+swBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfDELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEpMCcGA1UEAwwgRml4dHVyZSBFZDI1NTE5IEF0dGVzdGF0aW9uIFJvb3QwKjAFBgMrZXADIQCVOkidv4x1dS3MznN12V3JevygGSsfjkKngkWk1skn/jAFBgMrZXADQQAuMQevenOOhfniZ2CaYMt09z0m7q0nhwVLod/TJCQza2JnjdXaj66ndoGKabQTGEXlqCRU2AMnfkSKGQv4WzQH"
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ED25519_SHA512",
       "certificateAlgorithmInfoList": [
         "ED25519_SHA512"
@@ -2092,6 +2109,8 @@
       "name": "Fixture Certified Key",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -2137,6 +2156,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -2235,6 +2255,8 @@
       "name": "Fixture Uncertified Key",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -2278,6 +2300,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -2380,6 +2403,8 @@
       "name": "Fixture Revoked Key",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -2445,6 +2470,7 @@
         "MIIBbzCCASGgAwIBAgICBFswBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowgZsxCzAJBgNVBAYTAlNFMR4wHAYDVQQKDBVDaGFyYWN0ZXJpemF0aW9uIFRlc3QxIjAgBgNVBAsMGUF1dGhlbnRpY2F0b3IgQXR0ZXN0YXRpb24xSDBGBgNVBAMMP0ZpeHR1cmUgQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbiBSb290IENlcnRpZmljYXRlIEF1dGhvcml0eSAxNTAqMAUGAytlcAMhAOV9j2gddQ83jzIT/zLRt4SEFedWZPRRIUdZAW5SpPmuMAUGAytlcANBAHXz88b0VknLw11CD6eA8UQEMLakzbUuuZLpVZp2IHyeYNLVTEQ9baQ8lA8l9VkKtVdJc8uribCX2WTBoSO9DA8="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ED25519_SHA512",
       "certificateAlgorithmInfoList": [
         "ED25519_SHA512"
@@ -2561,6 +2587,8 @@
       "name": "Fixture Key With Many Attestation Roots",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -2608,6 +2636,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -2771,6 +2800,8 @@
       "name": "Fixture Key With Every User Verification Method",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -2827,6 +2858,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -2929,6 +2961,8 @@
       "name": "Fixture Authenticator With A Deliberately Long Description, Written To Show How The Explorer Truncates A Name While Keeping It Visible.",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -2976,6 +3010,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -3078,6 +3113,8 @@
       "name": "Fixture Key Without An Icon",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -3121,6 +3158,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -3223,6 +3261,8 @@
       "name": "Fixture Key Without Status Reports",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -3261,6 +3301,7 @@
       "attestationKeyIdentifiers": [
         "f1d0000000000000000000000000000000000011"
       ],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -3329,6 +3370,8 @@
       "name": "Fixture U2F Key",
       "protocol": "U2F",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -3369,6 +3412,7 @@
         "MIIBTzCCAQGgAwIBAgICA+swBQYDK2VwMCMxITAfBgNVBAMMGENoYXJhY3Rlcml6YXRpb24gVGVzdCBDQTAgFw0yMDAxMDEwMDAwMDBaGA8yMDk5MTIzMTAwMDAwMFowfDELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEpMCcGA1UEAwwgRml4dHVyZSBFZDI1NTE5IEF0dGVzdGF0aW9uIFJvb3QwKjAFBgMrZXADIQCVOkidv4x1dS3MznN12V3JevygGSsfjkKngkWk1skn/jAFBgMrZXADQQAuMQevenOOhfniZ2CaYMt09z0m7q0nhwVLod/TJCQza2JnjdXaj66ndoGKabQTGEXlqCRU2AMnfkSKGQv4WzQH"
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ED25519_SHA512",
       "certificateAlgorithmInfoList": [
         "ED25519_SHA512"
@@ -3437,6 +3481,8 @@
       "name": "Fixture UAF Authenticator",
       "protocol": "Uaf",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -3479,6 +3525,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -3575,6 +3622,8 @@
       "name": "Fixture Filler Key 01",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -3620,6 +3669,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -3716,6 +3766,8 @@
       "name": "Fixture Filler Key 02",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -3761,6 +3813,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -3857,6 +3910,8 @@
       "name": "Fixture Filler Key 03",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -3902,6 +3957,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -3998,6 +4054,8 @@
       "name": "Fixture Filler Key 04",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -4043,6 +4101,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -4139,6 +4198,8 @@
       "name": "Fixture Filler Key 05",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -4184,6 +4245,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -4280,6 +4342,8 @@
       "name": "Fixture Filler Key 06",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -4325,6 +4389,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -4421,6 +4486,8 @@
       "name": "Fixture Filler Key 07",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -4466,6 +4533,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -4562,6 +4630,8 @@
       "name": "Fixture Filler Key 08",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -4607,6 +4677,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -4703,6 +4774,8 @@
       "name": "Fixture Filler Key 09",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -4748,6 +4821,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -4844,6 +4918,8 @@
       "name": "Fixture Filler Key 10",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -4889,6 +4965,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -4985,6 +5062,8 @@
       "name": "Fixture Filler Key 11",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -5030,6 +5109,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -5126,6 +5206,8 @@
       "name": "Fixture Filler Key 12",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -5171,6 +5253,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -5267,6 +5350,8 @@
       "name": "Fixture Filler Key 13",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -5312,6 +5397,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -5408,6 +5494,8 @@
       "name": "Fixture Filler Key 14",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -5453,6 +5541,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -5549,6 +5638,8 @@
       "name": "Fixture Filler Key 15",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -5594,6 +5685,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -5690,6 +5782,8 @@
       "name": "Fixture Filler Key 16",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -5735,6 +5829,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -5831,6 +5926,8 @@
       "name": "Fixture Filler Key 17",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -5876,6 +5973,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -5972,6 +6070,8 @@
       "name": "Fixture Filler Key 18",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -6017,6 +6117,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -6113,6 +6214,8 @@
       "name": "Fixture Filler Key 19",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",
@@ -6158,6 +6261,7 @@
         "MIIB4zCCAYqgAwIBAgICA+kwCgYIKoZIzj0EAwIwejELMAkGA1UEBhMCU0UxHjAcBgNVBAoMFUNoYXJhY3Rlcml6YXRpb24gVGVzdDEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEnMCUGA1UEAwweRml4dHVyZSBGSURPMiBBdHRlc3RhdGlvbiBSb290MCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkxMjMxMDAwMDAwWjB6MQswCQYDVQQGEwJTRTEeMBwGA1UECgwVQ2hhcmFjdGVyaXphdGlvbiBUZXN0MSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMScwJQYDVQQDDB5GaXh0dXJlIEZJRE8yIEF0dGVzdGF0aW9uIFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAS2NMN/lCK0saWxUd5rkVIh9Ei5EtvzTEgqMetNQgkB7i2AsanRtevTVihqOd38gG/a5gOefcY/oZf434apVE2nMAoGCCqGSM49BAMCA0cAMEQCIEFIIETyPMXDPFw8WCMVUmh8oqnQkDRQHfA5BEJH9pKwAiAZKb6PCP0zD0pU1RnxivYGaaBpA9k0K5qVjTw6hrSBRA=="
       ],
       "attestationKeyIdentifiers": [],
+      "biometricStatusReports": [],
       "certificateAlgorithmInfo": "ECDSA_SHA256",
       "certificateAlgorithmInfoList": [
         "ECDSA_SHA256"
@@ -6254,6 +6358,8 @@
       "name": "Fixture Filler Key 20",
       "protocol": "FIDO2",
       "rawEntry": null,
+      "rogueListHash": null,
+      "rogueListURL": null,
       "snapshotFetchedAt": "2026-09-20T08:00:00+00:00",
       "snapshotGeneratedAt": "2026-09-20T08:00:00+00:00",
       "snapshotNextUpdate": "2026-10-20",

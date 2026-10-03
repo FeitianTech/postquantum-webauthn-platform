@@ -5,7 +5,8 @@ It is built the way the updater builds a real one (``snapshot_files`` in
 itself: every entry, name, key and certificate is made up here, nothing is copied
 from the FIDO Alliance's service. It holds what the explorer must show well: each
 protocol (FIDO2, U2F, UAF: the three kinds of entry id), each certification level,
-a revocation, a status report with every MDS3 field (and one unknown), the longest values (a CN list of about 970 characters, 11 user
+a revocation, a status report with every MDS3 field (and one unknown), a biometric
+status report and a rogue list, the longest values (a CN list of about 970 characters, 11 user
 verification methods, a 135-character name), an entry without an icon, one without
 status reports, and enough short entries for the list to scroll.
 
@@ -427,6 +428,20 @@ def _entries() -> list[dict[str, Any]]:
                 algorithms=("secp256r1_ecdsa_sha256_raw",),
             )
         )
+    # The fingerprint key: a biometric component's own certification, and a rogue list.
+    entries[1]["biometricStatusReports"] = [
+        {
+            "certLevel": 1,
+            "modality": "fingerprint_internal",
+            "effectiveDate": "2026-08-15",
+            "certificationDescriptor": "Fixture Fingerprint Sensor",
+            "certificateNumber": "FIDOBIO20260815002",
+            "certificationPolicyVersion": "1.4.0",
+            "certificationRequirementsVersion": "3.0",
+        }
+    ]
+    entries[1]["rogueListURL"] = "https://fixture.example/rogue-lists/fixture-security-key-l2.json"
+    entries[1]["rogueListHash"] = "d156ed90c673639e9695aa88a6bd3937a1e1cea0c92034bd291a44bdbc6481ba"
     return entries
 
 

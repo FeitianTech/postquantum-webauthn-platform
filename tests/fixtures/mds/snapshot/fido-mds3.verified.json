@@ -142,6 +142,17 @@
     },
     {
       "aaguid": "f1d0f1d0-0000-4000-8000-000000000002",
+      "biometricStatusReports": [
+        {
+          "certLevel": 1,
+          "certificateNumber": "FIDOBIO20260815002",
+          "certificationDescriptor": "Fixture Fingerprint Sensor",
+          "certificationPolicyVersion": "1.4.0",
+          "certificationRequirementsVersion": "3.0",
+          "effectiveDate": "2026-08-15",
+          "modality": "fingerprint_internal"
+        }
+      ],
       "metadataStatement": {
         "aaguid": "f1d0f1d0-0000-4000-8000-000000000002",
         "attachmentHint": [
@@ -228,6 +239,8 @@
           ]
         ]
       },
+      "rogueListHash": "d156ed90c673639e9695aa88a6bd3937a1e1cea0c92034bd291a44bdbc6481ba",
+      "rogueListURL": "https://fixture.example/rogue-lists/fixture-security-key-l2.json",
       "statusReports": [
         {
           "certificateNumber": "FIDO20020260815002",

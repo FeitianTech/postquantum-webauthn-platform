@@ -77,6 +77,17 @@ def test_each_entry_has_its_detail_whole_at_a_url_of_this_version(full_snapshot,
     assert rows["aaid:F1D0#0012"]["detailUrl"].startswith("/assets/mds/entries/aaid%3AF1D0%230012?v=")
 
 
+def test_an_entrys_detail_keeps_its_biometric_reports_and_rogue_list(files):
+    detail = json.loads(files.details["aaguid:f1d0f1d0-0000-4000-8000-000000000002"])
+    row = next(row for row in _list(files)["entries"] if row["entryId"] == "aaguid:f1d0f1d0-0000-4000-8000-000000000002")
+
+    assert [report["modality"] for report in detail["biometricStatusReports"]] == ["fingerprint_internal"]
+    assert detail["biometricStatusReports"][0]["effectiveDate"] == "2026-08-15"
+    assert detail["rogueListURL"] == "https://fixture.example/rogue-lists/fixture-security-key-l2.json"
+    assert len(detail["rogueListHash"]) == 64
+    assert {"biometricStatusReports", "rogueListURL", "rogueListHash"}.isdisjoint(row)
+
+
 def test_the_version_names_the_snapshot_and_what_this_code_derives(full_snapshot, files):
     snapshot = explorer_files.snapshot_version(full_snapshot["meta"])
 

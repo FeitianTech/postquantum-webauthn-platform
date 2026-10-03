@@ -119,7 +119,7 @@ def _reference(packaged: list[dict], uploads: list[MetadataBlobPayloadEntry]) ->
         if aaguid:
             seen.add(aaguid)
         kept.append(entry)
-    base = [MetadataBlobPayloadEntry.from_dict(raw) for raw in packaged]
+    base = [mds_entries.parse_entry(raw) for raw in packaged]
     base = [entry for entry in base if mds_entries._extract_entry_aaguid(entry) not in seen or not mds_entries._extract_entry_aaguid(entry)]
     return MdsAttestationVerifier(MetadataBlobPayload(legal_header="", no=0, next_update=date(2099, 1, 1), entries=tuple(kept + base)))
 
