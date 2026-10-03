@@ -34,6 +34,5 @@ def test_the_dev_server_copies_flasks_enforced_policy():
     assert "; ".join(_array("FLASK_POLICY")) == security_headers._DEFAULT_CONTENT_SECURITY_POLICY
 
 
-def test_the_dev_server_copies_flasks_report_only_policy_and_endpoints():
-    assert "; ".join(_array("FLASK_REPORT_ONLY_POLICY")) == security_headers._DEFAULT_CONTENT_SECURITY_POLICY_REPORT_ONLY
+def test_the_dev_server_copies_flasks_reporting_endpoints():
     assert _string("FLASK_REPORTING_ENDPOINTS") == security_headers._DEFAULT_REPORTING_ENDPOINTS

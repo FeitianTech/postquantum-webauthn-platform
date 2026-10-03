@@ -17,7 +17,6 @@ from tests.app.web_export_files import CHUNK, INDEX, NOT_FOUND, write
 
 SECURITY_HEADERS = (
     "Content-Security-Policy",
-    "Content-Security-Policy-Report-Only",
     "Reporting-Endpoints",
     "Permissions-Policy",
     "X-Frame-Options",

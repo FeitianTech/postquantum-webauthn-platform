@@ -7,7 +7,6 @@ import nextConfig from '../next.config.mjs';
 import {
   DEV_ALLOWANCES,
   FLASK_POLICY,
-  FLASK_REPORT_ONLY_POLICY,
   FLASK_REPORTING_ENDPOINTS,
   developmentHeaders,
   developmentPolicy,
@@ -39,12 +38,12 @@ describe('the dev server\'s Content Security Policy', () => {
     expect(dev.has('style-src-attr')).toBe(false);
   });
 
-  it('sends the policy, the Trusted Types report-only policy and where reports go', () => {
+  it('sends the policy, Trusted Types enforced in it, and where reports go', () => {
     expect(developmentHeaders()).toEqual([
       { key: 'Content-Security-Policy', value: developmentPolicy() },
-      { key: 'Content-Security-Policy-Report-Only', value: FLASK_REPORT_ONLY_POLICY.join('; ') },
       { key: 'Reporting-Endpoints', value: FLASK_REPORTING_ENDPOINTS },
     ]);
+    expect(directives(developmentPolicy()).get('trusted-types')).toBe('trusted-types nextjs nextjs#bundler');
   });
 
   it('is sent by `next dev` for every path, and not configured for the export', async () => {

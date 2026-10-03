@@ -19,12 +19,8 @@ export const FLASK_POLICY = [
   "connect-src 'self'",
   "manifest-src 'self'",
   "worker-src 'self'",
-  "report-uri /api/csp-report",
-  "report-to csp"
-];
-
-export const FLASK_REPORT_ONLY_POLICY = [
   "require-trusted-types-for 'script'",
+  "trusted-types nextjs nextjs#bundler",
   "report-uri /api/csp-report",
   "report-to csp"
 ];
@@ -72,7 +68,6 @@ export function developmentPolicy() {
 export function developmentHeaders() {
   return [
     { key: 'Content-Security-Policy', value: developmentPolicy() },
-    { key: 'Content-Security-Policy-Report-Only', value: FLASK_REPORT_ONLY_POLICY.join('; ') },
     { key: 'Reporting-Endpoints', value: FLASK_REPORTING_ENDPOINTS },
   ];
 }

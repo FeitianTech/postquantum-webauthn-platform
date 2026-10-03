@@ -7,10 +7,9 @@ aside); web/'s components render with React (``test_web_source_rules.py`` holds
 them to the same rule).
 
 A string built at run time sooner or later carries data; a fixed one does not,
-but each of these calls is a Trusted Types sink all the same. The report-only
-policy (``require-trusted-types-for 'script'`` in ``config/security_headers.py``)
-reports every string given to one, and enforcing it waits until production
-reports none, so none is written.
+but each of these calls is a Trusted Types sink all the same. The policy
+(``require-trusted-types-for 'script'`` in ``config/security_headers.py``)
+refuses every string given to one, so none is written.
 
 ``ALLOWED`` names the sinks that remain, each with the reason. It may only
 shrink: an entry that no longer matches a sink fails the test, so a converted

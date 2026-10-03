@@ -27,11 +27,7 @@
     ],
     [
      "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Content-Security-Policy-Report-Only",
-     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
     [
      "Reporting-Endpoints",
@@ -110,11 +106,7 @@
     ],
     [
      "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Content-Security-Policy-Report-Only",
-     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
     [
      "Reporting-Endpoints",
@@ -197,11 +189,7 @@
     ],
     [
      "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Content-Security-Policy-Report-Only",
-     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
     [
      "Reporting-Endpoints",
@@ -285,11 +273,7 @@
     ],
     [
      "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Content-Security-Policy-Report-Only",
-     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
     [
      "Reporting-Endpoints",
@@ -359,11 +343,7 @@
     ],
     [
      "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Content-Security-Policy-Report-Only",
-     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
     [
      "Reporting-Endpoints",
@@ -440,11 +420,7 @@
     ],
     [
      "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Content-Security-Policy-Report-Only",
-     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
     [
      "Reporting-Endpoints",
@@ -517,11 +493,7 @@
     ],
     [
      "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Content-Security-Policy-Report-Only",
-     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
     [
      "Reporting-Endpoints",
@@ -606,11 +578,7 @@
     ],
     [
      "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Content-Security-Policy-Report-Only",
-     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
     [
      "Reporting-Endpoints",
@@ -689,11 +657,7 @@
     ],
     [
      "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Content-Security-Policy-Report-Only",
-     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
     [
      "Reporting-Endpoints",
@@ -772,11 +736,7 @@
     ],
     [
      "Content-Security-Policy",
-     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; report-uri /api/csp-report; report-to csp"
-    ],
-    [
-     "Content-Security-Policy-Report-Only",
-     "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
+     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; report-uri /api/csp-report; report-to csp"
     ],
     [
      "Reporting-Endpoints",

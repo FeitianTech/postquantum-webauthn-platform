@@ -1,7 +1,7 @@
 """The UI's sources in ``web/src`` keep the CSP's rules, and keep one copy of the logic.
 
 What ships from ``web/src`` (everything but its tests) is held to what the strict
-CSP and the Trusted Types report-only policy need, with the logic modules' guards'
+CSP and its Trusted Types need, with the logic modules' guards'
 own readers (``test_html_sinks.py``, ``test_inline_code.py``):
 
 - no markup sink (``innerHTML``, ``document.write``, ...) and no
@@ -52,7 +52,7 @@ _RULES: dict[str, re.Pattern[str]] = {
 }
 
 # Modules no source may import, by the rule each breaks. Next's router adds page
-# scripts after following a next/link, which the Trusted Types policy reports, and
+# scripts after following a next/link, which the Trusted Types policy refuses, and
 # it keeps the browser's Back on the app: links are <a>.
 _IMPORT_RULES = {"next/script": "next/script", "next/link": "next/link"}
 

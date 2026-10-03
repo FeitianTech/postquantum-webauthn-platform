@@ -90,9 +90,9 @@ the page in a real browser.
 
 - The policy Flask sends with every page: `script-src 'self'`, `style-src 'self'`,
   `font-src 'self'`, no `'unsafe-inline'`, no other origin
-  (`server/app/config/security_headers.py`); Trusted Types
-  (`require-trusted-types-for 'script'`) are report-only. Violations reach
-  `/api/csp-report`.
+  (`server/app/config/security_headers.py`); Trusted Types are enforced
+  (`require-trusted-types-for 'script'`), and only Next's two policies may be made
+  (`trusted-types nextjs nextjs#bundler`). Violations reach `/api/csp-report`.
 - So in `web/src` (`tests/app/tooling/test_web_source_rules.py` holds it): no `style`
   prop (the export would render a style attribute; set `element.style` through a ref),
   no `<style>` or `<script>` element, no `next/script`, no `next/link` (links are plain

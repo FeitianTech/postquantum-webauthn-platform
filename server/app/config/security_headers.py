@@ -26,7 +26,11 @@ _REPORTING = (f"report-uri {_REPORT_ENDPOINT}", f"report-to {_REPORT_GROUP}")
 # own. The pages are the UI's static export, which holds no inline script,
 # style element or style attribute (web/scripts/check-export-csp.mjs scans every
 # page); components style through CSSOM (element.style), which style-src does not
-# govern, and the fonts (Geist) are self-hosted.
+# govern, and the fonts (Geist) are self-hosted. Trusted Types are enforced: a
+# string given to a sink that parses HTML or loads script (innerHTML, a script's
+# src, ...) is refused unless a policy made it, and only Next's two policies may
+# be made (``nextjs`` and webpack's ``nextjs#bundler``, which load its chunks).
+# No script of the app gives a sink a string (tests/app/tooling/test_html_sinks.py).
 _DEFAULT_CONTENT_SECURITY_POLICY = "; ".join(
     (
         "default-src 'self'",
@@ -44,16 +48,10 @@ _DEFAULT_CONTENT_SECURITY_POLICY = "; ".join(
         "connect-src 'self'",
         "manifest-src 'self'",
         "worker-src 'self'",
+        "require-trusted-types-for 'script'",
+        "trusted-types nextjs nextjs#bundler",
         *_REPORTING,
     )
-)
-
-# Trusted Types, report-only: every string given to a sink that parses HTML or
-# loads script (innerHTML, document.write, ...) is reported, and nothing is
-# blocked. No script gives one a string (tests/app/tooling/test_html_sinks.py);
-# enforcing it waits for the final audit, once production reports none.
-_DEFAULT_CONTENT_SECURITY_POLICY_REPORT_ONLY = "; ".join(
-    ("require-trusted-types-for 'script'", *_REPORTING)
 )
 
 _DEFAULT_REPORTING_ENDPOINTS = f'{_REPORT_GROUP}="{_REPORT_ENDPOINT}"'
@@ -93,8 +91,6 @@ def config_from_env() -> dict[str, Any]:
     return {
         "CONTENT_SECURITY_POLICY": os.environ.get("FIDO_SERVER_CONTENT_SECURITY_POLICY")
         or _DEFAULT_CONTENT_SECURITY_POLICY,
-        "CONTENT_SECURITY_POLICY_REPORT_ONLY": os.environ.get("FIDO_SERVER_CONTENT_SECURITY_POLICY_REPORT_ONLY")
-        or _DEFAULT_CONTENT_SECURITY_POLICY_REPORT_ONLY,
         "REPORTING_ENDPOINTS": os.environ.get("FIDO_SERVER_REPORTING_ENDPOINTS")
         or _DEFAULT_REPORTING_ENDPOINTS,
         "PERMISSIONS_POLICY": _DEFAULT_PERMISSIONS_POLICY,
@@ -114,10 +110,6 @@ def set_security_headers(response):
     policy = current_app.config.get("CONTENT_SECURITY_POLICY")
     if policy:
         headers.setdefault("Content-Security-Policy", policy)
-
-    report_only_policy = current_app.config.get("CONTENT_SECURITY_POLICY_REPORT_ONLY")
-    if report_only_policy:
-        headers.setdefault("Content-Security-Policy-Report-Only", report_only_policy)
 
     reporting_endpoints = current_app.config.get("REPORTING_ENDPOINTS")
     if reporting_endpoints:

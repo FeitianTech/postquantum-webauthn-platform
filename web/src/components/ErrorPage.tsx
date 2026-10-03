@@ -6,7 +6,7 @@ type ErrorPageProps = {
 // Next's own error pages are styled with style attributes, which the CSP
 // refuses; the export ships these instead. The link is plain: following
 // next/link makes Next's router add page scripts (which the Trusted Types
-// policy reports) and leaves the browser's Back on the app with this page's URL.
+// policy refuses) and leaves the browser's Back on the app with this page's URL.
 export function ErrorPage({ title, message }: ErrorPageProps) {
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 px-4">

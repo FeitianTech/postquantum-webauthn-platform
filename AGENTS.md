@@ -217,8 +217,9 @@ its logic out here first.
   whose `Sec-Fetch-Site` names another site is refused, 403), `session_cookie.py` (the cookie's flags
   and lifetime; only an answer that changed the session sets the cookie
   (`SESSION_REFRESH_EACH_REQUEST` off), so nothing landing after a ceremony's begin can undo
-  it; and `cookie_size`), `security_headers.py` (the strict CSP and the Trusted Types
-  report-only policy, both reporting to `/api/csp-report`; `FIDO_SERVER_CONTENT_SECURITY_POLICY` replaces the enforced policy),
+  it; and `cookie_size`), `security_headers.py` (the strict CSP, Trusted Types enforced for
+  Next's two policies, reporting to `/api/csp-report`; `FIDO_SERVER_CONTENT_SECURITY_POLICY`
+  replaces it),
   `origins.py`, `attestation_trust.py`, `relying_party.py` (the default RP name is the site's,
   `APP_TITLE`), `paths.py` (the project and instance roots; `store_dir`: every local store under
   `instance/`, its setting read when used), `request_limits.py` (8 MiB, the metadata

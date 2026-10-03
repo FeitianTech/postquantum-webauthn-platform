@@ -28,7 +28,6 @@ def client(make_app, export_root):
 
 EXPECTED_HEADERS = (
     "Content-Security-Policy",
-    "Content-Security-Policy-Report-Only",
     "Reporting-Endpoints",
     "X-Frame-Options",
     "X-Content-Type-Options",
@@ -111,31 +110,29 @@ STRICT_CONTENT_SECURITY_POLICY = (
     "frame-src 'none'; form-action 'self'; img-src 'self' data:; "
     "font-src 'self'; style-src 'self'; "
     "script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; "
+    "require-trusted-types-for 'script'; trusted-types nextjs nextjs#bundler; "
     "report-uri /api/csp-report; report-to csp"
 )
-TRUSTED_TYPES_REPORT_ONLY = "require-trusted-types-for 'script'; report-uri /api/csp-report; report-to csp"
 REPORTING_ENDPOINTS = 'csp="/api/csp-report"'
 
 
 def test_the_shipped_policies_are_exactly_these(client):
-    """No 'unsafe-inline' anywhere; violations and Trusted Types reports go to /api/csp-report."""
+    """No 'unsafe-inline' anywhere, Trusted Types enforced for Next's two policies; violations go to /api/csp-report."""
 
     headers = client.get("/").headers
     assert headers["Content-Security-Policy"] == STRICT_CONTENT_SECURITY_POLICY
-    assert headers["Content-Security-Policy-Report-Only"] == TRUSTED_TYPES_REPORT_ONLY
+    assert "Content-Security-Policy-Report-Only" not in headers
     assert headers["Reporting-Endpoints"] == REPORTING_ENDPOINTS
     assert "unsafe" not in headers["Content-Security-Policy"]
 
 
 def test_the_policies_can_be_set_in_the_environment(monkeypatch, make_app):
     monkeypatch.setenv("FIDO_SERVER_CONTENT_SECURITY_POLICY", "default-src 'none'")
-    monkeypatch.setenv("FIDO_SERVER_CONTENT_SECURITY_POLICY_REPORT_ONLY", "script-src 'none'")
     monkeypatch.setenv("FIDO_SERVER_REPORTING_ENDPOINTS", 'csp="https://reports.example/csp"')
 
     headers = make_app().test_client().get("/health").headers
 
     assert headers["Content-Security-Policy"] == "default-src 'none'"
-    assert headers["Content-Security-Policy-Report-Only"] == "script-src 'none'"
     assert headers["Reporting-Endpoints"] == 'csp="https://reports.example/csp"'
 
 

@@ -1,7 +1,7 @@
 """Content-Security-Policy violation reports: read them, and log each in one line.
 
-A browser reports what the policy (``config/security_headers.py``) blocks, and
-what the report-only Trusted Types policy would block, in one of two formats:
+A browser reports what the policy (``config/security_headers.py``) blocks, Trusted
+Types' refusals among it, in one of two formats:
 
 - ``report-uri`` (Firefox, Safari): one ``{"csp-report": {...}}`` per request,
   sent as ``application/csp-report``, its keys spelled with hyphens;
