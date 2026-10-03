@@ -11,6 +11,7 @@ from ... import json_values
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
 from ...mds import provisioning as mds_provisioning
 from ...webauthn.attachments import request_hints
+from .. import ceremony_session
 from . import (
     algorithms,
     constants,
@@ -166,6 +167,7 @@ def _what_the_checks_read(data: Mapping[str, Any]) -> dict[str, Any]:
 
 
 @bp.route("/api/advanced/register/begin", methods=["POST"])
+@ceremony_session.ceremony_begin
 def advanced_register_begin():
     data = request.get_json(silent=True)
     begin_request, error_response = registration_options.parse_begin_request(data)

@@ -37,6 +37,7 @@ from ...storage import credentials
 from ...storage.common import InvalidStorageIdentifier
 from ...webauthn import client_binary
 from ...webauthn.sign_count import SIGN_COUNT_REGRESSED, sign_count_status
+from .. import ceremony_session
 from . import parsing
 
 bp = Blueprint("simple_authentication", __name__)
@@ -57,6 +58,7 @@ def credentials_digest(serialized: list[dict[str, Any]]) -> str:
 
 
 @bp.route("/api/authenticate/begin", methods=["POST"])
+@ceremony_session.ceremony_begin
 def authenticate_begin():
     uname = request.args.get("email")
     payload = request.get_json(silent=True) or {}

@@ -213,8 +213,9 @@ its logic out here first.
   overrides, then `INIT_STEPS` in order (`test_app_factory.py` pins it).
 - `config/`: `application.py` (the bare app, and `add_after_request_once`), `logs.py`,
   `session_secret.py`, `compression.py`, `proxy.py`, `session_cookie.py` (the cookie's flags
-  and lifetime, and a session interface whose cookie a file's answer never refreshes, so a
-  chunk or the MDS list landing after a ceremony's begin cannot undo it), `security_headers.py`
+  and lifetime, a session interface whose cookie a file's answer never refreshes, so a
+  chunk or the MDS list landing after a ceremony's begin cannot undo it, and `cookie_size`),
+  `security_headers.py`
   (the strict CSP and the Trusted Types report-only policy, both reporting to
   `/api/csp-report`; `FIDO_SERVER_CONTENT_SECURITY_POLICY` replaces the enforced policy),
   `origins.py`, `attestation_trust.py`, `relying_party.py` (the default RP name is the site's,
@@ -246,7 +247,9 @@ its logic out here first.
   sweep of idle namespaces, on both backends).
 - Routes: `routes/simple/` and `routes/advanced/` (begin/complete; the bodies are short
   orchestrators over modules named for their stage; the try blocks and the order of session
-  reads are behaviour); `routes/mds.py` (the MDS routes and certificate decoding);
+  reads are behaviour); `routes/ceremony_session.py` (every begin: refused, the session kept as
+  it was, when its cookie would pass `MAX_COOKIE_SIZE`); `routes/mds.py` (the MDS routes and
+  certificate decoding);
   `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`, and the export at `/`:
   the site's catch-all, since Flask has no static rule; HTML `no-cache`, `/_next/static/`
   immutable with the build's `.gz`, the export's 404 page, a plain 404 under `/api/`; `/beta…`

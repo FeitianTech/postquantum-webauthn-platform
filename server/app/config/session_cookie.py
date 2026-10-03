@@ -1,5 +1,6 @@
 """The Flask session cookie's flags and lifetime, which ``create_app()`` applies,
-and the session interface that keeps the files' answers from setting it."""
+the session interface that keeps the files' answers from setting it, and the size
+the session's cookie would take."""
 from __future__ import annotations
 
 import os
@@ -7,7 +8,8 @@ from datetime import timedelta
 from typing import Any
 
 from flask import Flask, has_request_context, request
-from flask.sessions import SecureCookieSessionInterface
+from flask.sessions import SecureCookieSessionInterface, SessionMixin
+from werkzeug.http import dump_cookie
 
 from ..env_flags import parse_env_flag
 from . import proxy
@@ -88,3 +90,28 @@ def init_app(app: Flask) -> None:
     """Use the session interface that leaves the cookie alone for files."""
 
     app.session_interface = FileQuietSessionInterface()
+
+
+def cookie_size(app: Flask, session: SessionMixin) -> int:
+    """The length of the Set-Cookie header the session interface would send for ``session``.
+
+    Werkzeug warns past ``MAX_COOKIE_SIZE`` (4,093 by default); a browser drops a
+    cookie whose name and value pass 4,096 bytes and keeps the one it had.
+    """
+
+    interface = app.session_interface
+    serializer = interface.get_signing_serializer(app)  # type: ignore[attr-defined]
+    return len(
+        dump_cookie(
+            interface.get_cookie_name(app),
+            serializer.dumps(dict(session)),
+            expires=interface.get_expiration_time(app, session),
+            path=interface.get_cookie_path(app),
+            domain=interface.get_cookie_domain(app),
+            secure=interface.get_cookie_secure(app),
+            httponly=interface.get_cookie_httponly(app),
+            samesite=interface.get_cookie_samesite(app),
+            partitioned=interface.get_cookie_partitioned(app),
+            max_size=0,
+        )
+    )

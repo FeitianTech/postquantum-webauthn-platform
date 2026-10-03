@@ -17,6 +17,7 @@ from ...webauthn.attachments import (
     resolve_allowed_attachments,
     resolve_effective_attachments,
 )
+from .. import ceremony_session
 from . import (
     algorithms,
     assertion_credentials,
@@ -32,6 +33,7 @@ bp = Blueprint("advanced_authentication", __name__)
 
 
 @bp.route("/api/advanced/authenticate/begin", methods=["POST"])
+@ceremony_session.ceremony_begin
 def advanced_authenticate_begin():
     data = request.get_json(silent=True)
 

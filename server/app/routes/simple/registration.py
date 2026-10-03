@@ -26,6 +26,7 @@ from ...webauthn.attachments import normalize_attachment
 from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
 from ...webauthn.attestation import checks
+from .. import ceremony_session
 from . import parsing, registration_persistence, registration_record
 
 bp = Blueprint("simple_registration", __name__)
@@ -256,6 +257,7 @@ def _offered_parameters(params: Any) -> list[dict[str, Any]]:
 
 
 @bp.route("/api/register/begin", methods=["POST"])
+@ceremony_session.ceremony_begin
 def register_begin():
     payload = request.get_json(silent=True) or {}
 
