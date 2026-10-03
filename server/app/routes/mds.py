@@ -10,14 +10,7 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
-from flask import (
-    Blueprint,
-    current_app,
-    g,
-    jsonify,
-    request,
-    session,
-)
+from flask import Blueprint, current_app, jsonify, request
 
 from .. import encoding, visitor_session
 from ..config.request_limits import METADATA_UPLOAD_LIMIT_KEY
@@ -28,38 +21,24 @@ from ..mds import explorer_files as mds_explorer_files
 from ..mds import provisioning as mds_provisioning
 from ..mds import uploads as mds_uploads
 from ..storage import github_mirror
+from ..storage.common import StorageReadError
 from ..webauthn.attestation import certificates as attestation_certificates
 
 # The HTTP rules, registered on the app by server.app.app.
 bp = Blueprint("mds", __name__)
 
 
-_MDS_CUSTOM_ENTRIES_SESSION_KEY = "fido.mds.custom"
+def _custom_entries_state(metadata_session_id: str | None) -> str:
+    """Whether the visitor's namespace holds uploaded metadata: "present" or "none",
+    or "unknown" when its uploads cannot be listed. The page loads the cacheable
+    packaged list only for "none"."""
 
-
-def _remember_custom_entries_state(snapshot: Any) -> None:
-    """Record whether this session has uploaded metadata.
-
-    The page uses this to load the cacheable packaged snapshot for sessions
-    without custom entries instead of the per-session explorer API.
-    """
-
-    meta = snapshot.get("meta") if isinstance(snapshot, Mapping) else None
-    if not isinstance(meta, Mapping) or not isinstance(meta.get("hasCustomEntries"), bool):
-        return
-    state = "present" if meta["hasCustomEntries"] else "none"
-    if session.get(_MDS_CUSTOM_ENTRIES_SESSION_KEY) != state:
-        session[_MDS_CUSTOM_ENTRIES_SESSION_KEY] = state
-
-
-def _initial_custom_entries_state(metadata_session_id: str | None) -> str:
-    if metadata_session_id and getattr(g, "_mds_session_new", None) == metadata_session_id:
-        # A namespace this request minted holds nothing: the session keeps
-        # saying so, so the next page load takes the cacheable list too.
-        session[_MDS_CUSTOM_ENTRIES_SESSION_KEY] = "none"
+    if not metadata_session_id:
         return "none"
-    stored = session.get(_MDS_CUSTOM_ENTRIES_SESSION_KEY)
-    return stored if stored in ("none", "present") else "unknown"
+    try:
+        return "present" if mds_uploads.has_items(metadata_session_id) else "none"
+    except StorageReadError:
+        return "unknown"
 
 
 def _packaged_snapshot_url() -> str | None:
@@ -90,9 +69,7 @@ def _initial_mds_info() -> dict[str, Any]:
     snapshot_url = _packaged_snapshot_url()
     if snapshot_url:
         initial_mds_info["snapshotUrl"] = snapshot_url
-    initial_mds_info["customEntriesState"] = _initial_custom_entries_state(
-        metadata_session_id
-    )
+    initial_mds_info["customEntriesState"] = _custom_entries_state(metadata_session_id)
     return initial_mds_info
 
 
@@ -120,7 +97,6 @@ def api_get_full_explorer_metadata():
             {"error": "Verified metadata snapshot is not available."},
             status=404,
         )
-    _remember_custom_entries_state(snapshot)
     return _no_store_json_response(snapshot)
 
 
@@ -259,8 +235,6 @@ def _upload_answer(saved_items: list[Any], errors: list[str]):
         response["errors"] = errors
     if saved_items:
         response["snapshot"] = mds_effective.load_effective_full_snapshot()
-        # A reload must now load this session's own list, not the packaged snapshot.
-        _remember_custom_entries_state(response["snapshot"])
 
     return _no_store_json_response(response, status=200 if saved_items else 400)
 
@@ -283,7 +257,6 @@ def api_delete_custom_metadata(stored_filename: str):
         )
 
     snapshot = mds_effective.load_effective_full_snapshot()
-    _remember_custom_entries_state(snapshot)
     return _no_store_json_response({"deleted": True, "snapshot": snapshot})
 
 

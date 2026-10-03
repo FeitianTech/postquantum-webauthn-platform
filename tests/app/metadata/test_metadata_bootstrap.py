@@ -9,7 +9,6 @@ from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
-from server.app.routes import mds as mds_routes
 from server.app.storage import github_mirror
 from server.app.webauthn.attestation import classical as attestation_classical
 from tests.app.entry_app import entry_app
@@ -84,17 +83,6 @@ def test_metadata_not_available_is_warning_classical():
     assert "metadata_not_available" in outcome["warnings"]
     assert "metadata_not_available" not in outcome["errors"]
     assert "metadata_entry_missing" not in outcome["errors"]
-
-
-def test_the_mds_info_answers_the_summary_and_the_custom_entries_state(monkeypatch):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-    monkeypatch.setattr(mds_cache, "load_packaged_explorer_summary", lambda: {})
-    monkeypatch.setattr(mds_cache, "load_packaged_snapshot_meta", lambda: None)
-
-    with entry_app().test_request_context("/api/mds/metadata/info"):
-        result = mds_routes._initial_mds_info()
-
-    assert result == {"customEntriesState": "unknown"}
 
 
 def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch):

@@ -9,8 +9,11 @@ import json
 import os
 
 from server.app.mds import files as mds_files
+from server.app.storage import session_metadata
+from server.app.storage.common import StorageReadError
 from tests.app.metadata import mds_fixture
 from tests.app.metadata.snapshot_versions import snapshot_version
+from tests.app.security.ceremony_helpers import Authenticator, register_simple
 
 
 def _summary():
@@ -45,17 +48,21 @@ def test_the_answer_is_per_session_and_never_cached(mds_fixture_snapshot, client
     assert "Cookie" in answer.headers["Vary"]
 
 
-def test_a_known_session_says_what_its_last_explorer_answer_held(mds_fixture_snapshot, client):
-    client.get("/api/mds/metadata/info")
-    # The namespace that answer minted holds nothing: the next page load is told so too.
+def test_a_namespace_a_registration_made_holds_no_uploads(mds_fixture_snapshot, client):
+    assert register_simple(client, Authenticator()).status_code == 200
+
     assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "none"
 
-    client.get("/api/mds/metadata/explorer/full")
-    assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "none"
 
+def test_a_namespace_whose_uploads_cannot_be_listed_is_unknown(mds_fixture_snapshot, client, monkeypatch):
     assert _upload(client).status_code == 200
-    client.get("/api/mds/metadata/explorer/full")
-    assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "present"
+
+    def unreadable(_directory):
+        raise StorageReadError("the uploads could not be listed")
+
+    monkeypatch.setattr(session_metadata, "list_files", unreadable)
+
+    assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "unknown"
 
 
 def test_the_snapshot_url_is_the_explorer_list_revalidated_by_its_etag(mds_fixture_snapshot, client):
@@ -114,12 +121,11 @@ def test_only_get_is_answered(client):
     assert client.post("/api/mds/metadata/info").status_code == 405
 
 
-def test_an_upload_and_a_delete_record_whether_the_session_has_uploads(mds_fixture_snapshot, client):
-    # The session last saw no uploads: its page may load the packaged snapshot.
-    client.get("/api/mds/metadata/explorer/full")
+def test_the_state_is_whether_the_namespace_holds_an_upload(mds_fixture_snapshot, client):
+    # No upload: the page may load the packaged snapshot.
     assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "none"
 
-    # After an upload a reload must ask the session's own list, not the packaged one.
+    # After an upload a reload must ask the visitor's own list, not the packaged one.
     assert _upload(client).status_code == 200
     assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "present"
 
@@ -128,10 +134,10 @@ def test_an_upload_and_a_delete_record_whether_the_session_has_uploads(mds_fixtu
     assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "none"
 
 
-def test_a_namespace_recovered_from_the_long_lived_cookie_may_hold_uploads(mds_fixture_snapshot, client):
-    client.get("/api/mds/metadata/info")
+def test_a_namespace_recovered_from_the_long_lived_cookie_says_what_it_holds(mds_fixture_snapshot, client):
+    assert _upload(client).status_code == 200
     recovery = client.get_cookie("fido.mds.session")
     client.delete_cookie("session")
     client.set_cookie(recovery.key, recovery.value)
 
-    assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "unknown"
+    assert client.get("/api/mds/metadata/info").get_json()["customEntriesState"] == "present"

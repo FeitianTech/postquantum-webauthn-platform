@@ -181,6 +181,19 @@ def save_session_metadata_item(
     )
 
 
+def _is_upload(name: str) -> bool:
+    return name.endswith(_SESSION_METADATA_SUFFIX) and not name.endswith(_SESSION_METADATA_INFO_SUFFIX)
+
+
+def has_items(session_id: str) -> bool:
+    """Whether the namespace holds an upload; StorageReadError when its uploads cannot be listed."""
+
+    directory = _session_metadata_directory(session_id, create=False, cleanup=False)
+    if not directory:
+        return False
+    return any(_is_upload(name) for name in session_metadata.list_files(directory))
+
+
 def list_session_metadata_items(session_id: str | None = None) -> list[SessionMetadataItem]:
     active_session = session_id or visitor_session.current_id()
     if not active_session:
@@ -193,12 +206,7 @@ def list_session_metadata_items(session_id: str | None = None) -> list[SessionMe
     visitor_session.note_activity(active_session)
 
     # A namespace whose uploads cannot be listed raises StorageReadError (503), never "no uploads".
-    filenames = [
-        name
-        for name in session_metadata.list_files(directory)
-        if name.endswith(_SESSION_METADATA_SUFFIX)
-        and not name.endswith(_SESSION_METADATA_INFO_SUFFIX)
-    ]
+    filenames = [name for name in session_metadata.list_files(directory) if _is_upload(name)]
 
     items: list[SessionMetadataItem] = []
     for filename in sorted(filenames):
