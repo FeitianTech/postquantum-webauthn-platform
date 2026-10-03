@@ -186,6 +186,32 @@ test.describe('/#simple', () => {
     await expect(detail).toBeVisible();
   });
 
+  test('opens a credential\'s details and the Analyze Browser after their chunks failed to load ahead', async ({ page, watch }) => {
+    // The network drops both chunks while the page loads them ahead, and is back
+    // before the person asks for either.
+    watch.allow(/net::ERR_FAILED/);
+    const aborted = new Set<string>();
+    let down = true;
+    await page.route(/\/_next\/static\/chunks\/(credential-details|analyze-browser)\.[^/]*\.js$/, async (route) => {
+      if (!down) return route.continue();
+      aborted.add(/credential-details|analyze-browser/.exec(route.request().url())![0]);
+      return route.abort();
+    });
+    const records = JSON.stringify([{ ...goldenStoredCredential('simple-register-es256'), type: 'simple' }]);
+    await page.addInitScript(([key, value]) => window.localStorage.setItem(key, value), [STORAGE_KEY, records] as const);
+    await openBeta(page);
+    await expect.poll(() => aborted.size).toBe(2);
+    down = false;
+
+    await rows(page).first().getByRole('button', { name: 'user@example.com' }).click();
+    const detail = page.getByRole('dialog', { name: 'Credential Details' });
+    await expect(detail).toBeVisible();
+    await page.goBack();
+    await expect(detail).toBeHidden();
+    await page.getByRole('button', { name: 'Analyze Browser' }).click();
+    await expect(page.getByRole('dialog', { name: 'Browser Analysis' })).toBeVisible();
+  });
+
   test('opens a saved credential\'s FIDO MDS entry, and Back returns to the list', async ({ page }) => {
     await openBeta(page);
     await keep(page, [
