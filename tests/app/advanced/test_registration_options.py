@@ -18,6 +18,42 @@ def _begin(client=None, **changes):
     return response.get_json()["publicKey"]
 
 
+@pytest.mark.parametrize(
+    ("changes", "error"),
+    [
+        ({"extensions": None}, "extensions must be an object."),
+        ({"extensions": "credProps"}, "extensions must be an object."),
+        ({"rp": "example.com"}, "rp must be an object."),
+        ({"user": "alice"}, "user must be an object."),
+        ({"excludeCredentials": None}, "excludeCredentials must be a list."),
+        ({"timeout": "60s"}, "timeout must be a number of milliseconds."),
+        ({"timeout": True}, "timeout must be a number of milliseconds."),
+    ],
+)
+def test_a_member_of_the_wrong_type_is_refused(changes, error):
+    response = entry_app().test_client().post(
+        "/api/advanced/register/begin",
+        json={"publicKey": {**advanced_public_key_options(challenge=b"\x01" * 32), **changes}},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": error}
+
+
+@pytest.mark.parametrize(
+    ("body", "error"),
+    [
+        ({"publicKey": "options"}, "publicKey must be an object."),
+        (["publicKey"], "Invalid request: Missing publicKey in CredentialCreationOptions"),
+    ],
+)
+def test_a_request_that_is_no_object_is_refused(body, error):
+    response = entry_app().test_client().post("/api/advanced/register/begin", json=body)
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": error}
+
+
 @pytest.mark.parametrize("attestation", ["direct", "indirect", "enterprise"])
 def test_the_requested_attestation_is_asked_for(attestation):
     assert _begin(attestation=attestation)["attestation"] == attestation

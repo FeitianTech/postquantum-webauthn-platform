@@ -44,16 +44,42 @@ class AuthenticatorSelection(NamedTuple):
     resident_key: ResidentKeyRequirement
 
 
+# Members a registration request's publicKey must hold as objects, or as a
+# list, when it has them.
+_OBJECT_MEMBERS = ("rp", "user", "extensions")
+_LIST_MEMBERS = ("excludeCredentials",)
+
+
+def member_type_refusal(public_key: Any) -> str | None:
+    """Why ``public_key``, or a member both ceremonies read from it, is not the JSON type it must be; else None."""
+
+    if not isinstance(public_key, Mapping):
+        return "publicKey must be an object."
+    for name in _OBJECT_MEMBERS:
+        if name in public_key and not isinstance(public_key[name], Mapping):
+            return f"{name} must be an object."
+    for name in _LIST_MEMBERS:
+        if name in public_key and not isinstance(public_key[name], list):
+            return f"{name} must be a list."
+    timeout = public_key.get("timeout")
+    if timeout is not None and (isinstance(timeout, bool) or not isinstance(timeout, (int, float))):
+        return "timeout must be a number of milliseconds."
+    return None
+
+
 def parse_begin_request(data: Any) -> tuple[BeginRequest | None, Any]:
     """The user, user id and challenge a register-begin request names, or the 400 it earns."""
 
-    if not data or not data.get("publicKey"):
+    if not isinstance(data, Mapping) or not data.get("publicKey"):
         return None, (
             jsonify({"error": "Invalid request: Missing publicKey in CredentialCreationOptions"}),
             400,
         )
 
     public_key = data["publicKey"]
+    refusal = member_type_refusal(public_key)
+    if refusal is not None:
+        return None, (jsonify({"error": refusal}), 400)
 
     if not public_key.get("rp"):
         return None, (jsonify({"error": "Missing required field: rp"}), 400)

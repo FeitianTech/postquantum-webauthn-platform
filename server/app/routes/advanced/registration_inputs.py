@@ -23,6 +23,7 @@ from ...webauthn.attachments import (
 )
 from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
+from . import registration_options
 
 
 def _request_allowed_attachments(original_public_key: Any) -> list[str]:
@@ -103,11 +104,12 @@ def _attestation_inputs(response: Any, credential_response: Mapping[str, Any]) -
 def prepare_register_complete_inputs(
     data: Mapping[str, Any],
 ) -> tuple[dict[str, Any] | None, Any | None]:
-    response = data.get("__credential_response")
+    response = data.get("__credential_response") if isinstance(data, Mapping) else None
     if not response:
         return None, (jsonify({"error": "Credential response is required"}), 400)
 
-    credential_response = response.get("response", {}) if isinstance(response, dict) else {}
+    inner_response = response.get("response") if isinstance(response, Mapping) else None
+    credential_response = inner_response if isinstance(inner_response, Mapping) else {}
     original_request = {key: value for key, value in data.items() if not key.startswith("__")}
 
     original_public_key = original_request.get("publicKey") if isinstance(original_request, Mapping) else None
@@ -132,6 +134,9 @@ def prepare_register_complete_inputs(
         )
 
     public_key = original_request["publicKey"]
+    refusal = registration_options.member_type_refusal(public_key)
+    if refusal is not None:
+        return None, (jsonify({"error": refusal}), 400)
     user_info = public_key.get("user", {})
     username = user_info.get("name", "")
     display_name = user_info.get("displayName", username)
