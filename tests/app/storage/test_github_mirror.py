@@ -534,13 +534,13 @@ def test_record_registration_event_creates_unique_files(monkeypatch, caplog):
         assert kwargs == {}
 
 
+def test_the_test_run_never_logs_to_github():
+    # tests/conftest.py turns the log off for the whole run.
+    assert is_logging_enabled() is False
+
+
 def test_record_registration_event_disabled(monkeypatch):
-    monkeypatch.delenv("ENABLE_GITHUB_LOGGING", raising=False)
-
-    def disabled_logging():
-        return False
-
-    monkeypatch.setattr(github_mirror, "is_logging_enabled", disabled_logging)
+    monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "0")
 
     def fail_upload(*_args, **_kwargs):
         raise AssertionError("github_upload_json should not be called when logging is disabled")

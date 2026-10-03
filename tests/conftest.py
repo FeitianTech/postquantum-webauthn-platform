@@ -56,6 +56,12 @@ atexit.register(shutil.rmtree, _WEB_EXPORT_ROOT, ignore_errors=True)
 # before anything is imported. A test of the secret's resolution removes it.
 os.environ.setdefault("FIDO_SERVER_SECRET_KEY", "test-session-secret-0123456789abcdef")
 
+# A registration logs itself to the credential log repository on GitHub
+# (storage/github_mirror.py), with whatever GITHUB_TOKEN the shell holds. No test
+# reaches GitHub: logging is off for the run, and a test of the log turns it on
+# against its own stand-in for the API.
+os.environ["ENABLE_GITHUB_LOGGING"] = "0"
+
 # The checkout guard (tests/checkout_guard.py) fails the run if a test wrote app
 # state into the checkout; tests/fixture_values.py fails a fixture whose value is a module.
 pytest_plugins = ["tests.checkout_guard", "tests.fixture_values"]

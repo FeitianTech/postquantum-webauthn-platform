@@ -37,6 +37,9 @@ const flask = spawn(
       FIDO_SERVER_WEB_EXPORT_ROOT: join(repo, 'web', 'out'),
       FIDO_SERVER_MDS_SNAPSHOT_DIR: mdsSnapshot,
       FIDO_SERVER_MDS_FETCH_UPSTREAM: '0',
+      // The browser tests' registrations never reach the credential log on
+      // GitHub, whatever GITHUB_TOKEN the shell holds.
+      ENABLE_GITHUB_LOGGING: '0',
     },
   },
 );
