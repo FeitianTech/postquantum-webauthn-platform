@@ -22,9 +22,8 @@ Limitation: in-process only
 :class:`InMemoryChallengeRegistry` protects a single process. Cloud Run runs up
 to ``maxScale`` instances (and gunicorn may run several workers), and a replay
 routed to a different instance/worker than the original ``/complete`` will not
-be detected. Swapping in a shared store only requires another
-:class:`ChallengeRegistry` implementation passed to
-:func:`set_challenge_registry`.
+be detected. A shared store would be another :class:`ChallengeRegistry`
+implementation, in ``_registry``.
 """
 from __future__ import annotations
 
@@ -43,7 +42,6 @@ __all__ = [
     "challenge_ttl_seconds",
     "consume_ceremony_state",
     "get_challenge_registry",
-    "set_challenge_registry",
     "stamp_ceremony_state",
 ]
 
@@ -131,11 +129,6 @@ _registry: ChallengeRegistry = InMemoryChallengeRegistry()
 
 def get_challenge_registry() -> ChallengeRegistry:
     return _registry
-
-
-def set_challenge_registry(registry: ChallengeRegistry) -> None:
-    global _registry
-    _registry = registry
 
 
 def stamp_ceremony_state(state: MutableMapping[str, Any]) -> MutableMapping[str, Any]:

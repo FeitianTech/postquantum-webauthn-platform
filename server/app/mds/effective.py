@@ -4,18 +4,15 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from . import cache as mds_cache
 from . import uploads as mds_uploads
 from .build import build_entry_id, build_explorer_entry, normalise_aaguid_key
 
-if TYPE_CHECKING:  # annotation-only, so no runtime import edge is needed
-    from .uploads import SessionMetadataItem
-
 
 def _build_session_snapshot_entry(
-    item: SessionMetadataItem,
+    item: mds_uploads.SessionMetadataItem,
     *,
     index: int,
     include_detail: bool,
@@ -38,7 +35,7 @@ def _build_session_snapshot_entry(
     )
 
 
-def _session_item_source_info(item: SessionMetadataItem) -> dict[str, Any]:
+def _session_item_source_info(item: mds_uploads.SessionMetadataItem) -> dict[str, Any]:
     info: dict[str, Any] = {"storedFilename": item.filename}
     if item.original_filename:
         info["originalFilename"] = item.original_filename
