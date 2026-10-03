@@ -168,3 +168,36 @@ def test_a_signing_certificate_whose_key_does_not_load_is_refused(monkeypatch):
     monkeypatch.setattr(mds_blob, "verify_chain_to_root", lambda _chain, _root: None)
     with pytest.raises(ValueError, match="does not expose a supported public key"):
         mds_blob.verify_blob(blob, certs.current_root)
+
+
+@pytest.mark.parametrize(
+    ("segment", "spelling"),
+    [(0, "padded"), (1, "padded"), (2, "padded"), (1, "standard"), (1, "spaced"), (2, "spaced")],
+)
+def test_a_segment_not_written_as_unpadded_base64url_is_refused_even_when_signed(segment, spelling):
+    key = ec.generate_private_key(ec.SECP256R1())
+    root = _certificate(subject="Signer", issuer="Signer", public_key=key.public_key(), issuer_key=key)
+    parts = _blob({"alg": "ES256"}, {**_payload(), "legalHeader": "~~~?"}, key).split(b".")
+    if spelling == "padded":
+        parts[segment] += b"=" * (-len(parts[segment]) % 4 or 4)
+    elif spelling == "standard":
+        parts[segment] = parts[segment].replace(b"-", b"+").replace(b"_", b"/")
+        assert b"+" in parts[segment] or b"/" in parts[segment]
+    else:
+        parts[segment] = parts[segment][:8] + b" " + parts[segment][8:]
+    message = parts[0] + b"." + parts[1]
+    if segment < 2:
+        parts[2] = websafe_encode(key.sign(message, ec.ECDSA(hashes.SHA256()))).encode("ascii")
+
+    with pytest.raises(ValueError):
+        mds_blob.verify_blob(message + b"." + parts[2], root)
+
+
+def test_an_x5c_certificate_in_base64url_is_refused():
+    certs = _transition()
+    leaf = base64.urlsafe_b64encode(certs.leaf).decode("ascii")
+    assert "-" in leaf or "_" in leaf
+    header = {"alg": "ES256", "x5c": [leaf, *_x5c(certs.intermediate)]}
+
+    with pytest.raises(ValueError):
+        mds_blob.verify_blob(_blob(header, _payload(), certs.leaf_key), certs.current_root)

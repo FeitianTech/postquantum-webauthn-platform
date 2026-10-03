@@ -8,12 +8,13 @@ checks ``x5c`` and the root as one straight chain, so with R46 pinned it would
 refuse the real BLOB; this builds the path cryptography's verifier finds.
 
 A Flask-free leaf like ``mds.trust``: ``tools/update_mds_snapshot.py`` uses it
-without building the app, and it imports nothing from the app.
+without building the app, and its only import from the app is ``encoding``. The
+JWS's segments are read as the unpadded base64url RFC 7515 writes, and ``x5c``'s
+certificates as standard base64, strictly: nothing else is decoded.
 """
 from __future__ import annotations
 
 import json
-from base64 import b64decode
 from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import Any
@@ -29,7 +30,8 @@ from cryptography.x509.verification import (
 from fido2.attestation import InvalidSignature
 from fido2.cose import CoseKey
 from fido2.mds3 import MetadataBlobPayload
-from fido2.utils import websafe_decode
+
+from .. import encoding
 
 __all__ = ["verify_blob", "verify_chain_to_root"]
 
@@ -61,6 +63,15 @@ def verify_chain_to_root(chain: Sequence[bytes], trust_root: bytes, *, now: date
         raise InvalidSignature(f"No path to the pinned root: {exc}") from None
 
 
+def _segment(segment: bytes) -> bytes:
+    """A JWS segment's bytes: unpadded base64url, nothing else."""
+
+    text = segment.decode("ascii")
+    if "=" in text:
+        raise encoding.EncodingError("a JWS segment is unpadded base64url")
+    return encoding.decode_base64url(text, ignore_whitespace=False)
+
+
 def verify_blob(blob: bytes, trust_root: bytes) -> dict[str, Any]:
     """The BLOB's payload, once its chain leads to ``trust_root`` and its signature verifies.
 
@@ -71,9 +82,9 @@ def verify_blob(blob: bytes, trust_root: bytes) -> dict[str, Any]:
 
     message, signature_segment = blob.rsplit(b".", 1)
     header_segment, payload_segment = message.split(b".")
-    header = json.loads(websafe_decode(header_segment.decode("ascii")))
+    header = json.loads(_segment(header_segment))
 
-    chain = [b64decode(certificate) for certificate in header.get("x5c", [])]
+    chain = [encoding.decode_base64(certificate, ignore_whitespace=False) for certificate in header.get("x5c", [])]
     verify_chain_to_root(chain, trust_root)
 
     signer = x509.load_der_x509_certificate(chain[0] if chain else trust_root)
@@ -81,9 +92,9 @@ def verify_blob(blob: bytes, trust_root: bytes) -> dict[str, Any]:
         public_key = signer.public_key()
     except ValueError:
         raise ValueError("Metadata signing certificate does not expose a supported public key") from None
-    signature = websafe_decode(signature_segment.decode("ascii"))
+    signature = _segment(signature_segment)
     CoseKey.for_name(header["alg"]).from_cryptography_key(public_key).verify(message, signature)
 
-    payload = json.loads(websafe_decode(payload_segment.decode("ascii")))
+    payload = json.loads(_segment(payload_segment))
     MetadataBlobPayload.from_dict(payload)
     return payload
