@@ -99,10 +99,17 @@ def _trust_path_dates_valid(trust_path: list[Any], now: datetime, errors: list[s
         not_after = cert.not_valid_after_utc
         if now < not_before or now > not_after:
             chain_valid_dates = False
-            errors.append(
-                f"certificate_out_of_validity: {cert.subject.rfc4514_string()}"
-            )
+            errors.append(f"certificate_out_of_validity: {_subject_text(cert)}")
     return chain_valid_dates
+
+
+def _subject_text(cert: x509.Certificate) -> str:
+    try:
+        return cert.subject.rfc4514_string()
+    except (TypeError, ValueError):
+        # cryptography reads a name only when asked, and refuses one it cannot
+        # type (a common name that is not a string).
+        return "a subject that cannot be read"
 
 
 def _evaluate_with_metadata(

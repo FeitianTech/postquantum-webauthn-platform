@@ -48,10 +48,10 @@ def _is_trusted_ca_certificate(cert_bytes: bytes, *, allow_subject_parsing: bool
 
     if allow_subject_parsing and subjects:
         try:
-            cert = x509.load_der_x509_certificate(cert_bytes)
+            subject_value = x509.load_der_x509_certificate(cert_bytes).subject.rfc4514_string()
         except Exception:
+            # Not a certificate, or a subject cryptography will not read.
             return False
-        subject_value = cert.subject.rfc4514_string()
         if subject_value in subjects:
             return True
 

@@ -60,6 +60,12 @@ def test_bytes_that_are_not_a_certificate_match_no_trusted_subject(trust_setting
     assert trusted is False
 
 
+def test_a_certificate_whose_subject_cryptography_will_not_read_matches_no_trusted_subject(trust_settings):
+    certificate = material.with_unreadable_subject(_certificate_with_aaguid_extension(None), "Trust Test")
+
+    assert trust_settings({"CN=Trust Test"}, None, lambda: attestation_trust._is_trusted_ca_certificate(certificate)) is False
+
+
 def test_with_only_fingerprints_trusted_another_certificate_is_not(trust_settings):
     certificate = _certificate_with_aaguid_extension(None)
     fingerprint = hashlib.sha256(certificate).hexdigest().upper()

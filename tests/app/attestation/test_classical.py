@@ -79,6 +79,15 @@ def test_an_expired_leaf_makes_the_chain_invalid_and_an_untrusted_entry_is_repor
     assert outcome["root_valid"] is False
 
 
+def test_an_expired_leaf_whose_subject_cryptography_will_not_read_is_reported(evaluate):
+    leaf = material.with_unreadable_subject(LEAF, "Classical Leaf")
+
+    outcome = evaluate([leaf], fido_trusted=True, now=AFTER_EXPIRY)
+
+    assert outcome["errors"] == ["certificate_out_of_validity: a subject that cannot be read"]
+    assert outcome["checks"]["chain"] is False
+
+
 def test_a_root_the_operator_does_not_trust_is_reported_beside_the_mds_errors(evaluate):
     config = {"TRUSTED_ATTESTATION_CA_FINGERPRINTS": {hashlib.sha256(b"another root").hexdigest().upper()}}
 
