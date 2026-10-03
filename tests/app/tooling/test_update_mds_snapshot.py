@@ -244,6 +244,24 @@ def test_the_verified_snapshot_is_checked_against_the_trust_root(monkeypatch):
     assert seen["args"] == (blob, updater.FIDO_METADATA_TRUST_ROOT_CERT)
 
 
+def test_a_signed_payload_with_a_biometric_report_as_mds3_writes_it_is_taken():
+    payload = _payload_with_unmodelled_fields()
+    payload["entries"][0]["biometricStatusReports"] = [
+        {
+            "certLevel": 1,
+            "modality": "fingerprint_internal",
+            "effectiveDate": "2026-02-01",
+            "certificationDescriptor": "Fixture Fingerprint",
+            "certificateNumber": "FIDO-BIO-001",
+            "certificationPolicyVersion": "1.0.4",
+            "certificationRequirementsVersion": "1.1",
+        }
+    ]
+    blob, root = mds_fixture._signed_blob(payload)
+
+    assert updater._build_verified_snapshot(blob, root) == payload
+
+
 def test_a_signed_payload_that_is_not_metadata_is_refused():
     blob, root = mds_fixture._signed_blob({"entries": "not a list"})
 

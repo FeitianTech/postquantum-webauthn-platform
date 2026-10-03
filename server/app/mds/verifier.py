@@ -99,7 +99,7 @@ class PackagedEntries:
         with self._lock:
             entry = self._parsed.get(index)
             if entry is None:
-                entry = MetadataBlobPayloadEntry.from_dict(self.raw[index])
+                entry = mds_entries.parse_entry(self.raw[index])
                 self._parsed[index] = entry
                 self._parsed_ids.add(id(entry))
             return entry

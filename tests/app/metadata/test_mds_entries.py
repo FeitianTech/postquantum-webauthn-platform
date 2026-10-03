@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
+from fido2.mds3 import MetadataBlobPayloadEntry
 
 from server.app.mds import entries as mds_entries
 
@@ -94,3 +95,40 @@ def test_a_blob_shaped_upload_without_readable_entries_is_refused(raw, error):
 )
 def test_an_entrys_aaguid_is_its_own_or_else_its_statements(entry, aaguid):
     assert mds_entries._extract_entry_aaguid(entry) == aaguid
+
+
+BIOMETRIC_REPORT = {
+    "certLevel": 1,
+    "modality": "fingerprint_internal",
+    "effectiveDate": "2026-02-01",
+    "certificationDescriptor": "Fixture Fingerprint",
+    "certificateNumber": "FIDO-BIO-001",
+    "certificationPolicyVersion": "1.0.4",
+    "certificationRequirementsVersion": "1.1",
+}
+
+
+def _entry_with_a_biometric_report() -> dict:
+    return {
+        "aaguid": "b10b10b1-0000-4000-8000-000000000001",
+        "statusReports": [],
+        "timeOfLastStatusChange": "2026-02-01",
+        "biometricStatusReports": [BIOMETRIC_REPORT],
+    }
+
+
+def test_an_entry_with_a_biometric_report_as_mds3_writes_it_is_read_without_it():
+    with pytest.raises(ValueError):
+        MetadataBlobPayloadEntry.from_dict(_entry_with_a_biometric_report())
+
+    entry = mds_entries.parse_entry(_entry_with_a_biometric_report())
+
+    assert str(entry.aaguid) == "b10b10b1-0000-4000-8000-000000000001"
+    assert entry.biometric_status_reports is None
+
+
+def test_a_payload_whose_entry_has_a_biometric_report_is_read():
+    payload = {"legalHeader": "", "no": 1, "nextUpdate": "2026-12-01", "entries": [_entry_with_a_biometric_report()]}
+
+    assert len(mds_entries.parse_payload(payload).entries) == 1
+    assert payload["entries"][0]["biometricStatusReports"] == [BIOMETRIC_REPORT]

@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
 
-from fido2.mds3 import MetadataBlobPayloadEntry
+from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
 
 # What an uploaded statement is given for a required member it lacks.
 _METADATA_STATEMENT_REQUIRED_DEFAULTS: Mapping[str, Any] = {
@@ -123,6 +123,30 @@ def _normalise_metadata_statement(raw: Mapping[str, Any]) -> tuple[dict[str, Any
     return metadata_statement, legal_header
 
 
+# fido2 2.2.1 reads a biometric status report's ``effectiveDate`` as an integer,
+# where MDS3 writes a date ("2026-02-01"), so it refuses an entry that has one.
+# Nothing reads those reports from fido2's dataclasses (they are shown from the
+# entry's JSON), so they are left out of what fido2 parses.
+_FIDO2_MISREADS = ("biometricStatusReports",)
+
+
+def parse_entry(raw: Mapping[str, Any]) -> MetadataBlobPayloadEntry:
+    """An entry's JSON as fido2's ``MetadataBlobPayloadEntry``, its biometric status reports left out."""
+
+    return MetadataBlobPayloadEntry.from_dict({key: value for key, value in raw.items() if key not in _FIDO2_MISREADS})
+
+
+def parse_payload(raw: Mapping[str, Any]) -> MetadataBlobPayload:
+    """A BLOB payload's JSON as fido2's ``MetadataBlobPayload``, each entry as ``parse_entry`` reads it."""
+
+    entries = raw.get("entries")
+    readable = [
+        {key: value for key, value in entry.items() if key not in _FIDO2_MISREADS} if isinstance(entry, Mapping) else entry
+        for entry in (entries if isinstance(entries, list) else [])
+    ]
+    return MetadataBlobPayload.from_dict({**raw, "entries": readable} if isinstance(entries, list) else raw)
+
+
 def build_metadata_entry_components(raw: Mapping[str, Any]) -> tuple[
     MetadataBlobPayloadEntry,
     str | None,
@@ -153,7 +177,7 @@ def build_metadata_entry_components(raw: Mapping[str, Any]) -> tuple[
     metadata_statement, legal_header = _normalise_metadata_statement(raw)
     payload["metadataStatement"] = metadata_statement
 
-    entry = MetadataBlobPayloadEntry.from_dict(payload)
+    entry = parse_entry(payload)
     payload_clone = json.loads(json.dumps(payload))
     return entry, legal_header, payload_clone
 
