@@ -7,19 +7,11 @@ from typing import Any
 from ... import encoding
 
 
-def _decode_pem_text(
-    pem_text: str,
-    *,
-    require_non_empty: bool = False,
-) -> bytes | None:
+def _decode_pem_text(pem_text: str) -> bytes | None:
     try:
-        decoded = encoding.decode_pem_body(pem_text)
+        return encoding.decode_pem_body(pem_text)
     except encoding.EncodingError:
         return None
-
-    if require_non_empty and not decoded:
-        return None
-    return decoded
 
 
 def _require_bytes(value: Any, field_name: str) -> bytes:
@@ -96,9 +88,7 @@ def _require_certificate_bytes(entry: Any, index: int) -> bytes:
     if isinstance(entry, Mapping):
         pem = entry.get("pem")
         if isinstance(pem, str) and pem.strip():
-            decoded_pem = _decode_pem_text(pem.strip(), require_non_empty=True)
-            if decoded_pem is not None:
-                return decoded_pem
+            # _maybe_decode_bytes read this PEM text already, and it does not decode.
             raise ValueError("Unable to decode certificate PEM contents.")
 
     raise ValueError(f"Unable to recover certificate bytes for x5c[{index}].")

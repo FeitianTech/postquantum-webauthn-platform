@@ -259,9 +259,6 @@ def _build_authenticator_section(
 
 
 def _build_credential_overview(decoded: Mapping[str, Any]) -> dict[str, Any]:
-    if not isinstance(decoded, Mapping):
-        return {}
-
     overview: dict[str, Any] = {}
     for key in ("id", "type", "authenticatorAttachment"):
         value = decoded.get(key)
@@ -539,8 +536,6 @@ def _convert_client_data_entry(entry: Any) -> dict[str, Any]:
         return {}
 
     details = entry.get("details") if isinstance(entry.get("details"), Mapping) else entry
-    if not isinstance(details, Mapping):
-        return {}
 
     payload: dict[str, Any] = {}
     for key in ("type", "origin", "crossOrigin"):
@@ -576,9 +571,7 @@ def _collect_response_extras(response: Any) -> dict[str, Any]:
     return extras
 
 
-def _extract_hex_from_binary(entry: Any) -> str | None:
-    if not isinstance(entry, Mapping):
-        return None
+def _extract_hex_from_binary(entry: Mapping[str, Any]) -> str | None:
     direct_hex = entry.get("hex")
     if isinstance(direct_hex, str) and direct_hex:
         return direct_hex

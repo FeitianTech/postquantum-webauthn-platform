@@ -160,20 +160,20 @@ def read(value: Any, path: str = "$") -> Any:
         return read_text(value, path)
     if isinstance(value, list):
         return [read(item, f"{path}[{index}]") for index, item in enumerate(value)]
-    if isinstance(value, Mapping):
-        return {
-            read_key(label, path): read(entry, f"{path}{{{json.dumps(label, ensure_ascii=False)}}}")
-            for label, entry in value.items()
-        }
-    raise ValueError(f"{path}: a {type(value).__name__} is no value a CTAP view writes.")
+    # An object: the only JSON value left.
+    return {
+        read_key(label, path): read(entry, f"{path}{{{json.dumps(label, ensure_ascii=False)}}}")
+        for label, entry in value.items()
+    }
 
 
 def read_text(value: str, path: str = "$") -> Any:
     """A string of a CTAP view: a typed spelling's value, bytes from hex, else the text itself."""
 
-    if values.typed_spelling(value):
+    match = values.typed_spelling(value)
+    if match:
         try:
-            return json_keys.read_typed(value)
+            return json_keys.read_typed(match)
         except json_keys.TypedSpellingError as exc:
             raise ValueError(f"{path}: {json.dumps(value, ensure_ascii=False)} is no value the encoder can read: {exc.reason}.") from None
     if _HEX_BYTES.fullmatch(value):

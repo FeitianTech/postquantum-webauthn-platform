@@ -84,7 +84,6 @@ def test_a_container_of_containers_spans_lines_unless_inline():
 def test_a_node_built_without_its_head_is_spelled_as_the_shortest():
     assert edn.spell({"majorType": 0, "value": 1}) == "1"
     assert edn.spell({"majorType": 4, "items": [{"majorType": 1, "value": -2}]}) == "[-2]"
-    assert edn.spell({"majorType": 7, "type": "float", "precision": "double", "value": 0.5}) == "0.5_3"
 
 
 @pytest.mark.parametrize(

@@ -75,13 +75,12 @@ def _reject_unknown_members(structure: Mapping[Any, Any], kind: str) -> None:
     A member CTAP 2.2 does not define for ``kind`` is not passed through either:
     the decoder shows byte strings as hex text, so from JSON alone "abcd" could
     have been a byte string or a text string, and encoding it would be a guess.
-    Two keys that name one member ("1" and "1 (fmt)") are refused too, since
-    only one of them could be encoded.
+    ``structure`` holds one key per member number (``handlers_cbor`` builds it,
+    or ``ctap_numeric`` has refused a number given twice).
     """
 
     _reject_typed_keys(structure, kind)
     members = _CTAP_FIELD_LABELS[kind]
-    claimed: dict[int, Any] = {}
     unknown: list[str] = []
     for key in structure:
         number = next(
@@ -94,18 +93,12 @@ def _reject_unknown_members(structure: Mapping[Any, Any], kind: str) -> None:
         )
         if number is None:
             unknown.append(repr(key))
-        elif number in claimed:
-            raise ValueError(
-                f"{kind} member {number} ({members[number]}) is given twice, as {claimed[number]!r} and {key!r}."
-            )
         elif structure[key] is None:
             # The builders read a null member as absent: encoding would drop it.
             raise ValueError(
                 f"{kind} member {number} ({members[number]}) is null. CTAP defines no null member, and "
                 "the encoder does not drop one: encode this map from its EDN."
             )
-        else:
-            claimed[number] = key
     if unknown:
         raise ValueError(
             f"{kind} has no member {', '.join(unknown)} in CTAP 2.2. The encoder does not drop it, and "

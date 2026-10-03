@@ -81,10 +81,7 @@ def extract_certificate(att_stmt: Mapping[str, Any]) -> dict[str, Any] | None:
     if not cert_bytes:
         return None
 
-    try:
-        return attestation_certificates.serialize_attestation_certificate(cert_bytes)
-    except Exception:
-        return None
+    return attestation_certificates.serialize_attestation_certificate(cert_bytes)
 
 
 def try_decode(data: bytes, encoding: str) -> dict[str, Any] | None:

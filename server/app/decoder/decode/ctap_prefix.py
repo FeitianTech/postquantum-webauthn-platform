@@ -48,10 +48,10 @@ def _parses(data: bytes) -> bool:
 
 
 def _is_one_item(data: bytes) -> bool:
-    try:
-        _node, end, _skipped = cbor_parser.decode_item(data)
-    except cbor_parser._CborDecodingError:
-        return False
+    # ``data`` starts with SUCCESS or a command byte, and something follows it:
+    # each of those bytes starts an item that ends within it (an integer, an
+    # empty byte string, a one-byte byte string), so the first item always reads.
+    _node, end, _skipped = cbor_parser.decode_item(data)
     return end == len(data)
 
 

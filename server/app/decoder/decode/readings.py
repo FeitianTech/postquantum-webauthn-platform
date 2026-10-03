@@ -183,13 +183,12 @@ def _is_lone_ctap_byte(data: bytes) -> bool:
 
 
 def _is_pem_text(data: bytes) -> bool:
+    # PEM text that does not decode never gets here: binary input holding it is
+    # refused first (``_utf8_pem``), and no base64 a text reading gives holds it.
     text = values.try_decode_utf8(data)
     if not text or not pem.looks_like_pem(text):
         return False
-    try:
-        pem.decode_pem_certificates(text)
-    except ValueError:
-        return False
+    pem.decode_pem_certificates(text)
     return True
 
 

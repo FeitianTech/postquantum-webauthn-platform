@@ -29,8 +29,6 @@ def _extract_mapping_string(value: Mapping[Any, Any], keys: Iterable[Any]) -> st
 
 
 def _extract_mapping_bytes(value: Mapping[Any, Any], keys: Iterable[Any]) -> bytes | None:
-    if not isinstance(value, Mapping):
-        return None
     candidate = values.get_mapping_entry(value, *keys)
     if candidate is values.MISSING:
         return None

@@ -19,7 +19,8 @@ from fido2 import cbor
 from fido2.ctap import CtapError
 from fido2.ctap2.base import Ctap2
 
-from server.app.decoder.decode import ctap
+from server.app.decoder import ctap_tables
+from server.app.decoder.decode import cbor_parser, ctap
 from server.app.decoder.decode.text import decode_payload_text
 from server.app.decoder.encode import constants
 
@@ -165,3 +166,13 @@ def test_a_command_byte_whose_payload_parses_is_still_read_as_the_command(text, 
 
     assert result["type"] == type_label
     assert "ctap-prefix-not-read" not in [finding["code"] for finding in result["findings"]]
+
+
+@pytest.mark.parametrize("code", sorted({ctap_tables.SUCCESS, *ctap_tables.COMMANDS}))
+def test_every_byte_read_as_a_prefix_starts_an_item_that_ends_within_two_bytes(code):
+    # ctap_prefix reads the input whole as one item, when what follows the byte is
+    # no CBOR, without guarding the read: every such byte starts an item that its
+    # next byte, whatever it is, ends.
+    for following in (0x00, 0x7F, 0xFF):
+        _node, end, _skipped = cbor_parser.decode_item(bytes([code, following]))
+        assert end <= 2

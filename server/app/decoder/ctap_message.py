@@ -87,8 +87,6 @@ def read_members(message: str, view: Mapping[str, Any], path: str = "$") -> dict
 
     if message not in MESSAGES:
         raise ValueError(f"{path}: {message} is not a CTAP message this view names; it names {', '.join(MESSAGES)}.")
-    if not isinstance(view, Mapping):
-        raise ValueError(f"{path}.{message} must be an object of members.")
     members: dict[Any, Any] = {}
     for label, value in view.items():
         member_path = f"{path}.{message}{{{json.dumps(label, ensure_ascii=False)}}}"

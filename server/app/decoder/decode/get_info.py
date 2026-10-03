@@ -71,9 +71,8 @@ def _member_label(key: Any, text: str) -> str:
     return f"{text} ({name})" if name else text
 
 
-def _aaguid(value: Any) -> Any:
-    if not isinstance(value, bytes):
-        return values.make_hex_only(value)
+def _aaguid(value: bytes) -> Any:
+    # A map is read as a getInfo only when its aaguid is bytes (looks_like_get_info).
     view: dict[str, Any] = {"hex": value.hex()}
     if len(value) == _AAGUID_LENGTH:
         view["guid"] = aaguid.guid(value)

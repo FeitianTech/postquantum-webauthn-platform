@@ -6,6 +6,7 @@ The spelling is ``values.qualified_key_text``'s; the encoder reads it with
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from typing import Any
 
@@ -50,10 +51,11 @@ def read_json_key(label: str) -> Any:
     numbered (two keys shared the spelling) raises ``ValueError`` naming it.
     """
 
-    if values.typed_spelling(label) is None:
+    match = values.typed_spelling(label)
+    if match is None:
         return str(label)
     try:
-        return read_typed(label, noun="key")
+        return read_typed(match, noun="key")
     except TypedSpellingError as exc:
         raise _unreadable(label, exc.reason) from None
 
@@ -66,16 +68,13 @@ class TypedSpellingError(ValueError):
         super().__init__(reason)
 
 
-def read_typed(label: str, *, noun: str = "value") -> Any:
-    """The CBOR value the typed spelling ``label`` names: text, bytes, or a ``CborDiagnostic`` of its EDN.
+def read_typed(match: re.Match[str], *, noun: str = "value") -> Any:
+    """The CBOR value a typed spelling (``values.typed_spelling``'s match) names: text, bytes, or a ``CborDiagnostic`` of its EDN.
 
     Raises ``TypedSpellingError`` for a numbered spelling, a kind this module does
     not write, EDN that does not read, or EDN of another kind than it says.
     """
 
-    match = values.typed_spelling(label)
-    if match is None:
-        raise TypedSpellingError("it is not spelled as a typed value, <EDN> (<kind>)")
     spelling, kind = match["spelling"], match["kind"]
     if match["numbered"]:
         raise TypedSpellingError("a numbered spelling names neither of the keys that shared it; use the map's EDN")

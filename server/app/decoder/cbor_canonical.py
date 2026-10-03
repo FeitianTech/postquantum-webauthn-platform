@@ -189,18 +189,15 @@ def _encode_canonical_float(value: float) -> bytes:
         # Canonical NaN representation (RFC 8949, Section 3.9): 0xf9 7e00
         return b"\xf9\x7e\x00"
 
-    for fmt, prefix in (("e", b"\xf9"), ("f", b"\xfa"), ("d", b"\xfb")):
+    for fmt, prefix in (("e", b"\xf9"), ("f", b"\xfa")):
         try:
             packed = struct.pack(">" + fmt, value)
         except (OverflowError, ValueError):
             continue
 
         unpacked = struct.unpack(">" + fmt, packed)[0]
-        if math.isnan(unpacked):
-            continue
-
         if unpacked == value and math.copysign(1.0, unpacked) == math.copysign(1.0, value):
             return prefix + packed
 
-    # Fall back to float64 encoding when no shorter representation is exact.
+    # float64 holds every Python float exactly.
     return b"\xfb" + struct.pack(">d", value)

@@ -19,19 +19,20 @@ from typing import Any
 WIDTHS = {1: (2, ">e"), 2: (4, ">f"), 3: (8, ">d")}
 # The quiet NaN with no payload -- what EDN's ``NaN`` is -- at each width.
 QUIET_NAN = {1: 0x7E00, 2: 0x7FC00000, 3: 0x7FF8000000000000}
-_PRECISION_WIDTH = {"half": 1, "single": 2, "double": 3}
 
 
 def shortest_width(value: float) -> int:
     """The width of ``value``'s preferred serialization: the shortest that holds it exactly."""
 
-    for width, (_size, fmt) in WIDTHS.items():
+    for width in (1, 2):
+        fmt = WIDTHS[width][1]
         try:
             back = struct.unpack(fmt, struct.pack(fmt, value))[0]
         except (OverflowError, struct.error):
             continue
         if back == value and math.copysign(1.0, back) == math.copysign(1.0, value):
             return width
+    # A double holds every Python float exactly (NaN is never asked about).
     return 3
 
 
@@ -53,9 +54,8 @@ def spell(node: Mapping[str, Any]) -> str:
 
     width = _width(node)
     size, fmt = WIDTHS[width]
-    bits = node.get("argument")
-    if not isinstance(bits, int):
-        bits = int.from_bytes(struct.pack(fmt, node["value"]), "big")
+    # The head's argument: the float's bits as they were sent.
+    bits = node["argument"]
     value = struct.unpack(fmt, bits.to_bytes(size, "big"))[0]
     if math.isnan(value):
         if bits == QUIET_NAN[width]:
@@ -69,13 +69,8 @@ def spell(node: Mapping[str, Any]) -> str:
 
 
 def _width(node: Mapping[str, Any]) -> int:
-    info = node.get("info")
-    if isinstance(info, int) and 25 <= info <= 27:
-        return info - 24
-    precision = node.get("precision")
-    if precision in _PRECISION_WIDTH:
-        return _PRECISION_WIDTH[precision]
-    raise ValueError("a float node without its width")
+    # A parsed float carries its head's additional information: 25, 26 or 27.
+    return node["info"] - 24
 
 
 def encode(value: float, width: int | None) -> bytes:

@@ -71,13 +71,8 @@ def test_parse_cbor_item_array_map_tag_and_simple_float_values():
 
 
 def test_structure_to_value_handles_chunks_and_unhashable_map_keys():
-    byte_chunks_node = {
-        "majorType": 2,
-        "chunks": [
-            {"majorType": 2, "hex": "4142"},
-            {"majorType": 2, "hex": "43"},
-        ],
-    }
+    # An indefinite byte string's node holds the hex of its chunks together.
+    byte_chunks_node, _end, _skipped = decode_cbor_parser.decode_item(b"\x5f\x42AB\x41C\xff")
     assert decode_cbor_parser._structure_to_value(byte_chunks_node) == b"ABC"
 
     map_node = {
@@ -204,7 +199,6 @@ def test_simple_values_and_floats_are_read_with_their_kind_and_precision(data, f
         ({"majorType": 7, "type": "null"}, None),
         ({"majorType": 7, "type": "undefined"}, decoder_values.CborDiagnostic("undefined")),
         ({"majorType": 7, "type": "boolean", "value": 0}, False),
-        ({"majorType": 2, "hex": "not-hex"}, b""),
         ({"majorType": 3, "value": 123}, ""),
         ({"majorType": 4, "items": 123}, []),
         ({"majorType": 5, "entries": 123}, {}),

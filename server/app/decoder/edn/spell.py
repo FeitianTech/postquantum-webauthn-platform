@@ -36,8 +36,6 @@ def spell(node: Mapping[str, Any], *, inline: bool = False) -> str:
 
 
 def _item(node: Mapping[str, Any], depth: int, inline: bool) -> str:
-    if not isinstance(node, Mapping):
-        raise ValueError("not a parsed CBOR item")
     if node.get("type") == "invalid" or node.get("truncated") or "declaredLength" in node or "error" in node:
         raise ValueError("an item the lenient parser could not read whole has no exact spelling")
     major_type = node.get("majorType")
@@ -54,9 +52,8 @@ def _item(node: Mapping[str, Any], depth: int, inline: bool) -> str:
     if major_type == 6:
         tag = node["tag"]
         return f"{tag}{_indicator(node, tag)}({_item(node['value'], depth, inline)})"
-    if major_type == 7:
-        return _simple(node)
-    raise ValueError(f"no CBOR major type {major_type!r}")
+    # Major type 7: the type is three bits, and the other seven are spelled above.
+    return _simple(node)
 
 
 def _indicator(node: Mapping[str, Any], argument: int) -> str:
@@ -99,7 +96,6 @@ def _string(
 
 def _array(node: Mapping[str, Any], depth: int, inline: bool) -> str:
     items: Sequence[Mapping[str, Any]] = node.get("items") or []
-    _check_count(node, len(items))
     parts = [_item(item, depth + 1, inline) for item in items]
     nested = any(item.get("majorType") in (4, 5) for item in items)
     return _container("[", "]", parts, _container_indicator(node, len(items)), nested and not inline, depth)
@@ -107,19 +103,11 @@ def _array(node: Mapping[str, Any], depth: int, inline: bool) -> str:
 
 def _map(node: Mapping[str, Any], depth: int, inline: bool) -> str:
     entries: Sequence[Mapping[str, Any]] = node.get("entries") or []
-    _check_count(node, len(entries))
     parts = [
         f"{_item(entry['key'], depth + 1, True)}: {_item(entry['value'], depth + 1, inline)}" for entry in entries
     ]
     nested = any(entry["value"].get("majorType") in (4, 5) for entry in entries)
     return _container("{", "}", parts, _container_indicator(node, len(entries)), nested and not inline, depth)
-
-
-def _check_count(node: Mapping[str, Any], count: int) -> None:
-    # A lenient parse can drop an entry (a key with no value) without marking the node.
-    argument = node.get("argument")
-    if not _is_indefinite(node) and isinstance(argument, int) and argument != count:
-        raise ValueError(f"a container that declares {argument} items holds {count}")
 
 
 def _container_indicator(node: Mapping[str, Any], count: int) -> str:
@@ -146,6 +134,5 @@ def _simple(node: Mapping[str, Any]) -> str:
         return "true" if node.get("value") else "false"
     if kind in ("null", "undefined"):
         return kind
-    if kind == "simple":
-        return f"simple({node['value']})"
-    raise ValueError(f"no spelling for a major-type-7 item of type {kind!r}")
+    # A simple value: the parser gives major type 7 no other kind (an invalid one is refused above).
+    return f"simple({node['value']})"

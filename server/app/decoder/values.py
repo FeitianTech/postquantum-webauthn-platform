@@ -95,8 +95,6 @@ def get_mapping_entry(mapping: Mapping[Any, Any], *keys: Any) -> Any:
 def key_text(key: Any) -> str:
     """Spell a map key for JSON: a byte string as hex, like a byte string value."""
 
-    if isinstance(key, ByteBuffer):
-        return key.getvalue().hex()
     if isinstance(key, (bytes, bytearray, memoryview)):
         return bytes(key).hex()
     return str(key)
@@ -109,8 +107,6 @@ def qualified_key_text(key: Any) -> str:
     plain spelling: no other integer has it, and JSON has no other for it.
     """
 
-    if isinstance(key, bool):
-        return f"{'true' if key else 'false'} (boolean)"
     if isinstance(key, int):
         return str(key)
     if isinstance(key, str):
@@ -118,9 +114,9 @@ def qualified_key_text(key: Any) -> str:
     raw = json_values.as_bytes(key)
     if raw is not None:
         return f"h'{raw.hex()}' (bytes)"
-    if isinstance(key, CborDiagnostic):
-        return f"{key.diagnostic} ({key.kind or 'diagnostic notation'})"
-    return f"{key} ({type(key).__name__})"
+    # A CborDiagnostic: the parser gives every other key one (a boolean, null,
+    # float, array, map or tag key), and the encoder reads no other.
+    return f"{key.diagnostic} ({key.kind or 'diagnostic notation'})"
 
 
 def typed_spelling(label: str) -> re.Match[str] | None:

@@ -458,19 +458,19 @@ def _edn_or(node: Mapping[str, Any], fallback: str, kind: str) -> values.CborDia
 
 
 def _diagnostic_value(node: Mapping[str, Any]) -> str:
+    """A boolean, null or float node's value in EDN: the only nodes asked for one."""
+
     node_type = node.get("type")
     if node_type == "boolean":
         return "true" if node.get("value") else "false"
     if node_type == "null":
         return "null"
-    if node_type == "float":
-        value = node.get("value")
-        if isinstance(value, float) and math.isnan(value):
-            return "NaN"
-        if isinstance(value, float) and math.isinf(value):
-            return "Infinity" if value > 0 else "-Infinity"
-        return repr(value)
-    return str(node.get("summary"))
+    value = node.get("value")
+    if isinstance(value, float) and math.isnan(value):
+        return "NaN"
+    if isinstance(value, float) and math.isinf(value):
+        return "Infinity" if value > 0 else "-Infinity"
+    return repr(value)
 
 
 def _structure_to_value(node: Mapping[str, Any]) -> Any:
@@ -497,19 +497,8 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
         return node.get("value")
 
     if major_type == 2:
-        hex_value = node.get("hex")
-        if isinstance(hex_value, str):
-            try:
-                return decode_hex(hex_value)
-            except ValueError:
-                return b""
-        chunks = node.get("chunks")
-        if isinstance(chunks, Sequence):
-            return b"".join(
-                bytes(_structure_to_value(chunk) or b"")  # type: ignore[arg-type]
-                for chunk in chunks
-            )
-        return b""
+        # Every byte string node holds the hex of its bytes, chunked or not (``_byte_node``).
+        return decode_hex(node["hex"])
 
     if major_type == 3:
         text_value = node.get("value")
@@ -528,16 +517,14 @@ def _structure_to_value(node: Mapping[str, Any]) -> Any:
     if major_type == 5:
         return _map_value(node)
 
-    if major_type == 6:
-        tagged_value = node.get("value")
-        converted = (
-            _structure_to_value(tagged_value)
-            if isinstance(tagged_value, Mapping)
-            else tagged_value
-        )
-        return {"tag": node.get("tag"), "value": converted}
-
-    return node.get("value")
+    # A tag: the major type is three bits, and the other seven are read above.
+    tagged_value = node.get("value")
+    converted = (
+        _structure_to_value(tagged_value)
+        if isinstance(tagged_value, Mapping)
+        else tagged_value
+    )
+    return {"tag": node.get("tag"), "value": converted}
 
 
 def _map_value(node: Mapping[str, Any]) -> dict[Any, Any]:

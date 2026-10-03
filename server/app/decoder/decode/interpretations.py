@@ -51,9 +51,10 @@ def for_ctap(classification: str, value: Any, node: Mapping[str, Any], data: byt
     elif classification in ("make_credential_output", "get_assertion_output"):
         registration = classification == "make_credential_output"
         findings += authenticator_data_findings.for_member(node, data, (2,))
-        key, auth_data = _member(value, (2,))
+        # The shapes of both responses hold members 1, 2 and 3, or 2 (ctap_classify).
+        auth_data = values.get_mapping_entry(value, 2)
         output = extensions.MAKE_CREDENTIAL_OUTPUT if registration else extensions.GET_ASSERTION_OUTPUT
-        _add_auth_data(blocks, auth_data, output, _path(key))
+        _add_auth_data(blocks, auth_data, output, _path(2))
         unsigned_key = 6 if registration else 8
         unsigned = extensions.MAKE_CREDENTIAL_UNSIGNED if registration else extensions.GET_ASSERTION_UNSIGNED
         _add(
@@ -64,8 +65,7 @@ def for_ctap(classification: str, value: Any, node: Mapping[str, Any], data: byt
             f"${{{unsigned_key}}}",
         )
         if registration:
-            _, fmt = _member(value, (1,))
-            _, att_stmt = _member(value, (3,))
+            fmt, att_stmt = values.get_mapping_entry(value, 1), values.get_mapping_entry(value, 3)
             findings += _attestation(extra, fmt, att_stmt, auth_data, node, data, (3,))
     _extensions(extra, blocks)
     extra.update(edn_view.extra(node, data))
@@ -133,14 +133,6 @@ def _looks_like_attestation_object(value: Any) -> bool:
         and isinstance(values.get_mapping_entry(value, "authData"), bytes)
         and values.get_mapping_entry(value, "attStmt") is not values.MISSING
     )
-
-
-def _member(value: Any, keys: Sequence[Any]) -> tuple[Any, Any]:
-    for key in keys:
-        entry = values.get_mapping_entry(value, key)
-        if entry is not values.MISSING:
-            return key, entry
-    return keys[0], None
 
 
 def _path(key: Any) -> str:

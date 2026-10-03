@@ -296,8 +296,7 @@ _AUTHENTICATOR: dict[tuple[str, str], Callable[[Any], dict[str, Any]]] = {
 
 
 def _client_bytes(value: Any) -> bytes | None:
-    if isinstance(value, bytes):
-        return value
+    # From the credential's JSON: never bytes, text when anything.
     if isinstance(value, str):
         return encoding.try_decode_base64url(value)
     return None
