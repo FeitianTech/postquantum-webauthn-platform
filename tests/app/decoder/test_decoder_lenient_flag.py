@@ -91,3 +91,16 @@ def test_a_ctap_response_with_an_integer_key_it_could_not_read_is_shown(client):
     shown = response.get_json()["data"]["ctapDecoded"]["makeCredentialResponse"]
     assert shown["invalid(invalid(h'1f') at offset 52) (invalid)"] == 1
     assert shown["1 (fmt)"] == "packed"
+
+
+def test_a_ctap_member_whose_key_or_value_holds_an_unreadable_item_is_shown(client):
+    # A tag (0xcc: 12) around a head no item has (0x1e), as a fourth key and as member 7.
+    auth_data = (bytes(32) + b"\x01" + (7).to_bytes(4, "big")).hex()
+    payload = "00a501667061636b6564025825" + auth_data + "03a0" + "cc1e01" + "07cc1e"
+
+    response = client.post("/api/codec", json={"payload": payload, "mode": "decode", "lenient": True})
+
+    assert response.status_code == 200
+    shown = response.get_json()["data"]["ctapDecoded"]["makeCredentialResponse"]
+    assert shown["invalid(tag(12) at offset 52) (invalid)"] == 1
+    assert shown["7"] == "invalid(tag(12) at offset 56) (invalid)"

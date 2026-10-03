@@ -49,6 +49,9 @@ A byte or text string the lenient parser read past a skipped chunk is
 to itself (`key_equivalence.identity` is its offset) and is spelled as a damaged
 container key is, `invalid(bytes[1] at offset 1)`. Two such keys never merge
 into one entry, and never merge with the string their surviving chunks spell.
+In a CTAP view, a key or a tagged value holding anything the lenient parser could
+not read whole is spelled the same way (`view_spelling`), since no EDN spells it
+exactly.
 
 ## Readings
 

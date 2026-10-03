@@ -54,8 +54,7 @@ def spell(node: Mapping[str, Any]) -> Any:
     """The CTAP-view spelling of the value ``node`` holds (a node of ``decode/cbor_parser``)."""
 
     if node.get("type") == "invalid" or "error" in node or node.get("damaged"):
-        # A lenient read's damage: shown by what and where it is; nothing reads it back.
-        return f"invalid({node.get('summary')} at offset {node.get('offset')}) (invalid)"
+        return _unreadable(node)
     major = node.get("majorType")
     if major in (0, 1):
         return node["value"]
@@ -72,7 +71,18 @@ def spell(node: Mapping[str, Any]) -> Any:
         return bool(node.get("value"))
     if node_type == "null":
         return None
-    return f"{edn.spell(node, inline=True)} ({_TYPED_KINDS.get(node_type, node_type)})"
+    try:
+        spelled = edn.spell(node, inline=True)
+    except ValueError:
+        # A tag holding something the lenient parser could not read whole.
+        return _unreadable(node)
+    return f"{spelled} ({_TYPED_KINDS.get(node_type, node_type)})"
+
+
+def _unreadable(node: Mapping[str, Any]) -> str:
+    """A lenient read's damage: shown by what and where it is; nothing reads it back."""
+
+    return f"invalid({node.get('summary')} at offset {node.get('offset')}) (invalid)"
 
 
 def spell_text(text: str) -> str:
@@ -112,7 +122,7 @@ def key_label(node: Mapping[str, Any]) -> str:
     """How a map key is written: an integer by its number, text plainly where it can be, the rest typed."""
 
     if node.get("type") == "invalid" or "error" in node or node.get("damaged"):
-        return f"invalid({node.get('summary')} at offset {node.get('offset')}) (invalid)"
+        return _unreadable(node)
     major = node.get("majorType")
     if major in (0, 1):
         return str(node["value"])
@@ -124,7 +134,12 @@ def key_label(node: Mapping[str, Any]) -> str:
     if major == 2:
         return f"h'{node['hex']}' (bytes)"
     kind = {4: "array", 5: "map"}.get(major) or {"boolean": "boolean", "null": "null"}.get(node.get("type"))
-    return f"{edn.spell(node, inline=True)} ({kind or _TYPED_KINDS.get(node.get('type'), node.get('type'))})"
+    try:
+        spelled = edn.spell(node, inline=True)
+    except ValueError:
+        # A tag, array or map holding something the lenient parser could not read whole.
+        return _unreadable(node)
+    return f"{spelled} ({kind or _TYPED_KINDS.get(node.get('type'), node.get('type'))})"
 
 
 def read(value: Any, path: str = "$") -> Any:

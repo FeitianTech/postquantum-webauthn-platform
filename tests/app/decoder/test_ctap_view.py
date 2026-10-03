@@ -40,6 +40,33 @@ def test_a_value_is_spelled_so_its_type_comes_back(hex_text, spelled):
     assert view_spelling.spell(_node(hex_text)) == spelled
 
 
+@pytest.mark.parametrize(
+    ("hex_text", "spelled"),
+    [
+        ("cc1e", "invalid(tag(12) at offset 0) (invalid)"),  # a tag around an unreadable head
+        ("811e", ["invalid(invalid(h'1e') at offset 1) (invalid)"]),  # an array keeps its items
+    ],
+)
+def test_a_value_holding_what_the_lenient_parser_could_not_read_is_spelled_invalid(hex_text, spelled):
+    node = cbor_parser.decode_item(bytes.fromhex(hex_text), 0, lenient=True)[0]
+
+    assert view_spelling.spell(node) == spelled
+
+
+@pytest.mark.parametrize(
+    ("hex_text", "label"),
+    [
+        ("cc1e", "invalid(tag(12) at offset 0) (invalid)"),
+        ("811e", "invalid(array[1] at offset 0) (invalid)"),
+        ("a1011e", "invalid(map[1] at offset 0) (invalid)"),
+    ],
+)
+def test_a_key_holding_what_the_lenient_parser_could_not_read_is_labelled_invalid(hex_text, label):
+    node = cbor_parser.decode_item(bytes.fromhex(hex_text), 0, lenient=True)[0]
+
+    assert view_spelling.key_label(node) == label
+
+
 def test_text_that_looks_typed_is_typed():
     assert view_spelling.spell_text("h'01' (bytes)") == "\"h'01' (bytes)\" (text)"
     assert view_spelling.spell_text("Temperature (C)") == "Temperature (C)"
