@@ -139,6 +139,16 @@ describe('the detail page: sections', () => {
     expect(section({ metadataStatement: { friendlyNames: 'Name' } }, 'metadataStatement').fields).toEqual([]);
   });
 
+  it('says whether the statement\'s key is restricted, wants fresh user verification, or syncs, as it says it', () => {
+    expect(section(named('Fixture Security Key L2'), 'metadataStatement').fields.slice(-3)).toEqual([
+      { label: 'Key Restricted', value: 'true' },
+      { label: 'Fresh User Verification Required', value: 'false' },
+      { label: 'Multi-Device Credential Support', value: 'unsupported' },
+    ]);
+    // Neither is guessed from MDS3's default when the statement leaves it out.
+    expect(section(named('Fixture Security Key L1'), 'metadataStatement').fields.map(({ label }) => label)).not.toContain('Key Restricted');
+  });
+
   it('writes a list value as the metadata does', () => {
     const noJson = Object.assign(Object.create(null), { big: 1n });
     expect(

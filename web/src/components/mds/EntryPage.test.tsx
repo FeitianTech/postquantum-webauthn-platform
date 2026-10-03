@@ -215,6 +215,14 @@ describe('the MDS entry page', () => {
     expect(field(statement, 'Friendly Name (zh-CN)')).toHaveTextContent(/^Fixture 安全密钥 L2$/);
   });
 
+  it('says whether the statement\'s key is restricted, wants fresh user verification, or syncs', () => {
+    renderEntry(entryNamed('Fixture Security Key L2'));
+    const statement = section('metadataStatement');
+    expect(field(statement, 'Key Restricted')).toHaveTextContent(/^true$/);
+    expect(field(statement, 'Fresh User Verification Required')).toHaveTextContent(/^false$/);
+    expect(field(statement, 'Multi-Device Credential Support')).toHaveTextContent(/^unsupported$/);
+  });
+
   it('shows the biometric status reports in a table of their own, and the rogue list over the status reports', () => {
     const entry = entryNamed('Fixture Security Key L2');
     renderEntry(entry);

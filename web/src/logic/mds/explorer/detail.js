@@ -168,6 +168,9 @@ function metadataStatementSection(entry, metadata) {
             field('Crypto Strength', metadata.cryptoStrength),
             codes.length ? { label: 'Attestation Certificate Key IDs', codes } : null,
             upv.length ? field('UPV', upv.join(', ')) : null,
+            field('Key Restricted', metadata.isKeyRestricted),
+            field('Fresh User Verification Required', metadata.isFreshUserVerificationRequired),
+            field('Multi-Device Credential Support', metadata.multiDeviceCredentialSupport),
         ]),
         chipLists: present([
             chipList('Authentication Algorithms', metadata.authenticationAlgorithms),
