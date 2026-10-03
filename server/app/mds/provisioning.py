@@ -283,8 +283,9 @@ def follow_newer_snapshot() -> bool:
     A running instance otherwise keeps the snapshot it started with for as long
     as it lives. Called in a request (Cloud Run gives CPU only to requests), at most
     once per ``FIDO_SERVER_MDS_POINTER_CHECK_SECONDS`` (15 minutes): one short read
-    of the pointer. The one request that finds a newer set downloads it and writes
-    it, payloads first and metas last; every other request meanwhile goes on with
+    of the pointer. The one request that finds a newer set takes it as a cold start
+    does (its BLOB and meta, the BLOB verified, the rest derived: ``_derived_set``)
+    and writes it, payloads first and metas last; every other request meanwhile goes on with
     the snapshot it has, and never waits. Any failure keeps the local snapshot.
     """
 
@@ -303,7 +304,7 @@ def follow_newer_snapshot() -> bool:
         local_no = _local_snapshot_no()
         if local_no is not None and pointer["no"] <= local_no:
             return False
-        files = snapshot_sets.download_set(pointer, timeout=_SET_TIMEOUT_SECONDS)
+        files = _derived_set(pointer, timeout=_SET_TIMEOUT_SECONDS)
         _write_set(files)
         _provision_state["source"] = "gcs"
         logger.info("Took MDS snapshot no. %s from Cloud Storage (was %s).", pointer["no"], local_no)

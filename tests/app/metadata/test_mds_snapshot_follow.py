@@ -47,7 +47,7 @@ def _info(client):
 
 
 def test_a_newer_set_in_the_bucket_reaches_a_running_instance(instance, client):
-    directory, _bucket = instance
+    directory, bucket = instance
     no, url = _info(client)
     assert no == 7 and json.loads(client.get(url).data)["meta"]["no"] == 7
 
@@ -62,6 +62,9 @@ def test_a_newer_set_in_the_bucket_reaches_a_running_instance(instance, client):
     # The explorer's own rows follow too.
     rows = client.get("/api/mds/metadata/explorer/full").get_json()
     assert rows["meta"]["no"] == 8 and len(rows["entries"]) == 3
+    # Taken from the set's BLOB and meta alone, the rest derived.
+    taken = {name for name, _options in bucket.download_options if name.startswith("mds/sets/")}
+    assert {name.rsplit("/", 1)[1] for name in taken} == {mds_files.BLOB, mds_files.VERIFIED_META}
 
 
 def test_the_pointer_is_read_at_most_once_per_interval(instance, client, monkeypatch):
@@ -115,16 +118,20 @@ def test_other_requests_go_on_while_one_takes_the_new_set(instance, client, app)
     assert _info(client)[0] == 8
 
 
-@pytest.mark.parametrize("failure", ["a file not the one named", "the bucket unreachable", "a file gone"])
+@pytest.mark.parametrize(
+    "failure", ["a file not the one named", "the bucket unreachable", "a file gone", "a BLOB of another snapshot"]
+)
 def test_a_failed_follow_keeps_the_snapshot(instance, client, failure):
     directory, bucket = instance
+    if failure == "a BLOB of another snapshot":
+        snapshot_sets.publish({**snapshot_version(8), mds_files.BLOB: snapshot_version(9)[mds_files.BLOB]})
     pointer = snapshot_sets.publish(snapshot_version(8)).pointer
     if failure == "a file not the one named":
-        bucket.put(pointer["set"] + mds_files.EXPLORER_FULL, b"{}")
+        bucket.put(pointer["set"] + mds_files.BLOB, b"{}")
     elif failure == "the bucket unreachable":
         bucket.failing["mds/current.json"] = fake_gcs.ServiceUnavailable("unreachable")
-    else:
-        del bucket.objects[pointer["set"] + mds_files.EXPLORER_FULL_META]
+    elif failure == "a file gone":
+        del bucket.objects[pointer["set"] + mds_files.VERIFIED_META]
 
     no, url = _info(client)
     assert no == 7 and json.loads(client.get(url).data)["meta"]["no"] == 7

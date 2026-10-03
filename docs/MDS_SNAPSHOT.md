@@ -133,7 +133,8 @@ snapshot it started with. `/api/mds/metadata/info`, where the explorer starts, c
 `FIDO_SERVER_MDS_POINTER_CHECK_SECONDS` (default 900) it reads the bucket's pointer,
 with a 5 s timeout and no retry, inside the request (the service has CPU only while
 serving one). When the pointer names a set with a higher serial than the local one,
-that request downloads it, checks it and writes it; the instance's other requests go
+that request takes it as a cold start does (its BLOB and meta, the BLOB verified, the
+rest derived) and writes it; the instance's other requests go
 on with the snapshot they have and never wait. Any failure keeps the local snapshot,
 and the next check tries again.
 
