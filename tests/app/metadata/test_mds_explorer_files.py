@@ -88,6 +88,17 @@ def test_an_entrys_detail_keeps_its_biometric_reports_and_rogue_list(files):
     assert {"biometricStatusReports", "rogueListURL", "rogueListHash"}.isdisjoint(row)
 
 
+def test_an_entrys_detail_keeps_every_statement_field_but_its_images(mds_fixture_snapshot, files):
+    verified = json.loads((mds_fixture_snapshot / mds_files.VERIFIED).read_text())
+    statement = next(
+        entry["metadataStatement"] for entry in verified["entries"] if entry.get("aaguid") == "f1d0f1d0-0000-4000-8000-000000000002"
+    )
+    detail = json.loads(files.details["aaguid:f1d0f1d0-0000-4000-8000-000000000002"])["metadataStatement"]
+
+    assert {"friendlyNames", "supportedExtensions", "tcDisplayPNGCharacteristics", "fixtureFutureStatementField"} <= set(detail)
+    assert detail == {key: value for key, value in statement.items() if key not in {"icon", "attestationRootCertificates"}}
+
+
 def test_the_version_names_the_snapshot_and_what_this_code_derives(full_snapshot, files):
     snapshot = explorer_files.snapshot_version(full_snapshot["meta"])
 

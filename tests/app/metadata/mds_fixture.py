@@ -5,8 +5,8 @@ It is built the way the updater builds a real one (``snapshot_files`` in
 itself: every entry, name, key and certificate is made up here, nothing is copied
 from the FIDO Alliance's service. It holds what the explorer must show well: each
 protocol (FIDO2, U2F, UAF: the three kinds of entry id), each certification level,
-a revocation, a status report with every MDS3 field (and one unknown), a biometric
-status report and a rogue list, the longest values (a CN list of about 970 characters, 11 user
+a revocation, a status report, a statement and a getInfo with every MDS3 field (and one
+unknown each), a biometric status report and a rogue list, the longest values (a CN list of about 970 characters, 11 user
 verification methods, a 135-character name), an entry without an icon, one without
 status reports, and enough short entries for the list to scroll.
 
@@ -119,6 +119,54 @@ FULL_GET_INFO = {
     "maxRPIDsForSetMinPINLength": 1,
     "remainingDiscoverableCredentials": 25,
     "algorithms": [{"type": "public-key", "alg": -7}, {"type": "public-key", "alg": -8}],
+}
+
+EVERY_OTHER_STATEMENT_FIELD = {
+    "friendlyNames": {"en-US": "Fixture Security Key L2", "zh-CN": "Fixture 安全密钥 L2"},
+    "alternativeDescriptions": {"de-DE": "Fixture Sicherheitsschlüssel L2", "zh-CN": "Fixture 安全密钥 L2"},
+    "isKeyRestricted": True,
+    "isFreshUserVerificationRequired": False,
+    "operatingEnv": "Secure Element (SE)",
+    "tcDisplay": ["any", "hardware"],
+    "tcDisplayContentType": "image/png",
+    "tcDisplayPNGCharacteristics": [
+        {"width": 320, "height": 480, "bitDepth": 16, "colorType": 2, "compression": 0, "filter": 0, "interlace": 0},
+        {
+            "width": 32,
+            "height": 32,
+            "bitDepth": 1,
+            "colorType": 3,
+            "compression": 0,
+            "filter": 0,
+            "interlace": 0,
+            "plte": [{"r": 255, "g": 255, "b": 255}, {"r": 0, "g": 0, "b": 0}],
+        },
+    ],
+    "supportedExtensions": [
+        {"id": "hmac-secret", "fail_if_unknown": False},
+        {"id": "credProtect", "tag": 1, "data": "03", "fail_if_unknown": True},
+    ],
+    "multiDeviceCredentialSupport": "unsupported",
+    "cxConfigURL": "https://fixture.example/credential-exchange.json",
+    "fixtureFutureStatementField": "A statement field no MDS3 version defines",
+}
+
+EVERY_OTHER_GET_INFO_MEMBER = {
+    "maxPINLength": 63,
+    "forcePINChange": False,
+    "uvModality": 2,
+    "preferredPlatformUvAttempts": 3,
+    "uvCountSinceLastPinEntry": 0,
+    "certifications": {"FIDO": 2, "FIPS-CMVP-2": 2},
+    "authenticatorConfigCommands": [1, 2, 3],
+    "transportsForReset": ["usb", "nfc"],
+    "attestationFormats": ["packed", "none"],
+    "longTouchForReset": False,
+    "pinComplexityPolicy": True,
+    "pinComplexityPolicyURL": "68747470733a2f2f666978747572652e6578616d706c652f70696e",
+    "encIdentifier": "",
+    "encCredStoreState": "",
+    "fixtureFutureMember": {"kept": True},
 }
 
 
@@ -428,7 +476,11 @@ def _entries() -> list[dict[str, Any]]:
                 algorithms=("secp256r1_ecdsa_sha256_raw",),
             )
         )
-    # The fingerprint key: a biometric component's own certification, and a rogue list.
+    # The fingerprint key: every other statement field MDS3 defines (and one no
+    # version defines yet), getInfo's other members, a biometric component's own
+    # certification, and a rogue list.
+    entries[1]["metadataStatement"].update(EVERY_OTHER_STATEMENT_FIELD)
+    entries[1]["metadataStatement"]["authenticatorGetInfo"].update(EVERY_OTHER_GET_INFO_MEMBER)
     entries[1]["biometricStatusReports"] = [
         {
             "certLevel": 1,
