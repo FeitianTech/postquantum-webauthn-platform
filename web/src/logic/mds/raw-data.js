@@ -22,8 +22,9 @@ function isStatement(value) {
 
 // The entry as MDS publishes it: its own BLOB entry when it has one, else its
 // statement with the roots and key identifiers the explorer took out of it put
-// back, its status reports, AAGUID, id and time of the last status change. The
-// entry is not changed: a statement that gains a field is a copy.
+// back, its status and biometric status reports, AAGUID, id, time of the last
+// status change and rogue list. The entry is not changed: a statement that
+// gains a field is a copy.
 /**
  * @param {Record<string, any> | null | undefined} entry
  * @returns {Record<string, unknown> | null}
@@ -75,8 +76,10 @@ export function getAuthenticatorRawData(entry) {
         }
     }
 
-    if (base.statusReports === undefined && Array.isArray(entry.statusReports) && entry.statusReports.length) {
-        base.statusReports = entry.statusReports;
+    for (const key of ['statusReports', 'biometricStatusReports']) {
+        if (base[key] === undefined && Array.isArray(entry[key]) && entry[key].length) {
+            base[key] = entry[key];
+        }
     }
 
     if (base.aaguid === undefined && entry.aaguid) {
@@ -92,6 +95,12 @@ export function getAuthenticatorRawData(entry) {
             base.timeOfLastStatusChange = rawEntry.timeOfLastStatusChange;
         } else if (entry.timeOfLastStatusChange) {
             base.timeOfLastStatusChange = entry.timeOfLastStatusChange;
+        }
+    }
+
+    for (const key of ['rogueListURL', 'rogueListHash']) {
+        if (base[key] === undefined && entry[key]) {
+            base[key] = entry[key];
         }
     }
 

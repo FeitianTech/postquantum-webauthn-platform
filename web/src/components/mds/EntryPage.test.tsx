@@ -207,6 +207,33 @@ describe('the MDS entry page', () => {
     expect(rows[1].querySelector('[data-report-certificate]')).toBeNull();
   });
 
+  it('shows the biometric status reports in a table of their own, and the rogue list over the status reports', () => {
+    const entry = entryNamed('Fixture Security Key L2');
+    renderEntry(entry);
+    expect(screen.getAllByRole('heading', { level: 4 }).map((heading) => heading.textContent).slice(-2)).toEqual([
+      'Status Reports',
+      'Biometric Status Reports',
+    ]);
+    const status = section('statusReports');
+    expect(field(status, 'Rogue List URL')).toHaveTextContent('https://fixture.example/rogue-lists/fixture-security-key-l2.json');
+    expect(field(status, 'Rogue List Hash').querySelector('code')).toHaveTextContent(entry.rogueListHash as string);
+    expect(within(status).getByRole('button', { name: 'Copy Rogue List Hash' })).toBeInTheDocument();
+    const table = within(section('biometricStatusReports')).getByRole('table');
+    expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+      'Modality',
+      'Effective Date',
+      'Certification Level',
+      'Certificate Number',
+      'Descriptor',
+    ]);
+    const [report] = [...table.querySelectorAll<HTMLElement>('[data-report]')];
+    const cells = within(report).getAllByRole('cell');
+    expect(cells.slice(0, 3).map((cell) => cell.textContent)).toEqual(['fingerprint_internal', '2026-08-15', '1']);
+    expect(cells[2]).toHaveAttribute('data-label', 'Certification Level');
+    expect(cells[3].querySelector('code')).toHaveTextContent('FIDOBIO20260815002');
+    expect(cells[4]).toHaveTextContent('Fixture Fingerprint SensorPolicy: 1.4.0 • Requirements: 3.0');
+  });
+
   it('reads "—" for a missing identifier and leaves out what an entry does not have', () => {
     renderEntry({ entryId: 'entry:bare', name: 'Bare' } as unknown as MdsEntry);
     expect(field(section('overview'), 'Identifier')).toHaveTextContent('—');

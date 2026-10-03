@@ -9,7 +9,7 @@
 import { MISSING_CELL_TEXT } from './rows.js';
 import { formatDetailValue, formatUpv } from '../formatters.js';
 import { aaguidGuid } from '../../shared/aaguid.js';
-import { STATUS_REPORT_COLUMNS, statusReportRow } from './status-reports.js';
+import { BIOMETRIC_REPORT_COLUMNS, STATUS_REPORT_COLUMNS, biometricReportRow, statusReportRow } from './status-reports.js';
 
 /** @import { StatusReportRow } from './status-reports.js' */
 
@@ -276,6 +276,32 @@ function authenticatorInfoSection(info) {
     };
 }
 
+function reportObjects(value) {
+    return Array.isArray(value) ? value.filter(report => report && typeof report === 'object') : [];
+}
+
+// The status reports, under the entry's last status change and its rogue list;
+// shown when the entry has a report or a rogue list.
+function statusReportsSection(entry) {
+    const reports = Array.isArray(entry.statusReports) ? entry.statusReports : [];
+    const rogueList = present([
+        field('Rogue List URL', entry.rogueListURL),
+        field('Rogue List Hash', entry.rogueListHash, { identifier: true }),
+    ]);
+    if (!reports.length && !rogueList.length) {
+        return null;
+    }
+    const fields = present([field('Last Status Change', entry.timeOfLastStatusChange), ...rogueList]);
+    return {
+        key: 'statusReports',
+        title: 'Status Reports',
+        ...(fields.length ? { fields } : {}),
+        ...(reports.length
+            ? { columns: STATUS_REPORT_COLUMNS, statusReports: reportObjects(reports).map(statusReportRow) }
+            : {}),
+    };
+}
+
 /**
  * A field: a value (an identifier is copyable, in Geist Mono), or a list of codes.
  * @typedef {{ label: string, value?: string, codes?: string[], identifier?: boolean }} DetailField
@@ -329,15 +355,18 @@ export function detailSections(entry) {
         sections.push(authenticatorInfoSection(info));
     }
 
-    const reports = Array.isArray(source.statusReports) ? source.statusReports : [];
-    if (reports.length) {
-        const lastChange = source.timeOfLastStatusChange;
+    const status = statusReportsSection(source);
+    if (status) {
+        sections.push(status);
+    }
+
+    const biometricReports = reportObjects(source.biometricStatusReports);
+    if (biometricReports.length) {
         sections.push({
-            key: 'statusReports',
-            title: 'Status Reports',
-            ...(lastChange ? { fields: [{ label: 'Last Status Change', value: String(lastChange) }] } : {}),
-            columns: STATUS_REPORT_COLUMNS,
-            statusReports: reports.filter(report => report && typeof report === 'object').map(statusReportRow),
+            key: 'biometricStatusReports',
+            title: 'Biometric Status Reports',
+            columns: BIOMETRIC_REPORT_COLUMNS,
+            statusReports: biometricReports.map(biometricReportRow),
         });
     }
 

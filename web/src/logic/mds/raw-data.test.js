@@ -45,6 +45,28 @@ describe('the entry as MDS publishes it', () => {
     expect(Object.keys(fido2)).toEqual(['metadataStatement', 'statusReports', 'aaguid', 'id', 'timeOfLastStatusChange']);
   });
 
+  it('puts back a listed entry\'s biometric status reports and rogue list', () => {
+    const entry = named('Fixture Security Key L2');
+    const raw = getAuthenticatorRawData(entry);
+    expect(Object.keys(raw)).toEqual([
+      'metadataStatement',
+      'statusReports',
+      'biometricStatusReports',
+      'aaguid',
+      'id',
+      'timeOfLastStatusChange',
+      'rogueListURL',
+      'rogueListHash',
+    ]);
+    expect(raw.biometricStatusReports).toBe(entry.biometricStatusReports);
+    expect(raw.biometricStatusReports[0].modality).toBe('fingerprint_internal');
+    expect([raw.rogueListURL, raw.rogueListHash]).toEqual([entry.rogueListURL, entry.rogueListHash]);
+    expect(getAuthenticatorRawData({ id: 'i', biometricStatusReports: [], rogueListURL: '', rogueListHash: null })).toEqual({ id: 'i' });
+    expect(
+      getAuthenticatorRawData({ rawEntry: { rogueListURL: 'own', biometricStatusReports: [] }, rogueListURL: 'listed', biometricStatusReports: [{}] }),
+    ).toEqual({ rogueListURL: 'own', biometricStatusReports: [] });
+  });
+
   it('starts from the entry\'s own BLOB entry when it has one', () => {
     const rawEntry = {
       aaguid: 'raw',

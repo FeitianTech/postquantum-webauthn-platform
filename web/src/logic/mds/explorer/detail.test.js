@@ -11,7 +11,7 @@ import {
   formatDetailSubtitle,
   rawListValues,
 } from './detail.js';
-import { STATUS_REPORT_COLUMNS } from './status-reports.js';
+import { BIOMETRIC_REPORT_COLUMNS, STATUS_REPORT_COLUMNS } from './status-reports.js';
 import { repoFile } from '@/test/logic/repo-file.js';
 
 const FIXTURE = JSON.parse(readFileSync(repoFile('tests/fixtures/mds/snapshot/fido-mds3.explorer.full.json'), 'utf8'));
@@ -331,6 +331,60 @@ describe('the detail page: sections', () => {
       ].join(' • '),
     );
     expect(section({ statusReports: [{ certificate: 7 }] }, 'statusReports').statusReports[0].certificate).toBe('');
+  });
+
+  it('lists the biometric status reports after the status reports, in a table of the same shape', () => {
+    const entry = named('Fixture Security Key L2');
+    expect(detailSections(entry).map(({ key, title }) => [key, title]).slice(-2)).toEqual([
+      ['statusReports', 'Status Reports'],
+      ['biometricStatusReports', 'Biometric Status Reports'],
+    ]);
+    const biometric = section(entry, 'biometricStatusReports');
+    expect(BIOMETRIC_REPORT_COLUMNS).toEqual(['Modality', 'Effective Date', 'Certification Level', 'Certificate Number', 'Descriptor']);
+    expect(biometric.columns).toBe(BIOMETRIC_REPORT_COLUMNS);
+    expect(biometric.fields).toBeUndefined();
+    expect(biometric.statusReports).toEqual([
+      {
+        status: 'fingerprint_internal',
+        effectiveDate: '2026-08-15',
+        authenticatorVersion: '1',
+        certificateNumber: 'FIDOBIO20260815002',
+        descriptor: 'Fixture Fingerprint Sensor',
+        details: 'Policy: 1.4.0 • Requirements: 3.0',
+        certificate: '',
+      },
+    ]);
+    // A field a status report has is only a detail of a biometric report, and the other way round.
+    const crossed = { status: 'REVOKED', authenticatorVersion: 2, modality: 'face_internal', certLevel: 2 };
+    expect(section({ biometricStatusReports: [null, crossed] }, 'biometricStatusReports').statusReports[0]).toMatchObject({
+      status: 'face_internal',
+      authenticatorVersion: '2',
+      details: 'Status: REVOKED • Authenticator Version: 2',
+    });
+    expect(section({ statusReports: [crossed] }, 'statusReports').statusReports[0]).toMatchObject({
+      status: 'REVOKED',
+      details: 'Modality: face_internal • Cert Level: 2',
+    });
+    expect(section({ biometricStatusReports: [] }, 'biometricStatusReports')).toBeUndefined();
+    expect(section({ biometricStatusReports: 'none' }, 'biometricStatusReports')).toBeUndefined();
+  });
+
+  it('shows the entry\'s rogue list over its status reports, with or without reports', () => {
+    const entry = named('Fixture Security Key L2');
+    expect(section(entry, 'statusReports').fields).toEqual([
+      { label: 'Last Status Change', value: entry.timeOfLastStatusChange },
+      { label: 'Rogue List URL', value: 'https://fixture.example/rogue-lists/fixture-security-key-l2.json' },
+      { label: 'Rogue List Hash', value: entry.rogueListHash, identifier: true },
+    ]);
+    expect(section({ rogueListHash: 'ab', timeOfLastStatusChange: '2026-01-01' }, 'statusReports')).toEqual({
+      key: 'statusReports',
+      title: 'Status Reports',
+      fields: [
+        { label: 'Last Status Change', value: '2026-01-01' },
+        { label: 'Rogue List Hash', value: 'ab', identifier: true },
+      ],
+    });
+    expect(section({ timeOfLastStatusChange: '2026-01-01', rogueListURL: ' ' }, 'statusReports')).toBeUndefined();
   });
 });
 

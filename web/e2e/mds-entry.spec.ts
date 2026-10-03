@@ -185,6 +185,15 @@ test.describe('the link to an AAGUID\'s MDS entry', () => {
   test('opens a listed entry by its URL', async ({ page }) => {
     await page.goto('/#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000002');
     await expect(entryPage(page).getByRole('heading', { level: 3, name: 'Fixture Security Key L2' })).toBeVisible();
+    // Its detail file holds its biometric status report and rogue list.
+    await expect(part(page, 'biometricStatusReports').getByRole('cell')).toHaveText([
+      'fingerprint_internal',
+      '2026-08-15',
+      '1',
+      /FIDOBIO20260815002/,
+      /^Fixture Fingerprint Sensor/,
+    ]);
+    await expect(part(page, 'statusReports')).toContainText('https://fixture.example/rogue-lists/fixture-security-key-l2.json');
   });
 
   test('asks the server for an entry the list does not hold', async ({ page }) => {
