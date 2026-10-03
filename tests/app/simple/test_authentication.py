@@ -146,6 +146,22 @@ def test_a_credential_the_server_holds_no_record_of_is_checked_against_the_brows
     assert response.get_json()["failedCredentialId"] == b64u(unregistered.credential_id)
 
 
+def test_a_visitor_without_a_namespace_is_checked_against_the_browsers_copy_and_given_none(credential_store):
+    # Registered from another browser, or this one's cookies cleared: nothing is stored for it here.
+    authenticator = Authenticator()
+    register_simple(entry_app().test_client(), authenticator, counter=10)
+    client = entry_app().test_client()
+
+    lower = authenticate_simple(client, authenticator, counter=3, client_sign_count=5)
+    higher = authenticate_simple(client, authenticator, counter=6, client_sign_count=5)
+
+    assert "stored 5, received 3" in lower.get_json()["error"]
+    assert higher.status_code == 200, higher.get_json()
+    assert client.get_cookie("fido.mds.session") is None
+    with client.session_transaction() as session:
+        assert "fido.mds.session" not in session
+
+
 def test_a_counter_that_cannot_be_saved_fails_the_authentication(credential_store, monkeypatch, caplog):
     authenticator = Authenticator()
     client = entry_app().test_client()

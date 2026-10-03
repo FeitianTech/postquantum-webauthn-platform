@@ -439,14 +439,15 @@ class StoredRecordsUnreadable(Exception):
 def load_server_records(uname: Any) -> tuple[list[Any] | None, Any, str | None]:
     """The caller's server-side records, their version, the session: ``(None, None, None)`` if none.
 
-    "None" means the read worked and there is nothing to find (or no name to
-    find it by). A read that failed raises :class:`StoredRecordsUnreadable`.
+    "None" means the read worked and there is nothing to find (or no name or
+    namespace to find it by). A read that failed raises :class:`StoredRecordsUnreadable`.
     """
 
-    if not isinstance(uname, str) or not uname:
+    # A visitor without a namespace has stored nothing, and reading gives them none.
+    session_id = visitor_session.current_id()
+    if not isinstance(uname, str) or not uname or not session_id:
         return None, None, None
     try:
-        session_id = visitor_session.ensure_id()
         records, version = credentials.read_for_update(uname, session_id=session_id)
     except InvalidStorageIdentifier:
         # A name the store refuses is the caller's error: the app answers 400.
