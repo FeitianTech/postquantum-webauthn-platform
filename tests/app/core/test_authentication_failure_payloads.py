@@ -5,7 +5,11 @@ from server.app.routes.advanced import algorithms as advanced_algorithms
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.routes.simple import parsing as simple_parsing
 from tests.app.entry_app import entry_app
-from tests.app.security.ceremony_helpers import b64u
+from tests.app.security.ceremony_helpers import (
+    b64u,
+    keep_simple_credentials,
+    simple_complete_body,
+)
 
 
 def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch):
@@ -21,16 +25,13 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch)
 
     with entry_app().test_client() as client:
         with client.session_transaction() as session:
-            session["simple_credentials"] = [{"credentialIdBase64Url": encoded_id}]
+            keep_simple_credentials(session, [{"credentialIdBase64Url": encoded_id}])
             session["state"] = {"challenge": "test", "issued_at": time.time()}
             session["authenticate_rp_id"] = "example.com"
 
         response = client.post(
             f"/api/authenticate/complete?email={encoded_id}@example.com",
-            json={
-                "rawId": encoded_id,
-                "response": {},
-            },
+            json=simple_complete_body({"rawId": encoded_id, "response": {}}, [{"credentialIdBase64Url": encoded_id}]),
         )
 
     assert response.status_code == 400

@@ -8,20 +8,74 @@ from __future__ import annotations
 import hashlib
 from types import SimpleNamespace
 
+import pytest
 from fido2.webauthn import AuthenticatorData
 
 from server.app.routes.simple import authentication as simple_authentication
 from server.app.storage import credentials as storage_credentials
+from tests.app.characterization import material
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import (
+    ORIGIN,
     RP_ID,
     Authenticator,
+    assertion_payload,
     authenticate_simple,
     b64u,
     register_simple,
+    simple_complete_body,
+    unb64u,
 )
 
 EMAIL = "user@example.com"
+
+
+# Werkzeug's limit for a Set-Cookie header, just under what browsers keep (4,096 bytes).
+COOKIE_LIMIT = 4093
+
+
+def _cookies_fit(response) -> bool:
+    return all(len(header) <= COOKIE_LIMIT for header in response.headers.getlist("Set-Cookie"))
+
+
+@pytest.mark.parametrize(("key_type", "count"), [("ML-DSA-65", 2), ("ML-DSA-87", 3)])
+def test_several_ml_dsa_passkeys_authenticate_with_every_cookie_a_browser_keeps(credential_store, key_type, count):
+    client = entry_app().test_client()
+    authenticators = [material.Authenticator(f"{key_type}-passkey-{index}", key_type=key_type) for index in range(count)]
+    for authenticator in authenticators:
+        register_simple(client, authenticator)
+    credentials = [authenticator.stored_credential_entry() for authenticator in authenticators]
+
+    begin = client.post(f"/api/authenticate/begin?email={EMAIL}", json={"credentials": credentials})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    complete = client.post(
+        f"/api/authenticate/complete?email={EMAIL}",
+        json=simple_complete_body(assertion_payload(authenticators[-1], challenge=challenge, counter=1), credentials),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert complete.status_code == 200, complete.get_json()
+    assert _cookies_fit(begin)
+    assert _cookies_fit(complete)
+
+
+def test_a_complete_sent_other_credentials_than_its_begin_is_refused(credential_store):
+    client = entry_app().test_client()
+    first, second = Authenticator(credential_id=b"\x01" * 32), Authenticator(credential_id=b"\x02" * 32)
+    for authenticator in (first, second):
+        register_simple(client, authenticator)
+    begun_with = [first.stored_credential_entry(), second.stored_credential_entry()]
+
+    begin = client.post(f"/api/authenticate/begin?email={EMAIL}", json={"credentials": begun_with})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    complete = client.post(
+        f"/api/authenticate/complete?email={EMAIL}",
+        json=simple_complete_body(assertion_payload(first, challenge=challenge, counter=1), begun_with[:1]),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert complete.status_code == 400
+    assert "not the ones it began with" in complete.get_json()["error"]
 
 
 def test_a_begin_body_that_is_no_object_offers_no_credential():
@@ -33,13 +87,13 @@ def test_a_begin_body_that_is_no_object_offers_no_credential():
 def test_an_assertion_body_that_is_no_object_fails_without_naming_a_credential(credential_store):
     authenticator = Authenticator()
     client = entry_app().test_client()
-    begin = client.post(
-        f"/api/authenticate/begin?email={EMAIL}",
-        json={"credentials": [authenticator.stored_credential_entry()]},
-    )
+    stored = [authenticator.stored_credential_entry()]
+    begin = client.post(f"/api/authenticate/begin?email={EMAIL}", json={"credentials": stored})
     assert begin.status_code == 200
 
-    response = client.post(f"/api/authenticate/complete?email={EMAIL}", json=["not", "an", "assertion"])
+    response = client.post(
+        f"/api/authenticate/complete?email={EMAIL}", json=simple_complete_body(["not", "an", "assertion"], stored)
+    )
 
     assert response.status_code == 400
     assert response.get_json()["error"]

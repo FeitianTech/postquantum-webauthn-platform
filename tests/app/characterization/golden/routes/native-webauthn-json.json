@@ -1005,13 +1005,7 @@
       "authenticate_rp_id": "localhost",
       "fido.mds.session": "fJAAoedto0c7R4WAwGgHo-Cbe9NlssP9402V3MDPgXs",
       "fido.mds.touched_at": 1790000000.0,
-      "simple_credentials": [
-       {
-        "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
-        "credentialId": "8vMFJI92lensLfAxwYdlxWmYD_z_xAhpzN3_tukFB2Y",
-        "publicKey": "pQECAyYgASFYIFqwCf_U5cMd-3T3vwujIs6WSVOQ8xBdzP7CI-cI9IkXIlgg-to_bMDlpB-QDYZohrD3zDV2OVYRUOAbDviJiUk25lc"
-       }
-      ],
+      "simple_credentials_digest": "-iHIbJNXI3fifTNV8PbK3mirawdJYKucnfvT5D1m1j8",
       "simple_credentials_email": "user@example.com",
       "state": {
        "challenge": "zDjnMAMi_Wl8l6p8WP8EFd5YvSxP7ZiJUGrE1lXExfc",

@@ -20,6 +20,7 @@ from .ceremony_helpers import (
     Authenticator,
     assertion_payload,
     registration_payload,
+    simple_complete_body,
     unb64u,
 )
 
@@ -111,7 +112,9 @@ def test_allowlist_gates_simple_authentication_too(simple_storage, allowed_origi
 
     response = client.post(
         "/api/authenticate/complete?email=user@example.com",
-        json=assertion_payload(authenticator, challenge=challenge, origin=unlisted),
+        json=simple_complete_body(
+            assertion_payload(authenticator, challenge=challenge, origin=unlisted), [authenticator.stored_credential_entry()]
+        ),
         headers={"Origin": unlisted},
     )
 

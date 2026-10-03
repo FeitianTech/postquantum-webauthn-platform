@@ -19,7 +19,9 @@ from .ceremony_helpers import (
     advanced_public_key_options,
     assertion_payload,
     b64u,
+    keep_simple_credentials,
     registration_payload,
+    simple_complete_body,
     unb64u,
 )
 
@@ -45,10 +47,10 @@ def _begin_simple_authentication(client, authenticator):
     return unb64u(begin.get_json()["publicKey"]["challenge"])
 
 
-def _complete_simple_authentication(client, payload):
+def _complete_simple_authentication(client, authenticator, payload):
     return client.post(
         "/api/authenticate/complete?email=user@example.com",
-        json=payload,
+        json=simple_complete_body(payload, [authenticator.stored_credential_entry()]),
         headers={"Origin": ORIGIN},
     )
 
@@ -66,14 +68,14 @@ def test_simple_assertion_replayed_with_earlier_cookie_is_rejected(simple_storag
     cookie_with_state = _snapshot_cookie(client)
     assertion = assertion_payload(authenticator, challenge=challenge, counter=1)
 
-    first = _complete_simple_authentication(client, assertion)
+    first = _complete_simple_authentication(client, authenticator, assertion)
     assert first.status_code == 200, first.get_json()
     assert first.get_json()["status"] == "OK"
 
     # The attacker resends the cookie that still holds the ceremony state,
     # together with the exact same, genuinely signed assertion.
     _restore_cookie(client, cookie_with_state)
-    replay = _complete_simple_authentication(client, assertion)
+    replay = _complete_simple_authentication(client, authenticator, assertion)
 
     assert replay.status_code == 400
     body = replay.get_json()
@@ -91,13 +93,13 @@ def test_simple_challenge_is_consumed_even_when_the_first_attempt_fails(simple_s
     cookie_with_state = _snapshot_cookie(client)
 
     failed = _complete_simple_authentication(
-        client, assertion_payload(authenticator, challenge=challenge, valid_signature=False)
+        client, authenticator, assertion_payload(authenticator, challenge=challenge, valid_signature=False)
     )
     assert failed.status_code == 400
 
     _restore_cookie(client, cookie_with_state)
     retry = _complete_simple_authentication(
-        client, assertion_payload(authenticator, challenge=challenge, counter=1)
+        client, authenticator, assertion_payload(authenticator, challenge=challenge, counter=1)
     )
 
     assert retry.status_code == 400
@@ -145,7 +147,7 @@ def test_simple_state_older_than_the_ttl_is_rejected(simple_storage, monkeypatch
     client = entry_app().test_client()
 
     with client.session_transaction() as session:
-        session["simple_credentials"] = [authenticator.stored_credential_entry()]
+        keep_simple_credentials(session, [authenticator.stored_credential_entry()])
         session["authenticate_rp_id"] = "localhost"
         session["state"] = {
             "challenge": b64u(challenge),
@@ -154,7 +156,7 @@ def test_simple_state_older_than_the_ttl_is_rejected(simple_storage, monkeypatch
         }
 
     response = _complete_simple_authentication(
-        client, assertion_payload(authenticator, challenge=challenge, counter=1)
+        client, authenticator, assertion_payload(authenticator, challenge=challenge, counter=1)
     )
 
     assert response.status_code == 400
@@ -170,12 +172,12 @@ def test_simple_state_without_issued_at_stamp_is_rejected(simple_storage):
     client = entry_app().test_client()
 
     with client.session_transaction() as session:
-        session["simple_credentials"] = [authenticator.stored_credential_entry()]
+        keep_simple_credentials(session, [authenticator.stored_credential_entry()])
         session["authenticate_rp_id"] = "localhost"
         session["state"] = {"challenge": b64u(challenge), "user_verification": "discouraged"}
 
     response = _complete_simple_authentication(
-        client, assertion_payload(authenticator, challenge=challenge, counter=1)
+        client, authenticator, assertion_payload(authenticator, challenge=challenge, counter=1)
     )
 
     assert response.status_code == 400
@@ -194,7 +196,7 @@ def test_simple_ceremonies_succeed_back_to_back_and_clear_session_state(simple_s
     for counter in (1, 2):
         challenge = _begin_simple_authentication(client, authenticator)
         response = _complete_simple_authentication(
-            client, assertion_payload(authenticator, challenge=challenge, counter=counter)
+            client, authenticator, assertion_payload(authenticator, challenge=challenge, counter=counter)
         )
         assert response.status_code == 200, response.get_json()
         assert response.get_json()["status"] == "OK"
@@ -202,7 +204,7 @@ def test_simple_ceremonies_succeed_back_to_back_and_clear_session_state(simple_s
         with client.session_transaction() as session:
             assert "state" not in session
             assert "authenticate_rp_id" not in session
-            assert "simple_credentials" not in session
+            assert "simple_credentials_digest" not in session
 
 
 # --------------------------------------------------------------------------

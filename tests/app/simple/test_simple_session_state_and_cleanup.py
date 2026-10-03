@@ -5,7 +5,11 @@ from server.app.config import relying_party
 from server.app.routes.simple import parsing as simple_parsing
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.entry_app import entry_app
-from tests.app.security.ceremony_helpers import b64u
+from tests.app.security.ceremony_helpers import (
+    b64u,
+    keep_simple_credentials,
+    simple_complete_body,
+)
 
 
 def test_register_complete_rejects_non_mapping_request_state_fallback(monkeypatch):
@@ -43,17 +47,15 @@ def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkey
 
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
-            session_state["simple_credentials"] = [{"credentialId": "cred-1"}]
+            keep_simple_credentials(session_state, [{"credentialId": "cred-1"}])
             session_state["authenticate_rp_id"] = "example.com"
             session_state["simple_credentials_email"] = "user@example.com"
 
         response = client.post(
             "/api/authenticate/complete?email=user@example.com",
-            json={
-                "rawId": "cred-1",
-                "response": {},
-                "__session_state": "invalid",
-            },
+            json=simple_complete_body(
+                {"rawId": "cred-1", "response": {}, "__session_state": "invalid"}, [{"credentialId": "cred-1"}]
+            ),
         )
 
         assert response.status_code == 400
@@ -80,17 +82,17 @@ def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypa
 
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
-            session_state["simple_credentials"] = [{"credentialId": b64u(credential_id)}]
+            keep_simple_credentials(session_state, [{"credentialId": b64u(credential_id)}])
             session_state["state"] = {"challenge": "auth-state", "issued_at": time.time()}
             session_state["authenticate_rp_id"] = "example.com"
             session_state["simple_credentials_email"] = "user@example.com"
 
         response = client.post(
             "/api/authenticate/complete?email=user@example.com",
-            json={
-                "rawId": b64u(credential_id),
-                "response": {"authenticatorData": "not-valid-base64url"},
-            },
+            json=simple_complete_body(
+                {"rawId": b64u(credential_id), "response": {"authenticatorData": "not-valid-base64url"}},
+                [{"credentialId": b64u(credential_id)}],
+            ),
         )
 
         # An unreadable counter cannot pass the signCount check.

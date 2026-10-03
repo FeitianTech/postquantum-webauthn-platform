@@ -77,7 +77,9 @@ test.describe('the browser\'s own WebAuthn JSON', () => {
 
     const assertion = await sentBody(page, '/api/authenticate/complete', () => simple.getByRole('button', { name: 'Authenticate', exact: true }).click());
     await expect(page.getByText('Authentication successful! You have been verified.')).toBeVisible();
-    expect(assertion.id).toBe(registration.id);
+    expect(assertion.credential.id).toBe(registration.id);
+    // Beside the assertion, the credentials begin was sent, again: the session keeps only their digest.
+    expect(assertion.credentials.map(({ credentialId }: { credentialId: string }) => credentialId)).toEqual([registration.id]);
     expect((await ceremonies(page)).map(({ name }) => name)).toEqual(['create', 'get']);
   });
 

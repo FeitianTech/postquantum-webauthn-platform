@@ -20,6 +20,7 @@ from .ceremony_helpers import (
     advanced_public_key_options,
     assertion_payload,
     registration_payload,
+    simple_complete_body,
     unb64u,
 )
 
@@ -81,7 +82,9 @@ def test_simple_authentication_refuses_a_traversal_name(client, caplog, store):
     with caplog.at_level(logging.WARNING):
         response = client.post(
             f"/api/authenticate/complete?email={TRAVERSAL}",
-            json=assertion_payload(authenticator, challenge=challenge, counter=1),
+            json=simple_complete_body(
+                assertion_payload(authenticator, challenge=challenge, counter=1), [authenticator.stored_credential_entry()]
+            ),
             headers={"Origin": ORIGIN},
         )
 

@@ -139,7 +139,8 @@ export async function registerSimplePasskey(email, { onProgress = () => {} } = {
 
 /**
  * Authenticates `email` with the passkeys this browser keeps for it, sending the
- * server what it keeps of each. Says each step through onProgress. Gives
+ * server what it keeps of each, at begin and again, the very same list, with the
+ * assertion (the server keeps only a digest of it). Says each step through onProgress. Gives
  * `{answer, result}` on success, `{failure, result}` when the server refused the
  * assertion (readFailedResponse's reading; `result` is what the result panel
  * shows: shared/ceremony-result.js); throws for anything before that.
@@ -155,9 +156,8 @@ export async function authenticateSimplePasskey(email, { onProgress = () => {} }
         throw new Error(SIMPLE_CEREMONY_TEXT.noStoredCredentials);
     }
 
-    const response = await postJson('/api/authenticate/begin', email, {
-        credentials: prepareCredentialsForServer(storedCredentials),
-    });
+    const credentials = prepareCredentialsForServer(storedCredentials);
+    const response = await postJson('/api/authenticate/begin', email, { credentials });
     if (!response.ok) {
         if (response.status === 404) {
             throw new Error(SIMPLE_CEREMONY_TEXT.noServerCredentials);
@@ -172,7 +172,7 @@ export async function authenticateSimplePasskey(email, { onProgress = () => {} }
     const { json: assertionJson } = await getAssertion(publicKey);
 
     onProgress(SIMPLE_CEREMONY_TEXT.authenticationCompleting);
-    const result = await postJson('/api/authenticate/complete', email, assertionJson);
+    const result = await postJson('/api/authenticate/complete', email, { credential: assertionJson, credentials });
     if (!result.ok) {
         const failure = await readFailedResponse(result);
         return {

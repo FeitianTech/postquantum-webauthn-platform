@@ -82,9 +82,9 @@ def test_simple_authenticate_begin_accepts_stored_credentials_alias(monkeypatch)
         with client.session_transaction() as session_state:
             assert session_state["state"]["challenge"] == "simple-auth-state"
             assert isinstance(session_state["state"]["issued_at"], float)
-
-        with client.session_transaction() as session_state:
-            assert len(session_state["simple_credentials"]) == 1
+            # The credentials' digest, never their public keys: complete is sent them again.
+            assert "simple_credentials" not in session_state
+            assert isinstance(session_state["simple_credentials_digest"], str)
 
 
 def test_advanced_register_begin_accepts_base64url_wrapped_user_id_and_challenge(monkeypatch):

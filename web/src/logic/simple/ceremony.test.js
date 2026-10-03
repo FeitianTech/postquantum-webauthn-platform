@@ -140,8 +140,11 @@ describe('authenticating with a passkey', () => {
     const outcome = await authenticateSimplePasskey('alice', { onProgress });
 
     expect(sent(0).url).toBe('/api/authenticate/begin?email=alice');
-    expect(sent(0).body).toEqual({ credentials: [{ credentialId: 'AQIDBA', aaguid: null, publicKey: 'pQE', signCount: 0 }] });
-    expect(sent(1).body).toMatchObject({ id: 'AQIDBA', response: { signature: 'MEQ', userHandle: 'dQ' } });
+    const credentials = [{ credentialId: 'AQIDBA', aaguid: null, publicKey: 'pQE', signCount: 0 }];
+    expect(sent(0).body).toEqual({ credentials });
+    // The assertion as the browser's JSON, beside the very list begin was sent.
+    expect(sent(1).body).toMatchObject({ credential: { id: 'AQIDBA', response: { signature: 'MEQ', userHandle: 'dQ' } }, credentials });
+    expect(Object.keys(sent(1).body).sort()).toEqual(['credential', 'credentials']);
     expect(authenticator.get.mock.calls[0][0].publicKey.challenge).toBeInstanceOf(ArrayBuffer);
     expect(outcome).toEqual({
       answer: AUTHENTICATE[3].body,

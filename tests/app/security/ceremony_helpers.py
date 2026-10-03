@@ -20,6 +20,9 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed25519
 from fido2 import cbor
 from fido2.cose import ES256, EdDSA
 
+from server.app.routes.simple import authentication as simple_authentication
+from server.app.routes.simple import parsing as simple_parsing
+
 RP_ID = "localhost"
 ORIGIN = "http://localhost"
 
@@ -302,6 +305,19 @@ def authenticate_simple(
     challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
     return client.post(
         f"/api/authenticate/complete{query}",
-        json=assertion_payload(authenticator, challenge=challenge, counter=counter),
+        json=simple_complete_body(assertion_payload(authenticator, challenge=challenge, counter=counter), [entry]),
         headers={"Origin": ORIGIN},
     )
+
+
+def simple_complete_body(credential: Mapping[str, Any], credentials: list[Any]) -> dict[str, Any]:
+    """What the page sends /api/authenticate/complete: the assertion's JSON, and the credentials begin was sent."""
+
+    return {"credential": credential, "credentials": credentials}
+
+
+def keep_simple_credentials(session: Any, credentials: list[Any]) -> None:
+    """Put into ``session`` what /api/authenticate/begin keeps of ``credentials``: their digest."""
+
+    _, serialized = simple_parsing._parse_client_credentials(credentials)
+    session["simple_credentials_digest"] = simple_authentication.credentials_digest(serialized)

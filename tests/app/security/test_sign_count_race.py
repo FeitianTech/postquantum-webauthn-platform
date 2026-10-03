@@ -23,6 +23,7 @@ from .ceremony_helpers import (
     Authenticator,
     assertion_payload,
     register_simple,
+    simple_complete_body,
     unb64u,
 )
 
@@ -70,7 +71,10 @@ def test_two_authentications_with_the_same_counter_cannot_both_succeed(app, monk
     def _complete(index, client):
         responses[index] = client.post(
             f"/api/authenticate/complete?email={EMAIL}",
-            json=assertion_payload(authenticator, challenge=challenges[index], counter=6),
+            json=simple_complete_body(
+                assertion_payload(authenticator, challenge=challenges[index], counter=6),
+                [authenticator.stored_credential_entry()],
+            ),
             headers={"Origin": ORIGIN},
         )
 
@@ -105,7 +109,9 @@ def test_losing_the_race_twice_rejects_the_authentication(app, monkeypatch, cred
 
     response = client.post(
         f"/api/authenticate/complete?email={EMAIL}",
-        json=assertion_payload(authenticator, challenge=challenge, counter=6),
+        json=simple_complete_body(
+            assertion_payload(authenticator, challenge=challenge, counter=6), [authenticator.stored_credential_entry()]
+        ),
         headers={"Origin": ORIGIN},
     )
 
@@ -130,7 +136,9 @@ def test_an_uncontended_authentication_saves_its_counter_once(app, monkeypatch, 
 
     response = client.post(
         f"/api/authenticate/complete?email={EMAIL}",
-        json=assertion_payload(authenticator, challenge=challenge, counter=6),
+        json=simple_complete_body(
+            assertion_payload(authenticator, challenge=challenge, counter=6), [authenticator.stored_credential_entry()]
+        ),
         headers={"Origin": ORIGIN},
     )
 

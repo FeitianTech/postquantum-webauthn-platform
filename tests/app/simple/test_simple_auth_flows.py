@@ -13,7 +13,11 @@ from server.app.webauthn.attestation import aaguid as attestation_aaguid
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import checks as attestation_checks
 from tests.app.entry_app import entry_app
-from tests.app.security.ceremony_helpers import b64u
+from tests.app.security.ceremony_helpers import (
+    b64u,
+    keep_simple_credentials,
+    simple_complete_body,
+)
 
 
 class _FakeCredentialData:
@@ -127,17 +131,17 @@ def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch):
 
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
-            session_state["simple_credentials"] = [{"credentialId": b64u(credential_id)}]
+            keep_simple_credentials(session_state, [{"credentialId": b64u(credential_id)}])
             session_state["state"] = {"challenge": "auth-state", "issued_at": time.time()}
             session_state["authenticate_rp_id"] = "example.com"
             session_state["simple_credentials_email"] = "user@example.com"
 
         response = client.post(
             "/api/authenticate/complete?email=user@example.com",
-            json={
-                "rawId": b64u(credential_id),
-                "response": {"authenticatorData": auth_data_b64},
-            },
+            json=simple_complete_body(
+                {"rawId": b64u(credential_id), "response": {"authenticatorData": auth_data_b64}},
+                [{"credentialId": b64u(credential_id)}],
+            ),
         )
 
         assert response.status_code == 200
@@ -176,17 +180,20 @@ def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch
 
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
-            session_state["simple_credentials"] = [{"credentialId": b64u(credential_id)}]
+            keep_simple_credentials(session_state, [{"credentialId": b64u(credential_id)}])
             session_state["authenticate_rp_id"] = "example.com"
             # Deliberately no server-issued "state" in the session.
 
         response = client.post(
             "/api/authenticate/complete?email=user@example.com",
-            json={
-                "rawId": b64u(credential_id),
-                "response": {"authenticatorData": "AQID"},
-                "__session_state": {"challenge": "fallback-state"},
-            },
+            json=simple_complete_body(
+                {
+                    "rawId": b64u(credential_id),
+                    "response": {"authenticatorData": "AQID"},
+                    "__session_state": {"challenge": "fallback-state"},
+                },
+                [{"credentialId": b64u(credential_id)}],
+            ),
         )
 
         assert response.status_code == 400
@@ -204,13 +211,13 @@ def test_simple_authenticate_complete_missing_state_returns_400(monkeypatch):
 
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:
-            session_state["simple_credentials"] = [{"credentialId": "cred-1"}]
+            keep_simple_credentials(session_state, [{"credentialId": "cred-1"}])
             session_state["authenticate_rp_id"] = "example.com"
             session_state["simple_credentials_email"] = "user@example.com"
 
         response = client.post(
             "/api/authenticate/complete?email=user@example.com",
-            json={"rawId": "cred-1", "response": {}},
+            json=simple_complete_body({"rawId": "cred-1", "response": {}}, [{"credentialId": "cred-1"}]),
         )
 
         assert response.status_code == 400

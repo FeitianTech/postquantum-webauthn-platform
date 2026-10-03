@@ -955,13 +955,7 @@
       "authenticate_rp_id": "localhost",
       "fido.mds.session": "cGourgMF_TKe-v8yiLbvgeZOruAAf7YK6id8pibnwCw",
       "fido.mds.touched_at": 1790000000.0,
-      "simple_credentials": [
-       {
-        "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
-        "credentialId": "I-x_yx0u_bw6JTjE9_-voaixJvVYFfaqv_zOJg7HAqE",
-        "publicKey": "owEHAzgvIFkFIBpvCT6xrBFJJSI9_QOQAeop902PyVyKEccyFf0qGxUOQWOdH2eeDK9cbYRgCmd3mhidFBMO_OQ05SwzQPnnaXcFY04eK4BeVPwJTxq4A1WJqaS8EEzgYqTzzpRPxHJPBRlcjk7WodS_-7ltBBBWmQl2rV51JSqfWkKzXb5rHldIquzR603LfinfvsGNIIfx2vhg8xGU8WFxPWdUr0fczkaXmqITCWr26cwYElEPr8XZptzLhYLM1QXuiGQgsfARpL0kKuCIDF4a-3QeCob3Wo3ghhrNvVujLv8SVQGKLlFNNiUfcD7awQQ8u-1KavI2I1BqpNvm7h1nh6qMqISWWcP6rBQpEgjKdkAWSz7Iwwnbazudw5esBcPhC6yWxBKMPYC-R4hk9wWqz3YJEQhTIYjqFbJgoxzYz8n2-2cRthnfHXjsEGn3D8jSam7lOtQIVLBjrNX_nlKjIY21KVs560_zCOtEmNjFe7Wt04U3BbVozUmYc--vA7sJU4Q6XpSih9f0ZUvt0sIka3uXLifqs2bN_UaBOHOcRB0wjHTsCIHO_DXXFBp4HTtpeR5pqBJLh8ZmmPzoYY6Jw_HRbRnwCUlzDCpA0btkg2SSnYp5vdewTXN_7E6WXw5j5vcMMebTG7wIV7LRcR5ILkJsdRc2Xb2_kEjluMaDADbUtBAwphcVZEGbyJNUMdY7DvmGxDwMw4svOb8XrEc0I2NXEhmvC9cHiD-hK1w1VNJ3XOhAqn0UXGvB8uFXQEcsSPe0Ff7-YHz2ySQkHeVpoGg9pspZau_JaAFPGFYZkDr2xVkFGJRhDS5XZbMFRUVOEOz5xq3imZdXigyruL_tI3KTmqu5mUPFEhHwO2WP5KzEBNyDMqnAtlyaL-mOFGD8fL3CpqKq8X9n2HfzUDWoGD9BS9-DunpWIEAXwz-g95zH3LFJyiFLVwZzwNEu10GGqwFM7k3nkmo7_JLgIe5lvU3c21BcpSBOkUtDzYNpsBI7ibE4C73mHQBXDqJBRsB4bP8hB5nXMvsbnf2hazCvUPmR3xYqsNxYVHWZ_gzks_wmohXALB7tHyGh5qMsXEtnI8dYc7EYtIdvDjx2ZJfuZAmoWU5VA3B7yx-bwYB10L28gB7vss4pme3oZbfFdV5uEvt466j9TDJj_aI2GPufUVoUHnCBkrIE58LekEkQuc3MNiU0PJe_cFqadS_YRk5r7mo3ch9um-LmejTgJb1Fz3g_Twru9hSTuTaM6FMfP9CermbMiLBSsSwgnlRqimRnxV1tPFm4whqvc5hqLxg5x7kyh6AFtR1LMCQ_-7uL4iDeKk6sA6wl2pDD-6nhUq7i589yDgj9mLF_f5UFcmNx5oAn0BVXrZ5WzfIesXQsUa1i5y6GE19B2yj0Sc8AeWq1QEcJ22wS7tiEqBOvbQk3p0UlLC-XWJDY8TONEe1BfJREEQeCWlW-IrV-Pt-BHmjeFOsA_bal395E5gSHv_Bhrvuri-KMoXB3EozIo_DMKScq0gQSTYPLI22BEYkmxt7qF8QQKOjKDjPrQTW7VuHLL8MjIRMfNw0qnb8iZ7x-hV0Admznr2w_tBwxaIQC6g2pYa1SKG_BnuQ_W7D655B0-EOAJG7LwHyKwfUyAbk8f4X3kl4MmsYw8Fpb9y3ygAw7_oygD5idIRq14gcDEXCqLXKw21qN2iPCtlCuF7_NUQZl727D9eJbxmdOzx2z4K8A7XQM222pq6qJrJGo7M2-OjqinEcGyhE"
-       }
-      ],
+      "simple_credentials_digest": "QqzvwkjPRN86RcKbohOAMVcz9t7jS1XunF9wCW0wJSk",
       "simple_credentials_email": "user@example.com",
       "state": {
        "challenge": "4L1frHh-5eGcfX77b2gs6HMQbswToIFZBcPnmcTsU3g",

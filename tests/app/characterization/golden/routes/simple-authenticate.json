@@ -957,13 +957,7 @@
       "authenticate_rp_id": "localhost",
       "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY",
       "fido.mds.touched_at": 1790000000.0,
-      "simple_credentials": [
-       {
-        "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
-        "credentialId": "hc3wKwT2pzE_moP8MirmB9IeO2Kr5g8EXY7MXMk-FvU",
-        "publicKey": "pQECAyYgASFYIOUXheTw1E-EWQzlvZV436po9IPSSC4v-2KUgHzYdwcBIlggV1x10katy4m49ykeifI0L8XqeWIF6rPx0q0yg5YadZ4"
-       }
-      ],
+      "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
       "simple_credentials_email": "user@example.com",
       "state": {
        "challenge": "e7FoxsevCIziKUviZ3-YmzTAOdMxa3jxHJ5F5SNXxdA",
@@ -1366,13 +1360,7 @@
       "authenticate_rp_id": "localhost",
       "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY",
       "fido.mds.touched_at": 1790000000.0,
-      "simple_credentials": [
-       {
-        "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
-        "credentialId": "hc3wKwT2pzE_moP8MirmB9IeO2Kr5g8EXY7MXMk-FvU",
-        "publicKey": "pQECAyYgASFYIOUXheTw1E-EWQzlvZV436po9IPSSC4v-2KUgHzYdwcBIlggV1x10katy4m49ykeifI0L8XqeWIF6rPx0q0yg5YadZ4"
-       }
-      ],
+      "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
       "simple_credentials_email": "user@example.com",
       "state": {
        "challenge": "VmG-5rO1v-ANquzpBMllHqEAuvmYaSVeI8pgp83RpmE",
@@ -1532,13 +1520,7 @@
       "authenticate_rp_id": "localhost",
       "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY",
       "fido.mds.touched_at": 1790000000.0,
-      "simple_credentials": [
-       {
-        "aaguid": "AAAAAAAAAAAAAAAAAAAAAA",
-        "credentialId": "hc3wKwT2pzE_moP8MirmB9IeO2Kr5g8EXY7MXMk-FvU",
-        "publicKey": "pQECAyYgASFYIOUXheTw1E-EWQzlvZV436po9IPSSC4v-2KUgHzYdwcBIlggV1x10katy4m49ykeifI0L8XqeWIF6rPx0q0yg5YadZ4"
-       }
-      ],
+      "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
       "simple_credentials_email": "user@example.com",
       "state": {
        "challenge": "2XdPgXup1_HtE5HLE4dTZpR2FtdQ-9AFjkZwYER5rms",

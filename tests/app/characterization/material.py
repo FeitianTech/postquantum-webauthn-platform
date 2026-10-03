@@ -49,8 +49,12 @@ OID_FIRMWARE = x509.ObjectIdentifier("1.3.6.1.4.1.41482.13.1")
 OID_YUBICO_DEVICE = x509.ObjectIdentifier("1.3.6.1.4.1.41482.2")
 OID_YUBICO_VALUE = x509.ObjectIdentifier("1.3.6.1.4.1.41482.1.1")
 
-MLDSA_PRIVATE = {"ML-DSA-44": mldsa.MLDSA44PrivateKey, "ML-DSA-65": mldsa.MLDSA65PrivateKey}
-MLDSA_COSE = {"ML-DSA-44": cose.MLDSA44, "ML-DSA-65": cose.MLDSA65}
+MLDSA_PRIVATE = {
+    "ML-DSA-44": mldsa.MLDSA44PrivateKey,
+    "ML-DSA-65": mldsa.MLDSA65PrivateKey,
+    "ML-DSA-87": mldsa.MLDSA87PrivateKey,
+}
+MLDSA_COSE = {"ML-DSA-44": cose.MLDSA44, "ML-DSA-65": cose.MLDSA65, "ML-DSA-87": cose.MLDSA87}
 
 
 # -- frozen inputs -----------------------------------------------------------

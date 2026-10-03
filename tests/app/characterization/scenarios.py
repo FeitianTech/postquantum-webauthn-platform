@@ -57,16 +57,16 @@ def _simple_register(r: Recorder, client, authenticator, *, email: str = EMAIL, 
 
 
 def _simple_authenticate(r: Recorder, client, authenticator, *, counter: int, valid: bool = True, entry=None):
-    begin = r.post(
-        client,
-        f"/api/authenticate/begin?email={EMAIL}",
-        json={"credentials": [entry or authenticator.stored_credential_entry()]},
-    )
+    credentials = [entry or authenticator.stored_credential_entry()]
+    begin = r.post(client, f"/api/authenticate/begin?email={EMAIL}", json={"credentials": credentials})
     challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
     return r.post(
         client,
         f"/api/authenticate/complete?email={EMAIL}",
-        json=m.assertion_payload(authenticator, challenge=challenge, counter=counter, valid_signature=valid),
+        json={
+            "credential": m.assertion_payload(authenticator, challenge=challenge, counter=counter, valid_signature=valid),
+            "credentials": credentials,
+        },
         headers=HEADERS,
     )
 
@@ -809,12 +809,16 @@ def _(r: Recorder) -> None:
         json=m.as_browser_writes_it(registration, simple, {"credProps": {"rk": True}}),
         headers=HEADERS,
     )
-    begin = r.post(client, f"/api/authenticate/begin?email={EMAIL}", json={"credentials": [simple.stored_credential_entry()]})
+    credentials = [simple.stored_credential_entry()]
+    begin = r.post(client, f"/api/authenticate/begin?email={EMAIL}", json={"credentials": credentials})
     challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
     r.post(
         client,
         f"/api/authenticate/complete?email={EMAIL}",
-        json=m.as_browser_writes_it(m.assertion_payload(simple, challenge=challenge, counter=1), simple, {}),
+        json={
+            "credential": m.as_browser_writes_it(m.assertion_payload(simple, challenge=challenge, counter=1), simple, {}),
+            "credentials": credentials,
+        },
         headers=HEADERS,
     )
 

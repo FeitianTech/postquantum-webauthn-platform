@@ -25,11 +25,12 @@ from .ceremony_helpers import (
     assertion_payload,
     authenticate_simple,
     register_simple,
+    simple_complete_body,
     unb64u,
 )
 
 EMAIL = "user@example.com"
-_CEREMONY_KEYS = {"state", "simple_credentials", "authenticate_rp_id", "simple_credentials_email"}
+_CEREMONY_KEYS = {"state", "simple_credentials_digest", "authenticate_rp_id", "simple_credentials_email"}
 
 
 @pytest.fixture
@@ -74,7 +75,7 @@ def test_a_failed_read_of_the_stored_counter_rejects_the_authentication(
     with caplog.at_level(logging.INFO, logger="server.app"):
         response = client.post(
             f"/api/authenticate/complete?email={EMAIL}",
-            json=assertion_payload(authenticator, challenge=challenge, counter=5),
+            json=simple_complete_body(assertion_payload(authenticator, challenge=challenge, counter=5), [entry]),
             headers={"Origin": ORIGIN},
         )
 

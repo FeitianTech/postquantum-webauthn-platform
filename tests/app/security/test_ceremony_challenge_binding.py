@@ -19,7 +19,9 @@ from .ceremony_helpers import (
     advanced_public_key_options,
     assertion_payload,
     b64u,
+    keep_simple_credentials,
     registration_payload,
+    simple_complete_body,
     unb64u,
 )
 
@@ -68,15 +70,16 @@ def test_cold_simple_authenticate_complete_with_self_chosen_challenge_is_rejecte
 
     payload = assertion_payload(authenticator, challenge=attacker_challenge)
     payload["__session_state"] = {"challenge": b64u(attacker_challenge)}
+    stored = [authenticator.stored_credential_entry()]
 
     client = entry_app().test_client()
     with client.session_transaction() as session:
         # Credentials are known, but there is no server-issued ceremony state.
-        session["simple_credentials"] = [authenticator.stored_credential_entry()]
+        keep_simple_credentials(session, stored)
 
     response = client.post(
         "/api/authenticate/complete?email=attacker@example.com",
-        json=payload,
+        json=simple_complete_body(payload, stored),
         headers={"Origin": ORIGIN, "Host": RP_ID},
     )
 
@@ -169,7 +172,7 @@ def test_simple_registration_and_authentication_happy_path(simple_storage):
 
     auth_complete = client.post(
         "/api/authenticate/complete?email=user@example.com",
-        json=assertion_payload(authenticator, challenge=auth_challenge),
+        json=simple_complete_body(assertion_payload(authenticator, challenge=auth_challenge), stored),
         headers={"Origin": ORIGIN},
     )
     assert auth_complete.status_code == 200, auth_complete.get_json()

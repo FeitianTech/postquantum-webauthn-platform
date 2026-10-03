@@ -4,7 +4,8 @@ Where the "stored" counter comes from
 -------------------------------------
 The simple flow keeps two copies of each credential: the server-side record
 written at registration, and the browser's own copy, which it
-sends back as the credential list on ``/authenticate/begin``. The server record
+sends back as the credential list on ``/authenticate/begin`` and again, the same
+list, on ``/authenticate/complete``. The server record
 is authoritative; the browser copy is attacker-controllable, so it may only
 ever make the check *stricter*. The stored value is therefore the larger of the
 two, and a missing copy simply does not contribute.
@@ -14,6 +15,8 @@ credential. Records that could not be read are not missing: the assertion is
 rejected with 503, since the browser's copy alone can be omitted or lowered."""
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 from collections.abc import Iterable, Mapping
 from typing import Any
@@ -40,6 +43,18 @@ bp = Blueprint("simple_authentication", __name__)
 
 logger = logging.getLogger(__name__)
 
+# What begin keeps of the credentials it was sent: their digest. Their public keys
+# (an ML-DSA-87 key is 2.6 KB) would not fit a cookie; complete is sent the same
+# list again, and is refused when it is not the one begin built its options from.
+_CREDENTIALS_DIGEST_KEY = "simple_credentials_digest"
+
+
+def credentials_digest(serialized: list[dict[str, Any]]) -> str:
+    """The digest begin keeps of the credentials it read (``parsing._parse_client_credentials``)."""
+
+    canonical = json.dumps(serialized, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return encode_base64url(hashlib.sha256(canonical).digest())
+
 
 @bp.route("/api/authenticate/begin", methods=["POST"])
 def authenticate_begin():
@@ -57,7 +72,7 @@ def authenticate_begin():
     if not credential_data_list:
         abort(404)
 
-    session["simple_credentials"] = serialized
+    session[_CREDENTIALS_DIGEST_KEY] = credentials_digest(serialized)
     session["simple_credentials_email"] = uname
 
     rp_id = relying_party.determine_rp_id()
@@ -86,8 +101,11 @@ def _challenge_rejection_message(replayed: bool) -> str:
     return "Authentication challenge has expired. Please restart the authentication flow."
 
 
-def _consume_authentication_state(response: Any) -> tuple[tuple[Any, Any, list[Any], Any] | None, Any]:
-    """The ceremony state, the session's credentials and RP ID, each taken from the session; or the 400.
+def _consume_authentication_state(
+    response: Any, sent_credentials: Any
+) -> tuple[tuple[Any, Any, list[Any], Any] | None, Any]:
+    """The ceremony state, the credentials (those sent again, when they are the ones
+    begin read) and the RP ID; or the 400.
 
     The session keys are popped in this order whatever the outcome, so a
     request that fails leaves nothing of the ceremony behind.
@@ -102,9 +120,9 @@ def _consume_authentication_state(response: Any) -> tuple[tuple[Any, Any, list[A
         consume_ceremony_state(state) if state is not None else None
     )
 
-    session_credentials = session.pop("simple_credentials", [])
-    credential_data_list, _ = parsing._parse_client_credentials(session_credentials)
-    if not credential_data_list:
+    begun_with = session.pop(_CREDENTIALS_DIGEST_KEY, None)
+    credential_data_list, session_credentials = parsing._parse_client_credentials(sent_credentials)
+    if begun_with is None or not credential_data_list:
         session.pop("authenticate_rp_id", None)
         session.pop("simple_credentials_email", None)
         abort(400)
@@ -132,6 +150,19 @@ def _consume_authentication_state(response: Any) -> tuple[tuple[Any, Any, list[A
                 {
                     "error": _challenge_rejection_message(
                         challenge_verdict == CHALLENGE_REPLAYED
+                    )
+                }
+            ),
+            400,
+        )
+    if credentials_digest(session_credentials) != begun_with:
+        session.pop("simple_credentials_email", None)
+        return None, (
+            jsonify(
+                {
+                    "error": (
+                        "The saved credentials sent with this authentication are not the ones it began "
+                        "with. Please restart the authentication flow."
                     )
                 }
             ),
@@ -197,9 +228,12 @@ def _asserted_sign_count(response_mapping: Mapping[str, Any]) -> int | None:
 
 @bp.route("/api/authenticate/complete", methods=["POST"])
 def authenticate_complete():
-    response = request.get_json(silent=True)
+    # The browser's own JSON of the assertion, and the credentials begin was sent.
+    body = request.get_json(silent=True)
+    body = body if isinstance(body, Mapping) else {}
+    response = body.get("credential")
 
-    consumed, error_response = _consume_authentication_state(response)
+    consumed, error_response = _consume_authentication_state(response, body.get("credentials"))
     if error_response is not None:
         return error_response
     state, session_credentials, credential_data_list, rp_id = consumed
