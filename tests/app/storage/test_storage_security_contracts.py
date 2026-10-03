@@ -431,14 +431,7 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
     monkeypatch.setattr(github_mirror, "record_registration_event", lambda _event: None)
 
-    # Any value the encoder cannot represent is logged; the flow must not need it.
-    warnings: list[str] = []
-    monkeypatch.setattr(
-        credentials.logger,
-        "warning",
-        lambda msg, *args, **kwargs: warnings.append(str(msg) % args if args else str(msg)),
-    )
-
+    # The encoder raises on a value it cannot represent, so a 200 means the record has none.
     client = entry_app().test_client()
     begin = client.post(
         "/api/register/begin?email=alice@example.com",
@@ -461,8 +454,6 @@ def test_real_registration_round_trips_through_the_json_store(monkeypatch, tmp_p
     assert written[0].name == "alice@example.com_credential_data.json"
     envelope = json.loads(written[0].read_text(encoding="utf-8"))
     assert envelope["version"] == 1 and envelope["encoding"] == "base64url"
-
-    assert not any("unsupported type" in message for message in warnings), warnings
 
     # The store reads it back from the session folder it wrote it into.
     records = credentials.readkey("alice@example.com", session_id=written[0].parent.name)

@@ -117,6 +117,9 @@ _UNDECODABLE = [
     pytest.param(b"not json " + _SECRET, id="not-json"),
     pytest.param(b'{"secret": "' + _SECRET + b'"}', id="json-but-not-a-credential-list"),
     pytest.param(b'{"credentials": [{"__t": "bytes", "__v": "' + _SECRET + b'!!"}]}', id="undecodable-json-value"),
+    # encode_records writes the envelope and these tags only.
+    pytest.param(b'[{"secret": "' + _SECRET + b'"}]', id="a-bare-list"),
+    pytest.param(b'{"credentials": [{"__t": "tuple", "__v": ["' + _SECRET + b'"]}]}', id="a-tag-no-writer-writes"),
 ]
 
 

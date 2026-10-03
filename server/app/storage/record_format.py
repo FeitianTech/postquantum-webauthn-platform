@@ -6,14 +6,11 @@ the bytes live is ``credentials``' business.
 from __future__ import annotations
 
 import json
-import logging
 from typing import Any
 
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData
 
 from .. import encoding
-
-logger = logging.getLogger(__name__)
 
 __all__ = [
     "UndecodableRecords",
@@ -30,9 +27,6 @@ _T_BYTES = "bytes"
 _T_ATTESTED_CREDENTIAL_DATA = "fido2.AttestedCredentialData"
 _T_AUTHENTICATOR_DATA = "fido2.AuthenticatorData"
 _T_MAP = "map"
-_T_TUPLE = "tuple"
-_T_SET = "set"
-_T_UNSUPPORTED = "unsupported"
 
 def _b64u_encode(data: bytes) -> str:
     return encoding.encode_base64url(data)
@@ -75,16 +69,8 @@ def _encode_value(value: Any) -> Any:
         }
     if isinstance(value, list):
         return [_encode_value(item) for item in value]
-    if isinstance(value, tuple):
-        return {_TYPE_KEY: _T_TUPLE, _VALUE_KEY: [_encode_value(item) for item in value]}
-    if isinstance(value, (set, frozenset)):
-        return {_TYPE_KEY: _T_SET, _VALUE_KEY: [_encode_value(item) for item in value]}
-
-    logger.warning(
-        "Credential record contains unsupported type %s; storing its text form",
-        type(value).__name__,
-    )
-    return {_TYPE_KEY: _T_UNSUPPORTED, _VALUE_KEY: str(value)}
+    # A record holds fido2's objects, JSON and what fido2's CBOR reads: nothing else.
+    raise TypeError(f"a credential record holds a {type(value).__name__}, which the store does not write")
 
 
 def _decode_value(value: Any) -> Any:
@@ -104,8 +90,6 @@ def _decode_value(value: Any) -> Any:
     if tag == _T_BYTES:
         return _b64u_decode(raw) if isinstance(raw, str) else b""
     if tag in (_T_ATTESTED_CREDENTIAL_DATA, _T_AUTHENTICATOR_DATA):
-        if not isinstance(raw, str):
-            return b""
         decoded = _b64u_decode(raw)
         cls = AttestedCredentialData if tag == _T_ATTESTED_CREDENTIAL_DATA else AuthenticatorData
         try:
@@ -121,14 +105,8 @@ def _decode_value(value: Any) -> Any:
             if isinstance(entry, list) and len(entry) == 2:
                 decoded_map[_decode_value(entry[0])] = _decode_value(entry[1])
         return decoded_map
-    if tag == _T_TUPLE:
-        return tuple(_decode_value(item) for item in raw) if isinstance(raw, list) else ()
-    if tag == _T_SET:
-        return set(_decode_value(item) for item in raw) if isinstance(raw, list) else set()
-    if tag == _T_UNSUPPORTED:
-        return raw
-
-    return {key: _decode_value(item) for key, item in value.items()}
+    # No writer of this format writes another tag (encode_records is its only one).
+    raise ValueError(f"a value tagged {tag!r}")
 
 
 def encode_records(records: Any) -> bytes:
@@ -155,13 +133,10 @@ def _decode_records(payload: bytes) -> list[Any] | None:
     except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
         return None
 
-    if isinstance(parsed, dict) and isinstance(parsed.get("credentials"), list):
-        items = parsed["credentials"]
-    elif isinstance(parsed, list):
-        # Tolerate a bare list in case something wrote one directly.
-        items = parsed
-    else:
+    # encode_records always writes the envelope.
+    if not (isinstance(parsed, dict) and isinstance(parsed.get("credentials"), list)):
         raise UndecodableRecords("it is JSON but not a credential list")
+    items = parsed["credentials"]
     try:
         return [_decode_value(item) for item in items]
     except Exception as exc:
