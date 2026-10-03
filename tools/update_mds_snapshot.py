@@ -17,6 +17,8 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
+from fido2.mds3 import MetadataBlobPayload
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -236,12 +238,15 @@ def _build_verified_snapshot(
     blob: bytes, trust_root: bytes = FIDO_METADATA_TRUST_ROOT_CERT
 ) -> dict[str, object]:
     """The BLOB's payload as the BLOB has it, once ``mds.blob`` has checked its
-    signature against the trust root and read it (a BLOB it cannot read fails
-    here). Its own JSON rather than fido2's dataclasses, which drop every field
-    they do not model: a status report's ``sunsetDate`` or
-    ``certificationProfiles``, a statement's ``friendlyNames``."""
+    signature against the trust root, and once it reads as fido2's
+    ``MetadataBlobPayload`` (a BLOB that does not fails here). Its own JSON
+    rather than fido2's dataclasses, which drop every field they do not model: a
+    status report's ``sunsetDate`` or ``certificationProfiles``, a statement's
+    ``friendlyNames``."""
 
-    return mds_blob.verify_blob(blob, trust_root)
+    payload = mds_blob.verify_blob(blob, trust_root)
+    MetadataBlobPayload.from_dict(payload)
+    return payload
 
 
 def _publish_to_cloud_storage(files: dict[str, bytes]) -> int:

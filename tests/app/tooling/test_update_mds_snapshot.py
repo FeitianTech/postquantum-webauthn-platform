@@ -261,6 +261,13 @@ def test_the_verified_snapshot_is_checked_against_the_trust_root(monkeypatch):
     assert seen["args"] == (blob, updater.FIDO_METADATA_TRUST_ROOT_CERT)
 
 
+def test_a_signed_payload_that_is_not_metadata_is_refused():
+    blob, root = mds_fixture._signed_blob({"entries": "not a list"})
+
+    with pytest.raises(Exception):
+        updater._build_verified_snapshot(blob, root)
+
+
 def test_a_blob_signed_by_another_root_is_refused():
     blob, _root = mds_fixture._signed_blob(_payload_with_unmodelled_fields())
 

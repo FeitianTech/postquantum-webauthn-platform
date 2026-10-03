@@ -29,7 +29,6 @@ from cryptography.x509.verification import (
 )
 from fido2.attestation import InvalidSignature
 from fido2.cose import CoseKey
-from fido2.mds3 import MetadataBlobPayload
 
 from .. import encoding
 
@@ -72,12 +71,14 @@ def _segment(segment: bytes) -> bytes:
     return encoding.decode_base64url(text, ignore_whitespace=False)
 
 
-def verify_blob(blob: bytes, trust_root: bytes) -> dict[str, Any]:
-    """The BLOB's payload, once its chain leads to ``trust_root`` and its signature verifies.
+def verify_blob(blob: bytes, trust_root: bytes, *, now: datetime | None = None) -> dict[str, Any]:
+    """The BLOB's payload, once its chain leads to ``trust_root``, valid at ``now``, and its signature verifies.
 
-    The payload is returned as the BLOB has it, JSON, not fido2's dataclasses,
-    which drop every field they do not model; it must still read as a
-    ``MetadataBlobPayload``, or this raises.
+    ``now`` defaults to the present; an instance checks a BLOB it took from Cloud
+    Storage at the time it was fetched. The payload is returned as the BLOB has
+    it, JSON, not fido2's dataclasses (which drop every field they do not model),
+    and is not parsed into them: the updater checks it reads as a
+    ``MetadataBlobPayload``.
     """
 
     message, signature_segment = blob.rsplit(b".", 1)
@@ -85,7 +86,7 @@ def verify_blob(blob: bytes, trust_root: bytes) -> dict[str, Any]:
     header = json.loads(_segment(header_segment))
 
     chain = [encoding.decode_base64(certificate, ignore_whitespace=False) for certificate in header.get("x5c", [])]
-    verify_chain_to_root(chain, trust_root)
+    verify_chain_to_root(chain, trust_root, now=now)
 
     signer = x509.load_der_x509_certificate(chain[0] if chain else trust_root)
     try:
@@ -96,5 +97,6 @@ def verify_blob(blob: bytes, trust_root: bytes) -> dict[str, Any]:
     CoseKey.for_name(header["alg"]).from_cryptography_key(public_key).verify(message, signature)
 
     payload = json.loads(_segment(payload_segment))
-    MetadataBlobPayload.from_dict(payload)
+    if not isinstance(payload, dict):
+        raise ValueError("The metadata BLOB's payload is not a JSON object")
     return payload

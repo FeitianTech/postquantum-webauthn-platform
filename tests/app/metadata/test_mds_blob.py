@@ -147,12 +147,33 @@ def test_a_blob_signed_by_another_key_is_refused():
         mds_blob.verify_blob(_blob(header, _payload(), ec.generate_private_key(ec.SECP256R1())), certs.current_root)
 
 
-def test_a_payload_that_is_not_metadata_is_refused():
+def test_a_payload_that_is_not_a_json_object_is_refused():
     certs = _transition()
     header = {"alg": "ES256", "x5c": _x5c(certs.leaf, certs.intermediate)}
 
-    with pytest.raises(Exception):
-        mds_blob.verify_blob(_blob(header, {"entries": "not a list"}, certs.leaf_key), certs.current_root)
+    with pytest.raises(ValueError, match="not a JSON object"):
+        mds_blob.verify_blob(_blob(header, ["not", "an", "object"], certs.leaf_key), certs.current_root)
+
+
+def test_the_payload_is_given_as_json_unparsed_into_fido2s_dataclasses():
+    certs = _transition()
+    header = {"alg": "ES256", "x5c": _x5c(certs.leaf, certs.intermediate)}
+    unparseable = {"entries": "not a list"}
+
+    assert mds_blob.verify_blob(_blob(header, unparseable, certs.leaf_key), certs.current_root) == unparseable
+
+
+def test_a_blob_is_checked_at_the_time_given():
+    certs = _transition()
+    expired = _certificate(
+        subject="Intermediate CA", issuer="Root R46", public_key=certs.intermediate_key.public_key(),
+        issuer_key=certs.current_key, expired=True,
+    )
+    blob = _blob({"alg": "ES256", "x5c": _x5c(certs.leaf, expired)}, _payload(), certs.leaf_key)
+
+    with pytest.raises(InvalidSignature, match="No path to the pinned root"):
+        mds_blob.verify_blob(blob, certs.current_root)
+    assert mds_blob.verify_blob(blob, certs.current_root, now=_NOW - timedelta(hours=2)) == _payload()
 
 
 def test_a_signing_certificate_whose_key_does_not_load_is_refused(monkeypatch):
@@ -165,7 +186,7 @@ def test_a_signing_certificate_whose_key_does_not_load_is_refused(monkeypatch):
             raise ValueError("not a key")
 
     monkeypatch.setattr(mds_blob.x509, "load_der_x509_certificate", lambda _der: _Unloadable())
-    monkeypatch.setattr(mds_blob, "verify_chain_to_root", lambda _chain, _root: None)
+    monkeypatch.setattr(mds_blob, "verify_chain_to_root", lambda _chain, _root, now=None: None)
     with pytest.raises(ValueError, match="does not expose a supported public key"):
         mds_blob.verify_blob(blob, certs.current_root)
 
