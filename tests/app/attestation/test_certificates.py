@@ -41,12 +41,22 @@ def test_a_certificate_whose_key_cryptography_cannot_load_is_described_from_its_
 MALFORMED_SUBJECT = CERTIFICATE.replace(b"\x0c\x04Leaf", b"\x02\x04Leaf")
 
 
-def test_a_certificate_malformed_past_its_load_is_reported_as_what_went_wrong():
-    serialized = attestation_certificates.serialize_attestation_certificate(MALFORMED_SUBJECT)
+@pytest.mark.parametrize(
+    ("certificate", "parse_error"),
+    [
+        pytest.param(MALFORMED_SUBJECT, 'location: ["subject"]', id="malformed-subject"),
+        # A BIT STRING common name: cryptography reads it, then will not type it.
+        pytest.param(
+            material.with_unreadable_subject(CERTIFICATE, "Leaf"), "X500_UNIQUE_IDENTIFIER", id="unreadable-subject"
+        ),
+    ],
+)
+def test_a_certificate_malformed_past_its_load_is_reported_as_what_went_wrong(certificate, parse_error):
+    serialized = attestation_certificates.serialize_attestation_certificate(certificate)
 
     assert serialized["error"].startswith("Unable to parse attestation certificate: ")
-    assert 'location: ["subject"]' in serialized["parseError"]
-    assert serialized["raw"] == MALFORMED_SUBJECT.hex()
+    assert parse_error in serialized["parseError"]
+    assert serialized["raw"] == certificate.hex()
     assert serialized["summary"].startswith("Unable to parse attestation certificate using cryptography.x509.")
 
 

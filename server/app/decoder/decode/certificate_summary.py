@@ -15,7 +15,8 @@ def summarize(der: Any) -> dict[str, Any]:
     if not isinstance(der, bytes):
         return {"error": "a certificate in x5c is a byte string of DER; this is not"}
     # cryptography reads the names only when they are asked for: a certificate
-    # that loads can still be malformed there.
+    # that loads can still be malformed there, or hold a name it will not type
+    # (TypeError: a common name that is no string).
     try:
         certificate = x509.load_der_x509_certificate(der)
         return {
@@ -25,5 +26,5 @@ def summarize(der: Any) -> dict[str, Any]:
             "notValidAfter": certificate.not_valid_after_utc.isoformat(),
             "sha256": certificate.fingerprint(hashes.SHA256()).hex(),
         }
-    except ValueError as exc:
+    except (TypeError, ValueError) as exc:
         return {"error": f"not an X.509 certificate: {exc}"}

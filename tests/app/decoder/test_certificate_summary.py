@@ -28,6 +28,12 @@ def test_a_certificate_is_summarised_by_its_names_validity_and_digest():
             "not an X.509 certificate: error parsing asn1 value",
             id="malformed-subject",
         ),
+        # A BIT STRING common name: cryptography reads it, then will not type it.
+        pytest.param(
+            material.with_unreadable_subject(CERTIFICATE, "Leaf"),
+            "not an X.509 certificate: oid must be X500_UNIQUE_IDENTIFIER",
+            id="unreadable-subject",
+        ),
         pytest.param("text", "a certificate in x5c is a byte string of DER; this is not", id="no-bytes"),
     ],
 )

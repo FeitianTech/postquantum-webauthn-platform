@@ -182,9 +182,10 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
         return _serialize_attestation_certificate_fallback(cert_bytes, exc)
     try:
         return _certificate_view(certificate, cert_bytes)
-    except ValueError as exc:
+    except (TypeError, ValueError) as exc:
         # cryptography reads a certificate's names and extensions only when they
-        # are asked for: one that loaded can still be malformed there.
+        # are asked for: one that loaded can still be malformed there, or hold
+        # a name it will not type (TypeError: a common name that is no string).
         return _serialize_attestation_certificate_fallback(cert_bytes, exc)
 
 
