@@ -1,5 +1,8 @@
 import copy
+import json
 
+from server.app.mds import files as mds_files
+from server.app.mds import snapshot as mds_snapshot
 from server.app.mds.build import (
     build_bootstrap_snapshot,
     build_entry_id,
@@ -129,3 +132,26 @@ def test_build_explorer_entry_keeps_unparseable_status_date_text():
     assert entry["timeOfLastStatusChange"] == "not-a-date"
     assert entry["dateTooltip"] == "not-a-date"
     assert entry["dateUpdated"] == "not-a-date"
+
+
+def test_the_snapshots_files_are_written_sorted_and_the_full_one_compact():
+    assert mds_snapshot._serialise_json({"b": 2, "a": 1}) == '{\n  "a": 1,\n  "b": 2\n}\n'
+    assert mds_snapshot._serialise_compact_json({"b": 2, "a": "é"}) == '{"a":"é","b":2}\n'
+
+    finalised = mds_snapshot._finalise_base_full_snapshot({"entries": [{"name": "a"}, {"name": "b"}], "meta": {"no": 5}})
+
+    assert finalised["entries"] == [{"name": "a"}, {"name": "b"}]
+    assert finalised["meta"] == {"no": 5, "entryCount": 2, "baseEntryCount": 2, "customEntryCount": 0, "hasCustomEntries": False}
+
+
+def test_a_snapshots_seven_files_come_from_its_blob_payload_and_cache_state(monkeypatch):
+    monkeypatch.setattr(mds_snapshot, "build_explorer_snapshot", lambda _verified, _cache: {"entries": [], "meta": {"kind": "e"}})
+    monkeypatch.setattr(mds_snapshot, "build_bootstrap_snapshot", lambda _verified, _cache: {"entries": [{}], "meta": {}})
+
+    files = mds_snapshot.snapshot_files(b"blob-data", {"entries": [], "no": 1}, {"a": 1})
+
+    assert tuple(files) == mds_files.SNAPSHOT_FILENAMES
+    assert files["blob.jwt"] == b"blob-data"
+    assert files["fido-mds3.verified.json.meta.json"] == b'{\n  "a": 1\n}\n'
+    assert json.loads(files["fido-mds3.explorer.json.meta.json"]) == {"kind": "e"}
+    assert json.loads(files["fido-mds3.explorer.full.json"])["meta"]["baseEntryCount"] == 1

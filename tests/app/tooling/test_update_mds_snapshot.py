@@ -100,7 +100,7 @@ def test_fetch_remote_blob_uses_expected_request_contract(monkeypatch):
     assert etag == '"etag"'
 
 
-def test_write_blob_write_if_changed_and_serialisers(isolated_mds_paths, tmp_path):
+def test_write_blob_and_write_if_changed(isolated_mds_paths, tmp_path):
     updater._write_blob(b"initial")
     assert _file(mds_files.BLOB).read_bytes() == b"initial"
 
@@ -111,23 +111,6 @@ def test_write_blob_write_if_changed_and_serialisers(isolated_mds_paths, tmp_pat
     assert updater._write_if_changed(target, b"world") is True
     assert target.read_bytes() == b"world"
 
-    serialised_json = updater._serialise_json({"b": 2, "a": 1})
-    assert serialised_json == '{\n  "a": 1,\n  "b": 2\n}\n'
-
-    compact_json = updater._serialise_compact_json({"b": 2, "a": "é"})
-    assert compact_json == '{"a":"é","b":2}\n'
-
-    finalised = updater._finalise_base_full_snapshot(
-        {"entries": [{"name": "a"}, {"name": "b"}], "meta": {"no": 5}}
-    )
-    assert finalised["entries"] == [{"name": "a"}, {"name": "b"}]
-    assert finalised["meta"] == {
-        "no": 5,
-        "entryCount": 2,
-        "baseEntryCount": 2,
-        "customEntryCount": 0,
-        "hasCustomEntries": False,
-    }
 
 
 def test_load_existing_cache_handles_missing_invalid_and_non_dict(isolated_mds_paths):
@@ -275,24 +258,6 @@ def test_a_blob_signed_by_another_root_is_refused():
         updater._build_verified_snapshot(blob)
 
 
-def test_build_verified_snapshot_and_snapshot_files(monkeypatch, isolated_mds_paths):
-    verified = {"entries": [], "no": 1}
-
-    monkeypatch.setattr(
-        updater, "build_explorer_snapshot", lambda _verified, _cache: {"entries": [], "meta": {"kind": "e"}}
-    )
-    monkeypatch.setattr(
-        updater, "build_bootstrap_snapshot", lambda _verified, _cache: {"entries": [{}], "meta": {}}
-    )
-    files = updater.snapshot_files(b"blob-data", verified, {"a": 1})
-    assert tuple(files) == mds_files.SNAPSHOT_FILENAMES
-    assert files["blob.jwt"] == b"blob-data"
-    assert files["fido-mds3.verified.json.meta.json"] == b'{\n  "a": 1\n}\n'
-    assert json.loads(files["fido-mds3.explorer.json.meta.json"]) == {"kind": "e"}
-    assert json.loads(files["fido-mds3.explorer.full.json"])["meta"]["baseEntryCount"] == 1
-    assert not any(_file(name).exists() for name in mds_files.SNAPSHOT_FILENAMES)
-
-
 def test_main_reports_refresh_then_up_to_date(monkeypatch, isolated_mds_paths, capsys):
     fixed_now = datetime(2026, 4, 3, 14, 0, 0, tzinfo=timezone.utc)
 
@@ -314,12 +279,12 @@ def test_main_reports_refresh_then_up_to_date(monkeypatch, isolated_mds_paths, c
         lambda _blob: {"entries": [{"aaguid": "x"}], "no": 99, "nextUpdate": "2026-12-01"},
     )
     monkeypatch.setattr(
-        updater,
+        updater.mds_snapshot,
         "build_explorer_snapshot",
         lambda _verified, _cache: {"entries": [{"name": "demo"}], "meta": {"kind": "explorer"}},
     )
     monkeypatch.setattr(
-        updater,
+        updater.mds_snapshot,
         "build_bootstrap_snapshot",
         lambda _verified, _cache: {"entries": [{"name": "demo"}], "meta": {"kind": "full"}},
     )
@@ -366,12 +331,12 @@ def stubbed_refresh(monkeypatch, isolated_mds_paths):
         lambda _blob: {"entries": [{"aaguid": "x"}], "no": 42, "nextUpdate": "2026-12-01"},
     )
     monkeypatch.setattr(
-        updater,
+        updater.mds_snapshot,
         "build_explorer_snapshot",
         lambda _verified, _cache: {"entries": [], "meta": {"kind": "explorer"}},
     )
     monkeypatch.setattr(
-        updater,
+        updater.mds_snapshot,
         "build_bootstrap_snapshot",
         lambda _verified, _cache: {"entries": [], "meta": {"kind": "full"}},
     )

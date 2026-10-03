@@ -1,7 +1,7 @@
 """The small FIDO MDS snapshot the tests and the browser tests serve.
 
 It is built the way the updater builds a real one (``snapshot_files`` in
-``tools/update_mds_snapshot.py``), from a synthetic MDS3 BLOB this module signs
+``server/app/mds/snapshot.py``), from a synthetic MDS3 BLOB this module signs
 itself: every entry, name, key and certificate is made up here, nothing is copied
 from the FIDO Alliance's service. It holds what the explorer must show well: each
 protocol (FIDO2, U2F, UAF: the three kinds of entry id), each certification level,
@@ -28,6 +28,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from fido2.utils import websafe_encode
 
+from server.app.mds import snapshot as mds_snapshot
 from tests.app.characterization import material
 from tools import update_mds_snapshot as updater
 
@@ -471,7 +472,7 @@ def build_fixture_files() -> dict[str, bytes]:
         blob_unchanged=True,
         verified_snapshot=verified,
     )
-    files = {f"snapshot/{name}": data for name, data in updater.snapshot_files(blob, verified, cache_state).items()}
+    files = {f"snapshot/{name}": data for name, data in mds_snapshot.snapshot_files(blob, verified, cache_state).items()}
     files["custom-metadata.json"] = (json.dumps(custom_metadata(), indent=2, sort_keys=True) + "\n").encode("utf-8")
     return files
 
