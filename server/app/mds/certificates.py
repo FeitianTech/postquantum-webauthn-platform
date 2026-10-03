@@ -59,9 +59,13 @@ def summarise_attestation_certificates(certificates: Sequence[Any]) -> tuple[lis
             seen_algorithms.add(algorithm_info.lower())
             algorithm_infos.append(algorithm_info)
 
-        for attribute in certificate.subject.get_attributes_for_oid(NameOID.COMMON_NAME):
-            if not isinstance(attribute.value, str):
-                continue
+        try:
+            attributes = certificate.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+        except (TypeError, ValueError):
+            # cryptography reads a name only when asked, and refuses one it
+            # cannot type (a common name that is not a string).
+            attributes = []
+        for attribute in attributes:
             common_name = attribute.value.strip()
             if not common_name:
                 continue

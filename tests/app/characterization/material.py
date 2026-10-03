@@ -389,6 +389,16 @@ def certificate(
     return signed.public_bytes(serialization.Encoding.DER)
 
 
+def with_unreadable_subject(der: bytes, common_name: str) -> bytes:
+    """``der`` with its subject's common name re-tagged a BIT STRING of the same
+    length: cryptography loads the certificate, then refuses to read the name
+    (``TypeError``), as it would one an authenticator or an upload sent."""
+
+    utf8 = bytes([0x0C, len(common_name)]) + common_name.encode()
+    assert der.count(utf8) == 1, "the common name must appear once"
+    return der.replace(utf8, bytes([0x03, len(common_name), 0x00]) + common_name[1:].encode())
+
+
 def _octet_string(payload: bytes) -> bytes:
     return bytes([0x04, len(payload)]) + payload
 
