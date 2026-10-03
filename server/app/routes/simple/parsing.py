@@ -134,8 +134,6 @@ def _parse_client_credentials(
                 "publicKey",
                 encode_base64url(material.public_key),
             )
-            if "signCount" not in serialized_entry and isinstance(entry.get("signCount"), int):
-                serialized_entry["signCount"] = entry["signCount"]
             algorithm_value = entry.get("algorithm") or entry.get("publicKeyAlgorithm")
             if isinstance(algorithm_value, int):
                 serialized_entry["algorithm"] = algorithm_value

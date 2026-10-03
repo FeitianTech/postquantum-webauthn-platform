@@ -55,19 +55,15 @@ def _server_supports_algorithm(algorithm: int | None) -> bool:
 
     if not isinstance(algorithm, int):
         return False
-    try:
-        return CoseKey.for_alg(algorithm) is not UnsupportedKey
-    except Exception:
-        return False
+    # fido2 compares the number with each key class's: it does not raise.
+    return CoseKey.for_alg(algorithm) is not UnsupportedKey
 
 
 def _assertion_rp() -> tuple[Any, Any]:
-    """The RP id and name begin kept in the session."""
+    """The RP id and name begin kept in the session, beside the state complete has just taken."""
 
-    stored_rp = session.pop("advanced_auth_rp", None)
-    if isinstance(stored_rp, Mapping):
-        return stored_rp.get("id"), stored_rp.get("name")
-    return None, None
+    stored_rp = session.pop("advanced_auth_rp")
+    return stored_rp["id"], stored_rp["name"]
 
 
 def _verification_failure(exc: Exception, response: Any, lookup: Mapping[bytes, Any], trace: Mapping[str, Any]) -> Any:

@@ -122,10 +122,8 @@ def _metadata_entry_facts(metadata_entry: Any, algorithm: Any) -> dict[str, Any]
     # AAGUID -- fido-u2f's is zero by definition -- where they always would.
     entry_aaguid = getattr(metadata_entry, "aaguid", None)
     if entry_aaguid is not None:
-        try:
-            metadata_aaguid = str(entry_aaguid)
-        except Exception:
-            pass
+        # A fido2 Aaguid: its text is its hex, dashed.
+        metadata_aaguid = str(entry_aaguid)
 
     return {
         "description": metadata_description,

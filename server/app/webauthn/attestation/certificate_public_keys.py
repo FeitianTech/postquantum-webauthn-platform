@@ -86,16 +86,13 @@ def _unknown_key_summary(
     summary_entries: list[tuple[str, Any]] = []
 
     def _append_summary(label: str, value: Any) -> None:
+        # Lists come in only when they hold something (below).
         if value in (None, ""):
-            return
-        if isinstance(value, list) and not value:
             return
         summary_entries.append((label, value))
 
+    # The type is the algorithm's name (or "Unsupported" without one): one line names both.
     _append_summary("Type", info.get("type"))
-    algorithm_name = algorithm_details.get("name")
-    if algorithm_name and algorithm_name != info.get("type"):
-        _append_summary("Algorithm", algorithm_name)
     _append_summary("Algorithm OID", algorithm_details.get("oid"))
     _append_summary("ML-DSA parameter set", algorithm_details.get("mlDsaParameterSet"))
     _append_summary("Claimed NIST level", algorithm_details.get("claimedNistLevel"))
@@ -112,7 +109,7 @@ def _unknown_key_summary(
     return summary_entries
 
 
-def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> tuple[dict[str, Any], list[tuple[str, Any]]]:
+def _build_unknown_public_key_info(cert_bytes: bytes) -> tuple[dict[str, Any], list[tuple[str, Any]]]:
     try:
         parsed = extract_certificate_public_key_info(cert_bytes)
     except Exception:
@@ -135,12 +132,8 @@ def _build_unknown_public_key_info(cert_bytes: bytes, error: Exception) -> tuple
     if key_size_bits:
         info["keySize"] = key_size_bits
 
-    summary_entries = _unknown_key_summary(info, algorithm_details, key_size_bits)
-    if not summary_entries and "error" not in info:
-        info["error"] = str(error)
-        summary_entries.append(("Error", str(error)))
-
-    return info, summary_entries
+    # Never empty: it always names the type.
+    return info, _unknown_key_summary(info, algorithm_details, key_size_bits)
 
 
 def _mldsa_key_info(public_key: Any, parameter_set: str, oid: str) -> dict[str, Any]:

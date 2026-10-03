@@ -8,7 +8,6 @@ from flask import Blueprint, jsonify, session
 
 from ... import json_values
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
-from ...encoding import encode_base64url
 from ...webauthn import client_binary
 from ...webauthn.attachments import (
     attachment_hint_violation,
@@ -184,20 +183,18 @@ def advanced_authenticate_complete():
     if refusal is not None:
         return refusal
 
-    try:
-        return assertion_verification.verify_assertion(
-            data=data,
-            state=state,
-            public_key=public_key,
-            response=response,
-            all_credentials=all_credentials,
-            lookup=lookup,
-            credential_id_bytes=credential_id_bytes,
-            selected_record=selected_record,
-            trace=trace,
-        )
-    except Exception as exc:
-        return _unexpected_failure(exc, response, credential_id_bytes, trace)
+    # fido2's own steps answer for themselves inside: nothing here raises.
+    return assertion_verification.verify_assertion(
+        data=data,
+        state=state,
+        public_key=public_key,
+        response=response,
+        all_credentials=all_credentials,
+        lookup=lookup,
+        credential_id_bytes=credential_id_bytes,
+        selected_record=selected_record,
+        trace=trace,
+    )
 
 
 def _attachment_violation(public_key: Mapping[str, Any], response: Any) -> str | None:
@@ -211,18 +208,6 @@ def _attachment_violation(public_key: Mapping[str, Any], response: Any) -> str |
         allowed_attachments,
         normalize_attachment(response.get("authenticatorAttachment") if isinstance(response, Mapping) else None),
     )
-
-
-def _unexpected_failure(exc: Exception, response: Any, credential_id_bytes: bytes | None, trace: Mapping[str, Any]):
-    response_payload: dict[str, Any] = {"error": str(exc), **trace}
-    failed_credential_id = credential_id_bytes
-    if not failed_credential_id and isinstance(response, Mapping):
-        failed_credential_id = client_binary.extract_assertion_credential_id(response)
-    if failed_credential_id:
-        response_payload["failedCredentialId"] = (
-            encode_base64url(failed_credential_id)
-        )
-    return jsonify(response_payload), 400
 
 
 def _ceremony_state(state: Any, trace: Mapping[str, Any]) -> tuple[Any, Any]:

@@ -162,12 +162,10 @@ def prepare_register_complete_inputs(
 
 
 def _registration_rp() -> tuple[Any, Any]:
-    """The RP id and name begin kept in the session."""
+    """The RP id and name begin kept in the session, beside the state complete has just taken."""
 
-    stored_rp = session.pop("advanced_rp", None)
-    if isinstance(stored_rp, Mapping):
-        return stored_rp.get("id"), stored_rp.get("name")
-    return None, None
+    stored_rp = session.pop("advanced_rp")
+    return stored_rp["id"], stored_rp["name"]
 
 
 def resolve_state_and_registration_server(

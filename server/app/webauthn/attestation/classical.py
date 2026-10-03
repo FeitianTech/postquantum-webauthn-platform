@@ -164,6 +164,5 @@ def _chain_valid(
         chain_valid = manual_chain_valid
     if chain_valid is True and not chain_valid_dates:
         chain_valid = False
-    if chain_valid is None and chain_valid_dates is False:
-        chain_valid = False
+    # No verdict comes only from an empty trust path, whose dates are never bad.
     return chain_valid

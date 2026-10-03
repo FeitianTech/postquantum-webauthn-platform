@@ -46,7 +46,7 @@ def _serialize_attestation_certificate_fallback(
         "md5": hashlib.md5(cert_bytes).hexdigest(),
     }
 
-    public_key_info, summary_entries = certificate_public_keys._build_unknown_public_key_info(cert_bytes, error)
+    public_key_info, summary_entries = certificate_public_keys._build_unknown_public_key_info(cert_bytes)
 
     summary_lines = [
         "Unable to parse attestation certificate using cryptography.x509.",
@@ -136,11 +136,9 @@ def _public_key_view(certificate: Any, cert_bytes: bytes) -> tuple[Any, dict[str
     fallback_public_key_summary: list[tuple[str, Any]] = []
     try:
         public_key = certificate.public_key()
-    except (UnsupportedAlgorithm, ValueError) as exc:
+    except (UnsupportedAlgorithm, ValueError):
         public_key = None
-        public_key_info, fallback_public_key_summary = certificate_public_keys._build_unknown_public_key_info(
-            cert_bytes, exc
-        )
+        public_key_info, fallback_public_key_summary = certificate_public_keys._build_unknown_public_key_info(cert_bytes)
     else:
         public_key_info = certificate_public_keys._serialize_public_key_info(public_key)
         if public_key_info.get("mechanismFamily") == "ML-DSA":

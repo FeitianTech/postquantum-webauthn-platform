@@ -87,7 +87,7 @@ def test_certificate_helpers_match_their_golden_record():
             record["coerce"][name] = f"raises {type(exc).__name__}: {exc}"
     error = ValueError("unparsable for the test")
     for name, cert in {"ec": der, "ml-dsa": mldsa_der, "truncated": der[:40], "garbage": b"\x01\x02"}.items():
-        record[f"unknown-key/{name}"] = harness.json_safe(attestation_certificate_public_keys._build_unknown_public_key_info(cert, error))
+        record[f"unknown-key/{name}"] = harness.json_safe(attestation_certificate_public_keys._build_unknown_public_key_info(cert))
         record[f"fallback/{name}"] = harness.json_safe(attestation_certificates._serialize_attestation_certificate_fallback(cert, error))
     names = ["", "  ", "ecdsa-with-SHA256", "RSASSA-PSS", "sha256WithRSAEncryption", "ed25519", "Ed448",
              "dsa-with-sha1", "ML-DSA-44", "some thing-else", "rsassaPss", "ML-DSA-65", "ML-DSA-87",

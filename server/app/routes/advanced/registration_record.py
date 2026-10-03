@@ -166,9 +166,8 @@ def build_debug_info(
         "challengeSource": challenge_source,
     }
 
+    # An object when there (registration_options.member_type_refusal).
     extensions_requested = public_key.get("extensions", {})
-    if not isinstance(extensions_requested, dict):
-        extensions_requested = {}
     debug_info["credProtectUsed"] = _cred_protect_used(extensions_requested)
 
     enforce_requested = extensions_requested.get("enforceCredentialProtectionPolicy")

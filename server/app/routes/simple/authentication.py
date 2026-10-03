@@ -453,8 +453,6 @@ def load_server_records(uname: Any) -> tuple[list[Any] | None, Any, str | None]:
         raise
     except Exception as exc:
         raise StoredRecordsUnreadable() from exc
-    if not isinstance(records, list):
-        raise StoredRecordsUnreadable(f"the store answered {type(records).__name__}, not a list")
     return records, version, session_id
 
 

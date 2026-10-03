@@ -142,13 +142,8 @@ def _with_challenge_source(
     """Re-emit a response with the challenge source and status attached."""
 
     payload, status = error_response if isinstance(error_response, tuple) else (error_response, 200)
-    try:
-        body = payload.get_json(silent=True) or {}
-    except Exception:
-        return error_response
-    if not isinstance(body, Mapping):
-        return error_response
-    merged = dict(body)
+    # Every answer given here is a JSON object this module or its stages made.
+    merged = dict(payload.get_json())
     for key, value in state_trace.items():
         merged.setdefault(key, value)
     return jsonify(merged), status
