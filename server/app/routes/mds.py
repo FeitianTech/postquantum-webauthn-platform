@@ -133,7 +133,7 @@ def api_resolve_metadata_entry():
 @bp.route("/api/mds/metadata/custom", methods=["GET"])
 def api_list_custom_metadata():
     items = [mds_uploads.serialize_session_metadata_item(item) for item in mds_uploads.list_session_metadata_items()]
-    return jsonify({"items": items})
+    return _no_store_json_response({"items": items})
 
 
 def _refuse_json_constant(constant: str) -> Any:

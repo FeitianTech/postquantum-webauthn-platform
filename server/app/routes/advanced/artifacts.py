@@ -11,6 +11,15 @@ from ...storage import credential_artifacts
 bp = Blueprint("advanced_artifacts", __name__)
 
 
+@bp.after_request
+def _per_visitor(response):
+    """Every answer here is the visitor's own: never cached, and keyed on the cookie."""
+
+    response.headers["Cache-Control"] = "no-store"
+    response.vary.add("Cookie")
+    return response
+
+
 @bp.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["GET"])
 def api_get_advanced_credential_artifact(storage_id: str):
     # A visitor without a namespace has stored nothing, and reading gives them none.

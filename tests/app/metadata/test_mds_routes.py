@@ -45,3 +45,10 @@ def test_an_upload_still_mints_the_namespace_it_is_stored_under(mds_fixture_snap
     assert response.status_code == 200, response.get_json()
     assert client.get_cookie("fido.mds.session") is not None
     assert len(session_metadata.list_sessions()) == 1
+
+
+def test_the_visitors_uploads_are_never_cached_and_keyed_on_the_cookie(mds_fixture_snapshot, client):
+    response = client.get("/api/mds/metadata/custom")
+
+    assert response.headers["Cache-Control"] == "no-store"
+    assert "Cookie" in response.headers["Vary"]

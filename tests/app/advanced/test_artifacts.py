@@ -336,3 +336,19 @@ def test_a_visitor_without_a_namespace_reads_and_deletes_without_being_given_one
 
     assert (response.status_code, response.get_json()) == (status, answer)
     assert response.headers.getlist("Set-Cookie") == []
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "body"),
+    [
+        ("GET", "/api/advanced/credential-artifacts/cred-1", None),
+        ("POST", "/api/advanced/credential-artifacts/bulk", {"storageIds": ["cred-1"]}),
+        ("PUT", "/api/advanced/credential-artifacts/cred-1", {"artifact": {"kept": True}}),
+    ],
+)
+def test_the_visitors_artifacts_are_never_cached_and_keyed_on_the_cookie(advanced_stores, method, path, body):
+    with entry_app().test_client() as client:
+        response = client.open(path, method=method, json=body)
+
+    assert response.headers["Cache-Control"] == "no-store"
+    assert "Cookie" in response.headers["Vary"]
