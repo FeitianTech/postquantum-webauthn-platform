@@ -181,3 +181,21 @@ def test_authdata_sent_as_an_indefinite_length_byte_string_points_at_the_string(
     assert finding["offset"] == data.index(chunked)
     assert finding["hex"] == "ee"
     assert finding["message"].endswith("(inside an indefinite-length byte string)")
+
+
+def test_a_damaged_duplicate_of_authdata_does_not_hide_the_authdata_from_its_checks():
+    # Lenient: a second "authData" key whose last chunk is no text (0x01), so
+    # what is left of it is no "authData" the decoded value keys by; its value is 5.
+    auth_data = _auth_data(_UP, tail=b"\xaa")
+    data = (
+        bytes([0xA4])
+        + cbor2.dumps("fmt") + cbor2.dumps("none")
+        + cbor2.dumps("attStmt") + cbor2.dumps({})
+        + cbor2.dumps("authData") + cbor2.dumps(auth_data)
+        + b"\x7f" + cbor2.dumps("authData") + b"\x01\xff" + b"\x05"
+    )
+
+    (finding,) = _authdata_findings(decode_payload_text(data.hex(), lenient=True))
+
+    assert finding["offset"] == data.index(auth_data) + 37
+    assert finding["hex"] == "aa"

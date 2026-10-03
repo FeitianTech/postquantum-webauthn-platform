@@ -18,18 +18,21 @@ from typing import Any
 from fido2.webauthn import AuthenticatorData
 
 from .. import values
-from . import canonical, key_collisions
+from . import canonical, key_collisions, key_equivalence
 from .cbor_parser import _CborDecodingError, _structure_to_value, decode_item
 
 _HEADER_LENGTH = 37
 
 
 def for_member(root: Mapping[str, Any], data: bytes, keys: Sequence[Any]) -> list[dict[str, Any]]:
-    """Check the authData held under the first of ``keys`` in the map ``root``."""
+    """Check the authData held under the first of ``keys`` in the map ``root``.
+
+    Its callers ask only for a member the decoded value holds as a byte string
+    (the classification of a CTAP response, ``attestation_object.read``), and
+    ``member_node`` finds the member the decoded value holds.
+    """
 
     node = member_node(root, keys)
-    if node is None or node.get("majorType") != 2 or node.get("type") == "invalid":
-        return []
     if node.get("indefinite"):
         # Chunked: its bytes are not contiguous in the input, so nothing inside it
         # has an input offset of its own; each finding points at the string.
@@ -113,19 +116,12 @@ def member_node(root: Mapping[str, Any], keys: Sequence[Any]) -> Mapping[str, An
 
     if not isinstance(root, Mapping) or root.get("majorType") != 5:
         return None
-    by_key: dict[tuple[str, Any], Mapping[str, Any]] = {}
+    by_key: dict[Any, Mapping[str, Any]] = {}
     for entry in root.get("entries") or []:
-        key_node, value_node = entry.get("key"), entry.get("value")
-        if not isinstance(key_node, Mapping) or not isinstance(value_node, Mapping):
-            continue
-        if key_node.get("type") in ("unsigned", "negative"):
-            identity = values.key_identity(key_node.get("value"))
-        elif key_node.get("type") == "text string" and isinstance(key_node.get("value"), str):
-            identity = values.key_identity(key_node["value"])
-        else:
-            continue
-        # The decoded value keeps the later of two duplicate keys; so does this.
-        by_key[identity] = {**value_node, "path": entry.get("path")}
+        # Keyed as the decoded value keys them: a damaged or non-UTF-8 text key
+        # is no "authData", whatever the lenient parser kept of it. The decoded
+        # value keeps the later of two duplicate keys; so does this.
+        by_key[key_equivalence.identity(entry["key"])] = {**entry["value"], "path": entry.get("path")}
     for key in keys:
         node = by_key.get(values.key_identity(key))
         if node is not None:
