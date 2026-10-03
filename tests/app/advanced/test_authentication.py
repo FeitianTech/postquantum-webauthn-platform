@@ -26,16 +26,12 @@ def test_a_complete_without_public_key_options_is_refused():
 
 
 def test_a_complete_with_no_saved_credential_anywhere_finds_none():
-    client = entry_app().test_client()
-    with client.session_transaction() as session:
-        session["advanced_auth_credentials_meta"] = {"count": 2, "resident_count": 1}
-
-    response = _complete(client, {"publicKey": {"challenge": "AQID"}, "__assertion_response": {"response": {}}})
+    response = _complete(
+        entry_app().test_client(), {"publicKey": {"challenge": "AQID"}, "__assertion_response": {"response": {}}}
+    )
 
     assert response.status_code == 404
     assert response.get_json() == {"error": "No credentials found"}
-    with client.session_transaction() as session:
-        assert "advanced_auth_credentials_meta" not in session
 
 
 def test_a_verified_assertion_reports_the_credentials_algorithm_and_counter():

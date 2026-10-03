@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from flask import jsonify, session
+from flask import jsonify
 
 from ...encoding import decode_hex, encode_base64url
 from ...webauthn import client_binary
@@ -172,7 +172,6 @@ def restore_complete_credentials(data: Mapping[str, Any]) -> tuple[list[dict[str
 
     if not stored_records:
         if isinstance(raw_credentials_input, list) and raw_credentials_input:
-            session.pop("advanced_auth_credentials_meta", None)
             return [], (
                 {
                     "error": (
@@ -182,10 +181,8 @@ def restore_complete_credentials(data: Mapping[str, Any]) -> tuple[list[dict[str
                 },
                 400,
             )
-        session.pop("advanced_auth_credentials_meta", None)
         return [], ({"error": "No credentials found"}, 404)
 
-    session.pop("advanced_auth_credentials_meta", None)
     return stored_records, None
 
 

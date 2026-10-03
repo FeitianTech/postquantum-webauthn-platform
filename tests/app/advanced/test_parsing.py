@@ -1,10 +1,8 @@
 """Tests for how the advanced routes read the credentials the page sends back."""
 from __future__ import annotations
 
-from tests.app.entry_app import entry_app
+from server.app.routes.advanced import parsing
 from tests.app.security.ceremony_helpers import Authenticator
-
-from .assertion_ceremony import begin
 
 
 def test_a_resident_flag_given_as_null_is_read_from_the_next_field_that_gives_one():
@@ -14,13 +12,10 @@ def test_a_resident_flag_given_as_null_is_read_from_the_next_field_that_gives_on
         "clientExtensionOutputs": {"credProps": {"rk": True}},
     }
     said_nowhere = {**Authenticator(credential_id=b"\x02" * 32).stored_credential_entry(), "resident": None}
-    client = entry_app().test_client()
 
-    response = begin(client, [said_by_cred_props, said_nowhere])
+    records, _serialized = parsing._parse_client_supplied_credentials([said_by_cred_props, said_nowhere])
 
-    assert response.status_code == 200, response.get_json()
-    with client.session_transaction() as session:
-        assert session["advanced_auth_credentials_meta"] == {"count": 2, "resident_count": 1}
+    assert [record["resident"] for record in records] == [True, False]
 
 
 def test_an_aaguid_given_as_plain_hex_is_read_as_hex_not_as_base64():
@@ -29,10 +24,6 @@ def test_an_aaguid_given_as_plain_hex_is_read_as_hex_not_as_base64():
     entry["aaguidHex"] = authenticator.aaguid.hex()
     del entry["aaguid"]
 
-    client = entry_app().test_client()
+    records, _serialized = parsing._parse_client_supplied_credentials([entry])
 
-    response = begin(client, [entry])
-
-    assert response.status_code == 200, response.get_json()
-    with client.session_transaction() as session:
-        assert session["advanced_auth_credentials_meta"]["count"] == 1
+    assert [bytes(record["data"].aaguid) for record in records] == [authenticator.aaguid]

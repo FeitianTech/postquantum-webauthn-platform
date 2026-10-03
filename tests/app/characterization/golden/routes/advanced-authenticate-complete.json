@@ -55,10 +55,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "advanced_auth_credentials_meta": {
-       "count": 1,
-       "resident_count": 1
-      },
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -208,10 +204,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "advanced_auth_credentials_meta": {
-       "count": 1,
-       "resident_count": 1
-      },
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -361,10 +353,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "advanced_auth_credentials_meta": {
-       "count": 1,
-       "resident_count": 1
-      },
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -512,10 +500,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "advanced_auth_credentials_meta": {
-       "count": 1,
-       "resident_count": 1
-      },
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -669,10 +653,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "advanced_auth_credentials_meta": {
-       "count": 1,
-       "resident_count": 1
-      },
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -822,10 +802,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "advanced_auth_credentials_meta": {
-       "count": 1,
-       "resident_count": 1
-      },
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -975,10 +951,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "advanced_auth_credentials_meta": {
-       "count": 1,
-       "resident_count": 1
-      },
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -1128,10 +1100,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "advanced_auth_credentials_meta": {
-       "count": 1,
-       "resident_count": 1
-      },
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -1280,10 +1248,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "advanced_auth_credentials_meta": {
-       "count": 1,
-       "resident_count": 1
-      },
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null

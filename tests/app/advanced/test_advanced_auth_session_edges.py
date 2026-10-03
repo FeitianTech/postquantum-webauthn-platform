@@ -57,12 +57,6 @@ def test_advanced_authenticate_complete_reports_unreadable_sent_credentials(monk
     )
 
     with entry_app().test_client() as client:
-        with client.session_transaction() as session_state:
-            session_state["advanced_auth_credentials_meta"] = {
-                "count": 50,
-                "resident_count": 10,
-            }
-
         response = client.post(
             "/api/advanced/authenticate/complete",
             json={
@@ -75,9 +69,6 @@ def test_advanced_authenticate_complete_reports_unreadable_sent_credentials(monk
         assert response.status_code == 400
         payload = response.get_json()
         assert "None of the saved credentials sent with this authentication could be read" in payload["error"]
-
-        with client.session_transaction() as session_state:
-            assert "advanced_auth_credentials_meta" not in session_state
 
 
 def test_advanced_authenticate_complete_requires_attachment_when_session_scopes_allowed_attachments():

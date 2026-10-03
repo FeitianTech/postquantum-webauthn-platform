@@ -1627,10 +1627,6 @@
      ],
      "contents": {
       "_permanent": true,
-      "advanced_auth_credentials_meta": {
-       "count": 2,
-       "resident_count": 2
-      },
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -1786,10 +1782,6 @@
      ],
      "contents": {
       "_permanent": true,
-      "advanced_auth_credentials_meta": {
-       "count": 2,
-       "resident_count": 2
-      },
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -1945,10 +1937,6 @@
      ],
      "contents": {
       "_permanent": true,
-      "advanced_auth_credentials_meta": {
-       "count": 2,
-       "resident_count": 2
-      },
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null

@@ -2277,10 +2277,6 @@
      ],
      "contents": {
       "_permanent": true,
-      "advanced_auth_credentials_meta": {
-       "count": 1,
-       "resident_count": 1
-      },
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -2446,10 +2442,6 @@
      ],
      "contents": {
       "_permanent": true,
-      "advanced_auth_credentials_meta": {
-       "count": 1,
-       "resident_count": 1
-      },
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null

@@ -143,10 +143,6 @@ def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(m
         assert payload["publicKey"]["allowCredentials"] == [{"type": "public-key", "id": "placeholder"}]
 
         with client.session_transaction() as session_state:
-            assert session_state["advanced_auth_credentials_meta"] == {
-                "count": 2,
-                "resident_count": 1,
-            }
             assert session_state["advanced_authenticate_allowed_attachments"] == []
             assert session_state["advanced_auth_state"]["challenge"] == "state-token"
             assert isinstance(session_state["advanced_auth_state"]["issued_at"], float)

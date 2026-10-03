@@ -60,7 +60,7 @@ def advanced_authenticate_begin():
     uv_req = assertion_options.user_verification_requirement(public_key)
 
     raw_credentials_input = assertion_credentials.credential_list_input(data) or []
-    stored_records, serialized_credentials = parsing._parse_client_supplied_credentials(raw_credentials_input)
+    stored_records, _serialized = parsing._parse_client_supplied_credentials(raw_credentials_input)
     if not stored_records:
         return jsonify(
             {"error": "No credentials detected. Please register a credential first."},
@@ -96,10 +96,6 @@ def advanced_authenticate_begin():
     # old cookie.
     session["advanced_auth_state"] = stamp_ceremony_state(dict(state))
     session["advanced_auth_rp"] = {"id": resolved_rp_id, "name": stored_rp_name}
-    session["advanced_auth_credentials_meta"] = {
-        "count": len(serialized_credentials),
-        "resident_count": sum(1 for entry in serialized_credentials if entry.get("resident")),
-    }
 
     # The extensions may hold bytes (prf's eval inputs).
     return jsonify(json_values.make_json_safe(_begin_payload(options, resident_key_only, request_hints(public_key))))
