@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from datetime import date, datetime, timezone
 from typing import Any
 
+from .. import aaguid
 from . import certificates as mds_certificates
 
 __all__ = [
@@ -85,13 +86,13 @@ def _format_date(value: Any) -> str:
     return parsed.strftime("%b %d, %Y").replace(" 0", " ")
 
 
-def _extract_byte_array(value: Any) -> list[int] | None:
-    if value is None:
-        return None
-    if isinstance(value, list) and all(isinstance(item, int) for item in value):
-        return value
+def _extract_byte_array(value: Any) -> bytes | None:
+    """Bytes, or a list of byte values (0 to 255), as bytes; None for anything else."""
+
+    if isinstance(value, list) and all(isinstance(item, int) and 0 <= item <= 255 for item in value):
+        return bytes(value)
     if isinstance(value, (bytes, bytearray, memoryview)):
-        return list(bytes(value))
+        return bytes(value)
     return None
 
 
@@ -114,13 +115,9 @@ def format_guid_candidate(value: Any) -> str:
             )
         return ""
 
-    byte_array = _extract_byte_array(value)
-    if byte_array and len(byte_array) == 16:
-        hex_value = "".join(f"{byte:02x}" for byte in byte_array)
-        return (
-            f"{hex_value[:8]}-{hex_value[8:12]}-{hex_value[12:16]}-"
-            f"{hex_value[16:20]}-{hex_value[20:]}"
-        )
+    guid = aaguid.guid(_extract_byte_array(value))
+    if guid:
+        return guid
 
     try:
         text = str(value)

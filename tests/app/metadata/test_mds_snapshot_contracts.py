@@ -26,8 +26,9 @@ def test_basic_mapping_string_list_and_byte_helpers():
     assert m._extract_list('x') == ['x']
 
     assert m._extract_byte_array(None) is None
-    assert m._extract_byte_array([1, 2, 3]) == [1, 2, 3]
-    assert m._extract_byte_array(b'\x01\x02') == [1, 2]
+    assert m._extract_byte_array([1, 2, 3]) == b'\x01\x02\x03'
+    assert m._extract_byte_array(b'\x01\x02') == b'\x01\x02'
+    assert m._extract_byte_array([1, 256]) is None
     assert m._extract_byte_array('bad') is None
 
 
@@ -53,6 +54,9 @@ def test_guid_formatting_and_aaguid_normalisation_edge_cases():
     assert m.format_guid_candidate('AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA') == 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
     assert m.format_guid_candidate('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') == 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
     assert m.format_guid_candidate([0] * 16) == '00000000-0000-0000-0000-000000000000'
+    assert m.format_guid_candidate(bytes(range(16))) == '00010203-0405-0607-0809-0a0b0c0d0e0f'
+    # Not bytes: a value over 255 makes no AAGUID, where it once made a 33-digit one.
+    assert m.format_guid_candidate([256] + [0] * 15) == ''
     assert m.format_guid_candidate('invalid') == ''
 
     class _BadStr:
