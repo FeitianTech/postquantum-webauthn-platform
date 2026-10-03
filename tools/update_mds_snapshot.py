@@ -29,7 +29,6 @@ from server.app.mds import snapshot as mds_snapshot  # noqa: E402
 from server.app.mds.trust import FIDO_METADATA_TRUST_ROOT_CERT  # noqa: E402
 
 MDS_METADATA_URL = "https://mds3.fidoalliance.org/"
-MDS_METADATA_FILENAME = mds_files.BLOB
 
 MDS_DOWNLOAD_MAX_ATTEMPTS = 5
 MDS_DOWNLOAD_BACKOFF_BASE_SECONDS = 10
@@ -94,12 +93,6 @@ def _fetch_remote_blob_with_retry() -> tuple[bytes, str | None, str | None]:
             )
             time.sleep(backoff)
     raise RuntimeError("FIDO MDS download retries exhausted")  # pragma: no cover - defensive
-
-
-def _write_blob(blob: bytes) -> None:
-    path = _path(mds_files.BLOB)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(blob)
 
 
 def _write_if_changed(path: Path, payload: str | bytes) -> bool:

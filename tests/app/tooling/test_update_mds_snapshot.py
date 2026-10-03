@@ -102,10 +102,7 @@ def test_fetch_remote_blob_uses_expected_request_contract(monkeypatch):
     assert etag == '"etag"'
 
 
-def test_write_blob_and_write_if_changed(isolated_mds_paths, tmp_path):
-    updater._write_blob(b"initial")
-    assert _file(mds_files.BLOB).read_bytes() == b"initial"
-
+def test_a_file_is_written_only_when_its_bytes_change(tmp_path):
     target = tmp_path / "nested" / "payload.txt"
     assert updater._write_if_changed(target, "hello") is True
     assert target.read_text(encoding="utf-8") == "hello"
