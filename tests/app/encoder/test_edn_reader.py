@@ -130,11 +130,30 @@ def test_edn_is_encoded_to_exactly_the_bytes_it_notates(text, expected):
         ('"a\tb"', 2, "control character"),
         ("/ open", 0, "never closed"),
         ("<<1", 3, "expected '>>'"),
+        ("1 /* x", 2, "a /\\* comment that is never closed"),
+        ("simple(x)", 7, "simple\\(\\) takes a decimal number"),
+        ("h'00", 0, "a h'...' literal that is never closed"),
+        ("[", 1, "expected ']'"),
+        ('[_0"a"]', 3, "an encoding indicator is followed by blank space before the first item"),
+        ("{", 1, "expected '}'"),
+        ('{1:2"a":3}', 4, "entries are separated by a comma or blank space"),
+        ('"\\', 1, "a string literal that ends in a backslash"),
+        ('"\\u{zz}"', 1, "a \\\\u\\{...\\} escape without hex digits"),
+        ('"\\u{110000}"', 1, "\\\\u\\{110000\\} is not a Unicode scalar value"),
+        ('"\\ud800\\u0041"', 1, "a high surrogate without its low surrogate"),
+        ('"\\udc00"', 1, "a lone low surrogate"),
+        ('"\\u12"', 1, "a \\\\u escape without four hex digits"),
+        ("1.0e300_1", 0, "1.0e\\+300 is not exact at the width _1 names"),
     ],
 )
 def test_edn_that_cannot_be_encoded_is_refused_with_its_offset(text, offset, reason):
     with pytest.raises(ValueError, match=f"^EDN is not valid at offset {offset}: .*{reason}"):
         edn.encode(text)
+
+
+def test_an_escaped_apostrophe_is_one_in_either_kind_of_literal():
+    assert edn.encode('"\\\'"') == b"\x61'"
+    assert edn.encode("'\\''") == b"\x41'"
 
 
 def test_edn_nested_as_deep_as_the_decoder_reads_is_encoded():
