@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { extractList, rawListValues } from './detail-fields.js';
+import { extractList, nameFromKey, rawListValues, valueText } from './detail-fields.js';
 
 describe('a list value', () => {
   it('writes a list value as the metadata does', () => {
@@ -19,5 +19,19 @@ describe('extractList', () => {
     expect(extractList('single')).toEqual(['single']);
     expect(extractList(['a', '', null, 'b'])).toEqual(['a', 'b']);
     expect(extractList(null)).toEqual([]);
+  });
+});
+
+describe('a field no MDS version this page knows', () => {
+  it('is named from its key', () => {
+    expect(nameFromKey('fipsRevision')).toBe('Fips Revision');
+    expect(nameFromKey('cxConfigURL')).toBe('Cx Config URL');
+    expect(nameFromKey('x')).toBe('X');
+  });
+
+  it('shows its value on one line', () => {
+    expect(valueText(['a', 2, [true, null], { b: 1 }])).toBe('a, 2, true, —, {"b":1}');
+    expect(valueText(false)).toBe('false');
+    expect(valueText(null)).toBe('—');
   });
 });

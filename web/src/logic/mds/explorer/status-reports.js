@@ -2,7 +2,7 @@
 // columns, and each report's cells, details and certificate; and a biometric
 // status report, in a table of the same shape. No DOM.
 import { MISSING_CELL_TEXT } from './rows.js';
-import { formatDetailValue } from '../formatters.js';
+import { nameFromKey, valueText } from './detail-fields.js';
 
 /** @typedef {ReturnType<typeof reportRow>} StatusReportRow */
 
@@ -26,22 +26,6 @@ const REPORT_DETAILS = [
 ];
 const REPORT_SHOWN_ELSEWHERE = ['effectiveDate', 'certificateNumber', 'certificationDescriptor', 'url', 'certificate'];
 
-// "fipsRevision" -> "Fips Revision": a field no MDS version this page knows has.
-function fieldName(key) {
-    const words = key.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
-    return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
-function reportValue(value) {
-    if (Array.isArray(value)) {
-        return value.map(reportValue).join(', ');
-    }
-    if (value && typeof value === 'object') {
-        return JSON.stringify(value);
-    }
-    return formatDetailValue(value);
-}
-
 // A report's row, its first and third cells the fields `lead` and `level`
 // name: the cells, the Descriptor column's two lines, "descriptor • url" and
 // every other field as "Name: value • …" ('' when a line has nothing; the
@@ -52,10 +36,10 @@ function reportRow(report, lead, level) {
         ...REPORT_DETAILS,
         ...Object.keys(report)
             .filter(key => !known.has(key))
-            .map(key => [key, fieldName(key)]),
+            .map(key => [key, nameFromKey(key)]),
     ]
         .filter(([key]) => report[key] !== undefined && report[key] !== null && report[key] !== '')
-        .map(([key, name]) => `${name}: ${reportValue(report[key])}`);
+        .map(([key, name]) => `${name}: ${valueText(report[key])}`);
     return {
         status: reportCell(report[lead]),
         effectiveDate: reportCell(report.effectiveDate),

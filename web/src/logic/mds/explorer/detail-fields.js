@@ -1,5 +1,6 @@
 // The fields and chip lists of the explorer's authenticator page: a value as
 // the metadata writes it, and a field or a list only when it has one. No DOM.
+import { formatDetailValue } from '../formatters.js';
 
 /**
  * A field: a value (an identifier is copyable, in Geist Mono), or a list of codes.
@@ -77,4 +78,22 @@ export function describe(descriptor, properties) {
         .filter(([key]) => descriptor[key] !== undefined)
         .map(([key, label]) => `${label}: ${descriptor[key]}`)
         .join(' • ');
+}
+
+// "fipsRevision" -> "Fips Revision": a field no MDS version this page knows,
+// named from its key.
+export function nameFromKey(key) {
+    const words = key.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+    return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+// A value on one line: a list's values joined by commas, an object as its JSON.
+export function valueText(value) {
+    if (Array.isArray(value)) {
+        return value.map(valueText).join(', ');
+    }
+    if (value && typeof value === 'object') {
+        return JSON.stringify(value);
+    }
+    return formatDetailValue(value);
 }

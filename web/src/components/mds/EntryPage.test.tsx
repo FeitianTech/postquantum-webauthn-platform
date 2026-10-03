@@ -232,6 +232,14 @@ describe('the MDS entry page', () => {
     expect(field(statement, 'TC Display PNG 2')).toHaveTextContent(/Palette: rgb\(255, 255, 255\), rgb\(0, 0, 0\)$/);
   });
 
+  it('shows every other member of the statement, a later version\'s named from its key', () => {
+    renderEntry(entryNamed('Fixture Security Key L2'));
+    const statement = section('metadataStatement');
+    expect(field(statement, 'Operating Environment')).toHaveTextContent(/^Secure Element \(SE\)$/);
+    expect(field(statement, 'Credential Exchange Config URL')).toHaveTextContent('https://fixture.example/credential-exchange.json');
+    expect(field(statement, 'Fixture Future Statement Field')).toHaveTextContent('A statement field no MDS3 version defines');
+  });
+
   it('shows the biometric status reports in a table of their own, and the rogue list over the status reports', () => {
     const entry = entryNamed('Fixture Security Key L2');
     renderEntry(entry);

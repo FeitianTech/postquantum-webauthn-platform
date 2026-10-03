@@ -8,7 +8,7 @@
 // Overview and the Metadata Statement always are, even with nothing under them.
 import { MISSING_CELL_TEXT } from './rows.js';
 import { formatUpv } from '../formatters.js';
-import { chipList, describe, extractList, field, present, rawDisplayString } from './detail-fields.js';
+import { chipList, describe, extractList, field, nameFromKey, present, rawDisplayString, valueText } from './detail-fields.js';
 import { authenticatorInfoSection } from './get-info.js';
 import { BIOMETRIC_REPORT_COLUMNS, STATUS_REPORT_COLUMNS, biometricReportRow, statusReportRow } from './status-reports.js';
 
@@ -115,6 +115,7 @@ function metadataStatementSection(entry, metadata) {
             field('Multi-Device Credential Support', metadata.multiDeviceCredentialSupport),
             field('TC Display Content Type', metadata.tcDisplayContentType),
             ...pngFields(metadata.tcDisplayPNGCharacteristics),
+            ...otherStatementFields(metadata),
         ]),
         chipLists: present([
             chipList('Authentication Algorithms', metadata.authenticationAlgorithms),
@@ -127,6 +128,32 @@ function metadataStatementSection(entry, metadata) {
             chipList('Supported Extensions', extractList(metadata.supportedExtensions).map(extensionText)),
         ]),
     };
+}
+
+// The statement's members the page shows elsewhere: in the overview, above, in
+// a section of their own, or not at all (the images).
+const STATEMENT_SHOWN = new Set([
+    'aaid', 'aaguid', 'protocolFamily', 'authenticatorVersion',
+    'description', 'alternativeDescriptions', 'friendlyNames', 'legalHeader', 'schema', 'cryptoStrength',
+    'attestationCertificateKeyIdentifiers', 'upv', 'isKeyRestricted', 'isFreshUserVerificationRequired',
+    'multiDeviceCredentialSupport', 'tcDisplayContentType', 'tcDisplayPNGCharacteristics',
+    'authenticationAlgorithms', 'publicKeyAlgAndEncodings', 'attestationTypes', 'keyProtection',
+    'matcherProtection', 'attachmentHint', 'tcDisplay', 'supportedExtensions',
+    'userVerificationDetails', 'attestationRootCertificates', 'authenticatorGetInfo',
+    'icon', 'iconDark', 'providerLogoLight', 'providerLogoDark',
+]);
+const STATEMENT_NAMES = {
+    operatingEnv: 'Operating Environment',
+    cxConfigURL: 'Credential Exchange Config URL',
+    ecdaaTrustAnchors: 'ECDAA Trust Anchors',
+};
+
+// Every other member of the statement, MDS3's own under their names and any a
+// later version adds named from its key.
+function otherStatementFields(metadata) {
+    return Object.keys(metadata)
+        .filter(key => !STATEMENT_SHOWN.has(key) && metadata[key] !== null)
+        .map(key => field(STATEMENT_NAMES[key] ?? nameFromKey(key), valueText(metadata[key])));
 }
 
 // "credProtect (tag 1, data 03, fail if unknown)": an extension the statement

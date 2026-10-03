@@ -145,7 +145,8 @@ describe('the detail page: sections', () => {
 
   it('shows the supported extensions and how the transaction display shows its text', () => {
     const statement = section(named('Fixture Security Key L2'), 'metadataStatement');
-    expect(statement.fields.slice(-3)).toEqual([
+    const contentType = statement.fields.findIndex(({ label }) => label === 'TC Display Content Type');
+    expect(statement.fields.slice(contentType, contentType + 3)).toEqual([
       { label: 'TC Display Content Type', value: 'image/png' },
       {
         label: 'TC Display PNG 1',
@@ -175,6 +176,37 @@ describe('the detail page: sections', () => {
     expect(odd.fields).toEqual([{ label: 'TC Display PNG', value: 'Palette: {"r":1,"g":2}, grey' }]);
     expect(odd.chipLists).toEqual([{ label: 'Supported Extensions', values: ['credBlob', '(tag 0)', 'x'] }]);
     expect(section({ metadataStatement: { tcDisplayPNGCharacteristics: {} } }, 'metadataStatement').fields).toEqual([]);
+  });
+
+  it('shows every other member of the statement, a later version\'s named from its key', () => {
+    const fields = section(named('Fixture Security Key L2'), 'metadataStatement').fields;
+    expect(fields.slice(-3)).toEqual([
+      { label: 'Credential Exchange Config URL', value: 'https://fixture.example/credential-exchange.json' },
+      { label: 'Fixture Future Statement Field', value: 'A statement field no MDS3 version defines' },
+      { label: 'Operating Environment', value: 'Secure Element (SE)' },
+    ]);
+    const odd = section(
+      {
+        metadataStatement: {
+          ecdaaTrustAnchors: [{ X: 'x', Y: 'y' }],
+          iconDark: 'data:image/png;base64,AA==',
+          laterList: ['a', 2],
+          laterFlag: false,
+          laterNothing: null,
+          laterEmpty: [],
+        },
+      },
+      'metadataStatement',
+    );
+    expect(odd.fields).toEqual([
+      { label: 'ECDAA Trust Anchors', value: '{"X":"x","Y":"y"}' },
+      { label: 'Later List', value: 'a, 2' },
+      { label: 'Later Flag', value: 'false' },
+    ]);
+    // The overview, the sections and the fields above show the rest of these statements.
+    for (const name of ['Fixture Security Key L1', 'Fixture U2F Key', 'Fixture UAF Authenticator']) {
+      expect(section(named(name), 'metadataStatement').fields.at(-1).label).toBe('UPV');
+    }
   });
 
   it('lists each combination with a method or a code accuracy, counting those left out', () => {
