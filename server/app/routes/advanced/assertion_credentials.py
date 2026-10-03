@@ -3,8 +3,7 @@
 Begin picks the credentials to offer (the allow list, else every stored or every
 discoverable credential, filtered by the attachments the hints allow) and says
 why when none qualify. Complete restores the credentials the request carries
-(or, failing that, the legacy session copy) and checks a discoverable-only
-ceremony was answered by a discoverable credential.
+and checks a discoverable-only ceremony was answered by a discoverable credential.
 """
 from __future__ import annotations
 
@@ -170,13 +169,6 @@ def restore_complete_credentials(data: Mapping[str, Any]) -> tuple[list[dict[str
     stored_records: list[dict[str, Any]] = []
     if isinstance(raw_credentials_input, list):
         stored_records, _serialized = parsing._parse_client_supplied_credentials(raw_credentials_input)
-
-    if not stored_records:
-        legacy_serialized = session.pop("advanced_auth_credentials", [])
-        if legacy_serialized:
-            stored_records, _serialized = parsing._parse_client_supplied_credentials(
-                legacy_serialized,
-            )
 
     if not stored_records:
         if isinstance(raw_credentials_input, list) and raw_credentials_input:

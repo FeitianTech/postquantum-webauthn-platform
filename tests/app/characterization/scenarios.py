@@ -621,10 +621,6 @@ def _(r: Recorder) -> None:
     _advanced_authenticate(r, client, es256, options=hinted, entries=roaming)
     _advanced_authenticate(r, client, es256, options=hinted, entries=roaming, attachment="platform")
     _advanced_authenticate(r, client, es256, options=hinted, entries=roaming, attachment="cross-platform")
-    # Legacy session credentials, when the request carries none.
-    with client.session_transaction() as session:
-        session["advanced_auth_credentials"] = ["unparseable"]
-    post({"publicKey": _auth_options(), "__assertion_response": assertion})
 
 
 # -- decoder -------------------------------------------------------------------------

@@ -52,20 +52,16 @@ def test_a_verified_assertion_reports_the_credentials_algorithm_and_counter():
     assert body["authenticatedCredentialId"] == b64u(authenticator.credential_id)
 
 
-def test_credentials_an_earlier_version_kept_in_the_session_are_used_when_none_are_sent():
+def test_a_complete_that_sends_no_credentials_finds_none_whatever_its_begin_was_sent():
     authenticator = Authenticator()
     credentials = [authenticator.stored_credential_entry()]
     client = entry_app().test_client()
     begin(client, credentials)
-    with client.session_transaction() as session:
-        session["advanced_auth_credentials"] = credentials
 
     response = complete(client, None, assertion_payload(authenticator, challenge=CHALLENGE, counter=7))
 
-    assert response.status_code == 200, response.get_json()
-    assert response.get_json()["status"] == "OK"
-    with client.session_transaction() as session:
-        assert "advanced_auth_credentials" not in session
+    assert response.status_code == 404
+    assert response.get_json()["error"] == "No credentials found"
 
 
 def test_begin_gives_the_browser_the_requests_hints():
