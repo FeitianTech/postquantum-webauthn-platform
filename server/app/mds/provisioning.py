@@ -319,8 +319,9 @@ def follow_newer_snapshot() -> bool:
 def waits_for_the_snapshot(view):
     """A route that reads the MDS snapshot waits for a provisioning under way.
 
-    A cold instance provisions the snapshot in the background (about 20 s from
-    Cloud Storage, ``startup.start_background_warmup``); until that finishes the
+    A cold instance provisions the snapshot in the background (from Cloud
+    Storage: the BLOB and its meta downloaded, then about 0.7 s of CPU to verify
+    and derive; ``startup.start_background_warmup``); until that finishes the
     route would answer as if there were no snapshot. The MDS routes read it, and
     so does a registration's own lookup of its authenticator (the attestation
     checks' root validation and metadata entry), which would otherwise record,

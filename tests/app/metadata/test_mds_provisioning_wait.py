@@ -1,7 +1,8 @@
 """A cold instance's MDS endpoints wait for the snapshot's provisioning.
 
 On Cloud Run the snapshot is provisioned in the background when a worker starts
-(``startup.start_background_warmup``), about 20 s from Cloud Storage. The routes
+(``startup.start_background_warmup``): from Cloud Storage, the BLOB and its meta
+downloaded, then verified and derived (docs/MDS_SNAPSHOT.md). The routes
 that read it wait for that provisioning rather than answer, meanwhile, as if
 there were no snapshot; the index page does not wait, so a cold instance's first
 page is not held (its explorer then asks the API, which waits).

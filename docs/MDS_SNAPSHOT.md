@@ -6,9 +6,9 @@ metadata service: seven files totalling about 30 MB, produced together by
 
 | File | Size | Read by |
 | --- | --- | --- |
-| `blob.jwt` | 10 MB | the updater, to tell whether the BLOB changed (the server does not read it) |
+| `blob.jwt` | 10 MB | the server's provisioning, which verifies it and derives the other files from it and the verified meta (below); the updater, to tell whether the BLOB changed |
 | `fido-mds3.verified.json` | 8.2 MB | the server, as the base metadata payload: the BLOB's payload as the BLOB has it, once verified |
-| `fido-mds3.explorer.json` | 5.5 MB | the server, for the explorer's summary |
+| `fido-mds3.explorer.json` | 5.5 MB | the server, for the explorer's summary: its meta, and the whole file only when that meta does not describe the verified snapshot |
 | `fido-mds3.explorer.full.json` | 7.1 MB | the server, which derives what browsers load from it (below) |
 | `*.meta.json` (three files) | ~1 KB | the freshness check and the explorer banner |
 
@@ -86,9 +86,13 @@ The routes that read the snapshot (`/api/mds/metadata/info`,
 under `/assets/mds/`, and both registrations' complete, which look the new
 credential's AAGUID up and record what they found for good) call
 `ensure_snapshot_available()` first (`waits_for_the_snapshot` in `server/app/mds/provisioning.py`):
-on a cold instance they wait for the provisioning under way (about 20 s from Cloud Storage)
-instead of answering meanwhile as if there were no snapshot, and after the first
-attempt they return at once. The pages are static (the UI's export) and never wait,
+on a cold instance they wait for the provisioning under way instead of answering
+meanwhile as if there were no snapshot, and after the first attempt they return at
+once. From Cloud Storage that wait is the download of the BLOB and its meta (10.6 MB
+for no. 288) and about 0.7 s of CPU to verify the BLOB and derive the other five files
+(measured on no. 288 with the download taken out; Cloud Run's CPU may be slower). It
+has no bound of its own: a request waits up to the service's request timeout (300 s,
+`deploy/service.yaml`). The pages are static (the UI's export) and never wait,
 so a cold instance's first page is not held; the explorer asks the info route, which
 waits.
 
