@@ -132,3 +132,31 @@ def test_a_payload_whose_entry_has_a_biometric_report_is_read():
 
     assert len(mds_entries.parse_payload(payload).entries) == 1
     assert payload["entries"][0]["biometricStatusReports"] == [BIOMETRIC_REPORT]
+
+
+def test_an_uploaded_blob_entry_keeps_every_entry_level_field():
+    raw = {
+        **_entry_with_a_biometric_report(),
+        "rogueListURL": "https://upload.example/rogue.json",
+        "rogueListHash": "00" * 32,
+        "fixtureFutureField": {"kept": True},
+        "legalHeader": "Upload Legal",
+        "metadataStatement": {"description": "Uploaded"},
+    }
+
+    entry, legal_header, payload = mds_entries.build_metadata_entry_components(raw)
+
+    assert payload["biometricStatusReports"] == [BIOMETRIC_REPORT]
+    assert (payload["rogueListURL"], payload["rogueListHash"]) == ("https://upload.example/rogue.json", "00" * 32)
+    assert payload["fixtureFutureField"] == {"kept": True}
+    assert "legalHeader" not in payload and legal_header == "Upload Legal"
+    assert entry.rogue_list_url == "https://upload.example/rogue.json"
+
+
+def test_an_uploaded_statement_on_its_own_has_only_the_entry_fields_it_names():
+    _entry, _legal_header, payload = mds_entries.build_metadata_entry_components(
+        {"description": "Flat", "aaguid": "b10b10b1-0000-4000-8000-000000000001", "rogueListURL": "https://x.example"}
+    )
+
+    assert set(payload) == {"statusReports", "timeOfLastStatusChange", "aaguid", "metadataStatement"}
+    assert payload["metadataStatement"]["rogueListURL"] == "https://x.example"

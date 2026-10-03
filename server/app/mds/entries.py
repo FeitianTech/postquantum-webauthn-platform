@@ -147,6 +147,21 @@ def parse_payload(raw: Mapping[str, Any]) -> MetadataBlobPayload:
     return MetadataBlobPayload.from_dict({**raw, "entries": readable} if isinstance(entries, list) else raw)
 
 
+# An uploaded BLOB entry's fields that are read, trimmed and checked below; the
+# statement and the BLOB's legal header go into the statement.
+_READ_BELOW = frozenset(
+    {
+        "metadataStatement",
+        "legalHeader",
+        "statusReports",
+        "timeOfLastStatusChange",
+        "attestationCertificateKeyIdentifiers",
+        "aaid",
+        "aaguid",
+    }
+)
+
+
 def build_metadata_entry_components(raw: Mapping[str, Any]) -> tuple[
     MetadataBlobPayloadEntry,
     str | None,
@@ -156,6 +171,14 @@ def build_metadata_entry_components(raw: Mapping[str, Any]) -> tuple[
         raise TypeError("Metadata JSON must be an object.")
 
     payload: dict[str, Any] = {}
+    if isinstance(raw.get("metadataStatement"), Mapping):
+        # A BLOB entry: every entry-level field it has (its biometric reports, its
+        # rogue list, one no MDS3 version defines yet), as it has it; those below
+        # are read as fido2 needs them.
+        for key, value in raw.items():
+            cloned = _clone_json_value(value) if key not in _READ_BELOW else None
+            if cloned is not None:
+                payload[key] = cloned
     payload["statusReports"] = _normalise_status_reports(raw)
 
     time_of_last_status_change = raw.get("timeOfLastStatusChange")
