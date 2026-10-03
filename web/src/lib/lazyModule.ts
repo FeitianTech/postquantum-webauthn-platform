@@ -32,17 +32,30 @@ export type LazyState<T> = {
 };
 
 /**
- * A lazy module once `wanted`: nothing on the first render (the server's and
- * the browser's alike, so the exported HTML hydrates as it is), then the module
- * when it has arrived. It arrives as a transition, so rendering what it brings
- * gives way to the person's input.
+ * A lazy module, loaded ahead once `prefetch` and at once when `needed`:
+ * nothing on the first render (the server's and the browser's alike, so the
+ * exported HTML hydrates as it is), then the module when it has arrived. It
+ * arrives as a transition, so rendering what it brings gives way to the
+ * person's input. A load that failed is tried again each time the module
+ * becomes needed (the section shown, the dialog asked for), as well as on
+ * `retry`.
  */
-export function useLazyModule<T>(lazy: LazyModule<T>, wanted: boolean): LazyState<T> {
+export function useLazyModule<T>(lazy: LazyModule<T>, prefetch: boolean, needed: boolean): LazyState<T> {
   // The module is held inside an object: a module that is a function would
   // otherwise be taken for a state updater.
   const [arrived, setArrived] = useState<{ module: T } | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [neededBefore, setNeededBefore] = useState(needed);
+  const wanted = prefetch || needed;
+
+  if (needed !== neededBefore) {
+    setNeededBefore(needed);
+    if (needed && failed) {
+      setFailed(false);
+      setAttempt((value) => value + 1);
+    }
+  }
 
   useEffect(() => {
     if (!wanted || arrived) return undefined;

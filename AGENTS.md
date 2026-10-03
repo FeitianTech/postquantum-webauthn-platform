@@ -78,7 +78,8 @@ the CSP and the source rules.
   tells Next's router, `beforePopState`, to leave Back to the page while the path stays),
   `entrance.ts` (entrances only for what the person brings up: what mounts already shown
   enters only once the page has left its first URL), `lazyModule.ts` (a chunk loaded once,
-  `useLazyModule`, `whenInteractive`), `download.ts`, `useOverlayRoot.ts`.
+  `useLazyModule`: ahead, or at once when needed, a failed load tried again when next
+  needed; `whenInteractive`), `download.ts`, `useOverlayRoot.ts`.
 - Sections:
   - `simple/` and `credentials/`: the Simple tab, and the saved credentials both tabs share
     (`SavedCredentialsProvider` at the shell's level; it follows another tab's change through

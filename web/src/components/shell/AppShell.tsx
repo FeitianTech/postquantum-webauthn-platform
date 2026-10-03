@@ -34,9 +34,9 @@ export function AppShell() {
   const [section, setSection, route, go] = useSection();
   const [interactive, setInteractive] = useState(false);
   useEffect(() => whenInteractive(() => setInteractive(true)), []);
-  const advanced = useLazyModule(ADVANCED, interactive || section === 'advanced');
-  const codec = useLazyModule(CODEC, interactive || section === 'codec');
-  const mds = useLazyModule(MDS, interactive || section === 'mds');
+  const advanced = useLazyModule(ADVANCED, interactive, section === 'advanced');
+  const codec = useLazyModule(CODEC, interactive, section === 'codec');
+  const mds = useLazyModule(MDS, interactive, section === 'mds');
   // Ask for the shown section's chunk before the frame is painted, and for the
   // MDS list with it when the URL opens #mds; the list is otherwise fetched,
   // without hurry, once the first view is interactive.
@@ -48,7 +48,7 @@ export function AppShell() {
     if (interactive) prefetchExplorerList(undefined, { priority: 'low' });
   }, [interactive]);
   const browser = useBrowserAnalysis();
-  const panel = useLazyModule(ANALYZE_PANEL, interactive || browser.running || browser.open);
+  const panel = useLazyModule(ANALYZE_PANEL, interactive, browser.running || browser.open);
   const [copy, setCopy] = useState<CopyResult | null>(null);
   // What is open belongs to the section shown; the others see nothing open.
   const routeOf = (id: SectionId) => (id === section ? route : CLOSED_ROUTE);

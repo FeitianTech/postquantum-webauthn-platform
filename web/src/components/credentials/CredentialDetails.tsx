@@ -12,6 +12,6 @@ type Props = ComponentProps<typeof import('./CredentialDetailDialog').Credential
 export function CredentialDetails(props: Props) {
   const [interactive, setInteractive] = useState(false);
   useEffect(() => whenInteractive(() => setInteractive(true)), []);
-  const { module } = useLazyModule(DIALOG, interactive || props.route.path[0] === 'credential');
+  const { module } = useLazyModule(DIALOG, interactive, props.route.path[0] === 'credential');
   return module ? <module.CredentialDetailDialog {...props} /> : null;
 }

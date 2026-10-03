@@ -28,28 +28,32 @@ describe('a lazy module', () => {
 });
 
 describe('a lazy module in a component', () => {
-  it('is nothing on the first render, and nothing until it is wanted', async () => {
-    const lazy = lazyModule(async () => ({ Part }));
-    const { result, rerender } = renderHook(({ wanted }) => useLazyModule(lazy, wanted), { initialProps: { wanted: false } });
+  it('is nothing on the first render, and nothing until it is prefetched or needed', async () => {
+    for (const asked of [{ prefetch: true, needed: false }, { prefetch: false, needed: true }]) {
+      const lazy = lazyModule(async () => ({ Part }));
+      const { result, rerender } = renderHook(({ prefetch, needed }) => useLazyModule(lazy, prefetch, needed), {
+        initialProps: { prefetch: false, needed: false },
+      });
 
-    expect(result.current.module).toBeNull();
-    await act(async () => {});
-    expect(result.current.module).toBeNull();
-    rerender({ wanted: true });
-    expect(result.current.module).toBeNull();
-    await waitFor(() => expect(result.current.module).toEqual({ Part }));
+      expect(result.current.module).toBeNull();
+      await act(async () => {});
+      expect(result.current.module).toBeNull();
+      rerender(asked);
+      expect(result.current.module).toBeNull();
+      await waitFor(() => expect(result.current.module).toEqual({ Part }));
+    }
   });
 
   it('holds a module that is itself a function', async () => {
     const lazy = lazyModule(async () => Part);
-    const { result } = renderHook(() => useLazyModule(lazy, true));
+    const { result } = renderHook(() => useLazyModule(lazy, true, false));
 
     await waitFor(() => expect(result.current.module).toBe(Part));
   });
 
   it('says it failed, and loads again when asked to', async () => {
     const lazy = lazyModule(vi.fn().mockRejectedValueOnce(new Error('chunk failed')).mockResolvedValue({ Part }));
-    const { result } = renderHook(() => useLazyModule(lazy, true));
+    const { result } = renderHook(() => useLazyModule(lazy, true, false));
 
     await waitFor(() => expect(result.current.failed).toBe(true));
     act(() => result.current.retry());
@@ -57,13 +61,48 @@ describe('a lazy module in a component', () => {
     await waitFor(() => expect(result.current.module).toEqual({ Part }));
   });
 
+  it('loads again when it is needed after a prefetch that failed', async () => {
+    const loader = vi.fn().mockRejectedValueOnce(new Error('chunk failed')).mockResolvedValue({ Part });
+    const lazy = lazyModule(loader);
+    const { result, rerender } = renderHook(({ needed }) => useLazyModule(lazy, true, needed), {
+      initialProps: { needed: false },
+    });
+    await waitFor(() => expect(result.current.failed).toBe(true));
+
+    rerender({ needed: true });
+
+    expect(result.current.failed).toBe(false);
+    await waitFor(() => expect(result.current.module).toEqual({ Part }));
+    expect(loader).toHaveBeenCalledTimes(2);
+  });
+
+  it('loads again each time it becomes needed while its loads fail', async () => {
+    const loader = vi.fn().mockRejectedValueOnce(new Error('chunk failed')).mockRejectedValueOnce(new Error('chunk failed')).mockResolvedValue({ Part });
+    const lazy = lazyModule(loader);
+    const { result, rerender } = renderHook(({ needed }) => useLazyModule(lazy, false, needed), {
+      initialProps: { needed: true },
+    });
+    await waitFor(() => expect(result.current.failed).toBe(true));
+
+    rerender({ needed: false });
+    expect(loader).toHaveBeenCalledTimes(1);
+    rerender({ needed: true });
+    await waitFor(() => expect(result.current.failed).toBe(true));
+    expect(loader).toHaveBeenCalledTimes(2);
+    rerender({ needed: false });
+    rerender({ needed: true });
+
+    await waitFor(() => expect(result.current.module).toEqual({ Part }));
+    expect(loader).toHaveBeenCalledTimes(3);
+  });
+
   it('drops what arrives after the component has gone', async () => {
     let arrive!: (value: { Part: typeof Part }) => void;
     let refuse!: (error: Error) => void;
     const arriving = lazyModule(() => new Promise<{ Part: typeof Part }>((resolve) => (arrive = resolve)));
     const refused = lazyModule(() => new Promise<{ Part: typeof Part }>((_resolve, reject) => (refuse = reject)));
-    const first = renderHook(() => useLazyModule(arriving, true));
-    const second = renderHook(() => useLazyModule(refused, true));
+    const first = renderHook(() => useLazyModule(arriving, true, false));
+    const second = renderHook(() => useLazyModule(refused, true, false));
 
     first.unmount();
     second.unmount();
