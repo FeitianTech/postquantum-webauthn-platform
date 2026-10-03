@@ -27,7 +27,7 @@ def test_a_statement_without_a_readable_first_certificate_has_none(statement):
     assert decode_attestation_object.extract_certificate(statement) is None
 
 
-def test_a_certificate_whose_extensions_cannot_be_read_has_no_details():
+def test_a_certificate_whose_extensions_cannot_be_read_is_shown_as_unparsed():
     # It loads, but reading its extensions fails: basic constraints holding no valid DER.
     key = ec.generate_private_key(ec.SECP256R1())
     name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Unreadable extension")])
@@ -43,6 +43,10 @@ def test_a_certificate_whose_extensions_cannot_be_read_has_no_details():
         .sign(key, hashes.SHA256())
     )
 
-    statement = {"x5c": [certificate.public_bytes(serialization.Encoding.DER)]}
+    der = certificate.public_bytes(serialization.Encoding.DER)
 
-    assert decode_attestation_object.extract_certificate(statement) is None
+    shown = decode_attestation_object.extract_certificate({"x5c": [der]})
+
+    # As one that does not load is: what failed, and the bytes as sent.
+    assert shown["error"].startswith("Unable to parse attestation certificate: ")
+    assert shown["raw"] == der.hex()

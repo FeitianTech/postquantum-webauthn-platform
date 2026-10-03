@@ -17,6 +17,7 @@ import pytest
 
 from server.app.decoder.decode import attestation_statement
 from server.app.decoder.decode.text import decode_payload_text
+from tests.app.characterization import material
 from tests.app.decoder.real_vectors import (
     ANDROID_SAFETYNET_ATT_STMT,
     ANDROID_SAFETYNET_AUTH_DATA,
@@ -260,3 +261,20 @@ def test_every_format_names_its_section(fmt):
 
     assert view["spec"].startswith("WebAuthn L3 section 8.")
     assert view["verification"] == _NOT_VERIFIED
+
+
+@pytest.mark.parametrize("lenient", [False, True])
+def test_a_certificate_malformed_past_its_load_is_shown_as_unreadable(client, lenient):
+    leaf = material.certificate(material.ec_key("malformed-subject").public_key(), common_name="Leaf", serial=0x5E)
+    # The subject's common name written as an INTEGER: the certificate loads, and
+    # cryptography refuses its subject only when it is read.
+    malformed = leaf.replace(b"\x0c\x04Leaf", b"\x02\x04Leaf")
+    auth_data = bytes(32) + b"\x41" + (7).to_bytes(4, "big")
+    statement = {"alg": -7, "sig": b"\x30\x00", "x5c": [malformed]}
+    payload = cbor2.dumps({"fmt": "packed", "attStmt": statement, "authData": auth_data})
+
+    response = client.post("/api/codec", json={"payload": payload.hex(), "mode": "decode", "lenient": lenient})
+
+    assert response.status_code == 200
+    (certificate,) = response.get_json()["data"]["attestationStatementDecoded"]["fields"]["x5c"]["certificates"]
+    assert certificate["error"].startswith("not an X.509 certificate: error parsing asn1 value")

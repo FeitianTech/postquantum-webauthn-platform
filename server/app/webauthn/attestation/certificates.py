@@ -182,6 +182,15 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
         certificate = x509.load_der_x509_certificate(cert_bytes)
     except Exception as exc:  # pragma: no cover - exercised in dedicated tests
         return _serialize_attestation_certificate_fallback(cert_bytes, exc)
+    try:
+        return _certificate_view(certificate, cert_bytes)
+    except ValueError as exc:
+        # cryptography reads a certificate's names and extensions only when they
+        # are asked for: one that loaded can still be malformed there.
+        return _serialize_attestation_certificate_fallback(cert_bytes, exc)
+
+
+def _certificate_view(certificate: x509.Certificate, cert_bytes: bytes) -> dict[str, Any]:
     version_number = certificate.version.value + 1
     version_hex = f"0x{certificate.version.value:x}"
 

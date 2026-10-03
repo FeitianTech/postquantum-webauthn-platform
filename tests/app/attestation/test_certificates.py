@@ -35,6 +35,20 @@ def test_a_certificate_whose_key_cryptography_cannot_load_is_described_from_its_
     assert "    Type: Unknown\n    Algorithm OID: 1.2.840.10045.2.9" in serialized["summary"]
 
 
+# The subject's common name written as an INTEGER: cryptography loads the
+# certificate, and refuses the subject only when it is read.
+MALFORMED_SUBJECT = CERTIFICATE.replace(b"\x0c\x04Leaf", b"\x02\x04Leaf")
+
+
+def test_a_certificate_malformed_past_its_load_is_reported_as_what_went_wrong():
+    serialized = attestation_certificates.serialize_attestation_certificate(MALFORMED_SUBJECT)
+
+    assert serialized["error"].startswith("Unable to parse attestation certificate: ")
+    assert 'location: ["subject"]' in serialized["parseError"]
+    assert serialized["raw"] == MALFORMED_SUBJECT.hex()
+    assert serialized["summary"].startswith("Unable to parse attestation certificate using cryptography.x509.")
+
+
 def test_each_x5c_entry_is_serialised_or_reported_as_what_went_wrong():
     details = attestation_certificates.extract_attestation_details(
         _registration_with_x5c(["%%%", b"", b"junk", CERTIFICATE])
