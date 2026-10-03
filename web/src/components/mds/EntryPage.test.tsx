@@ -207,6 +207,14 @@ describe('the MDS entry page', () => {
     expect(rows[1].querySelector('[data-report-certificate]')).toBeNull();
   });
 
+  it('shows the statement\'s descriptions and friendly names in each of their languages', () => {
+    renderEntry(entryNamed('Fixture Security Key L2'));
+    const statement = section('metadataStatement');
+    expect(field(statement, 'Description (de-DE)')).toHaveTextContent(/^Fixture Sicherheitsschlüssel L2$/);
+    expect(field(statement, 'Friendly Name (en-US)')).toHaveTextContent(/^Fixture Security Key L2$/);
+    expect(field(statement, 'Friendly Name (zh-CN)')).toHaveTextContent(/^Fixture 安全密钥 L2$/);
+  });
+
   it('shows the biometric status reports in a table of their own, and the rogue list over the status reports', () => {
     const entry = entryNamed('Fixture Security Key L2');
     renderEntry(entry);

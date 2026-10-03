@@ -121,6 +121,24 @@ describe('the detail page: sections', () => {
     expect(odd.chipLists).toEqual([{ label: 'TC Display', values: ['any'] }]);
   });
 
+  it('shows the statement\'s other descriptions and friendly names, one field for each language', () => {
+    const fields = section(named('Fixture Security Key L2'), 'metadataStatement').fields;
+    expect(fields.slice(0, 6)).toEqual([
+      { label: 'Description', value: 'Fixture Security Key L2' },
+      { label: 'Description (de-DE)', value: 'Fixture Sicherheitsschlüssel L2' },
+      { label: 'Description (zh-CN)', value: 'Fixture 安全密钥 L2' },
+      { label: 'Friendly Name (en-US)', value: 'Fixture Security Key L2' },
+      { label: 'Friendly Name (zh-CN)', value: 'Fixture 安全密钥 L2' },
+      { label: 'Legal Header', value: named('Fixture Security Key L2').metadataStatement.legalHeader },
+    ]);
+    const odd = section(
+      { metadataStatement: { friendlyNames: { 'en-US': ' ', fr: 7, de: null }, alternativeDescriptions: ['not', 'by', 'language'] } },
+      'metadataStatement',
+    );
+    expect(odd.fields).toEqual([{ label: 'Friendly Name (fr)', value: '7' }]);
+    expect(section({ metadataStatement: { friendlyNames: 'Name' } }, 'metadataStatement').fields).toEqual([]);
+  });
+
   it('writes a list value as the metadata does', () => {
     const noJson = Object.assign(Object.create(null), { big: 1n });
     expect(

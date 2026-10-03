@@ -142,6 +142,17 @@ function keyIdentifierCodes(values) {
         .filter(Boolean);
 }
 
+// A text the statement gives in several languages: one field for each, the
+// language after the label, as in "Friendly Name (en-US)".
+function languageFields(label, texts) {
+    if (!texts || typeof texts !== 'object' || Array.isArray(texts)) {
+        return [];
+    }
+    return Object.entries(texts)
+        .filter(([, text]) => text !== null)
+        .map(([language, text]) => field(`${label} (${language})`, rawDisplayString(text)));
+}
+
 function metadataStatementSection(entry, metadata) {
     const codes = keyIdentifierCodes(entry.attestationKeyIdentifiers);
     const upv = formatUpv(metadata.upv);
@@ -150,6 +161,8 @@ function metadataStatementSection(entry, metadata) {
         title: 'Metadata Statement',
         fields: present([
             metadata.description ? field('Description', metadata.description) : null,
+            ...languageFields('Description', metadata.alternativeDescriptions),
+            ...languageFields('Friendly Name', metadata.friendlyNames),
             metadata.legalHeader ? field('Legal Header', metadata.legalHeader) : null,
             field('Schema', metadata.schema),
             field('Crypto Strength', metadata.cryptoStrength),
