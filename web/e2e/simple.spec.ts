@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
@@ -65,6 +66,46 @@ test.describe('/#simple', () => {
     const [used] = await authenticator.credentials();
     expect(used.credentialId).toBe(registered.credentialId);
     expect(used.signCount).toBeGreaterThan(registered.signCount);
+  });
+
+  test('authenticates beside two ML-DSA-65 passkeys saved under the same name', async ({ page }) => {
+    // Their public keys are too large for the session cookie to hold (5,780 bytes for
+    // the two), so begin keeps a digest of the list, and complete is sent it again.
+    await addVirtualAuthenticator(page);
+    await openBeta(page);
+    const name = username();
+    await registerInBeta(page, name);
+    // Two ML-DSA-65 records from the recorded registration, each with its own ID and
+    // its own key: the last 1,900 of the key's 1,952 bytes changed (they compress
+    // apart, as two real keys do).
+    const mldsa65 = goldenStoredCredential('simple-register-mldsa65');
+    const twoMldsa65 = [0x52, 0x53].map((first) => {
+      const id = Buffer.from(mldsa65.credentialIdHex as string, 'hex');
+      id[0] = first;
+      const key = Buffer.from(mldsa65.publicKeyBase64Url as string, 'base64url');
+      const noise = createHash('shake256', { outputLength: 1900 }).update(id).digest();
+      noise.forEach((byte, index) => { key[key.length - noise.length + index] ^= byte; });
+      return {
+        ...mldsa65,
+        type: 'simple',
+        email: name,
+        userName: name,
+        displayName: name,
+        credentialId: id.toString('base64url'),
+        credentialIdBase64Url: id.toString('base64url'),
+        credentialIdHex: id.toString('hex'),
+        publicKey: key.toString('base64url'),
+        publicKeyBase64Url: key.toString('base64url'),
+      };
+    });
+    const saved = await page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) ?? '[]'), STORAGE_KEY);
+    await keep(page, [...saved, ...twoMldsa65]);
+    await page.reload();
+    await expect(rows(page).filter({ hasText: name })).toHaveCount(3);
+
+    await section(page).getByRole('textbox', { name: 'Username' }).fill(name);
+    await section(page).getByRole('button', { name: 'Authenticate', exact: true }).click();
+    await expect(page.getByText('Authentication successful! You have been verified.')).toBeVisible();
   });
 
   test('keeps a failure in place, with its sentence', async ({ page }) => {
