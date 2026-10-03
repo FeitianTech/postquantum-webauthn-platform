@@ -10,8 +10,8 @@ import tools.update_footer_year as updater
 def test_update_footer_year_updates_first_footer_match_only(tmp_path: Path):
     html = (
         "<footer>\n"
-        "  <p>&copy; 2024 Feitian Technologies Co., Ltd. All rights reserved.</p>\n"
-        "  <p>&copy; 1999 Feitian Technologies Co., Ltd.</p>\n"
+        "  <p>© 2024 Feitian Technologies Co., Ltd. All rights reserved.</p>\n"
+        "  <p>© 1999 Feitian Technologies Co., Ltd.</p>\n"
         "</footer>\n"
     )
     html_path = tmp_path / "index.html"
@@ -21,14 +21,14 @@ def test_update_footer_year_updates_first_footer_match_only(tmp_path: Path):
 
     assert changed is True
     updated = html_path.read_text(encoding="utf-8")
-    assert "&copy; 2026 Feitian Technologies Co., Ltd. All rights reserved." in updated
-    assert "&copy; 1999 Feitian Technologies Co., Ltd." in updated
+    assert "© 2026 Feitian Technologies Co., Ltd. All rights reserved." in updated
+    assert "© 1999 Feitian Technologies Co., Ltd." in updated
 
 
 def test_update_footer_year_returns_false_when_already_current(tmp_path: Path):
     html_path = tmp_path / "index.html"
     html_path.write_text(
-        "<p>&copy; 2026 Feitian Technologies Co., Ltd. All rights reserved.</p>\n",
+        "<p>© 2026 Feitian Technologies Co., Ltd. All rights reserved.</p>\n",
         encoding="utf-8",
     )
 
@@ -48,7 +48,7 @@ def test_update_footer_year_raises_when_footer_pattern_missing(tmp_path: Path):
 def test_main_reports_update_and_noop(tmp_path: Path, capsys):
     html_path = tmp_path / "index.html"
     html_path.write_text(
-        "<p>&copy; 2020 Feitian Technologies Co., Ltd. All rights reserved.</p>\n",
+        "<p>© 2020 Feitian Technologies Co., Ltd. All rights reserved.</p>\n",
         encoding="utf-8",
     )
 
@@ -76,14 +76,14 @@ def test_main_reports_error_for_missing_footer(tmp_path: Path, capsys):
 
 def test_main_updates_every_footer_it_is_given(tmp_path: Path, capsys):
     html_path = tmp_path / "index.html"
-    html_path.write_text("<p>&copy; 2025 Feitian Technologies Co., Ltd. All rights reserved.</p>\n", encoding="utf-8")
+    html_path.write_text("<p>© 2025 Feitian Technologies Co., Ltd. All rights reserved.</p>\n", encoding="utf-8")
     tsx_path = tmp_path / "Footer.tsx"
     tsx_path.write_text("<p>\u00a9 2025 Feitian Technologies Co., Ltd. All rights reserved.</p>\n", encoding="utf-8")
 
     exit_code = updater.main(["--path", str(html_path), "--path", str(tsx_path), "--year", "2027"])
 
     assert exit_code == 0
-    assert "&copy; 2027 Feitian" in html_path.read_text(encoding="utf-8")
+    assert "© 2027 Feitian" in html_path.read_text(encoding="utf-8")
     assert "\u00a9 2027 Feitian" in tsx_path.read_text(encoding="utf-8")
     assert "Updated footer year to 2027" in capsys.readouterr().out
 

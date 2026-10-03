@@ -13,19 +13,17 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_WEB_FOOTER_PATH = REPO_ROOT / "web" / "src" / "components" / "shell" / "Footer.tsx"
 DEFAULT_PATHS = (DEFAULT_WEB_FOOTER_PATH,)
 
-FOOTER_YEAR_PATTERN = re.compile(
-    r"(?P<prefix>©|&copy;)\s+\d{4}\s+Feitian Technologies Co\., Ltd\."
-)
+# The footer writes the sign itself (web/src/components/shell/Footer.tsx).
+FOOTER_YEAR_PATTERN = re.compile(r"©\s+\d{4}\s+Feitian Technologies Co\., Ltd\.")
 
 
 def update_footer_year(path: Path, *, year: int | None = None) -> bool:
     target_year = year if year is not None else datetime.now(timezone.utc).year
     text = path.read_text(encoding="utf-8")
 
-    def _replace(match: re.Match[str]) -> str:
-        return f"{match.group('prefix')} {target_year} Feitian Technologies Co., Ltd."
-
-    updated_text, replacements = FOOTER_YEAR_PATTERN.subn(_replace, text, count=1)
+    updated_text, replacements = FOOTER_YEAR_PATTERN.subn(
+        f"© {target_year} Feitian Technologies Co., Ltd.", text, count=1
+    )
     if replacements == 0:
         raise ValueError(f"No footer year found to update in {path}")
 
