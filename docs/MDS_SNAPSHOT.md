@@ -76,7 +76,10 @@ tests' Flask (`web/e2e/serve-flask.mjs`) serves such a copy too.
 `server/app/mds/provisioning.py` materialises the files into the snapshot directory
 on demand, trying three tiers in order. It runs once per process, from the
 background warm-up on a Cloud Run cold start and from the first request that
-needs the snapshot otherwise.
+needs the snapshot otherwise. The warm-up then derives the explorer's files and
+indexes the verified entries a registration looks its credential up in
+(`server/app/mds/verifier.py`): their JSON is read once, and an entry is parsed into
+fido2's dataclasses only when a lookup finds it, never the whole payload.
 
 The routes that read the snapshot (`/api/mds/metadata/info`,
 `explorer/full`, `resolve`, the upload and the delete, the explorer's files

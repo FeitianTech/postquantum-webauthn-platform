@@ -14,7 +14,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from fido2.mds3 import MdsAttestationVerifier, MetadataBlobPayload
+from fido2.mds3 import MdsAttestationVerifier
 
 from . import explorer_files as mds_explorer_files
 from . import files as mds_files
@@ -27,13 +27,7 @@ logger = logging.getLogger(__name__)
 class SnapshotCache:
     """The snapshot as last read: each value with the file modification times it was read at."""
 
-    # The verified BLOB payload, where it came from, and the ids of its entries,
-    # published before ``trust_verified`` so a reader never sees the flag without them.
-    metadata: MetadataBlobPayload | None = None
-    metadata_mtime: float | None = None
-    metadata_source: str | None = None
-    trust_verified: bool | None = None
-    entry_ids: set[int] = field(default_factory=set)
+    # The verified payload's entries as its JSON holds them, for the file version read.
     raw_entries: list[Any] | None = None
     raw_entries_mtime: float | None = None
     # The explorer's and the full snapshot, keyed by the mtimes of their four files.
@@ -97,86 +91,6 @@ def load_metadata_cache_entry() -> dict[str, str | None]:
         "etag": etag,
         "fetched_at": fetched_at,
     }
-
-
-def load_cached_metadata_snapshot() -> bool:
-    """Warm in-memory caches from the stored MDS metadata when available."""
-
-    metadata, _ = _load_base_metadata()
-    return metadata is not None
-
-
-def _load_base_metadata() -> tuple[MetadataBlobPayload | None, float | None]:
-    try:
-        verified_mtime = os.path.getmtime(_path(mds_files.VERIFIED))
-    except OSError:
-        verified_mtime = None
-
-    if (
-        CACHE.metadata is not None
-        and CACHE.metadata_source == "verified"
-        and CACHE.metadata_mtime == verified_mtime
-    ):
-        return CACHE.metadata, verified_mtime
-
-    # Concurrent requests on a cold instance wait for a single parse of the
-    # multi-megabyte snapshot instead of each loading their own copy.
-    with CACHE.metadata_lock:
-        if (
-            CACHE.metadata is not None
-            and CACHE.metadata_source == "verified"
-            and CACHE.metadata_mtime == verified_mtime
-        ):
-            return CACHE.metadata, verified_mtime
-
-        metadata, fallback_mtime = _load_verified_metadata_fallback()
-
-        # Entry ids are published before the trust flag so a concurrent reader
-        # can only ever observe "not yet trusted", never a stale trusted state.
-        if metadata is not None:
-            CACHE.entry_ids = {id(entry) for entry in metadata.entries}
-            CACHE.trust_verified = True
-            CACHE.metadata_source = "verified"
-        else:
-            CACHE.trust_verified = None
-            CACHE.entry_ids = set()
-            CACHE.metadata_source = None
-
-        CACHE.metadata = metadata
-        CACHE.metadata_mtime = fallback_mtime
-        return metadata, fallback_mtime
-
-
-def _load_verified_metadata_fallback() -> tuple[MetadataBlobPayload | None, float | None]:
-    """Load the bundled verified metadata snapshot shipped with the application."""
-
-    try:
-        fallback_mtime = os.path.getmtime(_path(mds_files.VERIFIED))
-    except OSError:
-        fallback_mtime = None
-
-    try:
-        with open(_path(mds_files.VERIFIED), "r", encoding="utf-8") as fallback_file:
-            payload = json.load(fallback_file)
-    except FileNotFoundError:
-        return None, fallback_mtime
-    except (OSError, json.JSONDecodeError) as exc:
-        logger.warning(
-            "Unable to load verified metadata fallback %s: %s",
-            _path(mds_files.VERIFIED),
-            exc,
-        )
-        return None, fallback_mtime
-
-    try:
-        return MetadataBlobPayload.from_dict(payload), fallback_mtime
-    except Exception as exc:  # pylint: disable=broad-except
-        logger.warning(
-            "Verified metadata fallback %s is invalid: %s",
-            _path(mds_files.VERIFIED),
-            exc,
-        )
-        return None, fallback_mtime
 
 
 def _load_verified_metadata_payload() -> dict[str, Any] | None:

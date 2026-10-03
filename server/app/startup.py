@@ -7,6 +7,9 @@ import os
 import threading
 
 from .env_flags import parse_env_flag
+from .mds import cache as mds_cache
+from .mds import provisioning as mds_provisioning
+from .mds import verifier as mds_verifier
 from .storage import cloud, common
 
 logger = logging.getLogger(__name__)
@@ -40,19 +43,17 @@ def _run_background_warmup() -> None:
     # The MDS snapshot is provisioned at runtime rather than shipped in the
     # image, so a cold instance fetches it here instead of on the first request.
     try:
-        from .mds.provisioning import ensure_snapshot_available
-
-        ensure_snapshot_available()
+        mds_provisioning.ensure_snapshot_available()
     except Exception:
         logger.warning("Background MDS snapshot provisioning failed.", exc_info=True)
 
     try:
-        from .mds import cache as mds_cache
-
         # The explorer's files first: every page fetches the list once its
-        # first view is interactive.
+        # first view is interactive. Then the index a registration's metadata
+        # lookup reads: the verified entries' JSON, none of it parsed into
+        # fido2's dataclasses (mds/verifier.py).
         mds_cache.load_explorer_files()
-        mds_cache.load_cached_metadata_snapshot()
+        mds_verifier.get_mds_verifier()
     except Exception:
         logger.warning("Background metadata warm-up failed.", exc_info=True)
 

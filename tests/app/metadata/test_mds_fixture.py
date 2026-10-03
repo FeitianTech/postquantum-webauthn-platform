@@ -12,6 +12,7 @@ import json
 import os
 
 import pytest
+from fido2.mds3 import MetadataBlobPayload
 
 from server.app.mds import cache as mds_cache
 from server.app.mds import files as mds_files
@@ -155,7 +156,7 @@ def test_resolving_an_entry_parses_no_payload_into_fido2s_dataclasses(mds_fixtur
     def refused(_payload):
         raise AssertionError("parsed the whole payload")
 
-    monkeypatch.setattr(mds_cache.MetadataBlobPayload, "from_dict", refused)
+    monkeypatch.setattr(MetadataBlobPayload, "from_dict", refused)
 
     answer = client.get("/api/mds/metadata/resolve", query_string={"aaid": "F1D0#0012"})
 

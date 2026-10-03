@@ -8,6 +8,7 @@ import time
 from server.app import startup
 from server.app.mds import cache as mds_cache
 from server.app.mds import provisioning as mds_provisioning
+from server.app.mds import verifier as mds_verifier
 from server.app.storage import common as storage_common
 
 
@@ -57,21 +58,35 @@ def test_run_background_warmup_survives_failures(monkeypatch):
         lambda: (_ for _ in ()).throw(RuntimeError("no bucket")),
     )
     monkeypatch.setattr(
-        mds_cache,
-        "load_cached_metadata_snapshot",
+        mds_verifier,
+        "get_mds_verifier",
         lambda: (_ for _ in ()).throw(RuntimeError("no metadata")),
     )
 
     startup._run_background_warmup()
 
 
-def test_the_warmup_derives_the_explorers_files_before_reading_the_metadata(monkeypatch):
+def test_the_warmup_derives_the_explorers_files_before_indexing_the_metadata(monkeypatch):
     calls = []
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
     monkeypatch.setattr(mds_provisioning, "ensure_snapshot_available", lambda: calls.append("provision"))
     monkeypatch.setattr(mds_cache, "load_explorer_files", lambda: calls.append("explorer files"))
-    monkeypatch.setattr(mds_cache, "load_cached_metadata_snapshot", lambda: calls.append("metadata"))
+    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: calls.append("metadata"))
 
     startup._run_background_warmup()
 
     assert calls == ["provision", "explorer files", "metadata"]
+
+
+def test_the_warmup_leaves_the_snapshot_indexed_and_parses_no_payload(mds_fixture_snapshot, monkeypatch):
+    def refused(_payload):
+        raise AssertionError("parsed the whole payload")
+
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
+    monkeypatch.setattr(mds_verifier.MetadataBlobPayload, "from_dict", refused)
+
+    startup._run_background_warmup()
+
+    assert mds_cache.CACHE.explorer_files is not None
+    assert mds_cache.CACHE.verifier is not None
+    assert mds_cache.CACHE.verifier.packaged.raw is mds_cache.load_verified_entries()

@@ -145,6 +145,4 @@ def test_load_verified_metadata_helpers_handle_invalid_and_missing_payloads(meta
     assert mds_cache._load_verified_metadata_payload() is None
 
     verified_path.write_text("{\"broken\": true}", encoding="utf-8")
-    loaded, mtime = mds_cache._load_verified_metadata_fallback()
-    assert loaded is None
-    assert mtime is not None
+    assert mds_cache.load_verified_entries() is None

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import threading
 import time
 from types import SimpleNamespace
@@ -107,27 +106,22 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(monkeypatch, me
     assert base_results == [True] * iterations
 
 
-def test_concurrent_cold_loads_parse_base_metadata_once(metadata_state, monkeypatch, tmp_path):
+def test_concurrent_cold_loads_read_the_verified_entries_once(metadata_state, monkeypatch, tmp_path):
     calls = []
 
     # The real snapshot is generated, not tracked, so this stands in for it.
     verified_path = tmp_path / "fido-mds3.verified.json"
     verified_path.write_text("{}", encoding="utf-8")
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
-    verified_mtime = os.path.getmtime(verified_path)
 
-    def _slow_fallback():
+    def _slow_payload():
         calls.append(1)
         time.sleep(0.05)
-        return SimpleNamespace(entries=()), verified_mtime
+        return {"entries": []}
 
-    monkeypatch.setattr(
-        mds_cache, "_load_verified_metadata_fallback", _slow_fallback
-    )
+    monkeypatch.setattr(mds_cache, "_load_verified_metadata_payload", _slow_payload)
 
-    threads = [
-        threading.Thread(target=mds_cache._load_base_metadata) for _ in range(8)
-    ]
+    threads = [threading.Thread(target=mds_cache.load_verified_entries) for _ in range(8)]
     for thread in threads:
         thread.start()
     for thread in threads:

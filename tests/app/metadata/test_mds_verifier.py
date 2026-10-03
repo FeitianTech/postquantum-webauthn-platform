@@ -22,7 +22,6 @@ from fido2.mds3 import (
 from fido2.webauthn import Aaguid
 from flask import g
 
-from server.app.mds import cache as mds_cache
 from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
@@ -186,7 +185,6 @@ def test_the_snapshots_verifier_is_kept_for_its_file_and_trusts_its_entries(visi
     assert mds_verifier.get_mds_verifier() is verifier
     assert _described(entry) == "Fixture Security Key L1"
     assert mds_verifier.metadata_entry_trust_anchor_status(entry) is True
-    assert mds_cache.CACHE.metadata is None
 
 
 def test_an_upload_takes_the_place_of_the_packaged_entry_with_its_aaguid(visitor, mds_fixture_snapshot):

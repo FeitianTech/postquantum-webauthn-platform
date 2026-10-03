@@ -125,24 +125,12 @@ def test_cached_headers_are_trimmed_and_the_iso_date_read_from_the_header(snapsh
     }
 
 
-def test_the_verified_snapshot_is_loaded_once_and_kept_while_it_is_unchanged(mds_fixture_snapshot):
-    assert mds_cache.load_cached_metadata_snapshot() is True
-
-    first, first_mtime = mds_cache._load_base_metadata()
-    second, second_mtime = mds_cache._load_base_metadata()
-
-    assert second is first
-    assert second_mtime == first_mtime
-    assert mds_cache.CACHE.metadata_source == "verified"
-
-
 @pytest.mark.parametrize("verified", [None, "{not json", "[]"])
-def test_without_a_readable_verified_snapshot_there_is_no_metadata(snapshot_dir, verified):
+def test_without_a_readable_verified_snapshot_there_are_no_entries(snapshot_dir, verified):
     if verified is not None:
         (snapshot_dir / mds_files.VERIFIED).write_text(verified, encoding="utf-8")
 
-    assert mds_cache.load_cached_metadata_snapshot() is False
-    assert mds_cache.CACHE.trust_verified is None
+    assert mds_cache.load_verified_entries() is None
 
 
 @pytest.mark.parametrize("explorer", ["a directory", "[]"])

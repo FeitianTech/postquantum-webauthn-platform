@@ -60,9 +60,7 @@ def packaged_metadata_env(monkeypatch, tmp_path, metadata_state):
 
 
 def test_packaged_metadata_loads_without_download(packaged_metadata_env):
-    metadata, _ = mds_cache._load_base_metadata()
-    assert metadata is not None
-    assert metadata.entries == []
+    assert mds_cache.load_verified_entries() == []
 
 
 def test_metadata_not_available_is_warning_classical():

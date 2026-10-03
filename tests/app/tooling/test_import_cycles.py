@@ -16,8 +16,6 @@ from pathlib import Path
 
 ALLOWED_DEFERRED: dict[tuple[str, str], str] = {
     ("server/app/mds/provisioning.py", "tools"): "the updater is imported only when a refresh runs, and may be absent",
-    ("server/app/startup.py", "server.app.mds.provisioning"): "the warm-up loads the MDS runtime on its own thread",
-    ("server/app/startup.py", "server.app.mds.cache"): "the warm-up loads the MDS runtime on its own thread",
 }
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
