@@ -41,8 +41,11 @@ def test_parse_and_format_date_paths():
     assert m._parse_date(date(2024, 1, 2)).tzinfo == timezone.utc
     assert m._parse_date(123) is None
     assert m._parse_date('  ') is None
-    assert m._parse_date('2024-01-02T03:04:05Z') is not None
-    assert m._parse_date('2024-01-02') is not None
+    assert m._parse_date('2024-01-02T03:04:05Z') == datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+    assert m._parse_date('2024-01-02T03:04:05+01:00') == datetime(2024, 1, 2, 2, 4, 5, tzinfo=timezone.utc)
+    assert m._parse_date('2024-01-02') == datetime(2024, 1, 2, tzinfo=timezone.utc)
+    # A zone needs a time: no ISO 8601 date is "2024-01-02Z".
+    assert m._parse_date('2024-01-02Z') is None
     assert m._parse_date('not-a-date') is None
 
     assert m._format_date('2024-01-02') == 'Jan 2, 2024'

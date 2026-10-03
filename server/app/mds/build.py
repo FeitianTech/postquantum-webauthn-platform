@@ -63,14 +63,12 @@ def _parse_date(value: Any) -> datetime | None:
     if not text:
         return None
 
-    normalised = text.replace("Z", "+00:00")
+    # ISO 8601 as MDS writes it: a date ("2024-01-02", read as its midnight) or
+    # a date and time, "Z" included.
     try:
-        parsed = datetime.fromisoformat(normalised)
+        parsed = datetime.fromisoformat(text)
     except ValueError:
-        try:
-            parsed = datetime.fromisoformat(f"{normalised}T00:00:00")
-        except ValueError:
-            return None
+        return None
 
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=timezone.utc)
