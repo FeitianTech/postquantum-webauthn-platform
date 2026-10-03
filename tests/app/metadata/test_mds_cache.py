@@ -15,6 +15,7 @@ import pytest
 
 from server.app.mds import cache as mds_cache
 from server.app.mds import files as mds_files
+from tests.app.metadata.cache_locks import FillingLock
 
 META = {"no": 7, "etag": "7"}
 
@@ -172,3 +173,31 @@ def test_an_explorer_meta_that_is_no_object_does_not_describe_the_snapshot(mds_f
     (mds_fixture_snapshot / mds_files.EXPLORER_META).write_text("[]", encoding="utf-8")
 
     assert mds_cache._load_packaged_explorer_meta() is None
+
+
+
+_EXPLORER_MARKER = (mds_files.EXPLORER, mds_files.VERIFIED, mds_files.EXPLORER_META, mds_files.VERIFIED_META)
+_FULL_MARKER = (mds_files.EXPLORER_FULL, mds_files.VERIFIED, mds_files.EXPLORER_FULL_META, mds_files.VERIFIED_META)
+
+
+@pytest.mark.parametrize(
+    ("load", "lock", "value", "marker", "names"),
+    [
+        (mds_cache._load_base_explorer_snapshot, "explorer_lock", "explorer", "explorer_mtime", _EXPLORER_MARKER),
+        (mds_cache._load_base_full_snapshot, "full_lock", "full", "full_mtime", _FULL_MARKER),
+        (mds_cache.load_explorer_files, "explorer_files_lock", "explorer_files", "explorer_files_mtime", _FULL_MARKER),
+    ],
+)
+def test_what_another_thread_loaded_while_this_one_waited_for_the_lock_is_used(
+    mds_fixture_snapshot, monkeypatch, load, lock, value, marker, names
+):
+    loaded = types.SimpleNamespace(name="loaded by the thread that held the lock")
+
+    def fill():
+        setattr(mds_cache.CACHE, value, loaded)
+        setattr(mds_cache.CACHE, marker, mds_cache._mtimes(*names))
+
+    monkeypatch.setattr(mds_cache.CACHE, lock, FillingLock(fill))
+    answer = load()
+
+    assert (answer[0] if isinstance(answer, tuple) else answer) is loaded

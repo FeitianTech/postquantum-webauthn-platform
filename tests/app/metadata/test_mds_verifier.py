@@ -22,10 +22,12 @@ from fido2.mds3 import (
 from fido2.webauthn import Aaguid
 from flask import g
 
+from server.app.mds import cache as mds_cache
 from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
 from server.app.mds import verifier as mds_verifier
+from tests.app.metadata.cache_locks import FillingLock
 
 PACKAGED = "f1d0f1d0-0000-4000-8000-000000000001"
 OTHER = "0badc0de-0000-4000-8000-000000000001"
@@ -172,6 +174,24 @@ def test_only_the_entry_found_is_parsed_and_it_is_parsed_once(mds_fixture_snapsh
     assert first is again
     assert parsed == ["Fixture Security Key L1"]
     assert packaged.holds(first) and not packaged.holds(copy.copy(first))
+
+
+def test_an_aaguid_or_key_identifier_that_does_not_read_indexes_nothing():
+    unread = {**_raw("Unread", aaguid="not-an-aaguid"), "attestationCertificateKeyIdentifiers": ["zz", 7]}
+    packaged = mds_verifier.PackagedEntries([unread, _raw("Read", aaguid=PACKAGED)])
+
+    # Indexing passes over it: the readable entry is found, and no key identifier is indexed.
+    assert _described(packaged.by_aaguid(Aaguid.parse(PACKAGED), frozenset())) == "Read"
+    assert packaged._by_key_identifier == {}
+
+
+def test_a_verifier_built_while_this_thread_waited_for_the_lock_is_the_one_used(mds_fixture_snapshot, monkeypatch):
+    raw_entries = mds_cache.load_verified_entries()
+    built = mds_verifier.IndexedVerifier(mds_verifier.PackagedEntries(raw_entries))
+    monkeypatch.setattr(mds_cache.CACHE, "verifier", None)
+    monkeypatch.setattr(mds_cache.CACHE, "verifier_lock", FillingLock(lambda: setattr(mds_cache.CACHE, "verifier", built)))
+
+    assert mds_verifier._packaged_verifier() is built
 
 
 def _upload(aaguid: str, description: str):
