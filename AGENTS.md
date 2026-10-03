@@ -213,7 +213,8 @@ its logic out here first.
 - `factory.py`: `create_app(config=None)`: each config submodule's `config_from_env()`, then the
   overrides, then `INIT_STEPS` in order (`test_app_factory.py` pins it).
 - `config/`: `application.py` (the bare app, and `add_after_request_once`), `logs.py`,
-  `session_secret.py`, `compression.py`, `proxy.py`, `session_cookie.py` (the cookie's flags
+  `session_secret.py`, `compression.py`, `proxy.py`, `fetch_metadata.py` (a write under `/api/`
+  whose `Sec-Fetch-Site` names another site is refused, 403), `session_cookie.py` (the cookie's flags
   and lifetime; only an answer that changed the session sets the cookie
   (`SESSION_REFRESH_EACH_REQUEST` off), so nothing landing after a ceremony's begin can undo
   it; and `cookie_size`), `security_headers.py` (the strict CSP and the Trusted Types

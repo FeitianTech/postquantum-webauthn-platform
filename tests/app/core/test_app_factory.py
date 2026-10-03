@@ -10,6 +10,7 @@ from server.app import factory
 from server.app.config import (
     attestation_trust,
     compression,
+    fetch_metadata,
     logs,
     origins,
     proxy,
@@ -33,6 +34,7 @@ def test_init_steps_are_pinned_in_order():
         logs.init_app,
         session_secret.init_app,
         proxy.init_app,
+        fetch_metadata.init_app,
         compression.init_app,
         security_headers.init_app,
         assets.init_app,
@@ -74,7 +76,7 @@ def test_hooks_and_blueprints_are_registered_in_order(app):
         compression.maybe_compress_response,
         security_headers.set_security_headers,
     ]
-    assert app.before_request_funcs[None] == [assets._hide_private_static_files]
+    assert app.before_request_funcs[None] == [fetch_metadata._refuse_cross_site_write, assets._hide_private_static_files]
     assert list(app.blueprints) == [
         "assets",
         "advanced_registration",
