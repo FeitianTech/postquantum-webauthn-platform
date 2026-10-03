@@ -119,7 +119,7 @@ function CertificationCell({ entry, expanded }: { entry: MdsEntry; expanded: boo
   );
 }
 
-export type RowProps = {
+type RowProps = {
   entry: MdsEntry;
   hidden: boolean;
   expanded: boolean;

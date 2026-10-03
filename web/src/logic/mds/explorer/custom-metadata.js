@@ -23,7 +23,7 @@ import { CUSTOM_METADATA_DELETE_PATH, CUSTOM_METADATA_LIST_PATH, CUSTOM_METADATA
  * @param {File[]} files
  * @returns {{ accepted: File[], rejected: string[] }}
  */
-export function splitAcceptedFiles(files) {
+function splitAcceptedFiles(files) {
     /** @type {File[]} */
     const accepted = [];
     /** @type {string[]} */

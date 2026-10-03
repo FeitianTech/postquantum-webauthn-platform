@@ -24,7 +24,7 @@ export const COSE_ALGORITHM_LABELS = {
 };
 
 
-export const COSE_KEY_TYPE_LABELS = {
+const COSE_KEY_TYPE_LABELS = {
     '1': 'OKP (1)',
     '2': 'EC2 (2)',
     '3': 'RSA (3)',

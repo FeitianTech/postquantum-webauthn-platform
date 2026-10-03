@@ -93,7 +93,7 @@ const DIALOG_WIDTHS = {
 // the app, which is made inert while it is open), a scrim that closes it, the
 // panel taking focus, Tab kept inside, Escape closing it, and focus given back.
 // The page behind is not scroll-locked.
-export function Overlay({
+function Overlay({
   open,
   onClose,
   id,

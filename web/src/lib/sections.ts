@@ -38,7 +38,7 @@ export const DEFAULT_SECTION: SectionId = 'simple';
  * each decoded on its own. `#mds/aaguid:…/certificate/1` is the MDS section and
  * `['aaguid:…', 'certificate', '1']`.
  */
-export type Route = { section: SectionId; path: string[] };
+type Route = { section: SectionId; path: string[] };
 
 function decodeSegment(segment: string) {
   try {

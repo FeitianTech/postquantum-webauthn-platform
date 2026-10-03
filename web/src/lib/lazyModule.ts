@@ -22,7 +22,7 @@ export function lazyModule<T>(loader: () => Promise<T>): LazyModule<T> {
   };
 }
 
-export type LazyState<T> = {
+type LazyState<T> = {
   /** The module once it has arrived. */
   module: T | null;
   /** Its chunk could not be loaded. */
