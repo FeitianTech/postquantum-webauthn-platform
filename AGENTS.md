@@ -135,7 +135,7 @@ the CSP and the source rules.
   lines and no module over 400, with no exceptions (`code-size.test.ts` runs it in `npm test`).
 
 Running it (Node 22, in `web/`): `npm ci`; `npm run dev` (at `http://localhost:3000/`,
-proxying `/api` to `FLASK_URL`, default `http://localhost:8000`; ceremonies need Flask's
+proxying `/api` and `/assets/mds` to `FLASK_URL`, default `http://localhost:8000`; ceremonies need Flask's
 origin, so use the export for those); `npm run build` (the export in `web/out`, which Flask
 serves; `FIDO_SERVER_WEB_EXPORT_ROOT` points elsewhere); `npm run typecheck` (covers
 `e2e/`, and through `tsconfig.logic.json` checks the logic's JSDoc types with `checkJs`);

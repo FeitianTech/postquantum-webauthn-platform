@@ -51,6 +51,7 @@ describe('the dev server\'s Content Security Policy', () => {
     expect(await dev.headers!()).toEqual([{ source: '/:path*', headers: developmentHeaders() }]);
     expect(await dev.rewrites!()).toEqual([
       { source: '/api/:path*', destination: 'http://localhost:8000/api/:path*', basePath: false },
+      { source: '/assets/mds/:path*', destination: 'http://localhost:8000/assets/mds/:path*', basePath: false },
     ]);
     const build = nextConfig(PHASE_PRODUCTION_BUILD);
     expect(build.output).toBe('export');

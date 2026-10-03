@@ -17,11 +17,16 @@ export default function nextConfig(phase) {
     eslint: { ignoreDuringBuilds: true },
     ...(developing
       ? {
-          // `npm run dev` beside a local Flask: the API answers from Flask (Next
-          // matches /api itself, not under a base path: scripts/dev-csp.test.ts).
+          // `npm run dev` beside a local Flask: the API and the MDS explorer's files
+          // (its list, icons and entries, server/app/routes/assets.py) answer from
+          // Flask (Next matches them itself, not under a base path:
+          // scripts/dev-csp.test.ts).
           async rewrites() {
             const flask = process.env.FLASK_URL ?? 'http://localhost:8000';
-            return [{ source: '/api/:path*', destination: `${flask}/api/:path*`, basePath: false }];
+            return [
+              { source: '/api/:path*', destination: `${flask}/api/:path*`, basePath: false },
+              { source: '/assets/mds/:path*', destination: `${flask}/assets/mds/:path*`, basePath: false },
+            ];
           },
           // Flask's CSP, so a violation shows while developing (scripts/dev-csp.mjs).
           // Flask sends it with the export; headers() does not apply to one.
