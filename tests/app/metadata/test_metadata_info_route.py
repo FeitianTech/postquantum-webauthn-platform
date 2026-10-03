@@ -28,7 +28,7 @@ def _upload(client):
     )
 
 
-def test_a_new_session_gets_the_packaged_summary_and_the_static_snapshot(mds_fixture_snapshot, client):
+def test_a_new_visitor_gets_the_packaged_summary_and_the_static_snapshot_and_no_namespace(mds_fixture_snapshot, client):
     answer = client.get("/api/mds/metadata/info")
 
     assert answer.status_code == 200
@@ -37,8 +37,8 @@ def test_a_new_session_gets_the_packaged_summary_and_the_static_snapshot(mds_fix
         "snapshotUrl": "/assets/mds/fido-mds3.explorer.list.json",
         "customEntriesState": "none",
     }
-    assert client.get_cookie("session") is not None
-    assert client.get_cookie("fido.mds.session") is not None
+    assert client.get_cookie("session") is None
+    assert client.get_cookie("fido.mds.session") is None
 
 
 def test_the_answer_is_per_session_and_never_cached(mds_fixture_snapshot, client):

@@ -63,7 +63,7 @@ def _initial_mds_info() -> dict[str, Any]:
 
     mds_provisioning.ensure_snapshot_available()
     mds_provisioning.follow_newer_snapshot()
-    metadata_session_id = visitor_session.ensure_id()
+    metadata_session_id = visitor_session.current_id()
 
     initial_mds_info = dict(mds_cache.load_packaged_explorer_summary() or {})
     snapshot_url = _packaged_snapshot_url()
@@ -90,7 +90,6 @@ def api_get_metadata_info():
 @bp.route("/api/mds/metadata/explorer/full", methods=["GET"])
 @mds_provisioning.waits_for_the_snapshot
 def api_get_full_explorer_metadata():
-    visitor_session.ensure_id()
     snapshot = mds_effective.load_effective_full_snapshot()
     if not snapshot.get("entries") and not snapshot.get("meta"):
         return _no_store_json_response(
@@ -103,8 +102,6 @@ def api_get_full_explorer_metadata():
 @bp.route("/api/mds/metadata/resolve", methods=["GET"])
 @mds_provisioning.waits_for_the_snapshot
 def api_resolve_metadata_entry():
-    visitor_session.ensure_id()
-
     requested = {
         "entry_id": request.args.get("entryId", type=str),
         "aaguid": request.args.get("aaguid", type=str),
@@ -135,7 +132,6 @@ def api_resolve_metadata_entry():
 
 @bp.route("/api/mds/metadata/custom", methods=["GET"])
 def api_list_custom_metadata():
-    visitor_session.ensure_id()
     items = [mds_uploads.serialize_session_metadata_item(item) for item in mds_uploads.list_session_metadata_items()]
     return jsonify({"items": items})
 
@@ -242,7 +238,6 @@ def _upload_answer(saved_items: list[Any], errors: list[str]):
 @bp.route("/api/mds/metadata/custom/<string:stored_filename>", methods=["DELETE"])
 @mds_provisioning.waits_for_the_snapshot
 def api_delete_custom_metadata(stored_filename: str):
-    visitor_session.ensure_id()
     try:
         deleted = mds_uploads.delete_session_metadata_item(stored_filename)
     except ValueError as exc:

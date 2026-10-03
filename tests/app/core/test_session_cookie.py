@@ -2,10 +2,14 @@
 so it cannot put back a session a ceremony has moved on from."""
 from __future__ import annotations
 
+import io
+import json
+
 import pytest
 
 from server.app.config import session_cookie
 from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
+from tests.app.metadata.upload_entries import minimal_entry
 
 
 def _sets_session_cookie(response) -> bool:
@@ -14,14 +18,18 @@ def _sets_session_cookie(response) -> bool:
 
 @pytest.fixture
 def visitor(make_app, export_root, mds_fixture_snapshot):
-    """A client whose session is permanent: /api/mds/metadata/info gave it a namespace."""
+    """A client whose session is permanent: an upload gave it a namespace."""
 
     app = make_app({WEB_EXPORT_ROOT_KEY: str(export_root)})
     client = app.test_client()
-    first = client.get("/api/mds/metadata/info")
+    first = client.post(
+        "/api/mds/metadata/upload",
+        data={"files": (io.BytesIO(json.dumps(minimal_entry("uploaded")).encode()), "entry.json")},
+        content_type="multipart/form-data",
+    )
     assert first.status_code == 200
     assert _sets_session_cookie(first)
-    return client, first.get_json()["snapshotUrl"]
+    return client, client.get("/api/mds/metadata/info").get_json()["snapshotUrl"]
 
 
 def test_the_app_uses_the_interface_that_leaves_files_alone(app):

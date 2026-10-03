@@ -116,8 +116,6 @@ def test_the_certificate_route_answers_each_certificate_with_its_status(fake_dec
 
 
 def test_the_custom_metadata_list_answers_the_visitors_uploads(monkeypatch):
-    session_calls = []
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: session_calls.append("called") or "session-abc")
     monkeypatch.setattr(mds_uploads, "list_session_metadata_items", lambda: [{"storedFilename": "one.json"}])
     monkeypatch.setattr(
         mds_uploads,
@@ -129,7 +127,6 @@ def test_the_custom_metadata_list_answers_the_visitors_uploads(monkeypatch):
 
     assert response.status_code == 200
     assert response.get_json() == {"items": [{"storedFilename": "one.json", "label": "demo"}]}
-    assert session_calls
 
 
 @pytest.mark.parametrize(

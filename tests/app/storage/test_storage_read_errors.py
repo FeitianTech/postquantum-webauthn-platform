@@ -21,6 +21,7 @@ import os
 
 import pytest
 
+from server.app import visitor_session
 from server.app.storage import credentials as storage_credentials
 from server.app.storage import record_format
 from server.app.storage.common import StorageReadError
@@ -160,7 +161,10 @@ def test_uploads_that_cannot_be_listed_answer_503_not_an_empty_list(make_app, mo
 
     monkeypatch.setattr(bucket, "list_blobs", unreachable)
 
-    answer = make_app().test_client().get("/api/mds/metadata/custom")
+    client = make_app().test_client()
+    with client.session_transaction() as session:
+        session[visitor_session.SESSION_KEY] = SESSION
+    answer = client.get("/api/mds/metadata/custom")
 
     assert answer.status_code == 503
     assert "items" not in answer.get_json()

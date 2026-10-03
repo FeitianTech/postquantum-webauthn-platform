@@ -112,8 +112,7 @@ def test_list_session_metadata_items_skips_invalid_payloads_and_returns_valid_en
 def test_delete_session_metadata_item_validates_session_filename_and_storage_errors(metadata_local_env, monkeypatch):
     app = metadata_local_env
 
-    with pytest.raises(ValueError, match="No active metadata session"):
-        mds_uploads.delete_session_metadata_item("entry.json", session_id=None)
+    assert mds_uploads.delete_session_metadata_item("entry.json", session_id=None) is False
 
     with app.test_request_context("/"):
         session_id = visitor_session.ensure_id()

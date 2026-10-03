@@ -264,11 +264,11 @@ def list_session_metadata_items(session_id: str | None = None) -> list[SessionMe
 def delete_session_metadata_item(
     stored_filename: str, session_id: str | None = None
 ) -> bool:
+    safe_name = _validate_session_metadata_filename(stored_filename)
     active_session = session_id or visitor_session.current_id()
     if not active_session:
-        raise ValueError("No active metadata session.")
+        return False
 
-    safe_name = _validate_session_metadata_filename(stored_filename)
     directory = _session_metadata_directory(active_session, create=False, cleanup=False)
     if not directory:
         return False

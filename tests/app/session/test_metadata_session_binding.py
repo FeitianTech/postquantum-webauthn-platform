@@ -8,6 +8,9 @@ they knew.  The recovery cookie is now signed with the application secret.
 """
 from __future__ import annotations
 
+import io
+import json
+
 import itsdangerous
 import pytest
 from flask import session as flask_session
@@ -35,6 +38,17 @@ def session_env(monkeypatch, tmp_path):
     monkeypatch.setattr(visitor_session.CLEANUP, "last_run", 0.0)
 
     return entry_app()
+
+
+def _upload(client, **kwargs):
+    """Upload one statement: the request that gives a visitor a namespace."""
+
+    return client.post(
+        "/api/mds/metadata/upload",
+        data={"files": (io.BytesIO(json.dumps(minimal_entry("uploaded")).encode()), "entry.json")},
+        content_type="multipart/form-data",
+        **kwargs,
+    )
 
 
 def _seal(app, identifier: str) -> str:
@@ -175,7 +189,7 @@ def test_issued_cookie_is_signed_httponly_and_round_trips(session_env):
     app = session_env
 
     client = app.test_client()
-    response = client.get("/api/mds/metadata/custom")
+    response = _upload(client)
     assert response.status_code == 200
 
     set_cookies = [
@@ -215,7 +229,7 @@ def test_issued_cookie_is_same_site_lax_over_https(session_env):
     app = session_env
 
     client = app.test_client()
-    response = client.get("/api/mds/metadata/custom", base_url="https://localhost")
+    response = _upload(client, base_url="https://localhost")
     assert response.status_code == 200
 
     cookie = next(
