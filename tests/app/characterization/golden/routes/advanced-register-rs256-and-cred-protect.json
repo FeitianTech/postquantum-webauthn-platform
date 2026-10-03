@@ -60,25 +60,12 @@
         "challenge": {
          "$base64url": "UFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFA"
         },
-        "extensions": {
-         "credProtect": 3,
-         "enforceCredProtect": true
-        },
         "pubKeyCredParams": [
          {
           "alg": -257,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [],
@@ -841,24 +828,12 @@
         "challenge": {
          "$base64url": "UVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVE"
         },
-        "extensions": {
-         "credentialProtectionPolicy": 9
-        },
         "pubKeyCredParams": [
          {
           "alg": -257,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [],
@@ -1622,24 +1597,12 @@
         "challenge": {
          "$base64url": "UlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlI"
         },
-        "extensions": {
-         "credProtect": "userVerificationRequired"
-        },
         "pubKeyCredParams": [
          {
           "alg": -257,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [],
@@ -2403,26 +2366,12 @@
         "challenge": {
          "$base64url": "U1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1M"
         },
-        "extensions": {
-         "largeBlob": {
-          "support": "required"
-         }
-        },
         "pubKeyCredParams": [
          {
           "alg": -257,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [],

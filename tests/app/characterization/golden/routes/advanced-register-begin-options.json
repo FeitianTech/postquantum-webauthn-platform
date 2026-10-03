@@ -65,16 +65,7 @@
           "alg": -7,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [],
@@ -176,7 +167,6 @@
      "contents": {
       "advanced_original_request": {
        "publicKey": {
-        "attestation": "direct",
         "authenticatorSelection": {
          "authenticatorAttachment": "platform",
          "residentKey": "required",
@@ -185,50 +175,6 @@
         "challenge": {
          "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
         },
-        "excludeCredentials": [
-         {
-          "id": {
-           "$base64url": "EREREREREREREREREREREQ"
-          },
-          "transports": [
-           "usb"
-          ],
-          "type": "public-key"
-         },
-         {
-          "id": "2222",
-          "type": "public-key"
-         },
-         {
-          "id": "33",
-          "type": "other"
-         },
-         "not-a-descriptor"
-        ],
-        "extensions": {
-         "credBlob": {
-          "$base64url": "YmxvYg"
-         },
-         "credProps": true,
-         "credentialProtectionPolicy": "userVerificationOptionalWithCredentialIDList",
-         "enforceCredentialProtectionPolicy": true,
-         "hmacCreateSecret": true,
-         "largeBlob": {
-          "support": "preferred"
-         },
-         "minPinLength": true,
-         "prf": {
-          "eval": {
-           "first": {
-            "$base64url": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc"
-           },
-           "second": "0a0b0c"
-          }
-         }
-        },
-        "hints": [
-         "client-device"
-        ],
         "pubKeyCredParams": [
          {
           "alg": -7,
@@ -262,17 +208,7 @@
           "alg": -37,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "timeout": 120000,
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [
@@ -458,16 +394,7 @@
           "alg": -257,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [],
@@ -609,16 +536,7 @@
           "alg": -257,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [],
@@ -736,7 +654,6 @@
      "contents": {
       "advanced_original_request": {
        "publicKey": {
-        "attestation": "indirect",
         "authenticatorSelection": {
          "requireResidentKey": true,
          "userVerification": "discouraged"
@@ -749,16 +666,7 @@
           "alg": -7,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [],
@@ -860,32 +768,18 @@
      "contents": {
       "advanced_original_request": {
        "publicKey": {
-        "attestation": "enterprise",
         "authenticatorSelection": {
          "residentKey": "discouraged"
         },
         "challenge": {
          "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
         },
-        "hints": [
-         "security-key"
-        ],
         "pubKeyCredParams": [
          {
           "alg": -7,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "timeout": 0,
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [
@@ -996,25 +890,12 @@
         "challenge": {
          "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
         },
-        "hints": [
-         "hybrid",
-         7
-        ],
         "pubKeyCredParams": [
          {
           "alg": -7,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [
@@ -1125,27 +1006,12 @@
         "challenge": {
          "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
         },
-        "extensions": {
-         "credProtect": 3,
-         "enforceCredProtect": false,
-         "largeBlob": "required",
-         "prf": {}
-        },
         "pubKeyCredParams": [
          {
           "alg": -7,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [],

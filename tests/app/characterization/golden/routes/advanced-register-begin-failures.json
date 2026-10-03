@@ -394,15 +394,7 @@
           "alg": -7,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "No Id",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [],

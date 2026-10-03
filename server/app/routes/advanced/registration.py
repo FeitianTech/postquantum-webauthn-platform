@@ -153,6 +153,18 @@ def _with_challenge_source(
     return jsonify(merged), status
 
 
+# What complete's attestation checks read of the request begin answered
+# (attestation/checks.py), kept in the session as the request had them. Nothing
+# else: the request's other members, such as a 4 KB fake excludeCredentials ID,
+# would not fit a cookie.
+_CHECKED_REQUEST_MEMBERS = ("pubKeyCredParams", "authenticatorSelection", "userVerification", "challenge")
+
+
+def _what_the_checks_read(data: Mapping[str, Any]) -> dict[str, Any]:
+    public_key = data["publicKey"]
+    return {"publicKey": {name: public_key[name] for name in _CHECKED_REQUEST_MEMBERS if name in public_key}}
+
+
 @bp.route("/api/advanced/register/begin", methods=["POST"])
 def advanced_register_begin():
     data = request.get_json(silent=True)
@@ -202,7 +214,7 @@ def advanced_register_begin():
     # Stamped so /complete can tell a fresh challenge from a replayed or stale one.
     session["advanced_state"] = stamp_ceremony_state(dict(state))
     session["advanced_rp"] = {"id": rp_entity.id, "name": rp_entity.name}
-    session["advanced_original_request"] = data
+    session["advanced_original_request"] = _what_the_checks_read(data)
 
     response_payload = dict(options)
     # The browser reads the hints and preferred formats from the options too (its JSON parser keeps them).

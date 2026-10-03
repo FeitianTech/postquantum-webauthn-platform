@@ -60,24 +60,12 @@
         "challenge": {
          "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
         },
-        "hints": [
-         "client-device"
-        ],
         "pubKeyCredParams": [
          {
           "alg": -7,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [
@@ -188,24 +176,12 @@
         "challenge": {
          "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
         },
-        "hints": [
-         "client-device"
-        ],
         "pubKeyCredParams": [
          {
           "alg": -7,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_rp": {
@@ -281,24 +257,12 @@
         "challenge": {
          "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
         },
-        "hints": [
-         "client-device"
-        ],
         "pubKeyCredParams": [
          {
           "alg": -7,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [
@@ -409,24 +373,12 @@
         "challenge": {
          "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
         },
-        "hints": [
-         "client-device"
-        ],
         "pubKeyCredParams": [
          {
           "alg": -7,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_rp": {
@@ -502,24 +454,12 @@
         "challenge": {
          "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
         },
-        "hints": [
-         "client-device"
-        ],
         "pubKeyCredParams": [
          {
           "alg": -7,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [
@@ -1290,16 +1230,7 @@
           "alg": -7,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [
@@ -1418,16 +1349,7 @@
           "alg": -7,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_rp": {

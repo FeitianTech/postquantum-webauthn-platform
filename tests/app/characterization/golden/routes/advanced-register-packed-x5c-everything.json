@@ -57,7 +57,6 @@
      "contents": {
       "advanced_original_request": {
        "publicKey": {
-        "attestation": "direct",
         "authenticatorSelection": {
          "authenticatorAttachment": "cross-platform",
          "residentKey": "preferred"
@@ -65,38 +64,6 @@
         "challenge": {
          "$base64url": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE"
         },
-        "excludeCredentials": [
-         {
-          "id": {
-           "$base64url": "RERERERERERERERERERERA"
-          },
-          "type": "public-key"
-         }
-        ],
-        "extensions": {
-         "credBlob": {
-          "$base64url": "YmxvYg"
-         },
-         "credProps": true,
-         "credentialProtectionPolicy": "userVerificationOptionalWithCredentialIDList",
-         "enforceCredentialProtectionPolicy": true,
-         "hmacCreateSecret": true,
-         "largeBlob": {
-          "support": "preferred"
-         },
-         "minPinLength": true,
-         "prf": {
-          "eval": {
-           "first": {
-            "$base64url": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc"
-           },
-           "second": "0a0b0c"
-          }
-         }
-        },
-        "hints": [
-         "security-key"
-        ],
         "pubKeyCredParams": [
          {
           "alg": -7,
@@ -106,16 +73,7 @@
           "alg": -257,
           "type": "public-key"
          }
-        ],
-        "rp": {
-         "id": "localhost",
-         "name": "FIDO2/WebAuthn PQC Developer Tools"
-        },
-        "user": {
-         "displayName": "A. User",
-         "id": "757365722d68616e646c65",
-         "name": "user@example.com"
-        }
+        ]
        }
       },
       "advanced_register_allowed_attachments": [

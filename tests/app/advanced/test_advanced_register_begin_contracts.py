@@ -161,11 +161,10 @@ def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkey
                 "id": "normalized.example",
                 "name": "Normalized RP",
             }
-            assert session_state["advanced_original_request"]["publicKey"]["rp"] == {
-                "id": "normalized.example",
-                "name": "Normalized RP",
-                "icon": "https://example.com/icon.png",
-            }
+            # Only what complete's checks read of the request: no rp, user or excluded IDs.
+            kept = session_state["advanced_original_request"]["publicKey"]
+            assert set(kept) == {"pubKeyCredParams", "challenge"}
+            assert kept["pubKeyCredParams"] == payload["publicKey"]["pubKeyCredParams"]
 
 
 def test_advanced_register_begin_normalizes_pubkeycredparams_and_filters_invalid_entries(monkeypatch):

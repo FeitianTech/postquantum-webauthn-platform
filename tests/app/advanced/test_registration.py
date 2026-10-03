@@ -1,10 +1,19 @@
 """Tests for the advanced register complete route."""
 from __future__ import annotations
 
+import hashlib
+
 from fido2 import cbor
 
 from tests.app.entry_app import entry_app
-from tests.app.security.ceremony_helpers import advanced_public_key_options
+from tests.app.security.ceremony_helpers import (
+    ORIGIN,
+    Authenticator,
+    advanced_public_key_options,
+    b64u,
+    registration_payload,
+    unb64u,
+)
 
 from .registration_ceremony import register
 
@@ -40,6 +49,28 @@ def test_requested_extensions_that_are_no_object_fail_the_registration(advanced_
     assert response.status_code == 400
     assert response.get_json()["error"]
     assert response.get_json()["challengeStatus"] == "fresh"
+
+
+def test_a_4096_byte_excluded_id_still_fits_the_session_cookie(advanced_stores):
+    # The largest fake credential ID the Advanced form adds (logic/advanced/fake-credentials.js).
+    excluded = [{"type": "public-key", "id": {"$base64url": b64u(hashlib.shake_256(b"fake").digest(4096))}}]
+    client = entry_app().test_client()
+    options = {**advanced_public_key_options(challenge=b"\x73" * 32), "excludeCredentials": excluded}
+
+    begin = client.post("/api/advanced/register/begin", json={"publicKey": options})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    complete = client.post(
+        "/api/advanced/register/complete",
+        json={
+            "publicKey": {**advanced_public_key_options(challenge=challenge), "excludeCredentials": excluded},
+            "__credential_response": registration_payload(Authenticator(), challenge=challenge),
+        },
+        headers={"Origin": ORIGIN},
+    )
+
+    # Werkzeug's limit for a Set-Cookie header, just under what browsers keep.
+    assert all(len(header) <= 4093 for header in begin.headers.getlist("Set-Cookie"))
+    assert complete.status_code == 200, complete.get_json()
 
 
 def _begin(public_key_changes):
