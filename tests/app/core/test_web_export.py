@@ -1,6 +1,5 @@
 """The site's pages are the UI's static export, served at ``/``
-(``routes/web_export.py``); ``/beta``, which old links still name,
-redirects there.
+(``routes/web_export.py``).
 
 Every test builds its own export in ``tmp_path`` (the ``export_root`` fixture):
 pytest never needs Node, and never reads a ``web/out`` a local build (or Cloud
@@ -174,7 +173,7 @@ def test_an_export_without_a_404_page_answers_a_plain_404(make_app, tmp_path):
 def test_the_pages_carry_the_security_headers_of_every_answer(site):
     api = site.get("/health")
 
-    for url in ("/", "/index.html", "/_next/static/chunks/main-abc123.js", "/nothing-here", "/beta"):
+    for url in ("/", "/index.html", "/_next/static/chunks/main-abc123.js", "/nothing-here"):
         response = site.get(url)
         for header in SECURITY_HEADERS:
             assert response.headers.get(header) == api.headers.get(header), (url, header)
@@ -207,45 +206,9 @@ def test_every_other_rule_still_answers_for_itself(site):
         assert endpoint == rule.endpoint, rule.rule
 
 
-# -- /beta, which old links still name ------------------------------------------------------
+def test_an_old_beta_link_answers_the_404_page(site):
+    response = site.get("/beta/")
 
+    assert response.status_code == 404
+    assert response.data == NOT_FOUND
 
-@pytest.mark.parametrize(
-    ("url", "location"),
-    [
-        ("/beta", "/"),
-        ("/beta/", "/"),
-        ("/beta/favicon.ico", "/favicon.ico"),
-        ("/beta/index.html", "/index.html"),
-        ("/beta/_next/static/chunks/main-abc123.js", "/_next/static/chunks/main-abc123.js"),
-        ("/beta/no-such-page", "/no-such-page"),
-        ("/beta?x=1&y=%20z", "/?x=1&y=%20z"),
-        ("/beta/favicon.ico?q=%E2%9C%93", "/favicon.ico?q=%E2%9C%93"),
-        ("/beta/a%20b", "/a%20b"),
-    ],
-)
-def test_beta_redirects_permanently_to_the_same_path_at_the_root(site, url, location):
-    response = site.get(url)
-
-    assert response.status_code == 308
-    assert response.headers["Location"] == location
-    # Revalidated, so a browser does not hold the redirect past a rollback.
-    assert response.headers["Cache-Control"] == "no-cache"
-
-
-@pytest.mark.parametrize(
-    "url",
-    ["/beta/%09/evil.example", "/beta/%5Cevil.example", "/beta/%5C%5Cevil.example", "/beta//evil.example", "/beta/%2F%2Fevil.example"],
-)
-def test_beta_never_redirects_to_another_origin(site, url):
-    response = site.get(url)
-
-    location = response.headers.get("Location", "/")
-    assert location.startswith("/"), location
-    assert not location.startswith("//"), location
-    assert "\\" not in location and "\t" not in location, location
-
-
-def test_beta_redirects_a_head_and_a_post_alike(site):
-    assert site.head("/beta/favicon.ico").headers["Location"] == "/favicon.ico"
-    assert site.post("/beta/favicon.ico").status_code == 405

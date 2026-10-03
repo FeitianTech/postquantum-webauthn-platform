@@ -118,8 +118,7 @@ the page in a real browser.
   `.gz` copies; the export's 404 page for an unknown path. No Node runs in production.
 - **Flask** answers everything with a static segment first: `/health`, `/api/…` (a
   plain 404 when unknown), `/assets/mds/…` (the MDS explorer's list, its icons and each
-  entry's detail, derived from the snapshot: docs/MDS_SNAPSHOT.md; no snapshot file),
-  and `/beta` and `/beta/…`, a permanent redirect (308) to the same path at `/`. The
+  entry's detail, derived from the snapshot: docs/MDS_SNAPSHOT.md; no snapshot file). The
   export's files and `/assets/` never set the session's cookie, and the page fetches the
   MDS list without it: an answer landing after a ceremony's begin cannot put back the
   session from before it.

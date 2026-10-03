@@ -10,14 +10,10 @@
   export at all, Werkzeug's plain 404. A path under ``/api/`` that no route
   holds answers the plain 404, as an API should.
 - ``/health`` answers ``ok``, the liveness probe Cloud Run and the image check use.
-- ``/beta`` and every ``/beta/...`` path answer a permanent redirect (308) to the
-  same path at ``/`` with its query, so old links keep working; the browser keeps
-  the ``#hash``. The redirect is
-  revalidated like the pages, so a browser does not hold it past a rollback.
 
 The page rule is the site's catch-all, as Flask's own static rule was before it
 (``config/application.py`` no longer adds one): Werkzeug tries every rule with a
-static segment first (``/health``, ``/api/...``, ``/assets/...``, ``/beta...``),
+static segment first (``/health``, ``/api/...``, ``/assets/...``),
 and a method no other rule takes falls through to it and is refused, as before.
 
 The app's ``after_request`` handlers give these answers the same security
@@ -29,7 +25,7 @@ from __future__ import annotations
 import mimetypes
 import os
 
-from flask import Blueprint, abort, current_app, redirect, request, send_file, url_for
+from flask import Blueprint, abort, current_app, request, send_file
 from werkzeug.security import safe_join
 
 from ..config.web_export import WEB_EXPORT_ROOT_KEY
@@ -93,22 +89,6 @@ def page(subpath: str = ""):
     if relative.startswith(_IMMUTABLE_PREFIX):
         return send_precompressed(path, IMMUTABLE_CACHE_CONTROL)
     return send_precompressed(path, REVALIDATE_CACHE_CONTROL)
-
-
-@bp.route("/beta")
-@bp.route("/beta/")
-@bp.route("/beta/<path:subpath>")
-def beta(subpath: str = ""):
-    # Built by url_for, never by joining text: each segment is quoted, and no
-    # leading slash is kept, so no path (a tab, a backslash, a second slash) can
-    # make the target another origin's URL.
-    subpath = subpath.lstrip("/")
-    location = url_for("web_export.page", subpath=subpath) if subpath else url_for("web_export.page")
-    if request.query_string:
-        location = f"{location}?{request.query_string.decode('latin-1')}"
-    response = redirect(location, code=308)
-    response.headers["Cache-Control"] = REVALIDATE_CACHE_CONTROL
-    return response
 
 
 def send_precompressed(path: str, cache_control: str):

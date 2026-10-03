@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-
 import type { Locator, Page } from '@playwright/test';
 
 import { greyFills } from './design-rules';
@@ -8,10 +5,9 @@ import { expect, test } from './fixtures';
 
 // The site at /, served by Flask from the built export under the strict CSP:
 // the shell, the sections, the Analyze Browser panel, the phone menu, the 404
-// page, the old /beta links, and the design system's rules checked on the
-// page itself in a real browser.
+// page, and the design system's rules checked on the page itself in a real
+// browser.
 
-const repo = resolve(import.meta.dirname, '..', '..');
 const SECTIONS = ['Simple Authentication', 'Advanced Authentication', 'Codec', 'FIDO MDS Authenticators'];
 
 // The top bar's highlight (the Codec's Decode / Encode switch has its own).
@@ -269,58 +265,3 @@ test.describe('the app shell', () => {
   });
 });
 
-// Old /beta links: every one lands where it pointed, the hash kept across the
-// redirect.
-test.describe('an old /beta link', () => {
-  test('is answered by a permanent redirect to the same path at /, not cached', async ({ page }) => {
-    for (const [from, to] of [
-      ['/beta', '/'],
-      ['/beta/favicon.ico', '/favicon.ico'],
-      ['/beta?x=1', '/?x=1'],
-    ]) {
-      const answer = await page.request.get(from, { maxRedirects: 0 });
-      expect(answer.status(), from).toBe(308);
-      expect(answer.headers()['location'], from).toBe(to);
-      expect(answer.headers()['cache-control'], from).toBe('no-cache');
-    }
-  });
-
-  test('to a section or an MDS entry opens it', async ({ page }) => {
-    await page.goto('/beta#advanced');
-    await expect(page).toHaveURL(/\/#advanced$/);
-    await expect(page.getByRole('tabpanel', { name: 'Advanced Authentication' })).toBeVisible();
-
-    await page.goto('/beta?from=old#codec');
-    await expect(page).toHaveURL(/\/\?from=old#codec$/);
-    await expect(page.getByRole('tabpanel', { name: 'Codec' })).toBeVisible();
-
-    await page.goto('/beta#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000001');
-    await expect(page).toHaveURL(/\/#mds\/aaguid:f1d0f1d0-0000-4000-8000-000000000001$/);
-    await expect(page.locator('[data-mds-entry]').getByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeVisible();
-  });
-
-  test('to a saved credential\'s registration opens that level', async ({ page }) => {
-    const registered = JSON.parse(
-      readFileSync(join(repo, 'tests', 'app', 'characterization', 'golden', 'routes', 'registration-detail-decodes.json'), 'utf8'),
-    ).requests.find((entry: { request: string }) => entry.request.includes('/register/complete')).body.storedCredential;
-    await page.goto('/');
-    await page.evaluate((record) => window.localStorage.setItem('postquantum-webauthn.credentials', JSON.stringify([record])), {
-      ...registered,
-      type: 'simple',
-      userName: 'old-link@example.com',
-      email: 'old-link@example.com',
-    });
-
-    await page.goto(`/beta#simple/credential/id:${registered.credentialIdBase64Url}/registration`);
-    await expect(page).toHaveURL(new RegExp(`/#simple/credential/id:${registered.credentialIdBase64Url}/registration$`));
-    await expect(page.getByRole('dialog').locator('[data-level="registration"]')).toBeVisible();
-  });
-
-  test('to a missing page lands on it', async ({ page, watch }) => {
-    watch.allow(/status of 404/);
-    const missing = await page.goto('/beta/no-such-page');
-    expect(missing?.status()).toBe(404);
-    await expect(page).toHaveURL(/\/no-such-page$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
-  });
-});

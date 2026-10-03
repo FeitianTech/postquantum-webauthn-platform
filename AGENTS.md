@@ -257,8 +257,8 @@ its logic out here first.
   certificate decoding);
   `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`, and the export at `/`:
   the site's catch-all, since Flask has no static rule; HTML `no-cache`, `/_next/static/`
-  immutable with the build's `.gz`, the export's 404 page, a plain 404 under `/api/`; `/beta…`
-  308 to `/…`, built with `url_for`; `send_precompressed`); `routes/assets.py` (the explorer's
+  immutable with the build's `.gz`, the export's 404 page, a plain 404 under `/api/`;
+  `send_precompressed`); `routes/assets.py` (the explorer's
   files under `/assets/mds/`: the list at one URL revalidated by its ETag, the icons by digest,
   each entry's detail at `?v=<version>`; no snapshot file at any path); `routes/csp_report.py`
   (one WARNING line per violation, bounded);

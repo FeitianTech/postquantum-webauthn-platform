@@ -43,14 +43,6 @@ test.describe('/#mds', () => {
     await expect(header(page, 'Date Updated')).toHaveAttribute('aria-sort', 'descending');
   });
 
-  test('loads from an old /beta/ link too, asking the API at its own path', async ({ page }) => {
-    const requests: string[] = [];
-    page.on('request', (request) => requests.push(new URL(request.url()).pathname));
-    await openList(page, '/beta/#mds');
-    expect(requests).toContain('/api/mds/metadata/info');
-    expect(requests.some((path) => path.startsWith('/beta/api/'))).toBe(false);
-  });
-
   test('filters, clears, and sorts', async ({ page }) => {
     await openList(page);
     await filter(page, 'Name').fill('u2f');
