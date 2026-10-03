@@ -14,22 +14,25 @@ from cryptography import x509
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, mldsa, rsa
+from cryptography.x509.oid import SignatureAlgorithmOID
 
 __all__ = [
     "PUBLIC_KEY_TYPES",
     "describe_mldsa_oid",
-    "describe_mldsa_oid_name",
     "extract_certificate_public_key_info",
     "key_parameter_set",
     "parameter_details",
     "with_raw_public_key",
 ]
 
-_OID_TO_PARAMETER_SET: dict[str, str] = {
-    "2.16.840.1.101.3.4.3.17": "ML-DSA-44",
-    "2.16.840.1.101.3.4.3.18": "ML-DSA-65",
-    "2.16.840.1.101.3.4.3.19": "ML-DSA-87",
+# cryptography's OIDs for the three parameter sets, which it names after them
+# (a certificate's signature algorithm reads "ML-DSA-65").
+_PARAMETER_SET_OIDS: dict[str, x509.ObjectIdentifier] = {
+    "ML-DSA-44": SignatureAlgorithmOID.ML_DSA_44,
+    "ML-DSA-65": SignatureAlgorithmOID.ML_DSA_65,
+    "ML-DSA-87": SignatureAlgorithmOID.ML_DSA_87,
 }
+_OID_TO_PARAMETER_SET: dict[str, str] = {oid.dotted_string: name for name, oid in _PARAMETER_SET_OIDS.items()}
 
 # FIPS 204 (final) sizes. The pre-standard CRYSTALS-Dilithium Round 3 signature
 # sizes were 2420/3293/4595; FIPS 204 widened the challenge seed for the two
@@ -62,8 +65,7 @@ def key_parameter_set(public_key: Any) -> tuple[str, str] | None:
 
     for key_type, parameter_set in _KEY_PARAMETER_SETS.items():
         if isinstance(public_key, key_type):
-            oid = next(oid for oid, name in _OID_TO_PARAMETER_SET.items() if name == parameter_set)
-            return parameter_set, oid
+            return parameter_set, _PARAMETER_SET_OIDS[parameter_set].dotted_string
     return None
 
 
@@ -82,13 +84,6 @@ def describe_mldsa_oid(oid: str | None) -> dict[str, str] | None:
     if parameter_set is None:
         return None
     return {"name": "ML-DSA", "mlDsaParameterSet": parameter_set, "display": parameter_set, "oid": oid}
-
-
-def describe_mldsa_oid_name(oid: str | None) -> str | None:
-    """The parameter set's name for a recognised ML-DSA OID."""
-
-    details = describe_mldsa_oid(oid)
-    return details["display"] if details is not None else None
 
 
 def _subject_public_key_bytes(public_key: Any) -> bytes | None:

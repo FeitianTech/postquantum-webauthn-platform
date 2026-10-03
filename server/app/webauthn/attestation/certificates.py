@@ -14,7 +14,7 @@ from fido2.webauthn import RegistrationResponse
 
 from ... import encoding
 from ...encoding import encode_base64
-from ..mldsa import describe_mldsa_oid, describe_mldsa_oid_name
+from ..mldsa import describe_mldsa_oid
 from . import (
     certificate_extensions,
     certificate_names,
@@ -109,7 +109,8 @@ def _extension_entries(certificate: Any) -> list[dict[str, Any]]:
 
 
 def _signature_algorithm(certificate: Any) -> tuple[Any, Any, Any]:
-    """The signature algorithm's OID, display name (ML-DSA's friendly name) and ML-DSA details."""
+    """The signature algorithm's OID, its name as cryptography gives it (ML-DSA's is its
+    parameter set's) or the OID it does not name, and ML-DSA details."""
 
     signature_algorithm_oid = getattr(
         certificate.signature_algorithm_oid,
@@ -126,11 +127,7 @@ def _signature_algorithm(certificate: Any) -> tuple[Any, Any, Any]:
     else:
         signature_algorithm = raw_signature_algorithm
 
-    signature_algorithm_details = describe_mldsa_oid(signature_algorithm_oid)
-    friendly_signature_name = describe_mldsa_oid_name(signature_algorithm_oid)
-    if friendly_signature_name:
-        signature_algorithm = friendly_signature_name
-    return signature_algorithm_oid, signature_algorithm, signature_algorithm_details
+    return signature_algorithm_oid, signature_algorithm, describe_mldsa_oid(signature_algorithm_oid)
 
 
 def _public_key_view(certificate: Any, cert_bytes: bytes) -> tuple[Any, dict[str, Any], list[tuple[str, Any]]]:

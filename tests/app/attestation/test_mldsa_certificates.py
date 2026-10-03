@@ -147,15 +147,22 @@ def test_truncated_certificate_is_rejected(label, key_cls, key_len, sig_len, oid
         mldsa_info.extract_certificate_public_key_info(der[: len(der) // 2])
 
 
-def test_oid_names_and_descriptions_for_each_parameter_set():
+def test_oid_descriptions_for_each_parameter_set():
     for label, _key_cls, _key_len, _sig_len, oid in PARAMETER_SETS:
-        assert mldsa_info.describe_mldsa_oid_name(oid) == label
         assert mldsa_info.describe_mldsa_oid(oid) == {
             "name": "ML-DSA", "mlDsaParameterSet": label, "display": label, "oid": oid,
         }
     for other in ("1.2.840.113549.1.1.11", "", None):
-        assert mldsa_info.describe_mldsa_oid_name(other) is None
         assert mldsa_info.describe_mldsa_oid(other) is None
+
+
+@pytest.mark.parametrize("label,key_cls,key_len,sig_len,oid", PARAMETER_SETS)
+def test_an_mldsa_signature_is_named_for_its_parameter_set(label, key_cls, key_len, sig_len, oid):
+    key = key_cls.generate()
+    signature = serialize_attestation_certificate(_certificate(key, issuer_key=key))["signature"]
+
+    assert signature["algorithm"] == label
+    assert signature["oid"] == oid
 
 
 def test_parameter_details_are_the_fips_204_sizes():
