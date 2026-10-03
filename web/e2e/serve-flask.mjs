@@ -1,7 +1,8 @@
-// Starts the Flask app for the browser tests, as production runs it but with
-// every store in a temporary directory (nothing is written to the checkout), the
-// MDS fixture as its snapshot and the relying party pinned to localhost. Stops
-// Flask and removes the directory when Playwright stops it.
+// Starts the Flask app for the browser tests: the app production runs, served by
+// Flask's own server rather than gunicorn, with every store in a temporary
+// directory (nothing is written to the checkout), the MDS fixture as its snapshot
+// and the relying party pinned to localhost. Stops Flask and removes the
+// directory when Playwright stops it.
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { cpSync, mkdtempSync, rmSync } from 'node:fs';

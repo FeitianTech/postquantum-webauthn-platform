@@ -76,8 +76,7 @@ jobs:
               print(f"Imported {module}")
           PY
 
-      # Run under coverage so the fail_under floor in .coveragerc is enforced on
-      # every push and PR, not only when the badge workflow runs on main.
+      # Under coverage, so .coveragerc's fail_under floor holds on every push and PR.
       - name: Run pytest with coverage
         run: |
           coverage run -m pytest --maxfail=1 --disable-warnings -q -p no:cov
