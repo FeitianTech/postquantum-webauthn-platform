@@ -64,8 +64,8 @@ def _metadata_entry_by_aaguid(verifier: Any, credential_aaguid_bytes: bytes) -> 
     """The metadata entry for the credential's AAGUID, or ``None``; a failed lookup is no entry."""
 
     try:
-        aaguid_obj = Aaguid.fromhex(credential_aaguid_bytes.hex())
-    except Exception:
+        aaguid_obj = Aaguid(credential_aaguid_bytes)
+    except (TypeError, ValueError):
         return None
     if verifier is None:
         verifier = mds_verifier.get_mds_verifier()
