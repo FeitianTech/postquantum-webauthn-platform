@@ -301,8 +301,11 @@ page updates the saved credentials, which both tabs show.
 
 - `pytest -q` (`tests/`); `cd web && npm test` (both vitest projects); `npm run e2e`.
   Targeted: `pytest -q tests/app/<file>.py`, `npx vitest run --project logic <path>`.
-- A test goes in the file of the module it tests (`test_<module>.py`, in its area's folder under
-  `tests/app/`) and is named for the behaviour it checks. Tests import the app's modules at the
+- A test of one module goes in that module's file (`test_<module>.py`, in its area's folder
+  under `tests/app/`); a test of one behaviour across modules goes in a file named for that
+  behaviour (`security/test_registration_race.py`, `storage/test_storage_read_errors.py`).
+  Each test is named for the behaviour it checks. Older files named for neither (the
+  `*_contracts`, `*_edges` files) take no new tests. Tests import the app's modules at the
   top; a shared helper lives once (`tests/app/fido2_stand_ins.py`,
   `tests/app/security/ceremony_helpers.py`, `tests/app/storage/credential_seed.py`, …).
 - `make_app` (`tests/app/conftest.py`) builds an app from the environment at that moment:
