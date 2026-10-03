@@ -57,7 +57,7 @@ the CSP and the source rules.
   text fields carry `data-text-field`. `@source not` keeps Tailwind out of `src/logic` and
   `src/test/logic`.
 - `src/components/ui/`: the primitives (Button, IconButton, text fields, Select, Switch,
-  ToggleChip, SegmentedControl, Card, Badge, StatusChip, Overlay with Dialog / Drawer / Sheet,
+  ToggleChip, SegmentedControl, Badge, StatusChip, Overlay with Dialog / Drawer / Sheet,
   Toast, InfoPopover, the table primitives, MonoValue, CodeBlock, KeyValueGrid,
   ConfirmDialog, FieldRow, OverlayHeader with `back`). Overlays stack: a module-level list of
   open layers, z-index by depth, only the top one handling Escape and Tab, focus returned
