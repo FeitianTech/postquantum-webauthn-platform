@@ -230,6 +230,27 @@ def test_put_snapshot_route_returns_400_when_store_fails(monkeypatch):
     assert response.get_json() == {"error": "Unable to store artifact snapshot."}
 
 
+def test_a_snapshot_the_store_cannot_be_made_for_is_not_stored(monkeypatch, advanced_stores, tmp_path):
+    # The artifact store's folder is a file: nothing can be made under it.
+    blocked = tmp_path / "artifacts-blocked"
+    blocked.write_text("not a folder")
+    monkeypatch.setenv("FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR", str(blocked))
+
+    with entry_app().test_client() as client:
+        response = client.put("/api/advanced/credential-artifacts/cred-4/snapshot", json={"snapshot": {"view": 1}})
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "Unable to store artifact snapshot."}
+
+
+def test_a_blank_artifact_id_is_refused():
+    with entry_app().test_client() as client:
+        response = client.delete("/api/advanced/credential-artifacts/%20")
+
+    assert response.status_code == 400
+    assert response.get_json() == {"status": "failed", "error": "Invalid storage identifier."}
+
+
 def test_put_snapshot_route_stores_snapshot_using_merge(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
 

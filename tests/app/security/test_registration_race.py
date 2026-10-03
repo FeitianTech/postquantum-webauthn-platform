@@ -175,6 +175,21 @@ def test_a_save_that_failed_before_it_landed_is_an_error(app, monkeypatch, crede
     assert _stored_ids(client) == []
 
 
+def test_a_save_that_failed_and_cannot_be_checked_is_an_error(app, monkeypatch, credential_store):
+    def _fails(*_args, **_kwargs):
+        raise OSError("bucket unreachable")
+
+    client = app.test_client()
+    begun = _begin(client)
+    monkeypatch.setattr(storage_credentials, "save_if_unchanged", _fails)
+    # The read that would tell a save that landed from one that did not fails too.
+    monkeypatch.setattr(storage_credentials, "readkey", _fails)
+    response = _complete(client, Authenticator(), begun)
+
+    assert response.status_code == 500
+    assert response.get_json() == {"error": "Unable to persist registered credential."}
+
+
 def test_a_failed_read_is_an_error_not_an_empty_list_to_overwrite(app, monkeypatch, credential_store):
     client = app.test_client()
     first = Authenticator(credential_id=b"\x01" * 32)

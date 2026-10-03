@@ -6,6 +6,7 @@ import base64
 from types import SimpleNamespace
 
 import pytest
+from fido2 import cbor
 
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.characterization import material
@@ -47,6 +48,17 @@ def test_a_certificate_malformed_past_its_load_is_reported_as_what_went_wrong():
     assert 'location: ["subject"]' in serialized["parseError"]
     assert serialized["raw"] == MALFORMED_SUBJECT.hex()
     assert serialized["summary"].startswith("Unable to parse attestation certificate using cryptography.x509.")
+
+
+def test_an_attestation_statement_that_is_no_map_has_no_certificates():
+    authenticator = ceremony_helpers.Authenticator()
+    payload = ceremony_helpers.registration_payload(authenticator, challenge=b"challenge")
+    attestation = cbor.encode({"fmt": "none", "attStmt": [1], "authData": authenticator.authenticator_data()})
+    payload["response"]["attestationObject"] = ceremony_helpers.b64u(attestation)
+
+    fmt, statement, _attestation, _client_data, _extensions, first, chain = attestation_certificates.extract_attestation_details(payload)
+
+    assert (fmt, statement, first, chain) == ("none", [1], None, [])
 
 
 def test_each_x5c_entry_is_serialised_or_reported_as_what_went_wrong():

@@ -30,6 +30,19 @@ def test_allow_list_entries_that_name_no_saved_credential_are_passed_over():
     ]
 
 
+def test_a_credential_saved_twice_is_offered_once():
+    authenticator = Authenticator()
+    entry = authenticator.stored_credential_entry()
+
+    # An allow list naming no saved credential offers every saved one instead.
+    response = begin(entry_app().test_client(), [entry, entry], allowCredentials=[{"type": "public-key", "id": "00" * 16}])
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["publicKey"]["allowCredentials"] == [
+        {"id": b64u(authenticator.credential_id), "type": "public-key"}
+    ]
+
+
 def test_a_record_without_credential_id_bytes_is_never_offered():
     records = [{"id": "not bytes", "data": "unread"}, {"id": b"\x01", "data": "offered"}]
 
