@@ -10,7 +10,7 @@ from ..storage import fake_gcs
 
 
 def test_bulk_credential_artifact_route_returns_requested_items(monkeypatch):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: "session-id")
 
     def _load(storage_id, *, session_id=None):
         assert session_id == "session-id"
@@ -35,7 +35,7 @@ def test_bulk_credential_artifact_route_returns_requested_items(monkeypatch):
 
 
 def test_bulk_credential_artifact_route_requires_array(monkeypatch):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: "session-id")
 
     with entry_app().test_client() as client:
         response = client.post(
@@ -48,7 +48,7 @@ def test_bulk_credential_artifact_route_requires_array(monkeypatch):
 
 
 def test_bulk_credential_artifact_route_trims_dedupes_and_ignores_invalid_ids(monkeypatch):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: "session-id")
 
     observed_storage_ids = []
 
@@ -82,7 +82,7 @@ def test_bulk_credential_artifact_route_trims_dedupes_and_ignores_invalid_ids(mo
 
 
 def test_get_credential_artifact_route_returns_payload(monkeypatch):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: "session-id")
     monkeypatch.setattr(
         credential_artifacts,
         "load_credential_artifact",
@@ -102,7 +102,7 @@ def test_get_credential_artifact_route_returns_payload(monkeypatch):
 
 
 def test_get_credential_artifact_route_returns_404_when_missing(monkeypatch):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: "session-id")
     monkeypatch.setattr(credential_artifacts, "load_credential_artifact", lambda *_args, **_kwargs: None)
 
     with entry_app().test_client() as client:
@@ -278,7 +278,7 @@ def test_put_snapshot_route_stores_snapshot_using_merge(monkeypatch):
     ],
 )
 def test_delete_credential_artifact_route_reports_status(monkeypatch, delete_status, expected_http_status, expected_payload):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: "session-id")
     monkeypatch.setattr(
         credential_artifacts,
         "delete_credential_artifact_with_status",
@@ -300,6 +300,7 @@ def test_an_artifact_the_store_cannot_read_answers_503_not_missing_or_unstored(
     # bulk answer), and a merge that could not read answered 400.
     bucket = fake_gcs.install(monkeypatch, credential_artifacts)
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
+    monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: "session-id")
     blob_name = credential_artifacts._artifact_blob("cred-1", "session-id")
     bucket.put(blob_name, json.dumps({"storageId": "cred-1", "payload": {"kept": True}}).encode())
     bucket.failing[blob_name] = fake_gcs.ServiceUnavailable("503 at /secret/path")
@@ -319,3 +320,19 @@ def test_an_artifact_the_store_cannot_read_answers_503_not_missing_or_unstored(
     assert "/secret/path" not in response.get_data(as_text=True)
     bucket.failing.clear()
     assert json.loads(bucket.objects[blob_name][0])["payload"] == {"kept": True}
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "body", "status", "answer"),
+    [
+        ("GET", "/api/advanced/credential-artifacts/cred-1", None, 404, {"error": "Credential artifact not found."}),
+        ("POST", "/api/advanced/credential-artifacts/bulk", {"storageIds": ["cred-1"]}, 200, {"artifacts": {}}),
+        ("DELETE", "/api/advanced/credential-artifacts/cred-1", None, 200, {"status": "absent"}),
+    ],
+)
+def test_a_visitor_without_a_namespace_reads_and_deletes_without_being_given_one(method, path, body, status, answer):
+    with entry_app().test_client() as client:
+        response = client.open(path, method=method, json=body)
+
+    assert (response.status_code, response.get_json()) == (status, answer)
+    assert response.headers.getlist("Set-Cookie") == []
