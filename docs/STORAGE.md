@@ -47,3 +47,24 @@ names as prefixes (`cloud.list_prefixes`), so a flat object is not a session.
 
 A name the store refuses raises `common.InvalidStorageIdentifier`, a `ValueError`
 that `routes/errors.py` answers with 400 and no traceback.
+
+## The session and the namespace cookie
+
+Two cookies, both signed with the app's secret, `HttpOnly`, `SameSite=Lax`, and
+`Secure` as `SESSION_COOKIE_SECURE` says (on Cloud Run):
+
+- Flask's session holds a ceremony's state from its begin to its complete, and no
+  store reads or writes it. Only an answer that changed it sets the cookie
+  (`SESSION_REFRESH_EACH_REQUEST` is off, `config/session_cookie.py`), so an answer
+  that lands after a begin cannot undo it; it is accepted for
+  `FIDO_SERVER_SESSION_LIFETIME_SECONDS` (30 minutes) after it was signed. A begin
+  whose cookie would pass the browser's 4 KB is refused with a 400 and leaves the
+  session as it was (`routes/ceremony_session.py`).
+- `fido.mds.session` names the visitor's namespace, under which every store keeps
+  their records: locally `<store dir>/<namespace>/`, on Cloud Storage
+  `user-data/<namespace>/<store>/`. A route that stores something for the visitor
+  mints it (`visitor_session.ensure_id`); a route that only reads mints none. It
+  lasts a year and is signed again once a day old. A namespace idle for 14 days is
+  removed whole, on both backends, by one sweep at most every 6 hours
+  (`visitor_session.schedule_cleanup`). Deleting a visitor's last upload removes only
+  the local uploads folder, never their credentials or artifacts.
