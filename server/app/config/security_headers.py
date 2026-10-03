@@ -91,8 +91,8 @@ def config_from_env() -> dict[str, Any]:
     return {
         "CONTENT_SECURITY_POLICY": os.environ.get("FIDO_SERVER_CONTENT_SECURITY_POLICY")
         or _DEFAULT_CONTENT_SECURITY_POLICY,
-        "REPORTING_ENDPOINTS": os.environ.get("FIDO_SERVER_REPORTING_ENDPOINTS")
-        or _DEFAULT_REPORTING_ENDPOINTS,
+        # The policies' report-to names this group: the two are one setting.
+        "REPORTING_ENDPOINTS": _DEFAULT_REPORTING_ENDPOINTS,
         "PERMISSIONS_POLICY": _DEFAULT_PERMISSIONS_POLICY,
         "STRICT_TRANSPORT_SECURITY": _DEFAULT_STRICT_TRANSPORT_SECURITY,
     }

@@ -126,14 +126,14 @@ def test_the_shipped_policies_are_exactly_these(client):
     assert "unsafe" not in headers["Content-Security-Policy"]
 
 
-def test_the_policies_can_be_set_in_the_environment(monkeypatch, make_app):
+def test_the_policy_can_be_set_in_the_environment_and_the_reporting_endpoints_cannot(monkeypatch, make_app):
     monkeypatch.setenv("FIDO_SERVER_CONTENT_SECURITY_POLICY", "default-src 'none'")
     monkeypatch.setenv("FIDO_SERVER_REPORTING_ENDPOINTS", 'csp="https://reports.example/csp"')
 
     headers = make_app().test_client().get("/health").headers
 
     assert headers["Content-Security-Policy"] == "default-src 'none'"
-    assert headers["Reporting-Endpoints"] == 'csp="https://reports.example/csp"'
+    assert headers["Reporting-Endpoints"] == REPORTING_ENDPOINTS
 
 
 def test_security_headers_do_not_clobber_an_explicit_value():
