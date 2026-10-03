@@ -7,21 +7,13 @@
 // `statusReports`. A section the page leaves out is not in the list; the
 // Overview and the Metadata Statement always are, even with nothing under them.
 import { MISSING_CELL_TEXT } from './rows.js';
-import { formatDetailValue, formatUpv } from '../formatters.js';
-import { aaguidGuid } from '../../shared/aaguid.js';
+import { formatUpv } from '../formatters.js';
+import { chipList, describe, extractList, field, present, rawDisplayString } from './detail-fields.js';
+import { authenticatorInfoSection } from './get-info.js';
 import { BIOMETRIC_REPORT_COLUMNS, STATUS_REPORT_COLUMNS, biometricReportRow, statusReportRow } from './status-reports.js';
 
+/** @import { ChipList, DetailField } from './detail-fields.js' */
 /** @import { StatusReportRow } from './status-reports.js' */
-
-export function extractList(value) {
-    if (!value) {
-        return [];
-    }
-    if (Array.isArray(value)) {
-        return value.filter(Boolean);
-    }
-    return [value];
-}
 
 export const DEFAULT_DETAIL_TITLE = 'Authenticator';
 
@@ -67,56 +59,6 @@ export function formatDetailSubtitle(entry) {
     return detailSubtitleParts(entry)
         .map(part => (part.label ? `${part.label}: ${part.value}` : part.value))
         .join(' • ');
-}
-
-// One list item (never null: the list reader drops empty items first).
-function rawDisplayString(value) {
-    if (typeof value === 'string') {
-        return value;
-    }
-    if (typeof value === 'number' || typeof value === 'bigint') {
-        return String(value);
-    }
-    try {
-        // true as "true", an object as its JSON; a function or a symbol has no
-        // JSON: nothing to show.
-        return JSON.stringify(value) ?? '';
-    } catch {
-        try {
-            return String(value);
-        } catch {
-            return '';
-        }
-    }
-}
-
-// A list's values as the metadata writes them (a number as written, a boolean
-// as true / false, an object as its JSON), the empty ones left out.
-export function rawListValues(value) {
-    return extractList(value)
-        .map(item => rawDisplayString(item))
-        .filter(text => text !== '');
-}
-
-// A field is shown when it has a value that is not blank.
-function field(label, value, { identifier = false } = {}) {
-    if (value === undefined || value === null) {
-        return null;
-    }
-    const text = String(value);
-    if (!text.trim()) {
-        return null;
-    }
-    return identifier ? { label, value: text, identifier: true } : { label, value: text };
-}
-
-function present(items) {
-    return items.filter(Boolean);
-}
-
-function chipList(label, value) {
-    const values = rawListValues(value);
-    return values.length ? { label, values } : null;
 }
 
 function overviewSection(entry, metadata) {
@@ -184,18 +126,6 @@ function metadataStatementSection(entry, metadata) {
     };
 }
 
-// A descriptor's properties as "Label: value", joined by " • ", each only when
-// the descriptor has it; '' for no descriptor.
-function describe(descriptor, properties) {
-    if (!descriptor || typeof descriptor !== 'object') {
-        return '';
-    }
-    return properties
-        .filter(([key]) => descriptor[key] !== undefined)
-        .map(([key, label]) => `${label}: ${descriptor[key]}`)
-        .join(' • ');
-}
-
 const CODE_ACCURACY = [
     ['base', 'Base'],
     ['minLength', 'Min length'],
@@ -256,42 +186,6 @@ function attestationCertificates(certificates) {
     }));
 }
 
-const GET_INFO_NUMBERS = [
-    ['maxMsgSize', 'Max Message Size'],
-    ['maxCredentialCountInList', 'Max Credential Count'],
-    ['maxCredentialIdLength', 'Max Credential ID Length'],
-    ['maxSerializedLargeBlobArray', 'Max Serialized Large Blob Array'],
-    ['minPINLength', 'Min PIN Length'],
-    ['firmwareVersion', 'Firmware Version'],
-    ['maxCredBlobLength', 'Max Cred Blob Length'],
-    ['maxRPIDsForSetMinPINLength', 'Max RP IDs for Set Min PIN Length'],
-    ['remainingDiscoverableCredentials', 'Remaining Discoverable Credentials'],
-];
-
-function authenticatorInfoSection(info) {
-    const options = info.options && typeof info.options === 'object'
-        ? Object.entries(info.options).filter(([, value]) => value !== undefined && value !== null)
-        : [];
-    return {
-        key: 'authenticatorGetInfo',
-        title: 'Authenticator Get Info',
-        fields: present([
-            info.aaguid ? field('AAGUID', aaguidGuid(info.aaguid) || String(info.aaguid), { identifier: true }) : null,
-            ...GET_INFO_NUMBERS.map(([key, label]) => field(label, info[key])),
-        ]),
-        chipLists: present([
-            chipList('Versions', info.versions),
-            chipList('Extensions', info.extensions),
-            chipList('Transports', info.transports),
-            chipList('Algorithms', info.algorithms),
-            chipList('pinUvAuth Protocols', info.pinUvAuthProtocols),
-            options.length
-                ? { label: 'Options', values: options.map(([key, value]) => `${key}: ${formatDetailValue(value)}`) }
-                : null,
-        ]),
-    };
-}
-
 function reportObjects(value) {
     return Array.isArray(value) ? value.filter(report => report && typeof report === 'object') : [];
 }
@@ -319,9 +213,6 @@ function statusReportsSection(entry) {
 }
 
 /**
- * A field: a value (an identifier is copyable, in Geist Mono), or a list of codes.
- * @typedef {{ label: string, value?: string, codes?: string[], identifier?: boolean }} DetailField
- * @typedef {{ label: string, values: string[] }} ChipList
  * @typedef {object} VerificationMethod
  * @property {string} method
  * @property {string} codeAccuracy

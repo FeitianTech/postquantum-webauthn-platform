@@ -1,4 +1,5 @@
-import type { ChipList, DetailField, DetailSection } from '@/logic/mds/explorer/detail.js';
+import type { DetailSection } from '@/logic/mds/explorer/detail.js';
+import type { ChipList, DetailField } from '@/logic/mds/explorer/detail-fields.js';
 import type { MdsEntry } from '@/logic/mds/explorer/loading.js';
 import { certificationParts, identifierLabel } from '@/logic/mds/explorer/rows.js';
 
@@ -24,7 +25,7 @@ function FieldValue({ field, entry }: { field: DetailField; entry: MdsEntry }) {
       </span>
     );
   }
-  // A field without codes has a value (explorer/detail.js).
+  // A field without codes has a value (explorer/detail-fields.js).
   const value = field.value as string;
   if (field.identifier) {
     // The overview's Identifier is the entry's id, named by its kind.

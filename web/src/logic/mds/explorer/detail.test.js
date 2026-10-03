@@ -2,15 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  DEFAULT_DETAIL_TITLE,
-  detailSections,
-  detailSubtitleParts,
-  detailTitle,
-  extractList,
-  formatDetailSubtitle,
-  rawListValues,
-} from './detail.js';
+import { DEFAULT_DETAIL_TITLE, detailSections, detailSubtitleParts, detailTitle, formatDetailSubtitle } from './detail.js';
 import { BIOMETRIC_REPORT_COLUMNS, STATUS_REPORT_COLUMNS } from './status-reports.js';
 import { repoFile } from '@/test/logic/repo-file.js';
 
@@ -149,16 +141,6 @@ describe('the detail page: sections', () => {
     expect(section(named('Fixture Security Key L1'), 'metadataStatement').fields.map(({ label }) => label)).not.toContain('Key Restricted');
   });
 
-  it('writes a list value as the metadata does', () => {
-    const noJson = Object.assign(Object.create(null), { big: 1n });
-    expect(
-      rawListValues(['a', 1, 2n, true, false, null, { x: 1 }, [1, 2], () => 1, Symbol('s'), { big: 1n }, noJson, '']),
-    // A false or null item is dropped with the empty ones, as the list reader does.
-    ).toEqual(['a', '1', '2', 'true', '{"x":1}', '[1,2]', '[object Object]']);
-    expect(rawListValues('one')).toEqual(['one']);
-    expect(rawListValues(undefined)).toEqual([]);
-  });
-
   it('lists each combination with a method or a code accuracy, counting those left out', () => {
     const details = [
       [
@@ -211,65 +193,6 @@ describe('the detail page: sections', () => {
     ]);
     expect(section({ attestationCertificates: [''] }, 'certificates')).toBeUndefined();
     expect(section({ attestationCertificates: 'MIIB' }, 'certificates')).toBeUndefined();
-  });
-
-  it('shows getInfo, its AAGUID dashed, its numbers, chips and options', () => {
-    const info = section(
-      {
-        metadataStatement: {
-          authenticatorGetInfo: {
-            aaguid: 'F1D0F1D0000040008000000000000001',
-            maxMsgSize: 1200,
-            maxCredentialCountInList: 8,
-            maxCredentialIdLength: 128,
-            maxSerializedLargeBlobArray: 1024,
-            minPINLength: 4,
-            firmwareVersion: 0,
-            maxCredBlobLength: 32,
-            maxRPIDsForSetMinPINLength: 1,
-            remainingDiscoverableCredentials: 25,
-            versions: ['FIDO_2_0'],
-            extensions: ['credProtect'],
-            transports: ['usb'],
-            algorithms: [{ type: 'public-key', alg: -7 }],
-            pinUvAuthProtocols: [1, 2],
-            options: { rk: true, up: false, uv: null },
-          },
-        },
-      },
-      'authenticatorGetInfo',
-    );
-    expect(info.title).toBe('Authenticator Get Info');
-    expect(info.fields).toEqual([
-      { label: 'AAGUID', value: 'f1d0f1d0-0000-4000-8000-000000000001', identifier: true },
-      { label: 'Max Message Size', value: '1200' },
-      { label: 'Max Credential Count', value: '8' },
-      { label: 'Max Credential ID Length', value: '128' },
-      { label: 'Max Serialized Large Blob Array', value: '1024' },
-      { label: 'Min PIN Length', value: '4' },
-      { label: 'Firmware Version', value: '0' },
-      { label: 'Max Cred Blob Length', value: '32' },
-      { label: 'Max RP IDs for Set Min PIN Length', value: '1' },
-      { label: 'Remaining Discoverable Credentials', value: '25' },
-    ]);
-    expect(info.chipLists).toEqual([
-      { label: 'Versions', values: ['FIDO_2_0'] },
-      { label: 'Extensions', values: ['credProtect'] },
-      { label: 'Transports', values: ['usb'] },
-      { label: 'Algorithms', values: ['{"type":"public-key","alg":-7}'] },
-      { label: 'pinUvAuth Protocols', values: ['1', '2'] },
-      { label: 'Options', values: ['rk: true', 'up: false'] },
-    ]);
-
-    // An AAGUID that is not one is shown as written; an empty getInfo still has its heading.
-    expect(section({ metadataStatement: { authenticatorGetInfo: { aaguid: 'nope', options: 'x' } } }, 'authenticatorGetInfo')).toEqual({
-      key: 'authenticatorGetInfo',
-      title: 'Authenticator Get Info',
-      fields: [{ label: 'AAGUID', value: 'nope', identifier: true }],
-      chipLists: [],
-    });
-    expect(section({ metadataStatement: { authenticatorGetInfo: {} } }, 'authenticatorGetInfo').fields).toEqual([]);
-    expect(section({ metadataStatement: { authenticatorGetInfo: { options: {} } } }, 'authenticatorGetInfo').chipLists).toEqual([]);
   });
 
   it('gives each status report its cells, the descriptor column\'s two lines and its certificate', () => {
@@ -413,13 +336,5 @@ describe('the detail page: sections', () => {
       ],
     });
     expect(section({ timeOfLastStatusChange: '2026-01-01', rogueListURL: ' ' }, 'statusReports')).toBeUndefined();
-  });
-});
-
-describe('extractList', () => {
-  it('lists a value, keeps a list\'s values, and lists nothing for none', () => {
-    expect(extractList('single')).toEqual(['single']);
-    expect(extractList(['a', '', null, 'b'])).toEqual(['a', 'b']);
-    expect(extractList(null)).toEqual([]);
   });
 });
