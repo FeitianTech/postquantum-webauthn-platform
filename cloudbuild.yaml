@@ -6,8 +6,9 @@
 # with deploy/apply-service-config.sh.
 #
 # GitHub Actions and Cloud Build are independent pipelines: a red CI run does
-# not stop a trigger from firing. The test steps below are therefore the gate
-# that actually stands between a commit on main and production. They run first
+# not stop a trigger from firing. The test steps below (ruff, the Python suite
+# with its coverage floor, and the UI's checks) are therefore the gate that
+# actually stands between a commit on main and production. They run first
 # and in parallel; Build waits for both, so a failing suite fails the build
 # before an image is ever pushed. The Playwright browser tests run in GitHub CI
 # only (ci-web.yml).
@@ -24,7 +25,11 @@ steps:
         # The same uv version the image and CI install from uv.lock with.
         pip install --no-cache-dir --quiet "uv==0.12.15"
         uv sync --locked --python 3.12
-        .venv/bin/python -m pytest -q
+        # ruff's gated set (ruff.toml), the version CI runs.
+        uvx ruff@0.16.8 check .
+        # The suite under coverage, held to .coveragerc's fail_under.
+        .venv/bin/python -m coverage run -m pytest -q
+        .venv/bin/python -m coverage report
 
   # The UI (web/): typecheck, its unit tests and its logic's with their
   # coverage floors, the static export, the export's CSP scan and its size

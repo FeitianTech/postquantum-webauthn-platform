@@ -361,8 +361,8 @@ goldens show what it changes).
 
 - Two independent pipelines run on a push to `main`: GitHub Actions and Cloud Build. A red CI
   run does not stop Cloud Build, so `cloudbuild.yaml` runs its own gate first: `Python tests`
-  (pytest) and `Web tests` (typecheck, both vitest projects with coverage, build, CSP scan,
-  size budget) in parallel, then Build, Push and Deploy (Cloud Run `pqcwebauthn`). Playwright
+  (ruff, pytest with `.coveragerc`'s floor) and `Web tests` (typecheck, both vitest projects
+  with coverage, build, CSP scan, size budget) in parallel, then Build, Push and Deploy (Cloud Run `pqcwebauthn`). Playwright
   runs in GitHub CI only. Keep that gate: it is all that stands between a commit and production.
 - Workflows (`ci-*.yml` run on `pull_request` and on `push` to `main` only): `ci-python.yml`,
   `ci-web.yml` (web and the Playwright tests), `ci-docker.yml` (builds the image and checks it
