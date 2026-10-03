@@ -1,56 +1,29 @@
 # Ruff configuration for the whole repository.
 #
-# It lives in a standalone ruff.toml rather than in pyproject.toml, which holds
-# only the app's dependencies (ruff itself is kept out of uv.lock).
+# A standalone ruff.toml: pyproject.toml holds only the app's dependencies, and
+# ruff is kept out of uv.lock (CI runs `uvx ruff@0.16.8`).
 
-# The app declares requires-python >= 3.12 (pyproject.toml), so PEP 585/604
-# syntax is valid everywhere and the UP modernisation rules are safe to apply.
+# requires-python >= 3.12 (pyproject.toml): PEP 585/604 syntax is valid everywhere.
 target-version = "py312"
 
 [lint]
-# The gated set: every rule here is at zero today and is one we are confident
-# stays at zero. CI fails the build on any violation (.github/workflows/ci-python.yml).
+# The gated set, at zero: .github/workflows/ci-python.yml fails on any violation.
 #
 #   E4/E7/E9  import placement, statement-level errors, syntax errors
-#   F         pyflakes -- undefined names, unused imports, broken __all__, dead locals
+#   F         pyflakes: undefined names (F821 too, with nothing ignored), unused
+#             imports, dead locals
 #   I         import sorting
-#   UP006/UP007/UP035/UP045  PEP 585/604 typing, valid because the floor is 3.12
+#   UP006/UP007/UP035/UP045  PEP 585/604 typing
 #
-# Deliberately NOT gated, and why:
-#   BLE001 (175), S110 (21), S112 (11)  reconnaissance only. A read of 32 of the
-#     S110/S112 sites and a 20-site BLE001 sample put roughly 4 in 5 in the
-#     "load-bearing defensive handler" bucket and the rest in "silently swallows
-#     a failure". Splitting them needs a human decision per site, so they stay
-#     out of the gate rather than being mass-rewritten or mass-suppressed.
-#   RUF100 (63)  its answer depends on which rules are selected, and with a gate
-#     this narrow it calls live markers dead: the blanket `# noqa` on long
-#     fixture lines (E501 is not gated), `# noqa: S101` in tests, and the
-#     `# noqa: F401` re-export markers in `server/app/decoder/encode/__init__.py`,
-#     which ruff only skips because `ignore-init-module-imports` still defaults
-#     to true and which come back the moment that deprecated default is dropped.
-#     The 7 that were genuinely stale have been removed by hand.
-#   The rest of UP, plus B/C4/SIM/RUF012/TRY/DTZ/...  all still have findings.
-#     They are worth adopting, but one rule group at a time with the suite green.
+# There is no per-file ignore, and no package re-exports a name, so no `# noqa: F401`.
+#
+# Not gated, with findings today (ruff 0.16.8):
+#   BLE001 (96), S110 (4), S112 (5)  broad handlers. Most are deliberate (the
+#     decoder showing what it cannot read, for one), so each needs a decision of
+#     its own, not a rewrite or a suppression in bulk.
+#   RUF100 (8)  with a gate this narrow it calls a marker for a rule outside the
+#     gate unused: the blanket `# noqa` on python_fido2_vectors.py's long lines
+#     (E501 is not gated) and the updater's `# noqa: S310`.
+#   The rest of UP, and B, C4, SIM, RUF, TRY, DTZ  findings remain; adopt one
+#     group at a time with the suite green.
 select = ["E4", "E7", "E9", "F", "I", "UP006", "UP007", "UP035", "UP045"]
-
-# F821 is gated, with nothing ignored. It was the progress meter for the
-# split-module runtime hack, where a "carrier" module rebuilt its `*_parts/`
-# fragments' functions against its own globals so the fragments never imported
-# the names they used. It read 1008 before `metadata` was unwound, 557 before
-# `attestation`, 382 before `decoder/decode`, and 0 once the last rebinding was
-# removed.
-#
-# `routes/advanced` and `routes/simple` were the last two carriers, and they
-# coupled differently: rather than rebinding, they passed themselves into their
-# fragments (`_self_module()`) and the fragments read names off the parameter. That
-# shape produces no F821 at all -- to ruff the parameter is just a parameter -- so
-# F821 could not measure it. The meters there were the 498 `advanced_module.` /
-# `simple_module.` reads and the 107 F401/UP035 findings the two per-file-ignores
-# for those files were suppressing. Both are now zero, the ignores are gone, and this
-# file has no [lint.per-file-ignores] section left at all.
-#
-# The `*_parts/` packages themselves are gone too: each carrier is now a package
-# whose `__init__.py` IS the public surface and whose submodules are named for
-# what they do (`webauthn/attestation/{certificates,checks,trust,pqc}.py`,
-# `decoder/decode/{cbor_parser,ctap,pipeline}.py`, and so on). F821 stays at zero
-# because every submodule imports what it uses.
