@@ -14,6 +14,7 @@ import json
 
 import cbor2
 import pytest
+from cryptography import x509
 
 from server.app.decoder.decode import attestation_statement
 from server.app.decoder.decode.text import decode_payload_text
@@ -133,6 +134,53 @@ def test_fido_u2f_names_its_key_and_counts_its_certificates():
     two = {**FIDO_U2F_ATT_STMT, "x5c": FIDO_U2F_ATT_STMT["x5c"] * 2}
     noted = _statement(attestation_object("fido-u2f", two, FIDO_U2F_AUTH_DATA))
     assert noted["fields"]["x5c"]["note"] == "section 8.6: x5c holds exactly one certificate; this holds 2"
+
+
+def test_fido_u2f_names_a_certificate_key_that_is_not_p256_or_cannot_be_read():
+    ed25519_certificate = material.certificate(material.ed25519_key("u2f-ed25519").public_key(), common_name="U2F", serial=8)
+    auth_data = bytes(32) + b"\x01" + bytes(4)
+
+    other = _statement(attestation_object("fido-u2f", {"sig": b"\x00", "x5c": [ed25519_certificate]}, auth_data))
+    unreadable = _statement(attestation_object("fido-u2f", {"sig": b"\x00", "x5c": [b"\x00"]}, auth_data))
+
+    assert other["fields"]["attestnCertKey"] == "Ed25519PublicKey (section 8.6 requires an EC P-256 key; shown, not judged)"
+    assert unreadable["fields"]["attestnCertKey"] == "unreadable"
+    assert unreadable["fields"]["x5c"]["certificates"][0]["error"].startswith("not an X.509 certificate: ")
+
+
+def test_a_tpm_statement_holding_only_its_version_names_what_it_lacks():
+    statement = _statement(attestation_object("tpm", {"ver": "2.0"}, bytes(32) + b"\x01" + bytes(4)))
+
+    assert statement["fields"] == {"ver": "2.0"}
+    assert statement["missing"]["members"] == ["alg", "x5c", "sig", "certInfo", "pubArea"]
+
+
+def test_an_android_key_description_of_the_wrong_shapes_shows_each_error_and_the_rest():
+    # version as an OCTET STRING, softwareEnforced as an INTEGER, and in teeEnforced an
+    # algorithm the schema does not name (99), an application id that is no DER (00),
+    # and a brand that is no UTF-8 (ff).
+    description = bytes.fromhex(
+        "302c0401000a01010201030a010104040000000004000201003013a203020163bf854503040100bf8546030401ff"
+    )
+    key_description = x509.UnrecognizedExtension(x509.ObjectIdentifier("1.3.6.1.4.1.11129.2.1.17"), description)
+    leaf = material.certificate(
+        material.ec_key("android-key-shapes").public_key(), common_name="Android", serial=9, extensions=[(key_description, False)]
+    )
+
+    statement = _statement(attestation_object("android-key", {"alg": -7, "sig": b"\x00", "x5c": [leaf]}, bytes(32) + b"\x01" + bytes(4)))
+    read = statement["fields"]["keyDescription"]
+
+    assert [error["field"] for error in read["errors"]] == [
+        "attestationVersion",
+        "softwareEnforced",
+        "teeEnforced.attestationApplicationId",
+    ]
+    assert read["teeEnforced"] == {
+        "algorithm": {"value": 99, "meaning": "not a value the schema names"},
+        "attestationApplicationId": {"hex": "00"},
+        "attestationIdBrand": {"hex": "ff"},
+    }
+    assert read["keymasterVersion"] == {"value": 3, "meaning": "Keymaster version 3.0"}
 
 
 def test_apple_decodes_the_nonce_and_keeps_what_is_not_in_its_syntax():
