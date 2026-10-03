@@ -15,8 +15,8 @@ demand, in three tiers:
    set ``<bucket>/mds/current.json`` points to is taken: its BLOB and meta,
    each checked against the pointer (``mds.sets``), the BLOB verified against
    the pinned root and the other files derived from the two (``mds.snapshot``);
-   without a usable one, the files missing locally from the flat
-   ``<bucket>/mds/<file>`` objects of earlier releases. This is how a Cloud Run cold start gets the snapshot without
+   without a usable one, the same from the flat ``<bucket>/mds/<file>`` objects
+   of earlier releases (never a snapshot older than the local one). This is how a Cloud Run cold start gets the snapshot without
    shipping it in the image.
 3. **Upstream refresh.** As a last resort the packaged updater is run, which
    downloads the BLOB from the FIDO Alliance and verifies it against the pinned
@@ -159,31 +159,28 @@ def _download_set_from_gcs() -> dict | None:
     return pointer
 
 
-def _download_from_gcs(missing: tuple[str, ...]) -> tuple[str, ...]:
-    """Fetch ``missing`` from the flat objects of earlier releases; return the names still missing."""
+def _download_flat_from_gcs() -> bool:
+    """Take the flat objects of earlier releases: their BLOB and meta, both, the
+    BLOB verified and the other files derived from the two, as for a set. Return
+    whether the snapshot was written; one older than the local one is not."""
 
     if not cloud.gcs_enabled():
-        return missing
-
-    remaining: list[str] = []
-    for filename in missing:
-        try:
-            data = cloud.download_bytes(snapshot_blob_name(filename))
-        except Exception as exc:  # pragma: no cover - network/credential failure
-            logger.warning(
-                "Could not download MDS snapshot file %s from Cloud Storage: %s",
-                filename,
-                exc,
-            )
-            remaining.append(filename)
-            continue
-
-        if data is None:
-            remaining.append(filename)
-            continue
-        write_snapshot_file(filename, data)
-
-    return tuple(remaining)
+        return False
+    try:
+        blob = cloud.download_bytes(snapshot_blob_name(mds_files.BLOB))
+        meta = cloud.download_bytes(snapshot_blob_name(mds_files.VERIFIED_META))
+        if blob is None or meta is None:
+            return False
+        files = mds_snapshot.derive(blob, meta)
+    except Exception as exc:
+        logger.warning("Could not take the flat MDS snapshot from Cloud Storage: %s", exc)
+        return False
+    flat_no, local_no = json.loads(meta).get("no"), _local_snapshot_no()
+    if local_no is not None and (not isinstance(flat_no, int) or flat_no < local_no):
+        logger.warning("The flat MDS snapshot in Cloud Storage is no. %s, older than the local no. %s.", flat_no, local_no)
+        return False
+    _write_set(files)
+    return True
 
 
 def _refresh_from_upstream() -> bool:
@@ -240,7 +237,7 @@ def ensure_snapshot_available(*, force: bool = False) -> str:
                 "MDS snapshot files missing locally (%s); provisioning.",
                 ", ".join(missing),
             )
-            if _download_set_from_gcs() is not None or not _download_from_gcs(missing):
+            if _download_set_from_gcs() is not None or _download_flat_from_gcs():
                 source = "gcs"
             elif upstream_refresh_enabled() and _refresh_from_upstream():
                 source = "upstream"

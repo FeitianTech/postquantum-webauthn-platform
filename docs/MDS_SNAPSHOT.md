@@ -102,7 +102,9 @@ waits.
    the other five files are derived from the two with the updater's own code
    (`mds/snapshot.py`'s `derive`), the payload derived being the file the pointer
    names. Without a usable pointer, or when its set cannot be read and verified, the
-   missing files come from the flat `mds/<file>` objects earlier releases wrote. This is the production path: the Cloud Run service account
+   flat `mds/<file>` objects earlier releases wrote are taken the same way: their BLOB
+   and meta, both (so files of two snapshots never mix), the rest derived, and never
+   a snapshot older than the local one. This is the production path: the Cloud Run service account
    already has access to the `pqcwebauthn` bucket, so no new credentials are involved.
 3. **Upstream refresh.** As a last resort the packaged updater downloads the
    BLOB from `https://mds3.fidoalliance.org/` and verifies it against the

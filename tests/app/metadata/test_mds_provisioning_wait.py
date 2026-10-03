@@ -30,7 +30,7 @@ FIXTURE_ENTRIES = 32
 
 
 @pytest.fixture
-def slow_provisioning(monkeypatch, tmp_path, metadata_state):
+def slow_provisioning(monkeypatch, tmp_path, metadata_state, fixture_blob_root):
     """A warm-up thread provisioning the fixture snapshot from a Cloud Storage that
     answers only once the test releases it. Yields the release."""
 

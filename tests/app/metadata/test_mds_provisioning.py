@@ -81,12 +81,47 @@ def test_a_new_instance_takes_the_set_the_pointer_names(static_root, gcs):
     assert _local(static_root) == snapshot_version(8)
 
 
-def test_without_a_pointer_the_flat_objects_are_downloaded(static_root, gcs):
+def test_without_a_pointer_the_flat_blob_and_meta_are_taken_and_the_rest_derived(static_root, gcs):
     for name, data in snapshot_version(7).items():
         gcs.put(f"mds/{name}", data)
 
     assert provisioning.ensure_snapshot_available() == "gcs"
     assert _local(static_root) == snapshot_version(7)
+    fetched = {name for name, _options in gcs.download_options}
+    assert fetched == {snapshot_sets.pointer_name(), f"mds/{mds_files.BLOB}", f"mds/{mds_files.VERIFIED_META}"}
+
+
+def test_the_flat_snapshot_replaces_an_older_partial_one_whole(static_root, gcs):
+    _flat(gcs, 7)
+    (static_root / mds_files.VERIFIED_META).write_bytes(snapshot_version(6)[mds_files.VERIFIED_META])
+    (static_root / mds_files.BLOB).write_bytes(b"a file of another snapshot")
+
+    assert provisioning.ensure_snapshot_available() == "gcs"
+    assert _local(static_root) == snapshot_version(7)
+
+
+def test_a_flat_snapshot_older_than_the_local_one_is_not_taken(static_root, gcs, monkeypatch):
+    _flat(gcs, 7)
+    (static_root / mds_files.VERIFIED_META).write_bytes(snapshot_version(8)[mds_files.VERIFIED_META])
+    monkeypatch.setenv("FIDO_SERVER_MDS_FETCH_UPSTREAM", "0")
+
+    assert provisioning.ensure_snapshot_available() == "unavailable"
+    assert provisioning.missing_snapshot_files() == tuple(
+        name for name in provisioning.SNAPSHOT_FILENAMES if name != mds_files.VERIFIED_META
+    )
+
+
+@pytest.mark.parametrize("broken", ["blob of another snapshot", "meta missing", "blob missing"])
+def test_a_flat_snapshot_that_does_not_verify_is_not_taken(static_root, gcs, monkeypatch, broken):
+    _flat(gcs, 7)
+    if broken == "blob of another snapshot":
+        gcs.put(f"mds/{mds_files.BLOB}", snapshot_version(8)[mds_files.BLOB])
+    else:
+        del gcs.objects[f"mds/{mds_files.VERIFIED_META if broken == 'meta missing' else mds_files.BLOB}"]
+    monkeypatch.setenv("FIDO_SERVER_MDS_FETCH_UPSTREAM", "0")
+
+    assert provisioning.ensure_snapshot_available() == "unavailable"
+    assert provisioning.missing_snapshot_files() == provisioning.SNAPSHOT_FILENAMES
 
 
 def _flat(gcs, no=7):
