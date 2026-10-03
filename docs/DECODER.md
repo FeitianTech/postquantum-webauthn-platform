@@ -107,7 +107,7 @@ categories `skipped`, `malformed`, `trailing` and `canonical` in
 
 ## Map keys
 
-Map keys become JSON keys only through `keys.json_keys`: keys that would share a
+Map keys become JSON keys only through `values.json_keys`: keys that would share a
 spelling (1 and "1", h'01' and "01") are each spelled with their type, and
 `decode/key_collisions.py` reports the map as `json-key-collision`.
 
@@ -119,9 +119,10 @@ kept, whose `earlier` lists every earlier entry's offsets and key and value in E
 inside a value the decoded value drops, `kept` is null and the message says none is
 kept (`duplicate-json-key` does the same).
 
-A key `json_keys` spells with its type is written by `keys.qualified_key_text` and
-read back only by `keys.read_json_key`, which the encoder uses for every object key
-it writes: `"1" (text)`, `h'01' (bytes)`, `1.5 (float)`, `[1, 2] (array)`. A key
+A key `json_keys` spells with its type is written by `values.qualified_key_text`
+and read back only by `decode/json_keys.read_json_key`, which the encoder uses for
+every object key it writes: `"1" (text)`, `h'01' (bytes)`, `1.5 (float)`,
+`[1, 2] (array)`. A key
 that looks typed (an EDN literal, then ` (<kind>)`) but whose kind is unknown, or
 one a lenient decode could not read, is an error naming the key; anything else is
 a text key, so `Temperature (C)` stays text. Two JSON keys that make equal CBOR
@@ -133,8 +134,8 @@ JSON input is read by `decode/json_input.py`, which reports a key given twice in
 one object as `duplicate-json-key` (the path, the value kept and the values
 dropped; no offset, which the JSON reader cannot give); the encoder refuses such
 input and points at EDN, which can express it. The encoder shows the JSON it was
-given back with its keys as written (`keys.as_written` marks them `JsonLabel`), so
-its own output can be pasted back in.
+given back with its keys as written (`decode/json_keys.as_written` marks them
+`JsonLabel`), so its own output can be pasted back in.
 
 `NaN`, `Infinity` and `-Infinity` are not JSON (RFC 8259), though Python's reader
 takes them. Read strictly, input holding one is refused with a 422 naming the
