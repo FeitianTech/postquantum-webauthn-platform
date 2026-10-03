@@ -231,3 +231,27 @@ def test_deleting_the_last_upload_keeps_the_namespaces_other_stores_on_cloud_sto
     assert credentials in bucket.objects
     assert artifact in bucket.objects
     assert session_store.resolve_last_access("session-gcs") is not None
+
+
+def test_a_cloud_storage_listing_that_fails_raises_and_deletes_nothing(monkeypatch):
+    bucket = fake_gcs.install(monkeypatch, "every store")
+    credentials = storage_common.session_prefix("session-gcs", "credentials") + "/user@example.com_credential_data.json"
+    bucket.put(credentials, b"{}")
+
+    def unreachable(*_args, **_kwargs):
+        raise fake_gcs.ServiceUnavailable("listing refused")
+
+    monkeypatch.setattr(bucket, "list_blobs", unreachable)
+
+    with pytest.raises(storage_common.StorageReadError):
+        session_store.list_files("session-gcs")
+    assert credentials in bucket.objects
+
+
+def test_a_local_folder_that_cannot_be_listed_is_not_pruned(session_metadata_dir, monkeypatch):
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
+    (session_metadata_dir / "session-local").write_text("not a folder")
+
+    with pytest.raises(storage_common.StorageReadError):
+        session_store.prune_session("session-local")
+    assert (session_metadata_dir / "session-local").read_text() == "not a folder"

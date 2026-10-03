@@ -11,6 +11,7 @@ import pytest
 
 from server.app import visitor_session
 from server.app.mds import uploads as mds_uploads
+from server.app.storage import common as storage_common
 from server.app.storage import session_metadata
 
 SESSION = "session-a"
@@ -97,12 +98,21 @@ def test_an_info_file_that_cannot_be_read_is_none(storage, monkeypatch):
     assert (item.original_filename, item.mtime) == (None, None)
 
 
-def test_a_namespace_that_is_not_one_or_cannot_be_listed_lists_nothing(storage, monkeypatch):
+def test_a_namespace_that_is_not_one_lists_nothing(storage):
     _stored(storage)
 
     assert mds_uploads.list_session_metadata_items("../escape") == []
-    monkeypatch.setattr(session_metadata, "list_files", _fail)
-    assert mds_uploads.list_session_metadata_items(SESSION) == []
+
+
+def test_a_namespace_whose_uploads_cannot_be_listed_raises_rather_than_listing_none(storage, monkeypatch):
+    _stored(storage)
+    (storage / SESSION / "stored.json").unlink()
+    (storage / SESSION).rmdir()
+    # A file where the namespace's folder should be: the store cannot be read.
+    (storage / SESSION).write_text("")
+
+    with pytest.raises(storage_common.StorageReadError):
+        mds_uploads.list_session_metadata_items(SESSION)
 
 
 def test_deleting_from_a_namespace_that_is_not_one_or_cannot_be_read_deletes_nothing(storage, monkeypatch):

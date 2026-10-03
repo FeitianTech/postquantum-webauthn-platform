@@ -258,17 +258,20 @@ def test_list_files_gcs_handles_empty_prefix_and_filters_entries(session_store_l
     assert session_store.list_files("session-a") == ["entry.json"]
 
 
-def test_list_files_local_handles_invalid_directory_and_os_errors(session_store_local, monkeypatch):
+def test_list_files_local_lists_nothing_for_no_folder_and_raises_when_one_cannot_be_read(
+    session_store_local, monkeypatch, tmp_path
+):
     monkeypatch.setattr(session_store, "_local_session_directory", lambda _sid: None)
     assert session_store.list_files("session-a") == []
 
-    monkeypatch.setattr(session_store, "_local_session_directory", lambda _sid: "/tmp/session-a")
-    monkeypatch.setattr(
-        session_store.os,
-        "listdir",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("cannot list")),
-    )
+    monkeypatch.setattr(session_store, "_local_session_directory", lambda _sid: str(tmp_path / "never-made"))
     assert session_store.list_files("session-a") == []
+
+    # A file where the namespace's folder should be: the store is broken, not empty.
+    (tmp_path / "a-file").write_text("")
+    monkeypatch.setattr(session_store, "_local_session_directory", lambda _sid: str(tmp_path / "a-file"))
+    with pytest.raises(storage_common.StorageReadError):
+        session_store.list_files("session-a")
 
 
 def test_list_files_local_filters_non_files(session_store_local, monkeypatch):

@@ -192,15 +192,13 @@ def list_session_metadata_items(session_id: str | None = None) -> list[SessionMe
 
     visitor_session.note_activity(active_session)
 
-    try:
-        filenames = [
-            name
-            for name in session_metadata.list_files(directory)
-            if name.endswith(_SESSION_METADATA_SUFFIX)
-            and not name.endswith(_SESSION_METADATA_INFO_SUFFIX)
-        ]
-    except Exception:
-        return []
+    # A namespace whose uploads cannot be listed raises StorageReadError (503), never "no uploads".
+    filenames = [
+        name
+        for name in session_metadata.list_files(directory)
+        if name.endswith(_SESSION_METADATA_SUFFIX)
+        and not name.endswith(_SESSION_METADATA_INFO_SUFFIX)
+    ]
 
     items: list[SessionMetadataItem] = []
     for filename in sorted(filenames):

@@ -228,6 +228,9 @@ def resolve_last_access(session_id: str) -> float | None:
 
 
 def list_files(session_id: str) -> list[str]:
+    """The namespace's uploaded files, by name; raises ``StorageReadError`` when
+    the store cannot be listed, never answering with fewer files."""
+
     if common.using_gcs():
         prefix = _metadata_prefix(session_id)
         if prefix:
@@ -243,8 +246,8 @@ def list_files(session_id: str) -> list[str]:
                 if remainder == _LAST_ACCESS_BLOB:
                     continue
                 names.append(remainder)
-        except Exception as exc:  # pragma: no cover - depends on storage backend
-            logger.warning("Unable to list metadata files for %s: %s", session_id, exc)
+        except Exception as exc:
+            raise common.StorageReadError(f"the uploads of {session_id} could not be listed") from exc
         return sorted(names)
 
     directory = _local_session_directory(session_id)
@@ -253,8 +256,10 @@ def list_files(session_id: str) -> list[str]:
 
     try:
         entries = os.listdir(directory)
-    except OSError:
+    except FileNotFoundError:
         return []
+    except OSError as exc:
+        raise common.StorageReadError(f"the uploads of {session_id} could not be listed") from exc
 
     names: list[str] = []
     for entry in entries:

@@ -150,3 +150,17 @@ def test_read_for_update_refuses_to_replace_a_current_copy_it_cannot_decode(back
 
     with pytest.raises(backend.store.CredentialsUndecodable):
         backend.store.read_for_update(NAME, session_id=SESSION)
+
+
+def test_uploads_that_cannot_be_listed_answer_503_not_an_empty_list(make_app, monkeypatch):
+    bucket = fake_gcs.install(monkeypatch, "every store")
+
+    def unreachable(*_args, **_kwargs):
+        raise fake_gcs.ServiceUnavailable("listing refused")
+
+    monkeypatch.setattr(bucket, "list_blobs", unreachable)
+
+    answer = make_app().test_client().get("/api/mds/metadata/custom")
+
+    assert answer.status_code == 503
+    assert "items" not in answer.get_json()
