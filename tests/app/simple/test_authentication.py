@@ -78,6 +78,25 @@ def test_a_complete_sent_other_credentials_than_its_begin_is_refused(credential_
     assert "not the ones it began with" in complete.get_json()["error"]
 
 
+def test_a_complete_for_another_email_than_its_begin_is_refused(credential_store):
+    client = entry_app().test_client()
+    authenticator = Authenticator()
+    register_simple(client, authenticator)
+    register_simple(client, authenticator, email="other@example.com")
+    stored = [authenticator.stored_credential_entry()]
+
+    begin = client.post(f"/api/authenticate/begin?email={EMAIL}", json={"credentials": stored})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    complete = client.post(
+        "/api/authenticate/complete?email=other@example.com",
+        json=simple_complete_body(assertion_payload(authenticator, challenge=challenge, counter=1), stored),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert complete.status_code == 400
+    assert complete.get_json()["error"].startswith("This authentication began for another email.")
+
+
 def test_a_begin_body_that_is_no_object_offers_no_credential():
     response = entry_app().test_client().post("/api/authenticate/begin", json=["not", "an", "object"])
 

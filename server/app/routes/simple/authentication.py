@@ -155,6 +155,13 @@ def _consume_authentication_state(
             ),
             400,
         )
+    # The email names whose stored records the counter is checked against: the one begin was for.
+    if session.get("simple_credentials_email") != request.args.get("email"):
+        session.pop("simple_credentials_email", None)
+        return None, (
+            jsonify({"error": "This authentication began for another email. Please restart the authentication flow."}),
+            400,
+        )
     if credentials_digest(session_credentials) != begun_with:
         session.pop("simple_credentials_email", None)
         return None, (

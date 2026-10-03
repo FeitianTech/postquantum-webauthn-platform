@@ -28,6 +28,7 @@ def test_simple_authentication_failure_returns_failed_credential_id(monkeypatch)
             keep_simple_credentials(session, [{"credentialIdBase64Url": encoded_id}])
             session["state"] = {"challenge": "test", "issued_at": time.time()}
             session["authenticate_rp_id"] = "example.com"
+            session["simple_credentials_email"] = f"{encoded_id}@example.com"
 
         response = client.post(
             f"/api/authenticate/complete?email={encoded_id}@example.com",
