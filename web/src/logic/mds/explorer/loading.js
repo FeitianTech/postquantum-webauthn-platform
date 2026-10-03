@@ -1,4 +1,5 @@
 // Where the explorer's entries come from and what an answer means. No DOM.
+import { cloneJson } from '../../shared/json.js';
 import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MDS_LIST_PATH, MISSING_METADATA_MESSAGE } from '../constants.js';
 
 /** @import { ExplorerSource, SnapshotLocation } from '../explorer-source.js' */
@@ -68,13 +69,6 @@ export function hasInlineDetail(entry) {
         && entry.metadataStatement
         && typeof entry.metadataStatement === 'object',
     );
-}
-
-export function cloneMetadataEntry(entry) {
-    if (!entry || typeof entry !== 'object') {
-        return null;
-    }
-    return structuredClone(entry);
 }
 
 /**
@@ -249,7 +243,7 @@ export function explorerLoadFailure(error) {
 export function prepareSnapshotEntries(snapshot, resolvedEntryCache = new Map()) {
     const incomingEntries = Array.isArray(snapshot?.entries) ? snapshot.entries : [];
     return incomingEntries
-        .map(entry => cloneMetadataEntry(entry))
+        .map(entry => cloneJson(entry))
         .filter(entry => entry && typeof entry === 'object')
         .map(entry => {
             if (hasInlineDetail(entry)) {

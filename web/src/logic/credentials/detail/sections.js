@@ -9,7 +9,7 @@ import {
     bytesToBase64,
     bytesToBase64Url,
 } from '../../shared/base64.js';
-import {hexToUint8Array} from '../../shared/bytes.js';
+import {bytesToHex, hexToUint8Array} from '../../shared/bytes.js';
 import {aaguidGuid, aaguidHex} from '../../shared/aaguid.js';
 import {resolveCredentialAlgorithmIdentifier} from '../algorithm-tag.js';
 import {extractMinPinLengthValue} from '../min-pin-length.js';
@@ -201,7 +201,7 @@ function describeIdentifier(title, value) {
         spellings: [
             { label: 'b64', value: bytesToBase64(bytes) },
             { label: 'b64u', value: bytesToBase64Url(bytes) },
-            { label: 'hex', value: Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('') },
+            { label: 'hex', value: bytesToHex(bytes) },
         ],
     };
 }

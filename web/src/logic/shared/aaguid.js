@@ -124,7 +124,7 @@ export function aaguidGuid(value) {
     }
     const bytes = byteList(value);
     if (bytes && bytes.length === 16) {
-        return dashed(bytes.map(byte => byte.toString(16).padStart(2, '0')).join(''));
+        return dashed(bytesToHex(bytes));
     }
     try {
         if (typeof value.toString === 'function') {

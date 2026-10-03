@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MDS_EXPLORER_FULL_PATH, MDS_INFO_PATH, MDS_LIST_PATH, MISSING_METADATA_MESSAGE } from '../constants.js';
 import {
   classifyExplorerAnswer,
-  cloneMetadataEntry,
   explorerLoadFailure,
   fetchExplorerInfo,
   forgetExplorerList,
@@ -241,15 +240,6 @@ describe('explorer loading: what the page starts from', () => {
       throw abortError();
     });
     await expect(fetchExplorerInfo()).rejects.toMatchObject({ name: 'AbortError' });
-  });
-});
-
-describe('an entry the explorer keeps', () => {
-  it('copies an entry at every level', () => {
-    const entry = { name: 'Key', metadataStatement: { upv: [{ major: 1 }] } };
-    const copy = cloneMetadataEntry(entry);
-    expect(copy).toEqual(entry);
-    expect(copy.metadataStatement).not.toBe(entry.metadataStatement);
   });
 });
 

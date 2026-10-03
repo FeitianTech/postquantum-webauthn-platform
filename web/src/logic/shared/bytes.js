@@ -10,7 +10,7 @@ import { Base64Error, base64UrlToBytes, forgivingBase64ToBytes } from './base64.
 export function generateRandomHex(bytes) {
     const array = new Uint8Array(bytes);
     crypto.getRandomValues(array);
-    return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+    return bytesToHex(array);
 }
 
 // Tolerant of either alphabet, padding and whitespace: for values a person typed.
