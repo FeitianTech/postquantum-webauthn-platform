@@ -189,14 +189,10 @@ def resolve_effective_metadata_entry(
         if aaguid_key:
             seen_aaguids.add(aaguid_key)
 
-    base_metadata, metadata_mtime = mds_cache._load_base_metadata()
-    if base_metadata is None:
+    # The entry as the BLOB has it, from the verified payload's JSON.
+    raw_entries = mds_cache.load_verified_entries()
+    if raw_entries is None:
         return None
-
-    # The entry as the BLOB has it: the dataclasses drop what they do not model.
-    raw_entries = mds_cache._load_base_raw_entries(metadata_mtime)
-    if raw_entries is None or len(raw_entries) != len(base_metadata.entries):
-        raw_entries = [dict(entry) for entry in base_metadata.entries]
 
     for index, payload in enumerate(raw_entries):
         if not isinstance(payload, Mapping):

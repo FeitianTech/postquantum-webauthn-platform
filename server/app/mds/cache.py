@@ -192,18 +192,18 @@ def _load_verified_metadata_payload() -> dict[str, Any] | None:
     return payload
 
 
-def _load_base_raw_entries(metadata_mtime: float | None) -> list[Any] | None:
-    """The packaged entries as the verified snapshot holds them, every field the
-    BLOB has (``fido2``'s dataclasses drop those they do not model), in the order
-    of ``_load_base_metadata``'s entries. Only while the file is the one those
-    were read from (``metadata_mtime``); None otherwise or without one."""
+def load_verified_entries() -> list[Any] | None:
+    """The verified snapshot's entries as its JSON holds them, every field the BLOB
+    has (``fido2``'s dataclasses drop those they do not model); None without a
+    readable file. Read once for each version of the file, and never parsed into
+    ``fido2``'s dataclasses."""
 
     try:
         verified_mtime = os.path.getmtime(_path(mds_files.VERIFIED))
     except OSError:
         return None
-    if metadata_mtime is None or verified_mtime != metadata_mtime:
-        return None
+    if CACHE.raw_entries_mtime == verified_mtime:
+        return CACHE.raw_entries
 
     with CACHE.metadata_lock:
         if CACHE.raw_entries_mtime == verified_mtime:

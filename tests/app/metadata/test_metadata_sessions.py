@@ -1,4 +1,3 @@
-from types import SimpleNamespace
 
 import pytest
 
@@ -79,11 +78,7 @@ def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch)
         "load_packaged_explorer_summary",
         lambda: {"generatedAt": "2026-04-02T00:00:00+00:00", "no": 1},
     )
-    monkeypatch.setattr(
-        mds_cache,
-        "_load_base_metadata",
-        lambda: (SimpleNamespace(entries=[base_entry]), "packaged"),
-    )
+    monkeypatch.setattr(mds_cache, "load_verified_entries", lambda: [base_entry])
 
     resolved = mds_effective.resolve_effective_metadata_entry(
         aaguid="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"

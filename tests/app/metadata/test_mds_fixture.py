@@ -135,19 +135,29 @@ def test_resolve_serves_a_packaged_entry_as_the_blob_has_it(mds_fixture_snapshot
     assert entry["timeOfLastStatusChange"] == blob_entry["timeOfLastStatusChange"]
 
 
-def test_raw_entries_follow_only_the_file_the_metadata_was_read_from(mds_fixture_snapshot, monkeypatch):
+def test_the_verified_entries_are_read_once_for_each_version_of_the_file(mds_fixture_snapshot, monkeypatch):
     verified = mds_fixture_snapshot / mds_files.VERIFIED
     mtime = os.path.getmtime(verified)
 
-    assert mds_cache._load_base_raw_entries(None) is None
-    assert mds_cache._load_base_raw_entries(mtime - 1) is None
-    entries = mds_cache._load_base_raw_entries(mtime)
+    entries = mds_cache.load_verified_entries()
     assert len(entries) == 32
-    assert mds_cache._load_base_raw_entries(mtime) is entries
+    assert mds_cache.load_verified_entries() is entries
 
     # A payload without an entry list gives none, and a missing file nothing.
     os.utime(verified, (mtime + 5, mtime + 5))
     monkeypatch.setattr(mds_cache, "_load_verified_metadata_payload", lambda: {"entries": {}})
-    assert mds_cache._load_base_raw_entries(mtime + 5) is None
+    assert mds_cache.load_verified_entries() is None
     verified.unlink()
-    assert mds_cache._load_base_raw_entries(mtime + 5) is None
+    assert mds_cache.load_verified_entries() is None
+
+
+def test_resolving_an_entry_parses_no_payload_into_fido2s_dataclasses(mds_fixture_snapshot, client, monkeypatch):
+    def refused(_payload):
+        raise AssertionError("parsed the whole payload")
+
+    monkeypatch.setattr(mds_cache.MetadataBlobPayload, "from_dict", refused)
+
+    answer = client.get("/api/mds/metadata/resolve", query_string={"aaid": "F1D0#0012"})
+
+    assert answer.status_code == 200
+    assert answer.get_json()["entry"]["source"] == "packaged"
