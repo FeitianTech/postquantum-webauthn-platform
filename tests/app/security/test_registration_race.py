@@ -19,11 +19,11 @@ import threading
 
 import pytest
 
-from server.app import visitor_session
 from server.app.storage import cloud, github_mirror
 from server.app.storage import common as storage_common
 from server.app.storage import credentials as storage_credentials
 
+from .. import visitor_namespace
 from ..storage import fake_gcs
 from .ceremony_helpers import ORIGIN, Authenticator, registration_payload, unb64u
 
@@ -65,9 +65,7 @@ def _register(client, authenticator):
 
 
 def _stored_ids(client) -> list[bytes]:
-
-    with client.session_transaction() as session:
-        namespace = session[visitor_session.SESSION_KEY]
+    namespace = visitor_namespace.of(client)
     return sorted(bytes(record["credential_data"].credential_id) for record in storage_credentials.readkey(EMAIL, session_id=namespace))
 
 
@@ -75,13 +73,13 @@ def test_eight_registrations_for_one_user_at_once_all_keep_their_credential(app,
     first = app.test_client()
     existing = Authenticator(credential_id=b"\x01" * 32)
     _register(first, existing)
-    cookie = first.get_cookie("session").value
+    namespace = visitor_namespace.of(first)
 
     authenticators = [Authenticator(credential_id=bytes([0x10 + index]) * 32) for index in range(WRITERS)]
     clients = []
     for _authenticator in authenticators:
         client = app.test_client()
-        client.set_cookie("session", cookie)
+        visitor_namespace.give(client, namespace)
         clients.append(client)
     challenges = [_begin(client) for client in clients]
 
@@ -199,8 +197,7 @@ def _break_the_current_copy(client, how: str):
     import os
 
 
-    with client.session_transaction() as session:
-        namespace = session[visitor_session.SESSION_KEY]
+    namespace = visitor_namespace.of(client)
     if storage_common.using_gcs():
         bucket = cloud._ensure_bucket()
         blob = storage_credentials._credential_blob(EMAIL, namespace)

@@ -175,8 +175,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "MGihcu5AJ9caEs8pcTwU5vGhLVdNVpL9y2ZPHJu5KJk"
+      "_permanent": true
      }
     }
    ],
@@ -831,8 +830,7 @@
        "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
        "issued_at": 1790000000.0,
        "user_verification": "preferred"
-      },
-      "fido.mds.session": "MGihcu5AJ9caEs8pcTwU5vGhLVdNVpL9y2ZPHJu5KJk"
+      }
      }
     }
    ],
@@ -931,16 +929,6 @@
    ],
    "cookies": [
     {
-     "name": "fido.mds.session",
-     "attributes": [
-      "Max-Age=31536000",
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": "MGihcu5AJ9caEs8pcTwU5vGhLVdNVpL9y2ZPHJu5KJk"
-    },
-    {
      "name": "session",
      "attributes": [
       "HttpOnly",
@@ -948,8 +936,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "MGihcu5AJ9caEs8pcTwU5vGhLVdNVpL9y2ZPHJu5KJk"
+      "_permanent": true
      }
     }
    ],
@@ -2107,8 +2094,7 @@
        "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
        "issued_at": 1790000000.0,
        "user_verification": "preferred"
-      },
-      "fido.mds.session": "MGihcu5AJ9caEs8pcTwU5vGhLVdNVpL9y2ZPHJu5KJk"
+      }
      }
     }
    ],
@@ -2189,16 +2175,6 @@
    ],
    "cookies": [
     {
-     "name": "fido.mds.session",
-     "attributes": [
-      "Max-Age=31536000",
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": "MGihcu5AJ9caEs8pcTwU5vGhLVdNVpL9y2ZPHJu5KJk"
-    },
-    {
      "name": "session",
      "attributes": [
       "HttpOnly",
@@ -2206,8 +2182,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "MGihcu5AJ9caEs8pcTwU5vGhLVdNVpL9y2ZPHJu5KJk"
+      "_permanent": true
      }
     }
    ],
@@ -2900,8 +2875,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "MGihcu5AJ9caEs8pcTwU5vGhLVdNVpL9y2ZPHJu5KJk"
+      "_permanent": true
      }
     }
    ],
@@ -3019,8 +2993,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "MGihcu5AJ9caEs8pcTwU5vGhLVdNVpL9y2ZPHJu5KJk"
+      "_permanent": true
      }
     }
    ],
@@ -3255,8 +3228,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "MGihcu5AJ9caEs8pcTwU5vGhLVdNVpL9y2ZPHJu5KJk"
+      "_permanent": true
      }
     }
    ],

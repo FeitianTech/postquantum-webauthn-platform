@@ -175,8 +175,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "XWFVmU1AONdCW9E3cWM9jCMZF81VuemkwNefq8ooq-o"
+      "_permanent": true
      }
     }
    ],

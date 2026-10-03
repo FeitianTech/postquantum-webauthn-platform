@@ -1,9 +1,8 @@
 """The visitor session: the namespace a visitor's uploads and credentials are stored under.
 
-Its id lives in the signed Flask session and, for a returning visitor whose
-session has expired, in a long-lived recovery cookie signed with the app's
-secret (``COOKIE_SALT``), so a caller can never point itself at another
-visitor's namespace. Page views refresh the namespace's last-access marker
+Its id lives in a long-lived cookie of its own, signed with the app's secret
+(``COOKIE_SALT``), so a caller can never point itself at another visitor's
+namespace; the Flask session does not hold it. Page views refresh the namespace's last-access marker
 (``note_activity``), at most once per ``TOUCH_THROTTLE_SECONDS`` in each process;
 namespaces idle for ``INACTIVE_AGE`` are removed by one sweep, on both storage
 backends, at most every ``CLEANUP_INTERVAL`` (``schedule_cleanup``).
@@ -32,9 +31,10 @@ from .storage import session_metadata
 
 logger = logging.getLogger(__name__)
 
-SESSION_KEY = "fido.mds.session"
 COOKIE_NAME = "fido.mds.session"
 COOKIE_MAX_AGE = 60 * 60 * 24 * 365  # 1 year
+# The cookie is signed again (and its year starts again) when it is older than this.
+COOKIE_REFRESH_SECONDS = 60 * 60 * 24
 # Salt for the recovery cookie; the key is the app's ``secret_key``.
 COOKIE_SALT = "fido.mds.session-cookie.v1"
 INACTIVE_AGE = timedelta(days=14)
@@ -183,37 +183,43 @@ def schedule_cleanup() -> None:
         _maybe_cleanup(now=current_time)
 
 
-def _schedule_cookie(identifier: str) -> None:
-    if not has_request_context():
-        return
-
-    normalised = storage_common.normalise_session_id(identifier)
-    if not normalised:
-        return
-
-    note_activity(normalised)
-
-    secure = bool(request.is_secure)
-    cookie_path = "/"
-    # Lax, like the session cookie: the metadata upload is a multipart form,
-    # which another site could post in the visitor's namespace were the cookie
-    # sent cross-site.
-    samesite = "Lax"
-
-    if getattr(g, "_session_metadata_cookie", None) == normalised:
-        return
-
-    # The recovery cookie is client storage.  Handing back a bare namespace name
-    # lets anyone who can set a cookie point themselves at another visitor's
-    # namespace, so the value that leaves the server is signed with the
-    # application secret and the signature is re-checked on the way back in.
+def _serializer() -> URLSafeTimedSerializer | None:
     secret = current_app.secret_key
-    if not secret:
+    return URLSafeTimedSerializer(secret, salt=COOKIE_SALT) if secret else None
+
+
+def _read_cookie() -> tuple[str | None, float]:
+    """The namespace the request's cookie names, and when it was signed.
+
+    None when there is no cookie, or one this server did not sign.
+    Handing back a bare namespace name would let anyone who can set a cookie
+    point themselves at another visitor's namespace, so the value is signed with
+    the application secret and checked here on the way back in.
+    """
+
+    raw_cookie = request.cookies.get(COOKIE_NAME)
+    serializer = _serializer()
+    if not isinstance(raw_cookie, str) or not raw_cookie or serializer is None:
+        return None, 0.0
+    try:
+        unsealed, signed_at = serializer.loads(raw_cookie, max_age=COOKIE_MAX_AGE, return_timestamp=True)
+    except BadSignature:
+        # Also covers SignatureExpired / BadTimeSignature.
+        return None, 0.0
+    except Exception:
+        return None, 0.0
+    return storage_common.normalise_session_id(unsealed), signed_at.timestamp()
+
+
+def _set_cookie(identifier: str) -> None:
+    serializer = _serializer()
+    if serializer is None:
         return
-
-    sealed = URLSafeTimedSerializer(secret, salt=COOKIE_SALT).dumps(normalised)
-
-    g._session_metadata_cookie = normalised
+    sealed = serializer.dumps(identifier)
+    # Secure as the session cookie is; Lax, like it: the metadata upload is a
+    # multipart form, which another site could post in the visitor's namespace
+    # were the cookie sent cross-site.
+    secure = bool(current_app.config.get("SESSION_COOKIE_SECURE"))
 
     @after_this_request
     def _apply_cookie(response):
@@ -223,62 +229,43 @@ def _schedule_cookie(identifier: str) -> None:
             max_age=COOKIE_MAX_AGE,
             httponly=True,
             secure=secure,
-            samesite=samesite,
-            path=cookie_path,
+            samesite="Lax",
+            path="/",
         )
         return response
 
 
 def current_id(*, create: bool = False) -> str | None:
-    """The visitor's session id; with ``create``, a new one when the visitor has none."""
+    """The visitor's namespace, from its signed cookie; with ``create``, a new one if none.
+
+    The cookie is set when a namespace is minted, and again when it was signed
+    more than ``COOKIE_REFRESH_SECONDS`` ago, so a visitor who keeps coming back
+    keeps their namespace. The id is kept for the rest of the request, so every
+    store a request writes uses one namespace.
+    """
 
     if not has_request_context():
         return None
 
-    # The signed Flask session is authoritative.  It is authenticated with the
-    # application secret, so a caller cannot point it at somebody else's
-    # namespace.
-    existing = session.get(SESSION_KEY)
-    if isinstance(existing, str):
-        identifier = storage_common.normalise_session_id(existing)
-        if identifier:
-            session[SESSION_KEY] = identifier
-            _schedule_cookie(identifier)
-            return identifier
+    cached = g.get("_visitor_namespace")
+    if cached:
+        return cached
 
-    # Otherwise fall back to the long-lived recovery cookie, so a returning
-    # visitor keeps their namespace after the (much shorter lived) Flask session
-    # has expired.  Only a cookie this server signed is honoured; a forged or
-    # replayed-from-elsewhere value is ignored and a fresh namespace is minted
-    # instead, which is what stops one caller reading another's stored metadata
-    # and credential artifacts.
-    cookie_identifier = None
-    raw_cookie = request.cookies.get(COOKIE_NAME)
-    secret = current_app.secret_key
-    if isinstance(raw_cookie, str) and raw_cookie and secret:
-        try:
-            unsealed = URLSafeTimedSerializer(secret, salt=COOKIE_SALT).loads(raw_cookie, max_age=COOKIE_MAX_AGE)
-        except BadSignature:
-            # Also covers SignatureExpired / BadTimeSignature.
-            unsealed = None
-        except Exception:
-            unsealed = None
-        cookie_identifier = storage_common.normalise_session_id(unsealed)
-
-    if cookie_identifier:
-        session[SESSION_KEY] = cookie_identifier
-        _schedule_cookie(cookie_identifier)
-        return cookie_identifier
-
-    if not create:
+    identifier, signed_at = _read_cookie()
+    if identifier:
+        if time.time() - signed_at > COOKIE_REFRESH_SECONDS:
+            _set_cookie(identifier)
+    elif create:
+        identifier = secrets.token_urlsafe(32)
+        # A brand-new namespace has nothing stored yet, so it does not need a
+        # last-access marker until it writes data (writes refresh it themselves).
+        g._mds_session_new = identifier
+        _set_cookie(identifier)
+    else:
         return None
 
-    identifier = secrets.token_urlsafe(32)
-    session[SESSION_KEY] = identifier
-    # A brand-new session has nothing stored yet, so it does not need a
-    # last-access marker until it writes data (writes refresh it themselves).
-    g._mds_session_new = identifier
-    _schedule_cookie(identifier)
+    g._visitor_namespace = identifier
+    note_activity(identifier)
     return identifier
 
 

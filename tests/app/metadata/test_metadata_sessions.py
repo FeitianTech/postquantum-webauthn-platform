@@ -1,7 +1,6 @@
 from types import SimpleNamespace
 
 import pytest
-from flask import session as flask_session
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
@@ -9,6 +8,7 @@ from server.app.mds import effective as mds_effective
 from server.app.mds import uploads as mds_uploads
 from server.app.storage import cloud as storage_cloud
 from server.app.storage import common as storage_common
+from tests.app import visitor_namespace
 from tests.app.entry_app import entry_app
 from tests.app.metadata.upload_entries import minimal_entry
 
@@ -42,8 +42,7 @@ def test_session_metadata_is_isolated(session_metadata_env):
         assert second_session_id != first_session_id
         assert mds_uploads.list_session_metadata_items() == []
 
-    with app.test_request_context("/"):
-        flask_session[visitor_session.SESSION_KEY] = first_session_id
+    with app.test_request_context("/", headers=visitor_namespace.header(app, first_session_id)):
         items = mds_uploads.list_session_metadata_items()
         assert len(items) == 1
         assert items[0].payload["metadataStatement"]["description"] == "Session entry"

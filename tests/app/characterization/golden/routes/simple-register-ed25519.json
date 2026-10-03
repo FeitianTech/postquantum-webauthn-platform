@@ -282,8 +282,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "xHS3P3oz5S028pTaO5cKNcZJweTtcaVV-dxaFHPdouc"
+      "_permanent": true
      }
     }
    ],

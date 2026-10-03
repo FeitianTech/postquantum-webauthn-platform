@@ -2,11 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-import itsdangerous
 from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
-from flask import g, session
 
-from server.app import visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
@@ -14,7 +11,6 @@ from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
 from server.app.mds import verifier as mds_verifier
 from server.app.storage import session_metadata
-from tests.app.entry_app import entry_app
 
 
 def _entry_payload(*, aaguid: str, description: str):
@@ -157,42 +153,12 @@ def test_cache_cleaning_and_formatting_helpers():
     assert mds_files.format_last_modified("not-a-date") == "not-a-date"
 
 
-def test_prune_helper_and_request_session_identifier_paths(monkeypatch, tmp_path):
-    # Resolving the cookie's namespace refreshes its directory's last-access marker.
+def test_a_prune_that_fails_is_passed_over(monkeypatch, tmp_path):
     monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
-
     monkeypatch.setattr(
         session_metadata,
         "prune_session",
         lambda _sid: (_ for _ in ()).throw(RuntimeError("ignore prune errors")),
     )
+
     mds_uploads._prune_session_metadata_directory("session-1")
-
-    # Only a cookie signed with the application secret names a namespace; an
-    # unsigned one is ignored (it would otherwise be an IDOR).
-    sealed = itsdangerous.URLSafeTimedSerializer(
-        entry_app().secret_key, salt="fido.mds.session-cookie.v1"
-    ).dumps("cookie-session")
-    with entry_app().test_request_context(
-        "/",
-        headers={"Cookie": f"{visitor_session.COOKIE_NAME}=cookie-session"},
-    ):
-        assert visitor_session.current_id(create=False) is None
-
-    with entry_app().test_request_context(
-        "/",
-        headers={"Cookie": f"{visitor_session.COOKIE_NAME}={sealed}"},
-    ):
-        identifier = visitor_session.current_id(create=False)
-        assert identifier == "cookie-session"
-        assert session[visitor_session.SESSION_KEY] == "cookie-session"
-        assert g._session_metadata_cookie == "cookie-session"
-
-    with entry_app().test_request_context("/"):
-        generated = visitor_session.current_id(create=True)
-        assert isinstance(generated, str)
-        assert session[visitor_session.SESSION_KEY] == generated
-        assert g._session_metadata_cookie == generated
-
-    with entry_app().test_request_context("/"):
-        assert visitor_session.current_id(create=False) is None

@@ -333,8 +333,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "GjoJwaTVMvq0r-8iEzzd4jhxCnB078aBmmlB2vVXSaI"
+      "_permanent": true
      }
     }
    ],
@@ -2395,16 +2394,6 @@
    ],
    "cookies": [
     {
-     "name": "fido.mds.session",
-     "attributes": [
-      "Max-Age=31536000",
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": "GjoJwaTVMvq0r-8iEzzd4jhxCnB078aBmmlB2vVXSaI"
-    },
-    {
      "name": "session",
      "attributes": [
       "HttpOnly",
@@ -2412,8 +2401,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "GjoJwaTVMvq0r-8iEzzd4jhxCnB078aBmmlB2vVXSaI"
+      "_permanent": true
      }
     }
    ],

@@ -179,8 +179,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "UY1Q3aJ51FaIt4g0lxH6dHI6zZGMYthL9vyCT-NEfIA"
+      "_permanent": true
      }
     }
    ],
@@ -844,8 +843,7 @@
        "challenge": "UVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVE",
        "issued_at": 1790000000.0,
        "user_verification": "preferred"
-      },
-      "fido.mds.session": "UY1Q3aJ51FaIt4g0lxH6dHI6zZGMYthL9vyCT-NEfIA"
+      }
      }
     }
    ],
@@ -929,16 +927,6 @@
    ],
    "cookies": [
     {
-     "name": "fido.mds.session",
-     "attributes": [
-      "Max-Age=31536000",
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": "UY1Q3aJ51FaIt4g0lxH6dHI6zZGMYthL9vyCT-NEfIA"
-    },
-    {
      "name": "session",
      "attributes": [
       "HttpOnly",
@@ -946,8 +934,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "UY1Q3aJ51FaIt4g0lxH6dHI6zZGMYthL9vyCT-NEfIA"
+      "_permanent": true
      }
     }
    ],
@@ -1611,8 +1598,7 @@
        "challenge": "UlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlI",
        "issued_at": 1790000000.0,
        "user_verification": "preferred"
-      },
-      "fido.mds.session": "UY1Q3aJ51FaIt4g0lxH6dHI6zZGMYthL9vyCT-NEfIA"
+      }
      }
     }
    ],
@@ -1696,16 +1682,6 @@
    ],
    "cookies": [
     {
-     "name": "fido.mds.session",
-     "attributes": [
-      "Max-Age=31536000",
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": "UY1Q3aJ51FaIt4g0lxH6dHI6zZGMYthL9vyCT-NEfIA"
-    },
-    {
      "name": "session",
      "attributes": [
       "HttpOnly",
@@ -1713,8 +1689,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "UY1Q3aJ51FaIt4g0lxH6dHI6zZGMYthL9vyCT-NEfIA"
+      "_permanent": true
      }
     }
    ],
@@ -2378,8 +2353,7 @@
        "challenge": "U1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1M",
        "issued_at": 1790000000.0,
        "user_verification": "preferred"
-      },
-      "fido.mds.session": "UY1Q3aJ51FaIt4g0lxH6dHI6zZGMYthL9vyCT-NEfIA"
+      }
      }
     }
    ],
@@ -2465,16 +2439,6 @@
    ],
    "cookies": [
     {
-     "name": "fido.mds.session",
-     "attributes": [
-      "Max-Age=31536000",
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": "UY1Q3aJ51FaIt4g0lxH6dHI6zZGMYthL9vyCT-NEfIA"
-    },
-    {
      "name": "session",
      "attributes": [
       "HttpOnly",
@@ -2482,8 +2446,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "UY1Q3aJ51FaIt4g0lxH6dHI6zZGMYthL9vyCT-NEfIA"
+      "_permanent": true
      }
     }
    ],

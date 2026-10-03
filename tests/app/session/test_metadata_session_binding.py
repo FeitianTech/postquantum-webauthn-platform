@@ -19,6 +19,7 @@ from server.app import visitor_session
 from server.app.mds import uploads as mds_uploads
 from server.app.storage import cloud as storage_cloud
 from server.app.storage import common as storage_common
+from tests.app import visitor_namespace
 from tests.app.entry_app import entry_app
 from tests.app.metadata.upload_entries import minimal_entry
 
@@ -51,15 +52,8 @@ def _upload(client, **kwargs):
     )
 
 
-def _seal(app, identifier: str) -> str:
-    return itsdangerous.URLSafeTimedSerializer(
-        app.secret_key, salt=COOKIE_SALT
-    ).dumps(identifier)
-
-
 def _seed_victim(app, mds_uploads, namespace: str) -> None:
-    with app.test_request_context("/"):
-        flask_session[visitor_session.SESSION_KEY] = namespace
+    with app.test_request_context("/", headers=visitor_namespace.header(app, namespace)):
         mds_uploads.save_session_metadata_item(minimal_entry("victim secret entry"))
 
 
@@ -91,8 +85,7 @@ def test_forged_plaintext_cookie_cannot_reach_another_namespace(session_env):
     app = session_env
     _seed_victim(app, mds_uploads, "victim-namespace")
 
-    with app.test_request_context("/"):
-        flask_session[visitor_session.SESSION_KEY] = "victim-namespace"
+    with app.test_request_context("/", headers=visitor_namespace.header(app, "victim-namespace")):
         assert len(mds_uploads.list_session_metadata_items()) == 1
 
     # The attacker names the victim's namespace directly.
@@ -110,8 +103,7 @@ def test_forged_cookie_cannot_write_into_another_namespace(session_env):
         assert attacker_namespace != "victim-namespace"
         mds_uploads.save_session_metadata_item(minimal_entry("attacker entry"))
 
-    with app.test_request_context("/"):
-        flask_session[visitor_session.SESSION_KEY] = "victim-namespace"
+    with app.test_request_context("/", headers=visitor_namespace.header(app, "victim-namespace")):
         items = mds_uploads.list_session_metadata_items()
     assert len(items) == 1
     assert items[0].payload["metadataStatement"]["description"] == "victim secret entry"
@@ -143,7 +135,7 @@ def test_tampered_signature_is_rejected(session_env):
     app = session_env
     _seed_victim(app, mds_uploads, "victim-namespace")
 
-    sealed = _seal(app, "victim-namespace")
+    sealed = visitor_namespace.sealed(app, "victim-namespace")
     tampered = sealed[:-4] + ("zzzz" if not sealed.endswith("zzzz") else "yyyy")
 
     assert _custom_items(app, tampered) == []
@@ -168,21 +160,24 @@ def test_returning_visitor_keeps_their_namespace_via_the_signed_cookie(session_e
 
     # A brand-new client (no Flask session cookie at all) carrying only the
     # signed recovery cookie must land back in its own namespace.
-    items = _custom_items(app, _seal(app, "victim-namespace"))
+    items = _custom_items(app, visitor_namespace.sealed(app, "victim-namespace"))
     assert len(items) == 1
     assert items[0]["entry"]["metadataStatement"]["description"] == (
         "victim secret entry"
     )
 
 
-def test_signed_flask_session_takes_precedence_over_the_cookie(session_env):
+def test_only_the_signed_cookie_names_the_namespace_never_the_flask_session(session_env):
+    # Earlier releases kept the namespace in the Flask session too, under the cookie's name.
     app = session_env
 
-    with app.test_request_context(
-        "/", headers={"Cookie": f"fido.mds.session={_seal(app, 'from-cookie')}"}
-    ):
-        flask_session[visitor_session.SESSION_KEY] = "from-session"
-        assert visitor_session.current_id(create=False) == "from-session"
+    with app.test_request_context("/"):
+        flask_session["fido.mds.session"] = "from-session"
+        assert visitor_session.current_id(create=False) is None
+
+    with app.test_request_context("/", headers=visitor_namespace.header(app, "from-cookie")):
+        flask_session["fido.mds.session"] = "from-session"
+        assert visitor_session.current_id(create=False) == "from-cookie"
 
 
 def test_issued_cookie_is_signed_httponly_and_round_trips(session_env):
@@ -222,14 +217,15 @@ def test_fresh_visitor_gets_an_unguessable_namespace(session_env):
     assert len(first) >= 32
 
 
-def test_issued_cookie_is_same_site_lax_over_https(session_env):
+def test_issued_cookie_is_secure_as_the_session_cookie_and_same_site_lax(session_env, monkeypatch):
     # The metadata upload is a multipart form another site can post. Neither the
     # session cookie nor the recovery cookie may ride along on that request, or
     # the upload lands in the visitor's namespace.
     app = session_env
+    monkeypatch.setitem(app.config, "SESSION_COOKIE_SECURE", True)
 
     client = app.test_client()
-    response = _upload(client, base_url="https://localhost")
+    response = _upload(client)
     assert response.status_code == 200
 
     cookie = next(

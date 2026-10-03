@@ -17,6 +17,7 @@ from flask import session
 
 from server.app import visitor_session
 from server.app.storage import session_metadata
+from tests.app import visitor_namespace
 from tests.app.entry_app import entry_app
 
 
@@ -33,10 +34,6 @@ def fast_cleanup_interval(monkeypatch, metadata_state):
     """A sweep at most once a second, from a fresh cleanup state."""
 
     monkeypatch.setattr(visitor_session, "CLEANUP_INTERVAL", timedelta(seconds=1))
-
-
-def _sealed(identifier: str, app) -> str:
-    return itsdangerous.URLSafeTimedSerializer(app.secret_key, salt=visitor_session.COOKIE_SALT).dumps(identifier)
 
 
 # The last-access marker: page views must not write it on every request.
@@ -130,18 +127,24 @@ def test_health_endpoint_sets_no_session_cookie():
     assert response.headers["Cache-Control"] == "no-store"
 
 
-# The namespace id: the signed session, else the signed recovery cookie, else a new one.
+# The namespace id: the signed cookie, else a new one when asked for.
 
 
-def test_a_new_visitor_gets_a_signed_secure_lax_recovery_cookie_once(touches):
+def _namespace_cookies(response) -> list[str]:
+    return [value for value in response.headers.getlist("Set-Cookie") if value.startswith(f"{visitor_session.COOKIE_NAME}=")]
+
+
+def test_a_new_visitor_gets_a_signed_lax_cookie_once_secure_as_the_session_cookie(touches, monkeypatch):
     app = entry_app()
+    monkeypatch.setitem(app.config, "SESSION_COOKIE_SECURE", True)
 
-    with app.test_request_context("/", base_url="https://localhost"):
+    with app.test_request_context("/"):
         identifier = visitor_session.current_id(create=True)
-        assert visitor_session.current_id() == identifier
+        assert visitor_session.current_id(create=True) == identifier
+        assert dict(session) == {}
         response = app.process_response(app.response_class("ok"))
 
-    (cookie,) = [value for value in response.headers.getlist("Set-Cookie") if value.startswith(f"{visitor_session.COOKIE_NAME}=")]
+    (cookie,) = _namespace_cookies(response)
     assert "Secure" in cookie and "HttpOnly" in cookie and "SameSite=Lax" in cookie
     # The namespace name is signed with the application secret rather than sent
     # verbatim, so a caller cannot rewrite it to somebody else's.
@@ -149,29 +152,39 @@ def test_a_new_visitor_gets_a_signed_secure_lax_recovery_cookie_once(touches):
     assert itsdangerous.URLSafeTimedSerializer(app.secret_key, salt=visitor_session.COOKIE_SALT).loads(value) == identifier
 
 
-def test_only_a_recovery_cookie_this_server_signed_restores_its_namespace(touches):
+def test_only_a_cookie_this_server_signed_names_a_namespace(touches):
     app = entry_app()
 
     # An unsigned cookie naming a namespace is ignored: trusting it verbatim was an
     # IDOR, since any caller could name another visitor's namespace.
     with app.test_request_context("/", headers={"Cookie": f"{visitor_session.COOKIE_NAME}=cookie-session"}):
-        session[visitor_session.SESSION_KEY] = ".invalid"
         assert visitor_session.current_id() is None
 
-    with app.test_request_context("/", headers={"Cookie": f"{visitor_session.COOKIE_NAME}={_sealed('cookie-session', app)}"}):
-        session[visitor_session.SESSION_KEY] = ".invalid"
+    with app.test_request_context("/", headers=visitor_namespace.header(app, "cookie-session")):
         assert visitor_session.current_id() == "cookie-session"
-        assert session[visitor_session.SESSION_KEY] == "cookie-session"
 
 
-def test_a_visitor_without_a_namespace_gets_one_only_when_asked_and_it_is_permanent(touches):
+def test_the_cookie_is_signed_again_once_it_is_a_day_old(touches, monkeypatch):
+    app = entry_app()
+    cookie = visitor_namespace.header(app, "cookie-session")
+    signed = time.time()
+
+    for age, set_again in ((60.0, False), (visitor_session.COOKIE_REFRESH_SECONDS + 60.0, True)):
+        monkeypatch.setattr(visitor_session.time, "time", lambda age=age: signed + age)
+        with app.test_request_context("/", headers=cookie):
+            assert visitor_session.current_id() == "cookie-session"
+            response = app.process_response(app.response_class("ok"))
+        assert bool(_namespace_cookies(response)) is set_again
+
+
+def test_a_visitor_without_a_namespace_gets_one_only_when_asked_and_keeps_it_for_the_request(touches):
     with entry_app().test_request_context("/"):
-        session[visitor_session.SESSION_KEY] = ".invalid"
         assert visitor_session.current_id() is None
 
         identifier = visitor_session.ensure_id()
 
         assert visitor_session.current_id() == identifier
+        assert visitor_session.ensure_id() == identifier
         assert session.permanent is True
 
 
@@ -179,15 +192,6 @@ def test_outside_a_request_there_is_no_namespace():
     assert visitor_session.current_id(create=True) is None
     with pytest.raises(RuntimeError, match="Unable to establish metadata session identifier"):
         visitor_session.ensure_id()
-
-
-def test_a_cookie_is_scheduled_only_inside_a_request_and_for_a_namespace_id(touches):
-    # Callers give it a normalised id inside a request; a direct call gives it neither.
-    visitor_session._schedule_cookie("outside-a-request")
-
-    with entry_app().test_request_context("/"):
-        visitor_session._schedule_cookie("   ")
-        assert not hasattr(visitor_session.g, "_session_metadata_cookie")
 
 
 # The sweep of inactive namespaces.

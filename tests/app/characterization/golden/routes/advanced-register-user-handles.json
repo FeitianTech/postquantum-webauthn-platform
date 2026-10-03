@@ -175,8 +175,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M"
+      "_permanent": true
      }
     }
    ],
@@ -825,8 +824,7 @@
        "challenge": "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE",
        "issued_at": 1790000000.0,
        "user_verification": "preferred"
-      },
-      "fido.mds.session": "WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M"
+      }
      }
     }
    ],
@@ -907,16 +905,6 @@
    ],
    "cookies": [
     {
-     "name": "fido.mds.session",
-     "attributes": [
-      "Max-Age=31536000",
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": "WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M"
-    },
-    {
      "name": "session",
      "attributes": [
       "HttpOnly",
@@ -924,8 +912,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M"
+      "_permanent": true
      }
     }
    ],
@@ -1574,8 +1561,7 @@
        "challenge": "YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI",
        "issued_at": 1790000000.0,
        "user_verification": "preferred"
-      },
-      "fido.mds.session": "WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M"
+      }
      }
     }
    ],
@@ -1656,16 +1642,6 @@
    ],
    "cookies": [
     {
-     "name": "fido.mds.session",
-     "attributes": [
-      "Max-Age=31536000",
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": "WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M"
-    },
-    {
      "name": "session",
      "attributes": [
       "HttpOnly",
@@ -1673,8 +1649,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "WaqzqLteTmhSGDn-8X5C-HgIEKYeNggfPet-bQijG6M"
+      "_permanent": true
      }
     }
    ],

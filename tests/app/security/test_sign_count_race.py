@@ -18,6 +18,7 @@ import threading
 from server.app.routes.simple import authentication
 from server.app.storage import credentials as storage_credentials
 
+from .. import visitor_namespace
 from .ceremony_helpers import (
     ORIGIN,
     Authenticator,
@@ -49,8 +50,8 @@ def test_two_authentications_with_the_same_counter_cannot_both_succeed(app, monk
     authenticator = Authenticator()
     first, second = app.test_client(), app.test_client()
     register_simple(first, authenticator, counter=5)
-    # The same browser session, so the same server-side records.
-    second.set_cookie("session", first.get_cookie("session").value)
+    # The same browser, so the same namespace and server-side records.
+    visitor_namespace.give(second, visitor_namespace.of(first))
     challenges = [_begin(first, authenticator), _begin(second, authenticator)]
 
     both_have_read = threading.Barrier(2, timeout=10)

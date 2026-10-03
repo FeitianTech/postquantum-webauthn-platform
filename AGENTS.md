@@ -243,8 +243,8 @@ its logic out here first.
   `json_values.py` (`make_json_safe`, and `as_bytes`, the one reading of a value as bytes),
   `aaguid.py` (an AAGUID's GUID spelling), `env_flags.py`.
 - `visitor_session.py`: the namespace a visitor's uploads and credentials are stored under (its id
-  in the signed session and a signed recovery cookie, the throttled last-access touch, and the one
-  sweep of idle namespaces, on both backends).
+  in a signed cookie of its own, never the Flask session; the last-access touch, throttled in
+  memory; and the one sweep of idle namespaces, on both backends).
 - Routes: `routes/simple/` and `routes/advanced/` (begin/complete; the bodies are short
   orchestrators over modules named for their stage; the try blocks and the order of session
   reads are behaviour); `routes/ceremony_session.py` (every begin: refused, the session kept as

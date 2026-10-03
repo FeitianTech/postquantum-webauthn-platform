@@ -175,8 +175,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0"
+      "_permanent": true
      }
     }
    ],
@@ -888,8 +887,7 @@
        "challenge": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE",
        "issued_at": 1790000000.0,
        "user_verification": "preferred"
-      },
-      "fido.mds.session": "D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0"
+      }
      }
     }
    ],
@@ -970,16 +968,6 @@
    ],
    "cookies": [
     {
-     "name": "fido.mds.session",
-     "attributes": [
-      "Max-Age=31536000",
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": "D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0"
-    },
-    {
      "name": "session",
      "attributes": [
       "HttpOnly",
@@ -987,8 +975,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0"
+      "_permanent": true
      }
     }
    ],
@@ -1633,8 +1620,7 @@
        "issued_at": 1790000000.0,
        "user_verification": "preferred"
       },
-      "advanced_authenticate_allowed_attachments": [],
-      "fido.mds.session": "D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0"
+      "advanced_authenticate_allowed_attachments": []
      }
     }
    ],
@@ -1702,8 +1688,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0"
+      "_permanent": true
      }
     }
    ],
@@ -1786,8 +1771,7 @@
        "issued_at": 1790000000.0,
        "user_verification": "preferred"
       },
-      "advanced_authenticate_allowed_attachments": [],
-      "fido.mds.session": "D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0"
+      "advanced_authenticate_allowed_attachments": []
      }
     }
    ],
@@ -1855,8 +1839,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0"
+      "_permanent": true
      }
     }
    ],
@@ -1939,8 +1922,7 @@
        "issued_at": 1790000000.0,
        "user_verification": "preferred"
       },
-      "advanced_authenticate_allowed_attachments": [],
-      "fido.mds.session": "D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0"
+      "advanced_authenticate_allowed_attachments": []
      }
     }
    ],
@@ -2008,8 +1990,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0"
+      "_permanent": true
      }
     }
    ],
@@ -2081,8 +2062,7 @@
      ],
      "contents": {
       "_permanent": true,
-      "advanced_authenticate_allowed_attachments": [],
-      "fido.mds.session": "D_4GU6mjgNxOcyimZ4RAj7hEZv7zFbYaXIA8xL53Sj0"
+      "advanced_authenticate_allowed_attachments": []
      }
     }
    ],

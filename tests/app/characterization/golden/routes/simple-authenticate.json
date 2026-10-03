@@ -282,8 +282,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY"
+      "_permanent": true
      }
     }
    ],
@@ -954,7 +953,6 @@
      "contents": {
       "_permanent": true,
       "authenticate_rp_id": "localhost",
-      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY",
       "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
       "simple_credentials_email": "user@example.com",
       "state": {
@@ -1027,16 +1025,6 @@
    ],
    "cookies": [
     {
-     "name": "fido.mds.session",
-     "attributes": [
-      "Max-Age=31536000",
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY"
-    },
-    {
      "name": "session",
      "attributes": [
       "HttpOnly",
@@ -1044,8 +1032,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY"
+      "_permanent": true
      }
     }
    ],
@@ -1355,7 +1342,6 @@
      "contents": {
       "_permanent": true,
       "authenticate_rp_id": "localhost",
-      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY",
       "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
       "simple_credentials_email": "user@example.com",
       "state": {
@@ -1428,16 +1414,6 @@
    ],
    "cookies": [
     {
-     "name": "fido.mds.session",
-     "attributes": [
-      "Max-Age=31536000",
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY"
-    },
-    {
      "name": "session",
      "attributes": [
       "HttpOnly",
@@ -1445,8 +1421,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY"
+      "_permanent": true
      }
     }
    ],
@@ -1513,7 +1488,6 @@
      "contents": {
       "_permanent": true,
       "authenticate_rp_id": "localhost",
-      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY",
       "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
       "simple_credentials_email": "user@example.com",
       "state": {
@@ -1593,8 +1567,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY"
+      "_permanent": true
      }
     }
    ],
@@ -1658,8 +1631,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY"
+      "_permanent": true
      }
     }
    ],
@@ -1722,8 +1694,7 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
-      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY"
+      "_permanent": true
      }
     }
    ],
