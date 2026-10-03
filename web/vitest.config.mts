@@ -65,14 +65,14 @@ export default defineConfig({
       // the tests.
       exclude: ['src/**/*.test.{ts,tsx}', 'src/**/*.test.js', 'src/test/**', 'src/pages/**'],
       thresholds: {
-        // A floor, not a target: set just under what was measured on 2026-10-01
-        // (99.51 statements / 98.32 branches / 99.38 functions / 99.85 lines), so
+        // A floor, not a target: set just under what was measured on 2026-10-03
+        // (99.54 statements / 98.56 branches / 99.47 functions / 99.86 lines), so
         // a real regression fails the run. Raise them as coverage rises; never
         // lower them to go green.
-        statements: 99,
-        branches: 98,
-        functions: 99,
-        lines: 99.5,
+        statements: 99.5,
+        branches: 98.5,
+        functions: 99.4,
+        lines: 99.8,
         // The logic modules: every line and branch of each.
         'src/logic/**/*.js': FULL,
       },

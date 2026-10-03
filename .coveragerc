@@ -5,12 +5,14 @@ source =
     server
 
 [report]
-# A floor, not a target: the app and tools measured 97.8% on 2026-10-01 (fido2
-# comes from PyPI and is not measured), and 97.6% in the python:3.12-slim image,
+# A floor, not a target: the app and tools measured 99.45% on 2026-10-03 (fido2
+# comes from PyPI and is not measured), and 99.25% in the python:3.12-slim image,
 # where tools/commit_messages.py's tests skip for want of git. Set just below the
 # lower figure so a real regression fails. Raise it when coverage rises; never
 # lower it to go green.
-fail_under = 97.5
+fail_under = 99.2
+# coverage compares the total rounded to this many places with the floor.
+precision = 2
 omit =
     tests/*
     */tests/*
