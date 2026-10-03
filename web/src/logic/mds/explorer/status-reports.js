@@ -44,7 +44,7 @@ function reportRow(report, lead, level) {
         status: reportCell(report[lead]),
         effectiveDate: reportCell(report.effectiveDate),
         authenticatorVersion: reportCell(report[level]),
-        certificateNumber: report.certificateNumber ? String(report.certificateNumber) : MISSING_CELL_TEXT,
+        certificateNumber: report.certificateNumber === '' ? MISSING_CELL_TEXT : reportCell(report.certificateNumber),
         descriptor: [report.certificationDescriptor, report.url].filter(Boolean).map(String).join(' • '),
         details: details.join(' • '),
         certificate: typeof report.certificate === 'string' ? report.certificate : '',

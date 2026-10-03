@@ -439,6 +439,13 @@ describe('the MDS entry page: what an entry may lack', () => {
     expect(within(urlOnly).getAllByRole('cell')[4]).toHaveTextContent(/^https:\/\/example.com\/only-the-url$/);
     expect(within(versionOnly).getAllByRole('cell')[4]).toHaveTextContent(/^Policy: 1.4.0$/);
   });
+
+  it('shows a certificate number 0 as a number, with copy', () => {
+    renderEntry({ ...L1(), statusReports: [{ status: 'FIDO_CERTIFIED', certificateNumber: 0 }] } as unknown as MdsEntry);
+    const number = within(section('statusReports')).getAllByRole('cell')[3];
+    expect(number.querySelector('code')).toHaveTextContent(/^0$/);
+    expect(within(number).getByRole('button', { name: 'Copy certificate number' })).toBeInTheDocument();
+  });
 });
 
 describe('an entry the list does not hold', () => {

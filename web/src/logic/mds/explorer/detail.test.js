@@ -288,7 +288,7 @@ describe('the detail page: sections', () => {
     expect(reports.columns).toBe(STATUS_REPORT_COLUMNS);
     expect(reports.fields).toBeUndefined();
     expect(reports.statusReports).toEqual([
-      { status: '', effectiveDate: '—', authenticatorVersion: '—', certificateNumber: '—', descriptor: '', details: '', certificate: '' },
+      { status: '', effectiveDate: '—', authenticatorVersion: '—', certificateNumber: '0', descriptor: '', details: '', certificate: '' },
       {
         status: 'FIDO_CERTIFIED_L1',
         effectiveDate: '2026-09-01',
@@ -308,6 +308,7 @@ describe('the detail page: sections', () => {
         certificate: '',
       },
     ]);
+    expect(section({ statusReports: [{ certificateNumber: '' }] }, 'statusReports').statusReports[0].certificateNumber).toBe('—');
     expect(section({ statusReports: [] }, 'statusReports')).toBeUndefined();
   });
 
