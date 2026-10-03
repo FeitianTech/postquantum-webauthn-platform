@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import os
 import subprocess
 import sys
+import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -450,10 +452,59 @@ def test_publish_takes_the_pointer_back_from_an_older_publisher(stubbed_refresh,
     assert pointer["previous"].startswith("mds/sets/1/7-")
 
 
-def _rate_limited(monkeypatch):
-    import io
-    import urllib.error
+def test_publish_gives_up_quietly_after_losing_the_pointer_three_times(stubbed_refresh, bucket, monkeypatch, capsys):
+    tries = []
 
+    def _lost(_files):
+        tries.append(1)
+        return snapshot_sets.Published("lost", {"no": 43})
+
+    monkeypatch.setattr(snapshot_sets, "publish", _lost)
+
+    assert updater.main(["--publish"]) == 0
+    assert len(tries) == 3
+    assert "::warning::Other publishers kept landing first (no. 43); nothing published." in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("value", "seconds"),
+    [
+        (None, None),
+        ("", None),
+        ("soon", None),
+        ("5", 5),
+        ("99999", updater.MDS_RETRY_AFTER_CAP_SECONDS),
+        ("Thu, 01 Jan 1970 00:00:00 GMT", 0),
+    ],
+)
+def test_a_retry_after_is_seconds_or_a_date_never_negative_and_capped(value, seconds):
+    assert updater._parse_retry_after(value) == seconds
+
+
+def test_a_retry_after_date_is_read_as_the_seconds_until_it():
+    soon = datetime.now(timezone.utc).timestamp() + 30
+    value = datetime.fromtimestamp(soon, timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+    assert 28 <= updater._parse_retry_after(value) <= 30
+
+
+def test_a_rate_limit_without_retry_after_waits_the_backoff(monkeypatch):
+    waits = []
+    answers = [urllib.error.HTTPError("https://mds.example", 429, "Too Many Requests", None, io.BytesIO())]
+
+    def _fetch():
+        if answers:
+            raise answers.pop()
+        return b"blob", None, None
+
+    monkeypatch.setattr(updater, "_fetch_remote_blob", _fetch)
+    monkeypatch.setattr(updater.time, "sleep", waits.append)
+
+    assert updater._fetch_remote_blob_with_retry() == (b"blob", None, None)
+    assert waits == [updater.MDS_DOWNLOAD_BACKOFF_BASE_SECONDS]
+
+
+def _rate_limited(monkeypatch):
     attempts = []
 
     def _urlopen(request, timeout):
