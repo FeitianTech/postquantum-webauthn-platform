@@ -277,13 +277,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "ab13b85c2110a80d1a41cb4efea2d25d3f401403ab5c3a0193cb068156e99cf9",
@@ -999,7 +998,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "authenticate_rp_id": "localhost",
       "simple_credentials_digest": "-iHIbJNXI3fifTNV8PbK3mirawdJYKucnfvT5D1m1j8",
       "simple_credentials_email": "user@example.com",
@@ -1075,13 +1073,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "12c896ce5c4d8b8dbc9958ea3a41446d50cafce3e476a2dc375556ca4f678fc5",
@@ -1410,7 +1407,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_original_request": {
        "publicKey": {
         "authenticatorSelection": {
@@ -1530,13 +1526,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "30ab3bfb8696745795996fbb3d0718e1beb311e5a4aef6129a84813e733aaecc",
@@ -2246,7 +2241,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -2329,13 +2323,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "d7a74bdde641c4c589b5bc68aff8372747f19921fe6c0a4e6384f13d9f4adffc",
@@ -2407,7 +2400,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -2485,13 +2477,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "78d642bfdc30e2a2960d35747dd0595dafc9ebdeb02ac164dffd8faf57eb61ba",

@@ -170,13 +170,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "820e55a12a04e00fad983c541f9fb394d30e9f7537edbf81d499de0e9fd35f67",
@@ -801,7 +800,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_original_request": {
        "publicKey": {
         "authenticatorSelection": {
@@ -931,13 +929,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "40071acdbddced6abffbbbb892d3aa81b6239b0f0be45f7252447e9952168502",
@@ -2071,7 +2068,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_original_request": {
        "publicKey": {
         "challenge": {
@@ -2177,13 +2173,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "0d2d65324017850e78467da93852c0b4a859c86315b3a0c63ba9e69fc45429e8",
@@ -2860,25 +2855,9 @@
     [
      "Permissions-Policy",
      "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
-    ],
-    [
-     "Vary",
-     "Cookie"
     ]
    ],
-   "cookies": [
-    {
-     "name": "session",
-     "attributes": [
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": {
-      "_permanent": true
-     }
-    }
-   ],
+   "cookies": [],
    "bodySha256": "e00b616231ec9a521f10c47c00c1e48f2983daff1922b79aae888b612c87212f",
    "body": {
     "data": {
@@ -2978,25 +2957,9 @@
     [
      "Permissions-Policy",
      "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
-    ],
-    [
-     "Vary",
-     "Cookie"
     ]
    ],
-   "cookies": [
-    {
-     "name": "session",
-     "attributes": [
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": {
-      "_permanent": true
-     }
-    }
-   ],
+   "cookies": [],
    "bodySha256": "5a47bbd0975b61afb4ef7fa577ded50b4bfb2be9aaace5ccc351cbe042a6e510",
    "body": {
     "data": {
@@ -3213,25 +3176,9 @@
     [
      "Permissions-Policy",
      "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(), usb=(), xr-spatial-tracking=()"
-    ],
-    [
-     "Vary",
-     "Cookie"
     ]
    ],
-   "cookies": [
-    {
-     "name": "session",
-     "attributes": [
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": {
-      "_permanent": true
-     }
-    }
-   ],
+   "cookies": [],
    "bodySha256": "18ef33c9c997c0d792227b9ee22b2173adffda6e8db3cfd90962d82dcf0af1c5",
    "body": {
     "data": {

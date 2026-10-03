@@ -277,13 +277,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "f9733af76c3b28e9a5a840bd83d80d98cdfb816d39b5635399012d95d7aef834",
@@ -951,7 +950,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "register_rp_id": "localhost",
       "simple_register_public_key": {
        "authenticatorSelection": {
@@ -1164,13 +1162,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "69fe7d1af2c947e65373a814336fe966b3f19878f276fe40e047682e1f71bc7c",
@@ -1232,7 +1229,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "register_rp_id": "localhost",
       "simple_register_public_key": {
        "authenticatorSelection": {
@@ -1445,13 +1441,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "7c6d7a2e194d7cfa0f79ad92e96dc0173612c7aa1b13d1a7d78dfa5008f3ab07",

@@ -277,13 +277,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "bed84b25f2719547263085ec6d25d32587d208b1c1864b141798d1bd5c5bc969",
@@ -951,7 +950,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "authenticate_rp_id": "localhost",
       "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
       "simple_credentials_email": "user@example.com",
@@ -1027,13 +1025,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "30ddcef6f6ae657fbf6bfbff532afea6ba15469911b034de664e4846d276bc48",
@@ -1340,7 +1337,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "authenticate_rp_id": "localhost",
       "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
       "simple_credentials_email": "user@example.com",
@@ -1416,13 +1412,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "8e3ad0897c5b1fcd964fe290460994807914273f8df932aec196d599e9460224",
@@ -1486,7 +1481,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "authenticate_rp_id": "localhost",
       "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
       "simple_credentials_email": "user@example.com",
@@ -1562,13 +1556,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "029fb2709bf85b5a5c7c5fc6896e74dd7bed2f7f9f14e88bb9f046ec38c09dac",
@@ -1622,19 +1615,7 @@
      "Cookie"
     ]
    ],
-   "cookies": [
-    {
-     "name": "session",
-     "attributes": [
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": {
-      "_permanent": true
-     }
-    }
-   ],
+   "cookies": [],
    "bodySha256": "e9639e3c4681ce85f852fbac48e2eeee5ba51296dbfec57c200d59b76237ab80",
    "body": {
     "$text": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>\n"
@@ -1685,19 +1666,7 @@
      "Cookie"
     ]
    ],
-   "cookies": [
-    {
-     "name": "session",
-     "attributes": [
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": {
-      "_permanent": true
-     }
-    }
-   ],
+   "cookies": [],
    "bodySha256": "3f48916adedde6dec8149e67f56c02d7d3006f340e8156abe95f1cfb8e4714da",
    "body": {
     "$text": "<!doctype html>\n<html lang=en>\n<title>400 Bad Request</title>\n<h1>Bad Request</h1>\n<p>The browser (or proxy) sent a request that this server could not understand.</p>\n"

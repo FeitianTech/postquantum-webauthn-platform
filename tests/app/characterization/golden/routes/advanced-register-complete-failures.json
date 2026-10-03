@@ -209,17 +209,6 @@
       "SameSite=Lax"
      ],
      "contents": "RCwQ_e2mdacpbW9TWRyln6Yfq7alEzciAIw_aJmbqK8"
-    },
-    {
-     "name": "session",
-     "attributes": [
-      "HttpOnly",
-      "Path=/",
-      "SameSite=Lax"
-     ],
-     "contents": {
-      "_permanent": true
-     }
     }
    ],
    "bodySha256": "a88ce5a85a2704443ed969917f2406498e965030981a91facbbc69850952ab79",
@@ -281,7 +270,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_original_request": {
        "publicKey": {
         "challenge": {
@@ -387,13 +375,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "58e30690b28d5a7756285a92b2c2ea8df067d1a9d5d1440a9b0fe3605318d2a6",
@@ -1013,13 +1000,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "41122d03171bed02bbec82a8113975842b9450f19bc480e6b40bbe4e29968669",
@@ -1644,7 +1630,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_original_request": {
        "publicKey": {
         "challenge": {
@@ -1750,13 +1735,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "87d71ac36605b9c235c3201df4f6d9050d8b88656ed41249286db3644160db77",
@@ -1820,7 +1804,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_original_request": {
        "publicKey": {
         "challenge": {
@@ -1926,13 +1909,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "87d71ac36605b9c235c3201df4f6d9050d8b88656ed41249286db3644160db77",
@@ -1996,7 +1978,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_original_request": {
        "publicKey": {
         "challenge": {
@@ -2102,13 +2083,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "2e41ee4e0d95864b389f41c9e23847002dcbfb4755ad2e38c6da3082b6beb3eb",
@@ -2172,7 +2152,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_original_request": {
        "publicKey": {
         "challenge": {
@@ -2278,13 +2257,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "6e58dc3a31d11aa1c0318d8967cc4218ab43ce2e28e6d785bb36a4c376b26e56",

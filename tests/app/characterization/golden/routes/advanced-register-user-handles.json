@@ -170,13 +170,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "5a65df762003c53bdc45ebe8007c9c41fa300f549db13e97df22be48362ae2a7",
@@ -801,7 +800,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_original_request": {
        "publicKey": {
         "challenge": {
@@ -907,13 +905,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "bb8656dc8a2a9996d592dea1f9309867945aee1a92d347a8e95a221e91289e53",
@@ -1538,7 +1535,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_original_request": {
        "publicKey": {
         "challenge": {
@@ -1644,13 +1640,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "e12cd183b9e8598ca855ce998751e644a853b458ac0df1de52b4d4f80ca236a9",

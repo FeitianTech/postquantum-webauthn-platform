@@ -185,7 +185,7 @@ def test_a_visitor_without_a_namespace_gets_one_only_when_asked_and_keeps_it_for
 
         assert visitor_session.current_id() == identifier
         assert visitor_session.ensure_id() == identifier
-        assert session.permanent is True
+        assert dict(session) == {}
 
 
 def test_outside_a_request_there_is_no_namespace():

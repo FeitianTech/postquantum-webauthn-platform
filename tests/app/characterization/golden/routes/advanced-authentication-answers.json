@@ -170,13 +170,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "b1ab8e78e8ef880a76b675cbc348a06f3d65c31f182b9d94f6f704f855219925",
@@ -864,7 +863,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_original_request": {
        "publicKey": {
         "challenge": {
@@ -970,13 +968,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "db8a49ae385b4283515d836ab1203ece82beec7e4279a6a833ac4e418d4543b6",
@@ -1610,7 +1607,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -1683,13 +1679,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "4aaf4871bdc9a24972b2fefc5e8a410899a1ef8be2048d35efb42c4c5ff7ce04",
@@ -1761,7 +1756,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -1834,13 +1828,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "7135bde88c8150881d80a49a1fb179935023279e692f821251fd64cc7ae86e2c",
@@ -1912,7 +1905,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_auth_rp": {
        "id": "localhost",
        "name": null
@@ -1985,13 +1977,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "186dd095448e6daa811ecac7f16569f9e8db077843eb0ba77fba26d79dca1448",
@@ -2061,7 +2052,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "advanced_authenticate_allowed_attachments": []
      }
     }

@@ -277,13 +277,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "2339c6cd84517c1b6e2cf9bcc6ec26b0742395645a400057a48c7f324ebdd312",
@@ -949,7 +948,6 @@
       "SameSite=Lax"
      ],
      "contents": {
-      "_permanent": true,
       "authenticate_rp_id": "localhost",
       "simple_credentials_digest": "QqzvwkjPRN86RcKbohOAMVcz9t7jS1XunF9wCW0wJSk",
       "simple_credentials_email": "user@example.com",
@@ -1025,13 +1023,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "54fea46ef33aca08c66aecf6ab990222ac8855f3395309748ef7c40b982bab19",

@@ -16,14 +16,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import timedelta
 
-from flask import (
-    after_this_request,
-    current_app,
-    g,
-    has_request_context,
-    request,
-    session,
-)
+from flask import after_this_request, current_app, g, has_request_context, request
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 
 from .storage import common as storage_common
@@ -270,13 +263,11 @@ def current_id(*, create: bool = False) -> str | None:
 
 
 def ensure_id() -> str:
-    """The visitor's session id, created when the visitor has none; the session is made permanent."""
+    """The visitor's namespace, created when the visitor has none."""
 
     identifier = current_id(create=True)
     if not identifier:
         raise RuntimeError("Unable to establish metadata session identifier.")
-    if has_request_context():
-        session.permanent = True
     return identifier
 
 

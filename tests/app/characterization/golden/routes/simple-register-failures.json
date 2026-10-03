@@ -328,13 +328,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "7850161b1316754d178dcafb6e5fb873345e8872f9c7bbddb513c30ac929110d",
@@ -2396,13 +2395,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "57161eadb768899a3c4f50c354e94608d30cf0eef5e8d2e8c800f427d261b9a7",

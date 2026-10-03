@@ -170,13 +170,12 @@
     {
      "name": "session",
      "attributes": [
+      "Max-Age=0",
       "HttpOnly",
       "Path=/",
       "SameSite=Lax"
      ],
-     "contents": {
-      "_permanent": true
-     }
+     "contents": null
     }
    ],
    "bodySha256": "29b0873f5dbf5047794fafe94f4b1236174319c81e73d4566cb657ad567aa1dd",
