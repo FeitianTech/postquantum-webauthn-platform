@@ -132,13 +132,49 @@ describe('the detail page: sections', () => {
   });
 
   it('says whether the statement\'s key is restricted, wants fresh user verification, or syncs, as it says it', () => {
-    expect(section(named('Fixture Security Key L2'), 'metadataStatement').fields.slice(-3)).toEqual([
+    const fields = section(named('Fixture Security Key L2'), 'metadataStatement').fields;
+    const first = fields.findIndex(({ label }) => label === 'Key Restricted');
+    expect(fields.slice(first, first + 3)).toEqual([
       { label: 'Key Restricted', value: 'true' },
       { label: 'Fresh User Verification Required', value: 'false' },
       { label: 'Multi-Device Credential Support', value: 'unsupported' },
     ]);
     // Neither is guessed from MDS3's default when the statement leaves it out.
     expect(section(named('Fixture Security Key L1'), 'metadataStatement').fields.map(({ label }) => label)).not.toContain('Key Restricted');
+  });
+
+  it('shows the supported extensions and how the transaction display shows its text', () => {
+    const statement = section(named('Fixture Security Key L2'), 'metadataStatement');
+    expect(statement.fields.slice(-3)).toEqual([
+      { label: 'TC Display Content Type', value: 'image/png' },
+      {
+        label: 'TC Display PNG 1',
+        value: 'Width: 320 • Height: 480 • Bit depth: 16 • Color type: 2 • Compression: 0 • Filter: 0 • Interlace: 0',
+      },
+      {
+        label: 'TC Display PNG 2',
+        value:
+          'Width: 32 • Height: 32 • Bit depth: 1 • Color type: 3 • Compression: 0 • Filter: 0 • Interlace: 0 • ' +
+          'Palette: rgb(255, 255, 255), rgb(0, 0, 0)',
+      },
+    ]);
+    expect(statement.chipLists.slice(-2)).toEqual([
+      { label: 'TC Display', values: ['any', 'hardware'] },
+      { label: 'Supported Extensions', values: ['hmac-secret', 'credProtect (tag 1, data 03, fail if unknown)'] },
+    ]);
+
+    const odd = section(
+      {
+        metadataStatement: {
+          tcDisplayPNGCharacteristics: [null, { plte: [{ r: 1, g: 2 }, 'grey'] }],
+          supportedExtensions: ['credBlob', { tag: 0 }, [], { id: 'x', fail_if_unknown: false, data: '' }, null],
+        },
+      },
+      'metadataStatement',
+    );
+    expect(odd.fields).toEqual([{ label: 'TC Display PNG', value: 'Palette: {"r":1,"g":2}, grey' }]);
+    expect(odd.chipLists).toEqual([{ label: 'Supported Extensions', values: ['credBlob', '(tag 0)', 'x'] }]);
+    expect(section({ metadataStatement: { tcDisplayPNGCharacteristics: {} } }, 'metadataStatement').fields).toEqual([]);
   });
 
   it('lists each combination with a method or a code accuracy, counting those left out', () => {

@@ -113,6 +113,8 @@ function metadataStatementSection(entry, metadata) {
             field('Key Restricted', metadata.isKeyRestricted),
             field('Fresh User Verification Required', metadata.isFreshUserVerificationRequired),
             field('Multi-Device Credential Support', metadata.multiDeviceCredentialSupport),
+            field('TC Display Content Type', metadata.tcDisplayContentType),
+            ...pngFields(metadata.tcDisplayPNGCharacteristics),
         ]),
         chipLists: present([
             chipList('Authentication Algorithms', metadata.authenticationAlgorithms),
@@ -122,8 +124,53 @@ function metadataStatementSection(entry, metadata) {
             chipList('Matcher Protection', metadata.matcherProtection),
             chipList('Attachment Hints', metadata.attachmentHint),
             chipList('TC Display', metadata.tcDisplay),
+            chipList('Supported Extensions', extractList(metadata.supportedExtensions).map(extensionText)),
         ]),
     };
+}
+
+// "credProtect (tag 1, data 03, fail if unknown)": an extension the statement
+// says the authenticator supports, and what its descriptor says of it.
+function extensionText(descriptor) {
+    if (typeof descriptor !== 'object') {
+        return descriptor;
+    }
+    const notes = [
+        descriptor.tag !== undefined && descriptor.tag !== null ? `tag ${descriptor.tag}` : '',
+        descriptor.data ? `data ${descriptor.data}` : '',
+        descriptor.fail_if_unknown === true ? 'fail if unknown' : '',
+    ].filter(Boolean);
+    const id = descriptor.id !== undefined && descriptor.id !== null ? String(descriptor.id) : '';
+    return [id, notes.length ? `(${notes.join(', ')})` : ''].filter(Boolean).join(' ');
+}
+
+const PNG_CHARACTERISTICS = [
+    ['width', 'Width'],
+    ['height', 'Height'],
+    ['bitDepth', 'Bit depth'],
+    ['colorType', 'Color type'],
+    ['compression', 'Compression'],
+    ['filter', 'Filter'],
+    ['interlace', 'Interlace'],
+];
+
+// A palette entry as "rgb(255, 255, 255)", or its JSON when it is not three numbers.
+function paletteEntry(entry) {
+    const channels = [entry?.r, entry?.g, entry?.b];
+    return channels.every(channel => typeof channel === 'number')
+        ? `rgb(${channels.join(', ')})`
+        : rawDisplayString(entry);
+}
+
+// The transaction display's PNG characteristics: a field for each descriptor
+// ("TC Display PNG", numbered when there are several), its palette last.
+function pngFields(descriptors) {
+    const values = Array.isArray(descriptors) ? descriptors.filter(item => item && typeof item === 'object') : [];
+    return values.map((descriptor, index) => {
+        const palette = Array.isArray(descriptor.plte) ? `Palette: ${descriptor.plte.map(paletteEntry).join(', ')}` : '';
+        const text = [describe(descriptor, PNG_CHARACTERISTICS), palette].filter(Boolean).join(' • ');
+        return field(values.length > 1 ? `TC Display PNG ${index + 1}` : 'TC Display PNG', text);
+    });
 }
 
 const CODE_ACCURACY = [

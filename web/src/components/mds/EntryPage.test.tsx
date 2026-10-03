@@ -223,6 +223,15 @@ describe('the MDS entry page', () => {
     expect(field(statement, 'Multi-Device Credential Support')).toHaveTextContent(/^unsupported$/);
   });
 
+  it('shows the supported extensions and the transaction display\'s content type and PNG', () => {
+    renderEntry(entryNamed('Fixture Security Key L2'));
+    const statement = section('metadataStatement');
+    expect(chips('Supported Extensions')).toEqual(['hmac-secret', 'credProtect (tag 1, data 03, fail if unknown)']);
+    expect(chips('TC Display')).toEqual(['any', 'hardware']);
+    expect(field(statement, 'TC Display Content Type')).toHaveTextContent(/^image\/png$/);
+    expect(field(statement, 'TC Display PNG 2')).toHaveTextContent(/Palette: rgb\(255, 255, 255\), rgb\(0, 0, 0\)$/);
+  });
+
   it('shows the biometric status reports in a table of their own, and the rogue list over the status reports', () => {
     const entry = entryNamed('Fixture Security Key L2');
     renderEntry(entry);
