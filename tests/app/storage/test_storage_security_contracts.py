@@ -42,6 +42,7 @@ TRAVERSAL_NAMES = [
     "a/b",
     "a\\b",
     "alice\x00.pkl",
+    "a\x01b",  # a control character, as ?email=a%01b sends it
     "/etc/passwd",
     "/private/tmp/X",
     "foo/../../bar",

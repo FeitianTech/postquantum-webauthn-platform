@@ -181,6 +181,24 @@ def test_a_lost_reply_counts_as_stored_only_if_the_record_holds_every_merged_val
     ) is False
 
 
+def test_a_lost_reply_over_a_record_that_no_longer_decodes_is_not_reported_as_stored(gcs, monkeypatch):
+    blob_name = artifacts._artifact_blob(STORAGE_ID, SESSION)
+
+    def _overwritten_by_something_else_then_the_reply_is_lost(*_args, **_kwargs):
+        gcs.put(blob_name, b"not a record")
+        raise ConnectionError("connection reset")
+
+    monkeypatch.setattr(artifacts, "upload_bytes_if_generation", _overwritten_by_something_else_then_the_reply_is_lost)
+
+    assert artifacts.store_credential_artifact(STORAGE_ID, {"late": True}, merge=True, session_id=SESSION) is False
+
+
+def test_a_delete_on_cloud_storage_says_whether_there_was_a_record(gcs):
+    assert artifacts.delete_credential_artifact_with_status(STORAGE_ID, session_id=SESSION) == "deleted"
+    assert artifacts.delete_credential_artifact_with_status(STORAGE_ID, session_id=SESSION) == "absent"
+    assert artifacts._artifact_blob(STORAGE_ID, SESSION) not in gcs.objects
+
+
 def _merge_in_a_process(root, key, start):
     os.environ.pop("FIDO_SERVER_GCS_ENABLED", None)
     os.environ["FIDO_SERVER_CREDENTIAL_ARTIFACT_DIR"] = root

@@ -66,6 +66,23 @@ def test_run_background_warmup_survives_failures(monkeypatch):
     startup._run_background_warmup()
 
 
+def test_a_snapshot_that_cannot_be_provisioned_is_logged_and_the_warmup_goes_on(monkeypatch, caplog):
+    calls = []
+
+    def _unwritable():
+        raise OSError("the snapshot directory cannot be written")
+
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
+    monkeypatch.setattr(mds_provisioning, "ensure_snapshot_available", _unwritable)
+    monkeypatch.setattr(mds_cache, "load_explorer_files", lambda: calls.append("explorer files"))
+    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: calls.append("metadata"))
+
+    startup._run_background_warmup()
+
+    assert calls == ["explorer files", "metadata"]
+    assert "Background MDS snapshot provisioning failed." in caplog.text
+
+
 def test_the_warmup_derives_the_explorers_files_before_indexing_the_metadata(monkeypatch):
     calls = []
     monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
