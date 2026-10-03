@@ -1,8 +1,8 @@
 """Simple registration complete: saving the credential, and what follows a save.
 
 The user's credential list is appended to by compare-and-swap, so concurrent
-registrations for one user all keep their credential; then the session's
-credential list and the device log are updated.
+registrations for one user all keep their credential; then the device log is
+updated.
 """
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-from flask import jsonify, session
+from flask import jsonify
 
 from ... import json_values, visitor_session
 from ...storage import credentials, github_mirror
@@ -118,25 +118,6 @@ def _persist_registered_credential_entry(reg: SimpleRegistration) -> Any | None:
     )
 
 
-def _update_session_simple_credentials(reg: SimpleRegistration) -> None:
-    session_simple_credentials = session.get("simple_credentials")
-    if isinstance(session_simple_credentials, list):
-        new_entry = {
-            "credentialId": reg.stored_credential["credentialIdBase64Url"],
-            "aaguid": reg.stored_credential.get("aaguid"),
-            "publicKey": reg.stored_credential["publicKeyBase64Url"],
-            "algorithm": reg.stored_credential.get("publicKeyAlgorithm"),
-            "signCount": reg.stored_credential.get("signCount", 0),
-            "email": reg.stored_credential.get("email"),
-            "type": "simple",
-        }
-        session_simple_credentials = [
-            entry for entry in session_simple_credentials if isinstance(entry, Mapping)
-        ]
-        session_simple_credentials.append(new_entry)
-        session["simple_credentials"] = session_simple_credentials
-
-
 def _record_registration_event(reg: SimpleRegistration) -> None:
     event = github_mirror.registration_event(
         rp_id=reg.resolved_rp_id,
@@ -157,7 +138,6 @@ def persist_registration_context(reg: SimpleRegistration) -> Any | None:
     if persist_response is not None:
         return persist_response
 
-    _update_session_simple_credentials(reg)
     _record_registration_event(reg)
     return None
 

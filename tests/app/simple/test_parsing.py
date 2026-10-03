@@ -1,16 +1,17 @@
 """Tests for how the simple routes read the credentials the page sends back."""
 from __future__ import annotations
 
+from server.app.routes.simple import parsing
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import Authenticator, b64u
 
 
 def _begin_registration(credentials):
-    client = entry_app().test_client()
-    response = client.post("/api/register/begin", json={"credentials": credentials})
+    """What register begin excludes, and the copy of each credential authenticate keeps a digest of."""
+
+    response = entry_app().test_client().post("/api/register/begin", json={"credentials": credentials})
     assert response.status_code == 200
-    with client.session_transaction() as session:
-        kept = session.get("simple_credentials", [])
+    _attested, kept = parsing._parse_client_credentials(credentials)
     return response.get_json()["publicKey"]["excludeCredentials"], kept
 
 
@@ -23,7 +24,7 @@ def test_credentials_that_are_no_objects_are_passed_over():
     assert [entry["credentialId"] for entry in kept] == [b64u(authenticator.credential_id)]
 
 
-def test_an_aaguid_given_in_hex_is_kept_in_the_sessions_copy():
+def test_an_aaguid_given_in_hex_is_kept_in_the_credentials_copy():
     aaguid = bytes.fromhex("00112233445566778899aabbccddeeff")
     entry = Authenticator(aaguid=aaguid).stored_credential_entry()
     del entry["aaguid"]

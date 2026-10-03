@@ -95,9 +95,7 @@ def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch
             assert session_state["state"]["challenge"] == state["challenge"]
             assert isinstance(session_state["state"]["issued_at"], float)
             assert session_state["register_rp_id"] == "example.com"
-            assert session_state["simple_credentials"] == [
-                {"credentialId": "cred-1", "publicKey": "pk-1", "aaguid": "ag-1"}
-            ]
+            assert "simple_credentials" not in session_state
             assert "simple_register_public_key" in session_state
 
 

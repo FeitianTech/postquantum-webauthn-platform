@@ -7,6 +7,7 @@ from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import (
     ORIGIN,
     Authenticator,
+    b64u,
     registration_payload,
     unb64u,
 )
@@ -21,14 +22,14 @@ def test_a_begin_body_that_is_no_object_excludes_no_credential():
     assert response.get_json()["publicKey"]["excludeCredentials"] == []
 
 
-def test_a_begin_without_credentials_forgets_the_ones_an_earlier_begin_kept():
+def test_a_begin_excludes_the_credentials_it_is_sent_and_keeps_none_in_the_session():
     client = entry_app().test_client()
-    client.post("/api/register/begin", json={"credentials": [Authenticator().stored_credential_entry()]})
-    with client.session_transaction() as session:
-        assert len(session["simple_credentials"]) == 1
+    authenticator = Authenticator()
+    begin = client.post("/api/register/begin", json={"credentials": [authenticator.stored_credential_entry()]})
 
-    client.post("/api/register/begin", json={"credentials": []})
-
+    assert [entry["id"] for entry in begin.get_json()["publicKey"]["excludeCredentials"]] == [
+        b64u(authenticator.credential_id)
+    ]
     with client.session_transaction() as session:
         assert "simple_credentials" not in session
 

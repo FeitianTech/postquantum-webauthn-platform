@@ -53,7 +53,7 @@ def test_simple_register_begin_accepts_existing_credentials_alias(monkeypatch):
             assert isinstance(session_state["state"]["issued_at"], float)
 
         with client.session_transaction() as session_state:
-            assert len(session_state["simple_credentials"]) == 1
+            assert "simple_credentials" not in session_state
 
 
 def test_simple_authenticate_begin_accepts_stored_credentials_alias(monkeypatch):

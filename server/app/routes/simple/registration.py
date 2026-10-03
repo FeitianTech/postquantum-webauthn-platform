@@ -265,11 +265,7 @@ def register_begin():
         if isinstance(raw_candidates, list):
             existing_credentials_raw = raw_candidates
 
-    credentials, serialized = parsing._parse_client_credentials(existing_credentials_raw)
-    if serialized:
-        session["simple_credentials"] = serialized
-    else:
-        session.pop("simple_credentials", None)
+    credentials, _serialized = parsing._parse_client_credentials(existing_credentials_raw)
 
     rp_id = relying_party.determine_rp_id()
     server = relying_party.create_fido_server(rp_id=rp_id)
