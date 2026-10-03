@@ -115,7 +115,7 @@ def _artifact_blob(storage_id: str, session_id: str) -> str:
 
 
 def _ensure_directory(session_id: str) -> None:
-    os.makedirs(_session_directory(session_id), exist_ok=True)
+    common.make_store_directory(_artifact_dir(), _session_directory(session_id))
 
 
 def _write_file(path: str, payload: dict[str, Any]) -> None:

@@ -261,6 +261,20 @@ def replace_file(path: str, payload: bytes) -> None:
             os.remove(tmp_path)
 
 
+def make_store_directory(root: str, directory: str) -> None:
+    """Create a local store's ``directory``, and give the store's ``root`` a
+    ``.gitignore`` that ignores everything in it (``*``) when it has none.
+
+    A store's setting may name a folder inside a checkout, where the repository's
+    own .gitignore (which covers ``instance/``) does not reach and nothing else
+    keeps git from offering a visitor's data for a commit."""
+
+    os.makedirs(directory, exist_ok=True)
+    ignore = os.path.join(root, ".gitignore")
+    if not os.path.exists(ignore):
+        replace_file(ignore, b"# Written by the store: nothing here belongs in git.\n*\n")
+
+
 def file_digest(path: str) -> str | None:
     try:
         with open(path, "rb") as f:

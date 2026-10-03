@@ -96,7 +96,7 @@ def _local_session_directory(session_id: str, *, create: bool = False) -> str | 
 
     if create:
         try:
-            os.makedirs(directory, exist_ok=True)
+            common.make_store_directory(session_metadata_dir(), directory)
         except OSError as exc:
             logger.error("Failed to prepare session metadata directory %s: %s", directory, exc)
             raise

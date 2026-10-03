@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import os
 from typing import Any
 
 from .. import visitor_session
@@ -99,25 +98,12 @@ def _credential_blob(name: str, session_id: str) -> str:
     return assert_contained_blob_name(blob_name, prefix=prefix)
 
 
-def _make_session_directory(root: str, directory: str) -> None:
-    """Create a session's directory, and give the store's root a ``.gitignore``
-    that ignores everything in it (``*``) when it has none.
-
-    ``FIDO_SERVER_CREDENTIAL_DIR`` may name a folder inside a checkout, where
-    nothing else keeps git from offering the credentials for a commit."""
-
-    os.makedirs(directory, exist_ok=True)
-    ignore = os.path.join(root, ".gitignore")
-    if not os.path.exists(ignore):
-        replace_file(ignore, b"# Written by the credential store: nothing here belongs in git.\n*\n")
-
-
 def _local_filename(name: str, session_id: str, *, create: bool = False) -> str:
     root = _local_credential_base()
     cleaned_session = _validate_session_id(session_id)
     cleaned_name = _validate_name(name)
     if create:
-        _make_session_directory(root, resolve_contained_path(root, cleaned_session))
+        common.make_store_directory(root, resolve_contained_path(root, cleaned_session))
     # Contained against the store root rather than the session directory, so a
     # session id and a name cannot combine to climb out.
     return resolve_contained_path(root, cleaned_session, f"{cleaned_name}{_JSON_SUFFIX}")
