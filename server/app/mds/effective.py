@@ -1,6 +1,7 @@
 """Effective snapshot composition and metadata entry resolution helpers."""
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
@@ -170,17 +171,9 @@ def resolve_effective_metadata_entry(
     for index, item in enumerate(session_items):
         payload = item.payload
         if _entry_matches_lookup(payload, entry_id=entry_id, aaguid=aaguid, aaid=aaid):
-            return build_explorer_entry(
-                payload,
-                index=index,
-                source="session",
-                trust_anchor_status=False,
-                snapshot_meta={
-                    "generatedAt": item.uploaded_at,
-                    "fetchedAt": item.uploaded_at,
-                },
-                include_detail=True,
-                source_info=_session_item_source_info(item),
+            # As the visitor's explorer list holds it.
+            return _build_session_snapshot_entry(
+                item, index=index, include_detail=True, include_raw_entry=False, compact_detail=True
             )
 
         metadata_statement = payload.get("metadataStatement")
@@ -203,13 +196,26 @@ def resolve_effective_metadata_entry(
         if aaguid_key and aaguid_key in seen_aaguids:
             continue
         if _entry_matches_lookup(payload, entry_id=entry_id, aaguid=aaguid, aaid=aaid):
-            return build_explorer_entry(
-                payload,
-                index=index,
-                source="packaged",
-                trust_anchor_status=True,
-                snapshot_meta=base_summary,
-                include_detail=True,
-            )
+            return _packaged_detail(payload, index, base_summary)
 
     return None
+
+
+def _packaged_detail(payload: Mapping[str, Any], index: int, base_summary: Mapping[str, Any]) -> dict[str, Any]:
+    """A packaged entry as its detail file has it (``mds.explorer_files``), or, without
+    one, built as the full snapshot builds it."""
+
+    files = mds_cache.load_explorer_files()
+    detail = files.details.get(build_entry_id(payload)) if files is not None else None
+    if detail is not None:
+        return json.loads(detail)
+    return build_explorer_entry(
+        payload,
+        index=index,
+        source="packaged",
+        trust_anchor_status=True,
+        snapshot_meta=base_summary,
+        include_detail=True,
+        include_raw_entry=False,
+        compact_detail=True,
+    )

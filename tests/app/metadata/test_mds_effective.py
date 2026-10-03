@@ -62,6 +62,16 @@ def test_an_upload_is_found_before_the_packaged_entry_with_its_aaguid(visitor, m
     assert by_aaguid["sourceInfo"]["storedFilename"].endswith(".json")
 
 
+def test_an_upload_is_resolved_as_the_visitors_explorer_list_holds_it(visitor, mds_fixture_snapshot):
+    _upload("Uploaded", PACKAGED)
+
+    resolved = mds_effective.resolve_effective_metadata_entry(aaguid=PACKAGED)
+    listed = mds_effective.load_effective_full_snapshot()["entries"][0]
+
+    assert resolved == listed
+    assert resolved["rawEntry"] is None
+
+
 def test_an_upload_without_its_info_file_is_shown_without_its_names(visitor, mds_fixture_snapshot):
     stored = _upload("Uploaded", PACKAGED)
     session_metadata.delete_file(visitor_session.current_id(), f"{stored.filename}.meta.json")

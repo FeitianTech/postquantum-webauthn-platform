@@ -117,7 +117,7 @@ def test_serving_the_fixture_never_writes_to_it(mds_fixture_snapshot, client, na
     assert (mds_fixture_snapshot / name).read_bytes() == before
 
 
-def test_resolve_serves_a_packaged_entry_as_the_blob_has_it(mds_fixture_snapshot, client):
+def test_resolve_serves_a_packaged_entry_as_its_detail_file_has_it(mds_fixture_snapshot, client):
     # fido2's StatusReport models neither sunsetDate nor certificationProfiles,
     # nor a field no MDS3 version defines yet: none may be lost on the way.
     blob_entry = next(
@@ -132,8 +132,11 @@ def test_resolve_serves_a_packaged_entry_as_the_blob_has_it(mds_fixture_snapshot
     assert entry["statusReports"] == blob_entry["statusReports"]
     assert entry["statusReports"][-1]["sunsetDate"] == "2029-09-01"
     assert entry["statusReports"][-1]["fixtureFutureField"] == "A field no MDS3 version defines"
-    assert entry["rawEntry"] == blob_entry
     assert entry["timeOfLastStatusChange"] == blob_entry["timeOfLastStatusChange"]
+    # The very entry the page reads from the file its row names.
+    listed = client.get("/assets/mds/fido-mds3.explorer.list.json").get_json()
+    row = next(row for row in listed["entries"] if row["entryId"] == entry["entryId"])
+    assert client.get(row["detailUrl"]).get_json() == entry
 
 
 def test_the_verified_entries_are_read_once_for_each_version_of_the_file(mds_fixture_snapshot, monkeypatch):
