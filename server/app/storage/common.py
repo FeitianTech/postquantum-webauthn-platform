@@ -6,7 +6,6 @@ import contextlib
 import fcntl
 import hashlib
 import os
-import posixpath
 from collections.abc import Callable, Iterator
 from typing import Any
 
@@ -137,10 +136,10 @@ def validate_storage_component(
     A credential name or session id is attacker supplied (it arrives as
     ``?email=`` or a cookie), and it is interpolated straight into a filesystem
     path and a GCS object key. Anything that could make the result denote a
-    different directory -- a path separator, a ``..`` segment, a leading dot, a
-    NUL or other control byte, or a drive-qualified/absolute path -- is
-    rejected outright rather than sanitised, so a rejected request fails loudly
-    instead of silently writing somewhere unexpected.
+    different directory -- a path separator (``/`` and ``\\`` on every platform,
+    so no absolute path either), a ``..`` segment, a leading dot, a NUL or other
+    control byte -- is rejected outright rather than sanitised, so a rejected
+    request fails loudly instead of silently writing somewhere unexpected.
     """
 
     try:
@@ -158,21 +157,11 @@ def validate_storage_component(
         if separator in cleaned:
             raise InvalidStorageIdentifier("Storage identifier contains a path separator")
 
-    # ``os.altsep`` is ``/`` on Windows and ``None`` on POSIX; both real
-    # separators are already covered above, this keeps the check honest if a
-    # platform ever adds another one.
-    for separator in (os.sep, os.altsep):
-        if separator and separator in cleaned:
-            raise InvalidStorageIdentifier("Storage identifier contains a path separator")
-
     if cleaned.startswith("."):
         raise InvalidStorageIdentifier("Storage identifier starts with a dot")
 
     if ".." in cleaned:
         raise InvalidStorageIdentifier("Storage identifier contains a parent directory reference")
-
-    if os.path.isabs(cleaned) or posixpath.isabs(cleaned):
-        raise InvalidStorageIdentifier("Storage identifier is an absolute path")
 
     return cleaned
 

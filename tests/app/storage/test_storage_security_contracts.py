@@ -192,6 +192,9 @@ def test_resolve_contained_path_rejects_a_symlink_escape(local_store):
 
     with pytest.raises(ValueError):
         storage_common.resolve_contained_path(str(root), "escape", "loot")
+    # The lexical check, before any symlink is looked at.
+    with pytest.raises(ValueError):
+        storage_common.resolve_contained_path(str(root), "..", "loot")
 
 
 # --------------------------------------------------------------------------
@@ -229,6 +232,9 @@ def test_assert_contained_blob_name_rejects_escapes():
         storage_common.assert_contained_blob_name("elsewhere/loot", prefix="user-data")
     with pytest.raises(ValueError):
         storage_common.assert_contained_blob_name("user-data//loot", prefix="user-data")
+    for name in ("", None, "user-data/a\x00b", "user-data/a\\b"):
+        with pytest.raises(ValueError):
+            storage_common.assert_contained_blob_name(name, prefix="user-data")
 
     assert (
         storage_common.assert_contained_blob_name("user-data/ok", prefix="user-data")

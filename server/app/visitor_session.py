@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 
 from flask import after_this_request, current_app, g, has_request_context, request
-from itsdangerous import BadSignature, URLSafeTimedSerializer
+from itsdangerous import BadData, URLSafeTimedSerializer
 
 from .storage import common as storage_common
 from .storage import session_metadata
@@ -176,9 +176,9 @@ def schedule_cleanup() -> None:
         _maybe_cleanup(now=current_time)
 
 
-def _serializer() -> URLSafeTimedSerializer | None:
-    secret = current_app.secret_key
-    return URLSafeTimedSerializer(secret, salt=COOKIE_SALT) if secret else None
+def _serializer() -> URLSafeTimedSerializer:
+    # create_app() always sets the secret (config/session_secret.py).
+    return URLSafeTimedSerializer(current_app.secret_key, salt=COOKIE_SALT)
 
 
 def _read_cookie() -> tuple[str | None, float]:
@@ -191,24 +191,18 @@ def _read_cookie() -> tuple[str | None, float]:
     """
 
     raw_cookie = request.cookies.get(COOKIE_NAME)
-    serializer = _serializer()
-    if not isinstance(raw_cookie, str) or not raw_cookie or serializer is None:
+    if not raw_cookie:
         return None, 0.0
     try:
-        unsealed, signed_at = serializer.loads(raw_cookie, max_age=COOKIE_MAX_AGE, return_timestamp=True)
-    except BadSignature:
-        # Also covers SignatureExpired / BadTimeSignature.
-        return None, 0.0
-    except Exception:
+        unsealed, signed_at = _serializer().loads(raw_cookie, max_age=COOKIE_MAX_AGE, return_timestamp=True)
+    except BadData:
+        # A bad or expired signature, or a payload that does not load.
         return None, 0.0
     return storage_common.normalise_session_id(unsealed), signed_at.timestamp()
 
 
 def _set_cookie(identifier: str) -> None:
-    serializer = _serializer()
-    if serializer is None:
-        return
-    sealed = serializer.dumps(identifier)
+    sealed = _serializer().dumps(identifier)
     # Secure as the session cookie is; Lax, like it: the metadata upload is a
     # multipart form, which another site could post in the visitor's namespace
     # were the cookie sent cross-site.

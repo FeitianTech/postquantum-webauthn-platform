@@ -181,11 +181,12 @@ def test_a_lost_reply_counts_as_stored_only_if_the_record_holds_every_merged_val
     ) is False
 
 
-def test_a_lost_reply_over_a_record_that_no_longer_decodes_is_not_reported_as_stored(gcs, monkeypatch):
+@pytest.mark.parametrize("something_else", [b"not a record", b'{"payload": "not an object"}'])
+def test_a_lost_reply_over_a_record_that_no_longer_decodes_is_not_reported_as_stored(gcs, monkeypatch, something_else):
     blob_name = artifacts._artifact_blob(STORAGE_ID, SESSION)
 
     def _overwritten_by_something_else_then_the_reply_is_lost(*_args, **_kwargs):
-        gcs.put(blob_name, b"not a record")
+        gcs.put(blob_name, something_else)
         raise ConnectionError("connection reset")
 
     monkeypatch.setattr(artifacts, "upload_bytes_if_generation", _overwritten_by_something_else_then_the_reply_is_lost)

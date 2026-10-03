@@ -163,6 +163,12 @@ def test_only_a_cookie_this_server_signed_names_a_namespace(touches):
     with app.test_request_context("/", headers=visitor_namespace.header(app, "cookie-session")):
         assert visitor_session.current_id() == "cookie-session"
 
+    # Signed with this server's secret, but no payload it ever wrote.
+    serializer = itsdangerous.URLSafeTimedSerializer(app.secret_key, salt=visitor_session.COOKIE_SALT)
+    unloadable = serializer.make_signer(visitor_session.COOKIE_SALT).sign(b"not-json").decode()
+    with app.test_request_context("/", headers={"Cookie": f"{visitor_session.COOKIE_NAME}={unloadable}"}):
+        assert visitor_session.current_id() is None
+
 
 def test_the_cookie_is_signed_again_once_it_is_a_day_old(touches, monkeypatch):
     app = entry_app()
