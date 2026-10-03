@@ -96,6 +96,15 @@ def test_sixteen_bytes_that_are_a_shorter_octet_string_are_read_whole():
         _certificate_with_aaguid_extension(None),
         _certificate_with_aaguid_extension(b"\x04\x05short"),  # an OCTET STRING of five bytes
         _certificate_with_aaguid_extension(b"short"),
+        # Extensions cryptography will not read: none of them is an AAGUID.
+        pytest.param(
+            material.with_extension_twice(material.ec_key("trust-test").public_key(), common_name="Twice", serial=0x7158),
+            id="extension-twice",
+        ),
+        pytest.param(
+            material.with_x400_alternative_name(material.ec_key("trust-test").public_key(), common_name="X400", serial=0x7159),
+            id="x400-alternative-name",
+        ),
     ],
 )
 def test_a_certificate_without_a_sixteen_byte_aaguid_extension_has_none(certificate):

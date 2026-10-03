@@ -20,6 +20,7 @@ from cryptography.x509.oid import NameOID
 
 from server.app.decoder.decode import apple_anonymous, safetynet
 from server.app.decoder.decode.text import decode_payload_text
+from tests.app.characterization import material
 from tests.app.decoder.real_vectors import (
     ANDROID_SAFETYNET_ATT_STMT,
     ANDROID_SAFETYNET_AUTH_DATA,
@@ -114,6 +115,10 @@ def test_certificates_without_the_nonce_or_that_are_not_certificates():
         "note": "credCert has no 1.2.840.113635.100.8.2 extension"
     }
     assert apple_anonymous.read_certificate(b"junk")["error"].startswith("credCert is not DER X.509")
+    x400 = material.with_x400_alternative_name(material.ec_key("apple").public_key(), common_name="X400", serial=1)
+    assert apple_anonymous.read_certificate(x400) == {
+        "error": "credCert's extensions cannot be read: x400Address/EDIPartyName are not supported types"
+    }
 
 
 def _safetynet_attestation_object(header: bytes, payload: bytes) -> bytes:

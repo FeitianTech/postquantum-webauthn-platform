@@ -49,6 +49,16 @@ MALFORMED_SUBJECT = CERTIFICATE.replace(b"\x0c\x04Leaf", b"\x02\x04Leaf")
         pytest.param(
             material.with_unreadable_subject(CERTIFICATE, "Leaf"), "X500_UNIQUE_IDENTIFIER", id="unreadable-subject"
         ),
+        pytest.param(
+            material.with_extension_twice(material.ec_key("certificates-test").public_key(), common_name="Twice", serial=0x5F),
+            "Duplicate 1.3.6.1.4.1.99999.1 extension found",
+            id="extension-twice",
+        ),
+        pytest.param(
+            material.with_x400_alternative_name(material.ec_key("certificates-test").public_key(), common_name="X400", serial=0x60),
+            "x400Address/EDIPartyName are not supported types",
+            id="x400-alternative-name",
+        ),
     ],
 )
 def test_a_certificate_malformed_past_its_load_is_reported_as_what_went_wrong(certificate, parse_error):

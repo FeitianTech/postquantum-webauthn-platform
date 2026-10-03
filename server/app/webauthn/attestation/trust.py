@@ -9,7 +9,7 @@ from flask import current_app
 
 from ... import encoding, json_values
 from . import formatting
-from .constants import AAGUID_EXTENSION_OID
+from .constants import AAGUID_EXTENSION_OID, UNREADABLE_EXTENSIONS
 
 
 def _trusted_ca_subjects() -> set[str] | None:
@@ -85,7 +85,7 @@ def _extract_certificate_aaguid(cert_der: bytes) -> bytes:
 
     try:
         extension = certificate.extensions.get_extension_for_oid(AAGUID_EXTENSION_OID)
-    except x509.ExtensionNotFound:
+    except (x509.ExtensionNotFound, *UNREADABLE_EXTENSIONS):
         return b""
 
     # cryptography has no type for FIDO's AAGUID extension: it is always unrecognised, its value the DER.

@@ -10,9 +10,16 @@ from __future__ import annotations
 
 from typing import Any
 
+from cryptography import x509
 from cryptography.x509.oid import ObjectIdentifier
 
 AAGUID_EXTENSION_OID = ObjectIdentifier("1.3.6.1.4.1.45724.1.1.4")
+
+# What cryptography raises reading the extensions of a certificate it loaded,
+# which it parses only then: one malformed (ValueError), one given twice
+# (DuplicateExtension), a general name it does not represent (x400Address,
+# ediPartyName: UnsupportedGeneralNameType).
+UNREADABLE_EXTENSIONS = (ValueError, x509.DuplicateExtension, x509.UnsupportedGeneralNameType)
 
 EXTENSION_DISPLAY_METADATA: dict[str, dict[str, Any]] = {
     "1.3.6.1.4.1.41482.13.1": {

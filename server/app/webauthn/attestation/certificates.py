@@ -22,7 +22,7 @@ from . import (
     certificate_summary,
     formatting,
 )
-from .constants import EXTENSION_DISPLAY_METADATA
+from .constants import EXTENSION_DISPLAY_METADATA, UNREADABLE_EXTENSIONS
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +182,7 @@ def serialize_attestation_certificate(cert_bytes: bytes) -> Any:
         return _serialize_attestation_certificate_fallback(cert_bytes, exc)
     try:
         return _certificate_view(certificate, cert_bytes)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, *UNREADABLE_EXTENSIONS) as exc:
         # cryptography reads a certificate's names and extensions only when they
         # are asked for: one that loaded can still be malformed there, or hold
         # a name it will not type (TypeError: a common name that is no string).

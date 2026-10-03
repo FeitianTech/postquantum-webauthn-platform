@@ -29,6 +29,8 @@ from typing import Annotated, Any, Literal
 from cryptography import x509
 from cryptography.hazmat import asn1
 
+from ...webauthn.attestation import constants as attestation_constants
+
 EXTENSION_OID = "1.3.6.1.4.1.11129.2.1.17"
 
 # KeyMint SecurityLevel, by the content octets of the ENUMERATED.
@@ -194,6 +196,8 @@ def read_certificate(der: bytes) -> dict[str, Any]:
         extension = certificate.extensions.get_extension_for_oid(x509.ObjectIdentifier(EXTENSION_OID))
     except x509.ExtensionNotFound:
         return {"note": f"the credential certificate has no {EXTENSION_OID} extension"}
+    except attestation_constants.UNREADABLE_EXTENSIONS as exc:
+        return {"error": f"the credential certificate's extensions cannot be read: {exc}"}
     raw = extension.value.value if isinstance(extension.value, x509.UnrecognizedExtension) else b""
     return read_key_description(raw)
 

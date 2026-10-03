@@ -12,6 +12,7 @@ import hashlib
 import cbor2
 
 from server.app.decoder.decode import android_key
+from tests.app.characterization import material
 from tests.app.decoder.real_vectors import (
     PACKED_ATT_STMT,
     WEBAUTHN_L3_ANDROID_KEY_ATTESTATION_OBJECT,
@@ -230,4 +231,8 @@ def test_what_is_not_a_key_description_is_said_so():
     # A packed attestation certificate carries no KeyDescription.
     assert android_key.read_certificate(PACKED_ATT_STMT["x5c"][0]) == {
         "note": "the credential certificate has no 1.3.6.1.4.1.11129.2.1.17 extension"
+    }
+    twice = material.with_extension_twice(material.ec_key("android-key").public_key(), common_name="Twice", serial=1)
+    assert android_key.read_certificate(twice) == {
+        "error": "the credential certificate's extensions cannot be read: Duplicate 1.3.6.1.4.1.99999.1 extension found"
     }

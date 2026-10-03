@@ -399,6 +399,39 @@ def with_unreadable_subject(der: bytes, common_name: str) -> bytes:
     return der.replace(utf8, bytes([0x03, len(common_name), 0x00]) + common_name[1:].encode())
 
 
+def with_extension_twice(public_key: Any, *, common_name: str, serial: int) -> bytes:
+    """A certificate holding one unrecognised extension twice (two of one length,
+    the second's OID rewritten to the first's): cryptography loads it, then raises
+    ``DuplicateExtension`` when its extensions are read."""
+
+    first, second = x509.ObjectIdentifier("1.3.6.1.4.1.99999.1"), x509.ObjectIdentifier("1.3.6.1.4.1.99999.2")
+    der = certificate(
+        public_key,
+        common_name=common_name,
+        serial=serial,
+        extensions=[(x509.UnrecognizedExtension(oid, b"\x05\x00"), False) for oid in (first, second)],
+    )
+    second_oid = bytes.fromhex("06092b06010401868d1f02")
+    assert der.count(second_oid) == 1
+    return der.replace(second_oid, bytes.fromhex("06092b06010401868d1f01"))
+
+
+def with_x400_alternative_name(public_key: Any, *, common_name: str, serial: int) -> bytes:
+    """A certificate whose alternative name is an x400Address (an rfc822Name
+    re-tagged [3]): cryptography loads it, then raises
+    ``UnsupportedGeneralNameType`` when its extensions are read."""
+
+    der = certificate(
+        public_key,
+        common_name=common_name,
+        serial=serial,
+        extensions=[(x509.SubjectAlternativeName([x509.RFC822Name("zq@zq")]), False)],
+    )
+    rfc822 = bytes([0x81, 5]) + b"zq@zq"
+    assert der.count(rfc822) == 1
+    return der.replace(rfc822, bytes([0xA3, 5]) + b"zq@zq")
+
+
 def _octet_string(payload: bytes) -> bytes:
     return bytes([0x04, len(payload)]) + payload
 

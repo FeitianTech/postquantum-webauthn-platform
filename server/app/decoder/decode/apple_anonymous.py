@@ -14,6 +14,8 @@ from typing import Annotated, Any
 from cryptography import x509
 from cryptography.hazmat import asn1
 
+from ...webauthn.attestation import constants as attestation_constants
+
 NONCE_OID = "1.2.840.113635.100.8.2"
 
 
@@ -31,6 +33,8 @@ def read_certificate(der: bytes) -> dict[str, Any]:
         extension = certificate.extensions.get_extension_for_oid(x509.ObjectIdentifier(NONCE_OID))
     except x509.ExtensionNotFound:
         return {"note": f"credCert has no {NONCE_OID} extension"}
+    except attestation_constants.UNREADABLE_EXTENSIONS as exc:
+        return {"error": f"credCert's extensions cannot be read: {exc}"}
     raw = extension.value.value if isinstance(extension.value, x509.UnrecognizedExtension) else b""
     try:
         nonce = asn1.decode_der(_NonceExtension, raw).nonce
