@@ -12,6 +12,7 @@ import pytest
 from server.app import factory, visitor_session
 from server.app.mds import cache as mds_cache
 from server.app.mds import provisioning as mds_provisioning
+from server.app.mds import trust as mds_trust
 from server.app.storage import github_mirror
 from tests.app.metadata import mds_fixture
 from tests.app.web_export_files import write, write_export
@@ -101,6 +102,15 @@ def mds_fixture_snapshot(monkeypatch, tmp_path, metadata_state):
     shutil.copytree(mds_fixture.SNAPSHOT_DIR, target, copy_function=shutil.copy)
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(target))
     return target
+
+
+@pytest.fixture
+def fixture_blob_root(monkeypatch):
+    """The fixture's BLOB root pinned where the server pins FIDO's, so an instance
+    verifies a snapshot built from the fixture (``snapshot_versions``) as it verifies
+    the real one."""
+
+    monkeypatch.setattr(mds_trust, "FIDO_METADATA_TRUST_ROOT_CERT", mds_fixture.blob_root())
 
 
 @pytest.fixture

@@ -453,6 +453,12 @@ def _signed_blob(payload: dict[str, Any]) -> tuple[bytes, bytes]:
     return message + b"." + websafe_encode(signature).encode("ascii"), root
 
 
+def blob_root() -> bytes:
+    """The root the fixture's BLOBs verify against, which tests pin where the server pins FIDO's."""
+
+    return _signed_blob({})[1]
+
+
 def build_fixture_files() -> dict[str, bytes]:
     """Every fixture file, by its path under ``tests/fixtures/mds``."""
 

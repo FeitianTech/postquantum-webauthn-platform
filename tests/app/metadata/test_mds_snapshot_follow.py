@@ -20,7 +20,7 @@ from tests.app.storage import fake_gcs
 
 
 @pytest.fixture
-def instance(monkeypatch, tmp_path, metadata_state):
+def instance(monkeypatch, tmp_path, metadata_state, fixture_blob_root):
     """A running instance with snapshot no. 7, and Cloud Storage as an in-memory bucket."""
 
     directory = tmp_path / "mds-snapshot"

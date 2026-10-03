@@ -1,6 +1,8 @@
 import copy
 import json
 
+import pytest
+
 from server.app.mds import files as mds_files
 from server.app.mds import snapshot as mds_snapshot
 from server.app.mds.build import (
@@ -10,6 +12,7 @@ from server.app.mds.build import (
     build_explorer_snapshot,
     normalise_aaguid_key,
 )
+from tests.app.metadata import mds_fixture
 
 
 def _sample_payload():
@@ -155,3 +158,17 @@ def test_a_snapshots_seven_files_come_from_its_blob_payload_and_cache_state(monk
     assert files["fido-mds3.verified.json.meta.json"] == b'{\n  "a": 1\n}\n'
     assert json.loads(files["fido-mds3.explorer.json.meta.json"]) == {"kind": "e"}
     assert json.loads(files["fido-mds3.explorer.full.json"])["meta"]["baseEntryCount"] == 1
+
+
+def test_a_snapshot_derived_from_its_blob_and_meta_is_the_one_the_updater_wrote(fixture_blob_root):
+    written = {name: (mds_fixture.SNAPSHOT_DIR / name).read_bytes() for name in mds_files.SNAPSHOT_FILENAMES}
+
+    derived = mds_snapshot.derive(written[mds_files.BLOB], written[mds_files.VERIFIED_META])
+
+    assert derived == written
+
+
+@pytest.mark.parametrize("meta", [b"[]", b"{}", b'{"fetched_at": 7}'])
+def test_a_meta_that_names_no_fetch_time_is_refused(fixture_blob_root, meta):
+    with pytest.raises(ValueError, match="names no time it was fetched"):
+        mds_snapshot.derive((mds_fixture.SNAPSHOT_DIR / mds_files.BLOB).read_bytes(), meta)

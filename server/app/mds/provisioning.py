@@ -12,10 +12,11 @@ demand, in three tiers:
    developer gets after running ``python tools/update_mds_snapshot.py`` once,
    and it is the only tier that needs no network access at all.
 2. **Cloud Storage.** When GCS is configured (``FIDO_SERVER_GCS_ENABLED``), the
-   set ``<bucket>/mds/current.json`` points to is downloaded, each file checked
-   against the pointer (``mds.sets``); without a usable one, the files
-   missing locally from the flat ``<bucket>/mds/<file>`` objects of earlier
-   releases. This is how a Cloud Run cold start gets the snapshot without
+   set ``<bucket>/mds/current.json`` points to is taken: its BLOB and meta,
+   each checked against the pointer (``mds.sets``), the BLOB verified against
+   the pinned root and the other files derived from the two (``mds.snapshot``);
+   without a usable one, the files missing locally from the flat
+   ``<bucket>/mds/<file>`` objects of earlier releases. This is how a Cloud Run cold start gets the snapshot without
    shipping it in the image.
 3. **Upstream refresh.** As a last resort the packaged updater is run, which
    downloads the BLOB from the FIDO Alliance and verifies it against the pinned
@@ -31,6 +32,7 @@ is available, exactly as they already did for a missing snapshot.
 from __future__ import annotations
 
 import functools
+import hashlib
 import json
 import logging
 import os
@@ -42,6 +44,7 @@ from ..env_flags import parse_env_flag
 from ..storage import cloud
 from . import files as mds_files
 from . import sets as snapshot_sets
+from . import snapshot as mds_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -118,9 +121,29 @@ def _write_set(files: dict[str, bytes]) -> None:
         write_snapshot_file(filename, files[filename])
 
 
+def _derived_set(pointer: dict, *, timeout: float | None = None) -> dict[str, bytes]:
+    """The seven files of the set ``pointer`` names, derived from its BLOB and meta
+    once the BLOB verifies (``mds_snapshot.derive``); the other five are not fetched.
+
+    Each of the two is checked against the pointer as it downloads, the pointer's
+    ``no`` must be the BLOB's, and the payload derived must be the file the pointer
+    names: the set is one snapshot, from one updater's run.
+    """
+
+    fetched = snapshot_sets.download_set(pointer, names=(mds_files.BLOB, mds_files.VERIFIED_META), timeout=timeout)
+    files = mds_snapshot.derive(fetched[mds_files.BLOB], fetched[mds_files.VERIFIED_META])
+    expected = pointer["files"][mds_files.VERIFIED]
+    verified = files[mds_files.VERIFIED]
+    if json.loads(fetched[mds_files.VERIFIED_META]).get("no") != pointer["no"]:
+        raise snapshot_sets.SnapshotSetError(f"{pointer['set']} is not snapshot no. {pointer['no']}")
+    if len(verified) != expected.get("size") or hashlib.sha256(verified).hexdigest() != expected.get("sha256"):
+        raise snapshot_sets.SnapshotSetError(f"{pointer['set']}'s BLOB is not the payload the pointer names")
+    return files
+
+
 def _download_set_from_gcs() -> dict | None:
     """Fetch the set the bucket's pointer names; return the pointer, or None
-    when there is no usable pointer or its set cannot be read whole."""
+    when there is no usable pointer or its set cannot be read and verified."""
 
     if not cloud.gcs_enabled():
         return None
@@ -128,7 +151,7 @@ def _download_set_from_gcs() -> dict | None:
         pointer, _generation = snapshot_sets.read_pointer()
         if not snapshot_sets.usable(pointer):
             return None
-        files = snapshot_sets.download_set(pointer)
+        files = _derived_set(pointer)
     except Exception as exc:
         logger.warning("Could not download the MDS snapshot set from Cloud Storage: %s", exc)
         return None

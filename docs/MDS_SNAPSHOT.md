@@ -94,11 +94,15 @@ waits.
 
 1. **Local files.** Anything already on disk is used unchanged. No network.
 2. **Cloud Storage.** With `FIDO_SERVER_GCS_ENABLED` set, the set the bucket's
-   pointer names (below) is downloaded from `gs://$FIDO_SERVER_GCS_BUCKET/mds/` (the
-   prefix is `FIDO_SERVER_MDS_GCS_PREFIX`, default `mds`), its seven files at once,
-   each checked against the pointer's SHA-256 and size. Without a usable pointer, or when its set cannot
-   be read whole, the missing files come from the flat `mds/<file>` objects earlier
-   releases wrote. This is the production path: the Cloud Run service account
+   pointer names (below) is taken from `gs://$FIDO_SERVER_GCS_BUCKET/mds/` (the
+   prefix is `FIDO_SERVER_MDS_GCS_PREFIX`, default `mds`): its BLOB and the verified
+   payload's meta are downloaded at once, each checked against the pointer's SHA-256
+   and size; the BLOB is verified against the pinned root at the time the meta says it
+   was fetched (`mds/blob.py`), its signed `no` must be the meta's and the pointer's, and
+   the other five files are derived from the two with the updater's own code
+   (`mds/snapshot.py`'s `derive`), the payload derived being the file the pointer
+   names. Without a usable pointer, or when its set cannot be read and verified, the
+   missing files come from the flat `mds/<file>` objects earlier releases wrote. This is the production path: the Cloud Run service account
    already has access to the `pqcwebauthn` bucket, so no new credentials are involved.
 3. **Upstream refresh.** As a last resort the packaged updater downloads the
    BLOB from `https://mds3.fidoalliance.org/` and verifies it against the

@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
+import base64
 import builtins
+import json
+from datetime import datetime, timezone
 
 import pytest
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from fido2.utils import websafe_encode
 
 from server.app.mds import files as mds_files
 from server.app.mds import provisioning
 from server.app.mds import sets as snapshot_sets
+from server.app.mds import snapshot as mds_snapshot
 from tests.app.metadata.snapshot_versions import snapshot_version
 from tests.app.storage import fake_gcs
 from tools import update_mds_snapshot
@@ -26,8 +34,8 @@ def static_root(monkeypatch, tmp_path):
 
 
 @pytest.fixture
-def gcs(monkeypatch):
-    """Cloud Storage on, as an in-memory bucket."""
+def gcs(monkeypatch, fixture_blob_root):
+    """Cloud Storage on, as an in-memory bucket, holding snapshots signed by the fixture's root."""
 
     monkeypatch.delenv("FIDO_SERVER_MDS_GCS_PREFIX", raising=False)
     monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: True)
@@ -81,14 +89,103 @@ def test_without_a_pointer_the_flat_objects_are_downloaded(static_root, gcs):
     assert _local(static_root) == snapshot_version(7)
 
 
-def test_a_set_that_is_not_the_one_named_falls_back_to_the_flat_objects(static_root, gcs):
-    for name, data in snapshot_version(7).items():
+def _flat(gcs, no=7):
+    for name, data in snapshot_version(no).items():
         gcs.put(f"mds/{name}", data)
+
+
+def _repoint(gcs, **changes):
+    pointer, _generation = snapshot_sets.read_pointer()
+    gcs.put(snapshot_sets.pointer_name(), json.dumps({**pointer, **changes}).encode())
+
+
+def test_a_new_instance_fetches_the_sets_blob_and_meta_alone_and_derives_the_rest(static_root, gcs):
     pointer = snapshot_sets.publish(snapshot_version(8)).pointer
-    gcs.put(pointer["set"] + mds_files.VERIFIED, b"{}")
+
+    assert provisioning.ensure_snapshot_available() == "gcs"
+    assert _local(static_root) == snapshot_version(8)
+    fetched = {name for name, _options in gcs.download_options}
+    assert fetched == {snapshot_sets.pointer_name(), pointer["set"] + mds_files.BLOB, pointer["set"] + mds_files.VERIFIED_META}
+
+
+@pytest.mark.parametrize("broken", ["blob replaced", "meta missing"])
+def test_a_set_that_is_not_the_one_named_falls_back_to_the_flat_objects(static_root, gcs, broken):
+    _flat(gcs)
+    pointer = snapshot_sets.publish(snapshot_version(8)).pointer
+    if broken == "blob replaced":
+        gcs.put(pointer["set"] + mds_files.BLOB, snapshot_version(9)[mds_files.BLOB])
+    else:
+        del gcs.objects[pointer["set"] + mds_files.VERIFIED_META]
 
     assert provisioning.ensure_snapshot_available() == "gcs"
     assert _local(static_root) == snapshot_version(7)
+
+
+def test_a_set_whose_blob_another_key_signed_is_refused(static_root, gcs, monkeypatch):
+    _flat(gcs)
+    snapshot_sets.publish(snapshot_version(8))
+    # Pinned now: another root, so the set's BLOB, named by the pointer as it is, does not verify.
+    monkeypatch.setattr(provisioning.mds_snapshot.mds_trust, "FIDO_METADATA_TRUST_ROOT_CERT", _expiring_root()[1])
+
+    assert provisioning._download_set_from_gcs() is None
+    assert provisioning.missing_snapshot_files() == provisioning.SNAPSHOT_FILENAMES
+
+
+def test_a_set_whose_blob_is_another_snapshot_than_its_meta_is_refused(static_root, gcs):
+    _flat(gcs)
+    files = {**snapshot_version(8), mds_files.BLOB: snapshot_version(9)[mds_files.BLOB]}
+    snapshot_sets.publish(files)
+
+    assert provisioning.ensure_snapshot_available() == "gcs"
+    assert _local(static_root) == snapshot_version(7)
+
+
+@pytest.mark.parametrize("change", [{"no": 9}, {"files": "the payload's digest"}])
+def test_a_set_that_is_not_the_snapshot_its_pointer_says_is_refused(static_root, gcs, change):
+    _flat(gcs)
+    pointer = snapshot_sets.publish(snapshot_version(8)).pointer
+    if "files" in change:
+        files = json.loads(json.dumps(pointer["files"]))
+        files[mds_files.VERIFIED]["sha256"] = "0" * 64
+        change = {"files": files}
+    _repoint(gcs, **change)
+
+    assert provisioning.ensure_snapshot_available() == "gcs"
+    assert _local(static_root) == snapshot_version(7)
+
+
+def _expiring_root() -> tuple[ec.EllipticCurvePrivateKey, bytes]:
+    """A root that was valid from January to the end of September 2026."""
+
+    key = ec.derive_private_key(0x5EED, ec.SECP256R1())
+    name = x509.Name([x509.NameAttribute(x509.NameOID.COMMON_NAME, "Expired MDS BLOB Signer")])
+    certificate = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(1)
+        .not_valid_before(datetime(2026, 1, 1, tzinfo=timezone.utc))
+        .not_valid_after(datetime(2026, 9, 30, tzinfo=timezone.utc))
+        .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
+        .sign(key, hashes.SHA256())
+    )
+    return key, certificate.public_bytes(serialization.Encoding.DER)
+
+
+@pytest.mark.parametrize(("fetched_at", "taken"), [("2026-09-20T08:00:00+00:00", True), ("2026-10-02T08:00:00+00:00", False)])
+def test_a_blob_is_checked_at_the_time_it_was_fetched(static_root, gcs, monkeypatch, fetched_at, taken):
+    key, root = _expiring_root()
+    monkeypatch.setattr(provisioning.mds_snapshot.mds_trust, "FIDO_METADATA_TRUST_ROOT_CERT", root)
+    version = snapshot_version(8)
+    payload = json.loads(version[mds_files.VERIFIED])
+    cache_state = {**json.loads(version[mds_files.VERIFIED_META]), "fetched_at": fetched_at}
+    header = {"alg": "ES256", "x5c": [base64.b64encode(root).decode("ascii")]}
+    message = b".".join(websafe_encode(json.dumps(part).encode()).encode("ascii") for part in (header, payload))
+    blob = message + b"." + websafe_encode(key.sign(message, ec.ECDSA(hashes.SHA256()))).encode("ascii")
+    snapshot_sets.publish(mds_snapshot.snapshot_files(blob, payload, cache_state))
+
+    assert (provisioning._download_set_from_gcs() is not None) is taken
 
 
 def test_provisioning_result_is_reused_within_a_process(static_root, gcs):

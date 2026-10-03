@@ -185,14 +185,15 @@ def _download_file(pointer: Mapping[str, Any], name: str, timeout: float | None)
     return data
 
 
-def download_set(pointer: Mapping[str, Any], *, timeout: float | None = None) -> dict[str, bytes]:
-    """The seven files of the set ``pointer`` names, each checked against it.
+def download_set(
+    pointer: Mapping[str, Any], *, names: tuple[str, ...] = mds_files.SNAPSHOT_FILENAMES, timeout: float | None = None
+) -> dict[str, bytes]:
+    """The files ``names`` (all seven by default) of the set ``pointer`` names, each checked against it.
 
     They are fetched at once (a cold instance waits for the largest, not for
-    all of them in turn); the first, in ``SNAPSHOT_FILENAMES`` order, that is
-    missing or not the file named is the error, whichever failed first."""
+    all of them in turn); the first, in ``names`` order, that is missing or not
+    the file named is the error, whichever failed first."""
 
-    names = mds_files.SNAPSHOT_FILENAMES
     with ThreadPoolExecutor(max_workers=len(names)) as pool:
         downloads = [pool.submit(_download_file, pointer, name, timeout) for name in names]
     return {name: download.result() for name, download in zip(names, downloads)}
