@@ -162,6 +162,23 @@ def test_every_kind_of_authorization_list_entry():
     assert view["keyMintSecurityLevel"]["meaning"] == "StrongBox"
 
 
+def test_octets_that_are_not_utf8_are_shown_as_their_hex_alone():
+    application_id = _sequence(
+        # DER orders a set's elements by their encodings: the shorter first here.
+        _set(_sequence(_octets(b"com.ok"), _integer(2)), _sequence(_octets(b"com.\xffapp"), _integer(1))),
+        _set(_octets(b"\xab" * 32)),
+    )
+    hardware = [_explicit(709, _octets(application_id)), _explicit(710, _octets(b"\xfe\xff"))]
+    view = android_key.read_key_description(_key_description(200, [], hardware))
+    listed = view["hardwareEnforced"]
+
+    assert listed["attestationIdBrand"] == {"hex": "feff"}
+    assert listed["attestationApplicationId"]["packages"] == [
+        {"name": "com.ok", "version": 2},
+        {"hex": "636f6d2eff617070", "version": 1},
+    ]
+
+
 def test_a_keymaster_description_uses_the_older_names_and_can_carry_all_applications():
     root_of_trust = _sequence(_octets(b"\x01" * 32), b"\x01\x01\x00", _enumerated(2))
     view = android_key.read_key_description(

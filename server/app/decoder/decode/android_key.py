@@ -324,16 +324,19 @@ def _octets(errors: list[dict[str, str]], field: str, name: str, value: bytes) -
             errors.append({"field": field, "error": str(exc)})
             return view
         view["packages"] = [
-            {"name": _text(info.package_name), "version": info.version} for info in application.package_infos.as_list()
+            {**_text(info.package_name, "name"), "version": info.version}
+            for info in application.package_infos.as_list()
         ]
         view["signatureDigests"] = [digest.hex() for digest in application.signature_digests.as_list()]
     elif name.startswith("attestationId"):
-        view["text"] = _text(value)
+        view.update(_text(value, "text"))
     return view
 
 
-def _text(value: bytes) -> str:
+def _text(value: bytes, key: str) -> dict[str, str]:
+    """``{key: text}`` for UTF-8 octets; others are shown as their hex alone, under ``hex``."""
+
     try:
-        return value.decode("utf-8")
+        return {key: value.decode("utf-8")}
     except UnicodeDecodeError:
-        return value.hex()
+        return {"hex": value.hex()}
