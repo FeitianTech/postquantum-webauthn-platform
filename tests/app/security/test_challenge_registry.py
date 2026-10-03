@@ -86,6 +86,13 @@ def test_state_older_than_ttl_is_expired(fresh_registry, monkeypatch):
     assert consume_ceremony_state(state) == CHALLENGE_EXPIRED
 
 
+@pytest.mark.parametrize(("setting", "seconds"), [("30", 30), ("10m", 600), ("0", 600), ("-5", 600), ("", 600)])
+def test_the_challenge_lifetime_is_a_positive_number_of_seconds_or_ten_minutes(monkeypatch, setting, seconds):
+    monkeypatch.setenv("FIDO_SERVER_CHALLENGE_TTL_SECONDS", setting)
+
+    assert registry_module.challenge_ttl_seconds() == seconds
+
+
 @pytest.mark.parametrize(
     "state",
     [None, "not-a-mapping", {}, {"challenge": ""}, {"challenge": 7, "issued_at": time.time()}],

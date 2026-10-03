@@ -89,6 +89,20 @@ def test_a_report_to_batch_logs_each_csp_violation_and_skips_other_reports(clien
     ]
 
 
+def test_a_report_without_its_page_logs_a_dash_for_the_path(client, lines):
+    response = post(client, {"csp-report": {"violated-directive": "script-src"}})
+
+    assert response.status_code == 204
+    assert lines() == ["CSP violation: directive=script-src blocked=- path=-"]
+
+
+def test_a_report_to_entry_without_a_body_is_passed_over(client, lines):
+    response = post(client, [{"type": "csp-violation", "body": None}], content_type="application/reports+json")
+
+    assert response.status_code == 204
+    assert lines() == []
+
+
 def test_nothing_but_the_three_fields_reaches_the_log(client, lines, caplog):
     post(client, REPORT_URI_BODY)
     post(client, REPORT_TO_BODY, content_type="application/reports+json")
