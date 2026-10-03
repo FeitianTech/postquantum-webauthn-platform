@@ -213,11 +213,10 @@ its logic out here first.
   overrides, then `INIT_STEPS` in order (`test_app_factory.py` pins it).
 - `config/`: `application.py` (the bare app, and `add_after_request_once`), `logs.py`,
   `session_secret.py`, `compression.py`, `proxy.py`, `session_cookie.py` (the cookie's flags
-  and lifetime, a session interface whose cookie a file's answer never refreshes, so a
-  chunk or the MDS list landing after a ceremony's begin cannot undo it, and `cookie_size`),
-  `security_headers.py`
-  (the strict CSP and the Trusted Types report-only policy, both reporting to
-  `/api/csp-report`; `FIDO_SERVER_CONTENT_SECURITY_POLICY` replaces the enforced policy),
+  and lifetime; only an answer that changed the session sets the cookie
+  (`SESSION_REFRESH_EACH_REQUEST` off), so nothing landing after a ceremony's begin can undo
+  it; and `cookie_size`), `security_headers.py` (the strict CSP and the Trusted Types
+  report-only policy, both reporting to `/api/csp-report`; `FIDO_SERVER_CONTENT_SECURITY_POLICY` replaces the enforced policy),
   `origins.py`, `attestation_trust.py`, `relying_party.py` (the default RP name is the site's,
   `APP_TITLE`), `paths.py` (the project and instance roots; `store_dir`: every local store under
   `instance/`, its setting read when used), `request_limits.py` (8 MiB, the metadata

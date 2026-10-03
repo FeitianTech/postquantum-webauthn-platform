@@ -1,22 +1,22 @@
 """The Flask session cookie's flags and lifetime, which ``create_app()`` applies,
-the session interface that keeps the files' answers from setting it, and the size
-the session's cookie would take."""
+and the size the session's cookie would take."""
 from __future__ import annotations
 
 import os
 from datetime import timedelta
 from typing import Any
 
-from flask import Flask, has_request_context, request
-from flask.sessions import SecureCookieSessionInterface, SessionMixin
+from flask import Flask
+from flask.sessions import SessionMixin
 from werkzeug.http import dump_cookie
 
 from ..env_flags import parse_env_flag
 from . import proxy
 
-# Session state here is short-lived ceremony state (WebAuthn challenges and the
-# metadata-session pointer), not a signed-in user session, so the 31-day Flask
-# default is far longer than anything needs to live.
+# Session state here is short-lived ceremony state (a WebAuthn ceremony's, from
+# its begin to its complete), not a signed-in user session, so the 31-day Flask
+# default is far longer than anything needs to live. Flask refuses a session
+# cookie signed longer ago than this, permanent or not.
 _DEFAULT_SESSION_LIFETIME_SECONDS = 30 * 60
 
 
@@ -61,35 +61,12 @@ def config_from_env() -> dict[str, Any]:
         # costs nothing and keeps the cookie off cross-site POSTs.
         "SESSION_COOKIE_SAMESITE": "Lax",
         "PERMANENT_SESSION_LIFETIME": timedelta(seconds=_resolve_session_lifetime_seconds()),
+        # The cookie is set only by an answer that changed the session: a ceremony's.
+        # Flask would otherwise set a permanent session's cookie (one an earlier
+        # release made) on every answer, from the session that request saw, and an
+        # answer that landed after a ceremony's begin would undo the state begin kept.
+        "SESSION_REFRESH_EACH_REQUEST": False,
     }
-
-
-# The blueprints that serve files: the UI's export at / (routes/web_export.py)
-# and the MDS snapshot's files (routes/assets.py). Neither reads the session.
-_FILE_BLUEPRINTS = frozenset({"web_export", "assets"})
-
-
-class FileQuietSessionInterface(SecureCookieSessionInterface):
-    """Flask's signed-cookie session, whose cookie a file's answer never refreshes.
-
-    Flask sets a permanent session's cookie again on every answer, from the
-    session as that request found it. A file fetched while a ceremony runs (a
-    script chunk, the MDS list, an icon) could then answer after the ceremony's
-    begin and put back the cookie from before it, without the state begin kept,
-    and the ceremony's complete would fail. A file's answer leaves the cookie
-    as it is, unless the session changed (files never change it).
-    """
-
-    def should_set_cookie(self, app: Flask, session: Any) -> bool:
-        if not session.modified and has_request_context() and request.blueprint in _FILE_BLUEPRINTS:
-            return False
-        return super().should_set_cookie(app, session)
-
-
-def init_app(app: Flask) -> None:
-    """Use the session interface that leaves the cookie alone for files."""
-
-    app.session_interface = FileQuietSessionInterface()
 
 
 def cookie_size(app: Flask, session: SessionMixin) -> int:

@@ -7,6 +7,7 @@ from flask import jsonify, session
 
 from server.app.config import session_cookie
 from server.app.routes import ceremony_session
+from tests.app import cookies
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import (
     Authenticator,
@@ -17,10 +18,6 @@ from tests.app.security.ceremony_helpers import (
 
 def _incompressible_text(length: int) -> str:
     return b64u(hashlib.shake_256(b"ceremony-session").digest(length))[:length]
-
-
-def _session_cookies(response) -> list[str]:
-    return [value for value in response.headers.getlist("Set-Cookie") if value.startswith("session=")]
 
 
 def _authentication_begin(client, challenge: bytes):
@@ -46,7 +43,7 @@ def test_a_registration_begin_with_a_5000_character_rp_name_is_refused_and_the_s
 
     assert response.status_code == 400
     assert response.get_json() == {"error": ceremony_session.TOO_LARGE}
-    assert all(len(cookie) <= 4093 for cookie in _session_cookies(response))
+    assert all(len(cookie) <= 4093 for cookie in cookies.session_cookies(response))
     with client.session_transaction() as after:
         assert dict(after) == kept
 
@@ -68,7 +65,7 @@ def test_a_begin_that_fits_answers_as_it_would_and_keeps_its_state():
     response = _authentication_begin(client, b"\x02" * 32)
 
     assert response.status_code == 200, response.get_json()
-    assert all(len(cookie) <= 4093 for cookie in _session_cookies(response))
+    assert all(len(cookie) <= 4093 for cookie in cookies.session_cookies(response))
     with client.session_transaction() as after:
         assert "advanced_auth_state" in after
 
@@ -96,7 +93,7 @@ def test_the_cookie_size_is_the_length_of_the_set_cookie_header_flask_sends():
 
     response = _authentication_begin(client, b"\x03" * 32)
 
-    [cookie] = _session_cookies(response)
+    [cookie] = cookies.session_cookies(response)
     with client.session_transaction() as sent:
         with app.test_request_context():
             assert session_cookie.cookie_size(app, sent) == len(cookie)
