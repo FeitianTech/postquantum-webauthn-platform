@@ -167,9 +167,25 @@ def test_the_codec_endpoint_refuses_a_lone_surrogate_with_its_offset(client):
     response = client.post("/api/codec", json={"payload": '["\ud800"]', "mode": "encode", "format": "EDN"})
 
     assert response.status_code == 422
-    assert response.get_json()["error"] == (
-        "EDN is not valid at offset 2: a lone surrogate U+D800, which UTF-8 cannot encode"
-    )
+    assert response.get_json() == {
+        "error": "EDN is not valid at offset 2: a lone surrogate U+D800, which UTF-8 cannot encode",
+        "offset": 2,
+    }
+
+
+@pytest.mark.parametrize(
+    ("text", "offset", "reason"),
+    [
+        ('[1, "\\u12"]', 5, "a \\u escape without four hex digits"),
+        ("[1, '\\q']", 5, "an unknown escape \\q"),
+        ('[1, "open', 4, "a string literal that is never closed"),
+    ],
+)
+def test_the_codec_endpoint_refuses_a_string_literal_with_its_offset(client, text, offset, reason):
+    response = client.post("/api/codec", json={"payload": text, "mode": "encode", "format": "EDN"})
+
+    assert response.status_code == 422
+    assert response.get_json() == {"error": f"EDN is not valid at offset {offset}: {reason}", "offset": offset}
 
 
 @pytest.mark.parametrize(("text", "offset"), [("\n\n  [1, 256_0]", 8), ("\t[1, 256_0]\n", 5), ("[1, 256_0]", 4)])

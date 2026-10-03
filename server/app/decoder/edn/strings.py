@@ -8,6 +8,8 @@ included, is written as itself: EDN text is UTF-8.
 """
 from __future__ import annotations
 
+from . import errors
+
 _SHORT_ESCAPES = {'"': '\\"', "\\": "\\\\", "\n": "\\n", "\r": "\\r", "\t": "\\t", "\b": "\\b", "\f": "\\f"}
 _READ_ESCAPES = {'"': '"', "\\": "\\", "/": "/", "b": "\b", "f": "\f", "n": "\n", "r": "\r", "t": "\t"}
 
@@ -38,7 +40,7 @@ def read_quoted(source: str, start: int, quote_mark: str = '"') -> tuple[str, in
     JSON's escapes, EDN's ``\\u{hex}`` for any scalar value, and a surrogate pair
     written as two ``\\u`` escapes. A lone surrogate, escaped or not (a JSON
     request can carry one), a raw control character other than a line feed, or a
-    missing closing quote raises ``ValueError`` with the offset in ``source``.
+    missing closing quote raises ``errors.EdnError`` with the offset in ``source``.
     """
 
     position = start + 1
@@ -100,5 +102,5 @@ def _four_hex(source: str, position: int) -> tuple[int, int]:
     return int(digits, 16), position + 6
 
 
-def _error(offset: int, reason: str) -> ValueError:
-    return ValueError(f"EDN is not valid at offset {offset}: {reason}")
+def _error(offset: int, reason: str) -> errors.EdnError:
+    return errors.EdnError(reason, offset)
