@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 
 import type { Page } from '@playwright/test';
 
-import { betaLevel, betaSubViews, expectedFor, keep, report } from './credential-views';
+import { shownLevel, shownSubViews, expectedFor, keep, report } from './credential-views';
 import { expect, test } from './fixtures';
 import { type ShownSection, compareShownText, describeDifferences, readShownText } from './recorded-words';
 import { recorded } from './recorded';
@@ -109,13 +109,13 @@ test.describe('the Advanced tab\'s registration, as recorded', () => {
     await page.reload();
     const key = await page.locator('li[data-credential-key]').first().getAttribute('data-credential-key');
     await page.goto(`/#simple/credential/${encodeURIComponent(key!).replace(/%3A/gi, ':')}`);
-    const detail = await betaLevel(page, 'detail', 'h4');
+    const detail = await shownLevel(page, 'detail', 'h4');
     await page.getByRole('dialog').getByRole('button', { name: 'Show registration details' }).click();
-    const registration = await betaLevel(page, 'registration', 'h4, [data-recorded-heading]');
-    const betaSubs = await betaSubViews(page);
+    const registration = await shownLevel(page, 'registration', 'h4, [data-recorded-heading]');
+    const shownSubs = await shownSubViews(page);
 
     expect(report(current.sections, [...detail, ...registration], expectedFor(current.name))).toEqual([]);
-    expect(betaSubs).toEqual(current.subViews);
+    expect(shownSubs).toEqual(current.subViews);
   });
 });
 

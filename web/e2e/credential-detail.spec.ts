@@ -38,7 +38,7 @@ const shownLevel = (page: Page) => dialog(page).locator('[data-level]:not([hidde
 const detailSection = (page: Page, title: string) => shownLevel(page).locator(`[data-section="${title}"]`);
 const username = () => `e2e-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 
-async function openBeta(page: Page, hash = '#simple') {
+async function openPage(page: Page, hash = '#simple') {
   await page.goto(`/${hash}`);
   await expect(section(page).locator('[data-count]')).toBeVisible();
 }
@@ -47,7 +47,7 @@ async function keep(page: Page, records: object[]) {
   await page.evaluate(([key, value]) => window.localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify(records)] as const);
 }
 
-async function registerInBeta(page: Page, name: string) {
+async function registerPasskey(page: Page, name: string) {
   await section(page).getByRole('textbox', { name: 'Username' }).fill(name);
   await section(page).getByRole('button', { name: 'Register Passkey' }).click();
   await expect(page.getByText(/^Registration successful! Algorithm: /)).toBeVisible();
@@ -62,9 +62,9 @@ async function openDetailOf(page: Page, name: string) {
 test.describe('a saved credential\'s details', () => {
   test('show every section of a credential registered here, its registration and authenticator data, Back going up a level', async ({ page }) => {
     await addVirtualAuthenticator(page);
-    await openBeta(page);
+    await openPage(page);
     const name = username();
-    await registerInBeta(page, name);
+    await registerPasskey(page, name);
     await openDetailOf(page, name);
 
     const key = await rows(page).filter({ hasText: name }).getAttribute('data-credential-key');
@@ -102,7 +102,7 @@ test.describe('a saved credential\'s details', () => {
   });
 
   test('open a certificate from a link or a reload, and × closes every level from there', async ({ page }) => {
-    await openBeta(page);
+    await openPage(page);
     await keep(page, [named(X5C, 'x5c@example.com')]);
     await page.reload();
     const url = `#simple/credential/id:${X5C.credentialIdBase64Url}/registration/certificate/1`;
@@ -120,7 +120,7 @@ test.describe('a saved credential\'s details', () => {
   });
 
   test('show an ES256 credential the server registered, and correct a level it does not have', async ({ page }) => {
-    await openBeta(page);
+    await openPage(page);
     await keep(page, [named(ES256, 'es256@example.com')]);
     await page.reload();
     await page.goto(`/#simple/credential/id:${ES256.credentialIdBase64Url}/registration/certificate/1`);
@@ -135,7 +135,7 @@ test.describe('a saved credential\'s details', () => {
   });
 
   test('draw a credential whose stored AAGUID no spelling reads', async ({ page }) => {
-    await openBeta(page);
+    await openPage(page);
     const unreadable = { type: 'simple', userName: 'unreadable', credentialId: 'AQID', aaguid: 'abcde' };
     await keep(page, [named(ES256, 'es256@example.com'), unreadable, named(X5C, 'x5c@example.com')]);
     await page.reload();
@@ -146,7 +146,7 @@ test.describe('a saved credential\'s details', () => {
   for (const width of [1440, 1024, 375]) {
     test(`fit a phone and a wide screen: every level at ${width} px, identifiers whole, no grey, no sideways scroll`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
-      await openBeta(page);
+      await openPage(page);
       await keep(page, [named(X5C, 'x5c-with-a-long-name-for-the-row@example.com')]);
       await page.reload();
       const rowCodes = rows(page).locator('[data-row-values] code');
@@ -176,12 +176,12 @@ test.describe('a saved credential\'s details', () => {
 
 test.describe('another tab', () => {
   test('a deletion in one tab shows in the other without a reload', async ({ page, context }) => {
-    await openBeta(page);
+    await openPage(page);
     await keep(page, [named(ES256, 'first@example.com'), named(X5C, 'second@example.com')]);
     await page.reload();
     await expect(rows(page)).toHaveCount(2);
     const other = await context.newPage();
-    await openBeta(other);
+    await openPage(other);
     await expect(rows(other)).toHaveCount(2);
 
     await rows(page).filter({ hasText: 'first@example.com' }).getByRole('button', { name: 'Delete' }).click();
@@ -203,7 +203,7 @@ test.describe('another tab', () => {
     await expect(page.getByRole('heading', { level: 2, name: 'Registration Details' })).toBeVisible();
 
     const other = await context.newPage();
-    await openBeta(other);
+    await openPage(other);
     await expect(rows(other)).toHaveCount(1);
     const counting = () => (window as unknown as { __writes?: number }).__writes ?? 0;
     for (const tab of [page, other]) {

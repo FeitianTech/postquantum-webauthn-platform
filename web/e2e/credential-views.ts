@@ -54,14 +54,14 @@ export async function keep(page: Page, records: object[]) {
   await page.evaluate(([key, value]) => window.localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify(records)] as const);
 }
 
-export async function betaLevel(page: Page, level: string, headings: string) {
+export async function shownLevel(page: Page, level: string, headings: string) {
   const root = page.getByRole('dialog').locator(`[data-level="${level}"]`);
   await expect(root).toBeVisible();
   return readShownText(root, headings);
 }
 
 // The dialog's certificate and authenticator-data levels' text, by their buttons.
-export async function betaSubViews(page: Page) {
+export async function shownSubViews(page: Page) {
   const texts: Record<string, string> = {};
   const dialog = page.getByRole('dialog');
   const buttons = dialog.locator('[data-level="registration"] [data-level-open]');
@@ -78,7 +78,7 @@ export async function betaSubViews(page: Page) {
   return texts;
 }
 
-export function report(legacy: ShownSection[], beta: ShownSection[], expected: ExpectedDifference[]) {
-  const differences = compareShownText(legacy, beta, expected);
+export function report(legacy: ShownSection[], shown: ShownSection[], expected: ExpectedDifference[]) {
+  const differences = compareShownText(legacy, shown, expected);
   return describeDifferences(differences.filter((difference) => !difference.reason));
 }
