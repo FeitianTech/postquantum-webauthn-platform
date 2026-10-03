@@ -49,6 +49,8 @@ _RULES: dict[str, re.Pattern[str]] = {
     "<style> or <script> element": re.compile(r"<(?:style|script)\b"),
     "eval": re.compile(r"(?<![\w$.])eval\s*\(|\bnew\s+Function\s*\("),
     "atob": re.compile(r"(?<![\w$.])atob\s*\("),
+    # A suspended boundary rendered on the server is filled by an inline script.
+    "Suspense": re.compile(r"\bSuspense\b"),
 }
 
 # Modules no source may import, by the rule each breaks. Next's router adds page
@@ -306,6 +308,7 @@ def test_the_reader_finds_each_rule_break():
             "node.innerHTML = markup;",
             "node.setAttribute('style', 'x');",
             "window.helper = helper;",
+            "<Suspense fallback={null}>{child}</Suspense>",
             "// node.innerHTML = 'a comment';",
             "const ok = element.style; ref.current.style.transform = 'none'; decodeAtob(x);",
         ]
@@ -324,6 +327,7 @@ def test_the_reader_finds_each_rule_break():
         (10, "markup sink"),
         (11, "setAttribute('style')"),
         (12, "write to window"),
+        (13, "Suspense"),
     ]
 
 
