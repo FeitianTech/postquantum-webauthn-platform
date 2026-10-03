@@ -102,6 +102,57 @@ def test_the_writer_that_loses_the_pointer_deletes_its_set(bucket):
     assert snapshot_sets.download_set(pointer) == snapshot_version(9)
 
 
+def test_a_set_that_cannot_be_deleted_stays_behind_and_the_outcome_stands(bucket, monkeypatch, caplog):
+    snapshot_sets.publish(snapshot_version(7))
+    results = {}
+
+    def _other_writer(name):
+        if name == "mds/current.json" and "other" not in results:
+            results["other"] = None
+            results["other"] = snapshot_sets.publish(snapshot_version(9))
+
+    def _refused(name):
+        raise PermissionError(f"403 deleting {name}")
+
+    bucket.on_download.append(_other_writer)
+    monkeypatch.setattr(cloud, "delete_blob", _refused)
+    result = snapshot_sets.publish(snapshot_version(8))
+
+    assert result.outcome == "lost"
+    assert any(name.startswith("mds/sets/1/8-") for name in bucket.objects)
+    assert any("Could not delete mds/sets/1/8-" in record.getMessage() for record in caplog.records)
+
+
+def test_a_set_name_already_taken_ends_the_publish(bucket, monkeypatch):
+    monkeypatch.setattr(snapshot_sets.secrets, "token_hex", lambda _bytes: "taken")
+    bucket.put(f"mds/sets/1/9-taken/{mds_files.WRITE_ORDER[0]}", b"someone else's")
+    before = dict(bucket.objects)
+
+    with pytest.raises(snapshot_sets.SnapshotSetError, match="already exists"):
+        snapshot_sets.publish(snapshot_version(9))
+    assert bucket.objects == before
+
+
+def test_a_failure_halfway_whose_clean_up_fails_too_raises_the_failure(bucket, monkeypatch, caplog):
+    upload = cloud.upload_bytes_if_generation
+
+    def _failing(name, data, **kwargs):
+        if name.endswith(mds_files.EXPLORER_FULL):
+            raise OSError("the bucket went away")
+        return upload(name, data, **kwargs)
+
+    def _refused(name):
+        raise PermissionError(f"403 deleting {name}")
+
+    monkeypatch.setattr(cloud, "upload_bytes_if_generation", _failing)
+    monkeypatch.setattr(cloud, "delete_blob", _refused)
+    with pytest.raises(OSError, match="the bucket went away"):
+        snapshot_sets.publish(snapshot_version(9))
+
+    assert "mds/current.json" not in bucket.objects
+    assert any("Could not delete mds/sets/1/9-" in record.getMessage() for record in caplog.records)
+
+
 def test_writers_at_once_leave_one_pointer_to_one_complete_set(bucket):
     versions = {no: snapshot_version(no) for no in range(8, 14)}
     start = threading.Barrier(len(versions))

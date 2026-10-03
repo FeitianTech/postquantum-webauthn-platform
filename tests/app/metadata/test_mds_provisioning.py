@@ -357,3 +357,10 @@ def test_a_publish_error_does_not_propagate(static_root, gcs, monkeypatch):
 
     provisioning._publish_to_gcs()
     assert gcs.objects == {}
+
+
+@pytest.mark.parametrize(("setting", "seconds"), [("60", 60.0), ("15m", 900.0), ("-5", 0.0)])
+def test_the_pointer_check_interval_is_seconds_or_its_default(monkeypatch, setting, seconds):
+    monkeypatch.setenv("FIDO_SERVER_MDS_POINTER_CHECK_SECONDS", setting)
+
+    assert provisioning._pointer_check_seconds() == seconds
