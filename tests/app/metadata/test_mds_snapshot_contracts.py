@@ -5,6 +5,7 @@ import types
 from datetime import date, datetime, timezone
 
 from server.app.mds import build as m
+from server.app.mds import certificates as mds_certificates
 from server.app.webauthn import signature_algorithms as names
 from tests.app.characterization import material
 
@@ -136,9 +137,9 @@ def test_algorithm_and_certificate_decoding_helpers(monkeypatch):
     assert names.format_hash_name('') == ''
     assert names.join_algorithm_info(names.normalise_signature_algorithm_name('ecdsa'), 'sha256') == 'ECDSA_SHA256'
 
-    assert m._decode_der_certificate(b'bytes') == b'bytes'
-    assert m._decode_der_certificate('YQ') == b'a'
-    assert m._decode_der_certificate(123) is None
+    assert mds_certificates.decode_der_certificate(b'bytes') == b'bytes'
+    assert mds_certificates.decode_der_certificate('YQ') == b'a'
+    assert mds_certificates.decode_der_certificate(123) is None
 
     fake_cert = types.SimpleNamespace(
         signature_hash_algorithm=types.SimpleNamespace(name='sha256'),
@@ -148,23 +149,23 @@ def test_algorithm_and_certificate_decoding_helpers(monkeypatch):
         ),
     )
 
-    monkeypatch.setattr(m, '_decode_der_certificate', lambda value: b'der' if value != 'skip' else None)
-    monkeypatch.setattr(m.x509, 'load_der_x509_certificate', lambda _der: fake_cert)
+    monkeypatch.setattr(mds_certificates, 'decode_der_certificate', lambda value: b'der' if value != 'skip' else None)
+    monkeypatch.setattr(mds_certificates.x509, 'load_der_x509_certificate', lambda _der: fake_cert)
 
-    algs, cns = m._summarise_attestation_certificates(['cert-a', 'skip'])
+    algs, cns = mds_certificates.summarise_attestation_certificates(['cert-a', 'skip'])
     assert algs == ['ECDSA_SHA256']
     assert cns == ['CN1']
 
     class _CertNoHash:
         @property
         def signature_hash_algorithm(self):
-            raise m.UnsupportedAlgorithm('x')
+            raise mds_certificates.UnsupportedAlgorithm('x')
 
         signature_algorithm_oid = types.SimpleNamespace(_name='unknown oid', dotted_string='1.2.3.4')
         subject = types.SimpleNamespace(get_attributes_for_oid=lambda _oid: [])
 
-    monkeypatch.setattr(m.x509, 'load_der_x509_certificate', lambda _der: _CertNoHash())
-    algs2, cns2 = m._summarise_attestation_certificates(['cert-b'])
+    monkeypatch.setattr(mds_certificates.x509, 'load_der_x509_certificate', lambda _der: _CertNoHash())
+    algs2, cns2 = mds_certificates.summarise_attestation_certificates(['cert-b'])
     assert algs2 == ['1.2.3.4']
     assert cns2 == []
 
@@ -266,7 +267,7 @@ def test_blank_names_format_as_empty():
     assert m._format_enum('A--B') == 'A B'
     assert names.format_hash_name('   ') == ''
     assert names.format_hash_name('abc-123') == 'ABC123'
-    assert m._decode_der_certificate('   ') is None
+    assert mds_certificates.decode_der_certificate('   ') is None
 
 
 def test_the_certificate_summary_names_each_algorithm_once_and_skips_blank_common_names():
@@ -275,4 +276,4 @@ def test_the_certificate_summary_names_each_algorithm_once_and_skips_blank_commo
         for label, name, serial in (("one", "CN-Valid", 1), ("two", "   ", 2))
     ]
 
-    assert m._summarise_attestation_certificates(certificates) == (['ED25519_SHA512'], ['CN-Valid'])
+    assert mds_certificates.summarise_attestation_certificates(certificates) == (['ED25519_SHA512'], ['CN-Valid'])

@@ -235,7 +235,7 @@ its logic out here first.
   `trust.py` (the MDS trust anchor), `blob.py` (the BLOB's chain to that root, which may end in
   a cross-certificate fido2's `parse_blob` refuses, its signature and payload), `files.py` (the
   snapshot's file names, its directory, the whole-file and `.gz` sibling writers, Last-Modified),
-  `build.py` (the explorer rows), `snapshot.py` (a snapshot's seven files, from its BLOB, payload
+  `build.py` (the explorer rows; `certificates.py`, what their roots say), `snapshot.py` (a snapshot's seven files, from its BLOB, payload
   and cache state) and `sets.py` (the snapshot in Cloud Storage) without Flask.
   The runtime: `provisioning.py` (local files, Cloud Storage, upstream), `cache.py` (the
   loaders and their one `SnapshotCache`), `explorer_files.py` (what browsers load, derived from
