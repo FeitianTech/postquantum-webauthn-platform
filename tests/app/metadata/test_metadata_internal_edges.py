@@ -1,16 +1,13 @@
 import json
 import os
 from datetime import datetime, timezone
-from types import SimpleNamespace
 
 import pytest
-from fido2.mds3 import MetadataBlobPayloadEntry
 
 from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
-from server.app.mds import verifier as mds_verifier
 from server.app.storage import common as storage_common
 from server.app.storage import github_mirror, session_metadata
 
@@ -203,7 +200,7 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(monkey
     assert marker is not None
 
 
-def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadata_state, monkeypatch):
+def test_load_packaged_explorer_summary_without_a_packaged_meta_or_explorer(metadata_state, monkeypatch):
     monkeypatch.setattr(mds_cache, "_load_packaged_explorer_meta", lambda: None)
     monkeypatch.setattr(mds_cache, "_load_base_explorer_snapshot", lambda: (None, None))
     monkeypatch.setattr(
@@ -220,46 +217,3 @@ def test_load_packaged_explorer_summary_and_get_mds_verifier_cache_paths(metadat
     summary = mds_cache.load_packaged_explorer_summary()
     assert summary["entryCount"] == 0
 
-    created = []
-
-    class _FakeVerifier:
-        def __init__(self, metadata):
-            self.metadata = metadata
-            created.append(metadata)
-
-    fake_metadata = SimpleNamespace(entries=[])
-    monkeypatch.setattr(mds_cache, "_load_base_metadata", lambda: (fake_metadata, 123.0))
-    monkeypatch.setattr(mds_uploads, "list_session_metadata_items", lambda: [])
-    monkeypatch.setattr(mds_verifier, "MdsAttestationVerifier", _FakeVerifier)
-
-    first = mds_verifier.get_mds_verifier()
-    second = mds_verifier.get_mds_verifier()
-
-    assert first is second
-    assert created == [fake_metadata]
-
-
-def test_metadata_entry_trust_anchor_status_uses_session_and_base_entry_sets(metadata_state):
-    entry = MetadataBlobPayloadEntry.from_dict(
-        {
-            "statusReports": [],
-            "timeOfLastStatusChange": "2026-01-01",
-            "metadataStatement": {
-                "description": "Demo",
-                "authenticatorVersion": 1,
-                "schema": 3,
-                "upv": [],
-                "attestationTypes": [],
-                "userVerificationDetails": [],
-                "keyProtection": [],
-                "matcherProtection": [],
-                "attachmentHint": [],
-                "tcDisplay": [],
-                "attestationRootCertificates": [],
-            },
-        }
-    )
-
-    mds_cache.CACHE.entry_ids = {id(entry)}
-    mds_cache.CACHE.trust_verified = True
-    assert mds_verifier.metadata_entry_trust_anchor_status(entry) is True

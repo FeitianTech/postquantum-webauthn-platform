@@ -7,8 +7,8 @@ import threading
 import time
 from types import SimpleNamespace
 
-import pytest
-from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
+from fido2.mds3 import MetadataBlobPayloadEntry
+from fido2.webauthn import Aaguid
 from flask import g
 
 from server.app import visitor_session
@@ -19,61 +19,38 @@ from server.app.storage import session_metadata
 from tests.app.entry_app import entry_app
 
 
-@pytest.fixture
-def trusted_cache(monkeypatch, metadata_state):
-    monkeypatch.setattr(mds_cache.CACHE, "trust_verified", True)
-
-
-def _entry(aaguid: str):
-    return MetadataBlobPayloadEntry.from_dict(
-        {
+def _raw(aaguid: str) -> dict:
+    return {
+        "aaguid": aaguid,
+        "statusReports": [],
+        "timeOfLastStatusChange": "2026-01-01",
+        "metadataStatement": {
+            "description": "Demo",
             "aaguid": aaguid,
-            "statusReports": [],
-            "timeOfLastStatusChange": "2026-01-01",
-            "metadataStatement": {
-                "description": "Demo",
-                "authenticatorVersion": 1,
-                "schema": 3,
-                "upv": [],
-                "attestationTypes": [],
-                "userVerificationDetails": [],
-                "keyProtection": [],
-                "matcherProtection": [],
-                "attachmentHint": [],
-                "tcDisplay": [],
-                "attestationRootCertificates": [],
-            },
-        }
-    )
+            "authenticatorVersion": 1,
+            "schema": 3,
+            "upv": [],
+            "attestationTypes": [],
+            "userVerificationDetails": [],
+            "keyProtection": [],
+            "matcherProtection": [],
+            "attachmentHint": [],
+            "tcDisplay": [],
+            "attestationRootCertificates": [],
+        },
+    }
 
 
-def test_unknown_entry_is_never_reported_as_trusted(trusted_cache):
-    entry = _entry("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+def test_unknown_entry_is_never_reported_as_trusted(metadata_state):
+    entry = MetadataBlobPayloadEntry.from_dict(_raw("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"))
 
     assert mds_verifier.metadata_entry_trust_anchor_status(entry) is None
 
 
-def test_base_entry_reports_base_trust(trusted_cache, metadata_state):
-    entry = _entry("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
-    mds_cache.CACHE.entry_ids = {id(entry)}
-
-    assert mds_verifier.metadata_entry_trust_anchor_status(entry) is True
-
-
-def test_session_entries_stay_untrusted_while_other_sessions_run(trusted_cache, monkeypatch, metadata_state):
-    base_entry = _entry("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
-    custom_entry = _entry("cccccccc-cccc-cccc-cccc-cccccccccccc")
-    base_metadata = MetadataBlobPayload(
-        legal_header="",
-        no=1,
-        next_update=None,
-        entries=(base_entry,),
-    )
-    mds_cache.CACHE.entry_ids = {id(base_entry)}
-
-    monkeypatch.setattr(
-        mds_cache, "_load_base_metadata", lambda: (base_metadata, 1.0)
-    )
+def test_session_entries_stay_untrusted_while_other_sessions_run(monkeypatch, metadata_state):
+    packaged = [_raw("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")]
+    custom_entry = MetadataBlobPayloadEntry.from_dict(_raw("cccccccc-cccc-cccc-cccc-cccccccccccc"))
+    monkeypatch.setattr(mds_cache, "load_verified_entries", lambda: packaged)
     monkeypatch.setattr(
         mds_uploads,
         "list_session_metadata_items",
@@ -85,6 +62,8 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(trusted_cache, 
     )
 
     app = entry_app()
+    with app.test_request_context("/"):
+        base_entry = mds_verifier.get_mds_verifier().find_entry_by_aaguid(Aaguid.parse(packaged[0]["aaguid"]))
     iterations = 200
     barrier = threading.Barrier(2)
     observed = []
@@ -128,7 +107,7 @@ def test_session_entries_stay_untrusted_while_other_sessions_run(trusted_cache, 
     assert base_results == [True] * iterations
 
 
-def test_concurrent_cold_loads_parse_base_metadata_once(trusted_cache, monkeypatch, tmp_path):
+def test_concurrent_cold_loads_parse_base_metadata_once(metadata_state, monkeypatch, tmp_path):
     calls = []
 
     # The real snapshot is generated, not tracked, so this stands in for it.
@@ -157,7 +136,7 @@ def test_concurrent_cold_loads_parse_base_metadata_once(trusted_cache, monkeypat
     assert len(calls) == 1
 
 
-def test_concurrent_cleanup_checks_run_cleanup_once(trusted_cache, monkeypatch, metadata_state):
+def test_concurrent_cleanup_checks_run_cleanup_once(monkeypatch, metadata_state):
     calls = []
 
     def _slow_list_sessions():

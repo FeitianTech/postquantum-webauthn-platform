@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
-from fido2.mds3 import MetadataBlobPayload, MetadataBlobPayloadEntry
+from fido2.mds3 import MetadataBlobPayloadEntry
 
 from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
-from server.app.mds import verifier as mds_verifier
 from server.app.storage import session_metadata
 
 
@@ -76,23 +73,13 @@ def test_a_statement_gets_the_legal_header_and_defaults_for_fields_that_do_not_r
     assert isinstance(statement["attestationRootCertificates"], list)
 
 
-def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch):
+def test_aaguid_extraction_and_source_info_helpers():
     session_payload = _entry_payload(
         aaguid="AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA",
         description="Session metadata",
     )
-    base_payload_same = _entry_payload(
-        aaguid="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-        description="Base duplicate",
-    )
-    base_payload_other = _entry_payload(
-        aaguid="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-        description="Base unique",
-    )
 
     session_entry = MetadataBlobPayloadEntry.from_dict(session_payload)
-    base_entry_same = MetadataBlobPayloadEntry.from_dict(base_payload_same)
-    base_entry_other = MetadataBlobPayloadEntry.from_dict(base_payload_other)
 
     assert (
         mds_entries._normalise_aaguid(" AAAA-BBBB-CCCC-DDDD-EEEEFFFF0000 ")
@@ -118,24 +105,6 @@ def test_aaguid_extraction_merge_and_source_info_helpers(monkeypatch):
         original_filename="upload.json",
         mtime=1.0,
     )
-
-    base_metadata = MetadataBlobPayload(
-        legal_header="",
-        no=7,
-        next_update=datetime.now(timezone.utc).date(),
-        entries=(base_entry_same, base_entry_other),
-    )
-
-    monkeypatch.setattr(
-        mds_entries,
-        "_extract_entry_aaguid",
-        lambda entry: mds_entries._normalise_aaguid(str(getattr(entry, "aaguid", ""))),
-    )
-
-    merged = mds_verifier._merge_metadata(base_metadata, [session_item])
-    merged_descriptions = [entry["metadataStatement"]["description"] for entry in merged.entries]
-    assert merged_descriptions == ["Session metadata", "Base unique"]
-    assert merged.legal_header == "Session Legal"
 
     source_info = mds_effective._session_item_source_info(session_item)
     assert source_info["storedFilename"] == "session.json"

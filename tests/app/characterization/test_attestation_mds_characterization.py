@@ -97,7 +97,7 @@ def _entry(template, *, aaguid: bytes | None, roots: list[bytes], key_ids: list[
     return entry
 
 
-def _verifier() -> MdsAttestationVerifier:
+def _payload() -> dict:
     uploaded = json.loads(mds_fixture.CUSTOM_METADATA_PATH.read_text(encoding="utf-8"))
     template = uploaded["entries"][0]
     leaf = x509.load_der_x509_certificate(_leaf(b"\x00" * 16))
@@ -114,7 +114,7 @@ def _verifier() -> MdsAttestationVerifier:
             _entry(template, aaguid=None, roots=[ca_root], key_ids=[leaf_key_id]),
         ],
     }
-    return MdsAttestationVerifier(MetadataBlobPayload.from_dict(payload))
+    return payload
 
 
 def _cases():
@@ -140,9 +140,18 @@ def _cases():
     }
 
 
-@pytest.fixture
-def mds(monkeypatch):
-    verifier = _verifier()
+def _verifier() -> MdsAttestationVerifier:
+    return MdsAttestationVerifier(MetadataBlobPayload.from_dict(_payload()))
+
+
+@pytest.fixture(params=["fido2", "indexed"])
+def mds(monkeypatch, request):
+    """fido2's verifier over the parsed metadata, and the app's over the same entries' JSON."""
+
+    if request.param == "fido2":
+        verifier = _verifier()
+    else:
+        verifier = mds_verifier.IndexedVerifier(mds_verifier.PackagedEntries(_payload()["entries"]))
     monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: verifier)
     return verifier
 

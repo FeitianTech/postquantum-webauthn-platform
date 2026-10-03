@@ -44,9 +44,8 @@ class SnapshotCache:
     # The browsers' files derived from the full snapshot, keyed like it.
     explorer_files: mds_explorer_files.ExplorerFiles | None = None
     explorer_files_mtime: tuple[float | None, ...] | None = None
-    # fido2's verifier over the payload.
+    # The verifier over the verified entries (mds/verifier.py), for the list it was built from.
     verifier: MdsAttestationVerifier | None = None
-    verifier_mtime: float | None = None
     metadata_lock: threading.RLock = field(default_factory=threading.RLock)
     explorer_lock: threading.RLock = field(default_factory=threading.RLock)
     full_lock: threading.RLock = field(default_factory=threading.RLock)

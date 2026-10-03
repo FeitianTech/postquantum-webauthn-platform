@@ -238,7 +238,9 @@ its logic out here first.
   loaders and their one `SnapshotCache`), `explorer_files.py` (what browsers load, derived from
   the full explorer snapshot: the list, the icons, each entry's detail; kept per snapshot by
   `cache.load_explorer_files`), `uploads.py` (a visitor's uploaded metadata),
-  `entries.py`, `effective.py` (the snapshot merged with a visitor's uploads), `verifier.py`.
+  `entries.py`, `effective.py` (the snapshot merged with a visitor's uploads), `verifier.py` (the
+  verified entries indexed from their JSON by fido2's keys, each parsed when found, a visitor's
+  uploads in front).
 - Leaves the rest import: `encoding.py` (base64, base64url and hex, written and read strictly),
   `json_values.py` (`make_json_safe`, and `as_bytes`, the one reading of a value as bytes),
   `aaguid.py` (an AAGUID's GUID spelling), `env_flags.py`.
