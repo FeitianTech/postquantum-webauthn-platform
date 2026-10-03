@@ -34,6 +34,7 @@ def test_a_boolean_may_be_a_word(word, value):
         ({"1": "example.com", "2": HASH, "5": None}, r"member 5 \(options\) is null"),
         ({"1": "example.com", "2": HASH, "3": "not-a-list"}, "allowList must be an array of credential descriptors"),
         ({"1": "packed", "2": AUTH_DATA, "3": {"x5c": 5}}, "attStmt.x5c must be an array of certificates"),
+        ({"1 (float)": "example.com", "2": HASH}, r"key '1 \(float\)' is a float key, not a CTAP member"),
     ],
 )
 def test_a_value_of_the_wrong_kind_is_refused_naming_its_field(fields, error):

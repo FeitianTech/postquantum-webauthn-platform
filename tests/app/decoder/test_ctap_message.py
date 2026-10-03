@@ -72,6 +72,7 @@ def test_an_attestation_certificate_is_rebuilt_from_its_raw_bytes():
         ({"1": 1}, {"code": "0x00"}, "ctap.code must be a byte"),
         ({"1": 1}, {"code": None, "trailingBytesHex": "zz"}, "ctap.trailingBytesHex must be hex"),
         ({"2 (authData)": {"raw": "zz"}}, {"code": None}, r"\.raw must be hex"),
+        ({"2 (authData)": {"raw": 5}}, {"code": None}, r"\.raw must be hex"),
     ],
 )
 def test_a_view_that_does_not_rebuild_is_refused(view, framing, message):

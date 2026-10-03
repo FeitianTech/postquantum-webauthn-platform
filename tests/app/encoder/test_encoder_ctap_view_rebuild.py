@@ -64,6 +64,25 @@ def test_a_view_the_lenient_parser_read_past_damage_is_marked():
         encode_payload_text(json.dumps(decoded), "CBOR")
 
 
+# A makeCredential response whose x5c holds a map {"raw": ...} where a certificate goes.
+_X5C_MAP = "00a301667061636b65640258250000000000000000000000000000000000000000000000000000000000000000010000000003a16378356381"
+
+
+@pytest.mark.parametrize(
+    ("raw", "reason"),
+    [
+        # Text "00": spelled as a certificate view's raw, it reads back as hex, not as text.
+        ("a163726177623030", 'the view does not read back: ctapDecoded.makeCredentialResponse{"3 (attStmt)"}{"x5c"}[0].raw must be hex.'),
+        # Bytes 00: it reads back, as other bytes than were sent.
+        ("a1637261774100", "the view writes other bytes than the input from offset 57"),
+    ],
+)
+def test_a_view_that_does_not_give_back_its_bytes_is_marked_with_why(raw, reason):
+    decoded = decode_payload_text(_X5C_MAP + raw)["data"]
+
+    assert decoded["ctap"]["notRebuildable"] == reason
+
+
 def test_a_canonical_message_is_not_marked():
     message = b"\x00" + edn.encode(f'{{1: "none", 2: h\'{_AUTH_DATA}\', 3: {{}}}}')
 
