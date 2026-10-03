@@ -78,3 +78,16 @@ def test_a_lenient_decode_of_the_corrupt_get_assertion_dump_shows_what_is_there_
 def _signature_key(decoded: dict) -> str:
     (key,) = [key for key in decoded if key.startswith("3045022100aad84e")]
     return key
+
+
+def test_a_ctap_response_with_an_integer_key_it_could_not_read_is_shown(client):
+    # makeCredential's response with a fourth key whose head (0x1f) no integer has.
+    auth_data = (bytes(32) + b"\x01" + (7).to_bytes(4, "big")).hex()
+    payload = "00a401667061636b6564025825" + auth_data + "03a0" + "1f01"
+
+    response = client.post("/api/codec", json={"payload": payload, "mode": "decode", "lenient": True})
+
+    assert response.status_code == 200
+    shown = response.get_json()["data"]["ctapDecoded"]["makeCredentialResponse"]
+    assert shown["invalid(invalid(h'1f') at offset 52) (invalid)"] == 1
+    assert shown["1 (fmt)"] == "packed"

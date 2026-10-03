@@ -20,6 +20,12 @@ def test_a_member_is_labelled_by_its_number_and_name():
     assert ctap_message.member_label("makeCredentialResponse", _key("6131")) == '"1" (text)'
 
 
+def test_an_integer_key_the_lenient_parser_could_not_read_is_labelled_invalid():
+    key = cbor_parser.decode_item(bytes.fromhex("1f"), 0, lenient=True)[0]
+
+    assert ctap_message.member_label("makeCredentialResponse", key) == "invalid(invalid(h'1f') at offset 0) (invalid)"
+
+
 @pytest.mark.parametrize(
     ("label", "key"),
     [("1 (fmt)", 1), ("1", 1), ("99", 99), ('"fmt" (text)', "fmt"), ("h'01' (bytes)", b"\x01")],

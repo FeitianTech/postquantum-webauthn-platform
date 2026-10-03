@@ -48,7 +48,8 @@ _MEMBER_LABEL = re.compile(r"(-?(?:0|[1-9][0-9]*)) \((.+)\)")
 def member_label(message: str, key_node: Mapping[str, Any]) -> str:
     """A member's label: ``"N (name)"``, the number alone where the message defines none, a typed key."""
 
-    if key_node.get("majorType") in (0, 1) and "error" not in key_node:
+    # An integer head the lenient parser could not read (``invalid``) has no number.
+    if key_node.get("majorType") in (0, 1) and key_node.get("type") != "invalid" and "error" not in key_node:
         number = key_node["value"]
         name = MESSAGES[message].get(number)
         return f"{number} ({name})" if name else str(number)
