@@ -15,7 +15,7 @@ const section = (page: Page) => page.getByRole('tabpanel', { name: 'Advanced Aut
 const editor = (page: Page) => section(page).getByRole('textbox', { name: 'JSON Editor (CredentialCreationOptions)' });
 const dialog = (page: Page) => page.getByRole('dialog', { name: /Registration Details|Credential Details/ });
 
-async function openBeta(page: Page) {
+async function openPage(page: Page) {
   await page.goto('/#advanced');
   await expect(editor(page)).toHaveValue(/"publicKey"/);
 }
@@ -39,7 +39,7 @@ async function box(locator: Locator) {
 test.describe('/#advanced', () => {
   test('registers from the form, keeps the credential, and opens its registration with the detail under it', async ({ page }) => {
     const authenticator = await addVirtualAuthenticator(page);
-    await openBeta(page);
+    await openPage(page);
     const name = await section(page).getByLabel('User Name').inputValue();
 
     await register(page);
@@ -62,7 +62,7 @@ test.describe('/#advanced', () => {
 
   test('registers from an edited JSON: the form follows the edit, and the request sent is the edit', async ({ page }) => {
     await addVirtualAuthenticator(page);
-    await openBeta(page);
+    await openPage(page);
     const edited = await request(page);
     edited.publicKey.pubKeyCredParams = [{ type: 'public-key', alg: -7 }];
     await editor(page).fill(JSON.stringify(edited, null, 2));
@@ -77,7 +77,7 @@ test.describe('/#advanced', () => {
 
   test('says where an edit stops being JSON, keeps the form, and refuses to send it', async ({ page }) => {
     await addVirtualAuthenticator(page);
-    await openBeta(page);
+    await openPage(page);
     const before = await section(page).getByLabel('Attestation', { exact: true }).inputValue();
     await editor(page).fill('{\n  "publicKey": {\n    "attestation": "none",\n  }\n}');
 
@@ -95,7 +95,7 @@ test.describe('/#advanced', () => {
 
   test('lists the saved credentials in a drawer, and opens a credential\'s details over it', async ({ page }) => {
     await addVirtualAuthenticator(page);
-    await openBeta(page);
+    await openPage(page);
     const name = await section(page).getByLabel('User Name').inputValue();
     await register(page);
     await page.getByRole('dialog').getByRole('button', { name: 'Close credential details' }).click();
@@ -120,7 +120,7 @@ test.describe('/#advanced', () => {
   ] as const) {
     test(`fits ${width} px: no sideways scroll, no grey fill, the editor ${width >= 1280 ? 'beside' : 'below'} the form`, async ({ page }) => {
       await page.setViewportSize({ width, height });
-      await openBeta(page);
+      await openPage(page);
 
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
       expect(await greyFills(page, '#nav-panel-advanced')).toEqual([]);
@@ -137,7 +137,7 @@ test.describe('/#advanced', () => {
   }
 
   test('keeps what an edit typed through a form change: rp.id and a timeout of 0', async ({ page }) => {
-    await openBeta(page);
+    await openPage(page);
     const edited = await request(page);
     edited.publicKey.rp.id = 'example.com';
     edited.publicKey.timeout = 0;
@@ -163,8 +163,8 @@ async function toAuthentication(page: Page) {
 }
 
 /** Registers in #advanced and closes the details the registration opens; gives the saved record. */
-async function registerInBeta(page: Page) {
-  await openBeta(page);
+async function registerPasskey(page: Page) {
+  await openPage(page);
   await register(page);
   await page.keyboard.press('Escape');
   await expect(page).toHaveURL(/#advanced$/);
@@ -175,7 +175,7 @@ async function registerInBeta(page: Page) {
 test.describe('/#advanced authentication', () => {
   test('authenticates from the form: the counter and the challenge, the counter kept, the row tinted', async ({ page }) => {
     await addVirtualAuthenticator(page);
-    await registerInBeta(page);
+    await registerPasskey(page);
     await toAuthentication(page);
 
     await section(page).getByRole('button', { name: 'Assert Credential' }).click();
@@ -192,7 +192,7 @@ test.describe('/#advanced authentication', () => {
 
   test('authenticates from an edited JSON: the form follows the edit, and the request sent is the edit', async ({ page }) => {
     await addVirtualAuthenticator(page);
-    await registerInBeta(page);
+    await registerPasskey(page);
     await toAuthentication(page);
     const edited = JSON.parse(await authEditor(page).inputValue());
     edited.publicKey.userVerification = 'discouraged';
@@ -211,7 +211,7 @@ test.describe('/#advanced authentication', () => {
     // The refused complete's own status.
     watch.allow(/status of 400/);
     await addVirtualAuthenticator(page);
-    await registerInBeta(page);
+    await registerPasskey(page);
     await toAuthentication(page);
     // The authenticator signed the client data's SHA-256 hash: SHA-512 does not verify.
     await authentication(page).getByLabel('Hash Algorithm', { exact: true }).selectOption('SHA-512');
@@ -231,7 +231,7 @@ test.describe('/#advanced authentication', () => {
   ] as const) {
     test(`fits ${width} px: no sideways scroll, no grey fill, the editor ${width >= 1280 ? 'beside' : 'below'} the form`, async ({ page }) => {
       await page.setViewportSize({ width, height });
-      await openBeta(page);
+      await openPage(page);
       await toAuthentication(page);
 
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);

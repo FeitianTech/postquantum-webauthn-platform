@@ -64,7 +64,7 @@ function rowExpected(name: string, row: Locator): Promise<ExpectedDifference[]> 
 // Each check's verdict: the current card said it by the word's colour (green,
 // red, grey), recorded as passed, failed or unknown; the new UI by the chip's tone (and
 // a word for screen readers).
-function betaVerdicts(row: Locator) {
+function shownVerdicts(row: Locator) {
   return row.evaluate((element) =>
     Array.from(element.querySelectorAll<HTMLElement>('[data-check]')).map((chip) => {
       const tone = chip.className.includes('bg-success-tint') ? 'passed' : chip.className.includes('bg-danger-tint') ? 'failed' : 'unknown';
@@ -77,7 +77,7 @@ async function keep(page: Page, records: object[]) {
   await page.evaluate(([key, value]) => window.localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify(records)] as const);
 }
 
-async function openBeta(page: Page) {
+async function openPage(page: Page) {
   await page.goto('/#simple');
   await expect(page.locator('[data-saved-credentials] [data-count]')).toBeVisible();
 }
@@ -87,35 +87,35 @@ type RowRecording = { name: string; sections: ShownSection[]; buttons: string[];
 test.describe('the Simple tab, as recorded', () => {
   test('shows the same words', async ({ page }) => {
     const legacy = recorded<ShownSection[]>('simple', 'the tab');
-    await openBeta(page);
-    const beta = await readShownText(page.locator('#nav-panel-simple'), 'h2, h3');
+    await openPage(page);
+    const shownSections = await readShownText(page.locator('#nav-panel-simple'), 'h2, h3');
 
-    const differences = compareShownText(legacy, beta, TAB_EXPECTED);
+    const differences = compareShownText(legacy, shownSections, TAB_EXPECTED);
     expect(describeDifferences(differences.filter((difference) => !difference.reason))).toEqual([]);
-    expect(legacy.map((section) => section.heading)).toEqual(beta.map((section) => section.heading));
+    expect(legacy.map((section) => section.heading)).toEqual(shownSections.map((section) => section.heading));
   });
 
   test('shows each saved credential with the same words, in the same order', async ({ page }) => {
     const legacyRows = recorded<RowRecording[]>('simple', 'the rows');
     expect(legacyRows).toHaveLength(RECORDS.length);
 
-    await openBeta(page);
+    await openPage(page);
     await keep(page, RECORDS);
     await page.reload();
-    const betaRows = page.locator('[data-saved-credentials] li[data-credential-key]');
-    await expect(betaRows).toHaveCount(RECORDS.length);
+    const shownRows = page.locator('[data-saved-credentials] li[data-credential-key]');
+    await expect(shownRows).toHaveCount(RECORDS.length);
 
     for (let index = 0; index < RECORDS.length; index += 1) {
       const { name, sections: legacy, buttons: legacyButtons, checks: legacyChecks } = legacyRows[index];
-      const betaRow = betaRows.nth(index);
-      await expect(betaRow.getByRole('button', { name, exact: true })).toBeVisible();
-      const beta = await readShownText(betaRow, 'h6');
-      const betaButtons = (await betaRow.getByRole('button').allTextContents()).filter((text) => ['FIDO MDS', 'Delete'].includes(text));
+      const shownRow = shownRows.nth(index);
+      await expect(shownRow.getByRole('button', { name, exact: true })).toBeVisible();
+      const shownSections = await readShownText(shownRow, 'h6');
+      const shownButtons = (await shownRow.getByRole('button').allTextContents()).filter((text) => ['FIDO MDS', 'Delete'].includes(text));
 
-      const differences = compareShownText(legacy, beta, await rowExpected(name, betaRow));
+      const differences = compareShownText(legacy, shownSections, await rowExpected(name, shownRow));
       expect(describeDifferences(differences.filter((difference) => !difference.reason)), name).toEqual([]);
-      expect(betaButtons, `${name}'s actions`).toEqual(legacyButtons);
-      expect(await betaVerdicts(betaRow), `${name}'s checks`).toEqual(legacyChecks);
+      expect(shownButtons, `${name}'s actions`).toEqual(legacyButtons);
+      expect(await shownVerdicts(shownRow), `${name}'s checks`).toEqual(legacyChecks);
       expect(legacyChecks).toHaveLength(4);
     }
   });
@@ -124,13 +124,13 @@ test.describe('the Simple tab, as recorded', () => {
     await addVirtualAuthenticator(page);
     const name = `recorded-${Date.now()}`;
 
-    await openBeta(page);
+    await openPage(page);
     await page.getByRole('textbox', { name: 'Username' }).fill(name);
     await page.getByRole('button', { name: 'Register Passkey' }).click();
-    const betaRegistered = (await page.locator('[data-toast-viewport]').getByText(/^Registration successful!/).textContent())!;
+    const shownRegistered = (await page.locator('[data-toast-viewport]').getByText(/^Registration successful!/).textContent())!;
     await page.getByRole('button', { name: 'Authenticate', exact: true }).click();
     await expect(page.getByText('Authentication successful! You have been verified.')).toBeVisible();
-    const betaPanel = await readShownText(page.getByRole('tabpanel', { name: 'Simple Authentication' }).locator('[data-ceremony-result]'), 'h6');
+    const shownPanel = await readShownText(page.getByRole('tabpanel', { name: 'Simple Authentication' }).locator('[data-ceremony-result]'), 'h6');
 
     const current = recorded<{ panel: ShownSection[]; registered: string }>('simple', 'after a registration and an authentication');
     const legacyPanel = current.panel;
@@ -139,8 +139,8 @@ test.describe('the Simple tab, as recorded', () => {
       { only: 'recorded', token: /^\d+$/, reason: 'the counter, which each authentication raises (the same credential was used on the page first)' },
       { only: 'shown', token: /^\d+$/, reason: 'the counter, which each authentication raises' },
     ];
-    const differences = compareShownText(legacyPanel, betaPanel, counter);
+    const differences = compareShownText(legacyPanel, shownPanel, counter);
     expect(describeDifferences(differences.filter((difference) => !difference.reason))).toEqual([]);
-    expect(betaRegistered.trim()).toBe(current.registered);
+    expect(shownRegistered.trim()).toBe(current.registered);
   });
 });

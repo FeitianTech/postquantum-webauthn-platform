@@ -54,7 +54,7 @@ async function upload(page: Page) {
   expect(answer.ok()).toBe(true);
 }
 
-async function betaEntry(page: Page, entryId: string, name: string) {
+async function shownEntry(page: Page, entryId: string, name: string) {
   await page.goto(`/#mds/${encodeURIComponent(entryId).replace(/%3A/g, ':')}`);
   const entry = page.locator('[data-mds-entry]');
   await expect(entry.getByRole('heading', { level: 3, name })).toBeVisible();
@@ -73,10 +73,10 @@ test.describe('the MDS entry page reads as recorded', () => {
     test(entry.label, async ({ page }) => {
       if ('upload' in entry) await upload(page);
       const legacy = recorded<ShownSection[]>('mds-entry', entry.label);
-      const beta = await readShownText(await betaEntry(page, entry.entryId, entry.name), 'h4');
+      const shownSections = await readShownText(await shownEntry(page, entry.entryId, entry.name), 'h4');
 
-      expect(beta.map((section) => section.heading)).toEqual(legacy.map((section) => section.heading));
-      const differences = compareShownText(legacy, beta, EXPECTED);
+      expect(shownSections.map((section) => section.heading)).toEqual(legacy.map((section) => section.heading));
+      const differences = compareShownText(legacy, shownSections, EXPECTED);
       report.push(`${entry.label}:`, ...describeDifferences(differences).map((line) => `  ${line}`));
       expect(describeDifferences(differences.filter((difference) => !difference.reason))).toEqual([]);
       if (entry.name === 'Fixture Key With Every User Verification Method') {
@@ -93,12 +93,12 @@ test.describe('the MDS entry page reads as recorded', () => {
     const legacy = recorded<ShownSection[]>('mds-entry', 'a certificate');
 
     await page.goto('/#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000002/certificate/1');
-    const betaPage = page.locator('[data-mds-certificate]');
-    await expect(betaPage.locator('pre').last()).toContainText('Version');
-    const beta = await readShownText(betaPage, 'h4');
+    const certificatePage = page.locator('[data-mds-certificate]');
+    await expect(certificatePage.locator('pre').last()).toContainText('Version');
+    const shownSections = await readShownText(certificatePage, 'h4');
 
-    expect(beta.map((section) => section.heading)).toEqual(legacy.map((section) => section.heading));
-    const differences = compareShownText(legacy, beta, EXPECTED);
+    expect(shownSections.map((section) => section.heading)).toEqual(legacy.map((section) => section.heading));
+    const differences = compareShownText(legacy, shownSections, EXPECTED);
     report.push('a certificate:', ...describeDifferences(differences).map((line) => `  ${line}`));
     expect(describeDifferences(differences)).toEqual([]);
   });
@@ -109,7 +109,7 @@ test.describe('the MDS entry page reads as recorded', () => {
       'the raw view',
     );
 
-    await betaEntry(page, 'akid:f1d0000000000000000000000000000000000011', 'Fixture U2F Key');
+    await shownEntry(page, 'akid:f1d0000000000000000000000000000000000011', 'Fixture U2F Key');
     await page.locator('[data-mds-entry]').getByRole('button', { name: 'Raw' }).last().click();
     const dialog = page.getByRole('dialog', { name: legacyTitle! });
     await expect(dialog).toBeVisible();

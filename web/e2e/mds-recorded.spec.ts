@@ -23,7 +23,7 @@ const CASES = [
 // Nothing is expected to differ: the words are the server's, in both tables.
 const EXPECTED: ExpectedDifference[] = [];
 
-async function betaRows(page: Page, filters: Record<string, readonly string[]>) {
+async function shownRows(page: Page, filters: Record<string, readonly string[]>) {
   await page.goto('/#mds');
   const section = page.getByRole('tabpanel', { name: 'FIDO MDS Authenticators' });
   await expect(section.locator('tbody tr[data-entry-id]:not([hidden])')).toHaveCount(32);
@@ -49,11 +49,11 @@ test.describe('the MDS table reads as recorded', () => {
   for (const { label, filters } of CASES) {
     test(label, async ({ page }) => {
       const legacy = recorded<ShownSection[]>('mds', label);
-      const beta = await betaRows(page, filters);
+      const shown = await shownRows(page, filters);
       expect(legacy.length, 'the recording holds rows').toBeGreaterThan(0);
-      expect(keys(beta), 'the same rows, in the same order').toEqual(keys(legacy));
+      expect(keys(shown), 'the same rows, in the same order').toEqual(keys(legacy));
 
-      const differences = compareShownText(legacy, beta, EXPECTED);
+      const differences = compareShownText(legacy, shown, EXPECTED);
       report.push(`${label} (${legacy.length} rows):`, ...describeDifferences(differences).map((line) => `  ${line}`));
       expect(describeDifferences(differences.filter((difference) => !difference.reason))).toEqual([]);
     });
@@ -62,15 +62,15 @@ test.describe('the MDS table reads as recorded', () => {
   test('sorted by name, both ways', async ({ page }) => {
     const { legacyUp, legacyDown } = recorded<{ legacyUp: string[]; legacyDown: string[] }>('mds', 'sorted by name');
 
-    await betaRows(page, {});
+    await shownRows(page, {});
     const section = page.getByRole('tabpanel', { name: 'FIDO MDS Authenticators' });
     const name = section.getByRole('columnheader', { name: /^Name/ }).getByRole('button');
     await name.click();
-    const betaUp = keys(await readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 4));
+    const shownUp = keys(await readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 4));
     await name.click();
-    const betaDown = keys(await readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 4));
+    const shownDown = keys(await readShownRows(section.locator('tbody'), 'tr[data-entry-id]:not([hidden])', 4));
 
-    expect(betaUp).toEqual(legacyUp);
-    expect(betaDown).toEqual(legacyDown);
+    expect(shownUp).toEqual(legacyUp);
+    expect(shownDown).toEqual(legacyDown);
   });
 });

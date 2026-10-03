@@ -23,12 +23,12 @@ const USER_ID = '00112233445566778899aabbccddeeff';
 const USER_NAME = 'paritycheck';
 const CHALLENGE = 'ffeeddccbbaa99887766554433221100ffeeddccbbaa99887766554433221100';
 
-const beta = (page: Page) => page.getByRole('tabpanel', { name: 'Advanced Authentication' });
-const betaEditor = (page: Page) => beta(page).getByRole('textbox', { name: 'JSON Editor (CredentialCreationOptions)' });
+const advancedSection = (page: Page) => page.getByRole('tabpanel', { name: 'Advanced Authentication' });
+const registrationEditor = (page: Page) => advancedSection(page).getByRole('textbox', { name: 'JSON Editor (CredentialCreationOptions)' });
 
-async function openBeta(page: Page) {
+async function openPage(page: Page) {
   await page.goto('/#advanced');
-  await expect(betaEditor(page)).toHaveValue(/"publicKey"/);
+  await expect(registrationEditor(page)).toHaveValue(/"publicKey"/);
 }
 
 const squeeze = (text: string | null) => (text ?? '').replace(/\s+/g, '');
@@ -37,8 +37,8 @@ test.describe('the Advanced tab\'s registration, as recorded', () => {
   test('shows the same words, section by section', async ({ page }) => {
     const legacy = recorded<ShownSection[]>('advanced', 'the registration form');
 
-    await openBeta(page);
-    const shown = await readShownText(beta(page).locator('[data-registration-form]'), 'h3');
+    await openPage(page);
+    const shown = await readShownText(advancedSection(page).locator('[data-registration-form]'), 'h3');
 
     const differences = compareShownText(legacy, shown, []);
     expect(describeDifferences(differences)).toEqual([]);
@@ -48,8 +48,8 @@ test.describe('the Advanced tab\'s registration, as recorded', () => {
   test('gives each field the same info popup, in English and 中文', async ({ page }) => {
     const legacy = recorded<Popup[]>('advanced', 'the registration popups');
 
-    await openBeta(page);
-    const shown = await beta(page)
+    await openPage(page);
+    const shown = await advancedSection(page)
       .locator('[data-registration-form] button[aria-label^="About "]')
       .evaluateAll((buttons) =>
         buttons.map((button) => {
@@ -71,20 +71,20 @@ test.describe('the Advanced tab\'s registration, as recorded', () => {
   test('offers the same algorithms and hints, in the same order', async ({ page }) => {
     const legacy = recorded<string[][]>('advanced', 'the registration choices');
 
-    await openBeta(page);
-    const chipsOf = (name: string) => beta(page).getByRole('group', { name }).getByRole('button').allTextContents();
+    await openPage(page);
+    const chipsOf = (name: string) => advancedSection(page).getByRole('group', { name }).getByRole('button').allTextContents();
     expect([await chipsOf('Public Key Credential Parameters'), await chipsOf('Hints')]).toEqual(legacy);
   });
 
   test('writes the same request for the same settings, byte for byte', async ({ page }) => {
     const { legacyDefault, legacyChanged } = recorded<{ legacyDefault: string; legacyChanged: string }>('advanced', 'the registration request');
 
-    await openBeta(page);
-    const form = beta(page).locator('#advanced-ceremony-panel-registration');
+    await openPage(page);
+    const form = advancedSection(page).locator('#advanced-ceremony-panel-registration');
     await form.getByLabel('User ID (hex)', { exact: true }).fill(USER_ID);
     await form.getByLabel('User Name', { exact: true }).fill(USER_NAME);
     await form.getByLabel('Challenge (hex)', { exact: true }).fill(CHALLENGE);
-    expect(await betaEditor(page).inputValue()).toBe(legacyDefault);
+    expect(await registrationEditor(page).inputValue()).toBe(legacyDefault);
     await form.getByLabel('Authenticator Attachment', { exact: true }).selectOption('unspecified');
     await form.getByLabel('Resident Key', { exact: true }).selectOption('required');
     await form.getByLabel('Attestation', { exact: true }).selectOption('none');
@@ -98,7 +98,7 @@ test.describe('the Advanced tab\'s registration, as recorded', () => {
     await form.getByLabel('largeBlob', { exact: true }).selectOption('preferred');
     await form.getByRole('switch', { name: 'prf' }).click();
     await form.getByLabel('prf eval first (hex)', { exact: true }).fill('aa'.repeat(32));
-    expect(await betaEditor(page).inputValue()).toBe(legacyChanged);
+    expect(await registrationEditor(page).inputValue()).toBe(legacyChanged);
   });
 
   test('a registration\'s details show the recorded words at each level', async ({ page }) => {
@@ -137,28 +137,28 @@ const RECORDS = (
   }));
 const CAPABLE_ID = RECORDS[0].credentialIdHex as string;
 
-const betaAuth = (page: Page) => page.locator('#advanced-ceremony-panel-authentication');
-const betaAuthEditor = (page: Page) => beta(page).getByRole('textbox', { name: 'JSON Editor (CredentialRequestOptions)' });
+const authenticationPanel = (page: Page) => page.locator('#advanced-ceremony-panel-authentication');
+const authenticationEditor = (page: Page) => advancedSection(page).getByRole('textbox', { name: 'JSON Editor (CredentialRequestOptions)' });
 
-async function openBetaAuthentication(page: Page, records: object[] = RECORDS) {
+async function openAuthentication(page: Page, records: object[] = RECORDS) {
   await page.goto('/#advanced');
   await keep(page, records);
   await page.reload();
-  await beta(page).getByRole('tab', { name: 'Authentication' }).click();
-  await expect(betaAuthEditor(page)).toHaveValue(/"rpId"/);
+  await advancedSection(page).getByRole('tab', { name: 'Authentication' }).click();
+  await expect(authenticationEditor(page)).toHaveValue(/"rpId"/);
 }
 
 test.describe('the Advanced tab\'s authentication, as recorded', () => {
   test('shows the same words, section by section, and the same notes', async ({ page }) => {
     const { legacy, legacyNotes } = recorded<{ legacy: ShownSection[]; legacyNotes: string[] }>('advanced', 'the authentication form');
 
-    await openBetaAuthentication(page, []);
-    const form = betaAuth(page).locator('[data-authentication-form]');
-    const betaNotes = [
+    await openAuthentication(page, []);
+    const form = authenticationPanel(page).locator('[data-authentication-form]');
+    const noteIds = [
       await form.getByLabel('largeBlob', { exact: true }).getAttribute('aria-describedby'),
       await form.getByLabel('prf eval first (hex)', { exact: true }).getAttribute('aria-describedby'),
     ];
-    const notes = await Promise.all(betaNotes.map((id) => page.locator(`[id="${id}"]`).textContent()));
+    const notes = await Promise.all(noteIds.map((id) => page.locator(`[id="${id}"]`).textContent()));
     // The notes are compared on their own: the current form keeps them among its errors.
     await page.evaluate(() => {
       for (const element of document.querySelectorAll('[data-authentication-form] [id$="-hint"]')) element.setAttribute('data-recorded-skip', '');
@@ -173,8 +173,8 @@ test.describe('the Advanced tab\'s authentication, as recorded', () => {
   test('gives each field the same info popup, in English and 中文', async ({ page }) => {
     const legacy = recorded<Popup[]>('advanced', 'the authentication popups');
 
-    await openBetaAuthentication(page);
-    const shown = await betaAuth(page)
+    await openAuthentication(page);
+    const shown = await authenticationPanel(page)
       .locator('[data-authentication-form] button[aria-label^="About "]')
       .evaluateAll((buttons) =>
         buttons.map((button) => {
@@ -195,8 +195,8 @@ test.describe('the Advanced tab\'s authentication, as recorded', () => {
   test('offers the same choices, in the same order', async ({ page }) => {
     const legacy = recorded<Record<'allow' | 'verification' | 'hash' | 'largeBlob' | 'hints', string[]>>('advanced', 'the authentication choices');
 
-    await openBetaAuthentication(page);
-    const form = betaAuth(page);
+    await openAuthentication(page);
+    const form = authenticationPanel(page);
     const options = (label: string) => form.getByLabel(label, { exact: true }).locator('option').allTextContents();
     expect({
       allow: await options('Allow Credentials'),
@@ -211,42 +211,42 @@ test.describe('the Advanced tab\'s authentication, as recorded', () => {
   test('writes the same request for the same settings, byte for byte', async ({ page }) => {
     const legacyTexts = recorded<string[]>('advanced', 'the authentication requests');
 
-    await openBetaAuthentication(page);
-    const form = betaAuth(page);
-    const betaTexts = [];
+    await openAuthentication(page);
+    const form = authenticationPanel(page);
+    const shownTexts = [];
     await form.getByLabel('Challenge (hex)', { exact: true }).fill(CHALLENGE);
-    betaTexts.push(await betaAuthEditor(page).inputValue());
+    shownTexts.push(await authenticationEditor(page).inputValue());
     await form.getByLabel('User Verification', { exact: true }).selectOption('discouraged');
     await form.getByLabel('Timeout (milliseconds)', { exact: true }).fill('5000');
     await form.getByRole('button', { name: 'Hybrid', exact: true }).click();
-    betaTexts.push(await betaAuthEditor(page).inputValue());
+    shownTexts.push(await authenticationEditor(page).inputValue());
     await form.getByLabel('Allow Credentials', { exact: true }).selectOption(CAPABLE_ID);
     await form.getByLabel('largeBlob', { exact: true }).selectOption('write');
     await form.getByLabel('largeBlob write (hex)', { exact: true }).fill('ab'.repeat(32));
     await form.getByLabel('prf eval first (hex)', { exact: true }).fill('cd'.repeat(32));
     await form.getByLabel('prf eval second (hex)', { exact: true }).fill('ef'.repeat(32));
-    betaTexts.push(await betaAuthEditor(page).inputValue());
+    shownTexts.push(await authenticationEditor(page).inputValue());
     await form.getByLabel('Allow Credentials', { exact: true }).selectOption('empty');
     await form.getByLabel('largeBlob', { exact: true }).selectOption('read');
-    betaTexts.push(await betaAuthEditor(page).inputValue());
+    shownTexts.push(await authenticationEditor(page).inputValue());
 
-    expect(betaTexts).toEqual(legacyTexts);
+    expect(shownTexts).toEqual(legacyTexts);
     expect(JSON.parse(legacyTexts[2]).publicKey.extensions.prf.eval.second).toEqual({ $hex: 'ef'.repeat(32) });
   });
 
   test('says the same after an authentication', async ({ page }) => {
     await addVirtualAuthenticator(page);
-    await openBeta(page);
-    await beta(page).getByRole('button', { name: 'Create Credential' }).click();
+    await openPage(page);
+    await advancedSection(page).getByRole('button', { name: 'Create Credential' }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Registration Details' })).toBeVisible();
 
     const legacy = recorded<string>('advanced', 'the result of an authentication');
 
     await page.goto('/#advanced');
-    await beta(page).getByRole('tab', { name: 'Authentication' }).click();
-    await beta(page).getByRole('button', { name: 'Assert Credential' }).click();
+    await advancedSection(page).getByRole('tab', { name: 'Authentication' }).click();
+    await advancedSection(page).getByRole('button', { name: 'Assert Credential' }).click();
     await expect(page.getByText('Advanced authentication successful!')).toBeVisible();
-    const shown = await beta(page).locator('[data-ceremony-result]').innerText();
+    const shown = await advancedSection(page).locator('[data-ceremony-result]').innerText();
 
     // The counter's value is the authenticator's, one more for the second authentication.
     const words = (text: string) => squeeze(text.replace(/\b\d+\b/g, '#'));

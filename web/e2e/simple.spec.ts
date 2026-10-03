@@ -27,12 +27,12 @@ const list = (page: Page) => section(page).locator('[data-saved-credentials]');
 const rows = (page: Page) => list(page).locator('li[data-credential-key]');
 const username = () => `e2e-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 
-async function openBeta(page: Page, hash = '#simple') {
+async function openPage(page: Page, hash = '#simple') {
   await page.goto(`/${hash}`);
   await expect(list(page).locator('[data-count]')).toBeVisible();
 }
 
-async function registerInBeta(page: Page, name: string) {
+async function registerPasskey(page: Page, name: string) {
   await section(page).getByRole('textbox', { name: 'Username' }).fill(name);
   await section(page).getByRole('button', { name: 'Register Passkey' }).click();
   await expect(page.getByText(/^Registration successful! Algorithm: /)).toBeVisible();
@@ -50,9 +50,9 @@ async function storedCount(page: Page) {
 test.describe('/#simple', () => {
   test('registers a passkey and authenticates with it, saying each outcome and what the server made of it', async ({ page }) => {
     const authenticator = await addVirtualAuthenticator(page);
-    await openBeta(page);
+    await openPage(page);
     const name = username();
-    await registerInBeta(page, name);
+    await registerPasskey(page, name);
     const [registered] = await authenticator.credentials();
     expect(registered.rpId).toBe('localhost');
 
@@ -72,9 +72,9 @@ test.describe('/#simple', () => {
     // Their public keys are too large for the session cookie to hold (5,780 bytes for
     // the two), so begin keeps a digest of the list, and complete is sent it again.
     await addVirtualAuthenticator(page);
-    await openBeta(page);
+    await openPage(page);
     const name = username();
-    await registerInBeta(page, name);
+    await registerPasskey(page, name);
     // Two ML-DSA-65 records from the recorded registration, each with its own ID and
     // its own key: the last 1,900 of the key's 1,952 bytes changed (they compress
     // apart, as two real keys do).
@@ -112,7 +112,7 @@ test.describe('/#simple', () => {
     // The answer leaves with the cookies from before the begin. Were it to set the
     // session cookie, the browser would keep that one, without begin's state.
     await addVirtualAuthenticator(page);
-    await openBeta(page);
+    await openPage(page);
     let sent!: () => void;
     let release!: () => void;
     const infoSent = new Promise<void>((resolve) => { sent = resolve; });
@@ -134,13 +134,13 @@ test.describe('/#simple', () => {
       await route.continue();
     });
 
-    await registerInBeta(page, username());
+    await registerPasskey(page, username());
     expect(await late).toBe(200);
   });
 
   test('keeps a failure in place, with its sentence', async ({ page }) => {
     await addVirtualAuthenticator(page);
-    await openBeta(page);
+    await openPage(page);
     await section(page).getByRole('textbox', { name: 'Username' }).fill(username());
     await section(page).getByRole('button', { name: 'Authenticate', exact: true }).click();
     await expect(section(page).getByRole('alert')).toHaveText(
@@ -149,7 +149,7 @@ test.describe('/#simple', () => {
   });
 
   test('clears every credential, and warns of an advanced one the server no longer held', async ({ page }) => {
-    await openBeta(page);
+    await openPage(page);
     await keep(page, [
       { ...goldenStoredCredential('simple-register-es256'), type: 'simple' },
       { ...goldenStoredCredential('advanced-register-none-es256'), type: 'advanced' },
@@ -167,7 +167,7 @@ test.describe('/#simple', () => {
   });
 
   test('opens a credential\'s details at their own URL, and Back closes them', async ({ page }) => {
-    await openBeta(page);
+    await openPage(page);
     const record: Record<string, unknown> = { ...goldenStoredCredential('simple-register-es256'), type: 'simple' };
     await keep(page, [record]);
     await page.reload();
@@ -199,7 +199,7 @@ test.describe('/#simple', () => {
     });
     const records = JSON.stringify([{ ...goldenStoredCredential('simple-register-es256'), type: 'simple' }]);
     await page.addInitScript(([key, value]) => window.localStorage.setItem(key, value), [STORAGE_KEY, records] as const);
-    await openBeta(page);
+    await openPage(page);
     await expect.poll(() => aborted.size).toBe(2);
     down = false;
 
@@ -213,7 +213,7 @@ test.describe('/#simple', () => {
   });
 
   test('opens a saved credential\'s FIDO MDS entry, and Back returns to the list', async ({ page }) => {
-    await openBeta(page);
+    await openPage(page);
     await keep(page, [
       { type: 'simple', credentialId: 'AQIDBA', email: 'mds@example.com', aaguidHex: 'f1d0f1d0000040008000000000000001', attestationSummary: { rootValid: true } },
     ]);
@@ -230,7 +230,7 @@ test.describe('/#simple', () => {
   for (const width of [1440, 1024, 800, 375]) {
     test(`never scrolls the page sideways at ${width} px, and has no grey fill`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
-      await openBeta(page);
+      await openPage(page);
       await keep(page, [
         { ...goldenStoredCredential('simple-register-packed-x5c-extensions'), type: 'simple' },
         { ...goldenStoredCredential('advanced-register-packed-x5c-everything'), type: 'advanced' },

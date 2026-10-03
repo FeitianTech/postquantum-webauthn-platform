@@ -84,7 +84,7 @@ const EXPECTED: ExpectedDifference[] = [
   },
 ];
 
-async function betaText(page: Page, input: string, lenient: boolean) {
+async function shownText(page: Page, input: string, lenient: boolean) {
   await page.goto('/#codec');
   const decoding = page.locator('#codec-mode-panel-decode');
   await decoding.getByRole('textbox', { name: 'Input to decode' }).fill(input);
@@ -112,10 +112,10 @@ test.describe('the Codec reads as recorded', () => {
   for (const label of cases) {
     test(label, async ({ page }) => {
       const current = recorded<{ input: string; lenient: boolean; sections: ShownSection[] }>('codec', label);
-      const beta = await betaText(page, current.input, current.lenient);
+      const shownSections = await shownText(page, current.input, current.lenient);
       expect(current.sections.length, 'the recording holds sections').toBeGreaterThan(1);
 
-      const differences = compareShownText(current.sections, beta, EXPECTED);
+      const differences = compareShownText(current.sections, shownSections, EXPECTED);
       found[label] = differences;
       expect(describeDifferences(differences.filter((difference) => !difference.reason))).toEqual([]);
     });
