@@ -71,6 +71,6 @@ RUN rm -rf /usr/local/lib/python3.12/ensurepip \
     && rm /tmp/build_static_assets.py
 
 WORKDIR /app
-ENV PYTHONPATH=/app:${PYTHONPATH}
+ENV PYTHONPATH=/app
 
 CMD ["gunicorn", "-c", "/app/gunicorn.conf.py", "server.app.app:app"]
