@@ -226,3 +226,24 @@ def test_a_map_node_keeps_only_its_well_formed_entries():
     }
 
     assert decode_cbor_parser._structure_to_value(node) == {1: 7}
+
+
+@pytest.mark.parametrize(
+    ("data", "kept", "skipped"),
+    [
+        # An indefinite byte string whose break byte never comes: its chunks are kept.
+        (b"\x5f\x41\x00", {"summary": "bytes[1]", "indefinite": True}, ("truncated", 0, "indefinite-length byte string has no break byte")),
+        # Text declaring 3 bytes with 2 left: what is there is kept, and the length it declared.
+        (b"\x63AJ", {"value": "AJ", "truncated": True, "declaredLength": 3}, ("truncated", 0, "text string declares 3 bytes; 2 remain")),
+        # A simple value under 32 written in two bytes is no simple value.
+        (b"\xf8\x10", {"type": "invalid", "summary": "invalid(h'f810')"}, ("invalid-simple-value", 0, "simple value 16 must be written in one byte")),
+    ],
+)
+def test_a_short_unterminated_or_invalid_item_is_kept_when_lenient_and_refused_when_strict(data, kept, skipped):
+    node, end, stepped_over = decode_cbor_parser.decode_item(data, lenient=True)
+
+    assert {key: node.get(key) for key in kept} == kept
+    assert end == len(data)
+    assert [(entry["code"], entry["offset"], entry["message"]) for entry in stepped_over] == [skipped]
+    with pytest.raises(decode_cbor_parser._CborDecodingError, match=skipped[2]):
+        decode_cbor_parser.decode_item(data)
