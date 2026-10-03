@@ -76,3 +76,19 @@ Open the following address in your browser:
 ```text
 http://localhost:8000
 ```
+
+---
+
+### Step 4 — Load the FIDO Metadata
+
+The MDS explorer is empty until the container has a metadata snapshot. This
+downloads the FIDO Alliance's BLOB, verifies it against the pinned trust root and
+writes the snapshot into `./instance/mds-snapshot`, which the running server reads
+at once and keeps across restarts:
+
+```bash
+docker compose exec webauthn python tools/update_mds_snapshot.py
+```
+
+Run it again to take a newer BLOB. [docs/MDS_SNAPSHOT.md](docs/MDS_SNAPSHOT.md)
+has the whole picture.
