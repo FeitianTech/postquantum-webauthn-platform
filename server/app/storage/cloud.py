@@ -27,7 +27,6 @@ __all__ = [
 # they are loaded on first use rather than when the server starts.
 _LAZY_MODULES = {
     "gcs_exceptions": "google.api_core.exceptions",
-    "auth_exceptions": "google.auth.exceptions",
     "storage": "google.cloud.storage",
 }
 _LAZY_IMPORT_LOCK = threading.Lock()
