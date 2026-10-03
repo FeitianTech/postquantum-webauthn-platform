@@ -108,6 +108,36 @@ test.describe('/#simple', () => {
     await expect(page.getByText('Authentication successful! You have been verified.')).toBeVisible();
   });
 
+  test('registers while an API answer sent before its begin arrives after it', async ({ page }) => {
+    // The answer leaves with the cookies from before the begin. Were it to set the
+    // session cookie, the browser would keep that one, without begin's state.
+    await addVirtualAuthenticator(page);
+    await openBeta(page);
+    let sent!: () => void;
+    let release!: () => void;
+    const infoSent = new Promise<void>((resolve) => { sent = resolve; });
+    const infoHeld = new Promise<void>((resolve) => { release = resolve; });
+    await page.route('**/api/mds/metadata/info', async (route) => {
+      const response = await route.fetch();
+      sent();
+      await infoHeld;
+      await route.fulfill({ response });
+    });
+    const late = page.evaluate(() => fetch('/api/mds/metadata/info').then((answer) => answer.status));
+    await infoSent;
+    await page.route('**/api/register/begin**', async (route) => {
+      await route.fulfill({ response: await route.fetch() });
+      release();
+    });
+    await page.route('**/api/register/complete**', async (route) => {
+      await late;
+      await route.continue();
+    });
+
+    await registerInBeta(page, username());
+    expect(await late).toBe(200);
+  });
+
   test('keeps a failure in place, with its sentence', async ({ page }) => {
     await addVirtualAuthenticator(page);
     await openBeta(page);
