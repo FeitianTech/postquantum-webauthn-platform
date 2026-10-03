@@ -210,7 +210,8 @@ its logic out here first.
 - `app.py`: the WSGI entry point, `server.app.app:app = create_app()`, in a checkout and in the
   image alike (the Dockerfile copies `server/app` to `/app/server/app`). No `server.X` import
   fallbacks.
-- `factory.py`: `create_app(config=None)`: each config submodule's `config_from_env()`, then the
+- `factory.py`: `create_app(config=None)`: the `config_from_env()` of each module in
+  `CONFIG_SOURCES` (the seven config submodules that read the environment), then the
   overrides, then `INIT_STEPS` in order (`test_app_factory.py` pins it).
 - `config/`: `application.py` (the bare app, and `add_after_request_once`), `logs.py`,
   `session_secret.py`, `compression.py`, `proxy.py`, `fetch_metadata.py` (a write under `/api/`
@@ -367,10 +368,11 @@ goldens show what it changes).
   (ruff, pytest with `.coveragerc`'s floor) and `Web tests` (typecheck, both vitest projects
   with coverage, build, CSP scan, size budget) in parallel, then Build, Push and Deploy (Cloud Run `pqcwebauthn`). Playwright
   runs in GitHub CI only. Keep that gate: it is all that stands between a commit and production.
-- Workflows (`ci-*.yml` run on `pull_request` and on `push` to `main` only): `ci-python.yml`,
+- Workflows (`ci-*.yml` run on `pull_request` and on `push` to `main`; `ci-security.yml` also
+  weekly, since advisories land without a commit): `ci-python.yml`,
   `ci-web.yml` (web and the Playwright tests), `ci-docker.yml` (builds the image and checks it
   answers), `ci-security.yml` (`pip-audit`, `npm audit --audit-level=moderate` in `web/`, Trivy
-  on the image; fix the dependency, never widen a threshold), `ci-repository.yml` (actionlint
+  (its image pinned by digest) on the image; fix the dependency, never widen a threshold), `ci-repository.yml` (actionlint
   with shellcheck from its author's image pinned by digest, which Dependabot does not bump;
   and on a push, `tools/commit_messages.py` over the pushed commits), `ci-scheduled-runs.yml`
   (warns while a scheduled workflow's latest run on `main` has failed: add any new scheduled
