@@ -190,7 +190,8 @@ def _attestation_error_response(attestation_checks: Mapping[str, Any]) -> Any:
 def register_complete():
     uname = request.args.get("email")
     response = json_body.json_object()
-    credential_response = response.get("response", {}) if isinstance(response, dict) else {}
+    inner_response = response.get("response")
+    credential_response = inner_response if isinstance(inner_response, Mapping) else {}
     inputs = _complete_inputs(response, credential_response)
 
     # A client-supplied ``__session_state`` is stripped and ignored: accepting

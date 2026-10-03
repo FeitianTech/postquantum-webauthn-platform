@@ -43,6 +43,8 @@ def advanced_authenticate_begin():
         ), 400
 
     public_key = data["publicKey"]
+    if not isinstance(public_key, Mapping):
+        return jsonify({"error": "publicKey must be an object."}), 400
 
     if not public_key.get("challenge"):
         return jsonify({"error": "Missing required field: challenge"}), 400

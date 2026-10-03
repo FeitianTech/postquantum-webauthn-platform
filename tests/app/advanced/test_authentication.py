@@ -105,3 +105,10 @@ def test_begin_refuses_an_extension_value_it_cannot_read():
 
     assert response.status_code == 400
     assert response.get_json() == {"error": "Invalid extension value: input is not hexadecimal"}
+
+
+def test_begin_refuses_a_public_key_that_is_no_object():
+    response = entry_app().test_client().post("/api/advanced/authenticate/begin", json={"publicKey": ["challenge"]})
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "publicKey must be an object."}

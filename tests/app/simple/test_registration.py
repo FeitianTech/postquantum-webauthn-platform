@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import time
 
+import pytest
+
 from tests.app.entry_app import entry_app
 from tests.app.security.ceremony_helpers import (
     ORIGIN,
@@ -43,6 +45,14 @@ def test_a_complete_body_that_is_no_object_finds_no_registration_state():
     assert response.get_json() == {
         "error": "Registration state not found or has expired. Please restart the registration process."
     }
+
+
+@pytest.mark.parametrize("member", [None, "attestation", ["attestation"]])
+def test_a_complete_whose_response_is_no_object_finds_no_registration_state(member):
+    response = entry_app().test_client().post(f"/api/register/complete?email={EMAIL}", json={"response": member})
+
+    assert response.status_code == 400
+    assert response.get_json()["error"].startswith("Registration state not found")
 
 
 def test_a_registration_challenge_past_its_lifetime_is_refused_as_expired():
