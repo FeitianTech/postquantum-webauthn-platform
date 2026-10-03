@@ -256,3 +256,14 @@ def test_the_encoder_rebuilds_a_decoded_get_info_from_its_view(message):
     decoded = decode_payload_text(message.hex())["data"]
 
     assert encode_payload_text(json.dumps(decoded), "cbor")["data"]["binary"]["hex"] == message.hex()
+
+
+def test_get_info_members_of_another_type_than_ctap_gives_them_are_shown_as_sent():
+    # options as an integer, encIdentifier as an integer, pinComplexityPolicyURL as text.
+    info = cbor2.dumps({1: ["FIDO_2_0"], 3: bytes(16), 4: 1, 0x19: 0, 0x1C: "x"})
+
+    decoded = decode_payload_text(info.hex())["data"]["getInfoDecoded"]
+
+    assert decoded["4 (options)"] == 1
+    assert decoded["25 (encIdentifier)"] == 0
+    assert decoded["28 (pinComplexityPolicyURL)"] == "x"

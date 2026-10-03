@@ -199,3 +199,15 @@ def test_a_damaged_duplicate_of_authdata_does_not_hide_the_authdata_from_its_che
 
     assert finding["offset"] == data.index(auth_data) + 37
     assert finding["hex"] == "aa"
+
+
+def test_a_credential_id_longer_than_its_authdata_leaves_the_bytes_after_it_unchecked():
+    # AT set, and a credential ID declared 255 bytes long with none left.
+    auth_data = _auth_data(_UP | _AT)[:37] + bytes(16) + b"\x00\xff"
+    data = bytes([0]) + cbor2.dumps({2: auth_data, 3: b"\x00"})
+
+    result = decode_payload_text(data.hex())
+    view = result["data"]["ctapDecoded"]["getAssertionResponse"]["2 (authData)"]["attestedCredentialData"]
+
+    assert _authdata_findings(result) == []
+    assert view["parseError"] == "The credential ID declares 255 bytes; 0 remain."

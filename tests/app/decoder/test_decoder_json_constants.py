@@ -140,3 +140,11 @@ def test_an_uploaded_metadata_file_with_nan_is_refused(client, monkeypatch):
         "errors": ["custom.json: NaN is not JSON (RFC 8259 has no NaN or Infinity)"],
     }
     assert saved == []
+
+
+def test_the_bytes_of_nan_read_leniently_are_json_text_with_its_nan_noted(client):
+    # Hex 4e614e is the bytes "NaN": JSON only when read leniently, and no other reading.
+    result = client.post("/api/codec", json={"payload": "4e614e", "mode": "decode", "lenient": True}).get_json()
+
+    assert result["type"] == "JSON"
+    assert [finding["code"] for finding in result["findings"]] == ["json-nan-or-infinity"]

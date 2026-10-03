@@ -5,6 +5,7 @@ import base64
 import json
 
 from server.app.decoder.decode import credential_json
+from server.app.decoder.decode.text import decode_payload_text
 
 
 def test_a_credentials_signature_and_user_handle_are_shown_with_their_bytes():
@@ -61,3 +62,13 @@ def test_client_data_fido2_cannot_read_is_still_shown_as_its_json():
     assert details["challenge"]["hex"] == "010203"
     assert details["rawText"] == text
     assert "origin" not in details
+
+
+def test_a_credential_whose_attestation_object_is_an_empty_map_interprets_nothing():
+    # "oA" is the base64url of 0xa0, an empty CBOR map: no fmt, no authData.
+    credential = {"id": "x", "type": "public-key", "response": {"attestationObject": "oA"}}
+
+    data = decode_payload_text(json.dumps(credential))["data"]
+
+    assert set(data) == {"credential", "attestationObject"}
+    assert data["attestationObject"]["parseError"]["reason"].startswith("An attestation object has a text fmt")

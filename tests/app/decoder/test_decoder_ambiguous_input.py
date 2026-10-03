@@ -143,3 +143,12 @@ def test_a_binary_field_names_every_alphabet_that_reads_it(raw_id, encoding):
     result = decode_payload_text(json.dumps(credential))
 
     assert result["data"]["credential"]["rawId"]["binary"]["encoding"] == encoding
+
+
+@pytest.mark.parametrize(("body", "also_pem"), [("!!!!", False), ("AAAA", True)])
+def test_json_holding_pem_text_names_pem_only_when_the_pem_reads(body, also_pem):
+    text = json.dumps({"pem": f"-----BEGIN CERTIFICATE-----{body}-----END CERTIFICATE-----"})
+
+    findings = decode_payload_text(text)["findings"]
+
+    assert [(finding.get("readAs"), finding.get("alsoValidAs")) for finding in findings] == ([("json", "pem")] if also_pem else [])
