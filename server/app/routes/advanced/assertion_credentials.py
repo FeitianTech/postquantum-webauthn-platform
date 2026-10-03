@@ -176,9 +176,8 @@ def restore_complete_credentials(data: Mapping[str, Any]) -> tuple[list[dict[str
             return [], (
                 {
                     "error": (
-                        "Stored credentials could not be restored from the browser session. "
-                        "This often means the session cookie exceeded the browser size limit. "
-                        "Please clear some saved credentials or restart the authentication flow and try again."
+                        "None of the saved credentials sent with this authentication could be read. "
+                        "Please register a credential and try again."
                     )
                 },
                 400,

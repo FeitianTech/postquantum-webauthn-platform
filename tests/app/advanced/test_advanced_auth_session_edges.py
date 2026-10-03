@@ -49,7 +49,7 @@ def test_advanced_authenticate_complete_without_session_state_returns_400(monkey
             assert "advanced_auth_rp" not in session_state
 
 
-def test_advanced_authenticate_complete_reports_cookie_restore_failure(monkeypatch):
+def test_advanced_authenticate_complete_reports_unreadable_sent_credentials(monkeypatch):
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
@@ -74,7 +74,7 @@ def test_advanced_authenticate_complete_reports_cookie_restore_failure(monkeypat
 
         assert response.status_code == 400
         payload = response.get_json()
-        assert "session cookie exceeded" in payload["error"]
+        assert "None of the saved credentials sent with this authentication could be read" in payload["error"]
 
         with client.session_transaction() as session_state:
             assert "advanced_auth_credentials_meta" not in session_state

@@ -113,7 +113,7 @@
     ],
     [
      "Content-Length",
-     "234"
+     "131"
     ],
     [
      "X-Content-Type-Options",
@@ -149,9 +149,9 @@
     ]
    ],
    "cookies": [],
-   "bodySha256": "342f3eb23794e3700ac4c6d3d5e00e61bfbaee1908719bc4945857d2f0437452",
+   "bodySha256": "d42922f570886f0771143aaf4ed6b309cd8296a8384695bc9b20a06734e23448",
    "body": {
-    "error": "Stored credentials could not be restored from the browser session. This often means the session cookie exceeded the browser size limit. Please clear some saved credentials or restart the authentication flow and try again."
+    "error": "None of the saved credentials sent with this authentication could be read. Please register a credential and try again."
    }
   },
   {

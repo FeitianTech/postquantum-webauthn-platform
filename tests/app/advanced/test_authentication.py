@@ -64,6 +64,20 @@ def test_a_complete_that_sends_no_credentials_finds_none_whatever_its_begin_was_
     assert response.get_json()["error"] == "No credentials found"
 
 
+def test_a_complete_whose_sent_credentials_cannot_be_read_says_so():
+    authenticator = Authenticator()
+    client = entry_app().test_client()
+    begin(client, [authenticator.stored_credential_entry()])
+
+    response = complete(client, ["unparseable"], assertion_payload(authenticator, challenge=CHALLENGE, counter=7))
+
+    assert response.status_code == 400
+    assert response.get_json()["error"] == (
+        "None of the saved credentials sent with this authentication could be read. "
+        "Please register a credential and try again."
+    )
+
+
 def test_begin_gives_the_browser_the_requests_hints():
     authenticator = Authenticator(credential_id=b"\x04" * 32)
 
