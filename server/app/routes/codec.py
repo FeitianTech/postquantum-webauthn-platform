@@ -12,6 +12,7 @@ from flask import Blueprint, jsonify, request
 
 from ..decoder.decode import text as decode_text
 from ..decoder.encode import text as encode_text
+from . import json_body
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ def api_codec_payload():
     if not request.is_json:
         return jsonify({"error": "Expected JSON payload."}), 400
 
-    payload = request.get_json(silent=True) or {}
+    payload = json_body.json_object()
     codec_input = payload.get("payload")
     if not isinstance(codec_input, str) or not codec_input.strip():
         return jsonify({"error": "Codec payload must be a non-empty string."}), 400

@@ -3,10 +3,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from ... import visitor_session
 from ...storage import credential_artifacts
+from .. import json_body
 
 bp = Blueprint("advanced_artifacts", __name__)
 
@@ -37,7 +38,7 @@ def api_get_advanced_credential_artifact(storage_id: str):
 
 @bp.route("/api/advanced/credential-artifacts/bulk", methods=["POST"])
 def api_get_advanced_credential_artifacts_bulk():
-    data = request.get_json(silent=True) or {}
+    data = json_body.json_object()
     raw_storage_ids = data.get("storageIds")
     if not isinstance(raw_storage_ids, list):
         return jsonify({"error": "storageIds must be an array."}), 400
@@ -65,7 +66,7 @@ def api_get_advanced_credential_artifacts_bulk():
 
 @bp.route("/api/advanced/credential-artifacts/<string:storage_id>", methods=["PUT"])
 def api_put_advanced_credential_artifact(storage_id: str):
-    data = request.get_json(silent=True) or {}
+    data = json_body.json_object()
     merge = True
     if isinstance(data, Mapping) and "merge" in data:
         merge = bool(data.get("merge"))
@@ -93,7 +94,7 @@ def api_put_advanced_credential_artifact(storage_id: str):
 
 @bp.route("/api/advanced/credential-artifacts/<string:storage_id>/snapshot", methods=["PUT"])
 def api_put_advanced_credential_snapshot(storage_id: str):
-    data = request.get_json(silent=True) or {}
+    data = json_body.json_object()
     snapshot = data.get("snapshot")
     if snapshot is not None and not isinstance(snapshot, Mapping):
         return jsonify({"error": "Snapshot must be an object."}), 400

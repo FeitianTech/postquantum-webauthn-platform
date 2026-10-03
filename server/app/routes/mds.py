@@ -23,6 +23,7 @@ from ..mds import uploads as mds_uploads
 from ..storage import github_mirror
 from ..storage.common import StorageReadError
 from ..webauthn.attestation import certificates as attestation_certificates
+from . import json_body
 
 # The HTTP rules, registered on the app by server.app.app.
 bp = Blueprint("mds", __name__)
@@ -260,7 +261,7 @@ def api_decode_mds_certificate():
     if not request.is_json:
         return jsonify({"error": "Expected JSON payload."}), 400
 
-    payload = request.get_json(silent=True) or {}
+    payload = json_body.json_object()
     certificate_value = payload.get("certificate")
     if not certificate_value or not isinstance(certificate_value, str):
         return jsonify({"error": "Certificate is required."}), 400

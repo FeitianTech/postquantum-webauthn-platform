@@ -26,7 +26,7 @@ from ...webauthn.attachments import normalize_attachment
 from ...webauthn.attestation import aaguid as attestation_aaguid
 from ...webauthn.attestation import certificates as attestation_certificates
 from ...webauthn.attestation import checks
-from .. import ceremony_session
+from .. import ceremony_session, json_body
 from . import parsing, registration_persistence, registration_record
 
 bp = Blueprint("simple_registration", __name__)
@@ -189,7 +189,7 @@ def _attestation_error_response(attestation_checks: Mapping[str, Any]) -> Any:
 @mds_provisioning.waits_for_the_snapshot
 def register_complete():
     uname = request.args.get("email")
-    response = request.get_json(silent=True) or {}
+    response = json_body.json_object()
     credential_response = response.get("response", {}) if isinstance(response, dict) else {}
     inputs = _complete_inputs(response, credential_response)
 
@@ -259,7 +259,7 @@ def _offered_parameters(params: Any) -> list[dict[str, Any]]:
 @bp.route("/api/register/begin", methods=["POST"])
 @ceremony_session.ceremony_begin
 def register_begin():
-    payload = request.get_json(silent=True) or {}
+    payload = json_body.json_object()
 
     existing_credentials_raw: list[Any] = []
     if isinstance(payload, Mapping):

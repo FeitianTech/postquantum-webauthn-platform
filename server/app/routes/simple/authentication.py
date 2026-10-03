@@ -37,7 +37,7 @@ from ...storage import credentials
 from ...storage.common import InvalidStorageIdentifier
 from ...webauthn import client_binary
 from ...webauthn.sign_count import SIGN_COUNT_REGRESSED, sign_count_status
-from .. import ceremony_session
+from .. import ceremony_session, json_body
 from . import parsing
 
 bp = Blueprint("simple_authentication", __name__)
@@ -61,7 +61,7 @@ def credentials_digest(serialized: list[dict[str, Any]]) -> str:
 @ceremony_session.ceremony_begin
 def authenticate_begin():
     uname = request.args.get("email")
-    payload = request.get_json(silent=True) or {}
+    payload = json_body.json_object()
 
     raw_credentials: list[Any] = []
     if isinstance(payload, Mapping):
@@ -238,8 +238,7 @@ def _asserted_sign_count(response_mapping: Mapping[str, Any]) -> int | None:
 @bp.route("/api/authenticate/complete", methods=["POST"])
 def authenticate_complete():
     # The browser's own JSON of the assertion, and the credentials begin was sent.
-    body = request.get_json(silent=True)
-    body = body if isinstance(body, Mapping) else {}
+    body = json_body.json_object()
     response = body.get("credential")
 
     consumed, error_response = _consume_authentication_state(response, body.get("credentials"))

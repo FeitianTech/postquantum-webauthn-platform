@@ -253,7 +253,8 @@ its logic out here first.
 - Routes: `routes/simple/` and `routes/advanced/` (begin/complete; the bodies are short
   orchestrators over modules named for their stage; the try blocks and the order of session
   reads are behaviour); `routes/ceremony_session.py` (every begin: refused, the session kept as
-  it was, when its cookie would pass `MAX_COOKIE_SIZE`); `routes/mds.py` (the MDS routes and
+  it was, when its cookie would pass `MAX_COOKIE_SIZE`); `routes/json_body.py` (every route's
+  JSON body: an object, or read as an empty one); `routes/mds.py` (the MDS routes and
   certificate decoding);
   `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`, and the export at `/`:
   the site's catch-all, since Flask has no static rule; HTML `no-cache`, `/_next/static/`

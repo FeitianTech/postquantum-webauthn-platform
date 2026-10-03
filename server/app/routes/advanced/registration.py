@@ -5,13 +5,13 @@ from collections.abc import Mapping
 from typing import Any
 
 from fido2.webauthn import PublicKeyCredentialUserEntity
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, jsonify, session
 
 from ... import json_values
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
 from ...mds import provisioning as mds_provisioning
 from ...webauthn.attachments import request_hints
-from .. import ceremony_session
+from .. import ceremony_session, json_body
 from . import (
     algorithms,
     constants,
@@ -30,7 +30,7 @@ bp = Blueprint("advanced_registration", __name__)
 @bp.route("/api/advanced/register/complete", methods=["POST"])
 @mds_provisioning.waits_for_the_snapshot
 def advanced_register_complete():
-    data = request.get_json(silent=True) or {}
+    data = json_body.json_object()
     # Consumed before anything can fail, as in the simple flow: an early error
     # burns the challenge too, so a replay is always labelled as one. The
     # request editor is permissive: it reports ``challengeStatus``, it does not
@@ -169,7 +169,7 @@ def _what_the_checks_read(data: Mapping[str, Any]) -> dict[str, Any]:
 @bp.route("/api/advanced/register/begin", methods=["POST"])
 @ceremony_session.ceremony_begin
 def advanced_register_begin():
-    data = request.get_json(silent=True)
+    data = json_body.json_object()
     begin_request, error_response = registration_options.parse_begin_request(data)
     if error_response is not None:
         return error_response

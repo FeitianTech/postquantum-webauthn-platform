@@ -4,7 +4,7 @@ import logging
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, jsonify, session
 
 from ... import json_values
 from ...challenge_registry import consume_ceremony_state, stamp_ceremony_state
@@ -17,7 +17,7 @@ from ...webauthn.attachments import (
     resolve_allowed_attachments,
     resolve_effective_attachments,
 )
-from .. import ceremony_session
+from .. import ceremony_session, json_body
 from . import (
     algorithms,
     assertion_credentials,
@@ -35,7 +35,7 @@ bp = Blueprint("advanced_authentication", __name__)
 @bp.route("/api/advanced/authenticate/begin", methods=["POST"])
 @ceremony_session.ceremony_begin
 def advanced_authenticate_begin():
-    data = request.get_json(silent=True)
+    data = json_body.json_object()
 
     if not data or not data.get("publicKey"):
         return jsonify(
@@ -125,7 +125,7 @@ def _begin_payload(options: Any, resident_key_only: bool, hints: list[str]) -> d
 
 @bp.route("/api/advanced/authenticate/complete", methods=["POST"])
 def advanced_authenticate_complete():
-    data = request.get_json(silent=True) or {}
+    data = json_body.json_object()
 
     # Consumed before anything can fail, as in the simple flow: an early error
     # burns the challenge too, so a replay is always labelled as one. The
