@@ -283,8 +283,7 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY"
      }
     }
    ],
@@ -956,7 +955,6 @@
       "_permanent": true,
       "authenticate_rp_id": "localhost",
       "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY",
-      "fido.mds.touched_at": 1790000000.0,
       "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
       "simple_credentials_email": "user@example.com",
       "state": {
@@ -1047,8 +1045,7 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY"
      }
     }
    ],
@@ -1359,7 +1356,6 @@
       "_permanent": true,
       "authenticate_rp_id": "localhost",
       "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY",
-      "fido.mds.touched_at": 1790000000.0,
       "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
       "simple_credentials_email": "user@example.com",
       "state": {
@@ -1450,8 +1446,7 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY"
      }
     }
    ],
@@ -1519,7 +1514,6 @@
       "_permanent": true,
       "authenticate_rp_id": "localhost",
       "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY",
-      "fido.mds.touched_at": 1790000000.0,
       "simple_credentials_digest": "BU7y-j8AwULNooYSw8dvea-BFMg-9Hn9rkhTCewiVDE",
       "simple_credentials_email": "user@example.com",
       "state": {
@@ -1600,8 +1594,7 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY"
      }
     }
    ],
@@ -1666,8 +1659,7 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY"
      }
     }
    ],
@@ -1731,8 +1723,7 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "gx8TJg2yEYVhjXb03fw5jeACUzBTv7UADb13EOfNztY"
      }
     }
    ],

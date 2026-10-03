@@ -283,8 +283,7 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "x6tWbo2NzMxOA3gxXWf8EkzPLSdQXj6BMW8Hr01seKk",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "x6tWbo2NzMxOA3gxXWf8EkzPLSdQXj6BMW8Hr01seKk"
      }
     }
    ],
@@ -955,7 +954,6 @@
      "contents": {
       "_permanent": true,
       "fido.mds.session": "x6tWbo2NzMxOA3gxXWf8EkzPLSdQXj6BMW8Hr01seKk",
-      "fido.mds.touched_at": 1790000000.0,
       "register_rp_id": "localhost",
       "simple_register_public_key": {
        "authenticatorSelection": {
@@ -1184,8 +1182,7 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "x6tWbo2NzMxOA3gxXWf8EkzPLSdQXj6BMW8Hr01seKk",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "x6tWbo2NzMxOA3gxXWf8EkzPLSdQXj6BMW8Hr01seKk"
      }
     }
    ],
@@ -1250,7 +1247,6 @@
      "contents": {
       "_permanent": true,
       "fido.mds.session": "x6tWbo2NzMxOA3gxXWf8EkzPLSdQXj6BMW8Hr01seKk",
-      "fido.mds.touched_at": 1790000000.0,
       "register_rp_id": "localhost",
       "simple_register_public_key": {
        "authenticatorSelection": {
@@ -1479,8 +1475,7 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "x6tWbo2NzMxOA3gxXWf8EkzPLSdQXj6BMW8Hr01seKk",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "x6tWbo2NzMxOA3gxXWf8EkzPLSdQXj6BMW8Hr01seKk"
      }
     }
    ],

@@ -283,8 +283,7 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "cGourgMF_TKe-v8yiLbvgeZOruAAf7YK6id8pibnwCw",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "cGourgMF_TKe-v8yiLbvgeZOruAAf7YK6id8pibnwCw"
      }
     }
    ],
@@ -954,7 +953,6 @@
       "_permanent": true,
       "authenticate_rp_id": "localhost",
       "fido.mds.session": "cGourgMF_TKe-v8yiLbvgeZOruAAf7YK6id8pibnwCw",
-      "fido.mds.touched_at": 1790000000.0,
       "simple_credentials_digest": "QqzvwkjPRN86RcKbohOAMVcz9t7jS1XunF9wCW0wJSk",
       "simple_credentials_email": "user@example.com",
       "state": {
@@ -1045,8 +1043,7 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "cGourgMF_TKe-v8yiLbvgeZOruAAf7YK6id8pibnwCw",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "cGourgMF_TKe-v8yiLbvgeZOruAAf7YK6id8pibnwCw"
      }
     }
    ],

@@ -576,8 +576,7 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "kpRg_O2-4WdYcMXuIeaPyooYbOoV_G8vL7e8g5UpjfY",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "kpRg_O2-4WdYcMXuIeaPyooYbOoV_G8vL7e8g5UpjfY"
      }
     }
    ],
@@ -1245,8 +1244,7 @@
        "issued_at": 1790000000.0,
        "user_verification": "preferred"
       },
-      "fido.mds.session": "kpRg_O2-4WdYcMXuIeaPyooYbOoV_G8vL7e8g5UpjfY",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "kpRg_O2-4WdYcMXuIeaPyooYbOoV_G8vL7e8g5UpjfY"
      }
     }
    ],
@@ -1356,8 +1354,7 @@
        "id": "localhost",
        "name": "FIDO2/WebAuthn PQC Developer Tools"
       },
-      "fido.mds.session": "kpRg_O2-4WdYcMXuIeaPyooYbOoV_G8vL7e8g5UpjfY",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "kpRg_O2-4WdYcMXuIeaPyooYbOoV_G8vL7e8g5UpjfY"
      }
     }
    ],

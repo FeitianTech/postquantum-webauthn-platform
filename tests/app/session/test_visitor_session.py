@@ -46,49 +46,61 @@ def test_touch_is_deduplicated_within_one_request(touches):
     with entry_app().test_request_context("/"):
         visitor_session.note_activity("session-a")
         visitor_session.note_activity("session-a")
-        assert isinstance(session[visitor_session.TOUCH_KEY], float)
 
     assert touches == ["session-a"]
 
 
-def test_touch_is_throttled_across_requests(touches):
-    key = visitor_session.TOUCH_KEY
+def test_touch_is_throttled_across_requests_and_writes_nothing_to_the_session(touches, monkeypatch):
+    clock = [1_000_000.0]
+    monkeypatch.setattr(visitor_session.time, "time", lambda: clock[0])
 
-    with entry_app().test_request_context("/"):
-        session[key] = time.time() - 60
-        visitor_session.note_activity("session-a")
-    assert touches == []
+    for elapsed in (0, 60, 1799, 1800, 1860):
+        clock[0] = 1_000_000.0 + elapsed
+        with entry_app().test_request_context("/"):
+            visitor_session.note_activity("session-a")
+            assert dict(session) == {}
 
-    with entry_app().test_request_context("/"):
-        session[key] = time.time() - 3600
-        visitor_session.note_activity("session-a")
-    assert touches == ["session-a"]
+    assert touches == ["session-a", "session-a"]
 
 
 def test_throttle_window_is_configurable(touches, monkeypatch):
-    monkeypatch.setattr(visitor_session, "TOUCH_THROTTLE_SECONDS", 30.0)
+    monkeypatch.setattr(visitor_session, "TOUCH_THROTTLE_SECONDS", 0.0)
 
     with entry_app().test_request_context("/"):
-        session[visitor_session.TOUCH_KEY] = time.time() - 60
+        visitor_session.note_activity("session-a")
+    with entry_app().test_request_context("/"):
         visitor_session.note_activity("session-a")
 
-    assert touches == ["session-a"]
+    assert touches == ["session-a", "session-a"]
 
 
 def test_new_session_does_not_write_marker(touches):
     with entry_app().test_request_context("/"):
         identifier = visitor_session.ensure_id()
         assert identifier
-        assert visitor_session.TOUCH_KEY in session
 
     assert touches == []
 
 
-def test_touch_outside_request_context_is_unthrottled(touches):
+def test_touch_outside_request_context_is_throttled_too(touches):
     visitor_session.note_activity("session-a")
     visitor_session.note_activity("session-a")
 
-    assert touches == ["session-a", "session-a"]
+    assert touches == ["session-a"]
+
+
+def test_only_the_namespaces_inside_the_window_are_remembered_past_the_limit(touches, monkeypatch):
+    monkeypatch.setattr(visitor_session, "_TOUCHES_KEPT", 3)
+    clock = [1_000_000.0]
+    monkeypatch.setattr(visitor_session.time, "time", lambda: clock[0])
+    visitor_session.note_activity("session-a")
+    visitor_session.note_activity("session-b")
+    clock[0] += 3600
+    visitor_session.note_activity("session-c")
+
+    visitor_session.note_activity("session-d")
+
+    assert set(visitor_session.TOUCHES.last) == {"session-c", "session-d"}
 
 
 def test_a_namespace_that_is_not_one_is_not_touched(touches):

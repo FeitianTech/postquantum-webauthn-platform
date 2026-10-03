@@ -4,7 +4,7 @@ Its id lives in the signed Flask session and, for a returning visitor whose
 session has expired, in a long-lived recovery cookie signed with the app's
 secret (``COOKIE_SALT``), so a caller can never point itself at another
 visitor's namespace. Page views refresh the namespace's last-access marker
-(``note_activity``), at most once per request and per ``TOUCH_THROTTLE_SECONDS``;
+(``note_activity``), at most once per ``TOUCH_THROTTLE_SECONDS`` in each process;
 namespaces idle for ``INACTIVE_AGE`` are removed by one sweep, on both storage
 backends, at most every ``CLEANUP_INTERVAL`` (``schedule_cleanup``).
 """
@@ -40,8 +40,9 @@ COOKIE_SALT = "fido.mds.session-cookie.v1"
 INACTIVE_AGE = timedelta(days=14)
 # Page views refresh the session's last-access marker at most this often; the
 # marker only needs to be accurate relative to the 14-day inactivity cutoff.
-TOUCH_KEY = "fido.mds.touched_at"
 TOUCH_THROTTLE_SECONDS = 1800.0
+# Past this many namespaces remembered, the ones outside the throttle window are forgotten.
+_TOUCHES_KEPT = 10_000
 # How often inactive sessions are swept, and whether the sweep runs on a worker
 # thread. Tests set these to override them.
 CLEANUP_INTERVAL = timedelta(hours=6)
@@ -59,6 +60,31 @@ class CleanupState:
 
 
 CLEANUP = CleanupState()
+
+
+@dataclass
+class TouchState:
+    """When this process last refreshed each namespace's last-access marker."""
+
+    last: dict[str, float] = field(default_factory=dict)
+    lock: threading.Lock = field(default_factory=threading.Lock)
+
+
+TOUCHES = TouchState()
+
+
+def _due_for_touch(session_id: str, now: float) -> bool:
+    """Whether the namespace's marker is due a refresh; if so, it counts as refreshed now."""
+
+    with TOUCHES.lock:
+        last = TOUCHES.last.get(session_id)
+        if last is not None and 0 <= now - last < TOUCH_THROTTLE_SECONDS:
+            return False
+        if len(TOUCHES.last) >= _TOUCHES_KEPT:
+            cutoff = now - TOUCH_THROTTLE_SECONDS
+            TOUCHES.last = {key: value for key, value in TOUCHES.last.items() if value >= cutoff}
+        TOUCHES.last[session_id] = now
+        return True
 
 
 def _touch_last_access(session_id: str) -> None:
@@ -274,25 +300,10 @@ def note_activity(session_id: str) -> None:
     if not normalised:
         return
 
-    if has_request_context():
-        # Refreshing the marker is a storage write, so do it at most once per
-        # request and at most once per throttle window per session.
-        if getattr(g, "_mds_session_touched", None) == normalised:
-            return
-        g._mds_session_touched = normalised
-
-        now = time.time()
-        if getattr(g, "_mds_session_new", None) == normalised:
-            session[TOUCH_KEY] = now
-            schedule_cleanup()
-            return
-
-        throttle = TOUCH_THROTTLE_SECONDS
-        last_touch = session.get(TOUCH_KEY)
-        if isinstance(last_touch, (int, float)) and 0 <= now - last_touch < throttle:
-            schedule_cleanup()
-            return
-        session[TOUCH_KEY] = now
-
-    _touch_last_access(normalised)
+    # Refreshing the marker is a storage write, so it is done at most once per
+    # throttle window per namespace. A namespace this request minted holds
+    # nothing yet: it needs no marker until it writes data (writes refresh it).
+    minted = has_request_context() and getattr(g, "_mds_session_new", None) == normalised
+    if _due_for_touch(normalised, time.time()) and not minted:
+        _touch_last_access(normalised)
     schedule_cleanup()

@@ -176,8 +176,7 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "La0e5Y9g91Axy0WcXzP-ocWouSr6CJ5vIPviaQ-DiLk",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "La0e5Y9g91Axy0WcXzP-ocWouSr6CJ5vIPviaQ-DiLk"
      }
     }
    ],
@@ -266,8 +265,7 @@
        "issued_at": 1790000000.0,
        "user_verification": "preferred"
       },
-      "fido.mds.session": "La0e5Y9g91Axy0WcXzP-ocWouSr6CJ5vIPviaQ-DiLk",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "La0e5Y9g91Axy0WcXzP-ocWouSr6CJ5vIPviaQ-DiLk"
      }
     }
    ],
@@ -366,8 +364,7 @@
      ],
      "contents": {
       "_permanent": true,
-      "fido.mds.session": "La0e5Y9g91Axy0WcXzP-ocWouSr6CJ5vIPviaQ-DiLk",
-      "fido.mds.touched_at": 1790000000.0
+      "fido.mds.session": "La0e5Y9g91Axy0WcXzP-ocWouSr6CJ5vIPviaQ-DiLk"
      }
     }
    ],
