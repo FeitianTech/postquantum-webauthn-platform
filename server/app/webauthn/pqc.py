@@ -29,6 +29,28 @@ def is_pqc_algorithm(alg_id: int) -> bool:
     return alg_id in PQC_ALGORITHM_ID_TO_NAME
 
 
+# Every other COSE algorithm the views name, as they name it.
+_ALGORITHM_LABELS: dict[int, str] = {
+    -8: "EdDSA",
+    -19: "Ed25519",
+    -53: "Ed448",
+    -7: "ES256 (ECDSA)",
+    -9: "ESP256 (ECDSA)",
+    -47: "ES256K (ECDSA)",
+    -35: "ES384 (ECDSA)",
+    -36: "ES512 (ECDSA)",
+    -51: "ESP384 (ECDSA)",
+    -52: "ESP512 (ECDSA)",
+    -37: "PS256 (RSA-PSS)",
+    -38: "PS384 (RSA-PSS)",
+    -39: "PS512 (RSA-PSS)",
+    -257: "RS256 (RSA)",
+    -258: "RS384 (RSA)",
+    -259: "RS512 (RSA)",
+    -65535: "RS1 (RSA)",
+}
+
+
 def describe_algorithm(alg_id: int | None) -> str:
     """Return a friendly label for the given COSE algorithm identifier."""
 
@@ -37,41 +59,7 @@ def describe_algorithm(alg_id: int | None) -> str:
     name = PQC_ALGORITHM_ID_TO_NAME.get(alg_id)
     if name:
         return f"{name} (PQC)"
-    if alg_id == -8:
-        return "EdDSA"
-    if alg_id == -19:
-        return "Ed25519"
-    if alg_id == -53:
-        return "Ed448"
-    if alg_id == -7:
-        return "ES256 (ECDSA)"
-    if alg_id == -9:
-        return "ESP256 (ECDSA)"
-    if alg_id == -47:
-        return "ES256K (ECDSA)"
-    if alg_id == -35:
-        return "ES384 (ECDSA)"
-    if alg_id == -36:
-        return "ES512 (ECDSA)"
-    if alg_id == -51:
-        return "ESP384 (ECDSA)"
-    if alg_id == -52:
-        return "ESP512 (ECDSA)"
-    if alg_id == -37:
-        return "PS256 (RSA-PSS)"
-    if alg_id == -38:
-        return "PS384 (RSA-PSS)"
-    if alg_id == -39:
-        return "PS512 (RSA-PSS)"
-    if alg_id == -257:
-        return "RS256 (RSA)"
-    if alg_id == -258:
-        return "RS384 (RSA)"
-    if alg_id == -259:
-        return "RS512 (RSA)"
-    if alg_id == -65535:
-        return "RS1 (RSA)"
-    return f"COSE alg {alg_id}"
+    return _ALGORITHM_LABELS.get(alg_id, f"COSE alg {alg_id}")
 
 
 def log_algorithm_selection(stage: str, alg_id: int | None) -> None:
