@@ -16,10 +16,7 @@ def test_advanced_authenticate_complete_without_session_state_returns_400(monkey
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
-            [],
-        )
+        lambda _raw: [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}]
     )
 
     with entry_app().test_client() as client:
@@ -53,7 +50,7 @@ def test_advanced_authenticate_complete_reports_unreadable_sent_credentials(monk
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: ([], [])
+        lambda _raw: []
     )
 
     with entry_app().test_client() as client:
@@ -139,10 +136,7 @@ def test_advanced_authenticate_complete_forwards_hash_algorithm_override(monkeyp
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
-            [],
-        )
+        lambda _raw: [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}]
     )
 
     with entry_app().test_client() as client:
@@ -192,10 +186,7 @@ def test_advanced_authenticate_complete_defaults_hash_algorithm_when_override_in
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
-            [],
-        )
+        lambda _raw: [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}]
     )
 
     with entry_app().test_client() as client:
@@ -236,10 +227,7 @@ def test_advanced_authenticate_complete_omits_sign_count_for_malformed_authentic
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}],
-            [],
-        )
+        lambda _raw: [{"id": credential_id, "data": object(), "attachment": None, "algorithm": -7, "resident": True}]
     )
 
     with entry_app().test_client() as client:

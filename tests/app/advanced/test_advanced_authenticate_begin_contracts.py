@@ -16,14 +16,6 @@ def _credential_record(credential_id: bytes, *, data=None, attachment=None, resi
     }
 
 
-def _serialized_record(*, resident=False):
-    return {
-        "credentialId": "credential",
-        "publicKey": "public-key",
-        "resident": resident,
-    }
-
-
 def _install_fake_auth_begin_server(monkeypatch, captured, *, include_allow_credentials=True):
     class _FakeServer:
         def __init__(self):
@@ -107,13 +99,10 @@ def test_advanced_authenticate_begin_uses_allow_credentials_subset_and_dedupes(m
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [
-                _credential_record(cred_one, data=marker_one, attachment="platform"),
-                _credential_record(cred_two, data=marker_two, attachment="cross-platform"),
-            ],
-            [_serialized_record(resident=True), _serialized_record(resident=False)],
-        )
+        lambda _raw: [
+            _credential_record(cred_one, data=marker_one, attachment="platform"),
+            _credential_record(cred_two, data=marker_two, attachment="cross-platform"),
+        ]
     )
 
     captured = {}
@@ -156,13 +145,10 @@ def test_advanced_authenticate_begin_falls_back_to_all_records_when_allow_creden
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [
-                _credential_record(b"fallback-one", data=marker_one, attachment="platform"),
-                _credential_record(b"fallback-two", data=marker_two, attachment="cross-platform"),
-            ],
-            [_serialized_record(resident=False), _serialized_record(resident=False)],
-        )
+        lambda _raw: [
+            _credential_record(b"fallback-one", data=marker_one, attachment="platform"),
+            _credential_record(b"fallback-two", data=marker_two, attachment="cross-platform"),
+        ]
     )
 
     captured = {}
@@ -190,10 +176,7 @@ def test_advanced_authenticate_begin_returns_hints_error_when_filtered_allow_cre
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [_credential_record(cred_id, attachment="platform", resident=True)],
-            [_serialized_record(resident=True)],
-        )
+        lambda _raw: [_credential_record(cred_id, attachment="platform", resident=True)]
     )
 
     with entry_app().test_client() as client:
@@ -220,18 +203,15 @@ def test_advanced_authenticate_begin_resident_mode_prefers_resident_records_and_
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [
-                _credential_record(b"resident", data=resident_marker, resident=True, attachment="platform"),
-                _credential_record(
-                    b"nonresident",
-                    data=nonresident_marker,
-                    resident=False,
-                    attachment="platform",
-                ),
-            ],
-            [_serialized_record(resident=True), _serialized_record(resident=False)],
-        )
+        lambda _raw: [
+            _credential_record(b"resident", data=resident_marker, resident=True, attachment="platform"),
+            _credential_record(
+                b"nonresident",
+                data=nonresident_marker,
+                resident=False,
+                attachment="platform",
+            ),
+        ]
     )
 
     captured = {}
@@ -259,21 +239,18 @@ def test_advanced_authenticate_begin_resident_mode_returns_hints_error_when_resi
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [
-                _credential_record(
-                    b"resident-platform",
-                    resident=True,
-                    attachment="platform",
-                ),
-                _credential_record(
-                    b"nonresident-cross-platform",
-                    resident=False,
-                    attachment="cross-platform",
-                ),
-            ],
-            [_serialized_record(resident=True), _serialized_record(resident=False)],
-        )
+        lambda _raw: [
+            _credential_record(
+                b"resident-platform",
+                resident=True,
+                attachment="platform",
+            ),
+            _credential_record(
+                b"nonresident-cross-platform",
+                resident=False,
+                attachment="cross-platform",
+            ),
+        ]
     )
 
     with entry_app().test_client() as client:
@@ -294,12 +271,11 @@ def test_advanced_authenticate_begin_resident_mode_returns_hints_error_when_resi
 
 def test_advanced_authenticate_begin_propagates_algorithms_extensions_and_uv_preferences(monkeypatch):
     records = [_credential_record(b"credential-id", resident=True, attachment="platform")]
-    serialized = [_serialized_record(resident=True)]
 
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (records, serialized)
+        lambda _raw: records
     )
 
     expected_algorithms = [types.SimpleNamespace(alg=-7), types.SimpleNamespace(alg=-257)]

@@ -57,7 +57,7 @@ def test_decode_client_binary_rejects_unsupported_input_type():
 
 
 def test_parse_client_supplied_credentials_skips_entries_missing_required_fields():
-    records, serialized = advanced_parsing._parse_client_supplied_credentials(
+    records = advanced_parsing._parse_client_supplied_credentials(
         [
             {"publicKey": b64u(sample_public_key_bytes())},
             {"credentialId": b64u(b"id-only")},
@@ -65,7 +65,6 @@ def test_parse_client_supplied_credentials_skips_entries_missing_required_fields
     )
 
     assert records == []
-    assert serialized == []
 
 
 def test_parse_client_supplied_credentials_skips_malformed_entries_and_keeps_valid_ones():
@@ -75,54 +74,47 @@ def test_parse_client_supplied_credentials_skips_malformed_entries_and_keeps_val
     }
     valid = _valid_credential_entry(resident=True)
 
-    records, serialized = advanced_parsing._parse_client_supplied_credentials([malformed, valid])
+    records = advanced_parsing._parse_client_supplied_credentials([malformed, valid])
 
     assert len(records) == 1
-    assert len(serialized) == 1
     assert records[0]["resident"] is True
-    assert serialized[0]["resident"] is True
-    assert serialized[0]["credentialId"] == valid["credentialId"]
 
 
 def test_parse_client_supplied_credentials_uses_properties_resident_flag_when_top_level_absent():
     entry = _valid_credential_entry(properties={"residentKey": True})
 
-    records, serialized = advanced_parsing._parse_client_supplied_credentials([entry])
+    records = advanced_parsing._parse_client_supplied_credentials([entry])
 
     assert len(records) == 1
     assert records[0]["resident"] is True
-    assert serialized[0]["resident"] is True
 
 
 def test_parse_client_supplied_credentials_prefers_top_level_resident_over_properties():
     entry = _valid_credential_entry(resident=False, properties={"residentKey": True})
 
-    records, serialized = advanced_parsing._parse_client_supplied_credentials([entry])
+    records = advanced_parsing._parse_client_supplied_credentials([entry])
 
     assert len(records) == 1
     assert records[0]["resident"] is False
-    assert serialized[0]["resident"] is False
 
 
 def test_parse_client_supplied_credentials_defaults_missing_aaguid_to_zero_bytes():
     entry = _valid_credential_entry()
     entry.pop("aaguid")
 
-    records, serialized = advanced_parsing._parse_client_supplied_credentials([entry])
+    records = advanced_parsing._parse_client_supplied_credentials([entry])
 
     assert len(records) == 1
     assert len(records[0]["data"].aaguid) == 16
-    assert serialized[0]["aaguid"] == b64u(bytes(16))
 
 
 def test_parse_client_supplied_credentials_coerces_named_algorithm_identifier():
     entry = _valid_credential_entry(algorithm="ES256")
 
-    records, serialized = advanced_parsing._parse_client_supplied_credentials([entry])
+    records = advanced_parsing._parse_client_supplied_credentials([entry])
 
     assert len(records) == 1
     assert records[0]["algorithm"] == -7
-    assert serialized[0]["algorithm"] == -7
 
 
 def test_decode_client_binary_handles_none_bytes_and_empty_string_inputs():
@@ -136,13 +128,12 @@ def test_decode_client_binary_handles_none_bytes_and_empty_string_inputs():
 
 
 def test_parse_client_supplied_credentials_ignores_non_list_and_non_mapping_entries():
-    assert advanced_parsing._parse_client_supplied_credentials({"not": "a-list"}) == ([], [])
+    assert advanced_parsing._parse_client_supplied_credentials({"not": "a-list"}) == []
 
     valid = _valid_credential_entry(resident=True)
-    records, serialized = advanced_parsing._parse_client_supplied_credentials([1, "x", valid])
+    records = advanced_parsing._parse_client_supplied_credentials([1, "x", valid])
 
     assert len(records) == 1
-    assert len(serialized) == 1
     assert records[0]["resident"] is True
 
 
@@ -154,12 +145,11 @@ def test_parse_client_supplied_credentials_derives_resident_from_client_extensio
     rk_boolean_entry["credentialId"] = b64u(b"credential-id-2")
     rk_boolean_entry["clientExtensionOutputs"] = {"credProps": False}
 
-    records, serialized = advanced_parsing._parse_client_supplied_credentials(
+    records = advanced_parsing._parse_client_supplied_credentials(
         [rk_mapping_entry, rk_boolean_entry]
     )
 
     assert [record["resident"] for record in records] == [True, False]
-    assert [entry["resident"] for entry in serialized] == [True, False]
 
 
 def test_parse_client_supplied_credentials_uses_property_attachment_and_defaults_sign_count():
@@ -167,12 +157,11 @@ def test_parse_client_supplied_credentials_uses_property_attachment_and_defaults
     entry["signCount"] = "9"  # Non-int values are intentionally normalized to 0.
     entry["properties"] = {"authenticator_attachment": "cross-platform"}
 
-    records, serialized = advanced_parsing._parse_client_supplied_credentials([entry])
+    records = advanced_parsing._parse_client_supplied_credentials([entry])
 
     assert len(records) == 1
     assert records[0]["attachment"] == "cross-platform"
-    assert serialized[0]["authenticatorAttachment"] == "cross-platform"
-    assert serialized[0]["signCount"] == 0
+    assert records[0]["signCount"] == 0
 
 
 def test_lookup_named_cose_algorithm_supports_suffix_matching_for_descriptive_labels():

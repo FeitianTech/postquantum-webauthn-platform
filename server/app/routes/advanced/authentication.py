@@ -60,7 +60,7 @@ def advanced_authenticate_begin():
     uv_req = assertion_options.user_verification_requirement(public_key)
 
     raw_credentials_input = assertion_credentials.credential_list_input(data) or []
-    stored_records, _serialized = parsing._parse_client_supplied_credentials(raw_credentials_input)
+    stored_records = parsing._parse_client_supplied_credentials(raw_credentials_input)
     if not stored_records:
         return jsonify(
             {"error": "No credentials detected. Please register a credential first."},

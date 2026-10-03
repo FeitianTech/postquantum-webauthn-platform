@@ -58,10 +58,7 @@ def test_advanced_authentication_failure_returns_failed_credential_id(monkeypatc
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [{"id": credential_id, "data": {"public_key": {3: -7}}, "resident": True}],
-            [],
-        )
+        lambda _raw: [{"id": credential_id, "data": {"public_key": {3: -7}}, "resident": True}]
     )
 
     with entry_app().test_client() as client:

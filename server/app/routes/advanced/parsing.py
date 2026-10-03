@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from ...encoding import encode_base64url
 from ...webauthn import client_credentials, cose_algorithms
 from ...webauthn.attachments import normalize_attachment
 
@@ -51,12 +50,11 @@ _FIELDS = client_credentials.CredentialFields(
 
 def _parse_client_supplied_credentials(
     raw_credentials: Any,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+) -> list[dict[str, Any]]:
     if not isinstance(raw_credentials, list):
-        return [], []
+        return []
 
     records: list[dict[str, Any]] = []
-    serialized: list[dict[str, Any]] = []
 
     for entry in raw_credentials:
         if not isinstance(entry, Mapping):
@@ -90,11 +88,10 @@ def _parse_client_supplied_credentials(
                     else 0,
                 }
             )
-            serialized.append(_serialized_entry(entry, material, attachment_value, algorithm_value, resident_flag))
         except Exception:
             continue
 
-    return records, serialized
+    return records
 
 
 def _resident_flag(entry: Mapping[str, Any]) -> bool:
@@ -124,25 +121,3 @@ def _resident_flag(entry: Mapping[str, Any]) -> bool:
     if resident_flag is None:
         resident_flag = False
     return resident_flag
-
-
-def _serialized_entry(
-    entry: Mapping[str, Any],
-    material: client_credentials.KeyMaterial,
-    attachment_value: Any,
-    algorithm_value: Any,
-    resident_flag: bool,
-) -> dict[str, Any]:
-    serialized_entry: dict[str, Any] = {
-        "credentialId": encode_base64url(material.credential_id),
-        "publicKey": encode_base64url(material.public_key),
-        "signCount": int(entry.get("signCount")) if isinstance(entry.get("signCount"), int) else 0,
-        "resident": bool(resident_flag),
-    }
-    if material.aaguid:
-        serialized_entry["aaguid"] = encode_base64url(material.aaguid)
-    if attachment_value:
-        serialized_entry["authenticatorAttachment"] = attachment_value
-    if algorithm_value is not None:
-        serialized_entry["algorithm"] = algorithm_value
-    return serialized_entry

@@ -13,7 +13,7 @@ def test_a_resident_flag_given_as_null_is_read_from_the_next_field_that_gives_on
     }
     said_nowhere = {**Authenticator(credential_id=b"\x02" * 32).stored_credential_entry(), "resident": None}
 
-    records, _serialized = parsing._parse_client_supplied_credentials([said_by_cred_props, said_nowhere])
+    records = parsing._parse_client_supplied_credentials([said_by_cred_props, said_nowhere])
 
     assert [record["resident"] for record in records] == [True, False]
 
@@ -24,6 +24,6 @@ def test_an_aaguid_given_as_plain_hex_is_read_as_hex_not_as_base64():
     entry["aaguidHex"] = authenticator.aaguid.hex()
     del entry["aaguid"]
 
-    records, _serialized = parsing._parse_client_supplied_credentials([entry])
+    records = parsing._parse_client_supplied_credentials([entry])
 
     assert [bytes(record["data"].aaguid) for record in records] == [authenticator.aaguid]

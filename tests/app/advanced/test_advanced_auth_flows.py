@@ -33,18 +33,15 @@ def test_advanced_authenticate_complete_rejects_non_resident_in_resident_mode(mo
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [
-                {
-                    "id": credential_id,
-                    "data": object(),
-                    "attachment": None,
-                    "algorithm": -7,
-                    "resident": False,
-                }
-            ],
-            [],
-        )
+        lambda _raw: [
+            {
+                "id": credential_id,
+                "data": object(),
+                "attachment": None,
+                "algorithm": -7,
+                "resident": False,
+            }
+        ]
     )
 
     with entry_app().test_client() as client:
@@ -70,18 +67,15 @@ def test_advanced_authenticate_complete_missing_state_returns_400(monkeypatch):
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [
-                {
-                    "id": credential_id,
-                    "data": object(),
-                    "attachment": None,
-                    "algorithm": -7,
-                    "resident": True,
-                }
-            ],
-            [],
-        )
+        lambda _raw: [
+            {
+                "id": credential_id,
+                "data": object(),
+                "attachment": None,
+                "algorithm": -7,
+                "resident": True,
+            }
+        ]
     )
 
     with entry_app().test_client() as client:
@@ -126,18 +120,15 @@ def test_advanced_authenticate_complete_custom_algorithm_does_not_bypass_verific
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [
-                {
-                    "id": credential_id,
-                    "data": object(),
-                    "attachment": None,
-                    "algorithm": custom_alg,
-                    "resident": True,
-                }
-            ],
-            [],
-        )
+        lambda _raw: [
+            {
+                "id": credential_id,
+                "data": object(),
+                "attachment": None,
+                "algorithm": custom_alg,
+                "resident": True,
+            }
+        ]
     )
 
     with entry_app().test_client() as client:
@@ -187,18 +178,15 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_requires_request
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [
-                {
-                    "id": credential_id,
-                    "data": object(),
-                    "attachment": None,
-                    "algorithm": stored_custom_alg,
-                    "resident": True,
-                }
-            ],
-            [],
-        )
+        lambda _raw: [
+            {
+                "id": credential_id,
+                "data": object(),
+                "attachment": None,
+                "algorithm": stored_custom_alg,
+                "resident": True,
+            }
+        ]
     )
 
     with entry_app().test_client() as client:
@@ -243,18 +231,15 @@ def test_advanced_authenticate_complete_custom_algorithm_bypass_rejects_non_sign
     monkeypatch.setattr(
         advanced_parsing,
         "_parse_client_supplied_credentials",
-        lambda _raw: (
-            [
-                {
-                    "id": credential_id,
-                    "data": object(),
-                    "attachment": None,
-                    "algorithm": custom_alg,
-                    "resident": True,
-                }
-            ],
-            [],
-        )
+        lambda _raw: [
+            {
+                "id": credential_id,
+                "data": object(),
+                "attachment": None,
+                "algorithm": custom_alg,
+                "resident": True,
+            }
+        ]
     )
 
     with entry_app().test_client() as client:
