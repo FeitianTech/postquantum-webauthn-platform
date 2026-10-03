@@ -372,6 +372,15 @@ def delete_session(session_id: str) -> None:
 
 
 def prune_session(session_id: str) -> None:
+    """Remove a namespace's local metadata folder once it holds no upload.
+
+    Only the local backend has such a folder. On Cloud Storage a namespace's
+    uploads sit beside its credentials and artifacts under ``user-data/<session>/``,
+    which stay until the idle sweep removes the namespace whole.
+    """
+
+    if common.using_gcs():
+        return
     if session_is_empty(session_id):
         delete_file(session_id, _LAST_ACCESS_BLOB, missing_ok=True)
         if session_is_empty(session_id):

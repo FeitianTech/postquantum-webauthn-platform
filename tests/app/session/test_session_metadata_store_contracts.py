@@ -6,6 +6,7 @@ import pytest
 from server.app import visitor_session
 from server.app.storage import common as storage_common
 from server.app.storage import session_metadata as session_store
+from tests.app.storage import fake_gcs
 
 
 @pytest.fixture
@@ -212,3 +213,21 @@ def test_gcs_file_exists_proxies_blob_exists(session_metadata_dir, monkeypatch):
 
     assert session_store.file_exists("session-gcs", "present.json") is True
     assert session_store.file_exists("session-gcs", "missing.json") is False
+
+
+def test_deleting_the_last_upload_keeps_the_namespaces_other_stores_on_cloud_storage(monkeypatch):
+    bucket = fake_gcs.install(monkeypatch, "every store")
+    credentials = storage_common.session_prefix("session-gcs", "credentials") + "/user@example.com_credential_data.json"
+    artifact = storage_common.session_prefix("session-gcs", "credential-artifacts") + "/stored.json"
+    bucket.put(credentials, b"{}")
+    bucket.put(artifact, b"{}")
+    session_store.touch_last_access("session-gcs")
+    session_store.write_file("session-gcs", "entry.json", b"{}")
+
+    session_store.delete_file("session-gcs", "entry.json")
+    session_store.prune_session("session-gcs")
+
+    assert session_store.list_files("session-gcs") == []
+    assert credentials in bucket.objects
+    assert artifact in bucket.objects
+    assert session_store.resolve_last_access("session-gcs") is not None
