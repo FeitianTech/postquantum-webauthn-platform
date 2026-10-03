@@ -240,6 +240,16 @@ describe('the MDS entry page', () => {
     expect(field(statement, 'Fixture Future Statement Field')).toHaveTextContent('A statement field no MDS3 version defines');
   });
 
+  it('shows every getInfo member a later CTAP version added', () => {
+    renderEntry(entryNamed('Fixture Security Key L2'));
+    const info = section('authenticatorGetInfo');
+    expect(field(info, 'Max PIN Length')).toHaveTextContent(/^63$/);
+    expect(field(info, 'Force PIN Change')).toHaveTextContent(/^false$/);
+    expect(field(info, 'Fixture Future Member')).toHaveTextContent('{"kept":true}');
+    expect(chips('Certifications')).toEqual(['FIDO: 2', 'FIPS-CMVP-2: 2']);
+    expect(chips('Transports for Reset')).toEqual(['usb', 'nfc']);
+  });
+
   it('shows the biometric status reports in a table of their own, and the rogue list over the status reports', () => {
     const entry = entryNamed('Fixture Security Key L2');
     renderEntry(entry);

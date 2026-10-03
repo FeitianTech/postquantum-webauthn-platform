@@ -28,8 +28,8 @@ export const BUDGET = {
   chunks: {
     'section-advanced': { raw: 94208, gzip: 27648 },
     'section-codec': { raw: 28672, gzip: 10240 },
-    // Measured on 2026-10-03, once the entry page showed every statement field.
-    'section-mds': { raw: 68608, gzip: 21504 },
+    // Measured on 2026-10-03, once the entry page showed every statement field and getInfo member.
+    'section-mds': { raw: 70656, gzip: 21504 },
     'credential-details': { raw: 27648, gzip: 9216 },
     'analyze-browser': { raw: 21504, gzip: 8192 },
   },

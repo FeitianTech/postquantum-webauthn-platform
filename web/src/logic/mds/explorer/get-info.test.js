@@ -54,4 +54,46 @@ describe('the Authenticator Get Info section', () => {
     expect(authenticatorInfoSection({}).fields).toEqual([]);
     expect(authenticatorInfoSection({ options: {} }).chipLists).toEqual([]);
   });
+
+  it('shows every member a later CTAP version added, and one no version has, named from its key', () => {
+    const info = authenticatorInfoSection({
+      maxPINLength: 63,
+      forcePINChange: false,
+      uvModality: 2,
+      preferredPlatformUvAttempts: 3,
+      uvCountSinceLastPinEntry: 0,
+      certifications: { FIDO: 2, 'FIPS-CMVP-2': 2, none: null },
+      authenticatorConfigCommands: [1, 2, 3],
+      vendorPrototypeConfigCommands: [255],
+      transportsForReset: ['usb', 'nfc'],
+      attestationFormats: ['packed', 'none'],
+      longTouchForReset: false,
+      pinComplexityPolicy: true,
+      pinComplexityPolicyURL: '68747470733a2f2f666978747572652e6578616d706c652f70696e',
+      encIdentifier: 'AAEC',
+      encCredStoreState: '',
+      laterMember: { kept: true },
+      laterNothing: null,
+    });
+    expect(info.fields).toEqual([
+      { label: 'Max PIN Length', value: '63' },
+      { label: 'Preferred Platform UV Attempts', value: '3' },
+      { label: 'UV Modality', value: '2' },
+      { label: 'UV Count Since Last PIN Entry', value: '0' },
+      { label: 'Force PIN Change', value: 'false' },
+      { label: 'Long Touch for Reset', value: 'false' },
+      { label: 'PIN Complexity Policy', value: 'true' },
+      { label: 'PIN Complexity Policy URL', value: '68747470733a2f2f666978747572652e6578616d706c652f70696e' },
+      { label: 'Encrypted Identifier', value: 'AAEC' },
+      { label: 'Later Member', value: '{"kept":true}' },
+    ]);
+    expect(info.chipLists).toEqual([
+      { label: 'Transports for Reset', values: ['usb', 'nfc'] },
+      { label: 'Attestation Formats', values: ['packed', 'none'] },
+      { label: 'Authenticator Config Commands', values: ['1', '2', '3'] },
+      { label: 'Vendor Prototype Config Commands', values: ['255'] },
+      { label: 'Certifications', values: ['FIDO: 2', 'FIPS-CMVP-2: 2'] },
+    ]);
+    expect(authenticatorInfoSection({ certifications: ['FIDO'] }).chipLists).toEqual([]);
+  });
 });
