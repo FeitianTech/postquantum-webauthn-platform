@@ -321,8 +321,6 @@ def _extract_attestation_key_identifiers(
             )
         ),
     ):
-        if candidate in (None, ""):
-            continue
         text = str(candidate).strip()
         if not text:
             continue

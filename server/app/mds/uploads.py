@@ -66,9 +66,6 @@ def _validate_session_metadata_filename(filename: str) -> str:
         if separator and separator in trimmed:
             raise ValueError("Invalid metadata filename.")
 
-    if os.path.basename(trimmed) != trimmed:
-        raise ValueError("Invalid metadata filename.")
-
     if not trimmed.endswith(_SESSION_METADATA_SUFFIX):
         raise ValueError("Invalid metadata filename.")
 
@@ -186,12 +183,10 @@ def _is_upload(name: str) -> bool:
 
 
 def has_items(session_id: str) -> bool:
-    """Whether the namespace holds an upload; StorageReadError when its uploads cannot be listed."""
+    """Whether the namespace ``session_id`` (as ``visitor_session.current_id()`` names it)
+    holds an upload; StorageReadError when its uploads cannot be listed."""
 
-    directory = _session_metadata_directory(session_id, create=False, cleanup=False)
-    if not directory:
-        return False
-    return any(_is_upload(name) for name in session_metadata.list_files(directory))
+    return any(_is_upload(name) for name in session_metadata.list_files(session_id))
 
 
 def list_session_metadata_items(session_id: str | None = None) -> list[SessionMetadataItem]:

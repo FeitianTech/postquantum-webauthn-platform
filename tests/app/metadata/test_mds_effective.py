@@ -8,6 +8,7 @@ from __future__ import annotations
 import pytest
 
 from server.app import visitor_session
+from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
 from server.app.mds import uploads as mds_uploads
 from server.app.storage import session_metadata
@@ -87,6 +88,7 @@ def test_an_upload_without_its_info_file_is_shown_without_its_names(visitor, mds
 )
 def test_a_packaged_entry_is_found_by_its_aaguid_or_aaid_past_the_one_an_upload_replaced(visitor, mds_fixture_snapshot, lookup, source):
     _upload("Uploaded", PACKAGED)
+    _upload("No AAGUID")
 
     assert mds_effective.resolve_effective_metadata_entry(**lookup)["source"] == source
 
@@ -94,6 +96,13 @@ def test_a_packaged_entry_is_found_by_its_aaguid_or_aaid_past_the_one_an_upload_
 @pytest.mark.parametrize("lookup", [{"aaid": "missing"}, {"aaguid": "   "}, {}])
 def test_a_lookup_that_names_no_entry_finds_none(visitor, mds_fixture_snapshot, lookup):
     assert mds_effective.resolve_effective_metadata_entry(**lookup) is None
+
+
+def test_an_entry_of_the_verified_payload_that_is_no_object_is_passed_over(visitor, mds_fixture_snapshot, monkeypatch):
+    entries = mds_cache.load_verified_entries()
+    monkeypatch.setattr(mds_cache, "load_verified_entries", lambda: ["not an entry", *entries])
+
+    assert mds_effective.resolve_effective_metadata_entry(aaguid=PACKAGED)["aaguid"] == PACKAGED
 
 
 def test_without_a_snapshot_a_packaged_lookup_finds_none(visitor):
