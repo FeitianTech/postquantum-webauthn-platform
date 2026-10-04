@@ -4,13 +4,15 @@ Conditional uploads (``if_generation_match``) are checked and applied under one
 lock, as GCS does server-side, so threads racing them see exactly one winner.
 ``on_download`` hooks run after a download has read an object: a test uses one
 to have "another instance" write between a request's read and its write.
-``failing`` maps an object name to the error its downloads raise.
+``failing`` maps an object name to the error its downloads raise. Each write
+records when it happened (``updated``, as a reload reads it) and its content type.
 """
 from __future__ import annotations
 
 import threading
 import types
 from collections.abc import Callable
+from datetime import datetime, timezone
 
 from server.app.storage import cloud
 from server.app.storage import common as storage_common
@@ -40,6 +42,8 @@ class Bucket:
         self.failing: dict[str, Exception] = {}
         self.list_calls: list[tuple[str, str | None]] = []
         self.download_options: list[tuple[str, dict]] = []
+        self.updated: dict[str, datetime] = {}
+        self.content_types: dict[str, str | None] = {}
         self.lock = threading.Lock()
 
     def blob(self, name: str) -> Blob:
@@ -72,6 +76,7 @@ class Bucket:
 
         with self.lock:
             self.objects[name] = (bytes(data), self.next_generation)
+            self.updated[name] = datetime.now(timezone.utc)
             self.next_generation += 1
 
 
@@ -93,6 +98,7 @@ class Blob:
         self.bucket = bucket
         self.name = name
         self.generation = None
+        self.updated: datetime | None = None
 
     def download_as_bytes(self, **options) -> bytes:
         self.bucket.download_options.append((self.name, options))
@@ -113,6 +119,8 @@ class Blob:
             if if_generation_match is not None and if_generation_match != current:
                 raise PreconditionFailed(f"{self.name} is at generation {current}")
             self.bucket.objects[self.name] = (bytes(data), self.bucket.next_generation)
+            self.bucket.updated[self.name] = datetime.now(timezone.utc)
+            self.bucket.content_types[self.name] = content_type
             self.bucket.next_generation += 1
 
     def delete(self, retry: object = None) -> None:
@@ -120,6 +128,12 @@ class Blob:
             if self.name not in self.bucket.objects:
                 raise NotFound(self.name)
             del self.bucket.objects[self.name]
+
+    def reload(self, retry: object = None) -> None:
+        with self.bucket.lock:
+            if self.name not in self.bucket.objects:
+                raise NotFound(self.name)
+            self.updated = self.bucket.updated[self.name]
 
     def exists(self, retry: object = None) -> bool:
         with self.bucket.lock:

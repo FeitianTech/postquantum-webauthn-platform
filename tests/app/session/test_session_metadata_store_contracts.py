@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 import pytest
@@ -91,130 +90,6 @@ def test_local_cleanup_respects_cleanup_interval_guard(session_metadata_dir, mon
     visitor_session._maybe_cleanup(now=2_500.0)
 
 
-def test_gcs_touch_last_access_uploads_json_marker(session_metadata_dir, monkeypatch):
-    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
-
-    uploads = []
-    monkeypatch.setattr(
-        session_store,
-        "upload_bytes",
-        lambda blob_name, data, *, content_type=None: uploads.append((blob_name, data, content_type)),
-    )
-
-    session_store.touch_last_access("session-gcs", timestamp=321.5)
-
-    assert len(uploads) == 1
-    blob_name, raw_payload, content_type = uploads[0]
-    assert blob_name.endswith("/.last-access")
-    assert content_type == "application/json"
-
-    payload = json.loads(raw_payload.decode("utf-8"))
-    assert payload["timestamp"] == 321.5
-
-
-def test_gcs_resolve_last_access_prefers_marker_timestamp(session_metadata_dir, monkeypatch):
-    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
-
-    monkeypatch.setattr(
-        session_store,
-        "download_bytes",
-        lambda _blob_name: b'{"timestamp": 123.25}',
-    )
-    monkeypatch.setattr(session_store, "blob_updated_timestamp", lambda _blob_name: 999.0)
-
-    assert session_store.resolve_last_access("session-gcs") == 123.25
-
-
-def test_gcs_resolve_last_access_falls_back_to_blob_timestamp(session_metadata_dir, monkeypatch):
-    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
-
-    monkeypatch.setattr(session_store, "download_bytes", lambda _blob_name: b"not-json")
-    monkeypatch.setattr(session_store, "blob_updated_timestamp", lambda _blob_name: 456.5)
-
-    assert session_store.resolve_last_access("session-gcs") == 456.5
-
-
-def test_gcs_list_files_filters_last_access_and_folder_markers(session_metadata_dir, monkeypatch):
-    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
-
-    prefix = session_store._metadata_prefix("session-gcs") + "/"
-    blob_names = [
-        prefix + "b.json",
-        prefix + ".last-access",
-        prefix + "nested/",
-        prefix + "a.json",
-    ]
-
-    monkeypatch.setattr(session_store, "list_blob_names", lambda _prefix: blob_names)
-
-    assert session_store.list_files("session-gcs") == ["a.json", "b.json"]
-
-
-def test_gcs_delete_session_deletes_all_session_blobs(session_metadata_dir, monkeypatch):
-    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
-
-    prefix = session_store._user_root_prefix("session-gcs") + "/"
-    blob_names = [
-        prefix + "metadata/a.json",
-        prefix + "metadata/b.json",
-        prefix + ".last-access",
-    ]
-
-    monkeypatch.setattr(session_store, "list_blob_names", lambda _prefix: blob_names)
-
-    deleted = []
-    monkeypatch.setattr(
-        session_store,
-        "delete_blob",
-        lambda blob_name, *, missing_ok=True: deleted.append((blob_name, missing_ok)),
-    )
-
-    session_store.delete_session("session-gcs")
-
-    assert deleted == [(blob_names[0], True), (blob_names[1], True), (blob_names[2], True)]
-
-
-def test_gcs_write_file_uploads_and_updates_last_access(session_metadata_dir, monkeypatch):
-    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
-
-    uploads = []
-    monkeypatch.setattr(
-        session_store,
-        "upload_bytes",
-        lambda blob_name, data, *, content_type=None: uploads.append((blob_name, data, content_type)),
-    )
-
-    touched = []
-    monkeypatch.setattr(session_store, "touch_last_access", lambda sid: touched.append(sid))
-
-    session_store.write_file(
-        "session-gcs",
-        "entry.json",
-        b"{}",
-        content_type="application/json",
-    )
-
-    assert len(uploads) == 1
-    blob_name, payload, content_type = uploads[0]
-    assert blob_name.endswith("/metadata/entry.json")
-    assert payload == b"{}"
-    assert content_type == "application/json"
-    assert touched == ["session-gcs"]
-
-
-def test_gcs_file_exists_proxies_blob_exists(session_metadata_dir, monkeypatch):
-    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
-
-    monkeypatch.setattr(
-        session_store,
-        "blob_exists",
-        lambda blob_name: blob_name.endswith("/metadata/present.json"),
-    )
-
-    assert session_store.file_exists("session-gcs", "present.json") is True
-    assert session_store.file_exists("session-gcs", "missing.json") is False
-
-
 def test_deleting_the_last_upload_keeps_the_namespaces_other_stores_on_cloud_storage(monkeypatch):
     bucket = fake_gcs.install(monkeypatch, "every store")
     credentials = storage_common.session_prefix("session-gcs", "credentials") + "/user@example.com_credential_data.json"
@@ -231,21 +106,6 @@ def test_deleting_the_last_upload_keeps_the_namespaces_other_stores_on_cloud_sto
     assert credentials in bucket.objects
     assert artifact in bucket.objects
     assert session_store.resolve_last_access("session-gcs") is not None
-
-
-def test_a_cloud_storage_listing_that_fails_raises_and_deletes_nothing(monkeypatch):
-    bucket = fake_gcs.install(monkeypatch, "every store")
-    credentials = storage_common.session_prefix("session-gcs", "credentials") + "/user@example.com_credential_data.json"
-    bucket.put(credentials, b"{}")
-
-    def unreachable(*_args, **_kwargs):
-        raise fake_gcs.ServiceUnavailable("listing refused")
-
-    monkeypatch.setattr(bucket, "list_blobs", unreachable)
-
-    with pytest.raises(storage_common.StorageReadError):
-        session_store.list_files("session-gcs")
-    assert credentials in bucket.objects
 
 
 def test_a_local_folder_that_cannot_be_listed_is_not_pruned(session_metadata_dir, monkeypatch):

@@ -65,16 +65,14 @@ def _last_access_blob(session_id: str) -> str:
 
 
 def _session_blob(session_id: str, name: str) -> str:
-    prefix = _metadata_prefix(session_id)
     cleaned = name.strip("/")
     if not cleaned:
         raise ValueError("Invalid metadata filename")
-    return f"{prefix}/{cleaned}" if prefix else cleaned
+    return f"{_metadata_prefix(session_id)}/{cleaned}"
 
 
 def _base_prefix() -> str:
-    cleaned = (common.USER_FOLDER_PREFIX or "").strip().strip("/")
-    return f"{cleaned}/" if cleaned else ""
+    return f"{common.USER_FOLDER_PREFIX}/"
 
 
 def _normalise_local_session_id(session_id: str) -> str:
@@ -169,7 +167,7 @@ def list_sessions() -> list[str]:
                 session_component = folder[len(prefix) :].strip("/").strip()
                 if session_component:
                     seen.add(session_component)
-        except Exception as exc:  # pragma: no cover - depends on storage backend
+        except Exception as exc:
             logger.warning("Unable to list session metadata blobs: %s", exc)
         return sorted(seen)
 
@@ -232,13 +230,11 @@ def list_files(session_id: str) -> list[str]:
     the store cannot be listed, never answering with fewer files."""
 
     if common.using_gcs():
-        prefix = _metadata_prefix(session_id)
-        if prefix:
-            prefix = prefix + "/"
+        prefix = _metadata_prefix(session_id) + "/"
         names: list[str] = []
         try:
             for blob_name in list_blob_names(prefix):
-                remainder = blob_name[len(prefix) :] if prefix else blob_name
+                remainder = blob_name[len(prefix) :]
                 if not remainder:
                     continue
                 if remainder.endswith("/"):
@@ -351,17 +347,13 @@ def session_is_empty(session_id: str) -> bool:
 
 def delete_session(session_id: str) -> None:
     if common.using_gcs():
-        prefix = _user_root_prefix(session_id)
-        if prefix:
-            prefix = prefix + "/"
+        prefix = _user_root_prefix(session_id) + "/"
         to_delete: list[str] = []
         try:
             for blob_name in list_blob_names(prefix):
                 to_delete.append(blob_name)
-        except Exception as exc:  # pragma: no cover - depends on storage backend
-            logger.warning(
-                "Unable to enumerate metadata for deletion under %s: %s", prefix, exc
-            )
+        except Exception as exc:
+            logger.warning("Unable to enumerate metadata for deletion under %s: %s", prefix, exc)
         for blob_name in to_delete:
             delete_blob(blob_name, missing_ok=True)
         return
