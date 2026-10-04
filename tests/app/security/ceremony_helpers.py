@@ -99,8 +99,9 @@ class Authenticator:
         include_credential: bool = True,
         user_verified: bool = True,
         cose_key_bytes: bytes | None = None,
+        user_present: bool = True,
     ) -> bytes:
-        flags = FLAG_UP
+        flags = FLAG_UP if user_present else 0
         if user_verified:
             flags |= FLAG_UV
         if include_credential:

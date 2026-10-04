@@ -1,10 +1,11 @@
 """``perform_attestation_checks`` and its metadata step report what they reported before.
 
 A table of registration responses -- valid, tampered, wrongly typed, bound to the
-wrong origin, challenge or RP, missing UV, using a disallowed algorithm or a broken
-COSE key, ML-DSA, and the captured attestation formats -- goes through the checks
-with no MDS verifier, and ``_finalize_metadata_results`` gets fake metadata entries
-and verifiers. Every result must equal ``golden/attestation-checks.json``.
+wrong origin, challenge or RP, missing UP, UV or the attested credential, using a
+disallowed algorithm or a broken COSE key, ML-DSA, and the captured attestation
+formats -- goes through the checks with no MDS verifier, and
+``_finalize_metadata_results`` gets fake metadata entries and verifiers. Every
+result must equal ``golden/attestation-checks.json``.
 """
 from __future__ import annotations
 
@@ -46,6 +47,8 @@ def _cases():
         "wrong-origin": (build(origin="https://elsewhere.example"), state, ES256_ONLY),
         "wrong-challenge": (build(), {"challenge": b64u(b"\x01" * 32)}, ES256_ONLY),
         "wrong-rp": (build(rp_id="example.com"), state, ES256_ONLY),
+        "up-missing": (build(user_present=False), state, ES256_ONLY),
+        "no-attested-data": (build(include_credential=False), state, ES256_ONLY),
         "uv-required-missing": (build(user_verified=False), {**state, "user_verification": "required"}, ES256_ONLY),
         "uv-required-in-options": (
             build(user_verified=False), None,

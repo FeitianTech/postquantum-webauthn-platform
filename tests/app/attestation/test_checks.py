@@ -108,17 +108,6 @@ def test_user_verification_the_ceremony_required_must_be_performed(check, state,
     assert "user_verification_required_not_satisfied" in missing["errors"]
 
 
-def test_without_attested_credential_data_there_is_no_credential_to_allow(check):
-    bare = stand_ins.AuthData(flags=int(AuthenticatorData.FLAG.UP), credential_data=None)
-
-    result = check(state={"challenge": CHALLENGE}, attestation=stand_ins.attestation_object(auth_data=bare))
-
-    facts = result["authenticator_data"]
-    assert (facts["credential_id_length"], facts["credential_aaguid"], facts["algorithm"]) == (None, None, None)
-    assert facts["algorithm_allowed"] is False
-    assert {"attested_credential_data_missing", "algorithm_not_allowed"} <= set(result["errors"])
-
-
 def test_a_cose_key_whose_algorithm_is_not_a_number_is_not_an_allowed_algorithm(check):
     credential = stand_ins.CredentialData(public_key={**stand_ins.ES256_KEY, 3: "ES256"})
     attestation = stand_ins.attestation_object(auth_data=stand_ins.AuthData(credential_data=credential))

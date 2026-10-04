@@ -238,6 +238,8 @@ def registration_payload(
     cose_key_bytes: bytes | None = None,
     x5c_aaguid: bytes | None = None,
     tamper: bool = False,
+    user_present: bool = True,
+    include_credential: bool = True,
 ) -> dict[str, Any]:
     """A registration response; ``attestation`` is ``none``, ``self`` or ``x5c``.
 
@@ -248,7 +250,8 @@ def registration_payload(
         challenge=challenge, ceremony_type=ceremony_type, origin=origin, cross_origin=cross_origin
     )
     auth_data = authenticator.authenticator_data(
-        rp_id=rp_id, counter=counter, user_verified=user_verified, cose_key_bytes=cose_key_bytes
+        rp_id=rp_id, counter=counter, user_verified=user_verified, cose_key_bytes=cose_key_bytes,
+        user_present=user_present, include_credential=include_credential,
     )
     statement: dict[str, Any] = {}
     if attestation == "self":
