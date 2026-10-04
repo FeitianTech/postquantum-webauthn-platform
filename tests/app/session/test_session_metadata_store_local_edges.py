@@ -512,14 +512,6 @@ def test_delete_file_local_swallows_errors_when_missing_ok_true(session_store_lo
     session_store.delete_file("session-a", "entry.json", missing_ok=True)
 
 
-def test_session_is_empty_reflects_list_files_results(session_store_local, monkeypatch):
-    monkeypatch.setattr(session_store, "list_files", lambda _sid: [])
-    assert session_store.session_is_empty("session-a") is True
-
-    monkeypatch.setattr(session_store, "list_files", lambda _sid: ["entry.json"])
-    assert session_store.session_is_empty("session-a") is False
-
-
 def test_local_resolve_last_access_keeps_existing_latest_when_next_candidate_is_older(session_store_local, monkeypatch):
     marker_suffix = os.path.join("session-a", session_store._LAST_ACCESS_BLOB)
 

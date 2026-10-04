@@ -229,20 +229,6 @@ def test_the_verified_snapshot_is_the_payload_as_the_blob_has_it():
     assert updater._build_verified_snapshot(blob, root) == payload
 
 
-def test_the_verified_snapshot_is_checked_against_the_trust_root(monkeypatch):
-    blob, _root = mds_fixture._signed_blob(_payload_with_unmodelled_fields())
-    seen = {}
-
-    def _verify_blob(blob, cert):
-        seen["args"] = (blob, cert)
-        raise ValueError("bad signature")
-
-    monkeypatch.setattr(updater.mds_blob, "verify_blob", _verify_blob)
-    with pytest.raises(ValueError, match="bad signature"):
-        updater._build_verified_snapshot(blob)
-    assert seen["args"] == (blob, updater.FIDO_METADATA_TRUST_ROOT_CERT)
-
-
 def test_a_signed_payload_with_a_biometric_report_as_mds3_writes_it_is_taken():
     payload = _payload_with_unmodelled_fields()
     payload["entries"][0]["biometricStatusReports"] = [

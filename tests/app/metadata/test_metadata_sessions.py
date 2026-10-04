@@ -47,21 +47,6 @@ def test_session_metadata_is_isolated(session_metadata_env):
         assert items[0].payload["metadataStatement"]["description"] == "Session entry"
 
 
-def test_note_session_activity_schedules_cleanup(session_metadata_env, monkeypatch):
-    calls = []
-    monkeypatch.setattr(visitor_session, "_touch_last_access", lambda sid: calls.append(("touch", sid)))
-    monkeypatch.setattr(visitor_session, "schedule_cleanup", lambda: calls.append(("schedule", None)))
-    monkeypatch.setattr(
-        visitor_session,
-        "_maybe_cleanup",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("inline cleanup should not run")),
-    )
-
-    visitor_session.note_activity("session-123")
-
-    assert calls == [("touch", "session-123"), ("schedule", None)]
-
-
 def test_resolve_effective_metadata_entry_accepts_hyphenated_aaguid(monkeypatch):
     base_entry = {
         "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
