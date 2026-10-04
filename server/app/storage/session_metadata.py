@@ -76,8 +76,6 @@ def _base_prefix() -> str:
 
 
 def _normalise_local_session_id(session_id: str) -> str:
-    if not isinstance(session_id, str):
-        raise ValueError("Session identifier is required")
     normalised = common.normalise_session_id(session_id)
     if normalised is None:
         raise ValueError("Session identifier is invalid")
@@ -120,24 +118,13 @@ def _local_resolve_last_access(directory: str) -> float | None:
     except OSError:
         pass
 
-    latest: float | None = None
+    # Else the newest entry, else the folder itself. An entry or the folder that
+    # goes while it is read leaves the time unknown: the idle sweep keeps the
+    # namespace until it looks again.
     try:
         with os.scandir(directory) as entries:
-            for entry in entries:
-                try:
-                    candidate = entry.stat(follow_symlinks=False).st_mtime
-                except OSError:
-                    continue
-                if latest is None or candidate > latest:
-                    latest = candidate
-    except OSError:
-        return None
-
-    if latest is not None:
-        return latest
-
-    try:
-        return os.path.getmtime(directory)
+            times = [entry.stat(follow_symlinks=False).st_mtime for entry in entries]
+        return max(times) if times else os.path.getmtime(directory)
     except OSError:
         return None
 
