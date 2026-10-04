@@ -65,3 +65,11 @@ def test_an_odd_number_of_hexadecimal_digits_is_read_as_the_base64_it_may_be():
 def test_an_odd_number_of_hexadecimal_digits_that_is_no_base64_says_so():
     with pytest.raises(ValueError, match="Input is 5 hexadecimal digits, an odd number, so no bytes; and it is not base64"):
         decode_payload_text("abcde")
+
+
+def test_a_der_certificate_sent_as_base64url_is_the_certificate_it_holds():
+    answer = decode_payload_text(base64.urlsafe_b64encode(GSR2_DER).decode().rstrip("="))
+
+    assert answer["type"] == "X.509 certificate"
+    assert answer["data"]["raw"] == GSR2_DER.hex()
+    assert answer["data"]["parsedX5c"]["subject"] == decode_payload_text(_pem(GSR2_DER))["data"]["parsedX5c"]["subject"]

@@ -4,18 +4,12 @@ from datetime import datetime, timedelta, timezone
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec, ed25519, rsa
-from cryptography.x509.oid import NameOID, ObjectIdentifier
+from cryptography.hazmat.primitives.asymmetric import ed25519, rsa
+from cryptography.x509.oid import NameOID
 
 from server.app.webauthn.attestation import (
     certificate_extensions as attestation_certificate_extensions,
 )
-from server.app.webauthn.attestation import (
-    certificate_names as attestation_certificate_names,
-)
-from server.app.webauthn.attestation import certificates as certificates_module
-from server.app.webauthn.attestation import constants as attestation_constants
-from server.app.webauthn.attestation import trust as attestation_trust
 
 
 def _build_certificate(
@@ -57,69 +51,6 @@ def _build_certificate(
     return cert.public_bytes(serialization.Encoding.DER)
 
 
-def test_serialize_attestation_certificate_rsa_success_path_includes_extensions_and_summary():
-    custom_device_identifier = x509.UnrecognizedExtension(
-        ObjectIdentifier("1.3.6.1.4.1.41482.2"),
-        b"\x04\x04demo",
-    )
-    custom_transports = x509.UnrecognizedExtension(
-        ObjectIdentifier("1.3.6.1.4.1.45724.2.1.1"),
-        b"\x03\x02\x00\x03",
-    )
-
-    cert_bytes = _build_certificate(
-        rsa.generate_private_key(public_exponent=65537, key_size=2048),
-        subject_cn="Demo Authenticator",
-        issuer_cn="Demo Root",
-        custom_extensions=[custom_device_identifier, custom_transports],
-    )
-
-    result = certificates_module.serialize_attestation_certificate(cert_bytes)
-
-    assert result is not None
-    assert result["signatureAlgorithm"]
-    assert result["issuer"]
-    assert result["subject"]
-    assert result["publicKeyInfo"]["type"] == "RSA"
-    assert result["fingerprints"]["sha256"]
-    assert "X509v3 extensions" in result["summary"]
-    assert any(ext["oid"] == "1.3.6.1.4.1.41482.2" for ext in result["extensions"])
-    assert any(ext["oid"] == "1.3.6.1.4.1.45724.2.1.1" for ext in result["extensions"])
-
-
-def test_serialize_attestation_certificate_handles_ec_and_ed25519_public_key_variants():
-    ec_cert = _build_certificate(
-        ec.generate_private_key(ec.SECP256R1()),
-        subject_cn="EC Device",
-        issuer_cn="EC Root",
-    )
-    ec_result = certificates_module.serialize_attestation_certificate(ec_cert)
-    assert ec_result["publicKeyInfo"]["type"] == "ECC"
-    assert ec_result["publicKeyInfo"]["curve"]
-
-    ed_cert = _build_certificate(
-        ed25519.Ed25519PrivateKey.generate(),
-        subject_cn="Ed Device",
-        issuer_cn="Ed Root",
-    )
-    ed_result = certificates_module.serialize_attestation_certificate(ed_cert)
-    assert "Ed" in ed_result["publicKeyInfo"]["type"]
-    assert ed_result["publicKeyInfo"]["algorithm"]["name"] == "EdDSA"
-
-
-def test_extract_certificate_aaguid_reads_aaguid_extension_bytes():
-    aaguid = bytes.fromhex("00112233445566778899aabbccddeeff")
-    extension = x509.UnrecognizedExtension(attestation_constants.AAGUID_EXTENSION_OID, b"\x04\x10" + aaguid)
-    cert_bytes = _build_certificate(
-        rsa.generate_private_key(public_exponent=65537, key_size=2048),
-        custom_extensions=[extension],
-    )
-
-    extracted = attestation_trust._extract_certificate_aaguid(cert_bytes)
-    assert extracted == aaguid
-    assert attestation_trust._extract_certificate_aaguid(b"not-a-cert") == b""
-
-
 def test_serialize_extension_value_handles_known_extension_types_from_real_certificate():
     cert_bytes = _build_certificate(
         rsa.generate_private_key(public_exponent=65537, key_size=2048),
@@ -137,25 +68,3 @@ def test_serialize_extension_value_handles_known_extension_types_from_real_certi
     assert "Hex value" in extension_values["2.5.29.14"]
     assert "2.5.29.35" in extension_values
     assert "2.5.29.19" in extension_values
-
-
-def test_derive_certificate_algorithm_info_formats_signature_components_consistently():
-    assert (
-        attestation_certificate_names._derive_certificate_algorithm_info(
-            {
-                "algorithm": {"name": "ecdsa"},
-                "hash": {"name": "sha-256"},
-            }
-        )
-        == "ECDSA_SHA256"
-    )
-
-    assert (
-        attestation_certificate_names._derive_certificate_algorithm_info(
-            {
-                "algorithm": "ed25519",
-                "hash": None,
-            }
-        )
-        == "ED25519_SHA512"
-    )

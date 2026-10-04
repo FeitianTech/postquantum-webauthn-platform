@@ -3,9 +3,7 @@ import base64
 import pytest
 
 from server.app.decoder.decode import pem as decode_pem
-from tests.app.entry_app import entry_app
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
-from tests.app.security.ceremony_helpers import b64u
 
 
 def _pem_block(der_bytes: bytes) -> str:
@@ -42,22 +40,3 @@ def test_try_decode_certificate_bytes_returns_none_for_malformed_der_payload():
     malformed_der = _GSR2_DER[:24]
 
     assert decode_pem.try_decode_der_certificate(malformed_der, "base64url") is None
-
-
-def test_codec_api_decodes_der_certificate_payload_successfully():
-    payload = b64u(_GSR2_DER)
-
-    with entry_app().test_client() as client:
-        response = client.post(
-            "/api/codec",
-            json={"mode": "decode", "payload": payload},
-        )
-
-    assert response.status_code == 200
-    body = response.get_json()
-    assert body["success"] is True
-    assert body["type"].startswith("X.509 certificate")
-    assert isinstance(body["data"], dict)
-    parsed = body["data"].get("parsedX5c")
-    assert isinstance(parsed, dict)
-    assert isinstance(parsed.get("fingerprints"), dict)
