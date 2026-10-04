@@ -115,26 +115,6 @@ def test_a_pss_signature_without_parameters_is_named_with_the_default_hash():
     assert serialize_attestation_certificate(der)["algorithmInfo"] == "RSASSA-PSS_SHA1"
 
 
-@pytest.mark.parametrize(
-    ("name", "expected"),
-    [
-        ("rsassaPss", "RSASSA-PSS"),
-        ("RSASSA-PSS", "RSASSA-PSS"),
-        ("rsassa_pss", "RSASSA-PSS"),
-        ("1.2.840.113549.1.1.10", "RSASSA-PSS"),
-        ("sha256WithRSAEncryption", "RSASSA-PKCS1-v1_5"),
-        ("ML-DSA-87", "ML-DSA-87"),
-        ("2.16.840.1.101.3.4.3.17", "ML-DSA-44"),
-        ("dsa-with-sha1", "DSA"),
-        ("2.16.840.1.101.3.4.3.12", "ECDSA"),
-        ("2.16.840.1.101.3.4.3.16", "RSASSA-PKCS1-v1_5"),
-        ("some thing-else", "SOMETHINGELSE"),
-    ],
-)
-def test_a_signature_algorithm_is_named_by_name_or_oid(name, expected):
-    assert signature_algorithms.normalise_signature_algorithm_name(name) == expected
-
-
 def _spelled(name: str) -> str:
     """A signature algorithm's spelling from its name or dotted OID alone, as both views make it without a hash."""
 

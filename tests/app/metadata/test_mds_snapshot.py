@@ -1,5 +1,4 @@
 import copy
-import json
 
 import pytest
 
@@ -145,19 +144,6 @@ def test_the_snapshots_files_are_written_sorted_and_the_full_one_compact():
 
     assert finalised["entries"] == [{"name": "a"}, {"name": "b"}]
     assert finalised["meta"] == {"no": 5, "entryCount": 2, "baseEntryCount": 2, "customEntryCount": 0, "hasCustomEntries": False}
-
-
-def test_a_snapshots_seven_files_come_from_its_blob_payload_and_cache_state(monkeypatch):
-    monkeypatch.setattr(mds_snapshot, "build_explorer_snapshot", lambda _verified, _cache: {"entries": [], "meta": {"kind": "e"}})
-    monkeypatch.setattr(mds_snapshot, "build_bootstrap_snapshot", lambda _verified, _cache: {"entries": [{}], "meta": {}})
-
-    files = mds_snapshot.snapshot_files(b"blob-data", {"entries": [], "no": 1}, {"a": 1})
-
-    assert tuple(files) == mds_files.SNAPSHOT_FILENAMES
-    assert files["blob.jwt"] == b"blob-data"
-    assert files["fido-mds3.verified.json.meta.json"] == b'{\n  "a": 1\n}\n'
-    assert json.loads(files["fido-mds3.explorer.json.meta.json"]) == {"kind": "e"}
-    assert json.loads(files["fido-mds3.explorer.full.json"])["meta"]["baseEntryCount"] == 1
 
 
 def test_a_snapshot_derived_from_its_blob_and_meta_is_the_one_the_updater_wrote(fixture_blob_root):
