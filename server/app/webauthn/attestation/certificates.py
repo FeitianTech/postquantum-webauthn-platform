@@ -341,17 +341,6 @@ def _serialized_certificate_chain(attestation_statement: Any) -> list[dict[str, 
     return attestation_certificates
 
 
-def _client_extension_results(registration: Any) -> dict[str, Any]:
-    extension_outputs = registration.client_extension_results
-    if not extension_outputs:
-        return {}
-    if isinstance(extension_outputs, dict):
-        return extension_outputs
-    if isinstance(extension_outputs, Mapping):
-        return dict(extension_outputs)
-    return extension_outputs  # type: ignore[return-value]
-
-
 def extract_attestation_details(
     response: Any,
 ) -> tuple[
@@ -383,17 +372,12 @@ def extract_attestation_details(
     attestation_certificates = _serialized_certificate_chain(attestation_statement)
     attestation_certificate = attestation_certificates[0] if attestation_certificates else None
 
-    client_data = registration.response.client_data
-    client_data_b64 = getattr(client_data, "b64", None)
-    if client_data_b64 is None:
-        client_data_b64 = encoding.encode_base64url(bytes(client_data))
-
     return (
         attestation_format,
         attestation_statement,
         attestation_object_b64,
-        client_data_b64,
-        _client_extension_results(registration),
+        registration.response.client_data.b64,
+        dict(registration.client_extension_results),
         attestation_certificate,
         attestation_certificates,
     )

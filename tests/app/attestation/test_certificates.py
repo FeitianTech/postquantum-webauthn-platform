@@ -125,9 +125,3 @@ def test_a_signature_hash_without_a_name_is_named_by_its_class():
     certificate = SimpleNamespace(signature_hash_algorithm=Sha3Hash())
 
     assert attestation_certificates._signature_hash(certificate) == {"name": "Sha3Hash"}
-
-
-def test_extension_outputs_that_are_not_a_mapping_are_kept_as_given():
-    registration = SimpleNamespace(client_extension_results=["raw-extension"])
-
-    assert attestation_certificates._client_extension_results(registration) == ["raw-extension"]

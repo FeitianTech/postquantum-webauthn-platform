@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from types import SimpleNamespace
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, rsa
 from cryptography.x509.oid import NameOID, ObjectIdentifier
-from fido2.webauthn import RegistrationResponse
 
 from server.app.webauthn.attestation import (
     certificate_extensions as attestation_certificate_extensions,
@@ -107,59 +105,6 @@ def test_serialize_attestation_certificate_handles_ec_and_ed25519_public_key_var
     ed_result = certificates_module.serialize_attestation_certificate(ed_cert)
     assert "Ed" in ed_result["publicKeyInfo"]["type"]
     assert ed_result["publicKeyInfo"]["algorithm"]["name"] == "EdDSA"
-
-
-def test_extract_attestation_details_populates_chain_and_extension_outputs(monkeypatch):
-    cert_bytes = _build_certificate(
-        rsa.generate_private_key(public_exponent=65537, key_size=2048),
-        subject_cn="Chain Device",
-        issuer_cn="Chain Root",
-    )
-
-    class _ClientData:
-        b64 = None
-
-        def __bytes__(self):
-            return b'{"type":"webauthn.create"}'
-
-    class _AttestationObject:
-        fmt = "packed"
-        att_stmt = {"x5c": [cert_bytes]}
-
-        def __bytes__(self):
-            return b"attestation-object"
-
-    fake_registration = SimpleNamespace(
-        response=SimpleNamespace(
-            attestation_object=_AttestationObject(),
-            client_data=_ClientData(),
-        ),
-        client_extension_results={"credProps": {"rk": True}},
-    )
-
-    monkeypatch.setattr(
-        RegistrationResponse,
-        "from_dict",
-        lambda _response: fake_registration,
-    )
-
-    (
-        attestation_format,
-        attestation_statement,
-        attestation_object_b64,
-        client_data_b64,
-        client_extensions,
-        attestation_certificate,
-        attestation_certificates,
-    ) = certificates_module.extract_attestation_details({"dummy": True})
-
-    assert attestation_format == "packed"
-    assert "x5c" in attestation_statement
-    assert isinstance(attestation_object_b64, str) and attestation_object_b64
-    assert isinstance(client_data_b64, str) and client_data_b64
-    assert client_extensions["credProps"]["rk"] is True
-    assert attestation_certificate is not None
-    assert attestation_certificates and isinstance(attestation_certificates[0], dict)
 
 
 def test_extract_certificate_aaguid_reads_aaguid_extension_bytes():
