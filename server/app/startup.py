@@ -19,14 +19,10 @@ __all__ = ["start_background_warmup"]
 _BACKGROUND_WARMUP_ENV = "FIDO_SERVER_BACKGROUND_WARMUP"
 
 
-def _env_flag(name: str) -> bool | None:
-    return parse_env_flag(name)
-
-
 def background_warmup_enabled() -> bool:
     """Return ``True`` when caches should be warmed after the worker starts."""
 
-    explicit = _env_flag(_BACKGROUND_WARMUP_ENV)
+    explicit = parse_env_flag(_BACKGROUND_WARMUP_ENV)
     if explicit is not None:
         return explicit
     # Cloud Run sets K_SERVICE; local development keeps lazy loading.

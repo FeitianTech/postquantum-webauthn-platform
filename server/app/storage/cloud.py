@@ -66,14 +66,10 @@ def _not_found_error() -> type:
     return _lazy("gcs_exceptions").NotFound
 
 
-def _env_flag(name: str) -> bool | None:
-    return parse_env_flag(name)
-
-
 def gcs_enabled() -> bool:
     """Return ``True`` when GCS access should be used for storage."""
 
-    flag = _env_flag("FIDO_SERVER_GCS_ENABLED")
+    flag = parse_env_flag("FIDO_SERVER_GCS_ENABLED")
     if flag is not None:
         return flag
 

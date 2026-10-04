@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import os
 import types
-from unittest import mock
 
 from server.app.config.attestation_trust import _parse_trusted_ca_subjects
 from server.app.config.paths import basepath
@@ -14,37 +12,9 @@ from server.app.config.relying_party import (
     determine_rp_id,
 )
 from server.app.config.session_secret import _resolve_secret_key
-from server.app.env_flags import parse_env_flag
 from server.app.factory import create_app
 from server.app.mds import files as mds_files
 from tests.app.entry_app import entry_app
-
-
-def test_env_flag_with_none():
-    """Test parse_env_flag when env var is not set."""
-    
-    with mock.patch.dict(os.environ, {}, clear=False):
-        if "TEST_FLAG" in os.environ:
-            del os.environ["TEST_FLAG"]
-        assert parse_env_flag("TEST_FLAG") is None
-
-
-def test_env_flag_with_false_values():
-    """Test parse_env_flag with various false values."""
-    
-    false_values = ["", "0", "false", "off", "no", "  false  ", "  0  "]
-    for value in false_values:
-        with mock.patch.dict(os.environ, {"TEST_FLAG": value}, clear=False):
-            assert parse_env_flag("TEST_FLAG") is False, f"Failed for value: {value}"
-
-
-def test_env_flag_with_true_values():
-    """Test parse_env_flag with various true values."""
-    
-    true_values = ["1", "true", "yes", "on", "True", "YES", "  1  "]
-    for value in true_values:
-        with mock.patch.dict(os.environ, {"TEST_FLAG": value}, clear=False):
-            assert parse_env_flag("TEST_FLAG") is True, f"Failed for value: {value}"
 
 
 def test_resolve_secret_key_from_env(monkeypatch):

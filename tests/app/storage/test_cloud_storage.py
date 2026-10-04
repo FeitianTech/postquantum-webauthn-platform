@@ -52,31 +52,6 @@ def test_download_bytes_handles_not_found(monkeypatch):
     assert cloud.download_bytes("missing") is None
 
 
-@pytest.mark.parametrize(
-    "raw,expected",
-    [
-        (None, None),
-        ("", False),
-        ("0", False),
-        ("false", False),
-        ("off", False),
-        ("no", False),
-        ("1", True),
-        ("true", True),
-        ("yes", True),
-        ("on", True),
-        ("unexpected", None),
-    ],
-)
-def test_env_flag_interprets_values(monkeypatch, raw, expected):
-    if raw is None:
-        monkeypatch.delenv("TEST_FLAG", raising=False)
-    else:
-        monkeypatch.setenv("TEST_FLAG", raw)
-
-    assert cloud._env_flag("TEST_FLAG") is expected
-
-
 def test_gcs_enabled_defaults_to_false_when_env_missing(monkeypatch):
     monkeypatch.delenv("FIDO_SERVER_GCS_ENABLED", raising=False)
 
@@ -337,4 +312,3 @@ def test_every_call_is_given_the_client_librarys_retry_within_a_bound(monkeypatc
     assert retry._predicate is storage_retry.DEFAULT_RETRY._predicate
     assert retry._timeout == 30.0
     assert cloud._retry() is retry
-
