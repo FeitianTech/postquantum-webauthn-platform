@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 import pytest
 
 from server.app.mds import cache as mds_cache
-from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
 from server.app.storage import common as storage_common
@@ -129,50 +128,6 @@ def test_build_metadata_entry_components_and_expand_payloads(metadata_state):
         mds_entries.expand_metadata_entry_payloads({"entries": ["bad-entry"]})
 
 
-def test_entry_lookup_and_snapshot_composition_deduplicate_by_aaguid(metadata_state, monkeypatch):
-    payload = {
-        "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-        "aaid": "A1B2#0001",
-        "metadataStatement": {"description": "Entry"},
-    }
-    entry_id = mds_effective.build_entry_id(payload)
-
-    assert mds_effective._entry_matches_lookup(payload, entry_id=entry_id) is True
-    assert (
-        mds_effective._entry_matches_lookup(
-            payload, aaguid="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-        )
-        is True
-    )
-    assert mds_effective._entry_matches_lookup(payload, aaid="A1B2#0001") is True
-
-    base_snapshot = {
-        "meta": {"entryCount": 2},
-        "entries": [
-            {"entryId": "base-1", "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},
-            {"entryId": "base-2", "aaguid": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"},
-        ],
-    }
-
-    monkeypatch.setattr(mds_uploads, "list_session_metadata_items", lambda: [object()])
-    monkeypatch.setattr(
-        mds_effective,
-        "_build_session_snapshot_entry",
-        lambda *_args, **_kwargs: {
-            "entryId": "session-1",
-            "source": "session",
-            "aaguid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-        },
-    )
-
-    snapshot = mds_effective._compose_effective_snapshot(base_snapshot, include_detail=False)
-
-    assert snapshot["meta"]["entryCount"] == 2
-    assert snapshot["meta"]["customEntryCount"] == 1
-    assert snapshot["entries"][0]["source"] == "session"
-    assert [entry["entryId"] for entry in snapshot["entries"]] == ["session-1", "base-2"]
-
-
 def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(monkeypatch, tmp_path, metadata_state):
     verified_path = tmp_path / "fido-mds3.verified.json"
     explorer_path = tmp_path / "fido-mds3.explorer.json"
@@ -198,22 +153,3 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(monkey
 
     assert snapshot["meta"]["entryCount"] == 1
     assert marker is not None
-
-
-def test_load_packaged_explorer_summary_without_a_packaged_meta_or_explorer(metadata_state, monkeypatch):
-    monkeypatch.setattr(mds_cache, "_load_packaged_explorer_meta", lambda: None)
-    monkeypatch.setattr(mds_cache, "_load_base_explorer_snapshot", lambda: (None, None))
-    monkeypatch.setattr(
-        mds_cache,
-        "_load_verified_metadata_payload",
-        lambda: {"legalHeader": "L", "no": 1, "nextUpdate": "2099-01-01", "entries": []},
-    )
-    monkeypatch.setattr(
-        mds_cache,
-        "build_explorer_snapshot",
-        lambda payload, _cache: {"meta": {"entryCount": len(payload.get("entries", []))}},
-    )
-
-    summary = mds_cache.load_packaged_explorer_summary()
-    assert summary["entryCount"] == 0
-

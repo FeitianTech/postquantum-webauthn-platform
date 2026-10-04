@@ -175,6 +175,20 @@ def test_an_explorer_meta_that_is_no_object_does_not_describe_the_snapshot(mds_f
     assert mds_cache._load_packaged_explorer_meta() is None
 
 
+def test_a_packaged_explorer_without_an_object_meta_is_summarised_from_the_verified_snapshot(mds_fixture_snapshot):
+    (mds_fixture_snapshot / mds_files.EXPLORER_META).write_text("[]", encoding="utf-8")
+    (mds_fixture_snapshot / mds_files.EXPLORER).write_text('{"entries": [], "meta": "none"}', encoding="utf-8")
+    verified = json.loads((mds_fixture_snapshot / mds_files.VERIFIED).read_text(encoding="utf-8"))
+
+    summary = mds_cache.load_packaged_explorer_summary()
+    built = mds_cache.build_explorer_snapshot(verified, mds_cache.load_metadata_cache_entry())["meta"]
+
+    # Built again, it differs only in when it was built.
+    assert summary.pop("generatedAt") and built.pop("generatedAt")
+    assert summary == built
+    assert summary["entryCount"] == 32
+
+
 
 _EXPLORER_MARKER = (mds_files.EXPLORER, mds_files.VERIFIED, mds_files.EXPLORER_META, mds_files.VERIFIED_META)
 _FULL_MARKER = (mds_files.EXPLORER_FULL, mds_files.VERIFIED, mds_files.EXPLORER_FULL_META, mds_files.VERIFIED_META)

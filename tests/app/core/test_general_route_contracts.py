@@ -115,20 +115,6 @@ def test_the_certificate_route_answers_each_certificate_with_its_status(fake_dec
     assert response.get_json() == answer
 
 
-def test_the_custom_metadata_list_answers_the_visitors_uploads(monkeypatch):
-    monkeypatch.setattr(mds_uploads, "list_session_metadata_items", lambda: [{"storedFilename": "one.json"}])
-    monkeypatch.setattr(
-        mds_uploads,
-        "serialize_session_metadata_item",
-        lambda item: {"storedFilename": item["storedFilename"], "label": "demo"},
-    )
-
-    response = entry_app().test_client().get("/api/mds/metadata/custom")
-
-    assert response.status_code == 200
-    assert response.get_json() == {"items": [{"storedFilename": "one.json", "label": "demo"}]}
-
-
 @pytest.mark.parametrize(
     ("files", "error"),
     [

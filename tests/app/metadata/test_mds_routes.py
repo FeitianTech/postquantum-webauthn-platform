@@ -52,3 +52,19 @@ def test_the_visitors_uploads_are_never_cached_and_keyed_on_the_cookie(mds_fixtu
 
     assert response.headers["Cache-Control"] == "no-store"
     assert "Cookie" in response.headers["Vary"]
+
+
+def test_the_full_explorer_is_never_cached_and_keyed_on_the_cookie(mds_fixture_snapshot, client):
+    response = client.get("/api/mds/metadata/explorer/full")
+
+    assert response.status_code == 200
+    assert len(response.get_json()["entries"]) == 32
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["Vary"] == "Cookie"
+
+
+def test_an_aaguid_no_entry_has_is_not_found(mds_fixture_snapshot, client):
+    response = client.get("/api/mds/metadata/resolve?aaguid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+
+    assert response.status_code == 404
+    assert response.get_json() == {"error": "Metadata entry not found."}

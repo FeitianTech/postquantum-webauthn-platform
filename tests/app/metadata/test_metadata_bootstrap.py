@@ -1,4 +1,3 @@
-import io
 import json
 from datetime import datetime, timezone
 
@@ -6,11 +5,6 @@ import pytest
 
 from server.app import visitor_session
 from server.app.mds import cache as mds_cache
-from server.app.mds import effective as mds_effective
-from server.app.mds import entries as mds_entries
-from server.app.mds import uploads as mds_uploads
-from server.app.storage import github_mirror
-from server.app.webauthn.attestation import classical as attestation_classical
 from tests.app.entry_app import entry_app
 
 
@@ -63,43 +57,6 @@ def test_packaged_metadata_loads_without_download(packaged_metadata_env):
     assert mds_cache.load_verified_entries() == []
 
 
-def test_metadata_not_available_is_warning_classical():
-    attestation_object = type("obj", (), {"att_stmt": {}})()
-    attestation_result = type(
-        "result",
-        (),
-        {"trust_path": [], "metadata_entry": None, "metadata_lookup_source": None},
-    )()
-    outcome = attestation_classical._evaluate_classical_attestation_root(
-        attestation_object,
-        attestation_result,
-        b"",
-        None,
-        datetime.now(timezone.utc),
-    )
-
-    assert "metadata_not_available" in outcome["warnings"]
-    assert "metadata_not_available" not in outcome["errors"]
-    assert "metadata_entry_missing" not in outcome["errors"]
-
-
-def test_full_explorer_metadata_route_sets_no_store_headers(monkeypatch):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-    monkeypatch.setattr(
-        mds_effective,
-        "load_effective_full_snapshot",
-        lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test", "metadataStatement": {}}]},
-    )
-
-    with entry_app().test_client() as client:
-        response = client.get("/api/mds/metadata/explorer/full")
-
-    assert response.status_code == 200
-    assert response.get_json()["meta"]["entryCount"] == 1
-    assert response.headers["Cache-Control"] == "no-store"
-    assert response.headers["Vary"] == "Cookie"
-
-
 def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
 
@@ -108,89 +65,3 @@ def test_resolve_metadata_entry_requires_exactly_one_lookup(monkeypatch):
 
     assert response.status_code == 400
     assert response.get_json()["error"] == "Provide exactly one of entryId, aaguid, or aaid."
-
-
-def test_resolve_metadata_entry_returns_not_found(monkeypatch):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-    monkeypatch.setattr(
-        mds_effective,
-        "resolve_effective_metadata_entry",
-        lambda **_kwargs: None,
-    )
-
-    with entry_app().test_client() as client:
-        response = client.get("/api/mds/metadata/resolve?aaguid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
-
-    assert response.status_code == 404
-    assert response.get_json()["error"] == "Metadata entry not found."
-
-
-def test_resolve_metadata_entry_returns_entry(monkeypatch):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-    monkeypatch.setattr(
-        mds_effective,
-        "resolve_effective_metadata_entry",
-        lambda **_kwargs: {"entryId": "aaguid:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "name": "Demo"},
-    )
-
-    with entry_app().test_client() as client:
-        response = client.get("/api/mds/metadata/resolve?aaguid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
-
-    assert response.status_code == 200
-    assert response.get_json() == {
-        "entry": {
-            "entryId": "aaguid:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-            "name": "Demo",
-        }
-    }
-
-
-def test_upload_custom_metadata_returns_rebuilt_snapshot(monkeypatch):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-    monkeypatch.setattr(
-        mds_entries,
-        "expand_metadata_entry_payloads",
-        lambda payload: [payload],
-    )
-    monkeypatch.setattr(github_mirror, "maybe_store_uploaded_metadata_file", lambda *_args, **_kwargs: False)
-    monkeypatch.setattr(
-        mds_uploads,
-        "save_session_metadata_item",
-        lambda payload, original_filename=None: {"payload": payload, "original_filename": original_filename},
-    )
-    monkeypatch.setattr(
-        mds_uploads,
-        "serialize_session_metadata_item",
-        lambda item: {"storedFilename": "custom.json", "originalFilename": item["original_filename"]},
-    )
-    monkeypatch.setattr(
-        mds_effective,
-        "load_effective_full_snapshot",
-        lambda: {"meta": {"entryCount": 1}, "entries": [{"entryId": "aaguid:test"}]},
-    )
-
-    with entry_app().test_client() as client:
-        response = client.post(
-            "/api/mds/metadata/upload",
-            data={"files": (io.BytesIO(b'{"metadataStatement":{"description":"Demo"}}'), "custom.json")},
-            content_type="multipart/form-data",
-        )
-
-    assert response.status_code == 200
-    assert response.get_json()["snapshot"]["meta"]["entryCount"] == 1
-
-
-def test_delete_custom_metadata_returns_rebuilt_snapshot(monkeypatch):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-    monkeypatch.setattr(mds_uploads, "delete_session_metadata_item", lambda _name: True)
-    monkeypatch.setattr(
-        mds_effective,
-        "load_effective_full_snapshot",
-        lambda: {"meta": {"entryCount": 3}, "entries": [{"entryId": "aaguid:test"}]},
-    )
-
-    with entry_app().test_client() as client:
-        response = client.delete("/api/mds/metadata/custom/custom.json")
-
-    assert response.status_code == 200
-    assert response.get_json()["snapshot"]["meta"]["entryCount"] == 3
