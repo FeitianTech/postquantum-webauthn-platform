@@ -542,10 +542,8 @@ def test_the_test_run_never_logs_to_github():
 def test_record_registration_event_disabled(monkeypatch):
     monkeypatch.setenv("ENABLE_GITHUB_LOGGING", "0")
 
-    def fail_upload(*_args, **_kwargs):
-        raise AssertionError("github_upload_json should not be called when logging is disabled")
-
-    monkeypatch.setattr(github_mirror, "github_upload_json", fail_upload)
+    uploads = []
+    monkeypatch.setattr(github_mirror, "github_upload_json", lambda *args, **kwargs: uploads.append(args))
 
     event = github_mirror.RegistrationEvent(
         timestamp=datetime(2025, 10, 23, 9, 41, 10, tzinfo=timezone.utc),
@@ -556,6 +554,8 @@ def test_record_registration_event_disabled(monkeypatch):
     )
 
     github_mirror.record_registration_event(event)
+
+    assert uploads == []
 
 
 def test_record_registration_event_uploads_inline_on_cloud_run(monkeypatch, caplog):

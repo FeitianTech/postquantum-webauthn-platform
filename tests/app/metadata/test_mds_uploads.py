@@ -161,3 +161,11 @@ def test_an_upload_without_its_times_is_shown_with_its_name_only():
 def test_no_session_names_no_directory():
     # Every caller has a session by then; a direct call gives it none.
     assert mds_uploads._session_metadata_directory("") is None
+
+
+def test_an_emptied_namespace_that_cannot_be_pruned_still_has_its_upload_deleted(storage, monkeypatch):
+    stored = _stored(storage)
+    monkeypatch.setattr(session_metadata, "prune_session", _fail)
+
+    assert mds_uploads.delete_session_metadata_item(stored, session_id=SESSION) is True
+    assert not (storage / SESSION / stored).exists()

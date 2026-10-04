@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 import time
 
@@ -50,7 +51,7 @@ def test_start_background_warmup_disabled_does_nothing(monkeypatch):
     assert startup.start_background_warmup() is None
 
 
-def test_run_background_warmup_survives_failures(monkeypatch):
+def test_run_background_warmup_survives_failures(monkeypatch, caplog):
     monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
     monkeypatch.setattr(
         startup.cloud,
@@ -63,7 +64,12 @@ def test_run_background_warmup_survives_failures(monkeypatch):
         lambda: (_ for _ in ()).throw(RuntimeError("no metadata")),
     )
 
-    startup._run_background_warmup()
+    with caplog.at_level(logging.WARNING, logger=startup.__name__):
+        startup._run_background_warmup()
+
+    warnings = [record.getMessage() for record in caplog.records if record.name == startup.__name__]
+    assert "Background cloud storage warm-up failed." in warnings
+    assert "Background metadata warm-up failed." in warnings
 
 
 def test_a_snapshot_that_cannot_be_provisioned_is_logged_and_the_warmup_goes_on(monkeypatch, caplog):

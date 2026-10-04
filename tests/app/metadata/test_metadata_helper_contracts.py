@@ -7,7 +7,6 @@ from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
 from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
-from server.app.storage import session_metadata
 
 
 def _entry_payload(*, aaguid: str, description: str):
@@ -120,14 +119,3 @@ def test_cache_cleaning_and_formatting_helpers():
     iso_value = mds_files.format_last_modified("Wed, 21 Oct 2015 07:28:00 GMT")
     assert iso_value == "2015-10-21T07:28:00+00:00"
     assert mds_files.format_last_modified("not-a-date") == "not-a-date"
-
-
-def test_a_prune_that_fails_is_passed_over(monkeypatch, tmp_path):
-    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(tmp_path / "session-metadata"))
-    monkeypatch.setattr(
-        session_metadata,
-        "prune_session",
-        lambda _sid: (_ for _ in ()).throw(RuntimeError("ignore prune errors")),
-    )
-
-    mds_uploads._prune_session_metadata_directory("session-1")
