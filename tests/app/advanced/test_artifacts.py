@@ -9,31 +9,6 @@ from tests.app.entry_app import entry_app
 from ..storage import fake_gcs
 
 
-def test_bulk_credential_artifact_route_returns_requested_items(monkeypatch):
-    monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: "session-id")
-
-    def _load(storage_id, *, session_id=None):
-        assert session_id == "session-id"
-        if storage_id == "cred-1":
-            return {"registrationDetailSnapshot": {"html": "<p>ready</p>"}}
-        return None
-
-    monkeypatch.setattr(credential_artifacts, "load_credential_artifact", _load)
-
-    with entry_app().test_client() as client:
-        response = client.post(
-            "/api/advanced/credential-artifacts/bulk",
-            json={"storageIds": ["cred-1", "missing", "cred-1"]},
-        )
-
-    assert response.status_code == 200
-    assert response.get_json() == {
-        "artifacts": {
-            "cred-1": {"registrationDetailSnapshot": {"html": "<p>ready</p>"}}
-        }
-    }
-
-
 def test_bulk_credential_artifact_route_requires_array(monkeypatch):
     monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: "session-id")
 
@@ -47,71 +22,6 @@ def test_bulk_credential_artifact_route_requires_array(monkeypatch):
     assert response.get_json()["error"] == "storageIds must be an array."
 
 
-def test_bulk_credential_artifact_route_trims_dedupes_and_ignores_invalid_ids(monkeypatch):
-    monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: "session-id")
-
-    observed_storage_ids = []
-
-    def _load(storage_id, *, session_id=None):
-        assert session_id == "session-id"
-        observed_storage_ids.append(storage_id)
-        if storage_id == "cred-1":
-            return {"storedCredential": {"id": "cred-1"}}
-        if storage_id == "cred-2":
-            return {"storedCredential": {"id": "cred-2"}}
-        return None
-
-    monkeypatch.setattr(credential_artifacts, "load_credential_artifact", _load)
-
-    with entry_app().test_client() as client:
-        response = client.post(
-            "/api/advanced/credential-artifacts/bulk",
-            json={
-                "storageIds": ["  cred-1  ", "", "   ", None, 123, "cred-2", "cred-1"],
-            },
-        )
-
-    assert response.status_code == 200
-    assert observed_storage_ids == ["cred-1", "cred-2"]
-    assert response.get_json() == {
-        "artifacts": {
-            "cred-1": {"storedCredential": {"id": "cred-1"}},
-            "cred-2": {"storedCredential": {"id": "cred-2"}},
-        }
-    }
-
-
-def test_get_credential_artifact_route_returns_payload(monkeypatch):
-    monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: "session-id")
-    monkeypatch.setattr(
-        credential_artifacts,
-        "load_credential_artifact",
-        lambda storage_id, *, session_id=None: (
-            {"storedCredential": {"id": storage_id}} if session_id == "session-id" else None
-        )
-    )
-
-    with entry_app().test_client() as client:
-        response = client.get("/api/advanced/credential-artifacts/cred-1")
-
-    assert response.status_code == 200
-    assert response.get_json() == {
-        "storageId": "cred-1",
-        "artifact": {"storedCredential": {"id": "cred-1"}},
-    }
-
-
-def test_get_credential_artifact_route_returns_404_when_missing(monkeypatch):
-    monkeypatch.setattr(visitor_session, "current_id", lambda **_kwargs: "session-id")
-    monkeypatch.setattr(credential_artifacts, "load_credential_artifact", lambda *_args, **_kwargs: None)
-
-    with entry_app().test_client() as client:
-        response = client.get("/api/advanced/credential-artifacts/missing")
-
-    assert response.status_code == 404
-    assert response.get_json() == {"error": "Credential artifact not found."}
-
-
 def test_put_credential_artifact_route_requires_object_payload(monkeypatch):
     with entry_app().test_client() as client:
         response = client.put(
@@ -121,66 +31,6 @@ def test_put_credential_artifact_route_requires_object_payload(monkeypatch):
 
     assert response.status_code == 400
     assert response.get_json() == {"error": "Artifact payload must be an object."}
-
-
-def test_put_credential_artifact_route_defaults_merge_true(monkeypatch):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-
-    captured = {}
-
-    def _store(storage_id, payload, *, merge=False, session_id=None):
-        captured["storage_id"] = storage_id
-        captured["payload"] = payload
-        captured["merge"] = merge
-        captured["session_id"] = session_id
-        return True
-
-    monkeypatch.setattr(credential_artifacts, "store_credential_artifact", _store)
-
-    with entry_app().test_client() as client:
-        response = client.put(
-            "/api/advanced/credential-artifacts/cred-1",
-            json={"artifact": {"registrationDetailSnapshot": {"html": "<p>x</p>"}}},
-        )
-
-    assert response.status_code == 200
-    assert response.get_json() == {"status": "OK"}
-    assert captured == {
-        "storage_id": "cred-1",
-        "payload": {"registrationDetailSnapshot": {"html": "<p>x</p>"}},
-        "merge": True,
-        "session_id": "session-id",
-    }
-
-
-def test_put_credential_artifact_route_supports_payload_alias_and_merge_override(monkeypatch):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-
-    captured = {}
-
-    def _store(storage_id, payload, *, merge=False, session_id=None):
-        captured["storage_id"] = storage_id
-        captured["payload"] = payload
-        captured["merge"] = merge
-        captured["session_id"] = session_id
-        return True
-
-    monkeypatch.setattr(credential_artifacts, "store_credential_artifact", _store)
-
-    with entry_app().test_client() as client:
-        response = client.put(
-            "/api/advanced/credential-artifacts/cred-2",
-            json={"payload": {"storedCredential": {"id": "cred-2"}}, "merge": False},
-        )
-
-    assert response.status_code == 200
-    assert response.get_json() == {"status": "OK"}
-    assert captured == {
-        "storage_id": "cred-2",
-        "payload": {"storedCredential": {"id": "cred-2"}},
-        "merge": False,
-        "session_id": "session-id",
-    }
 
 
 def test_put_credential_artifact_route_returns_400_when_store_fails(monkeypatch):
@@ -249,38 +99,6 @@ def test_a_blank_artifact_id_is_refused():
 
     assert response.status_code == 400
     assert response.get_json() == {"status": "failed", "error": "Invalid storage identifier."}
-
-
-def test_put_snapshot_route_stores_snapshot_using_merge(monkeypatch):
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-
-    captured = {}
-
-    def _store(storage_id, payload, *, merge=False, session_id=None):
-        captured["storage_id"] = storage_id
-        captured["payload"] = payload
-        captured["merge"] = merge
-        captured["session_id"] = session_id
-        return True
-
-    monkeypatch.setattr(credential_artifacts, "store_credential_artifact", _store)
-
-    snapshot = {"html": "<section>snapshot</section>"}
-
-    with entry_app().test_client() as client:
-        response = client.put(
-            "/api/advanced/credential-artifacts/cred-5/snapshot",
-            json={"snapshot": snapshot},
-        )
-
-    assert response.status_code == 200
-    assert response.get_json() == {"status": "OK"}
-    assert captured == {
-        "storage_id": "cred-5",
-        "payload": {"registrationDetailSnapshot": snapshot},
-        "merge": True,
-        "session_id": "session-id",
-    }
 
 
 @pytest.mark.parametrize(
@@ -373,3 +191,27 @@ def test_the_visitors_artifacts_are_never_cached_and_keyed_on_the_cookie(advance
 
     assert response.headers["Cache-Control"] == "no-store"
     assert "Cookie" in response.headers["Vary"]
+
+
+def test_an_artifact_is_stored_merged_snapshotted_read_and_deleted_in_the_visitors_store(advanced_stores):
+    base = "/api/advanced/credential-artifacts"
+    client = entry_app().test_client()
+
+    assert client.put(f"{base}/cred-1", json={"artifact": {"storedCredential": {"id": "cred-1"}}}).get_json() == {"status": "OK"}
+    # Merged by default, under either name.
+    assert client.put(f"{base}/cred-1", json={"payload": {"note": 1}}).status_code == 200
+    assert client.put(f"{base}/cred-1/snapshot", json={"snapshot": {"view": 1}}).status_code == 200
+    stored = {"note": 1, "registrationDetailSnapshot": {"view": 1}, "storedCredential": {"id": "cred-1"}}
+    assert client.get(f"{base}/cred-1").get_json() == {"storageId": "cred-1", "artifact": stored}
+    # Bulk: each id once, trimmed; what is missing or no id is left out.
+    bulk = client.post(f"{base}/bulk", json={"storageIds": [" cred-1 ", "missing", "cred-1", 5]})
+    assert bulk.get_json() == {"artifacts": {"cred-1": stored}}
+    # Another visitor's client sees none of it.
+    assert entry_app().test_client().post(f"{base}/bulk", json={"storageIds": ["cred-1"]}).get_json() == {"artifacts": {}}
+
+    assert client.put(f"{base}/cred-1", json={"artifact": {"only": True}, "merge": False}).status_code == 200
+    assert client.get(f"{base}/cred-1").get_json()["artifact"] == {"only": True}
+
+    assert client.delete(f"{base}/cred-1").get_json() == {"status": "deleted"}
+    assert client.delete(f"{base}/cred-1").get_json() == {"status": "absent"}
+    assert client.get(f"{base}/cred-1").status_code == 404
