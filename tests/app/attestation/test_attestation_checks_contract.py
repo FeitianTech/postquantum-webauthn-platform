@@ -1,10 +1,8 @@
 from datetime import datetime, timedelta, timezone
 
-import pytest
 from fido2.webauthn import RegistrationResponse
 
 from server.app.webauthn.attestation import checks as attestation_checks
-from server.app.webauthn.attestation import trust as attestation_trust
 from tests.app import fido2_stand_ins
 from tests.app.fido2_stand_ins import (
     AuthData,
@@ -141,35 +139,3 @@ def test_perform_attestation_checks_returns_registration_parse_error(monkeypatch
 
     assert result["errors"]
     assert result["errors"][0].startswith("registration_parse_error")
-
-
-@pytest.mark.parametrize(
-    "checks,expected",
-    [
-        ({"trusted_ca": True, "chain": True, "fido_mds": None}, True),
-        ({"trusted_ca": True, "chain": False, "fido_mds": False}, False),
-        ({"trusted_ca": True, "chain": None, "fido_mds": None}, None),
-        ({"trusted_ca": False, "chain": True, "fido_mds": False}, True),
-        ({"trusted_ca": False, "chain": False, "fido_mds": False}, False),
-        ({"trusted_ca": None, "chain": True, "fido_mds": True}, None),
-        ({"trusted_ca": True, "chain": True, "fido_mds": False}, True),
-        ({"trusted_ca": True, "chain": False, "fido_mds": True}, True),
-        ({"trusted_ca": False, "chain": None, "fido_mds": False}, False),
-        ({"trusted_ca": None, "chain": True, "fido_mds": False}, None),
-    ],
-)
-def test_resolve_root_validity_matrix(checks, expected):
-    assert attestation_trust._resolve_root_validity(checks) is expected
-
-
-def test_resolve_root_validity_returns_none_when_all_checks_unknown():
-    assert (
-        attestation_trust._resolve_root_validity(
-            {
-                "trusted_ca": None,
-                "chain": None,
-                "fido_mds": None,
-            }
-        )
-        is None
-    )

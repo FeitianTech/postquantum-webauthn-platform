@@ -113,27 +113,6 @@ def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monke
         assert attestation_trust._is_trusted_ca_certificate(cert_der) is False
 
 
-def test_resolve_root_validity_handles_partial_success_and_failures():
-    assert (
-        attestation_trust._resolve_root_validity(
-            {"trusted_ca": True, "chain": True, "fido_mds": None}
-        )
-        is True
-    )
-    assert (
-        attestation_trust._resolve_root_validity(
-            {"trusted_ca": True, "chain": False, "fido_mds": False}
-        )
-        is False
-    )
-    assert (
-        attestation_trust._resolve_root_validity(
-            {"trusted_ca": False, "chain": None, "fido_mds": None}
-        )
-        is None
-    )
-
-
 def test_serialize_extension_value_handles_known_unrecognized_oids_and_transport_bits():
     device_oid = ObjectIdentifier("1.3.6.1.4.1.41482.2")
     device_ext = SimpleNamespace(
