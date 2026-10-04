@@ -177,10 +177,7 @@ def initialize_registration_context(reg: SimpleRegistration) -> None:
         getattr(reg.auth_data.credential_data, "public_key", {}),
     )
 
-    if reg.parsed_attestation_object:
-        credential_info["attestation_object_decoded"] = json_values.make_json_safe(
-            reg.parsed_attestation_object
-        )
+    credential_info["attestation_object_decoded"] = json_values.make_json_safe(reg.parsed_attestation_object)
 
     if reg.attestation_certificates_details:
         credential_info["attestationCertificates"] = reg.attestation_certificates_details

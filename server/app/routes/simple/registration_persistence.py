@@ -51,10 +51,8 @@ def _build_credential_entry(reg: SimpleRegistration) -> dict[str, Any]:
         "registration_response": reg.credential_info.get("registration_response"),
     }
 
-    if reg.parsed_attestation_object:
-        credential_entry["attestation_object_decoded"] = json_values.make_json_safe(
-            reg.parsed_attestation_object
-        )
+    # The attestation object fido2 verified: extracting the registration never fails after that.
+    credential_entry["attestation_object_decoded"] = json_values.make_json_safe(reg.parsed_attestation_object)
     return credential_entry
 
 
