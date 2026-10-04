@@ -7,10 +7,13 @@ import { forgetExplorerList } from '@/logic/mds/explorer/loading.js';
 import { StandInPublicKeyCredential } from '@/test/logic/simple/ceremony-answers.js';
 
 // findBy* and waitFor give up after one second by default. The Cloud Build gate
-// runs this suite about ten times slower than GitHub's runner (vitest.config.mts),
-// where the MDS entry and certificate pages' fetch-then-render took longer than
-// that on 2026-09-27. A query still resolves as soon as its element appears.
-configure({ asyncUtilTimeout: 10_000 });
+// runs this suite about ten times slower than GitHub's runner (vitest.config.mts).
+// There a test that renders the whole app (src/test/app.tsx) waits for the shell, a
+// section, its fetch and its render: under that load, reproduced locally on
+// 2026-10-03, one such wait took 12 s and a test 26 s. A query still resolves as
+// soon as its element appears; one that never does fails after 30 s, inside the
+// components project's 60 s a test.
+configure({ asyncUtilTimeout: 30_000 });
 
 // jsdom has no layout, no media queries and no observers: give the components
 // what they call, and let each test say what it needs.

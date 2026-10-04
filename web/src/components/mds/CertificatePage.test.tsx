@@ -1,7 +1,7 @@
 // An MDS entry's attestation root certificate through the whole
 // page: the button, the decode, the URL (#mds/<entryId>/certificate/<n>), the
 // page, and Back to the entry.
-import { act, configure, getConfig, screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { AppShell } from '@/components/shell/AppShell';
@@ -44,15 +44,6 @@ function renderApp(hash: string, decodeRoute = () => json({ details: DETAILS }) 
 
 const decodeCalls = (fetch: ReturnType<typeof stubFetch>) =>
   fetch.mock.calls.filter(([url]) => String(url) === '/api/mds/decode-certificate');
-
-// Each test renders the whole app first: the shell, the MDS chunk, the list, the entry
-// and its certificate. Under the Cloud Build gate's load that first render took 11.4 s
-// on 2026-10-03, past setup.ts's 10 s, so this file's queries wait up to 30 s, still
-// inside the components project's 60 s a test. A query resolves as soon as its element
-// appears.
-const { asyncUtilTimeout } = getConfig();
-beforeAll(() => configure({ asyncUtilTimeout: 30_000 }));
-afterAll(() => configure({ asyncUtilTimeout }));
 
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
