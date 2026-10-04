@@ -77,19 +77,6 @@ def test_local_cleanup_removes_only_stale_non_hidden_sessions(session_metadata_d
     assert hidden_dir.exists() is True
 
 
-def test_local_cleanup_respects_cleanup_interval_guard(session_metadata_dir, monkeypatch):
-    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
-    monkeypatch.setattr(visitor_session, "CLEANUP", visitor_session.CleanupState(last_run=2_000.0))
-
-    monkeypatch.setattr(
-        session_store.os,
-        "listdir",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("listdir should not run")),
-    )
-
-    visitor_session._maybe_cleanup(now=2_500.0)
-
-
 def test_deleting_the_last_upload_keeps_the_namespaces_other_stores_on_cloud_storage(monkeypatch):
     bucket = fake_gcs.install(monkeypatch, "every store")
     credentials = storage_common.session_prefix("session-gcs", "credentials") + "/user@example.com_credential_data.json"

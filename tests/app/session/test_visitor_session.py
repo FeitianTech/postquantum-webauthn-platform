@@ -16,6 +16,7 @@ import pytest
 from flask import session
 
 from server.app import visitor_session
+from server.app.storage import common as storage_common
 from server.app.storage import session_metadata
 from tests.app import visitor_namespace
 from tests.app.entry_app import entry_app
@@ -313,3 +314,20 @@ def test_a_sweep_that_cannot_list_the_namespaces_deletes_nothing(fast_cleanup_in
     visitor_session._maybe_cleanup(now=2_000_000.0)
 
     assert visitor_session.CLEANUP.last_run == 2_000_000.0
+
+
+def test_a_sweep_waits_out_its_interval_after_the_last_one(monkeypatch, tmp_path, metadata_state):
+    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(tmp_path))
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
+    session_metadata.touch_last_access("idle", timestamp=100.0)
+    last_run = 2_000_000.0
+    monkeypatch.setattr(visitor_session, "CLEANUP", visitor_session.CleanupState(last_run=last_run))
+
+    visitor_session._maybe_cleanup(now=last_run + visitor_session.CLEANUP_INTERVAL.total_seconds() - 1)
+
+    assert session_metadata.list_sessions() == ["idle"]
+    assert visitor_session.CLEANUP.last_run == last_run
+
+    visitor_session._maybe_cleanup(now=last_run + visitor_session.CLEANUP_INTERVAL.total_seconds())
+
+    assert session_metadata.list_sessions() == []
