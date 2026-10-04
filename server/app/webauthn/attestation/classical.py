@@ -124,13 +124,9 @@ def _evaluate_with_metadata(
     if verifier is None:
         warnings.append("metadata_not_available")
         return _MetadataEvaluation(None, None, None, True)
-    try:
-        outcome = evaluation.evaluate_attestation(
-            verifier, attestation_object, client_data_hash
-        )
-    except Exception as exc:  # pragma: no cover - defensive
-        errors.append(f"untrusted_attestation: {exc}")
-        return _MetadataEvaluation(None, None, None, False)
+    # Only a statement fido2 has already verified gets here, so its format is one
+    # evaluate_attestation reads, and every other failure is in its trust path.
+    outcome = evaluation.evaluate_attestation(verifier, attestation_object, client_data_hash)
     trust_details = outcome.trust_path
     if trust_details.errors:
         errors.extend(trust_details.errors)

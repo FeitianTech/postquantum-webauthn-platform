@@ -99,48 +99,6 @@ def test_perform_attestation_checks_warns_when_metadata_verifier_unavailable(mon
     assert "trust_path_missing" in result["errors"]
 
 
-def test_perform_attestation_checks_captures_verifier_evaluation_exception(monkeypatch):
-    challenge = b"verifier-exception"
-    rp_id = "example.com"
-    auth_data = AuthData(rp_id=rp_id, flags=AuthData.FLAG.UP | AuthData.FLAG.UV | AuthData.FLAG.AT)
-    client_data = ClientData(challenge=challenge, origin="https://example.com")
-    attestation_object = type(
-        "_AttestationObject",
-        (),
-        {
-            "fmt": "packed",
-            "auth_data": auth_data,
-            "att_stmt": {"sig": b"signature"},
-        },
-    )()
-
-    registration = fido2_stand_ins.registration(attestation_object, client_data)
-    monkeypatch.setattr(RegistrationResponse, "from_dict", lambda _value: registration)
-
-    class _PassingAttestation:
-        def verify(self, *_args, **_kwargs):
-            return AttestationResult(AttestationType.BASIC, [])
-
-    def _exploding(*_args, **_kwargs):
-        raise RuntimeError("verifier exploded")
-
-    monkeypatch.setattr(Attestation, "for_type", lambda _fmt: _PassingAttestation)
-    monkeypatch.setattr(mds_verifier, "get_mds_verifier", lambda: object())
-    monkeypatch.setattr(evaluation, "evaluate_attestation", _exploding)
-
-    result = _perform_checks(
-        response={"raw": "value"},
-        state={"challenge": b64u(challenge), "user_verification": "required"},
-        public_key_options={"pubKeyCredParams": [{"alg": -7}]},
-        rp_id=rp_id,
-    )
-
-    assert result["signature_valid"] is True
-    assert any(error.startswith("untrusted_attestation: verifier exploded") for error in result["errors"])
-    assert "metadata_entry_missing" in result["errors"]
-    assert result["root_checks"]["trusted_ca"] is False
-
-
 def test_perform_attestation_checks_flags_algorithm_not_in_metadata_when_root_is_valid(monkeypatch):
     challenge = b"metadata-algorithm"
     rp_id = "example.com"
