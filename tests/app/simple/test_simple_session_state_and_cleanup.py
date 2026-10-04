@@ -1,7 +1,4 @@
-import time
-from types import SimpleNamespace
 
-from server.app.config import relying_party
 from server.app.routes.simple import parsing as simple_parsing
 from server.app.webauthn.attestation import certificates as attestation_certificates
 from tests.app.entry_app import entry_app
@@ -64,44 +61,3 @@ def test_authenticate_complete_invalid_request_state_fallback_returns_400(monkey
         with client.session_transaction() as session_state:
             assert "authenticate_rp_id" not in session_state
             assert session_state.get("simple_credentials_email") == "user@example.com"
-
-
-def test_authenticate_complete_malformed_authenticator_data_is_rejected(monkeypatch):
-    credential_id = b"simple-auth-no-sign-count"
-
-    class _FakeServer:
-        def authenticate_complete(self, *_args, **_kwargs):
-            return SimpleNamespace(credential_id=credential_id)
-
-    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
-    monkeypatch.setattr(
-        simple_parsing,
-        "_parse_client_credentials",
-        lambda _raw: ([object()], [{"credentialId": b64u(credential_id)}])
-    )
-
-    with entry_app().test_client() as client:
-        with client.session_transaction() as session_state:
-            keep_simple_credentials(session_state, [{"credentialId": b64u(credential_id)}])
-            session_state["state"] = {"challenge": "auth-state", "issued_at": time.time()}
-            session_state["authenticate_rp_id"] = "example.com"
-            session_state["simple_credentials_email"] = "user@example.com"
-
-        response = client.post(
-            "/api/authenticate/complete?email=user@example.com",
-            json=simple_complete_body(
-                {"rawId": b64u(credential_id), "response": {"authenticatorData": "not-valid-base64url"}},
-                [{"credentialId": b64u(credential_id)}],
-            ),
-        )
-
-        # An unreadable counter cannot pass the signCount check.
-        assert response.status_code == 400
-        payload = response.get_json()
-        assert payload.get("status") != "OK"
-        assert "signature counter could not be read" in payload["error"]
-        assert "signCount" not in payload
-
-        with client.session_transaction() as session_state:
-            assert "simple_credentials_email" not in session_state
-            assert "authenticate_rp_id" not in session_state

@@ -24,6 +24,7 @@ from .ceremony_helpers import (
     authenticate_simple,
     b64u,
     register_simple,
+    simple_complete_body,
     unb64u,
 )
 
@@ -202,12 +203,46 @@ def test_simple_counter_with_base64url_only_characters_is_read_correctly(credent
     assert credential_store(authenticator.credential_id) == counter
 
 
+def _in_the_standard_alphabet(assertion):
+    """``assertion`` with its authenticatorData in standard base64: fido2 still reads it, the counter's reader does not."""
+
+    auth_data = assertion["response"]["authenticatorData"]
+    assert "-" in auth_data
+    assertion["response"]["authenticatorData"] = auth_data.replace("-", "+").replace("_", "/")
+    return assertion
+
+
+def test_simple_authenticator_data_not_in_base64url_is_refused_its_counter_unread(credential_store):
+    authenticator = Authenticator()
+    client = entry_app().test_client()
+    _register(client, authenticator, counter=0)
+    entry = authenticator.stored_credential_entry()
+    query = f"?email={EMAIL}"
+    begin = client.post(f"/api/authenticate/begin{query}", json={"credentials": [entry]})
+    challenge = unb64u(begin.get_json()["publicKey"]["challenge"])
+    assertion = _in_the_standard_alphabet(assertion_payload(authenticator, challenge=challenge, counter=0xFBEFBE01))
+
+    response = client.post(
+        f"/api/authenticate/complete{query}",
+        json=simple_complete_body(assertion, [entry]),
+        headers={"Origin": ORIGIN},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "error": "The signature counter could not be read from the authenticator data, so authentication was rejected."
+    }
+    assert credential_store(authenticator.credential_id) == 0
+    with client.session_transaction() as session_state:
+        assert "simple_credentials_email" not in session_state
+
+
 # --------------------------------------------------------------------------
 # ADVANCED flow -- permissive, but reports the counter verdict honestly.
 # --------------------------------------------------------------------------
 
 
-def _advanced_authenticate(authenticator, *, stored_sign_count, counter):
+def _advanced_authenticate(authenticator, *, stored_sign_count, counter, rewrite=lambda assertion: assertion):
     stored_entry = authenticator.stored_credential_entry(declared_algorithm=-7)
     if stored_sign_count is not None:
         stored_entry["signCount"] = stored_sign_count
@@ -228,9 +263,7 @@ def _advanced_authenticate(authenticator, *, stored_sign_count, counter):
         json={
             "publicKey": {"challenge": {"$base64url": b64u(challenge)}},
             "__storedCredentials": [stored_entry],
-            "__assertion_response": assertion_payload(
-                authenticator, challenge=challenge, counter=counter
-            ),
+            "__assertion_response": rewrite(assertion_payload(authenticator, challenge=challenge, counter=counter)),
         },
         headers={"Origin": ORIGIN},
     )
@@ -291,3 +324,13 @@ def test_the_stored_counter_is_the_last_authentications(credential_store):
 
     # Not 5, the counter the authenticator reported at registration.
     assert credential_store(authenticator.credential_id) == 9
+
+
+def test_advanced_authenticator_data_not_in_base64url_reports_no_counter():
+    response = _advanced_authenticate(
+        Authenticator(), stored_sign_count=None, counter=0xFBEFBE01, rewrite=_in_the_standard_alphabet
+    )
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["status"] == "OK"
+    assert "signCount" not in response.get_json()
