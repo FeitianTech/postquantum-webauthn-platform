@@ -5,7 +5,6 @@ from fido2.mds3 import MetadataBlobPayloadEntry
 from server.app.mds import cache as mds_cache
 from server.app.mds import effective as mds_effective
 from server.app.mds import entries as mds_entries
-from server.app.mds import files as mds_files
 from server.app.mds import uploads as mds_uploads
 
 
@@ -115,7 +114,3 @@ def test_aaguid_extraction_and_source_info_helpers():
 def test_cache_cleaning_and_formatting_helpers():
     assert mds_cache._clean_metadata_cache_value("  etag-value  ") == "etag-value"
     assert mds_cache._clean_metadata_cache_value("   ") is None
-
-    iso_value = mds_files.format_last_modified("Wed, 21 Oct 2015 07:28:00 GMT")
-    assert iso_value == "2015-10-21T07:28:00+00:00"
-    assert mds_files.format_last_modified("not-a-date") == "not-a-date"

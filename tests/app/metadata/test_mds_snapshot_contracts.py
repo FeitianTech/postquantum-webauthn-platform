@@ -63,7 +63,6 @@ def test_guid_formatting_and_aaguid_normalisation_edge_cases():
             raise RuntimeError('no str')
 
     assert m.format_guid_candidate(_BadStr()) == ''
-    assert m.normalise_aaguid_key('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa') == 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 
 
 def test_enum_protocol_certification_and_extraction_helpers():

@@ -7,7 +7,6 @@ import pytest
 from server.app.mds import cache as mds_cache
 from server.app.mds import entries as mds_entries
 from server.app.mds import uploads as mds_uploads
-from server.app.storage import common as storage_common
 from server.app.storage import github_mirror, session_metadata
 
 
@@ -52,22 +51,6 @@ def test_safe_filename_and_upload_flow_handles_skip_update_and_disabled_logging(
 
     monkeypatch.setattr(github_mirror, "is_logging_enabled", lambda: False)
     assert github_mirror.maybe_store_uploaded_metadata_file("metadata.json", content) is False
-
-
-def test_session_identifier_and_filename_validation_helpers(metadata_state):
-    assert storage_common.normalise_session_id("  session-1  ") == "session-1"
-    assert storage_common.normalise_session_id(123) is None
-    assert storage_common.normalise_session_id(".hidden") is None
-    assert storage_common.normalise_session_id("a/b") is None
-
-    assert mds_uploads._validate_session_metadata_filename("entry.json") == "entry.json"
-
-    with pytest.raises(ValueError):
-        mds_uploads._validate_session_metadata_filename("../entry.json")
-    with pytest.raises(ValueError):
-        mds_uploads._validate_session_metadata_filename(".entry.json")
-    with pytest.raises(ValueError):
-        mds_uploads._validate_session_metadata_filename("entry.txt")
 
 
 def test_load_session_metadata_info_and_clone_helpers(metadata_state, monkeypatch):

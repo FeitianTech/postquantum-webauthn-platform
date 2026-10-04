@@ -18,6 +18,7 @@ def test_normalise_session_identifier_accepts_clean_value_and_rejects_invalid_sh
         )
         == "550e8400-e29b-41d4-a716-446655440000"
     )
+    assert storage_common.normalise_session_id("  session-1  ") == "session-1"
     assert storage_common.normalise_session_id("   ") is None
     assert storage_common.normalise_session_id(".hidden") is None
     assert storage_common.normalise_session_id(123) is None

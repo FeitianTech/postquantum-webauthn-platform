@@ -42,6 +42,14 @@ def test_an_upload_is_kept_in_the_namespaces_metadata_folder_and_marks_its_last_
     assert session_store.file_mtime(SESSION, "missing.json") is None
 
 
+def test_an_upload_name_that_is_only_slashes_names_no_object(bucket):
+    for name in ("", "///"):
+        with pytest.raises(ValueError, match="Invalid metadata filename"):
+            session_store.read_file(SESSION, name)
+
+    assert bucket.objects == {}
+
+
 def test_a_namespace_is_ensured_by_marking_its_last_access(bucket):
     session_store.ensure_session(SESSION)
 
