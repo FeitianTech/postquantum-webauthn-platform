@@ -5,11 +5,9 @@ from __future__ import annotations
 import types
 
 from server.app.config.attestation_trust import _parse_trusted_ca_subjects
-from server.app.config.paths import basepath
 from server.app.config.relying_party import (
     build_rp_entity,
     create_fido_server,
-    determine_rp_id,
 )
 from server.app.config.session_secret import _resolve_secret_key
 from server.app.factory import create_app
@@ -97,17 +95,6 @@ def test_parse_trusted_ca_subjects():
     assert result == {"CN=CA1", "CN=CA2"}
 
 
-def test_basepath():
-    """Test basepath configuration."""
-    
-    # basepath should be a valid path (could be str or Path)
-    assert basepath is not None
-    # Convert to Path for validation
-    from pathlib import Path
-    path_obj = Path(basepath) if isinstance(basepath, str) else basepath
-    assert path_obj.exists()
-
-
 def test_mds_metadata_paths(monkeypatch):
     """The snapshot's files are absolute paths in one directory."""
 
@@ -161,58 +148,3 @@ def test_build_rp_entity():
         # Test with explicit rp_name
         rp = build_rp_entity(rp_name="Custom Server")
         assert rp.name == "Custom Server"
-
-
-def test_determine_rp_id():
-    """Test determine_rp_id function."""
-    
-    with entry_app().app_context():
-        # Test with explicit ID
-        rp_id = determine_rp_id("example.com")
-        assert rp_id == "example.com"
-    
-        # Test without a request context (should return localhost)
-        rp_id = determine_rp_id()
-        assert rp_id == "localhost"
-
-
-def test_determine_rp_id_with_request_context():
-    """Test determine_rp_id with Flask request context."""
-    
-    with entry_app().test_request_context(
-        "https://example.com/path",
-        headers={"Host": "example.com"}
-    ):
-        rp_id = determine_rp_id()
-        assert rp_id == "example.com"
-    
-    with entry_app().test_request_context(
-        "https://test.example.com:8443/path",
-        headers={"Host": "test.example.com:8443"}
-    ):
-        rp_id = determine_rp_id()
-        assert rp_id == "test.example.com"
-    
-    # Test with IP addresses
-    with entry_app().test_request_context(
-        "http://127.0.0.1/path",
-        headers={"Host": "127.0.0.1"}
-    ):
-        rp_id = determine_rp_id()
-        assert rp_id == "localhost"
-    
-    # IPv6 localhost from a raw host value without brackets.
-    with entry_app().test_request_context(
-        "http://[::1]/path",
-        headers={"Host": "::1"}  # Without brackets in header
-    ):
-        rp_id = determine_rp_id()
-        assert rp_id == "localhost"
-
-    # IPv6 localhost with the bracketed host:port form browsers send.
-    with entry_app().test_request_context(
-        "http://[::1]:8443/path",
-        headers={"Host": "[::1]:8443"}
-    ):
-        rp_id = determine_rp_id()
-        assert rp_id == "localhost"

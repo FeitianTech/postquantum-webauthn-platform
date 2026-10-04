@@ -56,11 +56,23 @@ def test_a_configured_allowlist_is_text_or_a_collection_of_origins(configured, a
     assert origins.allowed_origins_from_config({ALLOWLIST: configured}) == allowlist
 
 
-def test_only_an_allowlisted_origin_is_allowed(make_app):
+@pytest.mark.parametrize(
+    ("candidate", "allowed"),
+    [
+        ("https://a.example", True),
+        ("https://A.example:443", True),  # the default port, and the host in any case
+        ("https://a.example/some/path", True),  # a path is no part of an origin
+        ("http://a.example", False),  # the scheme must match
+        ("https://sub.a.example", False),  # no subdomain wildcard
+        ("https://a.example:8443", False),  # another port is another origin
+        ("https://b.example", False),
+        (None, False),
+        ("", False),
+    ],
+)
+def test_only_an_allowlisted_origin_is_allowed(make_app, candidate, allowed):
     with make_app({ALLOWLIST: ("https://a.example",)}).app_context():
-        assert origins.is_origin_allowed("https://A.example:443") is True
-        assert origins.is_origin_allowed("https://b.example") is False
-        assert origins.is_origin_allowed("") is False
+        assert origins.is_origin_allowed(candidate) is allowed
 
 
 def test_without_an_allowlist_every_origin_is_allowed(make_app):

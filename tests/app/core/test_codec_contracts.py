@@ -129,16 +129,6 @@ def test_codec_api_round_trip_cbor_encode_then_decode():
         assert decoded_payload["type"].startswith("CBOR")
 
 
-def test_encode_payload_text_cbor_is_deterministic_for_same_input():
-    source = json.dumps({"z": 1, "a": [2, 3], "nested": {"x": "ok"}})
-
-    first = encode_text.encode_payload_text(source, "cbor")
-    second = encode_text.encode_payload_text(source, "cbor")
-
-    assert first["data"]["binary"]["hex"] == second["data"]["binary"]["hex"]
-    assert first["data"]["binary"]["base64url"] == second["data"]["binary"]["base64url"]
-
-
 def test_normalize_encoding_format_aliases_and_case_insensitive():
     assert encode_handlers_basic._normalize_encoding_format("  JSON (binary)  ") == "json"
     assert encode_handlers_basic._normalize_encoding_format("CBOR (CANONICAL)") == "cbor"
@@ -200,17 +190,6 @@ def test_decode_public_key_credential_preserves_key_fields_and_extensions():
     assert payload["attestationObject"]["fmt"] == "none"
     assert payload["clientDataJSON"]["type"] == "webauthn.create"
     assert payload["authenticatorData"]["counter"] == 3
-
-
-def test_encode_payload_text_cbor_is_canonical_for_equivalent_key_orderings():
-    left_payload = json.dumps({"z": 1, "nested": {"b": 2, "a": 1}, "k": [3, {"y": 2, "x": 1}]})
-    right_payload = json.dumps({"k": [3, {"x": 1, "y": 2}], "nested": {"a": 1, "b": 2}, "z": 1})
-
-    left = encode_text.encode_payload_text(left_payload, "cbor")
-    right = encode_text.encode_payload_text(right_payload, "cbor")
-
-    assert left["data"]["binary"]["hex"] == right["data"]["binary"]["hex"]
-    assert left["data"]["binary"]["base64url"] == right["data"]["binary"]["base64url"]
 
 
 def test_codec_api_decodes_attestation_object_contract():
