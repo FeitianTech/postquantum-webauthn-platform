@@ -9,7 +9,6 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-from fido2.attestation import Attestation
 from fido2.webauthn import AuthenticatorData, RegistrationResponse
 
 from server.app.mds import verifier as mds_verifier
@@ -148,19 +147,6 @@ def test_an_attestation_statement_fido2_cannot_read_is_invalid(check):
 
     assert result["signature_valid"] is False
     assert any(error.startswith("attestation_invalid:") for error in result["errors"])
-
-
-def test_a_verifier_that_fails_unexpectedly_is_an_attestation_error(check, monkeypatch):
-    class _FailingVerifier:
-        def verify(self, _att_stmt, _auth_data, _client_data_hash):
-            raise RuntimeError("boom")
-
-    monkeypatch.setattr(Attestation, "for_type", lambda _fmt: _FailingVerifier)
-
-    result = check(state={"challenge": CHALLENGE}, attestation=stand_ins.attestation_object(fmt="packed"))
-
-    assert result["signature_valid"] is False
-    assert "attestation_error: boom" in result["errors"]
 
 
 # What fido2 never hands over -- a credential ID without a length, a public key it

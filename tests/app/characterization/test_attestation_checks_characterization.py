@@ -2,9 +2,9 @@
 
 A table of registration responses -- valid, tampered, wrongly typed, bound to the
 wrong origin, challenge or RP, missing UP, UV or the attested credential, using a
-disallowed algorithm or a broken COSE key, ML-DSA, and the captured attestation
-formats -- goes through the checks with no MDS verifier, and
-``_finalize_metadata_results`` gets fake metadata entries and verifiers. Every
+disallowed algorithm or a broken COSE key, a statement fido2 fails on, ML-DSA, and
+the captured attestation formats -- goes through the checks with no MDS verifier,
+and ``_finalize_metadata_results`` gets fake metadata entries and verifiers. Every
 result must equal ``golden/attestation-checks.json``.
 """
 from __future__ import annotations
@@ -13,17 +13,26 @@ import types
 import uuid
 
 import pytest
+from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
 from server.app.mds import verifier as mds_verifier
 from server.app.webauthn.attestation import checks
 from server.app.webauthn.attestation import checks as attestation_checks
 
-from ..security.ceremony_helpers import ORIGIN, RP_ID, b64u, client_data
+from ..security.ceremony_helpers import ORIGIN, RP_ID, b64u, client_data, unb64u
 from . import harness, material
 
 CHALLENGE = b"\x5a" * 32
 ES256_ONLY = {"pubKeyCredParams": [{"type": "public-key", "alg": -7}]}
+
+
+def _with_statement(payload, statement):
+    """``payload`` re-packed as a packed attestation holding ``statement``: fido2 reads it, then fails verifying it."""
+
+    attestation = cbor.decode(unb64u(payload["response"]["attestationObject"]))
+    payload["response"]["attestationObject"] = b64u(cbor.encode({"fmt": "packed", "attStmt": statement, "authData": attestation["authData"]}))
+    return payload
 
 
 def _cases():
@@ -66,6 +75,7 @@ def _cases():
         "options-challenge-text": (build(), None, {"challenge": "not a challenge at all"}),
         "no-challenge": (build(), None, None),
         "state-uv-enum": (build(user_verified=False), {"challenge": b64u(CHALLENGE), "user_verification": __import__("fido2.webauthn", fromlist=["x"]).UserVerificationRequirement.REQUIRED}, None),
+        "x5c-not-a-list": (_with_statement(build(), {"alg": -7, "sig": b"\x01", "x5c": "not a list"}), state, ES256_ONLY),
         "not-a-mapping": (["not", "a", "mapping"], state, None),
         "unparsable": ({"id": "x", "rawId": "x", "type": "public-key", "response": {}}, state, None),
     }
