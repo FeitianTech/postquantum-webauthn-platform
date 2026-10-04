@@ -244,17 +244,17 @@ bytes).
   and offsets, or the first offset that differs). Its `data.edn` is exact, and
   the EDN input gives its bytes back.
 
-The encoder never reads a plain map as a CTAP message.
-`encode/ctap_view_reader.py` is its one path from a view back to bytes, for
-format `CBOR` and for the CTAP/WebAuthn format alike: it takes `ctapDecoded`, or
-`expandedJson` beside a `ctap` whose `message` names it, reads the members by
-the spelling above, writes them in CTAP2 canonical form, and frames them exactly as `ctap` says -- the byte
-if `code` is one and none if it is null, then `trailingBytesHex`. It refuses by
-name a view without its `ctap`, a `ctapDecoded` whose message and `ctap.message`
-disagree, a member given twice, a label that names no member, and a view marked
-`notRebuildable` (pointing at `data.edn`). Anything else in format `CBOR` is
-generic CBOR, so `{"1": "a"}` is `a161316161`. A `ctapDecoded` written by hand is
-read by the same spelling: a base64 `clientDataHash` is text, not bytes.
+The encoder never reads a plain map as a CTAP message. `encode/ctap_view_reader.py` is
+its one path from a view back to bytes, for format `CBOR` and for the CTAP/WebAuthn
+format alike: it takes `ctapDecoded`, or `expandedJson` beside a `ctap` whose
+`message` names it, reads the members by the spelling above, writes them in CTAP2
+canonical form, and frames them exactly as `ctap` says -- the byte if `code` is one
+and none if it is null, then `trailingBytesHex`. It refuses by name a view without its
+`ctap`, a `ctapDecoded` whose message and `ctap.message` disagree, a member given
+twice, a label that names no member, and a view marked `notRebuildable` (pointing at
+`data.edn`). Anything else in format `CBOR` is generic CBOR, so `{"1": "a"}` is
+`a161316161`. A `ctapDecoded` written by hand is read by the same spelling: a base64
+`clientDataHash` is text, not bytes.
 
 The CTAP/WebAuthn format's other input, a numeric map written by hand without a
 view, still goes through its own builders (`encode/ctap_numeric.py`,

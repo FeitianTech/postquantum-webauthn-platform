@@ -134,15 +134,15 @@ the CSP and the source rules.
   `scripts/code-size.mjs` holds `src` (tests and `src/test` aside) to no function over 120
   lines and no module over 400, with no exceptions (`code-size.test.ts` runs it in `npm test`).
 
-Running it (Node 22, in `web/`): `npm ci`; `npm run dev` (at `http://localhost:3000/`,
-proxying `/api` and `/assets/mds` to `FLASK_URL`, default `http://localhost:8000`; ceremonies need Flask's
-origin, so use the export for those); `npm run build` (the export in `web/out`, which Flask
-serves; `FIDO_SERVER_WEB_EXPORT_ROOT` points elsewhere); `npm run typecheck` (covers
+Running it (Node 22, in `web/`): `npm ci`; `npm run dev` (at `http://localhost:3000/`, proxying
+`/api` and `/assets/mds` to `FLASK_URL`, default `http://localhost:8000`; ceremonies need
+Flask's origin, so use the export for those); `npm run build` (the export in `web/out`, which
+Flask serves; `FIDO_SERVER_WEB_EXPORT_ROOT` points elsewhere); `npm run typecheck` (covers
 `e2e/`, and through `tsconfig.logic.json` checks the logic's JSDoc types with `checkJs`);
 `npm test`; `npm run test:coverage`; `npm run check:csp` and `npm run check:size` (after a
-build); `npm run e2e`
-(after a build; `npx playwright install chromium` once; `E2E_PYTHON` names the Python with
-the app's dependencies, `.venv/bin/python` by default; `E2E_PORT`, default 5151).
+build); `npm run e2e` (after a build; `npx playwright install chromium` once; `E2E_PYTHON` names
+the Python with the app's dependencies, `.venv/bin/python` by default; `E2E_PORT`, default
+5151).
 
 ## The logic (`web/src/logic`)
 
@@ -215,36 +215,35 @@ its logic out here first.
   overrides, then `INIT_STEPS` in order (`test_app_factory.py` pins it).
 - `config/`: `application.py` (the bare app, and `add_after_request_once`), `logs.py`,
   `session_secret.py`, `compression.py`, `proxy.py`, `fetch_metadata.py` (a write under `/api/`
-  whose `Sec-Fetch-Site` names another site is refused, 403), `session_cookie.py` (the cookie's flags
-  and lifetime; only an answer that changed the session sets the cookie
-  (`SESSION_REFRESH_EACH_REQUEST` off), so nothing landing after a ceremony's begin can undo
-  it; and `cookie_size`), `security_headers.py` (the strict CSP, Trusted Types enforced for
-  Next's two policies, reporting to `/api/csp-report`; `FIDO_SERVER_CONTENT_SECURITY_POLICY`
-  replaces it),
-  `origins.py`, `attestation_trust.py`, `relying_party.py` (the default RP name is the site's,
-  `APP_TITLE`), `paths.py` (the project and instance roots; `store_dir`: every local store under
-  `instance/`, its setting read when used), `request_limits.py` (8 MiB, the metadata
-  upload 16 MiB; 413 in JSON), `web_export.py`. Importing it configures nothing, and the
-  package re-exports nothing: routes call `relying_party.create_fido_server` and
-  `origins.determine_expected_origin` through their modules, where tests patch them. Tests
-  reach the entry point's app through `tests/app/entry_app.py`.
+  whose `Sec-Fetch-Site` names another site is refused, 403), `session_cookie.py` (the cookie's
+  flags and lifetime; only an answer that changed the session sets the cookie
+  (`SESSION_REFRESH_EACH_REQUEST` off), so nothing landing after a ceremony's begin can undo it;
+  and `cookie_size`), `security_headers.py` (the strict CSP, Trusted Types enforced for Next's
+  two policies, reporting to `/api/csp-report`; `FIDO_SERVER_CONTENT_SECURITY_POLICY` replaces
+  it), `origins.py`, `attestation_trust.py`, `relying_party.py` (the default RP name is the
+  site's, `APP_TITLE`), `paths.py` (the project and instance roots; `store_dir`: every local
+  store under `instance/`, its setting read when used), `request_limits.py` (8 MiB, the metadata
+  upload 16 MiB; 413 in JSON), `web_export.py`. Importing it configures nothing, and the package
+  re-exports nothing: routes call `relying_party.create_fido_server` and
+  `origins.determine_expected_origin` through their modules, where tests patch them. Tests reach
+  the entry point's app through `tests/app/entry_app.py`.
 - Importing any module but the entry point writes nothing (`test_import_side_effects.py`). Log
   with `logging.getLogger(__name__)`. On Cloud Run (`K_SERVICE`) the app refuses to start
   without `FIDO_SERVER_SECRET_KEY` or `FIDO_SERVER_SECRET_KEY_FILE`; only local development
   generates `instance/session-secret.key`, and tests never do.
-- `mds/`: the FIDO MDS snapshot. Its `__init__` imports nothing, so the updater takes
-  `trust.py` (the MDS trust anchor), `blob.py` (the BLOB's chain to that root, which may end in
-  a cross-certificate fido2's `parse_blob` refuses, its signature and payload), `files.py` (the
-  snapshot's file names, its directory, the whole-file and `.gz` sibling writers, Last-Modified),
-  `build.py` (the explorer rows; `certificates.py`, what their roots say), `snapshot.py` (a snapshot's seven files, from its BLOB, payload
-  and cache state) and `sets.py` (the snapshot in Cloud Storage) without Flask.
-  The runtime: `provisioning.py` (local files, Cloud Storage, upstream), `cache.py` (the
-  loaders and their one `SnapshotCache`), `explorer_files.py` (what browsers load, derived from
-  the full explorer snapshot: the list, the icons, each entry's detail; kept per snapshot by
-  `cache.load_explorer_files`), `uploads.py` (a visitor's uploaded metadata),
-  `entries.py`, `effective.py` (the snapshot merged with a visitor's uploads), `verifier.py` (the
-  verified entries indexed from their JSON by fido2's keys, each parsed when found, a visitor's
-  uploads in front).
+- `mds/`: the FIDO MDS snapshot. Its `__init__` imports nothing, so the updater takes `trust.py`
+  (the MDS trust anchor), `blob.py` (the BLOB's chain to that root, which may end in a
+  cross-certificate fido2's `parse_blob` refuses, its signature and payload), `files.py` (the
+  snapshot's file names, its directory, the whole-file writer,
+  Last-Modified), `build.py` (the explorer rows; `certificates.py`, what their roots say),
+  `snapshot.py` (a snapshot's seven files, from its BLOB, payload and cache state) and `sets.py`
+  (the snapshot in Cloud Storage) without Flask. The runtime: `provisioning.py` (local files,
+  Cloud Storage, upstream), `cache.py` (the loaders and their one `SnapshotCache`),
+  `explorer_files.py` (what browsers load, derived from the full explorer snapshot: the list,
+  the icons, each entry's detail; kept per snapshot by `cache.load_explorer_files`),
+  `uploads.py` (a visitor's uploaded metadata), `entries.py`, `effective.py` (the snapshot
+  merged with a visitor's uploads), `verifier.py` (the verified entries indexed from their JSON
+  by fido2's keys, each parsed when found, a visitor's uploads in front).
 - Leaves the rest import: `encoding.py` (base64, base64url and hex, written and read strictly),
   `json_values.py` (`make_json_safe`, and `as_bytes`, the one reading of a value as bytes),
   `aaguid.py` (an AAGUID's GUID spelling), `env_flags.py`.
@@ -256,32 +255,31 @@ its logic out here first.
   reads are behaviour); `routes/ceremony_session.py` (every begin: refused, the session kept as
   it was, when its cookie would pass `MAX_COOKIE_SIZE`); `routes/json_body.py` (every route's
   JSON body: an object, or read as an empty one); `routes/mds.py` (the MDS routes and
-  certificate decoding);
-  `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`, and the export at `/`:
-  the site's catch-all, since Flask has no static rule; HTML `no-cache`, `/_next/static/`
-  immutable with the build's `.gz`, the export's 404 page, a plain 404 under `/api/`;
-  `send_precompressed`); `routes/assets.py` (the explorer's
-  files under `/assets/mds/`: the list at one URL revalidated by its ETag, the icons by digest,
-  each entry's detail at `?v=<version>`; no snapshot file at any path); `routes/csp_report.py`
-  (one WARNING line per violation, bounded);
-  `routes/errors.py`.
+  certificate decoding); `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`,
+  and the export at `/`: the site's catch-all, since Flask has no static rule; HTML `no-cache`,
+  `/_next/static/` immutable with the build's `.gz`, the export's 404 page, a plain 404 under
+  `/api/`; `send_precompressed`); `routes/assets.py` (the explorer's files under `/assets/mds/`:
+  the list at one URL revalidated by its ETag, the icons by digest, each entry's detail at
+  `?v=<version>`; no snapshot file at any path); `routes/csp_report.py` (one WARNING line per
+  violation, bounded); `routes/errors.py`.
 - `webauthn/attestation/` (checks, trust, the root evaluation for every algorithm, ML-DSA
   included, certificate serialisation; `chain.py` verifies certificate chains with
   `verify_directly_issued_by` (RSA-PSS, EdDSA and ML-DSA too, which fido2's `verify_x509_chain`
-  does not); `evaluation.py` checks an attestation against the MDS metadata step by step),
-  `webauthn/signature_algorithms.py` (the one spelling of a signature algorithm),
-  `webauthn/cose_algorithms.py` (a named COSE algorithm read, for both tabs),
-  `webauthn/attachments.py` (the authenticator attachment hints),
-  `webauthn/pqc.py` (the ML-DSA adapter),
-  `webauthn/mldsa.py` (ML-DSA parameter sets, sizes and certificate keys),
-  `webauthn/cose_keys.py` (RS384, RS512, PS384, PS512: the package imports it so fido2's
-  `CoseKey` lookups find them), `webauthn/assertion_hash.py` (the Advanced tab's hash choice
-  for an assertion), `webauthn/sign_count.py`, `webauthn/client_binary.py` (bytes a client
-  sends, read one way for both tabs), `webauthn/client_credentials.py` (a saved credential the
-  page sends back, read into its key material for both tabs), `webauthn/registration_facts.py`
-  (what a verified registration's authData and extension outputs say, the relying party's view
-  of it and the saved credential record, each in one key order for both tabs). `config/logs.py`
-  holds `fido2.server`'s logger at WARNING: fido2 logs credential IDs at INFO.
+  does not); `evaluation.py` checks an attestation against the MDS metadata step by step;
+  `constants.py`'s `UNREADABLE_EXTENSIONS`, what cryptography raises reading a loaded
+  certificate's extensions, caught wherever they are read), `webauthn/signature_algorithms.py`
+  (the one spelling of a signature algorithm), `webauthn/cose_algorithms.py` (a named COSE
+  algorithm read, for both tabs), `webauthn/attachments.py` (the authenticator attachment
+  hints), `webauthn/pqc.py` (the ML-DSA adapter), `webauthn/mldsa.py` (ML-DSA parameter sets,
+  sizes and certificate keys), `webauthn/cose_keys.py` (RS384, RS512, PS384, PS512: the package
+  imports it so fido2's `CoseKey` lookups find them), `webauthn/assertion_hash.py` (the Advanced
+  tab's hash choice for an assertion), `webauthn/sign_count.py`, `webauthn/client_binary.py`
+  (bytes a client sends, read one way for both tabs), `webauthn/client_credentials.py` (a saved
+  credential the page sends back, read into its key material for both tabs),
+  `webauthn/registration_facts.py` (what a verified registration's authData and extension
+  outputs say, the relying party's view of it and the saved credential record, each in one key
+  order for both tabs). `config/logs.py` holds `fido2.server`'s logger at WARNING: fido2 logs
+  credential IDs at INFO.
 - `storage/` (`credentials.py`, `credential_artifacts.py`, `session_metadata.py`,
   `github_mirror.py`, over `cloud.py` and `common.py`): every read-modify-write is
   compare-and-swap; a failed read raises `StorageReadError` (503), never a shorter list. **Read
@@ -321,7 +319,8 @@ page updates the saved credentials, which both tabs show.
   `CHARACTERIZATION_WRITE=1 pytest tests/app/characterization` rewrites them after an intended
   change; review the diff (`encoding_diff.py` tells byte-spelling-only diffs).
 - `tests/checkout_guard.py` fails the run when a test changed anything under `server/runtime/`,
-  `instance/` (which holds the MDS snapshot too) or `.hypothesis/`. Give a test its own stores in `tmp_path`.
+  `instance/` (which holds the MDS snapshot too) or `.hypothesis/`. Give a test its own stores
+  in `tmp_path`.
 
 Guards on the code and the checkout (`tests/app/tooling/`; each `ALLOWED` list may only shrink):
 
@@ -366,22 +365,22 @@ goldens show what it changes).
 - Two independent pipelines run on a push to `main`: GitHub Actions and Cloud Build. A red CI
   run does not stop Cloud Build, so `cloudbuild.yaml` runs its own gate first: `Python tests`
   (ruff, pytest with `.coveragerc`'s floor) and `Web tests` (typecheck, both vitest projects
-  with coverage, build, CSP scan, size budget) in parallel, then Build, Push and Deploy (Cloud Run `pqcwebauthn`). Playwright
-  runs in GitHub CI only. Keep that gate: it is all that stands between a commit and production.
+  with coverage, build, CSP scan, size budget) in parallel, then Build, Push and Deploy (Cloud
+  Run `pqcwebauthn`). Playwright runs in GitHub CI only. Keep that gate: it is all that stands
+  between a commit and production.
 - Workflows (`ci-*.yml` run on `pull_request` and on `push` to `main`; `ci-security.yml` also
-  weekly, since advisories land without a commit): `ci-python.yml`,
-  `ci-web.yml` (web and the Playwright tests), `ci-docker.yml` (builds the image and checks it
-  answers), `ci-security.yml` (`pip-audit`, `npm audit --audit-level=moderate` in `web/`, Trivy
-  (its image pinned by digest) on the image; fix the dependency, never widen a threshold), `ci-repository.yml` (actionlint
-  with shellcheck from its author's image pinned by digest, which Dependabot does not bump;
-  and on a push, `tools/commit_messages.py` over the pushed commits), `ci-scheduled-runs.yml`
-  (warns while a scheduled workflow's latest run on `main` has failed: add any new scheduled
-  workflow to its list).
+  weekly, since advisories land without a commit): `ci-python.yml`, `ci-web.yml` (web and the
+  Playwright tests), `ci-docker.yml` (builds the image and checks it answers), `ci-security.yml`
+  (`pip-audit`, `npm audit --audit-level=moderate` in `web/`, Trivy (its image pinned by digest)
+  on the image; fix the dependency, never widen a threshold), `ci-repository.yml` (actionlint
+  with shellcheck from its author's image pinned by digest, which Dependabot does not bump; and
+  on a push, `tools/commit_messages.py` over the pushed commits), `ci-scheduled-runs.yml` (warns
+  while a scheduled workflow's latest run on `main` has failed: add any new scheduled workflow
+  to its list).
 - Every action is pinned to a commit SHA (or an image digest) with its version in a trailing
   comment. No workflow pushes to `main`: `update-footer-year.yml` opens pull requests through
   `.github/actions/open-bot-pr` (merge them by rebase or cherry-pick, so each commit keeps a
-  one-line message);
-  `update-fido-mds.yml` only verifies the upstream BLOB.
+  one-line message); `update-fido-mds.yml` only verifies the upstream BLOB.
 - Coverage is a gate: `.coveragerc`'s floor and `web/vitest.config.mts`'s (every logic file at
   100 %).
 - `npm ci` everywhere. If a lock regeneration drops foreign-platform native builds, delete

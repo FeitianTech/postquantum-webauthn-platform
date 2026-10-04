@@ -27,10 +27,11 @@ served under a URL of its own.
 
 `server/app/mds/files.py` names the seven files once and says where they are:
 `snapshot_dir()` reads `FIDO_SERVER_MDS_SNAPSHOT_DIR` whenever a path is needed, and
-without it answers `instance/mds-snapshot` (in the image, `/app/instance/mds-snapshot`;
-`docker compose` mounts `./instance`, so a local container keeps its copy there). It is a leaf with no Flask import, so every
-reader and writer follows the one setting: the server's metadata loaders
-(`mds/cache.py`), the provisioning below, and `tools/update_mds_snapshot.py`.
+without it answers `instance/mds-snapshot` (in the image,
+`/app/instance/mds-snapshot`; `docker compose` mounts `./instance`, so a local
+container keeps its copy there). It is a leaf with no Flask import, so every reader
+and writer follows the one setting: the server's metadata loaders (`mds/cache.py`),
+the provisioning below, and `tools/update_mds_snapshot.py`.
 
 ## What browsers load
 
@@ -146,10 +147,9 @@ and the next check tries again.
 
 The application still starts and serves. `/health` and `/` work; the explorer APIs
 answer `200` with no entries (their `404` branch is not reached: the snapshot they
-compose always has its counts), the page is given no `snapshotUrl` (so
-it requests no missing file), and the explorer shows no entries (it says the
-packaged metadata is unavailable). This is the behaviour that already existed for a missing snapshot —
-the relocation did not introduce a new failure mode.
+compose always has its counts), the page is given no `snapshotUrl` (so it requests no
+missing file), and the explorer shows no entries (it says the packaged metadata is
+unavailable). The updater (below) fills it.
 
 ## Working locally without Cloud Storage
 
