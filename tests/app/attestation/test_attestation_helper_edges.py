@@ -1,4 +1,3 @@
-import base64
 import hashlib
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
@@ -8,12 +7,10 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID, ObjectIdentifier
-from fido2.utils import ByteBuffer
 
 from server.app.webauthn.attestation import (
     certificate_extensions as attestation_certificate_extensions,
 )
-from server.app.webauthn.attestation import certificates as attestation_certificates
 from server.app.webauthn.attestation import trust as attestation_trust
 from tests.app.entry_app import entry_app
 
@@ -32,42 +29,6 @@ def _self_signed_cert_der() -> bytes:
         .sign(private_key, hashes.SHA256())
     )
     return cert.public_bytes(serialization.Encoding.DER)
-
-
-def test_collect_trust_path_entries_and_certificate_bytes_coercion_helpers():
-    trust_path = attestation_trust._collect_trust_path_entries(
-        [b"leaf", bytearray(b"intermediate"), "ignored", ByteBuffer(b"root")]
-    )
-    assert trust_path == [b"leaf", b"intermediate", b"root"]
-
-    cert_bytes = b"\x30\x82\x01\x00"
-    cert_b64 = base64.b64encode(cert_bytes).decode("ascii")
-
-    assert attestation_trust._coerce_certificate_bytes(cert_b64) == cert_bytes
-    assert attestation_trust._coerce_certificate_bytes("   ") is None
-
-
-def test_collect_metadata_root_certificates_supports_object_and_mapping_shapes():
-    root_a = b"root-a"
-    root_b = b"root-b"
-
-    metadata_entry_obj = SimpleNamespace(
-        metadata_statement=SimpleNamespace(
-            attestation_root_certificates=[root_a, base64.b64encode(root_b).decode("ascii")]
-        )
-    )
-
-    roots_obj = attestation_trust._collect_metadata_root_certificates(metadata_entry_obj)
-    assert roots_obj == [root_a, root_b]
-
-    metadata_entry_map = {
-        "attestationRootCertificates": [
-            base64.b64encode(root_a).decode("ascii"),
-            base64.b64encode(root_b).decode("ascii"),
-        ]
-    }
-    roots_map = attestation_trust._collect_metadata_root_certificates(metadata_entry_map)
-    assert roots_map == [root_a, root_b]
 
 
 def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monkeypatch):
@@ -157,22 +118,3 @@ def test_parse_fido_transport_bitfield_reads_fidos_named_bits(der, transports):
 @pytest.mark.parametrize("raw", [b"", b"\x03", b"\x04\x01\x00", bytes.fromhex("0302043000")])
 def test_parse_fido_transport_bitfield_names_nothing_for_what_is_not_a_bit_string(raw):
     assert attestation_certificate_extensions._parse_fido_transport_bitfield(raw) is None
-
-
-def test_coerce_attestation_certificate_bytes_handles_mapping_variants():
-    cert_bytes = b"\x30\x82\x01\x00"
-    pem = (
-        "-----BEGIN CERTIFICATE-----\n"
-        + base64.b64encode(cert_bytes).decode("ascii")
-        + "\n-----END CERTIFICATE-----"
-    )
-
-    assert attestation_certificates._coerce_attestation_certificate_bytes({"raw": cert_bytes.hex()}) == cert_bytes
-    assert (
-        attestation_certificates._coerce_attestation_certificate_bytes(
-            {"derBase64": base64.b64encode(cert_bytes).decode("ascii")}
-        )
-        == cert_bytes
-    )
-    assert attestation_certificates._coerce_attestation_certificate_bytes({"pem": pem}) == cert_bytes
-    assert attestation_certificates._coerce_attestation_certificate_bytes(ByteBuffer(cert_bytes)) == cert_bytes

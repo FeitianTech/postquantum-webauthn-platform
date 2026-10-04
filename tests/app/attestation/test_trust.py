@@ -10,6 +10,7 @@ from types import SimpleNamespace
 
 import pytest
 from cryptography import x509
+from fido2.utils import ByteBuffer
 
 from server.app.webauthn.attestation import trust as attestation_trust
 from tests.app.characterization import material
@@ -159,3 +160,10 @@ def test_metadata_roots_are_one_certificate_or_a_list_and_unreadable_ones_are_sk
 )
 def test_a_root_is_valid_by_what_its_checks_say(checks, expected):
     assert attestation_trust._resolve_root_validity(checks) is expected
+
+
+def test_a_trust_path_keeps_the_x5c_entries_that_are_bytes():
+    x5c = [b"leaf", bytearray(b"intermediate"), "text", ByteBuffer(b"root")]
+
+    assert attestation_trust._collect_trust_path_entries(x5c) == [b"leaf", b"intermediate", b"root"]
+    assert attestation_trust._collect_trust_path_entries(None) == []
