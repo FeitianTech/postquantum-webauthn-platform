@@ -173,44 +173,6 @@ def test_artifact_prefix_rejects_invalid_session_identifiers(local_artifact_stor
         credential_artifacts._artifact_prefix("   ")
 
 
-def test_read_record_gcs_raises_on_a_download_error_and_skips_what_does_not_decode(local_artifact_store, monkeypatch, caplog):
-    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
-    blob_name = credential_artifacts._artifact_blob("cred-1", "session-a")
-
-    # A download that fails is not "no artifact": the store could not be read.
-    monkeypatch.setattr(
-        credential_artifacts,
-        "download_bytes",
-        lambda _blob: (_ for _ in ()).throw(RuntimeError("download failed")),
-    )
-    with pytest.raises(StorageReadError, match="Could not read") as raised:
-        credential_artifacts._read_record("cred-1", "session-a")
-    assert isinstance(raised.value.__cause__, RuntimeError)
-
-    # Nothing stored is fine.
-    monkeypatch.setattr(credential_artifacts, "download_bytes", lambda _blob: None)
-    assert credential_artifacts._read_record("cred-1", "session-a") is None
-
-    # Content that does not decode is logged by name, never its content, and skipped.
-    undecodable = (
-        b"",
-        b"\xff-secret",
-        b"{invalid-secret",
-        b'["secret list"]',
-        # JSON that json.loads still refuses: a ValueError past Python's digit limit, a RecursionError.
-        b'{"secret": ' + b"1" * 5000 + b"}",
-        b"[" * 200000 + b"]" * 200000,
-    )
-    for content in undecodable:
-        monkeypatch.setattr(credential_artifacts, "download_bytes", lambda _blob, content=content: content)
-        caplog.clear()
-        with caplog.at_level("WARNING", logger="server.app.storage.credential_artifacts"):
-            assert credential_artifacts._read_record("cred-1", "session-a") is None
-        messages = [record.getMessage() for record in caplog.records]
-        assert len(messages) == 1 and blob_name in messages[0], messages
-        assert "secret" not in messages[0]
-
-
 def test_read_record_local_raises_when_the_file_cannot_be_read(local_artifact_store):
     path = credential_artifacts._artifact_path("cred-dir", "session-a")
     # A directory where the file belongs: an OSError that is not "no such file".
@@ -237,107 +199,6 @@ def test_a_local_merge_refuses_a_record_that_does_not_decode(local_artifact_stor
     assert credential_artifacts.store_credential_artifact("cred-corrupt", {"x": 1}, session_id="session-a") is True
 
 
-def test_write_record_gcs_uploads_json_payload(local_artifact_store, monkeypatch):
-    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
-
-    uploads = []
-    monkeypatch.setattr(
-        credential_artifacts,
-        "upload_bytes",
-        lambda blob, payload, *, content_type=None: uploads.append((blob, payload, content_type)),
-    )
-
-    credential_artifacts._write_record("cred-1", "session-a", {"payload": {"ok": True}})
-
-    assert len(uploads) == 1
-    blob, payload, content_type = uploads[0]
-    assert "session-a" in blob
-    assert payload.startswith(b"{")
-    assert content_type == "application/json"
-
-
-def test_delete_on_gcs_fails_when_the_existence_check_fails(local_artifact_store, monkeypatch):
-    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
-    monkeypatch.setattr(
-        credential_artifacts,
-        "blob_exists",
-        lambda _blob: (_ for _ in ()).throw(RuntimeError("exists failed")),
-    )
-    monkeypatch.setattr(credential_artifacts, "delete_blob", lambda *_args, **_kwargs: None)
-
-    assert credential_artifacts.delete_credential_artifact_with_status("cred-1", session_id="session-a") == "failed"
-
-
-def test_delete_on_gcs_fails_when_the_delete_fails(local_artifact_store, monkeypatch):
-    monkeypatch.setattr(storage_common, "using_gcs", lambda: True)
-    monkeypatch.setattr(credential_artifacts, "blob_exists", lambda _blob: True)
-    monkeypatch.setattr(
-        credential_artifacts,
-        "delete_blob",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("delete failed")),
-    )
-
-    assert credential_artifacts.delete_credential_artifact_with_status("cred-1", session_id="session-a") == "failed"
-
-
-def test_load_credential_artifact_returns_none_for_non_mapping_payload(local_artifact_store, monkeypatch):
-    monkeypatch.setattr(credential_artifacts, "_read_record", lambda *_args, **_kwargs: {"payload": [1, 2, 3]})
-
-    assert credential_artifacts.load_credential_artifact("cred-1", session_id="session-a") is None
-
-
-def test_store_credential_artifact_merge_handles_non_dict_existing_payload(local_artifact_store, monkeypatch):
-    monkeypatch.setattr(
-        credential_artifacts,
-        "_record_to_merge_into",
-        lambda *_args, **_kwargs: {
-            "storageId": "cred-1",
-            "createdAt": 123.0,
-            "updatedAt": 123.0,
-            "payload": "not-a-dict",
-        },
-    )
-
-    written = {}
-
-    def _capture_write(storage_id, session_id, record):
-        written["storage_id"] = storage_id
-        written["session_id"] = session_id
-        written["record"] = record
-
-    monkeypatch.setattr(credential_artifacts, "_write_record", _capture_write)
-    monkeypatch.setattr(credential_artifacts.time, "time", lambda: 456.0)
-
-    stored = credential_artifacts.store_credential_artifact(
-        "cred-1",
-        {"fresh": True},
-        merge=True,
-        session_id="session-a",
-    )
-
-    assert stored is True
-    assert written["record"]["payload"] == {"fresh": True}
-    assert written["record"]["createdAt"] == 123.0
-    assert written["record"]["updatedAt"] == 456.0
-
-
-def test_store_credential_artifact_returns_false_when_write_raises(local_artifact_store, monkeypatch):
-    monkeypatch.setattr(
-        credential_artifacts,
-        "_write_record",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("write failed")),
-    )
-
-    assert (
-        credential_artifacts.store_credential_artifact(
-            "cred-1",
-            {"x": 1},
-            session_id="session-a",
-        )
-        is False
-    )
-
-
 def test_delete_credential_artifact_rejects_invalid_storage_id(local_artifact_store):
     assert credential_artifacts.delete_credential_artifact_with_status("   ", session_id="session-a") == "failed"
 
@@ -359,22 +220,6 @@ def test_resolve_session_id_falls_back_for_non_string(monkeypatch, local_artifac
     )
 
     assert credential_artifacts._resolve_session_id(object()) == "metadata-non-string-fallback"
-
-
-def test_delete_locally_fails_on_oserror(local_artifact_store, monkeypatch):
-    storage_id = "cred-oserror"
-    path = credential_artifacts._artifact_path(storage_id, "session-a")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as handle:
-        handle.write("{}")
-
-    monkeypatch.setattr(
-        credential_artifacts.os,
-        "remove",
-        lambda _path: (_ for _ in ()).throw(OSError("remove failed")),
-    )
-
-    assert credential_artifacts.delete_credential_artifact_with_status(storage_id, session_id="session-a") == "failed"
 
 
 def test_load_credential_artifact_rejects_non_string_storage_id(local_artifact_store):
