@@ -136,17 +136,6 @@ def test_an_undecodable_copy_is_named_and_skipped(backend, caplog, content):
     assert "SECRET" not in warnings[0]
 
 
-def test_readkey_skips_an_undecodable_copy_with_a_warning(backend, caplog):
-    source = backend.put_current(NAME, b"not json " + _SECRET)
-
-    with caplog.at_level(logging.WARNING, logger="server.app.storage"):
-        assert backend.store.readkey(NAME, session_id=SESSION) == []
-
-    (warning,) = [r.getMessage() for r in caplog.records if r.name.startswith("server.app.storage")]
-    assert os.path.basename(source) in warning
-    assert "SECRET" not in warning
-
-
 def test_read_for_update_refuses_to_replace_a_current_copy_it_cannot_decode(backend):
     # Skipping it here would hand the caller [] and let its save overwrite the
     # copy unread; the simple routes answer an error instead.

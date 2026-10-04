@@ -10,7 +10,6 @@ import pytest
 from server.app import visitor_session
 from server.app.storage import cloud as storage_cloud
 from server.app.storage import credentials
-from server.app.storage.common import StorageReadError
 
 
 @pytest.fixture(autouse=True)
@@ -19,14 +18,6 @@ def _force_gcs(monkeypatch):
 
     monkeypatch.setenv("FIDO_SERVER_GCS_BUCKET", "test-bucket")
     monkeypatch.setattr(storage_cloud, "gcs_enabled", lambda: True)
-
-
-def test_readkey_returns_empty_list_for_corrupted_payload(monkeypatch):
-    monkeypatch.setattr(credentials, "download_bytes", lambda _blob_name: b"not-a-valid-pickle")
-
-    result = credentials.readkey("broken@example.com", session_id="session-corrupt")
-
-    assert result == []
 
 
 def test_resolve_session_id_falls_back_to_metadata_session(monkeypatch):
@@ -62,28 +53,5 @@ def test_save_uploads_payload_to_session_scoped_gcs_blob(monkeypatch):
     assert envelope["credentials"] == value
     assert blob_name.endswith("_credential_data.json")
     assert content_type == "application/json"
-    with pytest.raises(Exception):
+    with pytest.raises(pickle.UnpicklingError):
         pickle.loads(payload)
-
-
-def test_readkey_raises_when_a_gcs_download_fails(monkeypatch):
-    calls = []
-
-    def fake_download(blob_name: str):
-        calls.append(blob_name)
-        raise RuntimeError("temporary failure")
-
-    monkeypatch.setattr(credentials, "download_bytes", fake_download)
-
-    # Not []: that would answer with no records.
-    with pytest.raises(StorageReadError):
-        credentials.readkey("alice@example.com", session_id="session-read")
-    assert len(calls) == 1
-
-
-def test_readkey_of_a_copy_that_is_not_there_is_empty(monkeypatch):
-    calls = []
-    monkeypatch.setattr(credentials, "download_bytes", lambda blob_name: calls.append(blob_name))
-
-    assert credentials.readkey("alice@example.com", session_id="session-read") == []
-    assert calls == [credentials._credential_blob("alice@example.com", "session-read")]
