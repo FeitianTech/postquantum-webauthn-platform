@@ -26,6 +26,10 @@ are the ``.js`` files under ``web/src/logic`` (their tests aside), which import
 only each other; web/'s components reach them as ``@/logic/…``. None of them
 touches the DOM: the export pre-renders them in Node.
 
+A web test that renders the whole app does it through ``web/src/test/app.tsx``,
+which imports every chunk the shell loads with ``import()`` before the file's
+first test: no other test file imports ``AppShell``.
+
 Each ``ALLOWED`` dict may only shrink; an entry that no longer matches fails.
 """
 from __future__ import annotations
@@ -530,3 +534,36 @@ def test_the_logic_modules_are_imported_not_copied():
         if found:
             copied[path.relative_to(_WEB_SRC).as_posix()] = found
     assert copied == {}
+
+
+_APP_SHELL = _WEB_SRC / "components" / "shell" / "AppShell"
+_WHOLE_APP_HELPER = _WEB_SRC / "test" / "app.tsx"
+
+
+def _imports_app_shell(path: Path, text: str) -> bool:
+    for specifier in _imports(text):
+        if specifier.startswith("@/"):
+            target = _WEB_SRC / specifier.removeprefix("@/")
+        elif specifier.startswith("."):
+            target = path.parent / specifier
+        else:
+            continue
+        if target.resolve() == _APP_SHELL.resolve():
+            return True
+    return False
+
+
+def test_whole_app_tests_render_through_the_helper_that_loads_the_chunks():
+    tests = [*_WEB_SRC.rglob("*.test.ts"), *_WEB_SRC.rglob("*.test.tsx")]
+    assert len(tests) > 40
+    assert _imports_app_shell(_WHOLE_APP_HELPER, _WHOLE_APP_HELPER.read_text(encoding="utf-8"))
+    importers = [path.relative_to(_WEB_SRC).as_posix() for path in tests if _imports_app_shell(path, path.read_text(encoding="utf-8"))]
+    assert importers == []
+
+
+def test_the_reader_finds_app_shell_by_alias_or_relative_path():
+    shell_test = _WEB_SRC / "components" / "shell" / "AppShell.test.tsx"
+    assert _imports_app_shell(shell_test, "import { AppShell } from './AppShell';\n")
+    assert _imports_app_shell(shell_test, "import { AppShell } from '@/components/shell/AppShell';\n")
+    assert not _imports_app_shell(shell_test, "// import { AppShell } from './AppShell';\n")
+    assert not _imports_app_shell(shell_test, "import { Header } from './Header';\n")
