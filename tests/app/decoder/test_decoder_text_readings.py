@@ -1,10 +1,45 @@
 """How the decoder reads the text it is given: JSON, PEM, hexadecimal, base64."""
 from __future__ import annotations
 
+import base64
+
 import pytest
 
 from server.app.decoder.decode import binary_text
 from server.app.decoder.decode.text import decode_payload_text
+from tests.app.python_fido2_vectors import GSR2_DER
+
+
+def _pem(der: bytes) -> str:
+    body = base64.b64encode(der).decode("ascii")
+    lines = "\n".join(body[i : i + 64] for i in range(0, len(body), 64))
+    return f"-----BEGIN CERTIFICATE-----\n{lines}\n-----END CERTIFICATE-----\n"
+
+
+def test_blank_text_is_refused_as_empty():
+    with pytest.raises(ValueError, match="Decoder input is empty"):
+        decode_payload_text(" \n\t ")
+
+
+def test_pem_text_sent_as_hexadecimal_is_the_certificate_it_holds():
+    as_text = decode_payload_text(_pem(GSR2_DER))
+    as_hex = decode_payload_text(_pem(GSR2_DER).encode().hex())
+
+    assert as_hex["type"] == as_text["type"] == "X.509 certificate"
+    assert as_hex["data"]["raw"] == GSR2_DER.hex()
+    assert as_hex["data"]["pem"] == as_text["data"]["pem"]
+    assert as_hex["findings"] == []
+
+
+def test_json_text_sent_as_hexadecimal_is_the_json_it_holds():
+    assert decode_payload_text(b'{"k": 1}'.hex()) == {
+        "success": True,
+        "type": "JSON",
+        "data": {"json": {"k": 1}},
+        "decodeMode": "strict",
+        "findings": [],
+        "malformed": [],
+    }
 
 
 def test_the_json_text_null_is_json_null():

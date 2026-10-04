@@ -72,3 +72,18 @@ def test_a_credential_whose_attestation_object_is_an_empty_map_interprets_nothin
 
     assert set(data) == {"credential", "attestationObject"}
     assert data["attestationObject"]["parseError"]["reason"].startswith("An attestation object has a text fmt")
+
+
+def test_client_data_json_is_shown_as_client_data():
+    raw = json.dumps({"type": "webauthn.get", "challenge": "AQID", "origin": "https://example.com"})
+
+    result = credential_json.decode_json_object(json.loads(raw), raw_text=raw)
+
+    assert result["format"] == "WebAuthn client data (JSON)"
+    assert result["inputEncoding"] == "json"
+    assert result["decoded"]["challenge"]["hex"] == "010203"
+    assert decode_payload_text(raw)["type"] == "WebAuthn client data"
+
+
+def test_json_that_is_no_credential_or_client_data_is_shown_as_json():
+    assert credential_json.decode_json_object([1, 2, 3]) == {"format": "JSON", "inputEncoding": "json", "decoded": [1, 2, 3]}

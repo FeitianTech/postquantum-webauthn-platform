@@ -25,3 +25,11 @@ def test_binary_input_reads_hex_and_base64_and_refuses_what_is_neither():
 
     with pytest.raises(ValueError, match="No binary data present"):
         binary_text.decode_binary_input("   ")
+
+
+def test_a_field_is_read_as_binary_text_or_taken_as_the_bytes_it_is():
+    assert binary_text.decode_binary_field("0abc") == (bytes.fromhex("0abc"), "hex")
+    assert binary_text.decode_binary_field("AQ*D") is None
+    assert binary_text.decode_binary_field(memoryview(b"abc")) == (b"abc", "binary")
+    assert binary_text.decode_binary_field(bytearray(b"\x01")) == (b"\x01", "binary")
+    assert binary_text.decode_binary_field(123) is None
