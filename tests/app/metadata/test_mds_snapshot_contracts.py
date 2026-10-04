@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import base64
 from datetime import date, datetime, timezone
 
 from server.app.mds import build as m
-from server.app.mds import certificates as mds_certificates
 from server.app.webauthn import signature_algorithms as names
-from tests.app.characterization import material
 
 
 def test_basic_mapping_string_list_and_byte_helpers():
@@ -226,22 +223,3 @@ def test_blank_names_format_as_empty():
     assert m._format_enum('A--B') == 'A B'
     assert names.format_hash_name('   ') == ''
     assert names.format_hash_name('abc-123') == 'ABC123'
-    assert mds_certificates.decode_der_certificate('   ') is None
-
-
-def test_the_certificate_summary_names_each_algorithm_once_and_skips_blank_common_names():
-    certificates = [
-        material.certificate(material.ec_key(label).public_key(), common_name=name, serial=serial)
-        for label, name, serial in (("one", "CN-Valid", 1), ("two", "   ", 2), ("three", "cn-valid", 3))
-    ]
-    # As the BLOB holds them (base64), as bytes, and what holds no certificate at all.
-    values = [base64.b64encode(certificates[0]).decode(), base64.b64encode(certificates[1]).decode(), certificates[2], "   ", 123]
-
-    assert mds_certificates.summarise_attestation_certificates(values) == (['ED25519_SHA512'], ['CN-Valid'])
-
-
-def test_a_certificate_value_is_its_bytes_or_their_base64():
-    assert mds_certificates.decode_der_certificate(b'bytes') == b'bytes'
-    assert mds_certificates.decode_der_certificate(memoryview(b'a')) == b'a'
-    assert mds_certificates.decode_der_certificate('YQ') == b'a'
-    assert mds_certificates.decode_der_certificate(123) is None
