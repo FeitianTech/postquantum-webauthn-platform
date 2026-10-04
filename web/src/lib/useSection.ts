@@ -32,10 +32,13 @@ export type SectionRoute = {
 /** Opens `path` in another section, as a history entry of its own, so Back returns here. */
 export type GoToSection = (section: SectionId, path: string[]) => void;
 
-/** The route of a section not shown: nothing open in it, and nothing it can open. */
-export const CLOSED_ROUTE: SectionRoute = { path: [], open: () => {}, close: () => {}, replace: () => {}, closeAll: () => {} };
+const nothing = () => {};
 
-const SectionNavigation = createContext<GoToSection>(() => {});
+/** The route of a section not shown: nothing open in it, and nothing it can open. */
+export const CLOSED_ROUTE: SectionRoute = { path: [], open: nothing, close: nothing, replace: nothing, closeAll: nothing };
+
+// Outside the shell there is no other section to open.
+const SectionNavigation = createContext<GoToSection>(nothing);
 
 export const SectionNavigationProvider = SectionNavigation.Provider;
 

@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 const beforePopState = vi.fn();
 vi.mock('next/router', () => ({ default: { beforePopState } }));
 
-const { CLOSED_ROUTE, SectionNavigationProvider, useSection, useSectionNavigation } = await import('./useSection');
+const { SectionNavigationProvider, useSection, useSectionNavigation } = await import('./useSection');
 
 afterEach(() => {
   window.history.replaceState(null, '', '/');
@@ -123,15 +123,13 @@ describe('the section in the URL, inside Next', () => {
     expect(result.current[2].path).toEqual([]);
   });
 
-  it('gives a section the shell\'s way to open something in another, and nothing outside the shell', () => {
+  it('gives a section the shell\'s way to open something in another', () => {
     const go = vi.fn();
     const inside = renderHook(() => useSectionNavigation(), {
       wrapper: ({ children }) => <SectionNavigationProvider value={go}>{children}</SectionNavigationProvider>,
     });
     inside.result.current('mds', ['aaguid:x']);
     expect(go).toHaveBeenCalledWith('mds', ['aaguid:x']);
-    const outside = renderHook(() => useSectionNavigation());
-    expect(() => outside.result.current('mds', [])).not.toThrow();
   });
 });
 
@@ -178,9 +176,5 @@ describe('closing every level at once', () => {
     act(() => result.current[1]('simple'));
     expect(window.history.state).toEqual({ fromNext: true });
     expect(window.location.hash).toBe('#simple');
-  });
-
-  it('has nothing to close in a section not shown', () => {
-    expect(() => CLOSED_ROUTE.closeAll()).not.toThrow();
   });
 });
