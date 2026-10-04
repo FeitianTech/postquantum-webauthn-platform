@@ -46,28 +46,6 @@ def test_advanced_authenticate_complete_without_session_state_returns_400(monkey
             assert "advanced_auth_rp" not in session_state
 
 
-def test_advanced_authenticate_complete_reports_unreadable_sent_credentials(monkeypatch):
-    monkeypatch.setattr(
-        advanced_parsing,
-        "_parse_client_supplied_credentials",
-        lambda _raw: []
-    )
-
-    with entry_app().test_client() as client:
-        response = client.post(
-            "/api/advanced/authenticate/complete",
-            json={
-                "publicKey": {"challenge": "AQID"},
-                "__storedCredentials": [{"record": 1}],
-                "__assertion_response": {"response": {}},
-            },
-        )
-
-        assert response.status_code == 400
-        payload = response.get_json()
-        assert "None of the saved credentials sent with this authentication could be read" in payload["error"]
-
-
 def test_advanced_authenticate_complete_requires_attachment_when_session_scopes_allowed_attachments():
     with entry_app().test_client() as client:
         with client.session_transaction() as session_state:

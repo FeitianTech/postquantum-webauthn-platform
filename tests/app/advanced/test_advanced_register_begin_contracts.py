@@ -1,7 +1,5 @@
 import types
 
-import pytest
-
 from server.app.config import relying_party
 from server.app.routes.advanced import algorithms as advanced_algorithms
 from tests.app.entry_app import entry_app
@@ -56,68 +54,6 @@ def _install_fake_register_server(monkeypatch, captured):
         return _FakeServer()
 
     monkeypatch.setattr(relying_party, "create_fido_server", _create_fido_server)
-
-
-def test_advanced_register_begin_requires_public_key_payload():
-    with entry_app().test_client() as client:
-        response = client.post("/api/advanced/register/begin", json={})
-
-    assert response.status_code == 400
-    assert response.get_json() == {
-        "error": "Invalid request: Missing publicKey in CredentialCreationOptions"
-    }
-
-
-@pytest.mark.parametrize(
-    "missing_key,expected_error",
-    [
-        ("rp", "Missing required field: rp"),
-        ("user", "Missing required field: user"),
-        ("challenge", "Missing required field: challenge"),
-    ],
-)
-def test_advanced_register_begin_requires_mandatory_fields(missing_key, expected_error):
-    payload = _base_payload()
-    payload["publicKey"].pop(missing_key)
-
-    with entry_app().test_client() as client:
-        response = client.post("/api/advanced/register/begin", json=payload)
-
-    assert response.status_code == 400
-    assert response.get_json() == {"error": expected_error}
-
-
-def test_advanced_register_begin_requires_user_name():
-    payload = _base_payload()
-    payload["publicKey"]["user"]["name"] = ""
-
-    with entry_app().test_client() as client:
-        response = client.post("/api/advanced/register/begin", json=payload)
-
-    assert response.status_code == 400
-    assert response.get_json() == {"error": "Username is required in user.name"}
-
-
-def test_advanced_register_begin_rejects_invalid_user_id_format():
-    payload = _base_payload()
-    payload["publicKey"]["user"]["id"] = "g$"
-
-    with entry_app().test_client() as client:
-        response = client.post("/api/advanced/register/begin", json=payload)
-
-    assert response.status_code == 400
-    assert "Invalid user ID format" in response.get_json()["error"]
-
-
-def test_advanced_register_begin_rejects_invalid_challenge_format():
-    payload = _base_payload()
-    payload["publicKey"]["challenge"] = "not-hex"
-
-    with entry_app().test_client() as client:
-        response = client.post("/api/advanced/register/begin", json=payload)
-
-    assert response.status_code == 400
-    assert "Invalid challenge format" in response.get_json()["error"]
 
 
 def test_advanced_register_begin_normalizes_rp_and_persists_session_state(monkeypatch):

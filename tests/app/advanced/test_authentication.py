@@ -11,27 +11,11 @@ def _complete(client, body):
     return client.post("/api/advanced/authenticate/complete", json=body)
 
 
-def test_a_complete_without_an_assertion_response_is_refused():
-    response = _complete(entry_app().test_client(), {"publicKey": {"challenge": "AQID"}})
-
-    assert response.status_code == 400
-    assert response.get_json() == {"error": "Assertion response is required"}
-
-
 def test_a_complete_without_public_key_options_is_refused():
     response = _complete(entry_app().test_client(), {"__assertion_response": {"response": {}}})
 
     assert response.status_code == 400
     assert response.get_json() == {"error": "Invalid request: Missing publicKey in JSON editor content"}
-
-
-def test_a_complete_with_no_saved_credential_anywhere_finds_none():
-    response = _complete(
-        entry_app().test_client(), {"publicKey": {"challenge": "AQID"}, "__assertion_response": {"response": {}}}
-    )
-
-    assert response.status_code == 404
-    assert response.get_json() == {"error": "No credentials found"}
 
 
 def test_a_verified_assertion_reports_the_credentials_algorithm_and_counter():

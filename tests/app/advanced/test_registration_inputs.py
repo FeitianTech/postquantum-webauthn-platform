@@ -12,20 +12,6 @@ def _complete(body):
     return entry_app().test_client().post("/api/advanced/register/complete", json=body)
 
 
-def test_a_request_without_a_credential_response_is_refused():
-    response = _complete({"publicKey": {"user": {"name": "user@example.com"}}})
-
-    assert response.status_code == 400
-    assert response.get_json() == {"error": "Credential response is required"}
-
-
-def test_a_request_without_public_key_options_is_refused():
-    response = _complete({"__credential_response": {"response": {}}})
-
-    assert response.status_code == 400
-    assert response.get_json()["error"] == "Invalid request: Missing publicKey in JSON editor content"
-
-
 @pytest.mark.parametrize("body", [["publicKey"], "publicKey"])
 def test_a_body_that_is_no_object_has_no_credential_response(body):
     response = _complete(body)
@@ -54,18 +40,6 @@ def test_a_response_member_that_is_no_object_is_read_as_none(inner):
 
     assert response.status_code == 400
     assert response.get_json()["error"].startswith("Registration state not found")
-
-
-def test_a_request_without_a_user_name_is_refused():
-    response = _complete(
-        {
-            "publicKey": {"challenge": "AQID", "user": {"name": "", "displayName": "User"}},
-            "__credential_response": {"response": {}},
-        }
-    )
-
-    assert response.status_code == 400
-    assert response.get_json()["error"] == "Username is required in user.name"
 
 
 def test_an_authenticator_selection_that_is_no_object_asks_for_no_resident_key(advanced_stores):

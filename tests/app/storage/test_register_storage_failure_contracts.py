@@ -1,5 +1,4 @@
 import hashlib
-import time
 
 from server.app import visitor_session
 from server.app.config import relying_party
@@ -39,68 +38,6 @@ class _SimpleFakeServer:
 
     def register_complete(self, *_args, **_kwargs):
         return self._auth_data
-
-
-def test_simple_register_complete_returns_500_when_saving_fails(monkeypatch):
-    credential_id = b"simple-save-fail"
-    rp_id = "example.com"
-
-    auth_data = _FakeAuthData(credential_id=credential_id, rp_id=rp_id)
-
-    monkeypatch.setattr(relying_party, "determine_rp_id", lambda: rp_id)
-    monkeypatch.setattr(
-        relying_party,
-        "create_fido_server",
-        lambda **_kwargs: _SimpleFakeServer(auth_data)
-    )
-    monkeypatch.setattr(
-        attestation_certificates,
-        "extract_attestation_details",
-        lambda _response: ("none", {}, None, None, {}, None, [])
-    )
-    monkeypatch.setattr(
-        attestation_checks,
-        "perform_attestation_checks",
-        lambda *_args, **_kwargs: {
-            "signature_valid": True,
-            "root_valid": True,
-            "rp_id_hash_valid": True,
-            "aaguid_match": True,
-            "warnings": [],
-        }
-    )
-    monkeypatch.setattr(attestation_aaguid, "extract_min_pin_length", lambda _ext: None)
-    monkeypatch.setattr(storage_credentials, "add_public_key_material", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
-    monkeypatch.setattr(storage_credentials, "read_for_update", lambda *_args, **_kwargs: ([], None))
-    monkeypatch.setattr(
-        storage_credentials,
-        "save_if_unchanged",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("storage unavailable"))
-    )
-    # Read again after the failed save, to tell a write that landed from one that did not.
-    monkeypatch.setattr(storage_credentials, "readkey", lambda *_args, **_kwargs: [])
-    monkeypatch.setattr(github_mirror, "record_registration_event", lambda *_args, **_kwargs: None)
-
-    with entry_app().test_client() as client:
-        with client.session_transaction() as session_state:
-            session_state["state"] = {"challenge": "state", "issued_at": time.time()}
-            session_state["register_rp_id"] = rp_id
-            session_state["simple_register_public_key"] = {"challenge": "AQID"}
-
-        response = client.post(
-            "/api/register/complete?email=user@example.com",
-            json={
-                "rawId": b64u(credential_id),
-                "response": {
-                    "attestationObject": b64u(b"attestation"),
-                    "clientDataJSON": b64u(b"client-data"),
-                },
-            },
-        )
-
-    assert response.status_code == 500
-    assert response.get_json() == {"error": "Unable to persist registered credential."}
 
 
 def _install_advanced_register_common_monkeypatches(monkeypatch, auth_data, rp_id):

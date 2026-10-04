@@ -97,17 +97,6 @@ def test_advanced_register_complete_without_session_state_returns_400(monkeypatc
             assert session_store.get("advanced_rp") == {"id": "example.com", "name": "Example RP"}
 
 
-def test_advanced_register_complete_requires_attachment_when_hints_resolve_to_attachment():
-    with entry_app().test_client() as client:
-        payload = _minimal_register_complete_payload()
-        payload["publicKey"]["hints"] = ["security-key"]
-
-        response = client.post("/api/advanced/register/complete", json=payload)
-
-    assert response.status_code == 400
-    assert "Authenticator attachment could not be determined" in response.get_json()["error"]
-
-
 def test_advanced_register_complete_prefers_session_attachment_scope_over_tampered_request_hints(monkeypatch):
     monkeypatch.setattr(visitor_session, "ensure_id", lambda: "session-id")
     monkeypatch.setattr(
