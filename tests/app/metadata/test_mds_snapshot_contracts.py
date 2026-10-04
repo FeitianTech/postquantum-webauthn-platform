@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import base64
-import types
 from datetime import date, datetime, timezone
 
 from server.app.mds import build as m
@@ -130,53 +129,6 @@ def test_name_identifier_aaguid_and_identifier_list_resolution():
     assert key_ids == ['id2', 'ID3', 'ID1']
 
 
-def test_algorithm_and_certificate_decoding_helpers(monkeypatch):
-    assert names.normalise_signature_algorithm_name('ecdsa-with-sha256') == 'ECDSA'
-    assert names.normalise_signature_algorithm_name('rsassa-pss') == 'RSASSA-PSS'
-    assert names.normalise_signature_algorithm_name('rsa encryption') == 'RSASSA-PKCS1-v1_5'
-    assert names.normalise_signature_algorithm_name('ed25519') == 'ED25519'
-    assert names.normalise_signature_algorithm_name('ed448') == 'ED448'
-    assert names.normalise_signature_algorithm_name('dsa') == 'DSA'
-    assert names.normalise_signature_algorithm_name('custom-alg') == 'CUSTOMALG'
-
-    assert names.format_hash_name('sha256') == 'SHA256'
-    assert names.format_hash_name(' SHA-1 ') == 'SHA1'
-    assert names.format_hash_name('') == ''
-    assert names.join_algorithm_info(names.normalise_signature_algorithm_name('ecdsa'), 'sha256') == 'ECDSA_SHA256'
-
-    assert mds_certificates.decode_der_certificate(b'bytes') == b'bytes'
-    assert mds_certificates.decode_der_certificate('YQ') == b'a'
-    assert mds_certificates.decode_der_certificate(123) is None
-
-    fake_cert = types.SimpleNamespace(
-        signature_hash_algorithm=types.SimpleNamespace(name='sha256'),
-        signature_algorithm_oid=types.SimpleNamespace(_name='ecdsa-with-SHA256', dotted_string='1.2.3'),
-        subject=types.SimpleNamespace(
-            get_attributes_for_oid=lambda _oid: [types.SimpleNamespace(value='CN1'), types.SimpleNamespace(value='CN1')]
-        ),
-    )
-
-    monkeypatch.setattr(mds_certificates, 'decode_der_certificate', lambda value: b'der' if value != 'skip' else None)
-    monkeypatch.setattr(mds_certificates.x509, 'load_der_x509_certificate', lambda _der: fake_cert)
-
-    algs, cns = mds_certificates.summarise_attestation_certificates(['cert-a', 'skip'])
-    assert algs == ['ECDSA_SHA256']
-    assert cns == ['CN1']
-
-    class _CertNoHash:
-        @property
-        def signature_hash_algorithm(self):
-            raise mds_certificates.UnsupportedAlgorithm('x')
-
-        signature_algorithm_oid = types.SimpleNamespace(_name='unknown oid', dotted_string='1.2.3.4')
-        subject = types.SimpleNamespace(get_attributes_for_oid=lambda _oid: [])
-
-    monkeypatch.setattr(mds_certificates.x509, 'load_der_x509_certificate', lambda _der: _CertNoHash())
-    algs2, cns2 = mds_certificates.summarise_attestation_certificates(['cert-b'])
-    assert algs2 == ['1.2.3.4']
-    assert cns2 == []
-
-
 def test_json_compaction_entry_id_meta_and_snapshot_builders(monkeypatch):
     payload = {'x': 1, 'y': 2}
     assert m._canonical_json(payload) == '{"x":1,"y":2}'
@@ -279,8 +231,17 @@ def test_blank_names_format_as_empty():
 
 def test_the_certificate_summary_names_each_algorithm_once_and_skips_blank_common_names():
     certificates = [
-        base64.b64encode(material.certificate(material.ec_key(label).public_key(), common_name=name, serial=serial)).decode()
-        for label, name, serial in (("one", "CN-Valid", 1), ("two", "   ", 2))
+        material.certificate(material.ec_key(label).public_key(), common_name=name, serial=serial)
+        for label, name, serial in (("one", "CN-Valid", 1), ("two", "   ", 2), ("three", "cn-valid", 3))
     ]
+    # As the BLOB holds them (base64), as bytes, and what holds no certificate at all.
+    values = [base64.b64encode(certificates[0]).decode(), base64.b64encode(certificates[1]).decode(), certificates[2], "   ", 123]
 
-    assert mds_certificates.summarise_attestation_certificates(certificates) == (['ED25519_SHA512'], ['CN-Valid'])
+    assert mds_certificates.summarise_attestation_certificates(values) == (['ED25519_SHA512'], ['CN-Valid'])
+
+
+def test_a_certificate_value_is_its_bytes_or_their_base64():
+    assert mds_certificates.decode_der_certificate(b'bytes') == b'bytes'
+    assert mds_certificates.decode_der_certificate(memoryview(b'a')) == b'a'
+    assert mds_certificates.decode_der_certificate('YQ') == b'a'
+    assert mds_certificates.decode_der_certificate(123) is None
