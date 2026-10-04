@@ -1,14 +1,11 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { renderApp } from '@/test/app';
 import { keepRecords } from '@/test/credentials';
 import { SNAPSHOT_URL, fixtureRoutes, stubFetch } from '@/test/mds';
-import { renderPage } from '@/test/page';
-
-import { AppShell } from './AppShell';
 
 beforeEach(() => {
-  window.history.replaceState({ fromNext: true }, '', '/');
   // The MDS section loads the fixture snapshot when it is first shown.
   stubFetch(fixtureRoutes());
 });
@@ -20,8 +17,7 @@ afterEach(() => {
 describe('the app shell', () => {
   // First in the file: the page has not moved from the URL it opened on.
   it('keeps the section the URL names a placeholder until its chunk arrives, then shows it without an entrance', async () => {
-    window.history.replaceState({ fromNext: true }, '', '/#codec');
-    renderPage(<AppShell />);
+    renderApp('#codec');
     const placeholder = screen.getByRole('tabpanel', { name: 'Codec' });
 
     expect(placeholder).toHaveAttribute('aria-busy', 'true');
@@ -36,8 +32,7 @@ describe('the app shell', () => {
 
   // Before the page has moved: what the URL opened is simply there.
   it('opens on the section the URL names, simply there; a section the person brings up comes in', async () => {
-    window.history.replaceState({ fromNext: true }, '', '/#advanced');
-    renderPage(<AppShell />);
+    renderApp('#advanced');
     const advanced = screen.getByRole('tabpanel', { name: 'Advanced Authentication' });
 
     expect(screen.getByRole('tab', { name: 'Advanced Authentication' })).toHaveAttribute('aria-selected', 'true');
@@ -53,7 +48,7 @@ describe('the app shell', () => {
   });
 
   it('loads the other sections once the first view is interactive, and keeps them hidden', async () => {
-    renderPage(<AppShell />);
+    renderApp();
     expect(document.querySelectorAll('[data-section-placeholder]')).toHaveLength(3);
 
     await waitFor(() => expect(document.querySelectorAll('[data-section-placeholder]')).toHaveLength(0));
@@ -65,7 +60,7 @@ describe('the app shell', () => {
 
   it('fetches the MDS list ahead once the first view is interactive, without hurry and without the cookie', async () => {
     const fetch = stubFetch(fixtureRoutes());
-    renderPage(<AppShell />);
+    renderApp();
     const listRequests = () => fetch.mock.calls.filter(([url]) => url === SNAPSHOT_URL);
 
     await waitFor(() => expect(listRequests()).toHaveLength(1));
@@ -75,9 +70,8 @@ describe('the app shell', () => {
   });
 
   it('fetches the MDS list at once when the URL opens #mds, and shows it from that answer', async () => {
-    window.history.replaceState({ fromNext: true }, '', '/#mds');
     const fetch = stubFetch(fixtureRoutes());
-    renderPage(<AppShell />);
+    renderApp('#mds');
 
     expect(fetch.mock.calls[0]).toEqual([SNAPSHOT_URL, { cache: 'default', credentials: 'omit' }]);
     await screen.findByRole('table', { name: 'FIDO MDS authenticators' });
@@ -88,7 +82,7 @@ describe('the app shell', () => {
   });
 
   it('shows the title, the four sections, Analyze Browser and GitHub', () => {
-    renderPage(<AppShell />);
+    renderApp();
 
     expect(screen.getByRole('heading', { level: 1, name: 'FIDO2/WebAuthn PQC Developer Tools' })).toBeInTheDocument();
     const tabs = within(screen.getByRole('tablist', { name: 'Sections' })).getAllByRole('tab');
@@ -125,7 +119,7 @@ describe('the app shell', () => {
     const measured = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
       return { height: this.matches('[data-shell-header]') ? height : 0 } as DOMRect;
     });
-    const { unmount } = renderPage(<AppShell />);
+    const { unmount } = renderApp();
     const variable = () => document.documentElement.style.getPropertyValue('--header-height');
     expect(variable()).toBe('61px');
 
@@ -139,7 +133,7 @@ describe('the app shell', () => {
   });
 
   it('keeps the footer text the site has always had', () => {
-    renderPage(<AppShell />);
+    renderApp();
     const footer = screen.getByRole('contentinfo');
 
     expect(footer).toHaveTextContent('© 2026 Feitian Technologies Co., Ltd. All rights reserved.');
@@ -151,7 +145,7 @@ describe('the app shell', () => {
   });
 
   it('opens on Simple Authentication, with the saved credentials beside it', async () => {
-    renderPage(<AppShell />);
+    renderApp();
     const panel = screen.getByRole('tabpanel', { name: 'Simple Authentication' });
 
     expect(within(panel).getByRole('heading', { level: 2, name: 'Simple Authentication' })).toBeInTheDocument();
@@ -164,7 +158,7 @@ describe('the app shell', () => {
   });
 
   it('switches sections on the page and writes the section to the hash, keeping the history state', async () => {
-    renderPage(<AppShell />);
+    renderApp();
 
     await userEvent.click(screen.getByRole('tab', { name: 'Codec' }));
     await screen.findByRole('heading', { level: 2, name: 'Codec' });
@@ -189,8 +183,7 @@ describe('the app shell', () => {
   });
 
   it('opens the section the hash names, and follows the hash when it changes', async () => {
-    window.history.replaceState(null, '', '/#advanced');
-    renderPage(<AppShell />);
+    renderApp('#advanced');
 
     await screen.findByRole('heading', { level: 2, name: 'Advanced Authentication' });
     expect(screen.getByRole('tabpanel', { name: 'Advanced Authentication' })).toHaveTextContent(
@@ -211,7 +204,7 @@ describe('the app shell', () => {
   });
 
   it('offers the sections, Analyze Browser and GitHub in a menu sheet on a phone', async () => {
-    renderPage(<AppShell />);
+    renderApp();
     const menu = screen.getByRole('button', { name: 'Menu' });
     expect(menu).toHaveAttribute('aria-expanded', 'false');
 
@@ -236,7 +229,7 @@ describe('the app shell', () => {
     keepRecords([
       { type: 'simple', credentialId: 'AQID', email: 'alice', aaguidHex: 'f1d0f1d0000040008000000000000001', attestationSummary: { rootValid: true } },
     ]);
-    renderPage(<AppShell />);
+    renderApp();
     const panel = screen.getByRole('tabpanel', { name: 'Simple Authentication' });
     const link = await within(panel).findByRole('button', { name: 'FIDO MDS' });
     expect(link).toHaveAttribute('title', 'Open authenticator metadata');

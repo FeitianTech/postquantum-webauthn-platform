@@ -13,11 +13,9 @@ import {
 import { answerResponse, goldenAnswers, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
 
 import { forgetCompletedRecords } from '@/components/credentials/detail/useCredentialDetail';
-import { AppShell } from '@/components/shell/AppShell';
-import { ToastProvider } from '@/components/ui/Toast';
+import { renderApp } from '@/test/app';
 import { keepRecords, savedRecord, storedRecords, warmUpRoutes } from '@/test/credentials';
 import { json, stubFetch } from '@/test/fetch';
-import { renderPage } from '@/test/page';
 
 type Answer = { status: number; body: unknown };
 const answer = (entry: Answer) => () => answerResponse(entry) as Response;
@@ -27,18 +25,13 @@ const KEPT = savedRecord('advanced-register-packed-x5c-everything', { userName: 
 let authenticator: ReturnType<typeof installAuthenticator>;
 
 function renderSection(records: object[] = [], routes = {}) {
-  window.history.replaceState({ fromNext: true }, '', '/#advanced');
   keepRecords(records);
   const fetch = stubFetch({
     ...warmUpRoutes(),
     '/api/codec': (init) => answerResponse(advancedDecodeAnswer(JSON.parse(String(init?.body)).payload)) as Response,
     ...routes,
   });
-  renderPage(
-    <ToastProvider>
-      <AppShell />
-    </ToastProvider>,
-  );
+  renderApp('#advanced');
   return fetch;
 }
 

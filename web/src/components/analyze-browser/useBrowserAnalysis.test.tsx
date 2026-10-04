@@ -1,8 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { AppShell } from '@/components/shell/AppShell';
-import { renderPage } from '@/test/page';
+import { renderApp } from '@/test/app';
 
 const { gather } = vi.hoisted(() => ({ gather: vi.fn() }));
 
@@ -15,7 +14,7 @@ vi.mock('@/logic/browser/report.js', async (importOriginal) => {
 describe('when the analysis fails', () => {
   it('does not open, enables the trigger again, and asks again on the next click', async () => {
     gather.mockRejectedValueOnce(new Error('the browser threw'));
-    renderPage(<AppShell />);
+    renderApp();
     const trigger = screen.getByRole('button', { name: 'Analyze Browser' });
 
     await userEvent.click(trigger);

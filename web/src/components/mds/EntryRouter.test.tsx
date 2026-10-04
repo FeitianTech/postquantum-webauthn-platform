@@ -3,19 +3,12 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { AppShell } from '@/components/shell/AppShell';
-import { ToastProvider } from '@/components/ui/Toast';
+import { renderApp } from '@/test/app';
 import { entryNamed, fixtureRoutes, stubFetch } from '@/test/mds';
-import { renderPage } from '@/test/page';
 
-function renderApp(hash: string) {
-  window.history.replaceState({ fromNext: true }, '', `/${hash}`);
+function openAt(hash: string) {
   stubFetch(fixtureRoutes());
-  renderPage(
-    <ToastProvider>
-      <AppShell />
-    </ToastProvider>,
-  );
+  renderApp(hash);
 }
 
 const list = () => document.querySelector<HTMLElement>('[data-mds-list]')!;
@@ -33,7 +26,7 @@ afterEach(() => {
 
 describe('an MDS entry in the URL', () => {
   it('opens from its row as a new history entry, and the page Back returns to the list as it was', async () => {
-    renderApp('#mds');
+    openAt('#mds');
     await loaded();
     const entry = entryNamed('Fixture U2F Key');
     await userEvent.type(screen.getByRole('searchbox', { name: 'Name' }), 'Fixture');
@@ -57,7 +50,7 @@ describe('an MDS entry in the URL', () => {
   });
 
   it('closes with the browser Back too, and opens again with Forward', async () => {
-    renderApp('#mds');
+    openAt('#mds');
     await loaded();
     const entry = entryNamed('Fixture Security Key L2');
     await userEvent.click(link(entry.entryId));
@@ -72,7 +65,7 @@ describe('an MDS entry in the URL', () => {
   });
 
   it('opens an entry a link names once the list has loaded, and Back leaves no entry behind', async () => {
-    renderApp('#mds/aaid:F1D0%230012');
+    openAt('#mds/aaid:F1D0%230012');
     expect(await screen.findByRole('heading', { level: 3, name: 'Fixture UAF Authenticator' })).toBeInTheDocument();
     expect(list()).not.toBeVisible();
     const length = window.history.length;
@@ -86,7 +79,7 @@ describe('an MDS entry in the URL', () => {
   });
 
   it('asks the server for an entry the list does not have, and says when it has none', async () => {
-    renderApp('#mds/aaguid:not-listed');
+    openAt('#mds/aaguid:not-listed');
     expect(await screen.findByRole('heading', { level: 3, name: 'Authenticator metadata not found.' })).toBeInTheDocument();
     expect(screen.getByText('Metadata entry not found.')).toBeInTheDocument();
     expect(screen.getByText('aaguid:not-listed')).toBeInTheDocument();
@@ -95,7 +88,7 @@ describe('an MDS entry in the URL', () => {
   });
 
   it('leaves the entry when another section is chosen', async () => {
-    renderApp('#mds');
+    openAt('#mds');
     await loaded();
     await userEvent.click(link('aaguid:f1d0f1d0-0000-4000-8000-000000000002'));
     await userEvent.click(within(screen.getByRole('tablist', { name: 'Sections' })).getByRole('tab', { name: 'Codec' }));

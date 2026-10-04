@@ -4,10 +4,9 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { AppShell } from '@/components/shell/AppShell';
+import { renderApp } from '@/test/app';
 import { DETAIL_SCENARIO, artifactAnswer, decodeRoute, keepRecords, savedRecord, storedRecords, warmUpRoutes } from '@/test/credentials';
 import { json, stubFetch } from '@/test/fetch';
-import { renderPage } from '@/test/page';
 
 import { forgetCompletedRecords } from './detail/useCredentialDetail';
 
@@ -22,10 +21,9 @@ const keyOf = (record: Record<string, unknown>) => `id:${record.credentialIdBase
 const urlOf = (record: Record<string, unknown>, ...levels: string[]) => ['#simple/credential', keyOf(record), ...levels].join('/');
 
 function renderShell(records: Record<string, unknown>[], hash = '', routes = {}) {
-  window.history.replaceState({ fromNext: true }, '', `/${hash}`);
   keepRecords(records);
   const fetch = stubFetch({ ...warmUpRoutes(), '/api/codec': decodeRoute(), ...routes });
-  renderPage(<AppShell />);
+  renderApp(hash);
   return fetch;
 }
 

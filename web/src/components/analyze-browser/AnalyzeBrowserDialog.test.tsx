@@ -5,8 +5,7 @@ import { IDENTITY_MATRIX } from '@/test/logic/browser/identity-matrix.js';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { AppShell } from '@/components/shell/AppShell';
-import { renderPage } from '@/test/page';
+import { renderApp } from '@/test/app';
 
 type Navigatorish = Record<string, unknown>;
 const matrixEntry = (label: string) =>
@@ -60,7 +59,7 @@ const trigger = () => screen.getByRole('button', { name: 'Analyze Browser' });
 const panelRoot = () => document.getElementById('analyze-browser-panel')!;
 
 async function openPanel() {
-  renderPage(<AppShell />);
+  renderApp();
   await userEvent.click(trigger());
   const dialog = await screen.findByRole('dialog', { name: 'Browser Analysis' });
   await waitFor(() => expect(dialog).toHaveFocus());
@@ -328,7 +327,7 @@ describe('the trigger', () => {
         getClientCapabilities: vi.fn(() => new Promise((resolve) => (answer = resolve))),
       }),
     });
-    renderPage(<AppShell />);
+    renderApp();
 
     await userEvent.click(trigger());
     expect(trigger()).toBeDisabled();
@@ -489,7 +488,7 @@ describe('as a dialog', () => {
 
   it('leaves Tab alone while it is closed', async () => {
     installBrowser();
-    renderPage(<AppShell />);
+    renderApp();
     trigger().focus();
     const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
     trigger().dispatchEvent(event);
@@ -519,7 +518,7 @@ describe('as a dialog', () => {
 
   it('opens from the phone menu, and gives focus back to the Menu button', async () => {
     installBrowser();
-    renderPage(<AppShell />);
+    renderApp();
     const menu = screen.getByRole('button', { name: 'Menu' });
 
     await userEvent.click(menu);

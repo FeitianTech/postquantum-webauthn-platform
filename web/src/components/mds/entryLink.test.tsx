@@ -1,10 +1,8 @@
 // The link other surfaces use to open an AAGUID's MDS entry.
 import { act, renderHook, screen } from '@testing-library/react';
 
-import { AppShell } from '@/components/shell/AppShell';
-import { ToastProvider } from '@/components/ui/Toast';
+import { renderApp } from '@/test/app';
 import { fixtureRoutes, stubFetch } from '@/test/mds';
-import { renderPage } from '@/test/page';
 import { SectionNavigationProvider, useSection } from '@/lib/useSection';
 
 import { openMdsEntryForAaguid, useOpenMdsEntry } from './entryLink';
@@ -51,13 +49,8 @@ describe('opening an AAGUID\'s MDS entry', () => {
   });
 
   it('shows the entry at its URL', async () => {
-    window.history.replaceState({ fromNext: true }, '', '/#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000001');
     stubFetch(fixtureRoutes());
-    renderPage(
-      <ToastProvider>
-        <AppShell />
-      </ToastProvider>,
-    );
+    renderApp('#mds/aaguid:f1d0f1d0-0000-4000-8000-000000000001');
     expect(await screen.findByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeInTheDocument();
   });
 });

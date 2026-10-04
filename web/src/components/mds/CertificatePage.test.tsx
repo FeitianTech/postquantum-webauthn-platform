@@ -4,10 +4,8 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { AppShell } from '@/components/shell/AppShell';
-import { ToastProvider } from '@/components/ui/Toast';
+import { renderApp } from '@/test/app';
 import { entryNamed, fixtureRoutes, json, stubFetch } from '@/test/mds';
-import { renderPage } from '@/test/page';
 
 // What POST /api/mds/decode-certificate answers for the fixture's EC root (its shape).
 const DETAILS = {
@@ -31,14 +29,9 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-function renderApp(hash: string, decodeRoute = () => json({ details: DETAILS }) as Response | Promise<Response>) {
-  window.history.replaceState({ fromNext: true }, '', `/${hash}`);
+function openAt(hash: string, decodeRoute = () => json({ details: DETAILS }) as Response | Promise<Response>) {
   const fetch = stubFetch(fixtureRoutes({ '/api/mds/decode-certificate': decodeRoute }));
-  renderPage(
-    <ToastProvider>
-      <AppShell />
-    </ToastProvider>,
-  );
+  renderApp(hash);
   return fetch;
 }
 
@@ -56,7 +49,7 @@ afterEach(() => {
 describe('an attestation certificate of an MDS entry', () => {
   it('keeps its button busy while the certificate is decoded', async () => {
     const pending = deferred<Response>();
-    const fetch = renderApp(`#mds/${L1().entryId}`, () => pending.promise);
+    const fetch = openAt(`#mds/${L1().entryId}`, () => pending.promise);
     const button = await screen.findByRole('button', { name: 'Certificate 1' });
 
     await userEvent.click(button);
@@ -67,7 +60,7 @@ describe('an attestation certificate of an MDS entry', () => {
   });
 
   it('opens at its own URL over the entry, with the summary, Raw and Decoded Output', async () => {
-    renderApp(`#mds/${L1().entryId}`);
+    openAt(`#mds/${L1().entryId}`);
     await userEvent.click(await screen.findByRole('button', { name: 'Certificate 1' }));
 
     const heading = await screen.findByRole('heading', { level: 3, name: DETAILS.subject });
@@ -92,7 +85,7 @@ describe('an attestation certificate of an MDS entry', () => {
   });
 
   it('its Back returns to the entry, with the focus on the certificate\'s button', async () => {
-    renderApp(`#mds/${L1().entryId}`);
+    openAt(`#mds/${L1().entryId}`);
     await userEvent.click(await screen.findByRole('button', { name: 'Certificate 1' }));
     await screen.findByRole('heading', { level: 3, name: DETAILS.subject });
 
@@ -104,7 +97,7 @@ describe('an attestation certificate of an MDS entry', () => {
   });
 
   it('decodes a certificate once, and the browser\'s Back returns to the entry', async () => {
-    const fetch = renderApp(`#mds/${L1().entryId}`);
+    const fetch = openAt(`#mds/${L1().entryId}`);
     await userEvent.click(await screen.findByRole('button', { name: 'Certificate 1' }));
     await screen.findByRole('heading', { level: 3, name: DETAILS.subject });
     act(() => window.history.back());
@@ -117,7 +110,7 @@ describe('an attestation certificate of an MDS entry', () => {
 
   it('decodes on the page when a link opens it, and its Back shows the entry', async () => {
     const pending = deferred<Response>();
-    renderApp(`#mds/${L1().entryId}/certificate/1`, () => pending.promise);
+    openAt(`#mds/${L1().entryId}/certificate/1`, () => pending.promise);
     expect(await screen.findByText('Decoding certificate 1…')).toBeInTheDocument();
     await act(async () => pending.resolve(json({ details: DETAILS })));
     await screen.findByRole('heading', { level: 3, name: DETAILS.subject });
@@ -131,7 +124,7 @@ describe('an attestation certificate of an MDS entry', () => {
 
   it('opens on a failure too, with the sentence, the server reason, and a new try from the entry', async () => {
     let answer = () => json({ error: 'Invalid certificate encoding.' }, 400);
-    const fetch = renderApp(`#mds/${L1().entryId}`, () => answer());
+    const fetch = openAt(`#mds/${L1().entryId}`, () => answer());
     await userEvent.click(await screen.findByRole('button', { name: 'Certificate 1' }));
 
     expect(await screen.findByRole('heading', { level: 3, name: 'Attestation Certificate' })).toBeInTheDocument();
@@ -148,21 +141,21 @@ describe('an attestation certificate of an MDS entry', () => {
   });
 
   it('says a decode that could not be sent', async () => {
-    renderApp(`#mds/${L1().entryId}/certificate/1`, () => {
+    openAt(`#mds/${L1().entryId}/certificate/1`, () => {
       throw new TypeError('Failed to fetch');
     });
     expect(await screen.findByRole('alert')).toHaveTextContent('Failed to fetch');
   });
 
   it('says there is nothing to summarise, and keeps Decoded Output', async () => {
-    renderApp(`#mds/${L1().entryId}/certificate/1`, () => json({ details: { summary: 'Unable to parse attestation certificate' } }));
+    openAt(`#mds/${L1().entryId}/certificate/1`, () => json({ details: { summary: 'Unable to parse attestation certificate' } }));
     expect(await screen.findByText('No decoded certificate details available.')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(document.querySelectorAll('[data-mds-certificate] pre')[1].textContent).toBe('Unable to parse attestation certificate');
   });
 
   it('gives a value that is a list a line for each', async () => {
-    renderApp(`#mds/${L1().entryId}/certificate/1`, () =>
+    openAt(`#mds/${L1().entryId}/certificate/1`, () =>
       json({ details: { subject: ['CN=First', '', 'CN=Second'], serialNumber: { hex: '0A' } } }),
     );
     const subject = await waitFor(() => {
@@ -174,7 +167,7 @@ describe('an attestation certificate of an MDS entry', () => {
   });
 
   it('shows a summary that has only a section', async () => {
-    renderApp(`#mds/${L1().entryId}/certificate/1`, () => json({ details: { signature: { algorithm: 'ECDSA_SHA256' } } }));
+    openAt(`#mds/${L1().entryId}/certificate/1`, () => json({ details: { signature: { algorithm: 'ECDSA_SHA256' } } }));
     await waitFor(() => expect(document.querySelector('[data-mds-certificate] [data-section="Signature"]')).not.toBeNull());
     const page = document.querySelector<HTMLElement>('[data-mds-certificate]')!;
     expect(page.querySelector('[data-item="Subject"]')).toBeNull();
@@ -184,17 +177,12 @@ describe('an attestation certificate of an MDS entry', () => {
   it('opens nothing for a certificate that is only whitespace, nor for an entry without certificates', async () => {
     const blank = { ...L1(), entryId: 'aaguid:blank', name: 'Blank Root', attestationCertificates: ['  '] };
     const bare = { ...L1(), entryId: 'aaguid:bare', name: 'No Roots', attestationCertificates: [] };
-    window.history.replaceState({ fromNext: true }, '', '/#mds/aaguid:blank/certificate/1');
     const fetch = stubFetch(
       fixtureRoutes({
         '/api/mds/metadata/resolve': (_init, url) => json({ entry: url.includes('blank') ? blank : bare }),
       }),
     );
-    renderPage(
-      <ToastProvider>
-        <AppShell />
-      </ToastProvider>,
-    );
+    renderApp('#mds/aaguid:blank/certificate/1');
     expect(await screen.findByRole('heading', { level: 3, name: 'Blank Root' })).toBeVisible();
     await waitFor(() => expect(window.location.hash).toBe('#mds/aaguid:blank'));
     await userEvent.click(screen.getByRole('button', { name: 'Certificate 1' }));
@@ -210,14 +198,14 @@ describe('an attestation certificate of an MDS entry', () => {
   });
 
   it('shows the entry for a certificate it does not have, and says so in the URL', async () => {
-    renderApp(`#mds/${L1().entryId}/certificate/9`);
+    openAt(`#mds/${L1().entryId}/certificate/9`);
     expect(await screen.findByRole('heading', { level: 3, name: 'Fixture Security Key L1' })).toBeVisible();
     await waitFor(() => expect(window.location.hash).toBe(`#mds/${L1().entryId}`));
   });
 
   it('leaves an entry\'s page alone when the list is left while a certificate decodes', async () => {
     const pending = deferred<Response>();
-    renderApp(`#mds/${L1().entryId}`, () => pending.promise);
+    openAt(`#mds/${L1().entryId}`, () => pending.promise);
     await userEvent.click(await screen.findByRole('button', { name: 'Certificate 1' }));
     await userEvent.click(screen.getByRole('button', { name: 'Back' }));
     await act(async () => pending.resolve(json({ details: DETAILS })));
