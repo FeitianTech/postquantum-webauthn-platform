@@ -194,11 +194,18 @@ def _resigned(der: bytes, issuer_key, old: bytes, new: bytes) -> bytes:
     return b"\x30" + _der_length(len(body)) + body
 
 
-def test_a_signing_certificate_whose_key_does_not_load_is_refused():
+@pytest.mark.parametrize("unloadable", ["a point off the curve", "a key type no library names"])
+def test_a_signing_certificate_whose_key_does_not_load_is_refused(unloadable):
     certs = _transition()
     point = certs.leaf_key.public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)
-    # A point off the curve, in a certificate its issuer signed.
-    leaf = _resigned(certs.leaf, certs.intermediate_key, point, point[:-1] + bytes([point[-1] ^ 1]))
+    old, new = (
+        (point, point[:-1] + bytes([point[-1] ^ 1]))
+        if unloadable == "a point off the curve"
+        # id-ecPublicKey's OID made 1.2.840.10045.2.9: cryptography raises UnsupportedAlgorithm.
+        else (bytes.fromhex("06072a8648ce3d0201"), bytes.fromhex("06072a8648ce3d0209"))
+    )
+    # In a certificate its issuer signed, so the chain to the root still verifies.
+    leaf = _resigned(certs.leaf, certs.intermediate_key, old, new)
     blob = _blob({"alg": "ES256", "x5c": _x5c(leaf, certs.intermediate)}, _payload(), certs.leaf_key)
 
     with pytest.raises(ValueError, match="does not expose a supported public key"):

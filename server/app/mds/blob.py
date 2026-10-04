@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from cryptography import x509
+from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.x509.verification import (
     Criticality,
     ExtensionPolicy,
@@ -91,7 +92,7 @@ def verify_blob(blob: bytes, trust_root: bytes, *, now: datetime | None = None) 
     signer = x509.load_der_x509_certificate(chain[0] if chain else trust_root)
     try:
         public_key = signer.public_key()
-    except ValueError:
+    except (ValueError, UnsupportedAlgorithm):
         raise ValueError("Metadata signing certificate does not expose a supported public key") from None
     signature = _segment(signature_segment)
     CoseKey.for_name(header["alg"]).from_cryptography_key(public_key).verify(message, signature)
