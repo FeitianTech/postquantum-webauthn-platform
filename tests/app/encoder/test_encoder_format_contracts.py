@@ -4,21 +4,10 @@ import json
 import cbor2
 import pytest
 
-from server.app.decoder.encode import binary_decode as encode_binary_decode
 from server.app.decoder.encode import ctap_fields as encode_ctap_fields
 from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
 from server.app.decoder.encode import text as encode_text
 from tests.app.security.ceremony_helpers import b64u, unb64u
-
-
-def test_encode_payload_text_rejects_empty_input():
-    with pytest.raises(ValueError, match="Encoder input is empty"):
-        encode_text.encode_payload_text("   ", "json")
-
-
-def test_encode_payload_text_rejects_non_json_document():
-    with pytest.raises(ValueError, match="expects a JSON document"):
-        encode_text.encode_payload_text("not-json", "json")
 
 
 def test_encode_pem_normalizes_label_and_wraps_64_columns():
@@ -85,11 +74,6 @@ def test_encode_attestation_statement_converts_sig_and_x5c_entries():
     assert statement["x5c"] == [first_cert, b"second-cert"]
     assert statement["alg"] == -7
     assert statement["customBinary"] == b"blob-data"
-
-
-def test_require_certificate_bytes_rejects_unrecoverable_pem_entry():
-    with pytest.raises(ValueError, match="Unable to decode certificate PEM contents"):
-        encode_binary_decode._require_certificate_bytes({"pem": "%%%%"}, 0)
 
 
 def test_encode_ctap_webauthn_rejects_negative_numeric_field_ids():

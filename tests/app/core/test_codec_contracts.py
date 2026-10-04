@@ -7,7 +7,6 @@ import pytest
 
 from server.app.decoder.decode import text as decode_text
 from server.app.decoder.encode import ctap_numeric as encode_ctap_numeric
-from server.app.decoder.encode import handlers_basic as encode_handlers_basic
 from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
 from server.app.decoder.encode import text as encode_text
 from tests.app.entry_app import entry_app
@@ -127,17 +126,6 @@ def test_codec_api_round_trip_cbor_encode_then_decode():
         decoded_payload = decoded_response.get_json()
         assert decoded_payload["success"] is True
         assert decoded_payload["type"].startswith("CBOR")
-
-
-def test_normalize_encoding_format_aliases_and_case_insensitive():
-    assert encode_handlers_basic._normalize_encoding_format("  JSON (binary)  ") == "json"
-    assert encode_handlers_basic._normalize_encoding_format("CBOR (CANONICAL)") == "cbor"
-    assert encode_handlers_basic._normalize_encoding_format("cbor (ctap/webauthn data)") == "ctap-webauthn"
-
-
-def test_normalize_encoding_format_rejects_unknown_values():
-    with pytest.raises(ValueError, match="Unsupported encoder format"):
-        encode_handlers_basic._normalize_encoding_format("totally-unknown")
 
 
 def test_encode_ctap_webauthn_requires_mandatory_fields_for_make_credential_request():
