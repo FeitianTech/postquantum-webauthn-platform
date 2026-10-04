@@ -71,11 +71,9 @@ def summarise_attestation(attestation_checks: Mapping[str, Any]) -> dict[str, An
     warnings: list[str] = []
     attestation_warnings = attestation_checks.get("warnings")
     if isinstance(attestation_warnings, list):
-        for message in attestation_warnings:
-            if isinstance(message, str):
-                stripped = message.strip()
-                if stripped:
-                    warnings.append(stripped)
+        warnings = [
+            message.strip() for message in attestation_warnings if isinstance(message, str) and message.strip()
+        ]
 
     errors: list[str] = []
     raw_attestation_errors = attestation_checks.get("errors")

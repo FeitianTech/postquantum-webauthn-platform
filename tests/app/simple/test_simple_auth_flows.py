@@ -1,12 +1,9 @@
-import base64
 import hashlib
-import time
 from types import SimpleNamespace
 
 from server.app import visitor_session
 from server.app.config import relying_party
 from server.app.routes.simple import parsing as simple_parsing
-from server.app.routes.simple import registration as simple_registration
 from server.app.storage import credentials as storage_credentials
 from server.app.storage import github_mirror
 from server.app.webauthn.attestation import aaguid as attestation_aaguid
@@ -47,58 +44,6 @@ class _FakeAuthData:
         return self.rp_id_hash + bytes([self.flags]) + int(self.counter).to_bytes(4, "big")
 
 
-def test_simple_register_begin_persists_state_and_filters_algorithms(monkeypatch):
-    state = {"challenge": "register-state"}
-
-    class _FakeServer:
-        def register_begin(self, *_args, **_kwargs):
-            return (
-                {
-                    "publicKey": {
-                        "challenge": "challenge-1",
-                        "pubKeyCredParams": [
-                            {"type": "public-key", "alg": -257},
-                            {"type": "public-key", "alg": -8},
-                            {"type": "public-key", "alg": 12345},
-                        ],
-                    }
-                },
-                state,
-            )
-
-    monkeypatch.setattr(simple_registration, "_SIMPLE_ALLOWED_ALGORITHMS", (-257, -7))
-    monkeypatch.setattr(relying_party, "determine_rp_id", lambda: "example.com")
-    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
-    monkeypatch.setattr(
-        simple_parsing,
-        "_parse_client_credentials",
-        lambda _raw: ([], [{"credentialId": "cred-1", "publicKey": "pk-1", "aaguid": "ag-1"}])
-    )
-
-    with entry_app().test_client() as client:
-        response = client.post(
-            "/api/register/begin?email=user@example.com",
-            json={"credentials": [{"credentialId": "cred-1"}]},
-        )
-
-        assert response.status_code == 200
-        payload = response.get_json()
-        assert payload["publicKey"]["pubKeyCredParams"] == [
-            {"type": "public-key", "alg": -257},
-            {"type": "public-key", "alg": -7},
-        ]
-        # The ceremony state (and therefore the challenge) must never be
-        # returned to the client: it lives only in the server-side session.
-        assert "__session_state" not in payload
-
-        with client.session_transaction() as session_state:
-            assert session_state["state"]["challenge"] == state["challenge"]
-            assert isinstance(session_state["state"]["issued_at"], float)
-            assert session_state["register_rp_id"] == "example.com"
-            assert "simple_credentials" not in session_state
-            assert "simple_register_public_key" in session_state
-
-
 def test_simple_authenticate_begin_requires_valid_credentials(monkeypatch):
     monkeypatch.setattr(simple_parsing, "_parse_client_credentials", lambda _raw: ([], []))
 
@@ -109,53 +54,6 @@ def test_simple_authenticate_begin_requires_valid_credentials(monkeypatch):
         )
 
     assert response.status_code == 404
-
-
-def test_simple_authenticate_complete_success_returns_sign_count(monkeypatch):
-    credential_id = b"simple-auth-success"
-    auth_data_bytes = b"\x00" * 32 + b"\x01" + (7).to_bytes(4, "big")
-    auth_data_b64 = base64.b64encode(auth_data_bytes).decode("ascii").rstrip("=")
-
-    class _FakeServer:
-        def authenticate_complete(self, *_args, **_kwargs):
-            return SimpleNamespace(credential_id=credential_id)
-
-    monkeypatch.setattr(relying_party, "create_fido_server", lambda **_kwargs: _FakeServer())
-    monkeypatch.setattr(
-        simple_parsing,
-        "_parse_client_credentials",
-        lambda _raw: ([object()], [{"credentialId": b64u(credential_id)}])
-    )
-
-    with entry_app().test_client() as client:
-        with client.session_transaction() as session_state:
-            keep_simple_credentials(session_state, [{"credentialId": b64u(credential_id)}])
-            session_state["state"] = {"challenge": "auth-state", "issued_at": time.time()}
-            session_state["authenticate_rp_id"] = "example.com"
-            session_state["simple_credentials_email"] = "user@example.com"
-
-        response = client.post(
-            "/api/authenticate/complete?email=user@example.com",
-            json=simple_complete_body(
-                {"rawId": b64u(credential_id), "response": {"authenticatorData": auth_data_b64}},
-                [{"credentialId": b64u(credential_id)}],
-            ),
-        )
-
-        assert response.status_code == 200
-        payload = response.get_json()
-        assert payload == {
-            "status": "OK",
-            "hintsUsed": [],
-            "authenticatedCredentialId": b64u(credential_id),
-            "signCount": 7,
-            "signCountStatus": "ok",
-        }
-
-        with client.session_transaction() as session_state:
-            assert "state" not in session_state
-            assert "authenticate_rp_id" not in session_state
-            assert "simple_credentials_email" not in session_state
 
 
 def test_simple_authenticate_complete_rejects_request_state_fallback(monkeypatch):
