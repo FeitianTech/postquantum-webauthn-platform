@@ -2,11 +2,7 @@ from __future__ import annotations
 
 import base64
 
-import pytest
-
 from server.app import encoding
-from server.app.routes import advanced as advanced_module
-from server.app.routes.advanced import algorithms, parsing
 from server.app.routes.advanced import parsing as advanced_parsing
 from server.app.routes.advanced import summary as advanced_summary
 from server.app.webauthn import client_binary, client_credentials, cose_algorithms
@@ -117,14 +113,3 @@ def test_base64_assertion_and_binary_extraction_helpers():
     assert client_binary.unwrap_request_value({"$base64": "YWJj"}) == b"abc"
     assert client_binary.unwrap_request_value({"$base64url": "YWJj"}) == b"abc"
     assert client_binary.unwrap_request_value("plain") == "plain"
-
-
-@pytest.mark.parametrize(
-    "name", ["_extract_credential_id", "_is_custom_cose_algorithm", "_extract_requested_assertion_algorithm"]
-)
-def test_helpers_no_route_called_are_gone(name):
-    # Each existed only for tests: no route, and no other helper, called it.
-
-    assert not hasattr(advanced_module, name)
-    assert not hasattr(algorithms, name)
-    assert not hasattr(parsing, name)

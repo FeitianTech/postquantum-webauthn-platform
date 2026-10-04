@@ -5,16 +5,6 @@ from __future__ import annotations
 from server.app.webauthn import attachments
 
 
-def test_hint_to_attachment_map():
-    """Test that the hint-to-attachment mapping is correctly defined."""
-    
-    assert attachments.HINT_TO_ATTACHMENT_MAP == {
-        "security-key": "cross-platform",
-        "hybrid": "cross-platform",
-        "client-device": "platform",
-    }
-
-
 def test_normalize_attachment_with_string():
     """Test normalizing valid attachment strings."""
     

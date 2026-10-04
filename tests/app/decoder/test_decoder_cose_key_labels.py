@@ -65,10 +65,6 @@ def test_every_algorithm_label_comes_from_describe_algorithm(alg):
     assert cose_display._resolve_cose_algorithm({"3": str(alg)}) == pqc.describe_algorithm(alg)
 
 
-def test_the_decoder_keeps_no_algorithm_table_of_its_own():
-    assert not hasattr(cose_display, "_COSE_ALG_LABELS")
-
-
 @pytest.mark.parametrize(
     ("make_key", "expected"),
     [

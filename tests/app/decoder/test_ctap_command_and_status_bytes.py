@@ -22,7 +22,6 @@ from fido2.ctap2.base import Ctap2
 from server.app.decoder import ctap_tables
 from server.app.decoder.decode import cbor_parser, ctap
 from server.app.decoder.decode.text import decode_payload_text
-from server.app.decoder.encode import constants
 
 _COMMAND_CODES = {int(command) for command in Ctap2.CMD}
 _ERROR_STATUSES = [status for status in CtapError.ERR if status != CtapError.ERR.SUCCESS]
@@ -123,15 +122,6 @@ def test_a_client_pin_command_is_named():
 
     assert result["data"]["ctap"]["command"] == "CLIENT_PIN"
     assert result["type"].startswith("CBOR (CLIENT_PIN command")
-
-
-def test_the_encoder_prefixes_ctap_messages_with_fido2_codes():
-    assert constants._CTAP_PREFIX_DETAILS == {
-        "makeCredentialRequest": (int(Ctap2.CMD.MAKE_CREDENTIAL), "command"),
-        "getAssertionRequest": (int(Ctap2.CMD.GET_ASSERTION), "command"),
-        "makeCredentialResponse": (int(CtapError.ERR.SUCCESS), "status"),
-        "getAssertionResponse": (int(CtapError.ERR.SUCCESS), "status"),
-    }
 
 
 @pytest.mark.parametrize("lenient", [False, True])

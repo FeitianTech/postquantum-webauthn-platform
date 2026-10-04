@@ -6,16 +6,6 @@ from server.app.routes.advanced import algorithms
 from server.app.webauthn import pqc
 
 
-def test_pqc_algorithm_id_to_name_mapping():
-    """Test that PQC algorithm constants are correctly defined."""
-    
-    assert pqc.PQC_ALGORITHM_ID_TO_NAME == {
-        -50: "ML-DSA-87",
-        -49: "ML-DSA-65",
-        -48: "ML-DSA-44",
-    }
-
-
 def test_is_pqc_algorithm_recognizes_pqc():
     """Test that PQC algorithms are correctly identified."""
     

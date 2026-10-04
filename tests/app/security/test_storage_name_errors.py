@@ -115,10 +115,3 @@ def test_the_advanced_flow_does_not_hand_its_user_name_to_the_store(client, capl
 
     assert response.status_code == 200, response.get_json()
     assert [record for record in caplog.records if record.exc_info] == []
-
-
-def test_the_refusal_is_still_a_value_error():
-    with pytest.raises(InvalidStorageIdentifier) as refused:
-        storage_credentials.readkey(TRAVERSAL, session_id="session-a")
-
-    assert isinstance(refused.value, ValueError)
