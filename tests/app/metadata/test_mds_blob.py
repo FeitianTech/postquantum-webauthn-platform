@@ -15,7 +15,7 @@ import pytest
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature as CryptographyInvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec, rsa
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 from cryptography.x509.oid import NameOID
 from fido2.attestation import InvalidSignature, verify_x509_chain
 from fido2.utils import websafe_encode
@@ -176,17 +176,31 @@ def test_a_blob_is_checked_at_the_time_given():
     assert mds_blob.verify_blob(blob, certs.current_root, now=_NOW - timedelta(hours=2)) == _payload()
 
 
-def test_a_signing_certificate_whose_key_does_not_load_is_refused(monkeypatch):
+def _der_length(length: int) -> bytes:
+    if length < 0x80:
+        return bytes([length])
+    encoded = length.to_bytes((length.bit_length() + 7) // 8, "big")
+    return bytes([0x80 | len(encoded)]) + encoded
+
+
+def _resigned(der: bytes, issuer_key, old: bytes, new: bytes) -> bytes:
+    """``der`` with ``old`` replaced by ``new`` in its body, signed again by ``issuer_key``."""
+
+    tbs = x509.load_der_x509_certificate(der.replace(old, new)).tbs_certificate_bytes
+    algorithm = bytes.fromhex("300d06092a864886f70d01010b0500")  # sha256WithRSAEncryption
+    assert algorithm in der
+    signature = b"\x00" + issuer_key.sign(tbs, padding.PKCS1v15(), hashes.SHA256())
+    body = tbs + algorithm + b"\x03" + _der_length(len(signature)) + signature
+    return b"\x30" + _der_length(len(body)) + body
+
+
+def test_a_signing_certificate_whose_key_does_not_load_is_refused():
     certs = _transition()
-    header = {"alg": "ES256", "x5c": _x5c(certs.leaf, certs.intermediate)}
-    blob = _blob(header, _payload(), certs.leaf_key)
+    point = certs.leaf_key.public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)
+    # A point off the curve, in a certificate its issuer signed.
+    leaf = _resigned(certs.leaf, certs.intermediate_key, point, point[:-1] + bytes([point[-1] ^ 1]))
+    blob = _blob({"alg": "ES256", "x5c": _x5c(leaf, certs.intermediate)}, _payload(), certs.leaf_key)
 
-    class _Unloadable:
-        def public_key(self):
-            raise ValueError("not a key")
-
-    monkeypatch.setattr(mds_blob.x509, "load_der_x509_certificate", lambda _der: _Unloadable())
-    monkeypatch.setattr(mds_blob, "verify_chain_to_root", lambda _chain, _root, now=None: None)
     with pytest.raises(ValueError, match="does not expose a supported public key"):
         mds_blob.verify_blob(blob, certs.current_root)
 
