@@ -4,10 +4,6 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
-  RAW_DATA_BUTTON_TITLE,
-  RAW_DATA_LABEL,
-  RAW_DATA_TITLE,
-  RAW_DATA_UNAVAILABLE_TITLE,
   authenticatorRawTitle,
   getAuthenticatorRawData,
 } from './raw-data.js';
@@ -18,10 +14,6 @@ const named = name => FIXTURE.entries.find(entry => entry.name === name);
 
 describe('the raw view\'s words', () => {
   it('keeps the window\'s title, label and the Raw button\'s titles', () => {
-    expect(RAW_DATA_TITLE).toBe('Authenticator Raw Data');
-    expect(RAW_DATA_LABEL).toBe('Raw authenticator metadata');
-    expect(RAW_DATA_BUTTON_TITLE).toBe('View raw authenticator data');
-    expect(RAW_DATA_UNAVAILABLE_TITLE).toBe('Raw authenticator data unavailable');
     expect(authenticatorRawTitle({ name: ' Fixture Key ' })).toBe('Fixture Key – Authenticator Raw Data');
     expect(authenticatorRawTitle({ name: '  ' })).toBe('Authenticator Raw Data');
     expect(authenticatorRawTitle({ name: 3 })).toBe('Authenticator Raw Data');

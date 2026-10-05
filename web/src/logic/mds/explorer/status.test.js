@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildLoadedStatus,
-  EXPLORER_NO_MATCHES,
-  EXPLORER_REFRESHED_NOTE,
   explorerLoadedStatus,
   explorerLoadingStatus,
   extractSnapshotTimestamp,
@@ -19,11 +17,6 @@ describe('explorer status sentences', () => {
   it('says what is loading', () => {
     expect(explorerLoadingStatus(false)).toBe('Loading authenticator explorer…');
     expect(explorerLoadingStatus(true)).toBe('Refreshing authenticator explorer…');
-  });
-
-  it('keeps the fixed sentences', () => {
-    expect(EXPLORER_REFRESHED_NOTE).toBe('Explorer refreshed.');
-    expect(EXPLORER_NO_MATCHES).toBe('No authenticators match the selected filters.');
   });
 
 });

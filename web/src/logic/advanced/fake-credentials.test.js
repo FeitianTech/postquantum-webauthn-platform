@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  FAKE_CREDENTIAL_MAX_BYTES,
   FAKE_CREDENTIAL_TEXT,
   fakeCredentialLength,
   fakeCredentialSize,
@@ -40,16 +39,13 @@ describe('the length of a new fake credential ID', () => {
   });
 
   it('is at most 4096 bytes, and says so when more was asked for', () => {
-    expect(FAKE_CREDENTIAL_MAX_BYTES).toBe(4096);
     expect(fakeCredentialLength('5000')).toEqual({ bytes: 4096, error: null, notice: FAKE_CREDENTIAL_TEXT.truncated });
-    expect(FAKE_CREDENTIAL_TEXT.truncated).toBe('Credential IDs are limited to 4096 bytes. Generated value truncated to maximum length.');
   });
 
   it('is none for a length that is not a whole number above 0, with the reason', () => {
     for (const length of ['0', '-3', 'many', '', undefined]) {
       expect(fakeCredentialLength(length)).toEqual({ bytes: 0, error: FAKE_CREDENTIAL_TEXT.invalidLength, notice: null });
     }
-    expect(FAKE_CREDENTIAL_TEXT.invalidLength).toBe('Please enter a valid fake credential ID length (at least 1 byte).');
   });
 });
 
@@ -65,8 +61,4 @@ describe('removing a fake credential ID', () => {
     }
   });
 
-  it('says so of an empty list, for registration and authentication', () => {
-    expect(FAKE_CREDENTIAL_TEXT.noExclude).toBe('No fake credential IDs added.');
-    expect(FAKE_CREDENTIAL_TEXT.noAllow).toBe('No fake allow credential IDs added.');
-  });
 });

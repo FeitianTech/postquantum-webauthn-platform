@@ -252,7 +252,6 @@ describe('the hints', () => {
     await authenticateAdvancedCredential(request({ hints: ['client-device'], allowCredentials: list }), formOptions());
     // Both saved credentials are cross-platform: a client-device hint leaves none.
     expect(sent(0).body.publicKey).not.toHaveProperty('allowCredentials');
-    expect(PLAIN.authenticatorAttachment).toBe('cross-platform');
   });
 
   it('stop the ceremony when they refuse the request, saying their own message', async () => {

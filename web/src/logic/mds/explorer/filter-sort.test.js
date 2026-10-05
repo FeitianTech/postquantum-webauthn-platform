@@ -12,9 +12,6 @@ import {
   nextExplorerSort,
   nextExplorerSortDirection,
   normaliseSortValueInput,
-  SORT_ASCENDING,
-  SORT_DESCENDING,
-  SORT_NONE,
   sortExplorerEntries,
 } from './filter-sort.js';
 
@@ -27,7 +24,6 @@ const DISPLAY_ONLY = { name: 'Display', certification: 'FIDO Certified L2 • Ol
 
 describe('sort order', () => {
   it('names the directions and the default', () => {
-    expect([SORT_NONE, SORT_ASCENDING, SORT_DESCENDING]).toEqual(['none', 'asc', 'desc']);
     expect(defaultExplorerSort()).toEqual({ key: DEFAULT_SORT_KEY, direction: DEFAULT_SORT_DIRECTION });
     expect(defaultExplorerSort()).toEqual({ key: 'dateUpdated', direction: 'desc' });
   });

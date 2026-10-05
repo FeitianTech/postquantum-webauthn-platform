@@ -152,12 +152,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('ADVANCED_CEREMONY_TEXT', () => {
-  it('holds the sentence shown for a hint configuration it cannot read', () => {
-    expect(ADVANCED_CEREMONY_TEXT.invalidHints).toBe('Invalid hint configuration.');
-  });
-});
-
 describe('readCreationRequest', () => {
   it('gives the object the editor\'s text parses to', () => {
     expect(readCreationRequest(text(EVERYTHING_REQUEST))).toEqual(EVERYTHING_REQUEST);

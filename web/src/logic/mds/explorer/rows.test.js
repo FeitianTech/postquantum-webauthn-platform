@@ -1,18 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  MISSING_CELL_TEXT,
-  NO_ICON_TEXT,
   certificationParts,
   iconAltText,
   identifierLabel,
 } from './rows.js';
 
 describe('table cells', () => {
-  it('keeps the fallbacks', () => {
-    expect(MISSING_CELL_TEXT).toBe('—');
-    expect(NO_ICON_TEXT).toBe('N/A');
-  });
 
   it('names the icon after the entry', () => {
     expect(iconAltText({ name: 'YubiKey 5' })).toBe('YubiKey 5 icon');

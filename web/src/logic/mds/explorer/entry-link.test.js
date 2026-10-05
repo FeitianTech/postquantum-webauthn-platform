@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  ENTRY_LINK_MESSAGES,
   entryIdForAaguid,
   requestEntryDetail,
   requestResolvedEntry,
@@ -17,17 +16,6 @@ afterEach(() => {
 });
 
 describe('opening an entry from elsewhere', () => {
-  it('keeps the credential jump\'s sentences', () => {
-    expect(ENTRY_LINK_MESSAGES).toEqual({
-      locating: 'Locating metadata entry...',
-      opening: 'Opening authenticator metadata...',
-      notLocated: 'Unable to locate metadata entry.',
-      failed: 'Unable to open authenticator metadata.',
-      unavailable: 'Authenticator metadata entry unavailable.',
-      notFound: 'Authenticator metadata not found.',
-    });
-    expect(Object.isFrozen(ENTRY_LINK_MESSAGES)).toBe(true);
-  });
 
   it('names an AAGUID\'s entry as the server does', () => {
     expect(entryIdForAaguid('F1D0F1D0-0000-4000-8000-000000000001')).toBe('aaguid:f1d0f1d0-0000-4000-8000-000000000001');

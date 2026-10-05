@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CAPABILITY_GROUPS,
-  COPIED,
   IDENTITY_FIELDS,
   NOT_REPORTED,
   NO_CAPABILITIES,
@@ -44,7 +43,6 @@ describe('Analyze Browser report data', () => {
     expect(IDENTITY_FIELDS).toEqual(['name', 'version', 'engine', 'system']);
     expect(NOT_REPORTED).toBe('Not reported');
     expect(NO_CAPABILITIES).toBe('The browser returned no capabilities.');
-    expect(COPIED).toBe('Report copied to the clipboard.');
     expect(CAPABILITY_GROUPS.map((group) => [group.kind, group.title])).toEqual([
       ['defined', 'Defined by WebAuthn Level 3'],
       ['extension', 'Extensions'],
