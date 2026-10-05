@@ -105,9 +105,12 @@ the CSP and the source rules.
     credential opens `#mds/aaguid:<aaguid>`.
   - `analyze-browser/`: the Analyze Browser panel.
 - Tests: vitest with two projects (`web/vitest.config.mts`): `components`
-  (`src/**/*.test.{ts,tsx}`, Testing Library, `src/test/setup.ts`) and `logic`
+  (`src/**/*.test.{ts,tsx}` and `scripts/**/*.test.ts`, Testing Library, `src/test/setup.ts`:
+  queries wait up to 30 s, for the deploy gate's load) and `logic`
   (`src/logic/**/*.test.js`, `src/test/logic/setup.js`: a fresh storage, `fetch` mock and
-  document per test). Helpers are in `src/test/` (`credentials.ts` keeps records in the
+  document per test). Helpers are in `src/test/` (`app.tsx`'s `renderApp`, the one way a test
+  renders the whole app: it imports every lazy chunk first, so a file's first test does not
+  load them (`test_web_source_rules.py` holds every `AppShell` test to it); `credentials.ts` keeps records in the
   storage, `fetch.ts` answers `fetch` by path, `mds.ts` like Flask serving the fixture: its
   list and details from `src/test/mds-files.json`, which `tests/app/tooling/test_web_mds_files.py`
   keeps equal to what the server serves (`MDS_FILES_WRITE=1` rewrites it),
@@ -175,8 +178,9 @@ its logic out here first.
 - `credentials/`: the saved list (`saved-list.js`: the records, each row, the warm-up),
   deletion (`delete-flow.js`, through the list's report), the algorithm tag, hydration from
   a server artifact (`hydrate.js`), and (`registration/`, `certificates/`, `detail/`) a
-  credential's details and registration view as data, which `detail/compose.js` composes into
-  a registration state of its own. Registration snapshots (`schemaVersion` 2) hold the
+  credential's details and registration view as data (`registration/view.js` composes the view
+  from `registration/describe.js`'s parts and `registration/relying-party.js`'s copy of the
+  relying party), which `detail/compose.js` composes into a registration state of its own. Registration snapshots (`schemaVersion` 2) hold the
   registration as data, never markup; older composed HTML is never read.
 - `codec/`: the Codec's requests, results and values. `mds/`: the MDS
   explorer's loading (the list fetched ahead, without the cookie: `prefetchExplorerList`), filters,
@@ -211,8 +215,9 @@ its logic out here first.
   image alike (the Dockerfile copies `server/app` to `/app/server/app`). No `server.X` import
   fallbacks.
 - `factory.py`: `create_app(config=None)`: the `config_from_env()` of each module in
-  `CONFIG_SOURCES` (the seven config submodules that read the environment), then the
-  overrides, then `INIT_STEPS` in order (`test_app_factory.py` pins it).
+  `CONFIG_SOURCES` (the seven config submodules whose settings go into `app.config`), then the
+  overrides, then `INIT_STEPS` in order (`test_app_factory.py` pins it). `proxy.py`,
+  `session_secret.py` and `paths.py` read the environment themselves when used.
 - `config/`: `application.py` (the bare app, and `add_after_request_once`), `logs.py`,
   `session_secret.py`, `compression.py`, `proxy.py`, `fetch_metadata.py` (a write under `/api/`
   whose `Sec-Fetch-Site` names another site is refused, 403), `session_cookie.py` (the cookie's
@@ -235,13 +240,14 @@ its logic out here first.
   (the MDS trust anchor), `blob.py` (the BLOB's chain to that root, which may end in a
   cross-certificate fido2's `parse_blob` refuses, its signature and payload), `files.py` (the
   snapshot's file names, its directory, the whole-file writer,
-  Last-Modified), `build.py` (the explorer rows; `certificates.py`, what their roots say),
+  Last-Modified), `build.py` (the explorer rows; `statement_fields.py`, a statement's fields as
+  the explorer shows them; `certificates.py`, what their roots say), `entries.py`,
   `snapshot.py` (a snapshot's seven files, from its BLOB, payload and cache state) and `sets.py`
   (the snapshot in Cloud Storage) without Flask. The runtime: `provisioning.py` (local files,
   Cloud Storage, upstream), `cache.py` (the loaders and their one `SnapshotCache`),
   `explorer_files.py` (what browsers load, derived from the full explorer snapshot: the list,
   the icons, each entry's detail; kept per snapshot by `cache.load_explorer_files`),
-  `uploads.py` (a visitor's uploaded metadata), `entries.py`, `effective.py` (the snapshot
+  `uploads.py` (a visitor's uploaded metadata), `effective.py` (the snapshot
   merged with a visitor's uploads), `verifier.py` (the verified entries indexed from their JSON
   by fido2's keys, each parsed when found, a visitor's uploads in front).
 - Leaves the rest import: `encoding.py` (base64, base64url and hex, written and read strictly),
@@ -249,10 +255,15 @@ its logic out here first.
   `aaguid.py` (an AAGUID's GUID spelling), `env_flags.py`.
 - `visitor_session.py`: the namespace a visitor's uploads and credentials are stored under (its id
   in a signed cookie of its own, never the Flask session; the last-access touch, throttled in
-  memory; and the one sweep of idle namespaces, on both backends).
+  memory; and the one sweep of idle namespaces, on both backends). `challenge_registry.py`: each
+  ceremony's challenge used once (the session is a client-side cookie, so popping it does not
+  stop a replay). `csp_reports.py`: a CSP report read in either format and logged in one line.
+  `startup.py`: the Cloud Run warm-up after the worker starts (the bucket, the MDS snapshot, the
+  explorer's files and the verifier's index).
 - Routes: `routes/simple/` and `routes/advanced/` (begin/complete; the bodies are short
-  orchestrators over modules named for their stage; the try blocks and the order of session
-  reads are behaviour); `routes/ceremony_session.py` (every begin: refused, the session kept as
+  orchestrators over modules named for their stage, `routes/simple/stored_sign_count.py` the
+  Simple tab's counter check against the stored record; the try blocks and the order of
+  session reads are behaviour); `routes/ceremony_session.py` (every begin: refused, the session kept as
   it was, when its cookie would pass `MAX_COOKIE_SIZE`); `routes/json_body.py` (every route's
   JSON body: an object, or read as an empty one); `routes/mds.py` (the MDS routes and
   certificate decoding); `routes/codec.py` (`/api/codec`); `routes/web_export.py` (`/health`,
@@ -262,8 +273,9 @@ its logic out here first.
   the list at one URL revalidated by its ETag, the icons by digest, each entry's detail at
   `?v=<version>`; no snapshot file at any path); `routes/csp_report.py` (one WARNING line per
   violation, bounded); `routes/errors.py`.
-- `webauthn/attestation/` (checks, trust, the root evaluation for every algorithm, ML-DSA
-  included, certificate serialisation; `chain.py` verifies certificate chains with
+- `webauthn/attestation/` (`checks.py` runs every check in order over `request_expectations.py`,
+  `response_checks.py`, `statement_checks.py` and `metadata_checks.py`; trust, the root
+  evaluation for every algorithm, ML-DSA included, certificate serialisation; `chain.py` verifies certificate chains with
   `verify_directly_issued_by` (RSA-PSS, EdDSA and ML-DSA too, which fido2's `verify_x509_chain`
   does not); `evaluation.py` checks an attestation against the MDS metadata step by step;
   `constants.py`'s `UNREADABLE_EXTENSIONS`, what cryptography raises reading a loaded
@@ -281,10 +293,11 @@ its logic out here first.
   order for both tabs). `config/logs.py` holds `fido2.server`'s logger at WARNING: fido2 logs
   credential IDs at INFO.
 - `storage/` (`credentials.py`, `credential_artifacts.py`, `session_metadata.py`,
-  `github_mirror.py`, over `cloud.py` and `common.py`): every read-modify-write is
+  `github_mirror.py`, over `cloud.py`, `common.py` and `record_format.py`): every read-modify-write is
   compare-and-swap; a failed read raises `StorageReadError` (503), never a shorter list. **Read
   `docs/STORAGE.md` first.** `decoder/`: the Codec's server side (`decode/text.py` the entry,
-  `encode/text.py` the encoder's, `values.py` the leaf both share); it shows what was sent and
+  `decode/answer.py` what it answers, `encode/text.py` the encoder's, `values.py` the leaf both
+  share); it shows what was sent and
   never repairs it. **Read `docs/DECODER.md` first.**
 - A package's `__init__.py` is a docstring (`webauthn`'s imports `cose_keys`, and `decoder/edn`
   exports its two functions); the code lives in submodules named for what they do. Import the
