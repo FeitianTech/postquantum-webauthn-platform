@@ -8,6 +8,7 @@ import { advancedAuthentications } from '@/test/logic/advanced/advanced-answers.
 
 import { authEditor, authPublicKey, editor, publicKey, renderAuthenticationForm, renderForm } from '@/test/advanced';
 import { keepRecords, savedRecord } from '@/test/credentials';
+import { holdingTimers } from '@/test/timers';
 
 const field = (name: string) => screen.getByLabelText(name) as HTMLInputElement;
 const note = () => document.querySelector<HTMLElement>('[data-edit]');
@@ -109,11 +110,13 @@ describe('the editor', () => {
       root.publicKey.timeout = -1;
     }) } });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Reset' })));
 
-    expect(await screen.findByText('JSON editor reset to current settings.')).toBeInTheDocument();
-    expect(note()).toBeNull();
-    expect(JSON.parse(editor().value)).toMatchObject({ extra: { b: 2 }, publicKey: { timeout: 90000 } });
+      expect(screen.getByText('JSON editor reset to current settings.')).toBeInTheDocument();
+      expect(note()).toBeNull();
+      expect(JSON.parse(editor().value)).toMatchObject({ extra: { b: 2 }, publicKey: { timeout: 90000 } });
+    });
   });
 });
 
