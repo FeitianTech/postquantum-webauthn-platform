@@ -16,6 +16,7 @@ import { forgetCompletedRecords } from '@/components/credentials/detail/useCrede
 import { renderApp } from '@/test/app';
 import { keepRecords, savedRecord, storedRecords, warmUpRoutes } from '@/test/credentials';
 import { json, stubFetch } from '@/test/fetch';
+import { holdingTimers } from '@/test/timers';
 
 type Answer = { status: number; body: unknown };
 const answer = (entry: Answer) => () => answerResponse(entry) as Response;
@@ -183,15 +184,17 @@ describe('a registration', () => {
     await ready();
     const userId = (screen.getByLabelText('User ID (hex)') as HTMLInputElement).value;
 
-    await userEvent.click(button('Create Credential'));
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(button('Create Credential')));
 
-    expect(await screen.findByText('Advanced registration successful! Algorithm: ES256 (ECDSA) metadata_not_available')).toBeInTheDocument();
-    const result = document.querySelector<HTMLElement>('#nav-panel-advanced [data-ceremony-result]')!;
-    await waitFor(() => expect(result).toHaveTextContent('Last registration'));
-    // The recorded registration reused the scenario's challenge: a replay, which the panel warns of.
-    expect(result.querySelector('[data-row="Challenge"]')).toHaveTextContent('server-session Issued by this server for this ceremony. Used before: this is a replay.');
-    expect(result).toHaveAttribute('data-verdict', 'warning');
-    expect((screen.getByLabelText('User ID (hex)') as HTMLInputElement).value).not.toBe(userId);
+      expect(screen.getByText('Advanced registration successful! Algorithm: ES256 (ECDSA) metadata_not_available')).toBeInTheDocument();
+      const result = document.querySelector<HTMLElement>('#nav-panel-advanced [data-ceremony-result]')!;
+      expect(result).toHaveTextContent('Last registration');
+      // The recorded registration reused the scenario's challenge: a replay, which the panel warns of.
+      expect(result.querySelector('[data-row="Challenge"]')).toHaveTextContent('server-session Issued by this server for this ceremony. Used before: this is a replay.');
+      expect(result).toHaveAttribute('data-verdict', 'warning');
+      expect((screen.getByLabelText('User ID (hex)') as HTMLInputElement).value).not.toBe(userId);
+    });
   });
 
   it('gives the begin answer\'s warnings as a toast', async () => {
@@ -200,9 +203,11 @@ describe('a registration', () => {
     renderSection([], { ...registrationRoutes(NONE), '/api/advanced/register/begin': answer(warned) });
     await ready();
 
-    await userEvent.click(button('Create Credential'));
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(button('Create Credential')));
 
-    expect(await screen.findByText(/^Unsupported PQC algorithms were skipped/)).toBeInTheDocument();
+      expect(screen.getByText(/^Unsupported PQC algorithms were skipped/)).toBeInTheDocument();
+    });
   });
 
   it('says in place why the server refused it, and that it reported no challenge', async () => {
@@ -291,21 +296,23 @@ describe('an authentication', () => {
     await onAuthentication(authenticationRoutes(recorded.first));
     const challenge = (screen.getByLabelText('Challenge (hex)', { selector: '#nav-panel-advanced [data-authentication-form] input' }) as HTMLInputElement).value;
 
-    await userEvent.click(button('Assert Credential'));
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(button('Assert Credential')));
 
-    expect(await screen.findByText('Advanced authentication successful!')).toBeInTheDocument();
-    await waitFor(() => expect(result()).toHaveTextContent('Last authentication'));
-    expect(result()!.querySelector('[data-row="Signature counter"]')).toHaveTextContent(
-      '1 Higher than the last counter the server saw for this credential, as it should be.',
-    );
-    expect(result()!.querySelector('[data-row="Challenge"]')).toHaveTextContent('server-session Issued by this server for this ceremony. First use.');
-    await waitFor(() => expect(storedRecords()[0]).toMatchObject({ signCount: 1 }));
-    await waitFor(() => expect(document.querySelector('#nav-panel-simple li[data-credential-key]')).toHaveAttribute('data-flash', 'success'));
-    const now = screen.getByLabelText('Challenge (hex)', { selector: '#nav-panel-advanced [data-authentication-form] input' }) as HTMLInputElement;
-    expect(now.value).toMatch(/^[0-9a-f]{64}$/);
-    expect(now.value).not.toBe(challenge);
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(window.location.hash).toBe('#advanced');
+      expect(screen.getByText('Advanced authentication successful!')).toBeInTheDocument();
+      expect(result()).toHaveTextContent('Last authentication');
+      expect(result()!.querySelector('[data-row="Signature counter"]')).toHaveTextContent(
+        '1 Higher than the last counter the server saw for this credential, as it should be.',
+      );
+      expect(result()!.querySelector('[data-row="Challenge"]')).toHaveTextContent('server-session Issued by this server for this ceremony. First use.');
+      expect(storedRecords()[0]).toMatchObject({ signCount: 1 });
+      expect(document.querySelector('#nav-panel-simple li[data-credential-key]')).toHaveAttribute('data-flash', 'success');
+      const now = screen.getByLabelText('Challenge (hex)', { selector: '#nav-panel-advanced [data-authentication-form] input' }) as HTMLInputElement;
+      expect(now.value).toMatch(/^[0-9a-f]{64}$/);
+      expect(now.value).not.toBe(challenge);
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(window.location.hash).toBe('#advanced');
+    });
   });
 
   it('reports a counter that went backwards, and that this tab does not reject the assertion', async () => {
@@ -323,13 +330,15 @@ describe('an authentication', () => {
   it('says in place why the server refused it, tints the credential it names, and shows where the challenge came from', async () => {
     const fetch = await onAuthentication(authenticationRoutes(recorded.refused), recordedAssertion(recorded.refused));
 
-    await userEvent.click(button('Assert Credential'));
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(button('Assert Credential')));
 
-    await waitFor(() => expect(requestsTo(fetch, '/api/advanced/authenticate/complete')).toHaveLength(1));
-    expect(await screen.findByText(/^Advanced authentication failed: Invalid signature\./, { selector: '[data-role="failure"]' })).toBeInTheDocument();
-    expect(result()!.querySelector('[data-row="Challenge"]')).toHaveTextContent('server-session');
-    await waitFor(() => expect(document.querySelector('#nav-panel-simple li[data-credential-key]')).toHaveAttribute('data-flash', 'failure'));
-    expect(storedRecords()[0]).not.toHaveProperty('signCount', 3);
+      expect(requestsTo(fetch, '/api/advanced/authenticate/complete')).toHaveLength(1);
+      expect(screen.getByText(/^Advanced authentication failed: Invalid signature\./, { selector: '[data-role="failure"]' })).toBeInTheDocument();
+      expect(result()!.querySelector('[data-row="Challenge"]')).toHaveTextContent('server-session');
+      expect(document.querySelector('#nav-panel-simple li[data-credential-key]')).toHaveAttribute('data-flash', 'failure');
+      expect(storedRecords()[0]).not.toHaveProperty('signCount', 3);
+    });
   });
 
   it('says there are no credentials when the server finds none', async () => {
