@@ -34,6 +34,17 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
+// The last progress sentence stays on a timer (useCustomMetadata.ts): hold it while an
+// answer lands and is read, or a loaded machine can take the sentence away first.
+async function holdingTheLastSentence(read: () => Promise<void>) {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  try {
+    await read();
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
 type Routes = Parameters<typeof fixtureRoutes>[0];
 
 async function renderSection(routes: Routes = {}, { waitForRows = true } = {}) {
@@ -163,17 +174,12 @@ describe('Manage Trusted Metadata', () => {
     expect(message()).toHaveTextContent('Uploading metadata…');
     expect(screen.getByRole('button', { name: 'Drop JSON files here or click to browse' })).toBeDisabled();
 
-    // The last sentence stays on a timer; hold it, or a loaded machine can take the
-    // sentence away before it is read.
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    try {
+    await holdingTheLastSentence(async () => {
       await act(async () => answer.resolve(json({ items: [ITEM], snapshot: WITH_UPLOAD })));
       expect(document.querySelector('[data-mds-progress]')).toHaveTextContent('Completing metadata update...');
       await act(async () => vi.runOnlyPendingTimers());
       expect(document.querySelector('[data-mds-progress]')).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
+    });
   });
 
   it('passes on the warnings of an upload that partly worked', async () => {
@@ -185,12 +191,16 @@ describe('Manage Trusted Metadata', () => {
   });
 
   it('keeps the server reason for a refused upload', async () => {
-    await renderSection({ '/api/mds/metadata/upload': () => json({ items: [], errors: ['a.json must contain a JSON object.'] }, 400) });
+    const answer = deferred<Response>();
+    await renderSection({ '/api/mds/metadata/upload': () => answer.promise });
     await openDialog();
     await userEvent.upload(fileInput(), file('a.json'));
-    await waitFor(() => expect(message()).toHaveTextContent('a.json must contain a JSON object.'));
-    expect(message()).toHaveAttribute('data-variant', 'error');
-    expect(document.querySelector('[data-mds-progress]')).toHaveTextContent('Metadata update failed.');
+    await holdingTheLastSentence(async () => {
+      await act(async () => answer.resolve(json({ items: [], errors: ['a.json must contain a JSON object.'] }, 400)));
+      expect(message()).toHaveTextContent('a.json must contain a JSON object.');
+      expect(message()).toHaveAttribute('data-variant', 'error');
+      expect(document.querySelector('[data-mds-progress]')).toHaveTextContent('Metadata update failed.');
+    });
   });
 
   it('says an upload failed when the request did', async () => {
@@ -276,29 +286,36 @@ describe('Manage Trusted Metadata', () => {
   });
 
   it('says a file was already gone, as a warning', async () => {
+    const answer = deferred<Response>();
     await renderSection({
       '/api/mds/metadata/custom': () => json({ items: [ITEM] }),
-      '/api/mds/metadata/custom/0f1e.json': () => json({ deleted: false, message: 'Metadata entry not found.' }, 404),
+      '/api/mds/metadata/custom/0f1e.json': () => answer.promise,
     });
     const panel = await openDialog();
     await userEvent.click(await within(panel).findByRole('button', { name: 'Delete custom-metadata.json' }));
-    await waitFor(() => expect(message()).toHaveTextContent('Metadata entry not found.'));
-    expect(message()).toHaveAttribute('data-variant', 'warning');
-    expect(document.querySelector('[data-mds-progress]')).toHaveTextContent('No metadata changes detected.');
+    await holdingTheLastSentence(async () => {
+      await act(async () => answer.resolve(json({ deleted: false, message: 'Metadata entry not found.' }, 404)));
+      expect(message()).toHaveTextContent('Metadata entry not found.');
+      expect(message()).toHaveAttribute('data-variant', 'warning');
+      expect(document.querySelector('[data-mds-progress]')).toHaveTextContent('No metadata changes detected.');
+    });
   });
 
   it('keeps the server reason for a refused delete, and says when the request failed', async () => {
     let fail: 'refuse' | 'throw' = 'refuse';
+    const refusal = deferred<Response>();
     await renderSection({
       '/api/mds/metadata/custom': () => json({ items: [ITEM] }),
-      '/api/mds/metadata/custom/0f1e.json': () =>
-        fail === 'refuse' ? json({ error: 'Invalid metadata filename.' }, 400) : Promise.reject(new TypeError('offline')),
+      '/api/mds/metadata/custom/0f1e.json': () => (fail === 'refuse' ? refusal.promise : Promise.reject(new TypeError('offline'))),
     });
     const panel = await openDialog();
     await userEvent.click(await within(panel).findByRole('button', { name: 'Delete custom-metadata.json' }));
-    await waitFor(() => expect(message()).toHaveTextContent('Invalid metadata filename.'));
-    expect(message()).toHaveAttribute('data-variant', 'error');
-    expect(document.querySelector('[data-mds-progress]')).toHaveTextContent('Metadata removal failed.');
+    await holdingTheLastSentence(async () => {
+      await act(async () => refusal.resolve(json({ error: 'Invalid metadata filename.' }, 400)));
+      expect(message()).toHaveTextContent('Invalid metadata filename.');
+      expect(message()).toHaveAttribute('data-variant', 'error');
+      expect(document.querySelector('[data-mds-progress]')).toHaveTextContent('Metadata removal failed.');
+    });
 
     fail = 'throw';
     await userEvent.click(await within(panel).findByRole('button', { name: 'Delete custom-metadata.json' }));
