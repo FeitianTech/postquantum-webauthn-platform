@@ -2,23 +2,27 @@ name: Update FIDO MDS Snapshot
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # daily at 00:00 UTC
+    - cron: '17 */12 * * *'  # twice a day
   workflow_dispatch:
 
-# The snapshot is no longer tracked in git (see docs/MDS_SNAPSHOT.md): the
-# server provisions it at runtime from Cloud Storage. This workflow therefore
-# writes nothing to the repository at all — it is a canary that fails loudly if
-# the FIDO Alliance BLOB stops being reachable or stops verifying against the
-# pinned trust root, which is what would silently break the explorer.
+# Downloads the FIDO Alliance's metadata BLOB, verifies its signature chain
+# against the pinned GlobalSign R46 root, and publishes it to the bucket as a new
+# snapshot set when its serial is above the pointer's (docs/MDS_SNAPSHOT.md).
+# Running instances take the new set within 15 minutes. Nothing is written to
+# the repository. Google credentials come from Workload Identity Federation: the
+# pool accepts only this repository's main branch, and the mds-publisher account
+# may write only under mds/ in the bucket (deploy/README.md). No key is stored.
 permissions:
   contents: read
+  id-token: write
 
+# A publish in progress finishes: another run waits rather than cancelling it.
 concurrency:
   group: fido-mds-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  verify:
+  publish:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -41,7 +45,16 @@ jobs:
           uv sync --locked --no-dev --python 3.12
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
-      # Downloads the BLOB and verifies its signature chain against the pinned
-      # GlobalSign R46 root, then discards it. Nothing is written or committed.
-      - name: Verify the upstream metadata BLOB
-        run: python tools/update_mds_snapshot.py --verify-only
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_MDS_PUBLISHER_SERVICE_ACCOUNT }}
+
+      - name: Publish a newer verified snapshot
+        env:
+          FIDO_SERVER_GCS_ENABLED: "1"
+          FIDO_SERVER_GCS_BUCKET: pqcwebauthn
+          FIDO_SERVER_GCS_PROJECT: feitian-project
+          FIDO_SERVER_MDS_SNAPSHOT_DIR: ${{ runner.temp }}/mds-snapshot
+        run: python tools/update_mds_snapshot.py --publish

@@ -210,9 +210,12 @@ verified snapshot as a set (`--gcs-upload` is the flag's earlier name). It exits
 non-zero when the download, the verification or the bucket fails, having published
 nothing.
 
-The daily workflow (`.github/workflows/update-fido-mds.yml`) downloads and verifies
-the BLOB; publishing from it waits on the owner's Workload Identity Federation set-up
-for the workflow (no key is stored in GitHub).
+`.github/workflows/update-fido-mds.yml` runs this twice a day, so a new BLOB reaches
+the bucket within about twelve hours of the FIDO Alliance publishing it, and running
+instances within fifteen minutes after that. The workflow signs in to Google through
+Workload Identity Federation (no key is stored in GitHub): the pool accepts only this
+repository's `main` branch, and the `mds-publisher` account it acts as may write only
+under `mds/` in the bucket (`deploy/README.md` has the set-up).
 
 ## The container image
 

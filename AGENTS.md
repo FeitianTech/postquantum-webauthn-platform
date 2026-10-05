@@ -396,7 +396,8 @@ goldens show what it changes).
 - Every action is pinned to a commit SHA (or an image digest) with its version in a trailing
   comment. No workflow pushes to `main`: `update-footer-year.yml` opens pull requests through
   `.github/actions/open-bot-pr` (merge them by rebase or cherry-pick, so each commit keeps a
-  one-line message); `update-fido-mds.yml` only verifies the upstream BLOB.
+  one-line message); `update-fido-mds.yml` publishes a newer verified MDS snapshot to the
+  bucket twice a day, signed in through Workload Identity Federation (no key in GitHub).
 - Coverage is a gate: `.coveragerc`'s floor and `web/vitest.config.mts`'s (every logic file at
   100 %).
 - `npm ci` everywhere. If a lock regeneration drops foreign-platform native builds, delete
