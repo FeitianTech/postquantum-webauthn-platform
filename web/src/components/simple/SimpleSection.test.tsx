@@ -1,6 +1,6 @@
 // The Simple tab over the server's recorded
 // answers (the characterization goldens) and a stand-in authenticator.
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { answerResponse, installAuthenticator } from '@/test/logic/simple/ceremony-answers.js';
@@ -13,6 +13,7 @@ import { json, stubFetch } from '@/test/fetch';
 import { renderPage } from '@/test/page';
 
 import { SimpleSection } from './SimpleSection';
+import { holdingTimers } from '@/test/timers';
 
 const REGISTER = answersOf('simple-register-es256');
 const MLDSA = answersOf('simple-register-mldsa65');
@@ -96,22 +97,28 @@ describe('registering in the Simple tab', () => {
     expect(await screen.findByText('Completing registration...')).toBeVisible();
     expect(button('Register Passkey')).toHaveAttribute('aria-busy', 'true');
     expect(button('Authenticate')).toBeDisabled();
-    await act(async () => finish());
 
-    expect(await screen.findByText('Registration successful! Algorithm: ES256 (ECDSA)')).toBeVisible();
-    expect(screen.queryByText('Completing registration...')).toBeNull();
-    expect(button('Register Passkey')).toBeEnabled();
+    await holdingTimers(async () => {
+      await act(async () => finish());
+
+      expect(screen.getByText('Registration successful! Algorithm: ES256 (ECDSA)')).toBeVisible();
+      expect(screen.queryByText('Completing registration...')).toBeNull();
+      expect(button('Register Passkey')).toBeEnabled();
+    });
   });
 
   it('keeps the server\'s record in this browser, for the username, and lists it', async () => {
     renderTab({ '/api/register/begin': answer(MLDSA[0]), '/api/register/complete': answer(MLDSA[1]) });
     await useUsername('alice');
-    await userEvent.click(button('Register Passkey'));
 
-    expect(await screen.findByText('Registration successful! Algorithm: ML-DSA-65 (PQC)')).toBeVisible();
-    const [record] = storedRecords();
-    expect(record).toMatchObject({ type: 'simple', email: 'alice', credentialIdBase64Url: savedRecord('simple-register-mldsa65').credentialIdBase64Url });
-    expect(await screen.findByRole('list', { name: 'Saved Credentials' })).toHaveTextContent('MLDSA65');
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(button('Register Passkey')));
+
+      expect(screen.getByText('Registration successful! Algorithm: ML-DSA-65 (PQC)')).toBeVisible();
+      const [record] = storedRecords();
+      expect(record).toMatchObject({ type: 'simple', email: 'alice', credentialIdBase64Url: savedRecord('simple-register-mldsa65').credentialIdBase64Url });
+      expect(screen.getByRole('list', { name: 'Saved Credentials' })).toHaveTextContent('MLDSA65');
+    });
   });
 
   it('keeps a refused registration in place, as the server said it', async () => {
@@ -143,27 +150,33 @@ describe('authenticating in the Simple tab', () => {
   it('says so, shows the counter and its verdict, keeps the counter, and tints the credential', async () => {
     renderTab(routes(AUTHENTICATE[3]), [KEPT]);
     await useUsername('user@example.com');
-    await userEvent.click(button('Authenticate'));
 
-    expect(await screen.findByText('Authentication successful! You have been verified.')).toBeVisible();
-    const panel = document.querySelector('[data-ceremony-result]')!;
-    expect(panel).toBeVisible();
-    expect(panel).toHaveTextContent('Last authentication');
-    expect(panel).toHaveTextContent('6 Higher than the last counter the server saw for this credential, as it should be.');
-    expect(storedRecords()[0].signCount).toBe(6);
-    await waitFor(() => expect(document.querySelector('li[data-credential-key]')).toHaveAttribute('data-flash', 'success'));
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(button('Authenticate')));
+
+      expect(screen.getByText('Authentication successful! You have been verified.')).toBeVisible();
+      const panel = document.querySelector('[data-ceremony-result]')!;
+      expect(panel).toBeVisible();
+      expect(panel).toHaveTextContent('Last authentication');
+      expect(panel).toHaveTextContent('6 Higher than the last counter the server saw for this credential, as it should be.');
+      expect(storedRecords()[0].signCount).toBe(6);
+      expect(document.querySelector('li[data-credential-key]')).toHaveAttribute('data-flash', 'success');
+    });
   });
 
   it('warns of a counter that went backwards, keeps the refusal in place, and tints the credential red', async () => {
     renderTab(routes(AUTHENTICATE[5]), [KEPT]);
     await useUsername('user@example.com');
-    await userEvent.click(button('Authenticate'));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Signature counter did not increase');
-    const panel = document.querySelector('[data-ceremony-result]')!;
-    expect(panel).toHaveAttribute('data-verdict', 'warning');
-    expect(panel).toHaveTextContent('the authenticator may have been cloned. Authentication was rejected.');
-    expect(document.querySelector('li[data-credential-key]')).toHaveAttribute('data-flash', 'failure');
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(button('Authenticate')));
+
+      expect(screen.getByRole('alert')).toHaveTextContent('Signature counter did not increase');
+      const panel = document.querySelector('[data-ceremony-result]')!;
+      expect(panel).toHaveAttribute('data-verdict', 'warning');
+      expect(panel).toHaveTextContent('the authenticator may have been cloned. Authentication was rejected.');
+      expect(document.querySelector('li[data-credential-key]')).toHaveAttribute('data-flash', 'failure');
+    });
   });
 
   it('keeps a refused signature in place, with no result to show', async () => {
