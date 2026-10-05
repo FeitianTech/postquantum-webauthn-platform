@@ -27,6 +27,19 @@ def _empty_results() -> dict[str, Any]:
     }
 
 
+def _parse_registration(response: Any, results: dict[str, Any]) -> RegistrationResponse | None:
+    """The response as fido2 reads it, or None with the reason in ``results``."""
+
+    if not isinstance(response, Mapping):
+        results["errors"].append("registration_response_invalid")
+        return None
+    try:
+        return RegistrationResponse.from_dict(response)
+    except Exception as exc:
+        results["errors"].append(f"registration_parse_error: {exc}")
+        return None
+
+
 def perform_attestation_checks(
     response: Mapping[str, Any],
     state: Mapping[str, Any] | None,
@@ -38,25 +51,15 @@ def perform_attestation_checks(
     """Execute a comprehensive set of attestation validation checks."""
 
     results = _empty_results()
-
-    if not isinstance(response, Mapping):
-        results["errors"].append("registration_response_invalid")
-        return results
-
-    try:
-        registration = RegistrationResponse.from_dict(response)
-    except Exception as exc:
-        results["errors"].append(f"registration_parse_error: {exc}")
+    registration = _parse_registration(response, results)
+    if registration is None:
         return results
 
     client_data = registration.response.client_data
     attestation_object = registration.response.attestation_object
     results["attestation_format"] = attestation_object.fmt
-
-    if isinstance(auth_data, AuthenticatorData):
-        auth_data_obj = auth_data
-    else:
-        auth_data_obj = attestation_object.auth_data
+    # The authenticator data the caller already holds, else the attestation object's.
+    auth_data_obj = auth_data if isinstance(auth_data, AuthenticatorData) else attestation_object.auth_data
 
     expected_challenge_bytes = request_expectations.resolve_expected_challenge(state, public_key_options)
     response_checks.populate_client_data_results(
