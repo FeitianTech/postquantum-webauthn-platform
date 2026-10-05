@@ -1,6 +1,9 @@
 """Attestation: the checks a registration's attestation goes through, and its certificates.
 
-``checks`` runs every check (``perform_attestation_checks``), ``classical`` and
+``checks`` runs every check (``perform_attestation_checks``) in order, over
+``request_expectations`` (what the request expected), ``response_checks`` (the
+response against it), ``statement_checks`` (the attestation statement's signature,
+trust path and root) and ``metadata_checks`` (the MDS entry); ``classical`` and
 ``evaluation`` validate the trust path against the MDS metadata, ``chain``
 verifies certificate chains, ``trust`` holds the trust anchors and roots, and
 ``certificates`` (with ``certificate_names``, ``certificate_extensions``,

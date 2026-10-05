@@ -12,7 +12,7 @@ from __future__ import annotations
 import types
 import uuid
 
-from server.app.webauthn.attestation import checks
+from server.app.webauthn.attestation import metadata_checks
 
 _ENTRY_AAGUID = uuid.UUID("f8a011f3-8c0a-4d15-8006-17111f9edc7d")
 
@@ -20,7 +20,7 @@ _ENTRY_AAGUID = uuid.UUID("f8a011f3-8c0a-4d15-8006-17111f9edc7d")
 def _finalize(credential_aaguid: bytes, certificate_aaguid: bytes, source: str) -> dict:
     entry = types.SimpleNamespace(aaguid=_ENTRY_AAGUID, metadata_statement=types.SimpleNamespace(description="Model"))
     results = {"authenticator_data": {"algorithm": -7}, "errors": [], "warnings": []}
-    checks._finalize_metadata_results(
+    metadata_checks.finalize_metadata_results(
         results,
         metadata_entry=entry,
         metadata_lookup_source=source,

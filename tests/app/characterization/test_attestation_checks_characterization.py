@@ -4,8 +4,8 @@ A table of registration responses -- valid, tampered, wrongly typed, bound to th
 wrong origin, challenge or RP, missing UP, UV or the attested credential, using a
 disallowed algorithm or a broken COSE key, a statement fido2 fails on, ML-DSA, and
 the captured attestation formats -- goes through the checks with no MDS verifier,
-and ``_finalize_metadata_results`` gets fake metadata entries and verifiers. Every
-result must equal ``golden/attestation-checks.json``.
+and ``metadata_checks.finalize_metadata_results`` gets fake metadata entries and
+verifiers. Every result must equal ``golden/attestation-checks.json``.
 """
 from __future__ import annotations
 
@@ -17,8 +17,8 @@ from fido2 import cbor
 from fido2.webauthn import AuthenticatorData
 
 from server.app.mds import verifier as mds_verifier
-from server.app.webauthn.attestation import checks
 from server.app.webauthn.attestation import checks as attestation_checks
+from server.app.webauthn.attestation import metadata_checks
 
 from ..security.ceremony_helpers import ORIGIN, RP_ID, b64u, client_data, unb64u
 from . import harness, material
@@ -151,7 +151,7 @@ def test_metadata_finalisation_matches_its_golden_record(monkeypatch):
     for name, kwargs in variants:
         for credential, certificate in ((aaguid.bytes, aaguid.bytes), (aaguid.bytes, b"\x01" * 16), (b"", b""), (b"\x05", b"")):
             results = {"authenticator_data": {"algorithm": -7}, "errors": [], "warnings": []}
-            checks._finalize_metadata_results(
+            metadata_checks.finalize_metadata_results(
                 results,
                 metadata_lookup_source="chain" if kwargs["metadata_entry"] is not None else None,
                 credential_aaguid_bytes=credential,
