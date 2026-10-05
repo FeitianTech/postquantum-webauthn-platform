@@ -207,46 +207,17 @@ describe('the MDS entry page', () => {
     expect(rows[1].querySelector('[data-report-certificate]')).toBeNull();
   });
 
-  it('shows the statement\'s descriptions and friendly names in each of their languages', () => {
+  // What each field holds is the detail logic's (logic/mds/explorer/detail.test.js): here, that each kind renders.
+  it('shows the statement\'s and getInfo\'s fields and chip lists as the detail gives them', () => {
     renderEntry(entryNamed('Fixture Security Key L2'));
     const statement = section('metadataStatement');
     expect(field(statement, 'Description (de-DE)')).toHaveTextContent(/^Fixture Sicherheitsschlüssel L2$/);
-    expect(field(statement, 'Friendly Name (en-US)')).toHaveTextContent(/^Fixture Security Key L2$/);
-    expect(field(statement, 'Friendly Name (zh-CN)')).toHaveTextContent(/^Fixture 安全密钥 L2$/);
-  });
-
-  it('says whether the statement\'s key is restricted, wants fresh user verification, or syncs', () => {
-    renderEntry(entryNamed('Fixture Security Key L2'));
-    const statement = section('metadataStatement');
     expect(field(statement, 'Key Restricted')).toHaveTextContent(/^true$/);
-    expect(field(statement, 'Fresh User Verification Required')).toHaveTextContent(/^false$/);
-    expect(field(statement, 'Multi-Device Credential Support')).toHaveTextContent(/^unsupported$/);
-  });
-
-  it('shows the supported extensions and the transaction display\'s content type and PNG', () => {
-    renderEntry(entryNamed('Fixture Security Key L2'));
-    const statement = section('metadataStatement');
-    expect(chips('Supported Extensions')).toEqual(['hmac-secret', 'credProtect (tag 1, data 03, fail if unknown)']);
-    expect(chips('TC Display')).toEqual(['any', 'hardware']);
-    expect(field(statement, 'TC Display Content Type')).toHaveTextContent(/^image\/png$/);
     expect(field(statement, 'TC Display PNG 2')).toHaveTextContent(/Palette: rgb\(255, 255, 255\), rgb\(0, 0, 0\)$/);
-  });
-
-  it('shows every other member of the statement, a later version\'s named from its key', () => {
-    renderEntry(entryNamed('Fixture Security Key L2'));
-    const statement = section('metadataStatement');
-    expect(field(statement, 'Operating Environment')).toHaveTextContent(/^Secure Element \(SE\)$/);
-    expect(field(statement, 'Credential Exchange Config URL')).toHaveTextContent('https://fixture.example/credential-exchange.json');
     expect(field(statement, 'Fixture Future Statement Field')).toHaveTextContent('A statement field no MDS3 version defines');
-  });
-
-  it('shows every getInfo member a later CTAP version added', () => {
-    renderEntry(entryNamed('Fixture Security Key L2'));
+    expect(chips('Supported Extensions')).toEqual(['hmac-secret', 'credProtect (tag 1, data 03, fail if unknown)']);
     const info = section('authenticatorGetInfo');
-    expect(field(info, 'Max PIN Length')).toHaveTextContent(/^63$/);
-    expect(field(info, 'Force PIN Change')).toHaveTextContent(/^false$/);
     expect(field(info, 'Fixture Future Member')).toHaveTextContent('{"kept":true}');
-    expect(chips('Certifications')).toEqual(['FIDO: 2', 'FIPS-CMVP-2: 2']);
     expect(chips('Transports for Reset')).toEqual(['usb', 'nfc']);
   });
 

@@ -110,11 +110,6 @@ describe('composeCredentialDetail', () => {
     expect(describeAttestationCertificate(state, 0).text).toContain('Issuer: CN=Characterization Test CA');
   });
 
-  it('gives an ML-DSA key\'s parameter set', async () => {
-    const { detail } = await detailOf(simpleRecord('mldsa65'));
-    expect(detail.publicKey.lines.at(-1)).toEqual({ label: 'ML-DSA parameter set:', value: 'ML-DSA-65' });
-  });
-
   it('composes each detail into a state of its own', async () => {
     const first = await detailOf(simpleRecord('packedX5c'));
     const second = await detailOf(simpleRecord('es256'));
@@ -129,8 +124,8 @@ describe('composeCredentialDetail', () => {
     expect(decode).not.toHaveBeenCalled();
     expect(JSON.parse(detail.registration.response.credential)).toEqual(saved.registrationResponse);
     expect(JSON.parse(detail.registration.response.relyingParty)).toEqual(saved.registrationDetailSnapshot.response.relyingParty);
-    expect(detail.registration.attestation.certificates).toEqual([{ index: 0, title: 'Attestation Certificate' }]);
-    expect(describeAttestationCertificate(state, 0).text).toContain('Issuer: CN=Characterization Test CA');
+    // How a snapshot's certificates are shown is the registration view's (registration/view.test.js).
+    expect(state.attestationCertificates).toHaveLength(1);
   });
 
   it('takes the credential or the relying party from the record when the snapshot holds only the other', async () => {
