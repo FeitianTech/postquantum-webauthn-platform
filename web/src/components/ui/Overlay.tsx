@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { cx } from '@/lib/cx';
@@ -89,36 +89,11 @@ const DIALOG_WIDTHS = {
   sm: 'w-[min(calc(100vw-2rem),28rem)]',
 } as const;
 
-// What every floating layer shares: rendered into #overlay-root (a sibling of
-// the app, which is made inert while it is open), a scrim that closes it, the
-// panel taking focus, Tab kept inside, Escape closing it, and focus given back.
-// The page behind is not scroll-locked.
-function Overlay({
-  open,
-  onClose,
-  id,
-  variant = 'dialog',
-  labelledBy,
-  label,
-  returnFocusTo,
-  initialFocus,
-  size = 'md',
-  role = 'dialog',
-  describedBy,
-  className,
-  children,
-}: OverlayProps) {
-  const target = useOverlayRoot();
+// Whether the overlay is in the page (it stays for EXIT_MS after it closes, to fade
+// out) and whether it is shown (a frame after it mounts, so it fades in).
+function useOverlayPresence(open: boolean) {
   const [mounted, setMounted] = useState(open);
   const [shown, setShown] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const onCloseRef = useRef(onClose);
-  const returnFocusRef = useRef(returnFocusTo);
-  const initialFocusRef = useRef(initialFocus);
-  onCloseRef.current = onClose;
-  returnFocusRef.current = returnFocusTo;
-  initialFocusRef.current = initialFocus;
 
   useEffect(() => {
     if (open) {
@@ -130,6 +105,30 @@ function Overlay({
     const timer = setTimeout(() => setMounted(false), EXIT_MS);
     return () => clearTimeout(timer);
   }, [open]);
+
+  return { mounted, shown };
+}
+
+type OverlayLayer = {
+  open: boolean;
+  mounted: boolean;
+  target: Element | null;
+  rootRef: RefObject<HTMLDivElement | null>;
+  panelRef: RefObject<HTMLDivElement | null>;
+  onClose: () => void;
+  returnFocusTo?: () => HTMLElement | null;
+  initialFocus?: () => HTMLElement | null;
+};
+
+// While it is open, the overlay is the top layer: the one under it and the app
+// inert, focus in its panel, Escape and Tab its own; on closing, all given back.
+function useOverlayLayer({ open, mounted, target, rootRef, panelRef, onClose, returnFocusTo, initialFocus }: OverlayLayer) {
+  const onCloseRef = useRef(onClose);
+  const returnFocusRef = useRef(returnFocusTo);
+  const initialFocusRef = useRef(initialFocus);
+  onCloseRef.current = onClose;
+  returnFocusRef.current = returnFocusTo;
+  initialFocusRef.current = initialFocus;
 
   useEffect(() => {
     const root = rootRef.current;
@@ -167,7 +166,33 @@ function Overlay({
     };
     // A layer mounted open (a dialog whose chunk arrived once it was asked for)
     // has its root only once the overlay root is known: it becomes a layer then.
-  }, [open, mounted, target]);
+  }, [open, mounted, target, rootRef, panelRef]);
+}
+
+// What every floating layer shares: rendered into #overlay-root (a sibling of
+// the app, which is made inert while it is open), a scrim that closes it, the
+// panel taking focus, Tab kept inside, Escape closing it, and focus given back.
+// The page behind is not scroll-locked.
+function Overlay({
+  open,
+  onClose,
+  id,
+  variant = 'dialog',
+  labelledBy,
+  label,
+  returnFocusTo,
+  initialFocus,
+  size = 'md',
+  role = 'dialog',
+  describedBy,
+  className,
+  children,
+}: OverlayProps) {
+  const target = useOverlayRoot();
+  const { mounted, shown } = useOverlayPresence(open);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useOverlayLayer({ open, mounted, target, rootRef, panelRef, onClose, returnFocusTo, initialFocus });
 
   if (!target) return null;
   return createPortal(
