@@ -1,14 +1,14 @@
-"""Helpers for building fast FIDO MDS explorer snapshots."""
+"""The FIDO MDS explorer's entries and snapshots, built from a metadata BLOB's entries
+(each statement's fields read by ``statement_fields``)."""
 from __future__ import annotations
 
 import hashlib
-import json
 from collections.abc import Mapping
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from typing import Any
 
-from .. import aaguid
 from . import certificates as mds_certificates
+from . import statement_fields
 
 __all__ = [
     "build_entry_id",
@@ -16,364 +16,30 @@ __all__ = [
     "build_explorer_entry",
     "build_explorer_snapshot",
     "build_snapshot_meta",
-    "normalise_aaguid_key",
 ]
 
 _ENTRY_HASH_PREFIX = "entry:"
 
 
-def _mapping_value(mapping: Mapping[str, Any], *keys: str) -> Any:
-    for key in keys:
-        if key in mapping:
-            return mapping[key]
-    return None
-
-
-def _string_or_none(value: Any) -> str | None:
-    if isinstance(value, str):
-        text = value.strip()
-        if text:
-            return text
-    return None
-
-
-def _extract_list(value: Any) -> list[Any]:
-    if value in (None, ""):
-        return []
-    if isinstance(value, list):
-        return [item for item in value if item not in (None, "")]
-    if isinstance(value, tuple):
-        return [item for item in value if item not in (None, "")]
-    return [value]
-
-
-def _parse_date(value: Any) -> datetime | None:
-    if isinstance(value, datetime):
-        if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
-        return value.astimezone(timezone.utc)
-
-    if isinstance(value, date):
-        return datetime(value.year, value.month, value.day, tzinfo=timezone.utc)
-
-    if not isinstance(value, str):
-        return None
-
-    text = value.strip()
-    if not text:
-        return None
-
-    # ISO 8601 as MDS writes it: a date ("2024-01-02", read as its midnight) or
-    # a date and time, "Z" included.
-    try:
-        parsed = datetime.fromisoformat(text)
-    except ValueError:
-        return None
-
-    if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
-
-
-def _format_date(value: Any) -> str:
-    parsed = _parse_date(value)
-    if parsed is None:
-        if isinstance(value, str):
-            return value
-        return ""
-    return parsed.strftime("%b %d, %Y").replace(" 0", " ")
-
-
-def _extract_byte_array(value: Any) -> bytes | None:
-    """Bytes, or a list of byte values (0 to 255), as bytes; None for anything else."""
-
-    if isinstance(value, list) and all(isinstance(item, int) and 0 <= item <= 255 for item in value):
-        return bytes(value)
-    if isinstance(value, (bytes, bytearray, memoryview)):
-        return bytes(value)
-    return None
-
-
-def format_guid_candidate(value: Any) -> str:
-    if value is None:
-        return ""
-
-    if isinstance(value, str):
-        trimmed = value.strip()
-        if not trimmed:
-            return ""
-        lowered = trimmed.lower()
-        if len(lowered) == 36 and lowered.count("-") == 4:
-            return lowered
-        clean = "".join(ch for ch in lowered if ch in "0123456789abcdef")
-        if len(clean) == 32:
-            return (
-                f"{clean[:8]}-{clean[8:12]}-{clean[12:16]}-"
-                f"{clean[16:20]}-{clean[20:]}"
-            )
-        return ""
-
-    guid = aaguid.guid(_extract_byte_array(value))
-    if guid:
-        return guid
-
-    try:
-        text = str(value)
-    except Exception:  # pragma: no cover - defensive
-        return ""
-    return format_guid_candidate(text)
-
-
-def normalise_aaguid_key(value: Any) -> str:
-    formatted = format_guid_candidate(value)
-    return formatted.replace("-", "").lower() if formatted else ""
-
-
-def _format_enum(value: Any) -> str:
-    if value in (None, ""):
-        return ""
-
-    parts: list[str] = []
-    for raw_part in str(value).split("_"):
-        for sub_part in raw_part.split("-"):
-            text = sub_part.strip()
-            if text:
-                parts.append(text)
-
-    formatted_parts = []
-    for part in parts:
-        if part.isupper():
-            if len(part) <= 4:
-                formatted_parts.append(part)
-            else:
-                lowered = part.lower()
-                formatted_parts.append(lowered[:1].upper() + lowered[1:])
-            continue
-
-        if any(char.isdigit() for char in part):
-            formatted_parts.append(part.upper())
-            continue
-
-        lowered = part.lower()
-        formatted_parts.append(lowered[:1].upper() + lowered[1:])
-
-    return " ".join(formatted_parts)
-
-
-def _format_protocol(protocol: Any) -> str:
-    formatted = _format_enum(protocol)
-    compact = formatted.replace(" ", "")
-    if compact.lower().startswith("fido") and compact[4:].isdigit():
-        return compact.upper()
-    return formatted
-
-
-def _format_certification(status_reports: Any) -> tuple[str, str]:
-    reports = [report for report in _extract_list(status_reports) if isinstance(report, Mapping)]
-    if not reports:
-        return "", ""
-
-    def sort_key(report: Mapping[str, Any]) -> float:
-        parsed = _parse_date(_mapping_value(report, "effectiveDate", "effective_date"))
-        return parsed.timestamp() if parsed else 0.0
-
-    sorted_reports = sorted(reports, key=sort_key, reverse=True)
-    latest = sorted_reports[0]
-
-    status_raw = _string_or_none(_mapping_value(latest, "status")) or ""
-    status_value = status_raw.upper()
-    descriptor = _string_or_none(
-        _mapping_value(latest, "certificationDescriptor", "certification_descriptor")
-    )
-    certificate_number = _string_or_none(
-        _mapping_value(latest, "certificateNumber", "certificate_number")
-    )
-
-    parts = []
-    if status_value:
-        parts.append(_format_enum(status_value))
-    if descriptor:
-        parts.append(descriptor)
-    if certificate_number:
-        parts.append(f"({certificate_number})")
-
-    return " • ".join(part for part in parts if part), status_value
-
-
-def _latest_effective_date(status_reports: Any) -> str:
-    reports = [report for report in _extract_list(status_reports) if isinstance(report, Mapping)]
-    if not reports:
-        return ""
-
-    def sort_key(report: Mapping[str, Any]) -> float:
-        parsed = _parse_date(_mapping_value(report, "effectiveDate", "effective_date"))
-        return parsed.timestamp() if parsed else 0.0
-
-    latest = max(reports, key=sort_key)
-    return _string_or_none(_mapping_value(latest, "effectiveDate", "effective_date")) or ""
-
-
-def _extract_user_verification(details: Any) -> list[str]:
-    values = set()
-    for group in _extract_list(details):
-        if not isinstance(group, list):
-            group = [group]
-        for entry in group:
-            if isinstance(entry, Mapping):
-                method = _mapping_value(entry, "userVerificationMethod", "user_verification_method")
-                if method:
-                    values.add(_format_enum(method))
-    return sorted(values)
-
-
-def _extract_transports(metadata: Mapping[str, Any]) -> list[str]:
-    info = _mapping_value(metadata, "authenticatorGetInfo", "authenticator_get_info")
-    info_transports = _extract_list(_mapping_value(info, "transports")) if isinstance(info, Mapping) else []
-    metadata_transports = _extract_list(_mapping_value(metadata, "transports"))
-    combined = {_format_enum(value) for value in [*info_transports, *metadata_transports] if value}
-    return sorted(item for item in combined if item)
-
-
-def _normalise_icon(icon: Any, icon_type: Any) -> str:
-    value = _string_or_none(icon)
-    if not value:
-        return ""
-    if value.lower().startswith("data:") or value.lower().startswith("http://") or value.lower().startswith("https://"):
-        return value
-    content_type = _string_or_none(icon_type) or "image/png"
-    return f"data:{content_type};base64,{value}"
-
-
-def _resolve_name(metadata: Mapping[str, Any], entry: Mapping[str, Any]) -> str:
-    description = _mapping_value(metadata, "description")
-    if isinstance(description, str) and description.strip():
-        return description.strip()
-    if isinstance(description, Mapping):
-        for value in description.values():
-            text = _string_or_none(value)
-            if text:
-                return text
-
-    alt_descriptions = _mapping_value(metadata, "alternativeDescriptions", "alternative_descriptions")
-    if isinstance(alt_descriptions, Mapping):
-        for value in alt_descriptions.values():
-            text = _string_or_none(value)
-            if text:
-                return text
-
-    for report in _extract_list(_mapping_value(entry, "statusReports", "status_reports")):
-        if isinstance(report, Mapping):
-            descriptor = _string_or_none(
-                _mapping_value(report, "certificationDescriptor", "certification_descriptor")
-            )
-            if descriptor:
-                return descriptor
-
-    return "Unknown Authenticator"
-
-
-def _resolve_identifier(entry: Mapping[str, Any], metadata: Mapping[str, Any]) -> str:
-    for candidate in (
-        _string_or_none(_mapping_value(entry, "aaguid")),
-        _string_or_none(_mapping_value(metadata, "aaguid")),
-        _string_or_none(_mapping_value(metadata, "aaid")),
-    ):
-        if candidate:
-            return candidate
-
-    identifiers = _extract_list(
-        _mapping_value(metadata, "attestationCertificateKeyIdentifiers", "attestation_certificate_key_identifiers")
-    )
-    if identifiers:
-        return str(identifiers[0])
-    return "—"
-
-
-def _resolve_aaguid(entry: Mapping[str, Any], metadata: Mapping[str, Any]) -> str:
-    for candidate in (
-        _mapping_value(entry, "aaguid"),
-        _mapping_value(metadata, "aaguid"),
-    ):
-        formatted = format_guid_candidate(candidate)
-        if formatted:
-            return formatted
-    return ""
-
-
-def _extract_attestation_key_identifiers(
-    metadata: Mapping[str, Any], entry: Mapping[str, Any]
-) -> list[str]:
-    seen = set()
-    values: list[str] = []
-    for candidate in (
-        *_extract_list(
-            _mapping_value(
-                metadata,
-                "attestationCertificateKeyIdentifiers",
-                "attestation_certificate_key_identifiers",
-            )
-        ),
-        *_extract_list(
-            _mapping_value(
-                entry,
-                "attestationCertificateKeyIdentifiers",
-                "attestation_certificate_key_identifiers",
-            )
-        ),
-    ):
-        text = str(candidate).strip()
-        if not text:
-            continue
-        key = text.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        values.append(text)
-    return values
-
-
-def _canonical_json(value: Any) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-
-
-def _compact_metadata_statement(metadata_mapping: Mapping[str, Any]) -> dict[str, Any]:
-    compact = dict(metadata_mapping)
-    for key in (
-        "attestationRootCertificates",
-        "attestation_root_certificates",
-        "attestationCertificateKeyIdentifiers",
-        "attestation_certificate_key_identifiers",
-        "icon",
-        "iconType",
-        "icon_type",
-        # Images the explorer never shows, as large as the icon.
-        "iconDark",
-        "providerLogoLight",
-        "providerLogoDark",
-    ):
-        compact.pop(key, None)
-    return compact
-
-
 def build_entry_id(entry_payload: Mapping[str, Any]) -> str:
-    metadata = _mapping_value(entry_payload, "metadataStatement", "metadata_statement")
+    metadata = statement_fields.mapping_value(entry_payload, "metadataStatement", "metadata_statement")
     metadata_mapping = metadata if isinstance(metadata, Mapping) else {}
 
-    aaguid = _resolve_aaguid(entry_payload, metadata_mapping)
+    aaguid = statement_fields.resolve_aaguid(entry_payload, metadata_mapping)
     if aaguid:
         return f"aaguid:{aaguid.lower()}"
 
-    aaid = _string_or_none(_mapping_value(entry_payload, "aaid", "AAID")) or _string_or_none(
-        _mapping_value(metadata_mapping, "aaid", "AAID")
+    aaid = statement_fields.string_or_none(statement_fields.mapping_value(entry_payload, "aaid", "AAID")) or statement_fields.string_or_none(
+        statement_fields.mapping_value(metadata_mapping, "aaid", "AAID")
     )
     if aaid:
         return f"aaid:{aaid}"
 
-    key_ids = _extract_attestation_key_identifiers(metadata_mapping, entry_payload)
+    key_ids = statement_fields.extract_attestation_key_identifiers(metadata_mapping, entry_payload)
     if key_ids:
         return f"akid:{key_ids[0].lower()}"
 
-    digest = hashlib.sha256(_canonical_json(entry_payload).encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(statement_fields.canonical_json(entry_payload).encode("utf-8")).hexdigest()
     return f"{_ENTRY_HASH_PREFIX}{digest[:24]}"
 
 
@@ -384,21 +50,21 @@ def build_snapshot_meta(
     source: str = "packaged",
 ) -> dict[str, Any]:
     metadata = dict(cache_info or {})
-    generated_at = _string_or_none(_mapping_value(metadata, "generated_at"))
+    generated_at = statement_fields.string_or_none(statement_fields.mapping_value(metadata, "generated_at"))
     if not generated_at:
         generated_at = datetime.now(timezone.utc).isoformat()
 
-    entries = _extract_list(_mapping_value(payload, "entries"))
+    entries = statement_fields.extract_list(statement_fields.mapping_value(payload, "entries"))
     return {
         "source": source,
-        "legalHeader": _string_or_none(_mapping_value(payload, "legalHeader", "legal_header")) or "",
-        "no": _mapping_value(payload, "no"),
-        "nextUpdate": _string_or_none(_mapping_value(payload, "nextUpdate", "next_update")),
+        "legalHeader": statement_fields.string_or_none(statement_fields.mapping_value(payload, "legalHeader", "legal_header")) or "",
+        "no": statement_fields.mapping_value(payload, "no"),
+        "nextUpdate": statement_fields.string_or_none(statement_fields.mapping_value(payload, "nextUpdate", "next_update")),
         "entryCount": len(entries),
-        "lastModified": _string_or_none(_mapping_value(metadata, "last_modified")),
-        "lastModifiedIso": _string_or_none(_mapping_value(metadata, "last_modified_iso")),
-        "etag": _string_or_none(_mapping_value(metadata, "etag")),
-        "fetchedAt": _string_or_none(_mapping_value(metadata, "fetched_at")),
+        "lastModified": statement_fields.string_or_none(statement_fields.mapping_value(metadata, "last_modified")),
+        "lastModifiedIso": statement_fields.string_or_none(statement_fields.mapping_value(metadata, "last_modified_iso")),
+        "etag": statement_fields.string_or_none(statement_fields.mapping_value(metadata, "etag")),
+        "fetchedAt": statement_fields.string_or_none(statement_fields.mapping_value(metadata, "fetched_at")),
         "generatedAt": generated_at,
     }
 
@@ -406,38 +72,38 @@ def build_snapshot_meta(
 def _authenticator_fields(
     metadata_mapping: Mapping[str, Any], entry_payload: Mapping[str, Any], status_reports: list[Mapping[str, Any]]
 ) -> dict[str, Any]:
-    certification, certification_status = _format_certification(status_reports)
-    user_verification_list = _extract_user_verification(
-        _mapping_value(metadata_mapping, "userVerificationDetails", "user_verification_details")
+    certification, certification_status = statement_fields.format_certification(status_reports)
+    user_verification_list = statement_fields.extract_user_verification(
+        statement_fields.mapping_value(metadata_mapping, "userVerificationDetails", "user_verification_details")
     )
     attachment_list = [
-        _format_enum(value)
-        for value in _extract_list(_mapping_value(metadata_mapping, "attachmentHint", "attachment_hint"))
+        statement_fields.format_enum(value)
+        for value in statement_fields.extract_list(statement_fields.mapping_value(metadata_mapping, "attachmentHint", "attachment_hint"))
     ]
-    transports_list = _extract_transports(metadata_mapping)
+    transports_list = statement_fields.extract_transports(metadata_mapping)
     key_protection_list = [
-        _format_enum(value)
-        for value in _extract_list(_mapping_value(metadata_mapping, "keyProtection", "key_protection"))
+        statement_fields.format_enum(value)
+        for value in statement_fields.extract_list(statement_fields.mapping_value(metadata_mapping, "keyProtection", "key_protection"))
     ]
     algorithms_list = [
-        _format_enum(value)
-        for value in _extract_list(
-            _mapping_value(metadata_mapping, "authenticationAlgorithms", "authentication_algorithms")
+        statement_fields.format_enum(value)
+        for value in statement_fields.extract_list(
+            statement_fields.mapping_value(metadata_mapping, "authenticationAlgorithms", "authentication_algorithms")
         )
     ]
     return {
-        "name": _resolve_name(metadata_mapping, entry_payload),
-        "protocol": _format_protocol(
-            _mapping_value(metadata_mapping, "protocolFamily", "protocol_family")
-            or _mapping_value(metadata_mapping, "protocolType", "protocol_type")
+        "name": statement_fields.resolve_name(metadata_mapping, entry_payload),
+        "protocol": statement_fields.format_protocol(
+            statement_fields.mapping_value(metadata_mapping, "protocolFamily", "protocol_family")
+            or statement_fields.mapping_value(metadata_mapping, "protocolType", "protocol_type")
         ),
         "certification": certification,
         "certificationStatus": certification_status,
-        "id": _resolve_identifier(entry_payload, metadata_mapping),
-        "aaguid": _resolve_aaguid(entry_payload, metadata_mapping),
-        "icon": _normalise_icon(
-            _mapping_value(metadata_mapping, "icon"),
-            _mapping_value(metadata_mapping, "iconType", "icon_type"),
+        "id": statement_fields.resolve_identifier(entry_payload, metadata_mapping),
+        "aaguid": statement_fields.resolve_aaguid(entry_payload, metadata_mapping),
+        "icon": statement_fields.normalise_icon(
+            statement_fields.mapping_value(metadata_mapping, "icon"),
+            statement_fields.mapping_value(metadata_mapping, "iconType", "icon_type"),
         ),
         "userVerification": ", ".join(user_verification_list),
         "userVerificationList": user_verification_list,
@@ -454,11 +120,11 @@ def _authenticator_fields(
 
 def _date_fields(entry_payload: Mapping[str, Any], status_reports: list[Mapping[str, Any]]) -> dict[str, Any]:
     raw_date = (
-        _string_or_none(_mapping_value(entry_payload, "timeOfLastStatusChange", "time_of_last_status_change"))
-        or _latest_effective_date(status_reports)
+        statement_fields.string_or_none(statement_fields.mapping_value(entry_payload, "timeOfLastStatusChange", "time_of_last_status_change"))
+        or statement_fields.latest_effective_date(status_reports)
     )
     return {
-        "dateUpdated": _format_date(raw_date),
+        "dateUpdated": statement_fields.format_date(raw_date),
         "dateTooltip": raw_date or None,
         "timeOfLastStatusChange": raw_date or None,
     }
@@ -474,10 +140,10 @@ def _provenance_fields(
         "source": source,
         "sourceInfo": dict(source_info) if isinstance(source_info, Mapping) else None,
         "trustAnchorStatus": trust_anchor_status,
-        "snapshotNo": _mapping_value(snapshot_meta or {}, "no"),
-        "snapshotNextUpdate": _mapping_value(snapshot_meta or {}, "nextUpdate"),
-        "snapshotFetchedAt": _mapping_value(snapshot_meta or {}, "fetchedAt"),
-        "snapshotGeneratedAt": _mapping_value(snapshot_meta or {}, "generatedAt"),
+        "snapshotNo": statement_fields.mapping_value(snapshot_meta or {}, "no"),
+        "snapshotNextUpdate": statement_fields.mapping_value(snapshot_meta or {}, "nextUpdate"),
+        "snapshotFetchedAt": statement_fields.mapping_value(snapshot_meta or {}, "fetchedAt"),
+        "snapshotGeneratedAt": statement_fields.mapping_value(snapshot_meta or {}, "generatedAt"),
     }
 
 
@@ -492,19 +158,19 @@ def _detail_fields(
 ) -> dict[str, Any]:
     return {
         "metadataStatement": (
-            _compact_metadata_statement(metadata_mapping) if compact_detail else dict(metadata_mapping)
+            statement_fields.compact_metadata_statement(metadata_mapping) if compact_detail else dict(metadata_mapping)
         ),
         "rawEntry": dict(entry_payload) if include_raw_entry else None,
         "statusReports": [dict(report) for report in status_reports],
         "biometricStatusReports": [
             dict(report)
-            for report in _extract_list(_mapping_value(entry_payload, "biometricStatusReports"))
+            for report in statement_fields.extract_list(statement_fields.mapping_value(entry_payload, "biometricStatusReports"))
             if isinstance(report, Mapping)
         ],
-        "rogueListURL": _string_or_none(_mapping_value(entry_payload, "rogueListURL")),
-        "rogueListHash": _string_or_none(_mapping_value(entry_payload, "rogueListHash")),
+        "rogueListURL": statement_fields.string_or_none(statement_fields.mapping_value(entry_payload, "rogueListURL")),
+        "rogueListHash": statement_fields.string_or_none(statement_fields.mapping_value(entry_payload, "rogueListHash")),
         "attestationCertificates": [str(value) for value in attestation_certificates if value],
-        "attestationKeyIdentifiers": _extract_attestation_key_identifiers(metadata_mapping, entry_payload),
+        "attestationKeyIdentifiers": statement_fields.extract_attestation_key_identifiers(metadata_mapping, entry_payload),
         "isLightweightEntry": False,
     }
 
@@ -532,14 +198,14 @@ def build_explorer_entry(
     compact_detail: bool = False,
     source_info: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    metadata = _mapping_value(entry_payload, "metadataStatement", "metadata_statement")
+    metadata = statement_fields.mapping_value(entry_payload, "metadataStatement", "metadata_statement")
     metadata_mapping = metadata if isinstance(metadata, Mapping) else {}
     status_reports = [
-        report for report in _extract_list(_mapping_value(entry_payload, "statusReports", "status_reports"))
+        report for report in statement_fields.extract_list(statement_fields.mapping_value(entry_payload, "statusReports", "status_reports"))
         if isinstance(report, Mapping)
     ]
-    attestation_certificates = _extract_list(
-        _mapping_value(metadata_mapping, "attestationRootCertificates", "attestation_root_certificates")
+    attestation_certificates = statement_fields.extract_list(
+        statement_fields.mapping_value(metadata_mapping, "attestationRootCertificates", "attestation_root_certificates")
     )
 
     entry: dict[str, Any] = {"entryId": build_entry_id(entry_payload), "index": index}
@@ -585,7 +251,7 @@ def build_explorer_snapshot(
             include_raw_entry=include_raw_entry,
             compact_detail=compact_detail,
         )
-        for index, entry_payload in enumerate(_extract_list(_mapping_value(payload, "entries")))
+        for index, entry_payload in enumerate(statement_fields.extract_list(statement_fields.mapping_value(payload, "entries")))
         if isinstance(entry_payload, Mapping)
     ]
 

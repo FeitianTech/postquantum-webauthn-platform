@@ -9,8 +9,8 @@ from server.app.mds.build import (
     build_entry_id,
     build_explorer_entry,
     build_explorer_snapshot,
-    normalise_aaguid_key,
 )
+from server.app.mds.statement_fields import normalise_aaguid_key
 from tests.app.metadata import mds_fixture
 
 

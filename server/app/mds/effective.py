@@ -8,7 +8,8 @@ from typing import Any
 
 from . import cache as mds_cache
 from . import uploads as mds_uploads
-from .build import build_entry_id, build_explorer_entry, normalise_aaguid_key
+from .build import build_entry_id, build_explorer_entry
+from .statement_fields import normalise_aaguid_key
 
 
 def _build_session_snapshot_entry(
