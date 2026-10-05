@@ -111,10 +111,6 @@ describe('cloning advanced records', () => {
 });
 
 describe('pruneAdvancedCredentialPayload', () => {
-  it('leaves nothing to prune when given no record', () => {
-    expect(() => pruneAdvancedCredentialPayload(null)).not.toThrow();
-  });
-
   it('keeps the registration snapshot, sanitised', () => {
     const record = advancedRecord({
       registrationDetailSnapshot: { ...registrationSnapshot(), html: '<section>old markup</section>' },

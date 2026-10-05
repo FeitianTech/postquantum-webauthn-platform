@@ -137,10 +137,8 @@ describe('keepRegistrationSnapshot', () => {
     const input = await resultOf(EVERYTHING);
     vi.mocked(updateAdvancedCredentialRegistrationSnapshot).mockImplementation(async () => false);
     const unchanged = await keepRegistrationSnapshot(input);
-    vi.mocked(updateAdvancedCredentialRegistrationSnapshot).mockImplementation(async () => undefined);
-    const unanswered = await keepRegistrationSnapshot(input);
 
-    expect([unchanged.saved, unanswered.saved]).toEqual([false, false]);
+    expect(unchanged.saved).toBe(false);
   });
 
   it('saves nothing for a registration the browser did not save, and still gives the composition', async () => {

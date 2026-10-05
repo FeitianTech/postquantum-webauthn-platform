@@ -6,10 +6,8 @@ export function isNonEmptyString(value) {
     return typeof value === 'string' && value.trim() !== '';
 }
 
+// Called with a record and a list of its keys (advanced-storage-shaping.js).
 export function removeObjectKeys(target, keys) {
-    if (!target || typeof target !== 'object' || !Array.isArray(keys)) {
-        return;
-    }
     keys.forEach(key => {
         if (Object.hasOwn(target, key)) {
             delete target[key];

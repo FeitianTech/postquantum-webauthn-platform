@@ -28,10 +28,6 @@ describe('stripCertificateCollections', () => {
     stripCertificateCollections(target);
     expect(target).toEqual({ nested: { keep: 1 }, list: [{}, 'MIIB'] });
   });
-
-  it('leaves alone what is not a map', () => {
-    expect(() => stripCertificateCollections(null)).not.toThrow();
-  });
 });
 
 describe('removeKeysFromObject', () => {
@@ -93,10 +89,6 @@ describe('stripSignatureFormatting', () => {
     const target = { signature: { hex: '3045' } };
     stripSignatureFormatting(target);
     expect(target).toEqual({ signature: { hex: '3045' } });
-  });
-
-  it('leaves alone what is not a map', () => {
-    expect(() => stripSignatureFormatting(undefined)).not.toThrow();
   });
 });
 

@@ -71,10 +71,6 @@ describe('the attachment given to the browser', () => {
     applyAuthenticatorAttachmentPreference(options, []);
     expect(options.publicKey.authenticatorSelection).toEqual({});
   });
-
-  it('changes nothing that is not options', () => {
-    expect(() => applyAuthenticatorAttachmentPreference(null, ['platform'])).not.toThrow();
-  });
 });
 
 describe('the credentials a request allows', () => {

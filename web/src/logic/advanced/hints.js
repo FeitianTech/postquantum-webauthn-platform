@@ -51,15 +51,11 @@ export function enforceAuthenticatorAttachmentWithHints(publicKey) {
 }
 
 /**
- * @param {Record<string, any> | null | undefined} targetOptions
+ * @param {Record<string, any>} targetOptions
  * @param {string[]} allowedAttachments
  * @param {...unknown} fallbackSources
  */
 export function applyAuthenticatorAttachmentPreference(targetOptions, allowedAttachments, ...fallbackSources) {
-    if (!targetOptions || typeof targetOptions !== 'object') {
-        return;
-    }
-
     const publicKey = targetOptions.publicKey && typeof targetOptions.publicKey === 'object'
         ? targetOptions.publicKey
         : targetOptions;

@@ -138,8 +138,8 @@ describe('useCopy', () => {
     expect(copyStatusText('Hex', { state: 'failed', reason: 'Denied!' })).toBe(
       'Could not copy: Denied! It is shown in full and selected, to copy by hand.',
     );
-    expect(copyStatusText('Hex', { state: 'failed' })).toBe(
-      'Could not copy: . It is shown in full and selected, to copy by hand.',
+    expect(copyStatusText('Hex', { state: 'failed', reason: 'Denied' })).toBe(
+      'Could not copy: Denied. It is shown in full and selected, to copy by hand.',
     );
   });
 });

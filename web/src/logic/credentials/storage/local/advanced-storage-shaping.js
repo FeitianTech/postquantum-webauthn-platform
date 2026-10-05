@@ -128,11 +128,8 @@ export function cloneAdvancedStoredRecord(record) {
     return clone;
 }
 
+// Called with a record's clone (prepareAdvancedCredentialForStorage).
 export function pruneAdvancedCredentialPayload(record, { aggressive = false } = {}) {
-    if (!record || typeof record !== 'object') {
-        return;
-    }
-
     let registrationSnapshot = null;
     if (record.registrationDetailSnapshot && typeof record.registrationDetailSnapshot === 'object') {
         registrationSnapshot = cloneJson(record.registrationDetailSnapshot);

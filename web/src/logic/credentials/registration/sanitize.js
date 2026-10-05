@@ -22,10 +22,6 @@ const RP_INFO_EXCLUDED_KEYS = [
 ];
 
 export function stripCertificateCollections(target) {
-    if (!target || typeof target !== 'object') {
-        return;
-    }
-
     CERTIFICATE_COLLECTION_KEYS.forEach(key => {
         if (Object.hasOwn(target, key)) {
             delete target[key];
@@ -329,10 +325,6 @@ export function sanitizeParsedCertificateDetails(parsed) {
 }
 
 export function stripSignatureFormatting(target) {
-    if (!target || typeof target !== 'object') {
-        return;
-    }
-
     const process = value => {
         if (value && typeof value === 'object') {
             stripSignatureFormatting(value);

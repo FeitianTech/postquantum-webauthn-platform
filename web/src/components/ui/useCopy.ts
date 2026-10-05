@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 const COPIED_MS = 2000;
 
-type CopyOutcome = { state: 'idle' | 'copied' | 'failed'; reason?: string };
+type CopyOutcome = { state: 'idle' | 'copied' } | { state: 'failed'; reason: string };
 
 // Copies text and remembers how it went: "copied" for two seconds, or "failed"
 // with the browser's reason until the next copy. `copy` resolves to whether the
@@ -30,7 +30,7 @@ export function useCopy() {
 export function copyStatusText(label: string, outcome: CopyOutcome) {
   if (outcome.state === 'copied') return `${label} copied.`;
   if (outcome.state === 'failed') {
-    const reason = outcome.reason ?? '';
+    const { reason } = outcome;
     return `Could not copy: ${reason}${/[.!?]$/.test(reason) ? '' : '.'} It is shown in full and selected, to copy by hand.`;
   }
   return '';

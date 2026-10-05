@@ -2,21 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   computeUpdatedSignCount,
-  removeObjectKeys,
   safeParse,
   truncateString,
 } from './common.js';
 
 describe('the storage\'s small helpers', () => {
-  it('remove no keys from a target that is not a record, or with keys that are not a list', () => {
-    const record = { attestationObject: 'o2NmbXRkbm9uZQ' };
-
-    removeObjectKeys(record, 'attestationObject');
-
-    expect(record).toEqual({ attestationObject: 'o2NmbXRkbm9uZQ' });
-    expect(() => removeObjectKeys(null, ['attestationObject'])).not.toThrow();
-  });
-
   it('truncate a value that is not text to an empty string', () => {
     expect(truncateString(48000, 10)).toBe('');
   });
