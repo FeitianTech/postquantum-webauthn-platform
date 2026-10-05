@@ -1,7 +1,8 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { MonoValue } from './MonoValue';
+import { holdingTimers } from '@/test/timers';
 
 describe('MonoValue', () => {
   const VALUE = 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgk2Qr9pNdQtSK1kuCzKZyWdMWbsfL7vWUwNQ3xUCvaYYlHBP6uxT';
@@ -20,9 +21,11 @@ describe('MonoValue', () => {
     setClipboard({ writeText });
     render(<MonoValue value={VALUE} label="public key" />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Copy public key' }));
-    expect(writeText).toHaveBeenCalledWith(VALUE);
-    expect(screen.getByRole('status')).toHaveTextContent('public key copied.');
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Copy public key' })));
+      expect(writeText).toHaveBeenCalledWith(VALUE);
+      expect(screen.getByRole('status')).toHaveTextContent('public key copied.');
+    });
   });
 
   it('shows the value in full and selected when copying fails', async () => {

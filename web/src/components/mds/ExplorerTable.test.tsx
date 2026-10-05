@@ -10,6 +10,7 @@ import { renderPage } from '@/test/page';
 
 import { ExplorerTable } from './ExplorerTable';
 import { useExplorerView } from './useExplorerView';
+import { holdingTimers } from '@/test/timers';
 
 function Harness({ entries, onOpen }: { entries: MdsEntry[]; onOpen?: (entryId: string) => void }) {
   const view = useExplorerView(entries, 1);
@@ -341,9 +342,12 @@ describe('the MDS table: copying an identifier', () => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
     renderTable();
     const entry = entryNamed('Fixture Security Key L1');
-    await userEvent.click(within(cellsOf(entry)[4]).getByRole('button', { name: 'Copy AAGUID' }));
-    expect(writeText).toHaveBeenCalledWith('f1d0f1d0-0000-4000-8000-000000000001');
-    expect(within(cellsOf(entry)[4]).getByRole('status')).toHaveTextContent('AAGUID copied.');
+
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(within(cellsOf(entry)[4]).getByRole('button', { name: 'Copy AAGUID' })));
+      expect(writeText).toHaveBeenCalledWith('f1d0f1d0-0000-4000-8000-000000000001');
+      expect(within(cellsOf(entry)[4]).getByRole('status')).toHaveTextContent('AAGUID copied.');
+    });
   });
 
   it('says so when the clipboard refuses, and selects the value to copy by hand', async () => {

@@ -1,8 +1,9 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { CodeBlock } from './CodeBlock';
 import { copyStatusText, useCopy } from './useCopy';
+import { holdingTimers } from '@/test/timers';
 
 const EDN = '{\n  1: "a",\n  "1": "b",\n  1: "c"\n}';
 
@@ -92,9 +93,11 @@ describe('CodeBlock', () => {
     setClipboard({ writeText });
     render(<CodeBlock value={EDN} label="EDN (exact bytes)" />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Copy EDN (exact bytes)' }));
-    expect(writeText).toHaveBeenCalledWith(EDN);
-    expect(screen.getByRole('status')).toHaveTextContent('EDN (exact bytes) copied.');
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Copy EDN (exact bytes)' })));
+      expect(writeText).toHaveBeenCalledWith(EDN);
+      expect(screen.getByRole('status')).toHaveTextContent('EDN (exact bytes) copied.');
+    });
   });
 
   it('opens and selects the text when copying fails', async () => {
