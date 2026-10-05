@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ToastProvider } from '@/components/ui/Toast';
@@ -6,6 +6,7 @@ import answers from '@/test/codec-answers.json';
 import { renderPage } from '@/test/page';
 
 import { CodecSection } from './CodecSection';
+import { holdingTimers } from '@/test/timers';
 
 // Real answers of POST /api/codec (tests/app/tooling/test_web_codec_answers.py
 // keeps them the server's own), each with the request that produced it.
@@ -135,12 +136,14 @@ describe('decoding', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/codec', expect.objectContaining({ method: 'POST' }));
     expect(sentBodies()).toEqual([{ payload: ' a301616161316162016163 ', mode: 'decode' }]);
 
-    await act(async () => pending.resolve(reply('decode-duplicate-and-colliding-keys')));
-    const output = within(decodePanel()).getByRole('region', { name: 'Codec Output' });
-    expect(within(output).getByText('Success')).toBeInTheDocument();
-    expect(output.querySelector('[data-role="type"]')).toHaveTextContent('CBOR');
-    expect(screen.getByText('Response decoded successfully!')).toBeInTheDocument();
-    expect(within(decodePanel()).getByRole('button', { name: 'Decode' })).toBeEnabled();
+    await holdingTimers(async () => {
+      await act(async () => pending.resolve(reply('decode-duplicate-and-colliding-keys')));
+      const output = within(decodePanel()).getByRole('region', { name: 'Codec Output' });
+      expect(within(output).getByText('Success')).toBeInTheDocument();
+      expect(output.querySelector('[data-role="type"]')).toHaveTextContent('CBOR');
+      expect(screen.getByText('Response decoded successfully!')).toBeInTheDocument();
+      expect(within(decodePanel()).getByRole('button', { name: 'Decode' })).toBeEnabled();
+    });
   });
 
   it('sends lenient only when the switch is on', async () => {
@@ -307,22 +310,25 @@ describe('encoding', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Encode' }));
     await userEvent.selectOptions(within(encodePanel()).getByRole('combobox', { name: 'Encoding format' }), format);
     await typeInto(encodePanel(), String(request.payload));
-    await userEvent.click(within(encodePanel()).getByRole('button', { name: 'Encode' }));
 
-    const output = await within(encodePanel()).findByRole('region', { name: 'Codec Output' });
-    expect(sentBodies()).toEqual([request]);
-    expect(output.querySelector('[data-role="type"]')).toHaveTextContent(String(answer.type));
-    const binary = (answer.data as { binary: Record<string, unknown> }).binary;
-    const encoded = within(output).getByRole('region', { name: 'Encoded output' });
-    expect(encoded.querySelector('[data-encoded="hex"] pre')).toHaveTextContent(String(binary.hex));
-    expect(Array.from(encoded.querySelectorAll('[data-encoded]')).map((block) => block.getAttribute('data-encoded')).slice(0, 4)).toEqual([
-      'hex',
-      'base64',
-      'base64url',
-      'colonHex',
-    ]);
-    expect(encoded.querySelector('[data-role="byte-length"]')).toHaveTextContent(`Byte length: ${String(binary.length)}`);
-    expect(screen.getByText('Payload encoded successfully!')).toBeInTheDocument();
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(within(encodePanel()).getByRole('button', { name: 'Encode' })));
+
+      const output = within(encodePanel()).getByRole('region', { name: 'Codec Output' });
+      expect(sentBodies()).toEqual([request]);
+      expect(output.querySelector('[data-role="type"]')).toHaveTextContent(String(answer.type));
+      const binary = (answer.data as { binary: Record<string, unknown> }).binary;
+      const encoded = within(output).getByRole('region', { name: 'Encoded output' });
+      expect(encoded.querySelector('[data-encoded="hex"] pre')).toHaveTextContent(String(binary.hex));
+      expect(Array.from(encoded.querySelectorAll('[data-encoded]')).map((block) => block.getAttribute('data-encoded')).slice(0, 4)).toEqual([
+        'hex',
+        'base64',
+        'base64url',
+        'colonHex',
+      ]);
+      expect(encoded.querySelector('[data-role="byte-length"]')).toHaveTextContent(`Byte length: ${String(binary.length)}`);
+      expect(screen.getByText('Payload encoded successfully!')).toBeInTheDocument();
+    });
   });
 
   it.each([
