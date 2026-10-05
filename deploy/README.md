@@ -51,6 +51,48 @@ Then apply the service settings:
 ./deploy/apply-service-config.sh
 ```
 
+## One-time setup: the MDS publisher
+
+`.github/workflows/update-fido-mds.yml` publishes new MDS snapshot sets to the bucket
+([MDS_SNAPSHOT.md](../docs/MDS_SNAPSHOT.md)). It signs in through Workload Identity
+Federation, so no key is stored in GitHub: the pool accepts only this repository's `main`
+branch, and the `mds-publisher` account it acts as may write only under `mds/`.
+
+```bash
+PROJECT=feitian-project
+PROJECT_NUMBER=277359456097
+REPO=FeitianTech/postquantum-webauthn-platform
+PUBLISHER=mds-publisher@$PROJECT.iam.gserviceaccount.com
+
+gcloud services enable sts.googleapis.com iamcredentials.googleapis.com --project $PROJECT
+
+gcloud iam workload-identity-pools create github --project $PROJECT --location global \
+  --display-name "GitHub Actions"
+gcloud iam workload-identity-pools providers create-oidc postquantum-webauthn-platform \
+  --project $PROJECT --location global --workload-identity-pool github \
+  --display-name "postquantum-webauthn-platform" \
+  --issuer-uri "https://token.actions.githubusercontent.com" \
+  --attribute-mapping "google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
+  --attribute-condition "assertion.repository == '$REPO' && assertion.ref == 'refs/heads/main'"
+
+gcloud iam service-accounts create mds-publisher --project $PROJECT \
+  --display-name "FIDO MDS snapshot publisher"
+gcloud storage buckets add-iam-policy-binding gs://pqcwebauthn \
+  --member serviceAccount:$PUBLISHER --role roles/storage.objectUser \
+  --condition 'expression=resource.name.startsWith("projects/_/buckets/pqcwebauthn/objects/mds/"),title=mds-only'
+gcloud iam service-accounts add-iam-policy-binding $PUBLISHER --project $PROJECT \
+  --role roles/iam.workloadIdentityUser \
+  --member "principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository/$REPO"
+
+# Where the workflow signs in (repository variables: identifiers, not secrets).
+gh variable set GCP_WORKLOAD_IDENTITY_PROVIDER --repo $REPO \
+  --body "projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/postquantum-webauthn-platform"
+gh variable set GCP_MDS_PUBLISHER_SERVICE_ACCOUNT --repo $REPO --body "$PUBLISHER"
+```
+
+Once a conditional binding is on the bucket, `gcloud storage buckets remove-iam-policy-binding`
+needs `--condition=None` to remove an unconditional one.
+
 ## Environment variables
 
 Everything the server reads from its environment (`server/app`, `gunicorn.conf.py`).
