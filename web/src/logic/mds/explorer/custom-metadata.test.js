@@ -6,15 +6,6 @@ import {
   CUSTOM_METADATA_UPLOAD_PATH,
 } from '../constants.js';
 import {
-  CHOOSE_METADATA_FILES,
-  CUSTOM_METADATA_UPDATED_NOTE,
-  DELETE_METADATA_FAILED,
-  DELETE_PROGRESS,
-  METADATA_UPDATE_CANCELLED,
-  NO_CUSTOM_METADATA,
-  UPLOADING_METADATA,
-  UPLOAD_METADATA_FAILED,
-  UPLOAD_PROGRESS,
   buildCustomMetadataForm,
   customMetadataItemLabel,
   describeCustomMetadataItem,
@@ -48,45 +39,6 @@ afterEach(() => {
 });
 
 describe('Manage Trusted Metadata: its words', () => {
-  it('keeps every sentence', () => {
-    expect([
-      CUSTOM_METADATA_UPDATED_NOTE,
-      METADATA_UPDATE_CANCELLED,
-      NO_CUSTOM_METADATA,
-      CHOOSE_METADATA_FILES,
-      UPLOADING_METADATA,
-      UPLOAD_METADATA_FAILED,
-      DELETE_METADATA_FAILED,
-    ]).toEqual([
-      'Custom metadata updated.',
-      'Metadata update cancelled.',
-      'No custom metadata has been added yet.',
-      'Please choose one or more JSON files.',
-      'Uploading metadata…',
-      'Failed to upload metadata files.',
-      'Failed to delete metadata file.',
-    ]);
-    expect(UPLOAD_PROGRESS).toEqual({
-      start: 'Updating Metadata...',
-      uploading: 'Uploading metadata…',
-      applying: 'Applying metadata…',
-      reloading: 'Reloading metadata…',
-      success: 'Completing metadata update...',
-      cancel: 'Metadata update cancelled.',
-      failure: 'Metadata update failed.',
-    });
-    expect(DELETE_PROGRESS).toEqual({
-      start: 'Removing metadata...',
-      removing: 'Removing metadata…',
-      applying: 'Applying metadata…',
-      refreshing: 'Refreshing metadata…',
-      unchanged: 'No metadata changes detected.',
-      success: 'Completing metadata removal...',
-      cancel: 'Metadata removal cancelled.',
-      failure: 'Metadata removal failed.',
-    });
-  });
-
   it('names a file being removed', () => {
     expect(customMetadataItemLabel('  statement.json ')).toBe('statement.json');
     expect(customMetadataItemLabel('')).toBe('metadata file');

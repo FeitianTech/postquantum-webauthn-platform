@@ -43,7 +43,6 @@ function splitAcceptedFiles(files) {
 }
 
 export const CUSTOM_METADATA_UPDATED_NOTE = 'Custom metadata updated.';
-export const METADATA_UPDATE_CANCELLED = 'Metadata update cancelled.';
 export const NO_CUSTOM_METADATA = 'No custom metadata has been added yet.';
 export const CHOOSE_METADATA_FILES = 'Please choose one or more JSON files.';
 export const UPLOADING_METADATA = 'Uploading metadata…';
@@ -57,7 +56,6 @@ export const UPLOAD_PROGRESS = {
     applying: 'Applying metadata…',
     reloading: 'Reloading metadata…',
     success: 'Completing metadata update...',
-    cancel: METADATA_UPDATE_CANCELLED,
     failure: 'Metadata update failed.',
 };
 
@@ -69,7 +67,6 @@ export const DELETE_PROGRESS = {
     refreshing: 'Refreshing metadata…',
     unchanged: 'No metadata changes detected.',
     success: 'Completing metadata removal...',
-    cancel: 'Metadata removal cancelled.',
     failure: 'Metadata removal failed.',
 };
 
