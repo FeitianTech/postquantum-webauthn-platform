@@ -188,11 +188,12 @@ describe('the warm-up after the list is drawn', () => {
     expect(reload).not.toHaveBeenCalled();
   });
 
-  it('changes nothing when warming up fails', async () => {
-    vi.mocked(ensureAdvancedCredentialArtifactsSynced).mockRejectedValue(new Error('offline'));
-    vi.mocked(ensureAdvancedCredentialSnapshotsPrefetched).mockResolvedValue(true);
-    const reload = vi.fn();
+  // The syncs never reject (each answers false when it cannot sync); what can fail is reading the list again.
+  it('says nothing changed when the list cannot be read again', async () => {
+    vi.mocked(ensureAdvancedCredentialArtifactsSynced).mockResolvedValue(true);
+    vi.mocked(ensureAdvancedCredentialSnapshotsPrefetched).mockResolvedValue(false);
+    const reload = vi.fn().mockRejectedValue(new Error('storage unreadable'));
     expect(await warmSavedCredentials(reload)).toBe(false);
-    expect(reload).not.toHaveBeenCalled();
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });
