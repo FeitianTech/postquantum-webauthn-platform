@@ -7,7 +7,7 @@ import {extractCredentialAttestationContext} from '../attestation-context.js';
 import {describeCoseAlgorithm, describeCoseKeyType, describeMldsaParameterSet} from '../cose-labels.js';
 import {decodePayloadThroughApi} from '../registration/decode-payload.js';
 import {createRegistrationState} from '../registration/state.js';
-import {composeRegistration} from '../registration/view.js';
+import { composeRegistration } from '../registration/view.js';
 import {
     describeAaguid,
     describeAttestationFormat,

@@ -4,7 +4,7 @@ import { Spinner } from '@/components/ui/icons';
 import { Dialog, OverlayBody, OverlayHeader } from '@/components/ui/Overlay';
 import type { SectionRoute } from '@/lib/useSection';
 import { HYDRATE_TEXT } from '@/logic/credentials/hydrate.js';
-import { describeAttestationCertificate, describeAuthenticatorData } from '@/logic/credentials/registration/view.js';
+import { describeAttestationCertificate, describeAuthenticatorData } from '@/logic/credentials/registration/describe.js';
 import type { CredentialRowView } from '@/logic/credentials/saved-list.js';
 
 import { DetailSections } from './detail/DetailSections';

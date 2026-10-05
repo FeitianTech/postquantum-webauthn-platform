@@ -5,10 +5,7 @@ import {
   hydrateCredentialFromServer,
 } from './hydrate.js';
 import { needsArtifact } from './detail/compose.js';
-import {
-  composeRegistration,
-  registrationSnapshotPayload,
-} from './registration/view.js';
+import { composeRegistration, registrationSnapshotPayload } from './registration/view.js';
 import { createRegistrationState } from './registration/state.js';
 import { fetchCredentialArtifact } from './storage/artifacts-client.js';
 import { updateAdvancedCredentialRegistrationSnapshot } from './storage/local/advanced-snapshot-update.js';

@@ -3,12 +3,8 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import {
-  type AttestationView,
-  type CertificateView,
-  REGISTRATION_TEXT,
-  type RegistrationView,
-} from '@/logic/credentials/registration/view.js';
+import { type AttestationView, type CertificateView, REGISTRATION_TEXT } from '@/logic/credentials/registration/describe.js';
+import { type RegistrationView } from '@/logic/credentials/registration/view.js';
 
 import { CertificateLevel, RegistrationLevel } from './RegistrationLevels';
 

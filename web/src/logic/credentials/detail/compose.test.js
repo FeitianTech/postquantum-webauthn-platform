@@ -4,12 +4,8 @@ import {
   composeCredentialDetail,
   needsArtifact,
 } from './compose.js';
-import {
-  REGISTRATION_TEXT,
-  composeRegistration,
-  describeAttestationCertificate,
-  registrationSnapshotPayload,
-} from '../registration/view.js';
+import { composeRegistration, registrationSnapshotPayload } from '../registration/view.js';
+import { REGISTRATION_TEXT, describeAttestationCertificate } from '../registration/describe.js';
 import { createRegistrationState } from '../registration/state.js';
 import { hydrateCredentialFromServer } from '../hydrate.js';
 import { describeCoseAlgorithm } from '../cose-labels.js';

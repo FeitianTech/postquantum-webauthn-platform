@@ -1,12 +1,8 @@
 import { CertificateSummary } from '@/components/mds/CertificateSummary';
 import { Button } from '@/components/ui/Button';
 import { CodeBlock } from '@/components/ui/CodeBlock';
-import {
-  type AttestationView,
-  type CertificateView,
-  REGISTRATION_TEXT,
-  type RegistrationView,
-} from '@/logic/credentials/registration/view.js';
+import { type AttestationView, type CertificateView, REGISTRATION_TEXT } from '@/logic/credentials/registration/describe.js';
+import { type RegistrationView } from '@/logic/credentials/registration/view.js';
 import { certificateSummary } from '@/logic/mds/explorer/certificate.js';
 
 import { DetailSection } from './DetailSections';
