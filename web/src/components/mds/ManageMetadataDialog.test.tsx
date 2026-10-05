@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { ToastProvider } from '@/components/ui/Toast';
 import { FIXTURE_ENTRIES, FIXTURE_INFO, FIXTURE_SNAPSHOT, SNAPSHOT_URL, fixtureRoutes, json, stubFetch } from '@/test/mds';
 import { renderPage } from '@/test/page';
+import { deferred, holdingTimers } from '@/test/timers';
 
 import { MdsSection } from './MdsSection';
 
@@ -25,25 +26,6 @@ const ITEM = {
   source: { storedFilename: '0f1e.json', originalFilename: 'custom-metadata.json', uploadedAt: '2026-09-26T10:00:00+00:00' },
   legalHeader: 'Fixture.',
 };
-
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((settle) => {
-    resolve = settle;
-  });
-  return { promise, resolve };
-}
-
-// The last progress sentence stays on a timer (useCustomMetadata.ts): hold it while an
-// answer lands and is read, or a loaded machine can take the sentence away first.
-async function holdingTheLastSentence(read: () => Promise<void>) {
-  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-  try {
-    await read();
-  } finally {
-    vi.useRealTimers();
-  }
-}
 
 type Routes = Parameters<typeof fixtureRoutes>[0];
 
@@ -174,7 +156,7 @@ describe('Manage Trusted Metadata', () => {
     expect(message()).toHaveTextContent('Uploading metadata…');
     expect(screen.getByRole('button', { name: 'Drop JSON files here or click to browse' })).toBeDisabled();
 
-    await holdingTheLastSentence(async () => {
+    await holdingTimers(async () => {
       await act(async () => answer.resolve(json({ items: [ITEM], snapshot: WITH_UPLOAD })));
       expect(document.querySelector('[data-mds-progress]')).toHaveTextContent('Completing metadata update...');
       await act(async () => vi.runOnlyPendingTimers());
@@ -195,7 +177,7 @@ describe('Manage Trusted Metadata', () => {
     await renderSection({ '/api/mds/metadata/upload': () => answer.promise });
     await openDialog();
     await userEvent.upload(fileInput(), file('a.json'));
-    await holdingTheLastSentence(async () => {
+    await holdingTimers(async () => {
       await act(async () => answer.resolve(json({ items: [], errors: ['a.json must contain a JSON object.'] }, 400)));
       expect(message()).toHaveTextContent('a.json must contain a JSON object.');
       expect(message()).toHaveAttribute('data-variant', 'error');
@@ -293,7 +275,7 @@ describe('Manage Trusted Metadata', () => {
     });
     const panel = await openDialog();
     await userEvent.click(await within(panel).findByRole('button', { name: 'Delete custom-metadata.json' }));
-    await holdingTheLastSentence(async () => {
+    await holdingTimers(async () => {
       await act(async () => answer.resolve(json({ deleted: false, message: 'Metadata entry not found.' }, 404)));
       expect(message()).toHaveTextContent('Metadata entry not found.');
       expect(message()).toHaveAttribute('data-variant', 'warning');
@@ -310,7 +292,7 @@ describe('Manage Trusted Metadata', () => {
     });
     const panel = await openDialog();
     await userEvent.click(await within(panel).findByRole('button', { name: 'Delete custom-metadata.json' }));
-    await holdingTheLastSentence(async () => {
+    await holdingTimers(async () => {
       await act(async () => refusal.resolve(json({ error: 'Invalid metadata filename.' }, 400)));
       expect(message()).toHaveTextContent('Invalid metadata filename.');
       expect(message()).toHaveAttribute('data-variant', 'error');
