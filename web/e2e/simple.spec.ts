@@ -166,26 +166,6 @@ test.describe('/#simple', () => {
     expect(await storedCount(page)).toBe(0);
   });
 
-  test('opens a credential\'s details at their own URL, and Back closes them', async ({ page }) => {
-    await openPage(page);
-    const record: Record<string, unknown> = { ...goldenStoredCredential('simple-register-es256'), type: 'simple' };
-    await keep(page, [record]);
-    await page.reload();
-    await rows(page).first().getByRole('button', { name: 'user@example.com' }).click();
-
-    const detail = page.getByRole('dialog', { name: 'Credential Details' });
-    await expect(detail).toContainText(record.credentialIdBase64Url as string);
-    await expect(page).toHaveURL(new RegExp(`#simple/credential/id:${record.credentialIdBase64Url}$`));
-    await page.goBack();
-    await expect(detail).toBeHidden();
-    await expect(page).toHaveURL(/\/#simple$/);
-
-    await page.goForward();
-    await expect(detail).toBeVisible();
-    await page.reload();
-    await expect(detail).toBeVisible();
-  });
-
   test('opens a credential\'s details and the Analyze Browser after their chunks failed to load ahead', async ({ page, watch }) => {
     // The network drops both chunks while the page loads them ahead, and is back
     // before the person asks for either.

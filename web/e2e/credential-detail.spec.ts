@@ -99,6 +99,12 @@ test.describe('a saved credential\'s details', () => {
     await page.goBack();
     await expect(dialog(page)).toBeHidden();
     await expect(page).toHaveURL(/\/#simple$/);
+
+    // Forward opens the details again, and a reload keeps them open.
+    await page.goForward();
+    await expect(dialog(page).getByRole('heading', { level: 2 })).toHaveText('Credential Details');
+    await page.reload();
+    await expect(dialog(page).getByRole('heading', { level: 2 })).toHaveText('Credential Details');
   });
 
   test('open a certificate from a link or a reload, and × closes every level from there', async ({ page }) => {
