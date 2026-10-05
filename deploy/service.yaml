@@ -27,7 +27,9 @@ spec:
         run.googleapis.com/startup-cpu-boost: "true"
         # Request-based billing: CPU is only allocated while serving requests.
         run.googleapis.com/cpu-throttling: "true"
-        autoscaling.knative.dev/minScale: "0"
+        # One instance stays up between visits, billed at the idle rate, so a
+        # visitor rarely meets a cold start.
+        autoscaling.knative.dev/minScale: "1"
         autoscaling.knative.dev/maxScale: "10"
     spec:
       serviceAccountName: pqcwebauthn-run@feitian-project.iam.gserviceaccount.com
@@ -42,7 +44,8 @@ spec:
               containerPort: 8080
           resources:
             limits:
-              cpu: "2"
+              # One gunicorn worker runs the app; startup CPU boost covers a start.
+              cpu: "1"
               memory: 1Gi
           startupProbe:
             tcpSocket:

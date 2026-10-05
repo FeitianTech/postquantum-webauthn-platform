@@ -1,6 +1,6 @@
 # Deploying pqcwebauthn on Cloud Run
 
-The service runs in `feitian-project`, region `asia-northeast1`, and scales to zero.
+The service runs in `feitian-project`, region `asia-northeast1`, on one vCPU, and keeps one instance warm (`minScale` 1).
 
 - **Code:** every push to `main` triggers Cloud Build ([cloudbuild.yaml](../cloudbuild.yaml)), which builds the image and updates only the service's image.
 - **Settings:** concurrency, scaling, secrets and the runtime identity live in [service.yaml](service.yaml). Apply them with [apply-service-config.sh](apply-service-config.sh). The script keeps the image that is currently deployed.
@@ -112,7 +112,7 @@ gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.serv
   --project feitian-project --freshness=1d --limit 100 --format='table(timestamp,httpRequest.requestUrl,httpRequest.latency)'
 ```
 
-After about 15–20 idle minutes the instance count reaches zero. A request after that measures a true cold start:
+With one instance kept warm, a visitor meets a cold start only when traffic needs a second instance, or on a new revision's first request. A request's time to first byte:
 
 ```bash
 curl -so /dev/null -w 'ttfb=%{time_starttransfer}s total=%{time_total}s\n' https://pqcwebauthn-277359456097.asia-northeast1.run.app/
