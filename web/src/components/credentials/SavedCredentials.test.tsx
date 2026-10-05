@@ -1,6 +1,6 @@
 // The saved credentials both sections share, over records as the server saved
 // them.
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ToastProvider } from '@/components/ui/Toast';
@@ -10,6 +10,7 @@ import { renderPage } from '@/test/page';
 
 import { SavedCredentials } from './SavedCredentials';
 import { SavedCredentialsProvider, useSavedCredentials } from './useSavedCredentials';
+import { holdingTimers } from '@/test/timers';
 
 const ES256 = savedRecord('simple-register-es256');
 const MLDSA = savedRecord('simple-register-mldsa65', { email: 'ml@example.com', userName: 'ml@example.com' });
@@ -161,10 +162,12 @@ describe('deleting a saved credential', () => {
     const dialog = await screen.findByRole('alertdialog', { name: 'Delete credential' });
     expect(dialog).toHaveTextContent('Are you sure you want to delete the credential for user@example.com? This action cannot be undone.');
 
-    await confirmIn('Delete');
-    expect(await screen.findByText('Deletion successful.')).toBeVisible();
-    expect(rows()).toHaveLength(1);
-    expect(storedRecords().map((record) => record.email)).toEqual(['ml@example.com']);
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Delete' })));
+      expect(screen.getByText('Deletion successful.')).toBeVisible();
+      expect(rows()).toHaveLength(1);
+      expect(storedRecords().map((record) => record.email)).toEqual(['ml@example.com']);
+    });
   });
 
   it('keeps the credential when the question is cancelled', async () => {
@@ -177,10 +180,13 @@ describe('deleting a saved credential', () => {
   it('deletes an advanced one on the server first, then here', async () => {
     const { fetch } = renderList([ADVANCED], { [ADVANCED_PATH]: () => json({ status: 'deleted' }) });
     await userEvent.click(within(await waitFor(() => rowNamed('advanced@example.com'))).getByRole('button', { name: 'Delete' }));
-    await confirmIn('Delete');
-    expect(await screen.findByText('Deletion successful.')).toBeVisible();
-    expect(fetch.mock.calls.find(([url]) => String(url) === ADVANCED_PATH)?.[1]).toMatchObject({ method: 'DELETE' });
-    expect(storedRecords()).toEqual([]);
+
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Delete' })));
+      expect(screen.getByText('Deletion successful.')).toBeVisible();
+      expect(fetch.mock.calls.find(([url]) => String(url) === ADVANCED_PATH)?.[1]).toMatchObject({ method: 'DELETE' });
+      expect(storedRecords()).toEqual([]);
+    });
   });
 
   it('warns under the header when the server no longer had it', async () => {
@@ -261,10 +267,13 @@ describe('clearing every saved credential', () => {
     expect(await screen.findByRole('alertdialog', { name: 'Clear All' })).toHaveTextContent(
       'Are you sure you want to delete all saved credentials? This action cannot be undone.',
     );
-    await confirmIn('Clear All');
-    expect(await screen.findByText('Deletion successful.')).toBeVisible();
-    expect(await screen.findByText('No credentials registered yet.')).toBeVisible();
-    expect(storedRecords()).toEqual([]);
+
+    await holdingTimers(async () => {
+      await act(async () => fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Clear All' })));
+      expect(screen.getByText('Deletion successful.')).toBeVisible();
+      expect(screen.getByText('No credentials registered yet.')).toBeVisible();
+      expect(storedRecords()).toEqual([]);
+    });
   });
 
   it('says under the header which ones it kept', async () => {
