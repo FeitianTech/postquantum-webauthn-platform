@@ -92,3 +92,13 @@ docker compose exec webauthn python tools/update_mds_snapshot.py
 
 Run it again to take a newer BLOB. [docs/MDS_SNAPSHOT.md](docs/MDS_SNAPSHOT.md)
 has the whole picture.
+
+---
+
+## License
+
+Copyright 2025-2026 FEITIAN Technologies Co., Ltd., under the [Apache License 2.0](LICENSE).
+
+The Geist font in `web/src/fonts` is under the SIL Open Font License
+([OFL.txt](web/src/fonts/OFL.txt)), and the test vectors copied from python-fido2
+(`tests/app/python_fido2_vectors.py`) keep its BSD licence there.

@@ -40,6 +40,9 @@ in `server/app` (see "Backend").
   `STORAGE.md`, `MDS_SNAPSHOT.md`.
 - `Dockerfile`, `cloudbuild.yaml` (the deploy gate), `deploy/` (Cloud Run service config),
   `.github/` (workflows, Dependabot, the bot PR action).
+- `LICENSE`: Apache 2.0, FEITIAN Technologies Co., Ltd. Third-party material keeps its own
+  licence beside it: the Geist font (`web/src/fonts/OFL.txt`), python-fido2's test vectors (in
+  `tests/app/python_fido2_vectors.py`).
 
 ## The UI (`web/`)
 
