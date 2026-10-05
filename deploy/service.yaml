@@ -54,6 +54,12 @@ spec:
             periodSeconds: 240
             failureThreshold: 1
           env:
+            # Passkeys belong to webauthnlab.tech: a ceremony from any other origin,
+            # the run.app URL among them, is refused.
+            - name: FIDO_SERVER_RP_ID
+              value: webauthnlab.tech
+            - name: FIDO_SERVER_ALLOWED_ORIGINS
+              value: https://webauthnlab.tech
             - name: FIDO_SERVER_GCS_ENABLED
               value: "true"
             - name: FIDO_SERVER_GCS_BUCKET
