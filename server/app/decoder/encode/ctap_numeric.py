@@ -10,21 +10,58 @@ from .constants import _CTAP_LABELED_KEY_PATTERN
 from .ctap_fields import _reject_misnamed_request_fields
 
 
-def _extract_ctap_numeric_payload(parsed: Any) -> tuple[dict[int, Any], str]:
-    """Locate and sanitize a CTAP/WebAuthn numeric-keyed mapping within ``parsed``."""
+def _enqueue_candidates(queue: deque[Any], value: Any, visited: set[int]) -> None:
+    """Queue each mapping in ``value`` once, looking inside lists for them."""
 
-    def _enqueue_candidates(queue: deque[Any], value: Any, visited: set[int]) -> None:
-        if isinstance(value, Mapping):
-            marker = id(value)
-            if marker in visited:
-                return
-            visited.add(marker)
-            queue.append(value)
+    if isinstance(value, Mapping):
+        marker = id(value)
+        if marker in visited:
             return
+        visited.add(marker)
+        queue.append(value)
+        return
 
-        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
-            for entry in value:
-                _enqueue_candidates(queue, entry, visited)
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        for entry in value:
+            _enqueue_candidates(queue, entry, visited)
+
+
+def _salvage_numeric_map(candidate: Any) -> tuple[dict[int, Any], ValueError | None]:
+    """The numbered fields of a mapping the strict reading refused, or why it has none."""
+
+    salvage_map: dict[int, Any] = {}
+    if not isinstance(candidate, Mapping):
+        return salvage_map, None
+    for key, value in candidate.items():
+        try:
+            index = _coerce_ctap_numeric_key(key)
+        except ValueError as exc:
+            return {}, exc
+        if index is None:
+            continue
+        if index in salvage_map:
+            return {}, ValueError(f"Duplicate field 0x{index:02x} detected in CTAP/WebAuthn input.")
+        salvage_map[index] = value
+    return salvage_map, None
+
+
+def _classified(candidate: Mapping[Any, Any], numeric_map: dict[int, Any]) -> tuple[str | None, ValueError | None]:
+    """The CTAP message ``numeric_map`` makes, its names checked; or why it makes none."""
+
+    try:
+        ctap_type = _classify_ctap_numeric_mapping(numeric_map)
+    except ValueError as exc:
+        return None, exc
+    _reject_misnamed_numbered_fields(candidate, ctap_type)
+    return ctap_type, None
+
+
+def _extract_ctap_numeric_payload(parsed: Any) -> tuple[dict[int, Any], str]:
+    """Locate and sanitize a CTAP/WebAuthn numeric-keyed mapping within ``parsed``.
+
+    Mappings are tried breadth first; the first one that makes a CTAP message is
+    it. When none does, the first reason one gave is raised.
+    """
 
     visited: set[int] = set()
     candidates: deque[Any] = deque()
@@ -35,50 +72,20 @@ def _extract_ctap_numeric_payload(parsed: Any) -> tuple[dict[int, Any], str]:
     while candidates:
         candidate = candidates.popleft()
 
+        numeric_map: dict[int, Any] | None
         try:
             numeric_map = _sanitize_ctap_numeric_mapping(candidate)
         except ValueError:
-            salvage_map: dict[int, Any] = {}
-            salvage_error: ValueError | None = None
-            if isinstance(candidate, Mapping):
-                for key, value in candidate.items():
-                    try:
-                        index = _coerce_ctap_numeric_key(key)
-                    except ValueError as exc:
-                        salvage_map = {}
-                        salvage_error = exc
-                        break
-                    if index is None:
-                        continue
-                    if index in salvage_map:
-                        salvage_map = {}
-                        salvage_error = ValueError(
-                            f"Duplicate field 0x{index:02x} detected in CTAP/WebAuthn input."
-                        )
-                        break
-                    salvage_map[index] = value
+            numeric_map, salvage_error = _salvage_numeric_map(candidate)
+            if not numeric_map:
+                classification_error = classification_error or salvage_error
+                numeric_map = None
 
-            if salvage_map:
-                try:
-                    ctap_type = _classify_ctap_numeric_mapping(salvage_map)
-                except ValueError as exc:
-                    if classification_error is None:
-                        classification_error = exc
-                else:
-                    _reject_misnamed_numbered_fields(candidate, ctap_type)
-                    return salvage_map, ctap_type
-
-            if salvage_error is not None and classification_error is None:
-                classification_error = salvage_error
-        else:
-            try:
-                ctap_type = _classify_ctap_numeric_mapping(numeric_map)
-            except ValueError as exc:
-                if classification_error is None:
-                    classification_error = exc
-            else:
-                _reject_misnamed_numbered_fields(candidate, ctap_type)
+        if numeric_map is not None:
+            ctap_type, error = _classified(candidate, numeric_map)
+            if ctap_type is not None:
                 return numeric_map, ctap_type
+            classification_error = classification_error or error
 
         if isinstance(candidate, Mapping):
             for value in candidate.values():
