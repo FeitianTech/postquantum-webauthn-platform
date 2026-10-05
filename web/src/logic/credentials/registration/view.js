@@ -6,7 +6,7 @@ import {collectTruthyEntries} from './data-utils.js';
 import {describeAttestationSection, describeClientData} from './describe.js';
 import {hashAuthenticatorData, prepareRegistrationState} from './prepare.js';
 import {applyRegistrationSnapshot, captureRegistrationState} from './state-snapshot.js';
-import {sanitizeRelyingPartyInfo} from './sanitize.js';
+import {sanitizeRelyingPartyInfo} from './relying-party.js';
 
 /** @import { Decode, RegistrationSources, RegistrationState } from './state.js' */
 /** @import { AttestationView } from './describe.js' */

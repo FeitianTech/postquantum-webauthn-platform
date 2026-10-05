@@ -10,7 +10,7 @@ import {
 } from '../registration/state.js';
 import { prepareRegistrationState } from '../registration/prepare.js';
 import { captureRegistrationState } from '../registration/state-snapshot.js';
-import { sanitizeRelyingPartyInfo } from '../registration/sanitize.js';
+import { sanitizeRelyingPartyInfo } from '../registration/relying-party.js';
 import { goldenDecode, registration } from '@/test/logic/credentials/registration-detail-answers.js';
 
 // A saved registration snapshot read back (credentials/detail/snapshot-context.js).
