@@ -106,11 +106,10 @@ waits.
    was fetched (`mds/blob.py`), its signed `no` must be the meta's and the pointer's, and
    the other five files are derived from the two with the updater's own code
    (`mds/snapshot.py`'s `derive`), the payload derived being the file the pointer
-   names. Without a usable pointer, or when its set cannot be read and verified, the
-   flat `mds/<file>` objects earlier releases wrote are taken the same way: their BLOB
-   and meta, both (so files of two snapshots never mix), the rest derived, and never
-   a snapshot older than the local one. This is the production path: the Cloud Run service account
-   already has access to the `pqcwebauthn` bucket, so no new credentials are involved.
+   names. Without a usable pointer, or when its set cannot be read and verified,
+   provisioning goes on to the upstream refresh. This is the production path: the
+   Cloud Run service account already has access to the `pqcwebauthn` bucket, so no
+   new credentials are involved.
 3. **Upstream refresh.** As a last resort the packaged updater downloads the
    BLOB from `https://mds3.fidoalliance.org/` and verifies it against the
    GlobalSign R46 trust root pinned in the source before writing anything. The
@@ -192,9 +191,6 @@ snapshot as immutable sets and a pointer:
 - **Pruning**: after a publish the set two back (the old pointer's `previous`) is
   deleted; the set it replaced stays, since an instance may still be reading it.
   Nothing needs to list the bucket.
-
-The flat `mds/<file>` objects earlier releases published are left in place as the
-fallback when there is no pointer; nothing writes them any more.
 
 ## Publishing a snapshot to Cloud Storage
 

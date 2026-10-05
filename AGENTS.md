@@ -413,7 +413,8 @@ goldens show what it changes).
 - About 30 MB of generated files in `instance/mds-snapshot/` (in the image,
   `/app/instance/mds-snapshot`); `FIDO_SERVER_MDS_SNAPSHOT_DIR` puts it elsewhere. Not tracked in
   git and not baked into the image: `server/app/mds/provisioning.py` provides it at runtime
-  (local files, then Cloud Storage, then a verified upstream refresh). Whatever writes the
+  (local files, then the set Cloud Storage's pointer names, then a verified upstream refresh).
+  Without a usable pointer or set, a cold instance goes on to upstream. Whatever writes the
   snapshot writes each file whole, metas last. Browsers load none of them: the server derives
   the explorer's list, icons and entry details from the snapshot it holds (`mds/explorer_files.py`).
 - Cloud Storage holds immutable sets and `mds/current.json`, the pointer to one

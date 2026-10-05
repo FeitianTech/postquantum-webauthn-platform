@@ -15,6 +15,7 @@ import pytest
 
 from server.app.config.web_export import WEB_EXPORT_ROOT_KEY
 from server.app.mds import provisioning as mds_provisioning
+from server.app.mds import sets as snapshot_sets
 from server.app.storage import github_mirror
 from tests.app.metadata import mds_fixture
 from tests.app.security.ceremony_helpers import (
@@ -51,8 +52,10 @@ def slow_provisioning(monkeypatch, tmp_path, metadata_state, fixture_blob_root):
     monkeypatch.delenv("FIDO_SERVER_MDS_GCS_PREFIX", raising=False)
     monkeypatch.setattr(mds_provisioning.cloud, "gcs_enabled", lambda: True)
     bucket = fake_gcs.install(monkeypatch)
-    for name in mds_provisioning.SNAPSHOT_FILENAMES:
-        bucket.put(f"mds/{name}", (mds_fixture.SNAPSHOT_DIR / name).read_bytes())
+    snapshot_sets.publish({
+        name: (mds_fixture.SNAPSHOT_DIR / name).read_bytes()
+        for name in mds_provisioning.SNAPSHOT_FILENAMES
+    })
     bucket.on_download.append(download)
 
     warmup = threading.Thread(target=mds_provisioning.ensure_snapshot_available, daemon=True)

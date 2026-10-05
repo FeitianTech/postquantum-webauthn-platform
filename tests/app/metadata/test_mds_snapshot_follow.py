@@ -168,3 +168,17 @@ def test_without_cloud_storage_nothing_is_asked(instance, client, monkeypatch):
 
     assert _info(client)[0] == 7
     assert len(bucket.download_options) == reads
+
+
+@pytest.mark.parametrize("local_meta", [None, b"not-json", b"[]", b'{"no":"7"}'])
+def test_a_follow_replaces_a_snapshot_whose_local_serial_cannot_be_read(instance, client, local_meta):
+    directory, _bucket = instance
+    meta = directory / mds_files.VERIFIED_META
+    if local_meta is None:
+        meta.unlink()
+    else:
+        meta.write_bytes(local_meta)
+    snapshot_sets.publish(snapshot_version(8))
+
+    assert _info(client)[0] == 8
+    assert _local(directory) == snapshot_version(8)

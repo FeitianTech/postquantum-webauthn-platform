@@ -73,60 +73,10 @@ def test_local_files_are_used_without_touching_cloud_storage(static_root, monkey
 
 
 def test_a_new_instance_takes_the_set_the_pointer_names(static_root, gcs):
-    for name, data in snapshot_version(7).items():
-        gcs.put(f"mds/{name}", data)
     snapshot_sets.publish(snapshot_version(8))
 
     assert provisioning.ensure_snapshot_available() == "gcs"
     assert _local(static_root) == snapshot_version(8)
-
-
-def test_without_a_pointer_the_flat_blob_and_meta_are_taken_and_the_rest_derived(static_root, gcs):
-    for name, data in snapshot_version(7).items():
-        gcs.put(f"mds/{name}", data)
-
-    assert provisioning.ensure_snapshot_available() == "gcs"
-    assert _local(static_root) == snapshot_version(7)
-    fetched = {name for name, _options in gcs.download_options}
-    assert fetched == {snapshot_sets.pointer_name(), f"mds/{mds_files.BLOB}", f"mds/{mds_files.VERIFIED_META}"}
-
-
-def test_the_flat_snapshot_replaces_an_older_partial_one_whole(static_root, gcs):
-    _flat(gcs, 7)
-    (static_root / mds_files.VERIFIED_META).write_bytes(snapshot_version(6)[mds_files.VERIFIED_META])
-    (static_root / mds_files.BLOB).write_bytes(b"a file of another snapshot")
-
-    assert provisioning.ensure_snapshot_available() == "gcs"
-    assert _local(static_root) == snapshot_version(7)
-
-
-def test_a_flat_snapshot_older_than_the_local_one_is_not_taken(static_root, gcs, monkeypatch):
-    _flat(gcs, 7)
-    (static_root / mds_files.VERIFIED_META).write_bytes(snapshot_version(8)[mds_files.VERIFIED_META])
-    monkeypatch.setenv("FIDO_SERVER_MDS_FETCH_UPSTREAM", "0")
-
-    assert provisioning.ensure_snapshot_available() == "unavailable"
-    assert provisioning.missing_snapshot_files() == tuple(
-        name for name in provisioning.SNAPSHOT_FILENAMES if name != mds_files.VERIFIED_META
-    )
-
-
-@pytest.mark.parametrize("broken", ["blob of another snapshot", "meta missing", "blob missing"])
-def test_a_flat_snapshot_that_does_not_verify_is_not_taken(static_root, gcs, monkeypatch, broken):
-    _flat(gcs, 7)
-    if broken == "blob of another snapshot":
-        gcs.put(f"mds/{mds_files.BLOB}", snapshot_version(8)[mds_files.BLOB])
-    else:
-        del gcs.objects[f"mds/{mds_files.VERIFIED_META if broken == 'meta missing' else mds_files.BLOB}"]
-    monkeypatch.setenv("FIDO_SERVER_MDS_FETCH_UPSTREAM", "0")
-
-    assert provisioning.ensure_snapshot_available() == "unavailable"
-    assert provisioning.missing_snapshot_files() == provisioning.SNAPSHOT_FILENAMES
-
-
-def _flat(gcs, no=7):
-    for name, data in snapshot_version(no).items():
-        gcs.put(f"mds/{name}", data)
 
 
 def _repoint(gcs, **changes):
@@ -144,20 +94,18 @@ def test_a_new_instance_fetches_the_sets_blob_and_meta_alone_and_derives_the_res
 
 
 @pytest.mark.parametrize("broken", ["blob replaced", "meta missing"])
-def test_a_set_that_is_not_the_one_named_falls_back_to_the_flat_objects(static_root, gcs, broken):
-    _flat(gcs)
+def test_a_set_that_is_not_the_one_named_is_unavailable_without_upstream(static_root, gcs, broken):
     pointer = snapshot_sets.publish(snapshot_version(8)).pointer
     if broken == "blob replaced":
         gcs.put(pointer["set"] + mds_files.BLOB, snapshot_version(9)[mds_files.BLOB])
     else:
         del gcs.objects[pointer["set"] + mds_files.VERIFIED_META]
 
-    assert provisioning.ensure_snapshot_available() == "gcs"
-    assert _local(static_root) == snapshot_version(7)
+    assert provisioning.ensure_snapshot_available() == "unavailable"
+    assert provisioning.missing_snapshot_files() == provisioning.SNAPSHOT_FILENAMES
 
 
 def test_a_set_whose_blob_another_key_signed_is_refused(static_root, gcs, monkeypatch):
-    _flat(gcs)
     snapshot_sets.publish(snapshot_version(8))
     # Pinned now: another root, so the set's BLOB, named by the pointer as it is, does not verify.
     monkeypatch.setattr(provisioning.mds_snapshot.mds_trust, "FIDO_METADATA_TRUST_ROOT_CERT", _expiring_root()[1])
@@ -167,17 +115,15 @@ def test_a_set_whose_blob_another_key_signed_is_refused(static_root, gcs, monkey
 
 
 def test_a_set_whose_blob_is_another_snapshot_than_its_meta_is_refused(static_root, gcs):
-    _flat(gcs)
     files = {**snapshot_version(8), mds_files.BLOB: snapshot_version(9)[mds_files.BLOB]}
     snapshot_sets.publish(files)
 
-    assert provisioning.ensure_snapshot_available() == "gcs"
-    assert _local(static_root) == snapshot_version(7)
+    assert provisioning.ensure_snapshot_available() == "unavailable"
+    assert provisioning.missing_snapshot_files() == provisioning.SNAPSHOT_FILENAMES
 
 
 @pytest.mark.parametrize("change", [{"no": 9}, {"files": "the payload's digest"}])
 def test_a_set_that_is_not_the_snapshot_its_pointer_says_is_refused(static_root, gcs, change):
-    _flat(gcs)
     pointer = snapshot_sets.publish(snapshot_version(8)).pointer
     if "files" in change:
         files = json.loads(json.dumps(pointer["files"]))
@@ -185,8 +131,8 @@ def test_a_set_that_is_not_the_snapshot_its_pointer_says_is_refused(static_root,
         change = {"files": files}
     _repoint(gcs, **change)
 
-    assert provisioning.ensure_snapshot_available() == "gcs"
-    assert _local(static_root) == snapshot_version(7)
+    assert provisioning.ensure_snapshot_available() == "unavailable"
+    assert provisioning.missing_snapshot_files() == provisioning.SNAPSHOT_FILENAMES
 
 
 def _expiring_root() -> tuple[ec.EllipticCurvePrivateKey, bytes]:
@@ -252,6 +198,7 @@ def test_an_empty_bucket_falls_through_to_an_upstream_refresh_it_publishes(stati
     assert provisioning.ensure_snapshot_available() == "upstream"
     pointer, _generation = snapshot_sets.read_pointer()
     assert pointer["no"] == 9
+    assert {name for name, _options in gcs.download_options} == {snapshot_sets.pointer_name()}
     assert snapshot_sets.download_set(pointer) == snapshot_version(9)
 
 
@@ -264,8 +211,7 @@ def test_a_failed_upstream_refresh_leaves_the_snapshot_unavailable(static_root, 
 
 
 def test_a_cloud_storage_error_does_not_propagate(static_root, gcs, monkeypatch):
-    for name in ("current.json", *provisioning.SNAPSHOT_FILENAMES):
-        gcs.failing[f"mds/{name}"] = fake_gcs.ServiceUnavailable("bucket unreachable")
+    gcs.failing[snapshot_sets.pointer_name()] = fake_gcs.ServiceUnavailable("bucket unreachable")
     monkeypatch.setenv("FIDO_SERVER_MDS_FETCH_UPSTREAM", "0")
 
     assert provisioning.ensure_snapshot_available() == "unavailable"
@@ -295,13 +241,6 @@ def test_upstream_refresh_defaults_to_the_cloud_storage_setting(monkeypatch):
 
     monkeypatch.setattr(provisioning.cloud, "gcs_enabled", lambda: False)
     assert provisioning.upstream_refresh_enabled() is False
-
-
-def test_the_blob_prefix_is_configurable(monkeypatch):
-    assert provisioning.snapshot_blob_name("blob.jwt") == "mds/blob.jwt"
-
-    monkeypatch.setenv("FIDO_SERVER_MDS_GCS_PREFIX", "snapshots/fido")
-    assert provisioning.snapshot_blob_name("blob.jwt") == "snapshots/fido/blob.jwt"
 
 
 def test_upstream_refresh_runs_the_packaged_updater(static_root, monkeypatch):
