@@ -10,10 +10,6 @@ import {
   registerAdvancedCredential,
   registeredRecord,
 } from './ceremony.js';
-import {
-  applyAuthenticatorAttachmentPreference,
-  enforceAuthenticatorAttachmentWithHints,
-} from '../hints.js';
 import { FailedResponseError } from '../../shared/failed-response.js';
 import { UPDATE_BROWSER_TEXT } from '../../shared/native-json.js';
 import {
@@ -23,16 +19,6 @@ import {
   installAuthenticator,
 } from '@/test/logic/simple/ceremony-answers.js';
 import { advancedRegistrations, recordedCredential } from '@/test/logic/advanced/advanced-answers.js';
-
-// The hints' rules, real, and watched.
-vi.mock('../hints.js', async (importOriginal) => {
-  const real = await importOriginal();
-  return {
-    ...real,
-    enforceAuthenticatorAttachmentWithHints: vi.fn(real.enforceAuthenticatorAttachmentWithHints),
-    applyAuthenticatorAttachmentPreference: vi.fn(real.applyAuthenticatorAttachmentPreference),
-  };
-});
 
 const BEGIN = '/api/advanced/register/begin';
 const COMPLETE = '/api/advanced/register/complete';
@@ -500,10 +486,8 @@ describe('registerAdvancedCredential', () => {
     expect(outcome.registered).toBe(true);
     expect(asked()).toEqual([BEGIN, COMPLETE]);
     expect(sent(0).body).toEqual(hinted);
-    expect(enforceAuthenticatorAttachmentWithHints).toHaveBeenCalledWith(hinted.publicKey);
-    expect(enforceAuthenticatorAttachmentWithHints).toHaveReturnedWith(['platform']);
+    // The hints resolve to platform: the authenticator is asked for it.
     const createOptions = authenticator.create.mock.calls[0][0];
-    expect(applyAuthenticatorAttachmentPreference).toHaveBeenCalledWith(createOptions, ['platform'], ATTACHMENT_HINTS[4].body.publicKey, hinted.publicKey);
     expect(createOptions.publicKey.authenticatorSelection.authenticatorAttachment).toBe('platform');
     expect(sent(1).body.__credential_response.authenticatorAttachment).toBe('platform');
   });
@@ -627,20 +611,18 @@ describe('registerAdvancedCredential', () => {
 
     expect(outcome.text).toBe('Credential registration failed: Invalid CredentialCreationOptions: Missing required "rp" property');
     expect(asked()).toEqual([]);
-    expect(enforceAuthenticatorAttachmentWithHints).not.toHaveBeenCalled();
     expect(options.onStart).not.toHaveBeenCalled();
   });
 
   it('stops before anything is asked when the hints refuse the request', async () => {
     serving({});
-    vi.mocked(enforceAuthenticatorAttachmentWithHints).mockImplementationOnce(() => {
-      throw new Error('base64 has "!" at position 0, outside its alphabet');
-    });
+    // An allowed credential whose id is no base64: the hints cannot narrow the list.
+    const refused = request({ hints: ['hybrid'], allowCredentials: [{ id: '!!' }] });
     const options = formOptions();
-    const outcome = await registerAdvancedCredential(text(request({ hints: ['unknown'] })), options);
+    const outcome = await registerAdvancedCredential(text(refused), options);
 
     expect(outcome.text).toBe('Credential registration failed: base64 has "!" at position 0, outside its alphabet');
-    expect(outcome.context.publicKey).toEqual(request({ hints: ['unknown'] }).publicKey);
+    expect(outcome.context.publicKey).toEqual(refused.publicKey);
     expect(asked()).toEqual([]);
     expect(options.onStart).not.toHaveBeenCalled();
   });
