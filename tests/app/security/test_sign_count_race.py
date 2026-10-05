@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import threading
 
-from server.app.routes.simple import authentication
+from server.app.routes.simple import stored_sign_count
 from server.app.storage import credentials as storage_credentials
 
 from .. import visitor_namespace
@@ -56,7 +56,7 @@ def test_two_authentications_with_the_same_counter_cannot_both_succeed(app, monk
 
     both_have_read = threading.Barrier(2, timeout=10)
     reads = []
-    original = authentication.load_server_records
+    original = stored_sign_count.load_server_records
 
     def _read_then_wait(uname):
         loaded = original(uname)
@@ -65,7 +65,7 @@ def test_two_authentications_with_the_same_counter_cannot_both_succeed(app, monk
             both_have_read.wait()
         return loaded
 
-    monkeypatch.setattr(authentication, "load_server_records", _read_then_wait)
+    monkeypatch.setattr(stored_sign_count, "load_server_records", _read_then_wait)
 
     responses = [None, None]
 
@@ -106,7 +106,7 @@ def test_losing_the_race_twice_rejects_the_authentication(app, monkeypatch, cred
         attempts.append(version)
         return False
 
-    monkeypatch.setattr(authentication.credentials, "save_if_unchanged", _always_lose)
+    monkeypatch.setattr(storage_credentials, "save_if_unchanged", _always_lose)
 
     response = client.post(
         f"/api/authenticate/complete?email={EMAIL}",
@@ -127,13 +127,13 @@ def test_an_uncontended_authentication_saves_its_counter_once(app, monkeypatch, 
     register_simple(client, authenticator, counter=5)
     challenge = _begin(client, authenticator)
     saves = []
-    original = authentication.credentials.save_if_unchanged
+    original = storage_credentials.save_if_unchanged
 
     def _counting(*args, **kwargs):
         saves.append(args[0])
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(authentication.credentials, "save_if_unchanged", _counting)
+    monkeypatch.setattr(storage_credentials, "save_if_unchanged", _counting)
 
     response = client.post(
         f"/api/authenticate/complete?email={EMAIL}",
