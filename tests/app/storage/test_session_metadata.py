@@ -4,6 +4,7 @@ On Cloud Storage the store runs over the in-memory bucket (``fake_gcs``), so wha
 is asserted is what the bucket holds: the objects under ``user-data/<session>/``.
 On disk it runs over the test's own folder.
 """
+
 from __future__ import annotations
 
 import json
@@ -15,8 +16,7 @@ import pytest
 
 from server.app.storage import common as storage_common
 from server.app.storage import session_metadata as session_store
-
-from . import fake_gcs
+from tests.app.storage import fake_gcs
 
 SESSION = "session-gcs"
 METADATA = f"user-data/{SESSION}/metadata"
@@ -317,3 +317,57 @@ def test_on_disk_an_upload_that_is_not_there_has_no_time(on_disk):
 
 def _refused(*_args, **_kwargs):
     raise fake_gcs.ServiceUnavailable("listing refused")
+
+
+def test_local_write_read_list_delete_roundtrip(session_metadata_dir, monkeypatch):
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
+
+    session_store.write_file("session-local", "entry.json", b"{\"ok\":true}")
+
+    assert session_store.file_exists("session-local", "entry.json") is True
+    assert session_store.list_files("session-local") == ["entry.json"]
+    assert session_store.read_file("session-local", "entry.json") == b"{\"ok\":true}"
+    assert session_store.file_mtime("session-local", "entry.json") is not None
+
+    session_store.delete_file("session-local", "entry.json")
+
+    assert session_store.file_exists("session-local", "entry.json") is False
+    assert session_store.list_files("session-local") == []
+
+
+def test_local_touch_last_access_with_explicit_timestamp(session_metadata_dir, monkeypatch):
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
+
+    expected_timestamp = 1_700_000_123.0
+    session_store.touch_last_access("session-touch", timestamp=expected_timestamp)
+
+    resolved_timestamp = session_store.resolve_last_access("session-touch")
+    assert resolved_timestamp is not None
+    assert abs(resolved_timestamp - expected_timestamp) < 1.0
+
+
+def test_deleting_the_last_upload_keeps_the_namespaces_other_stores_on_cloud_storage(monkeypatch):
+    bucket = fake_gcs.install(monkeypatch, "every store")
+    credentials = storage_common.session_prefix("session-gcs", "credentials") + "/user@example.com_credential_data.json"
+    artifact = storage_common.session_prefix("session-gcs", "credential-artifacts") + "/stored.json"
+    bucket.put(credentials, b"{}")
+    bucket.put(artifact, b"{}")
+    session_store.touch_last_access("session-gcs")
+    session_store.write_file("session-gcs", "entry.json", b"{}")
+
+    session_store.delete_file("session-gcs", "entry.json")
+    session_store.prune_session("session-gcs")
+
+    assert session_store.list_files("session-gcs") == []
+    assert credentials in bucket.objects
+    assert artifact in bucket.objects
+    assert session_store.resolve_last_access("session-gcs") is not None
+
+
+def test_a_local_folder_that_cannot_be_listed_is_not_pruned(session_metadata_dir, monkeypatch):
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
+    (session_metadata_dir / "session-local").write_text("not a folder")
+
+    with pytest.raises(storage_common.StorageReadError):
+        session_store.prune_session("session-local")
+    assert (session_metadata_dir / "session-local").read_text() == "not a folder"

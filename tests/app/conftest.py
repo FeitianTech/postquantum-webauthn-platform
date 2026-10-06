@@ -143,3 +143,13 @@ def fake_decoders(monkeypatch):
 
     monkeypatch.setattr(decode_text, "decode_payload_text", _fake_decode)
     monkeypatch.setattr(attestation_certificates, "serialize_attestation_certificate", _fake_serialize)
+
+
+@pytest.fixture
+def session_metadata_dir(monkeypatch, tmp_path):
+    session_dir = tmp_path / "session-metadata"
+    session_dir.mkdir()
+
+    monkeypatch.setenv("FIDO_SERVER_SESSION_METADATA_DIR", str(session_dir))
+
+    return session_dir

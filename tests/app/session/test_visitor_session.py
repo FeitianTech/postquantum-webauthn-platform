@@ -10,6 +10,7 @@ from __future__ import annotations
 import threading
 import time
 from datetime import timedelta
+from pathlib import Path
 
 import itsdangerous
 import pytest
@@ -18,6 +19,7 @@ from flask import session
 from server.app import visitor_session
 from server.app.storage import common as storage_common
 from server.app.storage import session_metadata
+from server.app.storage import session_metadata as session_store
 from tests.app import visitor_namespace
 from tests.app.entry_app import entry_app
 
@@ -331,3 +333,35 @@ def test_a_sweep_waits_out_its_interval_after_the_last_one(monkeypatch, tmp_path
     visitor_session._maybe_cleanup(now=last_run + visitor_session.CLEANUP_INTERVAL.total_seconds())
 
     assert session_metadata.list_sessions() == []
+
+
+def test_local_cleanup_removes_only_stale_non_hidden_sessions(session_metadata_dir, monkeypatch):
+    session_dir = session_metadata_dir
+    monkeypatch.setattr(storage_common, "using_gcs", lambda: False)
+    monkeypatch.setattr(visitor_session, "CLEANUP", visitor_session.CleanupState())
+
+    stale_dir = session_dir / "stale-session"
+    fresh_dir = session_dir / "fresh-session"
+    hidden_dir = session_dir / ".hidden-session"
+    stale_dir.mkdir()
+    fresh_dir.mkdir()
+    hidden_dir.mkdir()
+
+    now = 2_000_000.0
+    last_access = {
+        "stale-session": 100.0,
+        "fresh-session": now - 10.0,
+        ".hidden-session": 0.0,
+    }
+
+    monkeypatch.setattr(
+        session_store,
+        "_local_resolve_last_access",
+        lambda directory: last_access.get(Path(directory).name),
+    )
+
+    visitor_session._maybe_cleanup(now=now)
+
+    assert stale_dir.exists() is False
+    assert fresh_dir.exists() is True
+    assert hidden_dir.exists() is True
