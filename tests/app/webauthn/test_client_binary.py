@@ -180,3 +180,51 @@ def test_credential_intake_reads_both_base64_alphabets_exactly():
     assert client_binary.read(urlsafe, wrappers=True) == raw
     assert client_binary.read(standard, iterables=True) == raw
     assert client_binary.read(urlsafe, iterables=True) == raw
+
+
+def test_decode_binary_value_decodes_base64url_string():
+    raw = b"\x00\x01\xfe\xff"
+
+    assert client_binary.read(b64u(raw), iterables=True) == raw
+
+
+def test_decode_binary_value_decodes_standard_base64_string():
+    raw = b"\xfb\xef\xff"
+    encoded = base64.b64encode(raw).decode("ascii")
+
+    assert client_binary.read(encoded, iterables=True) == raw
+
+
+def test_decode_binary_value_falls_back_to_hex_when_base64_decoders_fail():
+    # Separated or spaced hex cannot be base64, so it reaches the hex reading.
+    assert client_binary.read("41 42 43", iterables=True) == b"ABC"
+    assert client_binary.read("41:42:43", iterables=True) == b"ABC"
+
+    # An unbroken run of hex digits can be valid base64 as well, and base64
+    # still wins where it is: the precedence predates the strictness work and
+    # is left alone so stored credential IDs keep decoding to the same bytes.
+    assert client_binary.read("0000", iterables=True) == base64.b64decode("0000")
+
+    # "414243" is not canonical base64 -- its final quantum carries bits that
+    # re-encode to something else -- so it is no longer accepted as base64 and
+    # falls through to the hex reading it plainly is.
+    assert client_binary.read("414243", iterables=True) == b"ABC"
+
+
+def test_decode_binary_value_decodes_iterable_of_ints():
+    assert client_binary.read([65, 66, 67], iterables=True) == b"ABC"
+
+
+@pytest.mark.parametrize(
+    "value,pattern",
+    [
+        (None, "missing binary value"),
+        ("   ", "empty binary value"),
+        ("g$", "invalid binary value"),
+        (1234, "unsupported binary value type"),
+        (["A"], "invalid iterable value"),
+    ],
+)
+def test_decode_binary_value_rejects_invalid_inputs(value, pattern):
+    with pytest.raises(ValueError, match=pattern):
+        client_binary.read(value, iterables=True)
