@@ -248,3 +248,16 @@ def test_load_base_explorer_snapshot_prefers_packaged_explorer_when_newer(monkey
 
     assert snapshot["meta"]["entryCount"] == 1
     assert marker is not None
+
+
+def test_load_verified_metadata_helpers_handle_invalid_and_missing_payloads(metadata_local_env, monkeypatch, tmp_path):
+    monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
+    verified_path = tmp_path / "fido-mds3.verified.json"
+
+    assert mds_cache._load_verified_metadata_payload() is None
+
+    verified_path.write_text("[]", encoding="utf-8")
+    assert mds_cache._load_verified_metadata_payload() is None
+
+    verified_path.write_text("{\"broken\": true}", encoding="utf-8")
+    assert mds_cache.load_verified_entries() is None
