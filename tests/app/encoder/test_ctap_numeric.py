@@ -4,6 +4,7 @@ Format "CBOR (CTAP/WebAuthn Data)" looks for the object whose members are number
 ("1", "0x02", "02 (clientDataHash)"), wherever it sits, and names the message its
 fields make -- or says which field keeps it from being one.
 """
+
 from __future__ import annotations
 
 import json
@@ -103,3 +104,61 @@ def test_a_field_number_is_non_negative_and_a_key_of_another_kind_names_none():
     with pytest.raises(ValueError, match="at least one CTAP field"):
         encode_ctap_numeric._classify_ctap_numeric_mapping({})
     assert encode_ctap_numeric._normalize_ctap_extra_value({9: "numeric-key"}) == {"9": "numeric-key"}
+
+
+def test_classify_ctap_numeric_mapping_requires_field_two():
+    with pytest.raises(ValueError, match=r"Missing field 0x02"):
+        encode_ctap_numeric._classify_ctap_numeric_mapping({1: "example.com"})
+
+
+def test_classify_ctap_numeric_mapping_rejects_short_auth_data_for_signature_response():
+    with pytest.raises(
+        ValueError,
+        match=r"must contain authenticator data for GetAssertion response",
+    ):
+        encode_ctap_numeric._classify_ctap_numeric_mapping(
+            {
+                1: "credential",
+                2: b"\x00" * 36,
+                3: b"\x01" * 64,
+            }
+        )
+
+
+def test_classify_ctap_numeric_mapping_uses_field_two_length_boundaries_for_string_field_one():
+    get_assertion_request = encode_ctap_numeric._classify_ctap_numeric_mapping(
+        {
+            1: "example.com",
+            2: b"\x00" * 32,
+        }
+    )
+    assert get_assertion_request == "getAssertionRequest"
+
+    make_credential_response = encode_ctap_numeric._classify_ctap_numeric_mapping(
+        {
+            1: "example.com",
+            2: b"\x00" * 37,
+        }
+    )
+    assert make_credential_response == "makeCredentialResponse"
+
+    with pytest.raises(ValueError, match=r"length is not valid"):
+        encode_ctap_numeric._classify_ctap_numeric_mapping(
+            {
+                1: "example.com",
+                2: b"\x00" * 33,
+            }
+        )
+
+
+def test_classify_ctap_numeric_mapping_requires_exact_client_data_hash_length_for_make_credential_request():
+    with pytest.raises(
+        ValueError,
+        match=r"clientDataHash\) must be exactly 32 bytes",
+    ):
+        encode_ctap_numeric._classify_ctap_numeric_mapping(
+            {
+                1: b"\x01" * 31,
+                2: {"id": "example.com", "name": "Example"},
+            }
+        )
