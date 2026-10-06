@@ -274,7 +274,8 @@ its logic out here first.
   `/_next/static/` immutable with the build's `.gz`, the export's 404 page, a plain 404 under
   `/api/`; `send_precompressed`); `routes/assets.py` (the explorer's files under `/assets/mds/`:
   the list at one URL revalidated by its ETag, the icons by digest, each entry's detail at
-  `?v=<version>`; no snapshot file at any path); `routes/csp_report.py` (one WARNING line per
+  `?v=<version>` (other versions revalidate by a weak ETag, including gzip);
+  no snapshot file at any path); `routes/csp_report.py` (one WARNING line per
   violation, bounded); `routes/errors.py`.
 - `webauthn/attestation/` (`checks.py` runs every check in order over `request_expectations.py`,
   `response_checks.py`, `statement_checks.py` and `metadata_checks.py`; trust, the root

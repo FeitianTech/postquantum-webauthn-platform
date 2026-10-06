@@ -6,6 +6,7 @@ import gzip
 import importlib.util
 import json
 import os
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -181,3 +182,42 @@ def test_without_a_snapshot_there_is_no_explorer_file(metadata_state, monkeypatc
     monkeypatch.setenv("FIDO_SERVER_MDS_SNAPSHOT_DIR", str(tmp_path))
 
     assert client.get("/assets/mds/fido-mds3.explorer.list.json").status_code == 404
+
+
+@pytest.mark.parametrize("encoding", ["identity", "gzip"])
+@pytest.mark.parametrize("version", ["", "?v=6.earlier"])
+def test_an_entry_at_an_old_or_missing_version_revalidates_with_its_etag(mds_fixture_snapshot, client, encoding, version):
+    files = _derived(client)
+    row = json.loads(files.list_json)["entries"][0]
+    url = row["detailUrl"].split("?")[0] + version
+    headers = {"Accept-Encoding": encoding}
+    first = client.get(url, headers=headers)
+
+    assert first.status_code == 200
+    assert first.headers["Cache-Control"] == "no-cache"
+    assert first.get_etag()[1] is True
+    assert "Accept-Encoding" in first.headers["Vary"]
+    if encoding == "gzip":
+        assert first.headers["Content-Encoding"] == "gzip"
+    again = client.get(url, headers={**headers, "If-None-Match": first.headers["ETag"]})
+    assert again.status_code == 304
+    assert again.data == b""
+    assert again.headers["ETag"] == first.headers["ETag"]
+    assert "Accept-Encoding" in again.headers["Vary"]
+
+
+def test_an_old_entry_url_gets_a_new_validator_when_its_detail_changes(mds_fixture_snapshot, client, monkeypatch):
+    files = _derived(client)
+    row = json.loads(files.list_json)["entries"][0]
+    url = row["detailUrl"]
+    first = client.get(url)
+    data = {**json.loads(files.details[row["entryId"]]), "name": "A newer entry"}
+    newer = replace(files, version="8.newer", details={**files.details, row["entryId"]: json.dumps(data).encode()})
+    monkeypatch.setattr(mds_cache, "load_explorer_files", lambda: newer)
+
+    after = client.get(url, headers={"If-None-Match": first.headers["ETag"]})
+
+    assert after.status_code == 200
+    assert after.headers["Cache-Control"] == "no-cache"
+    assert after.headers["ETag"] != first.headers["ETag"]
+    assert after.get_json()["name"] == "A newer entry"

@@ -32,6 +32,12 @@ def compressing_client():
         response.headers["Content-MD5"] = "digest"
         return response
 
+    @app.route("/weak")
+    def weak():
+        response = Response(TEXT, mimetype="text/plain")
+        response.set_etag("etag", weak=True)
+        return response
+
     @app.route("/passthrough")
     def passthrough():
         return Response(TEXT, mimetype="text/plain", direct_passthrough=True)
@@ -122,3 +128,10 @@ def test_outside_a_request_nothing_is_gzipped():
 
     assert compression.maybe_compress_response(response) is response
     assert response.data == TEXT
+
+
+def test_a_weak_validator_survives_gzip_because_it_names_equivalent_content(compressing_client):
+    response = compressing_client.get("/weak", headers=GZIP)
+
+    assert gzip.decompress(response.data) == TEXT
+    assert response.get_etag() == ("etag", True)

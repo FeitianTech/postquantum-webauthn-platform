@@ -23,6 +23,10 @@ refresh would add about 30 MB to the repository's history and invalidate an imag
 layer; so they are provisioned at runtime instead (below), and each snapshot is
 served under a URL of its own.
 
+Entry details requested without the current version revalidate with a weak ETag
+of their JSON bytes. The validator survives gzip compression, so an unchanged
+entry answers a conditional request with 304 in either content coding.
+
 ## Where the files are
 
 `server/app/mds/files.py` names the seven files once and says where they are:

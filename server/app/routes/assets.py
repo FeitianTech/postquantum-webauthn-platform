@@ -11,6 +11,8 @@ No file of the snapshot directory is served, at any path.
 """
 from __future__ import annotations
 
+import hashlib
+
 from flask import Blueprint, Flask, Response, abort, request
 
 from ..mds import cache as mds_cache
@@ -103,5 +105,7 @@ def explorer_entry(entry_id: str):
     response.headers["Cache-Control"] = (
         web_export.IMMUTABLE_CACHE_CONTROL if current else web_export.REVALIDATE_CACHE_CONTROL
     )
-    return response
+    response.vary.add("Accept-Encoding")
+    response.set_etag(hashlib.sha256(detail).hexdigest(), weak=True)
+    return response.make_conditional(request)
 

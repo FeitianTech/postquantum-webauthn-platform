@@ -80,7 +80,9 @@ def maybe_compress_response(response):
     response.headers["Content-Encoding"] = "gzip"
     response.headers["Content-Length"] = str(len(compressed))
     response.headers["Vary"] = _append_vary(response.headers.get("Vary"), "Accept-Encoding")
-    response.headers.pop("ETag", None)
+    # Weak validators describe equivalent content, including either coding.
+    if not response.get_etag()[1]:
+        response.headers.pop("ETag", None)
     response.headers.pop("Content-MD5", None)
     return response
 
