@@ -1,4 +1,5 @@
 """``webauthn.client_binary``: bytes a client sends, as bytes or strict text."""
+
 from __future__ import annotations
 
 import base64
@@ -7,6 +8,7 @@ import pytest
 
 from server.app import encoding
 from server.app.webauthn import client_binary
+from tests.app.security.ceremony_helpers import b64u
 
 STANDARD = base64.b64encode(b"\xfb\xef\xbe").decode("ascii")  # "++++"-style, base64 only
 URLSAFE = base64.urlsafe_b64encode(b"\xfb\xef\xbe").decode("ascii")  # "----"-style, base64url only
@@ -104,3 +106,46 @@ def test_an_advanced_request_value_is_unwrapped_and_anything_else_given_back(val
 def test_a_bare_request_field_is_read_as_hex():
     assert client_binary.read_request_field("6162") == b"ab"
     assert client_binary.read_request_field({"$base64url": "YWI"}) == b"ab"
+
+
+def test_decode_client_binary_accepts_base64url_mapping_key():
+    raw = b"\x00\x01\x02\xfa"
+    decoded = client_binary.read({"$base64url": b64u(raw)}, wrappers=True)
+
+    assert decoded == raw
+
+
+def test_decode_client_binary_honors_explicit_hex_wrapper():
+    decoded = client_binary.read({"$hex": "0011223344556677"}, wrappers=True)
+
+    assert decoded == bytes.fromhex("0011223344556677")
+
+
+def test_decode_client_binary_rejects_invalid_explicit_hex_wrapper():
+    with pytest.raises(ValueError, match="invalid binary value"):
+        client_binary.read({"$hex": "zz"}, wrappers=True)
+
+
+def test_decode_client_binary_rejects_invalid_explicit_base64url_wrapper():
+    with pytest.raises(ValueError, match="invalid binary value"):
+        client_binary.read({"$base64url": "%%%"}, wrappers=True)
+
+
+def test_decode_client_binary_rejects_invalid_string_value():
+    with pytest.raises(ValueError, match="invalid binary value"):
+        client_binary.read("g$", wrappers=True)
+
+
+def test_decode_client_binary_rejects_unsupported_input_type():
+    with pytest.raises(ValueError, match="unsupported binary value type"):
+        client_binary.read(1234, wrappers=True)
+
+
+def test_decode_client_binary_handles_none_bytes_and_empty_string_inputs():
+    with pytest.raises(ValueError, match="missing binary value"):
+        client_binary.read(None, wrappers=True)
+
+    assert client_binary.read(b"\x00\x01\x02", wrappers=True) == b"\x00\x01\x02"
+
+    with pytest.raises(ValueError, match="empty binary value"):
+        client_binary.read("   ", wrappers=True)

@@ -1,4 +1,5 @@
 """``webauthn.cose_algorithms``: a COSE algorithm a client names, as its number."""
+
 from __future__ import annotations
 
 import pytest
@@ -42,3 +43,8 @@ def test_what_names_no_algorithm_is_none(value):
 @pytest.mark.parametrize("name", ["", "   ", "(ES256)"])
 def test_a_blank_name_names_no_algorithm(name):
     assert cose_algorithms.lookup_name(name) is None
+
+
+def test_lookup_named_cose_algorithm_supports_suffix_matching_for_descriptive_labels():
+    assert cose_algorithms.lookup_name("WebAuthn: RSASSA-PKCS1-V1_5-SHA1") == -65535
+    assert cose_algorithms.lookup_name("Experimental profile ML-DSA-65") == -49
