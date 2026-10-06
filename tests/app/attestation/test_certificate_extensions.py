@@ -272,3 +272,49 @@ def test_serialize_extension_value_handles_known_extension_types_from_real_certi
     assert "Hex value" in extension_values["2.5.29.14"]
     assert "2.5.29.35" in extension_values
     assert "2.5.29.19" in extension_values
+
+
+def test_serialize_extension_value_handles_known_unrecognized_oids_and_transport_bits():
+    device_oid = ObjectIdentifier("1.3.6.1.4.1.41482.2")
+    device_ext = SimpleNamespace(
+        oid=device_oid,
+        value=x509.UnrecognizedExtension(device_oid, b"\x04\x04demo"),
+    )
+
+    device_value = attestation_certificate_extensions._serialize_extension_value(device_ext)
+    assert device_value["Device identifier"] == "demo"
+    assert "Hex value" in device_value
+
+    transports_oid = ObjectIdentifier("1.3.6.1.4.1.45724.2.1.1")
+    transports_ext = SimpleNamespace(
+        oid=transports_oid,
+        value=x509.UnrecognizedExtension(transports_oid, bytes.fromhex("03020430")),
+    )
+    transport_value = attestation_certificate_extensions._serialize_extension_value(transports_ext)
+    assert transport_value["Transports"] == "USB NFC"
+
+
+@pytest.mark.parametrize(
+    ("der", "transports"),
+    [
+        # FIDO's named bits, bit 0 the first byte's most significant:
+        # bluetoothRadio 0, bluetoothLowEnergyRadio 1, uSB 2, nFC 3, uSBInternal 4.
+        ("03020780", ["BT CLASSIC"]),
+        ("03020640", ["BLE"]),
+        ("03020520", ["USB"]),
+        ("03020410", ["NFC"]),
+        ("03020308", ["USB INTERNAL"]),
+        ("03020430", ["USB", "NFC"]),
+        ("030204f0", ["BT CLASSIC", "BLE", "USB", "NFC"]),
+        # A bit FIDO names nothing for is shown by its number.
+        ("03020104", ["bit 5"]),
+        ("030100", []),
+    ],
+)
+def test_parse_fido_transport_bitfield_reads_fidos_named_bits(der, transports):
+    assert attestation_certificate_extensions._parse_fido_transport_bitfield(bytes.fromhex(der)) == transports
+
+
+@pytest.mark.parametrize("raw", [b"", b"\x03", b"\x04\x01\x00", bytes.fromhex("0302043000")])
+def test_parse_fido_transport_bitfield_names_nothing_for_what_is_not_a_bit_string(raw):
+    assert attestation_certificate_extensions._parse_fido_transport_bitfield(raw) is None

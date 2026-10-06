@@ -3,17 +3,23 @@
 Its functions are the attestation package's own: ``checks`` and ``classical`` call
 them across modules, so they are tested here directly.
 """
+
 from __future__ import annotations
 
 import hashlib
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
 from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import NameOID
 from fido2.utils import ByteBuffer
 
 from server.app.webauthn.attestation import trust as attestation_trust
 from tests.app.characterization import material
+from tests.app.entry_app import entry_app
 
 AAGUID = bytes.fromhex("f8a011f38c0a4d15800617111f9edc7d")
 
@@ -167,3 +173,62 @@ def test_a_trust_path_keeps_the_x5c_entries_that_are_bytes():
 
     assert attestation_trust._collect_trust_path_entries(x5c) == [b"leaf", b"intermediate", b"root"]
     assert attestation_trust._collect_trust_path_entries(None) == []
+
+
+def _self_signed_cert_der() -> bytes:
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "attestation-test")])
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.now(timezone.utc) - timedelta(days=1))
+        .not_valid_after(datetime.now(timezone.utc) + timedelta(days=10))
+        .sign(private_key, hashes.SHA256())
+    )
+    return cert.public_bytes(serialization.Encoding.DER)
+
+
+def test_is_trusted_ca_certificate_uses_fingerprint_and_subject_allowlists(monkeypatch):
+    app = entry_app()
+
+    cert_der = _self_signed_cert_der()
+    certificate = x509.load_der_x509_certificate(cert_der)
+    subject = certificate.subject.rfc4514_string()
+    fingerprint = hashlib.sha256(cert_der).hexdigest().upper()
+
+    monkeypatch.setitem(
+        app.config,
+        "TRUSTED_ATTESTATION_CA_FINGERPRINTS",
+        {fingerprint},
+    )
+    monkeypatch.setitem(
+        app.config,
+        "TRUSTED_ATTESTATION_CA_SUBJECTS",
+        set(),
+    )
+    with app.app_context():
+        assert attestation_trust._is_trusted_ca_certificate(cert_der) is True
+
+    monkeypatch.setitem(
+        app.config,
+        "TRUSTED_ATTESTATION_CA_FINGERPRINTS",
+        {"NOT-A-MATCH"},
+    )
+    monkeypatch.setitem(
+        app.config,
+        "TRUSTED_ATTESTATION_CA_SUBJECTS",
+        {subject},
+    )
+    with app.app_context():
+        assert attestation_trust._is_trusted_ca_certificate(cert_der) is True
+
+    monkeypatch.setitem(
+        app.config,
+        "TRUSTED_ATTESTATION_CA_SUBJECTS",
+        {"CN=other"},
+    )
+    with app.app_context():
+        assert attestation_trust._is_trusted_ca_certificate(cert_der) is False
