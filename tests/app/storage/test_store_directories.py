@@ -5,12 +5,18 @@ docker-compose does not mount, so a recreated container lost them; the
 credentials were already in instance/. Each store's directory is read when the
 store is used, not when the module is imported.
 """
+
 from __future__ import annotations
 
 import os
 
 from server.app.config import paths
-from server.app.storage import credential_artifacts, credentials, session_metadata
+from server.app.storage import (
+    credential_artifacts,
+    credentials,
+    session_metadata,
+)
+from tests.app.entry_app import entry_app
 
 _SETTINGS = (
     "FIDO_SERVER_CREDENTIAL_DIR",
@@ -44,3 +50,16 @@ def test_a_store_setting_is_read_when_the_store_is_used(monkeypatch, tmp_path):
     assert credentials._local_filename("alice", "session-a").startswith(str(tmp_path / "credentials") + os.sep)
     assert credential_artifacts._session_directory("session-a") == str(tmp_path / "artifacts" / "session-a")
     assert session_metadata._local_session_directory("session-a") == str(tmp_path / "metadata" / "session-a")
+
+
+def test_credential_root_is_not_inside_the_source_tree():
+    package_dir = os.path.realpath(paths.basepath)
+    root = os.path.realpath(credentials._local_credential_base())
+
+    assert not root.startswith(package_dir + os.sep)
+    assert root != package_dir
+
+    if not os.environ.get("FIDO_SERVER_CREDENTIAL_DIR"):
+        assert root == os.path.realpath(
+            os.path.join(entry_app().instance_path, "session-credentials")
+        )

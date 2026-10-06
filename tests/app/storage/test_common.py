@@ -52,3 +52,36 @@ def test_a_write_that_fails_leaves_the_file_as_it_was_and_no_temporary_file(tmp_
 
     assert target.read_bytes() == b"before"
     assert sorted(path.name for path in tmp_path.iterdir()) == ["record.json"]
+
+
+def test_resolve_contained_path_rejects_a_symlink_escape(local_store):
+    """Containment is checked after symlink resolution, not just lexically."""
+
+    root = local_store.root
+    outside = local_store.tmp_path / "outside"
+    outside.mkdir()
+    (root / "escape").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ValueError):
+        storage_common.resolve_contained_path(str(root), "escape", "loot")
+    # The lexical check, before any symlink is looked at.
+    with pytest.raises(ValueError):
+        storage_common.resolve_contained_path(str(root), "..", "loot")
+
+
+def test_assert_contained_blob_name_rejects_escapes():
+
+    with pytest.raises(ValueError):
+        storage_common.assert_contained_blob_name("user-data/../loot", prefix="user-data")
+    with pytest.raises(ValueError):
+        storage_common.assert_contained_blob_name("elsewhere/loot", prefix="user-data")
+    with pytest.raises(ValueError):
+        storage_common.assert_contained_blob_name("user-data//loot", prefix="user-data")
+    for name in ("", None, "user-data/a\x00b", "user-data/a\\b"):
+        with pytest.raises(ValueError):
+            storage_common.assert_contained_blob_name(name, prefix="user-data")
+
+    assert (
+        storage_common.assert_contained_blob_name("user-data/ok", prefix="user-data")
+        == "user-data/ok"
+    )
