@@ -1,12 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  ensureAdvancedCredentialArtifactsSynced,
-  ensureAdvancedCredentialSnapshotsPrefetched,
-} from './advanced-sync.js';
-import {
-  seedUnifiedCredentialRecords,
-} from './storage-core.js';
+import { ensureAdvancedCredentialArtifactsSynced, ensureAdvancedCredentialSnapshotsPrefetched } from './advanced-sync.js';
+import { seedUnifiedCredentialRecords } from './storage-core.js';
+import * as artifactsClient from '../artifacts-client.js';
+import { saveAdvancedCredential } from './advanced-credentials.js';
 
 const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
 const STORAGE_ID = 'THBi3GyG-MexchMynbz3x5Nv::1a0c4506c00::abb1b052d88044e486bb1446aa6a1e87';
@@ -178,5 +175,213 @@ describe('prefetching advanced credential snapshots', () => {
 
     expect(ensureAdvancedCredentialSnapshotsPrefetched()).toBe(first);
     await first;
+  });
+});
+
+
+describe("stored credentials: artifacts", () => {
+  let fetchCredentialArtifactsBulk;
+  let updateCredentialSnapshot;
+  let uploadCredentialArtifact;
+  beforeEach(() => {
+    window.localStorage.clear();
+    seedUnifiedCredentialRecords([]);
+    fetchCredentialArtifactsBulk = vi.spyOn(artifactsClient, 'fetchCredentialArtifactsBulk').mockReset();
+    updateCredentialSnapshot = vi.spyOn(artifactsClient, 'updateCredentialSnapshot').mockReset();
+    uploadCredentialArtifact = vi.spyOn(artifactsClient, 'uploadCredentialArtifact').mockReset();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("synchronizes an artifact and marks its stored record", async () => {
+    const heavyRecord = {
+          type: 'advanced',
+          credentialId: 'adv-2',
+          storageId: 'adv-2::storage',
+          attestationObject: 'heavy-data',
+          publicKey: 'cHVibGlj',
+          hasServerArtifact: false,
+        };
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([heavyRecord]));
+    uploadCredentialArtifact.mockResolvedValue(true);
+    expect(await ensureAdvancedCredentialArtifactsSynced()).toBe(true);
+    const afterSync = JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY));
+    expect(afterSync[0].hasServerArtifact).toBe(true);
+    expect(uploadCredentialArtifact).toHaveBeenCalled();
+  });
+
+  it("prefetches a registration snapshot for a server artifact", async () => {
+    const heavyRecord = {
+          type: 'advanced',
+          credentialId: 'adv-2',
+          storageId: 'adv-2::storage',
+          attestationObject: 'heavy-data',
+          publicKey: 'cHVibGlj',
+          hasServerArtifact: false,
+        };
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([{ ...heavyRecord, hasServerArtifact: true }]));
+    seedUnifiedCredentialRecords(null);
+    fetchCredentialArtifactsBulk.mockResolvedValue({
+          'adv-2::storage': {
+            registrationDetailSnapshot: {
+              html: '<p>summary</p>',
+              state: { authenticatorDataHex: '0a0b' },
+            },
+          },
+        });
+    expect(await ensureAdvancedCredentialSnapshotsPrefetched()).toBe(true);
+    const afterPrefetch = JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY));
+    expect(afterPrefetch[0].registrationDetailSnapshot).toEqual({ state: { authenticatorDataHex: '0a0b' } });
+  });
+
+  it("prefetches snapshots only for missing advanced records with server artifacts", async () => {
+    seedUnifiedCredentialRecords(null);
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([
+          {
+            type: 'advanced',
+            credentialId: 'needs-snapshot',
+            storageId: 'needs-snapshot::storage',
+            hasServerArtifact: true,
+          },
+          {
+            type: 'advanced',
+            credentialId: 'already-snapshotted',
+            storageId: 'already-snapshotted::storage',
+            hasServerArtifact: true,
+            registrationDetailSnapshot: { html: '<p>exists</p>', state: { authenticatorDataHex: '0a0b' } },
+          },
+          {
+            type: 'advanced',
+            credentialId: 'no-artifact',
+            storageId: 'no-artifact::storage',
+            hasServerArtifact: false,
+          },
+        ]));
+    fetchCredentialArtifactsBulk.mockResolvedValue({
+          'needs-snapshot::storage': {
+            registrationDetailSnapshot: {
+              schemaVersion: 1,
+              html: '<p>prefetched</p>',
+              state: {
+                authenticatorDataHex: 'aa'.repeat(10),
+              },
+            },
+          },
+        });
+    const changed = await ensureAdvancedCredentialSnapshotsPrefetched();
+    expect(changed).toBe(true);
+    expect(fetchCredentialArtifactsBulk).toHaveBeenCalledWith(['needs-snapshot::storage']);
+    const records = JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY));
+    const updated = records.find((record) => record.storageId === 'needs-snapshot::storage');
+    expect(updated.registrationDetailSnapshot.html).toBeUndefined();
+    expect(updated.registrationDetailSnapshot.state.authenticatorDataHex).toBe('aa'.repeat(10));
+  });
+
+  it("retries artifact synchronization after transient upload failures", async () => {
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([
+          {
+            type: 'advanced',
+            credentialId: 'retry-artifact',
+            storageId: 'retry-artifact::storage',
+            publicKey: 'cHVibGlj',
+            attestationObject: 'heavy-data',
+            hasServerArtifact: false,
+          },
+        ]));
+    uploadCredentialArtifact.mockRejectedValueOnce(new Error('upload failed'));
+    expect(await ensureAdvancedCredentialArtifactsSynced()).toBe(false);
+    uploadCredentialArtifact.mockResolvedValueOnce(true);
+    expect(await ensureAdvancedCredentialArtifactsSynced()).toBe(true);
+    const records = JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY));
+    expect(records[0].hasServerArtifact).toBe(true);
+  });
+
+  it("prefetches snapshots from storedCredential fallback and sanitizes nested fields", async () => {
+    seedUnifiedCredentialRecords(null);
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([
+          {
+            type: 'advanced',
+            credentialId: 'snapshot-fallback',
+            storageId: 'snapshot-fallback::storage',
+            hasServerArtifact: true,
+          },
+        ]));
+    fetchCredentialArtifactsBulk.mockResolvedValue({
+          'snapshot-fallback::storage': {
+            storedCredential: {
+              registrationDetailSnapshot: {
+                combinedHtml: '<section>combined-fallback</section>',
+                state: {
+                  visibleAttestationCertificateIndices: ['1', 'NaN', null],
+                  attestationCertificates: [
+                    {
+                      parsedX5c: {
+                        subject: 'CN=Snapshot',
+                        derBase64: 'drop',
+                        extensions: [{ oid: '1.2.3.4', value: { 'Hex value': '0102' } }],
+                      },
+                    },
+                  ],
+                  authenticatorData: {
+                    value: 'keep-value',
+                  },
+                },
+              },
+            },
+          },
+        });
+    const changed = await ensureAdvancedCredentialSnapshotsPrefetched();
+    expect(changed).toBe(true);
+    const records = JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY));
+    const snapshot = records[0].registrationDetailSnapshot;
+    expect(snapshot.html).toBeUndefined();
+    expect(snapshot.combinedHtml).toBeUndefined();
+    expect(snapshot.state.visibleAttestationCertificateIndices).toEqual([1]);
+    expect(snapshot.state.attestationCertificates[0].parsedX5c.derBase64).toBeUndefined();
+    expect(snapshot.state.attestationCertificates[0].parsedX5c.extensions).toEqual([{ oid: '1.2.3.4', value: { 'Hex value': '0102' } }]);
+    expect(snapshot.state.authenticatorData.value).toBe('keep-value');
+  });
+
+  it("summarizes heavy advanced fields before persisting synced artifacts", async () => {
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([
+          {
+            type: 'advanced',
+            credentialId: 'summary-target',
+            storageId: 'summary-target::storage',
+            publicKey: 'cHVibGlj',
+            hasServerArtifact: false,
+            attestationObject: 'heavy-object',
+            properties: {
+              attestationChecks: { authenticator_data: { counter: 0 } },
+              customFlag: true,
+            },
+            relyingParty: {
+              attestationObject: 'heavy-rp-object',
+              displayName: 'RP Display',
+            },
+          },
+        ]));
+    uploadCredentialArtifact.mockResolvedValueOnce(true);
+    const changed = await ensureAdvancedCredentialArtifactsSynced();
+    expect(changed).toBe(true);
+    const records = JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY));
+    const stored = records[0];
+    expect(stored.hasServerArtifact).toBe(true);
+    expect(stored.attestationObject).toBeUndefined();
+    expect(stored.properties.customFlag).toBe(true);
+    expect(stored.properties.attestationChecks).toBeUndefined();
+    expect(stored.relyingParty.displayName).toBe('RP Display');
+  });
+
+  it("changes nothing when the snapshots cannot be fetched", async () => {
+    saveAdvancedCredential({
+          credentialId: 'shared-counter',
+          publicKey: 'cHVibGlj',
+          storageId: 'shared-counter::storage',
+        });
+    fetchCredentialArtifactsBulk.mockRejectedValueOnce(new Error('prefetch failed'));
+    await expect(ensureAdvancedCredentialSnapshotsPrefetched()).resolves.toBe(false);
   });
 });

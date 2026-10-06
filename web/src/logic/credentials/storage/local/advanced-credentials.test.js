@@ -230,3 +230,19 @@ describe("stored credentials: simple", () => {
     expect(getAllSimpleCredentials()[0].signCount).toBe(3);
   });
 });
+
+
+describe("stored credentials: artifacts", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    seedUnifiedCredentialRecords([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("reports false when an advanced removal names no credential", async () => {
+    expect(removeAdvancedCredential('', null)).toBe(false);
+  });
+});
