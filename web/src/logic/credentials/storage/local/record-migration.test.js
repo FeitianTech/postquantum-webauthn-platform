@@ -4,6 +4,7 @@ import { migrateStoredRecord } from './record-migration.js';
 import { ADVANCED_RECORD, SIMPLE_RECORD } from '@/test/logic/credentials/storage/standard-base64-records.js';
 import { bytesOf } from '@/test/logic/credentials/storage/bytes.js';
 import { seedUnifiedCredentialRecords } from './storage-core.js';
+import { savedRecord } from '@/test/logic/credentials/storage/markup-record.js';
 
 const CREDENTIAL_ID = SIMPLE_RECORD.credentialIdBase64Url;
 
@@ -82,5 +83,29 @@ describe("stored credentials: base64", () => {
     expect(advanced.publicKeyBase64).toBe(ADVANCED_RECORD.publicKeyBase64);
     expect(advanced.userHandleBase64).toBe(ADVANCED_RECORD.userHandleBase64);
     expect(advanced.credentialIdHex).toBe(ADVANCED_RECORD.credentialIdHex);
+  });
+});
+
+
+describe("stored credentials: markup", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    seedUnifiedCredentialRecords([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("drops registration markup while keeping its structured state", async () => {
+    const { record } = migrateStoredRecord(savedRecord());
+    expect(record.registrationDetailSnapshot).toEqual({ schemaVersion: 1, state: { authenticatorDataHex: '0a0b' } });
+    expect(record.userName).toBe('alice');
+  });
+
+  it("takes the snapshot away when markup was all it held", async () => {
+    const record = savedRecord();
+    delete record.registrationDetailSnapshot.state;
+    expect(migrateStoredRecord(record).record.registrationDetailSnapshot).toBeUndefined();
   });
 });

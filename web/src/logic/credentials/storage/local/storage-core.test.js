@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { followStoredCredentialChanges, persistStoredCredentials, persistUnifiedCredentialRecords, readStoredCredentials, readUnifiedCredentialRecords, seedUnifiedCredentialRecords } from './storage-core.js';
 import { getAllStoredCredentialsInOrder } from '../records.js';
 import { SIMPLE_RECORD } from '@/test/logic/credentials/storage/standard-base64-records.js';
+import { savedRecord } from '@/test/logic/credentials/storage/markup-record.js';
 
 // The one read and write of the saved credentials both interfaces share
 // (local/storage-core.js) and the ordered list they show (records.js), over the
@@ -288,5 +289,36 @@ describe("stored credentials: base64", () => {
     again.readUnifiedCredentialRecords();
     expect(setItem).not.toHaveBeenCalled();
     setItem.mockRestore();
+  });
+});
+
+
+describe("stored credentials: markup", () => {
+  const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
+  beforeEach(() => {
+    window.localStorage.clear();
+    seedUnifiedCredentialRecords([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("persists a migrated registration without its old markup", async () => {
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([savedRecord()]));
+    seedUnifiedCredentialRecords(null);
+    readUnifiedCredentialRecords();
+    const [saved] = JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY));
+    expect(JSON.stringify(saved)).not.toContain('<section>');
+    expect(saved.registrationDetailSnapshot.state).toEqual({ authenticatorDataHex: '0a0b' });
+  });
+
+  it("leaves a record without markup as it is", async () => {
+    const record = { type: 'advanced', credentialId: 'AQID', storageId: 'AQID::storage', userName: 'bob' };
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([record]));
+    const before = localStorage.getItem(SHARED_STORAGE_KEY);
+    seedUnifiedCredentialRecords(null);
+    readUnifiedCredentialRecords().filter((record) => record.type === 'advanced');
+    expect(localStorage.getItem(SHARED_STORAGE_KEY)).toBe(before);
   });
 });
