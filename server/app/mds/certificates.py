@@ -38,7 +38,7 @@ def summarise_attestation_certificates(certificates: Sequence[Any]) -> tuple[lis
 
         try:
             certificate = x509.load_der_x509_certificate(certificate_bytes)
-        except Exception:  # pragma: no cover - invalid certificate data
+        except Exception:  # A root that cannot be loaded contributes no summary.
             continue
 
         try:

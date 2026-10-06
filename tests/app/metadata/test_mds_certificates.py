@@ -2,9 +2,14 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import io
 import json
+from pathlib import Path
 
+import pytest
+
+from server.app.mds import build as mds_build
 from server.app.mds import certificates as mds_certificates
 from tests.app.characterization import material
 from tests.app.metadata.upload_entries import minimal_entry
@@ -54,3 +59,41 @@ def test_a_certificate_value_is_its_bytes_or_their_base64():
     assert mds_certificates.decode_der_certificate("YQ") == b"a"
     assert mds_certificates.decode_der_certificate(123) is None
     assert mds_certificates.decode_der_certificate("   ") is None
+
+
+_NEGATIVE_ROOTS = json.loads(
+    (Path(__file__).resolve().parents[2] / "fixtures" / "mds-negative-serial-roots.json").read_text()
+)["certificates"]
+
+
+@pytest.mark.parametrize("root", _NEGATIVE_ROOTS, ids=lambda root: root["description"])
+@pytest.mark.parametrize("with_readable_root", [False, True])
+def test_the_explorer_build_skips_a_real_root_a_future_loader_refuses(monkeypatch, root, with_readable_root):
+    unreadable = base64.b64decode(root["derBase64"])
+    assert hashlib.sha256(unreadable).hexdigest() == root["sha256"]
+    assert root["serial"] < 0
+    loader = mds_certificates.x509.load_der_x509_certificate
+    attempted = []
+
+    def load(der):
+        attempted.append(der)
+        if der == unreadable:
+            raise ValueError("Certificate serial number must be positive")
+        return loader(der)
+
+    monkeypatch.setattr(mds_certificates.x509, "load_der_x509_certificate", load)
+    roots = [root["derBase64"]]
+    if with_readable_root:
+        roots.append(base64.b64encode(ROOT).decode())
+    entry = minimal_entry(root["description"])
+    entry["metadataStatement"]["attestationRootCertificates"] = roots
+
+    snapshot = mds_build.build_explorer_snapshot({"entries": [entry]}, include_detail=True)
+
+    assert snapshot["meta"]["entryCount"] == 1
+    shown = snapshot["entries"][0]
+    assert shown["certificateAlgorithmInfoList"] == (["ED25519_SHA512"] if with_readable_root else [])
+    assert shown["certificateCommonNameList"] == (["Unreadable Root"] if with_readable_root else [])
+    assert shown["attestationCertificates"] == roots
+    assert shown["rawEntry"]["metadataStatement"]["attestationRootCertificates"] == roots
+    assert attempted == ([unreadable, ROOT] if with_readable_root else [unreadable])
