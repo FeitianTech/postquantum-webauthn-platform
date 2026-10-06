@@ -69,6 +69,21 @@ def build_authenticator_data_payload(
     return payload
 
 
+@dataclass
+class _FlagFacts:
+    """Flags as the details name them, filled from their byte when absent."""
+
+    flags_byte: int | None = None
+    bitfield: Any = None
+    hex_value: str | None = None
+    up: Any = None
+    uv: Any = None
+    be: Any = None
+    bs: Any = None
+    at: Any = None
+    ed: Any = None
+
+
 def _build_flag_payload(
     flag_details: Any,
     flags_byte: int | None,
@@ -76,71 +91,79 @@ def _build_flag_payload(
 ) -> dict[str, Any]:
     if flag_details is None and flags_byte is None:
         return {}
-
     if flag_details is None and auth_byte_length is not None and auth_byte_length < 37:
         return {}
 
-    payload: dict[str, Any] = {}
+    facts = _FlagFacts(flags_byte=flags_byte)
+    _read_flag_details(facts, flag_details)
+    _read_flag_bits(facts)
+    return _flag_payload(facts)
 
-    bitfield = None
-    hex_value = None
-    up = uv = be = bs = at = ed = None
 
-    if isinstance(flag_details, Mapping):
-        bitfield = flag_details.get("bitfield")
-        value = flag_details.get("value")
+def _read_flag_details(facts: _FlagFacts, flag_details: Any) -> None:
+    if not isinstance(flag_details, Mapping):
+        return
+
+    facts.bitfield = flag_details.get("bitfield")
+    value = flag_details.get("value")
+    try:
+        facts.hex_value = f"{int(value):02x}".upper()
+    except (TypeError, ValueError):
+        facts.hex_value = None
+    facts.up = flag_details.get("userPresent")
+    facts.uv = flag_details.get("userVerified")
+    facts.be = flag_details.get("backupEligible")
+    facts.bs = flag_details.get("backupState")
+    facts.at = flag_details.get("attestedCredentialData")
+    facts.ed = flag_details.get("extensionData")
+    if facts.flags_byte is None:
         try:
-            hex_value = f"{int(value):02x}".upper()
+            facts.flags_byte = int(value)
         except (TypeError, ValueError):
-            hex_value = None
-        up = flag_details.get("userPresent")
-        uv = flag_details.get("userVerified")
-        be = flag_details.get("backupEligible")
-        bs = flag_details.get("backupState")
-        at = flag_details.get("attestedCredentialData")
-        ed = flag_details.get("extensionData")
-        if flags_byte is None:
-            try:
-                flags_byte = int(value)
-            except (TypeError, ValueError):
-                flags_byte = None
+            facts.flags_byte = None
 
-    if flags_byte is not None:
-        if bitfield is None:
-            bitfield = f"{flags_byte:08b}"
-        if hex_value is None:
-            hex_value = f"{flags_byte:02x}".upper()
-        if up is None:
-            up = bool(flags_byte & 0x01)
-        if uv is None:
-            uv = bool(flags_byte & 0x04)
-        if be is None:
-            be = bool(flags_byte & 0x08)
-        if bs is None:
-            bs = bool(flags_byte & 0x10)
-        if at is None:
-            at = bool(flags_byte & 0x40)
-        if ed is None:
-            ed = bool(flags_byte & 0x80)
 
-    if bitfield:
-        payload["bin"] = bitfield.replace("0b", "")[-8:].zfill(8)
-    if hex_value:
-        payload["hex"] = hex_value
-        payload["raw"] = hex_value
-    if up is not None:
-        payload["UP"] = bool(up)
-    if uv is not None:
-        payload["UV"] = bool(uv)
-    if be is not None:
-        payload["BE"] = bool(be)
-    if bs is not None:
-        payload["BS"] = bool(bs)
-    if at is not None:
-        payload["AT"] = bool(at)
-    if ed is not None:
-        payload["ED"] = bool(ed)
+def _read_flag_bits(facts: _FlagFacts) -> None:
+    if facts.flags_byte is None:
+        return
 
+    if facts.bitfield is None:
+        facts.bitfield = f"{facts.flags_byte:08b}"
+    if facts.hex_value is None:
+        facts.hex_value = f"{facts.flags_byte:02x}".upper()
+    if facts.up is None:
+        facts.up = bool(facts.flags_byte & 0x01)
+    if facts.uv is None:
+        facts.uv = bool(facts.flags_byte & 0x04)
+    if facts.be is None:
+        facts.be = bool(facts.flags_byte & 0x08)
+    if facts.bs is None:
+        facts.bs = bool(facts.flags_byte & 0x10)
+    if facts.at is None:
+        facts.at = bool(facts.flags_byte & 0x40)
+    if facts.ed is None:
+        facts.ed = bool(facts.flags_byte & 0x80)
+
+
+def _flag_payload(facts: _FlagFacts) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
+    if facts.bitfield:
+        payload["bin"] = facts.bitfield.replace("0b", "")[-8:].zfill(8)
+    if facts.hex_value:
+        payload["hex"] = facts.hex_value
+        payload["raw"] = facts.hex_value
+    if facts.up is not None:
+        payload["UP"] = bool(facts.up)
+    if facts.uv is not None:
+        payload["UV"] = bool(facts.uv)
+    if facts.be is not None:
+        payload["BE"] = bool(facts.be)
+    if facts.bs is not None:
+        payload["BS"] = bool(facts.bs)
+    if facts.at is not None:
+        payload["AT"] = bool(facts.at)
+    if facts.ed is not None:
+        payload["ED"] = bool(facts.ed)
     return payload
 
 
