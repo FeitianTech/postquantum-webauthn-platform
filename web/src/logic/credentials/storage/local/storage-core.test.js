@@ -219,3 +219,45 @@ describe("stored credentials: simple", () => {
     expect(ordered).toHaveLength(2);
   });
 });
+
+
+describe("stored credentials: keys", () => {
+  const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
+  beforeEach(() => {
+    window.localStorage.clear();
+    seedUnifiedCredentialRecords([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("migrates legacy storage keys into unified records and removes legacy keys", async () => {
+    seedUnifiedCredentialRecords(null);
+    localStorage.setItem('postquantum-webauthn.simpleCredentials', JSON.stringify([
+          {
+            credentialId: 'simple-legacy',
+            email: 'legacy@example.com',
+            publicKey: 'cHVibGlj',
+            signCount: 1,
+          },
+        ]));
+    localStorage.setItem('postquantum-webauthn.advancedCredentials', JSON.stringify([
+          {
+            type: 'advanced',
+            credentialId: 'advanced-legacy',
+            storageId: 'advanced-legacy::storage',
+            publicKey: 'cHVibGlj',
+            signCount: 2,
+          },
+        ]));
+    const ordered = readUnifiedCredentialRecords();
+    expect(ordered).toHaveLength(2);
+    expect(ordered.find((record) => record.type === 'simple')?.credentialId).toBe('simple-legacy');
+    expect(ordered.find((record) => record.type === 'advanced')?.credentialId).toBe('advanced-legacy');
+    expect(localStorage.getItem('postquantum-webauthn.simpleCredentials')).toBeNull();
+    expect(localStorage.getItem('postquantum-webauthn.advancedCredentials')).toBeNull();
+    const unified = JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY));
+    expect(unified).toHaveLength(2);
+  });
+});
