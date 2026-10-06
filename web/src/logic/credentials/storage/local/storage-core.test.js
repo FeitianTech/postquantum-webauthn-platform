@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { followStoredCredentialChanges, persistStoredCredentials, persistUnifiedCredentialRecords, readStoredCredentials, readUnifiedCredentialRecords, seedUnifiedCredentialRecords } from './storage-core.js';
 import { getAllStoredCredentialsInOrder } from '../records.js';
+import { SIMPLE_RECORD } from '@/test/logic/credentials/storage/standard-base64-records.js';
 
 // The one read and write of the saved credentials both interfaces share
 // (local/storage-core.js) and the ordered list they show (records.js), over the
@@ -259,5 +260,33 @@ describe("stored credentials: keys", () => {
     expect(localStorage.getItem('postquantum-webauthn.advancedCredentials')).toBeNull();
     const unified = JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY));
     expect(unified).toHaveLength(2);
+  });
+});
+
+
+describe("stored credentials: base64", () => {
+  const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
+  beforeEach(() => {
+    window.localStorage.clear();
+    seedUnifiedCredentialRecords([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("are saved once in the new spelling, and read again without another save", async () => {
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([SIMPLE_RECORD]));
+    seedUnifiedCredentialRecords(null);
+    const setItem = vi.spyOn(window.localStorage, 'setItem');
+    readUnifiedCredentialRecords();
+    const [saved] = JSON.parse(localStorage.getItem(SHARED_STORAGE_KEY));
+    expect(saved.publicKey).toBe(SIMPLE_RECORD.publicKeyBase64Url);
+    vi.resetModules();
+    const again = await import('./storage-core.js');
+    setItem.mockClear();
+    again.readUnifiedCredentialRecords();
+    expect(setItem).not.toHaveBeenCalled();
+    setItem.mockRestore();
   });
 });

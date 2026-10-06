@@ -5,6 +5,7 @@ import { clearSimpleCredentials, getAllSimpleCredentials, getSimpleCredentialsFo
 import { seedUnifiedCredentialRecords } from './storage-core.js';
 import { repoFile } from '@/test/logic/repo-file.js';
 import { getAllAdvancedCredentials, saveAdvancedCredential } from './advanced-credentials.js';
+import { SIMPLE_RECORD } from '@/test/logic/credentials/storage/standard-base64-records.js';
 
 const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
 
@@ -381,5 +382,31 @@ describe("stored credentials: advanced", () => {
             algorithm: -7,
           },
         ]);
+  });
+});
+
+
+describe("stored credentials: base64", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    seedUnifiedCredentialRecords([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("a simple record saved without credentialIdBase64Url is found by the ID the server reports", async () => {
+    const legacy = { ...SIMPLE_RECORD };
+    delete legacy.credentialIdBase64Url;
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([legacy]));
+    seedUnifiedCredentialRecords(null);
+    const updated = updateSimpleCredentialSignCount(
+          'user@example.com',
+          SIMPLE_RECORD.credentialIdBase64Url,
+          5,
+        );
+    expect(updated).toBe(true);
+    expect(getAllSimpleCredentials()[0].signCount).toBe(5);
   });
 });

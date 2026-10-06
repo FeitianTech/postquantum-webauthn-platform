@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   deriveAaguidFromCredentialData,
@@ -11,6 +11,9 @@ import {
   normalizeToHex,
 } from './record-fields.js';
 import { goldenAnswers } from '@/test/logic/simple/ceremony-answers.js';
+import { migrateStoredRecord } from './storage/local/record-migration.js';
+import { ADVANCED_RECORD, SIMPLE_RECORD } from '@/test/logic/credentials/storage/standard-base64-records.js';
+import { seedUnifiedCredentialRecords } from './storage/local/storage-core.js';
 
 // A saved credential's fields as the pages compare them (credentials/record-fields.js).
 
@@ -126,5 +129,26 @@ describe('normalizeToHex', () => {
     expect(normalizeToHex(42)).toBe('');
     // No record holds an ID as a JSON byte value.
     expect(normalizeToHex({ $hex: '414243' })).toBe('');
+  });
+});
+
+
+describe("stored credentials: base64", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    seedUnifiedCredentialRecords([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("still name the same credential and user handle", async () => {
+
+    const simple = migrateStoredRecord(SIMPLE_RECORD).record;
+    const advanced = migrateStoredRecord(ADVANCED_RECORD).record;
+    expect(getCredentialIdHex({ credentialId: simple.credentialId })).toBe(SIMPLE_RECORD.credentialIdHex);
+    expect(getCredentialIdHex({ credentialId: advanced.credentialId })).toBe(ADVANCED_RECORD.credentialIdHex);
+    expect(getCredentialUserHandleHex({ userHandle: advanced.userHandle })).toBe(ADVANCED_RECORD.userHandleHex);
   });
 });
