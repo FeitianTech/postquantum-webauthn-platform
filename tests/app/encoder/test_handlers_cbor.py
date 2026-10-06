@@ -9,11 +9,12 @@ from __future__ import annotations
 import base64
 import json
 
+import cbor2
 import pytest
 
 from server.app.decoder.encode import handlers_cbor as encode_handlers_cbor
 from server.app.decoder.encode import text as encode_text
-from tests.app.security.ceremony_helpers import b64u
+from tests.app.security.ceremony_helpers import b64u, unb64u
 
 MAKE_CREDENTIAL = {
     # A view's members by number, its values in the view's spelling: bytes as hex.
@@ -122,3 +123,44 @@ def test_cose_encoder_reports_the_key_type():
     cose_response = encode_handlers_cbor._encode_cose_value({'cose': {1: 2, 3: -7, -1: 1, -2: b'\x01', -3: b'\x02'}})
     assert cose_response['success'] is True
     assert cose_response['type'].startswith('COSE')
+
+
+def test_encode_ctap_webauthn_rejects_negative_numeric_field_ids():
+    with pytest.raises(ValueError, match="must be non-negative"):
+        encode_handlers_cbor._encode_ctap_webauthn_value(
+            {
+                -1: "AA",
+                2: b64u(b"\x00" * 32),
+            }
+        )
+
+
+def test_encode_cbor_writes_the_byte_the_ctap_framing_names():
+    challenge_hash = b"\x11" * 32
+    payload = {
+        "ctap": {
+            "code": 2,
+            "codeHex": "0x02",
+            "kind": "command",
+        },
+        "ctapDecoded": {
+            "getAssertionRequest": {
+                "1 (rpId)": "example.com",
+                "2 (clientDataHash)": challenge_hash.hex(),
+            }
+        },
+    }
+
+    result = encode_handlers_cbor._encode_cbor_value(payload)
+
+    assert result["success"] is True
+    assert result["type"] == "CBOR (canonical) (encoded getAssertionRequest)"
+    assert result["data"]["ctap"]["code"] == 2
+    assert result["data"]["ctap"]["kind"] == "command"
+
+    raw_bytes = unb64u(result["data"]["binary"]["base64url"])
+    assert raw_bytes[0] == 0x02
+
+    encoded_mapping = cbor2.loads(raw_bytes[1:])
+    assert encoded_mapping[1] == "example.com"
+    assert encoded_mapping[2] == challenge_hash

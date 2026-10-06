@@ -3,7 +3,10 @@
 Numbers may be text in any base ``int(..., 0)`` reads, booleans the words true/yes/1 and
 false/no/0; a credential descriptor may be its ID alone; attStmt's ``sig`` and ``x5c`` are bytes.
 """
+
 from __future__ import annotations
+
+import base64
 
 import pytest
 
@@ -79,3 +82,29 @@ def test_an_attestation_statement_given_as_bytes_or_nothing_is_kept_as_it_is():
     # only a direct call gives the reader these.
     assert encode_ctap_fields._encode_attestation_statement(None) is None
     assert encode_ctap_fields._encode_attestation_statement(b"\xaa") == b"\xaa"
+
+
+def test_encode_attestation_statement_converts_sig_and_x5c_entries():
+    first_cert = b"first-cert"
+    first_cert_pem = (
+        "-----BEGIN CERTIFICATE-----\n"
+        + base64.b64encode(first_cert).decode("ascii")
+        + "\n-----END CERTIFICATE-----"
+    )
+
+    statement = encode_ctap_fields._encode_attestation_statement(
+        {
+            "sig": {"hex": "aabbcc"},
+            "x5c": [
+                {"pem": first_cert_pem},
+                {"base64url": b64u(b"second-cert")},
+            ],
+            "alg": -7,
+            "customBinary": {"base64": base64.b64encode(b"blob-data").decode("ascii")},
+        }
+    )
+
+    assert statement["sig"] == bytes.fromhex("aabbcc")
+    assert statement["x5c"] == [first_cert, b"second-cert"]
+    assert statement["alg"] == -7
+    assert statement["customBinary"] == b"blob-data"
