@@ -3,13 +3,16 @@
 What does not read -- a truncated credential, a COSE key or extensions that are not
 well-formed CBOR -- is shown as it is, with where it stops, never dropped or completed.
 """
+
 from __future__ import annotations
 
+import cbor2
 from fido2 import cbor
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData
 
 from server.app.decoder.decode import ctap_auth_data as decode_ctap_auth_data
+from tests.app.decoder.ctap_auth_bytes import _auth_header
 
 AT = bytes([AuthenticatorData.FLAG.AT])
 ED = bytes([AuthenticatorData.FLAG.ED])
@@ -86,3 +89,40 @@ def test_the_expanded_json_shows_the_raw_authenticator_data_and_what_follows_it(
     assert formatted["signCount"] == 3
     assert formatted["raw"] == auth_data.hex()
     assert (formatted["trailingBytesHex"], trailing) == ("99", b"\x99")
+
+
+def test_parse_authenticator_data_bytes_returns_parse_error_for_short_payload():
+    details, trimmed, trailing = decode_ctap_auth_data._parse_authenticator_data_bytes(b"\x00" * 10)
+
+    assert details["parseError"].startswith("Authenticator data shorter")
+    assert trimmed == b"\x00" * 10
+    assert trailing == b""
+
+
+def test_parse_authenticator_data_bytes_parses_attested_and_extension_sections_with_trailing():
+    aaguid = bytes.fromhex("00112233445566778899aabbccddeeff")
+    credential_id = b"\xAA\xBB"
+    public_key = cbor2.dumps({1: 2, 3: -7})
+    extensions = cbor2.dumps({"credProtect": 1})
+    trailer = b"\x00\xFF"
+
+    payload = (
+        _auth_header(flags=0xC1, sign_count=9)  # UP + AT + ED
+        + aaguid
+        + len(credential_id).to_bytes(2, "big")
+        + credential_id
+        + public_key
+        + extensions
+        + trailer
+    )
+
+    details, trimmed, trailing = decode_ctap_auth_data._parse_authenticator_data_bytes(payload)
+
+    assert details["rpIdHash"] == bytes(range(32)).hex()
+    assert details["flags"]["AT"] is True
+    assert details["flags"]["ED"] is True
+    assert details["attestedCredentialData"]["credentialId"] == "aabb"
+    assert details["extensions"]["credProtect"] == 1
+    # Only the bytes after the extensions trail; the extensions were read.
+    assert trailing == trailer
+    assert trimmed == payload[: len(payload) - len(trailer)]

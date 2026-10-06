@@ -8,6 +8,7 @@ import cbor2
 import pytest
 
 from server.app.decoder.decode import text as decode_text
+from server.app.decoder.decode.text import decode_payload_text
 from tests.app.core.codec_examples import PLAIN_TEXT
 from tests.app.decoder.credential_bytes import (
     _build_attestation_and_auth_data,
@@ -94,3 +95,17 @@ def test_decode_payload_text_json_public_key_credential_and_cbor_roundtrip():
     assert decoded_cbor["success"] is True
     assert decoded_cbor["type"].startswith("CBOR")
     assert "decodedValue" in decoded_cbor["data"]
+
+
+def test_a_bare_map_of_a_make_credential_request_is_shown_as_one():
+    value = {
+        1: b"\x11" * 32,
+        2: {"id": "example.com", "name": "Example"},
+        3: {"id": b"\x01", "name": "user", "displayName": "User"},
+        4: [{"type": "public-key", "alg": -7}],
+    }
+
+    mapped = decode_payload_text(cbor2.dumps(value).hex())["data"]["ctapDecoded"]["makeCredentialRequest"]
+
+    assert mapped["1 (clientDataHash)"] == (b"\x11" * 32).hex()
+    assert mapped["2 (rp)"]["id"] == "example.com"

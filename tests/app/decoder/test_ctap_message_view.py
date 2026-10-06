@@ -1,62 +1,17 @@
+"""Tests of ctap message view behavior."""
+
 import base64
 
 import cbor2
 
 from server.app.decoder.decode import cbor_parser, ctap_message_view
-from server.app.decoder.decode import ctap as decode_ctap
-from server.app.decoder.decode import ctap_auth_data as decode_ctap_auth_data
-from server.app.decoder.decode.text import decode_payload_text
+from tests.app.decoder.ctap_auth_bytes import _auth_header
 from tests.app.python_fido2_vectors import GSR2_DER as _GSR2_DER
-
-
-def _auth_header(flags: int = 0x01, sign_count: int = 1) -> bytes:
-    return bytes(range(32)) + bytes([flags]) + sign_count.to_bytes(4, "big")
-
-
-def _auth_data_with_trailing_map(fields: dict) -> bytes:
-    return _auth_header() + cbor2.dumps(fields)
 
 
 def _auth_data_with_trailing_pairs(pairs: list[tuple[int, object]]) -> bytes:
     trailing = b"".join(cbor2.dumps(key) + cbor2.dumps(value) for key, value in pairs)
     return _auth_header() + trailing
-
-
-def test_parse_authenticator_data_bytes_returns_parse_error_for_short_payload():
-    details, trimmed, trailing = decode_ctap_auth_data._parse_authenticator_data_bytes(b"\x00" * 10)
-
-    assert details["parseError"].startswith("Authenticator data shorter")
-    assert trimmed == b"\x00" * 10
-    assert trailing == b""
-
-
-def test_parse_authenticator_data_bytes_parses_attested_and_extension_sections_with_trailing():
-    aaguid = bytes.fromhex("00112233445566778899aabbccddeeff")
-    credential_id = b"\xAA\xBB"
-    public_key = cbor2.dumps({1: 2, 3: -7})
-    extensions = cbor2.dumps({"credProtect": 1})
-    trailer = b"\x00\xFF"
-
-    payload = (
-        _auth_header(flags=0xC1, sign_count=9)  # UP + AT + ED
-        + aaguid
-        + len(credential_id).to_bytes(2, "big")
-        + credential_id
-        + public_key
-        + extensions
-        + trailer
-    )
-
-    details, trimmed, trailing = decode_ctap_auth_data._parse_authenticator_data_bytes(payload)
-
-    assert details["rpIdHash"] == bytes(range(32)).hex()
-    assert details["flags"]["AT"] is True
-    assert details["flags"]["ED"] is True
-    assert details["attestedCredentialData"]["credentialId"] == "aabb"
-    assert details["extensions"]["credProtect"] == 1
-    # Only the bytes after the extensions trail; the extensions were read.
-    assert trailing == trailer
-    assert trimmed == payload[: len(payload) - len(trailer)]
 
 
 def _view(message: str, value: dict) -> dict:
@@ -126,20 +81,6 @@ def test_a_make_credential_view_shows_every_member_as_sent_and_each_certificate_
     assert shown["2 (authData)"]["trailingBytesHex"] == auth_data[37:].hex()
 
 
-def test_a_bare_map_of_a_make_credential_request_is_shown_as_one():
-    value = {
-        1: b"\x11" * 32,
-        2: {"id": "example.com", "name": "Example"},
-        3: {"id": b"\x01", "name": "user", "displayName": "User"},
-        4: [{"type": "public-key", "alg": -7}],
-    }
-
-    mapped = decode_payload_text(cbor2.dumps(value).hex())["data"]["ctapDecoded"]["makeCredentialRequest"]
-
-    assert mapped["1 (clientDataHash)"] == (b"\x11" * 32).hex()
-    assert mapped["2 (rp)"]["id"] == "example.com"
-
-
 def test_a_user_that_is_no_map_is_shown_as_it_was_sent():
     # A user entity sent as a byte string or as text is not re-read as CBOR,
     # base64 or hex to turn it into a map.
@@ -170,18 +111,3 @@ def test_a_credential_descriptor_shows_every_member():
     )["3 (allowList)"][0]
 
     assert descriptor == {"id": "0102", "type": "public-key", "transports": ["usb", "nfc"], "9": "03"}
-
-
-def test_try_decode_cbor_interprets_prefixed_get_assertion_request_payload():
-    map_payload = cbor2.dumps({1: "example.com", 2: b"\x22" * 32})
-    data = b"\x02" + map_payload
-
-    result = decode_ctap._try_decode_cbor(data, "hex")
-
-    assert result is not None
-    assert result["format"] == "CBOR"
-    decoded = result["decoded"]
-    assert decoded["ctap"]["kind"] == "command"
-    assert list(decoded["ctapDecoded"]) == ["getAssertionRequest"]
-    assert decoded["ctapDecoded"]["getAssertionRequest"]["1 (rpId)"] == "example.com"
-    assert decoded["expandedJson"]["2 (clientDataHash)"] == (b"\x22" * 32).hex()

@@ -2,10 +2,12 @@
 
 Nothing after the item goes unmentioned, and what the authenticator sent is shown as sent.
 """
+
 from __future__ import annotations
 
 import hashlib
 
+import cbor2
 from fido2 import cbor
 from fido2.cose import CoseKey
 from fido2.webauthn import AttestedCredentialData, AuthenticatorData
@@ -57,3 +59,18 @@ def test_a_status_prefixed_map_of_no_response_shape_is_not_named_a_response():
     assert "ctapDecoded" not in decoded
     assert "decodedValue" in decoded
     assert result["malformed"]
+
+
+def test_try_decode_cbor_interprets_prefixed_get_assertion_request_payload():
+    map_payload = cbor2.dumps({1: "example.com", 2: b"\x22" * 32})
+    data = b"\x02" + map_payload
+
+    result = decode_ctap._try_decode_cbor(data, "hex")
+
+    assert result is not None
+    assert result["format"] == "CBOR"
+    decoded = result["decoded"]
+    assert decoded["ctap"]["kind"] == "command"
+    assert list(decoded["ctapDecoded"]) == ["getAssertionRequest"]
+    assert decoded["ctapDecoded"]["getAssertionRequest"]["1 (rpId)"] == "example.com"
+    assert decoded["expandedJson"]["2 (clientDataHash)"] == (b"\x22" * 32).hex()
