@@ -1,3 +1,5 @@
+"""Tests of registration storage failures behavior."""
+
 import hashlib
 
 from server.app import visitor_session
@@ -30,14 +32,6 @@ class _FakeAuthData:
 
     def __bytes__(self):
         return self.rp_id_hash + bytes([self.flags]) + int(self.counter).to_bytes(4, "big")
-
-
-class _SimpleFakeServer:
-    def __init__(self, auth_data):
-        self._auth_data = auth_data
-
-    def register_complete(self, *_args, **_kwargs):
-        return self._auth_data
 
 
 def _install_advanced_register_common_monkeypatches(monkeypatch, auth_data, rp_id):
