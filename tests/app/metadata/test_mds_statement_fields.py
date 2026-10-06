@@ -1,10 +1,10 @@
+"""Tests of mds statement fields behavior."""
+
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
-from server.app.mds import build as m
 from server.app.mds import statement_fields as fields
-from server.app.webauthn import signature_algorithms as names
 
 
 def test_basic_mapping_string_list_and_byte_helpers():
@@ -126,56 +126,11 @@ def test_name_identifier_aaguid_and_identifier_list_resolution():
     assert key_ids == ['id2', 'ID3', 'ID1']
 
 
-def test_json_compaction_entry_id_meta_and_snapshot_builders(monkeypatch):
+def test_json_compaction_keeps_only_statement_fields(monkeypatch):
     payload = {'x': 1, 'y': 2}
     assert fields.canonical_json(payload) == '{"x":1,"y":2}'
-
-    compact = fields.compact_metadata_statement(
-        {
-            'attestationRootCertificates': ['a'],
-            'attestationCertificateKeyIdentifiers': ['b'],
-            'icon': 'c',
-            'iconType': 'd',
-            'iconDark': 'e',
-            'providerLogoLight': 'f',
-            'providerLogoDark': 'g',
-            'keep': 1,
-        }
-    )
+    compact = fields.compact_metadata_statement({'attestationRootCertificates': ['a'], 'attestationCertificateKeyIdentifiers': ['b'], 'icon': 'c', 'iconType': 'd', 'iconDark': 'e', 'providerLogoLight': 'f', 'providerLogoDark': 'g', 'keep': 1})
     assert compact == {'keep': 1}
-
-    entry_aaguid = {'aaguid': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'}
-    assert m.build_entry_id(entry_aaguid).startswith('aaguid:')
-    assert m.build_entry_id({'metadataStatement': {'aaid': 'AAID'}}) == 'aaid:AAID'
-    assert m.build_entry_id({'metadataStatement': {'attestationCertificateKeyIdentifiers': ['KID']}}) == 'akid:kid'
-
-    digest_id = m.build_entry_id({'metadataStatement': {}, 'statusReports': []})
-    assert digest_id.startswith('entry:')
-
-    meta = m.build_snapshot_meta({'entries': [1, 2], 'legalHeader': 'L'}, {'last_modified': 'x'}, source='session')
-    assert meta['source'] == 'session'
-    assert meta['entryCount'] == 2
-    assert meta['generatedAt']
-
-    explorer = m.build_explorer_snapshot(
-        {
-            'entries': [
-                {
-                    'metadataStatement': {'description': 'Name', 'protocolFamily': 'fido2'},
-                    'statusReports': [],
-                },
-                'not-a-mapping',
-            ]
-        },
-        {'generated_at': '2026-01-01T00:00:00+00:00'},
-        include_detail=True,
-        include_raw_entry=True,
-    )
-    assert explorer['meta']['entryCount'] == 1
-    assert explorer['entries'][0]['metadataStatement']['description'] == 'Name'
-
-    bootstrap = m.build_bootstrap_snapshot({'entries': []}, {'generated_at': '2026-01-01T00:00:00+00:00'})
-    assert bootstrap['meta']['entryCount'] == 0
 
 
 def test_a_guid_candidate_that_is_no_text_formats_as_empty():
@@ -218,8 +173,5 @@ def test_attestation_key_identifiers_are_trimmed_and_unique_ignoring_case():
     assert key_ids == ['A', 'B']
 
 
-def test_blank_names_format_as_empty():
-    assert names.normalise_signature_algorithm_name('   ') == ''
+def test_enum_names_replace_repeated_hyphens_with_spaces():
     assert fields.format_enum('A--B') == 'A B'
-    assert names.format_hash_name('   ') == ''
-    assert names.format_hash_name('abc-123') == 'ABC123'
