@@ -1,16 +1,10 @@
 import { readFileSync } from 'node:fs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  getAllSimpleCredentials,
-  getSimpleCredentialsForEmail,
-  prepareCredentialsForServer,
-  removeSimpleCredential,
-  saveSimpleCredential,
-  updateSimpleCredentialSignCount,
-} from './simple-credentials.js';
+import { clearSimpleCredentials, getAllSimpleCredentials, getSimpleCredentialsForEmail, prepareCredentialsForServer, removeSimpleCredential, saveSimpleCredential, updateSimpleCredentialSignCount } from './simple-credentials.js';
 import { seedUnifiedCredentialRecords } from './storage-core.js';
 import { repoFile } from '@/test/logic/repo-file.js';
+import { getAllAdvancedCredentials, saveAdvancedCredential } from './advanced-credentials.js';
 
 const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
 
@@ -241,5 +235,116 @@ describe('credentials prepared for the server', () => {
       signCount: ES256.signCount,
       algorithm: ES256.publicKeyAlgorithm,
     }]);
+  });
+});
+
+
+describe("stored credentials: simple", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    seedUnifiedCredentialRecords([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("stores, updates, prepares, and removes simple credentials", async () => {
+    const saved = saveSimpleCredential({
+          credentialId: 'cred-1',
+          email: 'user@example.com',
+          publicKey: 'cHVibGlj',
+          signCount: 2,
+          aaguid: 'aaguid-1',
+        });
+    expect(saved.credentialIdBase64Url).toBe('cred-1');
+    expect(getSimpleCredentialsForEmail('USER@example.com')).toHaveLength(1);
+    expect(prepareCredentialsForServer(getAllSimpleCredentials())).toEqual([
+          {
+            credentialId: 'cred-1',
+            aaguid: 'aaguid-1',
+            publicKey: 'cHVibGlj',
+            signCount: 2,
+            algorithm: undefined,
+          },
+        ]);
+    expect(updateSimpleCredentialSignCount('user@example.com', 'cred-1')).toBe(true);
+    expect(getAllSimpleCredentials()[0].signCount).toBe(3);
+    expect(removeSimpleCredential('cred-1', 'user@example.com')).toBe(true);
+    expect(getAllSimpleCredentials()).toHaveLength(0);
+  });
+
+  it("updates advanced records when saving matching simple credentials", async () => {
+    seedUnifiedCredentialRecords(null);
+    localStorage.setItem(SHARED_STORAGE_KEY, JSON.stringify([
+          {
+            type: 'advanced',
+            credentialId: 'shared-id',
+            storageId: 'shared-id::storage',
+            publicKey: 'cHVibGlj',
+            signCount: 3,
+          },
+        ]));
+    const saved = saveSimpleCredential({
+          credentialId: 'shared-id',
+          email: 'merged@example.com',
+          userName: 'merged@example.com',
+          publicKey: 'cHVibGlj',
+          signCount: 9,
+        });
+    expect(saved).not.toBeNull();
+    expect(getAllSimpleCredentials()).toHaveLength(0);
+    expect(getAllAdvancedCredentials()).toHaveLength(1);
+    expect(getAllAdvancedCredentials()[0].email).toBe('merged@example.com');
+    expect(getAllAdvancedCredentials()[0].signCount).toBe(9);
+  });
+
+  it("applies strict email matching for simple updates/removal and handles explicit sign counts", async () => {
+    saveSimpleCredential({
+          credentialId: 'simple-email-1',
+          email: 'owner@example.com',
+          publicKey: 'cHVibGlj',
+          signCount: 4,
+        });
+    expect(updateSimpleCredentialSignCount('other@example.com', 'simple-email-1')).toBe(false);
+    expect(getAllSimpleCredentials()[0].signCount).toBe(4);
+    expect(updateSimpleCredentialSignCount('owner@example.com', 'simple-email-1', 11)).toBe(true);
+    expect(getAllSimpleCredentials()[0].signCount).toBe(11);
+    expect(removeSimpleCredential('simple-email-1', 'wrong@example.com')).toBe(false);
+    expect(removeSimpleCredential('simple-email-1', 'owner@example.com')).toBe(true);
+    expect(getAllSimpleCredentials()).toHaveLength(0);
+  });
+
+  it("clears simple credentials while keeping the advanced partition", async () => {
+    seedUnifiedCredentialRecords([
+          null,
+          'not-an-object',
+          {
+            type: 'simple',
+            credentialId: 'boot-simple',
+            email: 'boot@example.com',
+            publicKey: 'cHVibGlj',
+          },
+          {
+            type: 'advanced',
+            credentialId: 'boot-advanced',
+            storageId: 'boot-advanced::storage',
+            publicKey: 'cHVibGlj',
+          },
+        ]);
+    clearSimpleCredentials();
+    expect(getAllSimpleCredentials()).toHaveLength(0);
+    expect(getAllAdvancedCredentials()).toHaveLength(1);
+  });
+
+  it("counts a sign-in held in the advanced partition", async () => {
+    const savedAdvanced = saveAdvancedCredential({
+          credentialId: 'shared-counter',
+          publicKey: 'cHVibGlj',
+          storageId: 'shared-counter::storage',
+        });
+    expect(savedAdvanced).not.toBeNull();
+    expect(updateSimpleCredentialSignCount('', 'shared-counter')).toBe(true);
+    expect(getAllAdvancedCredentials()[0].signCount).toBe(1);
   });
 });

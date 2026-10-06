@@ -1,14 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  getAllAdvancedCredentials,
-  removeAdvancedCredential,
-  saveAdvancedCredential,
-  updateAdvancedCredentialSignCount,
-} from './advanced-credentials.js';
+import { getAllAdvancedCredentials, removeAdvancedCredential, saveAdvancedCredential, updateAdvancedCredentialSignCount } from './advanced-credentials.js';
 import { seedUnifiedCredentialRecords } from './storage-core.js';
 import { repoFile } from '@/test/logic/repo-file.js';
+import { getAllSimpleCredentials, saveSimpleCredential } from './simple-credentials.js';
 
 const SHARED_STORAGE_KEY = 'postquantum-webauthn.credentials';
 
@@ -204,5 +200,33 @@ describe('updateAdvancedCredentialSignCount', () => {
 
     expect(updateAdvancedCredentialSignCount(CREDENTIAL_ID, 6)).toBe(false);
     expect(stored()[0].signCount).toBe(5);
+  });
+});
+
+
+describe("stored credentials: simple", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    seedUnifiedCredentialRecords([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("counts a sign-in held in the simple partition", async () => {
+    saveAdvancedCredential({
+          credentialId: 'shared-counter',
+          publicKey: 'cHVibGlj',
+          storageId: 'shared-counter::storage',
+        });
+    saveSimpleCredential({
+          credentialId: 'simple-counter',
+          email: 'simple@example.com',
+          publicKey: 'cHVibGlj',
+          signCount: 2,
+        });
+    expect(updateAdvancedCredentialSignCount('simple-counter')).toBe(true);
+    expect(getAllSimpleCredentials()[0].signCount).toBe(3);
   });
 });

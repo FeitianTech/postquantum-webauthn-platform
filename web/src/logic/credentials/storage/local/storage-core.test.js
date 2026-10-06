@@ -1,13 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  followStoredCredentialChanges,
-  persistStoredCredentials,
-  persistUnifiedCredentialRecords,
-  readStoredCredentials,
-  readUnifiedCredentialRecords,
-  seedUnifiedCredentialRecords,
-} from './storage-core.js';
+import { followStoredCredentialChanges, persistStoredCredentials, persistUnifiedCredentialRecords, readStoredCredentials, readUnifiedCredentialRecords, seedUnifiedCredentialRecords } from './storage-core.js';
 import { getAllStoredCredentialsInOrder } from '../records.js';
 
 // The one read and write of the saved credentials both interfaces share
@@ -191,5 +184,38 @@ describe('the ordered list both interfaces show', () => {
 
   it('lists nothing when nothing is saved', () => {
     expect(getAllStoredCredentialsInOrder()).toEqual([]);
+  });
+});
+
+
+describe("stored credentials: simple", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    seedUnifiedCredentialRecords([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("filters non-record values from seeded credentials", async () => {
+    seedUnifiedCredentialRecords([
+          null,
+          'not-an-object',
+          {
+            type: 'simple',
+            credentialId: 'boot-simple',
+            email: 'boot@example.com',
+            publicKey: 'cHVibGlj',
+          },
+          {
+            type: 'advanced',
+            credentialId: 'boot-advanced',
+            storageId: 'boot-advanced::storage',
+            publicKey: 'cHVibGlj',
+          },
+        ]);
+    const ordered = readUnifiedCredentialRecords();
+    expect(ordered).toHaveLength(2);
   });
 });
