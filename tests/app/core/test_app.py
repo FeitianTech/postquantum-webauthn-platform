@@ -1,4 +1,4 @@
-"""Contract tests for server application entrypoint behavior."""
+"""Tests of app behavior."""
 
 from __future__ import annotations
 
